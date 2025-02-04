@@ -22,6 +22,22 @@
 
 using namespace llvm;
 
+// TODO: gcc-10 has a bug that causes the below line not to compile due to some
+// macro-magic in gunit in combination with a class with pure-virtual
+// function. Once gcc-10 is no longer supported, replace this function with
+// something like the following:
+//
+// EXPECT_THAT(SB, testing::ElementsAre(St0, St1, St2, St3));
+static void
+ExpectThatElementsAre(sandboxir::SeedBundle &SR,
+                      llvm::ArrayRef<sandboxir::Instruction *> Contents) {
+  EXPECT_EQ(range_size(SR), Contents.size());
+  auto CI = Contents.begin();
+  if (range_size(SR) == Contents.size())
+    for (auto &S : SR)
+      EXPECT_EQ(S, *CI++);
+}
+
 struct SeedBundleTest : public testing::Test {
   LLVMContext C;
   std::unique_ptr<Module> M;
@@ -37,6 +53,15 @@ struct SeedBundleTest : public testing::Test {
       if (BB.getName() == Name)
         return &BB;
     llvm_unreachable("Expected to find basic block!");
+  }
+};
+
+// Stub class to make the abstract base class testable.
+class SeedBundleForTest : public sandboxir::SeedBundle {
+public:
+  using sandboxir::SeedBundle::SeedBundle;
+  void insert(sandboxir::Instruction *I, ScalarEvolution &SE) override {
+    insertAt(Seeds.end(), I);
   }
 };
 
@@ -66,7 +91,7 @@ bb:
   // Assume first two instructions are identical in the number of bits.
   const unsigned IOBits = sandboxir::Utils::getNumBits(I0, DL);
   // Constructor
-  sandboxir::SeedBundle SBO(I0);
+  SeedBundleForTest SBO(I0);
   EXPECT_EQ(*SBO.begin(), I0);
   // getNumUnusedBits after constructor
   EXPECT_EQ(SBO.getNumUnusedBits(), IOBits);
@@ -103,7 +128,7 @@ bb:
   EXPECT_EQ(BundleBits, 88u);
   auto Seeds = Insts;
   // Constructor
-  sandboxir::SeedBundle SB1(std::move(Seeds));
+  SeedBundleForTest SB1(std::move(Seeds));
   // getNumUnusedBits after constructor
   EXPECT_EQ(SB1.getNumUnusedBits(), BundleBits);
   // setUsed with index
@@ -195,4 +220,302 @@ bb:
   Loads.push_back(L0);
   sandboxir::LoadSeedBundle LB(std::move(Loads), SE);
   EXPECT_THAT(LB, testing::ElementsAre(L0, L1, L2, L3));
+}
+
+TEST_F(SeedBundleTest, Container) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptrA, float %val, ptr %ptrB) {
+bb:
+  %gepA0 = getelementptr float, ptr %ptrA, i32 0
+  %gepA1 = getelementptr float, ptr %ptrA, i32 1
+  %gepB0 = getelementptr float, ptr %ptrB, i32 0
+  %gepB1 = getelementptr float, ptr %ptrB, i32 1
+  store float %val, ptr %gepA0
+  store float %val, ptr %gepA1
+  store float %val, ptr %gepB0
+  store float %val, ptr %gepB1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  DominatorTree DT(LLVMF);
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI(TLII);
+  DataLayout DL(M->getDataLayout());
+  LoopInfo LI(DT);
+  AssumptionCache AC(LLVMF);
+  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = std::next(BB.begin(), 4);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+  sandboxir::SeedContainer SC(SE);
+  // Check begin() end() when empty.
+  EXPECT_EQ(SC.begin(), SC.end());
+
+  SC.insert(S0);
+  SC.insert(S1);
+  SC.insert(S2);
+  SC.insert(S3);
+  unsigned Cnt = 0;
+  SmallVector<sandboxir::SeedBundle *> Bndls;
+  for (auto &SeedBndl : SC) {
+    EXPECT_EQ(SeedBndl.size(), 2u);
+    ++Cnt;
+    Bndls.push_back(&SeedBndl);
+  }
+  EXPECT_EQ(Cnt, 2u);
+
+  // Mark them "Used" to check if operator++ skips them in the next loop.
+  for (auto *SeedBndl : Bndls)
+    for (auto Lane : seq<unsigned>(SeedBndl->size()))
+      SeedBndl->setUsed(Lane);
+  // Check if iterator::operator++ skips used lanes.
+  Cnt = 0;
+  for (auto &SeedBndl : SC) {
+    (void)SeedBndl;
+    ++Cnt;
+  }
+  EXPECT_EQ(Cnt, 0u);
+}
+
+TEST_F(SeedBundleTest, ConsecutiveStores) {
+  // Where "Consecutive" means the stores address consecutive locations in
+  // memory, but not in program order. Check to see that the collector puts them
+  // in the proper order for vectorization.
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr, float %val) {
+bb:
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ptr2 = getelementptr float, ptr %ptr, i32 2
+  %ptr3 = getelementptr float, ptr %ptr, i32 3
+  store float %val, ptr %ptr0
+  store float %val, ptr %ptr2
+  store float %val, ptr %ptr1
+  store float %val, ptr %ptr3
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  DominatorTree DT(LLVMF);
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI(TLII);
+  DataLayout DL(M->getDataLayout());
+  LoopInfo LI(DT);
+  AssumptionCache AC(LLVMF);
+  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto BB = F.begin();
+  sandboxir::SeedCollector SC(&*BB, SE);
+
+  // Find the stores
+  auto It = std::next(BB->begin(), 4);
+  // StX with X as the order by offset in memory
+  auto *St0 = &*It++;
+  auto *St2 = &*It++;
+  auto *St1 = &*It++;
+  auto *St3 = &*It++;
+
+  auto StoreSeedsRange = SC.getStoreSeeds();
+  auto &SB = *StoreSeedsRange.begin();
+  //  Expect just one vector of store seeds
+  EXPECT_EQ(range_size(StoreSeedsRange), 1u);
+  ExpectThatElementsAre(SB, {St0, St1, St2, St3});
+}
+
+TEST_F(SeedBundleTest, StoresWithGaps) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr, float %val) {
+bb:
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 3
+  %ptr2 = getelementptr float, ptr %ptr, i32 5
+  %ptr3 = getelementptr float, ptr %ptr, i32 7
+  store float %val, ptr %ptr0
+  store float %val, ptr %ptr2
+  store float %val, ptr %ptr1
+  store float %val, ptr %ptr3
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  DominatorTree DT(LLVMF);
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI(TLII);
+  DataLayout DL(M->getDataLayout());
+  LoopInfo LI(DT);
+  AssumptionCache AC(LLVMF);
+  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto BB = F.begin();
+  sandboxir::SeedCollector SC(&*BB, SE);
+
+  // Find the stores
+  auto It = std::next(BB->begin(), 4);
+  // StX with X as the order by offset in memory
+  auto *St0 = &*It++;
+  auto *St2 = &*It++;
+  auto *St1 = &*It++;
+  auto *St3 = &*It++;
+
+  auto StoreSeedsRange = SC.getStoreSeeds();
+  auto &SB = *StoreSeedsRange.begin();
+  // Expect just one vector of store seeds
+  EXPECT_EQ(range_size(StoreSeedsRange), 1u);
+  ExpectThatElementsAre(SB, {St0, St1, St2, St3});
+  // Check that the EraseInstr callback works.
+
+  // TODO: Range_size counts fully used-bundles even though the iterator skips
+  // them. Further, iterating over anything other than the Bundles in a
+  // SeedContainer includes used seeds. So for now just check that removing all
+  // the seeds from a bundle also empties the bundle.
+  St0->eraseFromParent();
+  St1->eraseFromParent();
+  St2->eraseFromParent();
+  St3->eraseFromParent();
+  size_t nonEmptyBundleCount = 0;
+  for (auto &B : SC.getStoreSeeds()) {
+    (void)B;
+    nonEmptyBundleCount++;
+  }
+  EXPECT_EQ(nonEmptyBundleCount, 0u);
+}
+
+TEST_F(SeedBundleTest, VectorStores) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr, <2 x float> %val0, i64 %val1) {
+bb:
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ptr2 = getelementptr i64, ptr %ptr, i32 2
+  store <2 x float> %val0, ptr %ptr1
+  store <2 x float> %val0, ptr %ptr0
+  store atomic i64 %val1, ptr %ptr2 unordered, align 8
+  store volatile i64 %val1, ptr %ptr2
+
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  DominatorTree DT(LLVMF);
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI(TLII);
+  DataLayout DL(M->getDataLayout());
+  LoopInfo LI(DT);
+  AssumptionCache AC(LLVMF);
+  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto BB = F.begin();
+  sandboxir::SeedCollector SC(&*BB, SE);
+
+  // Find the stores
+  auto It = std::next(BB->begin(), 3);
+  // StX with X as the order by offset in memory
+  auto *St1 = &*It++;
+  auto *St0 = &*It++;
+
+  auto StoreSeedsRange = SC.getStoreSeeds();
+  EXPECT_EQ(range_size(StoreSeedsRange), 1u);
+  auto &SB = *StoreSeedsRange.begin();
+  // isValidMemSeed check: The atomic and volatile stores should not
+  // be included in the bundle, but the vector stores should be.
+  ExpectThatElementsAre(SB, {St0, St1});
+}
+
+TEST_F(SeedBundleTest, MixedScalarVectors) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr, float %v, <2 x float> %val) {
+bb:
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ptr3 = getelementptr float, ptr %ptr, i32 3
+  store float %v, ptr %ptr0
+  store float %v, ptr %ptr3
+  store <2 x float> %val, ptr %ptr1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  DominatorTree DT(LLVMF);
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI(TLII);
+  DataLayout DL(M->getDataLayout());
+  LoopInfo LI(DT);
+  AssumptionCache AC(LLVMF);
+  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto BB = F.begin();
+  sandboxir::SeedCollector SC(&*BB, SE);
+
+  // Find the stores
+  auto It = std::next(BB->begin(), 3);
+  // StX with X as the order by offset in memory
+  auto *St0 = &*It++;
+  auto *St3 = &*It++;
+  auto *St1 = &*It++;
+
+  auto StoreSeedsRange = SC.getStoreSeeds();
+  EXPECT_EQ(range_size(StoreSeedsRange), 1u);
+  auto &SB = *StoreSeedsRange.begin();
+  // isValidMemSeedCheck here: all of the three stores should be included.
+  ExpectThatElementsAre(SB, {St0, St1, St3});
+}
+
+TEST_F(SeedBundleTest, VectorLoads) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr, <2 x float> %val0) {
+bb:
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %r0 = load <2 x float>, ptr %ptr0
+  %r1 = load <2 x float>, ptr %ptr1
+  %r2 = load atomic i64, ptr %ptr0 unordered, align 8
+  %r3 = load volatile i64, ptr %ptr1
+  %r4 = load void()*, ptr %ptr1
+
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  DominatorTree DT(LLVMF);
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI(TLII);
+  DataLayout DL(M->getDataLayout());
+  LoopInfo LI(DT);
+  AssumptionCache AC(LLVMF);
+  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto BB = F.begin();
+  sandboxir::SeedCollector SC(&*BB, SE);
+
+  // Find the loads
+  auto It = std::next(BB->begin(), 2);
+  // StX with X as the order by offset in memory
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *Ld1 = cast<sandboxir::LoadInst>(&*It++);
+
+  auto LoadSeedsRange = SC.getLoadSeeds();
+  EXPECT_EQ(range_size(LoadSeedsRange), 2u);
+  auto &SB = *LoadSeedsRange.begin();
+  // isValidMemSeed check: The atomic and volatile loads should not
+  // be included in the bundle, the vector stores should be, but the
+  // void-typed load should not.
+  ExpectThatElementsAre(SB, {Ld0, Ld1});
 }

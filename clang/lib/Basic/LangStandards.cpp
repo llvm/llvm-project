@@ -37,8 +37,6 @@ StringRef clang::languageToString(Language L) {
     return "OpenCLC++";
   case Language::CUDA:
     return "CUDA";
-  case Language::RenderScript:
-    return "RenderScript";
   case Language::HIP:
     return "HIP";
   case Language::HLSL:
@@ -114,8 +112,6 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
   case Language::CUDA:
   case Language::HIP:
     return LangStandard::lang_gnucxx17;
-  case Language::RenderScript:
-    return LangStandard::lang_c99;
   case Language::HLSL:
     return LangStandard::lang_hlsl202x;
   }

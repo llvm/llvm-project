@@ -27,7 +27,6 @@ do i=1, 9
 ! CHECK:             {{.*}} = fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
 ! CHECK:             omp.yield
 ! CHECK:           }
-! CHECK:           omp.terminator
 ! CHECK:         }
 
 end do
@@ -50,7 +49,6 @@ do i=1, 9
 ! CHECK:             {{.*}} = fir.call @_FortranAioOutputInteger32({{.*}}, %[[VAL_25]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
 ! CHECK:             omp.yield
 ! CHECK:           }
-! CHECK:           omp.terminator
 ! CHECK:         }
   
 end do
@@ -77,7 +75,6 @@ end do
 ! CHECK:             {{.*}} = fir.call @_FortranAioOutputInteger32({{.*}}, %[[VAL_40]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
 ! CHECK:             omp.yield
 ! CHECK:           }
-! CHECK:           omp.terminator
 ! CHECK:         }
 ! CHECK:         return
 ! CHECK:       }

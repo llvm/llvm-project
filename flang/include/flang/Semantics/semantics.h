@@ -9,6 +9,8 @@
 #ifndef FORTRAN_SEMANTICS_SEMANTICS_H_
 #define FORTRAN_SEMANTICS_SEMANTICS_H_
 
+#include "module-dependences.h"
+#include "program-tree.h"
 #include "scope.h"
 #include "symbol.h"
 #include "flang/Common/Fortran-features.h"
@@ -17,7 +19,6 @@
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Parser/message.h"
-#include "flang/Semantics/module-dependences.h"
 #include <iosfwd>
 #include <set>
 #include <string>
@@ -109,6 +110,12 @@ public:
   }
   Scope &globalScope() { return globalScope_; }
   Scope &intrinsicModulesScope() { return intrinsicModulesScope_; }
+  Scope *currentHermeticModuleFileScope() {
+    return currentHermeticModuleFileScope_;
+  }
+  void set_currentHermeticModuleFileScope(Scope *scope) {
+    currentHermeticModuleFileScope_ = scope;
+  }
   parser::Messages &messages() { return messages_; }
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
@@ -280,6 +287,9 @@ public:
 
   void DumpSymbols(llvm::raw_ostream &);
 
+  // Top-level ProgramTrees are owned by the SemanticsContext for persistence.
+  ProgramTree &SaveProgramTree(ProgramTree &&);
+
 private:
   struct ScopeIndexComparator {
     bool operator()(parser::CharBlock, parser::CharBlock) const;
@@ -309,6 +319,7 @@ private:
   evaluate::TargetCharacteristics targetCharacteristics_;
   Scope globalScope_;
   Scope &intrinsicModulesScope_;
+  Scope *currentHermeticModuleFileScope_{nullptr};
   ScopeIndex scopeIndex_;
   parser::Messages messages_;
   evaluate::FoldingContext foldingContext_;
@@ -331,6 +342,7 @@ private:
   ModuleDependences moduleDependences_;
   std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
   UnorderedSymbolSet isDefined_;
+  std::list<ProgramTree> programTrees_;
 };
 
 class Semantics {

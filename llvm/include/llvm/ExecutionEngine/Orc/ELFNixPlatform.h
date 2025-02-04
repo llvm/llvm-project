@@ -106,14 +106,14 @@ public:
   /// RuntimeAliases function, in which case the client is responsible for
   /// setting up all aliases (including the required ones).
   static Expected<std::unique_ptr<ELFNixPlatform>>
-  Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-         JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
+  Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+         std::unique_ptr<DefinitionGenerator> OrcRuntime,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   /// Construct using a path to the ORC runtime.
   static Expected<std::unique_ptr<ELFNixPlatform>>
-  Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-         JITDylib &PlatformJD, const char *OrcRuntimePath,
+  Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+         const char *OrcRuntimePath,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   ExecutionSession &getExecutionSession() const { return ES; }
@@ -138,6 +138,11 @@ public:
   static ArrayRef<std::pair<const char *, const char *>>
   standardRuntimeUtilityAliases();
 
+  /// Returns a list of aliases required to enable lazy compilation via the
+  /// ORC runtime.
+  static ArrayRef<std::pair<const char *, const char *>>
+  standardLazyCompilationAliases();
+
 private:
   // Data needed for bootstrap only.
   struct BootstrapInfo {
@@ -151,6 +156,7 @@ private:
         RuntimeFunction *func1, RuntimeFunction *func2,
         const shared::WrapperFunctionCall::ArgDataBufferType &arg1,
         const shared::WrapperFunctionCall::ArgDataBufferType &arg2) {
+      std::lock_guard<std::mutex> Lock(Mutex);
       auto &argList = DeferredRTFnMap[std::make_pair(func1, func2)];
       argList.emplace_back(arg1, arg2);
     }
@@ -211,8 +217,7 @@ private:
 
   static bool supportedTarget(const Triple &TT);
 
-  ELFNixPlatform(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-                 JITDylib &PlatformJD,
+  ELFNixPlatform(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                  std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
                  Error &Err);
 

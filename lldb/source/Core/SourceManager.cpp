@@ -430,7 +430,7 @@ SourceManager::GetDefaultFileAndLine() {
             false; // Force it to be a debug symbol.
         function_options.include_inlines = true;
         executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
-                                      lldb::eFunctionNameTypeBase,
+                                      lldb::eFunctionNameTypeFull,
                                       function_options, sc_list);
         for (const SymbolContext &sc : sc_list) {
           if (sc.function) {

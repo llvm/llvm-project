@@ -52,7 +52,7 @@ define <2 x i1> @ins1_ins1_i64(i64 %x, i64 %y) {
 define <2 x i1> @ins0_ins0_f64(double %x, double %y) {
 ; CHECK-LABEL: @ins0_ins0_f64(
 ; CHECK-NEXT:    [[R_SCALAR:%.*]] = fcmp nnan ninf uge double [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> <i1 true, i1 true>, i1 [[R_SCALAR]], i64 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> splat (i1 true), i1 [[R_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %i0 = insertelement <2 x double> undef, double %x, i32 0
@@ -157,7 +157,7 @@ define <2 x i1> @constant_op1_i64(i64 %x) {
 define <2 x i1> @constant_op1_i64_not_undef_lane(i64 %x) {
 ; CHECK-LABEL: @constant_op1_i64_not_undef_lane(
 ; CHECK-NEXT:    [[R_SCALAR:%.*]] = icmp sge i64 [[X:%.*]], 42
-; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> <i1 true, i1 true>, i1 [[R_SCALAR]], i64 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> splat (i1 true), i1 [[R_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
@@ -194,7 +194,7 @@ define <4 x i1> @constant_op0_i32(i32 %x) {
 define <4 x i1> @constant_op0_i32_not_undef_lane(i32 %x) {
 ; CHECK-LABEL: @constant_op0_i32_not_undef_lane(
 ; CHECK-NEXT:    [[R_SCALAR:%.*]] = icmp ule i32 42, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> <i1 true, i1 true, i1 true, i1 true>, i1 [[R_SCALAR]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> splat (i1 true), i1 [[R_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %ins = insertelement <4 x i32> undef, i32 %x, i32 1
@@ -216,7 +216,7 @@ define <2 x i1> @constant_op0_f64(double %x) {
 define <2 x i1> @constant_op0_f64_not_undef_lane(double %x) {
 ; CHECK-LABEL: @constant_op0_f64_not_undef_lane(
 ; CHECK-NEXT:    [[R_SCALAR:%.*]] = fcmp nnan ueq double -4.200000e+01, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> <i1 true, i1 true>, i1 [[R_SCALAR]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> splat (i1 true), i1 [[R_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %ins = insertelement <2 x double> undef, double %x, i32 1
@@ -238,7 +238,7 @@ define <2 x i1> @constant_op1_f64(double %x) {
 define <4 x i1> @constant_op1_f32_not_undef_lane(float %x) {
 ; CHECK-LABEL: @constant_op1_f32_not_undef_lane(
 ; CHECK-NEXT:    [[R_SCALAR:%.*]] = fcmp uge float [[X:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> <i1 true, i1 true, i1 true, i1 true>, i1 [[R_SCALAR]], i64 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> splat (i1 true), i1 [[R_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %ins = insertelement <4 x float> undef, float %x, i32 0

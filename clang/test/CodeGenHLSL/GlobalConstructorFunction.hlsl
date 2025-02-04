@@ -25,11 +25,11 @@ void main(unsigned GI : SV_GroupIndex) {}
 // CHECK: define void @main()
 // CHECK-NEXT: entry:
 // Verify function constructors are emitted
-// NOINLINE-NEXT:   call void @"?call_me_first@@YAXXZ"()
-// NOINLINE-NEXT:   call void @"?then_call_me@@YAXXZ"()
+// NOINLINE-NEXT:   call void @_Z13call_me_firstv()
+// NOINLINE-NEXT:   call void @_Z12then_call_mev()
 // NOINLINE-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-// NOINLINE-NEXT:   call void @"?main@@YAXI@Z"(i32 %0)
-// NOINLINE-NEXT:   call void @"?call_me_last@@YAXXZ"(
+// NOINLINE-NEXT:   call void @_Z4mainj(i32 %0)
+// NOINLINE-NEXT:   call void @_Z12call_me_lastv(
 // NOINLINE-NEXT:   ret void
 
 // Verify constructor calls are inlined when AlwaysInline is run

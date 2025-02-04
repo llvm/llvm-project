@@ -10,6 +10,7 @@
 ///
 //===----------------------------------------------------------------------===//
 #include "include/llvm-libc-types/ENTRY.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/HashTable/table.h"
 #include "src/__support/macros/config.h"
@@ -81,15 +82,14 @@ static struct {
 
   template <typename T> T next() {
     static_assert(cpp::is_integral<T>::value, "T must be an integral type");
-    union {
-      T result;
-      char data[sizeof(T)];
-    };
-    for (size_t i = 0; i < sizeof(result); i++)
+
+    char data[sizeof(T)];
+
+    for (size_t i = 0; i < sizeof(T); i++)
       data[i] = buffer[i];
-    buffer += sizeof(result);
-    remaining -= sizeof(result);
-    return result;
+    buffer += sizeof(T);
+    remaining -= sizeof(T);
+    return cpp::bit_cast<T>(data);
   }
 
   cpp::string_view next_string() {

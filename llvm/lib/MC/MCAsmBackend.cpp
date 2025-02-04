@@ -56,7 +56,7 @@ MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
     return createXCOFFObjectWriter(
         cast<MCXCOFFObjectTargetWriter>(std::move(TW)), OS);
   case Triple::DXContainer:
-    return createDXContainerObjectWriter(
+    return std::make_unique<DXContainerObjectWriter>(
         cast<MCDXContainerTargetWriter>(std::move(TW)), OS);
   default:
     llvm_unreachable("unexpected object format");

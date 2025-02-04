@@ -547,10 +547,9 @@ define i8 @abd_select_i8(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: abd_select_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    cmp w8, w1, sxtb
-; CHECK-NEXT:    csel w8, w0, w1, lt
-; CHECK-NEXT:    csel w9, w1, w0, lt
-; CHECK-NEXT:    sub w0, w9, w8
+; CHECK-NEXT:    sub w8, w8, w1, sxtb
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cneg w0, w8, mi
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i8 %a, %b
   %ab = select i1 %cmp, i8 %a, i8 %b
@@ -563,10 +562,9 @@ define i16 @abd_select_i16(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: abd_select_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    cmp w8, w1, sxth
-; CHECK-NEXT:    csel w8, w0, w1, le
-; CHECK-NEXT:    csel w9, w1, w0, le
-; CHECK-NEXT:    sub w0, w9, w8
+; CHECK-NEXT:    sub w8, w8, w1, sxth
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cneg w0, w8, mi
 ; CHECK-NEXT:    ret
   %cmp = icmp sle i16 %a, %b
   %ab = select i1 %cmp, i16 %a, i16 %b
@@ -578,10 +576,9 @@ define i16 @abd_select_i16(i16 %a, i16 %b) nounwind {
 define i32 @abd_select_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: abd_select_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    csel w8, w0, w1, gt
-; CHECK-NEXT:    csel w9, w1, w0, gt
-; CHECK-NEXT:    sub w0, w8, w9
+; CHECK-NEXT:    sub w8, w1, w0
+; CHECK-NEXT:    subs w9, w0, w1
+; CHECK-NEXT:    csel w0, w9, w8, gt
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt i32 %a, %b
   %ab = select i1 %cmp, i32 %a, i32 %b
@@ -593,10 +590,9 @@ define i32 @abd_select_i32(i32 %a, i32 %b) nounwind {
 define i64 @abd_select_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: abd_select_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, x1
-; CHECK-NEXT:    csel x8, x0, x1, ge
-; CHECK-NEXT:    csel x9, x1, x0, ge
-; CHECK-NEXT:    sub x0, x8, x9
+; CHECK-NEXT:    sub x8, x1, x0
+; CHECK-NEXT:    subs x9, x0, x1
+; CHECK-NEXT:    csel x0, x9, x8, gt
 ; CHECK-NEXT:    ret
   %cmp = icmp sge i64 %a, %b
   %ab = select i1 %cmp, i64 %a, i64 %b
@@ -608,14 +604,13 @@ define i64 @abd_select_i64(i64 %a, i64 %b) nounwind {
 define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: abd_select_i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, x2
-; CHECK-NEXT:    sbcs xzr, x1, x3
-; CHECK-NEXT:    csel x8, x0, x2, lt
-; CHECK-NEXT:    csel x9, x2, x0, lt
-; CHECK-NEXT:    csel x10, x1, x3, lt
-; CHECK-NEXT:    csel x11, x3, x1, lt
-; CHECK-NEXT:    subs x0, x9, x8
-; CHECK-NEXT:    sbc x1, x11, x10
+; CHECK-NEXT:    subs x8, x0, x2
+; CHECK-NEXT:    sbc x9, x1, x3
+; CHECK-NEXT:    subs x10, x2, x0
+; CHECK-NEXT:    sbc x11, x3, x1
+; CHECK-NEXT:    sbcs xzr, x3, x1
+; CHECK-NEXT:    csel x0, x8, x10, lt
+; CHECK-NEXT:    csel x1, x9, x11, lt
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i128 %a, %b
   %ab = select i1 %cmp, i128 %a, i128 %b

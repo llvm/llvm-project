@@ -14,26 +14,24 @@
 #include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/ilist_iterator.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/StructuralHash.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/xxhash.h"
 
 #define DEBUG_TYPE "machine-stable-hash"
 
@@ -97,13 +95,19 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
     return 0;
   case MachineOperand::MO_GlobalAddress: {
     const GlobalValue *GV = MO.getGlobal();
-    if (!GV->hasName()) {
-      ++StableHashBailingGlobalAddress;
-      return 0;
+    stable_hash GVHash = 0;
+    if (auto *GVar = dyn_cast<GlobalVariable>(GV))
+      GVHash = StructuralHash(*GVar);
+    if (!GVHash) {
+      if (!GV->hasName()) {
+        ++StableHashBailingGlobalAddress;
+        return 0;
+      }
+      GVHash = stable_hash_name(GV->getName());
     }
-    auto Name = GV->getName();
-    return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
-                               stable_hash_name(Name), MO.getOffset());
+
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(), GVHash,
+                               MO.getOffset());
   }
 
   case MachineOperand::MO_TargetIndex: {

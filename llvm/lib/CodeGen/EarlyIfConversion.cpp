@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -760,7 +761,7 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks,
 //===----------------------------------------------------------------------===//
 
 namespace {
-class EarlyIfConverter : public MachineFunctionPass {
+class EarlyIfConverter {
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   MCSchedModel SchedModel;
@@ -772,38 +773,48 @@ class EarlyIfConverter : public MachineFunctionPass {
   SSAIfConv IfConv;
 
 public:
-  static char ID;
-  EarlyIfConverter() : MachineFunctionPass(ID) {}
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnMachineFunction(MachineFunction &MF) override;
-  StringRef getPassName() const override { return "Early If-Conversion"; }
+  EarlyIfConverter(MachineDominatorTree &DT, MachineLoopInfo &LI,
+                   MachineTraceMetrics &MTM)
+      : DomTree(&DT), Loops(&LI), Traces(&MTM) {}
+  EarlyIfConverter() = delete;
+
+  bool run(MachineFunction &MF);
 
 private:
   bool tryConvertIf(MachineBasicBlock *);
   void invalidateTraces();
   bool shouldConvertIf();
 };
+
+class EarlyIfConverterLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  EarlyIfConverterLegacy() : MachineFunctionPass(ID) {}
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  StringRef getPassName() const override { return "Early If-Conversion"; }
+};
 } // end anonymous namespace
 
-char EarlyIfConverter::ID = 0;
-char &llvm::EarlyIfConverterID = EarlyIfConverter::ID;
+char EarlyIfConverterLegacy::ID = 0;
+char &llvm::EarlyIfConverterLegacyID = EarlyIfConverterLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(EarlyIfConverter, DEBUG_TYPE,
-                      "Early If Converter", false, false)
+INITIALIZE_PASS_BEGIN(EarlyIfConverterLegacy, DEBUG_TYPE, "Early If Converter",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
-INITIALIZE_PASS_END(EarlyIfConverter, DEBUG_TYPE,
-                    "Early If Converter", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
+INITIALIZE_PASS_END(EarlyIfConverterLegacy, DEBUG_TYPE, "Early If Converter",
+                    false, false)
 
-void EarlyIfConverter::getAnalysisUsage(AnalysisUsage &AU) const {
+void EarlyIfConverterLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
-  AU.addRequired<MachineTraceMetrics>();
-  AU.addPreserved<MachineTraceMetrics>();
+  AU.addRequired<MachineTraceMetricsWrapperPass>();
+  AU.addPreserved<MachineTraceMetricsWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -884,7 +895,7 @@ bool EarlyIfConverter::shouldConvertIf() {
         if (!MO.isReg() || !MO.isUse())
           return false;
         Register Reg = MO.getReg();
-        if (Register::isPhysicalRegister(Reg))
+        if (Reg.isPhysical())
           return false;
 
         MachineInstr *Def = MRI->getVRegDef(Reg);
@@ -895,7 +906,7 @@ bool EarlyIfConverter::shouldConvertIf() {
                  if (!MO.isReg() || !MO.isUse())
                    return false;
                  Register Reg = MO.getReg();
-                 if (Register::isPhysicalRegister(Reg))
+                 if (Reg.isPhysical())
                    return false;
 
                  MachineInstr *Def = MRI->getVRegDef(Reg);
@@ -1076,11 +1087,9 @@ bool EarlyIfConverter::tryConvertIf(MachineBasicBlock *MBB) {
   return Changed;
 }
 
-bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
+bool EarlyIfConverter::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** EARLY IF-CONVERSION **********\n"
                     << "********** Function: " << MF.getName() << '\n');
-  if (skipFunction(MF.getFunction()))
-    return false;
 
   // Only run if conversion if the target wants it.
   const TargetSubtargetInfo &STI = MF.getSubtarget();
@@ -1091,9 +1100,6 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
   TRI = STI.getRegisterInfo();
   SchedModel = STI.getSchedModel();
   MRI = &MF.getRegInfo();
-  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
 
   bool Changed = false;
@@ -1108,6 +1114,38 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
       Changed = true;
 
   return Changed;
+}
+
+PreservedAnalyses
+EarlyIfConverterPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  MachineLoopInfo &LI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  MachineTraceMetrics &MTM = MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
+
+  EarlyIfConverter Impl(MDT, LI, MTM);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<MachineLoopAnalysis>();
+  PA.preserve<MachineTraceMetricsAnalysis>();
+  return PA;
+}
+
+bool EarlyIfConverterLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  MachineDominatorTree &MDT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MachineTraceMetrics &MTM =
+      getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
+
+  return EarlyIfConverter(MDT, LI, MTM).run(MF);
 }
 
 //===----------------------------------------------------------------------===//

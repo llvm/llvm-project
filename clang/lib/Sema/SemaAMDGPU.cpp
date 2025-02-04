@@ -26,6 +26,14 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
                                                 CallExpr *TheCall) {
   // position of memory order and scope arguments in the builtin
   unsigned OrderIndex, ScopeIndex;
+
+  const auto *FD = SemaRef.getCurFunctionDecl();
+  assert(FD && "AMDGPU builtins should not be used outside of a function");
+  llvm::StringMap<bool> CallerFeatureMap;
+  getASTContext().getFunctionFeatureMap(CallerFeatureMap, FD);
+  bool HasGFX950Insts =
+      Builtin::evaluateRequiredTargetFeatures("gfx950-insts", CallerFeatureMap);
+
   switch (BuiltinID) {
   case AMDGPU::BI__builtin_amdgcn_global_load_lds: {
     constexpr const int SizeIdx = 2;
@@ -39,13 +47,19 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     case 2:
     case 4:
       return false;
+    case 12:
+    case 16: {
+      if (HasGFX950Insts)
+        return false;
+      [[fallthrough]];
+    }
     default:
       Diag(ArgExpr->getExprLoc(),
            diag::err_amdgcn_global_load_lds_size_invalid_value)
           << ArgExpr->getSourceRange();
       Diag(ArgExpr->getExprLoc(),
            diag::note_amdgcn_global_load_lds_size_valid_value)
-          << ArgExpr->getSourceRange();
+          << HasGFX950Insts << ArgExpr->getSourceRange();
       return true;
     }
   }
@@ -63,6 +77,13 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     OrderIndex = 0;
     ScopeIndex = 1;
     break;
+  case AMDGPU::BI__builtin_amdgcn_mov_dpp:
+    return checkMovDPPFunctionCall(TheCall, 5, 1);
+  case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
+    return checkMovDPPFunctionCall(TheCall, 2, 1);
+  case AMDGPU::BI__builtin_amdgcn_update_dpp: {
+    return checkMovDPPFunctionCall(TheCall, 6, 2);
+  }
   default:
     return false;
   }
@@ -106,6 +127,44 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
            << ArgExpr->getType();
 
   return false;
+}
+
+bool SemaAMDGPU::checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
+                                         unsigned NumDataArgs) {
+  assert(NumDataArgs <= 2);
+  if (SemaRef.checkArgCountRange(TheCall, NumArgs, NumArgs))
+    return true;
+  Expr *Args[2];
+  QualType ArgTys[2];
+  for (unsigned I = 0; I != NumDataArgs; ++I) {
+    Args[I] = TheCall->getArg(I);
+    ArgTys[I] = Args[I]->getType();
+    // TODO: Vectors can also be supported.
+    if (!ArgTys[I]->isArithmeticType() || ArgTys[I]->isAnyComplexType()) {
+      SemaRef.Diag(Args[I]->getBeginLoc(),
+                   diag::err_typecheck_cond_expect_int_float)
+          << ArgTys[I] << Args[I]->getSourceRange();
+      return true;
+    }
+  }
+  if (NumDataArgs < 2)
+    return false;
+
+  if (getASTContext().hasSameUnqualifiedType(ArgTys[0], ArgTys[1]))
+    return false;
+
+  if (((ArgTys[0]->isUnsignedIntegerType() &&
+        ArgTys[1]->isSignedIntegerType()) ||
+       (ArgTys[0]->isSignedIntegerType() &&
+        ArgTys[1]->isUnsignedIntegerType())) &&
+      getASTContext().getTypeSize(ArgTys[0]) ==
+          getASTContext().getTypeSize(ArgTys[1]))
+    return false;
+
+  SemaRef.Diag(Args[1]->getBeginLoc(),
+               diag::err_typecheck_call_different_arg_types)
+      << ArgTys[0] << ArgTys[1];
+  return true;
 }
 
 static bool

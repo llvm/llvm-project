@@ -53,3 +53,24 @@ cc_test(
         "//third-party/unittest:gtest_main",
     ],
 )
+
+cc_test(
+    name = "clang_doc_test",
+    size = "small",
+    srcs = glob(
+        [
+            "clang-doc/*.cpp",
+            "clang-doc/*.h",
+        ],
+        allow_empty = False,
+    ),
+    deps = [
+        "//clang:ast",
+        "//clang:basic",
+        "//clang-tools-extra/clang-doc:lib",
+        "//llvm:BitstreamReader",
+        "//llvm:BitstreamWriter",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)

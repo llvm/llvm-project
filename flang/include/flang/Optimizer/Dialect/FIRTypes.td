@@ -213,6 +213,22 @@ def fir_IntegerType : FIR_Type<"Integer", "int"> {
   }];
 }
 
+def fir_UnsignedType : FIR_Type<"Unsigned", "unsigned"> {
+  let summary = "FIR unsigned type";
+
+  let description = [{
+    Model of a Fortran UNSIGNED extension intrinsic type, including
+    the KIND type parameter.
+  }];
+
+  let parameters = (ins "KindTy":$fKind);
+  let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    using KindTy = unsigned;
+  }];
+}
+
 def fir_LenType : FIR_Type<"Len", "len"> {
   let summary = "A LEN parameter (in a RecordType) argument's type";
 
@@ -329,6 +345,12 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
     bool isFinalized() const;
     void finalize(llvm::ArrayRef<TypePair> lenPList,
                   llvm::ArrayRef<TypePair> typeList);
+
+    // fir.type is unpacked by default. If the flag is set, the packed fir.type
+    // is generated and the alignment is enforced by explicit padding by i8
+    // array fields.
+    bool isPacked() const;
+    void pack(bool);
 
     detail::RecordTypeStorage const *uniqueKey() const;
   }];
@@ -465,6 +487,8 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
         size = size * static_cast<std::uint64_t>(extent);
       return size;
     }
+
+    mlir::Type getElementType() const { return getEleTy(); }
   }];
 }
 
@@ -519,6 +543,8 @@ def fir_VectorType : FIR_Type<"Vector", "vector"> {
 
   let extraClassDeclaration = [{
     static bool isValidElementType(mlir::Type t);
+
+    mlir::Type getElementType() const { return getEleTy(); }
   }];
 
   let skipDefaultBuilders = 1;
@@ -553,8 +579,9 @@ def IsBaseBoxTypePred
 def fir_BaseBoxType : Type<IsBaseBoxTypePred, "fir.box or fir.class type">;
 
 // Generalized FIR and standard dialect types representing intrinsic types
-def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerLike.predicate,
-    AnySignedInteger.predicate, fir_IntegerType.predicate]>, "any integer">;
+def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerOrIndexLike.predicate,
+    AnySignedInteger.predicate, AnyUnsignedInteger.predicate,
+    fir_IntegerType.predicate, fir_UnsignedType.predicate]>, "any integer">;
 def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,
     fir_LogicalType.predicate]>, "any logical">;
 def AnyRealLike : TypeConstraint<FloatLike.predicate, "any real">;

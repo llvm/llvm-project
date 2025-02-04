@@ -50,19 +50,19 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v31
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
 ; CHECK-NEXT:    s_mov_b32 s42, s15
 ; CHECK-NEXT:    s_mov_b32 s43, s14
 ; CHECK-NEXT:    s_mov_b32 s44, s13
 ; CHECK-NEXT:    s_mov_b32 s45, s12
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
+; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[46:47]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[34:35]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[36:37]
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
 ; CHECK-NEXT:    s_mov_b32 s12, s45
 ; CHECK-NEXT:    s_mov_b32 s13, s44
 ; CHECK-NEXT:    s_mov_b32 s14, s43
@@ -91,11 +91,11 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    v_readlane_b32 s34, v41, 2
 ; CHECK-NEXT:    v_readlane_b32 s31, v41, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v41, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s4, v41, 16
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
-; CHECK-NEXT:    s_addk_i32 s32, 0xfc00
 ; CHECK-NEXT:    s_mov_b32 s33, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

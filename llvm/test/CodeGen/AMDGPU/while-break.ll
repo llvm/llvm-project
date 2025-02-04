@@ -162,8 +162,8 @@ define amdgpu_ps < 2 x float> @while_break_two_chains_of_phi(float %v, i32 %x, i
 ; GCN-NEXT:    s_branch .LBB2_2
 ; GCN-NEXT:  .LBB2_1: ; %Flow1
 ; GCN-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GCN-NEXT:    s_and_b32 s1, exec_lo, s4
+; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GCN-NEXT:    s_and_b32 s1, exec_lo, s1
 ; GCN-NEXT:    s_or_b32 s2, s1, s2
 ; GCN-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
 ; GCN-NEXT:    s_cbranch_execz .LBB2_6
@@ -190,20 +190,17 @@ define amdgpu_ps < 2 x float> @while_break_two_chains_of_phi(float %v, i32 %x, i
 ; GCN-NEXT:  .LBB2_4: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB2_2 Depth=1
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; GCN-NEXT:    v_mov_b32_e32 v7, v6
-; GCN-NEXT:    s_mov_b32 s4, -1
-; GCN-NEXT:    s_and_saveexec_b32 s1, s3
+; GCN-NEXT:    s_mov_b32 s1, -1
+; GCN-NEXT:    s_and_saveexec_b32 s4, s3
 ; GCN-NEXT:    s_cbranch_execz .LBB2_1
 ; GCN-NEXT:  ; %bb.5: ; %latch
 ; GCN-NEXT:    ; in Loop: Header=BB2_2 Depth=1
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, s0, v3
-; GCN-NEXT:    v_mov_b32_e32 v7, v0
 ; GCN-NEXT:    s_add_i32 s0, s0, 1
-; GCN-NEXT:    s_orn2_b32 s4, vcc_lo, exec_lo
+; GCN-NEXT:    s_orn2_b32 s1, vcc_lo, exec_lo
 ; GCN-NEXT:    s_branch .LBB2_1
 ; GCN-NEXT:  .LBB2_6: ; %end
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s2
-; GCN-NEXT:    v_mov_b32_e32 v0, v7
 ; GCN-NEXT:    v_mov_b32_e32 v1, v6
 ; GCN-NEXT:    ; return to shader part epilog
 entry:

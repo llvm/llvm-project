@@ -106,7 +106,6 @@ struct Eg12{
   MySRV s1;
   MySRV s2;
 };
-// expected-warning@+3{{binding type 'u' only applies to types containing UAV resources}}
 // expected-warning@+2{{binding type 'u' only applies to types containing UAV resources}}
 // expected-error@+1{{binding type 'u' cannot be applied more than once}}
 Eg12 e12 : register(u9) : register(u10);
@@ -115,11 +114,13 @@ struct Eg13{
   MySRV s1;
   MySRV s2;
 };
-// expected-warning@+4{{binding type 'u' only applies to types containing UAV resources}}
 // expected-warning@+3{{binding type 'u' only applies to types containing UAV resources}}
-// expected-warning@+2{{binding type 'u' only applies to types containing UAV resources}}
+// expected-error@+2{{binding type 'u' cannot be applied more than once}}
 // expected-error@+1{{binding type 'u' cannot be applied more than once}}
 Eg13 e13 : register(u9) : register(u10) : register(u11);
+
+// expected-error@+1{{binding type 't' cannot be applied more than once}}
+Eg13 e13_2 : register(t11) : register(t12);
 
 struct Eg14{
  MyTemplatedUAV<int> r1;  
@@ -132,4 +133,3 @@ struct Eg15 {
 }; 
 // expected no error
 Eg15 e15 : register(c0);
-

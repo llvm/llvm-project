@@ -413,7 +413,7 @@ void HexagonFrameLowering::findShrunkPrologEpilog(MachineFunction &MF,
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
   MachineDominatorTree MDT;
-  MDT.calculate(MF);
+  MDT.recalculate(MF);
   MachinePostDominatorTree MPT;
   MPT.recalculate(MF);
 
@@ -906,22 +906,25 @@ void HexagonFrameLowering::insertAllocframe(MachineBasicBlock &MBB,
   if (NumBytes >= ALLOCFRAME_MAX) {
     // Emit allocframe(#0).
     BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::S2_allocframe))
-      .addDef(SP)
-      .addReg(SP)
-      .addImm(0)
-      .addMemOperand(MMO);
+        .addDef(SP)
+        .addReg(SP)
+        .addImm(0)
+        .addMemOperand(MMO)
+        .setMIFlag(MachineInstr::FrameSetup);
 
     // Subtract the size from the stack pointer.
     Register SP = HRI.getStackRegister();
     BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_addi), SP)
-      .addReg(SP)
-      .addImm(-int(NumBytes));
+        .addReg(SP)
+        .addImm(-int(NumBytes))
+        .setMIFlag(MachineInstr::FrameSetup);
   } else {
     BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::S2_allocframe))
-      .addDef(SP)
-      .addReg(SP)
-      .addImm(NumBytes)
-      .addMemOperand(MMO);
+        .addDef(SP)
+        .addReg(SP)
+        .addImm(NumBytes)
+        .addMemOperand(MMO)
+        .setMIFlag(MachineInstr::FrameSetup);
   }
 }
 
@@ -1141,10 +1144,7 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
   }
 }
 
-bool HexagonFrameLowering::hasFP(const MachineFunction &MF) const {
-  if (MF.getFunction().hasFnAttribute(Attribute::Naked))
-    return false;
-
+bool HexagonFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   auto &MFI = MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   bool HasExtraAlign = HRI.hasStackRealignment(MF);

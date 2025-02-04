@@ -1,4 +1,5 @@
 // RUN: fir-opt --target-rewrite="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
+// RUN: fir-opt --target-rewrite="target=loongarch64-unknown-linux-gnu" %s | FileCheck %s
 
 // Test that we rewrite the signature and body of a func.function that returns a
 // complex<16>.

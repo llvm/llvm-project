@@ -246,6 +246,8 @@ static_assert(sizeof(Thread) == 48);
 
 struct Exception {
   static constexpr size_t MaxParameters = 15;
+  static constexpr size_t MaxParameterBytes = MaxParameters * sizeof(uint64_t);
+  static const uint32_t LLDB_FLAG = 0x4C4C4442; // ASCII for 'LLDB'
 
   support::ulittle32_t ExceptionCode;
   support::ulittle32_t ExceptionFlags;

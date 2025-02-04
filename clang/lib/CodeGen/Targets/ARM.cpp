@@ -35,7 +35,9 @@ public:
     case llvm::Triple::EABI:
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABI:
+    case llvm::Triple::GNUEABIT64:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::MuslEABIHF:
       return true;
@@ -48,6 +50,7 @@ public:
     switch (getTarget().getTriple().getEnvironment()) {
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABIHF:
       return true;
     default:
@@ -68,6 +71,7 @@ private:
                                   unsigned functionCallConv) const;
   ABIArgInfo classifyHomogeneousAggregate(QualType Ty, const Type *Base,
                                           uint64_t Members) const;
+  bool shouldIgnoreEmptyArg(QualType Ty) const;
   ABIArgInfo coerceIllegalVector(QualType Ty) const;
   bool isIllegalVectorType(QualType Ty) const;
   bool containsAnyFP16Vectors(QualType Ty) const;
@@ -325,6 +329,31 @@ ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
   return ABIArgInfo::getDirect(nullptr, 0, nullptr, false, Align);
 }
 
+bool ARMABIInfo::shouldIgnoreEmptyArg(QualType Ty) const {
+  uint64_t Size = getContext().getTypeSize(Ty);
+  assert((isEmptyRecord(getContext(), Ty, true) || Size == 0) &&
+         "Arg is not empty");
+
+  // Empty records are ignored in C mode, and in C++ on WatchOS.
+  if (!getContext().getLangOpts().CPlusPlus ||
+      getABIKind() == ARMABIKind::AAPCS16_VFP)
+    return true;
+
+  // In C++ mode, arguments which have sizeof() == 0 are ignored. This is not a
+  // situation which is defined by any C++ standard or ABI, but this matches
+  // GCC's de facto ABI.
+  if (Size == 0)
+    return true;
+
+  // Clang 19.0 and earlier always ignored empty struct arguments in C++ mode.
+  if (getContext().getLangOpts().getClangABICompat() <=
+      LangOptions::ClangABI::Ver19)
+    return true;
+
+  // Otherwise, they are passed as if they have a size of 1 byte.
+  return false;
+}
+
 ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
                                             unsigned functionCallConv) const {
   // 6.1.2.1 The following argument types are VFP CPRCs:
@@ -363,9 +392,15 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
     return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
-  // Ignore empty records.
-  if (isEmptyRecord(getContext(), Ty, true))
-    return ABIArgInfo::getIgnore();
+  // Empty records are either ignored completely or passed as if they were a
+  // 1-byte object, depending on the ABI and language standard.
+  if (isEmptyRecord(getContext(), Ty, true) ||
+      getContext().getTypeSize(Ty) == 0) {
+    if (shouldIgnoreEmptyArg(Ty))
+      return ABIArgInfo::getIgnore();
+    else
+      return ABIArgInfo::getDirect(llvm::Type::getInt8Ty(getVMContext()));
+  }
 
   if (IsAAPCS_VFP) {
     // Homogeneous Aggregates need to be expanded when we can fit the aggregate
@@ -415,12 +450,6 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
     return ABIArgInfo::getIndirect(CharUnits::fromQuantity(ABIAlign),
                                    /*ByVal=*/true,
                                    /*Realign=*/TyAlign > ABIAlign);
-  }
-
-  // On RenderScript, coerce Aggregates <= 64 bytes to an integer array of
-  // same size and alignment.
-  if (getTarget().isRenderScriptTarget()) {
-    return coerceToIntArray(Ty, getContext(), getVMContext());
   }
 
   // Otherwise, pass by coercing to a structure of the appropriate size.
@@ -591,7 +620,8 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
 
   // Otherwise this is an AAPCS variant.
 
-  if (isEmptyRecord(getContext(), RetTy, true))
+  if (isEmptyRecord(getContext(), RetTy, true) ||
+      getContext().getTypeSize(RetTy) == 0)
     return ABIArgInfo::getIgnore();
 
   // Check for homogeneous aggregates with AAPCS-VFP.
@@ -606,11 +636,6 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
   // are returned indirectly.
   uint64_t Size = getContext().getTypeSize(RetTy);
   if (Size <= 32) {
-    // On RenderScript, coerce Aggregates <= 4 bytes to an integer array of
-    // same size and alignment.
-    if (getTarget().isRenderScriptTarget()) {
-      return coerceToIntArray(RetTy, getContext(), getVMContext());
-    }
     if (getDataLayout().isBigEndian())
       // Return in 32 bit integer integer type (as if loaded by LDR, AAPCS 5.4)
       return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
@@ -760,7 +785,9 @@ RValue ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CharUnits SlotSize = CharUnits::fromQuantity(4);
 
   // Empty records are ignored for parameter passing purposes.
-  if (isEmptyRecord(getContext(), Ty, true))
+  uint64_t Size = getContext().getTypeSize(Ty);
+  bool IsEmpty = isEmptyRecord(getContext(), Ty, true);
+  if ((IsEmpty || Size == 0) && shouldIgnoreEmptyArg(Ty))
     return Slot.asRValue();
 
   CharUnits TySize = getContext().getTypeSizeInChars(Ty);

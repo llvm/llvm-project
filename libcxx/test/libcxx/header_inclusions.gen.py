@@ -10,34 +10,48 @@
 # prescribed by the Standard.
 
 # RUN: %{python} %s %{libcxx-dir}/utils
+# END.
 
 import sys
+
 sys.path.append(sys.argv[1])
-from libcxx.header_information import lit_header_restrictions, public_headers, mandatory_inclusions
+from libcxx.header_information import (
+    lit_header_restrictions,
+    lit_header_undeprecations,
+    public_headers,
+    mandatory_inclusions,
+)
 
 for header in public_headers:
-  header_guard = lambda h: f"_LIBCPP_{h.upper().replace('.', '_').replace('/', '_')}"
+    header_guard = (
+        lambda h: f"_LIBCPP_{str(h).upper().replace('.', '_').replace('/', '_')}"
+    )
 
-  # <cassert> has no header guards
-  if header == 'cassert':
-    checks = ''
-  else:
-    checks = f'''
+    # <cassert> has no header guards
+    if header == "cassert":
+        checks = ""
+    else:
+        checks = f"""
 #ifndef {header_guard(header)}
 # error <{header}> was expected to define a header guard {header_guard(header)}
 #endif
-'''
-  for includee in mandatory_inclusions.get(header, []):
-    checks += f'''
+"""
+    for includee in mandatory_inclusions.get(header, []):
+        checks += f"""
 #ifndef {header_guard(includee)}
 # error <{header}> was expected to include <{includee}>
 #endif
-'''
+"""
 
-  print(f"""\
+    print(
+        f"""\
 //--- {header}.compile.pass.cpp
+// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
+
 {lit_header_restrictions.get(header, '')}
+{lit_header_undeprecations.get(header, '')}
 
 #include <{header}>
 {checks}
-""")
+"""
+    )

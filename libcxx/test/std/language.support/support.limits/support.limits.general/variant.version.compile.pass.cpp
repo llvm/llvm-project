@@ -19,6 +19,8 @@
     __cpp_lib_constrained_equality    202403L [C++26]
     __cpp_lib_freestanding_variant    202311L [C++26]
     __cpp_lib_variant                 202102L [C++17]
+                                      202106L [C++20]
+                                      202306L [C++26]
 */
 
 #include <variant>
@@ -82,8 +84,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++20"
 # endif
-# if __cpp_lib_variant != 202102L
-#   error "__cpp_lib_variant should have the value 202102L in c++20"
+# if __cpp_lib_variant != 202106L
+#   error "__cpp_lib_variant should have the value 202106L in c++20"
 # endif
 
 #elif TEST_STD_VER == 23
@@ -99,8 +101,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++23"
 # endif
-# if __cpp_lib_variant != 202102L
-#   error "__cpp_lib_variant should have the value 202102L in c++23"
+# if __cpp_lib_variant != 202106L
+#   error "__cpp_lib_variant should have the value 202106L in c++23"
 # endif
 
 #elif TEST_STD_VER > 23
@@ -134,8 +136,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++26"
 # endif
-# if __cpp_lib_variant != 202102L
-#   error "__cpp_lib_variant should have the value 202102L in c++26"
+# if __cpp_lib_variant != 202306L
+#   error "__cpp_lib_variant should have the value 202306L in c++26"
 # endif
 
 #endif // TEST_STD_VER > 23

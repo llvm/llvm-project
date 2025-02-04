@@ -12,6 +12,7 @@
 #define __managed__ __attribute__((managed))
 #endif
 #define __launch_bounds__(...) __attribute__((launch_bounds(__VA_ARGS__)))
+#define __grid_constant__ __attribute__((grid_constant))
 #else
 #define __constant__
 #define __device__
@@ -20,6 +21,7 @@
 #define __shared__
 #define __managed__
 #define __launch_bounds__(...)
+#define __grid_constant__
 #endif
 
 struct dim3 {

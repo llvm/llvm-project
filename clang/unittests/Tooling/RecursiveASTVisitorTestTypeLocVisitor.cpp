@@ -12,9 +12,9 @@ using namespace clang;
 
 namespace {
 
-class TypeLocVisitor : public ExpectedLocationVisitor<TypeLocVisitor> {
+class TypeLocVisitor : public ExpectedLocationVisitor {
 public:
-  bool VisitTypeLoc(TypeLoc TypeLocation) {
+  bool VisitTypeLoc(TypeLoc TypeLocation) override {
     Match(TypeLocation.getType().getAsString(), TypeLocation.getBeginLoc());
     return true;
   }

@@ -203,7 +203,6 @@ func.func @memref_subview_dynamic_offset_i4(%idx : index) -> i4 {
 
 // -----
 
-
 func.func @negative_memref_subview_non_contiguous(%idx : index) -> i4 {
   %c0 = arith.constant 0 : index
   %arr = memref.alloc() : memref<40x40xi4>
@@ -543,13 +542,15 @@ func.func @memref_copy_i4(%arg0: memref<32x128xi4, 1>, %arg1: memref<32x128xi4>)
 
 // -----
 
-!colMajor = memref<8x8xi4, strided<[1, 8]>>
-func.func @copy_distinct_layouts(%idx : index) -> i4 {
-  %c0 = arith.constant 0 : index
-  %arr = memref.alloc() : memref<8x8xi4>
-  %arr2 = memref.alloc() : !colMajor
-  // expected-error @+1 {{failed to legalize operation 'memref.copy' that was explicitly marked illegal}}
-  memref.copy %arr, %arr2 : memref<8x8xi4> to !colMajor
-  %ld = memref.load %arr2[%c0, %c0] : !colMajor
-  return %ld : i4
+func.func @alloc_non_contiguous() {
+  // expected-error @+1 {{failed to legalize operation 'memref.alloc' that was explicitly marked illegal}}
+  %arr = memref.alloc() : memref<8x8xi4, strided<[1, 8]>>
+  return
+}
+
+// -----
+
+// expected-error @+1 {{failed to legalize operation 'func.func' that was explicitly marked illegal}}
+func.func @argument_non_contiguous(%arg0 : memref<8x8xi4, strided<[1, 8]>>) {
+  return
 }

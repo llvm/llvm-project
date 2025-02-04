@@ -123,7 +123,7 @@ bool PPCLowerMASSVEntries::handlePowSpecialCases(CallInst *CI, Function &Func,
         return false;
 
       CI->setCalledFunction(
-          Intrinsic::getDeclaration(&M, Intrinsic::pow, CI->getType()));
+          Intrinsic::getOrInsertDeclaration(&M, Intrinsic::pow, CI->getType()));
       return true;
     }
 

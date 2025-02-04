@@ -85,6 +85,32 @@ class OpenMP_AllocateClauseSkip<
 def OpenMP_AllocateClause : OpenMP_AllocateClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// LLVM OpenMP extension `ompx_bare` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_BareClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    UnitAttr:$bare
+  );
+
+  let optAssemblyFormat = [{
+    `ompx_bare` $bare
+  }];
+
+  let description = [{
+    `ompx_bare` allows `omp target teams` to be executed on a GPU with an
+    explicit number of teams and threads. This clause also allows the teams and
+    threads sizes to have up to 3 dimensions.
+  }];
+}
+
+def OpenMP_BareClause : OpenMP_BareClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [16.1, 16.2] `cancel-directive-name` clause set
 //===----------------------------------------------------------------------===//
 
@@ -106,6 +132,31 @@ class OpenMP_CancelDirectiveNameClauseSkip<
 }
 
 def OpenMP_CancelDirectiveNameClause : OpenMP_CancelDirectiveNameClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [11.7.1] `bind` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_BindClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    OptionalAttr<BindKindAttr>:$bind_kind
+  );
+
+  let optAssemblyFormat = [{
+    `bind` `(` custom<ClauseAttr>($bind_kind) `)`
+  }];
+
+  let description = [{
+    The `bind` clause specifies the binding region of the construct on which it
+    appears.
+  }];
+}
+
+def OpenMP_BindClause : OpenMP_BindClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [5.7.2] `copyprivate` clause
@@ -284,6 +335,43 @@ class OpenMP_DoacrossClauseSkip<
 def OpenMP_DoacrossClause : OpenMP_DoacrossClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [5.4.7] `exclusive` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_ExclusiveClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    Variadic<AnyType>:$exclusive_vars
+  );
+
+  let optAssemblyFormat = [{
+    `exclusive` `(` $exclusive_vars `:` type($exclusive_vars) `)`
+  }];
+
+  let extraClassDeclaration = [{
+    bool hasExclusiveVars() {
+      return !getExclusiveVars().empty();
+    }
+  }];
+
+  let description = [{
+    The exclusive clause is used on a separating directive that separates a
+    structured block into two structured block sequences. If it
+    is specified, the input phase excludes the preceding structured block 
+    sequence and instead includes the following structured block sequence, 
+    while the scan phase includes the preceding structured block sequence.
+
+    The `exclusive_vars` is a variadic list of operands that specifies the
+    scan-reduction accumulator symbols.
+  }];
+}
+
+def OpenMP_ExclusiveClause : OpenMP_ExclusiveClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [10.5.1] `filter` clause
 //===----------------------------------------------------------------------===//
 
@@ -394,6 +482,43 @@ class OpenMP_HasDeviceAddrClauseSkip<
 def OpenMP_HasDeviceAddrClause : OpenMP_HasDeviceAddrClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [5.4.7] `inclusive` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_InclusiveClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    Variadic<AnyType>:$inclusive_vars
+  );
+
+  let optAssemblyFormat = [{
+    `inclusive` `(` $inclusive_vars `:` type($inclusive_vars) `)`
+  }];
+
+  let extraClassDeclaration = [{
+    bool hasInclusiveVars() {
+      return !getInclusiveVars().empty();
+    }
+  }];
+
+  let description = [{
+    The inclusive clause is used on a separating directive that separates a
+    structured block into two structured block sequences. If it is specified,
+    the input phase includes the preceding structured block sequence and the
+    scan phase includes the following structured block sequence.
+
+    The `inclusive_vars` is a variadic list of operands that specifies the
+    scan-reduction accumulator symbols.
+  }];
+}
+
+def OpenMP_InclusiveClause : OpenMP_InclusiveClauseSkip<>;
+
+
+//===----------------------------------------------------------------------===//
 // V5.2: [15.1.2] `hint` clause
 //===----------------------------------------------------------------------===//
 
@@ -418,6 +543,44 @@ class OpenMP_HintClauseSkip<
 }
 
 def OpenMP_HintClause : OpenMP_HintClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// Not in the spec: Clause-like structure to hold host-evaluated values.
+//===----------------------------------------------------------------------===//
+
+class OpenMP_HostEvalClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface, IsolatedFromAbove
+  ];
+
+  let arguments = (ins
+    Variadic<AnyType>:$host_eval_vars
+  );
+
+  let extraClassDeclaration = [{
+    unsigned numHostEvalBlockArgs() {
+      return getHostEvalVars().size();
+    }
+  }];
+
+  let description = [{
+    The optional `host_eval_vars` holds values defined outside of the region of
+    the `IsolatedFromAbove` operation for which a corresponding entry block
+    argument is defined. The only legal uses for these captured values are the
+    following:
+      - `num_teams` or `thread_limit` clause of an immediately nested
+      `omp.teams` operation.
+      - If the operation is the top-level `omp.target` of a target SPMD kernel:
+        - `num_threads` clause of the nested `omp.parallel` operation.
+        - Bounds and steps of the nested `omp.loop_nest` operation.
+  }];
+}
+
+def OpenMP_HostEvalClause : OpenMP_HostEvalClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [3.4] `if` clause
@@ -885,6 +1048,34 @@ class OpenMP_ParallelizationLevelClauseSkip<
 def OpenMP_ParallelizationLevelClause : OpenMP_ParallelizationLevelClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// OpenMPV5.2: [12.5.2] `detach` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_DetachClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+
+  let traits = [BlockArgOpenMPOpInterface];
+
+  let arguments = (ins Optional<OpenMP_PointerLikeType>:$event_handle);
+
+  let optAssemblyFormat = [{
+		`detach` `(` $event_handle `:` type($event_handle) `)`
+	}];
+
+  let description = [{
+		The detach clause specifies that the task generated by the construct on which it appears is a
+	detachable task. A new allow-completion event is created and connected to the completion of the
+	associated task region. The original event-handle is updated to represent that allow-completion
+	event before the task data environment is created.
+	}];
+}
+
+def OpenMP_DetachClause : OpenMP_DetachClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [12.4] `priority` clause
 //===----------------------------------------------------------------------===//
 
@@ -983,6 +1174,7 @@ class OpenMP_ReductionClauseSkip<
   ];
 
   let arguments = (ins
+    OptionalAttr<ReductionModifierAttr>:$reduction_mod,
     Variadic<OpenMP_PointerLikeType>:$reduction_vars,
     OptionalAttr<DenseBoolArrayAttr>:$reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$reduction_syms
@@ -996,10 +1188,11 @@ class OpenMP_ReductionClauseSkip<
 
   // Description varies depending on the operation.
   let description = [{
-    Reductions can be performed by specifying reduction accumulator variables in
-    `reduction_vars`, symbols referring to reduction declarations in the
-    `reduction_syms` attribute, and whether the reduction variable should be
-    passed into the reduction region by value or by reference in
+    Reductions can be performed by specifying the reduction modifer
+    (`default`, `inscan` or `task`) in `reduction_mod`, reduction accumulator
+    variables in `reduction_vars`, symbols referring to reduction declarations
+    in the `reduction_syms` attribute, and whether the reduction variable
+    should be passed into the reduction region by value or by reference in
     `reduction_byref`. Each reduction is identified by the accumulator it uses
     and accumulators must not be repeated in the same reduction. A private
     variable corresponding to the accumulator is used in place of the

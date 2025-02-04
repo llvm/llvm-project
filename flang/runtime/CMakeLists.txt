@@ -59,6 +59,16 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     )
 endif()
 
+set(linked_libraries FortranDecimal)
+
+# function checks
+find_package(Backtrace)
+set(HAVE_BACKTRACE ${Backtrace_FOUND})
+set(BACKTRACE_HEADER ${Backtrace_HEADER})
+if(HAVE_BACKTRACE)
+  list(APPEND linked_libraries ${Backtrace_LIBRARY})
+endif()
+
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)
 check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
@@ -266,7 +276,7 @@ if (NOT DEFINED MSVC)
   add_flang_library(FortranRuntime
     ${sources}
     LINK_LIBS
-    FortranDecimal
+    ${linked_libraries}
 
     INSTALL_WITH_TOOLCHAIN
   )
@@ -274,7 +284,7 @@ else()
   add_flang_library(FortranRuntime
     ${sources}
     LINK_LIBS
-    FortranDecimal
+    ${linked_libraries}
   )
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
   add_flang_library(FortranRuntime.static ${sources}
@@ -308,12 +318,12 @@ set_target_properties(FortranRuntime PROPERTIES FOLDER "Flang/Runtime Libraries"
 # If FortranRuntime is part of a Flang build (and not a separate build) then
 # add dependency to make sure that Fortran runtime library is being built after
 # we have the Flang compiler available.  This also includes the MODULE files
-# that compile when the 'flang-new' target is built.
+# that compile when the 'flang' target is built.
 #
 # TODO: This is a workaround and should be updated when runtime build procedure
 # is changed to a regular runtime build.  See discussion in PR #95388.
-if (TARGET flang-new AND TARGET module_files)
-  add_dependencies(FortranRuntime flang-new module_files)
+if (TARGET flang AND TARGET module_files)
+  add_dependencies(FortranRuntime flang module_files)
 endif()
 
 if (FLANG_CUF_RUNTIME)

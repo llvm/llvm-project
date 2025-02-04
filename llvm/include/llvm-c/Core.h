@@ -322,11 +322,6 @@ typedef enum {
 } LLVMRealPredicate;
 
 typedef enum {
-  LLVMLandingPadCatch,    /**< A catch clause   */
-  LLVMLandingPadFilter    /**< A filter clause  */
-} LLVMLandingPadClauseTy;
-
-typedef enum {
   LLVMNotThreadLocal = 0,
   LLVMGeneralDynamicTLSModel,
   LLVMLocalDynamicTLSModel,
@@ -2807,10 +2802,10 @@ unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen);
 unsigned LLVMGetIntrinsicID(LLVMValueRef Fn);
 
 /**
- * Create or insert the declaration of an intrinsic.  For overloaded intrinsics,
+ * Get or insert the declaration of an intrinsic.  For overloaded intrinsics,
  * parameter types must be provided to uniquely identify an overload.
  *
- * @see llvm::Intrinsic::getDeclaration()
+ * @see llvm::Intrinsic::getOrInsertDeclaration()
  */
 LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
                                          unsigned ID,
@@ -2834,10 +2829,8 @@ LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
 const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength);
 
 /** Deprecated: Use LLVMIntrinsicCopyOverloadedName2 instead. */
-const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
-                                            LLVMTypeRef *ParamTypes,
-                                            size_t ParamCount,
-                                            size_t *NameLength);
+char *LLVMIntrinsicCopyOverloadedName(unsigned ID, LLVMTypeRef *ParamTypes,
+                                      size_t ParamCount, size_t *NameLength);
 
 /**
  * Copies the name of an overloaded intrinsic identified by a given list of
@@ -2850,10 +2843,9 @@ const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
  *
  * @see llvm::Intrinsic::getName()
  */
-const char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
-                                             LLVMTypeRef *ParamTypes,
-                                             size_t ParamCount,
-                                             size_t *NameLength);
+char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
+                                       LLVMTypeRef *ParamTypes,
+                                       size_t ParamCount, size_t *NameLength);
 
 /**
  * Obtain if the intrinsic identified by the given ID is overloaded.

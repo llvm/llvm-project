@@ -48,7 +48,7 @@ static StringRef getRCPrefix(dxil::ResourceClass RC) {
   llvm_unreachable("covered switch");
 }
 
-static StringRef getFormatName(const dxil::ResourceInfo &RI) {
+static StringRef getFormatName(const dxil::ResourceTypeInfo &RI) {
   if (RI.isTyped()) {
     switch (RI.getTyped().ElementTy) {
     case dxil::ElementType::I1:
@@ -139,9 +139,9 @@ static StringRef getTextureDimName(dxil::ResourceKind RK) {
 
 namespace {
 struct FormatResourceDimension
-    : public llvm::FormatAdapter<const dxil::ResourceInfo &> {
-  explicit FormatResourceDimension(const dxil::ResourceInfo &RI)
-      : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI) {}
+    : public llvm::FormatAdapter<const dxil::ResourceTypeInfo &> {
+  explicit FormatResourceDimension(const dxil::ResourceTypeInfo &RI)
+      : llvm::FormatAdapter<const dxil::ResourceTypeInfo &>(RI) {}
 
   void format(llvm::raw_ostream &OS, StringRef Style) override {
     dxil::ResourceKind RK = Item.getResourceKind();
@@ -149,7 +149,7 @@ struct FormatResourceDimension
     default: {
       OS << getTextureDimName(RK);
       if (Item.isMultiSample())
-        OS << Item.getMultiSample().Count;
+        OS << Item.getMultiSampleCount();
       break;
     }
     case dxil::ResourceKind::RawBuffer:
@@ -172,33 +172,40 @@ struct FormatResourceDimension
 };
 
 struct FormatBindingID
-    : public llvm::FormatAdapter<const dxil::ResourceInfo &> {
-  explicit FormatBindingID(const dxil::ResourceInfo &RI)
-      : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI) {}
+    : public llvm::FormatAdapter<const dxil::ResourceBindingInfo &> {
+  dxil::ResourceClass RC;
+
+  explicit FormatBindingID(const dxil::ResourceBindingInfo &RBI,
+                           const dxil::ResourceTypeInfo &RTI)
+      : llvm::FormatAdapter<const dxil::ResourceBindingInfo &>(RBI),
+        RC(RTI.getResourceClass()) {}
 
   void format(llvm::raw_ostream &OS, StringRef Style) override {
-    OS << getRCPrefix(Item.getResourceClass()).upper()
-       << Item.getBinding().RecordID;
+    OS << getRCPrefix(RC).upper() << Item.getBinding().RecordID;
   }
 };
 
 struct FormatBindingLocation
-    : public llvm::FormatAdapter<const dxil::ResourceInfo &> {
-  explicit FormatBindingLocation(const dxil::ResourceInfo &RI)
-      : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI) {}
+    : public llvm::FormatAdapter<const dxil::ResourceBindingInfo &> {
+  dxil::ResourceClass RC;
+
+  explicit FormatBindingLocation(const dxil::ResourceBindingInfo &RBI,
+                                 const dxil::ResourceTypeInfo &RTI)
+      : llvm::FormatAdapter<const dxil::ResourceBindingInfo &>(RBI),
+        RC(RTI.getResourceClass()) {}
 
   void format(llvm::raw_ostream &OS, StringRef Style) override {
     const auto &Binding = Item.getBinding();
-    OS << getRCPrefix(Item.getResourceClass()) << Binding.LowerBound;
+    OS << getRCPrefix(RC) << Binding.LowerBound;
     if (Binding.Space)
       OS << ",space" << Binding.Space;
   }
 };
 
 struct FormatBindingSize
-    : public llvm::FormatAdapter<const dxil::ResourceInfo &> {
-  explicit FormatBindingSize(const dxil::ResourceInfo &RI)
-      : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI) {}
+    : public llvm::FormatAdapter<const dxil::ResourceBindingInfo &> {
+  explicit FormatBindingSize(const dxil::ResourceBindingInfo &RI)
+      : llvm::FormatAdapter<const dxil::ResourceBindingInfo &>(RI) {}
 
   void format(llvm::raw_ostream &OS, StringRef Style) override {
     uint32_t Size = Item.getBinding().Size;
@@ -211,7 +218,8 @@ struct FormatBindingSize
 
 } // namespace
 
-static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
+static void prettyPrintResources(raw_ostream &OS, const DXILBindingMap &DBM,
+                                 DXILResourceTypeMap &DRTM,
                                  const dxil::Resources &MDResources) {
   // Column widths are arbitrary but match the widths DXC uses.
   OS << ";\n; Resource Bindings:\n;\n";
@@ -222,20 +230,22 @@ static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
       "", "", "", "", "");
 
   // TODO: Do we want to sort these by binding or something like that?
-  for (const dxil::ResourceInfo &RI : DRM) {
-    dxil::ResourceClass RC = RI.getResourceClass();
+  for (const dxil::ResourceBindingInfo &RBI : DBM) {
+    const dxil::ResourceTypeInfo &RTI = DRTM[RBI.getHandleTy()];
+
+    dxil::ResourceClass RC = RTI.getResourceClass();
     assert((RC != dxil::ResourceClass::CBuffer || !MDResources.hasCBuffers()) &&
            "Old and new cbuffer representations can't coexist");
     assert((RC != dxil::ResourceClass::UAV || !MDResources.hasUAVs()) &&
            "Old and new UAV representations can't coexist");
 
-    StringRef Name(RI.getName());
+    StringRef Name(RBI.getName());
     StringRef Type(getRCName(RC));
-    StringRef Format(getFormatName(RI));
-    FormatResourceDimension Dim(RI);
-    FormatBindingID ID(RI);
-    FormatBindingLocation Bind(RI);
-    FormatBindingSize Count(RI);
+    StringRef Format(getFormatName(RTI));
+    FormatResourceDimension Dim(RTI);
+    FormatBindingID ID(RBI, RTI);
+    FormatBindingLocation Bind(RBI, RTI);
+    FormatBindingSize Count(RBI);
     OS << formatv("; {0,-30} {1,10} {2,7} {3,11} {4,7} {5,14} {6,9}\n", Name,
                   Type, Format, Dim, ID, Bind, Count);
   }
@@ -250,9 +260,10 @@ static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
 
 PreservedAnalyses DXILPrettyPrinterPass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
-  const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
+  const DXILBindingMap &DBM = MAM.getResult<DXILResourceBindingAnalysis>(M);
+  DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
   const dxil::Resources &MDResources = MAM.getResult<DXILResourceMDAnalysis>(M);
-  prettyPrintResources(OS, DRM, MDResources);
+  prettyPrintResources(OS, DBM, DRTM, MDResources);
   return PreservedAnalyses::all();
 }
 
@@ -277,7 +288,8 @@ public:
   bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<DXILResourceWrapperPass>();
+    AU.addRequired<DXILResourceTypeWrapperPass>();
+    AU.addRequired<DXILResourceBindingWrapperPass>();
     AU.addRequired<DXILResourceMDWrapper>();
   }
 };
@@ -286,16 +298,19 @@ public:
 char DXILPrettyPrinterLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
                       "DXIL Metadata Pretty Printer", true, true)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceMDWrapper)
 INITIALIZE_PASS_END(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
                     "DXIL Metadata Pretty Printer", true, true)
 
 bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
-  const DXILResourceMap &DRM =
-      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
+  const DXILBindingMap &DBM =
+      getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+  DXILResourceTypeMap &DRTM =
+      getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
   dxil::Resources &Res = getAnalysis<DXILResourceMDWrapper>().getDXILResource();
-  prettyPrintResources(OS, DRM, Res);
+  prettyPrintResources(OS, DBM, DRTM, Res);
   return false;
 }
 

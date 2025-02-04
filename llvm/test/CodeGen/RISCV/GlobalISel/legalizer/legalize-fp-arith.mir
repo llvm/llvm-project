@@ -211,12 +211,12 @@ body:             |
 
 ...
 ---
-name:            fcopysign_f32
+name:            fcopysign_f32_f32
 body:             |
   bb.0:
     liveins: $f10_f, $f11_f
 
-    ; CHECK-LABEL: name: fcopysign_f32
+    ; CHECK-LABEL: name: fcopysign_f32_f32
     ; CHECK: liveins: $f10_f, $f11_f
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
@@ -226,6 +226,27 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $f10_f
     %0:_(s32) = COPY $f10_f
     %1:_(s32) = COPY $f11_f
+    %2:_(s32) = G_FCOPYSIGN %0, %1
+    $f10_f = COPY %2(s32)
+    PseudoRET implicit $f10_f
+
+...
+---
+name:            fcopysign_f32_f64
+body:             |
+  bb.0:
+    liveins: $f10_f, $f11_d
+
+    ; CHECK-LABEL: name: fcopysign_f32_f64
+    ; CHECK: liveins: $f10_f, $f11_d
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $f11_d
+    ; CHECK-NEXT: [[FCOPYSIGN:%[0-9]+]]:_(s32) = G_FCOPYSIGN [[COPY]], [[COPY1]](s64)
+    ; CHECK-NEXT: $f10_f = COPY [[FCOPYSIGN]](s32)
+    ; CHECK-NEXT: PseudoRET implicit $f10_f
+    %0:_(s32) = COPY $f10_f
+    %1:_(s64) = COPY $f11_d
     %2:_(s32) = G_FCOPYSIGN %0, %1
     $f10_f = COPY %2(s32)
     PseudoRET implicit $f10_f
@@ -438,12 +459,12 @@ body:             |
 
 ...
 ---
-name:            fcopysign_f64
+name:            fcopysign_f64_f64
 body:             |
   bb.0:
     liveins: $f10_d, $f11_d
 
-    ; CHECK-LABEL: name: fcopysign_f64
+    ; CHECK-LABEL: name: fcopysign_f64_f64
     ; CHECK: liveins: $f10_d, $f11_d
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $f10_d
@@ -453,6 +474,27 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %0:_(s64) = COPY $f10_d
     %1:_(s64) = COPY $f11_d
+    %2:_(s64) = G_FCOPYSIGN %0, %1
+    $f10_d = COPY %2(s64)
+    PseudoRET implicit $f10_d
+
+...
+---
+name:            fcopysign_f64_f32
+body:             |
+  bb.0:
+    liveins: $f10_d, $f11_f
+
+    ; CHECK-LABEL: name: fcopysign_f64_f32
+    ; CHECK: liveins: $f10_d, $f11_f
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $f10_d
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
+    ; CHECK-NEXT: [[FCOPYSIGN:%[0-9]+]]:_(s64) = G_FCOPYSIGN [[COPY]], [[COPY1]](s32)
+    ; CHECK-NEXT: $f10_d = COPY [[FCOPYSIGN]](s64)
+    ; CHECK-NEXT: PseudoRET implicit $f10_d
+    %0:_(s64) = COPY $f10_d
+    %1:_(s32) = COPY $f11_f
     %2:_(s64) = G_FCOPYSIGN %0, %1
     $f10_d = COPY %2(s64)
     PseudoRET implicit $f10_d

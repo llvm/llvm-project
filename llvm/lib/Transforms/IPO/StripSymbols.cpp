@@ -31,7 +31,6 @@
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -143,8 +142,8 @@ static bool StripSymbolNames(Module &M, bool PreserveDbgInfo) {
 }
 
 static bool stripDebugDeclareImpl(Module &M) {
-
-  Function *Declare = M.getFunction("llvm.dbg.declare");
+  Function *Declare =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::dbg_declare);
   std::vector<Constant*> DeadConstants;
 
   if (Declare) {

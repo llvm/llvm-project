@@ -19,7 +19,6 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -588,7 +587,7 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
       return rv;
     }
     case Type::VoidTyID:
-      rv.IntVal = APInt(32, ((int(*)())(intptr_t)FPtr)());
+      rv.IntVal = APInt(32, ((int (*)())(intptr_t)FPtr)(), true);
       return rv;
     case Type::FloatTyID:
       rv.FloatVal = ((float(*)())(intptr_t)FPtr)();

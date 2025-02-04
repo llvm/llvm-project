@@ -60,6 +60,12 @@ public:
                                      lldb::addr_t base_addr,
                                      bool base_addr_is_offset) override;
 
+  void CalculateDynamicSaveCoreRanges(
+      lldb_private::Process &process,
+      std::vector<lldb_private::MemoryRegionInfo> &ranges,
+      llvm::function_ref<bool(const lldb_private::Thread &)>
+          save_thread_predicate) override;
+
 protected:
   /// Runtime linker rendezvous structure.
   DYLDRendezvous m_rendezvous;

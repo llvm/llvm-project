@@ -95,7 +95,7 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
 
   const DataLayout &DL = F->getDataLayout();
   BranchInst *Br = BranchInst::Create(
-      LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
+      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
   AllocaInst *Alloca = new AllocaInst(I32Ty, DL.getAllocaAddrSpace(), "alloca",
                                       Br->getIterator());
   ConstantInt *Ci32 = ConstantInt::get(Context, APInt(32, 1));
@@ -172,7 +172,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
   Builder.SetInsertPoint(L);
   PHINode *Phi = Builder.CreatePHI(T_int64, 2);
   Value *Add = Builder.CreateAdd(Phi, ConstantInt::get(T_int64, 1), "add");
-  Builder.CreateCondBr(UndefValue::get(T_int1), L, Post);
+  Builder.CreateCondBr(PoisonValue::get(T_int1), L, Post);
   Phi->addIncoming(ConstantInt::get(T_int64, 0), LPh);
   Phi->addIncoming(Add, L);
 

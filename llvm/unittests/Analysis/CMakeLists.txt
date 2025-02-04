@@ -33,6 +33,7 @@ set(ANALYSIS_TEST_SOURCES
   InlineCostTest.cpp
   IRSimilarityIdentifierTest.cpp
   IVDescriptorsTest.cpp
+  LastRunTrackingAnalysisTest.cpp
   LazyCallGraphTest.cpp
   LoadsTest.cpp
   LoopInfoTest.cpp

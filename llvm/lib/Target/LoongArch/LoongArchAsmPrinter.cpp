@@ -13,17 +13,27 @@
 
 #include "LoongArchAsmPrinter.h"
 #include "LoongArch.h"
-#include "LoongArchTargetMachine.h"
+#include "LoongArchMachineFunctionInfo.h"
 #include "MCTargetDesc/LoongArchInstPrinter.h"
+#include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "loongarch-asm-printer"
+
+cl::opt<bool> LArchAnnotateTableJump(
+    "loongarch-annotate-tablejump", cl::Hidden,
+    cl::desc(
+        "Annotate table jump instruction to correlate it with the jump table."),
+    cl::init(false));
 
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
@@ -236,6 +246,39 @@ void LoongArchAsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
   emitNops(NoopsInSledCount);
   OutStreamer->emitLabel(EndOfSled);
   recordSled(BeginOfSled, MI, Kind, 2);
+}
+
+void LoongArchAsmPrinter::emitJumpTableInfo() {
+  AsmPrinter::emitJumpTableInfo();
+
+  if (!LArchAnnotateTableJump)
+    return;
+
+  assert(TM.getTargetTriple().isOSBinFormatELF());
+
+  unsigned Size = getDataLayout().getPointerSize();
+  auto *LAFI = MF->getInfo<LoongArchMachineFunctionInfo>();
+  unsigned EntrySize = LAFI->getJumpInfoSize();
+
+  if (0 == EntrySize)
+    return;
+
+  // Emit an additional section to store the correlation info as pairs of
+  // addresses, each pair contains the address of a jump instruction (jr) and
+  // the address of the jump table.
+  OutStreamer->switchSection(MMI->getContext().getELFSection(
+      ".discard.tablejump_annotate", ELF::SHT_PROGBITS, 0));
+
+  for (unsigned Idx = 0; Idx < EntrySize; ++Idx) {
+    OutStreamer->emitValue(
+        MCSymbolRefExpr::create(LAFI->getJumpInfoJrMI(Idx)->getPreInstrSymbol(),
+                                OutContext),
+        Size);
+    OutStreamer->emitValue(
+        MCSymbolRefExpr::create(
+            GetJTISymbol(LAFI->getJumpInfoJTIMO(Idx)->getIndex()), OutContext),
+        Size);
+  }
 }
 
 bool LoongArchAsmPrinter::runOnMachineFunction(MachineFunction &MF) {

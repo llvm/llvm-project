@@ -17,7 +17,7 @@ In LLDB you will be able to see the following new registers:
 
 * `z0-z31` vector registers, each one has size equal to the vector length.
 * `p0-p15` predicate registers, each one containing 1 bit per byte in the vector
-  length. Making each one vector length / 8 sized.
+  length. So each one is `vector length in bits / 8` bits.
 * `ffr` the first fault register, same size as a predicate register.
 * `vg`, the vector length in "granules". Each granule is 8 bytes.
 
@@ -160,7 +160,7 @@ Kernel does.
 ### Visibility of an Inactive ZA Register
 
 LLDB does not handle registers that can come and go at runtime (SVE changes
-size but it does not dissappear). Therefore when `za` is not enabled, LLDB
+size but it does not disappear). Therefore when `za` is not enabled, LLDB
 will return a block of 0s instead. This block will match the expected size of
 `za`:
 ```
@@ -183,9 +183,9 @@ If you want to know whether `za` is active or not, refer to bit 2 of the
 
 As for SVE, LLDB does not know how the debugee will use `za`, and therefore
 does not know how it would be best to display it. At any time any given
-instrucion could interpret its contents as many kinds and sizes of data.
+instruction could interpret its contents as many kinds and sizes of data.
 
-So LLDB will default to showing  `za` as one large vector of individual bytes.
+So LLDB will default to showing `za` as one large vector of individual bytes.
 You can override this with a format option (see the SVE example above).
 
 ### Expression Evaluation
@@ -229,3 +229,64 @@ bytes.
 
 `zt0`'s value and whether it is active or not will be saved prior to
 expression evaluation and restored afterwards.
+
+## Guarded Control Stack Extension (GCS)
+
+GCS support includes the following new registers:
+
+* `gcs_features_enabled`
+* `gcs_features_locked`
+* `gcspr_el0`
+
+These map to the registers ptrace provides. The first two have a `gcs_`
+prefix added as their names are too generic without it.
+
+When the GCS is enabled the kernel allocates a memory region for it. This region
+has a special attribute that LLDB will detect and presents like this:
+```
+  (lldb) memory region --all
+  <...>
+  [0x0000fffff7a00000-0x0000fffff7e00000) rw-
+  shadow stack: yes
+  [0x0000fffff7e00000-0x0000fffff7e10000) ---
+```
+
+`shadow stack` is a generic term used in the kernel for secure stack
+extensions like GCS.
+
+### Expression Evaluation
+
+To execute an expression when GCS is enabled, LLDB must push the return
+address of the expression wrapper (usually the entry point of the program)
+to the Guarded Control Stack. It does this by decrementing `gcspr_el0` and
+writing to the location now pointed to by `gcspr_el0` (instead of using the
+GCS push instructions).
+
+After an expression finishes, LLDB will restore the contents of all 3
+GCS registers, apart from the enable bit of `gcs_features_enabled`. This is
+because there are limits on how often and from where you can set this
+bit.
+
+GCS cannot be enabled from ptrace and it is expected that a process which
+has enabled and then disabled GCS, will not enable it again. The simplest
+choice was to not restore the enable bit at all. It is up to the user or
+program to manage that bit.
+
+The return address that LLDB pushed onto the Guarded Control Stack will be left
+in place. As will any values that were pushed to the stack by functions run
+during the expression.
+
+When the process resumes, `gcspr_el0` will be pointing to the original entry
+on the guarded control stack. So the other values will have no effect and
+likely be overwritten by future function calls.
+
+LLDB does not track and restore changes to general memory during expressions,
+so not restoring the GCS contents fits with the current behaviour.
+
+Note that if GCS is disabled and an expression enables it, LLDB will not
+be able to setup the return address and it is up to that expression to do that
+if it wants to return to LLDB correctly.
+
+If it does not do this, the expression will fail and although most process
+state will be restored, GCS will be left enabled. Which means that the program
+is very unlikely to be able to progress.

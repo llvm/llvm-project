@@ -92,11 +92,6 @@ The members of ``ParsedAttrInfo`` that a plugin attribute must define are:
    attribute, each of which consists of an attribute syntax and how the
    attribute name is spelled for that syntax. If the syntax allows a scope then
    the spelling must be "scope::attr" if a scope is present or "::attr" if not.
- * ``handleDeclAttribute``, which is the function that applies the attribute to
-   a declaration. It is responsible for checking that the attribute's arguments
-   are valid, and typically applies the attribute by adding an ``Attr`` to the
-   ``Decl``. It returns either ``AttributeApplied``, to indicate that the
-   attribute was successfully applied, or ``AttributeNotApplied`` if it wasn't.
 
 The members of ``ParsedAttrInfo`` that may need to be defined, depending on the
 attribute, are:
@@ -105,6 +100,18 @@ attribute, are:
    arguments to the attribute.
  * ``diagAppertainsToDecl``, which checks if the attribute has been used on the
    right kind of declaration and issues a diagnostic if not.
+ * ``handleDeclAttribute``, which is the function that applies the attribute to
+   a declaration. It is responsible for checking that the attribute's arguments
+   are valid, and typically applies the attribute by adding an ``Attr`` to the
+   ``Decl``. It returns either ``AttributeApplied``, to indicate that the
+   attribute was successfully applied, or ``AttributeNotApplied`` if it wasn't.
+ * ``diagAppertainsToStmt``, which checks if the attribute has been used on the
+   right kind of statement and issues a diagnostic if not.
+ * ``handleStmtAttribute``, which is the function that applies the attribute to
+   a statement. It is responsible for checking that the attribute's arguments
+   are valid, and typically applies the attribute by adding an ``Attr`` to the
+   ``Stmt``. It returns either ``AttributeApplied``, to indicate that the
+   attribute was successfully applied, or ``AttributeNotApplied`` if it wasn't.
  * ``diagLangOpts``, which checks if the attribute is permitted for the current
    language mode and issues a diagnostic if not.
  * ``existsInTarget``, which checks if the attribute is permitted for the given

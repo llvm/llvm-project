@@ -9,16 +9,16 @@ define void @MainKernel(i32 %iNumSteps, i32 %tid, i32 %base) {
 ; CHECK-NEXT:    [[CALLB:%.*]] = alloca [258 x float], align 4
 ; CHECK-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[INUMSTEPS:%.*]] to float
 ; CHECK-NEXT:    [[CONV_I12:%.*]] = zext i32 [[TID:%.*]] to i64
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [258 x float], ptr [[CALLA]], i64 0, i64 [[CONV_I12]]
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw [258 x float], ptr [[CALLA]], i64 0, i64 [[CONV_I12]]
 ; CHECK-NEXT:    store float [[CONV_I]], ptr [[ARRAYIDX3]], align 4
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [258 x float], ptr [[CALLB]], i64 0, i64 [[CONV_I12]]
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw [258 x float], ptr [[CALLB]], i64 0, i64 [[CONV_I12]]
 ; CHECK-NEXT:    store float [[CONV_I]], ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i32 [[TID]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[DOTBB1:%.*]], label [[DOTBB2:%.*]]
 ; CHECK:       .bb1:
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i8, ptr [[CALLA]], i64 1024
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLA]], i64 1024
 ; CHECK-NEXT:    store float [[CONV_I]], ptr [[ARRAYIDX10]], align 4
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i8, ptr [[CALLB]], i64 1024
+; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLB]], i64 1024
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX11]], align 4
 ; CHECK-NEXT:    br label [[DOTBB2]]
 ; CHECK:       .bb2:
@@ -316,7 +316,7 @@ define i8 @trunc_in_loop_exit_block() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ [[IV_NEXT]], [[LOOP_LATCH]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV]], 100
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1

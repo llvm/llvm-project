@@ -18,7 +18,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -33,6 +32,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include <memory>
 
@@ -384,6 +384,14 @@ lldb::ThreadSP OperatingSystemPython::CreateThread(lldb::tid_t tid,
     }
   }
   return ThreadSP();
+}
+
+bool OperatingSystemPython::DoesPluginReportAllThreads() {
+  // If the python plugin has a "DoesPluginReportAllThreads" method, use it.
+  if (std::optional<bool> plugin_answer =
+          m_operating_system_interface_sp->DoesPluginReportAllThreads())
+    return *plugin_answer;
+  return m_process->GetOSPluginReportsAllThreads();
 }
 
 #endif // #if LLDB_ENABLE_PYTHON

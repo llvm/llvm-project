@@ -19,6 +19,7 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -35,7 +36,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Argument.h"
@@ -61,7 +61,6 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
@@ -451,6 +450,9 @@ unsigned AArch64FastISel::materializeGV(const GlobalValue *GV) {
   // MachO still uses GOT for large code-model accesses, but ELF requires
   // movz/movk sequences, which FastISel doesn't handle yet.
   if (!Subtarget->useSmallAddressing() && !Subtarget->isTargetMachO())
+    return 0;
+
+  if (FuncInfo.MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT())
     return 0;
 
   unsigned OpFlags = Subtarget->ClassifyGlobalReference(GV, TM);
@@ -5195,7 +5197,8 @@ FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
   SMEAttrs CallerAttrs(*FuncInfo.Fn);
   if (CallerAttrs.hasZAState() || CallerAttrs.hasZT0State() ||
       CallerAttrs.hasStreamingInterfaceOrBody() ||
-      CallerAttrs.hasStreamingCompatibleInterface())
+      CallerAttrs.hasStreamingCompatibleInterface() ||
+      CallerAttrs.hasAgnosticZAInterface())
     return nullptr;
   return new AArch64FastISel(FuncInfo, LibInfo);
 }

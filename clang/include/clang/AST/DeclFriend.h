@@ -115,7 +115,7 @@ public:
   static FriendDecl *
   Create(ASTContext &C, DeclContext *DC, SourceLocation L, FriendUnion Friend_,
          SourceLocation FriendL, SourceLocation EllipsisLoc = {},
-         ArrayRef<TemplateParameterList *> FriendTypeTPLists = std::nullopt);
+         ArrayRef<TemplateParameterList *> FriendTypeTPLists = {});
   static FriendDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                         unsigned FriendTypeNumTPLists);
 

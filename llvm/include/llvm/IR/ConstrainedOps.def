@@ -72,6 +72,7 @@ CMP_INSTRUCTION(FCmp,         2, 0, experimental_constrained_fcmps,      FSETCCS
 DAG_FUNCTION(acos,            1, 1, experimental_constrained_acos,       FACOS)
 DAG_FUNCTION(asin,            1, 1, experimental_constrained_asin,       FASIN)
 DAG_FUNCTION(atan,            1, 1, experimental_constrained_atan,       FATAN)
+DAG_FUNCTION(atan2,           2, 1, experimental_constrained_atan2,      FATAN2)
 DAG_FUNCTION(ceil,            1, 0, experimental_constrained_ceil,       FCEIL)
 DAG_FUNCTION(cos,             1, 1, experimental_constrained_cos,        FCOS)
 DAG_FUNCTION(cosh,            1, 1, experimental_constrained_cosh,       FCOSH)

@@ -27,7 +27,6 @@ program wsloop_dynamic
 !CHECK:         fir.call @_FortranAioEndIoStatement(%[[RTBEGIN]]) {{.*}}: (!fir.ref<i8>) -> i32
   end do
 !CHECK:         omp.yield
-!CHECK:       omp.terminator
 !CHECK:     omp.terminator
 !CHECK:   }
 

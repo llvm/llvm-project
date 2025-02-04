@@ -8,7 +8,7 @@
 
 #include "AMDGPUMachineFunction.h"
 #include "AMDGPU.h"
-#include "AMDGPUPerfHintAnalysis.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -102,6 +102,13 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
 
   unsigned Offset;
   if (GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    if (AMDGPU::isNamedBarrier(GV)) {
+      std::optional<unsigned> BarAddr = getLDSAbsoluteAddress(GV);
+      if (!BarAddr)
+        llvm_unreachable("named barrier should have an assigned address");
+      Entry.first->second = BarAddr.value();
+      return BarAddr.value();
+    }
 
     std::optional<uint32_t> MaybeAbs = getLDSAbsoluteAddress(GV);
     if (MaybeAbs) {

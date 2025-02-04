@@ -14,12 +14,17 @@
 #ifndef LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 #define LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 
+#include "clang/Basic/TypeTraits.h"
+
 namespace llvm {
 class APFloat;
 }
 namespace clang {
 class QualType;
 class LangOptions;
+class ASTContext;
+class CharUnits;
+class Expr;
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
@@ -65,5 +70,8 @@ void HandleComplexComplexMul(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
 void HandleComplexComplexDiv(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
                              llvm::APFloat D, llvm::APFloat &ResR,
                              llvm::APFloat &ResI);
+
+CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
+                         UnaryExprOrTypeTrait ExprKind);
 
 #endif

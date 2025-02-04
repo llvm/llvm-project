@@ -1,4 +1,4 @@
-REQUIRES: system-windows, lld
+REQUIRES: target-windows, lld
 RUN: %build --compiler=clang-cl --output=%t.exe %S/Inputs/VBases.cpp
 RUN: %lldb -b -s %S/Inputs/VBases.script -- %t.exe | FileCheck %s
 

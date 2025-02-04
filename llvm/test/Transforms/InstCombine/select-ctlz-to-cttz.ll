@@ -208,10 +208,8 @@ define <2 x i32> @select_clz_to_ctz_vec_with_undef(<2 x i32> %a) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> zeroinitializer, [[A:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A]], [[SUB]]
 ; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i32 0, 33) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[AND]], i1 true)
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq <2 x i32> [[A]], zeroinitializer
 ; CHECK-NEXT:    [[SUB1:%.*]] = xor <2 x i32> [[LZ]], <i32 31, i32 undef>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[TOBOOL]], <2 x i32> [[LZ]], <2 x i32> [[SUB1]]
-; CHECK-NEXT:    ret <2 x i32> [[COND]]
+; CHECK-NEXT:    ret <2 x i32> [[SUB1]]
 ;
   %sub = sub <2 x i32> zeroinitializer, %a
   %and = and <2 x i32> %sub, %a

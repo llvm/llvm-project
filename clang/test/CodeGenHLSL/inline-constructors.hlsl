@@ -49,7 +49,7 @@ void NionsDay(int hours) {
 // Verify constructor is emitted
 // NOINLINE-NEXT: call void @_GLOBAL__sub_I_inline_constructors.hlsl()
 // NOINLINE-NEXT: %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-// NOINLINE-NEXT: call void @"?main@@YAXI@Z"(i32 %0)
+// NOINLINE-NEXT: call void @_Z4mainj(i32 %0)
 // Verify inlining leaves only calls to "llvm." intrinsics
 // INLINE-NOT:    call {{[^@]*}} @{{[^l][^l][^v][^m][^\.]}}
 // CHECK:         ret void
@@ -64,7 +64,7 @@ void main(unsigned GI : SV_GroupIndex) {
 // CHECK-NEXT: entry:
 // Verify constructor is emitted
 // NOINLINE-NEXT:   call void @_GLOBAL__sub_I_inline_constructors.hlsl()
-// NOINLINE-NEXT:   call void @"?rainyMain@@YAXXZ"()
+// NOINLINE-NEXT:   call void @_Z9rainyMainv()
 // Verify inlining leaves only calls to "llvm." intrinsics
 // INLINE-NOT:      call {{[^@]*}} @{{[^l][^l][^v][^m][^\.]}}
 // CHECK:           ret void

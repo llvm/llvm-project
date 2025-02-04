@@ -480,6 +480,55 @@ if.else:
   ret i64 13
 }
 
+define i64 @test_icmp_trunc_nuw(i64 %a) {
+; CHECK-LABEL: @test_icmp_trunc_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw i64 [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CAST]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i64 [[A]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %cast = trunc nuw i64 %a to i32
+  %cmp = icmp sgt i32 %cast, 0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %b = and i64 %a, 2147483647
+  ret i64 %b
+
+if.else:
+  ret i64 0
+}
+
+define i64 @test_icmp_trunc_no_nuw(i64 %a) {
+; CHECK-LABEL: @test_icmp_trunc_no_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CAST]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[B:%.*]] = and i64 [[A]], 2147483647
+; CHECK-NEXT:    ret i64 [[B]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %cast = trunc i64 %a to i32
+  %cmp = icmp sgt i32 %cast, 0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %b = and i64 %a, 2147483647
+  ret i64 %b
+
+if.else:
+  ret i64 0
+}
+
 define i1 @test_icmp_or_distjoint(i8 %n, i1 %other) {
 ; CHECK-LABEL: @test_icmp_or_distjoint(
 ; CHECK-NEXT:  entry:
@@ -939,10 +988,10 @@ define i1 @extract_value_uadd_fail2(<2 x i8> %xx, <2 x i8> %yy, i32 %idx) {
 
 define i1 @extract_value_uadd_fail3(<2 x i8> %xx, <2 x i8> %yy) {
 ; CHECK-LABEL: @extract_value_uadd_fail3(
-; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], <i8 1, i8 1>
-; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], <i8 1, i8 1>
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], splat (i8 127)
+; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], splat (i8 127)
+; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], splat (i8 1)
+; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], splat (i8 1)
 ; CHECK-NEXT:    [[ADD_UOV:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow.v2i8(<2 x i8> [[X]], <2 x i8> [[Y]])
 ; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 0
 ; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 1
@@ -1334,7 +1383,7 @@ define i8 @nonzero_reduce_xor_vscale_even(<vscale x 2 x i8> %xx) {
 
 define i8 @nonzero_reduce_xor_vscale_odd_fail(<vscale x 3 x i8> %xx) {
 ; CHECK-LABEL: @nonzero_reduce_xor_vscale_odd_fail(
-; CHECK-NEXT:    [[X:%.*]] = or <vscale x 3 x i8> [[XX:%.*]], shufflevector (<vscale x 3 x i8> insertelement (<vscale x 3 x i8> poison, i8 1, i64 0), <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer)
+; CHECK-NEXT:    [[X:%.*]] = or <vscale x 3 x i8> [[XX:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.nxv3i8(<vscale x 3 x i8> [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -1349,7 +1398,7 @@ define i8 @nonzero_reduce_xor_vscale_odd_fail(<vscale x 3 x i8> %xx) {
 
 define i8 @nonzero_reduce_xor_vscale_even_fail(<vscale x 2 x i8> %xx) {
 ; CHECK-LABEL: @nonzero_reduce_xor_vscale_even_fail(
-; CHECK-NEXT:    [[X:%.*]] = or <vscale x 2 x i8> [[XX:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 1, i64 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[X:%.*]] = or <vscale x 2 x i8> [[XX:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.nxv2i8(<vscale x 2 x i8> [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -1609,17 +1658,13 @@ if.else:
   ret i16 0
 }
 
-; TODO: %cmp always evaluates to false
-
 define i1 @test_simplify_icmp2(double %x) {
 ; CHECK-LABEL: @test_simplify_icmp2(
 ; CHECK-NEXT:    [[ABS:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp oeq double [[ABS]], 0x7FF0000000000000
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast double [[X]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[CAST]], 3458764513820540928
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;

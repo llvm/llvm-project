@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/Designator.h"
@@ -436,9 +436,9 @@ ExprResult Parser::createEmbedExpr() {
   ASTContext &Context = Actions.getASTContext();
   SourceLocation StartLoc = ConsumeAnnotationToken();
   if (Data->BinaryData.size() == 1) {
-    Res = IntegerLiteral::Create(Context,
-                                 llvm::APInt(CHAR_BIT, Data->BinaryData.back()),
-                                 Context.UnsignedCharTy, StartLoc);
+    Res = IntegerLiteral::Create(
+        Context, llvm::APInt(CHAR_BIT, (unsigned char)Data->BinaryData.back()),
+        Context.UnsignedCharTy, StartLoc);
   } else {
     auto CreateStringLiteralFromStringRef = [&](StringRef Str, QualType Ty) {
       llvm::APSInt ArraySize =
@@ -487,7 +487,7 @@ ExprResult Parser::ParseBraceInitializer() {
                           : diag::ext_c_empty_initializer);
     }
     // Match the '}'.
-    return Actions.ActOnInitList(LBraceLoc, std::nullopt, ConsumeBrace());
+    return Actions.ActOnInitList(LBraceLoc, {}, ConsumeBrace());
   }
 
   // Enter an appropriate expression evaluation context for an initializer list.

@@ -148,12 +148,12 @@ class S2op_tableidx_pat <Intrinsic IntID, InstHexagon OutputInst,
 
 def SDEC2 : SDNodeXForm<imm, [{
   int32_t V = N->getSExtValue();
-  return CurDAG->getTargetConstant(V-2, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(V-2, SDLoc(N), MVT::i32);
 }]>;
 
 def SDEC3 : SDNodeXForm<imm, [{
   int32_t V = N->getSExtValue();
-  return CurDAG->getTargetConstant(V-3, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(V-3, SDLoc(N), MVT::i32);
 }]>;
 
 // Table Index : Extract and insert bits.

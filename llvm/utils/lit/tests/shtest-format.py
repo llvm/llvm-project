@@ -18,7 +18,7 @@
 # CHECK: Command Output (stderr):
 # CHECK-NEXT: --
 # CHECK-NOT: --
-# CHECK: cat{{(_64)?(\.exe)?}}: {{cannot open does-not-exist|does-not-exist: No such file or directory}}
+# CHECK: cat{{(_64)?(\.exe)?}}: {{(cannot open does-not-exist|.*does-not-exist.*: No such file or directory)}}
 # CHECK: --
 
 # CHECK: FAIL: shtest-format :: external_shell/fail_with_bad_encoding.txt
@@ -107,7 +107,7 @@
 
 # XUNIT: <?xml version="1.0" encoding="UTF-8"?>
 # XUNIT-NEXT: <testsuites time="{{[0-9.]+}}">
-# XUNIT-NEXT: <testsuite name="shtest-format" tests="22" failures="8" skipped="3">
+# XUNIT-NEXT: <testsuite name="shtest-format" tests="22" failures="8" skipped="3" time="{{[0-9.]+}}">
 
 # XUNIT: <testcase classname="shtest-format.external_shell" name="fail.txt" time="{{[0-9]+\.[0-9]+}}">
 # XUNIT-NEXT: <failure{{[ ]*}}>
