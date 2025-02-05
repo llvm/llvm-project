@@ -3277,6 +3277,25 @@ LogicalResult ReduceReturnOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ScopeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult scf::ScopeOp::verify() {
+  Region &body = getBody();
+  Block &block = body.front();
+  Operation *terminator = block.getTerminator();
+  if (terminator->getOperands().getTypes() != getResults().getTypes()) {
+    InFlightDiagnostic diag = emitOpError()
+                              << "expects terminator operands to have the "
+                                 "same type as results of the operation";
+    diag.attachNote(terminator->getLoc()) << "terminator";
+    return diag;
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // WhileOp
 //===----------------------------------------------------------------------===//
 
