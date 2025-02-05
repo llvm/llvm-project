@@ -16122,6 +16122,52 @@ of the argument.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+'``llvm.sincospi.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sincospi`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare { float, float }          @llvm.sincospi.f32(float  %Val)
+      declare { double, double }        @llvm.sincospi.f64(double %Val)
+      declare { x86_fp80, x86_fp80 }    @llvm.sincospi.f80(x86_fp80  %Val)
+      declare { fp128, fp128 }          @llvm.sincospi.f128(fp128 %Val)
+      declare { ppc_fp128, ppc_fp128 }  @llvm.sincospi.ppcf128(ppc_fp128  %Val)
+      declare { <4 x float>, <4 x float> } @llvm.sincospi.v4f32(<4 x float>  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.sincospi.*``' intrinsics returns the sine and cosine of pi*operand.
+
+Arguments:
+""""""""""
+
+The argument is a :ref:`floating-point <t_floating>` value or
+:ref:`vector <t_vector>` of floating-point values. Returns two values matching
+the argument type in a struct.
+
+Semantics:
+""""""""""
+
+This is equivalent to the `llvm.sincos.*` intrinsic where the argument has been
+multiplied by pi, however, it computes the result more accurately especially
+for large input values.
+
+.. note::
+
+  Currently, the default lowering of this intrinsic relies on the `sincospi[f|l]`
+  functions being available in the target's runtime (e.g. libc).
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
 '``llvm.modf.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
