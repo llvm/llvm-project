@@ -4871,13 +4871,13 @@ def note_ovl_candidate_inconsistent_deduction_types : Note<
     "of conflicting types for parameter %0 (%1 of type $ vs. %3 of type $)|"
     "%1 and %3 of conflicting types for parameter %0}2,4">;
 
-def note_ovl_candidate_explicit_arg_mismatch_detail : Note<
+def note_ovl_candidate_explicit_arg_mismatch : Note<
     "candidate template ignored: invalid explicitly-specified argument"
     "%select{"
-    "|: expected a type, but got value '%1'"
-    "|: expected constant of type %3 but got type %1"
-    "|: could not convert '%1' from %2 to %3"
-    "| for %ordinal4 template parameter}0">;
+    "|: %select{non-type|type}1 argument %select{'%3'|%3}1 is not compatible with "
+    "%select{non-type|type}2 parameter %select{%5|%4}2"
+    "|: could not convert '%3' from %4 to %5"
+    "| for %ordinal6 template parameter}0">;
 
 def note_ovl_candidate_unsatisfied_constraints : Note<
     "candidate template ignored: constraints not satisfied%0">;

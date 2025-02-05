@@ -11719,42 +11719,43 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     TemplateArgument FirstArg = *DeductionFailure.getFirstArg();
     TemplateArgument SecondArg = *DeductionFailure.getSecondArg();
 
-    auto TupleResult = [&]() -> std::tuple<int, int, QualType> {
+    auto TupleResult = [&]() -> std::tuple<int, int, int, int, QualType> {
       switch (ParamD->getKind()) {
       case Decl::TemplateTypeParm: {
         auto *TTPD = cast<TemplateTypeParmDecl>(ParamD);
-        return {1, TTPD->getIndex(), QualType()};
+        return {1, 0, 1, TTPD->getIndex(), QualType()};
       }
       case Decl::NonTypeTemplateParm: {
         auto *NTTPD = cast<NonTypeTemplateParmDecl>(ParamD);
-        if (SecondArg.isNull())
-          return {2, NTTPD->getIndex(), NTTPD->getType()};
-        else {
+        if (SecondArg.isNull()) {
+          return {1, 1, 0, NTTPD->getIndex(), NTTPD->getType()};
+        } else {
           // FIXME: This is a hack. We should emit a better message
           // for ill-formed const exprs in >=C++20.
           QualType qt = NTTPD->getType();
           if (qt.getCanonicalType() ==
                   SecondArg.getAsType().getCanonicalType() &&
               __cplusplus <= 201703) {
-            return {4, NTTPD->getIndex(), NTTPD->getType()};
+            return {3, -1, -1, NTTPD->getIndex(), NTTPD->getType()};
           } else {
-            return {3, NTTPD->getIndex(), NTTPD->getType()};
+            return {2, -1, -1, NTTPD->getIndex(), NTTPD->getType()};
           }
         }
       }
       case Decl::TemplateTemplateParm: {
         auto *TTempPD = cast<TemplateTemplateParmDecl>(ParamD);
-        return {4, TTempPD->getIndex(), QualType()};
+        return {3, -1, -1, TTempPD->getIndex(), QualType()};
       }
       default:
         llvm_unreachable("unexpected param decl kind");
       }
     };
-    auto [Which, Index, Type] = TupleResult();
+    auto [Which, Provided, Expected, Index, Type] = TupleResult();
     S.NoteTemplateParameterLocation(*ParamD);
     S.Diag(Templated->getLocation(),
-           diag::note_ovl_candidate_explicit_arg_mismatch_detail)
-        << Which << FirstArg << SecondArg << Type << (Index + 1);
+           diag::note_ovl_candidate_explicit_arg_mismatch)
+        << Which << Provided << Expected << FirstArg << SecondArg << Type
+        << (Index + 1);
 
     MaybeEmitInheritedConstructorNote(S, Found);
     return;

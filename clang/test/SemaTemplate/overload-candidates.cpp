@@ -18,7 +18,7 @@ void test_dyn_cast(int* ptr) {
 
 template<int I, typename T> // expected-note {{template parameter is declared here}}
   void get(const T&); // #get-int-typename
-  // expected-note@#get-int-typename {{candidate template ignored: invalid explicitly-specified argument: expected constant of type 'int' but got type 'int'}}
+  // expected-note@#get-int-typename {{candidate template ignored: invalid explicitly-specified argument: type argument 'int' is not compatible with non-type parameter 'int'}}
 template<template<class T> class, typename T> // expected-note {{template parameter is declared here}}
   void get(const T&); // expected-note {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
 
