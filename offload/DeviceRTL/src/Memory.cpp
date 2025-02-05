@@ -1,7 +1,5 @@
 #include <DeviceTypes.h>
 
-#pragma omp begin declare target device_type(nohost)
-
 extern "C" {
 __attribute__((leaf)) char *global_allocate(uint32_t bufsz);
 __attribute__((leaf)) int global_free(void *ptr);
@@ -57,7 +55,4 @@ void *omp_realloc(void *ptr, uint64_t size,
   return (void *)0;
 }
 
-
 } // extern "C"
-
-#pragma omp end declare target

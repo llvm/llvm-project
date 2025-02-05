@@ -65,7 +65,7 @@ template <class D> struct BPOrderer {
                         &rootSymbolToSectionIdxs)
       -> llvm::DenseMap<const Section *, int>;
 
-  std::optional<StringRef> static getResolvedLinkageName(llvm::StringRef name) {
+  std::optional<StringRef> static getResolvedLinkageName(StringRef name) {
     return {};
   }
 };
@@ -186,7 +186,7 @@ auto BPOrderer<D>::computeOrder(
     }
     auto &traces = reader->getTemporalProfTraces();
 
-    MapVector<unsigned, BPFunctionNode::UtilityNodeT> sectionIdxToFirstUN;
+    DenseMap<unsigned, BPFunctionNode::UtilityNodeT> sectionIdxToFirstUN;
     for (size_t traceIdx = 0; traceIdx < traces.size(); traceIdx++) {
       uint64_t currentSize = 0, cutoffSize = 1;
       size_t cutoffTimestamp = 1;

@@ -25,26 +25,26 @@
 
 # RUN: ld.lld -o out.s a.o --irpgo-profile=a.profdata --bp-startup-sort=function
 # RUN: llvm-nm -jn out.s | tr '\n' , | FileCheck %s --check-prefix=STARTUP
-# STARTUP: s5,s4,s3,s2,s1,A,B,C,F,E,D,_start,d4,d3,d2,d1,
+# STARTUP: s5,s4,s3,s2,s1,A,B,C,F,E,D,_start,d4,d3,d2,d1,{{$}}
 
 # RUN: ld.lld -o out.os a.o --irpgo-profile=a.profdata --bp-startup-sort=function --symbol-ordering-file a.txt
 # RUN: llvm-nm -jn out.os | tr '\n' , | FileCheck %s --check-prefix=ORDER-STARTUP
-# ORDER-STARTUP: s2,s1,s5,s4,s3,A,F,E,D,B,C,_start,d4,d3,d2,d1,
+# ORDER-STARTUP: s2,s1,s5,s4,s3,A,F,E,D,B,C,_start,d3,d2,d4,d1,{{$}}
 
 # RUN: ld.lld -o out.cf a.o --verbose-bp-section-orderer --bp-compression-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-FUNC
 # RUN: llvm-nm -jn out.cf | tr '\n' , | FileCheck %s --check-prefix=CFUNC
-# CFUNC: s5,s4,s3,s2,s1,F,C,E,D,B,A,_start,d4,d3,d2,d1,
+# CFUNC: s5,s4,s3,s2,s1,F,C,E,D,B,A,_start,d4,d3,d2,d1,{{$}}
 
 # RUN: ld.lld -o out.cd a.o --verbose-bp-section-orderer --bp-compression-sort=data 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-DATA
 # RUN: llvm-nm -jn out.cd | tr '\n' , | FileCheck %s --check-prefix=CDATA
-# CDATA: s4,s2,s1,s5,s3,F,C,E,D,B,A,_start,d4,d1,d3,d2,
+# CDATA: s5,s3,s4,s2,s1,F,C,E,D,B,A,_start,d4,d1,d3,d2,{{$}}
 
 # RUN: ld.lld -o out.cb a.o --verbose-bp-section-orderer --bp-compression-sort=both 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
 # RUN: llvm-nm -jn out.cb | tr '\n' , | FileCheck %s --check-prefix=CDATA
 
 # RUN: ld.lld -o out.cbs a.o --verbose-bp-section-orderer --bp-compression-sort=both --irpgo-profile=a.profdata --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
 # RUN: llvm-nm -jn out.cbs | tr '\n' , | FileCheck %s --check-prefix=CBOTH-STARTUP
-# CBOTH-STARTUP: s4,s2,s1,s5,s3,A,B,C,F,E,D,_start,d4,d1,d3,d2,
+# CBOTH-STARTUP: s5,s3,s4,s2,s1,A,B,C,F,E,D,_start,d4,d1,d3,d2,{{$}}
 
 # BP-COMPRESSION-FUNC: Ordered 7 sections using balanced partitioning
 # BP-COMPRESSION-DATA: Ordered 9 sections using balanced partitioning
@@ -100,8 +100,8 @@ E
 D
 s2
 s1
-r3
-r2
+d3
+d2
 
 #--- a.c
 const char s5[] = "engineering";

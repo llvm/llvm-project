@@ -61,7 +61,7 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator = omp_null_allocator);
 //// Any re-definitions of malloc/free delete the native CUDA
 //// but they are necessary
 #ifdef __AMDGCN__
-void *malloc(uint64_t Size);
+void *malloc(size_t Size);
 void free(void *Ptr);
 #endif
 } // extern "C"

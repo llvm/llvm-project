@@ -313,6 +313,24 @@ bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
   return !F || !ST->isSingleLaneExecution(*F);
 }
 
+unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) {
+  // For certain 8 bit ops, we can pack a v4i8 into a single part
+  // (e.g. v4i8 shufflevectors -> v_perm v4i8, v4i8). Thus, we
+  // do not limit the numberOfParts for 8 bit vectors to the
+  // legalization costs of such. It is left up to other target
+  // queries (e.g. get*InstrCost) to decide the proper handling
+  // of 8 bit vectors.
+  if (FixedVectorType *VTy = dyn_cast<FixedVectorType>(Tp)) {
+    if (ST->shouldCoerceIllegalTypes() &&
+        DL.getTypeSizeInBits(VTy->getElementType()) == 8) {
+      unsigned ElCount = VTy->getElementCount().getFixedValue();
+      return PowerOf2Ceil(ElCount / 4);
+    }
+  }
+
+  return BaseT::getNumberOfParts(Tp);
+}
+
 unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
   // NB: RCID is not an RCID. In fact it is 0 or 1 for scalar or vector
   // registers. See getRegisterClassForType for the implementation.
@@ -344,9 +362,11 @@ unsigned GCNTTIImpl::getMinVectorRegisterBitWidth() const {
 unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   if (Opcode == Instruction::Load || Opcode == Instruction::Store)
     return 32 * 4 / ElemWidth;
-  return (ElemWidth == 16 && ST->has16BitInsts()) ? 2
-       : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
-       : 1;
+
+  return (ST->shouldCoerceIllegalTypes() && ElemWidth == 8) ? 4
+         : (ElemWidth == 16)                                ? 2
+         : (ElemWidth == 32 && ST->hasPackedFP32Ops())      ? 2
+                                                            : 1;
 }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
@@ -416,8 +436,6 @@ int64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
   return 1024;
 }
 
-// FIXME: Should we use narrower types for local/region, or account for when
-// unaligned access is legal?
 Type *GCNTTIImpl::getMemcpyLoopLoweringType(
     LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
     unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
@@ -426,29 +444,12 @@ Type *GCNTTIImpl::getMemcpyLoopLoweringType(
   if (AtomicElementSize)
     return Type::getIntNTy(Context, *AtomicElementSize * 8);
 
-  Align MinAlign = std::min(SrcAlign, DestAlign);
-
-  // A (multi-)dword access at an address == 2 (mod 4) will be decomposed by the
-  // hardware into byte accesses. If you assume all alignments are equally
-  // probable, it's more efficient on average to use short accesses for this
-  // case.
-  if (MinAlign == Align(2))
-    return Type::getInt16Ty(Context);
-
-  // Not all subtargets have 128-bit DS instructions, and we currently don't
-  // form them by default.
-  if (SrcAddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-      SrcAddrSpace == AMDGPUAS::REGION_ADDRESS ||
-      DestAddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-      DestAddrSpace == AMDGPUAS::REGION_ADDRESS) {
-    return FixedVectorType::get(Type::getInt32Ty(Context), 2);
-  }
-
-  // Global memory works best with 16-byte accesses.
+  // 16-byte accesses achieve the highest copy throughput.
   // If the operation has a fixed known length that is large enough, it is
   // worthwhile to return an even wider type and let legalization lower it into
-  // multiple accesses, effectively unrolling the memcpy loop. Private memory
-  // also hits this, although accesses may be decomposed.
+  // multiple accesses, effectively unrolling the memcpy loop.
+  // We also rely on legalization to decompose into smaller accesses for
+  // subtargets and address spaces where it is necessary.
   //
   // Don't unroll if Length is not a constant, since unrolling leads to worse
   // performance for length values that are smaller or slightly larger than the
@@ -473,26 +474,22 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
         OpsOut, Context, RemainingBytes, SrcAddrSpace, DestAddrSpace, SrcAlign,
         DestAlign, AtomicCpySize);
 
-  Align MinAlign = std::min(SrcAlign, DestAlign);
+  Type *I32x4Ty = FixedVectorType::get(Type::getInt32Ty(Context), 4);
+  while (RemainingBytes >= 16) {
+    OpsOut.push_back(I32x4Ty);
+    RemainingBytes -= 16;
+  }
 
-  if (MinAlign != Align(2)) {
-    Type *I32x4Ty = FixedVectorType::get(Type::getInt32Ty(Context), 4);
-    while (RemainingBytes >= 16) {
-      OpsOut.push_back(I32x4Ty);
-      RemainingBytes -= 16;
-    }
+  Type *I64Ty = Type::getInt64Ty(Context);
+  while (RemainingBytes >= 8) {
+    OpsOut.push_back(I64Ty);
+    RemainingBytes -= 8;
+  }
 
-    Type *I64Ty = Type::getInt64Ty(Context);
-    while (RemainingBytes >= 8) {
-      OpsOut.push_back(I64Ty);
-      RemainingBytes -= 8;
-    }
-
-    Type *I32Ty = Type::getInt32Ty(Context);
-    while (RemainingBytes >= 4) {
-      OpsOut.push_back(I32Ty);
-      RemainingBytes -= 4;
-    }
+  Type *I32Ty = Type::getInt32Ty(Context);
+  while (RemainingBytes >= 4) {
+    OpsOut.push_back(I32Ty);
+    RemainingBytes -= 4;
   }
 
   Type *I16Ty = Type::getInt16Ty(Context);
@@ -1154,14 +1151,16 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   Kind = improveShuffleKindFromMask(Kind, Mask, VT, Index, SubTp);
 
-  // Larger vector widths may require additional instructions, but are
-  // typically cheaper than scalarized versions.
-  unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
+  unsigned ScalarSize = DL.getTypeSizeInBits(VT->getElementType());
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
-      DL.getTypeSizeInBits(VT->getElementType()) == 16) {
-    bool HasVOP3P = ST->hasVOP3PInsts();
+      (ScalarSize == 16 ||
+       (ScalarSize == 8 && ST->shouldCoerceIllegalTypes()))) {
+    // Larger vector widths may require additional instructions, but are
+    // typically cheaper than scalarized versions.
+    unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
     unsigned RequestedElts =
         count_if(Mask, [](int MaskElt) { return MaskElt != -1; });
+    unsigned EltsPerReg = 32 / ScalarSize;
     if (RequestedElts == 0)
       return 0;
     switch (Kind) {
@@ -1170,9 +1169,9 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     case TTI::SK_PermuteSingleSrc: {
       // With op_sel VOP3P instructions freely can access the low half or high
       // half of a register, so any swizzle of two elements is free.
-      if (HasVOP3P && NumVectorElts == 2)
+      if (ST->hasVOP3PInsts() && ScalarSize == 16 && NumVectorElts == 2)
         return 0;
-      unsigned NumPerms = alignTo(RequestedElts, 2) / 2;
+      unsigned NumPerms = alignTo(RequestedElts, EltsPerReg) / EltsPerReg;
       // SK_Broadcast just reuses the same mask
       unsigned NumPermMasks = Kind == TTI::SK_Broadcast ? 1 : NumPerms;
       return NumPerms + NumPermMasks;
@@ -1184,12 +1183,12 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         return 0;
       // Insert/extract subvectors only require shifts / extract code to get the
       // relevant bits
-      return alignTo(RequestedElts, 2) / 2;
+      return alignTo(RequestedElts, EltsPerReg) / EltsPerReg;
     }
     case TTI::SK_PermuteTwoSrc:
     case TTI::SK_Splice:
     case TTI::SK_Select: {
-      unsigned NumPerms = alignTo(RequestedElts, 2) / 2;
+      unsigned NumPerms = alignTo(RequestedElts, EltsPerReg) / EltsPerReg;
       // SK_Select just reuses the same mask
       unsigned NumPermMasks = Kind == TTI::SK_Select ? 1 : NumPerms;
       return NumPerms + NumPermMasks;

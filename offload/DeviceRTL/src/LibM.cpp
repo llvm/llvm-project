@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma omp begin declare target device_type(nohost)
-
 #define __BUILD_MATH_BUILTINS_LIB__
 
+#include "DeviceTypes.h"
 #include "Platform.h"
 
 using size_t = decltype(sizeof(char));
@@ -17,6 +16,7 @@ using size_t = decltype(sizeof(char));
 // We cannot use variants as we need the "C" symbol names to be exported.
 #ifdef __AMDGPU__
 
+#define __OPENMP_SKIP_INCLUDE__
 #define __OPENMP_AMDGCN__
 
 #pragma push_macro("__device__")
@@ -102,5 +102,3 @@ int16_t __f90_imodulov(int16_t a, int16_t p) {
 #undef __CUDA__
 
 #endif // __NVPTX__
-
-#pragma omp end declare target
