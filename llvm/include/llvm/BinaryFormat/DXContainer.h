@@ -14,12 +14,11 @@
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Object/Error.h"
+#include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <cstdint>
 #include <stdint.h>
 
 namespace llvm {
@@ -553,13 +552,13 @@ struct RootSignatureValidations {
 
   static Expected<uint32_t> validateRootFlag(uint32_t Flags) {
     if ((Flags & ~0x80000fff) != 0)
-      return llvm::make_error<object::GenericBinaryError>("Invalid flag");
+      return llvm::make_error<BinaryStreamError>("Invalid flag");
     return Flags;
   }
 
   static Expected<uint32_t> validateVersion(uint32_t Version) {
     if (Version < 1 || Version > 2)
-      return llvm::make_error<object::GenericBinaryError>("Invalid Version");
+      return llvm::make_error<BinaryStreamError>("Invalid Version");
     return Version;
   }
 };

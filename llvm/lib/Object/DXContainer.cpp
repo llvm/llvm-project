@@ -7,14 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/DXContainer.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::object;
