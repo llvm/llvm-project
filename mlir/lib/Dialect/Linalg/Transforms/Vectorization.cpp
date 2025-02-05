@@ -2743,7 +2743,6 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
         sliceOp.getLoc(), readMaskType, reifiedSrcSizes[0]);
   }
 
-  // 3.a. TransferReadOp
   SmallVector<Value> readIndices(
       vecType.getRank(),
       rewriter.create<arith::ConstantIndexOp>(sliceOp.getLoc(), 0));
@@ -2751,12 +2750,10 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
       sliceOp.getLoc(), vecType, source, readIndices, padValue,
       ArrayRef<bool>{readInBounds});
 
-  // Mask the xfer_read Op
-  if (!inputVectorSizes.empty()) {
+  if (maskOp) {
     read = mlir::vector::maskOperation(rewriter, read, maskOp);
   }
 
-  // 3.b. TransferWriteOp
   auto writeIndices = getValueOrCreateConstantIndexOp(
       rewriter, sliceOp.getLoc(), sliceOp.getMixedOffsets());
 
@@ -2764,8 +2761,7 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
       sliceOp.getLoc(), read->getResult(0), sliceOp.getDest(), writeIndices,
       ArrayRef<bool>{writeInBounds});
 
-  // Mask the xfer_write Op
-  if (!inputVectorSizes.empty()) {
+  if (maskOp) {
     write = mlir::vector::maskOperation(rewriter, write, maskOp);
   }
 
