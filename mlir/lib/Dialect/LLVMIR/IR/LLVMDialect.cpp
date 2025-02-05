@@ -2470,13 +2470,16 @@ void AliasOp::print(OpAsmPrinter &p) {
   StringRef visibility = stringifyVisibility(getVisibility_());
   if (!visibility.empty())
     p << visibility << ' ';
-  if (getThreadLocal_())
-    p << "thread_local ";
+
   if (std::optional<mlir::LLVM::UnnamedAddr> unnamedAddr = getUnnamedAddr()) {
     StringRef str = stringifyUnnamedAddr(*unnamedAddr);
     if (!str.empty())
       p << str << ' ';
   }
+
+  if (getThreadLocal_())
+    p << "thread_local ";
+
   p.printSymbolName(getSymName());
   p.printOptionalAttrDict((*this)->getAttrs(),
                           {SymbolTable::getSymbolAttrName(),
@@ -2555,7 +2558,7 @@ LogicalResult AliasOp::verify() {
 
 LogicalResult AliasOp::verifyRegions() {
   Block &b = getInitializerBlock();
-  ReturnOp ret = cast<ReturnOp>(b.getTerminator());
+  auto ret = cast<ReturnOp>(b.getTerminator());
   if (ret.getNumOperands() == 0 ||
       !isa<LLVM::LLVMPointerType>(ret.getOperand(0).getType()))
     return emitOpError("initializer region must always return a pointer");

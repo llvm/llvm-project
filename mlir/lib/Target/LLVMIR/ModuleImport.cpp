@@ -987,9 +987,8 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
     return failure();
   builder.create<ReturnOp>(aliasOp.getLoc(), *initializer);
 
-  if (alias->hasAtLeastLocalUnnamedAddr()) {
+  if (alias->hasAtLeastLocalUnnamedAddr())
     aliasOp.setUnnamedAddr(convertUnnamedAddrFromLLVM(alias->getUnnamedAddr()));
-  }
   aliasOp.setVisibility_(convertVisibilityFromLLVM(alias->getVisibility()));
 
   return success();

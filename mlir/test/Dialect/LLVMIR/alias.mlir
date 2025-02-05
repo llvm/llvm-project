@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -split-input-file --verify-roundtrip | FileCheck %s
 
 llvm.func internal @callee() -> !llvm.ptr attributes {dso_local} {
   %0 = llvm.mlir.zero : !llvm.ptr
@@ -124,4 +124,18 @@ llvm.mlir.global internal constant @g3() {addr_space = 0 : i32, dso_local} : !ll
 // CHECK: llvm.mlir.global internal constant @g3() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
 // CHECK:   %[[ADDR:.*]] = llvm.mlir.addressof @a2 : !llvm.ptr
 // CHECK:   llvm.return %[[ADDR]] : !llvm.ptr
+// CHECK: }
+
+// -----
+
+llvm.mlir.global private @g30(0 : i32) {dso_local} : i32
+
+llvm.mlir.alias private unnamed_addr thread_local @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK: llvm.mlir.alias private unnamed_addr thread_local @a30 {dso_local} : i32 {
+// CHECK:   %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+// CHECK:   llvm.return %0 : !llvm.ptr
 // CHECK: }
