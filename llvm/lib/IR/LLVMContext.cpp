@@ -82,9 +82,9 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
     assert(Entry->second == BundleTagID && "operand bundle id drifted!");
   }
 
-  [[maybe_unused]] auto *TypeEntry = pImpl->getOrInsertBundleTag("type");
-  assert(TypeEntry->second == LLVMContext::OB_type &&
-         "type operand bundle id drifted!");
+  [[maybe_unused]] auto *TypeEntry = pImpl->getOrInsertBundleTag("callee_type");
+  assert(TypeEntry->second == LLVMContext::OB_callee_type &&
+         "callee_type operand bundle id drifted!");
 
   SyncScope::ID SingleThreadSSID =
       pImpl->getOrInsertSyncScopeID("singlethread");
