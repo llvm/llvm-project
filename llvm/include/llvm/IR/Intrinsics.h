@@ -162,6 +162,7 @@ namespace Intrinsic {
       AArch64Svcount,
     } Kind;
 
+    // These three have to be contiguous.
     static_assert(OneFifthVecArgument == OneThirdVecArgument + 1 &&
                   OneSeventhVecArgument == OneFifthVecArgument + 1);
     union {
