@@ -42,6 +42,7 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fopenacc,
                             options::OPT_finput_charset_EQ,
                             options::OPT_fimplicit_none,
+                            options::OPT_fimplicit_none_ext,
                             options::OPT_fno_implicit_none,
                             options::OPT_fbackslash,
                             options::OPT_fno_backslash,
@@ -58,7 +59,8 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fhermetic_module_files,
                             options::OPT_frealloc_lhs,
                             options::OPT_fno_realloc_lhs,
-                            options::OPT_fsave_main_program});
+                            options::OPT_fsave_main_program,
+                            options::OPT_fno_save_main_program});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -937,6 +939,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::warn_O4_is_O3);
     } else if (A->getOption().matches(options::OPT_Ofast)) {
       CmdArgs.push_back("-O3");
+      D.Diag(diag::warn_drv_deprecated_arg_ofast_for_flang);
     } else {
       A->render(Args, CmdArgs);
     }
