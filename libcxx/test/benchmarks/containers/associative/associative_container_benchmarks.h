@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
-#include "../GenerateInput.h"
+#include "../../GenerateInput.h"
 
 namespace support {
 

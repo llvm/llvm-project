@@ -8,27 +8,28 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <map>
 #include <string>
+#include <unordered_map>
 
 #include "associative_container_benchmarks.h"
-#include "../GenerateInput.h"
+#include "../../GenerateInput.h"
 #include "benchmark/benchmark.h"
 
 template <class K, class V>
-struct support::adapt_operations<std::multimap<K, V>> {
-  using ValueType = typename std::multimap<K, V>::value_type;
-  using KeyType   = typename std::multimap<K, V>::key_type;
+struct support::adapt_operations<std::unordered_multimap<K, V>> {
+  using ValueType = typename std::unordered_multimap<K, V>::value_type;
+  using KeyType   = typename std::unordered_multimap<K, V>::key_type;
   static ValueType value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
   static KeyType key_from_value(ValueType const& value) { return value.first; }
 
-  using InsertionResult = typename std::multimap<K, V>::iterator;
+  using InsertionResult = typename std::unordered_multimap<K, V>::iterator;
   static auto get_iterator(InsertionResult const& result) { return result; }
 };
 
 int main(int argc, char** argv) {
-  support::associative_container_benchmarks<std::multimap<int, int>>("std::multimap<int, int>");
-  support::associative_container_benchmarks<std::multimap<std::string, int>>("std::multimap<std::string, int>");
+  support::associative_container_benchmarks<std::unordered_multimap<int, int>>("std::unordered_multimap<int, int>");
+  support::associative_container_benchmarks<std::unordered_multimap<std::string, int>>(
+      "std::unordered_multimap<std::string, int>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
