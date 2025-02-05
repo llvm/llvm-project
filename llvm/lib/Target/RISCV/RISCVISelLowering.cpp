@@ -5718,7 +5718,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                       DAG.getVectorIdxConstant(0, DL));
       auto [InnerTrueMask, InnerVL] =
           getDefaultScalableVLOps(M1VT, DL, DAG, Subtarget);
-      int N = ContainerVT.getVectorMinNumElements() / M1VT.getVectorMinNumElements();
+      int N = ContainerVT.getVectorMinNumElements() /
+              M1VT.getVectorMinNumElements();
       assert(isPowerOf2_32(N) && N <= 8);
       Gather = DAG.getUNDEF(ContainerVT);
       for (int i = 0; i < N; i++) {
