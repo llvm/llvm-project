@@ -5325,6 +5325,21 @@ static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
   return DAG.getVectorShuffle(VT, DL, Select, DAG.getUNDEF(VT), NewMask);
 }
 
+/// Is this mask local (i.e. elements only move within their local span), and
+/// repeating (that is, the same rearrangement is being done within each span)?
+static bool isLocalRepeatingShuffle(ArrayRef<int> Mask, int Span) {
+  // TODO: Could improve the case where undef elements exist in the first span.
+  for (auto [I, M] : enumerate(Mask)) {
+    if (M == -1)
+      continue;
+    int ChunkLo = I - (I % Span);
+    int ChunkHi = ChunkLo + Span;
+    if (M < ChunkLo || M >= ChunkHi || M - ChunkLo != Mask[I % Span])
+      return false;
+  }
+  return true;
+}
+
 /// Try to widen element type to get a new mask value for a better permutation
 /// sequence.  This doesn't try to inspect the widened mask for profitability;
 /// we speculate the widened form is equal or better.  This has the effect of
@@ -5686,10 +5701,43 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                  : DAG.getUNDEF(XLenVT));
     }
     SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
-    LHSIndices = convertToScalableVector(IndexContainerVT, LHSIndices, DAG,
-                                         Subtarget);
-    SDValue Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
-                                 DAG.getUNDEF(ContainerVT), TrueMask, VL);
+    LHSIndices =
+        convertToScalableVector(IndexContainerVT, LHSIndices, DAG, Subtarget);
+
+    SDValue Gather;
+    // If we have a locally repeating mask, then we can reuse the first register
+    // in the index register group for all registers within the source register
+    // group.  TODO: This generalizes to m2, and m4.  Also, this is currently
+    // picking up cases with a fully undef tail which could be more directly
+    // handled with fewer redundant vrgathers
+    const MVT M1VT = getLMUL1VT(ContainerVT);
+    auto VLMAX = RISCVTargetLowering::computeVLMAXBounds(M1VT, Subtarget).first;
+    if (ContainerVT.bitsGT(M1VT) && isLocalRepeatingShuffle(Mask, VLMAX)) {
+      EVT SubIndexVT = M1VT.changeVectorElementType(IndexVT.getScalarType());
+      SDValue SubIndex =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubIndexVT, LHSIndices,
+                      DAG.getVectorIdxConstant(0, DL));
+      auto [InnerTrueMask, InnerVL] =
+          getDefaultScalableVLOps(M1VT, DL, DAG, Subtarget);
+      int N = ContainerVT.getVectorMinNumElements() /
+              M1VT.getVectorMinNumElements();
+      assert(isPowerOf2_32(N) && N <= 8);
+      Gather = DAG.getUNDEF(ContainerVT);
+      for (int i = 0; i < N; i++) {
+        SDValue SubIdx =
+            DAG.getVectorIdxConstant(M1VT.getVectorMinNumElements() * i, DL);
+        SDValue SubV1 =
+            DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, V1, SubIdx);
+        SDValue SubVec =
+            DAG.getNode(GatherVVOpc, DL, M1VT, SubV1, SubIndex,
+                        DAG.getUNDEF(M1VT), InnerTrueMask, InnerVL);
+        Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
+                             SubVec, SubIdx);
+      }
+    } else {
+      Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
+                           DAG.getUNDEF(ContainerVT), TrueMask, VL);
+    }
     return convertFromScalableVector(VT, Gather, DAG, Subtarget);
   }
 
