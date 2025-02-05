@@ -55,6 +55,7 @@
 #include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
+#include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
@@ -960,7 +961,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
     if (Opt.MISchedPostRA)
       addPass(PostMachineSchedulerPass(&TM));
     else
-      addPass(PostRASchedulerPass());
+      addPass(PostRASchedulerPass(&TM));
   }
 
   // GC
