@@ -45,9 +45,6 @@
 #define __NOEXCEPT throw()
 #endif
 
-#undef _Returns_twice
-#define _Returns_twice [[gnu::returns_twice]]
-
 #else // not __cplusplus
 
 #undef __BEGIN_C_DECLS
