@@ -2162,8 +2162,7 @@ SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
         // cast two constants
         APInt Value(64, 0);
         Value = CastToAPInt(BVOp0) | CastToAPInt(BVOp1).shl(32);
-        SDValue Const = DAG.getConstant(Value, DL, MVT::i64);
-        return DAG.getBitcast(ToVT, Const);
+        return DAG.getConstant(Value, DL, MVT::i64);
       }
 
       // otherwise build an i64
