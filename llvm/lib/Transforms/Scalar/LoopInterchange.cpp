@@ -1130,6 +1130,12 @@ std::optional<bool>
 LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis(
     const DenseMap<const Loop *, unsigned> &CostMap,
     std::unique_ptr<CacheCost> &CC) {
+  // The `CacheCost` is not calculated if it is not considered worthwhile to use
+  // it. In this case we leave the profitability decision to the subsequent
+  // processes.
+  if (CC == nullptr)
+    return std::nullopt;
+
   // This is the new cost model returned from loop cache analysis.
   // A smaller index means the loop should be placed an outer loop, and vice
   // versa.
@@ -1773,8 +1779,12 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   });
 
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
-  std::unique_ptr<CacheCost> CC =
-      CacheCost::getCacheCost(LN.getOutermostLoop(), AR, DI);
+
+  std::unique_ptr<CacheCost> CC;
+  // If the cache line size is set to zero, it doesn't make sense to use
+  // `CacheCost` for profitability decisions. Avoid computing it in this case.
+  if (AR.TTI.getCacheLineSize() != 0)
+    CC = CacheCost::getCacheCost(LN.getOutermostLoop(), AR, DI);
 
   if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, CC, &ORE).run(LN))
     return PreservedAnalyses::all();
