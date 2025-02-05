@@ -312,11 +312,12 @@ ScheduleDAGInstrs *
 RISCVTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
   ScheduleDAGMI *DAG = nullptr;
   const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-  bool EnableLoadStoreClusteringForLoadStorePairOpt =
-      !ST.getMacroFusions().empty() && ST.useLoadStorePairs();
+  bool EnableLoadStoreClusteringForLoadStoreOpt =
+      !ST.getMacroFusions().empty() &&
+      (ST.useLoadStorePairs() || ST.useMIPSLoadStoreBonding());
 
   if (EnablePostMISchedLoadStoreClustering ||
-      EnableLoadStoreClusteringForLoadStorePairOpt) {
+      EnableLoadStoreClusteringForLoadStoreOpt) {
     DAG = createGenericSchedPostRA(C);
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
@@ -574,7 +575,7 @@ void RISCVPassConfig::addPreEmitPass() {
 
   // LoadStoreOptimizer creates bundles for load-store bonding.
   addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
-    return MF.getSubtarget<RISCVSubtarget>().useLoadStorePairs();
+    return MF.getSubtarget<RISCVSubtarget>().useMIPSLoadStoreBonding();
   }));
 }
 

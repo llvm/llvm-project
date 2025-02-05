@@ -62,10 +62,15 @@ static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
     "riscv-min-jump-table-entries", cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on RISCV"));
 
+static cl::opt<bool> UseMIPSLoadStorePairsOpt(
+    "mips-riscv-load-store-pairs",
+    cl::desc("RISCV: Enable the load/store pair optimization pass"),
+    cl::init(false), cl::Hidden);
+
 static cl::opt<bool>
-    UseMIPSLoadStorePairsOpt("mips-riscv-load-store-pairs",
+    UseMIPSLoadStoreBondingOpt("mips-riscv-load-store-bonding",
                              cl::desc("RISCV: Optimize for load-store bonding"),
-                             cl::init(false), cl::Hidden);
+                             cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     UseCCMovInsn("riscv-ccmov", cl::desc("RISCV: Use 'mips.ccmov' instruction"),
@@ -250,6 +255,10 @@ void RISCVSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
 
 bool RISCVSubtarget::useLoadStorePairs() const {
   return UseMIPSLoadStorePairsOpt && HasVendorXMIPSLSP;
+}
+
+bool RISCVSubtarget::useMIPSLoadStoreBonding() const {
+  return UseMIPSLoadStoreBondingOpt && HasVendorXMIPSLSP;
 }
 
 bool RISCVSubtarget::useCCMovInsn() const {
