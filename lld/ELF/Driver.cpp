@@ -2929,36 +2929,6 @@ static void readSecurityNotes(Ctx &ctx) {
     ctx.arg.andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 }
 
-static void checkExecuteOnly(Ctx &ctx) {
-  if (ctx.arg.emachine != EM_AARCH64)
-    return;
-
-  auto reportUnless = [&](StringRef config, bool cond) -> ELFSyncStream {
-    if (cond)
-      return {ctx, DiagLevel::None};
-    if (config == "error")
-      return {ctx, DiagLevel::Err};
-    if (config == "warning")
-      return {ctx, DiagLevel::Warn};
-    return {ctx, DiagLevel::None};
-  };
-
-  for (ELFFileBase *file : ctx.objectFiles) {
-    for (InputSectionBase *sec : file->getSections()) {
-      if (!(sec && sec->flags & SHF_EXECINSTR))
-        continue;
-
-      OutputSection *osec = sec->getOutputSection();
-      if (osec && osec->name == ".text") {
-        reportUnless(ctx.arg.zExecuteOnlyReport,
-                     sec->flags & SHF_AARCH64_PURECODE)
-            << "-z execute-only-report: " << sec
-            << " does not have SHF_AARCH64_PURECODE flag set";
-      }
-    }
-  }
-}
-
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
   switch (file->ekind) {
   case ELF32LEKind:
@@ -3324,8 +3294,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // Process that.
     ctx.script->addOrphanSections();
   }
-
-  checkExecuteOnly(ctx);
 
   {
     llvm::TimeTraceScope timeScope("Merge/finalize input sections");
