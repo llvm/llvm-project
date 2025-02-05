@@ -644,8 +644,7 @@ define <16 x i8> @uabd_v16i8_nuw(<16 x i8> %a, <16 x i8> %b) {
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; ZVABD-NEXT:    vsub.vv v8, v8, v9
-; ZVABD-NEXT:    vrsub.vi v9, v8, 0
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %sub = sub nuw <16 x i8> %a, %b
   %abs = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %sub, i1 true)
@@ -666,8 +665,7 @@ define <8 x i16> @uabd_v8i16_nuw(<8 x i16> %a, <8 x i16> %b) {
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVABD-NEXT:    vsub.vv v8, v8, v9
-; ZVABD-NEXT:    vrsub.vi v9, v8, 0
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %sub = sub nuw <8 x i16> %a, %b
   %abs = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %sub, i1 true)
@@ -688,8 +686,7 @@ define <4 x i32> @uabd_v4i32_nuw(<4 x i32> %a, <4 x i32> %b) {
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; ZVABD-NEXT:    vsub.vv v8, v8, v9
-; ZVABD-NEXT:    vrsub.vi v9, v8, 0
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %sub = sub nuw <4 x i32> %a, %b
   %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %sub, i1 true)
@@ -710,8 +707,7 @@ define <2 x i64> @uabd_v2i64_nuw(<2 x i64> %a, <2 x i64> %b) {
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; ZVABD-NEXT:    vsub.vv v8, v8, v9
-; ZVABD-NEXT:    vrsub.vi v9, v8, 0
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %sub = sub nuw <2 x i64> %a, %b
   %abs = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %sub, i1 true)
