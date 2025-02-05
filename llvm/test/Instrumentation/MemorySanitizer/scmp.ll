@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=msan -S | FileCheck %s
 ;
 ; llvm.scmp is correctly handled heuristically when each parameter is the same
-; as the return type e.g.,
+; type as the return type e.g.,
 ;   call i8 @llvm.scmp.i8.i8(i8 %x, i8 %y)
 ; but handled incorrectly by visitInstruction when the return type is different
 ; e.g.,
