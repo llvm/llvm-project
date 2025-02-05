@@ -5,8 +5,8 @@
 ; - llvm.aarch64.neon.{addp, faddp}
 ;
 ; Unknown instructions handled by visitInstruction:
-; - llvm.aarch64.neon.{addhn, raddhn}
-; - llvm.aarch64.neon.{saddlp, uaddlp}
+; - Incorrectly: llvm.aarch64.neon.{addhn, raddhn}
+; - Suboptimally: llvm.aarch64.neon.{saddlp, uaddlp}
 ;
 ; Forked from llvm/test/CodeGen/AArch64/arm64-vadd.ll
 
