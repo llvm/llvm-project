@@ -5811,6 +5811,11 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   if (SVT.getScalarType() == MVT::i1)
     return false;
 
+  unsigned NumElts = M.size();
+  if (ShuffleVectorInst::isReverseMask(M, NumElts) &&
+      ShuffleVectorInst::isSingleSourceMask(M, NumElts))
+    return true;
+
   int Dummy1, Dummy2;
   return (isElementRotate(Dummy1, Dummy2, M) > 0) ||
          isInterleaveShuffle(M, SVT, Dummy1, Dummy2, Subtarget);
