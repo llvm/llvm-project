@@ -232,6 +232,17 @@ cir::AllocaOp findAlloca(mlir::Operation *op) {
   return {};
 }
 
+mlir::Value findAddr(mlir::Value v) {
+  if (mlir::isa<cir::PointerType>(v.getType()))
+    return v;
+
+  auto op = v.getDefiningOp();
+  if (!op || !mlir::isa<cir::CastOp, cir::LoadOp, cir::ReturnOp>(op))
+    return {};
+
+  return findAddr(op->getOperand(0));
+}
+
 /// Create a store to \param Dst from \param Src where the source and
 /// destination may have different types.
 ///
@@ -338,10 +349,10 @@ mlir::Value createCoercedValue(mlir::Value Src, mlir::Type Ty,
     return CGF.buildAggregateBitcast(Src, Ty);
   }
 
-  if (auto alloca = findAlloca(Src.getDefiningOp())) {
-    auto tmpAlloca = createTmpAlloca(CGF, alloca.getLoc(), Ty);
-    createMemCpy(CGF, tmpAlloca, alloca, SrcSize.getFixedValue());
-    return CGF.getRewriter().create<LoadOp>(alloca.getLoc(),
+  if (mlir::Value addr = findAddr(Src)) {
+    auto tmpAlloca = createTmpAlloca(CGF, addr.getLoc(), Ty);
+    createMemCpy(CGF, tmpAlloca, addr, SrcSize.getFixedValue());
+    return CGF.getRewriter().create<LoadOp>(addr.getLoc(),
                                             tmpAlloca.getResult());
   }
 
@@ -371,7 +382,6 @@ mlir::Value createCoercedNonPrimitive(mlir::Value src, mlir::Type ty,
 
     auto tySize = LF.LM.getDataLayout().getTypeStoreSize(ty);
     createMemCpy(LF, alloca, addr, tySize.getFixedValue());
-
     auto newLoad = bld.create<LoadOp>(src.getLoc(), alloca.getResult());
     bld.replaceAllOpUsesWith(load, newLoad);
 
@@ -1265,6 +1275,14 @@ mlir::Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
 
       // FIXME(cir): Use return value slot here.
       mlir::Value RetVal = callOp.getResult();
+      mlir::Value dstPtr;
+      for (auto *user : Caller->getUsers()) {
+        if (auto storeOp = mlir::dyn_cast<StoreOp>(user)) {
+          assert(!dstPtr && "multiple destinations for the return value");
+          dstPtr = storeOp.getAddr();
+        }
+      }
+
       // TODO(cir): Check for volatile return values.
       cir_cconv_assert(!cir::MissingFeatures::volatileTypes());
 
@@ -1283,16 +1301,11 @@ mlir::Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
       if (mlir::dyn_cast<StructType>(RetTy) &&
           mlir::cast<StructType>(RetTy).getNumElements() != 0) {
         RetVal = newCallOp.getResult();
+        createCoercedStore(RetVal, dstPtr, false, *this);
 
-        llvm::SmallVector<StoreOp, 8> workList;
         for (auto *user : Caller->getUsers())
           if (auto storeOp = mlir::dyn_cast<StoreOp>(user))
-            workList.push_back(storeOp);
-        for (StoreOp storeOp : workList) {
-          auto destPtr =
-              createCoercedBitcast(storeOp.getAddr(), RetVal.getType(), *this);
-          rewriter.replaceOpWithNewOp<StoreOp>(storeOp, RetVal, destPtr);
-        }
+            rewriter.eraseOp(storeOp);
       }
 
       // NOTE(cir): No need to convert from a temp to an RValue. This is

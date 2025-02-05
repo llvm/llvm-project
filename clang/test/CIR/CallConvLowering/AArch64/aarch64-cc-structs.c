@@ -302,19 +302,18 @@ void pass_nested_u(NESTED_U a) {}
 
 // CHECK: cir.func no_proto @call_nested_u()
 // CHECK: %[[#V0:]] = cir.alloca !ty_NESTED_U, !cir.ptr<!ty_NESTED_U>
-// CHECK: %[[#V1:]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["tmp"] {alignment = 8 : i64}
+// CHECK: %[[#V1:]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["tmp"]
 // CHECK: %[[#V2:]] = cir.load %[[#V0]] : !cir.ptr<!ty_NESTED_U>, !ty_NESTED_U
-// CHECK: %[[#V3:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_NESTED_U>)
-// CHECK: %[[#V4:]] = cir.load %[[#V3]]
-// CHECK: %[[#V5:]] = cir.cast(bitcast, %[[#V3]]
-// CHECK: %[[#V6:]] = cir.load %[[#V5]]
-// CHECK: %[[#V7:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_NESTED_U>), !cir.ptr<!void>
+// CHECK: %[[#V3:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_NESTED_U>), !cir.ptr<!ty_anon2E0_>
+// CHECK: %[[#V4:]] = cir.load %[[#V3]] : !cir.ptr<!ty_anon2E0_>, !ty_anon2E0_
+// CHECK: %[[#V5:]] = cir.cast(bitcast, %[[#V3]] : !cir.ptr<!ty_anon2E0_>), !cir.ptr<!ty_anon2E1_>
+// CHECK: %[[#V6:]] = cir.load %[[#V5]] : !cir.ptr<!ty_anon2E1_>, !ty_anon2E1_
+// CHECK: %[[#V7:]] = cir.cast(bitcast, %[[#V5]] : !cir.ptr<!ty_anon2E1_>), !cir.ptr<!void>
 // CHECK: %[[#V8:]] = cir.cast(bitcast, %[[#V1]] : !cir.ptr<!u64i>), !cir.ptr<!void>
 // CHECK: %[[#V9:]] = cir.const #cir.int<2> : !u64i
 // CHECK: cir.libc.memcpy %[[#V9]] bytes from %[[#V7]] to %[[#V8]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
 // CHECK: %[[#V10:]] = cir.load %[[#V1]] : !cir.ptr<!u64i>, !u64i
 // CHECK: cir.call @pass_nested_u(%[[#V10]]) : (!u64i) -> ()
-// CHECK: cir.return
 
 // LLVM: void @call_nested_u()
 // LLVM: %[[#V1:]] = alloca %struct.NESTED_U, i64 1, align 1
@@ -330,3 +329,84 @@ void call_nested_u() {
   NESTED_U a;
   pass_nested_u(a);
 }
+
+
+#pragma pack(push)
+#pragma pack(1)
+typedef struct {
+   int f0 : 18;
+   int f1 : 31;
+   int f2 : 5;
+   int f3 : 29;
+   int f4 : 24;
+} PackedS1;
+#pragma pack(pop)
+
+PackedS1 foo(void) {
+  PackedS1 s;
+  return s;
+}
+
+void bar(void) {
+  PackedS1 y = foo();
+}
+
+// CHECK: cir.func @bar
+// CHECK: %[[#V0:]] = cir.alloca !ty_PackedS1_, !cir.ptr<!ty_PackedS1_>, ["y", init]
+// CHECK: %[[#V1:]] = cir.alloca !cir.array<!u64i x 2>, !cir.ptr<!cir.array<!u64i x 2>>, ["tmp"]
+// CHECK: %[[#V2:]] = cir.call @foo() : () -> !cir.array<!u64i x 2>
+// CHECK: cir.store %[[#V2]], %[[#V1]] : !cir.array<!u64i x 2>, !cir.ptr<!cir.array<!u64i x 2>>
+// CHECK: %[[#V3:]] = cir.cast(bitcast, %[[#V1]] : !cir.ptr<!cir.array<!u64i x 2>>), !cir.ptr<!void>
+// CHECK: %[[#V4:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_PackedS1_>), !cir.ptr<!void>
+// CHECK: %[[#V5:]] = cir.const #cir.int<14> : !u64i
+// CHECK: cir.libc.memcpy %[[#V5]] bytes from %[[#V3]] to %[[#V4]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+
+// LLVML: void @bar
+// LLVM:  %[[#V1:]] = alloca %struct.PackedS1, i64 1, align 1
+// LLVM:  %[[#V2:]] = alloca [2 x i64], i64 1, align 8
+// LLVM:  %[[#V3:]] = call [2 x i64] @foo()
+// LLVM:  store [2 x i64] %[[#V3]], ptr %[[#V2]], align 8
+// LLVM:  call void @llvm.memcpy.p0.p0.i64(ptr %[[#V1]], ptr %[[#V2]], i64 14, i1 false)
+
+
+#pragma pack(push)
+#pragma pack(1)
+typedef struct {
+   short  f0;
+   int  f1;
+} PackedS2;
+#pragma pack(pop)
+
+PackedS2 g[3] = {{1,2},{3,4},{5,6}};
+
+void baz(PackedS2 a) {
+  short *x = &g[2].f0;
+  (*x) = a.f0;
+}
+
+void qux(void) {
+  const PackedS2 *s1 = &g[1];
+  baz(*s1);
+}
+
+// check source of memcpy
+// CHECK: cir.func @qux
+// CHECK: %[[#V0:]] = cir.alloca !cir.ptr<!ty_PackedS2_>, !cir.ptr<!cir.ptr<!ty_PackedS2_>>, ["s1", init]
+// CHECK: %[[#V1:]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["tmp"]
+// CHECK: %[[#V2:]] = cir.get_global @g : !cir.ptr<!cir.array<!ty_PackedS2_ x 3>>
+// CHECK: %[[#V3:]] = cir.const #cir.int<1> : !s32i
+// CHECK: %[[#V4:]] = cir.cast(array_to_ptrdecay, %[[#V2]] : !cir.ptr<!cir.array<!ty_PackedS2_ x 3>>), !cir.ptr<!ty_PackedS2_>
+// CHECK: %[[#V5:]] = cir.ptr_stride(%[[#V4]] : !cir.ptr<!ty_PackedS2_>, %[[#V3]] : !s32i), !cir.ptr<!ty_PackedS2_>
+// CHECK: cir.store %[[#V5]], %[[#V0]] : !cir.ptr<!ty_PackedS2_>, !cir.ptr<!cir.ptr<!ty_PackedS2_>>
+// CHECK: %[[#V6:]] = cir.load deref %[[#V0]] : !cir.ptr<!cir.ptr<!ty_PackedS2_>>, !cir.ptr<!ty_PackedS2_>
+// CHECK: %[[#V7:]] = cir.cast(bitcast, %[[#V6]] : !cir.ptr<!ty_PackedS2_>), !cir.ptr<!void>  
+// CHECK: %[[#V8:]] = cir.const #cir.int<6> : !u64i
+// CHECK: cir.libc.memcpy %[[#V8]] bytes from %[[#V7]] 
+
+// LLVM: void @qux
+// LLVM: %[[#V1:]] = alloca ptr, i64 1, align 8
+// LLVM: %[[#V2:]] = alloca i64, i64 1, align 8
+// LLVM: store ptr getelementptr (%struct.PackedS2, ptr @g, i64 1), ptr %[[#V1]], align 8
+// LLVM: %[[#V3:]] = load ptr, ptr %[[#V1]], align 8
+// LLVM: %[[#V4:]] = load %struct.PackedS2, ptr %[[#V3]], align 1
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[#V2]], ptr %[[#V3]], i64 6, i1 false)
