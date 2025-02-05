@@ -500,7 +500,8 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
       case Intrinsic::fptosi_sat:
       case Intrinsic::fptoui_sat:
         ToErase = lowerFPTOISat(II);
-        if (ToErase.empty()) break;
+        if (ToErase.empty()) 
+          break;
 
         Changed = true;
         break;
