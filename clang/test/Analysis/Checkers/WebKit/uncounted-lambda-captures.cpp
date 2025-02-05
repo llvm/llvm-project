@@ -259,7 +259,6 @@ struct RefCountableWithLambdaCapturingThis {
     call(lambda);
   }
 
-
   void forEach(const WTF::Function<void(RefCountable&)>&);
   void method_captures_this_with_lambda_with_no_escape() {
     auto run = [&]([[clang::noescape]] const WTF::Function<void(RefCountable&)>& func) {
