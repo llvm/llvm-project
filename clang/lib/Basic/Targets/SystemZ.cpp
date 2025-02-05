@@ -90,6 +90,14 @@ bool SystemZTargetInfo::validateAsmConstraint(
   case 'T': // Likewise, plus an index
     Info.setAllowsMemory();
     return true;
+  case '@':
+    // CC condition changes.
+    if (strlen(Name) >= 3 && *(Name + 1) == 'c' && *(Name + 2) == 'c') {
+      Name += 2;
+      Info.setAllowsRegister();
+      return true;
+    }
+    return false;
   }
 }
 
@@ -150,6 +158,9 @@ unsigned SystemZTargetInfo::getMinGlobalAlign(uint64_t Size,
 
 void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
+  // Inline assembly supports SystemZ flag outputs.
+  Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
+
   Builder.defineMacro("__s390__");
   Builder.defineMacro("__s390x__");
   Builder.defineMacro("__zarch__");

@@ -2563,9 +2563,15 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
     if ((i < ResultRegIsFlagReg.size()) && ResultRegIsFlagReg[i]) {
       // Target must guarantee the Value `Tmp` here is lowered to a boolean
       // value.
-      llvm::Constant *Two = llvm::ConstantInt::get(Tmp->getType(), 2);
+      unsigned CCUpperBound = 2;
+      if (CGF.getTarget().getTriple().getArch() == llvm::Triple::systemz) {
+        // On this target CC value can be in range [0, 3].
+        CCUpperBound = 4;
+      }
+      llvm::Constant *CCUpperBoundConst =
+          llvm::ConstantInt::get(Tmp->getType(), CCUpperBound);
       llvm::Value *IsBooleanValue =
-          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, Two);
+          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, CCUpperBoundConst);
       llvm::Function *FnAssume = CGM.getIntrinsic(llvm::Intrinsic::assume);
       Builder.CreateCall(FnAssume, IsBooleanValue);
     }

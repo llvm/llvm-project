@@ -510,6 +510,16 @@ public:
   bool shouldExpandCmpUsingSelects(EVT VT) const override { return true; }
 
   const char *getTargetNodeName(unsigned Opcode) const override;
+
+  // Check for if flag output operands has SRL/IPM Sequence.
+  bool canLowerSRL_IPM_Switch(SDValue Cond) const override;
+
+  // Handle Lowering flag assembly outputs.
+  SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Flag,
+                                      const SDLoc &DL,
+                                      const AsmOperandInfo &Constraint,
+                                      SelectionDAG &DAG) const override;
+
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
@@ -744,7 +754,11 @@ private:
   SDValue combineINT_TO_FP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
+  std::optional<SDValue> combineBR_CCJoinIPMMask(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
+  std::optional<SDValue> combineSELECT_CC_CCIPMMask(SDNode *N,
+                                                    DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineIntDIVREM(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINTRINSIC(SDNode *N, DAGCombinerInfo &DCI) const;

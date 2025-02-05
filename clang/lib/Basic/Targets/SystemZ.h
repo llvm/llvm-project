@@ -118,6 +118,11 @@ public:
                              TargetInfo::ConstraintInfo &info) const override;
 
   std::string convertConstraint(const char *&Constraint) const override {
+    if (strncmp(Constraint, "@cc", 3) == 0) {
+      std::string Converted = "{" + std::string(Constraint, 3) + "}";
+      Constraint += 3;
+      return Converted;
+    }
     switch (Constraint[0]) {
     case 'p': // Keep 'p' constraint.
       return std::string("p");

@@ -2831,8 +2831,37 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
       Opcode = Instruction::And;
     else if (match(BOp, m_LogicalOr(m_Value(BOp0), m_Value(BOp1))))
       Opcode = Instruction::Or;
-
-    if (Opcode &&
+    auto &TLI = DAG.getTargetLoweringInfo();
+    bool BrSrlIPM = FuncInfo.MF->getTarget().getTargetTriple().getArch() ==
+                    Triple::ArchType::systemz;
+    // For Flag output operands SRL/IPM sequence, we want to avoid
+    // creating switch case, as it creates Basic Block and inhibits
+    // optimization in DAGCombiner for flag output operands.
+    const auto checkSRLIPM = [&TLI](const SDValue &Op) {
+      if (!Op.getNumOperands())
+        return false;
+      SDValue OpVal = Op.getOperand(0);
+      SDNode *N = OpVal.getNode();
+      if (N && N->getOpcode() == ISD::SRL)
+        return TLI.canLowerSRL_IPM_Switch(OpVal);
+      else if (N && OpVal.getNumOperands() &&
+               (N->getOpcode() == ISD::AND || N->getOpcode() == ISD::OR)) {
+        SDValue OpVal1 = OpVal.getOperand(0);
+        SDNode *N1 = OpVal1.getNode();
+        if (N1 && N1->getOpcode() == ISD::SRL)
+          return TLI.canLowerSRL_IPM_Switch(OpVal1);
+      }
+      return false;
+    };
+    if (BrSrlIPM) {
+      if (NodeMap.count(BOp0) && NodeMap[BOp0].getNode()) {
+        BrSrlIPM &= checkSRLIPM(getValue(BOp0));
+        if (NodeMap.count(BOp1) && NodeMap[BOp1].getNode())
+          BrSrlIPM &= checkSRLIPM(getValue(BOp1));
+      } else
+        BrSrlIPM = false;
+    }
+    if (Opcode && !BrSrlIPM &&
         !(match(BOp0, m_ExtractElt(m_Value(Vec), m_Value())) &&
           match(BOp1, m_ExtractElt(m_Specific(Vec), m_Value()))) &&
         !shouldKeepJumpConditionsTogether(
@@ -12043,18 +12072,41 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
       const APInt &SmallValue = Small.Low->getValue();
       const APInt &BigValue = Big.Low->getValue();
 
+      // Creating switch cases optimizing tranformation inhibits DAGCombiner
+      // for SystemZ for flag output operands. DAGCobiner compute cumulative
+      // CCMask for flag output operands SRL/IPM sequence, we want to avoid
+      // creating switch case, as it creates Basic Block and inhibits
+      // optimization in DAGCombiner for flag output operands.
+      // cases like (CC == 0) || (CC == 2) || (CC == 3), or
+      // (CC == 0) || (CC == 1) ^ (CC == 3), there could potentially be
+      // more cases like this.
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      bool IsSrlIPM = false;
+      if (NodeMap.count(Cond) && NodeMap[Cond].getNode())
+        IsSrlIPM = CurMF->getTarget().getTargetTriple().getArch() ==
+                       Triple::ArchType::systemz &&
+                   TLI.canLowerSRL_IPM_Switch(getValue(Cond));
       // Check that there is only one bit different.
       APInt CommonBit = BigValue ^ SmallValue;
-      if (CommonBit.isPowerOf2()) {
+      if (CommonBit.isPowerOf2() || IsSrlIPM) {
         SDValue CondLHS = getValue(Cond);
         EVT VT = CondLHS.getValueType();
         SDLoc DL = getCurSDLoc();
+        SDValue Cond;
 
-        SDValue Or = DAG.getNode(ISD::OR, DL, VT, CondLHS,
-                                 DAG.getConstant(CommonBit, DL, VT));
-        SDValue Cond = DAG.getSetCC(
-            DL, MVT::i1, Or, DAG.getConstant(BigValue | SmallValue, DL, VT),
-            ISD::SETEQ);
+        if (CommonBit.isPowerOf2()) {
+          SDValue Or = DAG.getNode(ISD::OR, DL, VT, CondLHS,
+                                   DAG.getConstant(CommonBit, DL, VT));
+          Cond = DAG.getSetCC(DL, MVT::i1, Or,
+                              DAG.getConstant(BigValue | SmallValue, DL, VT),
+                              ISD::SETEQ);
+        } else if (IsSrlIPM && BigValue == 3 && SmallValue == 0) {
+          SDValue SetCC =
+              DAG.getSetCC(DL, MVT::i32, CondLHS,
+                           DAG.getConstant(SmallValue, DL, VT), ISD::SETEQ);
+          Cond = DAG.getSetCC(DL, MVT::i32, SetCC,
+                              DAG.getConstant(BigValue, DL, VT), ISD::SETEQ);
+        }
 
         // Update successor info.
         // Both Small and Big will jump to Small.BB, so we sum up the
