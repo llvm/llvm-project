@@ -24912,10 +24912,8 @@ static SDValue foldCSELofLASTB(SDNode *Op, SelectionDAG &DAG) {
   if (LastB.getOpcode() != AArch64ISD::LASTB || LastB.getOperand(0) != AnyPred)
     return SDValue();
 
-  SDValue Vec = LastB.getOperand(1);
-
   return DAG.getNode(AArch64ISD::CLASTB_N, SDLoc(Op), Op->getValueType(0),
-                     AnyPred, Default, Vec);
+                     AnyPred, Default, LastB.getOperand(1));
 }
 
 // Optimize CSEL instructions
