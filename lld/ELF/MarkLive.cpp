@@ -231,6 +231,7 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
   if (sym) {
     // If a specific symbol is referenced, the parent makes it alive, and it
     // (may) makes its section alive.
+    assert(parent || isa<Defined>(sym) && "only Defined symbols can be alive");
     whyLive.try_emplace(sym, parent);
     whyLive.try_emplace(sec, sym);
   } else {
@@ -244,11 +245,16 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
 }
 
 template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
-  if (!whyLive.contains(s))
-    return;
+  if (!whyLive.contains(s)) {
+    auto *d = dyn_cast<Defined>(s);
+    if (!d)
+      return;
+    auto *parent = dyn_cast<InputSectionBase>(d->section);
+    if (!parent || !parent->isLive())
+      return;
+  }
 
   auto msg = Msg(ctx);
-
   msg << "live symbol: " << toStr(ctx, *s);
 
   LiveObject cur = s;
