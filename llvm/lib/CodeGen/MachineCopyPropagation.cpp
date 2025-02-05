@@ -1039,8 +1039,7 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         if (MIRefedinCopyInfo)
           continue;
 
-        LLVM_DEBUG(dbgs() << "MCP: Removing copy due to regmask clobbering: ";
-                   MaybeDead->dump());
+        LLVM_DEBUG(dbgs() << "MCP: Removing copy due to regmask clobbering: " << *MaybeDead;
 
         MaybeDead->eraseFromParent();
         Changed = true;
