@@ -146,6 +146,20 @@ public:
     return cir::GlobalViewAttr::get(type, symbol, indices);
   }
 
+  cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
+                                        cir::GlobalOp globalOp,
+                                        llvm::ArrayRef<int64_t> indices) {
+    llvm::SmallVector<mlir::Attribute> attrs;
+    for (auto ind : indices) {
+      auto a =
+          mlir::IntegerAttr::get(mlir::IntegerType::get(getContext(), 64), ind);
+      attrs.push_back(a);
+    }
+
+    mlir::ArrayAttr arAttr = mlir::ArrayAttr::get(getContext(), attrs);
+    return getGlobalViewAttr(type, globalOp, arAttr);
+  }
+
   mlir::Attribute getString(llvm::StringRef str, mlir::Type eltTy,
                             unsigned size = 0) {
     unsigned finalSize = size ? size : str.size();
@@ -941,51 +955,12 @@ public:
   // yet, return them.
   void computeGlobalViewIndicesFromFlatOffset(
       int64_t Offset, mlir::Type Ty, cir::CIRDataLayout Layout,
-      llvm::SmallVectorImpl<int64_t> &Indices) {
-    if (!Offset)
-      return;
+      llvm::SmallVectorImpl<int64_t> &Indices);
 
-    mlir::Type SubType;
-
-    auto getIndexAndNewOffset =
-        [](int64_t Offset, int64_t EltSize) -> std::pair<int64_t, int64_t> {
-      int64_t DivRet = Offset / EltSize;
-      if (DivRet < 0)
-        DivRet -= 1; // make sure offset is positive
-      int64_t ModRet = Offset - (DivRet * EltSize);
-      return {DivRet, ModRet};
-    };
-
-    if (auto ArrayTy = mlir::dyn_cast<cir::ArrayType>(Ty)) {
-      int64_t EltSize = Layout.getTypeAllocSize(ArrayTy.getEltType());
-      SubType = ArrayTy.getEltType();
-      auto const [Index, NewOffset] = getIndexAndNewOffset(Offset, EltSize);
-      Indices.push_back(Index);
-      Offset = NewOffset;
-    } else if (auto StructTy = mlir::dyn_cast<cir::StructType>(Ty)) {
-      auto Elts = StructTy.getMembers();
-      int64_t Pos = 0;
-      for (size_t I = 0; I < Elts.size(); ++I) {
-        int64_t EltSize =
-            (int64_t)Layout.getTypeAllocSize(Elts[I]).getFixedValue();
-        unsigned AlignMask = Layout.getABITypeAlign(Elts[I]).value() - 1;
-        Pos = (Pos + AlignMask) & ~AlignMask;
-        assert(Offset >= 0);
-        if (Offset < Pos + EltSize) {
-          Indices.push_back(I);
-          SubType = Elts[I];
-          Offset -= Pos;
-          break;
-        }
-        Pos += EltSize;
-      }
-    } else {
-      llvm_unreachable("unexpected type");
-    }
-
-    assert(SubType);
-    computeGlobalViewIndicesFromFlatOffset(Offset, SubType, Layout, Indices);
-  }
+  // Convert high-level indices (e.g. from GlobalViewAttr) to byte offset
+  uint64_t computeOffsetFromGlobalViewIndices(const cir::CIRDataLayout &layout,
+                                              mlir::Type t,
+                                              llvm::ArrayRef<int64_t> indexes);
 
   cir::StackSaveOp createStackSave(mlir::Location loc, mlir::Type ty) {
     return create<cir::StackSaveOp>(loc, ty);

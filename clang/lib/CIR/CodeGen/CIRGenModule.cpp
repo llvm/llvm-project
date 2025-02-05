@@ -9,9 +9,7 @@
 // This is the internal per-translation-unit state used for CIR translation.
 //
 //===----------------------------------------------------------------------===//
-
 #include "CIRGenModule.h"
-
 #include "CIRGenCXXABI.h"
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
@@ -797,9 +795,75 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl GD, mlir::Operation *GO) {
   assert(!cir::MissingFeatures::setTargetAttributes());
 }
 
+static llvm::SmallVector<int64_t> indexesOfArrayAttr(mlir::ArrayAttr indexes) {
+  llvm::SmallVector<int64_t> inds;
+
+  for (mlir::Attribute i : indexes) {
+    auto ind = dyn_cast<mlir::IntegerAttr>(i);
+    assert(ind && "expect MLIR integer attribute");
+    inds.push_back(ind.getValue().getSExtValue());
+  }
+
+  return inds;
+}
+
+static bool isViewOnGlobal(GlobalOp glob, GlobalViewAttr view) {
+  return view.getSymbol().getValue() == glob.getSymName();
+}
+
+static GlobalViewAttr createNewGlobalView(CIRGenModule &CGM, GlobalOp newGlob,
+                                          GlobalViewAttr attr,
+                                          mlir::Type oldTy) {
+  if (!attr.getIndices() || !isViewOnGlobal(newGlob, attr))
+    return attr;
+
+  llvm::SmallVector<int64_t> oldInds = indexesOfArrayAttr(attr.getIndices());
+  llvm::SmallVector<int64_t> newInds;
+  CIRGenBuilderTy &bld = CGM.getBuilder();
+  const CIRDataLayout &layout = CGM.getDataLayout();
+  mlir::MLIRContext *ctxt = bld.getContext();
+  auto newTy = newGlob.getSymType();
+
+  auto offset = bld.computeOffsetFromGlobalViewIndices(layout, oldTy, oldInds);
+  bld.computeGlobalViewIndicesFromFlatOffset(offset, newTy, layout, newInds);
+  cir::PointerType newPtrTy;
+
+  if (isa<cir::StructType>(oldTy))
+    newPtrTy = cir::PointerType::get(ctxt, newTy);
+  else if (cir::ArrayType oldArTy = dyn_cast<cir::ArrayType>(oldTy))
+    newPtrTy = dyn_cast<cir::PointerType>(attr.getType());
+
+  if (newPtrTy)
+    return bld.getGlobalViewAttr(newPtrTy, newGlob, newInds);
+
+  llvm_unreachable("NYI");
+}
+
+static mlir::Attribute getNewInitValue(CIRGenModule &CGM, GlobalOp newGlob,
+                                       mlir::Type oldTy, GlobalOp user,
+                                       mlir::Attribute oldInit) {
+  if (auto oldView = mlir::dyn_cast<cir::GlobalViewAttr>(oldInit)) {
+    return createNewGlobalView(CGM, newGlob, oldView, oldTy);
+  } else if (auto oldArray = mlir::dyn_cast<ConstArrayAttr>(oldInit)) {
+    llvm::SmallVector<mlir::Attribute> newArray;
+    auto eltsAttr = dyn_cast<mlir::ArrayAttr>(oldArray.getElts());
+    for (auto elt : eltsAttr) {
+      if (auto view = dyn_cast<GlobalViewAttr>(elt))
+        newArray.push_back(createNewGlobalView(CGM, newGlob, view, oldTy));
+      else if (auto view = dyn_cast<ConstArrayAttr>(elt))
+        newArray.push_back(getNewInitValue(CGM, newGlob, oldTy, user, elt));
+    }
+
+    auto &builder = CGM.getBuilder();
+    mlir::Attribute ar = mlir::ArrayAttr::get(builder.getContext(), newArray);
+    return builder.getConstArray(ar, cast<cir::ArrayType>(oldArray.getType()));
+  } else {
+    llvm_unreachable("NYI");
+  }
+}
+
 void CIRGenModule::replaceGlobal(cir::GlobalOp Old, cir::GlobalOp New) {
   assert(Old.getSymName() == New.getSymName() && "symbol names must match");
-
   // If the types does not match, update all references to Old to the new type.
   auto OldTy = Old.getSymType();
   auto NewTy = New.getSymType();
@@ -809,6 +873,7 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp Old, cir::GlobalOp New) {
   if (oldAS != newAS) {
     llvm_unreachable("NYI");
   }
+
   if (OldTy != NewTy) {
     auto OldSymUses = Old.getSymbolUses(theModule.getOperation());
     if (OldSymUses.has_value()) {
@@ -823,11 +888,16 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp Old, cir::GlobalOp New) {
               cir::PointerType::get(&getMLIRContext(), NewTy));
 
           mlir::OpBuilder::InsertionGuard guard(builder);
-          builder.setInsertionPointAfter(UserOp);
+          builder.setInsertionPointAfter(GGO);
           mlir::Type ptrTy = builder.getPointerTo(OldTy);
           mlir::Value cast =
               builder.createBitcast(GGO->getLoc(), UseOpResultValue, ptrTy);
           UseOpResultValue.replaceAllUsesExcept(cast, cast.getDefiningOp());
+        } else if (auto glob = dyn_cast<cir::GlobalOp>(UserOp)) {
+          if (auto init = glob.getInitialValue()) {
+            auto nw = getNewInitValue(*this, New, OldTy, glob, init.value());
+            glob.setInitialValueAttr(nw);
+          }
         }
       }
     }
@@ -1083,7 +1153,8 @@ CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *D, mlir::Type Ty,
     Ty = getTypes().convertTypeForMem(ASTTy);
 
   auto globalOp = getOrCreateCIRGlobal(D, Ty, IsForDefinition);
-  return builder.getGlobalViewAttr(builder.getPointerTo(Ty), globalOp);
+  auto ptrTy = builder.getPointerTo(globalOp.getSymType());
+  return builder.getGlobalViewAttr(ptrTy, globalOp);
 }
 
 mlir::Operation *CIRGenModule::getWeakRefReference(const ValueDecl *VD) {

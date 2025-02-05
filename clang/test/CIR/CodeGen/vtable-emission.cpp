@@ -20,7 +20,7 @@ void S::key() {}
 // LLVM-SAME: [ptr null, ptr @_ZTI1S, ptr @_ZN1S3keyEv, ptr @_ZN1S6nonKeyEv] }, align 8
 
 // CHECK: cir.global external @sobj = #cir.const_struct
-// CHECK-SAME: <{#cir.global_view<@_ZTV1S, [0 : i32, 0 : i32, 2 : i32]> :
+// CHECK-SAME: <{#cir.global_view<@_ZTV1S, [0 : i32, 2 : i32]> :
 // CHECK-SAME: !cir.ptr<!ty_anon_struct1>}> : !ty_anon_struct2 {alignment = 8 : i64}
 // LLVM: @sobj = global { ptr } { ptr getelementptr inbounds
 // LLVM-SAME: ({ [4 x ptr] }, ptr @_ZTV1S, i32 0, i32 0, i32 2) }, align 8

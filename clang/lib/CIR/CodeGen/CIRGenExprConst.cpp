@@ -756,7 +756,6 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
               .getAddressPoint(BaseSubobject(CD, Offset));
       assert(!cir::MissingFeatures::ptrAuth());
       mlir::ArrayAttr indices = builder.getArrayAttr({
-          builder.getI32IntegerAttr(0),
           builder.getI32IntegerAttr(addressPoint.VTableIndex),
           builder.getI32IntegerAttr(addressPoint.AddressPointIndex),
       });

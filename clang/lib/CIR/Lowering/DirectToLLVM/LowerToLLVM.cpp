@@ -680,12 +680,8 @@ lowerCirAttrAsValue(mlir::Operation *parentOp, cir::GlobalViewAttr globalAttr,
   if (globalAttr.getIndices()) {
     llvm::SmallVector<mlir::LLVM::GEPArg> indices;
 
-    if (auto stTy = dyn_cast<mlir::LLVM::LLVMStructType>(sourceType)) {
-      if (stTy.isIdentified())
-        indices.push_back(0);
-    } else if (isa<mlir::LLVM::LLVMArrayType>(sourceType)) {
+    if (isa<mlir::LLVM::LLVMArrayType, mlir::LLVM::LLVMStructType>(sourceType))
       indices.push_back(0);
-    }
 
     for (auto idx : globalAttr.getIndices()) {
       auto intAttr = dyn_cast<mlir::IntegerAttr>(idx);

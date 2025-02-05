@@ -622,8 +622,7 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp VTT,
              "Did not find ctor vtable address point!");
     }
 
-    mlir::Attribute Idxs[3] = {
-        CGM.getBuilder().getI32IntegerAttr(0),
+    mlir::Attribute Idxs[2] = {
         CGM.getBuilder().getI32IntegerAttr(AddressPoint.VTableIndex),
         CGM.getBuilder().getI32IntegerAttr(AddressPoint.AddressPointIndex),
     };

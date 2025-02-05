@@ -19,7 +19,7 @@ short use() {
 // CHECK:       !ty_anon_struct = !cir.struct<struct  {!s16i, !cir.array<!u8i x 2>}>
 
 // CHECK:       @g3 = #cir.global_view<@g2> : !cir.ptr<!cir.ptr<!s16i>>
-// CHECK:       @g2 = #cir.const_array<[#cir.global_view<@g1, [1 : i32]> : !cir.ptr<!s16i>]> : !cir.array<!cir.ptr<!s16i> x 1> 
+// CHECK:       @g2 = #cir.const_array<[#cir.global_view<@g1, [1]> : !cir.ptr<!s16i>]> : !cir.array<!cir.ptr<!s16i> x 1>
 
 // CHECK:       @g1 = 
 // CHECK-SAME:    #cir.const_array<[

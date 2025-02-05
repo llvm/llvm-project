@@ -622,6 +622,30 @@ def GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [TypedAttrInterface]>
       cir.global external @elt_ptr = #cir.global_view<@rgb, [1]> : !cir.ptr<i8>
       cir.global external @table_of_ptrs = #cir.const_array<[#cir.global_view<@rgb, [1]> : !cir.ptr<i8>] : !cir.array<!cir.ptr<i8> x 1>>
     ```
+    
+    Note, that unlike LLVM IR's gep instruction, CIR doesn't add the leading zero index
+    when it's known to be constant zero, e.g. for pointers, i.e. we use indexes exactly
+    to access sub elements or for the offset. The leading zero index is added later in
+    the lowering.
+        
+    Example:
+    ```
+    struct A {
+      int a;
+    };
+
+    struct B:  virtual A {
+      int b;
+    };
+    ```
+    VTT for B:
+    ```
+    cir.global linkonce_odr @_ZTT1B = #cir.const_array<[#cir.global_view<@_ZTV1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>    
+    ```
+    The same for LLVM IR after CIR:
+    ```
+    @_ZTT1B = linkonce_odr global [1 x ptr] [ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 3)], align 8
+    ```
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
