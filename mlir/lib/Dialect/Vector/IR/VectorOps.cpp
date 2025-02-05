@@ -26,7 +26,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
@@ -42,7 +41,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/ADT/bit.h"
 
 #include <cassert>
 #include <cstdint>
@@ -2684,25 +2682,45 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
   if (!v1Attr || !v2Attr)
     return {};
 
+  // Fold shuffle poison, poison -> poison.
+  bool isV1Poison = isa<ub::PoisonAttr>(v1Attr);
+  bool isV2Poison = isa<ub::PoisonAttr>(v2Attr);
+  if (isV1Poison && isV2Poison)
+    return ub::PoisonAttr::get(getContext());
+
   // Only support 1-D for now to avoid complicated n-D DenseElementsAttr
   // manipulation.
   if (v1Type.getRank() != 1)
     return {};
 
-  int64_t v1Size = v1Type.getDimSize(0);
+  // Poison input attributes need special handling as they are not
+  // DenseElementsAttr. If an index is poison, we select the first element of
+  // the first non-poison input.
+  SmallVector<Attribute> v1Elements, v2Elements;
+  Attribute poisonElement;
+  if (!isV2Poison) {
+    v2Elements =
+        to_vector(cast<DenseElementsAttr>(v2Attr).getValues<Attribute>());
+    poisonElement = v2Elements[0];
+  }
+  if (!isV1Poison) {
+    v1Elements =
+        to_vector(cast<DenseElementsAttr>(v1Attr).getValues<Attribute>());
+    poisonElement = v1Elements[0];
+  }
 
   SmallVector<Attribute> results;
-  auto v1Elements = cast<DenseElementsAttr>(v1Attr).getValues<Attribute>();
-  auto v2Elements = cast<DenseElementsAttr>(v2Attr).getValues<Attribute>();
+  int64_t v1Size = v1Type.getDimSize(0);
   for (int64_t maskIdx : mask) {
     Attribute indexedElm;
-    // Select v1[0] for poison indices.
     // TODO: Return a partial poison vector when supported by the UB dialect.
     if (maskIdx == ShuffleOp::kPoisonIndex) {
-      indexedElm = v1Elements[0];
+      indexedElm = poisonElement;
     } else {
-      indexedElm =
-          maskIdx < v1Size ? v1Elements[maskIdx] : v2Elements[maskIdx - v1Size];
+      if (maskIdx < v1Size)
+        indexedElm = isV1Poison ? poisonElement : v1Elements[maskIdx];
+      else
+        indexedElm = isV2Poison ? poisonElement : v2Elements[maskIdx - v1Size];
     }
 
     results.push_back(indexedElm);
@@ -3319,11 +3337,13 @@ public:
         !destVector.hasOneUse())
       return failure();
 
-    auto denseDest = llvm::cast<DenseElementsAttr>(vectorDestCst);
-
     TypedValue<VectorType> sourceValue = op.getSource();
     Attribute sourceCst;
     if (!matchPattern(sourceValue, m_Constant(&sourceCst)))
+      return failure();
+
+    // TODO: Support poison.
+    if (isa<ub::PoisonAttr>(vectorDestCst) || isa<ub::PoisonAttr>(sourceCst))
       return failure();
 
     // TODO: Handle non-unit strides when they become available.
@@ -3342,6 +3362,7 @@ public:
     // increasing linearized position indices.
     // Because the destination may have higher dimensionality then the slice,
     // we keep track of two overlapping sets of positions and offsets.
+    auto denseDest = llvm::cast<DenseElementsAttr>(vectorDestCst);
     auto denseSlice = llvm::cast<DenseElementsAttr>(sourceCst);
     auto sliceValuesIt = denseSlice.value_begin<Attribute>();
     auto newValues = llvm::to_vector(denseDest.getValues<Attribute>());
