@@ -11,6 +11,7 @@ static_assert(_Generic(typeof (t2), int *restrict[2] : 1, default : 0));
 typedef int *T3[2][2];
 restrict T3 t3;
 static_assert(_Generic(typeof (t3), int *restrict[2][2] : 1, default : 0));
+static_assert(_Generic(void(T3 restrict), void(int *restrict (*)[2]): 1, default: 0));
 
 typedef int (*t4)();
 typedef t4 t5[2];
