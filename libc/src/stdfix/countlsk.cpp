@@ -1,4 +1,4 @@
-//===-- Implementation for countlsk function  --------------------------------===//
+//===-- Implementation for countlsk function  -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +13,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, countlsk, (accum f)) {
-  return fixed_point::countls(f);
-}
+LLVM_LIBC_FUNCTION(int, countlsk, (accum f)) { return fixed_point::countls(f); }
 
 } // namespace LIBC_NAMESPACE_DECL

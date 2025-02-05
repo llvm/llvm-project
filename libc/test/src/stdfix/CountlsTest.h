@@ -20,8 +20,7 @@ template <typename T> class CountlsTest : public LIBC_NAMESPACE::testing::Test {
   static constexpr T one_fourth = FXRep::ONE_FOURTH();
   static constexpr T eps = FXRep::EPS();
 
-  static constexpr auto value_len =
-      FXRep::INTEGRAL_LEN + FXRep::FRACTION_LEN;
+  static constexpr auto value_len = FXRep::INTEGRAL_LEN + FXRep::FRACTION_LEN;
 
 public:
   typedef int (*CountlsFunc)(T);

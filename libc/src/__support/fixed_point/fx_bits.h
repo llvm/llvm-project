@@ -11,10 +11,10 @@
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/bit.h"
-#include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/limits.h" // numeric_limits
-#include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/config.h"       // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
 
