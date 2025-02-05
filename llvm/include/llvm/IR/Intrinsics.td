@@ -300,8 +300,6 @@ def IIT_V1 : IIT_Vec<1, 28>;
 def IIT_VARARG : IIT_VT<isVoid, 29>;
 def IIT_HALF_VEC_ARG : IIT_Base<30>;
 def IIT_SAME_VEC_WIDTH_ARG : IIT_Base<31>;
-def IIT_ONE_THIRD_VEC_ARG : IIT_Base<32>;
-def IIT_ONE_FIFTH_VEC_ARG : IIT_Base<33>;
 def IIT_VEC_OF_ANYPTRS_TO_ELT : IIT_Base<34>;
 def IIT_I128 : IIT_Int<128, 35>;
 def IIT_V512 : IIT_Vec<512, 36>;
@@ -329,7 +327,9 @@ def IIT_I4 : IIT_Int<4, 58>;
 def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 59>;
 def IIT_V6 : IIT_Vec<6, 60>;
 def IIT_V10 : IIT_Vec<10, 61>;
-def IIT_ONE_SEVENTH_VEC_ARG : IIT_Base<62>;
+def IIT_ONE_THIRD_VEC_ARG : IIT_Base<62>;
+def IIT_ONE_FIFTH_VEC_ARG : IIT_Base<63>;
+def IIT_ONE_SEVENTH_VEC_ARG : IIT_Base<64>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
