@@ -29,28 +29,28 @@ implicit none
 
   interface
     attributes(device) integer function syncthreads_and(value)
-      integer :: value
+      integer, value :: value
     end function
   end interface
   public :: syncthreads_and
 
   interface
     attributes(device) integer function syncthreads_count(value)
-      integer :: value
+      integer, value :: value
     end function
   end interface
   public :: syncthreads_count
 
   interface
     attributes(device) integer function syncthreads_or(value)
-      integer :: value
+      integer, value :: value
     end function
   end interface
   public :: syncthreads_or
 
   interface
     attributes(device) subroutine syncwarp(mask) bind(c, name='__syncwarp')
-      integer :: mask
+      integer, value :: mask
     end subroutine
   end interface
   public :: syncwarp
