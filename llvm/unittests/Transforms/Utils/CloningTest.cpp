@@ -514,7 +514,8 @@ protected:
     // cloning).
     auto *StructType = DICompositeType::getDistinct(
         C, dwarf::DW_TAG_structure_type, "some_struct", nullptr, 0, nullptr,
-        nullptr, 32, 32, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr);
+        nullptr, 32, 32, 0, DINode::FlagZero, nullptr, 0, std::nullopt, nullptr,
+        nullptr);
     auto *InlinedSP = DBuilder.createFunction(
         CU, "inlined", "inlined", File, 8, FuncType, 9, DINode::FlagZero,
         DISubprogram::SPFlagLocalToUnit | DISubprogram::SPFlagDefinition);

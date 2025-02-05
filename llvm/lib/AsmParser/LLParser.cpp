@@ -4697,6 +4697,12 @@ struct DwarfCCField : public MDUnsignedField {
   DwarfCCField() : MDUnsignedField(0, dwarf::DW_CC_hi_user) {}
 };
 
+struct DwarfEnumKindField : public MDUnsignedField {
+  DwarfEnumKindField()
+      : MDUnsignedField(dwarf::DW_APPLE_ENUM_KIND_invalid,
+                        dwarf::DW_APPLE_ENUM_KIND_max) {}
+};
+
 struct EmissionKindField : public MDUnsignedField {
   EmissionKindField() : MDUnsignedField(0, DICompileUnit::LastEmissionKind) {}
 };
@@ -4866,6 +4872,25 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name,
                     Lex.getStrVal() + "'");
   assert(Virtuality <= Result.Max && "Expected valid DWARF virtuality code");
   Result.assign(Virtuality);
+  Lex.Lex();
+  return false;
+}
+
+template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
+                            DwarfEnumKindField &Result) {
+  if (Lex.getKind() == lltok::APSInt)
+    return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+
+  if (Lex.getKind() != lltok::DwarfEnumKind)
+    return tokError("expected DWARF enum kind code");
+
+  unsigned EnumKind = dwarf::getEnumKind(Lex.getStrVal());
+  if (EnumKind == dwarf::DW_APPLE_ENUM_KIND_invalid)
+    return tokError("invalid DWARF enum kind code" + Twine(" '") +
+                    Lex.getStrVal() + "'");
+  assert(EnumKind <= Result.Max && "Expected valid DWARF enum kind code");
+  Result.assign(EnumKind);
   Lex.Lex();
   return false;
 }
@@ -5489,6 +5514,7 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(elements, MDField, );                                               \
   OPTIONAL(runtimeLang, DwarfLangField, );                                     \
+  OPTIONAL(enumKind, DwarfEnumKindField, );                                    \
   OPTIONAL(vtableHolder, MDField, );                                           \
   OPTIONAL(templateParams, MDField, );                                         \
   OPTIONAL(identifier, MDStringField, );                                       \
@@ -5510,15 +5536,19 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   else if (rank.isMDField())
     Rank = rank.getMDFieldValue();
 
+  std::optional<unsigned> EnumKind;
+  if (enumKind.Val != dwarf::DW_APPLE_ENUM_KIND_invalid)
+    EnumKind = enumKind.Val;
+
   // If this has an identifier try to build an ODR type.
   if (identifier.Val)
     if (auto *CT = DICompositeType::buildODRType(
             Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
             scope.Val, baseType.Val, size.Val, align.Val, offset.Val,
             specification.Val, num_extra_inhabitants.Val, flags.Val,
-            elements.Val, runtimeLang.Val, vtableHolder.Val, templateParams.Val,
-            discriminator.Val, dataLocation.Val, associated.Val, allocated.Val,
-            Rank, annotations.Val)) {
+            elements.Val, runtimeLang.Val, EnumKind, vtableHolder.Val,
+            templateParams.Val, discriminator.Val, dataLocation.Val,
+            associated.Val, allocated.Val, Rank, annotations.Val)) {
       Result = CT;
       return false;
     }
@@ -5529,9 +5559,10 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
       DICompositeType,
       (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
-       runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val,
-       discriminator.Val, dataLocation.Val, associated.Val, allocated.Val, Rank,
-       annotations.Val, specification.Val, num_extra_inhabitants.Val));
+       runtimeLang.Val, EnumKind, vtableHolder.Val, templateParams.Val,
+       identifier.Val, discriminator.Val, dataLocation.Val, associated.Val,
+       allocated.Val, Rank, annotations.Val, specification.Val,
+       num_extra_inhabitants.Val));
   return false;
 }
 

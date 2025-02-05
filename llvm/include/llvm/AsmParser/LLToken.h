@@ -497,6 +497,7 @@ enum Kind {
   DwarfMacinfo,     // DW_MACINFO_foo
   ChecksumKind,     // CSK_foo
   DbgRecordType,    // dbg_foo
+  DwarfEnumKind,    // DW_APPLE_ENUM_KIND_foo
 
   // Type valued tokens (TyVal).
   Type,

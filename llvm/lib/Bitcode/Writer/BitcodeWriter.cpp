@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
@@ -1959,6 +1960,8 @@ void ModuleBitcodeWriter::writeDICompositeType(
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
   Record.push_back(N->getNumExtraInhabitants());
   Record.push_back(VE.getMetadataOrNullID(N->getRawSpecification()));
+  Record.push_back(
+      N->getEnumKind().value_or(dwarf::DW_APPLE_ENUM_KIND_invalid));
 
   Stream.EmitRecord(bitc::METADATA_COMPOSITE_TYPE, Record, Abbrev);
   Record.clear();

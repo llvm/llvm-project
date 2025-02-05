@@ -1624,6 +1624,9 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       addFlag(Buffer, dwarf::DW_AT_enum_class);
   }
 
+  if (auto Kind = CTy->getEnumKind())
+    addUInt(Buffer, dwarf::DW_AT_APPLE_enum_kind, dwarf::DW_FORM_data1, *Kind);
+
   auto *Context = CTy->getScope();
   bool IndexEnumerators = !Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||
       isa<DINamespace>(Context) || isa<DICommonBlock>(Context);
