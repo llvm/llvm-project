@@ -602,7 +602,7 @@ def AMDGPU_MFMAOp :
     order (that is, v[0] will go to arg[7:0], v[1] to arg[15:8] and so on).
 
     The negateA, negateB, and negateC flags are only supported for double-precision
-    operations on gfx940+.
+    operations on gfx942+.
   }];
   let assemblyFormat = [{
     $sourceA `*` $sourceB `+` $destC
