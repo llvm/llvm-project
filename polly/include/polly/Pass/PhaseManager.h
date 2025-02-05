@@ -68,7 +68,7 @@ StringRef getPhaseName(PassPhase Phase);
 PassPhase parsePhase(StringRef Name);
 bool dependsOnDependenceInfo(PassPhase Phase);
 
-/// Options for the polly pass.
+/// Options for the Polly pass.
 class PollyPassOptions {
   /// For each Polly phase, whether it should be executed.
   /// Since PassPhase::None is unused, bit positions are shifted by one.
@@ -114,7 +114,7 @@ public:
   llvm::Error checkConsistency() const;
 };
 
-/// Run Polly and ots phases on \p F.
+/// Run Polly and its phases on \p F.
 bool runPollyPass(Function &F, llvm::FunctionAnalysisManager &FAM,
                   PollyPassOptions Opts);
 } // namespace polly
