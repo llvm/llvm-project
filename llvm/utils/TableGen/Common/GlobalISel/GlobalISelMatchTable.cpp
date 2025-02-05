@@ -294,13 +294,14 @@ void MatchTable::emitDeclaration(raw_ostream &OS) const {
   const unsigned NumColsForIdx = llvm::to_string(CurrentSize).size();
 
   unsigned CurIndex = 0;
-  const auto BeginLine = [&](){
+  const auto BeginLine = [&]() {
     OS << std::string(BaseIndent, ' ');
     // To keep the /* index */ column consistent, pad
     // the string at the start so we can always fit the
     // exact number of characters to print the largest possible index.
     std::string IdxStr = llvm::to_string(CurIndex);
-    OS << " /* " << std::string(NumColsForIdx - IdxStr.size(), ' ') << IdxStr << " */ ";
+    OS << " /* " << std::string(NumColsForIdx - IdxStr.size(), ' ') << IdxStr
+       << " */ ";
     OS << std::string(Indentation, ' ');
   };
 
