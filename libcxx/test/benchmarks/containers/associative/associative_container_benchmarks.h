@@ -55,13 +55,13 @@ void associative_container_benchmarks(std::string container) {
   auto get_key = [](Value const& v) { return adapt_operations<Container>::key_from_value(v); };
 
   auto bench = [&](std::string operation, auto f) {
-    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(1024);
+    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(32)->Arg(1024)->Arg(8192);
   };
 
   // These benchmarks are structured to perform the operation being benchmarked
   // a small number of times at each iteration, in order to offset the cost of
   // PauseTiming() and ResumeTiming().
-  static constexpr std::size_t BatchSize = 10;
+  static constexpr std::size_t BatchSize = 32;
 
   struct alignas(Container) ScratchSpace {
     char storage[sizeof(Container)];
