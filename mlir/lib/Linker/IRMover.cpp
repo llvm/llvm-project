@@ -199,8 +199,8 @@ MLIRLinker::linkGlobalValueProto(GlobalValueLinkageOpInterface sgv,
   } else {
     // TODO: Done linking bodies?
 
-    newDst =
-        copyGlobalValueProto(sgv.getOperation(), shouldLinkOps); // TODO: || ForIndirectSymbol?
+    newDst = copyGlobalValueProto(sgv.getOperation(),
+                                  shouldLinkOps); // TODO: || ForIndirectSymbol?
     if (shouldLinkOps) // TODO: || !ForIndirectSymbol?
       needsRenaming = true;
   }
@@ -345,8 +345,9 @@ Error MLIRLinker::run() {
     auto gvl = worklist.back();
     worklist.pop_back();
 
-    if (valueMap.contains(gvl.getOperation())) // TODO: There is an indirect symbol value map,
-                                // do we need that?
+    if (valueMap.contains(
+            gvl.getOperation())) // TODO: There is an indirect symbol value map,
+                                 // do we need that?
       continue;
 
     assert(!gvl.isDeclarationForLinkage());
@@ -360,7 +361,21 @@ Error MLIRLinker::run() {
     flushRAUWorklist();
   }
 
-  // TODO: Do we need to reorder the globals?
+  // Reorder the globals just added to the destination module to match their
+  // original order in the source module.
+  src->walk([&](GlobalValueLinkageOpInterface gv) {
+    if (gv.hasAppendingLinkage())
+      return WalkResult::skip();
+    if (auto op = valueMap.lookupOrNull(gv.getOperation())) {
+      if (auto newValue = dyn_cast<GlobalValueLinkageOpInterface>(op)) {
+        newValue->remove();
+        composite->getRegion(0).back().push_back(newValue);
+      }
+    }
+
+    // do not recurse into global values
+    return WalkResult::skip();
+  });
 
   return Error::success();
 }
