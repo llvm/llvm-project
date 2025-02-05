@@ -1254,6 +1254,12 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+static inline bool Kill(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.pop<Pointer>();
+  Ptr.endLifetime();
+  return true;
+}
+
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
 ///    given offset.
