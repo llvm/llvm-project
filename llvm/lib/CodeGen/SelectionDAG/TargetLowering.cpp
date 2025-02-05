@@ -11891,15 +11891,14 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
   return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
 }
 
-SDValue TargetLowering::expandPartialReduceMLA(SDNode *N, SelectionDAG &DAG) const {
+SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
+                                               SelectionDAG &DAG) const {
   SDLoc DL(N);
   SDValue Acc = N->getOperand(0);
-  SDValue Input1 = N->getOperand(1);
-  SDValue Input2 = N->getOperand(2);
-  
-  
+  SDValue MulLHS = N->getOperand(1);
+  SDValue MulRHS = N->getOperand(2);
   EVT ReducedTy = Acc.getValueType();
-  EVT FullTy = Input1.getValueType();
+  EVT FullTy = MulLHS.getValueType();
 
   auto ExtendToAccEltVT = [&](SDValue V) {
     unsigned ExtOpc = V->getOpcode() == ISD::SIGN_EXTEND ? ISD::SIGN_EXTEND
@@ -11914,9 +11913,9 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N, SelectionDAG &DAG) con
   EVT NewVT =
       EVT::getVectorVT(*DAG.getContext(), ReducedTy.getVectorElementType(),
                        FullTy.getVectorElementCount());
-  Input1 = ExtendToAccEltVT(Input1);
-  Input2 = ExtendToAccEltVT(Input2);
-  SDValue Input = DAG.getNode(ISD::MUL, DL, NewVT, Input1, Input2);
+  MulLHS = ExtendToAccEltVT(MulLHS);
+  MulRHS = ExtendToAccEltVT(MulRHS);
+  SDValue Input = DAG.getNode(ISD::MUL, DL, NewVT, MulLHS, MulRHS);
 
   unsigned Stride = ReducedTy.getVectorMinNumElements();
   unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;

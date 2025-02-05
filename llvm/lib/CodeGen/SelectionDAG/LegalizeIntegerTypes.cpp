@@ -6218,7 +6218,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_PARTIAL_REDUCE_MLA(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   SDValue ExtAcc = GetPromotedInteger(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), DL, NVT, ExtAcc, N->getOperand(1),
-                          N->getOperand(2));
+                     N->getOperand(2));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_INSERT_VECTOR_ELT(SDNode *N) {
