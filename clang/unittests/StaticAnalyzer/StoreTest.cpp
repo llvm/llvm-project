@@ -69,7 +69,7 @@ class VariableBindConsumer : public StoreTestConsumer {
     SVal NarrowZero = Builder.makeZeroVal(ASTCtxt.CharTy);
 
     // Bind(Zero)
-    Store StX0 = SManager.Bind(StInit, LX0, Zero).getStore();
+    Store StX0 = SManager.Bind(StInit, LX0, Zero).ResultingStore.getStore();
     EXPECT_EQ(Zero, SManager.getBinding(StX0, LX0, ASTCtxt.IntTy));
 
     // BindDefaultInitial(Zero)
@@ -87,7 +87,7 @@ class VariableBindConsumer : public StoreTestConsumer {
     EXPECT_EQ(NarrowZero, *SManager.getDefaultBinding(StZ0, LZ0.getAsRegion()));
 
     // Bind(One)
-    Store StX1 = SManager.Bind(StInit, LX1, One).getStore();
+    Store StX1 = SManager.Bind(StInit, LX1, One).ResultingStore.getStore();
     EXPECT_EQ(One, SManager.getBinding(StX1, LX1, ASTCtxt.IntTy));
 
     // BindDefaultInitial(One)
@@ -134,7 +134,8 @@ class LiteralCompoundConsumer : public StoreTestConsumer {
     Store StInit = SManager.getInitialStore(SFC).getStore();
     // Let's bind constant 1 to 'test[0]'
     SVal One = Builder.makeIntVal(1, Int);
-    Store StX = SManager.Bind(StInit, ZeroElement, One).getStore();
+    Store StX =
+        SManager.Bind(StInit, ZeroElement, One).ResultingStore.getStore();
 
     // And make sure that we can read this binding back as it was
     EXPECT_EQ(One, SManager.getBinding(StX, ZeroElement, Int));

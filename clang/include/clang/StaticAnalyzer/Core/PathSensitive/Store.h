@@ -50,6 +50,14 @@ class SymbolReaper;
 
 using InvalidatedSymbols = llvm::DenseSet<SymbolRef>;
 
+struct BindResult {
+  StoreRef ResultingStore;
+
+  // If during the bind operation we exhaust the allowed binding budget, we set
+  // this to the beginning of the escaped part of the region.
+  llvm::SmallVector<SVal, 0> FailedToBindValues;
+};
+
 class StoreManager {
 protected:
   SValBuilder &svalBuilder;
@@ -105,7 +113,7 @@ public:
   /// \return A StoreRef object that contains the same
   ///   bindings as \c store with the addition of having the value specified
   ///   by \c val bound to the location given for \c loc.
-  virtual StoreRef Bind(Store store, Loc loc, SVal val) = 0;
+  virtual BindResult Bind(Store store, Loc loc, SVal val) = 0;
 
   /// Return a store with the specified value bound to all sub-regions of the
   /// region. The region must not have previous bindings. If you need to

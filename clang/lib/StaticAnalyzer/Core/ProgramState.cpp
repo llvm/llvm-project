@@ -116,13 +116,23 @@ ProgramStateRef ProgramState::bindLoc(Loc LV,
                                       const LocationContext *LCtx,
                                       bool notifyChanges) const {
   ProgramStateManager &Mgr = getStateManager();
-  ProgramStateRef newState = makeWithStore(Mgr.StoreMgr->Bind(getStore(),
-                                                             LV, V));
+  ExprEngine &Eng = Mgr.getOwningEngine();
+  BindResult BindRes = Mgr.StoreMgr->Bind(getStore(), LV, V);
+  ProgramStateRef State = makeWithStore(BindRes.ResultingStore);
   const MemRegion *MR = LV.getAsRegion();
-  if (MR && notifyChanges)
-    return Mgr.getOwningEngine().processRegionChange(newState, MR, LCtx);
 
-  return newState;
+  // We must always notify the checkers for failing binds because otherwise they
+  // may keep stale traits for these symbols.
+  // Eg., Malloc checker may report leaks if we failed to bind that symbol.
+  if (!BindRes.FailedToBindValues.empty()) {
+    State =
+        Eng.escapeValues(State, BindRes.FailedToBindValues, PSK_EscapeOnBind);
+  }
+
+  if (MR && notifyChanges)
+    return Eng.processRegionChange(State, MR, LCtx);
+
+  return State;
 }
 
 ProgramStateRef

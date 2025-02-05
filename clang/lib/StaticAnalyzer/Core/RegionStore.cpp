@@ -164,6 +164,7 @@ namespace {
 class RegionBindingsRef : public llvm::ImmutableMapRef<const MemRegion *,
                                  ClusterBindings> {
   ClusterBindings::Factory *CBFactory;
+  SmallVectorImpl<SVal> *EscapedValuesDuringBind;
 
   // This flag indicates whether the current bindings are within the analysis
   // that has started from main(). It affects how we perform loads from
@@ -176,31 +177,59 @@ class RegionBindingsRef : public llvm::ImmutableMapRef<const MemRegion *,
   // however that would have made the manager needlessly stateful.
   bool IsMainAnalysis;
 
+  unsigned BindingsLeft;
+
 public:
+  unsigned bindingsLeft() const { return BindingsLeft; }
+
+  bool hasExhaustedBindingLimit() const { return BindingsLeft == 0; }
+
+  RegionBindingsRef escapeValue(SVal V) const {
+    assert(EscapedValuesDuringBind);
+    EscapedValuesDuringBind->push_back(V);
+    return *this;
+  }
+  RegionBindingsRef escapeValues(nonloc::CompoundVal::iterator Begin,
+                                 nonloc::CompoundVal::iterator End) const {
+    for (SVal V : llvm::make_range(Begin, End))
+      escapeValue(V);
+    return *this;
+  }
+
   typedef llvm::ImmutableMapRef<const MemRegion *, ClusterBindings>
           ParentTy;
 
   RegionBindingsRef(ClusterBindings::Factory &CBFactory,
+                    SmallVectorImpl<SVal> *EscapedValuesDuringBind,
                     const RegionBindings::TreeTy *T,
-                    RegionBindings::TreeTy::Factory *F,
-                    bool IsMainAnalysis)
-      : llvm::ImmutableMapRef<const MemRegion *, ClusterBindings>(T, F),
-        CBFactory(&CBFactory), IsMainAnalysis(IsMainAnalysis) {}
+                    RegionBindings::TreeTy::Factory *F, bool IsMainAnalysis,
+                    unsigned BindingsLeft)
+      : RegionBindingsRef(ParentTy(T, F), CBFactory, EscapedValuesDuringBind,
+                          IsMainAnalysis, BindingsLeft) {}
 
-  RegionBindingsRef(const ParentTy &P,
-                    ClusterBindings::Factory &CBFactory,
-                    bool IsMainAnalysis)
-      : llvm::ImmutableMapRef<const MemRegion *, ClusterBindings>(P),
-        CBFactory(&CBFactory), IsMainAnalysis(IsMainAnalysis) {}
+  RegionBindingsRef(const ParentTy &P, ClusterBindings::Factory &CBFactory,
+                    SmallVectorImpl<SVal> *EscapedValuesDuringBind,
+                    bool IsMainAnalysis, unsigned BindingsLeft)
+      : ParentTy(P), CBFactory(&CBFactory),
+        EscapedValuesDuringBind(EscapedValuesDuringBind),
+        IsMainAnalysis(IsMainAnalysis), BindingsLeft(BindingsLeft) {}
+
+  RegionBindingsRef add(key_type_ref K, data_type_ref D,
+                        unsigned NewBindingsLeft) const {
+    return RegionBindingsRef(static_cast<const ParentTy *>(this)->add(K, D),
+                             *CBFactory, EscapedValuesDuringBind,
+                             IsMainAnalysis, NewBindingsLeft);
+  }
 
   RegionBindingsRef add(key_type_ref K, data_type_ref D) const {
-    return RegionBindingsRef(static_cast<const ParentTy *>(this)->add(K, D),
-                             *CBFactory, IsMainAnalysis);
+    unsigned NewBindingsLeft = BindingsLeft ? BindingsLeft - 1 : BindingsLeft;
+    return add(K, D, NewBindingsLeft);
   }
 
   RegionBindingsRef remove(key_type_ref K) const {
     return RegionBindingsRef(static_cast<const ParentTy *>(this)->remove(K),
-                             *CBFactory, IsMainAnalysis);
+                             *CBFactory, EscapedValuesDuringBind,
+                             IsMainAnalysis, BindingsLeft);
   }
 
   RegionBindingsRef addBinding(BindingKey K, SVal V) const;
@@ -345,14 +374,21 @@ RegionBindingsRef::getDefaultBinding(const MemRegion *R) const {
 }
 
 RegionBindingsRef RegionBindingsRef::addBinding(BindingKey K, SVal V) const {
+  // If we are about to exhaust the binding limit, highjack this bind call for
+  // the default binding.
+  if (BindingsLeft == 1) {
+    escapeValue(V);
+    K = BindingKey::Make(K.getRegion(), BindingKey::Default);
+    V = UnknownVal();
+  }
+
   const MemRegion *Base = K.getBaseRegion();
 
   const ClusterBindings *ExistingCluster = lookup(Base);
   ClusterBindings Cluster =
       (ExistingCluster ? *ExistingCluster : CBFactory->getEmptyMap());
 
-  ClusterBindings NewCluster = CBFactory->add(Cluster, K, V);
-  return add(Base, NewCluster);
+  return add(Base, CBFactory->add(Cluster, K, V));
 }
 
 
@@ -417,7 +453,7 @@ private:
   ///
   /// This is controlled by 'region-store-small-struct-limit' option.
   /// To disable all small-struct-dependent behavior, set the option to "0".
-  unsigned SmallStructLimit;
+  const unsigned SmallStructLimit;
 
   /// The largest number of element an array can have and still be
   /// considered "small".
@@ -427,7 +463,13 @@ private:
   ///
   /// This is controlled by 'region-store-small-struct-limit' option.
   /// To disable all small-struct-dependent behavior, set the option to "0".
-  unsigned SmallArrayLimit;
+  const unsigned SmallArrayLimit;
+
+  /// The number of bindings a single bind operation can scatter into.
+  /// For example, binding the initializer-list of an array would recurse and
+  /// bind all the individual array elements, potentially causing scalability
+  /// issues.
+  const unsigned RegionStoreMaxBindingFanOut;
 
   /// A helper used to populate the work list with the given set of
   /// regions.
@@ -435,15 +477,21 @@ private:
                         ArrayRef<SVal> Values,
                         InvalidatedRegions *TopLevelRegions);
 
+  const AnalyzerOptions &getOptions() {
+    return StateMgr.getOwningEngine().getAnalysisManager().options;
+  }
+
 public:
   RegionStoreManager(ProgramStateManager &mgr)
       : StoreManager(mgr), RBFactory(mgr.getAllocator()),
-        CBFactory(mgr.getAllocator()), SmallStructLimit(0), SmallArrayLimit(0) {
-    ExprEngine &Eng = StateMgr.getOwningEngine();
-    AnalyzerOptions &Options = Eng.getAnalysisManager().options;
-    SmallStructLimit = Options.RegionStoreSmallStructLimit;
-    SmallArrayLimit = Options.RegionStoreSmallArrayLimit;
-  }
+        CBFactory(mgr.getAllocator()),
+        SmallStructLimit(getOptions().RegionStoreSmallStructLimit),
+        SmallArrayLimit(getOptions().RegionStoreSmallArrayLimit),
+        RegionStoreMaxBindingFanOut(
+            getOptions().RegionStoreMaxBindingFanOut == 0
+                ? -1U
+                : getOptions().RegionStoreMaxBindingFanOut +
+                      /*for the default binding*/ 1) {}
 
   /// setImplicitDefaultValue - Set the default binding for the provided
   ///  MemRegion to the value implicitly defined for compound literals when
@@ -465,9 +513,13 @@ public:
     bool IsMainAnalysis = false;
     if (const auto *FD = dyn_cast<FunctionDecl>(InitLoc->getDecl()))
       IsMainAnalysis = FD->isMain() && !Ctx.getLangOpts().CPlusPlus;
-    return StoreRef(RegionBindingsRef(
-        RegionBindingsRef::ParentTy(RBFactory.getEmptyMap(), RBFactory),
-        CBFactory, IsMainAnalysis).asStore(), *this);
+    return StoreRef(
+        RegionBindingsRef(
+            RegionBindingsRef::ParentTy(RBFactory.getEmptyMap(), RBFactory),
+            CBFactory, /*EscapedValuesDuringBind=*/nullptr, IsMainAnalysis,
+            RegionStoreMaxBindingFanOut)
+            .asStore(),
+        *this);
   }
 
   //===-------------------------------------------------------------------===//
@@ -502,9 +554,13 @@ public:
                                 QualType ElemT);
 
 public: // Part of public interface to class.
-
-  StoreRef Bind(Store store, Loc LV, SVal V) override {
-    return StoreRef(bind(getRegionBindings(store), LV, V).asStore(), *this);
+  BindResult Bind(Store store, Loc LV, SVal V) override {
+    llvm::SmallVector<SVal, 0> EscapedValuesDuringBind;
+    return BindResult{
+        StoreRef(bind(getRegionBindings(store, &EscapedValuesDuringBind), LV, V)
+                     .asStore(),
+                 *this),
+        EscapedValuesDuringBind};
   }
 
   RegionBindingsRef bind(RegionBindingsConstRef B, Loc LV, SVal V);
@@ -513,7 +569,7 @@ public: // Part of public interface to class.
   // a default value.
   StoreRef BindDefaultInitial(Store store, const MemRegion *R,
                               SVal V) override {
-    RegionBindingsRef B = getRegionBindings(store);
+    RegionBindingsRef B = getRegionBindingsWithUnboundedLimit(store);
     // Use other APIs when you have to wipe the region that was initialized
     // earlier.
     assert(!(B.getDefaultBinding(R) || B.getDirectBinding(R)) &&
@@ -538,7 +594,7 @@ public: // Part of public interface to class.
       if (BR->getDecl()->isEmpty())
         return StoreRef(store, *this);
 
-    RegionBindingsRef B = getRegionBindings(store);
+    RegionBindingsRef B = getRegionBindingsWithUnboundedLimit(store);
     SVal V = svalBuilder.makeZeroVal(Ctx.CharTy);
     B = removeSubRegionBindings(B, cast<SubRegion>(R));
     B = B.addBinding(BindingKey::Make(R, BindingKey::Default), V);
@@ -587,14 +643,14 @@ public: // Part of public interface to class.
   StoreRef killBinding(Store ST, Loc L) override;
 
   void incrementReferenceCount(Store store) override {
-    getRegionBindings(store).manualRetain();
+    getRegionBindingsWithUnboundedLimit(store).manualRetain();
   }
 
   /// If the StoreManager supports it, decrement the reference count of
   /// the specified Store object.  If the reference count hits 0, the memory
   /// associated with the object is recycled.
   void decrementReferenceCount(Store store) override {
-    getRegionBindings(store).manualRelease();
+    getRegionBindingsWithUnboundedLimit(store).manualRelease();
   }
 
   bool includedInBindings(Store store, const MemRegion *region) const override;
@@ -613,7 +669,7 @@ public: // Part of public interface to class.
   ///     else
   ///       return symbolic
   SVal getBinding(Store S, Loc L, QualType T) override {
-    return getBinding(getRegionBindings(S), L, T);
+    return getBinding(getRegionBindingsWithUnboundedLimit(S), L, T);
   }
 
   std::optional<SVal> getUniqueDefaultBinding(RegionBindingsConstRef B,
@@ -622,7 +678,7 @@ public: // Part of public interface to class.
   getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const;
 
   std::optional<SVal> getDefaultBinding(Store S, const MemRegion *R) override {
-    RegionBindingsRef B = getRegionBindings(S);
+    RegionBindingsRef B = getRegionBindingsWithUnboundedLimit(S);
     // Default bindings are always applied over a base region so look up the
     // base region's default binding, otherwise the lookup will fail when R
     // is at an offset from R->getBaseRegion().
@@ -700,21 +756,23 @@ public: // Part of public interface to class.
   // Utility methods.
   //===------------------------------------------------------------------===//
 
-  RegionBindingsRef getRegionBindings(Store store) const {
-    llvm::PointerIntPair<Store, 1, bool> Ptr;
-    Ptr.setFromOpaqueValue(const_cast<void *>(store));
-    return RegionBindingsRef(
-        CBFactory,
-        static_cast<const RegionBindings::TreeTy *>(Ptr.getPointer()),
-        RBFactory.getTreeFactory(),
-        Ptr.getInt());
+  RegionBindingsRef
+  getRegionBindings(Store store,
+                    SmallVectorImpl<SVal> *EscapedValuesDuringBind) const {
+    return getRegionBindingsImpl(store, EscapedValuesDuringBind,
+                                 /*BindingsLeft=*/RegionStoreMaxBindingFanOut);
+  }
+
+  RegionBindingsRef getRegionBindingsWithUnboundedLimit(Store store) const {
+    return getRegionBindingsImpl(store, /*EscapedValuesDuringBind=*/nullptr,
+                                 /*BindingsLeft=*/-1U);
   }
 
   void printJson(raw_ostream &Out, Store S, const char *NL = "\n",
                  unsigned int Space = 0, bool IsDot = false) const override;
 
   void iterBindings(Store store, BindingsHandler& f) override {
-    RegionBindingsRef B = getRegionBindings(store);
+    RegionBindingsRef B = getRegionBindingsWithUnboundedLimit(store);
     for (const auto &[Region, Cluster] : B) {
       for (const auto &[Key, Value] : Cluster) {
         if (!Key.isDirect())
@@ -726,6 +784,19 @@ public: // Part of public interface to class.
         }
       }
     }
+  }
+
+private:
+  RegionBindingsRef
+  getRegionBindingsImpl(Store store,
+                        SmallVectorImpl<SVal> *EscapedValuesDuringBind,
+                        unsigned BindingsLeft) const {
+    llvm::PointerIntPair<Store, 1, bool> Ptr;
+    Ptr.setFromOpaqueValue(const_cast<void *>(store));
+    return RegionBindingsRef(
+        CBFactory, EscapedValuesDuringBind,
+        static_cast<const RegionBindings::TreeTy *>(Ptr.getPointer()),
+        RBFactory.getTreeFactory(), Ptr.getInt(), BindingsLeft);
   }
 };
 
@@ -852,7 +923,7 @@ public:
 bool RegionStoreManager::scanReachableSymbols(Store S, const MemRegion *R,
                                               ScanReachableSymbols &Callbacks) {
   assert(R == R->getBaseRegion() && "Should only be called for base regions");
-  RegionBindingsRef B = getRegionBindings(S);
+  RegionBindingsRef B = getRegionBindingsWithUnboundedLimit(S);
   const ClusterBindings *Cluster = B.lookup(R);
 
   if (!Cluster)
@@ -1038,7 +1109,9 @@ RegionStoreManager::removeSubRegionBindings(RegionBindingsConstRef B,
 
   if (Result.isEmpty())
     return B.remove(ClusterHead);
-  return B.add(ClusterHead, Result.asImmutableMap());
+  // Make this "add" free by using the old "BindingsLeft".
+  return B.add(ClusterHead, Result.asImmutableMap(),
+               /*BindingsLeft=*/B.bindingsLeft());
 }
 
 namespace {
@@ -1375,7 +1448,7 @@ StoreRef RegionStoreManager::invalidateRegions(
     GlobalsFilter = GFK_None;
   }
 
-  RegionBindingsRef B = getRegionBindings(store);
+  RegionBindingsRef B = getRegionBindingsWithUnboundedLimit(store);
   InvalidateRegionsWorker W(*this, StateMgr, B, S, Count, LCtx, IS, ITraits,
                             Invalidated, GlobalsFilter);
 
@@ -2136,8 +2209,9 @@ RegionStoreManager::getBindingForFieldOrElementCommon(RegionBindingsConstRef B,
   const SubRegion *lazyBindingRegion = nullptr;
   std::tie(lazyBindingStore, lazyBindingRegion) = findLazyBinding(B, R, R);
   if (lazyBindingRegion)
-    return getLazyBinding(lazyBindingRegion,
-                          getRegionBindings(lazyBindingStore));
+    return getLazyBinding(
+        lazyBindingRegion,
+        getRegionBindingsWithUnboundedLimit(lazyBindingStore));
 
   // Record whether or not we see a symbolic index.  That can completely
   // be out of scope of our lookup.
@@ -2314,7 +2388,7 @@ RegionStoreManager::getInterestingValues(nonloc::LazyCompoundVal LCV) {
   SValListTy List;
 
   const SubRegion *LazyR = LCV.getRegion();
-  RegionBindingsRef B = getRegionBindings(LCV.getStore());
+  RegionBindingsRef B = getRegionBindingsWithUnboundedLimit(LCV.getStore());
 
   // If this region had /no/ bindings at the time, there are no interesting
   // values to return.
@@ -2377,7 +2451,7 @@ SVal RegionStoreManager::getBindingForArray(RegionBindingsConstRef B,
 
 bool RegionStoreManager::includedInBindings(Store store,
                                             const MemRegion *region) const {
-  RegionBindingsRef B = getRegionBindings(store);
+  RegionBindingsRef B = getRegionBindingsWithUnboundedLimit(store);
   region = region->getBaseRegion();
 
   // Quick path: if the base is the head of a cluster, the region is live.
@@ -2406,18 +2480,23 @@ bool RegionStoreManager::includedInBindings(Store store,
 StoreRef RegionStoreManager::killBinding(Store ST, Loc L) {
   if (std::optional<loc::MemRegionVal> LV = L.getAs<loc::MemRegionVal>())
     if (const MemRegion* R = LV->getRegion())
-      return StoreRef(getRegionBindings(ST).removeBinding(R)
-                                           .asImmutableMap()
-                                           .getRootWithoutRetain(),
+      return StoreRef(getRegionBindingsWithUnboundedLimit(ST)
+                          .removeBinding(R)
+                          .asImmutableMap()
+                          .getRootWithoutRetain(),
                       *this);
 
   return StoreRef(ST, *this);
 }
 
-RegionBindingsRef
-RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
+RegionBindingsRef RegionStoreManager::bind(RegionBindingsConstRef B, Loc L,
+                                           SVal V) {
   llvm::TimeTraceScope TimeScope("RegionStoreManager::bind",
                                  [&L]() { return locDescr(L); });
+
+  if (B.hasExhaustedBindingLimit())
+    return B.escapeValue(V);
+
   // We only care about region locations.
   auto MemRegVal = L.getAs<loc::MemRegionVal>();
   if (!MemRegVal)
@@ -2511,7 +2590,8 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallArray(
     auto Idx = svalBuilder.makeArrayIndex(i);
     const ElementRegion *SrcER =
         MRMgr.getElementRegion(Ty, Idx, LCV.getRegion(), Ctx);
-    SVal V = getBindingForElement(getRegionBindings(LCV.getStore()), SrcER);
+    SVal V = getBindingForElement(
+        getRegionBindingsWithUnboundedLimit(LCV.getStore()), SrcER);
 
     const ElementRegion *DstER = MRMgr.getElementRegion(Ty, Idx, R, Ctx);
     NewB = bind(NewB, loc::MemRegionVal(DstER), V);
@@ -2566,6 +2646,8 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
     // The init list might be shorter than the array length.
     if (VI == VE)
       break;
+    if (NewB.hasExhaustedBindingLimit())
+      return NewB.escapeValues(VI, VE);
 
     NonLoc Idx = svalBuilder.makeArrayIndex(i);
     const ElementRegion *ER = MRMgr.getElementRegion(ElementTy, Idx, R, Ctx);
@@ -2645,7 +2727,7 @@ RegionStoreManager::getUniqueDefaultBinding(RegionBindingsConstRef B,
 
 std::optional<SVal>
 RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
-  RegionBindingsConstRef B = getRegionBindings(LCV.getStore());
+  auto B = getRegionBindingsWithUnboundedLimit(LCV.getStore());
   return getUniqueDefaultBinding(B, LCV.getRegion());
 }
 
@@ -2702,7 +2784,8 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
 
   for (const FieldDecl *Field : Fields) {
     const FieldRegion *SourceFR = MRMgr.getFieldRegion(Field, LCV.getRegion());
-    SVal V = getBindingForField(getRegionBindings(LCV.getStore()), SourceFR);
+    SVal V = getBindingForField(
+        getRegionBindingsWithUnboundedLimit(LCV.getStore()), SourceFR);
 
     const FieldRegion *DestFR = MRMgr.getFieldRegion(Field, R);
     NewB = bind(NewB, loc::MemRegionVal(DestFR), V);
@@ -2782,6 +2865,8 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
 
       if (VI == VE)
         break;
+      if (NewB.hasExhaustedBindingLimit())
+        return NewB.escapeValues(VI, VE);
 
       QualType BTy = B.getType();
       assert(BTy->isStructureOrClassType() && "Base classes must be classes!");
@@ -2804,6 +2889,9 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
 
     if (VI == VE)
       break;
+
+    if (NewB.hasExhaustedBindingLimit())
+      return NewB.escapeValues(VI, VE);
 
     // Skip any unnamed bitfields to stay in sync with the initializers.
     if (FI->isUnnamedBitField())
@@ -2984,7 +3072,7 @@ bool RemoveDeadBindingsWorker::UpdatePostponed() {
 StoreRef RegionStoreManager::removeDeadBindings(Store store,
                                                 const StackFrameContext *LCtx,
                                                 SymbolReaper& SymReaper) {
-  RegionBindingsRef B = getRegionBindings(store);
+  RegionBindingsRef B = getRegionBindingsWithUnboundedLimit(store);
   RemoveDeadBindingsWorker W(*this, StateMgr, B, SymReaper, LCtx);
   W.GenerateClusters();
 
@@ -3014,7 +3102,7 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
 
 void RegionStoreManager::printJson(raw_ostream &Out, Store S, const char *NL,
                                    unsigned int Space, bool IsDot) const {
-  RegionBindingsRef Bindings = getRegionBindings(S);
+  RegionBindingsRef Bindings = getRegionBindingsWithUnboundedLimit(S);
 
   Indent(Out, Space, IsDot) << "\"store\": ";
 
