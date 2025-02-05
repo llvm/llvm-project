@@ -3722,13 +3722,13 @@ void Verifier::visitCallBase(CallBase &Call) {
       visitIntrinsicCall(ID, Call);
 
   // Verify that a callsite has at most one operand bundle for each of the
-  // following: "deopt", "funclet", "gc-transition", "cfguardtarget", "type",
-  // "preallocated", and "ptrauth".
+  // following: "deopt", "funclet", "gc-transition", "cfguardtarget",
+  // "callee_type", "preallocated", and "ptrauth".
   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
        FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
        FoundPtrauthBundle = false, FoundKCFIBundle = false,
-       FoundAttachedCallBundle = false, FoundTypeBundle = false;
+       FoundAttachedCallBundle = false, FoundCalleeTypeBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -3791,9 +3791,10 @@ void Verifier::visitCallBase(CallBase &Call) {
             "Multiple \"clang.arc.attachedcall\" operand bundles", Call);
       FoundAttachedCallBundle = true;
       verifyAttachedCallBundle(Call, BU);
-    } else if (Tag == LLVMContext::OB_type) {
-      Check(!FoundTypeBundle, "Multiple \"type\" operand bundles", Call);
-      FoundTypeBundle = true;
+    } else if (Tag == LLVMContext::OB_callee_type) {
+      Check(!FoundCalleeTypeBundle, "Multiple \"callee_type\" operand bundles",
+            Call);
+      FoundCalleeTypeBundle = true;
     }
   }
 
