@@ -1375,6 +1375,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                                   : RISCV::VMV_V_X,
                                               LT.second, CostKind);
   }
+  case Intrinsic::experimental_vp_splice: {
+    // To support type-based query from vectorizer, set the index to 0.
+    // Note that index only change the cost from vslide.vx to vslide.vi and in
+    // current implementations they have same costs.
+    return getShuffleCost(TTI::SK_Splice,
+                          cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
+                          0, cast<VectorType>(ICA.getReturnType()));
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
