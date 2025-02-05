@@ -1186,6 +1186,52 @@ func.func @warpgroup_mma_store_multiple(
   return 
 }
 
+// CHECK-LABEL: @warpgroup_mma_store_multiple_with_id(  
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: !nvgpu.warpgroup.accumulator<fragmented = vector<64x16xf32>>, %[[arg1:[a-zA-Z0-9_]+]]: memref<64x16xf32, 3>, %[[arg2:[a-zA-Z0-9_]+]]: i32)
+func.func @warpgroup_mma_store_multiple_with_id(
+  %res_m64n16k : !nvgpu.warpgroup.accumulator<fragmented = vector<64x16xf32>>,
+  %shmem_m64n16k : memref<64x16xf32, 3>, 
+  %id : i32) 
+{    
+  // CHECK: %[[s0:.*]] = builtin.unrealized_conversion_cast %[[arg0]] : !nvgpu.warpgroup.accumulator<fragmented = vector<64x16xf32>> to !llvm.struct<(struct<(f32, f32, f32, f32, f32, f32, f32, f32)>)>
+  // CHECK: %[[s1:.*]] = builtin.unrealized_conversion_cast %[[arg1]] : memref<64x16xf32, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK: %[[s2:.*]] = llvm.extractvalue %[[s0]][0] : !llvm.struct<(struct<(f32, f32, f32, f32, f32, f32, f32, f32)>)> 
+  // CHECK: %[[s3:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[s4:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK: %[[s5:.*]] = llvm.mlir.constant(4 : i32) : i32
+  // CHECK: %[[s6:.*]] = llvm.mlir.constant(8 : i32) : i32
+  // CHECK: %[[s7:.*]] = llvm.mlir.constant(16 : i32) : i32
+  // CHECK: %[[s8:.*]] = llvm.mlir.constant(32 : i32) : i32
+  // CHECK: %[[s9:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+  // CHECK: %[[s10:.*]] = llvm.mlir.constant(128 : i32) : i32
+  // CHECK: %[[s11:.*]] = arith.muli %[[arg2]], %[[s10]] : i32
+  // CHECK: %[[s12:.*]] = arith.subi %[[s9]], %[[s11]] : i32
+  // CHECK: %[[s13:.*]] = llvm.urem %12, %8  : i32
+  // CHECK: %[[s14:.*]] = llvm.udiv %[[s12]], %[[s8]]  : i32
+  // CHECK: %[[s15:.*]] = llvm.udiv %[[s13]], %[[s5]]  : i32
+  // CHECK: %[[s16:.*]] = llvm.urem %[[s13]], %[[s5]]  : i32
+  // CHECK: %[[s17:.*]] = llvm.mul %[[s16]], %[[s4]]  : i32
+  // CHECK: %[[s18:.*]] = llvm.mul %[[s14]], %[[s7]]  : i32
+  // CHECK: %[[s19:.*]] = llvm.add %[[s15]], %[[s18]]  : i32
+  // CHECK: %[[s20:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[s21:.*]] = llvm.mul %[[s20]], %[[s6]]  : i32
+  // CHECK: %[[s22:.*]] = llvm.add %[[s19]], %[[s21]]  : i32
+  // CHECK: %[[s23:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[s24:.*]] = llvm.mul %[[s23]], %[[s6]]  : i32
+  // CHECK: %[[s25:.*]] = llvm.add %[[s17]], %[[s24]]  : i32
+  // CHECK: %[[s26:.*]] = arith.index_cast %[[s22]] : i32 to index
+  // CHECK: %[[s27:.*]] = arith.index_cast %[[s25]] : i32 to index
+  // CHECK: %[[s28:.*]] = llvm.add %[[s25]], %[[s3]]  : i32
+  // CHECK: %[[s29:.*]] = arith.index_cast %[[s28]] : i32 to index
+  // CHECK: %[[s30:.*]] = llvm.extractvalue %[[s2]][0] : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> 
+  // CHECK: %[[s31:.*]] = llvm.extractvalue %[[s2]][1] : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> 
+  // CHECK: memref.store %[[s30]], %[[arg1]][%[[s26]], %[[s27]]] : memref<64x16xf32, 3>
+  // CHECK: memref.store %[[s31]], %[[arg1]][%[[s26]], %[[s29]]] : memref<64x16xf32, 3>
+  // CHECK-COUNT-6: memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<64x16xf32, 3>
+  nvgpu.warpgroup.mma.store  %res_m64n16k, %shmem_m64n16k, warpgroup_id = %id : !nvgpu.warpgroup.accumulator<fragmented = vector<64x16xf32>> to memref<64x16xf32,3>
+  return
+}
+
 func.func @warpgroup_mma_init() {
   //CHECK: %[[S1:.+]] = llvm.mlir.constant(0.000000e+00 : f32) : f3
   //CHECK: %[[S0:.+]] = llvm.mlir.undef : !llvm.struct<(struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>, struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>)>

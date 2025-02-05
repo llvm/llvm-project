@@ -24,6 +24,9 @@
 
 constexpr int kWarpSize = 32;
 
+/// Number of threads in warpgroup
+constexpr int kWarpgroupSize = 128;
+
 /// M size of wgmma.mma_async instruction
 constexpr int kWgmmaSizeM = 64;
 

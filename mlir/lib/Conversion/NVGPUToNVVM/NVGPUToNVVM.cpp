@@ -1086,10 +1086,9 @@ struct NVGPUGenerateWarpgroupDescriptorLowering
     // // [0,14)   start_address
     dsc = insertBit(dsc, basePtr14bit, startBaseAddrBit);
 
-    LLVM_DEBUG(DBGS() << "Generating warpgroup.descriptor: "
-                      << "leading_off:" << leadDimVal << "\t"
-                      << "stride_off :" << strideDimVal << "\t"
-                      << "base_offset:" << offsetVal << "\t"
+    LLVM_DEBUG(DBGS() << "Generating warpgroup.descriptor: " << "leading_off:"
+                      << leadDimVal << "\t" << "stride_off :" << strideDimVal
+                      << "\t" << "base_offset:" << offsetVal << "\t"
                       << "layout_type:" << swizzle << " ("
                       << nvgpu::stringifyTensorMapSwizzleKind(swizzleKind)
                       << ")\n start_addr :  " << baseAddr << "\n");
@@ -1381,13 +1380,12 @@ struct NVGPUWarpgroupMmaOpLowering
     /// This function generates a WgmmaMmaAsyncOp using provided GMMA matrix
     /// descriptors and arranges them based on induction variables: i, j, and k.
     Value generateWgmma(int i, int j, int k, Value matrixC) {
-      LLVM_DEBUG(DBGS() << "\t wgmma."
-                        << "m" << wgmmaM << "n" << wgmmaN << "k" << wgmmaK
-                        << "(A[" << (iterationM * wgmmaM) << ":"
+      LLVM_DEBUG(DBGS() << "\t wgmma." << "m" << wgmmaM << "n" << wgmmaN << "k"
+                        << wgmmaK << "(A[" << (iterationM * wgmmaM) << ":"
                         << (iterationM * wgmmaM) + wgmmaM << "]["
                         << (iterationK * wgmmaK) << ":"
-                        << (iterationK * wgmmaK + wgmmaK) << "] * "
-                        << " B[" << (iterationK * wgmmaK) << ":"
+                        << (iterationK * wgmmaK + wgmmaK) << "] * " << " B["
+                        << (iterationK * wgmmaK) << ":"
                         << (iterationK * wgmmaK + wgmmaK) << "][" << 0 << ":"
                         << wgmmaN << "])\n");
 
@@ -1534,8 +1532,8 @@ struct NVGPUWarpgroupMmaStoreOpLowering
   /// \param offset: the offset within the memref where the registers will be
   /// stored.
   void storeFragmentedMatrix(ImplicitLocOpBuilder &b, Value matrixD,
-                             TypedValue<MemRefType> dstMemref,
-                             int offset) const {
+                             TypedValue<MemRefType> dstMemref, int offset,
+                             Value warpgroupId) const {
     Type i32 = b.getI32Type();
 
     auto makeConst = [&](int32_t index) -> Value {
@@ -1568,6 +1566,13 @@ struct NVGPUWarpgroupMmaStoreOpLowering
     };
 
     Value tidx = b.create<NVVM::ThreadIdXOp>(i32);
+    // Normalize the thread index to the beginning of the warpgroup
+    if (warpgroupId) {
+      Value s1 =
+          b.create<arith::MulIOp>(warpgroupId, makeConst(kWarpgroupSize));
+      tidx = b.create<arith::SubIOp>(tidx, s1);
+    }
+
     Value laneId = b.create<LLVM::URemOp>(i32, tidx, warpSize);
     Value warpId = b.create<LLVM::UDivOp>(i32, tidx, warpSize);
     Value lane4Id = b.create<LLVM::UDivOp>(i32, laneId, c4);
@@ -1609,7 +1614,8 @@ struct NVGPUWarpgroupMmaStoreOpLowering
     for (auto [idx, matrixD] : llvm::enumerate(stype.getBody())) {
       auto structType = cast<LLVM::LLVMStructType>(matrixD);
       Value innerStructValue = b.create<LLVM::ExtractValueOp>(matriDValue, idx);
-      storeFragmentedMatrix(b, innerStructValue, op.getDstMemref(), offset);
+      storeFragmentedMatrix(b, innerStructValue, op.getDstMemref(), offset,
+                            adaptor.getWarpgroupId());
       offset += structType.getBody().size();
     }
     rewriter.eraseOp(op);
