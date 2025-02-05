@@ -38,14 +38,15 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_i32_const_idx(ptr addrs
 ; CHECK-LABEL: struct_ptr_atomic_buffer_load_i32_const_idx:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; CHECK-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_and_b32 v0, 0x3ff, v0
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:  .LBB1_1: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    v_mov_b32_e32 v1, 15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_load_b32 v2, v1, s[0:3], 0 idxen glc
+; CHECK-NEXT:    buffer_load_b32 v1, v1, s[0:3], 0 idxen glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4

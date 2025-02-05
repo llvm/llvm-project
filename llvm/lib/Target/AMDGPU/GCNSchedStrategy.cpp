@@ -329,7 +329,7 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                                          const RegPressureTracker &RPTracker,
                                          SchedCandidate &Cand,
                                          bool IsBottomUp) {
-  const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(TRI);
+  const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo*>(TRI);
   ArrayRef<unsigned> Pressure = RPTracker.getRegSetPressureAtPos();
   unsigned SGPRPressure = 0;
   unsigned VGPRPressure = 0;
@@ -1403,7 +1403,8 @@ GCNSchedStage::getScheduleMetrics(const std::vector<SUnit> &InputSchedule) {
 #ifndef NDEBUG
   LLVM_DEBUG(
       printScheduleModel(ReadyCyclesSorted);
-      dbgs() << "\n\t" << "Metric: "
+      dbgs() << "\n\t"
+             << "Metric: "
              << (SumBubbles
                      ? (SumBubbles * ScheduleMetrics::ScaleFactor) / CurrCycle
                      : 1)
@@ -1438,7 +1439,8 @@ GCNSchedStage::getScheduleMetrics(const GCNScheduleDAGMILive &DAG) {
 #ifndef NDEBUG
   LLVM_DEBUG(
       printScheduleModel(ReadyCyclesSorted);
-      dbgs() << "\n\t" << "Metric: "
+      dbgs() << "\n\t"
+             << "Metric: "
              << (SumBubbles
                      ? (SumBubbles * ScheduleMetrics::ScaleFactor) / CurrCycle
                      : 1)
@@ -1486,7 +1488,8 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
       dbgs()
       << "\n\t      *** In shouldRevertScheduling ***\n"
       << "      *********** BEFORE UnclusteredHighRPStage ***********\n");
-  ScheduleMetrics MBefore = getScheduleMetrics(DAG.SUnits);
+  ScheduleMetrics MBefore =
+      getScheduleMetrics(DAG.SUnits);
   LLVM_DEBUG(
       dbgs()
       << "\n      *********** AFTER UnclusteredHighRPStage ***********\n");

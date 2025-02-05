@@ -54,7 +54,6 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ;
 ; GFX12-LABEL: _amdgpu_cs_main:
 ; GFX12:       ; %bb.0: ; %branch1_true
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v1
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-NEXT:    s_mov_b32 s4, 0
@@ -77,6 +76,7 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX12-NEXT:    s_cbranch_execz .LBB0_1
 ; GFX12-NEXT:  ; %bb.3: ; %branch2_merge
 ; GFX12-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_mov_b32 s5, s4
 ; GFX12-NEXT:    s_mov_b32 s6, s4
 ; GFX12-NEXT:    s_mov_b32 s7, s4
