@@ -2441,6 +2441,14 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
 
     const uint64_t SymAddress = SymbolAddress + Addend;
     BinaryFunction *Func = BC->getBinaryFunctionContainingAddress(SymAddress);
+
+    if (SymbolIter != InputFile->symbol_end()) {
+      const SymbolRef &RefSymbol = *SymbolIter;
+      uint64_t SymbolSize = ELFSymbolRef(RefSymbol).getSize();
+      if (Func && !Func->isSymbolValidInScope(RefSymbol, SymbolSize))
+        continue;
+    }
+
     if (Func && !Func->isInConstantIsland(SymAddress)) {
       if (const uint64_t SymOffset = SymAddress - Func->getAddress())
         Func->addEntryPointAtOffset(SymOffset);
@@ -5603,10 +5611,16 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
       // If OldAddress is the another entry point of
       // the function, then BOLT could get the new address.
       if (BF->isMultiEntry()) {
-        for (const BinaryBasicBlock &BB : *BF)
-          if (BB.isEntryPoint() &&
-              (BF->getAddress() + BB.getOffset()) == OldAddress)
+        for (const BinaryBasicBlock &BB : *BF) {
+          if (BF->forEachEntryPoint(
+                  [&](uint64_t Offset, const MCSymbol *Symbol) {
+                    if (BB.isEntryPoint() &&
+                        (BF->getAddress() + BB.getOffset()) == OldAddress)
+                      return true;
+                    return false;
+                  }))
             return BB.getOutputStartAddress();
+        }
       }
       BC->errs() << "BOLT-ERROR: unable to get new address corresponding to "
                     "input address 0x"
