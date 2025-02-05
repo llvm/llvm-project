@@ -367,7 +367,16 @@ Simple values
 The :token:`SimpleValue` has a number of forms.
 
 .. productionlist::
-   SimpleValue: `TokInteger` | `TokString`+ | `TokCode`
+   SimpleValue: `SimpleValue1`
+              :| `SimpleValue2`
+              :| `SimpleValue3`
+              :| `SimpleValue4`
+              :| `SimpleValue5`
+              :| `SimpleValue6`
+              :| `SimpleValue7`
+              :| `SimpleValue8`
+              :| `SimpleValue9`
+   SimpleValue1: `TokInteger` | `TokString`+ | `TokCode`
 
 A value can be an integer literal, a string literal, or a code literal.
 Multiple adjacent string literals are concatenated as in C/C++; the simple
@@ -1307,8 +1316,9 @@ output. It is intended for debugging purpose.
   instantiation point of the containing record.
 
 .. productionlist::
-   Dump: "dump"  `string` ";"
+   Dump: "dump" `Value` ";"
 
+The :token:`Value` is an arbitrary string expression.
 For example, it can be used in combination with `!repr` to investigate
 the values passed to a multiclass:
 
@@ -1355,11 +1365,12 @@ The ``assert`` statement checks a boolean condition to be sure that it is true
 and prints an error message if it is not.
 
 .. productionlist::
-   Assert: "assert" `condition` "," `message` ";"
+   Assert: "assert" `Value` "," `Value` ";"
 
-If the boolean condition is true, the statement does nothing. If the
-condition is false, it prints a nonfatal error message. The **message**, which
-can be an arbitrary string expression, is included in the error message as a
+The first :token:`Value` is a boolean condition. If it is true, the
+statement does nothing. If the condition is false, it prints a nonfatal
+error message. The second :token:`Value` is a message, which can be an
+arbitrary string expression. It is included in the error message as a
 note. The exact behavior of the ``assert`` statement depends on its
 placement.
 

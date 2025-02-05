@@ -358,10 +358,10 @@ public:
       TypedAttr constantAttr;
       if (isa<FloatType>(elementTy)) {
         constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-      } else if (isa<IntegerType>(elementTy) && !padOp.getQuantizationInfo()) {
+      } else if (isa<IntegerType>(elementTy) && !padOp.getInputZpAttr()) {
         constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-      } else if (isa<IntegerType>(elementTy) && padOp.getQuantizationInfo()) {
-        int64_t value = padOp.getQuantizationInfo()->getInputZp();
+      } else if (isa<IntegerType>(elementTy) && padOp.getInputZpAttr()) {
+        int64_t value = padOp.getInputZpAttr().getInt();
         constantAttr = rewriter.getIntegerAttr(elementTy, value);
       }
       if (constantAttr)

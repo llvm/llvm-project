@@ -74,6 +74,8 @@ public:
   bool splitModule(Module &M, unsigned NumParts,
                    function_ref<void(std::unique_ptr<Module> MPart)>
                        ModuleCallback) override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -118,6 +120,10 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -131,10 +137,6 @@ public:
   AMDGPUTargetMachine &getAMDGPUTargetMachine() const {
     return getTM<AMDGPUTargetMachine>();
   }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override;
-
   void addEarlyCSEOrGVNPass();
   void addStraightLineScalarOptimizationPasses();
   void addIRPasses() override;
