@@ -800,7 +800,8 @@ void MCELFStreamer::createAttributesWithSubsection(
   if (AttributeSection) {
     switchSection(AttributeSection);
   } else {
-    AttributeSection = getContext().getELFSection(Section, Type, 0);
+    AttributeSection =
+        getContext().getELFSection(Section, Type, ELF::SHF_EXCLUDE);
     switchSection(AttributeSection);
 
     // Format version

@@ -1,10 +1,15 @@
 ; RUN: llc %s -o - | FileCheck %s --check-prefix=ASM
-; RUN: llc %s -filetype=obj -o - | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
+; RUN: llc %s -filetype=obj -o - | llvm-readelf --section-details --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
 
 ; ASM:      .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
 ; ASM-NEXT: .aeabi_attribute	Tag_Feature_BTI, 1
 ; ASM-NEXT: .aeabi_attribute	Tag_Feature_PAC, 1
 ; ASM-NEXT: .aeabi_attribute	Tag_Feature_GCS, 1
+
+; ELF: Section Headers:
+; ELF: .ARM.attributes
+; ELF-NEXT: 0000000000000000
+; ELF-NEXT: EXCLUDE
 
 ; ELF: Hex dump of section '.ARM.attributes':
 ; ELF-NEXT: 0x00000000 41230000 00616561 62695f66 65617475 A#...aeabi_featu
