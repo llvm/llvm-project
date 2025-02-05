@@ -4800,6 +4800,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    case Intrinsic::scmp:
+    case Intrinsic::ucmp: {
+      handleShadowOr(I);
+      break;
+    }
+
     default:
       if (!handleUnknownIntrinsic(I))
         visitInstruction(I);
