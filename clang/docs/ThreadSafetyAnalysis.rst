@@ -518,7 +518,7 @@ Warning flags
   + ``-Wthread-safety-reference``: Checks when guarded variables are passed by reference.
 
 * ``-Wthread-safety-addressof``: Warn when the address of guarded variables is
-  obtained (``&var``). Since obtaining the address of a variable does *not
+  taken (``&var``). Since taking the address of a variable does *not
   necessarily imply a read or write*, the warning is off by default to avoid
   false positives. In codebases that prefer passing pointers rather than
   references (for C++ codebases), or passing pointers is ubiquitous (for C

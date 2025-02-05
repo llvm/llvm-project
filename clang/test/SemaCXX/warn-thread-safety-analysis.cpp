@@ -4907,7 +4907,7 @@ public:
     a = (*datap2_).getValue(); // \
       // expected-warning {{reading the value pointed to by 'datap2_' requires holding mutex 'mu_'}}
 
-    // Calls operator&, and does not obtain the address.
+    // Calls operator&, and does not take the address.
     (void)&data_ao_; // expected-warning {{reading variable 'data_ao_' requires holding mutex 'mu_'}}
     (void)__builtin_addressof(data_ao_); // expected-warning {{passing variable 'data_ao_' by reference requires holding mutex 'mu_'}}
 
