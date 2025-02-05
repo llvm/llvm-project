@@ -39,6 +39,10 @@ for header in public_headers:
 // breaks when building with modules even when we don't use the offending headers directly.
 // UNSUPPORTED: clang-modules-build
 
+// The AIX localization support uses some functions as part of their headers that require a
+// recent value of _XOPEN_SOURCE.
+// UNSUPPORTED: LIBCXX-AIX-FIXME
+
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 
