@@ -33,7 +33,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.openat
 
     # poll.h entrypoints
-    libc.src.poll.poll
+    # TODO: https://github.com/llvm/llvm-project/issues/125940
+    # libc.src.poll.poll
 
     # sched.h entrypoints
     libc.src.sched.sched_get_priority_max
