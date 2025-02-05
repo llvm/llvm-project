@@ -4007,7 +4007,7 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
       ClassTemplateSpecializationDecl::Create(
           SemaRef.Context, D->getTagKind(), Owner, D->getBeginLoc(),
           D->getLocation(), InstClassTemplate, CTAI.CanonicalConverted,
-          PrevDecl);
+          CTAI.MatchedPackOnParmToNonPackOnArg, PrevDecl);
   InstD->setTemplateArgsAsWritten(InstTemplateArgs);
 
   // Add this partial specialization to the set of class template partial
