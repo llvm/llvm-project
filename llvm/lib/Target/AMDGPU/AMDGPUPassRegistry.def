@@ -111,6 +111,7 @@ MACHINE_FUNCTION_PASS("si-optimize-exec-masking", SIOptimizeExecMaskingPass())
 MACHINE_FUNCTION_PASS("si-peephole-sdwa", SIPeepholeSDWAPass())
 MACHINE_FUNCTION_PASS("si-pre-allocate-wwm-regs", SIPreAllocateWWMRegsPass())
 MACHINE_FUNCTION_PASS("si-shrink-instructions", SIShrinkInstructionsPass())
+MACHINE_FUNCTION_PASS("si-wqm", SIWholeQuadModePass())
 #undef MACHINE_FUNCTION_PASS
 
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
@@ -140,7 +141,6 @@ DUMMY_MACHINE_FUNCTION_PASS("amdgpu-global-isel-divergence-lowering", AMDGPUGlob
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-regbankselect", AMDGPURegBankSelectPass())
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-regbanklegalize", AMDGPURegBankLegalizePass())
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-regbank-combiner", AMDGPURegBankCombinerPass())
-DUMMY_MACHINE_FUNCTION_PASS("si-wqm", SIWholeQuadModePass())
 
 #undef DUMMY_MACHINE_FUNCTION_PASS
 
