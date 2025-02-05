@@ -5731,9 +5731,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     SDValue Gather;
     // If we have a locally repeating mask, then we can reuse the first register
     // in the index register group for all registers within the source register
-    // group.  TODO: This generalizes to m2, and m4.  Also, this is currently
-    // picking up cases with a fully undef tail which could be more directly
-    // handled with fewer redundant vrgathers
+    // group.  TODO: This generalizes to m2, and m4.
     const MVT M1VT = getLMUL1VT(ContainerVT);
     auto VLMAX = RISCVTargetLowering::computeVLMAXBounds(M1VT, Subtarget).first;
     if (ContainerVT.bitsGT(M1VT) && isLocalRepeatingShuffle(Mask, VLMAX)) {
