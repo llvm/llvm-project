@@ -409,7 +409,7 @@ static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
 
 #define IF_ANY_RELATIVE_RETURN_FALSE(PATHS)                                    \
   do {                                                                         \
-    if (std::any_of(PATHS.begin(), PATHS.end(), [](const auto &P) {            \
+    if (llvm::any_of(PATHS, [](const auto &P) {                                \
           return !P.empty() && !llvm::sys::path::is_absolute(P);               \
         }))                                                                    \
       return false;                                                            \
