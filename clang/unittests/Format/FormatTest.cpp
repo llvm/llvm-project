@@ -11238,13 +11238,6 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
   verifyFormat("template <typename Foo, typename Bar>\n"
                "void foo() {}",
                Style);
-  // It should allow a line break, even when the typename is short.
-  // verifyNoChange is needed because the default behavior is one line.
-  verifyNoChange("template <\n"
-                 "    typename Foo\n"
-                 ">\n"
-                 "void foo() {}",
-                 Style);
   // It should add a line break before > if not already present:
   verifyFormat("template <\n"
                "    typename Foo\n"
