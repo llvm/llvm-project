@@ -171,7 +171,8 @@ void associative_container_benchmarks(std::string container) {
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        c[i].insert(to_insert);
+        auto result = c[i].insert(to_insert);
+        benchmark::DoNotOptimize(result);
         benchmark::DoNotOptimize(c[i]);
         benchmark::ClobberMemory();
       }
@@ -199,7 +200,8 @@ void associative_container_benchmarks(std::string container) {
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        c[i].insert(to_insert);
+        auto result = c[i].insert(to_insert);
+        benchmark::DoNotOptimize(result);
         benchmark::DoNotOptimize(c[i]);
         benchmark::ClobberMemory();
       }
@@ -229,7 +231,8 @@ void associative_container_benchmarks(std::string container) {
 
       while (st.KeepRunningBatch(BatchSize)) {
         for (std::size_t i = 0; i != BatchSize; ++i) {
-          c[i].insert(hints[i], to_insert);
+          auto result = c[i].insert(hints[i], to_insert);
+          benchmark::DoNotOptimize(result);
           benchmark::DoNotOptimize(c[i]);
           benchmark::ClobberMemory();
         }
@@ -252,7 +255,8 @@ void associative_container_benchmarks(std::string container) {
 
       while (st.KeepRunningBatch(BatchSize)) {
         for (std::size_t i = 0; i != BatchSize; ++i) {
-          c[i].insert(c[i].begin(), to_insert);
+          auto result = c[i].insert(c[i].begin(), to_insert);
+          benchmark::DoNotOptimize(result);
           benchmark::DoNotOptimize(c[i]);
           benchmark::ClobberMemory();
         }
@@ -323,7 +327,8 @@ void associative_container_benchmarks(std::string container) {
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        c[i].erase(get_key(element));
+        auto result = c[i].erase(get_key(element));
+        benchmark::DoNotOptimize(result);
         benchmark::DoNotOptimize(c[i]);
         benchmark::ClobberMemory();
       }
@@ -345,7 +350,8 @@ void associative_container_benchmarks(std::string container) {
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        c.erase(get_key(element));
+        auto result = c.erase(get_key(element));
+        benchmark::DoNotOptimize(result);
         benchmark::DoNotOptimize(c);
         benchmark::ClobberMemory();
       }
@@ -368,7 +374,8 @@ void associative_container_benchmarks(std::string container) {
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        c[i].erase(iterators[i]);
+        auto result = c[i].erase(iterators[i]);
+        benchmark::DoNotOptimize(result);
         benchmark::DoNotOptimize(c[i]);
         benchmark::ClobberMemory();
       }
@@ -389,7 +396,8 @@ void associative_container_benchmarks(std::string container) {
     auto first = std::next(c.begin(), c.size() / 4);
     auto last  = std::next(c.begin(), 3 * (c.size() / 4));
     for (auto _ : st) {
-      c.erase(first, last);
+      auto result = c.erase(first, last);
+      benchmark::DoNotOptimize(result);
       benchmark::DoNotOptimize(c);
       benchmark::ClobberMemory();
 
@@ -426,9 +434,9 @@ void associative_container_benchmarks(std::string container) {
     Container c(in.begin(), in.end());
 
     for (auto _ : st) {
-      auto res = c.size();
+      auto result = c.size();
+      benchmark::DoNotOptimize(result);
       benchmark::DoNotOptimize(c);
-      benchmark::DoNotOptimize(res);
       benchmark::ClobberMemory();
     }
   });
