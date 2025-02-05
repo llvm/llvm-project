@@ -5,7 +5,7 @@
 define void @test_typedbuffer() {
   ; ByteAddressBuffer Buf : register(t8, space1)
   %srv0 = call target("dx.RawBuffer", void, 0, 0)
-      @llvm.dx.handle.fromBinding.tdx.RawBuffer_i8_0_0t(
+      @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(
           i32 1, i32 8, i32 1, i32 0, i1 false)
   ; CHECK: Binding [[SRV0:[0-9]+]]:
   ; CHECK:   Binding:
@@ -19,7 +19,7 @@ define void @test_typedbuffer() {
   ; struct S { float4 a; uint4 b; };
   ; StructuredBuffer<S> Buf : register(t2, space4)
   %srv1 = call target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 0, 0)
-      @llvm.dx.handle.fromBinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
+      @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
           i32 4, i32 2, i32 1, i32 0, i1 false)
   ; CHECK: Binding [[SRV1:[0-9]+]]:
   ; CHECK:   Binding:
@@ -34,7 +34,7 @@ define void @test_typedbuffer() {
 
   ; Buffer<uint4> Buf[24] : register(t3, space5)
   %srv2 = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
-      @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_0_0t(
+      @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_0_0t(
           i32 5, i32 3, i32 24, i32 0, i1 false)
   ; CHECK: Binding [[SRV2:[0-9]+]]:
   ; CHECK:   Binding:
@@ -49,7 +49,7 @@ define void @test_typedbuffer() {
 
   ; RWBuffer<int> Buf : register(u7, space2)
   %uav0 = call target("dx.TypedBuffer", i32, 1, 0, 1)
-      @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_1_0t(
+      @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0t(
           i32 2, i32 7, i32 1, i32 0, i1 false)
   ; CHECK: Binding [[UAV0:[0-9]+]]:
   ; CHECK:   Binding:
@@ -67,7 +67,7 @@ define void @test_typedbuffer() {
 
   ; RWBuffer<float4> Buf : register(u5, space3)
   %uav1 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
-              @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0(
+              @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0(
                   i32 3, i32 5, i32 1, i32 0, i1 false)
   ; CHECK: Binding [[UAV1:[0-9]+]]:
   ; CHECK:   Binding:
@@ -86,11 +86,11 @@ define void @test_typedbuffer() {
   ; RWBuffer<float4> BufferArray[10] : register(u0, space4)
   ; RWBuffer<float4> Buf = BufferArray[0]
   %uav2_1 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
-              @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0(
+              @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0(
                   i32 4, i32 0, i32 10, i32 0, i1 false)
   ; RWBuffer<float4> Buf = BufferArray[5]
   %uav2_2 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
-              @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0(
+              @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0(
                   i32 4, i32 0, i32 10, i32 5, i1 false)
   ; CHECK: Binding [[UAV2:[0-9]+]]:
   ; CHECK:   Binding:

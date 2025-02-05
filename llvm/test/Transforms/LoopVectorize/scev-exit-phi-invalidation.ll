@@ -42,16 +42,11 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[L_LCSSA_LCSSA]], i32 -1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SMAX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i8 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i32 [[TMP3]], 255
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP3]] to i8
-; CHECK-NEXT:    [[TMP9:%.*]] = add i8 1, [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt i8 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt i32 [[TMP3]], 255
-; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP7]], [[TMP12]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[SCALAR_PH3]], label [[VECTOR_PH4:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add i8 1, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i8 [[TMP5]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP3]], 255
+; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH3]], label [[VECTOR_PH4:%.*]]
 ; CHECK:       vector.ph4:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
@@ -69,8 +64,8 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_NEXT9]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK2:%.*]], label [[VECTOR_BODY5]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block2:
-; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N6]], label [[EXIT_2:%.*]], label [[SCALAR_PH3]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_2:%.*]], label [[SCALAR_PH3]]
 ; CHECK:       scalar.ph3:
 ; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK2]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[EXIT_1]] ]
 ; CHECK-NEXT:    br label [[LOOP_2:%.*]]

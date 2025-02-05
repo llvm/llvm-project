@@ -3,16 +3,41 @@
 # int baz();
 # int bar() { return 47; }
 # int foo(int flag) { return flag ? bar() : baz(); }
-# The function bar has been placed "in the middle" of foo.
+# The function bar has been placed "in the middle" of foo, and the function
+# entry point is deliberately not its lowest address.
 
-# RUN: llvm-mc -triple x86_64-pc-linux -filetype=obj %s -o %t
-# RUN: %lldb %t -o "image lookup -v -n foo" -o exit | FileCheck %s
+# RUN: split-file %s %t
+# RUN: llvm-mc -triple x86_64-pc-linux -filetype=obj %t/input.s -o %t/input.o
+# RUN: %lldb %t/input.o -s %t/commands -o exit | FileCheck %s
 
+#--- commands
+
+image lookup -v -n foo
+# CHECK-LABEL: image lookup -v -n foo
 # CHECK: 1 match found in {{.*}}
-# CHECK: Summary: {{.*}}`foo
+# CHECK: Summary: input.o`foo
 # CHECK: Function: id = {{.*}}, name = "foo", ranges = [0x0000000000000000-0x000000000000000e)[0x0000000000000014-0x000000000000001c)
 
+image lookup -v --regex -n '^foo$'
+# CHECK-LABEL: image lookup -v --regex -n '^foo$'
+# CHECK: 1 match found in {{.*}}
+# CHECK: Summary: input.o`foo
+# CHECK: Function: id = {{.*}}, name = "foo", ranges = [0x0000000000000000-0x000000000000000e)[0x0000000000000014-0x000000000000001c)
+
+expr -- &foo
+# CHECK-LABEL: expr -- &foo
+# CHECK: (void (*)()) $0 = 0x0000000000000007
+
+#--- input.s
         .text
+
+foo.__part.1:
+        .cfi_startproc
+        callq   bar
+        jmp     foo.__part.3
+.Lfoo.__part.1_end:
+        .size   foo.__part.1, .Lfoo.__part.1_end-foo.__part.1
+        .cfi_endproc
 
         .type   foo,@function
 foo:
@@ -23,14 +48,6 @@ foo:
         .cfi_endproc
 .Lfoo_end:
         .size   foo, .Lfoo_end-foo
-
-foo.__part.1:
-        .cfi_startproc
-        callq   bar
-        jmp     foo.__part.3
-.Lfoo.__part.1_end:
-        .size   foo.__part.1, .Lfoo.__part.1_end-foo.__part.1
-        .cfi_endproc
 
 bar:
         .cfi_startproc

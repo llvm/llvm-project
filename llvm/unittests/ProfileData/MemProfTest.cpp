@@ -501,16 +501,13 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   IndexedRecord.CallSiteIds.push_back(CS3Id);
   IndexedRecord.CallSiteIds.push_back(CS4Id);
 
-  FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
-      MemProfData.Frames);
-  CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
-      MemProfData.CallStacks, FrameIdConv);
+  IndexedCallstackIdConveter CSIdConv(MemProfData);
 
   MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
 
   // Make sure that all lookups are successful.
-  ASSERT_EQ(FrameIdConv.LastUnmappedId, std::nullopt);
-  ASSERT_EQ(CSIdConv.LastUnmappedId, std::nullopt);
+  ASSERT_EQ(CSIdConv.FrameIdConv.LastUnmappedId, std::nullopt);
+  ASSERT_EQ(CSIdConv.CSIdConv.LastUnmappedId, std::nullopt);
 
   // Verify the contents of Record.
   ASSERT_THAT(Record.AllocSites, SizeIs(2));
@@ -540,17 +537,14 @@ TEST(MemProf, MissingCallStackId) {
 
   // Create empty maps.
   IndexedMemProfData MemProfData;
-  FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
-      MemProfData.Frames);
-  CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
-      MemProfData.CallStacks, FrameIdConv);
+  IndexedCallstackIdConveter CSIdConv(MemProfData);
 
   // We are only interested in errors, not the return value.
   (void)IndexedMR.toMemProfRecord(CSIdConv);
 
-  ASSERT_TRUE(CSIdConv.LastUnmappedId.has_value());
-  EXPECT_EQ(*CSIdConv.LastUnmappedId, 0xdeadbeefU);
-  EXPECT_EQ(FrameIdConv.LastUnmappedId, std::nullopt);
+  ASSERT_TRUE(CSIdConv.CSIdConv.LastUnmappedId.has_value());
+  EXPECT_EQ(*CSIdConv.CSIdConv.LastUnmappedId, 0xdeadbeefU);
+  EXPECT_EQ(CSIdConv.FrameIdConv.LastUnmappedId, std::nullopt);
 }
 
 TEST(MemProf, MissingFrameId) {
@@ -561,17 +555,14 @@ TEST(MemProf, MissingFrameId) {
   IndexedMemProfRecord IndexedMR;
   IndexedMR.AllocSites.emplace_back(CSId, makePartialMIB(), getHotColdSchema());
 
-  FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
-      MemProfData.Frames);
-  CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
-      MemProfData.CallStacks, FrameIdConv);
+  IndexedCallstackIdConveter CSIdConv(MemProfData);
 
   // We are only interested in errors, not the return value.
   (void)IndexedMR.toMemProfRecord(CSIdConv);
 
-  EXPECT_EQ(CSIdConv.LastUnmappedId, std::nullopt);
-  ASSERT_TRUE(FrameIdConv.LastUnmappedId.has_value());
-  EXPECT_EQ(*FrameIdConv.LastUnmappedId, 3U);
+  EXPECT_EQ(CSIdConv.CSIdConv.LastUnmappedId, std::nullopt);
+  ASSERT_TRUE(CSIdConv.FrameIdConv.LastUnmappedId.has_value());
+  EXPECT_EQ(*CSIdConv.FrameIdConv.LastUnmappedId, 3U);
 }
 
 // Verify CallStackRadixTreeBuilder can handle empty inputs.
@@ -714,10 +705,7 @@ HeapProfileRecords:
   const auto &[GUID, IndexedRecord] = MemProfData.Records.front();
   EXPECT_EQ(GUID, 0xdeadbeef12345678ULL);
 
-  FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
-      MemProfData.Frames);
-  CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
-      MemProfData.CallStacks, FrameIdConv);
+  IndexedCallstackIdConveter CSIdConv(MemProfData);
   MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
 
   ASSERT_THAT(Record.AllocSites, SizeIs(2));
@@ -760,10 +748,7 @@ HeapProfileRecords:
   const auto &[GUID, IndexedRecord] = MemProfData.Records.front();
   EXPECT_EQ(GUID, IndexedMemProfRecord::getGUID("_Z3fooi"));
 
-  FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
-      MemProfData.Frames);
-  CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
-      MemProfData.CallStacks, FrameIdConv);
+  IndexedCallstackIdConveter CSIdConv(MemProfData);
   MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
 
   ASSERT_THAT(Record.AllocSites, SizeIs(1));

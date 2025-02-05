@@ -434,8 +434,11 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
   if (!HalvingSwizzle && *compStr) {
     // We didn't get to the end of the string. This means the component names
     // didn't come from the same set *or* we encountered an illegal name.
-    S.Diag(OpLoc, diag::err_ext_vector_component_name_illegal)
-      << StringRef(compStr, 1) << SourceRange(CompLoc);
+    size_t Offset = compStr - CompName->getNameStart() + 1;
+    char Fmt[3] = {'\'', *compStr, '\''};
+    S.Diag(OpLoc.getLocWithOffset(Offset),
+           diag::err_ext_vector_component_name_illegal)
+        << StringRef(Fmt, 3) << SourceRange(CompLoc);
     return QualType();
   }
 

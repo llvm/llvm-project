@@ -188,6 +188,8 @@ public:
   unsigned getXLen() const {
     return is64Bit() ? 64 : 32;
   }
+  bool useLoadStorePairs() const;
+  bool useCCMovInsn() const;
   unsigned getFLen() const {
     if (HasStdExtD)
       return 64;
@@ -323,6 +325,10 @@ public:
   bool useRVVForFixedLengthVectors() const;
 
   bool enableSubRegLiveness() const override;
+
+  bool enableMachinePipeliner() const override;
+
+  bool useDFAforSMS() const override { return false; }
 
   bool useAA() const override;
 

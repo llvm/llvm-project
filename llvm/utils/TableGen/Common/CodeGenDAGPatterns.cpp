@@ -1537,21 +1537,19 @@ SDTypeConstraint::SDTypeConstraint(const Record *R, const CodeGenHwModes &CGH) {
     ConstraintType = SDTCisVec;
   } else if (R->isSubClassOf("SDTCisSameAs")) {
     ConstraintType = SDTCisSameAs;
-    x.SDTCisSameAs_Info.OtherOperandNum = R->getValueAsInt("OtherOperandNum");
+    OtherOperandNo = R->getValueAsInt("OtherOperandNum");
   } else if (R->isSubClassOf("SDTCisVTSmallerThanOp")) {
     ConstraintType = SDTCisVTSmallerThanOp;
-    x.SDTCisVTSmallerThanOp_Info.OtherOperandNum =
-        R->getValueAsInt("OtherOperandNum");
+    OtherOperandNo = R->getValueAsInt("OtherOperandNum");
   } else if (R->isSubClassOf("SDTCisOpSmallerThanOp")) {
     ConstraintType = SDTCisOpSmallerThanOp;
-    x.SDTCisOpSmallerThanOp_Info.BigOperandNum =
-        R->getValueAsInt("BigOperandNum");
+    OtherOperandNo = R->getValueAsInt("BigOperandNum");
   } else if (R->isSubClassOf("SDTCisEltOfVec")) {
     ConstraintType = SDTCisEltOfVec;
-    x.SDTCisEltOfVec_Info.OtherOperandNum = R->getValueAsInt("OtherOpNum");
+    OtherOperandNo = R->getValueAsInt("OtherOpNum");
   } else if (R->isSubClassOf("SDTCisSubVecOfVec")) {
     ConstraintType = SDTCisSubVecOfVec;
-    x.SDTCisSubVecOfVec_Info.OtherOperandNum = R->getValueAsInt("OtherOpNum");
+    OtherOperandNo = R->getValueAsInt("OtherOpNum");
   } else if (R->isSubClassOf("SDTCVecEltisVT")) {
     ConstraintType = SDTCVecEltisVT;
     VVT = getValueTypeByHwMode(R->getValueAsDef("VT"), CGH);
@@ -1566,12 +1564,10 @@ SDTypeConstraint::SDTypeConstraint(const Record *R, const CodeGenHwModes &CGH) {
     }
   } else if (R->isSubClassOf("SDTCisSameNumEltsAs")) {
     ConstraintType = SDTCisSameNumEltsAs;
-    x.SDTCisSameNumEltsAs_Info.OtherOperandNum =
-        R->getValueAsInt("OtherOperandNum");
+    OtherOperandNo = R->getValueAsInt("OtherOperandNum");
   } else if (R->isSubClassOf("SDTCisSameSizeAs")) {
     ConstraintType = SDTCisSameSizeAs;
-    x.SDTCisSameSizeAs_Info.OtherOperandNum =
-        R->getValueAsInt("OtherOperandNum");
+    OtherOperandNo = R->getValueAsInt("OtherOperandNum");
   } else {
     PrintFatalError(R->getLoc(),
                     "Unrecognized SDTypeConstraint '" + R->getName() + "'!\n");
@@ -1632,7 +1628,7 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
   case SDTCisSameAs: {
     unsigned OResNo = 0;
     TreePatternNode &OtherNode =
-        getOperandNum(x.SDTCisSameAs_Info.OtherOperandNum, N, NodeInfo, OResNo);
+        getOperandNum(OtherOperandNo, N, NodeInfo, OResNo);
     return (int)NodeToApply.UpdateNodeType(ResNo, OtherNode.getExtType(OResNo),
                                            TP) |
            (int)OtherNode.UpdateNodeType(OResNo, NodeToApply.getExtType(ResNo),
@@ -1654,23 +1650,23 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
     TypeSetByHwMode TypeListTmp(VVT);
 
     unsigned OResNo = 0;
-    TreePatternNode &OtherNode = getOperandNum(
-        x.SDTCisVTSmallerThanOp_Info.OtherOperandNum, N, NodeInfo, OResNo);
+    TreePatternNode &OtherNode =
+        getOperandNum(OtherOperandNo, N, NodeInfo, OResNo);
 
     return TI.EnforceSmallerThan(TypeListTmp, OtherNode.getExtType(OResNo),
                                  /*SmallIsVT*/ true);
   }
   case SDTCisOpSmallerThanOp: {
     unsigned BResNo = 0;
-    TreePatternNode &BigOperand = getOperandNum(
-        x.SDTCisOpSmallerThanOp_Info.BigOperandNum, N, NodeInfo, BResNo);
+    TreePatternNode &BigOperand =
+        getOperandNum(OtherOperandNo, N, NodeInfo, BResNo);
     return TI.EnforceSmallerThan(NodeToApply.getExtType(ResNo),
                                  BigOperand.getExtType(BResNo));
   }
   case SDTCisEltOfVec: {
     unsigned VResNo = 0;
-    TreePatternNode &VecOperand = getOperandNum(
-        x.SDTCisEltOfVec_Info.OtherOperandNum, N, NodeInfo, VResNo);
+    TreePatternNode &VecOperand =
+        getOperandNum(OtherOperandNo, N, NodeInfo, VResNo);
     // Filter vector types out of VecOperand that don't have the right element
     // type.
     return TI.EnforceVectorEltTypeIs(VecOperand.getExtType(VResNo),
@@ -1678,8 +1674,8 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
   }
   case SDTCisSubVecOfVec: {
     unsigned VResNo = 0;
-    TreePatternNode &BigVecOperand = getOperandNum(
-        x.SDTCisSubVecOfVec_Info.OtherOperandNum, N, NodeInfo, VResNo);
+    TreePatternNode &BigVecOperand =
+        getOperandNum(OtherOperandNo, N, NodeInfo, VResNo);
 
     // Filter vector types out of BigVecOperand that don't have the
     // right subvector type.
@@ -1691,20 +1687,72 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
   }
   case SDTCisSameNumEltsAs: {
     unsigned OResNo = 0;
-    TreePatternNode &OtherNode = getOperandNum(
-        x.SDTCisSameNumEltsAs_Info.OtherOperandNum, N, NodeInfo, OResNo);
+    TreePatternNode &OtherNode =
+        getOperandNum(OtherOperandNo, N, NodeInfo, OResNo);
     return TI.EnforceSameNumElts(OtherNode.getExtType(OResNo),
                                  NodeToApply.getExtType(ResNo));
   }
   case SDTCisSameSizeAs: {
     unsigned OResNo = 0;
-    TreePatternNode &OtherNode = getOperandNum(
-        x.SDTCisSameSizeAs_Info.OtherOperandNum, N, NodeInfo, OResNo);
+    TreePatternNode &OtherNode =
+        getOperandNum(OtherOperandNo, N, NodeInfo, OResNo);
     return TI.EnforceSameSize(OtherNode.getExtType(OResNo),
                               NodeToApply.getExtType(ResNo));
   }
   }
   llvm_unreachable("Invalid ConstraintType!");
+}
+
+bool llvm::operator==(const SDTypeConstraint &LHS,
+                      const SDTypeConstraint &RHS) {
+  if (std::tie(LHS.OperandNo, LHS.ConstraintType) !=
+      std::tie(RHS.OperandNo, RHS.ConstraintType))
+    return false;
+  switch (LHS.ConstraintType) {
+  case SDTypeConstraint::SDTCisVT:
+  case SDTypeConstraint::SDTCVecEltisVT:
+    return LHS.VVT == RHS.VVT;
+  case SDTypeConstraint::SDTCisPtrTy:
+  case SDTypeConstraint::SDTCisInt:
+  case SDTypeConstraint::SDTCisFP:
+  case SDTypeConstraint::SDTCisVec:
+    break;
+  case SDTypeConstraint::SDTCisSameAs:
+  case SDTypeConstraint::SDTCisVTSmallerThanOp:
+  case SDTypeConstraint::SDTCisOpSmallerThanOp:
+  case SDTypeConstraint::SDTCisEltOfVec:
+  case SDTypeConstraint::SDTCisSubVecOfVec:
+  case SDTypeConstraint::SDTCisSameNumEltsAs:
+  case SDTypeConstraint::SDTCisSameSizeAs:
+    return LHS.OtherOperandNo == RHS.OtherOperandNo;
+  }
+  return true;
+}
+
+bool llvm::operator<(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS) {
+  if (std::tie(LHS.OperandNo, LHS.ConstraintType) !=
+      std::tie(RHS.OperandNo, RHS.ConstraintType))
+    return std::tie(LHS.OperandNo, LHS.ConstraintType) <
+           std::tie(RHS.OperandNo, RHS.ConstraintType);
+  switch (LHS.ConstraintType) {
+  case SDTypeConstraint::SDTCisVT:
+  case SDTypeConstraint::SDTCVecEltisVT:
+    return LHS.VVT < RHS.VVT;
+  case SDTypeConstraint::SDTCisPtrTy:
+  case SDTypeConstraint::SDTCisInt:
+  case SDTypeConstraint::SDTCisFP:
+  case SDTypeConstraint::SDTCisVec:
+    break;
+  case SDTypeConstraint::SDTCisSameAs:
+  case SDTypeConstraint::SDTCisVTSmallerThanOp:
+  case SDTypeConstraint::SDTCisOpSmallerThanOp:
+  case SDTypeConstraint::SDTCisEltOfVec:
+  case SDTypeConstraint::SDTCisSubVecOfVec:
+  case SDTypeConstraint::SDTCisSameNumEltsAs:
+  case SDTypeConstraint::SDTCisSameSizeAs:
+    return LHS.OtherOperandNo < RHS.OtherOperandNo;
+  }
+  return false;
 }
 
 // Update the node type to match an instruction operand or result as specified
@@ -1797,6 +1845,14 @@ SDNodeInfo::SDNodeInfo(const Record *R, const CodeGenHwModes &CGH) : Def(R) {
 
   // Parse the properties.
   Properties = parseSDPatternOperatorProperties(R);
+  IsStrictFP = R->getValueAsBit("IsStrictFP");
+
+  std::optional<int64_t> MaybeTSFlags =
+      R->getValueAsBitsInit("TSFlags")->convertInitializerToInt();
+  if (!MaybeTSFlags)
+    PrintFatalError(R->getLoc(), "Invalid TSFlags");
+  assert(isUInt<32>(*MaybeTSFlags) && "TSFlags bit width out of sync");
+  TSFlags = *MaybeTSFlags;
 
   // Parse the type constraints.
   for (const Record *R : TypeProfile->getValueAsListOfDefs("Constraints"))
@@ -3006,14 +3062,13 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
       // Check that the ComplexPattern uses are consistent: "(MY_PAT $a, $b)"
       // and "(MY_PAT $b, $a)" should not be allowed in the same pattern;
       // neither should "(MY_PAT_1 $a, $b)" and "(MY_PAT_2 $a, $b)".
-      auto OperandId = std::make_pair(Operator, i);
-      auto PrevOp = ComplexPatternOperands.find(Child->getName());
-      if (PrevOp != ComplexPatternOperands.end()) {
-        if (PrevOp->getValue() != OperandId)
-          error("All ComplexPattern operands must appear consistently: "
-                "in the same order in just one ComplexPattern instance.");
-      } else
-        ComplexPatternOperands[Child->getName()] = OperandId;
+      auto OperandId = std::pair(Operator, i);
+      auto [PrevOp, Inserted] =
+          ComplexPatternOperands.try_emplace(Child->getName(), OperandId);
+      if (!Inserted && PrevOp->getValue() != OperandId) {
+        error("All ComplexPattern operands must appear consistently: "
+              "in the same order in just one ComplexPattern instance.");
+      }
     }
   }
 
@@ -3095,14 +3150,14 @@ bool TreePattern::InferAllTypes(
       // If we have input named node types, propagate their types to the named
       // values here.
       if (InNamedTypes) {
-        if (!InNamedTypes->count(Entry.getKey())) {
+        auto InIter = InNamedTypes->find(Entry.getKey());
+        if (InIter == InNamedTypes->end()) {
           error("Node '" + std::string(Entry.getKey()) +
                 "' in output pattern but not input pattern");
           return true;
         }
 
-        const SmallVectorImpl<TreePatternNode *> &InNodes =
-            InNamedTypes->find(Entry.getKey())->second;
+        const SmallVectorImpl<TreePatternNode *> &InNodes = InIter->second;
 
         // The input types should be fully resolved by now.
         for (TreePatternNode *Node : Nodes) {
@@ -3219,7 +3274,7 @@ void CodeGenDAGPatterns::ParseNodeInfo() {
   const CodeGenHwModes &CGH = getTargetInfo().getHwModes();
 
   for (const Record *R : reverse(Records.getAllDerivedDefinitions("SDNode")))
-    SDNodes.insert(std::pair(R, SDNodeInfo(R, CGH)));
+    SDNodes.try_emplace(R, SDNodeInfo(R, CGH));
 
   // Get the builtin intrinsic nodes.
   intrinsic_void_sdnode = getSDNodeNamed("intrinsic_void");
@@ -3291,10 +3346,9 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
       if (!OpsList->getArgName(j))
         P->error("Operands list should have names for each operand!");
       StringRef ArgNameStr = OpsList->getArgNameStr(j);
-      if (!OperandsSet.count(ArgNameStr))
+      if (!OperandsSet.erase(ArgNameStr))
         P->error("'" + ArgNameStr +
                  "' does not occur in pattern or was multiply specified!");
-      OperandsSet.erase(ArgNameStr);
       Args.push_back(std::string(ArgNameStr));
     }
 
@@ -3350,8 +3404,7 @@ void CodeGenDAGPatterns::ParseDefaultOperands() {
     // SomeSDnode so that we can parse this.
     std::vector<std::pair<const Init *, const StringInit *>> Ops;
     for (unsigned op = 0, e = DefaultInfo->getNumArgs(); op != e; ++op)
-      Ops.push_back(
-          std::pair(DefaultInfo->getArg(op), DefaultInfo->getArgName(op)));
+      Ops.emplace_back(DefaultInfo->getArg(op), DefaultInfo->getArgName(op));
     const DagInit *DI = DagInit::get(SomeSDNode, nullptr, Ops);
 
     // Create a TreePattern to parse this.
@@ -3510,9 +3563,8 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
         Val->getDef()->isSubClassOf("PointerLikeRegClass")) {
       if (Dest->getName().empty())
         I.error("set destination must have a name!");
-      if (InstResults.count(Dest->getName()))
+      if (!InstResults.insert_or_assign(Dest->getName(), Dest).second)
         I.error("cannot set '" + Dest->getName() + "' multiple times");
-      InstResults[Dest->getName()] = Dest;
     } else if (Val->getDef()->isSubClassOf("Register")) {
       InstImpResults.push_back(Val->getDef());
     } else {
@@ -3855,7 +3907,8 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
       continue;
     }
 
-    if (!InstInputs.count(OpName)) {
+    auto InIter = InstInputs.find(OpName);
+    if (InIter == InstInputs.end()) {
       // If this is an operand with a DefaultOps set filled in, we can ignore
       // this.  When we codegen it, we will do so as always executed.
       if (Op.Rec->isSubClassOf("OperandWithDefaultOps")) {
@@ -3868,8 +3921,8 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
               " does not appear in the instruction pattern");
       continue;
     }
-    TreePatternNodePtr InVal = InstInputs[OpName];
-    InstInputs.erase(OpName); // It occurred, remove from map.
+    TreePatternNodePtr InVal = InIter->second;
+    InstInputs.erase(InIter); // It occurred, remove from map.
 
     if (InVal->isLeaf() && isa<DefInit>(InVal->getLeafValue())) {
       const Record *InRec = cast<DefInit>(InVal->getLeafValue())->getDef();

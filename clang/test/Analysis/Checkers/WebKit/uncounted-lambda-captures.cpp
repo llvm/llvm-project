@@ -207,6 +207,67 @@ struct RefCountableWithLambdaCapturingThis {
     };
     call(lambda);
   }
+
+  void method_captures_this_unsafe_capture_local_var_explicitly() {
+    RefCountable* x = make_obj();
+    call([this, protectedThis = RefPtr { this }, x]() {
+      // expected-warning@-1{{Captured raw-pointer 'x' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      nonTrivial();
+      x->method();
+    });
+  }
+
+  void method_captures_this_with_other_protected_var() {
+    RefCountable* x = make_obj();
+    call([this, protectedX = RefPtr { x }]() {
+      // expected-warning@-1{{Captured raw-pointer 'this' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      nonTrivial();
+      protectedX->method();
+    });
+  }
+
+  void method_captures_this_unsafe_capture_local_var_explicitly_with_deref() {
+    RefCountable* x = make_obj();
+    call([this, protectedThis = Ref { *this }, x]() {
+      // expected-warning@-1{{Captured raw-pointer 'x' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      nonTrivial();
+      x->method();
+    });
+  }
+
+  void method_captures_this_unsafe_local_var_via_vardecl() {
+    RefCountable* x = make_obj();
+    auto lambda = [this, protectedThis = Ref { *this }, x]() {
+      // expected-warning@-1{{Captured raw-pointer 'x' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      nonTrivial();
+      x->method();
+    };
+    call(lambda);
+  }
+
+  void method_captures_this_with_guardian() {
+    auto lambda = [this, protectedThis = Ref { *this }]() {
+      nonTrivial();
+    };
+    call(lambda);
+  }
+
+  void method_captures_this_with_guardian_refptr() {
+    auto lambda = [this, protectedThis = RefPtr { &*this }]() {
+      nonTrivial();
+    };
+    call(lambda);
+  }
+
+  void forEach(const WTF::Function<void(RefCountable&)>&);
+  void method_captures_this_with_lambda_with_no_escape() {
+    auto run = [&]([[clang::noescape]] const WTF::Function<void(RefCountable&)>& func) {
+      forEach(func);
+    };
+    run([&](RefCountable&) {
+      nonTrivial();
+    });
+  }
 };
 
 struct NonRefCountableWithLambdaCapturingThis {

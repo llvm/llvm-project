@@ -36,7 +36,7 @@ define <12 x i8> @byte12() {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.u16 %rs1, 0;
+; CHECK-NEXT:    mov.b16 %rs1, 0;
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+4], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
@@ -50,7 +50,7 @@ define <20 x i8> @byte20() {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.u16 %rs1, 0;
+; CHECK-NEXT:    mov.b16 %rs1, 0;
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+4], {%rs1, %rs1, %rs1, %rs1};
 ; CHECK-NEXT:    st.param.v4.b8 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};

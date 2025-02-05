@@ -1204,8 +1204,13 @@ private:
 
   JITDylib(ExecutionSession &ES, std::string Name);
 
-  std::pair<AsynchronousSymbolQuerySet, std::shared_ptr<SymbolDependenceMap>>
-  IL_removeTracker(ResourceTracker &RT);
+  struct RemoveTrackerResult {
+    AsynchronousSymbolQuerySet QueriesToFail;
+    std::shared_ptr<SymbolDependenceMap> FailedSymbols;
+    std::vector<std::unique_ptr<MaterializationUnit>> DefunctMUs;
+  };
+
+  RemoveTrackerResult IL_removeTracker(ResourceTracker &RT);
 
   void transferTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT);
 
@@ -1312,6 +1317,7 @@ public:
   MaterializationTask(std::unique_ptr<MaterializationUnit> MU,
                       std::unique_ptr<MaterializationResponsibility> MR)
       : MU(std::move(MU)), MR(std::move(MR)) {}
+  ~MaterializationTask() override;
   void printDescription(raw_ostream &OS) override;
   void run() override;
 

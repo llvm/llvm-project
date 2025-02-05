@@ -106,7 +106,7 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
         continue;
 
       if (isZeroLengthBitfieldPermittedInHomogeneousAggregate() &&
-          FD->isZeroLengthBitField(getContext()))
+          FD->isZeroLengthBitField())
         continue;
 
       uint64_t FldMembers;
@@ -234,6 +234,14 @@ void ABIInfo::appendAttributeMangling(StringRef AttrStr,
     IsFirst = false;
     Out << Feat.substr(1);
   }
+}
+
+llvm::FixedVectorType *
+ABIInfo::getOptimalVectorMemoryType(llvm::FixedVectorType *T,
+                                    const LangOptions &Opt) const {
+  if (T->getNumElements() == 3 && !Opt.PreserveVec3Type)
+    return llvm::FixedVectorType::get(T->getElementType(), 4);
+  return T;
 }
 
 // Pin the vtable to this file.

@@ -621,7 +621,8 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
 bool XtensaTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_Xtensa);
@@ -747,7 +748,7 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
       return Op;
     // Check if use node maybe lowered to the ADDMI instruction
     SDNode &OpNode = *Op.getNode();
-    if ((OpNode.hasOneUse() && OpNode.use_begin()->getOpcode() == ISD::ADD) &&
+    if ((OpNode.hasOneUse() && OpNode.user_begin()->getOpcode() == ISD::ADD) &&
         isShiftedInt<16, 8>(Value))
       return Op;
     Type *Ty = Type::getInt32Ty(*DAG.getContext());

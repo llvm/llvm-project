@@ -95,7 +95,8 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
   BitVector CSRHintsForAllocOrder(TRI->getNumRegs());
   for (const MCPhysReg *I = CSR; *I; ++I)
     for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI)
-      CSRHintsForAllocOrder[*AI] = STI.ignoreCSRForAllocationOrder(mf, *AI);
+      CSRHintsForAllocOrder[(*AI).id()] =
+          STI.ignoreCSRForAllocationOrder(mf, *AI);
   if (IgnoreCSRForAllocOrder != CSRHintsForAllocOrder) {
     Update = true;
     IgnoreCSRForAllocOrder = CSRHintsForAllocOrder;

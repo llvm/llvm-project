@@ -53,6 +53,8 @@ enum {
   NEEDS_TLSIE = 1 << 8,
   NEEDS_GOT_AUTH = 1 << 9,
   NEEDS_GOT_NONAUTH = 1 << 10,
+  NEEDS_TLSDESC_AUTH = 1 << 11,
+  NEEDS_TLSDESC_NONAUTH = 1 << 12,
 };
 
 // The base class for real symbol classes.
@@ -103,6 +105,9 @@ public:
   uint8_t partition;
 
   // True if this symbol is preemptible at load time.
+  //
+  // Primarily set in two locations, (a) parseVersionAndComputeIsPreemptible and
+  // (b) demoteSymbolsAndComputeIsPreemptible.
   LLVM_PREFERRED_TYPE(bool)
   uint8_t isPreemptible : 1;
 
@@ -129,15 +134,8 @@ public:
   // - If -shared or --export-dynamic is specified, any symbol in an object
   //   file/bitcode sets this property, unless suppressed by LTO
   //   canBeOmittedFromSymbolTable().
-  //
-  // Primarily set in two locations, (a) after parseSymbolVersion and
-  // (b) during demoteSymbols.
   LLVM_PREFERRED_TYPE(bool)
   uint8_t isExported : 1;
-
-  // Used to compute isExported. Set when defined or referenced by a SharedFile.
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t exportDynamic : 1;
 
   LLVM_PREFERRED_TYPE(bool)
   uint8_t ltoCanOmit : 1;
@@ -157,7 +155,6 @@ public:
     stOther = (stOther & ~3) | visibility;
   }
 
-  bool includeInDynsym(Ctx &) const;
   uint8_t computeBinding(Ctx &) const;
   bool isGlobal() const { return binding == llvm::ELF::STB_GLOBAL; }
   bool isWeak() const { return binding == llvm::ELF::STB_WEAK; }
@@ -245,8 +242,8 @@ protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
       : file(file), nameData(name.data()), nameSize(name.size()), type(type),
-        binding(binding), stOther(stOther), symbolKind(k), exportDynamic(false),
-        ltoCanOmit(false), archSpecificBit(false) {}
+        binding(binding), stOther(stOther), symbolKind(k), ltoCanOmit(false),
+        archSpecificBit(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
     if (sym.traced)

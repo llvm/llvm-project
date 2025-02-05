@@ -186,7 +186,7 @@ struct CollapseShapeOpInterface
         // the source type.
         SmallVector<int64_t> strides;
         int64_t offset;
-        if (failed(getStridesAndOffset(bufferType, strides, offset)))
+        if (failed(bufferType.getStridesAndOffset(strides, offset)))
           return failure();
         resultType = MemRefType::get(
             {}, tensorResultType.getElementType(),
@@ -761,8 +761,8 @@ struct PadOpInterface
     RankedTensorType srcType = padOp.getSourceType();
 
     auto toValue = [&](OpFoldResult ofr) {
-      if (ofr.is<Value>())
-        return ofr.get<Value>();
+      if (auto value = dyn_cast<Value>(ofr))
+        return value;
       return rewriter
           .create<arith::ConstantIndexOp>(loc, *getConstantIntValue(ofr))
           .getResult();

@@ -495,6 +495,19 @@ define i32 @test_cttz_not_bw(i32 %x) {
   ret i32 %res
 }
 
+define i32 @test_cttz_not_bw_noundef(i32 %x) {
+; CHECK-LABEL: @test_cttz_not_bw_noundef(
+; CHECK-NEXT:    [[CT:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP_NOT]], i32 123, i32 [[CT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %ct = tail call noundef i32 @llvm.cttz.i32(i32 %x, i1 false)
+  %cmp = icmp ne i32 %x, 0
+  %res = select i1 %cmp, i32 %ct, i32 123
+  ret i32 %res
+}
+
 define i32 @test_cttz_not_bw_multiuse(i32 %x) {
 ; CHECK-LABEL: @test_cttz_not_bw_multiuse(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)

@@ -1190,9 +1190,13 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
 
   const RegisterBank *SizeBank = getRegBank(AllocSize, MRI, *TRI);
 
-  // TODO: Need to emit a wave reduction to get the maximum size.
-  if (SizeBank != &AMDGPU::SGPRRegBank)
-    return false;
+  if (SizeBank != &AMDGPU::SGPRRegBank) {
+    auto WaveReduction =
+        B.buildIntrinsic(Intrinsic::amdgcn_wave_reduce_umax, {LLT::scalar(32)})
+            .addUse(AllocSize)
+            .addImm(0);
+    AllocSize = WaveReduction.getReg(0);
+  }
 
   LLT PtrTy = MRI.getType(Dst);
   LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
@@ -1204,15 +1208,18 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
   auto WaveSize = B.buildConstant(LLT::scalar(32), ST.getWavefrontSizeLog2());
   auto ScaledSize = B.buildShl(IntPtrTy, AllocSize, WaveSize);
 
-  auto SPCopy = B.buildCopy(PtrTy, SPReg);
+  auto OldSP = B.buildCopy(PtrTy, SPReg);
   if (Alignment > TFI.getStackAlign()) {
-    auto PtrAdd = B.buildPtrAdd(PtrTy, SPCopy, ScaledSize);
-    B.buildMaskLowPtrBits(Dst, PtrAdd,
+    auto StackAlignMask = (Alignment.value() << ST.getWavefrontSizeLog2()) - 1;
+    auto Tmp1 = B.buildPtrAdd(PtrTy, OldSP,
+                              B.buildConstant(LLT::scalar(32), StackAlignMask));
+    B.buildMaskLowPtrBits(Dst, Tmp1,
                           Log2(Alignment) + ST.getWavefrontSizeLog2());
   } else {
-    B.buildPtrAdd(Dst, SPCopy, ScaledSize);
+    B.buildCopy(Dst, OldSP);
   }
-
+  auto PtrAdd = B.buildPtrAdd(PtrTy, Dst, ScaledSize);
+  B.buildCopy(SPReg, PtrAdd);
   MI.eraseFromParent();
   return true;
 }
@@ -3297,7 +3304,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 1);
       return;
     case Intrinsic::amdgcn_s_barrier_join:
-    case Intrinsic::amdgcn_s_wakeup_barrier:
       constrainOpWithReadfirstlane(B, MI, 1);
       return;
     case Intrinsic::amdgcn_s_barrier_init:
@@ -4669,6 +4675,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_set_inactive:
     case Intrinsic::amdgcn_set_inactive_chain_arg:
     case Intrinsic::amdgcn_permlane64:
+    case Intrinsic::amdgcn_ds_bpermute_fi_b32:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_cvt_pkrtz:
       if (Subtarget.hasSALUFloatInsts() && isSALUMapping(MI))
@@ -5265,7 +5272,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;
     case Intrinsic::amdgcn_s_barrier_join:
-    case Intrinsic::amdgcn_s_wakeup_barrier:
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;
     case Intrinsic::amdgcn_s_barrier_init:

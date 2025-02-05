@@ -41,7 +41,7 @@ struct __tuple_sfinae_base {
   static auto __do_test(...) -> false_type;
 
   template <class _FromArgs, class _ToArgs>
-  using __constructible = decltype(__do_test<is_constructible>(_ToArgs{}, _FromArgs{}));
+  using __constructible _LIBCPP_NODEBUG = decltype(__do_test<is_constructible>(_ToArgs{}, _FromArgs{}));
 };
 
 // __tuple_constructible
@@ -59,7 +59,7 @@ struct __tuple_constructible<_Tp, _Up, true, true>
 
 template <size_t _Ip, class... _Tp>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, tuple<_Tp...> > {
-  typedef _LIBCPP_NODEBUG typename tuple_element<_Ip, __tuple_types<_Tp...> >::type type;
+  using type _LIBCPP_NODEBUG = typename tuple_element<_Ip, __tuple_types<_Tp...> >::type;
 };
 
 struct _LIBCPP_EXPORTED_FROM_ABI __check_tuple_constructor_fail {

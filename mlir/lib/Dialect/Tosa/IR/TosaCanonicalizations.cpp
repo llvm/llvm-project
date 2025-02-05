@@ -111,8 +111,8 @@ struct ConsolidateTransposeOptimization
     auto permsTy =
         RankedTensorType::get(transposePerms.size(), rewriter.getI32Type());
     auto permsAttr = DenseIntElementsAttr::get(permsTy, perms);
-    Value permsValue =
-        rewriter.create<arith::ConstantOp>(transposeOp.getLoc(), permsAttr);
+    Value permsValue = rewriter.create<tosa::ConstOp>(transposeOp.getLoc(),
+                                                      permsTy, permsAttr);
 
     rewriter.replaceOpWithNewOp<tosa::TransposeOp>(
         transposeOp, transposeOp.getResult().getType(),
@@ -207,10 +207,10 @@ struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
     Attribute constantAttr;
     if (llvm::isa<FloatType>(elementTy)) {
       constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-    } else if (llvm::isa<IntegerType>(elementTy) && !op.getQuantizationInfo()) {
+    } else if (llvm::isa<IntegerType>(elementTy) && !op.getInputZpAttr()) {
       constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-    } else if (llvm::isa<IntegerType>(elementTy) && op.getQuantizationInfo()) {
-      auto value = op.getQuantizationInfo()->getInputZp();
+    } else if (llvm::isa<IntegerType>(elementTy) && op.getInputZpAttr()) {
+      int64_t value = op.getInputZpAttr().getInt();
       constantAttr = rewriter.getIntegerAttr(elementTy, value);
     }
 
@@ -339,33 +339,84 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
   }
 };
 
+// Attempts the following transformation:
+//
+// For integers a, b, a', and b' such that [a, b] ∩ [a', b'] ≠ ∅ and input
+// tensor X the following identity holds:
+//
+// CLAMP(CLAMP(X, a, b), a', b') = CLAMP(X, max(a, a'),  min(b, b'))
+//
+// subject to the following valid NaN propagation semantics:
+// --------------------------------------------
+// | OUTER CLAMP | INNER CLAMP  | RESULT MODE |
+// |-------------|--------------|-------------|
+// | PROPAGATE   | PROPAGATE    | PROPAGATE   |
+// | PROPAGATE   | IGNORE       | IGNORE      |
+// | IGNORE      | PROPAGATE    | INVALID     |
+// | IGNORE      | IGNORE       | IGNORE      |
+// |------------------------------------------|
+
 struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
   using OpRewritePattern<tosa::ClampOp>::OpRewritePattern;
 
+  // Helper structure to describe the range of a clamp operation.
+  template <typename T>
+  struct ClampRange {
+    ClampRange(const T &start, const T &end) : start(start), end(end) {}
+    T start;
+    T end;
+
+    // Helper function to determine if two Clamp ranges intersect.
+    bool intersects(const ClampRange<T> &otherRange) {
+      return start < otherRange.end && otherRange.start < end;
+    }
+  };
+
   LogicalResult matchAndRewrite(tosa::ClampOp op,
                                 PatternRewriter &rewriter) const override {
-    Value input = op.getInput();
-
-    Operation *definingOp = input.getDefiningOp();
-    if (!definingOp)
+    // Check the input to the CLAMP op is itself a CLAMP.
+    auto clampOp =
+        dyn_cast_if_present<tosa::ClampOp>(op.getInput().getDefiningOp());
+    if (!clampOp)
       return failure();
 
-    if (tosa::ClampOp clampOp = dyn_cast<tosa::ClampOp>(definingOp)) {
-      auto minFp = std::max(op.getMinFp(), clampOp.getMinFp()).convertToFloat();
-      auto maxFp = std::min(op.getMaxFp(), clampOp.getMaxFp()).convertToFloat();
+    // Check we have a valid NaN propagation combination.
+    const auto opNanMode = op.getNanMode();
+    const auto clampNanMode = clampOp.getNanMode();
+    if (opNanMode == "IGNORE" && clampNanMode == "PROPAGATE")
+      return failure();
 
-      auto minInt = std::max(op.getMinInt(), clampOp.getMinInt());
-      auto maxInt = std::min(op.getMaxInt(), clampOp.getMaxInt());
+    // Check we have intersecting ranges.
+    const auto opMinInt = op.getMinInt();
+    const auto opMaxInt = op.getMaxInt();
+    const auto clampOpMinInt = clampOp.getMinInt();
+    const auto clampOpMaxInt = clampOp.getMaxInt();
+    ClampRange<std::int64_t> opRangeIntRange(opMinInt, opMaxInt);
+    ClampRange<std::int64_t> clampRangeIntRange(clampOpMinInt, clampOpMaxInt);
+    if (!opRangeIntRange.intersects(clampRangeIntRange))
+      return failure();
 
-      rewriter.replaceOpWithNewOp<tosa::ClampOp>(
-          op, op.getType(), clampOp.getInput(),
-          rewriter.getI64IntegerAttr(minInt),
-          rewriter.getI64IntegerAttr(maxInt), rewriter.getF32FloatAttr(minFp),
-          rewriter.getF32FloatAttr(maxFp));
-      return success();
-    }
+    const auto opMinFloat = op.getMinFp();
+    const auto opMaxFloat = op.getMaxFp();
+    const auto clampOpMinFloat = clampOp.getMinFp();
+    const auto clampOpMaxFloat = clampOp.getMaxFp();
+    ClampRange<APFloat> opRangeFloatRange(opMinFloat, opMaxFloat);
+    ClampRange<APFloat> clampRangeFloatRange(clampOpMinFloat, clampOpMaxFloat);
+    if (!opRangeFloatRange.intersects(clampRangeFloatRange))
+      return failure();
 
-    return failure();
+    // Run the transformation.
+    const auto minFp = std::max(opMinFloat, clampOpMinFloat).convertToFloat();
+    const auto maxFp = std::min(opMaxFloat, clampOpMaxFloat).convertToFloat();
+    const auto minInt = std::max(opMinInt, clampOpMinInt);
+    const auto maxInt = std::min(opMaxInt, clampOpMaxInt);
+    rewriter.replaceOpWithNewOp<tosa::ClampOp>(
+        op, op.getType(), clampOp.getInput(),
+        rewriter.getI64IntegerAttr(minInt), rewriter.getI64IntegerAttr(maxInt),
+        rewriter.getF32FloatAttr(minFp), rewriter.getF32FloatAttr(maxFp),
+        rewriter.getStringAttr((opNanMode != clampNanMode) ? "IGNORE"
+                                                           : opNanMode));
+    return success();
   }
 };
 
@@ -393,8 +444,21 @@ struct ConcatSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
           sliceOp, "slice input must be a static ranked tensor");
     int32_t axis = concatOp.getAxis();
 
-    llvm::SmallVector<int64_t> sliceStart(sliceOp.getStart());
-    llvm::ArrayRef<int64_t> sliceSize = sliceOp.getSize();
+    DenseElementsAttr startElems;
+    DenseElementsAttr sizeElems;
+
+    if (!matchPattern(sliceOp.getStart(), m_Constant(&startElems)))
+      return rewriter.notifyMatchFailure(
+          sliceOp, "start of slice must be a static ranked shape");
+
+    if (!matchPattern(sliceOp.getSize(), m_Constant(&sizeElems)))
+      return rewriter.notifyMatchFailure(
+          sliceOp, "size of slice must be a static ranked shape");
+
+    llvm::SmallVector<int64_t> sliceStarts =
+        llvm::to_vector(startElems.getValues<int64_t>());
+    llvm::SmallVector<int64_t> sliceSizes =
+        llvm::to_vector(sizeElems.getValues<int64_t>());
 
     // Validate slice on the concatenated axis. Slicing along this
     // axis should span only one of the inputs to the concatenate
@@ -406,17 +470,20 @@ struct ConcatSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
         return rewriter.notifyMatchFailure(
             sliceOp, "concat input must be a static ranked tensor");
 
-      if (sliceStart[axis] >= 0 &&
-          (sliceStart[axis] + sliceSize[axis]) <= inputType.getDimSize(axis)) {
-        replaceWithSlice = rewriter
-                               .create<tosa::SliceOp>(
-                                   sliceOp.getLoc(), sliceOp.getType(), input,
-                                   rewriter.getDenseI64ArrayAttr(sliceStart),
-                                   rewriter.getDenseI64ArrayAttr(sliceSize))
-                               .getResult();
+      if (sliceStarts[axis] >= 0 && (sliceStarts[axis] + sliceSizes[axis]) <=
+                                        inputType.getDimSize(axis)) {
+        auto start_op =
+            getTosaConstShape(rewriter, sliceOp.getLoc(), sliceStarts);
+        auto size_op =
+            getTosaConstShape(rewriter, sliceOp.getLoc(), sliceSizes);
+        replaceWithSlice =
+            rewriter
+                .create<tosa::SliceOp>(sliceOp.getLoc(), sliceOp.getType(),
+                                       input, start_op, size_op)
+                .getResult();
         break;
       }
-      sliceStart[axis] -= inputType.getDimSize(axis);
+      sliceStarts[axis] -= inputType.getDimSize(axis);
     }
 
     if (!replaceWithSlice)
@@ -614,7 +681,18 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   auto rhsAttr =
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput2());
 
-  const int64_t shift = llvm::isa<IntegerType>(resultETy) ? getShift() : 0;
+  // Result right shift on i32_t data type only. For simplification, synthesize
+  // a zero shift for other data type.
+  int32_t shift = 0;
+  if (resultETy.isInteger(32)) {
+    ElementsAttr shift_elem;
+    if (getShift().getImpl()) {
+      if (!matchPattern(getShift(), m_Constant(&shift_elem)))
+        // cannot be folded when the shift value is unknown.
+        return {};
+      shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+    }
+  }
 
   if (rhsTy == resultTy) {
     if (isSplatZero(resultETy, lhsAttr))
@@ -629,7 +707,7 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
       return lhs;
   }
 
-  return mulBinaryFolder(lhsAttr, rhsAttr, resultTy, getShift());
+  return mulBinaryFolder(lhsAttr, rhsAttr, resultTy, shift);
 }
 
 OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
@@ -808,6 +886,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
 
+OpFoldResult ConstShapeOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
+
 #define REDUCE_FOLDER(OP)                                                      \
   OpFoldResult OP::fold(FoldAdaptor adaptor) {                                 \
     ShapedType inputTy = llvm::cast<ShapedType>(getInput().getType());         \
@@ -961,7 +1041,12 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
 
   if (inputTy.hasStaticShape() && outputTy.hasStaticShape() &&
       outputTy.getNumElements() == 1) {
-    llvm::SmallVector<uint64_t> indices(getStart());
+    DenseElementsAttr startElems;
+    if (!matchPattern(getStart(), m_Constant(&startElems)))
+      return {};
+
+    llvm::SmallVector<uint64_t> indices =
+        llvm::to_vector(startElems.getValues<uint64_t>());
     auto value = operand.getValues<Attribute>()[indices];
     return SplatElementsAttr::get(outputTy, value);
   }
@@ -985,9 +1070,20 @@ OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult TileOp::fold(FoldAdaptor adaptor) {
-  bool allOnes = llvm::all_of(getMultiples(), [](int64_t v) { return v == 1; });
-  if (allOnes && getInput1().getType() == getType())
-    return getInput1();
+  if (getInput1().getType() == getType()) {
+    if (auto multiples = llvm::dyn_cast_if_present<DenseElementsAttr>(
+            adaptor.getMultiples())) {
+      if (multiples.isSplat() &&
+          multiples.getSplatValue<APInt>().getSExtValue() == 1)
+        return getInput1();
+      if (auto int_array_attr =
+              llvm::dyn_cast<DenseIntElementsAttr>(multiples)) {
+        if (llvm::all_of(int_array_attr.getValues<APInt>(),
+                         [](APInt v) { return v.getSExtValue() == 1; }))
+          return getInput1();
+      }
+    }
+  }
   return {};
 }
 
@@ -1001,10 +1097,6 @@ OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
         input.getType().getElementType() == resultTy.getElementType())
       return input.reshape(resultTy);
   }
-
-  // Transpose does not change the input type.
-  if (getInput1().getType() != getType())
-    return {};
 
   // Transpose is not the identity transpose.
   SmallVector<int32_t> perms;

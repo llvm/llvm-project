@@ -52,6 +52,8 @@ for header in public_headers:
 // TODO: Fix seemingly circular inclusion or <wchar.h> on AIX
 // UNSUPPORTED: LIBCXX-AIX-FIXME
 
+// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
+
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 
