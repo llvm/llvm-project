@@ -107,7 +107,8 @@ define <8 x i8> @sqxtn8b(<8 x i16> %A) nounwind #0 {
 ; CHECK-SAME: <8 x i16> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <8 x i16> [[TMP1]] to <8 x i8>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <8 x i16> [[_MSPROP]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqxtn.v8i8(<8 x i16> [[A]])
 ; CHECK-NEXT:    store <8 x i8> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[TMP3]]
@@ -121,7 +122,8 @@ define <4 x i16> @sqxtn4h(<4 x i32> %A) nounwind #0 {
 ; CHECK-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[_MSPROP]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32> [[A]])
 ; CHECK-NEXT:    store <4 x i16> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[TMP3]]
@@ -135,7 +137,8 @@ define <2 x i32> @sqxtn2s(<2 x i64> %A) nounwind #0 {
 ; CHECK-SAME: <2 x i64> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[_MSPROP]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqxtn.v2i32(<2 x i64> [[A]])
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
@@ -150,7 +153,8 @@ define <16 x i8> @sqxtn2_16b(<8 x i8> %ret, <8 x i16> %A) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <8 x i16> [[TMP1]] to <8 x i8>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <8 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <8 x i16> [[_MSPROP1]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqxtn.v8i8(<8 x i16> [[A]])
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i8> [[TMP2]], <8 x i8> [[TMP5]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <8 x i8> [[RET]], <8 x i8> [[TMP3]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -168,7 +172,8 @@ define <8 x i16> @sqxtn2_8h(<4 x i16> %ret, <4 x i32> %A) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[_MSPROP1]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32> [[A]])
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i16> [[RET]], <4 x i16> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -186,7 +191,8 @@ define <4 x i32> @sqxtn2_4s(<2 x i32> %ret, <2 x i64> %A) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[_MSPROP1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqxtn.v2i32(<2 x i64> [[A]])
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x i32> [[RET]], <2 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -207,7 +213,8 @@ define <8 x i8> @uqxtn8b(<8 x i16> %A) nounwind #0 {
 ; CHECK-SAME: <8 x i16> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <8 x i16> [[TMP1]] to <8 x i8>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <8 x i16> [[_MSPROP]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqxtn.v8i8(<8 x i16> [[A]])
 ; CHECK-NEXT:    store <8 x i8> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[TMP3]]
@@ -221,7 +228,8 @@ define <4 x i16> @uqxtn4h(<4 x i32> %A) nounwind #0 {
 ; CHECK-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[_MSPROP]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqxtn.v4i16(<4 x i32> [[A]])
 ; CHECK-NEXT:    store <4 x i16> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[TMP3]]
@@ -235,7 +243,8 @@ define <2 x i32> @uqxtn2s(<2 x i64> %A) nounwind #0 {
 ; CHECK-SAME: <2 x i64> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[_MSPROP]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.aarch64.neon.uqxtn.v2i32(<2 x i64> [[A]])
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
@@ -250,7 +259,8 @@ define <16 x i8> @uqxtn2_16b(<8 x i8> %ret, <8 x i16> %A) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <8 x i16> [[TMP1]] to <8 x i8>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <8 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <8 x i16> [[_MSPROP1]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqxtn.v8i8(<8 x i16> [[A]])
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i8> [[TMP2]], <8 x i8> [[TMP5]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <8 x i8> [[RET]], <8 x i8> [[TMP3]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -268,7 +278,8 @@ define <8 x i16> @uqxtn2_8h(<4 x i16> %ret, <4 x i32> %A) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[_MSPROP1]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqxtn.v4i16(<4 x i32> [[A]])
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i16> [[RET]], <4 x i16> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -286,7 +297,8 @@ define <4 x i32> @uqxtn2_4s(<2 x i32> %ret, <2 x i64> %A) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[_MSPROP1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.aarch64.neon.uqxtn.v2i32(<2 x i64> [[A]])
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x i32> [[RET]], <2 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -307,7 +319,8 @@ define <8 x i8> @sqxtun8b(<8 x i16> %A) nounwind #0 {
 ; CHECK-SAME: <8 x i16> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <8 x i16> [[TMP1]] to <8 x i8>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <8 x i16> [[_MSPROP]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqxtun.v8i8(<8 x i16> [[A]])
 ; CHECK-NEXT:    store <8 x i8> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[TMP3]]
@@ -321,7 +334,8 @@ define <4 x i16> @sqxtun4h(<4 x i32> %A) nounwind #0 {
 ; CHECK-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[_MSPROP]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> [[A]])
 ; CHECK-NEXT:    store <4 x i16> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[TMP3]]
@@ -335,7 +349,8 @@ define <2 x i32> @sqxtun2s(<2 x i64> %A) nounwind #0 {
 ; CHECK-SAME: <2 x i64> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[_MSPROP]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqxtun.v2i32(<2 x i64> [[A]])
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
@@ -350,7 +365,8 @@ define <16 x i8> @sqxtun2_16b(<8 x i8> %ret, <8 x i16> %A) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <8 x i16> [[TMP1]] to <8 x i8>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <8 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <8 x i16> [[_MSPROP1]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqxtun.v8i8(<8 x i16> [[A]])
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i8> [[TMP2]], <8 x i8> [[TMP5]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <8 x i8> [[RET]], <8 x i8> [[TMP3]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -368,7 +384,8 @@ define <8 x i16> @sqxtun2_8h(<4 x i16> %ret, <4 x i32> %A) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[_MSPROP1]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> [[A]])
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i16> [[RET]], <4 x i16> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -386,7 +403,8 @@ define <4 x i32> @sqxtun2_4s(<2 x i32> %ret, <2 x i64> %A) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[_MSPROP1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqxtun.v2i32(<2 x i64> [[A]])
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x i32> [[RET]], <2 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>

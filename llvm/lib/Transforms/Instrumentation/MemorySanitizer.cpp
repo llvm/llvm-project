@@ -4237,21 +4237,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                              /*trailingVerbatimArgs*/ 0);
   }
 
-  /// Instrument vector instructions that change the width.
-  ///
-  /// e.g., <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32>
-  /// (this example also saturates the values, but we ignore that for the
-  /// purposes of propagating the shadow)
-  void handleVectorWidthChangeIntrinsic(IntrinsicInst &I) {
-    assert(I.arg_size() == 1);
-
-    IRBuilder<> IRB(&I);
-    Value *S = getShadow(&I, 0);
-    S = CreateShadowCast(IRB, S, getShadowTy(&I));
-    setShadow(&I, S);
-    setOriginForNaryOp(I);
-  }
-
   /// Handle Arm NEON vector store intrinsics (vst{2,3,4}, vst1x_{2,3,4},
   /// and vst{2,3,4}lane).
   ///
@@ -4913,7 +4898,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_sqxtn:
     case Intrinsic::aarch64_neon_sqxtun:
     case Intrinsic::aarch64_neon_uqxtn:
-      handleVectorWidthChangeIntrinsic(I);
+      handleShadowOr(I);
       break;
 
     case Intrinsic::aarch64_neon_st1x2:
