@@ -10,13 +10,23 @@
 #include "src/fcntl/open.h"
 #include "src/sys/uio/readv.h"
 #include "src/unistd/close.h"
+#include "src/unistd/unlink.h"
+#include "src/unistd/write.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 TEST(LlvmLibcSysUioReadvTest, SmokeTest) {
-  int fd = LIBC_NAMESPACE::open("/dev/urandom", O_RDONLY);
+  const char *filename = "./LlvmLibcSysUioReadvTest";
+  int fd = LIBC_NAMESPACE::open(filename, O_WRONLY | O_CREAT, 0644);
+  ASSERT_THAT(fd, returns(GT(0)).with_errno(EQ(0)));
+  const char data[] = "Hello, World!\n";
+  ASSERT_THAT(LIBC_NAMESPACE::write(fd, data, sizeof(data)),
+              returns(EQ(sizeof(data))).with_errno(EQ(0)));
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds());
+
+  fd = LIBC_NAMESPACE::open(filename, O_RDONLY);
   ASSERT_THAT(fd, returns(GT(0)).with_errno(EQ(0)));
   char buf0[2];
   char buf1[3];
@@ -28,4 +38,6 @@ TEST(LlvmLibcSysUioReadvTest, SmokeTest) {
   ASSERT_THAT(LIBC_NAMESPACE::readv(fd, iov, 2),
               returns(EQ(3)).with_errno(EQ(0)));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds());
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(filename),
+              returns(EQ(0)).with_errno(EQ(0)));
 }
