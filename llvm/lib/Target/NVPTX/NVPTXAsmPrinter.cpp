@@ -1625,53 +1625,20 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     Type *ETy = PAL.getParamByValType(paramIndex);
     assert(ETy && "Param should have byval type");
 
-    if (isKernelFunc) {
-      // Just print .param .align <a> .b8 .param[size];
-      // <a>  = optimal alignment for the element type; always multiple of
-      //        PAL.getParamAlignment
-      // size = typeallocsize of element type
-      Align OptimalAlign =
-          isKernelFunc
-              ? getOptimalAlignForParam(ETy)
-              : TLI->getFunctionByValParamAlign(
-                    F, ETy, PAL.getParamAlignment(paramIndex).valueOrOne(), DL);
+    // Print .param .align <a> .b8 .param[size];
+    // <a>  = optimal alignment for the element type; always multiple of
+    //        PAL.getParamAlignment
+    // size = typeallocsize of element type
+    Align OptimalAlign =
+        isKernelFunc
+            ? getOptimalAlignForParam(ETy)
+            : TLI->getFunctionByValParamAlign(
+                  F, ETy, PAL.getParamAlignment(paramIndex).valueOrOne(), DL);
 
-      unsigned sz = DL.getTypeAllocSize(ETy);
-      O << "\t.param .align " << OptimalAlign.value() << " .b8 ";
-      O << TLI->getParamName(F, paramIndex);
-      O << "[" << sz << "]";
-      continue;
-    } else {
-      // Split the ETy into constituent parts and
-      // print .param .b<size> <name> for each part.
-      // Further, if a part is vector, print the above for
-      // each vector element.
-      SmallVector<EVT, 16> vtparts;
-      ComputeValueVTs(*TLI, DL, ETy, vtparts);
-      for (unsigned i = 0, e = vtparts.size(); i != e; ++i) {
-        unsigned elems = 1;
-        EVT elemtype = vtparts[i];
-        if (vtparts[i].isVector()) {
-          elems = vtparts[i].getVectorNumElements();
-          elemtype = vtparts[i].getVectorElementType();
-        }
-
-        for (unsigned j = 0, je = elems; j != je; ++j) {
-          unsigned sz = elemtype.getSizeInBits();
-          if (elemtype.isInteger())
-            sz = promoteScalarArgumentSize(sz);
-          O << "\t.reg .b" << sz << " ";
-          O << TLI->getParamName(F, paramIndex);
-          if (j < je - 1)
-            O << ",\n";
-          ++paramIndex;
-        }
-        if (i < e - 1)
-          O << ",\n";
-      }
-      --paramIndex;
-      continue;
-    }
+    unsigned sz = DL.getTypeAllocSize(ETy);
+    O << "\t.param .align " << OptimalAlign.value() << " .b8 ";
+    O << TLI->getParamName(F, paramIndex);
+    O << "[" << sz << "]";
   }
 
   if (F->isVarArg()) {
