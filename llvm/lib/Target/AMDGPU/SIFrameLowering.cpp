@@ -1512,6 +1512,16 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   const Register StackPtrReg = FuncInfo->getStackPtrOffsetReg();
   Register FramePtrReg = FuncInfo->getFrameOffsetReg();
   bool FPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(FramePtrReg);
+  if (RoundedSize != 0) {
+    if (TRI.hasBasePointer(MF))
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), StackPtrReg)
+          .addReg(TRI.getBaseRegister())
+          .setMIFlag(MachineInstr::FrameDestroy);
+    else if (hasFP(MF))
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), StackPtrReg)
+          .addReg(FramePtrReg)
+          .setMIFlag(MachineInstr::FrameDestroy);
+  }
 
   Register FramePtrRegScratchCopy;
   Register SGPRForFPSaveRestoreCopy =
@@ -1537,14 +1547,6 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                          FramePtrRegScratchCopy);
   }
 
-  if (RoundedSize != 0 && hasFP(MF)) {
-    auto Add = BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_I32), StackPtrReg)
-        .addReg(StackPtrReg)
-        .addImm(-static_cast<int64_t>(RoundedSize * getScratchScaleFactor(ST)))
-        .setMIFlag(MachineInstr::FrameDestroy);
-    Add->getOperand(3).setIsDead(); // Mark SCC as dead.
-  }
-
   // FIXME: Switch to using MF.needsFrameMoves() later
   const bool NeedsFrameMoves = true;
   if (hasFP(MF)) {
@@ -1564,7 +1566,8 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       MIB.setMIFlag(MachineInstr::FrameDestroy);
   } else {
     // Insert the CSR spill restores with SP as the base register.
-    emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits, StackPtrReg,
+    emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits,
+                         FuncInfo->isChainFunction() ? Register() : StackPtrReg,
                          FramePtrRegScratchCopy);
   }
 }
@@ -1709,7 +1712,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
     // second VGPR emergency frame index.
     if (HaveSGPRToVMemSpill &&
         allocateScavengingFrameIndexesNearIncomingSP(MF)) {
-      RS->addScavengingFrameIndex(MFI.CreateStackObject(4, Align(4), false));
+      RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
     }
   }
 }

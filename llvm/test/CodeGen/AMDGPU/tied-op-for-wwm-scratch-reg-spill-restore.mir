@@ -19,12 +19,12 @@ body:             |
     ; GCN-LABEL: name: wwm_scratch_reg_spill_reload_of_outgoing_reg
     ; GCN: liveins: $sgpr20, $vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; GCN-NEXT: $sgpr4_sgpr5 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr0_lo16, 0
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr0, 0
     ; GCN-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5
     ; GCN-NEXT: $vgpr0 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr0
@@ -56,15 +56,15 @@ body:             |
     ; GCN-LABEL: name: wwm_scratch_reg_spill_reload_of_outgoing_tuple_subreg
     ; GCN: liveins: $sgpr20, $sgpr21, $vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
     ; GCN-NEXT: $sgpr4_sgpr5 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr0_lo16, 0
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr0, 0
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr2_lo16, 256
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr2, 256
     ; GCN-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5
     ; GCN-NEXT: $vgpr0 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr2 = IMPLICIT_DEF
@@ -101,13 +101,13 @@ body:             |
     ; GCN-LABEL: name: wwm_scratch_reg_spill_reload_different_outgoing_reg
     ; GCN: liveins: $sgpr20, $vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
     ; GCN-NEXT: $sgpr4_sgpr5 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr2_lo16, 0
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr2, 0
     ; GCN-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5
     ; GCN-NEXT: $vgpr2 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr2 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr2
@@ -138,14 +138,14 @@ body:             |
     ; GCN-LABEL: name: wwm_csr_spill_reload
     ; GCN: liveins: $sgpr20, $vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2_lo16
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
     ; GCN-NEXT: $sgpr4_sgpr5 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr2_lo16, 0
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr2, 0
     ; GCN-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5
     ; GCN-NEXT: $vgpr2 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr2 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr2

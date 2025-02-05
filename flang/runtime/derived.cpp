@@ -73,7 +73,7 @@ RT_API_ATTRS int Initialize(const Descriptor &instance,
       std::size_t bytes{comp.SizeInBytes(instance)};
       for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
         char *ptr{instance.ElementComponent<char>(at, comp.offset())};
-        std::memcpy(ptr, init, bytes);
+        Fortran::runtime::memcpy(ptr, init, bytes);
       }
     } else if (comp.genre() == typeInfo::Component::Genre::Pointer) {
       // Data pointers without explicit initialization are established
@@ -117,6 +117,88 @@ RT_API_ATTRS int Initialize(const Descriptor &instance,
       auto &pptr{*instance.ElementComponent<typeInfo::ProcedurePointer>(
           at, comp.offset)};
       pptr = comp.procInitialization;
+    }
+  }
+  return stat;
+}
+
+RT_API_ATTRS int InitializeClone(const Descriptor &clone,
+    const Descriptor &orig, const typeInfo::DerivedType &derived,
+    Terminator &terminator, bool hasStat, const Descriptor *errMsg) {
+  const Descriptor &componentDesc{derived.component()};
+  std::size_t elements{orig.Elements()};
+  int stat{StatOk};
+
+  // Skip pointers and unallocated variables.
+  if (orig.IsPointer() || !orig.IsAllocated()) {
+    return stat;
+  }
+  // Initialize each data component.
+  std::size_t components{componentDesc.Elements()};
+  for (std::size_t i{0}; i < components; ++i) {
+    const typeInfo::Component &comp{
+        *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(i)};
+    SubscriptValue at[maxRank];
+    orig.GetLowerBounds(at);
+    // Allocate allocatable components that are also allocated in the original
+    // object.
+    if (comp.genre() == typeInfo::Component::Genre::Allocatable) {
+      // Initialize each element.
+      for (std::size_t j{0}; j < elements; ++j, orig.IncrementSubscripts(at)) {
+        Descriptor &origDesc{
+            *orig.ElementComponent<Descriptor>(at, comp.offset())};
+        Descriptor &cloneDesc{
+            *clone.ElementComponent<Descriptor>(at, comp.offset())};
+        if (origDesc.IsAllocated()) {
+          cloneDesc.ApplyMold(origDesc, origDesc.rank());
+          stat = ReturnError(terminator, cloneDesc.Allocate(), errMsg, hasStat);
+          if (stat == StatOk) {
+            if (const DescriptorAddendum * addendum{cloneDesc.Addendum()}) {
+              if (const typeInfo::DerivedType *
+                  derived{addendum->derivedType()}) {
+                if (!derived->noInitializationNeeded()) {
+                  // Perform default initialization for the allocated element.
+                  stat = Initialize(
+                      cloneDesc, *derived, terminator, hasStat, errMsg);
+                }
+                // Initialize derived type's allocatables.
+                if (stat == StatOk) {
+                  stat = InitializeClone(cloneDesc, origDesc, *derived,
+                      terminator, hasStat, errMsg);
+                }
+              }
+            }
+          }
+        }
+        if (stat != StatOk) {
+          break;
+        }
+      }
+    } else if (comp.genre() == typeInfo::Component::Genre::Data &&
+        comp.derivedType()) {
+      // Handle nested derived types.
+      const typeInfo::DerivedType &compType{*comp.derivedType()};
+      SubscriptValue extents[maxRank];
+      GetComponentExtents(extents, comp, orig);
+      // Data components don't have descriptors, allocate them.
+      StaticDescriptor<maxRank, true, 0> origStaticDesc;
+      StaticDescriptor<maxRank, true, 0> cloneStaticDesc;
+      Descriptor &origDesc{origStaticDesc.descriptor()};
+      Descriptor &cloneDesc{cloneStaticDesc.descriptor()};
+      // Initialize each element.
+      for (std::size_t j{0}; j < elements; ++j, orig.IncrementSubscripts(at)) {
+        origDesc.Establish(compType,
+            orig.ElementComponent<char>(at, comp.offset()), comp.rank(),
+            extents);
+        cloneDesc.Establish(compType,
+            clone.ElementComponent<char>(at, comp.offset()), comp.rank(),
+            extents);
+        stat = InitializeClone(
+            cloneDesc, origDesc, compType, terminator, hasStat, errMsg);
+        if (stat != StatOk) {
+          break;
+        }
+      }
     }
   }
   return stat;

@@ -189,7 +189,7 @@ with Xnack capability.
 #### Prerequisites
 
 * Linux Kernel versions above 5.14
-* Latest KFD driver packaged in ROCm stack
+* Latest AMD Kernel-mode GPU Driver (KMD) packaged in ROCm stack
 * Xnack, as USM support can only be tested with applications compiled with Xnack
   capability
 

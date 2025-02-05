@@ -1381,12 +1381,6 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
     // Add arguments. Do not add arguments for subprogram definition. They will
     // be handled while processing variables.
-    // FIXME: If no DBG_* intrinsic survives for a param into AsmPrinter then
-    // the argument doesn't get added at all. As an example, the following
-    // produces DWARF without mention of the "d" param:
-    // echo 'struct c {int x; c(const c&)=delete; c(c&&)=delete; }; void \
-    // f(c d) { }' | clang -x c++ - -o - -m32 -O0 -g -emit-llvm -S | \
-    // build/bin/llc -O0 -filetype=obj | build/bin/llvm-dwarfdump -a -
     constructSubprogramArguments(SPDie, Args);
   }
 

@@ -71,9 +71,7 @@ static uint32_t __kmpc_impl_smid() {
 }
 
 static uint32_t getGenericModeMainThreadId() {
-  unsigned Mask =
-      llvm::omp::getAMDGPUGridValues<__AMDGCN_WAVEFRONT_SIZE>().GV_Warp_Size -
-      1;
+  unsigned Mask = __builtin_amdgcn_wavefrontsize() - 1;
   return (__kmpc_get_hardware_num_threads_in_block() - 1) & (~Mask);
 }
 

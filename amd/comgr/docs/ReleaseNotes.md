@@ -156,7 +156,11 @@ action, and Comgr will internally unbundle and link via the OffloadBundler and l
 - (Data Type) AMD\_COMGR\_DATA\_KIND\_OBJ\_BUNDLE
   - This data kind represents a clang-offload-bundle of object files, and can be
   passed when calling the AMD\_COMGR\_ACTION\_UNBUNDLE action
-
+- (Data Type) AMD\_COMGR\_DATA\_KIND\_SPIRV
+  - This data kind represents a SPIR-V binary file (.spv)
+- (Action) AMD\_COMGR\_ACTION\_TRANSLATE\_SPIRV\_TO\_BC
+  - This accepts a set of SPIR-V (.spv) inputs, and returns a set of translated
+  bitcode (.bc) outputs
 
 Deprecated Comgr Actions and Data Types
 ---------------------------------------
@@ -215,6 +219,7 @@ New Targets
  - gfx940
  - gfx941
  - gfx942
+ - gfx950
  - gfx1036
  - gfx1150
  - gfx1151

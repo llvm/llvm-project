@@ -51,7 +51,9 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 
 #ifndef _WIN32
 // posix-compliant and has getlogin_r and F_OK
-#include <unistd.h> 
+#include <unistd.h>
+#else
+#include <direct.h>
 #endif
 
 extern "C" {
@@ -78,7 +80,7 @@ uid_t RTNAME(GetUID)() {
 
 void GetUsernameEnvVar(const char *envName, char *arg, std::int64_t length) {
   Descriptor name{*Descriptor::Create(
-      1, std::strlen(envName) + 1, const_cast<char *>(envName), 0)};
+      1, Fortran::runtime::strlen(envName) + 1, const_cast<char *>(envName), 0)};
   Descriptor value{*Descriptor::Create(1, length, arg, 0)};
 
   RTNAME(GetEnvVariable)
@@ -102,7 +104,7 @@ void FORTRAN_PROCEDURE_NAME(fdate)(char *arg, std::int64_t length) {
   char str[26];
   // Insufficient space, fill with spaces and return.
   if (length < 24) {
-    std::memset(arg, ' ', length);
+    Fortran::runtime::memset(arg, ' ', length);
     return;
   }
 
@@ -134,8 +136,8 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
   if (length >= 1 && getlogin_r(arg, length) == 0) {
-    auto loginLen{std::strlen(arg)};
-    std::memset(
+    auto loginLen{Fortran::runtime::strlen(arg)};
+    Fortran::runtime::memset(
         arg + loginLen, ' ', static_cast<std::size_t>(length) - loginLen);
     return;
   }
@@ -189,7 +191,7 @@ std::int64_t FORTRAN_PROCEDURE_NAME(access)(const char *name,
   char *newName{nullptr};
   if (name[nameLength - 1] != '\0') {
     newName = static_cast<char *>(std::malloc(nameLength + 1));
-    std::memcpy(newName, name, nameLength);
+    Fortran::runtime::memcpy(newName, name, nameLength);
     newName[nameLength] = '\0';
     name = newName;
   }
@@ -247,6 +249,18 @@ cleanup:
   return ret;
 }
 #endif
+
+// CHDIR(DIR)
+int RTNAME(Chdir)(const char *name) {
+// chdir alias seems to be deprecated on Windows.
+#ifndef _WIN32
+  return chdir(name);
+#else
+  return _chdir(name);
+#endif
+}
+
+int FORTRAN_PROCEDURE_NAME(ierrno)() { return errno; }
 
 } // namespace Fortran::runtime
 } // extern "C"

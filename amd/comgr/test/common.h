@@ -92,8 +92,9 @@ int setBuf(const char *infile, char **buf) {
   return size;
 }
 
-void checkError(amd_comgr_status_t status, const char *str) {
-  if (status != AMD_COMGR_STATUS_SUCCESS) {
+void checkStatus(amd_comgr_status_t status, amd_comgr_status_t expected,
+                 const char *str) {
+  if (status != expected) {
     const char *statusStr;
     printf("FAILED: %s\n", str);
     status = amd_comgr_status_string(status, &statusStr);
@@ -101,6 +102,10 @@ void checkError(amd_comgr_status_t status, const char *str) {
       printf(" REASON: %s\n", statusStr);
     exit(1);
   }
+}
+
+void checkError(amd_comgr_status_t status, const char *str) {
+  checkStatus(status, AMD_COMGR_STATUS_SUCCESS, str);
 }
 
 void dumpData(amd_comgr_data_t Data, const char *OutFile) {
@@ -327,10 +332,10 @@ size_t WriteFile(int FD, const char *Buffer, size_t Size) {
 
   while (BytesWritten < Size) {
 #if defined(_WIN32) || defined(_WIN64)
-    size_t Ret =
+    ssize_t Ret =
         _write(FD, Buffer + BytesWritten, (unsigned int)(Size - BytesWritten));
 #else
-    size_t Ret = write(FD, Buffer + BytesWritten, Size - BytesWritten);
+    ssize_t Ret = write(FD, Buffer + BytesWritten, Size - BytesWritten);
 #endif
     if (Ret == 0) {
       break;

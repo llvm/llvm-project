@@ -106,7 +106,7 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; DWARFDUMP-COMMON: .debug_line contents:
 ; DWARFDUMP-COMMON-NEXT: debug_line[0x00000000]
 ; DWARFDUMP-COMMON-NEXT: Line table prologue:
-; DWARFDUMP-COMMON-NEXT:     total_length: 0x00000048
+; DWARFDUMP-COMMON-NEXT:     total_length: 0x00000047
 ; DWARFDUMP-COMMON-NEXT:           format: DWARF32
 ; DWARFDUMP-COMMON-NEXT:          version: 5
 ; DWARFDUMP-COMMON-NEXT:     address_size: 8
@@ -141,5 +141,5 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; DWARFDUMP-COMMON-NEXT: Address            Line   Column File   ISA Discriminator OpIndex  Flags
 ; DWARFDUMP-COMMON-NEXT: ------------------ ------ ------ ------ --- -------------  ------- -------------
 ; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1      0      1   0             0 0  is_stmt
-; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1     88      1   0             0 0  is_stmt prologue_end epilogue_begin
+; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1     88      1   0             0 0  is_stmt prologue_end
 ; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1     88      1   0             0 0  is_stmt end_sequence

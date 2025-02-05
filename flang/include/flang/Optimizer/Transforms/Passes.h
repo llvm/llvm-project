@@ -10,10 +10,12 @@
 #define FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Transforms/Utils.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
+
 #include <memory>
 
 namespace mlir {
@@ -66,7 +68,6 @@ namespace fir {
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
 std::unique_ptr<mlir::Pass>
 createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
-std::unique_ptr<mlir::Pass> createCFGConversionPassWithNSW();
 std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 std::unique_ptr<mlir::Pass>
@@ -83,7 +84,7 @@ createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
 
 void populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
                                    bool forceLoopToExecuteOnce = false,
-                                   bool setNSW = false);
+                                   bool setNSW = true);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

@@ -72,7 +72,11 @@ update_mbox(const __global amd_signal_t *sig)
     if (mb) {
         uint id = sig->event_id;
         AS(mb, id, memory_order_release, memory_scope_all_svm_devices);
-        __builtin_amdgcn_s_sendmsg(1 | (0 << 4), __builtin_amdgcn_readfirstlane(id) & 0xff);
+        uint mid = id &
+                    (__oclc_ISA_version < 9000 ? 0xff :
+                     (__oclc_ISA_version < 10000 ? 0xffffff :
+                      (__oclc_ISA_version < 11000 ? 0x7fffff : 0xffffff)));
+        __builtin_amdgcn_s_sendmsg(1 | (0 << 4), __builtin_amdgcn_readfirstlane(mid));
     }
 }
 

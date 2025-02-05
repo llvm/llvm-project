@@ -1,6 +1,7 @@
 ! Verify that the Fortran runtime libraries are present in the linker
 ! invocation. These libraries are added on top of other standard runtime
 ! libraries that the Clang driver will include.
+! REQUIRES: StableDriver
 
 ! RUN: %flang -### --target=ppc64le-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX,UNIX-F128%f128-lib
 ! RUN: %flang -### --target=aarch64-apple-darwin %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,DARWIN-F128%f128-lib

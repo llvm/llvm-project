@@ -1,3 +1,13 @@
+function(cannonicalize_cmake_boolean var)
+    if(${var})
+        set(${var} 1 PARENT_SCOPE)
+    else()
+        set(${var} 0 PARENT_SCOPE)
+    endif()
+endfunction()
+
+cannonicalize_cmake_boolean(COMGR_DISABLE_SPIRV)
+
 configure_file(lit.site.cfg.py.in lit.site.cfg.py @ONLY)
 
 if (NOT DEFINED LLVM_LIT_PATH)
@@ -26,5 +36,6 @@ endmacro()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 add_comgr_lit_binary(source-to-bc-with-dev-libs)
+add_comgr_lit_binary(spirv-translator)
 
 add_dependencies(check-comgr test-lit)

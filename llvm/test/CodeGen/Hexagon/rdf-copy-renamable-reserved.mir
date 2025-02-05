@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-rdf-opt -hexagon-rdf-track-reserved %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-rdf-opt -hexagon-rdf-track-reserved %s -o - | FileCheck %s
 
 # Check that r29 gets propagated into the A2_addi, and that the renamable
 # flag is cleared.

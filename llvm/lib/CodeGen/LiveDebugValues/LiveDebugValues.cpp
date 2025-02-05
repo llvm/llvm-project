@@ -118,7 +118,7 @@ bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
   if (!llvm::isHeterogeneousDebug(*MF.getFunction().getParent())) {
     if (InstrRefBased) {
       DomTree = &MDT;
-      MDT.calculate(MF);
+      MDT.recalculate(MF);
       TheImpl = &*InstrRefImpl;
     }
   } else
@@ -131,7 +131,8 @@ bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
 
 bool llvm::debuginfoShouldUseDebugInstrRef(const Triple &T) {
   // Enable by default on x86_64, disable if explicitly turned off on cmdline.
-  if (T.getArch() == llvm::Triple::x86_64 &&
+  if ((T.getArch() == llvm::Triple::x86_64 ||
+       T.getArch() == llvm::Triple::amdgcn) &&
       ValueTrackingVariableLocations != cl::boolOrDefault::BOU_FALSE)
     return true;
 

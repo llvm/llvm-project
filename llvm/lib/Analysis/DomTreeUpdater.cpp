@@ -28,6 +28,13 @@ template void
 GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
                       PostDominatorTree>::recalculate(Function &F);
 
+template void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
+    applyUpdatesImpl</*IsForward=*/true>();
+template void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
+    applyUpdatesImpl</*IsForward=*/false>();
+
 bool DomTreeUpdater::forceFlushDeletedBB() {
   if (DeletedBBs.empty())
     return false;

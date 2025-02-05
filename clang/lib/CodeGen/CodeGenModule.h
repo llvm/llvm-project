@@ -102,6 +102,50 @@ enum ForDefinition_t : bool {
   ForDefinition = true
 };
 
+/// The Counter with an optional additional Counter for
+/// branches. `Skipped` counter can be calculated with `Executed` and
+/// a common Counter (like `Parent`) as `(Parent-Executed)`.
+///
+/// In SingleByte mode, Counters are binary. Subtraction is not
+/// applicable (but addition is capable). In this case, both
+/// `Executed` and `Skipped` counters are required.  `Skipped` is
+/// `None` by default. It is allocated in the coverage mapping.
+///
+/// There might be cases that `Parent` could be induced with
+/// `(Executed+Skipped)`. This is not always applicable.
+class CounterPair {
+public:
+  /// Optional value.
+  class ValueOpt {
+  private:
+    static constexpr uint32_t None = (1u << 31); /// None is allocated.
+    static constexpr uint32_t Mask = None - 1;
+
+    uint32_t Val;
+
+  public:
+    ValueOpt() : Val(None) {}
+
+    ValueOpt(unsigned InitVal) {
+      assert(!(InitVal & ~Mask));
+      Val = InitVal;
+    }
+
+    bool hasValue() const { return !(Val & None); }
+
+    operator uint32_t() const { return Val; }
+  };
+
+  ValueOpt Executed;
+  ValueOpt Skipped; /// May be None.
+
+  /// Initialized with Skipped=None.
+  CounterPair(unsigned Val) : Executed(Val) {}
+
+  // FIXME: Should work with {None, None}
+  CounterPair() : Executed(0) {}
+};
+
 struct OrderGlobalInitsOrStermFinalizers {
   unsigned int priority;
   unsigned int lex_order;
@@ -443,6 +487,9 @@ private:
   /// Used by emitParallelCall
   bool isSPMDExecutionMode = false;
 
+  /// Used by Xteam Scan Codegen
+  bool isXteamScanCandidate = false;
+
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
 
   // This should not be moved earlier, since its initialization depends on some
@@ -468,7 +515,6 @@ private:
 
   /// Statement for which Xteam reduction code is being generated currently
   const Stmt *CurrentXteamRedStmt = nullptr;
-
   // Map associated statement from top-level to innermost level for optimized
   // kernels.
   Stmt2StmtMap OptKernelNestMap;
@@ -742,6 +788,9 @@ private:
   /// void @llvm.lifetime.end(i64 %size, i8* nocapture <ptr>)
   llvm::Function *LifetimeEndFn = nullptr;
 
+  /// void @llvm.fake.use(...)
+  llvm::Function *FakeUseFn = nullptr;
+
   std::unique_ptr<SanitizerMetadata> SanitizerMD;
 
   llvm::MapVector<const Decl *, bool> DeferredEmptyCoverageMappingDecls;
@@ -779,6 +828,9 @@ public:
   ~CodeGenModule();
 
   void clear();
+  bool isXteamScanPhaseOne = true;
+  llvm::SmallVector<llvm::Value *, 8> ReductionVars;
+  const OMPExecutableDirective *OMPPresentScanDirective = nullptr;
 
   /// Finalize LLVM code generation.
   void Release();
@@ -1324,6 +1376,8 @@ public:
 
   llvm::Function *getIntrinsic(unsigned IID, ArrayRef<llvm::Type *> Tys = {});
 
+  void AddCXXGlobalInit(llvm::Function *F) { CXXGlobalInits.push_back(F); }
+
   /// Emit code for a single top level declaration.
   void EmitTopLevelDecl(Decl *D);
 
@@ -1422,6 +1476,7 @@ public:
 
   llvm::Function *getLLVMLifetimeStartFn();
   llvm::Function *getLLVMLifetimeEndFn();
+  llvm::Function *getLLVMFakeUseFn();
 
   // Make sure that this type is translated.
   void UpdateCompletedType(const TagDecl *TD);
@@ -1847,6 +1902,16 @@ public:
 
   bool isFastXteamSumReduction() {
     return getLangOpts().OpenMPTargetFastReduction;
+  }
+
+  bool isXteamScanKernel() {
+    return (getLangOpts().OpenMPTargetXteamScan ||
+            getLangOpts().OpenMPTargetXteamNoLoopScan) &&
+           isXteamScanCandidate;
+  }
+
+  bool isXteamSegmentedScanKernel() {
+    return isXteamScanKernel() && !getLangOpts().OpenMPTargetXteamNoLoopScan;
   }
 
   /// If we are able to generate a NoLoop kernel for this directive, return

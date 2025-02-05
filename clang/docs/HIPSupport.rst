@@ -27,7 +27,8 @@ AMD GPU Support
 Clang provides HIP support on AMD GPUs via the ROCm platform `<https://rocm.docs.amd.com/en/latest/#>`_.
 The ROCm runtime forms the base for HIP host APIs, while HIP device APIs are realized through HIP header
 files and the ROCm device library. The Clang driver uses the HIPAMD toolchain to compile HIP device code
-to AMDGPU ISA via the AMDGPU backend. The compiled code is then bundled and embedded in the host executables.
+to AMDGPU ISA via the AMDGPU backend, or SPIR-V via the workflow outlined below.
+The compiled code is then bundled and embedded in the host executables.
 
 Intel GPU Support
 =================
@@ -307,7 +308,7 @@ The `parallel_unsequenced_policy <https://en.cppreference.com/w/cpp/algorithm/ex
 maps relatively well to the execution model of AMD GPUs. This, coupled with the
 the availability and maturity of GPU accelerated algorithm libraries that
 implement most / all corresponding algorithms in the standard library
-(e.g. `rocThrust <https://github.com/ROCmSoftwarePlatform/rocThrust>`_), makes
+(e.g. `rocThrust <https://github.com/ROCmSoftwarePlatform/rocThrust>`__), makes
 it feasible to provide seamless accelerator offload for supported algorithms,
 when an accelerated version exists. Thus, it becomes possible to easily access
 the computational resources of an AMD accelerator, via a well specified,
@@ -339,8 +340,8 @@ transparent on-demand paging (such as e.g. that provided in Linux via
 the ``--hipstdpar-interpose-alloc`` flag. If the accelerator specific algorithm
 library ``foo`` uses doesn't have an implementation of a particular algorithm,
 execution seamlessly falls back to the host CPU. It is legal to specify multiple
-``--offload-arch``s. All the flags we introduce, as well as a thorough view of
-various restrictions and their implications will be provided below.
+``--offload-arch``\s. All the flags we introduce, as well as a thorough view of
+various restrictions an their implementations, will be provided below.
 
 Implementation - General View
 =============================
@@ -462,7 +463,7 @@ such as GPUs, work.
      allocation / deallocation functions with accelerator-aware equivalents,
      based on a pre-established table; the list of functions that can be
      interposed is available
-     `here <https://github.com/ROCmSoftwarePlatform/roc-stdpar#allocation--deallocation-interposition-status>`_;
+     `here <https://github.com/ROCmSoftwarePlatform/roc-stdpar#allocation--deallocation-interposition-status>`__;
    - This is only run when compiling for the host.
 
 The second pass is optional.
@@ -599,6 +600,9 @@ Linux operating system. Support is synthesised in the following table:
    * - GCN GFX11 (RDNA 3)
      - *NO*
      - YES
+   * - GCN GFX12 (RDNA 4)
+     - *NO*
+     - YES
 
 The minimum Linux kernel version for running in HMM mode is 6.4.
 
@@ -707,13 +711,6 @@ Using ``--offload-arch=amdgcnspirv``
 
 - **Clang Offload Bundler**: The resulting SPIR-V is embedded in the Clang
   offload bundler with the bundle ID ``hip-spirv64-amd-amdhsa--amdgcnspirv``.
-
-Mixed with Normal ``--offload-arch``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-**Mixing ``amdgcnspirv`` and concrete ``gfx###`` targets via ``--offload-arch``
-is not currently supported; this limitation is temporary and will be removed in
-a future release**
 
 Architecture Specific Macros
 ----------------------------

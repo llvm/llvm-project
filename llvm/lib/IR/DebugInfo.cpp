@@ -642,6 +642,7 @@ bool llvm::StripDebugInfo(Module &M) {
 
   for (auto &GV : M.globals()) {
     Changed |= GV.eraseMetadata(LLVMContext::MD_dbg);
+    Changed |= GV.eraseMetadata(M.getContext().getMDKindID("dbg.def"));
   }
 
   if (GVMaterializer *Materializer = M.getMaterializer())
@@ -1471,10 +1472,11 @@ LLVMDIBuilderCreateObjCProperty(LLVMDIBuilderRef Builder,
                   PropertyAttributes, unwrapDI<DIType>(Ty)));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
-                                     LLVMMetadataRef Type) {
-  return wrap(unwrap(Builder)->createObjectPointerType(unwrapDI<DIType>(Type)));
+LLVMMetadataRef LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
+                                                     LLVMMetadataRef Type,
+                                                     LLVMBool Implicit) {
+  return wrap(unwrap(Builder)->createObjectPointerType(unwrapDI<DIType>(Type),
+                                                       Implicit));
 }
 
 LLVMMetadataRef

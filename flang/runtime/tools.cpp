@@ -28,7 +28,7 @@ RT_API_ATTRS OwningPtr<char> SaveDefaultCharacter(
     const char *s, std::size_t length, const Terminator &terminator) {
   if (s) {
     auto *p{static_cast<char *>(AllocateMemoryOrCrash(terminator, length + 1))};
-    std::memcpy(p, s, length);
+    Fortran::runtime::memcpy(p, s, length);
     p[length] = '\0';
     return OwningPtr<char>{p};
   } else {
@@ -75,10 +75,10 @@ RT_API_ATTRS void ToFortranDefaultCharacter(
     char *to, std::size_t toLength, const char *from) {
   std::size_t len{Fortran::runtime::strlen(from)};
   if (len < toLength) {
-    std::memcpy(to, from, len);
-    std::memset(to + len, ' ', toLength - len);
+    Fortran::runtime::memcpy(to, from, len);
+    Fortran::runtime::memset(to + len, ' ', toLength - len);
   } else {
-    std::memcpy(to, from, toLength);
+    Fortran::runtime::memcpy(to, from, toLength);
   }
 }
 
@@ -122,7 +122,7 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
   std::size_t elementBytes{to.ElementBytes()};
   for (std::size_t n{to.Elements()}; n-- > 0;
        to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
-    std::memcpy(
+    Fortran::runtime::memcpy(
         to.Element<char>(toAt), from.Element<char>(fromAt), elementBytes);
   }
 }
@@ -135,7 +135,7 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
   std::size_t elementBytes{to.ElementBytes()};
   for (std::size_t n{to.Elements()}; n-- > 0;
        toAt += elementBytes, from.IncrementSubscripts(fromAt)) {
-    std::memcpy(toAt, from.Element<char>(fromAt), elementBytes);
+    Fortran::runtime::memcpy(toAt, from.Element<char>(fromAt), elementBytes);
   }
 }
 
@@ -147,7 +147,7 @@ RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
   std::size_t elementBytes{to.ElementBytes()};
   for (std::size_t n{to.Elements()}; n-- > 0;
        to.IncrementSubscripts(toAt), fromAt += elementBytes) {
-    std::memcpy(to.Element<char>(toAt), fromAt, elementBytes);
+    Fortran::runtime::memcpy(to.Element<char>(toAt), fromAt, elementBytes);
   }
 }
 
@@ -155,7 +155,7 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous) {
   if (toIsContiguous) {
     if (fromIsContiguous) {
-      std::memcpy(to.OffsetElement(), from.OffsetElement(),
+      Fortran::runtime::memcpy(to.OffsetElement(), from.OffsetElement(),
           to.Elements() * to.ElementBytes());
     } else {
       ShallowCopyDiscontiguousToContiguous(to, from);
@@ -177,7 +177,7 @@ RT_API_ATTRS char *EnsureNullTerminated(
     char *str, std::size_t length, Terminator &terminator) {
   if (runtime::memchr(str, '\0', length) == nullptr) {
     char *newCmd{(char *)AllocateMemoryOrCrash(terminator, length + 1)};
-    std::memcpy(newCmd, str, length);
+    Fortran::runtime::memcpy(newCmd, str, length);
     newCmd[length] = '\0';
     return newCmd;
   } else {
@@ -209,7 +209,7 @@ RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
     return ToErrmsg(errmsg, StatValueTooShort);
   }
 
-  std::memcpy(value.OffsetElement(offset), rawValue, toCopy);
+  Fortran::runtime::memcpy(value.OffsetElement(offset), rawValue, toCopy);
 
   if (static_cast<std::int64_t>(rawValueLength) > toCopy) {
     return ToErrmsg(errmsg, StatValueTooShort);

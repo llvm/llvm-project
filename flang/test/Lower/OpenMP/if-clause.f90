@@ -11,7 +11,6 @@ program main
   ! TODO When they are supported, add tests for:
   ! - PARALLEL SECTIONS
   ! - PARALLEL WORKSHARE
-  ! - TARGET UPDATE
   ! - TASKLOOP
   ! - TASKLOOP SIMD
 
@@ -1223,6 +1222,22 @@ program main
   !$omp target teams if(teams: .true.)
   i = 1
   !$omp end target teams
+
+  ! ----------------------------------------------------------------------------
+  ! TARGET UPDATE
+  ! ----------------------------------------------------------------------------
+
+  ! CHECK:      omp.target_update
+  ! CHECK-NOT:  if({{.*}})
+  !$omp target update to(i)
+
+  ! CHECK:      omp.target_update
+  ! CHECK-SAME: if({{.*}})
+  !$omp target update to(i) if(.true.)
+
+  ! CHECK:      omp.target_update
+  ! CHECK-SAME: if({{.*}})
+  !$omp target update to(i) if(target update: .true.)
 
   ! ----------------------------------------------------------------------------
   ! TASK

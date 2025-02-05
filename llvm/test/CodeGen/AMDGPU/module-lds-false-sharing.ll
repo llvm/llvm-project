@@ -138,7 +138,7 @@ define amdgpu_kernel void @withcall() {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX10-NEXT:    s_endpgm
-;
+
 ; G_GFX9-LABEL: withcall:
 ; G_GFX9:       ; %bb.0:
 ; G_GFX9-NEXT:    s_mov_b32 s20, SCRATCH_RSRC_DWORD0
@@ -229,7 +229,6 @@ define amdgpu_kernel void @nocall_false_sharing() {
   ret void
 }
 ; CHECK: ; LDSByteSize: 4 bytes
-
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

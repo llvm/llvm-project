@@ -1611,10 +1611,10 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopMostTaskgroupReductionData(
       continue;
     const ReductionData &ReductionData = I->ReductionMap.lookup(D);
     if (!ReductionData.ReductionOp ||
-        ReductionData.ReductionOp.is<const Expr *>())
+        isa<const Expr *>(ReductionData.ReductionOp))
       return DSAVarData();
     SR = ReductionData.ReductionRange;
-    BOK = ReductionData.ReductionOp.get<ReductionData::BOKPtrType>();
+    BOK = cast<ReductionData::BOKPtrType>(ReductionData.ReductionOp);
     assert(I->TaskgroupReductionRef && "taskgroup reduction reference "
                                        "expression for the descriptor is not "
                                        "set.");
@@ -1638,10 +1638,10 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopMostTaskgroupReductionData(
       continue;
     const ReductionData &ReductionData = I->ReductionMap.lookup(D);
     if (!ReductionData.ReductionOp ||
-        !ReductionData.ReductionOp.is<const Expr *>())
+        !isa<const Expr *>(ReductionData.ReductionOp))
       return DSAVarData();
     SR = ReductionData.ReductionRange;
-    ReductionRef = ReductionData.ReductionOp.get<const Expr *>();
+    ReductionRef = cast<const Expr *>(ReductionData.ReductionOp);
     assert(I->TaskgroupReductionRef && "taskgroup reduction reference "
                                        "expression for the descriptor is not "
                                        "set.");
@@ -5400,12 +5400,23 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     Recommend = ShouldBeInTargetRegion;
   } else if (CurrentRegion == OMPD_scan) {
     if (SemaRef.LangOpts.OpenMP >= 50) {
+      // Make sure that one of the flags - '-fopenmp-target-xteam-scan' or
+      // '-fopenmp-target-xteam-no-loop-scan' flag is passed to enable the
+      // Xteam-Scan Codegen, if the 'scan' directive is found to be nested
+      // inside the 'target teams distribute parallel for' directive
+      if (ParentRegion == OMPD_target_teams_distribute_parallel_for &&
+          !(SemaRef.getLangOpts().OpenMPTargetXteamScan ||
+            SemaRef.getLangOpts().OpenMPTargetXteamNoLoopScan))
+        SemaRef.Diag(StartLoc, diag::err_omp_xteam_scan_prohibited)
+            << getOpenMPDirectiveName(CurrentRegion) << Recommend;
       // OpenMP spec 5.0 and 5.1 require scan to be directly enclosed by for,
       // simd, or for simd. This has to take into account combined directives.
       // In 5.2 this seems to be implied by the fact that the specified
       // separated constructs are do, for, and simd.
-      NestingProhibited = !llvm::is_contained(
-          {OMPD_for, OMPD_simd, OMPD_for_simd}, EnclosingConstruct);
+      NestingProhibited =
+          !llvm::is_contained({OMPD_for, OMPD_simd, OMPD_for_simd},
+                              EnclosingConstruct) &&
+          ParentRegion != OMPD_target_teams_distribute_parallel_for;
     } else {
       NestingProhibited = true;
     }
@@ -5752,6 +5763,8 @@ static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
       Expr *SimpleRefExpr = E;
       auto Res = getPrivateItem(S, SimpleRefExpr, ELoc, ERange);
       ValueDecl *VD = Res.first;
+      if (!VD)
+        continue;
       DSAStackTy::DSAVarData Data = Stack->getTopDSA(VD, /*FromParent=*/false);
       if (!isOpenMPPrivate(Data.CKind)) {
         S.Diag(E->getExprLoc(),
@@ -5762,10 +5775,8 @@ static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
       if (checkPreviousOMPAllocateAttribute(S, Stack, E, PrivateVD,
                                             AllocatorKind, AC->getAllocator()))
         continue;
-      // Placeholder until allocate clause supports align modifier.
-      Expr *Alignment = nullptr;
       applyOMPAllocateAttribute(S, PrivateVD, AllocatorKind, AC->getAllocator(),
-                                Alignment, E->getSourceRange());
+                                AC->getAlignment(), E->getSourceRange());
     }
   }
 }
@@ -11535,7 +11546,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFlushDirective(ArrayRef<OMPClause *> Clauses,
     if (C->getClauseKind() == OMPC_acq_rel ||
         C->getClauseKind() == OMPC_acquire ||
         C->getClauseKind() == OMPC_release ||
-        C->getClauseKind() == OMPC_seq_cst) {
+        C->getClauseKind() == OMPC_seq_cst /*OpenMP 5.1*/) {
       if (MemOrderKind != OMPC_unknown) {
         Diag(C->getBeginLoc(), diag::err_omp_several_mem_order_clauses)
             << getOpenMPDirectiveName(OMPD_flush) << 1
@@ -16049,7 +16060,9 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
         << E->getSourceRange();
     return ExprError();
   }
-  if ((CKind == OMPC_aligned || CKind == OMPC_align) && !Result.isPowerOf2()) {
+  if ((CKind == OMPC_aligned || CKind == OMPC_align ||
+       CKind == OMPC_allocate) &&
+      !Result.isPowerOf2()) {
     Diag(E->getExprLoc(), diag::warn_omp_alignment_not_power_of_two)
         << E->getSourceRange();
     return ExprError();
@@ -17585,11 +17598,26 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
   case OMPC_has_device_addr:
     Res = ActOnOpenMPHasDeviceAddrClause(VarList, Locs);
     break;
-  case OMPC_allocate:
-    Res = ActOnOpenMPAllocateClause(Data.DepModOrTailExpr,
-                                    Data.AllocClauseModifier, VarList, StartLoc,
-                                    LParenLoc, ColonLoc, EndLoc);
+  case OMPC_allocate: {
+    OpenMPAllocateClauseModifier Modifier1 = OMPC_ALLOCATE_unknown;
+    OpenMPAllocateClauseModifier Modifier2 = OMPC_ALLOCATE_unknown;
+    SourceLocation Modifier1Loc, Modifier2Loc;
+    if (!Data.AllocClauseModifiers.empty()) {
+      assert(Data.AllocClauseModifiers.size() <= 2 &&
+             "More allocate modifiers than expected");
+      Modifier1 = Data.AllocClauseModifiers[0];
+      Modifier1Loc = Data.AllocClauseModifiersLoc[0];
+      if (Data.AllocClauseModifiers.size() == 2) {
+        Modifier2 = Data.AllocClauseModifiers[1];
+        Modifier2Loc = Data.AllocClauseModifiersLoc[1];
+      }
+    }
+    Res = ActOnOpenMPAllocateClause(
+        Data.DepModOrTailExpr, Data.AllocateAlignment, Modifier1, Modifier1Loc,
+        Modifier2, Modifier2Loc, VarList, StartLoc, LParenLoc, ColonLoc,
+        EndLoc);
     break;
+  }
   case OMPC_nontemporal:
     Res = ActOnOpenMPNontemporalClause(VarList, StartLoc, LParenLoc, EndLoc);
     break;
@@ -19567,7 +19595,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPReductionClause(
        DSAStack->getCurrentDirective() != OMPD_for_simd &&
        DSAStack->getCurrentDirective() != OMPD_simd &&
        DSAStack->getCurrentDirective() != OMPD_parallel_for &&
-       DSAStack->getCurrentDirective() != OMPD_parallel_for_simd)) {
+       DSAStack->getCurrentDirective() != OMPD_parallel_for_simd &&
+       DSAStack->getCurrentDirective() !=
+           OMPD_target_teams_distribute_parallel_for)) {
     Diag(ModifierLoc, diag::err_omp_wrong_inscan_reduction);
     return nullptr;
   }
@@ -23595,32 +23625,37 @@ SemaOpenMP::ActOnOpenMPHasDeviceAddrClause(ArrayRef<Expr *> VarList,
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
-    Expr *Allocator, OpenMPAllocateClauseModifier AllocClauseModifier,
-    ArrayRef<Expr *> VarList, SourceLocation StartLoc, SourceLocation LParenLoc,
-    SourceLocation ColonLoc, SourceLocation EndLoc) {
-
+    Expr *Allocator, Expr *Alignment,
+    OpenMPAllocateClauseModifier FirstAllocateModifier,
+    SourceLocation FirstAllocateModifierLoc,
+    OpenMPAllocateClauseModifier SecondAllocateModifier,
+    SourceLocation SecondAllocateModifierLoc, ArrayRef<Expr *> VarList,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation ColonLoc,
+    SourceLocation EndLoc) {
   if (Allocator) {
     // Allocator expression is dependent - skip it for now and build the
     // allocator when instantiated.
-    if (Allocator->isTypeDependent() || Allocator->isValueDependent() ||
-        Allocator->isInstantiationDependent() ||
-        Allocator->containsUnexpandedParameterPack())
-      return nullptr;
-    // OpenMP [2.11.4 allocate Clause, Description]
-    // allocator is an expression of omp_allocator_handle_t type.
-    if (!findOMPAllocatorHandleT(SemaRef, Allocator->getExprLoc(), DSAStack))
-      return nullptr;
+    bool AllocDependent =
+        (Allocator->isTypeDependent() || Allocator->isValueDependent() ||
+         Allocator->isInstantiationDependent() ||
+         Allocator->containsUnexpandedParameterPack());
+    if (!AllocDependent) {
+      // OpenMP [2.11.4 allocate Clause, Description]
+      // allocator is an expression of omp_allocator_handle_t type.
+      if (!findOMPAllocatorHandleT(SemaRef, Allocator->getExprLoc(), DSAStack))
+        return nullptr;
 
-    ExprResult AllocatorRes = SemaRef.DefaultLvalueConversion(Allocator);
-    if (AllocatorRes.isInvalid())
-      return nullptr;
-    AllocatorRes = SemaRef.PerformImplicitConversion(
-        AllocatorRes.get(), DSAStack->getOMPAllocatorHandleT(),
-        AssignmentAction::Initializing,
-        /*AllowExplicit=*/true);
-    if (AllocatorRes.isInvalid())
-      return nullptr;
-    Allocator = AllocatorRes.get();
+      ExprResult AllocatorRes = SemaRef.DefaultLvalueConversion(Allocator);
+      if (AllocatorRes.isInvalid())
+        return nullptr;
+      AllocatorRes = SemaRef.PerformImplicitConversion(
+          AllocatorRes.get(), DSAStack->getOMPAllocatorHandleT(),
+          AssignmentAction::Initializing,
+          /*AllowExplicit=*/true);
+      if (AllocatorRes.isInvalid())
+        return nullptr;
+      Allocator = AllocatorRes.isUsable() ? AllocatorRes.get() : nullptr;
+    }
   } else {
     // OpenMP 5.0, 2.11.4 allocate Clause, Restrictions.
     // allocate clauses that appear on a target construct or on constructs in a
@@ -23630,6 +23665,17 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
     if (getLangOpts().OpenMPIsTargetDevice &&
         !DSAStack->hasRequiresDeclWithClause<OMPDynamicAllocatorsClause>())
       SemaRef.targetDiag(StartLoc, diag::err_expected_allocator_expression);
+  }
+  if (Alignment) {
+    bool AlignmentDependent = Alignment->isTypeDependent() ||
+                              Alignment->isValueDependent() ||
+                              Alignment->isInstantiationDependent() ||
+                              Alignment->containsUnexpandedParameterPack();
+    if (!AlignmentDependent) {
+      ExprResult AlignResult =
+          VerifyPositiveIntegerConstantInClause(Alignment, OMPC_allocate);
+      Alignment = AlignResult.isUsable() ? AlignResult.get() : nullptr;
+    }
   }
   // Analyze and build list of variables.
   SmallVector<Expr *, 8> Vars;
@@ -23662,11 +23708,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
   if (Allocator)
     DSAStack->addInnerAllocatorExpr(Allocator);
 
-  OpenMPAllocateClauseModifier AllocatorModifier = AllocClauseModifier;
-  SourceLocation AllocatorModifierLoc;
-  return OMPAllocateClause::Create(getASTContext(), StartLoc, LParenLoc,
-                                   Allocator, ColonLoc, AllocatorModifier,
-                                   AllocatorModifierLoc, EndLoc, Vars);
+  return OMPAllocateClause::Create(
+      getASTContext(), StartLoc, LParenLoc, Allocator, Alignment, ColonLoc,
+      FirstAllocateModifier, FirstAllocateModifierLoc, SecondAllocateModifier,
+      SecondAllocateModifierLoc, EndLoc, Vars);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPNontemporalClause(ArrayRef<Expr *> VarList,
@@ -23733,6 +23778,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPInclusiveClause(ArrayRef<Expr *> VarList,
     Expr *SimpleRefExpr = RefExpr;
     auto Res = getPrivateItem(SemaRef, SimpleRefExpr, ELoc, ERange,
                               /*AllowArraySection=*/true);
+    if (!Vars.empty() && DSAStack->getParentDirective() ==
+                             OMPD_target_teams_distribute_parallel_for) {
+      Diag(ELoc, diag::err_omp_multivar_xteam_scan_unsupported)
+          << RefExpr->getSourceRange();
+    }
     if (Res.second)
       // It will be analyzed later.
       Vars.push_back(RefExpr);
@@ -23774,6 +23824,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPExclusiveClause(ArrayRef<Expr *> VarList,
     Expr *SimpleRefExpr = RefExpr;
     auto Res = getPrivateItem(SemaRef, SimpleRefExpr, ELoc, ERange,
                               /*AllowArraySection=*/true);
+    if (!Vars.empty() && DSAStack->getParentDirective() ==
+                             OMPD_target_teams_distribute_parallel_for) {
+      Diag(ELoc, diag::err_omp_multivar_xteam_scan_unsupported)
+          << RefExpr->getSourceRange();
+    }
     if (Res.second)
       // It will be analyzed later.
       Vars.push_back(RefExpr);

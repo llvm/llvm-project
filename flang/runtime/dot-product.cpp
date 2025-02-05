@@ -180,6 +180,29 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(DotProductInteger16)(
 }
 #endif
 
+CppTypeFor<TypeCategory::Unsigned, 1> RTDEF(DotProductUnsigned1)(
+    const Descriptor &x, const Descriptor &y, const char *source, int line) {
+  return DotProduct<TypeCategory::Unsigned, 1>{}(x, y, source, line);
+}
+CppTypeFor<TypeCategory::Unsigned, 2> RTDEF(DotProductUnsigned2)(
+    const Descriptor &x, const Descriptor &y, const char *source, int line) {
+  return DotProduct<TypeCategory::Unsigned, 2>{}(x, y, source, line);
+}
+CppTypeFor<TypeCategory::Unsigned, 4> RTDEF(DotProductUnsigned4)(
+    const Descriptor &x, const Descriptor &y, const char *source, int line) {
+  return DotProduct<TypeCategory::Unsigned, 4>{}(x, y, source, line);
+}
+CppTypeFor<TypeCategory::Unsigned, 8> RTDEF(DotProductUnsigned8)(
+    const Descriptor &x, const Descriptor &y, const char *source, int line) {
+  return DotProduct<TypeCategory::Unsigned, 8>{}(x, y, source, line);
+}
+#ifdef __SIZEOF_INT128__
+CppTypeFor<TypeCategory::Unsigned, 16> RTDEF(DotProductUnsigned16)(
+    const Descriptor &x, const Descriptor &y, const char *source, int line) {
+  return DotProduct<TypeCategory::Unsigned, 16>{}(x, y, source, line);
+}
+#endif
+
 // TODO: REAL/COMPLEX(2 & 3)
 // Intermediate results and operations are at least 64 bits
 CppTypeFor<TypeCategory::Real, 4> RTDEF(DotProductReal4)(

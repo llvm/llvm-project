@@ -12,9 +12,9 @@
 #ifndef FORTRAN_LOWER_DATASHARINGPROCESSOR_H
 #define FORTRAN_LOWER_DATASHARINGPROCESSOR_H
 
-#include "Clauses.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/OpenMP.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
@@ -86,8 +86,10 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
-  lower::SymMap *symTable;
+  bool callsInitClone = false;
+  lower::SymMap &symTable;
   OMPConstructSymbolVisitor visitor;
+  bool privatizationDone = false;
 
   bool needBarrier();
   void collectSymbols(semantics::Symbol::Flag flag,
@@ -122,22 +124,35 @@ public:
                        const List<Clause> &clauses,
                        lower::pft::Evaluation &eval,
                        bool shouldCollectPreDeterminedSymbols,
-                       bool useDelayedPrivatization = false,
-                       lower::SymMap *symTable = nullptr);
+                       bool useDelayedPrivatization, lower::SymMap &symTable);
 
-  // Privatisation is split into two steps.
-  // Step1 performs cloning of all privatisation clauses and copying for
-  // firstprivates. Step1 is performed at the place where process/processStep1
+  // Privatisation is split into 3 steps:
+  //
+  // * Step1: collects all symbols that should be privatized.
+  //
+  // * Step2: performs cloning of all privatisation clauses and copying for
+  // firstprivates. Step2 is performed at the place where process/processStep2
   // is called. This is usually inside the Operation corresponding to the OpenMP
-  // construct, for looping constructs this is just before the Operation. The
-  // split into two steps was performed basically to be able to call
-  // privatisation for looping constructs before the operation is created since
-  // the bounds of the MLIR OpenMP operation can be privatised.
-  // Step2 performs the copying for lastprivates and requires knowledge of the
-  // MLIR operation to insert the last private update. Step2 adds
+  // construct, for looping constructs this is just before the Operation.
+  //
+  // * Step3: performs the copying for lastprivates and requires knowledge of
+  // the MLIR operation to insert the last private update. Step3 adds
   // dealocation code as well.
-  void processStep1(mlir::omp::PrivateClauseOps *clauseOps = nullptr);
-  void processStep2(mlir::Operation *op, bool isLoop);
+  //
+  // The split was performed for the following reasons:
+  //
+  // 1. Step1 was split so that the `target` op knows which symbols should not
+  // be mapped into the target region due to being `private`. The implicit
+  // mapping happens before the op body is generated so we need to to collect
+  // the private symbols first and then later in the body actually privatize
+  // them.
+  //
+  // 2. Step2 was split in order to call privatisation for looping constructs
+  // before the operation is created since the bounds of the MLIR OpenMP
+  // operation can be privatised.
+  void processStep1();
+  void processStep2(mlir::omp::PrivateClauseOps *clauseOps = nullptr);
+  void processStep3(mlir::Operation *op, bool isLoop);
 
   void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
 

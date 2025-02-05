@@ -40,7 +40,10 @@ __read_pipe_2(__global struct pipeimp* p, void* ptr, uint size, uint align)
         return -1;
 
     size_t pi = wrap(ri, p->end_idx);
-    __memcpy_internal_aligned(ptr, p->packets + pi*size, size, align);
+    void *pipe_ptr = p->packets + pi * size;
+    ASSUME_ALIGNED(ptr, align);
+    ASSUME_ALIGNED(pipe_ptr, align);
+    __builtin_memcpy(ptr, pipe_ptr, size);
 
     if (ri == wi-1) {
         __opencl_atomic_store(&p->write_idx, 0, memory_order_relaxed, memory_scope_device);
@@ -68,7 +71,10 @@ __read_pipe_4(__global struct pipeimp* p, reserve_id_t rid, uint i, void *ptr, u
 {
     size_t rin = __builtin_astype(rid, size_t) + i; \
     size_t pi = wrap(rin, p->end_idx);
-    __memcpy_internal_aligned(ptr, p->packets + pi*size, size, align);
+    void *pipe_ptr = p->packets + pi * size;
+    ASSUME_ALIGNED(ptr, align);
+    ASSUME_ALIGNED(pipe_ptr, align);
+    __builtin_memcpy(ptr, pipe_ptr, size);
 
     return 0;
 }

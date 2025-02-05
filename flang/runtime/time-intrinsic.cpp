@@ -221,13 +221,13 @@ static void DateAndTimeUnavailable(Fortran::runtime::Terminator &terminator,
     char *zone, std::size_t zoneChars,
     const Fortran::runtime::Descriptor *values) {
   if (date) {
-    std::memset(date, static_cast<int>(' '), dateChars);
+    Fortran::runtime::memset(date, static_cast<int>(' '), dateChars);
   }
   if (time) {
-    std::memset(time, static_cast<int>(' '), timeChars);
+    Fortran::runtime::memset(time, static_cast<int>(' '), timeChars);
   }
   if (zone) {
-    std::memset(zone, static_cast<int>(' '), zoneChars);
+    Fortran::runtime::memset(zone, static_cast<int>(' '), zoneChars);
   }
   if (values) {
     auto typeCode{values->type().GetCategoryAndKind()};
@@ -365,7 +365,7 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
   auto copyBufferAndPad{
       [&](char *dest, std::size_t destChars, std::size_t len) {
         auto copyLen{std::min(len, destChars)};
-        std::memcpy(dest, buffer, copyLen);
+        Fortran::runtime::memcpy(dest, buffer, copyLen);
         for (auto i{copyLen}; i < destChars; ++i) {
           dest[i] = ' ';
         }

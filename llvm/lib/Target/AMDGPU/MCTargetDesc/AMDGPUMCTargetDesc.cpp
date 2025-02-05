@@ -77,7 +77,22 @@ static MCSubtargetInfo *
 createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (TT.getArch() == Triple::r600)
     return createR600MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
-  return createAMDGPUMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+
+  MCSubtargetInfo *STI =
+      createAMDGPUMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+
+  // FIXME: We should error for the default target.
+  if (!STI->hasFeature(AMDGPU::FeatureWavefrontSize64) &&
+      !STI->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
+    // If there is no default wave size it must be a generation before gfx10,
+    // these have FeatureWavefrontSize64 in their definition already. For gfx10+
+    // set wave32 as a default.
+    STI->ToggleFeature(AMDGPU::isGFX10Plus(*STI)
+                           ? AMDGPU::FeatureWavefrontSize32
+                           : AMDGPU::FeatureWavefrontSize64);
+  }
+
+  return STI;
 }
 
 static MCInstPrinter *createAMDGPUMCInstPrinter(const Triple &T,

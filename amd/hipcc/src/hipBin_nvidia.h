@@ -31,7 +31,6 @@ THE SOFTWARE.
 
 class HipBinNvidia : public HipBinBase {
  private:
-  HipBinUtil* hipBinUtilPtr_;
   string cudaPath_ = "";
   PlatformInfo platformInfoNV_;
   string hipCFlags_, hipCXXFlags_, hipLdFlags_;

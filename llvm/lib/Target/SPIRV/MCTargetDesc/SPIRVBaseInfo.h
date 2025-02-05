@@ -207,6 +207,16 @@ namespace Opcode {
 #include "SPIRVGenTables.inc"
 } // namespace Opcode
 
+namespace CooperativeMatrixLayout {
+#define GET_CooperativeMatrixLayout_DECL
+#include "SPIRVGenTables.inc"
+} // namespace CooperativeMatrixLayout
+
+namespace CooperativeMatrixOperands {
+#define GET_CooperativeMatrixOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace CooperativeMatrixOperands
+
 struct ExtendedBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;

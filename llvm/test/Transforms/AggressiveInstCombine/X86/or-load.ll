@@ -1205,19 +1205,19 @@ entry:
 
 define i32 @loadCombine_4consecutive_metadata(ptr %p, ptr %pstr) {
 ; LE-LABEL: @loadCombine_4consecutive_metadata(
-; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1, !alias.scope !0
-; LE-NEXT:    store i32 25, ptr [[PSTR:%.*]], align 4, !noalias !0
+; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1, !alias.scope [[META0:![0-9]+]]
+; LE-NEXT:    store i32 25, ptr [[PSTR:%.*]], align 4, !noalias [[META0]]
 ; LE-NEXT:    ret i32 [[L1]]
 ;
 ; BE-LABEL: @loadCombine_4consecutive_metadata(
 ; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
 ; BE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 2
 ; BE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
-; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1, !alias.scope !0
-; BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1, !alias.scope !0
-; BE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1, !alias.scope !0
-; BE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1, !alias.scope !0
-; BE-NEXT:    store i32 25, ptr [[PSTR:%.*]], align 4, !noalias !0
+; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1, !alias.scope [[META0:![0-9]+]]
+; BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1, !alias.scope [[META0]]
+; BE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1, !alias.scope [[META0]]
+; BE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1, !alias.scope [[META0]]
+; BE-NEXT:    store i32 25, ptr [[PSTR:%.*]], align 4, !noalias [[META0]]
 ; BE-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
 ; BE-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
 ; BE-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
@@ -2005,7 +2005,7 @@ define i32 @loadCombine_4consecutive_badinsert2(ptr %p) {
 
 define i32 @loadCombine_4consecutive_badinsert3(ptr %p) {
 ; LE-LABEL: @loadCombine_4consecutive_badinsert3(
-; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
 ; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[TMP1]], align 1
 ; LE-NEXT:    ret i32 [[L1]]
 ;
@@ -2306,7 +2306,7 @@ define i64 @loadCombine_nonConstShift2(ptr %arg, i8 %b) {
 
 define void @nested_gep(ptr %p, ptr %dest) {
 ; LE-LABEL: @nested_gep(
-; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 68
+; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 68
 ; LE-NEXT:    [[LD2:%.*]] = load i64, ptr [[TMP1]], align 4
 ; LE-NEXT:    [[TRUNC:%.*]] = trunc i64 [[LD2]] to i32
 ; LE-NEXT:    store i32 [[TRUNC]], ptr [[DEST:%.*]], align 4
@@ -2346,7 +2346,7 @@ define void @nested_gep(ptr %p, ptr %dest) {
 
 define void @bitcast_gep(ptr %p, ptr %dest) {
 ; LE-LABEL: @bitcast_gep(
-; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 68
+; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 68
 ; LE-NEXT:    [[LD2:%.*]] = load i64, ptr [[TMP1]], align 4
 ; LE-NEXT:    [[TRUNC:%.*]] = trunc i64 [[LD2]] to i32
 ; LE-NEXT:    store i32 [[TRUNC]], ptr [[DEST:%.*]], align 4
@@ -2381,4 +2381,36 @@ define void @bitcast_gep(ptr %p, ptr %dest) {
   %trunc = trunc i64 %add to i32
   store i32 %trunc, ptr %dest, align 4
   ret void
+}
+
+define i32 @loadcombine_consecutive_idx_64(ptr %data) {
+; LE-LABEL: @loadcombine_consecutive_idx_64(
+; LE-NEXT:  entry:
+; LE-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DATA:%.*]], i64 2149675576
+; LE-NEXT:    [[VAL_2:%.*]] = load i16, ptr [[TMP0]], align 1
+; LE-NEXT:    [[TMP1:%.*]] = zext i16 [[VAL_2]] to i32
+; LE-NEXT:    ret i32 [[TMP1]]
+;
+; BE-LABEL: @loadcombine_consecutive_idx_64(
+; BE-NEXT:  entry:
+; BE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA:%.*]], i64 2149675577
+; BE-NEXT:    [[VAL:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; BE-NEXT:    [[CONV:%.*]] = zext i8 [[VAL]] to i32
+; BE-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 2149675576
+; BE-NEXT:    [[VAL_2:%.*]] = load i8, ptr [[ARRAYIDX_2]], align 1
+; BE-NEXT:    [[CONV_2:%.*]] = zext i8 [[VAL_2]] to i32
+; BE-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[CONV]], 8
+; BE-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL]], [[CONV_2]]
+; BE-NEXT:    ret i32 [[OR]]
+;
+entry:
+  %arrayidx = getelementptr inbounds nuw i8, ptr %data, i64 2149675577
+  %val = load i8, ptr %arrayidx, align 1
+  %conv = zext i8 %val to i32
+  %arrayidx.2 = getelementptr inbounds nuw i8, ptr %data, i64 2149675576
+  %val.2 = load i8, ptr %arrayidx.2, align 1
+  %conv.2 = zext i8 %val.2 to i32
+  %shl = shl nuw nsw i32 %conv, 8
+  %or = or disjoint i32 %shl, %conv.2
+  ret i32 %or
 }

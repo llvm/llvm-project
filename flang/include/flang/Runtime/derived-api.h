@@ -32,6 +32,13 @@ extern "C" {
 void RTDECL(Initialize)(
     const Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
 
+// Initializes an object clone from the original object.
+// Each allocatable member of the clone is allocated with the same bounds as
+// in the original object, if it is also allocated in it.
+// The descriptor must be initialized and non-null.
+void RTDECL(InitializeClone)(const Descriptor &, const Descriptor &,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+
 // Finalizes an object and its components.  Deallocates any
 // allocatable/automatic components.  Does not deallocate the descriptor's
 // storage.

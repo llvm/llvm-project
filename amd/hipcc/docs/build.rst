@@ -1,5 +1,5 @@
 .. meta::
-  :description: HIPCC environment variables
+  :description: Building HIPCC from source files
   :keywords: HIPCC, ROCm, HIP tools, HIP compiler
 
 .. _hipcc_build:

@@ -56,8 +56,7 @@ typedef struct {
 // CHECK:       vaarg.end:
 // CHECK-NEXT:    [[VAARG_ADDR:%.*]] = phi ptr [ [[TMP1]], [[VAARG_IN_REG]] ], [ [[OVERFLOW_ARG_AREA]], [[VAARG_IN_MEM]] ]
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[VAARG_ADDR]], i64 8, i1 false)
-// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[COERCE_DIVE]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[RETVAL]], align 8
 // CHECK-NEXT:    ret double [[TMP3]]
 //
 s1 f(int z, ...) {

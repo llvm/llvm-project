@@ -23,6 +23,18 @@ if(CLANG_PLUGIN_SUPPORT)
   set(support_plugins SUPPORT_PLUGINS)
 endif()
 
+set(CLANG_BOLT OFF CACHE STRING "Apply BOLT optimization to Clang. \
+  May be specified as Instrument or Perf or LBR to use a particular profiling \
+  mechanism.")
+string(TOUPPER "${CLANG_BOLT}" CLANG_BOLT)
+
+if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
+  set(CLANG_BOLT_DEPS clear-bolt-fdata llvm-bolt llvm-readobj)
+  if (NOT CLANG_BOLT STREQUAL "INSTRUMENT")
+    list(APPEND CLANG_BOLT_DEPS clear-perf-data)
+  endif()
+endif()
+
 add_clang_tool(clang
   driver.cpp
   cc1_main.cpp
@@ -35,6 +47,7 @@ add_clang_tool(clang
   ARMTargetParserTableGen
   AArch64TargetParserTableGen
   ${support_plugins}
+  ${CLANG_BOLT_DEPS}
   GENERATE_DRIVER
   )
 
@@ -79,7 +92,7 @@ endif()
 foreach(link ${CLANG_LINKS_TO_CREATE} ${HLSL_LINK})
 # We need to separate classic flang from the new llvm flang
 # that is in development. Until the new llvm flang replaces
-# classic, we need to have a flang -> flang-legacy symlink
+# classic, we need to have a flang -> flang-classic symlink
 # instead of flang -> clang. Flang-legacy is built later during
 # openmp-extras and is based of llvm archives from ROCm 5.5.
 # This can be removed once llvm flang is in production.
@@ -91,7 +104,7 @@ foreach(link ${CLANG_LINKS_TO_CREATE} ${HLSL_LINK})
       endif()
     endforeach()
     install(SCRIPT ${INSTALL_SYMLINK}
-            CODE "install_symlink(flang flang-legacy bin create_symlink)"
+            CODE "install_symlink(flang flang-classic bin create_symlink)"
             COMPONENT ${component})
   else()
     add_clang_symlink(${link} clang)
@@ -156,4 +169,43 @@ if(CLANG_ORDER_FILE AND
     target_link_libraries(clang PRIVATE ${LINKER_ORDER_FILE_OPTION})
     set_target_properties(clang PROPERTIES LINK_DEPENDS ${CLANG_ORDER_FILE})
   endif()
+endif()
+
+if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
+  # Add a clang-bolt target for backwards compatibility.
+  add_custom_target(clang-bolt DEPENDS clang)
+
+  set(CLANG_BOLT_INSTRUMENTED "clang-bolt.inst" CACHE STRING
+    "Name of BOLT-instrumented Clang binary")
+  set(CLANG_INSTRUMENTED ${LLVM_RUNTIME_OUTPUT_INTDIR}/${CLANG_BOLT_INSTRUMENTED})
+  set(PERF_TRAINING_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/../../utils/perf-training)
+  set(BOLT_FDATA ${PERF_TRAINING_BINARY_DIR}/prof.fdata)
+  get_llvm_lit_path(
+    lit_base_dir
+    lit_file_name
+    ALLOW_EXTERNAL
+  )
+  set(LIT_COMMAND "${lit_base_dir}/${lit_file_name}")
+
+  # This POST_BUILD command is executed unconditionally even if the clang target
+  # is already built.  We need to wrap the whole bolt optimization process in
+  # a single python wrapper, so that we can first check if the binary has
+  # already been optimized and then exit early with a 0 status if it has.
+  add_custom_command(
+    TARGET clang POST_BUILD
+    COMMAND  "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/../../utils/perf-training/perf-helper.py
+             bolt-optimize
+	     --method ${CLANG_BOLT}
+	     --input $<TARGET_FILE:clang>
+	     --instrumented-output ${CLANG_INSTRUMENTED}
+	     --fdata ${BOLT_FDATA}
+	     --perf-training-binary-dir ${PERF_TRAINING_BINARY_DIR}
+	     --readelf $<TARGET_FILE:llvm-readobj>
+	     --bolt $<TARGET_FILE:llvm-bolt>
+	     --lit "${LIT_COMMAND}"
+	     --merge-fdata $<TARGET_FILE:merge-fdata>
+    COMMENT "Optimizing Clang with BOLT"
+    USES_TERMINAL
+    VERBATIM
+  )
 endif()

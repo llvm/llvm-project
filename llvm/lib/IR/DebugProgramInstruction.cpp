@@ -452,7 +452,7 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
   DVI->setTailCall();
   DVI->setDebugLoc(getDebugLoc());
   if (InsertBefore)
-    DVI->insertBefore(InsertBefore);
+    DVI->insertBefore(InsertBefore->getIterator());
 
   return DVI;
 }
@@ -468,7 +468,7 @@ DbgLabelRecord::createDebugIntrinsic(Module *M,
   DbgLabel->setTailCall();
   DbgLabel->setDebugLoc(getDebugLoc());
   if (InsertBefore)
-    DbgLabel->insertBefore(InsertBefore);
+    DbgLabel->insertBefore(InsertBefore->getIterator());
   return DbgLabel;
 }
 
@@ -549,6 +549,24 @@ void DbgRecord::insertAfter(DbgRecord *InsertAfter) {
          "DbgMarker!");
   InsertAfter->getMarker()->insertDbgRecordAfter(this, InsertAfter);
 }
+
+void DbgRecord::insertBefore(self_iterator InsertBefore) {
+  assert(!getMarker() &&
+         "Cannot insert a DbgRecord that is already has a DbgMarker!");
+  assert(InsertBefore->getMarker() &&
+         "Cannot insert a DbgRecord before a DbgRecord that does not have a "
+         "DbgMarker!");
+  InsertBefore->getMarker()->insertDbgRecord(this, &*InsertBefore);
+}
+void DbgRecord::insertAfter(self_iterator InsertAfter) {
+  assert(!getMarker() &&
+         "Cannot insert a DbgRecord that is already has a DbgMarker!");
+  assert(InsertAfter->getMarker() &&
+         "Cannot insert a DbgRecord after a DbgRecord that does not have a "
+         "DbgMarker!");
+  InsertAfter->getMarker()->insertDbgRecordAfter(this, &*InsertAfter);
+}
+
 void DbgRecord::moveBefore(DbgRecord *MoveBefore) {
   assert(getMarker() &&
          "Canot move a DbgRecord that does not currently have a DbgMarker!");
@@ -556,6 +574,19 @@ void DbgRecord::moveBefore(DbgRecord *MoveBefore) {
   insertBefore(MoveBefore);
 }
 void DbgRecord::moveAfter(DbgRecord *MoveAfter) {
+  assert(getMarker() &&
+         "Canot move a DbgRecord that does not currently have a DbgMarker!");
+  removeFromParent();
+  insertAfter(MoveAfter);
+}
+
+void DbgRecord::moveBefore(self_iterator MoveBefore) {
+  assert(getMarker() &&
+         "Canot move a DbgRecord that does not currently have a DbgMarker!");
+  removeFromParent();
+  insertBefore(MoveBefore);
+}
+void DbgRecord::moveAfter(self_iterator MoveAfter) {
   assert(getMarker() &&
          "Canot move a DbgRecord that does not currently have a DbgMarker!");
   removeFromParent();

@@ -405,8 +405,8 @@ namespace std {
 }
 */
 
-#ifndef _LIBCPP_MDSPAN
-#define _LIBCPP_MDSPAN
+#ifndef _LIBCPP___CXX03_MDSPAN
+#define _LIBCPP___CXX03_MDSPAN
 
 #include <__cxx03/__config>
 
@@ -435,4 +435,4 @@ namespace std {
 #  include <__cxx03/span>
 #endif
 
-#endif // _LIBCPP_MDSPAN
+#endif // _LIBCPP___CXX03_MDSPAN

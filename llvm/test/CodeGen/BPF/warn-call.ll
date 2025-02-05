@@ -1,4 +1,4 @@
-; RUN: not llc -march=bpfel < %s 2>&1 >/dev/null | FileCheck %s
+; RUN: not llc -mtriple=bpfel < %s 2>&1 >/dev/null | FileCheck %s
 
 ; CHECK: error: warn_call.c
 ; CHECK: built-in function 'memcpy'

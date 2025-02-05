@@ -160,7 +160,6 @@ LANGOPT(GNUAsm            , 1, 1, "GNU-style inline assembly")
 LANGOPT(Coroutines        , 1, 0, "C++20 coroutines")
 LANGOPT(CoroAlignedAllocation, 1, 0, "prefer Aligned Allocation according to P2014 Option 2")
 LANGOPT(DllExportInlines  , 1, 1, "dllexported classes dllexport inline methods")
-LANGOPT(RelaxedTemplateTemplateArgs, 1, 1, "C++17 relaxed matching of template template arguments")
 LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
 LANGOPT(RetainSubstTemplateTypeParmTypeAstNodes, 1, 0, "retain SubstTemplateTypeParmType nodes in the AST's representation of alias template specializations")
 
@@ -178,6 +177,7 @@ LANGOPT(PointerAuthInitFini, 1, 0, "sign function pointers in init/fini arrays")
 LANGOPT(PointerAuthInitFiniAddressDiscrimination, 1, 0,
         "incorporate address discrimination in authenticated function pointers in init/fini arrays")
 LANGOPT(PointerAuthELFGOT, 1, 0, "authenticate pointers from GOT")
+LANGOPT(AArch64JumpTableHardening, 1, 0, "use hardened lowering for jump-table dispatch")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
 LANGOPT(ExperimentalLateParseAttributes, 1, 0, "experimental late parsing of attributes")
@@ -281,6 +281,10 @@ LANGOPT(OpenMPTargetNoLoop , 1, 1, "Use no-loop code generation technique.")
 LANGOPT(OpenMPTargetXteamReduction , 1, 1, "Use cross-team code generation technique.")
 LANGOPT(OpenMPTargetFastReduction , 1, 0, "Use fast reduction code generation technique.")
 LANGOPT(OpenMPTargetMultiDevice , 1, 0, "Offload the iteration space of a single target region across multiple GPU devices.")
+
+// The flag '-fopenmp-target-xteam-scan' triggers the 'Segmented Cross Team Scan' variant by default. To use the no-loop variant, please use the flag '-fopenmp-target-no-loop-scan' instead. 
+LANGOPT(OpenMPTargetXteamScan , 1, 0, "Use the cross-team specialized kernel code generation for 'scan' directive.")
+LANGOPT(OpenMPTargetXteamNoLoopScan , 1, 0, "Use the no-loop variant of the cross-team specialized kernel code generation for 'scan' directive.")
 LANGOPT(OpenMPOptimisticCollapse  , 1, 0, "Use at most 32 bits to represent the collapsed loop nest counter.")
 LANGOPT(OpenMPThreadSubscription  , 1, 0, "Assume work-shared loops do not have more iterations than participating threads.")
 LANGOPT(OpenMPTeamSubscription  , 1, 0, "Assume distributed loops do not have more iterations than participating teams.")
@@ -417,6 +421,7 @@ VALUE_LANGOPT(TrivialAutoVarInitMaxSize, 32, 0,
              "stop trivial automatic variable initialization if var size exceeds the specified size (in bytes). Must be greater than 0.")
 ENUM_LANGOPT(SignedOverflowBehavior, SignedOverflowBehaviorTy, 2, SOB_Undefined,
              "signed integer overflow handling")
+LANGOPT(PointerOverflowDefined, 1, 0, "make pointer overflow defined")
 ENUM_LANGOPT(ThreadModel  , ThreadModelKind, 2, ThreadModelKind::POSIX, "Thread Model")
 
 BENIGN_LANGOPT(ArrowDepth, 32, 256,
@@ -541,6 +546,8 @@ BENIGN_LANGOPT(CheckConstexprFunctionBodies, 1, 1,
                "be used in a constant expression.")
 
 LANGOPT(BoundsSafety, 1, 0, "Bounds safety extension for C")
+
+LANGOPT(PreserveVec3Type, 1, 0, "Preserve 3-component vector type")
 
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT

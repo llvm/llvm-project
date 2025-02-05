@@ -36,7 +36,10 @@ __write_pipe_2(__global struct pipeimp* p, const void* ptr, uint size, uint alig
         return -1;
 
     size_t pi = wrap(wi, ei);
-    __memcpy_internal_aligned(p->packets + pi*size, ptr, size, align);
+    void *pipe_ptr = p->packets + pi * size;
+    ASSUME_ALIGNED(pipe_ptr, align);
+    ASSUME_ALIGNED(ptr, align);
+    __builtin_memcpy(pipe_ptr, ptr, size);
 
     return 0;
 }
@@ -58,7 +61,10 @@ __write_pipe_4(__global struct pipeimp* p, reserve_id_t rid, uint i, const void 
 {
     size_t rin = __builtin_astype(rid, size_t) + i; \
     size_t pi = wrap(rin, p->end_idx);
-    __memcpy_internal_aligned(p->packets + pi*size, ptr, size, align);
+    void *pipe_ptr = p->packets + pi * size;
+    ASSUME_ALIGNED(pipe_ptr, align);
+    ASSUME_ALIGNED(ptr, align);
+    __builtin_memcpy(pipe_ptr, ptr, size);
 
     return 0;
 }

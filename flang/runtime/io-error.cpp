@@ -25,7 +25,9 @@ void IoErrorHandler::SignalError(int iostatOrErrno, const char *msg, ...) {
   case IostatOk:
     return;
   case IostatEnd:
-    if (flags_ & (hasIoStat | hasEnd)) {
+    if ((flags_ & (hasIoStat | hasEnd)) ||
+        ((flags_ & hasErr) && (flags_ & hasRec))) {
+      // EOF goes to ERR= when REC= is present
       if (ioStat_ == IostatOk || ioStat_ < IostatEnd) {
         ioStat_ = IostatEnd;
       }
@@ -151,7 +153,7 @@ bool IoErrorHandler::GetIoMsg(char *buffer, std::size_t bufferLength) {
   } else if (ok) {
     std::size_t copied{Fortran::runtime::strlen(buffer)};
     if (copied < bufferLength) {
-      std::memset(buffer + copied, ' ', bufferLength - copied);
+      Fortran::runtime::memset(buffer + copied, ' ', bufferLength - copied);
     }
     return true;
   } else {

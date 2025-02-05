@@ -23,6 +23,9 @@ entry:
   ; CHECK: #dbg_declare(i16 42, ![[#]], !DIExpression(DIOpArg(0, i16), DIOpFragment(16, 16)), ![[#]])
   call void @llvm.dbg.declare(metadata i16 42, metadata !21, metadata !DIExpression(DIOpArg(0, i16), DIOpFragment(16, 16))), !dbg !22
 
+  ; CHECK: #dbg_declare(i8 poison, ![[#]], !DIExpression(DIOpArg(0, i32)), ![[#]])
+  call void @llvm.dbg.declare(metadata i8 poison, metadata !24, metadata !DIExpression(DIOpArg(0, i32))), !dbg !22
+
   ret void
 }
 
@@ -51,6 +54,7 @@ entry:
 !21 = !DILocalVariable(name: "i", scope: !17, file: !1, line: 12, type: !10)
 !22 = !DILocation(line: 12, column: 7, scope: !17)
 !23 = !DILocation(line: 13, column: 1, scope: !17)
+!24 = !DILocalVariable(name: "j", scope: !17, file: !1, line: 12, type: !10)
 
 ;--- invalid.ll
 ; RUN: opt invalid.ll -S -passes=verify 2>&1 | FileCheck invalid.ll

@@ -1,3 +1,5 @@
+! -fopenacc unsupported on AMD downstream
+! UNSUPPORTED: true
 ! RUN: %flang_fc1 -fdebug-pre-fir-tree -fopenacc %s | FileCheck %s
 	program rewrite_goto
 	integer b

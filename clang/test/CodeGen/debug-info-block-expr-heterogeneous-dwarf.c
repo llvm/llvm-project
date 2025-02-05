@@ -35,7 +35,7 @@ void test_local_block() {
 
 // FIXME(KZHURAVL): Update EmitDeclareOfBlockDeclRefVariable and EmitDeclareOfBlockLiteralArgVariable.
 // CHECK-LABEL: @__test_local_block_block_invoke
-// CHECK: #dbg_declare({{.*}}!DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}){{.*}})
+// CHECK-NOT: #dbg_declare({{.*}}
   ^ { block_var = 1; }();
 }
 

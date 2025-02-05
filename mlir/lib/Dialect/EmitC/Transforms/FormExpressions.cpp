@@ -47,7 +47,7 @@ struct FormExpressionsPass
     RewritePatternSet patterns(context);
     populateExpressionPatterns(patterns);
 
-    if (failed(applyPatternsAndFoldGreedily(rootOp, std::move(patterns))))
+    if (failed(applyPatternsGreedily(rootOp, std::move(patterns))))
       return signalPassFailure();
   }
 

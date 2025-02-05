@@ -1,5 +1,6 @@
 
 #include <stdint.h>
+#include "Platform.h"
 
 #define GLOB_ATTR __attribute__((address_space(1)))
 #define __static_inl static __attribute__((flatten, always_inline))

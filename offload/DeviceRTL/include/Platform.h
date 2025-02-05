@@ -33,9 +33,8 @@ extern const inline bool __oclc_correctly_rounded_sqrt32 = 1;
 // Disable finite math optimizations.
 extern const inline bool __oclc_finite_only_opt = 0;
 
-// Disable finite math optimizations.
-extern const inline bool __oclc_wavefrontsize64 =
-    __AMDGCN_WAVEFRONT_SIZE == 64 ? 1 : 0;
+// Spoof this to wave64 since we only compile for a single architecture.
+extern const inline bool __oclc_wavefrontsize64 = 1;
 
 #if defined(__gfx700__)
 extern const inline unsigned __oclc_ISA_version = 7000;
@@ -125,8 +124,22 @@ extern const inline unsigned __oclc_ISA_version = 11503;
 extern const inline unsigned __oclc_ISA_version = 12000;
 #elif defined(__gfx1201__)
 extern const inline unsigned __oclc_ISA_version = 12001;
+#elif defined(__gfx9_generic__)
+extern const inline unsigned __oclc_ISA_version = 9000;
+#elif defined(__gfx9_4_generic__)
+extern const inline unsigned __oclc_ISA_version = 9402;
+#elif defined(__gfx10_1_generic__)
+extern const inline unsigned __oclc_ISA_version = 10100;
+#elif defined(__gfx10_3_generic__)
+extern const inline unsigned __oclc_ISA_version = 10300;
+#elif defined(__gfx11_generic__)
+extern const inline unsigned __oclc_ISA_version = 11003;
+#elif defined(__gfx12_generic__)
+extern const inline unsigned __oclc_ISA_version = 12000;
 #else
-#error "Unknown AMDGPU architecture"
+// The only thing this controls that we care about is fast FMA.
+// FIXME: We need to stop relying on the DeviceRTL math libs this way.
+extern const inline unsigned __oclc_ISA_version = 7001;
 #endif
 }
 

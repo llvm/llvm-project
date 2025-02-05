@@ -45,7 +45,7 @@ macro(add_test_input_bitcode_bundle name input output)
   add_custom_command(
     OUTPUT "${output}"
     COMMAND "$<TARGET_FILE:clang>" -c --offload-arch=gfx900 -emit-llvm -fgpu-rdc
-    --gpu-bundle-output ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
+    --gpu-bundle-output ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -nogpulib
     -o "${output}"
     VERBATIM
     DEPENDS clang lld "${input}")
@@ -62,7 +62,7 @@ macro(add_test_input_object_file_bundle name input output)
   add_custom_command(
     OUTPUT "${output}"
     COMMAND "$<TARGET_FILE:clang>" -c --offload-arch=gfx900 --gpu-bundle-output
-    --offload-device-only ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
+    --offload-device-only ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -nogpulib
     -o "${output}"
     VERBATIM
     DEPENDS clang lld "${input}")
@@ -225,6 +225,7 @@ add_comgr_test(get_data_isa_name_test c)
 add_comgr_test(include_subdirectory_test c)
 add_comgr_test(options_test c)
 add_comgr_test(demangle_test c)
+add_comgr_test(fail_to_build_driver c)
 add_comgr_test(file_map c)
 add_comgr_test(lookup_code_object_test c)
 add_comgr_test(symbolize_test c)

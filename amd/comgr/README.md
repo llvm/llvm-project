@@ -80,6 +80,10 @@ may be enabled during development via `-DADDRESS_SANITIZER=On` during the Comgr
 Comgr can be built as a static library by passing
 `-DCOMGR_BUILD_SHARED_LIBS=OFF` during the Comgr `cmake` step.
 
+Comgr SPIRV-related APIs can be disabled by passing
+`-DCOMGR_DISABLE_SPIRV=1` during the Comgr `cmake` step. This removes any
+dependency on LLVM SPIRV libraries or the llvm-spirv tool.
+
 Depending on the Code Object Manager
 ------------------------------------
 

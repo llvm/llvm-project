@@ -81,7 +81,7 @@ inline RT_API_ATTRS void MatrixTimesMatrix(
     SubscriptValue n, std::size_t xColumnByteStride = 0,
     std::size_t yColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
-  std::memset(product, 0, rows * cols * sizeof *product);
+  Fortran::runtime::memset(product, 0, rows * cols * sizeof *product);
   const XT *RESTRICT xp0{x};
   for (SubscriptValue k{0}; k < n; ++k) {
     ResultType *RESTRICT p{product};
@@ -153,7 +153,7 @@ inline RT_API_ATTRS void MatrixTimesVector(
     SubscriptValue n, const XT *RESTRICT x, const YT *RESTRICT y,
     std::size_t xColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
-  std::memset(product, 0, rows * sizeof *product);
+  Fortran::runtime::memset(product, 0, rows * sizeof *product);
   [[maybe_unused]] const XT *RESTRICT xp0{x};
   for (SubscriptValue k{0}; k < n; ++k) {
     ResultType *RESTRICT p{product};
@@ -203,7 +203,7 @@ inline RT_API_ATTRS void VectorTimesMatrix(
     SubscriptValue cols, const XT *RESTRICT x, const YT *RESTRICT y,
     std::size_t yColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
-  std::memset(product, 0, cols * sizeof *product);
+  Fortran::runtime::memset(product, 0, cols * sizeof *product);
   for (SubscriptValue k{0}; k < n; ++k) {
     ResultType *RESTRICT p{product};
     auto xv{static_cast<ResultType>(*x++)};
@@ -432,8 +432,13 @@ struct MatmulHelper {
     auto xCatKind{x.type().GetCategoryAndKind()};
     auto yCatKind{y.type().GetCategoryAndKind()};
     RUNTIME_CHECK(terminator, xCatKind.has_value() && yCatKind.has_value());
-    RUNTIME_CHECK(terminator, xCatKind->first == XCAT);
-    RUNTIME_CHECK(terminator, yCatKind->first == YCAT);
+    RUNTIME_CHECK(terminator,
+        (xCatKind->first == XCAT && yCatKind->first == YCAT) ||
+            (XCAT == TypeCategory::Integer && YCAT == TypeCategory::Integer &&
+                ((xCatKind->first == TypeCategory::Integer ||
+                     xCatKind->first == TypeCategory::Unsigned) &&
+                    (yCatKind->first == TypeCategory::Integer ||
+                        yCatKind->first == TypeCategory::Unsigned))));
     if constexpr (constexpr auto resultType{
                       GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
       return DoMatmul<IS_ALLOCATING, resultType->first, resultType->second,

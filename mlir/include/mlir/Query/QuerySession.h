@@ -9,7 +9,10 @@
 #ifndef MLIR_TOOLS_MLIRQUERY_QUERYSESSION_H
 #define MLIR_TOOLS_MLIRQUERY_QUERYSESSION_H
 
+#include "mlir/IR/Operation.h"
+#include "mlir/Query/Matcher/Registry.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/SourceMgr.h"
 
 namespace mlir::query {
 

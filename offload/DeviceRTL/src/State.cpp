@@ -24,8 +24,8 @@
 using namespace ompx;
 
 #pragma omp begin declare target device_type(host)
-void *internal_malloc(uint64_t Size);
-void internal_free(void *Ptr);
+__attribute__((noinline)) void *internal_malloc(uint64_t Size);
+__attribute__((noinline)) void internal_free(void *Ptr);
 #pragma omp end declare target
 
 #pragma omp begin declare target device_type(nohost)
@@ -59,18 +59,35 @@ namespace {
 ///
 ///{
 
-// global_allocate uses ockl_dm_alloc to manage a global memory heap
+// global_allocate uses ockl_dm_alloc/asan_malloc_impl to manage a global memory
+// heap
 __attribute__((noinline)) extern "C" uint64_t __ockl_dm_alloc(uint64_t bufsz);
 __attribute__((noinline)) extern "C" void __ockl_dm_dealloc(uint64_t ptr);
-
+#if SANITIZER_AMDGPU
+__attribute__((noinline)) extern "C" uint64_t __asan_malloc_impl(uint64_t bufsz,
+                                                                 uint64_t pc);
+__attribute__((noinline)) extern "C" void __asan_free_impl(uint64_t ptr,
+                                                           uint64_t pc);
+#endif
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 extern "C" {
-void *internal_malloc(uint64_t Size) {
+__attribute__((noinline)) void *internal_malloc(uint64_t Size) {
+#if SANITIZER_AMDGPU
+  uint64_t ptr =
+      __asan_malloc_impl(Size, (uint64_t)__builtin_return_address(0));
+#else
   uint64_t ptr = __ockl_dm_alloc(Size);
+#endif
   return (void *)ptr;
 }
 
-void internal_free(void *Ptr) { __ockl_dm_dealloc((uint64_t)Ptr); }
+__attribute__((noinline)) void internal_free(void *Ptr) {
+#if SANITIZER_AMDGPU
+  __asan_free_impl((uint64_t)Ptr, (uint64_t)__builtin_return_address(0));
+#else
+  __ockl_dm_dealloc((uint64_t)Ptr);
+#endif
+}
 }
 #pragma omp end declare variant
 
@@ -181,8 +198,8 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   }
 
   if (config::isDebugMode(DeviceDebugKind::CommonIssues))
-    PRINT("Shared memory stack full, fallback to dynamic allocation of global "
-          "memory will negatively impact performance.\n");
+    printf("Shared memory stack full, fallback to dynamic allocation of global "
+           "memory will negatively impact performance.\n");
   void *GlobalMemory = memory::allocGlobal(
       AlignedBytes, "Slow path shared memory allocation, insufficient "
                     "shared memory stack memory!");
@@ -216,7 +233,7 @@ void memory::freeShared(void *Ptr, uint64_t Bytes, const char *Reason) {
 void *memory::allocGlobal(uint64_t Bytes, const char *Reason) {
   void *Ptr = malloc(Bytes);
   if (config::isDebugMode(DeviceDebugKind::CommonIssues) && Ptr == nullptr)
-    PRINT("nullptr returned by malloc!\n");
+    printf("nullptr returned by malloc!\n");
   return Ptr;
 }
 
@@ -320,7 +337,7 @@ void state::enterDataEnvironment(IdentTy *Ident) {
         sizeof(ThreadStates[0]) * mapping::getNumberOfThreadsInBlock();
     void *ThreadStatesPtr =
         memory::allocGlobal(Bytes, "Thread state array allocation");
-    memset(ThreadStatesPtr, 0, Bytes);
+    __builtin_memset(ThreadStatesPtr, 0, Bytes);
     if (!atomic::cas(ThreadStatesBitsPtr, uintptr_t(0),
                      reinterpret_cast<uintptr_t>(ThreadStatesPtr),
                      atomic::seq_cst, atomic::seq_cst))

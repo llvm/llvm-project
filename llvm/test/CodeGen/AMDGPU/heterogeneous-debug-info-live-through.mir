@@ -9,10 +9,10 @@
 # CHECK: DW_TAG_subprogram
 # CHECK:   DW_AT_name      ("live_through")
 # CHECK:   DW_TAG_variable
-# CHECK:     DW_AT_location        (DW_OP_regx SGPR32_LO16, {{.*}})
+# CHECK:     DW_AT_location        (DW_OP_regx SGPR32, {{.*}})
 # CHECK:     DW_AT_name    ("x")
 # CHECK:   DW_TAG_variable
-# CHECK:     DW_AT_location        (DW_OP_regx SGPR32_LO16, {{.*}})
+# CHECK:     DW_AT_location        (DW_OP_regx SGPR32, {{.*}})
 # CHECK:     DW_AT_name    ("y")
 
 # Also confirm that we correctly fall back to the complete loclist when there
@@ -23,12 +23,12 @@
 # CHECK:   DW_AT_name      ("not_live_through")
 # CHECK:   DW_TAG_variable
 # CHECK:     DW_AT_location        (0x[[#%x,]]:
-# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx SGPR32_LO16, {{.*}}
-# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx SGPR32_LO16, {{.*}})
+# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx SGPR32, {{.*}}
+# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx SGPR32, {{.*}})
 # CHECK:     DW_AT_name    ("x")
 # CHECK:   DW_TAG_variable
 # CHECK:     DW_AT_location        (0x[[#%x,]]:
-# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx SGPR32_LO16, {{.*}})
+# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx SGPR32, {{.*}})
 # CHECK:     DW_AT_name    ("y")
 
 --- |

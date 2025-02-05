@@ -224,13 +224,28 @@ long hostexec_long_execute(char *print_buffer, uint32_t bufsz) {
 // See https://github.com/llvm/llvm-project/issues/63597
 __attribute__((noinline)) extern "C" uint64_t __ockl_dm_alloc(uint64_t bufsz);
 __attribute__((noinline)) extern "C" void __ockl_dm_dealloc(uint64_t ptr);
+#if SANITIZER_AMDGPU
+__attribute__((noinline)) extern "C" uint64_t __asan_malloc_impl(uint64_t bufsz,
+                                                                 uint64_t pc);
+__attribute__((noinline)) extern "C" void __asan_free_impl(uint64_t ptr,
+                                                           uint64_t pc);
+#endif
 
 // FIXME: Deprecate upstream, change test cases to use malloc & free directly
 __attribute__((flatten, always_inline)) char *global_allocate(uint32_t bufsz) {
+#if SANITIZER_AMDGPU
+  return (char *)__asan_malloc_impl(bufsz,
+                                    (uint64_t)__builtin_return_address(0));
+#else
   return (char *)__ockl_dm_alloc(bufsz);
+#endif
 }
 __attribute__((flatten, always_inline)) int global_free(void *ptr) {
+#if SANITIZER_AMDGPU
+  __asan_free_impl((uint64_t)ptr, (uint64_t)__builtin_return_address(0));
+#else
   __ockl_dm_dealloc((uint64_t)ptr);
+#endif
   return 0;
 }
 

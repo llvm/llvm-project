@@ -237,6 +237,8 @@ event_class_operator_w_body(BufferRecord,                                      \
     isEqual &= ObservedDurationNs >= Expected.Record.time;                     \
     break;                                                                     \
   case ompt_callback_target_submit:                                            \
+    ObservedDurationNs =                                                       \
+      Observed.Record.record.target_kernel.end_time - Observed.Record.time;    \
     isEqual &=                                                                 \
       (Expected.Record.record.target_kernel.requested_num_teams ==             \
        expectedDefault(unsigned int))                                          \

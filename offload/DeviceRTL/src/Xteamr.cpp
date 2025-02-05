@@ -317,7 +317,7 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
 
   if (_IS_FAST) {
     if (omp_thread_num == 0)
-      ompx::atomic::add_system(r_ptr, xwave_lds[0], ompx::atomic::seq_cst);
+      ompx::atomic::add(r_ptr, xwave_lds[0], ompx::atomic::seq_cst);
   } else {
     // No sync needed here from last reduction in LDS loop
     // because we only need xwave_lds[0] correct on thread 0.
@@ -486,48 +486,6 @@ __kmpc_iteamr_bf_16x64(__bf16 v, __bf16 *r_p, void (*rf)(__bf16 *, __bf16),
                        void (*rflds)(_LDS __bf16 *, _LDS __bf16 *),
                        const __bf16 rnv, const uint64_t k) {
   _iteam_reduction<__bf16, 16, 64>(v, r_p, rf, rflds, rnv, k);
-}
-_EXT_ATTR
-__kmpc_xteamr_cd_16x64(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
-                       void (*rf)(_CD *, _CD),
-                       void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
-                       const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<_CD, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
-}
-_EXT_ATTR
-__kmpc_xteamr_cd_16x64_fast_sum(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
-                                void (*rf)(_CD *, _CD),
-                                void (*rflds)(_LDS _CD *, _LDS _CD *),
-                                const _CD rnv, const uint64_t k,
-                                const uint32_t nt) {
-  _xteam_reduction<_CD, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
-}
-_EXT_ATTR
-__kmpc_iteamr_cd_16x64(_CD v, _CD *r_p, void (*rf)(_CD *, _CD),
-                       void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
-                       const uint64_t k) {
-  _iteam_reduction<_CD, 16, 64>(v, r_p, rf, rflds, rnv, k);
-}
-_EXT_ATTR
-__kmpc_xteamr_cf_16x64(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
-                       void (*rf)(_CF *, _CF),
-                       void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
-                       const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<_CF, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
-}
-_EXT_ATTR
-__kmpc_xteamr_cf_16x64_fast_sum(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
-                                void (*rf)(_CF *, _CF),
-                                void (*rflds)(_LDS _CF *, _LDS _CF *),
-                                const _CF rnv, const uint64_t k,
-                                const uint32_t nt) {
-  _xteam_reduction<_CF, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
-}
-_EXT_ATTR
-__kmpc_iteamr_cf_16x64(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
-                       void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
-                       const uint64_t k) {
-  _iteam_reduction<_CF, 16, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
 __kmpc_xteamr_s_16x64(short v, short *r_p, short *tvs, uint32_t *td,
@@ -742,48 +700,6 @@ __kmpc_iteamr_bf_32x32(__bf16 v, __bf16 *r_p, void (*rf)(__bf16 *, __bf16),
                        void (*rflds)(_LDS __bf16 *, _LDS __bf16 *),
                        const __bf16 rnv, const uint64_t k) {
   _iteam_reduction<__bf16, 32, 32>(v, r_p, rf, rflds, rnv, k);
-}
-_EXT_ATTR
-__kmpc_xteamr_cd_32x32(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
-                       void (*rf)(_CD *, _CD),
-                       void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
-                       const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<_CD, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
-}
-_EXT_ATTR
-__kmpc_xteamr_cd_32x32_fast_sum(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
-                                void (*rf)(_CD *, _CD),
-                                void (*rflds)(_LDS _CD *, _LDS _CD *),
-                                const _CD rnv, const uint64_t k,
-                                const uint32_t nt) {
-  _xteam_reduction<_CD, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
-}
-_EXT_ATTR
-__kmpc_iteamr_cd_32x32(_CD v, _CD *r_p, void (*rf)(_CD *, _CD),
-                       void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
-                       const uint64_t k) {
-  _iteam_reduction<_CD, 32, 32>(v, r_p, rf, rflds, rnv, k);
-}
-_EXT_ATTR
-__kmpc_xteamr_cf_32x32(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
-                       void (*rf)(_CF *, _CF),
-                       void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
-                       const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<_CF, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
-}
-_EXT_ATTR
-__kmpc_xteamr_cf_32x32_fast_sum(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
-                                void (*rf)(_CF *, _CF),
-                                void (*rflds)(_LDS _CF *, _LDS _CF *),
-                                const _CF rnv, const uint64_t k,
-                                const uint32_t nt) {
-  _xteam_reduction<_CF, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
-}
-_EXT_ATTR
-__kmpc_iteamr_cf_32x32(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
-                       void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
-                       const uint64_t k) {
-  _iteam_reduction<_CF, 32, 32>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
 __kmpc_xteamr_s_32x32(short v, short *r_p, short *tvs, uint32_t *td,

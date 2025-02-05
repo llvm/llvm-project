@@ -346,7 +346,10 @@ unsigned ConvertFIRToLLVMPattern::getAllocaAddressSpace(
   mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
   assert(parentOp != nullptr &&
          "expected insertion block to have parent operation");
-  if (auto module = parentOp->getParentOfType<mlir::ModuleOp>())
+  auto module = mlir::isa<mlir::ModuleOp>(parentOp)
+                    ? mlir::cast<mlir::ModuleOp>(parentOp)
+                    : parentOp->getParentOfType<mlir::ModuleOp>();
+  if (module)
     if (mlir::Attribute addrSpace =
             mlir::DataLayout(module).getAllocaMemorySpace())
       return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
@@ -358,9 +361,27 @@ unsigned ConvertFIRToLLVMPattern::getProgramAddressSpace(
   mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
   assert(parentOp != nullptr &&
          "expected insertion block to have parent operation");
-  if (auto module = parentOp->getParentOfType<mlir::ModuleOp>())
+  auto module = mlir::isa<mlir::ModuleOp>(parentOp)
+                    ? mlir::cast<mlir::ModuleOp>(parentOp)
+                    : parentOp->getParentOfType<mlir::ModuleOp>();
+  if (module)
     if (mlir::Attribute addrSpace =
             mlir::DataLayout(module).getProgramMemorySpace())
+      return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+  return defaultAddressSpace;
+}
+
+unsigned ConvertFIRToLLVMPattern::getGlobalAddressSpace(
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+  assert(parentOp != nullptr &&
+         "expected insertion block to have parent operation");
+  auto module = mlir::isa<mlir::ModuleOp>(parentOp)
+                    ? mlir::cast<mlir::ModuleOp>(parentOp)
+                    : parentOp->getParentOfType<mlir::ModuleOp>();
+  if (module)
+    if (mlir::Attribute addrSpace =
+            mlir::DataLayout(module).getGlobalMemorySpace())
       return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
   return defaultAddressSpace;
 }

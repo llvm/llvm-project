@@ -215,7 +215,7 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   // omp_target_is_present tests whether a host pointer refers to storage that
   // is mapped to a given device. However, due to the lack of the storage size,
   // only check 1 byte. Cannot set size 0 which checks whether the pointer (zero
-  // lengh array) is mapped instead of the referred storage.
+  // length array) is mapped instead of the referred storage.
   TargetPointerResultTy TPR =
       DeviceOrErr->getMappingInfo().getTgtPtrBegin(const_cast<void *>(Ptr), 1,
                                                    /*UpdateRefCount=*/false,
@@ -286,7 +286,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
       FATAL_MESSAGE(DstDevice, "%s",
                     toString(DstDeviceOrErr.takeError()).c_str());
     // First try to use D2D memcpy which is more efficient. If fails, fall back
-    // to unefficient way.
+    // to inefficient way.
     if (SrcDeviceOrErr->isDataExchangable(*DstDeviceOrErr)) {
       AsyncInfoTy AsyncInfo(*SrcDeviceOrErr);
       Rc = SrcDeviceOrErr->dataExchange(SrcAddr, *DstDeviceOrErr, DstAddr,
@@ -695,6 +695,11 @@ EXTERN void omp_register_coarse_grain_mem(void *ptr, size_t size, int setattr) {
   if (!DeviceOrErr)
     FATAL_MESSAGE(omp_get_default_device(), "%s",
                   toString(DeviceOrErr.takeError()).c_str());
+
+  if (!(DeviceOrErr->RTL->is_gfx90a(omp_get_default_device()) &&
+        DeviceOrErr->RTL->is_gfx90a_coarse_grain_usm_map_enabled(
+            omp_get_default_device())))
+    return;
 
   bool set_attr = (setattr == 1) ? true : false;
   DeviceOrErr->RTL->set_coarse_grain_mem(omp_get_default_device(), ptr, size,

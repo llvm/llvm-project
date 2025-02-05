@@ -2412,7 +2412,7 @@ DILocation::cloneWithDiscriminator(unsigned Discriminator) const {
   DIScope *Scope = getScope();
   // Skip all parent DILexicalBlockFile that already have a discriminator
   // assigned. We do not want to have nested DILexicalBlockFiles that have
-  // mutliple discriminators because only the leaf DILexicalBlockFile's
+  // multiple discriminators because only the leaf DILexicalBlockFile's
   // dominator will be used.
   for (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope);
        LBF && LBF->getDiscriminator() != 0;
@@ -3291,6 +3291,22 @@ private:
   static constexpr std::array<uint64_t, 1> PoisonedExpr = {
       dwarf::DW_OP_LLVM_poisoned};
 
+  DIExpression *getPoisonedFragment(unsigned OffsetInBits,
+                                    unsigned SizeInBits) const {
+    std::array<uint64_t, 4> PoisonedOps = {dwarf::DW_OP_LLVM_poisoned,
+                                           dwarf::DW_OP_LLVM_fragment,
+                                           OffsetInBits, SizeInBits};
+    return DIExpression::get(getContext(), PoisonedOps);
+  }
+
+  OldElementsRef getPoisonedElements() const {
+    std::optional<FragmentInfo> Frag = getFragmentInfo();
+    if (!Frag)
+      return PoisonedExpr;
+    return getPoisonedFragment(Frag->OffsetInBits, Frag->SizeInBits)
+        ->getElements();
+  }
+
   DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements)
       : MDNode(C, DIExpressionKind, Storage, {}),
         Elements(std::in_place_type<OldElements>, Elements.begin(),
@@ -3318,6 +3334,13 @@ private:
   }
 
 public:
+  DIExpression *getPoisoned() const {
+    std::optional<FragmentInfo> Frag = getFragmentInfo();
+    if (!Frag)
+      return DIExpression::get(getContext(), PoisonedExpr);
+    return getPoisonedFragment(Frag->OffsetInBits, Frag->SizeInBits);
+  }
+
   DEFINE_MDNODE_GET(DIExpression, (std::nullopt_t Elements), (Elements))
   DEFINE_MDNODE_GET(DIExpression, (ArrayRef<uint64_t> Elements), (Elements))
   // The bool parameter is ignored, and only present to disambiguate the
@@ -3327,17 +3350,12 @@ public:
                     (bool /*ignored*/, ArrayRef<DIOp::Variant> Elements),
                     (false, Elements))
 
-  static DIExpression *getPoisoned(LLVMContext &Ctx) {
-    return get(Ctx, PoisonedExpr);
-  }
-  DIExpression *getPoisoned() const { return getPoisoned(getContext()); }
-
   TempDIExpression clone() const { return cloneImpl(); }
 
   OldElementsRef getElements() const {
     if (auto *E = std::get_if<OldElements>(&Elements))
       return *E;
-    return PoisonedExpr;
+    return getPoisonedElements();
   }
 
   unsigned getNumElements() const { return getElements().size(); }
