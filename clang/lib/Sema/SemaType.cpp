@@ -1596,7 +1596,7 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     QualType EltTy = Context.getBaseElementType(T);
 
     if (EltTy->isAnyPointerType() || EltTy->isReferenceType() ||
-        EltTy->isMemberPointerType() || EltTy->isArrayType()) {
+        EltTy->isMemberPointerType()) {
 
       if (const MemberPointerType *PTy = EltTy->getAs<MemberPointerType>())
         EltTy = PTy->getPointeeType();
