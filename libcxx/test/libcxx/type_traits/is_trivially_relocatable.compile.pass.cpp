@@ -54,11 +54,7 @@ struct MoveOnlyTriviallyCopyable {
   MoveOnlyTriviallyCopyable(MoveOnlyTriviallyCopyable&&)                 = default;
   MoveOnlyTriviallyCopyable& operator=(MoveOnlyTriviallyCopyable&&)      = default;
 };
-#ifndef _MSC_VER
 static_assert(std::__libcpp_is_trivially_relocatable<MoveOnlyTriviallyCopyable>::value, "");
-#else
-static_assert(!std::__libcpp_is_trivially_relocatable<MoveOnlyTriviallyCopyable>::value, "");
-#endif
 
 struct NonTrivialMoveConstructor {
   NonTrivialMoveConstructor(NonTrivialMoveConstructor&&);
