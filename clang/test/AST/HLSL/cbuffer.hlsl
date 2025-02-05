@@ -75,6 +75,8 @@ cbuffer CB {
   groupshared float g2;
   // CHECK: VarDecl {{.*}} e2 'hlsl_constant float'
   float e2;
+  // CHECK: VarDecl {{.*}} h2 '__hlsl_resource_t'
+  __hlsl_resource_t h2;
   // CHECK: CXXRecordDecl {{.*}} implicit referenced struct __cblayout_CB_1 definition
   // CHECK: PackedAttr
   // CHECK-NEXT: FieldDecl {{.*}} a2 'float'
