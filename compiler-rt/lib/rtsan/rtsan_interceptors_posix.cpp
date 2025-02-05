@@ -254,6 +254,11 @@ INTERCEPTOR(int, fchdir, int fd) {
   return REAL(fchdir)(fd);
 }
 
+INTERCEPTOR(int, chroot, const char *path) {
+  __rtsan_notify_intercepted_call("chroot");
+  return REAL(chroot)(path);
+}
+
 // Streams
 
 INTERCEPTOR(FILE *, fopen, const char *path, const char *mode) {
@@ -1402,6 +1407,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(close);
   INTERCEPT_FUNCTION(chdir);
   INTERCEPT_FUNCTION(fchdir);
+  INTERCEPT_FUNCTION(chroot);
   INTERCEPT_FUNCTION(fopen);
   RTSAN_MAYBE_INTERCEPT_FOPEN64;
   RTSAN_MAYBE_INTERCEPT_FREOPEN64;
