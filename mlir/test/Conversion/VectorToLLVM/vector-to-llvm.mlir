@@ -1250,13 +1250,13 @@ func.func @extract_scalar_from_vec_1d_f32(%arg0: vector<16xf32>) -> f32 {
 
 // -----
 
-func.func @extract_poison_idx(%arg0: vector<16xf32>) -> f32 {
+func.func @extract_scalar_from_vec_1d_f32_poison_idx(%arg0: vector<16xf32>) -> f32 {
   %0 = vector.extract %arg0[-1]: f32 from vector<16xf32>
   return %0 : f32
 }
-// CHECK-LABEL: @extract_poison_idx
-//       CHECK:   %[[IDX:.*]] = llvm.mlir.constant(-1 : i64) : i64
-//       CHECK:   llvm.extractelement {{.*}}[%[[IDX]] : i64] : vector<16xf32>
+// CHECK-LABEL: @extract_scalar_from_vec_1d_f32_poison_idx
+//       CHECK:   %[[UB:.*]] = ub.poison : f32
+//       CHECK:   return %[[UB]] : f32
 
 // -----
 
@@ -1332,6 +1332,16 @@ func.func @extract_vec_2d_from_vec_3d_f32(%arg0: vector<4x3x16xf32>) -> vector<3
 // CHECK-LABEL: @extract_vec_2d_from_vec_3d_f32
 //       CHECK:   llvm.extractvalue {{.*}}[0] : !llvm.array<4 x array<3 x vector<16xf32>>>
 //       CHECK:   return {{.*}} : vector<3x16xf32>
+
+// -----
+
+func.func @extract_vec_2d_from_vec_3d_f32_poison_idx(%arg0: vector<4x3x16xf32>) -> vector<3x16xf32> {
+  %0 = vector.extract %arg0[-1]: vector<3x16xf32> from vector<4x3x16xf32>
+  return %0 : vector<3x16xf32>
+}
+// CHECK-LABEL: @extract_vec_2d_from_vec_3d_f32_poison_idx
+//       CHECK:   %[[UB:.*]] = ub.poison : vector<3x16xf32>
+//       CHECK:   return %[[UB]] : vector<3x16xf32>
 
 // -----
 
