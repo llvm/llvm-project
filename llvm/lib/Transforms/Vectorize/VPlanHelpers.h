@@ -199,6 +199,7 @@ struct VPTransformState {
                    LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan,
                    Loop *CurrentParentLoop, Type *CanonicalIVTy);
+  ~VPTransformState();
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
 
