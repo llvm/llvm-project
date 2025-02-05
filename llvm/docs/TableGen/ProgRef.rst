@@ -1304,6 +1304,7 @@ output. It is intended for debugging purpose.
 .. productionlist::
    Dump: "dump" `Value` ";"
 
+The :token:`Value` is an arbitrary string expression.
 For example, it can be used in combination with `!repr` to investigate
 the values passed to a multiclass:
 
