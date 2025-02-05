@@ -1395,7 +1395,7 @@ public:
 
   /// \returns the cost incurred by unwanted spills and fills, caused by
   /// holding live values over call sites.
-  InstructionCost getSpillCost() const;
+  InstructionCost getSpillCost();
 
   /// \returns the vectorization cost of the subtree that starts at \p VL.
   /// A negative number means that this is profitable.
@@ -2958,7 +2958,7 @@ public:
   }
 
   /// Check if the value is vectorized in the tree.
-  bool isVectorized(Value *V) const {
+  bool isVectorized(const Value *V) const {
     assert(V && "V cannot be nullptr.");
     return ScalarToTreeEntries.contains(V);
   }
@@ -7634,6 +7634,60 @@ bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
            NumAltInsts) < S.getMainOp()->getNumOperands() * VL.size());
 }
 
+/// Builds the arguments types vector for the given call instruction with the
+/// given \p ID for the specified vector factor.
+static SmallVector<Type *>
+buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
+                       const unsigned VF, unsigned MinBW,
+                       const TargetTransformInfo *TTI) {
+  SmallVector<Type *> ArgTys;
+  for (auto [Idx, Arg] : enumerate(CI->args())) {
+    if (ID != Intrinsic::not_intrinsic) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx, TTI)) {
+        ArgTys.push_back(Arg->getType());
+        continue;
+      }
+      if (MinBW > 0) {
+        ArgTys.push_back(
+            getWidenedType(IntegerType::get(CI->getContext(), MinBW), VF));
+        continue;
+      }
+    }
+    ArgTys.push_back(getWidenedType(Arg->getType(), VF));
+  }
+  return ArgTys;
+}
+
+/// Calculates the costs of vectorized intrinsic (if possible) and vectorized
+/// function (if possible) calls.
+static std::pair<InstructionCost, InstructionCost>
+getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
+                   TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
+                   ArrayRef<Type *> ArgTys) {
+  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+
+  // Calculate the cost of the scalar and vector calls.
+  FastMathFlags FMF;
+  if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
+    FMF = FPCI->getFastMathFlags();
+  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF);
+  auto IntrinsicCost =
+    TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
+
+  auto Shape = VFShape::get(CI->getFunctionType(),
+                            ElementCount::getFixed(VecTy->getNumElements()),
+                            false /*HasGlobalPred*/);
+  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
+  auto LibCost = IntrinsicCost;
+  if (!CI->isNoBuiltin() && VecFunc) {
+    // Calculate the cost of the vector library call.
+    // If the corresponding vector call is cheaper, return its cost.
+    LibCost =
+        TTI->getCallInstrCost(nullptr, VecTy, ArgTys, TTI::TCK_RecipThroughput);
+  }
+  return {IntrinsicCost, LibCost};
+}
+
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     const InstructionsState &S, ArrayRef<Value *> VL,
     bool IsScatterVectorizeUserTE, OrdersType &CurrentOrder,
@@ -9017,34 +9071,6 @@ bool BoUpSLP::areAllUsersVectorized(
          });
 }
 
-static std::pair<InstructionCost, InstructionCost>
-getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
-                   TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
-                   ArrayRef<Type *> ArgTys) {
-  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-
-  // Calculate the cost of the scalar and vector calls.
-  FastMathFlags FMF;
-  if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
-    FMF = FPCI->getFastMathFlags();
-  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF);
-  auto IntrinsicCost =
-    TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
-
-  auto Shape = VFShape::get(CI->getFunctionType(),
-                            ElementCount::getFixed(VecTy->getNumElements()),
-                            false /*HasGlobalPred*/);
-  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
-  auto LibCost = IntrinsicCost;
-  if (!CI->isNoBuiltin() && VecFunc) {
-    // Calculate the cost of the vector library call.
-    // If the corresponding vector call is cheaper, return its cost.
-    LibCost =
-        TTI->getCallInstrCost(nullptr, VecTy, ArgTys, TTI::TCK_RecipThroughput);
-  }
-  return {IntrinsicCost, LibCost};
-}
-
 void BoUpSLP::TreeEntry::buildAltOpShuffleMask(
     const function_ref<bool(Instruction *)> IsAltOp, SmallVectorImpl<int> &Mask,
     SmallVectorImpl<Value *> *OpScalars,
@@ -10354,7 +10380,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     SameNodesEstimated = false;
     if (!E2 && InVectors.size() == 1) {
       unsigned VF = E1.getVectorFactor();
-      if (Value *V1 = InVectors.front().dyn_cast<Value *>()) {
+      if (Value *V1 = dyn_cast<Value *>(InVectors.front())) {
         VF = std::max(VF,
                       cast<FixedVectorType>(V1->getType())->getNumElements());
       } else {
@@ -10370,7 +10396,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       auto P = InVectors.front();
       Cost += createShuffle(&E1, E2, Mask);
       unsigned VF = Mask.size();
-      if (Value *V1 = P.dyn_cast<Value *>()) {
+      if (Value *V1 = dyn_cast<Value *>(P)) {
         VF = std::max(VF,
                       getNumElements(V1->getType()));
       } else {
@@ -11043,30 +11069,6 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
       return TTI::CastContextHint::Reversed;
   }
   return TTI::CastContextHint::None;
-}
-
-/// Builds the arguments types vector for the given call instruction with the
-/// given \p ID for the specified vector factor.
-static SmallVector<Type *>
-buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
-                       const unsigned VF, unsigned MinBW,
-                       const TargetTransformInfo *TTI) {
-  SmallVector<Type *> ArgTys;
-  for (auto [Idx, Arg] : enumerate(CI->args())) {
-    if (ID != Intrinsic::not_intrinsic) {
-      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx, TTI)) {
-        ArgTys.push_back(Arg->getType());
-        continue;
-      }
-      if (MinBW > 0) {
-        ArgTys.push_back(
-            getWidenedType(IntegerType::get(CI->getContext(), MinBW), VF));
-        continue;
-      }
-    }
-    ArgTys.push_back(getWidenedType(Arg->getType(), VF));
-  }
-  return ArgTys;
 }
 
 InstructionCost
@@ -12160,16 +12162,15 @@ bool BoUpSLP::isTreeNotExtendable() const {
   return Res;
 }
 
-InstructionCost BoUpSLP::getSpillCost() const {
+InstructionCost BoUpSLP::getSpillCost() {
   // Walk from the bottom of the tree to the top, tracking which values are
   // live. When we see a call instruction that is not part of our tree,
   // query TTI to see if there is a cost to keeping values live over it
   // (for example, if spills and fills are required).
-  unsigned BundleWidth = VectorizableTree.front()->Scalars.size();
   InstructionCost Cost = 0;
 
-  SmallPtrSet<Instruction *, 4> LiveValues;
-  Instruction *PrevInst = nullptr;
+  SmallPtrSet<const TreeEntry *, 4> LiveEntries;
+  const TreeEntry *Prev = nullptr;
 
   // The entries in VectorizableTree are not necessarily ordered by their
   // position in basic blocks. Collect them and order them by dominance so later
@@ -12177,100 +12178,100 @@ InstructionCost BoUpSLP::getSpillCost() const {
   // different basic blocks, we only scan to the beginning of the block, so
   // their order does not matter, as long as all instructions in a basic block
   // are grouped together. Using dominance ensures a deterministic order.
-  SmallVector<Instruction *, 16> OrderedScalars;
+  SmallVector<TreeEntry *, 16> OrderedEntries;
   for (const auto &TEPtr : VectorizableTree) {
-    if (TEPtr->State != TreeEntry::Vectorize)
+    if (TEPtr->isGather())
       continue;
-    Instruction *Inst = dyn_cast<Instruction>(TEPtr->Scalars[0]);
-    if (!Inst)
-      continue;
-    OrderedScalars.push_back(Inst);
+    OrderedEntries.push_back(TEPtr.get());
   }
-  llvm::sort(OrderedScalars, [&](Instruction *A, Instruction *B) {
-    auto *NodeA = DT->getNode(A->getParent());
-    auto *NodeB = DT->getNode(B->getParent());
+  llvm::stable_sort(OrderedEntries, [&](const TreeEntry *TA,
+                                        const TreeEntry *TB) {
+    Instruction &A = getLastInstructionInBundle(TA);
+    Instruction &B = getLastInstructionInBundle(TB);
+    auto *NodeA = DT->getNode(A.getParent());
+    auto *NodeB = DT->getNode(B.getParent());
     assert(NodeA && "Should only process reachable instructions");
     assert(NodeB && "Should only process reachable instructions");
     assert((NodeA == NodeB) == (NodeA->getDFSNumIn() == NodeB->getDFSNumIn()) &&
            "Different nodes should have different DFS numbers");
     if (NodeA != NodeB)
       return NodeA->getDFSNumIn() > NodeB->getDFSNumIn();
-    return B->comesBefore(A);
+    return B.comesBefore(&A);
   });
 
-  for (Instruction *Inst : OrderedScalars) {
-    if (!PrevInst) {
-      PrevInst = Inst;
+  for (const TreeEntry *TE : OrderedEntries) {
+    if (!Prev) {
+      Prev = TE;
       continue;
     }
 
-    // Update LiveValues.
-    LiveValues.erase(PrevInst);
-    for (auto &J : PrevInst->operands()) {
-      if (isa<Instruction>(&*J) && isVectorized(&*J))
-        LiveValues.insert(cast<Instruction>(&*J));
+    LiveEntries.erase(Prev);
+    for (unsigned I : seq<unsigned>(Prev->getNumOperands())) {
+      const TreeEntry *Op = getVectorizedOperand(Prev, I);
+      if (!Op)
+        continue;
+      assert(!Op->isGather() && "Expected vectorized operand.");
+      LiveEntries.insert(Op);
     }
 
     LLVM_DEBUG({
-      dbgs() << "SLP: #LV: " << LiveValues.size();
-      for (auto *X : LiveValues)
-        dbgs() << " " << X->getName();
+      dbgs() << "SLP: #LV: " << LiveEntries.size();
+      for (auto *X : LiveEntries)
+        X->dump();
       dbgs() << ", Looking at ";
-      Inst->dump();
+      TE->dump();
     });
 
     // Now find the sequence of instructions between PrevInst and Inst.
     unsigned NumCalls = 0;
-    BasicBlock::reverse_iterator InstIt = ++Inst->getIterator().getReverse(),
-                                 PrevInstIt =
-                                     PrevInst->getIterator().getReverse();
+    const Instruction *PrevInst = &getLastInstructionInBundle(Prev);
+    BasicBlock::const_reverse_iterator
+        InstIt = ++getLastInstructionInBundle(TE).getIterator().getReverse(),
+        PrevInstIt = PrevInst->getIterator().getReverse();
     while (InstIt != PrevInstIt) {
       if (PrevInstIt == PrevInst->getParent()->rend()) {
-        PrevInstIt = Inst->getParent()->rbegin();
+        PrevInstIt = getLastInstructionInBundle(TE).getParent()->rbegin();
         continue;
       }
 
-      auto NoCallIntrinsic = [this](Instruction *I) {
-        auto *II = dyn_cast<IntrinsicInst>(I);
+      auto NoCallIntrinsic = [this](const Instruction *I) {
+        const auto *II = dyn_cast<IntrinsicInst>(I);
         if (!II)
           return false;
         if (II->isAssumeLikeIntrinsic())
           return true;
-        FastMathFlags FMF;
-        SmallVector<Type *, 4> Tys;
-        for (auto &ArgOp : II->args())
-          Tys.push_back(ArgOp->getType());
-        if (auto *FPMO = dyn_cast<FPMathOperator>(II))
-          FMF = FPMO->getFastMathFlags();
-        IntrinsicCostAttributes ICA(II->getIntrinsicID(), II->getType(), Tys,
-                                    FMF);
+        IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II);
         InstructionCost IntrCost =
             TTI->getIntrinsicInstrCost(ICA, TTI::TCK_RecipThroughput);
-        InstructionCost CallCost = TTI->getCallInstrCost(
-            nullptr, II->getType(), Tys, TTI::TCK_RecipThroughput);
+        InstructionCost CallCost =
+            TTI->getCallInstrCost(nullptr, II->getType(), ICA.getArgTypes(),
+                                  TTI::TCK_RecipThroughput);
         return IntrCost < CallCost;
       };
 
       // Debug information does not impact spill cost.
-      if (isa<CallBase>(&*PrevInstIt) && !NoCallIntrinsic(&*PrevInstIt) &&
-          &*PrevInstIt != PrevInst)
+      // Vectorized calls, represented as vector intrinsics, do not impact spill
+      // cost.
+      if (const auto *CB = dyn_cast<CallBase>(&*PrevInstIt);
+          CB && !NoCallIntrinsic(CB) && !isVectorized(CB))
         NumCalls++;
 
       ++PrevInstIt;
     }
 
     if (NumCalls) {
-      SmallVector<Type *, 4> V;
-      for (auto *II : LiveValues) {
-        auto *ScalarTy = II->getType();
-        if (auto *VectorTy = dyn_cast<FixedVectorType>(ScalarTy))
-          ScalarTy = VectorTy->getElementType();
-        V.push_back(getWidenedType(ScalarTy, BundleWidth));
+      SmallVector<Type *, 4> EntriesTypes;
+      for (const TreeEntry *TE : LiveEntries) {
+        auto *ScalarTy = TE->getMainOp()->getType();
+        auto It = MinBWs.find(TE);
+        if (It != MinBWs.end())
+          ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
+        EntriesTypes.push_back(getWidenedType(ScalarTy, TE->getVectorFactor()));
       }
-      Cost += NumCalls * TTI->getCostOfKeepingLiveOverCall(V);
+      Cost += NumCalls * TTI->getCostOfKeepingLiveOverCall(EntriesTypes);
     }
 
-    PrevInst = Inst;
+    Prev = TE;
   }
 
   return Cost;
@@ -15089,7 +15090,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       }
     }
     if (!GatherShuffles.empty()) {
-      unsigned SliceSize = getPartNumElems(E->Scalars.size(), NumParts);
+      unsigned SliceSize =
+          getPartNumElems(E->Scalars.size(),
+                          ::getNumberOfParts(*TTI, VecTy, E->Scalars.size()));
       SmallVector<int> VecMask(Mask.size(), PoisonMaskElem);
       for (const auto [I, TEs] : enumerate(Entries)) {
         if (TEs.empty()) {
@@ -20146,7 +20149,7 @@ public:
         }
         V.reorderTopToBottom();
         // No need to reorder the root node at all.
-        V.reorderBottomToTop(/*IgnoreReorder=*/true);
+        V.reorderBottomToTop(!V.doesRootHaveInTreeUses());
         // Keep extracted other reduction values, if they are used in the
         // vectorization trees.
         BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues(

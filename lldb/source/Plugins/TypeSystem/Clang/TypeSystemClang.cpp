@@ -8541,12 +8541,10 @@ clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
 
 clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
     const CompilerType &enum_type, const Declaration &decl, const char *name,
-    int64_t enum_value, uint32_t enum_value_bit_size) {
-  CompilerType underlying_type = GetEnumerationIntegerType(enum_type);
-  bool is_signed = false;
-  underlying_type.IsIntegerType(is_signed);
-
-  llvm::APSInt value(enum_value_bit_size, !is_signed);
+    uint64_t enum_value, uint32_t enum_value_bit_size) {
+  assert(enum_type.IsEnumerationType());
+  llvm::APSInt value(enum_value_bit_size,
+                     !enum_type.IsEnumerationIntegerTypeSigned());
   value = enum_value;
 
   return AddEnumerationValueToEnumerationType(enum_type, decl, name, value);

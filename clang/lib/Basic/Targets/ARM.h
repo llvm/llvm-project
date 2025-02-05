@@ -196,7 +196,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool isCLZForZeroUndef() const override;
   BuiltinVaListKind getBuiltinVaListKind() const override;
@@ -227,7 +227,7 @@ public:
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
-    return std::make_pair(getTriple().isArch64Bit() ? 256 : 64, 64);
+    return std::make_pair(64, 64);
   }
 };
 

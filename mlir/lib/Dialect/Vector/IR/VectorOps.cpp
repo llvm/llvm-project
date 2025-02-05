@@ -437,6 +437,9 @@ void VectorDialect::initialize() {
 Operation *VectorDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
+  if (isa<ub::PoisonAttrInterface>(value))
+    return value.getDialect().materializeConstant(builder, value, type, loc);
+
   return arith::ConstantOp::materialize(builder, value, type, loc);
 }
 
@@ -2273,20 +2276,6 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
   return success();
 }
 
-/// Fold an insert or extract operation into an poison value when a poison index
-/// is found at any dimension of the static position.
-template <typename OpTy>
-LogicalResult
-canonicalizePoisonIndexInsertExtractOp(OpTy op, PatternRewriter &rewriter) {
-  if (auto poisonAttr = foldPoisonIndexInsertExtractOp(
-          op.getContext(), op.getStaticPosition(), OpTy::kPoisonIndex)) {
-    rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getType(), poisonAttr);
-    return success();
-  }
-
-  return failure();
-}
-
 } // namespace
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -2295,7 +2284,6 @@ void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
               ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
-  results.add(canonicalizePoisonIndexInsertExtractOp<ExtractOp>);
 }
 
 static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
@@ -2673,43 +2661,51 @@ static bool isStepIndexArray(ArrayRef<T> idxArr, uint64_t begin, size_t width) {
 }
 
 OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
-  VectorType v1Type = getV1VectorType();
+  auto v1Type = getV1VectorType();
+  auto v2Type = getV2VectorType();
+
+  assert(!v1Type.isScalable() && !v2Type.isScalable() &&
+         "Vector shuffle does not support scalable vectors");
+
   // For consistency: 0-D shuffle return type is 1-D, this cannot be a folding
   // but must be a canonicalization into a vector.broadcast.
   if (v1Type.getRank() == 0)
     return {};
 
-  // fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1
-  if (!v1Type.isScalable() &&
-      isStepIndexArray(getMask(), 0, v1Type.getDimSize(0)))
+  // Fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1.
+  auto mask = getMask();
+  if (isStepIndexArray(mask, 0, v1Type.getDimSize(0)))
     return getV1();
-  // fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2
-  if (!getV1VectorType().isScalable() && !getV2VectorType().isScalable() &&
-      isStepIndexArray(getMask(), getV1VectorType().getDimSize(0),
-                       getV2VectorType().getDimSize(0)))
+  // Fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2.
+  if (isStepIndexArray(mask, v1Type.getDimSize(0), v2Type.getDimSize(0)))
     return getV2();
 
-  Attribute lhs = adaptor.getV1(), rhs = adaptor.getV2();
-  if (!lhs || !rhs)
+  Attribute v1Attr = adaptor.getV1(), v2Attr = adaptor.getV2();
+  if (!v1Attr || !v2Attr)
     return {};
 
-  auto lhsType =
-      llvm::cast<VectorType>(llvm::cast<DenseElementsAttr>(lhs).getType());
   // Only support 1-D for now to avoid complicated n-D DenseElementsAttr
   // manipulation.
-  if (lhsType.getRank() != 1)
+  if (v1Type.getRank() != 1)
     return {};
-  int64_t lhsSize = lhsType.getDimSize(0);
+
+  int64_t v1Size = v1Type.getDimSize(0);
 
   SmallVector<Attribute> results;
-  auto lhsElements = llvm::cast<DenseElementsAttr>(lhs).getValues<Attribute>();
-  auto rhsElements = llvm::cast<DenseElementsAttr>(rhs).getValues<Attribute>();
-  for (int64_t i : this->getMask()) {
-    if (i >= lhsSize) {
-      results.push_back(rhsElements[i - lhsSize]);
+  auto v1Elements = cast<DenseElementsAttr>(v1Attr).getValues<Attribute>();
+  auto v2Elements = cast<DenseElementsAttr>(v2Attr).getValues<Attribute>();
+  for (int64_t maskIdx : mask) {
+    Attribute indexedElm;
+    // Select v1[0] for poison indices.
+    // TODO: Return a partial poison vector when supported by the UB dialect.
+    if (maskIdx == ShuffleOp::kPoisonIndex) {
+      indexedElm = v1Elements[0];
     } else {
-      results.push_back(lhsElements[i]);
+      indexedElm =
+          maskIdx < v1Size ? v1Elements[maskIdx] : v2Elements[maskIdx - v1Size];
     }
+
+    results.push_back(indexedElm);
   }
 
   return DenseElementsAttr::get(getResultVectorType(), results);
@@ -3060,7 +3056,6 @@ void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
               InsertOpConstantFolder>(context);
-  results.add(canonicalizePoisonIndexInsertExtractOp<InsertOp>);
 }
 
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {

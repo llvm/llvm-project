@@ -9,6 +9,7 @@
 #include "Writer.h"
 #include "AArch64ErrataFix.h"
 #include "ARMErrataFix.h"
+#include "BPSectionOrderer.h"
 #include "CallGraphSort.h"
 #include "Config.h"
 #include "InputFiles.h"
@@ -296,13 +297,12 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
                   sym->type)
             .overwrite(*sym);
         sym->versionId = VER_NDX_GLOBAL;
-        if (hasDynsym && sym->includeInDynsym(ctx))
-          sym->isExported = true;
       }
     }
 
     if (hasDynsym)
-      sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
+      sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
+                           computeIsPreemptible(ctx, *sym);
   }
 }
 
@@ -1081,8 +1081,18 @@ static void maybeShuffle(Ctx &ctx,
 // that don't appear in the order file.
 static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   DenseMap<const InputSectionBase *, int> sectionOrder;
-  if (!ctx.arg.callGraphProfile.empty())
+  if (ctx.arg.bpStartupFunctionSort || ctx.arg.bpFunctionOrderForCompression ||
+      ctx.arg.bpDataOrderForCompression) {
+    TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
+    sectionOrder = runBalancedPartitioning(
+        ctx, ctx.arg.bpStartupFunctionSort ? ctx.arg.irpgoProfilePath : "",
+        ctx.arg.bpFunctionOrderForCompression,
+        ctx.arg.bpDataOrderForCompression,
+        ctx.arg.bpCompressionSortStartupFunctions,
+        ctx.arg.bpVerboseSectionOrderer);
+  } else if (!ctx.arg.callGraphProfile.empty()) {
     sectionOrder = computeCallGraphProfileOrder(ctx);
+  }
 
   if (ctx.arg.symbolOrderingFile.empty())
     return sectionOrder;
@@ -1841,9 +1851,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // If the previous code block defines any non-hidden symbols (e.g.
   // __global_pointer$), they may be exported.
-  if (ctx.hasDynsym)
+  if (ctx.hasDynsym && ctx.arg.exportDynamic)
     for (Symbol *sym : ctx.synthesizedSymbols)
-      sym->isExported = sym->includeInDynsym(ctx);
+      if (sym->computeBinding(ctx) != STB_LOCAL)
+        sym->isExported = true;
 
   demoteSymbolsAndComputeIsPreemptible(ctx);
 
@@ -1931,7 +1942,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
       // computeBinding might localize a linker-synthesized hidden symbol
       // (e.g. __global_pointer$) that was considered exported.
-      if (sym->isExported && !sym->isLocal()) {
+      if (ctx.hasDynsym && (sym->isUndefined() || sym->isExported) &&
+          !sym->isLocal()) {
         ctx.partitions[sym->partition - 1].dynSymTab->addSymbol(sym);
         if (auto *file = dyn_cast<SharedFile>(sym->file))
           if (file->isNeeded && !sym->isUndefined())

@@ -6,6 +6,7 @@
 ../generic/integer/clc_clz.cl
 ../generic/integer/clc_hadd.cl
 ../generic/integer/clc_mad24.cl
+../generic/integer/clc_mad_sat.cl
 ../generic/integer/clc_mul24.cl
 ../generic/integer/clc_mul_hi.cl
 ../generic/integer/clc_popcount.cl
