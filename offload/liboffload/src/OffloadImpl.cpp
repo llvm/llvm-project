@@ -364,7 +364,9 @@ ol_impl_result_t olRetainQueue_impl(ol_queue_handle_t Queue) {
 }
 
 ol_impl_result_t olReleaseQueue_impl(ol_queue_handle_t Queue) {
-  Queue->RefCount--;
+  if (--Queue->RefCount == 0) {
+    delete Queue;
+  }
   return OL_SUCCESS;
 }
 
