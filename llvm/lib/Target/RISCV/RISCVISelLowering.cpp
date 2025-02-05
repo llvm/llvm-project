@@ -5630,9 +5630,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
           continue;
         MaxIdx = std::max(std::max((unsigned)I, (unsigned)M), MaxIdx);
       }
-      unsigned NewNumElts = NumElts;
-      while (MaxIdx < NewNumElts / 2 && NewNumElts != MinVLMAX)
-        NewNumElts /= 2;
+      unsigned NewNumElts =
+          std::max((uint64_t)MinVLMAX, PowerOf2Ceil(MaxIdx + 1));
       if (NewNumElts != NumElts) {
         MVT NewVT = MVT::getVectorVT(VT.getVectorElementType(), NewNumElts);
         SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
