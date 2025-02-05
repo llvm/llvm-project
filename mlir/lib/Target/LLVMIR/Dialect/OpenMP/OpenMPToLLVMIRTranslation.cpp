@@ -1767,20 +1767,6 @@ buildDependData(std::optional<ArrayAttr> dependKinds, OperandRange dependVars,
   }
 }
 
-static bool privatizerReadsSourceVariable(omp::PrivateClauseOp &priv) {
-  if (priv.getDataSharingType() == omp::DataSharingClauseType::FirstPrivate)
-    return true;
-
-  Region &initRegion = priv.getInitRegion();
-  if (initRegion.empty())
-    return false;
-
-  BlockArgument sourceVariable = priv.getInitMoldArg();
-  if (!sourceVariable)
-    return false;
-  return !sourceVariable.use_empty();
-}
-
 namespace {
 /// TaskContextStructManager takes care of creating and freeing a structure
 /// containing information needed by the task body to execute.
@@ -1833,7 +1819,7 @@ void TaskContextStructManager::generateTaskContextStruct() {
   for (omp::PrivateClauseOp &privOp : privateDecls) {
     // Skip private variables which can safely be allocated and initialised
     // inside of the task
-    if (!privatizerReadsSourceVariable(privOp))
+    if (!privOp.readsFromMold())
       continue;
     Type mlirType = privOp.getType();
     privateVarTypes.push_back(moduleTranslation.convertType(mlirType));
@@ -1865,7 +1851,7 @@ void TaskContextStructManager::createGEPsToPrivateVars(
   llvm::Value *zero = builder.getInt32(0);
   unsigned i = 0;
   for (auto privDecl : privateDecls) {
-    if (!privatizerReadsSourceVariable(privDecl)) {
+    if (!privDecl.readsFromMold()) {
       // Handle this inside of the task so we don't pass unnessecary vars in
       llvmPrivateVars.push_back(nullptr);
       continue;
@@ -2020,7 +2006,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     llvm::BasicBlock *privInitBlock = nullptr;
     for (auto [blockArg, privDecl, mlirPrivVar] :
          llvm::zip_equal(privateBlockArgs, privateDecls, mlirPrivateVars)) {
-      if (privatizerReadsSourceVariable(privDecl))
+      if (privDecl.readsFromMold())
         // This is handled before the task executes
         continue;
 
