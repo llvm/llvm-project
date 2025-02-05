@@ -1123,8 +1123,8 @@
 
 
 // This test verifies that the linker doesn't include '-latomic' when no sanitizers are enabled 
-// Running this test on non-AIX host will result in an unrelated error 
-// FIXME: Sanitizer interface functions must be exported by export files on AIX
+// FIXME: Running this test on non-AIX host will result in the following error:
+// LLVM ERROR: Sanitizer interface functions must be exported by export files on AIX
 
 // Check No Sanitizer on 32-bit AIX
 // RUN: %if target={{.*aix.*}} %{ \
