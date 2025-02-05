@@ -163,6 +163,9 @@ jobs:
               build_runs_on="macos-13-large"
             fi
             test_runs_on="${{ inputs.runs-on }}"
+            # These runners hit timeouts building all of LLVM, so we need to
+            # limit the projects that we build.
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS=clang;lld;lldb;clang-tools-extra;mlir"
             ;;
           macos-14)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
