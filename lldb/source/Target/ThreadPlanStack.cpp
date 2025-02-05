@@ -408,13 +408,6 @@ void ThreadPlanStack::WillResume() {
   m_discarded_plans.clear();
 }
 
-lldb::tid_t ThreadPlanStack::GetTID() { return GetCurrentPlan()->GetTID(); }
-
-void ThreadPlanStack::SetTID(lldb::tid_t tid) {
-  for (auto plan_sp : m_plans)
-    plan_sp->SetTID(tid);
-}
-
 void ThreadPlanStackMap::Update(ThreadList &current_threads,
                                 bool delete_missing,
                                 bool check_for_new) {
@@ -468,8 +461,8 @@ void ThreadPlanStackMap::DumpPlans(Stream &strm,
       index_id = thread_sp->GetIndexID();
 
     if (condense_if_trivial) {
-      if (!elem.second->AnyPlans() && !elem.second->AnyCompletedPlans() &&
-          !elem.second->AnyDiscardedPlans()) {
+      if (!elem.second.AnyPlans() && !elem.second.AnyCompletedPlans() &&
+          !elem.second.AnyDiscardedPlans()) {
         strm.Printf("thread #%u: tid = 0x%4.4" PRIx64 "\n", index_id, tid);
         strm.IndentMore();
         strm.Indent();
@@ -482,7 +475,7 @@ void ThreadPlanStackMap::DumpPlans(Stream &strm,
     strm.Indent();
     strm.Printf("thread #%u: tid = 0x%4.4" PRIx64 ":\n", index_id, tid);
 
-    elem.second->DumpThreadPlans(strm, desc_level, internal);
+    elem.second.DumpThreadPlans(strm, desc_level, internal);
   }
 }
 
