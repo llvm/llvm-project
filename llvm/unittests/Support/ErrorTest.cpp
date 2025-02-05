@@ -977,12 +977,15 @@ TEST(Error, FileErrorTest) {
     EXPECT_EQ(F->messageWithoutFileInfo(), "CustomError {6}");
   });
 
-  Error FE7 = createFileError("file.bin", make_error_code(std::errc::invalid_argument), "invalid argument");
+  Error FE7 =
+      createFileError("file.bin", make_error_code(std::errc::invalid_argument),
+                      "invalid argument");
   EXPECT_EQ(toString(std::move(FE7)), "'file.bin': invalid argument");
 
   StringRef Argument = "arg";
-  Error FE8 = createFileError("file.bin", make_error_code(std::errc::invalid_argument),
-                              "invalid argument '%s'", Argument.str().c_str());
+  Error FE8 =
+      createFileError("file.bin", make_error_code(std::errc::invalid_argument),
+                      "invalid argument '%s'", Argument.str().c_str());
   EXPECT_EQ(toString(std::move(FE8)), "'file.bin': invalid argument 'arg'");
 }
 
