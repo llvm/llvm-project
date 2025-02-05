@@ -167,7 +167,7 @@ inline _LIBCPP_HIDE_FROM_ABI int __wctob(wint_t __c, __locale_t __loc) { return 
 
 inline _LIBCPP_HIDE_FROM_ABI size_t
 __wcsnrtombs(char* __dest, const wchar_t** __src, size_t __nwc, size_t __len, mbstate_t* __ps, __locale_t __loc) {
-  return ::wcsnrtombs_l(__dest, __src, __nwc, __len, __ps, __loc);
+  return ::wcsnrtombs_l(__dest, __src, __nwc, __len, __ps, __loc); // wcsnrtombs is a POSIX extension
 }
 
 inline _LIBCPP_HIDE_FROM_ABI size_t __wcrtomb(char* __s, wchar_t __wc, mbstate_t* __ps, __locale_t __loc) {
@@ -176,7 +176,7 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __wcrtomb(char* __s, wchar_t __wc, mbstate_t
 
 inline _LIBCPP_HIDE_FROM_ABI size_t
 __mbsnrtowcs(wchar_t* __dest, const char** __src, size_t __nms, size_t __len, mbstate_t* __ps, __locale_t __loc) {
-  return ::mbsnrtowcs_l(__dest, __src, __nms, __len, __ps, __loc);
+  return ::mbsnrtowcs_l(__dest, __src, __nms, __len, __ps, __loc); // mbsnrtowcs is a POSIX extension
 }
 
 inline _LIBCPP_HIDE_FROM_ABI size_t
@@ -217,7 +217,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __
 template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
     char** __s, __locale_t __loc, const char* __format, _Args&&... __args) {
-  return ::asprintf_l(__s, __loc, __format, std::forward<_Args>(__args)...);
+  return ::asprintf_l(__s, __loc, __format, std::forward<_Args>(__args)...); // non-standard
 }
 
 template <class... _Args>
