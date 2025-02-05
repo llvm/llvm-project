@@ -12,9 +12,9 @@
 // XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
+// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=fast && availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <chrono>
 //

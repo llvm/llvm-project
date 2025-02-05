@@ -14,7 +14,7 @@
 
 // <chrono>
 //
-// class tai;
+// class tai_clock;
 
 // static time_point now();
 
