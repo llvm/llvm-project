@@ -779,3 +779,73 @@ def ROTW : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins imm8n_7:$imm),
   let s = 0x0;
   let t = imm{3-0};
 }
+
+//===----------------------------------------------------------------------===//
+// Boolean Instructions
+//===----------------------------------------------------------------------===//
+
+def ALL4 : RRR_Inst<0x00, 0x00, 0x00, (outs BR:$t), (ins BR:$s),
+                   "all4\t$t, $s", []>, Requires<[HasBoolean]> {
+  let r = 0x9;
+}
+
+def ALL8 : RRR_Inst<0x00, 0x00, 0x00, (outs BR:$t), (ins BR:$s),
+                   "all8\t$t, $s", []>, Requires<[HasBoolean]> {
+  let r = 0xB;
+}
+
+def ANDB : RRR_Inst<0x00, 0x02, 0x00, (outs BR:$r), (ins BR:$s, BR:$t),
+                   "andb\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+def ANDBC : RRR_Inst<0x00, 0x02, 0x01, (outs BR:$r), (ins BR:$s, BR:$t),
+                    "andbc\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+def ORB : RRR_Inst<0x00, 0x02, 0x02, (outs BR:$r), (ins BR:$s, BR:$t),
+                  "orb\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+def ORBC : RRR_Inst<0x00, 0x02, 0x03, (outs BR:$r), (ins BR:$s, BR:$t),
+                   "orbc\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+def XORB : RRR_Inst<0x00, 0x02, 0x04, (outs BR:$r), (ins BR:$s, BR:$t),
+                   "xorb\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+
+def ANY4 : RRR_Inst<0x00, 0x00, 0x00, (outs BR:$t), (ins BR:$s),
+                   "any4\t$t, $s", []>, Requires<[HasBoolean]> {
+  let r = 0x8;
+}
+
+def ANY8 : RRR_Inst<0x00, 0x00, 0x00, (outs BR:$t), (ins BR:$s),
+                   "any8\t$t, $s", []>, Requires<[HasBoolean]> {
+  let r = 0xA;
+}
+
+let isBranch = 1, isTerminator = 1, Predicates = [HasBoolean] in {
+  def BT : RRI8_Inst<0x06, (outs), (ins BR:$b, brtarget:$target),
+                    "bt\t$b, $target", []> {
+    bits<8> target;
+    bits<4> b;
+
+    let r = 0x1;
+    let s = b;
+    let t = 0x7;
+    let imm8 = target;
+  }
+
+  def BF : RRI8_Inst<0x06, (outs), (ins BR:$b, brtarget:$target),
+                    "bf\t$b, $target", []> {
+    bits<8> target;
+    bits<4> b;
+
+    let r = 0x0;
+    let s = b;
+    let t = 0x7;
+    let imm8 = target;
+  }
+}
+
+def : InstAlias<"_BT\t$b, $target", (BT BR:$b, brtarget:$target)>;
+def : InstAlias<"_BF\t$b, $target", (BF BR:$b, brtarget:$target)>;
+
+let Constraints = "$dr = $r,@earlyclobber $dr" in {
+  def MOVF : RRR_Inst<0x00, 0x03, 0x0C, (outs AR:$dr), (ins AR:$r, AR:$s, BR:$t),
+                   "movf\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+
+  def MOVT : RRR_Inst<0x00, 0x03, 0x0D, (outs AR:$dr), (ins AR:$r, AR:$s, BR:$t),
+                   "movt\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+}
