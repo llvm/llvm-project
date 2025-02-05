@@ -1231,6 +1231,18 @@ public:
     return getSwappedCmpPredicate(getCmpPredicate());
   }
 
+  /// @returns the non-strict predicate along with samesign information: static
+  /// variant.
+  static CmpPredicate getNonStrictCmpPredicate(CmpPredicate Pred) {
+    return {getNonStrictPredicate(Pred), Pred.hasSameSign()};
+  }
+
+  /// For example, SGT -> SGE, SLT -> SLE, ULT -> ULE, UGT -> UGE.
+  /// @returns the non-strict predicate along with samesign information.
+  Predicate getNonStrictCmpPredicate() const {
+    return getNonStrictCmpPredicate(getCmpPredicate());
+  }
+
   /// For example, EQ->EQ, SLE->SLE, UGT->SGT, etc.
   /// @returns the predicate that would be the result if the operand were
   /// regarded as signed.
