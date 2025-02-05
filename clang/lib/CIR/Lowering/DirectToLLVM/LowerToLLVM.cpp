@@ -123,7 +123,7 @@ struct ConvertCIRToLLVMPass
 
 bool CIRToLLVMGlobalOpLowering::attrRequiresRegionInitialization(
     mlir::Attribute attr) const {
-  // There will be more case added later.
+  // There will be more cases added later.
   return isa<cir::ConstPtrAttr>(attr);
 }
 

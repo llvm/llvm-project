@@ -1,3 +1,15 @@
+//===- TypeConverter.h - Convert builtin to LLVM dialect types --*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the CirAttrVisitor interface.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRATTRVISITOR_H
 #define LLVM_CLANG_CIR_DIALECT_IR_CIRATTRVISITOR_H
 
