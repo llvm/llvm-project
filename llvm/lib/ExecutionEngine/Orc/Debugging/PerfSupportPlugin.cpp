@@ -86,7 +86,7 @@ constexpr StringRef RegisterPerfImplSymbolName =
 static PerfJITCodeLoadRecord
 getCodeLoadRecord(const Symbol &Sym, std::atomic<uint64_t> &CodeIndex) {
   PerfJITCodeLoadRecord Record;
-  auto Name = Sym.getName();
+  auto Name = *Sym.getName();
   auto Addr = Sym.getAddress();
   auto Size = Sym.getSize();
   Record.Prefix.Id = PerfJITRecordType::JIT_CODE_LOAD;

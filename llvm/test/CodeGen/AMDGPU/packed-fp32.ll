@@ -549,21 +549,43 @@ bb:
   ret void
 }
 
-; GCN-LABEL: {{^}}fadd_fadd_fsub:
+; GCN-LABEL: {{^}}fadd_fadd_fsub_0:
 ; GFX900:       v_add_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, 0
 ; GFX900:       v_add_f32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
-; PACKED-SDAG:  v_pk_add_f32 v[{{[0-9:]+}}], s[{{[0-9:]+}}], 0 op_sel_hi:[1,0]{{$}}
-; PACKED-SDAG:  v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 0 op_sel_hi:[1,0]{{$}}
+
+; PACKED-SDAG: v_add_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, 0
+; PACKED-SDAG: v_add_f32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
+
 ; PACKED-GISEL: v_pk_add_f32 v[{{[0-9:]+}}], s[{{[0-9:]+}}], v[{{[0-9:]+}}]{{$}}
 ; PACKED-GISEL: v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
-define amdgpu_kernel void @fadd_fadd_fsub(<2 x float> %arg) {
+define amdgpu_kernel void @fadd_fadd_fsub_0(<2 x float> %arg) {
 bb:
   %i12 = fadd <2 x float> zeroinitializer, %arg
-  %shift8 = shufflevector <2 x float> %i12, <2 x float> undef, <2 x i32> <i32 1, i32 undef>
+  %shift8 = shufflevector <2 x float> %i12, <2 x float> poison, <2 x i32> <i32 1, i32 poison>
   %i13 = fadd <2 x float> zeroinitializer, %shift8
   %i14 = shufflevector <2 x float> %arg, <2 x float> %i13, <2 x i32> <i32 0, i32 2>
   %i15 = fsub <2 x float> %i14, zeroinitializer
   store <2 x float> %i15, ptr undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}fadd_fadd_fsub:
+; GFX900:       v_add_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GFX900:       v_add_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+
+; PACKED-SDAG:  v_add_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; PACKED-SDAG:  v_pk_add_f32 v[{{[0-9:]+}}], s[{{[0-9:]+}}], v[{{[0-9:]+}}] op_sel_hi:[1,0]{{$}}
+
+; PACKED-GISEL: v_pk_add_f32 v[{{[0-9:]+}}], s[{{[0-9:]+}}], v[{{[0-9:]+}}]{{$}}
+; PACKED-GISEL: v_pk_add_f32 v[{{[0-9:]+}}], s[{{[0-9:]+}}], v[{{[0-9:]+}}]{{$}}
+define amdgpu_kernel void @fadd_fadd_fsub(<2 x float> %arg, <2 x float> %arg1, ptr addrspace(1) %ptr) {
+bb:
+  %i12 = fadd <2 x float> %arg, %arg1
+  %shift8 = shufflevector <2 x float> %i12, <2 x float> poison, <2 x i32> <i32 1, i32 poison>
+  %i13 = fadd <2 x float> %arg1, %shift8
+  %i14 = shufflevector <2 x float> %arg, <2 x float> %i13, <2 x i32> <i32 0, i32 2>
+  %i15 = fsub <2 x float> %i14, %arg1
+  store <2 x float> %i15, ptr addrspace(1) %ptr
   ret void
 }
 

@@ -12,8 +12,9 @@
 // XFAIL: using-built-library-before-llvm-9
 
 #include "cxxabi.h"
-#include <new>
 #include <cassert>
+#include <cstddef>
+#include <new>
 
 void dummy_ctor(void*) { assert(false && "should not be called"); }
 void dummy_dtor(void*) { assert(false && "should not be called"); }

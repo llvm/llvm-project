@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- -fno-delayed-template-parsing -Wno-array-compare-cxx26
 
 typedef __INT64_TYPE__ I64;
 

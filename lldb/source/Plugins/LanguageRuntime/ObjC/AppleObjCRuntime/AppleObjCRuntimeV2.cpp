@@ -3278,7 +3278,7 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
       }
 
       // If the index is still out of range then this isn't a pointer.
-      if (index > m_indexed_isa_cache.size())
+      if (index >= m_indexed_isa_cache.size())
         return false;
 
       LLDB_LOGF(log, "AOCRT::NPI Evaluate(ret_isa = 0x%" PRIx64 ")",

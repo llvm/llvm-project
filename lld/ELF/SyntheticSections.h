@@ -112,7 +112,9 @@ public:
 
   void addConstant(const Relocation &r);
   void addEntry(const Symbol &sym);
+  void addAuthEntry(const Symbol &sym);
   bool addTlsDescEntry(const Symbol &sym);
+  void addTlsDescAuthEntry();
   bool addDynTlsEntry(const Symbol &sym);
   bool addTlsIndex();
   uint32_t getTlsDescOffset(const Symbol &sym) const;
@@ -131,6 +133,11 @@ protected:
   size_t numEntries = 0;
   uint32_t tlsIndexOff = -1;
   uint64_t size = 0;
+  struct AuthEntryInfo {
+    size_t offset;
+    bool isSymbolFunc;
+  };
+  SmallVector<AuthEntryInfo, 0> authEntries;
 };
 
 // .note.GNU-stack section.
@@ -794,6 +801,15 @@ public:
   RelroPaddingSection(Ctx &);
   size_t getSize() const override { return 0; }
   void writeTo(uint8_t *buf) override {}
+};
+
+class RandomizePaddingSection final : public SyntheticSection {
+  uint64_t size;
+
+public:
+  RandomizePaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent);
+  size_t getSize() const override { return size; }
+  void writeTo(uint8_t *buf) override;
 };
 
 // Used by the merged DWARF32 .debug_names (a per-module index). If we

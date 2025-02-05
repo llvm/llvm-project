@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineCSE.h"
+#include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -57,6 +58,7 @@
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
+#include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
@@ -668,9 +670,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
     addPass(createFunctionToLoopPassAdaptor(LoopStrengthReducePass(),
                                             /*UseMemorySSA=*/true));
-    // FIXME: use -stop-after so we could remove PrintLSR
-    if (Opt.PrintLSR)
-      addPass(PrintFunctionPass(dbgs(), "\n\n*** Code after LSR ***\n"));
   }
 
   if (getOptLevel() != CodeGenOptLevel::None) {

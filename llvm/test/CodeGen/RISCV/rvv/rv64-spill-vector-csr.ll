@@ -20,6 +20,7 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O0-NEXT:    slli a1, a1, 1
 ; SPILL-O0-NEXT:    sub sp, sp, a1
 ; SPILL-O0-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
+; SPILL-O0-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; SPILL-O0-NEXT:    vmv1r.v v10, v9
 ; SPILL-O0-NEXT:    vmv1r.v v9, v8
 ; SPILL-O0-NEXT:    csrr a1, vlenb

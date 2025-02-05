@@ -94,8 +94,8 @@ void __outwordstring(unsigned short, unsigned short *, unsigned long);
 unsigned long __readcr0(void);
 unsigned long __readcr2(void);
 unsigned __LPTRINT_TYPE__ __readcr3(void);
-unsigned long __readcr4(void);
-unsigned long __readcr8(void);
+unsigned __LPTRINT_TYPE__ __readcr4(void);
+unsigned __int64 __readcr8(void);
 unsigned int __readdr(unsigned int);
 #ifdef __i386__
 unsigned char __readfsbyte(unsigned long);
@@ -124,8 +124,8 @@ void __vmx_vmptrst(unsigned __int64 *);
 void __wbinvd(void);
 void __writecr0(unsigned int);
 void __writecr3(unsigned __INTPTR_TYPE__);
-void __writecr4(unsigned int);
-void __writecr8(unsigned int);
+void __writecr4(unsigned __INTPTR_TYPE__);
+void __writecr8(unsigned __int64);
 void __writedr(unsigned int, unsigned int);
 void __writefsbyte(unsigned long, unsigned char);
 void __writefsdword(unsigned long, unsigned long);
@@ -395,6 +395,16 @@ unsigned char __readx18byte(unsigned long offset);
 unsigned short __readx18word(unsigned long offset);
 unsigned long __readx18dword(unsigned long offset);
 unsigned __int64 __readx18qword(unsigned long offset);
+
+void __addx18byte(unsigned long offset, unsigned char data);
+void __addx18word(unsigned long offset, unsigned short data);
+void __addx18dword(unsigned long offset, unsigned long data);
+void __addx18qword(unsigned long offset, unsigned __int64 data);
+
+void __incx18byte(unsigned long offset);
+void __incx18word(unsigned long offset);
+void __incx18dword(unsigned long offset);
+void __incx18qword(unsigned long offset);
 
 double _CopyDoubleFromInt64(__int64);
 float _CopyFloatFromInt32(__int32);

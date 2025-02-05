@@ -29,6 +29,11 @@ Example:
   void fn3(); // without function body in all declaration, maybe external linkage
   void fn3();
 
+  // export declarations
+  export void fn4() {}
+  export namespace t { void fn5() {} }
+  export int v2;
+
 Options
 -------
 

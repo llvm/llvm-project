@@ -23,6 +23,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -31,6 +32,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -50,12 +52,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  constexpr llvm::StringLiteral NAME##_init[] = VALUE;                         \
-  constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                          \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 const llvm::opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -65,7 +68,8 @@ const llvm::opt::OptTable::Info InfoTable[] = {
 
 class ScanDepsOptTable : public llvm::opt::GenericOptTable {
 public:
-  ScanDepsOptTable() : GenericOptTable(InfoTable) {
+  ScanDepsOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -83,8 +87,9 @@ static std::string ModuleFilesDir;
 static bool EagerLoadModules;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
-static std::string ModuleName;
+static std::optional<std::string> ModuleName;
 static std::vector<std::string> ModuleDepTargets;
+static std::string TranslationUnitFile;
 static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
@@ -162,6 +167,8 @@ static void ParseArgs(int argc, char **argv) {
             .Case("system-warnings", ScanningOptimizations::SystemWarnings)
             .Case("vfs", ScanningOptimizations::VFS)
             .Case("canonicalize-macros", ScanningOptimizations::Macros)
+            .Case("ignore-current-working-dir",
+                  ScanningOptimizations::IgnoreCWD)
             .Case("all", ScanningOptimizations::All)
             .Default(std::nullopt);
     if (!Optimization) {
@@ -201,6 +208,9 @@ static void ParseArgs(int argc, char **argv) {
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_dependency_target_EQ))
     ModuleDepTargets.emplace_back(A->getValue());
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_tu_buffer_path_EQ))
+    TranslationUnitFile = A->getValue();
 
   DeprecatedDriverCommand = Args.hasArg(OPT_deprecated_driver_command);
 
@@ -911,7 +921,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       return llvm::nulls();
 
     std::error_code EC;
-    FileOS.emplace(OutputFileName, EC);
+    FileOS.emplace(OutputFileName, EC, llvm::sys::fs::OF_Text);
     if (EC) {
       llvm::errs() << "Failed to open output file '" << OutputFileName
                    << "': " << llvm::errorCodeToError(EC) << '\n';
@@ -938,7 +948,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   };
 
   if (Format == ScanningOutputFormat::Full)
-    FD.emplace(ModuleName.empty() ? Inputs.size() : 0);
+    FD.emplace(!ModuleName ? Inputs.size() : 0);
 
   std::atomic<size_t> NumStatusCalls = 0;
   std::atomic<size_t> NumOpenFileForReadCalls = 0;
@@ -956,10 +966,6 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       const tooling::CompileCommand *Input = &Inputs[LocalIndex];
       std::string Filename = std::move(Input->Filename);
       std::string CWD = std::move(Input->Directory);
-
-      std::optional<StringRef> MaybeModuleName;
-      if (!ModuleName.empty())
-        MaybeModuleName = ModuleName;
 
       std::string OutputDir(ModuleFilesDir);
       if (OutputDir.empty())
@@ -1001,9 +1007,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           auto OSIter = OSs.find(MakeformatOutputPath);
           if (OSIter == OSs.end()) {
             std::error_code EC;
-            OSIter =
-                OSs.try_emplace(MakeformatOutputPath, MakeformatOutputPath, EC)
-                    .first;
+            OSIter = OSs.try_emplace(MakeformatOutputPath, MakeformatOutputPath,
+                                     EC, llvm::sys::fs::OF_Text)
+                         .first;
             if (EC)
               llvm::errs() << "Failed to open P1689 make format output file \""
                            << MakeformatOutputPath << "\" for " << EC.message()
@@ -1016,16 +1022,31 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                                              MakeformatOS, Errs))
             HadErrors = true;
         }
-      } else if (MaybeModuleName) {
+      } else if (ModuleName) {
         auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
-            *MaybeModuleName, Input->CommandLine, CWD, AlreadySeenModules,
+            *ModuleName, Input->CommandLine, CWD, AlreadySeenModules,
             LookupOutput);
-        if (handleModuleResult(*MaybeModuleName, MaybeModuleDepsGraph, *FD,
+        if (handleModuleResult(*ModuleName, MaybeModuleDepsGraph, *FD,
                                LocalIndex, DependencyOS, Errs))
           HadErrors = true;
       } else {
+        std::unique_ptr<llvm::MemoryBuffer> TU;
+        std::optional<llvm::MemoryBufferRef> TUBuffer;
+        if (!TranslationUnitFile.empty()) {
+          auto MaybeTU = llvm::MemoryBuffer::getFile(TranslationUnitFile);
+          if (!MaybeTU) {
+            llvm::errs() << "cannot open input translation unit: "
+                         << MaybeTU.getError().message() << "\n";
+            HadErrors = true;
+            continue;
+          }
+          TU = std::move(*MaybeTU);
+          TUBuffer = TU->getMemBufferRef();
+          Filename = TU->getBufferIdentifier();
+        }
         auto MaybeTUDeps = WorkerTool.getTranslationUnitDependencies(
-            Input->CommandLine, CWD, AlreadySeenModules, LookupOutput);
+            Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,
+            TUBuffer);
         if (handleTranslationUnitResult(Filename, MaybeTUDeps, *FD, LocalIndex,
                                         DependencyOS, Errs))
           HadErrors = true;

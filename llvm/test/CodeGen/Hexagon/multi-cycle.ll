@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 
 ; CHECK: v{{[0-9]+}}.h = vadd(v{{[0-9]+}}.h,v{{[0-9]+}}.h)
 ; CHECK: }

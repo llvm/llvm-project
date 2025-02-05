@@ -23,7 +23,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ;}
 define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr #0 {
 ; SCALAR_TAIL_FOLDING-LABEL: define dso_local void @masked_strided1
-; SCALAR_TAIL_FOLDING-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; SCALAR_TAIL_FOLDING-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; SCALAR_TAIL_FOLDING-NEXT:  entry:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
@@ -79,19 +79,19 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; SCALAR_TAIL_FOLDING:       if.then:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[IX_024]], 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP18:%.*]] = zext nneg i32 [[MUL]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP18]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP18]]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP19:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[ADD:%.*]] = or disjoint i32 [[MUL]], 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP20:%.*]] = zext nneg i32 [[ADD]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP20]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP20]]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP21:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[SPEC_SELECT_I:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP19]], i8 [[TMP21]])
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP22:%.*]] = zext nneg i32 [[MUL]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP22]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP22]]
 ; SCALAR_TAIL_FOLDING-NEXT:    store i8 [[SPEC_SELECT_I]], ptr [[ARRAYIDX6]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[SUB:%.*]] = sub i8 0, [[SPEC_SELECT_I]]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP23:%.*]] = zext nneg i32 [[ADD]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP23]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP23]]
 ; SCALAR_TAIL_FOLDING-NEXT:    store i8 [[SUB]], ptr [[ARRAYIDX11]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[FOR_INC]]
 ; SCALAR_TAIL_FOLDING:       for.inc:
@@ -102,7 +102,7 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    ret void
 ;
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided1
-; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; PREDICATED_TAIL_FOLDING-NEXT:  entry:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.ph:
@@ -207,7 +207,7 @@ for.end:
 ;}
 define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr #0 {
 ; SCALAR_TAIL_FOLDING-LABEL: define dso_local void @masked_strided2
-; SCALAR_TAIL_FOLDING-SAME: (ptr noalias nocapture readnone [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SCALAR_TAIL_FOLDING-SAME: (ptr noalias readnone captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SCALAR_TAIL_FOLDING-NEXT:  entry:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
@@ -253,14 +253,14 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[IX_012:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[IX_012]], 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = zext nneg i32 [[MUL]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP15]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP15]]
 ; SCALAR_TAIL_FOLDING-NEXT:    store i8 1, ptr [[ARRAYIDX]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[CMP1:%.*]] = icmp samesign ugt i32 [[IX_012]], [[CONV]]
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; SCALAR_TAIL_FOLDING:       if.then:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[ADD:%.*]] = or disjoint i32 [[MUL]], 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = zext nneg i32 [[ADD]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP16]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP16]]
 ; SCALAR_TAIL_FOLDING-NEXT:    store i8 2, ptr [[ARRAYIDX3]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[FOR_INC]]
 ; SCALAR_TAIL_FOLDING:       for.inc:
@@ -271,7 +271,7 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    ret void
 ;
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided2
-; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias nocapture readnone [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias readnone captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; PREDICATED_TAIL_FOLDING-NEXT:  entry:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.ph:
@@ -364,7 +364,7 @@ for.end:
 ;}
 define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr noalias nocapture %q, i8 zeroext %guard1, i8 zeroext %guard2) local_unnamed_addr #0 {
 ; SCALAR_TAIL_FOLDING-LABEL: define dso_local void @masked_strided3
-; SCALAR_TAIL_FOLDING-SAME: (ptr noalias nocapture readnone [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 zeroext [[GUARD1:%.*]], i8 zeroext [[GUARD2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SCALAR_TAIL_FOLDING-SAME: (ptr noalias readnone captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD1:%.*]], i8 zeroext [[GUARD2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SCALAR_TAIL_FOLDING-NEXT:  entry:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD1]] to i32
 ; SCALAR_TAIL_FOLDING-NEXT:    [[CONV3:%.*]] = zext i8 [[GUARD2]] to i32
@@ -417,7 +417,7 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; SCALAR_TAIL_FOLDING:       if.then:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = zext nneg i32 [[MUL]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP16]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP16]]
 ; SCALAR_TAIL_FOLDING-NEXT:    store i8 1, ptr [[ARRAYIDX]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[IF_END]]
 ; SCALAR_TAIL_FOLDING:       if.end:
@@ -426,7 +426,7 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING:       if.then6:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[ADD:%.*]] = or disjoint i32 [[MUL]], 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = zext nneg i32 [[ADD]] to i64
-; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP17]]
+; SCALAR_TAIL_FOLDING-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[TMP17]]
 ; SCALAR_TAIL_FOLDING-NEXT:    store i8 2, ptr [[ARRAYIDX7]], align 1
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[FOR_INC]]
 ; SCALAR_TAIL_FOLDING:       for.inc:
@@ -437,7 +437,7 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    ret void
 ;
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided3
-; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias nocapture readnone [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 zeroext [[GUARD1:%.*]], i8 zeroext [[GUARD2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias readnone captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD1:%.*]], i8 zeroext [[GUARD2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; PREDICATED_TAIL_FOLDING-NEXT:  entry:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.ph:
