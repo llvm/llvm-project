@@ -20,6 +20,7 @@ add_libc_test(
 
 add_libc_test(
   mempcpy_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -40,6 +41,7 @@ add_libc_test(
 
 add_libc_test(
   memchr_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -50,6 +52,7 @@ add_libc_test(
 
 add_libc_test(
   memrchr_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -70,6 +73,7 @@ add_libc_test(
 
 add_libc_test(
   stpncpy_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -80,6 +84,7 @@ add_libc_test(
 
 add_libc_test(
   strcat_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -131,6 +136,7 @@ add_libc_test(
 
 add_libc_test(
   strcoll_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -141,6 +147,7 @@ add_libc_test(
 
 add_libc_test(
   strcpy_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -296,6 +303,7 @@ add_libc_test(
 
 add_libc_test(
   strsep_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -316,6 +324,7 @@ add_libc_test(
 
 add_libc_test(
   strspn_test
+  UNIT_TEST_ONLY
   SUITE
     libc-string-tests
   SRCS
@@ -374,7 +383,7 @@ add_libc_test(
     libc.src.string.memset_explicit
 )
 
-add_libc_multi_impl_test(memcmp libc-string-tests SRCS memcmp_test.cpp)
-add_libc_multi_impl_test(memcpy libc-string-tests SRCS memcpy_test.cpp)
-add_libc_multi_impl_test(memmove libc-string-tests SRCS memmove_test.cpp)
-add_libc_multi_impl_test(memset libc-string-tests SRCS memset_test.cpp)
+add_libc_multi_impl_test(memcmp UNIT_TEST_ONLY libc-string-tests SRCS memcmp_test.cpp)
+add_libc_multi_impl_test(memcpy UNIT_TEST_ONLY libc-string-tests SRCS memcpy_test.cpp)
+add_libc_multi_impl_test(memmove UNIT_TEST_ONLY libc-string-tests SRCS memmove_test.cpp)
+add_libc_multi_impl_test(memset UNIT_TEST_ONLY libc-string-tests SRCS memset_test.cpp)
