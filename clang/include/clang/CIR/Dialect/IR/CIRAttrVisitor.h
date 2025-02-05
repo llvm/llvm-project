@@ -8,42 +8,31 @@ namespace cir {
 template <typename ImplClass, typename RetTy> class CirAttrVisitor {
 public:
   // FIXME: Create a TableGen list to automatically handle new attributes
-  template <typename... Args>
-  RetTy visit(mlir::Attribute attr, Args &&...args) {
+  RetTy visit(mlir::Attribute attr) {
     if (const auto intAttr = mlir::dyn_cast<cir::IntAttr>(attr))
-      return static_cast<ImplClass *>(this)->visitCirIntAttr(
-          intAttr, std::forward<Args>(args)...);
+      return getImpl().visitCirIntAttr(intAttr);
     if (const auto fltAttr = mlir::dyn_cast<cir::FPAttr>(attr))
-      return static_cast<ImplClass *>(this)->visitCirFPAttr(
-          fltAttr, std::forward<Args>(args)...);
+      return getImpl().visitCirFPAttr(fltAttr);
     if (const auto ptrAttr = mlir::dyn_cast<cir::ConstPtrAttr>(attr))
-      return static_cast<ImplClass *>(this)->visitCirConstPtrAttr(
-          ptrAttr, std::forward<Args>(args)...);
+      return getImpl().visitCirConstPtrAttr(ptrAttr);
     llvm_unreachable("unhandled attribute type");
   }
 
   // If the implementation chooses not to implement a certain visit
   // method, fall back to the parent.
-  template <typename... Args>
-  RetTy visitCirIntAttr(cir::IntAttr attr, Args &&...args) {
-    return static_cast<ImplClass *>(this)->visitCirAttr(
-        attr, std::forward<Args>(args)...);
+  RetTy visitCirIntAttr(cir::IntAttr attr) {
+    return getImpl().visitCirAttr(attr);
   }
-  template <typename... Args>
-  RetTy visitCirFPAttr(cir::FPAttr attr, Args &&...args) {
-    return static_cast<ImplClass *>(this)->visitCirAttr(
-        attr, std::forward<Args>(args)...);
+  RetTy visitCirFPAttr(cir::FPAttr attr) {
+    return getImpl().visitCirAttr(attr);
   }
-  template <typename... Args>
-  RetTy visitCirConstPtrAttr(cir::ConstPtrAttr attr, Args &&...args) {
-    return static_cast<ImplClass *>(this)->visitCirAttr(
-        attr, std::forward<Args>(args)...);
+  RetTy visitCirConstPtrAttr(cir::ConstPtrAttr attr) {
+    return getImpl().visitCirAttr(attr);
   }
 
-  template <typename... Args>
-  RetTy visitCirAttr(mlir::Attribute attr, Args &&...args) {
-    return RetTy();
-  }
+  RetTy visitCirAttr(mlir::Attribute attr) { return RetTy(); }
+
+  ImplClass &getImpl() { return *static_cast<ImplClass *>(this); }
 };
 
 } // namespace cir
