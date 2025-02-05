@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <vector>
 
+#include "sized_allocator.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -45,6 +46,39 @@ struct Test {
     }
   }
 };
+
+// Make sure std::fill behaves properly with std::vector<bool> iterators with custom size types.
+// See https://github.com/llvm/llvm-project/pull/122410.
+TEST_CONSTEXPR_CXX20 void test_bititer_with_custom_sized_types() {
+  {
+    using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+    std::vector<bool, Alloc> in(100, false, Alloc(1));
+    std::vector<bool, Alloc> expected(100, true, Alloc(1));
+    std::fill(in.begin(), in.end(), true);
+    assert(in == expected);
+  }
+  {
+    using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+    std::vector<bool, Alloc> in(200, false, Alloc(1));
+    std::vector<bool, Alloc> expected(200, true, Alloc(1));
+    std::fill(in.begin(), in.end(), true);
+    assert(in == expected);
+  }
+  {
+    using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
+    std::vector<bool, Alloc> in(200, false, Alloc(1));
+    std::vector<bool, Alloc> expected(200, true, Alloc(1));
+    std::fill(in.begin(), in.end(), true);
+    assert(in == expected);
+  }
+  {
+    using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
+    std::vector<bool, Alloc> in(200, false, Alloc(1));
+    std::vector<bool, Alloc> expected(200, true, Alloc(1));
+    std::fill(in.begin(), in.end(), true);
+    assert(in == expected);
+  }
+}
 
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::forward_iterator_list<char*>(), Test<char>());
@@ -93,6 +127,9 @@ TEST_CONSTEXPR_CXX20 bool test() {
       assert(in == expected);
     }
   }
+
+  test_bititer_with_custom_sized_types();
+
   return true;
 }
 
