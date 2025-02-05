@@ -21,16 +21,20 @@ using namespace mlir::xegpu;
 using namespace mlir::vector;
 
 namespace {
-struct TestXeGPUDistribution
-    : public PassWrapper<TestXeGPUDistribution, OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUDistribution)
+struct TestXeGPUSubgroupDistribution
+    : public PassWrapper<TestXeGPUSubgroupDistribution,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUSubgroupDistribution)
 
-  TestXeGPUDistribution() = default;
-  TestXeGPUDistribution(const TestXeGPUDistribution &pass) = default;
+  TestXeGPUSubgroupDistribution() = default;
+  TestXeGPUSubgroupDistribution(const TestXeGPUSubgroupDistribution &pass) =
+      default;
 
-  StringRef getArgument() const final { return "test-xegpu-distribute"; }
+  StringRef getArgument() const final {
+    return "test-xegpu-subgroup-distribute";
+  }
   StringRef getDescription() const final {
-    return "Test patterns for operations work item distribution";
+    return "Test lowering patterns for distributing XeGPU ops to work items";
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -42,7 +46,7 @@ struct TestXeGPUDistribution
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateXeGPUDistributePatterns(patterns);
+    populateXeGPUSubgroupDistributePatterns(patterns);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -51,7 +55,7 @@ struct TestXeGPUDistribution
 namespace mlir {
 namespace test {
 void registerTestXeGPUTransforms() {
-  PassRegistration<TestXeGPUDistribution>();
+  PassRegistration<TestXeGPUSubgroupDistribution>();
 }
 } // namespace test
 } // namespace mlir

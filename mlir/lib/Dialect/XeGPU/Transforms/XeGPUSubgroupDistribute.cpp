@@ -1,4 +1,4 @@
-//===- XeGPUDistribute.cpp - XeGPU ditribute ops to work items --*- C++ -*-===//
+//=- XeGPUSubgroupDistribute.cpp - ditribute XeGPU ops to work items *-C++-*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,22 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/XeGPU/Transforms/Passes.h"
-
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/DistributionUtils.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "xegpu-distribute"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
@@ -32,18 +25,11 @@ namespace {
 bool divisible(APInt lhs, APInt rhs) { return !lhs.urem(rhs); }
 
 /// Clone a create_nd_tdesc feeding into vector.yield op for the enclosing
-/// `gpu.warp_execute_on_lane_0` and put it after the warp op.
-/// The warp op will still contain the original op that will not be used by
-/// the
-/// yield op (and should be cleaned up later with dce). The yield op will
-/// bypass
-/// the create_nd_tdesc's arguments.
-/// The rewrite will create a subview of the size used by a single work item
-/// and
-/// appropriate offset. The distributed create_nd_tdesc points into the
-/// subview
-/// without offset. The tensor descriptor types is distributed according to
-/// sg_map attribute.
+/// `gpu.warp_execute_on_lane_0` and put it after the warp op. The warp op will
+/// still contain the original op that will not be used by the yield op (and
+/// should be cleaned up later with dce). The yield op will bypass the
+/// create_nd_tdesc's arguments. Tensor descriptor is not distributed because it
+/// is a uniform value accorss all work items within the subgroup.
 ///
 /// Example:
 ///
@@ -65,25 +51,20 @@ bool divisible(APInt lhs, APInt rhs) { return !lhs.urem(rhs); }
 ///               : memref<4x8xf32> -> !xegpu.tensor_desc<4x8xf32>
 ///     vector.yield %arg0, %dead
 ///   }
-///   %view = memref.subview %r#0[0, %laneid] [4, 1] [1, 1]
-///                               : memref<4x8xf32> to memref<4x1xf32>
-///   %td = xegpu.create_nd_tdesc %view[0, 0]: memref<4x1xf32>
-///                                 -> !xegpu.tensor_desc<4x1xf32>
+///   %td = xegpu.create_nd_tdesc %r#0[0, 0]: memref<4x8xf32>
+///                                 -> !xegpu.tensor_desc<4x8xf32>
 ///
 /// ```
-struct WarpOpTensorDescOp final : public gpu::WarpDistributionPattern {
+struct SubgroupOpTensorDescOp final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
-  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Sink a store_nd feeding into vector.yield op for the enclosing
-/// `gpu.warp_execute_on_lane_0`. In case arguments for the store are
-/// passed
-/// through the warp op interface they would be propagated as returned
-/// values.
-/// Both the stored vector type and tensor descriptor types are distributed
-/// according to sg_map attribute.
+/// Sink a store_nd op at the end of enclosing `gpu.warp_execute_on_lane_0`. In
+/// case arguments for the store are passed through the warp op interface they
+/// would be propagated as returned values. Only the source vector for the store
+/// is distributed according to sg_map attribute.
 ///
 /// Example:
 ///
@@ -93,22 +74,20 @@ struct WarpOpTensorDescOp final : public gpu::WarpDistributionPattern {
 ///     ...
 ///     xegpu.store_nd %arg0, %arg1: vector<4x8xf32>,
 ///                                 !xegpu.tensor_desc<4x8xf32>
-///     vector.yield
 ///   }
 /// ```
 /// To
 /// ```
-///   %r = gpu.warp_execute_on_lane_0(%laneid) -> () {
-///     ...
-///     vector.yield
+///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> () {
+///     gpu.yield %arg0, %arg1: vector<4x8xf32>, !xegpu.tensor_desc<4x8xf32>
 ///   }
-///   xegpu.store_nd %arg0, %arg1: vector<4x1xf32>,
-///   !xegpu.tensor_desc<4x1xf32>
+///   xegpu.store_nd %r#0, %r#1: vector<4x1xf32>,
+///     !xegpu.tensor_desc<4x8xf32>
 ///
 /// ```
-struct WarpOpStoreNd final : public gpu::WarpDistributionPattern {
+struct SubgroupOpStoreNd final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
-  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
                                 PatternRewriter &rewriter) const override;
 };
 
@@ -116,38 +95,39 @@ struct WarpOpStoreNd final : public gpu::WarpDistributionPattern {
 /// `gpu.warp_execute_on_lane_0` and put it after the warp op.
 /// The warp op will still contain the original op that will not be used by
 /// the yield op (and should be cleaned up later with dce). The yield op will
-/// bypass the load's arguments. Both the loaded vector type and tensor
-/// descriptor types are distributed according to sg_map attribute.
+/// bypass the load's arguments. Only the loaded vector is distributed according
+/// to sg_map attribute and, tensor descriptor types is not distributed.
 ///
 /// Example:
 ///
 /// ```
 ///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
 ///   %r = gpu.warp_execute_on_lane_0(%laneid) ->
-///                   (!xegpu.tensor_desc<4x8xf32>) {
+///                   (vector<4x1xf32>) {
 ///     ...
-///     %ld = xegpu.load_nd %arg0, %arg1: !xegpu.tensor_desc<4x8xf32>,
-///     vector<4x8xf32> vector.yield %ld
+///     %ld = xegpu.load_nd %arg0, %arg1: !xegpu.tensor_desc<4x8xf32> ->
+///       vector<4x8xf32>
+///     gpu.yield %ld
 ///   }
 /// ```
 /// To
 /// ```
 ///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> () {
 ///     ...
-///     %dead = xegpu.load_nd %arg0, %arg1:
-///         !xegpu.tensor_desc<4x8xf32>, vector<4x8xf32>
-///     vector.yield %arg0, %arg1
+///     %dead = xegpu.load_nd %arg0: !xegpu.tensor_desc<4x8xf32> ->
+///     vector<4x8xf32> gpu.yield %arg0, %arg1
 ///   }
-///   xegpu.store_nd %r#0, %r#1: vector<4x1xf32>,
-///   !xegpu.tensor_desc<4x1xf32>
+///   %ld = xegpu.load_nd %r#0: !xegpu.tensor_desc<4x8xf32> -> vector<4x1xf32>
 ///
 /// ```
-struct WarpOpLoadNd final : public gpu::WarpDistributionPattern {
+struct SubgroupOpLoadNd final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
-  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
                                 PatternRewriter &rewriter) const override;
 };
 
+/// Returns the distributed vector type for a source vector type according to
+/// the sg_map attribute.
 FailureOr<VectorType> getDistributedVectorType(VectorType originalT,
                                                xegpu::SGMapAttr sgMap) {
   llvm::SmallVector<int64_t, 2> distributedShape;
@@ -164,6 +144,11 @@ FailureOr<VectorType> getDistributedVectorType(VectorType originalT,
   return newVectorType;
 }
 
+// Returns the distributed tensor descriptor type for a source tensor descriptor
+// type according to the sg_map attribute. Note that tensor descriptor type is
+// distributed only for the scattered case. For XeGPU ND operaions
+// (create_nd_tdesc, load_nd, store_nd), tensor descriptor is considered uniform
+// across all work items within the subgroup and therefore is not distributed.
 FailureOr<xegpu::TensorDescType>
 getDistributedTensorDescType(xegpu::TensorDescType originalT,
                              xegpu::SGMapAttr sgMap,
@@ -187,10 +172,11 @@ getDistributedTensorDescType(xegpu::TensorDescType originalT,
 }
 } // namespace
 
-LogicalResult WarpOpStoreNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
-                                             PatternRewriter &rewriter) const {
+LogicalResult
+SubgroupOpStoreNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                   PatternRewriter &rewriter) const {
   auto yield = cast<gpu::YieldOp>(
-      warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+      subgroupOp.getBodyRegion().getBlocks().begin()->getTerminator());
   Operation *lastNode = yield->getPrevNode();
   auto storeOp = dyn_cast_or_null<xegpu::StoreNdOp>(lastNode);
   if (!storeOp)
@@ -222,7 +208,8 @@ LogicalResult WarpOpStoreNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
 
   SmallVector<size_t> newRetIndices;
   gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-      rewriter, warpOp, ValueRange{storeOp.getTensorDesc(), storeOp.getValue()},
+      rewriter, subgroupOp,
+      ValueRange{storeOp.getTensorDesc(), storeOp.getValue()},
       TypeRange{newTDescType, newVectorType}, newRetIndices);
 
   rewriter.setInsertionPointAfter(newWarpOp);
@@ -236,14 +223,15 @@ LogicalResult WarpOpStoreNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
   return success();
 }
 
-LogicalResult WarpOpLoadNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
-                                            PatternRewriter &rewriter) const {
-  OpOperand *operand = getWarpResult(warpOp, [](Operation *op) {
+LogicalResult
+SubgroupOpLoadNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                  PatternRewriter &rewriter) const {
+  OpOperand *operand = getWarpResult(subgroupOp, [](Operation *op) {
     return isa<xegpu::LoadNdOp>(op) && op->hasOneUse();
   });
 
   if (!operand)
-    return rewriter.notifyMatchFailure(warpOp,
+    return rewriter.notifyMatchFailure(subgroupOp,
                                        "warp result is not a xegpu::LoadNd op");
 
   auto loadOp = operand->get().getDefiningOp<xegpu::LoadNdOp>();
@@ -280,7 +268,7 @@ LogicalResult WarpOpLoadNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
 
   SmallVector<size_t> newRetIndices;
   gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-      rewriter, warpOp, loadOp.getTensorDesc(), TypeRange{newTDescType},
+      rewriter, subgroupOp, loadOp.getTensorDesc(), TypeRange{newTDescType},
       newRetIndices);
 
   rewriter.setInsertionPointAfter(newWarpOp);
@@ -299,21 +287,21 @@ LogicalResult WarpOpLoadNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
 }
 
 LogicalResult
-WarpOpTensorDescOp::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
-                                    PatternRewriter &rewriter) const {
-  OpOperand *operand = getWarpResult(warpOp, [](Operation *op) {
+SubgroupOpTensorDescOp::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                        PatternRewriter &rewriter) const {
+  OpOperand *operand = getWarpResult(subgroupOp, [](Operation *op) {
     return isa<xegpu::CreateNdDescOp>(op) && op->hasOneUse();
   });
 
   if (!operand)
     return rewriter.notifyMatchFailure(
-        warpOp, "warp result is not a xegpu::CreateNdDesc op");
+        subgroupOp, "warp result is not a xegpu::CreateNdDesc op");
   auto descOp = operand->get().getDefiningOp<xegpu::CreateNdDescOp>();
   assert(descOp && "desc op must be not null");
   unsigned operandIdx = operand->getOperandNumber();
 
   // TODO: is memref uniform in the region
-  rewriter.setInsertionPoint(warpOp);
+  rewriter.setInsertionPoint(subgroupOp);
   auto srcTypedVal = dyn_cast<TypedValue<MemRefType>>(descOp.getSource());
   assert(srcTypedVal && "source value must be not null");
 
@@ -342,7 +330,7 @@ WarpOpTensorDescOp::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
 
   SmallVector<size_t> newRetIndices;
   gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-      rewriter, warpOp, descOp.getSource(), descOp.getSourceType(),
+      rewriter, subgroupOp, descOp.getSource(), descOp.getSourceType(),
       newRetIndices);
 
   rewriter.setInsertionPointAfter(newWarpOp);
@@ -357,8 +345,9 @@ WarpOpTensorDescOp::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
   return success();
 }
 
-void xegpu::populateXeGPUDistributePatterns(RewritePatternSet &patterns) {
-  patterns.add<WarpOpTensorDescOp>(patterns.getContext());
-  patterns.add<WarpOpStoreNd>(patterns.getContext());
-  patterns.add<WarpOpLoadNd>(patterns.getContext());
+void xegpu::populateXeGPUSubgroupDistributePatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<SubgroupOpTensorDescOp>(patterns.getContext());
+  patterns.add<SubgroupOpStoreNd>(patterns.getContext());
+  patterns.add<SubgroupOpLoadNd>(patterns.getContext());
 }
