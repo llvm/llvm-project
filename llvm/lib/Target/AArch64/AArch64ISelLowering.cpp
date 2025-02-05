@@ -19739,8 +19739,14 @@ performExtractLastActiveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SDValue Vec = N->getOperand(0);
   SDValue Idx = N->getOperand(1);
 
-  if (!Subtarget->hasSVE() || DCI.isBeforeLegalize() ||
-      Idx.getOpcode() != ISD::VECTOR_FIND_LAST_ACTIVE)
+  if (DCI.isBeforeLegalize() || Idx.getOpcode() != ISD::VECTOR_FIND_LAST_ACTIVE)
+    return SDValue();
+
+  // Only legal for 8, 16, 32, and 64 bit element types.
+  EVT EltVT = Vec.getValueType().getVectorElementType();
+  if (!is_contained(
+          ArrayRef({MVT::i8, MVT::i16, MVT::i32, MVT::i64, MVT::f32, MVT::f64}),
+          EltVT.getSimpleVT().SimpleTy))
     return SDValue();
 
   SDValue Mask = Idx.getOperand(0);

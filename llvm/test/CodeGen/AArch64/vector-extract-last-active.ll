@@ -356,6 +356,20 @@ define i8 @extract_last_i8_scalable_poison_passthru(<vscale x 16 x i8> %data, <v
   ret i8 %res
 }
 
+;; (c)lastb doesn't exist for predicate types; check we get functional codegen
+define i1 @extract_last_i1_scalable(<vscale x 16 x i1> %data, <vscale x 16 x i1> %mask) #0 {
+; CHECK-LABEL: extract_last_i1_scalable:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    ptest p1, p1.b
+; CHECK-NEXT:    cset w9, ne
+; CHECK-NEXT:    lastb w8, p1, z0.b
+; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    ret
+  %res = call i1 @llvm.experimental.vector.extract.last.active.nxv16i1(<vscale x 16 x i1> %data, <vscale x 16 x i1> %mask, i1 false)
+  ret i1 %res
+}
+
 declare i8 @llvm.experimental.vector.extract.last.active.v16i8(<16 x i8>, <16 x i1>, i8)
 declare i16 @llvm.experimental.vector.extract.last.active.v8i16(<8 x i16>, <8 x i1>, i16)
 declare i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32>, <4 x i1>, i32)
@@ -368,5 +382,6 @@ declare i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x 
 declare i64 @llvm.experimental.vector.extract.last.active.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, i64)
 declare float @llvm.experimental.vector.extract.last.active.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, float)
 declare double @llvm.experimental.vector.extract.last.active.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, double)
+declare i1 @llvm.experimental.vector.extract.last.active.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, i1)
 
 attributes #0 = { "target-features"="+sve" vscale_range(1, 16) }
