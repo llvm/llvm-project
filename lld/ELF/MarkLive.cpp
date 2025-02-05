@@ -245,12 +245,8 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
 }
 
 template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
-  // If the symbol isn't live, return.
-  if (!whyLive.contains(s)) {
-    auto *d = dyn_cast<Defined>(s);
-    if (!d)
-      return;
-    // A defined symbol is only dead if it has a dead input section parent.
+  // Skip dead symbols. A symbol is dead if it belongs to a dead section.
+  if (auto *d = dyn_cast<Defined>(s)) {
     auto *parent = dyn_cast_or_null<InputSectionBase>(d->section);
     if (parent && !parent->isLive())
       return;
@@ -269,10 +265,16 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
         return;
       cur = *it->second;
     } else {
-      auto *d = cast<Defined>(std::get<Symbol *>(cur));
+      // TODO: Some sections are enqueued without symbols, so maybe cur could be a section?
+      auto *d = dyn_cast<Defined>(std::get<Symbol *>(cur));
+      if (!d)
+        return;
       auto *parent = dyn_cast_or_null<InputSectionBase>(d->section);
       if (!parent)
         return;
+
+      // TODO: This comment below seems vaguely wrong given the changes to the
+      // logic above.
 
       // This object made something else live, but it has no direct reason to be
       // live. That means it a symbol kept live only by being a member of its

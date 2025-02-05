@@ -43,8 +43,10 @@ jmp test_from_unsized
 test_dead:
 jmp test_dead
 
-## Undefined symbols are not considered live.
-# RUN: ld.lld %t.o -o /dev/null --gc-sections --why-live=test_undef -u test_undef | count 0
+## Undefined symbols are considered live, since they are not attached to dead sections.
+# RUN: ld.lld %t.o -o /dev/null --gc-sections --why-live=test_undef -u test_undef | FileCheck %s --check-prefix=UNDEFINED
+# UNDEFINED: live symbol: test_undef
+# UNDEFINED-NOT: >>>
 
 ## Defined symbols without input section parents are considered directly live.
 # RUN: ld.lld %t.o -o /dev/null --gc-sections --why-live=test_absolute | FileCheck %s --check-prefix=ABSOLUTE
