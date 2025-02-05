@@ -879,34 +879,100 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                    }) ||
       C.getInputArgs().hasArg(options::OPT_hip_link) ||
       C.getInputArgs().hasArg(options::OPT_hipstdpar);
+  bool IsOpenMP =
+      C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                               options::OPT_fno_openmp, false);
+  bool IsSYCL = C.getInputArgs().hasFlag(options::OPT_fsycl,
+                                         options::OPT_fno_sycl, false);
+
   bool UseLLVMOffload = C.getInputArgs().hasArg(
       options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
+
+  llvm::DenseSet<Action::OffloadKind> Kinds;
+  const std::pair<bool, Action::OffloadKind> ActiveKinds[] = {
+      {IsCuda, Action::OFK_Cuda},
+      {IsHIP, Action::OFK_HIP},
+      {IsOpenMP, Action::OFK_OpenMP},
+      {IsSYCL, Action::OFK_SYCL}};
+  for (const auto &[Active, Kind] : ActiveKinds)
+    if (Active)
+      Kinds.insert(Kind);
+
+  // Build an offloading toolchain for every requested target and kind.
+  for (StringRef Targets :
+       C.getInputArgs().getAllArgValues(options::OPT_offload_targets_EQ)) {
+    // We currently don't support any kind of mixed offloading.
+    if (Kinds.size() > 1) {
+      Diag(clang::diag::err_drv_mix_offload)
+          << Action::GetOffloadKindName(*Kinds.begin())
+          << Action::GetOffloadKindName(*Kinds.end());
+      return;
+    }
+
+    // OpenMP offloading requires a compatible libomp.
+    if (Kinds.contains(Action::OFK_OpenMP)) {
+      OpenMPRuntimeKind RuntimeKind = getOpenMPRuntime(C.getInputArgs());
+      if (RuntimeKind != OMPRT_OMP && RuntimeKind != OMPRT_IOMP5) {
+        Diag(clang::diag::err_drv_expecting_fopenmp_with_fopenmp_targets);
+        return;
+      }
+    }
+
+    // Certain options are not allowed when combined with SYCL compilation.
+    if (Kinds.contains(Action::OFK_SYCL)) {
+      for (auto ID :
+           {options::OPT_static_libstdcxx, options::OPT_ffreestanding})
+        if (Arg *IncompatArg = C.getInputArgs().getLastArg(ID))
+          Diag(clang::diag::err_drv_argument_not_allowed_with)
+              << IncompatArg->getSpelling() << "-fsycl";
+    }
+
+    // Create a device toolchain for every specified triple.
+    for (StringRef Target : llvm::split(Targets, ",")) {
+      llvm::Triple TT(Target);
+      for (Action::OffloadKind Kind : Kinds) {
+        auto &TC = getOffloadToolChain(C.getInputArgs(), Kind, TT,
+                                       C.getDefaultToolChain().getTriple());
+
+        // Emit a warning if the detected CUDA version is too new.
+        if (Kind == Action::OFK_Cuda) {
+          auto &CudaInstallation =
+              static_cast<const toolchains::CudaToolChain &>(TC)
+                  .CudaInstallation;
+          if (CudaInstallation.isValid())
+            CudaInstallation.WarnIfUnsupportedVersion();
+        }
+
+        C.addOffloadDeviceToolChain(&TC, Kind);
+      }
+    }
+  }
+
+  // If the user did not specify the toolchains specifically we will infer them
+  // based on the usage of `--offloard-arch=`.
+  if (C.getInputArgs().hasArg(options::OPT_offload_targets_EQ))
+    return;
+
   if (IsCuda && IsHIP) {
     Diag(clang::diag::err_drv_mix_cuda_hip);
     return;
   }
   if (IsCuda && !UseLLVMOffload) {
-    const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
-    const llvm::Triple &HostTriple = HostTC->getTriple();
-    auto OFK = Action::OFK_Cuda;
-    auto CudaTriple =
-        getNVIDIAOffloadTargetTriple(*this, C.getInputArgs(), HostTriple);
+    auto CudaTriple = getNVIDIAOffloadTargetTriple(
+        *this, C.getInputArgs(), C.getDefaultToolChain().getTriple());
     if (!CudaTriple)
       return;
-    // Use the CUDA and host triples as the key into the ToolChains map,
-    // because the device toolchain we create depends on both.
-    auto &CudaTC = ToolChains[CudaTriple->str() + "/" + HostTriple.str()];
-    if (!CudaTC) {
-      CudaTC = std::make_unique<toolchains::CudaToolChain>(
-          *this, *CudaTriple, *HostTC, C.getInputArgs());
 
-      // Emit a warning if the detected CUDA version is too new.
-      CudaInstallationDetector &CudaInstallation =
-          static_cast<toolchains::CudaToolChain &>(*CudaTC).CudaInstallation;
-      if (CudaInstallation.isValid())
-        CudaInstallation.WarnIfUnsupportedVersion();
-    }
-    C.addOffloadDeviceToolChain(CudaTC.get(), OFK);
+    auto &TC =
+        getOffloadToolChain(C.getInputArgs(), Action::OFK_Cuda, *CudaTriple,
+                            C.getDefaultToolChain().getTriple());
+
+    // Emit a warning if the detected CUDA version is too new.
+    const CudaInstallationDetector &CudaInstallation =
+        static_cast<const toolchains::CudaToolChain &>(TC).CudaInstallation;
+    if (CudaInstallation.isValid())
+      CudaInstallation.WarnIfUnsupportedVersion();
+    C.addOffloadDeviceToolChain(&TC, Action::OFK_Cuda);
   } else if (IsHIP && !UseLLVMOffload) {
     if (auto *OMPTargetArg =
             C.getInputArgs().getLastArg(options::OPT_fopenmp_targets_EQ)) {
@@ -914,14 +980,15 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
           << OMPTargetArg->getSpelling() << "HIP";
       return;
     }
-    const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
-    auto OFK = Action::OFK_HIP;
+
     auto HIPTriple = getHIPOffloadTargetTriple(*this, C.getInputArgs());
     if (!HIPTriple)
       return;
-    auto *HIPTC = &getOffloadingDeviceToolChain(C.getInputArgs(), *HIPTriple,
-                                                *HostTC, OFK);
-    C.addOffloadDeviceToolChain(HIPTC, OFK);
+
+    auto &TC =
+        getOffloadToolChain(C.getInputArgs(), Action::OFK_HIP, *HIPTriple,
+                            C.getDefaultToolChain().getTriple());
+    C.addOffloadDeviceToolChain(&TC, Action::OFK_HIP);
   }
 
   if (IsCuda || IsHIP)
@@ -934,10 +1001,8 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   // the -fopenmp-targets option or used --offload-arch with OpenMP enabled.
   bool IsOpenMPOffloading =
       ((IsCuda || IsHIP) && UseLLVMOffload) ||
-      (C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                                options::OPT_fno_openmp, false) &&
-       (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ) ||
-        C.getInputArgs().hasArg(options::OPT_offload_arch_EQ)));
+      (IsOpenMP && (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ) ||
+                    C.getInputArgs().hasArg(options::OPT_offload_arch_EQ)));
   if (IsOpenMPOffloading) {
     // We expect that -fopenmp-targets is always used in conjunction with the
     // option -fopenmp specifying a valid runtime with offloading support, i.e.
@@ -1038,49 +1103,22 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       FoundNormalizedTriples[NormalizedName] = Val;
 
       // If the specified target is invalid, emit a diagnostic.
-      if (TT.getArch() == llvm::Triple::UnknownArch)
+      if (TT.getArch() == llvm::Triple::UnknownArch) {
         Diag(clang::diag::err_drv_invalid_omp_target) << Val;
-      else {
-        const ToolChain *TC;
-        // Device toolchains have to be selected differently. They pair host
-        // and device in their implementation.
-        if (TT.isNVPTX() || TT.isAMDGCN() || TT.isSPIRV()) {
-          const ToolChain *HostTC =
-              C.getSingleOffloadToolChain<Action::OFK_Host>();
-          assert(HostTC && "Host toolchain should be always defined.");
-          auto &DeviceTC =
-              ToolChains[TT.str() + "/" + HostTC->getTriple().normalize()];
-          if (!DeviceTC) {
-            if (TT.isNVPTX())
-              DeviceTC = std::make_unique<toolchains::CudaToolChain>(
-                  *this, TT, *HostTC, C.getInputArgs());
-            else if (TT.isAMDGCN())
-              DeviceTC = std::make_unique<toolchains::AMDGPUOpenMPToolChain>(
-                  *this, TT, *HostTC, C.getInputArgs());
-            else if (TT.isSPIRV())
-              DeviceTC = std::make_unique<toolchains::SPIRVOpenMPToolChain>(
-                  *this, TT, *HostTC, C.getInputArgs());
-            else
-              assert(DeviceTC && "Device toolchain not defined.");
-          }
-
-          TC = DeviceTC.get();
-        } else
-          TC = &getToolChain(C.getInputArgs(), TT);
-        C.addOffloadDeviceToolChain(TC, Action::OFK_OpenMP);
-        auto It = DerivedArchs.find(TT.getTriple());
-        if (It != DerivedArchs.end())
-          KnownArchs[TC] = It->second;
+        continue;
       }
+
+      auto &TC = getOffloadToolChain(C.getInputArgs(), Action::OFK_OpenMP, TT,
+                                     C.getDefaultToolChain().getTriple());
+      C.addOffloadDeviceToolChain(&TC, Action::OFK_OpenMP);
+      auto It = DerivedArchs.find(TT.getTriple());
+      if (It != DerivedArchs.end())
+        KnownArchs[&TC] = It->second;
     }
   } else if (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ)) {
     Diag(clang::diag::err_drv_expecting_fopenmp_with_fopenmp_targets);
     return;
   }
-
-  // We need to generate a SYCL toolchain if the user specified -fsycl.
-  bool IsSYCL = C.getInputArgs().hasFlag(options::OPT_fsycl,
-                                         options::OPT_fno_sycl, false);
 
   auto argSYCLIncompatible = [&](OptSpecifier OptId) {
     if (!IsSYCL)
@@ -1103,9 +1141,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     // getOffloadingDeviceToolChain, because the device toolchains we're
     // going to create will depend on both.
     const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
-    for (const auto &TargetTriple : UniqueSYCLTriplesVec) {
-      auto SYCLTC = &getOffloadingDeviceToolChain(
-          C.getInputArgs(), TargetTriple, *HostTC, Action::OFK_SYCL);
+    for (const auto &TT : UniqueSYCLTriplesVec) {
+      auto SYCLTC = &getOffloadToolChain(C.getInputArgs(), Action::OFK_SYCL, TT,
+                                         HostTC->getTriple());
       C.addOffloadDeviceToolChain(SYCLTC, Action::OFK_SYCL);
     }
   }
@@ -3409,7 +3447,8 @@ class OffloadingActionBuilder final {
       // Collect all offload arch parameters, removing duplicates.
       std::set<StringRef> GpuArchs;
       bool Error = false;
-      for (Arg *A : Args) {
+      const ToolChain &TC = *ToolChains.front();
+      for (Arg *A : C.getArgsForToolChain(&TC, "", AssociatedOffloadKind)) {
         if (!(A->getOption().matches(options::OPT_offload_arch_EQ) ||
               A->getOption().matches(options::OPT_no_offload_arch_EQ)))
           continue;
@@ -3420,7 +3459,6 @@ class OffloadingActionBuilder final {
               ArchStr == "all") {
             GpuArchs.clear();
           } else if (ArchStr == "native") {
-            const ToolChain &TC = *ToolChains.front();
             auto GPUsOrErr = ToolChains.front()->getSystemGPUArchs(Args);
             if (!GPUsOrErr) {
               TC.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
@@ -6604,6 +6642,72 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
   return std::string(Output);
 }
 
+const ToolChain &Driver::getOffloadToolChain(
+    const llvm::opt::ArgList &Args, const Action::OffloadKind Kind,
+    const llvm::Triple &Target, const llvm::Triple &AuxTarget) const {
+  auto &TC = ToolChains[Target.str() + "/" + AuxTarget.str()];
+  auto &HostTC = ToolChains[AuxTarget.str()];
+
+  assert(HostTC && "Host toolchain for offloading doesn't exit?");
+  if (!TC) {
+    // Detect the toolchain based off of the target operating system.
+    switch (Target.getOS()) {
+    case llvm::Triple::CUDA:
+      TC = std::make_unique<toolchains::CudaToolChain>(*this, Target, *HostTC,
+                                                       Args);
+      break;
+    case llvm::Triple::AMDHSA:
+      if (Kind == Action::OFK_HIP)
+        TC = std::make_unique<toolchains::HIPAMDToolChain>(*this, Target,
+                                                           *HostTC, Args);
+      else if (Kind == Action::OFK_OpenMP)
+        TC = std::make_unique<toolchains::AMDGPUOpenMPToolChain>(*this, Target,
+                                                                 *HostTC, Args);
+      break;
+    default:
+      break;
+    }
+  }
+  if (!TC) {
+    // Detect the toolchain based off of the target architecture if that failed.
+    switch (Target.getArch()) {
+    case llvm::Triple::spir:
+    case llvm::Triple::spir64:
+    case llvm::Triple::spirv:
+    case llvm::Triple::spirv32:
+    case llvm::Triple::spirv64:
+      switch (Kind) {
+      case Action::OFK_SYCL:
+        TC = std::make_unique<toolchains::SYCLToolChain>(*this, Target, *HostTC,
+                                                         Args);
+        break;
+      case Action::OFK_HIP:
+        TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target,
+                                                           *HostTC, Args);
+        break;
+      case Action::OFK_OpenMP:
+        TC = std::make_unique<toolchains::SPIRVOpenMPToolChain>(*this, Target,
+                                                                *HostTC, Args);
+        break;
+      case Action::OFK_Cuda:
+        TC = std::make_unique<toolchains::CudaToolChain>(*this, Target, *HostTC,
+                                                         Args);
+        break;
+      default:
+        break;
+      }
+      break;
+    default:
+      break;
+    }
+  }
+
+  // If all else fails, just look up the normal toolchain for the target.
+  if (!TC)
+    return getToolChain(Args, Target);
+  return *TC;
+}
+
 const ToolChain &Driver::getToolChain(const ArgList &Args,
                                       const llvm::Triple &Target) const {
 
@@ -6794,45 +6898,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     }
   }
 
-  return *TC;
-}
-
-const ToolChain &Driver::getOffloadingDeviceToolChain(
-    const ArgList &Args, const llvm::Triple &Target, const ToolChain &HostTC,
-    const Action::OffloadKind &TargetDeviceOffloadKind) const {
-  // Use device / host triples as the key into the ToolChains map because the
-  // device ToolChain we create depends on both.
-  auto &TC = ToolChains[Target.str() + "/" + HostTC.getTriple().str()];
-  if (!TC) {
-    // Categorized by offload kind > arch rather than OS > arch like
-    // the normal getToolChain call, as it seems a reasonable way to categorize
-    // things.
-    switch (TargetDeviceOffloadKind) {
-    case Action::OFK_HIP: {
-      if (((Target.getArch() == llvm::Triple::amdgcn ||
-            Target.getArch() == llvm::Triple::spirv64) &&
-           Target.getVendor() == llvm::Triple::AMD &&
-           Target.getOS() == llvm::Triple::AMDHSA) ||
-          !Args.hasArgNoClaim(options::OPT_offload_EQ))
-        TC = std::make_unique<toolchains::HIPAMDToolChain>(*this, Target,
-                                                           HostTC, Args);
-      else if (Target.getArch() == llvm::Triple::spirv64 &&
-               Target.getVendor() == llvm::Triple::UnknownVendor &&
-               Target.getOS() == llvm::Triple::UnknownOS)
-        TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target,
-                                                           HostTC, Args);
-      break;
-    }
-    case Action::OFK_SYCL:
-      if (Target.isSPIROrSPIRV())
-        TC = std::make_unique<toolchains::SYCLToolChain>(*this, Target, HostTC,
-                                                         Args);
-      break;
-    default:
-      break;
-    }
-  }
-  assert(TC && "Could not create offloading device tool chain.");
   return *TC;
 }
 
