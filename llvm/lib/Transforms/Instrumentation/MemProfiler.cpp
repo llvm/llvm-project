@@ -966,12 +966,12 @@ undriftMemProfRecord(const DenseMap<uint64_t, LocToLocMap> &UndriftMaps,
     UndriftCallStack(CS);
 }
 
-static void readMemprof(
-    Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
-    const TargetLibraryInfo &TLI,
-    std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo,
-    std::set<std::vector<uint64_t>> &MatchedCallSites,
-    DenseMap<uint64_t, LocToLocMap> &UndriftMaps) {
+static void
+readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
+            const TargetLibraryInfo &TLI,
+            std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo,
+            std::set<std::vector<uint64_t>> &MatchedCallSites,
+            DenseMap<uint64_t, LocToLocMap> &UndriftMaps) {
   auto &Ctx = M.getContext();
   // Previously we used getIRPGOFuncName() here. If F is local linkage,
   // getIRPGOFuncName() returns FuncName with prefix 'FileName;'. But
