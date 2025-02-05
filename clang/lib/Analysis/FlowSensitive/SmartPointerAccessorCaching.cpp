@@ -41,7 +41,8 @@ bool hasSmartPointerClassShape(const CXXRecordDecl &RD, bool &HasGet,
         HasStar = true;
         StarReturnType = MD->getReturnType()
                              .getNonReferenceType()
-                             ->getCanonicalTypeUnqualified();
+                             ->getCanonicalTypeUnqualified()
+                             .getUnqualifiedType();
       }
       break;
     case OO_Arrow:
@@ -49,7 +50,8 @@ bool hasSmartPointerClassShape(const CXXRecordDecl &RD, bool &HasGet,
         HasArrow = true;
         ArrowReturnType = MD->getReturnType()
                               ->getPointeeType()
-                              ->getCanonicalTypeUnqualified();
+                              ->getCanonicalTypeUnqualified()
+                              .getUnqualifiedType();
       }
       break;
     case OO_None: {
@@ -61,14 +63,16 @@ bool hasSmartPointerClassShape(const CXXRecordDecl &RD, bool &HasGet,
           HasGet = true;
           GetReturnType = MD->getReturnType()
                               ->getPointeeType()
-                              ->getCanonicalTypeUnqualified();
+                              ->getCanonicalTypeUnqualified()
+                              .getUnqualifiedType();
         }
       } else if (II->isStr("value")) {
         if (MD->getReturnType()->isReferenceType()) {
           HasValue = true;
           ValueReturnType = MD->getReturnType()
                                 .getNonReferenceType()
-                                ->getCanonicalTypeUnqualified();
+                                ->getCanonicalTypeUnqualified()
+                                .getUnqualifiedType();
         }
       }
     } break;
