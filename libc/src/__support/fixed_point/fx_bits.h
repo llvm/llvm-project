@@ -176,7 +176,7 @@ template <typename T> LIBC_INLINE constexpr T round(T x, int n) {
   return bit_and((x + round_bit), rounding_mask);
 }
 
-// count leading zeros
+// count leading sign bits
 template <typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, int>
 countls(T f) {
