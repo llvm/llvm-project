@@ -1080,7 +1080,7 @@ public:
   enum CandReason : uint8_t {
     NoCand, Only1, PhysReg, RegExcess, RegCritical, Stall, Cluster, Weak,
     RegMax, ResourceReduce, ResourceDemand, BotHeightReduce, BotPathReduce,
-    TopDepthReduce, TopPathReduce, NextDefUse, NodeOrder};
+    TopDepthReduce, TopPathReduce, NodeOrder};
 
 #ifndef NDEBUG
   static const char *getReasonStr(GenericSchedulerBase::CandReason Reason);

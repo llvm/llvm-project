@@ -3236,7 +3236,6 @@ const char *GenericSchedulerBase::getReasonStr(
   case TopPathReduce:  return "TOP-PATH  ";
   case BotHeightReduce:return "BOT-HEIGHT";
   case BotPathReduce:  return "BOT-PATH  ";
-  case NextDefUse:     return "DEF-USE   ";
   case NodeOrder:      return "ORDER     ";
   };
   llvm_unreachable("Unknown reason!");
