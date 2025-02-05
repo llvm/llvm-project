@@ -65,7 +65,7 @@ LIBC_INLINE ErrorOr<pid_t> wait4impl(pid_t pid, int *wait_status, int options,
       *wait_status = W_STOPCODE(info.si_status);
       break;
     case CLD_CONTINUED:
-      *wait_status = __W_CONTINUED;
+      *wait_status = 0xffff;
       break;
     default:
       *wait_status = 0;
