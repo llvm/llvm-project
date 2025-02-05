@@ -3471,6 +3471,17 @@ public:
         m_type = eLookupTypeFunctionOrSymbol;
         break;
 
+      case 'c':
+        bool value, success;
+        value = OptionArgParser::ToBoolean(option_arg, false, &success);
+        if (success) {
+          m_cached = value;
+        } else {
+          return Status::FromErrorStringWithFormatv(
+              "invalid boolean value '%s' passed for -G option", option_arg);
+        }
+        break;
+
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -3482,6 +3493,7 @@ public:
       m_type = eLookupTypeInvalid;
       m_str.clear();
       m_addr = LLDB_INVALID_ADDRESS;
+      m_cached = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -3494,6 +3506,7 @@ public:
                                      // parsing options
     std::string m_str; // Holds name lookup
     lldb::addr_t m_addr = LLDB_INVALID_ADDRESS; // Holds the address to lookup
+    bool m_cached = false;
   };
 
   CommandObjectTargetModulesShowUnwind(CommandInterpreter &interpreter)
@@ -3583,9 +3596,12 @@ protected:
       if (abi)
         start_addr = abi->FixCodeAddress(start_addr);
 
-      FuncUnwindersSP func_unwinders_sp(
-          sc.module_sp->GetUnwindTable()
-              .GetUncachedFuncUnwindersContainingAddress(start_addr, sc));
+      UnwindTable &uw_table = sc.module_sp->GetUnwindTable();
+      FuncUnwindersSP func_unwinders_sp =
+          m_options.m_cached
+              ? uw_table.GetFuncUnwindersContainingAddress(start_addr, sc)
+              : uw_table.GetUncachedFuncUnwindersContainingAddress(start_addr,
+                                                                   sc);
       if (!func_unwinders_sp)
         continue;
 
