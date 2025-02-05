@@ -908,3 +908,26 @@ namespace TemporaryInNTTP {
                // expected-note {{created here}}
   B<2> j2; /// Ok.
 }
+
+namespace LocalDestroy {
+  /// This is reduced from a libc++ test case.
+  /// The local f.TI.copied points to the local variable Copied, and we used to
+  /// destroy Copied before f, causing problems later on when a DeadBlock had a
+  /// pointer pointing to it that was already destroyed.
+  struct TrackInitialization {
+    bool *copied_;
+  };
+  struct TrackingPred : TrackInitialization {
+    constexpr TrackingPred(bool *copied) : TrackInitialization(copied) {}
+  };
+  struct F {
+    const TrackingPred &TI;
+  };
+  constexpr int f() {
+    bool Copied = false;
+    TrackingPred TI(&Copied);
+    F f{TI};
+    return 1;
+  }
+  static_assert(f() == 1);
+}
