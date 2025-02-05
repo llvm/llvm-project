@@ -10706,6 +10706,7 @@ public:
         });
     SmallPtrSet<Value *, 4> UniqueBases;
     unsigned SliceSize = getPartNumElems(VL.size(), NumParts);
+    SmallDenseMap<Value *, APInt, 4> VectorOpsToExtracts;
     for (unsigned Part : seq<unsigned>(NumParts)) {
       unsigned Limit = getNumElems(VL.size(), SliceSize, Part);
       ArrayRef<int> SubMask = Mask.slice(Part * SliceSize, Limit);
@@ -10756,10 +10757,18 @@ public:
             continue;
           }
         }
-        Cost -= TTI.getVectorInstrCost(*EE, EE->getVectorOperandType(),
-                                       CostKind, Idx);
+        APInt &DemandedElts =
+            VectorOpsToExtracts
+                .try_emplace(VecBase,
+                             APInt::getZero(getNumElements(VecBase->getType())))
+                .first->getSecond();
+        DemandedElts.setBit(Idx);
       }
     }
+    for (const auto &[Vec, DemandedElts] : VectorOpsToExtracts)
+      Cost -= TTI.getScalarizationOverhead(cast<VectorType>(Vec->getType()),
+                                           DemandedElts, /*Insert=*/false,
+                                           /*Extract=*/true, CostKind);
     // Check that gather of extractelements can be represented as just a
     // shuffle of a single/two vectors the scalars are extracted from.
     // Found the bunch of extractelement instructions that must be gathered
@@ -11283,24 +11292,27 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   }
   case Instruction::ExtractValue:
   case Instruction::ExtractElement: {
+    APInt DemandedElts;
+    VectorType *SrcVecTy = nullptr;
     auto GetScalarCost = [&](unsigned Idx) {
       if (isa<PoisonValue>(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
 
       auto *I = cast<Instruction>(UniqueValues[Idx]);
-      VectorType *SrcVecTy;
-      if (ShuffleOrOp == Instruction::ExtractElement) {
-        auto *EE = cast<ExtractElementInst>(I);
-        SrcVecTy = EE->getVectorOperandType();
-      } else {
-        auto *EV = cast<ExtractValueInst>(I);
-        Type *AggregateTy = EV->getAggregateOperand()->getType();
-        unsigned NumElts;
-        if (auto *ATy = dyn_cast<ArrayType>(AggregateTy))
-          NumElts = ATy->getNumElements();
-        else
-          NumElts = AggregateTy->getStructNumElements();
-        SrcVecTy = getWidenedType(OrigScalarTy, NumElts);
+      if (!SrcVecTy) {
+        if (ShuffleOrOp == Instruction::ExtractElement) {
+          auto *EE = cast<ExtractElementInst>(I);
+          SrcVecTy = EE->getVectorOperandType();
+        } else {
+          auto *EV = cast<ExtractValueInst>(I);
+          Type *AggregateTy = EV->getAggregateOperand()->getType();
+          unsigned NumElts;
+          if (auto *ATy = dyn_cast<ArrayType>(AggregateTy))
+            NumElts = ATy->getNumElements();
+          else
+            NumElts = AggregateTy->getStructNumElements();
+          SrcVecTy = getWidenedType(OrigScalarTy, NumElts);
+        }
       }
       if (I->hasOneUse()) {
         Instruction *Ext = I->user_back();
@@ -11317,10 +11329,18 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           return Cost;
         }
       }
-      return TTI->getVectorInstrCost(Instruction::ExtractElement, SrcVecTy,
-                                     CostKind, *getExtractIndex(I));
+      if (DemandedElts.isZero())
+        DemandedElts = APInt::getZero(getNumElements(SrcVecTy));
+      DemandedElts.setBit(*getExtractIndex(I));
+      return InstructionCost(TTI::TCC_Free);
     };
-    auto GetVectorCost = [](InstructionCost CommonCost) { return CommonCost; };
+    auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
+      return CommonCost - (DemandedElts.isZero()
+                               ? TTI::TCC_Free
+                               : TTI.getScalarizationOverhead(
+                                     SrcVecTy, DemandedElts, /*Insert=*/false,
+                                     /*Extract=*/true, CostKind));
+    };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
   case Instruction::InsertElement: {
@@ -13663,6 +13683,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
   APInt ShuffledElements = APInt::getZero(VL.size());
+  APInt DemandedElements = APInt::getZero(VL.size());
   DenseMap<Value *, unsigned> UniqueElements;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
@@ -13673,9 +13694,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
       V = nullptr;
     }
     if (!ForPoisonSrc)
-      Cost +=
-          TTI->getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
-                                  I, Constant::getNullValue(VecTy), V);
+      DemandedElements.setBit(I);
   };
   SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
   for (unsigned I = 0, E = VL.size(); I < E; ++I) {
@@ -13698,6 +13717,10 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     ShuffledElements.setBit(I);
     ShuffleMask[I] = Res.first->second;
   }
+  if (!DemandedElements.isZero())
+    Cost +=
+        TTI->getScalarizationOverhead(VecTy, DemandedElements, /*Insert=*/true,
+                                      /*Extract=*/false, CostKind, VL);
   if (ForPoisonSrc) {
     if (isa<FixedVectorType>(ScalarTy)) {
       assert(SLPReVec && "Only supported by REVEC.");
