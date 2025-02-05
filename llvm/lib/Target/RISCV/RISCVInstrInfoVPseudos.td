@@ -776,10 +776,8 @@ class VPseudo<Instruction instr, LMULInfo m, dag outs, dag ins, int sew = 0> :
   let SEW = sew;
 }
 
-class GetVTypePredicates<VTypeInfo vti, bit minimal = false> {
-  list<Predicate> Predicates = !cond(!eq(vti.Scalar, f16) : [!if(minimal,
-                                                                 HasVInstructionsF16Minimal,
-                                                                 HasVInstructionsF16)],
+class GetVTypePredicates<VTypeInfo vti> {
+  list<Predicate> Predicates = !cond(!eq(vti.Scalar, f16) : [HasVInstructionsF16],
                                      !eq(vti.Scalar, bf16) : [HasVInstructionsBF16Minimal],
                                      !eq(vti.Scalar, f32) : [HasVInstructionsAnyF],
                                      !eq(vti.Scalar, f64) : [HasVInstructionsF64],
