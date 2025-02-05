@@ -259,6 +259,11 @@ static cl::opt<bool> ShowBarriers(
     cl::desc("Print memory barrier information in the instruction info view"),
     cl::cat(ViewOptions), cl::init(false));
 
+static cl::opt<bool> ShowSchedulingInfo(
+    "scheduling-info",
+    cl::desc("Print the instruction scheduling information in the instruction info view"),
+    cl::cat(ViewOptions), cl::init(false));
+
 static cl::opt<bool> DisableCustomBehaviour(
     "disable-cb",
     cl::desc(
@@ -678,12 +683,13 @@ int main(int argc, char **argv) {
 
       // Create the views for this pipeline, execute, and emit a report.
       if (PrintInstructionInfoView) {
-        Printer.addView(std::make_unique<mca::InstructionInfoView>(
-            *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-            ShowBarriers, *IM, InstToInstruments));
+	Printer.addView(std::make_unique<mca::InstructionInfoView>(
+              *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
+              ShowBarriers, ShowSchedulingInfo, *IM, InstToInstruments));
       }
+
       Printer.addView(
-          std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
+	   std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
 
       if (!runPipeline(*P))
         return 1;
@@ -757,7 +763,7 @@ int main(int argc, char **argv) {
     if (PrintInstructionInfoView)
       Printer.addView(std::make_unique<mca::InstructionInfoView>(
           *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-          ShowBarriers, *IM, InstToInstruments));
+          ShowBarriers, ShowSchedulingInfo, *IM, InstToInstruments));
 
     // Fetch custom Views that are to be placed after the InstructionInfoView.
     // Refer to the comment paired with the CB->getStartViews(*IP, Insts); line

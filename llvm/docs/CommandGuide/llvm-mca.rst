@@ -170,6 +170,20 @@ option specifies "``-``", then the output will also be sent to standard output.
   Enable extra scheduler statistics. This view collects and analyzes instruction
   issue events. This view is disabled by default.
 
+.. option:: -scheduling-info
+
+  Enable scheduling info view. This view reports scheduling information defined
+  in LLVM target description in the form:
+  uOps | Latency | Bypass Latency | Throughput | LLVM OpcodeName | Resources
+  units | assembly instruction and its comment (// or /* */) if defined.
+  It allows to compare scheduling info with architecture documents and fix them
+  in target description by fixing InstrRW for the reported LLVM opcode.
+  Scheduling information can be defined in the same order in each instruction
+  comments to check easily reported and reference scheduling information.
+  Suggested information in comment:
+  ``// <architecture instruction form> \\ <scheduling documentation title> \\
+     <uOps>, <Latency>, <Bypass Latency>, <Throughput>, <Resources units>``
+
 .. option:: -retire-stats
 
   Enable extra retire control unit statistics. This view is disabled by default.

@@ -56,6 +56,7 @@ class InstructionInfoView : public InstructionView {
   CodeEmitter &CE;
   bool PrintEncodings;
   bool PrintBarriers;
+  bool PrintSchedulingInfo;
   using UniqueInst = std::unique_ptr<Instruction>;
   ArrayRef<UniqueInst> LoweredInsts;
   const InstrumentManager &IM;
@@ -65,16 +66,27 @@ class InstructionInfoView : public InstructionView {
 
   struct InstructionInfoViewData {
     unsigned NumMicroOpcodes = 0;
+    // Latency + ForwardingDelayCycles: negative ReadAdvance
     unsigned Latency = 0;
+    // ReadAvance Bypasses cycles: Latency - ReadAdvance (positive value)
+    unsigned Bypass = 0;
     std::optional<double> RThroughput = 0.0;
     bool mayLoad = false;
     bool mayStore = false;
     bool hasUnmodeledSideEffects = false;
+    std::string OpcodeName = "";
+    std::string Resources = "";
   };
   using IIVDVec = SmallVector<InstructionInfoViewData, 16>;
 
   /// Place the data into the array of InstructionInfoViewData IIVD.
   void collectData(MutableArrayRef<InstructionInfoViewData> IIVD) const;
+
+  /// Extract comment (//, /* */) from the source assembly placed just after
+  /// instruction.
+  void getComment(const llvm::MCInst &Inst, std::string &CommentString) const;
+  /// Print Scheduling Info to avoid mixing too much options
+  void printSchedulingInfoView(raw_ostream &OS) const;
 
 public:
   InstructionInfoView(const llvm::MCSubtargetInfo &ST,
@@ -82,12 +94,15 @@ public:
                       bool ShouldPrintEncodings, llvm::ArrayRef<llvm::MCInst> S,
                       llvm::MCInstPrinter &IP,
                       ArrayRef<UniqueInst> LoweredInsts,
-                      bool ShouldPrintBarriers, const InstrumentManager &IM,
-                      const InstToInstrumentsT &InstToInstruments)
+                      bool ShouldPrintBarriers, bool ShouldPrintSchedulingInfo,
+		      const InstrumentManager &IM,
+		      const InstToInstrumentsT &InstToInstruments)
       : InstructionView(ST, IP, S), MCII(II), CE(C),
         PrintEncodings(ShouldPrintEncodings),
-        PrintBarriers(ShouldPrintBarriers), LoweredInsts(LoweredInsts), IM(IM),
-        InstToInstruments(InstToInstruments) {}
+        PrintBarriers(ShouldPrintBarriers),
+	PrintSchedulingInfo(ShouldPrintSchedulingInfo),
+	LoweredInsts(LoweredInsts), IM(IM),
+	InstToInstruments(InstToInstruments) {}
 
   void printView(llvm::raw_ostream &OS) const override;
   StringRef getNameAsString() const override { return "InstructionInfoView"; }
