@@ -20,14 +20,14 @@ declare <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8>, <16 x i8>)
 define void @ass_pair(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-LABEL: ass_pair:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    stxv v2, 16(r3)
+; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NOMMA-LABEL: ass_pair:
 ; CHECK-NOMMA:       # %bb.0: # %entry
-; CHECK-NOMMA-NEXT:    stxv v2, 0(r3)
 ; CHECK-NOMMA-NEXT:    stxv v2, 16(r3)
+; CHECK-NOMMA-NEXT:    stxv v2, 0(r3)
 ; CHECK-NOMMA-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: ass_pair:
@@ -53,32 +53,32 @@ define void @disass_pair(ptr %ptr1, ptr %ptr2, ptr %ptr3) {
 ; CHECK-LABEL: disass_pair:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v3, 0(r3)
-; CHECK-NEXT:    lxv v2, 16(r3)
+; CHECK-NEXT:    lxv vs0, 16(r3)
 ; CHECK-NEXT:    stxv v3, 0(r4)
-; CHECK-NEXT:    stxv v2, 0(r5)
+; CHECK-NEXT:    stxv vs0, 0(r5)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NOMMA-LABEL: disass_pair:
 ; CHECK-NOMMA:       # %bb.0: # %entry
 ; CHECK-NOMMA-NEXT:    lxv v3, 0(r3)
-; CHECK-NOMMA-NEXT:    lxv v2, 16(r3)
+; CHECK-NOMMA-NEXT:    lxv vs0, 16(r3)
 ; CHECK-NOMMA-NEXT:    stxv v3, 0(r4)
-; CHECK-NOMMA-NEXT:    stxv v2, 0(r5)
+; CHECK-NOMMA-NEXT:    stxv vs0, 0(r5)
 ; CHECK-NOMMA-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: disass_pair:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv v3, 16(r3)
-; CHECK-BE-NEXT:    lxv v2, 0(r3)
-; CHECK-BE-NEXT:    stxv v2, 0(r4)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
+; CHECK-BE-NEXT:    stxv vs0, 0(r4)
 ; CHECK-BE-NEXT:    stxv v3, 0(r5)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-BE-NOMMA-LABEL: disass_pair:
 ; CHECK-BE-NOMMA:       # %bb.0: # %entry
 ; CHECK-BE-NOMMA-NEXT:    lxv v3, 16(r3)
-; CHECK-BE-NOMMA-NEXT:    lxv v2, 0(r3)
-; CHECK-BE-NOMMA-NEXT:    stxv v2, 0(r4)
+; CHECK-BE-NOMMA-NEXT:    lxv vs0, 0(r3)
+; CHECK-BE-NOMMA-NEXT:    stxv vs0, 0(r4)
 ; CHECK-BE-NOMMA-NEXT:    stxv v3, 0(r5)
 ; CHECK-BE-NOMMA-NEXT:    blr
 entry:

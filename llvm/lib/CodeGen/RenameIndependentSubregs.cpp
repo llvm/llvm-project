@@ -26,6 +26,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "LiveRangeUtils.h"
 #include "PHIEliminationUtils.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -43,25 +44,11 @@ using namespace llvm;
 
 namespace {
 
-class RenameIndependentSubregs : public MachineFunctionPass {
+class RenameIndependentSubregs {
 public:
-  static char ID;
-  RenameIndependentSubregs() : MachineFunctionPass(ID) {}
+  RenameIndependentSubregs(LiveIntervals *LIS) : LIS(LIS) {}
 
-  StringRef getPassName() const override {
-    return "Rename Disconnected Subregister Components";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<LiveIntervalsWrapperPass>();
-    AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addRequired<SlotIndexesWrapperPass>();
-    AU.addPreserved<SlotIndexesWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool run(MachineFunction &MF);
 
 private:
   struct SubRangeInfo {
@@ -106,17 +93,36 @@ private:
   const TargetInstrInfo *TII = nullptr;
 };
 
+class RenameIndependentSubregsLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  RenameIndependentSubregsLegacy() : MachineFunctionPass(ID) {}
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  StringRef getPassName() const override {
+    return "Rename Disconnected Subregister Components";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addRequired<SlotIndexesWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
 } // end anonymous namespace
 
-char RenameIndependentSubregs::ID;
+char RenameIndependentSubregsLegacy::ID;
 
-char &llvm::RenameIndependentSubregsID = RenameIndependentSubregs::ID;
+char &llvm::RenameIndependentSubregsID = RenameIndependentSubregsLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(RenameIndependentSubregs, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(RenameIndependentSubregsLegacy, DEBUG_TYPE,
                       "Rename Independent Subregisters", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(RenameIndependentSubregs, DEBUG_TYPE,
+INITIALIZE_PASS_END(RenameIndependentSubregsLegacy, DEBUG_TYPE,
                     "Rename Independent Subregisters", false, false)
 
 bool RenameIndependentSubregs::renameComponents(LiveInterval &LI) const {
@@ -381,7 +387,25 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
   }
 }
 
-bool RenameIndependentSubregs::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses
+RenameIndependentSubregsPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  if (!RenameIndependentSubregs(&LIS).run(MF))
+    return PreservedAnalyses::all();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<LiveIntervalsAnalysis>();
+  PA.preserve<SlotIndexesAnalysis>();
+  return PA;
+}
+
+bool RenameIndependentSubregsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  return RenameIndependentSubregs(&LIS).run(MF);
+}
+
+bool RenameIndependentSubregs::run(MachineFunction &MF) {
   // Skip renaming if liveness of subregister is not tracked.
   MRI = &MF.getRegInfo();
   if (!MRI->subRegLivenessEnabled())
@@ -390,7 +414,6 @@ bool RenameIndependentSubregs::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Renaming independent subregister live ranges in "
                     << MF.getName() << '\n');
 
-  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   TII = MF.getSubtarget().getInstrInfo();
 
   // Iterate over all vregs. Note that we query getNumVirtRegs() the newly
