@@ -282,6 +282,7 @@ static bool isResourceRecordTypeOrArrayOf(const Type *Ty) {
 // array, or a builtin intangible type. Returns false it is a valid leaf element
 // type or if it is a record type that needs to be inspected further.
 static bool isInvalidConstantBufferLeafElementType(const Type *Ty) {
+  Ty = Ty->getUnqualifiedDesugaredType();
   if (isResourceRecordTypeOrArrayOf(Ty))
     return true;
   if (Ty->isRecordType())
@@ -289,7 +290,7 @@ static bool isInvalidConstantBufferLeafElementType(const Type *Ty) {
   if (Ty->isConstantArrayType() &&
       isZeroSizedArray(cast<ConstantArrayType>(Ty)))
     return true;
-  if (Ty->isHLSLBuiltinIntangibleType())
+  if (Ty->isHLSLBuiltinIntangibleType() || Ty->isHLSLAttributedResourceType())
     return true;
   return false;
 }
