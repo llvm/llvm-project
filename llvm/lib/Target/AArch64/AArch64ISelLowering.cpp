@@ -1451,8 +1451,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Legal);
     }
+    for (auto VT: {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1})
+      setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Legal);
   }
 
   if (Subtarget->isSVEorStreamingSVEAvailable()) {
