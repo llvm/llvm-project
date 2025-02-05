@@ -16162,6 +16162,23 @@ trapping or setting ``errno``.
 The first result is the fractional part of the operand and the second result is
 the integral part of the operand. Both results have the same sign as the operand.
 
+Not including exceptional inputs (listed below), `llvm.modf.*` is semantically
+equivalent to:
+
+  %fp = frem <fptype> %x, 1.0  ; Fractional part
+  %ip = fsub <fptype> %x, %fp  ; Integral part
+
+(assuming no floating-point precision errors)
+
+If the argument is a zero, returns a zero with the same sign and a 0 exponent
+for both the fractional and integral parts.
+
+If the argument is an infinity, returns a fractional part of zero with the same
+sign, and infinity with the same sign as the integral part.
+
+If the argument is a NaN, a NaN is returned as both fractional and integral
+parts.
+
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
