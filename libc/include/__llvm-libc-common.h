@@ -80,6 +80,9 @@
 #define __NOEXCEPT
 #endif
 
+#undef _Returns_twice
+#define _Returns_twice __attribute__((returns_twice))
+
 #endif // __cplusplus
 
 #endif // LLVM_LIBC_COMMON_H
