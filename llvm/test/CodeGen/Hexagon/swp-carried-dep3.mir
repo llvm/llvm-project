@@ -7,6 +7,13 @@
 # requires to use a single CHECK-NOT to match such a Rec NodeSet. Fortunately
 # the atom '.' does not match a newline but anything else on a line.
 
+# CHECK: Overlap check:
+# CHECK-NEXT:   BaseMI:   %13:intregs = S2_storerh_pi %12:intregs(tied-def 0), 2, %20:intregs :: (store (s16))
+# CHECK-NEXT:     Base + 0 + I * 2, Len: 2
+# CHECK-NEXT:   OtherMI:   %19:intregs, %15:intregs = L2_loadrh_pi %14:intregs(tied-def 1), 2 :: (load (s16))
+# CHECK-NEXT:     Base + 0 + I * 2, Len: 2
+# CHECK-NEXT:   Result: No overlap
+
 # CHECK-NOT: Rec NodeSet{{.+[[:space:]]}} SU(5){{.+[[:space:]]}} SU(7)
 
 ...
