@@ -2055,7 +2055,8 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                        "'llvm.mlir.alias' or 'llvm.func'");
 
   LLVMPointerType type = getType();
-  if ((global && global.getAddrSpace() != type.getAddressSpace()))
+  if ((global && global.getAddrSpace() != type.getAddressSpace()) ||
+      (alias && alias.getAddrSpace() != type.getAddressSpace()))
     return emitOpError("pointer address space must match address space of the "
                        "referenced global or alias");
 

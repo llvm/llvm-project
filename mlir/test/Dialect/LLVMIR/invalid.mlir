@@ -1734,10 +1734,22 @@ llvm.mlir.alias external @y3 : i32 {
 
 // -----
 
+llvm.mlir.global external @x(42 : i32) : i32
+
 llvm.mlir.alias external @y4 : i32 {
   %0 = llvm.mlir.addressof @x : !llvm.ptr
   // expected-error@+1 {{ops with side effects are not allowed in alias initializers}}
   %2 = llvm.load %0 : !llvm.ptr -> i32
   llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+llvm.mlir.alias external @y5 : i32 {
+  // expected-error@+1 {{pointer address space must match address space}}
+  %0 = llvm.mlir.addressof @x : !llvm.ptr<4>
+  llvm.return %0 : !llvm.ptr<4>
 }
 
