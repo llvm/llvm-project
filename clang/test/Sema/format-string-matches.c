@@ -113,8 +113,8 @@ void test_freebsd_specifiers(void) {
 }
 
 // passing the wrong kind of string literal
-void takes_printf_string(const char *fmt) __attribute__((format_matches(printf, 1, "%s"))); // expected-note{{format string is defined here}}
-__attribute__((format_matches(freebsd_kprintf, 1, "%s")))
+void takes_printf_string(const char *fmt) __attribute__((format_matches(printf, 1, "%s")));
+__attribute__((format_matches(freebsd_kprintf, 1, "%s"))) // expected-note{{format string is defined here}}
 void takes_freebsd_kprintf_string(const char *fmt) {
     takes_printf_string(fmt); // expected-warning{{passing 'freebsd_kprintf' format string where 'printf' format string is expected}}
 
@@ -143,4 +143,41 @@ void test_multiple_format_strings(const char *fmt1, const char *fmt2) {
     test_recv_multiple_format_strings(fmt2, fmt1); // \
         expected-warning{{passing 'printf' format string where 'os_log' format string is expected}} \
         expected-warning{{passing 'os_log' format string where 'printf' format string is expected}}
+}
+
+void accept_value(const char *f) __attribute__((format_matches(freebsd_kprintf, 1, "%s%i%i"))); // \
+    expected-note 3{{comparing with this specifier}} \
+    expected-note 3{{format string is defined here}}
+void accept_indirect_field_width(const char *f) __attribute__((format_matches(freebsd_kprintf, 1, "%s%*i"))); // \
+    expected-note 3{{comparing with this specifier}} \
+    expected-note 3{{format string is defined here}}
+void accept_indirect_field_precision(const char *f) __attribute__((format_matches(freebsd_kprintf, 1, "%s%.*i"))); // \
+    expected-note 3{{comparing with this specifier}} \
+    expected-note 3{{format string is defined here}}
+void accept_aux_value(const char *f) __attribute__((format_matches(freebsd_kprintf, 1, "%D%i"))); // \
+    expected-note 3{{comparing with this specifier}} \
+    expected-note 3{{format string is defined here}}
+
+void accept_value(const char *f) {
+    accept_indirect_field_width(f); // expected-warning{{format argument is a value, but it should be an indirect field width}}
+    accept_indirect_field_precision(f); // expected-warning{{format argument is a value, but it should be an indirect precision}}
+    accept_aux_value(f); // expected-warning{{format argument is a value, but it should be an auxiliary value}}
+}
+
+void accept_indirect_field_width(const char *f) {
+    accept_value(f); // expected-warning{{format argument is an indirect field width, but it should be a value}}
+    accept_indirect_field_precision(f); // expected-warning{{format argument is an indirect field width, but it should be an indirect precision}}
+    accept_aux_value(f); // expected-warning{{format argument is an indirect field width, but it should be an auxiliary value}}
+}
+
+void accept_indirect_field_precision(const char *f) {
+    accept_value(f); // expected-warning{{format argument is an indirect precision, but it should be a value}}
+    accept_indirect_field_width(f); // expected-warning{{format argument is an indirect precision, but it should be an indirect field width}}
+    accept_aux_value(f); // expected-warning{{format argument is an indirect precision, but it should be an auxiliary value}}
+}
+
+void accept_aux_value(const char *f) {
+    accept_value(f); // expected-warning{{format argument is an auxiliary value, but it should be a value}}
+    accept_indirect_field_width(f); // expected-warning{{format argument is an auxiliary value, but it should be an indirect field width}}
+    accept_indirect_field_precision(f); // expected-warning{{format argument is an auxiliary value, but it should be an indirect precision}}
 }
