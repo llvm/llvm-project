@@ -5717,7 +5717,7 @@ HLSLBufferDecl::HLSLBufferDecl(DeclContext *DC, bool CBuffer,
                                SourceLocation IDLoc, SourceLocation LBrace)
     : NamedDecl(Decl::Kind::HLSLBuffer, DC, IDLoc, DeclarationName(ID)),
       DeclContext(Decl::Kind::HLSLBuffer), LBraceLoc(LBrace), KwLoc(KwLoc),
-      IsCBuffer(CBuffer), HasPackoffset(false) {}
+      IsCBuffer(CBuffer), HasPackoffset(false), LayoutStruct(nullptr) {}
 
 HLSLBufferDecl *HLSLBufferDecl::Create(ASTContext &C,
                                        DeclContext *LexicalParent, bool CBuffer,
@@ -5747,15 +5747,10 @@ HLSLBufferDecl *HLSLBufferDecl::CreateDeserialized(ASTContext &C,
                                     SourceLocation(), SourceLocation());
 }
 
-const CXXRecordDecl *HLSLBufferDecl::getLayoutStruct() const {
-  // Layout struct is the last decl in the HLSLBufferDecl.
-  if (CXXRecordDecl *RD = llvm::dyn_cast_or_null<CXXRecordDecl>(LastDecl)) {
-    assert(RD->getName().starts_with(
-               ("__cblayout_" + getIdentifier()->getName()).str()) &&
-           "expected buffer layout struct");
-    return RD;
-  }
-  llvm_unreachable("HLSL buffer is missing a layout struct");
+void HLSLBufferDecl::addLayoutStruct(CXXRecordDecl *LS) {
+  assert(LayoutStruct == nullptr && "layout struct has already been set");
+  LayoutStruct = LS;
+  addDecl(LS);
 }
 
 //===----------------------------------------------------------------------===//

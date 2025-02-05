@@ -5035,6 +5035,8 @@ class HLSLBufferDecl final : public NamedDecl, public DeclContext {
   /// HasValidPackoffset - Whether the buffer has valid packoffset annotations
   //                       on all declarations
   bool HasPackoffset;
+  // LayoutStruct - Layout struct for the buffer
+  CXXRecordDecl *LayoutStruct;
 
   HLSLBufferDecl(DeclContext *DC, bool CBuffer, SourceLocation KwLoc,
                  IdentifierInfo *ID, SourceLocation IDLoc,
@@ -5057,7 +5059,8 @@ public:
   bool isCBuffer() const { return IsCBuffer; }
   void setHasPackoffset(bool PO) { HasPackoffset = PO; }
   bool hasPackoffset() const { return HasPackoffset; }
-  const CXXRecordDecl *getLayoutStruct() const;
+  const CXXRecordDecl *getLayoutStruct() const { return LayoutStruct; }
+  void addLayoutStruct(CXXRecordDecl *LS);
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
