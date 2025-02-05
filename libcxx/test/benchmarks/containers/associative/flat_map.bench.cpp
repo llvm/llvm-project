@@ -29,7 +29,6 @@ struct support::adapt_operations<std::flat_map<K, V>> {
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::flat_map<int, int>>("std::flat_map<int, int>");
-  support::associative_container_benchmarks<std::flat_map<std::string, int>>("std::flat_map<std::string, int>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

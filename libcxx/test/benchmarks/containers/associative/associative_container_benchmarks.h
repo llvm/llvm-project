@@ -13,6 +13,8 @@
 #include <iterator>
 #include <random>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "benchmark/benchmark.h"
@@ -57,6 +59,12 @@ void associative_container_benchmarks(std::string container) {
   auto bench = [&](std::string operation, auto f) {
     benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(32)->Arg(1024)->Arg(8192);
   };
+
+  static constexpr bool is_multi_key_container =
+      !std::is_same_v<typename adapt_operations<Container>::InsertionResult,
+                      std::pair<typename Container::iterator, bool>>;
+
+  static constexpr bool is_ordered_container = requires(Container c, Key k) { c.lower_bound(k); };
 
   // These benchmarks are structured to perform the operation being benchmarked
   // a small number of times at each iteration, in order to offset the cost of
@@ -168,26 +176,23 @@ void associative_container_benchmarks(std::string container) {
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Value to_insert        = in[in.size() / 2]; // pick any existing value
     std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+    typename Container::iterator inserted[BatchSize];
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        auto result = c[i].insert(to_insert);
-        benchmark::DoNotOptimize(result);
+        inserted[i] = adapt_operations<Container>::get_iterator(c[i].insert(to_insert));
+        benchmark::DoNotOptimize(inserted[i]);
         benchmark::DoNotOptimize(c[i]);
         benchmark::ClobberMemory();
       }
 
-      st.PauseTiming();
-      // Unique-key containers will not insert above, but multi-key containers will insert
-      // the key a second time. Restore the invariant that there's a single copy of each
-      // key in the container.
-      for (std::size_t i = 0; i != BatchSize; ++i) {
-        auto const& key = get_key(to_insert);
-        if (c[i].count(key) > 1) {
-          c[i].erase(key);
+      if constexpr (is_multi_key_container) {
+        st.PauseTiming();
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          c[i].erase(inserted[i]);
         }
+        st.ResumeTiming();
       }
-      st.ResumeTiming();
     }
   });
 
@@ -216,7 +221,7 @@ void associative_container_benchmarks(std::string container) {
 
   // The insert(hint, ...) methods are only relevant for ordered containers, and we lack
   // a good way to compute a hint for unordered ones.
-  if constexpr (requires(Container c, Key k) { c.lower_bound(k); }) {
+  if constexpr (is_ordered_container) {
     bench("insert(hint, value) (good hint)", [=](auto& st) {
       const std::size_t size = st.range(0);
       std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
@@ -499,8 +504,7 @@ void associative_container_benchmarks(std::string container) {
           return c.contains(get_key(element));
         }));
 
-  // Only for ordered containers
-  if constexpr (requires(Container c, Key k) { c.lower_bound(k); }) {
+  if constexpr (is_ordered_container) {
     bench("lower_bound(key) (existent)", bench_with_existent_key([=](Container const& c, Value const& element) {
             return c.lower_bound(get_key(element));
           }));
