@@ -4940,6 +4940,28 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   return LoopBB;
 }
 
+static uint32_t getInitialValueForWaveReduction(unsigned Opc){
+  switch(Opc){
+      case AMDGPU::S_MIN_U32:
+        return std::numeric_limits<uint32_t>::max();
+      case AMDGPU::S_MIN_I32:
+        return std::numeric_limits<int32_t>::max();
+      case AMDGPU::S_MAX_U32:
+        return std::numeric_limits<u_int32_t>::lowest();
+      case AMDGPU::S_MAX_I32:
+        return std::numeric_limits<int32_t>::min();
+      case AMDGPU::S_ADD_I32:
+      case AMDGPU::S_SUB_I32:
+      case AMDGPU::S_OR_B32:
+      case AMDGPU::S_XOR_B32:
+        return 0x00000000;
+      case AMDGPU::S_AND_B32:
+        return 0xFFFFFFFF;
+      default:  
+        llvm_unreachable("Unexpected opcode in getInitialValueForWaveReduction");  
+    }
+}
+
 static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                                           MachineBasicBlock &BB,
                                           const GCNSubtarget &ST,
@@ -4955,13 +4977,73 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
   MachineBasicBlock *RetBB = nullptr;
   if (isSGPR) {
-    // These operations with a uniform value i.e. SGPR are idempotent.
-    // Reduced value will be same as given sgpr.
-    // clang-format off
-    BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg)
-        .addReg(SrcReg);
-    // clang-format on
-    RetBB = &BB;
+    switch(Opc){
+      case AMDGPU::S_MIN_U32:
+      case AMDGPU::S_MIN_I32:
+      case AMDGPU::S_MAX_U32:
+      case AMDGPU::S_MAX_I32:
+      case AMDGPU::S_AND_B32:
+      case AMDGPU::S_OR_B32:{
+        // Idempotent operations.
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg).addReg(SrcReg);
+        RetBB = &BB;
+        break;
+      }
+      case AMDGPU::S_XOR_B32:
+      case AMDGPU::S_ADD_I32:
+      case AMDGPU::S_SUB_I32:{
+        const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
+        const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
+        Register ExecMask = MRI.createVirtualRegister(WaveMaskRegClass);
+        Register ActiveLanes = MRI.createVirtualRegister(DstRegClass);
+
+        bool IsWave32 = ST.isWave32();
+        unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+        unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+        unsigned CountReg = IsWave32 ? AMDGPU::S_BCNT1_I32_B32 : AMDGPU::S_BCNT1_I32_B64;
+
+        auto Exec =
+            BuildMI(BB, MI, DL, TII->get(MovOpc), ExecMask).addReg(ExecReg);
+
+        auto NewAccumulator = BuildMI(BB, MI, DL, TII->get(CountReg), ActiveLanes)
+                                  .addReg(Exec->getOperand(0).getReg());
+
+        switch(Opc){
+          case AMDGPU::S_XOR_B32:{
+            // Performing an XOR operation on a uniform value
+            // depends on the parity of the number of active lanes.
+            // For even parity, the result will be 0, for odd 
+            // parity the result will be the same as the input value.
+            Register ParityRegister = MRI.createVirtualRegister(DstRegClass);
+
+            auto ParityReg = BuildMI(BB, MI, DL, TII->get(AMDGPU::S_AND_B32), ParityRegister)
+                .addReg(NewAccumulator->getOperand(0).getReg())
+                .addImm(1);
+            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)  
+                .addReg(SrcReg)
+                .addReg(ParityReg->getOperand(0).getReg())  ;
+            break;
+          }
+          case AMDGPU::S_SUB_I32:{
+            Register NegatedVal = MRI.createVirtualRegister(DstRegClass);
+
+            // Take the negation of the source operand.
+            auto InvertedValReg = BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), NegatedVal).addImm(-1).addReg(SrcReg);
+            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+                .addReg(InvertedValReg->getOperand(0).getReg())
+                .addReg(NewAccumulator->getOperand(0).getReg());
+            break;
+          }
+          case AMDGPU::S_ADD_I32:{
+            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+                .addReg(SrcReg)
+                .addReg(NewAccumulator->getOperand(0).getReg());
+            break;
+          }
+        }
+        RetBB = &BB;
+      }
+    }
   } else {
     // TODO: Implement DPP Strategy and switch based on immediate strategy
     // operand. For now, for all the cases (default, Iterative and DPP we use
@@ -4997,9 +5079,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
 
     // Create initail values of induction variable from Exec, Accumulator and
-    // insert branch instr to newly created ComputeBlockk
-    uint32_t InitalValue =
-        (Opc == AMDGPU::S_MIN_U32) ? std::numeric_limits<uint32_t>::max() : 0;
+    // insert branch instr to newly created ComputeBlock
+    uint32_t InitalValue = getInitialValueForWaveReduction(Opc);
     auto TmpSReg =
         BuildMI(BB, I, DL, TII->get(MovOpc), LoopIterator).addReg(ExecReg);
     BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B32), InitalValReg)
@@ -5071,8 +5152,26 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   switch (MI.getOpcode()) {
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_U32);
+  case AMDGPU::WAVE_REDUCE_MIN_PSEUDO_I32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_I32);
   case AMDGPU::WAVE_REDUCE_UMAX_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_U32);
+  case AMDGPU::WAVE_REDUCE_MAX_PSEUDO_I32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_I32);
+  case AMDGPU::WAVE_REDUCE_UADD_PSEUDO_U32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_ADD_I32);
+  case AMDGPU::WAVE_REDUCE_ADD_PSEUDO_I32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_ADD_I32);
+  case AMDGPU::WAVE_REDUCE_USUB_PSEUDO_U32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_SUB_I32);
+  case AMDGPU::WAVE_REDUCE_SUB_PSEUDO_I32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_SUB_I32);
+  case AMDGPU::WAVE_REDUCE_AND_PSEUDO_B32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_AND_B32);
+  case AMDGPU::WAVE_REDUCE_OR_PSEUDO_B32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_OR_B32);
+  case AMDGPU::WAVE_REDUCE_XOR_PSEUDO_B32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_XOR_B32);
   case AMDGPU::S_UADDO_PSEUDO:
   case AMDGPU::S_USUBO_PSEUDO: {
     const DebugLoc &DL = MI.getDebugLoc();
