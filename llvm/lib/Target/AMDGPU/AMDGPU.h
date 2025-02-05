@@ -41,7 +41,7 @@ FunctionPass *createSIPeepholeSDWALegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
-FunctionPass *createSIWholeQuadModePass();
+FunctionPass *createSIWholeQuadModeLegacyPass();
 FunctionPass *createAMDGPUBundleIdxLdStPass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
@@ -229,7 +229,7 @@ extern char &SILowerSGPRSpillsLegacyID;
 void initializeSILoadStoreOptimizerLegacyPass(PassRegistry &);
 extern char &SILoadStoreOptimizerLegacyID;
 
-void initializeSIWholeQuadModePass(PassRegistry &);
+void initializeSIWholeQuadModeLegacyPass(PassRegistry &);
 extern char &SIWholeQuadModeID;
 
 void initializeAMDGPUBundleIdxLdStPass(PassRegistry &);
@@ -488,7 +488,7 @@ extern char &AMDGPUOpenCLEnqueuedBlockLoweringLegacyID;
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;
 
-void initializeGCNPreRALongBranchRegPass(PassRegistry &);
+void initializeGCNPreRALongBranchRegLegacyPass(PassRegistry &);
 extern char &GCNPreRALongBranchRegID;
 
 void initializeGCNPreRAOptimizationsPass(PassRegistry &);
