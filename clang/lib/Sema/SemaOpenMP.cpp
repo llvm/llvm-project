@@ -4788,13 +4788,26 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
       getLeafOrCompositeConstructs(ParentRegion, LeafOrComposite);
   OpenMPDirectiveKind EnclosingConstruct = ParentLOC.back();
 
-  if (SemaRef.LangOpts.OpenMP >= 51 && Stack->isParentOrderConcurrent() &&
-      CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
-      CurrentRegion != OMPD_parallel &&
-      !isOpenMPCombinedParallelADirective(CurrentRegion)) {
-    SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
-        << getOpenMPDirectiveName(CurrentRegion);
-    return true;
+  if (Stack->isParentOrderConcurrent()) {
+    bool InvalidOrderNesting = false;
+    if ((SemaRef.LangOpts.OpenMP == 51 || SemaRef.LangOpts.OpenMP == 52) &&
+        CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
+        CurrentRegion != OMPD_parallel &&
+        !isOpenMPCombinedParallelADirective(CurrentRegion)) {
+      InvalidOrderNesting = true;
+    } else if (SemaRef.LangOpts.OpenMP >= 60 &&
+               !isOpenMPOrderConcurrentNestableDirective(CurrentRegion)) {
+      // OpenMP 6.0 [12.3 order Clause, Restrictions]
+      // Only regions that correspond to order-concurrent-nestable constructs
+      // or order-concurrent-nestable routines may be strictly nested regions
+      // of regions that correspond to constructs on which the order clause is
+      // specified with concurrent as the ordering argument.
+      InvalidOrderNesting = true;
+    }
+    if (InvalidOrderNesting) {
+      SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
+          << getOpenMPDirectiveName(CurrentRegion);
+    }
   }
   if (isOpenMPSimdDirective(ParentRegion) &&
       ((SemaRef.LangOpts.OpenMP <= 45 && CurrentRegion != OMPD_ordered) ||
@@ -7114,7 +7127,8 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
   if (!CalleeFnDecl)
     return Call;
 
-  if (getLangOpts().OpenMP >= 51 && CalleeFnDecl->getIdentifier() &&
+  if (getLangOpts().OpenMP >= 51 && getLangOpts().OpenMP < 60 &&
+      CalleeFnDecl->getIdentifier() &&
       CalleeFnDecl->getName().starts_with_insensitive("omp_")) {
     // checking for any calls inside an Order region
     if (Scope && Scope->isOpenMPOrderClauseScope())
