@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANHELPERS_H
 
 #include "VPlanAnalysis.h"
+#include "VPlanDominatorTree.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -38,7 +39,6 @@ class VPRegionBlock;
 class VPlan;
 class Value;
 class LoopVersioning;
-class VPDominatorTree;
 
 /// Returns a calculation for the total number of elements for a given \p VF.
 /// For fixed width vectors this value is a constant, whereas for scalable
@@ -199,7 +199,6 @@ struct VPTransformState {
                    LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan,
                    Loop *CurrentParentLoop, Type *CanonicalIVTy);
-  ~VPTransformState();
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
 
@@ -355,7 +354,7 @@ struct VPTransformState {
   VPTypeAnalysis TypeAnalysis;
 
   /// VPlan-based dominator tree.
-  VPDominatorTree *VPDT = nullptr;
+  VPDominatorTree VPDT;
 };
 
 /// Struct to hold various analysis needed for cost computations.
