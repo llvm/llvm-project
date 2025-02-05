@@ -514,7 +514,19 @@ void CIRGenModule::emitGlobal(GlobalDecl GD) {
 
   assert(!Global->hasAttr<IFuncAttr>() && "NYI");
   assert(!Global->hasAttr<CPUDispatchAttr>() && "NYI");
-  assert(!langOpts.CUDA && "NYI");
+
+  if (langOpts.CUDA) {
+    if (langOpts.CUDAIsDevice)
+      llvm_unreachable("NYI");
+
+    if (dyn_cast<VarDecl>(Global))
+      llvm_unreachable("NYI");
+
+    // We must skip __device__ functions when compiling for host.
+    if (!Global->hasAttr<CUDAHostAttr>() && Global->hasAttr<CUDADeviceAttr>()) {
+      return;
+    }
+  }
 
   if (langOpts.OpenMP) {
     // If this is OpenMP, check if it is legal to emit this global normally.
@@ -557,6 +569,7 @@ void CIRGenModule::emitGlobal(GlobalDecl GD) {
       return;
     }
   } else {
+    assert(!langOpts.CUDA && "NYI");
     const auto *VD = cast<VarDecl>(Global);
     assert(VD->isFileVarDecl() && "Cannot emit local var decl as global.");
     if (VD->isThisDeclarationADefinition() != VarDecl::Definition &&
@@ -2322,7 +2335,13 @@ cir::FuncOp CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD, mlir::Type Ty,
   auto F = GetOrCreateCIRFunction(MangledName, Ty, GD, ForVTable, DontDefer,
                                   /*IsThunk=*/false, IsForDefinition);
 
-  assert(!langOpts.CUDA && "NYI");
+  // As __global__ functions always reside on device,
+  // we need special care when accessing them from host;
+  // otherwise, CUDA functions behave as normal functions
+  if (langOpts.CUDA && !langOpts.CUDAIsDevice &&
+      cast<FunctionDecl>(GD.getDecl())->hasAttr<CUDAGlobalAttr>()) {
+    llvm_unreachable("NYI");
+  }
 
   return F;
 }
@@ -3164,9 +3183,6 @@ void CIRGenModule::Release() {
   assert(!MissingFeatures::registerGlobalDtorsWithAtExit());
   assert(!MissingFeatures::emitCXXThreadLocalInitFunc());
   assert(!MissingFeatures::objCRuntime());
-  if (astContext.getLangOpts().CUDA) {
-    llvm_unreachable("NYI");
-  }
   assert(!MissingFeatures::openMPRuntime());
   assert(!MissingFeatures::pgoReader());
   assert(!MissingFeatures::emitCtorList()); // GlobalCtors, GlobalDtors
