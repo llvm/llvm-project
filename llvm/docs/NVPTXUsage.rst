@@ -962,6 +962,104 @@ The ``griddepcontrol`` intrinsics allows the dependent grids and prerequisite gr
 For more information, refer 
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol>`__.
 
+TCGEN05 family of Intrinsics
+----------------------------
+
+The llvm.nvvm.tcgen05.* intrinsics model the TCGEN05 family of instructions
+exposed by PTX. These intrinsics use 'Tensor Memory' (henceforth ``tmem``).
+NVPTX represents this memory using ``addrspace(6)`` and is always 32-bits.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory>`_.
+
+The tensor-memory pointers may only be used with the tcgen05 intrinsics.
+There are specialized load/store instructions provided (tcgen05.ld/st) to
+work with tensor-memory.
+
+See the PTX ISA for more information on tensor-memory load/store instructions
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-and-register-load-store-instructions>`_.
+
+'``llvm.nvvm.tcgen05.alloc``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.alloc.cg1(ptr %dst, i32 %ncols)
+  declare void @llvm.nvvm.tcgen05.alloc.cg2(ptr %dst, i32 %ncols)
+  declare void @llvm.nvvm.tcgen05.alloc.shared.cg1(ptr addrspace(3) %dst, i32 %ncols)
+  declare void @llvm.nvvm.tcgen05.alloc.shared.cg2(ptr addrspace(3) %dst, i32 %ncols)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.alloc.*``' intrinsics correspond to the
+``tcgen05.alloc.cta_group*.sync.aligned.b32`` family of PTX instructions.
+The ``tcgen05.alloc`` is a potentially blocking instruction which dynamically
+allocates the specified number of columns in the Tensor Memory and writes
+the address of the allocated Tensor Memory into shared memory at the
+location specified by ``%dst``. The 32-bit operand ``%ncols`` specifies
+the number of columns to be allocated and it must be a power-of-two.
+The ``.shared`` variant explicitly uses shared memory address space for
+the ``%dst`` operand. The ``.cg1`` and ``.cg2`` variants generate
+``cta_group::1`` and ``cta_group::2`` variants of the instruction respectively.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+
+'``llvm.nvvm.tcgen05.dealloc``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6) %tmem_addr, i32 %ncols)
+  declare void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6) %tmem_addr, i32 %ncols)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.dealloc.*``' intrinsics correspond to the
+``tcgen05.dealloc.*`` set of PTX instructions. The ``tcgen05.dealloc``
+instructions deallocates the Tensor Memory specified by the Tensor Memory
+address ``%tmem_addr``. The operand ``%tmem_addr`` must point to a previous
+Tensor Memory allocation. The 32-bit operand ``%ncols`` specifies the number
+of columns to be de-allocated. The ``.cg1`` and ``.cg2`` variants generate
+``cta_group::1`` and ``cta_group::2`` variants of the instruction respectively.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+
+'``llvm.nvvm.tcgen05.relinq.alloc.permit``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.relinq.alloc.permit.cg1()
+  declare void @llvm.nvvm.tcgen05.relinq.alloc.permit.cg2()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.relinq.alloc.permit.*``' intrinsics correspond
+to the ``tcgen05.relinquish_alloc_permit.*`` set of PTX instructions.
+This instruction specifies that the CTA of the executing thread is
+relinquishing the right to allocate Tensor Memory. So, it is illegal
+for a CTA to perform ``tcgen05.alloc`` after any of its constituent
+threads execute ``tcgen05.relinquish_alloc_permit``. The ``.cg1``
+and ``.cg2`` variants generate ``cta_group::1`` and ``cta_group::2``
+flavors of the instruction respectively.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+
 Other Intrinsics
 ----------------
 
