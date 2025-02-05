@@ -19752,8 +19752,7 @@ performExtractLastActiveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   SDValue Mask = Idx.getOperand(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (TLI.getOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE,
-                             Mask.getValueType()) != TargetLowering::Legal)
+  if (!TLI.isOperationLegal(ISD::VECTOR_FIND_LAST_ACTIVE, Mask.getValueType()))
     return SDValue();
 
   return DAG.getNode(AArch64ISD::LASTB, SDLoc(N), N->getValueType(0), Mask,
