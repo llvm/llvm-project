@@ -11730,15 +11730,15 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
         if (SecondArg.isNull())
           return {2, NTTPD->getIndex(), NTTPD->getType()};
         else {
-          // FIXME: this is a hack, we should do this in SemaTempalteDeduction
-          // or even ExprConstant. Perhaps an InvalidExplicitArguments error
-          // is not what we want
+          // FIXME: This is a hack. We should emit a better message
+          // for ill-formed const exprs in >=C++20.
           QualType qt = NTTPD->getType();
-          if (qt.getCanonicalType() !=
-              SecondArg.getAsType().getCanonicalType()) {
-            return {3, NTTPD->getIndex(), NTTPD->getType()};
+          if (qt.getCanonicalType() ==
+                  SecondArg.getAsType().getCanonicalType() &&
+              __cplusplus <= 201703) {
+            return {4, NTTPD->getIndex(), NTTPD->getType()};
           } else {
-            return {5, NTTPD->getIndex(), NTTPD->getType()};
+            return {3, NTTPD->getIndex(), NTTPD->getType()};
           }
         }
       }

@@ -16814,17 +16814,8 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
       (!EvaluateDestruction(Ctx, Base, Result.Val, T, getBeginLoc(), Result,
                             true) ||
        Result.HasSideEffects)) {
-
-    // FIXME: err_constexpr_var_requires_const_destruction?
-    PartialDiagnostic PD(diag::err_constexpr_var_requires_const_destruction,
-                         const_cast<ASTContext &>(Ctx).getDiagAllocator());
-    std::string ExprStr;
-    llvm::raw_string_ostream OS(ExprStr);
-    this->printPretty(OS, nullptr, PrintingPolicy(Ctx.getLangOpts()));
-    PD << ExprStr;
-    SourceLocation Loc = this->getBeginLoc();
-    Result.Diag->insert(Result.Diag->begin(), PartialDiagnosticAt(Loc, PD));
-
+    // FIXME: Prefix a note to indicate that the problem is lack of constant
+    // destruction.
     return false;
   }
 

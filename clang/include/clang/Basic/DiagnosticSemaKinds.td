@@ -4877,8 +4877,7 @@ def note_ovl_candidate_explicit_arg_mismatch_detail : Note<
     "|: expected a type, but got value '%1'"
     "|: expected constant of type %3 but got type %1"
     "|: could not convert '%1' from %2 to %3"
-    "| for %ordinal4 template parameter"
-    "|: expr is not a valid const expr in the expected context}0">;
+    "| for %ordinal4 template parameter}0">;
 
 def note_ovl_candidate_unsatisfied_constraints : Note<
     "candidate template ignored: constraints not satisfied%0">;
