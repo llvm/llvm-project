@@ -551,7 +551,6 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
 
   if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
     builder.setInsertionPointToEnd(initBlock);
-    // TODO: remove: boxAlloca = allocatedPrivVarArg;
 
     // TODO: don't do this unless it is needed
     loadedMoldArg = builder.loadIfRef(loc, moldArg);
