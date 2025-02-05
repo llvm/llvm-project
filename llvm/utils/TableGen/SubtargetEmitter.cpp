@@ -1311,7 +1311,7 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
       std::vector<int64_t> CycleTunables =
           ReadAdvance->getValueAsListOfInts("CycleTunables");
       std::vector<std::pair<unsigned, int>> WriteIDs;
-      if (!CycleTunables.empty() && CycleTunables.size() > ValidWrites.size())
+      if (CycleTunables.size() > ValidWrites.size())
         PrintFatalError(ReadAdvance->getLoc(),
                         "If specified, CycleTunables must have at most the "
                         "same number of elements of ValidWrites.\n");
