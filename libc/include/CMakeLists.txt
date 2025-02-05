@@ -704,6 +704,16 @@ add_header_macro(
     .llvm-libc-types.struct_lconv
 )
 
+add_header_macro(
+  poll
+  ../libc/include/poll.yaml
+  poll.h
+  DEPENDS
+    .llvm-libc-types.struct_pollfd
+    .llvm-libc-types.nfds_t
+    .llvm-libc-macros.poll-macros
+  )
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   # We don't install headers in non-fullbuild mode.
   return()
