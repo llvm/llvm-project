@@ -24633,18 +24633,12 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       // If we have SSE41/AVX, we can use a variable vector select (VBLENDV)
       // instead of 3 logic instructions for size savings and potentially speed.
       // Unfortunately, there is no scalar form of VBLENDV.
-
+      //
       // If either operand is a +0.0 constant, don't try this. We can expect to
       // optimize away at least one of the logic instructions later in that
       // case, so that sequence would be faster than a variable blend.
-
-      // BLENDV was introduced with SSE 4.1, but the 2 register form implicitly
-      // uses XMM0 as the selection register. That may need just as many
-      // instructions as the AND/ANDN/OR sequence due to register moves, so
-      // only attempt this if at least one of ops (+ condition) are one use.
       if (Subtarget.hasSSE41() && !isNullFPConstant(Op1) &&
-          !isNullFPConstant(Op2) &&
-          (Subtarget.hasAVX() || Op1->hasOneUse() || Op2->hasOneUse())) {
+          !isNullFPConstant(Op2)) {
         // Convert to vectors, do a VSELECT, and convert back to scalar.
         // All of the conversions should be optimized away.
         MVT VecVT = VT == MVT::f32 ? MVT::v4f32 : MVT::v2f64;
