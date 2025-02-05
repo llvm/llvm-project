@@ -244,6 +244,18 @@ INTERCEPTOR(int, close, int filedes) {
   return REAL(close)(filedes);
 }
 
+INTERCEPTOR(int, chdir, const char *path) {
+  __rtsan_notify_intercepted_call("chdir");
+  return REAL(chdir)(path);
+}
+
+INTERCEPTOR(int, fchdir, int fd) {
+  __rtsan_notify_intercepted_call("fchdir");
+  return REAL(fchdir)(fd);
+}
+
+// Streams
+
 INTERCEPTOR(FILE *, fopen, const char *path, const char *mode) {
   __rtsan_notify_intercepted_call("fopen");
   return REAL(fopen)(path, mode);
@@ -253,8 +265,6 @@ INTERCEPTOR(FILE *, freopen, const char *path, const char *mode, FILE *stream) {
   __rtsan_notify_intercepted_call("freopen");
   return REAL(freopen)(path, mode, stream);
 }
-
-// Streams
 
 #if SANITIZER_INTERCEPT_FOPEN64
 INTERCEPTOR(FILE *, fopen64, const char *path, const char *mode) {
@@ -1390,6 +1400,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(openat);
   RTSAN_MAYBE_INTERCEPT_OPENAT64;
   INTERCEPT_FUNCTION(close);
+  INTERCEPT_FUNCTION(chdir);
+  INTERCEPT_FUNCTION(fchdir);
   INTERCEPT_FUNCTION(fopen);
   RTSAN_MAYBE_INTERCEPT_FOPEN64;
   RTSAN_MAYBE_INTERCEPT_FREOPEN64;
