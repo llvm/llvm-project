@@ -54,6 +54,20 @@ def : Function {
 }
 
 
+def : Struct {
+    let name = "ol_kernel_launch_size_args_t";
+    let desc = "Size-related arguments for a kernel launch.";
+    let members = [
+        StructMember<"size_t", "Dimensions", "Number of work dimensions">,
+        StructMember<"size_t", "NumGroupsX", "Number of work groups on the X dimension">,
+        StructMember<"size_t", "NumGroupsY", "Number of work groups on the Y dimension">,
+        StructMember<"size_t", "NumGroupsZ", "Number of work groups on the Z dimension">,
+        StructMember<"size_t", "GroupSizeX", "Size of a work group on the X dimension.">,
+        StructMember<"size_t", "GroupSizeY", "Size of a work group on the Y dimension.">,
+        StructMember<"size_t", "GroupSizeZ", "Size of a work group on the Z dimension.">
+    ];
+}
+
 def : Function {
     let name = "olEnqueueKernelLaunch";
     let desc = "Enqueue a kernel launch with the specified size and parameters";
@@ -61,7 +75,7 @@ def : Function {
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
         Param<"ol_kernel_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
-        Param<"const size_t*", "GlobalWorkSize", "an array of size 3 representing the global work size", PARAM_IN>,
+        Param<"const ol_kernel_launch_size_args_t*", "LaunchSizeArgs", "pointer to the struct containing launch size parameters", PARAM_IN>,
         Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
     ];
     let returns = [];

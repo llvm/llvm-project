@@ -560,22 +560,22 @@ ol_impl_result_t olSetKernelArgValue_impl(ol_kernel_handle_t Kernel,
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue,
-                                            ol_kernel_handle_t Kernel,
-                                            const size_t *GlobalWorkSize,
-                                            ol_event_handle_t *EventOut) {
+ol_impl_result_t
+olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+                           const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+                           ol_event_handle_t *EventOut) {
   auto &DeviceImpl = Queue->Device->Device;
 
   AsyncInfoWrapperTy AsyncInfoWrapper(DeviceImpl, Queue->AsyncInfo);
 
   KernelArgsTy LaunchArgs{};
   LaunchArgs.NumArgs = Kernel->Args.getPointers().size();
-  LaunchArgs.NumTeams[0] = GlobalWorkSize[0];
-  LaunchArgs.NumTeams[1] = 1;
-  LaunchArgs.NumTeams[2] = 1;
-  LaunchArgs.ThreadLimit[0] = 1;
-  LaunchArgs.ThreadLimit[1] = 1;
-  LaunchArgs.ThreadLimit[2] = 1;
+  LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumGroupsX;
+  LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumGroupsY;
+  LaunchArgs.NumTeams[2] = LaunchSizeArgs->NumGroupsZ;
+  LaunchArgs.ThreadLimit[0] = LaunchSizeArgs->GroupSizeX;
+  LaunchArgs.ThreadLimit[1] = LaunchSizeArgs->GroupSizeY;
+  LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSizeZ;
 
   LaunchArgs.ArgPtrs = (void **)Kernel->Args.getStorage();
 

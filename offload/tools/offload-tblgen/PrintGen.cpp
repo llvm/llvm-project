@@ -20,7 +20,7 @@
 using namespace llvm;
 using namespace offload::tblgen;
 
-constexpr auto PrintEnumHeader =
+constexpr auto PrintTypeHeader =
     R"(///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the {0} type
 /// @returns std::ostream &
@@ -33,7 +33,7 @@ constexpr auto PrintTaggedEnumHeader =
 )";
 
 static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
-  OS << formatv(PrintEnumHeader, Enum.getName());
+  OS << formatv(PrintTypeHeader, Enum.getName());
   OS << formatv(
       "inline std::ostream &operator<<(std::ostream &os, enum {0} value) "
       "{{\n" TAB_1 "switch (value) {{\n",
@@ -150,6 +150,33 @@ inline std::ostream &operator<<(std::ostream &os, const struct {0} *params) {{
   OS << TAB_1 "return os;\n}\n";
 }
 
+
+void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
+  if (Struct.getName() == "ol_error_struct_t") {
+    return;
+  }
+  OS << formatv(PrintTypeHeader, Struct.getName());
+  OS << formatv(R"(
+inline std::ostream &operator<<(std::ostream &os, const struct {0} params) {{
+)",
+                Struct.getName());
+  OS << formatv(TAB_1 "os << \"(struct {0}){{\";\n", Struct.getName());
+  for (const auto &Member : Struct.getMembers()) {
+    OS << formatv(TAB_1 "os << \".{0} = \";\n", Member.getName());
+    if (Member.isPointerType() || Member.isHandleType()) {
+      OS << formatv(TAB_1 "printPtr(os, params.{0});\n", Member.getName());
+    } else {
+      OS << formatv(TAB_1 "os << params.{0};\n", Member.getName());
+    }
+    if (Member.getName() != Struct.getMembers().back().getName()) {
+      OS << TAB_1 "os << \", \";\n";
+    }
+  }
+  OS << TAB_1 "os << \"}\";\n";
+  OS << TAB_1 "return os;\n";
+  OS << "}\n";
+}
+
 void EmitOffloadPrintHeader(const RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   OS << R"""(
@@ -192,6 +219,11 @@ template <typename T> inline void printTagged(std::ostream &os, const void *ptr,
     ProcessEnum(E, OS);
   }
   EmitResultPrint(OS);
+
+  for (auto *R : Records.getAllDerivedDefinitions("Struct")) {
+    StructRec S{R};
+    ProcessStruct(S, OS);
+  }
 
   // Emit print functions for the function param structs
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {

@@ -736,6 +736,18 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopy(
     ol_event_handle_t *EventOut);
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Size-related arguments for a kernel launch.
+typedef struct ol_kernel_launch_size_args_t {
+  size_t Dimensions; /// Number of work dimensions
+  size_t NumGroupsX; /// Number of work groups on the X dimension
+  size_t NumGroupsY; /// Number of work groups on the Y dimension
+  size_t NumGroupsZ; /// Number of work groups on the Z dimension
+  size_t GroupSizeX; /// Size of a work group on the X dimension.
+  size_t GroupSizeY; /// Size of a work group on the Y dimension.
+  size_t GroupSizeZ; /// Size of a work group on the Z dimension.
+} ol_kernel_launch_size_args_t;
+
+///////////////////////////////////////////////////////////////////////////////
 /// @brief Enqueue a kernel launch with the specified size and parameters
 ///
 /// @details
@@ -748,14 +760,14 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopy(
 ///         + `NULL == Queue`
 ///         + `NULL == Kernel`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == GlobalWorkSize`
+///         + `NULL == LaunchSizeArgs`
 OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunch(
     // [in] handle of the queue
     ol_queue_handle_t Queue,
     // [in] handle of the kernel
     ol_kernel_handle_t Kernel,
-    // [in] an array of size 3 representing the global work size
-    const size_t *GlobalWorkSize,
+    // [in] pointer to the struct containing launch size parameters
+    const ol_kernel_launch_size_args_t *LaunchSizeArgs,
     // [out][optional] optional recorded event for the enqueued operation
     ol_event_handle_t *EventOut);
 
@@ -1099,7 +1111,7 @@ typedef struct ol_enqueue_data_copy_params_t {
 typedef struct ol_enqueue_kernel_launch_params_t {
   ol_queue_handle_t *pQueue;
   ol_kernel_handle_t *pKernel;
-  const size_t **pGlobalWorkSize;
+  const ol_kernel_launch_size_args_t **pLaunchSizeArgs;
   ol_event_handle_t **pEventOut;
 } ol_enqueue_kernel_launch_params_t;
 
@@ -1339,8 +1351,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopyWithCodeLoc(
 /// @details See also ::olEnqueueKernelLaunch
 OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunchWithCodeLoc(
     ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
-    const size_t *GlobalWorkSize, ol_event_handle_t *EventOut,
-    ol_code_location_t *CodeLocation);
+    const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+    ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olCreateProgram that also sets source code location

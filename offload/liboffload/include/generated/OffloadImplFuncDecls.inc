@@ -73,10 +73,10 @@ ol_impl_result_t olEnqueueDataCopy_impl(ol_queue_handle_t Queue, void *SrcPtr,
                                         size_t Size,
                                         ol_event_handle_t *EventOut);
 
-ol_impl_result_t olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue,
-                                            ol_kernel_handle_t Kernel,
-                                            const size_t *GlobalWorkSize,
-                                            ol_event_handle_t *EventOut);
+ol_impl_result_t
+olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+                           const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+                           ol_event_handle_t *EventOut);
 
 ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device, void *ProgData,
                                       size_t ProgDataSize,

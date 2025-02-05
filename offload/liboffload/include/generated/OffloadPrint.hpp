@@ -309,6 +309,57 @@ inline std::ostream &operator<<(std::ostream &os,
   }
   return os;
 }
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Print operator for the ol_code_location_t type
+/// @returns std::ostream &
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ol_code_location_t params) {
+  os << "(struct ol_code_location_t){";
+  os << ".FunctionName = ";
+  printPtr(os, params.FunctionName);
+  os << ", ";
+  os << ".SourceFile = ";
+  printPtr(os, params.SourceFile);
+  os << ", ";
+  os << ".LineNumber = ";
+  os << params.LineNumber;
+  os << ", ";
+  os << ".ColumnNumber = ";
+  os << params.ColumnNumber;
+  os << "}";
+  return os;
+}
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Print operator for the ol_kernel_launch_size_args_t type
+/// @returns std::ostream &
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ol_kernel_launch_size_args_t params) {
+  os << "(struct ol_kernel_launch_size_args_t){";
+  os << ".Dimensions = ";
+  os << params.Dimensions;
+  os << ", ";
+  os << ".NumGroupsX = ";
+  os << params.NumGroupsX;
+  os << ", ";
+  os << ".NumGroupsY = ";
+  os << params.NumGroupsY;
+  os << ", ";
+  os << ".NumGroupsZ = ";
+  os << params.NumGroupsZ;
+  os << ", ";
+  os << ".GroupSizeX = ";
+  os << params.GroupSizeX;
+  os << ", ";
+  os << ".GroupSizeY = ";
+  os << params.GroupSizeY;
+  os << ", ";
+  os << ".GroupSizeZ = ";
+  os << params.GroupSizeZ;
+  os << "}";
+  return os;
+}
 
 inline std::ostream &operator<<(std::ostream &os,
                                 const struct ol_get_platform_params_t *params) {
@@ -583,8 +634,8 @@ operator<<(std::ostream &os,
   os << ".Kernel = ";
   printPtr(os, *params->pKernel);
   os << ", ";
-  os << ".GlobalWorkSize = ";
-  printPtr(os, *params->pGlobalWorkSize);
+  os << ".LaunchSizeArgs = ";
+  printPtr(os, *params->pLaunchSizeArgs);
   os << ", ";
   os << ".EventOut = ";
   printPtr(os, *params->pEventOut);

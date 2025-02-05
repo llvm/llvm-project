@@ -964,10 +964,10 @@ ol_result_t olEnqueueDataCopyWithCodeLoc(ol_queue_handle_t Queue, void *SrcPtr,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olEnqueueKernelLaunch_val(ol_queue_handle_t Queue,
-                                           ol_kernel_handle_t Kernel,
-                                           const size_t *GlobalWorkSize,
-                                           ol_event_handle_t *EventOut) {
+ol_impl_result_t
+olEnqueueKernelLaunch_val(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+                          const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+                          ol_event_handle_t *EventOut) {
   if (true /*enableParameterValidation*/) {
     if (NULL == Queue) {
       return OL_ERRC_INVALID_NULL_HANDLE;
@@ -977,26 +977,27 @@ ol_impl_result_t olEnqueueKernelLaunch_val(ol_queue_handle_t Queue,
       return OL_ERRC_INVALID_NULL_HANDLE;
     }
 
-    if (NULL == GlobalWorkSize) {
+    if (NULL == LaunchSizeArgs) {
       return OL_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return olEnqueueKernelLaunch_impl(Queue, Kernel, GlobalWorkSize, EventOut);
+  return olEnqueueKernelLaunch_impl(Queue, Kernel, LaunchSizeArgs, EventOut);
 }
-OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunch(
-    ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
-    const size_t *GlobalWorkSize, ol_event_handle_t *EventOut) {
+OL_APIEXPORT ol_result_t OL_APICALL
+olEnqueueKernelLaunch(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+                      const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+                      ol_event_handle_t *EventOut) {
   if (offloadConfig().TracingEnabled) {
     std::cout << "---> olEnqueueKernelLaunch";
   }
 
   ol_result_t Result =
-      olEnqueueKernelLaunch_val(Queue, Kernel, GlobalWorkSize, EventOut);
+      olEnqueueKernelLaunch_val(Queue, Kernel, LaunchSizeArgs, EventOut);
 
   if (offloadConfig().TracingEnabled) {
     ol_enqueue_kernel_launch_params_t Params = {&Queue, &Kernel,
-                                                &GlobalWorkSize, &EventOut};
+                                                &LaunchSizeArgs, &EventOut};
     std::cout << "(" << &Params << ")";
     std::cout << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -1005,14 +1006,13 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunch(
   }
   return Result;
 }
-ol_result_t olEnqueueKernelLaunchWithCodeLoc(ol_queue_handle_t Queue,
-                                             ol_kernel_handle_t Kernel,
-                                             const size_t *GlobalWorkSize,
-                                             ol_event_handle_t *EventOut,
-                                             ol_code_location_t *CodeLocation) {
+ol_result_t olEnqueueKernelLaunchWithCodeLoc(
+    ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+    const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+    ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
   ol_result_t Result =
-      olEnqueueKernelLaunch(Queue, Kernel, GlobalWorkSize, EventOut);
+      olEnqueueKernelLaunch(Queue, Kernel, LaunchSizeArgs, EventOut);
 
   currentCodeLocation() = nullptr;
   return Result;
