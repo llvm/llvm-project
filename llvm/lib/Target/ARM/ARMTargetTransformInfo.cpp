@@ -1458,16 +1458,62 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
   if (LooksLikeAFreeShift())
     return 0;
 
+  // When targets have both DSP and MVE we find that the
+  // the compiler will attempt to vectorize as well as using
+  // scalar SMLAL operations. This is in cases where we have
+  // the pattern ext(mul(ext(i16), ext(i16))) we find
+  // that generated codegen performs better when only using SMLAL scalar
+  // ops instead of trying to mix vector ops with SMLAL ops. We therefore
+  // check if a mul instruction is used in a SMLAL pattern.
+  auto MulInSMLALPattern = [&](const Instruction *I, unsigned Opcode,
+                               Type *Ty) -> bool {
+    if (!ST->hasDSP() || !ST->hasMVEIntegerOps())
+      return false;
+    if (!I)
+      return false;
+
+    if (Opcode != Instruction::Mul)
+      return false;
+
+    if (Ty->isVectorTy())
+      return false;
+
+    auto IsSExtInst = [](const Value *V) -> bool {
+      return (dyn_cast<SExtInst>(V)) ? true : false;
+    };
+
+    // We check the arguments of the function to see if they're extends
+    auto *BinOp = dyn_cast<BinaryOperator>(I);
+    if (!BinOp)
+      return false;
+    auto *Op0 = BinOp->getOperand(0);
+    auto *Op1 = BinOp->getOperand(1);
+    if (Op0 && Op1 && IsSExtInst(Op0) && IsSExtInst(Op1)) {
+      // In this case we're interested in an ext of an i16
+      if (!Op0->getType()->isIntegerTy(32) || !Op1->getType()->isIntegerTy(32))
+        return false;
+      // We need to check if this result will be further extended to i64
+      for (auto *U : I->users())
+        if (IsSExtInst(dyn_cast<Value>(U)))
+          return true;
+    }
+
+    return false;
+  };
+
+  if (MulInSMLALPattern(CxtI, Opcode, Ty))
+    return 0;
+
   // Default to cheap (throughput/size of 1 instruction) but adjust throughput
   // for "multiple beats" potentially needed by MVE instructions.
   int BaseCost = 1;
   if (ST->hasMVEIntegerOps() && Ty->isVectorTy())
     BaseCost = ST->getMVEVectorCostFactor(CostKind);
 
-  // The rest of this mostly follows what is done in BaseT::getArithmeticInstrCost,
-  // without treating floats as more expensive that scalars or increasing the
-  // costs for custom operations. The results is also multiplied by the
-  // MVEVectorCostFactor where appropriate.
+  // The rest of this mostly follows what is done in
+  // BaseT::getArithmeticInstrCost, without treating floats as more expensive
+  // that scalars or increasing the costs for custom operations. The results is
+  // also multiplied by the MVEVectorCostFactor where appropriate.
   if (TLI->isOperationLegalOrCustomOrPromote(ISDOpcode, LT.second))
     return LT.first * BaseCost;
 
@@ -1806,7 +1852,7 @@ InstructionCost ARMTTIImpl::getExtendedReductionCost(
           ((LT.second == MVT::v16i8 && RevVTSize <= 32) ||
            (LT.second == MVT::v8i16 && RevVTSize <= 32) ||
            (LT.second == MVT::v4i32 && RevVTSize <= 64)))
-        return 3 * ST->getMVEVectorCostFactor(CostKind) * LT.first;
+        return ST->getMVEVectorCostFactor(CostKind) * LT.first;
     }
     break;
   default:
