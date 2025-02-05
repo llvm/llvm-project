@@ -8,33 +8,37 @@
 
 !RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s
 
-!CHECK-DAG: define internal void @_copy_box_Uxi32(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_10xi32(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_i64(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_box_Uxi64(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_f32(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_2x3xf32(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_z32(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_10xz32(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_l32(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_5xl32(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_c8x8(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_10xc8x8(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_c16x5(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_rec__QFtest_typesTdt(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_box_heap_Uxi32(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
-!CHECK-DAG: define internal void @_copy_box_ptr_Uxc8x9(ptr nocapture %{{.*}}, ptr nocapture %{{.*}})
+!CHECK-DAG: define internal void @_copy_box_Uxi32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_box_10xi32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_i64(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_box_Uxi64(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_f32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_box_2x3xf32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_z32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_box_10xz32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_l32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_box_5xl32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_c8x8(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_box_10xc8x8(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_c16x5(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_rec__QFtest_typesTdt(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_box_heap_Uxi32(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
+!CHECK-DAG: define internal void @_copy_box_ptr_Uxc8x9(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}})
 
 !CHECK-LABEL: define internal void @_copy_i32(
-!CHECK-SAME:                         ptr nocapture %[[DST:.*]], ptr nocapture %[[SRC:.*]]){{.*}} {
+!CHECK-SAME:                         ptr captures(none) %[[DST:.*]], ptr captures(none) %[[SRC:.*]]){{.*}} {
 !CHECK-NEXT:    %[[SRC_VAL:.*]] = load i32, ptr %[[SRC]]
 !CHECK-NEXT:    store i32 %[[SRC_VAL]], ptr %[[DST]]
 !CHECK-NEXT:    ret void
 !CHECK-NEXT:  }
 
 !CHECK-LABEL: define internal void @test_scalar_..omp_par({{.*}})
-!CHECK:         %[[I:.*]] = alloca i32, i64 1
-!CHECK:         %[[J:.*]] = alloca i32, i64 1
+!CHECK-NEXT: omp.par.entry:
+!CHECK:         %[[TID_ADDR:.*]] = alloca i32, align 4
+!CHECK:         %[[I:.*]] = alloca i32, align 4
+!CHECK:         %[[J:.*]] = alloca i32, align 4
+!CHECK:         br label %[[OMP_REDUCTION_INIT:.*]]
+
 !CHECK:         %[[DID_IT:.*]] = alloca i32
 !CHECK:         store i32 0, ptr %[[DID_IT]]
 !CHECK:         %[[THREAD_NUM1:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[LOC:.*]])

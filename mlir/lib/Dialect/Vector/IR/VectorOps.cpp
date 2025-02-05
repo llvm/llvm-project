@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
@@ -1274,6 +1275,13 @@ OpFoldResult vector::ExtractElementOp::fold(FoldAdaptor adaptor) {
   return srcElements[posIdx];
 }
 
+// Returns `true` if `index` is either within [0, maxIndex) or equal to
+// `poisonValue`.
+static bool isValidPositiveIndexOrPoison(int64_t index, int64_t poisonValue,
+                                         int64_t maxIndex) {
+  return index == poisonValue || (index >= 0 && index < maxIndex);
+}
+
 //===----------------------------------------------------------------------===//
 // ExtractOp
 //===----------------------------------------------------------------------===//
@@ -1355,11 +1363,12 @@ LogicalResult vector::ExtractOp::verify() {
   for (auto [idx, pos] : llvm::enumerate(position)) {
     if (auto attr = dyn_cast<Attribute>(pos)) {
       int64_t constIdx = cast<IntegerAttr>(attr).getInt();
-      if (constIdx < 0 || constIdx >= getSourceVectorType().getDimSize(idx)) {
+      if (!isValidPositiveIndexOrPoison(
+              constIdx, kPoisonIndex, getSourceVectorType().getDimSize(idx))) {
         return emitOpError("expected position attribute #")
                << (idx + 1)
                << " to be a non-negative integer smaller than the "
-                  "corresponding vector dimension";
+                  "corresponding vector dimension or poison (-1)";
       }
     }
   }
@@ -1479,7 +1488,7 @@ private:
 
   /// Try to fold in place to extract(source, extractPosition) and return the
   /// folded result. Return null if folding is not possible (e.g. due to an
-  /// internal tranposition in the result).
+  /// internal transposition in the result).
   Value tryToFoldExtractOpInPlace(Value source);
 
   ExtractOp extractOp;
@@ -1573,7 +1582,7 @@ ExtractFromInsertTransposeChainState::handleInsertOpWithPrefixPos(Value &res) {
 
 /// Try to fold in place to extract(source, extractPosition) and return the
 /// folded result. Return null if folding is not possible (e.g. due to an
-/// internal tranposition in the result).
+/// internal transposition in the result).
 Value ExtractFromInsertTransposeChainState::tryToFoldExtractOpInPlace(
     Value source) {
   // TODO: Canonicalization for dynamic position not implemented yet.
@@ -1977,12 +1986,26 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
   return fromElementsOp.getElements()[flatIndex];
 }
 
-OpFoldResult ExtractOp::fold(FoldAdaptor) {
+/// Fold an insert or extract operation into an poison value when a poison index
+/// is found at any dimension of the static position.
+static ub::PoisonAttr
+foldPoisonIndexInsertExtractOp(MLIRContext *context,
+                               ArrayRef<int64_t> staticPos, int64_t poisonVal) {
+  if (!llvm::is_contained(staticPos, poisonVal))
+    return ub::PoisonAttr();
+
+  return ub::PoisonAttr::get(context);
+}
+
+OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   // Fold "vector.extract %v[] : vector<2x2xf32> from vector<2x2xf32>" to %v.
   // Note: Do not fold "vector.extract %v[] : f32 from vector<f32>" (type
   // mismatch).
   if (getNumIndices() == 0 && getVector().getType() == getResult().getType())
     return getVector();
+  if (auto res = foldPoisonIndexInsertExtractOp(
+          getContext(), adaptor.getStaticPosition(), kPoisonIndex))
+    return res;
   if (succeeded(foldExtractOpFromExtractChain(*this)))
     return getResult();
   if (auto res = ExtractFromInsertTransposeChainState(*this).fold())
@@ -2249,6 +2272,21 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
                                          resultType.getNumElements()));
   return success();
 }
+
+/// Fold an insert or extract operation into an poison value when a poison index
+/// is found at any dimension of the static position.
+template <typename OpTy>
+LogicalResult
+canonicalizePoisonIndexInsertExtractOp(OpTy op, PatternRewriter &rewriter) {
+  if (auto poisonAttr = foldPoisonIndexInsertExtractOp(
+          op.getContext(), op.getStaticPosition(), OpTy::kPoisonIndex)) {
+    rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getType(), poisonAttr);
+    return success();
+  }
+
+  return failure();
+}
+
 } // namespace
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -2257,6 +2295,7 @@ void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
               ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
+  results.add(canonicalizePoisonIndexInsertExtractOp<ExtractOp>);
 }
 
 static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
@@ -2600,7 +2639,7 @@ LogicalResult ShuffleOp::verify() {
   int64_t indexSize = (v1Type.getRank() == 0 ? 1 : v1Type.getDimSize(0)) +
                       (v2Type.getRank() == 0 ? 1 : v2Type.getDimSize(0));
   for (auto [idx, maskPos] : llvm::enumerate(mask)) {
-    if (maskPos != kMaskPoisonValue && (maskPos < 0 || maskPos >= indexSize))
+    if (!isValidPositiveIndexOrPoison(maskPos, kPoisonIndex, indexSize))
       return emitOpError("mask index #") << (idx + 1) << " out of range";
   }
   return success();
@@ -2634,43 +2673,51 @@ static bool isStepIndexArray(ArrayRef<T> idxArr, uint64_t begin, size_t width) {
 }
 
 OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
-  VectorType v1Type = getV1VectorType();
+  auto v1Type = getV1VectorType();
+  auto v2Type = getV2VectorType();
+
+  assert(!v1Type.isScalable() && !v2Type.isScalable() &&
+         "Vector shuffle does not support scalable vectors");
+
   // For consistency: 0-D shuffle return type is 1-D, this cannot be a folding
   // but must be a canonicalization into a vector.broadcast.
   if (v1Type.getRank() == 0)
     return {};
 
-  // fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1
-  if (!v1Type.isScalable() &&
-      isStepIndexArray(getMask(), 0, v1Type.getDimSize(0)))
+  // Fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1.
+  auto mask = getMask();
+  if (isStepIndexArray(mask, 0, v1Type.getDimSize(0)))
     return getV1();
-  // fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2
-  if (!getV1VectorType().isScalable() && !getV2VectorType().isScalable() &&
-      isStepIndexArray(getMask(), getV1VectorType().getDimSize(0),
-                       getV2VectorType().getDimSize(0)))
+  // Fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2.
+  if (isStepIndexArray(mask, v1Type.getDimSize(0), v2Type.getDimSize(0)))
     return getV2();
 
-  Attribute lhs = adaptor.getV1(), rhs = adaptor.getV2();
-  if (!lhs || !rhs)
+  Attribute v1Attr = adaptor.getV1(), v2Attr = adaptor.getV2();
+  if (!v1Attr || !v2Attr)
     return {};
 
-  auto lhsType =
-      llvm::cast<VectorType>(llvm::cast<DenseElementsAttr>(lhs).getType());
   // Only support 1-D for now to avoid complicated n-D DenseElementsAttr
   // manipulation.
-  if (lhsType.getRank() != 1)
+  if (v1Type.getRank() != 1)
     return {};
-  int64_t lhsSize = lhsType.getDimSize(0);
+
+  int64_t v1Size = v1Type.getDimSize(0);
 
   SmallVector<Attribute> results;
-  auto lhsElements = llvm::cast<DenseElementsAttr>(lhs).getValues<Attribute>();
-  auto rhsElements = llvm::cast<DenseElementsAttr>(rhs).getValues<Attribute>();
-  for (int64_t i : this->getMask()) {
-    if (i >= lhsSize) {
-      results.push_back(rhsElements[i - lhsSize]);
+  auto v1Elements = cast<DenseElementsAttr>(v1Attr).getValues<Attribute>();
+  auto v2Elements = cast<DenseElementsAttr>(v2Attr).getValues<Attribute>();
+  for (int64_t maskIdx : mask) {
+    Attribute indexedElm;
+    // Select v1[0] for poison indices.
+    // TODO: Return a partial poison vector when supported by the UB dialect.
+    if (maskIdx == ShuffleOp::kPoisonIndex) {
+      indexedElm = v1Elements[0];
     } else {
-      results.push_back(lhsElements[i]);
+      indexedElm =
+          maskIdx < v1Size ? v1Elements[maskIdx] : v2Elements[maskIdx - v1Size];
     }
+
+    results.push_back(indexedElm);
   }
 
   return DenseElementsAttr::get(getResultVectorType(), results);
@@ -2882,7 +2929,8 @@ LogicalResult InsertOp::verify() {
   for (auto [idx, pos] : llvm::enumerate(position)) {
     if (auto attr = pos.dyn_cast<Attribute>()) {
       int64_t constIdx = cast<IntegerAttr>(attr).getInt();
-      if (constIdx < 0 || constIdx >= destVectorType.getDimSize(idx)) {
+      if (!isValidPositiveIndexOrPoison(constIdx, kPoisonIndex,
+                                        destVectorType.getDimSize(idx))) {
         return emitOpError("expected position attribute #")
                << (idx + 1)
                << " to be a non-negative integer smaller than the "
@@ -3020,6 +3068,7 @@ void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
               InsertOpConstantFolder>(context);
+  results.add(canonicalizePoisonIndexInsertExtractOp<InsertOp>);
 }
 
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
@@ -3028,6 +3077,10 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   // (type mismatch).
   if (getNumIndices() == 0 && getSourceType() == getType())
     return getSource();
+  if (auto res = foldPoisonIndexInsertExtractOp(
+          getContext(), adaptor.getStaticPosition(), kPoisonIndex))
+    return res;
+
   return {};
 }
 
