@@ -245,10 +245,13 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
 }
 
 template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
+  // If the symbol isn't live, return.
   if (!whyLive.contains(s)) {
     auto *d = dyn_cast<Defined>(s);
+    // TODO: Test
     if (!d)
       return;
+    // TODO: Test both cases
     auto *parent = dyn_cast<InputSectionBase>(d->section);
     if (!parent || !parent->isLive())
       return;
@@ -260,15 +263,16 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
   LiveObject cur = s;
   while (true) {
     auto it = whyLive.find(cur);
+    // If there is a specific reason this object is live...
     if (it != whyLive.end()) {
-      // If there is a specific reason this object is live, report it.
+      // The object may be a liveness root.
       if (!it->second)
         break;
       cur = *it->second;
     } else {
       // This object made something else live, but it has no direct reason to be
-      // live. That means it a symbol made alive merely by being a member of its
-      // parent section, so report that section.
+      // live. That means it a symbol kept live only by being a member of its
+      // parent section. Report that section as the symbol's parent.
       auto *d = cast<Defined>(std::get<Symbol *>(cur));
       auto *parent = cast<InputSectionBase>(d->section);
       cur = LiveObject{parent};
