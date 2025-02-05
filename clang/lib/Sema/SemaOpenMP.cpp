@@ -7134,7 +7134,7 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
   };
   TargetOMPContext OMPCtx(Context, std::move(DiagUnknownTrait),
                           SemaRef.getCurFunctionDecl(),
-                          DSAStack->getConstructTraits());
+                          DSAStack->getConstructTraits(), getOpenMPDeviceNum());
 
   QualType CalleeFnType = CalleeFnDecl->getType();
 
@@ -15629,6 +15629,38 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
   else if (CKind == OMPC_ordered)
     DSAStack->setAssociatedLoops(Result.getExtValue());
   return ICE;
+}
+
+void SemaOpenMP::setOpenMPDeviceNum(int Num) { DeviceNum = Num; }
+
+void SemaOpenMP::setOpenMPDeviceNumID(StringRef ID) { DeviceNumID = ID; }
+
+int SemaOpenMP::getOpenMPDeviceNum() const { return DeviceNum; }
+
+void SemaOpenMP::ActOnOpenMPDeviceNum(Expr *DeviceNumExpr) {
+  llvm::APSInt Result;
+  Expr::EvalResult EvalResult;
+  // Evaluate the expression to an integer value
+  if (!DeviceNumExpr->isValueDependent() &&
+      DeviceNumExpr->EvaluateAsInt(EvalResult, SemaRef.Context)) {
+    // The device expression must evaluate to a non-negative integer value.
+    Result = EvalResult.Val.getInt();
+    if (Result.isNonNegative()) {
+      setOpenMPDeviceNum(Result.getZExtValue());
+    } else {
+      Diag(DeviceNumExpr->getExprLoc(),
+           diag::err_omp_negative_expression_in_clause)
+          << "device_num" << 0 << DeviceNumExpr->getSourceRange();
+    }
+  } else if (auto *DeclRef = dyn_cast<DeclRefExpr>(DeviceNumExpr)) {
+    // Check if the expression is an identifier
+    IdentifierInfo *IdInfo = DeclRef->getDecl()->getIdentifier();
+    if (IdInfo) {
+      setOpenMPDeviceNumID(IdInfo->getName());
+    }
+  } else {
+    Diag(DeviceNumExpr->getExprLoc(), diag::err_expected_expression);
+  }
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPSafelenClause(Expr *Len,
