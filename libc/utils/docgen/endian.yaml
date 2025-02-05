@@ -1,0 +1,8 @@
+macros:
+  LITTLE_ENDIAN:
+    in-latest-posix: ''
+  BIG_ENDIAN:
+    in-latest-posix: ''
+  BYTE_ORDER:
+    in-latest-posix: ''
+
