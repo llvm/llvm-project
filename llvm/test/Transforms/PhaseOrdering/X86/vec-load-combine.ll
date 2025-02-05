@@ -47,13 +47,19 @@ define dso_local noundef <4 x float> @ConvertVectors_ByRef(ptr noundef nonnull a
 define noundef <4 x float> @ConvertVectors_ByVal(ptr noundef nonnull align 16 dereferenceable(16) %V) #0 {
 ; SSE-LABEL: @ConvertVectors_ByVal(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[V:%.*]], align 16
-; SSE-NEXT:    [[V_VAL20:%.*]] = load i64, ptr [[V]], align 16
+; SSE-NEXT:    [[V_VAL20:%.*]] = load i64, ptr [[V:%.*]], align 16
+; SSE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 8
+; SSE-NEXT:    [[V_VAL421:%.*]] = load i64, ptr [[TMP0]], align 8
 ; SSE-NEXT:    [[TMP1:%.*]] = lshr i64 [[V_VAL20]], 32
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 1>
-; SSE-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[TMP1]], i64 1
-; SSE-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP3]] to <4 x i32>
-; SSE-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP4]] to <4 x float>
+; SSE-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[V_VAL20]], i64 0
+; SSE-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[TMP1]], i64 1
+; SSE-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[TMP3]] to <2 x i32>
+; SSE-NEXT:    [[TMP9:%.*]] = bitcast <2 x i32> [[TMP4]] to <2 x float>
+; SSE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; SSE-NEXT:    [[TMP7:%.*]] = trunc i64 [[V_VAL421]] to i32
+; SSE-NEXT:    [[TMP8:%.*]] = bitcast i32 [[TMP7]] to float
+; SSE-NEXT:    [[VECINIT11:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP8]], i64 2
+; SSE-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[VECINIT11]], float [[TMP8]], i64 3
 ; SSE-NEXT:    ret <4 x float> [[TMP5]]
 ;
 ; AVX-LABEL: @ConvertVectors_ByVal(
