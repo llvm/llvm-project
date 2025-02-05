@@ -508,19 +508,19 @@ static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
          "Cannot perform HLSL flat cast when vector source \
          object has less elements than flattened destination \
          object.");
-  for (unsigned i = 0; i < StoreGEPList.size(); i++) {
-    llvm::Value *Load = CGF.Builder.CreateExtractElement(SrcVal, i, "vec.load");
+  for (unsigned I = 0, Size = StoreGEPList.size(); I < Size; I++) {
+    llvm::Value *Load = CGF.Builder.CreateExtractElement(SrcVal, I, "vec.load");
     llvm::Value *Cast =
-        CGF.EmitScalarConversion(Load, SrcTy, DestTypes[i], Loc);
+        CGF.EmitScalarConversion(Load, SrcTy, DestTypes[I], Loc);
 
     // store back
-    llvm::Value *Idx = StoreGEPList[i].second;
+    llvm::Value *Idx = StoreGEPList[I].second;
     if (Idx) {
       llvm::Value *V =
-          CGF.Builder.CreateLoad(StoreGEPList[i].first, "load.for.insert");
+          CGF.Builder.CreateLoad(StoreGEPList[I].first, "load.for.insert");
       Cast = CGF.Builder.CreateInsertElement(V, Cast, Idx);
     }
-    CGF.Builder.CreateStore(Cast, StoreGEPList[i].first);
+    CGF.Builder.CreateStore(Cast, StoreGEPList[I].first);
   }
   return;
 }
@@ -974,7 +974,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     if (RV.isScalar()) {
       llvm::Value *SrcVal = RV.getScalarVal();
       EmitHLSLScalarFlatCast(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
-    } else { // RHS is an aggregate
+    } else {
       assert(RV.isAggregate() &&
              "Can't perform HLSL Aggregate cast on a complex type.");
       Address SrcVal = RV.getAggregateAddress();

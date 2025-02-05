@@ -2272,24 +2272,25 @@ static Value *EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address RHSVal,
   // LHS is either a vector or a builtin?
   // if its a vector create a temp alloca to store into and return that
   if (auto *VecTy = LHSTy->getAs<VectorType>()) {
+    assert(SrcTypes.size() >= VecTy->getNumElements() &&
+           "Flattened type on RHS must have more elements than vector on LHS.");
     llvm::Value *V =
         CGF.Builder.CreateLoad(CGF.CreateIRTemp(LHSTy, "flatcast.tmp"));
     // write to V.
-    for (unsigned i = 0; i < VecTy->getNumElements(); i++) {
-      llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[i].first, "load");
-      llvm::Value *Idx = LoadGEPList[i].second;
+    for (unsigned I = 0, E = VecTy->getNumElements(); I < E; I++) {
+      llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[I].first, "load");
+      llvm::Value *Idx = LoadGEPList[I].second;
       Load = Idx ? CGF.Builder.CreateExtractElement(Load, Idx, "vec.extract")
                  : Load;
       llvm::Value *Cast = CGF.EmitScalarConversion(
-          Load, SrcTypes[i], VecTy->getElementType(), Loc);
-      V = CGF.Builder.CreateInsertElement(V, Cast, i);
+          Load, SrcTypes[I], VecTy->getElementType(), Loc);
+      V = CGF.Builder.CreateInsertElement(V, Cast, I);
     }
     return V;
   }
   // i its a builtin just do an extract element or load.
   assert(LHSTy->isBuiltinType() &&
          "Destination type must be a vector or builtin type.");
-  // TODO add asserts about things being long enough
   llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[0].first, "load");
   llvm::Value *Idx = LoadGEPList[0].second;
   Load =

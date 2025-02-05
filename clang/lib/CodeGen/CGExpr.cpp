@@ -6370,17 +6370,11 @@ void CodeGenFunction::FlattenAccessAndType(
                     16>
       WorkList;
   llvm::IntegerType *IdxTy = llvm::IntegerType::get(getLLVMContext(), 32);
-  WorkList.push_back(
-      {AddrType,
-       {llvm::ConstantInt::get(
-           IdxTy,
-           0)}}); // Addr should be a pointer so we need to 'dereference' it
+  // Addr should be a pointer so we need to 'dereference' it
+  WorkList.push_back({AddrType, {llvm::ConstantInt::get(IdxTy, 0)}});
 
   while (!WorkList.empty()) {
-    std::pair<QualType, llvm::SmallVector<llvm::Value *, 4>> P =
-        WorkList.pop_back_val();
-    QualType T = P.first;
-    llvm::SmallVector<llvm::Value *, 4> IdxList = P.second;
+    auto [T, IdxList] = WorkList.pop_back_val();
     T = T.getCanonicalType().getUnqualifiedType();
     assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
     if (const auto *CAT = dyn_cast<ConstantArrayType>(T)) {
@@ -6388,7 +6382,7 @@ void CodeGenFunction::FlattenAccessAndType(
       for (int64_t I = Size - 1; I > -1; I--) {
         llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
         IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, I));
-        WorkList.insert(WorkList.end(), {CAT->getElementType(), IdxListCopy});
+        WorkList.emplace_back(CAT->getElementType(), IdxListCopy);
       }
     } else if (const auto *RT = dyn_cast<RecordType>(T)) {
       const RecordDecl *Record = RT->getDecl();
@@ -6419,8 +6413,8 @@ void CodeGenFunction::FlattenAccessAndType(
       CharUnits Align = getContext().getTypeAlignInChars(T);
       Address GEP =
           Builder.CreateInBoundsGEP(Addr, IdxList, LLVMT, Align, "vector.gep");
-      for (unsigned i = 0; i < VT->getNumElements(); i++) {
-        llvm::Value *Idx = llvm::ConstantInt::get(IdxTy, i);
+      for (unsigned I = 0, E = VT->getNumElements(); I < E; I++) {
+        llvm::Value *Idx = llvm::ConstantInt::get(IdxTy, I);
         // gep on vector fields is not recommended so combine gep with
         // extract/insert
         AccessList.push_back({GEP, Idx});
@@ -6432,7 +6426,7 @@ void CodeGenFunction::FlattenAccessAndType(
       CharUnits Align = getContext().getTypeAlignInChars(T);
       Address GEP =
           Builder.CreateInBoundsGEP(Addr, IdxList, LLVMT, Align, "gep");
-      AccessList.push_back({GEP, NULL});
+      AccessList.emplace_back(GEP, nullptr);
       FlatTypes.push_back(T);
     }
   }
