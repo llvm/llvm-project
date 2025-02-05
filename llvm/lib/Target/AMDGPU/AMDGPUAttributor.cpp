@@ -799,7 +799,31 @@ AAAMDAttributes &AAAMDAttributes::createForPosition(const IRPosition &IRP,
   llvm_unreachable("AAAMDAttributes is only valid for function position");
 }
 
-/// Base class to derive different size ranges.
+/// Merge two range states and indicate changes. The range can apply to
+/// flat-workgroup-size and waves-per-eu attributes. The growth/merge of these
+/// two attributes is neither a union nor an intersection. Instead, it follows
+/// the rule below:
+///
+/// Lower = max(S.Lower, R.Lower)
+/// Upper = max(S.Upper, R.Upper)
+ChangeStatus mergeRangeStateAndIndicateChange(IntegerRangeState &S,
+                                              const IntegerRangeState &R) {
+  auto Assumed = S.getAssumed();
+  unsigned Min = R.getAssumed().getLower().getZExtValue();
+  unsigned Max = R.getAssumed().getUpper().getZExtValue();
+  Min = std::max(Min, static_cast<unsigned>(Assumed.getLower().getZExtValue()));
+  Max = std::max(Max, static_cast<unsigned>(Assumed.getUpper().getZExtValue()));
+  ConstantRange Range(APInt(32, Min), APInt(32, Max));
+  IntegerRangeState RangeState(Range);
+  S = RangeState;
+  return S == Assumed ? ChangeStatus::UNCHANGED : ChangeStatus::CHANGED;
+}
+
+/// Base class for deriving different size ranges. This size range is
+/// specifically intended for flat-workgroup-size and waves-per-eu attributes.
+/// Therefore, updating the attribute should use
+/// \p mergeRangeStateAndIndicateChange. Given this, the attribute may not be
+/// applicable to other potential size ranges in the future.
 struct AAAMDSizeRangeAttribute
     : public StateWrapper<IntegerRangeState, AbstractAttribute, uint32_t> {
   using Base = StateWrapper<IntegerRangeState, AbstractAttribute, uint32_t>;
@@ -826,8 +850,8 @@ struct AAAMDSizeRangeAttribute
       if (!CallerInfo || !CallerInfo->isValidState())
         return false;
 
-      Change |=
-          clampStateAndIndicateChange(this->getState(), CallerInfo->getState());
+      Change |= mergeRangeStateAndIndicateChange(this->getState(),
+                                                 CallerInfo->getState());
 
       return true;
     };
@@ -903,15 +927,14 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
       }
     }
 
-    // We don't want to directly clamp the state if it's the max range because
+    // We don't want to directly merge the state if it's the max range because
     // that is basically the worst state.
     if (Range == MaxRange)
       return;
 
     auto [Min, Max] = Range;
     ConstantRange CR(APInt(32, Min), APInt(32, Max + 1));
-    IntegerRangeState IRS(CR);
-    clampStateAndIndicateChange(this->getState(), IRS);
+    this->getState() = IntegerRangeState(CR);
 
     if (HasAttr || AMDGPU::isEntryFunctionCC(F->getCallingConv()))
       indicateOptimisticFixpoint();
