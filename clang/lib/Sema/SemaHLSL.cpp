@@ -2500,8 +2500,10 @@ bool SemaHLSL::CanPerformAggregateCast(Expr *Src, QualType DestTy) {
   if (SrcTypes.size() < DestTypes.size())
     return false;
 
+  unsigned SrcSize = SrcTypes.size();
+  unsigned DstSize = DestTypes.size();
   unsigned I;
-  for (I = 0; I < DestTypes.size() && I < SrcTypes.size(); I++) {
+  for (I = 0; I < DstSize && I < SrcSize; I++) {
     if (SrcTypes[I]->isUnionType() || DestTypes[I]->isUnionType())
       return false;
     if (!CanPerformScalarCast(SrcTypes[I], DestTypes[I])) {
@@ -2510,7 +2512,7 @@ bool SemaHLSL::CanPerformAggregateCast(Expr *Src, QualType DestTy) {
   }
 
   // check the rest of the source type for unions.
-  for (; I < SrcTypes.size(); I++) {
+  for (; I < SrcSize; I++) {
     if (SrcTypes[I]->isUnionType())
       return false;
   }

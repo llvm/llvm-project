@@ -6403,10 +6403,10 @@ void CodeGenFunction::FlattenAccessAndType(
       for (auto *FD : Record->fields())
         FieldTypes.push_back(FD->getType());
 
-      for (int64_t i = FieldTypes.size() - 1; i > -1; i--) {
+      for (int64_t I = FieldTypes.size() - 1; I > -1; I--) {
         llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
-        IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, i));
-        WorkList.insert(WorkList.end(), {FieldTypes[i], IdxListCopy});
+        IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, I));
+        WorkList.insert(WorkList.end(), {FieldTypes[I], IdxListCopy});
       }
     } else if (const auto *VT = dyn_cast<VectorType>(T)) {
       llvm::Type *LLVMT = ConvertTypeForMem(T);

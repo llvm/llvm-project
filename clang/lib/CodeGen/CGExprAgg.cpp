@@ -545,22 +545,22 @@ static void EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address DestVal,
           has less elements than flattened destination object.");
   // apply casts to what we load from LoadGEPList
   // and store result in Dest
-  for (unsigned i = 0; i < StoreGEPList.size(); i++) {
-    llvm::Value *Idx = LoadGEPList[i].second;
-    llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[i].first, "load");
+  for (unsigned I = 0, E = StoreGEPList.size(); I < E; I++) {
+    llvm::Value *Idx = LoadGEPList[I].second;
+    llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[I].first, "load");
     Load =
         Idx ? CGF.Builder.CreateExtractElement(Load, Idx, "vec.extract") : Load;
     llvm::Value *Cast =
-        CGF.EmitScalarConversion(Load, SrcTypes[i], DestTypes[i], Loc);
+        CGF.EmitScalarConversion(Load, SrcTypes[I], DestTypes[I], Loc);
 
     // store back
-    Idx = StoreGEPList[i].second;
+    Idx = StoreGEPList[I].second;
     if (Idx) {
       llvm::Value *V =
-          CGF.Builder.CreateLoad(StoreGEPList[i].first, "load.for.insert");
+          CGF.Builder.CreateLoad(StoreGEPList[I].first, "load.for.insert");
       Cast = CGF.Builder.CreateInsertElement(V, Cast, Idx);
     }
-    CGF.Builder.CreateStore(Cast, StoreGEPList[i].first);
+    CGF.Builder.CreateStore(Cast, StoreGEPList[I].first);
   }
 }
 
