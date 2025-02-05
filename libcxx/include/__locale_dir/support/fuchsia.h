@@ -50,7 +50,9 @@ struct __locale_guard {
 #define _LIBCPP_LC_ALL LC_ALL
 
 using __locale_t = locale_t;
-using __lconv_t  = std::lconv;
+
+#if defined(_LIBCPP_BUILDING_LIBRARY)
+using __lconv_t = std::lconv;
 
 inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const char* __name, __locale_t __loc) {
   return ::newlocale(__category_mask, __name, __loc);
@@ -74,7 +76,7 @@ inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __mb_len_max(__locale_t __loc)
   __locale_guard __current(__loc);
   return MB_CUR_MAX;
 }
-#if _LIBCPP_HAS_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI wint_t __btowc(int __ch, __locale_t __loc) {
   __locale_guard __current(__loc);
   return std::btowc(__ch);
@@ -115,7 +117,8 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
   __locale_guard __current(__loc);
   return ::mbsrtowcs(__dest, __src, __len, __ps);
 }
-#endif
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
+#endif   // _LIBCPP_BUILDING_LIBRARY
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")

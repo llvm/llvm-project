@@ -13,6 +13,7 @@
 # https://github.com/llvm/llvm-project/issues/117630
 
 # RUN: %{python} %s %{libcxx-dir}/utils
+# END.
 
 import sys
 
@@ -32,6 +33,12 @@ for header in public_headers:
         print(
             f"""\
 //--- {header}.xopen_source_{version}.compile.pass.cpp
+
+// Some parts of the code like <fstream> use non-standard functions in their implementation,
+// and these functions are not provided when _XOPEN_SOURCE is set to older values. This
+// breaks when building with modules even when we don't use the offending headers directly.
+// UNSUPPORTED: clang-modules-build
+
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 
