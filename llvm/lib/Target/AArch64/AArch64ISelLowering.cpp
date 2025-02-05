@@ -530,6 +530,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::XOR, MVT::i32, Custom);
   setOperationAction(ISD::XOR, MVT::i64, Custom);
 
+  setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
+  setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
+
   // Virtually no operation on f128 is legal, but LLVM can't expand them when
   // there's a valid register class, so we need custom operations in most cases.
   setOperationAction(ISD::FABS, MVT::f128, Expand);
@@ -1139,6 +1142,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::VECREDUCE_XOR);
 
   setTargetDAGCombine(ISD::SCALAR_TO_VECTOR);
+
+  setTargetDAGCombine(ISD::SHL);
 
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
@@ -6878,6 +6883,38 @@ static SDValue LowerTruncateVectorStore(SDLoc DL, StoreSDNode *ST,
                       ST->getBasePtr(), ST->getMemOperand());
 }
 
+static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
+  SDLoc dl(Op);
+  SDValue Src = Op.getOperand(0);
+  MVT DestVT = Op.getSimpleValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  AddrSpaceCastSDNode *N = cast<AddrSpaceCastSDNode>(Op.getNode());
+
+  unsigned SrcAS = N->getSrcAddressSpace();
+  unsigned DestAS = N->getDestAddressSpace();
+  assert(SrcAS != DestAS &&
+         "addrspacecast must be between different address spaces");
+  assert(TLI.getTargetMachine().getPointerSize(SrcAS) !=
+             TLI.getTargetMachine().getPointerSize(DestAS) &&
+         "addrspacecast must be between different ptr sizes");
+  (void)TLI;
+
+  if (SrcAS == ARM64AS::PTR32_SPTR) {
+    return DAG.getNode(ISD::SIGN_EXTEND, dl, DestVT, Src,
+                       DAG.getTargetConstant(0, dl, DestVT));
+  } else if (SrcAS == ARM64AS::PTR32_UPTR) {
+    return DAG.getNode(ISD::ZERO_EXTEND, dl, DestVT, Src,
+                       DAG.getTargetConstant(0, dl, DestVT));
+  } else if ((DestAS == ARM64AS::PTR32_SPTR) ||
+             (DestAS == ARM64AS::PTR32_UPTR)) {
+    SDValue Ext = DAG.getAnyExtOrTrunc(Src, dl, DestVT);
+    SDValue Trunc = DAG.getZeroExtendInReg(Ext, dl, DestVT);
+    return Trunc;
+  } else {
+    return Src;
+  }
+}
+
 // Custom lowering for any store, vector or scalar and/or default or with
 // a truncate operations.  Currently only custom lower truncate operation
 // from vector v4i16 to v4i8 or volatile stores of i128.
@@ -7539,6 +7576,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     return LowerFixedLengthVectorIntExtendToSVE(Op, DAG);
+  case ISD::ADDRSPACECAST:
+    return LowerADDRSPACECAST(Op, DAG);
   case ISD::SIGN_EXTEND_INREG: {
     // Only custom lower when ExtraVT has a legal byte based element type.
     EVT ExtraVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
@@ -8748,56 +8787,6 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
   return ZExtBool;
 }
 
-// The FORM_TRANSPOSED_REG_TUPLE pseudo should only be used if the
-// input operands are copy nodes where the source register is in a
-// StridedOrContiguous class. For example:
-//
-//   %3:zpr2stridedorcontiguous = LD1B_2Z_IMM_PSEUDO ..
-//   %4:zpr = COPY %3.zsub1:zpr2stridedorcontiguous
-//   %5:zpr = COPY %3.zsub0:zpr2stridedorcontiguous
-//   %6:zpr2stridedorcontiguous = LD1B_2Z_PSEUDO ..
-//   %7:zpr = COPY %6.zsub1:zpr2stridedorcontiguous
-//   %8:zpr = COPY %6.zsub0:zpr2stridedorcontiguous
-//   %9:zpr2mul2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %5:zpr, %8:zpr
-//
-bool shouldUseFormStridedPseudo(MachineInstr &MI) {
-  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-
-  const TargetRegisterClass *RegClass = nullptr;
-  switch (MI.getOpcode()) {
-  case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
-    RegClass = &AArch64::ZPR2StridedOrContiguousRegClass;
-    break;
-  case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
-    RegClass = &AArch64::ZPR4StridedOrContiguousRegClass;
-    break;
-  default:
-    llvm_unreachable("Unexpected opcode.");
-  }
-
-  MCRegister SubReg = MCRegister::NoRegister;
-  for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
-    MachineOperand &MO = MI.getOperand(I);
-    assert(MO.isReg() && "Unexpected operand to FORM_TRANSPOSED_REG_TUPLE");
-
-    MachineOperand *Def = MRI.getOneDef(MO.getReg());
-    if (!Def || !Def->getParent()->isCopy())
-      return false;
-
-    const MachineOperand &CopySrc = Def->getParent()->getOperand(1);
-    unsigned OpSubReg = CopySrc.getSubReg();
-    if (SubReg == MCRegister::NoRegister)
-      SubReg = OpSubReg;
-
-    MachineOperand *CopySrcOp = MRI.getOneDef(CopySrc.getReg());
-    if (!CopySrcOp || !CopySrcOp->isReg() || OpSubReg != SubReg ||
-        MRI.getRegClass(CopySrcOp->getReg()) != RegClass)
-      return false;
-  }
-
-  return true;
-}
-
 void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                           SDNode *Node) const {
   // Live-in physreg copies that are glued to SMSTART are applied as
@@ -8821,27 +8810,6 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
       MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/true,
                                               /*IsImplicit=*/true));
     }
-  }
-
-  if (MI.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
-      MI.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO) {
-    // If input values to the FORM_TRANSPOSED_REG_TUPLE pseudo aren't copies
-    // from a StridedOrContiguous class, fall back on REG_SEQUENCE node.
-    if (shouldUseFormStridedPseudo(MI))
-      return;
-
-    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-    MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                                      TII->get(TargetOpcode::REG_SEQUENCE),
-                                      MI.getOperand(0).getReg());
-
-    for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
-      MIB.add(MI.getOperand(I));
-      MIB.addImm(AArch64::zsub0 + (I - 1));
-    }
-
-    MI.eraseFromParent();
-    return;
   }
 
   // Add an implicit use of 'VG' for ADDXri/SUBXri, which are instructions that
@@ -9576,7 +9544,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
-    if (CalledGlobal)
+    if (CalledGlobal &&
+        MF.getFunction().getParent()->getModuleFlag("import-call-optimization"))
       DAG.addCalledGlobal(Ret.getNode(), CalledGlobal, OpFlags);
     return Ret;
   }
@@ -9589,7 +9558,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   InGlue = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
-  if (CalledGlobal)
+  if (CalledGlobal &&
+      MF.getFunction().getParent()->getModuleFlag("import-call-optimization"))
     DAG.addCalledGlobal(Chain.getNode(), CalledGlobal, OpFlags);
 
   uint64_t CalleePopBytes =
@@ -17464,148 +17434,17 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   return true;
 }
 
-bool getDeinterleave2Values(
-    Value *DI, SmallVectorImpl<Instruction *> &DeinterleavedValues,
-    SmallVectorImpl<Instruction *> &DeInterleaveDeadInsts) {
-  if (!DI->hasNUses(2))
-    return false;
-  auto *Extr1 = dyn_cast<ExtractValueInst>(*(DI->user_begin()));
-  auto *Extr2 = dyn_cast<ExtractValueInst>(*(++DI->user_begin()));
-  if (!Extr1 || !Extr2)
-    return false;
-
-  DeinterleavedValues.resize(2);
-  // Place the values into the vector in the order of extraction:
-  DeinterleavedValues[0x1 & (Extr1->getIndices()[0])] = Extr1;
-  DeinterleavedValues[0x1 & (Extr2->getIndices()[0])] = Extr2;
-  if (!DeinterleavedValues[0] || !DeinterleavedValues[1])
-    return false;
-
-  // Make sure that the extracted values match the deinterleave tree pattern
-  if (!match(DeinterleavedValues[0], m_ExtractValue<0>((m_Specific(DI)))) ||
-      !match(DeinterleavedValues[1], m_ExtractValue<1>((m_Specific(DI))))) {
-    LLVM_DEBUG(dbgs() << "matching deinterleave2 failed\n");
-    return false;
-  }
-  // DeinterleavedValues will be replace by output of ld2
-  DeInterleaveDeadInsts.insert(DeInterleaveDeadInsts.end(),
-                               DeinterleavedValues.begin(),
-                               DeinterleavedValues.end());
-  return true;
-}
-
-/*
-DeinterleaveIntrinsic tree:
-                   [DI]
-                /        \
-         [Extr<0>]      [Extr<1>]
-            |                 |
-           [DI]              [DI]
-          /    \            /    \
-    [Extr<0>][Extr<1>] [Extr<0>][Extr<1>]
-        |       |         |         |
-roots:  A       C         B         D
-roots in correct order of DI4 will be: A B C D.
-Returns true if `DI` is the top of an IR tree that represents a theoretical
-vector.deinterleave4 intrinsic. When true is returned, \p `DeinterleavedValues`
-vector is populated with the results such an intrinsic would return: (i.e. {A,
-B, C, D } = vector.deinterleave4(...))
-*/
-bool getDeinterleave4Values(
-    Value *DI, SmallVectorImpl<Instruction *> &DeinterleavedValues,
-    SmallVectorImpl<Instruction *> &DeInterleaveDeadInsts) {
-  if (!DI->hasNUses(2))
-    return false;
-  auto *Extr1 = dyn_cast<ExtractValueInst>(*(DI->user_begin()));
-  auto *Extr2 = dyn_cast<ExtractValueInst>(*(++DI->user_begin()));
-  if (!Extr1 || !Extr2)
-    return false;
-
-  if (!Extr1->hasOneUse() || !Extr2->hasOneUse())
-    return false;
-  auto *DI1 = *(Extr1->user_begin());
-  auto *DI2 = *(Extr2->user_begin());
-
-  if (!DI1->hasNUses(2) || !DI2->hasNUses(2))
-    return false;
-  // Leaf nodes of the deinterleave tree:
-  auto *A = dyn_cast<ExtractValueInst>(*(DI1->user_begin()));
-  auto *C = dyn_cast<ExtractValueInst>(*(++DI1->user_begin()));
-  auto *B = dyn_cast<ExtractValueInst>(*(DI2->user_begin()));
-  auto *D = dyn_cast<ExtractValueInst>(*(++DI2->user_begin()));
-  // Make sure that the A,B,C and D are ExtractValue instructions before getting
-  // the extract index
-  if (!A || !B || !C || !D)
-    return false;
-
-  DeinterleavedValues.resize(4);
-  // Place the values into the vector in the order of deinterleave4:
-  DeinterleavedValues[0x3 &
-                      ((A->getIndices()[0] * 2) + Extr1->getIndices()[0])] = A;
-  DeinterleavedValues[0x3 &
-                      ((B->getIndices()[0] * 2) + Extr2->getIndices()[0])] = B;
-  DeinterleavedValues[0x3 &
-                      ((C->getIndices()[0] * 2) + Extr1->getIndices()[0])] = C;
-  DeinterleavedValues[0x3 &
-                      ((D->getIndices()[0] * 2) + Extr2->getIndices()[0])] = D;
-  if (!DeinterleavedValues[0] || !DeinterleavedValues[1] ||
-      !DeinterleavedValues[2] || !DeinterleavedValues[3])
-    return false;
-
-  // Make sure that A,B,C,D match the deinterleave tree pattern
-  if (!match(DeinterleavedValues[0], m_ExtractValue<0>(m_Deinterleave2(
-                                         m_ExtractValue<0>(m_Specific(DI))))) ||
-      !match(DeinterleavedValues[1], m_ExtractValue<0>(m_Deinterleave2(
-                                         m_ExtractValue<1>(m_Specific(DI))))) ||
-      !match(DeinterleavedValues[2], m_ExtractValue<1>(m_Deinterleave2(
-                                         m_ExtractValue<0>(m_Specific(DI))))) ||
-      !match(DeinterleavedValues[3], m_ExtractValue<1>(m_Deinterleave2(
-                                         m_ExtractValue<1>(m_Specific(DI)))))) {
-    LLVM_DEBUG(dbgs() << "matching deinterleave4 failed\n");
-    return false;
-  }
-
-  // These Values will not be used anymore,
-  // DI4 will be created instead of nested DI1 and DI2
-  DeInterleaveDeadInsts.insert(DeInterleaveDeadInsts.end(),
-                               DeinterleavedValues.begin(),
-                               DeinterleavedValues.end());
-  DeInterleaveDeadInsts.push_back(cast<Instruction>(DI1));
-  DeInterleaveDeadInsts.push_back(cast<Instruction>(Extr1));
-  DeInterleaveDeadInsts.push_back(cast<Instruction>(DI2));
-  DeInterleaveDeadInsts.push_back(cast<Instruction>(Extr2));
-
-  return true;
-}
-
-bool getDeinterleavedValues(
-    Value *DI, SmallVectorImpl<Instruction *> &DeinterleavedValues,
-    SmallVectorImpl<Instruction *> &DeInterleaveDeadInsts) {
-  if (getDeinterleave4Values(DI, DeinterleavedValues, DeInterleaveDeadInsts))
-    return true;
-  return getDeinterleave2Values(DI, DeinterleavedValues, DeInterleaveDeadInsts);
-}
-
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    IntrinsicInst *DI, LoadInst *LI,
-    SmallVectorImpl<Instruction *> &DeadInsts) const {
-  // Only deinterleave2 supported at present.
-  if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
-    return false;
-
-  SmallVector<Instruction *, 4> DeinterleavedValues;
-  SmallVector<Instruction *, 8> DeInterleaveDeadInsts;
-
-  if (!getDeinterleavedValues(DI, DeinterleavedValues, DeInterleaveDeadInsts)) {
+    LoadInst *LI, ArrayRef<Value *> DeinterleavedValues) const {
+  unsigned Factor = DeinterleavedValues.size();
+  if (Factor != 2 && Factor != 4) {
     LLVM_DEBUG(dbgs() << "Matching ld2 and ld4 patterns failed\n");
     return false;
   }
-  unsigned Factor = DeinterleavedValues.size();
-  assert((Factor == 2 || Factor == 4) &&
-         "Currently supported Factor is 2 or 4 only");
+
   VectorType *VTy = cast<VectorType>(DeinterleavedValues[0]->getType());
 
-  const DataLayout &DL = DI->getModule()->getDataLayout();
+  const DataLayout &DL = LI->getModule()->getDataLayout();
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
@@ -17621,7 +17460,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
                       VTy->getElementCount().divideCoefficientBy(NumLoads));
 
   Type *PtrTy = LI->getPointerOperandType();
-  Function *LdNFunc = getStructuredLoadFunction(DI->getModule(), Factor,
+  Function *LdNFunc = getStructuredLoadFunction(LI->getModule(), Factor,
                                                 UseScalable, LdTy, PtrTy);
 
   IRBuilder<> Builder(LI);
@@ -17666,72 +17505,19 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
       DeinterleavedValues[I]->replaceAllUsesWith(NewExtract);
     }
   }
-  DeadInsts.insert(DeadInsts.end(), DeInterleaveDeadInsts.begin(),
-                   DeInterleaveDeadInsts.end());
   return true;
 }
 
-/*
-InterleaveIntrinsic tree.
-          A    C         B    D
-           \  /           \  /
-           [II]           [II]
-                 \     /
-                  [II]
-
-values in correct order of interleave4: A B C D.
-Returns true if `II` is the root of an IR tree that represents a theoretical
-vector.interleave4 intrinsic. When true is returned, \p `InterleavedValues`
-vector is populated with the inputs such an intrinsic would take: (i.e.
-vector.interleave4(A, B, C, D)).
-*/
-bool getValuesToInterleave(
-    Value *II, SmallVectorImpl<Value *> &InterleavedValues,
-    SmallVectorImpl<Instruction *> &InterleaveDeadInsts) {
-  Value *A, *B, *C, *D;
-  // Try to match interleave of Factor 4
-  if (match(II, m_Interleave2(m_Interleave2(m_Value(A), m_Value(C)),
-                              m_Interleave2(m_Value(B), m_Value(D))))) {
-    InterleavedValues.push_back(A);
-    InterleavedValues.push_back(B);
-    InterleavedValues.push_back(C);
-    InterleavedValues.push_back(D);
-    // intermediate II will not be needed anymore
-    InterleaveDeadInsts.push_back(
-        cast<Instruction>(cast<Instruction>(II)->getOperand(0)));
-    InterleaveDeadInsts.push_back(
-        cast<Instruction>(cast<Instruction>(II)->getOperand(1)));
-    return true;
-  }
-
-  // Try to match interleave of Factor 2
-  if (match(II, m_Interleave2(m_Value(A), m_Value(B)))) {
-    InterleavedValues.push_back(A);
-    InterleavedValues.push_back(B);
-    return true;
-  }
-
-  return false;
-}
-
 bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
-    IntrinsicInst *II, StoreInst *SI,
-    SmallVectorImpl<Instruction *> &DeadInsts) const {
-  // Only interleave2 supported at present.
-  if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
-    return false;
-
-  SmallVector<Value *, 4> InterleavedValues;
-  SmallVector<Instruction *, 2> InterleaveDeadInsts;
-  if (!getValuesToInterleave(II, InterleavedValues, InterleaveDeadInsts)) {
+    StoreInst *SI, ArrayRef<Value *> InterleavedValues) const {
+  unsigned Factor = InterleavedValues.size();
+  if (Factor != 2 && Factor != 4) {
     LLVM_DEBUG(dbgs() << "Matching st2 and st4 patterns failed\n");
     return false;
   }
-  unsigned Factor = InterleavedValues.size();
-  assert((Factor == 2 || Factor == 4) &&
-         "Currently supported Factor is 2 or 4 only");
+
   VectorType *VTy = cast<VectorType>(InterleavedValues[0]->getType());
-  const DataLayout &DL = II->getModule()->getDataLayout();
+  const DataLayout &DL = SI->getModule()->getDataLayout();
 
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
@@ -17762,9 +17548,11 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
         Builder.CreateVectorSplat(StTy->getElementCount(), Builder.getTrue());
 
   auto ExtractedValues = InterleavedValues;
+  SmallVector<Value *, 4> StoreOperands(InterleavedValues.begin(),
+                                        InterleavedValues.end());
   if (UseScalable)
-    InterleavedValues.push_back(Pred);
-  InterleavedValues.push_back(BaseAddr);
+    StoreOperands.push_back(Pred);
+  StoreOperands.push_back(BaseAddr);
   for (unsigned I = 0; I < NumStores; ++I) {
     Value *Address = BaseAddr;
     if (NumStores > 1) {
@@ -17773,16 +17561,14 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
       Value *Idx =
           Builder.getInt64(I * StTy->getElementCount().getKnownMinValue());
       for (unsigned J = 0; J < Factor; J++) {
-        InterleavedValues[J] =
+        StoreOperands[J] =
             Builder.CreateExtractVector(StTy, ExtractedValues[J], Idx);
       }
       // update the address
-      InterleavedValues[InterleavedValues.size() - 1] = Address;
+      StoreOperands[StoreOperands.size() - 1] = Address;
     }
-    Builder.CreateCall(StNFunc, InterleavedValues);
+    Builder.CreateCall(StNFunc, StoreOperands);
   }
-  DeadInsts.insert(DeadInsts.end(), InterleaveDeadInsts.begin(),
-                   InterleaveDeadInsts.end());
   return true;
 }
 
@@ -23740,6 +23526,26 @@ static SDValue performLOADCombine(SDNode *N,
     performTBISimplification(N->getOperand(1), DCI, DAG);
 
   LoadSDNode *LD = cast<LoadSDNode>(N);
+  EVT RegVT = LD->getValueType(0);
+  EVT MemVT = LD->getMemoryVT();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc DL(LD);
+
+  // Cast ptr32 and ptr64 pointers to the default address space before a load.
+  unsigned AddrSpace = LD->getAddressSpace();
+  if (AddrSpace == ARM64AS::PTR64 || AddrSpace == ARM64AS::PTR32_SPTR ||
+      AddrSpace == ARM64AS::PTR32_UPTR) {
+    MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
+    if (PtrVT != LD->getBasePtr().getSimpleValueType()) {
+      SDValue Cast =
+          DAG.getAddrSpaceCast(DL, PtrVT, LD->getBasePtr(), AddrSpace, 0);
+      return DAG.getExtLoad(LD->getExtensionType(), DL, RegVT, LD->getChain(),
+                            Cast, LD->getPointerInfo(), MemVT,
+                            LD->getOriginalAlign(),
+                            LD->getMemOperand()->getFlags());
+    }
+  }
+
   if (LD->isVolatile() || !Subtarget->isLittleEndian())
     return SDValue(N, 0);
 
@@ -23749,13 +23555,11 @@ static SDValue performLOADCombine(SDNode *N,
   if (!LD->isNonTemporal())
     return SDValue(N, 0);
 
-  EVT MemVT = LD->getMemoryVT();
   if (MemVT.isScalableVector() || MemVT.getSizeInBits() <= 256 ||
       MemVT.getSizeInBits() % 256 == 0 ||
       256 % MemVT.getScalarSizeInBits() != 0)
     return SDValue(N, 0);
 
-  SDLoc DL(LD);
   SDValue Chain = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
   SDNodeFlags Flags = LD->getFlags();
@@ -24015,11 +23819,27 @@ static SDValue performSTORECombine(SDNode *N,
   SDValue Value = ST->getValue();
   SDValue Ptr = ST->getBasePtr();
   EVT ValueVT = Value.getValueType();
+  EVT MemVT = ST->getMemoryVT();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc DL(ST);
 
   auto hasValidElementTypeForFPTruncStore = [](EVT VT) {
     EVT EltVT = VT.getVectorElementType();
     return EltVT == MVT::f32 || EltVT == MVT::f64;
   };
+
+  // Cast ptr32 and ptr64 pointers to the default address space before a store.
+  unsigned AddrSpace = ST->getAddressSpace();
+  if (AddrSpace == ARM64AS::PTR64 || AddrSpace == ARM64AS::PTR32_SPTR ||
+      AddrSpace == ARM64AS::PTR32_UPTR) {
+    MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
+    if (PtrVT != Ptr.getSimpleValueType()) {
+      SDValue Cast = DAG.getAddrSpaceCast(DL, PtrVT, Ptr, AddrSpace, 0);
+      return DAG.getStore(Chain, DL, Value, Cast, ST->getPointerInfo(),
+                          ST->getOriginalAlign(),
+                          ST->getMemOperand()->getFlags(), ST->getAAInfo());
+    }
+  }
 
   if (SDValue Res = combineI8TruncStore(ST, DAG, Subtarget))
     return Res;
@@ -24034,8 +23854,8 @@ static SDValue performSTORECombine(SDNode *N,
       ValueVT.isFixedLengthVector() &&
       ValueVT.getFixedSizeInBits() >= Subtarget->getMinSVEVectorSizeInBits() &&
       hasValidElementTypeForFPTruncStore(Value.getOperand(0).getValueType()))
-    return DAG.getTruncStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
-                             ST->getMemoryVT(), ST->getMemOperand());
+    return DAG.getTruncStore(Chain, DL, Value.getOperand(0), Ptr, MemVT,
+                             ST->getMemOperand());
 
   if (SDValue Split = splitStores(N, DCI, DAG, Subtarget))
     return Split;
@@ -26523,6 +26343,50 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return NVCAST;
 }
 
+/// If the operand is a bitwise AND with a constant RHS, and the shift has a
+/// constant RHS and is the only use, we can pull it out of the shift, i.e.
+///
+///   (shl (and X, C1), C2) -> (and (shl X, C2), (shl C1, C2))
+///
+/// We prefer this canonical form to match existing isel patterns.
+static SDValue performSHLCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 SelectionDAG &DAG) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  SDValue Op0 = N->getOperand(0);
+  if (Op0.getOpcode() != ISD::AND || !Op0.hasOneUse())
+    return SDValue();
+
+  SDValue C1 = Op0->getOperand(1);
+  SDValue C2 = N->getOperand(1);
+  if (!isa<ConstantSDNode>(C1) || !isa<ConstantSDNode>(C2))
+    return SDValue();
+
+  // Might be folded into shifted op, do not lower.
+  if (N->hasOneUse()) {
+    unsigned UseOpc = N->user_begin()->getOpcode();
+    if (UseOpc == ISD::ADD || UseOpc == ISD::SUB || UseOpc == ISD::SETCC ||
+        UseOpc == AArch64ISD::ADDS || UseOpc == AArch64ISD::SUBS)
+      return SDValue();
+  }
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  // Don't combine unless (shl C1, C2) can be constant folded. Otherwise,
+  // DAGCombiner will simplify (and (op x...), (op y...)) -> (op (and x, y))
+  // causing infinite loop. Result may also be worse.
+  SDValue NewRHS = DAG.getNode(ISD::SHL, DL, VT, C1, C2);
+  if (!isa<ConstantSDNode>(NewRHS))
+    return SDValue();
+
+  SDValue X = Op0->getOperand(0);
+  SDValue NewShift = DAG.getNode(ISD::SHL, DL, VT, X, C2);
+  return DAG.getNode(ISD::AND, DL, VT, NewShift, NewRHS);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -26868,6 +26732,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performCTLZCombine(N, DAG, Subtarget);
   case ISD::SCALAR_TO_VECTOR:
     return performScalarToVectorCombine(N, DCI, DAG);
+  case ISD::SHL:
+    return performSHLCombine(N, DCI, DAG);
   }
   return SDValue();
 }
@@ -27528,6 +27394,11 @@ void AArch64TargetLowering::ReplaceNodeResults(
            "Expected 128-bit atomicrmw.");
     // These need custom type legalisation so we go directly to instruction.
     ReplaceATOMIC_LOAD_128Results(N, Results, DAG, Subtarget);
+    return;
+  }
+  case ISD::ADDRSPACECAST: {
+    SDValue V = LowerADDRSPACECAST(SDValue(N, 0), DAG);
+    Results.push_back(V);
     return;
   }
   case ISD::ATOMIC_LOAD:

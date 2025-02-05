@@ -740,6 +740,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       args.hasFlag(clang::driver::options::OPT_fimplicit_none,
                    clang::driver::options::OPT_fno_implicit_none, false));
 
+  // -f{no-}implicit-none-ext
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::ImplicitNoneExternal,
+      args.hasFlag(clang::driver::options::OPT_fimplicit_none_ext,
+                   clang::driver::options::OPT_fno_implicit_none_ext, false));
+
   // -f{no-}backslash
   opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
                        args.hasFlag(clang::driver::options::OPT_fbackslash,
@@ -770,10 +776,11 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     opts.features.Enable(Fortran::common::LanguageFeature::DefaultSave);
   }
 
-  // -fsave-main-program
-  if (args.hasArg(clang::driver::options::OPT_fsave_main_program)) {
-    opts.features.Enable(Fortran::common::LanguageFeature::SaveMainProgram);
-  }
+  // -f{no}-save-main-program
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::SaveMainProgram,
+      args.hasFlag(clang::driver::options::OPT_fsave_main_program,
+                   clang::driver::options::OPT_fno_save_main_program, false));
 
   if (args.hasArg(
           clang::driver::options::OPT_falternative_parameter_statement)) {

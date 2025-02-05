@@ -155,8 +155,15 @@ public:
   llvm::DenseSet<StringRef> directivesExports;
   bool hadExplicitExports;
 
+  Chunk *edataStart = nullptr;
+  Chunk *edataEnd = nullptr;
+
+  Symbol *delayLoadHelper = nullptr;
+  Chunk *tailMergeUnwindInfoChunk = nullptr;
+
   void fixupExports();
   void assignExportOrdinals();
+  void parseModuleDefs(StringRef path);
 
   // Iterates symbols in non-determinstic hash table order.
   template <typename T> void forEachSymbol(T callback) {

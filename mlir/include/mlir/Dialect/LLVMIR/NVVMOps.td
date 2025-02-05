@@ -23,6 +23,7 @@ include "mlir/Interfaces/InferIntRangeInterface.td"
 def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
 def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
 def LLVM_PointerShared : LLVM_PointerInAddressSpace<3>;
+def LLVM_PointerTensor : LLVM_PointerInAddressSpace<6>;
 
 //===----------------------------------------------------------------------===//
 // NVVM dialect definitions
@@ -849,55 +850,24 @@ def LoadCacheModifierKind : I32EnumAttr<"LoadCacheModifierKind",
 
 def LoadCacheModifierAttr : EnumAttr<NVVM_Dialect, LoadCacheModifierKind, "load_cache_modifier">;
 
-def NVVM_CpAsyncOp : NVVM_PTXBuilder_Op<"cp.async.shared.global">,
+def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
   Arguments<(ins LLVM_PointerShared:$dst,
                  LLVM_PointerGlobal:$src,
                  I32Attr:$size,
                  LoadCacheModifierAttr:$modifier,
                  Optional<LLVM_Type>:$cpSize)> {
-  string llvmBuilder = [{
-      llvm::Intrinsic::ID id;
-      switch ($size) {
-        case 4:
-          id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_4;
-          break;
-        case 8:
-          id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_8;
-          break;
-        case 16:
-          if($modifier == NVVM::LoadCacheModifierKind::CG)
-            id = llvm::Intrinsic::nvvm_cp_async_cg_shared_global_16;
-          else if($modifier == NVVM::LoadCacheModifierKind::CA)
-            id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_16;
-          else 
-            llvm_unreachable("unsupported cache modifier");
-          break;
-        default:
-          llvm_unreachable("unsupported async copy size");
-      }
-      createIntrinsicCall(builder, id, {$dst, $src});
-  }];
   let assemblyFormat = "$dst `,` $src `,` $size `,` `cache` `=` $modifier (`,` $cpSize^)? attr-dict `:` type(operands)";
   let hasVerifier = 1;
   let extraClassDeclaration = [{
-    bool hasIntrinsic() { if(getCpSize()) return false; return true; }
-
-    void getAsmValues(RewriterBase &rewriter, 
-        llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues) {
-      asmValues.push_back({getDst(), PTXRegisterMod::Read});
-      asmValues.push_back({getSrc(), PTXRegisterMod::Read});
-      asmValues.push_back({makeConstantI32(rewriter, getSize()), PTXRegisterMod::Read});
-      asmValues.push_back({getCpSize(), PTXRegisterMod::Read});
-    }        
+    static llvm::Intrinsic::ID
+      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::SmallVector<llvm::Value *> &args);
   }];
-  let extraClassDefinition = [{        
-    std::string $cppClass::getPtx() { 
-      if(getModifier() == NVVM::LoadCacheModifierKind::CG)
-        return std::string("cp.async.cg.shared.global [%0], [%1], %2, %3;\n");
-      if(getModifier() == NVVM::LoadCacheModifierKind::CA)
-        return std::string("cp.async.ca.shared.global [%0], [%1], %2, %3;\n");
-      llvm_unreachable("unsupported cache modifier");      
-    }
+  string llvmBuilder = [{
+    llvm::SmallVector<llvm::Value *> translatedOperands;
+    auto id = NVVM::CpAsyncOp::getIntrinsicIDAndArgs(
+      *op, moduleTranslation, translatedOperands);
+    createIntrinsicCall(builder, id, translatedOperands);
   }];
 }
 
@@ -2543,6 +2513,55 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM Griddepcontrol Ops
+//===----------------------------------------------------------------------===//
+
+def NVVM_GriddepcontrolWaitOp : NVVM_IntrOp<"griddepcontrol.wait", [], 0> {
+  let assemblyFormat = "attr-dict";
+
+  let description = [{
+    Causes the executing thread to wait until all prerequisite grids in flight 
+    have completed and all the memory operations from the prerequisite grids 
+    are performed and made visible to the current grid.
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol)
+  }];
+}
+
+def NVVM_GriddepcontrolLaunchDependentsOp
+    : NVVM_IntrOp<"griddepcontrol.launch.dependents", [], 0> {
+  let assemblyFormat = "attr-dict";
+
+  let description = [{
+    Signals that specific dependents the runtime system designated to react to 
+    this instruction can be scheduled as soon as all other CTAs in the grid 
+    issue the same instruction or have completed.
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Mapa Op
+//===----------------------------------------------------------------------===//
+
+def NVVM_MapaOp: NVVM_Op<"mapa",
+    [TypesMatchWith<"`res` and `a` should have the same type",
+                    "a", "res", "$_self">]> {
+  let results = (outs AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$res);
+  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$a, I32:$b);
+
+  string llvmBuilder = [{
+    int addrSpace = llvm::cast<LLVMPointerType>(op.getA().getType()).getAddressSpace();
+    
+    bool isSharedMemory = addrSpace == NVVM::NVVMMemorySpace::kSharedMemorySpace;
+
+    auto intId = isSharedMemory? llvm::Intrinsic::nvvm_mapa_shared_cluster : llvm::Intrinsic::nvvm_mapa;
+    $res = createIntrinsicCall(builder, intId, {$a, $b});
+  }];
+  
+  let assemblyFormat = "$a`,` $b attr-dict `:` type($a) `->` type($res)";
+}
+
 def NVVM_Exit : NVVM_Op<"exit"> {
   let summary = "Exit Op";
   let description = [{
@@ -2572,6 +2591,110 @@ def NVVM_Breakpoint : NVVM_Op<"breakpoint"> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM TCGEN05 Ops
+//===----------------------------------------------------------------------===//
+// Num CTAs in a group participating in the TCGEN05 operation.
+// This corresponds to the "cta_group::1", "cta_group::2"
+// modifiers in the PTX instructions.
+def Tcgen05GroupCTA_1 : I32EnumAttrCase<"CTA_1", 0, "cta_1">;
+def Tcgen05GroupCTA_2 : I32EnumAttrCase<"CTA_2", 1, "cta_2">;
+
+def Tcgen05GroupKind : I32EnumAttr<"Tcgen05GroupKind",
+                            "NVVM Tcgen05 group kind",
+  [Tcgen05GroupCTA_1, Tcgen05GroupCTA_2]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def Tcgen05GroupKindAttr :
+  EnumAttr<NVVM_Dialect, Tcgen05GroupKind, "tcgen05_group"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc"> {
+  let summary = "Tcgen05 alloc operation";
+  let description = [{
+    The `tcgen05.alloc` Op allocates tensor core memory for
+    the amount specified by `nCols` and writes the destination
+    address to the `addr` argument. The `nCols` operand specifies the
+    number of columns to be allocated and it must be a power-of-two.
+    [For more information, refer to the PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
+  }];
+
+  let arguments = (ins
+    AnyTypeOf<[LLVM_AnyPointer, LLVM_PointerShared]>:$addr,
+    I32:$nCols,
+    DefaultValuedAttr<Tcgen05GroupKindAttr, "Tcgen05GroupKind::CTA_1">:$group);
+
+  let assemblyFormat = "$addr `,` $nCols attr-dict `:` type(operands)";
+
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID
+      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::SmallVector<llvm::Value *> &args);
+  }];
+  string llvmBuilder = [{
+    llvm::SmallVector<llvm::Value *> args;
+    auto id = NVVM::Tcgen05AllocOp::getIntrinsicIDAndArgs(
+      *op, moduleTranslation, args);
+    createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc"> {
+  let summary = "Tcgen05 dealloc operation";
+  let description = [{
+    The `tcgen05.dealloc` Op de-allocates the tensor core memory
+    specified by `tmemAddr`, which must be from a previous tensor
+    memory allocation. The `nCols` operand specifies the number
+    of columns to be de-allocated, and it must be a power-of-two.
+    [For more information, refer to the PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
+  }];
+
+  let arguments = (ins LLVM_PointerTensor:$taddr, I32:$nCols,
+    DefaultValuedAttr<Tcgen05GroupKindAttr, "Tcgen05GroupKind::CTA_1">:$group);
+
+  let assemblyFormat = "$taddr `,` $nCols attr-dict `:` type(operands)";
+
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID
+      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::SmallVector<llvm::Value *> &args);
+  }];
+  string llvmBuilder = [{
+    llvm::SmallVector<llvm::Value *> args;
+    auto id = NVVM::Tcgen05DeallocOp::getIntrinsicIDAndArgs(
+      *op, moduleTranslation, args);
+    createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_permit"> {
+  let summary = "Tcgen05 Op to relinquish the right to allocate";
+  let description = [{
+    The `tcgen05.relinquish_alloc_permit` Op specifies that the CTA
+    of the executing thread is relinquishing the right to allocate
+    Tensor Memory. So, it is illegal for a CTA to perform `tcgen05.alloc`
+    after any of its constituent threads execute `tcgen05.relinquish_alloc_permit`.
+    [For more information, refer to the PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
+  }];
+
+  let arguments = (ins
+    DefaultValuedAttr<Tcgen05GroupKindAttr, "Tcgen05GroupKind::CTA_1">:$group);
+
+  let assemblyFormat = "attr-dict";
+
+  string llvmBuilder = [{
+    auto id = ($group == NVVM::Tcgen05GroupKind::CTA_1) ?
+      llvm::Intrinsic::nvvm_tcgen05_relinq_alloc_permit_cg1 :
+      llvm::Intrinsic::nvvm_tcgen05_relinq_alloc_permit_cg2;
+    createIntrinsicCall(builder, id);
+  }];
 }
 
 //===----------------------------------------------------------------------===//

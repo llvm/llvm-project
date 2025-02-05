@@ -480,6 +480,55 @@ if.else:
   ret i64 13
 }
 
+define i64 @test_icmp_trunc_nuw(i64 %a) {
+; CHECK-LABEL: @test_icmp_trunc_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw i64 [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CAST]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i64 [[A]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %cast = trunc nuw i64 %a to i32
+  %cmp = icmp sgt i32 %cast, 0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %b = and i64 %a, 2147483647
+  ret i64 %b
+
+if.else:
+  ret i64 0
+}
+
+define i64 @test_icmp_trunc_no_nuw(i64 %a) {
+; CHECK-LABEL: @test_icmp_trunc_no_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CAST]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[B:%.*]] = and i64 [[A]], 2147483647
+; CHECK-NEXT:    ret i64 [[B]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %cast = trunc i64 %a to i32
+  %cmp = icmp sgt i32 %cast, 0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %b = and i64 %a, 2147483647
+  ret i64 %b
+
+if.else:
+  ret i64 0
+}
+
 define i1 @test_icmp_or_distjoint(i8 %n, i1 %other) {
 ; CHECK-LABEL: @test_icmp_or_distjoint(
 ; CHECK-NEXT:  entry:
@@ -1609,17 +1658,13 @@ if.else:
   ret i16 0
 }
 
-; TODO: %cmp always evaluates to false
-
 define i1 @test_simplify_icmp2(double %x) {
 ; CHECK-LABEL: @test_simplify_icmp2(
 ; CHECK-NEXT:    [[ABS:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp oeq double [[ABS]], 0x7FF0000000000000
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast double [[X]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[CAST]], 3458764513820540928
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;

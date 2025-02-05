@@ -5150,8 +5150,8 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
   auto *Ti16 = sandboxir::Type::getInt16Ty(Ctx);
   auto *Tdouble = sandboxir::Type::getDoubleTy(Ctx);
   auto *Tfloat = sandboxir::Type::getFloatTy(Ctx);
-  auto *Tptr = sandboxir::PointerType::get(Tfloat, 0);
-  auto *Tptr1 = sandboxir::PointerType::get(Tfloat, 1);
+  auto *Tptr = sandboxir::PointerType::get(Ctx, 0);
+  auto *Tptr1 = sandboxir::PointerType::get(Ctx, 1);
 
   // Check classof(), getOpcode(), getSrcTy(), getDstTy()
   auto *ZExt = cast<sandboxir::CastInst>(&*It++);
@@ -6079,4 +6079,24 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
   EXPECT_THAT(Inserted, testing::IsEmpty());
   EXPECT_THAT(Removed, testing::IsEmpty());
   EXPECT_THAT(Moved, testing::IsEmpty());
+}
+
+TEST_F(SandboxIRTest, FunctionObjectAlreadyExists) {
+  parseIR(C, R"IR(
+define void @foo() {
+  call void @bar()
+  ret void
+}
+define void @bar() {
+  ret void
+}
+)IR");
+  Function &LLVMFoo = *M->getFunction("foo");
+  Function &LLVMBar = *M->getFunction("bar");
+  sandboxir::Context Ctx(C);
+  // This will create a Function object for @bar().
+  Ctx.createFunction(&LLVMFoo);
+  EXPECT_NE(Ctx.getValue(&LLVMBar), nullptr);
+  // This should not crash, even though there is already a value for LLVMBar.
+  Ctx.createFunction(&LLVMBar);
 }

@@ -99,14 +99,7 @@ struct TaskDescriptorTy {
   TaskFnTy TaskFn;
 };
 
-#pragma omp begin declare variant match(device = {arch(amdgcn)})
 using LaneMaskTy = uint64_t;
-#pragma omp end declare variant
-
-#pragma omp begin declare variant match(                                       \
-        device = {arch(amdgcn)}, implementation = {extension(match_none)})
-using LaneMaskTy = uint64_t;
-#pragma omp end declare variant
 
 namespace lanes {
 enum : LaneMaskTy { All = ~(LaneMaskTy)0 };
@@ -163,8 +156,7 @@ typedef enum omp_allocator_handle_t {
 #define OMP_PRAGMA(STR) __PRAGMA(omp STR)
 
 #define SHARED(NAME)                                                           \
-  NAME [[clang::loader_uninitialized]];                                        \
-  OMP_PRAGMA(allocate(NAME) allocator(omp_pteam_mem_alloc))
+  [[clang::address_space(3)]] NAME [[clang::loader_uninitialized]];
 
 // TODO: clang should use address space 5 for omp_thread_mem_alloc, but right
 //       now that's not the case.
