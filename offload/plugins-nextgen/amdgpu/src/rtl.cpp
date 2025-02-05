@@ -884,6 +884,11 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Indicates whether or not we need to set up our own private segment size.
   bool usesDynamicStack() const { return DynamicStack; }
 
+  /// Get the execution mode of this kernel.
+  OMPTgtExecModeFlags getExecutionMode() const {
+    return getExecutionModeFlags();
+  }
+
   /// Envar to disable host-exec thread creation.
   BoolEnvar OMPX_DisableHostExec;
 
@@ -2186,7 +2191,8 @@ public:
 
     // If runtime autotuning is enabled, setup the callback functions to process
     // the data after kernel completed.
-    if (Device.enableRuntimeAutotuning()) {
+    if (Device.enableRuntimeAutotuning() &&
+        Kernel.getExecutionMode() == OMP_TGT_EXEC_MODE_SPMD) {
       std::string KernelName(Kernel.getName());
       KernelRunRecord *KernelRecords = Device.getKernelRunRecords();
 

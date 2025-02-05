@@ -734,7 +734,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     KernelRunCounter = KernelRecord->getRunCounterForKernel(KernelName);
   }
   // If Autotuning is enabled and the kernel is not launched for the first time.
-  if (GenericDevice.enableRuntimeAutotuning() && KernelRunCounter > 0) {
+  if (GenericDevice.enableRuntimeAutotuning() && isSPMDMode() &&
+      KernelRunCounter > 0) {
     assert(KernelRecord &&
            "Autotuning is enabled, but KernelRunRecord is not initialized!");
 

@@ -1305,7 +1305,7 @@ struct KernelRunRecord {
     uint32_t IdxThread = 0;
     uint32_t IdxCUMultiplier = 0;
     // Run counters.
-    uint32_t RunCounters;
+    uint32_t RunCounters = 0;
     // Entry with minimum running time.
     KernelRunEntry MinEntries;
   };
@@ -1363,10 +1363,19 @@ struct KernelRunRecord {
   }
 
   bool reachedRunLimitForKernel(std::string KernelName) {
+    if (TuningData.count(KernelName) == 0) {
+      // If no record for this kernel.
+      return false;
+    }
+
     return TuningData[KernelName].RunCounters > RunLimiter;
   }
 
   uint32_t getRunCounterForKernel(std::string KernelName) {
+    if (TuningData.count(KernelName) == 0) {
+      return 0;
+    }
+
     return TuningData[KernelName].RunCounters;
   }
 
