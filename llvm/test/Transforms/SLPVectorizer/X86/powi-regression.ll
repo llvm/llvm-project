@@ -6,7 +6,12 @@
 define <2 x double> @PR53887_v2f64(<2 x double> noundef %x) {
 ; CHECK-LABEL: @PR53887_v2f64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call fast <2 x double> @llvm.powi.v2f64.i32(<2 x double> [[X:%.*]], i32 6)
+; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x double> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[VECEXT]], i32 6)
+; CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <2 x double> zeroinitializer, double [[TMP2]], i64 0
+; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <2 x double> [[X]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[VECEXT1]], i32 6)
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> [[VECINIT]], double [[TMP1]], i64 1
 ; CHECK-NEXT:    ret <2 x double> [[TMP0]]
 ;
 entry:
@@ -22,7 +27,18 @@ entry:
 define <4 x double> @PR53887_v4f64(<4 x double> noundef %x) {
 ; CHECK-LABEL: @PR53887_v4f64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call fast <4 x double> @llvm.powi.v4f64.i32(<4 x double> [[X:%.*]], i32 6)
+; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x double> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[VECEXT]], i32 6)
+; CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x double> zeroinitializer, double [[TMP4]], i64 0
+; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x double> [[X]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[VECEXT1]], i32 6)
+; CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x double> [[VECINIT]], double [[TMP1]], i64 1
+; CHECK-NEXT:    [[VECEXT4:%.*]] = extractelement <4 x double> [[X]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[VECEXT4]], i32 6)
+; CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <4 x double> [[VECINIT3]], double [[TMP2]], i64 2
+; CHECK-NEXT:    [[VECEXT7:%.*]] = extractelement <4 x double> [[X]], i64 3
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[VECEXT7]], i32 6)
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> [[VECINIT6]], double [[TMP3]], i64 3
 ; CHECK-NEXT:    ret <4 x double> [[TMP0]]
 ;
 entry:

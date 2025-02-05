@@ -22,6 +22,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::CudaUnified);
   disable_.set(LanguageFeature::ImplicitNoneTypeNever);
   disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
+  disable_.set(LanguageFeature::ImplicitNoneExternal);
   disable_.set(LanguageFeature::DefaultSave);
   disable_.set(LanguageFeature::SaveMainProgram);
   // These features, if enabled, conflict with valid standard usage,
