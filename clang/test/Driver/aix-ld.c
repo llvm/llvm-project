@@ -1124,8 +1124,7 @@
 // This check is only applicable to AIX host. 
 // AIX-specific link behavior requires `-latomic` for 32-bit sanitizer libraries, 
 // Running this test on non-AIX host will result in an unrelated error 
-// (e.g., missing atomic support on certain architectures).
-// FIXME: Address issues with non-AIX environments/configurations.
+// FIXME: Sanitizer interface functions must be exported by export files on AIX
 
 // Check No Sanitizer on 32-bit AIX
 // RUN: %if target={{.*aix.*}} %{ \
