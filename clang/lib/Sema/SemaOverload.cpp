@@ -11734,8 +11734,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
           // for ill-formed const exprs in >=C++20.
           QualType qt = NTTPD->getType();
           if (qt.getCanonicalType() ==
-                  SecondArg.getAsType().getCanonicalType() &&
-              __cplusplus <= 201703) {
+              SecondArg.getAsType().getCanonicalType()) {
             return {3, -1, -1, NTTPD->getIndex(), NTTPD->getType()};
           } else {
             return {2, -1, -1, NTTPD->getIndex(), NTTPD->getType()};
