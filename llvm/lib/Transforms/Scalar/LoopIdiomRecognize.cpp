@@ -97,7 +97,7 @@ using namespace llvm;
 STATISTIC(NumMemSet, "Number of memset's formed from loop stores");
 STATISTIC(NumMemCpy, "Number of memcpy's formed from loop load+stores");
 STATISTIC(NumMemMove, "Number of memmove's formed from loop load+stores");
-STATISTIC(NumStrLen, "Number of strlen's formed from loop loads");
+STATISTIC(NumStrLen, "Number of strlen's and wcslen's formed from loop loads");
 STATISTIC(
     NumShiftUntilBitTest,
     "Number of uncountable loops recognized as 'shift until bitttest' idiom");
@@ -1664,9 +1664,9 @@ public:
       if (!AddRecEv || !AddRecEv->isAffine())
         return false;
 
-      // We only want RecAddExpr with recurrence step that are constant. This
-      // is good enough for all the idioms we want to recognize. Later we expand
-      // the recurrence as {base,+,a} -> (base + a * strlen) and materialize
+      // We only want RecAddExpr with recurrence step that is constant. This
+      // is good enough for all the idioms we want to recognize. Later we expand and materialize
+      // the recurrence as {base,+,a} -> (base + a * strlen)
       if (!dyn_cast<SCEVConstant>(AddRecEv->getStepRecurrence(*SE)))
         return false;
     }
@@ -1719,7 +1719,7 @@ public:
 ///     size_t result = str - base;
 /// \endcode
 ///
-/// will be transformed as as follow: The idiom will be replaced by a strlen
+/// will be transformed as follows: The idiom will be replaced by a strlen
 /// computation to compute the address of the null terminator of the string.
 ///
 /// \code{.c}
@@ -1759,7 +1759,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   BasicBlock *LoopExitBB = CurLoop->getExitBlock();
 
   IRBuilder<> Builder(Preheader->getTerminator());
-  SCEVExpander Expander(*SE, Preheader->getModule()->getDataLayout(), "scev");
+  SCEVExpander Expander(*SE, Preheader->getModule()->getDataLayout(), "strlen_idiom");
   Value *MaterialzedBase = Expander.expandCodeFor(
       Verifier.LoadBaseEv, Verifier.LoadBaseEv->getType(),
       Builder.GetInsertPoint());
@@ -1805,9 +1805,8 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 
   // All LCSSA Loop Phi are dead, the left over dead loop body can be cleaned
   // up by later passes
-  for (PHINode *PN : Cleanup) {
+  for (PHINode *PN : Cleanup) 
     RecursivelyDeleteDeadPHINode(PN);
-  }
   SE->forgetLoop(CurLoop);
 
   ++NumStrLen;
