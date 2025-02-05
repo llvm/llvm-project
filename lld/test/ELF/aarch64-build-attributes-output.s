@@ -10,7 +10,7 @@
 /// File has a Build attributes section. This should not appear in
 /// ET_EXEC or ET_SHARED files as there is no requirement for it to
 /// do so. FIXME, the ld -r (relocatable link) should output a single
-/// merged build attributes section. WHen full support is added in
+/// merged build attributes section. When full support is added in
 /// ld.lld this test should be updated.
 
 // CHECK-NOT: .ARM.attributes
