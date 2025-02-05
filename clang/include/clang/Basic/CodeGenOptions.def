@@ -469,6 +469,10 @@ CODEGENOPT(CtorDtorReturnThis, 1, 0)
 /// by the Windows kernel to enable import call optimization.
 CODEGENOPT(ImportCallOptimization, 1, 0)
 
+/// Controls whether we generate code for static linking of libclosure
+/// (BlocksRuntime) on Windows.
+CODEGENOPT(StaticClosure, 1, 0)
+
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"
 
