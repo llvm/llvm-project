@@ -81,7 +81,7 @@ void associative_container_benchmarks(std::string container) {
   // PauseTiming() and ResumeTiming().
   static constexpr std::size_t BatchSize = 10;
 
-  struct ScratchSpace {
+  struct alignas(Container) ScratchSpace {
     char storage[sizeof(Container)];
   };
 
