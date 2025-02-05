@@ -1849,6 +1849,8 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
 bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
   if (!SIInstrInfo::isWMMA(*MI) && !SIInstrInfo::isSWMMAC(*MI))
     return false;
+  if (AMDGPU::isGFX13Plus(ST))
+    return false;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();

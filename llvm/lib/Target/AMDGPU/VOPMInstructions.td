@@ -574,19 +574,19 @@ class VOPM_Pseudo <VOPProfile P, list<dag> pattern = [], string opName = !tolowe
   let mayRaiseFPException = 0;
   let ReadsModeReg = 0;
   let Uses = [EXEC];
+  let IsWMMA = P.IsWMMA;
+  let IsSWMMAC = P.IsSWMMAC;
 }
 
-class VOPM_Pseudo_Indexing <VOPProfile P, list<dag> pattern = [], string opName = !tolower(NAME)> : VOPM_Pseudo <P, pattern, opName> {}
-
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
-  def V_MOV_2SRC_B64               : VOPM_Pseudo_Indexing<VOPM_I64_I32_I32>;
-  def V_BPERMUTE_B32               : VOPM_Pseudo_Indexing<VOPM_I32_I32_I32,
+  def V_MOV_2SRC_B64               : VOPM_Pseudo<VOPM_I64_I32_I32>;
+  def V_BPERMUTE_B32               : VOPM_Pseudo<VOPM_I32_I32_I32,
                                                  [(set i32:$vdst, (int_amdgcn_bpermute_b32 i32:$src0, i32:$src1))]>;
-  def V_PERMUTE_PAIR_GENSGPR_B32   : VOPM_Pseudo_Indexing<VOPM_I32_I32_I64,
+  def V_PERMUTE_PAIR_GENSGPR_B32   : VOPM_Pseudo<VOPM_I32_I32_I64,
                                                  [(set i32:$vdst, (int_amdgcn_permute_pair_gensgpr_b32 i32:$src0, i64:$src1))]>;
-  def V_PERMUTE_PAIR_BCAST_B32     : VOPM_Pseudo_Indexing<VOPM_I32_I32_AUX,
+  def V_PERMUTE_PAIR_BCAST_B32     : VOPM_Pseudo<VOPM_I32_I32_AUX,
                                                  [(set i32:$vdst, (int_amdgcn_permute_pair_bcast_b32 i32:$src0, timm:$aux_data))]>;
-  def V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32 : VOPM_Pseudo_Indexing<VOPM_I32_I32_I32_AUX,
+  def V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32 : VOPM_Pseudo<VOPM_I32_I32_I32_AUX,
                                                          [(set i32:$vdst, (int_amdgcn_permute_pair_2src_rotate_group_b32 i32:$src0, i32:$src1, timm:$aux_data))]>;
 
   let SchedRW = [Write32Bit, Write32Bit] in {
@@ -598,10 +598,10 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
 } // let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus
 
 multiclass VOPM_Conv_MultiPseudos_1x1_Iter<string ProfilePrefix> {
-  def _ITER_1 : VOPM_Pseudo_Indexing<!cast<Conv_Profile>(ProfilePrefix #"_ITER_1")>;
-  def _ITER_2 : VOPM_Pseudo_Indexing<!cast<Conv_Profile>(ProfilePrefix #"_ITER_2")>;
-  def _ITER_3 : VOPM_Pseudo_Indexing<!cast<Conv_Profile>(ProfilePrefix #"_ITER_3")>;
-  def _ITER_4 : VOPM_Pseudo_Indexing<!cast<Conv_Profile>(ProfilePrefix #"_ITER_4")>;
+  def _ITER_1 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_ITER_1")>;
+  def _ITER_2 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_ITER_2")>;
+  def _ITER_3 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_ITER_3")>;
+  def _ITER_4 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_ITER_4")>;
 }
 
 multiclass VOPM_Conv_MultiPseudos<string ProfilePrefix> {
@@ -609,9 +609,9 @@ multiclass VOPM_Conv_MultiPseudos<string ProfilePrefix> {
   defm _1x1_4x4 : VOPM_Conv_MultiPseudos_1x1_Iter<ProfilePrefix #"_1x1_4x4">;
   defm _1x1_4x2 : VOPM_Conv_MultiPseudos_1x1_Iter<ProfilePrefix #"_1x1_4x2">;
 
-  def _3x3_8x4 : VOPM_Pseudo_Indexing<!cast<Conv_Profile>(ProfilePrefix #"_3x3_8x4")>;
-  def _3x3_4x4 : VOPM_Pseudo_Indexing<!cast<Conv_Profile>(ProfilePrefix #"_3x3_4x4")>;
-  def _3x3_4x2 : VOPM_Pseudo_Indexing<!cast<Conv_Profile>(ProfilePrefix #"_3x3_4x2")>;
+  def _3x3_8x4 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_3x3_8x4")>;
+  def _3x3_4x4 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_3x3_4x4")>;
+  def _3x3_4x2 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_3x3_4x2")>;
 }
 
 defm V_CONVOLVE_F16_F16    : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_F16">;
@@ -1725,4 +1725,4 @@ class InfoPseudoTable <string Class>: GenericTable {
 }
 
 // TODO-GFX13: Currently this table contains opcodes that support indexing.
-def VOPMPseudoInfoTable : InfoPseudoTable <"VOPM_Pseudo_Indexing">;
+def VOPMPseudoInfoTable : InfoPseudoTable <"VOPM_Pseudo">;
