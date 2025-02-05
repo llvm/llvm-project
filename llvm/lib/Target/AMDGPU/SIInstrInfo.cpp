@@ -367,6 +367,21 @@ static bool isRTSOpc(unsigned op) {
   }
 }
 
+static bool isSWCOpc(unsigned op) {
+  switch (op) {
+  case AMDGPU::SWC_REORDER:
+  case AMDGPU::SWC_FLUSH:
+  case AMDGPU::SWC_REORDER_SWAP:
+  case AMDGPU::SWC_REORDER_SWAP_RESUME:
+  case AMDGPU::SWC_GET_EXCHANGE_STATE:
+  case AMDGPU::SWC_SET_EXCHANGE_STATE:
+  case AMDGPU::SWC_ABORT_EXCHANGE:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
     int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
@@ -512,7 +527,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     return true;
   }
 
-  if (isFLAT(LdSt) && !isRTSOpc(LdSt.getOpcode())) {
+  if (isFLAT(LdSt) && !isRTSOpc(LdSt.getOpcode()) &&
+      !isSWCOpc(LdSt.getOpcode())) {
     // Instructions have either vaddr or saddr or both or none.
     BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
     if (BaseOp)
