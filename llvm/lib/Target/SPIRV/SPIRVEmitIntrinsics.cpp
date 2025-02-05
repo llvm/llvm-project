@@ -1337,6 +1337,24 @@ static void createSaturatedConversionDecoration(Instruction *I,
   createDecorationIntrinsic(I, SaturatedConversionNode, B);
 }
 
+/// add saturated decoration to intrinsic with "sat" keyword in it
+static void addSaturatedDecorationToIntrinsic(Instruction *I, IRBuilder<> &B) {
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    Function *F = CI->getCalledFunction();
+    if (F->isIntrinsic()) {
+      StringRef S = F->getName();
+      SmallVector<StringRef, 8> Parts;
+
+      S.split(Parts, ".", -1, false);
+
+      if (Parts.size() > 1) {
+        if (std::find(Parts.begin(), Parts.end(), "sat") != Parts.end()) {
+          createSaturatedConversionDecoration(I, B);
+        }
+      }
+    }
+  }
+}
 Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   if (!Call.isInlineAsm())
     return &Call;
@@ -2399,7 +2417,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     // Don't emit intrinsics for convergence operations.
     if (isConvergenceIntrinsic(I))
       continue;
-
+    addSaturatedDecorationToIntrinsic(I, B);
     processInstrAfterVisit(I, B);
   }
 

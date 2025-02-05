@@ -340,6 +340,79 @@ static void lowerFunnelShifts(IntrinsicInst *FSHIntrinsic) {
   FSHIntrinsic->setCalledFunction(FSHFunc);
 }
 
+static std::vector<Instruction *> lowerFPTOISat(IntrinsicInst *FptosiIntrinsi) {
+  // follows implementation from SPIRV-LLVM Biderectional translator
+  std::vector<Instruction *> ToErase;
+
+  if (isa<VectorType>(FptosiIntrinsi->getType()))
+    return ToErase;
+
+  auto IID = FptosiIntrinsi->getIntrinsicID();
+  auto IntBitWidth = FptosiIntrinsi->getType()->getScalarSizeInBits();
+
+  if (IntBitWidth == 8 || IntBitWidth == 16 || IntBitWidth == 32 ||
+      IntBitWidth == 64)
+    return ToErase;
+
+  if (IID == Intrinsic::fptosi_sat) {
+    auto *User = FptosiIntrinsi->getUniqueUndroppableUser();
+    if (!User || !isa<SExtInst>(User))
+      return ToErase;
+
+    auto *SExtI = dyn_cast<SExtInst>(User);
+    auto *NewIType = SExtI->getType();
+    IRBuilder<> IRB(FptosiIntrinsi);
+
+    auto *NewII = IRB.CreateIntrinsic(
+        IID, {NewIType, FptosiIntrinsi->getOperand(0)->getType()},
+        FptosiIntrinsi->getOperand(0));
+
+    Constant *MaxVal = ConstantInt::get(
+        NewIType, APInt::getSignedMaxValue(IntBitWidth).getSExtValue());
+
+    Constant *MinVal = ConstantInt::get(
+        NewIType, APInt::getSignedMinValue(IntBitWidth).getSExtValue());
+
+    auto *GTMax = IRB.CreateICmp(CmpInst::ICMP_SGE, NewII, MaxVal);
+    auto *LTMin = IRB.CreateICmp(CmpInst::ICMP_SLE, NewII, MinVal);
+    auto *SatMax = IRB.CreateSelect(GTMax, MaxVal, NewII);
+    auto *SatMin = IRB.CreateSelect(LTMin, MinVal, SatMax);
+
+    SExtI->replaceAllUsesWith(SatMin);
+    ToErase.push_back(SExtI);
+    ToErase.push_back(FptosiIntrinsi);
+  }
+
+  if (IID == Intrinsic::fptoui_sat) {
+    // Identify zext (user of II). Make sure that's the only use of II.
+
+    auto *User = FptosiIntrinsi->getUniqueUndroppableUser();
+
+    if (!User || !isa<ZExtInst>(User))
+      return ToErase;
+
+    auto *ZExtI = dyn_cast<ZExtInst>(User);
+    auto *NewIType = ZExtI->getType();
+    IRBuilder<> IRB(FptosiIntrinsi);
+    auto *NewII = IRB.CreateIntrinsic(
+        IID, {NewIType, FptosiIntrinsi->getOperand(0)->getType()},
+        FptosiIntrinsi->getOperand(0));
+
+    Constant *MaxVal = ConstantInt::get(
+        NewIType, APInt::getMaxValue(IntBitWidth).getZExtValue());
+
+    auto *GTMax = IRB.CreateICmp(CmpInst::ICMP_UGE, NewII, MaxVal);
+    auto *SatMax = IRB.CreateSelect(GTMax, MaxVal, NewII);
+
+    ZExtI->replaceAllUsesWith(SatMax);
+
+    ToErase.push_back(ZExtI);
+    ToErase.push_back(FptosiIntrinsi);
+  }
+
+  return ToErase;
+}
+
 static void lowerExpectAssume(IntrinsicInst *II) {
   // If we cannot use the SPV_KHR_expect_assume extension, then we need to
   // ignore the intrinsic and move on. It should be removed later on by LLVM.
@@ -385,6 +458,7 @@ static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
 // or calls to proper generated functions. Returns True if F was modified.
 bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
+  std::vector<Instruction *> ToErase;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
       auto Call = dyn_cast<CallInst>(&I);
@@ -423,8 +497,21 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         lowerPtrAnnotation(II);
         Changed = true;
         break;
+      case Intrinsic::fptosi_sat:
+      case Intrinsic::fptoui_sat:
+        ToErase = lowerFPTOISat(II);
+        if (ToErase.empty()) break;
+
+        Changed = true;
+        break;
       }
     }
+  }
+
+  for (Instruction *V : ToErase) {
+    assert(V->user_empty());
+    V->dropAllReferences();
+    V->eraseFromParent();
   }
   return Changed;
 }
