@@ -24,17 +24,17 @@ struct Tracker {
 };
 
 struct [[clang::trivial_abi]] Inner {
-  TEST_CONSTEXPR explicit Inner(Tracker* tracker) : tracker_(tracker) {}
-  TEST_CONSTEXPR Inner(const Inner& rhs) : tracker_(rhs.tracker_) { tracker_->move_constructs += 1; }
-  TEST_CONSTEXPR Inner(Inner&& rhs) : tracker_(rhs.tracker_) { tracker_->move_constructs += 1; }
+  TEST_CONSTEXPR_CXX20 explicit Inner(Tracker* tracker) : tracker_(tracker) {}
+  TEST_CONSTEXPR_CXX20 Inner(const Inner& rhs) : tracker_(rhs.tracker_) { tracker_->move_constructs += 1; }
+  TEST_CONSTEXPR_CXX20 Inner(Inner&& rhs) : tracker_(rhs.tracker_) { tracker_->move_constructs += 1; }
   Tracker* tracker_;
 };
 
 // Even though this type contains a trivial_abi type, it is not trivially move-constructible,
 // so we should not attempt to optimize its move construction + destroy using trivial relocation.
 struct NotTriviallyMovable {
-  TEST_CONSTEXPR explicit NotTriviallyMovable(Tracker* tracker) : inner_(tracker) {}
-  TEST_CONSTEXPR NotTriviallyMovable(NotTriviallyMovable&& other) : inner_(std::move(other.inner_)) {}
+  TEST_CONSTEXPR_CXX20 explicit NotTriviallyMovable(Tracker* tracker) : inner_(tracker) {}
+  TEST_CONSTEXPR_CXX20 NotTriviallyMovable(NotTriviallyMovable&& other) : inner_(std::move(other.inner_)) {}
   Inner inner_;
 };
 static_assert(!std::is_trivially_copyable<NotTriviallyMovable>::value, "");
