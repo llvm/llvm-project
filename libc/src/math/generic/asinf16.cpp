@@ -42,14 +42,14 @@ LLVM_LIBC_FUNCTION(float16, asinf16, (float16 x)) {
 
       return x;
     }
-    
+
     // 1 < |x| <= +/-inf
     fputil::raise_except_if_required(FE_INVALID);
     fputil::set_errno_if_required(EDOM);
-    
+
     return FPBits::quiet_nan().get_val();
   }
-  
+
   float xsq = xf * xf;
 
   // |x| <= 0x1p-1, |x| <= 0.5
