@@ -402,6 +402,10 @@ struct MCSchedModel {
   static unsigned getForwardingDelayCycles(ArrayRef<MCReadAdvanceEntry> Entries,
                                            unsigned WriteResourceIdx = 0);
 
+  /// Returns the maximum forwarding delay for maximum write latency.
+  static unsigned getForwardingDelayCycles(const MCSubtargetInfo &STI,
+                                           const MCSchedClassDesc &SCDesc);
+
   /// Returns the default initialized model.
   static const MCSchedModel Default;
 };
