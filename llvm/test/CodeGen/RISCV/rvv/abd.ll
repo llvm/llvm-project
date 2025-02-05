@@ -155,6 +155,12 @@ define <vscale x 2 x i64> @sabd_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) 
 ; CHECK-NEXT:    vmax.vv v8, v8, v10
 ; CHECK-NEXT:    vsub.vv v8, v8, v12
 ; CHECK-NEXT:    ret
+;
+; ZVABD-LABEL: sabd_d:
+; ZVABD:       # %bb.0:
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; ZVABD-NEXT:    vabd.vv v8, v8, v10
+; ZVABD-NEXT:    ret
   %a.sext = sext <vscale x 2 x i64> %a to <vscale x 2 x i128>
   %b.sext = sext <vscale x 2 x i64> %b to <vscale x 2 x i128>
   %sub = sub <vscale x 2 x i128> %a.sext, %b.sext
@@ -339,6 +345,12 @@ define <vscale x 2 x i64> @uabd_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) 
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v10
 ; CHECK-NEXT:    vsub.vv v8, v8, v12
 ; CHECK-NEXT:    ret
+;
+; ZVABD-LABEL: uabd_d:
+; ZVABD:       # %bb.0:
+; ZVABD-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; ZVABD-NEXT:    vabdu.vv v8, v8, v10
+; ZVABD-NEXT:    ret
   %a.zext = zext <vscale x 2 x i64> %a to <vscale x 2 x i128>
   %b.zext = zext <vscale x 2 x i64> %b to <vscale x 2 x i128>
   %sub = sub <vscale x 2 x i128> %a.zext, %b.zext
@@ -450,8 +462,7 @@ define <vscale x 4 x i32> @uabd_non_matching_promotion(<vscale x 4 x i8> %a, <vs
 ; ZVABD-NEXT:    vsext.vf2 v8, v9
 ; ZVABD-NEXT:    vwsub.wv v10, v10, v8
 ; ZVABD-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVABD-NEXT:    vrsub.vi v8, v10, 0
-; ZVABD-NEXT:    vmax.vv v8, v10, v8
+; ZVABD-NEXT:    vabs.v v8, v10
 ; ZVABD-NEXT:    ret
   %a.zext = zext <vscale x 4 x i8> %a to <vscale x 4 x i32>
   %b.zext = sext <vscale x 4 x i8> %b to <vscale x 4 x i32>

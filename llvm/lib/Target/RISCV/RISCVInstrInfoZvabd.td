@@ -47,6 +47,13 @@ let Predicates = [HasStdExtZvabd] in {
 defm : VPatBinarySDNode_VV_VX<abds, "PseudoVABD">;
 defm : VPatBinarySDNode_VV_VX<abdu, "PseudoVABDU">;
 
+foreach vti = AllIntegerVectors in {
+  def : Pat<(vti.Vector (abs (vti.Vector vti.RegClass:$rs2))),
+            (!cast<Instruction>("PseudoVABD_VX_"#vti.LMul.MX)
+                    (vti.Vector (IMPLICIT_DEF)),
+                vti.RegClass:$rs2, (XLenVT X0), vti.AVL, vti.Log2SEW, TA_MA)>;
+}
+
 defm : VPatBinaryVL_VV_VX<riscv_abds_vl, "PseudoVABD">;
 defm : VPatBinaryVL_VV_VX<riscv_abdu_vl, "PseudoVABDU">;
 } // Predicates = [HasStdExtZvabd]
