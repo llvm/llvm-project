@@ -182,8 +182,8 @@ The `vscode://llvm-vs-code-extensions.lldb-dap/launch/config?config={launch-conf
 URI accepts a [URL-encoded](https://en.wikipedia.org/wiki/Percent-encoding)
 JSON launch config.
 
-This is useful, e.g., to integrate with custom scripts which start debugging
-sessions. The URIs might be printed to the terminal, potentially using
+This is useful for integration with custom scripts to start debugging
+sessions. The URI might be printed to the terminal, potentially using
 [OSC-8 hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda),
 or passed to `vscode --open-url` or `xdg-open`, although mileage may vary
 depending on your specific debugging setup.
