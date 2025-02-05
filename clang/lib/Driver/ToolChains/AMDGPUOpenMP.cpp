@@ -37,6 +37,8 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D,
   // Lookup binaries into the driver directory, this is used to
   // discover the 'amdgpu-arch' executable.
   getProgramPaths().push_back(getDriver().Dir);
+  // Diagnose unsupported sanitizer options only once.
+  diagnoseUnsupportedSanitizers(Args);
 }
 
 void AMDGPUOpenMPToolChain::addClangTargetOptions(
@@ -71,10 +73,10 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
 
   const OptTable &Opts = getDriver().getOpts();
 
-  for (Arg *A : Args) {
-    if (!llvm::is_contained(*DAL, A))
+  for (Arg *A : Args)
+    if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
+        !llvm::is_contained(*DAL, A))
       DAL->append(A);
-  }
 
   if (!BoundArch.empty()) {
     DAL->eraseArg(options::OPT_march_EQ);
