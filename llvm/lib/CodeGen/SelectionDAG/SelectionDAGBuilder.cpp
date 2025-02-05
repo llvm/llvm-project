@@ -8137,13 +8137,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                0 &&
            "Expected the element count of the Input operand to be a positive "
            "integer multiple of the element count of the Accumulator operand!");
+    SDValue PRVal = DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, sdl, AccVT, Acc,
+                                Input, DAG.getConstant(1, sdl, InputVT));
+
     if (NewPartialReduceLowering) {
       // ISD::PARTIAL_REDUCE_UMLA is chosen arbitrarily and would function the
       // same if ISD::PARTIAL_REDUCE_SMLA was chosen instead. It should be
       // changed to its correct signedness when combining or expanding,
       // according to extends being performed on Input.
-      setValue(&I, DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, sdl, AccVT, Acc, Input,
-                               DAG.getConstant(1, sdl, InputVT)));
+      setValue(&I, PRVal);
       return;
     }
 
@@ -8151,9 +8153,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       visitTargetIntrinsic(I, Intrinsic);
       return;
     }
-
-    setValue(&I, TLI.expandPartialReduceMLA(
-                     sdl, Acc, Input, DAG.getConstant(1, sdl, InputVT), DAG));
+    setValue(&I, TLI.expandPartialReduceMLA(PRVal.getNode(), DAG));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {

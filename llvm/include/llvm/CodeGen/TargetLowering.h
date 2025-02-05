@@ -5539,6 +5539,10 @@ public:
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Expands PARTIAL_REDUCE_S/UMLA nodes to a series of simpler operations,
+  /// consisting of zext/sext, extract_subvector, mul and add operations.
+  SDValue expandPartialReduceMLA(SDNode *Node, SelectionDAG &DAG) const;
+
   /// Legalize a SETCC or VP_SETCC with given LHS and RHS and condition code CC
   /// on the current target. A VP_SETCC will additionally be given a Mask
   /// and/or EVL not equal to SDValue().
@@ -5633,11 +5637,6 @@ public:
                                        EVT InVecVT, SDValue EltNo,
                                        LoadSDNode *OriginalLoad,
                                        SelectionDAG &DAG) const;
-
-  // Expands PARTIAL_REDUCE_S/UMLA nodes to a series of simpler operations,
-  // consisting of zext/sext, extract_subvector, mul and add operations.
-  SDValue expandPartialReduceMLA(SDLoc DL, SDValue Acc, SDValue Input1,
-                                 SDValue Input2, SelectionDAG &DAG) const;
 
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,

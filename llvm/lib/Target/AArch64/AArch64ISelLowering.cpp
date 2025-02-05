@@ -22021,9 +22021,10 @@ static SDValue performIntrinsicCombine(SDNode *N,
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     SDLoc DL(N);
     SDValue Input = N->getOperand(2);
-    return TLI.expandPartialReduceMLA(
-        DL, N->getOperand(1), Input,
-        DAG.getConstant(1, DL, Input.getValueType()), DAG);
+    SDValue PRVal = DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, DL,
+                                N->getValueType(0), N->getOperand(1), Input,
+                                DAG.getConstant(1, DL, Input.getValueType()));
+    return TLI.expandPartialReduceMLA(PRVal.getNode(), DAG);
   }
   case Intrinsic::aarch64_neon_vcvtfxs2fp:
   case Intrinsic::aarch64_neon_vcvtfxu2fp:

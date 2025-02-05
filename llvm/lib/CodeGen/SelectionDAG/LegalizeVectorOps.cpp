@@ -1200,9 +1200,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA: {
     SDLoc DL(Node);
-    Results.push_back(TLI.expandPartialReduceMLA(DL, Node->getOperand(0),
-                                                 Node->getOperand(1),
-                                                 Node->getOperand(2), DAG));
+    Results.push_back(TLI.expandPartialReduceMLA(Node, DAG));
     return;
   }
   case ISD::VECREDUCE_SEQ_FADD:

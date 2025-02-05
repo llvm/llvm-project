@@ -1452,7 +1452,7 @@ enum NodeType {
   VECREDUCE_UMIN,
 
   // PARTIAL_REDUCE_[U|S]MLA(Accumulator, Input1, Input2)
-  // The partial reduction nodes sign-or zero extend Input1 and Input2 to
+  // The partial reduction nodes sign or zero extend Input1 and Input2 to
   // the element type of Accumulator before multiplying their results.
   // The multiplied result is then reduced using addition to the result
   // type of Accumulator. The result is added to Accumulator and returned.

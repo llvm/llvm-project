@@ -11891,6 +11891,58 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
   return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
 }
 
+SDValue TargetLowering::expandPartialReduceMLA(SDNode *N, SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  SDValue Acc = N->getOperand(0);
+  SDValue Input1 = N->getOperand(1);
+  SDValue Input2 = N->getOperand(2);
+  
+  
+  EVT ReducedTy = Acc.getValueType();
+  EVT FullTy = Input1.getValueType();
+
+  auto ExtendToAccEltVT = [&](SDValue V) {
+    unsigned ExtOpc = V->getOpcode() == ISD::SIGN_EXTEND ? ISD::SIGN_EXTEND
+                                                         : ISD::ZERO_EXTEND;
+    EVT ExtVT = V.getValueType().changeVectorElementType(
+        Acc.getValueType().getVectorElementType());
+    if (ExtVT != FullTy)
+      return DAG.getNode(ExtOpc, DL, ExtVT, V);
+    return V;
+  };
+
+  EVT NewVT =
+      EVT::getVectorVT(*DAG.getContext(), ReducedTy.getVectorElementType(),
+                       FullTy.getVectorElementCount());
+  Input1 = ExtendToAccEltVT(Input1);
+  Input2 = ExtendToAccEltVT(Input2);
+  SDValue Input = DAG.getNode(ISD::MUL, DL, NewVT, Input1, Input2);
+
+  unsigned Stride = ReducedTy.getVectorMinNumElements();
+  unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
+
+  // Collect all of the subvectors
+  std::deque<SDValue> Subvectors = {Acc};
+  for (unsigned I = 0; I < ScaleFactor; I++) {
+    auto SourceIndex = DAG.getVectorIdxConstant(I * Stride, DL);
+    Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy,
+                                     {Input, SourceIndex}));
+  }
+
+  // Flatten the subvector tree
+  while (Subvectors.size() > 1) {
+    Subvectors.push_back(
+        DAG.getNode(ISD::ADD, DL, ReducedTy, {Subvectors[0], Subvectors[1]}));
+    Subvectors.pop_front();
+    Subvectors.pop_front();
+  }
+
+  assert(Subvectors.size() == 1 &&
+         "There should only be one subvector after tree flattening");
+
+  return Subvectors[0];
+}
+
 bool TargetLowering::LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT,
                                            SDValue &LHS, SDValue &RHS,
                                            SDValue &CC, SDValue Mask,
@@ -12188,52 +12240,4 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
   }
 
   return Load;
-}
-
-SDValue TargetLowering::expandPartialReduceMLA(SDLoc DL, SDValue Acc,
-                                               SDValue Input1, SDValue Input2,
-                                               SelectionDAG &DAG) const {
-  EVT ReducedTy = Acc.getValueType();
-  EVT FullTy = Input1.getValueType();
-
-  auto ExtendToAccEltVT = [&](SDValue V) {
-    unsigned ExtOpc = V->getOpcode() == ISD::SIGN_EXTEND ? ISD::SIGN_EXTEND
-                                                         : ISD::ZERO_EXTEND;
-    EVT ExtVT = V.getValueType().changeVectorElementType(
-        Acc.getValueType().getVectorElementType());
-    if (ExtVT != FullTy)
-      return DAG.getNode(ExtOpc, DL, ExtVT, V);
-    return V;
-  };
-
-  EVT NewVT =
-      EVT::getVectorVT(*DAG.getContext(), ReducedTy.getVectorElementType(),
-                       FullTy.getVectorElementCount());
-  Input1 = ExtendToAccEltVT(Input1);
-  Input2 = ExtendToAccEltVT(Input2);
-  SDValue Input = DAG.getNode(ISD::MUL, DL, NewVT, Input1, Input2);
-
-  unsigned Stride = ReducedTy.getVectorMinNumElements();
-  unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
-
-  // Collect all of the subvectors
-  std::deque<SDValue> Subvectors = {Acc};
-  for (unsigned I = 0; I < ScaleFactor; I++) {
-    auto SourceIndex = DAG.getVectorIdxConstant(I * Stride, DL);
-    Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy,
-                                     {Input, SourceIndex}));
-  }
-
-  // Flatten the subvector tree
-  while (Subvectors.size() > 1) {
-    Subvectors.push_back(
-        DAG.getNode(ISD::ADD, DL, ReducedTy, {Subvectors[0], Subvectors[1]}));
-    Subvectors.pop_front();
-    Subvectors.pop_front();
-  }
-
-  assert(Subvectors.size() == 1 &&
-         "There should only be one subvector after tree flattening");
-
-  return Subvectors[0];
 }
