@@ -286,11 +286,25 @@ MatchTableRecord MatchTable::JumpTarget(unsigned LabelID) {
 void MatchTable::emitUse(raw_ostream &OS) const { OS << "MatchTable" << ID; }
 
 void MatchTable::emitDeclaration(raw_ostream &OS) const {
-  unsigned Indentation = 4;
+  static constexpr unsigned BaseIndent = 4;
+  unsigned Indentation = 0;
   OS << "  constexpr static uint8_t MatchTable" << ID << "[] = {";
   LineBreak.emit(OS, true, *this);
-  OS << std::string(Indentation, ' ');
 
+  const unsigned NumColsForIdx = llvm::to_string(CurrentSize).size();
+
+  unsigned CurIndex = 0;
+  const auto BeginLine = [&](){
+    OS << std::string(BaseIndent, ' ');
+    // To keep the /* index */ column consistent, pad
+    // the string at the start so we can always fit the
+    // exact number of characters to print the largest possible index.
+    std::string IdxStr = llvm::to_string(CurIndex);
+    OS << " /* " << std::string(NumColsForIdx - IdxStr.size(), ' ') << IdxStr << " */ ";
+    OS << std::string(Indentation, ' ');
+  };
+
+  BeginLine();
   for (auto I = Contents.begin(), E = Contents.end(); I != E; ++I) {
     bool LineBreakIsNext = false;
     const auto &NextI = std::next(I);
@@ -306,11 +320,14 @@ void MatchTable::emitDeclaration(raw_ostream &OS) const {
 
     I->emit(OS, LineBreakIsNext, *this);
     if (I->Flags & MatchTableRecord::MTRF_LineBreakFollows)
-      OS << std::string(Indentation, ' ');
+      BeginLine();
 
     if (I->Flags & MatchTableRecord::MTRF_Outdent)
       Indentation -= 2;
+
+    CurIndex += I->size();
   }
+  assert(CurIndex == CurrentSize);
   OS << "}; // Size: " << CurrentSize << " bytes\n";
 }
 
