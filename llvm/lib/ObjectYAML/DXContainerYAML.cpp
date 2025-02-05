@@ -14,7 +14,6 @@
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/Object/DXContainer.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
