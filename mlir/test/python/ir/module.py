@@ -43,7 +43,7 @@ def testParseFromFileSuccess():
         print("CLEAR CONTEXT")
         ctx = None  # Ensure that module captures the context.
         gc.collect()
-        module.dump()  # Just outputs to stderr. Verifies that it functions.
+        module.operation.verify()
         print(str(module))
 
 
