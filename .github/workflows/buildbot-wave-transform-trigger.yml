@@ -32,11 +32,48 @@ jobs:
           docker run -d --name "${{env.CONTAINER_NAME}}" $CONTAINER_IMAGE sleep infinity
           docker exec "${{env.CONTAINER_NAME}}" /bin/bash -c "echo 'Running commands inside the container'"
 
+      - name: Escape pull request title
+        run: |
+          import json
+          import os
+          import shlex
+          with open('${{ github.event_path }}') as fh:
+              event = json.load(fh)         
+          escaped = event['pull_request']['title']
+          with open(os.environ['GITHUB_ENV'], 'a') as fh:
+              print(f'PR_TITLE={escaped}', file=fh)
+        shell: python3 {0}          
+        
       - name: Trigger Buildbot Build
         run: |          
           echo "${{ secrets.BUILDBOT_HOST }}:${{ secrets.BUILDBOT_WORKER_PORT }}"
-          docker exec "${{env.CONTAINER_NAME}}" /bin/bash -c "buildbot sendchange -W ${{ secrets.BUILDBOT_USER }}  -a ${{secrets.BUILDBOT_USER}}:${{secrets.BUILDBOT_PWD}} --master="${{ secrets.BUILDBOT_HOST }}:${{ secrets.BUILDBOT_WORKER_PORT }}" --branch=${{ env.BASE_BRANCH }} --revision=${{ env.PR_SHA }} -p PR_NUMBER:${{ env.PR_NUMBER }} -p PR_TITLE:'${{ env.PR_TITLE }}'  -p PR_URL:${{ env.PR_URL }}  -p SHA:${{ env.PR_SHA }}"
-  
+          docker exec -e PR_TITLE="$PR_TITLE" "${{env.CONTAINER_NAME}}" /bin/bash -c 'buildbot sendchange -W ${{ secrets.BUILDBOT_USER }}  -a ${{secrets.BUILDBOT_USER}}:${{secrets.BUILDBOT_PWD}} --master="${{ secrets.BUILDBOT_HOST }}:${{ secrets.BUILDBOT_WORKER_PORT }}" --branch=${{ env.BASE_BRANCH }} --revision=${{ env.PR_SHA }} -p PR_NUMBER:${{ env.PR_NUMBER }} -p PR_TITLE:"$PR_TITLE"  -p PR_URL:${{ env.PR_URL }}  -p SHA:${{ env.PR_SHA }}'
+          
+      - name: Set Initial Status to Pending
+        run: |
+          docker exec -e PR_SHA=$PR_SHA -e GITHUB_TOKEN=$GITHUB_TOKEN "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 -c \"
+          import os
+          import requests
+          GITHUB_TOKEN =  os.getenv('GITHUB_TOKEN')
+          TARGET_SHA = os.getenv('PR_SHA')
+          print('debug', TARGET_SHA)
+          api_url = f'https://api.github.com/repos/AMD-Lightning-Internal/llvm-project/statuses/{TARGET_SHA}'
+          headers = {
+          'Authorization': f'token {GITHUB_TOKEN}',
+          'Content-Type': 'application/json'
+          }
+          payload = {
+          'state': 'pending',
+          'context': 'buildbot',
+          'description': 'Build is in queue'
+          }
+          response = requests.post(api_url, json=payload, headers=headers)
+          if response.status_code == 201:
+            print('Status set to pending successfully.')
+          else:
+            print(f'Failed to set status: {response.status_code} {response.text}')
+            \""
+
       - name: Poll Buildbot build status
         run: |
           python3 -c "
@@ -88,32 +125,9 @@ jobs:
                 print('Build did not start for SHA:', TARGET_SHA, 'after maximum retries')
                 exit(1)
           "
-      - name: Set Initial Status to Pending
-        run: |
-          docker exec -e PR_SHA=$PR_SHA -e GITHUB_TOKEN=$GITHUB_TOKEN "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 -c \"
-          import os
-          import requests
-          GITHUB_TOKEN =  os.getenv('GITHUB_TOKEN')
-          TARGET_SHA = os.getenv('PR_SHA')
-          print('debug', TARGET_SHA)
-          api_url = f'https://api.github.com/repos/AMD-Lightning-Internal/llvm-project/statuses/{TARGET_SHA}'
-          headers = {
-          'Authorization': f'token {GITHUB_TOKEN}',
-          'Content-Type': 'application/json'
-          }
-          payload = {
-          'state': 'pending',
-          'context': 'buildbot',
-          'description': 'Build is in queue'
-          }
-          response = requests.post(api_url, json=payload, headers=headers)
-          if response.status_code == 201:
-            print('Status set to pending successfully.')
-          else:
-            print(f'Failed to set status: {response.status_code} {response.text}')
-            \""
+
       - name: Stop and remove container
         if: always()
         run: |
           docker stop "${{env.CONTAINER_NAME}}"
-          docker rm "${{env.CONTAINER_NAME}}"			
+          docker rm "${{env.CONTAINER_NAME}}"		
