@@ -3548,7 +3548,7 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
       !match(TrueVal,
              m_OneUse(m_Shl(m_One(), m_OneUse(m_Sub(m_SpecificInt(BitWidth),
                                                     m_Value(Ctlz)))))) ||
-      !match(Ctlz, m_Intrinsic<Intrinsic::ctlz>(m_Value(CtlzOp), m_Zero())) ||
+      !match(Ctlz, m_Intrinsic<Intrinsic::ctlz>(m_Value(CtlzOp), m_Value())) ||
       !isSafeToRemoveBitCeilSelect(Pred, Cond0, Cond1, CtlzOp, BitWidth,
                                    ShouldDropNoWrap))
     return nullptr;
@@ -3565,6 +3565,8 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
 
   // Drop range attributes and re-infer them in the next iteration.
   cast<Instruction>(Ctlz)->dropPoisonGeneratingAnnotations();
+  // Set is_zero_poison to false and re-infer them in the next iteration.
+  cast<Instruction>(Ctlz)->setOperand(1, Builder.getFalse());
   IC.addToWorklist(cast<Instruction>(Ctlz));
   Value *Neg = Builder.CreateNeg(Ctlz);
   Value *Masked =
