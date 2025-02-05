@@ -141,63 +141,65 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   }
 
   // tosa::NegateOp
-  if (isa<tosa::NegateOp>(op) && isa<FloatType>(elementTy))
-    return rewriter.create<arith::NegFOp>(loc, resultTypes, args);
+  if (isa<tosa::NegateOp>(op)) {
+    if (isa<FloatType>(elementTy))
+      return rewriter.create<arith::NegFOp>(loc, resultTypes, args);
 
-  if (isa<tosa::NegateOp>(op) && isa<IntegerType>(elementTy)) {
-    int64_t inZp = 0, outZp = 0;
+    if (isa<IntegerType>(elementTy)) {
+      auto inputZpAttr = cast<tosa::NegateOp>(op).getInput1Zp();
+      auto outputZpAttr = cast<tosa::NegateOp>(op).getOutputZp();
 
-    if (cast<tosa::NegateOp>(op).getQuantizationInfo()) {
-      auto quantizationInfo = cast<tosa::NegateOp>(op).getQuantizationInfo();
-      inZp = quantizationInfo.value().getInputZp();
-      outZp = quantizationInfo.value().getOutputZp();
+      const int64_t inZp = inputZpAttr ? *inputZpAttr : 0;
+      const int64_t outZp = outputZpAttr ? *outputZpAttr : 0;
+
+      if (!inZp && !outZp) {
+        auto constant = rewriter.create<arith::ConstantOp>(
+            loc, IntegerAttr::get(elementTy, 0));
+        return rewriter.create<arith::SubIOp>(loc, resultTypes, constant,
+                                              args[0]);
+      }
+
+      // Compute the maximum value that can occur in the intermediate buffer.
+      const int32_t inputBitWidth = elementTy.getIntOrFloatBitWidth();
+      const int64_t zpAdd = inZp + outZp;
+      const int64_t maxValue =
+          APInt::getSignedMaxValue(inputBitWidth).getSExtValue() +
+          std::abs(zpAdd) + 1;
+
+      // Convert that maximum value into the maximum bitwidth needed to
+      // represent it. We assume 48-bit numbers may be supported further in
+      // the pipeline.
+      int intermediateBitWidth = 64;
+      if (maxValue <= APInt::getSignedMaxValue(16).getSExtValue()) {
+        intermediateBitWidth = 16;
+      } else if (maxValue <= APInt::getSignedMaxValue(32).getSExtValue()) {
+        intermediateBitWidth = 32;
+      } else if (maxValue <= APInt::getSignedMaxValue(48).getSExtValue()) {
+        intermediateBitWidth = 48;
+      }
+
+      Type intermediateType = rewriter.getIntegerType(intermediateBitWidth);
+      Value zpAddValue = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
+
+      // The negation can be applied by doing:
+      //  outputValue = inZp + outZp - inputValue
+      auto ext =
+          rewriter.create<arith::ExtSIOp>(loc, intermediateType, args[0]);
+      auto sub = rewriter.create<arith::SubIOp>(loc, zpAddValue, ext);
+
+      // Clamp to the negation range.
+      Value min = rewriter.create<arith::ConstantIntOp>(
+          loc, APInt::getSignedMinValue(inputBitWidth).getSExtValue(),
+          intermediateType);
+      Value max = rewriter.create<arith::ConstantIntOp>(
+          loc, APInt::getSignedMaxValue(inputBitWidth).getSExtValue(),
+          intermediateType);
+      auto clamp = clampIntHelper(loc, sub, min, max, rewriter, false);
+
+      // Truncate to the final value.
+      return rewriter.create<arith::TruncIOp>(loc, elementTy, clamp);
     }
-
-    int32_t inputBitWidth = elementTy.getIntOrFloatBitWidth();
-    if (!inZp && !outZp) {
-      auto constant = rewriter.create<arith::ConstantOp>(
-          loc, IntegerAttr::get(elementTy, 0));
-      return rewriter.create<arith::SubIOp>(loc, resultTypes, constant,
-                                            args[0]);
-    }
-
-    // Compute the maximum value that can occur in the intermediate buffer.
-    int64_t zpAdd = inZp + outZp;
-    int64_t maxValue = APInt::getSignedMaxValue(inputBitWidth).getSExtValue() +
-                       std::abs(zpAdd) + 1;
-
-    // Convert that maximum value into the maximum bitwidth needed to represent
-    // it. We assume 48-bit numbers may be supported further in the pipeline.
-    int intermediateBitWidth = 64;
-    if (maxValue <= APInt::getSignedMaxValue(16).getSExtValue()) {
-      intermediateBitWidth = 16;
-    } else if (maxValue <= APInt::getSignedMaxValue(32).getSExtValue()) {
-      intermediateBitWidth = 32;
-    } else if (maxValue <= APInt::getSignedMaxValue(48).getSExtValue()) {
-      intermediateBitWidth = 48;
-    }
-
-    Type intermediateType = rewriter.getIntegerType(intermediateBitWidth);
-    Value zpAddValue = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
-
-    // The negation can be applied by doing:
-    //  outputValue = inZp + outZp - inputValue
-    auto ext = rewriter.create<arith::ExtSIOp>(loc, intermediateType, args[0]);
-    auto sub = rewriter.create<arith::SubIOp>(loc, zpAddValue, ext);
-
-    // Clamp to the negation range.
-    Value min = rewriter.create<arith::ConstantIntOp>(
-        loc, APInt::getSignedMinValue(inputBitWidth).getSExtValue(),
-        intermediateType);
-    Value max = rewriter.create<arith::ConstantIntOp>(
-        loc, APInt::getSignedMaxValue(inputBitWidth).getSExtValue(),
-        intermediateType);
-    auto clamp =
-        clampIntHelper(loc, sub, min, max, rewriter, /*isUnsigned=*/false);
-
-    // Truncate to the final value.
-    return rewriter.create<arith::TruncIOp>(loc, elementTy, clamp);
   }
 
   // tosa::BitwiseAndOp
