@@ -244,7 +244,7 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
   size_t BufferSize = 0;
   bool UsePackoffset = BufDecl->hasPackoffset();
   const auto *ElemIt = LayoutStruct->element_begin();
-  for (Decl *D : BufDecl->decls()) {
+  for (Decl *D : BufDecl->buffer_decls()) {
     if (isa<CXXRecordDecl, EmptyDecl>(D))
       // Nothing to do for this declaration.
       continue;
@@ -286,10 +286,7 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
                                   .str()))) &&
            "layout type does not match the converted element type");
 
-    // there might be resources inside the used defined structs
-    if (VDTy->isStructureType() && VDTy->isHLSLIntangibleType())
-      // FIXME: handle resources in cbuffer structs
-      llvm_unreachable("resources in cbuffer are not supported yet");
+    // FIXME: handle resources in cbuffer user-defined structs
 
     // create global variable for the constant and to metadata list
     GlobalVariable *ElemGV =
