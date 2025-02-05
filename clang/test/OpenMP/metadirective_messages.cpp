@@ -21,6 +21,6 @@ void foo() {
   ;
 #pragma omp metadirective when(device = {arch(nvptx)} : parallel) default() // expected-warning {{'default' clause for 'metadirective' is deprecated; use 'otherwise' instead}}
   ;
-#pragma omp metadirective when(device = {arch(nvptx)} : parallel) xyz() //expected-error {{unknown clause 'xyz' in metadirective}} expected-error {{use of undeclared identifier 'xyz'}} expected-error {{expected expression}} expected-error {{expected ';' after expression}}
+#pragma omp metadirective when(device = {arch(nvptx)} : parallel) xyz() //expected-error {{unknown clause 'xyz' in metadirective}} 
   ;
 }

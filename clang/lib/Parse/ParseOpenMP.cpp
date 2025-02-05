@@ -2747,7 +2747,6 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       if (CKind == OMPC_unknown) {
         Diag(Tok, diag::err_omp_unknown_clause)
         << PP.getSpelling(Tok) << "metadirective";
-        return Directive;
       }
       if(CKind == OMPC_default) {
         Diag(Tok, diag::warn_omp_default_deprecated);
