@@ -133,6 +133,7 @@ public:
 
   bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,
+                                const LangOptions &LO,
                                 StringRef &Err) const override;
 
   bool isValidCPUName(StringRef Name) const override;
