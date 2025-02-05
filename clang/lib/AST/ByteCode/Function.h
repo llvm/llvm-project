@@ -51,6 +51,11 @@ public:
     return llvm::make_range(Descriptors.begin(), Descriptors.end());
   }
 
+  llvm::iterator_range<LocalVectorTy::const_reverse_iterator>
+  locals_reverse() const {
+    return llvm::reverse(Descriptors);
+  }
+
 private:
   /// Object descriptors in this block.
   LocalVectorTy Descriptors;
