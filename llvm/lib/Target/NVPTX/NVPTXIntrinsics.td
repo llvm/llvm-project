@@ -740,6 +740,31 @@ foreach dim = [1, 2, 3, 4, 5] in {
   }
 }
 
+//Prefetch and Prefetchu 
+class PREFETCH_INTRS<string InstName, Intrinsic Intrin> :
+          NVPTXInst<(outs), (ins Int64Regs:$addr),
+            !strconcat(InstName, " [$addr];"),
+            [(Intrin i64:$addr)]>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+   
+
+// Only global supports evictlast and evictnormal.
+// Other variants (local and default) only support evictnormal
+foreach addr = ["global", "local", ""] in {
+  foreach evict = !if(!eq(addr, "global"),
+                          ["evictlast", "evictnormal"],
+                          ["evictnormal"]) in {
+    foreach level = ["L1", "L2"] in {
+      def PREFETCH_# addr # level # "_" # evict : PREFETCH_INTRS<
+                                                 "prefetch." # !if(!eq(addr, ""), "", addr # ".") # level # "." # evict,
+                                                 !cast<Intrinsic>
+                                                 ("int_nvvm_prefetch_"# !if(!eq(addr, ""), "", addr # "_") # level # "_" # evict)>;
+    }
+  }
+}
+
+def PREFETCHU_L1_EVICTNORMAL : PREFETCH_INTRS<"prefetchu.L1.evictnormal", !cast<Intrinsic>("int_nvvm_prefetchu_L1_evictnormal")>;
+
 //-----------------------------------
 // MBarrier Functions
 //-----------------------------------
