@@ -390,21 +390,22 @@ Function *Function::Create(FunctionType *Ty, LinkageTypes Linkage,
 
 StringRef Function::getDefaultTargetFeatures(const StringRef TargetABI) {
   Triple T(getParent()->getTargetTriple());
-  StringRef attr = "";
+  StringRef Attr = "";
   if (T.isRISCV64()) {
     if (TargetABI.equals_insensitive("lp64d"))
-      attr = "+d";
+      Attr = "+d";
     else if (TargetABI.equals_insensitive("lp64f"))
-      attr = "+f";
-    else if (TargetABI.equals_insensitive("lp64q"))
-      attr = "+q";
-  } else if (T.isRISCV32() && TargetABI.contains("ilp32f")) {
-    attr = "+f";
+      Attr = "+f";
+  } else if (T.isRISCV32()) {
+    if (TargetABI.equals_insensitive("ilp32d"))
+      Attr = "+d";
+    else if (TargetABI.equals_insensitive("ilp32f"))
+      Attr = "+f";
   } else if (T.isARM() || T.isThumb()) {
-    attr = "+thumb-mode";
+    Attr = "+thumb-mode";
   }
 
-  return attr;
+  return Attr;
 }
 
 Function *Function::createWithDefaultAttr(FunctionType *Ty,
