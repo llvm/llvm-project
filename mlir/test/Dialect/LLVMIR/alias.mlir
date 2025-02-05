@@ -49,7 +49,7 @@ llvm.mlir.alias external @foo2 : i16 {
 
 // -----
 
-llvm.mlir.global private constant @glob.private(dense<0> : tensor<32xi32>) {addr_space = 0 : i32, dso_local} : !llvm.array<32 x i32>
+llvm.mlir.global private constant @glob.private(dense<0> : tensor<32xi32>) : !llvm.array<32 x i32>
 
 llvm.mlir.alias linkonce_odr hidden @glob {dso_local} : !llvm.array<32 x i32> {
   %0 = llvm.mlir.constant(1234 : i64) : i64
@@ -60,7 +60,7 @@ llvm.mlir.alias linkonce_odr hidden @glob {dso_local} : !llvm.array<32 x i32> {
   llvm.return %4 : !llvm.ptr
 }
 
-// CHECK: llvm.mlir.global private constant @glob.private(dense<0> : tensor<32xi32>) {addr_space = 0 : i32, dso_local} : !llvm.array<32 x i32>
+// CHECK: llvm.mlir.global private constant @glob.private(dense<0> : tensor<32xi32>)
 // CHECK: llvm.mlir.alias linkonce_odr hidden @glob {dso_local} : !llvm.array<32 x i32> {
 // CHECK:   %[[CST:.*]] = llvm.mlir.constant(1234 : i64) : i64
 // CHECK:   %[[ADDR:.*]] = llvm.mlir.addressof @glob.private : !llvm.ptr
@@ -94,7 +94,7 @@ llvm.mlir.alias private @a1 {dso_local} : i32 {
   llvm.return %0 : !llvm.ptr
 }
 
-llvm.mlir.global internal constant @g2() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+llvm.mlir.global internal constant @g2() : !llvm.ptr {
   %0 = llvm.mlir.addressof @a1 : !llvm.ptr
   llvm.return %0 : !llvm.ptr
 }
@@ -104,7 +104,7 @@ llvm.mlir.alias private @a2 {dso_local} : !llvm.ptr {
   llvm.return %0 : !llvm.ptr
 }
 
-llvm.mlir.global internal constant @g3() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+llvm.mlir.global internal constant @g3() : !llvm.ptr {
   %0 = llvm.mlir.addressof @a2 : !llvm.ptr
   llvm.return %0 : !llvm.ptr
 }
@@ -113,7 +113,7 @@ llvm.mlir.global internal constant @g3() {addr_space = 0 : i32, dso_local} : !ll
 // CHECK:   %[[ADDR:.*]] = llvm.mlir.addressof @g1 : !llvm.ptr
 // CHECK:   llvm.return %[[ADDR]] : !llvm.ptr
 // CHECK: }
-// CHECK: llvm.mlir.global internal constant @g2() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+// CHECK: llvm.mlir.global internal constant @g2()
 // CHECK:   %[[ADDR:.*]] = llvm.mlir.addressof @a1 : !llvm.ptr
 // CHECK:   llvm.return %[[ADDR]] : !llvm.ptr
 // CHECK: }
@@ -121,7 +121,7 @@ llvm.mlir.global internal constant @g3() {addr_space = 0 : i32, dso_local} : !ll
 // CHECK:   %[[ADDR:.*]] = llvm.mlir.addressof @a1 : !llvm.ptr
 // CHECK:   llvm.return %[[ADDR]] : !llvm.ptr
 // CHECK: }
-// CHECK: llvm.mlir.global internal constant @g3() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+// CHECK: llvm.mlir.global internal constant @g3()
 // CHECK:   %[[ADDR:.*]] = llvm.mlir.addressof @a2 : !llvm.ptr
 // CHECK:   llvm.return %[[ADDR]] : !llvm.ptr
 // CHECK: }
