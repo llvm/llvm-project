@@ -47,7 +47,7 @@ enum LLVMConstants : uint32_t {
   DW_TAG_invalid = ~0U,             ///< Tag for invalid results.
   DW_VIRTUALITY_invalid = ~0U,      ///< Virtuality for invalid results.
   DW_MACINFO_invalid = ~0U,         ///< Macinfo type for invalid results.
-  DW_APPLE_ENUM_KIND_invalid = ~0U, ///< Virtuality for invalid results.
+  DW_APPLE_ENUM_KIND_invalid = ~0U, ///< Enum kind for invalid results.
   /// \}
 
   /// Special values for an initial length field.
