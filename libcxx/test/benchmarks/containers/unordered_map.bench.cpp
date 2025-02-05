@@ -6,26 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++26
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <flat_map>
 #include <string>
+#include <unordered_map>
 
 #include "associative_container_benchmarks.h"
 #include "../GenerateInput.h"
 #include "benchmark/benchmark.h"
 
 template <class K, class V>
-struct support::adapt_operations<std::flat_map<K, V>> {
-  using ValueType = typename std::map<K, V>::value_type;
-  using KeyType   = typename std::map<K, V>::key_type;
+struct support::adapt_operations<std::unordered_map<K, V>> {
+  using ValueType = typename std::unordered_map<K, V>::value_type;
+  using KeyType   = typename std::unordered_map<K, V>::key_type;
   static ValueType value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
   static KeyType key_from_value(ValueType const& value) { return value.first; }
 };
 
 int main(int argc, char** argv) {
-  support::associative_container_benchmarks<std::flat_map<int, int>>("std::flat_map<int, int>");
-  support::associative_container_benchmarks<std::flat_map<std::string, int>>("std::flat_map<std::string, int>");
+  support::associative_container_benchmarks<std::unordered_map<int, int>>("std::unordered_map<int, int>");
+  support::associative_container_benchmarks<std::unordered_map<std::string, int>>("std::unordered_map<std::string, int>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

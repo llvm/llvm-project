@@ -12,7 +12,16 @@
 #include <string>
 
 #include "associative_container_benchmarks.h"
+#include "../GenerateInput.h"
 #include "benchmark/benchmark.h"
+
+template <class K, class V>
+struct support::adapt_operations<std::map<K, V>> {
+  using ValueType = typename std::map<K, V>::value_type;
+  using KeyType   = typename std::map<K, V>::key_type;
+  static ValueType value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
+  static KeyType key_from_value(ValueType const& value) { return value.first; }
+};
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::map<int, int>>("std::map<int, int>");

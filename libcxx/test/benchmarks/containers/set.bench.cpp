@@ -13,6 +13,14 @@
 #include "associative_container_benchmarks.h"
 #include "benchmark/benchmark.h"
 
+template <class K>
+struct support::adapt_operations<std::set<K>> {
+  using ValueType = typename std::set<K>::value_type;
+  using KeyType   = typename std::set<K>::key_type;
+  static ValueType value_from_key(KeyType const& k) { return k; }
+  static KeyType key_from_value(ValueType const& value) { return value; }
+};
+
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::set<int>>("std::set<int>");
 

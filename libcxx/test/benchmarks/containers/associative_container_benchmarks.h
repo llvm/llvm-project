@@ -11,47 +11,22 @@
 
 #include <algorithm>
 #include <iterator>
-#include <map>
-#include <flat_map>
 #include <random>
-#include <set>
 #include <string>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 #include "../GenerateInput.h"
-#include "test_macros.h"
 
 namespace support {
 
 template <class Container>
-struct adapt_operations;
-
-template <class K>
-struct adapt_operations<std::set<K>> {
-  using ValueType = typename std::set<K>::value_type;
-  using KeyType   = typename std::set<K>::key_type;
-  static ValueType value_from_key(KeyType const& k) { return k; }
-  static KeyType key_from_value(ValueType const& value) { return value; }
+struct adapt_operations {
+  // using ValueType = ...;
+  // using KeyType   = ...;
+  // static ValueType value_from_key(KeyType const& k);
+  // static KeyType key_from_value(ValueType const& value);
 };
-
-template <class K, class V>
-struct adapt_operations<std::map<K, V>> {
-  using ValueType = typename std::map<K, V>::value_type;
-  using KeyType   = typename std::map<K, V>::key_type;
-  static ValueType value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
-  static KeyType key_from_value(ValueType const& value) { return value.first; }
-};
-
-#if TEST_STD_VER >= 26
-template <class K, class V>
-struct adapt_operations<std::flat_map<K, V>> {
-  using ValueType = typename std::map<K, V>::value_type;
-  using KeyType   = typename std::map<K, V>::key_type;
-  static ValueType value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
-  static KeyType key_from_value(ValueType const& value) { return value.first; }
-};
-#endif
 
 template <class Container>
 void associative_container_benchmarks(std::string container) {
@@ -67,7 +42,7 @@ void associative_container_benchmarks(std::string container) {
     return std::vector<Key>(keys.begin(), keys.end());
   };
 
-  auto add_dummy_mapped_type = [](std::vector<Key> const& keys) {
+  auto make_value_types = [](std::vector<Key> const& keys) {
     std::vector<Value> kv;
     for (Key const& k : keys)
       kv.push_back(adapt_operations<Container>::value_from_key(k));
@@ -90,7 +65,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   benchmark::RegisterBenchmark(container + "::ctor(const&)", [=](auto& st) {
     const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size));
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
     ScratchSpace c[BatchSize];
 
@@ -114,7 +89,7 @@ void associative_container_benchmarks(std::string container) {
     std::mt19937 randomness;
     std::vector<Key> keys = generate_unique_keys(size);
     std::shuffle(keys.begin(), keys.end(), randomness);
-    std::vector<Value> in = add_dummy_mapped_type(keys);
+    std::vector<Value> in = make_value_types(keys);
     ScratchSpace c[BatchSize];
 
     while (st.KeepRunningBatch(BatchSize)) {
@@ -136,7 +111,7 @@ void associative_container_benchmarks(std::string container) {
     const std::size_t size = st.range(0);
     std::vector<Key> keys  = generate_unique_keys(size);
     std::sort(keys.begin(), keys.end());
-    std::vector<Value> in = add_dummy_mapped_type(keys);
+    std::vector<Value> in = make_value_types(keys);
     ScratchSpace c[BatchSize];
 
     while (st.KeepRunningBatch(BatchSize)) {
@@ -159,7 +134,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   benchmark::RegisterBenchmark(container + "::operator=(const&)", [=](auto& st) {
     const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size));
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
     Container c[BatchSize];
 
@@ -183,7 +158,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   benchmark::RegisterBenchmark(container + "::insert(value) (already present)", [=](auto& st) {
     const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size));
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Value to_insert        = in[in.size() / 2]; // pick any existing value
     std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
 
@@ -201,7 +176,7 @@ void associative_container_benchmarks(std::string container) {
 
   benchmark::RegisterBenchmark(container + "::insert(value) (new value)", [=](auto& st) {
     const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size + 1));
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
     Value to_insert        = in.back();
     in.pop_back();
     std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
@@ -221,59 +196,63 @@ void associative_container_benchmarks(std::string container) {
     }
   })->Arg(1024);
 
-  benchmark::RegisterBenchmark(container + "::insert(hint, value) (good hint)", [=](auto& st) {
-    const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size + 1));
-    Value to_insert        = in.back();
-    in.pop_back();
+  // The insert(hint, ...) methods are only relevant for ordered containers, and we lack
+  // a good way to compute a hint for unordered ones.
+  if constexpr (requires(Container c, Key k) { c.lower_bound(k); }) {
+    benchmark::RegisterBenchmark(container + "::insert(hint, value) (good hint)", [=](auto& st) {
+      const std::size_t size = st.range(0);
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
+      Value to_insert        = in.back();
+      in.pop_back();
 
-    std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
-    typename Container::iterator hints[BatchSize];
-    for (std::size_t i = 0; i != BatchSize; ++i) {
-      hints[i] = c[i].lower_bound(get_key(to_insert));
-    }
-
-    while (st.KeepRunningBatch(BatchSize)) {
+      std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+      typename Container::iterator hints[BatchSize];
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        c[i].insert(hints[i], to_insert);
-        benchmark::DoNotOptimize(c[i]);
-        benchmark::ClobberMemory();
+        hints[i] = c[i].lower_bound(get_key(to_insert));
       }
 
-      st.PauseTiming();
-      for (std::size_t i = 0; i != BatchSize; ++i) {
-        c[i].erase(get_key(to_insert));
-        hints[i] = c[i].lower_bound(get_key(to_insert)); // refresh hints in case of invalidation
-      }
-      st.ResumeTiming();
-    }
-  })->Arg(1024);
+      while (st.KeepRunningBatch(BatchSize)) {
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          c[i].insert(hints[i], to_insert);
+          benchmark::DoNotOptimize(c[i]);
+          benchmark::ClobberMemory();
+        }
 
-  benchmark::RegisterBenchmark(container + "::insert(hint, value) (bad hint)", [=](auto& st) {
-    const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size + 1));
-    Value to_insert        = in.back();
-    in.pop_back();
-    std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
-
-    while (st.KeepRunningBatch(BatchSize)) {
-      for (std::size_t i = 0; i != BatchSize; ++i) {
-        c[i].insert(c[i].begin(), to_insert);
-        benchmark::DoNotOptimize(c[i]);
-        benchmark::ClobberMemory();
+        st.PauseTiming();
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          c[i].erase(get_key(to_insert));
+          hints[i] = c[i].lower_bound(get_key(to_insert)); // refresh hints in case of invalidation
+        }
+        st.ResumeTiming();
       }
+    })->Arg(1024);
 
-      st.PauseTiming();
-      for (std::size_t i = 0; i != BatchSize; ++i) {
-        c[i].erase(get_key(to_insert));
+    benchmark::RegisterBenchmark(container + "::insert(hint, value) (bad hint)", [=](auto& st) {
+      const std::size_t size = st.range(0);
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
+      Value to_insert        = in.back();
+      in.pop_back();
+      std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+
+      while (st.KeepRunningBatch(BatchSize)) {
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          c[i].insert(c[i].begin(), to_insert);
+          benchmark::DoNotOptimize(c[i]);
+          benchmark::ClobberMemory();
+        }
+
+        st.PauseTiming();
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          c[i].erase(get_key(to_insert));
+        }
+        st.ResumeTiming();
       }
-      st.ResumeTiming();
-    }
-  })->Arg(1024);
+    })->Arg(1024);
+  }
 
   benchmark::RegisterBenchmark(container + "::insert(iterator, iterator) (all new keys)", [=](auto& st) {
     const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size + (size / 10)));
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size + (size / 10)));
 
     // Populate a container with a small number of elements, that's what containers will start with.
     std::vector<Value> small;
@@ -296,7 +275,7 @@ void associative_container_benchmarks(std::string container) {
 
   benchmark::RegisterBenchmark(container + "::insert(iterator, iterator) (half new keys)", [=](auto& st) {
     const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size));
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
 
     // Populate a container that already contains half the elements we'll try inserting,
     // that's what our container will start with.
@@ -322,7 +301,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   benchmark::RegisterBenchmark(container + "::erase(key) (existent)", [=](auto& st) {
     const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size));
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Value element          = in[in.size() / 2]; // pick any element
     std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
 
@@ -343,7 +322,7 @@ void associative_container_benchmarks(std::string container) {
 
   benchmark::RegisterBenchmark(container + "::erase(key) (non-existent)", [=](auto& st) {
     const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size + 1));
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
     Value element          = in.back();
     in.pop_back();
     Container c(in.begin(), in.end());
@@ -361,7 +340,7 @@ void associative_container_benchmarks(std::string container) {
 
   benchmark::RegisterBenchmark(container + "::erase(iterator)", [=](auto& st) {
     const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size));
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Value element          = in[in.size() / 2]; // pick any element
 
     std::vector<Container> c;
@@ -388,7 +367,7 @@ void associative_container_benchmarks(std::string container) {
 
   benchmark::RegisterBenchmark(container + "::erase(iterator, iterator) (erase half the container)", [=](auto& st) {
     const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size));
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container c(in.begin(), in.end());
 
     auto first = std::next(c.begin(), c.size() / 4);
@@ -408,7 +387,7 @@ void associative_container_benchmarks(std::string container) {
 
   benchmark::RegisterBenchmark(container + "::clear()", [=](auto& st) {
     const std::size_t size = st.range(0);
-    std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size));
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container c(in.begin(), in.end());
 
     for (auto _ : st) {
@@ -428,7 +407,7 @@ void associative_container_benchmarks(std::string container) {
   auto bench_with_existent_key = [=](auto func) {
     return [=](auto& st) {
       const std::size_t size = st.range(0);
-      std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size));
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size));
       Value element          = in[in.size() / 2]; // pick any element
       Container c(in.begin(), in.end());
 
@@ -446,7 +425,7 @@ void associative_container_benchmarks(std::string container) {
   auto bench_with_nonexistent_key = [=](auto func) {
     return [=](auto& st) {
       const std::size_t size = st.range(0);
-      std::vector<Value> in  = add_dummy_mapped_type(generate_unique_keys(size + 1));
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
       Value element          = in.back();
       in.pop_back();
       Container c(in.begin(), in.end());
@@ -491,44 +470,47 @@ void associative_container_benchmarks(std::string container) {
       }))
       ->Arg(1024);
 
-  benchmark::RegisterBenchmark(
-      container + "::lower_bound(key) (existent)",
-      bench_with_existent_key([=](Container const& c, Value const& element) {
-        return c.lower_bound(get_key(element));
-      }))
-      ->Arg(1024);
-  benchmark::RegisterBenchmark(
-      container + "::lower_bound(key) (non-existent)",
-      bench_with_nonexistent_key([=](Container const& c, Value const& element) {
-        return c.lower_bound(get_key(element));
-      }))
-      ->Arg(1024);
+  // Only for ordered containers
+  if constexpr (requires(Container c, Key key) { c.lower_bound(key); }) {
+    benchmark::RegisterBenchmark(
+        container + "::lower_bound(key) (existent)",
+        bench_with_existent_key([=](Container const& c, Value const& element) {
+          return c.lower_bound(get_key(element));
+        }))
+        ->Arg(1024);
+    benchmark::RegisterBenchmark(
+        container + "::lower_bound(key) (non-existent)",
+        bench_with_nonexistent_key([=](Container const& c, Value const& element) {
+          return c.lower_bound(get_key(element));
+        }))
+        ->Arg(1024);
 
-  benchmark::RegisterBenchmark(
-      container + "::upper_bound(key) (existent)",
-      bench_with_existent_key([=](Container const& c, Value const& element) {
-        return c.upper_bound(get_key(element));
-      }))
-      ->Arg(1024);
-  benchmark::RegisterBenchmark(
-      container + "::upper_bound(key) (non-existent)",
-      bench_with_nonexistent_key([=](Container const& c, Value const& element) {
-        return c.upper_bound(get_key(element));
-      }))
-      ->Arg(1024);
+    benchmark::RegisterBenchmark(
+        container + "::upper_bound(key) (existent)",
+        bench_with_existent_key([=](Container const& c, Value const& element) {
+          return c.upper_bound(get_key(element));
+        }))
+        ->Arg(1024);
+    benchmark::RegisterBenchmark(
+        container + "::upper_bound(key) (non-existent)",
+        bench_with_nonexistent_key([=](Container const& c, Value const& element) {
+          return c.upper_bound(get_key(element));
+        }))
+        ->Arg(1024);
 
-  benchmark::RegisterBenchmark(
-      container + "::equal_range(key) (existent)",
-      bench_with_existent_key([=](Container const& c, Value const& element) {
-        return c.equal_range(get_key(element));
-      }))
-      ->Arg(1024);
-  benchmark::RegisterBenchmark(
-      container + "::equal_range(key) (non-existent)",
-      bench_with_nonexistent_key([=](Container const& c, Value const& element) {
-        return c.equal_range(get_key(element));
-      }))
-      ->Arg(1024);
+    benchmark::RegisterBenchmark(
+        container + "::equal_range(key) (existent)",
+        bench_with_existent_key([=](Container const& c, Value const& element) {
+          return c.equal_range(get_key(element));
+        }))
+        ->Arg(1024);
+    benchmark::RegisterBenchmark(
+        container + "::equal_range(key) (non-existent)",
+        bench_with_nonexistent_key([=](Container const& c, Value const& element) {
+          return c.equal_range(get_key(element));
+        }))
+        ->Arg(1024);
+  }
 }
 
 } // namespace support
