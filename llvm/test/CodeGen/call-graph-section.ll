@@ -34,18 +34,18 @@ entry:
   store i32 0, i32* %retval, align 4
   store void (...)* bitcast (void ()* @foo to void (...)*), void (...)** %fp_foo, align 8
   %0 = load void (...)*, void (...)** %fp_foo, align 8
-  call void (...) %0() [ "type"(metadata !"_ZTSFvE.generalized") ]
+  call void (...) %0() [ "callee_type"(metadata !"_ZTSFvE.generalized") ]
   store i32 (i8)* @bar, i32 (i8)** %fp_bar, align 8
   %1 = load i32 (i8)*, i32 (i8)** %fp_bar, align 8
   %2 = load i8, i8* %a, align 1
-  %call = call i32 %1(i8 signext %2) [ "type"(metadata !"_ZTSFicE.generalized") ]
+  %call = call i32 %1(i8 signext %2) [ "callee_type"(metadata !"_ZTSFicE.generalized") ]
   store i32* (i8*)* @baz, i32* (i8*)** %fp_baz, align 8
   %3 = load i32* (i8*)*, i32* (i8*)** %fp_baz, align 8
-  %call1 = call i32* %3(i8* %a) [ "type"(metadata !"_ZTSFPvS_E.generalized") ]
-  call void @foo() [ "type"(metadata !"_ZTSFvE.generalized") ]
+  %call1 = call i32* %3(i8* %a) [ "callee_type"(metadata !"_ZTSFPvS_E.generalized") ]
+  call void @foo() [ "callee_type"(metadata !"_ZTSFvE.generalized") ]
   %4 = load i8, i8* %a, align 1
-  %call2 = call i32 @bar(i8 signext %4) [ "type"(metadata !"_ZTSFicE.generalized") ]
-  %call3 = call i32* @baz(i8* %a) [ "type"(metadata !"_ZTSFPvS_E.generalized") ]
+  %call2 = call i32 @bar(i8 signext %4) [ "callee_type"(metadata !"_ZTSFicE.generalized") ]
+  %call3 = call i32* @baz(i8* %a) [ "callee_type"(metadata !"_ZTSFPvS_E.generalized") ]
   ret i32 0
 }
 
