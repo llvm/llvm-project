@@ -123,11 +123,10 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
   for (const auto &MBB : MF) {
     for (const MachineInstr &I : MBB) {
       for (const MachineOperand &Op : I.operands()) {
-        std::optional<uint64_t> Count = std::nullopt;
         if (!Op.isJTI() && !Op.isGlobal())
           continue;
 
-        Count = MBFI->getBlockProfileCount(&MBB);
+        std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
 
         if (Op.isJTI()) {
           assert(MJTI != nullptr && "Jump table info is not available.");
