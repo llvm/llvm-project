@@ -17,8 +17,8 @@ foo:
 ; CHECK-NEXT:                ; fixup A - offset: 0, value: (.Ltmp1-16)+2, kind: fixup_7_pcrel
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 23 f4   brvc .+8
-; INST-NEXT: c0 f7   brsh .-16
+; INST-NEXT: 03 f4   brvc .+0
+; INST-NEXT: 00 f4   brsh .+0
 ; INST-NEXT: 59 f7   brne .-42
 ; INST-NEXT: 52 f7   brpl .-44
 ; INST-NEXT: 4c f7   brge .-46

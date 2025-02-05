@@ -22,7 +22,7 @@ foo:
 
 ; INST-LABEL: <foo>:
 ; INST-NEXT: 00 d0    rcall .+0
-; INST-NEXT: fc df    rcall .-8
-; INST-NEXT: 06 d0    rcall .+12
-; INST-NEXT: 17 d0    rcall .+46
+; INST-NEXT: 00 d0    rcall .+0
+; INST-NEXT: 00 d0    rcall .+0
+; INST-NEXT: 00 d0    rcall .+0
 ; INST-NEXT: ea df    rcall .-44

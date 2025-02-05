@@ -19,6 +19,6 @@ bar:
 ; CHECK-NEXT:                ;   fixup A - offset: 0, value: bar, kind: fixup_7_pcrel
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 0a f1      brmi .+66
-; INST-NEXT: ea f0      brmi .+58
+; INST-NEXT: 02 f0      brmi .+0
+; INST-NEXT: 02 f0      brmi .+0
 ; INST-NEXT: 02 f0      brmi .+0

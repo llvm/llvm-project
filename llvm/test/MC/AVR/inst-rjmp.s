@@ -43,18 +43,18 @@ x:
 ; CHECK-NEXT:                 ;   fixup A - offset: 0, value: (.Ltmp6+4094)+2, kind: fixup_13_pcrel
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 01 c0      rjmp  .+2
-; INST-NEXT: ff cf      rjmp  .-2
-; INST-NEXT: fd cf      rjmp  .-6
-; INST-NEXT: 04 c0      rjmp  .+8
-; INST-NEXT: 01 c0      rjmp  .+2
+; INST-NEXT: 00 c0      rjmp  .+0
+; INST-NEXT: 00 c0      rjmp  .+0
+; INST-NEXT: 00 c0      rjmp  .+0
+; INST-NEXT: 00 c0      rjmp  .+0
+; INST-NEXT: 00 c0      rjmp  .+0
 ; INST-NEXT: 00 c0      rjmp  .+0
 ; INST-EMPTY:
 ; INST-LABEL: <end>:
-; INST-NEXT: fe cf      rjmp  .-4
-; INST-NEXT: fd cf      rjmp  .-6
+; INST-NEXT: 00 c0      rjmp  .+0
+; INST-NEXT: 00 c0      rjmp  .+0
 ; INST-EMPTY:
 ; INST-LABEL: <x>:
-; INST-NEXT: ff cf      rjmp  .-2
+; INST-NEXT: 00 c0      rjmp  .+0
 ; INST-NEXT: 0f c0      rjmp  .+30
-; INST-NEXT: ff c7      rjmp  .+4094
+; INST-NEXT: 00 c0      rjmp  .+0

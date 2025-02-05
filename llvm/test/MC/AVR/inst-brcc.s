@@ -22,7 +22,7 @@ bar:
 ; CHECK-NEXT:                ;   fixup A - offset: 0, value: bar, kind: fixup_7_pcrel
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 08 f5      brsh .+66
-; INST-NEXT: a8 f7      brsh .-22
-; INST-NEXT: 08 f5      brsh .+66
+; INST-NEXT: 00 f4      brsh .+0
+; INST-NEXT: 00 f4      brsh .+0
+; INST-NEXT: 00 f4      brsh .+0
 ; INST-NEXT: 00 f4      brsh .+0

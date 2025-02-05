@@ -19,6 +19,6 @@ bar:
 ; CHECK-NEXT:                ;   fixup A - offset: 0, value: bar, kind: fixup_7_pcrel
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 57 f0      brie .+20
-; INST-NEXT: a7 f0      brie .+40
+; INST-NEXT: 07 f0      brie .+0
+; INST-NEXT: 07 f0      brie .+0
 ; INST-NEXT: 07 f0      brie .+0

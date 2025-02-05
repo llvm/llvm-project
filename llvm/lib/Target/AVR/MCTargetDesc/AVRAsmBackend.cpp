@@ -35,26 +35,6 @@ namespace adjust {
 
 using namespace llvm;
 
-static void signed_width(unsigned Width, uint64_t Value,
-                         std::string Description, const MCFixup &Fixup,
-                         MCContext *Ctx = nullptr) {
-  if (!isIntN(Width, Value)) {
-    std::string Diagnostic = "out of range " + Description;
-
-    int64_t Min = minIntN(Width);
-    int64_t Max = maxIntN(Width);
-
-    Diagnostic += " (expected an integer in the range " + std::to_string(Min) +
-                  " to " + std::to_string(Max) + ")";
-
-    if (Ctx) {
-      Ctx->reportError(Fixup.getLoc(), Diagnostic);
-    } else {
-      llvm_unreachable(Diagnostic.c_str());
-    }
-  }
-}
-
 static void unsigned_width(unsigned Width, uint64_t Value,
                            std::string Description, const MCFixup &Fixup,
                            MCContext *Ctx = nullptr) {
@@ -85,20 +65,6 @@ static void adjustBranch(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
   AVR::fixups::adjustBranchTarget(Value);
 }
 
-/// Adjusts the value of a relative branch target before fixup application.
-static void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
-                                 uint64_t &Value, MCContext *Ctx = nullptr) {
-  // Jumps are relative to the current instruction.
-  Value -= 2;
-
-  // We have one extra bit of precision because the value is rightshifted by
-  // one.
-  signed_width(Size + 1, Value, std::string("branch target"), Fixup, Ctx);
-
-  // Rightshifts the value by one.
-  AVR::fixups::adjustBranchTarget(Value);
-}
-
 /// 22-bit absolute fixup.
 ///
 /// Resolves to:
@@ -114,33 +80,6 @@ static void fixup_call(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
   auto bottom = Value & 0x1f;           // end bottom 5 bits
 
   Value = (top << 6) | (middle << 3) | (bottom << 0);
-}
-
-/// 7-bit PC-relative fixup.
-///
-/// Resolves to:
-/// 0000 00kk kkkk k000
-/// Offset of 0 (so the result is left shifted by 3 bits before application).
-static void fixup_7_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
-                          MCContext *Ctx = nullptr) {
-  adjustRelativeBranch(Size, Fixup, Value, Ctx);
-
-  // Because the value may be negative, we must mask out the sign bits
-  Value &= 0x7f;
-}
-
-/// 12-bit PC-relative fixup.
-/// Yes, the fixup is 12 bits even though the name says otherwise.
-///
-/// Resolves to:
-/// 0000 kkkk kkkk kkkk
-/// Offset of 0 (so the result isn't left-shifted before application).
-static void fixup_13_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
-                           MCContext *Ctx = nullptr) {
-  adjustRelativeBranch(Size, Fixup, Value, Ctx);
-
-  // Because the value may be negative, we must mask out the sign bits
-  Value &= 0xfff;
 }
 
 /// 6-bit fixup for the immediate operand of the STD/LDD family of
@@ -264,10 +203,8 @@ void AVRAsmBackend::adjustFixupValue(const MCFixup &Fixup,
   default:
     llvm_unreachable("unhandled fixup");
   case AVR::fixup_7_pcrel:
-    adjust::fixup_7_pcrel(Size, Fixup, Value, Ctx);
-    break;
   case AVR::fixup_13_pcrel:
-    adjust::fixup_13_pcrel(Size, Fixup, Value, Ctx);
+    // Emitted as relocations, no fixup required.
     break;
   case AVR::fixup_call:
     adjust::fixup_call(Size, Fixup, Value, Ctx);
@@ -518,8 +455,6 @@ bool AVRAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
     return Fixup.getKind() >= FirstLiteralRelocationKind;
   case AVR::fixup_7_pcrel:
   case AVR::fixup_13_pcrel:
-    // Always resolve relocations for PC-relative branches
-    return false;
   case AVR::fixup_call:
     return true;
   }
