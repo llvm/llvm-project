@@ -402,13 +402,10 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     IndexExprs.push_back(SE->getSCEV(Index));
   // Replace the I-th index with LHS.
   IndexExprs[I] = SE->getSCEV(LHS);
-  Type *GEPArgType = GEP->getOperand(I)->getType();
-  Type *LHSType = LHS->getType();
+  Type *GEPArgType = SE->getEffectiveSCEVType(GEP->getOperand(I)->getType());
+  Type *LHSType = SE->getEffectiveSCEVType(LHS->getType());
   size_t LHSSize = DL->getTypeSizeInBits(LHSType).getFixedValue();
   size_t GEPArgSize = DL->getTypeSizeInBits(GEPArgType).getFixedValue();
-  // For pointers, we need to look at the index size, not the total type size.
-  if (isa<PointerType>(GEPArgType))
-    GEPArgSize = DL->getIndexTypeSizeInBits(GEPArgType);
   if (isKnownNonNegative(LHS, SimplifyQuery(*DL, DT, AC, GEP)) &&
       LHSSize < GEPArgSize) {
     // Zero-extend LHS if it is non-negative. InstCombine canonicalizes sext to
