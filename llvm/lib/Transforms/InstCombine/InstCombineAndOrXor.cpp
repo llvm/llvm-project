@@ -610,8 +610,11 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
       APInt NewMask = *ConstB & *ConstD;
       if (NewMask == *ConstB)
         return LHS;
-      if (NewMask == *ConstD)
+      if (NewMask == *ConstD) {
+        if (IsLogical)
+          cast<ICmpInst>(RHS)->setSameSign(false);
         return RHS;
+      }
     }
 
     if (Mask & AMask_NotAllOnes) {
