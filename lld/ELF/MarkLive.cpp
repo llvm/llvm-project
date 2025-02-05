@@ -250,9 +250,9 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
     auto *d = dyn_cast<Defined>(s);
     if (!d)
       return;
-    // TODO: Test both cases
-    auto *parent = dyn_cast<InputSectionBase>(d->section);
-    if (!parent || !parent->isLive())
+    // A defined symbol is only dead if it has a dead input section parent.
+    auto *parent = dyn_cast_or_null<InputSectionBase>(d->section);
+    if (parent && !parent->isLive())
       return;
   }
 
@@ -266,14 +266,17 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
     if (it != whyLive.end()) {
       // The object may be a liveness root.
       if (!it->second)
-        break;
+        return;
       cur = *it->second;
     } else {
+      auto *d = cast<Defined>(std::get<Symbol *>(cur));
+      auto *parent = dyn_cast_or_null<InputSectionBase>(d->section);
+      if (!parent)
+        return;
+
       // This object made something else live, but it has no direct reason to be
       // live. That means it a symbol kept live only by being a member of its
       // parent section. Report that section as the symbol's parent.
-      auto *d = cast<Defined>(std::get<Symbol *>(cur));
-      auto *parent = cast<InputSectionBase>(d->section);
       cur = LiveObject{parent};
     }
 

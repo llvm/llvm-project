@@ -46,3 +46,9 @@ jmp test_dead
 ## Undefined symbols are not considered live.
 # RUN: ld.lld %t.o -o /dev/null --gc-sections --why-live=test_undef -u test_undef | count 0
 
+## Defined symbols without input section parents are considered directly live.
+# RUN: ld.lld %t.o -o /dev/null --gc-sections --why-live=test_absolute | FileCheck %s --check-prefix=ABSOLUTE
+# ABSOLUTE: live symbol: test_absolute
+# ABSOLUTE-NOT: >>>
+.globl test_absolute
+test_absolute = 1234
