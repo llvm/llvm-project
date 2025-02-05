@@ -1672,9 +1672,10 @@ define void @load_16byte_chunk_of_32byte_alloca_with_zero_upper_half(ptr %src, i
 ;
 ; X64-HAVE-BMI2-HAVE-SHLD-LABEL: load_16byte_chunk_of_32byte_alloca_with_zero_upper_half:
 ; X64-HAVE-BMI2-HAVE-SHLD:       # %bb.0:
+; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movq %rsi, %rcx
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movups (%rdi), %xmm0
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    xorps %xmm1, %xmm1
-; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    leal (,%rsi,8), %ecx
+; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)

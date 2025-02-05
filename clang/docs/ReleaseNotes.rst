@@ -145,6 +145,8 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
