@@ -10623,7 +10623,7 @@ def err_second_argument_to_cwsc_not_pointer : Error<
   "second argument to __builtin_call_with_static_chain must be of pointer type">;
 
 def err_vector_incorrect_num_elements : Error<
-  "%select{too many|too few|incorrect number of}0 elements in vector %select{initialization|operand}3 (expected %1 elements, have %2)">;
+  "%select{too many|too few}0 elements in vector %select{initialization|operand}3 (expected %1 elements, have %2)">;
 def err_altivec_empty_initializer : Error<"expected initializer">;
 
 def err_invalid_neon_type_code : Error<
@@ -12553,6 +12553,8 @@ def err_std_initializer_list_malformed : Error<
   "%0 layout not recognized. Must be a non-polymorphic class type with no bases and two fields: a 'const E *' and either another 'const E *' or a 'std::size_t'">;
 
 // HLSL Diagnostics
+def err_hlsl_adduint64_invalid_arguments: Error<
+  "%select{scalar provided to a vector operand|invalid number of elements in vector operand}0 (expected a uint vector of 2 or 4 elements)">;
 def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in '%1' shaders, requires %select{|one of the following: }2%3">;
 def err_hlsl_attr_invalid_type : Error<
    "attribute %0 only applies to a field or parameter of type '%1'">;
