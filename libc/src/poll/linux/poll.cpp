@@ -20,12 +20,12 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, poll, (struct pollfd * fds, nfds_t nfds, int timeout)) {
+LLVM_LIBC_FUNCTION(int, poll, (pollfd * fds, nfds_t nfds, int timeout)) {
 
 #ifdef SYS_poll
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_poll, fds, nfds, timeout);
 #elif defined(SYS_ppoll)
-  struct timespec ts, *tsp;
+  timespec ts, *tsp;
   if (timeout >= 0) {
     ts.tv_sec = timeout / 1000;
     ts.tv_nsec = (timeout % 1000) * 1000000;

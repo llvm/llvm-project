@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int poll(struct pollfd *fds, nfds_t nfds, int timeout);
+int poll(pollfd *fds, nfds_t nfds, int timeout);
 
 } // namespace LIBC_NAMESPACE_DECL
 
