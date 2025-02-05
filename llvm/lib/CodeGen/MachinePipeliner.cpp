@@ -511,7 +511,7 @@ bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
   Context.MF = MF;
   Context.MLI = MLI;
   Context.MDT = MDT;
-  Context.PassConfig = &getAnalysis<TargetPassConfig>();
+  Context.TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   Context.AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   Context.LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   Context.RegClassInfo->runOnMachineFunction(*MF);

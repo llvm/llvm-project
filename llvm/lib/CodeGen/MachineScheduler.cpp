@@ -58,6 +58,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -392,8 +393,11 @@ ScheduleDAGInstrs *MachineScheduler::createMachineScheduler() {
   if (Ctor != useDefaultMachineSched)
     return Ctor(this);
 
+  const TargetMachine &TM =
+      getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+
   // Get the default scheduler set by the target for this function.
-  ScheduleDAGInstrs *Scheduler = PassConfig->createMachineScheduler(this);
+  ScheduleDAGInstrs *Scheduler = TM.createMachineScheduler(this);
   if (Scheduler)
     return Scheduler;
 
@@ -405,8 +409,10 @@ ScheduleDAGInstrs *MachineScheduler::createMachineScheduler() {
 /// the caller. We don't have a command line option to override the postRA
 /// scheduler. The Target must configure it.
 ScheduleDAGInstrs *PostMachineScheduler::createPostMachineScheduler() {
+  const TargetMachine &TM =
+      getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   // Get the postRA scheduler set by the target for this function.
-  ScheduleDAGInstrs *Scheduler = PassConfig->createPostMachineScheduler(this);
+  ScheduleDAGInstrs *Scheduler = TM.createPostMachineScheduler(this);
   if (Scheduler)
     return Scheduler;
 
@@ -446,7 +452,6 @@ bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  PassConfig = &getAnalysis<TargetPassConfig>();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
@@ -484,7 +489,6 @@ bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   // Initialize the context of the pass.
   MF = &mf;
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  PassConfig = &getAnalysis<TargetPassConfig>();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   if (VerifyScheduling)
