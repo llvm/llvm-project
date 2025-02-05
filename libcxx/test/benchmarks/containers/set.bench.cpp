@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <set>
+#include <utility>
 
 #include "associative_container_benchmarks.h"
 #include "benchmark/benchmark.h"
@@ -19,6 +20,9 @@ struct support::adapt_operations<std::set<K>> {
   using KeyType   = typename std::set<K>::key_type;
   static ValueType value_from_key(KeyType const& k) { return k; }
   static KeyType key_from_value(ValueType const& value) { return value; }
+
+  using InsertionResult = std::pair<typename std::set<K>::iterator, bool>;
+  static auto get_iterator(InsertionResult const& result) { return result.first; }
 };
 
 int main(int argc, char** argv) {

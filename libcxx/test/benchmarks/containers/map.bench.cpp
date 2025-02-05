@@ -10,6 +10,7 @@
 
 #include <map>
 #include <string>
+#include <utility>
 
 #include "associative_container_benchmarks.h"
 #include "../GenerateInput.h"
@@ -21,6 +22,9 @@ struct support::adapt_operations<std::map<K, V>> {
   using KeyType   = typename std::map<K, V>::key_type;
   static ValueType value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
   static KeyType key_from_value(ValueType const& value) { return value.first; }
+
+  using InsertionResult = std::pair<typename std::map<K, V>::iterator, bool>;
+  static auto get_iterator(InsertionResult const& result) { return result.first; }
 };
 
 int main(int argc, char** argv) {

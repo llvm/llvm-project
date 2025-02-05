@@ -26,6 +26,9 @@ struct adapt_operations {
   // using KeyType   = ...;
   // static ValueType value_from_key(KeyType const& k);
   // static KeyType key_from_value(ValueType const& value);
+
+  // using InsertionResult = ...;
+  // static Container::iterator get_iterator(InsertionResult const&);
 };
 
 template <class Container>
@@ -169,8 +172,17 @@ void associative_container_benchmarks(std::string container) {
         benchmark::ClobberMemory();
       }
 
-      // There is no cleanup to do, since associative containers don't insert
-      // if the key is already present.
+      st.PauseTiming();
+      // Unique-key containers will not insert above, but multi-key containers will insert
+      // the key a second time. Restore the invariant that there's a single copy of each
+      // key in the container.
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        auto const& key = get_key(to_insert);
+        if (c[i].count(key) > 1) {
+          c[i].erase(key);
+        }
+      }
+      st.ResumeTiming();
     }
   })->Arg(1024);
 
@@ -359,7 +371,7 @@ void associative_container_benchmarks(std::string container) {
 
       st.PauseTiming();
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        iterators[i] = c[i].insert(element).first;
+        iterators[i] = adapt_operations<Container>::get_iterator(c[i].insert(element));
       }
       st.ResumeTiming();
     }
@@ -398,6 +410,22 @@ void associative_container_benchmarks(std::string container) {
       st.PauseTiming();
       c = Container(in.begin(), in.end());
       st.ResumeTiming();
+    }
+  })->Arg(1024);
+
+  /////////////////////////
+  // Capacity
+  /////////////////////////
+  benchmark::RegisterBenchmark(container + "::size()", [=](auto& st) {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container c(in.begin(), in.end());
+
+    for (auto _ : st) {
+      auto res = c.size();
+      benchmark::DoNotOptimize(c);
+      benchmark::DoNotOptimize(res);
+      benchmark::ClobberMemory();
     }
   })->Arg(1024);
 
