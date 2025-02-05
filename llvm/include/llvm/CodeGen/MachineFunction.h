@@ -514,7 +514,7 @@ public:
         return;
 
       std::optional<OperandBundleUse> Opt =
-          CB.getOperandBundle(LLVMContext::OB_type);
+          CB.getOperandBundle(LLVMContext::OB_callee_type);
       // Return if the operand bundle for call graph section cannot be found.
       if (!Opt)
         return;

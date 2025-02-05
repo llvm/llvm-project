@@ -94,7 +94,7 @@ entry:
   store i32 0, ptr %retval, align 4
   store ptr @foo, ptr %fp, align 8
   %0 = load ptr, ptr %fp, align 8
-  call void %0(i8 signext 97) [ "type"(metadata !"_ZTSFvcE.generalized") ]
+  call void %0(i8 signext 97) [ "callee_type"(metadata !"_ZTSFvcE.generalized") ]
   ret i32 0
 }
 
