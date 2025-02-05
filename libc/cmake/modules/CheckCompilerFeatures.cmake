@@ -15,7 +15,6 @@ set(
     "fixed_point"
     "cfloat16"
     "cfloat128"
-    "padding_on_unsigned_fixed_point"
 )
 
 # Making sure ALL_COMPILER_FEATURES is sorted.
@@ -113,8 +112,6 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(LIBC_TYPES_HAS_FLOAT128 TRUE)
     elseif(${feature} STREQUAL "fixed_point")
       set(LIBC_COMPILER_HAS_FIXED_POINT TRUE)
-    elseif(${feature} STREQUAL "padding_on_unsigned_fixed_point")
-      set(LIBC_COMPILER_HAS_PADDING_ON_UNSIGNED_FIXED_POINT TRUE)
     elseif(${feature} STREQUAL "cfloat16")
       set(LIBC_TYPES_HAS_CFLOAT16 TRUE)
     elseif(${feature} STREQUAL "cfloat128")
