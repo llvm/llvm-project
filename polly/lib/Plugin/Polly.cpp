@@ -5,11 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//===----------------------------------------------------------------------===//
 
-#include "polly/RegisterPasses.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Passes/PassPlugin.h"
 
 // Pass Plugin Entrypoints

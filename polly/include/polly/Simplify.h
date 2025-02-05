@@ -16,11 +16,6 @@
 #include "polly/ScopPass.h"
 #include "llvm/ADT/SmallVector.h"
 
-namespace llvm {
-class PassRegistry;
-class Pass;
-} // namespace llvm
-
 namespace polly {
 class MemoryAccess;
 class ScopStmt;

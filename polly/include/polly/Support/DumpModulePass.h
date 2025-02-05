@@ -16,10 +16,6 @@
 #include "llvm/IR/PassManager.h"
 #include <string>
 
-namespace llvm {
-class ModulePass;
-} // namespace llvm
-
 namespace polly {
 /// A pass that prints the module into a file.
 ///
@@ -41,10 +37,5 @@ struct DumpModulePass final : llvm::PassInfoMixin<DumpModulePass> {
 };
 
 } // namespace polly
-
-namespace llvm {
-class PassRegistry;
-void initializeDumpModuleWrapperPassPass(llvm::PassRegistry &);
-} // namespace llvm
 
 #endif /* POLLY_SUPPORT_DUMPMODULEPASS_H */

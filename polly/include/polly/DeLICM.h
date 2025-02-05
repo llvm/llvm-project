@@ -21,8 +21,6 @@
 #include "isl/isl-noexceptions.h"
 
 namespace llvm {
-class PassRegistry;
-class Pass;
 class raw_ostream;
 } // namespace llvm
 

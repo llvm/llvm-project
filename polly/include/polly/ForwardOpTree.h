@@ -15,10 +15,6 @@
 
 #include "polly/ScopPass.h"
 
-namespace llvm {
-class PassRegistry;
-} // namespace llvm
-
 namespace polly {
 
 struct ForwardOpTreePass final : llvm::PassInfoMixin<ForwardOpTreePass> {

@@ -145,7 +145,6 @@ public:
   friend struct DependenceAnalysis;
   friend struct DependenceInfoPrinterPass;
   friend class DependenceInfo;
-  friend class DependenceInfoWrapperPass;
 
   /// Destructor that will free internal objects.
   ~Dependences() { releaseMemory(); }

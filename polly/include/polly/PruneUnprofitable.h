@@ -15,11 +15,6 @@
 
 #include "polly/ScopPass.h"
 
-namespace llvm {
-class Pass;
-class PassRegistry;
-} // namespace llvm
-
 namespace polly {
 
 struct PruneUnprofitablePass final
