@@ -9,6 +9,9 @@
 // CHECK: @"OBJC_IVAR_$_SubClass.subClassIvar" = constant i64 56
 // CHECK: @"OBJC_IVAR_$_SubClass._subClassProperty" = hidden constant i64 64
 // CHECK: @"OBJC_IVAR_$_NotStaticLayout.not_static_layout_ivar" = hidden global i64 12
+// CHECK: @"OBJC_IVAR_$_SuperClass2._superClassProperty2" = hidden constant i64 20
+// CHECK: @"OBJC_IVAR_$_IntermediateClass2._IntermediateClass2Property" = hidden constant i64 24
+// CHECK: @"OBJC_IVAR_$_SubClass2._subClass2Property" = hidden constant i64 28
 
 @interface NSObject {
   int these, will, never, change, ever;
@@ -137,4 +140,48 @@
   not_static_layout_ivar = 0;
   // CHECK: load i64, ptr @"OBJC_IVAR_$_NotStaticLayout.not_static_layout_ivar
 }
+@end
+
+// CHECK: define internal i32 @"\01-[IntermediateClass2 IntermediateClass2Property]"(ptr noundef %[[SELF:.*]],
+// CHECK: %[[SELF_ADDR:.*]] = alloca ptr, align 8
+// CHECK: store ptr %[[SELF]], ptr %[[SELF_ADDR]], align 8
+// CHECK: %[[V0:.*]] = load ptr, ptr %[[SELF_ADDR]], align 8
+// CHECK: %[[ADD_PTR:.*]] = getelementptr inbounds i8, ptr %[[V0]], i64 24
+// CHECK: %[[LOAD:.*]] = load atomic i32, ptr %[[ADD_PTR]] unordered, align 4
+// CHECK: ret i32 %[[LOAD]]
+
+// CHECK: define internal i32 @"\01-[SubClass2 subClass2Property]"(ptr noundef %[[SELF:.*]],
+// CHECK: %[[SELF_ADDR:.*]] = alloca ptr, align 8
+// CHECK: store ptr %[[SELF]], ptr %[[SELF_ADDR]], align 8
+// CHECK: %[[V0:.*]] = load ptr, ptr %[[SELF_ADDR]], align 8
+// CHECK: %[[ADD_PTR:.*]] = getelementptr inbounds i8, ptr %[[V0]], i64 28
+// CHECK: %[[LOAD:.*]] = load atomic i32, ptr %[[ADD_PTR]] unordered, align 4
+// CHECK: ret i32 %[[LOAD]]
+
+@interface SuperClass2 : NSObject
+@property int superClassProperty2;
+@end
+
+@interface IntermediateClass2 : SuperClass2
+@property int IntermediateClass2Property;
+@end
+
+@interface IntermediateClass3 : SuperClass2
+@property int IntermediateClass3Property;
+@end
+
+@interface SubClass2 : IntermediateClass2
+@property int subClass2Property;
+@end
+
+@implementation IntermediateClass3
+@end
+
+@implementation SuperClass2
+@end
+
+@implementation IntermediateClass2
+@end
+
+@implementation SubClass2
 @end
