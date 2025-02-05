@@ -611,9 +611,7 @@ Error containerizeRawImage(std::unique_ptr<MemoryBuffer> &Img, OffloadKind Kind,
   if (Kind != OFK_OpenMP || !Triple.isSPIRV() ||
       Triple.getVendor() != llvm::Triple::Intel)
     return Error::success();
-  if (Error E = offloading::intel::containerizeOpenMPSPIRVImage(Img))
-    return E;
-  return Error::success();
+  return offloading::intel::containerizeOpenMPSPIRVImage(Img);
 }
 
 Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
