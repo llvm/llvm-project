@@ -1383,7 +1383,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
   }];
 
   let extraClassDefinition = [{
-    bool $cppClass::isDeclarationForLinkage() { return getInitializerRegion().empty(); }
+    bool $cppClass::isDeclarationForLinkage() { return getInitializerRegion().empty() && !getValue(); }
   }];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;

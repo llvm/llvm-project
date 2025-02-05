@@ -12,6 +12,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "mlir/IR/Verifier.h" // TODO: Remove
 #include "mlir/Linker/Linker.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/ToolUtilities.h"
@@ -299,6 +300,10 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
   if (failed(proc.linkFiles(config.inputFiles)))
     return failure();
 
+  // TODO: Remove
+  if (failed(verify(composite.get(), true))) {
+    llvm::outs() << "Verify failed\n";
+  }
   composite.get()->print(out->os());
   out->keep();
 

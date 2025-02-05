@@ -11,7 +11,6 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/Verifier.h"
 
 #include <assert.h>
 #include <optional>
@@ -49,9 +48,10 @@ class MLIRLinker {
   }
 
   Error linkFunctionBody(Operation *dst, FunctionLinkageOpInterface src);
+  void linkGlobalVariable(Operation *dst, GlobalVariableLinkageOpInterface src);
   Error linkGlobalValueBody(Operation *dst, GlobalValueLinkageOpInterface src);
   bool shouldLink(Operation *dst, Operation *src);
-  Operation *copyGlobalVariableProto(Operation *src, bool forDefinition);
+  Operation *copyGlobalVariableProto(Operation *src);
   Operation *copyFunctionProto(Operation *src);
   Operation *copyGlobalValueProto(Operation *src, bool forIndirectSymbol);
   Expected<Operation *> linkGlobalValueProto(GlobalValueLinkageOpInterface sgv,
@@ -142,13 +142,16 @@ bool MLIRLinker::shouldLink(Operation *dst, Operation *src) {
   return LazilyAdded;
 }
 
-Operation *MLIRLinker::copyGlobalVariableProto(Operation *src,
-                                               bool forDefinition) {
-  // TODO: Is this the right way? Or, do we need to create an empty operation
-  // and later fill in the "meat"? E.g. should we do src->cloneWithoutRegions?
-  llvm_unreachable("unimplemented");
-  return nullptr;
+Operation *MLIRLinker::copyGlobalVariableProto(Operation *src) {
+  // No linking to be performed or linking from the source: simply create an
+  // identical version of the symbol over in the dest module... the
+  // initializer will be filled in later by LinkGlobalInits.
+  OpBuilder builder(composite->getRegion(0));
+  Operation *newFunc = src->cloneWithoutRegions();
+  builder.insert(newFunc);
+  return newFunc;
 }
+
 Operation *MLIRLinker::copyFunctionProto(Operation *src) {
   OpBuilder builder(composite->getRegion(0));
 
@@ -160,6 +163,8 @@ Operation *MLIRLinker::copyFunctionProto(Operation *src) {
 }
 Operation *MLIRLinker::copyGlobalValueProto(Operation *src,
                                             bool forDefinition) {
+  if (auto sgvar = dyn_cast<GlobalVariableLinkageOpInterface>(src))
+    return copyGlobalVariableProto(src);
   if (auto f = dyn_cast<FunctionLinkageOpInterface>(src))
     return copyFunctionProto(src);
 
@@ -283,6 +288,18 @@ Operation *MLIRLinker::materialize(GlobalValueLinkageOpInterface v,
   return newGvl.getOperation();
 }
 
+/// Update the initializers in the Dest module now that all globals that may be
+/// referenced are in Dest.
+void MLIRLinker::linkGlobalVariable(Operation *dst,
+                                    GlobalVariableLinkageOpInterface src) {
+  // TODO: Schedule global init
+  // TODO: This will likely only need to happen for those that have an
+  // initializer, not for constants
+}
+
+/// Copy the source function over into the dest function and fix up references
+/// to values. At this point we know that Dest is an external function, and
+/// that Src is not.
 Error MLIRLinker::linkFunctionBody(Operation *dst,
                                    FunctionLinkageOpInterface src) {
 
@@ -311,10 +328,13 @@ Error MLIRLinker::linkFunctionBody(Operation *dst,
 
 Error MLIRLinker::linkGlobalValueBody(Operation *dst,
                                       GlobalValueLinkageOpInterface src) {
-  // TODO: Switch on what type of thing it is. For now just assume it is a
-  // function-like thing
   if (auto f = dyn_cast<FunctionLinkageOpInterface>(src.getOperation()))
     return linkFunctionBody(dst, f);
+  if (auto gvar =
+          dyn_cast<GlobalVariableLinkageOpInterface>(src.getOperation())) {
+    linkGlobalVariable(dst, gvar);
+    return Error::success();
+  }
 
   return Error::success();
 }
@@ -389,9 +409,5 @@ Error IRMover::move(OwningOpRef<Operation *> src,
   MLIRLinker linker(composite, std::move(src), valuesToLink);
   Error e = linker.run();
 
-  // TODO: Remove
-  if (failed(verify(composite, true))) {
-    llvm::outs() << "Verify failed\n";
-  }
   return e;
 }
