@@ -961,16 +961,13 @@ ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(
     ASTContext &Context, Kind DK, TagKind TK, DeclContext *DC,
     SourceLocation StartLoc, SourceLocation IdLoc,
     ClassTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
-    bool MatchedPackOnParmToNonPackOnArg,
-    ClassTemplateSpecializationDecl *PrevDecl)
+    bool StrictPackMatch, ClassTemplateSpecializationDecl *PrevDecl)
     : CXXRecordDecl(DK, TK, Context, DC, StartLoc, IdLoc,
                     SpecializedTemplate->getIdentifier(), PrevDecl),
       SpecializedTemplate(SpecializedTemplate),
       TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args)),
-      SpecializationKind(TSK_Undeclared),
-      MatchedPackOnParmToNonPackOnArg(MatchedPackOnParmToNonPackOnArg) {
-  assert(DK == Kind::ClassTemplateSpecialization ||
-         MatchedPackOnParmToNonPackOnArg == false);
+      SpecializationKind(TSK_Undeclared), StrictPackMatch(StrictPackMatch) {
+  assert(DK == Kind::ClassTemplateSpecialization || StrictPackMatch == false);
 }
 
 ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(ASTContext &C,
@@ -982,11 +979,11 @@ ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(ASTContext &C,
 ClassTemplateSpecializationDecl *ClassTemplateSpecializationDecl::Create(
     ASTContext &Context, TagKind TK, DeclContext *DC, SourceLocation StartLoc,
     SourceLocation IdLoc, ClassTemplateDecl *SpecializedTemplate,
-    ArrayRef<TemplateArgument> Args, bool MatchedPackOnParmToNonPackOnArg,
+    ArrayRef<TemplateArgument> Args, bool StrictPackMatch,
     ClassTemplateSpecializationDecl *PrevDecl) {
   auto *Result = new (Context, DC) ClassTemplateSpecializationDecl(
       Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
-      SpecializedTemplate, Args, MatchedPackOnParmToNonPackOnArg, PrevDecl);
+      SpecializedTemplate, Args, StrictPackMatch, PrevDecl);
   Result->setMayHaveOutOfDateDef(false);
 
   // If the template decl is incomplete, copy the external lexical storage from
@@ -1173,10 +1170,9 @@ ClassTemplatePartialSpecializationDecl::ClassTemplatePartialSpecializationDecl(
     ClassTemplatePartialSpecializationDecl *PrevDecl)
     : ClassTemplateSpecializationDecl(
           Context, ClassTemplatePartialSpecialization, TK, DC, StartLoc, IdLoc,
-          // Tracking MatchedPackOnParmToNonPackOnArg for Partial
+          // Tracking StrictPackMatch for Partial
           // Specializations is not needed.
-          SpecializedTemplate, Args, /*MatchedPackOnParmToNonPackOnArg=*/false,
-          PrevDecl),
+          SpecializedTemplate, Args, /*StrictPackMatch=*/false, PrevDecl),
       TemplateParams(Params), InstantiatedFromMember(nullptr, false) {
   if (AdoptTemplateParameterList(Params, this))
     setInvalidDecl();

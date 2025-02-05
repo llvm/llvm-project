@@ -4059,8 +4059,7 @@ bool Sema::usesPartialOrExplicitSpecialization(
 static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
     Sema &S, SourceLocation PointOfInstantiation,
     ClassTemplateSpecializationDecl *ClassTemplateSpec,
-    TemplateSpecializationKind TSK,
-    bool PrimaryHasMatchedPackOnParmToNonPackOnArg) {
+    TemplateSpecializationKind TSK, bool PrimaryStrictPackMatch) {
   Sema::InstantiatingTemplate Inst(S, PointOfInstantiation, ClassTemplateSpec);
   if (Inst.isInvalid())
     return {/*Invalid=*/true};
@@ -4113,12 +4112,11 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
             MakeDeductionFailureInfo(S.Context, Result, Info));
         (void)Result;
       } else {
-        auto &List =
-            Info.hasMatchedPackOnParmToNonPackOnArg() ? ExtraMatched : Matched;
+        auto &List = Info.hasStrictPackMatch() ? ExtraMatched : Matched;
         List.push_back(MatchResult{Partial, Info.takeCanonical()});
       }
     }
-    if (Matched.empty() && PrimaryHasMatchedPackOnParmToNonPackOnArg)
+    if (Matched.empty() && PrimaryStrictPackMatch)
       Matched = std::move(ExtraMatched);
 
     // If we're dealing with a member template where the template parameters
@@ -4223,7 +4221,7 @@ bool Sema::InstantiateClassTemplateSpecialization(
     SourceLocation PointOfInstantiation,
     ClassTemplateSpecializationDecl *ClassTemplateSpec,
     TemplateSpecializationKind TSK, bool Complain,
-    bool PrimaryHasMatchedPackOnParmToNonPackOnArg) {
+    bool PrimaryStrictPackMatch) {
   // Perform the actual instantiation on the canonical declaration.
   ClassTemplateSpec = cast<ClassTemplateSpecializationDecl>(
       ClassTemplateSpec->getCanonicalDecl());
@@ -4231,9 +4229,9 @@ bool Sema::InstantiateClassTemplateSpecialization(
     return true;
 
   ActionResult<CXXRecordDecl *> Pattern =
-      getPatternForClassTemplateSpecialization(
-          *this, PointOfInstantiation, ClassTemplateSpec, TSK,
-          PrimaryHasMatchedPackOnParmToNonPackOnArg);
+      getPatternForClassTemplateSpecialization(*this, PointOfInstantiation,
+                                               ClassTemplateSpec, TSK,
+                                               PrimaryStrictPackMatch);
   if (!Pattern.isUsable())
     return Pattern.isInvalid();
 
