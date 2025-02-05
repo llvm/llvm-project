@@ -1,4 +1,4 @@
-; REQUIRES: x86_64-apple
+; REQUIRES: system-darwin && host-unwind-supports-jit
 ; RUN: lli -jit-kind=orc %s
 ;
 ; Basic correctness testing for eh-frame processing and registration.
