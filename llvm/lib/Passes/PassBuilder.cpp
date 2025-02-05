@@ -119,6 +119,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
