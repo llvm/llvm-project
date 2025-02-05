@@ -1954,9 +1954,11 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   for (auto [privDecl, mlirPrivVar, blockArg, llvmPrivateVarAlloc] :
        llvm::zip_equal(privateDecls, mlirPrivateVars, privateBlockArgs,
                        privateVarAllocations)) {
-    if (!llvmPrivateVarAlloc)
+    if (!privDecl.readsFromMold())
       // to be handled inside the task
       continue;
+    assert(llvmPrivateVarAlloc &&
+           "reads from mold so shouldn't have been skipped");
 
     llvm::Expected<llvm::Value *> privateVarOrErr =
         initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
