@@ -1,5 +1,5 @@
 ! RUN: %flang_fc1  -fopenmp-version=51 -fopenmp -fdebug-unparse-no-sema %s 2>&1 | FileCheck %s
-!!! RUN: %flang_fc1  -fopenmp-version=51 -fopenmp -fdebug-dump-parse-tree-no-sema %s 2>&1 | FileCheck %s --check-prefix="PARSE-TREE"
+! RUN: %flang_fc1  -fopenmp-version=51 -fopenmp -fdebug-dump-parse-tree-no-sema %s 2>&1 | FileCheck %s --check-prefix="PARSE-TREE"
 subroutine sub1
   integer :: r
 !CHECK: !$OMP ASSUME NO_OPENMP

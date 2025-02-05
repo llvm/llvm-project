@@ -2641,7 +2641,7 @@ public:
   void Unparse(const OmpAssumeDirective &x) {
     BeginOpenMP();
     Word("!$OMP ASSUME");
-    Walk(std::get<OmpClauseList>(x.t), ", ");
+    Walk(" ", std::get<OmpClauseList>(x.t).v);
     Put("\n");
     EndOpenMP();
   }
@@ -3137,10 +3137,6 @@ private:
   void Walk(const std::list<A> &list, const char *comma = ", ",
       const char *suffix = "") {
     return Walk("", list, comma, suffix);
-  }
-
-  void Walk(const OmpClauseList &x, const char *sep = " ") {
-    return Walk(" ", x.v, sep);
   }
 
   // Traverse a std::tuple<>, with an optional separator.
