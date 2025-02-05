@@ -1121,8 +1121,8 @@
 // RUN:   | FileCheck --check-prefixes=CHECK-K-UNUSED %s
 // CHECK-K-UNUSED: clang: warning: -K: 'linker' input unused [-Wunused-command-line-argument]
 
-// This check is only applicable to AIX host. 
-// AIX-specific link behavior requires `-latomic` for 32-bit sanitizer libraries, 
+
+// This test verifies that the linker doesn't include '-latomic' when no sanitizers are enabled 
 // Running this test on non-AIX host will result in an unrelated error 
 // FIXME: Sanitizer interface functions must be exported by export files on AIX
 
