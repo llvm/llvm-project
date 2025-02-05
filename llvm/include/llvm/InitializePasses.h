@@ -241,7 +241,7 @@ void initializePostInlineEntryExitInstrumenterPass(PassRegistry &);
 void initializePostMachineSchedulerLegacyPass(PassRegistry &);
 void initializePostRAHazardRecognizerPass(PassRegistry &);
 void initializePostRAMachineSinkingPass(PassRegistry &);
-void initializePostRASchedulerPass(PassRegistry &);
+void initializePostRASchedulerLegacyPass(PassRegistry &);
 void initializePreISelIntrinsicLoweringLegacyPassPass(PassRegistry &);
 void initializePrintFunctionPassWrapperPass(PassRegistry &);
 void initializePrintModulePassWrapperPass(PassRegistry &);
