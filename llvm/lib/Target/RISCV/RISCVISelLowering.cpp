@@ -16297,7 +16297,7 @@ static SDValue performVP_REVERSECombine(SDNode *N, SelectionDAG &DAG,
   SDValue Temp2 = DAG.getNode(ISD::MUL, DL, XLenVT, Temp1,
                               DAG.getConstant(ElemWidthByte, DL, XLenVT));
   SDValue Base = DAG.getNode(ISD::ADD, DL, XLenVT, VPLoad->getBasePtr(), Temp2);
-  SDValue Stride = DAG.getConstant(-ElemWidthByte, DL, XLenVT);
+  SDValue Stride = DAG.getSignedConstant(-ElemWidthByte, DL, XLenVT);
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachinePointerInfo PtrInfo(VPLoad->getAddressSpace());
@@ -16358,7 +16358,7 @@ static SDValue performVP_STORECombine(SDNode *N, SelectionDAG &DAG,
                               DAG.getConstant(ElemWidthByte, DL, XLenVT));
   SDValue Base =
       DAG.getNode(ISD::ADD, DL, XLenVT, VPStore->getBasePtr(), Temp2);
-  SDValue Stride = DAG.getConstant(-ElemWidthByte, DL, XLenVT);
+  SDValue Stride = DAG.getSignedConstant(-ElemWidthByte, DL, XLenVT);
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachinePointerInfo PtrInfo(VPStore->getAddressSpace());
