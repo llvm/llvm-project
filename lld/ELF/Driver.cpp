@@ -1644,9 +1644,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   auto reports = {
       std::make_pair("bti-report", &ctx.arg.zBtiReport),
       std::make_pair("cet-report", &ctx.arg.zCetReport),
+      std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
       std::make_pair("gcs-report", &ctx.arg.zGcsReport),
-      std::make_pair("pauth-report", &ctx.arg.zPauthReport),
-      std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport)};
+      std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -2944,15 +2944,15 @@ static void checkExecuteOnly(Ctx &ctx) {
   };
 
   for (ELFFileBase *file : ctx.objectFiles) {
-    for (InputSectionBase *section : file->getSections()) {
-      if (!(section && section->flags & SHF_EXECINSTR))
+    for (InputSectionBase *sec : file->getSections()) {
+      if (!(sec && sec->flags & SHF_EXECINSTR))
         continue;
 
-      OutputSection *outputSection = section->getOutputSection();
-      if (outputSection && outputSection->name == ".text") {
+      OutputSection *osec = sec->getOutputSection();
+      if (osec && osec->name == ".text") {
         reportUnless(ctx.arg.zExecuteOnlyReport,
-                     section->flags & SHF_AARCH64_PURECODE)
-            << file << ": -z execute-only-report: section " << section->name
+                     sec->flags & SHF_AARCH64_PURECODE)
+            << "-z execute-only-report: " << sec
             << " does not have SHF_AARCH64_PURECODE flag set";
       }
     }

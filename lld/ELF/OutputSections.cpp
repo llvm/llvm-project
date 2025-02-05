@@ -42,8 +42,10 @@ using namespace lld::elf;
 
 uint32_t OutputSection::getPhdrFlags() const {
   uint32_t ret = 0;
-  if ((ctx.arg.emachine != EM_ARM || !(flags & SHF_ARM_PURECODE)) &&
-      (ctx.arg.emachine != EM_AARCH64 || !(flags & SHF_AARCH64_PURECODE)))
+  bool purecode =
+      (ctx.arg.emachine == EM_ARM && (flags & SHF_ARM_PURECODE)) ||
+      (ctx.arg.emachine == EM_AARCH64 && (flags & SHF_AARCH64_PURECODE));
+  if (!purecode)
     ret |= PF_R;
   if (flags & SHF_WRITE)
     ret |= PF_W;

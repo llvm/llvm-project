@@ -7,8 +7,8 @@
 // RUN: not ld.lld -z execute-only-report=error %t.o -o /dev/null 2>&1 \
 // RUN:     | FileCheck --check-prefix=ERROR %s
 
-// WARNING: warning: {{.*}}.o: -z execute-only-report: section .text does not have SHF_AARCH64_PURECODE flag set
-// ERROR: error: {{.*}}.o: -z execute-only-report: section .text does not have SHF_AARCH64_PURECODE flag set
+// WARNING: warning: -z execute-only-report: {{.*}}.o:(.text) does not have SHF_AARCH64_PURECODE flag set
+// ERROR: error: -z execute-only-report: {{.*}}.o:(.text) does not have SHF_AARCH64_PURECODE flag set
 
         .section .text,"ax"
         .globl _start
