@@ -15,6 +15,4 @@ using olRetainQueueTest = offloadQueueTest;
 // TODO: When we can fetch queue info we can check the reference count is
 // changing in the expected way. In the meantime just check the entry point
 // doesn't blow up.
-TEST_F(olRetainQueueTest, Success) {
-  ASSERT_SUCCESS(olRetainQueue(Queue));
-}
+TEST_F(olRetainQueueTest, Success) { ASSERT_SUCCESS(olRetainQueue(Queue)); }

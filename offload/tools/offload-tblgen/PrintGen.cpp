@@ -150,7 +150,6 @@ inline std::ostream &operator<<(std::ostream &os, const struct {0} *params) {{
   OS << TAB_1 "return os;\n}\n";
 }
 
-
 void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
   if (Struct.getName() == "ol_error_struct_t") {
     return;
