@@ -32,6 +32,7 @@ namespace lldb_private {
 
 using ::llvm::Error;
 using ::llvm::telemetry::Destination;
+using ::llvm::telemetry::Serializer;
 using ::llvm::telemetry::TelemetryInfo;
 
 static uint64_t ToNanosec(const SteadyTimePoint Point) {
@@ -57,9 +58,9 @@ static std::string MakeUUID(lldb_private::Debugger *debugger) {
     LLDB_LOG(GetLog(LLDBLog::Object),
              "Failed to generate random bytes for UUID: {0}", ec.message());
     // fallback to using timestamp + debugger ID.
-    ret = std::to_string(
-              std::chrono::steady_clock::now().time_since_epoch().count()) +
-          "_" + std::to_string(debugger->GetID());
+    ret = llvm::formatv(
+        "{0}_{1}", std::chrono::steady_clock::now().time_since_epoch().count(),
+        debugger->GetID());
   } else {
     ret = lldb_private::UUID(random_bytes).GetAsString();
   }

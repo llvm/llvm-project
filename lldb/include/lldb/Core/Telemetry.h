@@ -27,13 +27,8 @@
 
 namespace lldb_private {
 
-using llvm::telemetry::Destination;
-using llvm::telemetry::KindType;
-using llvm::telemetry::Serializer;
-using llvm::telemetry::TelemetryInfo;
-
 struct LldbEntryKind : public ::llvm::telemetry::EntryKind {
-  static const KindType BaseInfo = 0b11000;
+  static const llvm::telemetry::KindType BaseInfo = 0b11000;
 };
 
 /// Defines a convenient type for timestamp of various events.
@@ -61,7 +56,7 @@ struct ExitDescription {
   std::string description;
 };
 
-struct LldbBaseTelemetryInfo : public TelemetryInfo {
+struct LldbBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
   EventStats stats;
 
   std::optional<ExitDescription> exit_desc;
@@ -69,14 +64,16 @@ struct LldbBaseTelemetryInfo : public TelemetryInfo {
   Debugger *debugger;
 
   // For dyn_cast, isa, etc operations.
-  KindType getKind() const override { return LldbEntryKind::BaseInfo; }
+  llvm::telemetry::KindType getKind() const override {
+    return LldbEntryKind::BaseInfo;
+  }
 
-  static bool classof(const TelemetryInfo *t) {
+  static bool classof(const llvm::telemetry::TelemetryInfo *t) {
     // Subclasses of this is also acceptable.
     return (t->getKind() & LldbEntryKind::BaseInfo) == LldbEntryKind::BaseInfo;
   }
 
-  void serialize(Serializer &serializer) const override;
+  void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
 
 /// The base Telemetry manager instance in LLDB
@@ -86,7 +83,7 @@ class TelemetryManager : public llvm::telemetry::Manager {
 public:
   TelemetryManager(std::unique_ptr<llvm::telemetry::Config> config);
 
-  llvm::Error preDispatch(TelemetryInfo *entry) override;
+  llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
 
 private:
   std::unique_ptr<llvm::telemetry::Config> m_config;
