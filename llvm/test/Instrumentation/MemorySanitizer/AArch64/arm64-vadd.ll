@@ -673,24 +673,26 @@ define <2 x i64> @saddl2d(ptr %A, ptr %B) nounwind #0 {
   ret <2 x i64> %tmpvar5
 }
 
-define <8 x i16> @saddl2_8h(<16 x i8> %a, <16 x i8> %b) nounwind  #0 {
+define <8 x i16> @saddl2_8h(<16 x i8> %a, <16 x i8> %b, <2 x i64> %param1, <2 x i64> %param2) nounwind  #0 {
 ; CHECK-LABEL: define <8 x i16> @saddl2_8h(
-; CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <2 x i64> [[PARAM1:%.*]], <2 x i64> [[PARAM2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP:%.*]] = bitcast <16 x i8> [[A]] to <2 x i64>
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> splat (i64 -1), <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> undef, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP7]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> [[PARAM1]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
 ; CHECK-NEXT:    [[TMPVAR1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I_I]] to <8 x i8>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = sext <8 x i8> [[TMP4]] to <8 x i16>
 ; CHECK-NEXT:    [[VMOVL_I_I_I:%.*]] = sext <8 x i8> [[TMPVAR1]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR2:%.*]] = bitcast <16 x i8> [[B]] to <2 x i64>
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> splat (i64 -1), <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SHUFFLE_I_I4_I:%.*]] = shufflevector <2 x i64> [[TMPVAR2]], <2 x i64> undef, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP8]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[SHUFFLE_I_I4_I:%.*]] = shufflevector <2 x i64> [[TMPVAR2]], <2 x i64> [[PARAM2]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[_MSPROP2]] to <8 x i8>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I4_I]] to <8 x i8>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = sext <8 x i8> [[TMP6]] to <8 x i16>
@@ -701,35 +703,37 @@ define <8 x i16> @saddl2_8h(<16 x i8> %a, <16 x i8> %b) nounwind  #0 {
 ; CHECK-NEXT:    ret <8 x i16> [[ADD_I]]
 ;
   %tmpvar = bitcast <16 x i8> %a to <2 x i64>
-  %shuffle.i.i.i = shufflevector <2 x i64> %tmpvar, <2 x i64> undef, <1 x i32> <i32 1>
+  %shuffle.i.i.i = shufflevector <2 x i64> %tmpvar, <2 x i64> %param1, <1 x i32> <i32 1>
   %tmpvar1 = bitcast <1 x i64> %shuffle.i.i.i to <8 x i8>
   %vmovl.i.i.i = sext <8 x i8> %tmpvar1 to <8 x i16>
   %tmpvar2 = bitcast <16 x i8> %b to <2 x i64>
-  %shuffle.i.i4.i = shufflevector <2 x i64> %tmpvar2, <2 x i64> undef, <1 x i32> <i32 1>
+  %shuffle.i.i4.i = shufflevector <2 x i64> %tmpvar2, <2 x i64> %param2, <1 x i32> <i32 1>
   %tmpvar3 = bitcast <1 x i64> %shuffle.i.i4.i to <8 x i8>
   %vmovl.i.i5.i = sext <8 x i8> %tmpvar3 to <8 x i16>
   %add.i = add <8 x i16> %vmovl.i.i.i, %vmovl.i.i5.i
   ret <8 x i16> %add.i
 }
 
-define <4 x i32> @saddl2_4s(<8 x i16> %a, <8 x i16> %b) nounwind  #0 {
+define <4 x i32> @saddl2_4s(<8 x i16> %a, <8 x i16> %b, <2 x i64> %param1, <2 x i64> %param2) nounwind  #0 {
 ; CHECK-LABEL: define <4 x i32> @saddl2_4s(
-; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <2 x i64> [[PARAM1:%.*]], <2 x i64> [[PARAM2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP:%.*]] = bitcast <8 x i16> [[A]] to <2 x i64>
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> splat (i64 -1), <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> undef, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP7]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> [[PARAM1]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
 ; CHECK-NEXT:    [[TMPVAR1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I_I]] to <4 x i16>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = sext <4 x i16> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    [[VMOVL_I_I_I:%.*]] = sext <4 x i16> [[TMPVAR1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i16> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR2:%.*]] = bitcast <8 x i16> [[B]] to <2 x i64>
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> splat (i64 -1), <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SHUFFLE_I_I4_I:%.*]] = shufflevector <2 x i64> [[TMPVAR2]], <2 x i64> undef, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP8]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[SHUFFLE_I_I4_I:%.*]] = shufflevector <2 x i64> [[TMPVAR2]], <2 x i64> [[PARAM2]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[_MSPROP2]] to <4 x i16>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I4_I]] to <4 x i16>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = sext <4 x i16> [[TMP6]] to <4 x i32>
@@ -740,35 +744,37 @@ define <4 x i32> @saddl2_4s(<8 x i16> %a, <8 x i16> %b) nounwind  #0 {
 ; CHECK-NEXT:    ret <4 x i32> [[ADD_I]]
 ;
   %tmpvar = bitcast <8 x i16> %a to <2 x i64>
-  %shuffle.i.i.i = shufflevector <2 x i64> %tmpvar, <2 x i64> undef, <1 x i32> <i32 1>
+  %shuffle.i.i.i = shufflevector <2 x i64> %tmpvar, <2 x i64> %param1, <1 x i32> <i32 1>
   %tmpvar1 = bitcast <1 x i64> %shuffle.i.i.i to <4 x i16>
   %vmovl.i.i.i = sext <4 x i16> %tmpvar1 to <4 x i32>
   %tmpvar2 = bitcast <8 x i16> %b to <2 x i64>
-  %shuffle.i.i4.i = shufflevector <2 x i64> %tmpvar2, <2 x i64> undef, <1 x i32> <i32 1>
+  %shuffle.i.i4.i = shufflevector <2 x i64> %tmpvar2, <2 x i64> %param2, <1 x i32> <i32 1>
   %tmpvar3 = bitcast <1 x i64> %shuffle.i.i4.i to <4 x i16>
   %vmovl.i.i5.i = sext <4 x i16> %tmpvar3 to <4 x i32>
   %add.i = add <4 x i32> %vmovl.i.i.i, %vmovl.i.i5.i
   ret <4 x i32> %add.i
 }
 
-define <2 x i64> @saddl2_2d(<4 x i32> %a, <4 x i32> %b) nounwind  #0 {
+define <2 x i64> @saddl2_2d(<4 x i32> %a, <4 x i32> %b, <2 x i64> %param1, <2 x i64> %param2) nounwind  #0 {
 ; CHECK-LABEL: define <2 x i64> @saddl2_2d(
-; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i64> [[PARAM1:%.*]], <2 x i64> [[PARAM2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP:%.*]] = bitcast <4 x i32> [[A]] to <2 x i64>
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> splat (i64 -1), <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> undef, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP7]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> [[PARAM1]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I_I]] to <2 x i32>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = sext <2 x i32> [[TMP4]] to <2 x i64>
 ; CHECK-NEXT:    [[VMOVL_I_I_I:%.*]] = sext <2 x i32> [[TMPVAR1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR2:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> splat (i64 -1), <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SHUFFLE_I_I4_I:%.*]] = shufflevector <2 x i64> [[TMPVAR2]], <2 x i64> undef, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP8]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[SHUFFLE_I_I4_I:%.*]] = shufflevector <2 x i64> [[TMPVAR2]], <2 x i64> [[PARAM2]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[_MSPROP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I4_I]] to <2 x i32>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = sext <2 x i32> [[TMP6]] to <2 x i64>
@@ -779,11 +785,11 @@ define <2 x i64> @saddl2_2d(<4 x i32> %a, <4 x i32> %b) nounwind  #0 {
 ; CHECK-NEXT:    ret <2 x i64> [[ADD_I]]
 ;
   %tmpvar = bitcast <4 x i32> %a to <2 x i64>
-  %shuffle.i.i.i = shufflevector <2 x i64> %tmpvar, <2 x i64> undef, <1 x i32> <i32 1>
+  %shuffle.i.i.i = shufflevector <2 x i64> %tmpvar, <2 x i64> %param1, <1 x i32> <i32 1>
   %tmpvar1 = bitcast <1 x i64> %shuffle.i.i.i to <2 x i32>
   %vmovl.i.i.i = sext <2 x i32> %tmpvar1 to <2 x i64>
   %tmpvar2 = bitcast <4 x i32> %b to <2 x i64>
-  %shuffle.i.i4.i = shufflevector <2 x i64> %tmpvar2, <2 x i64> undef, <1 x i32> <i32 1>
+  %shuffle.i.i4.i = shufflevector <2 x i64> %tmpvar2, <2 x i64> %param2, <1 x i32> <i32 1>
   %tmpvar3 = bitcast <1 x i64> %shuffle.i.i4.i to <2 x i32>
   %vmovl.i.i5.i = sext <2 x i32> %tmpvar3 to <2 x i64>
   %add.i = add <2 x i64> %vmovl.i.i.i, %vmovl.i.i5.i
@@ -926,24 +932,26 @@ define <2 x i64> @uaddl2d(ptr %A, ptr %B) nounwind #0 {
 }
 
 
-define <8 x i16> @uaddl2_8h(<16 x i8> %a, <16 x i8> %b) nounwind  #0 {
+define <8 x i16> @uaddl2_8h(<16 x i8> %a, <16 x i8> %b, <2 x i64> %param1, <2 x i64> %param2) nounwind  #0 {
 ; CHECK-LABEL: define <8 x i16> @uaddl2_8h(
-; CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <2 x i64> [[PARAM1:%.*]], <2 x i64> [[PARAM2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP:%.*]] = bitcast <16 x i8> [[A]] to <2 x i64>
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> splat (i64 -1), <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> undef, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP7]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> [[PARAM1]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
 ; CHECK-NEXT:    [[TMPVAR1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I_I]] to <8 x i8>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = zext <8 x i8> [[TMP4]] to <8 x i16>
 ; CHECK-NEXT:    [[VMOVL_I_I_I:%.*]] = zext <8 x i8> [[TMPVAR1]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR2:%.*]] = bitcast <16 x i8> [[B]] to <2 x i64>
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> splat (i64 -1), <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SHUFFLE_I_I4_I:%.*]] = shufflevector <2 x i64> [[TMPVAR2]], <2 x i64> undef, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP8]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[SHUFFLE_I_I4_I:%.*]] = shufflevector <2 x i64> [[TMPVAR2]], <2 x i64> [[PARAM2]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[_MSPROP2]] to <8 x i8>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I4_I]] to <8 x i8>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = zext <8 x i8> [[TMP6]] to <8 x i16>
@@ -954,35 +962,37 @@ define <8 x i16> @uaddl2_8h(<16 x i8> %a, <16 x i8> %b) nounwind  #0 {
 ; CHECK-NEXT:    ret <8 x i16> [[ADD_I]]
 ;
   %tmpvar = bitcast <16 x i8> %a to <2 x i64>
-  %shuffle.i.i.i = shufflevector <2 x i64> %tmpvar, <2 x i64> undef, <1 x i32> <i32 1>
+  %shuffle.i.i.i = shufflevector <2 x i64> %tmpvar, <2 x i64> %param1, <1 x i32> <i32 1>
   %tmpvar1 = bitcast <1 x i64> %shuffle.i.i.i to <8 x i8>
   %vmovl.i.i.i = zext <8 x i8> %tmpvar1 to <8 x i16>
   %tmpvar2 = bitcast <16 x i8> %b to <2 x i64>
-  %shuffle.i.i4.i = shufflevector <2 x i64> %tmpvar2, <2 x i64> undef, <1 x i32> <i32 1>
+  %shuffle.i.i4.i = shufflevector <2 x i64> %tmpvar2, <2 x i64> %param2, <1 x i32> <i32 1>
   %tmpvar3 = bitcast <1 x i64> %shuffle.i.i4.i to <8 x i8>
   %vmovl.i.i5.i = zext <8 x i8> %tmpvar3 to <8 x i16>
   %add.i = add <8 x i16> %vmovl.i.i.i, %vmovl.i.i5.i
   ret <8 x i16> %add.i
 }
 
-define <4 x i32> @uaddl2_4s(<8 x i16> %a, <8 x i16> %b) nounwind  #0 {
+define <4 x i32> @uaddl2_4s(<8 x i16> %a, <8 x i16> %b, <2 x i64> %param1, <2 x i64> %param2) nounwind  #0 {
 ; CHECK-LABEL: define <4 x i32> @uaddl2_4s(
-; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <2 x i64> [[PARAM1:%.*]], <2 x i64> [[PARAM2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP:%.*]] = bitcast <8 x i16> [[A]] to <2 x i64>
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> splat (i64 -1), <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> undef, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP7]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> [[PARAM1]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
 ; CHECK-NEXT:    [[TMPVAR1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I_I]] to <4 x i16>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = zext <4 x i16> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    [[VMOVL_I_I_I:%.*]] = zext <4 x i16> [[TMPVAR1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i16> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR2:%.*]] = bitcast <8 x i16> [[B]] to <2 x i64>
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> splat (i64 -1), <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SHUFFLE_I_I4_I:%.*]] = shufflevector <2 x i64> [[TMPVAR2]], <2 x i64> undef, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP8]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[SHUFFLE_I_I4_I:%.*]] = shufflevector <2 x i64> [[TMPVAR2]], <2 x i64> [[PARAM2]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[_MSPROP2]] to <4 x i16>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I4_I]] to <4 x i16>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = zext <4 x i16> [[TMP6]] to <4 x i32>
@@ -993,35 +1003,37 @@ define <4 x i32> @uaddl2_4s(<8 x i16> %a, <8 x i16> %b) nounwind  #0 {
 ; CHECK-NEXT:    ret <4 x i32> [[ADD_I]]
 ;
   %tmpvar = bitcast <8 x i16> %a to <2 x i64>
-  %shuffle.i.i.i = shufflevector <2 x i64> %tmpvar, <2 x i64> undef, <1 x i32> <i32 1>
+  %shuffle.i.i.i = shufflevector <2 x i64> %tmpvar, <2 x i64> %param1, <1 x i32> <i32 1>
   %tmpvar1 = bitcast <1 x i64> %shuffle.i.i.i to <4 x i16>
   %vmovl.i.i.i = zext <4 x i16> %tmpvar1 to <4 x i32>
   %tmpvar2 = bitcast <8 x i16> %b to <2 x i64>
-  %shuffle.i.i4.i = shufflevector <2 x i64> %tmpvar2, <2 x i64> undef, <1 x i32> <i32 1>
+  %shuffle.i.i4.i = shufflevector <2 x i64> %tmpvar2, <2 x i64> %param2, <1 x i32> <i32 1>
   %tmpvar3 = bitcast <1 x i64> %shuffle.i.i4.i to <4 x i16>
   %vmovl.i.i5.i = zext <4 x i16> %tmpvar3 to <4 x i32>
   %add.i = add <4 x i32> %vmovl.i.i.i, %vmovl.i.i5.i
   ret <4 x i32> %add.i
 }
 
-define <2 x i64> @uaddl2_2d(<4 x i32> %a, <4 x i32> %b) nounwind  #0 {
+define <2 x i64> @uaddl2_2d(<4 x i32> %a, <4 x i32> %b, <2 x i64> %param1, <2 x i64> %param2) nounwind  #0 {
 ; CHECK-LABEL: define <2 x i64> @uaddl2_2d(
-; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i64> [[PARAM1:%.*]], <2 x i64> [[PARAM2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP:%.*]] = bitcast <4 x i32> [[A]] to <2 x i64>
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> splat (i64 -1), <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> undef, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP7]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <2 x i64> [[TMP]], <2 x i64> [[PARAM1]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I_I]] to <2 x i32>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = zext <2 x i32> [[TMP4]] to <2 x i64>
 ; CHECK-NEXT:    [[VMOVL_I_I_I:%.*]] = zext <2 x i32> [[TMPVAR1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR2:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> splat (i64 -1), <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SHUFFLE_I_I4_I:%.*]] = shufflevector <2 x i64> [[TMPVAR2]], <2 x i64> undef, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP8]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[SHUFFLE_I_I4_I:%.*]] = shufflevector <2 x i64> [[TMPVAR2]], <2 x i64> [[PARAM2]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[_MSPROP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I4_I]] to <2 x i32>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = zext <2 x i32> [[TMP6]] to <2 x i64>
@@ -1032,11 +1044,11 @@ define <2 x i64> @uaddl2_2d(<4 x i32> %a, <4 x i32> %b) nounwind  #0 {
 ; CHECK-NEXT:    ret <2 x i64> [[ADD_I]]
 ;
   %tmpvar = bitcast <4 x i32> %a to <2 x i64>
-  %shuffle.i.i.i = shufflevector <2 x i64> %tmpvar, <2 x i64> undef, <1 x i32> <i32 1>
+  %shuffle.i.i.i = shufflevector <2 x i64> %tmpvar, <2 x i64> %param1, <1 x i32> <i32 1>
   %tmpvar1 = bitcast <1 x i64> %shuffle.i.i.i to <2 x i32>
   %vmovl.i.i.i = zext <2 x i32> %tmpvar1 to <2 x i64>
   %tmpvar2 = bitcast <4 x i32> %b to <2 x i64>
-  %shuffle.i.i4.i = shufflevector <2 x i64> %tmpvar2, <2 x i64> undef, <1 x i32> <i32 1>
+  %shuffle.i.i4.i = shufflevector <2 x i64> %tmpvar2, <2 x i64> %param2, <1 x i32> <i32 1>
   %tmpvar3 = bitcast <1 x i64> %shuffle.i.i4.i to <2 x i32>
   %vmovl.i.i5.i = zext <2 x i32> %tmpvar3 to <2 x i64>
   %add.i = add <2 x i64> %vmovl.i.i.i, %vmovl.i.i5.i
@@ -1169,36 +1181,37 @@ define <2 x i64> @uaddw2d(ptr %A, ptr %B) nounwind #0 {
   ret <2 x i64> %tmpvar4
 }
 
-define <8 x i16> @uaddw2_8h(ptr %A, ptr %B) nounwind #0 {
+define <8 x i16> @uaddw2_8h(ptr %A, ptr %B, <16 x i8> %param1) nounwind #0 {
 ; CHECK-LABEL: define <8 x i16> @uaddw2_8h(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], <16 x i8> [[PARAM1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[TMPVAR1:%.*]] = load <8 x i16>, ptr [[A]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <8 x i16>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       8:
+; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP9:%.*]], label [[TMP13:%.*]], !prof [[PROF1]]
+; CHECK:       9:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       9:
+; CHECK:       10:
 ; CHECK-NEXT:    [[TMPVAR2:%.*]] = load <16 x i8>, ptr [[B]], align 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor i64 [[TMP10]], 193514046488576
 ; CHECK-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
 ; CHECK-NEXT:    [[_MSLD1:%.*]] = load <16 x i8>, ptr [[TMP12]], align 16
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <16 x i8> [[_MSLD1]], <16 x i8> splat (i8 -1), <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[HIGH2:%.*]] = shufflevector <16 x i8> [[TMPVAR2]], <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <16 x i8> [[_MSLD1]], <16 x i8> [[TMP3]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[HIGH2:%.*]] = shufflevector <16 x i8> [[TMPVAR2]], <16 x i8> [[PARAM1]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = zext <8 x i8> [[_MSPROP]] to <8 x i16>
 ; CHECK-NEXT:    [[EXT2:%.*]] = zext <8 x i8> [[HIGH2]] to <8 x i16>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <8 x i16> [[_MSLD]], [[_MSPROP2]]
@@ -1209,43 +1222,44 @@ define <8 x i16> @uaddw2_8h(ptr %A, ptr %B) nounwind #0 {
   %tmpvar1 = load <8 x i16>, ptr %A
 
   %tmpvar2 = load <16 x i8>, ptr %B
-  %high2 = shufflevector <16 x i8> %tmpvar2, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %high2 = shufflevector <16 x i8> %tmpvar2, <16 x i8> %param1, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %ext2 = zext <8 x i8> %high2 to <8 x i16>
 
   %res = add <8 x i16> %tmpvar1, %ext2
   ret <8 x i16> %res
 }
 
-define <4 x i32> @uaddw2_4s(ptr %A, ptr %B) nounwind #0 {
+define <4 x i32> @uaddw2_4s(ptr %A, ptr %B, <8 x i16> %param1) nounwind #0 {
 ; CHECK-LABEL: define <4 x i32> @uaddw2_4s(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], <8 x i16> [[PARAM1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[TMPVAR1:%.*]] = load <4 x i32>, ptr [[A]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <4 x i32>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       8:
+; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP9:%.*]], label [[TMP13:%.*]], !prof [[PROF1]]
+; CHECK:       9:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       9:
+; CHECK:       10:
 ; CHECK-NEXT:    [[TMPVAR2:%.*]] = load <8 x i16>, ptr [[B]], align 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor i64 [[TMP10]], 193514046488576
 ; CHECK-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
 ; CHECK-NEXT:    [[_MSLD1:%.*]] = load <8 x i16>, ptr [[TMP12]], align 16
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i16> [[_MSLD1]], <8 x i16> splat (i16 -1), <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[HIGH2:%.*]] = shufflevector <8 x i16> [[TMPVAR2]], <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i16> [[_MSLD1]], <8 x i16> [[TMP3]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[HIGH2:%.*]] = shufflevector <8 x i16> [[TMPVAR2]], <8 x i16> [[PARAM1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = zext <4 x i16> [[_MSPROP]] to <4 x i32>
 ; CHECK-NEXT:    [[EXT2:%.*]] = zext <4 x i16> [[HIGH2]] to <4 x i32>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <4 x i32> [[_MSLD]], [[_MSPROP2]]
@@ -1256,43 +1270,44 @@ define <4 x i32> @uaddw2_4s(ptr %A, ptr %B) nounwind #0 {
   %tmpvar1 = load <4 x i32>, ptr %A
 
   %tmpvar2 = load <8 x i16>, ptr %B
-  %high2 = shufflevector <8 x i16> %tmpvar2, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %high2 = shufflevector <8 x i16> %tmpvar2, <8 x i16> %param1, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %ext2 = zext <4 x i16> %high2 to <4 x i32>
 
   %res = add <4 x i32> %tmpvar1, %ext2
   ret <4 x i32> %res
 }
 
-define <2 x i64> @uaddw2_2d(ptr %A, ptr %B) nounwind #0 {
+define <2 x i64> @uaddw2_2d(ptr %A, ptr %B, <4 x i32> %param1) nounwind #0 {
 ; CHECK-LABEL: define <2 x i64> @uaddw2_2d(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], <4 x i32> [[PARAM1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[TMPVAR1:%.*]] = load <2 x i64>, ptr [[A]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i64>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       8:
+; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP9:%.*]], label [[TMP13:%.*]], !prof [[PROF1]]
+; CHECK:       9:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       9:
+; CHECK:       10:
 ; CHECK-NEXT:    [[TMPVAR2:%.*]] = load <4 x i32>, ptr [[B]], align 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor i64 [[TMP10]], 193514046488576
 ; CHECK-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
 ; CHECK-NEXT:    [[_MSLD1:%.*]] = load <4 x i32>, ptr [[TMP12]], align 16
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <4 x i32> [[_MSLD1]], <4 x i32> splat (i32 -1), <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[HIGH2:%.*]] = shufflevector <4 x i32> [[TMPVAR2]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <4 x i32> [[_MSLD1]], <4 x i32> [[TMP3]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[HIGH2:%.*]] = shufflevector <4 x i32> [[TMPVAR2]], <4 x i32> [[PARAM1]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = zext <2 x i32> [[_MSPROP]] to <2 x i64>
 ; CHECK-NEXT:    [[EXT2:%.*]] = zext <2 x i32> [[HIGH2]] to <2 x i64>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <2 x i64> [[_MSLD]], [[_MSPROP2]]
@@ -1303,7 +1318,7 @@ define <2 x i64> @uaddw2_2d(ptr %A, ptr %B) nounwind #0 {
   %tmpvar1 = load <2 x i64>, ptr %A
 
   %tmpvar2 = load <4 x i32>, ptr %B
-  %high2 = shufflevector <4 x i32> %tmpvar2, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %high2 = shufflevector <4 x i32> %tmpvar2, <4 x i32> %param1, <2 x i32> <i32 2, i32 3>
   %ext2 = zext <2 x i32> %high2 to <2 x i64>
 
   %res = add <2 x i64> %tmpvar1, %ext2
@@ -1436,36 +1451,37 @@ define <2 x i64> @saddw2d(ptr %A, ptr %B) nounwind #0 {
   ret <2 x i64> %tmpvar4
 }
 
-define <8 x i16> @saddw2_8h(ptr %A, ptr %B) nounwind #0 {
+define <8 x i16> @saddw2_8h(ptr %A, ptr %B, <16 x i8> %param1) nounwind #0 {
 ; CHECK-LABEL: define <8 x i16> @saddw2_8h(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], <16 x i8> [[PARAM1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[TMPVAR1:%.*]] = load <8 x i16>, ptr [[A]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <8 x i16>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       8:
+; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP9:%.*]], label [[TMP13:%.*]], !prof [[PROF1]]
+; CHECK:       9:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       9:
+; CHECK:       10:
 ; CHECK-NEXT:    [[TMPVAR2:%.*]] = load <16 x i8>, ptr [[B]], align 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor i64 [[TMP10]], 193514046488576
 ; CHECK-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
 ; CHECK-NEXT:    [[_MSLD1:%.*]] = load <16 x i8>, ptr [[TMP12]], align 16
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <16 x i8> [[_MSLD1]], <16 x i8> splat (i8 -1), <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[HIGH2:%.*]] = shufflevector <16 x i8> [[TMPVAR2]], <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <16 x i8> [[_MSLD1]], <16 x i8> [[TMP3]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[HIGH2:%.*]] = shufflevector <16 x i8> [[TMPVAR2]], <16 x i8> [[PARAM1]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = sext <8 x i8> [[_MSPROP]] to <8 x i16>
 ; CHECK-NEXT:    [[EXT2:%.*]] = sext <8 x i8> [[HIGH2]] to <8 x i16>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <8 x i16> [[_MSLD]], [[_MSPROP2]]
@@ -1476,43 +1492,44 @@ define <8 x i16> @saddw2_8h(ptr %A, ptr %B) nounwind #0 {
   %tmpvar1 = load <8 x i16>, ptr %A
 
   %tmpvar2 = load <16 x i8>, ptr %B
-  %high2 = shufflevector <16 x i8> %tmpvar2, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %high2 = shufflevector <16 x i8> %tmpvar2, <16 x i8> %param1, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %ext2 = sext <8 x i8> %high2 to <8 x i16>
 
   %res = add <8 x i16> %tmpvar1, %ext2
   ret <8 x i16> %res
 }
 
-define <4 x i32> @saddw2_4s(ptr %A, ptr %B) nounwind #0 {
+define <4 x i32> @saddw2_4s(ptr %A, ptr %B, <8 x i16> %param1) nounwind #0 {
 ; CHECK-LABEL: define <4 x i32> @saddw2_4s(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], <8 x i16> [[PARAM1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[TMPVAR1:%.*]] = load <4 x i32>, ptr [[A]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <4 x i32>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       8:
+; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP9:%.*]], label [[TMP13:%.*]], !prof [[PROF1]]
+; CHECK:       9:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       9:
+; CHECK:       10:
 ; CHECK-NEXT:    [[TMPVAR2:%.*]] = load <8 x i16>, ptr [[B]], align 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor i64 [[TMP10]], 193514046488576
 ; CHECK-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
 ; CHECK-NEXT:    [[_MSLD1:%.*]] = load <8 x i16>, ptr [[TMP12]], align 16
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i16> [[_MSLD1]], <8 x i16> splat (i16 -1), <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[HIGH2:%.*]] = shufflevector <8 x i16> [[TMPVAR2]], <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i16> [[_MSLD1]], <8 x i16> [[TMP3]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[HIGH2:%.*]] = shufflevector <8 x i16> [[TMPVAR2]], <8 x i16> [[PARAM1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = sext <4 x i16> [[_MSPROP]] to <4 x i32>
 ; CHECK-NEXT:    [[EXT2:%.*]] = sext <4 x i16> [[HIGH2]] to <4 x i32>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <4 x i32> [[_MSLD]], [[_MSPROP2]]
@@ -1523,43 +1540,44 @@ define <4 x i32> @saddw2_4s(ptr %A, ptr %B) nounwind #0 {
   %tmpvar1 = load <4 x i32>, ptr %A
 
   %tmpvar2 = load <8 x i16>, ptr %B
-  %high2 = shufflevector <8 x i16> %tmpvar2, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %high2 = shufflevector <8 x i16> %tmpvar2, <8 x i16> %param1, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %ext2 = sext <4 x i16> %high2 to <4 x i32>
 
   %res = add <4 x i32> %tmpvar1, %ext2
   ret <4 x i32> %res
 }
 
-define <2 x i64> @saddw2_2d(ptr %A, ptr %B) nounwind #0 {
+define <2 x i64> @saddw2_2d(ptr %A, ptr %B, <4 x i32> %param1) nounwind #0 {
 ; CHECK-LABEL: define <2 x i64> @saddw2_2d(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], <4 x i32> [[PARAM1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
+; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK:       5:
 ; CHECK-NEXT:    [[TMPVAR1:%.*]] = load <2 x i64>, ptr [[A]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i64>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       8:
+; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP9:%.*]], label [[TMP13:%.*]], !prof [[PROF1]]
+; CHECK:       9:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       9:
+; CHECK:       10:
 ; CHECK-NEXT:    [[TMPVAR2:%.*]] = load <4 x i32>, ptr [[B]], align 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor i64 [[TMP10]], 193514046488576
 ; CHECK-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
 ; CHECK-NEXT:    [[_MSLD1:%.*]] = load <4 x i32>, ptr [[TMP12]], align 16
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <4 x i32> [[_MSLD1]], <4 x i32> splat (i32 -1), <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[HIGH2:%.*]] = shufflevector <4 x i32> [[TMPVAR2]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <4 x i32> [[_MSLD1]], <4 x i32> [[TMP3]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[HIGH2:%.*]] = shufflevector <4 x i32> [[TMPVAR2]], <4 x i32> [[PARAM1]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = sext <2 x i32> [[_MSPROP]] to <2 x i64>
 ; CHECK-NEXT:    [[EXT2:%.*]] = sext <2 x i32> [[HIGH2]] to <2 x i64>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <2 x i64> [[_MSLD]], [[_MSPROP2]]
@@ -1570,7 +1588,7 @@ define <2 x i64> @saddw2_2d(ptr %A, ptr %B) nounwind #0 {
   %tmpvar1 = load <2 x i64>, ptr %A
 
   %tmpvar2 = load <4 x i32>, ptr %B
-  %high2 = shufflevector <4 x i32> %tmpvar2, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %high2 = shufflevector <4 x i32> %tmpvar2, <4 x i32> %param1, <2 x i32> <i32 2, i32 3>
   %ext2 = sext <2 x i32> %high2 to <2 x i64>
 
   %res = add <2 x i64> %tmpvar1, %ext2
@@ -2859,18 +2877,20 @@ declare <2 x float> @llvm.aarch64.neon.faddp.v2f32(<2 x float>, <2 x float>) nou
 declare <4 x float> @llvm.aarch64.neon.faddp.v4f32(<4 x float>, <4 x float>) nounwind readnone
 declare <2 x double> @llvm.aarch64.neon.faddp.v2f64(<2 x double>, <2 x double>) nounwind readnone
 
-define <2 x i64> @uaddl_duprhs(<4 x i32> %lhs, i32 %rhs) #0 {
+define <2 x i64> @uaddl_duprhs(<4 x i32> %lhs, i32 %rhs, <2 x i32> %param1, <4 x i32> %param2) #0 {
 ; CHECK-LABEL: define <2 x i64> @uaddl_duprhs(
-; CHECK-SAME: <4 x i32> [[LHS:%.*]], i32 [[RHS:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: <4 x i32> [[LHS:%.*]], i32 [[RHS:%.*]], <2 x i32> [[PARAM1:%.*]], <4 x i32> [[PARAM2:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[RHSVEC_TMP:%.*]] = insertelement <2 x i32> undef, i32 [[RHS]], i32 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[RHSVEC_TMP:%.*]] = insertelement <2 x i32> [[PARAM1]], i32 [[RHS]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i32> [[_MSPROP]], i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[RHSVEC:%.*]] = insertelement <2 x i32> [[RHSVEC_TMP]], i32 [[RHS]], i32 1
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1), <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP4]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> [[PARAM2]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = zext <2 x i32> [[_MSPROP2]] to <2 x i64>
 ; CHECK-NEXT:    [[LHS_EXT:%.*]] = zext <2 x i32> [[LHS_HIGH]] to <2 x i64>
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = zext <2 x i32> [[_MSPROP1]] to <2 x i64>
@@ -2880,10 +2900,10 @@ define <2 x i64> @uaddl_duprhs(<4 x i32> %lhs, i32 %rhs) #0 {
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
-  %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
+  %rhsvec.tmp = insertelement <2 x i32> %param1, i32 %rhs, i32 0
   %rhsvec = insertelement <2 x i32> %rhsvec.tmp, i32 %rhs, i32 1
 
-  %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> %param2, <2 x i32> <i32 0, i32 1>
 
   %lhs.ext = zext <2 x i32> %lhs.high to <2 x i64>
   %rhs.ext = zext <2 x i32> %rhsvec to <2 x i64>
@@ -2892,18 +2912,20 @@ define <2 x i64> @uaddl_duprhs(<4 x i32> %lhs, i32 %rhs) #0 {
   ret <2 x i64> %res
 }
 
-define <2 x i64> @uaddl2_duprhs(<4 x i32> %lhs, i32 %rhs) #0 {
+define <2 x i64> @uaddl2_duprhs(<4 x i32> %lhs, i32 %rhs, <2 x i32> %param1, <4 x i32> %param2) #0 {
 ; CHECK-LABEL: define <2 x i64> @uaddl2_duprhs(
-; CHECK-SAME: <4 x i32> [[LHS:%.*]], i32 [[RHS:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: <4 x i32> [[LHS:%.*]], i32 [[RHS:%.*]], <2 x i32> [[PARAM1:%.*]], <4 x i32> [[PARAM2:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[RHSVEC_TMP:%.*]] = insertelement <2 x i32> undef, i32 [[RHS]], i32 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[RHSVEC_TMP:%.*]] = insertelement <2 x i32> [[PARAM1]], i32 [[RHS]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i32> [[_MSPROP]], i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[RHSVEC:%.*]] = insertelement <2 x i32> [[RHSVEC_TMP]], i32 [[RHS]], i32 1
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1), <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP4]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> [[PARAM2]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = zext <2 x i32> [[_MSPROP2]] to <2 x i64>
 ; CHECK-NEXT:    [[LHS_EXT:%.*]] = zext <2 x i32> [[LHS_HIGH]] to <2 x i64>
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = zext <2 x i32> [[_MSPROP1]] to <2 x i64>
@@ -2913,10 +2935,10 @@ define <2 x i64> @uaddl2_duprhs(<4 x i32> %lhs, i32 %rhs) #0 {
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
-  %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
+  %rhsvec.tmp = insertelement <2 x i32> %param1, i32 %rhs, i32 0
   %rhsvec = insertelement <2 x i32> %rhsvec.tmp, i32 %rhs, i32 1
 
-  %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> %param2, <2 x i32> <i32 2, i32 3>
 
   %lhs.ext = zext <2 x i32> %lhs.high to <2 x i64>
   %rhs.ext = zext <2 x i32> %rhsvec to <2 x i64>
@@ -2925,18 +2947,20 @@ define <2 x i64> @uaddl2_duprhs(<4 x i32> %lhs, i32 %rhs) #0 {
   ret <2 x i64> %res
 }
 
-define <2 x i64> @saddl_duplhs(i32 %lhs, <4 x i32> %rhs) #0 {
+define <2 x i64> @saddl_duplhs(i32 %lhs, <4 x i32> %rhs, <2 x i32> %param1, <4 x i32> %param2) #0 {
 ; CHECK-LABEL: define <2 x i64> @saddl_duplhs(
-; CHECK-SAME: i32 [[LHS:%.*]], <4 x i32> [[RHS:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: i32 [[LHS:%.*]], <4 x i32> [[RHS:%.*]], <2 x i32> [[PARAM1:%.*]], <4 x i32> [[PARAM2:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[LHSVEC_TMP:%.*]] = insertelement <2 x i32> undef, i32 [[LHS]], i32 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[LHSVEC_TMP:%.*]] = insertelement <2 x i32> [[PARAM1]], i32 [[LHS]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i32> [[_MSPROP]], i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[LHSVEC:%.*]] = insertelement <2 x i32> [[LHSVEC_TMP]], i32 [[LHS]], i32 1
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1), <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP4]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> [[PARAM2]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = sext <2 x i32> [[_MSPROP1]] to <2 x i64>
 ; CHECK-NEXT:    [[LHS_EXT:%.*]] = sext <2 x i32> [[LHSVEC]] to <2 x i64>
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = sext <2 x i32> [[_MSPROP2]] to <2 x i64>
@@ -2946,10 +2970,10 @@ define <2 x i64> @saddl_duplhs(i32 %lhs, <4 x i32> %rhs) #0 {
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
-  %lhsvec.tmp = insertelement <2 x i32> undef, i32 %lhs, i32 0
+  %lhsvec.tmp = insertelement <2 x i32> %param1, i32 %lhs, i32 0
   %lhsvec = insertelement <2 x i32> %lhsvec.tmp, i32 %lhs, i32 1
 
-  %rhs.high = shufflevector <4 x i32> %rhs, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %rhs.high = shufflevector <4 x i32> %rhs, <4 x i32> %param2, <2 x i32> <i32 0, i32 1>
 
   %lhs.ext = sext <2 x i32> %lhsvec to <2 x i64>
   %rhs.ext = sext <2 x i32> %rhs.high to <2 x i64>
@@ -2958,18 +2982,20 @@ define <2 x i64> @saddl_duplhs(i32 %lhs, <4 x i32> %rhs) #0 {
   ret <2 x i64> %res
 }
 
-define <2 x i64> @saddl2_duplhs(i32 %lhs, <4 x i32> %rhs) #0 {
+define <2 x i64> @saddl2_duplhs(i32 %lhs, <4 x i32> %rhs, <2 x i32> %param1, <4 x i32> %param2) #0 {
 ; CHECK-LABEL: define <2 x i64> @saddl2_duplhs(
-; CHECK-SAME: i32 [[LHS:%.*]], <4 x i32> [[RHS:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: i32 [[LHS:%.*]], <4 x i32> [[RHS:%.*]], <2 x i32> [[PARAM1:%.*]], <4 x i32> [[PARAM2:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[LHSVEC_TMP:%.*]] = insertelement <2 x i32> undef, i32 [[LHS]], i32 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[LHSVEC_TMP:%.*]] = insertelement <2 x i32> [[PARAM1]], i32 [[LHS]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i32> [[_MSPROP]], i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[LHSVEC:%.*]] = insertelement <2 x i32> [[LHSVEC_TMP]], i32 [[LHS]], i32 1
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1), <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP4]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> [[PARAM2]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = sext <2 x i32> [[_MSPROP1]] to <2 x i64>
 ; CHECK-NEXT:    [[LHS_EXT:%.*]] = sext <2 x i32> [[LHSVEC]] to <2 x i64>
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = sext <2 x i32> [[_MSPROP2]] to <2 x i64>
@@ -2979,10 +3005,10 @@ define <2 x i64> @saddl2_duplhs(i32 %lhs, <4 x i32> %rhs) #0 {
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
-  %lhsvec.tmp = insertelement <2 x i32> undef, i32 %lhs, i32 0
+  %lhsvec.tmp = insertelement <2 x i32> %param1, i32 %lhs, i32 0
   %lhsvec = insertelement <2 x i32> %lhsvec.tmp, i32 %lhs, i32 1
 
-  %rhs.high = shufflevector <4 x i32> %rhs, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %rhs.high = shufflevector <4 x i32> %rhs, <4 x i32> %param2, <2 x i32> <i32 2, i32 3>
 
   %lhs.ext = sext <2 x i32> %lhsvec to <2 x i64>
   %rhs.ext = sext <2 x i32> %rhs.high to <2 x i64>
@@ -2991,18 +3017,20 @@ define <2 x i64> @saddl2_duplhs(i32 %lhs, <4 x i32> %rhs) #0 {
   ret <2 x i64> %res
 }
 
-define <2 x i64> @usubl_duprhs(<4 x i32> %lhs, i32 %rhs) #0 {
+define <2 x i64> @usubl_duprhs(<4 x i32> %lhs, i32 %rhs, <2 x i32> %param1, <4 x i32> %param2) #0 {
 ; CHECK-LABEL: define <2 x i64> @usubl_duprhs(
-; CHECK-SAME: <4 x i32> [[LHS:%.*]], i32 [[RHS:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: <4 x i32> [[LHS:%.*]], i32 [[RHS:%.*]], <2 x i32> [[PARAM1:%.*]], <4 x i32> [[PARAM2:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[RHSVEC_TMP:%.*]] = insertelement <2 x i32> undef, i32 [[RHS]], i32 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[RHSVEC_TMP:%.*]] = insertelement <2 x i32> [[PARAM1]], i32 [[RHS]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i32> [[_MSPROP]], i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[RHSVEC:%.*]] = insertelement <2 x i32> [[RHSVEC_TMP]], i32 [[RHS]], i32 1
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1), <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP4]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> [[PARAM2]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = zext <2 x i32> [[_MSPROP2]] to <2 x i64>
 ; CHECK-NEXT:    [[LHS_EXT:%.*]] = zext <2 x i32> [[LHS_HIGH]] to <2 x i64>
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = zext <2 x i32> [[_MSPROP1]] to <2 x i64>
@@ -3012,10 +3040,10 @@ define <2 x i64> @usubl_duprhs(<4 x i32> %lhs, i32 %rhs) #0 {
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
-  %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
+  %rhsvec.tmp = insertelement <2 x i32> %param1, i32 %rhs, i32 0
   %rhsvec = insertelement <2 x i32> %rhsvec.tmp, i32 %rhs, i32 1
 
-  %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> %param2, <2 x i32> <i32 0, i32 1>
 
   %lhs.ext = zext <2 x i32> %lhs.high to <2 x i64>
   %rhs.ext = zext <2 x i32> %rhsvec to <2 x i64>
@@ -3024,18 +3052,20 @@ define <2 x i64> @usubl_duprhs(<4 x i32> %lhs, i32 %rhs) #0 {
   ret <2 x i64> %res
 }
 
-define <2 x i64> @usubl2_duprhs(<4 x i32> %lhs, i32 %rhs) #0 {
+define <2 x i64> @usubl2_duprhs(<4 x i32> %lhs, i32 %rhs, <2 x i32> %param1, <4 x i32> %param2) #0 {
 ; CHECK-LABEL: define <2 x i64> @usubl2_duprhs(
-; CHECK-SAME: <4 x i32> [[LHS:%.*]], i32 [[RHS:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: <4 x i32> [[LHS:%.*]], i32 [[RHS:%.*]], <2 x i32> [[PARAM1:%.*]], <4 x i32> [[PARAM2:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[RHSVEC_TMP:%.*]] = insertelement <2 x i32> undef, i32 [[RHS]], i32 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[RHSVEC_TMP:%.*]] = insertelement <2 x i32> [[PARAM1]], i32 [[RHS]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i32> [[_MSPROP]], i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[RHSVEC:%.*]] = insertelement <2 x i32> [[RHSVEC_TMP]], i32 [[RHS]], i32 1
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1), <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP4]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> [[PARAM2]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = zext <2 x i32> [[_MSPROP2]] to <2 x i64>
 ; CHECK-NEXT:    [[LHS_EXT:%.*]] = zext <2 x i32> [[LHS_HIGH]] to <2 x i64>
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = zext <2 x i32> [[_MSPROP1]] to <2 x i64>
@@ -3045,10 +3075,10 @@ define <2 x i64> @usubl2_duprhs(<4 x i32> %lhs, i32 %rhs) #0 {
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
-  %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
+  %rhsvec.tmp = insertelement <2 x i32> %param1, i32 %rhs, i32 0
   %rhsvec = insertelement <2 x i32> %rhsvec.tmp, i32 %rhs, i32 1
 
-  %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> %param2, <2 x i32> <i32 2, i32 3>
 
   %lhs.ext = zext <2 x i32> %lhs.high to <2 x i64>
   %rhs.ext = zext <2 x i32> %rhsvec to <2 x i64>
@@ -3057,18 +3087,20 @@ define <2 x i64> @usubl2_duprhs(<4 x i32> %lhs, i32 %rhs) #0 {
   ret <2 x i64> %res
 }
 
-define <2 x i64> @ssubl_duplhs(i32 %lhs, <4 x i32> %rhs) #0 {
+define <2 x i64> @ssubl_duplhs(i32 %lhs, <4 x i32> %rhs, <2 x i32> %param1, <4 x i32> %param2) #0 {
 ; CHECK-LABEL: define <2 x i64> @ssubl_duplhs(
-; CHECK-SAME: i32 [[LHS:%.*]], <4 x i32> [[RHS:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: i32 [[LHS:%.*]], <4 x i32> [[RHS:%.*]], <2 x i32> [[PARAM1:%.*]], <4 x i32> [[PARAM2:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[LHSVEC_TMP:%.*]] = insertelement <2 x i32> undef, i32 [[LHS]], i32 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[LHSVEC_TMP:%.*]] = insertelement <2 x i32> [[PARAM1]], i32 [[LHS]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i32> [[_MSPROP]], i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[LHSVEC:%.*]] = insertelement <2 x i32> [[LHSVEC_TMP]], i32 [[LHS]], i32 1
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1), <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP4]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> [[PARAM2]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = sext <2 x i32> [[_MSPROP1]] to <2 x i64>
 ; CHECK-NEXT:    [[LHS_EXT:%.*]] = sext <2 x i32> [[LHSVEC]] to <2 x i64>
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = sext <2 x i32> [[_MSPROP2]] to <2 x i64>
@@ -3078,10 +3110,10 @@ define <2 x i64> @ssubl_duplhs(i32 %lhs, <4 x i32> %rhs) #0 {
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
-  %lhsvec.tmp = insertelement <2 x i32> undef, i32 %lhs, i32 0
+  %lhsvec.tmp = insertelement <2 x i32> %param1, i32 %lhs, i32 0
   %lhsvec = insertelement <2 x i32> %lhsvec.tmp, i32 %lhs, i32 1
 
-  %rhs.high = shufflevector <4 x i32> %rhs, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %rhs.high = shufflevector <4 x i32> %rhs, <4 x i32> %param2, <2 x i32> <i32 0, i32 1>
 
   %lhs.ext = sext <2 x i32> %lhsvec to <2 x i64>
   %rhs.ext = sext <2 x i32> %rhs.high to <2 x i64>
@@ -3090,18 +3122,20 @@ define <2 x i64> @ssubl_duplhs(i32 %lhs, <4 x i32> %rhs) #0 {
   ret <2 x i64> %res
 }
 
-define <2 x i64> @ssubl2_duplhs(i32 %lhs, <4 x i32> %rhs) #0 {
+define <2 x i64> @ssubl2_duplhs(i32 %lhs, <4 x i32> %rhs, <2 x i32> %param1, <4 x i32> %param2) #0 {
 ; CHECK-LABEL: define <2 x i64> @ssubl2_duplhs(
-; CHECK-SAME: i32 [[LHS:%.*]], <4 x i32> [[RHS:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: i32 [[LHS:%.*]], <4 x i32> [[RHS:%.*]], <2 x i32> [[PARAM1:%.*]], <4 x i32> [[PARAM2:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[LHSVEC_TMP:%.*]] = insertelement <2 x i32> undef, i32 [[LHS]], i32 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[LHSVEC_TMP:%.*]] = insertelement <2 x i32> [[PARAM1]], i32 [[LHS]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i32> [[_MSPROP]], i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[LHSVEC:%.*]] = insertelement <2 x i32> [[LHSVEC_TMP]], i32 [[LHS]], i32 1
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1), <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP4]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> [[PARAM2]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = sext <2 x i32> [[_MSPROP1]] to <2 x i64>
 ; CHECK-NEXT:    [[LHS_EXT:%.*]] = sext <2 x i32> [[LHSVEC]] to <2 x i64>
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = sext <2 x i32> [[_MSPROP2]] to <2 x i64>
@@ -3111,10 +3145,10 @@ define <2 x i64> @ssubl2_duplhs(i32 %lhs, <4 x i32> %rhs) #0 {
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
-  %lhsvec.tmp = insertelement <2 x i32> undef, i32 %lhs, i32 0
+  %lhsvec.tmp = insertelement <2 x i32> %param1, i32 %lhs, i32 0
   %lhsvec = insertelement <2 x i32> %lhsvec.tmp, i32 %lhs, i32 1
 
-  %rhs.high = shufflevector <4 x i32> %rhs, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %rhs.high = shufflevector <4 x i32> %rhs, <4 x i32> %param2, <2 x i32> <i32 2, i32 3>
 
   %lhs.ext = sext <2 x i32> %lhsvec to <2 x i64>
   %rhs.ext = sext <2 x i32> %rhs.high to <2 x i64>
