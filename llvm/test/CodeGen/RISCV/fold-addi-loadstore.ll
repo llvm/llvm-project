@@ -1205,12 +1205,11 @@ define i32 @crash() {
 ;
 ; RV64I-LARGE-LABEL: crash:
 ; RV64I-LARGE:       # %bb.0: # %entry
-; RV64I-LARGE-NEXT:    li a0, 1
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi15:
-; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.LCPI21_0)
-; RV64I-LARGE-NEXT:    ld a1, %pcrel_lo(.Lpcrel_hi15)(a1)
-; RV64I-LARGE-NEXT:    add a0, a1, a0
-; RV64I-LARGE-NEXT:    lbu a0, 400(a0)
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI21_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi15)(a0)
+; RV64I-LARGE-NEXT:    add a0, a0, zero
+; RV64I-LARGE-NEXT:    lbu a0, 401(a0)
 ; RV64I-LARGE-NEXT:    seqz a0, a0
 ; RV64I-LARGE-NEXT:    sw a0, 0(zero)
 ; RV64I-LARGE-NEXT:    li a0, 0
