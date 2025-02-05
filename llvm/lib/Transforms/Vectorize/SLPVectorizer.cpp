@@ -7659,32 +7659,38 @@ buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
 }
 
 /// Calculates the costs of vectorized intrinsic (if possible) and vectorized
-/// function (if possible) calls.
+/// function (if possible) calls. Returns invalid cost for the corresponding
+/// calls, if they cannot be vectorized/will be scalarized.
 static std::pair<InstructionCost, InstructionCost>
 getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
                    TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
                    ArrayRef<Type *> ArgTys) {
-  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-
-  // Calculate the cost of the scalar and vector calls.
-  FastMathFlags FMF;
-  if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
-    FMF = FPCI->getFastMathFlags();
-  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF);
-  auto IntrinsicCost =
-    TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
-
   auto Shape = VFShape::get(CI->getFunctionType(),
                             ElementCount::getFixed(VecTy->getNumElements()),
                             false /*HasGlobalPred*/);
   Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
-  auto LibCost = IntrinsicCost;
+  auto LibCost = InstructionCost::getInvalid();
   if (!CI->isNoBuiltin() && VecFunc) {
     // Calculate the cost of the vector library call.
     // If the corresponding vector call is cheaper, return its cost.
     LibCost =
         TTI->getCallInstrCost(nullptr, VecTy, ArgTys, TTI::TCK_RecipThroughput);
   }
+  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+
+  // Calculate the cost of the vector intrinsic call.
+  FastMathFlags FMF;
+  if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
+    FMF = FPCI->getFastMathFlags();
+  const InstructionCost ScalarLimit = 10000;
+  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF, nullptr,
+                                    LibCost.isValid() ? LibCost : ScalarLimit);
+  auto IntrinsicCost =
+      TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
+  if ((LibCost.isValid() && IntrinsicCost > LibCost) ||
+      (!LibCost.isValid() && IntrinsicCost > ScalarLimit))
+    IntrinsicCost = InstructionCost::getInvalid();
+
   return {IntrinsicCost, LibCost};
 }
 
@@ -8028,6 +8034,12 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         return TreeEntry::NeedToGather;
       }
     }
+    SmallVector<Type *> ArgTys =
+        buildIntrinsicArgTypes(CI, ID, VL.size(), 0, TTI);
+    auto *VecTy = getWidenedType(S.getMainOp()->getType(), VL.size());
+    auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys);
+    if (!VecCallCosts.first.isValid() && !VecCallCosts.second.isValid())
+      return TreeEntry::NeedToGather;
 
     return TreeEntry::Vectorize;
   }
