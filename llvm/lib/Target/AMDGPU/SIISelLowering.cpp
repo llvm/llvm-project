@@ -8790,11 +8790,28 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                              AMDGPUFunctionArgInfo::LDS_KERNEL_ID);
   }
   case Intrinsic::amdgcn_workitem_id_x:
-    return lowerWorkitemID(DAG, Op, 0, MFI->getArgInfo().WorkItemIDX);
+    if (!MFI->getArgInfo().WorkItemIDX) {
+      // It's undefined behavior if a function marked with the amdgpu-no-*
+      // attributes uses the corresponding intrinsic.
+      return DAG.getConstant(0, SDLoc(Op),
+                             EVT::getIntegerVT(*DAG.getContext(), 32));
+    } else {
+      return lowerWorkitemID(DAG, Op, 0, MFI->getArgInfo().WorkItemIDX);
+    }
   case Intrinsic::amdgcn_workitem_id_y:
-    return lowerWorkitemID(DAG, Op, 1, MFI->getArgInfo().WorkItemIDY);
+    if (!MFI->getArgInfo().WorkItemIDY) {
+      return DAG.getConstant(0, SDLoc(Op),
+                             EVT::getIntegerVT(*DAG.getContext(), 32));
+    } else {
+      return lowerWorkitemID(DAG, Op, 1, MFI->getArgInfo().WorkItemIDY);
+    }
   case Intrinsic::amdgcn_workitem_id_z:
-    return lowerWorkitemID(DAG, Op, 2, MFI->getArgInfo().WorkItemIDZ);
+    if (!MFI->getArgInfo().WorkItemIDZ) {
+      return DAG.getConstant(0, SDLoc(Op),
+                             EVT::getIntegerVT(*DAG.getContext(), 32));
+    } else {
+      return lowerWorkitemID(DAG, Op, 2, MFI->getArgInfo().WorkItemIDZ);
+    }
   case Intrinsic::amdgcn_wavefrontsize:
     return DAG.getConstant(MF.getSubtarget<GCNSubtarget>().getWavefrontSize(),
                            SDLoc(Op), MVT::i32);
