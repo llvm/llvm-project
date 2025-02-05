@@ -1843,7 +1843,7 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
   Record.AddTemplateArgumentList(&D->getTemplateArgs());
   Record.AddSourceLocation(D->getPointOfInstantiation());
   Record.push_back(D->getSpecializationKind());
-  Record.push_back(D->hasMatchedPackOnParmToNonPackOnArg());
+  Record.push_back(D->hasStrictPackMatch());
   Record.push_back(D->isCanonicalDecl());
 
   if (D->isCanonicalDecl()) {
