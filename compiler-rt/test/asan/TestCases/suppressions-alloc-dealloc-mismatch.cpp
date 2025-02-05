@@ -12,6 +12,7 @@
 // FIXME: atos does not work for inlined functions, yet llvm-symbolizer
 // does not always work with debug info on Darwin.
 // UNSUPPORTED: darwin
+// UNSUPPORTED: target={{.*windows-msvc.*}} && asan-32-bits
 
 #include <stdio.h>
 #include <stdlib.h>
