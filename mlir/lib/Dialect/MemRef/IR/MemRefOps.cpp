@@ -825,29 +825,33 @@ struct FoldSelfCopy : public OpRewritePattern<CopyOp> {
   LogicalResult matchAndRewrite(CopyOp copyOp,
                                 PatternRewriter &rewriter) const override {
     if (copyOp.getSource() != copyOp.getTarget()) {
-      // If the source and target are SubViews and they are identical, we can fold.
+      // If the source and target are SubViews and they are identical, we can
+      // fold.
       auto source = copyOp.getSource().getDefiningOp<SubViewOp>();
       auto target = copyOp.getTarget().getDefiningOp<SubViewOp>();
-      if (!source || !target ||
-          source.getSource() != target.getSource() ||
+      if (!source || !target || source.getSource() != target.getSource() ||
           llvm::any_of(llvm::zip(source.getOffsets(), target.getOffsets()),
-                    [](std::tuple<Value, Value> offsetPair) {
-                      return std::get<0>(offsetPair) != std::get<1>(offsetPair);
-                    }) ||
-          llvm::any_of(llvm::zip(source.getStaticOffsets(), target.getStaticOffsets()),
-                    [](std::tuple<int64_t, int64_t> offsetPair) {
-                      return std::get<0>(offsetPair) != std::get<1>(offsetPair);
-                    }) ||
+                       [](std::tuple<Value, Value> offsetPair) {
+                         return std::get<0>(offsetPair) !=
+                                std::get<1>(offsetPair);
+                       }) ||
+          llvm::any_of(
+              llvm::zip(source.getStaticOffsets(), target.getStaticOffsets()),
+              [](std::tuple<int64_t, int64_t> offsetPair) {
+                return std::get<0>(offsetPair) != std::get<1>(offsetPair);
+              }) ||
           // sizes must be the same anyway
           llvm::any_of(llvm::zip(source.getStrides(), target.getStrides()),
-                    [](std::tuple<Value, Value> stridePair) {
-                      return std::get<0>(stridePair) != std::get<1>(stridePair);
-                    }) ||
-          llvm::any_of(llvm::zip(source.getStaticStrides(), target.getStaticStrides()),
-                    [](std::tuple<int64_t, int64_t> stridePair) {
-                      return std::get<0>(stridePair) != std::get<1>(stridePair);
-                    })) {
-          return failure();
+                       [](std::tuple<Value, Value> stridePair) {
+                         return std::get<0>(stridePair) !=
+                                std::get<1>(stridePair);
+                       }) ||
+          llvm::any_of(
+              llvm::zip(source.getStaticStrides(), target.getStaticStrides()),
+              [](std::tuple<int64_t, int64_t> stridePair) {
+                return std::get<0>(stridePair) != std::get<1>(stridePair);
+              })) {
+        return failure();
       }
     }
 
