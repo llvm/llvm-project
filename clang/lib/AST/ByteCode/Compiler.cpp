@@ -5604,6 +5604,22 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
 
       if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr))
         return false;
+
+      // Mark all chain links as initialized.
+      unsigned InitFieldOffset = 0;
+      for (const NamedDecl *ND : IFD->chain().drop_back()) {
+        const auto *FD = cast<FieldDecl>(ND);
+        const Record *FieldRecord = this->P.getOrCreateRecord(FD->getParent());
+        assert(FieldRecord);
+        NestedField = FieldRecord->getField(FD);
+        InitFieldOffset += NestedField->Offset;
+        assert(NestedField);
+        if (!this->emitGetPtrThisField(InitFieldOffset, InitExpr))
+          return false;
+        if (!this->emitFinishInitPop(InitExpr))
+          return false;
+      }
+
     } else {
       assert(Init->isDelegatingInitializer());
       if (!this->emitThis(InitExpr))
