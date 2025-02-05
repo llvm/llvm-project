@@ -10363,7 +10363,8 @@ bool ASTContext::areLaxCompatibleSveTypes(QualType FirstType,
 /// getRVVTypeSize - Return RVV vector register size.
 static uint64_t getRVVTypeSize(ASTContext &Context, const BuiltinType *Ty) {
   assert(Ty->isRVVVLSBuiltinType() && "Invalid RVV Type");
-  auto VScale = Context.getTargetInfo().getVScaleRange(Context.getLangOpts());
+  auto VScale =
+      Context.getTargetInfo().getVScaleRange(Context.getLangOpts(), false);
   if (!VScale)
     return 0;
 
@@ -12841,11 +12842,12 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
 
   // Likewise, variables with tuple-like bindings are required if their
   // bindings have side-effects.
-  if (const auto *DD = dyn_cast<DecompositionDecl>(VD))
-    for (const auto *BD : DD->bindings())
+  if (const auto *DD = dyn_cast<DecompositionDecl>(VD)) {
+    for (const auto *BD : DD->flat_bindings())
       if (const auto *BindingVD = BD->getHoldingVar())
         if (DeclMustBeEmitted(BindingVD))
           return true;
+  }
 
   return false;
 }

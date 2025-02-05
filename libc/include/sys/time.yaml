@@ -2,7 +2,8 @@ header: sys/time.h
 header_template: time.h.def
 standards: Linux
 macros: []
-types: []
+types:
+  - type_name: struct_timeval
 enums: []
 functions: []
 objects: []

@@ -656,6 +656,9 @@ public:
     return getOS() == Triple::Win32;
   }
 
+  /// Tests whether the OS is Windows or UEFI.
+  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
+
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
     return isOSWindows() && getEnvironment() == Triple::MSVC;
@@ -1120,9 +1123,10 @@ public:
            isWindowsCygwinEnvironment() || isOHOSFamily();
   }
 
-  /// True if the target supports both general-dynamic and TLSDESC, and TLSDESC
-  /// is enabled by default.
-  bool hasDefaultTLSDESC() const { return isAndroid() && isRISCV64(); }
+  /// True if the target uses TLSDESC by default.
+  bool hasDefaultTLSDESC() const {
+    return isAArch64() || (isAndroid() && isRISCV64()) || isOSFuchsia();
+  }
 
   /// Tests whether the target uses -data-sections as default.
   bool hasDefaultDataSections() const {

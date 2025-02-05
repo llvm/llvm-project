@@ -1027,9 +1027,9 @@ def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
    return CurDAG->isADDLike(SDValue(N,0));
 }]> {
   let GISelPredicateCode = [{
-     // Only handle G_ADD for now. FIXME. build capability to compute whether
-     // operands of G_OR have common bits set or not.
-     return MI.getOpcode() == TargetOpcode::G_ADD;
+     return MI.getOpcode() == TargetOpcode::G_ADD ||
+            (MI.getOpcode() == TargetOpcode::G_OR &&
+             MI.getFlag(MachineInstr::MIFlag::Disjoint));
   }];
 }
 
@@ -1773,7 +1773,12 @@ def : InstAlias<"xpaclri", (XPACLRI), 0>;
 
 let Uses = [LR, SP], Defs = [LR] in {
 // Insertion point of LR signing code.
-def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
+def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
+  // When using PAuthLR, the address of one of the instructions this expands
+  // into is used as an input to the signature calculation, so this must not be
+  // duplicated.
+  let isNotDuplicable = 1;
+}
 // Insertion point of LR authentication code.
 // The RET terminator of the containing machine basic block may be replaced
 // with a combined RETA(A|B) instruction when rewriting this Pseudo.

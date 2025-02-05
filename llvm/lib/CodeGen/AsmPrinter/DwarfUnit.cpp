@@ -849,9 +849,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   }
 }
 
-DIE *DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
-  // Args[0] is the return type.
-  DIE *ObjectPointer = nullptr;
+void DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
   for (unsigned i = 1, N = Args.size(); i < N; ++i) {
     const DIType *Ty = Args[i];
     if (!Ty) {
@@ -862,14 +860,8 @@ DIE *DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
       addType(Arg, Ty);
       if (Ty->isArtificial())
         addFlag(Arg, dwarf::DW_AT_artificial);
-      if (Ty->isObjectPointer()) {
-        assert(!ObjectPointer && "Can't have more than one object pointer");
-        ObjectPointer = &Arg;
-      }
     }
   }
-
-  return ObjectPointer;
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy) {
@@ -1366,8 +1358,7 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
     // Add arguments. Do not add arguments for subprogram definition. They will
     // be handled while processing variables.
-    if (auto *ObjectPointer = constructSubprogramArguments(SPDie, Args))
-      addDIEEntry(SPDie, dwarf::DW_AT_object_pointer, *ObjectPointer);
+    constructSubprogramArguments(SPDie, Args);
   }
 
   addThrownTypes(SPDie, SP->getThrownTypes());
