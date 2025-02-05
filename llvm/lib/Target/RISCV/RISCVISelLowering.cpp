@@ -10979,6 +10979,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   MVT VecVT = Op.getSimpleValueType();
 
   const unsigned Factor = Op->getNumValues();
+  assert(Factor <= 8);
 
   // 1 bit element vectors need to be widened to e8
   if (VecVT.getVectorElementType() == MVT::i1)
@@ -11140,6 +11141,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   MVT VecVT = Op.getSimpleValueType();
 
   const unsigned Factor = Op.getNumOperands();
+  assert(Factor <= 8);
 
   // i1 vectors need to be widened to i8
   if (VecVT.getVectorElementType() == MVT::i1)

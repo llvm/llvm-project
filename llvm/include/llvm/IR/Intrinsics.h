@@ -162,6 +162,8 @@ namespace Intrinsic {
       AArch64Svcount,
     } Kind;
 
+    static_assert(OneFifthVecArgument == OneThirdVecArgument + 1 &&
+                  OneSeventhVecArgument == OneFifthVecArgument + 1);
     union {
       unsigned Integer_Width;
       unsigned Float_Width;
