@@ -218,7 +218,8 @@ struct DAP {
   ///
   /// Errors in this operation will be printed to the log file and the IDE's
   /// console output as well.
-  llvm::Error ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr);
+  llvm::Error ConfigureIO(std::FILE *overrideOut = nullptr,
+                          std::FILE *overrideErr = nullptr);
 
   /// Stop the redirected IO threads and associated pipes.
   void StopIO();
@@ -305,6 +306,15 @@ struct DAP {
 
   PacketStatus GetNextObject(llvm::json::Object &object);
   bool HandleObject(const llvm::json::Object &object);
+
+  /// Disconnect the DAP session.
+  lldb::SBError Disconnect();
+
+  /// Disconnect the DAP session and optionally terminate the debuggee.
+  lldb::SBError Disconnect(bool terminateDebuggee);
+
+  /// Send a "terminated" event to indicate the process is done being debugged.
+  void SendTerminatedEvent();
 
   llvm::Error Loop();
 

@@ -75,3 +75,34 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         server = self.start_server(connection="unix://" + name)
         self.run_debug_session(server.connection, "Alice")
         self.run_debug_session(server.connection, "Bob")
+
+    @skipIfWindows
+    def test_server_interrupt(self):
+        """
+        Test launching a binary with lldb-dap in server mode and shutting down the server while the debug session is still active.
+        """
+        self.build()
+        server = self.start_server(connection="tcp://localhost:0")
+        self.dap_server = dap_server.DebugAdaptorServer(
+            connection=server.connection,
+        )
+        program = self.getBuildArtifact("a.out")
+        source = "main.c"
+        breakpoint_line = line_number(source, "// breakpoint")
+
+        self.launch(
+            program,
+            args=["Alice"],
+            disconnectAutomatically=False,
+        )
+        self.set_source_breakpoints(source, [breakpoint_line])
+        self.continue_to_next_stop()
+
+        # Interrupt the server which should disconnect all clients.
+        server.process.send_signal(signal.SIGINT)
+
+        self.dap_server.wait_for_terminated()
+        self.assertIsNone(
+            self.dap_server.exit_status,
+            "Process exited before interrupting lldb-dap server",
+        )

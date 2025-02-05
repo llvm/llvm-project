@@ -795,6 +795,57 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
   return false;
 }
 
+void DAP::SendTerminatedEvent() {
+  // Prevent races if the process exits while we're being asked to disconnect.
+  llvm::call_once(terminated_event_flag, [&] {
+    RunTerminateCommands();
+    // Send a "terminated" event
+    llvm::json::Object event(CreateTerminatedEventObject(target));
+    SendJSON(llvm::json::Value(std::move(event)));
+  });
+}
+
+lldb::SBError DAP::Disconnect() { return Disconnect(is_attach); }
+
+lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
+  lldb::SBError error;
+  lldb::SBProcess process = target.GetProcess();
+  auto state = process.GetState();
+  switch (state) {
+  case lldb::eStateInvalid:
+  case lldb::eStateUnloaded:
+  case lldb::eStateDetached:
+  case lldb::eStateExited:
+    break;
+  case lldb::eStateConnected:
+  case lldb::eStateAttaching:
+  case lldb::eStateLaunching:
+  case lldb::eStateStepping:
+  case lldb::eStateCrashed:
+  case lldb::eStateSuspended:
+  case lldb::eStateStopped:
+  case lldb::eStateRunning:
+    debugger.SetAsync(false);
+    error = terminateDebuggee ? process.Kill() : process.Detach();
+    debugger.SetAsync(true);
+    break;
+  }
+  SendTerminatedEvent();
+
+  if (event_thread.joinable()) {
+    broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
+    event_thread.join();
+  }
+  if (progress_event_thread.joinable()) {
+    broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
+    progress_event_thread.join();
+  }
+  StopIO();
+  disconnecting = true;
+
+  return error;
+}
+
 llvm::Error DAP::Loop() {
   while (!disconnecting) {
     llvm::json::Object object;

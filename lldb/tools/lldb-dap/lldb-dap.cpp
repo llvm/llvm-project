@@ -21,6 +21,8 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
@@ -42,7 +44,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <array>
@@ -55,6 +57,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <ostream>
 #include <set>
@@ -205,18 +208,6 @@ void SendContinuedEvent(DAP &dap) {
   body.try_emplace("allThreadsContinued", true);
   event.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(event)));
-}
-
-// Send a "terminated" event to indicate the process is done being
-// debugged.
-void SendTerminatedEvent(DAP &dap) {
-  // Prevent races if the process exits while we're being asked to disconnect.
-  llvm::call_once(dap.terminated_event_flag, [&] {
-    dap.RunTerminateCommands();
-    // Send a "terminated" event
-    llvm::json::Object event(CreateTerminatedEventObject(dap.target));
-    dap.SendJSON(llvm::json::Value(std::move(event)));
-  });
 }
 
 // Send a thread stopped event for all threads as long as the process
@@ -390,6 +381,7 @@ void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
 }
 
 void ProgressEventThreadFunction(DAP &dap) {
+  llvm::set_thread_name(dap.name + ".progress_handler");
   lldb::SBListener listener("lldb-dap.progress.listener");
   dap.debugger.GetBroadcaster().AddListener(
       listener, lldb::SBDebugger::eBroadcastBitProgress |
@@ -424,8 +416,10 @@ void ProgressEventThreadFunction(DAP &dap) {
 // them prevent multiple threads from writing simultaneously so no locking
 // is required.
 void EventThreadFunction(DAP &dap) {
+  llvm::set_thread_name(dap.name + ".event_handler");
   lldb::SBEvent event;
   lldb::SBListener listener = dap.debugger.GetListener();
+  dap.broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
   bool done = false;
   while (!done) {
     if (listener.WaitForEvent(1, event)) {
@@ -490,7 +484,7 @@ void EventThreadFunction(DAP &dap) {
               // launch.json
               dap.RunExitCommands();
               SendProcessExitedEvent(dap, process);
-              SendTerminatedEvent(dap);
+              dap.SendTerminatedEvent();
               done = true;
             }
             break;
@@ -1238,41 +1232,12 @@ void request_disconnect(DAP &dap, const llvm::json::Object &request) {
   bool defaultTerminateDebuggee = dap.is_attach ? false : true;
   bool terminateDebuggee =
       GetBoolean(arguments, "terminateDebuggee", defaultTerminateDebuggee);
-  lldb::SBProcess process = dap.target.GetProcess();
-  auto state = process.GetState();
-  switch (state) {
-  case lldb::eStateInvalid:
-  case lldb::eStateUnloaded:
-  case lldb::eStateDetached:
-  case lldb::eStateExited:
-    break;
-  case lldb::eStateConnected:
-  case lldb::eStateAttaching:
-  case lldb::eStateLaunching:
-  case lldb::eStateStepping:
-  case lldb::eStateCrashed:
-  case lldb::eStateSuspended:
-  case lldb::eStateStopped:
-  case lldb::eStateRunning:
-    dap.debugger.SetAsync(false);
-    lldb::SBError error = terminateDebuggee ? process.Kill() : process.Detach();
-    if (!error.Success())
-      EmplaceSafeString(response, "error", error.GetCString());
-    dap.debugger.SetAsync(true);
-    break;
-  }
-  SendTerminatedEvent(dap);
+
+  lldb::SBError error = dap.Disconnect(terminateDebuggee);
+  if (error.Fail())
+    EmplaceSafeString(response, "error", error.GetCString());
+
   dap.SendJSON(llvm::json::Value(std::move(response)));
-  if (dap.event_thread.joinable()) {
-    dap.broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
-    dap.event_thread.join();
-  }
-  if (dap.progress_event_thread.joinable()) {
-    dap.broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
-    dap.progress_event_thread.join();
-  }
-  dap.StopIO();
-  dap.disconnecting = true;
 }
 
 // "ExceptionInfoRequest": {
@@ -5254,37 +5219,6 @@ int main(int argc, char *argv[]) {
     pre_init_commands.push_back(arg);
   }
 
-  auto RunDAP = [](llvm::StringRef program_path, ReplMode repl_mode,
-                   std::vector<std::string> pre_init_commands,
-                   std::ofstream *log, std::string name, StreamDescriptor input,
-                   StreamDescriptor output, std::FILE *redirectOut = nullptr,
-                   std::FILE *redirectErr = nullptr) -> bool {
-    DAP dap = DAP(name, program_path, log, std::move(input), std::move(output),
-                  repl_mode, pre_init_commands);
-
-    // stdout/stderr redirection to the IDE's console
-    if (auto Err = dap.ConfigureIO(redirectOut, redirectErr)) {
-      llvm::logAllUnhandledErrors(
-          std::move(Err), llvm::errs(),
-          "Failed to configure lldb-dap IO operations: ");
-      return false;
-    }
-
-    RegisterRequestCallbacks(dap);
-
-    // used only by TestVSCode_redirection_to_console.py
-    if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
-      redirection_test();
-
-    if (auto Err = dap.Loop()) {
-      std::string errorMessage = llvm::toString(std::move(Err));
-      if (log)
-        *log << "Transport Error: " << errorMessage << "\n";
-      return false;
-    }
-    return true;
-  };
-
   if (!connection.empty()) {
     auto maybeProtoclAndName = validateConnection(connection);
     if (auto Err = maybeProtoclAndName.takeError()) {
@@ -5298,7 +5232,7 @@ int main(int argc, char *argv[]) {
     std::tie(protocol, name) = *maybeProtoclAndName;
 
     Status error;
-    std::unique_ptr<Socket> listener = Socket::Create(protocol, error);
+    static std::unique_ptr<Socket> listener = Socket::Create(protocol, error);
     if (error.Fail()) {
       llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
                                   "Failed to create socket listener: ");
@@ -5322,17 +5256,18 @@ int main(int argc, char *argv[]) {
     // address.
     llvm::outs().flush();
 
-    llvm::DefaultThreadPool pool;
+    static lldb_private::MainLoop g_loop;
+    llvm::sys::SetInterruptFunction([]() {
+      g_loop.AddPendingCallback(
+          [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+    });
+    std::mutex active_dap_sessions_mutext;
+    std::set<DAP *> active_dap_sessions;
     unsigned int clientCount = 0;
-    while (true) {
-      Socket *accepted_socket;
-      error = listener->Accept(/*timeout=*/std::nullopt, accepted_socket);
-      if (error.Fail()) {
-        llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
-                                    "accept failed: ");
-        return EXIT_FAILURE;
-      }
-
+    auto handle = listener->Accept(g_loop, [=, &active_dap_sessions_mutext,
+                                            &active_dap_sessions, &clientCount,
+                                            log = log.get()](
+                                               std::unique_ptr<Socket> sock) {
       std::string name = llvm::formatv("client_{0}", clientCount++).str();
       if (log) {
         auto now = std::chrono::duration<double>(
@@ -5341,24 +5276,80 @@ int main(int argc, char *argv[]) {
              << " client connected: " << name << "\n";
       }
 
-      // Move the client into the connection pool to unblock accepting the next
+      // Move the client into a background thread to unblock accepting the next
       // client.
-      pool.async(
-          [=](Socket *accepted_socket, std::ofstream *log) {
-            StreamDescriptor input = StreamDescriptor::from_socket(
-                accepted_socket->GetNativeSocket(), false);
-            // Close the output last for the best chance at error reporting.
-            StreamDescriptor output = StreamDescriptor::from_socket(
-                accepted_socket->GetNativeSocket(), true);
-            RunDAP(program_path, default_repl_mode, pre_init_commands, log,
-                   name, std::move(input), std::move(output));
-          },
-          accepted_socket, log.get());
+      std::thread client([=, &active_dap_sessions_mutext, &active_dap_sessions,
+                          sock = std::move(sock)]() {
+        llvm::set_thread_name(name + ".runloop");
+        StreamDescriptor input =
+            StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
+        // Close the output last for the best chance at error reporting.
+        StreamDescriptor output =
+            StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
+        DAP dap = DAP(name, program_path, log, std::move(input),
+                      std::move(output), default_repl_mode, pre_init_commands);
+
+        if (auto Err = dap.ConfigureIO()) {
+          llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                      "Failed to configure stdout redirect: ");
+          return;
+        }
+
+        RegisterRequestCallbacks(dap);
+
+        {
+          std::scoped_lock lock(active_dap_sessions_mutext);
+          active_dap_sessions.insert(&dap);
+        }
+
+        if (auto Err = dap.Loop()) {
+          llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                      "DAP session error: ");
+        }
+
+        {
+          std::scoped_lock lock(active_dap_sessions_mutext);
+          active_dap_sessions.erase(&dap);
+        }
+
+        if (log) {
+          auto now = std::chrono::duration<double>(
+              std::chrono::system_clock::now().time_since_epoch());
+          *log << llvm::formatv("{0:f9}", now.count()).str()
+               << " client closed: " << name << "\n";
+        }
+      });
+      client.detach();
+    });
+    if (auto Err = handle.takeError()) {
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                  "Registering accept handler failed: ");
+      return EXIT_FAILURE;
     }
 
-    pool.wait();
+    error = g_loop.Run();
+    if (error.Fail()) {
+      llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
+                                  "MainLoop failed: ");
+      return EXIT_FAILURE;
+    }
 
-    return EXIT_SUCCESS;
+    if (log)
+      *log << "lldb-dap server shutdown requested, disconnecting remaining "
+              "clients...\n";
+
+    bool client_failed = false;
+    std::scoped_lock lock(active_dap_sessions_mutext);
+    for (auto *dap : active_dap_sessions) {
+      auto error = dap->Disconnect();
+      if (error.Fail()) {
+        client_failed = true;
+        llvm::errs() << "DAP client " << dap->name
+                     << " disconnected failed: " << error.GetCString() << "\n";
+      }
+    }
+
+    return client_failed ? EXIT_FAILURE : EXIT_SUCCESS;
   }
 
 #if defined(_WIN32)
@@ -5383,8 +5374,26 @@ int main(int argc, char *argv[]) {
   StreamDescriptor input = StreamDescriptor::from_file(fileno(stdin), false);
   StreamDescriptor output = StreamDescriptor::from_file(stdout_fd, false);
 
-  bool status = RunDAP(program_path, default_repl_mode, pre_init_commands,
-                       log.get(), "stdin/stdout", std::move(input),
-                       std::move(output), stdout, stderr);
-  return status ? EXIT_SUCCESS : EXIT_FAILURE;
+  DAP dap = DAP("stdin/stdout", program_path, log.get(), std::move(input),
+                std::move(output), default_repl_mode, pre_init_commands);
+
+  // stdout/stderr redirection to the IDE's console
+  if (auto Err = dap.ConfigureIO(stdout, stderr)) {
+    llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                "Failed to configure stdout redirect: ");
+    return EXIT_FAILURE;
+  }
+
+  RegisterRequestCallbacks(dap);
+
+  // used only by TestVSCode_redirection_to_console.py
+  if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
+    redirection_test();
+
+  if (auto Err = dap.Loop()) {
+    llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                "DAP session error: ");
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
 }
