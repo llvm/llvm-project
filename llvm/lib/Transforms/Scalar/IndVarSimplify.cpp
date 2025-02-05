@@ -154,8 +154,9 @@ class IndVarSimplify {
   bool rewriteFirstIterationLoopExitValues(Loop *L);
 
   bool linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
-                                 const SCEV *ExitCount,
-                                 PHINode *IndVar, SCEVExpander &Rewriter);
+                                 const SCEV *ExitCount, PHINode *IndVar,
+                                 Instruction *IncVar, const SCEV *IVLimit,
+                                 bool UsePostInc, SCEVExpander &Rewriter);
 
   bool sinkUnusedInvariants(Loop *L);
 
@@ -907,36 +908,24 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
   return BestPhi;
 }
 
-/// Insert an IR expression which computes the value held by the IV IndVar
-/// (which must be an loop counter w/unit stride) after the backedge of loop L
-/// is taken ExitCount times.
-static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
-                           const SCEV *ExitCount, bool UsePostInc, Loop *L,
-                           SCEVExpander &Rewriter, ScalarEvolution *SE) {
-  assert(isLoopCounter(IndVar, L, SE));
-  assert(ExitCount->getType()->isIntegerTy() && "exit count must be integer");
-  const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(SE->getSCEV(IndVar));
-  assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
-
+static const SCEV *getIVLimit(PHINode *IndVar, const SCEV *ExitCount,
+                              bool UsePostInc, ScalarEvolution *SE) {
   // For integer IVs, truncate the IV before computing the limit unless we
   // know apriori that the limit must be a constant when evaluated in the
   // bitwidth of the IV.  We prefer (potentially) keeping a truncate of the
   // IV in the loop over a (potentially) expensive expansion of the widened
   // exit count add(zext(add)) expression.
+  const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(SE->getSCEV(IndVar));
+  assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
   if (IndVar->getType()->isIntegerTy() &&
       SE->getTypeSizeInBits(AR->getType()) >
-      SE->getTypeSizeInBits(ExitCount->getType())) {
+          SE->getTypeSizeInBits(ExitCount->getType())) {
     const SCEV *IVInit = AR->getStart();
     if (!isa<SCEVConstant>(IVInit) || !isa<SCEVConstant>(ExitCount))
       AR = cast<SCEVAddRecExpr>(SE->getTruncateExpr(AR, ExitCount->getType()));
   }
-
-  const SCEVAddRecExpr *ARBase = UsePostInc ? AR->getPostIncExpr(*SE) : AR;
-  const SCEV *IVLimit = ARBase->evaluateAtIteration(ExitCount, *SE);
-  assert(SE->isLoopInvariant(IVLimit, L) &&
-         "Computed iteration count is not loop invariant!");
-  return Rewriter.expandCodeFor(IVLimit, ARBase->getType(),
-                                ExitingBB->getTerminator());
+  AR = UsePostInc ? AR->getPostIncExpr(*SE) : AR;
+  return AR->evaluateAtIteration(ExitCount, *SE);
 }
 
 /// This method rewrites the exit condition of the loop to be a canonical !=
@@ -944,36 +933,13 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
 /// able to rewrite the exit tests of any loop where the SCEV analysis can
 /// determine a loop-invariant trip count of the loop, which is actually a much
 /// broader range than just linear tests.
-bool IndVarSimplify::
-linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
-                          const SCEV *ExitCount,
-                          PHINode *IndVar, SCEVExpander &Rewriter) {
-  assert(L->getLoopLatch() && "Loop no longer in simplified form?");
+bool IndVarSimplify::linearFunctionTestReplace(
+    Loop *L, BasicBlock *ExitingBB, const SCEV *ExitCount, PHINode *IndVar,
+    Instruction *IncVar, const SCEV *IVLimit, bool UsePostInc,
+    SCEVExpander &Rewriter) {
   assert(isLoopCounter(IndVar, L, SE));
-  Instruction * const IncVar =
-    cast<Instruction>(IndVar->getIncomingValueForBlock(L->getLoopLatch()));
 
-  // Initialize CmpIndVar to the preincremented IV.
-  Value *CmpIndVar = IndVar;
-  bool UsePostInc = false;
-
-  // If the exiting block is the same as the backedge block, we prefer to
-  // compare against the post-incremented value, otherwise we must compare
-  // against the preincremented value.
-  if (ExitingBB == L->getLoopLatch()) {
-    // For pointer IVs, we chose to not strip inbounds which requires us not
-    // to add a potentially UB introducing use.  We need to either a) show
-    // the loop test we're modifying is already in post-inc form, or b) show
-    // that adding a use must not introduce UB.
-    bool SafeToPostInc =
-        IndVar->getType()->isIntegerTy() ||
-        isLoopExitTestBasedOn(IncVar, ExitingBB) ||
-        mustExecuteUBIfPoisonOnPathTo(IncVar, ExitingBB->getTerminator(), DT);
-    if (SafeToPostInc) {
-      UsePostInc = true;
-      CmpIndVar = IncVar;
-    }
-  }
+  Value *CmpIndVar = UsePostInc ? IncVar : IndVar;
 
   // It may be necessary to drop nowrap flags on the incrementing instruction
   // if either LFTR moves from a pre-inc check to a post-inc check (in which
@@ -995,8 +961,11 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
       BO->setHasNoSignedWrap(AR->hasNoSignedWrap());
   }
 
-  Value *ExitCnt = genLoopLimit(
-      IndVar, ExitingBB, ExitCount, UsePostInc, L, Rewriter, SE);
+  assert(ExitCount->getType()->isIntegerTy() && "exit count must be integer");
+  assert(SE->isLoopInvariant(IVLimit, L) &&
+         "Computed iteration count is not loop invariant!");
+  Value *ExitCnt = Rewriter.expandCodeFor(IVLimit, IVLimit->getType(),
+                                          ExitingBB->getTerminator());
   assert(ExitCnt->getType()->isPointerTy() ==
              IndVar->getType()->isPointerTy() &&
          "genLoopLimit missed a cast");
@@ -1968,8 +1937,6 @@ bool IndVarSimplify::run(Loop *L) {
   // If we have a trip count expression, rewrite the loop's exit condition
   // using it.
   if (!DisableLFTR) {
-    BasicBlock *PreHeader = L->getLoopPreheader();
-
     SmallVector<BasicBlock*, 16> ExitingBlocks;
     L->getExitingBlocks(ExitingBlocks);
     for (BasicBlock *ExitingBB : ExitingBlocks) {
@@ -2001,18 +1968,40 @@ bool IndVarSimplify::run(Loop *L) {
       if (!IndVar)
         continue;
 
+      assert(L->getLoopLatch() && "Loop no longer in simplified form?");
+
+      Instruction *IncVar = cast<Instruction>(
+          IndVar->getIncomingValueForBlock(L->getLoopLatch()));
+
+      // For pointer IVs, we chose to not strip inbounds which requires us not
+      // to add a potentially UB introducing use.  We need to either a) show
+      // the loop test we're modifying is already in post-inc form, or b) show
+      // that adding a use must not introduce UB.
+      bool SafeToPostInc =
+          IndVar->getType()->isIntegerTy() ||
+          isLoopExitTestBasedOn(IncVar, ExitingBB) ||
+          mustExecuteUBIfPoisonOnPathTo(IncVar, ExitingBB->getTerminator(), DT);
+
+      // If the exiting block is the same as the backedge block, we prefer to
+      // compare against the post-incremented value, otherwise we must compare
+      // against the preincremented value.
+      bool UsePostInc = ExitingBB == L->getLoopLatch() && SafeToPostInc;
+
+      // IVLimit is the expression that will get expanded later.
+      const SCEV *IVLimit = getIVLimit(IndVar, ExitCount, UsePostInc, SE);
+
       // Avoid high cost expansions.  Note: This heuristic is questionable in
       // that our definition of "high cost" is not exactly principled.
-      if (Rewriter.isHighCostExpansion(ExitCount, L, SCEVCheapExpansionBudget,
-                                       TTI, PreHeader->getTerminator()))
+      if (Rewriter.isHighCostExpansion(IVLimit, L, SCEVCheapExpansionBudget,
+                                       TTI, ExitingBB->getTerminator()))
         continue;
 
-      if (!Rewriter.isSafeToExpand(ExitCount))
+      if (!Rewriter.isSafeToExpand(IVLimit))
         continue;
 
-      Changed |= linearFunctionTestReplace(L, ExitingBB,
-                                           ExitCount, IndVar,
-                                           Rewriter);
+      Changed |=
+          linearFunctionTestReplace(L, ExitingBB, ExitCount, IndVar, IncVar,
+                                    IVLimit, UsePostInc, Rewriter);
     }
   }
   // Clear the rewriter cache, because values that are in the rewriter's cache
