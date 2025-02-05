@@ -1296,8 +1296,10 @@ void PyOperationBase::print(std::optional<int64_t> largeElementsLimit,
     fileObject = nb::module_::import_("sys").attr("stdout");
 
   MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
-  if (largeElementsLimit)
+  if (largeElementsLimit) {
     mlirOpPrintingFlagsElideLargeElementsAttrs(flags, *largeElementsLimit);
+    mlirOpPrintingFlagsElideLargeResourceString(flags, *largeElementsLimit);
+  }
   if (enableDebugInfo)
     mlirOpPrintingFlagsEnableDebugInfo(flags, /*enable=*/true,
                                        /*prettyForm=*/prettyDebugInfo);
