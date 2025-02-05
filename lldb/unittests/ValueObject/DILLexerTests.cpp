@@ -24,10 +24,6 @@ ExtractTokenData(llvm::StringRef input_expr) {
     return maybe_lexer.takeError();
   DILLexer lexer(*maybe_lexer);
 
-  if (lexer.NumLexedTokens() == 0)
-    return llvm::createStringError("No lexed tokens");
-
-  lexer.ResetTokenIdx(0);
   std::vector<std::pair<Token::Kind, std::string>> data;
   do {
     Token tok = lexer.GetCurrentToken();
