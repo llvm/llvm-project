@@ -1,7 +1,9 @@
 ## Ensures that a call continuation fallthrough count is set when using
 ## pre-aggregated perf data.
 
-# RUN: %clangxx %cxxflags %s -o %t -Wl,-q -nostdlib
+# RUN: %clang %cflags -fpic -shared -xc /dev/null -o %t.so
+## Link against a DSO to ensure PLT entries.
+# RUN: %clangxx %cxxflags %s %t.so -o %t -Wl,-q -nostdlib
 # RUN: link_fdata %s %t %t.pa1 PREAGG
 # RUN: link_fdata %s %t %t.pa2 PREAGG2
 # RUN: link_fdata %s %t %t.pa3 PREAGG3
