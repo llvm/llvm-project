@@ -6327,7 +6327,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
         return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
       AccumOffset = ExprVal;
     } else if (ID == ".amdhsa_named_barrier_count") {
-      if (!isGFX1250Only())
+      if (!isGFX1250Plus())
         return Error(IDRange.Start, "directive requires gfx1250+", IDRange);
       NamedBarCnt = ExprVal;
     } else if (ID == ".amdhsa_reserve_vcc") {
@@ -6583,7 +6583,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                                  getContext());
   }
 
-  if (isGFX1250Only())
+  if (isGFX1250Plus())
     MCKernelDescriptor::bits_set(KD.compute_pgm_rsrc3, NamedBarCnt,
                                  COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT,
                                  COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
