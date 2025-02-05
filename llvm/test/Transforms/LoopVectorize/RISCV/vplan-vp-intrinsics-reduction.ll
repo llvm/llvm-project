@@ -24,8 +24,8 @@
 
 
 define i32 @reduction(ptr %a, i64 %n, i32 %start) {
-; IF-EVL: VPlan 'Initial VPlan for VF={1},UF={1}'
-; IF-EVL: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
+; IF-EVL: VPlan 'Initial VPlan for VF={1},UF>=1'
+; IF-EVL-NOT: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
 
 ; IF-EVL-OUTLOOP: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
 ; IF-EVL-OUTLOOP-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF

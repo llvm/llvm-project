@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1220,12 +1221,30 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
 
   if (auto *OLL = dyn_cast<ObjectLinkingLayer>(&J.getObjLinkingLayer())) {
 
-    auto &ES = J.getExecutionSession();
-    if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES))
-      OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-          ES, std::move(*EHFrameRegistrar)));
-    else
-      return EHFrameRegistrar.takeError();
+    bool CompactUnwindInfoSupported = false;
+
+    // Enable compact-unwind support if possible.
+    if (J.getTargetTriple().isOSDarwin() ||
+        J.getTargetTriple().isOSBinFormatMachO()) {
+      if (auto UIRP = UnwindInfoRegistrationPlugin::Create(
+              J.getIRCompileLayer(), PlatformJD)) {
+        CompactUnwindInfoSupported = true;
+        OLL->addPlugin(std::move(*UIRP));
+        LLVM_DEBUG(dbgs() << "Enabled compact-unwind support.\n");
+      } else
+        consumeError(UIRP.takeError());
+    }
+
+    // Otherwise fall back to standard unwind registration.
+    if (!CompactUnwindInfoSupported) {
+      auto &ES = J.getExecutionSession();
+      if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES)) {
+        OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
+            ES, std::move(*EHFrameRegistrar)));
+        LLVM_DEBUG(dbgs() << "Enabled eh-frame support.\n");
+      } else
+        return EHFrameRegistrar.takeError();
+    }
   }
 
   J.setPlatformSupport(
