@@ -115,19 +115,19 @@ template <typename A>
 std::optional<bool> IsContiguous(const A &, FoldingContext &,
     bool namedConstantSectionsAreContiguous = true);
 extern template std::optional<bool> IsContiguous(const Expr<SomeType> &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+    FoldingContext &, bool namedConstantSectionsAreContiguous);
 extern template std::optional<bool> IsContiguous(const ArrayRef &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+    FoldingContext &, bool namedConstantSectionsAreContiguous);
 extern template std::optional<bool> IsContiguous(const Substring &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+    FoldingContext &, bool namedConstantSectionsAreContiguous);
 extern template std::optional<bool> IsContiguous(const Component &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+    FoldingContext &, bool namedConstantSectionsAreContiguous);
 extern template std::optional<bool> IsContiguous(const ComplexPart &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+    FoldingContext &, bool namedConstantSectionsAreContiguous);
 extern template std::optional<bool> IsContiguous(const CoarrayRef &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
-extern template std::optional<bool> IsContiguous(const Symbol &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+    FoldingContext &, bool namedConstantSectionsAreContiguous);
+extern template std::optional<bool> IsContiguous(
+    const Symbol &, FoldingContext &, bool namedConstantSectionsAreContiguous);
 static inline std::optional<bool> IsContiguous(const SymbolRef &s,
     FoldingContext &c, bool namedConstantSectionsAreContiguous = true) {
   return IsContiguous(s.get(), c, namedConstantSectionsAreContiguous);
