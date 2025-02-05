@@ -55447,6 +55447,9 @@ static SDValue truncateAVX512SetCCNoBWI(EVT VT, EVT OpVT, SDValue LHS,
   return SDValue();
 }
 
+// The pattern (setcc (and (broadcast x), (2^n, 2^{n+1}, ...)), (0, 0, ...),
+// eq/ne) is generated when using an integer as a mask. Instead of generating a
+// broadcast + vptest, we can directly move the integer to a mask register.
 static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
                                         const SDLoc &DL, SelectionDAG &DAG,
                                         const X86Subtarget &Subtarget) {
@@ -55476,6 +55479,9 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
       UndefElts[0] || !EltBits[0].isPowerOf2())
     return SDValue();
 
+  // Check if the constant pool contains only powers of 2 starting from some
+  // 2^N. The table may also contain undefs because of widening of vector
+  // operands.
   unsigned N = EltBits[0].logBase2();
   unsigned Len = UndefElts.getBitWidth();
   for (unsigned I = 1; I != Len; ++I) {
@@ -55501,9 +55507,7 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
     Masked = DAG.getNode(ISD::AND, DL, BroadcastOpVT, ShiftedValue,
                          DAG.getConstant(Mask, DL, BroadcastOpVT));
   }
-  SDValue Trunc = DAG.getNode(BroadcastOpVT.bitsGT(MVT::i16) ? ISD::TRUNCATE
-                                                             : ISD::ANY_EXTEND,
-                              DL, MVT::i16, Masked);
+  SDValue Trunc = DAG.getAnyExtOrTrunc(Masked, DL, MVT::i16);
   SDValue Bitcast = DAG.getNode(ISD::BITCAST, DL, MVT::v16i1, Trunc);
   MVT PtrTy = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
 
