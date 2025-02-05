@@ -90,7 +90,7 @@ set(src_files
 # propagation. That said, we will run the vectorizer again after the runtime
 # has been linked into the user program.
 set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512 -mllvm -vectorize-slp=false )
-set(link_opt_flags  -O3        -openmp-opt-disable -attributor-enable=module -vectorize-slp=false )
+set(link_opt_flags  -O3 -openmp-opt-disable -attributor-enable=module -vectorize-slp=false )
 set(link_export_flag -passes=internalize -internalize-public-api-file=${source_directory}/exports)
 
 # If the user built with the GPU C library enabled we will use that instead.
@@ -103,11 +103,10 @@ set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
 list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 
 # Set flags for LLVM Bitcode compilation.
-set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
-              ${clang_opt_flags} --offload-device-only
-             -nocudalib -nogpulib -nogpuinc
-             -fopenmp -fopenmp-cuda-mode
-             -Wno-unknown-cuda-version -Wno-openmp-target
+set(bc_flags -c -flto -std=c++17 -fvisibility=hidden
+             ${clang_opt_flags} -nocudalib -nogpulib
+             -nogpuinc -nostdlibinc -Wno-unknown-cuda-version
+             -fno-rtti -fno-exceptions -fconvergent-functions
              -I${CMAKE_BINARY_DIR}/openmp/runtime/src # Need omp.h for LibM.
              -I${CMAKE_BINARY_DIR}/projects/openmp/runtime/src # Need omp.h for LibM.
              -I${CMAKE_BINARY_DIR}/runtime/src
@@ -139,9 +138,8 @@ function(compileDeviceRTLLibrary target_name target_triple)
     add_custom_target(${outfile}
       COMMAND ${CLANG_TOOL}
       ${bc_flags}
-      -fopenmp-targets=${target_triple}
-      -Xopenmp-target=${target_triple} -march=
       ${target_bc_flags}
+      --target=${target_triple}
       -MD -MF ${depfile}
       ${infile} -o ${outfile}
       DEPENDS ${infile} ${include_files}
@@ -310,10 +308,7 @@ function(compileDeviceRTLLibrary target_name target_triple)
     set(ide_target_name omptarget-ide-${target_name})
     add_library(${ide_target_name} STATIC EXCLUDE_FROM_ALL ${src_files})
     target_compile_options(${ide_target_name} PRIVATE
-      -fopenmp -fopenmp-cuda-mode
-      -fopenmp-targets=${target_triple} -Xopenmp-target=${target_triple} -march=
-      -mllvm -openmp-opt-disable
-      -foffload-lto -fvisibility=hidden --offload-device-only
+      --target=${target_triple} -flto -fvisibility=hidden
       -nocudalib -nogpulib -nogpuinc -nostdlibinc -Wno-unknown-cuda-version
     )
     target_compile_definitions(${ide_target_name} PRIVATE SHARED_SCRATCHPAD_SIZE=512)

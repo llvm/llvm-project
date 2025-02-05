@@ -23,21 +23,16 @@
 
 using namespace ompx;
 
-#pragma omp begin declare target device_type(host)
 __attribute__((noinline)) void *internal_malloc(uint64_t Size);
 __attribute__((noinline)) void internal_free(void *Ptr);
-#pragma omp end declare target
-
-#pragma omp begin declare target device_type(nohost)
 
 /// Memory implementation
 ///
 ///{
 
 /// External symbol to access dynamic shared memory.
-[[gnu::aligned(
-    allocator::ALIGNMENT)]] extern unsigned char DynamicSharedBuffer[];
-#pragma omp allocate(DynamicSharedBuffer) allocator(omp_pteam_mem_alloc)
+[[gnu::aligned(allocator::ALIGNMENT)]] extern unsigned char
+    [[clang::address_space(3)]] DynamicSharedBuffer[];
 
 /// The kernel environment passed to the init method by the compiler.
 static KernelEnvironmentTy *SHARED(KernelEnvironmentPtr);
@@ -69,7 +64,7 @@ __attribute__((noinline)) extern "C" uint64_t __asan_malloc_impl(uint64_t bufsz,
 __attribute__((noinline)) extern "C" void __asan_free_impl(uint64_t ptr,
                                                            uint64_t pc);
 #endif
-#pragma omp begin declare variant match(device = {arch(amdgcn)})
+#ifdef __AMDGPU__
 extern "C" {
 __attribute__((noinline)) void *internal_malloc(uint64_t Size) {
 #if SANITIZER_AMDGPU
@@ -89,7 +84,7 @@ __attribute__((noinline)) void internal_free(void *Ptr) {
 #endif
 }
 }
-#pragma omp end declare variant
+#endif
 
 extern "C" {
 #ifdef __AMDGCN__
@@ -97,7 +92,7 @@ extern "C" {
 [[gnu::weak]] void *malloc(size_t Size) { return allocator::alloc(Size); }
 [[gnu::weak]] void free(void *Ptr) { allocator::free(Ptr); }
 #else
-void *malloc(uint64_t Size) { return internal_malloc(Size); }
+void *malloc(size_t Size) { return internal_malloc(Size); }
 void free(void *Ptr) { internal_free(Ptr); }
 #endif
 #else
@@ -106,7 +101,7 @@ void free(void *Ptr) { internal_free(Ptr); }
 [[gnu::weak, gnu::leaf]] void *malloc(size_t Size);
 [[gnu::weak, gnu::leaf]] void free(void *Ptr);
 #else
-__attribute__((leaf)) void *malloc(uint64_t Size);
+__attribute__((leaf)) void *malloc(size_t Size);
 __attribute__((leaf)) void free(void *Ptr);
 #endif
 #endif
@@ -116,14 +111,13 @@ __attribute__((leaf)) void free(void *Ptr);
 /// NVPTX implementations of internal mallocs
 ///
 ///{
-#pragma omp begin declare variant match(                                       \
-    device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
+#ifdef __NVPTX__
 extern "C" {
 void *internal_malloc(uint64_t Size) { return malloc(Size); }
 
 void internal_free(void *Ptr) { free(Ptr); }
 }
-#pragma omp end declare variant
+#endif
 
 /// A "smart" stack in shared memory.
 ///
@@ -513,13 +507,10 @@ void *llvm_omp_get_dynamic_shared() { return __kmpc_get_dynamic_shared(); }
 /// NUM_SHARED_VARIABLES_IN_SHARED_MEM we will malloc space for communication.
 constexpr uint64_t NUM_SHARED_VARIABLES_IN_SHARED_MEM = 64;
 
-[[clang::loader_uninitialized]] static void
-    *SharedMemVariableSharingSpace[NUM_SHARED_VARIABLES_IN_SHARED_MEM];
-#pragma omp allocate(SharedMemVariableSharingSpace)                            \
-    allocator(omp_pteam_mem_alloc)
-[[clang::loader_uninitialized]] static void **SharedMemVariableSharingSpacePtr;
-#pragma omp allocate(SharedMemVariableSharingSpacePtr)                         \
-    allocator(omp_pteam_mem_alloc)
+[[clang::loader_uninitialized]] static void *[[clang::address_space(
+    3)]] SharedMemVariableSharingSpace[NUM_SHARED_VARIABLES_IN_SHARED_MEM];
+[[clang::loader_uninitialized]] static void **[[clang::address_space(
+    3)]] SharedMemVariableSharingSpacePtr;
 
 void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
   if (nArgs <= NUM_SHARED_VARIABLES_IN_SHARED_MEM) {
@@ -547,4 +538,3 @@ extern "C" {
 __attribute__((leaf)) void *__kmpc_impl_malloc(uint64_t t) { return malloc(t); }
 __attribute__((leaf)) void __kmpc_impl_free(void *ptr) { free(ptr); }
 }
-#pragma omp end declare target

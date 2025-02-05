@@ -13,13 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_DEVICERTL_INCLUDE_DEVRTLEXTRAS_H
 #define OPENMP_LIBOMPTARGET_DEVICERTL_INCLUDE_DEVRTLEXTRAS_H
 
-/// Base type declarations for freestanding mode
-///
-///{
-using uint64_t = unsigned long;
-// TODO: Properly implement this
-using uintptr_t = uint64_t;
-///}
+#include <stdint.h>
 
 /// Macros for allocating variables in different address spaces.
 ///{

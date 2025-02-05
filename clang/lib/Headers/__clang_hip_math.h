@@ -21,7 +21,10 @@
 #include <limits.h>
 #include <stdint.h>
 #ifdef __OPENMP_AMDGCN__
+// FIXME: A hack for the OpenMP DeviceRTL's `LibM.h` that should be removed.
+#ifndef __OPENMP_SKIP_INCLUDE__
 #include <omp.h>
+#endif
 #endif
 #endif // !defined(__HIPCC_RTC__)
 

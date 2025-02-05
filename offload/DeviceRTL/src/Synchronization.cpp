@@ -19,8 +19,6 @@
 #include "Mapping.h"
 #include "State.h"
 
-#pragma omp begin declare target device_type(nohost)
-
 namespace ompx {
 namespace synchronize {} // namespace synchronize
 } // namespace ompx
@@ -51,29 +49,10 @@ int testLock(omp_lock_t *Lock) {
 }
 ///}
 
-// Forward declarations defined to be defined for AMDGCN and NVPTX.
-uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
-                   atomic::MemScopeTy MemScope);
-void namedBarrierInit();
-void namedBarrier();
-void fenceTeam(atomic::OrderingTy Ordering);
-void fenceKernel(atomic::OrderingTy Ordering);
-void fenceSystem(atomic::OrderingTy Ordering);
-void syncWarp(__kmpc_impl_lanemask_t);
-void syncThreads(atomic::OrderingTy Ordering);
-void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
-void unsetLock(omp_lock_t *);
-int testLock(omp_lock_t *);
-void initLock(omp_lock_t *);
-void destroyLock(omp_lock_t *);
-void setLock(omp_lock_t *);
-void unsetCriticalLock(omp_lock_t *);
-void setCriticalLock(omp_lock_t *);
-
 /// AMDGCN Implementation
 ///
 ///{
-#pragma omp begin declare variant match(device = {arch(amdgcn)})
+#ifdef __AMDGPU__
 
 uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
                    atomic::MemScopeTy MemScope) {
@@ -292,15 +271,13 @@ ATOMIC_CAS_LOOP_MAX(double);
 
 #endif /// if defined(__gfx941__)
 
-#pragma omp end declare variant
+#endif
 ///}
 
 /// NVPTX Implementation
 ///
 ///{
-#pragma omp begin declare variant match(                                       \
-        device = {arch(nvptx, nvptx64)},                                       \
-            implementation = {extension(match_any)})
+#ifdef __NVPTX__
 
 uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
                    atomic::MemScopeTy MemScope) {
@@ -336,17 +313,6 @@ void syncThreadsAligned(atomic::OrderingTy Ordering) { __syncthreads(); }
 
 constexpr uint32_t OMP_SPIN = 1000;
 
-// TODO: This seems to hide a bug in the declare variant handling. If it is
-// called before it is defined
-//       here the overload won't happen. Investigate lalter!
-void unsetLock(omp_lock_t *Lock) {
-  (void)atomicExchange((uint32_t *)Lock, UNSET, atomic::seq_cst);
-}
-
-int testLock(omp_lock_t *Lock) {
-  return atomic::add((uint32_t *)Lock, 0u, atomic::seq_cst);
-}
-
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
 void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
@@ -371,7 +337,7 @@ void unsetCriticalLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
 void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 
-#pragma omp end declare variant
+#endif
 ///}
 
 } // namespace impl
@@ -524,5 +490,3 @@ void ompx_sync_block_divergent(int Ordering) {
   impl::syncThreads(atomic::OrderingTy(Ordering));
 }
 } // extern "C"
-
-#pragma omp end declare target
