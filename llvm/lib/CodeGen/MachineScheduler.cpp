@@ -447,11 +447,11 @@ ScheduleDAGInstrs *MachineSchedulerImpl::createMachineScheduler() {
 bool MachineSchedulerImpl::run() {
   if (VerifyScheduling) {
     LLVM_DEBUG(LIS->dump());
-    std::string MSchedBanner = "Before machine scheduling.";
+    const char *MSchedBanner = "Before machine scheduling.";
     if (P)
-      MF->verify(P, MSchedBanner.c_str(), &errs());
+      MF->verify(P, MSchedBanner, &errs());
     else
-      MF->verify(*MFAM, MSchedBanner.c_str(), &errs());
+      MF->verify(*MFAM, MSchedBanner, &errs());
   }
   RegClassInfo->runOnMachineFunction(*MF);
 
@@ -462,11 +462,11 @@ bool MachineSchedulerImpl::run() {
 
   LLVM_DEBUG(LIS->dump());
   if (VerifyScheduling) {
-    std::string MSchedBanner = "After machine scheduling.";
+    const char *MSchedBanner = "After machine scheduling.";
     if (P)
-      MF->verify(P, MSchedBanner.c_str(), &errs());
+      MF->verify(P, MSchedBanner, &errs());
     else
-      MF->verify(*MFAM, MSchedBanner.c_str(), &errs());
+      MF->verify(*MFAM, MSchedBanner, &errs());
   }
   return true;
 }
@@ -507,11 +507,11 @@ ScheduleDAGInstrs *PostMachineSchedulerImpl::createPostMachineScheduler() {
 
 bool PostMachineSchedulerImpl::run() {
   if (VerifyScheduling) {
-    std::string PostMSchedBanner = "Before post machine scheduling.";
+    const char *PostMSchedBanner = "Before post machine scheduling.";
     if (P)
-      MF->verify(P, PostMSchedBanner.c_str(), &errs());
+      MF->verify(P, PostMSchedBanner, &errs());
     else
-      MF->verify(*MFAM, PostMSchedBanner.c_str(), &errs());
+      MF->verify(*MFAM, PostMSchedBanner, &errs());
   }
 
   // Instantiate the selected scheduler for this target, function, and
@@ -520,11 +520,11 @@ bool PostMachineSchedulerImpl::run() {
   scheduleRegions(*Scheduler, true);
 
   if (VerifyScheduling) {
-    std::string PostMSchedBanner = "After post machine scheduling.";
+    const char *PostMSchedBanner = "After post machine scheduling.";
     if (P)
-      MF->verify(P, PostMSchedBanner.c_str(), &errs());
+      MF->verify(P, PostMSchedBanner, &errs());
     else
-      MF->verify(*MFAM, PostMSchedBanner.c_str(), &errs());
+      MF->verify(*MFAM, PostMSchedBanner, &errs());
   }
   return true;
 }
