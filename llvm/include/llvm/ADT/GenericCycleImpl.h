@@ -454,7 +454,9 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
     BlockT *Block = TraverseStack.back();
     LLVM_DEBUG(errs() << "DFS visiting block: " << Info.Context.print(Block)
                       << "\n");
-    if (!BlockDFSInfo.count(Block)) {
+    if (BlockDFSInfo.try_emplace(Block, Counter + 1).second) {
+      ++Counter;
+
       // We're visiting the block for the first time. Open its DFSInfo, add
       // successors to the traversal stack, and remember the traversal stack
       // depth at which the block was opened, so that we can correctly record
@@ -465,9 +467,6 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
       DFSTreeStack.emplace_back(TraverseStack.size());
       llvm::append_range(TraverseStack, successors(Block));
 
-      bool Added = BlockDFSInfo.try_emplace(Block, ++Counter).second;
-      (void)Added;
-      assert(Added);
       BlockPreorder.push_back(Block);
       LLVM_DEBUG(errs() << "  preorder number: " << Counter << "\n");
     } else {

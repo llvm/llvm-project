@@ -84,6 +84,13 @@ SBCommandReturnObject::operator bool() const {
   return true;
 }
 
+const char *SBCommandReturnObject::GetCommand() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ConstString output(ref().GetCommand());
+  return output.AsCString(/*value_if_empty*/ "");
+}
+
 const char *SBCommandReturnObject::GetOutput() {
   LLDB_INSTRUMENT_VA(this);
 

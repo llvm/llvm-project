@@ -62,3 +62,31 @@ end subroutine test
 ! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
 ! CHECK:         }
+
+subroutine test_associate(i)
+  interface
+   subroutine foo(x)
+     real :: x(:)
+   end subroutine
+  end interface
+  real, parameter :: p(*) = [1.,2.,3.,4.]
+  integer(8) :: i
+  associate(a => p(1:i))
+    associate(b => a(1:1:2))
+      call foo(b)
+    end associate
+  end associate
+end subroutine
+! CHECK-LABEL:   func.func @_QPtest_associate(
+! CHECK:           %[[VAL_3:.*]] = fir.address_of(@_QFtest_associateECp) : !fir.ref<!fir.array<4xf32>>
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_3]](%{{.*}}) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_associateECp"} : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<4xf32>>)
+! CHECK:           %[[VAL_18:.*]] = hlfir.designate %[[VAL_6]]#0 {{.*}}
+! CHECK:           %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {{.*}}
+! CHECK:           %[[VAL_25:.*]] = hlfir.designate %[[VAL_19]]#0 {{.*}}
+! CHECK:           %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_25]] {uniq_name = "_QFtest_associateEb"} : (!fir.box<!fir.array<1xf32>>) -> (!fir.box<!fir.array<1xf32>>, !fir.box<!fir.array<1xf32>>)
+! CHECK:           %[[VAL_27:.*]] = hlfir.as_expr %[[VAL_26]]#0 : (!fir.box<!fir.array<1xf32>>) -> !hlfir.expr<1xf32>
+! CHECK:           %[[VAL_30:.*]]:3 = hlfir.associate %[[VAL_27]]({{.*}}) {adapt.valuebyref} : (!hlfir.expr<1xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xf32>>, !fir.ref<!fir.array<1xf32>>, i1)
+! CHECK:           %[[VAL_31:.*]] = fir.embox %[[VAL_30]]
+! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (!fir.box<!fir.array<1xf32>>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:           fir.call @_QPfoo(%[[VAL_32]]) {{.*}} : (!fir.box<!fir.array<?xf32>>) -> ()
+! CHECK:           hlfir.end_associate %[[VAL_30]]#1, %[[VAL_30]]#2 : !fir.ref<!fir.array<1xf32>>, i1

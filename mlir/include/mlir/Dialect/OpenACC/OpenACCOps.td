@@ -859,9 +859,9 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
           "- `varPtr`: The address of variable to copy back to.",
           [MemoryEffects<[MemRead<OpenACC_RuntimeCounters>,
                           MemWrite<OpenACC_RuntimeCounters>]>],
-          (ins Arg<OpenACC_PointerLikeTypeInterface,
+          (ins Arg<OpenACC_AnyPointerOrMappableType,
                    "Accelerator mapped variable", [MemRead]>:$accVar,
-              Arg<OpenACC_PointerLikeTypeInterface,
+              Arg<OpenACC_AnyPointerOrMappableType,
                   "Host variable", [MemWrite]>:$var,
               TypeAttr:$varType)> {
   let assemblyFormat = [{
@@ -917,7 +917,7 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause> :
     OpenACC_DataExitOp<mnemonic, clause, "",
       [MemoryEffects<[MemRead<OpenACC_RuntimeCounters>,
                     MemWrite<OpenACC_RuntimeCounters>]>],
-      (ins Arg<OpenACC_PointerLikeTypeInterface,"Accelerator mapped variable",
+      (ins Arg<OpenACC_AnyPointerOrMappableType,"Accelerator mapped variable",
            [MemRead]>:$accVar)> {
   let assemblyFormat = [{
     custom<AccVar>($accVar, type($accVar))

@@ -10,7 +10,8 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_BCMP_H
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_
 
 #include <stddef.h> // size_t

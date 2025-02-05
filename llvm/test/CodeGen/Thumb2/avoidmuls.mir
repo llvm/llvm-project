@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=thumbv7m-none-eabi -mcpu=cortex-m33 -run-pass=thumb2-reduce-size %s -o - | FileCheck %s --check-prefix=MUL
+# RUN: llc -mtriple=thumbv7m-none-eabi -mcpu=star-mc1 -run-pass=thumb2-reduce-size %s -o - | FileCheck %s --check-prefix=MUL
 # RUN: llc -mtriple=thumbv7m-none-eabi --run-pass=thumb2-reduce-size %s -o - | FileCheck %s --check-prefix=MULS
 
 ---
