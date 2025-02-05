@@ -269,7 +269,7 @@ void initializeRegionViewerPass(PassRegistry &);
 void initializeRegisterCoalescerLegacyPass(PassRegistry &);
 void initializeRemoveLoadsIntoFakeUsesPass(PassRegistry &);
 void initializeRemoveRedundantDebugValuesPass(PassRegistry &);
-void initializeRenameIndependentSubregsPass(PassRegistry &);
+void initializeRenameIndependentSubregsLegacyPass(PassRegistry &);
 void initializeReplaceWithVeclibLegacyPass(PassRegistry &);
 void initializeResetMachineFunctionPass(PassRegistry &);
 void initializeSCEVAAWrapperPassPass(PassRegistry &);
