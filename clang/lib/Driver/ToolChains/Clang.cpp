@@ -1618,32 +1618,34 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     GuardedControlStack = PBP.GuardedControlStack;
   }
 
+  bool HasPtrauthReturns = llvm::any_of(CmdArgs, [](const char *Arg) {
+    return StringRef(Arg) == "-fptrauth-returns";
+  });
+  // GCS is currently untested with ptrauth-returns, but enabling this could be
+  // allowed in future after testing with a suitable system.
+  if (HasPtrauthReturns &&
+      (Scope != "none" || BranchProtectionPAuthLR || GuardedControlStack)) {
+    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << Triple.getTriple();
+    else
+      D.Diag(diag::err_drv_incompatible_options)
+          << A->getAsString(Args) << "-fptrauth-returns";
+  }
+
   CmdArgs.push_back(
       Args.MakeArgString(Twine("-msign-return-address=") + Scope));
-  if (Scope != "none") {
-    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getAsString(Args) << Triple.getTriple();
+  if (Scope != "none")
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-msign-return-address-key=") + Key));
-  }
-  if (BranchProtectionPAuthLR) {
-    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getAsString(Args) << Triple.getTriple();
+  if (BranchProtectionPAuthLR)
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-mbranch-protection-pauth-lr")));
-  }
   if (IndirectBranches)
     CmdArgs.push_back("-mbranch-target-enforce");
-  // GCS is currently untested with PAuthABI, but enabling this could be allowed
-  // in future after testing with a suitable system.
-  if (GuardedControlStack) {
-    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getAsString(Args) << Triple.getTriple();
+
+  if (GuardedControlStack)
     CmdArgs.push_back("-mguarded-control-stack");
-  }
 }
 
 void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
@@ -1822,12 +1824,6 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       CmdArgs.push_back("-aarch64-enable-global-merge=true");
   }
 
-  // Enable/disable return address signing and indirect branch targets.
-  CollectARMPACBTIOptions(getToolChain(), Args, CmdArgs, true /*isAArch64*/);
-
-  if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
-    handlePAuthABI(Args, CmdArgs);
-
   // Handle -msve_vector_bits=<bits>
   if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ)) {
     StringRef Val = A->getValue();
@@ -1896,6 +1892,12 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
                     options::OPT_fno_ptrauth_init_fini_address_discrimination);
   Args.addOptInFlag(CmdArgs, options::OPT_faarch64_jump_table_hardening,
                     options::OPT_fno_aarch64_jump_table_hardening);
+
+  if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+    handlePAuthABI(Args, CmdArgs);
+
+  // Enable/disable return address signing and indirect branch targets.
+  CollectARMPACBTIOptions(getToolChain(), Args, CmdArgs, true /*isAArch64*/);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
