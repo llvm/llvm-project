@@ -248,7 +248,6 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
   // If the symbol isn't live, return.
   if (!whyLive.contains(s)) {
     auto *d = dyn_cast<Defined>(s);
-    // TODO: Test
     if (!d)
       return;
     // TODO: Test both cases

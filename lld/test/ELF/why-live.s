@@ -42,3 +42,7 @@ jmp test_from_unsized
 .section .test_dead,"ax",@progbits
 test_dead:
 jmp test_dead
+
+## Undefined symbols are not considered live.
+# RUN: ld.lld %t.o -o /dev/null --gc-sections --why-live=test_undef -u test_undef | count 0
+
