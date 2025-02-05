@@ -16,10 +16,6 @@
 
 #include "llvm-libc-macros/signal-macros.h"
 
-#ifdef __linux__
-#include "llvm-libc-types/__sighandler_t.h"
-#endif
-
 %%public_api()
 
 #endif // LLVM_LIBC_SIGNAL_H
