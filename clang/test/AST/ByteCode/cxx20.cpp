@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexperimental-new-constant-interpreter -std=c++20 -verify=both,expected -fcxx-exceptions %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexperimental-new-constant-interpreter -std=c++20 -verify=both,expected -fcxx-exceptions %s -DNEW_INTERP
 // RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref -fcxx-exceptions %s
 
 void test_alignas_operand() {
@@ -930,4 +930,35 @@ namespace LocalDestroy {
     return 1;
   }
   static_assert(f() == 1);
+}
+
+namespace PseudoDtor {
+  constexpr int f1() {
+   using T = int;
+   int a = 0;
+   a.~T();
+   return a; // both-note {{read of object outside its lifetime}}
+  }
+  static_assert(f1() == 0); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to}}
+
+  constexpr int f2() {
+   using T = int;
+   int a = 0;
+   a.~T();
+   a = 0; // both-note {{assignment to object outside its lifetime}}
+   return a;
+  }
+  static_assert(f2() == 0); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to}}
+
+#ifdef NEW_INTERP
+  /// FIXME: Currently crashes with the current interpreter, see https://github.com/llvm/llvm-project/issues/53741
+  constexpr int f3() {
+   using T = int;
+   0 .~T();
+   return 0;
+  }
+  static_assert(f3() == 0);
+#endif
 }
