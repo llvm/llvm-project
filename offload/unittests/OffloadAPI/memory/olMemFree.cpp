@@ -14,25 +14,25 @@ using olMemFreeTest = offloadDeviceTest;
 
 TEST_F(olMemFreeTest, SuccessFreeShared) {
   void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_SHARED, 1024, 0, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_SHARED, 1024, &Alloc));
   ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_SHARED, Alloc));
 }
 
 TEST_F(olMemFreeTest, SuccessFreeHost) {
-    void *Alloc = nullptr;
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_HOST, 1024, 0, &Alloc));
-    ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_HOST, Alloc));
+  void *Alloc = nullptr;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_HOST, 1024, &Alloc));
+  ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_HOST, Alloc));
 }
 
 TEST_F(olMemFreeTest, SuccessFreeDevice) {
   void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 1024, 0, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
   ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_DEVICE, Alloc));
 }
 
 TEST_F(olMemFreeTest, InvalidNullDevice) {
   void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 1024, 0, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
                olMemFree(nullptr, OL_ALLOC_TYPE_DEVICE, &Alloc));
   ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_DEVICE, Alloc));
@@ -40,7 +40,7 @@ TEST_F(olMemFreeTest, InvalidNullDevice) {
 
 TEST_F(olMemFreeTest, InvalidNullPtr) {
   void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 1024, 0, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
                olMemFree(nullptr, OL_ALLOC_TYPE_DEVICE, &Alloc));
   ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_DEVICE, Alloc));

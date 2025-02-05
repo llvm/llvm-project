@@ -489,9 +489,6 @@ inline std::ostream &operator<<(std::ostream &os,
   os << ".Size = ";
   os << *params->pSize;
   os << ", ";
-  os << ".Aligment = ";
-  os << *params->pAligment;
-  os << ", ";
   os << ".AllocationOut = ";
   printPtr(os, *params->pAllocationOut);
   return os;

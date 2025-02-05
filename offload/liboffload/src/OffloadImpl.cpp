@@ -322,7 +322,7 @@ TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
 }
 
 ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
-                                 ol_alloc_type_t Type, size_t Size, size_t,
+                                 ol_alloc_type_t Type, size_t Size,
                                  void **AllocationOut) {
   auto Alloc =
       Device->Device.dataAlloc(Size, nullptr, convertOlToPluginAllocTy(Type));
@@ -485,7 +485,7 @@ ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device, void *ProgData,
                                       ol_program_handle_t *Program) {
   auto ImageData = MemoryBuffer::getMemBufferCopy(
       StringRef(reinterpret_cast<char *>(ProgData), ProgDataSize));
-  __tgt_device_image DeviceImage{(char *) ImageData->getBuffer().data(),
+  __tgt_device_image DeviceImage{(char *)ImageData->getBuffer().data(),
                                  ((char *)ImageData->getBuffer().data()) +
                                      ProgDataSize - 1,
                                  nullptr, nullptr};

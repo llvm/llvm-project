@@ -513,8 +513,6 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemAlloc(
     ol_alloc_type_t Type,
     // [in] size of the allocation in bytes
     size_t Size,
-    // [in] alignment of the allocation in bytes
-    size_t Aligment,
     // [out] output for the allocated pointer
     void **AllocationOut);
 
@@ -1008,7 +1006,6 @@ typedef struct ol_mem_alloc_params_t {
   ol_device_handle_t *pDevice;
   ol_alloc_type_t *pType;
   size_t *pSize;
-  size_t *pAligment;
   void ***pAllocationOut;
 } ol_mem_alloc_params_t;
 
@@ -1261,7 +1258,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoSizeWithCodeLoc(
 /// @details See also ::olMemAlloc
 OL_APIEXPORT ol_result_t OL_APICALL olMemAllocWithCodeLoc(
     ol_device_handle_t Device, ol_alloc_type_t Type, size_t Size,
-    size_t Aligment, void **AllocationOut, ol_code_location_t *CodeLocation);
+    void **AllocationOut, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olMemFree that also sets source code location information

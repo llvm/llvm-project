@@ -13,14 +13,11 @@
 using olEnqueueDataWriteTest = offloadQueueTest;
 
 TEST_F(olEnqueueDataWriteTest, Success) {
-    constexpr size_t Size = 1024;
-    void *Alloc;
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, 0, &Alloc));
-    std::vector<uint8_t> Input(Size, 42);
-    ASSERT_SUCCESS(
-        olEnqueueDataWrite(Queue, Input.data(), Alloc, Size, nullptr));
-    olFinishQueue(Queue);
-    olMemFree(Device, OL_ALLOC_TYPE_DEVICE, Alloc);
+  constexpr size_t Size = 1024;
+  void *Alloc;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
+  std::vector<uint8_t> Input(Size, 42);
+  ASSERT_SUCCESS(olEnqueueDataWrite(Queue, Input.data(), Alloc, Size, nullptr));
+  olFinishQueue(Queue);
+  olMemFree(Device, OL_ALLOC_TYPE_DEVICE, Alloc);
 }
-
-

@@ -19,8 +19,8 @@ TEST_F(olEnqueueDataCopyTest, Success) {
   std::vector<uint8_t> Input(Size, 42);
   std::vector<uint8_t> Output(Size, 0);
 
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, 0, &AllocA));
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, 0, &AllocB));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &AllocA));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &AllocB));
   ASSERT_SUCCESS(
       olEnqueueDataWrite(Queue, Input.data(), AllocA, Size, nullptr));
   ASSERT_SUCCESS(

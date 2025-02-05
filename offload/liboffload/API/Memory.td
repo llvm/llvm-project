@@ -27,7 +27,6 @@ def : Function {
     Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
     Param<"ol_alloc_type_t", "Type", "type of the allocation", PARAM_IN>,
     Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
-    Param<"size_t", "Aligment", "alignment of the allocation in bytes", PARAM_IN>,
     Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
   ];
   let returns = [

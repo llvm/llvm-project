@@ -442,8 +442,7 @@ ol_result_t olGetDeviceInfoSizeWithCodeLoc(ol_device_handle_t Device,
 
 ///////////////////////////////////////////////////////////////////////////////
 ol_impl_result_t olMemAlloc_val(ol_device_handle_t Device, ol_alloc_type_t Type,
-                                size_t Size, size_t Aligment,
-                                void **AllocationOut) {
+                                size_t Size, void **AllocationOut) {
   if (true /*enableParameterValidation*/) {
     if (Size == 0) {
       return OL_ERRC_INVALID_SIZE;
@@ -458,22 +457,20 @@ ol_impl_result_t olMemAlloc_val(ol_device_handle_t Device, ol_alloc_type_t Type,
     }
   }
 
-  return olMemAlloc_impl(Device, Type, Size, Aligment, AllocationOut);
+  return olMemAlloc_impl(Device, Type, Size, AllocationOut);
 }
 OL_APIEXPORT ol_result_t OL_APICALL olMemAlloc(ol_device_handle_t Device,
                                                ol_alloc_type_t Type,
-                                               size_t Size, size_t Aligment,
+                                               size_t Size,
                                                void **AllocationOut) {
   if (offloadConfig().TracingEnabled) {
     std::cout << "---> olMemAlloc";
   }
 
-  ol_result_t Result =
-      olMemAlloc_val(Device, Type, Size, Aligment, AllocationOut);
+  ol_result_t Result = olMemAlloc_val(Device, Type, Size, AllocationOut);
 
   if (offloadConfig().TracingEnabled) {
-    ol_mem_alloc_params_t Params = {&Device, &Type, &Size, &Aligment,
-                                    &AllocationOut};
+    ol_mem_alloc_params_t Params = {&Device, &Type, &Size, &AllocationOut};
     std::cout << "(" << &Params << ")";
     std::cout << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -484,10 +481,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemAlloc(ol_device_handle_t Device,
 }
 ol_result_t olMemAllocWithCodeLoc(ol_device_handle_t Device,
                                   ol_alloc_type_t Type, size_t Size,
-                                  size_t Aligment, void **AllocationOut,
+                                  void **AllocationOut,
                                   ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = olMemAlloc(Device, Type, Size, Aligment, AllocationOut);
+  ol_result_t Result = olMemAlloc(Device, Type, Size, AllocationOut);
 
   currentCodeLocation() = nullptr;
   return Result;

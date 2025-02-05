@@ -39,7 +39,7 @@ ol_impl_result_t olGetDeviceInfoSize_impl(ol_device_handle_t Device,
 
 ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
                                  ol_alloc_type_t Type, size_t Size,
-                                 size_t Aligment, void **AllocationOut);
+                                 void **AllocationOut);
 
 ol_impl_result_t olMemFree_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                                 void *Address);
