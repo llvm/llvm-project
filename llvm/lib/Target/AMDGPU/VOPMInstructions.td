@@ -218,11 +218,6 @@ def IterationCnt {
 }
 
 class VOP2M_Profile<list<ValueType> ArgTy, bit _HasAux = 0> : VOPMProfile<ArgTy, _HasAux, 0, 0, 0> {
-  bit HasAux = _HasAux;
-
-  let DstRC = getGVGPRforVT<ArgTy[0]>.ret;
-  let Src0RC64 = GSrcSimple;
-  let Src1RC64 = !if(!eq(Src1VT, i64), SCSrc_b64, GSrcSimple);
   let Ins64 = !con((ins Src0RC64:$src0), !if(HasSrc1, (ins Src1RC64:$src1), (ins)), !if(HasAux, (ins AuxData:$aux_data), (ins)), (ins Idxs0:$idxs));
 
   string Src1Asm = !if(HasSrc1, ", $src1", "");
@@ -231,11 +226,16 @@ class VOP2M_Profile<list<ValueType> ArgTy, bit _HasAux = 0> : VOPMProfile<ArgTy,
   let Asm64 = "$vdst, $src0"#Src1Asm#AuxDataAsm#"$idxs";
 }
 
-def VOPM_I64_I32_I32 : VOP2M_Profile<[i64, i32, i32, untyped]>;
+def VOPM_I64_I32_I32 : VOP2M_Profile<[i64, i32, i32, untyped]> {
+  let Src0RC64 = GSrcSimple;
+  let Src1RC64 = GSrcSimple;
+}
 def VOPM_I32_I32_I32 : VOP2M_Profile<[i32, i32, i32, untyped]>;
 def VOPM_I32_I32_I32_AUX : VOP2M_Profile<[i32, i32, i32, untyped], 1>;
 def VOPM_I32_I32_AUX : VOP2M_Profile<[i32, i32, untyped, untyped], 1>;
-def VOPM_I32_I32_I64 : VOP2M_Profile<[i32, i32, i64, untyped]>;
+def VOPM_I32_I32_I64 : VOP2M_Profile<[i32, i32, i64, untyped]> {
+  let Src1RC64 = SCSrc_b64;
+}
 
 class VOP3M_Permute_Profile<list<ValueType> ArgTy> : VOPMProfile<ArgTy, 1, 0, 0, 0> {
   let Outs64 = (outs DstRC64:$vdst, Src2RC64:$src2);
