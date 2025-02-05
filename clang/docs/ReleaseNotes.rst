@@ -112,6 +112,8 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -148,6 +150,8 @@ Bug Fixes to AST Handling
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- HTML tags in comments that span multiple lines are now parsed correctly by Clang's comment parser. (#GH120843)
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
