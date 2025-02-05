@@ -31,10 +31,8 @@ LLVM_LIBC_FUNCTION(float16, asinf16, (float16 x)) {
   uint16_t x_abs = x_u & 0x7fff;
   float xf = x;
 
-  float xsq = xf * xf;
-
-  // |x| <= 0x1p-1, |x| <= 0.5
-  if (x_abs <= 0x3800) {
+  // |x| > 0x1p0, |x| > 1, or x is NaN.
+  if (LIBC_UNLIKELY(x_abs > 0x3c00)) {
     // asinf16(NaN) = NaN
     if (xbits.is_nan()) {
       if (xbits.is_signaling_nan()) {
@@ -44,7 +42,18 @@ LLVM_LIBC_FUNCTION(float16, asinf16, (float16 x)) {
 
       return x;
     }
+    
+    // 1 < |x| <= +/-inf
+    fputil::raise_except_if_required(FE_INVALID);
+    fputil::set_errno_if_required(EDOM);
+    
+    return FPBits::quiet_nan().get_val();
+  }
+  
+  float xsq = xf * xf;
 
+  // |x| <= 0x1p-1, |x| <= 0.5
+  if (x_abs <= 0x3800) {
     // asinf16(+/-0) = +/-0
     if (LIBC_UNLIKELY(x_abs == 0))
       return x;
@@ -71,17 +80,6 @@ LLVM_LIBC_FUNCTION(float16, asinf16, (float16 x)) {
         fputil::polyeval(xsq, 0x1.000002p0f, 0x1.554c2ap-3f, 0x1.3541ccp-4f,
                          0x1.43b2d6p-5f, 0x1.a0d73ep-5f);
     return fputil::cast<float16>(xf * result);
-  }
-
-  // |x| > 1, asinf16(x) = NaN
-  if (LIBC_UNLIKELY(x_abs > 0x3c00)) {
-    // |x| <= +/-inf
-    if (LIBC_UNLIKELY(x_abs <= 0x7c00)) {
-      fputil::set_errno_if_required(EDOM);
-      fputil::raise_except_if_required(FE_INVALID);
-    }
-
-    return FPBits::quiet_nan().get_val();
   }
 
   // When |x| > 0.5, assume that 0.5 < |x| <= 1,
