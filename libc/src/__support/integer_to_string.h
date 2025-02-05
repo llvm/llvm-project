@@ -231,7 +231,7 @@ extract_decimal_digit(T &value) {
   // Having multiplied it by 6, add the lowest half-word, and then reduce mod
   // 10 by normal integer division to finish.
   acc_remainder += value.val[0] & HALFWORD_MASK;
-  uint8_t digit = acc_remainder % 10;
+  uint8_t digit = static_cast<uint8_t>(acc_remainder % 10);
 
   // Now we have the output digit. Subtract it from the input value, and shift
   // right to divide by 2.
