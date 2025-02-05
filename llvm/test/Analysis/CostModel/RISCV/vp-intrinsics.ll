@@ -1614,6 +1614,41 @@ define void @splat() {
   ret void
 }
 
+define void @splice() {
+; CHECK-LABEL: 'splice'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vp.splice.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv32i8 = call <vscale x 32 x i8> @llvm.experimental.vp.splice.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 1, <vscale x 32 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv2i16 = call <vscale x 2 x i16> @llvm.experimental.vp.splice.nxv2i16(<vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16> zeroinitializer, i32 1, <vscale x 2 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv4i16 = call <vscale x 4 x i16> @llvm.experimental.vp.splice.nxv4i16(<vscale x 4 x i16> zeroinitializer, <vscale x 4 x i16> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv8i16 = call <vscale x 8 x i16> @llvm.experimental.vp.splice.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer, i32 1, <vscale x 8 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv16i16 = call <vscale x 16 x i16> @llvm.experimental.vp.splice.nxv16i16(<vscale x 16 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv4i32 = call <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv8i32 = call <vscale x 8 x i32> @llvm.experimental.vp.splice.nxv8i32(<vscale x 8 x i32> zeroinitializer, <vscale x 8 x i32> zeroinitializer, i32 1, <vscale x 8 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv2i64 = call <vscale x 2 x i64> @llvm.experimental.vp.splice.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> zeroinitializer, i32 1, <vscale x 2 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv4i64 = call <vscale x 4 x i64> @llvm.experimental.vp.splice.nxv4i64(<vscale x 4 x i64> zeroinitializer, <vscale x 4 x i64> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv16i1 = call <vscale x 16 x i1> @llvm.experimental.vp.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv8i1 = call <vscale x 8 x i1> @llvm.experimental.vp.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1, <vscale x 8 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.experimental.vp.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.experimental.vp.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1, <vscale x 2 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %splice_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vp.splice.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv32i8 = call <vscale x 32 x i8> @llvm.experimental.vp.splice.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 1, <vscale x 32 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv2i16 = call <vscale x 2 x i16> @llvm.experimental.vp.splice.nxv2i16(<vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16> zeroinitializer, i32 1, <vscale x 2 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv4i16 = call <vscale x 4 x i16> @llvm.experimental.vp.splice.nxv4i16(<vscale x 4 x i16> zeroinitializer, <vscale x 4 x i16> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv8i16 = call <vscale x 8 x i16> @llvm.experimental.vp.splice.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer, i32 1, <vscale x 8 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv16i16 = call <vscale x 16 x i16> @llvm.experimental.vp.splice.nxv16i16(<vscale x 16 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv4i32 = call <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv8i32 = call <vscale x 8 x i32> @llvm.experimental.vp.splice.nxv8i32(<vscale x 8 x i32> zeroinitializer, <vscale x 8 x i32> zeroinitializer, i32 1, <vscale x 8 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv2i64 = call <vscale x 2 x i64> @llvm.experimental.vp.splice.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> zeroinitializer, i32 1, <vscale x 2 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv4i64 = call <vscale x 4 x i64> @llvm.experimental.vp.splice.nxv4i64(<vscale x 4 x i64> zeroinitializer, <vscale x 4 x i64> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv16i1 = call <vscale x 16 x i1> @llvm.experimental.vp.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv8i1 =  call <vscale x 8 x i1> @llvm.experimental.vp.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1, <vscale x 8 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.experimental.vp.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
+  %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.experimental.vp.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1, <vscale x 2 x i1> zeroinitializer, i32 poison, i32 poison)
+  ret void
+}
+
 declare <2 x i8> @llvm.vp.add.v2i8(<2 x i8>, <2 x i8>, <2 x i1>, i32)
 declare <4 x i8> @llvm.vp.add.v4i8(<4 x i8>, <4 x i8>, <4 x i1>, i32)
 declare <8 x i8> @llvm.vp.add.v8i8(<8 x i8>, <8 x i8>, <8 x i1>, i32)
