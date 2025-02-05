@@ -176,7 +176,8 @@ func.func @extract(%arg0 : vector<2xf32>) -> (vector<1xf32>, f32) {
 // -----
 
 func.func @extract_poison_idx(%arg0 : vector<4xf32>) -> f32 {
-  // expected-error@+1 {{index -1 out of bounds for 'vector<4xf32>'}}
+  // CHECK: %[[ZERO:.+]] = spirv.Constant 0.000000e+00
+  // CHECK: return %[[ZERO]]
   %0 = vector.extract %arg0[-1] : f32 from vector<4xf32>
   return %0: f32
 }
@@ -208,11 +209,30 @@ func.func @extract_size1_vector_dynamic(%arg0 : vector<1xf32>, %id : index) -> f
 // CHECK-LABEL: @extract_dynamic
 //  CHECK-SAME: %[[V:.*]]: vector<4xf32>, %[[ARG1:.*]]: index
 //       CHECK:   %[[ID:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : index to i32
-//       CHECK:   spirv.VectorExtractDynamic %[[V]][%[[ID]]] : vector<4xf32>, i32
+//       CHECK:   %[[MASK:.+]] = spirv.Constant 3 :
+//       CHECK:   %[[MASKED:.+]] = spirv.BitwiseAnd %[[ID]], %[[MASK]] :
+//       CHECK:   spirv.VectorExtractDynamic %[[V]][%[[MASKED]]] : vector<4xf32>, i32
 func.func @extract_dynamic(%arg0 : vector<4xf32>, %id : index) -> f32 {
   %0 = vector.extract %arg0[%id] : f32 from vector<4xf32>
   return %0: f32
 }
+
+// -----
+
+// CHECK-LABEL: @extract_dynamic_non_pow2
+//  CHECK-SAME: %[[V:.*]]: vector<3xf32>, %[[ARG1:.*]]: index
+//       CHECK:   %[[ID:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : index to i32
+//       CHECK:   %[[POISON:.+]] = spirv.Constant -1 :
+//       CHECK:   %[[CMP:.+]] = spirv.IEqual %[[ID]], %[[POISON]]
+//       CHECK:   %[[ZERO:.+]] = spirv.Constant 0 :
+//       CHECK:   %[[SELECT:.+]] = spirv.Select %[[CMP]], %[[ZERO]], %[[ID]] :
+//       CHECK:   spirv.VectorExtractDynamic %[[V]][%[[SELECT]]] : vector<3xf32>, i32
+func.func @extract_dynamic_non_pow2(%arg0 : vector<3xf32>, %id : index) -> f32 {
+  %0 = vector.extract %arg0[%id] : f32 from vector<3xf32>
+  return %0: f32
+}
+
+// -----
 
 // CHECK-LABEL: @extract_dynamic_cst
 //  CHECK-SAME: %[[V:.*]]: vector<4xf32>
@@ -264,8 +284,10 @@ func.func @insert(%arg0 : vector<4xf32>, %arg1: f32) -> vector<4xf32> {
 
 // -----
 
+// CHECK-LABEL: @insert_poison_idx
+// CHECK: %[[ZERO:.+]] = spirv.Constant dense<0.000000e+00>
+// CHECK: return %[[ZERO]]
 func.func @insert_poison_idx(%arg0 : vector<4xf32>, %arg1: f32) -> vector<4xf32> {
-  // expected-error@+1 {{index -1 out of bounds for 'vector<4xf32>'}}
   %1 = vector.insert %arg1, %arg0[-1] : f32 into vector<4xf32>
   return %1: vector<4xf32>
 }
@@ -306,10 +328,27 @@ func.func @insert_size1_vector_dynamic(%arg0 : vector<1xf32>, %arg1: f32, %id : 
 // CHECK-LABEL: @insert_dynamic
 //  CHECK-SAME: %[[VAL:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[ARG2:.*]]: index
 //       CHECK: %[[ID:.+]] = builtin.unrealized_conversion_cast %[[ARG2]] : index to i32
-//       CHECK:   spirv.VectorInsertDynamic %[[VAL]], %[[V]][%[[ID]]] : vector<4xf32>, i32
+//       CHECK:   %[[MASK:.+]] = spirv.Constant 3 :
+//       CHECK:   %[[MASKED:.+]] = spirv.BitwiseAnd %[[ID]], %[[MASK]] :
+//       CHECK:   spirv.VectorInsertDynamic %[[VAL]], %[[V]][%[[MASKED]]] : vector<4xf32>, i32
 func.func @insert_dynamic(%val: f32, %arg0 : vector<4xf32>, %id : index) -> vector<4xf32> {
   %0 = vector.insert %val, %arg0[%id] : f32 into vector<4xf32>
   return %0: vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @insert_dynamic_non_pow2
+//  CHECK-SAME: %[[VAL:.*]]: f32, %[[V:.*]]: vector<3xf32>, %[[ARG2:.*]]: index
+//       CHECK: %[[ID:.+]] = builtin.unrealized_conversion_cast %[[ARG2]] : index to i32
+//       CHECK:   %[[POISON:.+]] = spirv.Constant -1 :
+//       CHECK:   %[[CMP:.+]] = spirv.IEqual %[[ID]], %[[POISON]]
+//       CHECK:   %[[ZERO:.+]] = spirv.Constant 0 :
+//       CHECK:   %[[SELECT:.+]] = spirv.Select %[[CMP]], %[[ZERO]], %[[ID]] :
+//       CHECK:   spirv.VectorInsertDynamic %[[VAL]], %[[V]][%[[SELECT]]] : vector<3xf32>, i32
+func.func @insert_dynamic_non_pow2(%val: f32, %arg0 : vector<3xf32>, %id : index) -> vector<3xf32> {
+  %0 = vector.insert %val, %arg0[%id] : f32 into vector<3xf32>
+  return %0: vector<3xf32>
 }
 
 // -----
