@@ -19,8 +19,7 @@ Here is an example of a time trace produced with
 .. code-block:: bash
    :caption: Clang Static Analyzer invocation to generate a time trace of string.c analysis.
 
-   clang -cc1 -internal-isystem ./build/asserts/lib/clang/21/include \
-         -nostdsysteminc -analyze -analyzer-constraints=range \
+   clang -cc1 -nostdsysteminc -analyze -analyzer-constraints=range \
          -setup-static-analyzer -analyzer-checker=core,unix,alpha.unix.cstring,debug.ExprInspection \
          -verify ./clang/test/Analysis/string.c \
          -ftime-trace=trace.json -ftime-trace-granularity=1
