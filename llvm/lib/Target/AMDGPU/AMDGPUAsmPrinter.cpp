@@ -837,15 +837,10 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     }
 
 #if LLPC_BUILD_NPI
-    if (AMDGPU::isGFX1250Plus(STM)) {
-      const MCExpr *BarBlkConst = MCConstantExpr::create(4, Ctx);
-      const MCExpr *AlignToBlk = AMDGPUMCExpr::createAlignTo(
-          CurrentProgramInfo.NamedBarCnt, BarBlkConst, Ctx);
-      const MCExpr *BarBlks =
-          MCBinaryExpr::createDiv(AlignToBlk, BarBlkConst, Ctx);
-      OutStreamer->emitRawComment(" NamedBarCnt: " + getMCExprStr(BarBlks),
-                                  false);
-    }
+    if (AMDGPU::isGFX1250Plus(STM))
+      OutStreamer->emitRawComment(
+          " NamedBarCnt: " + getMCExprStr(CurrentProgramInfo.NamedBarCnt),
+          false);
 
 #endif /* LLPC_BUILD_NPI */
     OutStreamer->emitRawComment(
@@ -1070,10 +1065,14 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DynamicCallStack =
       MCBinaryExpr::createOr(GetSymRefExpr(RIK::RIK_HasDynSizedStack),
                              GetSymRefExpr(RIK::RIK_HasRecursion), Ctx);
-#if LLPC_BUILD_NPI
-  ProgInfo.NamedBarCnt = GetSymRefExpr(RIK::RIK_NumNamedBarrier);
-#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+  const MCExpr *BarBlkConst = MCConstantExpr::create(4, Ctx);
+  const MCExpr *AlignToBlk = AMDGPUMCExpr::createAlignTo(
+      GetSymRefExpr(RIK::RIK_NumNamedBarrier), BarBlkConst, Ctx);
+  ProgInfo.NamedBarCnt = MCBinaryExpr::createDiv(AlignToBlk, BarBlkConst, Ctx);
+
+#endif /* LLPC_BUILD_NPI */
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   // The calculations related to SGPR/VGPR blocks are

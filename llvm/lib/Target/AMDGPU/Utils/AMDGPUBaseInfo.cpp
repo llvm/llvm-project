@@ -3777,13 +3777,20 @@ getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
   static const unsigned VOPDOpsY[7] = {
       AMDGPU::OpName::src0Y, AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vsrc2Y,
       AMDGPU::OpName::vdstY, DEFAULT_VALUES_3};
-  static const unsigned VOPMOps[7] = {
+
+  // Most VOPM instructions use srcN, where N is integer, but WMMA use different
+  // naming scheme.
+  static const unsigned VOPMWMMAOps[7] = {
+      AMDGPU::OpName::vdst, AMDGPU::OpName::srcC, AMDGPU::OpName::srcA,
+      AMDGPU::OpName::srcB, AMDGPU::OpName::src3, AMDGPU::OpName::src4,
+      AMDGPU::OpName::OPERAND_LAST};
+  static const unsigned VOPMOtherOps[7] = {
       AMDGPU::OpName::vdst, AMDGPU::OpName::src0, AMDGPU::OpName::src1,
       AMDGPU::OpName::src2, AMDGPU::OpName::src3, AMDGPU::OpName::src4,
       AMDGPU::OpName::src5};
 #undef DEFAULT_VALUES_3
 
-  unsigned TSFlags = Desc.TSFlags;
+  uint64_t TSFlags = Desc.TSFlags;
 
   if (TSFlags &
       (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
@@ -3821,8 +3828,12 @@ getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
     llvm_unreachable("Sample VGPR lowering is not implemented and"
                      " these instructions are not expected on gfx1250");
 
-  if (isVOPMPseudo(Desc.getOpcode()))
-    return {VOPMOps, nullptr};
+  if (isVOPMPseudo(Desc.getOpcode())) {
+    if (TSFlags & (SIInstrFlags::IsWMMA | SIInstrFlags::IsSWMMAC))
+      return {VOPMWMMAOps, nullptr};
+    else
+      return {VOPMOtherOps, nullptr};
+  }
 
   return {};
 }

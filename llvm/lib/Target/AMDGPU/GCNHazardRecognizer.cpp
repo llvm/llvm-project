@@ -1855,6 +1855,10 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
 bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
   if (!SIInstrInfo::isWMMA(*MI) && !SIInstrInfo::isSWMMAC(*MI))
     return false;
+#if LLPC_BUILD_NPI
+  if (AMDGPU::isGFX13Plus(ST))
+    return false;
+#endif /* LLPC_BUILD_NPI */
 
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();

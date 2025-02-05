@@ -261,6 +261,12 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_SQ_PERF_SNAPSHOT_DATA1"}, ID_SQ_PERF_SNAPSHOT_DATA1, isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_PC_LO"}, ID_SQ_PERF_SNAPSHOT_PC_LO, isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_PC_HI"}, ID_SQ_PERF_SNAPSHOT_PC_HI, isGFX940},
+#if LLPC_BUILD_NPI
+
+  // GFX1250
+  {{"HW_REG_XNACK_STATE_PRIV"},       ID_XNACK_STATE_PRIV,       isGFX1250Only},
+  {{"HW_REG_XNACK_MASK"},             ID_XNACK_MASK_gfx1250,     isGFX1250Only},
+#endif /* LLPC_BUILD_NPI */
 
   // Aliases
   {{"HW_REG_HW_ID"},                  ID_HW_ID1,                 isGFX10},

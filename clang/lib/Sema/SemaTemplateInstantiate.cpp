@@ -190,7 +190,7 @@ HandleVarTemplateSpec(const VarTemplateSpecializationDecl *VarTemplSpec,
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
       Specialized = VarTemplSpec->getSpecializedTemplateOrPartial();
   if (VarTemplatePartialSpecializationDecl *Partial =
-          Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+          dyn_cast<VarTemplatePartialSpecializationDecl *>(Specialized)) {
     if (!SkipForSpecialization)
       Result.addOuterTemplateArguments(
           Partial, VarTemplSpec->getTemplateInstantiationArgs().asArray(),
@@ -2438,7 +2438,7 @@ TemplateInstantiator::TransformFunctionParmPackRefExpr(DeclRefExpr *E,
   assert(Found && "no instantiation for parameter pack");
 
   Decl *TransformedDecl;
-  if (DeclArgumentPack *Pack = Found->dyn_cast<DeclArgumentPack *>()) {
+  if (DeclArgumentPack *Pack = dyn_cast<DeclArgumentPack *>(*Found)) {
     // If this is a reference to a function parameter pack which we can
     // substitute but can't yet expand, build a FunctionParmPackExpr for it.
     if (getSema().ArgumentPackSubstitutionIndex == -1) {

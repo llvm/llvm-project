@@ -22,6 +22,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::CudaUnified);
   disable_.set(LanguageFeature::ImplicitNoneTypeNever);
   disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
+  disable_.set(LanguageFeature::ImplicitNoneExternal);
   disable_.set(LanguageFeature::DefaultSave);
   disable_.set(LanguageFeature::SaveMainProgram);
   // These features, if enabled, conflict with valid standard usage,
@@ -79,7 +80,6 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::ImplicitShared);
   warnUsage_.set(UsageWarning::IndexVarRedefinition);
   warnUsage_.set(UsageWarning::IncompatibleImplicitInterfaces);
-  warnUsage_.set(UsageWarning::BadTypeForTarget);
   warnUsage_.set(UsageWarning::VectorSubscriptFinalization);
   warnUsage_.set(UsageWarning::UndefinedFunctionResult);
   warnUsage_.set(UsageWarning::UselessIomsg);

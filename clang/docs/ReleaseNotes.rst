@@ -45,6 +45,8 @@ C++ Specific Potentially Breaking Changes
 ABI Changes in This Version
 ---------------------------
 
+- Return larger CXX records in memory instead of using AVX registers. Code compiled with older clang will be incompatible with newer version of the clang unless -fclang-abi-compat=20 is provided. (#GH120670)
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -110,8 +112,17 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
+
 Improvements to Clang's diagnostics
 -----------------------------------
+
+- Improve the diagnostics for deleted default constructor errors for C++ class
+  initializer lists that don't explicitly list a class member and thus attempt
+  to implicitly default construct that member.
+- The ``-Wunique-object-duplication`` warning has been added to warn about objects
+  which are supposed to only exist once per program, but may get duplicated when
+  built into a shared library.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -129,6 +140,7 @@ Bug Fixes to Compiler Builtins
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ - Fixed crash when a parameter to the ``clang::annotate`` attribute evaluates to ``void``. See #GH119125
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -138,6 +150,8 @@ Bug Fixes to AST Handling
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- HTML tags in comments that span multiple lines are now parsed correctly by Clang's comment parser. (#GH120843)
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -153,6 +167,11 @@ AMDGPU Support
 
 NVPTX Support
 ^^^^^^^^^^^^^^
+
+Hexagon Support
+^^^^^^^^^^^^^^^
+
+-  The default compilation target has been changed from V60 to V68.
 
 X86 Support
 ^^^^^^^^^^^

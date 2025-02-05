@@ -286,9 +286,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
   OS << "enum {\n";
   for (const auto &[I, Op] : enumerate(OperandNameToID))
     OS << "  " << Op.first << " = " << I << ",\n";
-#if LLPC_BUILD_NPI
-  OS << " OPERAND_LAST\n";
-#endif /* LLPC_BUILD_NPI */
+  OS << "  OPERAND_LAST = " << NumOperandNames << ",\n";
   OS << "};\n";
   OS << "} // end namespace llvm::" << Namespace << "::OpName\n";
   OS << "#endif //GET_INSTRINFO_OPERAND_ENUM\n\n";
@@ -302,13 +300,8 @@ void InstrInfoEmitter::emitOperandNameMappings(
     assert(MaxOperandNo <= INT16_MAX &&
            "Too many operands for the operand name -> index table");
     StringRef Type = MaxOperandNo <= INT8_MAX ? "int8_t" : "int16_t";
-#if LLPC_BUILD_NPI
-    OS << "  static constexpr " << Type << " OperandMap[]["
-       << NumOperandNames + 1 << "] = {\n";
-#else /* LLPC_BUILD_NPI */
     OS << "  static constexpr " << Type << " OperandMap[][" << NumOperandNames
        << "] = {\n";
-#endif /* LLPC_BUILD_NPI */
     for (const auto &Entry : OperandMap) {
       const std::map<unsigned, unsigned> &OpList = Entry.first;
 
@@ -318,11 +311,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
         auto Iter = OpList.find(ID);
         OS << (Iter != OpList.end() ? (int)Iter->second : -1) << ", ";
       }
-#if LLPC_BUILD_NPI
-      OS << "-1 },\n";
-#else /* LLPC_BUILD_NPI */
       OS << "},\n";
-#endif /* LLPC_BUILD_NPI */
     }
     OS << "  };\n";
 

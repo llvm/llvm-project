@@ -550,11 +550,14 @@ class FLAT_SWC<string opName, bit HasVdst, bit HasAddr> : FLAT_Pseudo<
   !con(!if(HasAddr, !if(HasVdst, (ins VReg_64:$vaddr), (ins VGPR_32:$vaddr)), (ins)), (ins CPol:$cpol)),
   !if(HasVdst, " $vdst", "")#!if(HasAddr, ", $vaddr", "")#"$cpol">{
 
+  let hasSideEffects = 1;
   let is_flat_global = 1;
   let has_offset = 0;
   let has_vaddr = HasAddr;
   let has_data = 0;
   let has_vdst = HasVdst;
+  let mayStore = 1;
+  let mayLoad = 1;
 }
 
 class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
@@ -1648,7 +1651,7 @@ class FlatLoadPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCN
 >;
 
 #ifdef LLPC_BUILD_NPI
-class FlatRtsPat<SDPatternOperator node, FLAT_Pseudo opcode,
+class FlatRtsSwcPat<SDPatternOperator node, FLAT_Pseudo opcode,
                  ValueType vdst_vt = isVoid,
                  ValueType vdata_vt = isVoid> : GCNPat<
   !if(!ne(vdst_vt, isVoid),
@@ -1663,12 +1666,20 @@ class FlatRtsPat<SDPatternOperator node, FLAT_Pseudo opcode,
       (opcode (i32 0)))
 >;
 
-def : FlatRtsPat<int_amdgcn_rts_read_result_all_stop, RTS_READ_RESULT_ALL_STOP, i64>;
-def : FlatRtsPat<int_amdgcn_rts_read_result_ongoing, RTS_READ_RESULT_ONGOING, i64>;
-def : FlatRtsPat<int_amdgcn_rts_flush, RTS_FLUSH>;
-def : FlatRtsPat<int_amdgcn_rts_ray_save, RTS_RAY_SAVE, i32>;
-def : FlatRtsPat<int_amdgcn_rts_ray_restore, RTS_RAY_RESTORE, isVoid, i32>;
-def : FlatRtsPat<int_amdgcn_rts_update_ray, RTS_UPDATE_RAY, i32, i64>;
+def : FlatRtsSwcPat<int_amdgcn_rts_read_result_all_stop, RTS_READ_RESULT_ALL_STOP, i64>;
+def : FlatRtsSwcPat<int_amdgcn_rts_read_result_ongoing, RTS_READ_RESULT_ONGOING, i64>;
+def : FlatRtsSwcPat<int_amdgcn_rts_flush, RTS_FLUSH>;
+def : FlatRtsSwcPat<int_amdgcn_rts_ray_save, RTS_RAY_SAVE, i32>;
+def : FlatRtsSwcPat<int_amdgcn_rts_ray_restore, RTS_RAY_RESTORE, isVoid, i32>;
+def : FlatRtsSwcPat<int_amdgcn_rts_update_ray, RTS_UPDATE_RAY, i32, i64>;
+
+def : FlatRtsSwcPat<int_amdgcn_swc_reorder, SWC_REORDER, i32, i64>;
+def : FlatRtsSwcPat<int_amdgcn_swc_flush, SWC_FLUSH>;
+def : FlatRtsSwcPat<int_amdgcn_swc_reorder_swap, SWC_REORDER_SWAP, i32, i64>;
+def : FlatRtsSwcPat<int_amdgcn_swc_reorder_swap_resume, SWC_REORDER_SWAP_RESUME, i32>;
+def : FlatRtsSwcPat<int_amdgcn_swc_get_exchange_state, SWC_GET_EXCHANGE_STATE, i32>;
+def : FlatRtsSwcPat<int_amdgcn_swc_set_exchange_state, SWC_SET_EXCHANGE_STATE, isVoid, i32>;
+def : FlatRtsSwcPat<int_amdgcn_swc_abort_exchange, SWC_ABORT_EXCHANGE>;
 
 class FlatLoadPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (FlatOffset i64:$vaddr, i32:$offset), (i32 timm:$cpol))),
@@ -1736,11 +1747,6 @@ class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt>
 class FlatLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
   (inst $saddr, $voffset, $offset, $cpol)
->;
-
-class FlatLoadSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol), M0)),
-  (inst $vaddr, $offset, $cpol)
 #else /* LLPC_BUILD_NPI */
 class GlobalLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset))),
@@ -1749,9 +1755,9 @@ class GlobalLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt
 >;
 
 #ifdef LLPC_BUILD_NPI
-class GlobalLoadSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddrCPolM0 (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), (i32 timm), M0)),
-  (inst $saddr, $voffset, $offset, $cpol)
+class FlatLoadSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol), M0)),
+  (inst $vaddr, $offset, $cpol)
 #else /* LLPC_BUILD_NPI */
 class GlobalStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                            ValueType vt> : GCNPat <
@@ -1761,6 +1767,11 @@ class GlobalStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
 >;
 
 #ifdef LLPC_BUILD_NPI
+class GlobalLoadSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddrCPolM0 (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), (i32 timm), M0)),
+  (inst $saddr, $voffset, $offset, $cpol)
+>;
+
 class FlatLoadSignedPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol))),
   (inst $vaddr, $offset, $cpol)

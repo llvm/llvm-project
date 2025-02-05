@@ -5463,6 +5463,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_rts_read_vertex_coords:
     case Intrinsic::amdgcn_rts_read_packet_info:
     case Intrinsic::amdgcn_rts_read_prim_info:
+    case Intrinsic::amdgcn_swc_reorder:
+    case Intrinsic::amdgcn_swc_reorder_swap:
+    case Intrinsic::amdgcn_swc_reorder_swap_resume:
+    case Intrinsic::amdgcn_swc_get_exchange_state:
+    case Intrinsic::amdgcn_swc_set_exchange_state:
 #endif /* LLPC_BUILD_NPI */
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:

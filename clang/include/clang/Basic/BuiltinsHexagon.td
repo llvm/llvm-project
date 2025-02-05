@@ -56,10 +56,13 @@ def HVXV65 : HVXV<"65", HVXV66>;
 def HVXV62 : HVXV<"62", HVXV65>;
 def HVXV60 : HVXV<"60", HVXV62>;
 
+def HexagonPrefix : NamePrefix<"__builtin_HEXAGON_">;
+
 class HexagonBuiltin<string prototype> : TargetBuiltin {
-  let Spellings = ["__builtin_HEXAGON_" # NAME];
+  let Spellings = [NAME];
   let Prototype = prototype;
   let Features = V5.Features;
+  let RequiredNamePrefix = HexagonPrefix; // Adds a prefix to the name.
 }
 
 class HexagonBuiltinNoPrefix<string prototype> : TargetBuiltin {

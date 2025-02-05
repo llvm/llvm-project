@@ -5975,19 +5975,19 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_agent
 ;
 ; GFX1032-LABEL: global_atomic_fadd_double_uni_address_uni_value_agent_scope_unsafe:
 ; GFX1032:       ; %bb.0:
-; GFX1032-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
 ; GFX1032-NEXT:    s_mov_b32 s42, s9
 ; GFX1032-NEXT:    s_mov_b32 s9, exec_lo
+; GFX1032-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
+; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v3, s9, 0
 ; GFX1032-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
 ; GFX1032-NEXT:    s_mov_b32 s50, -1
-; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v3, s9, 0
 ; GFX1032-NEXT:    s_mov_b32 s51, 0x31c16000
 ; GFX1032-NEXT:    s_add_u32 s48, s48, s11
+; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v3
 ; GFX1032-NEXT:    s_addc_u32 s49, s49, 0
 ; GFX1032-NEXT:    s_mov_b64 s[40:41], s[0:1]
 ; GFX1032-NEXT:    s_mov_b32 s46, 0
 ; GFX1032-NEXT:    s_movk_i32 s32, 0x400
-; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v3
 ; GFX1032-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX1032-NEXT:    s_cbranch_execz .LBB9_3
 ; GFX1032-NEXT:  ; %bb.1:
@@ -6434,19 +6434,19 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_agent
 ;
 ; GFX1032-DPP-LABEL: global_atomic_fadd_double_uni_address_uni_value_agent_scope_unsafe:
 ; GFX1032-DPP:       ; %bb.0:
-; GFX1032-DPP-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
 ; GFX1032-DPP-NEXT:    s_mov_b32 s42, s9
 ; GFX1032-DPP-NEXT:    s_mov_b32 s9, exec_lo
+; GFX1032-DPP-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
+; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v3, s9, 0
 ; GFX1032-DPP-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
 ; GFX1032-DPP-NEXT:    s_mov_b32 s50, -1
-; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v3, s9, 0
 ; GFX1032-DPP-NEXT:    s_mov_b32 s51, 0x31c16000
 ; GFX1032-DPP-NEXT:    s_add_u32 s48, s48, s11
+; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v3
 ; GFX1032-DPP-NEXT:    s_addc_u32 s49, s49, 0
 ; GFX1032-DPP-NEXT:    s_mov_b64 s[40:41], s[0:1]
 ; GFX1032-DPP-NEXT:    s_mov_b32 s46, 0
 ; GFX1032-DPP-NEXT:    s_movk_i32 s32, 0x400
-; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v3
 ; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB9_3
 ; GFX1032-DPP-NEXT:  ; %bb.1:
@@ -7680,8 +7680,8 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_agent
 ; GFX1032-DPP-NEXT:    v_permlanex16_b32 v10, v8, 0, 0
 ; GFX1032-DPP-NEXT:    v_add_f64 v[8:9], v[8:9], v[10:11]
 ; GFX1032-DPP-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v41, v8
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v1, exec_lo, 0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v41, v8
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v42, v9
 ; GFX1032-DPP-NEXT:    s_mov_b32 s46, 0
@@ -9197,8 +9197,8 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_one_a
 ; GFX1032-DPP-NEXT:    v_permlanex16_b32 v5, v3, 0, 0
 ; GFX1032-DPP-NEXT:    v_add_f64 v[3:4], v[3:4], v[5:6]
 ; GFX1032-DPP-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v7, exec_lo, 0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX1032-DPP-NEXT:    s_mov_b32 s2, 0
@@ -10622,8 +10622,8 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_agent
 ; GFX1032-DPP-NEXT:    v_permlanex16_b32 v5, v3, 0, 0
 ; GFX1032-DPP-NEXT:    v_add_f64 v[3:4], v[3:4], v[5:6]
 ; GFX1032-DPP-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v7, exec_lo, 0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX1032-DPP-NEXT:    s_mov_b32 s2, 0
@@ -11537,8 +11537,8 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_agent
 ; GFX1032-DPP-NEXT:    v_permlanex16_b32 v5, v3, 0, 0
 ; GFX1032-DPP-NEXT:    v_add_f64 v[3:4], v[3:4], v[5:6]
 ; GFX1032-DPP-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v7, exec_lo, 0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX1032-DPP-NEXT:    s_mov_b32 s2, 0
@@ -13720,8 +13720,8 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defau
 ; GFX1032-DPP-NEXT:    v_permlanex16_b32 v10, v8, 0, 0
 ; GFX1032-DPP-NEXT:    v_add_f64 v[8:9], v[8:9], v[10:11]
 ; GFX1032-DPP-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v41, v8
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v1, exec_lo, 0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v41, v8
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v42, v9
 ; GFX1032-DPP-NEXT:    s_mov_b32 s46, 0

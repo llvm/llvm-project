@@ -368,6 +368,21 @@ static bool isRTSOpc(unsigned op) {
   }
 }
 
+static bool isSWCOpc(unsigned op) {
+  switch (op) {
+  case AMDGPU::SWC_REORDER:
+  case AMDGPU::SWC_FLUSH:
+  case AMDGPU::SWC_REORDER_SWAP:
+  case AMDGPU::SWC_REORDER_SWAP_RESUME:
+  case AMDGPU::SWC_GET_EXCHANGE_STATE:
+  case AMDGPU::SWC_SET_EXCHANGE_STATE:
+  case AMDGPU::SWC_ABORT_EXCHANGE:
+    return true;
+  default:
+    return false;
+  }
+}
+
 #endif /* LLPC_BUILD_NPI */
 bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
@@ -521,7 +536,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
   }
 
 #if LLPC_BUILD_NPI
-  if (isFLAT(LdSt) && !isRTSOpc(LdSt.getOpcode())) {
+  if (isFLAT(LdSt) && !isRTSOpc(LdSt.getOpcode()) &&
+      !isSWCOpc(LdSt.getOpcode())) {
 #else /* LLPC_BUILD_NPI */
   if (isFLAT(LdSt)) {
 #endif /* LLPC_BUILD_NPI */
@@ -7443,9 +7459,14 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
 #if LLPC_BUILD_NPI
         .add(SrcMO);
     SrcMO.ChangeToRegister(Reg, false);
+#else /* LLPC_BUILD_NPI */
+        .add(Src0);
+    Src0.ChangeToRegister(Reg, false);
+#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 
+#if LLPC_BUILD_NPI
   if (MI.getOpcode() == AMDGPU::V_PERMUTE_PAIR_GENSGPR_B32) {
     const DebugLoc &DL = MI.getDebugLoc();
     Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
@@ -7469,14 +7490,9 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
         .addImm(AMDGPU::sub1);
 
     Src1.ChangeToRegister(Reg, false);
-#else /* LLPC_BUILD_NPI */
-        .add(Src0);
-    Src0.ChangeToRegister(Reg, false);
-#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 
-#if LLPC_BUILD_NPI
   // Legalize TENSOR_LOAD_TO_LDS, TENSOR_LOAD_TO_LDS_D2, TENSOR_STORE_FROM_LDS,
   // TENSOR_STORE_FROM_LDS_D2. All their operands are scalar.
   if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS ||
@@ -9350,6 +9366,11 @@ Register SIInstrInfo::findUsedSGPR(const MachineInstr &MI,
 
 MachineOperand *SIInstrInfo::getNamedOperand(MachineInstr &MI,
                                              unsigned OperandName) const {
+#if LLPC_BUILD_NPI
+  if (OperandName == AMDGPU::OpName::OPERAND_LAST)
+    return nullptr;
+
+#endif /* LLPC_BUILD_NPI */
   int Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OperandName);
   if (Idx == -1)
     return nullptr;

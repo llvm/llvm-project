@@ -1173,13 +1173,7 @@ struct Waitcnt {
   Waitcnt() = default;
   // Pre-gfx12 constructor.
   Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt, unsigned VsCnt)
-      : LoadCnt(VmCnt), ExpCnt(ExpCnt), DsCnt(LgkmCnt), StoreCnt(VsCnt),
-#if LLPC_BUILD_NPI
-        SampleCnt(~0u), BvhCnt(~0u), KmCnt(~0u), XCnt(~0u), VaVdst(~0u),
-        VmVsrc(~0u) {}
-#else /* LLPC_BUILD_NPI */
-        SampleCnt(~0u), BvhCnt(~0u), KmCnt(~0u), VaVdst(~0u), VmVsrc(~0u) {}
-#endif /* LLPC_BUILD_NPI */
+      : LoadCnt(VmCnt), ExpCnt(ExpCnt), DsCnt(LgkmCnt), StoreCnt(VsCnt) {}
 
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
