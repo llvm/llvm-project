@@ -2055,8 +2055,7 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                        "'llvm.mlir.alias' or 'llvm.func'");
 
   LLVMPointerType type = getType();
-  if ((global && global.getAddrSpace() != type.getAddressSpace()) ||
-      (alias && alias.getAddrSpace() != type.getAddressSpace()))
+  if ((global && global.getAddrSpace() != type.getAddressSpace()))
     return emitOpError("pointer address space must match address space of the "
                        "referenced global or alias");
 
@@ -2446,9 +2445,8 @@ LogicalResult GlobalDtorsOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void AliasOp::build(OpBuilder &builder, OperationState &result, Type type,
-                    Linkage linkage, StringRef name, unsigned addrSpace,
-                    bool dsoLocal, bool threadLocal,
-                    ArrayRef<NamedAttribute> attrs) {
+                    Linkage linkage, StringRef name, bool dsoLocal,
+                    bool threadLocal, ArrayRef<NamedAttribute> attrs) {
   result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getAliasTypeAttrName(result.name), TypeAttr::get(type));
@@ -2461,9 +2459,6 @@ void AliasOp::build(OpBuilder &builder, OperationState &result, Type type,
 
   result.addAttribute(getLinkageAttrName(result.name),
                       LinkageAttr::get(builder.getContext(), linkage));
-  if (addrSpace != 0)
-    result.addAttribute(getAddrSpaceAttrName(result.name),
-                        builder.getI32IntegerAttr(addrSpace));
   result.attributes.append(attrs.begin(), attrs.end());
 
   result.addRegion();
@@ -2564,10 +2559,6 @@ LogicalResult AliasOp::verifyRegions() {
       !isa<LLVM::LLVMPointerType>(ret.getOperand(0).getType()))
     return emitOpError("initializer region must always return a pointer");
 
-  auto ptrTy = cast<LLVM::LLVMPointerType>(ret.getOperand(0).getType());
-  if (ptrTy.getAddressSpace() != getAddrSpace())
-    return emitOpError("address space must match initializer returned one");
-
   for (Operation &op : b) {
     auto iface = dyn_cast<MemoryEffectOpInterface>(op);
     if (!iface || !iface.hasNoEffect())
@@ -2576,6 +2567,13 @@ LogicalResult AliasOp::verifyRegions() {
   }
 
   return success();
+}
+
+unsigned AliasOp::getAddrSpace() {
+  Block &initializer = getInitializerBlock();
+  auto ret = cast<ReturnOp>(initializer.getTerminator());
+  auto ptrTy = cast<LLVMPointerType>(ret.getOperand(0).getType());
+  return ptrTy.getAddressSpace();
 }
 
 //===----------------------------------------------------------------------===//

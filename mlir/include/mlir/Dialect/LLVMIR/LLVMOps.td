@@ -1472,7 +1472,6 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
     Linkage:$linkage,
     UnitAttr:$dso_local,
     UnitAttr:$thread_local_,
-    DefaultValuedAttr<ConfinedAttr<I32Attr, [IntNonNegative]>, "0">:$addr_space,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
   );
@@ -1516,7 +1515,6 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
   let builders = [
     OpBuilder<(ins "Type":$type, "Linkage":$linkage,
       "StringRef":$name,
-      CArg<"unsigned", "0">:$addrSpace,
       CArg<"bool", "false">:$dsoLocal,
       CArg<"bool", "false">:$thread_local_,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
@@ -1535,6 +1533,9 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
     Block &getInitializerBlock() {
       return getInitializerRegion().front();
     }
+    // Retrieve address space information from the initializer block
+    // result.
+    unsigned getAddrSpace();
   }];
 
   let hasCustomAssemblyFormat = 1;

@@ -1148,8 +1148,10 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
         convertLinkageToLLVM(op.getLinkage());
     llvm::Module &llvmMod = *llvmModule;
 
+    // Note address space and aliasee info isn't set just yet.
     llvm::GlobalAlias *var = llvm::GlobalAlias::create(
-        type, op.getAddrSpace(), linkage, op.getSymName(), cst, &llvmMod);
+        type, op.getAddrSpace(), linkage, op.getSymName(), /*placeholder*/ cst,
+        &llvmMod);
 
     var->setThreadLocalMode(op.getThreadLocal_()
                                 ? llvm::GlobalAlias::GeneralDynamicTLSModel

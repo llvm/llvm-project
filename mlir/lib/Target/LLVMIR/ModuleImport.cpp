@@ -974,7 +974,6 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
   AliasOp aliasOp = builder.create<AliasOp>(
       mlirModule.getLoc(), type, convertLinkageFromLLVM(alias->getLinkage()),
       alias->getName(),
-      /*addr_space=*/alias->getAddressSpace(),
       /*dso_local=*/alias->isDSOLocal(),
       /*thread_local=*/alias->isThreadLocal(),
       /*attrs=*/ArrayRef<NamedAttribute>());
