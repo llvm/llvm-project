@@ -9,7 +9,7 @@ export class LaunchUriHandler implements vscode.UriHandler {
                 if (configJson === null) {
                     throw new Error("Missing `config` URI parameter");
                 }
-                // Build the debug config
+                // Build the debug config.
                 let debugConfig: vscode.DebugConfiguration = {
                     type: 'lldb-dap',
                     request: 'launch',
