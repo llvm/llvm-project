@@ -1769,10 +1769,8 @@ define <vscale x 1 x double> @vfwma_vv_nxv1f64_same_op(<vscale x 1 x float> %va,
 ; CHECK-LABEL: vfwma_vv_nxv1f64_same_op:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vv v10, v10, v9
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vfwmacc.vv v9, v8, v8
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %vc = fpext <vscale x 1 x float> %va to <vscale x 1 x double>
   %vd = call <vscale x 1 x double> @llvm.fma(<vscale x 1 x double> %vc, <vscale x 1 x double> %vc, <vscale x 1 x double> %vb)
@@ -1783,10 +1781,8 @@ define <vscale x 1 x double> @vfwmsac_vv_nxv1f64_same_op(<vscale x 1 x float> %v
 ; CHECK-LABEL: vfwmsac_vv_nxv1f64_same_op:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmsub.vv v10, v10, v9
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vfwmsac.vv v9, v8, v8
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %vc = fpext <vscale x 1 x float> %va to <vscale x 1 x double>
   %vd = fneg <vscale x 1 x double> %vb

@@ -180,9 +180,8 @@ define <vscale x 1 x double> @vfwmul_vv_nxv1f64_same_op(<vscale x 1 x float> %va
 ; CHECK-LABEL: vfwmul_vv_nxv1f64_same_op:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmul.vv v8, v9, v9
+; CHECK-NEXT:    vfwmul.vv v9, v8, v8
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %vb = fpext <vscale x 1 x float> %va to <vscale x 1 x double>
   %vc = fmul <vscale x 1 x double> %vb, %vb
