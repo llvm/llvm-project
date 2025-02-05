@@ -1176,6 +1176,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::fmuladd: {
+    // TODO: handle promotion with f16/bf16 with zvfhmin/zvfbfmin
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector())
+      return LT.first *
+             getRISCVInstructionCost(RISCV::VFMADD_VV, LT.second, CostKind);
+    break;
+  }
   case Intrinsic::fabs: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
