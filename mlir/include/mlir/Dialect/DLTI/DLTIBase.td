@@ -50,6 +50,9 @@ def DLTI_Dialect : Dialect {
     kDataLayoutEndiannessLittle = "little";
 
     constexpr const static ::llvm::StringLiteral
+    kDataLayoutManglingStyleKey = "dlti.mangling_style";
+
+    constexpr const static ::llvm::StringLiteral
     kDataLayoutAllocaMemorySpaceKey = "dlti.alloca_memory_space";
     
     constexpr const static ::llvm::StringLiteral

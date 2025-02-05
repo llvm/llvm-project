@@ -199,6 +199,11 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       layoutStream << "-" << (isLittleEndian ? "e" : "E");
       continue;
     }
+    if (key.getValue() == DLTIDialect::kDataLayoutManglingStyleKey) {
+      auto value = cast<StringAttr>(entry.getValue());
+      layoutStream << "-m:" << value.getValue();
+      continue;
+    }
     if (key.getValue() == DLTIDialect::kDataLayoutProgramMemorySpaceKey) {
       auto value = cast<IntegerAttr>(entry.getValue());
       uint64_t space = value.getValue().getZExtValue();

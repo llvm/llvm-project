@@ -355,6 +355,11 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 target datalayout = "e-ni:42-i64:64"
 
 ; // -----
+; CHECK:      import-failure.ll
+; CHECK-SAME: malformed specification, must be of the form "m:<mangling>"
+target datalayout = "e-m-i64:64"
+
+; // -----
 
 ; CHECK:      <unknown>
 ; CHECK-SAME: incompatible call and callee types: '!llvm.func<void (i64)>' and '!llvm.func<void (ptr)>'

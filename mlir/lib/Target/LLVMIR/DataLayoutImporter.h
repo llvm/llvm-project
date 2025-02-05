@@ -100,6 +100,10 @@ private:
   LogicalResult tryToEmplaceAddrSpaceEntry(StringRef token,
                                            llvm::StringLiteral spaceKey);
 
+  /// Adds an mangling style entry if there is none yet.
+  LogicalResult tryToEmplaceManglingStyleEntry(StringRef token,
+                                               llvm::StringLiteral manglingKey);
+
   /// Adds a stack alignment entry if there is none yet.
   LogicalResult tryToEmplaceStackAlignmentEntry(StringRef token);
 

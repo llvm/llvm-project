@@ -258,6 +258,17 @@ mlir::detail::getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry) {
   return entry.getValue();
 }
 
+// Returns the mangling style if specified in the given entry.
+// If the entry is empty, an empty attribute is returned.
+Attribute
+mlir::detail::getDefaultManglingStyle(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface()) {
+    return Attribute();
+  }
+
+  return entry.getValue();
+}
+
 // Returns the memory space used for the program memory space.  if
 // specified in the given entry. If the entry is empty the default
 // memory space represented by an empty attribute is returned.
@@ -610,6 +621,22 @@ mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {
   else
     allocaMemorySpace = detail::getDefaultAllocaMemorySpace(entry);
   return *allocaMemorySpace;
+}
+
+mlir::Attribute mlir::DataLayout::getManglingStyle() const {
+  checkValid();
+  if (manglingStyle)
+    return *manglingStyle;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getManglingStyleIdentifier(originalLayout.getContext()));
+
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    manglingStyle = iface.getManglingStyle(entry);
+  else
+    manglingStyle = detail::getDefaultManglingStyle(entry);
+  return *manglingStyle;
 }
 
 mlir::Attribute mlir::DataLayout::getProgramMemorySpace() const {

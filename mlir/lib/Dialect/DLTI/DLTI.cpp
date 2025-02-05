@@ -398,6 +398,12 @@ DataLayoutSpecAttr::getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
 }
 
 StringAttr
+DataLayoutSpecAttr::getManglingStyleIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutManglingStyleKey);
+}
+
+StringAttr
 DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
   return Builder(context).getStringAttr(
       DLTIDialect::kDataLayoutStackAlignmentKey);
@@ -606,7 +612,8 @@ public:
     if (entryName == DLTIDialect::kDataLayoutAllocaMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutProgramMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutGlobalMemorySpaceKey ||
-        entryName == DLTIDialect::kDataLayoutStackAlignmentKey)
+        entryName == DLTIDialect::kDataLayoutStackAlignmentKey ||
+        entryName == DLTIDialect::kDataLayoutManglingStyleKey)
       return success();
     return emitError(loc) << "unknown data layout entry name: " << entryName;
   }

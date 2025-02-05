@@ -43,6 +43,7 @@ struct TestDataLayoutQuery
       uint64_t index = layout.getTypeIndexBitwidth(op.getType()).value_or(0);
       Attribute endianness = layout.getEndianness();
       Attribute allocaMemorySpace = layout.getAllocaMemorySpace();
+      Attribute manglingStyle = layout.getManglingStyle();
       Attribute programMemorySpace = layout.getProgramMemorySpace();
       Attribute globalMemorySpace = layout.getGlobalMemorySpace();
       uint64_t stackAlignment = layout.getStackAlignment();
@@ -72,6 +73,10 @@ struct TestDataLayoutQuery
                                 allocaMemorySpace == Attribute()
                                     ? builder.getUI32IntegerAttr(0)
                                     : allocaMemorySpace),
+           builder.getNamedAttr("mangling_style",
+                                manglingStyle == Attribute()
+                                    ? builder.getStringAttr("")
+                                    : manglingStyle),
            builder.getNamedAttr("program_memory_space",
                                 programMemorySpace == Attribute()
                                     ? builder.getUI32IntegerAttr(0)

@@ -25,6 +25,7 @@ constexpr static llvm::StringLiteral kAttrName = "dltest.layout";
 constexpr static llvm::StringLiteral kEndiannesKeyName = "dltest.endianness";
 constexpr static llvm::StringLiteral kAllocaKeyName =
     "dltest.alloca_memory_space";
+constexpr static llvm::StringLiteral kManglingStyleKeyName = "dltest.mangling";
 constexpr static llvm::StringLiteral kProgramKeyName =
     "dltest.program_memory_space";
 constexpr static llvm::StringLiteral kGlobalKeyName =
@@ -82,6 +83,9 @@ struct CustomDataLayoutSpec
   }
   StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kAllocaKeyName);
+  }
+  StringAttr getManglingStyleIdentifier(MLIRContext *context) const {
+    return Builder(context).getStringAttr(kManglingStyleKeyName);
   }
   StringAttr getProgramMemorySpaceIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kProgramKeyName);
