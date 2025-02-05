@@ -25,8 +25,6 @@
 
 using namespace ompx;
 
-#pragma omp begin declare target device_type(nohost)
-
 static void
 inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
                     KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
@@ -212,5 +210,3 @@ void __kmpc_target_deinit_v1(int64_t *, int8_t Mode,
 
 int8_t __kmpc_is_spmd_exec_mode() { return mapping::isSPMDMode(); }
 }
-
-#pragma omp end declare target

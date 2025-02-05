@@ -23,9 +23,6 @@
 
 using namespace ompx::mapping;
 
-#pragma omp begin declare target device_type(nohost)
-
-
 // tag dispatching of type specific shfl_xor, get_low, and get_high
 struct _d_tag {};
 struct _f_tag {};
@@ -1041,5 +1038,3 @@ __kmpc_xteams_phase2_f_32x32(float *storage, int segment_size, float *tvs,
 #undef _UL
 #undef _LDS
 #undef _EXT_ATTR
-
-#pragma omp end declare target

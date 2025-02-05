@@ -1,8 +1,6 @@
 #include "Interface.h"
 #include "Mapping.h"
 
-#pragma omp declare target
-
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 using namespace ompx::mapping;
@@ -13,10 +11,8 @@ namespace impl {
 /// AMDGCN Implementation
 ///
 ///{
-uint32_t __kmpc_impl_smid();
-uint32_t getGenericModeMainThreadId();
 
-#pragma omp begin declare variant match(device = {arch(amdgcn)})
+#ifdef __AMDGPU__
 
 // Partially derived fom hcc_detail/device_functions.h
 
@@ -75,15 +71,14 @@ static uint32_t getGenericModeMainThreadId() {
   return (__kmpc_get_hardware_num_threads_in_block() - 1) & (~Mask);
 }
 
-#pragma omp end declare variant
+#endif
 ///}
 
 /// NVPTX Implementation
 ///
 ///{
 
-#pragma omp begin declare variant match(                                       \
-    device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
+#ifdef __NVPTX__
 
 static uint32_t __kmpc_impl_smid() { return 0; }
 
@@ -92,7 +87,7 @@ static uint32_t getGenericModeMainThreadId() {
   return (__kmpc_get_hardware_num_threads_in_block() - 1) & (~Mask);
 }
 
-#pragma omp end declare variant
+#endif
 ///}
 
 } // namespace impl
@@ -113,7 +108,7 @@ int omp_ext_get_lane_id() {
 }
 
 int omp_ext_get_smid() {
-  int rc = impl::__kmpc_impl_smid();
+  int rc = ompx::mapping::impl::__kmpc_impl_smid();
   return rc;
 }
 
@@ -137,5 +132,3 @@ unsigned long long omp_ext_get_active_threads_mask() {
 }
 
 } // end extern "C"
-
-#pragma omp end declare target
