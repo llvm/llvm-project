@@ -3746,6 +3746,11 @@ void ASTDeclReader::checkMultipleDefinitionInNamedModules(ASTReader &Reader,
       Func && Func->getTemplateSpecializationInfo())
     return;
 
+  // The module ownership of in-class friend declaration is not straightforward.
+  // Avoid diagnosing such cases.
+  if (D->getFriendObjectKind() || Previous->getFriendObjectKind())
+    return;
+
   Module *M = Previous->getOwningModule();
   if (!M)
     return;
