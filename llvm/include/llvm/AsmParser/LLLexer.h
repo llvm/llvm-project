@@ -112,6 +112,7 @@ namespace llvm {
     lltok::Kind Lex0x();
     lltok::Kind LexHash();
     lltok::Kind LexCaret();
+    lltok::Kind LexFloatStr();
 
     uint64_t atoull(const char *Buffer, const char *End);
     uint64_t HexIntToVal(const char *Buffer, const char *End);

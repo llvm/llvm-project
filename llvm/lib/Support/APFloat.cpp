@@ -3219,7 +3219,7 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
   if (str.size() < MIN_NAME_SIZE)
     return false;
 
-  if (str == "inf" || str == "INFINITY" || str == "+Inf") {
+  if (str == "inf" || str == "INFINITY" || str == "+Inf" || str == "+inf") {
     makeInf(false);
     return true;
   }

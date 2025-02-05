@@ -594,6 +594,22 @@ static Cursor maybeLexHexadecimalLiteral(Cursor C, MIToken &Token) {
   return C;
 }
 
+static Cursor maybeLexFloatHexBits(Cursor C, MIToken &Token) {
+  if (C.peek() != 'f')
+    return std::nullopt;
+  if (C.peek(1) != '0' || (C.peek(2) != 'x' && C.peek(2) != 'X'))
+    return std::nullopt;
+  Cursor Range = C;
+  C.advance(3);
+  while (isxdigit(C.peek()))
+    C.advance();
+  StringRef StrVal = Range.upto(C);
+  if (StrVal.size() <= 3)
+    return std::nullopt;
+  Token.reset(MIToken::FloatingPointLiteral, Range.upto(C));
+  return C;
+}
+
 static Cursor maybeLexNumericalLiteral(Cursor C, MIToken &Token) {
   if (!isdigit(C.peek()) && (C.peek() != '-' || !isdigit(C.peek(1))))
     return std::nullopt;
@@ -729,6 +745,8 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
   C = skipWhitespace(skipMachineOperandComment(C));
 
   if (Cursor R = maybeLexMachineBasicBlock(C, Token, ErrorCallback))
+    return R.remaining();
+  if (Cursor R = maybeLexFloatHexBits(C, Token))
     return R.remaining();
   if (Cursor R = maybeLexIdentifier(C, Token))
     return R.remaining();
