@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -20,6 +21,7 @@
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -59,10 +61,10 @@ STATISTIC(NumDead,       "Number of trivially dead stack accesses eliminated");
 
 namespace {
 
-class StackSlotColoring : public MachineFunctionPass {
-  LiveStacks *LS = nullptr;
+class StackSlotColoring {
   MachineFrameInfo *MFI = nullptr;
   const TargetInstrInfo *TII = nullptr;
+  LiveStacks *LS = nullptr;
   const MachineBlockFrequencyInfo *MBFI = nullptr;
   SlotIndexes *Indexes = nullptr;
 
@@ -139,10 +141,28 @@ class StackSlotColoring : public MachineFunctionPass {
   SmallVector<ColorAssignmentInfo, 16> Assignments;
 
 public:
+  StackSlotColoring(MachineFunction &MF, LiveStacks *LS,
+                    MachineBlockFrequencyInfo *MBFI, SlotIndexes *Indexes)
+      : MFI(&MF.getFrameInfo()), TII(MF.getSubtarget().getInstrInfo()), LS(LS),
+        MBFI(MBFI), Indexes(Indexes) {}
+  bool run(MachineFunction &MF);
+
+private:
+  void InitializeSlots();
+  void ScanForSpillSlotRefs(MachineFunction &MF);
+  int ColorSlot(LiveInterval *li);
+  bool ColorSlots(MachineFunction &MF);
+  void RewriteInstruction(MachineInstr &MI, SmallVectorImpl<int> &SlotMapping,
+                          MachineFunction &MF);
+  bool RemoveDeadStores(MachineBasicBlock *MBB);
+};
+
+class StackSlotColoringLegacy : public MachineFunctionPass {
+public:
   static char ID; // Pass identification
 
-  StackSlotColoring() : MachineFunctionPass(ID) {
-    initializeStackSlotColoringPass(*PassRegistry::getPassRegistry());
+  StackSlotColoringLegacy() : MachineFunctionPass(ID) {
+    initializeStackSlotColoringLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -165,30 +185,21 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-
-private:
-  void InitializeSlots();
-  void ScanForSpillSlotRefs(MachineFunction &MF);
-  int ColorSlot(LiveInterval *li);
-  bool ColorSlots(MachineFunction &MF);
-  void RewriteInstruction(MachineInstr &MI, SmallVectorImpl<int> &SlotMapping,
-                          MachineFunction &MF);
-  bool RemoveDeadStores(MachineBasicBlock *MBB);
 };
 
 } // end anonymous namespace
 
-char StackSlotColoring::ID = 0;
+char StackSlotColoringLegacy::ID = 0;
 
-char &llvm::StackSlotColoringID = StackSlotColoring::ID;
+char &llvm::StackSlotColoringID = StackSlotColoringLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(StackSlotColoring, DEBUG_TYPE,
-                "Stack Slot Coloring", false, false)
+INITIALIZE_PASS_BEGIN(StackSlotColoringLegacy, DEBUG_TYPE,
+                      "Stack Slot Coloring", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_END(StackSlotColoring, DEBUG_TYPE,
-                "Stack Slot Coloring", false, false)
+INITIALIZE_PASS_END(StackSlotColoringLegacy, DEBUG_TYPE, "Stack Slot Coloring",
+                    false, false)
 
 namespace {
 
@@ -511,20 +522,11 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
   return changed;
 }
 
-bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
+bool StackSlotColoring::run(MachineFunction &MF) {
   LLVM_DEBUG({
     dbgs() << "********** Stack Slot Coloring **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });
-
-  if (skipFunction(MF.getFunction()))
-    return false;
-
-  MFI = &MF.getFrameInfo();
-  TII = MF.getSubtarget().getInstrInfo();
-  LS = &getAnalysis<LiveStacksWrapperLegacy>().getLS();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
 
   bool Changed = false;
 
@@ -558,4 +560,38 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   Assignments.clear();
 
   return Changed;
+}
+
+bool StackSlotColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  LiveStacks *LS = &getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  MachineBlockFrequencyInfo *MBFI =
+      &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+  SlotIndexes *Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
+  StackSlotColoring Impl(MF, LS, MBFI, Indexes);
+  return Impl.run(MF);
+}
+
+PreservedAnalyses
+StackSlotColoringPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  LiveStacks *LS = &MFAM.getResult<LiveStacksAnalysis>(MF);
+  MachineBlockFrequencyInfo *MBFI =
+      &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  SlotIndexes *Indexes = &MFAM.getResult<SlotIndexesAnalysis>(MF);
+  StackSlotColoring Impl(MF, LS, MBFI, Indexes);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<SlotIndexesAnalysis>();
+  PA.preserve<MachineBlockFrequencyAnalysis>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<LiveIntervalsAnalysis>();
+  PA.preserve<LiveDebugVariablesAnalysis>();
+  return PA;
 }
