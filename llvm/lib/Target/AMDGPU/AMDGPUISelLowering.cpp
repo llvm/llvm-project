@@ -4040,18 +4040,34 @@ SDValue AMDGPUTargetLowering::splitBinaryBitConstantOpImpl(
 SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   EVT VT = N->getValueType(0);
-
-  ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!RHS)
-    return SDValue();
-
   SDValue LHS = N->getOperand(0);
-  unsigned RHSVal = RHS->getZExtValue();
-  if (!RHSVal)
-    return LHS;
-
+  SDValue RHS = N->getOperand(1);
+  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
   SDLoc SL(N);
   SelectionDAG &DAG = DCI.DAG;
+
+  if (!CRHS) {
+    // shl i64 X, Y -> [0, shl i32 X, (Y - 32)]
+    if (VT == MVT::i64) {
+      KnownBits Known = DAG.computeKnownBits(RHS);
+      if (Known.getMinValue().getZExtValue() >= 32) {
+        SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, RHS);
+        const SDValue C32 = DAG.getConstant(32, SL, MVT::i32);
+        SDValue ShiftAmt =
+            DAG.getNode(ISD::SUB, SL, MVT::i32, truncShiftAmt, C32);
+        SDValue Lo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
+        SDValue NewShift = DAG.getNode(ISD::SHL, SL, MVT::i32, Lo, ShiftAmt);
+        const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+        SDValue Vec = DAG.getBuildVector(MVT::v2i32, SL, {Zero, NewShift});
+        return DAG.getNode(ISD::BITCAST, SL, MVT::i64, Vec);
+      }
+    }
+    return SDValue();
+  }
+
+  unsigned RHSVal = CRHS->getZExtValue();
+  if (!RHSVal)
+    return LHS;
 
   switch (LHS->getOpcode()) {
   default:
@@ -4078,7 +4094,7 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
     if (LZ < RHSVal)
       break;
     EVT XVT = X.getValueType();
-    SDValue Shl = DAG.getNode(ISD::SHL, SL, XVT, X, SDValue(RHS, 0));
+    SDValue Shl = DAG.getNode(ISD::SHL, SL, XVT, X, SDValue(CRHS, 0));
     return DAG.getZExtOrTrunc(Shl, SL, VT);
   }
   }
