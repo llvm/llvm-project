@@ -1130,6 +1130,9 @@ public:
     return getNode(ISD::UNDEF, SDLoc(), VT);
   }
 
+  /// Return an POISON node. POISON does not have a useful SDLoc.
+  SDValue getPoison(EVT VT) { return getNode(ISD::POISON, SDLoc(), VT); }
+
   /// Return a node that represents the runtime scaling 'MulImm * RuntimeVL'.
   SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
                     bool ConstantFold = true);
