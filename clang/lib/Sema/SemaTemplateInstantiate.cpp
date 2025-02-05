@@ -190,7 +190,7 @@ HandleVarTemplateSpec(const VarTemplateSpecializationDecl *VarTemplSpec,
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
       Specialized = VarTemplSpec->getSpecializedTemplateOrPartial();
   if (VarTemplatePartialSpecializationDecl *Partial =
-          Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+          dyn_cast<VarTemplatePartialSpecializationDecl *>(Specialized)) {
     if (!SkipForSpecialization)
       Result.addOuterTemplateArguments(
           Partial, VarTemplSpec->getTemplateInstantiationArgs().asArray(),
