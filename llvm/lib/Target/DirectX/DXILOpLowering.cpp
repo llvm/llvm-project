@@ -359,21 +359,17 @@ public:
     return lowerToBindAndAnnotateHandle(F);
   }
 
-  Error replaceExtractElementTypeOfCallUsages(CallInst *Intrin, CallInst *Op) {
+  Error replaceAggregateTypeOfCallUsages(CallInst *Intrin, CallInst *Op) {
     for (Use &U : make_early_inc_range(Intrin->uses())) {
       if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
-
-        if (EVI->getNumIndices() != 1)
-          return createStringError(
-              std::errc::invalid_argument,
-              (std::string(Intrin->getOpcodeName()) + " has only 2 elements")
-                  .c_str());
         EVI->setOperand(0, Op);
+      } else if (auto *IVI = dyn_cast<InsertValueInst>(U.getUser())) {
+        IVI->setOperand(0, Op);
       } else {
-        return make_error<StringError>((std::string(Intrin->getOpcodeName()) +
-                                        " use is not ExtractValueInst")
-                                           .c_str(),
-                                       inconvertibleErrorCode());
+        return make_error<StringError>(
+            (Intrin->getCalledFunction()->getName() +
+             " use is not a ExtractValueInst or InsertValueInst"),
+            inconvertibleErrorCode());
       }
     }
 
@@ -824,7 +820,7 @@ public:
             F, OpCode::SplitDouble,
             OpBuilder.getSplitDoubleType(M.getContext()),
             [&](CallInst *CI, CallInst *Op) {
-              return replaceExtractElementTypeOfCallUsages(CI, Op);
+              return replaceAggregateTypeOfCallUsages(CI, Op);
             });
         break;
       // TODO: this can be removed when
@@ -833,7 +829,7 @@ public:
         HasErrors |= replaceFunctionWithNamedStructOp(
             F, OpCode::UAddc, OpBuilder.getBinaryWithCarryType(M.getContext()),
             [&](CallInst *CI, CallInst *Op) {
-              return replaceExtractElementTypeOfCallUsages(CI, Op);
+              return replaceAggregateTypeOfCallUsages(CI, Op);
             });
         break;
       case Intrinsic::ctpop:

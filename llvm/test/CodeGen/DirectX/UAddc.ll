@@ -20,6 +20,21 @@ define noundef i32 @test_UAddc(i32 noundef %a, i32 noundef %b) {
   ret i32 %result
 }
 
+
+define noundef i32 @test_UAddc_insert(i32 noundef %a, i32 noundef %b) {
+; CHECK-LABEL: define noundef i32 @test_UAddc_insert(
+; CHECK-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) {
+; CHECK-NEXT:    [[UAddc:%.*]] = call %dx.types.i32c @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    insertvalue %dx.types.i32c [[UAddc]], i32 [[A]], 0
+; CHECK-NEXT:    [[Result:%.*]] = extractvalue %dx.types.i32c [[UAddc]], 0
+; CHECK-NEXT:    ret i32 [[Result]]
+; 
+  %uaddc = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
+  insertvalue { i32, i1 } %uaddc, i32 %a, 0
+  %result = extractvalue { i32, i1 } %uaddc, 0
+  ret i32 %result
+}
+
 declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)
 ; CHECK: declare %dx.types.i32c @dx.op.binaryWithCarryOrBorrow.i32(i32, i32, i32)
 
