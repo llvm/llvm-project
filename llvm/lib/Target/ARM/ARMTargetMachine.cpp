@@ -325,6 +325,28 @@ ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(ARMTTIImpl(this, F));
 }
 
+ScheduleDAGInstrs *
+ARMBaseTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  // add DAG Mutations here.
+  const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
+  if (ST.hasFusion())
+    DAG->addMutation(createARMMacroFusionDAGMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+ARMBaseTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+  // add DAG Mutations here.
+  const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
+  if (ST.hasFusion())
+    DAG->addMutation(createARMMacroFusionDAGMutation());
+  if (auto Mutation = createARMLatencyMutations(ST, C->AA))
+    DAG->addMutation(std::move(Mutation));
+  return DAG;
+}
+
 ARMLETargetMachine::ARMLETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
@@ -351,28 +373,6 @@ public:
 
   ARMBaseTargetMachine &getARMTargetMachine() const {
     return getTM<ARMBaseTargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-    // add DAG Mutations here.
-    const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
-    if (ST.hasFusion())
-      DAG->addMutation(createARMMacroFusionDAGMutation());
-    return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
-    // add DAG Mutations here.
-    const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
-    if (ST.hasFusion())
-      DAG->addMutation(createARMMacroFusionDAGMutation());
-    if (auto Mutation = createARMLatencyMutations(ST, C->AA))
-      DAG->addMutation(std::move(Mutation));
-    return DAG;
   }
 
   void addIRPasses() override;

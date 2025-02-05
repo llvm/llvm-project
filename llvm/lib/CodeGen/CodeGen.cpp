@@ -94,7 +94,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeModuloScheduleTestPass(Registry);
   initializeMachinePostDominatorTreeWrapperPassPass(Registry);
   initializeMachineRegionInfoPassPass(Registry);
-  initializeMachineSchedulerPass(Registry);
+  initializeMachineSchedulerLegacyPass(Registry);
   initializeMachineSinkingPass(Registry);
   initializeMachineUniformityAnalysisPassPass(Registry);
   initializeMachineUniformityInfoPrinterPassPass(Registry);
@@ -105,10 +105,10 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializePHIEliminationPass(Registry);
   initializePatchableFunctionPass(Registry);
   initializePeepholeOptimizerLegacyPass(Registry);
-  initializePostMachineSchedulerPass(Registry);
+  initializePostMachineSchedulerLegacyPass(Registry);
   initializePostRAHazardRecognizerPass(Registry);
   initializePostRAMachineSinkingPass(Registry);
-  initializePostRASchedulerPass(Registry);
+  initializePostRASchedulerLegacyPass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
   initializeProcessImplicitDefsPass(Registry);
   initializeRABasicPass(Registry);
@@ -119,7 +119,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRegisterCoalescerLegacyPass(Registry);
   initializeRemoveLoadsIntoFakeUsesPass(Registry);
   initializeRemoveRedundantDebugValuesPass(Registry);
-  initializeRenameIndependentSubregsPass(Registry);
+  initializeRenameIndependentSubregsLegacyPass(Registry);
   initializeSafeStackLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
   initializeShadowStackGCLoweringPass(Registry);
@@ -130,7 +130,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeStackFrameLayoutAnalysisPassPass(Registry);
   initializeStackMapLivenessPass(Registry);
   initializeStackProtectorPass(Registry);
-  initializeStackSlotColoringPass(Registry);
+  initializeStackSlotColoringLegacyPass(Registry);
   initializeStaticDataSplitterPass(Registry);
   initializeStripDebugMachineModulePass(Registry);
   initializeTailDuplicateLegacyPass(Registry);
