@@ -355,7 +355,7 @@ contains
     class(t), intent(inout) :: dtv
     integer, intent(in) :: unit
     character(len=*), intent(in) :: iotype
-    !ERROR: Dummy argument 'vlist' of a defined input/output procedure must be deferred shape
+    !ERROR: Dummy argument 'vlist' of a defined input/output procedure must be assumed shape
     integer, intent(in) :: vlist(5)
     integer, intent(out) :: iostat
     character(len=*), intent(inout) :: iomsg
