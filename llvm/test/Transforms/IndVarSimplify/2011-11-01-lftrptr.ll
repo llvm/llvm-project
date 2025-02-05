@@ -158,17 +158,14 @@ define i8 @testnullptrint(ptr %buf, ptr %end) nounwind {
 ; PTR64-NEXT:    [[GUARD:%.*]] = icmp ult i32 0, [[CNT]]
 ; PTR64-NEXT:    br i1 [[GUARD]], label [[PREHEADER:%.*]], label [[EXIT:%.*]]
 ; PTR64:       preheader:
-; PTR64-NEXT:    [[TMP1:%.*]] = add i32 [[EI]], -1
-; PTR64-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[BI]]
-; PTR64-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; PTR64-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
-; PTR64-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr null, i64 [[TMP4]]
 ; PTR64-NEXT:    br label [[LOOP:%.*]]
 ; PTR64:       loop:
 ; PTR64-NEXT:    [[P_01_US_US:%.*]] = phi ptr [ null, [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
+; PTR64-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[PREHEADER]] ], [ [[IVNEXT:%.*]], [[LOOP]] ]
 ; PTR64-NEXT:    [[GEP]] = getelementptr inbounds i8, ptr [[P_01_US_US]], i64 1
 ; PTR64-NEXT:    [[SNEXT:%.*]] = load i8, ptr [[GEP]], align 1
-; PTR64-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr [[GEP]], [[SCEVGEP]]
+; PTR64-NEXT:    [[IVNEXT]] = add nuw i32 [[IV]], 1
+; PTR64-NEXT:    [[EXITCOND:%.*]] = icmp ult i32 [[IVNEXT]], [[CNT]]
 ; PTR64-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR64:       exit.loopexit:
 ; PTR64-NEXT:    [[SNEXT_LCSSA:%.*]] = phi i8 [ [[SNEXT]], [[LOOP]] ]
