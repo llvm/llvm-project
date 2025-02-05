@@ -2875,7 +2875,8 @@ InstructionCost RISCVTargetLowering::getVRGatherVVCost(MVT VT) const {
   auto LMULCost = getLMULCost(VT);
   if (Subtarget.hasFastVRGather() && LMULCost.isValid()) {
     unsigned Log = Log2_64(*LMULCost.getValue());
-    return LMULCost * Log;
+    if (Log > 0)
+      return LMULCost * Log;
   }
   return LMULCost * LMULCost;
 }
