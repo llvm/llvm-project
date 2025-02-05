@@ -1,10 +1,10 @@
-// RUN: %clang -x cuda %s -Xarch_nvptx64 -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -x cuda %s -Xarch_nvptx64 -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s
 // RUN: %clang -x cuda %s -Xarch_device -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s
 // RUN: %clang -x hip %s -Xarch_amdgcn -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s
-// RUN: %clang -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib -nogpuinc \
+// RUN: %clang -fopenmp=libomp -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib -nogpuinc \
 // RUN:   -Xarch_amdgcn -march=gfx90a -Xarch_amdgcn -O3 -S -### %s 2>&1 \
 // RUN: | FileCheck -check-prefix=O3ONCE %s
-// RUN: %clang -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -nogpulib -nogpuinc \
+// RUN: %clang -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -nogpulib -nogpuinc \
 // RUN:   -Xarch_nvptx64 -march=sm_52 -Xarch_nvptx64 -O3 -S -### %s 2>&1 \
 // RUN: | FileCheck -check-prefix=O3ONCE %s
 // O3ONCE: "-O3"

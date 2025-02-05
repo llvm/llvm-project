@@ -128,32 +128,6 @@ inline bind_ty<VPValue> m_VPValue(VPValue *&V) { return V; }
 
 namespace detail {
 
-/// A helper to match an opcode against multiple recipe types.
-template <unsigned Opcode, typename...> struct MatchRecipeAndOpcode {};
-
-template <unsigned Opcode, typename RecipeTy>
-struct MatchRecipeAndOpcode<Opcode, RecipeTy> {
-  static bool match(const VPRecipeBase *R) {
-    auto *DefR = dyn_cast<RecipeTy>(R);
-    // Check for recipes that do not have opcodes.
-    if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
-                  std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
-                  std::is_same<RecipeTy, VPWidenSelectRecipe>::value ||
-                  std::is_same<RecipeTy, VPDerivedIVRecipe>::value ||
-                  std::is_same<RecipeTy, VPWidenGEPRecipe>::value)
-      return DefR;
-    else
-      return DefR && DefR->getOpcode() == Opcode;
-  }
-};
-
-template <unsigned Opcode, typename RecipeTy, typename... RecipeTys>
-struct MatchRecipeAndOpcode<Opcode, RecipeTy, RecipeTys...> {
-  static bool match(const VPRecipeBase *R) {
-    return MatchRecipeAndOpcode<Opcode, RecipeTy>::match(R) ||
-           MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R);
-  }
-};
 template <typename TupleTy, typename Fn, std::size_t... Is>
 bool CheckTupleElements(const TupleTy &Ops, Fn P, std::index_sequence<Is...>) {
   return (P(std::get<Is>(Ops), Is) && ...);
@@ -193,8 +167,17 @@ struct Recipe_match {
   }
 
   bool match(const VPRecipeBase *R) const {
-    if (!detail::MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R))
+    if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
+
+    if (!(std::is_same_v<VPWidenEVLRecipe, RecipeTys> || ...) &&
+        isa<VPWidenEVLRecipe>(R)) {
+      // Don't match VPWidenEVLRecipe if it is not explicitly part of RecipeTys.
+      // Otherwise we might match it unexpectedly when trying to match
+      // VPWidenRecipe, of which VPWidenEVLRecipe is a subclass of.
+      return false;
+    }
+
     assert(R->getNumOperands() == std::tuple_size<Ops_t>::value &&
            "recipe with matched opcode the expected number of operands");
 
@@ -207,6 +190,21 @@ struct Recipe_match {
            detail::all_of_tuple_elements(Ops, [R](auto Op, unsigned Idx) {
              return Op.match(R->getOperand(R->getNumOperands() - Idx - 1));
            });
+  }
+
+private:
+  template <typename RecipeTy>
+  static bool matchRecipeAndOpcode(const VPRecipeBase *R) {
+    auto *DefR = dyn_cast<RecipeTy>(R);
+    // Check for recipes that do not have opcodes.
+    if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
+                  std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
+                  std::is_same<RecipeTy, VPWidenSelectRecipe>::value ||
+                  std::is_same<RecipeTy, VPDerivedIVRecipe>::value ||
+                  std::is_same<RecipeTy, VPWidenGEPRecipe>::value)
+      return DefR;
+    else
+      return DefR && DefR->getOpcode() == Opcode;
   }
 };
 
