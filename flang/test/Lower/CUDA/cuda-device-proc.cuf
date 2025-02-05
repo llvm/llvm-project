@@ -87,3 +87,17 @@ end
 ! CHECK: func.func private @llvm.nvvm.barrier0.and(i32) -> i32
 ! CHECK: func.func private @llvm.nvvm.barrier0.popc(i32) -> i32
 ! CHECK: func.func private @llvm.nvvm.barrier0.or(i32) -> i32
+
+subroutine host1()
+  integer, device :: a(32)
+  integer :: i, j
+
+block; use cudadevice
+  !$cuf kernel do(1) <<<*,32>>>
+  do i = 1, 32
+    a(i) = a(i) * 2.0
+    call syncthreads()
+    a(i) = a(i) + a(j) - 34.0
+  end do
+end block
+end 
