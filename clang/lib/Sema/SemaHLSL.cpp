@@ -1924,7 +1924,6 @@ void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D,
 } // namespace
 
 void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
-
   // process default CBuffer - create buffer layout struct and invoke codegenCGH
   if (DefaultCBuffer) {
     SemaRef.getCurLexicalContext()->addDecl(DefaultCBuffer);
@@ -1933,7 +1932,6 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     DeclGroupRef DG(DefaultCBuffer);
     SemaRef.Consumer.HandleTopLevelDecl(DG);
   }
-
   diagnoseAvailabilityViolations(TU);
 }
 
