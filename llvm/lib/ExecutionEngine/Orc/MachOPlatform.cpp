@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
@@ -1257,7 +1258,7 @@ MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
   // that section points to to the CodeBlocks vector.
   SmallVector<Block *> CodeBlocks;
   auto ScanUnwindInfoSection = [&](Section &Sec, ExecutorAddrRange &SecRange,
-                                   auto GetCodeForRecord) {
+                                   auto AddCodeBlocks) {
     if (Sec.blocks().empty())
       return;
     SecRange = (*Sec.blocks().begin())->getRange();
@@ -1265,50 +1266,29 @@ MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
       auto R = B->getRange();
       SecRange.Start = std::min(SecRange.Start, R.Start);
       SecRange.End = std::max(SecRange.End, R.End);
-      if (auto *CodeBlock = GetCodeForRecord(*B))
-        CodeBlocks.push_back(CodeBlock);
+      AddCodeBlocks(*B);
     }
   };
 
   if (Section *EHFrameSec = G.findSectionByName(MachOEHFrameSectionName)) {
-    ScanUnwindInfoSection(
-        *EHFrameSec, US.DwarfSection, [&](Block &B) -> Block * {
-          // Filter out CIE, personality, etc. edges.
-          SmallVector<Edge *, 4> BEdges;
-          for (auto &E : B.edges())
-            BEdges.push_back(&E);
-          llvm::sort(BEdges, [](const Edge *LHS, const Edge *RHS) {
-            return LHS->getOffset() < RHS->getOffset();
-          });
-          if (BEdges.size() < 2)
-            return nullptr;
-          auto &TargetBlock = BEdges[1]->getTarget().getBlock();
-#ifndef NDEBUG
-          auto &TargetSection = TargetBlock.getSection();
-          assert(&TargetSection != EHFrameSec &&
-                 (TargetSection.getMemProt() & MemProt::Exec) ==
-                     MemProt::Exec &&
-                 "Invalid eh-frame function target");
-#endif // NDEBUG
-          return &TargetBlock;
-        });
+    ScanUnwindInfoSection(*EHFrameSec, US.DwarfSection, [&](Block &B) {
+      if (auto *Fn = jitlink::EHFrameCFIBlockInspector::FromEdgeScan(B)
+                         .getPCBeginEdge())
+        if (Fn->getTarget().isDefined())
+          CodeBlocks.push_back(&Fn->getTarget().getBlock());
+    });
   }
 
   if (Section *CUInfoSec = G.findSectionByName(MachOUnwindInfoSectionName)) {
     ScanUnwindInfoSection(
-        *CUInfoSec, US.CompactUnwindSection, [&](Block &B) -> Block * {
-          // Compact unwind records should just have a keep-alive pointing to
-          // the target function.
-          assert(B.edges_size() == 1 &&
-                 "unwind-info record should only have one edge");
+        *CUInfoSec, US.CompactUnwindSection, [&](Block &B) {
           for (auto &E : B.edges()) {
             assert(E.getTarget().isDefined() &&
                    "unwind-info record edge has external target");
             assert(E.getKind() == Edge::KeepAlive &&
                    "unwind-info record has unexpected edge kind");
-            return &E.getTarget().getBlock();
+            CodeBlocks.push_back(&E.getTarget().getBlock());
           }
-          return nullptr;
         });
   }
 
