@@ -5,6 +5,7 @@ on:
     branches: [amd-gfx13]
     types: [opened, reopened, synchronize, ready_for_review]
 
+
 jobs:  
   trigger-build:
     if: github.event.pull_request.draft == false
