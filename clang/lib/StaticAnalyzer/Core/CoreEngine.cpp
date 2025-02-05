@@ -194,20 +194,21 @@ static llvm::TimeTraceMetadata timeTraceMetadata(const ExplodedNode *Pred,
                                                  const ProgramPoint &Loc) {
   // If time-trace profiler is not enabled, this function is never called.
   assert(llvm::timeTraceProfilerEnabled());
-  std::string Str;
-  llvm::raw_string_ostream Rso(Str);
-  Loc.printJson(Rso);
-  if (auto SLoc = Loc.getSourceLocation()) {
-    const auto &SM = Pred->getLocationContext()
-                         ->getAnalysisDeclContext()
-                         ->getASTContext()
-                         .getSourceManager();
-    auto Line = SM.getPresumedLineNumber(*SLoc);
-    auto Fname = SM.getFilename(*SLoc);
-    return llvm::TimeTraceMetadata{Rso.str(), Fname.str(),
-                                   static_cast<int>(Line)};
+  std::string Detail = "";
+  if (const auto SP = Loc.getAs<StmtPoint>()) {
+    if (const Stmt *S = SP->getStmt())
+      Detail = S->getStmtClassName();
   }
-  return llvm::TimeTraceMetadata{Rso.str(), ""};
+  auto SLoc = Loc.getSourceLocation();
+  if (!SLoc)
+    return llvm::TimeTraceMetadata{Detail, ""};
+  const auto &SM = Pred->getLocationContext()
+                       ->getAnalysisDeclContext()
+                       ->getASTContext()
+                       .getSourceManager();
+  auto Line = SM.getPresumedLineNumber(*SLoc);
+  auto Fname = SM.getFilename(*SLoc);
+  return llvm::TimeTraceMetadata{Detail, Fname.str(), static_cast<int>(Line)};
 }
 
 void CoreEngine::dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,

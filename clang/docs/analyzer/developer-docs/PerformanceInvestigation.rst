@@ -14,17 +14,26 @@ such as `Perf <https://perfwiki.github.io/main/>`_ and `Callgrind <https://valgr
 Each analysis step has a time scope in the trace, corresponds to processing of an exploded node, and is designated with a ``ProgramPoint``.
 If the ``ProgramPoint`` is associated with a location, you can see it on the scope metadata label.
 
+Here is an example of a time trace produced with
+
+.. code-block:: bash
+   :caption: Clang Static Analyzer invocation to generate a time trace of string.c analysis.
+
+   clang -cc1 -internal-isystem ./build/asserts/lib/clang/21/include \
+         -nostdsysteminc -analyze -analyzer-constraints=range \
+         -setup-static-analyzer -analyzer-checker=core,unix,alpha.unix.cstring,debug.ExprInspection \
+         -verify ./clang/test/Analysis/string.c -ftime-trace=trace.json -ftime-trace-granularity=1
+
 .. image:: ../images/speedscope.png
 
-On the speedscope screenshot above, under the first time ruler is the birds-eye view of the entire trace that spans a little over 8 seconds.
-Under the second ruler (focused on the 4.27s time point) you can see a narrowed-down portion.
-The second box (of light-green color) that spans entire screen (and actually extends beyond it) corresponds to the analysis of ``get_global_options()`` entry point that is defined in the "options.cc" file on line 303646
-(the line number is huge because the file was preprocessed).
+On the speedscope screenshot above, under the first time ruler is the bird's-eye view of the entire trace that spans a little over 60 milliseconds.
+Under the second ruler (focused on the 18.09-18.13ms time point) you can see a narrowed-down portion.
+The second box ("HandleCode memset...") that spans entire screen (and actually extends beyond it) corresponds to the analysis of ``memset16_region_cast()`` entry point that is defined in the "string.c" test file on line 1627.
 Below it, you can find multiple sub-scopes each corresponding to processing of a single exploded node.
 
-1. A ``PostStmt`` for some statement on line 2337. This step spent most of the time in the ``ExprEngine::removeDead`` call.
-2. (Selected): another ``PostStmt`` for a return statement
-3. A ``BlockEdge``, and so on...
+- First: a ``PostStmt`` for some statement on line 1634. This scope has a selected subscope "CheckerManager::runCheckersForCallEvent (Pre)" that takes 5 microseconds.
+- Four other nodes, too small to be discernible at this zoom level
+- Last on this screenshot: another ``PostStmt`` for a statement on line 1635.
 
 In addition to the ``-ftime-trace`` option, you can use ``-ftime-trace-granularity`` to fine-tune the time trace.
 
