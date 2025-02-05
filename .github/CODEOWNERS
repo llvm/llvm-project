@@ -148,3 +148,8 @@
 
 # libclang/Python bindings
 /clang/bindings/python @DeinAlptraum
+
+# AMD-specific projects.
+/amd/comgr/ @jlambert_amdeng
+/amd/device-libs/ @bsumner_amdeng
+/amd/hipcc/ @dsalinas_amdeng
