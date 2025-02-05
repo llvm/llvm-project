@@ -48,4 +48,52 @@ int main(int argc, char **argv) {
 #pragma omp target //omp51-error {{construct 'target' not allowed in a region associated with a directive with 'order' clause}} omp60-error {{construct 'target' not allowed in a region associated with a directive with 'order' clause}}
       A++;
   }
+
+#pragma omp loop bind(parallel) order(concurrent)
+  for (int i = 0; i < 10; ++i) {
+#pragma omp parallel for //omp60-error {{construct 'parallel for' not allowed in a region associated with a directive with 'order' clause}}
+    for (int j = 0; j < 10; ++j) {
+      A += j;
+    }
+  }
+
+#pragma omp distribute order(concurrent)
+  for (int i = 0; i < 10; ++i) {
+#pragma omp parallel for simd //omp60-error {{construct 'parallel for simd' not allowed in a region associated with a directive with 'order' clause}}
+    for (int j = 0; j < 10; ++j) {
+      A += j;
+    }
+  }
+
+#pragma omp for order(concurrent)
+  for (int i = 0; i < 10; ++i) {
+#pragma omp parallel master //omp60-error {{construct 'parallel master' not allowed in a region associated with a directive with 'order' clause}}
+    for (int j = 0; j < 10; ++j) {
+      A += j;
+    }
+  }
+
+#pragma omp for order(concurrent)
+  for (int i = 0; i < 10; ++i) {
+#pragma omp parallel master taskloop //omp60-error {{construct 'parallel master taskloop' not allowed in a region associated with a directive with 'order' clause}}
+    for (int j = 0; j < 10; ++j) {
+      A += j;
+    }
+  }
+
+#pragma omp for order(concurrent)
+  for (int i = 0; i < 10; ++i) {
+#pragma omp parallel master taskloop simd //omp60-error {{construct 'parallel master taskloop simd' not allowed in a region associated with a directive with 'order' clause}}
+    for (int j = 0; j < 10; ++j) {
+      A += j;
+    }
+  }
+
+#pragma omp for order(concurrent)
+  for (int i = 0; i < 10; ++i) {
+    #pragma omp parallel sections //omp60-error {{construct 'parallel sections' not allowed in a region associated with a directive with 'order' clause}}
+    {
+      A++;
+    }
+  }
 }
