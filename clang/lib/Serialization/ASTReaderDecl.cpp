@@ -2532,6 +2532,7 @@ RedeclarableResult ASTDeclReader::VisitClassTemplateSpecializationDeclImpl(
   D->TemplateArgs = TemplateArgumentList::CreateCopy(C, TemplArgs);
   D->PointOfInstantiation = readSourceLocation();
   D->SpecializationKind = (TemplateSpecializationKind)Record.readInt();
+  D->StrictPackMatch = Record.readBool();
 
   bool writtenAsCanonicalDecl = Record.readInt();
   if (writtenAsCanonicalDecl) {
@@ -3744,6 +3745,11 @@ void ASTDeclReader::checkMultipleDefinitionInNamedModules(ASTReader &Reader,
     return;
   if (auto *Func = dyn_cast<FunctionDecl>(Previous);
       Func && Func->getTemplateSpecializationInfo())
+    return;
+
+  // The module ownership of in-class friend declaration is not straightforward.
+  // Avoid diagnosing such cases.
+  if (D->getFriendObjectKind() || Previous->getFriendObjectKind())
     return;
 
   Module *M = Previous->getOwningModule();
