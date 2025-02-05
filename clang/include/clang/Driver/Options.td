@@ -5827,6 +5827,9 @@ def start_no_unused_arguments : Flag<["--"], "start-no-unused-arguments">,
   HelpText<"Don't emit warnings about unused arguments for the following arguments">;
 def static_libgcc : Flag<["-"], "static-libgcc">;
 def static_libstdcxx : Flag<["-"], "static-libstdc++">;
+def static_libclosure : Flag<["-"], "static-libclosure">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Generate code for statically linking libclosure (BlocksRuntime)">;
 def static : Flag<["-", "--"], "static">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>,
   Flags<[NoArgumentUnused]>;
