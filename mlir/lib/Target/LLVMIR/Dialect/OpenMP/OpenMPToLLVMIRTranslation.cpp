@@ -1779,10 +1779,9 @@ public:
         privateDecls{privateDecls} {}
 
   /// Creates a heap allocated struct containing space for each private
-  /// variable. Returns nullptr if there are is no struct needed. Invariant:
-  /// privateVarTypes, privateDecls, and the elements of the structure should
-  /// all have the same order (although privateDecls which do not read from the
-  /// mold argument are skipped).
+  /// variable. Invariant: privateVarTypes, privateDecls, and the elements of
+  /// the structure should all have the same order (although privateDecls which
+  /// do not read from the mold argument are skipped).
   void generateTaskContextStruct();
 
   /// Create GEPs to access each member of the structure representing a private
