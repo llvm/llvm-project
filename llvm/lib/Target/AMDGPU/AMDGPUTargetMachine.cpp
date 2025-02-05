@@ -33,6 +33,7 @@
 #include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
 #include "GCNPreRALongBranchReg.h"
+#include "GCNRewritePartialRegUses.h"
 #include "GCNSchedStrategy.h"
 #include "GCNVOPDUtils.h"
 #include "R600.h"
@@ -550,7 +551,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNNSAReassignPass(*PR);
   initializeGCNPreRAOptimizationsPass(*PR);
   initializeGCNPreRALongBranchRegLegacyPass(*PR);
-  initializeGCNRewritePartialRegUsesPass(*PR);
+  initializeGCNRewritePartialRegUsesLegacyPass(*PR);
   initializeGCNRegPressurePrinterPass(*PR);
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
