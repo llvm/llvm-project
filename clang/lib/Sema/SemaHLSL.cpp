@@ -270,7 +270,7 @@ static bool isZeroSizedArray(const ConstantArrayType *CAT) {
 }
 
 // Returns true if the record type is an HLSL resource class or an array of
-// HLSL resource classes
+// resource classes
 static bool isResourceRecordTypeOrArrayOf(const Type *Ty) {
   while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
     Ty = CAT->getArrayElementTypeNoTypeQual();
