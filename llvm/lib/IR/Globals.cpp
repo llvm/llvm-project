@@ -293,15 +293,15 @@ void GlobalObject::setSectionPrefix(StringRef Prefix) {
               MDB.createGlobalObjectSectionPrefix(Prefix));
 }
 
-void GlobalObject::updateSectionPrefix(StringRef Prefix,
+bool GlobalObject::updateSectionPrefix(StringRef Prefix,
                                        std::optional<StringRef> KeepPrefix) {
   auto SectionPrefix = getSectionPrefix();
   if (SectionPrefix && (*SectionPrefix == Prefix ||
                         (KeepPrefix && *SectionPrefix == *KeepPrefix)))
-    return;
+    return false;
 
   setSectionPrefix(Prefix);
-  return;
+  return true;
 }
 
 std::optional<StringRef> GlobalObject::getSectionPrefix() const {

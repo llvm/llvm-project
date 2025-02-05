@@ -59,7 +59,7 @@ class StaticDataSplitter : public MachineFunctionPass {
 
   // Iterate all global variables in the module and update the section prefix
   // of the module-internal data.
-  void updateGlobalVariableSectionPrefix(MachineFunction &MF);
+  bool updateGlobalVariableSectionPrefix(MachineFunction &MF);
 
   // Accummulated data profile count across machine functions in the module.
   DenseMap<const GlobalVariable *, APInt> DataProfileCounts;
@@ -104,6 +104,8 @@ bool StaticDataSplitter::runOnMachineFunction(MachineFunction &MF) {
   }
 
   bool Changed = partitionStaticDataWithProfiles(MF);
+
+  Changed |= updateGlobalVariableSectionPrefix(MF);
 
   updateStatsWithProfiles(MF);
   return Changed;
@@ -188,8 +190,9 @@ bool StaticDataSplitter::inStaticDataSection(const GlobalVariable *GV,
          Kind.isBSS();
 }
 
-void StaticDataSplitter::updateGlobalVariableSectionPrefix(
+bool StaticDataSplitter::updateGlobalVariableSectionPrefix(
     MachineFunction &MF) {
+  bool Changed = false;
   for (GlobalVariable &GV : MF.getFunction().getParent()->globals()) {
     if (GV.isDeclarationForLinker())
       continue;
@@ -213,11 +216,13 @@ void StaticDataSplitter::updateGlobalVariableSectionPrefix(
     // framework, and set global variable section prefix once per module after
     // analyzing all machine functions.
     if (PSI->isColdCount(Iter->second.getZExtValue())) {
-      GV.updateSectionPrefix("unlikely", std::make_optional(StringRef("hot")));
+      Changed |= GV.updateSectionPrefix("unlikely",
+                                        std::make_optional(StringRef("hot")));
     } else if (PSI->isHotCount(Iter->second.getZExtValue())) {
-      GV.updateSectionPrefix("hot");
+      Changed |= GV.updateSectionPrefix("hot");
     }
   }
+  return Changed;
 }
 
 void StaticDataSplitter::updateStatsWithProfiles(const MachineFunction &MF) {
