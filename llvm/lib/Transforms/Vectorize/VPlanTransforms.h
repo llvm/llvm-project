@@ -163,7 +163,8 @@ struct VPlanTransforms {
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
 
-  static void simplifyRecipes(VPlan &Plan, Type *CanonicalIVTy);
+  /// Perform instcombine-like simplifications on recipes in \p Plan.
+  static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
 
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
