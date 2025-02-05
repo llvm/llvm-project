@@ -3035,11 +3035,11 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
 
 .. option:: -fprofile-continuous
 
-  Enables continuous PGO mode where profile counter updates are continuously
-  synced to a file. This option sets any neccessary modifiers (currently ``%c``)
-  in the default profile filename and passes any necessary flags to the
-  middle-end to support this mode. Value profiling is not supported in
-  continuous mode.
+  Enables the continuous instrumentation profiling where profile counter updates
+  are continuously synced to a file. This option sets any neccessary modifiers
+  (currently ``%c``) in the default profile filename and passes any necessary
+  flags to the middle-end to support this mode. Value profiling is not supported
+  in continuous mode.
 
   .. code-block:: console
 
