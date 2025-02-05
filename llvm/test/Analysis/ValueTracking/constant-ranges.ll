@@ -160,12 +160,30 @@ define i1 @srem_posC_okay0(i8 %x) {
   ret i1 %r
 }
 
+define i1 @srem_posC_okay0_samesign(i8 %x) {
+; CHECK-LABEL: @srem_posC_okay0_samesign(
+; CHECK-NEXT:    ret i1 true
+;
+  %val = srem i8 34, %x
+  %r = icmp samesign ule i8 %val, 34
+  ret i1 %r
+}
+
 define i1 @srem_posC_okay1(i8 %x) {
 ; CHECK-LABEL: @srem_posC_okay1(
 ; CHECK-NEXT:    ret i1 true
 ;
   %val = srem i8 34, %x
   %r = icmp sge i8 %val, -3
+  ret i1 %r
+}
+
+define i1 @srem_posC_okay1_samesign(i8 %x) {
+; CHECK-LABEL: @srem_posC_okay1_samesign(
+; CHECK-NEXT:    ret i1 false
+;
+  %val = srem i8 34, %x
+  %r = icmp samesign uge i8 %val, -3
   ret i1 %r
 }
 
@@ -178,12 +196,34 @@ define i1 @srem_negC_okay0(i8 %x) {
   ret i1 %r
 }
 
+define i1 @srem_negC_okay0_samesign(i8 %x) {
+; CHECK-LABEL: @srem_negC_okay0_samesign(
+; CHECK-NEXT:    [[VAL:%.*]] = srem i8 -34, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ule i8 [[VAL]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %val = srem i8 -34, %x
+  %r = icmp samesign ule i8 %val, 0
+  ret i1 %r
+}
+
 define i1 @srem_negC_okay1(i8 %x) {
 ; CHECK-LABEL: @srem_negC_okay1(
 ; CHECK-NEXT:    ret i1 true
 ;
   %val = srem i8 -34, %x
   %r = icmp sge i8 %val, -34
+  ret i1 %r
+}
+
+define i1 @srem_negC_okay1_samesign(i8 %x) {
+; CHECK-LABEL: @srem_negC_okay1_samesign(
+; CHECK-NEXT:    [[VAL:%.*]] = srem i8 -34, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign uge i8 [[VAL]], -34
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %val = srem i8 -34, %x
+  %r = icmp samesign uge i8 %val, -34
   ret i1 %r
 }
 
