@@ -26,7 +26,7 @@
 #var_x = #llvm.di_local_variable<scope = #sp,
  name = "x", file = #file, line = 12, type = #real_ty>
 
-module attributes {omp.is_target_device = true} {
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   llvm.func @test() {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x f32 : (i64) -> !llvm.ptr
