@@ -5755,9 +5755,8 @@ HLSLBufferDecl::CreateDefaultCBuffer(ASTContext &C,
 
 HLSLBufferDecl *HLSLBufferDecl::CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID) {
-  return new (C, ID)
-      HLSLBufferDecl(nullptr, false, SourceLocation(), nullptr,
-                     SourceLocation(), SourceLocation());
+  return new (C, ID) HLSLBufferDecl(nullptr, false, SourceLocation(), nullptr,
+                                    SourceLocation(), SourceLocation());
 }
 
 void HLSLBufferDecl::addLayoutStruct(CXXRecordDecl *LS) {
