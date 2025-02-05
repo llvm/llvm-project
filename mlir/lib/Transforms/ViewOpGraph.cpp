@@ -14,6 +14,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/IndentedOstream.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
 #include <map>
@@ -60,11 +61,9 @@ static std::string quoteString(const std::string &str) {
 std::string escapeLabelString(const std::string &str) {
   std::string buf;
   llvm::raw_string_ostream os(buf);
-  llvm::DenseSet<char> shouldEscape = {'{', '|', '<', '}', '>', '\n', '"'};
   for (char c : str) {
-    if (shouldEscape.contains(c)) {
+    if (llvm::is_contained({'{', '|', '<', '}', '>', '\n', '"'}, c))
       os << '\\';
-    }
     os << c;
   }
   return buf;
