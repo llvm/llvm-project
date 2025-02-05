@@ -628,11 +628,11 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                   - ``v_dot2_f32_f16``
 
 
-     ``gfx9-4-generic``   ``amdgcn``     - ``gfx940``      - xnack            - Absolute flat   FP8 and BF8 instructions,
-                                         - ``gfx941``      - sramecc            scratch         FP8 and BF8 conversion instructions,
-                                         - ``gfx942``                                           as well as instructions with XF32 format support
-                                         - ``gfx950``                                           are not available.
-
+     ``gfx9-4-generic``   ``amdgcn``     - ``gfx940``      - sramecc          - Architected     FP8 and BF8 instructions,
+                                         - ``gfx941``      - tgsplit            flat scratch    FP8 and BF8 conversion
+                                         - ``gfx942``      - xnack            - Packed          instructions, as well as
+                                         - ``gfx950``      - kernarg preload    work-item       instructions with XF32 format
+                                                                                IDs             support are not available.
 
      ``gfx10-1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
                                          - ``gfx1011``     - wavefrontsize64    scratch           not available on ``gfx1011``
@@ -18500,6 +18500,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               (wavefrontsize64)
      ``.amdhsa_uses_dynamic_stack``                           0                   GFX6-GFX12   Controls USES_DYNAMIC_STACK in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_named_barrier_count``                          0                   GFX1250+     Controls NAMED_BAR_CNT in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
      ``.amdhsa_enable_wavegroup``                             0                   GFX13+       Controls ENABLE_WAVEGROUP in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in

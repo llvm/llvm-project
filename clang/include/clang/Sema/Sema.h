@@ -3664,6 +3664,12 @@ public:
                              NonTrivialCUnionContext UseContext,
                              unsigned NonTrivialKind);
 
+  /// Certain globally-unique variables might be accidentally duplicated if
+  /// built into multiple shared libraries with hidden visibility. This can
+  /// cause problems if the variable is mutable, its initialization is
+  /// effectful, or its address is taken.
+  bool GloballyUniqueObjectMightBeAccidentallyDuplicated(const VarDecl *Dcl);
+
   /// AddInitializerToDecl - Adds the initializer Init to the
   /// declaration dcl. If DirectInit is true, this is C++ direct
   /// initialization rather than copy initialization.
@@ -13499,8 +13505,8 @@ public:
   bool InstantiateClassTemplateSpecialization(
       SourceLocation PointOfInstantiation,
       ClassTemplateSpecializationDecl *ClassTemplateSpec,
-      TemplateSpecializationKind TSK, bool Complain = true,
-      bool PrimaryHasMatchedPackOnParmToNonPackOnArg = false);
+      TemplateSpecializationKind TSK, bool Complain,
+      bool PrimaryHasMatchedPackOnParmToNonPackOnArg);
 
   /// Instantiates the definitions of all of the member
   /// of the given class, which is an instantiation of a class template

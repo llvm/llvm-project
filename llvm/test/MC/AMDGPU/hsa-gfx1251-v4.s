@@ -39,7 +39,7 @@
 // complete
 // OBJDUMP-NEXT: 0040 01000000 01000000 0c000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0060 00000000 00000000 00000000 00000000
+// OBJDUMP-NEXT: 0060 00000000 00000000 00000000 00c00000
 // OBJDUMP-NEXT: 0070 005021c4 410f007f 5e048200 00000000
 // special_sgpr
 // OBJDUMP-NEXT: 0080 00000000 00000000 00000000 00000000
@@ -136,6 +136,7 @@ max_vgprs:
   .amdhsa_system_vgpr_workitem_id 1
   .amdhsa_next_free_vgpr 9
   .amdhsa_next_free_sgpr 32
+  .amdhsa_named_barrier_count 3
   .amdhsa_reserve_vcc 0
   .amdhsa_float_round_mode_32 1
   .amdhsa_float_round_mode_16_64 1
@@ -175,6 +176,7 @@ max_vgprs:
 // ASM-NEXT: .amdhsa_system_vgpr_workitem_id 1
 // ASM-NEXT: .amdhsa_next_free_vgpr 9
 // ASM-NEXT: .amdhsa_next_free_sgpr 32
+// ASM-NEXT: .amdhsa_named_barrier_count 3
 // ASM-NEXT: .amdhsa_reserve_vcc 0
 // ASM-NEXT: .amdhsa_float_round_mode_32 1
 // ASM-NEXT: .amdhsa_float_round_mode_16_64 1
@@ -207,6 +209,7 @@ max_vgprs:
 // ASM: .amdhsa_kernel special_sgpr
 // ASM: .amdhsa_next_free_vgpr 0
 // ASM-NEXT: .amdhsa_next_free_sgpr 27
+// ASM-NEXT: .amdhsa_named_barrier_count 0
 // ASM-NEXT: .amdhsa_reserve_vcc 0
 // ASM: .amdhsa_float_denorm_mode_16_64 0
 // ASM: .end_amdhsa_kernel

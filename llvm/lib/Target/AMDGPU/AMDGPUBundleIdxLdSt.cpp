@@ -77,11 +77,6 @@ INITIALIZE_PASS(AMDGPUBundleIdxLdSt, DEBUG_TYPE,
 bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   if (MI->isMetaInstruction())
     return false;
-  MachineFunction *MF = MI->getParent()->getParent();
-  MachineRegisterInfo *MRI = &MF->getRegInfo();
-  MachineBasicBlock *MBB = MI->getParent();
-  SmallVector<BundleItem, 4> Worklist;
-  std::unordered_set<unsigned> IdxList;
   // Prevent cycles in data-flow from multiple defs. This check is too coarse.
   // We could fix this with per BB analysis, but prefer to fix it later while
   // extending the algorithm to multiple BBs.
@@ -90,6 +85,18 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
   if (MI->isConvertibleTo3Addr() || MI->isRegSequence() || MI->isInsertSubreg())
     return false;
+  // COPY would be lowered to v_mov, which is equivalent to not bundling at all,
+  // and further optimization of the COPY would be blocked by the BUNDLE, so
+  // skip it.
+  if (MI->isCopy())
+    return false;
+
+  MachineFunction *MF = MI->getParent()->getParent();
+  MachineRegisterInfo *MRI = &MF->getRegInfo();
+  MachineBasicBlock *MBB = MI->getParent();
+  SmallVector<BundleItem, 4> Worklist;
+  std::unordered_set<unsigned> IdxList;
+
   for (auto &Def : MI->defs()) {
     if (!Def.isReg())
       continue;
@@ -100,6 +107,8 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     if (!MRI->hasOneNonDBGUse(DefReg))
       continue;
     MachineOperand *UseOfMI = &*MRI->use_nodbg_begin(DefReg);
+    if (UseOfMI->getSubReg() != 0)
+      continue;
     MachineInstr *StoreMI = UseOfMI->getParent();
     if (StoreMI->getOpcode() != AMDGPU::V_STORE_IDX)
       continue;
@@ -155,6 +164,8 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     if (StagingRegIdx == NumSrcStagingRegs)
       break;
     if (!Use.isReg())
+      continue;
+    if (Use.getSubReg() != 0)
       continue;
     // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
     if (Use.isTied())

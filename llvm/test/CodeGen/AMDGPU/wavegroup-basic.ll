@@ -88,6 +88,7 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 ; KERNEL-NEXT:         .amdhsa_system_vgpr_workitem_id 1
 ; KERNEL-NEXT:         .amdhsa_next_free_vgpr 8
 ; KERNEL-NEXT:         .amdhsa_next_free_sgpr 34
+; KERNEL-NEXT:         .amdhsa_named_barrier_count 0
 ; KERNEL-NEXT:         .amdhsa_reserve_vcc 1
 ; KERNEL-NEXT:         .amdhsa_float_round_mode_32 0
 ; KERNEL-NEXT:         .amdhsa_float_round_mode_16_64 0

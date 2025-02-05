@@ -1783,6 +1783,21 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.flags |= MachineMemOperand::MOStore;
     return true;
   }
+  case Intrinsic::amdgcn_swc_reorder:
+  case Intrinsic::amdgcn_swc_reorder_swap:
+  case Intrinsic::amdgcn_swc_reorder_swap_resume:
+  case Intrinsic::amdgcn_swc_get_exchange_state:
+  case Intrinsic::amdgcn_swc_set_exchange_state: {
+    if (IntrID == Intrinsic::amdgcn_swc_set_exchange_state) {
+      Info.opc = ISD::INTRINSIC_VOID;
+      Info.memVT = MVT::i32;
+    } else {
+      Info.opc = ISD::INTRINSIC_W_CHAIN;
+      Info.memVT = MVT::getVT(CI.getType());
+    }
+    Info.flags |= MachineMemOperand::MOStore | MachineMemOperand::MOLoad;
+    return true;
+  }
   case Intrinsic::amdgcn_s_prefetch_data:
   case Intrinsic::amdgcn_flat_prefetch:
   case Intrinsic::amdgcn_global_prefetch: {
@@ -13148,11 +13163,27 @@ static bool isRTS(const MemSDNode *N) {
   return false;
 }
 
+static bool isSWC(const MemSDNode *N) {
+  if (N->getOpcode() == ISD::INTRINSIC_W_CHAIN ||
+      N->getOpcode() == ISD::INTRINSIC_VOID) {
+    unsigned IntrinID = N->getOperand(1)->getAsZExtVal();
+    if (IntrinID == Intrinsic::amdgcn_swc_reorder ||
+        IntrinID == Intrinsic::amdgcn_swc_reorder_swap ||
+        IntrinID == Intrinsic::amdgcn_swc_reorder_swap_resume ||
+        IntrinID == Intrinsic::amdgcn_swc_get_exchange_state ||
+        IntrinID == Intrinsic::amdgcn_swc_set_exchange_state)
+      return true;
+  }
+  return false;
+}
+
 SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
                                                   DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
 
+  if (isSWC(N))
+    return SDValue();
   if (isRTS(N))
     return SDValue();
 

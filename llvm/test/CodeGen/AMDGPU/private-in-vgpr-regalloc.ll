@@ -319,10 +319,7 @@ define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_cmp_nge_f32 s1, 0x41100000
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12
-; CHECK-NEXT:    s_cselect_b32 s2, -1, 0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s2
-; CHECK-NEXT:    s_cbranch_vccnz .LBB3_2
+; CHECK-NEXT:    s_cbranch_scc1 .LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %bb
 ; CHECK-NEXT:    v_mov_b32_e32 v30, s1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
