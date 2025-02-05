@@ -1412,29 +1412,6 @@ multiclass VPatWidenReductionVL<SDNode vop, PatFrags extop, string instruction_n
   }
 }
 
-multiclass VPatWidenReductionVL_RM<SDNode vop, PatFrags extop, string instruction_name, bit is_float> {
-  foreach vtiToWti = !if(is_float, AllWidenableFloatVectors, AllWidenableIntVectors) in {
-    defvar vti = vtiToWti.Vti;
-    defvar wti = vtiToWti.Wti;
-    defvar wti_m1 = !cast<VTypeInfo>(!if(is_float, "VF", "VI") # wti.SEW # "M1");
-    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
-                                 GetVTypePredicates<wti>.Predicates) in {
-      def: Pat<(wti_m1.Vector (vop (wti_m1.Vector VR:$passthru),
-                                   (wti.Vector (extop (vti.Vector vti.RegClass:$rs1))),
-                                   VR:$rs2, (vti.Mask V0), VLOpFrag,
-                                   (XLenVT timm:$policy))),
-               (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_E"#vti.SEW#"_MASK")
-                  (wti_m1.Vector VR:$passthru), (vti.Vector vti.RegClass:$rs1),
-                  (wti_m1.Vector VR:$rs2), (vti.Mask V0),
-                  // Value to indicate no rounding mode change in
-                  // RISCVInsertReadWriteCSR
-                  FRM_DYN,
-                  GPR:$vl, vti.Log2SEW,
-                  (XLenVT timm:$policy))>;
-    }
-  }
-}
-
 multiclass VPatWidenReductionVL_Ext_VL<SDNode vop, PatFrags extop, string instruction_name, bit is_float> {
   foreach vtiToWti = !if(is_float, AllWidenableFloatVectors, AllWidenableIntVectors) in {
     defvar vti = vtiToWti.Vti;
@@ -1443,7 +1420,7 @@ multiclass VPatWidenReductionVL_Ext_VL<SDNode vop, PatFrags extop, string instru
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                  GetVTypePredicates<wti>.Predicates) in {
       def: Pat<(wti_m1.Vector (vop (wti_m1.Vector VR:$passthru),
-                                   (wti.Vector (extop (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask), VLOpFrag)),
+                                   (wti.Vector (extop (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask), (XLenVT srcvalue))),
                                    VR:$rs2, (vti.Mask V0), VLOpFrag,
                                    (XLenVT timm:$policy))),
                (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_E"#vti.SEW#"_MASK")
@@ -1462,7 +1439,7 @@ multiclass VPatWidenReductionVL_Ext_VL_RM<SDNode vop, PatFrags extop, string ins
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                  GetVTypePredicates<wti>.Predicates) in {
       def: Pat<(wti_m1.Vector (vop (wti_m1.Vector VR:$passthru),
-                                   (wti.Vector (extop (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask), VLOpFrag)),
+                                   (wti.Vector (extop (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask), (XLenVT srcvalue))),
                                    VR:$rs2, (vti.Mask V0), VLOpFrag,
                                    (XLenVT timm:$policy))),
                (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_E"#vti.SEW#"_MASK")
@@ -2653,13 +2630,9 @@ defm : VPatReductionVL<rvv_vecreduce_FMIN_vl,     "PseudoVFREDMIN", is_float=1>;
 defm : VPatReductionVL<rvv_vecreduce_FMAX_vl,     "PseudoVFREDMAX", is_float=1>;
 
 // 14.4. Vector Widening Floating-Point Reduction Instructions
-defm : VPatWidenReductionVL_RM<rvv_vecreduce_SEQ_FADD_vl, fpext_oneuse,
-                               "PseudoVFWREDOSUM", is_float=1>;
 defm : VPatWidenReductionVL_Ext_VL_RM<rvv_vecreduce_SEQ_FADD_vl,
                                       riscv_fpextend_vl_oneuse,
                                       "PseudoVFWREDOSUM", is_float=1>;
-defm : VPatWidenReductionVL_RM<rvv_vecreduce_FADD_vl, fpext_oneuse,
-                               "PseudoVFWREDUSUM", is_float=1>;
 defm : VPatWidenReductionVL_Ext_VL_RM<rvv_vecreduce_FADD_vl,
                                       riscv_fpextend_vl_oneuse,
                                       "PseudoVFWREDUSUM", is_float=1>;

@@ -1731,11 +1731,6 @@ void populateDecomposePadPatterns(RewritePatternSet &patterns);
 /// \see rewriteInIm2Col for more details.
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
 
-/// Populates `patterns` with vectorisation patterns for tensor.insert_slice.
-/// TODO: Avoid having a dedicated `populate{}` for one pattern. Instead, either
-/// expand or merge with other `populate{}`.
-void populateInsertSliceVectorizationPatterns(RewritePatternSet &patterns);
-
 /// Populates `patterns` with patterns that vectorize tensor.pad.
 /// These patterns are meant to apply in a complementary fashion. Benefits
 /// are used to encode a certain ordering of pattern application. To avoid

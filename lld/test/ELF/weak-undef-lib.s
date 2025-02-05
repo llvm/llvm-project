@@ -7,7 +7,7 @@
 # RUN: llvm-readobj --dyn-syms %t.so | FileCheck %s
 
 # RUN: ld.lld -pie -o %t %t1.o --start-lib %t2.o
-# RUN: llvm-readelf --dyn-syms %t | FileCheck %s --check-prefix=STATICPIE
+# RUN: llvm-readobj --dyn-syms %t | FileCheck %s
 
 # CHECK:      Name: foo
 # CHECK-NEXT: Value: 0x0
