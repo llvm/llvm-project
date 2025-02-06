@@ -1581,27 +1581,50 @@ def INT_NVVM_ADD_RM_D : F_MATH_2<"add.rm.f64 \t$dst, $src0, $src1;",
 def INT_NVVM_ADD_RP_D : F_MATH_2<"add.rp.f64 \t$dst, $src0, $src1;",
   Float64Regs, Float64Regs, Float64Regs, int_nvvm_add_rp_d>;
 
-// F32x2 ops (sm_100+)
+// packed f32 ops (sm_100+)
+class F32x2Op2<string OpcStr, Predicate Pred>
+: NVPTXInst<(outs Int64Regs:$res),
+            (ins Int64Regs:$a, Int64Regs:$b),
+            OpcStr # ".f32x2 \t$res, $a, $b;", []>,
+  Requires<[hasF32x2Instructions, Pred]>;
+class F32x2Op3<string OpcStr, Predicate Pred>
+: NVPTXInst<(outs Int64Regs:$res),
+            (ins Int64Regs:$a, Int64Regs:$b, Int64Regs:$c),
+            OpcStr # ".f32x2 \t$res, $a, $b, $c;", []>,
+  Requires<[hasF32x2Instructions, Pred]>;
 
-def FADD_F32X2 : NVPTXInst<(outs Int64Regs:$res),
-                           (ins Int64Regs:$a, Int64Regs:$b),
-                           "add.rn.f32x2 \t$res, $a, $b;", []>,
-                 Requires<[hasF32x2Instructions]>;
+def fadd32x2_nvptx : SDNode<"NVPTXISD::FADD_F32X2", SDTIntBinOp>;
+def fsub32x2_nvptx : SDNode<"NVPTXISD::FSUB_F32X2", SDTIntBinOp>;
+def fmul32x2_nvptx : SDNode<"NVPTXISD::FMUL_F32X2", SDTIntBinOp>;
+def fma32x2_nvptx  : SDNode<"NVPTXISD::FMA_F32X2", SDTIntTernaryOp>;
 
-def FSUB_F32X2 : NVPTXInst<(outs Int64Regs:$res),
-                           (ins Int64Regs:$a, Int64Regs:$b),
-                           "sub.rn.f32x2 \t$res, $a, $b;", []>,
-                 Requires<[hasF32x2Instructions]>;
+def FADD32x2     : F32x2Op2<"add.rn", doNoF32FTZ>;
+def FSUB32x2     : F32x2Op2<"sub.rn", doNoF32FTZ>;
+def FMUL32x2     : F32x2Op2<"mul.rn", doNoF32FTZ>;
+def FMA32x2      : F32x2Op3<"fma.rn", doNoF32FTZ>;
 
-def FMUL_F32X2 : NVPTXInst<(outs Int64Regs:$res),
-                           (ins Int64Regs:$a, Int64Regs:$b),
-                           "mul.rn.f32x2 \t$res, $a, $b;", []>,
-                 Requires<[hasF32x2Instructions]>;
+def : Pat<(fadd32x2_nvptx i64:$a, i64:$b),
+          (FADD32x2 $a, $b)>, Requires<[doNoF32FTZ]>;
+def : Pat<(fsub32x2_nvptx i64:$a, i64:$b),
+          (FSUB32x2 $a, $b)>, Requires<[doNoF32FTZ]>;
+def : Pat<(fmul32x2_nvptx i64:$a, i64:$b),
+          (FMUL32x2 $a, $b)>, Requires<[doNoF32FTZ]>;
+def : Pat<(fma32x2_nvptx i64:$a, i64:$b, i64:$c),
+          (FMA32x2 $a, $b, $c)>, Requires<[doNoF32FTZ]>;
 
-def FMA_F32X2  : NVPTXInst<(outs Int64Regs:$res),
-                           (ins Int64Regs:$a, Int64Regs:$b, Int64Regs:$c),
-                           "fma.rn.f32x2 \t$res, $a, $b;", []>,
-                 Requires<[hasF32x2Instructions]>;
+def FADD32x2_ftz : F32x2Op2<"add.rn.ftz", doF32FTZ>;
+def FSUB32x2_ftz : F32x2Op2<"sub.rn.ftz", doF32FTZ>;
+def FMUL32x2_ftz : F32x2Op2<"mul.rn.ftz", doF32FTZ>;
+def FMA32x2_ftz  : F32x2Op3<"fma.rn.ftz", doF32FTZ>;
+
+def : Pat<(fadd32x2_nvptx i64:$a, i64:$b),
+          (FADD32x2_ftz $a, $b)>, Requires<[doF32FTZ]>;
+def : Pat<(fsub32x2_nvptx i64:$a, i64:$b),
+          (FSUB32x2_ftz $a, $b)>, Requires<[doF32FTZ]>;
+def : Pat<(fmul32x2_nvptx i64:$a, i64:$b),
+          (FMUL32x2_ftz $a, $b)>, Requires<[doF32FTZ]>;
+def : Pat<(fma32x2_nvptx i64:$a, i64:$b, i64:$c),
+          (FMA32x2_ftz $a, $b, $c)>, Requires<[doF32FTZ]>;
 
 //
 // BFIND
