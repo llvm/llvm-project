@@ -39,7 +39,7 @@ struct ExitDescription {
 using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock,
                                                 std::chrono::nanoseconds>;
 struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
-  /// REQUIRED: Start time of an event
+  /// Start time of an event
   SteadyTimePoint start_time;
   /// End time of an event - may be empty if not meaningful.
   std::optional<SteadyTimePoint> end_time;
