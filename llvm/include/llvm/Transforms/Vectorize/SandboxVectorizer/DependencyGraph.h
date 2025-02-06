@@ -45,15 +45,6 @@ class DGNode;
 class MemDGNode;
 class DependencyGraph;
 
-/// While OpIt points to a Value that is not an Instruction keep incrementing
-/// it. \Returns the first iterator that points to an Instruction, or end.
-[[nodiscard]] static User::op_iterator skipNonInstr(User::op_iterator OpIt,
-                                                    User::op_iterator OpItE) {
-  while (OpIt != OpItE && !isa<Instruction>((*OpIt).get()))
-    ++OpIt;
-  return OpIt;
-}
-
 /// Iterate over both def-use and mem dependencies.
 class PredIterator {
   User::op_iterator OpIt;
@@ -71,6 +62,12 @@ class PredIterator {
       : OpIt(OpIt), OpItE(OpItE), N(N), DAG(&DAG) {}
   friend class DGNode;    // For constructor
   friend class MemDGNode; // For constructor
+
+  /// Skip iterators that don't point instructions or are outside \p DAG,
+  /// starting from \p OpIt and ending before \p OpItE.n
+  static User::op_iterator skipBadIt(User::op_iterator OpIt,
+                                     User::op_iterator OpItE,
+                                     const DependencyGraph &DAG);
 
 public:
   using difference_type = std::ptrdiff_t;
@@ -135,8 +132,9 @@ public:
   bool comesBefore(const DGNode *Other) { return I->comesBefore(Other->I); }
   using iterator = PredIterator;
   virtual iterator preds_begin(DependencyGraph &DAG) {
-    return PredIterator(skipNonInstr(I->op_begin(), I->op_end()), I->op_end(),
-                        this, DAG);
+    return PredIterator(
+        PredIterator::skipBadIt(I->op_begin(), I->op_end(), DAG), I->op_end(),
+        this, DAG);
   }
   virtual iterator preds_end(DependencyGraph &DAG) {
     return PredIterator(I->op_end(), I->op_end(), this, DAG);
@@ -249,8 +247,8 @@ public:
   }
   iterator preds_begin(DependencyGraph &DAG) override {
     auto OpEndIt = I->op_end();
-    return PredIterator(skipNonInstr(I->op_begin(), OpEndIt), OpEndIt,
-                        MemPreds.begin(), this, DAG);
+    return PredIterator(PredIterator::skipBadIt(I->op_begin(), OpEndIt, DAG),
+                        OpEndIt, MemPreds.begin(), this, DAG);
   }
   iterator preds_end(DependencyGraph &DAG) override {
     return PredIterator(I->op_end(), I->op_end(), MemPreds.end(), this, DAG);
