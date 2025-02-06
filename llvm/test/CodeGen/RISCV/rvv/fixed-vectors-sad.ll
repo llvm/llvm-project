@@ -199,16 +199,18 @@ define signext i32 @sad_2block_16xi8_as_i32(ptr %a, ptr %b, i32 signext %stridea
 ; ZVABD-NEXT:    vle8.v v15, (a1)
 ; ZVABD-NEXT:    add a0, a0, a2
 ; ZVABD-NEXT:    add a1, a1, a3
+; ZVABD-NEXT:    vle8.v v16, (a0)
+; ZVABD-NEXT:    vle8.v v17, (a1)
 ; ZVABD-NEXT:    vabdu.vv v8, v8, v9
-; ZVABD-NEXT:    vle8.v v9, (a0)
-; ZVABD-NEXT:    vabdu.vv v10, v10, v11
-; ZVABD-NEXT:    vle8.v v11, (a1)
-; ZVABD-NEXT:    vwaddu.vv v12, v10, v8
+; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVABD-NEXT:    vzext.vf2 v12, v8
+; ZVABD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; ZVABD-NEXT:    vwabdau.vv v12, v10, v11
 ; ZVABD-NEXT:    vabdu.vv v8, v14, v15
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVABD-NEXT:    vzext.vf2 v14, v8
 ; ZVABD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD-NEXT:    vabdu.vv v16, v9, v11
+; ZVABD-NEXT:    vabdu.vv v16, v16, v17
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVABD-NEXT:    vwaddu.vv v8, v14, v12
 ; ZVABD-NEXT:    vzext.vf2 v12, v16
@@ -320,16 +322,18 @@ define signext i32 @sadu_2block_16xi8_as_i32(ptr %a, ptr %b, i32 signext %stride
 ; ZVABD-NEXT:    vle8.v v15, (a1)
 ; ZVABD-NEXT:    add a0, a0, a2
 ; ZVABD-NEXT:    add a1, a1, a3
+; ZVABD-NEXT:    vle8.v v16, (a0)
+; ZVABD-NEXT:    vle8.v v17, (a1)
 ; ZVABD-NEXT:    vabd.vv v8, v8, v9
-; ZVABD-NEXT:    vle8.v v9, (a0)
-; ZVABD-NEXT:    vabd.vv v10, v10, v11
-; ZVABD-NEXT:    vle8.v v11, (a1)
-; ZVABD-NEXT:    vwaddu.vv v12, v10, v8
+; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVABD-NEXT:    vzext.vf2 v12, v8
+; ZVABD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; ZVABD-NEXT:    vwabda.vv v12, v10, v11
 ; ZVABD-NEXT:    vabd.vv v8, v14, v15
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVABD-NEXT:    vzext.vf2 v14, v8
 ; ZVABD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD-NEXT:    vabd.vv v16, v9, v11
+; ZVABD-NEXT:    vabd.vv v16, v16, v17
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVABD-NEXT:    vwaddu.vv v8, v14, v12
 ; ZVABD-NEXT:    vzext.vf2 v12, v16
