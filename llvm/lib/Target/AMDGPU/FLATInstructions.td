@@ -3836,6 +3836,7 @@ let AssemblerPredicate = HasSGPRVMEM in {
 
 defm GLOBAL_LOAD_TR4_B64              : VFLAT_Real_AllAddr_gfx13<0x8a>;
 defm GLOBAL_LOAD_TR6_B96              : VFLAT_Real_AllAddr_gfx13<0x8b>;
+let AssemblerPredicate = HasSGPRVMEM in
 defm GLOBAL_ATOMIC_ADD_SGPR_U32       : VFLAT_Real_Atomics_gfx13<0x8c>;
 defm RTS_READ_RESULT_ALL_STOP         : VFLAT_Real_Base_gfx13<0x90>;
 defm RTS_READ_RESULT_ONGOING          : VFLAT_Real_Base_gfx13<0x91>;
