@@ -420,12 +420,14 @@ TEST(LegalizerInfoTest, RuleSets) {
 
     // Raw type form
     LI.getActionDefinitionsBuilder(G_ADD)
-      .fewerElementsIf(typeIs(0, v4s32), changeElementCountTo(0, v2s32))
-      .fewerElementsIf(typeIs(0, v8s32), changeElementCountTo(0, s32))
-      .fewerElementsIf(typeIs(0, LLT::scalable_vector(4, 16)),
-                       changeElementCountTo(0, LLT::scalable_vector(2, 16)))
-      .fewerElementsIf(typeIs(0, LLT::scalable_vector(8, 16)),
-                       changeElementCountTo(0, s16));
+        .fewerElementsIf(typeIs(0, v4s32),
+                         changeElementCountTo(0, ElementCount::getFixed(2)))
+        .fewerElementsIf(typeIs(0, v8s32),
+                         changeElementCountTo(0, ElementCount::getFixed(1)))
+        .fewerElementsIf(typeIs(0, LLT::scalable_vector(4, s16)),
+                         changeElementCountTo(0, ElementCount::getScalable(2)))
+        .fewerElementsIf(typeIs(0, LLT::scalable_vector(8, s16)),
+                         changeElementCountTo(0, ElementCount::getFixed(1)));
 
     LegacyInfo.computeTables();
 
