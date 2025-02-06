@@ -291,7 +291,7 @@ unsigned CollectFnPressure(
     MachineFunction &MF, LiveIntervals *LIS, const MachineRegisterInfo &MRI,
     const GCNSubtarget *ST, unsigned &maxVPressure, unsigned &maxSPressure,
     RematStatus &status) {
-  unsigned TgtOcc = ST->getOccupancyWithLocalMemSize(MF);
+  unsigned TgtOcc = ST->getOccupancyWithWorkGroupSizes(MF).second;
   // If only have one block, input/ouput virtual live set are empty.
   if (MF.size() > 1) {
     // Build input output live reg first.
@@ -1351,7 +1351,7 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
   bool bForceRematSgpr = bSGPRSpill | status.bNotBalance;
 
   // If bound by lds, skip.
-  if (status.TargetOcc > ST->getOccupancyWithLocalMemSize(MF) &&
+  if (status.TargetOcc > ST->getOccupancyWithWorkGroupSizes(MF).second &&
       !bForceRematSgpr)
     return false;
 
@@ -1662,6 +1662,8 @@ bool isSafeCandidate(Remat *Remat, Register Reg, const MachineRegisterInfo &MRI,
       continue;
     Register OpReg = Op.getReg();
     if (IsImplicitUseOfReg(Op, AMDGPU::EXEC) || IsImplicitUseOfReg(Op, AMDGPU::EXEC_LO))
+      continue;
+    if (IsImplicitUseOfReg(Op, AMDGPU::MODE))
       continue;
     if (IsImplicitUseOfReg(Op, AMDGPU::M0) && isPhyRegUniqueDef(OpReg, MRI))
       continue;
@@ -4454,7 +4456,7 @@ bool GroupRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI, LiveInt
   }
 
   // If bound by lds, skip.
-  if ((status.TargetOcc + 1) > ST->getOccupancyWithLocalMemSize(MF) &&
+  if ((status.TargetOcc + 1) > ST->getOccupancyWithWorkGroupSizes(MF).second &&
       !bSGPRSpill)
     return false;
 
