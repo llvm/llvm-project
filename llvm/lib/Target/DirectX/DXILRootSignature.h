@@ -18,7 +18,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <optional>
-#include <utility>
 
 namespace llvm {
 namespace dxil {
@@ -80,6 +79,7 @@ public:
   RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
   const ModuleRootSignature &getRootSignature() { return MRS.value(); }
+  
   bool hasRootSignature() { return MRS.has_value(); }
 
   bool runOnModule(Module &M) override;
