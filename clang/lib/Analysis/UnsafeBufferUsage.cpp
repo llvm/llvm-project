@@ -95,16 +95,14 @@ class MatchResult {
 
 public:
   template <typename T> const T *getNodeAs(StringRef ID) const {
-    auto It = Nodes.find(std::string(ID));
+    auto It = Nodes.find(ID);
     if (It == Nodes.end()) {
       return nullptr;
     }
     return It->second.get<T>();
   }
 
-  void addNode(StringRef ID, const DynTypedNode &Node) {
-    Nodes[std::string(ID)] = Node;
-  }
+  void addNode(StringRef ID, const DynTypedNode &Node) { Nodes[ID] = Node; }
 
 private:
   llvm::StringMap<DynTypedNode> Nodes;
@@ -257,8 +255,8 @@ static void
 forEachDescendantEvaluatedStmt(const Stmt *S, ASTContext &Ctx,
                                const UnsafeBufferUsageHandler &Handler,
                                FastMatcher &Matcher) {
-  MatchDescendantVisitor Visitor(Matcher, /* FindAll */ true,
-                                 /*ignoreUnevaluatedContext*/ true);
+  MatchDescendantVisitor Visitor(Matcher, /*FindAll=*/true,
+                                 /*ignoreUnevaluatedContext=*/true);
   Visitor.setASTContext(Ctx);
   Visitor.setHandler(Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
@@ -267,8 +265,8 @@ forEachDescendantEvaluatedStmt(const Stmt *S, ASTContext &Ctx,
 static void forEachDescendantStmt(const Stmt *S, ASTContext &Ctx,
                                   const UnsafeBufferUsageHandler &Handler,
                                   FastMatcher &Matcher) {
-  MatchDescendantVisitor Visitor(Matcher, /* FindAll */ true,
-                                 /*ignoreUnevaluatedContext*/ false);
+  MatchDescendantVisitor Visitor(Matcher, /*FindAll=*/true,
+                                 /*ignoreUnevaluatedContext=*/false);
   Visitor.setASTContext(Ctx);
   Visitor.setHandler(Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
@@ -1197,7 +1195,7 @@ public:
   }
 };
 
-static auto toSupportedVariable(const DeclRefExpr &Node) {
+static bool isSupportedVariable(const DeclRefExpr &Node) {
   const Decl *D = Node.getDecl();
   return D != nullptr && isa<VarDecl>(D);
 }
@@ -1357,7 +1355,7 @@ class PointerArithmeticGadget : public WarningGadget {
 public:
   PointerArithmeticGadget(const MatchResult &Result)
       : WarningGadget(Kind::PointerArithmetic),
-        PA((Result.getNodeAs<BinaryOperator>(PointerArithmeticTag))),
+        PA(Result.getNodeAs<BinaryOperator>(PointerArithmeticTag)),
         Ptr(Result.getNodeAs<Expr>(PointerArithmeticPointerTag)) {}
 
   static bool classof(const Gadget *G) {
@@ -1497,7 +1495,7 @@ public:
     if (!Init)
       return false;
     const auto *DRE = dyn_cast<DeclRefExpr>(Init->IgnoreImpCasts());
-    if (!DRE || !hasPointerType(*DRE) || !toSupportedVariable(*DRE)) {
+    if (!DRE || !hasPointerType(*DRE) || !isSupportedVariable(*DRE)) {
       return false;
     }
     MatchResult R;
@@ -1554,13 +1552,13 @@ public:
       const auto *RHS = BO->getRHS()->IgnoreParenImpCasts();
       if (const auto *RHSRef = dyn_cast<DeclRefExpr>(RHS);
           !RHSRef || !hasPointerType(*RHSRef) ||
-          !toSupportedVariable(*RHSRef)) {
+          !isSupportedVariable(*RHSRef)) {
         return;
       }
       const auto *LHS = BO->getLHS();
       if (const auto *LHSRef = dyn_cast<DeclRefExpr>(LHS);
           !LHSRef || !hasPointerType(*LHSRef) ||
-          !toSupportedVariable(*LHSRef)) {
+          !isSupportedVariable(*LHSRef)) {
         return;
       }
       MatchResult R;
@@ -1619,13 +1617,13 @@ public:
       if (const auto *RHSRef = dyn_cast<DeclRefExpr>(RHS);
           !RHSRef ||
           !isa<ConstantArrayType>(RHSRef->getType().getCanonicalType()) ||
-          !toSupportedVariable(*RHSRef)) {
+          !isSupportedVariable(*RHSRef)) {
         return;
       }
       const auto *LHS = BO->getLHS();
       if (const auto *LHSRef = dyn_cast<DeclRefExpr>(LHS);
           !LHSRef || !hasPointerType(*LHSRef) ||
-          !toSupportedVariable(*LHSRef)) {
+          !isSupportedVariable(*LHSRef)) {
         return;
       }
       MatchResult R;
@@ -1935,7 +1933,7 @@ public:
       const auto *DRE =
           dyn_cast<DeclRefExpr>(ASE->getBase()->IgnoreParenImpCasts());
       if (!DRE || (!hasPointerType(*DRE) && !hasArrayType(*DRE)) ||
-          !toSupportedVariable(*DRE))
+          !isSupportedVariable(*DRE))
         return;
       MatchResult R;
       R.addNode(ULCArraySubscriptTag, DynTypedNode::create(*ASE));
@@ -1985,7 +1983,7 @@ public:
         return;
       const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts());
       if (!DRE || (!hasPointerType(*DRE) && !hasArrayType(*DRE)) ||
-          !toSupportedVariable(*DRE))
+          !isSupportedVariable(*DRE))
         return;
       MatchResult R;
       R.addNode(DeclRefExprTag, DynTypedNode::create(*DRE));
@@ -2031,7 +2029,7 @@ public:
           continue;
         CE = CE->IgnoreParenImpCasts();
         const auto *DRE = dyn_cast<DeclRefExpr>(CE);
-        if (!DRE || !toSupportedVariable(*DRE))
+        if (!DRE || !isSupportedVariable(*DRE))
           continue;
         MatchResult R;
         R.addNode(BaseDeclRefExprTag, DynTypedNode::create(*DRE));
@@ -2087,7 +2085,7 @@ public:
         return;
       const auto *DRE =
           dyn_cast<DeclRefExpr>(ASE->getBase()->IgnoreParenImpCasts());
-      if (!DRE || !toSupportedVariable(*DRE))
+      if (!DRE || !isSupportedVariable(*DRE))
         return;
       MatchResult R;
       R.addNode(UPCAddressofArraySubscriptTag, DynTypedNode::create(*UO));
@@ -2209,7 +2207,7 @@ public:
       if (!UO || UO->getOpcode() != UO_PreInc)
         return;
       const auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr());
-      if (!DRE || !toSupportedVariable(*DRE))
+      if (!DRE || !isSupportedVariable(*DRE))
         return;
       MatchResult R;
       R.addNode(UPCPreIncrementTag, DynTypedNode::create(*UO));
@@ -2261,7 +2259,7 @@ public:
       if (!BO || BO->getOpcode() != BO_AddAssign)
         return;
       const auto *DRE = dyn_cast<DeclRefExpr>(BO->getLHS());
-      if (!DRE || !hasPointerType(*DRE) || !toSupportedVariable(*DRE) ||
+      if (!DRE || !hasPointerType(*DRE) || !isSupportedVariable(*DRE) ||
           !isa<Expr>(BO->getRHS()))
         return;
       MatchResult R;
@@ -2309,7 +2307,7 @@ public:
       if (!E || !hasPointerType(*E))
         return false;
       const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreImpCasts());
-      if (!DRE || !toSupportedVariable(*DRE))
+      if (!DRE || !isSupportedVariable(*DRE))
         return false;
       R.addNode(BaseDeclRefExprTag, DynTypedNode::create(*DRE));
       return true;
@@ -3055,7 +3053,7 @@ static inline std::optional<FixItList> createDataFixit(const ASTContext &Ctx,
 // `DRE.data()`
 std::optional<FixItList>
 UPCStandalonePointerGadget::getFixits(const FixitStrategy &S) const {
-  const auto *const VD = cast<VarDecl>(Node->getDecl());
+  auto *VD = cast<VarDecl>(Node->getDecl());
   switch (S.lookup(VD)) {
   case FixitStrategy::Kind::Array:
   case FixitStrategy::Kind::Span: {
