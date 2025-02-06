@@ -21,6 +21,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_WITH_Z3
   PPC_LINUX_DEFAULT_IEEELONGDOUBLE
   LLVM_TOOL_LLVM_DRIVER_BUILD
+  LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   )
 
 configure_lit_site_cfg(
