@@ -389,6 +389,8 @@ def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
 
+def UseLDAPUR : Predicate<"!Subtarget->avoidLDAPUR()">;
+
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                        SDTCisInt<1>]>>;
@@ -426,7 +428,6 @@ def SDT_AArch64cbz : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisVT<1, OtherVT>]>;
 def SDT_AArch64tbz : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>,
                                         SDTCisVT<2, OtherVT>]>;
 
-
 def SDT_AArch64CSel  : SDTypeProfile<1, 4,
                                    [SDTCisSameAs<0, 1>,
                                     SDTCisSameAs<0, 2>,
@@ -449,6 +450,7 @@ def SDT_AArch64FCCMP : SDTypeProfile<1, 5,
 def SDT_AArch64FCmp  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
                                             SDTCisFP<1>,
                                             SDTCisSameAs<2, 1>]>;
+def SDT_AArch64Rev : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>;
 def SDT_AArch64Dup   : SDTypeProfile<1, 1, [SDTCisVec<0>]>;
 def SDT_AArch64DupLane   : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<2>]>;
 def SDT_AArch64Insr  : SDTypeProfile<1, 2, [SDTCisVec<0>]>;
@@ -815,11 +817,9 @@ def AArch64mvni_msl : SDNode<"AArch64ISD::MVNImsl", SDT_AArch64MOVIshift>;
 def AArch64movi : SDNode<"AArch64ISD::MOVI", SDT_AArch64MOVIedit>;
 def AArch64fmov : SDNode<"AArch64ISD::FMOV", SDT_AArch64MOVIedit>;
 
-def AArch64rev16_scalar : SDNode<"AArch64ISD::REV16", SDTIntUnaryOp>;
-
-def AArch64rev16 : SDNode<"AArch64ISD::REV16", SDT_AArch64UnaryVec>;
-def AArch64rev32 : SDNode<"AArch64ISD::REV32", SDT_AArch64UnaryVec>;
-def AArch64rev64 : SDNode<"AArch64ISD::REV64", SDT_AArch64UnaryVec>;
+def AArch64rev16 : SDNode<"AArch64ISD::REV16", SDT_AArch64Rev>;
+def AArch64rev32 : SDNode<"AArch64ISD::REV32", SDT_AArch64Rev>;
+def AArch64rev64 : SDNode<"AArch64ISD::REV64", SDT_AArch64Rev>;
 def AArch64ext : SDNode<"AArch64ISD::EXT", SDT_AArch64ExtVec>;
 
 def AArch64vashr : SDNode<"AArch64ISD::VASHR", SDT_AArch64vshift>;
@@ -1025,9 +1025,9 @@ def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
    return CurDAG->isADDLike(SDValue(N,0));
 }]> {
   let GISelPredicateCode = [{
-     // Only handle G_ADD for now. FIXME. build capability to compute whether
-     // operands of G_OR have common bits set or not.
-     return MI.getOpcode() == TargetOpcode::G_ADD;
+     return MI.getOpcode() == TargetOpcode::G_ADD ||
+            (MI.getOpcode() == TargetOpcode::G_OR &&
+             MI.getFlag(MachineInstr::MIFlag::Disjoint));
   }];
 }
 
@@ -1495,7 +1495,7 @@ class BaseSIMDSUDOTIndex<bit Q, string dst_kind, string lhs_kind,
                          ValueType AccumType, ValueType InputType>
       : BaseSIMDThreeSameVectorIndexS<Q, 0, 0b00, 0b1111, "sudot", dst_kind,
                                         lhs_kind, rhs_kind, RegType, AccumType,
-                                        InputType, null_frag> {
+                                        InputType, VectorIndexS, null_frag> {
   let Pattern = [(set (AccumType RegType:$dst),
                       (AccumType (AArch64usdot (AccumType RegType:$Rd),
                                  (InputType (bitconvert (AccumType
@@ -1771,7 +1771,12 @@ def : InstAlias<"xpaclri", (XPACLRI), 0>;
 
 let Uses = [LR, SP], Defs = [LR] in {
 // Insertion point of LR signing code.
-def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
+def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
+  // When using PAuthLR, the address of one of the instructions this expands
+  // into is used as an input to the signature calculation, so this must not be
+  // duplicated.
+  let isNotDuplicable = 1;
+}
 // Insertion point of LR authentication code.
 // The RET terminator of the containing machine basic block may be replaced
 // with a combined RETA(A|B) instruction when rewriting this Pseudo.
@@ -2993,8 +2998,8 @@ def : Pat<(bswap (rotr GPR64:$Rn, (i64 32))), (REV32Xr GPR64:$Rn)>;
 def : Pat<(srl (bswap top16Zero:$Rn), (i64 16)), (REV16Wr GPR32:$Rn)>;
 def : Pat<(srl (bswap top32Zero:$Rn), (i64 32)), (REV32Xr GPR64:$Rn)>;
 
-def : Pat<(AArch64rev16_scalar GPR32:$Rn), (REV16Wr GPR32:$Rn)>;
-def : Pat<(AArch64rev16_scalar GPR64:$Rn), (REV16Xr GPR64:$Rn)>;
+def : Pat<(AArch64rev16 GPR32:$Rn), (REV16Wr GPR32:$Rn)>;
+def : Pat<(AArch64rev16 GPR64:$Rn), (REV16Xr GPR64:$Rn)>;
 
 def : Pat<(or (and (srl GPR64:$Rn, (i64 8)), (i64 0x00ff00ff00ff00ff)),
               (and (shl GPR64:$Rn, (i64 8)), (i64 0xff00ff00ff00ff00))),
@@ -4660,6 +4665,10 @@ def STRQpre : StorePreIdx<0b00, 1, 0b10, FPR128Op, "str", pre_store, f128>;
 def STRBBpre : StorePreIdx<0b00, 0, 0b00, GPR32z, "strb", pre_truncsti8,  i32>;
 def STRHHpre : StorePreIdx<0b01, 0, 0b00, GPR32z, "strh", pre_truncsti16, i32>;
 
+// bf16 pre-index store
+def : Pat<(pre_store (bf16 FPR16:$Rt), GPR64sp:$addr, simm9:$off),
+          (STRHpre FPR16:$Rt, GPR64sp:$addr, simm9:$off)>;
+
 // truncstore i64
 def : Pat<(pre_truncsti32 GPR64:$Rt, GPR64sp:$addr, simm9:$off),
   (STRWpre (EXTRACT_SUBREG GPR64:$Rt, sub_32), GPR64sp:$addr,
@@ -4685,6 +4694,8 @@ def : Pat<(pre_store (v1f64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
           (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
 def : Pat<(pre_store (v4f16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
           (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+def : Pat<(pre_store (v4bf16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+          (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
 
 def : Pat<(pre_store (v16i8 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
           (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
@@ -4699,6 +4710,8 @@ def : Pat<(pre_store (v2i64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
 def : Pat<(pre_store (v2f64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
           (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
 def : Pat<(pre_store (v8f16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+          (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+def : Pat<(pre_store (v8bf16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
           (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
 
 //---
@@ -10314,13 +10327,13 @@ let Predicates = [HasD128] in {
 // 2023 Architecture Extensions:
 //===----------------------------===//
 
-let Uses = [FPMR, FPCR], Predicates = [HasFP8] in {
-  defm F1CVTL  : SIMDMixedTwoVectorFP8<0b00, "f1cvtl">;
-  defm F2CVTL  : SIMDMixedTwoVectorFP8<0b01, "f2cvtl">;
-  defm BF1CVTL : SIMDMixedTwoVectorFP8<0b10, "bf1cvtl">;
-  defm BF2CVTL : SIMDMixedTwoVectorFP8<0b11, "bf2cvtl">;
-  defm FCVTN_F16_F8 : SIMDThreeSameSizeVectorCvt<"fcvtn">;
-  defm FCVTN_F32_F8 : SIMDThreeVectorCvt<"fcvtn">;
+let Predicates = [HasFP8] in {
+  defm F1CVTL  : SIMD_FP8_CVTL<0b00, "f1cvtl", v8f16, int_aarch64_neon_fp8_cvtl1>;
+  defm F2CVTL  : SIMD_FP8_CVTL<0b01, "f2cvtl", v8f16, int_aarch64_neon_fp8_cvtl2>;
+  defm BF1CVTL : SIMD_FP8_CVTL<0b10, "bf1cvtl", v8bf16, int_aarch64_neon_fp8_cvtl1>;
+  defm BF2CVTL : SIMD_FP8_CVTL<0b11, "bf2cvtl", v8bf16, int_aarch64_neon_fp8_cvtl2>;
+  defm FCVTN_F16 : SIMD_FP8_CVTN_F16<"fcvtn", int_aarch64_neon_fp8_fcvtn>;
+  defm FCVTN_F32 : SIMD_FP8_CVTN_F32<"fcvtn", int_aarch64_neon_fp8_fcvtn>;
   defm FSCALE : SIMDThreeVectorFscale<0b1, 0b1, 0b111, "fscale", int_aarch64_neon_fp8_fscale>;
 } // End let Predicates = [HasFP8]
 
@@ -10343,30 +10356,32 @@ let Predicates = [HasNEON, HasFAMINMAX] in {
  defm FAMIN : SIMDThreeSameVectorFP<0b1, 0b1, 0b011, "famin", AArch64famin>;
 } // End let Predicates = [HasNEON, HasFAMINMAX]
 
-let Uses = [FPMR, FPCR], Predicates = [HasFP8FMA] in {
- defm FMLALBlane : SIMDThreeSameVectorMLAIndex<0b0, "fmlalb">;
- defm FMLALTlane : SIMDThreeSameVectorMLAIndex<0b1, "fmlalt">;
- defm FMLALLBBlane : SIMDThreeSameVectorMLALIndex<0b0, 0b00, "fmlallbb">;
- defm FMLALLBTlane : SIMDThreeSameVectorMLALIndex<0b0, 0b01, "fmlallbt">;
- defm FMLALLTBlane : SIMDThreeSameVectorMLALIndex<0b1, 0b00, "fmlalltb">;
- defm FMLALLTTlane : SIMDThreeSameVectorMLALIndex<0b1, 0b01, "fmlalltt">;
+let Predicates = [HasFP8FMA] in {
+ defm FMLALBlane : SIMDThreeSameVectorMLAIndex<0b0, "fmlalb", int_aarch64_neon_fp8_fmlalb_lane>;
+ defm FMLALTlane : SIMDThreeSameVectorMLAIndex<0b1, "fmlalt", int_aarch64_neon_fp8_fmlalt_lane>;
+ defm FMLALLBBlane : SIMDThreeSameVectorMLALIndex<0b0, 0b00, "fmlallbb", int_aarch64_neon_fp8_fmlallbb_lane>;
+ defm FMLALLBTlane : SIMDThreeSameVectorMLALIndex<0b0, 0b01, "fmlallbt", int_aarch64_neon_fp8_fmlallbt_lane>;
+ defm FMLALLTBlane : SIMDThreeSameVectorMLALIndex<0b1, 0b00, "fmlalltb", int_aarch64_neon_fp8_fmlalltb_lane>;
+ defm FMLALLTTlane : SIMDThreeSameVectorMLALIndex<0b1, 0b01, "fmlalltt", int_aarch64_neon_fp8_fmlalltt_lane>;
+}
 
- defm FMLALB : SIMDThreeSameVectorMLA<0b0, "fmlalb">;
- defm FMLALT : SIMDThreeSameVectorMLA<0b1, "fmlalt">;
- defm FMLALLBB : SIMDThreeSameVectorMLAL<0b0, 0b00, "fmlallbb">;
- defm FMLALLBT : SIMDThreeSameVectorMLAL<0b0, 0b01, "fmlallbt">;
- defm FMLALLTB : SIMDThreeSameVectorMLAL<0b1, 0b00, "fmlalltb">;
- defm FMLALLTT : SIMDThreeSameVectorMLAL<0b1, 0b01, "fmlalltt">;
+let Predicates = [HasFP8FMA], Uses = [FPMR, FPCR], mayLoad = 1 in {
+ defm FMLALB : SIMDThreeSameVectorMLA<0b0, "fmlalb", int_aarch64_neon_fp8_fmlalb>;
+ defm FMLALT : SIMDThreeSameVectorMLA<0b1, "fmlalt", int_aarch64_neon_fp8_fmlalt>;
+ defm FMLALLBB : SIMDThreeSameVectorMLAL<0b0, 0b00, "fmlallbb", int_aarch64_neon_fp8_fmlallbb>;
+ defm FMLALLBT : SIMDThreeSameVectorMLAL<0b0, 0b01, "fmlallbt", int_aarch64_neon_fp8_fmlallbt>;
+ defm FMLALLTB : SIMDThreeSameVectorMLAL<0b1, 0b00, "fmlalltb", int_aarch64_neon_fp8_fmlalltb>;
+ defm FMLALLTT : SIMDThreeSameVectorMLAL<0b1, 0b01, "fmlalltt", int_aarch64_neon_fp8_fmlalltt>;
 } // End let Predicates = [HasFP8FMA]
 
-let Uses = [FPMR, FPCR], Predicates = [HasFP8DOT2] in {
- defm FDOTlane : SIMDThreeSameVectorFP8DOT2Index<"fdot">;
- defm FDOT : SIMDThreeSameVectorDOT2<"fdot">;
+let Predicates = [HasFP8DOT2] in {
+ defm FDOTlane : SIMD_FP8_Dot2_Index<"fdot", int_aarch64_neon_fp8_fdot2_lane>;
+ defm FDOT : SIMD_FP8_Dot2<"fdot", int_aarch64_neon_fp8_fdot2>;
 } // End let Predicates = [HasFP8DOT2]
 
-let Uses = [FPMR, FPCR], Predicates = [HasFP8DOT4] in {
- defm FDOTlane : SIMDThreeSameVectorFP8DOT4Index<"fdot">;
- defm FDOT : SIMDThreeSameVectorDOT4<"fdot">;
+let Predicates = [HasFP8DOT4] in {
+ defm FDOTlane : SIMD_FP8_Dot4_Index<"fdot", int_aarch64_neon_fp8_fdot4_lane>;
+ defm FDOT : SIMD_FP8_Dot4<"fdot", int_aarch64_neon_fp8_fdot4>;
 } // End let Predicates = [HasFP8DOT4]
 
 //===----------------------------------------------------------------------===//

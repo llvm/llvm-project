@@ -1,0 +1,44 @@
+macros:
+  C_IRUSR:
+    in-latest-posix: ''
+  C_IWUSR:
+    in-latest-posix: ''
+  C_IXUSR:
+    in-latest-posix: ''
+  C_IRGRP:
+    in-latest-posix: ''
+  C_IWGRP:
+    in-latest-posix: ''
+  C_IXGRP:
+    in-latest-posix: ''
+  C_IROTH:
+    in-latest-posix: ''
+  C_IWOTH:
+    in-latest-posix: ''
+  C_IXOTH:
+    in-latest-posix: ''
+  C_ISUID:
+    in-latest-posix: ''
+  C_ISGID:
+    in-latest-posix: ''
+  C_ISVTX:
+    in-latest-posix: ''
+  C_ISDIR:
+    in-latest-posix: ''
+  C_ISFIFO:
+    in-latest-posix: ''
+  C_ISREG:
+    in-latest-posix: ''
+  C_ISBLK:
+    in-latest-posix: ''
+  C_ISCHR:
+    in-latest-posix: ''
+  C_ISCTG:
+    in-latest-posix: ''
+  C_ISLNK:
+    in-latest-posix: ''
+  C_ISSOCK:
+    in-latest-posix: ''
+  MAGIC:
+    in-latest-posix: ''
+

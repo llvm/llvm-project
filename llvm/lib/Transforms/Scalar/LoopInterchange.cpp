@@ -160,11 +160,16 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         unsigned Levels = D->getLevels();
         char Direction;
         for (unsigned II = 1; II <= Levels; ++II) {
+          // `DVEntry::LE` is converted to `*`. This is because `LE` means `<`
+          // or `=`, for which we don't have an equivalent representation, so
+          // that the conservative approximation is necessary. The same goes for
+          // `DVEntry::GE`.
+          // TODO: Use of fine-grained expressions allows for more accurate
+          // analysis.
           unsigned Dir = D->getDirection(II);
-          if (Dir == Dependence::DVEntry::LT || Dir == Dependence::DVEntry::LE)
+          if (Dir == Dependence::DVEntry::LT)
             Direction = '<';
-          else if (Dir == Dependence::DVEntry::GT ||
-                   Dir == Dependence::DVEntry::GE)
+          else if (Dir == Dependence::DVEntry::GT)
             Direction = '>';
           else if (Dir == Dependence::DVEntry::EQ)
             Direction = '=';
@@ -271,6 +276,27 @@ static bool hasSupportedLoopDepth(SmallVectorImpl<Loop *> &LoopList,
   }
   return true;
 }
+
+static bool isComputableLoopNest(ScalarEvolution *SE,
+                                 ArrayRef<Loop *> LoopList) {
+  for (Loop *L : LoopList) {
+    const SCEV *ExitCountOuter = SE->getBackedgeTakenCount(L);
+    if (isa<SCEVCouldNotCompute>(ExitCountOuter)) {
+      LLVM_DEBUG(dbgs() << "Couldn't compute backedge count\n");
+      return false;
+    }
+    if (L->getNumBackEdges() != 1) {
+      LLVM_DEBUG(dbgs() << "NumBackEdges is not equal to 1\n");
+      return false;
+    }
+    if (!L->getExitingBlock()) {
+      LLVM_DEBUG(dbgs() << "Loop doesn't have unique exit block\n");
+      return false;
+    }
+  }
+  return true;
+}
+
 namespace {
 
 /// LoopInterchangeLegality checks if it is legal to interchange the loop.
@@ -426,25 +452,6 @@ struct LoopInterchange {
     return processLoopList(LoopList);
   }
 
-  bool isComputableLoopNest(ArrayRef<Loop *> LoopList) {
-    for (Loop *L : LoopList) {
-      const SCEV *ExitCountOuter = SE->getBackedgeTakenCount(L);
-      if (isa<SCEVCouldNotCompute>(ExitCountOuter)) {
-        LLVM_DEBUG(dbgs() << "Couldn't compute backedge count\n");
-        return false;
-      }
-      if (L->getNumBackEdges() != 1) {
-        LLVM_DEBUG(dbgs() << "NumBackEdges is not equal to 1\n");
-        return false;
-      }
-      if (!L->getExitingBlock()) {
-        LLVM_DEBUG(dbgs() << "Loop doesn't have unique exit block\n");
-        return false;
-      }
-    }
-    return true;
-  }
-
   unsigned selectLoopForInterchange(ArrayRef<Loop *> LoopList) {
     // TODO: Add a better heuristic to select the loop to be interchanged based
     // on the dependence matrix. Currently we select the innermost loop.
@@ -459,10 +466,6 @@ struct LoopInterchange {
            "Unsupported depth of loop nest.");
 
     unsigned LoopNestDepth = LoopList.size();
-    if (!isComputableLoopNest(LoopList)) {
-      LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
-      return false;
-    }
 
     LLVM_DEBUG(dbgs() << "Processing LoopList of size = " << LoopNestDepth
                       << "\n");
@@ -1350,7 +1353,7 @@ bool LoopInterchangeTransform::transform() {
         // Duplicate instruction and move it the new latch. Update uses that
         // have been moved.
         Instruction *NewI = WorkList[i]->clone();
-        NewI->insertBefore(NewLatch->getFirstNonPHI());
+        NewI->insertBefore(NewLatch->getFirstNonPHIIt());
         assert(!NewI->mayHaveSideEffects() &&
                "Moving instructions with side-effects may change behavior of "
                "the loop nest!");
@@ -1388,8 +1391,9 @@ bool LoopInterchangeTransform::transform() {
 
   // Ensure the inner loop phi nodes have a separate basic block.
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
-  if (InnerLoopHeader->getFirstNonPHI() != InnerLoopHeader->getTerminator()) {
-    SplitBlock(InnerLoopHeader, InnerLoopHeader->getFirstNonPHI(), DT, LI);
+  if (&*InnerLoopHeader->getFirstNonPHIIt() !=
+      InnerLoopHeader->getTerminator()) {
+    SplitBlock(InnerLoopHeader, InnerLoopHeader->getFirstNonPHIIt(), DT, LI);
     LLVM_DEBUG(dbgs() << "splitting InnerLoopHeader done\n");
   }
 
@@ -1405,7 +1409,7 @@ bool LoopInterchangeTransform::transform() {
     for (Instruction &I :
          make_early_inc_range(make_range(InnerLoopPreHeader->begin(),
                                          std::prev(InnerLoopPreHeader->end()))))
-      I.moveBeforePreserving(OuterLoopHeader->getTerminator());
+      I.moveBeforePreserving(OuterLoopHeader->getTerminator()->getIterator());
   }
 
   Transformed |= adjustLoopLinks();
@@ -1440,7 +1444,7 @@ static void swapBBContents(BasicBlock *BB1, BasicBlock *BB2) {
 
   // Move instructions from TempInstrs to BB2.
   for (Instruction *I : TempInstrs)
-    I->insertBefore(BB2->getTerminator());
+    I->insertBefore(BB2->getTerminator()->getIterator());
 }
 
 // Update BI to jump to NewBB instead of OldBB. Records updates to the
@@ -1526,12 +1530,12 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
   // InnerLatch, which will become the new exit block for the innermost
   // loop after interchanging.
   for (PHINode *P : LcssaInnerExit)
-    P->moveBefore(InnerLatch->getFirstNonPHI());
+    P->moveBefore(InnerLatch->getFirstNonPHIIt());
 
   // If the inner loop latch contains LCSSA PHIs, those come from a child loop
   // and we have to move them to the new inner latch.
   for (PHINode *P : LcssaInnerLatch)
-    P->moveBefore(InnerExit->getFirstNonPHI());
+    P->moveBefore(InnerExit->getFirstNonPHIIt());
 
   // Deal with LCSSA PHI nodes in the loop nest exit block. For PHIs that have
   // incoming values defined in the outer loop, we have to add a new PHI
@@ -1557,7 +1561,7 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
           continue;
         NewPhi->addIncoming(P.getIncomingValue(0), Pred);
       }
-      NewPhi->insertBefore(InnerLatch->getFirstNonPHI());
+      NewPhi->insertBefore(InnerLatch->getFirstNonPHIIt());
       P.setIncomingValue(0, NewPhi);
     }
   }
@@ -1697,12 +1701,12 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   // outer loop and all the remains to do is and updating the incoming blocks.
   for (PHINode *PHI : OuterLoopPHIs) {
     LLVM_DEBUG(dbgs() << "Outer loop reduction PHIs:\n"; PHI->dump(););
-    PHI->moveBefore(InnerLoopHeader->getFirstNonPHI());
+    PHI->moveBefore(InnerLoopHeader->getFirstNonPHIIt());
     assert(OuterInnerReductions.count(PHI) && "Expected a reduction PHI node");
   }
   for (PHINode *PHI : InnerLoopPHIs) {
     LLVM_DEBUG(dbgs() << "Inner loop reduction PHIs:\n"; PHI->dump(););
-    PHI->moveBefore(OuterLoopHeader->getFirstNonPHI());
+    PHI->moveBefore(OuterLoopHeader->getFirstNonPHIIt());
     assert(OuterInnerReductions.count(PHI) && "Expected a reduction PHI node");
   }
 
@@ -1755,10 +1759,23 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   // Ensure minimum depth of the loop nest to do the interchange.
   if (!hasSupportedLoopDepth(LoopList, ORE))
     return PreservedAnalyses::all();
+  // Ensure computable loop nest.
+  if (!isComputableLoopNest(&AR.SE, LoopList)) {
+    LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
+    return PreservedAnalyses::all();
+  }
+
+  ORE.emit([&]() {
+    return OptimizationRemarkAnalysis(DEBUG_TYPE, "Dependence",
+                                      LN.getOutermostLoop().getStartLoc(),
+                                      LN.getOutermostLoop().getHeader())
+           << "Computed dependence info, invoking the transform.";
+  });
+
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
   std::unique_ptr<CacheCost> CC =
       CacheCost::getCacheCost(LN.getOutermostLoop(), AR, DI);
-  
+
   if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, CC, &ORE).run(LN))
     return PreservedAnalyses::all();
   U.markLoopNestChanged(true);

@@ -674,6 +674,12 @@ public:
     return dyn_cast_if_present<const TargetRegisterClass *>(Val);
   }
 
+  /// Return the register bank of \p Reg.
+  /// This shouldn't be used directly unless \p Reg has a register bank.
+  const RegisterBank *getRegBank(Register Reg) const {
+    return cast<const RegisterBank *>(VRegInfo[Reg.id()].first);
+  }
+
   /// Return the register bank of \p Reg, or null if Reg has not been assigned
   /// a register bank or has been assigned a register class.
   /// \note It is possible to get the register bank from the register class via

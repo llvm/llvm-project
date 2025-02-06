@@ -413,12 +413,12 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
     // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_print_enabled_extensions)) ||
+             (PhaseArg =
+                  DAL.getLastArg(options::OPT_print_enabled_extensions)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT__migrate)) ||
              (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_emit_cir)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {
@@ -636,6 +636,10 @@ static llvm::Triple computeTargetTriple(const Driver &D,
         Target.setArch(AT);
     }
   }
+
+  // Currently the only architecture supported by *-uefi triples are x86_64.
+  if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64)
+    D.Diag(diag::err_target_unknown_triple) << Target.str();
 
   // The `-maix[32|64]` flags are only valid for AIX targets.
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_maix32, options::OPT_maix64);
@@ -3405,7 +3409,9 @@ class OffloadingActionBuilder final {
       // Collect all offload arch parameters, removing duplicates.
       std::set<StringRef> GpuArchs;
       bool Error = false;
-      for (Arg *A : Args) {
+      const ToolChain &TC = *ToolChains.front();
+      for (Arg *A : C.getArgsForToolChain(&TC, /*BoundArch=*/"",
+                                          AssociatedOffloadKind)) {
         if (!(A->getOption().matches(options::OPT_offload_arch_EQ) ||
               A->getOption().matches(options::OPT_no_offload_arch_EQ)))
           continue;
@@ -3416,7 +3422,6 @@ class OffloadingActionBuilder final {
               ArchStr == "all") {
             GpuArchs.clear();
           } else if (ArchStr == "native") {
-            const ToolChain &TC = *ToolChains.front();
             auto GPUsOrErr = ToolChains.front()->getSystemGPUArchs(Args);
             if (!GPUsOrErr) {
               TC.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
@@ -4708,23 +4713,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
     return KnownArchs.lookup(TC);
 
   llvm::DenseSet<StringRef> Archs;
-  for (auto *Arg : Args) {
-    // Extract any '--[no-]offload-arch' arguments intended for this toolchain.
-    std::unique_ptr<llvm::opt::Arg> ExtractedArg = nullptr;
-    if (Arg->getOption().matches(options::OPT_Xopenmp_target_EQ) &&
-        ToolChain::getOpenMPTriple(Arg->getValue(0)) == TC->getTriple()) {
-      Arg->claim();
-      unsigned Index = Args.getBaseArgs().MakeIndex(Arg->getValue(1));
-      unsigned Prev = Index;
-      ExtractedArg = getOpts().ParseOneArg(Args, Index);
-      if (!ExtractedArg || Index > Prev + 1) {
-        TC->getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
-            << Arg->getAsString(Args);
-        continue;
-      }
-      Arg = ExtractedArg.get();
-    }
-
+  for (auto *Arg : C.getArgsForToolChain(TC, /*BoundArch=*/"", Kind)) {
     // Add or remove the seen architectures in order of appearance. If an
     // invalid architecture is given we simply exit.
     if (Arg->getOption().matches(options::OPT_offload_arch_EQ)) {
@@ -4781,14 +4770,31 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
     return Archs;
 
   if (Archs.empty()) {
-    if (Kind == Action::OFK_Cuda)
+    if (Kind == Action::OFK_Cuda) {
       Archs.insert(OffloadArchToString(OffloadArch::CudaDefault));
-    else if (Kind == Action::OFK_HIP)
+    } else if (Kind == Action::OFK_HIP) {
       Archs.insert(OffloadArchToString(OffloadArch::HIPDefault));
-    else if (Kind == Action::OFK_OpenMP)
+    } else if (Kind == Action::OFK_SYCL) {
       Archs.insert(StringRef());
-    else if (Kind == Action::OFK_SYCL)
-      Archs.insert(StringRef());
+    } else if (Kind == Action::OFK_OpenMP) {
+      // Accept legacy `-march` device arguments for OpenMP.
+      if (auto *Arg = C.getArgsForToolChain(TC, /*BoundArch=*/"", Kind)
+                          .getLastArg(options::OPT_march_EQ)) {
+        Archs.insert(Arg->getValue());
+      } else {
+        auto ArchsOrErr = TC->getSystemGPUArchs(Args);
+        if (!ArchsOrErr) {
+          TC->getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
+              << llvm::Triple::getArchTypeName(TC->getArch())
+              << llvm::toString(ArchsOrErr.takeError()) << "--offload-arch";
+        } else if (!ArchsOrErr->empty()) {
+          for (auto Arch : *ArchsOrErr)
+            Archs.insert(Args.MakeArgStringRef(Arch));
+        } else {
+          Archs.insert(StringRef());
+        }
+      }
+    }
   } else {
     Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
     Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
@@ -5078,8 +5084,6 @@ Action *Driver::ConstructPhaseAction(
                                             types::TY_RewrittenLegacyObjC);
     if (Args.hasArg(options::OPT__analyze))
       return C.MakeAction<AnalyzeJobAction>(Input, types::TY_Plist);
-    if (Args.hasArg(options::OPT__migrate))
-      return C.MakeAction<MigrateJobAction>(Input, types::TY_Remap);
     if (Args.hasArg(options::OPT_emit_ast))
       return C.MakeAction<CompileJobAction>(Input, types::TY_AST);
     if (Args.hasArg(options::OPT_emit_cir))

@@ -1843,6 +1843,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, OPT_fno_finite_loops);
     break;
   }
+
+  if (Opts.StaticClosure)
+    GenerateArg(Consumer, OPT_static_libclosure);
 }
 
 bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
@@ -2330,6 +2333,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (!Opts.EmitIEEENaNCompliantInsts && !LangOptsRef.NoHonorNaNs)
     Diags.Report(diag::err_drv_amdgpu_ieee_without_no_honor_nans);
 
+  Opts.StaticClosure = Args.hasArg(options::OPT_static_libclosure);
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
@@ -2756,7 +2761,6 @@ static const auto &getFrontendActionTable() {
       {frontend::RewriteObjC, OPT_rewrite_objc},
       {frontend::RewriteTest, OPT_rewrite_test},
       {frontend::RunAnalysis, OPT_analyze},
-      {frontend::MigrateSource, OPT_migrate},
       {frontend::RunPreprocessorOnly, OPT_Eonly},
       {frontend::PrintDependencyDirectivesSourceMinimizerOutput,
        OPT_print_dependency_directives_minimized_source},
@@ -3098,12 +3102,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
   if (Args.hasArg(OPT_aux_target_feature))
     Opts.AuxTargetFeatures = Args.getAllArgValues(OPT_aux_target_feature);
-
-  if (Opts.ARCMTAction != FrontendOptions::ARCMT_None &&
-      Opts.ObjCMTAction != FrontendOptions::ObjCMT_None) {
-    Diags.Report(diag::err_drv_argument_not_allowed_with)
-      << "ARC migration" << "ObjC migration";
-  }
 
   InputKind DashX(Language::Unknown);
   if (const Arg *A = Args.getLastArg(OPT_x)) {
@@ -3721,6 +3719,8 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   } else if (Opts.SignedOverflowBehavior == LangOptions::SOB_Defined) {
     GenerateArg(Consumer, OPT_fwrapv);
   }
+  if (Opts.PointerOverflowDefined)
+    GenerateArg(Consumer, OPT_fwrapv_pointer);
 
   if (Opts.MSCompatibilityVersion != 0) {
     unsigned Major = Opts.MSCompatibilityVersion / 10000000;
@@ -3892,6 +3892,9 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     break;
   case LangOptions::ClangABI::Ver19:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "19.0");
+    break;
+  case LangOptions::ClangABI::Ver20:
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "20.0");
     break;
   case LangOptions::ClangABI::Latest:
     break;
@@ -4138,6 +4141,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   }
   else if (Args.hasArg(OPT_fwrapv))
     Opts.setSignedOverflowBehavior(LangOptions::SOB_Defined);
+  if (Args.hasArg(OPT_fwrapv_pointer))
+    Opts.PointerOverflowDefined = true;
 
   Opts.MSCompatibilityVersion = 0;
   if (const Arg *A = Args.getLastArg(OPT_fms_compatibility_version)) {
@@ -4211,7 +4216,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     }
   }
 
-  // Check if -fopenmp is specified and set default version to 5.0.
+  // Check if -fopenmp is specified and set default version to 5.1.
   Opts.OpenMP = Args.hasArg(OPT_fopenmp) ? 51 : 0;
   // Check if -fopenmp-simd is specified.
   bool IsSimdSpecified =
@@ -4409,7 +4414,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     // y or y.0 (4 <= y <= current version).
     if (!VerParts.first.starts_with("0") &&
         !VerParts.first.getAsInteger(10, Major) && 3 <= Major &&
-        Major <= CLANG_VERSION_MAJOR &&
+        Major <= MAX_CLANG_ABI_COMPAT_VERSION &&
         (Major == 3
              ? VerParts.second.size() == 1 &&
                    !VerParts.second.getAsInteger(10, Minor)
@@ -4635,7 +4640,6 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::RewriteTest:
   case frontend::RunAnalysis:
   case frontend::TemplightDump:
-  case frontend::MigrateSource:
     return false;
 
   case frontend::DumpCompilerOptions:

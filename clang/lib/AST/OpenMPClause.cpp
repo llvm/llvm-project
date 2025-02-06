@@ -2927,9 +2927,13 @@ llvm::raw_ostream &clang::operator<<(llvm::raw_ostream &OS,
 TargetOMPContext::TargetOMPContext(
     ASTContext &ASTCtx, std::function<void(StringRef)> &&DiagUnknownTrait,
     const FunctionDecl *CurrentFunctionDecl,
-    ArrayRef<llvm::omp::TraitProperty> ConstructTraits)
+    ArrayRef<llvm::omp::TraitProperty> ConstructTraits, int DeviceNum)
     : OMPContext(ASTCtx.getLangOpts().OpenMPIsTargetDevice,
-                 ASTCtx.getTargetInfo().getTriple()),
+                 ASTCtx.getTargetInfo().getTriple(),
+                 ASTCtx.getLangOpts().OMPTargetTriples.empty()
+                     ? llvm::Triple()
+                     : ASTCtx.getLangOpts().OMPTargetTriples[0],
+                 DeviceNum),
       FeatureValidityCheck([&](StringRef FeatureName) {
         return ASTCtx.getTargetInfo().isValidFeatureName(FeatureName);
       }),

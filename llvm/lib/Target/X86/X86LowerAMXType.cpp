@@ -939,10 +939,10 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
         BasicBlock::iterator Iter = Block->getTerminator()->getIterator();
         Instruction *NewInst = Builder.CreateIntrinsic(
             Intrinsic::x86_tilezero_internal, {}, {Row, Col});
-        NewInst->moveBefore(&*Iter);
+        NewInst->moveBefore(Iter);
         NewInst = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector,
                                           {IncValue->getType()}, {NewInst});
-        NewInst->moveBefore(&*Iter);
+        NewInst->moveBefore(Iter);
         // Replace InValue with new Value.
         OldPN->setIncomingValue(I, NewInst);
         IncValue = NewInst;

@@ -186,12 +186,12 @@ protected:
       const lldb::AccessType default_accessibility,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
-  void
-  ParseChildParameters(clang::DeclContext *containing_decl_ctx,
-                       const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
-                       bool &is_variadic, bool &has_template_params,
-                       std::vector<lldb_private::CompilerType> &function_args,
-                       std::vector<clang::ParmVarDecl *> &function_param_decls);
+  void ParseChildParameters(
+      clang::DeclContext *containing_decl_ctx,
+      const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
+      bool &is_variadic, bool &has_template_params,
+      std::vector<lldb_private::CompilerType> &function_param_types,
+      llvm::SmallVectorImpl<llvm::StringRef> &function_param_names);
 
   size_t ParseChildEnumerators(
       const lldb_private::CompilerType &compiler_type, bool is_signed,

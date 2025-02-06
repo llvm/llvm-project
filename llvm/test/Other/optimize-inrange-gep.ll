@@ -19,7 +19,7 @@ define void @foo(ptr %p) {
 ; O0-NEXT:    ret void
 ;
 ; CHECK-LABEL: define void @foo(
-; CHECK-SAME: ptr nocapture writeonly initializes((0, 8)) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((0, 8)) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    store ptr getelementptr inbounds nuw inrange(-24, 0) (i8, ptr @vtable, i64 24), ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;

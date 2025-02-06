@@ -4234,8 +4234,13 @@ class SPIRV_CoopMatrixOfType<list<Type> allowedTypes> :
     "::llvm::cast<::mlir::spirv::CooperativeMatrixType>($_self).getElementType()",
     "Cooperative Matrix">;
 
+class SPIRV_MatrixOfType<list<Type> allowedTypes> :
+  ContainerType<AnyTypeOf<allowedTypes>, SPIRV_IsMatrixType,
+    "::llvm::cast<::mlir::spirv::MatrixType>($_self).getElementType()",
+    "Matrix">;
+
 class SPIRV_VectorOf<Type type> :
-    VectorOfLengthAndType<[2, 3, 4, 8,16], [type]>;
+    VectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>;
 
 class SPIRV_ScalarOrVectorOf<Type type> :
     AnyTypeOf<[type, SPIRV_VectorOf<type>]>;
@@ -4247,6 +4252,9 @@ class SPIRV_ScalarOrVectorOrCoopMatrixOf<Type type> :
 class SPIRV_MatrixOrCoopMatrixOf<Type type> :
     AnyTypeOf<[SPIRV_AnyMatrix,
                SPIRV_CoopMatrixOfType<[type]>]>;
+
+class SPIRV_MatrixOf<Type type> :
+    SPIRV_MatrixOfType<[type]>;
 
 def SPIRV_ScalarOrVector : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector]>;
 def SPIRV_ScalarOrVectorOrPtr : AnyTypeOf<[SPIRV_ScalarOrVector, SPIRV_AnyPtr]>;
@@ -4387,7 +4395,8 @@ def SPIRV_OC_OpFRem                         : I32EnumAttrCase<"OpFRem", 140>;
 def SPIRV_OC_OpFMod                         : I32EnumAttrCase<"OpFMod", 141>;
 def SPIRV_OC_OpVectorTimesScalar            : I32EnumAttrCase<"OpVectorTimesScalar", 142>;
 def SPIRV_OC_OpMatrixTimesScalar            : I32EnumAttrCase<"OpMatrixTimesScalar", 143>;
-def SPIRV_OC_OpMatrixTimesVector           : I32EnumAttrCase<"OpMatrixTimesVector", 145>;
+def SPIRV_OC_OpVectorTimesMatrix            : I32EnumAttrCase<"OpVectorTimesMatrix", 144>;
+def SPIRV_OC_OpMatrixTimesVector            : I32EnumAttrCase<"OpMatrixTimesVector", 145>;
 def SPIRV_OC_OpMatrixTimesMatrix            : I32EnumAttrCase<"OpMatrixTimesMatrix", 146>;
 def SPIRV_OC_OpDot                          : I32EnumAttrCase<"OpDot", 148>;
 def SPIRV_OC_OpIAddCarry                    : I32EnumAttrCase<"OpIAddCarry", 149>;
@@ -4559,7 +4568,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpFSub, SPIRV_OC_OpIMul, SPIRV_OC_OpFMul, SPIRV_OC_OpUDiv,
       SPIRV_OC_OpSDiv, SPIRV_OC_OpFDiv, SPIRV_OC_OpUMod, SPIRV_OC_OpSRem,
       SPIRV_OC_OpSMod, SPIRV_OC_OpFRem, SPIRV_OC_OpFMod,
-      SPIRV_OC_OpVectorTimesScalar, SPIRV_OC_OpMatrixTimesScalar, SPIRV_OC_OpMatrixTimesVector,
+      SPIRV_OC_OpVectorTimesScalar, SPIRV_OC_OpMatrixTimesScalar,
+      SPIRV_OC_OpVectorTimesMatrix, SPIRV_OC_OpMatrixTimesVector,
       SPIRV_OC_OpMatrixTimesMatrix, SPIRV_OC_OpDot, SPIRV_OC_OpIAddCarry,
       SPIRV_OC_OpISubBorrow, SPIRV_OC_OpUMulExtended, SPIRV_OC_OpSMulExtended,
       SPIRV_OC_OpIsNan, SPIRV_OC_OpIsInf, SPIRV_OC_OpOrdered, SPIRV_OC_OpUnordered,

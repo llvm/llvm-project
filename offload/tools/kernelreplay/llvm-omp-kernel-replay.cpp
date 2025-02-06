@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
   unsigned NumThreads =
       (NumThreadsOpt > 0 ? NumThreadsOpt : NumThreadsJson.value());
   // TODO: Print a warning if number of teams/threads is explicitly set in the
-  // kernel info but overriden through command line options.
+  // kernel info but overridden through command line options.
   auto LoopTripCount =
       JsonKernelInfo->getAsObject()->getInteger("LoopTripCount");
   auto KernelFunc = JsonKernelInfo->getAsObject()->getString("Name");
@@ -93,7 +93,8 @@ int main(int argc, char **argv) {
   void *BAllocStart = reinterpret_cast<void *>(
       JsonKernelInfo->getAsObject()->getInteger("BumpAllocVAStart").value());
 
-  llvm::offloading::EntryTy KernelEntry = {nullptr, nullptr, 0, 0, 0};
+  llvm::offloading::EntryTy KernelEntry = {~0U,     0, 0, 0,      nullptr,
+                                           nullptr, 0, 0, nullptr};
   std::string KernelEntryName = KernelFunc.value().str();
   KernelEntry.SymbolName = const_cast<char *>(KernelEntryName.c_str());
   // Anything non-zero works to uniquely identify the kernel.

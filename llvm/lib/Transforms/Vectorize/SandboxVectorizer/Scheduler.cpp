@@ -172,6 +172,8 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
   for (auto *I = LowestI, *E = TopI->getPrevNode(); I != E;
        I = I->getPrevNode()) {
     auto *N = DAG.getNode(I);
+    if (N == nullptr)
+      continue;
     if (auto *SB = N->getSchedBundle())
       eraseBundle(SB);
   }
@@ -189,7 +191,13 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
                 [Instrs](Instruction *I) {
                   return I->getParent() == (*Instrs.begin())->getParent();
                 }) &&
-         "Instrs not in the same BB!");
+         "Instrs not in the same BB, should have been rejected by Legality!");
+  if (ScheduledBB == nullptr)
+    ScheduledBB = Instrs[0]->getParent();
+  // We don't support crossing BBs for now.
+  if (any_of(Instrs,
+             [this](Instruction *I) { return I->getParent() != ScheduledBB; }))
+    return false;
   auto SchedState = getBndlSchedState(Instrs);
   switch (SchedState) {
   case BndlSchedState::FullyScheduled:
@@ -205,6 +213,13 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // TODO: Set the window of the DAG that we are interested in.
     // We start scheduling at the bottom instr of Instrs.
     ScheduleTopItOpt = std::next(VecUtils::getLowest(Instrs)->getIterator());
+
+    // TODO: For now don't cross BBs.
+    if (!DAG.getInterval().empty()) {
+      auto *BB = DAG.getInterval().top()->getParent();
+      if (any_of(Instrs, [BB](auto *I) { return I->getParent() != BB; }))
+        return false;
+    }
 
     // Extend the DAG to include Instrs.
     Interval<Instruction> Extension = DAG.extend(Instrs);

@@ -1565,19 +1565,26 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
   // Attempt to detect a cheaper inlane shuffle, avoiding 128-bit subvector
   // permutation.
+  // Attempt to detect a shuffle mask with a single defined element.
   bool IsInLaneShuffle = false;
+  bool IsSingleElementMask = false;
   if (BaseTp->getPrimitiveSizeInBits() > 0 &&
       (BaseTp->getPrimitiveSizeInBits() % 128) == 0 &&
       BaseTp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
       Mask.size() == BaseTp->getElementCount().getKnownMinValue()) {
     unsigned NumLanes = BaseTp->getPrimitiveSizeInBits() / 128;
     unsigned NumEltsPerLane = Mask.size() / NumLanes;
-    if ((Mask.size() % NumLanes) == 0)
+    if ((Mask.size() % NumLanes) == 0) {
       IsInLaneShuffle = all_of(enumerate(Mask), [&](const auto &P) {
         return P.value() == PoisonMaskElem ||
                ((P.value() % Mask.size()) / NumEltsPerLane) ==
                    (P.index() / NumEltsPerLane);
       });
+      IsSingleElementMask =
+          (Mask.size() - 1) == static_cast<unsigned>(count_if(Mask, [](int M) {
+            return M == PoisonMaskElem;
+          }));
+    }
   }
 
   // Treat <X x bfloat> shuffles as <X x half>.
@@ -1666,40 +1673,41 @@ InstructionCost X86TTIImpl::getShuffleCost(
   EVT VT = TLI->getValueType(DL, BaseTp);
   if (VT.isSimple() && VT.isVector() && VT.getSizeInBits() < 128 &&
       !ST->hasSSSE3()) {
-     static const CostTblEntry SSE2SubVectorShuffleTbl[] = {
-      {TTI::SK_Broadcast,        MVT::v4i16, 1}, // pshuflw
-      {TTI::SK_Broadcast,        MVT::v2i16, 1}, // pshuflw
-      {TTI::SK_Broadcast,        MVT::v8i8,  2}, // punpck/pshuflw
-      {TTI::SK_Broadcast,        MVT::v4i8,  2}, // punpck/pshuflw
-      {TTI::SK_Broadcast,        MVT::v2i8,  1}, // punpck
+     static const CostKindTblEntry SSE2SubVectorShuffleTbl[] = {
+      {TTI::SK_Broadcast,        MVT::v4i16, {1,1,1,1}}, // pshuflw
+      {TTI::SK_Broadcast,        MVT::v2i16, {1,1,1,1}}, // pshuflw
+      {TTI::SK_Broadcast,        MVT::v8i8,  {2,2,2,2}}, // punpck/pshuflw
+      {TTI::SK_Broadcast,        MVT::v4i8,  {2,2,2,2}}, // punpck/pshuflw
+      {TTI::SK_Broadcast,        MVT::v2i8,  {1,1,1,1}}, // punpck
 
-      {TTI::SK_Reverse,          MVT::v4i16, 1}, // pshuflw
-      {TTI::SK_Reverse,          MVT::v2i16, 1}, // pshuflw
-      {TTI::SK_Reverse,          MVT::v4i8,  3}, // punpck/pshuflw/packus
-      {TTI::SK_Reverse,          MVT::v2i8,  1}, // punpck
+      {TTI::SK_Reverse,          MVT::v4i16, {1,1,1,1}}, // pshuflw
+      {TTI::SK_Reverse,          MVT::v2i16, {1,1,1,1}}, // pshuflw
+      {TTI::SK_Reverse,          MVT::v4i8,  {3,3,3,3}}, // punpck/pshuflw/packus
+      {TTI::SK_Reverse,          MVT::v2i8,  {1,1,1,1}}, // punpck
 
-      {TTI::SK_Splice,           MVT::v4i16, 2}, // punpck+psrldq
-      {TTI::SK_Splice,           MVT::v2i16, 2}, // punpck+psrldq
-      {TTI::SK_Splice,           MVT::v4i8,  2}, // punpck+psrldq
-      {TTI::SK_Splice,           MVT::v2i8,  2}, // punpck+psrldq
+      {TTI::SK_Splice,           MVT::v4i16, {2,2,2,2}}, // punpck+psrldq
+      {TTI::SK_Splice,           MVT::v2i16, {2,2,2,2}}, // punpck+psrldq
+      {TTI::SK_Splice,           MVT::v4i8,  {2,2,2,2}}, // punpck+psrldq
+      {TTI::SK_Splice,           MVT::v2i8,  {2,2,2,2}}, // punpck+psrldq
 
-      {TTI::SK_PermuteTwoSrc,    MVT::v4i16, 2}, // punpck/pshuflw
-      {TTI::SK_PermuteTwoSrc,    MVT::v2i16, 2}, // punpck/pshuflw
-      {TTI::SK_PermuteTwoSrc,    MVT::v8i8,  7}, // punpck/pshuflw
-      {TTI::SK_PermuteTwoSrc,    MVT::v4i8,  4}, // punpck/pshuflw
-      {TTI::SK_PermuteTwoSrc,    MVT::v2i8,  2}, // punpck
+      {TTI::SK_PermuteTwoSrc,    MVT::v4i16, {2,2,2,2}}, // punpck/pshuflw
+      {TTI::SK_PermuteTwoSrc,    MVT::v2i16, {2,2,2,2}}, // punpck/pshuflw
+      {TTI::SK_PermuteTwoSrc,    MVT::v8i8,  {7,7,7,7}}, // punpck/pshuflw
+      {TTI::SK_PermuteTwoSrc,    MVT::v4i8,  {4,4,4,4}}, // punpck/pshuflw
+      {TTI::SK_PermuteTwoSrc,    MVT::v2i8,  {2,2,2,2}}, // punpck
 
-      {TTI::SK_PermuteSingleSrc, MVT::v4i16, 1}, // pshuflw
-      {TTI::SK_PermuteSingleSrc, MVT::v2i16, 1}, // pshuflw
-      {TTI::SK_PermuteSingleSrc, MVT::v8i8,  5}, // punpck/pshuflw
-      {TTI::SK_PermuteSingleSrc, MVT::v4i8,  3}, // punpck/pshuflw
-      {TTI::SK_PermuteSingleSrc, MVT::v2i8,  1}, // punpck
+      {TTI::SK_PermuteSingleSrc, MVT::v4i16, {1,1,1,1}}, // pshuflw
+      {TTI::SK_PermuteSingleSrc, MVT::v2i16, {1,1,1,1}}, // pshuflw
+      {TTI::SK_PermuteSingleSrc, MVT::v8i8,  {5,5,5,5}}, // punpck/pshuflw
+      {TTI::SK_PermuteSingleSrc, MVT::v4i8,  {3,3,3,3}}, // punpck/pshuflw
+      {TTI::SK_PermuteSingleSrc, MVT::v2i8,  {1,1,1,1}}, // punpck
     };
 
     if (ST->hasSSE2())
       if (const auto *Entry =
               CostTableLookup(SSE2SubVectorShuffleTbl, Kind, VT.getSimpleVT()))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return LT.first * *KindCost;
   }
 
   // We are going to permute multiple sources and the result will be in multiple
@@ -1791,57 +1799,62 @@ InstructionCost X86TTIImpl::getShuffleCost(
     return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
   }
 
-  static const CostTblEntry AVX512VBMIShuffleTbl[] = {
-      {TTI::SK_Reverse, MVT::v64i8, 1}, // vpermb
-      {TTI::SK_Reverse, MVT::v32i8, 1}, // vpermb
+  // If we're just moving a single element around (probably as an alternative to
+  // extracting it), we can assume this is cheap.
+  if (LT.first == 1 && IsInLaneShuffle && IsSingleElementMask)
+    return TTI::TCC_Basic;
 
-      {TTI::SK_PermuteSingleSrc, MVT::v64i8, 1}, // vpermb
-      {TTI::SK_PermuteSingleSrc, MVT::v32i8, 1}, // vpermb
-
-      {TTI::SK_PermuteTwoSrc, MVT::v64i8, 2}, // vpermt2b
-      {TTI::SK_PermuteTwoSrc, MVT::v32i8, 2}, // vpermt2b
-      {TTI::SK_PermuteTwoSrc, MVT::v16i8, 2}  // vpermt2b
+  static const CostKindTblEntry AVX512VBMIShuffleTbl[] = {
+    { TTI::SK_Reverse, MVT::v64i8,          { 1, 1, 1, 1 } }, // vpermb
+    { TTI::SK_Reverse, MVT::v32i8,          { 1, 1, 1, 1 } }, // vpermb
+    { TTI::SK_PermuteSingleSrc, MVT::v64i8, { 1, 1, 1, 1 } }, // vpermb
+    { TTI::SK_PermuteSingleSrc, MVT::v32i8, { 1, 1, 1, 1 } }, // vpermb
+    { TTI::SK_PermuteTwoSrc, MVT::v64i8,    { 2, 2, 2, 2 } }, // vpermt2b
+    { TTI::SK_PermuteTwoSrc, MVT::v32i8,    { 2, 2, 2, 2 } }, // vpermt2b
+    { TTI::SK_PermuteTwoSrc, MVT::v16i8,    { 2, 2, 2, 2 } }  // vpermt2b
   };
 
   if (ST->hasVBMI())
     if (const auto *Entry =
             CostTableLookup(AVX512VBMIShuffleTbl, Kind, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX512BWShuffleTbl[] = {
-      {TTI::SK_Broadcast, MVT::v32i16, 1}, // vpbroadcastw
-      {TTI::SK_Broadcast, MVT::v32f16, 1}, // vpbroadcastw
-      {TTI::SK_Broadcast, MVT::v64i8, 1},  // vpbroadcastb
+  static const CostKindTblEntry AVX512BWShuffleTbl[] = {
+    { TTI::SK_Broadcast, MVT::v32i16, { 1, 1, 1, 1 } }, // vpbroadcastw
+    { TTI::SK_Broadcast, MVT::v32f16, { 1, 1, 1, 1 } }, // vpbroadcastw
+    { TTI::SK_Broadcast, MVT::v64i8,  { 1, 1, 1, 1 } }, // vpbroadcastb
 
-      {TTI::SK_Reverse, MVT::v32i16, 2}, // vpermw
-      {TTI::SK_Reverse, MVT::v32f16, 2}, // vpermw
-      {TTI::SK_Reverse, MVT::v16i16, 2}, // vpermw
-      {TTI::SK_Reverse, MVT::v64i8, 2},  // pshufb + vshufi64x2
+    { TTI::SK_Reverse, MVT::v32i16,   { 2, 2, 2, 2 } }, // vpermw
+    { TTI::SK_Reverse, MVT::v32f16,   { 2, 2, 2, 2 } }, // vpermw
+    { TTI::SK_Reverse, MVT::v16i16,   { 2, 2, 2, 2 } }, // vpermw
+    { TTI::SK_Reverse, MVT::v64i8,    { 2, 2, 2, 2 } }, // pshufb + vshufi64x2
 
-      {TTI::SK_PermuteSingleSrc, MVT::v32i16, 2}, // vpermw
-      {TTI::SK_PermuteSingleSrc, MVT::v32f16, 2}, // vpermw
-      {TTI::SK_PermuteSingleSrc, MVT::v16i16, 2}, // vpermw
-      {TTI::SK_PermuteSingleSrc, MVT::v16f16, 2}, // vpermw
-      {TTI::SK_PermuteSingleSrc, MVT::v64i8, 8},  // extend to v32i16
+    { TTI::SK_PermuteSingleSrc, MVT::v32i16, { 2, 2, 2, 2 } }, // vpermw
+    { TTI::SK_PermuteSingleSrc, MVT::v32f16, { 2, 2, 2, 2 } }, // vpermw
+    { TTI::SK_PermuteSingleSrc, MVT::v16i16, { 2, 2, 2, 2 } }, // vpermw
+    { TTI::SK_PermuteSingleSrc, MVT::v16f16, { 2, 2, 2, 2 } }, // vpermw
+    { TTI::SK_PermuteSingleSrc, MVT::v64i8,  { 8, 8, 8, 8 } },  // extend to v32i16
 
-      {TTI::SK_PermuteTwoSrc, MVT::v32i16, 2}, // vpermt2w
-      {TTI::SK_PermuteTwoSrc, MVT::v32f16, 2}, // vpermt2w
-      {TTI::SK_PermuteTwoSrc, MVT::v16i16, 2}, // vpermt2w
-      {TTI::SK_PermuteTwoSrc, MVT::v8i16, 2},  // vpermt2w
-      {TTI::SK_PermuteTwoSrc, MVT::v64i8, 19}, // 6 * v32i8 + 1
+    { TTI::SK_PermuteTwoSrc, MVT::v32i16,{  2,  2,  2,  2 } }, // vpermt2w
+    { TTI::SK_PermuteTwoSrc, MVT::v32f16,{  2,  2,  2,  2 } }, // vpermt2w
+    { TTI::SK_PermuteTwoSrc, MVT::v16i16,{  2,  2,  2,  2 } }, // vpermt2w
+    { TTI::SK_PermuteTwoSrc, MVT::v8i16, {  2,  2,  2,  2 } },  // vpermt2w
+    { TTI::SK_PermuteTwoSrc, MVT::v64i8, { 19, 19, 19, 19 } }, // 6 * v32i8 + 1
 
-      {TTI::SK_Select, MVT::v32i16, 1}, // vblendmw
-      {TTI::SK_Select, MVT::v64i8,  1}, // vblendmb
+    { TTI::SK_Select, MVT::v32i16, { 1, 1, 1, 1 } }, // vblendmw
+    { TTI::SK_Select, MVT::v64i8,  { 1, 1, 1, 1 } }, // vblendmb
 
-      {TTI::SK_Splice, MVT::v32i16, 2}, // vshufi64x2 + palignr
-      {TTI::SK_Splice, MVT::v32f16, 2}, // vshufi64x2 + palignr
-      {TTI::SK_Splice, MVT::v64i8,  2}, // vshufi64x2 + palignr
+    { TTI::SK_Splice, MVT::v32i16, { 2, 2, 2, 2 } }, // vshufi64x2 + palignr
+    { TTI::SK_Splice, MVT::v32f16, { 2, 2, 2, 2 } }, // vshufi64x2 + palignr
+    { TTI::SK_Splice, MVT::v64i8,  { 2, 2, 2, 2 } }, // vshufi64x2 + palignr
   };
 
   if (ST->hasBWI())
     if (const auto *Entry =
             CostTableLookup(AVX512BWShuffleTbl, Kind, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512ShuffleTbl[] = {
       {TTI::SK_Broadcast, MVT::v8f64,  { 1, 1, 1, 1 } }, // vbroadcastsd
@@ -1922,286 +1935,288 @@ InstructionCost X86TTIImpl::getShuffleCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
-  static const CostTblEntry AVX2InLaneShuffleTbl[] = {
-      {TTI::SK_PermuteSingleSrc, MVT::v16i16, 1}, // vpshufb
-      {TTI::SK_PermuteSingleSrc, MVT::v16f16, 1}, // vpshufb
-      {TTI::SK_PermuteSingleSrc, MVT::v32i8,  1}, // vpshufb
+  static const CostKindTblEntry AVX2InLaneShuffleTbl[] = {
+    { TTI::SK_PermuteSingleSrc, MVT::v16i16, { 1, 1, 1, 1 } }, // vpshufb
+    { TTI::SK_PermuteSingleSrc, MVT::v16f16, { 1, 1, 1, 1 } }, // vpshufb
+    { TTI::SK_PermuteSingleSrc, MVT::v32i8,  { 1, 1, 1, 1 } }, // vpshufb
 
-      {TTI::SK_PermuteTwoSrc, MVT::v4f64,     2}, // 2*vshufpd + vblendpd
-      {TTI::SK_PermuteTwoSrc, MVT::v8f32,     2}, // 2*vshufps + vblendps
-      {TTI::SK_PermuteTwoSrc, MVT::v4i64,     2}, // 2*vpshufd + vpblendd
-      {TTI::SK_PermuteTwoSrc, MVT::v8i32,     2}, // 2*vpshufd + vpblendd
-      {TTI::SK_PermuteTwoSrc, MVT::v16i16,    2}, // 2*vpshufb + vpor
-      {TTI::SK_PermuteTwoSrc, MVT::v16f16,    2}, // 2*vpshufb + vpor
-      {TTI::SK_PermuteTwoSrc, MVT::v32i8,     2}, // 2*vpshufb + vpor
+    { TTI::SK_PermuteTwoSrc,    MVT::v4f64,  { 2, 2, 2, 2 } }, // 2*vshufpd + vblendpd
+    { TTI::SK_PermuteTwoSrc,    MVT::v8f32,  { 2, 2, 2, 2 } }, // 2*vshufps + vblendps
+    { TTI::SK_PermuteTwoSrc,    MVT::v4i64,  { 2, 2, 2, 2 } }, // 2*vpshufd + vpblendd
+    { TTI::SK_PermuteTwoSrc,    MVT::v8i32,  { 2, 2, 2, 2 } }, // 2*vpshufd + vpblendd
+    { TTI::SK_PermuteTwoSrc,    MVT::v16i16, { 2, 2, 2, 2 } }, // 2*vpshufb + vpor
+    { TTI::SK_PermuteTwoSrc,    MVT::v16f16, { 2, 2, 2, 2 } }, // 2*vpshufb + vpor
+    { TTI::SK_PermuteTwoSrc,    MVT::v32i8,  { 2, 2, 2, 2 } }, // 2*vpshufb + vpor
   };
 
   if (IsInLaneShuffle && ST->hasAVX2())
     if (const auto *Entry =
             CostTableLookup(AVX2InLaneShuffleTbl, Kind, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX2ShuffleTbl[] = {
-      {TTI::SK_Broadcast, MVT::v4f64, 1},  // vbroadcastpd
-      {TTI::SK_Broadcast, MVT::v8f32, 1},  // vbroadcastps
-      {TTI::SK_Broadcast, MVT::v4i64, 1},  // vpbroadcastq
-      {TTI::SK_Broadcast, MVT::v8i32, 1},  // vpbroadcastd
-      {TTI::SK_Broadcast, MVT::v16i16, 1}, // vpbroadcastw
-      {TTI::SK_Broadcast, MVT::v16f16, 1}, // vpbroadcastw
-      {TTI::SK_Broadcast, MVT::v32i8, 1},  // vpbroadcastb
+  static const CostKindTblEntry AVX2ShuffleTbl[] = {
+    { TTI::SK_Broadcast, MVT::v4f64,  { 1, 1, 1, 1 } }, // vbroadcastpd
+    { TTI::SK_Broadcast, MVT::v8f32,  { 1, 1, 1, 1 } }, // vbroadcastps
+    { TTI::SK_Broadcast, MVT::v4i64,  { 1, 1, 1, 1 } }, // vpbroadcastq
+    { TTI::SK_Broadcast, MVT::v8i32,  { 1, 1, 1, 1 } }, // vpbroadcastd
+    { TTI::SK_Broadcast, MVT::v16i16, { 1, 1, 1, 1 } }, // vpbroadcastw
+    { TTI::SK_Broadcast, MVT::v16f16, { 1, 1, 1, 1 } }, // vpbroadcastw
+    { TTI::SK_Broadcast, MVT::v32i8,  { 1, 1, 1, 1 } }, // vpbroadcastb
 
-      {TTI::SK_Reverse, MVT::v4f64, 1},  // vpermpd
-      {TTI::SK_Reverse, MVT::v8f32, 1},  // vpermps
-      {TTI::SK_Reverse, MVT::v4i64, 1},  // vpermq
-      {TTI::SK_Reverse, MVT::v8i32, 1},  // vpermd
-      {TTI::SK_Reverse, MVT::v16i16, 2}, // vperm2i128 + pshufb
-      {TTI::SK_Reverse, MVT::v16f16, 2}, // vperm2i128 + pshufb
-      {TTI::SK_Reverse, MVT::v32i8, 2},  // vperm2i128 + pshufb
+    { TTI::SK_Reverse, MVT::v4f64,    { 1, 1, 1, 1 } }, // vpermpd
+    { TTI::SK_Reverse, MVT::v8f32,    { 1, 1, 1, 1 } }, // vpermps
+    { TTI::SK_Reverse, MVT::v4i64,    { 1, 1, 1, 1 } }, // vpermq
+    { TTI::SK_Reverse, MVT::v8i32,    { 1, 1, 1, 1 } }, // vpermd
+    { TTI::SK_Reverse, MVT::v16i16,   { 2, 2, 2, 2 } }, // vperm2i128 + pshufb
+    { TTI::SK_Reverse, MVT::v16f16,   { 2, 2, 2, 2 } }, // vperm2i128 + pshufb
+    { TTI::SK_Reverse, MVT::v32i8,    { 2, 2, 2, 2 } }, // vperm2i128 + pshufb
 
-      {TTI::SK_Select, MVT::v16i16, 1}, // vpblendvb
-      {TTI::SK_Select, MVT::v16f16, 1}, // vpblendvb
-      {TTI::SK_Select, MVT::v32i8,  1}, // vpblendvb
+    { TTI::SK_Select, MVT::v16i16,    { 1, 1, 1, 1 } }, // vpblendvb
+    { TTI::SK_Select, MVT::v16f16,    { 1, 1, 1, 1 } }, // vpblendvb
+    { TTI::SK_Select, MVT::v32i8,     { 1, 1, 1, 1 } }, // vpblendvb
 
-      {TTI::SK_Splice, MVT::v8i32,  2}, // vperm2i128 + vpalignr
-      {TTI::SK_Splice, MVT::v8f32,  2}, // vperm2i128 + vpalignr
-      {TTI::SK_Splice, MVT::v16i16, 2}, // vperm2i128 + vpalignr
-      {TTI::SK_Splice, MVT::v16f16, 2}, // vperm2i128 + vpalignr
-      {TTI::SK_Splice, MVT::v32i8,  2}, // vperm2i128 + vpalignr
+    { TTI::SK_Splice, MVT::v8i32,     { 2, 2, 2, 2 } }, // vperm2i128 + vpalignr
+    { TTI::SK_Splice, MVT::v8f32,     { 2, 2, 2, 2 } }, // vperm2i128 + vpalignr
+    { TTI::SK_Splice, MVT::v16i16,    { 2, 2, 2, 2 } }, // vperm2i128 + vpalignr
+    { TTI::SK_Splice, MVT::v16f16,    { 2, 2, 2, 2 } }, // vperm2i128 + vpalignr
+    { TTI::SK_Splice, MVT::v32i8,     { 2, 2, 2, 2 } }, // vperm2i128 + vpalignr
 
-      {TTI::SK_PermuteSingleSrc, MVT::v4f64, 1},  // vpermpd
-      {TTI::SK_PermuteSingleSrc, MVT::v8f32, 1},  // vpermps
-      {TTI::SK_PermuteSingleSrc, MVT::v4i64, 1},  // vpermq
-      {TTI::SK_PermuteSingleSrc, MVT::v8i32, 1},  // vpermd
-      {TTI::SK_PermuteSingleSrc, MVT::v16i16, 4}, // vperm2i128 + 2*vpshufb
-                                                  // + vpblendvb
-      {TTI::SK_PermuteSingleSrc, MVT::v16f16, 4}, // vperm2i128 + 2*vpshufb
-                                                  // + vpblendvb
-      {TTI::SK_PermuteSingleSrc, MVT::v32i8, 4},  // vperm2i128 + 2*vpshufb
-                                                  // + vpblendvb
+    { TTI::SK_PermuteSingleSrc, MVT::v4f64,  { 1, 1, 1, 1 } }, // vpermpd
+    { TTI::SK_PermuteSingleSrc, MVT::v8f32,  { 1, 1, 1, 1 } }, // vpermps
+    { TTI::SK_PermuteSingleSrc, MVT::v4i64,  { 1, 1, 1, 1 } }, // vpermq
+    { TTI::SK_PermuteSingleSrc, MVT::v8i32,  { 1, 1, 1, 1 } }, // vpermd
+    { TTI::SK_PermuteSingleSrc, MVT::v16i16, { 4, 4, 4, 4 } },
+    { TTI::SK_PermuteSingleSrc, MVT::v16f16, { 4, 4, 4, 4 } },
+    { TTI::SK_PermuteSingleSrc, MVT::v32i8,  { 4, 4, 4, 4 } },
 
-      {TTI::SK_PermuteTwoSrc, MVT::v4f64, 3},  // 2*vpermpd + vblendpd
-      {TTI::SK_PermuteTwoSrc, MVT::v8f32, 3},  // 2*vpermps + vblendps
-      {TTI::SK_PermuteTwoSrc, MVT::v4i64, 3},  // 2*vpermq + vpblendd
-      {TTI::SK_PermuteTwoSrc, MVT::v8i32, 3},  // 2*vpermd + vpblendd
-      {TTI::SK_PermuteTwoSrc, MVT::v16i16, 7}, // 2*vperm2i128 + 4*vpshufb
-                                               // + vpblendvb
-      {TTI::SK_PermuteTwoSrc, MVT::v16f16, 7}, // 2*vperm2i128 + 4*vpshufb
-                                               // + vpblendvb
-      {TTI::SK_PermuteTwoSrc, MVT::v32i8, 7},  // 2*vperm2i128 + 4*vpshufb
-                                               // + vpblendvb
+    { TTI::SK_PermuteTwoSrc, MVT::v4f64,  { 3, 3, 3, 3 } }, // 2*vpermpd + vblendpd
+    { TTI::SK_PermuteTwoSrc, MVT::v8f32,  { 3, 3, 3, 3 } }, // 2*vpermps + vblendps
+    { TTI::SK_PermuteTwoSrc, MVT::v4i64,  { 3, 3, 3, 3 } }, // 2*vpermq + vpblendd
+    { TTI::SK_PermuteTwoSrc, MVT::v8i32,  { 3, 3, 3, 3 } }, // 2*vpermd + vpblendd
+    { TTI::SK_PermuteTwoSrc, MVT::v16i16, { 7, 7, 7, 7 } },
+    { TTI::SK_PermuteTwoSrc, MVT::v16f16, { 7, 7, 7, 7 } },
+    { TTI::SK_PermuteTwoSrc, MVT::v32i8,  { 7, 7, 7, 7 } },
   };
 
   if (ST->hasAVX2())
     if (const auto *Entry = CostTableLookup(AVX2ShuffleTbl, Kind, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry XOPShuffleTbl[] = {
-      {TTI::SK_PermuteSingleSrc, MVT::v4f64, 2},  // vperm2f128 + vpermil2pd
-      {TTI::SK_PermuteSingleSrc, MVT::v8f32, 2},  // vperm2f128 + vpermil2ps
-      {TTI::SK_PermuteSingleSrc, MVT::v4i64, 2},  // vperm2f128 + vpermil2pd
-      {TTI::SK_PermuteSingleSrc, MVT::v8i32, 2},  // vperm2f128 + vpermil2ps
-      {TTI::SK_PermuteSingleSrc, MVT::v16i16, 4}, // vextractf128 + 2*vpperm
-                                                  // + vinsertf128
-      {TTI::SK_PermuteSingleSrc, MVT::v32i8, 4},  // vextractf128 + 2*vpperm
-                                                  // + vinsertf128
+  static const CostKindTblEntry XOPShuffleTbl[] = {
+    { TTI::SK_PermuteSingleSrc, MVT::v4f64, { 2, 2, 2, 2 } }, // vperm2f128 + vpermil2pd
+    { TTI::SK_PermuteSingleSrc, MVT::v8f32, { 2, 2, 2, 2 } }, // vperm2f128 + vpermil2ps
+    { TTI::SK_PermuteSingleSrc, MVT::v4i64, { 2, 2, 2, 2 } }, // vperm2f128 + vpermil2pd
+    { TTI::SK_PermuteSingleSrc, MVT::v8i32, { 2, 2, 2, 2 } }, // vperm2f128 + vpermil2ps
+    { TTI::SK_PermuteSingleSrc, MVT::v16i16,{ 4, 4, 4, 4 } }, // vextractf128 + 2*vpperm
+                                                             // + vinsertf128
+    { TTI::SK_PermuteSingleSrc, MVT::v32i8, { 4, 4, 4, 4 } }, // vextractf128 + 2*vpperm
+                                                             // + vinsertf128
 
-      {TTI::SK_PermuteTwoSrc, MVT::v16i16, 9}, // 2*vextractf128 + 6*vpperm
-                                               // + vinsertf128
-      {TTI::SK_PermuteTwoSrc, MVT::v8i16, 1},  // vpperm
-      {TTI::SK_PermuteTwoSrc, MVT::v32i8, 9},  // 2*vextractf128 + 6*vpperm
-                                               // + vinsertf128
-      {TTI::SK_PermuteTwoSrc, MVT::v16i8, 1},  // vpperm
+    { TTI::SK_PermuteTwoSrc, MVT::v16i16, { 9, 9, 9, 9 } }, // 2*vextractf128 + 6*vpperm
+                                                            // + vinsertf128
+
+    { TTI::SK_PermuteTwoSrc, MVT::v8i16,  { 1, 1, 1, 1 } }, // vpperm
+    { TTI::SK_PermuteTwoSrc, MVT::v32i8,  { 9, 9, 9, 9 } }, // 2*vextractf128 + 6*vpperm
+                                                            // + vinsertf128
+    { TTI::SK_PermuteTwoSrc, MVT::v16i8,  { 1, 1, 1, 1 } }, // vpperm
   };
 
   if (ST->hasXOP())
     if (const auto *Entry = CostTableLookup(XOPShuffleTbl, Kind, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX1InLaneShuffleTbl[] = {
-      {TTI::SK_PermuteSingleSrc, MVT::v4f64,  1},  // vpermilpd
-      {TTI::SK_PermuteSingleSrc, MVT::v4i64,  1},  // vpermilpd
-      {TTI::SK_PermuteSingleSrc, MVT::v8f32,  1},  // vpermilps
-      {TTI::SK_PermuteSingleSrc, MVT::v8i32,  1},  // vpermilps
+  static const CostKindTblEntry AVX1InLaneShuffleTbl[] = {
+    { TTI::SK_PermuteSingleSrc, MVT::v4f64,  { 1, 1, 1, 1 } }, // vpermilpd
+    { TTI::SK_PermuteSingleSrc, MVT::v4i64,  { 1, 1, 1, 1 } }, // vpermilpd
+    { TTI::SK_PermuteSingleSrc, MVT::v8f32,  { 1, 1, 1, 1 } }, // vpermilps
+    { TTI::SK_PermuteSingleSrc, MVT::v8i32,  { 1, 1, 1, 1 } }, // vpermilps
 
-      {TTI::SK_PermuteSingleSrc, MVT::v16i16, 4}, // vextractf128 + 2*pshufb
-                                                  // + vpor + vinsertf128
-      {TTI::SK_PermuteSingleSrc, MVT::v16f16, 4}, // vextractf128 + 2*pshufb
-                                                  // + vpor + vinsertf128
-      {TTI::SK_PermuteSingleSrc, MVT::v32i8,  4}, // vextractf128 + 2*pshufb
-                                                  // + vpor + vinsertf128
+    { TTI::SK_PermuteSingleSrc, MVT::v16i16, { 4, 4, 4, 4 } }, // vextractf128 + 2*pshufb
+                                                               // + vpor + vinsertf128
+    { TTI::SK_PermuteSingleSrc, MVT::v16f16, { 4, 4, 4, 4 } }, // vextractf128 + 2*pshufb
+                                                               // + vpor + vinsertf128
+    { TTI::SK_PermuteSingleSrc, MVT::v32i8,  { 4, 4, 4, 4 } }, // vextractf128 + 2*pshufb
+                                                               // + vpor + vinsertf128
 
-      {TTI::SK_PermuteTwoSrc, MVT::v4f64,     2}, // 2*vshufpd + vblendpd
-      {TTI::SK_PermuteTwoSrc, MVT::v8f32,     2}, // 2*vshufps + vblendps
-      {TTI::SK_PermuteTwoSrc, MVT::v4i64,     2}, // 2*vpermilpd + vblendpd
-      {TTI::SK_PermuteTwoSrc, MVT::v8i32,     2}, // 2*vpermilps + vblendps
-      {TTI::SK_PermuteTwoSrc, MVT::v16i16,    9}, // 2*vextractf128 + 4*pshufb
-                                                  // + 2*vpor + vinsertf128
-      {TTI::SK_PermuteTwoSrc, MVT::v16f16,    9}, // 2*vextractf128 + 4*pshufb
-                                                  // + 2*vpor + vinsertf128
-      {TTI::SK_PermuteTwoSrc, MVT::v32i8,     9}, // 2*vextractf128 + 4*pshufb
-                                                  // + 2*vpor + vinsertf128
+    { TTI::SK_PermuteTwoSrc, MVT::v4f64,  { 2, 2, 2, 2 } }, // 2*vshufpd + vblendpd
+    { TTI::SK_PermuteTwoSrc, MVT::v8f32,  { 2, 2, 2, 2 } }, // 2*vshufps + vblendps
+    { TTI::SK_PermuteTwoSrc, MVT::v4i64,  { 2, 2, 2, 2 } }, // 2*vpermilpd + vblendpd
+    { TTI::SK_PermuteTwoSrc, MVT::v8i32,  { 2, 2, 2, 2 } }, // 2*vpermilps + vblendps
+    { TTI::SK_PermuteTwoSrc, MVT::v16i16, { 9, 9, 9, 9 } }, // 2*vextractf128 + 4*pshufb
+                                                            // + 2*vpor + vinsertf128
+    { TTI::SK_PermuteTwoSrc, MVT::v16f16, { 9, 9, 9, 9 } }, // 2*vextractf128 + 4*pshufb
+                                                            // + 2*vpor + vinsertf128
+    { TTI::SK_PermuteTwoSrc, MVT::v32i8,  { 9, 9, 9, 9 } }, // 2*vextractf128 + 4*pshufb
+                                                            // + 2*vpor + vinsertf128
   };
 
   if (IsInLaneShuffle && ST->hasAVX())
     if (const auto *Entry =
             CostTableLookup(AVX1InLaneShuffleTbl, Kind, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX1ShuffleTbl[] = {
-      {TTI::SK_Broadcast, MVT::v4f64, 2},  // vperm2f128 + vpermilpd
-      {TTI::SK_Broadcast, MVT::v8f32, 2},  // vperm2f128 + vpermilps
-      {TTI::SK_Broadcast, MVT::v4i64, 2},  // vperm2f128 + vpermilpd
-      {TTI::SK_Broadcast, MVT::v8i32, 2},  // vperm2f128 + vpermilps
-      {TTI::SK_Broadcast, MVT::v16i16, 3}, // vpshuflw + vpshufd + vinsertf128
-      {TTI::SK_Broadcast, MVT::v16f16, 3}, // vpshuflw + vpshufd + vinsertf128
-      {TTI::SK_Broadcast, MVT::v32i8, 2},  // vpshufb + vinsertf128
+  static const CostKindTblEntry AVX1ShuffleTbl[] = {
+      {TTI::SK_Broadcast, MVT::v4f64,  {2,2,2,2}}, // vperm2f128 + vpermilpd
+      {TTI::SK_Broadcast, MVT::v8f32,  {2,2,2,2}}, // vperm2f128 + vpermilps
+      {TTI::SK_Broadcast, MVT::v4i64,  {2,2,2,2}}, // vperm2f128 + vpermilpd
+      {TTI::SK_Broadcast, MVT::v8i32,  {2,2,2,2}}, // vperm2f128 + vpermilps
+      {TTI::SK_Broadcast, MVT::v16i16, {3,3,3,3}}, // vpshuflw + vpshufd + vinsertf128
+      {TTI::SK_Broadcast, MVT::v16f16, {3,3,3,3}}, // vpshuflw + vpshufd + vinsertf128
+      {TTI::SK_Broadcast, MVT::v32i8,  {2,2,2,2}}, // vpshufb + vinsertf128
 
-      {TTI::SK_Reverse, MVT::v4f64, 2},  // vperm2f128 + vpermilpd
-      {TTI::SK_Reverse, MVT::v8f32, 2},  // vperm2f128 + vpermilps
-      {TTI::SK_Reverse, MVT::v4i64, 2},  // vperm2f128 + vpermilpd
-      {TTI::SK_Reverse, MVT::v8i32, 2},  // vperm2f128 + vpermilps
-      {TTI::SK_Reverse, MVT::v16i16, 4}, // vextractf128 + 2*pshufb
-                                         // + vinsertf128
-      {TTI::SK_Reverse, MVT::v16f16, 4}, // vextractf128 + 2*pshufb
-                                         // + vinsertf128
-      {TTI::SK_Reverse, MVT::v32i8, 4},  // vextractf128 + 2*pshufb
-                                         // + vinsertf128
+      {TTI::SK_Reverse, MVT::v4f64,  {2,2,2,2}}, // vperm2f128 + vpermilpd
+      {TTI::SK_Reverse, MVT::v8f32,  {2,2,2,2}}, // vperm2f128 + vpermilps
+      {TTI::SK_Reverse, MVT::v4i64,  {2,2,2,2}}, // vperm2f128 + vpermilpd
+      {TTI::SK_Reverse, MVT::v8i32,  {2,2,2,2}}, // vperm2f128 + vpermilps
+      {TTI::SK_Reverse, MVT::v16i16, {4,4,4,4}}, // vextractf128 + 2*pshufb
+                                                 // + vinsertf128
+      {TTI::SK_Reverse, MVT::v16f16, {4,4,4,4}}, // vextractf128 + 2*pshufb
+                                                 // + vinsertf128
+      {TTI::SK_Reverse, MVT::v32i8,  {4,4,4,4}}, // vextractf128 + 2*pshufb
+                                                 // + vinsertf128
 
-      {TTI::SK_Select, MVT::v4i64, 1},  // vblendpd
-      {TTI::SK_Select, MVT::v4f64, 1},  // vblendpd
-      {TTI::SK_Select, MVT::v8i32, 1},  // vblendps
-      {TTI::SK_Select, MVT::v8f32, 1},  // vblendps
-      {TTI::SK_Select, MVT::v16i16, 3}, // vpand + vpandn + vpor
-      {TTI::SK_Select, MVT::v16f16, 3}, // vpand + vpandn + vpor
-      {TTI::SK_Select, MVT::v32i8, 3},  // vpand + vpandn + vpor
+      {TTI::SK_Select, MVT::v4i64,  {1,1,1,1}}, // vblendpd
+      {TTI::SK_Select, MVT::v4f64,  {1,1,1,1}}, // vblendpd
+      {TTI::SK_Select, MVT::v8i32,  {1,1,1,1}}, // vblendps
+      {TTI::SK_Select, MVT::v8f32,  {1,1,1,1}}, // vblendps
+      {TTI::SK_Select, MVT::v16i16, {3,3,3,3}}, // vpand + vpandn + vpor
+      {TTI::SK_Select, MVT::v16f16, {3,3,3,3}}, // vpand + vpandn + vpor
+      {TTI::SK_Select, MVT::v32i8,  {3,3,3,3}}, // vpand + vpandn + vpor
 
-      {TTI::SK_Splice, MVT::v4i64,  2}, // vperm2f128 + shufpd
-      {TTI::SK_Splice, MVT::v4f64,  2}, // vperm2f128 + shufpd
-      {TTI::SK_Splice, MVT::v8i32,  4}, // 2*vperm2f128 + 2*vshufps
-      {TTI::SK_Splice, MVT::v8f32,  4}, // 2*vperm2f128 + 2*vshufps
-      {TTI::SK_Splice, MVT::v16i16, 5}, // 2*vperm2f128 + 2*vpalignr + vinsertf128
-      {TTI::SK_Splice, MVT::v16f16, 5}, // 2*vperm2f128 + 2*vpalignr + vinsertf128
-      {TTI::SK_Splice, MVT::v32i8,  5}, // 2*vperm2f128 + 2*vpalignr + vinsertf128
+      {TTI::SK_Splice, MVT::v4i64,  {2,2,2,2}}, // vperm2f128 + shufpd
+      {TTI::SK_Splice, MVT::v4f64,  {2,2,2,2}}, // vperm2f128 + shufpd
+      {TTI::SK_Splice, MVT::v8i32,  {4,4,4,4}}, // 2*vperm2f128 + 2*vshufps
+      {TTI::SK_Splice, MVT::v8f32,  {4,4,4,4}}, // 2*vperm2f128 + 2*vshufps
+      {TTI::SK_Splice, MVT::v16i16, {5,5,5,5}}, // 2*vperm2f128 + 2*vpalignr + vinsertf128
+      {TTI::SK_Splice, MVT::v16f16, {5,5,5,5}}, // 2*vperm2f128 + 2*vpalignr + vinsertf128
+      {TTI::SK_Splice, MVT::v32i8,  {5,5,5,5}}, // 2*vperm2f128 + 2*vpalignr + vinsertf128
 
-      {TTI::SK_PermuteSingleSrc, MVT::v4f64, 2},  // vperm2f128 + vshufpd
-      {TTI::SK_PermuteSingleSrc, MVT::v4i64, 2},  // vperm2f128 + vshufpd
-      {TTI::SK_PermuteSingleSrc, MVT::v8f32, 4},  // 2*vperm2f128 + 2*vshufps
-      {TTI::SK_PermuteSingleSrc, MVT::v8i32, 4},  // 2*vperm2f128 + 2*vshufps
-      {TTI::SK_PermuteSingleSrc, MVT::v16i16, 8}, // vextractf128 + 4*pshufb
-                                                  // + 2*por + vinsertf128
-      {TTI::SK_PermuteSingleSrc, MVT::v16f16, 8}, // vextractf128 + 4*pshufb
-                                                  // + 2*por + vinsertf128
-      {TTI::SK_PermuteSingleSrc, MVT::v32i8, 8},  // vextractf128 + 4*pshufb
-                                                  // + 2*por + vinsertf128
+      {TTI::SK_PermuteSingleSrc, MVT::v4f64, {2,2,2,2}}, // vperm2f128 + vshufpd
+      {TTI::SK_PermuteSingleSrc, MVT::v4i64, {2,2,2,2}}, // vperm2f128 + vshufpd
+      {TTI::SK_PermuteSingleSrc, MVT::v8f32, {4,4,4,4}}, // 2*vperm2f128 + 2*vshufps
+      {TTI::SK_PermuteSingleSrc, MVT::v8i32, {4,4,4,4}}, // 2*vperm2f128 + 2*vshufps
+      {TTI::SK_PermuteSingleSrc, MVT::v16i16,{8,8,8,8}}, // vextractf128 + 4*pshufb
+                                                         // + 2*por + vinsertf128
+      {TTI::SK_PermuteSingleSrc, MVT::v16f16,{8,8,8,8}}, // vextractf128 + 4*pshufb
+                                                         // + 2*por + vinsertf128
+      {TTI::SK_PermuteSingleSrc, MVT::v32i8, {8,8,8,8}}, // vextractf128 + 4*pshufb
+                                                         // + 2*por + vinsertf128
 
-      {TTI::SK_PermuteTwoSrc, MVT::v4f64, 3},   // 2*vperm2f128 + vshufpd
-      {TTI::SK_PermuteTwoSrc, MVT::v4i64, 3},   // 2*vperm2f128 + vshufpd
-      {TTI::SK_PermuteTwoSrc, MVT::v8f32, 4},   // 2*vperm2f128 + 2*vshufps
-      {TTI::SK_PermuteTwoSrc, MVT::v8i32, 4},   // 2*vperm2f128 + 2*vshufps
-      {TTI::SK_PermuteTwoSrc, MVT::v16i16, 15}, // 2*vextractf128 + 8*pshufb
-                                                // + 4*por + vinsertf128
-      {TTI::SK_PermuteTwoSrc, MVT::v16f16, 15}, // 2*vextractf128 + 8*pshufb
-                                                // + 4*por + vinsertf128
-      {TTI::SK_PermuteTwoSrc, MVT::v32i8, 15},  // 2*vextractf128 + 8*pshufb
-                                                // + 4*por + vinsertf128
+      {TTI::SK_PermuteTwoSrc, MVT::v4f64, {3,3,3,3}},   // 2*vperm2f128 + vshufpd
+      {TTI::SK_PermuteTwoSrc, MVT::v4i64, {3,3,3,3}},   // 2*vperm2f128 + vshufpd
+      {TTI::SK_PermuteTwoSrc, MVT::v8f32, {4,4,4,4}},   // 2*vperm2f128 + 2*vshufps
+      {TTI::SK_PermuteTwoSrc, MVT::v8i32, {4,4,4,4}},   // 2*vperm2f128 + 2*vshufps
+      {TTI::SK_PermuteTwoSrc, MVT::v16i16,{15,15,15,15}}, // 2*vextractf128 + 8*pshufb
+                                                          // + 4*por + vinsertf128
+      {TTI::SK_PermuteTwoSrc, MVT::v16f16,{15,15,15,15}}, // 2*vextractf128 + 8*pshufb
+                                                          // + 4*por + vinsertf128
+      {TTI::SK_PermuteTwoSrc, MVT::v32i8, {15,15,15,15}}, // 2*vextractf128 + 8*pshufb
+                                                         // + 4*por + vinsertf128
   };
 
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1ShuffleTbl, Kind, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry SSE41ShuffleTbl[] = {
-      {TTI::SK_Select, MVT::v2i64, 1}, // pblendw
-      {TTI::SK_Select, MVT::v2f64, 1}, // movsd
-      {TTI::SK_Select, MVT::v4i32, 1}, // pblendw
-      {TTI::SK_Select, MVT::v4f32, 1}, // blendps
-      {TTI::SK_Select, MVT::v8i16, 1}, // pblendw
-      {TTI::SK_Select, MVT::v8f16, 1}, // pblendw
-      {TTI::SK_Select, MVT::v16i8, 1}  // pblendvb
+  static const CostKindTblEntry SSE41ShuffleTbl[] = {
+      {TTI::SK_Select, MVT::v2i64, {1,1,1,1}}, // pblendw
+      {TTI::SK_Select, MVT::v2f64, {1,1,1,1}}, // movsd
+      {TTI::SK_Select, MVT::v4i32, {1,1,1,1}}, // pblendw
+      {TTI::SK_Select, MVT::v4f32, {1,1,1,1}}, // blendps
+      {TTI::SK_Select, MVT::v8i16, {1,1,1,1}}, // pblendw
+      {TTI::SK_Select, MVT::v8f16, {1,1,1,1}}, // pblendw
+      {TTI::SK_Select, MVT::v16i8, {1,1,1,1}}  // pblendvb
   };
 
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41ShuffleTbl, Kind, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry SSSE3ShuffleTbl[] = {
-      {TTI::SK_Broadcast, MVT::v8i16, 1}, // pshufb
-      {TTI::SK_Broadcast, MVT::v8f16, 1}, // pshufb
-      {TTI::SK_Broadcast, MVT::v16i8, 1}, // pshufb
+  static const CostKindTblEntry SSSE3ShuffleTbl[] = {
+      {TTI::SK_Broadcast, MVT::v8i16, {1, 1, 1, 1}}, // pshufb
+      {TTI::SK_Broadcast, MVT::v8f16, {1, 1, 1, 1}}, // pshufb
+      {TTI::SK_Broadcast, MVT::v16i8, {1, 1, 1, 1}}, // pshufb
 
-      {TTI::SK_Reverse, MVT::v8i16, 1}, // pshufb
-      {TTI::SK_Reverse, MVT::v8f16, 1}, // pshufb
-      {TTI::SK_Reverse, MVT::v16i8, 1}, // pshufb
+      {TTI::SK_Reverse, MVT::v8i16, {1, 1, 1, 1}}, // pshufb
+      {TTI::SK_Reverse, MVT::v8f16, {1, 1, 1, 1}}, // pshufb
+      {TTI::SK_Reverse, MVT::v16i8, {1, 1, 1, 1}}, // pshufb
 
-      {TTI::SK_Select, MVT::v8i16, 3}, // 2*pshufb + por
-      {TTI::SK_Select, MVT::v8f16, 3}, // 2*pshufb + por
-      {TTI::SK_Select, MVT::v16i8, 3}, // 2*pshufb + por
+      {TTI::SK_Select, MVT::v8i16, {3, 3, 3, 3}}, // 2*pshufb + por
+      {TTI::SK_Select, MVT::v8f16, {3, 3, 3, 3}}, // 2*pshufb + por
+      {TTI::SK_Select, MVT::v16i8, {3, 3, 3, 3}}, // 2*pshufb + por
 
-      {TTI::SK_Splice, MVT::v4i32, 1}, // palignr
-      {TTI::SK_Splice, MVT::v4f32, 1}, // palignr
-      {TTI::SK_Splice, MVT::v8i16, 1}, // palignr
-      {TTI::SK_Splice, MVT::v8f16, 1}, // palignr
-      {TTI::SK_Splice, MVT::v16i8, 1}, // palignr
+      {TTI::SK_Splice, MVT::v4i32, {1, 1, 1, 1}}, // palignr
+      {TTI::SK_Splice, MVT::v4f32, {1, 1, 1, 1}}, // palignr
+      {TTI::SK_Splice, MVT::v8i16, {1, 1, 1, 1}}, // palignr
+      {TTI::SK_Splice, MVT::v8f16, {1, 1, 1, 1}}, // palignr
+      {TTI::SK_Splice, MVT::v16i8, {1, 1, 1, 1}}, // palignr
 
-      {TTI::SK_PermuteSingleSrc, MVT::v8i16, 1}, // pshufb
-      {TTI::SK_PermuteSingleSrc, MVT::v8f16, 1}, // pshufb
-      {TTI::SK_PermuteSingleSrc, MVT::v16i8, 1}, // pshufb
+      {TTI::SK_PermuteSingleSrc, MVT::v8i16, {1, 1, 1, 1}}, // pshufb
+      {TTI::SK_PermuteSingleSrc, MVT::v8f16, {1, 1, 1, 1}}, // pshufb
+      {TTI::SK_PermuteSingleSrc, MVT::v16i8, {1, 1, 1, 1}}, // pshufb
 
-      {TTI::SK_PermuteTwoSrc, MVT::v8i16, 3}, // 2*pshufb + por
-      {TTI::SK_PermuteTwoSrc, MVT::v8f16, 3}, // 2*pshufb + por
-      {TTI::SK_PermuteTwoSrc, MVT::v16i8, 3}, // 2*pshufb + por
+      {TTI::SK_PermuteTwoSrc, MVT::v8i16, {3, 3, 3, 3}}, // 2*pshufb + por
+      {TTI::SK_PermuteTwoSrc, MVT::v8f16, {3, 3, 3, 3}}, // 2*pshufb + por
+      {TTI::SK_PermuteTwoSrc, MVT::v16i8, {3, 3, 3, 3}}, // 2*pshufb + por
   };
 
   if (ST->hasSSSE3())
     if (const auto *Entry = CostTableLookup(SSSE3ShuffleTbl, Kind, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry SSE2ShuffleTbl[] = {
-      {TTI::SK_Broadcast, MVT::v2f64, 1}, // shufpd
-      {TTI::SK_Broadcast, MVT::v2i64, 1}, // pshufd
-      {TTI::SK_Broadcast, MVT::v4i32, 1}, // pshufd
-      {TTI::SK_Broadcast, MVT::v8i16, 2}, // pshuflw + pshufd
-      {TTI::SK_Broadcast, MVT::v8f16, 2}, // pshuflw + pshufd
-      {TTI::SK_Broadcast, MVT::v16i8, 3}, // unpck + pshuflw + pshufd
+  static const CostKindTblEntry SSE2ShuffleTbl[] = {
+      {TTI::SK_Broadcast, MVT::v2f64, {1, 1, 1, 1}}, // shufpd
+      {TTI::SK_Broadcast, MVT::v2i64, {1, 1, 1, 1}}, // pshufd
+      {TTI::SK_Broadcast, MVT::v4i32, {1, 1, 1, 1}}, // pshufd
+      {TTI::SK_Broadcast, MVT::v8i16, {2, 2, 2, 2}}, // pshuflw + pshufd
+      {TTI::SK_Broadcast, MVT::v8f16, {2, 2, 2, 2}}, // pshuflw + pshufd
+      {TTI::SK_Broadcast, MVT::v16i8, {3, 3, 3, 3}}, // unpck + pshuflw + pshufd
 
-      {TTI::SK_Reverse, MVT::v2f64, 1}, // shufpd
-      {TTI::SK_Reverse, MVT::v2i64, 1}, // pshufd
-      {TTI::SK_Reverse, MVT::v4i32, 1}, // pshufd
-      {TTI::SK_Reverse, MVT::v8i16, 3}, // pshuflw + pshufhw + pshufd
-      {TTI::SK_Reverse, MVT::v8f16, 3}, // pshuflw + pshufhw + pshufd
-      {TTI::SK_Reverse, MVT::v16i8, 9}, // 2*pshuflw + 2*pshufhw
-                                        // + 2*pshufd + 2*unpck + packus
+      {TTI::SK_Reverse, MVT::v2f64, {1, 1, 1, 1}}, // shufpd
+      {TTI::SK_Reverse, MVT::v2i64, {1, 1, 1, 1}}, // pshufd
+      {TTI::SK_Reverse, MVT::v4i32, {1, 1, 1, 1}}, // pshufd
+      {TTI::SK_Reverse, MVT::v8i16, {3, 3, 3, 3}}, // pshuflw + pshufhw + pshufd
+      {TTI::SK_Reverse, MVT::v8f16, {3, 3, 3, 3}}, // pshuflw + pshufhw + pshufd
+      {TTI::SK_Reverse, MVT::v16i8, {9, 9, 9, 9}}, // 2*pshuflw + 2*pshufhw
+                                                   // + 2*pshufd + 2*unpck + packus
 
-      {TTI::SK_Select, MVT::v2i64, 1}, // movsd
-      {TTI::SK_Select, MVT::v2f64, 1}, // movsd
-      {TTI::SK_Select, MVT::v4i32, 2}, // 2*shufps
-      {TTI::SK_Select, MVT::v8i16, 3}, // pand + pandn + por
-      {TTI::SK_Select, MVT::v8f16, 3}, // pand + pandn + por
-      {TTI::SK_Select, MVT::v16i8, 3}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v2i64, {1, 1, 1, 1}}, // movsd
+      {TTI::SK_Select, MVT::v2f64, {1, 1, 1, 1}}, // movsd
+      {TTI::SK_Select, MVT::v4i32, {2, 2, 2, 2}}, // 2*shufps
+      {TTI::SK_Select, MVT::v8i16, {3, 3, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v8f16, {3, 3, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v16i8, {3, 3, 3, 3}}, // pand + pandn + por
 
-      {TTI::SK_Splice, MVT::v2i64, 1}, // shufpd
-      {TTI::SK_Splice, MVT::v2f64, 1}, // shufpd
-      {TTI::SK_Splice, MVT::v4i32, 2}, // 2*{unpck,movsd,pshufd}
-      {TTI::SK_Splice, MVT::v8i16, 3}, // psrldq + psrlldq + por
-      {TTI::SK_Splice, MVT::v8f16, 3}, // psrldq + psrlldq + por
-      {TTI::SK_Splice, MVT::v16i8, 3}, // psrldq + psrlldq + por
+      {TTI::SK_Splice, MVT::v2i64, {1, 1, 1, 1}}, // shufpd
+      {TTI::SK_Splice, MVT::v2f64, {1, 1, 1, 1}}, // shufpd
+      {TTI::SK_Splice, MVT::v4i32, {2, 2, 2, 2}}, // 2*{unpck,movsd,pshufd}
+      {TTI::SK_Splice, MVT::v8i16, {3, 3, 3, 3}}, // psrldq + psrlldq + por
+      {TTI::SK_Splice, MVT::v8f16, {3, 3, 3, 3}}, // psrldq + psrlldq + por
+      {TTI::SK_Splice, MVT::v16i8, {3, 3, 3, 3}}, // psrldq + psrlldq + por
 
-      {TTI::SK_PermuteSingleSrc, MVT::v2f64, 1}, // shufpd
-      {TTI::SK_PermuteSingleSrc, MVT::v2i64, 1}, // pshufd
-      {TTI::SK_PermuteSingleSrc, MVT::v4i32, 1}, // pshufd
-      {TTI::SK_PermuteSingleSrc, MVT::v8i16, 5}, // 2*pshuflw + 2*pshufhw
-                                                  // + pshufd/unpck
-      {TTI::SK_PermuteSingleSrc, MVT::v8f16, 5}, // 2*pshuflw + 2*pshufhw
-                                                  // + pshufd/unpck
-    { TTI::SK_PermuteSingleSrc, MVT::v16i8, 10 }, // 2*pshuflw + 2*pshufhw
-                                                  // + 2*pshufd + 2*unpck + 2*packus
+      {TTI::SK_PermuteSingleSrc, MVT::v2f64, {1, 1, 1, 1}}, // shufpd
+      {TTI::SK_PermuteSingleSrc, MVT::v2i64, {1, 1, 1, 1}}, // pshufd
+      {TTI::SK_PermuteSingleSrc, MVT::v4i32, {1, 1, 1, 1}}, // pshufd
+      {TTI::SK_PermuteSingleSrc, MVT::v8i16, {3, 5, 5, 5}}, // 2*pshuflw + 2*pshufhw
+                                                            // + pshufd/unpck
+      {TTI::SK_PermuteSingleSrc, MVT::v8f16, {3, 5, 5, 5}}, // 2*pshuflw + 2*pshufhw
+                                                            // + pshufd/unpck
+      {TTI::SK_PermuteSingleSrc, MVT::v16i8, {8, 10, 10, 10}}, // 2*pshuflw + 2*pshufhw
+                                                               // + 2*pshufd + 2*unpck + 2*packus
 
-    { TTI::SK_PermuteTwoSrc,    MVT::v2f64,  1 }, // shufpd
-    { TTI::SK_PermuteTwoSrc,    MVT::v2i64,  1 }, // shufpd
-    { TTI::SK_PermuteTwoSrc,    MVT::v4i32,  2 }, // 2*{unpck,movsd,pshufd}
-    { TTI::SK_PermuteTwoSrc,    MVT::v8i16,  8 }, // blend+permute
-    { TTI::SK_PermuteTwoSrc,    MVT::v8f16,  8 }, // blend+permute
-    { TTI::SK_PermuteTwoSrc,    MVT::v16i8, 13 }, // blend+permute
+      {TTI::SK_PermuteTwoSrc, MVT::v2f64, {1, 1, 1, 1}},     // shufpd
+      {TTI::SK_PermuteTwoSrc, MVT::v2i64, {1, 1, 1, 1}},     // shufpd
+      {TTI::SK_PermuteTwoSrc, MVT::v4i32, {2, 2, 2, 2}},     // 2*{unpck,movsd,pshufd}
+      {TTI::SK_PermuteTwoSrc, MVT::v8i16, {6, 8, 8, 8}},     // blend+permute
+      {TTI::SK_PermuteTwoSrc, MVT::v8f16, {6, 8, 8, 8}},     // blend+permute
+      {TTI::SK_PermuteTwoSrc, MVT::v16i8, {11, 13, 13, 13}}, // blend+permute
   };
 
   static const CostTblEntry SSE3BroadcastLoadTbl[] = {
@@ -2221,16 +2236,17 @@ InstructionCost X86TTIImpl::getShuffleCost(
       }
 
     if (const auto *Entry = CostTableLookup(SSE2ShuffleTbl, Kind, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
   }
 
-  static const CostTblEntry SSE1ShuffleTbl[] = {
-    { TTI::SK_Broadcast,        MVT::v4f32, 1 }, // shufps
-    { TTI::SK_Reverse,          MVT::v4f32, 1 }, // shufps
-    { TTI::SK_Select,           MVT::v4f32, 2 }, // 2*shufps
-    { TTI::SK_Splice,           MVT::v4f32, 2 }, // 2*shufps
-    { TTI::SK_PermuteSingleSrc, MVT::v4f32, 1 }, // shufps
-    { TTI::SK_PermuteTwoSrc,    MVT::v4f32, 2 }, // 2*shufps
+  static const CostKindTblEntry SSE1ShuffleTbl[] = {
+    { TTI::SK_Broadcast,        MVT::v4f32, {1,1,1,1} }, // shufps
+    { TTI::SK_Reverse,          MVT::v4f32, {1,1,1,1} }, // shufps
+    { TTI::SK_Select,           MVT::v4f32, {2,2,2,2} }, // 2*shufps
+    { TTI::SK_Splice,           MVT::v4f32, {2,2,2,2} }, // 2*shufps
+    { TTI::SK_PermuteSingleSrc, MVT::v4f32, {1,1,1,1} }, // shufps
+    { TTI::SK_PermuteTwoSrc,    MVT::v4f32, {2,2,2,2} }, // 2*shufps
   };
 
   if (ST->hasSSE1()) {
@@ -2243,7 +2259,8 @@ InstructionCost X86TTIImpl::getShuffleCost(
         return 1;
     }
     if (const auto *Entry = CostTableLookup(SSE1ShuffleTbl, Kind, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
   }
 
   return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
@@ -4329,9 +4346,15 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ABS,        MVT::i64,     {  1,  2,  3,  3 } }, // SUB+CMOV
     { ISD::BITREVERSE, MVT::i64,     { 10, 12, 20, 22 } },
     { ISD::BSWAP,      MVT::i64,     {  1,  2,  1,  2 } },
-    { ISD::CTLZ,       MVT::i64,     {  2,  2,  4,  5 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ,       MVT::i64,     {  1,  2,  3,  3 } }, // MOV+BSR+XOR
+    { ISD::CTLZ,       MVT::i32,     {  1,  2,  3,  3 } }, // MOV+BSR+XOR
+    { ISD::CTLZ,       MVT::i16,     {  2,  2,  3,  3 } }, // MOV+BSR+XOR
+    { ISD::CTLZ,       MVT::i8,      {  2,  2,  4,  3 } }, // MOV+BSR+XOR
     { ISD::CTLZ_ZERO_UNDEF, MVT::i64,{  1,  2,  2,  2 } }, // BSR+XOR
-    { ISD::CTTZ,       MVT::i64,     {  2,  2,  3,  4 } }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ,       MVT::i64,     {  1,  2,  2,  2 } }, // MOV+BSF
+    { ISD::CTTZ,       MVT::i32,     {  1,  2,  2,  2 } }, // MOV+BSF
+    { ISD::CTTZ,       MVT::i16,     {  2,  2,  2,  2 } }, // MOV+BSF
+    { ISD::CTTZ,       MVT::i8,      {  2,  2,  2,  2 } }, // MOV+BSF
     { ISD::CTTZ_ZERO_UNDEF, MVT::i64,{  1,  2,  1,  2 } }, // BSF
     { ISD::CTPOP,      MVT::i64,     { 10,  6, 19, 19 } },
     { ISD::ROTL,       MVT::i64,     {  2,  3,  1,  3 } },
@@ -4482,15 +4505,13 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   case Intrinsic::lrint:
-  case Intrinsic::llrint:
+  case Intrinsic::llrint: {
     // X86 can use the CVTP2SI instructions to lower lrint/llrint calls, which
     // have the same costs as the CVTTP2SI (fptosi) instructions
-    if (!ICA.isTypeBasedOnly()) {
-      const SmallVectorImpl<Type *> &ArgTys = ICA.getArgTypes();
-      return getCastInstrCost(Instruction::FPToSI, RetTy, ArgTys[0],
-                              TTI::CastContextHint::None, CostKind);
-    }
-    break;
+    const SmallVectorImpl<Type *> &ArgTys = ICA.getArgTypes();
+    return getCastInstrCost(Instruction::FPToSI, RetTy, ArgTys[0],
+                            TTI::CastContextHint::None, CostKind);
+  }
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
     // FMINNUM has same costs so don't duplicate.
@@ -4721,6 +4742,24 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
         return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
+
+    // Without arg data, we need to compute the expanded costs of custom lowered
+    // intrinsics to prevent use of the (very low) default costs.
+    if (ICA.isTypeBasedOnly() &&
+        (IID == Intrinsic::fshl || IID == Intrinsic::fshr)) {
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      InstructionCost Cost = 0;
+      Cost += getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
+      Cost += getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
+      Cost += getArithmeticInstrCost(BinaryOperator::Shl, RetTy, CostKind);
+      Cost += getArithmeticInstrCost(BinaryOperator::LShr, RetTy, CostKind);
+      Cost += getArithmeticInstrCost(BinaryOperator::And, RetTy, CostKind);
+      Cost += getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                 CmpInst::ICMP_EQ, CostKind);
+      Cost += getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                 CmpInst::ICMP_EQ, CostKind);
+      return Cost;
+    }
   }
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);

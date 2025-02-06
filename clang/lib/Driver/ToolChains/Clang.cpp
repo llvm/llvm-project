@@ -1560,15 +1560,21 @@ static void handlePAuthABI(const ArgList &DriverArgs, ArgStringList &CC1Args) {
 
 static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs, bool isAArch64) {
+  const llvm::Triple &Triple = TC.getEffectiveTriple();
   const Arg *A = isAArch64
                      ? Args.getLastArg(options::OPT_msign_return_address_EQ,
                                        options::OPT_mbranch_protection_EQ)
                      : Args.getLastArg(options::OPT_mbranch_protection_EQ);
-  if (!A)
+  if (!A) {
+    if (Triple.isOSOpenBSD() && isAArch64) {
+      CmdArgs.push_back("-msign-return-address=non-leaf");
+      CmdArgs.push_back("-msign-return-address-key=a_key");
+      CmdArgs.push_back("-mbranch-target-enforce");
+    }
     return;
+  }
 
   const Driver &D = TC.getDriver();
-  const llvm::Triple &Triple = TC.getEffectiveTriple();
   if (!(isAArch64 || (Triple.isArmT32() && Triple.isArmMClass())))
     D.Diag(diag::warn_incompatible_branch_protection_option)
         << Triple.getArchName();
@@ -1582,7 +1588,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Scope;
     Key = "a_key";
-    IndirectBranches = false;
+    IndirectBranches = Triple.isOSOpenBSD() && isAArch64;
     BranchProtectionPAuthLR = false;
     GuardedControlStack = false;
   } else {
@@ -1618,32 +1624,34 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     GuardedControlStack = PBP.GuardedControlStack;
   }
 
+  bool HasPtrauthReturns = llvm::any_of(CmdArgs, [](const char *Arg) {
+    return StringRef(Arg) == "-fptrauth-returns";
+  });
+  // GCS is currently untested with ptrauth-returns, but enabling this could be
+  // allowed in future after testing with a suitable system.
+  if (HasPtrauthReturns &&
+      (Scope != "none" || BranchProtectionPAuthLR || GuardedControlStack)) {
+    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << Triple.getTriple();
+    else
+      D.Diag(diag::err_drv_incompatible_options)
+          << A->getAsString(Args) << "-fptrauth-returns";
+  }
+
   CmdArgs.push_back(
       Args.MakeArgString(Twine("-msign-return-address=") + Scope));
-  if (Scope != "none") {
-    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getAsString(Args) << Triple.getTriple();
+  if (Scope != "none")
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-msign-return-address-key=") + Key));
-  }
-  if (BranchProtectionPAuthLR) {
-    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getAsString(Args) << Triple.getTriple();
+  if (BranchProtectionPAuthLR)
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-mbranch-protection-pauth-lr")));
-  }
   if (IndirectBranches)
     CmdArgs.push_back("-mbranch-target-enforce");
-  // GCS is currently untested with PAuthABI, but enabling this could be allowed
-  // in future after testing with a suitable system.
-  if (GuardedControlStack) {
-    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getAsString(Args) << Triple.getTriple();
+
+  if (GuardedControlStack)
     CmdArgs.push_back("-mguarded-control-stack");
-  }
 }
 
 void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
@@ -1822,12 +1830,6 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       CmdArgs.push_back("-aarch64-enable-global-merge=true");
   }
 
-  // Enable/disable return address signing and indirect branch targets.
-  CollectARMPACBTIOptions(getToolChain(), Args, CmdArgs, true /*isAArch64*/);
-
-  if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
-    handlePAuthABI(Args, CmdArgs);
-
   // Handle -msve_vector_bits=<bits>
   if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ)) {
     StringRef Val = A->getValue();
@@ -1896,6 +1898,12 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
                     options::OPT_fno_ptrauth_init_fini_address_discrimination);
   Args.addOptInFlag(CmdArgs, options::OPT_faarch64_jump_table_hardening,
                     options::OPT_fno_aarch64_jump_table_hardening);
+
+  if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+    handlePAuthABI(Args, CmdArgs);
+
+  // Enable/disable return address signing and indirect branch targets.
+  CollectARMPACBTIOptions(getToolChain(), Args, CmdArgs, true /*isAArch64*/);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -3958,78 +3966,6 @@ static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
   }
 }
 
-static void RenderARCMigrateToolOptions(const Driver &D, const ArgList &Args,
-                                        ArgStringList &CmdArgs) {
-  bool ARCMTEnabled = false;
-  if (!Args.hasArg(options::OPT_fno_objc_arc, options::OPT_fobjc_arc)) {
-    if (const Arg *A = Args.getLastArg(options::OPT_ccc_arcmt_check,
-                                       options::OPT_ccc_arcmt_modify,
-                                       options::OPT_ccc_arcmt_migrate)) {
-      ARCMTEnabled = true;
-      switch (A->getOption().getID()) {
-      default: llvm_unreachable("missed a case");
-      case options::OPT_ccc_arcmt_check:
-        CmdArgs.push_back("-arcmt-action=check");
-        break;
-      case options::OPT_ccc_arcmt_modify:
-        CmdArgs.push_back("-arcmt-action=modify");
-        break;
-      case options::OPT_ccc_arcmt_migrate:
-        CmdArgs.push_back("-arcmt-action=migrate");
-        CmdArgs.push_back("-mt-migrate-directory");
-        CmdArgs.push_back(A->getValue());
-
-        Args.AddLastArg(CmdArgs, options::OPT_arcmt_migrate_report_output);
-        Args.AddLastArg(CmdArgs, options::OPT_arcmt_migrate_emit_arc_errors);
-        break;
-      }
-    }
-  } else {
-    Args.ClaimAllArgs(options::OPT_ccc_arcmt_check);
-    Args.ClaimAllArgs(options::OPT_ccc_arcmt_modify);
-    Args.ClaimAllArgs(options::OPT_ccc_arcmt_migrate);
-  }
-
-  if (const Arg *A = Args.getLastArg(options::OPT_ccc_objcmt_migrate)) {
-    if (ARCMTEnabled)
-      D.Diag(diag::err_drv_argument_not_allowed_with)
-          << A->getAsString(Args) << "-ccc-arcmt-migrate";
-
-    CmdArgs.push_back("-mt-migrate-directory");
-    CmdArgs.push_back(A->getValue());
-
-    if (!Args.hasArg(options::OPT_objcmt_migrate_literals,
-                     options::OPT_objcmt_migrate_subscripting,
-                     options::OPT_objcmt_migrate_property)) {
-      // None specified, means enable them all.
-      CmdArgs.push_back("-objcmt-migrate-literals");
-      CmdArgs.push_back("-objcmt-migrate-subscripting");
-      CmdArgs.push_back("-objcmt-migrate-property");
-    } else {
-      Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_literals);
-      Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_subscripting);
-      Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_property);
-    }
-  } else {
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_literals);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_subscripting);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_property);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_all);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_readonly_property);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_readwrite_property);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_property_dot_syntax);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_annotation);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_instancetype);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_nsmacros);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_protocol_conformance);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_atomic_property);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_returns_innerpointer_property);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_ns_nonatomic_iosonly);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_migrate_designated_init);
-    Args.AddLastArg(CmdArgs, options::OPT_objcmt_allowlist_dir_path);
-  }
-}
-
 static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,
                                  const ArgList &Args, ArgStringList &CmdArgs) {
   // -fbuiltin is default unless -mkernel is used.
@@ -5319,8 +5255,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (isa<AnalyzeJobAction>(JA)) {
     assert(JA.getType() == types::TY_Plist && "Invalid output type.");
     CmdArgs.push_back("-analyze");
-  } else if (isa<MigrateJobAction>(JA)) {
-    CmdArgs.push_back("-migrate");
   } else if (isa<PreprocessJobAction>(JA)) {
     if (Output.getType() == types::TY_Dependencies)
       CmdArgs.push_back("-Eonly");
@@ -5653,6 +5587,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // defines).
   if (Args.hasArg(options::OPT_static))
     CmdArgs.push_back("-static-define");
+
+  Args.AddLastArg(CmdArgs, options::OPT_static_libclosure);
 
   if (Args.hasArg(options::OPT_municode))
     CmdArgs.push_back("-DUNICODE");
@@ -6141,9 +6077,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fno-direct-access-external-data");
   }
 
-  if (Args.hasFlag(options::OPT_fno_plt, options::OPT_fplt, false)) {
-    CmdArgs.push_back("-fno-plt");
-  }
+  if (Triple.isOSBinFormatELF() && (Triple.isAArch64() || Triple.isX86()))
+    Args.addOptOutFlag(CmdArgs, options::OPT_fplt, options::OPT_fno_plt);
 
   // -fhosted is default.
   // TODO: Audit uses of KernelOrKext and see where it'd be more appropriate to
@@ -6445,8 +6380,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(D.ResourceDir.c_str());
 
   Args.AddLastArg(CmdArgs, options::OPT_working_directory);
-
-  RenderARCMigrateToolOptions(D, Args, CmdArgs);
 
   // Add preprocessing options like -I, -D, etc. if we are using the
   // preprocessor.
@@ -7131,6 +7064,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Arg *SA = Args.getLastArg(options::OPT_mcf_branch_label_scheme_EQ))
       CmdArgs.push_back(Args.MakeArgString(Twine("-mcf-branch-label-scheme=") +
                                            SA->getValue()));
+  } else if (Triple.isOSOpenBSD() && Triple.getArch() == llvm::Triple::x86_64) {
+    // Emit IBT endbr64 instructions by default
+    CmdArgs.push_back("-fcf-protection=branch");
+    // jump-table can generate indirect jumps, which are not permitted
+    CmdArgs.push_back("-fno-jump-tables");
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mfunction_return_EQ))
@@ -7503,20 +7441,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_fassume_unique_vtables,
                      options::OPT_fno_assume_unique_vtables);
 
-  // -frelaxed-template-template-args is deprecated.
-  if (Arg *A =
-          Args.getLastArg(options::OPT_frelaxed_template_template_args,
-                          options::OPT_fno_relaxed_template_template_args)) {
-    if (A->getOption().matches(
-            options::OPT_fno_relaxed_template_template_args)) {
-      D.Diag(diag::warn_drv_deprecated_arg_no_relaxed_template_template_args);
-      CmdArgs.push_back("-fno-relaxed-template-template-args");
-    } else {
-      D.Diag(diag::warn_drv_deprecated_arg)
-          << A->getAsString(Args) << /*hasReplacement=*/false;
-    }
-  }
-
   // -fsized-deallocation is on by default in C++14 onwards and otherwise off
   // by default.
   Args.addLastArg(CmdArgs, options::OPT_fsized_deallocation,
@@ -7706,6 +7630,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_fretain_comments_from_system_headers))
     CmdArgs.push_back("-fretain-comments-from-system-headers");
+
+  Args.AddLastArg(CmdArgs, options::OPT_fextend_variable_liveness_EQ);
 
   // Forward -fcomment-block-commands to -cc1.
   Args.AddAllArgs(CmdArgs, options::OPT_fcomment_block_commands);

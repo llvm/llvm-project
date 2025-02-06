@@ -2252,6 +2252,33 @@ struct FormatStyle {
   /// \version 16
   BreakBeforeInlineASMColonStyle BreakBeforeInlineASMColon;
 
+  /// If ``true``, break before a template closing bracket (``>``) when there is
+  /// a line break after the matching opening bracket (``<``).
+  /// \code
+  ///    true:
+  ///    template <typename Foo, typename Bar>
+  ///
+  ///    template <typename Foo,
+  ///              typename Bar>
+  ///
+  ///    template <
+  ///        typename Foo,
+  ///        typename Bar
+  ///    >
+  ///
+  ///    false:
+  ///    template <typename Foo, typename Bar>
+  ///
+  ///    template <typename Foo,
+  ///              typename Bar>
+  ///
+  ///    template <
+  ///        typename Foo,
+  ///        typename Bar>
+  /// \endcode
+  /// \version 21
+  bool BreakBeforeTemplateCloser;
+
   /// If ``true``, ternary operators will be placed after line breaks.
   /// \code
   ///    true:
@@ -3638,6 +3665,10 @@ struct FormatStyle {
   /// The penalty for breaking a function call after ``call(``.
   /// \version 3.7
   unsigned PenaltyBreakBeforeFirstCallParameter;
+
+  /// The penalty for breaking before a member access operator (``.``, ``->``).
+  /// \version 20
+  unsigned PenaltyBreakBeforeMemberAccess;
 
   /// The penalty for each line break introduced inside a comment.
   /// \version 3.7
@@ -5247,6 +5278,7 @@ struct FormatStyle {
            BreakBeforeBraces == R.BreakBeforeBraces &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
+           BreakBeforeTemplateCloser == R.BreakBeforeTemplateCloser &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
@@ -5311,6 +5343,7 @@ struct FormatStyle {
            PenaltyBreakAssignment == R.PenaltyBreakAssignment &&
            PenaltyBreakBeforeFirstCallParameter ==
                R.PenaltyBreakBeforeFirstCallParameter &&
+           PenaltyBreakBeforeMemberAccess == R.PenaltyBreakBeforeMemberAccess &&
            PenaltyBreakComment == R.PenaltyBreakComment &&
            PenaltyBreakFirstLessLess == R.PenaltyBreakFirstLessLess &&
            PenaltyBreakOpenParenthesis == R.PenaltyBreakOpenParenthesis &&

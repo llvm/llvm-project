@@ -153,9 +153,6 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
   CompilerInvocation &invoc = this->getInvocation();
 
   llvm::Triple targetTriple{llvm::Triple(invoc.getTargetOpts().triple)};
-  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
-    invoc.getDefaultKinds().set_quadPrecisionKind(10);
-  }
 
   // Set some sane defaults for the frontend.
   invoc.setDefaultFortranOpts();

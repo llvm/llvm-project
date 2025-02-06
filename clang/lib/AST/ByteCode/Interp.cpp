@@ -65,14 +65,17 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
                                      const ValueDecl *VD);
 static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
                                 const ValueDecl *D) {
-  const SourceInfo &E = S.Current->getSource(OpPC);
 
   if (isa<ParmVarDecl>(D)) {
+    if (D->getType()->isReferenceType())
+      return false;
+
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
     if (S.getLangOpts().CPlusPlus11) {
-      S.FFDiag(E, diag::note_constexpr_function_param_value_unknown) << D;
+      S.FFDiag(Loc, diag::note_constexpr_function_param_value_unknown) << D;
       S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
     } else {
-      S.FFDiag(E);
+      S.FFDiag(Loc);
     }
     return false;
   }
@@ -558,6 +561,18 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
+static bool CheckLifetime(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                          AccessKinds AK) {
+  if (Ptr.getLifetime() == Lifetime::Started)
+    return true;
+
+  if (!S.checkingPotentialConstantExpression()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
+        << AK << /*uninitialized=*/false << S.Current->getRange(OpPC);
+  }
+  return false;
+}
+
 bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (Ptr.isInitialized())
     return true;
@@ -602,6 +617,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckActive(S, OpPC, Ptr, AK))
     return false;
+  if (!CheckLifetime(S, OpPC, Ptr, AK))
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK))
@@ -631,6 +648,8 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckActive(S, OpPC, Ptr, AK_Read))
     return false;
+  if (!CheckLifetime(S, OpPC, Ptr, AK_Read))
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
@@ -646,6 +665,8 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Assign))
     return false;
   if (!CheckDummy(S, OpPC, Ptr, AK_Assign))
+    return false;
+  if (!CheckLifetime(S, OpPC, Ptr, AK_Assign))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
@@ -873,12 +894,16 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
 
 bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
                        const Pointer &Ptr) {
-  // The two sources we currently allow are new expressions and
-  // __builtin_operator_new calls.
+  // Regular new type(...) call.
   if (isa_and_nonnull<CXXNewExpr>(Source))
     return true;
-  if (const CallExpr *CE = dyn_cast_if_present<CallExpr>(Source);
+  // operator new.
+  if (const auto *CE = dyn_cast_if_present<CallExpr>(Source);
       CE && CE->getBuiltinCallee() == Builtin::BI__builtin_operator_new)
+    return true;
+  // std::allocator.allocate() call
+  if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(Source);
+      MCE && MCE->getMethodDecl()->getIdentifier()->isStr("allocate"))
     return true;
 
   // Whatever this is, we didn't heap allocate it.
@@ -1283,6 +1308,12 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
 
     const Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
 
+    // C++23 [expr.const]p5.6
+    // an invocation of a virtual function ([class.virtual]) for an object whose
+    // dynamic type is constexpr-unknown;
+    if (ThisPtr.isDummy() && Func->isVirtual())
+      return false;
+
     // If the current function is a lambda static invoker and
     // the function we're about to call is a lambda call operator,
     // skip the CheckInvoke, since the ThisPtr is a null pointer
@@ -1489,7 +1520,8 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   const auto *NewExpr = cast<CXXNewExpr>(E);
   QualType StorageType = Ptr.getType();
 
-  if (isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr()) &&
+  if ((isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr()) ||
+       isa_and_nonnull<CXXMemberCallExpr>(Ptr.getFieldDesc()->asExpr())) &&
       StorageType->isPointerType()) {
     // FIXME: Are there other cases where this is a problem?
     StorageType = StorageType->getPointeeType();
@@ -1655,17 +1687,6 @@ bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType) {
 
   if (!P.isBlockPointer())
     return false;
-
-  if (P.isDummy()) {
-    QualType StarThisType =
-        S.getASTContext().getLValueReferenceType(P.getType());
-    S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_polymorphic_unknown_dynamic_type)
-        << AK_TypeId
-        << P.toAPValue(S.getASTContext())
-               .getAsString(S.getASTContext(), StarThisType);
-    return false;
-  }
 
   S.Stk.push<Pointer>(P.getType().getTypePtr(), TypeInfoType);
   return true;

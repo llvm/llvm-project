@@ -1340,6 +1340,11 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
     addArchSpecificRPath(TC, Args, CmdArgs);
+
+    // needs libexecinfo for backtrace functions
+    if (TC.getTriple().isOSFreeBSD() || TC.getTriple().isOSNetBSD() ||
+        TC.getTriple().isOSOpenBSD() || TC.getTriple().isOSDragonFly())
+      CmdArgs.push_back("-lexecinfo");
   }
 
   // libomp needs libatomic for atomic operations if using libgcc
@@ -1440,13 +1445,12 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   CmdArgs.push_back("-lm");
   // There's no libdl on all OSes.
   if (!TC.getTriple().isOSFreeBSD() && !TC.getTriple().isOSNetBSD() &&
-      !TC.getTriple().isOSOpenBSD() &&
+      !TC.getTriple().isOSOpenBSD() && !TC.getTriple().isOSDragonFly() &&
       TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes
-  if (TC.getTriple().isOSFreeBSD() ||
-      TC.getTriple().isOSNetBSD() ||
-      TC.getTriple().isOSOpenBSD())
+  if (TC.getTriple().isOSFreeBSD() || TC.getTriple().isOSNetBSD() ||
+      TC.getTriple().isOSOpenBSD() || TC.getTriple().isOSDragonFly())
     CmdArgs.push_back("-lexecinfo");
   // There is no libresolv on Android, FreeBSD, OpenBSD, etc. On musl
   // libresolv.a, even if exists, is an empty archive to satisfy POSIX -lresolv
@@ -3095,12 +3099,19 @@ void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
                                                ArgStringList &CmdArgs) {
   // -fno-strict-overflow implies -fwrapv if it isn't disabled, but
   // -fstrict-overflow won't turn off an explicitly enabled -fwrapv.
+  bool StrictOverflow = Args.hasFlag(options::OPT_fstrict_overflow,
+                                     options::OPT_fno_strict_overflow, true);
   if (Arg *A = Args.getLastArg(options::OPT_fwrapv, options::OPT_fno_wrapv)) {
     if (A->getOption().matches(options::OPT_fwrapv))
       CmdArgs.push_back("-fwrapv");
-  } else if (Arg *A = Args.getLastArg(options::OPT_fstrict_overflow,
-                                      options::OPT_fno_strict_overflow)) {
-    if (A->getOption().matches(options::OPT_fno_strict_overflow))
-      CmdArgs.push_back("-fwrapv");
+  } else if (!StrictOverflow) {
+    CmdArgs.push_back("-fwrapv");
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_fwrapv_pointer,
+                               options::OPT_fno_wrapv_pointer)) {
+    if (A->getOption().matches(options::OPT_fwrapv_pointer))
+      CmdArgs.push_back("-fwrapv-pointer");
+  } else if (!StrictOverflow) {
+    CmdArgs.push_back("-fwrapv-pointer");
   }
 }

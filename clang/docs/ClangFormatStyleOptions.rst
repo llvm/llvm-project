@@ -3421,6 +3421,35 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakBeforeTemplateCloser:
+
+**BreakBeforeTemplateCloser** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeTemplateCloser>`
+  If ``true``, break before a template closing bracket (``>``) when there is
+  a line break after the matching opening bracket (``<``).
+
+  .. code-block:: c++
+
+     true:
+     template <typename Foo, typename Bar>
+
+     template <typename Foo,
+               typename Bar>
+
+     template <
+         typename Foo,
+         typename Bar
+     >
+
+     false:
+     template <typename Foo, typename Bar>
+
+     template <typename Foo,
+               typename Bar>
+
+     template <
+         typename Foo,
+         typename Bar>
+
 .. _BreakBeforeTernaryOperators:
 
 **BreakBeforeTernaryOperators** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <BreakBeforeTernaryOperators>`
@@ -5197,6 +5226,11 @@ the configuration (without a prefix: ``Auto``).
 
 **PenaltyBreakBeforeFirstCallParameter** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <PenaltyBreakBeforeFirstCallParameter>`
   The penalty for breaking a function call after ``call(``.
+
+.. _PenaltyBreakBeforeMemberAccess:
+
+**PenaltyBreakBeforeMemberAccess** (``Unsigned``) :versionbadge:`clang-format 20` :ref:`¶ <PenaltyBreakBeforeMemberAccess>`
+  The penalty for breaking before a member access operator (``.``, ``->``).
 
 .. _PenaltyBreakComment:
 

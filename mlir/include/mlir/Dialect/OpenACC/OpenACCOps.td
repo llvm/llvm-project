@@ -859,9 +859,9 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
           "- `varPtr`: The address of variable to copy back to.",
           [MemoryEffects<[MemRead<OpenACC_RuntimeCounters>,
                           MemWrite<OpenACC_RuntimeCounters>]>],
-          (ins Arg<OpenACC_PointerLikeTypeInterface,
+          (ins Arg<OpenACC_AnyPointerOrMappableType,
                    "Accelerator mapped variable", [MemRead]>:$accVar,
-              Arg<OpenACC_PointerLikeTypeInterface,
+              Arg<OpenACC_AnyPointerOrMappableType,
                   "Host variable", [MemWrite]>:$var,
               TypeAttr:$varType)> {
   let assemblyFormat = [{
@@ -917,7 +917,7 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause> :
     OpenACC_DataExitOp<mnemonic, clause, "",
       [MemoryEffects<[MemRead<OpenACC_RuntimeCounters>,
                     MemWrite<OpenACC_RuntimeCounters>]>],
-      (ins Arg<OpenACC_PointerLikeTypeInterface,"Accelerator mapped variable",
+      (ins Arg<OpenACC_AnyPointerOrMappableType,"Accelerator mapped variable",
            [MemRead]>:$accVar)> {
   let assemblyFormat = [{
     custom<AccVar>($accVar, type($accVar))
@@ -1008,8 +1008,9 @@ def OpenACC_UpdateHostOp : OpenACC_DataExitOpWithVarPtr<"update_host",
 // 2.5.13 private clause
 //===----------------------------------------------------------------------===//
 
-def OpenACC_PrivateRecipeOp : OpenACC_Op<"private.recipe",
-    [IsolatedFromAbove, Symbol, RecipeInterface]> {
+def OpenACC_PrivateRecipeOp
+    : OpenACC_Op<"private.recipe", [IsolatedFromAbove, Symbol, RecipeInterface,
+                                    AutomaticAllocationScope]> {
   let summary = "privatization recipe";
 
   let description = [{
@@ -1065,8 +1066,10 @@ def OpenACC_PrivateRecipeOp : OpenACC_Op<"private.recipe",
 // 2.5.14 firstprivate clause
 //===----------------------------------------------------------------------===//
 
-def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
-    [IsolatedFromAbove, Symbol, RecipeInterface]> {
+def OpenACC_FirstprivateRecipeOp
+    : OpenACC_Op<"firstprivate.recipe", [IsolatedFromAbove, Symbol,
+                                         RecipeInterface,
+                                         AutomaticAllocationScope]> {
   let summary = "privatization recipe";
 
   let description = [{
@@ -1131,8 +1134,10 @@ def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
 // 2.5.15 reduction clause
 //===----------------------------------------------------------------------===//
 
-def OpenACC_ReductionRecipeOp : OpenACC_Op<"reduction.recipe",
-    [IsolatedFromAbove, Symbol, RecipeInterface]> {
+def OpenACC_ReductionRecipeOp
+    : OpenACC_Op<"reduction.recipe", [IsolatedFromAbove, Symbol,
+                                      RecipeInterface,
+                                      AutomaticAllocationScope]> {
   let summary = "reduction recipe";
 
   let description = [{

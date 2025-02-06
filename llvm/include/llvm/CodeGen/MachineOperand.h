@@ -854,7 +854,7 @@ public:
     Op.IsEarlyClobber = isEarlyClobber;
     Op.TiedTo = 0;
     Op.IsDebug = isDebug;
-    Op.SmallContents.RegNo = Reg;
+    Op.SmallContents.RegNo = Reg.id();
     Op.Contents.Reg.Prev = nullptr;
     Op.Contents.Reg.Next = nullptr;
     Op.setSubReg(SubReg);

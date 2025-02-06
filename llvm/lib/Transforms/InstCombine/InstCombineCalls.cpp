@@ -2752,7 +2752,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (match(Arg, m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
       // fabs (select Cond, TrueC, FalseC) --> select Cond, AbsT, AbsF
-      if (isa<Constant>(TVal) || isa<Constant>(FVal)) {
+      if (Arg->hasOneUse() ? (isa<Constant>(TVal) || isa<Constant>(FVal))
+                           : (isa<Constant>(TVal) && isa<Constant>(FVal))) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
         SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
@@ -3259,7 +3260,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (auto *Replacement = buildAssumeFromKnowledge(
               {RetainedKnowledge{Attribute::NonNull, 0, A}}, Next, &AC, &DT)) {
 
-        Replacement->insertBefore(Next);
+        Replacement->insertBefore(Next->getIterator());
         AC.registerAssumption(Replacement);
         return RemoveConditionFromAssume(II);
       }
@@ -3292,7 +3293,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           if (auto *Replacement =
                   buildAssumeFromKnowledge(RK, Next, &AC, &DT)) {
 
-            Replacement->insertAfter(II);
+            Replacement->insertAfter(II->getIterator());
             AC.registerAssumption(Replacement);
           }
           return RemoveConditionFromAssume(II);
@@ -3376,7 +3377,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         while (MoveI != NextInst) {
           auto *Temp = MoveI;
           MoveI = MoveI->getNextNonDebugInstruction();
-          Temp->moveBefore(II);
+          Temp->moveBefore(II->getIterator());
         }
         replaceOperand(*II, 0, Builder.CreateAnd(CurrCond, NextCond));
       }

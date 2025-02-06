@@ -908,21 +908,31 @@ def BoolLike : TypeOrContainer<I1, "bool-like">;
 
 def BoolLikeOfAnyRank : TypeOrContainerOfAnyRank<I1, "bool-like">;
 
+// Type constraint for signless-integer-like types: signless integers, 
+// vectors of signless integers or tensors of signless integers.
+def SignlessIntegerLike : TypeOrValueSemanticsContainer<
+    AnySignlessInteger, "signless-integer">;
+
 // Type constraint for signless-integer-like types: signless integers, indices,
 // vectors of signless integers or indices, tensors of signless integers.
-def SignlessIntegerLike : TypeOrValueSemanticsContainer<
+def SignlessIntegerOrIndexLike : TypeOrValueSemanticsContainer<
     AnySignlessIntegerOrIndex, "signless-integer-like">;
 
-def SignlessIntegerLikeOfAnyRank : TypeOrContainerOfAnyRank<
+def SignlessIntegerOrIndexLikeOfAnyRank : TypeOrContainerOfAnyRank<
     AnySignlessIntegerOrIndex,
     "signless-integer-like">;
 
 // Type constraint for float-like types: floats, vectors or tensors thereof.
 def FloatLike : TypeOrContainer<AnyFloat, "floating-point-like">;
 
-// Type constraint for signless-integer-like or float-like types.
+// Type constraint for signless-integer-or-index-like or float-like types.
 def SignlessIntegerOrFloatLike : TypeConstraint<Or<[
     SignlessIntegerLike.predicate, FloatLike.predicate]>,
     "signless-integer-like or floating-point-like">;
+
+// Type constraint for signless-integer-or-index-like or float-like types.
+def SignlessIntegerOrIndexOrFloatLike : TypeConstraint<Or<[
+    SignlessIntegerOrIndexLike.predicate, FloatLike.predicate]>,
+    "signless-integer-or-index-like or floating-point-like">;
 
 #endif // COMMON_TYPE_CONSTRAINTS_TD

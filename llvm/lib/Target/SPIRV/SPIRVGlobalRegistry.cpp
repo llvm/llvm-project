@@ -629,7 +629,7 @@ SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
   unsigned AddressSpace = typeToAddressSpace(LLVMTy);
   // Find a constant in DT or build a new one.
   Constant *CP = ConstantPointerNull::get(
-      PointerType::get(::getPointeeType(LLVMTy), AddressSpace));
+      PointerType::get(LLVMTy->getContext(), AddressSpace));
   Register Res = DT.find(CP, CurMF);
   if (!Res.isValid()) {
     LLT LLTy = LLT::pointer(AddressSpace, PointerSize);

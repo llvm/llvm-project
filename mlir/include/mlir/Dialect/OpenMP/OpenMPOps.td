@@ -34,31 +34,27 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
   let description = [{
     This operation provides a declaration of how to implement the
     [first]privatization of a variable. The dialect users should provide
-    information about how to create an instance of the type in the alloc region,
-    how to initialize the copy from the original item in the copy region, and if
-    needed, how to deallocate allocated memory in the dealloc region.
+    which type should be allocated for this variable. The allocated (usually by
+    alloca) variable is passed to the initialization region which does everything
+    else (e.g. initialization of Fortran runtime descriptors). Information about
+    how to initialize the copy from the original item should be given in the
+    copy region, and if needed, how to deallocate memory (allocated by the
+    initialization region) in the dealloc region.
 
     Examples:
 
-    * `private(x)` would be emitted as:
+    * `private(x)` would not need any regions because no initialization is
+      required by the standard for i32 variables and this is not firstprivate.
     ```mlir
-    omp.private {type = private} @x.privatizer : !fir.ref<i32> alloc {
-    ^bb0(%arg0: !fir.ref<i32>):
-    %0 = ... allocate proper memory for the private clone ...
-    omp.yield(%0 : !fir.ref<i32>)
-    }
+    omp.private {type = private} @x.privatizer : i32
     ```
 
     * `firstprivate(x)` would be emitted as:
     ```mlir
-    omp.private {type = firstprivate} @x.privatizer : !fir.ref<i32> alloc {
-    ^bb0(%arg0: !fir.ref<i32>):
-    %0 = ... allocate proper memory for the private clone ...
-    omp.yield(%0 : !fir.ref<i32>)
-    } copy {
+    omp.private {type = firstprivate} @x.privatizer : i32 copy {
     ^bb0(%arg0: !fir.ref<i32>, %arg1: !fir.ref<i32>):
-    // %arg0 is the original host variable. Same as for `alloc`.
-    // %arg1 represents the memory allocated in `alloc`.
+    // %arg0 is the original host variable.
+    // %arg1 represents the memory allocated for this private variable.
     ... copy from host to the privatized clone ....
     omp.yield(%arg1 : !fir.ref<i32>)
     }
@@ -66,20 +62,26 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
 
     * `private(x)` for "allocatables" would be emitted as:
     ```mlir
-    omp.private {type = private} @x.privatizer : !some.type alloc {
-    ^bb0(%arg0: !some.type):
-    %0 = ... allocate proper memory for the private clone ...
-    omp.yield(%0 : !fir.ref<i32>)
+    omp.private {type = private} @x.privatizer : !some.type init {
+    ^bb0(%arg0: !some.pointer<!some.type>, %arg1: !some.pointer<!some.type>):
+    // initialize %arg1, using %arg0 as a mold for allocations.
+    // For example if %arg0 is a heap allocated array with a runtime determined
+    // length and !some.type is a runtime type descriptor, the init region
+    // will read the array length from %arg0, and heap allocate an array of the
+    // right length and initialize %arg1 to contain the array allocation and
+    // length.
+    omp.yield(%arg1 : !some.pointer<!some.type>)
     } dealloc {
-    ^bb0(%arg0: !some.type):
-    ... deallocate allocated memory ...
+    ^bb0(%arg0: !some.pointer<!some.type>):
+    // ... deallocate memory allocated by the init region...
+    // In the example above, this will free the heap allocated array data.
     omp.yield
     }
     ```
 
     There are no restrictions on the body except for:
-    - The `alloc` & `dealloc` regions have a single argument.
-    - The `copy` region has 2 arguments.
+    - The `dealloc` regions has a single argument.
+    - The `init & `copy` regions have 2 arguments.
     - All three regions are terminated by `omp.yield` ops.
     The above restrictions and other obvious restrictions (e.g. verifying the
     type of yielded values) are verified by the custom op verifier. The actual
@@ -91,7 +93,10 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
     The $sym_name attribute provides a symbol by which the privatizer op can be
     referenced by other dialect ops.
 
-    The $type attribute is the type of the value being privatized.
+    The $type attribute is the type of the value being privatized. This type
+    will be implicitly allocated in MLIR->LLVMIR conversion and passed as the
+    second argument to the init region. Therefore the type of arguments to
+    the regions should be a type which represents a pointer to $type.
 
     The $data_sharing_type attribute specifies whether privatizer corresponds
     to a `private` or a `firstprivate` clause.
@@ -101,13 +106,13 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
                        TypeAttrOf<AnyType>:$type,
                        DataSharingClauseTypeAttr:$data_sharing_type);
 
-  let regions = (region MinSizedRegion<1>:$alloc_region,
+  let regions = (region AnyRegion:$init_region,
                         AnyRegion:$copy_region,
                         AnyRegion:$dealloc_region);
 
   let assemblyFormat = [{
     $data_sharing_type $sym_name `:` $type
-      `alloc` $alloc_region
+      (`init` $init_region^)?
       (`copy` $copy_region^)?
       (`dealloc` $dealloc_region^)?
       attr-dict
@@ -120,8 +125,13 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
   ];
 
   let extraClassDeclaration = [{
-    BlockArgument getAllocMoldArg() {
-      return getAllocRegion().getArgument(0);
+    BlockArgument getInitMoldArg() {
+      auto &region = getInitRegion();
+      return region.empty() ? nullptr : region.getArgument(0);
+    }
+    BlockArgument getInitPrivateArg() {
+      auto &region = getInitRegion();
+      return region.empty() ? nullptr : region.getArgument(1);
     }
     BlockArgument getCopyMoldArg() {
       auto &region = getCopyRegion();
@@ -141,7 +151,20 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
     /// when an allocatable is privatized. In such cases, the descriptor is used
     /// in privatization and needs to be mapped on to the device.
     bool needsMap() {
-      return !getAllocMoldArg().use_empty();
+      BlockArgument moldArg = getInitMoldArg();
+      return moldArg ? !moldArg.use_empty() : false;
+    }
+
+    /// Get the type for arguments to nested regions. This should
+    /// generally be either the same as getType() or some pointer
+    /// type (pointing to the type allocated by this op).
+    /// This method will return Type{nullptr} if there are no nested
+    /// regions.
+    Type getArgType() {
+      for (Region *region : getRegions())
+        for (Type ty : region->getArgumentTypes())
+          return ty;
+      return nullptr;
     }
   }];
 

@@ -466,9 +466,9 @@ public:
   }
 
   /// Returns true if Reg contains RegUnit.
-  bool hasRegUnit(MCRegister Reg, Register RegUnit) const {
+  bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {
     for (MCRegUnit Unit : regunits(Reg))
-      if (Register(Unit) == RegUnit)
+      if (Unit == RegUnit)
         return true;
     return false;
   }
@@ -1383,9 +1383,7 @@ public:
 // This is useful when building IndexedMaps keyed on virtual registers
 struct VirtReg2IndexFunctor {
   using argument_type = Register;
-  unsigned operator()(Register Reg) const {
-    return Register::virtReg2Index(Reg);
-  }
+  unsigned operator()(Register Reg) const { return Reg.virtRegIndex(); }
 };
 
 /// Prints virtual and physical registers with or without a TRI instance.

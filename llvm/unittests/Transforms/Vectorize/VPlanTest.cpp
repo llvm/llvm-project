@@ -9,6 +9,7 @@
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanCFG.h"
+#include "../lib/Transforms/Vectorize/VPlanHelpers.h"
 #include "VPlanTestBase.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"

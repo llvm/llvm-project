@@ -9,6 +9,7 @@
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/PrintCallHelper.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
@@ -1546,11 +1547,15 @@ public:
 
     auto punct = printOp.getPunctuation();
     if (auto stringLiteral = printOp.getStringLiteral()) {
-      LLVM::createPrintStrCall(rewriter, loc, parent, "vector_print_str",
-                               *stringLiteral, *getTypeConverter(),
-                               /*addNewline=*/false);
+      auto createResult =
+          LLVM::createPrintStrCall(rewriter, loc, parent, "vector_print_str",
+                                   *stringLiteral, *getTypeConverter(),
+                                   /*addNewline=*/false);
+      if (createResult.failed())
+        return failure();
+
     } else if (punct != PrintPunctuation::NoPunctuation) {
-      emitCall(rewriter, printOp->getLoc(), [&] {
+      FailureOr<LLVM::LLVMFuncOp> op = [&]() {
         switch (punct) {
         case PrintPunctuation::Close:
           return LLVM::lookupOrCreatePrintCloseFn(parent);
@@ -1563,7 +1568,10 @@ public:
         default:
           llvm_unreachable("unexpected punctuation");
         }
-      }());
+      }();
+      if (failed(op))
+        return failure();
+      emitCall(rewriter, printOp->getLoc(), op.value());
     }
 
     rewriter.eraseOp(printOp);
@@ -1588,7 +1596,7 @@ private:
 
     // Make sure element type has runtime support.
     PrintConversion conversion = PrintConversion::None;
-    Operation *printer;
+    FailureOr<Operation *> printer;
     if (printType.isF32()) {
       printer = LLVM::lookupOrCreatePrintF32Fn(parent);
     } else if (printType.isF64()) {
@@ -1631,6 +1639,8 @@ private:
     } else {
       return failure();
     }
+    if (failed(printer))
+      return failure();
 
     switch (conversion) {
     case PrintConversion::ZeroExt64:
@@ -1648,7 +1658,7 @@ private:
     case PrintConversion::None:
       break;
     }
-    emitCall(rewriter, loc, printer, value);
+    emitCall(rewriter, loc, printer.value(), value);
     return success();
   }
 
@@ -1932,4 +1942,28 @@ void mlir::populateVectorToLLVMMatrixConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<VectorMatmulOpConversion>(converter);
   patterns.add<VectorFlatTransposeOpConversion>(converter);
+}
+
+namespace {
+struct VectorToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<LLVM::LLVMDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateVectorToLLVMConversionPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::vector::registerConvertVectorToLLVMInterface(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, vector::VectorDialect *dialect) {
+    dialect->addInterfaces<VectorToLLVMDialectInterface>();
+  });
 }

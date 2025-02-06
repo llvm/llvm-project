@@ -55,55 +55,90 @@ AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
   return getLocalMemorySize() / WorkGroupsPerCU;
 }
 
-// FIXME: Should return min,max range.
-//
-// Returns the maximum occupancy, in number of waves per SIMD / EU, that can
-// be achieved when only the given function is running on the machine; and
-// taking into account the overall number of wave slots, the (maximum) workgroup
-// size, and the per-workgroup LDS allocation size.
-unsigned AMDGPUSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes,
-  const Function &F) const {
-  const unsigned MaxWorkGroupSize = getFlatWorkGroupSizes(F).second;
-  const unsigned MaxWorkGroupsPerCu = getMaxWorkGroupsPerCU(MaxWorkGroupSize);
-  if (!MaxWorkGroupsPerCu)
-    return 0;
+std::pair<unsigned, unsigned>
+AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(uint32_t LDSBytes,
+                                                const Function &F) const {
+  // FIXME: We should take into account the LDS allocation granularity.
+  const unsigned MaxWGsLDS = getLocalMemorySize() / std::max(LDSBytes, 1u);
 
-  const unsigned WaveSize = getWavefrontSize();
+  // Queried LDS size may be larger than available on a CU, in which case we
+  // consider the only achievable occupancy to be 1, in line with what we
+  // consider the occupancy to be when the number of requested registers in a
+  // particular bank is higher than the number of available ones in that bank.
+  if (!MaxWGsLDS)
+    return {1, 1};
 
-  // FIXME: Do we need to account for alignment requirement of LDS rounding the
-  // size up?
-  // Compute restriction based on LDS usage
-  unsigned NumGroups = getLocalMemorySize() / (Bytes ? Bytes : 1u);
+  const unsigned WaveSize = getWavefrontSize(), WavesPerEU = getMaxWavesPerEU();
 
-  // This can be queried with more LDS than is possible, so just assume the
-  // worst.
-  if (NumGroups == 0)
-    return 1;
+  auto PropsFromWGSize = [=](unsigned WGSize)
+      -> std::tuple<const unsigned, const unsigned, unsigned> {
+    unsigned WavesPerWG = divideCeil(WGSize, WaveSize);
+    unsigned WGsPerCU = std::min(getMaxWorkGroupsPerCU(WGSize), MaxWGsLDS);
+    return {WavesPerWG, WGsPerCU, WavesPerWG * WGsPerCU};
+  };
 
-  NumGroups = std::min(MaxWorkGroupsPerCu, NumGroups);
+  // The maximum group size will generally yield the minimum number of
+  // workgroups, maximum number of waves, and minimum occupancy. The opposite is
+  // generally true for the minimum group size. LDS or barrier ressource
+  // limitations can flip those minimums/maximums.
+  const auto [MinWGSize, MaxWGSize] = getFlatWorkGroupSizes(F);
+  auto [MinWavesPerWG, MaxWGsPerCU, MaxWavesPerCU] = PropsFromWGSize(MinWGSize);
+  auto [MaxWavesPerWG, MinWGsPerCU, MinWavesPerCU] = PropsFromWGSize(MaxWGSize);
 
-  // Round to the number of waves per CU.
-  const unsigned MaxGroupNumWaves = divideCeil(MaxWorkGroupSize, WaveSize);
-  unsigned MaxWaves = NumGroups * MaxGroupNumWaves;
+  // It is possible that we end up with flipped minimum and maximum number of
+  // waves per CU when the number of minimum/maximum concurrent groups on the CU
+  // is limited by LDS usage or barrier resources.
+  if (MinWavesPerCU >= MaxWavesPerCU) {
+    std::swap(MinWavesPerCU, MaxWavesPerCU);
+  } else {
+    const unsigned WaveSlotsPerCU = WavesPerEU * getEUsPerCU();
 
-  // Number of waves per EU (SIMD).
-  MaxWaves = divideCeil(MaxWaves, getEUsPerCU());
+    // Look for a potential smaller group size than the maximum which decreases
+    // the concurrent number of waves on the CU for the same number of
+    // concurrent workgroups on the CU.
+    unsigned MinWavesPerCUForWGSize =
+        divideCeil(WaveSlotsPerCU, MinWGsPerCU + 1) * MinWGsPerCU;
+    if (MinWavesPerCU > MinWavesPerCUForWGSize) {
+      unsigned ExcessSlots = MinWavesPerCU - MinWavesPerCUForWGSize;
+      if (unsigned ExcessSlotsPerWG = ExcessSlots / MinWGsPerCU) {
+        // There may exist a smaller group size than the maximum that achieves
+        // the minimum number of waves per CU. This group size is the largest
+        // possible size that requires MaxWavesPerWG - E waves where E is
+        // maximized under the following constraints.
+        // 1. 0 <= E <= ExcessSlotsPerWG
+        // 2. (MaxWavesPerWG - E) * WaveSize >= MinWGSize
+        MinWavesPerCU -= MinWGsPerCU * std::min(ExcessSlotsPerWG,
+                                                MaxWavesPerWG - MinWavesPerWG);
+      }
+    }
 
-  // Clamp to the maximum possible number of waves.
-  MaxWaves = std::min(MaxWaves, getMaxWavesPerEU());
+    // Look for a potential larger group size than the minimum which increases
+    // the concurrent number of waves on the CU for the same number of
+    // concurrent workgroups on the CU.
+    unsigned LeftoverSlots = WaveSlotsPerCU - MaxWGsPerCU * MinWavesPerWG;
+    if (unsigned LeftoverSlotsPerWG = LeftoverSlots / MaxWGsPerCU) {
+      // There may exist a larger group size than the minimum that achieves the
+      // maximum number of waves per CU. This group size is the smallest
+      // possible size that requires MinWavesPerWG + L waves where L is
+      // maximized under the following constraints.
+      // 1. 0 <= L <= LeftoverSlotsPerWG
+      // 2. (MinWavesPerWG + L - 1) * WaveSize <= MaxWGSize
+      MaxWavesPerCU += MaxWGsPerCU * std::min(LeftoverSlotsPerWG,
+                                              ((MaxWGSize - 1) / WaveSize) + 1 -
+                                                  MinWavesPerWG);
+    }
+  }
 
-  // FIXME: Needs to be a multiple of the group size?
-  //MaxWaves = MaxGroupNumWaves * (MaxWaves / MaxGroupNumWaves);
-
-  assert(MaxWaves > 0 && MaxWaves <= getMaxWavesPerEU() &&
-         "computed invalid occupancy");
-  return MaxWaves;
+  // Return the minimum/maximum number of waves on any EU, assuming that all
+  // wavefronts are spread across all EUs as evenly as possible.
+  return {std::clamp(MinWavesPerCU / getEUsPerCU(), 1U, WavesPerEU),
+          std::clamp(divideCeil(MaxWavesPerCU, getEUsPerCU()), 1U, WavesPerEU)};
 }
 
-unsigned
-AMDGPUSubtarget::getOccupancyWithLocalMemSize(const MachineFunction &MF) const {
+std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
+    const MachineFunction &MF) const {
   const auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  return getOccupancyWithLocalMemSize(MFI->getLDSSize(), MF.getFunction());
+  return getOccupancyWithWorkGroupSizes(MFI->getLDSSize(), MF.getFunction());
 }
 
 std::pair<unsigned, unsigned>

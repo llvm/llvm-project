@@ -71,13 +71,13 @@ void MachineOperand::setReg(Register Reg) {
   if (MachineFunction *MF = getMFIfAvailable(*this)) {
     MachineRegisterInfo &MRI = MF->getRegInfo();
     MRI.removeRegOperandFromUseList(this);
-    SmallContents.RegNo = Reg;
+    SmallContents.RegNo = Reg.id();
     MRI.addRegOperandToUseList(this);
     return;
   }
 
   // Otherwise, just change the register, no problem.  :)
-  SmallContents.RegNo = Reg;
+  SmallContents.RegNo = Reg.id();
 }
 
 void MachineOperand::substVirtReg(Register Reg, unsigned SubIdx,
@@ -291,7 +291,7 @@ void MachineOperand::ChangeToRegister(Register Reg, bool isDef, bool isImp,
   assert(!(isDead && !isDef) && "Dead flag on non-def");
   assert(!(isKill && isDef) && "Kill flag on def");
   OpKind = MO_Register;
-  SmallContents.RegNo = Reg;
+  SmallContents.RegNo = Reg.id();
   SubReg_TargetFlags = 0;
   IsDef = isDef;
   IsImp = isImp;
@@ -390,7 +390,8 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
     // Register operands don't have target flags.
-    return hash_combine(MO.getType(), (unsigned)MO.getReg(), MO.getSubReg(), MO.isDef());
+    return hash_combine(MO.getType(), MO.getReg().id(), MO.getSubReg(),
+                        MO.isDef());
   case MachineOperand::MO_Immediate:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getImm());
   case MachineOperand::MO_CImmediate:

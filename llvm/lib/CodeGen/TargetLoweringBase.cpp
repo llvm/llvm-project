@@ -1841,6 +1841,17 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   llvm_unreachable("Unknown instruction type encountered!");
 }
 
+int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
+  switch (ID) {
+  case Intrinsic::exp:
+    return ISD::FEXP;
+  case Intrinsic::exp2:
+    return ISD::FEXP2;
+  default:
+    return ISD::DELETED_NODE;
+  }
+}
+
 Value *
 TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
                                                        bool UseTLS) const {

@@ -180,12 +180,12 @@ static void rewriteMaterializableInstructions(
     // insert the remats into the end of the predecessor (there should only be
     // one). This is so that suspend blocks always have the suspend instruction
     // as the first instruction.
-    auto InsertPoint = &*Use->getParent()->getFirstInsertionPt();
+    BasicBlock::iterator InsertPoint = Use->getParent()->getFirstInsertionPt();
     if (isa<AnyCoroSuspendInst>(Use)) {
       BasicBlock *SuspendPredecessorBlock =
           Use->getParent()->getSinglePredecessor();
       assert(SuspendPredecessorBlock && "malformed coro suspend instruction");
-      InsertPoint = SuspendPredecessorBlock->getTerminator();
+      InsertPoint = SuspendPredecessorBlock->getTerminator()->getIterator();
     }
 
     // Note: skip the first instruction as this is the actual use that we're
@@ -197,7 +197,7 @@ static void rewriteMaterializableInstructions(
       CurrentMaterialization = D->clone();
       CurrentMaterialization->setName(D->getName());
       CurrentMaterialization->insertBefore(InsertPoint);
-      InsertPoint = CurrentMaterialization;
+      InsertPoint = CurrentMaterialization->getIterator();
 
       // Replace all uses of Def in the instructions being added as part of this
       // rematerialization group

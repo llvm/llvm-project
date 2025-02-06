@@ -4,8 +4,8 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %s 2>&1 | FileCheck %s
 
 ! CHECK: omp.declare_reduction @[[RED:add_reduction_i32]] : i32
-! CHECK: omp.private {type = private} @[[DUMMY_PRIV:.*test_privateEdummy_private.*]] : !fir.ref<i32>
-! CHECK: omp.private {type = private} @[[I_PRIV:.*test_no_clausesEi.*]] : !fir.ref<i32>
+! CHECK: omp.private {type = private} @[[DUMMY_PRIV:.*test_privateEdummy_private.*]] : i32
+! CHECK: omp.private {type = private} @[[I_PRIV:.*test_no_clausesEi.*]] : i32
 
 ! CHECK-LABEL: func.func @_QPtest_no_clauses
 subroutine test_no_clauses()
@@ -92,7 +92,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_bind
 subroutine test_bind()
   integer :: i, dummy = 1
-  ! CHECK: omp.loop bind(thread) private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
+  ! CHECK: omp.simd private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
   ! CHECK: }
   !$omp loop bind(thread)
   do i=1,10
@@ -138,4 +138,44 @@ subroutine test_nested_directives
     end do
   end do
   !$omp end target teams
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_standalone_bind_teams
+subroutine test_standalone_bind_teams
+  implicit none
+  integer, parameter :: N = 100000
+  integer a(N), b(N), c(N)
+  integer j,i, num, flag;
+  num = N
+
+  ! CHECK:     omp.distribute
+  ! CHECK-SAME:  private(@{{.*}}Ea_private_box_100000xi32 {{[^,]*}},
+  ! CHECK-SAME:          @{{.*}}Ei_private_i32 {{.*}} : {{.*}}) {
+  ! CHECK:       omp.loop_nest {{.*}} {
+  ! CHECK:       }
+  ! CHECK:     }
+  !$omp loop bind(teams) private(a)
+  do i=1,N
+    c(i) = a(i) * b(i)
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_standalone_bind_parallel
+subroutine test_standalone_bind_parallel
+  implicit none
+  integer, parameter :: N = 100000
+  integer a(N), b(N), c(N)
+  integer j,i, num, flag;
+  num = N
+
+  ! CHECK:     omp.wsloop
+  ! CHECK-SAME:  private(@{{.*}}Ea_private_box_100000xi32 {{[^,]*}},
+  ! CHECK-SAME:          @{{.*}}Ei_private_i32 {{.*}} : {{.*}}) {
+  ! CHECK:       omp.loop_nest {{.*}} {
+  ! CHECK:       }
+  ! CHECK:     }
+  !$omp loop bind(parallel) private(a)
+  do i=1,N
+    c(i) = a(i) * b(i)
+  end do
 end subroutine
