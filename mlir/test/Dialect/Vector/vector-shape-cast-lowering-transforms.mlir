@@ -115,11 +115,11 @@ func.func @shape_cast_1d3d(%arg0 : vector<6xf32>) -> vector<2x1x3xf32> {
 }
 
 // CHECK-LABEL:   func.func @shape_cast_0d1d(
-// CHECK-SAME:                               %[[VAL_0:.*]]: vector<f32>) -> vector<1xf32> {
-// CHECK:           %[[VAL_1:.*]] = ub.poison : vector<1xf32>
-// CHECK:           %[[VAL_2:.*]] = vector.extractelement %[[VAL_0]][] : vector<f32>
-// CHECK:           %[[VAL_3:.*]] = vector.insert %[[VAL_2]], %[[VAL_1]] [0] : f32 into vector<1xf32>
-// CHECK:           return %[[VAL_3]] : vector<1xf32>
+// CHECK-SAME:                               %[[ARG0:.*]]: vector<f32>) -> vector<1xf32> {
+// CHECK:           %[[UB:.*]] = ub.poison : vector<1xf32>
+// CHECK:           %[[EXTRACT0:.*]] = vector.extractelement %[[ARG0]][] : vector<f32>
+// CHECK:           %[[RES:.*]] = vector.insert %[[EXTRACT0]], %[[UB]] [0] : f32 into vector<1xf32>
+// CHECK:           return %[[RES]] : vector<1xf32>
 // CHECK:         }
 
 func.func @shape_cast_0d1d(%arg0 : vector<f32>) -> vector<1xf32> {
@@ -128,11 +128,11 @@ func.func @shape_cast_0d1d(%arg0 : vector<f32>) -> vector<1xf32> {
 }
 
 // CHECK-LABEL:   func.func @shape_cast_1d0d(
-// CHECK-SAME:                               %[[VAL_0:.*]]: vector<1xf32>) -> vector<f32> {
-// CHECK:           %[[VAL_1:.*]] = ub.poison : vector<f32>
-// CHECK:           %[[VAL_2:.*]] = vector.extract %[[VAL_0]][0] : f32 from vector<1xf32>
-// CHECK:           %[[VAL_3:.*]] = vector.insertelement %[[VAL_2]], %[[VAL_1]][] : vector<f32>
-// CHECK:           return %[[VAL_3]] : vector<f32>
+// CHECK-SAME:                               %[[ARG0:.*]]: vector<1xf32>) -> vector<f32> {
+// CHECK:           %[[UB:.*]] = ub.poison : vector<f32>
+// CHECK:           %[[EXTRACT0:.*]] = vector.extract %[[ARG0]][0] : f32 from vector<1xf32>
+// CHECK:           %[[RES:.*]] = vector.insertelement %[[EXTRACT0]], %[[UB]][] : vector<f32>
+// CHECK:           return %[[RES]] : vector<f32>
 // CHECK:         }
 
 func.func @shape_cast_1d0d(%arg0 : vector<1xf32>) -> vector<f32> {
