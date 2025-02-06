@@ -3507,7 +3507,7 @@ class VPlan {
 
   /// Contains all the external definitions created for this VPlan. External
   /// definitions are VPValues that hold a pointer to their underlying IR.
-  SmallVector<VPValue *, 16> VPLiveInsToFree;
+  SmallVector<VPValue *, 16> VPLiveIns;
 
   /// Mapping from SCEVs to the VPValues representing their expansions.
   /// NOTE: This mapping is temporary and will be removed once all users have
@@ -3699,7 +3699,7 @@ public:
     auto [It, Inserted] = Value2VPValue.try_emplace(V);
     if (Inserted) {
       VPValue *VPV = new VPValue(V);
-      VPLiveInsToFree.push_back(VPV);
+      VPLiveIns.push_back(VPV);
       assert(VPV->isLiveIn() && "VPV must be a live-in.");
       It->second = VPV;
     }
@@ -3712,7 +3712,7 @@ public:
   VPValue *getLiveIn(Value *V) const { return Value2VPValue.lookup(V); }
 
   /// Return the list of live-in VPValues available in the VPlan.
-  ArrayRef<VPValue *> getLiveIns() const { return VPLiveInsToFree; }
+  ArrayRef<VPValue *> getLiveIns() const { return VPLiveIns; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the live-ins of this VPlan to \p O.
