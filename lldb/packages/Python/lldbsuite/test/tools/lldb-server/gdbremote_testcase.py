@@ -397,13 +397,13 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             # Schedule debug monitor to be shut down during teardown.
             logger = self.logger
 
-            connect_attemps = 0
+            connect_attempts = 0
             MAX_CONNECT_ATTEMPTS = 10
 
-            while connect_attemps < MAX_CONNECT_ATTEMPTS:
+            while connect_attempts < MAX_CONNECT_ATTEMPTS:
                 # Create a socket to talk to the server
                 try:
-                    logger.info("Connect attempt %d", connect_attemps + 1)
+                    logger.info("Connect attempt %d", connect_attempts + 1)
                     self.sock = self.create_socket()
                     self._server = Server(self.sock, server)
                     return server
@@ -411,7 +411,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
                     # Ignore, and try again.
                     pass
                 time.sleep(0.5)
-                connect_attemps += 1
+                connect_attempts += 1
 
             # We should close the server here to be safe.
             server.terminate()
