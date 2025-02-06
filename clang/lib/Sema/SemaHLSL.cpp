@@ -1323,8 +1323,8 @@ SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
 
 // Walks though the global variable declaration, collects all resource binding
 // requirements and adds them to Bindings
-void SemaHLSL::collectResourcesOnUserRecordDecl(const VarDecl *VD,
-                                                const RecordType *RT) {
+void SemaHLSL::collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
+                                                       const RecordType *RT) {
   const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *FD : RD->fields()) {
     const Type *Ty = FD->getType()->getUnqualifiedDesugaredType();
@@ -1354,7 +1354,7 @@ void SemaHLSL::collectResourcesOnUserRecordDecl(const VarDecl *VD,
       // binding, which is something we are probably going to need to do later
       // on. Hopefully nesting of structs in structs too many levels is
       // unlikely.
-      collectResourcesOnUserRecordDecl(VD, RT);
+      collectResourceBindingsOnUserRecordDecl(VD, RT);
     }
   }
 }
@@ -1362,7 +1362,7 @@ void SemaHLSL::collectResourcesOnUserRecordDecl(const VarDecl *VD,
 // Diagnore localized register binding errors for a single binding; does not
 // diagnose resource binding on user record types, that will be done later
 // in processResourceBindingOnDecl based on the information collected in
-// collectResourcesOnVarDecl.
+// collectResourceBindingsOnVarDecl.
 // Returns false if the register binding is not valid.
 static bool DiagnoseLocalRegisterBinding(Sema &S, SourceLocation &ArgLoc,
                                          Decl *D, RegisterType RegType,
@@ -2788,7 +2788,7 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
 
     // find all resources on decl
     if (VD->getType()->isHLSLIntangibleType())
-      collectResourcesOnVarDecl(VD);
+      collectResourceBindingsOnVarDecl(VD);
 
     // process explicit bindings
     processExplicitBindingsOnDecl(VD);
@@ -2797,7 +2797,7 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
 
 // Walks though the global variable declaration, collects all resource binding
 // requirements and adds them to Bindings
-void SemaHLSL::collectResourcesOnVarDecl(VarDecl *VD) {
+void SemaHLSL::collectResourceBindingsOnVarDecl(VarDecl *VD) {
   assert(VD->hasGlobalStorage() && VD->getType()->isHLSLIntangibleType() &&
          "expected global variable that contains HLSL resource");
 
@@ -2826,7 +2826,7 @@ void SemaHLSL::collectResourcesOnVarDecl(VarDecl *VD) {
 
   // User defined record type
   if (const RecordType *RT = dyn_cast<RecordType>(Ty))
-    collectResourcesOnUserRecordDecl(VD, RT);
+    collectResourceBindingsOnUserRecordDecl(VD, RT);
 }
 
 // Walks though the explicit resource binding attributes on the declaration,

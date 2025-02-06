@@ -1529,7 +1529,8 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
       llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
   splitBB(llvm::OpenMPIRBuilder::InsertPointTy(allocaIP.getBlock(),
                                                allocaTerminator->getIterator()),
-          true, "omp.region.after_alloca");
+          true, allocaTerminator->getStableDebugLoc(),
+          "omp.region.after_alloca");
 
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
   // Update the allocaTerminator in case the alloca block was split above.
@@ -4899,6 +4900,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP)
       -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    builder.SetCurrentDebugLocation(llvm::DebugLoc());
     // Forward target-cpu and target-features function attributes from the
     // original function to the new outlined function.
     llvm::Function *llvmParentFn =
@@ -4994,6 +4997,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                            llvm::Value *&retVal, InsertPointTy allocaIP,
                            InsertPointTy codeGenIP)
       -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    builder.SetCurrentDebugLocation(llvm::DebugLoc());
     // We just return the unaltered argument for the host function
     // for now, some alterations may be required in the future to
     // keep host fallback functions working identically to the device

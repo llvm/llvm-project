@@ -40,9 +40,10 @@ class OpenMPIRBuilder;
 /// not have any PHINodes. If \p CreateBranch is true, a branch instruction to
 /// \p New will be added such that there is no semantic change. Otherwise, the
 /// \p IP insert block remains degenerate and it is up to the caller to insert a
-/// terminator.
-void spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
-              bool CreateBranch);
+/// terminator. \p DL is used as the debug location for the branch instruction
+/// if one is created.
+void spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New, bool CreateBranch,
+              DebugLoc DL);
 
 /// Splice a BasicBlock at an IRBuilder's current insertion point. Its new
 /// insert location will stick to after the instruction before the insertion
@@ -58,9 +59,10 @@ void spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch);
 /// is true, a branch to the new successor will new created such that
 /// semantically there is no change; otherwise the block of the insertion point
 /// remains degenerate and it is the caller's responsibility to insert a
-/// terminator. Returns the new successor block.
+/// terminator. \p DL is used as the debug location for the branch instruction
+/// if one is created. Returns the new successor block.
 BasicBlock *splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
-                    llvm::Twine Name = {});
+                    DebugLoc DL, llvm::Twine Name = {});
 
 /// Split a BasicBlock at \p Builder's insertion point, even if the block is
 /// degenerate (missing the terminator).  Its new insert location will stick to

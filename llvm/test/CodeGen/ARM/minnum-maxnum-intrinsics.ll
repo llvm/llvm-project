@@ -610,20 +610,20 @@ define <4 x float> @fminnumv432_one_zero_intrinsic(<4 x float> %x) {
 ; ARMV7-LABEL: fminnumv432_one_zero_intrinsic:
 ; ARMV7:       @ %bb.0:
 ; ARMV7-NEXT:    vmov d1, r2, r3
-; ARMV7-NEXT:    vldr s8, .LCPI18_0
+; ARMV7-NEXT:    vldr s4, .LCPI18_0
 ; ARMV7-NEXT:    vmov d0, r0, r1
-; ARMV7-NEXT:    vmov.f32 s10, #-1.000000e+00
+; ARMV7-NEXT:    vmov.f32 s6, #-1.000000e+00
 ; ARMV7-NEXT:    vcmp.f32 s1, #0
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vmov.f32 s4, s3
-; ARMV7-NEXT:    vmin.f32 d6, d2, d5
-; ARMV7-NEXT:    vmin.f32 d3, d1, d5
-; ARMV7-NEXT:    vmin.f32 d2, d0, d5
-; ARMV7-NEXT:    vmovlt.f32 s8, s1
-; ARMV7-NEXT:    vmov.f32 s5, s8
-; ARMV7-NEXT:    vmov.f32 s7, s12
-; ARMV7-NEXT:    vmov r0, r1, d2
-; ARMV7-NEXT:    vmov r2, r3, d3
+; ARMV7-NEXT:    vmov.f32 s8, s3
+; ARMV7-NEXT:    vmin.f32 d7, d1, d3
+; ARMV7-NEXT:    vmin.f32 d6, d0, d3
+; ARMV7-NEXT:    vmin.f32 d4, d4, d3
+; ARMV7-NEXT:    vmovlt.f32 s4, s1
+; ARMV7-NEXT:    vmov.f32 s13, s4
+; ARMV7-NEXT:    vmov.f32 s15, s8
+; ARMV7-NEXT:    vmov r0, r1, d6
+; ARMV7-NEXT:    vmov r2, r3, d7
 ; ARMV7-NEXT:    bx lr
 ; ARMV7-NEXT:    .p2align 2
 ; ARMV7-NEXT:  @ %bb.1:

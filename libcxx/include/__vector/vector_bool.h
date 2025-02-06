@@ -533,10 +533,8 @@ template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::size_type
 vector<bool, _Allocator>::max_size() const _NOEXCEPT {
   size_type __amax = __storage_traits::max_size(__alloc_);
-  size_type __nmax = numeric_limits<size_type>::max() / 2; // end() >= begin(), always
-  if (__nmax / __bits_per_word <= __amax)
-    return __nmax;
-  return __internal_cap_to_external(__amax);
+  size_type __nmax = numeric_limits<difference_type>::max();
+  return __nmax / __bits_per_word <= __amax ? __nmax : __internal_cap_to_external(__amax);
 }
 
 //  Precondition:  __new_size > capacity()
