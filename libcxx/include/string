@@ -763,9 +763,6 @@ struct __padding<0> {};
 
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
-private:
-  using __default_allocator_type _LIBCPP_NODEBUG = allocator<_CharT>;
-
 public:
   typedef basic_string __self;
   typedef basic_string_view<_CharT, _Traits> __self_view;
