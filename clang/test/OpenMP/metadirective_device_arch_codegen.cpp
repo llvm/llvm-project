@@ -27,7 +27,7 @@ int metadirective1() {
    {
       #pragma omp metadirective \
                    when(device={arch("amdgcn")}: teams distribute parallel for) \
-                   otherwise(parallel for)
+                   default(parallel for)
 
          for (int i = 0; i < N; i++) {
 	    #pragma omp atomic write

@@ -31,7 +31,7 @@ void foo() {
                                : parallel)
   bar();
 #pragma omp metadirective when(device = {kind(gpu)} \
-                               : target parallel for) otherwise(parallel for)
+                               : target parallel for) default(parallel for)
   for (int i = 0; i < 100; i++)
     ;
 }

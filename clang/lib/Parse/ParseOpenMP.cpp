@@ -2744,11 +2744,15 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
                                    ? OMPC_unknown
                                    : getOpenMPClauseKind(PP.getSpelling(Tok));
       // Check if the clause is unrecognized.
-      if (CKind == OMPC_unknown) {
+      if (getLangOpts().OpenMP < 52 && (CKind == OMPC_unknown || CKind == OMPC_otherwise)) {
         Diag(Tok, diag::err_omp_unknown_clause)
         << PP.getSpelling(Tok) << "metadirective";
       }
-      if(CKind == OMPC_default) {
+      if (getLangOpts().OpenMP >= 52 && CKind == OMPC_unknown) {
+        Diag(Tok, diag::err_omp_unknown_clause)
+        << PP.getSpelling(Tok) << "metadirective";
+      }
+      if(CKind == OMPC_default && getLangOpts().OpenMP >= 52) {
         Diag(Tok, diag::warn_omp_default_deprecated);
       }
       SourceLocation Loc = ConsumeToken();

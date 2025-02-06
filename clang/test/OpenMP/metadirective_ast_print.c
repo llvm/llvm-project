@@ -15,18 +15,18 @@ void bar(void);
 #define N 10
 void foo(void) {
 #pragma omp metadirective when(device = {kind(cpu)} \
-                               : parallel) otherwise()
+                               : parallel) default()
   bar();
 #pragma omp metadirective when(implementation = {vendor(score(0)  \
                                                         : llvm)}, \
                                device = {kind(cpu)}               \
-                               : parallel) otherwise(target teams)
+                               : parallel) default(target teams)
   bar();
 #pragma omp metadirective when(device = {kind(gpu)}                                 \
                                : target teams) when(implementation = {vendor(llvm)} \
-                                                    : parallel) otherwise()
+                                                    : parallel) default()
   bar();
-#pragma omp metadirective otherwise(target) when(implementation = {vendor(score(5)  \
+#pragma omp metadirective default(target) when(implementation = {vendor(score(5)  \
                                                                         : llvm)}, \
                                                device = {kind(cpu, host)}         \
                                                : parallel)
@@ -40,15 +40,15 @@ void foo(void) {
   for (int i = 0; i < 100; i++)
     ;
 #pragma omp metadirective when(implementation = {extension(match_all)} \
-                               : parallel) otherwise(parallel for)
+                               : parallel) default(parallel for)
   for (int i = 0; i < 100; i++)
     ;
 #pragma omp metadirective when(implementation = {extension(match_any)} \
-                               : parallel) otherwise(parallel for)
+                               : parallel) default(parallel for)
   for (int i = 0; i < 100; i++)
     ;
 #pragma omp metadirective when(implementation = {extension(match_none)} \
-                               : parallel) otherwise(parallel for)
+                               : parallel) default(parallel for)
   for (int i = 0; i < 100; i++)
     ;
 
@@ -64,17 +64,17 @@ void foo(void) {
 
 #pragma omp metadirective when(device={arch("amdgcn")}: \
                                 teams distribute parallel for)\
-                                otherwise(parallel for)
+                                default(parallel for)
   for (int i = 0; i < 100; i++)
   ;
 
 #pragma omp metadirective when(implementation = {extension(match_all)} \
-                               : nothing) otherwise(parallel for)
+                               : nothing) default(parallel for)
   for (int i = 0; i < 16; i++)
     ;
 
 #pragma omp metadirective when(implementation = {extension(match_any)} \
-                               : parallel) otherwise(nothing)
+                               : parallel) default(nothing)
   for (int i = 0; i < 16; i++)
     ;
 }

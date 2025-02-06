@@ -8,7 +8,7 @@ void bar();
 
 void x86_64_device_isa_selected() {
 #pragma omp metadirective when(device = {isa("sse2")} \
-                               : parallel) otherwise(single)
+                               : parallel) default(single)
   bar();
 }
 // CHECK-LABEL: void @_Z26x86_64_device_isa_selectedv()
@@ -21,7 +21,7 @@ void x86_64_device_isa_selected() {
 
 void x86_64_device_isa_not_selected() {
 #pragma omp metadirective when(device = {isa("some-unsupported-feature")} \
-                               : parallel) otherwise(single)
+                               : parallel) default(single)
   bar();
 }
 // CHECK-LABEL: void @_Z30x86_64_device_isa_not_selectedv()
