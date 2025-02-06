@@ -2933,6 +2933,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Instrument intrinsics that look like a simple SIMD store: writes memory,
   /// has 1 pointer argument and 1 vector argument, returns void.
   bool handleVectorStoreIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 2);
+
     IRBuilder<> IRB(&I);
     Value *Addr = I.getArgOperand(0);
     Value *Shadow = getShadow(&I, 1);
@@ -2958,6 +2960,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Instrument intrinsics that look like a simple SIMD load: reads memory,
   /// has 1 pointer argument, returns a vector.
   bool handleVectorLoadIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 1);
+
     IRBuilder<> IRB(&I);
     Value *Addr = I.getArgOperand(0);
 
@@ -3497,6 +3501,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // The return type does not need to be the same type as the fields
   // e.g., declare i32 @llvm.aarch64.neon.uaddv.i32.v16i8(<16 x i8>)
   void handleVectorReduceIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 1);
+
     IRBuilder<> IRB(&I);
     Value *S = IRB.CreateOrReduce(getShadow(&I, 0));
     S = CreateShadowCast(IRB, S, getShadowTy(&I));
@@ -3509,6 +3515,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // %a1)
   //       shadow = shadow[a0] | shadow[a1.0] | shadow[a1.1]
   void handleVectorReduceWithStarterIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 2);
+
     IRBuilder<> IRB(&I);
     Value *Shadow0 = getShadow(&I, 0);
     Value *Shadow1 = IRB.CreateOrReduce(getShadow(&I, 1));
@@ -3521,6 +3529,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // Valid (non-poisoned) set bits in the operand pull low the
   // corresponding shadow bits.
   void handleVectorReduceOrIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 1);
+
     IRBuilder<> IRB(&I);
     Value *OperandShadow = getShadow(&I, 0);
     Value *OperandUnsetBits = IRB.CreateNot(I.getOperand(0));
@@ -3539,6 +3549,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // Valid (non-poisoned) unset bits in the operand pull down the
   // corresponding shadow bits.
   void handleVectorReduceAndIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 1);
+
     IRBuilder<> IRB(&I);
     Value *OperandShadow = getShadow(&I, 0);
     Value *OperandSetOrPoison = IRB.CreateOr(I.getOperand(0), OperandShadow);
@@ -3801,6 +3813,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // (and we) do not reduce AVX/AVX2 masked intrinsics into LLVM masked
   // intrinsics.
   void handleAVXMaskedStore(IntrinsicInst &I) {
+    assert(I.arg_size() == 3);
+
     IRBuilder<> IRB(&I);
 
     Value *Dst = I.getArgOperand(0);
@@ -3865,6 +3879,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // because we need to apply getShadowOriginPtr, not getShadow, to the first
   // parameter.
   void handleAVXMaskedLoad(IntrinsicInst &I) {
+    assert(I.arg_size() == 2);
+
     IRBuilder<> IRB(&I);
 
     Value *Src = I.getArgOperand(0);
@@ -4298,7 +4314,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // Approximation only
+  //
+  // e.g., <16 x i8> @llvm.aarch64.neon.pmull64(i64, i64)
   void handleNEONVectorMultiplyIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 2);
+
     handleShadowOr(I);
   }
 
