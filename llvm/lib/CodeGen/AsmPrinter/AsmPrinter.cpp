@@ -2854,8 +2854,8 @@ void AsmPrinter::emitConstantPool() {
 // function.
 void AsmPrinter::emitJumpTableInfo() {
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
-  if (!MJTI)
-    return;
+  if (!MJTI) return;
+
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
   if (JT.empty()) return;
 
@@ -2908,14 +2908,12 @@ void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
   }
 
   const DataLayout &DL = MF->getDataLayout();
+  emitAlignment(Align(MJTI.getEntryAlignment(DL)));
 
-  emitAlignment(Align(MJTI.getEntryAlignment(MF->getDataLayout())));
-
-  if (!JTInDiffSection) {
-    // Jump tables in code sections are marked with a data_region directive
-    // where that's supported.
+  // Jump tables in code sections are marked with a data_region directive
+  // where that's supported.
+  if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionJT32);
-  }
 
   for (const unsigned JumpTableIndex : JumpTableIndices) {
     ArrayRef<MachineBasicBlock *> JTBBs = JT[JumpTableIndex].MBBs;

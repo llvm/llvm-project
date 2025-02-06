@@ -1,21 +1,23 @@
-; -stats requires asserts
-; REQUIRES: asserts
+; The llc commands override two options
+; - 'aarch64-enable-atomic-cfg-tidy' to false to turn off simplifycfg pass,
+;    which can simplify away switch instructions before isel lowers switch instructions.
+; - 'aarch64-min-jump-table-entries' so 'switch' needs fewer cases to generate
+;    a jump table.
 
-; Stop after 'finalize-isel' for simpler MIR.
-; Override 'aarch64-enable-atomic-cfg-tidy' to false to turn off simplifycfg
-; pass, which can simplify away switch instructions before isel lowers switch
-; into jump tables.
-; Override 'aarch64-min-jump-table-entries' so 'switch' needs fewer cases to
-; generate a jump table.
-; RUN: llc -mtriple=aarch64-unknown-linux-gnu -stop-after=finalize-isel -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 %s -o %t.mir
-; RUN: llc -mtriple=aarch64-unknown-linux-gnu --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
+; The static-data-splitter pass doesn't run.
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -function-sections=true \
+; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
+; RUN:     -unique-section-names=true %s -o - 2>&1 | FileCheck %s --check-prefixes=DEFAULT
 
- ; @foo has 2 hot and 2 cold jump tables.
- ; The two jump tables with unknown hotness come from @func_without_profile and
- ; @bar respectively.
-; STAT: 2 static-data-splitter - Number of cold jump tables seen
-; STAT: 2 static-data-splitter - Number of hot jump tables seen
-; STAT: 2 static-data-splitter - Number of jump tables with unknown hotness
+; DEFAULT: .section .rodata.hot.foo,"a",@progbits
+; DEFAULT:   .LJTI0_0:
+; DEFAULT:   .LJTI0_1:
+; DEFAULT:   .LJTI0_2:
+; DEFAULT:   .LJTI0_3:
+; DEFAULT: .section .rodata.func_without_profile,"a",@progbits
+; DEFAULT:   .LJTI1_0:
+; DEFAULT: .section .rodata.bar_prefix.bar,"a",@progbits
+; DEFAULT: .LJTI2_0
 
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions \
 ; RUN:     -partition-static-data-sections=true -function-sections=true \
@@ -41,25 +43,24 @@
 ; FUNCLESS: .section .rodata.hot.,"a",@progbits
 ; JT: .LJTI0_0:
 ; JT: .LJTI0_2:
-; NUM:    	.section	.rodata.unlikely.,"a",@progbits,unique,3
-; FUNC:       .section .rodata.unlikely.foo,"a",@progbits
+; NUM:        .section .rodata.unlikely.,"a",@progbits,unique,3
+; FUNC:       .section .rodata.unlikely.foo,
 ; FUNCLESS:   .section .rodata.unlikely.,"a",@progbits
 ; JT: .LJTI0_1:
 ; JT: .LJTI0_3:
 
-; @func_without_profile simulates the functions without profile information
-; (e.g., not instrumented or not profiled), its jump tables are placed in
-; sections without hot or unlikely prefixes.
-; NUM: .section .rodata,"a",@progbits,unique,5
-; FUNC: .section .rodata.func_without_profile,"a",@progbits
-; FUNCLESS: .section .rodata,"a",@progbits
+; func_without_profile doesn't have profiles, so its jumptable doesn't have
+; hotness-based prefix.
+; NUM:        .section .rodata,"a",@progbits,unique,5
+; FUNC:       .section .rodata.func_without_profile,"a",@progbits
+; FUNCLESS:   .section .rodata,"a",@progbits
 ; JT: .LJTI1_0:
 
 ; @bar doesn't have profile information and it has a section prefix.
 ; Tests that its jump tables are placed in sections with function prefixes.
-; NUM: .section .rodata.bar_prefix.,"a",@progbits,unique,7
-; FUNC: .section .rodata.bar_prefix.bar
-; FUNCLESS: .section .rodata.bar_prefix.,"a"
+; NUM:        .section .rodata.bar_prefix.,"a",@progbits,unique,7
+; FUNC:       .section .rodata.bar_prefix.bar
+; FUNCLESS:   .section .rodata.bar_prefix.,"a"
 ; JT: .LJTI2_0
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"

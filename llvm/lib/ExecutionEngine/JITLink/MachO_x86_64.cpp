@@ -13,7 +13,9 @@
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
 #include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
 
+#include "CompactUnwindSupport.h"
 #include "DefineExternalSectionStartAndEndSymbols.h"
 #include "MachOLinkGraphBuilder.h"
 
@@ -500,25 +502,56 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromMachOObject_x86_64(
       .buildGraph();
 }
 
+struct CompactUnwindTraits_MachO_x86_64
+    : public CompactUnwindTraits<CompactUnwindTraits_MachO_x86_64,
+                                 /* PointerSize = */ 8> {
+  // FIXME: Reinstate once we no longer need the MSVC workaround. See
+  //        FIXME for CompactUnwindTraits in CompactUnwindSupport.h.
+  // constexpr static size_t PointerSize = 8;
+
+  constexpr static endianness Endianness = endianness::little;
+
+  constexpr static uint32_t EncodingModeMask = 0x0f000000;
+
+  using GOTManager = x86_64::GOTTableManager;
+
+  static bool encodingSpecifiesDWARF(uint32_t Encoding) {
+    constexpr uint32_t DWARFMode = 0x04000000;
+    return (Encoding & EncodingModeMask) == DWARFMode;
+  }
+
+  static bool encodingCannotBeMerged(uint32_t Encoding) {
+    constexpr uint32_t StackIndirectMode = 0x03000000;
+    return (Encoding & EncodingModeMask) == StackIndirectMode;
+  }
+};
+
 void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
                        std::unique_ptr<JITLinkContext> Ctx) {
 
   PassConfiguration Config;
 
   if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
-    // Add eh-frame passes.
-    Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_x86_64());
-    Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_x86_64());
-
-    // Add compact unwind splitter pass.
-    Config.PrePrunePasses.push_back(
-        CompactUnwindSplitter("__LD,__compact_unwind"));
-
     // Add a mark-live pass.
     if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))
       Config.PrePrunePasses.push_back(std::move(MarkLive));
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
+
+    // Add eh-frame passes.
+    Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_x86_64());
+    Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_x86_64());
+
+    // Create a compact-unwind manager for use in passes below.
+    auto CompactUnwindMgr = std::make_shared<
+        CompactUnwindManager<CompactUnwindTraits_MachO_x86_64>>(
+        orc::MachOCompactUnwindSectionName, orc::MachOUnwindInfoSectionName,
+        orc::MachOEHFrameSectionName);
+
+    // Add compact unwind prepare pass.
+    Config.PrePrunePasses.push_back([CompactUnwindMgr](LinkGraph &G) {
+      return CompactUnwindMgr->prepareForPrune(G);
+    });
 
     // Resolve any external section start / end symbols.
     Config.PostAllocationPasses.push_back(
@@ -527,6 +560,16 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
 
     // Add an in-place GOT/Stubs pass.
     Config.PostPrunePasses.push_back(buildGOTAndStubs_MachO_x86_64);
+
+    // Reserve space for unwind-info.
+    Config.PostPrunePasses.push_back([CompactUnwindMgr](LinkGraph &G) {
+      return CompactUnwindMgr->processAndReserveUnwindInfo(G);
+    });
+
+    // Translate compact-unwind to unwind-info.
+    Config.PreFixupPasses.push_back([CompactUnwindMgr](LinkGraph &G) {
+      return CompactUnwindMgr->writeUnwindInfo(G);
+    });
 
     // Add GOT/Stubs optimizer pass.
     Config.PreFixupPasses.push_back(x86_64::optimizeGOTAndStubAccesses);
@@ -540,11 +583,11 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
 }
 
 LinkGraphPassFunction createEHFrameSplitterPass_MachO_x86_64() {
-  return DWARFRecordSectionSplitter("__TEXT,__eh_frame");
+  return DWARFRecordSectionSplitter(orc::MachOEHFrameSectionName);
 }
 
 LinkGraphPassFunction createEHFrameEdgeFixerPass_MachO_x86_64() {
-  return EHFrameEdgeFixer("__TEXT,__eh_frame", x86_64::PointerSize,
+  return EHFrameEdgeFixer(orc::MachOEHFrameSectionName, x86_64::PointerSize,
                           x86_64::Pointer32, x86_64::Pointer64, x86_64::Delta32,
                           x86_64::Delta64, x86_64::NegDelta32);
 }

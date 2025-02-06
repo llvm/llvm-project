@@ -112,6 +112,8 @@ public:
   const MCExpr *lowerBlockAddressConstant(const BlockAddress &BA) override;
 
   void emitStartOfAsmFile(Module &M) override;
+  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                         ArrayRef<unsigned> JumpTableIndices) override;
   std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
              codeview::JumpTableEntrySize>
   getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
@@ -268,8 +270,6 @@ private:
 
   void emitFunctionBodyEnd() override;
   void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
-  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
-                         ArrayRef<unsigned> JumpTableIndices) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
   void emitEndOfAsmFile(Module &M) override;
@@ -1276,9 +1276,9 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 
 void AArch64AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
                                           ArrayRef<unsigned> JumpTableIndices) {
+  // Fast return if there is nothing to emit to avoid creating empty sections.
   if (JumpTableIndices.empty())
     return;
-
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   const auto &F = MF->getFunction();
   const std::vector<MachineJumpTableEntry> &JT = MJTI.getJumpTables();

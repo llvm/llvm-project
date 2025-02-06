@@ -1584,6 +1584,15 @@ static void genParallelClauses(
   cp.processReduction(loc, clauseOps, reductionSyms);
 }
 
+static void genScanClauses(lower::AbstractConverter &converter,
+                           semantics::SemanticsContext &semaCtx,
+                           const List<Clause> &clauses, mlir::Location loc,
+                           mlir::omp::ScanOperands &clauseOps) {
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processInclusive(loc, clauseOps);
+  cp.processExclusive(loc, clauseOps);
+}
+
 static void genSectionsClauses(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     const List<Clause> &clauses, mlir::Location loc,
@@ -1979,6 +1988,16 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       genOpWithBody<mlir::omp::ParallelOp>(genInfo, queue, item, clauseOps);
   parallelOp.setComposite(isComposite);
   return parallelOp;
+}
+
+static mlir::omp::ScanOp
+genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
+          semantics::SemanticsContext &semaCtx, mlir::Location loc,
+          const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+  mlir::omp::ScanOperands clauseOps;
+  genScanClauses(converter, semaCtx, item->clauses, loc, clauseOps);
+  return converter.getFirOpBuilder().create<mlir::omp::ScanOp>(
+      converter.getCurrentLocation(), clauseOps);
 }
 
 /// This breaks the normal prototype of the gen*Op functions: adding the
@@ -2990,7 +3009,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     genStandaloneParallel(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_scan:
-    TODO(loc, "Unhandled directive " + llvm::omp::getOpenMPDirectiveName(dir));
+    genScanOp(converter, symTable, semaCtx, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_section:
     llvm_unreachable("genOMPDispatch: OMPD_section");

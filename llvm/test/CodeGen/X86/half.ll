@@ -1603,15 +1603,15 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm4, %xmm2
 ; BWON-F16C-NEXT:    vmovd %xmm2, %ecx
 ; BWON-F16C-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm3
-; BWON-F16C-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
-; BWON-F16C-NEXT:    vucomiss %xmm3, %xmm2
+; BWON-F16C-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; BWON-F16C-NEXT:    vcvtph2ps %xmm3, %xmm3
+; BWON-F16C-NEXT:    vucomiss %xmm2, %xmm3
 ; BWON-F16C-NEXT:    ja .LBB26_6
 ; BWON-F16C-NEXT:  # %bb.5:
-; BWON-F16C-NEXT:    vmovaps %xmm3, %xmm2
+; BWON-F16C-NEXT:    vmovaps %xmm2, %xmm3
 ; BWON-F16C-NEXT:  .LBB26_6:
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm3, %xmm2
 ; BWON-F16C-NEXT:    vmovd %xmm2, %edx
 ; BWON-F16C-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm3

@@ -918,6 +918,13 @@ public:
   bool verify(Pass *p = nullptr, const char *Banner = nullptr,
               raw_ostream *OS = nullptr, bool AbortOnError = true) const;
 
+  /// For New Pass Manager: Run the current MachineFunction through the machine
+  /// code verifier, useful for debugger use.
+  /// \returns true if no problems were found.
+  bool verify(MachineFunctionAnalysisManager &MFAM,
+              const char *Banner = nullptr, raw_ostream *OS = nullptr,
+              bool AbortOnError = true) const;
+
   /// Run the current MachineFunction through the machine code verifier, useful
   /// for debugger use.
   /// \returns true if no problems were found.

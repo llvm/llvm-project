@@ -78,7 +78,8 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr4:$pad,
     TypeAttrOf<Tosa_AccType>:$acc_type,
-    OptionalAttr<Tosa_UnaryOpQuantizationAttr>:$quantization_info
+    OptionalAttr<I32Attr>:$input_zp,
+    OptionalAttr<I32Attr>:$output_zp
   );
 
   let results = (outs
@@ -237,7 +238,8 @@ def Tosa_FullyConnectedOp : Tosa_InferShapedTypeOp<"fully_connected"> {
     Tosa_Tensor2D:$input,
     TosaTensorRankOf<[Tosa_Weight], [2]>:$weight,
     Tosa_Tensor1D:$bias,
-    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info
+    OptionalAttr<I32Attr>:$input_zp,
+    OptionalAttr<I32Attr>:$weight_zp
   );
 
   let results = (outs
@@ -263,7 +265,8 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
   let arguments = (ins
     Tosa_Tensor3D:$a,
     Tosa_Tensor3D:$b,
-    OptionalAttr<Tosa_MatMulOpQuantizationAttr>:$quantization_info
+    OptionalAttr<I32Attr>:$a_zp,
+    OptionalAttr<I32Attr>:$b_zp
   );
 
   let results = (outs
@@ -1114,7 +1117,8 @@ def Tosa_NegateOp : Tosa_ElementwiseUnaryOp<"negate"> {
 
   let arguments = (ins
       Tosa_Tensor:$input1,
-      OptionalAttr<Tosa_UnaryOpQuantizationAttr>:$quantization_info
+      OptionalAttr<I32Attr>:$input1_zp,
+      OptionalAttr<I32Attr>:$output_zp
   );
 
   let results = (outs
@@ -1589,7 +1593,7 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
     Tosa_RankedTensor:$input1,
     Tosa_Shape:$padding,
     Optional<Tosa_ScalarTensor>:$pad_const,
-    OptionalAttr<Tosa_PadOpQuantizationAttr>:$quantization_info
+    OptionalAttr<I32Attr>:$input_zp
   );
 
   let results = (outs

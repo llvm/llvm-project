@@ -337,6 +337,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.readlink
     libc.src.unistd.readlinkat
     libc.src.unistd.rmdir
+    libc.src.unistd.setsid
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
     libc.src.unistd.sysconf
