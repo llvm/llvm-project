@@ -1648,7 +1648,8 @@ void ToolChain::TranslateXarchArgs(
       A->getOption().matches(options::OPT_Xarch_host))
     ValuePos = 0;
 
-  unsigned Index = Args.getBaseArgs().MakeIndex(A->getValue(ValuePos));
+  const InputArgList &BaseArgs = Args.getBaseArgs();
+  unsigned Index = BaseArgs.MakeIndex(A->getValue(ValuePos));
   unsigned Prev = Index;
   std::unique_ptr<llvm::opt::Arg> XarchArg(Opts.ParseOneArg(Args, Index));
 
@@ -1672,8 +1673,31 @@ void ToolChain::TranslateXarchArgs(
     Diags.Report(DiagID) << A->getAsString(Args);
     return;
   }
+
   XarchArg->setBaseArg(A);
   A = XarchArg.release();
+
+  // Linker input arguments require custom handling. The problem is that we
+  // have already constructed the phase actions, so we can not treat them as
+  // "input arguments".
+  if (A->getOption().hasFlag(options::LinkerInput)) {
+    // Convert the argument into individual Zlinker_input_args. Need to do this
+    // manually to avoid memory leaks with the allocated arguments.
+    for (const char *Value : A->getValues()) {
+      auto Opt = Opts.getOption(options::OPT_Zlinker_input);
+      unsigned Index = BaseArgs.MakeIndex(Opt.getName(), Value);
+      auto NewArg =
+          new Arg(Opt, BaseArgs.MakeArgString(Opt.getPrefix() + Opt.getName()),
+                  Index, BaseArgs.getArgString(Index + 1), A);
+
+      DAL->append(NewArg);
+      if (!AllocatedArgs)
+        DAL->AddSynthesizedArg(NewArg);
+      else
+        AllocatedArgs->push_back(NewArg);
+    }
+  }
+
   if (!AllocatedArgs)
     DAL->AddSynthesizedArg(A);
   else
@@ -1697,19 +1721,17 @@ llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
     } else if (A->getOption().matches(options::OPT_Xarch_host)) {
       NeedTrans = !IsDevice;
       Skip = IsDevice;
-    } else if (A->getOption().matches(options::OPT_Xarch__) && IsDevice) {
-      // Do not translate -Xarch_ options for non CUDA/HIP toolchain since
-      // they may need special translation.
-      // Skip this argument unless the architecture matches BoundArch
-      if (BoundArch.empty() || A->getValue(0) != BoundArch)
-        Skip = true;
-      else
-        NeedTrans = true;
+    } else if (A->getOption().matches(options::OPT_Xarch__)) {
+      NeedTrans = A->getValue() == getArchName() ||
+                  (!BoundArch.empty() && A->getValue() == BoundArch);
+      Skip = !NeedTrans;
     }
     if (NeedTrans || Skip)
       Modified = true;
-    if (NeedTrans)
+    if (NeedTrans) {
+      A->claim();
       TranslateXarchArgs(Args, A, DAL, AllocatedArgs);
+    }
     if (!Skip)
       DAL->append(A);
   }

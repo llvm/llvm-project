@@ -2800,7 +2800,8 @@ static void configureBlocksRuntimeObject(CodeGenModule &CGM,
                                          llvm::Constant *C) {
   auto *GV = cast<llvm::GlobalValue>(C->stripPointerCasts());
 
-  if (CGM.getTarget().getTriple().isOSBinFormatCOFF()) {
+  if (!CGM.getCodeGenOpts().StaticClosure &&
+      CGM.getTarget().getTriple().isOSBinFormatCOFF()) {
     const IdentifierInfo &II = CGM.getContext().Idents.get(C->getName());
     TranslationUnitDecl *TUDecl = CGM.getContext().getTranslationUnitDecl();
     DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
@@ -2815,7 +2816,6 @@ static void configureBlocksRuntimeObject(CodeGenModule &CGM,
           (ND = dyn_cast<VarDecl>(Result)))
         break;
 
-    // TODO: support static blocks runtime
     if (GV->isDeclaration() && (!ND || !ND->hasAttr<DLLExportAttr>())) {
       GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
       GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
