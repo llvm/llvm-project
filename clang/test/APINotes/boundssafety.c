@@ -1,3 +1,6 @@
+// rdar://144275431: Clang module support for TypeCoupledDeclRefInfo is broken on Linux
+// REQUIRES: system-darwin
+
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fsyntax-only -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks -fexperimental-bounds-safety-attributes %s -ast-dump -ast-dump-filter asdf | FileCheck %s
 
