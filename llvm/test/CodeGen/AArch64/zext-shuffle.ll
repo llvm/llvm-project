@@ -646,9 +646,10 @@ define <4 x i32> @isUndefDeInterleave_t3(<8 x i16> %a) {
 define <4 x i32> @isUndefDeInterleave_b0_bad(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: isUndefDeInterleave_b0_bad:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    adrp x8, .LCPI40_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI40_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ret
   %2 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 4, i32 4, i32 0, i32 4, i32 poison, i32 poison, i32 poison, i32 poison>
   %s2 = shufflevector <8 x i16> %2, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -659,8 +660,10 @@ define <4 x i32> @isUndefDeInterleave_b0_bad(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @isUndefDeInterleave_t1_bad(<8 x i16> %a) {
 ; CHECK-LABEL: isUndefDeInterleave_t1_bad:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
+; CHECK-NEXT:    adrp x8, .LCPI41_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI41_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
 ; CHECK-NEXT:    ret
   %2 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 4, i32 4, i32 1, i32 5>
   %s2 = shufflevector <8 x i16> %2, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -671,10 +674,8 @@ define <4 x i32> @isUndefDeInterleave_t1_bad(<8 x i16> %a) {
 define i16 @undeftop(<8 x i16> %0) {
 ; CHECK-LABEL: undeftop:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    add v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    dup v0.8h, v0.h[4]
+; CHECK-NEXT:    uaddl v0.4s, v0.4h, v0.4h
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    ret
