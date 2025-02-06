@@ -7332,8 +7332,8 @@ bool EquatableFormatArgument::VerifyCompatible(
                    S.PDiag(diag::warn_format_cmp_sensitivity_mismatch)
                        << Sensitivity << Other.Sensitivity,
                    FmtExpr, InFunctionCall);
-    S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
-    HadError = true;
+    HadError = S.Diag(Other.ElementLoc, diag::note_format_cmp_with)
+               << 0 << Other.Range;
   }
 
   switch (ArgType.matchesArgType(S.Context, Other.ArgType)) {
@@ -7351,8 +7351,8 @@ bool EquatableFormatArgument::VerifyCompatible(
                        << buildFormatSpecifier()
                        << Other.buildFormatSpecifier(),
                    FmtExpr, InFunctionCall);
-    S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
-    HadError = true;
+    HadError = S.Diag(Other.ElementLoc, diag::note_format_cmp_with)
+               << 0 << Other.Range;
     break;
 
   case MK::NoMatchPedantic:
@@ -7361,8 +7361,8 @@ bool EquatableFormatArgument::VerifyCompatible(
                        << buildFormatSpecifier()
                        << Other.buildFormatSpecifier(),
                    FmtExpr, InFunctionCall);
-    S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
-    HadError = true;
+    HadError = S.Diag(Other.ElementLoc, diag::note_format_cmp_with)
+               << 0 << Other.Range;
     break;
 
   case MK::NoMatchSignedness:
@@ -7374,8 +7374,8 @@ bool EquatableFormatArgument::VerifyCompatible(
                          << buildFormatSpecifier()
                          << Other.buildFormatSpecifier(),
                      FmtExpr, InFunctionCall);
-      S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
-      HadError = true;
+      HadError = S.Diag(Other.ElementLoc, diag::note_format_cmp_with)
+                 << 0 << Other.Range;
     }
     break;
   }
@@ -8500,35 +8500,35 @@ static bool CompareFormatSpecifiers(Sema &S, const StringLiteral *Ref,
   auto RefIter = RefArgs.begin(), RefEnd = RefArgs.end();
   while (FmtIter < FmtEnd && RefIter < RefEnd) {
     // In positional-style format strings, the same specifier can appear
-    // multiple times. In the Ref format string, we have already verified that
-    // each repetition of the same positional specifier are mutually compatible,
-    // so we only need to test each repetition in the Fmt string with the first
-    // corresponding Ref specifier.
-    auto FmtIterEnd = std::find_if(FmtIter + 1, FmtEnd, [=](const auto &Arg) {
-      return Arg.getPosition() != FmtIter->getPosition();
-    });
-    auto RefIterEnd = std::find_if(RefIter + 1, RefEnd, [=](const auto &Arg) {
-      return Arg.getPosition() != RefIter->getPosition();
-    });
+    // multiple times (like %2$i %2$d). Specifiers in both RefArgs and FmtArgs
+    // are sorted by getPosition(), and we process each range of equal
+    // getPosition() values as one group.
+    // RefArgs are taken from a string literal that was given to
+    // attribute(format_matches), and if we got this far, we have already
+    // verified that if it has positional specifiers that appear in multiple
+    // locations, then they are all mutually compatible. What's left for us to
+    // do is verify that all specifiers with the same position in FmtArgs are
+    // compatible with the RefArgs specifiers. We check each specifier from
+    // FmtArgs against the first member of the RefArgs group.
+    for (; FmtIter < FmtEnd; ++FmtIter) {
+      // Clang does not diagnose missing format specifiers in positional-style
+      // strings (TODO: which it probably should do, as it is UB to skip over a
+      // format argument). Skip specifiers if needed.
+      if (FmtIter->getPosition() < RefIter->getPosition())
+        continue;
 
-    // Clang does not diagnose missing format specifiers in positional-style
-    // strings (TODO: which it probably should do, as it is UB to skip over a
-    // format argument). Skip specifiers if needed.
-    if (FmtIter->getPosition() < RefIter->getPosition()) {
-      FmtIter = FmtIterEnd;
-      continue;
-    }
-    if (RefIter->getPosition() < FmtIter->getPosition()) {
-      RefIter = RefIterEnd;
-      continue;
-    }
+      // Delimits a new getPosition() value.
+      if (FmtIter->getPosition() > RefIter->getPosition())
+        break;
 
-    while (FmtIter != FmtIterEnd) {
       HadError |=
           !FmtIter->VerifyCompatible(S, *RefIter, FmtExpr, InFunctionCall);
-      ++FmtIter;
     }
-    RefIter = RefIterEnd;
+
+    // Jump RefIter to the start of the next group.
+    RefIter = std::find_if(RefIter + 1, RefEnd, [=](const auto &Arg) {
+      return Arg.getPosition() != RefIter->getPosition();
+    });
   }
 
   if (FmtIter < FmtEnd) {
@@ -8536,16 +8536,14 @@ static bool CompareFormatSpecifiers(Sema &S, const StringLiteral *Ref,
         S, InFunctionCall, FmtExpr,
         S.PDiag(diag::warn_format_cmp_specifier_arity) << 1,
         FmtExpr->getBeginLoc(), false, FmtIter->getSourceRange());
-    S.Diag(Ref->getBeginLoc(), diag::note_format_cmp_with) << 1;
-    HadError = true;
+    HadError = S.Diag(Ref->getBeginLoc(), diag::note_format_cmp_with) << 1;
   } else if (RefIter < RefEnd) {
     CheckFormatHandler::EmitFormatDiagnostic(
         S, InFunctionCall, FmtExpr,
         S.PDiag(diag::warn_format_cmp_specifier_arity) << 0,
         FmtExpr->getBeginLoc(), false, Fmt->getSourceRange());
-    S.Diag(Ref->getBeginLoc(), diag::note_format_cmp_with)
-        << 1 << RefIter->getSourceRange();
-    HadError = true;
+    HadError = S.Diag(Ref->getBeginLoc(), diag::note_format_cmp_with)
+               << 1 << RefIter->getSourceRange();
   }
   return !HadError;
 }
@@ -8683,21 +8681,22 @@ bool Sema::ValidateFormatString(FormatStringType Type,
                                              true, Args))
     return false;
 
-  // If positional arguments are used multiple times in the same format string,
-  // ensure that they are used in compatible ways.
+  // Group arguments by getPosition() value, and check that each member of the
+  // group is compatible with the first member. This verifies that when
+  // positional arguments are used multiple times (such as %2$i %2$d), all uses
+  // are mutually compatible. As an optimization, don't test the first member
+  // against itself.
   bool HadError = false;
   auto Iter = Args.begin();
   auto End = Args.end();
   while (Iter != End) {
-    auto PosEnd = std::find_if(Iter + 1, End, [=](const auto &Arg) {
-      return Arg.getPosition() != Iter->getPosition();
-    });
-    for (auto PosIter = Iter + 1; PosIter != PosEnd; ++PosIter) {
-      HadError |= !PosIter->VerifyCompatible(*this, *Iter, Str, true);
+    const auto &FirstInGroup = *Iter;
+    for (++Iter;
+         Iter != End && Iter->getPosition() == FirstInGroup.getPosition();
+         ++Iter) {
+      HadError |= !Iter->VerifyCompatible(*this, FirstInGroup, Str, true);
     }
-    Iter = PosEnd;
   }
-
   return !HadError;
 }
 
