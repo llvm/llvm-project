@@ -1,5 +1,6 @@
 function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
+
   # Remove -fno-math-errno if it was added.
   if(LIBC_ADD_FNO_MATH_ERRNO)
     list(REMOVE_ITEM compile_options "-fno-math-errno")
