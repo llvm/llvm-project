@@ -1976,7 +1976,11 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
 
-    // TODO: this is a bit of a hack for Fortran character boxes
+    // TODO: this is a bit of a hack for Fortran character boxes.
+    // Character boxes are passed by value into the init region and then the
+    // initialized character box is yielded by value. Here we need to store the
+    // yielded value into the private allocation, and load the private
+    // allocation to match the type expected by region block arguments.
     if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
         !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
       builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
