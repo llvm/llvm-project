@@ -136,3 +136,8 @@
 // RUN: %clang --target=amd64-unknown-openbsd -flto -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LTO-FLAGS %s
 // CHECK-LTO-FLAGS: "-plugin-opt=mcpu=x86-64"
+
+// Check 64-bit ARM for BTI and PAC flags
+// RUN: %clang --target=aarch64-unknown-openbsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-AARCH64-BTI-PAC %s
+// CHECK-AARCH64-BTI-PAC: "-msign-return-address=non-leaf" "-msign-return-address-key=a_key" "-mbranch-target-enforce"

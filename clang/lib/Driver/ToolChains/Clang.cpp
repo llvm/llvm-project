@@ -1567,15 +1567,21 @@ static void handlePAuthABI(const ArgList &DriverArgs, ArgStringList &CC1Args) {
 
 static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs, bool isAArch64) {
+  const llvm::Triple &Triple = TC.getEffectiveTriple();
   const Arg *A = isAArch64
                      ? Args.getLastArg(options::OPT_msign_return_address_EQ,
                                        options::OPT_mbranch_protection_EQ)
                      : Args.getLastArg(options::OPT_mbranch_protection_EQ);
-  if (!A)
+  if (!A) {
+    if (Triple.isOSOpenBSD() && isAArch64) {
+      CmdArgs.push_back("-msign-return-address=non-leaf");
+      CmdArgs.push_back("-msign-return-address-key=a_key");
+      CmdArgs.push_back("-mbranch-target-enforce");
+    }
     return;
+  }
 
   const Driver &D = TC.getDriver();
-  const llvm::Triple &Triple = TC.getEffectiveTriple();
   if (!(isAArch64 || (Triple.isArmT32() && Triple.isArmMClass())))
     D.Diag(diag::warn_incompatible_branch_protection_option)
         << Triple.getArchName();
@@ -1589,7 +1595,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Scope;
     Key = "a_key";
-    IndirectBranches = false;
+    IndirectBranches = Triple.isOSOpenBSD() && isAArch64;
     BranchProtectionPAuthLR = false;
     GuardedControlStack = false;
   } else {
