@@ -8,3 +8,7 @@ add_subdirectory(Frontend)
 add_subdirectory(FrontendTool)
 
 add_subdirectory(Optimizer)
+
+if (FLANG_INCLUDE_TESTS)
+  add_subdirectory(Testing)
+endif ()
