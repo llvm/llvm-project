@@ -112,6 +112,8 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -143,11 +145,15 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- HTML tags in comments that span multiple lines are now parsed correctly by Clang's comment parser. (#GH120843)
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -236,6 +242,11 @@ Static Analyzer
 
 New features
 ^^^^^^^^^^^^
+
+A new flag - `-static-libclosure` was introduced to support statically linking
+the runtime for the Blocks extension on Windows. This flag currently only
+changes the code generation, and even then, only on Windows. This does not
+impact the linker behaviour like the other `-static-*` flags.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

@@ -9451,7 +9451,8 @@ struct TargetOMPContext final : public llvm::omp::OMPContext {
   TargetOMPContext(ASTContext &ASTCtx,
                    std::function<void(StringRef)> &&DiagUnknownTrait,
                    const FunctionDecl *CurrentFunctionDecl,
-                   ArrayRef<llvm::omp::TraitProperty> ConstructTraits);
+                   ArrayRef<llvm::omp::TraitProperty> ConstructTraits,
+                   int DeviceNum);
 
   virtual ~TargetOMPContext() = default;
 

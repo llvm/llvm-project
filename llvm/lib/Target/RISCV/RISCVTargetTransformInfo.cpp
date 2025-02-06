@@ -1176,6 +1176,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::fmuladd: {
+    // TODO: handle promotion with f16/bf16 with zvfhmin/zvfbfmin
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector())
+      return LT.first *
+             getRISCVInstructionCost(RISCV::VFMADD_VV, LT.second, CostKind);
+    break;
+  }
   case Intrinsic::fabs: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
@@ -2758,7 +2766,12 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
         return false;
     }
 
-    Ops.push_back(&Op->getOperandUse(0));
+    Use *InsertEltUse = &Op->getOperandUse(0);
+    // Sink any fpexts since they might be used in a widening fp pattern.
+    auto *InsertElt = cast<InsertElementInst>(InsertEltUse);
+    if (isa<FPExtInst>(InsertElt->getOperand(1)))
+      Ops.push_back(&InsertElt->getOperandUse(1));
+    Ops.push_back(InsertEltUse);
     Ops.push_back(&OpIdx.value());
   }
   return true;

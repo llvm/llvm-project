@@ -103,12 +103,22 @@ llvm.func @floor_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.return
 }
 
-// CHECK-LABEL: @cos_test
-llvm.func @cos_test(%arg0: f32, %arg1: vector<8xf32>) {
+// CHECK-LABEL: @trig_test
+llvm.func @trig_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call float @llvm.sin.f32
+  llvm.intr.sin(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.sin.v8f32
+  llvm.intr.sin(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
   // CHECK: call float @llvm.cos.f32
-  "llvm.intr.cos"(%arg0) : (f32) -> f32
+  llvm.intr.cos(%arg0) : (f32) -> f32
   // CHECK: call <8 x float> @llvm.cos.v8f32
-  "llvm.intr.cos"(%arg1) : (vector<8xf32>) -> vector<8xf32>
+  llvm.intr.cos(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
+  // CHECK: call float @llvm.tan.f32
+  llvm.intr.tan(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.tan.v8f32
+  llvm.intr.tan(%arg1) : (vector<8xf32>) -> vector<8xf32>
   llvm.return
 }
 
