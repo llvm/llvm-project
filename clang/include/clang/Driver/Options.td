@@ -6876,6 +6876,7 @@ defm backslash : OptInFC1FFlag<"backslash", "Specify that backslash in string in
 defm xor_operator : OptInFC1FFlag<"xor-operator", "Enable .XOR. as a synonym of .NEQV.">;
 defm logical_abbreviations : OptInFC1FFlag<"logical-abbreviations", "Enable logical abbreviations">;
 defm implicit_none : OptInFC1FFlag<"implicit-none", "No implicit typing allowed unless overridden by IMPLICIT statements">;
+defm implicit_none_ext : OptInFC1FFlag<"implicit-none-ext", "No implicit externals allowed">;
 defm underscoring : OptInFC1FFlag<"underscoring", "Appends one trailing underscore to external names">;
 defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-vector-element-order",
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,

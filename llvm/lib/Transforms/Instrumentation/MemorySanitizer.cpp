@@ -3493,11 +3493,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Instrument generic vector reduction intrinsics
   // by ORing together all their fields.
+  //
+  // The return type does not need to be the same type as the fields
+  // e.g., declare i32 @llvm.aarch64.neon.uaddv.i32.v16i8(<16 x i8>)
   void handleVectorReduceIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *S = IRB.CreateOrReduce(getShadow(&I, 0));
+    S = CreateShadowCast(IRB, S, getShadowTy(&I));
     setShadow(&I, S);
-    setOrigin(&I, getOrigin(&I, 0));
+    setOriginForNaryOp(I);
+  }
+
+  // Similar to handleVectorReduceIntrinsic but with an initial starting value.
+  // e.g., call float @llvm.vector.reduce.fadd.f32.v2f32(float %a0, <2 x float>
+  // %a1)
+  //       shadow = shadow[a0] | shadow[a1.0] | shadow[a1.1]
+  void handleVectorReduceWithStarterIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Shadow0 = getShadow(&I, 0);
+    Value *Shadow1 = IRB.CreateOrReduce(getShadow(&I, 1));
+    Value *S = IRB.CreateOr(Shadow0, Shadow1);
+    setShadow(&I, S);
+    setOriginForNaryOp(I);
   }
 
   // Instrument vector.reduce.or intrinsic.
@@ -4346,8 +4363,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_xor:
     case Intrinsic::vector_reduce_mul:
+    // Add reduction to scalar
+    case Intrinsic::aarch64_neon_faddv:
+    case Intrinsic::aarch64_neon_saddv:
+    case Intrinsic::aarch64_neon_uaddv:
       handleVectorReduceIntrinsic(I);
       break;
+    case Intrinsic::vector_reduce_fadd:
+    case Intrinsic::vector_reduce_fmul:
+      handleVectorReduceWithStarterIntrinsic(I);
+      break;
+
     case Intrinsic::x86_sse_stmxcsr:
       handleStmxcsr(I);
       break;

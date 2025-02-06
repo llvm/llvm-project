@@ -6001,6 +6001,7 @@ cc_library(
         ":IR",
         ":LLVMCommonConversion",
         ":MemRefDialect",
+        ":NVGPUDialect",
         ":NVVMDialect",
         ":SCFDialect",
         ":Support",
