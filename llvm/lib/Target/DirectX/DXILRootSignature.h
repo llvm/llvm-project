@@ -79,7 +79,7 @@ public:
   RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
   const ModuleRootSignature &getRootSignature() { return MRS.value(); }
-  
+
   bool hasRootSignature() { return MRS.has_value(); }
 
   bool runOnModule(Module &M) override;
