@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <string>
 #include <unordered_map>
 #include <utility>
 
@@ -29,8 +28,6 @@ struct support::adapt_operations<std::unordered_map<K, V>> {
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::unordered_map<int, int>>("std::unordered_map<int, int>");
-  support::associative_container_benchmarks<std::unordered_map<std::string, int>>(
-      "std::unordered_map<std::string, int>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

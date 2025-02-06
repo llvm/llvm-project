@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <string>
 #include <unordered_map>
 
 #include "associative_container_benchmarks.h"
@@ -28,8 +27,6 @@ struct support::adapt_operations<std::unordered_multimap<K, V>> {
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::unordered_multimap<int, int>>("std::unordered_multimap<int, int>");
-  support::associative_container_benchmarks<std::unordered_multimap<std::string, int>>(
-      "std::unordered_multimap<std::string, int>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
