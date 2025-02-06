@@ -135,13 +135,11 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
       // variants.
     }
 
-  // If we have a CheckType/CheckChildType/Record node followed by a
-  // CheckOpcode, invert the two nodes.  We prefer to do structural checks
-  // before type checks, as this opens opportunities for factoring on targets
-  // like X86 where many operations are valid on multiple types.
-  if ((isa<CheckTypeMatcher>(N) || isa<CheckChildTypeMatcher>(N) ||
-       isa<RecordMatcher>(N)) &&
-      isa<CheckOpcodeMatcher>(N->getNext())) {
+  // If we have a Record node followed by a CheckOpcode, invert the two nodes.
+  // We prefer to do structural checks before type checks, as this opens
+  // opportunities for factoring on targets like X86 where many operations are
+  // valid on multiple types.
+  if (isa<RecordMatcher>(N) && isa<CheckOpcodeMatcher>(N->getNext())) {
     // Unlink the two nodes from the list.
     Matcher *CheckType = MatcherPtr.release();
     Matcher *CheckOpcode = CheckType->takeNext();
@@ -308,13 +306,8 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
 
     // If we removed any equal matchers, we may need to slide the rest of the
     // elements down for the next iteration of the outer loop.
-    if (J != K) {
-      while (J != E)
-        *K++ = *J++;
-
-      // Update end pointer for outer loop.
-      E = K;
-    }
+    if (J != K)
+      E = std::copy(J, E, K);
 
     // If we only found one option starting with this matcher, no factoring is
     // possible. Put the Matcher back in OptionsToMatch.

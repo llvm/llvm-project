@@ -5881,15 +5881,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N) {
-  SDLoc dl(N);
+  SDLoc DL(N);
+  unsigned Factor = N->getNumOperands();
 
-  SDValue V0 = GetPromotedInteger(N->getOperand(0));
-  SDValue V1 = GetPromotedInteger(N->getOperand(1));
-  EVT ResVT = V0.getValueType();
-  SDValue Res = DAG.getNode(N->getOpcode(), dl,
-                            DAG.getVTList(ResVT, ResVT), V0, V1);
-  SetPromotedInteger(SDValue(N, 0), Res.getValue(0));
-  SetPromotedInteger(SDValue(N, 1), Res.getValue(1));
+  SmallVector<SDValue, 8> Ops(Factor);
+  for (unsigned i = 0; i != Factor; i++)
+    Ops[i] = GetPromotedInteger(N->getOperand(i));
+
+  SmallVector<EVT, 8> ResVTs(Factor, Ops[0].getValueType());
+  SDValue Res = DAG.getNode(N->getOpcode(), DL, DAG.getVTList(ResVTs), Ops);
+
+  for (unsigned i = 0; i != Factor; i++)
+    SetPromotedInteger(SDValue(N, i), Res.getValue(i));
+
   return SDValue();
 }
 
