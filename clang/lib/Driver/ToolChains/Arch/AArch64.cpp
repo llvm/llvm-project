@@ -250,6 +250,11 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     Extensions.disable(llvm::AArch64::AEK_FP);
   }
 
+  // -mcpa-codegen enables generation of scalar FEAT_CPA instructions
+  if (Args.getLastArg(options::OPT_mcpa_codegen)) {
+    Features.push_back("+cpa-codegen");
+  }
+
   // En/disable crc
   if (Arg *A = Args.getLastArg(options::OPT_mcrc, options::OPT_mnocrc)) {
     if (A->getOption().matches(options::OPT_mcrc))

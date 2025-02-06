@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64 -verify-machineinstrs --mattr=+cpa -O0 -global-isel=1 -global-isel-abort=1 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK-CPA-O0
-; RUN: llc -mtriple=aarch64 -verify-machineinstrs --mattr=+cpa -O3 -global-isel=1 -global-isel-abort=1 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK-CPA-O3
+; RUN: llc -mtriple=aarch64 -verify-machineinstrs --mattr=+cpa,cpa-codegen -O0 -global-isel=1 -global-isel-abort=1 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK-CPA-O0
+; RUN: llc -mtriple=aarch64 -verify-machineinstrs --mattr=+cpa,cpa-codegen -O3 -global-isel=1 -global-isel-abort=1 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK-CPA-O3
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs --mattr=-cpa -O0 -global-isel=1 -global-isel-abort=1 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK-NOCPA-O0
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs --mattr=-cpa -O3 -global-isel=1 -global-isel-abort=1 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK-NOCPA-O3
 

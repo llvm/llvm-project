@@ -517,6 +517,9 @@ def FeaturePAuthLR : ExtensionWithMArch<"pauth-lr", "PAuthLR", "FEAT_PAuth_LR",
 def FeatureTLBIW : ExtensionWithMArch<"tlbiw", "TLBIW", "FEAT_TLBIW",
   "Enable Armv9.5-A TLBI VMALL for Dirty State">;
 
+def FeatureCPACodegen : SubtargetFeature<"cpa-codegen",
+  "HasCPACodegen", "true", "Generate scalar FEAT_CPA instructions">;
+
 //===----------------------------------------------------------------------===//
 //  Armv9.6 Architecture Extensions
 //===----------------------------------------------------------------------===//

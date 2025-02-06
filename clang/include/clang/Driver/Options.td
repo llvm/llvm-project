@@ -5025,6 +5025,11 @@ def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">, Group<m_aarch64_Fe
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"
            " vector length agnostic value of \"scalable\". (AArch64 only)">;
+
+def mcpa_codegen : Flag<["-"], "mcpa-codegen">,
+  Visibility<[ClangOption]>,
+  Group<m_aarch64_Features_Group>,
+  HelpText<"Generate scalar FEAT_CPA instructions (AArch64 only)">;
 } // let Flags = [TargetSpecific]
 
 def mvscale_min_EQ : Joined<["-"], "mvscale-min=">,

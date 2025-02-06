@@ -930,5 +930,5 @@ bool AArch64TargetMachine::parseMachineFunctionInfo(
 }
 
 bool AArch64TargetMachine::shouldPreservePtrArith(const Function &F) const {
-  return getSubtargetImpl(F)->hasCPA();
+  return getSubtargetImpl(F)->hasCPA() && getSubtargetImpl(F)->hasCPACodegen();
 }
