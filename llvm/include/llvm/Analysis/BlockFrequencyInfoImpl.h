@@ -1145,7 +1145,7 @@ void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB,
                                               BlockFrequency Freq) {
   auto [It, Inserted] = Nodes.try_emplace(BB);
   if (!Inserted)
-    BlockFrequencyInfoImplBase::setBlockFreq(getNode(BB), Freq);
+    BlockFrequencyInfoImplBase::setBlockFreq(It->second.first, Freq);
   else {
     // If BB is a newly added block after BFI is done, we need to create a new
     // BlockNode for it assigned with a new index. The index can be determined
