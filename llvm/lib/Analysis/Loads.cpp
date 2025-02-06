@@ -26,8 +26,6 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> UseDerefAtPointSemantics;
-
 static bool isAligned(const Value *Base, Align Alignment,
                       const DataLayout &DL) {
   return Base->getPointerAlignment(DL) >= Alignment;
@@ -171,7 +169,7 @@ static bool isDereferenceableAndAlignedPointer(
                                               Size, DL, CtxI, AC, DT, TLI,
                                               Visited, MaxDepth);
 
-  if (CtxI && (!UseDerefAtPointSemantics || !V->canBeFreed())) {
+  if (CtxI && !V->canBeFreed()) {
     /// Look through assumes to see if both dereferencability and alignment can
     /// be proven by an assume if needed.
     RetainedKnowledge AlignRK;

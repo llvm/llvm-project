@@ -626,7 +626,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
               *I, I->bundle_op_info_begin()[Elem.Index])) {
         if (RK.WasOn == V &&
             (RK.AttrKind == Attribute::NonNull ||
-             (RK.AttrKind == Attribute::Dereferenceable &&
+             (RK.AttrKind == Attribute::Dereferenceable && !V->canBeFreed() &&
               !NullPointerIsDefined(Q.CxtI->getFunction(),
                                     V->getType()->getPointerAddressSpace()))) &&
             isValidAssumeForContext(I, Q.CxtI, Q.DT))

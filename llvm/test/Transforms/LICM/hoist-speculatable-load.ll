@@ -11,12 +11,12 @@ define void @f(i32 %ptr_i, ptr %ptr2, i1 %cond) {
 ; CHECK-NEXT:    store i32 0, ptr [[PTR2:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY_LR_PH]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[IF_END:%.*]] ]
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_END]], label [[IF:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR]], align 4, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[PTR2]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
@@ -56,4 +56,58 @@ exit:                                         ; preds = %if.end, %entry
   ret void
 }
 
+define void @f_nofree_nosync(i32 %ptr_i, ptr %ptr2, i1 %cond) nofree nosync {
+; CHECK-LABEL: @f_nofree_nosync(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[PTR_I:%.*]] to ptr
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i32 16), "dereferenceable"(ptr [[PTR]], i32 16) ]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[FOR_BODY_LR_PH:%.*]], label [[IF0:%.*]]
+; CHECK:       if0:
+; CHECK-NEXT:    store i32 0, ptr [[PTR2:%.*]], align 4
+; CHECK-NEXT:    br label [[FOR_BODY_LR_PH]]
+; CHECK:       for.body.lr.ph:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_END]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[PTR2]], align 4
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], 2
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %ptr = inttoptr i32 %ptr_i to ptr
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i32 16), "dereferenceable"(ptr %ptr, i32 16) ]
+  br i1 %cond, label %for.body.lr.ph, label %if0
+
+if0:
+  store i32 0, ptr %ptr2, align 4
+  br label %for.body.lr.ph
+
+for.body.lr.ph:                                   ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.lr.ph, %if.end
+  %i.08 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %if.end ]
+  br i1 %cond, label %if.end, label %if
+
+if:
+  %0 = load i32, ptr %ptr, align 4, !invariant.load !{}
+  store i32 %0, ptr %ptr2, align 4
+  br label %if.end
+
+if.end:                                           ; preds = %for.body
+  %inc = add nuw nsw i32 %i.08, 1
+  %cmp = icmp slt i32 %inc, 2
+  br i1 %cmp, label %for.body, label %exit
+
+exit:                                         ; preds = %if.end, %entry
+  ret void
+}
 declare void @llvm.assume(i1 noundef)

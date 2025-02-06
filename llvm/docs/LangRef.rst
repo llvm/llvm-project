@@ -1474,7 +1474,11 @@ Currently, only the following parameter attributes are defined:
     ``null_pointer_is_valid`` function attribute is present.
     ``n`` should be a positive number. The pointer should be well defined,
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
-    implies ``noundef``.
+    implies ``noundef``. When ``dereferenceable(<n>)`` is used in an
+    :ref:`assume operand bundls <assume_opbundles>`, the pointer is only
+    guaranteed to be dereferenceable at the point of the assumption and
+    may not be dereferenceable at later pointers, e.g. because it could have
+    been freed.
 
 ``dereferenceable_or_null(<n>)``
     This indicates that the parameter or return value isn't both
