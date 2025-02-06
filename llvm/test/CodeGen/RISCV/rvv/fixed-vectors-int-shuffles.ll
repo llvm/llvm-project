@@ -1340,3 +1340,51 @@ define void @shuffle_i256_splat(ptr %p) nounwind {
   ret void
 }
 
+define <16 x i32> @shuffle_m1_prefix(<16 x i32> %a) {
+; RV32-LABEL: shuffle_m1_prefix:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a0, %hi(.LCPI84_0)
+; RV32-NEXT:    addi a0, a0, %lo(.LCPI84_0)
+; RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; RV32-NEXT:    vle16.v v16, (a0)
+; RV32-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; RV32-NEXT:    vrgatherei16.vv v13, v9, v16
+; RV32-NEXT:    vrgatherei16.vv v12, v8, v16
+; RV32-NEXT:    vrgatherei16.vv v14, v10, v16
+; RV32-NEXT:    vrgatherei16.vv v15, v11, v16
+; RV32-NEXT:    vmv4r.v v8, v12
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: shuffle_m1_prefix:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a0, 131073
+; RV64-NEXT:    slli a0, a0, 4
+; RV64-NEXT:    addi a0, a0, 3
+; RV64-NEXT:    slli a0, a0, 16
+; RV64-NEXT:    addi a0, a0, 2
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vmv.v.x v16, a0
+; RV64-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; RV64-NEXT:    vrgatherei16.vv v13, v9, v16
+; RV64-NEXT:    vrgatherei16.vv v12, v8, v16
+; RV64-NEXT:    vrgatherei16.vv v14, v10, v16
+; RV64-NEXT:    vrgatherei16.vv v15, v11, v16
+; RV64-NEXT:    vmv4r.v v8, v12
+; RV64-NEXT:    ret
+  %out = shufflevector <16 x i32> %a, <16 x i32> poison, <16 x i32> <i32 2, i32 3, i32 1, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  ret <16 x i32> %out
+}
+
+define <16 x i32> @shuffle_m2_prefix(<16 x i32> %a) {
+; CHECK-LABEL: shuffle_m2_prefix:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI85_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI85_0)
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
+; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    ret
+  %out = shufflevector <16 x i32> %a, <16 x i32> poison, <16 x i32> <i32 2, i32 3, i32 5, i32 2, i32 3, i32 5, i32 7, i32 4, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  ret <16 x i32> %out
+}
