@@ -145,17 +145,21 @@ _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_lane(uint64_t __lane_mask) {
 
 // Shuffles the the lanes inside the wavefront according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t
-__gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x) {
-  return __builtin_amdgcn_ds_bpermute(__idx << 2, __x);
+__gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
+                      uint32_t __width) {
+  uint32_t __lane = __idx + (__gpu_lane_id() & ~(__width - 1));
+  return __builtin_amdgcn_ds_bpermute(__lane << 2, __x);
 }
 
 // Shuffles the the lanes inside the wavefront according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x) {
+__gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x,
+                      uint32_t __width) {
   uint32_t __hi = (uint32_t)(__x >> 32ull);
   uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
-  return ((uint64_t)__builtin_amdgcn_ds_bpermute(__idx << 2, __hi) << 32ull) |
-         ((uint64_t)__builtin_amdgcn_ds_bpermute(__idx << 2, __lo));
+  return ((uint64_t)__gpu_shuffle_idx_u32(__lane_mask, __idx, __hi, __width)
+          << 32ull) |
+         ((uint64_t)__gpu_shuffle_idx_u32(__lane_mask, __idx, __lo, __width));
 }
 
 // Returns true if the flat pointer points to AMDGPU 'shared' memory.

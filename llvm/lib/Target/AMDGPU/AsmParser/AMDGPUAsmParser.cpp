@@ -33,6 +33,7 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/AMDGPUMetadata.h"
@@ -1536,6 +1537,10 @@ public:
     return getFeatureBits()[AMDGPU::FeatureFlatInstOffsets];
   }
 
+  bool hasTrue16Insts() const {
+    return getFeatureBits()[AMDGPU::FeatureTrue16BitInsts];
+  }
+
   bool hasArchitectedFlatScratch() const {
     return getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
   }
@@ -1777,6 +1782,7 @@ private:
   bool validateMIMGDim(const MCInst &Inst, const OperandVector &Operands);
   bool validateMIMGMSAA(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
+  bool validateTrue16OpSel(const MCInst &Inst);
   bool validateNeg(const MCInst &Inst, int OpName);
   bool validateDPP(const MCInst &Inst, const OperandVector &Operands);
   bool validateVccOperand(MCRegister Reg) const;
@@ -4651,6 +4657,39 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
   return true;
 }
 
+bool AMDGPUAsmParser::validateTrue16OpSel(const MCInst &Inst) {
+  if (!hasTrue16Insts())
+    return true;
+  const MCRegisterInfo *MRI = getMRI();
+  const unsigned Opc = Inst.getOpcode();
+  int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
+  if (OpSelIdx == -1)
+    return true;
+  unsigned OpSelOpValue = Inst.getOperand(OpSelIdx).getImm();
+  // If the value is 0 we could have a default OpSel Operand, so conservatively
+  // allow it.
+  if (OpSelOpValue == 0)
+    return true;
+  unsigned OpCount = 0;
+  for (int OpName : {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
+                     AMDGPU::OpName::src2, AMDGPU::OpName::vdst}) {
+    int OpIdx = AMDGPU::getNamedOperandIdx(Inst.getOpcode(), OpName);
+    if (OpIdx == -1)
+      continue;
+    const MCOperand &Op = Inst.getOperand(OpIdx);
+    if (Op.isReg() &&
+        MRI->getRegClass(AMDGPU::VGPR_16RegClassID).contains(Op.getReg())) {
+      bool VGPRSuffixIsHi = AMDGPU::isHi16Reg(Op.getReg(), *MRI);
+      bool OpSelOpIsHi = ((OpSelOpValue & (1 << OpCount)) != 0);
+      if (OpSelOpIsHi != VGPRSuffixIsHi)
+        return false;
+    }
+    ++OpCount;
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateNeg(const MCInst &Inst, int OpName) {
   assert(OpName == AMDGPU::OpName::neg_lo || OpName == AMDGPU::OpName::neg_hi);
 
@@ -5133,6 +5172,11 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const OperandVector &Operands) {
   if (auto ErrMsg = validateLdsDirect(Inst)) {
     Error(getRegLoc(LDS_DIRECT, Operands), *ErrMsg);
+    return false;
+  }
+  if (!validateTrue16OpSel(Inst)) {
+    Error(getImmLoc(AMDGPUOperand::ImmTyOpSel, Operands),
+          "op_sel operand conflicts with 16-bit operand suffix");
     return false;
   }
   if (!validateSOPLiteral(Inst)) {

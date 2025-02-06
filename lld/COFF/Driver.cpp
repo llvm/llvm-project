@@ -2692,7 +2692,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /output-def (MinGW specific).
   if (auto *arg = args.getLastArg(OPT_output_def))
-    writeDefFile(ctx, arg->getValue(), ctx.symtab.exports);
+    writeDefFile(ctx, arg->getValue(), mainSymtab.exports);
 
   // Set extra alignment for .comm symbols
   for (auto pair : config->alignComm) {
