@@ -16,16 +16,12 @@ if (LLDB_ENABLE_CURSES)
   endif()
 endif()
 
-# TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbCore
-set(LLDB_CORE_SRCS
-
-)
-
 if (LLVM_BUILD_TELEMETRY)
    set(TELEMETRY_SOURCES Telemetry.cpp)
    set(TELEMETRY_DEPS Telemetry)
 endif()
 
+# TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbCore
 add_lldb_library(lldbCore
   Address.cpp
   AddressRange.cpp
