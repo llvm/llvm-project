@@ -184,7 +184,7 @@ Error UnwindInfoRegistrationPlugin::addUnwindInfoRegistrationActions(
   if (auto *EHFrame = G.findSectionByName(MachOEHFrameSectionName))
     ScanUnwindInfoSection(*EHFrame, EHFrameRange);
 
-  if (auto *UnwindInfo = G.findSectionByName(MachOCompactUnwindInfoSectionName))
+  if (auto *UnwindInfo = G.findSectionByName(MachOUnwindInfoSectionName))
     ScanUnwindInfoSection(*UnwindInfo, UnwindInfoRange);
 
   if (CodeBlocks.empty())

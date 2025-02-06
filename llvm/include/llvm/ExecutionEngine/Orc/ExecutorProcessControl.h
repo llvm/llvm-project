@@ -508,7 +508,9 @@ private:
                           SymbolLookupCompleteFn F) override;
 
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
+#ifdef __APPLE__
   std::unique_ptr<UnwindInfoManager> UnwindInfoMgr;
+#endif // __APPLE__
   char GlobalManglingPrefix = 0;
 };
 

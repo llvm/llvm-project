@@ -1230,6 +1230,7 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
               J.getIRCompileLayer(), PlatformJD)) {
         CompactUnwindInfoSupported = true;
         OLL->addPlugin(std::move(*UIRP));
+        LLVM_DEBUG(dbgs() << "Enabled compact-unwind support.\n");
       } else
         consumeError(UIRP.takeError());
     }
@@ -1237,10 +1238,11 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
     // Otherwise fall back to standard unwind registration.
     if (!CompactUnwindInfoSupported) {
       auto &ES = J.getExecutionSession();
-      if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES))
+      if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES)) {
         OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
             ES, std::move(*EHFrameRegistrar)));
-      else
+        LLVM_DEBUG(dbgs() << "Enabled eh-frame support.\n");
+      } else
         return EHFrameRegistrar.takeError();
     }
   }

@@ -1308,25 +1308,25 @@ defm VCVTHF82PH : avx10_convert_2op_nomb<"vcvthf82ph", avx512vl_f16_info,
 // AVX10 BF16 instructions
 //-------------------------------------------------
 
-// VADDNEPBF16, VSUBNEPBF16, VMULNEPBF16, VDIVNEPBF16, VMAXPBF16, VMINPBF16
-multiclass avx10_fp_binopne_int_pbf16<bits<8> opc, string OpcodeStr,
+// VADDBF16, VSUBBF16, VMULBF16, VDIVBF16, VMAXBF16, VMINBF16
+multiclass avx10_fp_binop_int_bf16<bits<8> opc, string OpcodeStr,
                                       X86SchedWriteSizes sched,
                                       bit IsCommutable = 0> {
   let Predicates = [HasAVX10_2_512] in
     defm Z : avx512_fp_packed<opc, OpcodeStr,
-                              !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"pbf16512"),
-                              !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"pbf16512"),
+                              !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"bf16512"),
+                              !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"bf16512"),
                               v32bf16_info, sched.PH.ZMM, IsCommutable>, EVEX_V512,
                               T_MAP5, PD, EVEX_CD8<16, CD8VF>;
   let Predicates = [HasAVX10_2] in {
     defm Z128 : avx512_fp_packed<opc, OpcodeStr,
-                                 !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"pbf16128"),
-                                 !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"pbf16128"),
+                                 !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"bf16128"),
+                                 !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"bf16128"),
                                  v8bf16x_info, sched.PH.XMM, IsCommutable>, EVEX_V128,
                                  T_MAP5, PD, EVEX_CD8<16, CD8VF>;
     defm Z256 : avx512_fp_packed<opc, OpcodeStr,
-                                 !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"pbf16256"),
-                                 !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"pbf16256"),
+                                 !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"bf16256"),
+                                 !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"bf16256"),
                                  v16bf16x_info, sched.PH.YMM, IsCommutable>, EVEX_V256,
                                  T_MAP5, PD, EVEX_CD8<16, CD8VF>;
   }
@@ -1351,12 +1351,12 @@ multiclass avx10_fp_binop_bf16<bits<8> opc, string OpcodeStr, SDPatternOperator 
 }
 
 let Uses = []<Register>, mayRaiseFPException = 0 in {
-defm VADDNEPBF16 : avx10_fp_binop_bf16<0x58, "vaddne", fadd, SchedWriteFAddSizes, 1>;
-defm VSUBNEPBF16 : avx10_fp_binop_bf16<0x5C, "vsubne", fsub, SchedWriteFAddSizes, 0>;
-defm VMULNEPBF16 : avx10_fp_binop_bf16<0x59, "vmulne", fmul, SchedWriteFMulSizes, 1>;
-defm VDIVNEPBF16 : avx10_fp_binop_bf16<0x5E, "vdivne", fdiv, SchedWriteFDivSizes, 0>;
-defm VMINPBF16 : avx10_fp_binopne_int_pbf16<0x5D, "vmin", SchedWriteFCmpSizes, 0>;
-defm VMAXPBF16 : avx10_fp_binopne_int_pbf16<0x5F, "vmax", SchedWriteFCmpSizes, 0>;
+defm VADDBF16 : avx10_fp_binop_bf16<0x58, "vadd", fadd, SchedWriteFAddSizes, 1>;
+defm VSUBBF16 : avx10_fp_binop_bf16<0x5C, "vsub", fsub, SchedWriteFAddSizes, 0>;
+defm VMULBF16 : avx10_fp_binop_bf16<0x59, "vmul", fmul, SchedWriteFMulSizes, 1>;
+defm VDIVBF16 : avx10_fp_binop_bf16<0x5E, "vdiv", fdiv, SchedWriteFDivSizes, 0>;
+defm VMINBF16 : avx10_fp_binop_int_bf16<0x5D, "vmin", SchedWriteFCmpSizes, 0>;
+defm VMAXBF16 : avx10_fp_binop_int_bf16<0x5F, "vmax", SchedWriteFCmpSizes, 0>;
 }
 
 // VCOMISBF16
@@ -1375,7 +1375,7 @@ let Uses = []<Register>, mayRaiseFPException = 0,
   }
 }
 
-// VCMPPBF16
+// VCMPBF16
 multiclass avx10_vcmp_common_bf16<X86FoldableSchedWrite sched, X86VectorVTInfo _> {
   let mayRaiseFPException = 0 in {
   defm rri  : AVX512_maskable_cmp<0xC2, MRMSrcReg, _,
@@ -1421,56 +1421,56 @@ multiclass avx10_vcmp_bf16<X86SchedWriteWidths sched, AVX512VLVectorVTInfo _> {
   }
 }
 
-defm VCMPPBF16 : avx10_vcmp_bf16<SchedWriteFCmp, avx512vl_bf16_info>,
+defm VCMPBF16 : avx10_vcmp_bf16<SchedWriteFCmp, avx512vl_bf16_info>,
                                  AVX512XDIi8Base, EVEX, VVVV,
                                  EVEX_CD8<16, CD8VF>, TA;
 
 
-// VSQRTNEPBF16
+// VSQRTBF16
 multiclass avx10_sqrt_packed_bf16<bits<8> opc, string OpcodeStr,
                                   X86SchedWriteSizes sched> {
   let Predicates = [HasAVX10_2_512] in
-  defm Z : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "pbf16"),
+  defm Z : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "bf16"),
                               sched.PH.ZMM, v32bf16_info>,
                               EVEX_V512, PD, T_MAP5, EVEX_CD8<16, CD8VF>;
   let Predicates = [HasAVX10_2] in {
-    defm Z128 : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "pbf16"),
+    defm Z128 : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "bf16"),
                                    sched.PH.XMM, v8bf16x_info>,
                                    EVEX_V128, PD, T_MAP5, EVEX_CD8<16, CD8VF>;
-    defm Z256 : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "pbf16"),
+    defm Z256 : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "bf16"),
                                    sched.PH.YMM, v16bf16x_info>,
                                    EVEX_V256, PD, T_MAP5, EVEX_CD8<16, CD8VF>;
   }
 }
 
 let Uses = []<Register>, mayRaiseFPException = 0 in
-defm VSQRTNEPBF16 : avx10_sqrt_packed_bf16<0x51, "vsqrtne", SchedWriteFSqrtSizes>;
+defm VSQRTBF16 : avx10_sqrt_packed_bf16<0x51, "vsqrt", SchedWriteFSqrtSizes>;
 
-// VRSQRTPBF16, VRCPPBF16, VSRQTPBF16, VGETEXPPBF16
-multiclass avx10_fp14_pbf16<bits<8> opc, string OpcodeStr, SDNode OpNode,
+// VRSQRTBF16, VRCPBF16, VSRQTBF16, VGETEXPBF16
+multiclass avx10_fp14_bf16<bits<8> opc, string OpcodeStr, SDNode OpNode,
                             X86SchedWriteWidths sched> {
   let Predicates = [HasAVX10_2_512] in
-  defm PBF16Z : avx512_fp14_p<opc, !strconcat(OpcodeStr, "pbf16"),
-                              OpNode, sched.ZMM, v32bf16_info>,
-                              EVEX_V512;
+  defm BF16Z : avx512_fp14_p<opc, !strconcat(OpcodeStr, "bf16"),
+                             OpNode, sched.ZMM, v32bf16_info>,
+                             EVEX_V512;
   let Predicates = [HasAVX10_2] in {
-    defm PBF16Z128 : avx512_fp14_p<opc, !strconcat(OpcodeStr, "pbf16"),
-                                   OpNode, sched.XMM, v8bf16x_info>,
-                                   EVEX_V128;
-    defm PBF16Z256 : avx512_fp14_p<opc, !strconcat(OpcodeStr, "pbf16"),
-                                   OpNode, sched.YMM, v16bf16x_info>,
-                                   EVEX_V256;
+    defm BF16Z128 : avx512_fp14_p<opc, !strconcat(OpcodeStr, "bf16"),
+                                  OpNode, sched.XMM, v8bf16x_info>,
+                                  EVEX_V128;
+    defm BF16Z256 : avx512_fp14_p<opc, !strconcat(OpcodeStr, "bf16"),
+                                  OpNode, sched.YMM, v16bf16x_info>,
+                                  EVEX_V256;
   }
 }
 
-defm VRSQRT  : avx10_fp14_pbf16<0x4E, "vrsqrt", X86rsqrt14, SchedWriteFRsqrt>,
+defm VRSQRT  : avx10_fp14_bf16<0x4E, "vrsqrt", X86rsqrt14, SchedWriteFRsqrt>,
                                 T_MAP6, PS, EVEX_CD8<16, CD8VF>;
-defm VRCP    : avx10_fp14_pbf16<0x4C, "vrcp", X86rcp14, SchedWriteFRcp>,
+defm VRCP    : avx10_fp14_bf16<0x4C, "vrcp", X86rcp14, SchedWriteFRcp>,
                                 T_MAP6, PS, EVEX_CD8<16, CD8VF>;
-defm VGETEXP : avx10_fp14_pbf16<0x42, "vgetexp", X86fgetexp, SchedWriteFRnd>,
+defm VGETEXP : avx10_fp14_bf16<0x42, "vgetexp", X86fgetexp, SchedWriteFRnd>,
                                 T_MAP5, EVEX_CD8<16, CD8VF>;
 
-// VSCALEFPBF16
+// VSCALEFBF16
 multiclass avx10_fp_scalef_bf16<bits<8> opc, string OpcodeStr,
                                 X86SchedWriteWidths sched> {
   let Predicates = [HasAVX10_2_512] in
@@ -1485,9 +1485,9 @@ multiclass avx10_fp_scalef_bf16<bits<8> opc, string OpcodeStr,
 }
 
 let Uses = []<Register>, mayRaiseFPException = 0 in
-defm VSCALEFPBF16 : avx10_fp_scalef_bf16<0x2C, "vscalef", SchedWriteFAdd>;
+defm VSCALEFBF16 : avx10_fp_scalef_bf16<0x2C, "vscalef", SchedWriteFAdd>;
 
-// VREDUCENEPBF16, VRNDSCALENEPBF16, VGETMANTPBF16
+// VREDUCEBF16, VRNDSCALEBF16, VGETMANTBF16
 multiclass avx10_common_unary_fp_packed_imm_bf16<string OpcodeStr,
             AVX512VLVectorVTInfo _, bits<8> opc, SDPatternOperator OpNode,
             SDPatternOperator MaskOpNode, X86SchedWriteWidths sched> {
@@ -1503,18 +1503,18 @@ multiclass avx10_common_unary_fp_packed_imm_bf16<string OpcodeStr,
 }
 
 let Uses = []<Register>, mayRaiseFPException = 0 in {
-defm VREDUCENEPBF16 : avx10_common_unary_fp_packed_imm_bf16<"vreducene", avx512vl_bf16_info, 0x56,
+defm VREDUCEBF16 : avx10_common_unary_fp_packed_imm_bf16<"vreduce", avx512vl_bf16_info, 0x56,
                             X86VReduce, X86VReduce, SchedWriteFRnd>,
                             AVX512XDIi8Base, TA, EVEX, EVEX_CD8<16, CD8VF>;
-defm VRNDSCALENEPBF16 : avx10_common_unary_fp_packed_imm_bf16<"vrndscalene", avx512vl_bf16_info, 0x08,
+defm VRNDSCALEBF16 : avx10_common_unary_fp_packed_imm_bf16<"vrndscale", avx512vl_bf16_info, 0x08,
                             X86any_VRndScale, X86VRndScale, SchedWriteFRnd>,
                             AVX512XDIi8Base, TA, EVEX, EVEX_CD8<16, CD8VF>;
-defm VGETMANTPBF16 : avx10_common_unary_fp_packed_imm_bf16<"vgetmant", avx512vl_bf16_info, 0x26,
+defm VGETMANTBF16 : avx10_common_unary_fp_packed_imm_bf16<"vgetmant", avx512vl_bf16_info, 0x26,
                             X86VGetMant, X86VGetMant, SchedWriteFRnd>,
                             AVX512XDIi8Base, TA, EVEX, EVEX_CD8<16, CD8VF>;
 }
 
-// VFPCLASSPBF16
+// VFPCLASSBF16
 multiclass avx10_fp_fpclass_bf16<string OpcodeStr, bits<8> opcVec,
                                   X86SchedWriteWidths sched> {
   let Predicates = [HasAVX10_2_512] in
@@ -1531,13 +1531,13 @@ multiclass avx10_fp_fpclass_bf16<string OpcodeStr, bits<8> opcVec,
   }
 }
 
-defm VFPCLASSPBF16 : avx10_fp_fpclass_bf16<"vfpclass", 0x66, SchedWriteFCmp>,
+defm VFPCLASSBF16 : avx10_fp_fpclass_bf16<"vfpclass", 0x66, SchedWriteFCmp>,
                                       AVX512XDIi8Base, TA, EVEX, EVEX_CD8<16, CD8VF>;
 
-// VF[,N]M[ADD,SUB][132,213,231]NEPBF16
+// VF[,N]M[ADD,SUB][132,213,231]BF16
 multiclass avx10_fma3p_213_bf16<bits<8> opc, string OpcodeStr,
-                                 SDPatternOperator OpNode, SDNode MaskOpNode,
-                                 X86SchedWriteWidths sched> {
+                                SDPatternOperator OpNode, SDNode MaskOpNode,
+                                X86SchedWriteWidths sched> {
   let Predicates = [HasAVX10_2_512] in
     defm Z : avx512_fma3p_213_rm<opc, OpcodeStr, OpNode, MaskOpNode,
                                sched.ZMM, v32bf16_info>, EVEX_V512, T_MAP6, PS,
@@ -1553,14 +1553,14 @@ multiclass avx10_fma3p_213_bf16<bits<8> opc, string OpcodeStr,
 }
 
 let Uses = []<Register>, mayRaiseFPException = 0 in {
-defm VFMADD213NEPBF16 : avx10_fma3p_213_bf16<0xA8, "vfmadd213nepbf16", any_fma,
-                                         fma, SchedWriteFMA>;
-defm VFMSUB213NEPBF16 : avx10_fma3p_213_bf16<0xAA, "vfmsub213nepbf16", X86any_Fmsub,
-                                         X86Fmsub, SchedWriteFMA>;
-defm VFNMADD213NEPBF16 : avx10_fma3p_213_bf16<0xAC, "vfnmadd213nepbf16", X86any_Fnmadd,
-                                          X86Fnmadd, SchedWriteFMA>;
-defm VFNMSUB213NEPBF16 : avx10_fma3p_213_bf16<0xAE, "vfnmsub213nepbf16", X86any_Fnmsub,
-                                          X86Fnmsub, SchedWriteFMA>;
+defm VFMADD213BF16 : avx10_fma3p_213_bf16<0xA8, "vfmadd213bf16", any_fma,
+                                          fma, SchedWriteFMA>;
+defm VFMSUB213BF16 : avx10_fma3p_213_bf16<0xAA, "vfmsub213bf16", X86any_Fmsub,
+                                          X86Fmsub, SchedWriteFMA>;
+defm VFNMADD213BF16 : avx10_fma3p_213_bf16<0xAC, "vfnmadd213bf16", X86any_Fnmadd,
+                                           X86Fnmadd, SchedWriteFMA>;
+defm VFNMSUB213BF16 : avx10_fma3p_213_bf16<0xAE, "vfnmsub213bf16", X86any_Fnmsub,
+                                           X86Fnmsub, SchedWriteFMA>;
 }
 
 multiclass avx10_fma3p_231_bf16<bits<8> opc, string OpcodeStr,
@@ -1581,14 +1581,14 @@ multiclass avx10_fma3p_231_bf16<bits<8> opc, string OpcodeStr,
 }
 
 let Uses = []<Register>, mayRaiseFPException = 0 in {
-defm VFMADD231NEPBF16 : avx10_fma3p_231_bf16<0xB8, "vfmadd231nepbf16", any_fma,
-                                         fma, SchedWriteFMA>;
-defm VFMSUB231NEPBF16 : avx10_fma3p_231_bf16<0xBA, "vfmsub231nepbf16", X86any_Fmsub,
-                                         X86Fmsub, SchedWriteFMA>;
-defm VFNMADD231NEPBF16 : avx10_fma3p_231_bf16<0xBC, "vfnmadd231nepbf16", X86any_Fnmadd,
-                                          X86Fnmadd, SchedWriteFMA>;
-defm VFNMSUB231NEPBF16 : avx10_fma3p_231_bf16<0xBE, "vfnmsub231nepbf16", X86any_Fnmsub,
-                                          X86Fnmsub, SchedWriteFMA>;
+defm VFMADD231BF16 : avx10_fma3p_231_bf16<0xB8, "vfmadd231bf16", any_fma,
+                                          fma, SchedWriteFMA>;
+defm VFMSUB231BF16 : avx10_fma3p_231_bf16<0xBA, "vfmsub231bf16", X86any_Fmsub,
+                                          X86Fmsub, SchedWriteFMA>;
+defm VFNMADD231BF16 : avx10_fma3p_231_bf16<0xBC, "vfnmadd231bf16", X86any_Fnmadd,
+                                           X86Fnmadd, SchedWriteFMA>;
+defm VFNMSUB231BF16 : avx10_fma3p_231_bf16<0xBE, "vfnmsub231bf16", X86any_Fnmsub,
+                                           X86Fnmsub, SchedWriteFMA>;
 }
 
 multiclass avx10_fma3p_132_bf16<bits<8> opc, string OpcodeStr,
@@ -1609,14 +1609,14 @@ multiclass avx10_fma3p_132_bf16<bits<8> opc, string OpcodeStr,
 }
 
 let Uses = []<Register>, mayRaiseFPException = 0 in {
-defm VFMADD132NEPBF16 : avx10_fma3p_132_bf16<0x98, "vfmadd132nepbf16", any_fma,
-                                             fma, SchedWriteFMA>;
-defm VFMSUB132NEPBF16 : avx10_fma3p_132_bf16<0x9A, "vfmsub132nepbf16", X86any_Fmsub,
+defm VFMADD132BF16 : avx10_fma3p_132_bf16<0x98, "vfmadd132bf16", any_fma,
+                                          fma, SchedWriteFMA>;
+defm VFMSUB132BF16 : avx10_fma3p_132_bf16<0x9A, "vfmsub132bf16", X86any_Fmsub,
                                              X86Fmsub, SchedWriteFMA>;
-defm VFNMADD132NEPBF16 : avx10_fma3p_132_bf16<0x9C, "vfnmadd132nepbf16", X86any_Fnmadd,
-                                              X86Fnmadd, SchedWriteFMA>;
-defm VFNMSUB132NEPBF16 : avx10_fma3p_132_bf16<0x9E, "vfnmsub132nepbf16", X86any_Fnmsub,
-                                              X86Fnmsub, SchedWriteFMA>;
+defm VFNMADD132BF16 : avx10_fma3p_132_bf16<0x9C, "vfnmadd132bf16", X86any_Fnmadd,
+                                           X86Fnmadd, SchedWriteFMA>;
+defm VFNMSUB132BF16 : avx10_fma3p_132_bf16<0x9E, "vfnmsub132bf16", X86any_Fnmsub,
+                                           X86Fnmsub, SchedWriteFMA>;
 }
 
 //-------------------------------------------------

@@ -642,7 +642,8 @@ class LinuxCoreTestCase(TestBase):
         )
         # RMode should have enumerator descriptions.
         self.expect(
-            "register info fpcr", substrs=["RMode: 0 = RN, 1 = RP, 2 = RM, 3 = RZ"]
+            "register info fpcr",
+            substrs=["RMode: 0 = RN, 1 = RP, 2 = RM, 3 = RZ"],
         )
 
     @skipIfLLVMTargetMissing("AArch64")
