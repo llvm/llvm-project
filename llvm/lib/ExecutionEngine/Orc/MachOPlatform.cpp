@@ -1071,7 +1071,7 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
       for (auto *B : Sec.blocks())
         for (auto &E : B->edges())
           if (E.getTarget().isDefined() &&
-              &E.getTarget().getBlock().getSection() == ObjCImageInfo)
+              &E.getTarget().getSection() == ObjCImageInfo)
             return make_error<StringError>(MachOObjCImageInfoSectionName +
                                                " is referenced within file " +
                                                G.getName(),
