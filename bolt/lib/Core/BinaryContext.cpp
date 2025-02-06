@@ -1760,7 +1760,8 @@ void BinaryContext::preprocessDebugInfo() {
       if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
         auto Iter = DWOCUs.find(*DWOID);
         if (Iter == DWOCUs.end()) {
-          this->errs() << "DWO CU was not found for " << Name << '\n';
+          this->errs() << "BOLT-ERROR: DWO CU was not found for " << Name
+                       << '\n';
           exit(1);
         }
         Name = dwarf::toString(
