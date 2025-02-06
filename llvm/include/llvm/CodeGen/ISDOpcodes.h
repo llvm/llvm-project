@@ -1058,7 +1058,7 @@ enum NodeType {
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
 
-  /// FMODF - Decomposes the given arg in integral and fractional parts, each
+  /// FMODF - Decomposes the operand into integral and fractional parts, each
   /// having the same type and sign as the arg.
   FMODF,
 
