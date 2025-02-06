@@ -2252,8 +2252,8 @@ struct FormatStyle {
   /// \version 16
   BreakBeforeInlineASMColonStyle BreakBeforeInlineASMColon;
 
-  /// If ``true``, a line break will be placed before the ``>`` in a block
-  /// indented template declaration.
+  /// If ``true``, break before a template closing bracket (``>``) when there is
+  /// a line break after the matching opening bracket (``<``).
   /// \code
   ///    true:
   ///    template <typename Foo, typename Bar>
