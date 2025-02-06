@@ -4,10 +4,10 @@
 // RUN:     -analyzer-config eagerly-assume=false \
 // RUN:     -verify=expected,noassumeone,noeagerlyassume,combo %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection \
-// RUN:     -analyzer-config assume-one-iteration=true \
+// RUN:     -analyzer-config assume-at-least-one-iteration=true \
 // RUN:     -verify=expected,eagerlyassume,combo %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection \
-// RUN:     -analyzer-config assume-one-iteration=true,eagerly-assume=false \
+// RUN:     -analyzer-config assume-at-least-one-iteration=true,eagerly-assume=false \
 // RUN:     -verify=expected,noeagerlyassume %s
 
 // The verify tag "combo" is used for one unique warning which is produced in three
@@ -18,8 +18,8 @@
 // if the code does not imply that they are possible.
 // In particular, if two (or more) iterations are already completed in a loop,
 // we don't assume that there can be another iteration. Moreover, if the
-// analyzer option `assume-one-iteration` is enabled, then we don't assume that
-// a loop can be skipped completely.
+// analyzer option `assume-at-least-one-iteration` is enabled, then we don't
+// assume that a loop can be skipped completely.
 
 void clang_analyzer_numTimesReached(void);
 void clang_analyzer_dump(int);
@@ -37,7 +37,7 @@ void clearTrueCondition(void) {
 
 void clearFalseCondition(void) {
   // If the analyzer can definitely determine that the loop condition is false,
-  // then the loop is (obviously) skipped, even in `assume-one-iteration` mode.
+  // then the loop is skipped, even in `assume-at-least-one-iteration` mode.
   int i;
   for (i = 0; i > 10; i++)
     clang_analyzer_numTimesReached(); // Unreachable, no report.
@@ -51,8 +51,8 @@ void opaqueCondition(int arg) {
   // that more than two iterations are possible. (It _does_ imply that two
   // iterations may be possible at least in some cases, because otherwise an
   // `if` would've been enough.)
-  // Moreover, if `assume-one-iteration` is enabled, then assume at least one
-  // iteration.
+  // Moreover, if `assume-at-least-one-iteration` is enabled, then assume at
+  // least one iteration.
   int i;
   for (i = 0; i < arg; i++)
     clang_analyzer_numTimesReached(); // expected-warning {{2}}
@@ -175,9 +175,10 @@ void eagerlyAssumeInSubexpression(int arg) {
     clang_analyzer_numTimesReached(); // eagerlyassume-warning {{4}} noeagerlyassume-warning {{2}}
   }
 
-  // The 'combo' warning intentionally appears when `assume-one-iteration` is
-  // disabled, but also appears as a bug (or at least inaccuracy) when
-  // `assume-one-iteration` is true but `EagerlyAssume` is also enabled.
+  // The 'combo' note intentionally appears if `assume-at-least-one-iteration`
+  // is disabled, but also appears as a bug (or at least inaccuracy) when
+  // `assume-at-least-one-iteration` is true but `EagerlyAssume` is also
+  // enabled.
   clang_analyzer_dump(i); // combo-warning {{0}} expected-warning {{1}} expected-warning {{2}} eagerlyassume-warning {{3}}
 }
 

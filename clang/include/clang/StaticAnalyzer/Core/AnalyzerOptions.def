@@ -295,7 +295,7 @@ ANALYZER_OPTION(
     "Whether the analysis should try to unroll loops with known bounds.", false)
 
 ANALYZER_OPTION(
-    bool, ShouldAssumeOneIteration, "assume-one-iteration",
+    bool, ShouldAssumeAtLeastOneIteration, "assume-at-least-one-iteration",
     "Whether the analyzer should always assume at least one iteration in "
     "loops where the loop condition is opaque (i.e. the analyzer cannot "
     "determine if it's true or false). Setting this to true eliminates some "

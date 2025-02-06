@@ -2844,8 +2844,8 @@ void ExprEngine::processBranch(
     if (StFalse) {
       // In a loop, if both branches are feasible (i.e. the analyzer doesn't
       // understand the loop condition), we are before the first iteration and
-      // the analyzer option `assume-one-iteration` is set to `true`, then avoid
-      // creating the execution path where the analyzer skips the loop.
+      // the analyzer option `assume-at-least-one-iteration` is set to `true`,
+      // then avoid creating the execution path where the loop is skipped.
       //
       // In some situations this "loop is skipped" execution path is an
       // important corner case that may evade the notice of the developer and
@@ -2856,7 +2856,7 @@ void ExprEngine::processBranch(
       // skipped.
       bool BeforeFirstIteration = IterationsCompletedInLoop == std::optional{0};
       bool SkipFalseBranch = BothFeasible && BeforeFirstIteration &&
-                             AMgr.options.ShouldAssumeOneIteration;
+                             AMgr.options.ShouldAssumeAtLeastOneIteration;
       if (!SkipFalseBranch)
         Builder.generateNode(StFalse, false, PredN);
     }
