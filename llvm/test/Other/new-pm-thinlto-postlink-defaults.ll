@@ -122,6 +122,7 @@
 ; CHECK-O-NEXT: Running pass: LoopIdiomRecognizePass
 ; CHECK-O-NEXT: Running pass: IndVarSimplifyPass
 ; CHECK-O-NEXT: Running pass: LoopDeletionPass
+; CHECK-O-NEXT: Running pass: LoopInterchangePass
 ; CHECK-O-NEXT: Running pass: LoopFullUnrollPass
 ; CHECK-O-NEXT: Running pass: SROAPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: VectorCombinePass
