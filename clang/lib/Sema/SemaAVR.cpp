@@ -32,13 +32,13 @@ void SemaAVR::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
   // AVR interrupt handlers must have no parameter and be void type.
   if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 0) {
-    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-        << /*AVR*/ 3 << "interrupt" << 0;
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*AVR*/ 3 << /*interrupt*/ 0 << 0;
     return;
   }
   if (!getFunctionOrMethodResultType(D)->isVoidType()) {
-    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-        << /*AVR*/ 3 << "interrupt" << 1;
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*AVR*/ 3 << /*interrupt*/ 0 << 1;
     return;
   }
 
@@ -57,13 +57,13 @@ void SemaAVR::handleSignalAttr(Decl *D, const ParsedAttr &AL) {
 
   // AVR signal handlers must have no parameter and be void type.
   if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 0) {
-    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-        << /*AVR*/ 3 << "signal" << 0;
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*AVR*/ 3 << /*signal*/ 1 << 0;
     return;
   }
   if (!getFunctionOrMethodResultType(D)->isVoidType()) {
-    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-        << /*AVR*/ 3 << "signal" << 1;
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*AVR*/ 3 << /*signal*/ 1 << 1;
     return;
   }
 
