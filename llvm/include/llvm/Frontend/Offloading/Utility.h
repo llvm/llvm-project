@@ -10,6 +10,7 @@
 #define LLVM_FRONTEND_OFFLOADING_UTILITY_H
 
 #include <cstdint>
+#include <memory>
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -152,6 +153,12 @@ Error getAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
                                  StringMap<AMDGPUKernelMetaData> &KernelInfoMap,
                                  uint16_t &ELFABIVersion);
 } // namespace amdgpu
+
+namespace intel {
+/// Containerizes an offloading binary into the ELF binary format expected by
+/// the Intel runtime offload plugin.
+Error containerizeOpenMPSPIRVImage(std::unique_ptr<MemoryBuffer> &Binary);
+} // namespace intel
 } // namespace offloading
 } // namespace llvm
 
