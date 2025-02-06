@@ -6811,6 +6811,11 @@ FunctionCallee OpenMPIRBuilder::createDispatchDeinitFunction() {
 static void FixupDebugInfoForOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, Function *Func,
     DenseMap<Value *, std::tuple<Value *, unsigned>> &ValueReplacementMap) {
+
+  DISubprogram *NewSP = Func->getSubprogram();
+  if (!NewSP)
+    return;
+
   DenseMap<const MDNode *, MDNode *> Cache;
   SmallDenseMap<DILocalVariable *, DILocalVariable *> RemappedVariables;
 
@@ -6828,50 +6833,41 @@ static void FixupDebugInfoForOutlinedFunction(
     return NewVar;
   };
 
-  DISubprogram *NewSP = Func->getSubprogram();
-  if (NewSP) {
-    // The location and scope of variable intrinsics and records still point to
-    // the parent function of the target region. Update them.
-    for (Instruction &I : instructions(Func)) {
-      if (auto *DDI = dyn_cast<llvm::DbgVariableIntrinsic>(&I)) {
-        DILocalVariable *OldVar = DDI->getVariable();
-        unsigned ArgNo = OldVar->getArg();
-        for (auto Loc : DDI->location_ops()) {
-          auto Iter = ValueReplacementMap.find(Loc);
-          if (Iter != ValueReplacementMap.end()) {
-            DDI->replaceVariableLocationOp(Loc, std::get<0>(Iter->second));
-            ArgNo = std::get<1>(Iter->second) + 1;
-          }
-        }
-        DDI->setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
-      }
-      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
-        DILocalVariable *OldVar = DVR.getVariable();
-        unsigned ArgNo = OldVar->getArg();
-        for (auto Loc : DVR.location_ops()) {
-          auto Iter = ValueReplacementMap.find(Loc);
-          if (Iter != ValueReplacementMap.end()) {
-            DVR.replaceVariableLocationOp(Loc, std::get<0>(Iter->second));
-            ArgNo = std::get<1>(Iter->second) + 1;
-          }
-        }
-        DVR.setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
+  auto UpdateDebugRecord = [&](auto *DR) {
+    DILocalVariable *OldVar = DR->getVariable();
+    unsigned ArgNo = OldVar->getArg();
+    for (auto Loc : DR->location_ops()) {
+      auto Iter = ValueReplacementMap.find(Loc);
+      if (Iter != ValueReplacementMap.end()) {
+        DR->replaceVariableLocationOp(Loc, std::get<0>(Iter->second));
+        ArgNo = std::get<1>(Iter->second) + 1;
       }
     }
-    // An extra argument is passed to the device. Create the debug data for it.
-    if (OMPBuilder.Config.isTargetDevice()) {
-      DICompileUnit *CU = NewSP->getUnit();
-      auto M = Builder.GetInsertBlock()->getModule();
-      DIBuilder DB(*M, true, CU);
-      DIType *VoidPtrTy =
-          DB.createQualifiedType(dwarf::DW_TAG_pointer_type, nullptr);
-      DILocalVariable *Var = DB.createParameterVariable(
-          NewSP, "dyn_ptr", /*ArgNo*/ 1, NewSP->getFile(), /*LineNo=*/0,
-          VoidPtrTy, /*AlwaysPreserve=*/false, DINode::DIFlags::FlagArtificial);
-      auto Loc = DILocation::get(Func->getContext(), 0, 0, NewSP, 0);
-      DB.insertDeclare(&(*Func->arg_begin()), Var, DB.createExpression(), Loc,
-                       &(*Func->begin()));
-    }
+    DR->setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
+  };
+
+  // The location and scope of variable intrinsics and records still point to
+  // the parent function of the target region. Update them.
+  for (Instruction &I : instructions(Func)) {
+    if (auto *DDI = dyn_cast<llvm::DbgVariableIntrinsic>(&I))
+      UpdateDebugRecord(DDI);
+
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+      UpdateDebugRecord(&DVR);
+  }
+  // An extra argument is passed to the device. Create the debug data for it.
+  if (OMPBuilder.Config.isTargetDevice()) {
+    DICompileUnit *CU = NewSP->getUnit();
+    auto M = Builder.GetInsertBlock()->getModule();
+    DIBuilder DB(*M, true, CU);
+    DIType *VoidPtrTy =
+        DB.createQualifiedType(dwarf::DW_TAG_pointer_type, nullptr);
+    DILocalVariable *Var = DB.createParameterVariable(
+        NewSP, "dyn_ptr", /*ArgNo*/ 1, NewSP->getFile(), /*LineNo=*/0,
+        VoidPtrTy, /*AlwaysPreserve=*/false, DINode::DIFlags::FlagArtificial);
+    auto Loc = DILocation::get(Func->getContext(), 0, 0, NewSP, 0);
+    DB.insertDeclare(&(*Func->arg_begin()), Var, DB.createExpression(), Loc,
+                     &(*Func->begin()));
   }
 }
 
