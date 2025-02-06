@@ -798,6 +798,10 @@ ol_impl_result_t olEnqueueDataWrite_val(ol_queue_handle_t Queue, void *SrcPtr,
                                         void *DstPtr, size_t Size,
                                         ol_event_handle_t *EventOut) {
   if (true /*enableParameterValidation*/) {
+    if (Size == 0) {
+      return OL_ERRC_INVALID_SIZE;
+    }
+
     if (NULL == Queue) {
       return OL_ERRC_INVALID_NULL_HANDLE;
     }

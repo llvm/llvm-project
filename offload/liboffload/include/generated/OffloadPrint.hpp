@@ -51,23 +51,20 @@ inline std::ostream &operator<<(std::ostream &os, enum ol_errc_t value) {
   case OL_ERRC_INVALID_PLATFORM:
     os << "OL_ERRC_INVALID_PLATFORM";
     break;
-  case OL_ERRC_DEVICE_NOT_FOUND:
-    os << "OL_ERRC_DEVICE_NOT_FOUND";
-    break;
   case OL_ERRC_INVALID_DEVICE:
     os << "OL_ERRC_INVALID_DEVICE";
     break;
-  case OL_ERRC_DEVICE_LOST:
-    os << "OL_ERRC_DEVICE_LOST";
+  case OL_ERRC_INVALID_QUEUE:
+    os << "OL_ERRC_INVALID_QUEUE";
     break;
-  case OL_ERRC_UNINITIALIZED:
-    os << "OL_ERRC_UNINITIALIZED";
+  case OL_ERRC_INVALID_EVENT:
+    os << "OL_ERRC_INVALID_EVENT";
+    break;
+  case OL_ERRC_INVALID_KERNEL_NAME:
+    os << "OL_ERRC_INVALID_KERNEL_NAME";
     break;
   case OL_ERRC_OUT_OF_RESOURCES:
     os << "OL_ERRC_OUT_OF_RESOURCES";
-    break;
-  case OL_ERRC_UNSUPPORTED_VERSION:
-    os << "OL_ERRC_UNSUPPORTED_VERSION";
     break;
   case OL_ERRC_UNSUPPORTED_FEATURE:
     os << "OL_ERRC_UNSUPPORTED_FEATURE";

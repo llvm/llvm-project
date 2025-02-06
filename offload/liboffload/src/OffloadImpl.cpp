@@ -53,7 +53,9 @@ struct ol_program_handle_t_ {
   std::atomic_uint32_t RefCount;
 };
 
-struct OffloadArguments {
+// A helper that can be used to construct the argument buffer for a kernel.
+// Alternatively, a pre-existing buffer can be set with `setArgsData`.
+struct OffloadKernelArguments {
   static constexpr size_t MaxParamBytes = 4096u;
   using args_t = std::array<char, MaxParamBytes>;
   using args_size_t = std::vector<size_t>;
@@ -94,7 +96,7 @@ struct ol_kernel_handle_t_ {
   ol_program_handle_t Program;
   std::atomic_uint32_t RefCount;
   GenericKernelTy *KernelImpl;
-  OffloadArguments Args;
+  OffloadKernelArguments Args;
 };
 
 using PlatformVecT = SmallVector<ol_platform_handle_t_, 4>;
@@ -238,9 +240,8 @@ ol_impl_result_t olGetDeviceCount_impl(ol_platform_handle_t Platform,
 ol_impl_result_t olGetDevice_impl(ol_platform_handle_t Platform,
                                   uint32_t NumEntries,
                                   ol_device_handle_t *Devices) {
-  if (NumEntries > Platform->Devices.size()) {
+  if (NumEntries > Platform->Devices.size())
     return OL_ERRC_INVALID_SIZE;
-  }
 
   for (uint32_t DeviceIndex = 0; DeviceIndex < NumEntries; DeviceIndex++) {
     Devices[DeviceIndex] = &(Platform->Devices[DeviceIndex]);
@@ -326,10 +327,9 @@ ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
                                  void **AllocationOut) {
   auto Alloc =
       Device->Device.dataAlloc(Size, nullptr, convertOlToPluginAllocTy(Type));
-  if (!Alloc) {
+  if (!Alloc)
     return {OL_ERRC_OUT_OF_RESOURCES,
             formatv("Could not create allocation on device {0}", Device).str()};
-  }
 
   *AllocationOut = *Alloc;
   return OL_SUCCESS;
@@ -338,9 +338,9 @@ ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
 ol_impl_result_t olMemFree_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                                 void *Address) {
   auto Res = Device->Device.dataDelete(Address, convertOlToPluginAllocTy(Type));
-  if (Res) {
+  if (Res)
     return {OL_ERRC_OUT_OF_RESOURCES, "Could not free allocation"};
-  }
+
   return OL_SUCCESS;
 }
 
@@ -348,10 +348,9 @@ ol_impl_result_t olCreateQueue_impl(ol_device_handle_t Device,
                                     ol_queue_handle_t *Queue) {
   auto CreatedQueue = std::make_unique<ol_queue_handle_t_>();
   auto Err = Device->Device.initAsyncInfo(&(CreatedQueue->AsyncInfo));
-  if (Err) {
-    return OL_ERRC_OUT_OF_RESOURCES;
-  }
-  // TODO: Check error
+  if (Err)
+    return {OL_ERRC_UNKNOWN, "Could not initialize stream resource"};
+
   CreatedQueue->Device = Device;
   CreatedQueue->RefCount = 1;
   *Queue = CreatedQueue.release();
@@ -364,9 +363,9 @@ ol_impl_result_t olRetainQueue_impl(ol_queue_handle_t Queue) {
 }
 
 ol_impl_result_t olReleaseQueue_impl(ol_queue_handle_t Queue) {
-  if (--Queue->RefCount == 0) {
+  if (--Queue->RefCount == 0)
     delete Queue;
-  }
+
   return OL_SUCCESS;
 }
 
@@ -375,27 +374,25 @@ ol_impl_result_t olFinishQueue_impl(ol_queue_handle_t Queue) {
   // on it, but we have nothing to synchronize in that situation anyway.
   if (Queue->AsyncInfo->Queue) {
     auto Err = Queue->Device->Device.synchronize(Queue->AsyncInfo);
-    if (Err) {
-      return OL_ERRC_OUT_OF_RESOURCES;
-    }
+    if (Err)
+      return {OL_ERRC_INVALID_QUEUE, "The queue failed to synchronize"};
   }
 
   // Recreate the stream resource so the queue can be reused
   // TODO: Would be easier for the synchronization to (optionally) not release
   // it to begin with.
   auto Res = Queue->Device->Device.initAsyncInfo(&Queue->AsyncInfo);
-  if (Res) {
-    return OL_ERRC_OUT_OF_RESOURCES;
-  }
+  if (Res)
+    return {OL_ERRC_UNKNOWN, "Could not reinitialize the stream resource"};
 
   return OL_SUCCESS;
 }
 
 ol_impl_result_t olWaitEvent_impl(ol_event_handle_t Event) {
   auto Res = Event->Device->Device.syncEvent(Event->EventInfo);
-  if (Res) {
-    return OL_ERRC_OUT_OF_RESOURCES;
-  }
+  if (Res)
+    return {OL_ERRC_INVALID_EVENT, "The event failed to synchronize"};
+
   return OL_SUCCESS;
 }
 
@@ -405,7 +402,9 @@ ol_impl_result_t olRetainEvent_impl(ol_event_handle_t Event) {
 }
 
 ol_impl_result_t olReleaseEvent_impl(ol_event_handle_t Event) {
-  Event->RefCount--;
+  if (--Event->RefCount == 0)
+    delete Event;
+
   return OL_SUCCESS;
 }
 
@@ -413,14 +412,13 @@ ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
   auto EventImpl = std::make_unique<ol_event_handle_t_>();
   EventImpl->Queue = Queue;
   auto Res = Queue->Device->Device.createEvent(&EventImpl->EventInfo);
-  if (Res) {
+  if (Res)
     return nullptr;
-  }
+
   Res =
       Queue->Device->Device.recordEvent(EventImpl->EventInfo, Queue->AsyncInfo);
-  if (Res) {
+  if (Res)
     return nullptr;
-  }
 
   return EventImpl.release();
 }
@@ -432,13 +430,11 @@ ol_impl_result_t olEnqueueDataWrite_impl(ol_queue_handle_t Queue, void *SrcPtr,
 
   auto Res = DeviceImpl.dataSubmit(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
 
-  if (Res) {
-    return OL_ERRC_OUT_OF_RESOURCES;
-  }
+  if (Res)
+    return {OL_ERRC_UNKNOWN, "The data submit operation failed"};
 
-  if (EventOut) {
+  if (EventOut)
     *EventOut = makeEvent(Queue);
-  }
 
   return OL_SUCCESS;
 }
@@ -450,13 +446,11 @@ ol_impl_result_t olEnqueueDataRead_impl(ol_queue_handle_t Queue, void *SrcPtr,
 
   auto Res = DeviceImpl.dataRetrieve(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
 
-  if (Res) {
-    return OL_ERRC_OUT_OF_RESOURCES;
-  }
+  if (Res)
+    return {OL_ERRC_UNKNOWN, "The data retrieve operation failed"};
 
-  if (EventOut) {
+  if (EventOut)
     *EventOut = makeEvent(Queue);
-  }
 
   return OL_SUCCESS;
 }
@@ -471,13 +465,11 @@ ol_impl_result_t olEnqueueDataCopy_impl(ol_queue_handle_t Queue, void *SrcPtr,
   auto Res = DeviceImpl.dataExchange(SrcPtr, DstDevice->Device, DstPtr, Size,
                                      Queue->AsyncInfo);
 
-  if (Res) {
-    return OL_ERRC_OUT_OF_RESOURCES;
-  }
+  if (Res)
+    return {OL_ERRC_UNKNOWN, "The data exchange operation failed"};
 
-  if (EventOut) {
+  if (EventOut)
     *EventOut = makeEvent(Queue);
-  }
 
   return OL_SUCCESS;
 }
@@ -485,12 +477,14 @@ ol_impl_result_t olEnqueueDataCopy_impl(ol_queue_handle_t Queue, void *SrcPtr,
 ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device, void *ProgData,
                                       size_t ProgDataSize,
                                       ol_program_handle_t *Program) {
+  // Make a copy of the program binary in case it is released by the caller.
+  // TODO: Make this copy optional.
   auto ImageData = MemoryBuffer::getMemBufferCopy(
       StringRef(reinterpret_cast<char *>(ProgData), ProgDataSize));
-  __tgt_device_image DeviceImage{(char *)ImageData->getBuffer().data(),
-                                 ((char *)ImageData->getBuffer().data()) +
-                                     ProgDataSize - 1,
-                                 nullptr, nullptr};
+  __tgt_device_image DeviceImage{
+      const_cast<char *>(ImageData->getBuffer().data()),
+      const_cast<char *>(ImageData->getBuffer().data()) + ProgDataSize - 1,
+      nullptr, nullptr};
 
   ol_program_handle_t Prog = new ol_program_handle_t_();
 
@@ -507,14 +501,14 @@ ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device, void *ProgData,
 }
 
 ol_impl_result_t olRetainProgram_impl(ol_program_handle_t Program) {
-  ++Program->RefCount;
+  Program->RefCount++;
   return OL_SUCCESS;
 }
 
 ol_impl_result_t olReleaseProgram_impl(ol_program_handle_t Program) {
-  if (--Program->RefCount == 0) {
+  if (--Program->RefCount == 0)
     delete Program;
-  }
+
   return OL_SUCCESS;
 }
 
@@ -524,14 +518,12 @@ ol_impl_result_t olCreateKernel_impl(ol_program_handle_t Program,
 
   auto &Device = Program->Image->getDevice();
   auto KernelImpl = Device.constructKernel(KernelName);
-  if (!KernelImpl) {
-    return OL_ERRC_OUT_OF_RESOURCES;
-  }
+  if (!KernelImpl)
+    return OL_ERRC_INVALID_KERNEL_NAME;
 
   auto Err = KernelImpl->init(Device, *Program->Image);
-  if (Err) {
-    return OL_ERRC_OUT_OF_RESOURCES;
-  }
+  if (Err)
+    return {OL_ERRC_UNKNOWN, "Could not initialize the kernel"};
 
   ol_kernel_handle_t CreatedKernel = new ol_kernel_handle_t_();
   CreatedKernel->Program = Program;
@@ -548,9 +540,9 @@ ol_impl_result_t olRetainKernel_impl(ol_kernel_handle_t Kernel) {
 }
 
 ol_impl_result_t olReleaseKernel_impl(ol_kernel_handle_t Kernel) {
-  if (--Kernel->RefCount == 0) {
+  if (--Kernel->RefCount == 0)
     delete Kernel;
-  }
+
   return OL_SUCCESS;
 }
 
@@ -579,23 +571,22 @@ olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
   LaunchArgs.ThreadLimit[1] = LaunchSizeArgs->GroupSizeY;
   LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSizeZ;
 
-  LaunchArgs.ArgPtrs = (void **)Kernel->Args.getStorage();
+  LaunchArgs.ArgPtrs =
+      reinterpret_cast<void **>(const_cast<char *>(Kernel->Args.getStorage()));
 
   // No offsets needed, arguments are real pointers
   auto ArgOffsets = std::vector<ptrdiff_t>(LaunchArgs.NumArgs, 0ul);
 
-  auto Err = Kernel->KernelImpl->launch(
-      DeviceImpl, (void **)Kernel->Args.getStorage(), ArgOffsets.data(),
-      LaunchArgs, AsyncInfoWrapper);
+  auto Err = Kernel->KernelImpl->launch(DeviceImpl, LaunchArgs.ArgPtrs,
+                                        ArgOffsets.data(), LaunchArgs,
+                                        AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
-  if (Err) {
-    return OL_ERRC_OUT_OF_RESOURCES;
-  }
+  if (Err)
+    return {OL_ERRC_UNKNOWN, "Could not finalize the AsyncInfoWrapper"};
 
-  if (EventOut) {
+  if (EventOut)
     *EventOut = makeEvent(Queue);
-  }
 
   return OL_SUCCESS;
 }

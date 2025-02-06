@@ -21,7 +21,9 @@ def : Function {
         Param<"size_t", "Size", "size in bytes of data to copy", PARAM_IN>,
         Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
     ];
-    let returns = [];
+    let returns = [
+        Return<"OL_ERRC_INVALID_SIZE", ["`Size == 0`"]>
+    ];
 }
 
 def : Function {
@@ -52,7 +54,6 @@ def : Function {
     ];
     let returns = [];
 }
-
 
 def : Struct {
     let name = "ol_kernel_launch_size_args_t";

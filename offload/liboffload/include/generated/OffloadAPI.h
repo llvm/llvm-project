@@ -110,34 +110,32 @@ typedef enum ol_errc_t {
   OL_ERRC_INVALID_VALUE = 1,
   /// Invalid platform
   OL_ERRC_INVALID_PLATFORM = 2,
-  /// Device not found
-  OL_ERRC_DEVICE_NOT_FOUND = 3,
   /// Invalid device
-  OL_ERRC_INVALID_DEVICE = 4,
-  /// Device hung, reset, was removed, or driver update occurred
-  OL_ERRC_DEVICE_LOST = 5,
-  /// plugin is not initialized or specific entry-point is not implemented
-  OL_ERRC_UNINITIALIZED = 6,
+  OL_ERRC_INVALID_DEVICE = 3,
+  /// Invalid queue
+  OL_ERRC_INVALID_QUEUE = 4,
+  /// Invalid event
+  OL_ERRC_INVALID_EVENT = 5,
+  /// Named kernel not found in the program binary
+  OL_ERRC_INVALID_KERNEL_NAME = 6,
   /// Out of resources
   OL_ERRC_OUT_OF_RESOURCES = 7,
-  /// generic error code for unsupported versions
-  OL_ERRC_UNSUPPORTED_VERSION = 8,
   /// generic error code for unsupported features
-  OL_ERRC_UNSUPPORTED_FEATURE = 9,
+  OL_ERRC_UNSUPPORTED_FEATURE = 8,
   /// generic error code for invalid arguments
-  OL_ERRC_INVALID_ARGUMENT = 10,
+  OL_ERRC_INVALID_ARGUMENT = 9,
   /// handle argument is not valid
-  OL_ERRC_INVALID_NULL_HANDLE = 11,
+  OL_ERRC_INVALID_NULL_HANDLE = 10,
   /// pointer argument may not be nullptr
-  OL_ERRC_INVALID_NULL_POINTER = 12,
+  OL_ERRC_INVALID_NULL_POINTER = 11,
   /// invalid size or dimensions (e.g., must not be zero, or is out of bounds)
-  OL_ERRC_INVALID_SIZE = 13,
+  OL_ERRC_INVALID_SIZE = 12,
   /// enumerator argument is not valid
-  OL_ERRC_INVALID_ENUMERATION = 14,
+  OL_ERRC_INVALID_ENUMERATION = 13,
   /// enumerator argument is not supported by the device
-  OL_ERRC_UNSUPPORTED_ENUMERATION = 15,
+  OL_ERRC_UNSUPPORTED_ENUMERATION = 14,
   /// Unknown or internal error
-  OL_ERRC_UNKNOWN = 16,
+  OL_ERRC_UNKNOWN = 15,
   /// @cond
   OL_ERRC_FORCE_UINT32 = 0x7fffffff
   /// @endcond
@@ -541,6 +539,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemFree(
 /// @brief Create a queue for the given device
 ///
 /// @details
+///    - The created queue has an initial reference count of 1.
 ///
 /// @returns
 ///     - ::OL_RESULT_SUCCESS
@@ -557,7 +556,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateQueue(
     ol_queue_handle_t *Queue);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Create a queue for the given device
+/// @brief Increment the queue's reference count.
 ///
 /// @details
 ///
@@ -573,7 +572,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olRetainQueue(
     ol_queue_handle_t Queue);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Create a queue for the given device
+/// @brief Decrement the queues's reference count, and free it if the reference
+/// count reaches 0
 ///
 /// @details
 ///
@@ -605,7 +605,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olFinishQueue(
     ol_queue_handle_t Queue);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Increment the reference count of the given event
+/// @brief Increment the event's reference count
 ///
 /// @details
 ///
@@ -621,7 +621,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olRetainEvent(
     ol_event_handle_t Event);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Decrement the reference count of the given event
+/// @brief Decrement the event's reference count, and free it if the reference
+/// count reaches 0
 ///
 /// @details
 ///
@@ -661,6 +662,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitEvent(
 ///     - ::OL_RESULT_SUCCESS
 ///     - ::OL_ERRC_UNINITIALIZED
 ///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_SIZE
+///         + `Size == 0`
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
 ///         + `NULL == Queue`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
@@ -770,9 +773,11 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunch(
     ol_event_handle_t *EventOut);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief
+/// @brief Create a program for the device from the binary image pointed to by
+/// `ProgData`
 ///
 /// @details
+///    - The created program has an initial reference count of 1.
 ///
 /// @returns
 ///     - ::OL_RESULT_SUCCESS
@@ -794,7 +799,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateProgram(
     ol_program_handle_t *Queue);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Create a queue for the given device
+/// @brief Increment the program's reference count
 ///
 /// @details
 ///
@@ -810,7 +815,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olRetainProgram(
     ol_program_handle_t Program);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Create a queue for the given device
+/// @brief Decrement the program's reference count, and free it if the reference
+/// count reaches 0
 ///
 /// @details
 ///
@@ -826,9 +832,11 @@ OL_APIEXPORT ol_result_t OL_APICALL olReleaseProgram(
     ol_program_handle_t Program);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief
+/// @brief Create a kernel from the function identified by `KernelName` in the
+/// given program
 ///
 /// @details
+///    - The created kernel has an initial reference count of 1.
 ///
 /// @returns
 ///     - ::OL_RESULT_SUCCESS
@@ -848,7 +856,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateKernel(
     ol_kernel_handle_t *Kernel);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Increment the reference count of the given kernel
+/// @brief Increment the kernel's reference count
 ///
 /// @details
 ///
@@ -864,7 +872,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olRetainKernel(
     ol_kernel_handle_t Kernel);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Decrement the reference count of the given kernel
+/// @brief Decrement the kernel's reference count, and free it if the reference
+/// count reaches 0
 ///
 /// @details
 ///
