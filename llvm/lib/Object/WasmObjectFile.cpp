@@ -485,7 +485,10 @@ Error WasmObjectFile::parseDylink0Section(ReadContext &Ctx) {
       break;
     }
     case wasm::WASM_DYLINK_RUNTIME_PATH: {
-      DylinkInfo.RuntimePath = readString(Ctx);
+      Count = readVaruint32(Ctx);
+      while (Count--) {
+        DylinkInfo.RuntimePath.push_back(readString(Ctx));
+      }
       break;
     }
     default:

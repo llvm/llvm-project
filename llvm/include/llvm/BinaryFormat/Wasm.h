@@ -295,7 +295,7 @@ struct WasmDylinkInfo {
   std::vector<StringRef> Needed; // Shared library dependencies
   std::vector<WasmDylinkImportInfo> ImportInfo;
   std::vector<WasmDylinkExportInfo> ExportInfo;
-  StringRef RuntimePath;
+  std::vector<StringRef> RuntimePath;
 };
 
 struct WasmProducerInfo {

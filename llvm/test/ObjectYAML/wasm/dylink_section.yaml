@@ -11,7 +11,7 @@ Sections:
     TableSize:       1
     TableAlignment:  0
     Needed:          [ libfoo.so, libbar.so ]
-    RuntimePath: $ORIGIN/../lib:$ORIGIN/../../.libs
+    RuntimePath: [ $ORIGIN/../lib, $ORIGIN/../../.libs]
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
@@ -26,5 +26,7 @@ Sections:
 # CHECK:     Needed:
 # CHECK:       - libfoo.so
 # CHECK:       - libbar.so
-# CHECK:     RuntimePath: '$ORIGIN/../lib:$ORIGIN/../../.libs'
+# CHECK:     RuntimePath:
+# CHECK:      - '$ORIGIN/../lib'
+# CHECK:      - '$ORIGIN/../../.libs'
 # CHECK: ...
