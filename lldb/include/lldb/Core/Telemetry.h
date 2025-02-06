@@ -39,7 +39,7 @@ using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock,
 struct EventStats {
   // REQUIRED: Start time of an event
   SteadyTimePoint start;
-  // OPTIONAL: End time of an event - may be empty if not meaningful.
+  /// End time of an event - may be empty if not meaningful.
   std::optional<SteadyTimePoint> end;
   // TBD: could add some memory stats here too?
 
