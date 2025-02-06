@@ -53899,11 +53899,6 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(X86ISD::MMX_MOVD2W, DL, MVT::i32, BCSrc);
   }
 
-  // Try to combine (trunc (vNi64 (lrint x))) to (vNi32 (lrint x)).
-  if (Src.getOpcode() == ISD::LRINT && VT.getScalarType() == MVT::i32 &&
-      Src.hasOneUse())
-    return DAG.getNode(ISD::LRINT, DL, VT, Src.getOperand(0));
-
   return SDValue();
 }
 
