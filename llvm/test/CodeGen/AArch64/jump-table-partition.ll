@@ -42,7 +42,7 @@
 ; FUNCLESS: .section .rodata.hot.,"a",@progbits
 ; JT: .LJTI0_0:
 ; JT: .LJTI0_2:
-; NUM:    	      .section	.rodata.hot.,"a",@progbits,unique,3
+; NUM:            .section	.rodata.hot.,"a",@progbits,unique,3
 ; FUNC-NOT:       .section .rodata.hot.foo
 ; FUNCLESS-NOT:   .section .rodata.hot.,"a",@progbits
 ; JT: .LJTI0_1:

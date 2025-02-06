@@ -2912,9 +2912,8 @@ void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
 
   // Jump tables in code sections are marked with a data_region directive
   // where that's supported.
-  if (!JTInDiffSection) {
+  if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionJT32);
-  }
 
   for (const unsigned JumpTableIndex : JumpTableIndices) {
     ArrayRef<MachineBasicBlock *> JTBBs = JT[JumpTableIndex].MBBs;
