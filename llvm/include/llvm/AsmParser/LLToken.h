@@ -500,6 +500,7 @@ enum Kind {
   ChecksumKind,     // CSK_foo
   DIOp,             // DIOpFoo
   DbgRecordType,    // dbg_foo
+  DwarfEnumKind,    // DW_APPLE_ENUM_KIND_foo
 
   // Type valued tokens (TyVal).
   Type,

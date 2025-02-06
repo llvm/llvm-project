@@ -1898,6 +1898,13 @@ static Type getInsertExtractValueElementType(Type llvmType,
 }
 
 OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
+  if (auto extractValueOp = getContainer().getDefiningOp<ExtractValueOp>()) {
+    SmallVector<int64_t, 4> newPos(extractValueOp.getPosition());
+    newPos.append(getPosition().begin(), getPosition().end());
+    setPosition(newPos);
+    getContainerMutable().set(extractValueOp.getContainer());
+    return getResult();
+  }
   auto insertValueOp = getContainer().getDefiningOp<InsertValueOp>();
   OpFoldResult result = {};
   while (insertValueOp) {
