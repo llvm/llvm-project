@@ -11,6 +11,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
@@ -258,11 +259,9 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  Expected<uint32_t> MaybeVersion =
-      dxbc::RootSignatureValidations::validateVersion(VValue);
-  if (Error E = MaybeVersion.takeError())
-    return E;
-  Version = MaybeVersion.get();
+  if (dxbc::RootSignatureValidations::validateVersion(VValue))
+    return make_error<GenericBinaryError>("Invalid Version");
+  Version = VValue;
 
   NumParameters =
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
@@ -284,11 +283,9 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  Expected<uint32_t> MaybeFlag =
-      dxbc::RootSignatureValidations::validateRootFlag(FValue);
-  if (Error E = MaybeFlag.takeError())
-    return E;
-  Flags = MaybeFlag.get();
+  if (dxbc::RootSignatureValidations::validateRootFlag(FValue))
+    return make_error<GenericBinaryError>("Invalid flag");
+  Flags = FValue;
 
   return Error::success();
 }

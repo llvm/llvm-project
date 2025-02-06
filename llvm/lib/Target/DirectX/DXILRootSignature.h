@@ -12,10 +12,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <optional>
+#include <utility>
 
 namespace llvm {
 namespace dxil {
@@ -31,18 +34,24 @@ enum class RootSignatureElementKind {
 
 struct ModuleRootSignature {
   uint32_t Flags = 0;
-
-  ModuleRootSignature() = default;
-  static ModuleRootSignature analyzeModule(Module &M, const Function *F);
+  ModuleRootSignature() { Ctx = nullptr; };
+  ModuleRootSignature(LLVMContext *Ctx) : Ctx(Ctx) {}
+  static std::optional<ModuleRootSignature> analyzeModule(Module &M,
+                                                          const Function *F);
 
 private:
+  LLVMContext *Ctx;
+
   bool parse(NamedMDNode *Root, const Function *F);
   bool parseRootSignatureElement(MDNode *Element);
   bool parseRootFlags(MDNode *RootFlagNode);
 
   bool validate();
-  bool validateRootFlag();
+
+  bool reportError(Twine Message, DiagnosticSeverity Severity = DS_Error);
 };
+
+using OptionalRootSignature = std::optional<ModuleRootSignature>;
 
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
   friend AnalysisInfoMixin<RootSignatureAnalysis>;
@@ -51,9 +60,9 @@ class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
 public:
   RootSignatureAnalysis() = default;
 
-  using Result = ModuleRootSignature;
+  using Result = OptionalRootSignature;
 
-  ModuleRootSignature run(Module &M, ModuleAnalysisManager &AM);
+  OptionalRootSignature run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Wrapper pass for the legacy pass manager.
@@ -61,14 +70,16 @@ public:
 /// This is required because the passes that will depend on this are codegen
 /// passes which run through the legacy pass manager.
 class RootSignatureAnalysisWrapper : public ModulePass {
-  std::optional<ModuleRootSignature> MRS;
+private:
+  OptionalRootSignature MRS;
 
 public:
   static char ID;
 
   RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
-  const std::optional<ModuleRootSignature> &getRootSignature() { return MRS; }
+  const ModuleRootSignature &getRootSignature() { return MRS.value(); }
+  bool hasRootSignature() { return MRS.has_value(); }
 
   bool runOnModule(Module &M) override;
 

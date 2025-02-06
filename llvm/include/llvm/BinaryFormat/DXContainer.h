@@ -550,16 +550,12 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
 
 struct RootSignatureValidations {
 
-  static Expected<uint32_t> validateRootFlag(uint32_t Flags) {
-    if ((Flags & ~0x80000fff) != 0)
-      return llvm::make_error<BinaryStreamError>("Invalid flag");
-    return Flags;
+  static bool validateRootFlag(uint32_t Flags) {
+    return (Flags & ~0x80000fff) != 0;
   }
 
-  static Expected<uint32_t> validateVersion(uint32_t Version) {
-    if (Version < 1 || Version > 2)
-      return llvm::make_error<BinaryStreamError>("Invalid Version");
-    return Version;
+  static bool validateVersion(uint32_t Version) {
+    return (Version < 1 || Version > 2);
   }
 };
 

@@ -153,16 +153,18 @@ void DXContainerGlobals::addSignature(Module &M,
 void DXContainerGlobals::addRootSignature(Module &M,
                                           SmallVector<GlobalValue *> &Globals) {
 
-  std::optional<ModuleRootSignature> MRS =
-      getAnalysis<RootSignatureAnalysisWrapper>().getRootSignature();
-  if (!MRS.has_value())
+  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
+
+  if (!RSA.hasRootSignature())
     return;
+
+  ModuleRootSignature MRS = RSA.getRootSignature();
 
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
 
   RootSignatureHeader RSH;
-  RSH.Flags = MRS->Flags;
+  RSH.Flags = MRS.Flags;
 
   RSH.write(OS);
 
