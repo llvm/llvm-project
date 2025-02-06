@@ -2678,8 +2678,8 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
          "inconsistent operands' types not supported yet");
 
   mlir::Type type = op.getRhs().getType();
-  assert((mlir::isa<cir::IntType, cir::CIRFPTypeInterface, cir::VectorType,
-                    mlir::IntegerType>(type)) &&
+  assert((mlir::isa<cir::IntType, cir::BoolType, cir::CIRFPTypeInterface,
+                    cir::VectorType, mlir::IntegerType>(type)) &&
          "operand type not supported yet");
 
   auto llvmTy = getTypeConverter()->convertType(op.getType());
