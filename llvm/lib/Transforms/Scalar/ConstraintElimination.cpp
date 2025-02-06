@@ -1083,6 +1083,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 }
 
+
 void State::addInfoFor(BasicBlock &BB) {
   addInfoForInductions(BB);
 
@@ -1096,7 +1097,15 @@ void State::addInfoFor(BasicBlock &BB) {
         auto *DTN = DT.getNode(UserI->getParent());
         if (!DTN)
           continue;
+        auto *L = LI.getLoopFor(cast<Instruction>(U.getUser())->getParent());
         WorkList.push_back(FactOrCheck::getCheck(DTN, &U));
+        if (L && L->getLoopLatch() && L->isLoopExiting(L->getLoopLatch())) {
+          auto *DTNLatch = DT.getNode(L->getLoopLatch());
+          if (DTNLatch->getDFSNumIn() >= DTN->getDFSNumIn() &&
+              DTNLatch->getDFSNumOut() <= DTN->getDFSNumOut())
+            WorkList.back().NumOut =
+                std::min(WorkList.back().NumOut, DTNLatch->getDFSNumIn());
+        }
       }
       continue;
     }
@@ -1430,16 +1439,25 @@ static bool checkAndReplaceCondition(
     CmpInst *Cmp, ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
     Instruction *ContextInst, Module *ReproducerModule,
     ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT,
-    SmallVectorImpl<Instruction *> &ToRemove) {
+    SmallVectorImpl<Instruction *> &ToRemove, LoopInfo &LI) {
   auto ReplaceCmpWithConstant = [&](CmpInst *Cmp, bool IsTrue) {
     generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *ConstantC = ConstantInt::getBool(
         CmpInst::makeCmpResultType(Cmp->getType()), IsTrue);
-    Cmp->replaceUsesWithIf(ConstantC, [&DT, NumIn, NumOut,
+    Cmp->replaceUsesWithIf(ConstantC, [&DT, NumIn, NumOut, Cmp, &LI,
                                        ContextInst](Use &U) {
       auto *UserI = getContextInstForUse(U);
       auto *DTN = DT.getNode(UserI->getParent());
-      if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
+      auto *L = LI.getLoopFor(Cmp->getParent());
+      bool IsSameLoop = L && LI.getLoopFor(UserI->getParent()) == L;
+      unsigned UserNumOut = DTN->getDFSNumOut();
+      if (IsSameLoop && L->getLoopLatch() && L->isLoopExiting(L->getLoopLatch())) {
+        auto *DTNLatch = DT.getNode(L->getLoopLatch());
+        if (DTNLatch->getDFSNumIn() >= DTN->getDFSNumIn() &&
+            DTNLatch->getDFSNumOut() <= DTN->getDFSNumOut())
+          UserNumOut = std::min(UserNumOut, DTNLatch->getDFSNumIn());
+      }
+      if (!DTN || DTN->getDFSNumIn() < NumIn || (UserNumOut > NumOut))
         return false;
       if (UserI->getParent() == ContextInst->getParent() &&
           UserI->comesBefore(ContextInst))
@@ -1814,7 +1832,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       } else if (auto *Cmp = dyn_cast<ICmpInst>(Inst)) {
         bool Simplified = checkAndReplaceCondition(
             Cmp, Info, CB.NumIn, CB.NumOut, CB.getContextInst(),
-            ReproducerModule.get(), ReproducerCondStack, S.DT, ToRemove);
+            ReproducerModule.get(), ReproducerCondStack, S.DT, ToRemove, LI);
         if (!Simplified &&
             match(CB.getContextInst(), m_LogicalOp(m_Value(), m_Value()))) {
           Simplified =
