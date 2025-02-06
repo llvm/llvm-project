@@ -957,6 +957,10 @@ bool RISCVRegisterInfo::getRegAllocationHints(
 
 bool RISCVRegisterInfo::shouldReleasePendingQueue(
     MachineFunction &MF, ArrayRef<unsigned> MaxSetPressure) const {
+
+  if (!MF.getSubtarget<RISCVSubtarget>().hasVInstructions())
+    return false;
+
   for (unsigned Idx = 0; Idx < MaxSetPressure.size(); Idx++) {
     // Consider only the RVV Register, as RVV spilling/reloading has higher
     // potential costs than hazards.
