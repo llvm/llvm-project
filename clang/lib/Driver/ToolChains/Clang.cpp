@@ -9151,80 +9151,78 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                                  const InputInfoList &Inputs,
                                  const ArgList &Args,
                                  const char *LinkingOutput) const {
-  const Driver &D = getToolChain().getDriver();
-  const llvm::Triple TheTriple = getToolChain().getTriple();
-  ArgStringList CmdArgs;
+  using namespace options;
 
-  // Pass the CUDA path to the linker wrapper tool.
+  // A list of permitted options that will be forwarded to the embedded device
+  // compilation job.
+  const llvm::DenseSet<unsigned> CompilerOptions{
+      OPT_v,
+      OPT_cuda_path_EQ,
+      OPT_rocm_path_EQ,
+      OPT_O_Group,
+      OPT_g_Group,
+      OPT_g_flags_Group,
+      OPT_R_value_Group,
+      OPT_R_Group,
+      OPT_Xcuda_ptxas,
+      OPT_ftime_report,
+      OPT_ftime_trace,
+      OPT_ftime_trace_EQ,
+      OPT_ftime_trace_granularity_EQ,
+      OPT_ftime_trace_verbose,
+      OPT_opt_record_file,
+      OPT_opt_record_format,
+      OPT_opt_record_passes,
+      OPT_fsave_optimization_record,
+      OPT_fsave_optimization_record_EQ,
+      OPT_fno_save_optimization_record,
+      OPT_foptimization_record_file_EQ,
+      OPT_foptimization_record_passes_EQ,
+      OPT_save_temps,
+      OPT_save_temps_EQ,
+      OPT_mcode_object_version_EQ,
+      OPT_load,
+      OPT_fno_lto,
+      OPT_flto,
+      OPT_flto_EQ};
+  const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm};
+  auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A) {
+    return Set.contains(A->getOption().getID()) ||
+           (A->getOption().getGroup().isValid() &&
+            Set.contains(A->getOption().getGroup().getID()));
+  };
+
+  ArgStringList CmdArgs;
   for (Action::OffloadKind Kind : {Action::OFK_Cuda, Action::OFK_OpenMP}) {
     auto TCRange = C.getOffloadToolChains(Kind);
     for (auto &I : llvm::make_range(TCRange)) {
       const ToolChain *TC = I.second;
-      if (TC->getTriple().isNVPTX()) {
-        CudaInstallationDetector CudaInstallation(D, TheTriple, Args);
-        if (CudaInstallation.isValid())
-          CmdArgs.push_back(Args.MakeArgString(
-              "--cuda-path=" + CudaInstallation.getInstallPath()));
-        break;
+
+      // We do not use a bound architecture here so options passed only to a
+      // specific architecture via -Xarch_<cpu> will not be forwarded.
+      ArgStringList CompilerArgs;
+      ArgStringList LinkerArgs;
+      for (Arg *A : C.getArgsForToolChain(TC, /*BoundArch=*/"", Kind)) {
+        if (ShouldForward(CompilerOptions, A))
+          A->render(Args, CompilerArgs);
+        else if (ShouldForward(LinkerOptions, A))
+          A->render(Args, LinkerArgs);
       }
+
+      // Forward all of these to the appropriate toolchain.
+      for (StringRef Arg : CompilerArgs)
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-compiler=" + TC->getTripleString() + "=" + Arg));
+      for (StringRef Arg : LinkerArgs)
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-linker=" + TC->getTripleString() + "=" + Arg));
     }
   }
 
-  // Pass in the optimization level to use for LTO.
-  if (const Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    StringRef OOpt;
-    if (A->getOption().matches(options::OPT_O4) ||
-        A->getOption().matches(options::OPT_Ofast))
-      OOpt = "3";
-    else if (A->getOption().matches(options::OPT_O)) {
-      OOpt = A->getValue();
-      if (OOpt == "g")
-        OOpt = "1";
-      else if (OOpt == "s" || OOpt == "z")
-        OOpt = "2";
-    } else if (A->getOption().matches(options::OPT_O0))
-      OOpt = "0";
-    if (!OOpt.empty())
-      CmdArgs.push_back(Args.MakeArgString(Twine("--opt-level=O") + OOpt));
-  }
-
   CmdArgs.push_back(
-      Args.MakeArgString("--host-triple=" + TheTriple.getTriple()));
+      Args.MakeArgString("--host-triple=" + getToolChain().getTripleString()));
   if (Args.hasArg(options::OPT_v))
     CmdArgs.push_back("--wrapper-verbose");
-
-  if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
-    if (!A->getOption().matches(options::OPT_g0))
-      CmdArgs.push_back("--device-debug");
-  }
-
-  // code-object-version=X needs to be passed to clang-linker-wrapper to ensure
-  // that it is used by lld.
-  if (const Arg *A = Args.getLastArg(options::OPT_mcode_object_version_EQ)) {
-    CmdArgs.push_back(Args.MakeArgString("-mllvm"));
-    CmdArgs.push_back(Args.MakeArgString(
-        Twine("--amdhsa-code-object-version=") + A->getValue()));
-  }
-
-  for (const auto &A : Args.getAllArgValues(options::OPT_Xcuda_ptxas))
-    CmdArgs.push_back(Args.MakeArgString("--ptxas-arg=" + A));
-
-  // Forward remarks passes to the LLVM backend in the wrapper.
-  if (const Arg *A = Args.getLastArg(options::OPT_Rpass_EQ))
-    CmdArgs.push_back(Args.MakeArgString(Twine("--offload-opt=-pass-remarks=") +
-                                         A->getValue()));
-  if (const Arg *A = Args.getLastArg(options::OPT_Rpass_missed_EQ))
-    CmdArgs.push_back(Args.MakeArgString(
-        Twine("--offload-opt=-pass-remarks-missed=") + A->getValue()));
-  if (const Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ))
-    CmdArgs.push_back(Args.MakeArgString(
-        Twine("--offload-opt=-pass-remarks-analysis=") + A->getValue()));
-
-  if (Args.getLastArg(options::OPT_ftime_report))
-    CmdArgs.push_back("--device-compiler=-ftime-report");
-
-  if (Args.getLastArg(options::OPT_save_temps_EQ))
-    CmdArgs.push_back("--save-temps");
 
   // Construct the link job so we can wrap around it.
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
@@ -9249,12 +9247,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_openmp_target_jit, false))
     CmdArgs.push_back("--embed-bitcode");
 
-  // Forward `-mllvm` arguments to the LLVM invocations if present.
-  for (Arg *A : Args.filtered(options::OPT_mllvm)) {
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(A->getValue());
-    A->claim();
-  }
+  // Save temporary files created by the linker wrapper.
+  if (Args.hasArg(options::OPT_save_temps_EQ) ||
+      Args.hasArg(options::OPT_save_temps))
+    CmdArgs.push_back("--save-temps");
 
   // Pass in the C library for GPUs if present and not disabled.
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_r, options::OPT_nogpulib,
@@ -9280,11 +9276,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                                "-lclang_rt.builtins"));
     });
   }
-
-  // If we disable the GPU C library support it needs to be forwarded to the
-  // link job.
-  if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, true))
-    CmdArgs.push_back("--device-compiler=-nolibc");
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +

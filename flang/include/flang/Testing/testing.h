@@ -41,4 +41,4 @@ FailureDetailPrinter Match(const char *file, int line, const std::string &want,
 FailureDetailPrinter Compare(const char *file, int line, const char *xs,
     const char *rel, const char *ys, std::uint64_t x, std::uint64_t y);
 } // namespace testing
-#endif /* FORTRAN_TESTING_TESTING_H_ */
+#endif // FORTRAN_TESTING_TESTING_H_

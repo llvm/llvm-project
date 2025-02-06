@@ -5073,8 +5073,8 @@ defm SCVTF : IntegerToFP<0b00, 0b010, "scvtf", any_sint_to_fp>;
 defm UCVTF : IntegerToFP<0b00, 0b011, "ucvtf", any_uint_to_fp>;
 
 let Predicates = [HasNEON, HasFPRCVT] in {
-  defm SCVTF : IntegerToFPSIMDScalar<0b11, 0b100, "scvtf">;
-  defm UCVTF : IntegerToFPSIMDScalar<0b11, 0b101, "ucvtf">;
+  defm SCVTF : IntegerToFPSIMDScalar<0b11, 0b100, "scvtf", any_sint_to_fp>;
+  defm UCVTF : IntegerToFPSIMDScalar<0b11, 0b101, "ucvtf", any_uint_to_fp>;
 }
 
 def : Pat<(f16 (fdiv (f16 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f16_i32:$scale)),
