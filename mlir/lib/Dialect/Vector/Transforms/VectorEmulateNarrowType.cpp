@@ -1969,7 +1969,7 @@ void vector::populateVectorNarrowTypeEmulationPatterns(
       typeConverter, patterns.getContext());
 
   // Populate `vector.*` store conversion patterns. The caller can choose
-  // to avoid emitting atomic operations and reduce it to load-modify-write
+  // to avoid emitting atomic operations and reduce it to read-modify-write
   // sequence for stores if it is known there are no thread contentions.
   patterns.insert<ConvertVectorStore>(patterns.getContext(), disableAtomicRMW);
 }
