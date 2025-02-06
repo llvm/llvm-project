@@ -1059,7 +1059,7 @@ enum NodeType {
   FSINCOS,
 
   /// FMODF - Decomposes the operand into integral and fractional parts, each
-  /// having the same type and sign as the arg.
+  /// having the same type and sign as the operand.
   FMODF,
 
   /// Gets the current floating-point environment. The first operand is a token

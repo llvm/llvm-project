@@ -103,3 +103,42 @@ define <vscale x 2 x double> @test_modf_nxv2f64(<vscale x 2 x double> %x, ptr %o
   store <vscale x 2 x double> %result.1, ptr %out_integral, align 8
   ret <vscale x 2 x double> %result.0
 }
+
+define <4 x float> @modf_store_merging_load_before_store(<4 x float> %x, ptr %out_integral) {
+; SLEEF-LABEL: modf_store_merging_load_before_store:
+; SLEEF:       // %bb.0:
+; SLEEF-NEXT:    sub sp, sp, #32
+; SLEEF-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; SLEEF-NEXT:    .cfi_def_cfa_offset 32
+; SLEEF-NEXT:    .cfi_offset w30, -16
+; SLEEF-NEXT:    ldr q1, [x0]
+; SLEEF-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; SLEEF-NEXT:    bl _ZGVnN4vl4_modff
+; SLEEF-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; SLEEF-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; SLEEF-NEXT:    fadd v0.4s, v1.4s, v0.4s
+; SLEEF-NEXT:    add sp, sp, #32
+; SLEEF-NEXT:    ret
+;
+; ARMPL-LABEL: modf_store_merging_load_before_store:
+; ARMPL:       // %bb.0:
+; ARMPL-NEXT:    sub sp, sp, #32
+; ARMPL-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; ARMPL-NEXT:    .cfi_def_cfa_offset 32
+; ARMPL-NEXT:    .cfi_offset w30, -16
+; ARMPL-NEXT:    ldr q1, [x0]
+; ARMPL-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; ARMPL-NEXT:    bl armpl_vmodfq_f32
+; ARMPL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; ARMPL-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; ARMPL-NEXT:    fadd v0.4s, v1.4s, v0.4s
+; ARMPL-NEXT:    add sp, sp, #32
+; ARMPL-NEXT:    ret
+  %result = call { <4 x float>, <4 x float> } @llvm.modf.v4f32(<4 x float> %x)
+  %result.0 = extractvalue { <4 x float>, <4 x float> } %result, 0
+  %result.1 = extractvalue { <4 x float>, <4 x float> } %result, 1
+  %original_intergral = load <4 x float>, ptr %out_integral, align 4
+  store <4 x float> %result.1, ptr %out_integral, align 4
+  %return = fadd <4 x float> %original_intergral, %result.0
+  ret <4 x float> %return
+}
