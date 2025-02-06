@@ -1382,43 +1382,46 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
     if (!ctx.config.dll)
       return;
 
-    if (!ctx.symtab.exports.empty())
+    if (ctx.symtab.hadExplicitExports ||
+        (ctx.hybridSymtab && ctx.hybridSymtab->hadExplicitExports))
       return;
     if (args.hasArg(OPT_exclude_all_symbols))
       return;
   }
 
-  AutoExporter exporter(ctx, excludedSymbols);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    AutoExporter exporter(symtab, excludedSymbols);
 
-  for (auto *arg : args.filtered(OPT_wholearchive_file))
-    if (std::optional<StringRef> path = findFile(arg->getValue()))
-      exporter.addWholeArchive(*path);
+    for (auto *arg : args.filtered(OPT_wholearchive_file))
+      if (std::optional<StringRef> path = findFile(arg->getValue()))
+        exporter.addWholeArchive(*path);
 
-  for (auto *arg : args.filtered(OPT_exclude_symbols)) {
-    SmallVector<StringRef, 2> vec;
-    StringRef(arg->getValue()).split(vec, ',');
-    for (StringRef sym : vec)
-      exporter.addExcludedSymbol(ctx.symtab.mangle(sym));
-  }
-
-  ctx.symtab.forEachSymbol([&](Symbol *s) {
-    auto *def = dyn_cast<Defined>(s);
-    if (!exporter.shouldExport(def))
-      return;
-
-    if (!def->isGCRoot) {
-      def->isGCRoot = true;
-      ctx.config.gcroot.push_back(def);
+    for (auto *arg : args.filtered(OPT_exclude_symbols)) {
+      SmallVector<StringRef, 2> vec;
+      StringRef(arg->getValue()).split(vec, ',');
+      for (StringRef sym : vec)
+        exporter.addExcludedSymbol(symtab.mangle(sym));
     }
 
-    Export e;
-    e.name = def->getName();
-    e.sym = def;
-    if (Chunk *c = def->getChunk())
-      if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
-        e.data = true;
-    s->isUsedInRegularObj = true;
-    ctx.symtab.exports.push_back(e);
+    symtab.forEachSymbol([&](Symbol *s) {
+      auto *def = dyn_cast<Defined>(s);
+      if (!exporter.shouldExport(def))
+        return;
+
+      if (!def->isGCRoot) {
+        def->isGCRoot = true;
+        ctx.config.gcroot.push_back(def);
+      }
+
+      Export e;
+      e.name = def->getName();
+      e.sym = def;
+      if (Chunk *c = def->getChunk())
+        if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
+          e.data = true;
+      s->isUsedInRegularObj = true;
+      symtab.exports.push_back(e);
+    });
   });
 }
 
