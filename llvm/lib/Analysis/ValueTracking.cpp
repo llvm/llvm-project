@@ -2638,8 +2638,19 @@ static bool transferNonZero(const Value *Op, const Value *V, unsigned Depth) {
     return transferNonZero(I->getOperand(0), V, Depth) ||
            transferNonZero(I->getOperand(1), V, Depth);
   case Instruction::Select: {
-    const Value *Unused0, *Unused1;
-    return matchSelectPattern(I, Unused0, Unused1).Flavor == SPF_UMIN;
+    const Value *Lhs, *Rhs;
+    auto MinOrMax = matchSelectPattern(I, Lhs, Rhs).Flavor;
+    if (MinOrMax == SPF_UMIN)
+      return transferNonZero(Lhs, V, Depth) || transferNonZero(Rhs, V, Depth);
+    if (MinOrMax == SPF_SMIN)
+      return (match(Rhs, m_StrictlyPositive()) &&
+              transferNonZero(Lhs, V, Depth)) ||
+             (match(Lhs, m_StrictlyPositive()) &&
+              transferNonZero(Rhs, V, Depth));
+    if (MinOrMax == SPF_SMAX)
+      return (match(Rhs, m_Negative()) && transferNonZero(Lhs, V, Depth)) ||
+             (match(Lhs, m_Negative()) && transferNonZero(Rhs, V, Depth));
+    break;
   }
   case Instruction::Call:
   case Instruction::Invoke:
@@ -2655,6 +2666,12 @@ static bool transferNonZero(const Value *Op, const Value *V, unsigned Depth) {
       case Intrinsic::umin:
         return transferNonZero(II->getArgOperand(0), V, Depth) ||
                transferNonZero(II->getArgOperand(1), V, Depth);
+      case Intrinsic::smin:
+        return match(II->getArgOperand(1), m_StrictlyPositive()) &&
+               transferNonZero(II->getArgOperand(0), V, Depth);
+      case Intrinsic::smax:
+        return match(II->getArgOperand(1), m_Negative()) &&
+               transferNonZero(II->getArgOperand(0), V, Depth);
       case Intrinsic::ptrmask:
         return transferNonZero(II->getArgOperand(0), V, Depth);
       }
