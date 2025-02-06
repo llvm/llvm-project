@@ -133,6 +133,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
       Changed |= Changed4MBB;
     }
   }
+  dumpUsedInBlock();
   T1->stopTimer();
   TG->print(llvm::errs());
 }
@@ -176,6 +177,17 @@ NextUseResult::getSortedSubregUses(const MachineBasicBlock::iterator I,
     }
   }
   return std::move(Result);
+}
+
+void NextUseResult::dumpUsedInBlock() {
+  LLVM_DEBUG(for (auto P
+                  : UsedInBlock) {
+    dbgs() << "MBB_" << P.first << ":\n";
+    for (auto VMP : P.second) {
+      dbgs() << "[ " << printReg(VMP.VReg) << " : <"
+             << PrintLaneMask(VMP.LaneMask) << "> ]\n";
+    }
+  });
 }
 
 unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
