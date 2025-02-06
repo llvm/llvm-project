@@ -1400,29 +1400,31 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
   SequenceIter SeqPos;
 
   if (StmtSequenceOffset) {
-    // If we have a statement sequence offset, find the specific sequence
-    // Binary search for sequence with matching StmtSeqOffset
-    Sequence.StmtSeqOffset = *StmtSequenceOffset;
-    SeqPos = std::lower_bound(Sequences.begin(), LastSeq, Sequence,
-                              [](const DWARFDebugLine::Sequence &LHS,
-                                 const DWARFDebugLine::Sequence &RHS) {
-                                return LHS.StmtSeqOffset < RHS.StmtSeqOffset;
-                              });
+    // If we have a statement sequence offset, find the specific sequence.
+    // Linear search for sequence with matching StmtSeqOffset
+    SeqPos = std::find_if(Sequences.begin(), LastSeq,
+                          [&](const DWARFDebugLine::Sequence &S) {
+                            return S.StmtSeqOffset == *StmtSequenceOffset;
+                          });
 
-    // If sequence not found or doesn't contain the address, return false
-    if (SeqPos == LastSeq || SeqPos->StmtSeqOffset != *StmtSequenceOffset ||
-        !SeqPos->containsPC(Address))
+    // If sequence not found, return false
+    if (SeqPos == LastSeq)
       return false;
 
-    // Set LastSeq to just past this sequence since we only want this one
-    LastSeq = std::next(SeqPos);
+    // Set LastSeq to the next sequence since we only want the one matching
+    // sequence (sequences are guaranteed to have unique StmtSeqOffset)
+    LastSeq = SeqPos + 1;
   } else {
     // No specific sequence requested, find first sequence containing address
     SeqPos = std::upper_bound(Sequences.begin(), LastSeq, Sequence,
                               DWARFDebugLine::Sequence::orderByHighPC);
-    if (SeqPos == LastSeq || !SeqPos->containsPC(Address))
+    if (SeqPos == LastSeq)
       return false;
   }
+
+  // If the start sequence doesn't contain the address, nothing to do
+  if (!SeqPos->containsPC(Address))
+    return false;
 
   SequenceIter StartPos = SeqPos;
 
