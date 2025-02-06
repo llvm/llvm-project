@@ -406,7 +406,10 @@ enum NodeType : unsigned {
   //  vfirst.m with additional mask and VL operands.
   VFIRST_VL,
 
-  LAST_VL_VECTOR_OP = VFIRST_VL,
+  // Vector Absolute Difference and Accumulate
+  VWABDACC_VL,
+  VWABDACCU_VL,
+  LAST_VL_VECTOR_OP = VWABDACCU_VL,
 
   // Read VLENB CSR
   READ_VLENB,

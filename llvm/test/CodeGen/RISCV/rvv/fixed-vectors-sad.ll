@@ -199,23 +199,25 @@ define signext i32 @sad_2block_16xi8_as_i32(ptr %a, ptr %b, i32 signext %stridea
 ; ZVABD-NEXT:    vle8.v v13, (a1)
 ; ZVABD-NEXT:    add a0, a0, a2
 ; ZVABD-NEXT:    add a1, a1, a3
-; ZVABD-NEXT:    vabdu.vv v8, v8, v9
-; ZVABD-NEXT:    vle8.v v9, (a0)
+; ZVABD-NEXT:    vle8.v v14, (a0)
+; ZVABD-NEXT:    vle8.v v15, (a1)
 ; ZVABD-NEXT:    vabdu.vv v10, v10, v11
-; ZVABD-NEXT:    vle8.v v11, (a1)
-; ZVABD-NEXT:    vwaddu.vv v14, v10, v8
+; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVABD-NEXT:    vzext.vf2 v16, v10
+; ZVABD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; ZVABD-NEXT:    vwabdaccu.vv v16, v8, v9
 ; ZVABD-NEXT:    vabdu.vv v8, v12, v13
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD-NEXT:    vzext.vf2 v12, v8
-; ZVABD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD-NEXT:    vabdu.vv v8, v9, v11
-; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD-NEXT:    vwaddu.vv v16, v12, v14
 ; ZVABD-NEXT:    vzext.vf2 v10, v8
-; ZVABD-NEXT:    vwaddu.wv v16, v16, v10
+; ZVABD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; ZVABD-NEXT:    vabdu.vv v8, v14, v15
+; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVABD-NEXT:    vwaddu.vv v12, v10, v16
+; ZVABD-NEXT:    vzext.vf2 v10, v8
+; ZVABD-NEXT:    vwaddu.wv v12, v12, v10
 ; ZVABD-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVABD-NEXT:    vmv.s.x v8, zero
-; ZVABD-NEXT:    vredsum.vs v8, v16, v8
+; ZVABD-NEXT:    vredsum.vs v8, v12, v8
 ; ZVABD-NEXT:    vmv.x.s a0, v8
 ; ZVABD-NEXT:    ret
 entry:
