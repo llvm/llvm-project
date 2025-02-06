@@ -349,21 +349,22 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     }
   }
 
-  // Allow breaking before the right parens with block indentation if there was
-  // a break after the left parens, which is tracked by BreakBeforeClosingParen.
-  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
-      Current.is(tok::r_paren)) {
-    return CurrentState.BreakBeforeClosingParen;
-  }
-  if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser))
-    return CurrentState.BreakBeforeClosingAngle;
-
   // Don't allow breaking before a closing brace of a block-indented braced list
   // initializer if there isn't already a break.
   if (Current.is(tok::r_brace) && Current.MatchingParen &&
       Current.isBlockIndentedInitRBrace(Style)) {
     return CurrentState.BreakBeforeClosingBrace;
   }
+
+  // Allow breaking before the right parens with block indentation if there was
+  // a break after the left parens, which is tracked by BreakBeforeClosingParen.
+  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
+      Current.is(tok::r_paren)) {
+    return CurrentState.BreakBeforeClosingParen;
+  }
+  
+  if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser))
+    return CurrentState.BreakBeforeClosingAngle;
 
   // If binary operators are moved to the next line (including commas for some
   // styles of constructor initializers), that's always ok.

@@ -11225,7 +11225,7 @@ TEST_F(FormatTest, WrapsTemplateDeclarationsWithComments) {
 }
 
 TEST_F(FormatTest, BreakBeforeTemplateCloser) {
-  FormatStyle Style = getLLVMStyle();
+  auto Style = getLLVMStyle();
   // Begin with tests covering the case where there is no constraint on the
   // column limit.
   Style.ColumnLimit = 0;
