@@ -2630,8 +2630,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     SmallVector<int, 8> EvenMask;
     SmallVector<int, 8> OddMask;
     for (unsigned X = 0; X < Width; X += 2) {
-      EvenMask.append(1, X);
-      OddMask.append(1, X + 1);
+      EvenMask.push_back(X);
+      OddMask.push_back(X + 1);
     }
 
     Value *EvenShadow;
