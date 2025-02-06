@@ -19745,9 +19745,9 @@ performExtractLastActiveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   // Only legal for 8, 16, 32, and 64 bit element types.
   EVT EltVT = Vec.getValueType().getVectorElementType();
-  if (!is_contained(
-          ArrayRef({MVT::i8, MVT::i16, MVT::i32, MVT::i64, MVT::f32, MVT::f64}),
-          EltVT.getSimpleVT().SimpleTy))
+  if (!is_contained(ArrayRef({MVT::i8, MVT::i16, MVT::i32, MVT::i64, MVT::f16,
+                              MVT::bf16, MVT::f32, MVT::f64}),
+                    EltVT.getSimpleVT().SimpleTy))
     return SDValue();
 
   SDValue Mask = Idx.getOperand(0);

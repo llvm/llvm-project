@@ -429,13 +429,8 @@ define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1
 define half @extract_last_half_scalable(<vscale x 8 x half> %data, <vscale x 8 x i1> %mask, half %passthru) #0 {
 ; CHECK-LABEL: extract_last_half_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z2.h, #0, #1
-; CHECK-NEXT:    lastb w8, p0, z2.h
-; CHECK-NEXT:    whilels p1.h, xzr, x8
-; CHECK-NEXT:    lastb h0, p1, z0.h
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    ptest p1, p0.b
-; CHECK-NEXT:    fcsel h0, h0, h1, ne
+; CHECK-NEXT:    clastb h1, p0, h1, z0.h
+; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    ret
   %res = call half @llvm.experimental.vector.extract.last.active.nxv8f16(<vscale x 8 x half> %data, <vscale x 8 x i1> %mask, half %passthru)
   ret half %res
@@ -444,13 +439,8 @@ define half @extract_last_half_scalable(<vscale x 8 x half> %data, <vscale x 8 x
 define bfloat @extract_last_bfloat_scalable(<vscale x 8 x bfloat> %data, <vscale x 8 x i1> %mask, bfloat %passthru) #0 {
 ; CHECK-LABEL: extract_last_bfloat_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z2.h, #0, #1
-; CHECK-NEXT:    lastb w8, p0, z2.h
-; CHECK-NEXT:    whilels p1.h, xzr, x8
-; CHECK-NEXT:    lastb h0, p1, z0.h
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    ptest p1, p0.b
-; CHECK-NEXT:    fcsel h0, h0, h1, ne
+; CHECK-NEXT:    clastb h1, p0, h1, z0.h
+; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    ret
   %res = call bfloat @llvm.experimental.vector.extract.last.active.nxv8bf16(<vscale x 8 x bfloat> %data, <vscale x 8 x i1> %mask, bfloat %passthru)
   ret bfloat %res
