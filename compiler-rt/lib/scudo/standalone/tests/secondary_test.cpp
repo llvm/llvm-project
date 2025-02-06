@@ -304,7 +304,10 @@ void testGetMappedSize(scudo::uptr Size, scudo::uptr *mapped,
   *mapped = Stats[scudo::StatMapped];
   Stats[scudo::StatMapped] = 0;
 
-  void *Ptr = Info.Allocator->allocate(Info.Options, Size);
+  // Make sure the allocation is aligned to a page boundary so that the checks
+  // in the tests can avoid problems due to allocations having different
+  // alignments.
+  void *Ptr = Info.Allocator->allocate(Info.Options, Size, PageSize);
   EXPECT_NE(Ptr, nullptr);
 
   Info.GlobalStats.get(Stats);
@@ -319,6 +322,9 @@ void testGetMappedSize(scudo::uptr Size, scudo::uptr *mapped,
 TEST(ScudoSecondaryTest, VerifyGuardPageOption) {
   static scudo::uptr AllocSize = 1000 * PageSize;
 
+  // Verify that a config with guard pages enabled:
+  //  - Non-zero sized guard page
+  //  - Mapped in at least the size of the allocation plus 2 * guard page size
   scudo::uptr guard_mapped = 0;
   scudo::uptr guard_page_size = 0;
   testGetMappedSize<TestNoCacheConfig>(AllocSize, &guard_mapped,
@@ -326,6 +332,9 @@ TEST(ScudoSecondaryTest, VerifyGuardPageOption) {
   EXPECT_GT(guard_page_size, 0U);
   EXPECT_GE(guard_mapped, AllocSize + 2 * guard_page_size);
 
+  // Verify that a config with guard pages disabled:
+  //  - Zero sized guard page
+  //  - The total mapped in is greater than the allocation size
   scudo::uptr no_guard_mapped = 0;
   scudo::uptr no_guard_page_size = 0;
   testGetMappedSize<TestNoCacheNoGuardPageConfig>(AllocSize, &no_guard_mapped,
@@ -333,7 +342,8 @@ TEST(ScudoSecondaryTest, VerifyGuardPageOption) {
   EXPECT_EQ(no_guard_page_size, 0U);
   EXPECT_GE(no_guard_mapped, AllocSize);
 
-  EXPECT_GE(guard_mapped, no_guard_mapped);
+  // Verify that a guard page config mapped in at least twice the size of
+  // their guard page when compared to a no guard page config.
   EXPECT_GE(guard_mapped, no_guard_mapped + guard_page_size * 2);
 }
 
