@@ -3497,8 +3497,8 @@ llvm::ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
   auto *FP = cast<FunctionParmPackExpr>(Binding);
   ValueDecl *const *First = FP->getNumExpansions() > 0 ? FP->begin() : nullptr;
   assert((!First || isa<BindingDecl>(*First)) && "expecting a BindingDecl");
-  return llvm::ArrayRef<BindingDecl *>((BindingDecl *const *)First,
-                                       FP->getNumExpansions());
+  return llvm::ArrayRef<BindingDecl *>(
+      reinterpret_cast<BindingDecl *const *>(First), FP->getNumExpansions());
 }
 
 void DecompositionDecl::anchor() {}
