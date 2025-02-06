@@ -401,13 +401,13 @@ struct GPUSubgroupOpConversion final : ConvertOpToLLVMPattern<SubgroupOp> {
                   ConversionPatternRewriter &rewriter) const final {
     constexpr StringRef funcName = [] {
       if constexpr (std::is_same_v<SubgroupOp, gpu::SubgroupIdOp>) {
-        return "_Z16get_sub_group_id";
+        return "_Z16get_sub_group_idv";
       } else if constexpr (std::is_same_v<SubgroupOp, gpu::LaneIdOp>) {
-        return "_Z22get_sub_group_local_id";
+        return "_Z22get_sub_group_local_idv";
       } else if constexpr (std::is_same_v<SubgroupOp, gpu::NumSubgroupsOp>) {
-        return "_Z18get_num_sub_groups";
+        return "_Z18get_num_sub_groupsv";
       } else if constexpr (std::is_same_v<SubgroupOp, gpu::SubgroupSizeOp>) {
-        return "_Z18get_sub_group_size";
+        return "_Z18get_sub_group_sizev";
       }
     }();
 
