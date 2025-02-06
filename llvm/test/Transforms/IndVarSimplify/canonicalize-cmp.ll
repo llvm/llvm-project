@@ -31,7 +31,7 @@ define i32 @test_01(i32 %a, i32 %b, ptr %p) {
 ; CHECK-NEXT:    br label [[LOOP_BE]]
 ; CHECK:       loop.be:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_ENTRY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 999
@@ -99,7 +99,7 @@ define i32 @test_02(i32 %a, i32 %b, ptr %p) {
 ; CHECK-NEXT:    br label [[LOOP_BE]]
 ; CHECK:       loop.be:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ugt i32 1000, [[IV_NEXT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_ENTRY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 999

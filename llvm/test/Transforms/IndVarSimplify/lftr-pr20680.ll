@@ -48,7 +48,7 @@ define void @f() {
 ; CHECK:       for.inc.us.us:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP2]], [[FOR_INC_LR_PH_US_US]] ], [ [[INC_US_US:%.*]], [[FOR_INC_US_US]] ]
 ; CHECK-NEXT:    [[INC_US_US]] = add nsw i32 [[TMP3]], 1
-; CHECK-NEXT:    [[EXITCOND3:%.*]] = icmp ne i32 [[INC_US_US]], 1
+; CHECK-NEXT:    [[EXITCOND3:%.*]] = icmp slt i32 [[INC_US_US]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND3]], label [[FOR_INC_US_US]], label [[FOR_COND8_FOR_COND2_LOOPEXIT_CRIT_EDGE_US_US:%.*]]
 ; CHECK:       for.cond2.for.inc13_crit_edge.us-lcssa.us.us-lcssa.us:
 ; CHECK-NEXT:    br label [[FOR_COND2_FOR_INC13_CRIT_EDGE_US_LCSSA_US:%.*]]
@@ -65,7 +65,7 @@ define void @f() {
 ; CHECK:       for.inc.us:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP4]], [[FOR_INC_LR_PH_US]] ], [ [[INC_US:%.*]], [[FOR_INC_US:%.*]] ]
 ; CHECK-NEXT:    [[INC_US]] = add nsw i32 [[TMP5]], 1
-; CHECK-NEXT:    [[EXITCOND2:%.*]] = icmp ne i32 [[INC_US]], 1
+; CHECK-NEXT:    [[EXITCOND2:%.*]] = icmp slt i32 [[INC_US]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND2]], label [[FOR_INC_US]], label [[FOR_COND8_FOR_COND2_LOOPEXIT_CRIT_EDGE_US:%.*]]
 ; CHECK:       for.cond2.loopexit.us:
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND2_FOR_INC13_CRIT_EDGE_US_LCSSA_US_US_LCSSA:%.*]], label [[FOR_BODY3_US]]
@@ -95,7 +95,7 @@ define void @f() {
 ; CHECK:       for.inc.us8:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP6]], [[FOR_INC_LR_PH_US12]] ], [ [[INC_US9:%.*]], [[FOR_INC_US8:%.*]] ]
 ; CHECK-NEXT:    [[INC_US9]] = add nsw i32 [[TMP7]], 1
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[INC_US9]], 1
+; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp slt i32 [[INC_US9]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[FOR_INC_US8]], label [[FOR_COND8_FOR_COND2_LOOPEXIT_CRIT_EDGE_US13:%.*]]
 ; CHECK:       for.cond2.loopexit.us11:
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND2_FOR_INC13_CRIT_EDGE_US_LCSSA_US_LCSSA_US:%.*]], label [[FOR_BODY3_US3]]
@@ -126,7 +126,7 @@ define void @f() {
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi i32 [ [[TMP8]], [[FOR_INC_LR_PH]] ], [ [[INC:%.*]], [[FOR_INC]] ]
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[TMP9]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[INC]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_INC]], label [[FOR_COND8_FOR_COND2_LOOPEXIT_CRIT_EDGE:%.*]]
 ; CHECK:       for.cond2.for.inc13_crit_edge.us-lcssa.us-lcssa:
 ; CHECK-NEXT:    br label [[FOR_COND2_FOR_INC13_CRIT_EDGE_US_LCSSA]]

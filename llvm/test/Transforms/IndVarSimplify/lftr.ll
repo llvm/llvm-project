@@ -15,7 +15,7 @@ define i32 @pre_to_post_add() {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    store i32 [[I]], ptr @A, align 4
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], 1001
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i32 [[I]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    ret i32 1000
@@ -190,13 +190,15 @@ define void @test_zext(ptr %a) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ @data, [[ENTRY:%.*]] ], [ [[T3:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_0:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[T4:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ @data, [[ENTRY]] ], [ [[T3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[DOT0:%.*]] = phi ptr [ [[A:%.*]], [[ENTRY]] ], [ [[T:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[T]] = getelementptr inbounds i8, ptr [[DOT0]], i64 1
 ; CHECK-NEXT:    [[T2:%.*]] = load i8, ptr [[DOT0]], align 1
 ; CHECK-NEXT:    [[T3]] = getelementptr inbounds i8, ptr [[P_0]], i64 1
 ; CHECK-NEXT:    store i8 [[T2]], ptr [[P_0]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr [[P_0]], getelementptr inbounds nuw (i8, ptr @data, i64 239)
+; CHECK-NEXT:    [[T4]] = add nuw i8 [[I_0]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i8 [[T4]], -16
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -229,15 +231,12 @@ define void @test_udiv_as_shift(ptr %a, i8 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:    [[E:%.*]] = icmp sgt i8 [[N:%.*]], 3
 ; CHECK-NEXT:    br i1 [[E]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[N]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i8 [[TMP1]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i8 [ [[I1_INC:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[I1_INC]] = add nuw nsw i8 [[I1]], 1
+; CHECK-NEXT:    [[I1_INC]] = add nuw nsw i8 [[I1]], 4
 ; CHECK-NEXT:    store volatile i8 0, ptr [[A:%.*]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8 [[I1_INC]], [[TMP2]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i8 [[I1]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -311,7 +310,7 @@ define i64 @no_undef_counter() nounwind {
 ; CHECK-NEXT:    [[NEXT_ITER]] = add nuw nsw i64 [[ITER]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 (ptr, ...) @printf(ptr noalias captures(none) @.str3, i64 [[NEXT_ITER]], i64 [[UNDEF]])
 ; CHECK-NEXT:    [[NEXT_UNDEF]] = add nsw i64 [[UNDEF]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[NEXT_ITER]], 100
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i64 [[NEXT_ITER]], 100
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BLOCK9]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i64 0
@@ -338,7 +337,7 @@ define void @extend_const() #0 {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    call void @bar(i32 [[INDVARS_IV]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INDVARS_IV_NEXT]], 512
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i32 [[INDVARS_IV_NEXT]], 512
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -470,7 +469,7 @@ define float @wide_trip_count_test2(ptr %a,
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TEMP]], [[TEMP1]]
 ; CHECK-NEXT:    [[ADD]] = fadd float [[SUM_07]], [[MUL]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], [[FOR_BODY]] ]
@@ -530,7 +529,7 @@ define float @wide_trip_count_test3(ptr %b,
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CONV]], [[TEMP]]
 ; CHECK-NEXT:    [[ADD1]] = fadd float [[SUM_07]], [[MUL]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[ADD1_LCSSA:%.*]] = phi float [ [[ADD1]], [[FOR_BODY]] ]
@@ -576,7 +575,7 @@ define float @wide_trip_count_test4(ptr %b,
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[M:%.*]], 10
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[M]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[M]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 10, [[FOR_BODY_PREHEADER]] ]
@@ -589,7 +588,7 @@ define float @wide_trip_count_test4(ptr %b,
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CONV]], [[TEMP]]
 ; CHECK-NEXT:    [[ADD1]] = fadd float [[SUM_07]], [[MUL]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[ADD1_LCSSA:%.*]] = phi float [ [[ADD1]], [[FOR_BODY]] ]

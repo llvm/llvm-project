@@ -12,13 +12,12 @@ define void @rewrite_preserve_add_nsw(i32 %a) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp sgt i32 [[A]], -4
 ; CHECK-NEXT:    br i1 [[PRE]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A]], 5
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    [[EC:%.*]] = icmp slt i32 [[IV]], [[ADD]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]

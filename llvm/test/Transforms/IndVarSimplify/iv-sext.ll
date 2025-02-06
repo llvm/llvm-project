@@ -17,7 +17,7 @@ define void @t(ptr %pval1, ptr %peakWeight, ptr %nrgReducePeakrate, i32 %bandEdg
 ; CHECK:       bb.nph22:
 ; CHECK-NEXT:    [[VAL3:%.*]] = add i32 [[BANDEDGEINDEX]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[VAL3]] to i64
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[BANDEDGEINDEX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[BANDEDGEINDEX]] to i64
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT2:%.*]], [[BB8:%.*]] ], [ 0, [[BB_NPH22]] ]
@@ -29,12 +29,12 @@ define void @t(ptr %pval1, ptr %peakWeight, ptr %nrgReducePeakrate, i32 %bandEdg
 ; CHECK-NEXT:    [[VAL4:%.*]] = icmp ugt i64 [[INDVARS_IV1]], 0
 ; CHECK-NEXT:    br i1 [[VAL4]], label [[BB1:%.*]], label [[BB3_PREHEADER:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV1]], -1
-; CHECK-NEXT:    [[VAL7:%.*]] = getelementptr float, ptr [[PVAL1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[INDVARS_IV1]], -1
+; CHECK-NEXT:    [[VAL7:%.*]] = getelementptr float, ptr [[PVAL1]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[VAL8:%.*]] = load float, ptr [[VAL7]], align 4
 ; CHECK-NEXT:    [[VAL9:%.*]] = fadd float [[VAL8]], [[DISTERBLO_120]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[INDVARS_IV1]], -1
-; CHECK-NEXT:    [[VAL12:%.*]] = getelementptr float, ptr [[PVAL1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[INDVARS_IV1]], -1
+; CHECK-NEXT:    [[VAL12:%.*]] = getelementptr float, ptr [[PVAL1]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[VAL13:%.*]] = load float, ptr [[VAL12]], align 4
 ; CHECK-NEXT:    [[VAL14:%.*]] = fsub float [[DISTERBHI_121]], [[VAL13]]
 ; CHECK-NEXT:    br label [[BB3_PREHEADER]]
@@ -76,10 +76,10 @@ define void @t(ptr %pval1, ptr %peakWeight, ptr %nrgReducePeakrate, i32 %bandEdg
 ; CHECK-NEXT:    [[OR_COND11:%.*]] = and i1 [[VAL26]], [[DOTNOT10]]
 ; CHECK-NEXT:    br i1 [[OR_COND11]], label [[BB_NPH12:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb.nph12:
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[HIPART_119]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[HIPART_119]] to i64
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BB5:%.*]] ], [ [[TMP3]], [[BB_NPH12]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BB5:%.*]] ], [ [[TMP4]], [[BB_NPH12]] ]
 ; CHECK-NEXT:    [[DISTERBHI_29:%.*]] = phi float [ [[VAL30:%.*]], [[BB5]] ], [ [[DISTERBHI_0_PH]], [[BB_NPH12]] ]
 ; CHECK-NEXT:    [[PEAKCOUNT_27:%.*]] = phi float [ [[VAL35:%.*]], [[BB5]] ], [ [[PEAKCOUNT_0_LCSSA]], [[BB_NPH12]] ]
 ; CHECK-NEXT:    [[VAL28:%.*]] = getelementptr float, ptr [[PVAL1]], i64 [[INDVARS_IV]]
@@ -99,11 +99,11 @@ define void @t(ptr %pval1, ptr %peakWeight, ptr %nrgReducePeakrate, i32 %bandEdg
 ; CHECK-NEXT:    [[VAL35_LCSSA:%.*]] = phi float [ [[VAL35]], [[BB5]] ]
 ; CHECK-NEXT:    [[VAL31_LCSSA_WIDE:%.*]] = phi i64 [ [[INDVARS_IV_NEXT]], [[BB5]] ]
 ; CHECK-NEXT:    [[VAL30_LCSSA:%.*]] = phi float [ [[VAL30]], [[BB5]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc nsw i64 [[VAL31_LCSSA_WIDE]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc nsw i64 [[VAL31_LCSSA_WIDE]] to i32
 ; CHECK-NEXT:    br label [[BB7]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[DISTERBHI_2_LCSSA]] = phi float [ [[VAL30_LCSSA]], [[BB5_BB7_CRIT_EDGE]] ], [ [[DISTERBHI_0_PH]], [[BB5_PREHEADER]] ]
-; CHECK-NEXT:    [[HIPART_0_LCSSA]] = phi i32 [ [[TMP4]], [[BB5_BB7_CRIT_EDGE]] ], [ [[HIPART_119]], [[BB5_PREHEADER]] ]
+; CHECK-NEXT:    [[HIPART_0_LCSSA]] = phi i32 [ [[TMP5]], [[BB5_BB7_CRIT_EDGE]] ], [ [[HIPART_119]], [[BB5_PREHEADER]] ]
 ; CHECK-NEXT:    [[PEAKCOUNT_2_LCSSA]] = phi float [ [[VAL35_LCSSA]], [[BB5_BB7_CRIT_EDGE]] ], [ [[PEAKCOUNT_0_LCSSA]], [[BB5_PREHEADER]] ]
 ; CHECK-NEXT:    [[VAL37:%.*]] = fadd float [[DISTERBLO_0_LCSSA]], [[DISTERBHI_2_LCSSA]]
 ; CHECK-NEXT:    [[VAL38:%.*]] = fdiv float [[PEAKCOUNT_2_LCSSA]], [[VAL37]]
@@ -117,8 +117,8 @@ define void @t(ptr %pval1, ptr %peakWeight, ptr %nrgReducePeakrate, i32 %bandEdg
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nuw nsw i64 [[INDVARS_IV1]], 1
 ; CHECK-NEXT:    br label [[BB8]]
 ; CHECK:       bb8:
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT2]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB]], label [[BB8_RETURN_CRIT_EDGE:%.*]]
+; CHECK-NEXT:    [[VAL47:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT2]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[VAL47]], label [[BB]], label [[BB8_RETURN_CRIT_EDGE:%.*]]
 ; CHECK:       bb8.return_crit_edge:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:

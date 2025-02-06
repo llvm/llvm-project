@@ -15,8 +15,8 @@ define i32 @test_drop_nuw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ -2, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr @a, align 4
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[STOREMERGE]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 0
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[STOREMERGE]], -1
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[STOREMERGE]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -42,8 +42,8 @@ define i32 @test_drop_nsw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr @a, align 4
-; CHECK-NEXT:    [[INC]] = add nuw i32 [[STOREMERGE]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], -2147483648
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i32 [[STOREMERGE]], 2147483647
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[STOREMERGE]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -69,8 +69,8 @@ define i32 @test_no_drop_nuw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ -3, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr @a, align 4
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[STOREMERGE]], -2
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[STOREMERGE]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], -1
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -97,8 +97,8 @@ define i32 @test_no_drop_nsw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr @a, align 4
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i32 [[STOREMERGE]], 2147483646
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[STOREMERGE]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 2147483647
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -124,8 +124,8 @@ define i32 @test_no_add_nuw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr @a, align 4
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[STOREMERGE]], 9
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[STOREMERGE]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 10
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -150,13 +150,12 @@ define i32 @test_drop_nsw_var_lim(i32 %lim) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[LIM:%.*]], -1
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LIM]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ [[INC:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr @a, align 4
-; CHECK-NEXT:    [[INC]] = add nuw i32 [[STOREMERGE]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], [[TMP0]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i32 [[STOREMERGE]], [[LIM]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[STOREMERGE]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -194,8 +193,8 @@ define i32 @switch_to_different_iv_post_inc(ptr %ptr, i1 %always_false) {
 ; CHECK-NEXT:    br label [[ALWAYS_TAKEN]]
 ; CHECK:       always_taken:
 ; CHECK-NEXT:    [[IV_INC]] = add nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[IV2_INC]] = add nuw i32 [[IV2]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV2_INC]], -2147483627
+; CHECK-NEXT:    [[IV2_INC]] = add nuw nsw i32 [[IV2]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[IV]], 20
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 0
@@ -233,7 +232,7 @@ define i32 @switch_to_different_iv_pre_inc(ptr %ptr, i1 %always_false) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ -2147483648, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[ALWAYS_TAKEN:%.*]] ]
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV2_INC:%.*]], [[ALWAYS_TAKEN]] ]
 ; CHECK-NEXT:    store i32 [[IV]], ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV2]], -2147483628
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[IV]], 20
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    br i1 [[ALWAYS_FALSE:%.*]], label [[NEVER_TAKEN:%.*]], label [[ALWAYS_TAKEN]]
@@ -242,7 +241,7 @@ define i32 @switch_to_different_iv_pre_inc(ptr %ptr, i1 %always_false) {
 ; CHECK-NEXT:    br label [[ALWAYS_TAKEN]]
 ; CHECK:       always_taken:
 ; CHECK-NEXT:    [[IV_INC]] = add nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[IV2_INC]] = add nuw i32 [[IV2]], 1
+; CHECK-NEXT:    [[IV2_INC]] = add nuw nsw i32 [[IV2]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 0
@@ -288,7 +287,7 @@ define i32 @switch_to_different_iv_first_poison(ptr %ptr, i1 %always_false) {
 ; CHECK:       always_taken:
 ; CHECK-NEXT:    [[IV2_INC]] = add nuw nsw i32 [[IV2]], 1
 ; CHECK-NEXT:    [[IV_INC]] = add nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV2_INC]], -2147483628
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[IV]], 20
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 0
@@ -329,9 +328,9 @@ define i32 @switch_to_different_iv_second_poison(ptr %ptr, i1 %always_false) {
 ; CHECK-NEXT:    store volatile i32 [[IV2]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[ALWAYS_TAKEN]]
 ; CHECK:       always_taken:
-; CHECK-NEXT:    [[IV2_INC]] = add nsw i32 [[IV2]], 1
+; CHECK-NEXT:    [[IV2_INC]] = add nuw nsw i32 [[IV2]], 1
 ; CHECK-NEXT:    [[IV_INC]] = add nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV2_INC]], -2147483629
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[IV]], 20
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 0

@@ -12,7 +12,7 @@ define i64 @test(ptr nocapture %first, i32 %count) nounwind readonly {
 ; CHECK-NEXT:    [[T0:%.*]] = icmp sgt i32 [[COUNT:%.*]], 0
 ; CHECK-NEXT:    br i1 [[T0]], label [[BB_NPH:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb.nph:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[COUNT]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[COUNT]] to i64
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BB1:%.*]] ], [ 0, [[BB_NPH]] ]
@@ -24,7 +24,7 @@ define i64 @test(ptr nocapture %first, i32 %count) nounwind readonly {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB]], label [[BB1_BB2_CRIT_EDGE:%.*]]
 ; CHECK:       bb1.bb2_crit_edge:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[T5]], [[BB1]] ]
@@ -70,7 +70,7 @@ define void @foo(i16 signext %N, ptr nocapture %P) nounwind {
 ; CHECK-NEXT:    [[T0:%.*]] = icmp sgt i16 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[T0]], label [[BB_NPH:%.*]], label [[RETURN:%.*]]
 ; CHECK:       bb.nph:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i16 [[N]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[N]] to i64
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BB1:%.*]] ], [ 0, [[BB_NPH]] ]
@@ -79,7 +79,7 @@ define void @foo(i16 signext %N, ptr nocapture %P) nounwind {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB]], label [[BB1_RETURN_CRIT_EDGE:%.*]]
 ; CHECK:       bb1.return_crit_edge:
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -124,7 +124,7 @@ define void @kinds__srangezero(ptr nocapture %a) nounwind {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [21 x i32], ptr [[A:%.*]], i32 0, i32 [[TMP4]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i32 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], 11
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i32 [[INDVARS_IV_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN:%.*]], label [[BB]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -156,7 +156,7 @@ define void @kinds__urangezero(ptr nocapture %a) nounwind {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [21 x i32], ptr [[A:%.*]], i32 0, i32 [[TMP4]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], 31
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ugt i32 [[INDVARS_IV_NEXT]], 30
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN:%.*]], label [[BB]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void

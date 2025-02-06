@@ -725,11 +725,6 @@ static bool needsLFTR(Loop *L, BasicBlock *ExitingBB) {
   if (!Cond)
     return true;
 
-  // Do LFTR to simplify the exit ICMP to EQ/NE
-  ICmpInst::Predicate Pred = Cond->getPredicate();
-  if (Pred != ICmpInst::ICMP_NE && Pred != ICmpInst::ICMP_EQ)
-    return true;
-
   // Look for a loop invariant RHS
   Value *LHS = Cond->getOperand(0);
   Value *RHS = Cond->getOperand(1);

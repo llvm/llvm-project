@@ -70,7 +70,7 @@ define i32 @test_02(i32 %start, i32 %limit) {
 ; WIDENING_ON:       loop:
 ; WIDENING_ON-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[BB:%.*]] ]
 ; WIDENING_ON-NEXT:    [[CANONICAL_IV:%.*]] = phi i32 [ [[CANONICAL_IV_NEXT:%.*]], [[BACKEDGE]] ], [ 0, [[BB]] ]
-; WIDENING_ON-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[CANONICAL_IV]], 65635
+; WIDENING_ON-NEXT:    [[EXITCOND:%.*]] = icmp ult i32 [[CANONICAL_IV]], 65635
 ; WIDENING_ON-NEXT:    br i1 [[EXITCOND]], label [[CHECKED:%.*]], label [[FAILED:%.*]]
 ; WIDENING_ON:       checked:
 ; WIDENING_ON-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
@@ -94,7 +94,7 @@ define i32 @test_02(i32 %start, i32 %limit) {
 ; WIDENING_OFF:       loop:
 ; WIDENING_OFF-NEXT:    [[CANONICAL_IV:%.*]] = phi i32 [ [[CANONICAL_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ 0, [[BB:%.*]] ]
 ; WIDENING_OFF-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BACKEDGE]] ], [ [[START:%.*]], [[BB]] ]
-; WIDENING_OFF-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[CANONICAL_IV]], 65635
+; WIDENING_OFF-NEXT:    [[EXITCOND:%.*]] = icmp ult i32 [[CANONICAL_IV]], 65635
 ; WIDENING_OFF-NEXT:    br i1 [[EXITCOND]], label [[CHECKED:%.*]], label [[FAILED:%.*]]
 ; WIDENING_OFF:       checked:
 ; WIDENING_OFF-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
