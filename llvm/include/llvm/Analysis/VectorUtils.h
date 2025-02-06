@@ -748,12 +748,11 @@ private:
   /// \returns the newly created interleave group.
   InterleaveGroup<Instruction> *
   createInterleaveGroup(Instruction *Instr, int Stride, Align Alignment) {
-    assert(!InterleaveGroupMap.count(Instr) &&
-           "Already in an interleaved access group");
-    InterleaveGroupMap[Instr] =
-        new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
-    InterleaveGroups.insert(InterleaveGroupMap[Instr]);
-    return InterleaveGroupMap[Instr];
+    auto [It, Inserted] = InterleaveGroupMap.try_emplace(Instr);
+    assert(Inserted && "Already in an interleaved access group");
+    It->second = new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
+    InterleaveGroups.insert(It->second);
+    return It->second;
   }
 
   /// Release the group and remove all the relationships.
