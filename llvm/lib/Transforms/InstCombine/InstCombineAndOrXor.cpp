@@ -4200,14 +4200,14 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 
     // Fold (icmp eq/ne (X & Pow2), 0) ^ (icmp eq/ne (Y & Pow2), 0) into
     // (icmp eq/ne ((X ^ Y) & Pow2), 0)
-    Value *X, *Y;
-    const APInt *Mask;
+    Value *X, *Y, *Pow2;
     if (ICmpInst::isEquality(PredL) && ICmpInst::isEquality(PredR) &&
         LC->isZero() && RC->isZero() && LHS->hasOneUse() && RHS->hasOneUse() &&
-        match(LHS0, m_And(m_Value(X), m_Power2(Mask))) &&
-        match(RHS0, m_And(m_Value(Y), m_SpecificInt(*Mask)))) {
+        match(LHS0, m_And(m_Value(X), m_Value(Pow2))) &&
+        match(RHS0, m_And(m_Value(Y), m_Specific(Pow2))) &&
+        isKnownToBeAPowerOfTwo(Pow2, /*OrZero=*/true, /*Depth=*/0, &I)) {
       Value *Xor = Builder.CreateXor(X, Y);
-      Value *And = Builder.CreateAnd(Xor, *Mask);
+      Value *And = Builder.CreateAnd(Xor, Pow2);
       return Builder.CreateICmp(PredL == PredR ? ICmpInst::ICMP_NE
                                                : ICmpInst::ICMP_EQ,
                                 And, ConstantInt::getNullValue(Xor->getType()));
