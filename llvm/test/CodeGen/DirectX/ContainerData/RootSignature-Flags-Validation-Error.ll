@@ -1,8 +1,6 @@
-; RUN: not llc %s --filetype=obj -o - 2>&1 | FileCheck %s
-
+; RUN: not llc %s --filetype=obj -o - 
 target triple = "dxil-unknown-shadermodel6.0-compute"
-
-; CHECK: LLVM ERROR: Invalid flag value for RootFlag
+; expected-error@-1: Invalid flag value for RootFlag
 
 
 define void @main() #0 {

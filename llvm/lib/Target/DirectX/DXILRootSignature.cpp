@@ -15,17 +15,23 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Error.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::dxil;
 
-static bool reportError(Twine Message) {
-  report_fatal_error(Message, false);
+bool ModuleRootSignature::reportError(Twine Message,
+                                      DiagnosticSeverity Severity) {
+  Ctx->diagnose(DiagnosticInfoGeneric(Message, Severity));
   return true;
 }
 
@@ -130,43 +136,33 @@ bool ModuleRootSignature::parse(NamedMDNode *Root, const Function *EF) {
   return HasError;
 }
 
-bool ModuleRootSignature::validateRootFlag() {
-  // Root Element validation, as specified:
-  // https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#validations-during-dxil-generation
-  if ((Flags & ~0x80000fff) != 0)
-    return reportError("Invalid flag value for RootFlag");
-
-  return false;
-}
-
 bool ModuleRootSignature::validate() {
-  if (validateRootFlag())
+  if (dxbc::RootSignatureValidations::validateRootFlag(Flags)) {
     return reportError("Invalid flag value for RootFlag");
-
+  }
   return false;
 }
 
-ModuleRootSignature ModuleRootSignature::analyzeModule(Module &M,
-                                                       const Function *F) {
-  ModuleRootSignature MRS;
+OptionalRootSignature ModuleRootSignature::analyzeModule(Module &M,
+                                                         const Function *F) {
+  ModuleRootSignature MRS(&M.getContext());
 
   NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
-  if (RootSignatureNode) {
-    if (MRS.parse(RootSignatureNode, F) || MRS.validate())
-      llvm_unreachable("Invalid Root Signature Metadata.");
-  }
+  if (RootSignatureNode == nullptr || MRS.parse(RootSignatureNode, F) ||
+      MRS.validate())
+    return std::nullopt;
 
   return MRS;
 }
 
 AnalysisKey RootSignatureAnalysis::Key;
 
-ModuleRootSignature RootSignatureAnalysis::run(Module &M,
-                                               ModuleAnalysisManager &AM) {
+OptionalRootSignature RootSignatureAnalysis::run(Module &M,
+                                                 ModuleAnalysisManager &AM) {
   auto MMI = AM.getResult<DXILMetadataAnalysis>(M);
 
   if (MMI.ShaderProfile == Triple::Library)
-    return ModuleRootSignature();
+    return std::nullopt;
 
   assert(MMI.EntryPropertyVec.size() == 1);
 
@@ -186,7 +182,6 @@ bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
 
   const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
   MRS = ModuleRootSignature::analyzeModule(M, EntryFunction);
-
   return false;
 }
 
