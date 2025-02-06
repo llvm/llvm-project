@@ -11345,6 +11345,15 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
 
   // Now test that it handles the cases when the column limit forces wrapping.
   Style.ColumnLimit = 40;
+  // The typename goes on the first line if it fits:
+  verifyFormat("template <typename Fooooooooooooooooooo,\n"
+               "          typename Bar>\n"
+               "void foo() {}",
+               Style);
+  verifyFormat("template <typename Foo,\n"
+               "          typename Barrrrrrrrrrrrrrrrrr>\n"
+               "void foo() {}",
+               Style);
   // Long names should be split in one step:
   verifyFormat("template <\n"
                "    typename Foo,\n"
