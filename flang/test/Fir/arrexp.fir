@@ -1,6 +1,6 @@
 // RUN: tco %s | FileCheck %s
 
-// CHECK-LINE: define void @f1
+// CHECK-LABEL: define void @f1
 // CHECK: (ptr captures(none) %[[A:[^,]*]], {{.*}}, float %[[F:.*]])
 func.func @f1(%a : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : index, %p : index, %f : f32) {
   %c1 = arith.constant 1 : index
@@ -22,7 +22,7 @@ func.func @f1(%a : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : i
   return
 }
 
-// CHECK-LINE: define void @f2
+// CHECK-LABEL: define void @f2
 // CHECK: (ptr captures(none) %[[A:[^,]*]], {{.*}}, float %[[F:.*]])
 func.func @f2(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : index, %p : index, %f : f32) {
   %c1 = arith.constant 1 : index
@@ -46,7 +46,7 @@ func.func @f2(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf
   return
 }
 
-// CHECK-LINE: define void @f3
+// CHECK-LABEL: define void @f3
 // CHECK: (ptr captures(none) %[[A:[^,]*]], {{.*}}, float %[[F:.*]])
 func.func @f3(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : index, %p : index, %f : f32) {
   %c1 = arith.constant 1 : index
@@ -71,7 +71,7 @@ func.func @f3(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf
   return
 }
 
-// CHECK-LINE: define void @f4
+// CHECK-LABEL: define void @f4
 // CHECK: (ptr captures(none) %[[A:[^,]*]], {{.*}}, float %[[F:.*]])
 func.func @f4(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : index, %p : index, %f : f32) {
   %c1 = arith.constant 1 : index
@@ -101,7 +101,7 @@ func.func @f4(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf
 // Array expression assignment with potentially non contiguous arrays (e.g.
 // `a = b + f`, with and v assumed shapes.
 // Tests that the stride from the descriptor is used.
-// CHECK-LINE: define void @f5
+// CHECK-LABEL: define void @f5
 // CHECK: (ptr %[[A:.*]], ptr %[[B:.*]], float %[[F:.*]])
 func.func @f5(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: f32) {
   %c0 = arith.constant 0 : index
@@ -134,7 +134,7 @@ func.func @f5(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf
 // Overlapping array expression assignment with a potentially non
 // contiguous array (e.g. `a(2:10:1) = a(1:9:1) + f`, with a assumed shape).
 // Test that a temp is created.
-// CHECK-LINE: define void @f6
+// CHECK-LABEL: define void @f6
 // CHECK: (ptr %[[A:[^,]*]], float %[[F:.*]])
 func.func @f6(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: f32) {
   %c0 = arith.constant 0 : index

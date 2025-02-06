@@ -7552,7 +7552,14 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM,
                         CM.CostKind);
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
-  assert((BestFactor.Width == LegacyVF.Width ||
+  // Set PlanForEarlyExitLoop to true if the BestPlan has been built from a
+  // loop with an uncountable early exit. The legacy cost model doesn't
+  // properly model costs for such loops.
+  bool PlanForEarlyExitLoop =
+      BestPlan.getVectorLoopRegion() &&
+      BestPlan.getVectorLoopRegion()->getSingleSuccessor() !=
+          BestPlan.getMiddleBlock();
+  assert((BestFactor.Width == LegacyVF.Width || PlanForEarlyExitLoop ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop) ||
           planContainsAdditionalSimplifications(getPlanFor(LegacyVF.Width),
@@ -8542,8 +8549,7 @@ bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
 }
 
 VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
-                                           ArrayRef<VPValue *> Operands,
-                                           VPBasicBlock *VPBB) {
+                                           ArrayRef<VPValue *> Operands) {
   switch (I->getOpcode()) {
   default:
     return nullptr;
@@ -8823,10 +8829,8 @@ bool VPRecipeBuilder::getScaledReductions(
   return false;
 }
 
-VPRecipeBase *
-VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
-                                        ArrayRef<VPValue *> Operands,
-                                        VFRange &Range, VPBasicBlock *VPBB) {
+VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
+    Instruction *Instr, ArrayRef<VPValue *> Operands, VFRange &Range) {
   // First, check for specific widening recipes that deal with inductions, Phi
   // nodes, calls and memory operations.
   VPRecipeBase *Recipe;
@@ -8905,7 +8909,7 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
                                  *CI);
   }
 
-  return tryToWiden(Instr, Operands, VPBB);
+  return tryToWiden(Instr, Operands);
 }
 
 VPRecipeBase *
@@ -8933,14 +8937,15 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(SubRange)) {
+      bool HasScalarVF = Plan->hasVF(ElementCount::getFixed(1));
       // Now optimize the initial VPlan.
-      if (!Plan->hasVF(ElementCount::getFixed(1)))
+      if (!HasScalarVF)
         VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
                                  *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::optimize(*Plan);
       // TODO: try to put it close to addActiveLaneMask().
       // Discard the plan if it is not EVL-compatible
-      if (CM.foldTailWithEVL() &&
+      if (CM.foldTailWithEVL() && !HasScalarVF &&
           !VPlanTransforms::runPass(VPlanTransforms::tryAddExplicitVectorLength,
                                     *Plan, CM.getMaxSafeElements()))
         break;
@@ -9373,7 +9378,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       }
 
       VPRecipeBase *Recipe =
-          RecipeBuilder.tryToCreateWidenRecipe(Instr, Operands, Range, VPBB);
+          RecipeBuilder.tryToCreateWidenRecipe(Instr, Operands, Range);
       if (!Recipe)
         Recipe = RecipeBuilder.handleReplication(Instr, Operands, Range);
 

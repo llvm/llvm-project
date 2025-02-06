@@ -63,26 +63,29 @@ entry:
   ret i32 0
 }
 
-; FIXME: this function calls another function but doesn't save/restore ra
 define internal void @foobar(ptr %live_throughout.0.val) norecurse nounwind {
 ; RV64-LABEL: foobar:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi sp, sp, -48
+; RV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    mv a1, a0
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    addi a2, sp, 12
+; RV64-NEXT:    addi a0, sp, 8
+; RV64-NEXT:    addi a2, sp, 4
 ; RV64-NEXT:    call bmp_iter_set_init
+; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 48
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: foobar:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    addi sp, sp, -32
+; RV32-NEXT:    addi sp, sp, -48
+; RV32-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv a1, a0
-; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    addi a2, sp, 4
+; RV32-NEXT:    addi a0, sp, 16
+; RV32-NEXT:    addi a2, sp, 12
 ; RV32-NEXT:    call bmp_iter_set_init
-; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 48
 ; RV32-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: foobar:
