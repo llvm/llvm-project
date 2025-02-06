@@ -613,13 +613,13 @@ define void @test_decompose_bitwise_and(i4 %x, i4 %y) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp sge i4 [[X]], 0
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp sge i4 [[Y]], 0
-; CHECK-NEXT:    [[F_AND:%.*]] = and i1 [[F_1]], [[F_2]]
+; CHECK-NEXT:    [[F_AND:%.*]] = and i1 false, [[F_2]]
 ; CHECK-NEXT:    call void @use(i1 [[F_AND]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[F_3:%.*]] = icmp slt i4 [[X]], 0
 ; CHECK-NEXT:    [[F_4:%.*]] = icmp slt i4 [[Y]], 0
-; CHECK-NEXT:    [[F_AND_2:%.*]] = and i1 [[F_3]], [[F_4]]
+; CHECK-NEXT:    [[F_AND_2:%.*]] = and i1 false, [[F_4]]
 ; CHECK-NEXT:    call void @use(i1 [[F_AND_2]])
 ; CHECK-NEXT:    ret void
 ;
@@ -655,7 +655,7 @@ define void @test_decompose_nested_bitwise_and(i4 %x, i4 %y, i4 %z) {
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp sge i4 [[Y]], 0
 ; CHECK-NEXT:    [[F_3:%.*]] = icmp sge i4 [[Z]], 0
 ; CHECK-NEXT:    [[F_AND:%.*]] = and i1 [[F_1]], [[F_2]]
-; CHECK-NEXT:    [[F_AND_2:%.*]] = and i1 [[F_AND]], [[F_3]]
+; CHECK-NEXT:    [[F_AND_2:%.*]] = and i1 [[F_AND]], false
 ; CHECK-NEXT:    call void @use(i1 [[F_AND]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
@@ -663,7 +663,7 @@ define void @test_decompose_nested_bitwise_and(i4 %x, i4 %y, i4 %z) {
 ; CHECK-NEXT:    [[F_5:%.*]] = icmp slt i4 [[Y]], 0
 ; CHECK-NEXT:    [[F_6:%.*]] = icmp slt i4 [[Z]], 0
 ; CHECK-NEXT:    [[F_AND_3:%.*]] = and i1 [[F_4]], [[F_5]]
-; CHECK-NEXT:    [[F_AND_4:%.*]] = and i1 [[F_AND_3]], [[F_6]]
+; CHECK-NEXT:    [[F_AND_4:%.*]] = and i1 [[F_AND_3]], false
 ; CHECK-NEXT:    call void @use(i1 [[F_AND_4]])
 ; CHECK-NEXT:    ret void
 ;

@@ -562,6 +562,18 @@ static Decomposition decompose(Value *V,
       }
     }
 
+    // (x | y) < 0 => (x < 0) || (y < 0)
+    if (match(V, m_Or(m_Value(Op0), m_Value(Op1)))) {
+      if (!isKnownNonNegative(Op0, DL) || !isKnownNonNegative(Op1, DL))
+        return MergeResults(Op0, Op1, IsSigned);
+    }
+
+    // (x & y) < 0 => (x < 0) && (y < 0)
+    if (match(V, m_And(m_Value(Op0), m_Value(Op1)))) {
+      if (!isKnownNonNegative(Op0, DL) && !isKnownNonNegative(Op1, DL))
+        return MergeResults(Op0, Op1, IsSigned);
+    }
+
     return {V, IsKnownNonNegative};
   }
 
