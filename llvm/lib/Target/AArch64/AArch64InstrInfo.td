@@ -2665,10 +2665,10 @@ defm CASLT  : CompareAndSwapUnprivileged<0b11, 0, 1, "l">;
 defm CASAT  : CompareAndSwapUnprivileged<0b11, 1, 0, "a">;
 defm CASALT : CompareAndSwapUnprivileged<0b11, 1, 1, "al">;
 
-def : MnemonicAlias<"cas", "cast">;
-def : MnemonicAlias<"casl", "caslt">;
-def : MnemonicAlias<"casa", "casat">;
-def : MnemonicAlias<"casal", "casalt">;
+def : InstAlias<"cast $Rs, $Rt, [$Rn]", (CASX GPR64:$Rs, GPR64:$Rt, GPR64sp0:$Rn)>;
+def : InstAlias<"caslt $Rs, $Rt, [$Rn]", (CASLX GPR64:$Rs, GPR64:$Rt, GPR64sp0:$Rn)>;
+def : InstAlias<"casat $Rs, $Rt, [$Rn]", (CASAX GPR64:$Rs, GPR64:$Rt, GPR64sp0:$Rn)>;
+def : InstAlias<"casalt $Rs, $Rt, [$Rn]", (CASALX GPR64:$Rs, GPR64:$Rt, GPR64sp0:$Rn)>;
 
 // v9.6-a atomic CASPT
 defm CASPT   : CompareAndSwapPairUnprivileged<0b01, 0, 0, "">;
@@ -2676,10 +2676,14 @@ defm CASPLT  : CompareAndSwapPairUnprivileged<0b01, 0, 1, "l">;
 defm CASPAT  : CompareAndSwapPairUnprivileged<0b01, 1, 0, "a">;
 defm CASPALT : CompareAndSwapPairUnprivileged<0b01, 1, 1, "al">;
 
-def : MnemonicAlias<"casp", "caspt">;
-def : MnemonicAlias<"caspl", "casplt">;
-def : MnemonicAlias<"caspa", "caspat">;
-def : MnemonicAlias<"caspal", "caspalt">;
+def : InstAlias<"caspt $Rs, $Rt, [$Rn]",
+                (CASPX XSeqPairClassOperand:$Rs, XSeqPairClassOperand:$Rt, GPR64sp0:$Rn)>;
+def : InstAlias<"casplt $Rs, $Rt, [$Rn]",
+                (CASPLX XSeqPairClassOperand:$Rs, XSeqPairClassOperand:$Rt, GPR64sp0:$Rn)>;
+def : InstAlias<"caspat $Rs, $Rt, [$Rn]",
+                (CASPAX XSeqPairClassOperand:$Rs, XSeqPairClassOperand:$Rt, GPR64sp0:$Rn)>;
+def : InstAlias<"caspalt $Rs, $Rt, [$Rn]",
+                (CASPALX XSeqPairClassOperand:$Rs, XSeqPairClassOperand:$Rt, GPR64sp0:$Rn)>;
 }
 
 // v8.1 atomic SWP
