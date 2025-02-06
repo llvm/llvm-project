@@ -35,16 +35,17 @@
 ; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
 
-; A function's section prefix is used for all jump tables of this function.
-; @foo is hot so its jump table data section has a hot prefix.
-; NUM:      .section .rodata.hot.,"a",@progbits,unique,2
+; In function @foo, the 2 switch instructions to jt0.* and jt1.* are placed in
+; hot-prefixed sections, and the 2 switch instructions to jt2.* and jt3.* are
+; placed in cold-prefixed sections.
+; NUM:    .section .rodata.hot.,"a",@progbits,unique,2
 ; FUNC:     .section .rodata.hot.foo,"a",@progbits
 ; FUNCLESS: .section .rodata.hot.,"a",@progbits
 ; JT: .LJTI0_0:
 ; JT: .LJTI0_2:
-; NUM:            .section	.rodata.hot.,"a",@progbits,unique,3
-; FUNC-NOT:       .section .rodata.hot.foo
-; FUNCLESS-NOT:   .section .rodata.hot.,"a",@progbits
+; NUM:        .section .rodata.unlikely.,"a",@progbits,unique,3
+; FUNC:       .section .rodata.unlikely.foo,
+; FUNCLESS:   .section .rodata.unlikely.,"a",@progbits
 ; JT: .LJTI0_1:
 ; JT: .LJTI0_3:
 
