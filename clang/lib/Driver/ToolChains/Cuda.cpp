@@ -123,7 +123,7 @@ CudaVersion parseCudaHFile(llvm::StringRef Input) {
 }
 } // namespace
 
-void CudaInstallationDetector::WarnIfUnsupportedVersion() {
+void CudaInstallationDetector::WarnIfUnsupportedVersion() const {
   if (Version > CudaVersion::PARTIALLY_SUPPORTED) {
     std::string VersionString = CudaVersionToString(Version);
     if (!VersionString.empty())
