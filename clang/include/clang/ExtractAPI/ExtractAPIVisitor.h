@@ -1155,8 +1155,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitTypedefNameDecl(
     // Also check whether the tag decl's name is the same as the typedef name
     // with prefixed underscores
     if (TagName.starts_with('_')) {
-      StringRef StrippedName =
-          TagName.drop_while([](char c) { return c == '_'; });
+      StringRef StrippedName = TagName.ltrim('_');
 
       if (StrippedName == Name)
         return true;
