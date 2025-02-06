@@ -1949,26 +1949,53 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
 }
 
 void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {
-  for (const auto &kv : ACLEIntrinsics) {
-    const ACLEIntrinsic &Int = *kv.second;
-    OS << "BUILTIN(__builtin_arm_mve_" << Int.fullName()
-       << ", \"\", \"n\")\n";
+  llvm::StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("n");
+  Table.GetOrAddStringOffset("nt");
+  Table.GetOrAddStringOffset("ntu");
+  Table.GetOrAddStringOffset("vi.");
+
+  for (const auto &[_, Int] : ACLEIntrinsics)
+    Table.GetOrAddStringOffset(Int->fullName());
+
+  std::map<std::string, ACLEIntrinsic *> ShortNameIntrinsics;
+  for (const auto &[_, Int] : ACLEIntrinsics) {
+    if (!Int->polymorphic())
+      continue;
+
+    StringRef Name = Int->shortName();
+    if (ShortNameIntrinsics.insert({Name.str(), Int.get()}).second)
+      Table.GetOrAddStringOffset(Name);
   }
 
-  DenseSet<StringRef> ShortNamesSeen;
-
-  for (const auto &kv : ACLEIntrinsics) {
-    const ACLEIntrinsic &Int = *kv.second;
-    if (Int.polymorphic()) {
-      StringRef Name = Int.shortName();
-      if (ShortNamesSeen.insert(Name).second) {
-        OS << "BUILTIN(__builtin_arm_mve_" << Name << ", \"vi.\", \"nt";
-        if (Int.nonEvaluating())
-          OS << "u"; // indicate that this builtin doesn't evaluate its args
-        OS << "\")\n";
-      }
-    }
+  OS << "#ifdef GET_MVE_BUILTIN_ENUMERATORS\n";
+  for (const auto &[_, Int] : ACLEIntrinsics) {
+    OS << "  BI__builtin_arm_mve_" << Int->fullName() << ",\n";
   }
+  for (const auto &[Name, _] : ShortNameIntrinsics) {
+    OS << "  BI__builtin_arm_mve_" << Name << ",\n";
+  }
+  OS << "#endif // GET_MVE_BUILTIN_ENUMERATORS\n\n";
+
+  OS << "#ifdef GET_MVE_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_MVE_BUILTIN_STR_TABLE\n\n";
+
+  OS << "#ifdef GET_MVE_BUILTIN_INFOS\n";
+  for (const auto &[_, Int] : ACLEIntrinsics) {
+    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+       << Table.GetStringOffset(Int->fullName()) << " /* " << Int->fullName()
+       << " */, " << Table.GetStringOffset("") << ", "
+       << Table.GetStringOffset("n") << " /* n */}},\n";
+  }
+  for (const auto &[Name, Int] : ShortNameIntrinsics) {
+    StringRef Attrs = Int->nonEvaluating() ? "ntu" : "nt";
+    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+       << Table.GetStringOffset(Name) << " /* " << Name << " */, "
+       << Table.GetStringOffset("vi.") << " /* vi. */, "
+       << Table.GetStringOffset(Attrs) << " /* " << Attrs << " */}},\n";
+  }
+  OS << "#endif // GET_MVE_BUILTIN_INFOS\n\n";
 }
 
 void MveEmitter::EmitBuiltinSema(raw_ostream &OS) {
@@ -2156,13 +2183,31 @@ void CdeEmitter::EmitHeader(raw_ostream &OS) {
 }
 
 void CdeEmitter::EmitBuiltinDef(raw_ostream &OS) {
-  for (const auto &kv : ACLEIntrinsics) {
-    if (kv.second->headerOnly())
-      continue;
-    const ACLEIntrinsic &Int = *kv.second;
-    OS << "BUILTIN(__builtin_arm_cde_" << Int.fullName()
-       << ", \"\", \"ncU\")\n";
-  }
+  llvm::StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("ncU");
+
+  for (const auto &[_, Int] : ACLEIntrinsics)
+    if (!Int->headerOnly())
+      Table.GetOrAddStringOffset(Int->fullName());
+
+  OS << "#ifdef GET_CDE_BUILTIN_ENUMERATORS\n";
+  for (const auto &[_, Int] : ACLEIntrinsics)
+    if (!Int->headerOnly())
+      OS << "  BI__builtin_arm_cde_" << Int->fullName() << ",\n";
+  OS << "#endif // GET_CDE_BUILTIN_ENUMERATORS\n\n";
+
+  OS << "#ifdef GET_CDE_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_CDE_BUILTIN_STR_TABLE\n\n";
+
+  OS << "#ifdef GET_CDE_BUILTIN_INFOS\n";
+  for (const auto &[_, Int] : ACLEIntrinsics)
+    if (!Int->headerOnly())
+      OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+         << Table.GetStringOffset(Int->fullName()) << " /* " << Int->fullName()
+         << " */, " << Table.GetStringOffset("") << ", "
+         << Table.GetStringOffset("ncU") << " /* ncU */}},\n";
+  OS << "#endif // GET_CDE_BUILTIN_INFOS\n\n";
 }
 
 void CdeEmitter::EmitBuiltinSema(raw_ostream &OS) {

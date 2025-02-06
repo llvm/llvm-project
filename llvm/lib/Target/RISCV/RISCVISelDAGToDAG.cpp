@@ -119,6 +119,19 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
                                            MachineMemOperand::MOLoad);
       break;
     }
+    case ISD::FP_EXTEND: {
+      // We only have vector patterns for riscv_fpextend_vl in isel.
+      SDLoc DL(N);
+      MVT VT = N->getSimpleValueType(0);
+      if (!VT.isVector())
+        break;
+      SDValue VLMAX = CurDAG->getRegister(RISCV::X0, Subtarget->getXLenVT());
+      SDValue TrueMask = CurDAG->getNode(
+          RISCVISD::VMSET_VL, DL, VT.changeVectorElementType(MVT::i1), VLMAX);
+      Result = CurDAG->getNode(RISCVISD::FP_EXTEND_VL, DL, VT, N->getOperand(0),
+                               TrueMask, VLMAX);
+      break;
+    }
     }
 
     if (Result) {
