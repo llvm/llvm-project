@@ -332,6 +332,10 @@ public:
 
       // Load the current shadow stack pointer from the global variable.
       LoadInst *LoadedSSPtr = Builder.CreateLoad(Int8PtrTy, SSGlobal);
+      // Assert that the allocas count match between opt/unopt main
+      assert(MainAllocas.size() == UnoptMainAllocas.size() &&
+             "Expected same number of allocas between opt/unopt main");
+
       auto UnoptMainGEPs = rewriteAllocas(DL, UnoptMainAllocas, LoadedSSPtr);
       // Validate that opt and unopt main have the same GEPs.
       assert(MainGEPs.size() == UnoptMainGEPs.size() &&
