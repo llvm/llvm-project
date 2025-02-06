@@ -1136,5 +1136,3 @@
 // RUN:   | FileCheck -check-prefix=CHECK-LD32-ASAN %s \
 // RUN: %}
 // CHECK-LD32-ASAN: "-latomic"
-
-
