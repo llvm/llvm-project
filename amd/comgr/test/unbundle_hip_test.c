@@ -134,8 +134,8 @@ int main(int Argc, char *Argv[]) {
                                     "hip-amdgcn-amd-amdhsa-unknown-gfx900"};
     size_t BundleEntryIDsCount =
         sizeof(BundleEntryIDs) / sizeof(BundleEntryIDs[0]);
-    Status = amd_comgr_action_info_set_bundle_entry_ids(ActionInfoUnbundle,
-                                                        BundleEntryIDs, BundleEntryIDsCount);
+    Status = amd_comgr_action_info_set_bundle_entry_ids(
+        ActionInfoUnbundle, BundleEntryIDs, BundleEntryIDsCount);
 
     // Unbundle
     Status = amd_comgr_create_data_set(&DataSetUnbundled);
@@ -183,10 +183,10 @@ int main(int Argc, char *Argv[]) {
     checkError(Status, "amd_comgr_release_data");
 
     // TODO: Re-enable after finalizing LLVM PR #122629
-    //if (BytesSize != 0) {
-    //  printf("Bitcode host element size: %ld (expected 0)\n", BytesSize);
-    //  exit(1);
-    //}
+    // if (BytesSize != 0) {
+    //   printf("Bitcode host element size: %ld (expected 0)\n", BytesSize);
+    //   exit(1);
+    // }
 
     // bitcode hip-gfx900 element (non-empty)
     Status = amd_comgr_action_data_get_data(
@@ -249,7 +249,7 @@ int main(int Argc, char *Argv[]) {
     checkError(Status, "amd_comgr_release_data");
 
     // TODO: Re-enable after finalizing LLVM PR #122629
-    //if (BytesSize != 0) {
+    // if (BytesSize != 0) {
     //  printf("Object host element size: %ld (expected empty)\n", BytesSize);
     //  exit(1);
     //}
