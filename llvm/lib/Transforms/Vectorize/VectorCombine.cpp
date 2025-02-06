@@ -3210,7 +3210,7 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
       ExtToVecMask[0] = ExtIdx;
     // Add cost for expanding or narrowing
     NewCost = TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
-                                 DstVecTy, ExtToVecMask, CostKind);
+                                 SrcVecTy, ExtToVecMask, CostKind);
     NewCost += TTI.getShuffleCost(SK, DstVecTy, Mask, CostKind);
   }
 
