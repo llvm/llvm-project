@@ -107,8 +107,9 @@ public:
 class RegexDirective : public Directive {
 public:
   RegexDirective(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
-                 StringRef Spelling, bool MatchAnyFileAndLine, bool MatchAnyLine,
-                 StringRef Text, unsigned Min, unsigned Max, StringRef RegexStr)
+                 StringRef Spelling, bool MatchAnyFileAndLine,
+                 bool MatchAnyLine, StringRef Text, unsigned Min, unsigned Max,
+                 StringRef RegexStr)
       : Directive(DirectiveLoc, DiagnosticLoc, Spelling, MatchAnyFileAndLine,
                   MatchAnyLine, Text, Min, Max),
         Regex(RegexStr) {}
@@ -485,10 +486,12 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
       continue;
 
     if (NoDiag) {
-      if (State.Status == VerifyDiagnosticConsumer::HasOtherExpectedDirectives) {
+      if (State.Status ==
+          VerifyDiagnosticConsumer::HasOtherExpectedDirectives) {
         Diags.Report(Pos, diag::err_verify_invalid_no_diags)
             << D.Spelling << /*IsExpectedNoDiagnostics=*/true;
-      } else if (State.Status != VerifyDiagnosticConsumer::HasExpectedNoDiagnostics) {
+      } else if (State.Status !=
+                 VerifyDiagnosticConsumer::HasExpectedNoDiagnostics) {
         State.Status = VerifyDiagnosticConsumer::HasExpectedNoDiagnostics;
         State.FirstNoDiagnosticsDirective = D.Spelling;
       }
@@ -862,8 +865,8 @@ static bool findDirectives(SourceManager &SM, FileID FID,
     VerifyDiagnosticConsumer::MarkerTracker Markers(SM.getDiagnostics());
 
     // Find first directive.
-    if (ParseDirective(Comment, nullptr, SM, nullptr, Tok.getLocation(),
-                       State, Markers))
+    if (ParseDirective(Comment, nullptr, SM, nullptr, Tok.getLocation(), State,
+                       Markers))
       return true;
   }
   return false;
@@ -893,7 +896,8 @@ static unsigned PrintUnexpected(DiagnosticsEngine &Diags, SourceManager *SourceM
     OS << ": " << I->second;
   }
 
-  const bool IsSinglePrefix = Diags.getDiagnosticOptions().VerifyPrefixes.size() == 1;
+  const bool IsSinglePrefix =
+      Diags.getDiagnosticOptions().VerifyPrefixes.size() == 1;
   std::string Prefix = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
   Diags.Report(diag::err_verify_inconsistent_diags).setForceEmit()
       << IsSinglePrefix << Prefix << Kind << /*Unexpected=*/true << OS.str();
@@ -1152,13 +1156,11 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
   ED.Reset();
 }
 
-std::unique_ptr<Directive> Directive::create(bool RegexKind,
-                                             SourceLocation DirectiveLoc,
-                                             SourceLocation DiagnosticLoc,
-                                             StringRef Spelling,
-                                             bool MatchAnyFileAndLine,
-                                             bool MatchAnyLine, StringRef Text,
-                                             unsigned Min, unsigned Max) {
+std::unique_ptr<Directive>
+Directive::create(bool RegexKind, SourceLocation DirectiveLoc,
+                  SourceLocation DiagnosticLoc, StringRef Spelling,
+                  bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
+                  unsigned Min, unsigned Max) {
   if (!RegexKind)
     return std::make_unique<StandardDirective>(DirectiveLoc, DiagnosticLoc,
                                                Spelling, MatchAnyFileAndLine,
