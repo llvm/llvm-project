@@ -187,13 +187,13 @@ xperm4 a0, a1, a2
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      121
-# CHECK-NEXT: Total Cycles:      155
+# CHECK-NEXT: Total Cycles:      153
 # CHECK-NEXT: Total uOps:        121
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    0.78
-# CHECK-NEXT: IPC:               0.78
-# CHECK-NEXT: Block RThroughput: 136.0
+# CHECK-NEXT: uOps Per Cycle:    0.79
+# CHECK-NEXT: IPC:               0.79
+# CHECK-NEXT: Block RThroughput: 141.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -234,14 +234,14 @@ xperm4 a0, a1, a2
 # CHECK-NEXT:  1      1     0.25                        sraw	a0, a0, a0
 # CHECK-NEXT:  1      1     0.25                        sub	a0, a0, a0
 # CHECK-NEXT:  1      1     0.25                        subw	a0, a0, a0
-# CHECK-NEXT:  1      1     0.25                        jal	a0, .Ltmp0
-# CHECK-NEXT:  1      1     0.25                        jalr	a0
-# CHECK-NEXT:  1      1     0.25                        beq	a0, a0, .Ltmp1
-# CHECK-NEXT:  1      1     0.25                        bne	a0, a0, .Ltmp2
-# CHECK-NEXT:  1      1     0.25                        blt	a0, a0, .Ltmp3
-# CHECK-NEXT:  1      1     0.25                        bltu	a0, a0, .Ltmp4
-# CHECK-NEXT:  1      1     0.25                        bge	a0, a0, .Ltmp5
-# CHECK-NEXT:  1      1     0.25                        bgeu	a0, a0, .Ltmp6
+# CHECK-NEXT:  1      1     1.00                        jal	a0, .Ltmp0
+# CHECK-NEXT:  1      1     1.00                        jalr	a0
+# CHECK-NEXT:  1      1     1.00                        beq	a0, a0, .Ltmp1
+# CHECK-NEXT:  1      1     1.00                        bne	a0, a0, .Ltmp2
+# CHECK-NEXT:  1      1     1.00                        blt	a0, a0, .Ltmp3
+# CHECK-NEXT:  1      1     1.00                        bltu	a0, a0, .Ltmp4
+# CHECK-NEXT:  1      1     1.00                        bge	a0, a0, .Ltmp5
+# CHECK-NEXT:  1      1     1.00                        bgeu	a0, a0, .Ltmp6
 # CHECK-NEXT:  1      1     0.25                        add	a0, a0, a0
 # CHECK-NEXT:  1      4     0.50    *                   lb	t0, 0(a0)
 # CHECK-NEXT:  1      4     0.50    *                   lbu	t0, 0(a0)
@@ -254,11 +254,11 @@ xperm4 a0, a1, a2
 # CHECK-NEXT:  1      1     0.50           *            sh	t0, 0(a0)
 # CHECK-NEXT:  1      1     0.50           *            sw	t0, 0(a0)
 # CHECK-NEXT:  1      1     0.50           *            sd	t0, 0(a0)
-# CHECK-NEXT:  1      4     0.25                        mul	a0, a0, a0
-# CHECK-NEXT:  1      4     0.25                        mulh	a0, a0, a0
-# CHECK-NEXT:  1      4     0.25                        mulhu	a0, a0, a0
-# CHECK-NEXT:  1      4     0.25                        mulhsu	a0, a0, a0
-# CHECK-NEXT:  1      4     0.25                        mulw	a0, a0, a0
+# CHECK-NEXT:  1      4     1.00                        mul	a0, a0, a0
+# CHECK-NEXT:  1      4     1.00                        mulh	a0, a0, a0
+# CHECK-NEXT:  1      4     1.00                        mulhu	a0, a0, a0
+# CHECK-NEXT:  1      4     1.00                        mulhsu	a0, a0, a0
+# CHECK-NEXT:  1      4     1.00                        mulw	a0, a0, a0
 # CHECK-NEXT:  1      21    21.00                       div	a0, a1, a2
 # CHECK-NEXT:  1      21    21.00                       divu	a0, a1, a2
 # CHECK-NEXT:  1      21    21.00                       rem	a0, a1, a2
@@ -327,139 +327,139 @@ xperm4 a0, a1, a2
 # CHECK-NEXT:  1      1     0.25                        xperm4	a0, a1, a2
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - GenericOOODIV
-# CHECK-NEXT: [1.0] - GenericOOOFPU
-# CHECK-NEXT: [1.1] - GenericOOOFPU
-# CHECK-NEXT: [2.0] - GenericOOOIXU
-# CHECK-NEXT: [2.1] - GenericOOOIXU
-# CHECK-NEXT: [2.2] - GenericOOOIXU
-# CHECK-NEXT: [3.0] - GenericOOOLSU
-# CHECK-NEXT: [3.1] - GenericOOOLSU
+# CHECK-NEXT: [0]   - GenericOOOBranch
+# CHECK-NEXT: [1]   - GenericOOOFMulDiv
+# CHECK-NEXT: [2]   - GenericOOOFloat
+# CHECK-NEXT: [3.0] - GenericOOOInt
+# CHECK-NEXT: [3.1] - GenericOOOInt
+# CHECK-NEXT: [4.0] - GenericOOOLSU
+# CHECK-NEXT: [4.1] - GenericOOOLSU
+# CHECK-NEXT: [5]   - GenericOOOMulDiv
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3.0]  [3.1]
-# CHECK-NEXT: 147.00  -      -     30.00  30.00  31.00  5.00   6.00
+# CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]
+# CHECK-NEXT: 23.00   -      -     34.00  35.00  5.00   6.00   146.00
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3.0]  [3.1]  Instructions:
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     addi	a0, a0, 1
+# CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   addi	a0, a0, 1
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     addiw	a0, a0, 1
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     slti	a0, a0, 1
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     seqz	a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     andi	a0, a0, 1
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ori	a0, a0, 1
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     xori	a0, a0, 1
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     slli	a0, a0, 1
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     srli	a0, a0, 1
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     srai	a0, a0, 1
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     slliw	a0, a0, 1
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     srliw	a0, a0, 1
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     sraiw	a0, a0, 1
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     lui	a0, 1
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     auipc	a1, 1
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   seqz	a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     andi	a0, a0, 1
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     ori	a0, a0, 1
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     xori	a0, a0, 1
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   slli	a0, a0, 1
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   srli	a0, a0, 1
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     srai	a0, a0, 1
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     slliw	a0, a0, 1
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     srliw	a0, a0, 1
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sraiw	a0, a0, 1
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     lui	a0, 1
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     auipc	a1, 1
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     add	a0, a0, a1
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     addw	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     slt	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     addw	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   slt	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sltu	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     and	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     or	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     xor	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sll	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     srl	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sra	a0, a0, a0
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     sllw	a0, a0, a0
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     srlw	a0, a0, a0
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     sraw	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sub	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     and	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     or	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     xor	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sll	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     srl	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sra	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sllw	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     srlw	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sraw	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sub	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     subw	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     jal	a0, .Ltmp0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     jalr	a0
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     beq	a0, a0, .Ltmp1
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     bne	a0, a0, .Ltmp2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     blt	a0, a0, .Ltmp3
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     bltu	a0, a0, .Ltmp4
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     bge	a0, a0, .Ltmp5
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     bgeu	a0, a0, .Ltmp6
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     add	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   lb	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     lbu	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   lh	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   lhu	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     lw	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   lwu	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     ld	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     sb	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sh	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     sw	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sd	t0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     mul	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     mulh	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     mulhu	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     mulhsu	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     mulw	a0, a0, a0
-# CHECK-NEXT: 21.00   -      -      -      -      -      -      -     div	a0, a1, a2
-# CHECK-NEXT: 21.00   -      -      -      -      -      -      -     divu	a0, a1, a2
-# CHECK-NEXT: 21.00   -      -      -      -      -      -      -     rem	a0, a1, a2
-# CHECK-NEXT: 21.00   -      -      -      -      -      -      -     remu	a0, a1, a2
-# CHECK-NEXT: 13.00   -      -      -      -      -      -      -     divw	a0, a1, a2
-# CHECK-NEXT: 13.00   -      -      -      -      -      -      -     divuw	a0, a1, a2
-# CHECK-NEXT: 13.00   -      -      -      -      -      -      -     remw	a0, a1, a2
-# CHECK-NEXT: 13.00   -      -      -      -      -      -      -     remuw	a0, a1, a2
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     jal	a0, .Ltmp0
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     jalr	a0
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     beq	a0, a0, .Ltmp1
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     bne	a0, a0, .Ltmp2
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     blt	a0, a0, .Ltmp3
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     bltu	a0, a0, .Ltmp4
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     bge	a0, a0, .Ltmp5
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     bgeu	a0, a0, .Ltmp6
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     add	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     lb	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     lbu	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     lh	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     lhu	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     lw	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     lwu	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     ld	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sb	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     sh	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sw	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     sd	t0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   mul	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   mulh	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   mulhu	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   mulhsu	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   mulw	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -     21.00  div	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     21.00  divu	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     21.00  rem	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     21.00  remu	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     13.00  divw	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     13.00  divuw	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     13.00  remw	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -      -     13.00  remuw	a0, a1, a2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     csrrw	t0, 4095, t1
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     csrrs	s3, fflags, s5
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     csrrc	sp, 0, ra
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     csrrwi	a5, 0, 0
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     csrrsi	t2, 4095, 31
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     csrrci	t1, sscratch, 5
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     czero.eqz	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     csrrs	s3, fflags, s5
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     csrrc	sp, 0, ra
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     csrrwi	a5, 0, 0
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     csrrsi	t2, 4095, 31
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     csrrci	t1, sscratch, 5
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     czero.eqz	a0, a1, a2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     czero.nez	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     czero.eqz	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     czero.nez	a0, a1, a2
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     add.uw	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     slli.uw	a0, a0, 1
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sh1add.uw	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sh2add.uw	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     czero.eqz	a0, a1, a2
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     czero.nez	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     add.uw	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     slli.uw	a0, a0, 1
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sh1add.uw	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sh2add.uw	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sh3add.uw	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sh1add	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sh2add	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sh3add	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sh3add	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     andn	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     orn	a0, a0, a0
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     orn	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     xnor	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     clz	a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     clz	a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     clzw	a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     ctz	a0, a0
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     ctzw	a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     cpop	a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     cpopw	a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     ctz	a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ctzw	a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     cpop	a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     cpopw	a0, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     min	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     minu	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     max	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     maxu	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sext.b	a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sext.h	a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     max	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     maxu	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sext.b	a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sext.h	a0, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     zext.h	a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     rol	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     rolw	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     ror	a0, a0, a0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     rorw	a0, a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     rori	a0, a0, 1
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     rolw	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ror	a0, a0, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     rorw	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     rori	a0, a0, 1
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     roriw	a0, a0, 1
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     orc.b	a0, a0
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     rev8	a0, a0
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     clmul	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     rev8	a0, a0
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     clmul	a0, a1, a2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     clmulh	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     clmulr	a0, a1, a2
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     clmulr	a0, a1, a2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     bclr	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     bclri	a0, a1, 1
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     bclri	a0, a1, 1
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     bext	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     bexti	a0, a1, 1
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     bexti	a0, a1, 1
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     binv	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     binvi	a0, a1, 1
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     bset	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     bseti	a0, a1, 1
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     pack	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     packh	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     brev8	a0, a1
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     xperm8	a0, a1, a2
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     binvi	a0, a1, 1
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     bset	a0, a1, a2
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     bseti	a0, a1, 1
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     pack	a0, a1, a2
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     packh	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     brev8	a0, a1
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     xperm8	a0, a1, a2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     xperm4	a0, a1, a2

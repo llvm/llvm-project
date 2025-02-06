@@ -10,7 +10,7 @@
 // We assume that:
 // * 6-issue out-of-order CPU with 192 ROB entries.
 // * Units:
-//   * IXU (Integer ALU Unit): 4 units, only one can execute division.
+//   * IXU (Integer ALU Unit): 4 units, only one can execute mul/div.
 //   * FXU (Floating-point Unit): 2 units.
 //   * LSU (Load/Store Unit): 2 units.
 //   * VXU (Vector Unit): 1 unit.
@@ -39,20 +39,24 @@ let SchedModel = GenericOOOModel in {
 //===----------------------------------------------------------------------===//
 // Resource groups
 //===----------------------------------------------------------------------===//
-def GenericOOODIV : ProcResource<1>;
-def GenericOOOIXU : ProcResource<3>;
-def GenericOOOALU : ProcResGroup<[GenericOOODIV, GenericOOOIXU]>;
+def GenericOOOBranch : ProcResource<1>;
+def GenericOOOMulDiv : ProcResource<1>;
+def GenericOOOInt : ProcResource<2>;
+def GenericOOOALU
+    : ProcResGroup<[GenericOOOBranch, GenericOOOMulDiv, GenericOOOInt]>;
 def GenericOOOLSU : ProcResource<2>;
-def GenericOOOFPU : ProcResource<2>;
+def GenericOOOFMulDiv : ProcResource<1>;
+def GenericOOOFloat : ProcResource<1>;
+def GenericOOOFPU : ProcResGroup<[GenericOOOFMulDiv, GenericOOOFloat]>;
 // TODO: Add vector scheduling.
 // def GenericOOOVXU : ProcResource<1>;
 
 //===----------------------------------------------------------------------===//
 // Branches
 //===----------------------------------------------------------------------===//
-def : WriteRes<WriteJmp, [GenericOOOALU]>;
-def : WriteRes<WriteJalr, [GenericOOOALU]>;
-def : WriteRes<WriteJal, [GenericOOOALU]>;
+def : WriteRes<WriteJmp, [GenericOOOBranch]>;
+def : WriteRes<WriteJalr, [GenericOOOBranch]>;
+def : WriteRes<WriteJal, [GenericOOOBranch]>;
 
 //===----------------------------------------------------------------------===//
 // Integer arithmetic and logic
@@ -68,26 +72,26 @@ def : WriteRes<WriteShiftReg32, [GenericOOOALU]>;
 // Integer multiplication
 //===----------------------------------------------------------------------===//
 let Latency = 4 in {
-  def : WriteRes<WriteIMul, [GenericOOOALU]>;
-  def : WriteRes<WriteIMul32, [GenericOOOALU]>;
+  def : WriteRes<WriteIMul, [GenericOOOMulDiv]>;
+  def : WriteRes<WriteIMul32, [GenericOOOMulDiv]>;
 }
 
 //===----------------------------------------------------------------------===//
 // Integer division
 //===----------------------------------------------------------------------===//
-def : WriteRes<WriteIDiv32,  [GenericOOODIV]> {
+def : WriteRes<WriteIDiv32, [GenericOOOMulDiv]> {
   let Latency = 13;
   let ReleaseAtCycles = [13];
 }
-def : WriteRes<WriteIDiv, [GenericOOODIV]> {
+def : WriteRes<WriteIDiv, [GenericOOOMulDiv]> {
   let Latency = 21;
   let ReleaseAtCycles = [21];
 }
-def : WriteRes<WriteIRem32, [GenericOOODIV]> {
+def : WriteRes<WriteIRem32, [GenericOOOMulDiv]> {
   let Latency = 13;
   let ReleaseAtCycles = [13];
 }
-def : WriteRes<WriteIRem, [GenericOOODIV]> {
+def : WriteRes<WriteIRem, [GenericOOOMulDiv]> {
   let Latency = 21;
   let ReleaseAtCycles = [21];
 }
@@ -144,16 +148,6 @@ let Latency = 2 in {
   def : WriteRes<WriteFAdd64, [GenericOOOFPU]>;
 }
 
-let Latency = 4 in {
-  def : WriteRes<WriteFMul32, [GenericOOOFPU]>;
-  def : WriteRes<WriteFMul64, [GenericOOOFPU]>;
-}
-
-let Latency = 6 in {
-  def : WriteRes<WriteFMA32, [GenericOOOFPU]>;
-  def : WriteRes<WriteFMA64, [GenericOOOFPU]>;
-}
-
 def : WriteRes<WriteFSGNJ32, [GenericOOOFPU]>;
 def : WriteRes<WriteFSGNJ64, [GenericOOOFPU]>;
 def : WriteRes<WriteFMinMax32, [GenericOOOFPU]>;
@@ -165,15 +159,27 @@ let Latency = 2 in {
   def : WriteRes<WriteFCmp64, [GenericOOOFPU]>;
 }
 
+// Multiplication
+let Latency = 4 in {
+  def : WriteRes<WriteFMul32, [GenericOOOFMulDiv]>;
+  def : WriteRes<WriteFMul64, [GenericOOOFMulDiv]>;
+}
+
+// FMA
+let Latency = 6 in {
+  def : WriteRes<WriteFMA32, [GenericOOOFMulDiv]>;
+  def : WriteRes<WriteFMA64, [GenericOOOFMulDiv]>;
+}
+
 // Division
 let Latency = 13, ReleaseAtCycles = [13] in {
-  def : WriteRes<WriteFDiv32, [GenericOOOFPU]>;
-  def : WriteRes<WriteFSqrt32, [GenericOOOFPU]>;
+  def : WriteRes<WriteFDiv32, [GenericOOOFMulDiv]>;
+  def : WriteRes<WriteFSqrt32, [GenericOOOFMulDiv]>;
 }
 
 let Latency = 17, ReleaseAtCycles = [17] in {
-  def : WriteRes<WriteFDiv64, [GenericOOOFPU]>;
-  def : WriteRes<WriteFSqrt64, [GenericOOOFPU]>;
+  def : WriteRes<WriteFDiv64, [GenericOOOFMulDiv]>;
+  def : WriteRes<WriteFSqrt64, [GenericOOOFMulDiv]>;
 }
 
 // Conversions

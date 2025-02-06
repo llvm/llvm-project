@@ -176,13 +176,13 @@ fgeq.d a1, ft1, ft2
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      113
-# CHECK-NEXT: Total Cycles:      95
+# CHECK-NEXT: Total Cycles:      97
 # CHECK-NEXT: Total uOps:        113
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.19
-# CHECK-NEXT: IPC:               1.19
-# CHECK-NEXT: Block RThroughput: 89.5
+# CHECK-NEXT: uOps Per Cycle:    1.16
+# CHECK-NEXT: IPC:               1.16
+# CHECK-NEXT: Block RThroughput: 70.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -212,26 +212,26 @@ fgeq.d a1, ft1, ft2
 # CHECK-NEXT:  1      6     0.50                        fnmadd.h	fs6, fs7, fs8, fs9
 # CHECK-NEXT:  1      2     0.50                        fadd.s	fs10, fs11, ft8
 # CHECK-NEXT:  1      2     0.50                        fsub.s	ft9, ft10, ft11
-# CHECK-NEXT:  1      4     0.50                        fmul.s	ft0, ft1, ft2
-# CHECK-NEXT:  1      13    6.50                        fdiv.s	ft3, ft4, ft5
-# CHECK-NEXT:  1      13    6.50                        fsqrt.s	ft6, ft7
+# CHECK-NEXT:  1      4     1.00                        fmul.s	ft0, ft1, ft2
+# CHECK-NEXT:  1      13    13.00                       fdiv.s	ft3, ft4, ft5
+# CHECK-NEXT:  1      13    13.00                       fsqrt.s	ft6, ft7
 # CHECK-NEXT:  1      1     0.50                        fmin.s	fa5, fa6, fa7
 # CHECK-NEXT:  1      1     0.50                        fmax.s	fs2, fs3, fs4
-# CHECK-NEXT:  1      6     0.50                        fmadd.s	fa0, fa1, fa2, ft11
-# CHECK-NEXT:  1      6     0.50                        fmsub.s	fa4, fa5, fa6, fa7
-# CHECK-NEXT:  1      6     0.50                        fnmsub.s	fs2, fs3, fs4, fs5
-# CHECK-NEXT:  1      6     0.50                        fnmadd.s	fs6, fs7, fs8, fs9
+# CHECK-NEXT:  1      6     1.00                        fmadd.s	fa0, fa1, fa2, ft11
+# CHECK-NEXT:  1      6     1.00                        fmsub.s	fa4, fa5, fa6, fa7
+# CHECK-NEXT:  1      6     1.00                        fnmsub.s	fs2, fs3, fs4, fs5
+# CHECK-NEXT:  1      6     1.00                        fnmadd.s	fs6, fs7, fs8, fs9
 # CHECK-NEXT:  1      2     0.50                        fadd.d	fs10, fs11, ft8
 # CHECK-NEXT:  1      2     0.50                        fsub.d	ft9, ft10, ft11
-# CHECK-NEXT:  1      4     0.50                        fmul.d	ft0, ft1, ft2
-# CHECK-NEXT:  1      17    8.50                        fdiv.d	ft3, ft4, ft5
-# CHECK-NEXT:  1      17    8.50                        fsqrt.d	ft6, ft7
+# CHECK-NEXT:  1      4     1.00                        fmul.d	ft0, ft1, ft2
+# CHECK-NEXT:  1      17    17.00                       fdiv.d	ft3, ft4, ft5
+# CHECK-NEXT:  1      17    17.00                       fsqrt.d	ft6, ft7
 # CHECK-NEXT:  1      1     0.50                        fmin.d	fa5, fa6, fa7
 # CHECK-NEXT:  1      1     0.50                        fmax.d	fs2, fs3, fs4
-# CHECK-NEXT:  1      6     0.50                        fmadd.d	fa0, fa1, fa2, ft11
-# CHECK-NEXT:  1      6     0.50                        fmsub.d	fa4, fa5, fa6, fa7
-# CHECK-NEXT:  1      6     0.50                        fnmsub.d	fs2, fs3, fs4, fs5
-# CHECK-NEXT:  1      6     0.50                        fnmadd.d	fs6, fs7, fs8, fs9
+# CHECK-NEXT:  1      6     1.00                        fmadd.d	fa0, fa1, fa2, ft11
+# CHECK-NEXT:  1      6     1.00                        fmsub.d	fa4, fa5, fa6, fa7
+# CHECK-NEXT:  1      6     1.00                        fnmsub.d	fs2, fs3, fs4, fs5
+# CHECK-NEXT:  1      6     1.00                        fnmadd.d	fs6, fs7, fs8, fs9
 # CHECK-NEXT:  1      2     0.50                        fmv.x.h	a2, fs7
 # CHECK-NEXT:  1      2     0.50                        fmv.h.x	ft1, a6
 # CHECK-NEXT:  1      2     0.50                        fcvt.s.h	fa0, ft0
@@ -308,27 +308,27 @@ fgeq.d a1, ft1, ft2
 # CHECK-NEXT:  1      2     0.50                        fleq.d	a1, ft2, ft1
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - GenericOOODIV
-# CHECK-NEXT: [1.0] - GenericOOOFPU
-# CHECK-NEXT: [1.1] - GenericOOOFPU
-# CHECK-NEXT: [2.0] - GenericOOOIXU
-# CHECK-NEXT: [2.1] - GenericOOOIXU
-# CHECK-NEXT: [2.2] - GenericOOOIXU
-# CHECK-NEXT: [3.0] - GenericOOOLSU
-# CHECK-NEXT: [3.1] - GenericOOOLSU
+# CHECK-NEXT: [0]   - GenericOOOBranch
+# CHECK-NEXT: [1]   - GenericOOOFMulDiv
+# CHECK-NEXT: [2]   - GenericOOOFloat
+# CHECK-NEXT: [3.0] - GenericOOOInt
+# CHECK-NEXT: [3.1] - GenericOOOInt
+# CHECK-NEXT: [4.0] - GenericOOOLSU
+# CHECK-NEXT: [4.1] - GenericOOOLSU
+# CHECK-NEXT: [5]   - GenericOOOMulDiv
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3.0]  [3.1]
-# CHECK-NEXT:  -     89.00  90.00   -      -      -     3.00   3.00
+# CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]
+# CHECK-NEXT:  -     90.00  89.00   -      -     3.00   3.00    -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3.0]  [3.1]  Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   flh	ft0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     fsh	ft0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     flw	ft0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   fsw	ft0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   fld	ft0, 0(a0)
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     fsd	ft0, 0(a0)
+# CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     flh	ft0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     fsh	ft0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     flw	ft0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     fsw	ft0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     fld	ft0, 0(a0)
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     fsd	ft0, 0(a0)
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fadd.h	fs10, fs11, ft8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fsub.h	ft9, ft10, ft11
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmul.h	ft0, ft1, ft2
@@ -343,96 +343,96 @@ fgeq.d a1, ft1, ft2
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fadd.s	fs10, fs11, ft8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fsub.s	ft9, ft10, ft11
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmul.s	ft0, ft1, ft2
-# CHECK-NEXT:  -      -     13.00   -      -      -      -      -     fdiv.s	ft3, ft4, ft5
+# CHECK-NEXT:  -     13.00   -      -      -      -      -      -     fdiv.s	ft3, ft4, ft5
 # CHECK-NEXT:  -     13.00   -      -      -      -      -      -     fsqrt.s	ft6, ft7
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmin.s	fa5, fa6, fa7
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmax.s	fs2, fs3, fs4
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmadd.s	fa0, fa1, fa2, ft11
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmax.s	fs2, fs3, fs4
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmadd.s	fa0, fa1, fa2, ft11
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmsub.s	fa4, fa5, fa6, fa7
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fnmsub.s	fs2, fs3, fs4, fs5
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fnmsub.s	fs2, fs3, fs4, fs5
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fnmadd.s	fs6, fs7, fs8, fs9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fadd.d	fs10, fs11, ft8
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fsub.d	ft9, ft10, ft11
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmul.d	ft0, ft1, ft2
-# CHECK-NEXT:  -      -     17.00   -      -      -      -      -     fdiv.d	ft3, ft4, ft5
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fsub.d	ft9, ft10, ft11
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmul.d	ft0, ft1, ft2
+# CHECK-NEXT:  -     17.00   -      -      -      -      -      -     fdiv.d	ft3, ft4, ft5
 # CHECK-NEXT:  -     17.00   -      -      -      -      -      -     fsqrt.d	ft6, ft7
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmin.d	fa5, fa6, fa7
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmax.d	fs2, fs3, fs4
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmax.d	fs2, fs3, fs4
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmadd.d	fa0, fa1, fa2, ft11
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmsub.d	fa4, fa5, fa6, fa7
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmsub.d	fa4, fa5, fa6, fa7
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fnmsub.d	fs2, fs3, fs4, fs5
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fnmadd.d	fs6, fs7, fs8, fs9
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmv.x.h	a2, fs7
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fnmadd.d	fs6, fs7, fs8, fs9
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmv.x.h	a2, fs7
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmv.h.x	ft1, a6
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.s.h	fa0, ft0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.s.h	fa0, ft0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.s.h	fa0, ft0, rup
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.h.s	ft2, fa2
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.d.h	fa0, ft0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.h.s	ft2, fa2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.d.h	fa0, ft0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.d.h	fa0, ft0, rup
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.h.d	ft2, fa2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.w.s	a0, fs5
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.wu.s	a1, fs6
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.s.w	ft11, a4
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.s.wu	ft0, a5
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.wu.s	a1, fs6
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.s.w	ft11, a4
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.s.wu	ft0, a5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.l.s	a0, ft0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.lu.s	a1, ft1
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.s.l	ft2, a2
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.s.lu	ft3, a3
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmv.x.w	a2, fs7
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.s.l	ft2, a2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.s.lu	ft3, a3
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmv.x.w	a2, fs7
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmv.w.x	ft1, a6
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fsgnj.s	fs1, fa0, fa1
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fsgnjn.s	fa1, fa3, fa4
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.wu.d	a4, ft11
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fsgnj.s	fs1, fa0, fa1
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fsgnjn.s	fa1, fa3, fa4
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.wu.d	a4, ft11
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.w.d	a4, ft11
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.d.w	ft0, a5
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.d.wu	ft1, a6
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.d.w	ft0, a5
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.d.wu	ft1, a6
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.s.d	fs5, fs6
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.d.s	fs7, fs8
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.l.d	a0, ft0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.l.d	a0, ft0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.lu.d	a1, ft1
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fcvt.d.l	ft3, a3
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.d.l	ft3, a3
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvt.d.lu	ft4, a4
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmv.x.d	a2, ft2
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmv.d.x	ft5, a5
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fsgnj.d	fs1, fa0, fa1
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmv.x.d	a2, ft2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmv.d.x	ft5, a5
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fsgnj.d	fs1, fa0, fa1
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fsgnjn.d	fa1, fa3, fa4
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     feq.h	a1, fs8, fs9
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     feq.h	a1, fs8, fs9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     flt.h	a2, fs10, fs11
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fle.h	a3, ft8, ft9
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fle.h	a3, ft8, ft9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     feq.s	a1, fs8, fs9
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     flt.s	a2, fs10, fs11
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     flt.s	a2, fs10, fs11
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fle.s	a3, ft8, ft9
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     feq.d	a1, fs8, fs9
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     feq.d	a1, fs8, fs9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     flt.d	a2, fs10, fs11
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fle.d	a3, ft8, ft9
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fclass.s	a3, ft10
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fclass.s	a3, ft10
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fclass.d	a3, ft10
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fclass.s	a3, ft10
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fclass.d	a3, ft10
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fli.h	ft1, -1.0
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fli.s	ft1, -1.0
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fli.d	ft1, -1.0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fli.s	ft1, -1.0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fli.d	ft1, -1.0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fminm.h	fa0, fa1, fa2
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmaxm.h	fs3, fs4, fs5
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fminm.s	fa0, fa1, fa2
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmaxm.s	fs3, fs4, fs5
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fminm.s	fa0, fa1, fa2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fmaxm.s	fs3, fs4, fs5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fminm.d	fa0, fa1, fa2
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fmaxm.d	fs3, fs4, fs5
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fround.h	fs1, fs2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fround.h	fs1, fs2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     froundnx.h	fs1, fs2
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fround.s	fs1, fs2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fround.s	fs1, fs2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     froundnx.s	fs1, fs2
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fround.d	fs1, fs2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fround.d	fs1, fs2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     froundnx.d	fs1, fs2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fcvtmod.w.d	a1, ft1, rtz
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fltq.h	a1, fs1, fs2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fltq.h	a1, fs1, fs2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fleq.h	a1, ft1, ft2
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fltq.h	a1, fs2, fs1
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fltq.h	a1, fs2, fs1
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fleq.h	a1, ft2, ft1
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fltq.s	a1, fs1, fs2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fltq.s	a1, fs1, fs2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fleq.s	a1, ft1, ft2
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fltq.s	a1, fs2, fs1
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fltq.s	a1, fs2, fs1
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fleq.s	a1, ft2, ft1
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fltq.d	a1, fs1, fs2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fltq.d	a1, fs1, fs2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fleq.d	a1, ft1, ft2
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     fltq.d	a1, fs2, fs1
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fltq.d	a1, fs2, fs1
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     fleq.d	a1, ft2, ft1
