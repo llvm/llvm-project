@@ -39,35 +39,33 @@ define <4 x float> @cvt_4i16_to_4f32(<4 x i16> %a0) nounwind {
 ; AVX-LABEL: cvt_4i16_to_4f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $72, %rsp
+; AVX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    movq %rax, %rcx
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrl $16, %ecx
 ; AVX-NEXT:    movq %rax, %rdx
+; AVX-NEXT:    shrq $32, %rdx
+; AVX-NEXT:    shrq $48, %rax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX-NEXT:    shrl $16, %eax
-; AVX-NEXT:    shrq $32, %rcx
-; AVX-NEXT:    shrq $48, %rdx
-; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-NEXT:    vinsertps $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; AVX-NEXT:    addq $72, %rsp
 ; AVX-NEXT:    retq
@@ -90,35 +88,33 @@ define <4 x float> @cvt_8i16_to_4f32(<8 x i16> %a0) nounwind {
 ; AVX-LABEL: cvt_8i16_to_4f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $72, %rsp
+; AVX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    movq %rax, %rcx
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrl $16, %ecx
 ; AVX-NEXT:    movq %rax, %rdx
+; AVX-NEXT:    shrq $32, %rdx
+; AVX-NEXT:    shrq $48, %rax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX-NEXT:    shrl $16, %eax
-; AVX-NEXT:    shrq $32, %rcx
-; AVX-NEXT:    shrq $48, %rdx
-; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-NEXT:    vinsertps $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; AVX-NEXT:    addq $72, %rsp
 ; AVX-NEXT:    retq
@@ -430,17 +426,15 @@ define <2 x float> @cvt_2i16_to_2f32_constrained(<2 x i16> %a0) nounwind strictf
 ; AVX-LABEL: cvt_2i16_to_2f32_constrained:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; AVX-NEXT:    shrl $16, %eax
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-NEXT:    vinsertps $16, (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; AVX-NEXT:    addq $40, %rsp
 ; AVX-NEXT:    retq
 ;
@@ -465,35 +459,33 @@ define <4 x float> @cvt_4i16_to_4f32_constrained(<4 x i16> %a0) nounwind strictf
 ; AVX-LABEL: cvt_4i16_to_4f32_constrained:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $72, %rsp
+; AVX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    movq %rax, %rcx
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrl $16, %ecx
 ; AVX-NEXT:    movq %rax, %rdx
+; AVX-NEXT:    shrq $32, %rdx
+; AVX-NEXT:    shrq $48, %rax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX-NEXT:    shrl $16, %eax
-; AVX-NEXT:    shrq $32, %rcx
-; AVX-NEXT:    shrq $48, %rdx
-; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-NEXT:    vinsertps $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; AVX-NEXT:    addq $72, %rsp
 ; AVX-NEXT:    retq
@@ -878,35 +870,34 @@ define <4 x float> @load_cvt_8i16_to_4f32(ptr %a0) nounwind {
 ; AVX-LABEL: load_cvt_8i16_to_4f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $72, %rsp
-; AVX-NEXT:    movq (%rdi), %rax
-; AVX-NEXT:    movq %rax, %rcx
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrl $16, %ecx
 ; AVX-NEXT:    movq %rax, %rdx
+; AVX-NEXT:    shrq $32, %rdx
+; AVX-NEXT:    shrq $48, %rax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX-NEXT:    shrl $16, %eax
-; AVX-NEXT:    shrq $32, %rcx
-; AVX-NEXT:    shrq $48, %rdx
-; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-NEXT:    vinsertps $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; AVX-NEXT:    addq $72, %rsp
 ; AVX-NEXT:    retq
@@ -1301,35 +1292,34 @@ define <4 x float> @load_cvt_8i16_to_4f32_constrained(ptr %a0) nounwind strictfp
 ; AVX-LABEL: load_cvt_8i16_to_4f32_constrained:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $72, %rsp
-; AVX-NEXT:    movq (%rdi), %rax
-; AVX-NEXT:    movq %rax, %rcx
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrl $16, %ecx
 ; AVX-NEXT:    movq %rax, %rdx
+; AVX-NEXT:    shrq $32, %rdx
+; AVX-NEXT:    shrq $48, %rax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX-NEXT:    shrl $16, %eax
-; AVX-NEXT:    shrq $32, %rcx
-; AVX-NEXT:    shrq $48, %rdx
-; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
-; AVX-NEXT:    vmovdqa %xmm1, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-NEXT:    vinsertps $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __extendhfsf2@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; AVX-NEXT:    addq $72, %rsp
 ; AVX-NEXT:    retq
@@ -1386,9 +1376,7 @@ define <2 x double> @cvt_2i16_to_2f64(<2 x i16> %a0) nounwind {
 ; AVX-LABEL: cvt_2i16_to_2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; AVX-NEXT:    shrl $16, %eax
+; AVX-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
 ; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    callq __extendhfsf2@PLT
@@ -1422,19 +1410,18 @@ define <4 x double> @cvt_4i16_to_4f64(<4 x i16> %a0) nounwind {
 ; AVX-LABEL: cvt_4i16_to_4f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $72, %rsp
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    movq %rax, %rcx
-; AVX-NEXT:    movl %eax, %edx
+; AVX-NEXT:    shrq $48, %rcx
+; AVX-NEXT:    movq %rax, %rdx
+; AVX-NEXT:    shrq $32, %rdx
+; AVX-NEXT:    shrl $16, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    shrq $48, %rax
-; AVX-NEXT:    shrq $32, %rcx
-; AVX-NEXT:    shrl $16, %edx
 ; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1477,9 +1464,7 @@ define <2 x double> @cvt_8i16_to_2f64(<8 x i16> %a0) nounwind {
 ; AVX-LABEL: cvt_8i16_to_2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; AVX-NEXT:    shrl $16, %eax
+; AVX-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
 ; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    callq __extendhfsf2@PLT
@@ -1514,19 +1499,18 @@ define <4 x double> @cvt_8i16_to_4f64(<8 x i16> %a0) nounwind {
 ; AVX-LABEL: cvt_8i16_to_4f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $72, %rsp
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    movq %rax, %rcx
-; AVX-NEXT:    movl %eax, %edx
+; AVX-NEXT:    shrq $48, %rcx
+; AVX-NEXT:    movq %rax, %rdx
+; AVX-NEXT:    shrq $32, %rdx
+; AVX-NEXT:    shrl $16, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    shrq $48, %rax
-; AVX-NEXT:    shrq $32, %rcx
-; AVX-NEXT:    shrl $16, %edx
 ; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1645,9 +1629,7 @@ define <2 x double> @cvt_2i16_to_2f64_constrained(<2 x i16> %a0) nounwind strict
 ; AVX-LABEL: cvt_2i16_to_2f64_constrained:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; AVX-NEXT:    shrl $16, %eax
+; AVX-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
 ; AVX-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    callq __extendhfsf2@PLT
@@ -1684,19 +1666,18 @@ define <4 x double> @cvt_4i16_to_4f64_constrained(<4 x i16> %a0) nounwind strict
 ; AVX-LABEL: cvt_4i16_to_4f64_constrained:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $72, %rsp
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    movq %rax, %rcx
-; AVX-NEXT:    movl %eax, %edx
+; AVX-NEXT:    shrq $48, %rcx
+; AVX-NEXT:    movq %rax, %rdx
+; AVX-NEXT:    shrq $32, %rdx
+; AVX-NEXT:    shrl $16, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    shrq $48, %rax
-; AVX-NEXT:    shrq $32, %rcx
-; AVX-NEXT:    shrl $16, %edx
 ; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1936,19 +1917,19 @@ define <4 x double> @load_cvt_8i16_to_4f64(ptr %a0) nounwind {
 ; AVX-LABEL: load_cvt_8i16_to_4f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $72, %rsp
-; AVX-NEXT:    movq (%rdi), %rax
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    movq %rax, %rcx
-; AVX-NEXT:    movl %eax, %edx
+; AVX-NEXT:    shrq $48, %rcx
+; AVX-NEXT:    movq %rax, %rdx
+; AVX-NEXT:    shrq $32, %rdx
+; AVX-NEXT:    shrl $16, %eax
 ; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    shrq $48, %rax
-; AVX-NEXT:    shrq $32, %rcx
-; AVX-NEXT:    shrl $16, %edx
 ; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2142,14 +2123,14 @@ define i16 @cvt_f32_to_i16(float %a0) nounwind {
 ; F16C-LABEL: cvt_f32_to_i16:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
+; F16C-NEXT:    vpextrw $0, %xmm0, %eax
 ; F16C-NEXT:    # kill: def $ax killed $ax killed $eax
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_f32_to_i16:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    vpextrw $0, %xmm0, %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512-NEXT:    retq
   %1 = fptrunc float %a0 to half

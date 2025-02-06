@@ -298,7 +298,7 @@ void initializeStackMapLivenessPass(PassRegistry &);
 void initializeStackProtectorPass(PassRegistry &);
 void initializeStackSafetyGlobalInfoWrapperPassPass(PassRegistry &);
 void initializeStackSafetyInfoWrapperPassPass(PassRegistry &);
-void initializeStackSlotColoringPass(PassRegistry &);
+void initializeStackSlotColoringLegacyPass(PassRegistry &);
 void initializeStraightLineStrengthReduceLegacyPassPass(PassRegistry &);
 void initializeStripDebugMachineModulePass(PassRegistry &);
 void initializeStructurizeCFGLegacyPassPass(PassRegistry &);

@@ -2,20 +2,20 @@
 
 // RUN: %clang_cc1 -triple x86_64-unknown-fuchsia -O2 -flto -ffat-lto-objects \
 // RUN:          -fsanitize=cfi-icall -fsanitize-trap=cfi-icall -fvisibility=hidden  -emit-llvm -o - %s \
-// RUN:   | FileCheck %s
+// RUN:   | FileCheck %s --check-prefix=TYPE_TEST
 
-// CHECK: llvm.embedded.object
-// CHECK-SAME: section ".llvm.lto"
+// TYPE_TEST: llvm.embedded.object
+// TYPE_TEST-SAME: section ".llvm.lto"
 
-// CHECK-LABEL: define hidden void @foo
-//      CHECK: entry:
-// CHECK-NEXT:   %cmp14.not = icmp eq i64 %len, 0
-// CHECK-NEXT:   br i1 %cmp14.not, label %for.end7, label %for.cond1.preheader.preheader
-//      CHECK: for.cond1.preheader.preheader:                    ; preds = %entry
-// CHECK-NEXT:   %arrayidx.1 = getelementptr inbounds nuw i8, ptr %ptr, i64 4
-// CHECK-NEXT:   br label %for.cond1.preheader
+// TYPE_TEST-LABEL: define hidden void @foo
+//      TYPE_TEST: entry:
+// TYPE_TEST-NEXT:   %cmp14.not = icmp eq i64 %len, 0
+// TYPE_TEST-NEXT:   br i1 %cmp14.not, label %for.end7, label %for.cond1.preheader.preheader
+//      TYPE_TEST: for.cond1.preheader.preheader:                    ; preds = %entry
+// TYPE_TEST-NEXT:   %arrayidx.1 = getelementptr inbounds nuw i8, ptr %ptr, i64 4
+// TYPE_TEST-NEXT:   br label %for.cond1.preheader
 
-// CHECK-NOT: @llvm.type.test
+// TYPE_TEST-NOT: @llvm.type.test
 
 // The code below is a reduced case from https://github.com/llvm/llvm-project/issues/112053
 #define __PRINTFLIKE(__fmt, __varargs) __attribute__((__format__(__printf__, __fmt, __varargs)))

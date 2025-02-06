@@ -42,6 +42,10 @@ C/C++ Language Potentially Breaking Changes
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
+- The type trait builtin ``__is_referenceable`` has been removed, since it has
+  very few users and all the type traits that could benefit from it in the
+  standard library already have their own bespoke builtins.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -231,6 +235,8 @@ AST Matchers
 clang-format
 ------------
 
+- Adds ``BreakBeforeTemplateCloser`` option.
+
 libclang
 --------
 
@@ -242,6 +248,11 @@ Static Analyzer
 
 New features
 ^^^^^^^^^^^^
+
+A new flag - `-static-libclosure` was introduced to support statically linking
+the runtime for the Blocks extension on Windows. This flag currently only
+changes the code generation, and even then, only on Windows. This does not
+impact the linker behaviour like the other `-static-*` flags.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
