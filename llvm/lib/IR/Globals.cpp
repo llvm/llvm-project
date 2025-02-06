@@ -293,17 +293,6 @@ void GlobalObject::setSectionPrefix(StringRef Prefix) {
               MDB.createGlobalObjectSectionPrefix(Prefix));
 }
 
-void GlobalObject::updateSectionPrefix(StringRef Prefix,
-                                       std::optional<StringRef> KeepPrefix) {
-  auto SectionPrefix = getSectionPrefix();
-  if (SectionPrefix && (*SectionPrefix == Prefix ||
-                        (KeepPrefix && *SectionPrefix == *KeepPrefix)))
-    return;
-
-  setSectionPrefix(Prefix);
-  return;
-}
-
 std::optional<StringRef> GlobalObject::getSectionPrefix() const {
   if (MDNode *MD = getMetadata(LLVMContext::MD_section_prefix)) {
     [[maybe_unused]] StringRef MDName =
