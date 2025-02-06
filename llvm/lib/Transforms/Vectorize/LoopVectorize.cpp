@@ -8918,14 +8918,19 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
       isa<VPPartialReductionRecipe>(BinOpRecipe))
     std::swap(BinOp, Accumulator);
 
+  unsigned ReductionOpcode = Reduction->getOpcode();
   if (CM.blockNeedsPredicationForAnyReason(Reduction->getParent())) {
+    assert((ReductionOpcode == Instruction::Add ||
+            ReductionOpcode == Instruction::Sub) &&
+           "Expected an ADD or SUB operation for predicated partial "
+           "reductions (because the neutral element in the mask is zero)!");
     VPValue *Mask = getBlockInMask(Reduction->getParent());
     VPValue *Zero =
         Plan.getOrAddLiveIn(ConstantInt::get(Reduction->getType(), 0));
     BinOp = Builder.createSelect(Mask, BinOp, Zero, Reduction->getDebugLoc());
   }
-  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp,
-                                      Accumulator, Reduction);
+  return new VPPartialReductionRecipe(ReductionOpcode, BinOp, Accumulator,
+                                      Reduction);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
