@@ -5009,12 +5009,12 @@ foreach addr = ["global", "local", ""] in {
                     
       def int_nvvm_prefetch_ # !if(!eq(addr, ""), "", addr # "_") 
           # level # "_" # evict : Intrinsic<[], 
-                                            !cond(
-                                            !eq(addr, "global") : [llvm_global_ptr_ty],
-                                            !eq(addr, "local") : [llvm_local_ptr_ty],
-                                            !eq(addr, "") : [llvm_ptr_ty]),
-                                            [IntrArgMemOnly, ReadOnly<ArgIndex<0>>,
-                                             NoCapture<ArgIndex<0>>]>;   
+                                  !cond(
+                                  !eq(addr, "global") : [llvm_global_ptr_ty],
+                                  !eq(addr, "local") : [llvm_local_ptr_ty],
+                                  !eq(addr, "") : [llvm_ptr_ty]),
+                                  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>,
+                                  NoCapture<ArgIndex<0>>]>;   
     }
   }
 }
