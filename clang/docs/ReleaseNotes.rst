@@ -278,6 +278,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support 'no_openmp_constructs' assumption clause.
 
 Improvements
 ^^^^^^^^^^^^

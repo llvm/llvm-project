@@ -10627,6 +10627,11 @@ OMPClause *TreeTransform<Derived>::TransformOMPNoOpenMPRoutinesClause(
   return C;
 }
 template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPNoOpenMPConstructsClause(
+    OMPNoOpenMPConstructsClause *C) {
+  return C;
+}
+template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPNoParallelismClause(
     OMPNoParallelismClause *C) {
   return C;
