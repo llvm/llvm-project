@@ -63,6 +63,18 @@ template<typename Out, typename... In> Function<Out(In...)> adopt(Detail::Callab
     return Function<Out(In...)>(impl, Function<Out(In...)>::Adopt);
 }
 
+template <typename KeyType, typename ValueType>
+class HashMap {
+public:
+  HashMap();
+  HashMap([[clang::noescape]] const Function<ValueType()>&);
+  void ensure(const KeyType&, [[clang::noescape]] const Function<ValueType()>&);
+  bool operator+([[clang::noescape]] const Function<ValueType()>&) const;
+
+private:
+  ValueType* m_table { nullptr };
+};
+
 } // namespace WTF
 
 struct A {
@@ -267,6 +279,17 @@ struct RefCountableWithLambdaCapturingThis {
     run([&](RefCountable&) {
       nonTrivial();
     });
+  }
+
+  void method_captures_this_in_template_method() {
+    RefCountable* obj = make_obj();
+    WTF::HashMap<int, RefPtr<RefCountable>> nextMap;
+    nextMap.ensure(3, [&] {
+      return obj->next();
+    });
+    nextMap+[&] {
+      return obj->next();
+    };
   }
 };
 
