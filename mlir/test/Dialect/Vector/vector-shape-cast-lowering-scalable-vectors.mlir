@@ -146,16 +146,15 @@ func.func @f32_reduce_trailing_scalable_dim(%arg0: vector<3x[4]xf32>) -> vector<
 // CHECK-SAME: %[[arg0:.*]]: vector<4x[2]xf32>
 func.func @f32_increase_trailing_scalable_dim(%arg0: vector<4x[2]xf32>) -> vector<2x[4]xf32>
 {
-  // CHECK-NEXT: %[[ub:.*]] = ub.poison : vector<2x[4]xf32>
+  //  CHECK-DAG: %[[ub0:.*]] = ub.poison : vector<2x[4]xf32>
+  //  CHECK-DAG: %[[ub1:.*]] = ub.poison : vector<[4]xf32>
   // CHECK-NEXT: %[[subvec0:.*]] = vector.extract %[[arg0]][0] : vector<[2]xf32> from vector<4x[2]xf32>
-  // CHECK-NEXT: %[[resvec0:.*]] = vector.extract %[[ub]][0] : vector<[4]xf32> from vector<2x[4]xf32>
-  // CHECK-NEXT: %[[resvec1:.*]] = vector.scalable.insert %[[subvec0]], %[[resvec0]][0] : vector<[2]xf32> into vector<[4]xf32>
+  // CHECK-NEXT: %[[resvec1:.*]] = vector.scalable.insert %[[subvec0]], %[[ub1]][0] : vector<[2]xf32> into vector<[4]xf32>
   // CHECK-NEXT: %[[subvec1:.*]] = vector.extract %[[arg0]][1] : vector<[2]xf32> from vector<4x[2]xf32>
   // CHECK-NEXT: %[[resvec2:.*]] = vector.scalable.insert %[[subvec1]], %[[resvec1]][2] : vector<[2]xf32> into vector<[4]xf32>
-  // CHECK-NEXT: %[[res0:.*]] = vector.insert %[[resvec2]], %[[ub]] [0] : vector<[4]xf32> into vector<2x[4]xf32>
+  // CHECK-NEXT: %[[res0:.*]] = vector.insert %[[resvec2]], %[[ub0]] [0] : vector<[4]xf32> into vector<2x[4]xf32>
   // CHECK-NEXT: %[[subvec3:.*]] = vector.extract %[[arg0]][2] : vector<[2]xf32> from vector<4x[2]xf32>
-  // CHECK-NEXT: %[[resvec3:.*]] = vector.extract %[[ub]][1] : vector<[4]xf32> from vector<2x[4]xf32>
-  // CHECK-NEXT: %[[resvec4:.*]] = vector.scalable.insert %[[subvec3]], %[[resvec3]][0] : vector<[2]xf32> into vector<[4]xf32>
+  // CHECK-NEXT: %[[resvec4:.*]] = vector.scalable.insert %[[subvec3]], %[[ub1]][0] : vector<[2]xf32> into vector<[4]xf32>
   // CHECK-NEXT: %[[subvec4:.*]] = vector.extract %[[arg0]][3] : vector<[2]xf32> from vector<4x[2]xf32>
   // CHECK-NEXT: %[[resvec5:.*]] = vector.scalable.insert %[[subvec4]], %[[resvec4]][2] : vector<[2]xf32> into vector<[4]xf32>
   // CHECK-NEXT: %[[res1:.*]] = vector.insert %[[resvec5]], %[[res0]] [1] : vector<[4]xf32> into vector<2x[4]xf32>
