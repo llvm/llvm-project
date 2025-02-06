@@ -386,6 +386,13 @@ struct LookupResult {
   LookupResult() : Flags({0, 0, 0}), TPR() {}
 
   TargetPointerResultTy TPR;
+
+  bool isEmpty() const {
+      bool IsEmpty = Flags.IsContained == 0
+              & Flags.ExtendsBefore == 0
+              & Flags.ExtendsAfter == 0;
+      return IsEmpty;
+  }
 };
 
 // This structure stores information of a mapped memory region.

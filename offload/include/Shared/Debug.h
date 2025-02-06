@@ -58,6 +58,8 @@ enum OpenMPInfoType : uint32_t {
   OMP_INFOTYPE_DATA_TRANSFER = 0x0020,
   // Print whenever data does not have a viable device counterpart.
   OMP_INFOTYPE_EMPTY_MAPPING = 0x0040,
+  // Print whenever data does not need to be transferred
+  OMP_INFOTYPE_REDUNDANT_TRANSFER = 0x0080,
   // Enable every flag.
   OMP_INFOTYPE_ALL = 0xffffffff,
 };
