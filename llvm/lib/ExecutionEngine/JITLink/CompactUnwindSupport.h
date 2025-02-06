@@ -155,7 +155,7 @@ public:
         Edge *KeepAliveEdge = nullptr;
         for (auto &E : Fn.getBlock().edges_at(0)) {
           if (E.getKind() == Edge::KeepAlive && E.getTarget().isDefined() &&
-              &E.getTarget().getBlock().getSection() == EHFrameSec) {
+              &E.getTarget().getSection() == EHFrameSec) {
             KeepAliveEdge = &E;
             break;
           }
