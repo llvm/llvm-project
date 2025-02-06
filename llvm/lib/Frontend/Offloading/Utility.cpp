@@ -83,8 +83,8 @@ offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
 void offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
                                      Constant *Addr, StringRef Name,
                                      uint64_t Size, uint32_t Flags,
-                                     uint64_t Data, StringRef SectionName,
-                                     Constant *AuxAddr) {
+                                     uint64_t Data, Constant *AuxAddr,
+                                     StringRef SectionName) {
   llvm::Triple Triple(M.getTargetTriple());
 
   auto [EntryInitializer, NameGV] = getOffloadingEntryInitializer(
@@ -103,7 +103,7 @@ void offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
     Entry->setSection((SectionName + "$OE").str());
   else
     Entry->setSection(SectionName);
-  Entry->setAlignment(Align(1));
+  Entry->setAlignment(Align(object::OffloadBinary::getAlignment()));
 }
 
 std::pair<GlobalVariable *, GlobalVariable *>
@@ -135,6 +135,7 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
         M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
         ZeroInitilaizer, "__dummy." + SectionName);
     DummyEntry->setSection(SectionName);
+    DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
     appendToCompilerUsed(M, DummyEntry);
   } else {
     // The COFF linker will merge sections containing a '$' together into a

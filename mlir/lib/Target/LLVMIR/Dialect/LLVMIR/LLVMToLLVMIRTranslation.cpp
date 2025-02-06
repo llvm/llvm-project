@@ -447,15 +447,21 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         addressOfOp.getGlobal(moduleTranslation.symbolTable());
     LLVM::LLVMFuncOp function =
         addressOfOp.getFunction(moduleTranslation.symbolTable());
+    LLVM::AliasOp alias = addressOfOp.getAlias(moduleTranslation.symbolTable());
 
     // The verifier should not have allowed this.
-    assert((global || function) &&
-           "referencing an undefined global or function");
+    assert((global || function || alias) &&
+           "referencing an undefined global, function, or alias");
 
-    moduleTranslation.mapValue(
-        addressOfOp.getResult(),
-        global ? moduleTranslation.lookupGlobal(global)
-               : moduleTranslation.lookupFunction(function.getName()));
+    llvm::Value *llvmValue = nullptr;
+    if (global)
+      llvmValue = moduleTranslation.lookupGlobal(global);
+    else if (alias)
+      llvmValue = moduleTranslation.lookupAlias(alias);
+    else
+      llvmValue = moduleTranslation.lookupFunction(function.getName());
+
+    moduleTranslation.mapValue(addressOfOp.getResult(), llvmValue);
     return success();
   }
 

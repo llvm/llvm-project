@@ -321,3 +321,9 @@ add_macro_header(
   HDR
     pthread-macros.h
 )
+
+add_macro_header(
+  poll-macros
+  HDR
+    poll-macros.h
+)
