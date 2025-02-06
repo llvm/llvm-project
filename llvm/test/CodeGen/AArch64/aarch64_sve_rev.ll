@@ -4,8 +4,6 @@
 define <vscale x 16 x i1> @aarch64_sve_rev_inv(<vscale x 16 x i1> %0) {
 ; CHECK-LABEL: aarch64_sve_rev_inv:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev p0.b, p0.b
-; CHECK-NEXT:    rev p0.b, p0.b
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.rev(<vscale x 16 x i1> %0)
@@ -16,8 +14,6 @@ entry:
 define <vscale x 16 x i1> @aarch64_sve_rev_b16_inv(<vscale x 16 x i1> %0) {
 ; CHECK-LABEL: aarch64_sve_rev_b16_inv:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev p0.h, p0.h
-; CHECK-NEXT:    rev p0.h, p0.h
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.b16(<vscale x 16 x i1> %0)
@@ -28,8 +24,6 @@ entry:
 define <vscale x 16 x i1> @aarch64_sve_rev_b32_inv(<vscale x 16 x i1> %0) {
 ; CHECK-LABEL: aarch64_sve_rev_b32_inv:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev p0.s, p0.s
-; CHECK-NEXT:    rev p0.s, p0.s
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.b32(<vscale x 16 x i1> %0)
@@ -40,8 +34,6 @@ entry:
 define <vscale x 16 x i1> @aarch64_sve_rev_b64_inv(<vscale x 16 x i1> %0) {
 ; CHECK-LABEL: aarch64_sve_rev_b64_inv:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev p0.d, p0.d
-; CHECK-NEXT:    rev p0.d, p0.d
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.b64(<vscale x 16 x i1> %0)
@@ -52,8 +44,6 @@ entry:
 define <vscale x 4 x i32> @aarch64_sve_revb_inv(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: aarch64_sve_revb_inv:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    revb z0.s, p0/m, z1.s
-; CHECK-NEXT:    revb z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.aarch64.sve.revb.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b)
   %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.revb.nxv4i32(<vscale x 4 x i32> %1, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b)
@@ -63,8 +53,6 @@ define <vscale x 4 x i32> @aarch64_sve_revb_inv(<vscale x 4 x i32> %a, <vscale x
 define <vscale x 16 x i8> @aarch64_sve_revd_inv(<vscale x 16 x i8> %a, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: aarch64_sve_revd_inv:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    revd z0.q, p0/m, z1.q
-; CHECK-NEXT:    revd z0.q, p0/m, z1.q
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 16 x i8> @llvm.aarch64.sve.revd.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b)
   %2 = call <vscale x 16 x i8> @llvm.aarch64.sve.revd.nxv16i8(<vscale x 16 x i8> %1, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b)
@@ -74,8 +62,6 @@ define <vscale x 16 x i8> @aarch64_sve_revd_inv(<vscale x 16 x i8> %a, <vscale x
 define <vscale x 4 x i32> @aarch64_sve_revh_inv(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: aarch64_sve_revh_inv:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    revh z0.s, p0/m, z1.s
-; CHECK-NEXT:    revh z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b)
   %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32> %1, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b)
@@ -85,14 +71,13 @@ define <vscale x 4 x i32> @aarch64_sve_revh_inv(<vscale x 4 x i32> %a, <vscale x
 define <vscale x 2 x i64> @aarch64_sve_revw_inv(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: aarch64_sve_revw_inv:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    revw z0.d, p0/m, z1.d
-; CHECK-NEXT:    revw z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b)
   %2 = call <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64> %1, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %2
 }
 
+; negative test
 define <vscale x 4 x i32> @test_aarch64_sve_revb_pg_mismatch(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, <vscale x 4 x i1> %pg1, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: test_aarch64_sve_revb_pg_mismatch:
 ; CHECK:       // %bb.0:
@@ -104,6 +89,7 @@ define <vscale x 4 x i32> @test_aarch64_sve_revb_pg_mismatch(<vscale x 4 x i32> 
   ret <vscale x 4 x i32> %2
 }
 
+; negative test
 define <vscale x 4 x i32> @test_aarch64_sve_revb_b_mismatch(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> %b1) {
 ; CHECK-LABEL: test_aarch64_sve_revb_b_mismatch:
 ; CHECK:       // %bb.0:
@@ -115,6 +101,7 @@ define <vscale x 4 x i32> @test_aarch64_sve_revb_b_mismatch(<vscale x 4 x i32> %
   ret <vscale x 4 x i32> %2
 }
 
+; negative test
 define <vscale x 16 x i8> @test_aarch64_sve_revd_pg_mismatch(<vscale x 16 x i8> %a, <vscale x 16 x i1> %pg, <vscale x 16 x i1> %pg1, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: test_aarch64_sve_revd_pg_mismatch:
 ; CHECK:       // %bb.0:
@@ -126,6 +113,7 @@ define <vscale x 16 x i8> @test_aarch64_sve_revd_pg_mismatch(<vscale x 16 x i8> 
   ret <vscale x 16 x i8> %2
 }
 
+; negative test
 define <vscale x 16 x i8> @test_aarch64_sve_revd_b_mismatch(<vscale x 16 x i8> %a, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, <vscale x 16 x i8> %b1) {
 ; CHECK-LABEL: test_aarch64_sve_revd_b_mismatch:
 ; CHECK:       // %bb.0:
@@ -137,6 +125,7 @@ define <vscale x 16 x i8> @test_aarch64_sve_revd_b_mismatch(<vscale x 16 x i8> %
   ret <vscale x 16 x i8> %2
 }
 
+; negative test
 define <vscale x 4 x i32> @test_aarch64_sve_revh_pg_mismatch(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, <vscale x 4 x i1> %pg1, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: test_aarch64_sve_revh_pg_mismatch:
 ; CHECK:       // %bb.0:
@@ -148,6 +137,7 @@ define <vscale x 4 x i32> @test_aarch64_sve_revh_pg_mismatch(<vscale x 4 x i32> 
   ret <vscale x 4 x i32> %2
 }
 
+; negative test
 define <vscale x 4 x i32> @test_aarch64_sve_revh_b_mismatch(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> %b1) {
 ; CHECK-LABEL: test_aarch64_sve_revh_b_mismatch:
 ; CHECK:       // %bb.0:
@@ -159,6 +149,7 @@ define <vscale x 4 x i32> @test_aarch64_sve_revh_b_mismatch(<vscale x 4 x i32> %
   ret <vscale x 4 x i32> %2
 }
 
+; negative test
 define <vscale x 2 x i64> @test_aarch64_sve_revw_pg_mismatch(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i1> %pg1, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: test_aarch64_sve_revw_pg_mismatch:
 ; CHECK:       // %bb.0:
@@ -170,6 +161,7 @@ define <vscale x 2 x i64> @test_aarch64_sve_revw_pg_mismatch(<vscale x 2 x i64> 
   ret <vscale x 2 x i64> %2
 }
 
+; negative test
 define <vscale x 2 x i64> @test_aarch64_sve_revw_b_mismatch(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b, <vscale x 2 x i64> %b1) {
 ; CHECK-LABEL: test_aarch64_sve_revw_b_mismatch:
 ; CHECK:       // %bb.0:

@@ -21962,6 +21962,35 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
   return DAG.getNode(TopOpcode, DL, AccVT, BottomNode, ExtOp);
 }
 
+static SDValue foldRevInvolution(SDNode *N) {
+  SDValue InnerRev = N->getOperand(1);
+  if (!InnerRev.hasOneUse())
+    return SDValue();
+
+  unsigned OuterIId = getIntrinsicID(N);
+  unsigned InnerIId = getIntrinsicID(InnerRev.getNode());
+  if (OuterIId != InnerIId)
+    return SDValue();
+
+  switch (OuterIId) {
+  case Intrinsic::aarch64_sve_revb:
+  case Intrinsic::aarch64_sve_revd:
+  case Intrinsic::aarch64_sve_revh:
+  case Intrinsic::aarch64_sve_revw:
+    if (N->getOperand(2) != InnerRev.getOperand(2) ||
+        N->getOperand(3) != InnerRev.getOperand(3))
+      return SDValue();
+    [[fallthrough]];
+  case Intrinsic::aarch64_sve_rev:
+  case Intrinsic::aarch64_sve_rev_b16:
+  case Intrinsic::aarch64_sve_rev_b32:
+  case Intrinsic::aarch64_sve_rev_b64:
+    return InnerRev.getOperand(1);
+  default:
+    return SDValue();
+  }
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -22270,6 +22299,15 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return tryConvertSVEWideCompare(N, ISD::SETULT, DCI, DAG);
   case Intrinsic::aarch64_sve_cmpls_wide:
     return tryConvertSVEWideCompare(N, ISD::SETULE, DCI, DAG);
+  case Intrinsic::aarch64_sve_rev:
+  case Intrinsic::aarch64_sve_rev_b16:
+  case Intrinsic::aarch64_sve_rev_b32:
+  case Intrinsic::aarch64_sve_rev_b64:
+  case Intrinsic::aarch64_sve_revb:
+  case Intrinsic::aarch64_sve_revd:
+  case Intrinsic::aarch64_sve_revh:
+  case Intrinsic::aarch64_sve_revw:
+    return foldRevInvolution(N);
   case Intrinsic::aarch64_sve_ptest_any:
     return getPTest(DAG, N->getValueType(0), N->getOperand(1), N->getOperand(2),
                     AArch64CC::ANY_ACTIVE);
