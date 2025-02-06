@@ -112,6 +112,8 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
