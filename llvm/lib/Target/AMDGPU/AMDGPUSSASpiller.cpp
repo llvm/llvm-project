@@ -515,7 +515,8 @@ void AMDGPUSSASpiller::initActiveSetLoopHeader(MachineBasicBlock &MBB) {
   RegisterSet UsedInLoop;
   MachineLoop *L = LI.getLoopFor(&MBB);
   for (auto B : L->blocks()) {
-    RegisterSet Tmp(NU.usedInBlock(*B));
+    RegisterSet Tmp = NU.usedInBlock(*B);
+    Tmp.remove_if([&](VRegMaskPair P) { return !takeReg(P.VReg); });
     LLVM_DEBUG(dbgs() << "\nBlock " << B->getName()
                       << " is part of the loop. Used in block: ";
                dumpRegSet(Tmp));

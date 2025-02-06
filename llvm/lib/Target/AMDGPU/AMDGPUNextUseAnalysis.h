@@ -311,9 +311,11 @@ public:
                           : getNextUseDistance(I, VMP) == Infinity;
   }
 
-  SetVector<VRegMaskPair> usedInBlock(MachineBasicBlock &MBB) {
-    return std::move(UsedInBlock[MBB.getNumber()]);
+  SetVector<VRegMaskPair>& usedInBlock(MachineBasicBlock &MBB) {
+    return UsedInBlock[MBB.getNumber()];
   }
+
+  void dumpUsedInBlock();
 };
 
 class AMDGPUNextUseAnalysis : public AnalysisInfoMixin<AMDGPUNextUseAnalysis> {
