@@ -491,9 +491,9 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
   // Offset of the instruction in function.
   uint64_t Offset = 0;
 
-  auto printConstantIslandInRange = [&](uint64_t Offset, uint64_t Size) {
-    std::optional<uint64_t> IslandOffset =
-        getIslandInRange(Offset, Offset + Size);
+  auto printConstantIslandInRange = [&](uint64_t Start, uint64_t End) {
+    assert(Start <= End && "Invalid range");
+    std::optional<uint64_t> IslandOffset = getIslandInRange(Start, End);
 
     if (!IslandOffset)
       return;
