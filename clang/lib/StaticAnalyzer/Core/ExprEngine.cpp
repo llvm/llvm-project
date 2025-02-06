@@ -74,6 +74,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -1031,6 +1032,7 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
                             const LocationContext *LC,
                             const Stmt *DiagnosticStmt,
                             ProgramPoint::Kind K) {
+  llvm::TimeTraceScope TimeScope("ExprEngine::removeDead");
   assert((K == ProgramPoint::PreStmtPurgeDeadSymbolsKind ||
           ReferenceStmt == nullptr || isa<ReturnStmt>(ReferenceStmt))
           && "PostStmt is not generally supported by the SymbolReaper yet");
