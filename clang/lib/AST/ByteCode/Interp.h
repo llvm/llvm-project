@@ -325,11 +325,11 @@ bool Ret(InterpState &S, CodePtr &PC) {
 
   if (InterpFrame *Caller = S.Current->Caller) {
     PC = S.Current->getRetPC();
-    delete S.Current;
+    InterpFrame::free(S.Current);
     S.Current = Caller;
     S.Stk.push<T>(Ret);
   } else {
-    delete S.Current;
+    InterpFrame::free(S.Current);
     S.Current = nullptr;
     // The topmost frame should come from an EvalEmitter,
     // which has its own implementation of the Ret<> instruction.
@@ -345,10 +345,10 @@ inline bool RetVoid(InterpState &S, CodePtr &PC) {
 
   if (InterpFrame *Caller = S.Current->Caller) {
     PC = S.Current->getRetPC();
-    delete S.Current;
+    InterpFrame::free(S.Current);
     S.Current = Caller;
   } else {
-    delete S.Current;
+    InterpFrame::free(S.Current);
     S.Current = nullptr;
   }
   return true;
@@ -379,15 +379,14 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
   APSInt Value = OpAP<APSInt>()(LHS.toAPSInt(Bits), RHS.toAPSInt(Bits));
 
   // Report undefined behaviour, stopping if required.
-  const Expr *E = S.Current->getExpr(OpPC);
-  QualType Type = E->getType();
   if (S.checkingForUndefinedBehavior()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    QualType Type = E->getType();
     SmallString<32> Trunc;
     Value.trunc(Result.bitWidth())
         .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
                   /*UpperCase=*/true, /*InsertSeparators=*/true);
-    auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow)
+    S.report(E->getExprLoc(), diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
   }
 
@@ -737,16 +736,14 @@ bool Neg(InterpState &S, CodePtr OpPC) {
   S.Stk.push<T>(Result);
 
   APSInt NegatedValue = -Value.toAPSInt(Value.bitWidth() + 1);
-  const Expr *E = S.Current->getExpr(OpPC);
-  QualType Type = E->getType();
-
   if (S.checkingForUndefinedBehavior()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    QualType Type = E->getType();
     SmallString<32> Trunc;
     NegatedValue.trunc(Result.bitWidth())
         .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
                   /*UpperCase=*/true, /*InsertSeparators=*/true);
-    auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow)
+    S.report(E->getExprLoc(), diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
     return true;
   }
@@ -800,15 +797,14 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     APResult = --Value.toAPSInt(Bits);
 
   // Report undefined behaviour, stopping if required.
-  const Expr *E = S.Current->getExpr(OpPC);
-  QualType Type = E->getType();
   if (S.checkingForUndefinedBehavior()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    QualType Type = E->getType();
     SmallString<32> Trunc;
     APResult.trunc(Result.bitWidth())
         .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
                   /*UpperCase=*/true, /*InsertSeparators=*/true);
-    auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow)
+    S.report(E->getExprLoc(), diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
     return true;
   }
@@ -1255,6 +1251,12 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
+  return true;
+}
+
+static inline bool Kill(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.pop<Pointer>();
+  Ptr.endLifetime();
   return true;
 }
 

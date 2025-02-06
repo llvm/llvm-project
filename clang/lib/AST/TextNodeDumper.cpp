@@ -2525,8 +2525,11 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
-  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D))
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
     dumpTemplateSpecializationKind(CTSD->getSpecializationKind());
+    if (CTSD->hasStrictPackMatch())
+      OS << " strict-pack-match";
+  }
 
   dumpNestedNameSpecifier(D->getQualifier());
 
@@ -3039,6 +3042,12 @@ void TextNodeDumper::VisitOpenACCSetConstruct(const OpenACCSetConstruct *S) {
 void TextNodeDumper::VisitOpenACCUpdateConstruct(
     const OpenACCUpdateConstruct *S) {
   VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCAtomicConstruct(
+    const OpenACCAtomicConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+  OS << ' ' << S->getAtomicKind();
 }
 
 void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {

@@ -343,61 +343,32 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
 
   Type *Ty = F->getReturnType();
-
-  bool isABI = (STI.getSmVersion() >= 20);
-
   if (Ty->getTypeID() == Type::VoidTyID)
     return;
   O << " (";
 
-  if (isABI) {
-    if ((Ty->isFloatingPointTy() || Ty->isIntegerTy()) &&
-        !ShouldPassAsArray(Ty)) {
-      unsigned size = 0;
-      if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
-        size = ITy->getBitWidth();
-      } else {
-        assert(Ty->isFloatingPointTy() && "Floating point type expected here");
-        size = Ty->getPrimitiveSizeInBits();
-      }
-      size = promoteScalarArgumentSize(size);
-      O << ".param .b" << size << " func_retval0";
-    } else if (isa<PointerType>(Ty)) {
-      O << ".param .b" << TLI->getPointerTy(DL).getSizeInBits()
-        << " func_retval0";
-    } else if (ShouldPassAsArray(Ty)) {
-      unsigned totalsz = DL.getTypeAllocSize(Ty);
-      Align RetAlignment = TLI->getFunctionArgumentAlignment(
-          F, Ty, AttributeList::ReturnIndex, DL);
-      O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
-        << totalsz << "]";
-    } else
-      llvm_unreachable("Unknown return type");
-  } else {
-    SmallVector<EVT, 16> vtparts;
-    ComputeValueVTs(*TLI, DL, Ty, vtparts);
-    unsigned idx = 0;
-    for (unsigned i = 0, e = vtparts.size(); i != e; ++i) {
-      unsigned elems = 1;
-      EVT elemtype = vtparts[i];
-      if (vtparts[i].isVector()) {
-        elems = vtparts[i].getVectorNumElements();
-        elemtype = vtparts[i].getVectorElementType();
-      }
-
-      for (unsigned j = 0, je = elems; j != je; ++j) {
-        unsigned sz = elemtype.getSizeInBits();
-        if (elemtype.isInteger())
-          sz = promoteScalarArgumentSize(sz);
-        O << ".reg .b" << sz << " func_retval" << idx;
-        if (j < je - 1)
-          O << ", ";
-        ++idx;
-      }
-      if (i < e - 1)
-        O << ", ";
+  if ((Ty->isFloatingPointTy() || Ty->isIntegerTy()) &&
+      !ShouldPassAsArray(Ty)) {
+    unsigned size = 0;
+    if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
+      size = ITy->getBitWidth();
+    } else {
+      assert(Ty->isFloatingPointTy() && "Floating point type expected here");
+      size = Ty->getPrimitiveSizeInBits();
     }
-  }
+    size = promoteScalarArgumentSize(size);
+    O << ".param .b" << size << " func_retval0";
+  } else if (isa<PointerType>(Ty)) {
+    O << ".param .b" << TLI->getPointerTy(DL).getSizeInBits()
+      << " func_retval0";
+  } else if (ShouldPassAsArray(Ty)) {
+    unsigned totalsz = DL.getTypeAllocSize(Ty);
+    Align RetAlignment = TLI->getFunctionArgumentAlignment(
+        F, Ty, AttributeList::ReturnIndex, DL);
+    O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
+      << totalsz << "]";
+  } else
+    llvm_unreachable("Unknown return type");
   O << ") ";
 }
 
@@ -1513,7 +1484,6 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   unsigned paramIndex = 0;
   bool first = true;
   bool isKernelFunc = isKernelFunction(*F);
-  bool isABI = (STI.getSmVersion() >= 20);
 
   if (F->arg_empty() && !F->isVarArg()) {
     O << "()";
@@ -1646,10 +1616,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
         sz = PTySizeInBits;
       } else
         sz = Ty->getPrimitiveSizeInBits();
-      if (isABI)
-        O << "\t.param .b" << sz << " ";
-      else
-        O << "\t.reg .b" << sz << " ";
+      O << "\t.param .b" << sz << " ";
       O << TLI->getParamName(F, paramIndex);
       continue;
     }
@@ -1658,53 +1625,20 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     Type *ETy = PAL.getParamByValType(paramIndex);
     assert(ETy && "Param should have byval type");
 
-    if (isABI || isKernelFunc) {
-      // Just print .param .align <a> .b8 .param[size];
-      // <a>  = optimal alignment for the element type; always multiple of
-      //        PAL.getParamAlignment
-      // size = typeallocsize of element type
-      Align OptimalAlign =
-          isKernelFunc
-              ? getOptimalAlignForParam(ETy)
-              : TLI->getFunctionByValParamAlign(
-                    F, ETy, PAL.getParamAlignment(paramIndex).valueOrOne(), DL);
+    // Print .param .align <a> .b8 .param[size];
+    // <a>  = optimal alignment for the element type; always multiple of
+    //        PAL.getParamAlignment
+    // size = typeallocsize of element type
+    Align OptimalAlign =
+        isKernelFunc
+            ? getOptimalAlignForParam(ETy)
+            : TLI->getFunctionByValParamAlign(
+                  F, ETy, PAL.getParamAlignment(paramIndex).valueOrOne(), DL);
 
-      unsigned sz = DL.getTypeAllocSize(ETy);
-      O << "\t.param .align " << OptimalAlign.value() << " .b8 ";
-      O << TLI->getParamName(F, paramIndex);
-      O << "[" << sz << "]";
-      continue;
-    } else {
-      // Split the ETy into constituent parts and
-      // print .param .b<size> <name> for each part.
-      // Further, if a part is vector, print the above for
-      // each vector element.
-      SmallVector<EVT, 16> vtparts;
-      ComputeValueVTs(*TLI, DL, ETy, vtparts);
-      for (unsigned i = 0, e = vtparts.size(); i != e; ++i) {
-        unsigned elems = 1;
-        EVT elemtype = vtparts[i];
-        if (vtparts[i].isVector()) {
-          elems = vtparts[i].getVectorNumElements();
-          elemtype = vtparts[i].getVectorElementType();
-        }
-
-        for (unsigned j = 0, je = elems; j != je; ++j) {
-          unsigned sz = elemtype.getSizeInBits();
-          if (elemtype.isInteger())
-            sz = promoteScalarArgumentSize(sz);
-          O << "\t.reg .b" << sz << " ";
-          O << TLI->getParamName(F, paramIndex);
-          if (j < je - 1)
-            O << ",\n";
-          ++paramIndex;
-        }
-        if (i < e - 1)
-          O << ",\n";
-      }
-      --paramIndex;
-      continue;
-    }
+    unsigned sz = DL.getTypeAllocSize(ETy);
+    O << "\t.param .align " << OptimalAlign.value() << " .b8 ";
+    O << TLI->getParamName(F, paramIndex);
+    O << "[" << sz << "]";
   }
 
   if (F->isVarArg()) {

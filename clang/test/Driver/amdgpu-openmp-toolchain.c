@@ -16,12 +16,12 @@
 // CHECK-PHASES: 0: input, "[[INPUT:.+]]", c, (host-openmp)
 // CHECK-PHASES: 1: preprocessor, {0}, cpp-output, (host-openmp)
 // CHECK-PHASES: 2: compiler, {1}, ir, (host-openmp)
-// CHECK-PHASES: 3: input, "[[INPUT]]", c, (device-openmp)
-// CHECK-PHASES: 4: preprocessor, {3}, cpp-output, (device-openmp)
-// CHECK-PHASES: 5: compiler, {4}, ir, (device-openmp)
-// CHECK-PHASES: 6: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (amdgcn-amd-amdhsa)" {5}, ir
-// CHECK-PHASES: 7: backend, {6}, ir, (device-openmp)
-// CHECK-PHASES: 8: offload, "device-openmp (amdgcn-amd-amdhsa)" {7}, ir
+// CHECK-PHASES: 3: input, "[[INPUT]]", c, (device-openmp, gfx906)
+// CHECK-PHASES: 4: preprocessor, {3}, cpp-output, (device-openmp, gfx906)
+// CHECK-PHASES: 5: compiler, {4}, ir, (device-openmp, gfx906)
+// CHECK-PHASES: 6: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (amdgcn-amd-amdhsa:gfx906)" {5}, ir
+// CHECK-PHASES: 7: backend, {6}, ir, (device-openmp, gfx906)
+// CHECK-PHASES: 8: offload, "device-openmp (amdgcn-amd-amdhsa:gfx906)" {7}, ir
 // CHECK-PHASES: 9: clang-offload-packager, {8}, image, (device-openmp)
 // CHECK-PHASES: 10: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (x86_64-unknown-linux-gnu)" {9}, ir
 // CHECK-PHASES: 11: backend, {10}, assembler, (host-openmp)

@@ -14,12 +14,14 @@
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
+#include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -706,6 +708,20 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
+  }
+}
+
+InstructionCost VPInstruction::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  switch (getOpcode()) {
+  case VPInstruction::AnyOf: {
+    auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
+    return Ctx.TTI.getArithmeticReductionCost(
+        Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
+  }
+  default:
+    // TODO: Fill out other opcodes!
+    return 0;
   }
 }
 

@@ -22,8 +22,6 @@ using namespace ompx;
 
 namespace {
 
-#pragma omp begin declare target device_type(nohost)
-
 void gpu_regular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct) {
   for (uint32_t mask = mapping::getWarpSize() / 2; mask > 0; mask /= 2) {
     shflFct(reduce_data, /*LaneId - not used= */ 0,
@@ -206,7 +204,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   // to the number of slots in the buffer.
   bool IsMaster = (ThreadId == 0);
   while (IsMaster) {
-    Bound = atomic::load(&IterCnt, atomic::aquire);
+    Bound = atomic::load(&IterCnt, atomic::acquire);
     if (TeamId < Bound + num_of_records)
       break;
   }
@@ -259,7 +257,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   unsigned NumRecs = kmpcMin(NumTeams, uint32_t(num_of_records));
   if (ChunkTeamCount == NumTeams - Bound - 1) {
     // Ensure we see the global memory writes by other teams
-    fence::kernel(atomic::aquire);
+    fence::kernel(atomic::acquire);
 
     //
     // Last team processing.
@@ -316,5 +314,3 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 void *__kmpc_reduction_get_fixed_buffer() {
   return state::getKernelLaunchEnvironment().ReductionBuffer;
 }
-
-#pragma omp end declare target

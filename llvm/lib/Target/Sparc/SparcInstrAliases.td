@@ -450,6 +450,10 @@ def : InstAlias<"save", (SAVErr G0, G0, G0)>;
 // def : InstAlias<"set $val, $rd", (ORri IntRegs:$rd, (SETHIi (HI22 imm:$val)), (LO10 imm:$val))>;
 def SET : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "set $val, $rd">;
 
+// setsw value, rd
+// (turns into a sequence of sethi+or+sra, depending on the value)
+def SETSW : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "setsw $val, $rd">, Requires<[HasV9]>;
+
 // setx value, tmp, rd
 // (turns into a sequence of sethi+or+shift, depending on the value)
 def SETX : AsmPseudoInst<(outs I64Regs:$rd),
@@ -604,6 +608,8 @@ def : InstAlias<"unimp", (UNIMP 0), 0>;
 // Not in spec, but we follow Solaris behavior of having `illtrap`
 // interchangeable with `unimp` all the time.
 def : MnemonicAlias<"illtrap", "unimp">;
+
+def : MnemonicAlias<"setuw", "set">, Requires<[HasV9]>;
 
 def : MnemonicAlias<"iflush", "flush">;
 
