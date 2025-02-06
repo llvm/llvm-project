@@ -1814,7 +1814,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"nofp", "fprcvt"}, {"fp-armv8", "fprcvt"}, {}},
         {AArch64::ARMV9_6A, {"fprcvt", "nofp"}, {}, {"fp-armv8", "fprcvt"}},
 
-        // simd -> {aes, sha2, sha3, sm4, f8f16mm, f8f32mm, fp8dot4, fp8dot2}
+        // simd -> {aes, sha2, sha3, sm4, f8f16mm, f8f32mm, faminmax, lut, fp8}
         {AArch64::ARMV8A, {"nosimd", "aes"}, {"neon", "aes"}, {}},
         {AArch64::ARMV8A, {"aes", "nosimd"}, {}, {"neon", "aes"}},
         {AArch64::ARMV8A, {"nosimd", "sha2"}, {"neon", "sha2"}, {}},
@@ -1827,10 +1827,18 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"f8f16mm", "nosimd"}, {}, {"neon", "f8f16mm"}},
         {AArch64::ARMV9_6A, {"nosimd", "f8f32mm"}, {"neon", "f8f32mm"}, {}},
         {AArch64::ARMV9_6A, {"f8f32mm", "nosimd"}, {}, {"neon", "f8f32mm"}},
-        {AArch64::ARMV9_6A, {"nosimd", "fp8dot4"}, {"neon", "fp8dot4"}, {}},
-        {AArch64::ARMV9_6A, {"fp8dot4", "nosimd"}, {}, {"neon", "fp8dot4"}},
-        {AArch64::ARMV9_6A, {"nosimd", "fp8dot2"}, {"neon", "fp8dot2"}, {}},
-        {AArch64::ARMV9_6A, {"fp8dot2", "nosimd"}, {}, {"neon", "fp8dot2"}},
+        {AArch64::ARMV9_6A, {"faminmax", "nosimd"}, {}, {"neon", "faminmax"}},
+        {AArch64::ARMV9_6A, {"nosimd", "faminmax"}, {"neon", "faminmax"}, {}},
+        {AArch64::ARMV9_6A, {"lut", "nosimd"}, {}, {"neon", "lut"}},
+        {AArch64::ARMV9_6A, {"nosimd", "lut"}, {"neon", "lut"}, {}},
+        {AArch64::ARMV9_6A, {"fp8", "nosimd"}, {}, {"neon", "fp8"}},
+        {AArch64::ARMV9_6A, {"nosimd", "fp8"}, {"neon", "fp8"}, {}},
+
+        // fp8 -> {fp8dot4, fp8dot2}
+        {AArch64::ARMV9_6A, {"nofp8", "fp8dot4"}, {"fp8", "fp8dot4"}, {}},
+        {AArch64::ARMV9_6A, {"fp8dot4", "nofp8"}, {}, {"fp8", "fp8dot4"}},
+        {AArch64::ARMV9_6A, {"nofp8", "fp8dot2"}, {"fp8", "fp8dot2"}, {}},
+        {AArch64::ARMV9_6A, {"fp8dot2", "nofp8"}, {}, {"fp8", "fp8dot2"}},
 
         // simd -> {rdm, dotprod, fcma}
         {AArch64::ARMV8A, {"nosimd", "rdm"}, {"neon", "rdm"}, {}},
