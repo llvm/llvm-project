@@ -41,7 +41,6 @@
 ! BSD-F128NONE-NOT: FortranFloat128Math
 ! BSD-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
 ! BSD-SAME: -lFortranRuntime
-! BSD-SAME: -lFortranDecimal
 ! BSD-SAME: -lexecinfo
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
