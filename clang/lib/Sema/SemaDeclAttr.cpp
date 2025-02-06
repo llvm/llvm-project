@@ -3867,13 +3867,12 @@ static void handleFormatMatchesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   Expr *FormatStrExpr = AL.getArgAsExpr(2)->IgnoreParenImpCasts();
   if (auto *SL = dyn_cast<StringLiteral>(FormatStrExpr)) {
-    // Aside from whether we started with a string literal, there is generally
-    // no useful checking that we can do here. For instance, "invalid" format
-    // specifiers (like %!) are simply ignored by printf and don't have a
-    // diagnostic.
-    if (auto *NewAttr = S.mergeFormatMatchesAttr(D, AL, Info.Identifier,
-                                                 Info.FormatStringIdx, SL))
-      D->addAttr(NewAttr);
+    Sema::FormatStringType FST =
+        S.GetFormatStringType(Info.Identifier->getName());
+    if (S.ValidateFormatString(FST, SL))
+      if (auto *NewAttr = S.mergeFormatMatchesAttr(D, AL, Info.Identifier,
+                                                   Info.FormatStringIdx, SL))
+        D->addAttr(NewAttr);
     return;
   }
 

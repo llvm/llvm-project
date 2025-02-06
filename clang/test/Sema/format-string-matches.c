@@ -3,15 +3,27 @@
 
 #include <stdarg.h>
 
+__attribute__((format_matches(printf, -1, "%s"))) // expected-error{{'format_matches' attribute parameter 2 is out of bounds}}
+int test_out_of_bounds(void);
+
+__attribute__((format_matches(printf, 0, "%s"))) // expected-error{{'format_matches' attribute parameter 2 is out of bounds}}
+int test_out_of_bounds(void);
+
+__attribute__((format_matches(printf, 1, "%s"))) // expected-error{{'format_matches' attribute parameter 2 is out of bounds}}
+int test_out_of_bounds(void);
+
+__attribute__((format_matches(printf, 1, "%s"))) // expected-error{{format argument not a string type}}
+int test_out_of_bounds_int(int x);
+
+// MARK: -
+// Calling printf with a format from format_matches(printf) diagnoses with
+// that format string
 __attribute__((format(printf, 1, 2)))
 int printf(const char *fmt, ...);
 
 __attribute__((format(printf, 1, 0)))
 int vprintf(const char *fmt, va_list);
 
-// MARK: -
-// Calling printf with a format from format_matches(printf) diagnoses with
-// that format string
 __attribute__((format_matches(printf, 1, "%s %1.5s")))
 void format_str_str0(const char *fmt) {
     printf(fmt, "hello", "world");
@@ -206,3 +218,16 @@ void test_merge_redecl_warn(const char *f);
 
 __attribute__((format_matches(printf, 1, "%s"))) // expected-note{{comparing with this specifier}}
 void test_merge_redecl_warn(const char *f);
+
+// MARK: -
+// Positional madness
+
+__attribute__((format_matches(printf, 1, "%1$s %1$d")))  // \
+    expected-warning{{format specifier 's' is incompatible with 'd'}} \
+    expected-note{{comparing with this specifier}}
+void test_positional_incompatible(const char *f);
+
+void call_positional_incompatible(void) {
+    // expect the attribute was dropped and that there is no diagnostic here
+    test_positional_incompatible("%d %d %d %d %d");
+}

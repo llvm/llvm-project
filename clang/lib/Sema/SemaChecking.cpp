@@ -8664,6 +8664,39 @@ bool Sema::CheckFormatStringsCompatible(
   return false;
 }
 
+bool Sema::ValidateFormatString(FormatStringType Type,
+                                const StringLiteral *Str) {
+  if (Type != Sema::FST_Printf && Type != Sema::FST_NSString &&
+      Type != Sema::FST_Kprintf && Type != Sema::FST_FreeBSDKPrintf &&
+      Type != Sema::FST_OSLog && Type != Sema::FST_OSTrace &&
+      Type != Sema::FST_Syslog)
+    return true;
+
+  FormatStringLiteral RefLit = Str;
+  llvm::SmallVector<EquatableFormatArgument, 9> Args;
+  bool IsObjC = Type == Sema::FST_NSString || Type == Sema::FST_OSTrace;
+  if (!DecomposePrintfHandler::GetSpecifiers(*this, &RefLit, Str, Type, IsObjC,
+                                             true, Args))
+    return false;
+
+  // If positional arguments are used multiple times in the same format string,
+  // ensure that they are used in compatible ways.
+  bool HadError = false;
+  auto Iter = Args.begin();
+  auto End = Args.end();
+  while (Iter != End) {
+    auto PosEnd = std::find_if(Iter + 1, End, [=](const auto &Arg) {
+      return Arg.getPosition() != Iter->getPosition();
+    });
+    for (auto PosIter = Iter + 1; PosIter != PosEnd; ++PosIter) {
+      HadError |= !PosIter->VerifyCompatible(*this, *Iter, Str, true);
+    }
+    Iter = PosEnd;
+  }
+
+  return !HadError;
+}
+
 bool Sema::FormatStringHasSArg(const StringLiteral *FExpr) {
   // Str - The format string.  NOTE: this is NOT null-terminated!
   StringRef StrRef = FExpr->getString();

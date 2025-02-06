@@ -2371,7 +2371,8 @@ public:
 
   /// Verify that two format strings (as understood by attribute(format) and
   /// attribute(format_matches) are compatible. If they are incompatible,
-  /// diagnostics will assume that \c AuthoritativeFormatString is correct and
+  /// diagnostics are emitted with the assumption that \c
+  /// AuthoritativeFormatString is correct and
   /// \c TestedFormatString is wrong. If \c FunctionCallArg is provided,
   /// diagnostics will point to it and a note will refer to \c
   /// TestedFormatString or \c AuthoritativeFormatString as appropriate.
@@ -2380,6 +2381,12 @@ public:
                                const StringLiteral *AuthoritativeFormatString,
                                const StringLiteral *TestedFormatString,
                                const Expr *FunctionCallArg = nullptr);
+
+  /// Verify that one format string (as understood by attribute(format)) is
+  /// self-consistent; for instance, that it doesn't have multiple positional
+  /// arguments referring to the same argument in incompatible ways. Diagnose
+  /// if it isn't.
+  bool ValidateFormatString(FormatStringType FST, const StringLiteral *Str);
 
   /// \brief Enforce the bounds of a TCB
   /// CheckTCBEnforcement - Enforces that every function in a named TCB only
