@@ -145,6 +145,7 @@ void test_multiple_format_strings(const char *fmt1, const char *fmt2) {
         expected-warning{{passing 'os_log' format string where 'printf' format string is expected}}
 }
 
+// MARK: - 
 void accept_value(const char *f) __attribute__((format_matches(freebsd_kprintf, 1, "%s%i%i"))); // \
     expected-note 3{{comparing with this specifier}} \
     expected-note 3{{format string is defined here}}
@@ -181,3 +182,27 @@ void accept_aux_value(const char *f) {
     accept_indirect_field_width(f); // expected-warning{{format argument is an auxiliary value, but it should be an indirect field width}}
     accept_indirect_field_precision(f); // expected-warning{{format argument is an auxiliary value, but it should be an indirect precision}}
 }
+
+// MARK: - Merging format attributes
+__attribute__((format_matches(printf, 1, "%i")))
+__attribute__((format_matches(printf, 1, "%d")))
+void test_merge_self(const char *f);
+
+__attribute__((format_matches(printf, 1, "%i"))) // expected-note{{comparing with this specifier}}
+__attribute__((format_matches(printf, 1, "%s"))) // expected-warning{{format specifier 's' is incompatible with 'i'}}
+void test_merge_self_warn(const char *f);
+
+__attribute__((format_matches(printf, 1, "%i")))
+void test_merge_redecl(const char *f);
+
+__attribute__((format_matches(printf, 1, "%d")))
+void test_merge_redecl(const char *f);
+
+// XXX: ideally the warning and note would be swapped, but this is entirely
+// reliant on which decl clang considers to be the "true one", and it might
+// upset something else more important if we tried to change it.
+__attribute__((format_matches(printf, 1, "%i"))) // expected-warning{{format specifier 'i' is incompatible with 's'}}
+void test_merge_redecl_warn(const char *f);
+
+__attribute__((format_matches(printf, 1, "%s"))) // expected-note{{comparing with this specifier}}
+void test_merge_redecl_warn(const char *f);

@@ -7106,7 +7106,7 @@ public:
     return result;
   }
 
-  void VerifyCompatible(Sema &S, const EquatableFormatArgument &Other,
+  bool VerifyCompatible(Sema &S, const EquatableFormatArgument &Other,
                         const Expr *FmtExpr, bool InFunctionCall) const;
 };
 
@@ -7131,7 +7131,7 @@ class DecomposePrintfHandler : public CheckPrintfHandler {
 
 public:
   static bool
-  GetSpecifiers(Sema &S, const FormatStringLiteral *FSL,
+  GetSpecifiers(Sema &S, const FormatStringLiteral *FSL, const Expr *FmtExpr,
                 Sema::FormatStringType type, bool IsObjC, bool InFunctionCall,
                 llvm::SmallVectorImpl<EquatableFormatArgument> &Args);
 
@@ -7299,7 +7299,7 @@ void EquatableFormatArgument::EmitDiagnostic(Sema &S, PartialDiagnostic PDiag,
                                            ElementLoc, true, Range);
 }
 
-void EquatableFormatArgument::VerifyCompatible(
+bool EquatableFormatArgument::VerifyCompatible(
     Sema &S, const EquatableFormatArgument &Other, const Expr *FmtExpr,
     bool InFunctionCall) const {
   using MK = analyze_format_string::ArgType::MatchKind;
@@ -7309,7 +7309,7 @@ void EquatableFormatArgument::VerifyCompatible(
         S, S.PDiag(diag::warn_format_cmp_role_mismatch) << Role << Other.Role,
         FmtExpr, InFunctionCall);
     S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
-    return;
+    return false;
   }
 
   if (Role != FAR_Data) {
@@ -7320,10 +7320,12 @@ void EquatableFormatArgument::VerifyCompatible(
                          << (ModifierFor + 1) << (Other.ModifierFor + 1),
                      FmtExpr, InFunctionCall);
       S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
+      return false;
     }
-    return;
+    return true;
   }
 
+  bool HadError = false;
   if (Sensitivity != Other.Sensitivity) {
     // diagnose and continue
     EmitDiagnostic(S,
@@ -7331,6 +7333,7 @@ void EquatableFormatArgument::VerifyCompatible(
                        << Sensitivity << Other.Sensitivity,
                    FmtExpr, InFunctionCall);
     S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
+    HadError = true;
   }
 
   switch (ArgType.matchesArgType(S.Context, Other.ArgType)) {
@@ -7349,6 +7352,7 @@ void EquatableFormatArgument::VerifyCompatible(
                        << Other.buildFormatSpecifier(),
                    FmtExpr, InFunctionCall);
     S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
+    HadError = true;
     break;
 
   case MK::NoMatchPedantic:
@@ -7358,6 +7362,7 @@ void EquatableFormatArgument::VerifyCompatible(
                        << Other.buildFormatSpecifier(),
                    FmtExpr, InFunctionCall);
     S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
+    HadError = true;
     break;
 
   case MK::NoMatchSignedness:
@@ -7370,14 +7375,16 @@ void EquatableFormatArgument::VerifyCompatible(
                          << Other.buildFormatSpecifier(),
                      FmtExpr, InFunctionCall);
       S.Diag(Other.ElementLoc, diag::note_format_cmp_with) << 0 << Other.Range;
+      HadError = true;
     }
     break;
   }
+  return !HadError;
 }
 
 bool DecomposePrintfHandler::GetSpecifiers(
-    Sema &S, const FormatStringLiteral *FSL, Sema::FormatStringType Type,
-    bool IsObjC, bool InFunctionCall,
+    Sema &S, const FormatStringLiteral *FSL, const Expr *FmtExpr,
+    Sema::FormatStringType Type, bool IsObjC, bool InFunctionCall,
     llvm::SmallVectorImpl<EquatableFormatArgument> &Args) {
   StringRef Data = FSL->getString();
   const char *Str = Data.data();
@@ -7400,7 +7407,25 @@ bool DecomposePrintfHandler::GetSpecifiers(
       [](const EquatableFormatArgument &A, const EquatableFormatArgument &B) {
         return A.getPosition() < B.getPosition();
       });
-  return true;
+
+  // If there are duplicate positional arguments, ensure that they are all
+  // mutually compatible.
+  bool HadError = false;
+  auto ArgIter = Args.begin();
+  auto ArgEnd = Args.end();
+  while (ArgIter != ArgEnd) {
+    auto ArgNext = ArgIter + 1;
+    auto PositionalEnd = std::find_if(ArgNext, ArgEnd, [=](const auto &Arg) {
+      return Arg.getPosition() != ArgIter->getPosition();
+    });
+    while (ArgNext != PositionalEnd) {
+      HadError |=
+          !ArgIter->VerifyCompatible(S, *ArgNext, FmtExpr, InFunctionCall);
+      ++ArgNext;
+    }
+    ArgIter = ArgNext;
+  }
+  return !HadError;
 }
 
 bool DecomposePrintfHandler::HandlePrintfSpecifier(
@@ -8483,11 +8508,12 @@ bool CheckScanfHandler::HandleScanfSpecifier(
   return true;
 }
 
-static void CompareFormatSpecifiers(Sema &S, const StringLiteral *Ref,
+static bool CompareFormatSpecifiers(Sema &S, const StringLiteral *Ref,
                                     ArrayRef<EquatableFormatArgument> RefArgs,
                                     const StringLiteral *Fmt,
                                     ArrayRef<EquatableFormatArgument> FmtArgs,
                                     const Expr *FmtExpr, bool InFunctionCall) {
+  bool HadError = false;
   unsigned CommonArgs;
   if (FmtArgs.size() > RefArgs.size()) {
     CommonArgs = RefArgs.size();
@@ -8498,6 +8524,7 @@ static void CompareFormatSpecifiers(Sema &S, const StringLiteral *Ref,
         FmtExpr->getBeginLoc(), false,
         FmtArgs[RefArgs.size()].getSourceRange());
     S.Diag(Ref->getBeginLoc(), diag::note_format_cmp_with) << 1;
+    HadError = true;
   } else if (RefArgs.size() > FmtArgs.size()) {
     CommonArgs = FmtArgs.size();
     // "fewer specifiers in format string than expected"
@@ -8507,13 +8534,16 @@ static void CompareFormatSpecifiers(Sema &S, const StringLiteral *Ref,
         FmtExpr->getBeginLoc(), false, Fmt->getSourceRange());
     S.Diag(Ref->getBeginLoc(), diag::note_format_cmp_with)
         << 1 << RefArgs[FmtArgs.size()].getSourceRange();
+    HadError = true;
   } else {
     CommonArgs = FmtArgs.size();
   }
 
   for (size_t I = 0; I < CommonArgs; ++I) {
-    FmtArgs[I].VerifyCompatible(S, RefArgs[I], FmtExpr, InFunctionCall);
+    HadError |=
+        !FmtArgs[I].VerifyCompatible(S, RefArgs[I], FmtExpr, InFunctionCall);
   }
+  return HadError;
 }
 
 static void CheckFormatString(
@@ -8585,16 +8615,9 @@ static void CheckFormatString(
               Type == Sema::FST_Kprintf || Type == Sema::FST_FreeBSDKPrintf))
         H.DoneProcessing();
     } else {
-      llvm::SmallVector<EquatableFormatArgument, 9> RefArgs, FmtArgs;
-      FormatStringLiteral RefLit = ReferenceFormatString;
-      if (DecomposePrintfHandler::GetSpecifiers(S, &RefLit, Type, IsObjC, true,
-                                                RefArgs) &&
-          DecomposePrintfHandler::GetSpecifiers(S, FExpr, Type, IsObjC,
-                                                inFunctionCall, FmtArgs)) {
-        CompareFormatSpecifiers(S, ReferenceFormatString, RefArgs,
-                                FExpr->getFormatString(), FmtArgs,
-                                Args[format_idx], inFunctionCall);
-      }
+      S.CheckFormatStringsCompatible(
+          Type, ReferenceFormatString, FExpr->getFormatString(),
+          inFunctionCall ? nullptr : Args[format_idx]);
     }
   } else if (Type == Sema::FST_Scanf) {
     CheckScanfHandler H(S, FExpr, OrigFormatExpr, Type, firstDataArg,
@@ -8605,6 +8628,40 @@ static void CheckFormatString(
             H, Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo()))
       H.DoneProcessing();
   } // TODO: handle other formats
+}
+
+bool Sema::CheckFormatStringsCompatible(
+    FormatStringType Type, const StringLiteral *AuthoritativeFormatString,
+    const StringLiteral *TestedFormatString, const Expr *FunctionCallArg) {
+  if (Type != Sema::FST_Printf && Type != Sema::FST_NSString &&
+      Type != Sema::FST_Kprintf && Type != Sema::FST_FreeBSDKPrintf &&
+      Type != Sema::FST_OSLog && Type != Sema::FST_OSTrace &&
+      Type != Sema::FST_Syslog)
+    return true;
+
+  bool IsObjC = Type == Sema::FST_NSString || Type == Sema::FST_OSTrace;
+  llvm::SmallVector<EquatableFormatArgument, 9> RefArgs, FmtArgs;
+  FormatStringLiteral RefLit = AuthoritativeFormatString;
+  FormatStringLiteral TestLit = TestedFormatString;
+  const Expr *Arg;
+  bool DiagAtStringLiteral;
+  if (FunctionCallArg) {
+    Arg = FunctionCallArg;
+    DiagAtStringLiteral = false;
+  } else {
+    Arg = TestedFormatString;
+    DiagAtStringLiteral = true;
+  }
+  if (DecomposePrintfHandler::GetSpecifiers(*this, &RefLit,
+                                            AuthoritativeFormatString, Type,
+                                            IsObjC, true, RefArgs) &&
+      DecomposePrintfHandler::GetSpecifiers(*this, &TestLit, Arg, Type, IsObjC,
+                                            DiagAtStringLiteral, FmtArgs)) {
+    return CompareFormatSpecifiers(*this, AuthoritativeFormatString, RefArgs,
+                                   TestedFormatString, FmtArgs, Arg,
+                                   DiagAtStringLiteral);
+  }
+  return false;
 }
 
 bool Sema::FormatStringHasSArg(const StringLiteral *FExpr) {

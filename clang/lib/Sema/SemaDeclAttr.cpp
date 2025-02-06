@@ -3708,8 +3708,11 @@ FormatMatchesAttr *Sema::mergeFormatMatchesAttr(Decl *D,
                                                 StringLiteral *FormatStr) {
   // Check whether we already have an equivalent FormatMatches attribute.
   for (auto *F : D->specific_attrs<FormatMatchesAttr>()) {
-    if (F->getType() == Format && F->getFormatIdx() == FormatIdx &&
-        true /* TODO: compare format strings */) {
+    if (F->getType() == Format && F->getFormatIdx() == FormatIdx) {
+      if (!CheckFormatStringsCompatible(GetFormatStringType(Format->getName()),
+                                        F->getFormatString(), FormatStr))
+        return nullptr;
+
       // If we don't have a valid location for this attribute, adopt the
       // location.
       if (F->getLocation().isInvalid())

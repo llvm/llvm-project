@@ -2369,6 +2369,18 @@ public:
                  bool IsMemberFunction, SourceLocation Loc, SourceRange Range,
                  VariadicCallType CallType);
 
+  /// Verify that two format strings (as understood by attribute(format) and
+  /// attribute(format_matches) are compatible. If they are incompatible,
+  /// diagnostics will assume that \c AuthoritativeFormatString is correct and
+  /// \c TestedFormatString is wrong. If \c FunctionCallArg is provided,
+  /// diagnostics will point to it and a note will refer to \c
+  /// TestedFormatString or \c AuthoritativeFormatString as appropriate.
+  bool
+  CheckFormatStringsCompatible(FormatStringType FST,
+                               const StringLiteral *AuthoritativeFormatString,
+                               const StringLiteral *TestedFormatString,
+                               const Expr *FunctionCallArg = nullptr);
+
   /// \brief Enforce the bounds of a TCB
   /// CheckTCBEnforcement - Enforces that every function in a named TCB only
   /// directly calls other functions in the same TCB as marked by the
