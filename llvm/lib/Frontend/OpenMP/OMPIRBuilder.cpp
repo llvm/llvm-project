@@ -6858,7 +6858,7 @@ static void FixupDebugInfoForOutlinedFunction(
   // An extra argument is passed to the device. Create the debug data for it.
   if (OMPBuilder.Config.isTargetDevice()) {
     DICompileUnit *CU = NewSP->getUnit();
-    auto M = Builder.GetInsertBlock()->getModule();
+    Module *M = Func->getParent();
     DIBuilder DB(*M, true, CU);
     DIType *VoidPtrTy =
         DB.createQualifiedType(dwarf::DW_TAG_pointer_type, nullptr);
