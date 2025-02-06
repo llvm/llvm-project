@@ -2925,7 +2925,7 @@ private:
       Prev = Prev->Previous;
       if (!Prev || Prev->isNot(tok::r_paren))
         return false;
-      const auto* PrevMatchingParen = Prev->MatchingParen;
+      const auto *PrevMatchingParen = Prev->MatchingParen;
       if (!PrevMatchingParen)
         return false;
 
