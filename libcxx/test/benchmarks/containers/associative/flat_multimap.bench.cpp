@@ -9,25 +9,24 @@
 // REQUIRES: std-at-least-c++26
 
 #include <flat_map>
-#include <utility>
 
 #include "associative_container_benchmarks.h"
 #include "../../GenerateInput.h"
 #include "benchmark/benchmark.h"
 
 template <class K, class V>
-struct support::adapt_operations<std::flat_map<K, V>> {
-  using ValueType = typename std::flat_map<K, V>::value_type;
-  using KeyType   = typename std::flat_map<K, V>::key_type;
+struct support::adapt_operations<std::flat_multimap<K, V>> {
+  using ValueType = typename std::flat_multimap<K, V>::value_type;
+  using KeyType   = typename std::flat_multimap<K, V>::key_type;
   static ValueType value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
   static KeyType key_from_value(ValueType const& value) { return value.first; }
 
-  using InsertionResult = std::pair<typename std::flat_map<K, V>::iterator, bool>;
-  static auto get_iterator(InsertionResult const& result) { return result.first; }
+  using InsertionResult = typename std::flat_multimap<K, V>::iterator;
+  static auto get_iterator(InsertionResult const& result) { return result; }
 };
 
 int main(int argc, char** argv) {
-  support::associative_container_benchmarks<std::flat_map<int, int>>("std::flat_map<int, int>");
+  support::associative_container_benchmarks<std::flat_multimap<int, int>>("std::flat_multimap<int, int>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
