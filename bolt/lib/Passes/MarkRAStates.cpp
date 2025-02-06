@@ -54,7 +54,7 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
         // authenticated, so functions always start with unsigned RAState when
         // working with compiler-generated code)
         BF.setIgnored();
-        BC.outs() << "BOLT-INFO: ignoring RAStates in function "
+        BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
                   << BF.getPrintName() << "\n";
         return;
       }
@@ -72,10 +72,22 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
         continue;
 
       if (BC.MIB->isPSign(Inst)) {
-        assert(!RAState && "Signed RA State before PSign");
+        if (RAState) {
+          // RA signing instructions should only follow unsigned RA state.
+          BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
+                    << BF.getPrintName() << "\n";
+          BF.setIgnored();
+          return;
+        }
         BC.MIB->setRASigning(Inst);
       } else if (BC.MIB->isPAuth(Inst)) {
-        assert(RAState && "Unsigned RA State before PAuth");
+        if (!RAState) {
+          // RA authenticating instructions should only follow signed RA state.
+          BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
+                    << BF.getPrintName() << "\n";
+          BF.setIgnored();
+          return;
+        }
         BC.MIB->setAuthenticating(Inst);
       } else if (RAState) {
         BC.MIB->setRASigned(Inst);
