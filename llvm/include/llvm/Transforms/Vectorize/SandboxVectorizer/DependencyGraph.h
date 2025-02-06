@@ -263,6 +263,7 @@ public:
   void addMemPred(MemDGNode *PredN) {
     [[maybe_unused]] auto Inserted = MemPreds.insert(PredN).second;
     assert(Inserted && "PredN already exists!");
+    assert(PredN != this && "Trying to add a dependency to self!");
     if (!Scheduled) {
       ++PredN->UnscheduledSuccs;
     }
