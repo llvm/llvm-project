@@ -132,6 +132,28 @@ func.func @extract_from_create_mask_dynamic_position(%dim0: index, %index: index
 
 // -----
 
+// CHECK-LABEL: @extract_scalar_poison
+func.func @extract_scalar_poison() -> f32 {
+  // CHECK-NEXT: ub.poison : f32
+  //  CHECK-NOT: vector.extract
+  %0 = ub.poison : vector<4x8xf32>
+  %1 = vector.extract %0[2, 4] : f32 from vector<4x8xf32>
+  return %1 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @extract_vector_poison
+func.func @extract_vector_poison() -> vector<8xf32> {
+  // CHECK-NEXT: ub.poison : vector<8xf32>
+  //  CHECK-NOT: vector.extract
+  %0 = ub.poison : vector<4x8xf32>
+  %1 = vector.extract %0[2] : vector<8xf32> from vector<4x8xf32>
+  return %1 : vector<8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @extract_scalar_poison_idx
 func.func @extract_scalar_poison_idx(%a: vector<4x5xf32>) -> f32 {
   //  CHECK-NOT: vector.extract
@@ -2885,6 +2907,37 @@ func.func @vector_insert_const_regression(%arg0: i8) -> vector<4xi8> {
   %1 = vector.insert %arg0, %0 [0] : i8 into vector<4xi8>
   return %1 : vector<4xi8>
 }
+
+// -----
+
+// Insert a poison value shouldn't be folded as the resulting vector is not
+// fully poison.
+
+// CHECK-LABEL: @insert_scalar_poison
+func.func @insert_scalar_poison(%a: vector<4x8xf32>)
+    -> vector<4x8xf32> {
+  //  CHECK-NEXT: %[[UB:.*]] = ub.poison : f32
+  //  CHECK-NEXT: vector.insert %[[UB]]
+  %0 = ub.poison : f32
+  %1 = vector.insert %0, %a[2, 3] : f32 into vector<4x8xf32>
+  return %1 : vector<4x8xf32>
+}
+
+// -----
+
+// Insert a poison value shouldn't be folded as the resulting vector is not
+// fully poison.
+
+// CHECK-LABEL: @insert_vector_poison
+func.func @insert_vector_poison(%a: vector<4x8xf32>)
+    -> vector<4x8xf32> {
+  //  CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<8xf32>
+  //  CHECK-NEXT: vector.insert %[[UB]]
+  %0 = ub.poison : vector<8xf32>
+  %1 = vector.insert %0, %a[2] : vector<8xf32> into vector<4x8xf32>
+  return %1 : vector<4x8xf32>
+}
+
 
 // -----
 
