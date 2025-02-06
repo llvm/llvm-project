@@ -1,5 +1,3 @@
-import * as path from "path";
-import * as util from "util";
 import * as vscode from "vscode";
 
 import {
@@ -7,6 +5,7 @@ import {
   isExecutable,
 } from "./debug-adapter-factory";
 import { DisposableContext } from "./disposable-context";
+import { LaunchUriHandler } from "./uri-launch-handler";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
@@ -37,6 +36,10 @@ export class LLDBDapExtension extends DisposableContext {
           LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(dapPath || "");
         }
       }),
+    );
+
+    this.pushSubscription(
+      vscode.window.registerUriHandler(new LaunchUriHandler())
     );
   }
 }
