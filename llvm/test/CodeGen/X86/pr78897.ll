@@ -223,7 +223,8 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X86-AVX512-NEXT:    pushl %ebx
 ; X86-AVX512-NEXT:    pushl %edi
 ; X86-AVX512-NEXT:    pushl %esi
-; X86-AVX512-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    vpbroadcastb {{[0-9]+}}(%esp), %xmm0
+; X86-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX512-NEXT:    kmovd %eax, %k0
 ; X86-AVX512-NEXT:    knotw %k0, %k1
 ; X86-AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} {z} = [17,17,17,17,17,17,17,17,u,u,u,u,u,u,u,u]

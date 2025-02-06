@@ -55491,14 +55491,22 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
       break;
     }
 
-    if (EltBits[I] != 1ULL << (N + I))
+    if (!EltBits[I].isOneBitSet(N + I))
       return SDValue();
   }
 
-  SDValue BroadcastOp = Broadcast.getOpcode() == X86ISD::VBROADCAST
-                            ? Broadcast.getOperand(0)
-                            : Broadcast.getOperand(1);
-  MVT BroadcastOpVT = BroadcastOp.getSimpleValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  const DataLayout &DL = DAG.getDataLayout();
+  MVT VecIdxTy = TLI.getVectorIdxTy(DL);
+  MVT BroadcastOpVT = Broadcast.getSimpleValueType().getVectorElementType();
+  SDValue BroadcastOp;
+  if (Broadcast.getOpcode() != X86ISD::VBROADCAST) {
+    BroadcastOp = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, BroadcastOpVT,
+                              Broadcast, DAG.getConstant(0, DL, VecIdxTy));
+  } else {
+    BroadcastOp = Broadcast.getOperand(0);
+  }
+
   SDValue Masked = BroadcastOp;
   if (N != 0) {
     unsigned Mask = (1ULL << Len) - 1;
@@ -55507,17 +55515,17 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
     Masked = DAG.getNode(ISD::AND, DL, BroadcastOpVT, ShiftedValue,
                          DAG.getConstant(Mask, DL, BroadcastOpVT));
   }
+  // We can't extract more than 16 bits using this pattern, because 2^{17} will
+  // not fit in an i16 and a vXi32 where X > 16 is more than 512 bits.
   SDValue Trunc = DAG.getAnyExtOrTrunc(Masked, DL, MVT::i16);
   SDValue Bitcast = DAG.getNode(ISD::BITCAST, DL, MVT::v16i1, Trunc);
-  MVT PtrTy = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+  MVT PtrTy = TLI.getPointerTy(DL);
 
   if (CC == ISD::SETEQ)
-    Bitcast = DAG.getNode(
-        ISD::XOR, DL, MVT::v16i1, Bitcast,
-        DAG.getSplatBuildVector(
-            MVT::v16i1, DL,
-            DAG.getConstant(APInt::getAllOnes(PtrTy.getSizeInBits()), DL,
-                            PtrTy)));
+    Bitcast =
+        DAG.getNode(ISD::XOR, DL, MVT::v16i1, Bitcast,
+                    DAG.getSplatBuildVector(MVT::v16i1, DL,
+                                            DAG.getAllOnesConstant(DL, PtrTy)));
 
   if (VT != MVT::v16i1)
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Bitcast,
@@ -55659,11 +55667,10 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       return Op0.getOperand(0);
     }
 
-    if (IsVZero1) {
+    if (IsVZero1)
       if (SDValue V =
               combineAVX512SetCCToKMOV(VT, Op0, TmpCC, DL, DAG, Subtarget))
         return V;
-    }
   }
 
   // Try and make unsigned vector comparison signed. On pre AVX512 targets there
