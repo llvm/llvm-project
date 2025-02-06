@@ -48,7 +48,6 @@ define amdgpu_ps float @global_load_b32_idxprom_wrong_stride(ptr addrspace(1) al
 ; GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
 ; GISEL-NEXT:    global_load_b32 v0, v[0:1], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    s_wait_alu 0xfffd
 ; GISEL-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = sext i32 %idx to i64

@@ -1325,7 +1325,7 @@ public:
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
-  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
+  bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
 
   bool hasForceVALUThrottle() const { return HasForceVALUThrottle; }
 

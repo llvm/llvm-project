@@ -206,7 +206,7 @@ define float @v_mad_mix_f32_bf16lo_bf16lo_f32imm1(bfloat %src0, bfloat %src1) #0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s0, 1.0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_fma_mix_f32_bf16 v0, v0, v1, s0 op_sel_hi:[1,1,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %src0.ext = fpext bfloat %src0 to float
@@ -221,7 +221,7 @@ define float @v_mad_mix_f32_bf16lo_bf16lo_f32imminv2pi(bfloat %src0, bfloat %src
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s0, 0.15915494
-; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_fma_mix_f32_bf16 v0, v0, v1, s0 op_sel_hi:[1,1,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %src0.ext = fpext bfloat %src0 to float
@@ -237,7 +237,7 @@ define float @v_mad_mix_f32_bf16lo_bf16lo_cvtbf16imminv2pi(bfloat %src0, bfloat 
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s0, 0x3e230000
-; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_fma_mix_f32_bf16 v0, v0, v1, s0 op_sel_hi:[1,1,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %src0.ext = fpext bfloat %src0 to float
@@ -254,7 +254,7 @@ define float @v_mad_mix_f32_bf16lo_bf16lo_cvtbf16imm63(bfloat %src0, bfloat %src
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s0, 0x367c0000
-; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_fma_mix_f32_bf16 v0, v0, v1, s0 op_sel_hi:[1,1,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %src0.ext = fpext bfloat %src0 to float
@@ -290,8 +290,7 @@ define <2 x float> @v_mad_mix_v2f32_cvtbf16imminv2pi(<2 x bfloat> %src0, <2 x bf
 ; GFX1250-NEXT:    v_dual_lshlrev_b32 v2, 16, v0 :: v_dual_lshlrev_b32 v4, 16, v1
 ; GFX1250-NEXT:    v_and_b32_e32 v5, 0xffff0000, v1
 ; GFX1250-NEXT:    s_mov_b32 s0, 0x3e230000
-; GFX1250-NEXT:    s_wait_alu 0xfffe
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_pk_fma_f32 v[0:1], v[2:3], v[4:5], s[0:1] op_sel_hi:[1,1,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %src0.ext = fpext <2 x bfloat> %src0 to <2 x float>
@@ -605,9 +604,8 @@ define amdgpu_kernel void @test_fma_mix_f32_bf16_src2_bf16lo(float %x, i32 %y, p
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_fma_mix_f32_bf16 v0, s0, 0, s1 op_sel_hi:[0,0,1]
 ; GFX1250-NEXT:    s_mov_b32 s0, 0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
