@@ -611,8 +611,10 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
       if (NewMask == *ConstB)
         return LHS;
       if (NewMask == *ConstD) {
-        if (IsLogical)
-          cast<ICmpInst>(RHS)->setSameSign(false);
+        if (IsLogical) {
+          if (auto *ICmp = dyn_cast<ICmpInst>(RHS))
+            ICmp->setSameSign(false);
+        }
         return RHS;
       }
     }
