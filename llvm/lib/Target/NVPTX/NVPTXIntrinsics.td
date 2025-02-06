@@ -7582,3 +7582,44 @@ def GRIDDEPCONTROL_WAIT :
                 Requires<[hasSM<90>, hasPTX<78>]>;
 
 def INT_EXIT : NVPTXInst<(outs), (ins), "exit;", [(int_nvvm_exit)]>;
+
+// Tcgen05 intrinsics
+let isConvergent = true in {
+
+multiclass TCGEN05_ALLOC_INTR<NVPTXRegClass rc, string AS, string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs),
+             (ins rc:$dst, Int32Regs:$ncols),
+             !strconcat("tcgen05.alloc.cta_group::", num, ".sync.aligned", AS, ".b32 [$dst], $ncols;"),
+             [(Intr rc:$dst, Int32Regs:$ncols)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+
+defm TCGEN05_ALLOC_CG1 : TCGEN05_ALLOC_INTR<Int64Regs, "", "1", int_nvvm_tcgen05_alloc_cg1>;
+defm TCGEN05_ALLOC_CG2 : TCGEN05_ALLOC_INTR<Int64Regs, "", "2", int_nvvm_tcgen05_alloc_cg2>;
+
+defm TCGEN05_ALLOC_S64_CG1 : TCGEN05_ALLOC_INTR<Int64Regs, ".shared::cta", "1", int_nvvm_tcgen05_alloc_shared_cg1>;
+defm TCGEN05_ALLOC_S64_CG2 : TCGEN05_ALLOC_INTR<Int64Regs, ".shared::cta", "2", int_nvvm_tcgen05_alloc_shared_cg2>;
+
+defm TCGEN05_ALLOC_S32_CG1 : TCGEN05_ALLOC_INTR<Int32Regs, ".shared::cta", "1", int_nvvm_tcgen05_alloc_shared_cg1>;
+defm TCGEN05_ALLOC_S32_CG2 : TCGEN05_ALLOC_INTR<Int32Regs, ".shared::cta", "2", int_nvvm_tcgen05_alloc_shared_cg2>;
+
+multiclass TCGEN05_DEALLOC_INTR<string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs),
+             (ins Int32Regs:$tmem_addr, Int32Regs:$ncols),
+             !strconcat("tcgen05.dealloc.cta_group::", num, ".sync.aligned.b32 $tmem_addr, $ncols;"),
+             [(Intr Int32Regs:$tmem_addr, Int32Regs:$ncols)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+defm TCGEN05_DEALLOC_CG1: TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1>;
+defm TCGEN05_DEALLOC_CG2: TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
+
+multiclass TCGEN05_RELINQ_PERMIT_INTR<string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs), (ins),
+             !strconcat("tcgen05.relinquish_alloc_permit.cta_group::", num, ".sync.aligned;"),
+             [(Intr)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+defm TCGEN05_RELINQ_CG1: TCGEN05_RELINQ_PERMIT_INTR<"1", int_nvvm_tcgen05_relinq_alloc_permit_cg1>;
+defm TCGEN05_RELINQ_CG2: TCGEN05_RELINQ_PERMIT_INTR<"2", int_nvvm_tcgen05_relinq_alloc_permit_cg2>;
+
+} // isConvergent

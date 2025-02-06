@@ -940,6 +940,44 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
   return NumLoads * MemOpCost;
 }
 
+InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
+    unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+    TTI::TargetCostKind CostKind, const Instruction *I) {
+  bool IsLegal = (Opcode == Instruction::Store &&
+                  isLegalMaskedCompressStore(DataTy, Alignment)) ||
+                 (Opcode == Instruction::Load &&
+                  isLegalMaskedExpandLoad(DataTy, Alignment));
+  if (!IsLegal || CostKind != TTI::TCK_RecipThroughput)
+    return BaseT::getExpandCompressMemoryOpCost(Opcode, DataTy, VariableMask,
+                                                Alignment, CostKind, I);
+  // Example compressstore sequence:
+  // vsetivli        zero, 8, e32, m2, ta, ma (ignored)
+  // vcompress.vm    v10, v8, v0
+  // vcpop.m a1, v0
+  // vsetvli zero, a1, e32, m2, ta, ma
+  // vse32.v v10, (a0)
+  // Example expandload sequence:
+  // vsetivli        zero, 8, e8, mf2, ta, ma (ignored)
+  // vcpop.m a1, v0
+  // vsetvli zero, a1, e32, m2, ta, ma
+  // vle32.v v10, (a0)
+  // vsetivli        zero, 8, e32, m2, ta, ma
+  // viota.m v12, v0
+  // vrgather.vv     v8, v10, v12, v0.t
+  auto MemOpCost =
+      getMemoryOpCost(Opcode, DataTy, Alignment, /*AddressSpace*/ 0, CostKind);
+  auto LT = getTypeLegalizationCost(DataTy);
+  SmallVector<unsigned, 4> Opcodes{RISCV::VSETVLI};
+  if (VariableMask)
+    Opcodes.push_back(RISCV::VCPOP_M);
+  if (Opcode == Instruction::Store)
+    Opcodes.append({RISCV::VCOMPRESS_VM});
+  else
+    Opcodes.append({RISCV::VSETIVLI, RISCV::VIOTA_M, RISCV::VRGATHER_VV});
+  return MemOpCost +
+         LT.first * getRISCVInstructionCost(Opcodes, LT.second, CostKind);
+}
+
 InstructionCost RISCVTTIImpl::getStridedMemoryOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
@@ -1136,6 +1174,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       }
       return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
     }
+    break;
+  }
+  case Intrinsic::fmuladd: {
+    // TODO: handle promotion with f16/bf16 with zvfhmin/zvfbfmin
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector())
+      return LT.first *
+             getRISCVInstructionCost(RISCV::VFMADD_VV, LT.second, CostKind);
     break;
   }
   case Intrinsic::fabs: {
@@ -1336,6 +1382,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                                   ? RISCV::VFMV_V_F
                                                   : RISCV::VMV_V_X,
                                               LT.second, CostKind);
+  }
+  case Intrinsic::experimental_vp_splice: {
+    // To support type-based query from vectorizer, set the index to 0.
+    // Note that index only change the cost from vslide.vx to vslide.vi and in
+    // current implementations they have same costs.
+    return getShuffleCost(TTI::SK_Splice,
+                          cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
+                          0, cast<VectorType>(ICA.getReturnType()));
   }
   }
 
@@ -2712,7 +2766,12 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
         return false;
     }
 
-    Ops.push_back(&Op->getOperandUse(0));
+    Use *InsertEltUse = &Op->getOperandUse(0);
+    // Sink any fpexts since they might be used in a widening fp pattern.
+    auto *InsertElt = cast<InsertElementInst>(InsertEltUse);
+    if (isa<FPExtInst>(InsertElt->getOperand(1)))
+      Ops.push_back(&InsertElt->getOperandUse(1));
+    Ops.push_back(InsertEltUse);
     Ops.push_back(&OpIdx.value());
   }
   return true;

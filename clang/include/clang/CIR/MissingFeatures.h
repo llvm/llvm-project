@@ -27,6 +27,9 @@ struct MissingFeatures {
   // Address space related
   static bool addressSpace() { return false; }
 
+  // This isn't needed until we add support for bools.
+  static bool convertTypeForMemory() { return false; }
+
   // Unhandled global/linkage information.
   static bool opGlobalDSOLocal() { return false; }
   static bool opGlobalThreadLocal() { return false; }

@@ -648,9 +648,50 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
   if (S == NVPTX::Scope::Cluster)
     T->failIfClustersUnsupported(".cluster scope fence");
 
+  // Fall back to .acq_rel if .acquire, .release is not supported.
+  if (!T->hasSplitAcquireAndReleaseFences() &&
+      (O == NVPTX::Ordering::Acquire || O == NVPTX::Ordering::Release))
+    O = NVPTX::Ordering::AcquireRelease;
+
   switch (O) {
   case NVPTX::Ordering::Acquire:
+    switch (S) {
+    case NVPTX::Scope::System:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acquire_sys
+                                    : NVPTX::INT_MEMBAR_SYS;
+    case NVPTX::Scope::Block:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acquire_cta
+                                    : NVPTX::INT_MEMBAR_CTA;
+    case NVPTX::Scope::Cluster:
+      return NVPTX::atomic_thread_fence_acquire_cluster;
+    case NVPTX::Scope::Device:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acquire_gpu
+                                    : NVPTX::INT_MEMBAR_GL;
+    case NVPTX::Scope::Thread:
+      report_fatal_error(
+          formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
+                  ScopeToString(S)));
+    }
+    break;
   case NVPTX::Ordering::Release:
+    switch (S) {
+    case NVPTX::Scope::System:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_release_sys
+                                    : NVPTX::INT_MEMBAR_SYS;
+    case NVPTX::Scope::Block:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_release_cta
+                                    : NVPTX::INT_MEMBAR_CTA;
+    case NVPTX::Scope::Cluster:
+      return NVPTX::atomic_thread_fence_release_cluster;
+    case NVPTX::Scope::Device:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_release_gpu
+                                    : NVPTX::INT_MEMBAR_GL;
+    case NVPTX::Scope::Thread:
+      report_fatal_error(
+          formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
+                  ScopeToString(S)));
+    }
+    break;
   case NVPTX::Ordering::AcquireRelease: {
     switch (S) {
     case NVPTX::Scope::System:
