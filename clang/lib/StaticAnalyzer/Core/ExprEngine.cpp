@@ -2810,6 +2810,13 @@ void ExprEngine::processBranch(
     if (StTrue && StFalse)
       assert(!isa<ObjCForCollectionStmt>(Condition));
 
+    // We want to ensure consistent behavior between `eagerly-assume=false`,
+    // when the state split is always performed by the `assumeCondition()`
+    // call within this function and `eagerly-assume=true` (the default), when
+    // some conditions (comparison operators, unary negation) can trigger a
+    // state split before this callback. There are some contrived corner cases
+    // that behave differently with and without `eagerly-assume`, but I don't
+    // know about an example that could plausibly appear in "real" code.
     bool BothFeasible =
         (StTrue && StFalse) ||
         didEagerlyAssumeBifurcateAt(PrevState, dyn_cast<Expr>(Condition));

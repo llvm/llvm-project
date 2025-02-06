@@ -163,22 +163,22 @@ void shortCircuitInLoopConditionRHS(int arg) {
 void eagerlyAssumeInSubexpression(int arg) {
   // The `EagerlyAssume` logic is another complication that can "split the
   // state" within the loop condition, but before the `processBranch()` call
-  // which is (in theory) responsible for evaluating the loop condition.
-  // The current implementation partially compensates this by noticing the
+  // which would be "naturally" responsible for evaluating the loop condition.
+  // The current implementation tries to handle this by noticing the
   // cases where the loop condition is targeted by `EagerlyAssume`, but does
   // not handle the (fortunately rare) case when `EagerlyAssume` hits a
   // sub-expression of the loop condition (as in this contrived test case).
-  // FIXME: I don't know a real-world example for this inconsistency, but it
-  // would be good to eliminate it eventually.
+  // FIXME: It would be good to eventually eliminate this inconsistency, but
+  // I don't know a realistic example that could appear in real-world code, so
+  // this seems to be a low-priority goal.
   int i;
   for (i = 0; (i >= arg) - 1; i++) {
     clang_analyzer_numTimesReached(); // eagerlyassume-warning {{4}} noeagerlyassume-warning {{2}}
   }
 
   // The 'combo' note intentionally appears if `assume-at-least-one-iteration`
-  // is disabled, but also appears as a bug (or at least inaccuracy) when
-  // `assume-at-least-one-iteration` is true but `EagerlyAssume` is also
-  // enabled.
+  // is disabled, but also appears as a bug when `eagerly-assume` and
+  // `assume-at-least-one-iteration` are both enabled.
   clang_analyzer_dump(i); // combo-warning {{0}} expected-warning {{1}} expected-warning {{2}} eagerlyassume-warning {{3}}
 }
 
