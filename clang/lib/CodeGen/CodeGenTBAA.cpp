@@ -83,6 +83,9 @@ llvm::MDNode *CodeGenTBAA::getChar() {
 llvm::MDNode *CodeGenTBAA::getAnyPtr(unsigned PtrDepth) {
   assert(PtrDepth >= 1 && "Pointer must have some depth");
 
+  // Populate at least PtrDepth elements in AnyPtrs. These are the type nodes
+  // for "any" pointers of increasing pointer depth, and are organized in the
+  // hierarchy: any pointer <- any p2 pointer <- any p3 pointer <- ...
   if (AnyPtrs.size() < PtrDepth) {
     AnyPtrs.reserve(PtrDepth);
     auto Size = Module.getDataLayout().getPointerSize();
