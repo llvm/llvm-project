@@ -312,7 +312,7 @@ private:
   /// Any length parameters which have been fetched for the type
   mlir::SmallVector<mlir::Value> lenParams;
 
-  /// If the source variable being privatized definately can't have non-default
+  /// If the source variable being privatized definitely can't have non-default
   /// lower bounds then we don't need to generate code to read them.
   bool cannotHaveNonDefaultLowerBounds;
 
