@@ -1945,7 +1945,7 @@ private:
       if (__n_move != 0)
         traits_type::move(__p + __ip + __n, __p + __ip, __n_move);
     } else {
-      __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __ip, 0, __n);
+      __grow_to_with_hole(__sz + __n, __ip, __n);
       __p = std::__to_address(__get_long_pointer());
     }
     __sz += __n;
@@ -2141,20 +2141,15 @@ private:
 #  if _LIBCPP_ABI_VERSION >= 2 //  We want to use the function in the dylib in ABIv1
   _LIBCPP_HIDE_FROM_ABI
 #  endif
-  _LIBCPP_DEPRECATED_("use __grow_by_without_replace") void __grow_by(
+  _LIBCPP_DEPRECATED_("use __grow_to") void __grow_by(
       size_type __old_cap,
       size_type __delta_cap,
       size_type __old_sz,
       size_type __n_copy,
       size_type __n_del,
       size_type __n_add = 0);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __grow_by_without_replace(
-      size_type __old_cap,
-      size_type __delta_cap,
-      size_type __old_sz,
-      size_type __n_copy,
-      size_type __n_del,
-      size_type __n_add = 0);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __grow_to(size_type __new_cap, size_type __n_copy, size_type __n_del, size_type __n_add = 0);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 void __grow_by_and_replace(
       size_type __old_cap,
       size_type __delta_cap,
@@ -2163,6 +2158,22 @@ private:
       size_type __n_del,
       size_type __n_add,
       const value_type* __p_new_stuff);
+
+  // Allocate a new buffer of size __new_cap and copy data from the old buffer from
+  // [old_buffer, old_buffer + __hole_loc) into [new_buffer, new_buffer + __hole_loc) and
+  // [old_buffer + __hole_loc) into [new_buffer + __hole_loc + __hole_size).
+  //
+  // This means that all the data from the old buffer is copied into the new one, but an uninitialized area
+  // [new_buffer + __hole_loc, new_buffer + __hole_loc + __hole_size) is there as well, allowing insertion operations
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __grow_to_with_hole(size_type __new_cap, size_type __hole_loc, size_type __hole_size) {
+    __grow_to(__new_cap, __hole_loc, 0, __hole_size);
+  }
+
+  // Allocate a new buffer of size __capacity and replace the old one with it, but do not copy any data
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __uninitialized_reallocate(size_type __capacity) {
+    __grow_to(__capacity, 0, size());
+  }
 
   // __assign_no_alias is invoked for assignment operations where we
   // have proof that the input does not alias the current instance.
@@ -2559,7 +2570,7 @@ void _LIBCPP_CONSTEXPR_SINCE_CXX20
 #  if _LIBCPP_ABI_VERSION >= 2 // We want to use the function in the dylib in ABIv1
 _LIBCPP_HIDE_FROM_ABI
 #  endif
-_LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Traits, _Allocator>::__grow_by(
+basic_string<_CharT, _Traits, _Allocator>::__grow_by(
     size_type __old_cap,
     size_type __delta_cap,
     size_type __old_sz,
@@ -2588,18 +2599,15 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-void _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-basic_string<_CharT, _Traits, _Allocator>::__grow_by_without_replace(
-    size_type __old_cap,
-    size_type __delta_cap,
-    size_type __old_sz,
-    size_type __n_copy,
-    size_type __n_del,
-    size_type __n_add) {
+void _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI basic_string<_CharT, _Traits, _Allocator>::__grow_to(
+    size_type __new_cap, size_type __n_copy, size_type __n_del, size_type __n_add) {
   __annotate_delete();
   auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
+
+  auto __old_cap = capacity();
+  auto __old_sz =  size();
   _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-  __grow_by(__old_cap, __delta_cap, __old_sz, __n_copy, __n_del, __n_add);
+  __grow_by(__old_cap, __new_cap - __old_cap, __old_sz, __n_copy, __n_del, __n_add);
   _LIBCPP_SUPPRESS_DEPRECATED_POP
   __set_long_size(__old_sz - __n_del + __n_add);
 }
@@ -2659,8 +2667,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(size_type __n, value_type __c)
   size_type __cap      = capacity();
   size_type __old_size = size();
   if (__cap < __n) {
-    size_type __sz = size();
-    __grow_by_without_replace(__cap, __n - __cap, __sz, 0, __sz);
+    __uninitialized_reallocate(__n);
     __annotate_increase(__n);
   } else if (__n > __old_size)
     __annotate_increase(__n - __old_size);
@@ -2819,8 +2826,7 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_trivial(_Iterator __first, _
     //    thus no reallocation would happen.
     // 2. In the exotic case where the input range is the byte representation of the string itself, the string
     //    object itself stays valid even if reallocation happens.
-    size_type __sz = size();
-    __grow_by_without_replace(__cap, __n - __cap, __sz, 0, __sz);
+    __uninitialized_reallocate(__n);
     __annotate_increase(__n);
   } else if (__n > __old_size)
     __annotate_increase(__n - __old_size);
@@ -2897,10 +2903,8 @@ template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::append(size_type __n, value_type __c) {
   if (__n) {
-    size_type __cap = capacity();
     size_type __sz  = size();
-    if (__cap - __sz < __n)
-      __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
+    reserve(__sz + __n);
     __annotate_increase(__n);
     pointer __p = __get_pointer();
     traits_type::assign(std::__to_address(__p) + __sz, __n, __c);
@@ -2915,10 +2919,8 @@ template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline void
 basic_string<_CharT, _Traits, _Allocator>::__append_default_init(size_type __n) {
   if (__n) {
-    size_type __cap = capacity();
     size_type __sz  = size();
-    if (__cap - __sz < __n)
-      __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
+    reserve(__sz + __n);
     __annotate_increase(__n);
     pointer __p = __get_pointer();
     __sz += __n;
@@ -2940,7 +2942,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::pu
     __sz  = __get_long_size();
   }
   if (__sz == __cap) {
-    __grow_by_without_replace(__cap, 1, __sz, __sz, 0);
+    reserve(__cap + 1);
     __annotate_increase(1);
     __is_short = false; // the string is always long after __grow_by
   } else
@@ -2962,12 +2964,10 @@ template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<
 _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::append(_ForwardIterator __first, _ForwardIterator __last) {
   size_type __sz  = size();
-  size_type __cap = capacity();
   size_type __n   = static_cast<size_type>(std::distance(__first, __last));
   if (__n) {
     if (__string_is_trivial_iterator<_ForwardIterator>::value && !__addr_in_range(*__first)) {
-      if (__cap - __sz < __n)
-        __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
+      reserve(__sz + __n);
       __annotate_increase(__n);
       auto __end = __copy_non_overlapping_range(__first, __last, std::__to_address(__get_pointer() + __sz));
       traits_type::assign(*__end, value_type());
@@ -3056,7 +3056,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, size_type __n
       if (__n_move != 0)
         traits_type::move(__p + __pos + __n, __p + __pos, __n_move);
     } else {
-      __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __pos, 0, __n);
+      __grow_to_with_hole(__sz + __n, __pos, __n);
       __p = std::__to_address(__get_long_pointer());
     }
     traits_type::assign(__p + __pos, __n, __c);
@@ -3140,7 +3140,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, value_ty
   size_type __cap = capacity();
   value_type* __p;
   if (__cap == __sz) {
-    __grow_by_without_replace(__cap, 1, __sz, __ip, 0, 1);
+    __grow_to_with_hole(__cap + 1, __ip, 1);
     __p = std::__to_address(__get_long_pointer());
   } else {
     __annotate_increase(1);
@@ -3221,7 +3221,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
         traits_type::move(__p + __pos + __n2, __p + __pos + __n1, __n_move);
     }
   } else {
-    __grow_by_without_replace(__cap, __sz - __n1 + __n2 - __cap, __sz, __pos, __n1, __n2);
+    __grow_to(__sz - __n1 + __n2, __pos, __n1, __n2);
     __p = std::__to_address(__get_long_pointer());
   }
   traits_type::assign(__p + __pos, __n2, __c);
