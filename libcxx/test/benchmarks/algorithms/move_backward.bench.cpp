@@ -10,46 +10,61 @@
 
 #include <algorithm>
 #include <benchmark/benchmark.h>
+#include <ranges>
 #include <vector>
 
-static void bm_ranges_move_backward_vb(benchmark::State& state, bool aligned) {
+template <bool aligned>
+void bm_ranges_move_backward_vb(benchmark::State& state) {
   auto n = state.range();
-  std::vector<bool> in(n, true);
-  std::vector<bool> out(aligned ? n : n + 8);
-  benchmark::DoNotOptimize(&in);
-  auto dst = aligned ? out.end() : out.end() - 4;
+  std::vector<bool> v1(n, true);
+  std::vector<bool> v2(n, false);
+  benchmark::DoNotOptimize(v1);
+  benchmark::DoNotOptimize(v2);
+  std::vector<bool>* in  = &v1;
+  std::vector<bool>* out = &v2;
   for (auto _ : state) {
-    benchmark::DoNotOptimize(std::ranges::move_backward(in, dst));
-    benchmark::DoNotOptimize(&out);
+    if constexpr (aligned) {
+      benchmark::DoNotOptimize(std::ranges::move_backward(*in, std::ranges::end(*out)));
+    } else {
+      benchmark::DoNotOptimize(std::ranges::move_backward(*in | std::views::take(n - 4), std::ranges::end(*out)));
+    }
+    std::swap(in, out);
+    benchmark::DoNotOptimize(in);
+    benchmark::DoNotOptimize(out);
   }
 }
 
-static void bm_move_backward(benchmark::State& state, bool aligned) {
+template <bool aligned>
+void bm_move_backward_vb(benchmark::State& state) {
   auto n = state.range();
-  std::vector<bool> in(n, true);
-  std::vector<bool> out(aligned ? n : n + 8);
-  benchmark::DoNotOptimize(&in);
-  auto beg = in.begin();
-  auto end = in.end();
-  auto dst = aligned ? out.end() : out.end() - 4;
+  std::vector<bool> v1(n, true);
+  std::vector<bool> v2(n, false);
+  benchmark::DoNotOptimize(v1);
+  benchmark::DoNotOptimize(v2);
+  std::vector<bool>* in  = &v1;
+  std::vector<bool>* out = &v2;
   for (auto _ : state) {
-    benchmark::DoNotOptimize(std::move_backward(beg, end, dst));
-    benchmark::DoNotOptimize(&out);
+    auto first1 = in->begin();
+    auto last1  = in->end();
+    auto last2  = out->end();
+    if constexpr (aligned) {
+      benchmark::DoNotOptimize(std::move_backward(first1, last1, last2));
+    } else {
+      benchmark::DoNotOptimize(std::move_backward(first1, last1 - 4, last2));
+    }
+    std::swap(in, out);
+    benchmark::DoNotOptimize(in);
+    benchmark::DoNotOptimize(out);
   }
 }
 
-static void bm_ranges_move_backward_vb_aligned(benchmark::State& state) { bm_ranges_move_backward_vb(state, true); }
-static void bm_ranges_move_backward_vb_unaligned(benchmark::State& state) { bm_ranges_move_backward_vb(state, false); }
+BENCHMARK(bm_ranges_move_backward_vb<true>)
+    ->Name("bm_ranges_move_backward_vb_aligned")
+    ->Range(8, 1 << 16)
+    ->DenseRange(102400, 204800, 4096);
+BENCHMARK(bm_ranges_move_backward_vb<false>)->Name("bm_ranges_move_backward_vb_unaligned")->Range(8, 1 << 20);
 
-static void bm_move_backward_vb_aligned(benchmark::State& state) { bm_move_backward(state, true); }
-static void bm_move_backward_vb_unaligned(benchmark::State& state) { bm_move_backward(state, false); }
-
-// Test std::ranges::move_backward for vector<bool>::iterator
-BENCHMARK(bm_ranges_move_backward_vb_aligned)->Range(8, 1 << 16)->DenseRange(102400, 204800, 4096);
-BENCHMARK(bm_ranges_move_backward_vb_unaligned)->Range(8, 1 << 20);
-
-// Test std::move_backward for vector<bool>::iterator
-BENCHMARK(bm_move_backward_vb_aligned)->Range(8, 1 << 20);
-BENCHMARK(bm_move_backward_vb_unaligned)->Range(8, 1 << 20);
+BENCHMARK(bm_move_backward_vb<true>)->Name("bm_move_backward_vb_aligned")->Range(8, 1 << 20);
+BENCHMARK(bm_move_backward_vb<false>)->Name("bm_move_backward_vb_unaligned")->Range(8, 1 << 20);
 
 BENCHMARK_MAIN();

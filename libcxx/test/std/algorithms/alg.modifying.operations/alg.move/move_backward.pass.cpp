@@ -90,20 +90,22 @@ struct Test1OutIters {
 };
 
 TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
-  std::vector<bool> in(N, false);
+  std::vector<bool> v(N, false);
   for (std::size_t i = 0; i < N; i += 2)
-    in[i] = true;
+    v[i] = true;
 
   { // Test move_backward with aligned bytes
+    std::vector<bool> in(v);
     std::vector<bool> out(N);
     std::move_backward(in.begin(), in.end(), out.end());
-    assert(in == out);
+    assert(out == v);
   }
   { // Test move_backward with unaligned bytes
-    std::vector<bool> out(N + 8);
-    std::move_backward(in.begin(), in.end(), out.end() - 4);
-    for (std::size_t i = 0; i < N; ++i)
-      assert(out[i + 4] == in[i]);
+    std::vector<bool> in(v);
+    std::vector<bool> out(N);
+    std::move_backward(in.begin(), in.end() - 4, out.end());
+    for (std::size_t i = 0; i < N - 4; ++i)
+      assert(out[i + 4] == v[i]);
   }
 
   return true;

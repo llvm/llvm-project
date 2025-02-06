@@ -195,20 +195,21 @@ struct IteratorWithMoveIter {
 
 #if TEST_STD_VER >= 23
 constexpr bool test_vector_bool(std::size_t N) {
-  std::vector<bool> in(N, false);
+  std::vector<bool> v(N, false);
   for (std::size_t i = 0; i < N; i += 2)
-    in[i] = true;
+    v[i] = true;
 
   { // Test move_backward with aligned bytes
+    std::vector<bool> in{v};
     std::vector<bool> out(N);
     std::ranges::move_backward(in, out.end());
-    assert(in == out);
+    assert(out == v);
   }
   { // Test move_backward with unaligned bytes
-    std::vector<bool> out(N + 8);
-    std::ranges::move_backward(in, out.end() - 4);
-    for (std::size_t i = 0; i < N; ++i)
-      assert(out[i + 4] == in[i]);
+    std::vector<bool> in{v};
+    std::vector<bool> out(N);
+    std::ranges::move_backward(in | std::views::take(N - 4), out.end());
+    assert(std::ranges::equal(v | std::views::take(N - 4), out | std::views::drop(4)));
   }
 
   return true;
