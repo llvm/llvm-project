@@ -1,4 +1,5 @@
 # RUN: llc -run-pass=machine-scheduler -mtriple=aarch64-linux-gnu -mcpu=neoverse-v2 %s -o /dev/null 2>&1
+# RUN: llc -passes=machine-scheduler -mtriple=aarch64-linux-gnu -mcpu=neoverse-v2 %s -o /dev/null 2>&1
 # Just ensure this doesn't crash. Ensures in the neoverse-v2
 # scheduling model we don't attempt to treat the first input
 # operand of MOVZXi as an immediate operand.
