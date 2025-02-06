@@ -4029,7 +4029,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         for (auto &Edge : CloneCallerEdges) {
           // Skip removed edges (due to direct recursive edges updated when
           // updating callee edges when moving an edge and subsequently
-          // removed by call to removeNoneTypeCalleeEdges on the Clone.
+          // removed by call to removeNoneTypeCalleeEdges on the Clone).
           if (Edge->isRemoved())
             continue;
           // Ignore any caller that does not have a recorded callsite Call.
