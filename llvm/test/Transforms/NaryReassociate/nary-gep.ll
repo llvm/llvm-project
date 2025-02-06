@@ -21,14 +21,14 @@ define void @no_sext_fat_pointer(ptr addrspace(2) %a, i32 %i, i32 %j) {
   ret void
 }
 
-define ptr addrspace(2) @zext_fat_pointer_crash() {
+define ptr addrspace(2) @zext_fat_pointer_crash(ptr addrspace(2) %p, i32 %a) {
 ; CHECK-LABEL: @zext_fat_pointer_crash(
-; CHECK-NEXT:    [[C:%.*]] = add i32 0, 0
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr double, ptr addrspace(2) null, i32 [[C]]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr double, ptr addrspace(2) [[P:%.*]], i32 [[C]]
 ; CHECK-NEXT:    ret ptr addrspace(2) [[Q]]
 ;
-  %c = add i32 0, 0
-  %q = getelementptr double, ptr addrspace(2) null, i32 %c
+  %c = add i32 %a, 1
+  %q = getelementptr double, ptr addrspace(2) %p, i32 %c
   ret ptr addrspace(2) %q
 }
 
