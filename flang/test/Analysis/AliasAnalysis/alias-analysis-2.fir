@@ -49,11 +49,11 @@
 
 // TODO: Can the address in a pointer alias the address of a pointer, even when the
 // pointer has no box. Should this be NoAlias?
-// T3: CHECK-DAG: p1.addr#0 <-> p1.tgt#0: MayAlias
+// CHECK-DAG: p1.addr#0 <-> p1.tgt#0: MayAlias
 
 // The addresses stored in two different pointers can alias, even if one has no
 // box.  In this program, they happen to be the same address.
-// T4: CHECK-DAG: p1.tgt#0 <-> boxp1.addr#0: MayAlias
+// CHECK-DAG: p1.tgt#0 <-> boxp1.addr#0: MayAlias
 
 func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %arg1: !fir.ref<f32> {fir.bindc_name = "v2", fir.target}, %arg2: !fir.ref<!fir.box<!fir.ptr<f32>>> ) attributes {test.ptr = "func"} {
 
