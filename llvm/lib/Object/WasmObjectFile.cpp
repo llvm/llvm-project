@@ -484,6 +484,10 @@ Error WasmObjectFile::parseDylink0Section(ReadContext &Ctx) {
       }
       break;
     }
+    case wasm::WASM_DYLINK_RUNTIME_PATH: {
+      DylinkInfo.RuntimePath = readString(Ctx);
+      break;
+    }
     default:
       LLVM_DEBUG(dbgs() << "unknown dylink.0 sub-section: " << Type << "\n");
       Ctx.Ptr += Size;
