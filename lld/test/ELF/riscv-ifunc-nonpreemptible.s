@@ -16,43 +16,43 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t.64 | FileCheck --check-prefix=DIS64 %s
 
 # RELOC32:      .rela.dyn {
-# RELOC32-NEXT:   0x3200 R_RISCV_IRELATIVE - 0x117C
+# RELOC32-NEXT:   0x30200 R_RISCV_IRELATIVE - 0x1017C
 # RELOC32-NEXT: }
 # RELOC32-LABEL:    Hex dump of section '.got.plt':
-# NO-APPLY-RELOC32: 0x00003200 00000000
-# APPLY-RELOC32:    0x00003200 7c110000
+# NO-APPLY-RELOC32: 0x00030200 00000000
+# APPLY-RELOC32:    0x00030200 7c010100
 # RELOC32-EMPTY:
 
-# SYM32: 0001190 0 FUNC GLOBAL DEFAULT {{.*}} func
+# SYM32: 00010190 0 FUNC GLOBAL DEFAULT {{.*}} func
 
 # DIS32:      <_start>:
-# DIS32-NEXT: 1180: auipc a0, 0x0
+# DIS32-NEXT: 10180: auipc a0, 0x0
 # DIS32-NEXT:       addi a0, a0, 0x10
 # DIS32:      Disassembly of section .iplt:
 # DIS32:      <func>:
 ## 32-bit: &.got.plt[func]-. = 0x3200-0x1190 = 4096*2+0x70
-# DIS32-NEXT: 1190: auipc t3, 0x2
+# DIS32-NEXT: 10190: auipc t3, 0x2
 # DIS32-NEXT:       lw t3, 0x70(t3)
 # DIS32-NEXT:       jalr t1, t3
 # DIS32-NEXT:       nop
 
 # RELOC64:      .rela.dyn {
-# RELOC64-NEXT:   0x3340 R_RISCV_IRELATIVE - 0x1260
+# RELOC64-NEXT:   0x30340 R_RISCV_IRELATIVE - 0x10260
 # RELOC64-NEXT: }
 # RELOC64-LABEL:    Hex dump of section '.got.plt':
-# NO-APPLY-RELOC64: 0x00003340 00000000 00000000
-# APPLY-RELOC64:    0x00003340 60120000 00000000
+# NO-APPLY-RELOC64: 0x00030340 00000000 00000000
+# APPLY-RELOC64:    0x00030340 60020100 00000000
 # RELOC64-EMPTY:
 
-# SYM64: 000000000001270 0 FUNC GLOBAL DEFAULT {{.*}} func
+# SYM64: 0000000000010270 0 FUNC GLOBAL DEFAULT {{.*}} func
 
 # DIS64:      <_start>:
-# DIS64-NEXT: 1264: auipc a0, 0x0
+# DIS64-NEXT: 10264: auipc a0, 0x0
 # DIS64-NEXT:       addi a0, a0, 0xc
 # DIS64:      Disassembly of section .iplt:
 # DIS64:      <func>:
 ## 64-bit: &.got.plt[func]-. = 0x3340-0x1270 = 4096*2+0xd0
-# DIS64-NEXT: 1270: auipc t3, 0x2
+# DIS64-NEXT: 10270: auipc t3, 0x2
 # DIS64-NEXT:       ld t3, 0xd0(t3)
 # DIS64-NEXT:       jalr t1, t3
 # DIS64-NEXT:       nop

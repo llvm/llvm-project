@@ -19,7 +19,7 @@
 # RUN: llvm-readelf -x .got.plt %t.64 | FileCheck --check-prefix=GOTPLT64 %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t.64 | FileCheck --check-prefixes=DIS,DIS64 %s
 
-# SEC: .plt PROGBITS {{0*}}00011030
+# SEC: .plt PROGBITS {{0*}}00020030
 
 ## A canonical PLT has a non-zero st_value. bar and weak are called but their
 ## addresses are not taken, so a canonical PLT is not necessary.
@@ -29,36 +29,36 @@
 ## The .got.plt slots relocated by .rela.plt point to .plt
 ## This is required by glibc.
 # RELOC32:      .rela.plt {
-# RELOC32-NEXT:   0x13070 R_RISCV_JUMP_SLOT bar 0x0
-# RELOC32-NEXT:   0x13074 R_RISCV_JUMP_SLOT weak 0x0
+# RELOC32-NEXT:   0x40070 R_RISCV_JUMP_SLOT bar 0x0
+# RELOC32-NEXT:   0x40074 R_RISCV_JUMP_SLOT weak 0x0
 # RELOC32-NEXT: }
 # GOTPLT32:      section '.got.plt'
-# GOTPLT32-NEXT: 0x00013068 00000000 00000000 30100100 30100100
+# GOTPLT32-NEXT: 0x00040068 00000000 00000000 30000200 30000200
 
 # RELOC64:      .rela.plt {
-# RELOC64-NEXT:   0x130E0 R_RISCV_JUMP_SLOT bar 0x0
-# RELOC64-NEXT:   0x130E8 R_RISCV_JUMP_SLOT weak 0x0
+# RELOC64-NEXT:   0x400E0 R_RISCV_JUMP_SLOT bar 0x0
+# RELOC64-NEXT:   0x400E8 R_RISCV_JUMP_SLOT weak 0x0
 # RELOC64-NEXT: }
 # GOTPLT64:      section '.got.plt'
-# GOTPLT64-NEXT: 0x000130d0 00000000 00000000 00000000 00000000
-# GOTPLT64-NEXT: 0x000130e0 30100100 00000000 30100100 00000000
+# GOTPLT64-NEXT: 0x000400d0 00000000 00000000 00000000 00000000
+# GOTPLT64-NEXT: 0x000400e0 30000200 00000000 30000200 00000000
 
 # DIS:      <_start>:
 ## Direct call
 ## foo - . = 0x11020-0x11000 = 32
-# DIS-NEXT:   11000: auipc ra, 0x0
+# DIS-NEXT:   20000: auipc ra, 0x0
 # DIS-NEXT:          jalr 0x20(ra)
 ## bar@plt - . = 0x11050-0x11008 = 72
-# DIS-NEXT:   11008: auipc ra, 0x0
+# DIS-NEXT:   20008: auipc ra, 0x0
 # DIS-NEXT:          jalr 0x48(ra)
 ## bar@plt - . = 0x11050-0x11010 = 64
-# DIS-NEXT:   11010: auipc ra, 0x0
+# DIS-NEXT:   20010: auipc ra, 0x0
 # DIS-NEXT:          jalr 0x40(ra)
 ## weak@plt - . = 0x11060-0x11018 = 72
-# DIS-NEXT:   11018: auipc ra, 0x0
+# DIS-NEXT:   20018: auipc ra, 0x0
 # DIS-NEXT:          jalr 0x48(ra)
 # DIS:      <foo>:
-# DIS-NEXT:   11020:
+# DIS-NEXT:   20020:
 
 # DIS:      Disassembly of section .plt:
 # DIS:      <.plt>:
@@ -77,14 +77,14 @@
 # DIS-NEXT:     jr t3
 
 ## 32-bit: &.got.plt[bar]-. = 0x13070-0x11050 = 4096*2+32
-# DIS:        11050: auipc t3, 0x2
+# DIS:        20050: auipc t3, 0x2
 # DIS32-NEXT:   lw t3, 0x20(t3)
 # DIS64-NEXT:   ld t3, 0x90(t3)
 # DIS-NEXT:     jalr t1, t3
 # DIS-NEXT:     nop
 
 ## 32-bit: &.got.plt[weak]-. = 0x13074-0x11060 = 4096*2+20
-# DIS:        11060: auipc t3, 0x2
+# DIS:        20060: auipc t3, 0x2
 # DIS32-NEXT:   lw t3, 0x14(t3)
 # DIS64-NEXT:   ld t3, 0x88(t3)
 # DIS-NEXT:     jalr t1, t3

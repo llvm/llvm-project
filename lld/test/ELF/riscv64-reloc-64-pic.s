@@ -7,11 +7,11 @@
 ## R_RISCV_64 is an absolute relocation type.
 ## In PIC mode, it creates a relative relocation if the symbol is non-preemptable.
 
-# NM: 0000000000003350 d b
+# NM: 0000000000030350 d b
 
 # RELOC:      .rela.dyn {
-# RELOC-NEXT:   0x3350 R_RISCV_RELATIVE - 0x3350
-# RELOC-NEXT:   0x3348 R_RISCV_64 a 0
+# RELOC-NEXT:   0x30350 R_RISCV_RELATIVE - 0x30350
+# RELOC-NEXT:   0x30348 R_RISCV_64 a 0
 # RELOC-NEXT: }
 
 .globl a, b
