@@ -1207,6 +1207,18 @@ mapInitializationArgs(T loop, LLVM::ModuleTranslation &moduleTranslation,
   }
 }
 
+static void
+setInsertPointForPossiblyEmptyBlock(llvm::IRBuilderBase &builder,
+                                    llvm::BasicBlock *block = nullptr) {
+  if (block == nullptr)
+    block = builder.GetInsertBlock();
+
+  if (block->empty() || block->getTerminator() == nullptr)
+    builder.SetInsertPoint(block);
+  else
+    builder.SetInsertPoint(block->getTerminator());
+}
+
 /// Inline reductions' `init` regions. This functions assumes that the
 /// `builder`'s insertion point is where the user wants the `init` regions to be
 /// inlined; i.e. it does not try to find a proper insertion location for the
@@ -1245,10 +1257,7 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     }
   }
 
-  if (initBlock->empty() || initBlock->getTerminator() == nullptr)
-    builder.SetInsertPoint(initBlock);
-  else
-    builder.SetInsertPoint(initBlock->getTerminator());
+  setInsertPointForPossiblyEmptyBlock(builder, initBlock);
 
   // store result of the alloc region to the allocated pointer to the real
   // reduction variable
@@ -1273,11 +1282,7 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     assert(phis.size() == 1 && "expected one value to be yielded from the "
                                "reduction neutral element declaration region");
 
-    if (builder.GetInsertBlock()->empty() ||
-        builder.GetInsertBlock()->getTerminator() == nullptr)
-      builder.SetInsertPoint(builder.GetInsertBlock());
-    else
-      builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
+    setInsertPointForPossiblyEmptyBlock(builder);
 
     if (isByRef[i]) {
       if (!reductionDecls[i].getAllocRegion().empty())
@@ -1514,18 +1519,15 @@ findAssociatedValue(Value privateVar, llvm::IRBuilderBase &builder,
 
 /// Initialize a single (first)private variable. You probably want to use
 /// allocateAndInitPrivateVars instead of this.
-static llvm::Error
-initPrivateVar(llvm::IRBuilderBase &builder,
-               LLVM::ModuleTranslation &moduleTranslation,
-               omp::PrivateClauseOp &privDecl, Value mlirPrivVar,
-               BlockArgument &blockArg, llvm::Value *llvmPrivateVar,
-               llvm::SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
-               llvm::BasicBlock *privInitBlock,
-               llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+static llvm::Error initPrivateVar(
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
+    omp::PrivateClauseOp &privDecl, Value mlirPrivVar, BlockArgument &blockArg,
+    llvm::SmallVectorImpl<llvm::Value *>::iterator llvmPrivateVarIt,
+    llvm::BasicBlock *privInitBlock,
+    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   Region &initRegion = privDecl.getInitRegion();
   if (initRegion.empty()) {
-    moduleTranslation.mapValue(blockArg, llvmPrivateVar);
-    llvmPrivateVars.push_back(llvmPrivateVar);
+    moduleTranslation.mapValue(blockArg, *llvmPrivateVarIt);
     return llvm::Error::success();
   }
 
@@ -1534,11 +1536,10 @@ initPrivateVar(llvm::IRBuilderBase &builder,
       mlirPrivVar, builder, moduleTranslation, mappedPrivateVars);
   assert(nonPrivateVar);
   moduleTranslation.mapValue(privDecl.getInitMoldArg(), nonPrivateVar);
-  moduleTranslation.mapValue(privDecl.getInitPrivateArg(), llvmPrivateVar);
+  moduleTranslation.mapValue(privDecl.getInitPrivateArg(), *llvmPrivateVarIt);
 
   // in-place convert the private initialization region
   SmallVector<llvm::Value *, 1> phis;
-  builder.SetInsertPoint(privInitBlock->getTerminator());
   if (failed(inlineConvertOmpRegions(initRegion, "omp.private.init", builder,
                                      moduleTranslation, &phis)))
     return llvm::createStringError(
@@ -1550,7 +1551,7 @@ initPrivateVar(llvm::IRBuilderBase &builder,
   // variable in case the region is operating on arguments by-value (e.g.
   // Fortran character boxes).
   moduleTranslation.mapValue(blockArg, phis[0]);
-  llvmPrivateVars.push_back(phis[0]);
+  *llvmPrivateVarIt = phis[0];
 
   // clear init region block argument mapping in case it needs to be
   // re-created with a different source for another use of the same
@@ -1559,17 +1560,48 @@ initPrivateVar(llvm::IRBuilderBase &builder,
   return llvm::Error::success();
 }
 
+static llvm::Error
+initPrivateVars(llvm::IRBuilderBase &builder,
+                LLVM::ModuleTranslation &moduleTranslation,
+                MutableArrayRef<BlockArgument> privateBlockArgs,
+                MutableArrayRef<omp::PrivateClauseOp> privateDecls,
+                MutableArrayRef<mlir::Value> mlirPrivateVars,
+                llvm::SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
+                llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+  if (privateBlockArgs.empty())
+    return llvm::Error::success();
+
+  llvm::BasicBlock *privInitBlock = splitBB(builder, true, "omp.private.init");
+  setInsertPointForPossiblyEmptyBlock(builder, privInitBlock);
+
+  for (auto [idx, zip] : llvm::enumerate(
+           llvm::zip_equal(privateDecls, mlirPrivateVars, privateBlockArgs))) {
+    auto [privDecl, mlirPrivVar, blockArg] = zip;
+    llvm::Error err = initPrivateVar(
+        builder, moduleTranslation, privDecl, mlirPrivVar, blockArg,
+        llvmPrivateVars.begin() + idx, privInitBlock, mappedPrivateVars);
+
+    if (err)
+      return err;
+
+    setInsertPointForPossiblyEmptyBlock(builder);
+  }
+
+  return llvm::Error::success();
+}
+
 /// Allocate and initialize delayed private variables. Returns the basic block
 /// which comes after all of these allocations. llvm::Value * for each of these
 /// private variables are populated in llvmPrivateVars.
-static llvm::Expected<llvm::BasicBlock *> allocateAndInitPrivateVars(
-    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
-    MutableArrayRef<BlockArgument> privateBlockArgs,
-    MutableArrayRef<omp::PrivateClauseOp> privateDecls,
-    MutableArrayRef<mlir::Value> mlirPrivateVars,
-    llvm::SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
-    const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
-    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+static llvm::Expected<llvm::BasicBlock *>
+allocatePrivateVars(llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation,
+                    MutableArrayRef<BlockArgument> privateBlockArgs,
+                    MutableArrayRef<omp::PrivateClauseOp> privateDecls,
+                    MutableArrayRef<mlir::Value> mlirPrivateVars,
+                    llvm::SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
+                    const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
+                    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   // Allocate private vars
   llvm::BranchInst *allocaTerminator =
       llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
@@ -1588,9 +1620,6 @@ static llvm::Expected<llvm::BasicBlock *> allocateAndInitPrivateVars(
 
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
-  llvm::BasicBlock *privInitBlock = nullptr;
-  if (!privateBlockArgs.empty())
-    privInitBlock = splitBB(builder, true, "omp.private.init");
   for (auto [privDecl, mlirPrivVar, blockArg] :
        llvm::zip_equal(privateDecls, mlirPrivateVars, privateBlockArgs)) {
     llvm::Type *llvmAllocType =
@@ -1598,24 +1627,18 @@ static llvm::Expected<llvm::BasicBlock *> allocateAndInitPrivateVars(
     builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
     llvm::Value *llvmPrivateVar = builder.CreateAlloca(
         llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
-
-    llvm::Error err = initPrivateVar(
-        builder, moduleTranslation, privDecl, mlirPrivVar, blockArg,
-        llvmPrivateVar, llvmPrivateVars, privInitBlock, mappedPrivateVars);
-    if (err)
-      return err;
+    llvmPrivateVars.push_back(llvmPrivateVar);
   }
+
   return afterAllocas;
 }
 
 static LogicalResult
-initFirstPrivateVars(llvm::IRBuilderBase &builder,
+copyFirstPrivateVars(llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation,
                      SmallVectorImpl<mlir::Value> &mlirPrivateVars,
                      SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
-                     SmallVectorImpl<omp::PrivateClauseOp> &privateDecls,
-                     llvm::BasicBlock *afterAllocas) {
-  llvm::IRBuilderBase::InsertPointGuard guard(builder);
+                     SmallVectorImpl<omp::PrivateClauseOp> &privateDecls) {
   // Apply copy region for firstprivate.
   bool needsFirstprivate =
       llvm::any_of(privateDecls, [](omp::PrivateClauseOp &privOp) {
@@ -1626,13 +1649,9 @@ initFirstPrivateVars(llvm::IRBuilderBase &builder,
   if (!needsFirstprivate)
     return success();
 
-  assert(afterAllocas->getSinglePredecessor());
-
-  // Find the end of the allocation blocks
-  builder.SetInsertPoint(afterAllocas->getSinglePredecessor()->getTerminator());
   llvm::BasicBlock *copyBlock =
       splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
-  builder.SetInsertPoint(copyBlock->getFirstNonPHIOrDbgOrAlloca());
+  setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
 
   for (auto [decl, mlirVar, llvmVar] :
        llvm::zip_equal(privateDecls, mlirPrivateVars, llvmPrivateVars)) {
@@ -1651,10 +1670,11 @@ initFirstPrivateVars(llvm::IRBuilderBase &builder,
     moduleTranslation.mapValue(decl.getCopyPrivateArg(), llvmVar);
 
     // in-place convert copy region
-    builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
     if (failed(inlineConvertOmpRegions(copyRegion, "omp.private.copy", builder,
                                        moduleTranslation)))
       return decl.emitError("failed to inline `copy` region of `omp.private`");
+
+    setInsertPointForPossiblyEmptyBlock(builder);
 
     // ignore unused value yielded from copy region
 
@@ -1999,20 +2019,25 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame> frame(
         moduleTranslation, allocaIP);
 
-    llvm::Expected<llvm::BasicBlock *> afterAllocas =
-        allocateAndInitPrivateVars(builder, moduleTranslation, privateBlockArgs,
-                                   privateDecls, mlirPrivateVars,
-                                   llvmPrivateVars, allocaIP);
+    llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+        builder, moduleTranslation, privateBlockArgs, privateDecls,
+        mlirPrivateVars, llvmPrivateVars, allocaIP);
     if (handleError(afterAllocas, *taskOp).failed())
       return llvm::make_error<PreviouslyReportedError>();
 
-    if (failed(initFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
-                                    llvmPrivateVars, privateDecls,
-                                    afterAllocas.get())))
+    builder.restoreIP(codegenIP);
+    if (handleError(initPrivateVars(builder, moduleTranslation,
+                                    privateBlockArgs, privateDecls,
+                                    mlirPrivateVars, llvmPrivateVars),
+                    *taskOp)
+            .failed())
+      return llvm::make_error<PreviouslyReportedError>();
+
+    if (failed(copyFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
+                                    llvmPrivateVars, privateDecls)))
       return llvm::make_error<PreviouslyReportedError>();
 
     // translate the body of the task:
-    builder.restoreIP(codegenIP);
     auto continuationBlockOrError = convertOmpOpRegions(
         taskOp.getRegion(), "omp.task.region", builder, moduleTranslation);
     if (failed(handleError(continuationBlockOrError, *taskOp)))
@@ -2249,7 +2274,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   SmallVector<llvm::Value *> privateReductionVariables(
       wsloopOp.getNumReductionVars());
 
-  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocateAndInitPrivateVars(
+  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
       builder, moduleTranslation, privateBlockArgs, privateDecls,
       mlirPrivateVars, llvmPrivateVars, allocaIP);
   if (handleError(afterAllocas, opInst).failed())
@@ -2268,9 +2293,15 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                                 deferredStores, isByRef)))
     return failure();
 
-  if (failed(initFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
-                                  llvmPrivateVars, privateDecls,
-                                  afterAllocas.get())))
+  if (handleError(initPrivateVars(builder, moduleTranslation, privateBlockArgs,
+                                  privateDecls, mlirPrivateVars,
+                                  llvmPrivateVars),
+                  opInst)
+          .failed())
+    return failure();
+
+  if (failed(copyFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
+                                  llvmPrivateVars, privateDecls)))
     return failure();
 
   assert(afterAllocas.get()->getSinglePredecessor());
@@ -2356,10 +2387,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
   auto bodyGenCB = [&](InsertPointTy allocaIP,
                        InsertPointTy codeGenIP) -> llvm::Error {
-    llvm::Expected<llvm::BasicBlock *> afterAllocas =
-        allocateAndInitPrivateVars(builder, moduleTranslation, privateBlockArgs,
-                                   privateDecls, mlirPrivateVars,
-                                   llvmPrivateVars, allocaIP);
+    llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+        builder, moduleTranslation, privateBlockArgs, privateDecls,
+        mlirPrivateVars, llvmPrivateVars, allocaIP);
     if (handleError(afterAllocas, *opInst).failed())
       return llvm::make_error<PreviouslyReportedError>();
 
@@ -2379,13 +2409,19 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
             deferredStores, isByRef)))
       return llvm::make_error<PreviouslyReportedError>();
 
-    if (failed(initFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
-                                    llvmPrivateVars, privateDecls,
-                                    afterAllocas.get())))
-      return llvm::make_error<PreviouslyReportedError>();
-
     assert(afterAllocas.get()->getSinglePredecessor());
     builder.restoreIP(codeGenIP);
+
+    if (handleError(initPrivateVars(builder, moduleTranslation,
+                                    privateBlockArgs, privateDecls,
+                                    mlirPrivateVars, llvmPrivateVars),
+                    *opInst)
+            .failed())
+      return llvm::make_error<PreviouslyReportedError>();
+
+    if (failed(copyFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
+                                    llvmPrivateVars, privateDecls)))
+      return llvm::make_error<PreviouslyReportedError>();
 
     if (failed(
             initReductionVars(opInst, reductionArgs, builder, moduleTranslation,
@@ -2434,6 +2470,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       tempTerminator->eraseFromParent();
       builder.restoreIP(*contInsertPoint);
     }
+
     return llvm::Error::success();
   };
 
@@ -2546,10 +2583,17 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
 
-  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocateAndInitPrivateVars(
+  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
       builder, moduleTranslation, privateBlockArgs, privateDecls,
       mlirPrivateVars, llvmPrivateVars, allocaIP);
   if (handleError(afterAllocas, opInst).failed())
+    return failure();
+
+  if (handleError(initPrivateVars(builder, moduleTranslation, privateBlockArgs,
+                                  privateDecls, mlirPrivateVars,
+                                  llvmPrivateVars),
+                  opInst)
+          .failed())
     return failure();
 
   auto loopNestConversionResult = convertLoopNestHelper(
@@ -4951,12 +4995,20 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     for (mlir::Value privateVar : targetOp.getPrivateVars())
       mlirPrivateVars.push_back(privateVar);
 
-    llvm::Expected<llvm::BasicBlock *> afterAllocas =
-        allocateAndInitPrivateVars(
-            builder, moduleTranslation, privateBlockArgs, privateDecls,
-            mlirPrivateVars, llvmPrivateVars, allocaIP, &mappedPrivateVars);
+    llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+        builder, moduleTranslation, privateBlockArgs, privateDecls,
+        mlirPrivateVars, llvmPrivateVars, allocaIP, &mappedPrivateVars);
 
     if (failed(handleError(afterAllocas, *targetOp)))
+      return llvm::make_error<PreviouslyReportedError>();
+
+    builder.restoreIP(codeGenIP);
+    if (handleError(initPrivateVars(builder, moduleTranslation,
+                                    privateBlockArgs, privateDecls,
+                                    mlirPrivateVars, llvmPrivateVars,
+                                    &mappedPrivateVars),
+                    *targetOp)
+            .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
     SmallVector<Region *> privateCleanupRegions;
@@ -4965,7 +5017,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                       return &privatizer.getDeallocRegion();
                     });
 
-    builder.restoreIP(codeGenIP);
     llvm::Expected<llvm::BasicBlock *> exitBlock = convertOmpOpRegions(
         targetRegion, "omp.target", builder, moduleTranslation);
 
