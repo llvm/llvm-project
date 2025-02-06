@@ -80,6 +80,25 @@ llvm::MDNode *CodeGenTBAA::getChar() {
   return Char;
 }
 
+llvm::MDNode *CodeGenTBAA::getAnyPtr(unsigned PtrDepth) {
+  assert(PtrDepth >= 1 && "Pointer must have some depth");
+
+  if (AnyPtrs.size() < PtrDepth) {
+    AnyPtrs.reserve(PtrDepth);
+    auto Size = Module.getDataLayout().getPointerSize();
+    // Populate first element.
+    if (AnyPtrs.empty())
+      AnyPtrs.push_back(createScalarTypeNode("any pointer", getChar(), Size));
+    // Populate further elements.
+    for (size_t Idx = AnyPtrs.size(); Idx < PtrDepth; ++Idx) {
+      auto Name = ("any p" + llvm::Twine(Idx + 1) + " pointer").str();
+      AnyPtrs.push_back(createScalarTypeNode(Name, AnyPtrs[Idx - 1], Size));
+    }
+  }
+
+  return AnyPtrs[PtrDepth - 1];
+}
+
 static bool TypeHasMayAlias(QualType QTy) {
   // Tagged types have declarations, and therefore may have attributes.
   if (auto *TD = QTy->getAsTagDecl())
@@ -202,9 +221,8 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
   // they involve a significant representation difference.  We don't
   // currently do so, however.
   if (Ty->isPointerType() || Ty->isReferenceType()) {
-    llvm::MDNode *AnyPtr = createScalarTypeNode("any pointer", getChar(), Size);
     if (!CodeGenOpts.PointerTBAA)
-      return AnyPtr;
+      return getAnyPtr();
     // C++ [basic.lval]p11 permits objects to accessed through an l-value of
     // similar type. Two types are similar under C++ [conv.qual]p2 if the
     // decomposition of the types into pointers, member pointers, and arrays has
@@ -232,7 +250,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     // common idioms and there is no good alternative to re-write the code
     // without strict-aliasing violations.
     if (Ty->isVoidType())
-      return AnyPtr;
+      return getAnyPtr(PtrDepth);
 
     assert(!isa<VariableArrayType>(Ty));
     // When the underlying type is a builtin type, we compute the pointee type
@@ -256,7 +274,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       // similar-types rule.
       const auto *RT = Ty->getAs<RecordType>();
       if (!RT)
-        return AnyPtr;
+        return getAnyPtr();
 
       // For unnamed structs or unions C's compatible types rule applies. Two
       // compatible types in different compilation units can have different
@@ -270,7 +288,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       // compatibility rule, but it doesn't matter because you can never have a
       // pointer to an anonymous struct or union.
       if (!RT->getDecl()->getDeclName())
-        return AnyPtr;
+        return getAnyPtr();
 
       // For non-builtin types use the mangled name of the canonical type.
       llvm::raw_svector_ostream TyOut(TyName);
@@ -281,7 +299,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     OutName += std::to_string(PtrDepth);
     OutName += " ";
     OutName += TyName;
-    return createScalarTypeNode(OutName, AnyPtr, Size);
+    return createScalarTypeNode(OutName, getAnyPtr(PtrDepth), Size);
   }
 
   // Accesses to arrays are accesses to objects of their element types.
