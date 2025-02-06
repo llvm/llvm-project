@@ -2242,8 +2242,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *VTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
     if (!VTy) {
       SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_hlsl_adduint64_invalid_arguments)
-          << /*scalar provided to a vector operand*/ 0;
+                   diag::err_vec_builtin_non_vector) << "AddUint64" << /*all*/ 1;
       return true;
     }
 
@@ -2251,8 +2250,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     int NumElementsArg = VTy->getNumElements();
     if (NumElementsArg != 2 && NumElementsArg != 4) {
       SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_hlsl_adduint64_invalid_arguments)
-          << /*invalid number of elements in vector operand*/ 1;
+                   diag::err_invalid_even_odd_vector_element_count)
+          << NumElementsArg << 2 << 4 << /*even*/ 0 << /*operand*/ 1;
       return true;
     }
 
