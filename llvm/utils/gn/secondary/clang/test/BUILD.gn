@@ -74,6 +74,7 @@ write_lit_config("lit_site_cfg") {
     "Python3_EXECUTABLE=$python_path",
     "USE_Z3_SOLVER=",
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=0",
+    "LLVM_INCLUDE_SPIRV_TOOLS_TESTS=0",
   ]
 
   if (clang_enable_static_analyzer) {
