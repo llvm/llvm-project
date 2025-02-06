@@ -1198,9 +1198,8 @@ public:
     return false;
   }
 
-  /// For each SUnit, determine whether to release it
-  /// from the pending queue based on the register pressure changes
-  /// associated with that SUnit.
+  /// For each SUnit, determine whether to release it from the pending queue
+  /// based on the register pressure changes associated with that SUnit.
   virtual bool shouldReleaseSUFromPendingQueue(MachineFunction &MF,
                                                ArrayRef<unsigned> PSetID,
                                                ArrayRef<int> UnitInc) const {
