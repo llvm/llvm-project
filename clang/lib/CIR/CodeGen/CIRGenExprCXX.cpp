@@ -882,8 +882,6 @@ void CIRGenFunction::emitNewArrayInitializer(
   CleanupDeactivationScope deactivation(*this);
 
   CharUnits ElementSize = getContext().getTypeSizeInChars(ElementType);
-  CharUnits ElementAlign =
-      BeginPtr.getAlignment().alignmentOfArrayElement(ElementSize);
 
   // Attempt to perform zero-initialization using memset.
   auto TryMemsetInitialization = [&]() -> bool {

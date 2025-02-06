@@ -830,10 +830,6 @@ void convertSideEffectForCall(mlir::Operation *callOp,
     noUnwind = true;
     willReturn = true;
     break;
-
-  default:
-    callOp->emitError("unknown side effect");
-    break;
   }
 }
 

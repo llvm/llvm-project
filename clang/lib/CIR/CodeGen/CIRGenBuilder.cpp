@@ -118,7 +118,7 @@ uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
     const cir::CIRDataLayout &layout, mlir::Type typ,
     llvm::ArrayRef<int64_t> indexes) {
 
-  uint64_t offset = 0;
+  int64_t offset = 0;
   for (auto idx : indexes) {
     if (auto sTy = dyn_cast<cir::StructType>(typ)) {
       offset += sTy.getElementOffset(layout.layout, idx);

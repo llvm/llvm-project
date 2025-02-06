@@ -737,6 +737,13 @@ static void emitAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
     fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
                                               cir::AtomicFetchKind::Nand);
     break;
+  case AtomicExpr::AO__atomic_test_and_set: {
+    llvm_unreachable("NYI");
+  }
+
+  case AtomicExpr::AO__atomic_clear: {
+    llvm_unreachable("NYI");
+  }
   }
 
   assert(Op.size() && "expected operation name to build");
@@ -854,6 +861,8 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__c11_atomic_load:
   case AtomicExpr::AO__opencl_atomic_load:
   case AtomicExpr::AO__hip_atomic_load:
+  case AtomicExpr::AO__atomic_test_and_set:
+  case AtomicExpr::AO__atomic_clear:
     break;
 
   case AtomicExpr::AO__atomic_load:
@@ -1144,6 +1153,8 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__opencl_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_max_fetch:
+    case AtomicExpr::AO__atomic_test_and_set:
+    case AtomicExpr::AO__atomic_clear:
       llvm_unreachable("Integral atomic operations always become atomicrmw!");
     }
 
@@ -1175,22 +1186,21 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *E) {
     llvm_unreachable("NYI");
   }
 
-  [[maybe_unused]] bool IsStore =
-      E->getOp() == AtomicExpr::AO__c11_atomic_store ||
-      E->getOp() == AtomicExpr::AO__opencl_atomic_store ||
-      E->getOp() == AtomicExpr::AO__hip_atomic_store ||
-      E->getOp() == AtomicExpr::AO__atomic_store ||
-      E->getOp() == AtomicExpr::AO__atomic_store_n ||
-      E->getOp() == AtomicExpr::AO__scoped_atomic_store ||
-      E->getOp() == AtomicExpr::AO__scoped_atomic_store_n;
-  [[maybe_unused]] bool IsLoad =
-      E->getOp() == AtomicExpr::AO__c11_atomic_load ||
-      E->getOp() == AtomicExpr::AO__opencl_atomic_load ||
-      E->getOp() == AtomicExpr::AO__hip_atomic_load ||
-      E->getOp() == AtomicExpr::AO__atomic_load ||
-      E->getOp() == AtomicExpr::AO__atomic_load_n ||
-      E->getOp() == AtomicExpr::AO__scoped_atomic_load ||
-      E->getOp() == AtomicExpr::AO__scoped_atomic_load_n;
+  bool IsStore = E->getOp() == AtomicExpr::AO__c11_atomic_store ||
+                 E->getOp() == AtomicExpr::AO__opencl_atomic_store ||
+                 E->getOp() == AtomicExpr::AO__hip_atomic_store ||
+                 E->getOp() == AtomicExpr::AO__atomic_store ||
+                 E->getOp() == AtomicExpr::AO__atomic_store_n ||
+                 E->getOp() == AtomicExpr::AO__scoped_atomic_store ||
+                 E->getOp() == AtomicExpr::AO__scoped_atomic_store_n ||
+                 E->getOp() == AtomicExpr::AO__atomic_clear;
+  bool IsLoad = E->getOp() == AtomicExpr::AO__c11_atomic_load ||
+                E->getOp() == AtomicExpr::AO__opencl_atomic_load ||
+                E->getOp() == AtomicExpr::AO__hip_atomic_load ||
+                E->getOp() == AtomicExpr::AO__atomic_load ||
+                E->getOp() == AtomicExpr::AO__atomic_load_n ||
+                E->getOp() == AtomicExpr::AO__scoped_atomic_load ||
+                E->getOp() == AtomicExpr::AO__scoped_atomic_load_n;
 
   if (auto ordAttr = getConstOpIntAttr(Order)) {
     // We should not ever get to a case where the ordering isn't a valid CABI

@@ -111,10 +111,10 @@ class CIRGenConsumer : public clang::ASTConsumer {
 
   CompilerInstance &compilerInstance;
   DiagnosticsEngine &diagnosticsEngine;
-  const HeaderSearchOptions &headerSearchOptions;
+  [[maybe_unused]] const HeaderSearchOptions &headerSearchOptions;
   CodeGenOptions &codeGenOptions;
-  const TargetOptions &targetOptions;
-  const LangOptions &langOptions;
+  [[maybe_unused]] const TargetOptions &targetOptions;
+  [[maybe_unused]] const LangOptions &langOptions;
   const FrontendOptions &feOptions;
 
   std::unique_ptr<raw_pwrite_stream> outputStream;

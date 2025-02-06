@@ -107,9 +107,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *S,
   switch (S->getStmtClass()) {
   case Stmt::OMPScopeDirectiveClass:
     llvm_unreachable("NYI");
-  case Stmt::OpenACCCombinedConstructClass:
-  case Stmt::OpenACCComputeConstructClass:
-  case Stmt::OpenACCLoopConstructClass:
   case Stmt::OMPErrorDirectiveClass:
   case Stmt::NoStmtClass:
   case Stmt::CXXCatchStmtClass:
@@ -128,6 +125,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *S,
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
+  case Stmt::SYCLKernelCallStmtClass:
     llvm_unreachable("should have emitted these statements as simple");
 
 #define STMT(Type, Base)
@@ -271,7 +269,19 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *S,
   case Stmt::OMPReverseDirectiveClass:
   case Stmt::OMPInterchangeDirectiveClass:
   case Stmt::OMPAssumeDirectiveClass:
-  case Stmt::OMPMaskedDirectiveClass: {
+  case Stmt::OMPMaskedDirectiveClass:
+  case Stmt::OpenACCComputeConstructClass:
+  case Stmt::OpenACCLoopConstructClass:
+  case Stmt::OpenACCCombinedConstructClass:
+  case Stmt::OpenACCDataConstructClass:
+  case Stmt::OpenACCEnterDataConstructClass:
+  case Stmt::OpenACCExitDataConstructClass:
+  case Stmt::OpenACCHostDataConstructClass:
+  case Stmt::OpenACCWaitConstructClass:
+  case Stmt::OpenACCInitConstructClass:
+  case Stmt::OpenACCShutdownConstructClass:
+  case Stmt::OpenACCSetConstructClass:
+  case Stmt::OpenACCUpdateConstructClass: {
     llvm::errs() << "CIR codegen for '" << S->getStmtClassName()
                  << "' not implemented\n";
     assert(0 && "not implemented");
@@ -328,6 +338,23 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *S,
     llvm::errs() << "CIR codegen for '" << S->getStmtClassName()
                  << "' not implemented\n";
     assert(0 && "not implemented");
+  case Stmt::SYCLKernelCallStmtClass:
+    // SYCL kernel call statements are generated as wrappers around the body
+    // of functions declared with the sycl_kernel_entry_point attribute. Such
+    // functions are used to specify how a SYCL kernel (a function object) is
+    // to be invoked; the SYCL kernel call statement contains a transformed
+    // variation of the function body and is used to generate a SYCL kernel
+    // caller function; a function that serves as the device side entry point
+    // used to execute the SYCL kernel. The sycl_kernel_entry_point attributed
+    // function is invoked by host code in order to trigger emission of the
+    // device side SYCL kernel caller function and to generate metadata needed
+    // by SYCL run-time library implementations; the function is otherwise
+    // intended to have no effect. As such, the function body is not evaluated
+    // as part of the invocation during host compilation (and the function
+    // should not be called or emitted during device compilation); the SYCL
+    // kernel call statement is thus handled as a null statement for the
+    // purpose of code generation.
+    break;
   }
 
   return mlir::success();

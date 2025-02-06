@@ -2751,7 +2751,6 @@ Address CIRGenARMCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
   Address cookie = Address(cookiePtr, cgf.SizeTy, newPtr.getAlignment());
 
   ASTContext &ctx = getContext();
-  CharUnits sizeSize = cgf.getSizeSize();
   mlir::Location loc = cgf.getLoc(expr->getSourceRange());
 
   // The first element is the element size.
