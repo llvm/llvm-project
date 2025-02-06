@@ -124,7 +124,7 @@ define i1 @src_sgt(i8 %x) {
 
 define <2 x i1> @src_sgt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @src_sgt_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %not = xor <2 x i8> %x, <i8 -1, i8 -1>
@@ -145,7 +145,7 @@ define i1 @src_sge(i8 %x) {
 
 define <2 x i1> @src_sge_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @src_sge_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %not = xor <2 x i8> %x, <i8 -1, i8 -1>
@@ -166,7 +166,7 @@ define i1 @src_ult(i8 %x) {
 
 define <2 x i1> @src_ult_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @src_ult_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %not = xor <2 x i8> %x, <i8 -1, i8 -1>
@@ -187,7 +187,7 @@ define i1 @src_ule(i8 %x) {
 
 define <2 x i1> @src_ule_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @src_ule_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %not = xor <2 x i8> %x, <i8 -1, i8 -1>
@@ -197,7 +197,7 @@ define <2 x i1> @src_ule_vec(<2 x i8> %x) {
 
 define <2 x i1> @src_ule_vec_min(<2 x i8> %x) {
 ; CHECK-LABEL: @src_ule_vec_min(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %not = xor <2 x i8> %x, <i8 -128, i8 -128>
@@ -207,7 +207,7 @@ define <2 x i1> @src_ule_vec_min(<2 x i8> %x) {
 
 define <2 x i1> @src_ule_vec_128(<2 x i128> %x) {
 ; CHECK-LABEL: @src_ule_vec_128(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i128> [[X:%.*]], <i128 -1, i128 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i128> [[X:%.*]], splat (i128 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %not = xor <2 x i128> %x, <i128 -170141183460469231731687303715884105728, i128 -170141183460469231731687303715884105728>
