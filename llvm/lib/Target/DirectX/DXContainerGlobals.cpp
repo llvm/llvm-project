@@ -61,7 +61,8 @@ public:
     AU.setPreservesAll();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
-    AU.addRequired<DXILResourceWrapperPass>();
+    AU.addRequired<DXILResourceTypeWrapperPass>();
+    AU.addRequired<DXILResourceBindingWrapperPass>();
   }
 };
 
@@ -144,19 +145,23 @@ void DXContainerGlobals::addSignature(Module &M,
 }
 
 void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
-  const DXILResourceMap &ResMap =
-      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
+  const DXILBindingMap &DBM =
+      getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+  DXILResourceTypeMap &DRTM =
+      getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
-  for (const dxil::ResourceInfo &ResInfo : ResMap) {
-    const dxil::ResourceInfo::ResourceBinding &Binding = ResInfo.getBinding();
+  for (const dxil::ResourceBindingInfo &RBI : DBM) {
+    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
+        RBI.getBinding();
     dxbc::PSV::v2::ResourceBindInfo BindInfo;
     BindInfo.LowerBound = Binding.LowerBound;
     BindInfo.UpperBound = Binding.LowerBound + Binding.Size - 1;
     BindInfo.Space = Binding.Space;
 
+    dxil::ResourceTypeInfo &TypeInfo = DRTM[RBI.getHandleTy()];
     dxbc::PSV::ResourceType ResType = dxbc::PSV::ResourceType::Invalid;
-    bool IsUAV = ResInfo.getResourceClass() == dxil::ResourceClass::UAV;
-    switch (ResInfo.getResourceKind()) {
+    bool IsUAV = TypeInfo.getResourceClass() == dxil::ResourceClass::UAV;
+    switch (TypeInfo.getResourceKind()) {
     case dxil::ResourceKind::Sampler:
       ResType = dxbc::PSV::ResourceType::Sampler;
       break;
@@ -166,7 +171,7 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
     case dxil::ResourceKind::StructuredBuffer:
       ResType = IsUAV ? dxbc::PSV::ResourceType::UAVStructured
                       : dxbc::PSV::ResourceType::SRVStructured;
-      if (IsUAV && ResInfo.getUAV().HasCounter)
+      if (IsUAV && TypeInfo.getUAV().HasCounter)
         ResType = dxbc::PSV::ResourceType::UAVStructuredWithCounter;
       break;
     case dxil::ResourceKind::RTAccelerationStructure:
@@ -184,7 +189,7 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
     BindInfo.Type = ResType;
 
     BindInfo.Kind =
-        static_cast<dxbc::PSV::ResourceKind>(ResInfo.getResourceKind());
+        static_cast<dxbc::PSV::ResourceKind>(TypeInfo.getResourceKind());
     // TODO: Add support for dxbc::PSV::ResourceFlag::UsedByAtomic64, tracking
     // with https://github.com/llvm/llvm-project/issues/104392
     BindInfo.Flags.Flags = 0u;
@@ -240,7 +245,8 @@ INITIALIZE_PASS_BEGIN(DXContainerGlobals, "dxil-globals",
                       "DXContainer Global Emitter", false, true)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
 INITIALIZE_PASS_END(DXContainerGlobals, "dxil-globals",
                     "DXContainer Global Emitter", false, true)
 

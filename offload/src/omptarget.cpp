@@ -977,9 +977,9 @@ TableMap *getTableMap(void *HostPtr) {
     TranslationTable *TransTable = &Itr->second;
     // iterate over all the host table entries to see if we can locate the
     // host_ptr.
-    __tgt_offload_entry *Cur = TransTable->HostTable.EntriesBegin;
+    llvm::offloading::EntryTy *Cur = TransTable->HostTable.EntriesBegin;
     for (uint32_t I = 0; Cur < TransTable->HostTable.EntriesEnd; ++Cur, ++I) {
-      if (Cur->addr != HostPtr)
+      if (Cur->Address != HostPtr)
         continue;
       // we got a match, now fill the HostPtrToTableMap so that we
       // may avoid this search next time.
@@ -1409,7 +1409,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   // API, we need the begin address itself, i.e. &A[N], as the API operates on
   // begin addresses, not bases. That's why we pass args and offsets as two
   // separate entities so that each plugin can do what it needs. This behavior
-  // was introdued via https://reviews.llvm.org/D33028 and commit 1546d319244c.
+  // was introduced via https://reviews.llvm.org/D33028 and commit 1546d319244c.
   SmallVector<void *> TgtArgs;
   SmallVector<ptrdiff_t> TgtOffsets;
 
@@ -1431,15 +1431,16 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
     // Clang might pass more values via the ArgPtrs to the runtime that we pass
     // on to the kernel.
-    // TOOD: Next time we adjust the KernelArgsTy we should introduce a new
+    // TODO: Next time we adjust the KernelArgsTy we should introduce a new
     // NumKernelArgs field.
     KernelArgs.NumArgs = TgtArgs.size();
   }
 
   // Launch device execution.
-  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].addr;
+  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].Address;
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
-     TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
+     TargetTable->EntriesBegin[TM->Index].SymbolName, DPxPTR(TgtEntryPtr),
+     TM->Index);
 
   {
     assert(KernelArgs.NumArgs == TgtArgs.size() && "Argument count mismatch!");
@@ -1451,8 +1452,6 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
         Loc);
 
 #ifdef OMPT_SUPPORT
-    assert(KernelArgs.NumTeams[1] == 0 && KernelArgs.NumTeams[2] == 0 &&
-           "Multi dimensional launch not supported yet.");
     /// RAII to establish tool anchors before and after kernel launch
     int32_t NumTeams = KernelArgs.NumTeams[0];
     // No need to guard this with OMPT_IF_BUILT
@@ -1527,9 +1526,10 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
   // Retrieve the target kernel pointer, allocate and store the recorded device
   // memory data, and launch device execution.
-  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].addr;
+  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].Address;
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
-     TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
+     TargetTable->EntriesBegin[TM->Index].SymbolName, DPxPTR(TgtEntryPtr),
+     TM->Index);
 
   void *TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
                                   TARGET_ALLOC_DEFAULT);

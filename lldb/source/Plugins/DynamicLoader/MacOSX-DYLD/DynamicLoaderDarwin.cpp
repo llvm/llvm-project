@@ -796,10 +796,8 @@ bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
   if (sym_ctx.symbol) {
     module_sp = sym_ctx.symbol->GetAddressRef().GetModule();
   }
-  if (module_sp.get() == nullptr && sym_ctx.function) {
-    module_sp =
-        sym_ctx.function->GetAddressRange().GetBaseAddress().GetModule();
-  }
+  if (module_sp.get() == nullptr && sym_ctx.function)
+    module_sp = sym_ctx.function->GetAddress().GetModule();
   if (module_sp.get() == nullptr)
     return false;
 
@@ -941,13 +939,10 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
         images.FindSymbolsWithNameAndType(trampoline_name, eSymbolTypeCode,
                                           code_symbols);
         for (const SymbolContext &context : code_symbols) {
-          AddressRange addr_range;
-          context.GetAddressRange(eSymbolContextEverything, 0, false,
-                                  addr_range);
-          addresses.push_back(addr_range.GetBaseAddress());
+          Address addr = context.GetFunctionOrSymbolAddress();
+          addresses.push_back(addr);
           if (log) {
-            addr_t load_addr =
-                addr_range.GetBaseAddress().GetLoadAddress(target_sp.get());
+            addr_t load_addr = addr.GetLoadAddress(target_sp.get());
 
             LLDB_LOGF(log, "Found a trampoline target symbol at 0x%" PRIx64 ".",
                       load_addr);
@@ -982,13 +977,10 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
                                           indirect_symbols);
 
         for (const SymbolContext &context : indirect_symbols) {
-          AddressRange addr_range;
-          context.GetAddressRange(eSymbolContextEverything, 0, false,
-                                  addr_range);
-          addresses.push_back(addr_range.GetBaseAddress());
+          Address addr = context.GetFunctionOrSymbolAddress();
+          addresses.push_back(addr);
           if (log) {
-            addr_t load_addr =
-                addr_range.GetBaseAddress().GetLoadAddress(target_sp.get());
+            addr_t load_addr = addr.GetLoadAddress(target_sp.get());
 
             LLDB_LOGF(log, "Found an indirect target symbol at 0x%" PRIx64 ".",
                       load_addr);

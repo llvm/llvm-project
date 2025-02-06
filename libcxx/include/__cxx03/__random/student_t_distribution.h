@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_STUDENT_T_DISTRIBUTION_H
-#define _LIBCPP___RANDOM_STUDENT_T_DISTRIBUTION_H
+#ifndef _LIBCPP___CXX03___RANDOM_STUDENT_T_DISTRIBUTION_H
+#define _LIBCPP___CXX03___RANDOM_STUDENT_T_DISTRIBUTION_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__random/gamma_distribution.h>
@@ -129,4 +129,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_STUDENT_T_DISTRIBUTION_H
+#endif // _LIBCPP___CXX03___RANDOM_STUDENT_T_DISTRIBUTION_H

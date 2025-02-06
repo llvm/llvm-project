@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STRING
-#define _LIBCPP_STRING
+#ifndef _LIBCPP___CXX03_STRING
+#define _LIBCPP___CXX03_STRING
 
 // clang-format off
 
@@ -4349,4 +4349,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP_STRING
+#endif // _LIBCPP___CXX03_STRING

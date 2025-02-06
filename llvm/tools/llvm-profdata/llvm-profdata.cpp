@@ -21,6 +21,7 @@
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
@@ -720,6 +721,43 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     };
 
     WC->Writer.addMemProfData(Reader->takeMemProfData(), MemProfError);
+    return;
+  }
+
+  using ::llvm::memprof::YAMLMemProfReader;
+  if (YAMLMemProfReader::hasFormat(Input.Filename)) {
+    auto ReaderOrErr = YAMLMemProfReader::create(Input.Filename);
+    if (!ReaderOrErr)
+      exitWithError(ReaderOrErr.takeError(), Input.Filename);
+    std::unique_ptr<YAMLMemProfReader> Reader = std::move(ReaderOrErr.get());
+    // Check if the profile types can be merged, e.g. clang frontend profiles
+    // should not be merged with memprof profiles.
+    if (Error E = WC->Writer.mergeProfileKind(Reader->getProfileKind())) {
+      consumeError(std::move(E));
+      WC->Errors.emplace_back(
+          make_error<StringError>(
+              "Cannot merge MemProf profile with incompatible profile.",
+              std::error_code()),
+          Filename);
+      return;
+    }
+
+    auto MemProfError = [&](Error E) {
+      auto [ErrorCode, Msg] = InstrProfError::take(std::move(E));
+      WC->Errors.emplace_back(make_error<InstrProfError>(ErrorCode, Msg),
+                              Filename);
+    };
+
+    auto MemProfData = Reader->takeMemProfData();
+
+    // Check for the empty input in case the YAML file is invalid.
+    if (MemProfData.Records.empty()) {
+      WC->Errors.emplace_back(
+          make_error<StringError>("The profile is empty.", std::error_code()),
+          Filename);
+    }
+
+    WC->Writer.addMemProfData(std::move(MemProfData), MemProfError);
     return;
   }
 
@@ -2974,15 +3012,13 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   OS << "\n";
   if (ShowAllFunctions || !FuncNameFilter.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
-  OS << "Total functions: " << PS->getNumFunctions() << "\n";
+  PS->printSummary(OS);
   if (ShowValueCutoff > 0) {
     OS << "Number of functions with maximum count (< " << ShowValueCutoff
        << "): " << BelowCutoffFunctions << "\n";
     OS << "Number of functions with maximum count (>= " << ShowValueCutoff
        << "): " << PS->getNumFunctions() - BelowCutoffFunctions << "\n";
   }
-  OS << "Maximum function count: " << PS->getMaxFunctionCount() << "\n";
-  OS << "Maximum internal block count: " << PS->getMaxInternalCount() << "\n";
 
   if (TopNFunctions) {
     std::vector<std::pair<std::string, uint64_t>> SortedHottestFuncs;
@@ -3012,11 +3048,8 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     showValueSitesStats(OS, IPVK_MemOPSize, VPStats[IPVK_MemOPSize]);
   }
 
-  if (ShowDetailedSummary) {
-    OS << "Total number of blocks: " << PS->getNumCounts() << "\n";
-    OS << "Total count: " << PS->getTotalCount() << "\n";
+  if (ShowDetailedSummary)
     PS->printDetailedSummary(OS);
-  }
 
   if (ShowBinaryIds)
     if (Error E = Reader->printBinaryIds(OS))
@@ -3242,18 +3275,38 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
 static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for MemProf");
-  auto ReaderOr = llvm::memprof::RawMemProfReader::create(
-      Filename, ProfiledBinary, /*KeepNames=*/true);
-  if (Error E = ReaderOr.takeError())
-    // Since the error can be related to the profile or the binary we do not
-    // pass whence. Instead additional context is provided where necessary in
-    // the error message.
-    exitWithError(std::move(E), /*Whence*/ "");
 
-  std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
-      ReaderOr.get().release());
+  // Show the raw profile in YAML.
+  if (memprof::RawMemProfReader::hasFormat(Filename)) {
+    auto ReaderOr = llvm::memprof::RawMemProfReader::create(
+        Filename, ProfiledBinary, /*KeepNames=*/true);
+    if (Error E = ReaderOr.takeError()) {
+      // Since the error can be related to the profile or the binary we do not
+      // pass whence. Instead additional context is provided where necessary in
+      // the error message.
+      exitWithError(std::move(E), /*Whence*/ "");
+    }
 
-  Reader->printYAML(OS);
+    std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
+        ReaderOr.get().release());
+
+    Reader->printYAML(OS);
+    return 0;
+  }
+
+  // Show the indexed MemProf profile in YAML.
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = IndexedInstrProfReader::create(Filename, *FS);
+  if (Error E = ReaderOrErr.takeError())
+    exitWithError(std::move(E), Filename);
+
+  auto Reader = std::move(ReaderOrErr.get());
+  memprof::AllMemProfData Data = Reader->getAllMemProfData();
+  // Construct yaml::Output with the maximum column width of 80 so that each
+  // Frame fits in one line.
+  yaml::Output Yout(OS, nullptr, 80);
+  Yout << Data;
+
   return 0;
 }
 

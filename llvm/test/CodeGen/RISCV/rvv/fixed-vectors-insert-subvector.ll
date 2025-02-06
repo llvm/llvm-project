@@ -133,6 +133,7 @@ define <vscale x 2 x i32> @insert_nxv8i32_v4i32_0(<vscale x 2 x i32> %vec, <4 x 
 ;
 ; VLS-LABEL: insert_nxv8i32_v4i32_0:
 ; VLS:       # %bb.0:
+; VLS-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; VLS-NEXT:    vmv1r.v v8, v9
 ; VLS-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v4i32(<vscale x 2 x i32> %vec, <4 x i32> %subvec, i64 0)
@@ -143,6 +144,7 @@ define <vscale x 2 x i32> @insert_nxv8i32_v4i32_0(<vscale x 2 x i32> %vec, <4 x 
 define <4 x i32> @insert_v4i32_v4i32_0(<4 x i32> %vec, <4 x i32> %subvec) {
 ; CHECK-LABEL: insert_v4i32_v4i32_0:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %v = call <4 x i32> @llvm.vector.insert.v4i32.v4i32(<4 x i32> %vec, <4 x i32> %subvec, i64 0)

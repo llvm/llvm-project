@@ -78,6 +78,8 @@ template <unsigned BitWidth = 0> struct specific_intval {
     if (!VPV->isLiveIn())
       return false;
     Value *V = VPV->getLiveInIRValue();
+    if (!V)
+      return false;
     const auto *CI = dyn_cast<ConstantInt>(V);
     if (!CI && V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
@@ -126,30 +128,6 @@ inline bind_ty<VPValue> m_VPValue(VPValue *&V) { return V; }
 
 namespace detail {
 
-/// A helper to match an opcode against multiple recipe types.
-template <unsigned Opcode, typename...> struct MatchRecipeAndOpcode {};
-
-template <unsigned Opcode, typename RecipeTy>
-struct MatchRecipeAndOpcode<Opcode, RecipeTy> {
-  static bool match(const VPRecipeBase *R) {
-    auto *DefR = dyn_cast<RecipeTy>(R);
-    // Check for recipes that do not have opcodes.
-    if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
-                  std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
-                  std::is_same<RecipeTy, VPWidenSelectRecipe>::value)
-      return DefR;
-    else
-      return DefR && DefR->getOpcode() == Opcode;
-  }
-};
-
-template <unsigned Opcode, typename RecipeTy, typename... RecipeTys>
-struct MatchRecipeAndOpcode<Opcode, RecipeTy, RecipeTys...> {
-  static bool match(const VPRecipeBase *R) {
-    return MatchRecipeAndOpcode<Opcode, RecipeTy>::match(R) ||
-           MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R);
-  }
-};
 template <typename TupleTy, typename Fn, std::size_t... Is>
 bool CheckTupleElements(const TupleTy &Ops, Fn P, std::index_sequence<Is...>) {
   return (P(std::get<Is>(Ops), Is) && ...);
@@ -189,8 +167,9 @@ struct Recipe_match {
   }
 
   bool match(const VPRecipeBase *R) const {
-    if (!detail::MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R))
+    if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
+
     assert(R->getNumOperands() == std::tuple_size<Ops_t>::value &&
            "recipe with matched opcode the expected number of operands");
 
@@ -203,6 +182,21 @@ struct Recipe_match {
            detail::all_of_tuple_elements(Ops, [R](auto Op, unsigned Idx) {
              return Op.match(R->getOperand(R->getNumOperands() - Idx - 1));
            });
+  }
+
+private:
+  template <typename RecipeTy>
+  static bool matchRecipeAndOpcode(const VPRecipeBase *R) {
+    auto *DefR = dyn_cast<RecipeTy>(R);
+    // Check for recipes that do not have opcodes.
+    if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
+                  std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
+                  std::is_same<RecipeTy, VPWidenSelectRecipe>::value ||
+                  std::is_same<RecipeTy, VPDerivedIVRecipe>::value ||
+                  std::is_same<RecipeTy, VPWidenGEPRecipe>::value)
+      return DefR;
+    else
+      return DefR && DefR->getOpcode() == Opcode;
   }
 };
 
@@ -306,6 +300,12 @@ m_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative>(Op0, Op1);
 }
 
+template <unsigned Opcode, typename Op0_t, typename Op1_t>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, true>
+m_c_Binary(const Op0_t &Op0, const Op1_t &Op1) {
+  return AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, true>(Op0, Op1);
+}
+
 template <typename Op0_t, typename Op1_t>
 inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Mul>
 m_Mul(const Op0_t &Op0, const Op1_t &Op1) {
@@ -334,6 +334,18 @@ inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or,
                              /*Commutative*/ true>
 m_c_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_BinaryOr<Op0_t, Op1_t, /*Commutative*/ true>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+using GEPLikeRecipe_match =
+    BinaryRecipe_match<Op0_t, Op1_t, Instruction::GetElementPtr, false,
+                       VPWidenRecipe, VPReplicateRecipe, VPWidenGEPRecipe,
+                       VPInstruction>;
+
+template <typename Op0_t, typename Op1_t>
+inline GEPLikeRecipe_match<Op0_t, Op1_t> m_GetElementPtr(const Op0_t &Op0,
+                                                         const Op1_t &Op1) {
+  return GEPLikeRecipe_match<Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode>
@@ -382,6 +394,17 @@ inline VPScalarIVSteps_match<Op0_t, Op1_t> m_ScalarIVSteps(const Op0_t &Op0,
                                                            const Op1_t &Op1) {
   return VPScalarIVSteps_match<Op0_t, Op1_t>(Op0, Op1);
 }
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+using VPDerivedIV_match =
+    Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, 0, false, VPDerivedIVRecipe>;
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline VPDerivedIV_match<Op0_t, Op1_t, Op2_t>
+m_DerivedIV(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return VPDerivedIV_match<Op0_t, Op1_t, Op2_t>({Op0, Op1, Op2});
+}
+
 } // namespace VPlanPatternMatch
 } // namespace llvm
 

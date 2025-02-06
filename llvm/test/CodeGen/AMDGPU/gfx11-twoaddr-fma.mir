@@ -18,7 +18,7 @@ body:             |
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF]].sub1
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[DEF]].sub0
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
-    ; GFX11-NEXT: [[V_FMA_F16_gfx9_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F16_gfx9_e64 0, killed [[COPY1]], 0, [[V_MOV_B32_e32_]], 0, killed [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_FMA_F16_gfx9_fake16_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F16_gfx9_fake16_e64 0, killed [[COPY1]], 0, [[V_MOV_B32_e32_]], 0, killed [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
     %0 = IMPLICIT_DEF
     %1 = COPY %0.sub1
     %2 = COPY %0.sub0
@@ -43,7 +43,7 @@ body:             |
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF]].sub1
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[DEF]].sub0
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
-    ; GFX11-NEXT: [[V_FMA_F16_gfx9_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F16_gfx9_e64 0, [[COPY1]], 0, killed [[V_MOV_B32_e32_]], 0, killed [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_FMA_F16_gfx9_fake16_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F16_gfx9_fake16_e64 0, [[COPY1]], 0, killed [[V_MOV_B32_e32_]], 0, killed [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
     %0 = IMPLICIT_DEF
     %1 = COPY %0.sub1
     %2 = COPY %0.sub0
@@ -68,7 +68,7 @@ body:             |
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF]].sub0
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[DEF]].sub1
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
-    ; GFX11-NEXT: [[V_FMA_F16_gfx9_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F16_gfx9_e64 0, killed [[COPY]], 0, [[COPY1]], 0, [[V_MOV_B32_e32_]], 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_FMA_F16_gfx9_fake16_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F16_gfx9_fake16_e64 0, killed [[COPY]], 0, [[COPY1]], 0, [[V_MOV_B32_e32_]], 0, 0, 0, implicit $mode, implicit $exec
     %0 = IMPLICIT_DEF
     %1 = COPY %0.sub0
     %2 = COPY %0.sub1
@@ -90,7 +90,7 @@ body:             |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 49664, implicit $exec
-    ; GFX11-NEXT: [[V_FMA_F16_gfx9_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F16_gfx9_e64 0, 16384, 0, killed [[COPY]], 0, [[V_MOV_B32_e32_]], 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[V_FMA_F16_gfx9_fake16_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F16_gfx9_fake16_e64 0, 16384, 0, killed [[COPY]], 0, [[V_MOV_B32_e32_]], 0, 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0
     %0:vgpr_32 = COPY killed $vgpr0
 

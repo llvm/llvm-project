@@ -143,6 +143,7 @@ struct Configuration {
   bool timeTraceEnabled = false;
   bool dataConst = false;
   bool dedupStrings = true;
+  bool dedupSymbolStrings = true;
   bool deadStripDuplicates = false;
   bool omitDebugInfo = false;
   bool warnDylibInstallName = false;
@@ -222,11 +223,12 @@ struct Configuration {
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
 
-  llvm::StringRef irpgoProfileSortProfilePath;
-  bool compressionSortStartupFunctions = false;
-  bool functionOrderForCompression = false;
-  bool dataOrderForCompression = false;
-  bool verboseBpSectionOrderer = false;
+  llvm::StringRef irpgoProfilePath;
+  bool bpStartupFunctionSort = false;
+  bool bpCompressionSortStartupFunctions = false;
+  bool bpFunctionOrderForCompression = false;
+  bool bpDataOrderForCompression = false;
+  bool bpVerboseSectionOrderer = false;
 
   SectionRenameMap sectionRenameMap;
   SegmentRenameMap segmentRenameMap;

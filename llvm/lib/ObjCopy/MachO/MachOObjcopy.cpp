@@ -93,19 +93,38 @@ static void markSymbols(const CommonConfig &, Object &Obj) {
 static void updateAndRemoveSymbols(const CommonConfig &Config,
                                    const MachOConfig &MachOConfig,
                                    Object &Obj) {
-  for (SymbolEntry &Sym : Obj.SymTable) {
-    // Weaken symbols first to match ELFObjcopy behavior.
-    bool IsExportedAndDefined =
-        (Sym.n_type & llvm::MachO::N_EXT) &&
-        (Sym.n_type & llvm::MachO::N_TYPE) != llvm::MachO::N_UNDF;
-    if (IsExportedAndDefined &&
+  Obj.SymTable.updateSymbols([&](SymbolEntry &Sym) {
+    if (Config.SymbolsToSkip.matches(Sym.Name))
+      return;
+
+    if (!Sym.isUndefinedSymbol() && Config.SymbolsToLocalize.matches(Sym.Name))
+      Sym.n_type &= ~MachO::N_EXT;
+
+    // Note: these two globalize flags have very similar names but different
+    // meanings:
+    //
+    // --globalize-symbol: promote a symbol to global
+    // --keep-global-symbol: all symbols except for these should be made local
+    //
+    // If --globalize-symbol is specified for a given symbol, it will be
+    // global in the output file even if it is not included via
+    // --keep-global-symbol. Because of that, make sure to check
+    // --globalize-symbol second.
+    if (!Sym.isUndefinedSymbol() && !Config.SymbolsToKeepGlobal.empty() &&
+        !Config.SymbolsToKeepGlobal.matches(Sym.Name))
+      Sym.n_type &= ~MachO::N_EXT;
+
+    if (!Sym.isUndefinedSymbol() && Config.SymbolsToGlobalize.matches(Sym.Name))
+      Sym.n_type |= MachO::N_EXT;
+
+    if (Sym.isExternalSymbol() && !Sym.isUndefinedSymbol() &&
         (Config.Weaken || Config.SymbolsToWeaken.matches(Sym.Name)))
-      Sym.n_desc |= llvm::MachO::N_WEAK_DEF;
+      Sym.n_desc |= MachO::N_WEAK_DEF;
 
     auto I = Config.SymbolsToRename.find(Sym.Name);
     if (I != Config.SymbolsToRename.end())
       Sym.Name = std::string(I->getValue());
-  }
+  });
 
   auto RemovePred = [&Config, &MachOConfig,
                      &Obj](const std::unique_ptr<SymbolEntry> &N) {

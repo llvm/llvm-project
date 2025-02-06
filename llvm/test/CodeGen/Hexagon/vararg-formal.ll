@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Make sure that the first formal argument is not loaded from memory.
 ; CHECK-NOT: memw

@@ -86,7 +86,7 @@ struct S {
 // CHECK-NEXT:    [[TMP18:%.*]] = tail call ptr @__kmpc_omp_task_alloc(ptr nonnull @[[GLOB1]], i32 [[TMP0]], i32 1, i64 80, i64 16, ptr nonnull @.omp_task_entry..6)
 // CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[TMP18]], align 8, !tbaa [[TBAA20:![0-9]+]]
 // CHECK-NEXT:    store ptr [[ARGC_ADDR]], ptr [[TMP19]], align 8, !tbaa [[TBAA23:![0-9]+]]
-// CHECK-NEXT:    [[AGG_CAPTURED3_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP19]], i64 8
+// CHECK-NEXT:    [[AGG_CAPTURED3_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP19]], i64 8
 // CHECK-NEXT:    store ptr [[ARGV_ADDR]], ptr [[AGG_CAPTURED3_SROA_2_0__SROA_IDX]], align 8, !tbaa [[TBAA25:![0-9]+]]
 // CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP20]], 0
@@ -144,7 +144,7 @@ struct S {
 // CHECK-NEXT:    [[TMP4:%.*]] = tail call ptr @__kmpc_omp_task_alloc(ptr nonnull @[[GLOB1]], i32 [[TMP0]], i32 1, i64 80, i64 16, ptr nonnull @.omp_task_entry..10)
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8, !tbaa [[TBAA20]]
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[TMP5]], align 8, !tbaa [[TBAA37:![0-9]+]]
-// CHECK-NEXT:    [[AGG_CAPTURED_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 8
+// CHECK-NEXT:    [[AGG_CAPTURED_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP5]], i64 8
 // CHECK-NEXT:    store ptr [[C_ADDR]], ptr [[AGG_CAPTURED_SROA_2_0__SROA_IDX]], align 8, !tbaa [[TBAA23]]
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i64 40
 // CHECK-NEXT:    store i64 0, ptr [[TMP6]], align 8, !tbaa [[TBAA15]]

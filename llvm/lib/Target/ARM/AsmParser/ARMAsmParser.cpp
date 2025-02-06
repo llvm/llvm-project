@@ -5129,7 +5129,8 @@ ParseStatus ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
 
     Opt = ARM_MB::RESERVED_0 + Val;
   } else
-    return ParseStatus::Failure;
+    return Error(Parser.getTok().getLoc(),
+                 "expected an immediate or barrier type");
 
   Operands.push_back(
       ARMOperand::CreateMemBarrierOpt((ARM_MB::MemBOpt)Opt, S, *this));
@@ -5193,7 +5194,8 @@ ARMAsmParser::parseInstSyncBarrierOptOperand(OperandVector &Operands) {
 
     Opt = ARM_ISB::RESERVED_0 + Val;
   } else
-    return ParseStatus::Failure;
+    return Error(Parser.getTok().getLoc(),
+                 "expected an immediate or barrier type");
 
   Operands.push_back(ARMOperand::CreateInstSyncBarrierOpt(
       (ARM_ISB::InstSyncBOpt)Opt, S, *this));
@@ -6661,9 +6663,9 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
       Mnemonic != "vshllt" && Mnemonic != "vrshrnt" && Mnemonic != "vshrnt" &&
       Mnemonic != "vqrshrunt" && Mnemonic != "vqshrunt" &&
       Mnemonic != "vqrshrnt" && Mnemonic != "vqshrnt" && Mnemonic != "vmullt" &&
-      Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" &&
-      Mnemonic != "vqmovnt" && Mnemonic != "vmovnt" && Mnemonic != "vqdmullt" &&
-      Mnemonic != "vpnot" && Mnemonic != "vcvtt" && Mnemonic != "vcvt") {
+      Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" && Mnemonic != "vmovnt" &&
+      Mnemonic != "vqdmullt" && Mnemonic != "vpnot" && Mnemonic != "vcvtt" &&
+      Mnemonic != "vcvt") {
     unsigned VCC =
         ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size() - 1));
     if (VCC != ~0U) {

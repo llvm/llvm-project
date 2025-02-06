@@ -794,16 +794,18 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
 }
 
 def GPU_LaunchOp : GPU_Op<"launch", [
-      AutomaticAllocationScope, AttrSizedOperandSegments, GPU_AsyncOpInterface,
+      AffineScope, AutomaticAllocationScope, AttrSizedOperandSegments,
       DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-      RecursiveMemoryEffects]>,
+      GPU_AsyncOpInterface, RecursiveMemoryEffects]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
                Optional<Index>:$clusterSizeX,
                Optional<Index>:$clusterSizeY,
                Optional<Index>:$clusterSizeZ,
-               Optional<I32>:$dynamicSharedMemorySize)>,
+               Optional<I32>:$dynamicSharedMemorySize,
+               OptionalAttr<SymbolRefAttr>:$kernelFunc,
+               OptionalAttr<SymbolRefAttr>:$kernelModule)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -836,6 +838,9 @@ def GPU_LaunchOp : GPU_Op<"launch", [
         grid and block sizes).
     -   a variadic number of Workgroup memory attributions.
     -   a variadic number of Private memory attributions.
+
+    The `kernelFunc` and `kernelModule` attributes are optional and specifies
+    the kernel name and a module in which the kernel should be outlined. 
 
     Syntax:
 
@@ -1050,7 +1055,7 @@ def GPU_PrintfOp : GPU_Op<"printf", [MemoryEffects<[MemWrite]>]>,
     imposed by one's target platform.
   }];
   let assemblyFormat = [{
-    $format attr-dict ($args^ `:` type($args))?
+    $format attr-dict (`,` $args^ `:` type($args))?
   }];
 }
 

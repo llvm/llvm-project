@@ -428,6 +428,9 @@ private:
   /// Function order for streaming into the destination binary.
   uint32_t Index{-1U};
 
+  /// Function is referenced by a non-control flow instruction.
+  bool HasAddressTaken{false};
+
   /// Get basic block index assuming it belongs to this function.
   unsigned getIndex(const BinaryBasicBlock *BB) const {
     assert(BB->getIndex() < BasicBlocks.size());
@@ -821,6 +824,14 @@ public:
 
     return nullptr;
   }
+
+  /// Return true if function is referenced in a non-control flow instruction.
+  /// This flag is set when the code and relocation analyses are being
+  /// performed, which occurs when safe ICF (Identical Code Folding) is enabled.
+  bool hasAddressTaken() const { return HasAddressTaken; }
+
+  /// Set whether function is referenced in a non-control flow instruction.
+  void setHasAddressTaken(bool AddressTaken) { HasAddressTaken = AddressTaken; }
 
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;
@@ -2049,6 +2060,11 @@ public:
     return Islands ? Islands->getAlignment() : 1;
   }
 
+  /// If there is a constant island in the range [StartOffset, EndOffset),
+  /// return its address.
+  std::optional<uint64_t> getIslandInRange(uint64_t StartOffset,
+                                           uint64_t EndOffset) const;
+
   uint64_t
   estimateConstantIslandSize(const BinaryFunction *OnBehalfOf = nullptr) const {
     if (!Islands)
@@ -2134,6 +2150,9 @@ public:
   // Check for linker veneers, which lack relocations and need manual
   // adjustments.
   void handleAArch64IndirectCall(MCInst &Instruction, const uint64_t Offset);
+
+  /// Analyze instruction to identify a function reference.
+  void analyzeInstructionForFuncReference(const MCInst &Inst);
 
   /// Scan function for references to other functions. In relocation mode,
   /// add relocations for external references. In non-relocation mode, detect

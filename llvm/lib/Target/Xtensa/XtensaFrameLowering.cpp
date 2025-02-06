@@ -276,7 +276,7 @@ void XtensaFrameLowering::processFunctionBeforeFrameFinalized(
   unsigned Size = TRI->getSpillSize(RC);
   Align Alignment = TRI->getSpillAlign(RC);
   for (unsigned I = 0; I < ScavSlotsNum; I++) {
-    int FI = MFI.CreateStackObject(Size, Alignment, false);
+    int FI = MFI.CreateSpillStackObject(Size, Alignment);
     RS->addScavengingFrameIndex(FI);
 
     if (IsLargeFunction &&

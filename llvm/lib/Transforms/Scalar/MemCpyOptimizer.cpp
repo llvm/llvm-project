@@ -341,17 +341,6 @@ static bool writtenBetween(MemorySSA *MSSA, BatchAAResults &AA,
   return !MSSA->dominates(Clobber, Start);
 }
 
-// Update AA metadata
-static void combineAAMetadata(Instruction *ReplInst, Instruction *I) {
-  // FIXME: MD_tbaa_struct and MD_mem_parallel_loop_access should also be
-  // handled here, but combineMetadata doesn't support them yet
-  unsigned KnownIDs[] = {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
-                         LLVMContext::MD_noalias,
-                         LLVMContext::MD_invariant_group,
-                         LLVMContext::MD_access_group};
-  combineMetadata(ReplInst, I, KnownIDs, true);
-}
-
 /// When scanning forward over instructions, we look for some other patterns to
 /// fold away. In particular, this looks for stores to neighboring locations of
 /// memory. If it sees enough consecutive ones, it attempts to merge them
@@ -622,7 +611,7 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
   // We made it, we need to lift.
   for (auto *I : llvm::reverse(ToLift)) {
     LLVM_DEBUG(dbgs() << "Lifting " << *I << " before " << *P << "\n");
-    I->moveBefore(P);
+    I->moveBefore(P->getIterator());
     assert(MemInsertPoint && "Must have found insert point");
     if (MemoryUseOrDef *MA = MSSA->getMemoryAccess(I)) {
       MSSAU->moveAfter(MA, MemInsertPoint);
@@ -787,43 +776,47 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
   // Ensure that the value being stored is something that can be memset'able a
   // byte at a time like "0" or "-1" or any width, as well as things like
   // 0xA0A0A0A0 and 0.0.
-  auto *V = SI->getOperand(0);
-  if (Value *ByteVal = isBytewiseValue(V, DL)) {
-    if (Instruction *I =
-            tryMergingIntoMemset(SI, SI->getPointerOperand(), ByteVal)) {
-      BBI = I->getIterator(); // Don't invalidate iterator.
-      return true;
-    }
+  Value *V = SI->getOperand(0);
+  Value *ByteVal = isBytewiseValue(V, DL);
+  if (!ByteVal)
+    return false;
 
-    // If we have an aggregate, we try to promote it to memset regardless
-    // of opportunity for merging as it can expose optimization opportunities
-    // in subsequent passes.
-    auto *T = V->getType();
-    if (T->isAggregateType()) {
-      uint64_t Size = DL.getTypeStoreSize(T);
-      IRBuilder<> Builder(SI);
-      auto *M = Builder.CreateMemSet(SI->getPointerOperand(), ByteVal, Size,
-                                     SI->getAlign());
-      M->copyMetadata(*SI, LLVMContext::MD_DIAssignID);
-
-      LLVM_DEBUG(dbgs() << "Promoting " << *SI << " to " << *M << "\n");
-
-      // The newly inserted memset is immediately overwritten by the original
-      // store, so we do not need to rename uses.
-      auto *StoreDef = cast<MemoryDef>(MSSA->getMemoryAccess(SI));
-      auto *NewAccess = MSSAU->createMemoryAccessBefore(M, nullptr, StoreDef);
-      MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/false);
-
-      eraseInstruction(SI);
-      NumMemSetInfer++;
-
-      // Make sure we do not invalidate the iterator.
-      BBI = M->getIterator();
-      return true;
-    }
+  if (Instruction *I =
+          tryMergingIntoMemset(SI, SI->getPointerOperand(), ByteVal)) {
+    BBI = I->getIterator(); // Don't invalidate iterator.
+    return true;
   }
 
-  return false;
+  // If we have an aggregate, we try to promote it to memset regardless
+  // of opportunity for merging as it can expose optimization opportunities
+  // in subsequent passes.
+  auto *T = V->getType();
+  if (!T->isAggregateType())
+    return false;
+
+  TypeSize Size = DL.getTypeStoreSize(T);
+  if (Size.isScalable())
+    return false;
+
+  IRBuilder<> Builder(SI);
+  auto *M = Builder.CreateMemSet(SI->getPointerOperand(), ByteVal, Size,
+                                 SI->getAlign());
+  M->copyMetadata(*SI, LLVMContext::MD_DIAssignID);
+
+  LLVM_DEBUG(dbgs() << "Promoting " << *SI << " to " << *M << "\n");
+
+  // The newly inserted memset is immediately overwritten by the original
+  // store, so we do not need to rename uses.
+  auto *StoreDef = cast<MemoryDef>(MSSA->getMemoryAccess(SI));
+  auto *NewAccess = MSSAU->createMemoryAccessBefore(M, nullptr, StoreDef);
+  MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/false);
+
+  eraseInstruction(SI);
+  NumMemSetInfer++;
+
+  // Make sure we do not invalidate the iterator.
+  BBI = M->getIterator();
+  return true;
 }
 
 bool MemCpyOptPass::processMemSet(MemSetInst *MSI, BasicBlock::iterator &BBI) {
@@ -975,9 +968,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
       append_range(srcUseList, U->users());
       continue;
     }
-    if (const auto *IT = dyn_cast<IntrinsicInst>(U))
-      if (IT->isLifetimeStartOrEnd())
-        continue;
+    if (isa<LifetimeIntrinsic>(U))
+      continue;
 
     if (U != C && U != cpyLoad) {
       LLVM_DEBUG(dbgs() << "Call slot: Source accessed by " << *U << "\n");
@@ -1089,11 +1081,11 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   if (NeedMoveGEP) {
     auto *GEP = dyn_cast<GetElementPtrInst>(cpyDest);
-    GEP->moveBefore(C);
+    GEP->moveBefore(C->getIterator());
   }
 
   if (SkippedLifetimeStart) {
-    SkippedLifetimeStart->moveBefore(C);
+    SkippedLifetimeStart->moveBefore(C->getIterator());
     MSSAU->moveBefore(MSSA->getMemoryAccess(SkippedLifetimeStart),
                       MSSA->getMemoryAccess(C));
   }
@@ -2017,7 +2009,7 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
   Value *ImmutArg = CB.getArgOperand(ArgNo);
 
   // 1. Ensure passed argument is immutable during call.
-  if (!CB.paramHasAttr(ArgNo, Attribute::NoCapture))
+  if (!CB.doesNotCapture(ArgNo))
     return false;
 
   // We know that the argument is readonly at this point, but the function

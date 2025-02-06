@@ -1004,7 +1004,7 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(
           MipsISD::Ins, DL, N->getValueType(0),
           isConstCase
-              ? DAG.getConstant(CN1->getSExtValue() >> SMPos0, DL, ValTy)
+              ? DAG.getSignedConstant(CN1->getSExtValue() >> SMPos0, DL, ValTy)
               : SrlX,
           DAG.getConstant(SMPos0, DL, MVT::i32),
           DAG.getConstant(ValTy.getSizeInBits() / 8 < 8 ? SMSize0 & 31
@@ -1102,8 +1102,7 @@ static SDValue performMADD_MSUBCombine(SDNode *ROOTNode, SelectionDAG &CurDAG,
   SDValue MAddOps[3] = {
       CurDAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Mult->getOperand(0)),
       CurDAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Mult->getOperand(1)), ACCIn};
-  EVT VTs[2] = {MVT::i32, MVT::i32};
-  SDValue MAdd = CurDAG.getNode(Opcode, DL, VTs, MAddOps);
+  SDValue MAdd = CurDAG.getNode(Opcode, DL, MVT::Untyped, MAddOps);
 
   SDValue ResLo = CurDAG.getNode(MipsISD::MFLO, DL, MVT::i32, MAdd);
   SDValue ResHi = CurDAG.getNode(MipsISD::MFHI, DL, MVT::i32, MAdd);
@@ -1139,13 +1138,21 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
+  // When loading from a jump table, push the Lo node to the position that
+  // allows folding it into a load immediate.
   // (add v0, (add v1, abs_lo(tjt))) => (add (add v0, v1), abs_lo(tjt))
-  SDValue Add = N->getOperand(1);
-
-  if (Add.getOpcode() != ISD::ADD)
+  // (add (add abs_lo(tjt), v1), v0) => (add (add v0, v1), abs_lo(tjt))
+  SDValue InnerAdd = N->getOperand(1);
+  SDValue Index = N->getOperand(0);
+  if (InnerAdd.getOpcode() != ISD::ADD)
+    std::swap(InnerAdd, Index);
+  if (InnerAdd.getOpcode() != ISD::ADD)
     return SDValue();
 
-  SDValue Lo = Add.getOperand(1);
+  SDValue Lo = InnerAdd.getOperand(0);
+  SDValue Other = InnerAdd.getOperand(1);
+  if (Lo.getOpcode() != MipsISD::Lo)
+    std::swap(Lo, Other);
 
   if ((Lo.getOpcode() != MipsISD::Lo) ||
       (Lo.getOperand(0).getOpcode() != ISD::TargetJumpTable))
@@ -1154,8 +1161,7 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
   EVT ValTy = N->getValueType(0);
   SDLoc DL(N);
 
-  SDValue Add1 = DAG.getNode(ISD::ADD, DL, ValTy, N->getOperand(0),
-                             Add.getOperand(0));
+  SDValue Add1 = DAG.getNode(ISD::ADD, DL, ValTy, Index, Other);
   return DAG.getNode(ISD::ADD, DL, ValTy, Add1, Lo);
 }
 
@@ -2146,6 +2152,14 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
   EVT Ty = Op.getValueType();
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = N->getGlobal();
+
+  if (GV->hasDLLImportStorageClass()) {
+    assert(Subtarget.isTargetWindows() &&
+           "Windows is the only supported COFF target");
+    return getDllimportVariable(
+        N, SDLoc(N), Ty, DAG, DAG.getEntryNode(),
+        MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+  }
 
   if (!isPositionIndependent()) {
     const MipsTargetObjectFile *TLOF =
@@ -3502,7 +3516,14 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    if (IsPIC) {
+    if (Subtarget.isTargetCOFF() &&
+        G->getGlobal()->hasDLLImportStorageClass()) {
+      assert(Subtarget.isTargetWindows() &&
+             "Windows is the only supported COFF target");
+      auto PtrInfo = MachinePointerInfo();
+      Callee = DAG.getLoad(Ty, DL, Chain,
+                           getDllimportSymbol(G, SDLoc(G), Ty, DAG), PtrInfo);
+    } else if (IsPIC) {
       const GlobalValue *Val = G->getGlobal();
       InternalLinkage = Val->hasInternalLinkage();
 
@@ -3865,10 +3886,10 @@ bool
 MipsTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
                                    MachineFunction &MF, bool IsVarArg,
                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                   LLVMContext &Context) const {
+                                   LLVMContext &Context, const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   MipsCCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
-  return CCInfo.CheckReturn(Outs, RetCC_Mips);
+  return CCInfo.CheckCallReturn(Outs, RetCC_Mips, RetTy);
 }
 
 bool MipsTargetLowering::shouldSignExtendTypeInLibCall(Type *Ty,

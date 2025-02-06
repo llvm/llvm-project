@@ -12,17 +12,91 @@ define void @small_load_store_loop(ptr %src, ptr %dst, i64 %N, i64 %scale) {
 ; APPLE-LABEL: define void @small_load_store_loop(
 ; APPLE-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[SCALE:%.*]]) #[[ATTR0:[0-9]+]] {
 ; APPLE-NEXT:  [[ENTRY:.*]]:
+; APPLE-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
+; APPLE-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 7
+; APPLE-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
+; APPLE-NEXT:    br i1 [[TMP1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[ENTRY_NEW:.*]]
+; APPLE:       [[ENTRY_NEW]]:
+; APPLE-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
 ; APPLE-NEXT:    br label %[[LOOP:.*]]
 ; APPLE:       [[LOOP]]:
-; APPLE-NEXT:    [[IV_EPIL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_EPIL:%.*]], %[[LOOP]] ]
+; APPLE-NEXT:    [[IV_EPIL:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[IV_NEXT_7:%.*]], %[[LOOP]] ]
+; APPLE-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[NITER_NEXT_7:%.*]], %[[LOOP]] ]
 ; APPLE-NEXT:    [[SCALED_IV_EPIL:%.*]] = mul nuw nsw i64 [[IV_EPIL]], [[SCALE]]
 ; APPLE-NEXT:    [[GEP_SRC_EPIL:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[SCALED_IV_EPIL]]
 ; APPLE-NEXT:    [[L_EPIL:%.*]] = load float, ptr [[GEP_SRC_EPIL]], align 4
 ; APPLE-NEXT:    [[GEP_DST_EPIL:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_EPIL]]
 ; APPLE-NEXT:    store float [[L_EPIL]], ptr [[GEP_DST_EPIL]], align 4
-; APPLE-NEXT:    [[IV_NEXT_EPIL]] = add nuw nsw i64 [[IV_EPIL]], 1
-; APPLE-NEXT:    [[EC_EPIL:%.*]] = icmp eq i64 [[IV_NEXT_EPIL]], [[N]]
-; APPLE-NEXT:    br i1 [[EC_EPIL]], label %[[EXIT:.*]], label %[[LOOP]]
+; APPLE-NEXT:    [[IV_NEXT_EPIL:%.*]] = add nuw nsw i64 [[IV_EPIL]], 1
+; APPLE-NEXT:    [[SCALED_IV_1:%.*]] = mul nuw nsw i64 [[IV_NEXT_EPIL]], [[SCALE]]
+; APPLE-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[SCALED_IV_1]]
+; APPLE-NEXT:    [[L_1:%.*]] = load float, ptr [[GEP_SRC_1]], align 4
+; APPLE-NEXT:    [[GEP_DST_1:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_NEXT_EPIL]]
+; APPLE-NEXT:    store float [[L_1]], ptr [[GEP_DST_1]], align 4
+; APPLE-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV_EPIL]], 2
+; APPLE-NEXT:    [[SCALED_IV_2:%.*]] = mul nuw nsw i64 [[IV_NEXT_1]], [[SCALE]]
+; APPLE-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[SCALED_IV_2]]
+; APPLE-NEXT:    [[L_2:%.*]] = load float, ptr [[GEP_SRC_2]], align 4
+; APPLE-NEXT:    [[GEP_DST_2:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_NEXT_1]]
+; APPLE-NEXT:    store float [[L_2]], ptr [[GEP_DST_2]], align 4
+; APPLE-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV_EPIL]], 3
+; APPLE-NEXT:    [[SCALED_IV_3:%.*]] = mul nuw nsw i64 [[IV_NEXT_2]], [[SCALE]]
+; APPLE-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[SCALED_IV_3]]
+; APPLE-NEXT:    [[L_3:%.*]] = load float, ptr [[GEP_SRC_3]], align 4
+; APPLE-NEXT:    [[GEP_DST_3:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_NEXT_2]]
+; APPLE-NEXT:    store float [[L_3]], ptr [[GEP_DST_3]], align 4
+; APPLE-NEXT:    [[IV_NEXT_3:%.*]] = add nuw nsw i64 [[IV_EPIL]], 4
+; APPLE-NEXT:    [[SCALED_IV_4:%.*]] = mul nuw nsw i64 [[IV_NEXT_3]], [[SCALE]]
+; APPLE-NEXT:    [[GEP_SRC_4:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[SCALED_IV_4]]
+; APPLE-NEXT:    [[L_4:%.*]] = load float, ptr [[GEP_SRC_4]], align 4
+; APPLE-NEXT:    [[GEP_DST_4:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_NEXT_3]]
+; APPLE-NEXT:    store float [[L_4]], ptr [[GEP_DST_4]], align 4
+; APPLE-NEXT:    [[IV_NEXT_4:%.*]] = add nuw nsw i64 [[IV_EPIL]], 5
+; APPLE-NEXT:    [[SCALED_IV_5:%.*]] = mul nuw nsw i64 [[IV_NEXT_4]], [[SCALE]]
+; APPLE-NEXT:    [[GEP_SRC_5:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[SCALED_IV_5]]
+; APPLE-NEXT:    [[L_5:%.*]] = load float, ptr [[GEP_SRC_5]], align 4
+; APPLE-NEXT:    [[GEP_DST_5:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_NEXT_4]]
+; APPLE-NEXT:    store float [[L_5]], ptr [[GEP_DST_5]], align 4
+; APPLE-NEXT:    [[IV_NEXT_5:%.*]] = add nuw nsw i64 [[IV_EPIL]], 6
+; APPLE-NEXT:    [[SCALED_IV_6:%.*]] = mul nuw nsw i64 [[IV_NEXT_5]], [[SCALE]]
+; APPLE-NEXT:    [[GEP_SRC_6:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[SCALED_IV_6]]
+; APPLE-NEXT:    [[L_6:%.*]] = load float, ptr [[GEP_SRC_6]], align 4
+; APPLE-NEXT:    [[GEP_DST_6:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_NEXT_5]]
+; APPLE-NEXT:    store float [[L_6]], ptr [[GEP_DST_6]], align 4
+; APPLE-NEXT:    [[IV_NEXT_6:%.*]] = add nuw nsw i64 [[IV_EPIL]], 7
+; APPLE-NEXT:    [[SCALED_IV_7:%.*]] = mul nuw nsw i64 [[IV_NEXT_6]], [[SCALE]]
+; APPLE-NEXT:    [[GEP_SRC_7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[SCALED_IV_7]]
+; APPLE-NEXT:    [[L_7:%.*]] = load float, ptr [[GEP_SRC_7]], align 4
+; APPLE-NEXT:    [[GEP_DST_7:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_NEXT_6]]
+; APPLE-NEXT:    store float [[L_7]], ptr [[GEP_DST_7]], align 4
+; APPLE-NEXT:    [[IV_NEXT_7]] = add nuw nsw i64 [[IV_EPIL]], 8
+; APPLE-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; APPLE-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
+; APPLE-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[LOOP]]
+; APPLE:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
+; APPLE-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_7]], %[[LOOP]] ]
+; APPLE-NEXT:    br label %[[EXIT_UNR_LCSSA]]
+; APPLE:       [[EXIT_UNR_LCSSA]]:
+; APPLE-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; APPLE-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; APPLE-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[EXIT:.*]]
+; APPLE:       [[LOOP_EPIL_PREHEADER]]:
+; APPLE-NEXT:    br label %[[LOOP_EPIL:.*]]
+; APPLE:       [[LOOP_EPIL]]:
+; APPLE-NEXT:    [[IV_EPIL1:%.*]] = phi i64 [ [[IV_UNR]], %[[LOOP_EPIL_PREHEADER]] ], [ [[IV_NEXT_EPIL1:%.*]], %[[LOOP_EPIL]] ]
+; APPLE-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ 0, %[[LOOP_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], %[[LOOP_EPIL]] ]
+; APPLE-NEXT:    [[SCALED_IV_EPIL1:%.*]] = mul nuw nsw i64 [[IV_EPIL1]], [[SCALE]]
+; APPLE-NEXT:    [[GEP_SRC_EPIL1:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[SCALED_IV_EPIL1]]
+; APPLE-NEXT:    [[L_EPIL1:%.*]] = load float, ptr [[GEP_SRC_EPIL1]], align 4
+; APPLE-NEXT:    [[GEP_DST_EPIL1:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_EPIL1]]
+; APPLE-NEXT:    store float [[L_EPIL1]], ptr [[GEP_DST_EPIL1]], align 4
+; APPLE-NEXT:    [[IV_NEXT_EPIL1]] = add nuw nsw i64 [[IV_EPIL1]], 1
+; APPLE-NEXT:    [[EC_EPIL:%.*]] = icmp eq i64 [[IV_NEXT_EPIL1]], [[N]]
+; APPLE-NEXT:    [[EPIL_ITER_NEXT]] = add i64 [[EPIL_ITER]], 1
+; APPLE-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i64 [[EPIL_ITER_NEXT]], [[XTRAITER]]
+; APPLE-NEXT:    br i1 [[EPIL_ITER_CMP]], label %[[LOOP_EPIL]], label %[[EXIT_EPILOG_LCSSA:.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; APPLE:       [[EXIT_EPILOG_LCSSA]]:
+; APPLE-NEXT:    br label %[[EXIT]]
 ; APPLE:       [[EXIT]]:
 ; APPLE-NEXT:    ret void
 ;
@@ -99,13 +173,21 @@ define void @early_continue_dep_on_load_large(ptr %p.1, ptr %p.2, i64 %N, i32 %x
 ; APPLE-LABEL: define void @early_continue_dep_on_load_large(
 ; APPLE-SAME: ptr [[P_1:%.*]], ptr [[P_2:%.*]], i64 [[N:%.*]], i32 [[X:%.*]], i32 [[WIDTH:%.*]], i32 [[T_1:%.*]], i32 [[T_2:%.*]]) #[[ATTR0]] {
 ; APPLE-NEXT:  [[ENTRY:.*]]:
+; APPLE-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
+; APPLE-NEXT:    [[TMP1:%.*]] = add i64 [[N]], -2
+; APPLE-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 3
+; APPLE-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 3
+; APPLE-NEXT:    br i1 [[TMP2]], label %[[EXIT_UNR_LCSSA:.*]], label %[[ENTRY_NEW:.*]]
+; APPLE:       [[ENTRY_NEW]]:
+; APPLE-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP0]], [[XTRAITER]]
 ; APPLE-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; APPLE:       [[LOOP_HEADER]]:
-; APPLE-NEXT:    [[IV_EPIL:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT_EPIL:%.*]], %[[LOOP_LATCH:.*]] ]
+; APPLE-NEXT:    [[IV_EPIL:%.*]] = phi i64 [ 1, %[[ENTRY_NEW]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP_LATCH_3:.*]] ]
+; APPLE-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[NITER_NEXT_3:%.*]], %[[LOOP_LATCH_3]] ]
 ; APPLE-NEXT:    [[GEP_EPIL:%.*]] = getelementptr { i32, i8, i8, [2 x i8] }, ptr [[P_1]], i64 [[IV_EPIL]]
 ; APPLE-NEXT:    [[L_1_EPIL:%.*]] = load i32, ptr [[GEP_EPIL]], align 4
 ; APPLE-NEXT:    [[CMP6_NOT_EPIL:%.*]] = icmp sgt i32 [[L_1_EPIL]], [[T_1]]
-; APPLE-NEXT:    br i1 [[CMP6_NOT_EPIL]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
+; APPLE-NEXT:    br i1 [[CMP6_NOT_EPIL]], label %[[THEN:.*]], label %[[LOOP_LATCH:.*]]
 ; APPLE:       [[THEN]]:
 ; APPLE-NEXT:    [[GEP_4_EPIL:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP_EPIL]], i64 4
 ; APPLE-NEXT:    [[L_2_EPIL:%.*]] = load i8, ptr [[GEP_4_EPIL]], align 4
@@ -150,9 +232,224 @@ define void @early_continue_dep_on_load_large(ptr %p.1, ptr %p.2, i64 %N, i32 %x
 ; APPLE-NEXT:    store i8 [[RES_EPIL]], ptr [[GEP_5_EPIL]], align 1
 ; APPLE-NEXT:    br label %[[LOOP_LATCH]]
 ; APPLE:       [[LOOP_LATCH]]:
-; APPLE-NEXT:    [[IV_NEXT_EPIL]] = add nuw nsw i64 [[IV_EPIL]], 1
-; APPLE-NEXT:    [[EC_EPIL:%.*]] = icmp eq i64 [[IV_NEXT_EPIL]], [[N]]
-; APPLE-NEXT:    br i1 [[EC_EPIL]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; APPLE-NEXT:    [[IV_NEXT_EPIL:%.*]] = add nuw nsw i64 [[IV_EPIL]], 1
+; APPLE-NEXT:    [[GEP_1:%.*]] = getelementptr { i32, i8, i8, [2 x i8] }, ptr [[P_1]], i64 [[IV_NEXT_EPIL]]
+; APPLE-NEXT:    [[L_1_1:%.*]] = load i32, ptr [[GEP_1]], align 4
+; APPLE-NEXT:    [[C_1_1:%.*]] = icmp sgt i32 [[L_1_1]], [[T_1]]
+; APPLE-NEXT:    br i1 [[C_1_1]], label %[[THEN_1:.*]], label %[[LOOP_LATCH_1:.*]]
+; APPLE:       [[THEN_1]]:
+; APPLE-NEXT:    [[GEP_4_1:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP_1]], i64 4
+; APPLE-NEXT:    [[L_2_1:%.*]] = load i8, ptr [[GEP_4_1]], align 4
+; APPLE-NEXT:    [[C_2_1:%.*]] = icmp ugt i8 [[L_2_1]], 7
+; APPLE-NEXT:    br i1 [[C_2_1]], label %[[MERGE_11:.*]], label %[[ELSE_1:.*]]
+; APPLE:       [[ELSE_1]]:
+; APPLE-NEXT:    [[CONV_I_1:%.*]] = zext nneg i8 [[L_2_1]] to i64
+; APPLE-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds [9 x i8], ptr @A, i64 0, i64 [[CONV_I_1]]
+; APPLE-NEXT:    [[L_3_1:%.*]] = load i8, ptr [[GEP_A_1]], align 1
+; APPLE-NEXT:    [[IDXPROM_I_1:%.*]] = sext i8 [[L_3_1]] to i64
+; APPLE-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds [8 x i32], ptr @B, i64 0, i64 [[IDXPROM_I_1]]
+; APPLE-NEXT:    [[L_4_1:%.*]] = load i32, ptr [[GEP_B_1]], align 4
+; APPLE-NEXT:    [[GEP_C_1:%.*]] = getelementptr inbounds [8 x i32], ptr @C, i64 0, i64 [[IDXPROM_I_1]]
+; APPLE-NEXT:    [[L_5_1:%.*]] = load i32, ptr [[GEP_C_1]], align 4
+; APPLE-NEXT:    br label %[[MERGE_11]]
+; APPLE:       [[MERGE_11]]:
+; APPLE-NEXT:    [[MERGE_1_1:%.*]] = phi i32 [ 0, %[[THEN_1]] ], [ [[L_4_1]], %[[ELSE_1]] ]
+; APPLE-NEXT:    [[MERGE_2_1:%.*]] = phi i32 [ 0, %[[THEN_1]] ], [ [[L_5_1]], %[[ELSE_1]] ]
+; APPLE-NEXT:    [[ADD14_1:%.*]] = add nsw i32 [[MERGE_2_1]], [[X]]
+; APPLE-NEXT:    [[MUL15_1:%.*]] = mul nsw i32 [[ADD14_1]], [[WIDTH]]
+; APPLE-NEXT:    [[TMP4:%.*]] = trunc nuw nsw i64 [[IV_NEXT_EPIL]] to i32
+; APPLE-NEXT:    [[ADD16_1:%.*]] = add nsw i32 [[MERGE_1_1]], [[TMP4]]
+; APPLE-NEXT:    [[ADD17_1:%.*]] = add nsw i32 [[ADD16_1]], [[MUL15_1]]
+; APPLE-NEXT:    [[IDXPROM18_1:%.*]] = sext i32 [[ADD17_1]] to i64
+; APPLE-NEXT:    [[GEP_P_2_1:%.*]] = getelementptr inbounds { i32, i8, i8, [2 x i8] }, ptr [[P_2]], i64 [[IDXPROM18_1]]
+; APPLE-NEXT:    [[L_6_1:%.*]] = load i32, ptr [[GEP_P_2_1]], align 4
+; APPLE-NEXT:    [[SUB_1:%.*]] = sub nsw i32 [[X]], [[MERGE_2_1]]
+; APPLE-NEXT:    [[MUL21_1:%.*]] = mul nsw i32 [[SUB_1]], [[WIDTH]]
+; APPLE-NEXT:    [[SUB22_1:%.*]] = sub i32 [[TMP4]], [[MERGE_1_1]]
+; APPLE-NEXT:    [[ADD23_1:%.*]] = add nsw i32 [[SUB22_1]], [[MUL21_1]]
+; APPLE-NEXT:    [[IDXPROM24_1:%.*]] = sext i32 [[ADD23_1]] to i64
+; APPLE-NEXT:    [[GEP_P2_1_1:%.*]] = getelementptr inbounds { i32, i8, i8, [2 x i8] }, ptr [[P_2]], i64 [[IDXPROM24_1]]
+; APPLE-NEXT:    [[L_7_1:%.*]] = load i32, ptr [[GEP_P2_1_1]], align 4
+; APPLE-NEXT:    [[C_3_1:%.*]] = icmp sgt i32 [[L_1_1]], [[L_6_1]]
+; APPLE-NEXT:    [[C_4_1:%.*]] = icmp sgt i32 [[L_1_1]], [[L_7_1]]
+; APPLE-NEXT:    [[AND34_1:%.*]] = and i1 [[C_3_1]], [[C_4_1]]
+; APPLE-NEXT:    br i1 [[AND34_1]], label %[[STORE_RES_1:.*]], label %[[LOOP_LATCH_1]]
+; APPLE:       [[STORE_RES_1]]:
+; APPLE-NEXT:    [[C_5_1:%.*]] = icmp sgt i32 [[L_1_1]], [[T_2]]
+; APPLE-NEXT:    [[GEP_5_1:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP_1]], i64 5
+; APPLE-NEXT:    [[RES_1:%.*]] = select i1 [[C_5_1]], i8 1, i8 2
+; APPLE-NEXT:    store i8 [[RES_1]], ptr [[GEP_5_1]], align 1
+; APPLE-NEXT:    br label %[[LOOP_LATCH_1]]
+; APPLE:       [[LOOP_LATCH_1]]:
+; APPLE-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV_EPIL]], 2
+; APPLE-NEXT:    [[GEP_2:%.*]] = getelementptr { i32, i8, i8, [2 x i8] }, ptr [[P_1]], i64 [[IV_NEXT_1]]
+; APPLE-NEXT:    [[L_1_2:%.*]] = load i32, ptr [[GEP_2]], align 4
+; APPLE-NEXT:    [[C_1_2:%.*]] = icmp sgt i32 [[L_1_2]], [[T_1]]
+; APPLE-NEXT:    br i1 [[C_1_2]], label %[[THEN_2:.*]], label %[[LOOP_LATCH_2:.*]]
+; APPLE:       [[THEN_2]]:
+; APPLE-NEXT:    [[GEP_4_2:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP_2]], i64 4
+; APPLE-NEXT:    [[L_2_2:%.*]] = load i8, ptr [[GEP_4_2]], align 4
+; APPLE-NEXT:    [[C_2_2:%.*]] = icmp ugt i8 [[L_2_2]], 7
+; APPLE-NEXT:    br i1 [[C_2_2]], label %[[MERGE_22:.*]], label %[[ELSE_2:.*]]
+; APPLE:       [[ELSE_2]]:
+; APPLE-NEXT:    [[CONV_I_2:%.*]] = zext nneg i8 [[L_2_2]] to i64
+; APPLE-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds [9 x i8], ptr @A, i64 0, i64 [[CONV_I_2]]
+; APPLE-NEXT:    [[L_3_2:%.*]] = load i8, ptr [[GEP_A_2]], align 1
+; APPLE-NEXT:    [[IDXPROM_I_2:%.*]] = sext i8 [[L_3_2]] to i64
+; APPLE-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds [8 x i32], ptr @B, i64 0, i64 [[IDXPROM_I_2]]
+; APPLE-NEXT:    [[L_4_2:%.*]] = load i32, ptr [[GEP_B_2]], align 4
+; APPLE-NEXT:    [[GEP_C_2:%.*]] = getelementptr inbounds [8 x i32], ptr @C, i64 0, i64 [[IDXPROM_I_2]]
+; APPLE-NEXT:    [[L_5_2:%.*]] = load i32, ptr [[GEP_C_2]], align 4
+; APPLE-NEXT:    br label %[[MERGE_22]]
+; APPLE:       [[MERGE_22]]:
+; APPLE-NEXT:    [[MERGE_1_2:%.*]] = phi i32 [ 0, %[[THEN_2]] ], [ [[L_4_2]], %[[ELSE_2]] ]
+; APPLE-NEXT:    [[MERGE_2_2:%.*]] = phi i32 [ 0, %[[THEN_2]] ], [ [[L_5_2]], %[[ELSE_2]] ]
+; APPLE-NEXT:    [[ADD14_2:%.*]] = add nsw i32 [[MERGE_2_2]], [[X]]
+; APPLE-NEXT:    [[MUL15_2:%.*]] = mul nsw i32 [[ADD14_2]], [[WIDTH]]
+; APPLE-NEXT:    [[TMP5:%.*]] = trunc nuw nsw i64 [[IV_NEXT_1]] to i32
+; APPLE-NEXT:    [[ADD16_2:%.*]] = add nsw i32 [[MERGE_1_2]], [[TMP5]]
+; APPLE-NEXT:    [[ADD17_2:%.*]] = add nsw i32 [[ADD16_2]], [[MUL15_2]]
+; APPLE-NEXT:    [[IDXPROM18_2:%.*]] = sext i32 [[ADD17_2]] to i64
+; APPLE-NEXT:    [[GEP_P_2_2:%.*]] = getelementptr inbounds { i32, i8, i8, [2 x i8] }, ptr [[P_2]], i64 [[IDXPROM18_2]]
+; APPLE-NEXT:    [[L_6_2:%.*]] = load i32, ptr [[GEP_P_2_2]], align 4
+; APPLE-NEXT:    [[SUB_2:%.*]] = sub nsw i32 [[X]], [[MERGE_2_2]]
+; APPLE-NEXT:    [[MUL21_2:%.*]] = mul nsw i32 [[SUB_2]], [[WIDTH]]
+; APPLE-NEXT:    [[SUB22_2:%.*]] = sub i32 [[TMP5]], [[MERGE_1_2]]
+; APPLE-NEXT:    [[ADD23_2:%.*]] = add nsw i32 [[SUB22_2]], [[MUL21_2]]
+; APPLE-NEXT:    [[IDXPROM24_2:%.*]] = sext i32 [[ADD23_2]] to i64
+; APPLE-NEXT:    [[GEP_P2_1_2:%.*]] = getelementptr inbounds { i32, i8, i8, [2 x i8] }, ptr [[P_2]], i64 [[IDXPROM24_2]]
+; APPLE-NEXT:    [[L_7_2:%.*]] = load i32, ptr [[GEP_P2_1_2]], align 4
+; APPLE-NEXT:    [[C_3_2:%.*]] = icmp sgt i32 [[L_1_2]], [[L_6_2]]
+; APPLE-NEXT:    [[C_4_2:%.*]] = icmp sgt i32 [[L_1_2]], [[L_7_2]]
+; APPLE-NEXT:    [[AND34_2:%.*]] = and i1 [[C_3_2]], [[C_4_2]]
+; APPLE-NEXT:    br i1 [[AND34_2]], label %[[STORE_RES_2:.*]], label %[[LOOP_LATCH_2]]
+; APPLE:       [[STORE_RES_2]]:
+; APPLE-NEXT:    [[C_5_2:%.*]] = icmp sgt i32 [[L_1_2]], [[T_2]]
+; APPLE-NEXT:    [[GEP_5_2:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP_2]], i64 5
+; APPLE-NEXT:    [[RES_2:%.*]] = select i1 [[C_5_2]], i8 1, i8 2
+; APPLE-NEXT:    store i8 [[RES_2]], ptr [[GEP_5_2]], align 1
+; APPLE-NEXT:    br label %[[LOOP_LATCH_2]]
+; APPLE:       [[LOOP_LATCH_2]]:
+; APPLE-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV_EPIL]], 3
+; APPLE-NEXT:    [[GEP_3:%.*]] = getelementptr { i32, i8, i8, [2 x i8] }, ptr [[P_1]], i64 [[IV_NEXT_2]]
+; APPLE-NEXT:    [[L_1_3:%.*]] = load i32, ptr [[GEP_3]], align 4
+; APPLE-NEXT:    [[C_1_3:%.*]] = icmp sgt i32 [[L_1_3]], [[T_1]]
+; APPLE-NEXT:    br i1 [[C_1_3]], label %[[THEN_3:.*]], label %[[LOOP_LATCH_3]]
+; APPLE:       [[THEN_3]]:
+; APPLE-NEXT:    [[GEP_4_3:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP_3]], i64 4
+; APPLE-NEXT:    [[L_2_3:%.*]] = load i8, ptr [[GEP_4_3]], align 4
+; APPLE-NEXT:    [[C_2_3:%.*]] = icmp ugt i8 [[L_2_3]], 7
+; APPLE-NEXT:    br i1 [[C_2_3]], label %[[MERGE_3:.*]], label %[[ELSE_3:.*]]
+; APPLE:       [[ELSE_3]]:
+; APPLE-NEXT:    [[CONV_I_3:%.*]] = zext nneg i8 [[L_2_3]] to i64
+; APPLE-NEXT:    [[GEP_A_3:%.*]] = getelementptr inbounds [9 x i8], ptr @A, i64 0, i64 [[CONV_I_3]]
+; APPLE-NEXT:    [[L_3_3:%.*]] = load i8, ptr [[GEP_A_3]], align 1
+; APPLE-NEXT:    [[IDXPROM_I_3:%.*]] = sext i8 [[L_3_3]] to i64
+; APPLE-NEXT:    [[GEP_B_3:%.*]] = getelementptr inbounds [8 x i32], ptr @B, i64 0, i64 [[IDXPROM_I_3]]
+; APPLE-NEXT:    [[L_4_3:%.*]] = load i32, ptr [[GEP_B_3]], align 4
+; APPLE-NEXT:    [[GEP_C_3:%.*]] = getelementptr inbounds [8 x i32], ptr @C, i64 0, i64 [[IDXPROM_I_3]]
+; APPLE-NEXT:    [[L_5_3:%.*]] = load i32, ptr [[GEP_C_3]], align 4
+; APPLE-NEXT:    br label %[[MERGE_3]]
+; APPLE:       [[MERGE_3]]:
+; APPLE-NEXT:    [[MERGE_1_3:%.*]] = phi i32 [ 0, %[[THEN_3]] ], [ [[L_4_3]], %[[ELSE_3]] ]
+; APPLE-NEXT:    [[MERGE_2_3:%.*]] = phi i32 [ 0, %[[THEN_3]] ], [ [[L_5_3]], %[[ELSE_3]] ]
+; APPLE-NEXT:    [[ADD14_3:%.*]] = add nsw i32 [[MERGE_2_3]], [[X]]
+; APPLE-NEXT:    [[MUL15_3:%.*]] = mul nsw i32 [[ADD14_3]], [[WIDTH]]
+; APPLE-NEXT:    [[TMP6:%.*]] = trunc nuw nsw i64 [[IV_NEXT_2]] to i32
+; APPLE-NEXT:    [[ADD16_3:%.*]] = add nsw i32 [[MERGE_1_3]], [[TMP6]]
+; APPLE-NEXT:    [[ADD17_3:%.*]] = add nsw i32 [[ADD16_3]], [[MUL15_3]]
+; APPLE-NEXT:    [[IDXPROM18_3:%.*]] = sext i32 [[ADD17_3]] to i64
+; APPLE-NEXT:    [[GEP_P_2_3:%.*]] = getelementptr inbounds { i32, i8, i8, [2 x i8] }, ptr [[P_2]], i64 [[IDXPROM18_3]]
+; APPLE-NEXT:    [[L_6_3:%.*]] = load i32, ptr [[GEP_P_2_3]], align 4
+; APPLE-NEXT:    [[SUB_3:%.*]] = sub nsw i32 [[X]], [[MERGE_2_3]]
+; APPLE-NEXT:    [[MUL21_3:%.*]] = mul nsw i32 [[SUB_3]], [[WIDTH]]
+; APPLE-NEXT:    [[SUB22_3:%.*]] = sub i32 [[TMP6]], [[MERGE_1_3]]
+; APPLE-NEXT:    [[ADD23_3:%.*]] = add nsw i32 [[SUB22_3]], [[MUL21_3]]
+; APPLE-NEXT:    [[IDXPROM24_3:%.*]] = sext i32 [[ADD23_3]] to i64
+; APPLE-NEXT:    [[GEP_P2_1_3:%.*]] = getelementptr inbounds { i32, i8, i8, [2 x i8] }, ptr [[P_2]], i64 [[IDXPROM24_3]]
+; APPLE-NEXT:    [[L_7_3:%.*]] = load i32, ptr [[GEP_P2_1_3]], align 4
+; APPLE-NEXT:    [[C_3_3:%.*]] = icmp sgt i32 [[L_1_3]], [[L_6_3]]
+; APPLE-NEXT:    [[C_4_3:%.*]] = icmp sgt i32 [[L_1_3]], [[L_7_3]]
+; APPLE-NEXT:    [[AND34_3:%.*]] = and i1 [[C_3_3]], [[C_4_3]]
+; APPLE-NEXT:    br i1 [[AND34_3]], label %[[STORE_RES_3:.*]], label %[[LOOP_LATCH_3]]
+; APPLE:       [[STORE_RES_3]]:
+; APPLE-NEXT:    [[C_5_3:%.*]] = icmp sgt i32 [[L_1_3]], [[T_2]]
+; APPLE-NEXT:    [[GEP_5_3:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP_3]], i64 5
+; APPLE-NEXT:    [[RES_3:%.*]] = select i1 [[C_5_3]], i8 1, i8 2
+; APPLE-NEXT:    store i8 [[RES_3]], ptr [[GEP_5_3]], align 1
+; APPLE-NEXT:    br label %[[LOOP_LATCH_3]]
+; APPLE:       [[LOOP_LATCH_3]]:
+; APPLE-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV_EPIL]], 4
+; APPLE-NEXT:    [[NITER_NEXT_3]] = add i64 [[NITER]], 4
+; APPLE-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NEXT_3]], [[UNROLL_ITER]]
+; APPLE-NEXT:    br i1 [[NITER_NCMP_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[LOOP_HEADER]]
+; APPLE:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
+; APPLE-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_3]], %[[LOOP_LATCH_3]] ]
+; APPLE-NEXT:    br label %[[EXIT_UNR_LCSSA]]
+; APPLE:       [[EXIT_UNR_LCSSA]]:
+; APPLE-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; APPLE-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; APPLE-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_HEADER_EPIL_PREHEADER:.*]], label %[[EXIT:.*]]
+; APPLE:       [[LOOP_HEADER_EPIL_PREHEADER]]:
+; APPLE-NEXT:    br label %[[LOOP_HEADER_EPIL:.*]]
+; APPLE:       [[LOOP_HEADER_EPIL]]:
+; APPLE-NEXT:    [[IV_EPIL1:%.*]] = phi i64 [ [[IV_UNR]], %[[LOOP_HEADER_EPIL_PREHEADER]] ], [ [[IV_NEXT_EPIL1:%.*]], %[[LOOP_LATCH_EPIL:.*]] ]
+; APPLE-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ 0, %[[LOOP_HEADER_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], %[[LOOP_LATCH_EPIL]] ]
+; APPLE-NEXT:    [[GEP_EPIL1:%.*]] = getelementptr { i32, i8, i8, [2 x i8] }, ptr [[P_1]], i64 [[IV_EPIL1]]
+; APPLE-NEXT:    [[L_1_EPIL1:%.*]] = load i32, ptr [[GEP_EPIL1]], align 4
+; APPLE-NEXT:    [[C_1_EPIL:%.*]] = icmp sgt i32 [[L_1_EPIL1]], [[T_1]]
+; APPLE-NEXT:    br i1 [[C_1_EPIL]], label %[[THEN_EPIL:.*]], label %[[LOOP_LATCH_EPIL]]
+; APPLE:       [[THEN_EPIL]]:
+; APPLE-NEXT:    [[GEP_4_EPIL1:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP_EPIL1]], i64 4
+; APPLE-NEXT:    [[L_2_EPIL1:%.*]] = load i8, ptr [[GEP_4_EPIL1]], align 4
+; APPLE-NEXT:    [[C_2_EPIL:%.*]] = icmp ugt i8 [[L_2_EPIL1]], 7
+; APPLE-NEXT:    br i1 [[C_2_EPIL]], label %[[MERGE_EPIL:.*]], label %[[ELSE_EPIL:.*]]
+; APPLE:       [[ELSE_EPIL]]:
+; APPLE-NEXT:    [[CONV_I_EPIL1:%.*]] = zext nneg i8 [[L_2_EPIL1]] to i64
+; APPLE-NEXT:    [[GEP_A_EPIL:%.*]] = getelementptr inbounds [9 x i8], ptr @A, i64 0, i64 [[CONV_I_EPIL1]]
+; APPLE-NEXT:    [[L_3_EPIL:%.*]] = load i8, ptr [[GEP_A_EPIL]], align 1
+; APPLE-NEXT:    [[IDXPROM_I_EPIL1:%.*]] = sext i8 [[L_3_EPIL]] to i64
+; APPLE-NEXT:    [[GEP_B_EPIL:%.*]] = getelementptr inbounds [8 x i32], ptr @B, i64 0, i64 [[IDXPROM_I_EPIL1]]
+; APPLE-NEXT:    [[L_4_EPIL:%.*]] = load i32, ptr [[GEP_B_EPIL]], align 4
+; APPLE-NEXT:    [[GEP_C_EPIL:%.*]] = getelementptr inbounds [8 x i32], ptr @C, i64 0, i64 [[IDXPROM_I_EPIL1]]
+; APPLE-NEXT:    [[L_5_EPIL:%.*]] = load i32, ptr [[GEP_C_EPIL]], align 4
+; APPLE-NEXT:    br label %[[MERGE_EPIL]]
+; APPLE:       [[MERGE_EPIL]]:
+; APPLE-NEXT:    [[MERGE_1_EPIL:%.*]] = phi i32 [ 0, %[[THEN_EPIL]] ], [ [[L_4_EPIL]], %[[ELSE_EPIL]] ]
+; APPLE-NEXT:    [[MERGE_2_EPIL:%.*]] = phi i32 [ 0, %[[THEN_EPIL]] ], [ [[L_5_EPIL]], %[[ELSE_EPIL]] ]
+; APPLE-NEXT:    [[ADD14_EPIL1:%.*]] = add nsw i32 [[MERGE_2_EPIL]], [[X]]
+; APPLE-NEXT:    [[MUL15_EPIL1:%.*]] = mul nsw i32 [[ADD14_EPIL1]], [[WIDTH]]
+; APPLE-NEXT:    [[TMP7:%.*]] = trunc nuw nsw i64 [[IV_EPIL1]] to i32
+; APPLE-NEXT:    [[ADD16_EPIL1:%.*]] = add nsw i32 [[MERGE_1_EPIL]], [[TMP7]]
+; APPLE-NEXT:    [[ADD17_EPIL1:%.*]] = add nsw i32 [[ADD16_EPIL1]], [[MUL15_EPIL1]]
+; APPLE-NEXT:    [[IDXPROM18_EPIL1:%.*]] = sext i32 [[ADD17_EPIL1]] to i64
+; APPLE-NEXT:    [[GEP_P_2_EPIL:%.*]] = getelementptr inbounds { i32, i8, i8, [2 x i8] }, ptr [[P_2]], i64 [[IDXPROM18_EPIL1]]
+; APPLE-NEXT:    [[L_6_EPIL:%.*]] = load i32, ptr [[GEP_P_2_EPIL]], align 4
+; APPLE-NEXT:    [[SUB_EPIL1:%.*]] = sub nsw i32 [[X]], [[MERGE_2_EPIL]]
+; APPLE-NEXT:    [[MUL21_EPIL1:%.*]] = mul nsw i32 [[SUB_EPIL1]], [[WIDTH]]
+; APPLE-NEXT:    [[SUB22_EPIL1:%.*]] = sub i32 [[TMP7]], [[MERGE_1_EPIL]]
+; APPLE-NEXT:    [[ADD23_EPIL1:%.*]] = add nsw i32 [[SUB22_EPIL1]], [[MUL21_EPIL1]]
+; APPLE-NEXT:    [[IDXPROM24_EPIL1:%.*]] = sext i32 [[ADD23_EPIL1]] to i64
+; APPLE-NEXT:    [[GEP_P2_1_EPIL:%.*]] = getelementptr inbounds { i32, i8, i8, [2 x i8] }, ptr [[P_2]], i64 [[IDXPROM24_EPIL1]]
+; APPLE-NEXT:    [[L_7_EPIL:%.*]] = load i32, ptr [[GEP_P2_1_EPIL]], align 4
+; APPLE-NEXT:    [[C_3_EPIL:%.*]] = icmp sgt i32 [[L_1_EPIL1]], [[L_6_EPIL]]
+; APPLE-NEXT:    [[C_4_EPIL:%.*]] = icmp sgt i32 [[L_1_EPIL1]], [[L_7_EPIL]]
+; APPLE-NEXT:    [[AND34_EPIL1:%.*]] = and i1 [[C_3_EPIL]], [[C_4_EPIL]]
+; APPLE-NEXT:    br i1 [[AND34_EPIL1]], label %[[STORE_RES_EPIL:.*]], label %[[LOOP_LATCH_EPIL]]
+; APPLE:       [[STORE_RES_EPIL]]:
+; APPLE-NEXT:    [[C_5_EPIL:%.*]] = icmp sgt i32 [[L_1_EPIL1]], [[T_2]]
+; APPLE-NEXT:    [[GEP_5_EPIL1:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP_EPIL1]], i64 5
+; APPLE-NEXT:    [[RES_EPIL1:%.*]] = select i1 [[C_5_EPIL]], i8 1, i8 2
+; APPLE-NEXT:    store i8 [[RES_EPIL1]], ptr [[GEP_5_EPIL1]], align 1
+; APPLE-NEXT:    br label %[[LOOP_LATCH_EPIL]]
+; APPLE:       [[LOOP_LATCH_EPIL]]:
+; APPLE-NEXT:    [[IV_NEXT_EPIL1]] = add nuw nsw i64 [[IV_EPIL1]], 1
+; APPLE-NEXT:    [[EC_EPIL:%.*]] = icmp eq i64 [[IV_NEXT_EPIL1]], [[N]]
+; APPLE-NEXT:    [[EPIL_ITER_NEXT]] = add i64 [[EPIL_ITER]], 1
+; APPLE-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i64 [[EPIL_ITER_NEXT]], [[XTRAITER]]
+; APPLE-NEXT:    br i1 [[EPIL_ITER_CMP]], label %[[LOOP_HEADER_EPIL]], label %[[EXIT_EPILOG_LCSSA:.*]], !llvm.loop [[LOOP2:![0-9]+]]
+; APPLE:       [[EXIT_EPILOG_LCSSA]]:
+; APPLE-NEXT:    br label %[[EXIT]]
 ; APPLE:       [[EXIT]]:
 ; APPLE-NEXT:    ret void
 ;
@@ -281,3 +578,8 @@ loop.latch:
 exit:
   ret void
 }
+;.
+; APPLE: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
+; APPLE: [[META1]] = !{!"llvm.loop.unroll.disable"}
+; APPLE: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
+;.

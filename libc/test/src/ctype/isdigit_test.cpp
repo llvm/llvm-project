@@ -11,16 +11,7 @@
 
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcIsDigit, SimpleTest) {
-  EXPECT_NE(LIBC_NAMESPACE::isdigit('3'), 0);
-
-  EXPECT_EQ(LIBC_NAMESPACE::isdigit('a'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isdigit('B'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isdigit(' '), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isdigit('?'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isdigit('\0'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isdigit(-1), 0);
-}
+namespace {
 
 // TODO: Merge the ctype tests using this framework.
 constexpr char DIGIT_ARRAY[] = {
@@ -32,6 +23,19 @@ bool in_span(int ch, LIBC_NAMESPACE::cpp::span<const char> arr) {
     if (static_cast<int>(arr[i]) == ch)
       return true;
   return false;
+}
+
+} // namespace
+
+TEST(LlvmLibcIsDigit, SimpleTest) {
+  EXPECT_NE(LIBC_NAMESPACE::isdigit('3'), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::isdigit('a'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isdigit('B'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isdigit(' '), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isdigit('?'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isdigit('\0'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isdigit(-1), 0);
 }
 
 TEST(LlvmLibcIsDigit, DefaultLocale) {

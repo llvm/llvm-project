@@ -226,12 +226,18 @@ template <Fortran::common::TypeCategory TC, int KIND>
 static mlir::Value genScalarLit(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC, KIND>> &value) {
-  if constexpr (TC == Fortran::common::TypeCategory::Integer) {
-    mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
-                                               std::nullopt);
+  if constexpr (TC == Fortran::common::TypeCategory::Integer ||
+                TC == Fortran::common::TypeCategory::Unsigned) {
+    // MLIR requires constants to be signless
+    mlir::Type ty = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND,
+        std::nullopt);
     if (KIND == 16) {
-      auto bigInt =
-          llvm::APInt(ty.getIntOrFloatBitWidth(), value.SignedDecimal(), 10);
+      auto bigInt = llvm::APInt(ty.getIntOrFloatBitWidth(),
+                                TC == Fortran::common::TypeCategory::Unsigned
+                                    ? value.UnsignedDecimal()
+                                    : value.SignedDecimal(),
+                                10);
       return builder.create<mlir::arith::ConstantOp>(
           loc, ty, mlir::IntegerAttr::get(ty, bigInt));
     }

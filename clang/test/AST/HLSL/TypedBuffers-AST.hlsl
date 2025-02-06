@@ -23,7 +23,7 @@
 // EMPTY-NEXT: ImplicitConceptSpecializationDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc>
 // EMPTY-NEXT: TemplateArgument type 'type-parameter-0-0'
 // EMPTY-NEXT: TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'type-parameter-0-0' dependent depth 0 index 0
-// EMPTY-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} ''
+// EMPTY-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} depth 0 index 0
 // EMPTY-NEXT: TemplateArgument type 'element_type':'type-parameter-0-0'
 // EMPTY-NEXT: TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'element_type' dependent depth 0 index 0
 // EMPTY-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} 'element_type'
@@ -45,7 +45,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: ImplicitConceptSpecializationDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc>
 // CHECK-NEXT: TemplateArgument type 'type-parameter-0-0'
 // CHECK-NEXT: TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'type-parameter-0-0' dependent depth 0 index 0
-// CHECK-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} ''
+// CHECK-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} depth 0 index 0
 // CHECK-NEXT: TemplateArgument type 'element_type':'type-parameter-0-0'
 // CHECK-NEXT: TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'element_type' dependent depth 0 index 0
 // CHECK-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} 'element_type'
@@ -73,6 +73,21 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: AlwaysInlineAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit always_inline
 
 // CHECK-NEXT: CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> operator[] 'element_type &(unsigned int)'
+// CHECK-NEXT: ParmVarDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> Index 'unsigned int'
+// CHECK-NEXT: CompoundStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>>
+// CHECK-NEXT: ReturnStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>>
+// CHECK-NEXT: UnaryOperator 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'element_type' prefix '*' cannot overflow
+// CHECK-NEXT: CallExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'element_type *'
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '<builtin fn type>' Function 0x{{[0-9A-Fa-f]+}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '__hlsl_resource_t
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// CHECK-SAME: ' lvalue .__handle 0x{{[0-9A-Fa-f]+}}
+// CHECK-NEXT: CXXThisExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'unsigned int' ParmVar 0x{{[0-9A-Fa-f]+}} 'Index' 'unsigned int'
+// CHECK-NEXT: AlwaysInlineAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit always_inline
+
+// CHECK-NEXT: CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> Load 'element_type (unsigned int)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> Index 'unsigned int'
 // CHECK-NEXT: CompoundStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>>
 // CHECK-NEXT: ReturnStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>>

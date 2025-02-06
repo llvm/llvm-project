@@ -476,6 +476,9 @@ cplusplus.NewDelete (C++)
 """""""""""""""""""""""""
 Check for double-free and use-after-free problems. Traces memory managed by new/delete.
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. literalinclude:: checkers/newdelete_example.cpp
     :language: cpp
 
@@ -484,6 +487,9 @@ Check for double-free and use-after-free problems. Traces memory managed by new/
 cplusplus.NewDeleteLeaks (C++)
 """"""""""""""""""""""""""""""
 Check for memory leaks. Traces memory managed by new/delete.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. code-block:: cpp
 
@@ -1263,6 +1269,9 @@ You can silence this warning either by bound checking the ``size`` parameter, or
 by explicitly marking the ``size`` parameter as sanitized. See the
 :ref:`optin-taint-GenericTaint` checker for an example.
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. code-block:: c
 
   void vulnerable(void) {
@@ -1857,6 +1866,9 @@ unix.Malloc (C)
 """""""""""""""
 Check for memory leaks, double free, and use-after-free problems. Traces memory managed by malloc()/free().
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. literalinclude:: checkers/unix_malloc_example.c
     :language: c
 
@@ -1865,6 +1877,9 @@ Check for memory leaks, double free, and use-after-free problems. Traces memory 
 unix.MallocSizeof (C)
 """""""""""""""""""""
 Check for dubious ``malloc`` arguments involving ``sizeof``.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. code-block:: c
 
@@ -1880,6 +1895,9 @@ Check for dubious ``malloc`` arguments involving ``sizeof``.
 unix.MismatchedDeallocator (C, C++)
 """""""""""""""""""""""""""""""""""
 Check for mismatched deallocators.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. literalinclude:: checkers/mismatched_deallocator_example.cpp
     :language: c
@@ -3437,6 +3455,31 @@ alpha.WebKit
 ^^^^^^^^^^^^
 
 .. _alpha-webkit-NoUncheckedPtrMemberChecker:
+
+alpha.webkit.MemoryUnsafeCastChecker
+""""""""""""""""""""""""""""""""""""""
+Check for all casts from a base type to its derived type as these might be memory-unsafe.
+
+Example:
+
+.. code-block:: cpp
+
+    class Base { };
+    class Derived : public Base { };
+
+    void f(Base* base) {
+        Derived* derived = static_cast<Derived*>(base); // ERROR
+    }
+
+For all cast operations (C-style casts, static_cast, reinterpret_cast, dynamic_cast), if the source type a `Base*` and the destination type is `Derived*`, where `Derived` inherits from `Base`, the static analyzer should signal an error.
+
+This applies to:
+
+- C structs, C++ structs and classes, and Objective-C classes and protocols.
+- Pointers and references.
+- Inside template instantiations and macro expansions that are visible to the compiler.
+
+For types like this, instead of using built in casts, the programmer will use helper functions that internally perform the appropriate type check and disable static analysis.
 
 alpha.webkit.NoUncheckedPtrMemberChecker
 """"""""""""""""""""""""""""""""""""""""

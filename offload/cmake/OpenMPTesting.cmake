@@ -73,6 +73,7 @@ else()
   set(OPENMP_NOT_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/not)
 endif()
 set(OFFLOAD_DEVICE_INFO_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-offload-device-info)
+set(OFFLOAD_TBLGEN_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/offload-tblgen)
 
 # Macro to extract information about compiler from file. (no own scope)
 macro(extract_test_compiler_information lang file)

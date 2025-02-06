@@ -271,7 +271,7 @@ private:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   /// Lower the result values of a call into the
   /// appropriate copies out of appropriate physical registers.

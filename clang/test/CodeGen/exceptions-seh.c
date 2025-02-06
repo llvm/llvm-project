@@ -276,6 +276,7 @@ int exception_code_in_except(void) {
   } __except(1) {
     return _exception_code();
   }
+  return 0;
 }
 
 // CHECK-LABEL: define dso_local i32 @exception_code_in_except()

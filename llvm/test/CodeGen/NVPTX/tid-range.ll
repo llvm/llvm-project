@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 | %ptxas-verify %}
 
 declare i32 @get_register()
 

@@ -53,7 +53,7 @@ public:
 
 protected:
   std::unique_ptr<Symbol *[]> symbols;
-  uint32_t numSymbols = 0;
+  size_t numSymbols = 0;
   SmallVector<InputSectionBase *, 0> sections;
 
 public:
@@ -208,7 +208,7 @@ public:
   }
   template <typename ELFT> typename ELFT::SymRange getELFSyms() const {
     return typename ELFT::SymRange(
-        reinterpret_cast<const typename ELFT::Sym *>(elfSyms), numELFSyms);
+        reinterpret_cast<const typename ELFT::Sym *>(elfSyms), numSymbols);
   }
   template <typename ELFT> typename ELFT::SymRange getGlobalELFSyms() const {
     return getELFSyms<ELFT>().slice(firstGlobal);
@@ -225,7 +225,6 @@ protected:
   const void *elfShdrs = nullptr;
   const void *elfSyms = nullptr;
   uint32_t numELFShdrs = 0;
-  uint32_t numELFSyms = 0;
   uint32_t firstGlobal = 0;
 
   // Below are ObjFile specific members.

@@ -2,7 +2,7 @@
 
 subroutine f00(x)
   integer :: x(10)
-!ERROR: Reference to x must be a contiguous object
+!ERROR: Reference to 'x' must be a contiguous object
   !$omp target update from(x(1:10:2))
 end
 

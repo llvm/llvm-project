@@ -292,7 +292,7 @@ declare i32 @test58_d(i64)
 
 define i1 @test59(ptr %foo) {
 ; CHECK-LABEL: @test59(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 8
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO:%.*]], i64 8
 ; CHECK-NEXT:    [[USE:%.*]] = ptrtoint ptr [[GEP1]] to i64
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 [[USE]])
 ; CHECK-NEXT:    ret i1 true
@@ -307,7 +307,7 @@ define i1 @test59(ptr %foo) {
 
 define i1 @test59_as1(ptr addrspace(1) %foo) {
 ; CHECK-LABEL: @test59_as1(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[FOO:%.*]], i16 8
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[FOO:%.*]], i16 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[GEP1]] to i16
 ; CHECK-NEXT:    [[USE:%.*]] = zext i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 [[USE]])
@@ -528,7 +528,7 @@ define i1 @test60_extra_use(ptr %foo, i64 %i, i64 %j) {
 
 define i1 @test60_extra_use_const_operands_inbounds(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_extra_use_const_operands_inbounds(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 4
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO:%.*]], i64 4
 ; CHECK-NEXT:    call void @use(ptr nonnull [[GEP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[J:%.*]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -707,5 +707,53 @@ define i1 @pointer_icmp_aligned_with_offset_negative(ptr align 8 %a, ptr align 8
 ;
   %gep = getelementptr i8, ptr %a, i64 8
   %cmp = icmp eq ptr %gep, %a2
+  ret i1 %cmp
+}
+
+define i1 @gep_diff_base_same_indices(ptr %x, ptr %y, i64 %z) {
+; CHECK-LABEL: @gep_diff_base_same_indices(
+; CHECK-NEXT:    [[X:%.*]] = getelementptr i8, ptr [[X1:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = getelementptr i8, ptr [[Y1:%.*]], i64 [[Z]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i8, ptr %x, i64 %z
+  %gep2 = getelementptr i8, ptr %y, i64 %z
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_diff_base_same_indices_nuw(ptr %x, ptr %y, i64 %z) {
+; CHECK-LABEL: @gep_diff_base_same_indices_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nuw i8, ptr %x, i64 %z
+  %gep2 = getelementptr nuw i8, ptr %y, i64 %z
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_diff_base_same_indices_nusw(ptr %x, ptr %y, i64 %z) {
+; CHECK-LABEL: @gep_diff_base_same_indices_nusw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nusw i8, ptr %x, i64 %z
+  %gep2 = getelementptr nusw i8, ptr %y, i64 %z
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_diff_base_same_indices_nuw_nusw(ptr %x, ptr %y, i64 %z) {
+; CHECK-LABEL: @gep_diff_base_same_indices_nuw_nusw(
+; CHECK-NEXT:    [[X:%.*]] = getelementptr nuw i8, ptr [[X1:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = getelementptr nusw i8, ptr [[Y1:%.*]], i64 [[Z]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nuw i8, ptr %x, i64 %z
+  %gep2 = getelementptr nusw i8, ptr %y, i64 %z
+  %cmp = icmp ult ptr %gep1, %gep2
   ret i1 %cmp
 }

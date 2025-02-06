@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_FORMATTER_H
-#define _LIBCPP___CHRONO_FORMATTER_H
+#ifndef _LIBCPP___CXX03___CHRONO_FORMATTER_H
+#define _LIBCPP___CXX03___CHRONO_FORMATTER_H
 
 #include <__cxx03/__algorithm/ranges_copy.h>
 #include <__cxx03/__chrono/calendar.h>
@@ -987,4 +987,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif //  _LIBCPP___CHRONO_FORMATTER_H
+#endif //  _LIBCPP___CXX03___CHRONO_FORMATTER_H

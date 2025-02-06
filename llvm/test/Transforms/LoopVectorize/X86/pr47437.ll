@@ -307,7 +307,7 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; AVX1-NEXT:    [[CMP_N34:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC25]]
 ; AVX1-NEXT:    br i1 [[CMP_N34]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; AVX1:       vec.epilog.scalar.ph:
-; AVX1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC25]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; AVX1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC25]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; AVX1-NEXT:    br label [[FOR_BODY1:%.*]]
 ; AVX1:       for.body:
 ; AVX1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY1]] ]

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_THREAD
-#define _LIBCPP_THREAD
+#ifndef _LIBCPP___CXX03_THREAD
+#define _LIBCPP___CXX03_THREAD
 
 /*
 
@@ -127,4 +127,4 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_THREAD
+#endif // _LIBCPP___CXX03_THREAD

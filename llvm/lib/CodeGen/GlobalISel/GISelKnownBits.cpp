@@ -253,6 +253,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
         // For COPYs we don't do anything, don't increase the depth.
         computeKnownBitsImpl(SrcReg, Known2, DemandedElts,
                              Depth + (Opcode != TargetOpcode::COPY));
+        Known2 = Known2.anyextOrTrunc(BitWidth);
         Known = Known.intersectWith(Known2);
         // If we reach a point where we don't know anything
         // just stop looking through the operands.

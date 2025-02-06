@@ -28,8 +28,6 @@ void SingleOnly() {
   #pragma acc kernels loop default(none)
   for(int i = 0; i < 5; ++i);
 
-  // expected-warning@+2{{OpenACC construct 'data' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
   #pragma acc data default(none)
   while(0);
 
@@ -37,7 +35,6 @@ void SingleOnly() {
   #pragma acc loop default(none)
   for(int i = 5; i < 10;++i);
 
-  // expected-warning@+2{{OpenACC construct 'wait' not yet implemented}}
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'wait' directive}}
   #pragma acc wait default(none)
   while(0);

@@ -337,7 +337,7 @@ end
 ! CHECK:      omp.terminator
 ! CHECK-NEXT:    }
 ! CHECK:    omp.terminator
-! CHECK-NEXT  }
+! CHECK-NEXT: }
 ! CHECK: }
 subroutine ss9() ! EXIT inside OpenMP parallel (inside parallel)
   integer :: x

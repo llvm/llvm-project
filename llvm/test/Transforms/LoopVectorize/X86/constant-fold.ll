@@ -17,15 +17,11 @@ define void @f1() {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
-; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [2 x ptr], ptr @b, i16 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    store <2 x ptr> <ptr @a, ptr @a>, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 0 to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [2 x ptr], ptr @b, i16 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    store <2 x ptr> <ptr @a, ptr @a>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[BB3:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -40,7 +36,7 @@ define void @f1() {
 ; CHECK-NEXT:    store ptr [[_TMP2]], ptr [[_TMP7]], align 8
 ; CHECK-NEXT:    [[_TMP9]] = add nsw i16 [[C_1_0]], 1
 ; CHECK-NEXT:    [[_TMP11:%.*]] = icmp slt i16 [[_TMP9]], 2
-; CHECK-NEXT:    br i1 [[_TMP11]], label [[BB2]], label [[BB3]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[_TMP11]], label [[BB2]], label [[BB3]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
 ;

@@ -429,12 +429,12 @@ private:
   Value *foldBooleanAndOr(Value *LHS, Value *RHS, Instruction &I, bool IsAnd,
                           bool IsLogical);
 
+  Value *reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y, Instruction &I,
+                                 bool IsAnd, bool RHSIsLogical);
+
   Instruction *
   canonicalizeConditionalNegationViaMathToSelect(BinaryOperator &i);
 
-  Value *foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS, ICmpInst *RHS,
-                                       Instruction *CxtI, bool IsAnd,
-                                       bool IsLogical = false);
   Value *matchSelectFromAndOr(Value *A, Value *B, Value *C, Value *D,
                               bool InvertFalseVal = false);
   Value *getSelectCondition(Value *A, Value *B, bool ABIsTheSame);
@@ -600,7 +600,8 @@ public:
   /// Given a binary operator, cast instruction, or select which has a PHI node
   /// as operand #0, see if we can fold the instruction into the PHI (which is
   /// only possible if all operands to the PHI are constants).
-  Instruction *foldOpIntoPhi(Instruction &I, PHINode *PN);
+  Instruction *foldOpIntoPhi(Instruction &I, PHINode *PN,
+                             bool AllowMultipleUses = false);
 
   /// For a binary operator with 2 phi operands, try to hoist the binary
   /// operation before the phi. This can result in fewer instructions in
@@ -784,6 +785,18 @@ public:
   void handlePotentiallyDeadBlocks(SmallVectorImpl<BasicBlock *> &Worklist);
   void handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
   void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
+
+  /// Take the exact integer log2 of the value. If DoFold is true, create the
+  /// actual instructions, otherwise return a non-null dummy value. Return
+  /// nullptr on failure. Note, if DoFold is true the caller must ensure that
+  /// takeLog2 will succeed, otherwise it may create stray instructions.
+  Value *takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero, bool DoFold);
+
+  Value *tryGetLog2(Value *Op, bool AssumeNonZero) {
+    if (takeLog2(Op, /*Depth=*/0, AssumeNonZero, /*DoFold=*/false))
+      return takeLog2(Op, /*Depth=*/0, AssumeNonZero, /*DoFold=*/true);
+    return nullptr;
+  }
 };
 
 class Negator final {

@@ -194,6 +194,19 @@ MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I) {
   return It;
 }
 
+MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB) {
+  MachineBasicBlock::iterator I = MBB->end();
+  if (I == MBB->begin())
+    return I;
+  --I;
+  while (I->isTerminator() || I->isDebugValue()) {
+    if (I == MBB->begin())
+      break;
+    --I;
+  }
+  return I;
+}
+
 SPIRV::StorageClass::StorageClass
 addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
@@ -447,25 +460,31 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
   TypeName.consume_front("atomic_");
   if (TypeName.consume_front("void"))
     return Type::getVoidTy(Ctx);
-  else if (TypeName.consume_front("bool"))
+  else if (TypeName.consume_front("bool") || TypeName.consume_front("_Bool"))
     return Type::getIntNTy(Ctx, 1);
   else if (TypeName.consume_front("char") ||
+           TypeName.consume_front("signed char") ||
            TypeName.consume_front("unsigned char") ||
            TypeName.consume_front("uchar"))
     return Type::getInt8Ty(Ctx);
   else if (TypeName.consume_front("short") ||
+           TypeName.consume_front("signed short") ||
            TypeName.consume_front("unsigned short") ||
            TypeName.consume_front("ushort"))
     return Type::getInt16Ty(Ctx);
   else if (TypeName.consume_front("int") ||
+           TypeName.consume_front("signed int") ||
            TypeName.consume_front("unsigned int") ||
            TypeName.consume_front("uint"))
     return Type::getInt32Ty(Ctx);
   else if (TypeName.consume_front("long") ||
+           TypeName.consume_front("signed long") ||
            TypeName.consume_front("unsigned long") ||
            TypeName.consume_front("ulong"))
     return Type::getInt64Ty(Ctx);
-  else if (TypeName.consume_front("half"))
+  else if (TypeName.consume_front("half") ||
+           TypeName.consume_front("_Float16") ||
+           TypeName.consume_front("__fp16"))
     return Type::getHalfTy(Ctx);
   else if (TypeName.consume_front("float"))
     return Type::getFloatTy(Ctx);

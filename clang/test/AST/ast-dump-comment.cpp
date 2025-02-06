@@ -91,6 +91,19 @@ int Test_HTMLTagComment;
 // CHECK-NEXT:       TextComment{{.*}} Text=" "
 // CHECK-NEXT:       HTMLStartTagComment{{.*}} Name="br" SelfClosing
 
+/// <a
+///     href="foo"
+/// >Aaa</a>b
+int Test_HTMLTagMultilineBCPL;
+// CHECK:      VarDecl{{.*}}Test_HTMLTagMultilineBCPL
+// CHECK-NEXT:   FullComment
+// CHECK-NEXT:     ParagraphComment
+// CHECK-NEXT:       TextComment{{.*}} Text=" "
+// CHECK-NEXT:       HTMLStartTagComment{{.*}} Name="a" Attrs:  "href="foo"
+// CHECK-NEXT:       TextComment{{.*}} Text="Aaa"
+// CHECK-NEXT:       HTMLEndTagComment{{.*}} Name="a"
+// CHECK-NEXT:       TextComment{{.*}} Text="b"
+
 /// \verbatim
 /// Aaa
 /// \endverbatim

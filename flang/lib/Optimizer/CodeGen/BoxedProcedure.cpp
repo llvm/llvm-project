@@ -69,11 +69,9 @@ public:
       return false;
     }
     if (auto recTy = mlir::dyn_cast<RecordType>(ty)) {
-      auto visited = visitedTypes.find(ty);
-      if (visited != visitedTypes.end())
+      auto [visited, inserted] = visitedTypes.try_emplace(ty, false);
+      if (!inserted)
         return visited->second;
-      [[maybe_unused]] auto newIt = visitedTypes.try_emplace(ty, false);
-      assert(newIt.second && "expected ty to not be in the map");
       bool wasAlreadyVisitingRecordType = needConversionIsVisitingRecordType;
       needConversionIsVisitingRecordType = true;
       bool result = false;
@@ -103,6 +101,8 @@ public:
       return needsConversion(unwrapRefType(ty));
     if (auto t = mlir::dyn_cast<SequenceType>(ty))
       return needsConversion(unwrapSequenceType(ty));
+    if (auto t = mlir::dyn_cast<TypeDescType>(ty))
+      return needsConversion(t.getOfTy());
     return false;
   }
 
@@ -165,9 +165,12 @@ public:
           cs.emplace_back(t.first, t.second);
       }
       rec.finalize(ps, cs);
+      rec.pack(ty.isPacked());
       return rec;
     });
-    addArgumentMaterialization(materializeProcedure);
+    addConversion([&](TypeDescType ty) {
+      return TypeDescType::get(convertType(ty.getOfTy()));
+    });
     addSourceMaterialization(materializeProcedure);
     addTargetMaterialization(materializeProcedure);
   }
@@ -220,7 +223,6 @@ public:
       auto *context = &getContext();
       mlir::IRRewriter rewriter(context);
       BoxprocTypeRewriter typeConverter(mlir::UnknownLoc::get(context));
-      mlir::Dialect *firDialect = context->getLoadedDialect("fir");
       getModule().walk([&](mlir::Operation *op) {
         bool opIsValid = true;
         typeConverter.setLocation(op->getLoc());
@@ -268,10 +270,18 @@ public:
             // Create the thunk.
             auto module = embox->getParentOfType<mlir::ModuleOp>();
             FirOpBuilder builder(rewriter, module);
+            const auto triple{fir::getTargetTriple(module)};
             auto loc = embox.getLoc();
             mlir::Type i8Ty = builder.getI8Type();
             mlir::Type i8Ptr = builder.getRefType(i8Ty);
-            mlir::Type buffTy = SequenceType::get({32}, i8Ty);
+            // For AArch64, PPC32 and PPC64, the thunk is populated by a call to
+            // __trampoline_setup, which is defined in
+            // compiler-rt/lib/builtins/trampoline_setup.c and requires the
+            // thunk size greater than 32 bytes.  For RISCV and x86_64, the
+            // thunk setup doesn't go through __trampoline_setup and fits in 32
+            // bytes.
+            fir::SequenceType::Extent thunkSize = triple.getTrampolineSize();
+            mlir::Type buffTy = SequenceType::get({thunkSize}, i8Ty);
             auto buffer = builder.create<AllocaOp>(loc, buffTy);
             mlir::Value closure =
                 builder.createConvert(loc, i8Ptr, embox.getHost());
@@ -366,13 +376,22 @@ public:
                 index, toTy, index.getFieldId(), toOnTy, index.getTypeparams());
             opIsValid = false;
           }
-        } else if (op->getDialect() == firDialect) {
+        } else {
           rewriter.startOpModification(op);
+          // Convert the operands if needed
           for (auto i : llvm::enumerate(op->getResultTypes()))
             if (typeConverter.needsConversion(i.value())) {
               auto toTy = typeConverter.convertType(i.value());
               op->getResult(i.index()).setType(toTy);
             }
+
+          // Convert the type attributes if needed
+          for (const mlir::NamedAttribute &attr : op->getAttrDictionary())
+            if (auto tyAttr = llvm::dyn_cast<mlir::TypeAttr>(attr.getValue()))
+              if (typeConverter.needsConversion(tyAttr.getValue())) {
+                auto toTy = typeConverter.convertType(tyAttr.getValue());
+                op->setAttr(attr.getName(), mlir::TypeAttr::get(toTy));
+              }
           rewriter.finalizeOpModification(op);
         }
         // Ensure block arguments are updated if needed.

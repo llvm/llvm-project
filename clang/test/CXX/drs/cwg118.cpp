@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++98 %s -pedantic-errors -emit-llvm -o - | FileCheck %s --implicit-check-not " call "
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++11 %s -pedantic-errors -emit-llvm -o - | FileCheck %s --implicit-check-not " call "
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++14 %s -pedantic-errors -emit-llvm -o - | FileCheck %s --implicit-check-not " call "
-// RUN: %clang_cc1 -triple x86_64-linux -std=c++1z %s -pedantic-errors -emit-llvm -o - | FileCheck %s --implicit-check-not " call "
+// RUN: %clang_cc1 -triple x86_64-linux -std=c++17 %s -pedantic-errors -emit-llvm -o - | FileCheck %s --implicit-check-not " call "
+// RUN: %clang_cc1 -triple x86_64-linux -std=c++20 %s -pedantic-errors -emit-llvm -o - | FileCheck %s --implicit-check-not " call "
+// RUN: %clang_cc1 -triple x86_64-linux -std=c++23 %s -pedantic-errors -emit-llvm -o - | FileCheck %s --implicit-check-not " call "
+// RUN: %clang_cc1 -triple x86_64-linux -std=c++2c %s -pedantic-errors -emit-llvm -o - | FileCheck %s --implicit-check-not " call "
+
 
 // cwg118: yes
 

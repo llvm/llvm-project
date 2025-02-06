@@ -119,6 +119,7 @@ public:
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
+  void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
@@ -162,9 +163,9 @@ private:
   ResourceBindings Bindings;
 
 private:
-  void collectResourcesOnVarDecl(VarDecl *D);
-  void collectResourcesOnUserRecordDecl(const VarDecl *VD,
-                                        const RecordType *RT);
+  void collectResourceBindingsOnVarDecl(VarDecl *D);
+  void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
+                                               const RecordType *RT);
   void processExplicitBindingsOnDecl(VarDecl *D);
 };
 

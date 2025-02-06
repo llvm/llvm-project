@@ -2185,6 +2185,16 @@ public:
   void VisitOpenACCComputeConstruct(const OpenACCComputeConstruct *D);
   void VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *D);
   void VisitOpenACCCombinedConstruct(const OpenACCCombinedConstruct *D);
+  void VisitOpenACCDataConstruct(const OpenACCDataConstruct *D);
+  void VisitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct *D);
+  void VisitOpenACCExitDataConstruct(const OpenACCExitDataConstruct *D);
+  void VisitOpenACCHostDataConstruct(const OpenACCHostDataConstruct *D);
+  void VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *D);
+  void VisitOpenACCInitConstruct(const OpenACCInitConstruct *D);
+  void VisitOpenACCShutdownConstruct(const OpenACCShutdownConstruct *D);
+  void VisitOpenACCSetConstruct(const OpenACCSetConstruct *D);
+  void VisitOpenACCUpdateConstruct(const OpenACCUpdateConstruct *D);
+  void VisitOpenACCAtomicConstruct(const OpenACCAtomicConstruct *D);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
@@ -2831,11 +2841,24 @@ void OpenACCClauseEnqueue::VisitIfClause(const OpenACCIfClause &C) {
   Visitor.AddStmt(C.getConditionExpr());
 }
 void OpenACCClauseEnqueue::VisitSelfClause(const OpenACCSelfClause &C) {
-  if (C.hasConditionExpr())
-    Visitor.AddStmt(C.getConditionExpr());
+  if (C.isConditionExprClause()) {
+    if (C.hasConditionExpr())
+      Visitor.AddStmt(C.getConditionExpr());
+  } else {
+    for (Expr *Var : C.getVarList())
+      Visitor.AddStmt(Var);
+  }
 }
 void OpenACCClauseEnqueue::VisitNumWorkersClause(
     const OpenACCNumWorkersClause &C) {
+  Visitor.AddStmt(C.getIntExpr());
+}
+void OpenACCClauseEnqueue::VisitDeviceNumClause(
+    const OpenACCDeviceNumClause &C) {
+  Visitor.AddStmt(C.getIntExpr());
+}
+void OpenACCClauseEnqueue::VisitDefaultAsyncClause(
+    const OpenACCDefaultAsyncClause &C) {
   Visitor.AddStmt(C.getIntExpr());
 }
 void OpenACCClauseEnqueue::VisitVectorLengthClause(
@@ -2853,6 +2876,14 @@ void OpenACCClauseEnqueue::VisitTileClause(const OpenACCTileClause &C) {
 }
 
 void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitHostClause(const OpenACCHostClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitDeviceClause(const OpenACCDeviceClause &C) {
   VisitVarList(C);
 }
 
@@ -2882,6 +2913,19 @@ void OpenACCClauseEnqueue::VisitCreateClause(const OpenACCCreateClause &C) {
 void OpenACCClauseEnqueue::VisitAttachClause(const OpenACCAttachClause &C) {
   VisitVarList(C);
 }
+
+void OpenACCClauseEnqueue::VisitDetachClause(const OpenACCDetachClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitDeleteClause(const OpenACCDeleteClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitUseDeviceClause(
+    const OpenACCUseDeviceClause &C) {
+  VisitVarList(C);
+}
+
 void OpenACCClauseEnqueue::VisitDevicePtrClause(
     const OpenACCDevicePtrClause &C) {
   VisitVarList(C);
@@ -2917,6 +2961,10 @@ void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
 void OpenACCClauseEnqueue::VisitIndependentClause(
     const OpenACCIndependentClause &C) {}
 void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
+void OpenACCClauseEnqueue::VisitFinalizeClause(const OpenACCFinalizeClause &C) {
+}
+void OpenACCClauseEnqueue::VisitIfPresentClause(
+    const OpenACCIfPresentClause &C) {}
 void OpenACCClauseEnqueue::VisitCollapseClause(const OpenACCCollapseClause &C) {
   Visitor.AddStmt(C.getLoopCount());
 }
@@ -3586,6 +3634,66 @@ void EnqueueVisitor::VisitOpenACCCombinedConstruct(
   EnqueueChildren(C);
   for (auto *Clause : C->clauses())
     EnqueueChildren(Clause);
+}
+void EnqueueVisitor::VisitOpenACCDataConstruct(const OpenACCDataConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+void EnqueueVisitor::VisitOpenACCEnterDataConstruct(
+    const OpenACCEnterDataConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+void EnqueueVisitor::VisitOpenACCExitDataConstruct(
+    const OpenACCExitDataConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+void EnqueueVisitor::VisitOpenACCHostDataConstruct(
+    const OpenACCHostDataConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCInitConstruct(const OpenACCInitConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCShutdownConstruct(
+    const OpenACCShutdownConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCSetConstruct(const OpenACCSetConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCUpdateConstruct(
+    const OpenACCUpdateConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCAtomicConstruct(
+    const OpenACCAtomicConstruct *C) {
+  EnqueueChildren(C);
 }
 
 void EnqueueVisitor::VisitAnnotateAttr(const AnnotateAttr *A) {
@@ -5262,15 +5370,15 @@ CXString clang_getCursorSpelling(CXCursor C) {
 
     case CXCursor_OverloadedDeclRef: {
       OverloadedDeclRefStorage Storage = getCursorOverloadedDeclRef(C).first;
-      if (const Decl *D = Storage.dyn_cast<const Decl *>()) {
+      if (const Decl *D = dyn_cast<const Decl *>(Storage)) {
         if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
           return cxstring::createDup(ND->getNameAsString());
         return cxstring::createEmpty();
       }
-      if (const OverloadExpr *E = Storage.dyn_cast<const OverloadExpr *>())
+      if (const OverloadExpr *E = dyn_cast<const OverloadExpr *>(Storage))
         return cxstring::createDup(E->getName().getAsString());
       OverloadedTemplateStorage *Ovl =
-          Storage.get<OverloadedTemplateStorage *>();
+          cast<OverloadedTemplateStorage *>(Storage);
       if (Ovl->size() == 0)
         return cxstring::createEmpty();
       return cxstring::createDup((*Ovl->begin())->getNameAsString());
@@ -6342,6 +6450,26 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OpenACCLoopConstruct");
   case CXCursor_OpenACCCombinedConstruct:
     return cxstring::createRef("OpenACCCombinedConstruct");
+  case CXCursor_OpenACCDataConstruct:
+    return cxstring::createRef("OpenACCDataConstruct");
+  case CXCursor_OpenACCEnterDataConstruct:
+    return cxstring::createRef("OpenACCEnterDataConstruct");
+  case CXCursor_OpenACCExitDataConstruct:
+    return cxstring::createRef("OpenACCExitDataConstruct");
+  case CXCursor_OpenACCHostDataConstruct:
+    return cxstring::createRef("OpenACCHostDataConstruct");
+  case CXCursor_OpenACCWaitConstruct:
+    return cxstring::createRef("OpenACCWaitConstruct");
+  case CXCursor_OpenACCInitConstruct:
+    return cxstring::createRef("OpenACCInitConstruct");
+  case CXCursor_OpenACCShutdownConstruct:
+    return cxstring::createRef("OpenACCShutdownConstruct");
+  case CXCursor_OpenACCSetConstruct:
+    return cxstring::createRef("OpenACCSetConstruct");
+  case CXCursor_OpenACCUpdateConstruct:
+    return cxstring::createRef("OpenACCUpdateConstruct");
+  case CXCursor_OpenACCAtomicConstruct:
+    return cxstring::createRef("OpenACCAtomicConstruct");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");
@@ -7090,6 +7218,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::TopLevelStmt:
   case Decl::StaticAssert:
   case Decl::Block:
+  case Decl::OutlinedFunction:
   case Decl::Captured:
   case Decl::OMPCapturedExpr:
   case Decl::Label: // FIXME: Is this right??
@@ -7302,14 +7431,14 @@ unsigned clang_getNumOverloadedDecls(CXCursor C) {
     return 0;
 
   OverloadedDeclRefStorage Storage = getCursorOverloadedDeclRef(C).first;
-  if (const OverloadExpr *E = Storage.dyn_cast<const OverloadExpr *>())
+  if (const OverloadExpr *E = dyn_cast<const OverloadExpr *>(Storage))
     return E->getNumDecls();
 
   if (OverloadedTemplateStorage *S =
-          Storage.dyn_cast<OverloadedTemplateStorage *>())
+          dyn_cast<OverloadedTemplateStorage *>(Storage))
     return S->size();
 
-  const Decl *D = Storage.get<const Decl *>();
+  const Decl *D = cast<const Decl *>(Storage);
   if (const UsingDecl *Using = dyn_cast<UsingDecl>(D))
     return Using->shadow_size();
 
@@ -7325,14 +7454,14 @@ CXCursor clang_getOverloadedDecl(CXCursor cursor, unsigned index) {
 
   CXTranslationUnit TU = getCursorTU(cursor);
   OverloadedDeclRefStorage Storage = getCursorOverloadedDeclRef(cursor).first;
-  if (const OverloadExpr *E = Storage.dyn_cast<const OverloadExpr *>())
+  if (const OverloadExpr *E = dyn_cast<const OverloadExpr *>(Storage))
     return MakeCXCursor(E->decls_begin()[index], TU);
 
   if (OverloadedTemplateStorage *S =
-          Storage.dyn_cast<OverloadedTemplateStorage *>())
+          dyn_cast<OverloadedTemplateStorage *>(Storage))
     return MakeCXCursor(S->begin()[index], TU);
 
-  const Decl *D = Storage.get<const Decl *>();
+  const Decl *D = cast<const Decl *>(Storage);
   if (const UsingDecl *Using = dyn_cast<UsingDecl>(D)) {
     // FIXME: This is, unfortunately, linear time.
     UsingDecl::shadow_iterator Pos = Using->shadow_begin();

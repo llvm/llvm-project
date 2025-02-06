@@ -63,8 +63,8 @@ define void @test2(i64 %i) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i64 (...) @goo()
 ; CHECK-NEXT:    store i64 [[CALL]], ptr @g2, align 8
-; CHECK-NEXT:    [[T2_PRE:%.*]] = load i64, ptr getelementptr inbounds (i8, ptr @a, i64 24), align 8
-; CHECK-NEXT:    [[T3_PRE:%.*]] = load i64, ptr getelementptr inbounds (i8, ptr @b, i64 24), align 8
+; CHECK-NEXT:    [[T2_PRE:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @a, i64 24), align 8
+; CHECK-NEXT:    [[T3_PRE:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @b, i64 24), align 8
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = mul nsw i64 [[T3_PRE]], [[T2_PRE]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
@@ -272,7 +272,7 @@ define void @test6(ptr %ptr, i1 %arg) {
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP2]] = phi i32 [ [[TMP0]], [[IF_THEN]] ], [ [[TMP1]], [[WHILE]] ]
-; CHECK-NEXT:    br i1 %arg, label [[WHILE_END:%.*]], label [[WHILE]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[WHILE_END:%.*]], label [[WHILE]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void
 ;

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SelectOptimize.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -218,7 +219,7 @@ public:
 private:
   // Select groups consist of consecutive select-like instructions with the same
   // condition. Between select-likes could be any number of auxiliary
-  // instructions related to the condition like not, zext
+  // instructions related to the condition like not, zext, ashr/lshr
   struct SelectGroup {
     Value *Condition;
     SmallVector<SelectLike, 2> Selects;
@@ -482,9 +483,9 @@ static Value *getTrueOrFalseValue(
     BasicBlock *B) {
   Value *V = isTrue ? SI.getTrueValue() : SI.getFalseValue();
   if (V) {
-    auto *IV = dyn_cast<Instruction>(V);
-    if (IV && OptSelects.count(IV))
-      return isTrue ? OptSelects[IV].first : OptSelects[IV].second;
+    if (auto *IV = dyn_cast<Instruction>(V))
+      if (auto It = OptSelects.find(IV); It != OptSelects.end())
+        return isTrue ? It->second.first : It->second.second;
     return V;
   }
 
@@ -496,15 +497,21 @@ static Value *getTrueOrFalseValue(
 
   auto *CBO = BO->clone();
   auto CondIdx = SI.getConditionOpIndex();
-  CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), 1));
+  auto *AuxI = cast<Instruction>(CBO->getOperand(CondIdx));
+  if (isa<ZExtInst>(AuxI) || isa<LShrOperator>(AuxI)) {
+    CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), 1));
+  } else {
+    assert((isa<AShrOperator>(AuxI) || isa<SExtInst>(AuxI)) &&
+           "Unexpected opcode");
+    CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), -1));
+  }
 
   unsigned OtherIdx = 1 - CondIdx;
   if (auto *IV = dyn_cast<Instruction>(CBO->getOperand(OtherIdx))) {
-    if (OptSelects.count(IV))
-      CBO->setOperand(OtherIdx,
-                      isTrue ? OptSelects[IV].first : OptSelects[IV].second);
+    if (auto It = OptSelects.find(IV); It != OptSelects.end())
+      CBO->setOperand(OtherIdx, isTrue ? It->second.first : It->second.second);
   }
-  CBO->insertBefore(B->getTerminator());
+  CBO->insertBefore(B->getTerminator()->getIterator());
   return CBO;
 }
 
@@ -629,7 +636,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     }
     auto InsertionPoint = EndBlock->getFirstInsertionPt();
     for (auto *DI : SinkInstrs)
-      DI->moveBeforePreserving(&*InsertionPoint);
+      DI->moveBeforePreserving(InsertionPoint);
 
     // Duplicate implementation for DbgRecords, the non-instruction debug-info
     // format. Helper lambda for moving DbgRecords to the end block.
@@ -667,7 +674,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       TrueBranch = BranchInst::Create(EndBlock, TrueBlock);
       TrueBranch->setDebugLoc(LastSI.getI()->getDebugLoc());
       for (Instruction *TrueInst : TrueSlicesInterleaved)
-        TrueInst->moveBefore(TrueBranch);
+        TrueInst->moveBefore(TrueBranch->getIterator());
     }
     if (!FalseSlicesInterleaved.empty() || HasSelectLike(ASI, false)) {
       FalseBlock =
@@ -676,7 +683,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
       FalseBranch->setDebugLoc(LastSI.getI()->getDebugLoc());
       for (Instruction *FalseInst : FalseSlicesInterleaved)
-        FalseInst->moveBefore(FalseBranch);
+        FalseInst->moveBefore(FalseBranch->getIterator());
     }
     // If there was nothing to sink, then arbitrarily choose the 'false' side
     // for a new input value to the PHI.
@@ -754,7 +761,11 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
   // Auxiliary instruction are instructions that depends on a condition and have
   // zero or some constant value on True/False branch, such as:
   // * ZExt(1bit)
+  // * SExt(1bit)
   // * Not(1bit)
+  // * A(L)Shr(Val), ValBitSize - 1, where there is a condition like `Val <= 0`
+  // earlier in the BB. For conditions that check the sign of the Val compiler
+  // may generate shifts instead of ZExt/SExt.
   struct SelectLikeInfo {
     Value *Cond;
     bool IsAuxiliary;
@@ -763,13 +774,21 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
   };
 
   DenseMap<Value *, SelectLikeInfo> SelectInfo;
+  // Keeps visited comparisons to help identify AShr/LShr variants of auxiliary
+  // instructions.
+  SmallSetVector<CmpInst *, 4> SeenCmp;
 
   // Check if the instruction is SelectLike or might be part of SelectLike
   // expression, put information into SelectInfo and return the iterator to the
   // inserted position.
-  auto ProcessSelectInfo = [&SelectInfo](Instruction *I) {
+  auto ProcessSelectInfo = [&SelectInfo, &SeenCmp](Instruction *I) {
+    if (auto *Cmp = dyn_cast<CmpInst>(I)) {
+      SeenCmp.insert(Cmp);
+      return SelectInfo.end();
+    }
+
     Value *Cond;
-    if (match(I, m_OneUse(m_ZExt(m_Value(Cond)))) &&
+    if (match(I, m_OneUse(m_ZExtOrSExt(m_Value(Cond)))) &&
         Cond->getType()->isIntegerTy(1)) {
       bool Inverted = match(Cond, m_Not(m_Value(Cond)));
       return SelectInfo.insert({I, {Cond, true, Inverted, 0}}).first;
@@ -784,30 +803,60 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
       bool Inverted = match(Cond, m_Not(m_Value(Cond)));
       return SelectInfo.insert({I, {Cond, false, Inverted, 0}}).first;
     }
+    Value *Val;
+    ConstantInt *Shift;
+    if (match(I, m_Shr(m_Value(Val), m_ConstantInt(Shift))) &&
+        I->getType()->getIntegerBitWidth() == Shift->getZExtValue() + 1) {
+      for (auto *CmpI : SeenCmp) {
+        auto Pred = CmpI->getPredicate();
+        if (Val != CmpI->getOperand(0))
+          continue;
+        if ((Pred == CmpInst::ICMP_SGT &&
+             match(CmpI->getOperand(1), m_ConstantInt<-1>())) ||
+            (Pred == CmpInst::ICMP_SGE &&
+             match(CmpI->getOperand(1), m_Zero())) ||
+            (Pred == CmpInst::ICMP_SLT &&
+             match(CmpI->getOperand(1), m_Zero())) ||
+            (Pred == CmpInst::ICMP_SLE &&
+             match(CmpI->getOperand(1), m_ConstantInt<-1>()))) {
+          bool Inverted =
+              Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE;
+          return SelectInfo.insert({I, {CmpI, true, Inverted, 0}}).first;
+        }
+      }
+      return SelectInfo.end();
+    }
 
-    // An Or(zext(i1 X), Y) can also be treated like a select, with condition X
+    // An BinOp(Aux(X), Y) can also be treated like a select, with condition X
     // and values Y|1 and Y.
-    if (auto *BO = dyn_cast<BinaryOperator>(I)) {
-      switch (I->getOpcode()) {
-      case Instruction::Add:
-      case Instruction::Sub: {
-        Value *X;
-        if (!((PatternMatch::match(I->getOperand(0),
-                                   m_OneUse(m_ZExt(m_Value(X)))) ||
-               PatternMatch::match(I->getOperand(1),
-                                   m_OneUse(m_ZExt(m_Value(X))))) &&
-              X->getType()->isIntegerTy(1)))
-          return SelectInfo.end();
-        break;
-      }
-      case Instruction::Or:
-        if (BO->getType()->isIntegerTy(1) || BO->getOpcode() != Instruction::Or)
-          return SelectInfo.end();
-        break;
-      }
+    // `Aux` can be either `ZExt(1bit)`, `SExt(1bit)` or `XShr(Val), ValBitSize
+    // - 1` `BinOp` can be Add, Sub, Or
+    Value *X;
+    auto MatchZExtOrSExtPattern =
+        m_c_BinOp(m_Value(), m_OneUse(m_ZExtOrSExt(m_Value(X))));
+    auto MatchShiftPattern =
+        m_c_BinOp(m_Value(), m_OneUse(m_Shr(m_Value(X), m_ConstantInt(Shift))));
 
-      for (unsigned Idx = 0; Idx < 2; Idx++) {
-        auto *Op = BO->getOperand(Idx);
+    // This check is unnecessary, but it prevents costly access to the
+    // SelectInfo map.
+    if ((match(I, MatchZExtOrSExtPattern) && X->getType()->isIntegerTy(1)) ||
+        (match(I, MatchShiftPattern) &&
+         X->getType()->getIntegerBitWidth() == Shift->getZExtValue() + 1)) {
+      if (I->getOpcode() != Instruction::Add &&
+          I->getOpcode() != Instruction::Sub &&
+          I->getOpcode() != Instruction::Or)
+        return SelectInfo.end();
+
+      if (I->getOpcode() == Instruction::Or && I->getType()->isIntegerTy(1))
+        return SelectInfo.end();
+
+      // Iterate through operands and find dependant on recognised sign
+      // extending auxiliary select-like instructions. The operand index does
+      // not matter for Add and Or. However, for Sub, we can only safely
+      // transform when the operand is second.
+      unsigned Idx = I->getOpcode() == Instruction::Sub ? 1 : 0;
+      for (; Idx < 2; Idx++) {
+        auto *Op = I->getOperand(Idx);
         auto It = SelectInfo.find(Op);
         if (It != SelectInfo.end() && It->second.IsAuxiliary) {
           Cond = It->second.Cond;
@@ -994,6 +1043,18 @@ bool SelectOptimizeImpl::isConvertToBranchProfitableBase(
     return true;
   }
 
+  // If latch has a select group with several elements, it is usually profitable
+  // to convert it to branches. We let `optimizeSelectsInnerLoops` decide if
+  // conversion is profitable for innermost loops.
+  auto *BB = SI.getI()->getParent();
+  auto *L = LI->getLoopFor(BB);
+  if (L && !L->isInnermost() && L->getLoopLatch() == BB &&
+      ASI.Selects.size() >= 3) {
+    OR << "Converted to branch because select group in the latch block is big.";
+    EmitAndPrintRemark(ORE, OR);
+    return true;
+  }
+
   ORmiss << "Not profitable to convert to branch (base heuristic).";
   EmitAndPrintRemark(ORE, ORmiss);
   return false;
@@ -1155,7 +1216,7 @@ bool SelectOptimizeImpl::checkLoopHeuristics(const Loop *L,
     return true;
 
   OptimizationRemarkMissed ORmissL(DEBUG_TYPE, "SelectOpti",
-                                   L->getHeader()->getFirstNonPHI());
+                                   &*L->getHeader()->getFirstNonPHIIt());
 
   if (LoopCost[0].NonPredCost > LoopCost[0].PredCost ||
       LoopCost[1].NonPredCost >= LoopCost[1].PredCost) {
@@ -1243,9 +1304,9 @@ bool SelectOptimizeImpl::computeLoopCosts(
           auto UI = dyn_cast<Instruction>(U.get());
           if (!UI)
             continue;
-          if (InstCostMap.count(UI)) {
-            IPredCost = std::max(IPredCost, InstCostMap[UI].PredCost);
-            INonPredCost = std::max(INonPredCost, InstCostMap[UI].NonPredCost);
+          if (auto It = InstCostMap.find(UI); It != InstCostMap.end()) {
+            IPredCost = std::max(IPredCost, It->second.PredCost);
+            INonPredCost = std::max(INonPredCost, It->second.NonPredCost);
           }
         }
         auto ILatency = computeInstCost(&I);
@@ -1276,8 +1337,8 @@ bool SelectOptimizeImpl::computeLoopCosts(
 
           Scaled64 CondCost = Scaled64::getZero();
           if (auto *CI = dyn_cast<Instruction>(SG->Condition))
-            if (InstCostMap.count(CI))
-              CondCost = InstCostMap[CI].NonPredCost;
+            if (auto It = InstCostMap.find(CI); It != InstCostMap.end())
+              CondCost = It->second.NonPredCost;
           Scaled64 MispredictCost = getMispredictionCost(SI, CondCost);
 
           INonPredCost = PredictedPathCost + MispredictCost;
