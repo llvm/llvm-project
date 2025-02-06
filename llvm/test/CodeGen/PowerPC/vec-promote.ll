@@ -7,16 +7,13 @@
 define noundef <2 x double> @vec_promote_double_zeroed(ptr nocapture noundef readonly %p) {
 ; CHECK-BE-LABEL: vec_promote_double_zeroed:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lfd 0, 0(3)
-; CHECK-BE-NEXT:    xxlxor 1, 1, 1
-; CHECK-BE-NEXT:    xxmrghd 34, 0, 1
+; CHECK-BE-NEXT:    lxsdx 34, 0, 3
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: vec_promote_double_zeroed:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    lfd 0, 0(3)
-; CHECK-LE-NEXT:    xxlxor 1, 1, 1
-; CHECK-LE-NEXT:    xxmrghd 34, 1, 0
+; CHECK-LE-NEXT:    lxsdx 0, 0, 3
+; CHECK-LE-NEXT:    xxswapd 34, 0
 ; CHECK-LE-NEXT:    blr
 entry:
   %0 = load double, ptr %p, align 8
@@ -43,24 +40,14 @@ entry:
 define noundef <4 x float> @vec_promote_float_zeroed(ptr nocapture noundef readonly %p) {
 ; CHECK-BE-LABEL: vec_promote_float_zeroed:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lfs 0, 0(3)
-; CHECK-BE-NEXT:    xxlxor 1, 1, 1
-; CHECK-BE-NEXT:    xxmrghd 0, 0, 1
-; CHECK-BE-NEXT:    xxspltd 1, 1, 0
-; CHECK-BE-NEXT:    xvcvdpsp 34, 0
-; CHECK-BE-NEXT:    xvcvdpsp 35, 1
-; CHECK-BE-NEXT:    vmrgew 2, 2, 3
+; CHECK-BE-NEXT:    lxsiwzx 0, 0, 3
+; CHECK-BE-NEXT:    xxsldwi 34, 0, 0, 1
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: vec_promote_float_zeroed:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    lfs 0, 0(3)
-; CHECK-LE-NEXT:    xxlxor 1, 1, 1
-; CHECK-LE-NEXT:    xxmrghd 0, 1, 0
-; CHECK-LE-NEXT:    xxspltd 1, 1, 0
-; CHECK-LE-NEXT:    xvcvdpsp 34, 0
-; CHECK-LE-NEXT:    xvcvdpsp 35, 1
-; CHECK-LE-NEXT:    vmrgew 2, 3, 2
+; CHECK-LE-NEXT:    lxsiwzx 0, 0, 3
+; CHECK-LE-NEXT:    xxsldwi 34, 0, 0, 2
 ; CHECK-LE-NEXT:    blr
 entry:
   %0 = load float, ptr %p, align 8
@@ -89,20 +76,13 @@ entry:
 define noundef <2 x i64> @vec_promote_long_long_zeroed(ptr nocapture noundef readonly %p) {
 ; CHECK-BE-LABEL: vec_promote_long_long_zeroed:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    ld 3, 0(3)
-; CHECK-BE-NEXT:    li 4, 0
-; CHECK-BE-NEXT:    mtfprd 0, 4
-; CHECK-BE-NEXT:    mtfprd 1, 3
-; CHECK-BE-NEXT:    xxmrghd 34, 1, 0
+; CHECK-BE-NEXT:    lxsdx 34, 0, 3
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: vec_promote_long_long_zeroed:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    ld 3, 0(3)
-; CHECK-LE-NEXT:    li 4, 0
-; CHECK-LE-NEXT:    mtfprd 0, 4
-; CHECK-LE-NEXT:    mtfprd 1, 3
-; CHECK-LE-NEXT:    xxmrghd 34, 0, 1
+; CHECK-LE-NEXT:    lxsdx 0, 0, 3
+; CHECK-LE-NEXT:    xxswapd 34, 0
 ; CHECK-LE-NEXT:    blr
 entry:
   %0 = load i64, ptr %p, align 8
@@ -129,25 +109,14 @@ entry:
 define noundef <4 x i32> @vec_promote_int_zeroed(ptr nocapture noundef readonly %p) {
 ; CHECK-BE-LABEL: vec_promote_int_zeroed:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lwz 3, 0(3)
-; CHECK-BE-NEXT:    li 4, 0
-; CHECK-BE-NEXT:    li 5, 0
-; CHECK-BE-NEXT:    rldimi 4, 4, 32, 0
-; CHECK-BE-NEXT:    rldimi 5, 3, 32, 0
-; CHECK-BE-NEXT:    mtfprd 1, 4
-; CHECK-BE-NEXT:    mtfprd 0, 5
-; CHECK-BE-NEXT:    xxmrghd 34, 0, 1
+; CHECK-BE-NEXT:    lxsiwzx 0, 0, 3
+; CHECK-BE-NEXT:    xxsldwi 34, 0, 0, 1
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: vec_promote_int_zeroed:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    lwz 3, 0(3)
-; CHECK-LE-NEXT:    li 4, 0
-; CHECK-LE-NEXT:    rldimi 3, 4, 32, 0
-; CHECK-LE-NEXT:    rldimi 4, 4, 32, 0
-; CHECK-LE-NEXT:    mtfprd 0, 3
-; CHECK-LE-NEXT:    mtfprd 1, 4
-; CHECK-LE-NEXT:    xxmrghd 34, 1, 0
+; CHECK-LE-NEXT:    lxsiwzx 0, 0, 3
+; CHECK-LE-NEXT:    xxsldwi 34, 0, 0, 2
 ; CHECK-LE-NEXT:    blr
 entry:
   %0 = load i32, ptr %p, align 4
