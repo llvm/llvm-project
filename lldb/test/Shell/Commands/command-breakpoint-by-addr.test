@@ -1,9 +1,11 @@
 # RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
-# RUN: %lldb -b -o 'breakpoint set -a "main+26"' \
-# RUN:          -o 'breakpoint set -a "main+ 26"' \
-# RUN:          -o 'breakpoint set -a "main +26"' \
-# RUN:          -o 'breakpoint set -a "main + 26"' \
-# RUN:          -o 'breakpoint set -a "main  +    26"' %t.out | FileCheck %s
+# RUN: %lldb %t.out -b -s %s | FileCheck %s
+
+breakpoint set -a "main+26"
+breakpoint set -a "main+ 26"
+breakpoint set -a "main +26"
+breakpoint set -a "main + 26"
+breakpoint set -a "main  +    26"
 
 # CHECK: Breakpoint 1: address = 
 # CHECK: Breakpoint 2: address = 
