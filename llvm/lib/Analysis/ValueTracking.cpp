@@ -1381,7 +1381,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known.insertBits(KnownSrc, ShiftElt * SubBitWidth);
       }
     }
-
+    // Look through a cast from wider vector elements to narrow type.
+    // Examples: v2i64 -> v4i32
     if (SubBitWidth % BitWidth == 0) {
       unsigned SubScale = SubBitWidth / BitWidth;
       KnownBits KnownSrc(SubBitWidth);
