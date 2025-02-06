@@ -60,7 +60,7 @@ void cvt_at(const char *c) __attribute__((format_matches(NSString, 1, "%@")));  
 void cvt_c(const char *c) __attribute__((format_matches(printf, 1, "%c"))); // expected-note{{comparing with this specifier}}
 void cvt_u(const char *c) __attribute__((format_matches(printf, 1, "%u"))); // expected-note 2{{comparing with this specifier}}
 void cvt_hhi(const char *c) __attribute__((format_matches(printf, 1, "%hhi")));  // expected-note 3{{comparing with this specifier}}
-void cvt_i(const char *c) __attribute__((format_matches(printf, 1, "%i"))); // expected-note 4{{comparing with this specifier}}
+void cvt_i(const char *c) __attribute__((format_matches(printf, 1, "%i"))); // expected-note 5{{comparing with this specifier}}
 void cvt_p(const char *c) __attribute__((format_matches(printf, 1, "%p")));
 void cvt_s(const char *c) __attribute__((format_matches(printf, 1, "%s"))); // expected-note{{comparing with this specifier}}
 void cvt_n(const char *c) __attribute__((format_matches(printf, 1, "%n"))); // expected-note{{comparing with this specifier}}
@@ -223,11 +223,24 @@ void test_merge_redecl_warn(const char *f);
 // Positional madness
 
 __attribute__((format_matches(printf, 1, "%1$s %1$d")))  // \
-    expected-warning{{format specifier 's' is incompatible with 'd'}} \
+    expected-warning{{format specifier 'd' is incompatible with 's'}} \
     expected-note{{comparing with this specifier}}
 void test_positional_incompatible(const char *f);
 
 void call_positional_incompatible(void) {
     // expect the attribute was dropped and that there is no diagnostic here
     test_positional_incompatible("%d %d %d %d %d");
+}
+
+void test_many_i(void) {
+    cvt_i("%1$d %1$i");
+    cvt_i("%1$d %1$s"); // expected-warning{{format specifier 's' is incompatible with 'i'}}
+}
+
+__attribute__((format_matches(printf, 1, "%*d %*d"))) // expected-note{{comparing with this specifier}}
+void accept_modifiers(const char *f);
+
+void test_modifiers(void) {
+    accept_modifiers("%2$*1$d %4$*3$d");
+    accept_modifiers("%2$*3$d %4$*3$d"); // expected-warning{{format argument modifies specifier at position 2, but it should modify specifier at position 4}}
 }

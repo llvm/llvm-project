@@ -7407,25 +7407,7 @@ bool DecomposePrintfHandler::GetSpecifiers(
       [](const EquatableFormatArgument &A, const EquatableFormatArgument &B) {
         return A.getPosition() < B.getPosition();
       });
-
-  // If there are duplicate positional arguments, ensure that they are all
-  // mutually compatible.
-  bool HadError = false;
-  auto ArgIter = Args.begin();
-  auto ArgEnd = Args.end();
-  while (ArgIter != ArgEnd) {
-    auto ArgNext = ArgIter + 1;
-    auto PositionalEnd = std::find_if(ArgNext, ArgEnd, [=](const auto &Arg) {
-      return Arg.getPosition() != ArgIter->getPosition();
-    });
-    while (ArgNext != PositionalEnd) {
-      HadError |=
-          !ArgIter->VerifyCompatible(S, *ArgNext, FmtExpr, InFunctionCall);
-      ++ArgNext;
-    }
-    ArgIter = ArgNext;
-  }
-  return !HadError;
+  return true;
 }
 
 bool DecomposePrintfHandler::HandlePrintfSpecifier(
@@ -8514,36 +8496,58 @@ static bool CompareFormatSpecifiers(Sema &S, const StringLiteral *Ref,
                                     ArrayRef<EquatableFormatArgument> FmtArgs,
                                     const Expr *FmtExpr, bool InFunctionCall) {
   bool HadError = false;
-  unsigned CommonArgs;
-  if (FmtArgs.size() > RefArgs.size()) {
-    CommonArgs = RefArgs.size();
-    // "data argument not used by format string"
+  auto FmtIter = FmtArgs.begin(), FmtEnd = FmtArgs.end();
+  auto RefIter = RefArgs.begin(), RefEnd = RefArgs.end();
+  while (FmtIter < FmtEnd && RefIter < RefEnd) {
+    // In positional-style format strings, the same specifier can appear
+    // multiple times. In the Ref format string, we have already verified that
+    // each repetition of the same positional specifier are mutually compatible,
+    // so we only need to test each repetition in the Fmt string with the first
+    // corresponding Ref specifier.
+    auto FmtIterEnd = std::find_if(FmtIter + 1, FmtEnd, [=](const auto &Arg) {
+      return Arg.getPosition() != FmtIter->getPosition();
+    });
+    auto RefIterEnd = std::find_if(RefIter + 1, RefEnd, [=](const auto &Arg) {
+      return Arg.getPosition() != RefIter->getPosition();
+    });
+
+    // Clang does not diagnose missing format specifiers in positional-style
+    // strings (TODO: which it probably should do, as it is UB to skip over a
+    // format argument). Skip specifiers if needed.
+    if (FmtIter->getPosition() < RefIter->getPosition()) {
+      FmtIter = FmtIterEnd;
+      continue;
+    }
+    if (RefIter->getPosition() < FmtIter->getPosition()) {
+      RefIter = RefIterEnd;
+      continue;
+    }
+
+    while (FmtIter != FmtIterEnd) {
+      HadError |=
+          !FmtIter->VerifyCompatible(S, *RefIter, FmtExpr, InFunctionCall);
+      ++FmtIter;
+    }
+    RefIter = RefIterEnd;
+  }
+
+  if (FmtIter < FmtEnd) {
     CheckFormatHandler::EmitFormatDiagnostic(
         S, InFunctionCall, FmtExpr,
         S.PDiag(diag::warn_format_cmp_specifier_arity) << 1,
-        FmtExpr->getBeginLoc(), false,
-        FmtArgs[RefArgs.size()].getSourceRange());
+        FmtExpr->getBeginLoc(), false, FmtIter->getSourceRange());
     S.Diag(Ref->getBeginLoc(), diag::note_format_cmp_with) << 1;
     HadError = true;
-  } else if (RefArgs.size() > FmtArgs.size()) {
-    CommonArgs = FmtArgs.size();
-    // "fewer specifiers in format string than expected"
+  } else if (RefIter < RefEnd) {
     CheckFormatHandler::EmitFormatDiagnostic(
         S, InFunctionCall, FmtExpr,
         S.PDiag(diag::warn_format_cmp_specifier_arity) << 0,
         FmtExpr->getBeginLoc(), false, Fmt->getSourceRange());
     S.Diag(Ref->getBeginLoc(), diag::note_format_cmp_with)
-        << 1 << RefArgs[FmtArgs.size()].getSourceRange();
+        << 1 << RefIter->getSourceRange();
     HadError = true;
-  } else {
-    CommonArgs = FmtArgs.size();
   }
-
-  for (size_t I = 0; I < CommonArgs; ++I) {
-    HadError |=
-        !FmtArgs[I].VerifyCompatible(S, RefArgs[I], FmtExpr, InFunctionCall);
-  }
-  return HadError;
+  return !HadError;
 }
 
 static void CheckFormatString(
