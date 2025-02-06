@@ -15,8 +15,6 @@
 #include "DeviceTypes.h"
 #include "DeviceUtils.h"
 
-#pragma omp begin declare target device_type(nohost)
-
 namespace ompx {
 namespace atomic {
 
@@ -220,7 +218,5 @@ void system(atomic::OrderingTy Ordering);
 } // namespace fence
 
 } // namespace ompx
-
-#pragma omp end declare target
 
 #endif

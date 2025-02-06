@@ -363,10 +363,96 @@ bb:
   ret <4 x i16> %ins.3
 }
 
+define <4 x i8> @uadd_sat_v4i8(<4 x i8> %arg0, <4 x i8> %arg1, ptr addrspace(1) %dst) {
+; GCN-LABEL: @uadd_sat_v4i8(
+; GCN-NEXT:  bb:
+; GCN-NEXT:    [[ARG0_0:%.*]] = extractelement <4 x i8> [[ARG0:%.*]], i64 0
+; GCN-NEXT:    [[ARG0_1:%.*]] = extractelement <4 x i8> [[ARG0]], i64 1
+; GCN-NEXT:    [[ARG0_2:%.*]] = extractelement <4 x i8> [[ARG0]], i64 2
+; GCN-NEXT:    [[ARG0_3:%.*]] = extractelement <4 x i8> [[ARG0]], i64 3
+; GCN-NEXT:    [[ARG1_0:%.*]] = extractelement <4 x i8> [[ARG1:%.*]], i64 0
+; GCN-NEXT:    [[ARG1_1:%.*]] = extractelement <4 x i8> [[ARG1]], i64 1
+; GCN-NEXT:    [[ARG1_2:%.*]] = extractelement <4 x i8> [[ARG1]], i64 2
+; GCN-NEXT:    [[ARG1_3:%.*]] = extractelement <4 x i8> [[ARG1]], i64 3
+; GCN-NEXT:    [[ADD_0:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_0]], i8 [[ARG1_0]])
+; GCN-NEXT:    [[ADD_1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_1]], i8 [[ARG1_1]])
+; GCN-NEXT:    [[ADD_2:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_2]], i8 [[ARG1_2]])
+; GCN-NEXT:    [[ADD_3:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_3]], i8 [[ARG1_3]])
+; GCN-NEXT:    [[INS_0:%.*]] = insertelement <4 x i8> poison, i8 [[ADD_0]], i64 0
+; GCN-NEXT:    [[INS_1:%.*]] = insertelement <4 x i8> [[INS_0]], i8 [[ADD_1]], i64 1
+; GCN-NEXT:    [[INS_2:%.*]] = insertelement <4 x i8> [[INS_1]], i8 [[ADD_2]], i64 2
+; GCN-NEXT:    [[INS_3:%.*]] = insertelement <4 x i8> [[INS_2]], i8 [[ADD_3]], i64 3
+; GCN-NEXT:    ret <4 x i8> [[INS_3]]
+;
+bb:
+  %arg0.0 = extractelement <4 x i8> %arg0, i64 0
+  %arg0.1 = extractelement <4 x i8> %arg0, i64 1
+  %arg0.2 = extractelement <4 x i8> %arg0, i64 2
+  %arg0.3 = extractelement <4 x i8> %arg0, i64 3
+  %arg1.0 = extractelement <4 x i8> %arg1, i64 0
+  %arg1.1 = extractelement <4 x i8> %arg1, i64 1
+  %arg1.2 = extractelement <4 x i8> %arg1, i64 2
+  %arg1.3 = extractelement <4 x i8> %arg1, i64 3
+  %add.0 = call i8 @llvm.uadd.sat.i8(i8 %arg0.0, i8 %arg1.0)
+  %add.1 = call i8 @llvm.uadd.sat.i8(i8 %arg0.1, i8 %arg1.1)
+  %add.2 = call i8 @llvm.uadd.sat.i8(i8 %arg0.2, i8 %arg1.2)
+  %add.3 = call i8 @llvm.uadd.sat.i8(i8 %arg0.3, i8 %arg1.3)
+  %ins.0 = insertelement <4 x i8> undef, i8 %add.0, i64 0
+  %ins.1 = insertelement <4 x i8> %ins.0, i8 %add.1, i64 1
+  %ins.2 = insertelement <4 x i8> %ins.1, i8 %add.2, i64 2
+  %ins.3 = insertelement <4 x i8> %ins.2, i8 %add.3, i64 3
+  ret <4 x i8> %ins.3
+}
+define <4 x i8> @usub_sat_v4i8(<4 x i8> %arg0, <4 x i8> %arg1) {
+; GCN-LABEL: @usub_sat_v4i8(
+; GCN-NEXT:  bb:
+; GCN-NEXT:    [[ARG0_0:%.*]] = extractelement <4 x i8> [[ARG0:%.*]], i64 0
+; GCN-NEXT:    [[ARG0_1:%.*]] = extractelement <4 x i8> [[ARG0]], i64 1
+; GCN-NEXT:    [[ARG0_2:%.*]] = extractelement <4 x i8> [[ARG0]], i64 2
+; GCN-NEXT:    [[ARG0_3:%.*]] = extractelement <4 x i8> [[ARG0]], i64 3
+; GCN-NEXT:    [[ARG1_0:%.*]] = extractelement <4 x i8> [[ARG1:%.*]], i64 0
+; GCN-NEXT:    [[ARG1_1:%.*]] = extractelement <4 x i8> [[ARG1]], i64 1
+; GCN-NEXT:    [[ARG1_2:%.*]] = extractelement <4 x i8> [[ARG1]], i64 2
+; GCN-NEXT:    [[ARG1_3:%.*]] = extractelement <4 x i8> [[ARG1]], i64 3
+; GCN-NEXT:    [[ADD_0:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_0]], i8 [[ARG1_0]])
+; GCN-NEXT:    [[ADD_1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_1]], i8 [[ARG1_1]])
+; GCN-NEXT:    [[ADD_2:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_2]], i8 [[ARG1_2]])
+; GCN-NEXT:    [[ADD_3:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_3]], i8 [[ARG1_3]])
+; GCN-NEXT:    [[INS_0:%.*]] = insertelement <4 x i8> poison, i8 [[ADD_0]], i64 0
+; GCN-NEXT:    [[INS_1:%.*]] = insertelement <4 x i8> [[INS_0]], i8 [[ADD_1]], i64 1
+; GCN-NEXT:    [[INS_2:%.*]] = insertelement <4 x i8> [[INS_1]], i8 [[ADD_2]], i64 2
+; GCN-NEXT:    [[INS_3:%.*]] = insertelement <4 x i8> [[INS_2]], i8 [[ADD_3]], i64 3
+; GCN-NEXT:    ret <4 x i8> [[INS_3]]
+;
+bb:
+  %arg0.0 = extractelement <4 x i8> %arg0, i64 0
+  %arg0.1 = extractelement <4 x i8> %arg0, i64 1
+  %arg0.2 = extractelement <4 x i8> %arg0, i64 2
+  %arg0.3 = extractelement <4 x i8> %arg0, i64 3
+  %arg1.0 = extractelement <4 x i8> %arg1, i64 0
+  %arg1.1 = extractelement <4 x i8> %arg1, i64 1
+  %arg1.2 = extractelement <4 x i8> %arg1, i64 2
+  %arg1.3 = extractelement <4 x i8> %arg1, i64 3
+  %add.0 = call i8 @llvm.usub.sat.i8(i8 %arg0.0, i8 %arg1.0)
+  %add.1 = call i8 @llvm.usub.sat.i8(i8 %arg0.1, i8 %arg1.1)
+  %add.2 = call i8 @llvm.usub.sat.i8(i8 %arg0.2, i8 %arg1.2)
+  %add.3 = call i8 @llvm.usub.sat.i8(i8 %arg0.3, i8 %arg1.3)
+  %ins.0 = insertelement <4 x i8> undef, i8 %add.0, i64 0
+  %ins.1 = insertelement <4 x i8> %ins.0, i8 %add.1, i64 1
+  %ins.2 = insertelement <4 x i8> %ins.1, i8 %add.2, i64 2
+  %ins.3 = insertelement <4 x i8> %ins.2, i8 %add.3, i64 3
+  ret <4 x i8> %ins.3
+
+}
+
+
 declare i16 @llvm.uadd.sat.i16(i16, i16) #0
 declare i16 @llvm.usub.sat.i16(i16, i16) #0
 declare i16 @llvm.sadd.sat.i16(i16, i16) #0
 declare i16 @llvm.ssub.sat.i16(i16, i16) #0
+
+declare i8 @llvm.uadd.sat.i8(i8, i8) #0
+declare i8 @llvm.usub.sat.i8(i8, i8) #0
 
 declare i32 @llvm.uadd.sat.i32(i32, i32) #0
 declare i32 @llvm.usub.sat.i32(i32, i32) #0

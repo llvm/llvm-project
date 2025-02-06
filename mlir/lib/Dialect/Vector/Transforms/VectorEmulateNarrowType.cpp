@@ -278,23 +278,25 @@ static Value dynamicallyInsertSubVector(RewriterBase &rewriter, Location loc,
   return dest;
 }
 
-/// Returns the op sequence for an emulated sub-byte data type vector load.
-/// specifically, use `emulatedElemType` for loading a vector of `origElemType`.
-/// The load location is given by `base` and `linearizedIndices`, and the
-/// load size is given by `numEmulatedElementsToLoad`.
+/// Emulate a vector load for `emulatedElemTy` using `containerElemTy`
+///
+/// Specifically, use `containerElemTy` for loading a vector of
+/// `emulatedElemTy`. The load location is given by `base` and
+/// `linearizedIndices`, and the load size is given by
+/// `numEmulatedElementsToLoad`.
 static VectorValue emulatedVectorLoad(OpBuilder &rewriter, Location loc,
                                       Value base,
                                       OpFoldResult linearizedIndices,
-                                      int64_t numEmultedElementsToLoad,
-                                      Type origElemType,
-                                      Type emulatedElemType) {
-  auto scale = emulatedElemType.getIntOrFloatBitWidth() /
-               origElemType.getIntOrFloatBitWidth();
+                                      int64_t numContainerElemsToLoad,
+                                      Type emulatedElemTy,
+                                      Type containerElemTy) {
+  auto scale = containerElemTy.getIntOrFloatBitWidth() /
+               emulatedElemTy.getIntOrFloatBitWidth();
   auto newLoad = rewriter.create<vector::LoadOp>(
-      loc, VectorType::get(numEmultedElementsToLoad, emulatedElemType), base,
+      loc, VectorType::get(numContainerElemsToLoad, containerElemTy), base,
       getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
   return rewriter.create<vector::BitCastOp>(
-      loc, VectorType::get(numEmultedElementsToLoad * scale, origElemType),
+      loc, VectorType::get(numContainerElemsToLoad * scale, emulatedElemTy),
       newLoad);
 }
 

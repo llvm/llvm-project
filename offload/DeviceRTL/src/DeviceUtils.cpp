@@ -15,8 +15,6 @@
 #include "Interface.h"
 #include "Mapping.h"
 
-#pragma omp begin declare target device_type(nohost)
-
 using namespace ompx;
 
 extern "C" [[gnu::weak]] int IsSPMDMode;
@@ -32,8 +30,6 @@ __keep_alive() {
 }
 
 namespace impl {
-
-bool isSharedMemPtr(const void *Ptr) { return false; }
 
 void Unpack(uint64_t Val, uint32_t *LowBits, uint32_t *HighBits) {
   static_assert(sizeof(unsigned long) == 8, "");
@@ -54,7 +50,7 @@ uint64_t ballotSync(uint64_t Mask, int32_t Pred);
 /// AMDGCN Implementation
 ///
 ///{
-#pragma omp begin declare variant match(device = {arch(amdgcn)})
+#ifdef __AMDGPU__
 
 int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane, int32_t Width) {
   int Self = mapping::getThreadIdInWarp();
@@ -78,15 +74,13 @@ bool isSharedMemPtr(const void *Ptr) {
   return __builtin_amdgcn_is_shared(
       (const __attribute__((address_space(0))) void *)Ptr);
 }
-#pragma omp end declare variant
+#endif
 ///}
 
 /// NVPTX Implementation
 ///
 ///{
-#pragma omp begin declare variant match(                                       \
-        device = {arch(nvptx, nvptx64)},                                       \
-            implementation = {extension(match_any)})
+#ifdef __NVPTX__
 
 int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane, int32_t Width) {
   return __nvvm_shfl_sync_idx_i32(Mask, Var, SrcLane, Width - 1);
@@ -103,7 +97,7 @@ uint64_t ballotSync(uint64_t Mask, int32_t Pred) {
 
 bool isSharedMemPtr(const void *Ptr) { return __nvvm_isspacep_shared(Ptr); }
 
-#pragma omp end declare variant
+#endif
 ///}
 } // namespace impl
 
@@ -149,5 +143,3 @@ int64_t __kmpc_shuffle_int64(int64_t Val, int16_t Delta, int16_t Width) {
   return utils::shuffleDown(lanes::All, Val, Delta, Width);
 }
 }
-
-#pragma omp end declare target

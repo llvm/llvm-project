@@ -78,3 +78,11 @@ setx (0x0123456700000000+0x0000000089abcdef), %g1, %o0
 ! V9: sllx %g1, 32, %g1                       ! encoding: [0x83,0x28,0x70,0x20]
 ! V9: or %g1, %o0, %o0                        ! encoding: [0x90,0x10,0x40,0x08]
 setx (.BB1-.BB0), %g1, %o0
+
+!! In V9, setuw is a mnemonic alias for set.
+! V8:      error: invalid instruction mnemonic
+! V9: sethi %hi(32768), %g1            ! encoding: [0x03,0b00AAAAAA,A,A]
+! V9:                                  !   fixup A - offset: 0, value: %hi(32768), kind: fixup_sparc_hi22
+setuw 32768, %g1
+! V9: mov 1, %g1 ! encoding: [0x82,0x10,0x20,0x01]
+setuw 1, %g1
