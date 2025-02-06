@@ -61,6 +61,14 @@ template <typename CRTPImpl, size_t PtrSize> struct CompactUnwindTraits {
     return support::endian::read32<CRTPImpl::Endianness>(RecordContent.data() +
                                                          EncodingFieldOffset);
   }
+
+  static std::optional<uint32_t> encodeDWARFOffset(size_t Delta) {
+    uint32_t Encoded =
+        static_cast<uint32_t>(Delta) & CRTPImpl::DWARFSectionOffsetMask;
+    if (Encoded != Delta)
+      return std::nullopt;
+    return Encoded;
+  }
 };
 
 /// Architecture specific implementation of CompactUnwindManager.
@@ -133,19 +141,22 @@ public:
                  << Fn.getName() << "\n";
         });
         continue;
-      } else {
-        LLVM_DEBUG({
-          dbgs() << "    Found record for function ";
-          if (Fn.hasName())
-            dbgs() << Fn.getName();
-          else
-            dbgs() << "<anon @ " << Fn.getAddress() << '>';
-          dbgs() << '\n';
-        });
       }
 
-      bool NeedsDWARF = CURecTraits::encodingSpecifiesDWARF(
-          CURecTraits::readEncoding(B->getContent()));
+      uint32_t Encoding = CURecTraits::readEncoding(B->getContent());
+      bool NeedsDWARF = CURecTraits::encodingSpecifiesDWARF(Encoding);
+
+      LLVM_DEBUG({
+        dbgs() << "    Found record for function ";
+        if (Fn.hasName())
+          dbgs() << Fn.getName();
+        else
+          dbgs() << "<anon @ " << Fn.getAddress() << '>';
+        dbgs() << ": encoding = " << formatv("{0:x}", Encoding);
+        if (NeedsDWARF)
+          dbgs() << " (needs DWARF)";
+        dbgs() << "\n";
+      });
 
       auto &CURecSym =
           G.addAnonymousSymbol(*B, 0, CURecTraits::Size, false, false);
@@ -170,7 +181,7 @@ public:
           KeepAliveAlreadyPresent = true;
           if (NeedsDWARF) {
             LLVM_DEBUG({
-              dbgs() << "      Needs DWARF: adding keep-alive edge to FDE at "
+              dbgs() << "      Adding keep-alive edge to FDE at "
                      << FDE.getAddress() << "\n";
             });
             B->addEdge(Edge::KeepAlive, 0, FDE, 0);
@@ -595,8 +606,24 @@ private:
             ", delta to function at " + formatv("{0:x}", R.Fn->getAddress()) +
             " exceeds 32 bits");
 
+      auto Encoding = R.Encoding;
+
+      if (LLVM_UNLIKELY(CURecTraits::encodingSpecifiesDWARF(R.Encoding))) {
+        if (!EHFrameBase)
+          EHFrameBase = SectionRange(R.FDE->getSection()).getStart();
+        auto FDEDelta = R.FDE->getAddress() - EHFrameBase;
+
+        if (auto EncodedFDEDelta = CURecTraits::encodeDWARFOffset(FDEDelta))
+          Encoding |= *EncodedFDEDelta;
+        else
+          return make_error<JITLinkError>(
+              "In " + G.getName() + " " + UnwindInfoSectionName +
+              ", cannot encode delta " + formatv("{0:x}", FDEDelta) +
+              " to FDE at " + formatv("{0:x}", R.FDE->getAddress()));
+      }
+
       cantFail(W.writeInteger<uint32_t>(FnDelta));
-      cantFail(W.writeInteger<uint32_t>(R.Encoding));
+      cantFail(W.writeInteger<uint32_t>(Encoding));
 
       ++RecordIdx;
     }
@@ -639,6 +666,7 @@ private:
   StringRef UnwindInfoSectionName;
   StringRef EHFrameSectionName;
   Symbol *CompactUnwindBase = nullptr;
+  orc::ExecutorAddr EHFrameBase;
 
   size_t NumLSDAs = 0;
   size_t NumSecondLevelPages = 0;
