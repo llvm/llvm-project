@@ -1391,90 +1391,67 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
     std::optional<uint64_t> StmtSequenceOffset) const {
   if (Sequences.empty())
     return false;
+  uint64_t EndAddr = Address.Address + Size;
+  // First, find an instruction sequence containing the given address.
+  DWARFDebugLine::Sequence Sequence;
+  Sequence.SectionIndex = Address.SectionIndex;
+  Sequence.HighPC = Address.Address;
+  SequenceIter LastSeq = Sequences.end();
+  SequenceIter SeqPos;
 
-  const uint64_t EndAddr = Address.Address + Size;
+  if (StmtSequenceOffset) {
+    // If we have a statement sequence offset, find the specific sequence
+    // Binary search for sequence with matching StmtSeqOffset
+    Sequence.StmtSeqOffset = *StmtSequenceOffset;
+    SeqPos = std::lower_bound(Sequences.begin(), LastSeq, Sequence,
+                              [](const DWARFDebugLine::Sequence &LHS,
+                                 const DWARFDebugLine::Sequence &RHS) {
+                                return LHS.StmtSeqOffset < RHS.StmtSeqOffset;
+                              });
 
-  // Helper: Given a sequence and a starting address, find the subset
-  // of rows within [Address, EndAddr) and append them to `Result`.
-  auto addRowsFromSequence = [&](const Sequence &Seq,
-                                 object::SectionedAddress StartAddr,
-                                 uint64_t EndAddress, bool IsFirstSequence) {
-    // If this sequence does not intersect our [StartAddr, EndAddress) range,
-    // do nothing.
-    if (Seq.HighPC <= StartAddr.Address || Seq.LowPC >= EndAddress)
-      return;
+    // If sequence not found or doesn't contain the address, return false
+    if (SeqPos == LastSeq || SeqPos->StmtSeqOffset != *StmtSequenceOffset ||
+        !SeqPos->containsPC(Address))
+      return false;
 
-    // For the "first" sequence in the search, we must figure out which row
-    // actually starts within our address range.
-    uint32_t FirstRowIndex = Seq.FirstRowIndex;
-    if (IsFirstSequence)
-      FirstRowIndex = findRowInSeq(Seq, StartAddr);
+    // Set LastSeq to just past this sequence since we only want this one
+    LastSeq = std::next(SeqPos);
+  } else {
+    // No specific sequence requested, find first sequence containing address
+    SeqPos = std::upper_bound(Sequences.begin(), LastSeq, Sequence,
+                              DWARFDebugLine::Sequence::orderByHighPC);
+    if (SeqPos == LastSeq || !SeqPos->containsPC(Address))
+      return false;
+  }
 
-    // Similarly, compute the last row that is within [StartAddr, EndAddress).
+  SequenceIter StartPos = SeqPos;
+
+  // Process sequences that overlap with the desired range
+  while (SeqPos != LastSeq && SeqPos->LowPC < EndAddr) {
+    const DWARFDebugLine::Sequence &CurSeq = *SeqPos;
+    // For the first sequence, we need to find which row in the sequence is the
+    // first in our range.
+    uint32_t FirstRowIndex = CurSeq.FirstRowIndex;
+    if (SeqPos == StartPos)
+      FirstRowIndex = findRowInSeq(CurSeq, Address);
+
+    // Figure out the last row in the range.
     uint32_t LastRowIndex =
-        findRowInSeq(Seq, {EndAddress - 1, StartAddr.SectionIndex});
+        findRowInSeq(CurSeq, {EndAddr - 1, Address.SectionIndex});
     if (LastRowIndex == UnknownRowIndex)
-      LastRowIndex = Seq.LastRowIndex - 1;
+      LastRowIndex = CurSeq.LastRowIndex - 1;
 
     assert(FirstRowIndex != UnknownRowIndex);
     assert(LastRowIndex != UnknownRowIndex);
 
-    // Append all row indices in [FirstRowIndex, LastRowIndex].
     for (uint32_t I = FirstRowIndex; I <= LastRowIndex; ++I) {
       Result.push_back(I);
     }
-  };
 
-  // If a stmt_sequence_offset was provided, do a binary search to find the
-  // single sequence that matches that offset. Then add only its relevant rows.
-  if (StmtSequenceOffset) {
-    // Binary-search the Sequences by their StmtSeqOffset:
-    auto It = llvm::lower_bound(Sequences, *StmtSequenceOffset,
-                                [](const Sequence &Seq, uint64_t OffsetVal) {
-                                  return Seq.StmtSeqOffset < OffsetVal;
-                                });
-
-    // If not found or mismatched, there’s no match to return.
-    if (It == Sequences.end() || It->StmtSeqOffset != *StmtSequenceOffset)
-      return false;
-
-    // Now add rows from the discovered sequence if it intersects [Address,
-    // EndAddr).
-    addRowsFromSequence(*It, Address, EndAddr, /*IsFirstSequence=*/true);
-    return !Result.empty();
-  }
-
-  // Otherwise, fall back to logic of walking sequences by Address.
-  // We first find a sequence containing `Address` (via upper_bound on HighPC),
-  // then proceed forward through overlapping sequences in ascending order.
-
-  // Construct a dummy Sequence to find where `Address` fits by HighPC.
-  DWARFDebugLine::Sequence SearchSeq;
-  SearchSeq.SectionIndex = Address.SectionIndex;
-  SearchSeq.HighPC = Address.Address;
-
-  auto LastSeq = Sequences.end();
-  auto SeqPos = llvm::upper_bound(Sequences, SearchSeq,
-                                  DWARFDebugLine::Sequence::orderByHighPC);
-  if (SeqPos == LastSeq || !SeqPos->containsPC(Address))
-    return false;
-
-  // This marks the first sequence we found that might contain Address.
-  const auto StartPos = SeqPos;
-
-  // Walk forward until sequences no longer intersect [Address, EndAddr).
-  while (SeqPos != LastSeq && SeqPos->LowPC < EndAddr) {
-    // Add rows only if the sequence is in the same section:
-    if (SeqPos->SectionIndex == Address.SectionIndex) {
-      // For the very first sequence, we need the row that lines up with
-      // `Address`.
-      bool IsFirst = (SeqPos == StartPos);
-      addRowsFromSequence(*SeqPos, Address, EndAddr, IsFirst);
-    }
     ++SeqPos;
   }
 
-  return !Result.empty();
+  return true;
 }
 
 std::optional<StringRef>
