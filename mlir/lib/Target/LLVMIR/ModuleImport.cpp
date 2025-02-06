@@ -1788,6 +1788,9 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
       return failure();
 
+    // Handle parameter and result attributes.
+    convertParameterAttributes(invokeInst, invokeOp, builder);
+
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
     else
