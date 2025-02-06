@@ -315,9 +315,6 @@ private:
                               SDValue *Parts, unsigned NumParts, MVT PartVT,
                               std::optional<CallingConv::ID> CC) const override;
 
-  const TargetRegisterClass *getRegClassFor(MVT VT,
-                                            bool isDivergent) const override;
-
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;

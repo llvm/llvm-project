@@ -3137,13 +3137,6 @@ bool NVPTXTargetLowering::splitValueIntoRegisterParts(
   return false;
 }
 
-const TargetRegisterClass *
-NVPTXTargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
-  if (VT == MVT::v2f32)
-    return &NVPTX::Int64RegsRegClass;
-  return TargetLowering::getRegClassFor(VT, isDivergent);
-}
-
 // This creates target external symbol for a function parameter.
 // Name of the symbol is composed from its index and the function name.
 // Negative index corresponds to special parameter (unsized array) used for
