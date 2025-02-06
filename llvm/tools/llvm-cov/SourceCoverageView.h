@@ -287,7 +287,8 @@ protected:
                      CoverageData &&CoverageInfo)
       : SourceName(SourceName), File(File), Options(Options),
         CoverageInfo(std::move(CoverageInfo)),
-        BinaryCounters(Options.BinaryCounters) {}
+        BinaryCounters(Options.BinaryCounters ||
+                       CoverageInfo.getSingleByteCoverage()) {}
 
 public:
   static std::unique_ptr<SourceCoverageView>

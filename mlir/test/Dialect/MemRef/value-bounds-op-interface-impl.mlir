@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds -verify-diagnostics \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds))' -verify-diagnostics \
 // RUN:     -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @memref_alloc(
@@ -48,6 +48,17 @@ func.func @memref_dim(%m: memref<?xf32>) -> index {
   %0 = memref.dim %m, %c0 : memref<?xf32>
   %1 = "test.reify_bound"(%0) : (index) -> (index)
   return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_dim_all_positive(
+func.func @memref_dim_all_positive(%m: memref<?xf32>, %x: index) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.dim %m, %x : memref<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %c0) {cmp = "GE"} : (index, index) -> ()
+  return
 }
 
 // -----

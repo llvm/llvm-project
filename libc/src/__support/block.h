@@ -18,21 +18,11 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/math_extras.h"
 
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
-
-namespace internal {
-// Types of corrupted blocks, and functions to crash with an error message
-// corresponding to each type.
-enum class BlockStatus {
-  VALID,
-  MISALIGNED,
-  PREV_MISMATCHED,
-  NEXT_MISMATCHED,
-};
-} // namespace internal
 
 /// Returns the value rounded down to the nearest multiple of alignment.
 LIBC_INLINE constexpr size_t align_down(size_t value, size_t alignment) {
@@ -40,24 +30,10 @@ LIBC_INLINE constexpr size_t align_down(size_t value, size_t alignment) {
   return (value / alignment) * alignment;
 }
 
-/// Returns the value rounded down to the nearest multiple of alignment.
-template <typename T>
-LIBC_INLINE constexpr T *align_down(T *value, size_t alignment) {
-  return reinterpret_cast<T *>(
-      align_down(reinterpret_cast<size_t>(value), alignment));
-}
-
-/// Returns the value rounded up to the nearest multiple of alignment.
+/// Returns the value rounded up to the nearest multiple of alignment. May wrap
+/// around.
 LIBC_INLINE constexpr size_t align_up(size_t value, size_t alignment) {
-  __builtin_add_overflow(value, alignment - 1, &value);
-  return align_down(value, alignment);
-}
-
-/// Returns the value rounded up to the nearest multiple of alignment.
-template <typename T>
-LIBC_INLINE constexpr T *align_up(T *value, size_t alignment) {
-  return reinterpret_cast<T *>(
-      align_up(reinterpret_cast<size_t>(value), alignment));
+  return align_down(value + alignment - 1, alignment);
 }
 
 using ByteSpan = cpp::span<LIBC_NAMESPACE::cpp::byte>;
@@ -68,8 +44,8 @@ using cpp::optional;
 /// The blocks store their offsets to the previous and next blocks. The latter
 /// is also the block's size.
 ///
-/// Blocks will always be aligned to a `ALIGNMENT` boundary. Block sizes will
-/// always be rounded up to a multiple of `ALIGNMENT`.
+/// All blocks have their usable space aligned to some multiple of max_align_t.
+/// This also implies that block outer sizes are aligned to max_align_t.
 ///
 /// As an example, the diagram below represents two contiguous `Block`s. The
 /// indices indicate byte offsets:
@@ -122,15 +98,13 @@ class Block {
   static constexpr size_t SIZE_MASK = ~(PREV_FREE_MASK | LAST_MASK);
 
 public:
-  static constexpr size_t ALIGNMENT = cpp::max(alignof(max_align_t), size_t{4});
-  static const size_t BLOCK_OVERHEAD;
-
   // No copy or move.
   Block(const Block &other) = delete;
   Block &operator=(const Block &other) = delete;
 
-  /// Creates the first block for a given memory region, followed by a sentinel
-  /// last block. Returns the first block.
+  /// Initializes a given memory region into a first block and a sentinel last
+  /// block. Returns the first block, which has its usable space aligned to
+  /// max_align_t.
   static optional<Block *> init(ByteSpan region);
 
   /// @returns  A pointer to a `Block`, given a pointer to the start of the
@@ -142,11 +116,11 @@ public:
   ///           pointer will return a non-null pointer.
   LIBC_INLINE static Block *from_usable_space(void *usable_space) {
     auto *bytes = reinterpret_cast<cpp::byte *>(usable_space);
-    return reinterpret_cast<Block *>(bytes - BLOCK_OVERHEAD);
+    return reinterpret_cast<Block *>(bytes - sizeof(Block));
   }
   LIBC_INLINE static const Block *from_usable_space(const void *usable_space) {
     const auto *bytes = reinterpret_cast<const cpp::byte *>(usable_space);
-    return reinterpret_cast<const Block *>(bytes - BLOCK_OVERHEAD);
+    return reinterpret_cast<const Block *>(bytes - sizeof(Block));
   }
 
   /// @returns The total size of the block in bytes, including the header.
@@ -154,7 +128,7 @@ public:
 
   LIBC_INLINE static size_t outer_size(size_t inner_size) {
     // The usable region includes the prev_ field of the next block.
-    return inner_size - sizeof(prev_) + BLOCK_OVERHEAD;
+    return inner_size - sizeof(prev_) + sizeof(Block);
   }
 
   /// @returns The number of usable bytes inside the block were it to be
@@ -182,15 +156,23 @@ public:
   /// @returns The number of usable bytes inside a block with the given outer
   /// size if it remains free.
   LIBC_INLINE static size_t inner_size_free(size_t outer_size) {
-    return outer_size - BLOCK_OVERHEAD;
+    return outer_size - sizeof(Block);
   }
 
   /// @returns A pointer to the usable space inside this block.
+  ///
+  /// Aligned to some multiple of max_align_t.
   LIBC_INLINE cpp::byte *usable_space() {
-    return reinterpret_cast<cpp::byte *>(this) + BLOCK_OVERHEAD;
+    auto *s = reinterpret_cast<cpp::byte *>(this) + sizeof(Block);
+    LIBC_ASSERT(reinterpret_cast<uintptr_t>(s) % alignof(max_align_t) == 0 &&
+                "usable space must be aligned to a multiple of max_align_t");
+    return s;
   }
   LIBC_INLINE const cpp::byte *usable_space() const {
-    return reinterpret_cast<const cpp::byte *>(this) + BLOCK_OVERHEAD;
+    const auto *s = reinterpret_cast<const cpp::byte *>(this) + sizeof(Block);
+    LIBC_ASSERT(reinterpret_cast<uintptr_t>(s) % alignof(max_align_t) == 0 &&
+                "usable space must be aligned to a multiple of max_align_t");
+    return s;
   }
 
   // @returns The region of memory the block manages, including the header.
@@ -201,11 +183,12 @@ public:
   /// Attempts to split this block.
   ///
   /// If successful, the block will have an inner size of at least
-  /// `new_inner_size`, rounded to ensure that the split point is on an
-  /// ALIGNMENT boundary. The remaining space will be returned as a new block.
-  /// Note that the prev_ field of the next block counts as part of the inner
-  /// size of the returnd block.
-  optional<Block *> split(size_t new_inner_size);
+  /// `new_inner_size`. The remaining space will be returned as a new block,
+  /// with usable space aligned to `usable_space_alignment`. Note that the prev_
+  /// field of the next block counts as part of the inner size of the block.
+  /// `usable_space_alignment` must be a multiple of max_align_t.
+  optional<Block *> split(size_t new_inner_size,
+                          size_t usable_space_alignment = alignof(max_align_t));
 
   /// Merges this block with the one that comes after it.
   bool merge_next();
@@ -244,49 +227,62 @@ public:
     *new (&next()->prev_) size_t = outer_size();
   }
 
-  /// Marks this block as the last one in the chain. Makes next() return
-  /// nullptr.
-  LIBC_INLINE void mark_last() { next_ |= LAST_MASK; }
-
-  LIBC_INLINE constexpr Block(size_t outer_size) : next_(outer_size) {
-    LIBC_ASSERT(outer_size % ALIGNMENT == 0 && "block sizes must be aligned");
+  LIBC_INLINE Block(size_t outer_size, bool is_last) : next_(outer_size) {
+    // Last blocks are not usable, so they need not have sizes aligned to
+    // max_align_t. Their lower bits must still be free, so they must be aligned
+    // to Block.
+    LIBC_ASSERT(
+        outer_size % (is_last ? alignof(Block) : alignof(max_align_t)) == 0 &&
+        "block sizes must be aligned");
+    LIBC_ASSERT(is_usable_space_aligned(alignof(max_align_t)) &&
+                "usable space must be aligned to a multiple of max_align_t");
+    if (is_last)
+      next_ |= LAST_MASK;
   }
 
   LIBC_INLINE bool is_usable_space_aligned(size_t alignment) const {
     return reinterpret_cast<uintptr_t>(usable_space()) % alignment == 0;
   }
 
-  /// @returns The new inner size of this block that would give the usable
-  /// space of the next block the given alignment.
-  LIBC_INLINE size_t padding_for_alignment(size_t alignment) const {
-    if (is_usable_space_aligned(alignment))
+  // Returns the minimum inner size necessary for a block of that size to
+  // always be able to allocate at the given size and alignment.
+  //
+  // Returns 0 if there is no such size.
+  LIBC_INLINE static size_t min_size_for_allocation(size_t alignment,
+                                                    size_t size) {
+    LIBC_ASSERT(alignment >= alignof(max_align_t) &&
+                alignment % alignof(max_align_t) == 0 &&
+                "alignment must be multiple of max_align_t");
+
+    if (alignment == alignof(max_align_t))
+      return size;
+
+    // We must create a new block inside this one (splitting). This requires a
+    // block header in addition to the requested size.
+    if (add_overflow(size, sizeof(Block), size))
       return 0;
 
-    // We need to ensure we can always split this block into a "padding" block
-    // and the aligned block. To do this, we need enough extra space for at
-    // least one block.
+    // Beyond that, padding space may need to remain in this block to ensure
+    // that the usable space of the next block is aligned.
     //
-    // |block   |usable_space                          |
-    // |........|......................................|
-    //                            ^
-    //                            Alignment requirement
+    // Consider a position P of some lesser alignment, L, with maximal distance
+    // to the next position of some greater alignment, G, where G is a multiple
+    // of L. P must be one L unit past a G-aligned point. If it were one L-unit
+    // earlier, its distance would be zero. If it were one L-unit later, its
+    // distance would not be maximal. If it were not some integral number of L
+    // units away, it would not be L-aligned.
     //
+    // So the maximum distance would be G - L. As a special case, if L is 1
+    // (unaligned), the max distance is G - 1.
     //
-    // |block   |space   |block   |usable_space        |
-    // |........|........|........|....................|
-    //                            ^
-    //                            Alignment requirement
-    //
-    alignment = cpp::max(alignment, ALIGNMENT);
-    uintptr_t start = reinterpret_cast<uintptr_t>(usable_space());
-    uintptr_t next_usable_space = align_up(start + BLOCK_OVERHEAD, alignment);
-    uintptr_t next_block = next_usable_space - BLOCK_OVERHEAD;
-    return next_block - start + sizeof(prev_);
+    // This block's usable space is aligned to max_align_t >= Block. With zero
+    // padding, the next block's usable space is sizeof(Block) past it, which is
+    // a point aligned to Block. Thus the max padding needed is alignment -
+    // alignof(Block).
+    if (add_overflow(size, alignment - alignof(Block), size))
+      return 0;
+    return size;
   }
-
-  // Check that we can `allocate` a block with a given alignment and size from
-  // this existing block.
-  bool can_allocate(size_t alignment, size_t size) const;
 
   // This is the return type for `allocate` which can split one block into up to
   // three blocks.
@@ -309,20 +305,36 @@ public:
     Block *next;
   };
 
-  // Divide a block into up to 3 blocks according to `BlockInfo`. This should
-  // only be called if `can_allocate` returns true.
+  // Divide a block into up to 3 blocks according to `BlockInfo`. Behavior is
+  // undefined if allocation is not possible for the given size and alignment.
   static BlockInfo allocate(Block *block, size_t alignment, size_t size);
+
+  // These two functions may wrap around.
+  LIBC_INLINE static uintptr_t next_possible_block_start(
+      uintptr_t ptr, size_t usable_space_alignment = alignof(max_align_t)) {
+    return align_up(ptr + sizeof(Block), usable_space_alignment) -
+           sizeof(Block);
+  }
+  LIBC_INLINE static uintptr_t prev_possible_block_start(
+      uintptr_t ptr, size_t usable_space_alignment = alignof(max_align_t)) {
+    return align_down(ptr, usable_space_alignment) - sizeof(Block);
+  }
 
 private:
   /// Construct a block to represent a span of bytes. Overwrites only enough
   /// memory for the block header; the rest of the span is left alone.
   LIBC_INLINE static Block *as_block(ByteSpan bytes) {
-    return ::new (bytes.data()) Block(bytes.size());
+    LIBC_ASSERT(reinterpret_cast<uintptr_t>(bytes.data()) % alignof(Block) ==
+                    0 &&
+                "block start must be suitably aligned");
+    return ::new (bytes.data()) Block(bytes.size(), /*is_last=*/false);
   }
 
-  /// Like `split`, but assumes the caller has already checked to parameters to
-  /// ensure the split will succeed.
-  Block *split_impl(size_t new_inner_size);
+  LIBC_INLINE static void make_last_block(cpp::byte *start) {
+    LIBC_ASSERT(reinterpret_cast<uintptr_t>(start) % alignof(Block) == 0 &&
+                "block start must be suitably aligned");
+    ::new (start) Block(sizeof(Block), /*is_last=*/true);
+  }
 
   /// Offset from this block to the previous block. 0 if this is the first
   /// block. This field is only alive when the previous block is free;
@@ -343,81 +355,57 @@ private:
   ///   previous block is free.
   /// * If the `last` flag is set, the block is the sentinel last block. It is
   ///   summarily considered used and has no next block.
-} __attribute__((packed, aligned(cpp::max(alignof(max_align_t), size_t{4}))));
 
-inline constexpr size_t Block::BLOCK_OVERHEAD =
-    align_up(sizeof(Block), ALIGNMENT);
+public:
+  /// Only for testing.
+  static constexpr size_t PREV_FIELD_SIZE = sizeof(prev_);
+};
 
-LIBC_INLINE ByteSpan get_aligned_subspan(ByteSpan bytes, size_t alignment) {
-  if (bytes.data() == nullptr)
-    return ByteSpan();
-
-  auto unaligned_start = reinterpret_cast<uintptr_t>(bytes.data());
-  auto aligned_start = align_up(unaligned_start, alignment);
-  auto unaligned_end = unaligned_start + bytes.size();
-  auto aligned_end = align_down(unaligned_end, alignment);
-
-  if (aligned_end <= aligned_start)
-    return ByteSpan();
-
-  return bytes.subspan(aligned_start - unaligned_start,
-                       aligned_end - aligned_start);
-}
+static_assert(alignof(Block) >= 4,
+              "at least 2 bits must be available in block sizes for flags");
 
 LIBC_INLINE
 optional<Block *> Block::init(ByteSpan region) {
-  optional<ByteSpan> result = get_aligned_subspan(region, ALIGNMENT);
-  if (!result)
+  if (!region.data())
     return {};
 
-  region = result.value();
-  // Two blocks are allocated: a free block and a sentinel last block.
-  if (region.size() < 2 * BLOCK_OVERHEAD)
+  uintptr_t start = reinterpret_cast<uintptr_t>(region.data());
+  uintptr_t end = start + region.size();
+  if (end < start)
     return {};
 
-  if (cpp::numeric_limits<size_t>::max() < region.size())
+  uintptr_t block_start = next_possible_block_start(start);
+  if (block_start < start)
     return {};
 
-  Block *block = as_block(region.first(region.size() - BLOCK_OVERHEAD));
-  Block *last = as_block(region.last(BLOCK_OVERHEAD));
+  uintptr_t last_start = prev_possible_block_start(end);
+  if (last_start >= end)
+    return {};
+
+  if (block_start + sizeof(Block) > last_start)
+    return {};
+
+  auto *last_start_ptr = reinterpret_cast<cpp::byte *>(last_start);
+  Block *block =
+      as_block({reinterpret_cast<cpp::byte *>(block_start), last_start_ptr});
+  make_last_block(last_start_ptr);
   block->mark_free();
-  last->mark_last();
   return block;
 }
 
 LIBC_INLINE
-bool Block::can_allocate(size_t alignment, size_t size) const {
-  if (inner_size() < size)
-    return false;
-  if (is_usable_space_aligned(alignment))
-    return true;
-
-  // Alignment isn't met, so a padding block is needed. Determine amount of
-  // inner_size() consumed by the padding block.
-  size_t padding_size = padding_for_alignment(alignment) - sizeof(prev_);
-
-  // Check that there is room for the allocation in the following aligned block.
-  size_t aligned_inner_size = inner_size() - padding_size - BLOCK_OVERHEAD;
-  return size <= aligned_inner_size;
-}
-
-LIBC_INLINE
 Block::BlockInfo Block::allocate(Block *block, size_t alignment, size_t size) {
-  LIBC_ASSERT(
-      block->can_allocate(alignment, size) &&
-      "Calls to this function for a given alignment and size should only be "
-      "done if `can_allocate` for these parameters returns true.");
+  LIBC_ASSERT(alignment % alignof(max_align_t) == 0 &&
+              "alignment must be a multiple of max_align_t");
 
   BlockInfo info{block, /*prev=*/nullptr, /*next=*/nullptr};
 
   if (!info.block->is_usable_space_aligned(alignment)) {
     Block *original = info.block;
-    optional<Block *> maybe_aligned_block =
-        original->split(info.block->padding_for_alignment(alignment));
+    // The padding block has no minimum size requirement.
+    optional<Block *> maybe_aligned_block = original->split(0, alignment);
     LIBC_ASSERT(maybe_aligned_block.has_value() &&
-                "This split should always result in a new block. The check in "
-                "`can_allocate` ensures that we have enough space here to make "
-                "two blocks.");
+                "it should always be possible to split for alignment");
 
     if (Block *prev = original->prev_free()) {
       // If there is a free block before this, we can merge the current one with
@@ -441,37 +429,40 @@ Block::BlockInfo Block::allocate(Block *block, size_t alignment, size_t size) {
 }
 
 LIBC_INLINE
-optional<Block *> Block::split(size_t new_inner_size) {
+optional<Block *> Block::split(size_t new_inner_size,
+                               size_t usable_space_alignment) {
+  LIBC_ASSERT(usable_space_alignment % alignof(max_align_t) == 0 &&
+              "alignment must be a multiple of max_align_t");
   if (used())
     return {};
-  // The prev_ field of the next block is always available, so there is a
-  // minimum size to a block created through splitting.
-  if (new_inner_size < sizeof(prev_))
-    new_inner_size = sizeof(prev_);
 
-  size_t old_inner_size = inner_size();
-  new_inner_size =
-      align_up(new_inner_size - sizeof(prev_), ALIGNMENT) + sizeof(prev_);
-  if (old_inner_size < new_inner_size)
+  // Compute the minimum outer size that produces a block of at least
+  // `new_inner_size`.
+  size_t min_outer_size = outer_size(cpp::max(new_inner_size, sizeof(prev_)));
+
+  uintptr_t start = reinterpret_cast<uintptr_t>(this);
+  uintptr_t next_block_start =
+      next_possible_block_start(start + min_outer_size, usable_space_alignment);
+  if (next_block_start < start)
+    return {};
+  size_t new_outer_size = next_block_start - start;
+  LIBC_ASSERT(new_outer_size % alignof(max_align_t) == 0 &&
+              "new size must be aligned to max_align_t");
+
+  if (outer_size() < new_outer_size ||
+      outer_size() - new_outer_size < sizeof(Block))
     return {};
 
-  if (old_inner_size - new_inner_size < BLOCK_OVERHEAD)
-    return {};
-
-  return split_impl(new_inner_size);
-}
-
-LIBC_INLINE
-Block *Block::split_impl(size_t new_inner_size) {
-  size_t outer_size1 = outer_size(new_inner_size);
-  LIBC_ASSERT(outer_size1 % ALIGNMENT == 0 && "new size must be aligned");
-  ByteSpan new_region = region().subspan(outer_size1);
+  ByteSpan new_region = region().subspan(new_outer_size);
   next_ &= ~SIZE_MASK;
-  next_ |= outer_size1;
+  next_ |= new_outer_size;
 
   Block *new_block = as_block(new_region);
   mark_free(); // Free status for this block is now stored in new_block.
   new_block->next()->prev_ = new_region.size();
+
+  LIBC_ASSERT(new_block->is_usable_space_aligned(usable_space_alignment) &&
+              "usable space must have requested alignment");
   return new_block;
 }
 

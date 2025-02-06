@@ -964,7 +964,7 @@ HTMLGenerator::generateDocs(StringRef RootDir,
   for (const auto &Group : FileToInfos) {
     std::error_code FileErr;
     llvm::raw_fd_ostream InfoOS(Group.getKey(), FileErr,
-                                llvm::sys::fs::OF_None);
+                                llvm::sys::fs::OF_Text);
     if (FileErr) {
       return llvm::createStringError(FileErr, "Error opening file '%s'",
                                      Group.getKey().str().c_str());
@@ -1047,7 +1047,7 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   llvm::SmallString<128> FilePath;
   llvm::sys::path::native(CDCtx.OutDirectory, FilePath);
   llvm::sys::path::append(FilePath, "index_json.js");
-  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_Text);
   if (FileErr != OK) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "error creating index file: " +
@@ -1108,7 +1108,7 @@ static llvm::Error genIndex(const ClangDocContext &CDCtx) {
   llvm::SmallString<128> IndexPath;
   llvm::sys::path::native(CDCtx.OutDirectory, IndexPath);
   llvm::sys::path::append(IndexPath, "index.html");
-  llvm::raw_fd_ostream IndexOS(IndexPath, FileErr, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream IndexOS(IndexPath, FileErr, llvm::sys::fs::OF_Text);
   if (FileErr != OK) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "error creating main index: " +

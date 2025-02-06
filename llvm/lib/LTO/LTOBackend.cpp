@@ -351,6 +351,14 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   MPM.run(Mod, MAM);
 }
 
+static bool isEmptyModule(const Module &Mod) {
+  // Module is empty if it has no functions, no globals, no inline asm and no
+  // named metadata (aliases and ifuncs require functions or globals so we
+  // don't need to check those explicitly).
+  return Mod.empty() && Mod.global_empty() && Mod.named_metadata_empty() &&
+         Mod.getModuleInlineAsm().empty();
+}
+
 bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
               bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
               const ModuleSummaryIndex *ImportSummary,
@@ -372,9 +380,16 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
                                /*EmbedBitcode*/ true, /*EmbedCmdline*/ true,
                                /*Cmdline*/ CmdArgs);
   }
-  // FIXME: Plumb the combined index into the new pass manager.
-  runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
-                 ImportSummary);
+  // No need to run any opt passes if the module is empty.
+  // In theory these passes should take almost no time for an empty
+  // module, however, this guards against doing any unnecessary summary-based
+  // analysis in the case of a ThinLTO build where this might be an empty
+  // regular LTO combined module, with a large combined index from ThinLTO.
+  if (!isEmptyModule(Mod)) {
+    // FIXME: Plumb the combined index into the new pass manager.
+    runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
+                   ImportSummary);
+  }
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
@@ -422,8 +437,14 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   legacy::PassManager CodeGenPasses;
   TargetLibraryInfoImpl TLII(Triple(Mod.getTargetTriple()));
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
-  CodeGenPasses.add(
-      createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
+  // No need to make index available if the module is empty.
+  // In theory these passes should not use the index for an empty
+  // module, however, this guards against doing any unnecessary summary-based
+  // analysis in the case of a ThinLTO build where this might be an empty
+  // regular LTO combined module, with a large combined index from ThinLTO.
+  if (!isEmptyModule(Mod))
+    CodeGenPasses.add(
+        createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
   if (Conf.PreCodeGenPassesHook)
     Conf.PreCodeGenPassesHook(CodeGenPasses);
   if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,

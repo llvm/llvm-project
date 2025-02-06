@@ -265,7 +265,6 @@ void transform::ApplyFoldAddIntoDestPatternsOp::populatePatterns(
 void transform::ApplyPadVectorizationPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::populatePadOpVectorizationPatterns(patterns);
-  linalg::populateInsertSliceVectorizationPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2244,7 +2243,7 @@ transform::ConvertToLoopsOp::apply(transform::TransformRewriter &rewriter,
   SmallVector<Operation *> loops;
   for (Operation *target : state.getPayloadOps(getTarget())) {
     auto tilingOp = dyn_cast<TilingInterface>(*target);
-    if (!target) {
+    if (!tilingOp) {
       DiagnosedSilenceableFailure diag =
           emitSilenceableError()
           << "expected the payload to implement TilingInterface";
@@ -2626,12 +2625,19 @@ void transform::TileReductionUsingForOp::build(
 }
 
 DiagnosedSilenceableFailure transform::TileReductionUsingForOp::applyToOne(
-    transform::TransformRewriter &rewriter, LinalgOp target,
+    transform::TransformRewriter &rewriter, Operation *target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
+
+  auto partialReductionOp = dyn_cast<PartialReductionOpInterface>(target);
+  if (!partialReductionOp) {
+    return emitSilenceableFailure(
+        target->getLoc(),
+        "Operation should implement PartialReductionOpInterface");
+  }
   FailureOr<scf::SCFTilingResult> result = scf::tileReductionUsingScf(
-      rewriter, cast<PartialReductionOpInterface>(target.getOperation()),
+      rewriter, partialReductionOp,
       getAsOpFoldResult(rewriter.getI64ArrayAttr(getTileSizes())));
 
   if (failed(result))
@@ -3497,9 +3503,6 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 
   patterns.add<CopyVectorizationPattern>(ctx);
 
-  // Add misc. vectorization patterns (e.g. for tensor.insert_slice)
-  linalg::populateInsertSliceVectorizationPatterns(patterns);
-
   if (getVectorizePadding()) {
     linalg::populatePadOpVectorizationPatterns(patterns);
     // This creates an alternative path for lowering tensor.pad - by
@@ -3882,7 +3885,7 @@ DiagnosedSilenceableFailure transform::WinogradConv2DOp::applyToOne(
            << "this operation is not supported to convert to Winograd Conv2D";
   }
 
-  if (supported && failed(maybeTransformed)) {
+  if (failed(maybeTransformed)) {
     return emitSilenceableError() << "apply Winograd Conv2D failed";
   }
 
@@ -3920,7 +3923,7 @@ DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
     return diag;
   }
 
-  if (supported && failed(maybeTransformed)) {
+  if (failed(maybeTransformed)) {
     DiagnosedSilenceableFailure diag =
         emitSilenceableError() << "decompose Winograd operations failed";
     diag.attachNote(target->getLoc()) << "target op";

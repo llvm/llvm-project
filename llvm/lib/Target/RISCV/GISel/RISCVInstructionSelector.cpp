@@ -80,7 +80,6 @@ private:
   bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB) const;
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineIRBuilder &MIB) const;
-  bool selectMergeValues(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool selectUnmergeValues(MachineInstr &MI, MachineIRBuilder &MIB) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root,
@@ -129,8 +128,6 @@ private:
                           int OpIdx) const;
   void renderImmPlus1(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx) const;
-  void renderImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                 int OpIdx) const;
   void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;
 
@@ -732,8 +729,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_IMPLICIT_DEF:
     return selectImplicitDef(MI, MIB);
-  case TargetOpcode::G_MERGE_VALUES:
-    return selectMergeValues(MI, MIB);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(MI, MIB);
   default:
@@ -741,25 +736,12 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
 }
 
-bool RISCVInstructionSelector::selectMergeValues(MachineInstr &MI,
-                                                 MachineIRBuilder &MIB) const {
-  assert(MI.getOpcode() == TargetOpcode::G_MERGE_VALUES);
-
-  // Build a F64 Pair from operands
-  if (MI.getNumOperands() != 3)
-    return false;
-  Register Dst = MI.getOperand(0).getReg();
-  Register Lo = MI.getOperand(1).getReg();
-  Register Hi = MI.getOperand(2).getReg();
-  if (!isRegInFprb(Dst) || !isRegInGprb(Lo) || !isRegInGprb(Hi))
-    return false;
-  MI.setDesc(TII.get(RISCV::BuildPairF64Pseudo));
-  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-}
-
 bool RISCVInstructionSelector::selectUnmergeValues(
     MachineInstr &MI, MachineIRBuilder &MIB) const {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
+
+  if (!Subtarget->hasStdExtZfa())
+    return false;
 
   // Split F64 Src into two s32 parts
   if (MI.getNumOperands() != 3)
@@ -769,8 +751,17 @@ bool RISCVInstructionSelector::selectUnmergeValues(
   Register Hi = MI.getOperand(1).getReg();
   if (!isRegInFprb(Src) || !isRegInGprb(Lo) || !isRegInGprb(Hi))
     return false;
-  MI.setDesc(TII.get(RISCV::SplitF64Pseudo));
-  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+
+  MachineInstr *ExtractLo = MIB.buildInstr(RISCV::FMV_X_W_FPR64, {Lo}, {Src});
+  if (!constrainSelectedInstRegOperands(*ExtractLo, TII, TRI, RBI))
+    return false;
+
+  MachineInstr *ExtractHi = MIB.buildInstr(RISCV::FMVH_X_D, {Hi}, {Src});
+  if (!constrainSelectedInstRegOperands(*ExtractHi, TII, TRI, RBI))
+    return false;
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
@@ -842,15 +833,6 @@ void RISCVInstructionSelector::renderImmPlus1(MachineInstrBuilder &MIB,
          "Expected G_CONSTANT");
   int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
   MIB.addImm(CstVal + 1);
-}
-
-void RISCVInstructionSelector::renderImm(MachineInstrBuilder &MIB,
-                                         const MachineInstr &MI,
-                                         int OpIdx) const {
-  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
-         "Expected G_CONSTANT");
-  int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
-  MIB.addImm(CstVal);
 }
 
 void RISCVInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,

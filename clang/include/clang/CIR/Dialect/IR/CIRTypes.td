@@ -220,8 +220,8 @@ def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
 
 // Constraints
 
-def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_FP80, CIR_FP128, CIR_LongDouble,
-    CIR_FP16, CIR_BFloat16]>;
+def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_FP80, CIR_FP128,
+                             CIR_LongDouble, CIR_FP16, CIR_BFloat16]>;
 def CIR_AnyIntOrFloat: AnyTypeOf<[CIR_AnyFloat, CIR_IntType]>;
 
 //===----------------------------------------------------------------------===//
@@ -349,5 +349,13 @@ def VoidPtr : Type<
       "cir::PointerType::get($_builder.getContext(),"
       "cir::VoidType::get($_builder.getContext()))"> {
 }
+
+//===----------------------------------------------------------------------===//
+// Global type constraints
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyType : AnyTypeOf<[
+  CIR_VoidType, CIR_IntType, CIR_AnyFloat, CIR_PointerType, CIR_FuncType
+]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

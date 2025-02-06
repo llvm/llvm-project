@@ -109,6 +109,25 @@ define i64 @addmul6(i64 %a, i64 %b) {
   ret i64 %d
 }
 
+define i64 @disjointormul6(i64 %a, i64 %b) {
+; RV64I-LABEL: disjointormul6:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a2, a0, 1
+; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    sub a0, a0, a2
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: disjointormul6:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 1
+; RV64XTHEADBA-NEXT:    th.addsl a0, a1, a0, 1
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 6
+  %d = or disjoint i64 %c, %b
+  ret i64 %d
+}
+
 define i64 @addmul10(i64 %a, i64 %b) {
 ; RV64I-LABEL: addmul10:
 ; RV64I:       # %bb.0:
@@ -423,8 +442,8 @@ define i64 @add255mul180(i64 %a) {
 ; RV64XTHEADBA:       # %bb.0:
 ; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 2
 ; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 3
-; RV64XTHEADBA-NEXT:    li a1, 255
-; RV64XTHEADBA-NEXT:    th.addsl a0, a1, a0, 2
+; RV64XTHEADBA-NEXT:    slli a0, a0, 2
+; RV64XTHEADBA-NEXT:    addi a0, a0, 255
 ; RV64XTHEADBA-NEXT:    ret
   %c = mul i64 %a, 180
   %d = add i64 %c, 255
@@ -640,6 +659,39 @@ define i64 @mul288(i64 %a) {
 ; RV64XTHEADBA-NEXT:    ret
   %c = mul i64 %a, 288
   ret i64 %c
+}
+
+define i64 @sh1add_imm(i64 %0) {
+; CHECK-LABEL: sh1add_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, 5
+; CHECK-NEXT:    ret
+  %a = shl i64 %0, 1
+  %b = add i64 %a, 5
+  ret i64 %b
+}
+
+define i64 @sh2add_imm(i64 %0) {
+; CHECK-LABEL: sh2add_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    addi a0, a0, -6
+; CHECK-NEXT:    ret
+  %a = shl i64 %0, 2
+  %b = add i64 %a, -6
+  ret i64 %b
+}
+
+define i64 @sh3add_imm(i64 %0) {
+; CHECK-LABEL: sh3add_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    addi a0, a0, 7
+; CHECK-NEXT:    ret
+  %a = shl i64 %0, 3
+  %b = add i64 %a, 7
+  ret i64 %b
 }
 
 define i64 @mul258(i64 %a) {
@@ -983,12 +1035,18 @@ define i64 @add4104(i64 %a) {
 }
 
 define i64 @add4104_2(i64 %a) {
-; CHECK-LABEL: add4104_2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 1
-; CHECK-NEXT:    addiw a1, a1, 8
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: add4104_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1
+; RV64I-NEXT:    addiw a1, a1, 8
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: add4104_2:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    li a1, 1026
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 2
+; RV64XTHEADBA-NEXT:    ret
   %c = or disjoint i64 %a, 4104
   ret i64 %c
 }

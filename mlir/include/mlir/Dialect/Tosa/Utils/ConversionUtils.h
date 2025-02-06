@@ -229,6 +229,14 @@ SmallVector<T> applyTOSAPermutation(ArrayRef<T> input,
   return permuted;
 }
 
+// Computes shape value using tosa const_shape op.
+Value getTosaConstShape(PatternRewriter &rewriter, Location loc,
+                        llvm::ArrayRef<int64_t> shape);
+SmallVector<int64_t> convertFromMlirShape(ArrayRef<int64_t> shape);
+
+bool getConstShapeValue(Operation *op,
+                        llvm::SmallVector<int64_t> &result_shape);
+
 } // namespace tosa
 } // namespace mlir
 

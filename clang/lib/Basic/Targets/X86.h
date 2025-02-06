@@ -46,6 +46,7 @@ static const unsigned X86AddrSpaceMap[] = {
     271, // ptr32_uptr
     272, // ptr64
     0,   // hlsl_groupshared
+    0,   // hlsl_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -384,7 +385,7 @@ public:
     return CPU != llvm::X86::CK_None;
   }
 
-  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
+  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool setFPMath(StringRef Name) override;
 
@@ -508,7 +509,7 @@ public:
       MaxAtomicInlineWidth = 64;
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {
@@ -532,6 +533,14 @@ public:
     IntPtrType = SignedLong;
     PtrDiffType = SignedLong;
   }
+};
+
+class LLVM_LIBRARY_VISIBILITY AppleMachOI386TargetInfo
+    : public AppleMachOTargetInfo<X86_32TargetInfo> {
+public:
+  AppleMachOI386TargetInfo(const llvm::Triple &Triple,
+                           const TargetOptions &Opts)
+      : AppleMachOTargetInfo<X86_32TargetInfo>(Triple, Opts) {}
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinI386TargetInfo
@@ -812,7 +821,7 @@ public:
       MaxAtomicInlineWidth = 128;
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {

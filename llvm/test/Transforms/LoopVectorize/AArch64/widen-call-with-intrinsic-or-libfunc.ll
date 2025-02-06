@@ -41,10 +41,11 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:        IR   %cmp = icmp ne i64 %iv.next, 1024
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -86,10 +87,11 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:        IR   %cmp = icmp ne i64 %iv.next, 1024
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:

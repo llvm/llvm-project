@@ -284,6 +284,18 @@ public:
     setValueSubclassData((getSubclassDataFromValue() & 0xc00f) | (ID << 4));
   }
 
+  /// Does it have a kernel calling convention?
+  bool hasKernelCallingConv() const {
+    switch (getCallingConv()) {
+    default:
+      return false;
+    case CallingConv::PTX_Kernel:
+    case CallingConv::AMDGPU_KERNEL:
+    case CallingConv::SPIR_KERNEL:
+      return true;
+    }
+  }
+
   enum ProfileCountType { PCT_Real, PCT_Synthetic };
 
   /// Class to represent profile counts.

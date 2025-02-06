@@ -85,7 +85,7 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
-  unsigned StreamingHazardSize;
+  std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 1;
@@ -129,6 +129,8 @@ public:
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
                    bool HasMinSize = false);
+
+  virtual unsigned getHwModeSet() const override;
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -179,7 +181,10 @@ public:
 
   /// Returns the size of memory region that if accessed by both the CPU and
   /// the SME unit could result in a hazard. 0 = disabled.
-  unsigned getStreamingHazardSize() const { return StreamingHazardSize; }
+  unsigned getStreamingHazardSize() const {
+    return StreamingHazardSize.value_or(
+        !hasSMEFA64() && hasSME() && hasSVE() ? 1024 : 0);
+  }
 
   /// Returns true if the target has NEON and the function at runtime is known
   /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE

@@ -277,9 +277,15 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     list( APPEND dirs amdgpu )
   endif()
 
-  # nvptx is special
+  # Some targets' directories alias others
   if( ${ARCH} STREQUAL nvptx OR ${ARCH} STREQUAL nvptx64 )
     set( DARCH ptx )
+  elseif( ${ARCH} STREQUAL clspv OR ${ARCH} STREQUAL clspv64 )
+    set( DARCH clspv )
+  elseif( ${ARCH} STREQUAL spirv OR ${ARCH} STREQUAL spirv64 )
+    set( DARCH spirv )
+  elseif( ${ARCH} STREQUAL amdgcn-mesa3d )
+    set( DARCH amdgcn-amdhsa )
   else()
     set( DARCH ${ARCH} )
   endif()

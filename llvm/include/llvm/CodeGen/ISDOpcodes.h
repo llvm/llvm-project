@@ -1480,6 +1480,10 @@ enum NodeType {
   // Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
+  // Finds the index of the last active mask element
+  // Operands: Mask
+  VECTOR_FIND_LAST_ACTIVE,
+
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address
   // Outputs: Output Chain
@@ -1494,6 +1498,10 @@ enum NodeType {
 inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
 }
+
+/// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
+/// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
+NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
 
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.

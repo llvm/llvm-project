@@ -1430,6 +1430,34 @@ m_NUWAddLike(const LHS &L, const RHS &R) {
   return m_CombineOr(m_NUWAdd(L, R), m_DisjointOr(L, R));
 }
 
+template <typename LHS, typename RHS>
+struct XorLike_match {
+  LHS L;
+  RHS R;
+
+  XorLike_match(const LHS &L, const RHS &R) : L(L), R(R) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *Op = dyn_cast<BinaryOperator>(V)) {
+      if (Op->getOpcode() == Instruction::Sub && Op->hasNoUnsignedWrap() &&
+          PatternMatch::match(Op->getOperand(0), m_LowBitMask()))
+		  ; // Pass
+      else if (Op->getOpcode() != Instruction::Xor)
+        return false;
+      return (L.match(Op->getOperand(0)) && R.match(Op->getOperand(1))) ||
+             (L.match(Op->getOperand(1)) && R.match(Op->getOperand(0)));
+    }
+    return false;
+  }
+};
+
+/// Match either `(xor L, R)`, `(xor R, L)` or `(sub nuw R, L)` iff `R.isMask()`
+/// Only commutative matcher as the `sub` will need to swap the L and R.
+template <typename LHS, typename RHS>
+inline auto m_c_XorLike(const LHS &L, const RHS &R) {
+  return XorLike_match<LHS, RHS>(L, R);
+}
+
 //===----------------------------------------------------------------------===//
 // Class that matches a group of binary opcodes.
 //
@@ -1844,9 +1872,9 @@ struct m_ZeroMask {
 };
 
 struct m_SpecificMask {
-  ArrayRef<int> &MaskRef;
-  m_SpecificMask(ArrayRef<int> &MaskRef) : MaskRef(MaskRef) {}
-  bool match(ArrayRef<int> Mask) { return MaskRef == Mask; }
+  ArrayRef<int> Val;
+  m_SpecificMask(ArrayRef<int> Val) : Val(Val) {}
+  bool match(ArrayRef<int> Mask) { return Val == Mask; }
 };
 
 struct m_SplatOrPoisonMask {
@@ -2870,7 +2898,7 @@ template <typename Opnd_t> struct Signum_match {
       return false;
 
     unsigned ShiftWidth = TypeSize - 1;
-    Value *OpL = nullptr, *OpR = nullptr;
+    Value *Op;
 
     // This is the representation of signum we match:
     //
@@ -2882,11 +2910,11 @@ template <typename Opnd_t> struct Signum_match {
     //
     // for i1 values.
 
-    auto LHS = m_AShr(m_Value(OpL), m_SpecificInt(ShiftWidth));
-    auto RHS = m_LShr(m_Neg(m_Value(OpR)), m_SpecificInt(ShiftWidth));
-    auto Signum = m_Or(LHS, RHS);
+    auto LHS = m_AShr(m_Value(Op), m_SpecificInt(ShiftWidth));
+    auto RHS = m_LShr(m_Neg(m_Deferred(Op)), m_SpecificInt(ShiftWidth));
+    auto Signum = m_c_Or(LHS, RHS);
 
-    return Signum.match(V) && OpL == OpR && Val.match(OpL);
+    return Signum.match(V) && Val.match(Op);
   }
 };
 

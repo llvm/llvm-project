@@ -33,9 +33,9 @@ define void @test2() nounwind uwtable ssp {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[OLD:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[NEW:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @otherf(ptr nocapture [[NEW]])
+; CHECK-NEXT:    call void @otherf(ptr captures(none) [[NEW]])
 ; CHECK-NEXT:    store atomic i32 0, ptr @x unordered, align 4
-; CHECK-NEXT:    call void @otherf(ptr nocapture [[NEW]])
+; CHECK-NEXT:    call void @otherf(ptr captures(none) [[NEW]])
 ; CHECK-NEXT:    ret void
 ;
   %old = alloca i32

@@ -1,6 +1,14 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("RISCVGenExegesis") {
+  args = [ "-gen-exegesis" ]
+  td_file = "//llvm/lib/Target/RISCV/RISCV.td"
+}
+
 static_library("RISCV") {
   output_name = "LLVMExegesisRISCV"
   deps = [
+    ":RISCVGenExegesis",
     "//llvm/lib/CodeGen",
     "//llvm/lib/IR",
     "//llvm/lib/Support",

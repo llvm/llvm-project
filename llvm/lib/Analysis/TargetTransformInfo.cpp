@@ -864,11 +864,12 @@ bool TargetTransformInfo::shouldPrefetchAddressSpace(unsigned AS) const {
 }
 
 InstructionCost TargetTransformInfo::getPartialReductionCost(
-    unsigned Opcode, Type *InputType, Type *AccumType, ElementCount VF,
-    PartialReductionExtendKind OpAExtend, PartialReductionExtendKind OpBExtend,
-    std::optional<unsigned> BinOp) const {
-  return TTIImpl->getPartialReductionCost(Opcode, InputType, AccumType, VF,
-                                          OpAExtend, OpBExtend, BinOp);
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, PartialReductionExtendKind OpAExtend,
+    PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp) const {
+  return TTIImpl->getPartialReductionCost(Opcode, InputTypeA, InputTypeB,
+                                          AccumType, VF, OpAExtend, OpBExtend,
+                                          BinOp);
 }
 
 unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {
@@ -1152,6 +1153,15 @@ InstructionCost TargetTransformInfo::getGatherScatterOpCost(
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getExpandCompressMemoryOpCost(
+    unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+    TTI::TargetCostKind CostKind, const Instruction *I) const {
+  InstructionCost Cost = TTIImpl->getExpandCompressMemoryOpCost(
+      Opcode, DataTy, VariableMask, Alignment, CostKind, I);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost TargetTransformInfo::getStridedMemoryOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
@@ -1382,6 +1392,14 @@ bool TargetTransformInfo::hasArmWideBranch(bool Thumb) const {
   return TTIImpl->hasArmWideBranch(Thumb);
 }
 
+uint64_t TargetTransformInfo::getFeatureMask(const Function &F) const {
+  return TTIImpl->getFeatureMask(F);
+}
+
+bool TargetTransformInfo::isMultiversionedFunction(const Function &F) const {
+  return TTIImpl->isMultiversionedFunction(F);
+}
+
 unsigned TargetTransformInfo::getMaxNumArgs() const {
   return TTIImpl->getMaxNumArgs();
 }
@@ -1430,6 +1448,12 @@ unsigned
 TargetTransformInfo::getNumBytesToPadGlobalArray(unsigned Size,
                                                  Type *ArrayType) const {
   return TTIImpl->getNumBytesToPadGlobalArray(Size, ArrayType);
+}
+
+void TargetTransformInfo::collectKernelLaunchBounds(
+    const Function &F,
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
+  return TTIImpl->collectKernelLaunchBounds(F, LB);
 }
 
 TargetTransformInfo::Concept::~Concept() = default;

@@ -39,7 +39,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.split:
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
-; CHECK-NEXT: Successor(s): ir-bb<e1>, middle.block
+; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<128>, vp<[[VTC]]>
@@ -47,18 +47,22 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT: Successor(s): ir-bb<e2>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
+; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:      No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<e2>:
 ; CHECK-NEXT:  IR %p2 = phi i64 [ 1, %loop.latch ] (extra operand: ir<1> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
+; CHECK-NEXT: vector.early.exit:
+; CHECK-NEXT: Successor(s): ir-bb<e1>
+; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<e1>:
-; CHECK-NEXT:   IR %p1 = phi i64 [ 0, %loop.header ] (extra operand: ir<0> from middle.split)
+; CHECK-NEXT:   IR %p1 = phi i64 [ 0, %loop.header ] (extra operand: ir<0> from vector.early.exit)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 entry:
@@ -121,7 +125,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.split:
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, middle.block
+; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<128>, vp<[[VTC]]>
@@ -129,14 +133,18 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
+; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:      No successors
 ; CHECK-EMPTY:
+; CHECK-NEXT: vector.early.exit:
+; CHECK-NEXT: Successor(s): ir-bb<exit>
+; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ] (extra operands: ir<1> from middle.block, ir<0> from middle.split)
+; CHECK-NEXT:   IR %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ] (extra operands: ir<1> from middle.block, ir<0> from vector.early.exit)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
@@ -196,7 +204,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.split:
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, middle.block
+; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<128>, vp<[[VTC]]>
@@ -204,14 +212,18 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
+; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:      No successors
 ; CHECK-EMPTY:
+; CHECK-NEXT: vector.early.exit:
+; CHECK-NEXT: Successor(s): ir-bb<exit>
+; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ] (extra operands: ir<1> from middle.block, ir<0> from middle.split)
+; CHECK-NEXT:   IR %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ] (extra operands: ir<1> from middle.block, ir<0> from vector.early.exit)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 

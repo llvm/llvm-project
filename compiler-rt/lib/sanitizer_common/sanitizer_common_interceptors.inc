@@ -520,14 +520,14 @@ INTERCEPTOR(int, strncmp, const char *s1, const char *s2, usize size) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, strncmp, s1, s2, size);
   unsigned char c1 = 0, c2 = 0;
-  uptr i;
+  usize i;
   for (i = 0; i < size; i++) {
     c1 = (unsigned char)s1[i];
     c2 = (unsigned char)s2[i];
     if (c1 != c2 || c1 == '\0') break;
   }
-  uptr i1 = i;
-  uptr i2 = i;
+  usize i1 = i;
+  usize i2 = i;
   if (common_flags()->strict_string_checks) {
     for (; i1 < size && s1[i1]; i1++) {}
     for (; i2 < size && s2[i2]; i2++) {}
@@ -583,14 +583,14 @@ INTERCEPTOR(int, strncasecmp, const char *s1, const char *s2, SIZE_T size) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, strncasecmp, s1, s2, size);
   unsigned char c1 = 0, c2 = 0;
-  uptr i;
+  usize i;
   for (i = 0; i < size; i++) {
     c1 = (unsigned char)s1[i];
     c2 = (unsigned char)s2[i];
     if (CharCaseCmp(c1, c2) != 0 || c1 == '\0') break;
   }
-  uptr i1 = i;
-  uptr i2 = i;
+  usize i1 = i;
+  usize i2 = i;
   if (common_flags()->strict_string_checks) {
     for (; i1 < size && s1[i1]; i1++) {}
     for (; i2 < size && s2[i2]; i2++) {}
@@ -851,7 +851,7 @@ int MemcmpInterceptorCommon(void *ctx,
       unsigned char c1 = 0, c2 = 0;
       const unsigned char *s1 = (const unsigned char*)a1;
       const unsigned char *s2 = (const unsigned char*)a2;
-      uptr i;
+      usize i;
       for (i = 0; i < size; i++) {
         c1 = s1[i];
         c2 = s2[i];

@@ -4,15 +4,15 @@
 
 !CHECK-LABEL:   func.func @_QPsimd_order() {
 subroutine simd_order
-   !CHECK: omp.simd order(reproducible:concurrent) {
+   !CHECK: omp.simd order(reproducible:concurrent) private({{.*}}) {
    !$omp simd order(concurrent)
    do i = 1, 10
    end do
-   !CHECK: omp.simd order(reproducible:concurrent) {
+   !CHECK: omp.simd order(reproducible:concurrent) private({{.*}}) {
    !$omp simd order(reproducible:concurrent)
    do i = 1, 10
    end do
-   !CHECK: omp.simd order(unconstrained:concurrent) {
+   !CHECK: omp.simd order(unconstrained:concurrent) private({{.*}}) {
    !$omp simd order(unconstrained:concurrent)
    do i = 1, 10
    end do
