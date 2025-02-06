@@ -432,7 +432,7 @@ __datasizeof
 ------------
 
 ``__datasizeof`` behaves like ``sizeof``, except that it returns the size of the
-type ignoring tail padding.
+type ignoring reusable tail padding according to the ABI.
 
 _BitInt, _ExtInt
 ----------------
