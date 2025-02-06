@@ -24,6 +24,7 @@
 #include <clc/clc.h>
 #include <clc/integer/clc_clz.h>
 #include <clc/integer/clc_mul_hi.h>
+#include <clc/math/clc_fma.h>
 #include <clc/math/clc_mad.h>
 #include <clc/math/clc_trunc.h>
 #include <clc/math/math.h>
@@ -124,7 +125,7 @@ _CLC_DEF void __clc_fullMulS(private float *hi, private float *lo, float a,
   if (__CLC_HAVE_HW_FMA32()) {
     float ph = a * b;
     *hi = ph;
-    *lo = fma(a, b, -ph);
+    *lo = __clc_fma(a, b, -ph);
   } else {
     float ah = as_float(as_uint(a) & 0xfffff000U);
     float at = a - ah;
@@ -312,7 +313,7 @@ _CLC_DEF int __clc_argReductionLargeS(private float *r, private float *rr,
 
   if (__CLC_HAVE_HW_FMA32()) {
     rh = q1 * pio2h;
-    rt = fma(q0, pio2h, fma(q1, pio2t, fma(q1, pio2h, -rh)));
+    rt = __clc_fma(q0, pio2h, __clc_fma(q1, pio2t, __clc_fma(q1, pio2h, -rh)));
   } else {
     float q1h = as_float(as_uint(q1) & 0xfffff000);
     float q1t = q1 - q1h;
@@ -349,7 +350,7 @@ _CLC_DEF void __clc_remainder_piby2_medium(double x, private double *r,
                                            private int *regn) {
   // How many pi/2 is x a multiple of?
   const double two_by_pi = 0x1.45f306dc9c883p-1;
-  double dnpi2 = __clc_trunc(fma(x, two_by_pi, 0.5));
+  double dnpi2 = __clc_trunc(__clc_fma(x, two_by_pi, 0.5));
 
   const double piby2_h = -7074237752028440.0 / 0x1.0p+52;
   const double piby2_m = -2483878800010755.0 / 0x1.0p+105;
@@ -357,11 +358,11 @@ _CLC_DEF void __clc_remainder_piby2_medium(double x, private double *r,
 
   // Compute product of npi2 with 159 bits of 2/pi
   double p_hh = piby2_h * dnpi2;
-  double p_ht = fma(piby2_h, dnpi2, -p_hh);
+  double p_ht = __clc_fma(piby2_h, dnpi2, -p_hh);
   double p_mh = piby2_m * dnpi2;
-  double p_mt = fma(piby2_m, dnpi2, -p_mh);
+  double p_mt = __clc_fma(piby2_m, dnpi2, -p_mh);
   double p_th = piby2_t * dnpi2;
-  double p_tt = fma(piby2_t, dnpi2, -p_th);
+  double p_tt = __clc_fma(piby2_t, dnpi2, -p_th);
 
   // Reduce to 159 bits
   double ph = p_hh;
@@ -469,13 +470,13 @@ _CLC_DEF void __clc_remainder_piby2_large(double x, private double *r,
 
   // Exact multiply
   double f0h = p0 * x;
-  double f0l = fma(p0, x, -f0h);
+  double f0l = __clc_fma(p0, x, -f0h);
   double f1h = p1 * x;
-  double f1l = fma(p1, x, -f1h);
+  double f1l = __clc_fma(p1, x, -f1h);
   double f2h = p2 * x;
-  double f2l = fma(p2, x, -f2h);
+  double f2l = __clc_fma(p2, x, -f2h);
   double f3h = p3 * x;
-  double f3l = fma(p3, x, -f3h);
+  double f3l = __clc_fma(p3, x, -f3h);
 
   // Accumulate product into 4 doubles
   double s, t;
@@ -533,7 +534,7 @@ _CLC_DEF void __clc_remainder_piby2_large(double x, private double *r,
   const double p2t = 4967757600021510.0 / 0x1.0p+106;
 
   double rhi = f3 * p2h;
-  double rlo = fma(f2, p2h, fma(f3, p2t, fma(f3, p2h, -rhi)));
+  double rlo = __clc_fma(f2, p2h, __clc_fma(f3, p2t, __clc_fma(f3, p2h, -rhi)));
 
   *r = rhi + rlo;
   *rr = rlo - (*r - rhi);
@@ -581,15 +582,21 @@ _CLC_DEF double2 __clc_sincos_piby4(double x, double xx) {
   double r = 0.5 * x2;
   double t = 1.0 - r;
 
-  double sp = fma(fma(fma(fma(sc6, x2, sc5), x2, sc4), x2, sc3), x2, sc2);
+  double sp = __clc_fma(
+      __clc_fma(__clc_fma(__clc_fma(sc6, x2, sc5), x2, sc4), x2, sc3), x2, sc2);
 
   double cp =
-      t + fma(fma(fma(fma(fma(fma(cc6, x2, cc5), x2, cc4), x2, cc3), x2, cc2),
-                  x2, cc1),
-              x2 * x2, fma(x, xx, (1.0 - t) - r));
+      t +
+      __clc_fma(__clc_fma(__clc_fma(__clc_fma(__clc_fma(__clc_fma(cc6, x2, cc5),
+                                                        x2, cc4),
+                                              x2, cc3),
+                                    x2, cc2),
+                          x2, cc1),
+                x2 * x2, __clc_fma(x, xx, (1.0 - t) - r));
 
   double2 ret;
-  ret.lo = x - fma(-x3, sc1, fma(fma(-x3, sp, 0.5 * xx), x2, -xx));
+  ret.lo =
+      x - __clc_fma(-x3, sc1, __clc_fma(__clc_fma(-x3, sp, 0.5 * xx), x2, -xx));
   ret.hi = cp;
 
   return ret;
