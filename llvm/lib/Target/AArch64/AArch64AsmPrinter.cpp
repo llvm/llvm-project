@@ -1281,7 +1281,7 @@ void AArch64AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
     return;
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   const auto &F = MF->getFunction();
-  const std::vector<MachineJumpTableEntry> &JT = MJTI.getJumpTables();
+  ArrayRef<MachineJumpTableEntry> JT = MJTI.getJumpTables();
 
   MCSection *ReadOnlySec = nullptr;
   if (TM.Options.EnableStaticDataPartitioning) {
