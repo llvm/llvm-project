@@ -1893,8 +1893,9 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
     if (VT == MVT::aarch64svcount) {
       assert(C->isNullValue() && "Can only zero this target type!");
-      return DAG.getNode(ISD::BITCAST, getCurSDLoc(), VT,
-                         DAG.getConstant(0, getCurSDLoc(), MVT::nxv16i1));
+      return NodeMap[V] =
+                 DAG.getNode(ISD::BITCAST, getCurSDLoc(), VT,
+                             DAG.getConstant(0, getCurSDLoc(), MVT::nxv16i1));
     }
 
     if (VT.isRISCVVectorTuple()) {
