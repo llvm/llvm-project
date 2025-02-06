@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs %s -o - -run-pass=amdgpu-hot-block-remat -amdgpu-remat-enable-sub-exp-remat-aggressive -amdgpu-remat-enable-late-float-vtos -amdgpu-remat-enable-hot-block-remat-aggressive -amdgpu-remat-enable-sub-exp-remat-aggressive -amdgpu-remat-enable-sub-exp-remat | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs %s -o - -run-pass=amdgpu-hot-block-remat -amdgpu-remat-enable-late-float-vtos -amdgpu-remat-enable-sub-exp-remat | FileCheck %s
 
 # DEFS
 # CHECK: %[[#div00:]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
