@@ -1121,17 +1121,14 @@
 // RUN:   | FileCheck --check-prefixes=CHECK-K-UNUSED %s
 // CHECK-K-UNUSED: clang: warning: -K: 'linker' input unused [-Wunused-command-line-argument]
 
+// Check No Sanitizer on 32-bit AIX
+// RUN: %clang -target powerpc-ibm-aix -m32 %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=CHECK-LD32-NO-SANITIZER %s 
+// CHECK-LD32-NO-SANITIZER-NOT: "-latomic"
 
 // This test verifies that the linker doesn't include '-latomic' when no sanitizers are enabled 
 // FIXME: Running this test on non-AIX host will result in the following error:
 // LLVM ERROR: Sanitizer interface functions must be exported by export files on AIX
-
-// Check No Sanitizer on 32-bit AIX
-// RUN: %if target={{.*aix.*}} %{ \
-// RUN:   %clang -target powerpc-ibm-aix -m32 %s -### 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-LD32-NO-SANITIZER %s \
-// RUN: %}
-// CHECK-LD32-NO-SANITIZER-NOT: "-latomic"
 
 // Check enable AddressSanitizer on 32-bit AIX
 // RUN: %if target={{.*aix.*}} %{ \
