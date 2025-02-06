@@ -612,8 +612,7 @@ specified address in global or local memory address space into the
 specified cache level (L1 or L2). The '`prefetchu.*``' instruction brings the cache line 
 containing the specified generic address into the specified uniform cache level.
 If no address space is specified, it is assumed to be generic address. The intrinsic 
-uses and eviction priority which can be accessed by the '``.level::eviction_priority``' modifier. 
-
+uses and eviction priority which can be accessed by the '``.level::eviction_priority``' modifier.
 
 * A prefetch to a shared memory location performs no operation.
 * A prefetch into the uniform cache requires a generic address, 
