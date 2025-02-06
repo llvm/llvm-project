@@ -526,9 +526,9 @@ static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
 }
 
 // emit a flat cast where the RHS is an aggregate
-static void EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address DestVal,
-                                      QualType DestTy, Address SrcVal,
-                                      QualType SrcTy, SourceLocation Loc) {
+static void EmitHLSLElementwiseCast(CodeGenFunction &CGF, Address DestVal,
+                                    QualType DestTy, Address SrcVal,
+                                    QualType SrcTy, SourceLocation Loc) {
   // Flatten our destination
   SmallVector<QualType, 16> DestTypes; // Flattened type
   SmallVector<std::pair<Address, llvm::Value *>, 16> StoreGEPList;
@@ -963,7 +963,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_HLSLArrayRValue:
     Visit(E->getSubExpr());
     break;
-  case CK_HLSLAggregateCast: {
+  case CK_HLSLElementwiseCast: {
     Expr *Src = E->getSubExpr();
     QualType SrcTy = Src->getType();
     RValue RV = CGF.EmitAnyExpr(Src);
@@ -978,7 +978,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
       assert(RV.isAggregate() &&
              "Can't perform HLSL Aggregate cast on a complex type.");
       Address SrcVal = RV.getAggregateAddress();
-      EmitHLSLAggregateFlatCast(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
+      EmitHLSLElementwiseCast(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
     }
     break;
   }
@@ -1552,7 +1552,7 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
   case CK_HLSLVectorTruncation:
-  case CK_HLSLAggregateCast:
+  case CK_HLSLElementwiseCast:
     return true;
 
   case CK_BaseToDerivedMemberPointer:

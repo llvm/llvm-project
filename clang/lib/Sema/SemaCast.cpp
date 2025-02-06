@@ -2781,7 +2781,7 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
       SrcExpr = Self.ImpCastExprToType(
           SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),
           CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
-    Kind = CK_HLSLAggregateCast;
+    Kind = CK_HLSLElementwiseCast;
     return;
   }
 

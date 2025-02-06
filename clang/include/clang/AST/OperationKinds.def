@@ -368,7 +368,7 @@ CAST_OPERATION(HLSLVectorTruncation)
 CAST_OPERATION(HLSLArrayRValue)
 
 // Aggregate by Value cast (HLSL only).
-CAST_OPERATION(HLSLAggregateCast)
+CAST_OPERATION(HLSLElementwiseCast)
 
 //===- Binary Operations  -------------------------------------------------===//
 // Operators listed in order of precedence.

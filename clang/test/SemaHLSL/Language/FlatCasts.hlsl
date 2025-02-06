@@ -2,7 +2,7 @@
 
 // truncation
 // CHECK-LABEL: call1
-// CHECK: CStyleCastExpr {{.*}} 'int[1]' <HLSLAggregateCast>
+// CHECK: CStyleCastExpr {{.*}} 'int[1]' <HLSLElementwiseCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int[2]' <HLSLArrayRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int[2]' lvalue Var {{.*}} 'A' 'int[2]'
 export void call1() {
@@ -13,7 +13,7 @@ export void call1() {
 
 // flat cast of equal size
 // CHECK-LABEL: call2
-// CHECK: CStyleCastExpr {{.*}} 'float[1]' <HLSLAggregateCast>
+// CHECK: CStyleCastExpr {{.*}} 'float[1]' <HLSLElementwiseCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int[1]' <HLSLArrayRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int[1]' lvalue Var {{.*}} 'A' 'int[1]'
 export void call2() {

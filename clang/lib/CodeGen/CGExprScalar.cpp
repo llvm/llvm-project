@@ -2263,9 +2263,9 @@ bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
 }
 
 // RHS is an aggregate type
-static Value *EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address RHSVal,
-                                        QualType RHSTy, QualType LHSTy,
-                                        SourceLocation Loc) {
+static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, Address RHSVal,
+                                      QualType RHSTy, QualType LHSTy,
+                                      SourceLocation Loc) {
   SmallVector<std::pair<Address, llvm::Value *>, 16> LoadGEPList;
   SmallVector<QualType, 16> SrcTypes; // Flattened type
   CGF.FlattenAccessAndType(RHSVal, RHSTy, LoadGEPList, SrcTypes);
@@ -2788,7 +2788,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm::Value *Zero = llvm::Constant::getNullValue(CGF.SizeTy);
     return Builder.CreateExtractElement(Vec, Zero, "cast.vtrunc");
   }
-  case CK_HLSLAggregateCast: {
+  case CK_HLSLElementwiseCast: {
     RValue RV = CGF.EmitAnyExpr(E);
     SourceLocation Loc = CE->getExprLoc();
     QualType SrcTy = E->getType();
@@ -2796,7 +2796,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     assert(RV.isAggregate() && "Not a valid HLSL Flat Cast.");
     // RHS is an aggregate
     Address SrcVal = RV.getAggregateAddress();
-    return EmitHLSLAggregateFlatCast(CGF, SrcVal, SrcTy, DestTy, Loc);
+    return EmitHLSLElementwiseCast(CGF, SrcVal, SrcTy, DestTy, Loc);
   }
   } // end of switch
 
