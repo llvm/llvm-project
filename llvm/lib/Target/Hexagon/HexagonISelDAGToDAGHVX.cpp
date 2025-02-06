@@ -262,8 +262,7 @@ bool Coloring::color() {
 
   // Explicitly assign "None" to all uncolored nodes.
   for (unsigned I = 0; I != Order.size(); ++I)
-    if (Colors.count(I) == 0)
-      Colors[I] = ColorKind::None;
+    Colors.try_emplace(I, ColorKind::None);
 
   return true;
 }

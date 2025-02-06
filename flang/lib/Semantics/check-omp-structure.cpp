@@ -3225,9 +3225,12 @@ void OmpStructureChecker::CheckReductionObjects(
     }
   }
 
+  // Denied in all current versions of the standard because structure components
+  // are not definable (i.e. they are expressions not variables).
+  // Object cannot be a part of another object (except array elements).
+  CheckStructureComponent(objects, clauseId);
+
   if (version >= 50) {
-    // Object cannot be a part of another object (except array elements)
-    CheckStructureComponent(objects, clauseId);
     // If object is an array section or element, the base expression must be
     // a language identifier.
     for (const parser::OmpObject &object : objects.v) {
