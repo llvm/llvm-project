@@ -296,7 +296,7 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
     // actual vector type (still of width 32b) and repack them into a result
     // struct.
     Type finalResultType = typeConverter->convertType(vectorResultType);
-    Value result = b.create<LLVM::UndefOp>(finalResultType);
+    Value result = b.create<LLVM::PoisonOp>(finalResultType);
     for (int64_t i = 0, e = vectorResultType.getDimSize(0); i < e; i++) {
       Value i32Register =
           num32BitRegs > 1 ? b.create<LLVM::ExtractValueOp>(ldMatrixResult, i)
