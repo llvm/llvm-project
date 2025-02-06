@@ -31,9 +31,7 @@ using namespace mlir;
 // AliasAnalysis: alias
 //===----------------------------------------------------------------------===//
 
-namespace {
-
-fir::AliasAnalysis::Source::Attributes
+static fir::AliasAnalysis::Source::Attributes
 getAttrsFromVariable(fir::FortranVariableOpInterface var) {
   fir::AliasAnalysis::Source::Attributes attrs;
   if (var.isTarget())
@@ -46,7 +44,7 @@ getAttrsFromVariable(fir::FortranVariableOpInterface var) {
   return attrs;
 }
 
-bool hasGlobalOpTargetAttr(mlir::Value v, fir::AddrOfOp op) {
+static bool hasGlobalOpTargetAttr(mlir::Value v, fir::AddrOfOp op) {
   auto globalOpName =
       mlir::OperationName(fir::GlobalOp::getOperationName(), op->getContext());
   return fir::valueHasFirAttribute(
@@ -66,7 +64,7 @@ mlir::Value getOriginalDef(mlir::Value v) {
   return v;
 }
 
-bool isEvaluateInMemoryBlockArg(mlir::Value v) {
+static bool isEvaluateInMemoryBlockArg(mlir::Value v) {
   if (auto evalInMem = llvm::dyn_cast_or_null<hlfir::EvaluateInMemoryOp>(
           v.getParentRegion()->getParentOp()))
     return evalInMem.getMemory() == v;
@@ -74,8 +72,8 @@ bool isEvaluateInMemoryBlockArg(mlir::Value v) {
 }
 
 template <typename OMPTypeOp, typename DeclTypeOp>
-bool isPrivateArg(omp::BlockArgOpenMPOpInterface &argIface, OMPTypeOp &op,
-                  DeclTypeOp &declOp) {
+static bool isPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
+                         OMPTypeOp &op, DeclTypeOp &declOp) {
   if (!op.getPrivateSyms().has_value())
     return false;
   for (auto [opSym, blockArg] :
@@ -86,8 +84,6 @@ bool isPrivateArg(omp::BlockArgOpenMPOpInterface &argIface, OMPTypeOp &op,
   }
   return false;
 }
-
-} // namespace
 
 namespace fir {
 
@@ -384,9 +380,7 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
 // AliasAnalysis: getModRef
 //===----------------------------------------------------------------------===//
 
-namespace {
-
-bool isSavedLocal(const fir::AliasAnalysis::Source &src) {
+static bool isSavedLocal(const fir::AliasAnalysis::Source &src) {
   if (auto symRef = llvm::dyn_cast<mlir::SymbolRefAttr>(src.origin.u)) {
     auto [nameKind, deconstruct] =
         fir::NameUniquer::deconstruct(symRef.getLeafReference().getValue());
@@ -396,7 +390,7 @@ bool isSavedLocal(const fir::AliasAnalysis::Source &src) {
   return false;
 }
 
-bool isCallToFortranUserProcedure(fir::CallOp call) {
+static bool isCallToFortranUserProcedure(fir::CallOp call) {
   // TODO: indirect calls are excluded by these checks. Maybe some attribute is
   // needed to flag user calls in this case.
   if (fir::hasBindcAttr(call))
@@ -407,7 +401,7 @@ bool isCallToFortranUserProcedure(fir::CallOp call) {
   return false;
 }
 
-ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
+static ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
   // TODO: limit to Fortran functions??
   // 1. Detect variables that can be accessed indirectly.
   fir::AliasAnalysis aliasAnalysis;
@@ -460,8 +454,6 @@ ModRefResult getCallModRef(fir::CallOp call, mlir::Value var) {
   // The call cannot access the variable.
   return ModRefResult::getNoModRef();
 }
-
-} // namespace
 
 /// This is mostly inspired by MLIR::LocalAliasAnalysis with 2 notable
 /// differences 1) Regions are not handled here but will be handled by a data
