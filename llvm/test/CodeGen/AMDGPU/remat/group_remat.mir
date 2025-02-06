@@ -1,0 +1,507 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs %s -o - -run-pass=amdgpu-hot-block-remat -amdgpu-remat-enable-sub-exp-remat | FileCheck %s
+
+# Check that the whole expression gets moved to uses in bb.2.
+# CHECK: bb.0:
+# CHECK: %[[#r500:]]:vgpr_32 = V_MOV_B32_e32 $vgpr0
+# CHECK: %[[#r501:]]:vgpr_32 = V_MOV_B32_e32 $vgpr1
+# CHECK: bb.1:
+# CHECK: bb.2:
+# CHECK: %[[#r502:]]:vgpr_32 = V_MUL_F32_e32 %[[#r500]], %[[#r500]]
+# CHECK: %[[#r503:]]:vgpr_32 = V_MUL_F32_e32 %[[#r500]], %[[#r501]]
+# CHECK: %[[#r504:]]:vgpr_32 = V_MUL_F32_e32 %[[#r501]], %[[#r501]]
+# CHECK: %[[#r505:]]:vgpr_32 = V_MUL_F32_e32 %[[#r502]], %[[#r502]]
+# CHECK: %[[#r506:]]:vgpr_32 = V_MUL_F32_e32 %[[#r502]], %[[#r503]]
+# CHECK: %[[#r507:]]:vgpr_32 = V_MUL_F32_e32 %[[#r503]], %[[#r503]]
+# CHECK: %[[#r508:]]:vgpr_32 = V_MUL_F32_e32 %[[#r503]], %[[#r504]]
+# CHECK: %[[#r509:]]:vgpr_32 = V_MUL_F32_e32 %[[#r504]], %[[#r504]]
+# CHECK: %[[#r5010:]]:vgpr_32 = V_MUL_F32_e32 %[[#r505]], %[[#r505]]
+# CHECK: %[[#r5011:]]:vgpr_32 = V_MUL_F32_e32 %[[#r505]], %[[#r506]]
+# CHECK: %[[#r5012:]]:vgpr_32 = V_MUL_F32_e32 %[[#r506]], %[[#r506]]
+# CHECK: %[[#r5013:]]:vgpr_32 = V_MUL_F32_e32 %[[#r506]], %[[#r507]]
+# CHECK: %[[#r5014:]]:vgpr_32 = V_MUL_F32_e32 %[[#r507]], %[[#r507]]
+# CHECK: %[[#r5015:]]:vgpr_32 = V_MUL_F32_e32 %[[#r507]], %[[#r508]]
+# CHECK: %[[#r5016:]]:vgpr_32 = V_MUL_F32_e32 %[[#r508]], %[[#r508]]
+# CHECK: %[[#r5017:]]:vgpr_32 = V_MUL_F32_e32 %[[#r508]], %[[#r509]]
+# CHECK: %[[#r5018:]]:vgpr_32 = V_MUL_F32_e32 %[[#r509]], %[[#r509]]
+# CHECK: %[[#r5019:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5010]], %[[#r5010]]
+# CHECK: %[[#r5020:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5010]], %[[#r5011]]
+# CHECK: %[[#r5021:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5011]], %[[#r5011]]
+# CHECK: %[[#r5022:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5011]], %[[#r5012]]
+# CHECK: %[[#r5023:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5012]], %[[#r5012]]
+# CHECK: %[[#r5024:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5012]], %[[#r5013]]
+# CHECK: %[[#r5025:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5013]], %[[#r5013]]
+# CHECK: %[[#r5026:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5013]], %[[#r5014]]
+# CHECK: %[[#r5027:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5014]], %[[#r5014]]
+# CHECK: %[[#r5028:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5014]], %[[#r5015]]
+# CHECK: %[[#r5029:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5015]], %[[#r5015]]
+# CHECK: %[[#r5030:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5015]], %[[#r5016]]
+# CHECK: %[[#r5031:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5016]], %[[#r5016]]
+# CHECK: %[[#r5032:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5016]], %[[#r5017]]
+# CHECK: %[[#r5033:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5017]], %[[#r5017]]
+# CHECK: %[[#r5034:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5017]], %[[#r5018]]
+# CHECK: %[[#r5035:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5018]], %[[#r5018]]
+# CHECK: %[[#r5036:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5019]], %[[#r5019]]
+# CHECK: %[[#r5037:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5019]], %[[#r5020]]
+# CHECK: %[[#r5038:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5020]], %[[#r5020]]
+# CHECK: %[[#r5039:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5020]], %[[#r5021]]
+# CHECK: %[[#r5040:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5021]], %[[#r5021]]
+# CHECK: %[[#r5041:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5021]], %[[#r5022]]
+# CHECK: %[[#r5042:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5022]], %[[#r5022]]
+# CHECK: %[[#r5043:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5022]], %[[#r5023]]
+# CHECK: %[[#r5044:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5023]], %[[#r5023]]
+# CHECK: %[[#r5045:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5023]], %[[#r5024]]
+# CHECK: %[[#r5046:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5024]], %[[#r5024]]
+# CHECK: %[[#r5047:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5024]], %[[#r5025]]
+# CHECK: %[[#r5048:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5025]], %[[#r5025]]
+# CHECK: %[[#r5049:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5025]], %[[#r5026]]
+# CHECK: %[[#r5050:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5026]], %[[#r5026]]
+# CHECK: %[[#r5051:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5026]], %[[#r5027]]
+# CHECK: %[[#r5052:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5027]], %[[#r5027]]
+# CHECK: %[[#r5053:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5027]], %[[#r5028]]
+# CHECK: %[[#r5054:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5028]], %[[#r5028]]
+# CHECK: %[[#r5055:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5028]], %[[#r5029]]
+# CHECK: %[[#r5056:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5029]], %[[#r5029]]
+# CHECK: %[[#r5057:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5029]], %[[#r5030]]
+# CHECK: %[[#r5058:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5030]], %[[#r5030]]
+# CHECK: %[[#r5059:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5030]], %[[#r5031]]
+# CHECK: %[[#r5060:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5031]], %[[#r5031]]
+# CHECK: %[[#r5061:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5031]], %[[#r5032]]
+# CHECK: %[[#r5062:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5032]], %[[#r5032]]
+# CHECK: %[[#r5063:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5032]], %[[#r5033]]
+# CHECK: %[[#r5064:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5033]], %[[#r5033]]
+# CHECK: %[[#r5065:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5033]], %[[#r5034]]
+# CHECK: %[[#r5066:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5034]], %[[#r5034]]
+# CHECK: %[[#r5067:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5034]], %[[#r5035]]
+# CHECK: %[[#r5068:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5035]], %[[#r5035]]
+# CHECK: %[[#r5069:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5036]], %[[#r5036]]
+# CHECK: %[[#r5070:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5036]], %[[#r5037]]
+# CHECK: %[[#r5071:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5037]], %[[#r5037]]
+# CHECK: %[[#r5072:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5037]], %[[#r5038]]
+# CHECK: %[[#r5073:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5038]], %[[#r5038]]
+# CHECK: %[[#r5074:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5038]], %[[#r5039]]
+# CHECK: %[[#r5075:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5039]], %[[#r5039]]
+# CHECK: %[[#r5076:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5039]], %[[#r5040]]
+# CHECK: %[[#r5077:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5040]], %[[#r5040]]
+# CHECK: %[[#r5078:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5040]], %[[#r5041]]
+# CHECK: %[[#r5079:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5041]], %[[#r5041]]
+# CHECK: %[[#r5080:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5041]], %[[#r5042]]
+# CHECK: %[[#r5081:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5042]], %[[#r5042]]
+# CHECK: %[[#r5082:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5042]], %[[#r5043]]
+# CHECK: %[[#r5083:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5043]], %[[#r5043]]
+# CHECK: %[[#r5084:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5043]], %[[#r5044]]
+# CHECK: %[[#r5085:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5044]], %[[#r5044]]
+# CHECK: %[[#r5086:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5044]], %[[#r5045]]
+# CHECK: %[[#r5087:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5045]], %[[#r5045]]
+# CHECK: %[[#r5088:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5045]], %[[#r5046]]
+# CHECK: %[[#r5089:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5046]], %[[#r5046]]
+# CHECK: %[[#r5090:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5046]], %[[#r5047]]
+# CHECK: %[[#r5091:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5047]], %[[#r5047]]
+# CHECK: %[[#r5092:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5047]], %[[#r5048]]
+# CHECK: %[[#r5093:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5048]], %[[#r5048]]
+# CHECK: %[[#r5094:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5048]], %[[#r5049]]
+# CHECK: %[[#r5095:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5049]], %[[#r5049]]
+# CHECK: %[[#r5096:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5049]], %[[#r5050]]
+# CHECK: %[[#r5097:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5050]], %[[#r5050]]
+# CHECK: %[[#r5098:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5050]], %[[#r5051]]
+# CHECK: %[[#r5099:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5051]], %[[#r5051]]
+# CHECK: %[[#r50100:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5051]], %[[#r5052]]
+# CHECK: %[[#r50101:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5052]], %[[#r5052]]
+# CHECK: %[[#r50102:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5052]], %[[#r5053]]
+# CHECK: %[[#r50103:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5053]], %[[#r5053]]
+# CHECK: %[[#r50104:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5053]], %[[#r5054]]
+# CHECK: %[[#r50105:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5054]], %[[#r5054]]
+# CHECK: %[[#r50106:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5054]], %[[#r5055]]
+# CHECK: %[[#r50107:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5055]], %[[#r5055]]
+# CHECK: %[[#r50108:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5055]], %[[#r5056]]
+# CHECK: %[[#r50109:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5056]], %[[#r5056]]
+# CHECK: %[[#r50110:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5056]], %[[#r5057]]
+# CHECK: %[[#r50111:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5057]], %[[#r5057]]
+# CHECK: %[[#r50112:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5057]], %[[#r5058]]
+# CHECK: %[[#r50113:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5058]], %[[#r5058]]
+# CHECK: %[[#r50114:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5058]], %[[#r5059]]
+# CHECK: %[[#r50115:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5059]], %[[#r5059]]
+# CHECK: %[[#r50116:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5059]], %[[#r5060]]
+# CHECK: %[[#r50117:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5060]], %[[#r5060]]
+# CHECK: %[[#r50118:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5060]], %[[#r5061]]
+# CHECK: %[[#r50119:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5061]], %[[#r5061]]
+# CHECK: %[[#r50120:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5061]], %[[#r5062]]
+# CHECK: %[[#r50121:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5062]], %[[#r5062]]
+# CHECK: %[[#r50122:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5062]], %[[#r5063]]
+# CHECK: %[[#r50123:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5063]], %[[#r5063]]
+# CHECK: %[[#r50124:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5063]], %[[#r5064]]
+# CHECK: %[[#r50125:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5064]], %[[#r5064]]
+# CHECK: %[[#r50126:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5064]], %[[#r5065]]
+# CHECK: %[[#r50127:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5065]], %[[#r5065]]
+# CHECK: %[[#r50128:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5065]], %[[#r5066]]
+# CHECK: %[[#r50129:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5066]], %[[#r5066]]
+# CHECK: %[[#r50130:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5066]], %[[#r5067]]
+# CHECK: %[[#r50131:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5067]], %[[#r5067]]
+# CHECK: %[[#r50132:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5067]], %[[#r5068]]
+# CHECK: %[[#r50133:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5068]], %[[#r5068]]
+
+
+--- |
+  source_filename = ".\main.ll"
+  define amdgpu_ps void @main() #1 {
+    ret void
+  }
+  attributes #1 = { "target-cpu"="gfx1010" }
+  !llvm.ident = !{!0}
+  !0 = !{!"clang version 3.7 (tags/RELEASE_370/final)"}
+...
+---
+name:            main
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0' }
+  - { reg: '$sgpr1' }
+  - { reg: '$sgpr2' }
+  - { reg: '$sgpr3' }
+  - { reg: '$sgpr4' }
+  - { reg: '$sgpr5' }
+  - { reg: '$sgpr6' }
+  - { reg: '$sgpr7' }
+  - { reg: '$sgpr8' }
+  - { reg: '$sgpr8' }
+  - { reg: '$vgpr0' }
+  - { reg: '$vgpr1' }
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $vgpr0, $vgpr1
+
+    undef %0.sub0:sgpr_64 = COPY $sgpr0
+    undef %0.sub1:sgpr_64 = COPY $sgpr1
+
+    undef %1.sub0:sgpr_128 = COPY $sgpr4
+    undef %1.sub1:sgpr_128 = COPY $sgpr5
+    undef %1.sub2:sgpr_128 = COPY $sgpr6
+    undef %1.sub3:sgpr_128 = COPY $sgpr7
+
+
+    %500:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %501:vgpr_32 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    %502:vgpr_32 = V_MUL_F32_e32 %500, %500, implicit $exec, implicit $mode
+    %503:vgpr_32 = V_MUL_F32_e32 %500, %501, implicit $exec, implicit $mode
+    %504:vgpr_32 = V_MUL_F32_e32 %501, %501, implicit $exec, implicit $mode
+    %505:vgpr_32 = V_MUL_F32_e32 %502, %502, implicit $exec, implicit $mode
+    %506:vgpr_32 = V_MUL_F32_e32 %502, %503, implicit $exec, implicit $mode
+    %507:vgpr_32 = V_MUL_F32_e32 %503, %503, implicit $exec, implicit $mode
+    %508:vgpr_32 = V_MUL_F32_e32 %503, %504, implicit $exec, implicit $mode
+    %509:vgpr_32 = V_MUL_F32_e32 %504, %504, implicit $exec, implicit $mode
+    %5010:vgpr_32 = V_MUL_F32_e32 %505, %505, implicit $exec, implicit $mode
+    %5011:vgpr_32 = V_MUL_F32_e32 %505, %506, implicit $exec, implicit $mode
+    %5012:vgpr_32 = V_MUL_F32_e32 %506, %506, implicit $exec, implicit $mode
+    %5013:vgpr_32 = V_MUL_F32_e32 %506, %507, implicit $exec, implicit $mode
+    %5014:vgpr_32 = V_MUL_F32_e32 %507, %507, implicit $exec, implicit $mode
+    %5015:vgpr_32 = V_MUL_F32_e32 %507, %508, implicit $exec, implicit $mode
+    %5016:vgpr_32 = V_MUL_F32_e32 %508, %508, implicit $exec, implicit $mode
+    %5017:vgpr_32 = V_MUL_F32_e32 %508, %509, implicit $exec, implicit $mode
+    %5018:vgpr_32 = V_MUL_F32_e32 %509, %509, implicit $exec, implicit $mode
+    %5019:vgpr_32 = V_MUL_F32_e32 %5010, %5010, implicit $exec, implicit $mode
+    %5020:vgpr_32 = V_MUL_F32_e32 %5010, %5011, implicit $exec, implicit $mode
+    %5021:vgpr_32 = V_MUL_F32_e32 %5011, %5011, implicit $exec, implicit $mode
+    %5022:vgpr_32 = V_MUL_F32_e32 %5011, %5012, implicit $exec, implicit $mode
+    %5023:vgpr_32 = V_MUL_F32_e32 %5012, %5012, implicit $exec, implicit $mode
+    %5024:vgpr_32 = V_MUL_F32_e32 %5012, %5013, implicit $exec, implicit $mode
+    %5025:vgpr_32 = V_MUL_F32_e32 %5013, %5013, implicit $exec, implicit $mode
+    %5026:vgpr_32 = V_MUL_F32_e32 %5013, %5014, implicit $exec, implicit $mode
+    %5027:vgpr_32 = V_MUL_F32_e32 %5014, %5014, implicit $exec, implicit $mode
+    %5028:vgpr_32 = V_MUL_F32_e32 %5014, %5015, implicit $exec, implicit $mode
+    %5029:vgpr_32 = V_MUL_F32_e32 %5015, %5015, implicit $exec, implicit $mode
+    %5030:vgpr_32 = V_MUL_F32_e32 %5015, %5016, implicit $exec, implicit $mode
+    %5031:vgpr_32 = V_MUL_F32_e32 %5016, %5016, implicit $exec, implicit $mode
+    %5032:vgpr_32 = V_MUL_F32_e32 %5016, %5017, implicit $exec, implicit $mode
+    %5033:vgpr_32 = V_MUL_F32_e32 %5017, %5017, implicit $exec, implicit $mode
+    %5034:vgpr_32 = V_MUL_F32_e32 %5017, %5018, implicit $exec, implicit $mode
+    %5035:vgpr_32 = V_MUL_F32_e32 %5018, %5018, implicit $exec, implicit $mode
+    %5036:vgpr_32 = V_MUL_F32_e32 %5019, %5019, implicit $exec, implicit $mode
+    %5037:vgpr_32 = V_MUL_F32_e32 %5019, %5020, implicit $exec, implicit $mode
+    %5038:vgpr_32 = V_MUL_F32_e32 %5020, %5020, implicit $exec, implicit $mode
+    %5039:vgpr_32 = V_MUL_F32_e32 %5020, %5021, implicit $exec, implicit $mode
+    %5040:vgpr_32 = V_MUL_F32_e32 %5021, %5021, implicit $exec, implicit $mode
+    %5041:vgpr_32 = V_MUL_F32_e32 %5021, %5022, implicit $exec, implicit $mode
+    %5042:vgpr_32 = V_MUL_F32_e32 %5022, %5022, implicit $exec, implicit $mode
+    %5043:vgpr_32 = V_MUL_F32_e32 %5022, %5023, implicit $exec, implicit $mode
+    %5044:vgpr_32 = V_MUL_F32_e32 %5023, %5023, implicit $exec, implicit $mode
+    %5045:vgpr_32 = V_MUL_F32_e32 %5023, %5024, implicit $exec, implicit $mode
+    %5046:vgpr_32 = V_MUL_F32_e32 %5024, %5024, implicit $exec, implicit $mode
+    %5047:vgpr_32 = V_MUL_F32_e32 %5024, %5025, implicit $exec, implicit $mode
+    %5048:vgpr_32 = V_MUL_F32_e32 %5025, %5025, implicit $exec, implicit $mode
+    %5049:vgpr_32 = V_MUL_F32_e32 %5025, %5026, implicit $exec, implicit $mode
+    %5050:vgpr_32 = V_MUL_F32_e32 %5026, %5026, implicit $exec, implicit $mode
+    %5051:vgpr_32 = V_MUL_F32_e32 %5026, %5027, implicit $exec, implicit $mode
+    %5052:vgpr_32 = V_MUL_F32_e32 %5027, %5027, implicit $exec, implicit $mode
+    %5053:vgpr_32 = V_MUL_F32_e32 %5027, %5028, implicit $exec, implicit $mode
+    %5054:vgpr_32 = V_MUL_F32_e32 %5028, %5028, implicit $exec, implicit $mode
+    %5055:vgpr_32 = V_MUL_F32_e32 %5028, %5029, implicit $exec, implicit $mode
+    %5056:vgpr_32 = V_MUL_F32_e32 %5029, %5029, implicit $exec, implicit $mode
+    %5057:vgpr_32 = V_MUL_F32_e32 %5029, %5030, implicit $exec, implicit $mode
+    %5058:vgpr_32 = V_MUL_F32_e32 %5030, %5030, implicit $exec, implicit $mode
+    %5059:vgpr_32 = V_MUL_F32_e32 %5030, %5031, implicit $exec, implicit $mode
+    %5060:vgpr_32 = V_MUL_F32_e32 %5031, %5031, implicit $exec, implicit $mode
+    %5061:vgpr_32 = V_MUL_F32_e32 %5031, %5032, implicit $exec, implicit $mode
+    %5062:vgpr_32 = V_MUL_F32_e32 %5032, %5032, implicit $exec, implicit $mode
+    %5063:vgpr_32 = V_MUL_F32_e32 %5032, %5033, implicit $exec, implicit $mode
+    %5064:vgpr_32 = V_MUL_F32_e32 %5033, %5033, implicit $exec, implicit $mode
+    %5065:vgpr_32 = V_MUL_F32_e32 %5033, %5034, implicit $exec, implicit $mode
+    %5066:vgpr_32 = V_MUL_F32_e32 %5034, %5034, implicit $exec, implicit $mode
+    %5067:vgpr_32 = V_MUL_F32_e32 %5034, %5035, implicit $exec, implicit $mode
+    %5068:vgpr_32 = V_MUL_F32_e32 %5035, %5035, implicit $exec, implicit $mode
+    %5069:vgpr_32 = V_MUL_F32_e32 %5036, %5036, implicit $exec, implicit $mode
+    %5070:vgpr_32 = V_MUL_F32_e32 %5036, %5037, implicit $exec, implicit $mode
+    %5071:vgpr_32 = V_MUL_F32_e32 %5037, %5037, implicit $exec, implicit $mode
+    %5072:vgpr_32 = V_MUL_F32_e32 %5037, %5038, implicit $exec, implicit $mode
+    %5073:vgpr_32 = V_MUL_F32_e32 %5038, %5038, implicit $exec, implicit $mode
+    %5074:vgpr_32 = V_MUL_F32_e32 %5038, %5039, implicit $exec, implicit $mode
+    %5075:vgpr_32 = V_MUL_F32_e32 %5039, %5039, implicit $exec, implicit $mode
+    %5076:vgpr_32 = V_MUL_F32_e32 %5039, %5040, implicit $exec, implicit $mode
+    %5077:vgpr_32 = V_MUL_F32_e32 %5040, %5040, implicit $exec, implicit $mode
+    %5078:vgpr_32 = V_MUL_F32_e32 %5040, %5041, implicit $exec, implicit $mode
+    %5079:vgpr_32 = V_MUL_F32_e32 %5041, %5041, implicit $exec, implicit $mode
+    %5080:vgpr_32 = V_MUL_F32_e32 %5041, %5042, implicit $exec, implicit $mode
+    %5081:vgpr_32 = V_MUL_F32_e32 %5042, %5042, implicit $exec, implicit $mode
+    %5082:vgpr_32 = V_MUL_F32_e32 %5042, %5043, implicit $exec, implicit $mode
+    %5083:vgpr_32 = V_MUL_F32_e32 %5043, %5043, implicit $exec, implicit $mode
+    %5084:vgpr_32 = V_MUL_F32_e32 %5043, %5044, implicit $exec, implicit $mode
+    %5085:vgpr_32 = V_MUL_F32_e32 %5044, %5044, implicit $exec, implicit $mode
+    %5086:vgpr_32 = V_MUL_F32_e32 %5044, %5045, implicit $exec, implicit $mode
+    %5087:vgpr_32 = V_MUL_F32_e32 %5045, %5045, implicit $exec, implicit $mode
+    %5088:vgpr_32 = V_MUL_F32_e32 %5045, %5046, implicit $exec, implicit $mode
+    %5089:vgpr_32 = V_MUL_F32_e32 %5046, %5046, implicit $exec, implicit $mode
+    %5090:vgpr_32 = V_MUL_F32_e32 %5046, %5047, implicit $exec, implicit $mode
+    %5091:vgpr_32 = V_MUL_F32_e32 %5047, %5047, implicit $exec, implicit $mode
+    %5092:vgpr_32 = V_MUL_F32_e32 %5047, %5048, implicit $exec, implicit $mode
+    %5093:vgpr_32 = V_MUL_F32_e32 %5048, %5048, implicit $exec, implicit $mode
+    %5094:vgpr_32 = V_MUL_F32_e32 %5048, %5049, implicit $exec, implicit $mode
+    %5095:vgpr_32 = V_MUL_F32_e32 %5049, %5049, implicit $exec, implicit $mode
+    %5096:vgpr_32 = V_MUL_F32_e32 %5049, %5050, implicit $exec, implicit $mode
+    %5097:vgpr_32 = V_MUL_F32_e32 %5050, %5050, implicit $exec, implicit $mode
+    %5098:vgpr_32 = V_MUL_F32_e32 %5050, %5051, implicit $exec, implicit $mode
+    %5099:vgpr_32 = V_MUL_F32_e32 %5051, %5051, implicit $exec, implicit $mode
+    %50100:vgpr_32 = V_MUL_F32_e32 %5051, %5052, implicit $exec, implicit $mode
+    %50101:vgpr_32 = V_MUL_F32_e32 %5052, %5052, implicit $exec, implicit $mode
+    %50102:vgpr_32 = V_MUL_F32_e32 %5052, %5053, implicit $exec, implicit $mode
+    %50103:vgpr_32 = V_MUL_F32_e32 %5053, %5053, implicit $exec, implicit $mode
+    %50104:vgpr_32 = V_MUL_F32_e32 %5053, %5054, implicit $exec, implicit $mode
+    %50105:vgpr_32 = V_MUL_F32_e32 %5054, %5054, implicit $exec, implicit $mode
+    %50106:vgpr_32 = V_MUL_F32_e32 %5054, %5055, implicit $exec, implicit $mode
+    %50107:vgpr_32 = V_MUL_F32_e32 %5055, %5055, implicit $exec, implicit $mode
+    %50108:vgpr_32 = V_MUL_F32_e32 %5055, %5056, implicit $exec, implicit $mode
+    %50109:vgpr_32 = V_MUL_F32_e32 %5056, %5056, implicit $exec, implicit $mode
+    %50110:vgpr_32 = V_MUL_F32_e32 %5056, %5057, implicit $exec, implicit $mode
+    %50111:vgpr_32 = V_MUL_F32_e32 %5057, %5057, implicit $exec, implicit $mode
+    %50112:vgpr_32 = V_MUL_F32_e32 %5057, %5058, implicit $exec, implicit $mode
+    %50113:vgpr_32 = V_MUL_F32_e32 %5058, %5058, implicit $exec, implicit $mode
+    %50114:vgpr_32 = V_MUL_F32_e32 %5058, %5059, implicit $exec, implicit $mode
+    %50115:vgpr_32 = V_MUL_F32_e32 %5059, %5059, implicit $exec, implicit $mode
+    %50116:vgpr_32 = V_MUL_F32_e32 %5059, %5060, implicit $exec, implicit $mode
+    %50117:vgpr_32 = V_MUL_F32_e32 %5060, %5060, implicit $exec, implicit $mode
+    %50118:vgpr_32 = V_MUL_F32_e32 %5060, %5061, implicit $exec, implicit $mode
+    %50119:vgpr_32 = V_MUL_F32_e32 %5061, %5061, implicit $exec, implicit $mode
+    %50120:vgpr_32 = V_MUL_F32_e32 %5061, %5062, implicit $exec, implicit $mode
+    %50121:vgpr_32 = V_MUL_F32_e32 %5062, %5062, implicit $exec, implicit $mode
+    %50122:vgpr_32 = V_MUL_F32_e32 %5062, %5063, implicit $exec, implicit $mode
+    %50123:vgpr_32 = V_MUL_F32_e32 %5063, %5063, implicit $exec, implicit $mode
+    %50124:vgpr_32 = V_MUL_F32_e32 %5063, %5064, implicit $exec, implicit $mode
+    %50125:vgpr_32 = V_MUL_F32_e32 %5064, %5064, implicit $exec, implicit $mode
+    %50126:vgpr_32 = V_MUL_F32_e32 %5064, %5065, implicit $exec, implicit $mode
+    %50127:vgpr_32 = V_MUL_F32_e32 %5065, %5065, implicit $exec, implicit $mode
+    %50128:vgpr_32 = V_MUL_F32_e32 %5065, %5066, implicit $exec, implicit $mode
+    %50129:vgpr_32 = V_MUL_F32_e32 %5066, %5066, implicit $exec, implicit $mode
+    %50130:vgpr_32 = V_MUL_F32_e32 %5066, %5067, implicit $exec, implicit $mode
+    %50131:vgpr_32 = V_MUL_F32_e32 %5067, %5067, implicit $exec, implicit $mode
+    %50132:vgpr_32 = V_MUL_F32_e32 %5067, %5068, implicit $exec, implicit $mode
+    %50133:vgpr_32 = V_MUL_F32_e32 %5068, %5068, implicit $exec, implicit $mode
+
+
+    %8000:vgpr_32 = IMPLICIT_DEF
+    %116:sreg_32_xm0 = nnan ninf nsz arcp contract afn reassoc V_CMP_GT_F32_e64 0, 0, 0, %8000, 0, implicit $exec, implicit $mode
+    $exec_lo = S_MOV_B32_term %116:sreg_32_xm0
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:  
+    successors: %bb.2
+
+    %8001:vgpr_32 = COPY %8000
+    %8002:vgpr_32 = COPY %8000
+    %8003:vgpr_32 = COPY %8000
+    %8004:vgpr_32 = COPY %8000
+    %8005:vgpr_32 = COPY %8000
+    %8006:vgpr_32 = COPY %8000
+    %8007:vgpr_32 = COPY %8000
+    %8008:vgpr_32 = COPY %8000
+    %8009:vgpr_32 = COPY %8000
+    %8010:vgpr_32 = COPY %8000
+    %8011:vgpr_32 = COPY %8000
+    %8012:vgpr_32 = COPY %8000
+    %8013:vgpr_32 = COPY %8000
+    %8014:vgpr_32 = COPY %8000
+    %8015:vgpr_32 = COPY %8000
+    %8016:vgpr_32 = COPY %8000
+    %8017:vgpr_32 = COPY %8000
+
+    %9001:vgpr_32 = COPY %8001
+    %9002:vgpr_32 = COPY %8002
+    %9003:vgpr_32 = COPY %8003
+    %9004:vgpr_32 = COPY %8004
+    %9005:vgpr_32 = COPY %8005
+    %9006:vgpr_32 = COPY %8006
+    %9007:vgpr_32 = COPY %8007
+    %9008:vgpr_32 = COPY %8008
+    %9009:vgpr_32 = COPY %8009
+    %9010:vgpr_32 = COPY %8010
+    %9011:vgpr_32 = COPY %8011
+    %9012:vgpr_32 = COPY %8012
+    %9013:vgpr_32 = COPY %8013
+    %9014:vgpr_32 = COPY %8014
+    %9015:vgpr_32 = COPY %8015
+    %9016:vgpr_32 = COPY %8016
+    %9017:vgpr_32 = COPY %8017
+
+    S_BRANCH %bb.2
+
+  bb.2:
+
+    %3:vgpr_32 = IMPLICIT_DEF
+
+    EXP 0, killed %500, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %501, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %502, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %503, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %504, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %505, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %506, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %507, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %508, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %509, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5010, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5011, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5012, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5013, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5014, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5015, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5016, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5017, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5018, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5019, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5020, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5021, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5022, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5023, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5024, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5025, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5026, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5027, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5028, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5029, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5030, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5031, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5032, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5033, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5034, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5035, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5036, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5037, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5038, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5039, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5040, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5041, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5042, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5043, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5044, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5045, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5046, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5047, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5048, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5049, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5050, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5051, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5052, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5053, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5054, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5055, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5056, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5057, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5058, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5059, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5060, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5061, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5062, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5063, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5064, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5065, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5066, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5067, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5068, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5069, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5070, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5071, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5072, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5073, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5074, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5075, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5076, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5077, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5078, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5079, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5080, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5081, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5082, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5083, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5084, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5085, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5086, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5087, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5088, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5089, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5090, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5091, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5092, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5093, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5094, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5095, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5096, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5097, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5098, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %5099, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50100, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50101, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50102, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50103, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50104, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50105, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50106, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50107, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50108, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50109, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50110, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50111, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50112, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50113, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50114, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50115, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50116, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50117, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50118, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50119, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50120, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50121, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50122, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50123, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50124, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50125, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50126, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50127, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50128, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50129, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50130, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50131, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50132, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %50133, %3, %3, %3, -1, -1, 15, implicit $exec
+
+
+    S_ENDPGM 0
+...
+    
