@@ -1841,7 +1841,15 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
 
         assert(NewLiveIns[I].contains(UseReg));
         LaneBitmask LiveInMask = NewLiveIns[I][UseReg];
-        assert((LiveInMask & LM) == LM);
+        LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
+        // If this register has lanes not covered by the LiveIns, be sure they
+        // do not map to any subrange. ref:
+        // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
+        if (UncoveredLanes.any()) {
+          assert(LI.hasSubRanges());
+          for (LiveInterval::SubRange &SR : LI.subranges())
+            assert((SR.LaneMask & UncoveredLanes).none());
+        }
       }
 #endif
     }
