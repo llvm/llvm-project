@@ -1001,10 +1001,6 @@ AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
 }
 
 amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
-  HIPIncludePath = (Twine(env::getHIPPath()) + "/include").str();
-  // HIP headers depend on hsa.h which is in ROCM_DIR/include.
-  ROCMIncludePath = (Twine(env::getROCMPath()) + "/include").str();
-
   // Default to O3 for all contexts
   Args.push_back("-O3");
 
@@ -1027,10 +1023,6 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
   case AMD_COMGR_LANGUAGE_HIP:
     Args.push_back("hip");
     Args.push_back("--offload-device-only");
-    Args.push_back("-isystem");
-    Args.push_back(ROCMIncludePath.c_str());
-    Args.push_back("-isystem");
-    Args.push_back(HIPIncludePath.c_str());
     break;
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
