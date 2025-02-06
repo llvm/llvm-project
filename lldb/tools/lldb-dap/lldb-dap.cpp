@@ -48,6 +48,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <array>
+#include <condition_variable>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -5261,12 +5262,13 @@ int main(int argc, char *argv[]) {
       g_loop.AddPendingCallback(
           [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
     });
-    std::mutex active_dap_sessions_mutext;
-    std::set<DAP *> active_dap_sessions;
+    std::condition_variable dap_sessions_condition;
+    std::mutex dap_sessions_mutex;
+    std::map<Socket *, DAP *> dap_sessions;
     unsigned int clientCount = 0;
-    auto handle = listener->Accept(g_loop, [=, &active_dap_sessions_mutext,
-                                            &active_dap_sessions, &clientCount,
-                                            log = log.get()](
+    auto handle = listener->Accept(g_loop, [=, &dap_sessions_condition,
+                                            &dap_sessions_mutex, &dap_sessions,
+                                            &clientCount, log = log.get()](
                                                std::unique_ptr<Socket> sock) {
       std::string name = llvm::formatv("client_{0}", clientCount++).str();
       if (log) {
@@ -5278,8 +5280,8 @@ int main(int argc, char *argv[]) {
 
       // Move the client into a background thread to unblock accepting the next
       // client.
-      std::thread client([=, &active_dap_sessions_mutext, &active_dap_sessions,
-                          sock = std::move(sock)]() {
+      std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
+                          &dap_sessions, sock = std::move(sock)]() {
         llvm::set_thread_name(name + ".runloop");
         StreamDescriptor input =
             StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
@@ -5298,18 +5300,13 @@ int main(int argc, char *argv[]) {
         RegisterRequestCallbacks(dap);
 
         {
-          std::scoped_lock lock(active_dap_sessions_mutext);
-          active_dap_sessions.insert(&dap);
+          std::scoped_lock lock(dap_sessions_mutex);
+          dap_sessions[sock.get()] = &dap;
         }
 
         if (auto Err = dap.Loop()) {
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                       "DAP session error: ");
-        }
-
-        {
-          std::scoped_lock lock(active_dap_sessions_mutext);
-          active_dap_sessions.erase(&dap);
         }
 
         if (log) {
@@ -5318,6 +5315,10 @@ int main(int argc, char *argv[]) {
           *log << llvm::formatv("{0:f9}", now.count()).str()
                << " client closed: " << name << "\n";
         }
+
+        std::unique_lock lock(dap_sessions_mutex);
+        dap_sessions.erase(sock.get());
+        std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
       });
       client.detach();
     });
@@ -5339,15 +5340,24 @@ int main(int argc, char *argv[]) {
               "clients...\n";
 
     bool client_failed = false;
-    std::scoped_lock lock(active_dap_sessions_mutext);
-    for (auto *dap : active_dap_sessions) {
-      auto error = dap->Disconnect();
-      if (error.Fail()) {
-        client_failed = true;
-        llvm::errs() << "DAP client " << dap->name
-                     << " disconnected failed: " << error.GetCString() << "\n";
+    {
+      std::scoped_lock lock(dap_sessions_mutex);
+      for (auto [sock, dap] : dap_sessions) {
+        auto error = dap->Disconnect();
+        if (error.Fail()) {
+          client_failed = true;
+          llvm::errs() << "DAP client " << dap->name
+                       << " disconnected failed: " << error.GetCString()
+                       << "\n";
+        }
+        // Close the socket to ensure the DAP::Loop read finishes.
+        sock->Close();
       }
     }
+
+    // Wait for all clients to finish disconnecting.
+    std::unique_lock lock(dap_sessions_mutex);
+    dap_sessions_condition.wait(lock, [&] { return dap_sessions.empty(); });
 
     return client_failed ? EXIT_FAILURE : EXIT_SUCCESS;
   }

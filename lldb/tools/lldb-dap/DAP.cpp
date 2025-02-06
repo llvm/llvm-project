@@ -21,6 +21,7 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
@@ -224,6 +225,15 @@ llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
 void DAP::StopIO() {
   out.Stop();
   err.Stop();
+
+  if (event_thread.joinable()) {
+    broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
+    event_thread.join();
+  }
+  if (progress_event_thread.joinable()) {
+    broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
+    progress_event_thread.join();
+  }
 }
 
 // Send the JSON in "json_str" to the "out" stream. Correctly send the
@@ -830,23 +840,16 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
     debugger.SetAsync(true);
     break;
   }
+
   SendTerminatedEvent();
 
-  if (event_thread.joinable()) {
-    broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
-    event_thread.join();
-  }
-  if (progress_event_thread.joinable()) {
-    broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
-    progress_event_thread.join();
-  }
-  StopIO();
   disconnecting = true;
 
   return error;
 }
 
 llvm::Error DAP::Loop() {
+  auto stop_io = llvm::make_scope_exit([this]() { StopIO(); });
   while (!disconnecting) {
     llvm::json::Object object;
     lldb_dap::PacketStatus status = GetNextObject(object);
