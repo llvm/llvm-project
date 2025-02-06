@@ -102,30 +102,26 @@ bool ModuleRootSignature::parse(NamedMDNode *Root, const Function *EF) {
       return reportError("Invalid format for Root Signature Definition. Pairs "
                          "of function, root signature expected.");
 
-    Metadata *MD = Node->getOperand(0).get();
-    if (auto *VAM = llvm::dyn_cast<llvm::ValueAsMetadata>(MD)) {
-      llvm::Value *V = VAM->getValue();
-      if (Function *F = dyn_cast<Function>(V)) {
-        if (F != EF)
-          continue;
-      } else {
-        return reportError(
-            "Root Signature MD node, first element is not a function.");
-      }
-    } else {
-      return reportError(
-          "Root Signature MD node, first element is not a function.");
-    }
+    ValueAsMetadata *VAM =
+        llvm::dyn_cast<ValueAsMetadata>(Node->getOperand(0).get());
+    if (VAM == nullptr)
+      return reportError("First element of root signature is not a value");
+
+    Function *F = dyn_cast<Function>(VAM->getValue());
+    if (F == nullptr)
+      return reportError("First element of root signature is not a function");
+
+    if (F != EF)
+      continue;
 
     // Get the Root Signature Description from the function signature pair.
     MDNode *RS = dyn_cast<MDNode>(Node->getOperand(1).get());
 
     if (RS == nullptr)
-      return reportError("Missing Root Signature Metadata node.");
+      return reportError("Missing Root Element List Metadata node.");
 
     // Loop through the Root Elements of the root signature.
     for (unsigned int Eid = 0; Eid < RS->getNumOperands(); Eid++) {
-
       MDNode *Element = dyn_cast<MDNode>(RS->getOperand(Eid));
       if (Element == nullptr)
         return reportError("Missing Root Element Metadata Node.");

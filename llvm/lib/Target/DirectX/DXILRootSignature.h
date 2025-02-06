@@ -35,12 +35,13 @@ enum class RootSignatureElementKind {
 struct ModuleRootSignature {
   uint32_t Flags = 0;
   ModuleRootSignature() { Ctx = nullptr; };
-  ModuleRootSignature(LLVMContext *Ctx) : Ctx(Ctx) {}
   static std::optional<ModuleRootSignature> analyzeModule(Module &M,
                                                           const Function *F);
 
 private:
   LLVMContext *Ctx;
+
+  ModuleRootSignature(LLVMContext *Ctx) : Ctx(Ctx) {}
 
   bool parse(NamedMDNode *Root, const Function *F);
   bool parseRootSignatureElement(MDNode *Element);
