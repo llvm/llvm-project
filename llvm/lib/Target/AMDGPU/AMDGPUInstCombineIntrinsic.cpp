@@ -1119,7 +1119,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   }
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readfirstlane:
-  case Intrinsic::amdgcn_readlane: {
+  case Intrinsic::amdgcn_readlane:
+  case Intrinsic::amdgcn_bpermute_b32: {
     // If the first argument is uniform these intrinsics return it unchanged.
     const Use &Src = II.getArgOperandUse(0);
     if (isTriviallyUniform(Src))
@@ -1128,6 +1129,17 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (IID == Intrinsic::amdgcn_readlane &&
         simplifyDemandedLaneMaskArg(IC, II, 1))
       return &II;
+
+    // If the second argument of bpermute is uniform, change it to
+    // readlane. This generates better code and can enable further
+    // optimizations because readlane is AlwaysUniform.
+    if (IID == Intrinsic::amdgcn_bpermute_b32 &&
+        isTriviallyUniform(II.getArgOperandUse(1))) {
+      Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+          II.getModule(), Intrinsic::amdgcn_readlane, II.getType());
+      II.setCalledFunction(NewDecl);
+      return &II;
+    }
 
     return std::nullopt;
   }
