@@ -79,9 +79,6 @@ void Scheduler::scheduleAndUpdateReadyList(SchedBundle &Bndl) {
   for (DGNode *N : Bndl) {
     N->setScheduled(true);
     for (auto *DepN : N->preds(DAG)) {
-      // TODO: preds() should not return nullptr.
-      if (DepN == nullptr)
-        continue;
       DepN->decrUnscheduledSuccs();
       if (DepN->ready())
         ReadyList.insert(DepN);
