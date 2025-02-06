@@ -41,5 +41,7 @@ ENUM_CODEGENOPT(DebugInfo,  llvm::codegenoptions::DebugInfoKind, 4,  llvm::codeg
 ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 3, llvm::driver::VectorLibrary::NoLibrary) ///< Vector functions library to use
 ENUM_CODEGENOPT(FramePointer, llvm::FramePointerKind, 2, llvm::FramePointerKind::None) ///< Enable the usage of frame pointers
 
+ENUM_CODEGENOPT(DoConcurrentMapping, DoConcurrentMappingKind, 2, DoConcurrentMappingKind::DCMK_None) ///< Map `do concurrent` to OpenMP
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
