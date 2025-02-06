@@ -955,7 +955,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   return BaseImplRetVal;
 }
 
-bool RISCVRegisterInfo::needReleasePendingQueue(
+bool RISCVRegisterInfo::shouldReleasePendingQueue(
     MachineFunction &MF, ArrayRef<unsigned> MaxSetPressure) const {
   for (unsigned Idx = 0; Idx < MaxSetPressure.size(); Idx++) {
     // Consider only the RVV Register, as RVV spilling/reloading has higher
@@ -972,7 +972,7 @@ bool RISCVRegisterInfo::needReleasePendingQueue(
   return false;
 }
 
-bool RISCVRegisterInfo::needReleaseSUFromPendingQueue(
+bool RISCVRegisterInfo::shouldReleaseSUFromPendingQueue(
     MachineFunction &MF, ArrayRef<unsigned> PSetID,
     ArrayRef<int> UnitInc) const {
   const int UnitIncRVVRegPressureThreshold = -3;

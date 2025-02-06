@@ -1193,17 +1193,17 @@ public:
   /// Based on the target and current register pressure information from the
   /// Scheduler, determine whether to release the node in the pending queue
   virtual bool
-  needReleasePendingQueue(MachineFunction &MF,
-                          ArrayRef<unsigned> MaxSetPressure) const {
+  shouldReleasePendingQueue(MachineFunction &MF,
+                            ArrayRef<unsigned> MaxSetPressure) const {
     return false;
   }
 
   /// For each SUnit, determine whether to release it
   /// from the pending queue based on the register pressure changes
   /// associated with that SUnit.
-  virtual bool needReleaseSUFromPendingQueue(MachineFunction &MF,
-                                             ArrayRef<unsigned> PSetID,
-                                             ArrayRef<int> UnitInc) const {
+  virtual bool shouldReleaseSUFromPendingQueue(MachineFunction &MF,
+                                               ArrayRef<unsigned> PSetID,
+                                               ArrayRef<int> UnitInc) const {
     return false;
   }
 

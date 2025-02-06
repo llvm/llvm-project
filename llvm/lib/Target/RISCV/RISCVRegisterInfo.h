@@ -145,12 +145,12 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
     return RISCVRI::isVRegClass(RC->TSFlags);
   }
   bool
-  needReleasePendingQueue(MachineFunction &MF,
-                          ArrayRef<unsigned> MaxSetPressure) const override;
+  shouldReleasePendingQueue(MachineFunction &MF,
+                            ArrayRef<unsigned> MaxSetPressure) const override;
 
-  bool needReleaseSUFromPendingQueue(MachineFunction &MF,
-                                     ArrayRef<unsigned> PSetID,
-                                     ArrayRef<int> UnitInc) const override;
+  bool shouldReleaseSUFromPendingQueue(MachineFunction &MF,
+                                       ArrayRef<unsigned> PSetID,
+                                       ArrayRef<int> UnitInc) const override;
 };
 } // namespace llvm
 

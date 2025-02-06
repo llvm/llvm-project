@@ -3679,7 +3679,7 @@ void GenericScheduler::bumpCycleUntilReleaseSUFromPending(bool IsTop) {
         PSetIDs.push_back(PChange.getPSet());
         UnitIncs.push_back(PChange.getUnitInc());
       }
-      if (TRI->needReleaseSUFromPendingQueue(DAG->MF, PSetIDs, UnitIncs))
+      if (TRI->shouldReleaseSUFromPendingQueue(DAG->MF, PSetIDs, UnitIncs))
         SchedB.bumpCycleUntilReleaseSUFromPending(SU, ReadyListLimit);
     }
   };
@@ -3778,11 +3778,11 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
   }
 
   if (EnableReleasePendingQ && !RegionPolicy.OnlyBottomUp &&
-      TRI->needReleasePendingQueue(
+      TRI->shouldReleasePendingQueue(
           DAG->MF, DAG->getTopRPTracker().getPressure().MaxSetPressure))
     bumpCycleUntilReleaseSUFromPending(/*IsTop=*/true);
   if (EnableReleasePendingQ && !RegionPolicy.OnlyTopDown &&
-      TRI->needReleasePendingQueue(
+      TRI->shouldReleasePendingQueue(
           DAG->MF, DAG->getBotRPTracker().getPressure().MaxSetPressure))
     bumpCycleUntilReleaseSUFromPending(/*IsTop=*/false);
 
