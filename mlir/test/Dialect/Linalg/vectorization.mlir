@@ -1201,9 +1201,9 @@ func.func private @insert_slice_dynamic_dest_dim(%source: tensor<?x3x?x1xi32>, %
 
 // CHECK-LABEL:   func.func private @insert_slice_dynamic_dest_dim(
 // CHECK-SAME:      %[[SRC:.*]]: tensor<?x3x?x1xi32>,
-// CHECK-SAME:      %[[size:.*]]: index) -> tensor<?x3xi32> {
+// CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<?x3xi32> {
 // CHECK:           %[[C_2:.*]] = arith.constant 2 : index
-// CHECK:           %[[INIT:.*]] = tensor.empty(%[[size]]) : tensor<?x3xi32>
+// CHECK:           %[[INIT:.*]] = tensor.empty(%[[SIZE]]) : tensor<?x3xi32>
 // CHECK:           %[[SRC_SLICE:.*]] = tensor.extract_slice %[[SRC]][0, %[[C_2]], 0, 0] [1, 1, 5, 1] [1, 1, 1, 1] : tensor<?x3x?x1xi32> to tensor<5x1xi32>
 // CHECK:           %[[PAD:.*]] = arith.constant 0 : i32
 // CHECK:           %[[C_5:.*]] = arith.constant 5 : index
