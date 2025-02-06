@@ -199,3 +199,22 @@ void other_main() {
   static_assert(f<int>() == 2);
 }
 }  // namespace
+
+namespace {
+struct S {
+  int a,b,c;
+};
+
+clsss S2 { // expected-error{{{unknown type name 'clsss'}}}
+public:
+  int a,b,c;
+};
+
+// Should not crash.
+auto X = [] <typename = void> () {
+    auto [...pack,a,b,c] = S{};
+    auto [x,y,z,...pack2] = S{};
+    auto [...pack3] = S2{};
+    static_assert(sizeof...(pack3) == 5);
+};
+}  // namespace
