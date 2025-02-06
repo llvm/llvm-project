@@ -876,7 +876,6 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
     // get more accurate result in this case.
     Result.second = Encoding.LaneSharedSize;
   } else {
-    llvm_unreachable("unhandled v_load/store_idx on private vgpr");
     // TODO-GFX13: we may have more accurate range info for
     // v_load/store_idx on private vgpr?
     Result.second = MaxNumVGPRs;
