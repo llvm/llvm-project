@@ -39,6 +39,7 @@ using ModulePassManager = PassManager<Module>;
 class Function;
 class GlobalValue;
 class MachineModuleInfoWrapperPass;
+struct MachineSchedContext;
 class Mangler;
 class MCAsmInfo;
 class MCContext;
@@ -50,6 +51,7 @@ class raw_pwrite_stream;
 class PassBuilder;
 class PassInstrumentationCallbacks;
 struct PerFunctionMIParsingState;
+class ScheduleDAGInstrs;
 class SMDiagnostic;
 class SMRange;
 class Target;
@@ -144,6 +146,28 @@ public:
   virtual MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const {
+    return nullptr;
+  }
+
+  /// Create an instance of ScheduleDAGInstrs to be run within the standard
+  /// MachineScheduler pass for this function and target at the current
+  /// optimization level.
+  ///
+  /// This can also be used to plug a new MachineSchedStrategy into an instance
+  /// of the standard ScheduleDAGMI:
+  ///   return new ScheduleDAGMI(C, std::make_unique<MyStrategy>(C),
+  ///   /*RemoveKillFlags=*/false)
+  ///
+  /// Return NULL to select the default (generic) machine scheduler.
+  virtual ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const {
+    return nullptr;
+  }
+
+  /// Similar to createMachineScheduler but used when postRA machine scheduling
+  /// is enabled.
+  virtual ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const {
     return nullptr;
   }
 
