@@ -5618,7 +5618,7 @@ v_dot2_bf16_bf16_e64_dpp v0.l, v1, s2, v3.l quad_perm:[0,1,2,3] row_mask:0x0 ban
 // GFX1200: v_dot2_bf16_bf16_e64_dpp v0.l, v1, s2, v3.l quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0x00,0x00,0x67,0xd6,0xfa,0x04,0x0c,0x04,0x01,0xe4,0x00,0x00]
 
 v_dot2_bf16_bf16_e64_dpp v0.l, v1, v2, v3.l op_sel:[0,0,1,1] quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 fi:1
-// GFX1200: v_dot2_bf16_bf16_e64_dpp v0.l, v1, v2, v3.l quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 fi:1 ; encoding: [0x00,0x00,0x67,0xd6,0xfa,0x04,0x0e,0x04,0x01,0xe4,0x04,0x00]
+// GFX12-ERR: :[[@LINE-1]]:45: error: op_sel operand conflicts with 16-bit operand suffix
 
 v_dot2_bf16_bf16_e64_dpp v0, |v1|, -v2, -|s3| op_sel:[0,0,1,1] quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 fi:1
 // GFX1200: v_dot2_bf16_bf16_e64_dpp v0, |v1|, -v2, -|s3| op_sel:[0,0,1,1] quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 fi:1 ; encoding: [0x00,0x65,0x67,0xd6,0xfa,0x04,0x0e,0xc0,0x01,0xe4,0x04,0x00]
