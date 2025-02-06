@@ -985,12 +985,12 @@ static bool CheckBindingsCount(Sema &S, DecompositionDecl *DD,
     BPack->setDecomposedDecl(DD);
     SmallVector<ValueDecl *, 8> NestedBDs(PackSize);
     // Create the nested BindingDecls.
-    for (ValueDecl *&VD : NestedBDs) {
+    for (unsigned I = 0; I < PackSize; ++I) {
       BindingDecl *NestedBD = BindingDecl::Create(
           S.Context, BPack->getDeclContext(), BPack->getLocation(),
           BPack->getIdentifier(), QualType());
       NestedBD->setDecomposedDecl(DD);
-      VD = NestedBD;
+      NestedBDs[I] = NestedBD;
     }
 
     QualType PackType = S.Context.getPackExpansionType(

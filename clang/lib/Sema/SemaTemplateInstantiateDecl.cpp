@@ -1181,7 +1181,7 @@ Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
   BindingDecl *OldBindingPack = nullptr;
   for (auto *OldBD : D->bindings()) {
     Expr *BindingExpr = OldBD->getBinding();
-    if (isa_and_nonnull<FunctionParmPackExpr>(BindingExpr)) {
+    if (isa_and_present<FunctionParmPackExpr>(BindingExpr)) {
       // We have a resolved pack.
       assert(!OldBindingPack && "no more than one pack is allowed");
       OldBindingPack = OldBD;
@@ -1202,6 +1202,7 @@ Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
     auto Bindings = NewDD->bindings();
     BindingDecl *NewBindingPack = *llvm::find_if(
         Bindings, [](BindingDecl *D) -> bool { return D->isParameterPack(); });
+    assert(NewBindingPack != nullptr && "new bindings should also have a pack");
     llvm::ArrayRef<BindingDecl *> OldDecls =
         OldBindingPack->getBindingPackDecls();
     llvm::ArrayRef<BindingDecl *> NewDecls =

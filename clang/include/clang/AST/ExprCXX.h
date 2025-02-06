@@ -4633,8 +4633,8 @@ public:
   }
 };
 
-/// Represents a reference to a function parameter pack or init-capture pack
-/// that has been substituted but not yet expanded.
+/// Represents a reference to a function parameter pack, init-capture pack,
+/// or binding pack that has been substituted but not yet expanded.
 ///
 /// When a pack expansion contains multiple parameter packs at different levels,
 /// this node is used to represent a function parameter pack at an outer level
