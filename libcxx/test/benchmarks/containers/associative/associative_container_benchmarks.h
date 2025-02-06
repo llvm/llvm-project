@@ -434,22 +434,6 @@ void associative_container_benchmarks(std::string container) {
   });
 
   /////////////////////////
-  // Capacity
-  /////////////////////////
-  bench("size()", [=](auto& st) {
-    const std::size_t size = st.range(0);
-    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
-    Container c(in.begin(), in.end());
-
-    for (auto _ : st) {
-      auto result = c.size();
-      benchmark::DoNotOptimize(result);
-      benchmark::DoNotOptimize(c);
-      benchmark::ClobberMemory();
-    }
-  });
-
-  /////////////////////////
   // Query
   /////////////////////////
   auto with_existent_key = [=](auto func) {
