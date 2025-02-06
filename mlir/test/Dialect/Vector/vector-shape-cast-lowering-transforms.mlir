@@ -22,11 +22,11 @@ func.func @cancel_shape_cast(%arg0: vector<16xf32>) -> vector<16xf32> {
 // llvm.matrix operations
 // CHECK-LABEL: func @shape_casts
 func.func @shape_casts(%a: vector<2x2xf32>) -> (vector<4xf32>, vector<2x2xf32>) {
-  // CHECK-DAG: %[[cst22:.*]] = ub.poison : vector<2x2xf32>
-  // CHECK-DAG: %[[cst:.*]] = ub.poison : vector<4xf32>
+  // CHECK-DAG: %[[ub22:.*]] = ub.poison : vector<2x2xf32>
+  // CHECK-DAG: %[[ub:.*]] = ub.poison : vector<4xf32>
   // CHECK: %[[ex0:.*]] = vector.extract %{{.*}}[0] : vector<2xf32> from vector<2x2xf32>
   //
-  // CHECK: %[[in0:.*]] = vector.insert_strided_slice %[[ex0]], %[[cst]]
+  // CHECK: %[[in0:.*]] = vector.insert_strided_slice %[[ex0]], %[[ub]]
   // CHECK-SAME: {offsets = [0], strides = [1]} : vector<2xf32> into vector<4xf32>
   //
   // CHECK: %[[ex1:.*]] = vector.extract %{{.*}}[1] : vector<2xf32> from vector<2x2xf32>
@@ -42,7 +42,7 @@ func.func @shape_casts(%a: vector<2x2xf32>) -> (vector<4xf32>, vector<2x2xf32>) 
   // CHECK-SAME: {offsets = [0], sizes = [2], strides = [1]} :
   // CHECK-SAME: vector<4xf32> to vector<2xf32>
   //
-  // CHECK: %[[res0:.*]] = vector.insert %[[ss0]], %[[cst22]] [0] :
+  // CHECK: %[[res0:.*]] = vector.insert %[[ss0]], %[[ub22]] [0] :
   // CHECK-SAME: vector<2xf32> into vector<2x2xf32>
   //
   // CHECK: %[[s2:.*]] = vector.extract_strided_slice %[[add]]
@@ -59,9 +59,9 @@ func.func @shape_casts(%a: vector<2x2xf32>) -> (vector<4xf32>, vector<2x2xf32>) 
 
 // CHECK-LABEL: func @shape_cast_2d2d
 // CHECK-SAME: %[[A:.*]]: vector<3x2xf32>
-// CHECK: %[[C:.*]] = ub.poison : vector<2x3xf32>
+// CHECK: %[[UB:.*]] = ub.poison : vector<2x3xf32>
 // CHECK: %[[T0:.*]] = vector.extract %[[A]][0, 0] : f32 from vector<3x2xf32>
-// CHECK: %[[T1:.*]] = vector.insert %[[T0]], %[[C]] [0, 0] : f32 into vector<2x3xf32>
+// CHECK: %[[T1:.*]] = vector.insert %[[T0]], %[[UB]] [0, 0] : f32 into vector<2x3xf32>
 // CHECK: %[[T2:.*]] = vector.extract %[[A]][0, 1] : f32 from vector<3x2xf32>
 // CHECK: %[[T3:.*]] = vector.insert %[[T2]], %[[T1]] [0, 1] : f32 into vector<2x3xf32>
 // CHECK: %[[T4:.*]] = vector.extract %[[A]][1, 0] : f32 from vector<3x2xf32>
@@ -81,9 +81,9 @@ func.func @shape_cast_2d2d(%arg0 : vector<3x2xf32>) -> vector<2x3xf32> {
 
 // CHECK-LABEL: func @shape_cast_3d1d
 // CHECK-SAME: %[[A:.*]]: vector<1x3x2xf32>
-// CHECK: %[[C:.*]] = ub.poison : vector<6xf32>
+// CHECK: %[[UB:.*]] = ub.poison : vector<6xf32>
 // CHECK: %[[T0:.*]] = vector.extract %[[A]][0, 0] : vector<2xf32> from vector<1x3x2xf32>
-// CHECK: %[[T1:.*]] = vector.insert_strided_slice %[[T0]], %[[C]]
+// CHECK: %[[T1:.*]] = vector.insert_strided_slice %[[T0]], %[[UB]]
 // CHECK-SAME:           {offsets = [0], strides = [1]} : vector<2xf32> into vector<6xf32>
 // CHECK: %[[T2:.*]] = vector.extract %[[A]][0, 1] : vector<2xf32> from vector<1x3x2xf32>
 // CHECK: %[[T3:.*]] = vector.insert_strided_slice %[[T2]], %[[T1]]
@@ -100,10 +100,10 @@ func.func @shape_cast_3d1d(%arg0 : vector<1x3x2xf32>) -> vector<6xf32> {
 
 // CHECK-LABEL: func @shape_cast_1d3d
 // CHECK-SAME: %[[A:.*]]: vector<6xf32>
-// CHECK: %[[C:.*]] = ub.poison : vector<2x1x3xf32>
+// CHECK: %[[UB:.*]] = ub.poison : vector<2x1x3xf32>
 // CHECK: %[[T0:.*]] = vector.extract_strided_slice %[[A]]
 // CHECK-SAME:           {offsets = [0], sizes = [3], strides = [1]} : vector<6xf32> to vector<3xf32>
-// CHECK: %[[T1:.*]] = vector.insert %[[T0]], %[[C]] [0, 0] : vector<3xf32> into vector<2x1x3xf32>
+// CHECK: %[[T1:.*]] = vector.insert %[[T0]], %[[UB]] [0, 0] : vector<3xf32> into vector<2x1x3xf32>
 // CHECK: %[[T2:.*]] = vector.extract_strided_slice %[[A]]
 // CHECK:                {offsets = [3], sizes = [3], strides = [1]} : vector<6xf32> to vector<3xf32>
 // CHECK: %[[T3:.*]] = vector.insert %[[T2]], %[[T1]] [1, 0] : vector<3xf32> into vector<2x1x3xf32>
