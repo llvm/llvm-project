@@ -493,8 +493,9 @@ bool GCNRewritePartialRegUsesImpl::run(MachineFunction &MF) {
 }
 
 bool GCNRewritePartialRegUsesLegacy::runOnMachineFunction(MachineFunction &MF) {
-  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
-  auto LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+  LiveIntervalsWrapperPass *LISWrapper =
+      getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   GCNRewritePartialRegUsesImpl Impl(LIS);
   return Impl.run(MF);
 }
