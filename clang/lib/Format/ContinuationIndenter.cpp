@@ -304,10 +304,6 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
                                    Current.closesBlockOrBlockTypeList(Style))) {
     return false;
   }
-  if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser) &&
-      !CurrentState.BreakBeforeClosingAngle) {
-    return false;
-  }
   // The opening "{" of a braced list has to be on the same line as the first
   // element if it is nested in another braced init list or function call.
   if (!Current.MustBreakBefore && Previous.is(tok::l_brace) &&
@@ -359,6 +355,8 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
       Current.is(tok::r_paren)) {
     return CurrentState.BreakBeforeClosingParen;
   }
+  if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser))
+    return CurrentState.BreakBeforeClosingAngle;
 
   // Don't allow breaking before a closing brace of a block-indented braced list
   // initializer if there isn't already a break.

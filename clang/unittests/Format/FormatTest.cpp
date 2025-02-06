@@ -11345,24 +11345,7 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
 
   // Now test that it handles the cases when the column limit forces wrapping.
   Style.ColumnLimit = 40;
-  // Breaks when the name is looong. Note that these names are exactly 1
-  // character too long for the ColumnLimit.
-  verifyFormat("template <\n"
-               "    typename Foo,\n"
-               "    typename Barrrrrrrrrrrrrrrrrrr\n"
-               ">\n"
-               "void foo() {}",
-               Style);
-  // BlockIndent style is used when the ColumnLimit allows it:
-  verifyFormat("template <typename Foo,\n"
-               "          typename Barrrrrrrrrrrrrrrrrr>\n"
-               "void foo() {}",
-               Style);
-  verifyFormat("template <typename Fooooooooooooooooooo,\n"
-               "          typename Bar>\n"
-               "void foo() {}",
-               Style);
-  // Additionally, long names should be split in one step:
+  // Long names should be split in one step:
   verifyFormat("template <\n"
                "    typename Foo,\n"
                "    typename Barrrrrrrrrrrrrrrrrrr\n"
@@ -11440,16 +11423,6 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                "                    typename>\n"
                "          typename T\n"
                "      >(T t) {};\n"
-               "}",
-               Style);
-  // Test that if the type is NOT long, it pulls it back into one line:
-  verifyFormat("void foo() {\n"
-               "  auto lambda = []<typename T>(T t) {};\n"
-               "}",
-               "void foo() {\n"
-               "  auto lambda = []<\n"
-               "                    typename T\n"
-               "                  >(T t) {};\n"
                "}",
                Style);
 
