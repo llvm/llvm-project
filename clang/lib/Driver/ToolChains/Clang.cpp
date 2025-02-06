@@ -7064,6 +7064,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Arg *SA = Args.getLastArg(options::OPT_mcf_branch_label_scheme_EQ))
       CmdArgs.push_back(Args.MakeArgString(Twine("-mcf-branch-label-scheme=") +
                                            SA->getValue()));
+  } else if (Triple.isOSOpenBSD() && Triple.getArch() == llvm::Triple::x86_64) {
+    // Emit IBT endbr64 instructions by default
+    CmdArgs.push_back("-fcf-protection=branch");
+    // jump-table can generate indirect jumps, which are not permitted
+    CmdArgs.push_back("-fno-jump-tables");
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mfunction_return_EQ))

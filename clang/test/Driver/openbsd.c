@@ -141,3 +141,8 @@
 // RUN: %clang --target=aarch64-unknown-openbsd -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AARCH64-BTI-PAC %s
 // CHECK-AARCH64-BTI-PAC: "-msign-return-address=non-leaf" "-msign-return-address-key=a_key" "-mbranch-target-enforce"
+
+// Check 64-bit X86 for IBT flags
+// RUN: %clang --target=amd64-unknown-openbsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-AMD64-IBT %s
+// CHECK-AMD64-IBT: "-fcf-protection=branch" "-fno-jump-tables"
