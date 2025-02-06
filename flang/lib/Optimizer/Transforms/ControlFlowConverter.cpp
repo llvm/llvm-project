@@ -123,7 +123,8 @@ public:
                                       : terminator->operand_begin();
     loopCarried.append(begin, terminator->operand_end());
     loopCarried.push_back(itersMinusOne);
-    auto backEdge = rewriter.create<mlir::cf::BranchOp>(loc, conditionalBlock, loopCarried);
+    auto backEdge =
+        rewriter.create<mlir::cf::BranchOp>(loc, conditionalBlock, loopCarried);
     rewriter.eraseOp(terminator);
 
     // Copy loop annotations from the do loop to the loop back edge.
