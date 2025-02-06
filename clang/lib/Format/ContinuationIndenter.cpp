@@ -362,7 +362,7 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
       Current.is(tok::r_paren)) {
     return CurrentState.BreakBeforeClosingParen;
   }
-  
+
   if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser))
     return CurrentState.BreakBeforeClosingAngle;
 
