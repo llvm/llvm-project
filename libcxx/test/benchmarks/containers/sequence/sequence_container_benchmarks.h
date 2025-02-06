@@ -21,7 +21,6 @@
 
 #include "benchmark/benchmark.h"
 #include "test_iterators.h"
-#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 namespace support {
@@ -102,7 +101,7 @@ void sequence_container_benchmarks(std::string container) {
       }
     });
 
-#if TEST_STD_VER >= 23
+#if defined(__cpp_lib_containers_ranges) && __cpp_lib_containers_ranges >= 202202L
   for (auto gen : generators)
     bench("ctor(Range)" + tostr(gen), [gen](auto& st) {
       auto const size = st.range(0);
