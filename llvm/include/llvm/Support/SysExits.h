@@ -1,0 +1,24 @@
+#ifndef SYSEXITS_H
+#define SYSEXITS_H
+
+// BSD Exit Codes (18 total) — These are the commonly used exit codes without POSIX dependencies
+#define EX_OK         0    // Successful termination
+#define EX_USAGE      64   // Command line usage error
+#define EX_DATAERR    65   // Data format error
+#define EX_NOINPUT    66   // Cannot open input
+#define EX_NOUSER     67   // Addressee unknown
+#define EX_NOHOST     68   // Host name unknown
+#define EX_UNAVAILABLE 69  // Service unavailable
+#define EX_SOFTWARE   70   // Internal software error
+#define EX_OSERR      71   // Operating system error
+#define EX_OSFILE     72   // System file error
+#define EX_CANTCREAT  73   // Cannot create (user) output file
+#define EX_IOERR      74   // Input/output error
+#define EX_TEMPFAIL   75   // Temporary failure, try again
+#define EX_PROTOCOL   76   // Remote protocol error
+#define EX_NOPERM     77   // Permission denied
+#define EX_CONFIG     78   // Configuration error
+#define EX_INTERNAL   80   // Internal error
+#define EX_INVALIDARG 81   // Invalid argument
+
+#endif // SYSEXITS_H
