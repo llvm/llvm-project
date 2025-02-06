@@ -287,7 +287,7 @@ void associative_container_benchmarks(std::string container) {
     }
     Container c(small.begin(), small.end());
 
-    for (auto _ : st) {
+    for ([[maybe_unused]] auto _ : st) {
       c.insert(in.begin(), in.end());
       benchmark::DoNotOptimize(c);
       benchmark::ClobberMemory();
@@ -310,7 +310,7 @@ void associative_container_benchmarks(std::string container) {
     }
     Container c(small.begin(), small.end());
 
-    for (auto _ : st) {
+    for ([[maybe_unused]] auto _ : st) {
       c.insert(in.begin(), in.end());
       benchmark::DoNotOptimize(c);
       benchmark::ClobberMemory();
@@ -403,7 +403,7 @@ void associative_container_benchmarks(std::string container) {
 
     auto first = std::next(c.begin(), c.size() / 4);
     auto last  = std::next(c.begin(), 3 * (c.size() / 4));
-    for (auto _ : st) {
+    for ([[maybe_unused]] auto _ : st) {
       auto result = c.erase(first, last);
       benchmark::DoNotOptimize(result);
       benchmark::DoNotOptimize(c);
@@ -422,7 +422,7 @@ void associative_container_benchmarks(std::string container) {
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container c(in.begin(), in.end());
 
-    for (auto _ : st) {
+    for ([[maybe_unused]] auto _ : st) {
       c.clear();
       benchmark::DoNotOptimize(c);
       benchmark::ClobberMemory();
