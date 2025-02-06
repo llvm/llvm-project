@@ -155,7 +155,7 @@ public:
         Edge *KeepAliveEdge = nullptr;
         for (auto &E : Fn.getBlock().edges_at(0)) {
           if (E.getKind() == Edge::KeepAlive && E.getTarget().isDefined() &&
-              &E.getTarget().getBlock().getSection() == EHFrameSec) {
+              &E.getTarget().getSection() == EHFrameSec) {
             KeepAliveEdge = &E;
             break;
           }
@@ -510,8 +510,9 @@ private:
       // If this record marks the start of a new second level page.
       if (RecordIdx % NumRecordsPerSecondLevelPage == 0) {
         auto FnDelta = R.Fn->getAddress() - CompactUnwindBase->getAddress();
-        auto SecondLevelPageOffset = SectionOffsetToSecondLevelPages +
-                                     (RecordIdx / NumRecordsPerSecondLevelPage);
+        auto SecondLevelPageOffset =
+            SectionOffsetToSecondLevelPages +
+            SecondLevelPageSize * (RecordIdx / NumRecordsPerSecondLevelPage);
         auto LSDAOffset =
             SectionOffsetToLSDAs + NumPreviousLSDAs * LSDAEntrySize;
 

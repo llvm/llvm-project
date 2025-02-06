@@ -145,6 +145,8 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -240,6 +242,11 @@ Static Analyzer
 
 New features
 ^^^^^^^^^^^^
+
+A new flag - `-static-libclosure` was introduced to support statically linking
+the runtime for the Blocks extension on Windows. This flag currently only
+changes the code generation, and even then, only on Windows. This does not
+impact the linker behaviour like the other `-static-*` flags.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
