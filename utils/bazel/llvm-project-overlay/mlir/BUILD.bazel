@@ -5037,6 +5037,7 @@ cc_library(
         ":TransformPDLExtension",
         ":UBToLLVM",
         ":VCIXToLLVMIRTranslation",
+        ":VectorToLLVM",
         ":VectorTransformOps",
     ],
 )
@@ -5097,6 +5098,7 @@ cc_library(
         ":BufferizationInterfaces",
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
+        ":ConvertToLLVMInterface",
         ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":IR",
@@ -12012,6 +12014,7 @@ cc_library(
         ":ArmSVEDialect",
         ":ArmSVETransforms",
         ":ConversionPassIncGen",
+        ":ConvertToLLVMInterface",
         ":FuncDialect",
         ":IR",
         ":LLVMCommonConversion",

@@ -42,6 +42,7 @@ def Variable : BuiltinGroup;
 def Atomic : BuiltinGroup;
 def Barrier : BuiltinGroup;
 def Dot : BuiltinGroup;
+def IntegerDot : BuiltinGroup;
 def Wave : BuiltinGroup;
 def GetQuery : BuiltinGroup;
 def ImageSizeQuery : BuiltinGroup;
@@ -101,6 +102,8 @@ def lookupBuiltin : SearchIndex {
 // Dot builtin record:
 def : DemangledBuiltin<"dot", OpenCL_std, Dot, 2, 2>;
 def : DemangledBuiltin<"__spirv_Dot", OpenCL_std, Dot, 2, 2>;
+def : DemangledBuiltin<"dot_acc_sat", OpenCL_std, IntegerDot, 3, 3>;
+def : DemangledBuiltin<"__spirv_DotAccSat", OpenCL_std, IntegerDot, 3, 3>;
 
 // Image builtin records:
 def : DemangledBuiltin<"read_imagei", OpenCL_std, ReadImage, 2, 4>;
@@ -1715,3 +1718,47 @@ class CLMemoryFenceFlags<bits<32> value> {
 def CLK_LOCAL_MEM_FENCE : CLMemoryFenceFlags<0x1>;
 def CLK_GLOBAL_MEM_FENCE : CLMemoryFenceFlags<0x2>;
 def CLK_IMAGE_MEM_FENCE : CLMemoryFenceFlags<0x4>;
+
+//===----------------------------------------------------------------------===//
+// Class defining dot builtins that should be translated into a
+// SPIR-V instruction using SPIR-V 1.6 or SPV_KHR_integer_dot_product extension.
+//
+// name is the demangled name of the given builtin.
+// opcode specifies the SPIR-V operation code of the generated instruction.
+// isSwapRequired specifies if the operands need to be swapped (the SPIR-V extension
+// has only one instruction for arguments of different signedness).
+//===----------------------------------------------------------------------===//
+class IntegerDotProductBuiltin<string name, Op operation> {
+  string Name = name;
+  Op Opcode = operation;
+  bit IsSwapReq = !not(!eq(!find(name, "_us"), -1));
+}
+
+// Table gathering all the integer dot product builtins.
+def IntegerDotProductBuiltins : GenericTable {
+  let FilterClass = "IntegerDotProductBuiltin";
+  let Fields = ["Name", "Opcode", "IsSwapReq"];
+}
+
+// Function to lookup group builtins by their name and set.
+def lookupIntegerDotProductBuiltin : SearchIndex {
+  let Table = IntegerDotProductBuiltins;
+  let Key = ["Name"];
+}
+
+// Multiclass used to define incoming builtin records for the SPV_KHR_integer_dot_product extension.
+multiclass DemangledIntegerDotProductBuiltin<string name, bits<8> minNumArgs, bits<8> maxNumArgs, Op operation> {
+  def : DemangledBuiltin<!strconcat("dot", name), OpenCL_std, IntegerDot, minNumArgs, maxNumArgs>;
+  def : IntegerDotProductBuiltin<!strconcat("dot", name), operation>;
+}
+
+// cl_khr_integer_dot_product
+defm : DemangledIntegerDotProductBuiltin<"_4x8packed_uu_uint", 2, 3, OpUDot>;
+defm : DemangledIntegerDotProductBuiltin<"_4x8packed_ss_int", 2, 3, OpSDot>;
+defm : DemangledIntegerDotProductBuiltin<"_4x8packed_us_int", 2, 3, OpSUDot>;
+defm : DemangledIntegerDotProductBuiltin<"_4x8packed_su_int", 2, 3, OpSUDot>;
+
+defm : DemangledIntegerDotProductBuiltin<"_acc_sat_4x8packed_uu_uint", 3, 4, OpUDotAccSat>;
+defm : DemangledIntegerDotProductBuiltin<"_acc_sat_4x8packed_ss_int", 3, 4, OpSDotAccSat>;
+defm : DemangledIntegerDotProductBuiltin<"_acc_sat_4x8packed_us_int", 3, 4, OpSUDotAccSat>;
+defm : DemangledIntegerDotProductBuiltin<"_acc_sat_4x8packed_su_int", 3, 4, OpSUDotAccSat>;
