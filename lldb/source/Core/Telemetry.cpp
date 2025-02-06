@@ -45,20 +45,16 @@ void LldbBaseTelemetryInfo::serialize(Serializer &serializer) const {
 }
 
 static std::string MakeUUID(lldb_private::Debugger *debugger) {
-  std::string ret;
   uint8_t random_bytes[16];
   if (auto ec = llvm::getRandomBytes(random_bytes, 16)) {
     LLDB_LOG(GetLog(LLDBLog::Object),
              "Failed to generate random bytes for UUID: {0}", ec.message());
     // fallback to using timestamp + debugger ID.
-    ret = llvm::formatv(
+    return llvm::formatv(
         "{0}_{1}", std::chrono::steady_clock::now().time_since_epoch().count(),
         debugger->GetID());
-  } else {
-    ret = lldb_private::UUID(random_bytes).GetAsString();
   }
-
-  return ret;
+  return lldb_private::UUID(random_bytes).GetAsString();
 }
 
 TelemetryManager::TelemetryManager(
