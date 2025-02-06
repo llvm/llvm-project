@@ -319,6 +319,7 @@ CODEGENOPT(TimePassesPerRun  , 1, 0) ///< Set when -ftime-report=per-pass-run is
 CODEGENOPT(TimeTrace         , 1, 0) ///< Set when -ftime-trace is enabled.
 VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500) ///< Minimum time granularity (in microseconds),
                                                ///< traced by time profiler
+CODEGENOPT(InterchangeLoops  , 1, 0) ///< Run loop-interchange.
 CODEGENOPT(UnrollLoops       , 1, 0) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0) ///< Control whether loops are rerolled.
 CODEGENOPT(NoUseJumpTables   , 1, 0) ///< Set when -fno-jump-tables is enabled.
