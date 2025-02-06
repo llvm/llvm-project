@@ -348,7 +348,11 @@ mlir::Type CIRGenTypes::convertType(QualType T) {
 
   // For the device-side compilation, CUDA device builtin surface/texture types
   // may be represented in different types.
-  assert(!astContext.getLangOpts().CUDAIsDevice && "not implemented");
+  if (astContext.getLangOpts().CUDAIsDevice) {
+    if (Ty->isCUDADeviceBuiltinSurfaceType() ||
+        Ty->isCUDADeviceBuiltinTextureType())
+      llvm_unreachable("NYI");
+  }
 
   if (const auto *recordType = dyn_cast<RecordType>(T))
     return convertRecordDeclType(recordType->getDecl());

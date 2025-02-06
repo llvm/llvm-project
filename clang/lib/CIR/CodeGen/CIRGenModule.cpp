@@ -516,16 +516,32 @@ void CIRGenModule::emitGlobal(GlobalDecl GD) {
   assert(!Global->hasAttr<CPUDispatchAttr>() && "NYI");
 
   if (langOpts.CUDA) {
-    if (langOpts.CUDAIsDevice)
-      llvm_unreachable("NYI");
+    if (langOpts.CUDAIsDevice) {
+      // This will implicitly mark templates and their
+      // specializations as __host__ __device__.
+      if (langOpts.OffloadImplicitHostDeviceTemplates)
+        llvm_unreachable("NYI");
+
+      // This maps some parallel standard libraries implicitly
+      // to GPU, even when they are not marked __device__.
+      if (langOpts.HIPStdPar)
+        llvm_unreachable("NYI");
+
+      if (Global->hasAttr<CUDAGlobalAttr>())
+        llvm_unreachable("NYI");
+
+      if (!Global->hasAttr<CUDADeviceAttr>())
+        return;
+    } else {
+      // We must skip __device__ functions when compiling for host.
+      if (!Global->hasAttr<CUDAHostAttr>() &&
+          Global->hasAttr<CUDADeviceAttr>()) {
+        return;
+      }
+    }
 
     if (dyn_cast<VarDecl>(Global))
       llvm_unreachable("NYI");
-
-    // We must skip __device__ functions when compiling for host.
-    if (!Global->hasAttr<CUDAHostAttr>() && Global->hasAttr<CUDADeviceAttr>()) {
-      return;
-    }
   }
 
   if (langOpts.OpenMP) {
@@ -2415,8 +2431,6 @@ StringRef CIRGenModule::getMangledName(GlobalDecl GD) {
     }
   }
 
-  assert(!langOpts.CUDAIsDevice && "NYI");
-
   // Keep the first result in the case of a mangling collision.
   const auto *ND = cast<NamedDecl>(GD.getDecl());
   std::string MangledName = getMangledNameImpl(*this, GD, ND);
@@ -3099,7 +3113,8 @@ void CIRGenModule::emitDeferred(unsigned recursionLimit) {
   // Emit CUDA/HIP static device variables referenced by host code only. Note we
   // should not clear CUDADeviceVarODRUsedByHost since it is still needed for
   // further handling.
-  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
+  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
+      !getASTContext().CUDADeviceVarODRUsedByHost.empty()) {
     llvm_unreachable("NYI");
   }
 
@@ -3389,10 +3404,6 @@ void CIRGenModule::Release() {
     llvm_unreachable("NYI");
 
   if (!codeGenOpts.MemoryProfileOutput.empty()) {
-    llvm_unreachable("NYI");
-  }
-
-  if (langOpts.CUDAIsDevice && getTriple().isNVPTX()) {
     llvm_unreachable("NYI");
   }
 
