@@ -1,7 +1,6 @@
 ! Test COPYPRIVATE.
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 \
 ! RUN: | FileCheck %s
-! XFAIL: *
 !CHECK-DAG: func private @_copy_i64(%{{.*}}: !fir.ref<i64>, %{{.*}}: !fir.ref<i64>)
 !CHECK-DAG: func private @_copy_f32(%{{.*}}: !fir.ref<f32>, %{{.*}}: !fir.ref<f32>)
 !CHECK-DAG: func private @_copy_f64(%{{.*}}: !fir.ref<f64>, %{{.*}}: !fir.ref<f64>)

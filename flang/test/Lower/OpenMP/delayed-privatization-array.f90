@@ -1,5 +1,4 @@
 ! Test delayed privatization for arrays.
-! XFAIL: *
 ! RUN: split-file %s %t
 
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
