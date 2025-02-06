@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -I%S/../Inputs -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+
+#include "std-cxx.h"
 
 void t_new_constant_size() {
   auto p = new double[16];
@@ -83,3 +85,105 @@ void t_constant_size_partial_init() {
 // LLVM:   %[[ELEM_3_PTR:.*]] = getelementptr i32, ptr %[[ELEM_2_PTR]], i64 1
 // LLVM:   call void @llvm.memset.p0.i64(ptr %[[ELEM_3_PTR]], i8 0, i64 52, i1 false)
 // LLVM:   store ptr %[[ADDR]], ptr %[[ALLOCA]], align 8
+
+void t_new_var_size(size_t n) {
+  auto p = new char[n];
+}
+
+// LLVM:  @_Z14t_new_var_sizem
+// LLVM:    %[[N:.*]] = load i64, ptr %[[ARG_ALLOCA:.*]]
+// LLVM:    %[[ADDR:.*]] = call ptr @_Znam(i64 %[[N]])
+
+void t_new_var_size2(int n) {
+  auto p = new char[n];
+}
+
+// LLVM:  @_Z15t_new_var_size2i
+// LLVM:    %[[N:.*]] = load i32, ptr %[[ARG_ALLOCA:.*]]
+// LLVM:    %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
+// LLVM:    %[[ADDR:.*]] = call ptr @_Znam(i64 %[[N_SIZE_T]])
+
+void t_new_var_size3(size_t n) {
+  auto p = new double[n];
+}
+
+// LLVM:  @_Z15t_new_var_size3m
+// LLVM:    %[[N:.*]] = load i64, ptr %[[ARG_ALLOCA:.*]]
+// LLVM:    %[[RESULT_PAIR:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N]], i64 8)
+// LLVM:    %[[RESULT:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR]], 0
+// LLVM:    %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR]], 1
+// LLVM:    %[[ALLOC_SIZE:.*]] = select i1 %[[OVERFLOW]], i64 -1, i64 %[[RESULT]]
+// LLVM:    %[[ADDR:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])
+
+void t_new_var_size4(int n) {
+  auto p = new double[n];
+}
+
+// LLVM:  @_Z15t_new_var_size4i
+// LLVM:    %[[N:.*]] = load i32, ptr %[[ARG_ALLOCA:.*]]
+// LLVM:    %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
+// LLVM:    %[[RESULT_PAIR:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 8)
+// LLVM:    %[[RESULT:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR]], 0
+// LLVM:    %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR]], 1
+// LLVM:    %[[ALLOC_SIZE:.*]] = select i1 %[[OVERFLOW]], i64 -1, i64 %[[RESULT]]
+// LLVM:    %[[ADDR:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])
+
+void t_new_var_size5(int n) {
+  auto p = new double[n][2][3];
+}
+
+// NUM_ELEMENTS is not used in this case because cookies aren't required
+
+// LLVM:  @_Z15t_new_var_size5i
+// LLVM:    %[[N:.*]] = load i32, ptr %[[ARG_ALLOCA:.*]]
+// LLVM:    %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
+// LLVM:    %[[RESULT_PAIR:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 48)
+// LLVM:    %[[RESULT:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR]], 0
+// LLVM:    %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR]], 1
+// LLVM:    %[[NUM_ELEMENTS:.*]] = mul i64 %[[N_SIZE_T]], 6
+// LLVM:    %[[ALLOC_SIZE:.*]] = select i1 %[[OVERFLOW]], i64 -1, i64 %[[RESULT]]
+// LLVM:    %[[ADDR:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])
+
+void t_new_var_size6(int n) {
+  auto p = new double[n] { 1, 2, 3 };
+}
+
+// LLVM:  @_Z15t_new_var_size6i
+// LLVM:    %[[N:.*]] = load i32, ptr %[[ARG_ALLOCA:.*]]
+// LLVM:    %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
+// LLVM:    %[[LT_MIN_SIZE:.*]] = icmp ult i64 %[[N_SIZE_T]], 3
+// LLVM:    %[[RESULT_PAIR:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 8)
+// LLVM:    %[[RESULT:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR]], 0
+// LLVM:    %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR]], 1
+// LLVM:    %[[ANY_OVERFLOW:.*]] = or i1 %[[LT_MIN_SIZE]], %[[OVERFLOW]]
+// LLVM:    %[[ALLOC_SIZE:.*]] = select i1 %[[ANY_OVERFLOW]], i64 -1, i64 %[[RESULT]]
+// LLVM:    %[[ADDR:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])
+
+void t_new_var_size7(__int128 n) {
+  auto p = new double[n];
+}
+
+// LLVM:  @_Z15t_new_var_size7n
+// LLVM:    %[[N:.*]] = load i128, ptr %[[ARG_ALLOCA:.*]]
+// LLVM:    %[[N_SIZE_T:.*]] = trunc i128 %[[N]] to i64
+// LLVM:    %[[RESULT_PAIR:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N_SIZE_T]], i64 8)
+// LLVM:    %[[RESULT:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR]], 0
+// LLVM:    %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR]], 1
+// LLVM:    %[[ALLOC_SIZE:.*]] = select i1 %[[OVERFLOW]], i64 -1, i64 %[[RESULT]]
+// LLVM:    %[[ADDR:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])
+
+void t_new_var_size_nontrivial(size_t n) {
+  auto p = new D[n];
+}
+
+// LLVM:  @_Z25t_new_var_size_nontrivialm
+// LLVM:    %[[N:.*]] = load i64, ptr %[[ARG_ALLOCA:.*]]
+// LLVM:    %[[RESULT_PAIR:.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %[[N]], i64 4)
+// LLVM:    %[[SIZE_WITHOUT_COOKIE:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR]], 0
+// LLVM:    %[[OVERFLOW:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR]], 1
+// LLVM:    %[[RESULT_PAIR2:.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %[[SIZE_WITHOUT_COOKIE]], i64 8)
+// LLVM:    %[[SIZE:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR2]], 0
+// LLVM:    %[[OVERFLOW2:.*]] = extractvalue { i64, i1 } %[[RESULT_PAIR2]], 1
+// LLVM:    %[[ANY_OVERFLOW:.*]] = or i1 %[[OVERFLOW]], %[[OVERFLOW2]]
+// LLVM:    %[[ALLOC_SIZE:.*]] = select i1 %[[ANY_OVERFLOW]], i64 -1, i64 %[[SIZE]]
+// LLVM:    %[[ADDR:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])

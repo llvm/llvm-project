@@ -672,8 +672,113 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &CGF, const CXXNewExpr *e,
       size = CGF.getBuilder().getConstInt(Loc, allocationSize);
     }
   } else {
-    // TODO: Handle the variable size case
-    llvm_unreachable("NYI");
+    // Create a value for the variable number of elements
+    numElements = CGF.emitScalarExpr(*e->getArraySize());
+    auto numElementsType = mlir::cast<cir::IntType>(numElements.getType());
+    unsigned numElementsWidth = numElementsType.getWidth();
+
+    // We might need check for overflow.
+
+    mlir::Value hasOverflow = nullptr;
+    // The clang LLVM IR codegen checks for the size variable being signed,
+    // having a smaller width than size_t, and having a larger width than
+    // size_t. However, the AST implicitly casts the size variable to size_t
+    // so none of these conditions will ever be met.
+    bool isSigned =
+        (*e->getArraySize())->getType()->isSignedIntegerOrEnumerationType();
+    assert(!isSigned && (numElementsWidth == sizeWidth) &&
+           (numElements.getType() == CGF.SizeTy) &&
+           "Expected array size to be implicitly cast to size_t!");
+
+    // There are up to three conditions we need to test for:
+    // 1) if minElements > 0, we need to check whether numElements is smaller
+    //    than that.
+    // 2) we need to compute
+    //      sizeWithoutCookie := numElements * typeSizeMultiplier
+    //    and check whether it overflows; and
+    // 3) if we need a cookie, we need to compute
+    //      size := sizeWithoutCookie + cookieSize
+    //    and check whether it overflows.
+
+    if (minElements) {
+      // Don't allow allocation of fewer elements than we have initializers.
+      if (!hasOverflow) {
+        // FIXME: Avoid creating this twice. It may happen above.
+        mlir::Value minElementsV = CGF.getBuilder().getConstInt(
+            Loc, llvm::APInt(sizeWidth, minElements));
+        hasOverflow = CGF.getBuilder().createCompare(Loc, cir::CmpOpKind::lt,
+                                                     numElements, minElementsV);
+      }
+    }
+
+    size = numElements;
+
+    // Multiply by the type size if necessary.  This multiplier
+    // includes all the factors for nested arrays.
+    //
+    // This step also causes numElements to be scaled up by the
+    // nested-array factor if necessary.  Overflow on this computation
+    // can be ignored because the result shouldn't be used if
+    // allocation fails.
+    if (typeSizeMultiplier != 1) {
+      mlir::Value tsmV = CGF.getBuilder().getConstInt(Loc, typeSizeMultiplier);
+      auto mulResult = CGF.getBuilder().createBinOpOverflowOp(
+          Loc, mlir::cast<cir::IntType>(CGF.SizeTy),
+          cir::BinOpOverflowKind::Mul, size, tsmV);
+
+      if (hasOverflow)
+        hasOverflow =
+            CGF.getBuilder().createOr(hasOverflow, mulResult.overflow);
+      else
+        hasOverflow = mulResult.overflow;
+
+      size = mulResult.result;
+
+      // Also scale up numElements by the array size multiplier.
+      if (arraySizeMultiplier != 1) {
+        // If the base element type size is 1, then we can re-use the
+        // multiply we just did.
+        if (typeSize.isOne()) {
+          assert(arraySizeMultiplier == typeSizeMultiplier);
+          numElements = size;
+
+          // Otherwise we need a separate multiply.
+        } else {
+          mlir::Value asmV =
+              CGF.getBuilder().getConstInt(Loc, arraySizeMultiplier);
+          numElements = CGF.getBuilder().createMul(numElements, asmV);
+        }
+      }
+    } else {
+      // numElements doesn't need to be scaled.
+      assert(arraySizeMultiplier == 1);
+    }
+
+    // Add in the cookie size if necessary.
+    if (cookieSize != 0) {
+      sizeWithoutCookie = size;
+      mlir::Value cookieSizeV = CGF.getBuilder().getConstInt(Loc, cookieSize);
+      auto addResult = CGF.getBuilder().createBinOpOverflowOp(
+          Loc, mlir::cast<cir::IntType>(CGF.SizeTy),
+          cir::BinOpOverflowKind::Add, size, cookieSizeV);
+
+      if (hasOverflow)
+        hasOverflow =
+            CGF.getBuilder().createOr(hasOverflow, addResult.overflow);
+      else
+        hasOverflow = addResult.overflow;
+
+      size = addResult.result;
+    }
+
+    // If we had any possibility of dynamic overflow, make a select to
+    // overwrite 'size' with an all-ones value, which should cause
+    // operator new to throw.
+    if (hasOverflow) {
+      mlir::Value allOnes =
+          CGF.getBuilder().getConstInt(Loc, llvm::APInt::getAllOnes(sizeWidth));
+      size = CGF.getBuilder().createSelect(Loc, hasOverflow, allOnes, size);
+    }
   }
 
   if (cookieSize == 0)
