@@ -23,19 +23,21 @@ endif()
 add_custom_target(test-lit COMMAND "${LLVM_LIT_PATH}"
                   "${CMAKE_CURRENT_BINARY_DIR}" -v)
 
-macro(add_comgr_lit_binary name)
-  add_executable("${name}" "comgr-sources/${name}.c")
-  set_target_properties("${name}" PROPERTIES
-    C_STANDARD 99
-    C_STANDARD_REQUIRED Yes
-    C_EXTENSIONS No)
+macro(add_comgr_lit_binary name lang)
+  add_executable("${name}" "comgr-sources/${name}.${lang}")
+  if (${lang} STREQUAL "c")
+    set_target_properties("${name}" PROPERTIES
+      C_STANDARD 99
+      C_STANDARD_REQUIRED Yes
+      C_EXTENSIONS No)
+  endif()
   target_link_libraries("${name}" amd_comgr)
   add_dependencies(check-comgr "${name}")
 endmacro()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-add_comgr_lit_binary(source-to-bc-with-dev-libs)
-add_comgr_lit_binary(spirv-translator)
+add_comgr_lit_binary(source-to-bc-with-dev-libs c)
+add_comgr_lit_binary(spirv-translator c)
 
 add_dependencies(check-comgr test-lit)
