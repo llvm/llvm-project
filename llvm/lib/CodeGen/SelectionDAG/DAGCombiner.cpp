@@ -23188,7 +23188,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     auto *VecLoad = dyn_cast<LoadSDNode>(VecOp);
     if (VecLoad && VecLoad->isSimple()) {
       if (SDValue Scalarized = TLI.scalarizeExtractedVectorLoad(
-              ExtVT, SDLoc(N), VecVT, Index, VecLoad, DAG)) {
+              ScalarVT, SDLoc(N), VecVT, Index, VecLoad, DAG)) {
         ++OpsNarrowed;
         return Scalarized;
       }

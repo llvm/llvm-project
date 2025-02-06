@@ -1843,6 +1843,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, OPT_fno_finite_loops);
     break;
   }
+
+  if (Opts.StaticClosure)
+    GenerateArg(Consumer, OPT_static_libclosure);
 }
 
 bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
@@ -2329,6 +2332,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       options::OPT_mamdgpu_ieee, options::OPT_mno_amdgpu_ieee, true);
   if (!Opts.EmitIEEENaNCompliantInsts && !LangOptsRef.NoHonorNaNs)
     Diags.Report(diag::err_drv_amdgpu_ieee_without_no_honor_nans);
+
+  Opts.StaticClosure = Args.hasArg(options::OPT_static_libclosure);
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }

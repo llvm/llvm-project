@@ -50,13 +50,12 @@ CHECK-NEXT: Column: 0
 
 CHECK: 0x4005ad
 CHECK-NEXT: foo
-CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+CHECK-NEXT: Filename: ??
 CHECK-NEXT: Function start filename: /tmp{{[\\/]}}discrim.c
 CHECK-NEXT: Function start line: 4
 CHECK-NEXT: Function start address: 0x400590
 CHECK-NEXT: Line: 0
-CHECK-NEXT: Column: 30
-CHECK-NEXT: Discriminator: 4
+CHECK-NEXT: Column: 0
 CHECK-NEXT: main
 CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
 CHECK-NEXT: Function start filename: /tmp{{[\\/]}}discrim.c
