@@ -8,14 +8,17 @@
 
 @.str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 
-define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x double> %c, i32 %gvl) nounwind
+define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x double> %c, i32 %gvl)
 ; SPILL-O0-LABEL: foo:
 ; SPILL-O0:       # %bb.0:
 ; SPILL-O0-NEXT:    addi sp, sp, -32
+; SPILL-O0-NEXT:    .cfi_def_cfa_offset 32
 ; SPILL-O0-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; SPILL-O0-NEXT:    .cfi_offset ra, -4
 ; SPILL-O0-NEXT:    csrr a1, vlenb
 ; SPILL-O0-NEXT:    slli a1, a1, 1
 ; SPILL-O0-NEXT:    sub sp, sp, a1
+; SPILL-O0-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 2 * vlenb
 ; SPILL-O0-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
 ; SPILL-O0-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; SPILL-O0-NEXT:    vmv1r.v v10, v9
@@ -46,18 +49,25 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O0-NEXT:    csrr a0, vlenb
 ; SPILL-O0-NEXT:    slli a0, a0, 1
 ; SPILL-O0-NEXT:    add sp, sp, a0
+; SPILL-O0-NEXT:    .cfi_def_cfa sp, 32
 ; SPILL-O0-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; SPILL-O0-NEXT:    .cfi_restore ra
 ; SPILL-O0-NEXT:    addi sp, sp, 32
+; SPILL-O0-NEXT:    .cfi_def_cfa_offset 0
 ; SPILL-O0-NEXT:    ret
 ;
 ; SPILL-O2-LABEL: foo:
 ; SPILL-O2:       # %bb.0:
 ; SPILL-O2-NEXT:    addi sp, sp, -32
+; SPILL-O2-NEXT:    .cfi_def_cfa_offset 32
 ; SPILL-O2-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; SPILL-O2-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; SPILL-O2-NEXT:    .cfi_offset ra, -4
+; SPILL-O2-NEXT:    .cfi_offset s0, -8
 ; SPILL-O2-NEXT:    csrr a1, vlenb
 ; SPILL-O2-NEXT:    slli a1, a1, 1
 ; SPILL-O2-NEXT:    sub sp, sp, a1
+; SPILL-O2-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 2 * vlenb
 ; SPILL-O2-NEXT:    mv s0, a0
 ; SPILL-O2-NEXT:    addi a1, sp, 16
 ; SPILL-O2-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
@@ -81,17 +91,25 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    slli a0, a0, 1
 ; SPILL-O2-NEXT:    add sp, sp, a0
+; SPILL-O2-NEXT:    .cfi_def_cfa sp, 32
 ; SPILL-O2-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; SPILL-O2-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; SPILL-O2-NEXT:    .cfi_restore ra
+; SPILL-O2-NEXT:    .cfi_restore s0
 ; SPILL-O2-NEXT:    addi sp, sp, 32
+; SPILL-O2-NEXT:    .cfi_def_cfa_offset 0
 ; SPILL-O2-NEXT:    ret
 ;
 ; SPILL-O2-ZCMP-LABEL: foo:
 ; SPILL-O2-ZCMP:       # %bb.0:
 ; SPILL-O2-ZCMP-NEXT:    cm.push {ra, s0}, -32
+; SPILL-O2-ZCMP-NEXT:    .cfi_def_cfa_offset 32
+; SPILL-O2-ZCMP-NEXT:    .cfi_offset ra, -8
+; SPILL-O2-ZCMP-NEXT:    .cfi_offset s0, -4
 ; SPILL-O2-ZCMP-NEXT:    csrr a1, vlenb
 ; SPILL-O2-ZCMP-NEXT:    slli a1, a1, 1
 ; SPILL-O2-ZCMP-NEXT:    sub sp, sp, a1
+; SPILL-O2-ZCMP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 2 * vlenb
 ; SPILL-O2-ZCMP-NEXT:    mv s0, a0
 ; SPILL-O2-ZCMP-NEXT:    addi a1, sp, 16
 ; SPILL-O2-ZCMP-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
@@ -115,6 +133,7 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-ZCMP-NEXT:    csrr a0, vlenb
 ; SPILL-O2-ZCMP-NEXT:    slli a0, a0, 1
 ; SPILL-O2-ZCMP-NEXT:    add sp, sp, a0
+; SPILL-O2-ZCMP-NEXT:    .cfi_def_cfa sp, 32
 ; SPILL-O2-ZCMP-NEXT:    cm.popret {ra, s0}, 32
 {
    %x = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %a, <vscale x 1 x double> %b, i32 7, i32 %gvl)
