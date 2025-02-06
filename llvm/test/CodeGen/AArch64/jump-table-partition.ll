@@ -1,6 +1,3 @@
-; -stats requires asserts
-; REQUIRES: asserts
-
 ; The llc commands override two options
 ; - 'aarch64-enable-atomic-cfg-tidy' to false to turn off simplifycfg pass,
 ;    which can simplify away switch instructions before isel lowers switch instructions.
