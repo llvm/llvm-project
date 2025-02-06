@@ -1,5 +1,3 @@
-func.func @test() {
-    %1 = arith.constant 5 : i32
-    "test_irdl_to_cpp.bar"() : () -> i32
-    return
+module {
+  %0 = "test_irdl_to_cpp.bar"() : () -> !test_irdl_to_cpp.foo
 }
