@@ -182,17 +182,13 @@ struct VectorExtractOpConvert final
 
     if (std::optional<int64_t> id =
             getConstantIntValue(extractOp.getMixedPosition()[0])) {
-      // TODO: ExtractOp::fold() already can fold a static poison index to
-      //       ub.poison; remove this once ub.poison can be converted to SPIR-V.
-      if (id == vector::ExtractOp::kPoisonIndex) {
-        // Arbitrary choice of poison result, intended to stick out.
-        Value zero =
-            spirv::ConstantOp::getZero(dstType, extractOp.getLoc(), rewriter);
-        rewriter.replaceOp(extractOp, zero);
-      } else
-        rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
-            extractOp, dstType, adaptor.getVector(),
-            rewriter.getI32ArrayAttr(id.value()));
+      if (id == vector::ExtractOp::kPoisonIndex)
+        return rewriter.notifyMatchFailure(
+            extractOp,
+            "Static use of poison index handled elsewhere (folded to poison)");
+      rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
+          extractOp, dstType, adaptor.getVector(),
+          rewriter.getI32ArrayAttr(id.value()));
     } else {
       Value sanitizedIndex = sanitizeDynamicIndex(
           rewriter, extractOp.getLoc(), adaptor.getDynamicPosition()[0],
@@ -306,16 +302,12 @@ struct VectorInsertOpConvert final
 
     if (std::optional<int64_t> id =
             getConstantIntValue(insertOp.getMixedPosition()[0])) {
-      // TODO: ExtractOp::fold() already can fold a static poison index to
-      //       ub.poison; remove this once ub.poison can be converted to SPIR-V.
-      if (id == vector::InsertOp::kPoisonIndex) {
-        // Arbitrary choice of poison result, intended to stick out.
-        Value zero = spirv::ConstantOp::getZero(insertOp.getDestVectorType(),
-                                                insertOp.getLoc(), rewriter);
-        rewriter.replaceOp(insertOp, zero);
-      } else
-        rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
-            insertOp, adaptor.getSource(), adaptor.getDest(), id.value());
+      if (id == vector::InsertOp::kPoisonIndex)
+        return rewriter.notifyMatchFailure(
+            insertOp,
+            "Static use of poison index handled elsewhere (folded to poison)");
+      rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
+          insertOp, adaptor.getSource(), adaptor.getDest(), id.value());
     } else {
       Value sanitizedIndex = sanitizeDynamicIndex(
           rewriter, insertOp.getLoc(), adaptor.getDynamicPosition()[0],
