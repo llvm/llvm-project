@@ -7854,6 +7854,30 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     break;
   }
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA: {
+    EVT AccVT = N1.getValueType();
+    EVT Input1VT = N2.getValueType();
+    EVT Input2VT = N3.getValueType();
+    assert(Input1VT == Input2VT &&
+           "Expected the second and third operands of the PARTIAL_REDUCE_MLA "
+           "node to have the same type!");
+    assert(VT == AccVT &&
+           "Expected the first operand of the PARTIAL_REDUCE_MLA node to have "
+           "the same type as its result!");
+    assert(Input1VT.getVectorElementCount().getKnownMinValue() %
+                   AccVT.getVectorElementCount().getKnownMinValue() ==
+               0 &&
+           "Expected the element count of the second and third operands of the "
+           "PARTIAL_REDUCE_MLA node to be a positive integer multiple of the "
+           "element count of the first operand and result!");
+    assert(Input1VT.getVectorElementType().getSizeInBits() <=
+               AccVT.getVectorElementType().getSizeInBits() &&
+           "Expected the second and third operands of the PARTIAL_REDUCE_MLA "
+           "node to have an element type which is the same as or smaller than "
+           "the element type of the first operand and result!");
+    break;
+  }
   }
 
   // Memoize node if it doesn't produce a glue result.

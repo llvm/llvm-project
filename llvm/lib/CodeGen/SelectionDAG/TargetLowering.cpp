@@ -11915,7 +11915,11 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
                        FullTy.getVectorElementCount());
   MulLHS = ExtendToAccEltVT(MulLHS);
   MulRHS = ExtendToAccEltVT(MulRHS);
-  SDValue Input = DAG.getNode(ISD::MUL, DL, NewVT, MulLHS, MulRHS);
+  SDValue Input = MulLHS;
+  APInt ConstantOne;
+  if (!ISD::isConstantSplatVector(MulRHS.getNode(), ConstantOne) ||
+      !ConstantOne.isOne())
+    Input = DAG.getNode(ISD::MUL, DL, NewVT, MulLHS, MulRHS);
 
   unsigned Stride = ReducedTy.getVectorMinNumElements();
   unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;

@@ -431,7 +431,7 @@ private:
   SDValue PromoteIntOp_VP_SPLICE(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N, unsigned OpNo);
-  SDValue PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N);
 
   void SExtOrZExtPromotedOperands(SDValue &LHS, SDValue &RHS);
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);

@@ -2106,7 +2106,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
-    Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N, OpNo);
+    Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
     break;
   }
 
@@ -2890,10 +2890,10 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N,
-                                                          unsigned OpNo) {
+SDValue DAGTypeLegalizer::PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N) {
   SmallVector<SDValue, 1> NewOps(N->ops());
-  NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
+  NewOps[1] = GetPromotedInteger(N->getOperand(1));
+  NewOps[2] = GetPromotedInteger(N->getOperand(2));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
