@@ -14,11 +14,43 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 
 namespace mlir {
+
+class LinkableModuleOpInterface;
+
 namespace link {
 
 using ComdatSelectionKind = LLVM::comdat::Comdat;
 
-using ComdatSymbolTable = llvm::StringMap<ComdatSelectionKind>;
+class ComdatPair {
+public:
+  ComdatPair(const ComdatPair &) = delete;
+  ComdatPair(ComdatPair &&) = default;
+
+  StringRef getName() const { return name->getKey(); }
+
+  ComdatSelectionKind getSelectionKind() const { return kind; }
+  void setSelectionKind(ComdatSelectionKind selectionKind) {
+    kind = selectionKind;
+  }
+
+  const llvm::SmallPtrSetImpl<Operation *> &getUsers() const { return users; }
+
+private:
+  friend class ::mlir::LinkableModuleOpInterface;
+
+  ComdatPair() = default;
+
+  void addUser(Operation *user) { users.insert(user); }
+  void removeUser(Operation *user) { users.erase(user); }
+
+  llvm::StringMapEntry<ComdatPair> *name = nullptr;
+  ComdatSelectionKind kind = ComdatSelectionKind::Any;
+
+  // Globals using this comdat.
+  llvm::SmallPtrSet<Operation *, 2> users;
+};
+
+using ComdatSymbolTable = llvm::StringMap<ComdatPair>;
 
 } // namespace link
 } // namespace mlir

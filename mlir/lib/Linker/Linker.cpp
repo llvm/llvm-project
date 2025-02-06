@@ -246,7 +246,7 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef comdatName,
 void ModuleLinker::dropReplacedComdat(
     GlobalValueLinkageOpInterface gv,
     DenseSet<Operation *> &replacedDstComdats) {
-  auto comdat = gv.getComdatSelectionKind();
+  auto comdat = gv.getComdatPair();
   if (!comdat)
     return;
   if (!replacedDstComdats.count(gv.getOperation()))
@@ -302,7 +302,7 @@ bool ModuleLinker::linkIfNeeded(GlobalValueLinkageOpInterface gv,
     return false;
 
   LinkFrom comdatFrom = LinkFrom::Dst;
-  if (gv.getComdatSelectionKind()) {
+  if (gv.getComdatPair()) {
     comdatFrom = comdatsChosen[dgv.getLinkedName()].second;
     if (comdatFrom == LinkFrom::Dst)
       return false;
@@ -325,11 +325,12 @@ LogicalResult ModuleLinker::run() {
   DenseSet<Operation *> nonPrevailingComdats;
 
   for (auto &[symbol, comdat] : src.getComdatSymbolTable()) {
+    llvm::errs() << "symbol: " << symbol << "\n";
     if (comdatsChosen.count(symbol))
       continue;
-
-    llvm_unreachable("unimplemented");
   }
+
+  llvm_unreachable("unimplemented");
 
   // TODO add `globals` and other values to LinkableModuleOpInterface
   dst->walk([&](GlobalValueLinkageOpInterface gv) {
@@ -345,7 +346,7 @@ LogicalResult ModuleLinker::run() {
   // TODO add `globals` and other values to LinkableModuleOpInterface
   src->walk([&](GlobalValueLinkageOpInterface gv) {
     if (gv.hasLinkOnceLinkage()) {
-      if (auto comdat = gv.getComdatSelectionKind()) {
+      if (auto comdat = gv.getComdatPair()) {
         llvm_unreachable("unimplemented lazy comdat members");
       }
     }
