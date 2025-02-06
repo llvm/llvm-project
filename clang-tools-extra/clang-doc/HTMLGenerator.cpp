@@ -494,18 +494,31 @@ genReferencesBlock(const std::vector<Reference> &References,
 static std::unique_ptr<TagNode>
 writeFileDefinition(const Location &L,
                     std::optional<StringRef> RepositoryUrl = std::nullopt) {
-  if (!L.IsFileInRootDir || !RepositoryUrl)
+  if (!L.IsFileInRootDir && !RepositoryUrl)
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
                             " of file " + L.Filename);
   SmallString<128> FileURL(*RepositoryUrl);
-  llvm::sys::path::append(FileURL, llvm::sys::path::Style::posix, L.Filename);
+  llvm::sys::path::append(
+      FileURL, llvm::sys::path::Style::posix,
+      // If we're on Windows, the file name will be in the wrong format, and
+      // append won't convert the full path being appended to the correct
+      // format, so we need to do that here.
+      llvm::sys::path::convert_to_slash(
+          L.Filename,
+          // The style here is the current style of the path, not the one we're
+          // targeting. If the string is already in the posix style, it will do
+          // nothing.
+          llvm::sys::path::Style::windows));
   auto Node = std::make_unique<TagNode>(HTMLTag::TAG_P);
   Node->Children.emplace_back(std::make_unique<TextNode>("Defined at line "));
   auto LocNumberNode =
       std::make_unique<TagNode>(HTMLTag::TAG_A, std::to_string(L.LineNumber));
   // The links to a specific line in the source code use the github /
   // googlesource notation so it won't work for all hosting pages.
+  // FIXME: we probably should have a configuration setting for line number
+  // rendering in the HTML. For example, GitHub uses #L22, while googlesource
+  // uses #22 for line numbers.
   LocNumberNode->Attributes.emplace_back(
       "href", (FileURL + "#" + std::to_string(L.LineNumber)).str());
   Node->Children.emplace_back(std::move(LocNumberNode));
