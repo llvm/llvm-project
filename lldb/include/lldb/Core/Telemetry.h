@@ -30,46 +30,31 @@ struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
   static const llvm::telemetry::KindType BaseInfo = 0b11000;
 };
 
-/// Defines a convenient type for timestamp of various events.
-/// This is used by the EventStats below.
-using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock,
-                                                std::chrono::nanoseconds>;
-
-/// Various time (and possibly memory) statistics of an event.
-struct EventStats {
-  // REQUIRED: Start time of an event
-  SteadyTimePoint start;
-  /// End time of an event - may be empty if not meaningful.
-  std::optional<SteadyTimePoint> end;
-  // TBD: could add some memory stats here too?
-
-  EventStats() = default;
-  EventStats(SteadyTimePoint start) : start(start) {}
-  EventStats(SteadyTimePoint start, SteadyTimePoint end)
-      : start(start), end(end) {}
-};
-
-/// Describes the exit signal of an event.
 struct ExitDescription {
   int exit_code;
   std::string description;
 };
 
-struct LldbBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
-  EventStats stats;
-
-  std::optional<ExitDescription> exit_desc;
+/// Defines a convenient type for timestamp of various events.
+using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock,
+                                                std::chrono::nanoseconds>;
+struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
+  /// REQUIRED: Start time of an event
+  SteadyTimePoint start_time;
+  /// End time of an event - may be empty if not meaningful.
+  std::optional<SteadyTimePoint> end_time;
+  // TBD: could add some memory stats here too?
 
   Debugger *debugger;
 
   // For dyn_cast, isa, etc operations.
   llvm::telemetry::KindType getKind() const override {
-    return LldbEntryKind::BaseInfo;
+    return LLDBEntryKind::BaseInfo;
   }
 
   static bool classof(const llvm::telemetry::TelemetryInfo *t) {
     // Subclasses of this is also acceptable.
-    return (t->getKind() & LldbEntryKind::BaseInfo) == LldbEntryKind::BaseInfo;
+    return (t->getKind() & LLDBEntryKind::BaseInfo) == LLDBEntryKind::BaseInfo;
   }
 
   void serialize(llvm::telemetry::Serializer &serializer) const override;

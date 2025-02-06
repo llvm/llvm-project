@@ -32,16 +32,12 @@ static uint64_t ToNanosec(const SteadyTimePoint Point) {
   return std::chrono::nanoseconds(Point.time_since_epoch()).count();
 }
 
-void LldbBaseTelemetryInfo::serialize(Serializer &serializer) const {
+void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
   serializer.write("entry_kind", getKind());
   serializer.write("session_id", SessionId);
-  serializer.write("start_time", ToNanosec(stats.start));
-  if (stats.end.has_value())
-    serializer.write("end_time", ToNanosec(stats.end.value()));
-  if (exit_desc.has_value()) {
-    serializer.write("exit_code", exit_desc->exit_code);
-    serializer.write("exit_msg", exit_desc->description);
-  }
+  serializer.write("start_time", ToNanosec(start_time));
+  if (end_time.has_value())
+    serializer.write("end_time", ToNanosec(end_time.value()));
 }
 
 static std::string MakeUUID(lldb_private::Debugger *debugger) {
@@ -65,6 +61,7 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   // Do nothing for now.
   // In up-coming patch, this would be where the manager
   // attach the session_uuid to the entry.
+  return Error::success();
 }
 
 } // namespace lldb_private
