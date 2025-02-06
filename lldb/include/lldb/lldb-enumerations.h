@@ -257,8 +257,8 @@ enum StopReason {
 };
 
 /// Command Return Status Types.
-enum ReturnStatus : int {
-  eReturnStatusInvalid = 0,
+enum ReturnStatus {
+  eReturnStatusInvalid,
   eReturnStatusSuccessFinishNoResult,
   eReturnStatusSuccessFinishResult,
   eReturnStatusSuccessContinuingNoResult,
