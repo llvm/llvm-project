@@ -29,7 +29,6 @@ let Predicates = [HasStdExtZvabd] in {
 //===----------------------------------------------------------------------===//
 // Pseudos
 //===----------------------------------------------------------------------===//
-
 multiclass PseudoVABS {
   foreach m = MxList in {
     defvar mx = m.MX;
@@ -44,10 +43,23 @@ multiclass PseudoVABS {
   }
 }
 
+multiclass VPseudoVWABD_VV {
+  foreach m = MxListW in {
+    defvar mx = m.MX;
+    defm "" : VPseudoTernaryW_VV<m, Commutable = 1>,
+              SchedTernary<"WriteVIWMulAddV", "ReadVIWMulAddV",
+                           "ReadVIWMulAddV", "ReadVIWMulAddV", mx>;
+  }
+}
+
 let Predicates = [HasStdExtZvabd] in {
   defm PseudoVABS : PseudoVABS;
   defm PseudoVABD : VPseudoVALU_VV<Commutable = 1>;
   defm PseudoVABDU : VPseudoVALU_VV<Commutable = 1>;
+  let IsRVVWideningReduction = 1 in {
+    defm PseudoVWABDACC : VPseudoVWABD_VV;
+    defm PseudoVWABDACCU : VPseudoVWABD_VV;
+  } // IsRVVWideningReduction = 1
 } // Predicates = [HasStdExtZvabd]
 
 //===----------------------------------------------------------------------===//
@@ -57,6 +69,8 @@ let HasPassthruOp = true, HasMaskOp = true in {
 def riscv_abs_vl  : RVSDNode<"ABS_VL", SDT_RISCVIntUnOp_VL>;
 def riscv_abds_vl : RVSDNode<"ABDS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_abdu_vl : RVSDNode<"ABDU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+def rvv_vwabdacc_vl  : RVSDNode<"VWABDACC_VL", SDT_RISCVVWIntTernOp_VL, [SDNPCommutative]>;
+def rvv_vwabdaccu_vl : RVSDNode<"VWABDACCU_VL", SDT_RISCVVWIntTernOp_VL, [SDNPCommutative]>;
 } // let HasPassthruOp = true, HasMaskOp = true
 
 let Predicates = [HasStdExtZvabd] in {
@@ -74,4 +88,7 @@ foreach vti = AllIntegerVectors in {
 }
 
 defm : VPatUnaryVL_V<riscv_abs_vl, "PseudoVABS", HasStdExtZvabd>;
+
+defm : VPatWidenMultiplyAddVL_VV<rvv_vwabdacc_vl, "PseudoVWABDACC">;
+defm : VPatWidenMultiplyAddVL_VV<rvv_vwabdaccu_vl, "PseudoVWABDACCU">;
 } // Predicates = [HasStdExtZvabd]
