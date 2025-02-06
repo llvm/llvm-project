@@ -72,7 +72,7 @@ define i32 @testRem(ptr %p, ptr %p1) {
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop1:
 ; CHECK-NEXT:    [[LOCAL_0_:%.*]] = phi i32 [ 8, [[ENTRY:%.*]] ], [ [[I9:%.*]], [[LOOP2_EXIT:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LOCAL_0_]], 15
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ugt i32 [[LOCAL_0_]], 14
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[GENERAL_CASE24:%.*]]
 ; CHECK:       general_case24:
 ; CHECK-NEXT:    br i1 false, label [[LOOP2_PREHEADER:%.*]], label [[LOOP2_EXIT]]

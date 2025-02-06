@@ -34,7 +34,7 @@ define void @neg_dynamically_dead_inbounds(i1 %always_false) #0 {
 ; CHECK-NEXT:    br label [[CONT]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[TMP4]] = add nuw i8 [[I_0]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8 [[TMP4]], -10
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i8 [[TMP4]], -10
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -77,7 +77,7 @@ define void @neg_dynamically_dead_inbounds2(ptr %a, i1 %always_false) #0 {
 ; CHECK-NEXT:    br label [[CONT]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[TMP4]] = add nuw i8 [[I_0]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8 [[TMP4]], -10
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i8 [[TMP4]], -10
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -109,10 +109,12 @@ define void @dom_store_preinc() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ @data, [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_0:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[TMP4:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ @data, [[ENTRY]] ], [ [[TMP3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    store volatile i8 0, ptr [[P_0]], align 1
 ; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, ptr [[P_0]], i64 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr [[P_0]], getelementptr nuw (i8, ptr @data, i64 245)
+; CHECK-NEXT:    [[TMP4]] = add nuw i8 [[I_0]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i8 [[TMP4]], -10
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -138,10 +140,12 @@ define void @dom_store_postinc() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ @data, [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_0:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[TMP4:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ @data, [[ENTRY]] ], [ [[TMP3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, ptr [[P_0]], i64 1
 ; CHECK-NEXT:    store volatile i8 0, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr [[TMP3]], getelementptr nuw (i8, ptr @data, i64 246)
+; CHECK-NEXT:    [[TMP4]] = add nuw i8 [[I_0]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i8 [[TMP4]], -10
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -167,10 +171,12 @@ define i8 @dom_load() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ @data, [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_0:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[TMP4:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ @data, [[ENTRY]] ], [ [[TMP3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, ptr [[P_0]], i64 1
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr [[TMP3]], getelementptr nuw (i8, ptr @data, i64 246)
+; CHECK-NEXT:    [[TMP4]] = add nuw i8 [[I_0]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i8 [[TMP4]], -10
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi i8 [ [[V]], [[LOOP]] ]
@@ -202,7 +208,7 @@ define i64 @dom_div(i64 %input) #0 {
 ; CHECK-NEXT:    [[TMP3]] = add nuw nsw i64 [[I_1]], 1
 ; CHECK-NEXT:    [[V:%.*]] = udiv i64 5, [[TMP3]]
 ; CHECK-NEXT:    [[TMP4]] = add nuw i8 [[I_0]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8 [[TMP4]], -10
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i8 [[TMP4]], -10
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi i64 [ [[V]], [[LOOP]] ]
@@ -231,9 +237,9 @@ define void @neg_dead_int_iv() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I_1:%.*]] = phi i64 [ -2, [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP3]] = add nsw i64 [[I_1]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[TMP3]], 244
+; CHECK-NEXT:    [[I_0:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[TMP4:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP4]] = add nuw i8 [[I_0]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i8 [[TMP4]], -10
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

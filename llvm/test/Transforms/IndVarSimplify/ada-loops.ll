@@ -100,7 +100,7 @@ define void @kinds__srangezero(ptr nocapture %a) nounwind {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [21 x i32], ptr [[A]], i32 0, i32 [[TMP4]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i32 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], 11
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i32 [[INDVARS_IV_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN:%.*]], label [[BB]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -133,7 +133,7 @@ define void @kinds__urangezero(ptr nocapture %a) nounwind {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [21 x i32], ptr [[A]], i32 0, i32 [[TMP4]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], 31
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ugt i32 [[INDVARS_IV_NEXT]], 30
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN:%.*]], label [[BB]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void

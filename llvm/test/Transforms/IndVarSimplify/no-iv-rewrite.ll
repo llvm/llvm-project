@@ -14,7 +14,7 @@ define i32 @sum(ptr %arr, i32 %n) nounwind {
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp slt i32 0, [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[PRECOND]], label [[PH:%.*]], label [[RETURN:%.*]]
 ; CHECK:       ph:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[PH]] ]
@@ -23,7 +23,7 @@ define i32 @sum(ptr %arr, i32 %n) nounwind {
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[ADR]], align 4
 ; CHECK-NEXT:    [[SINC]] = add nsw i32 [[S_01]], [[VAL]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[S_LCSSA:%.*]] = phi i32 [ [[SINC]], [[LOOP]] ]
@@ -68,7 +68,7 @@ define i64 @suml(ptr %arr, i32 %n) nounwind {
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp slt i32 0, [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[PRECOND]], label [[PH:%.*]], label [[RETURN:%.*]]
 ; CHECK:       ph:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[PH]] ]
@@ -78,7 +78,7 @@ define i64 @suml(ptr %arr, i32 %n) nounwind {
 ; CHECK-NEXT:    [[VALL:%.*]] = sext i32 [[VAL]] to i64
 ; CHECK-NEXT:    [[SINC]] = add nsw i64 [[S_01]], [[VALL]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[S_LCSSA:%.*]] = phi i64 [ [[SINC]], [[LOOP]] ]
@@ -202,8 +202,7 @@ exit:
 define void @maxvisitor(i32 %limit, ptr %base) nounwind {
 ; CHECK-LABEL: @maxvisitor(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT:%.*]], i32 1)
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[LIMIT:%.*]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
@@ -220,7 +219,7 @@ define void @maxvisitor(i32 %limit, ptr %base) nounwind {
 ; CHECK:       loop.inc:
 ; CHECK-NEXT:    [[MAX_NEXT]] = phi i32 [ [[TMP0]], [[IF_THEN]] ], [ [[MAX]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

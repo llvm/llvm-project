@@ -7,32 +7,28 @@ define i32 @iv_zext_zext_sgt_slt(i32 %iter.count, ptr %ptr) {
 ; CHECK-LABEL: define i32 @iv_zext_zext_sgt_slt(
 ; CHECK-SAME: i32 [[ITER_COUNT:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[ITER_COUNT]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[ITER_COUNT]] to i64
 ; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; CHECK:       [[PH_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[PH:.*]]
 ; CHECK:       [[PH]]:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT2:%.*]] = add i32 [[INDVARS_IV1:%.*]], -1
 ; CHECK-NEXT:    br label %[[OUTER_LOOP]]
 ; CHECK:       [[OUTER_LOOP]]:
-; CHECK-NEXT:    [[INDVARS_IV1]] = phi i32 [ [[INDVARS_IV_NEXT2]], %[[PH]] ], [ [[TMP0]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[IV_OUTER:%.*]] = phi i32 [ [[IV_OUTER_1:%.*]], %[[PH]] ], [ [[ITER_COUNT]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[IV_OUTER_1]] = add nsw i32 [[IV_OUTER]], -1
-; CHECK-NEXT:    [[EXT_OUTER:%.*]] = zext nneg i32 [[IV_OUTER_1]] to i64
+; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[EXT_OUTER:%.*]], %[[PH]] ], [ [[TMP0]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[EXT_OUTER]] = add nsw i64 [[INDVARS_IV1]], -1
 ; CHECK-NEXT:    [[GEP_OUTER:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[EXT_OUTER]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_OUTER]], align 1
-; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp sgt i32 [[IV_OUTER]], 1
+; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp sgt i64 [[INDVARS_IV1]], 1
 ; CHECK-NEXT:    br i1 [[EXIT_COND_OUTER]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[PH]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[INDVARS_IV1]] to i64
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
 ; CHECK:       [[INNER_LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[INNER_LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[INNER_LOOP]] ]
 ; CHECK-NEXT:    [[GEP_INNER:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_INNER]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
+; CHECK-NEXT:    [[EXIT_COND_INNER:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[EXT_OUTER]]
+; CHECK-NEXT:    br i1 [[EXIT_COND_INNER]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
 ; CHECK:       [[EXIT:.*:]]
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -183,15 +179,12 @@ define i32 @iv_zext_zext_sgt_lt(i32 %iter.count, ptr %ptr) {
 ; CHECK-LABEL: define i32 @iv_zext_zext_sgt_lt(
 ; CHECK-SAME: i32 [[ITER_COUNT:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[ITER_COUNT]], -1
 ; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; CHECK:       [[PH_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[PH:.*]]
 ; CHECK:       [[PH]]:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT2:%.*]] = add i32 [[INDVARS_IV1:%.*]], -1
 ; CHECK-NEXT:    br label %[[OUTER_LOOP]]
 ; CHECK:       [[OUTER_LOOP]]:
-; CHECK-NEXT:    [[INDVARS_IV1]] = phi i32 [ [[INDVARS_IV_NEXT2]], %[[PH]] ], [ [[TMP0]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IV_OUTER:%.*]] = phi i32 [ [[IV_OUTER_1:%.*]], %[[PH]] ], [ [[ITER_COUNT]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IV_OUTER_1]] = add nsw i32 [[IV_OUTER]], -1
 ; CHECK-NEXT:    [[EXT_OUTER:%.*]] = zext nneg i32 [[IV_OUTER_1]] to i64
@@ -200,15 +193,15 @@ define i32 @iv_zext_zext_sgt_lt(i32 %iter.count, ptr %ptr) {
 ; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp sgt i32 [[IV_OUTER]], 1
 ; CHECK-NEXT:    br i1 [[EXIT_COND_OUTER]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[PH]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[INDVARS_IV1]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[IV_OUTER_1]] to i64
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
 ; CHECK:       [[INNER_LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[INNER_LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[INNER_LOOP]] ]
 ; CHECK-NEXT:    [[GEP_INNER:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_INNER]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
+; CHECK-NEXT:    [[EXIT_COND_INNER:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[EXIT_COND_INNER]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
 ; CHECK:       [[EXIT:.*:]]
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -302,15 +295,12 @@ define i32 @iv_zext_zext_gt_lt(i32 %iter.count, ptr %ptr) {
 ; CHECK-LABEL: define i32 @iv_zext_zext_gt_lt(
 ; CHECK-SAME: i32 [[ITER_COUNT:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[ITER_COUNT]], -1
 ; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; CHECK:       [[PH_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[PH:.*]]
 ; CHECK:       [[PH]]:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT2:%.*]] = add i32 [[INDVARS_IV1:%.*]], -1
 ; CHECK-NEXT:    br label %[[OUTER_LOOP]]
 ; CHECK:       [[OUTER_LOOP]]:
-; CHECK-NEXT:    [[INDVARS_IV1]] = phi i32 [ [[INDVARS_IV_NEXT2]], %[[PH]] ], [ [[TMP0]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IV_OUTER:%.*]] = phi i32 [ [[IV_OUTER_1:%.*]], %[[PH]] ], [ [[ITER_COUNT]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IV_OUTER_1]] = add nsw i32 [[IV_OUTER]], -1
 ; CHECK-NEXT:    [[EXT_OUTER:%.*]] = zext nneg i32 [[IV_OUTER_1]] to i64
@@ -319,15 +309,15 @@ define i32 @iv_zext_zext_gt_lt(i32 %iter.count, ptr %ptr) {
 ; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp samesign ugt i32 [[IV_OUTER]], 1
 ; CHECK-NEXT:    br i1 [[EXIT_COND_OUTER]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[PH]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[INDVARS_IV1]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[IV_OUTER_1]] to i64
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
 ; CHECK:       [[INNER_LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[INNER_LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[INNER_LOOP]] ]
 ; CHECK-NEXT:    [[GEP_INNER:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_INNER]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
+; CHECK-NEXT:    [[EXIT_COND_INNER:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[EXIT_COND_INNER]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
 ; CHECK:       [[EXIT:.*:]]
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -363,32 +353,28 @@ define i32 @iv_sext_sext_sgt_slt(i32 %iter.count, ptr %ptr) {
 ; CHECK-LABEL: define i32 @iv_sext_sext_sgt_slt(
 ; CHECK-SAME: i32 [[ITER_COUNT:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[ITER_COUNT]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[ITER_COUNT]] to i64
 ; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; CHECK:       [[PH_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[PH:.*]]
 ; CHECK:       [[PH]]:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT2:%.*]] = add i32 [[INDVARS_IV1:%.*]], -1
 ; CHECK-NEXT:    br label %[[OUTER_LOOP]]
 ; CHECK:       [[OUTER_LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ [[INDVARS_IV_NEXT4:%.*]], %[[PH]] ], [ [[TMP1]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[INDVARS_IV1]] = phi i32 [ [[INDVARS_IV_NEXT2]], %[[PH]] ], [ [[TMP0]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT4]] = add nsw i64 [[INDVARS_IV3]], -1
 ; CHECK-NEXT:    [[GEP_OUTER:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[INDVARS_IV_NEXT4]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_OUTER]], align 1
 ; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp sgt i64 [[INDVARS_IV3]], 1
 ; CHECK-NEXT:    br i1 [[EXIT_COND_OUTER]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[PH]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[INDVARS_IV1]] to i64
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
 ; CHECK:       [[INNER_LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[INNER_LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[INNER_LOOP]] ]
 ; CHECK-NEXT:    [[GEP_INNER:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_INNER]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
+; CHECK-NEXT:    [[EXIT_COND_INNER:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[INDVARS_IV_NEXT4]]
+; CHECK-NEXT:    br i1 [[EXIT_COND_INNER]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
 ; CHECK:       [[EXIT:.*:]]
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -539,32 +525,28 @@ define i32 @iv_sext_sext_sgt_lt(i32 %iter.count, ptr %ptr) {
 ; CHECK-LABEL: define i32 @iv_sext_sext_sgt_lt(
 ; CHECK-SAME: i32 [[ITER_COUNT:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[ITER_COUNT]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[ITER_COUNT]] to i64
 ; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; CHECK:       [[PH_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[PH:.*]]
 ; CHECK:       [[PH]]:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT2:%.*]] = add i32 [[INDVARS_IV1:%.*]], -1
 ; CHECK-NEXT:    br label %[[OUTER_LOOP]]
 ; CHECK:       [[OUTER_LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ [[INDVARS_IV_NEXT4:%.*]], %[[PH]] ], [ [[TMP1]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[INDVARS_IV1]] = phi i32 [ [[INDVARS_IV_NEXT2]], %[[PH]] ], [ [[TMP0]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT4]] = add nsw i64 [[INDVARS_IV3]], -1
 ; CHECK-NEXT:    [[GEP_OUTER:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[INDVARS_IV_NEXT4]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_OUTER]], align 1
 ; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp sgt i64 [[INDVARS_IV3]], 1
 ; CHECK-NEXT:    br i1 [[EXIT_COND_OUTER]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[PH]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[INDVARS_IV1]] to i64
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
 ; CHECK:       [[INNER_LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[INNER_LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[INNER_LOOP]] ]
 ; CHECK-NEXT:    [[GEP_INNER:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_INNER]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
+; CHECK-NEXT:    [[EXIT_COND_INNER:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT]], [[INDVARS_IV_NEXT4]]
+; CHECK-NEXT:    br i1 [[EXIT_COND_INNER]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
 ; CHECK:       [[EXIT:.*:]]
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -658,32 +640,28 @@ define i32 @iv_sext_sext_gt_lt(i32 %iter.count, ptr %ptr) {
 ; CHECK-LABEL: define i32 @iv_sext_sext_gt_lt(
 ; CHECK-SAME: i32 [[ITER_COUNT:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[ITER_COUNT]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[ITER_COUNT]] to i64
 ; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; CHECK:       [[PH_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[PH:.*]]
 ; CHECK:       [[PH]]:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT2:%.*]] = add i32 [[INDVARS_IV1:%.*]], -1
 ; CHECK-NEXT:    br label %[[OUTER_LOOP]]
 ; CHECK:       [[OUTER_LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ [[INDVARS_IV_NEXT4:%.*]], %[[PH]] ], [ [[TMP1]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[INDVARS_IV1]] = phi i32 [ [[INDVARS_IV_NEXT2]], %[[PH]] ], [ [[TMP0]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT4]] = add nsw i64 [[INDVARS_IV3]], -1
 ; CHECK-NEXT:    [[GEP_OUTER:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[INDVARS_IV_NEXT4]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_OUTER]], align 1
 ; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp samesign ugt i64 [[INDVARS_IV3]], 1
 ; CHECK-NEXT:    br i1 [[EXIT_COND_OUTER]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[PH]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[INDVARS_IV1]] to i64
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
 ; CHECK:       [[INNER_LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[INNER_LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[INNER_LOOP]] ]
 ; CHECK-NEXT:    [[GEP_INNER:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_INNER]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
+; CHECK-NEXT:    [[EXIT_COND_INNER:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT]], [[INDVARS_IV_NEXT4]]
+; CHECK-NEXT:    br i1 [[EXIT_COND_INNER]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
 ; CHECK:       [[EXIT:.*:]]
 ; CHECK-NEXT:    ret i32 0
 ;

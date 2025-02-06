@@ -11,8 +11,8 @@ define dso_local float @foo(ptr noalias %dst, ptr %src, i32 %offset, i32 %N) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 1, [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.lr.ph:
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[OFFSET:%.*]] to i64
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.for.cond.cleanup_crit_edge:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -30,8 +30,8 @@ define dso_local float @foo(ptr noalias %dst, ptr %src, i32 %offset, i32 %N) {
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[DST:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store float [[ADD4]], ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_FOR_COND_CLEANUP_CRIT_EDGE:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP5]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_FOR_COND_CLEANUP_CRIT_EDGE:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ;
 entry:
   br label %for.cond

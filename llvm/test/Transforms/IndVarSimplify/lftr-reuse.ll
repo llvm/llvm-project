@@ -29,7 +29,7 @@ define void @ptriv(ptr %base, i32 %n) nounwind {
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[SUB_PTR_SUB]] to i8
 ; CHECK-NEXT:    store i8 [[CONV]], ptr [[P_02]], align 1
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[P_02]], i32 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr [[INCDEC_PTR]], [[ADD_PTR]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult ptr [[INCDEC_PTR]], [[ADD_PTR]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
@@ -69,8 +69,7 @@ define void @expandOuterRecurrence(i32 %arg) nounwind {
 ; CHECK:       outer.preheader:
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[SUB1]], [[OUTER_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[OUTER_INC:%.*]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], [[OUTER_INC]] ], [ 0, [[OUTER_PREHEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], [[OUTER_INC:%.*]] ], [ 0, [[OUTER_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[ARG]], [[I]]
 ; CHECK-NEXT:    [[SUB3:%.*]] = sub nsw i32 [[SUB2]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 0, [[SUB3]]
@@ -80,14 +79,13 @@ define void @expandOuterRecurrence(i32 %arg) nounwind {
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[INNER_PH]] ], [ [[J_INC:%.*]], [[INNER]] ]
 ; CHECK-NEXT:    [[J_INC]] = add nuw nsw i32 [[J]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[J_INC]], [[INDVARS_IV]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i32 [[J_INC]], [[SUB3]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER]], label [[OUTER_INC_LOOPEXIT:%.*]]
 ; CHECK:       outer.inc.loopexit:
 ; CHECK-NEXT:    br label [[OUTER_INC]]
 ; CHECK:       outer.inc:
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i32 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[I_INC]], [[SUB1]]
+; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp slt i32 [[I_INC]], [[SUB1]]
 ; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[OUTER]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -136,7 +134,7 @@ define void @guardedloop(ptr %matrix, ptr %vector,
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_PREHEADER:%.*]], label [[RETURN:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[ILEAD:%.*]] to i64
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[IROW]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[IROW]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV2:%.*]] = phi i64 [ 0, [[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT3:%.*]], [[LOOP]] ]
@@ -150,7 +148,7 @@ define void @guardedloop(ptr %matrix, ptr %vector,
 ; CHECK-NEXT:    call void @use(double [[V2]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT3]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT3]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[RETURN_LOOPEXIT:%.*]]
 ; CHECK:       return.loopexit:
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -188,13 +186,12 @@ define void @unguardedloop(ptr %matrix, ptr %vector,
 ;
 ; CHECK-LABEL: @unguardedloop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[IROW:%.*]], i32 1)
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[IROW:%.*]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV2:%.*]] = phi i64 [ [[INDVARS_IV_NEXT3:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT3]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT3]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -246,7 +243,7 @@ define void @geplftr(ptr %base, i32 %x, i32 %y, i32 %n) nounwind {
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[APTR]], i32 1
 ; CHECK-NEXT:    store i8 3, ptr [[APTR]], align 1
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], [[LIM]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i32 [[INC]], [[LIM]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -309,7 +306,7 @@ define void @aryptriv(ptr %base, i32 %n) nounwind {
 ; CHECK-NEXT:    [[APTR:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[LOOP]] ], [ [[BASE]], [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[APTR]], i32 1
 ; CHECK-NEXT:    store i8 3, ptr [[APTR]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr [[INCDEC_PTR]], [[IVEND]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult ptr [[INCDEC_PTR]], [[IVEND]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]

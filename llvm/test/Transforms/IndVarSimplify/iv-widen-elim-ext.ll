@@ -12,7 +12,7 @@ define void @foo(ptr %A, ptr %B, ptr %C, i32 %N) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_LR_PH]] ]
@@ -30,7 +30,7 @@ define void @foo(ptr %A, ptr %B, ptr %C, i32 %N) {
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]]
 ; CHECK:       for.cond.for.end_crit_edge:
 ; CHECK-NEXT:    br label [[FOR_END]]
@@ -79,7 +79,7 @@ define void @foo1(ptr %A, ptr %B, ptr %C, i32 %N) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_LR_PH]] ]
@@ -94,7 +94,7 @@ define void @foo1(ptr %A, ptr %B, ptr %C, i32 %N) {
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]]
 ; CHECK:       for.cond.for.end_crit_edge:
 ; CHECK-NEXT:    br label [[FOR_END]]
@@ -146,7 +146,7 @@ define i32 @foo2(i32 %M) {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[M]] to i64
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[M]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[M]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_LR_PH]] ]
@@ -161,7 +161,7 @@ define i32 @foo2(i32 %M) {
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]]
 ; CHECK:       for.cond.for.end_crit_edge:
 ; CHECK-NEXT:    br label [[FOR_END]]
@@ -214,7 +214,7 @@ define i32 @foo3(i32 %M) {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[M]] to i64
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[M]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[M]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_LR_PH]] ]
@@ -231,7 +231,7 @@ define i32 @foo3(i32 %M) {
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]]
 ; CHECK:       for.cond.for.end_crit_edge:
 ; CHECK-NEXT:    br label [[FOR_END]]
@@ -284,7 +284,7 @@ define i32 @foo4(ptr %input, i32 %length, ptr %in) {
 ; CHECK-NEXT:    br i1 [[CMP17]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[LENGTH]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = sext i32 [[LENGTH]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP10:%.*]], [[FOR_BODY]] ]
@@ -304,7 +304,7 @@ define i32 @foo4(ptr %input, i32 %length, ptr %in) {
 ; CHECK-NEXT:    [[ADD_PTR1:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ADD_PTR1]], align 4
 ; CHECK-NEXT:    [[TMP10]] = add i32 [[TMP7]], [[TMP9]]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP11]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT]]
 ;
 entry:
@@ -353,7 +353,7 @@ define i32 @foo5(ptr %input, i32 %length, ptr %in) {
 ; CHECK-NEXT:    br i1 [[CMP17]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[LENGTH]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = sext i32 [[LENGTH]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP10:%.*]], [[FOR_BODY]] ]
@@ -375,7 +375,7 @@ define i32 @foo5(ptr %input, i32 %length, ptr %in) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ADD_PTR1]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10]] = add i32 [[TMP9]], [[MUL]]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP11]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT]]
 ;
 entry:
@@ -450,7 +450,7 @@ define i32 @foo6(ptr %input, i32 %length, ptr %in) {
 ; CHECK-NEXT:    [[PTR_OR:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[VAL_OR:%.*]] = load i32, ptr [[PTR_OR]], align 4
 ; CHECK-NEXT:    [[TMP12]] = add i32 [[TMP7]], [[VAL_OR]]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT]]
 ;
 entry:

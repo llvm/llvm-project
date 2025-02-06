@@ -223,12 +223,10 @@ define void @test_transitive_use(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[LIMIT:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[LIMIT]] to i64
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[START]], i32 64)
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[UMAX]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult i64 [[INDVARS_IV]], 64
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[CONTINUE:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i64 [[INDVARS_IV]], 3

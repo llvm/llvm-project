@@ -19,7 +19,7 @@ define void @ptriv_as2(ptr addrspace(2) %base, i32 %n) nounwind {
 ; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i8 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]
 ; CHECK-NEXT:    store i8 [[SUB_PTR_SUB]], ptr addrspace(2) [[P_02]], align 1
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr addrspace(2) [[P_02]], i32 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr addrspace(2) [[INCDEC_PTR]], [[ADD_PTR]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult ptr addrspace(2) [[INCDEC_PTR]], [[ADD_PTR]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
@@ -66,7 +66,7 @@ define void @ptriv_as3(ptr addrspace(3) %base, i32 %n) nounwind {
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i16 [[SUB_PTR_SUB]] to i8
 ; CHECK-NEXT:    store i8 [[CONV]], ptr addrspace(3) [[P_02]], align 1
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr addrspace(3) [[P_02]], i32 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr addrspace(3) [[INCDEC_PTR]], [[ADD_PTR]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult ptr addrspace(3) [[INCDEC_PTR]], [[ADD_PTR]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]

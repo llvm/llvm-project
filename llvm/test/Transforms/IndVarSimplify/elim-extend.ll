@@ -8,9 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @postincConstIV(ptr %base, i32 %limit) nounwind {
 ; CHECK-LABEL: @postincConstIV(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT:%.*]], i32 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[SMAX]], 1
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[LIMIT:%.*]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
@@ -21,7 +19,7 @@ define void @postincConstIV(ptr %base, i32 %limit) nounwind {
 ; CHECK-NEXT:    store i8 0, ptr [[POSTADR]], align 1
 ; CHECK-NEXT:    [[POSTADRNSW:%.*]] = getelementptr inbounds i8, ptr [[BASE]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    store i8 0, ptr [[POSTADRNSW]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i64 [[TMP0]], [[INDVARS_IV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
@@ -73,7 +71,7 @@ define void @postincVarIV(ptr %base, i32 %init, i32 %limit) nounwind {
 ; CHECK-NEXT:    store i8 0, ptr [[POSTADR]], align 1
 ; CHECK-NEXT:    [[POSTADRNSW:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    store i8 0, ptr [[POSTADRNSW]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i64 [[WIDE_TRIP_COUNT]], [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -115,8 +113,7 @@ define void @nestedIV(ptr %address, i32 %limit) nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LIMITDEC:%.*]] = add i32 [[LIMIT:%.*]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[LIMITDEC]] to i64
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT]], i32 1)
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[LIMIT]] to i64
 ; CHECK-NEXT:    br label [[OUTERLOOP:%.*]]
 ; CHECK:       outerloop:
 ; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT2:%.*]], [[OUTERMERGE:%.*]] ], [ 0, [[ENTRY:%.*]] ]
@@ -138,7 +135,7 @@ define void @nestedIV(ptr %address, i32 %limit) nounwind {
 ; CHECK-NEXT:    store i8 0, ptr [[ADR2]], align 1
 ; CHECK-NEXT:    [[ADR3:%.*]] = getelementptr i8, ptr [[ADDRESS]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    store i8 0, ptr [[ADR3]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i64 [[TMP0]], [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNERLOOP]], label [[INNEREXIT:%.*]]
 ; CHECK:       innerexit:
 ; CHECK-NEXT:    [[INNERCOUNT_LCSSA_WIDE:%.*]] = phi i64 [ [[INDVARS_IV_NEXT]], [[INNERLOOP]] ]
@@ -152,7 +149,7 @@ define void @nestedIV(ptr %address, i32 %limit) nounwind {
 ; CHECK-NEXT:    [[ADR5:%.*]] = getelementptr i8, ptr [[ADDRESS]], i64 [[OFS5]]
 ; CHECK-NEXT:    store i8 0, ptr [[ADR5]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nuw nsw i64 [[INDVARS_IV1]], 1
-; CHECK-NEXT:    [[EXITCOND4:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT2]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND4:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT2]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[EXITCOND4]], label [[OUTERLOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
