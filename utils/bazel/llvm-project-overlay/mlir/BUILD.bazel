@@ -6203,6 +6203,7 @@ cc_library(
         ":Support",
         ":TransformUtils",
         ":UBDialect",
+        ":UBToSPIRV",
         ":VectorDialect",
         "//llvm:Support",
     ],
