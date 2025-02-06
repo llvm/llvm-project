@@ -60,7 +60,7 @@
 //
 // NOTE: This Pass matches really specific loop patterns because it's only
 // supposed to be a temporary solution until our LoopVectorizer is powerful
-// enought to vectorize them automatically.
+// enough to vectorize them automatically.
 //
 //===----------------------------------------------------------------------===//
 
