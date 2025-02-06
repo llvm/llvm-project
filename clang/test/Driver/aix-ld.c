@@ -1127,10 +1127,9 @@
 // RUN: | FileCheck -check-prefix=CHECK-LD32-NO-SANITIZER %s 
 // CHECK-LD32-NO-SANITIZER-NOT: "-latomic"
 
-// FIXME: Running this test on non-AIX host will result in the following error:
-// LLVM ERROR: Sanitizer interface functions must be exported by export files on AIX
-
 // Check enable AddressSanitizer on 32-bit AIX
+// FIXME: Running this test on non-AIX hosts will result in the following error:
+// LLVM ERROR: Sanitizer interface functions must be exported by export files on AIX
 // RUN: %if target={{.*aix.*}} %{ \
 // RUN:   %clang -target powerpc-ibm-aix -m32 -fsanitize=address %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LD32-ASAN %s \
