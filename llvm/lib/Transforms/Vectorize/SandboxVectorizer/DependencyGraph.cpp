@@ -14,6 +14,18 @@
 
 namespace llvm::sandboxir {
 
+User::op_iterator PredIterator::skipBadIt(User::op_iterator OpIt,
+                                          User::op_iterator OpItE,
+                                          const DependencyGraph &DAG) {
+  auto Skip = [&DAG](auto OpIt) {
+    auto *I = dyn_cast<Instruction>((*OpIt).get());
+    return I == nullptr || DAG.getNode(I) == nullptr;
+  };
+  while (OpIt != OpItE && Skip(OpIt))
+    ++OpIt;
+  return OpIt;
+}
+
 PredIterator::value_type PredIterator::operator*() {
   // If it's a DGNode then we dereference the operand iterator.
   if (!isa<MemDGNode>(N)) {
@@ -35,16 +47,16 @@ PredIterator &PredIterator::operator++() {
   if (!isa<MemDGNode>(N)) {
     assert(OpIt != OpItE && "Already at end!");
     ++OpIt;
-    // Skip operands that are not instructions.
-    OpIt = skipNonInstr(OpIt, OpItE);
+    // Skip operands that are not instructions or are outside the DAG.
+    OpIt = PredIterator::skipBadIt(OpIt, OpItE, *DAG);
     return *this;
   }
   // It's a MemDGNode, so if we are not at the end of the use-def iterator we
   // need to first increment that.
   if (OpIt != OpItE) {
     ++OpIt;
-    // Skip operands that are not instructions.
-    OpIt = skipNonInstr(OpIt, OpItE);
+    // Skip operands that are not instructions or are outside the DAG.
+    OpIt = PredIterator::skipBadIt(OpIt, OpItE, *DAG);
     return *this;
   }
   // It's a MemDGNode with OpIt == end, so we need to increment MemIt.
