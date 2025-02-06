@@ -31,10 +31,6 @@ Ron and Saiyed
 revert: need clean patch from Amit
 b68b4f64a2bd [Driver][ASan] Refactor Clang-Driver "Sanitizer
 ---
-revert: needs flang-new merge help
-[mlir][OpenMP][flang] make private variable allocation implicit in omp.private (#124019)
-9ad4ebd82b60 [mlir][OpenMP][NFC] break out priv var init into hel
----
 revert : breaks build of 5 spec-accel codes
 25f29ee377b1 - [flang][OpenMP] Update all `lastprivate` symbols, not just in clauses (#125628)
 Kareem, Ron
