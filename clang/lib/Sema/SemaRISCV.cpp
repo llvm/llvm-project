@@ -623,13 +623,37 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   }
   }
 
+  auto checkVsetvl = [&](unsigned SEWOffset,
+                                        unsigned LMULOffset) -> bool {
+    const FunctionDecl *FD = SemaRef.getCurFunctionDecl();
+    llvm::StringMap<bool> FunctionFeatureMap;
+    Context.getFunctionFeatureMap(FunctionFeatureMap, FD);
+    llvm::APSInt SEWResult;
+    llvm::APSInt LMULResult;
+    if (SemaRef.BuiltinConstantArg(TheCall, SEWOffset, SEWResult) ||
+        SemaRef.BuiltinConstantArg(TheCall, LMULOffset, LMULResult))
+      return true;
+    int SEWValue = SEWResult.getSExtValue();
+    int LMULValue = LMULResult.getSExtValue();
+    if (((SEWValue == 0 && LMULValue == 5) ||  // e8mf8
+         (SEWValue == 1 && LMULValue == 6) ||  // e16mf4
+         (SEWValue == 2 && LMULValue == 7) ||  // e32mf2
+         (SEWValue == 3 && LMULValue == 0) ||  // e64m1
+         (SEWValue == 3 && LMULValue == 1) ||  // e64m2
+         (SEWValue == 3 && LMULValue == 2) ||  // e64m4
+         (SEWValue == 3 && LMULValue == 3)) && // e64m8
+        (!TI.hasFeature("zve64x") && !FunctionFeatureMap.lookup("zve64x")))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_riscv_builtin_requires_extension)
+             << /* IsExtension */ true << TheCall->getSourceRange() << "zve64x";
+    return SemaRef.BuiltinConstantArgRange(TheCall, SEWOffset, 0, 3) ||
+           CheckLMUL(TheCall, LMULOffset);
+  };
   switch (BuiltinID) {
   case RISCVVector::BI__builtin_rvv_vsetvli:
-    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 3) ||
-           CheckLMUL(TheCall, 2);
+    return checkVsetvl(1, 2);
   case RISCVVector::BI__builtin_rvv_vsetvlimax:
-    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 3) ||
-           CheckLMUL(TheCall, 1);
+    return checkVsetvl(0, 1);
   case RISCVVector::BI__builtin_rvv_vget_v: {
     ASTContext::BuiltinVectorTypeInfo ResVecInfo =
         Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(
