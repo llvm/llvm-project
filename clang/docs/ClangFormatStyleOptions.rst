@@ -3424,8 +3424,8 @@ the configuration (without a prefix: ``Auto``).
 .. _BreakBeforeTemplateCloser:
 
 **BreakBeforeTemplateCloser** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeTemplateCloser>`
-  If ``true``, a line break will be placed before the ``>`` in a block
-  indented template declaration.
+  If ``true``, break before a template closing bracket (``>``) when there is
+  a line break after the matching opening bracket (``<``).
 
   .. code-block:: c++
 
