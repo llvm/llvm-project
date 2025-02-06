@@ -223,20 +223,21 @@ define amdgpu_ps float @test5(i32 %rsrc, i64 %data, i64 %cmp, i32 %vindex, i32 %
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, v8 :: v_dual_mov_b32 v5, v9
 ; GFX13-SDAG-NEXT:    buffer_atomic_cmpswap_b64 v[2:5], v10, v0, s0 idxen offset:4 th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX13-SDAG-NEXT:    v_xor_b32_e32 v0, v2, v3
 ; GFX13-SDAG-NEXT:    v_cls_i32_e32 v1, v3
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-SDAG-NEXT:    v_dual_add_nc_u32 v1, -1, v1 :: v_dual_bitop2_b32 v0, v2, v3 bitop3:0x14
 ; GFX13-SDAG-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_add_nc_u32_e32 v0, 32, v0
+; GFX13-SDAG-NEXT:    v_min_u32_e32 v4, v1, v0
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-SDAG-NEXT:    v_add_min_u32_e64 v4, v1, -1, v0
 ; GFX13-SDAG-NEXT:    v_lshlrev_b64_e32 v[0:1], v4, v[2:3]
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_min_u32_e32 v0, 1, v0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX13-SDAG-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX13-SDAG-NEXT:    v_sub_nc_u32_e32 v1, 32, v4
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_f32_i32_e32 v0, v0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX13-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -268,20 +269,21 @@ define amdgpu_ps float @test5(i32 %rsrc, i64 %data, i64 %cmp, i32 %vindex, i32 %
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v10 :: v_dual_mov_b32 v5, v11
 ; GFX13-GISEL-NEXT:    buffer_atomic_cmpswap_b64 v[2:5], v6, v0, s0 idxen offset:4 th:TH_ATOMIC_RETURN
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX13-GISEL-NEXT:    v_xor_b32_e32 v0, v2, v3
 ; GFX13-GISEL-NEXT:    v_cls_i32_e32 v1, v3
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-GISEL-NEXT:    v_dual_add_nc_u32 v1, -1, v1 :: v_dual_bitop2_b32 v0, v2, v3 bitop3:0x14
 ; GFX13-GISEL-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_add_nc_u32_e32 v0, 32, v0
+; GFX13-GISEL-NEXT:    v_min_u32_e32 v4, v1, v0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_add_min_u32_e64 v4, v1, -1, v0
 ; GFX13-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], v4, v[2:3]
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_min_u32_e32 v0, 1, v0
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX13-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX13-GISEL-NEXT:    v_sub_nc_u32_e32 v1, 32, v4
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_f32_i32_e32 v0, v0
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX13-GISEL-NEXT:    ; return to shader part epilog
 main_body:

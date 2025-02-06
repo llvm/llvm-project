@@ -219,11 +219,11 @@ define amdgpu_ps float @test5(i32 inreg %rsrc, i64 %data, i64 %cmp, i32 %vindex,
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    v_xor_b32_e32 v0, v8, v9
 ; GFX13-SDAG-NEXT:    v_cls_i32_e32 v1, v9
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-SDAG-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-SDAG-NEXT:    v_dual_ashrrev_i32 v0, 31, v0 :: v_dual_add_nc_u32 v1, -1, v1
 ; GFX13-SDAG-NEXT:    v_add_nc_u32_e32 v0, 32, v0
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-SDAG-NEXT:    v_add_min_u32_e64 v2, v1, -1, v0
+; GFX13-SDAG-NEXT:    v_min_u32_e32 v2, v1, v0
 ; GFX13-SDAG-NEXT:    v_lshlrev_b64_e32 v[0:1], v2, v[8:9]
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_min_u32_e32 v0, 1, v0
@@ -258,11 +258,11 @@ define amdgpu_ps float @test5(i32 inreg %rsrc, i64 %data, i64 %cmp, i32 %vindex,
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    v_xor_b32_e32 v0, v8, v9
 ; GFX13-GISEL-NEXT:    v_cls_i32_e32 v1, v9
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-GISEL-NEXT:    v_dual_ashrrev_i32 v0, 31, v0 :: v_dual_add_nc_u32 v1, -1, v1
 ; GFX13-GISEL-NEXT:    v_add_nc_u32_e32 v0, 32, v0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_add_min_u32_e64 v2, v1, -1, v0
+; GFX13-GISEL-NEXT:    v_min_u32_e32 v2, v1, v0
 ; GFX13-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], v2, v[8:9]
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_min_u32_e32 v0, 1, v0
