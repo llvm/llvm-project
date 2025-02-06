@@ -29,8 +29,8 @@
 !       executable and may find the GNU linker from MinGW or Cygwin.
 ! UNIX-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! UNIX-SAME: "[[object_file]]"
-! UNIX-F128NONE-NOT: libflang_rt.quadmath
-! SOLARIS-F128NONE-NOT: libflang_rt.quadmath
+! UNIX-F128NONE-NOT: lang_rt.quadmath
+! SOLARIS-F128NONE-NOT: flang_rt.quadmath
 ! UNIX-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
 ! SOLARIS-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "-z" "ignore" "-lquadmath" "-z" "record"
 ! UNIX-SAME: "-lflang_rt.runtime" "-lm"
@@ -38,9 +38,9 @@
 
 ! BSD-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! BSD-SAME: "[[object_file]]"
-! BSD-F128NONE-NOT: FortranFloat128Math
-! BSD-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
-! BSD-SAME: -lFortranRuntime
+! BSD-F128NONE-NOT: flang_rt.quadmath
+! BSD-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
+! BSD-SAME: -lflang_rt.runtime
 ! BSD-SAME: -lexecinfo
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
