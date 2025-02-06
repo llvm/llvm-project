@@ -5352,11 +5352,8 @@ static bool isLocalRepeatingShuffle(ArrayRef<int> Mask, int Span) {
 
 /// Is this mask only using elements from the first span of the input?
 static bool isLowSourceShuffle(ArrayRef<int> Mask, int Span) {
-  for (auto [I, M] : enumerate(Mask)) {
-    if (M != -1 && M >= Span)
-      return false;
-  }
-  return true;
+  return !any_of(Mask,
+                 [&](const auto &Idx) { return Idx != -1 && Idx >= Span; });
 }
 
 /// Try to widen element type to get a new mask value for a better permutation
@@ -5776,6 +5773,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                              SubVec, SubIdx);
       }
     } else if (ContainerVT.bitsGT(M1VT) && isLowSourceShuffle(Mask, VLMAX)) {
+      // If we have a shuffle which only uses the first register in our
+      // source register group, we can do a linear number of m1 vrgathers
+      // reusing the same source register (but with different indices)
+      // TODO: This can be generalized for m2 or m4, or for any shuffle
+      // for which we can do a vslidedown followed by this expansion.
       EVT SubIndexVT = M1VT.changeVectorElementType(IndexVT.getScalarType());
       auto [InnerTrueMask, InnerVL] =
           getDefaultScalableVLOps(M1VT, DL, DAG, Subtarget);
