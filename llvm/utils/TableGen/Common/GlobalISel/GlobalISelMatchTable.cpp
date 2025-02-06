@@ -291,18 +291,20 @@ void MatchTable::emitDeclaration(raw_ostream &OS) const {
   OS << "  constexpr static uint8_t MatchTable" << ID << "[] = {";
   LineBreak.emit(OS, true, *this);
 
+  // We want to display the table index of each line in a consistent
+  // manner. It has to appear as a column on the left side of the table.
+  // To determine how wide the column needs to be, check how many characters
+  // we need to fit the largest possible index in the current table.
   const unsigned NumColsForIdx = llvm::to_string(CurrentSize).size();
 
   unsigned CurIndex = 0;
   const auto BeginLine = [&]() {
-    OS << std::string(BaseIndent, ' ');
-    // To keep the /* index */ column consistent, pad
-    // the string at the start so we can always fit the
-    // exact number of characters to print the largest possible index.
+    OS.indent(BaseIndent);
     std::string IdxStr = llvm::to_string(CurIndex);
+    // Pad the string with spaces to keep the size of the prefix consistent.
     OS << " /* " << std::string(NumColsForIdx - IdxStr.size(), ' ') << IdxStr
        << " */ ";
-    OS << std::string(Indentation, ' ');
+    OS.indent(Indentation);
   };
 
   BeginLine();
