@@ -3,8 +3,10 @@
 ! CHECK-LABEL: unroll_dir
 subroutine unroll_dir
   integer :: a(10)
-  !dir$ unroll
-  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[UNROLL_ENABLE_FULL_ANNO:.*]]
+  !dir$ unroll 
+  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}
+  ! CHECK-NOT: !llvm.loop
+  ! CHECK:   br label {{.*}}, !llvm.loop ![[UNROLL_ENABLE_FULL_ANNO:.*]]
   do i=1,10
   a(i)=i
   end do
