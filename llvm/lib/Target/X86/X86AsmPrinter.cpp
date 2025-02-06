@@ -181,8 +181,29 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   // Embed the type hash in the X86::MOV32ri instruction to avoid special
   // casing object file parsers.
   EmitKCFITypePadding(MF);
+  unsigned DestReg = X86::EAX;
+
+  if (F.getParent()->getModuleFlag("kcfi-arity")) {
+    // The ArityToRegMap assumes the 64-bit Linux kernel ABI
+    const auto &Triple = MF.getTarget().getTargetTriple();
+    assert(Triple.isArch64Bit() && Triple.isOSLinux());
+
+    // Determine the function's arity (i.e., the number of arguments) at the ABI
+    // level by counting the number of parameters that are passed
+    // as registers, such as pointers and 64-bit (or smaller) integers. The
+    // Linux x86-64 ABI allows up to 6 parameters to be passed in GPRs.
+    // Additional parameters or parameters larger than 64 bits may be passed on
+    // the stack, in which case the arity is denoted as 7.
+    const unsigned ArityToRegMap[8] = {X86::EAX, X86::ECX, X86::EDX, X86::EBX,
+                                       X86::ESP, X86::EBP, X86::ESI, X86::EDI};
+    int Arity = MF.getInfo<X86MachineFunctionInfo>()->getArgumentStackSize() > 0
+                    ? 7
+                    : MF.getRegInfo().liveins().size();
+    DestReg = ArityToRegMap[Arity];
+  }
+
   EmitAndCountInstruction(MCInstBuilder(X86::MOV32ri)
-                              .addReg(X86::EAX)
+                              .addReg(DestReg)
                               .addImm(MaskKCFIType(Type->getZExtValue())));
 
   if (MAI->hasDotTypeDotSizeDirective()) {
