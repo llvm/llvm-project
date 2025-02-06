@@ -121,6 +121,7 @@ public:
     assert(UnscheduledSuccs > 0 && "Counting error!");
     --UnscheduledSuccs;
   }
+  void incrUnscheduledSuccs() { ++UnscheduledSuccs; }
   /// \Returns true if all dependent successors have been scheduled.
   bool ready() const { return UnscheduledSuccs == 0; }
   /// \Returns true if this node has been scheduled.
