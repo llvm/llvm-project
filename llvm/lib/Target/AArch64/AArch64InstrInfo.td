@@ -10398,25 +10398,20 @@ let Predicates = [HasCPA] in {
   def MADDPT : MulAccumCPA<0, "maddpt">;
   def MSUBPT : MulAccumCPA<1, "msubpt">;
 
-  // Rules to use CPA instructions in pointer arithmetic patterns which are not
-  // folded into loads/stores. The AddedComplexity serves to help supersede
-  // other simpler (non-CPA) patterns and make sure CPA is used instead.
-  let AddedComplexity = 20 in {
-    def : Pat<(ptradd GPR64sp:$Rn, GPR64sp:$Rm),
-              (ADDPT_shift GPR64sp:$Rn, GPR64sp:$Rm, (i32 0))>;
-    def : Pat<(ptradd GPR64sp:$Rn, (shl GPR64sp:$Rm, (i64 imm0_7:$imm))),
-              (ADDPT_shift GPR64sp:$Rn, GPR64sp:$Rm,
-                           (i32 (trunc_imm imm0_7:$imm)))>;
-    def : Pat<(ptradd GPR64sp:$Rn, (ineg GPR64sp:$Rm)),
-              (SUBPT_shift GPR64sp:$Rn, GPR64sp:$Rm, (i32 0))>;
-    def : Pat<(ptradd GPR64sp:$Rn, (ineg (shl GPR64sp:$Rm, (i64 imm0_7:$imm)))),
-              (SUBPT_shift GPR64sp:$Rn, GPR64sp:$Rm,
-                           (i32 (trunc_imm imm0_7:$imm)))>;
-    def : Pat<(ptradd GPR64:$Ra, (mul GPR64:$Rn, GPR64:$Rm)),
-              (MADDPT GPR64:$Rn, GPR64:$Rm, GPR64:$Ra)>;
-    def : Pat<(ptradd GPR64:$Ra, (mul GPR64:$Rn, (ineg GPR64:$Rm))),
-              (MSUBPT GPR64:$Rn, GPR64:$Rm, GPR64:$Ra)>;
-  }
+  def : Pat<(ptradd GPR64sp:$Rn, GPR64sp:$Rm),
+            (ADDPT_shift GPR64sp:$Rn, GPR64sp:$Rm, (i32 0))>;
+  def : Pat<(ptradd GPR64sp:$Rn, (shl GPR64sp:$Rm, (i64 imm0_7:$imm))),
+            (ADDPT_shift GPR64sp:$Rn, GPR64sp:$Rm,
+                         (i32 (trunc_imm imm0_7:$imm)))>;
+  def : Pat<(ptradd GPR64sp:$Rn, (ineg GPR64sp:$Rm)),
+            (SUBPT_shift GPR64sp:$Rn, GPR64sp:$Rm, (i32 0))>;
+  def : Pat<(ptradd GPR64sp:$Rn, (ineg (shl GPR64sp:$Rm, (i64 imm0_7:$imm)))),
+            (SUBPT_shift GPR64sp:$Rn, GPR64sp:$Rm,
+                         (i32 (trunc_imm imm0_7:$imm)))>;
+  def : Pat<(ptradd GPR64:$Ra, (mul GPR64:$Rn, GPR64:$Rm)),
+            (MADDPT GPR64:$Rn, GPR64:$Rm, GPR64:$Ra)>;
+  def : Pat<(ptradd GPR64:$Ra, (mul GPR64:$Rn, (ineg GPR64:$Rm))),
+            (MSUBPT GPR64:$Rn, GPR64:$Rm, GPR64:$Ra)>;
 }
 
 def round_v4fp32_to_v4bf16 :
