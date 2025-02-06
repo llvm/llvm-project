@@ -874,6 +874,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[14], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[15], tok::amp, TT_UnaryOperator);
 
+  Tokens = annotate("func((foo(bar::*)(void))&a);");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[13], tok::amp, TT_UnaryOperator);
+
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");
   Tokens = annotate("#define FOO(bar) foo((Foo)&bar)", Style);

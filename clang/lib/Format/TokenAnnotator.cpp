@@ -2915,14 +2915,27 @@ private:
     if (Prev->is(tok::r_paren)) {
       if (Prev->is(TT_CastRParen))
         return false;
+
+      // Check for the second pair of parentheses.
       Prev = Prev->MatchingParen;
       if (!Prev)
         return false;
+
+      // Now check for the first pair of parentheses.
       Prev = Prev->Previous;
       if (!Prev || Prev->isNot(tok::r_paren))
         return false;
-      Prev = Prev->MatchingParen;
-      return Prev && Prev->is(TT_FunctionTypeLParen);
+      const auto* PrevMatchingParen = Prev->MatchingParen;
+      if (!PrevMatchingParen)
+        return false;
+
+      // We can quickly tell it is a function pointer type if the paren is the
+      // right type.
+      if (PrevMatchingParen->isNot(TT_Unknown))
+        return PrevMatchingParen->is(TT_FunctionTypeLParen);
+
+      // Otherwise check for the trailing * in the parentheses.
+      return Prev->Previous && Prev->Previous->is(tok::star);
     }
 
     // Search for unexpected tokens.
