@@ -1,7 +1,7 @@
 ! NOTE: This lit test was automatically generated to validate unintentionally exposed arguments to various driver flavours.
 ! NOTE: To make changes, see llvm-project/clang/utils/generate_unsupported_in_drivermode.py from which it was generated.
 ! NOTE: Regenerate this Lit test with the following:
-! NOTE: python llvm-project/clang/utils/generate_unsupported_in_drivermode.py llvm-project/clang/include/clang/Driver/Options.td --llvm-bin llvm-project/build/bin --llvm-tblgen llvm-tblgen
+! NOTE: python generate_unsupported_in_drivermode.py llvm-project/clang/include/clang/Driver/Options.td --llvm-bin llvm-project/build/bin --llvm-tblgen llvm-tblgen
 
 ! RUN: not %clang --driver-mode=flang -fc1 -A -A- -B -C -CC -EB -EL -Eonly -F -faapcs-bitfield-load -G -G= -H -K -L -M -MD -MF -MG -MJ -MM -MMD -MP -MQ -MT -MV -Mach -Q -Qn -Qunused-arguments -Qy -T -V -X -Xanalyzer -Xarch_ -Xarch_device -Xarch_host -Xassembler -Xclang -Xcuda-fatbinary -Xcuda-ptxas -Xflang -Xlinker -Xoffload-linker -Xopenmp-target -Xopenmp-target= -Xpreprocessor -Z -Z-Xlinker-no-demangle -Z-reserved-lib-cckext -Z-reserved-lib-stdc++ -Zlinker-input --CLASSPATH --CLASSPATH= -- -### /AI /Brepro /Brepro- /Bt /Bt+ /C /EH /EP /F /FA /FC /FI /FR /FS /FU /Fa /Fd /Fe /Fe: /Fi /Fi: /Fm /Fo /Fo: /Fp /Fp: /Fr /Fx /G1 /G2 /GA /GF /GF- /GH /GL /GL- /GR /GR- /GS /GS- /GT /GX /GX-  - < /dev/null 2>&1 | FileCheck -check-prefix=FC1OptionCHECK-COUNT-100 %s
 

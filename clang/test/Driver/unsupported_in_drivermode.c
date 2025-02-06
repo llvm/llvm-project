@@ -1,7 +1,7 @@
 // NOTE: This lit test was automatically generated to validate unintentionally exposed arguments to various driver flavours.
 // NOTE: To make changes, see llvm-project/clang/utils/generate_unsupported_in_drivermode.py from which it was generated.
 // NOTE: Regenerate this Lit test with the following:
-// NOTE: python llvm-project/clang/utils/generate_unsupported_in_drivermode.py llvm-project/clang/include/clang/Driver/Options.td --llvm-bin llvm-project/build/bin --llvm-tblgen llvm-tblgen
+// NOTE: python generate_unsupported_in_drivermode.py llvm-project/clang/include/clang/Driver/Options.td --llvm-bin llvm-project/build/bin --llvm-tblgen llvm-tblgen
 
 // RUN: not %clang -cc1as -A -A- -B -C -CC -D -E -EB -EL -Eonly -F -faapcs-bitfield-load -G -G= -H -J -K -L -M -MD -MF -MG -MJ -MM -MMD -MP -MQ -MT -MV -Mach -O -O0 -O4 -O -ObjC -ObjC++ -Ofast -P -Q -Qn -Qunused-arguments -Qy -R -Rpass= -Rpass-analysis= -Rpass-missed= -S -T -U -V -WCL4 -W -Wa, -Wall -Wdeprecated -Wframe-larger-than -Wframe-larger-than= -Winvalid-constexpr -Winvalid-gnu-asm-cast -Wl, -Wlarge-by-value-copy= -Wlarge-by-value-copy -Wlarger-than- -Wlarger-than= -Wno-deprecated -Wno-invalid-constexpr -Wno-nonportable-cfstrings -Wno-rewrite-macros -Wno-system-headers -Wno-write-strings -Wnonportable-cfstrings -Wp, -Wsystem-headers -Wsystem-headers-in-module= -Wundef-prefix= -Wwrite-strings -X -Xanalyzer -Xarch_ -Xarch_device -Xarch_host -Xassembler -Xclang -Xcuda-fatbinary -Xcuda-ptxas -Xflang -Xlinker -Xoffload-linker -Xopenmp-target -Xopenmp-target= -Xpreprocessor -Z -Z-Xlinker-no-demangle -Z-reserved-lib-cckext -Z-reserved-lib-stdc++ -Zlinker-input --CLASSPATH --CLASSPATH= -- -###  - < /dev/null 2>&1 | FileCheck -check-prefix=CC1AsOptionCHECK-COUNT-100 %s
 

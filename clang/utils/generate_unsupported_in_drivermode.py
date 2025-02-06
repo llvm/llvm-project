@@ -120,12 +120,11 @@ def find_groups(options_dictionary, option):
     Return: A set including the group found for the option
     """
     group_list = options_dictionary[option]["Group"]
-    group_set = set()
 
     if group_list is None:
         return None
     found_group = group_list["def"]
-    group_set.add(found_group)
+    group_set = {found_group}
 
     sub_group_set = find_groups(options_dictionary, found_group)
     if sub_group_set is None:
@@ -169,7 +168,7 @@ def get_lit_test_note(test_visibility):
         f"{test_prefix}NOTE: To make changes, see llvm-project/clang/utils/generate_unsupported_in_drivermode.py"
         + " from which it was generated.\n"
         f"{test_prefix}NOTE: Regenerate this Lit test with the following:\n"
-        f"{test_prefix}NOTE: python llvm-project/clang/utils/generate_unsupported_in_drivermode.py "
+        f"{test_prefix}NOTE: python generate_unsupported_in_drivermode.py "
         + "llvm-project/clang/include/clang/Driver/Options.td --llvm-bin llvm-project/build/bin --llvm-tblgen llvm-tblgen\n\n"
     )
 
@@ -371,7 +370,7 @@ for visibility in options_dictionary["!instanceof"]["OptionVisibility"]:
 # Iterate the options list and find which drivers shouldn't be visible to each option
 for option in options_dictionary["!instanceof"]["Option"]:
     kind = options_dictionary[option]["Kind"]["def"]
-    tmp_visibility_set = set()
+    tmp_visibility_set = set(())
     option_name = options_dictionary[option]["Name"]
 
     # There are a few conditions that make an option unsuitable to test in this script
@@ -432,9 +431,9 @@ for visibility, driver_data in driver_data_dict.items():
     driver_data.supported_sequence.sort(key=len, reverse=True)
 
 # For a given driver, this script cannot generate tests for unsupported options whose option "Name" have a prefix that
-# corresponds to a supported option / visible option of Kind *JOINED*. These driver-option pairs are removed here.
+# corresponds to a supported/visible option of Kind *JOINED*. These driver-option pairs are removed here.
 # The reason is that those options will be parsed as if they were the corresponding prefixed options with a value,
-# and thus would not error would be triggered.
+# and thus no error would be triggered.
 # Example: Option "O_flag" is not visible to FlangOption, but option "O" is visible to FlangOption.
 #          Attempting to test this:
 #            clang --driver-mode=flang -O_flag -### -x c++ -c - < /dev/null 2>&1
