@@ -5338,13 +5338,19 @@ static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
 /// Is this mask local (i.e. elements only move within their local span), and
 /// repeating (that is, the same rearrangement is being done within each span)?
 static bool isLocalRepeatingShuffle(ArrayRef<int> Mask, int Span) {
-  // TODO: Could improve the case where undef elements exist in the first span.
+  SmallVector<int> LowSpan(Span, -1);
   for (auto [I, M] : enumerate(Mask)) {
     if (M == -1)
       continue;
-    int ChunkLo = I - (I % Span);
+    int SpanIdx = I % Span;
+    int ChunkLo = I - SpanIdx;
     int ChunkHi = ChunkLo + Span;
-    if (M < ChunkLo || M >= ChunkHi || M - ChunkLo != Mask[I % Span])
+    if (M < ChunkLo || M >= ChunkHi)
+      return false;
+    int Expected = M - ChunkLo;
+    if (LowSpan[SpanIdx] == -1)
+      LowSpan[SpanIdx] = Expected;
+    if (LowSpan[SpanIdx] != Expected)
       return false;
   }
   return true;
@@ -5742,9 +5748,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // If we have a locally repeating mask, then we can reuse the first register
     // in the index register group for all registers within the source register
     // group.  TODO: This generalizes to m2, and m4.
-    const MVT M1VT = getLMUL1VT(ContainerVT);
-    auto VLMAX = RISCVTargetLowering::computeVLMAXBounds(M1VT, Subtarget).first;
-    if (ContainerVT.bitsGT(M1VT) && isLocalRepeatingShuffle(Mask, VLMAX)) {
+    if (NumElts > MinVLMAX && isLocalRepeatingShuffle(Mask, MinVLMAX)) {
+      const MVT M1VT = getLMUL1VT(ContainerVT);
       EVT SubIndexVT = M1VT.changeVectorElementType(IndexVT.getScalarType());
       SDValue SubIndex =
           DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubIndexVT, LHSIndices,
