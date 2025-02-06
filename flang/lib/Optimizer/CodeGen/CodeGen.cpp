@@ -589,10 +589,15 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
     // Convert arith::FastMathFlagsAttr to LLVM::FastMathFlagsAttr.
     mlir::arith::AttrConvertFastMathToLLVM<fir::CallOp, mlir::LLVM::CallOp>
         attrConvert(call);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-        call, resultTys, adaptor.getOperands(),
+    auto llvmCall = rewriter.create<mlir::LLVM::CallOp>(
+        call.getLoc(), resultTys, adaptor.getOperands(),
         addLLVMOpBundleAttrs(rewriter, attrConvert.getAttrs(),
                              adaptor.getOperands().size()));
+    auto fmi =
+        mlir::cast<mlir::LLVM::FastmathFlagsInterface>(llvmCall.getOperation());
+    if (!fmi.isFastmathApplicable())
+      llvmCall.setFastmathFlags(mlir::LLVM::FastmathFlags::none);
+    rewriter.replaceOp(call, llvmCall);
     return mlir::success();
   }
 };

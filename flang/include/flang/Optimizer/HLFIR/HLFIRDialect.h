@@ -139,6 +139,11 @@ bool mayHaveAllocatableComponent(mlir::Type ty);
 /// Scalar integer or a sequence of integers (via boxed array or expr).
 bool isFortranIntegerScalarOrArrayObject(mlir::Type type);
 
+/// Return true iff FastMathFlagsAttr is applicable
+/// to the given HLFIR dialect operation that supports
+/// ArithFastMathInterface.
+bool isArithFastMathApplicable(mlir::Operation *op);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_HLFIR_HLFIRDIALECT_H

@@ -786,9 +786,7 @@ mlir::Value fir::FirOpBuilder::genAbsentOp(mlir::Location loc,
 
 void fir::FirOpBuilder::setCommonAttributes(mlir::Operation *op) const {
   auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
-  if (fmi) {
-    // TODO: use fmi.setFastMathFlagsAttr() after D137114 is merged.
-    //       For now set the attribute by the name.
+  if (fmi && fmi.isArithFastMathApplicable()) {
     llvm::StringRef arithFMFAttrName = fmi.getFastMathAttrName();
     if (fastMathFlags != mlir::arith::FastMathFlags::none)
       op->setAttr(arithFMFAttrName, mlir::arith::FastMathFlagsAttr::get(

@@ -434,6 +434,12 @@ def hlfir_MaxvalOp : hlfir_Op<"maxval", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isArithFastMathApplicable() {
+      return hlfir::isArithFastMathApplicable(getOperation());
+    }
+  }];
 }
 
 def hlfir_MinvalOp : hlfir_Op<"minval", [AttrSizedOperandSegments,
@@ -461,6 +467,12 @@ def hlfir_MinvalOp : hlfir_Op<"minval", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isArithFastMathApplicable() {
+      return hlfir::isArithFastMathApplicable(getOperation());
+    }
+  }];
 }
 
 def hlfir_MinlocOp : hlfir_Op<"minloc", [AttrSizedOperandSegments,
@@ -487,6 +499,12 @@ def hlfir_MinlocOp : hlfir_Op<"minloc", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isArithFastMathApplicable() {
+      return hlfir::isArithFastMathApplicable(getOperation());
+    }
+  }];
 }
 
 def hlfir_MaxlocOp : hlfir_Op<"maxloc", [AttrSizedOperandSegments,
@@ -513,6 +531,12 @@ def hlfir_MaxlocOp : hlfir_Op<"maxloc", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isArithFastMathApplicable() {
+      return hlfir::isArithFastMathApplicable(getOperation());
+    }
+  }];
 }
 
 def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
@@ -539,6 +563,12 @@ def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isArithFastMathApplicable() {
+      return hlfir::isArithFastMathApplicable(getOperation());
+    }
+  }];
 }
 
 def hlfir_SetLengthOp : hlfir_Op<"set_length",
@@ -604,6 +634,12 @@ def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isArithFastMathApplicable() {
+      return hlfir::isArithFastMathApplicable(getOperation());
+    }
+  }];
 }
 
 def hlfir_DotProductOp : hlfir_Op<"dot_product",
@@ -628,6 +664,12 @@ def hlfir_DotProductOp : hlfir_Op<"dot_product",
   }];
 
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isArithFastMathApplicable() {
+      return hlfir::isArithFastMathApplicable(getOperation());
+    }
+  }];
 }
 
 def hlfir_MatmulOp : hlfir_Op<"matmul",
@@ -655,6 +697,12 @@ def hlfir_MatmulOp : hlfir_Op<"matmul",
   let hasCanonicalizeMethod = 1;
 
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isArithFastMathApplicable() {
+      return hlfir::isArithFastMathApplicable(getOperation());
+    }
+  }];
 }
 
 def hlfir_TransposeOp : hlfir_Op<"transpose",
@@ -697,6 +745,12 @@ def hlfir_MatmulTransposeOp : hlfir_Op<"matmul_transpose",
   }];
 
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isArithFastMathApplicable() {
+      return hlfir::isArithFastMathApplicable(getOperation());
+    }
+  }];
 }
 
 def hlfir_CShiftOp

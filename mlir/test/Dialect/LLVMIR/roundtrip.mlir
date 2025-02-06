@@ -102,15 +102,15 @@ func.func @ops(%arg0: i32, %arg1: f32,
 
 // Variadic calls
 // CHECK:  llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : (i32, i32) -> ()
-// CHECK:  llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : (i32, i32) -> ()
-// CHECK:  %[[VARIADIC_FUNC:.*]] = llvm.mlir.addressof @vararg_func : !llvm.ptr
-// CHECK:  llvm.call %[[VARIADIC_FUNC]](%[[I32]], %[[I32]]) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
-// CHECK:  llvm.call %[[VARIADIC_FUNC]](%[[I32]], %[[I32]]) vararg(!llvm.func<void (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : !llvm.ptr, (i32, i32) -> ()
+// CHECK:  llvm.call @vararg_func_f32(%arg0, %arg0) vararg(!llvm.func<f32 (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : (i32, i32) -> f32
+// CHECK:  %[[VARIADIC_FUNC:.*]] = llvm.mlir.addressof @vararg_func_f32 : !llvm.ptr
+// CHECK:  llvm.call %[[VARIADIC_FUNC]](%[[I32]], %[[I32]]) vararg(!llvm.func<f32 (i32, ...)>) : !llvm.ptr, (i32, i32) -> f32
+// CHECK:  llvm.call %[[VARIADIC_FUNC]](%[[I32]], %[[I32]]) vararg(!llvm.func<f32 (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : !llvm.ptr, (i32, i32) -> f32
   llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : (i32, i32) -> ()
-  llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : (i32, i32) -> ()
-  %variadic_func = llvm.mlir.addressof @vararg_func : !llvm.ptr
-  llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
-  llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : !llvm.ptr, (i32, i32) -> ()
+  %tmp1 = llvm.call @vararg_func_f32(%arg0, %arg0) vararg(!llvm.func<f32 (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : (i32, i32) -> f32
+  %variadic_func = llvm.mlir.addressof @vararg_func_f32 : !llvm.ptr
+  llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<f32 (i32, ...)>) : !llvm.ptr, (i32, i32) -> f32
+  %tmp2 = llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<f32 (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : !llvm.ptr, (i32, i32) -> f32
 
 // Function call attributes
 // CHECK: llvm.call @baz() {convergent} : () -> ()
@@ -618,6 +618,9 @@ llvm.func @useInlineAsm(%arg0: i32) {
   llvm.return
 }
 
+// CHECK-LABEL: @fastmathStructReturn
+llvm.func @fastmathStructReturn(%arg0: i32) -> !llvm.struct<(f32, f32)>
+
 // CHECK-LABEL: @fastmathFlags
 func.func @fastmathFlags(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: vector<2 x f32>, %arg4: vector<2 x f32>) {
 // CHECK: {{.*}} = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
@@ -643,8 +646,8 @@ func.func @fastmathFlags(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: vector<2 x f
 // CHECK: {{.*}} = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<fast>} : f32
   %6 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<fast>} : f32
 
-// CHECK: {{.*}} = llvm.call @foo(%arg2) {fastmathFlags = #llvm.fastmath<fast>} : (i32) -> !llvm.struct<(i32, f64, i32)>
-  %7 = llvm.call @foo(%arg2) {fastmathFlags = #llvm.fastmath<fast>} : (i32) -> !llvm.struct<(i32, f64, i32)>
+// CHECK: {{.*}} = llvm.call @fastmathStructReturn(%arg2) {fastmathFlags = #llvm.fastmath<fast>} : (i32) -> !llvm.struct<(f32, f32)>
+  %7 = llvm.call @fastmathStructReturn(%arg2) {fastmathFlags = #llvm.fastmath<fast>} : (i32) -> !llvm.struct<(f32, f32)>
 
 // CHECK: {{.*}} = llvm.fadd %arg0, %arg1 : f32
   %8 = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<none>} : f32
@@ -699,6 +702,9 @@ llvm.func @invariant_group_intrinsics(%p: !llvm.ptr) {
   %2 = llvm.intr.strip.invariant.group %p : !llvm.ptr
   llvm.return
 }
+
+// CHECK-LABEL: @vararg_func_f32
+llvm.func @vararg_func_f32(%arg0: i32, ...) -> f32
 
 // CHECK-LABEL: @vararg_func
 llvm.func @vararg_func(%arg0: i32, ...) {
