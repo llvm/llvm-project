@@ -37,12 +37,12 @@
 
 ; A function's section prefix is used for all jump tables of this function.
 ; @foo is hot so its jump table data section has a hot prefix.
-; NUM:    .section .rodata.hot.,"a",@progbits,unique,2
+; NUM:      .section .rodata.hot.,"a",@progbits,unique,2
 ; FUNC:     .section .rodata.hot.foo,"a",@progbits
 ; FUNCLESS: .section .rodata.hot.,"a",@progbits
 ; JT: .LJTI0_0:
 ; JT: .LJTI0_2:
-; NUM:    	.section	.rodata.hot.,"a",@progbits,unique,3
+; NUM:    	      .section	.rodata.hot.,"a",@progbits,unique,3
 ; FUNC-NOT:       .section .rodata.hot.foo
 ; FUNCLESS-NOT:   .section .rodata.hot.,"a",@progbits
 ; JT: .LJTI0_1:
@@ -50,16 +50,16 @@
 
 ; func_without_profile doesn't have profiles, so its jumptable doesn't have
 ; hotness-based prefix.
-; NUM: .section .rodata,"a",@progbits,unique,
-; FUNC: .section .rodata.func_without_profile,"a",@progbits
-; FUNCLESS: .section .rodata,"a",@progbits
+; NUM:        .section .rodata,"a",@progbits,unique,5
+; FUNC:       .section .rodata.func_without_profile,"a",@progbits
+; FUNCLESS:   .section .rodata,"a",@progbits
 ; JT: .LJTI1_0:
 
 ; @bar doesn't have profile information and it has a section prefix.
 ; Tests that its jump tables are placed in sections with function prefixes.
-; NUM: .section .rodata.bar_prefix.,"a",@progbits,unique,
-; FUNC: .section .rodata.bar_prefix.bar
-; FUNCLESS: .section .rodata.bar_prefix.,"a"
+; NUM:        .section .rodata.bar_prefix.,"a",@progbits,unique,7
+; FUNC:       .section .rodata.bar_prefix.bar
+; FUNCLESS:   .section .rodata.bar_prefix.,"a"
 ; JT: .LJTI2_0
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"

@@ -2908,12 +2908,11 @@ void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
   }
 
   const DataLayout &DL = MF->getDataLayout();
+  emitAlignment(Align(MJTI.getEntryAlignment(DL)));
 
-  emitAlignment(Align(MJTI.getEntryAlignment(MF->getDataLayout())));
-
+  // Jump tables in code sections are marked with a data_region directive
+  // where that's supported.
   if (!JTInDiffSection) {
-    // Jump tables in code sections are marked with a data_region directive
-    // where that's supported.
     OutStreamer->emitDataRegion(MCDR_DataRegionJT32);
   }
 
