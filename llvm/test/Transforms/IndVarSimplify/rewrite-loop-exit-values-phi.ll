@@ -7,29 +7,33 @@
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @hoge(i64 %x, ptr %ptr) {
+define void @hoge(i64 %x, i64 %idx.start, ptr %ptr) {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = sdiv exact i64 [[X:%.*]], 40
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IDX_START:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[N]]
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT2:%.*]], [[LATCH:%.*]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[IDX_NEXT:%.*]], [[LATCH]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LATCH:%.*]] ], [ [[TMP1]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[IDX_NEXT:%.*]], [[LATCH]] ], [ [[IDX_START]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[N]], [[IDX]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[END:%.*]], label [[INNER_PREHEADER:%.*]]
 ; CHECK:       inner.preheader:
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[INNER]] ], [ [[N]], [[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add nsw i64 [[J]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[INNER]] ], [ 0, [[INNER_PREHEADER]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I]], 1
 ; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[I_NEXT]], [[INDVARS_IV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER]], label [[INNER_EXIT:%.*]]
 ; CHECK:       inner_exit:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[I_NEXT]], [[INNER]] ]
+; CHECK-NEXT:    [[INDVAR_USE:%.*]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IDX_NEXT]] = add nsw i64 [[IDX]], -1
-; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
@@ -39,7 +43,7 @@ entry:                                            ; preds = %entry
   br label %header
 
 header:                                           ; preds = %latch, %entry
-  %idx = phi i64 [ %idx.next, %latch ], [ 0, %entry ]
+  %idx = phi i64 [ %idx.next, %latch ], [ %idx.start, %entry ]
   %cond = icmp sgt i64 %n, %idx
   br i1 %cond, label %end, label %inner
 
