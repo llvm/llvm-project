@@ -26,7 +26,7 @@
 
 namespace lldb_private {
 
-struct LldbEntryKind : public ::llvm::telemetry::EntryKind {
+struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
   static const llvm::telemetry::KindType BaseInfo = 0b11000;
 };
 
