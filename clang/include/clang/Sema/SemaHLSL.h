@@ -141,7 +141,8 @@ public:
   bool diagnoseInputIDType(QualType T, const ParsedAttr &AL);
 
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
-  bool CanPerformAggregateCast(Expr *Src, QualType DestType);
+  bool ContainsBitField(QualType BaseTy);
+  bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 
   QualType getInoutParameterType(QualType Ty);

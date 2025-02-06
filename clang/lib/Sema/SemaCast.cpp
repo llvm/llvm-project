@@ -2776,7 +2776,7 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   // vector cast, vector truncation, or special hlsl splat cases
   QualType SrcTy = SrcExpr.get()->getType();
   if (Self.getLangOpts().HLSL &&
-      Self.HLSL().CanPerformAggregateCast(SrcExpr.get(), DestType)) {
+      Self.HLSL().CanPerformElementwiseCast(SrcExpr.get(), DestType)) {
     if (SrcTy->isConstantArrayType())
       SrcExpr = Self.ImpCastExprToType(
           SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),

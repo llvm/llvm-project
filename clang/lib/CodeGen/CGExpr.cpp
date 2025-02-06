@@ -6417,7 +6417,7 @@ void CodeGenFunction::FlattenAccessAndType(
         llvm::Value *Idx = llvm::ConstantInt::get(IdxTy, I);
         // gep on vector fields is not recommended so combine gep with
         // extract/insert
-        AccessList.push_back({GEP, Idx});
+        AccessList.emplace_back(GEP, Idx);
         FlatTypes.push_back(VT->getElementType());
       }
     } else {

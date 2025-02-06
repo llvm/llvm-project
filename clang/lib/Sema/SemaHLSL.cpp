@@ -2476,9 +2476,43 @@ bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
   llvm_unreachable("Unhandled scalar cast");
 }
 
-// Can we perform an HLSL Flattened cast?
+// Detect if a type contains a bitfield. Will be removed when
+// bitfield support is added to HLSLElementwiseCast
+bool SemaHLSL::ContainsBitField(QualType BaseTy) {
+  llvm::SmallVector<QualType, 16> WorkList;
+  WorkList.push_back(BaseTy);
+  while (!WorkList.empty()) {
+    QualType T = WorkList.pop_back_val();
+    T = T.getCanonicalType().getUnqualifiedType();
+    // only check aggregate types
+    if (const auto *AT = dyn_cast<ConstantArrayType>(T)) {
+      WorkList.push_back(AT->getElementType());
+      continue;
+    }
+    if (const auto *RT = dyn_cast<RecordType>(T)) {
+      const RecordDecl *RD = RT->getDecl();
+      if (RD->isUnion())
+        continue;
+
+      const CXXRecordDecl *CXXD = dyn_cast<CXXRecordDecl>(RD);
+
+      if (CXXD && CXXD->isStandardLayout())
+        RD = CXXD->getStandardLayoutBaseWithFields();
+
+      for (const auto *FD : RD->fields()) {
+        if (FD->isBitField())
+          return true;
+        WorkList.push_back(FD->getType());
+      }
+      continue;
+    }
+  }
+  return false;
+}
+
+// Can we perform an HLSL Elementwise cast?
 // TODO: update this code when matrices are added; see issue #88060
-bool SemaHLSL::CanPerformAggregateCast(Expr *Src, QualType DestTy) {
+bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
 
   // Don't handle casts where LHS and RHS are any combination of scalar/vector
   // There must be an aggregate somewhere
@@ -2488,6 +2522,9 @@ bool SemaHLSL::CanPerformAggregateCast(Expr *Src, QualType DestTy) {
 
   if (SrcTy->isVectorType() &&
       (DestTy->isScalarType() || DestTy->isVectorType()))
+    return false;
+
+  if (ContainsBitField(DestTy) || ContainsBitField(SrcTy))
     return false;
 
   llvm::SmallVector<QualType> DestTypes;
