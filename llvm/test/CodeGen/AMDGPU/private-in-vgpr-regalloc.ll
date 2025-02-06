@@ -400,9 +400,8 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v30, 3
-; CHECK-NEXT:    s_mov_b32 s2, 0
-; CHECK-NEXT:    s_mov_b32 s3, -1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_mov_b32 s2, -1
+; CHECK-NEXT:    s_mov_b32 s3, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
@@ -433,16 +432,15 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr27
 ; CHECK-NEXT:    ; implicit-def: $vgpr28
 ; CHECK-NEXT:    ; implicit-def: $vgpr29
-; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 v5, 5
 ; CHECK-NEXT:  .LBB4_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_lshr_b32 s4, s2, 2
-; CHECK-NEXT:    s_add_co_i32 s3, s3, 1
-; CHECK-NEXT:    s_add_co_i32 s2, s2, 4
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_lshr_b32 s4, s3, 2
+; CHECK-NEXT:    s_add_co_i32 s2, s2, 1
+; CHECK-NEXT:    s_add_co_i32 s3, s3, 4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s4
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_cmp_lt_u32 s3, s1
+; CHECK-NEXT:    s_cmp_lt_u32 s2, s1
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v30
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -455,7 +453,6 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) {
 entry:
   %p = alloca [30 x i32], align 4, addrspace(5)
   %p.5 = getelementptr [30 x i32], ptr addrspace(5) %p, i32 0, i32 5
-  store i32 5, ptr addrspace(5) %p.5, align 4
   br label %loop
 
 loop:
