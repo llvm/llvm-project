@@ -1,5 +1,3 @@
-
-
 ; The llc commands override two options
 ; - 'aarch64-enable-atomic-cfg-tidy' to false to turn off simplifycfg pass,
 ;    which can simplify away switch instructions before isel lowers switch instructions.
@@ -37,9 +35,8 @@
 ; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
 
-; In function @foo, the 2 switch instructions to jt0.* and jt1.* are placed in
-; hot-prefixed sections, and the 2 switch instructions to jt2.* and jt3.* are
-; placed in cold-prefixed sections.
+; A function's section prefix is used for all jump tables of this function.
+; @foo is hot so its jump table data section has a hot prefix.
 ; NUM:    .section .rodata.hot.,"a",@progbits,unique,2
 ; FUNC:     .section .rodata.hot.foo,"a",@progbits
 ; FUNCLESS: .section .rodata.hot.,"a",@progbits
@@ -51,10 +48,9 @@
 ; JT: .LJTI0_1:
 ; JT: .LJTI0_3:
 
-; @func_without_profile simulates the functions without profile information
-; (e.g., not instrumented or not profiled), its jump tables are placed in
-; sections without hot or unlikely prefixes.
-; NUM: .section .rodata,"a",@progbits,unique,5
+; func_without_profile doesn't have profiles, so its jumptable doesn't have
+; hotness-based prefix.
+; NUM: .section .rodata,"a",@progbits,unique,
 ; FUNC: .section .rodata.func_without_profile,"a",@progbits
 ; FUNCLESS: .section .rodata,"a",@progbits
 ; JT: .LJTI1_0:
