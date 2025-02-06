@@ -438,9 +438,6 @@ ProgramHeaders:
 # RUN: yaml2obj --docnum=4 %s -o %t4
 # RUN: llvm-objdump -p %t4 | FileCheck %s --strict-whitespace --check-prefix=INDENT
 
-# RUN: yaml2obj --docnum=5 %s -o %t5
-# RUN: llvm-objdump -p %t5 | FileCheck %s --strict-whitespace --check-prefix=INDENT
-
 # INDENT: {{^}}Dynamic Section:
 # INDENT: {{^}}  NEEDED 0x
 
@@ -473,6 +470,19 @@ Sections:
        Value: 0x1
      - Tag:   DT_NULL
        Value: 0x0
+
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-objdump -p %t5 2>&1 | FileCheck %s --strict-whitespace -DFILE=%t5 --check-prefix=WARN
+
+# WARN: Program Header:
+# WARN:     LOAD off    0x00000000000000b0 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# WARN:          filesz 0x0000000000000040 memsz 0x0000000000000040 flags ---
+# WARN:  DYNAMIC off    0x00000000000000c0 vaddr 0x000000000000101d paddr 0x000000000000101d align 2**0
+# WARN:          filesz 0x0000000000000030 memsz 0x0000000000000030 flags ---
+# WARN: Dynamic Section:
+# WARN: : warning: '[[FILE]]': invalid string table offset
+# WARN:  NEEDED 0x0000001245657656
+# WARN:  STRTAB 0x0000000000001000
 
 --- !ELF
 FileHeader:
