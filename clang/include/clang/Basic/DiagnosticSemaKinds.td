@@ -490,7 +490,7 @@ def warn_qual_return_type : Warning<
   "'%0' type qualifier%s1 on return type %plural{1:has|:have}1 no effect">,
   InGroup<IgnoredQualifiers>, DefaultIgnore;
 def warn_qual_base_type : Warning<
-  "'%0' qualifier%s1 on base class type %2 have no effect">,
+  "'%0' qualifier%s1 on base class type %2 %plural{1:has|:have}1 no effect">,
   InGroup<IgnoredQualifiers>, DefaultIgnore;
 
 def warn_deprecated_redundant_constexpr_static_def : Warning<

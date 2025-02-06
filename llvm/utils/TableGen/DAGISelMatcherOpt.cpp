@@ -306,13 +306,8 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
 
     // If we removed any equal matchers, we may need to slide the rest of the
     // elements down for the next iteration of the outer loop.
-    if (J != K) {
-      while (J != E)
-        *K++ = *J++;
-
-      // Update end pointer for outer loop.
-      E = K;
-    }
+    if (J != K)
+      E = std::copy(J, E, K);
 
     // If we only found one option starting with this matcher, no factoring is
     // possible. Put the Matcher back in OptionsToMatch.
