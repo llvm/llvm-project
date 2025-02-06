@@ -2128,7 +2128,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
       continue;
 
     // Add explicit broadcast if the vector preheader dominates all users.
-    // TODO: Find valid inert point for all users.
+    // TODO: Find valid insert point for all users.
     if (all_of(LiveIn->users(), [&VPDT, VectorPreheader](VPUser *U) {
           return VectorPreheader != cast<VPRecipeBase>(U)->getParent() &&
                  VPDT.dominates(VectorPreheader,

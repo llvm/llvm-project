@@ -3711,6 +3711,7 @@ public:
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
   VPValue *getLiveIn(Value *V) const { return Value2VPValue.lookup(V); }
 
+  /// Return the list of live-in VPValues available in the VPlan.
   ArrayRef<VPValue *> getLiveIns() const { return VPLiveInsToFree; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
