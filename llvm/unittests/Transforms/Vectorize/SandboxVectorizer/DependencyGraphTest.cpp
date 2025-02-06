@@ -313,6 +313,39 @@ define i8 @foo(i8 %v0, i8 %v1) {
   EXPECT_EQ(RetN->getNumUnscheduledSuccs(), 0u);
 }
 
+// Make sure we don't get null predecessors even if they are outside the DAG.
+TEST_F(DependencyGraphTest, NonNullPreds) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %val) {
+  %gep = getelementptr i8, ptr %ptr, i32 0
+  store i8 %val, ptr %gep
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  [[maybe_unused]] auto *GEP = cast<sandboxir::GetElementPtrInst>(&*It++);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  // The DAG doesn't include GEP.
+  DAG.extend({S0, Ret});
+
+  auto *S0N = DAG.getNode(S0);
+  // S0 has one operand (the GEP) that is outside the DAG and no memory
+  // predecessors. So pred_begin() should be == pred_end().
+  auto PredIt = S0N->preds_begin(DAG);
+  auto PredItE = S0N->preds_end(DAG);
+  EXPECT_EQ(PredIt, PredItE);
+  // Check preds().
+  for (auto *PredN : S0N->preds(DAG))
+    EXPECT_NE(PredN, nullptr);
+}
+
 TEST_F(DependencyGraphTest, MemDGNode_getPrevNode_getNextNode) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %v0, i8 %v1) {

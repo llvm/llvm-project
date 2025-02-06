@@ -2,10 +2,6 @@
 ; RUN: opt < %s -passes=msan -S | FileCheck %s
 ;
 ; Forked from llvm/test/CodeGen/AArch64/arm64-vaddlv.ll
-;
-; Currently handled (suboptimally) by handleUnknownInstruction:
-; - llvm.aarch64.neon.saddlv
-; - llvm.aarch64.neon.uaddlv
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android9001"
@@ -16,15 +12,10 @@ define i64 @test_vaddlv_s32(<2 x i32> %a1) nounwind readnone #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[VADDLV_I:%.*]] = tail call i64 @llvm.aarch64.neon.saddlv.i64.v2i32(<2 x i32> [[A1]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[VADDLV_I]]
 ;
 entry:
@@ -38,15 +29,10 @@ define i64 @test_vaddlv_u32(<2 x i32> %a1) nounwind readnone #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[VADDLV_I:%.*]] = tail call i64 @llvm.aarch64.neon.uaddlv.i64.v2i32(<2 x i32> [[A1]]) #[[ATTR2]]
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[VADDLV_I]]
 ;
 entry:
@@ -59,6 +45,3 @@ declare i64 @llvm.aarch64.neon.uaddlv.i64.v2i32(<2 x i32>) nounwind readnone
 declare i64 @llvm.aarch64.neon.saddlv.i64.v2i32(<2 x i32>) nounwind readnone
 
 attributes #0 = { sanitize_memory }
-;.
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.

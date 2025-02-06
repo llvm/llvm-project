@@ -32,4 +32,4 @@ private:
 #endif
 };
 
-#endif /* FORTRAN_TESTING_FP_TESTING_H_ */
+#endif // FORTRAN_TESTING_FP_TESTING_H_
