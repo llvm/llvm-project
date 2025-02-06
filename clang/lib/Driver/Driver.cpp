@@ -3411,7 +3411,9 @@ class OffloadingActionBuilder final {
       // Collect all offload arch parameters, removing duplicates.
       std::set<StringRef> GpuArchs;
       bool Error = false;
-      for (Arg *A : Args) {
+      const ToolChain &TC = *ToolChains.front();
+      for (Arg *A : C.getArgsForToolChain(&TC, /*BoundArch=*/"",
+                                          AssociatedOffloadKind)) {
         if (!(A->getOption().matches(options::OPT_offload_arch_EQ) ||
               A->getOption().matches(options::OPT_no_offload_arch_EQ)))
           continue;
@@ -3422,7 +3424,6 @@ class OffloadingActionBuilder final {
               ArchStr == "all") {
             GpuArchs.clear();
           } else if (ArchStr == "native") {
-            const ToolChain &TC = *ToolChains.front();
             auto GPUsOrErr = ToolChains.front()->getSystemGPUArchs(Args);
             if (!GPUsOrErr) {
               TC.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
