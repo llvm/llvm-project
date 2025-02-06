@@ -7,26 +7,19 @@
 //===----------------------------------------------------------------------===//
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Target/Statistics.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/UUID.h"
-#include "lldb/Version/Version.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Telemetry/Telemetry.h"
 #include <chrono>
 #include <cstdlib>
-#include <ctime>
 #include <memory>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace lldb_private {
 
