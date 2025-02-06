@@ -3407,6 +3407,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   if (!Node->hasCall())
     return;
 
+  // No need to look at any callers if allocation type already unambiguous.
+  if (hasSingleAllocType(Node->AllocTypes))
+    return;
+
 #ifndef NDEBUG
   auto Insert =
 #endif
