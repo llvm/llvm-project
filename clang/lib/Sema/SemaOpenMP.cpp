@@ -4205,6 +4205,8 @@ static void handleDeclareVariantConstructTrait(DSAStackTy *Stack,
   SmallVector<llvm::omp::TraitProperty, 8> Traits;
   if (isOpenMPTargetExecutionDirective(DKind))
     Traits.emplace_back(llvm::omp::TraitProperty::construct_target_target);
+  if (isOpenMPDispatchDirective(DKind))
+    Traits.emplace_back(llvm::omp::TraitProperty::construct_dispatch_dispatch);
   if (isOpenMPTeamsDirective(DKind))
     Traits.emplace_back(llvm::omp::TraitProperty::construct_teams_teams);
   if (isOpenMPParallelDirective(DKind))
@@ -5978,6 +5980,76 @@ static bool teamsLoopCanBeParallelFor(Stmt *AStmt, Sema &SemaRef) {
   return Checker.teamsLoopCanBeParallelFor();
 }
 
+/// getNewTraitsOrDirectCall() is for transforming the call traits.
+/// Call traits associated with a function call are removed and replaced with
+/// a direct call. For clause "nocontext" only, the direct call is then
+/// modified to have call traits for a non-dispatch (directive) variant.
+static Expr *getNewTraitsOrDirectCall(const ASTContext &Context,
+                                      Expr *AssocExpr, SemaOpenMP *SemaPtr,
+                                      bool NoContext) {
+  Expr *PseudoObjExprOrCall = AssocExpr;
+  if (auto *BinOprExpr = dyn_cast<BinaryOperator>(AssocExpr)) {
+    PseudoObjExprOrCall = BinOprExpr->getRHS();
+  }
+
+  Expr *CallWithoutInvariants = PseudoObjExprOrCall;
+  // Change PseudoObjectExpr to a direct call
+  if (auto *PseudoObjExpr = dyn_cast<PseudoObjectExpr>(PseudoObjExprOrCall))
+    CallWithoutInvariants = *((PseudoObjExpr->semantics_begin()) - 1);
+
+  Expr *FinalCall = CallWithoutInvariants; // For noinvariants clause
+  if (NoContext) {
+    auto *CallExprWithinStmt = cast<CallExpr>(CallWithoutInvariants);
+    int NumArgs = CallExprWithinStmt->getNumArgs();
+    clang::Expr **Args = CallExprWithinStmt->getArgs();
+    // ActOnOpenMPCall() adds traits to a simple function call
+    // e.g. invariant function call traits to "foo(i,j)", if they are present.
+    ExprResult ER = SemaPtr->ActOnOpenMPCall(
+        CallExprWithinStmt, SemaPtr->SemaRef.getCurScope(),
+        CallExprWithinStmt->getBeginLoc(), MultiExprArg(Args, NumArgs),
+        CallExprWithinStmt->getRParenLoc(), static_cast<Expr *>(nullptr));
+    FinalCall = ER.get();
+    if (auto *PseudoObjExpr = dyn_cast<PseudoObjectExpr>(ER.get()))
+      FinalCall = *((PseudoObjExpr->semantics_begin()));
+  }
+  return FinalCall;
+}
+
+/// annotateAStmt() function is used by ActOnOpenMPExecutableDirective()
+/// for the dispatch directive (nocontext or invariant clauses).
+/// An annotation "NoContextInvariant" is added to the Captured Decl
+/// in the Associated Stmt. This annotation contains either a call to the
+/// function, not to any of its variants (for invariant clause) or a variant
+/// function (for nocontext clause).
+void SemaOpenMP::annotateAStmt(const ASTContext &Context, Stmt *StmtP,
+                               SemaOpenMP *SemaPtr,
+                               ArrayRef<OMPClause *> &Clauses,
+                               SourceLocation StartLoc) {
+  if (auto *AssocStmt = dyn_cast<CapturedStmt>(StmtP)) {
+    CapturedDecl *CDecl = AssocStmt->getCapturedDecl();
+    Stmt *AssocExprStmt = AssocStmt->getCapturedStmt();
+    auto *AssocExpr = dyn_cast<Expr>(AssocExprStmt);
+    bool NoContext = false;
+
+    if (OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(Clauses)) {
+
+      if (OMPExecutableDirective::getSingleClause<OMPNocontextClause>(Clauses))
+        Diag(StartLoc, diag::warn_omp_dispatch_clause_novariants_nocontext);
+    } else if (OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
+                   Clauses))
+      NoContext = true;
+
+    Expr *NewCallExpr =
+        getNewTraitsOrDirectCall(Context, AssocExpr, SemaPtr, NoContext);
+    // Annotate "NoContextInvariant" to CDecl of the AssocStmt
+    llvm::SmallVector<Expr *, 4> Args;
+    Args.push_back(NewCallExpr);
+    CDecl->addAttr(AnnotateAttr::CreateImplicit(
+        const_cast<ASTContext &>(Context), "NoContextInvariant", Args.data(),
+        Args.size()));
+  }
+}
+
 StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
     OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
@@ -5992,6 +6064,19 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
           OMPExecutableDirective::getSingleClause<OMPBindClause>(Clauses))
     BindKind = BC->getBindKind();
 
+  if ((Kind == OMPD_dispatch) && (!Clauses.empty())) {
+
+    if (llvm::all_of(Clauses, [](OMPClause *C) {
+          return llvm::is_contained(
+              {OMPC_novariants, OMPC_nocontext, OMPC_depend},
+              C->getClauseKind());
+        })) {
+      if (OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(
+              Clauses) ||
+          OMPExecutableDirective::getSingleClause<OMPNocontextClause>(Clauses))
+        annotateAStmt(getASTContext(), AStmt, this, Clauses, StartLoc);
+    }
+  }
   if (Kind == OMPD_loop && BindKind == OMPC_BIND_unknown) {
     const OpenMPDirectiveKind ParentDirective = DSAStack->getParentDirective();
 
@@ -10534,11 +10619,22 @@ StmtResult SemaOpenMP::ActOnOpenMPSectionDirective(Stmt *AStmt,
                                      DSAStack->isCancelRegion());
 }
 
+/// PseudoObjectExpr is a Trait for dispatch containing the
+/// function and its variant. Returning only the function.
+static Expr *removePseudoObjectExpr(Expr *PseudoObjExprOrDirectCall) {
+  Expr *DirectCallExpr = PseudoObjExprOrDirectCall;
+  if (auto *PseudoObjExpr =
+          dyn_cast<PseudoObjectExpr>(PseudoObjExprOrDirectCall))
+    DirectCallExpr = *((PseudoObjExpr->semantics_begin()) - 1);
+  return DirectCallExpr;
+}
+
 static Expr *getDirectCallExpr(Expr *E) {
-  E = E->IgnoreParenCasts()->IgnoreImplicit();
-  if (auto *CE = dyn_cast<CallExpr>(E))
+  Expr *PseudoObjExpr = E->IgnoreParenCasts()->IgnoreImplicit();
+  Expr *DirectCallExpr = removePseudoObjectExpr(PseudoObjExpr);
+  if (auto *CE = dyn_cast<CallExpr>(DirectCallExpr))
     if (CE->getDirectCallee())
-      return E;
+      return DirectCallExpr;
   return nullptr;
 }
 
