@@ -1359,7 +1359,7 @@ void SemaHLSL::collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
   }
 }
 
-// Diagnore localized register binding errors for a single binding; does not
+// Diagnose localized register binding errors for a single binding; does not
 // diagnose resource binding on user record types, that will be done later
 // in processResourceBindingOnDecl based on the information collected in
 // collectResourceBindingsOnVarDecl.
