@@ -302,8 +302,8 @@ void MatchTable::emitDeclaration(raw_ostream &OS) const {
     OS.indent(BaseIndent);
     std::string IdxStr = llvm::to_string(CurIndex);
     // Pad the string with spaces to keep the size of the prefix consistent.
-    OS << " /* " << std::string(NumColsForIdx - IdxStr.size(), ' ') << IdxStr
-       << " */ ";
+    OS << " /* ";
+    OS.indent(NumColsForIdx - IdxStr.size()) << IdxStr << " */ ";
     OS.indent(Indentation);
   };
 
