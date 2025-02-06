@@ -348,14 +348,17 @@ void associative_container_benchmarks(std::string container) {
 
   bench("erase(key) (non-existent)", [=](auto& st) {
     const std::size_t size = st.range(0);
-    std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
-    Value element          = in.back();
-    in.pop_back();
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size + BatchSize));
+    std::vector<Key> keys;
+    for (std::size_t i = 0; i != BatchSize; ++i) {
+      keys.push_back(get_key(in.back()));
+      in.pop_back();
+    }
     Container c(in.begin(), in.end());
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        auto result = c.erase(get_key(element));
+        auto result = c.erase(keys[i]);
         benchmark::DoNotOptimize(result);
         benchmark::DoNotOptimize(c);
         benchmark::ClobberMemory();
@@ -449,16 +452,20 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   // Query
   /////////////////////////
-  auto bench_with_existent_key = [=](auto func) {
+  auto with_existent_key = [=](auto func) {
     return [=](auto& st) {
       const std::size_t size = st.range(0);
       std::vector<Value> in  = make_value_types(generate_unique_keys(size));
-      Value element          = in[in.size() / 2]; // pick any element
+      // Pick any `BatchSize` number of elements
+      std::vector<Key> keys;
+      for (std::size_t i = 0; i < in.size(); i += (in.size() / BatchSize)) {
+        keys.push_back(get_key(in.at(i)));
+      }
       Container c(in.begin(), in.end());
 
       while (st.KeepRunningBatch(BatchSize)) {
         for (std::size_t i = 0; i != BatchSize; ++i) {
-          auto result = func(c, element);
+          auto result = func(c, keys[i]);
           benchmark::DoNotOptimize(c);
           benchmark::DoNotOptimize(result);
           benchmark::ClobberMemory();
@@ -467,17 +474,20 @@ void associative_container_benchmarks(std::string container) {
     };
   };
 
-  auto bench_with_nonexistent_key = [=](auto func) {
+  auto with_nonexistent_key = [=](auto func) {
     return [=](auto& st) {
       const std::size_t size = st.range(0);
-      std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
-      Value element          = in.back();
-      in.pop_back();
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size + BatchSize));
+      std::vector<Key> keys;
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        keys.push_back(get_key(in.back()));
+        in.pop_back();
+      }
       Container c(in.begin(), in.end());
 
       while (st.KeepRunningBatch(BatchSize)) {
         for (std::size_t i = 0; i != BatchSize; ++i) {
-          auto result = func(c, element);
+          auto result = func(c, keys[i]);
           benchmark::DoNotOptimize(c);
           benchmark::DoNotOptimize(result);
           benchmark::ClobberMemory();
@@ -486,45 +496,30 @@ void associative_container_benchmarks(std::string container) {
     };
   };
 
-  bench("find(key) (existent)",
-        bench_with_existent_key([=](Container const& c, Value const& element) { return c.find(get_key(element)); }));
-  bench("find(key) (non-existent)",
-        bench_with_nonexistent_key([=](Container const& c, Value const& element) { return c.find(get_key(element)); }));
+  auto find = [](Container const& c, Key const& key) { return c.find(key); };
+  bench("find(key) (existent)", with_existent_key(find));
+  bench("find(key) (non-existent)", with_nonexistent_key(find));
 
-  bench("count(key) (existent)",
-        bench_with_existent_key([=](Container const& c, Value const& element) { return c.count(get_key(element)); }));
-  bench("count(key) (non-existent)", bench_with_nonexistent_key([=](Container const& c, Value const& element) {
-          return c.count(get_key(element));
-        }));
+  auto count = [](Container const& c, Key const& key) { return c.count(key); };
+  bench("count(key) (existent)", with_existent_key(count));
+  bench("count(key) (non-existent)", with_nonexistent_key(count));
 
-  bench("contains(key) (existent)", bench_with_existent_key([=](Container const& c, Value const& element) {
-          return c.contains(get_key(element));
-        }));
-  bench("contains(key) (non-existent)", bench_with_nonexistent_key([=](Container const& c, Value const& element) {
-          return c.contains(get_key(element));
-        }));
+  auto contains = [](Container const& c, Key const& key) { return c.contains(key); };
+  bench("contains(key) (existent)", with_existent_key(contains));
+  bench("contains(key) (non-existent)", with_nonexistent_key(contains));
 
   if constexpr (is_ordered_container) {
-    bench("lower_bound(key) (existent)", bench_with_existent_key([=](Container const& c, Value const& element) {
-            return c.lower_bound(get_key(element));
-          }));
-    bench("lower_bound(key) (non-existent)", bench_with_nonexistent_key([=](Container const& c, Value const& element) {
-            return c.lower_bound(get_key(element));
-          }));
+    auto lower_bound = [](Container const& c, Key const& key) { return c.lower_bound(key); };
+    bench("lower_bound(key) (existent)", with_existent_key(lower_bound));
+    bench("lower_bound(key) (non-existent)", with_nonexistent_key(lower_bound));
 
-    bench("upper_bound(key) (existent)", bench_with_existent_key([=](Container const& c, Value const& element) {
-            return c.upper_bound(get_key(element));
-          }));
-    bench("upper_bound(key) (non-existent)", bench_with_nonexistent_key([=](Container const& c, Value const& element) {
-            return c.upper_bound(get_key(element));
-          }));
+    auto upper_bound = [](Container const& c, Key const& key) { return c.upper_bound(key); };
+    bench("upper_bound(key) (existent)", with_existent_key(upper_bound));
+    bench("upper_bound(key) (non-existent)", with_nonexistent_key(upper_bound));
 
-    bench("equal_range(key) (existent)", bench_with_existent_key([=](Container const& c, Value const& element) {
-            return c.equal_range(get_key(element));
-          }));
-    bench("equal_range(key) (non-existent)", bench_with_nonexistent_key([=](Container const& c, Value const& element) {
-            return c.equal_range(get_key(element));
-          }));
+    auto equal_range = [](Container const& c, Key const& key) { return c.equal_range(key); };
+    bench("equal_range(key) (existent)", with_existent_key(equal_range));
+    bench("equal_range(key) (non-existent)", with_nonexistent_key(equal_range));
   }
 }
 
