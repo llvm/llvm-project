@@ -1164,22 +1164,6 @@ DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {
   return R;
 }
 
-void Function::setSectionPrefix(StringRef Prefix) {
-  MDBuilder MDB(getContext());
-  setMetadata(LLVMContext::MD_section_prefix,
-              MDB.createFunctionSectionPrefix(Prefix));
-}
-
-std::optional<StringRef> Function::getSectionPrefix() const {
-  if (MDNode *MD = getMetadata(LLVMContext::MD_section_prefix)) {
-    assert(cast<MDString>(MD->getOperand(0))->getString() ==
-               "function_section_prefix" &&
-           "Metadata not match");
-    return cast<MDString>(MD->getOperand(1))->getString();
-  }
-  return std::nullopt;
-}
-
 bool Function::nullPointerIsDefined() const {
   return hasFnAttribute(Attribute::NullPointerIsValid);
 }
