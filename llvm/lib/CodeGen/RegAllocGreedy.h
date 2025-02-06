@@ -305,7 +305,6 @@ private:
 
   bool ReverseLocalAssignment = false;
 
-  void setAnalyses(RequiredAnalyses &Analyses);
 public:
   RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F = nullptr);
 

@@ -183,11 +183,8 @@ RAGreedyLegacy::RAGreedyLegacy(const RegAllocFilterFunc F)
   initializeRAGreedyLegacyPass(*PassRegistry::getPassRegistry());
 }
 
-RAGreedy::RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F) : RegAllocBase(F) {
-  setAnalyses(Analyses);
-}
-
-void RAGreedy::setAnalyses(RequiredAnalyses &Analyses) {
+RAGreedy::RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F)
+    : RegAllocBase(F) {
   VRM = Analyses.VRM;
   LIS = Analyses.LIS;
   Matrix = Analyses.LRM;
@@ -206,7 +203,7 @@ void RAGreedy::setAnalyses(RequiredAnalyses &Analyses) {
 
 void RAGreedyPass::printPipeline(raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) const {
   StringRef FilterName = Opts.FilterName.empty() ? "all" : Opts.FilterName;
-  OS << "regallocgreedy<" << FilterName << '>';
+  OS << "regalloc-greedy<" << FilterName << '>';
 }
 
 PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
