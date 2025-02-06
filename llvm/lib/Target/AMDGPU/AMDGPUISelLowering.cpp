@@ -4047,16 +4047,16 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
 
   if (!CRHS) {
-    // shl i64 X, Y -> [0, shl i32 X, (Y - 32)]
+    // shl i64 X, Y -> [0, shl i32 X, (Y & 0x1F)]
     if (VT == MVT::i64) {
       KnownBits Known = DAG.computeKnownBits(RHS);
       if (Known.getMinValue().getZExtValue() >= 32) {
         SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, RHS);
-        const SDValue C32 = DAG.getConstant(32, SL, MVT::i32);
-        SDValue ShiftAmt =
-            DAG.getNode(ISD::SUB, SL, MVT::i32, truncShiftAmt, C32);
+        const SDValue C31 = DAG.getConstant(31, SL, MVT::i32);
+        SDValue MaskedShiftAmt =
+            DAG.getNode(ISD::AND, SL, MVT::i32, truncShiftAmt, C31);
         SDValue Lo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
-        SDValue NewShift = DAG.getNode(ISD::SHL, SL, MVT::i32, Lo, ShiftAmt);
+        SDValue NewShift = DAG.getNode(ISD::SHL, SL, MVT::i32, Lo, MaskedShiftAmt);
         const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
         SDValue Vec = DAG.getBuildVector(MVT::v2i32, SL, {Zero, NewShift});
         return DAG.getNode(ISD::BITCAST, SL, MVT::i64, Vec);
