@@ -185,7 +185,7 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
 
   if (F.getParent()->getModuleFlag("kcfi-arity")) {
     // The ArityToRegMap assumes the 64-bit Linux kernel ABI
-    const auto &Triple = MF.getTarget().getTargetTriple();
+    [[maybe_unused]] const auto &Triple = MF.getTarget().getTargetTriple();
     assert(Triple.isArch64Bit() && Triple.isOSLinux());
 
     // Determine the function's arity (i.e., the number of arguments) at the ABI
