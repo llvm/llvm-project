@@ -10,7 +10,7 @@ end subroutine
 ! CHECK:           %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<i32>
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.sum %[[ARRAY]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>) -> i32
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.sum %[[ARRAY]]#0 : (!fir.box<!fir.array<?xi32>>) -> i32
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : i32, !fir.ref<i32>
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
@@ -26,7 +26,7 @@ end subroutine
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK-DAG:     %[[DIM_REF:.*]]:2 = hlfir.declare %[[ARG2]]
 ! CHECK-NEXT:    %[[DIM:.*]] = fir.load %[[DIM_REF]]#0 : !fir.ref<i32>
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.sum %[[ARRAY]]#0 dim %[[DIM]] {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x?xi32>>, i32) -> !hlfir.expr<?xi32>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.sum %[[ARRAY]]#0 dim %[[DIM]] : (!fir.box<!fir.array<?x?xi32>>, i32) -> !hlfir.expr<?xi32>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
@@ -43,7 +43,7 @@ end subroutine
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG2]]
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.sum %[[ARRAY]]#0 mask %[[MASK]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.logical<4>>) -> i32
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.sum %[[ARRAY]]#0 mask %[[MASK]]#0 : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.logical<4>>) -> i32
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : i32, !fir.ref<i32>
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
@@ -59,7 +59,7 @@ end subroutine
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG2]]
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.sum %[[ARRAY]]#0 mask %[[MASK]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> i32
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.sum %[[ARRAY]]#0 mask %[[MASK]]#0 : (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> i32
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : i32, !fir.ref<i32>
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
@@ -79,7 +79,7 @@ end subroutine
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG0]](%[[OUT_SHAPE]])
 ! CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 ! CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : i32
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.sum %[[ARRAY]]#0 dim %[[C1]] mask %[[TRUE]] {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<2x2xi32>>, i32, i1) -> !hlfir.expr<2xi32>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.sum %[[ARRAY]]#0 dim %[[C1]] mask %[[TRUE]] : (!fir.ref<!fir.array<2x2xi32>>, i32, i1) -> !hlfir.expr<2xi32>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<2xi32>, !fir.ref<!fir.array<2xi32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]] : !hlfir.expr<2xi32>
 ! CHECK-NEXT:    return

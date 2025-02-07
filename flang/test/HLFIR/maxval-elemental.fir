@@ -24,7 +24,7 @@ func.func @_QPtest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}
     %12 = arith.subi %11, %10 : i32
     hlfir.yield_element %12 : i32
   }
-  %7 = hlfir.maxval %6 {fastmath = #arith.fastmath<contract>} : (!hlfir.expr<?xi32>) -> i32
+  %7 = hlfir.maxval %6 {fastmath = #arith.fastmath<none>} : (!hlfir.expr<?xi32>) -> i32
   hlfir.assign %7 to %3#0 : i32, !fir.ref<i32>
   hlfir.destroy %6 : !hlfir.expr<?xi32>
   return

@@ -16,7 +16,7 @@ func.func @_QPtest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}
     %11 = fir.convert %10 : (i1) -> !fir.logical<4>
     hlfir.yield_element %11 : !fir.logical<4>
   }
-  %7 = hlfir.maxloc %0#0 mask %6 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32>
+  %7 = hlfir.maxloc %0#0 mask %6 {fastmath = #arith.fastmath<none>} : (!fir.box<!fir.array<?xi32>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32>
   hlfir.assign %7 to %1#0 : !hlfir.expr<1xi32>, !fir.box<!fir.array<?xi32>>
   hlfir.destroy %7 : !hlfir.expr<1xi32>
   hlfir.destroy %6 : !hlfir.expr<?x!fir.logical<4>>

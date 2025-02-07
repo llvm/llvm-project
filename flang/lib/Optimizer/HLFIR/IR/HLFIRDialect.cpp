@@ -252,5 +252,5 @@ bool hlfir::isArithFastMathApplicable(mlir::Operation *op) {
       }))
     return true;
 
-  return true;
+  return false;
 }

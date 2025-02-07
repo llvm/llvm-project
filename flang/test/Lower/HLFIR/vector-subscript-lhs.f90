@@ -38,7 +38,7 @@ end subroutine
 ! CHECK:    %[[VAL_11:.*]] = arith.constant 4.200000e+01 : f32
 ! CHECK:    hlfir.yield %[[VAL_11]] : f32
 ! CHECK:  } to {
-! CHECK:    %[[VAL_12:.*]] = hlfir.matmul %[[VAL_9]]#0 %[[VAL_6]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<10xi64>>, !fir.ref<!fir.array<10x5xi64>>) -> !hlfir.expr<5xi64>
+! CHECK:    %[[VAL_12:.*]] = hlfir.matmul %[[VAL_9]]#0 %[[VAL_6]]#0 : (!fir.ref<!fir.array<10xi64>>, !fir.ref<!fir.array<10x5xi64>>) -> !hlfir.expr<5xi64>
 ! CHECK:    %[[VAL_13:.*]] = arith.constant 5 : index
 ! CHECK:    %[[VAL_14:.*]] = fir.shape %[[VAL_13]] : (index) -> !fir.shape<1>
 ! CHECK:    hlfir.elemental_addr %[[VAL_14]] unordered : !fir.shape<1> {

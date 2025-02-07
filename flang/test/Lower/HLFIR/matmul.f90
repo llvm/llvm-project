@@ -12,7 +12,7 @@ endsubroutine
 ! CHECK-DAG:     %[[LHS_VAR:.*]]:2 = hlfir.declare %[[LHS]]
 ! CHECK-DAG:     %[[RHS_VAR:.*]]:2 = hlfir.declare %[[RHS]]
 ! CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[RES]]
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_VAR]]#0 %[[RHS_VAR]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>) -> !hlfir.expr<?x?xi32>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_VAR]]#0 %[[RHS_VAR]]#0 : (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>) -> !hlfir.expr<?x?xi32>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[RES_VAR]]#0 : !hlfir.expr<?x?xi32>, !fir.box<!fir.array<?x?xi32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
@@ -54,7 +54,7 @@ endsubroutine
 ! CHECK-NEXT:    %[[A_BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
 
 ! The shapes in these types are what is being tested:
-! CHECK-NEXT:    %[[MATMUL:.*]] = hlfir.matmul %[[A_BOX]] %[[ELEMENTAL]] {{.*}} : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !hlfir.expr<?x?xi32>) -> !hlfir.expr<?x4xi32>
+! CHECK-NEXT:    %[[MATMUL:.*]] = hlfir.matmul %[[A_BOX]] %[[ELEMENTAL]] {{.*}}: (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !hlfir.expr<?x?xi32>) -> !hlfir.expr<?x4xi32>
 
 subroutine matmul3(lhs, rhs, res)
   integer, allocatable :: lhs(:,:), rhs(:,:), res(:,:)
@@ -69,8 +69,26 @@ endsubroutine
 ! CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[RES]]
 ! CHECK-NEXT:    %[[LHS_LD:.*]] = fir.load %[[LHS_VAR]]#0
 ! CHECK-NEXT:    %[[RHS_LD:.*]] = fir.load %[[RHS_VAR]]#0
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_LD]] %[[RHS_LD]] {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !hlfir.expr<?x?xi32>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_LD]] %[[RHS_LD]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !hlfir.expr<?x?xi32>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[RES_VAR]]#0 realloc : !hlfir.expr<?x?xi32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
+! CHECK-NEXT:    return
+! CHECK-NEXT:   }
+
+! Floating point matmul
+subroutine matmul4(lhs, rhs, res)
+  real :: lhs(:,:), rhs(:,:), res(:,:)
+  res = MATMUL(lhs, rhs)
+endsubroutine
+! CHECK-LABEL: func.func @_QPmatmul4
+! CHECK:           %[[LHS:.*]]: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "lhs"}
+! CHECK:           %[[RHS:.*]]: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "rhs"}
+! CHECK:           %[[RES:.*]]: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "res"}
+! CHECK-DAG:     %[[LHS_VAR:.*]]:2 = hlfir.declare %[[LHS]]
+! CHECK-DAG:     %[[RHS_VAR:.*]]:2 = hlfir.declare %[[RHS]]
+! CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[RES]]
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_VAR]]#0 %[[RHS_VAR]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>) -> !hlfir.expr<?x?xf32>
+! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[RES_VAR]]#0 : !hlfir.expr<?x?xf32>, !fir.box<!fir.array<?x?xf32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:   }

@@ -16,7 +16,7 @@ func.func @_QPtest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}
     %11 = fir.convert %10 : (i1) -> !fir.logical<4>
     hlfir.yield_element %11 : !fir.logical<4>
   }
-  %7 = hlfir.minloc %0#0 mask %6 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32>
+  %7 = hlfir.minloc %0#0 mask %6 {fastmath = #arith.fastmath<none>} : (!fir.box<!fir.array<?xi32>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32>
   hlfir.assign %7 to %1#0 : !hlfir.expr<1xi32>, !fir.box<!fir.array<?xi32>>
   hlfir.destroy %7 : !hlfir.expr<1xi32>
   hlfir.destroy %6 : !hlfir.expr<?x!fir.logical<4>>
@@ -89,7 +89,7 @@ func.func @_QPtest_kind2(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a
     %11 = fir.convert %10 : (i1) -> !fir.logical<4>
     hlfir.yield_element %11 : !fir.logical<4>
   }
-  %7 = hlfir.minloc %0#0 mask %6 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi16>
+  %7 = hlfir.minloc %0#0 mask %6 {fastmath = #arith.fastmath<none>} : (!fir.box<!fir.array<?xi32>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi16>
   hlfir.assign %7 to %1#0 : !hlfir.expr<1xi16>, !fir.box<!fir.array<?xi16>>
   hlfir.destroy %7 : !hlfir.expr<1xi16>
   hlfir.destroy %6 : !hlfir.expr<?x!fir.logical<4>>
@@ -162,7 +162,7 @@ func.func @_QPtest_kind2_convert(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_n
     %13 = fir.convert %12 : (i1) -> !fir.logical<4>
     hlfir.yield_element %13 : !fir.logical<4>
   }
-  %7 = hlfir.minloc %0#0 mask %6 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi16>
+  %7 = hlfir.minloc %0#0 mask %6 {fastmath = #arith.fastmath<none>} : (!fir.box<!fir.array<?xi32>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi16>
   %8 = fir.shape %c1 : (index) -> !fir.shape<1>
   %9 = hlfir.elemental %8 unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
   ^bb0(%arg3: index):
@@ -348,7 +348,7 @@ func.func @_QFPtest_character(%arg0: !fir.box<!fir.array<?x!fir.char<1>>> {fir.b
     %19 = fir.convert %18 : (i1) -> !fir.logical<4>
     hlfir.yield_element %19 : !fir.logical<4>
   }
-  %12 = hlfir.minloc %0#0 mask %11 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x!fir.char<1>>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32>
+  %12 = hlfir.minloc %0#0 mask %11 {fastmath = #arith.fastmath<none>} : (!fir.box<!fir.array<?x!fir.char<1>>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32>
   hlfir.assign %12 to %4#0 : !hlfir.expr<1xi32>, !fir.ref<!fir.array<1xi32>>
   hlfir.destroy %12 : !hlfir.expr<1xi32>
   hlfir.destroy %11 : !hlfir.expr<?x!fir.logical<4>>
@@ -382,7 +382,7 @@ func.func @_QPtest_parts(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "x
     %14 = fir.convert %13 : (i1) -> !fir.logical<4>
     hlfir.yield_element %14 : !fir.logical<4>
   }
-  %7 = hlfir.minloc %3#0 mask %6 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32>
+  %7 = hlfir.minloc %3#0 mask %6 {fastmath = #arith.fastmath<none>} : (!fir.box<!fir.array<?xi32>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32>
   %8 = fir.shape %c1 : (index) -> !fir.shape<1>
   %9 = hlfir.designate %3#0 (%c5:%c5:%c1)  shape %8 : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
   hlfir.assign %7 to %9 : !hlfir.expr<1xi32>, !fir.box<!fir.array<1xi32>>
