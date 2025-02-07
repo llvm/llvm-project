@@ -30,6 +30,27 @@ using namespace llvm;
 
 namespace {
 
+/// Wrapper around MachineOperand that defaults to immediate 0.
+struct DemandedVL {
+  MachineOperand VL;
+  DemandedVL() : VL(MachineOperand::CreateImm(0)) {}
+  DemandedVL(MachineOperand VL) : VL(VL) {}
+  static DemandedVL vlmax() {
+    return DemandedVL(MachineOperand::CreateImm(RISCV::VLMaxSentinel));
+  }
+  bool operator!=(const DemandedVL &Other) const {
+    return !VL.isIdenticalTo(Other.VL);
+  }
+};
+
+static DemandedVL max(const DemandedVL &LHS, const DemandedVL &RHS) {
+  if (RISCV::isVLKnownLE(LHS.VL, RHS.VL))
+    return RHS;
+  if (RISCV::isVLKnownLE(RHS.VL, LHS.VL))
+    return LHS;
+  return DemandedVL::vlmax();
+}
+
 class RISCVVLOptimizer : public MachineFunctionPass {
   const MachineRegisterInfo *MRI;
   const MachineDominatorTree *MDT;
@@ -51,17 +72,26 @@ public:
   StringRef getPassName() const override { return PASS_NAME; }
 
 private:
-  std::optional<MachineOperand>
-  getMinimumVLForUser(const MachineOperand &UserOp) const;
-  /// Returns the largest common VL MachineOperand that may be used to optimize
-  /// MI. Returns std::nullopt if it failed to find a suitable VL.
-  std::optional<MachineOperand> checkUsers(const MachineInstr &MI) const;
+  DemandedVL getMinimumVLForUser(const MachineOperand &UserOp) const;
+  /// Returns true if the users of \p MI have compatible EEWs and SEWs.
+  bool checkUsers(const MachineInstr &MI) const;
   bool tryReduceVL(MachineInstr &MI) const;
   bool isCandidate(const MachineInstr &MI) const;
+  void transfer(const MachineInstr &MI);
+
+  /// Returns all uses of vector virtual registers.
+  auto vector_uses(const MachineInstr &MI) const {
+    auto Pred = [this](const MachineOperand &MO) -> bool {
+      return MO.isReg() && MO.getReg().isVirtual() &&
+             RISCVRegisterInfo::isRVVRegClass(MRI->getRegClass(MO.getReg()));
+    };
+    return make_filter_range(MI.uses(), Pred);
+  }
 
   /// For a given instruction, records what elements of it are demanded by
   /// downstream users.
-  DenseMap<const MachineInstr *, std::optional<MachineOperand>> DemandedVLs;
+  DenseMap<const MachineInstr *, DemandedVL> DemandedVLs;
+  SetVector<const MachineInstr *> Worklist;
 };
 
 /// Represents the EMUL and EEW of a MachineOperand.
@@ -821,6 +851,9 @@ getOperandInfo(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
 /// white-list approach simplifies this optimization for instructions that may
 /// have more complex semantics with relation to how it uses VL.
 static bool isSupportedInstr(const MachineInstr &MI) {
+  if (MI.isPHI() || MI.isFullCopy())
+    return true;
+
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
 
@@ -1321,21 +1354,24 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   return true;
 }
 
-std::optional<MachineOperand>
+DemandedVL
 RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   const MachineInstr &UserMI = *UserOp.getParent();
   const MCInstrDesc &Desc = UserMI.getDesc();
 
+  if (UserMI.isPHI() || UserMI.isFullCopy())
+    return DemandedVLs.lookup(&UserMI);
+
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
     LLVM_DEBUG(dbgs() << "    Abort due to lack of VL, assume that"
                          " use VLMAX\n");
-    return std::nullopt;
+    return DemandedVL::vlmax();
   }
 
   if (RISCVII::readsPastVL(
           TII->get(RISCV::getRVVMCOpcode(UserMI.getOpcode())).TSFlags)) {
     LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
-    return std::nullopt;
+    return DemandedVL::vlmax();
   }
 
   unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
@@ -1349,11 +1385,10 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   if (UserOp.isTied()) {
     assert(UserOp.getOperandNo() == UserMI.getNumExplicitDefs() &&
            RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
-    auto DemandedVL = DemandedVLs.lookup(&UserMI);
-    if (!DemandedVL || !RISCV::isVLKnownLE(*DemandedVL, VLOp)) {
+    if (!RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp)) {
       LLVM_DEBUG(dbgs() << "    Abort because user is passthru in "
                            "instruction with demanded tail\n");
-      return std::nullopt;
+      return DemandedVL::vlmax();
     }
   }
 
@@ -1366,18 +1401,16 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
 
   // If we know the demanded VL of UserMI, then we can reduce the VL it
   // requires.
-  if (auto DemandedVL = DemandedVLs.lookup(&UserMI)) {
-    assert(isCandidate(UserMI));
-    if (RISCV::isVLKnownLE(*DemandedVL, VLOp))
-      return DemandedVL;
-  }
+  if (RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp))
+    return DemandedVLs.lookup(&UserMI);
 
   return VLOp;
 }
 
-std::optional<MachineOperand>
-RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
-  std::optional<MachineOperand> CommonVL;
+bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
+  if (MI.isPHI() || MI.isFullCopy())
+    return true;
+
   SmallSetVector<MachineOperand *, 8> Worklist;
   SmallPtrSet<const MachineInstr *, 4> PHISeen;
   for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg()))
@@ -1405,23 +1438,9 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       continue;
     }
 
-    auto VLOp = getMinimumVLForUser(UserOp);
-    if (!VLOp)
-      return std::nullopt;
-
-    // Use the largest VL among all the users. If we cannot determine this
-    // statically, then we cannot optimize the VL.
-    if (!CommonVL || RISCV::isVLKnownLE(*CommonVL, *VLOp)) {
-      CommonVL = *VLOp;
-      LLVM_DEBUG(dbgs() << "    User VL is: " << VLOp << "\n");
-    } else if (!RISCV::isVLKnownLE(*VLOp, *CommonVL)) {
-      LLVM_DEBUG(dbgs() << "    Abort because cannot determine a common VL\n");
-      return std::nullopt;
-    }
-
     if (!RISCVII::hasSEWOp(UserMI.getDesc().TSFlags)) {
       LLVM_DEBUG(dbgs() << "    Abort due to lack of SEW operand\n");
-      return std::nullopt;
+      return false;
     }
 
     std::optional<OperandInfo> ConsumerInfo = getOperandInfo(UserOp, MRI);
@@ -1431,7 +1450,7 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       LLVM_DEBUG(dbgs() << "    Abort due to unknown operand information.\n");
       LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
       LLVM_DEBUG(dbgs() << "      ProducerInfo is: " << ProducerInfo << "\n");
-      return std::nullopt;
+      return false;
     }
 
     if (!OperandInfo::areCompatible(*ProducerInfo, *ConsumerInfo)) {
@@ -1440,11 +1459,11 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
           << "    Abort due to incompatible information for EMUL or EEW.\n");
       LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
       LLVM_DEBUG(dbgs() << "      ProducerInfo is: " << ProducerInfo << "\n");
-      return std::nullopt;
+      return false;
     }
   }
 
-  return CommonVL;
+  return true;
 }
 
 bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
@@ -1460,9 +1479,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
     return false;
   }
 
-  auto CommonVL = DemandedVLs.lookup(&MI);
-  if (!CommonVL)
-    return false;
+  auto *CommonVL = &DemandedVLs.at(&MI).VL;
 
   assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
          "Expected VL to be an Imm or virtual Reg");
@@ -1497,6 +1514,24 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
   return true;
 }
 
+static bool isPhysical(const MachineOperand &MO) {
+  return MO.isReg() && MO.getReg().isPhysical();
+}
+
+/// Look through \p MI's operands and propagate what it demands to its uses.
+void RISCVVLOptimizer::transfer(const MachineInstr &MI) {
+  if (!isSupportedInstr(MI) || !checkUsers(MI) || any_of(MI.defs(), isPhysical))
+    DemandedVLs[&MI] = DemandedVL::vlmax();
+
+  for (const MachineOperand &MO : vector_uses(MI)) {
+    const MachineInstr *Def = MRI->getVRegDef(MO.getReg());
+    DemandedVL Prev = DemandedVLs[Def];
+    DemandedVLs[Def] = max(DemandedVLs[Def], getMinimumVLForUser(MO));
+    if (DemandedVLs[Def] != Prev)
+      Worklist.insert(Def);
+  }
+}
+
 bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -1513,14 +1548,17 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   assert(DemandedVLs.empty());
 
   // For each instruction that defines a vector, compute what VL its
-  // downstream users demand.
+  // upstream uses demand.
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     assert(MDT->isReachableFromEntry(MBB));
-    for (MachineInstr &MI : reverse(*MBB)) {
-      if (!isCandidate(MI))
-        continue;
-      DemandedVLs.insert({&MI, checkUsers(MI)});
-    }
+    for (MachineInstr &MI : reverse(*MBB))
+      Worklist.insert(&MI);
+  }
+
+  while (!Worklist.empty()) {
+    const MachineInstr *MI = Worklist.front();
+    Worklist.remove(MI);
+    transfer(*MI);
   }
 
   // Then go through and see if we can reduce the VL of any instructions to

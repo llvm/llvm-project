@@ -202,7 +202,7 @@ define void @fadd_fcmp_select_copy(<vscale x 4 x float> %v, <vscale x 4 x i1> %c
 define void @recurrence(<vscale x 4 x i32> %v, ptr %p, iXLen %n, iXLen %vl) {
 ; CHECK-LABEL: recurrence:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:  .LBB13_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -210,7 +210,6 @@ define void @recurrence(<vscale x 4 x i32> %v, ptr %p, iXLen %n, iXLen %vl) {
 ; CHECK-NEXT:    vadd.vv v10, v10, v8
 ; CHECK-NEXT:    bnez a1, .LBB13_1
 ; CHECK-NEXT:  # %bb.2: # %exit
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vse32.v v10, (a0)
 ; CHECK-NEXT:    ret
 entry:
