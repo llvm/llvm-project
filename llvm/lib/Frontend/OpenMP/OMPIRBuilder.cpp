@@ -6822,20 +6822,23 @@ static void FixupDebugInfoForOutlinedFunction(
   auto GetUpdatedDIVariable = [&](DILocalVariable *OldVar, unsigned arg) {
     auto NewSP = Func->getSubprogram();
     DILocalVariable *&NewVar = RemappedVariables[OldVar];
-    if (!NewVar) {
-      DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
-          *OldVar->getScope(), *NewSP, Builder.getContext(), Cache);
-      NewVar = llvm::DILocalVariable::get(
-          Builder.getContext(), NewScope, OldVar->getName(), OldVar->getFile(),
-          OldVar->getLine(), OldVar->getType(), arg, OldVar->getFlags(),
-          OldVar->getAlignInBits(), OldVar->getAnnotations());
-    }
+    // Only use cached variable if the arg number matches. This is important
+    // so that DIVariable created for privatized variables are not discarded.
+    if (NewVar && (arg == NewVar->getArg()))
+      return NewVar;
+
+    DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
+      *OldVar->getScope(), *NewSP, Builder.getContext(), Cache);
+    NewVar = llvm::DILocalVariable::get(
+        Builder.getContext(), NewScope, OldVar->getName(), OldVar->getFile(),
+        OldVar->getLine(), OldVar->getType(), arg, OldVar->getFlags(),
+        OldVar->getAlignInBits(), OldVar->getAnnotations());
     return NewVar;
   };
 
   auto UpdateDebugRecord = [&](auto *DR) {
     DILocalVariable *OldVar = DR->getVariable();
-    unsigned ArgNo = OldVar->getArg();
+    unsigned ArgNo = 0;
     for (auto Loc : DR->location_ops()) {
       auto Iter = ValueReplacementMap.find(Loc);
       if (Iter != ValueReplacementMap.end()) {
