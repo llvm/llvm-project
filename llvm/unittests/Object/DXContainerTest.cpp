@@ -870,10 +870,8 @@ TEST(RootSignature, ParseRootFlags) {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
     };
-    EXPECT_THAT_EXPECTED(
-        DXContainer::create(getMemoryBuffer<68>(Buffer)),
-        FailedWithMessage("Stream Error: An unspecified error has occurred.  "
-                          "Invalid Root Signature Version"));
+    EXPECT_THAT_EXPECTED(DXContainer::create(getMemoryBuffer<68>(Buffer)),
+                         FailedWithMessage("Invalid Root Signature Version"));
   }
   {
     // Flag has been set to an invalid value
@@ -885,9 +883,7 @@ TEST(RootSignature, ParseRootFlags) {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0xFF,
     };
-    EXPECT_THAT_EXPECTED(
-        DXContainer::create(getMemoryBuffer<68>(Buffer)),
-        FailedWithMessage("Stream Error: An unspecified error has occurred.  "
-                          "Invalid Root Signature flag"));
+    EXPECT_THAT_EXPECTED(DXContainer::create(getMemoryBuffer<68>(Buffer)),
+                         FailedWithMessage("Invalid Root Signature flag"));
   }
 }
