@@ -328,9 +328,8 @@ LogicalResult ModuleLinker::run() {
     llvm::errs() << "symbol: " << symbol << "\n";
     if (comdatsChosen.count(symbol))
       continue;
+    llvm_unreachable("unimplemented");
   }
-
-  llvm_unreachable("unimplemented");
 
   // TODO add `globals` and other values to LinkableModuleOpInterface
   dst->walk([&](GlobalValueLinkageOpInterface gv) {

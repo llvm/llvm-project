@@ -301,18 +301,16 @@ static std::optional<ParseResult> parseOpBundles(
 // Linkage helpers.
 //===----------------------------------------------------------------------===//
 
-static std::optional<::mlir::link::ComdatSelectionKind>
-getComdatSelectionKindImpl(SymbolOpInterface op) {
+static std::optional<std::pair<StringRef, ::mlir::link::ComdatSelectionKind>>
+getComdatPairImpl(SymbolOpInterface op) {
   auto mod = op->getParentOfType<LinkableModuleOpInterface>();
   auto &moduleBody = mod->getRegion(0).front();
   for (auto comdatOp : moduleBody.getOps<ComdatOp>()) {
     for (auto selectorOp : comdatOp.getOps<ComdatSelectorOp>()) {
-      if (selectorOp.getSymName() == op.getName()) {
-        return selectorOp.getComdat();
-      }
+      return std::make_pair(selectorOp.getSymName(), selectorOp.getComdat());
     }
+    return std::nullopt;
   }
-  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2398,9 +2396,9 @@ LogicalResult GlobalOp::verifyRegions() {
   return success();
 }
 
-std::optional<::mlir::link::ComdatSelectionKind>
-GlobalOp::getComdatSelectionKind() {
-  return getComdatSelectionKindImpl(*this);
+std::optional<std::pair<StringRef, ::mlir::link::ComdatSelectionKind>>
+GlobalOp::getComdatPair() {
+  return getComdatPairImpl(*this);
 }
 
 bool GlobalOp::isConstant() { return getConstant(); }
@@ -2824,9 +2822,9 @@ Region *LLVMFuncOp::getCallableRegion() {
   return &getBody();
 }
 
-std::optional<::mlir::link::ComdatSelectionKind>
-LLVMFuncOp::getComdatSelectionKind() {
-  return getComdatSelectionKindImpl(*this);
+std::optional<std::pair<StringRef, ::mlir::link::ComdatSelectionKind>>
+LLVMFuncOp::getComdatPair() {
+  return getComdatPairImpl(*this);
 }
 
 //===----------------------------------------------------------------------===//
