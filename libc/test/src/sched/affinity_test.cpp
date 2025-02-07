@@ -12,7 +12,7 @@
 #include "src/sched/sched_setaffinity.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 
-#include <sched.h>
+#include "hdr/types/cpu_set_t.h"
 #include <sys/syscall.h>
 
 TEST(LlvmLibcSchedAffinityTest, SmokeTest) {

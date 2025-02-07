@@ -16,7 +16,7 @@
 #include "src/unistd/getuid.h"
 #include "test/UnitTest/Test.h"
 
-#include <sched.h>
+#include "hdr/types/cpu_set_t.h"
 
 // We Test:
 // SCHED_OTHER, SCHED_FIFO, SCHED_RR
