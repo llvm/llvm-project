@@ -134,7 +134,7 @@ bool ModuleRootSignature::parse(NamedMDNode *Root, const Function *EF) {
 
 bool ModuleRootSignature::validate() {
   if (dxbc::RootSignatureValidations::validateRootFlag(Flags)) {
-    return reportError("Invalid flag value for RootFlag");
+    return reportError("Invalid Root Signature flag value");
   }
   return false;
 }

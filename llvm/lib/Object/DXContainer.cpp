@@ -246,16 +246,16 @@ Error DirectX::RootSignature::parse(StringRef Data) {
   const char *Current = Data.begin();
 
   // Root Signature headers expects 6 integers to be present.
-  if (Data.size() < 6 * sizeof(uint32_t)) {
-    return parseFailed("Invalid data. Too small.");
-  }
+  if (Data.size() < 6 * sizeof(uint32_t))
+    return parseFailed(
+        "Invalid root signature, insufficient space for header.");
 
   uint32_t VValue =
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
   if (dxbc::RootSignatureValidations::validateVersion(VValue))
-    return make_error<GenericBinaryError>("Invalid Version");
+    return make_error<GenericBinaryError>("Invalid Root Signature Version");
   Version = VValue;
 
   NumParameters =
@@ -279,7 +279,7 @@ Error DirectX::RootSignature::parse(StringRef Data) {
   Current += sizeof(uint32_t);
 
   if (dxbc::RootSignatureValidations::validateRootFlag(FValue))
-    return make_error<GenericBinaryError>("Invalid flag");
+    return make_error<GenericBinaryError>("Invalid Root Signature flag");
   Flags = FValue;
 
   return Error::success();

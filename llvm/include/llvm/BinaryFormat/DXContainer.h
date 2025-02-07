@@ -555,7 +555,7 @@ struct RootSignatureValidations {
   }
 
   static bool validateVersion(uint32_t Version) {
-    return (Version < 1 || Version > 2);
+    return !(Version == 1 || Version == 2);
   }
 };
 
