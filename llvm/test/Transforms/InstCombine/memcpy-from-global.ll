@@ -322,7 +322,7 @@ define float @test11_volatile(i64 %i) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [4 x float], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[A]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr align 4 [[A]], ptr addrspace(1) align 4 @I, i64 16, i1 true)
-; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds nuw [4 x float], ptr [[A]], i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds [4 x float], ptr [[A]], i64 0, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[G]], align 4
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -380,7 +380,7 @@ define void @volatile_memcpy() {
 ; and then forwarding it by readonly nocapture reference.
 define void @memcpy_to_nocapture_readonly() {
 ; CHECK-LABEL: @memcpy_to_nocapture_readonly(
-; CHECK-NEXT:    call void @bar(ptr nocapture nonnull readonly @H)
+; CHECK-NEXT:    call void @bar(ptr nonnull readonly captures(none) @H)
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16
@@ -411,7 +411,7 @@ define void @memcpy_to_aliased_nocapture_readonly() {
 ; CHECK-LABEL: @memcpy_to_aliased_nocapture_readonly(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i1 false)
-; CHECK-NEXT:    call void @two_params(ptr nocapture nonnull readonly [[A]], ptr nocapture nonnull [[A]])
+; CHECK-NEXT:    call void @two_params(ptr nonnull readonly captures(none) [[A]], ptr nonnull captures(none) [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16

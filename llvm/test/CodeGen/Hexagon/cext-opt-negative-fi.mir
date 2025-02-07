@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-cext-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-cext-opt %s -o - | FileCheck %s
 
 # Skip fixed stack indices in hexagon-cext. The reason is that they cannot
 # be stored as indices (stackSlot2Index) together with registers and

@@ -12,6 +12,8 @@ add_llvm_component_library(LLVMMipsDesc
   MipsNaClELFStreamer.cpp
   MipsOptionRecord.cpp
   MipsTargetStreamer.cpp
+  MipsWinCOFFObjectWriter.cpp
+  MipsWinCOFFStreamer.cpp
 
   LINK_COMPONENTS
   CodeGenTypes

@@ -14,11 +14,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/LangOptions.h"
-#include "flang/Common/OpenMP-features.h"
-#include "flang/Common/Version.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/Bridge.h"
@@ -42,6 +37,11 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/LangOptions.h"
+#include "flang/Support/OpenMP-features.h"
+#include "flang/Support/Version.h"
+#include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
@@ -234,6 +234,17 @@ static llvm::cl::opt<bool> integerWrapAround(
     llvm::cl::desc("Treat signed integer overflow as two's complement"),
     llvm::cl::init(false));
 
+static llvm::cl::opt<bool> initGlobalZero(
+    "finit-global-zero",
+    llvm::cl::desc("Zero initialize globals without default initialization"),
+    llvm::cl::init(true));
+
+static llvm::cl::opt<bool>
+    reallocateLHS("frealloc-lhs",
+                  llvm::cl::desc("Follow Fortran 2003 rules for (re)allocating "
+                                 "the LHS of the intrinsic assignment"),
+                  llvm::cl::init(true));
+
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
@@ -375,6 +386,8 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   loweringOptions.setIntegerWrapAround(integerWrapAround);
+  loweringOptions.setInitGlobalZero(initGlobalZero);
+  loweringOptions.setReallocateLHS(reallocateLHS);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   Fortran::frontend::TargetOptions targetOpts;
   Fortran::frontend::CodeGenOptions cgOpts;

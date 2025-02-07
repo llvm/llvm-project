@@ -96,6 +96,8 @@ void Pointer::operator=(const Pointer &P) {
     PointeeStorage.Int = P.PointeeStorage.Int;
   } else if (P.isFunctionPointer()) {
     PointeeStorage.Fn = P.PointeeStorage.Fn;
+  } else if (P.isTypeidPointer()) {
+    PointeeStorage.Typeid = P.PointeeStorage.Typeid;
   } else {
     assert(false && "Unhandled storage kind");
   }
@@ -132,6 +134,8 @@ void Pointer::operator=(Pointer &&P) {
     PointeeStorage.Int = P.PointeeStorage.Int;
   } else if (P.isFunctionPointer()) {
     PointeeStorage.Fn = P.PointeeStorage.Fn;
+  } else if (P.isTypeidPointer()) {
+    PointeeStorage.Typeid = P.PointeeStorage.Typeid;
   } else {
     assert(false && "Unhandled storage kind");
   }
@@ -150,6 +154,14 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
   if (isFunctionPointer())
     return asFunctionPointer().toAPValue(ASTCtx);
+
+  if (isTypeidPointer()) {
+    TypeInfoLValue TypeInfo(PointeeStorage.Typeid.TypePtr);
+    return APValue(
+        APValue::LValueBase::getTypeInfo(
+            TypeInfo, QualType(PointeeStorage.Typeid.TypeInfoType, 0)),
+        CharUnits::Zero(), APValue::NoLValuePath{});
+  }
 
   // Build the lvalue base from the block.
   const Descriptor *Desc = getDeclDesc();
@@ -197,6 +209,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     return ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex));
   };
 
+  bool UsePath = true;
+  if (getType()->isLValueReferenceType())
+    UsePath = false;
+
   // Build the path into the object.
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
@@ -205,38 +221,42 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       // An array root may still be an array element itself.
       if (Ptr.isArrayElement()) {
         Ptr = Ptr.expand();
+        const Descriptor *Desc = Ptr.getFieldDesc();
         unsigned Index = Ptr.getIndex();
-        Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
-        QualType ElemType = Ptr.getFieldDesc()->getElemQualType();
+        QualType ElemType = Desc->getElemQualType();
         Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
+        if (Ptr.getArray().getType()->isArrayType())
+          Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
         Ptr = Ptr.getArray();
       } else {
-        Path.push_back(APValue::LValuePathEntry(
-            {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
+        const Descriptor *Desc = Ptr.getFieldDesc();
+        const auto *Dcl = Desc->asDecl();
+        Path.push_back(APValue::LValuePathEntry({Dcl, /*IsVirtual=*/false}));
 
-        if (const auto *FD =
-                dyn_cast_if_present<FieldDecl>(Ptr.getFieldDesc()->asDecl()))
+        if (const auto *FD = dyn_cast_if_present<FieldDecl>(Dcl))
           Offset += getFieldOffset(FD);
 
         Ptr = Ptr.getBase();
       }
     } else if (Ptr.isArrayElement()) {
       Ptr = Ptr.expand();
+      const Descriptor *Desc = Ptr.getFieldDesc();
       unsigned Index;
       if (Ptr.isOnePastEnd())
         Index = Ptr.getArray().getNumElems();
       else
         Index = Ptr.getIndex();
 
-      QualType ElemType = Ptr.getFieldDesc()->getElemQualType();
+      QualType ElemType = Desc->getElemQualType();
       Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
-      Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
+      if (Ptr.getArray().getType()->isArrayType())
+        Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
+      const Descriptor *Desc = Ptr.getFieldDesc();
       bool IsVirtual = false;
 
       // Create a path entry for the field.
-      const Descriptor *Desc = Ptr.getFieldDesc();
       if (const auto *BaseOrMember = Desc->asDecl()) {
         if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
           Ptr = Ptr.getBase();
@@ -269,8 +289,11 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   // Just invert the order of the elements.
   std::reverse(Path.begin(), Path.end());
 
-  return APValue(Base, Offset, Path, /*IsOnePastEnd=*/isOnePastEnd(),
-                 /*IsNullPtr=*/false);
+  if (UsePath)
+    return APValue(Base, Offset, Path,
+                   /*IsOnePastEnd=*/!isElementPastEnd() && isOnePastEnd());
+
+  return APValue(Base, Offset, APValue::NoLValuePath());
 }
 
 void Pointer::print(llvm::raw_ostream &OS) const {
@@ -304,6 +327,9 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   case Storage::Fn:
     OS << "(Fn) { " << asFunctionPointer().getFunction() << " + " << Offset
        << " }";
+    break;
+  case Storage::Typeid:
+    OS << "(Typeid)";
   }
 }
 
@@ -450,6 +476,8 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
     return true;
   if (A.isFunctionPointer() && B.isFunctionPointer())
     return true;
+  if (A.isTypeidPointer() && B.isTypeidPointer())
+    return true;
 
   if (A.isIntegralPointer() || B.isIntegralPointer())
     return A.getSource() == B.getSource();
@@ -476,10 +504,10 @@ bool Pointer::pointsToLiteral() const {
   if (isZero() || !isBlockPointer())
     return false;
 
-  const Expr *E = block()->getDescriptor()->asExpr();
   if (block()->isDynamic())
     return false;
 
+  const Expr *E = block()->getDescriptor()->asExpr();
   return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
 }
 

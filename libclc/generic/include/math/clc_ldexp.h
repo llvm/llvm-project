@@ -1,3 +1,5 @@
+#include <clc/clcfunc.h>
+
 _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float, int);
 
 #ifdef cl_khr_fp64

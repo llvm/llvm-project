@@ -206,7 +206,7 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
       // arch feature set will be used to include all sub-features belonging to
       // the V1.1 ISA version.
       if (HasFeatureFrecipe && HasFeatureLAM_BH && HasFeatureLAMCAS &&
-          HasFeatureLD_SEQ_SA && HasFeatureDiv32)
+          HasFeatureLD_SEQ_SA && HasFeatureDiv32 && HasFeatureSCQ)
         Builder.defineMacro("__loongarch_arch",
                             Twine('"') + "la64v1.1" + Twine('"'));
       else
@@ -249,6 +249,9 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasFeatureDiv32)
     Builder.defineMacro("__loongarch_div32", Twine(1));
 
+  if (HasFeatureSCQ)
+    Builder.defineMacro("__loongarch_scq", Twine(1));
+
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
     Builder.defineMacro("__loongarch_lp64");
@@ -270,18 +273,55 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
+static constexpr int NumBaseBuiltins =
+    LoongArch::FirstLSXBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumLSXBuiltins =
+    LoongArch::FirstLASXBuiltin - LoongArch::FirstLSXBuiltin;
+static constexpr int NumLASXBuiltins =
+    LoongArch::LastTSBuiltin - LoongArch::FirstLASXBuiltin;
 static constexpr int NumBuiltins =
-    clang::LoongArch::LastTSBuiltin - Builtin::FirstTSBuiltin;
+    LoongArch::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static_assert(NumBuiltins ==
+              (NumBaseBuiltins + NumLSXBuiltins + NumLASXBuiltins));
 
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
+static constexpr llvm::StringTable BuiltinBaseStrings =
+    CLANG_BUILTIN_STR_TABLE_START
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsLoongArch.def"
-    , {
-#define BUILTIN CLANG_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsLoongArchBase.def"
+#undef TARGET_BUILTIN
+    ;
+
+static constexpr auto BuiltinBaseInfos = Builtin::MakeInfos<NumBaseBuiltins>({
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsLoongArch.def"
-      });
+#include "clang/Basic/BuiltinsLoongArchBase.def"
+#undef TARGET_BUILTIN
+});
+
+static constexpr llvm::StringTable BuiltinLSXStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsLoongArchLSX.def"
+#undef TARGET_BUILTIN
+    ;
+
+static constexpr auto BuiltinLSXInfos = Builtin::MakeInfos<NumLSXBuiltins>({
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsLoongArchLSX.def"
+#undef TARGET_BUILTIN
+});
+
+static constexpr llvm::StringTable BuiltinLASXStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsLoongArchLASX.def"
+#undef TARGET_BUILTIN
+    ;
+
+static constexpr auto BuiltinLASXInfos = Builtin::MakeInfos<NumLASXBuiltins>({
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsLoongArchLASX.def"
+#undef TARGET_BUILTIN
+});
 
 bool LoongArchTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
@@ -308,9 +348,13 @@ bool LoongArchTargetInfo::hasFeature(StringRef Feature) const {
       .Default(false);
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-LoongArchTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+llvm::SmallVector<Builtin::InfosShard>
+LoongArchTargetInfo::getTargetBuiltins() const {
+  return {
+      {&BuiltinBaseStrings, BuiltinBaseInfos},
+      {&BuiltinLSXStrings, BuiltinLSXInfos},
+      {&BuiltinLASXStrings, BuiltinLASXInfos},
+  };
 }
 
 bool LoongArchTargetInfo::handleTargetFeatures(
@@ -338,6 +382,8 @@ bool LoongArchTargetInfo::handleTargetFeatures(
       HasFeatureLD_SEQ_SA = true;
     else if (Feature == "+div32")
       HasFeatureDiv32 = true;
+    else if (Feature == "+scq")
+      HasFeatureSCQ = true;
   }
   return true;
 }

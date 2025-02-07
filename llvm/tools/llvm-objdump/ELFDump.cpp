@@ -17,7 +17,6 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -270,7 +269,7 @@ template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
       outs() << "   RELRO ";
       break;
     case ELF::PT_GNU_PROPERTY:
-      outs() << "   PROPERTY ";
+      outs() << "PROPERTY ";
       break;
     case ELF::PT_GNU_STACK:
       outs() << "   STACK ";

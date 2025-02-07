@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-DAG: r[[BASE:[0-9]+]] = add(r1,#1000)
 ; CHECK-DAG: r[[IDX0:[0-9]+]] = add(r2,#5)

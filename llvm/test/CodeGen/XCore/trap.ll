@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 define i32 @test() noreturn nounwind  {
 entry:
 ; CHECK-LABEL: test:

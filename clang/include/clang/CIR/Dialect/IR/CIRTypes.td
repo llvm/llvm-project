@@ -14,6 +14,7 @@
 #define MLIR_CIR_DIALECT_CIR_TYPES
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Interfaces/CIRFPTypeInterface.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 
@@ -128,5 +129,233 @@ def PrimitiveSInt
 def PrimitiveInt
     : AnyTypeOf<[UInt8, UInt16, UInt32, UInt64, SInt8, SInt16, SInt32, SInt64],
                 "primitive int", "::cir::IntType">;
+
+//===----------------------------------------------------------------------===//
+// FloatType
+//===----------------------------------------------------------------------===//
+
+class CIR_FloatType<string name, string mnemonic>
+    : CIR_Type<name, mnemonic,
+          [
+            DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+            DeclareTypeInterfaceMethods<CIRFPTypeInterface>,
+          ]> {}
+
+def CIR_Single : CIR_FloatType<"Single", "float"> {
+  let summary = "CIR single-precision 32-bit float type";
+  let description = [{
+    A 32-bit floating-point type whose format is IEEE-754 `binary32`.  It
+    represents the types `float`, `_Float32`, and `std::float32_t` in C and C++.
+  }];
+}
+
+def CIR_Double : CIR_FloatType<"Double", "double"> {
+  let summary = "CIR double-precision 64-bit float type";
+  let description = [{
+    A 64-bit floating-point type whose format is IEEE-754 `binary64`. It
+    represents the types `double', '_Float64`, `std::float64_t`, and `_Float32x`
+    in C and C++.  This is the underlying type for `long double` on some
+    platforms, including Windows.
+  }];
+}
+
+def CIR_FP16 : CIR_FloatType<"FP16", "f16"> {
+  let summary = "CIR half-precision 16-bit float type";
+  let description = [{
+    A 16-bit floating-point type whose format is IEEE-754 `binary16`. It
+    represents the types '_Float16` and `std::float16_t` in C and C++.
+  }];
+}
+
+def CIR_BFloat16 : CIR_FloatType<"BF16", "bf16"> {
+  let summary = "CIR bfloat16 16-bit float type";
+  let description = [{
+    A 16-bit floating-point type in the bfloat16 format, which is the same as
+    IEEE `binary32` except that the lower 16 bits of the mantissa are missing.
+    It represents the type `std::bfloat16_t` in C++, also spelled `__bf16` in
+    some implementations.
+  }];
+}
+
+def CIR_FP80 : CIR_FloatType<"FP80", "f80"> {
+  let summary = "CIR x87 80-bit float type";
+  let description = [{
+    An 80-bit floating-point type in the x87 extended precision format.  The
+    size and alignment of the type are both 128 bits, even though only 80 of
+    those bits are used.  This is the underlying type for `long double` on Linux
+    x86 platforms, and it is available as an extension in some implementations.
+  }];
+}
+
+def CIR_FP128 : CIR_FloatType<"FP128", "f128"> {
+  let summary = "CIR quad-precision 128-bit float type";
+  let description = [{
+    A 128-bit floating-point type whose format is IEEE-754 `binary128`. It
+    represents the types `_Float128` and `std::float128_t` in C and C++, and the
+    extension `__float128` in some implementations.  This is the underlying type
+    for `long double` on some platforms including Linux Arm.
+  }];
+}
+
+def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
+  let summary = "CIR float type for `long double`";
+  let description = [{
+    A floating-point type that represents the `long double` type in C and C++.
+
+    The underlying floating-point format of a `long double` value depends on the
+    target platform and the implementation. The `underlying` parameter specifies
+    the CIR floating-point type that corresponds to this format. Underlying
+    types of IEEE 64-bit, IEEE 128-bit, x87 80-bit, and IBM's double-double
+    format are all in use.
+  }];
+
+  let parameters = (ins "mlir::Type":$underlying);
+
+  let assemblyFormat = [{
+    `<` $underlying `>`
+  }];
+
+  let genVerifyDecl = 1;
+}
+
+// Constraints
+
+def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_FP80, CIR_FP128,
+                             CIR_LongDouble, CIR_FP16, CIR_BFloat16]>;
+def CIR_AnyIntOrFloat: AnyTypeOf<[CIR_AnyFloat, CIR_IntType]>;
+
+//===----------------------------------------------------------------------===//
+// PointerType
+//===----------------------------------------------------------------------===//
+
+def CIR_PointerType : CIR_Type<"Pointer", "ptr",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+
+  let summary = "CIR pointer type";
+  let description = [{
+    The `cir.ptr` type represents C and C++ pointer types and C++ reference
+    types, other than pointers-to-members.  The `pointee` type is the type
+    pointed to.
+
+    TODO(CIR): The address space attribute is not yet implemented.
+  }];
+
+  let parameters = (ins "mlir::Type":$pointee);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$pointee), [{
+      return $_get(pointee.getContext(), pointee);
+    }]>,
+    TypeBuilder<(ins "mlir::Type":$pointee), [{
+      return $_get($_ctxt, pointee);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `<` $pointee  `>`
+  }];
+
+  let genVerifyDecl = 1;
+
+  let skipDefaultBuilders = 1;
+
+  let extraClassDeclaration = [{
+    bool isVoidPtr() const {
+      return mlir::isa<cir::VoidType>(getPointee());
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// FuncType
+//===----------------------------------------------------------------------===//
+
+def CIR_FuncType : CIR_Type<"Func", "func"> {
+  let summary = "CIR function type";
+  let description = [{
+    The `!cir.func` is a function type. It consists of a single return type, a
+    list of parameter types and can optionally be variadic.
+
+    Example:
+
+    ```mlir
+    !cir.func<!bool ()>
+    !cir.func<!s32i (!s8i, !s8i)>
+    !cir.func<!s32i (!s32i, ...)>
+    ```
+  }];
+
+  let parameters = (ins ArrayRefParameter<"mlir::Type">:$inputs,
+                        "mlir::Type":$returnType, "bool":$varArg);
+  let assemblyFormat = [{
+    `<` $returnType ` ` `(` custom<FuncTypeArgs>($inputs, $varArg) `>`
+  }];
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "llvm::ArrayRef<mlir::Type>":$inputs, "mlir::Type":$returnType,
+      CArg<"bool", "false">:$isVarArg), [{
+      return $_get(returnType.getContext(), inputs, returnType, isVarArg);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Returns whether the function is variadic.
+    bool isVarArg() const { return getVarArg(); }
+
+    /// Returns the `i`th input operand type. Asserts if out of bounds.
+    mlir::Type getInput(unsigned i) const { return getInputs()[i]; }
+
+    /// Returns the number of arguments to the function.
+    unsigned getNumInputs() const { return getInputs().size(); }
+
+    /// Returns the result type of the function as an ArrayRef, enabling better
+    /// integration with generic MLIR utilities.
+    llvm::ArrayRef<mlir::Type> getReturnTypes() const;
+
+    /// Returns whether the function is returns void.
+    bool isVoid() const;
+
+    /// Returns a clone of this function type with the given argument
+    /// and result types.
+    FuncType clone(mlir::TypeRange inputs, mlir::TypeRange results) const;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Void type
+//===----------------------------------------------------------------------===//
+
+def CIR_VoidType : CIR_Type<"Void", "void"> {
+  let summary = "CIR void type";
+  let description = [{
+    The `!cir.void` type represents the C and C++ `void` type.
+  }];
+  let extraClassDeclaration = [{
+    std::string getAlias() const { return "void"; };
+  }];
+}
+
+// Constraints
+
+// Pointer to void
+def VoidPtr : Type<
+    And<[
+      CPred<"::mlir::isa<::cir::PointerType>($_self)">,
+      CPred<"::mlir::isa<::cir::VoidType>("
+            "::mlir::cast<::cir::PointerType>($_self).getPointee())">,
+    ]>, "void*">,
+    BuildableType<
+      "cir::PointerType::get($_builder.getContext(),"
+      "cir::VoidType::get($_builder.getContext()))"> {
+}
+
+//===----------------------------------------------------------------------===//
+// Global type constraints
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyType : AnyTypeOf<[
+  CIR_VoidType, CIR_IntType, CIR_AnyFloat, CIR_PointerType, CIR_FuncType
+]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

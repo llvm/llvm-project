@@ -1,16 +1,16 @@
-; RUN: llc -march=mips   -mcpu=mips32   -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC32,ACC32-TRAP
-; RUN: llc -march=mips   -mcpu=mips32r2 -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC32,ACC32-TRAP
-; RUN: llc -march=mips   -mcpu=mips32r6 -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR32,GPR32-TRAP
-; RUN: llc -march=mips64 -mcpu=mips64   -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,ACC64-TRAP
-; RUN: llc -march=mips64 -mcpu=mips64r2 -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,ACC64-TRAP
-; RUN: llc -march=mips64 -mcpu=mips64r6 -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR64,GPR64-TRAP
+; RUN: llc -mtriple=mips   -mcpu=mips32   -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC32,ACC32-TRAP
+; RUN: llc -mtriple=mips   -mcpu=mips32r2 -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC32,ACC32-TRAP
+; RUN: llc -mtriple=mips   -mcpu=mips32r6 -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR32,GPR32-TRAP
+; RUN: llc -mtriple=mips64 -mcpu=mips64   -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,ACC64-TRAP
+; RUN: llc -mtriple=mips64 -mcpu=mips64r2 -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,ACC64-TRAP
+; RUN: llc -mtriple=mips64 -mcpu=mips64r6 -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR64,GPR64-TRAP
 
-; RUN: llc -march=mips   -mcpu=mips32   -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC32,NOCHECK
-; RUN: llc -march=mips   -mcpu=mips32r2 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC32,NOCHECK
-; RUN: llc -march=mips   -mcpu=mips32r6 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR32,NOCHECK
-; RUN: llc -march=mips64 -mcpu=mips64   -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,NOCHECK
-; RUN: llc -march=mips64 -mcpu=mips64r2 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,NOCHECK
-; RUN: llc -march=mips64 -mcpu=mips64r6 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR64,NOCHECK
+; RUN: llc -mtriple=mips   -mcpu=mips32   -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC32,NOCHECK
+; RUN: llc -mtriple=mips   -mcpu=mips32r2 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC32,NOCHECK
+; RUN: llc -mtriple=mips   -mcpu=mips32r6 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR32,NOCHECK
+; RUN: llc -mtriple=mips64 -mcpu=mips64   -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,NOCHECK
+; RUN: llc -mtriple=mips64 -mcpu=mips64r2 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,NOCHECK
+; RUN: llc -mtriple=mips64 -mcpu=mips64r6 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR64,NOCHECK
 
 ; FileCheck Prefixes:
 ;   ALL - All targets

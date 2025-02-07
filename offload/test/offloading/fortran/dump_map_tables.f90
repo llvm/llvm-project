@@ -1,4 +1,4 @@
-! Offloading test with runtine call to ompx_dump_mapping_tables Fortran array
+! Offloading test with runtime call to ompx_dump_mapping_tables Fortran array
 ! writing some values and printing the variable mapped to device correctly
 ! receives the updates made on the device.
 ! REQUIRES: flang

@@ -37,8 +37,7 @@ public:
 class MipsPreLegalizerCombinerImpl : public Combiner {
 protected:
   const MipsSubtarget &STI;
-  // TODO: Make CombinerHelper methods const.
-  mutable CombinerHelper Helper;
+  const CombinerHelper Helper;
 
 public:
   MipsPreLegalizerCombinerImpl(MachineFunction &MF, CombinerInfo &CInfo,

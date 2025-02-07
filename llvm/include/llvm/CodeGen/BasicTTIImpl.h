@@ -223,12 +223,11 @@ private:
     //
     // First, compute the cost of the individual memory operations.
     InstructionCost AddrExtractCost =
-        IsGatherScatter
-            ? getScalarizationOverhead(
-                  FixedVectorType::get(
-                      PointerType::get(VT->getElementType(), 0), VF),
-                  /*Insert=*/false, /*Extract=*/true, CostKind)
-            : 0;
+        IsGatherScatter ? getScalarizationOverhead(
+                              FixedVectorType::get(
+                                  PointerType::get(VT->getContext(), 0), VF),
+                              /*Insert=*/false, /*Extract=*/true, CostKind)
+                        : 0;
 
     // The cost of the scalar loads/stores.
     InstructionCost MemoryOpCost =
@@ -257,6 +256,33 @@ private:
     }
 
     return AddrExtractCost + MemoryOpCost + PackingCost + ConditionalCost;
+  }
+
+  /// Checks if the provided mask \p is a splat mask, i.e. it contains only -1
+  /// or same non -1 index value and this index value contained at least twice.
+  /// So, mask <0, -1,-1, -1> is not considered splat (it is just identity),
+  /// same for <-1, 0, -1, -1> (just a slide), while <2, -1, 2, -1> is a splat
+  /// with \p Index=2.
+  static bool isSplatMask(ArrayRef<int> Mask, unsigned NumSrcElts, int &Index) {
+    // Check that the broadcast index meets at least twice.
+    bool IsCompared = false;
+    if (int SplatIdx = PoisonMaskElem;
+        all_of(enumerate(Mask), [&](const auto &P) {
+          if (P.value() == PoisonMaskElem)
+            return P.index() != Mask.size() - 1 || IsCompared;
+          if (static_cast<unsigned>(P.value()) >= NumSrcElts * 2)
+            return false;
+          if (SplatIdx == PoisonMaskElem) {
+            SplatIdx = P.value();
+            return P.index() != Mask.size() - 1;
+          }
+          IsCompared = true;
+          return SplatIdx == P.value();
+        })) {
+      Index = SplatIdx;
+      return true;
+    }
+    return false;
   }
 
 protected:
@@ -819,9 +845,14 @@ public:
     return false;
   }
 
-  bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                              int ScalarOpdIdx) const {
-    return ScalarOpdIdx == -1;
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) const {
+    return OpdIdx == -1;
+  }
+
+  bool isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                        int RetIdx) const {
+    return RetIdx == 0;
   }
 
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
@@ -1009,10 +1040,12 @@ public:
       return Kind;
     int NumSrcElts = Ty->getElementCount().getKnownMinValue();
     switch (Kind) {
-    case TTI::SK_PermuteSingleSrc:
+    case TTI::SK_PermuteSingleSrc: {
       if (ShuffleVectorInst::isReverseMask(Mask, NumSrcElts))
         return TTI::SK_Reverse;
       if (ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts))
+        return TTI::SK_Broadcast;
+      if (isSplatMask(Mask, NumSrcElts, Index))
         return TTI::SK_Broadcast;
       if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
           (Index + Mask.size()) <= (size_t)NumSrcElts) {
@@ -1020,6 +1053,7 @@ public:
         return TTI::SK_ExtractSubvector;
       }
       break;
+    }
     case TTI::SK_PermuteTwoSrc: {
       int NumSubElts;
       if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
@@ -1434,6 +1468,15 @@ public:
                                        true, CostKind);
   }
 
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) {
+    // Treat expand load/compress store as gather/scatter operation.
+    // TODO: implement more precise cost estimation for these intrinsics.
+    return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
+                                       /*IsGatherScatter*/ true, CostKind);
+  }
+
   InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,
@@ -1742,6 +1785,21 @@ public:
       return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
                                              VarMask, Alignment, CostKind, I);
     }
+    case Intrinsic::masked_compressstore: {
+      const Value *Data = Args[0];
+      const Value *Mask = Args[2];
+      Align Alignment = I->getParamAlign(1).valueOrOne();
+      return thisT()->getExpandCompressMemoryOpCost(
+          Instruction::Store, Data->getType(), !isa<Constant>(Mask), Alignment,
+          CostKind, I);
+    }
+    case Intrinsic::masked_expandload: {
+      const Value *Mask = Args[1];
+      Align Alignment = I->getParamAlign(0).valueOrOne();
+      return thisT()->getExpandCompressMemoryOpCost(Instruction::Load, RetTy,
+                                                    !isa<Constant>(Mask),
+                                                    Alignment, CostKind, I);
+    }
     case Intrinsic::experimental_vp_strided_store: {
       const Value *Data = Args[0];
       const Value *Ptr = Args[1];
@@ -1935,6 +1993,8 @@ public:
 
       return Cost;
     }
+    case Intrinsic::experimental_vector_match:
+      return thisT()->getTypeBasedIntrinsicInstrCost(ICA, CostKind);
     }
 
     // Assume that we need to scalarize this intrinsic.)
@@ -2040,6 +2100,9 @@ public:
       break;
     case Intrinsic::sincos:
       ISD = ISD::FSINCOS;
+      break;
+    case Intrinsic::modf:
+      ISD = ISD::FMODF;
       break;
     case Intrinsic::tan:
       ISD = ISD::FTAN;
@@ -2168,6 +2231,20 @@ public:
       return thisT()->getMaskedMemoryOpCost(Instruction::Load, Ty, TyAlign, 0,
                                             CostKind);
     }
+    case Intrinsic::experimental_vp_strided_store: {
+      auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);
+      Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
+      return thisT()->getStridedMemoryOpCost(
+          Instruction::Store, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
+          Alignment, CostKind, ICA.getInst());
+    }
+    case Intrinsic::experimental_vp_strided_load: {
+      auto *Ty = cast<VectorType>(ICA.getReturnType());
+      Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
+      return thisT()->getStridedMemoryOpCost(
+          Instruction::Load, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
+          Alignment, CostKind, ICA.getInst());
+    }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
     case Intrinsic::vector_reduce_and:
@@ -2190,8 +2267,43 @@ public:
     case Intrinsic::vector_reduce_fminimum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
+    case Intrinsic::experimental_vector_match: {
+      auto *SearchTy = cast<VectorType>(ICA.getArgTypes()[0]);
+      auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
+      unsigned SearchSize = NeedleTy->getNumElements();
+
+      // If we're not expanding the intrinsic then we assume this is cheap to
+      // implement.
+      EVT SearchVT = getTLI()->getValueType(DL, SearchTy);
+      if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize))
+        return getTypeLegalizationCost(RetTy).first;
+
+      // Approximate the cost based on the expansion code in
+      // SelectionDAGBuilder.
+      InstructionCost Cost = 0;
+      Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, NeedleTy,
+                                          CostKind, 1, nullptr, nullptr);
+      Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, SearchTy,
+                                          CostKind, 0, nullptr, nullptr);
+      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SearchTy, std::nullopt,
+                                      CostKind, 0, nullptr);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SearchTy, RetTy,
+                                          CmpInst::ICMP_EQ, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
+      Cost *= SearchSize;
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::And, RetTy, CostKind);
+      return Cost;
+    }
     case Intrinsic::abs:
       ISD = ISD::ABS;
+      break;
+    case Intrinsic::fshl:
+      ISD = ISD::FSHL;
+      break;
+    case Intrinsic::fshr:
+      ISD = ISD::FSHR;
       break;
     case Intrinsic::smax:
       ISD = ISD::SMAX;
@@ -2480,6 +2592,29 @@ public:
       Cost += thisT()->getArithmeticInstrCost(
           BinaryOperator::Sub, RetTy, CostKind,
           {TTI::OK_UniformConstantValue, TTI::OP_None});
+      return Cost;
+    }
+    case Intrinsic::fshl:
+    case Intrinsic::fshr: {
+      // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+      // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      InstructionCost Cost = 0;
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Shl, RetTy, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::LShr, RetTy,
+                                              CostKind);
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::URem, RetTy,
+                                              CostKind);
+      // Shift-by-zero handling.
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                          CmpInst::ICMP_EQ, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                          CmpInst::ICMP_EQ, CostKind);
       return Cost;
     }
     case Intrinsic::fptosi_sat:

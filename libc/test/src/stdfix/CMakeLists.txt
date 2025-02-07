@@ -57,7 +57,7 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       libc.src.stdfix.round${suffix}
       libc.src.__support.fixed_point.fx_bits
   )
-  
+
   add_libc_test(
     ${suffix}bits_test
     SUITE

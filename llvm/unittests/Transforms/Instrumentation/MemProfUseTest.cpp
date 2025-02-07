@@ -102,16 +102,15 @@ declare !dbg !19 void @_Z2f3v()
 
   const auto &[CallerGUID, CallSites] = *It;
   EXPECT_EQ(CallerGUID, IndexedMemProfRecord::getGUID("_Z3foov"));
-  ASSERT_THAT(CallSites, SizeIs(3));
 
   // Verify that call sites show up in the ascending order of their source
   // locations.
-  EXPECT_THAT(CallSites[0], Pair(LineLocation(1, 3),
-                                 IndexedMemProfRecord::getGUID("_Z2f1v")));
-  EXPECT_THAT(CallSites[1], Pair(LineLocation(2, 3),
-                                 IndexedMemProfRecord::getGUID("_Z2f2v")));
-  EXPECT_THAT(CallSites[2], Pair(LineLocation(2, 9),
-                                 IndexedMemProfRecord::getGUID("_Z2f3v")));
+  EXPECT_THAT(
+      CallSites,
+      ElementsAre(
+          Pair(LineLocation(1, 3), IndexedMemProfRecord::getGUID("_Z2f1v")),
+          Pair(LineLocation(2, 3), IndexedMemProfRecord::getGUID("_Z2f2v")),
+          Pair(LineLocation(2, 9), IndexedMemProfRecord::getGUID("_Z2f3v"))));
 }
 
 TEST(MemProf, ExtractDirectCallsFromIRInline) {
@@ -205,37 +204,37 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   ASSERT_NE(FooIt, Calls.end());
   const auto &[FooCallerGUID, FooCallSites] = *FooIt;
   EXPECT_EQ(FooCallerGUID, IndexedMemProfRecord::getGUID("_Z3foov"));
-  ASSERT_THAT(FooCallSites, SizeIs(2));
-  EXPECT_THAT(FooCallSites[0], Pair(LineLocation(1, 3),
-                                    IndexedMemProfRecord::getGUID("_ZL2f3v")));
-  EXPECT_THAT(FooCallSites[1], Pair(LineLocation(2, 9),
-                                    IndexedMemProfRecord::getGUID("_ZL2g3v")));
+  EXPECT_THAT(
+      FooCallSites,
+      ElementsAre(
+          Pair(LineLocation(1, 3), IndexedMemProfRecord::getGUID("_ZL2f3v")),
+          Pair(LineLocation(2, 9), IndexedMemProfRecord::getGUID("_ZL2g3v"))));
 
   auto F2It = Calls.find(IndexedMemProfRecord::getGUID("_ZL2f2v"));
   ASSERT_NE(F2It, Calls.end());
   const auto &[F2CallerGUID, F2CallSites] = *F2It;
   EXPECT_EQ(F2CallerGUID, IndexedMemProfRecord::getGUID("_ZL2f2v"));
-  ASSERT_THAT(F2CallSites, SizeIs(1));
-  EXPECT_THAT(F2CallSites[0], Pair(LineLocation(2, 3),
-                                   IndexedMemProfRecord::getGUID("_Z2f1v")));
+  EXPECT_THAT(F2CallSites,
+              ElementsAre(Pair(LineLocation(2, 3),
+                               IndexedMemProfRecord::getGUID("_Z2f1v"))));
 
   auto F3It = Calls.find(IndexedMemProfRecord::getGUID("_ZL2f3v"));
   ASSERT_NE(F3It, Calls.end());
   const auto &[F3CallerGUID, F3CallSites] = *F3It;
   EXPECT_EQ(F3CallerGUID, IndexedMemProfRecord::getGUID("_ZL2f3v"));
-  ASSERT_THAT(F3CallSites, SizeIs(1));
-  EXPECT_THAT(F3CallSites[0], Pair(LineLocation(1, 10),
-                                   IndexedMemProfRecord::getGUID("_ZL2f2v")));
+  EXPECT_THAT(F3CallSites,
+              ElementsAre(Pair(LineLocation(1, 10),
+                               IndexedMemProfRecord::getGUID("_ZL2f2v"))));
 
   auto G3It = Calls.find(IndexedMemProfRecord::getGUID("_ZL2g3v"));
   ASSERT_NE(G3It, Calls.end());
   const auto &[G3CallerGUID, G3CallSites] = *G3It;
   EXPECT_EQ(G3CallerGUID, IndexedMemProfRecord::getGUID("_ZL2g3v"));
-  ASSERT_THAT(G3CallSites, SizeIs(2));
-  EXPECT_THAT(G3CallSites[0], Pair(LineLocation(1, 8),
-                                   IndexedMemProfRecord::getGUID("_Z2g1v")));
-  EXPECT_THAT(G3CallSites[1], Pair(LineLocation(2, 3),
-                                   IndexedMemProfRecord::getGUID("_Z2g2v")));
+  EXPECT_THAT(
+      G3CallSites,
+      ElementsAre(
+          Pair(LineLocation(1, 8), IndexedMemProfRecord::getGUID("_Z2g1v")),
+          Pair(LineLocation(2, 3), IndexedMemProfRecord::getGUID("_Z2g2v"))));
 }
 
 TEST(MemProf, ExtractDirectCallsFromIRCallingNew) {
@@ -300,8 +299,7 @@ attributes #2 = { builtin allocsize(0) }
   ASSERT_NE(FooIt, Calls.end());
   const auto &[FooCallerGUID, FooCallSites] = *FooIt;
   EXPECT_EQ(FooCallerGUID, IndexedMemProfRecord::getGUID("_Z3foov"));
-  ASSERT_THAT(FooCallSites, SizeIs(1));
-  EXPECT_THAT(FooCallSites[0], Pair(LineLocation(1, 10), 0));
+  EXPECT_THAT(FooCallSites, ElementsAre(Pair(LineLocation(1, 10), 0)));
 }
 
 // Populate those fields returned by getHotColdSchema.

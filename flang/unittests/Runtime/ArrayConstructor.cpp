@@ -127,6 +127,9 @@ TEST(ArrayConstructor, Character) {
       0);
   result.Deallocate();
   cookieAllocator.deallocate(acVector, 1);
+  x->Deallocate();
+  y->Deallocate();
+  c->Deallocate();
 }
 
 TEST(ArrayConstructor, CharacterRuntimeCheck) {

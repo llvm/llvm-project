@@ -5,24 +5,6 @@
 ; CHECK-GI:       warning: Instruction selection used fallback path for dup_v2i8
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v2i8
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for dup_v2i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v2i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v2i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for dup_v3i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v3i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v3i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for dup_v4i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v4i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v4i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for dup_v2fp128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v2fp128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v2fp128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for dup_v3fp128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v3fp128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v3fp128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for dup_v4fp128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v4fp128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v4fp128
 
 define <2 x i8> @dup_v2i8(i8 %a) {
 ; CHECK-LABEL: dup_v2i8:
@@ -795,12 +777,22 @@ entry:
 }
 
 define <2 x i128> @loaddup_v2i128(ptr %p) {
-; CHECK-LABEL: loaddup_v2i128:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldp x2, x1, [x0]
-; CHECK-NEXT:    mov x0, x2
-; CHECK-NEXT:    mov x3, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: loaddup_v2i128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldp x2, x1, [x0]
+; CHECK-SD-NEXT:    mov x0, x2
+; CHECK-SD-NEXT:    mov x3, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: loaddup_v2i128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    fmov x2, d0
+; CHECK-GI-NEXT:    fmov x1, d1
+; CHECK-GI-NEXT:    fmov x3, d1
+; CHECK-GI-NEXT:    ret
 entry:
   %a = load i128, ptr %p
   %b = insertelement <2 x i128> poison, i128 %a, i64 0
@@ -836,14 +828,26 @@ entry:
 }
 
 define <3 x i128> @loaddup_v3i128(ptr %p) {
-; CHECK-LABEL: loaddup_v3i128:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldp x2, x1, [x0]
-; CHECK-NEXT:    mov x0, x2
-; CHECK-NEXT:    mov x3, x1
-; CHECK-NEXT:    mov x4, x2
-; CHECK-NEXT:    mov x5, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: loaddup_v3i128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldp x2, x1, [x0]
+; CHECK-SD-NEXT:    mov x0, x2
+; CHECK-SD-NEXT:    mov x3, x1
+; CHECK-SD-NEXT:    mov x4, x2
+; CHECK-SD-NEXT:    mov x5, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: loaddup_v3i128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    fmov x2, d0
+; CHECK-GI-NEXT:    fmov x4, d0
+; CHECK-GI-NEXT:    fmov x1, d1
+; CHECK-GI-NEXT:    fmov x3, d1
+; CHECK-GI-NEXT:    fmov x5, d1
+; CHECK-GI-NEXT:    ret
 entry:
   %a = load i128, ptr %p
   %b = insertelement <3 x i128> poison, i128 %a, i64 0
@@ -883,16 +887,30 @@ entry:
 }
 
 define <4 x i128> @loaddup_v4i128(ptr %p) {
-; CHECK-LABEL: loaddup_v4i128:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldp x2, x1, [x0]
-; CHECK-NEXT:    mov x0, x2
-; CHECK-NEXT:    mov x3, x1
-; CHECK-NEXT:    mov x4, x2
-; CHECK-NEXT:    mov x5, x1
-; CHECK-NEXT:    mov x6, x2
-; CHECK-NEXT:    mov x7, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: loaddup_v4i128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldp x2, x1, [x0]
+; CHECK-SD-NEXT:    mov x0, x2
+; CHECK-SD-NEXT:    mov x3, x1
+; CHECK-SD-NEXT:    mov x4, x2
+; CHECK-SD-NEXT:    mov x5, x1
+; CHECK-SD-NEXT:    mov x6, x2
+; CHECK-SD-NEXT:    mov x7, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: loaddup_v4i128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    fmov x2, d0
+; CHECK-GI-NEXT:    fmov x4, d0
+; CHECK-GI-NEXT:    fmov x6, d0
+; CHECK-GI-NEXT:    fmov x1, d1
+; CHECK-GI-NEXT:    fmov x3, d1
+; CHECK-GI-NEXT:    fmov x5, d1
+; CHECK-GI-NEXT:    fmov x7, d1
+; CHECK-GI-NEXT:    ret
 entry:
   %a = load i128, ptr %p
   %b = insertelement <4 x i128> poison, i128 %a, i64 0

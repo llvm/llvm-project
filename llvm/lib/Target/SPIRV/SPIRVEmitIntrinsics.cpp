@@ -74,7 +74,6 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
-  SPIRV::InstructionSet::InstructionSet InstrSet;
 
   // map of function declarations to <pointer arg index => element type>
   DenseMap<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
@@ -216,6 +215,8 @@ class SPIRVEmitIntrinsics
   bool processFunctionPointers(Module &M);
   void parseFunDeclarations(Module &M);
 
+  void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
+
 public:
   static char ID;
   SPIRVEmitIntrinsics() : ModulePass(ID) {
@@ -262,7 +263,14 @@ bool expectIgnoredInIRTranslation(const Instruction *I) {
   const auto *II = dyn_cast<IntrinsicInst>(I);
   if (!II)
     return false;
-  return II->getIntrinsicID() == Intrinsic::invariant_start;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::invariant_start:
+  case Intrinsic::spv_resource_handlefrombinding:
+  case Intrinsic::spv_resource_getpointer:
+    return true;
+  default:
+    return false;
+  }
 }
 
 bool allowEmitFakeUse(const Value *Arg) {
@@ -735,7 +743,13 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         {"__spirv_GenericCastToPtrExplicit_ToLocal", 0},
         {"__spirv_GenericCastToPtrExplicit_ToPrivate", 0}};
     // TODO: maybe improve performance by caching demangled names
-    if (Function *CalledF = CI->getCalledFunction()) {
+
+    auto *II = dyn_cast<IntrinsicInst>(I);
+    if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+      auto *ImageType = cast<TargetExtType>(II->getOperand(0)->getType());
+      assert(ImageType->getTargetExtName() == "spirv.Image");
+      Ty = ImageType->getTypeParameter(0);
+    } else if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
       if (DemangledName.length() > 0)
@@ -881,8 +895,9 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
       getOclOrSpirvBuiltinDemangledName(CalledF->getName());
   if (DemangledName.length() > 0 &&
       !StringRef(DemangledName).starts_with("llvm.")) {
-    auto [Grp, Opcode, ExtNo] =
-        SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
+    const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(*CalledF);
+    auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(
+        DemangledName, ST.getPreferredInstructionSet());
     if (Opcode == SPIRV::OpGroupAsyncCopy) {
       for (unsigned i = 0, PtrCnt = 0; i < CI->arg_size() && PtrCnt < 2; ++i) {
         Value *Op = CI->getArgOperand(i);
@@ -1291,6 +1306,37 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
   }
 }
 
+static void createDecorationIntrinsic(Instruction *I, MDNode *Node,
+                                      IRBuilder<> &B) {
+  LLVMContext &Ctx = I->getContext();
+  setInsertPointAfterDef(B, I);
+  B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
+                    {I, MetadataAsValue::get(Ctx, MDNode::get(Ctx, {Node}))});
+}
+
+static void createRoundingModeDecoration(Instruction *I,
+                                         unsigned RoundingModeDeco,
+                                         IRBuilder<> &B) {
+  LLVMContext &Ctx = I->getContext();
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  MDNode *RoundingModeNode = MDNode::get(
+      Ctx,
+      {ConstantAsMetadata::get(
+           ConstantInt::get(Int32Ty, SPIRV::Decoration::FPRoundingMode)),
+       ConstantAsMetadata::get(ConstantInt::get(Int32Ty, RoundingModeDeco))});
+  createDecorationIntrinsic(I, RoundingModeNode, B);
+}
+
+static void createSaturatedConversionDecoration(Instruction *I,
+                                                IRBuilder<> &B) {
+  LLVMContext &Ctx = I->getContext();
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  MDNode *SaturatedConversionNode =
+      MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                           Int32Ty, SPIRV::Decoration::SaturatedConversion))});
+  createDecorationIntrinsic(I, SaturatedConversionNode, B);
+}
+
 Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   if (!Call.isInlineAsm())
     return &Call;
@@ -1310,6 +1356,40 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   B.SetInsertPoint(&Call);
   B.CreateIntrinsic(Intrinsic::spv_inline_asm, {}, {Args});
   return &Call;
+}
+
+// Use a tip about rounding mode to create a decoration.
+void SPIRVEmitIntrinsics::useRoundingMode(ConstrainedFPIntrinsic *FPI,
+                                          IRBuilder<> &B) {
+  std::optional<RoundingMode> RM = FPI->getRoundingMode();
+  if (!RM.has_value())
+    return;
+  unsigned RoundingModeDeco = std::numeric_limits<unsigned>::max();
+  switch (RM.value()) {
+  default:
+    // ignore unknown rounding modes
+    break;
+  case RoundingMode::NearestTiesToEven:
+    RoundingModeDeco = SPIRV::FPRoundingMode::FPRoundingMode::RTE;
+    break;
+  case RoundingMode::TowardNegative:
+    RoundingModeDeco = SPIRV::FPRoundingMode::FPRoundingMode::RTN;
+    break;
+  case RoundingMode::TowardPositive:
+    RoundingModeDeco = SPIRV::FPRoundingMode::FPRoundingMode::RTP;
+    break;
+  case RoundingMode::TowardZero:
+    RoundingModeDeco = SPIRV::FPRoundingMode::FPRoundingMode::RTZ;
+    break;
+  case RoundingMode::Dynamic:
+  case RoundingMode::NearestTiesToAway:
+    // TODO: check if supported
+    break;
+  }
+  if (RoundingModeDeco == std::numeric_limits<unsigned>::max())
+    return;
+  // Convert the tip about rounding mode into a decoration record.
+  createRoundingModeDecoration(FPI, RoundingModeDeco, B);
 }
 
 Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
@@ -1774,20 +1854,20 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
   // Skip special artifical variable llvm.global.annotations.
   if (GV.getName() == "llvm.global.annotations")
     return;
-  if (GV.hasInitializer() && !isa<UndefValue>(GV.getInitializer())) {
+  Constant *Init = nullptr;
+  if (hasInitializer(&GV)) {
     // Deduce element type and store results in Global Registry.
     // Result is ignored, because TypedPointerType is not supported
     // by llvm IR general logic.
     deduceElementTypeHelper(&GV, false);
-    Constant *Init = GV.getInitializer();
+    Init = GV.getInitializer();
     Type *Ty = isAggrConstForceInt32(Init) ? B.getInt32Ty() : Init->getType();
     Constant *Const = isAggrConstForceInt32(Init) ? B.getInt32(1) : Init;
     auto *InitInst = B.CreateIntrinsic(Intrinsic::spv_init_global,
                                        {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, Init);
   }
-  if ((!GV.hasInitializer() || isa<UndefValue>(GV.getInitializer())) &&
-      GV.getNumUses() == 0)
+  if (!Init && GV.getNumUses() == 0)
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
@@ -1826,8 +1906,10 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
       Function *CalledF = CI->getCalledFunction();
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
+      FPDecorationId DecorationId = FPDecorationId::NONE;
       if (DemangledName.length() > 0)
-        DemangledName = SPIRV::lookupBuiltinNameHelper(DemangledName);
+        DemangledName =
+            SPIRV::lookupBuiltinNameHelper(DemangledName, &DecorationId);
       auto ResIt = ResTypeWellKnown.find(DemangledName);
       if (ResIt != ResTypeWellKnown.end()) {
         IsKnown = true;
@@ -1838,6 +1920,30 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
                           I);
           break;
         }
+      }
+      // check if a floating rounding mode or saturation info is present
+      switch (DecorationId) {
+      default:
+        break;
+      case FPDecorationId::SAT:
+        createSaturatedConversionDecoration(CI, B);
+        break;
+      case FPDecorationId::RTE:
+        createRoundingModeDecoration(
+            CI, SPIRV::FPRoundingMode::FPRoundingMode::RTE, B);
+        break;
+      case FPDecorationId::RTZ:
+        createRoundingModeDecoration(
+            CI, SPIRV::FPRoundingMode::FPRoundingMode::RTZ, B);
+        break;
+      case FPDecorationId::RTP:
+        createRoundingModeDecoration(
+            CI, SPIRV::FPRoundingMode::FPRoundingMode::RTP, B);
+        break;
+      case FPDecorationId::RTN:
+        createRoundingModeDecoration(
+            CI, SPIRV::FPRoundingMode::FPRoundingMode::RTN, B);
+        break;
       }
     }
   }
@@ -2211,8 +2317,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(Func);
   GR = ST.getSPIRVGlobalRegistry();
-  InstrSet = ST.isOpenCLEnv() ? SPIRV::InstructionSet::OpenCL_std
-                              : SPIRV::InstructionSet::GLSL_std_450;
 
   if (!CurrF)
     HaveFunPtrs =
@@ -2264,6 +2368,9 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     // already, and force it to be i8 if not
     if (Postpone && !GR->findAssignPtrTypeInstr(I))
       insertAssignPtrTypeIntrs(I, B, true);
+
+    if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(I))
+      useRoundingMode(FPI, B);
   }
 
   // Pass backward: use instructions results to specify/update/cast operands
@@ -2366,8 +2473,9 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
     if (DemangledName.empty())
       continue;
     // allow only OpGroupAsyncCopy use case at the moment
-    auto [Grp, Opcode, ExtNo] =
-        SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
+    const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(F);
+    auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(
+        DemangledName, ST.getPreferredInstructionSet());
     if (Opcode != SPIRV::OpGroupAsyncCopy)
       continue;
     // find pointer arguments

@@ -246,7 +246,7 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
       uint64_t FieldOffInBits = Layout.getFieldOffset(FD->getFieldIndex());
       QualType QTy = FD->getType();
       if (FD->isBitField()) {
-        unsigned BitWidth = FD->getBitWidthValue(getContext());
+        unsigned BitWidth = FD->getBitWidthValue();
         // Allow a bitfield with a type greater than XLen as long as the
         // bitwidth is XLen or less.
         if (getContext().getTypeSize(QTy) > XLen && BitWidth <= XLen)
@@ -367,8 +367,8 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty) const {
   const auto *VT = Ty->castAs<VectorType>();
   assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
 
-  auto VScale =
-      getContext().getTargetInfo().getVScaleRange(getContext().getLangOpts());
+  auto VScale = getContext().getTargetInfo().getVScaleRange(
+      getContext().getLangOpts(), false);
 
   unsigned NumElts = VT->getNumElements();
   llvm::Type *EltType = llvm::Type::getInt1Ty(getVMContext());
@@ -495,13 +495,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
         return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
     }
 
-    ABIArgInfo Info = ABIArgInfo::getDirect();
-
-    // If it is tuple type, it can't be flattened.
-    if (llvm::StructType *STy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty)))
-      Info.setCanBeFlattened(!STy->containsHomogeneousScalableVectorTypes());
-
-    return Info;
+    return ABIArgInfo::getDirect();
   }
 
   if (const VectorType *VT = Ty->getAs<VectorType>())

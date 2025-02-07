@@ -52,9 +52,8 @@ public:
     return Feature == "pnacl";
   }
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override {
-    return {nullptr, {}};
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
+    return {};
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

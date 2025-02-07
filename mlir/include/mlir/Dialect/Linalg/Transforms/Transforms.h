@@ -699,11 +699,11 @@ FailureOr<GenericOp> interchangeGenericOp(RewriterBase &rewriter,
                                           GenericOp genericOp,
                                           ArrayRef<unsigned> interchangeVector);
 
-/// Create a GenericOp from the given named operation `namedOp` and replace
-/// namedOp.
-/// Return failure if `namedOp` is a GenericOp or misses a region builder.
+/// Create a GenericOp from the given named operation `linalgOp` and replace
+/// the given `linalgOp`.
+/// Return failure if `linalgOp` is a GenericOp or misses a region builder.
 FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
-                                       LinalgOp namedOp);
+                                       LinalgOp linalgOp);
 
 /// Create a namedOp from the given GenericOp and replace the GenericOp.
 /// Currently we can specialize only trivial linalg copy operations.
@@ -1121,7 +1121,8 @@ struct LowerPackResult {
 
 /// Rewrite pack as pad + reshape + transpose.
 FailureOr<LowerPackResult> lowerPack(RewriterBase &rewriter,
-                                     tensor::PackOp packOp);
+                                     tensor::PackOp packOp,
+                                     bool lowerPadLikeWithInsertSlice = true);
 
 struct LowerUnPackOpResult {
   tensor::EmptyOp emptyOp;
@@ -1131,8 +1132,9 @@ struct LowerUnPackOpResult {
 };
 
 /// Rewrite pack as empty + transpose + reshape + extract_slice.
-FailureOr<LowerUnPackOpResult> lowerUnPack(RewriterBase &rewriter,
-                                           tensor::UnPackOp unPackOp);
+FailureOr<LowerUnPackOpResult>
+lowerUnPack(RewriterBase &rewriter, tensor::UnPackOp unPackOp,
+            bool lowerUnpadLikeWithExtractSlice = true);
 
 /// Struct to hold the result of a `pack` call.
 struct PackResult {
@@ -1392,6 +1394,14 @@ decomposeWinogradInputTransformOp(RewriterBase &rewriter,
 FailureOr<Operation *>
 decomposeWinogradOutputTransformOp(RewriterBase &rewriter,
                                    linalg::WinogradOutputTransformOp op);
+
+/// Method to deduplicate operands and remove dead results of `linalg.generic`
+/// operations. This is effectively DCE for a linalg.generic op. If there is
+/// deduplication of operands orremoval of results, replaces the `genericOp`
+/// with a new op and returns it. Returns the same operation if there is no
+/// deduplication/removal.
+FailureOr<linalg::GenericOp> deduplicateOperandsAndRemoveDeadResults(
+    RewriterBase &rewriter, linalg::GenericOp genericOp, bool removeOutputs);
 
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.
@@ -1721,11 +1731,6 @@ void populateDecomposePadPatterns(RewritePatternSet &patterns);
 /// \see rewriteInIm2Col for more details.
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
 
-/// Populates `patterns` with vectorisation patterns for tensor.insert_slice.
-/// TODO: Avoid having a dedicated `populate{}` for one pattern. Instead, either
-/// expand or merge with other `populate{}`.
-void populateInsertSliceVectorizationPatterns(RewritePatternSet &patterns);
-
 /// Populates `patterns` with patterns that vectorize tensor.pad.
 /// These patterns are meant to apply in a complementary fashion. Benefits
 /// are used to encode a certain ordering of pattern application. To avoid
@@ -1784,7 +1789,7 @@ void populateDataLayoutPropagationPatterns(
     const ControlPropagationFn &controlPackUnPackPropagation);
 
 /// Pattern to remove dead operands and results of `linalg.generic` operations.
-/// This is effectively DCE for a linalg op.
+/// This is a pattern wrapper for `deduplicateOperandsAndRemoveDeadResults`.
 void populateEraseUnusedOperandsAndResultsPatterns(RewritePatternSet &patterns);
 
 /// Patterns to promote inputs to outputs and remove unused inputs of

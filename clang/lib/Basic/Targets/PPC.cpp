@@ -22,16 +22,19 @@ using namespace clang::targets;
 static constexpr int NumBuiltins =
     clang::PPC::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
 #define BUILTIN CLANG_BUILTIN_STR_TABLE
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsPPC.def"
-    , {
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
 #define BUILTIN CLANG_BUILTIN_ENTRY
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
 #define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
 #include "clang/Basic/BuiltinsPPC.def"
-      });
+});
 
 /// handleTargetFeatures - Perform initialization based on the user
 /// configured set of features.
@@ -931,9 +934,9 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     MaxAtomicInlineWidth = 128;
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-PPCTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+llvm::SmallVector<Builtin::InfosShard>
+PPCTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {

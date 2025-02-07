@@ -39,7 +39,7 @@ macro(mlir_configure_python_dev_packages)
                   "extension = '${PYTHON_MODULE_EXTENSION}")
 
     mlir_detect_nanobind_install()
-    find_package(nanobind 2.2 CONFIG REQUIRED)
+    find_package(nanobind 2.4 CONFIG REQUIRED)
     message(STATUS "Found nanobind v${nanobind_VERSION}: ${nanobind_INCLUDE_DIR}")
     message(STATUS "Python prefix = '${PYTHON_MODULE_PREFIX}', "
                   "suffix = '${PYTHON_MODULE_SUFFIX}', "
@@ -95,5 +95,17 @@ function(mlir_detect_nanobind_install)
     endif()
     message(STATUS "found (${PACKAGE_DIR})")
     set(nanobind_DIR "${PACKAGE_DIR}" PARENT_SCOPE)
+    execute_process(
+      COMMAND "${Python3_EXECUTABLE}"
+      -c "import nanobind;print(nanobind.include_dir(), end='')"
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      RESULT_VARIABLE STATUS
+      OUTPUT_VARIABLE PACKAGE_DIR
+      ERROR_QUIET)
+    if(NOT STATUS EQUAL "0")
+      message(STATUS "not found (install via 'pip install nanobind' or set nanobind_DIR)")
+      return()
+    endif()
+    set(nanobind_INCLUDE_DIR "${PACKAGE_DIR}" PARENT_SCOPE)
   endif()
 endfunction()

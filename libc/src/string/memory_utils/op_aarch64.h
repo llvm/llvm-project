@@ -13,7 +13,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_AARCH64_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_AARCH64_H
 
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64)

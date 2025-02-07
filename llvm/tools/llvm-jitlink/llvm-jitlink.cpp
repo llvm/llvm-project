@@ -23,6 +23,7 @@
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -83,13 +84,39 @@ using namespace llvm::orc;
 
 static cl::OptionCategory JITLinkCategory("JITLink Options");
 
+static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
+                                        cl::desc("input files"),
+                                        cl::cat(JITLinkCategory));
+
 static cl::list<bool> LazyLink("lazy",
                                cl::desc("Link the following file lazily"),
                                cl::cat(JITLinkCategory));
 
-static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
-                                        cl::desc("input files"),
-                                        cl::cat(JITLinkCategory));
+enum class SpeculateKind { None, Simple };
+
+cl::opt<SpeculateKind> Speculate(
+    "speculate", cl::desc("Choose speculation scheme"),
+    cl::init(SpeculateKind::None),
+    cl::values(clEnumValN(SpeculateKind::None, "none", "No speculation"),
+               clEnumValN(SpeculateKind::Simple, "simple",
+                          "Simple speculation")),
+    cl::cat(JITLinkCategory));
+
+cl::opt<std::string> SpeculateOrder(
+    "speculate-order",
+    cl::desc("A CSV file containing (JITDylib, Function) pairs to"
+             "speculatively look up"),
+    cl::cat(JITLinkCategory));
+
+cl::opt<std::string> RecordLazyExecs(
+    "record-lazy-execs",
+    cl::desc("Write lazy-function executions to a CSV file as (JITDylib, "
+             "function) pairs"),
+    cl::cat(JITLinkCategory));
+
+static cl::opt<size_t> MaterializationThreads(
+    "num-threads", cl::desc("Number of materialization threads to use"),
+    cl::init(std::numeric_limits<size_t>::max()), cl::cat(JITLinkCategory));
 
 static cl::list<std::string>
     LibrarySearchPaths("L",
@@ -400,6 +427,7 @@ bool lazyLinkingRequested() {
 }
 
 static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
+  std::lock_guard<std::mutex> Lock(S.M);
 
   // If this graph is part of the test harness there's nothing to do.
   if (S.HarnessFiles.empty() || S.HarnessFiles.count(G.getName()))
@@ -450,7 +478,11 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
   return Error::success();
 }
 
-static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
+static void dumpSectionContents(raw_ostream &OS, Session &S, LinkGraph &G) {
+  std::lock_guard<std::mutex> Lock(S.M);
+
+  outs() << "Relocated section contents for " << G.getName() << ":\n";
+
   constexpr orc::ExecutorAddrDiff DumpWidth = 16;
   static_assert(isPowerOf2_64(DumpWidth), "DumpWidth must be a power of two");
 
@@ -740,8 +772,7 @@ getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
                !(*SymFlagsOrErr & object::BasicSymbolRef::SF_Global))
       continue;
 
-    auto InternedName = S.ES.intern(*Name);
-    I->SymbolFlags[InternedName] = std::move(*SymFlags);
+    I->SymbolFlags[S.ES.intern(*Name)] = std::move(*SymFlags);
   }
 
   return I;
@@ -843,7 +874,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
     S.CreateMemoryManager = createSharedMemoryManager;
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
       std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
 #endif
 }
@@ -951,17 +982,50 @@ public:
 };
 
 Expected<std::unique_ptr<Session::LazyLinkingSupport>>
-createLazyLinkingSupport(ObjectLinkingLayer &OLL, JITDylib &PlatformJD) {
-  auto RSMgr = JITLinkRedirectableSymbolManager::Create(OLL);
+createLazyLinkingSupport(Session &S) {
+  auto RSMgr = JITLinkRedirectableSymbolManager::Create(S.ObjLayer);
   if (!RSMgr)
     return RSMgr.takeError();
 
-  auto LRMgr = createJITLinkLazyReexportsManager(OLL, **RSMgr, PlatformJD);
+  std::shared_ptr<SimpleLazyReexportsSpeculator> Speculator;
+  switch (Speculate) {
+  case SpeculateKind::None:
+    break;
+  case SpeculateKind::Simple:
+    SimpleLazyReexportsSpeculator::RecordExecutionFunction RecordExecs;
+
+    if (!RecordLazyExecs.empty())
+      RecordExecs = [&S](const LazyReexportsManager::CallThroughInfo &CTI) {
+        S.LazyFnExecOrder.push_back({CTI.JD->getName(), CTI.BodyName});
+      };
+
+    Speculator =
+        SimpleLazyReexportsSpeculator::Create(S.ES, std::move(RecordExecs));
+    break;
+  }
+
+  auto LRMgr = createJITLinkLazyReexportsManager(
+      S.ObjLayer, **RSMgr, *S.PlatformJD, Speculator.get());
   if (!LRMgr)
     return LRMgr.takeError();
 
-  return std::make_unique<Session::LazyLinkingSupport>(std::move(*RSMgr),
-                                                       std::move(*LRMgr), OLL);
+  return std::make_unique<Session::LazyLinkingSupport>(
+      std::move(*RSMgr), std::move(Speculator), std::move(*LRMgr), S.ObjLayer);
+}
+
+static Error writeLazyExecOrder(Session &S) {
+  if (RecordLazyExecs.empty())
+    return Error::success();
+
+  std::error_code EC;
+  raw_fd_ostream ExecOrderOut(RecordLazyExecs, EC);
+  if (EC)
+    return createFileError(RecordLazyExecs, EC);
+
+  for (auto &[JDName, FunctionName] : S.LazyFnExecOrder)
+    ExecOrderOut << JDName << ", " << FunctionName << "\n";
+
+  return Error::success();
 }
 
 Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
@@ -985,10 +1049,21 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
     auto PageSize = sys::Process::getPageSize();
     if (!PageSize)
       return PageSize.takeError();
+    std::unique_ptr<TaskDispatcher> Dispatcher;
+    if (MaterializationThreads == 0)
+      Dispatcher = std::make_unique<InPlaceTaskDispatcher>();
+    else {
+#if LLVM_ENABLE_THREADS
+      Dispatcher = std::make_unique<DynamicThreadPoolTaskDispatcher>(
+          MaterializationThreads);
+#else
+      llvm_unreachable("MaterializationThreads should be 0");
+#endif
+    }
+
     EPC = std::make_unique<SelfExecutorProcessControl>(
-        std::make_shared<SymbolStringPool>(),
-        std::make_unique<InPlaceTaskDispatcher>(), std::move(TT), *PageSize,
-        createInProcessMemoryManager());
+        std::make_shared<SymbolStringPool>(), std::move(Dispatcher),
+        std::move(TT), *PageSize, createInProcessMemoryManager());
   }
 
   Error Err = Error::success();
@@ -998,8 +1073,7 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
   S->Features = std::move(Features);
 
   if (lazyLinkingRequested()) {
-    if (auto LazyLinking =
-            createLazyLinkingSupport(S->ObjLayer, *S->PlatformJD))
+    if (auto LazyLinking = createLazyLinkingSupport(*S))
       S->LazyLinking = std::move(*LazyLinking);
     else
       return LazyLinking.takeError();
@@ -1009,6 +1083,9 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
 }
 
 Session::~Session() {
+  if (auto Err = writeLazyExecOrder(*this))
+    ES.reportError(std::move(Err));
+
   if (auto Err = ES.endSession())
     ES.reportError(std::move(Err));
 }
@@ -1222,6 +1299,7 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
 
   if (ShowGraphsRegex)
     PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) -> Error {
+      std::lock_guard<std::mutex> Lock(M);
       // Print graph if ShowLinkGraphs is specified-but-empty, or if
       // it contains the given graph.
       if (ShowGraphsRegex->match(G.getName())) {
@@ -1231,18 +1309,29 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
       return Error::success();
     });
 
+  PassConfig.PrePrunePasses.push_back([this](LinkGraph &G) {
+    std::lock_guard<std::mutex> Lock(M);
+    ++ActiveLinks;
+    return Error::success();
+  });
   PassConfig.PrePrunePasses.push_back(
       [this](LinkGraph &G) { return applyHarnessPromotions(*this, G); });
 
   if (ShowRelocatedSectionContents)
-    PassConfig.PostFixupPasses.push_back([](LinkGraph &G) -> Error {
-      outs() << "Relocated section contents for " << G.getName() << ":\n";
-      dumpSectionContents(outs(), G);
+    PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) -> Error {
+      dumpSectionContents(outs(), *this, G);
       return Error::success();
     });
 
   if (AddSelfRelocations)
     PassConfig.PostPrunePasses.push_back(addSelfRelocations);
+
+  PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
+    std::lock_guard<std::mutex> Lock(M);
+    if (--ActiveLinks == 0)
+      ActiveLinksCV.notify_all();
+    return Error::success();
+  });
 }
 
 Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
@@ -1602,6 +1691,46 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
     }
   }
 
+#if LLVM_ENABLE_THREADS
+  if (MaterializationThreads == std::numeric_limits<size_t>::max()) {
+    if (auto HC = std::thread::hardware_concurrency())
+      MaterializationThreads = HC;
+    else {
+      errs() << "Warning: std::thread::hardware_concurrency() returned 0, "
+                "defaulting to -num-threads=1.\n";
+      MaterializationThreads = 1;
+    }
+  }
+#else
+  if (MaterializationThreads.getNumOccurrences() &&
+      MaterializationThreads != 0) {
+    errs() << "Warning: -num-threads was set, but LLVM was built with threads "
+              "disabled. Resetting to -num-threads=0\n";
+  }
+  MaterializationThreads = 0;
+#endif
+
+  if (!!OutOfProcessExecutor.getNumOccurrences() ||
+      !!OutOfProcessExecutorConnect.getNumOccurrences()) {
+    if (NoExec)
+      return make_error<StringError>("-noexec cannot be used with " +
+                                         OutOfProcessExecutor.ArgStr + " or " +
+                                         OutOfProcessExecutorConnect.ArgStr,
+                                     inconvertibleErrorCode());
+
+    if (MaterializationThreads == 0)
+      return make_error<StringError>("-threads=0 cannot be used with " +
+                                         OutOfProcessExecutor.ArgStr + " or " +
+                                         OutOfProcessExecutorConnect.ArgStr,
+                                     inconvertibleErrorCode());
+  }
+
+#ifndef NDEBUG
+  if (DebugFlag && MaterializationThreads != 0)
+    errs() << "Warning: debugging output is not thread safe. "
+              "Use -num-threads=0 to stabilize output.\n";
+#endif // NDEBUG
+
   // Only one of -oop-executor and -oop-executor-connect can be used.
   if (!!OutOfProcessExecutor.getNumOccurrences() &&
       !!OutOfProcessExecutorConnect.getNumOccurrences())
@@ -1631,6 +1760,23 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
       return make_error<StringError>(
           "Lazy linking cannot be used with -harness mode",
           inconvertibleErrorCode());
+  } else if (Speculate != SpeculateKind::None) {
+    errs() << "Warning: -speculate ignored as there are no -lazy inputs\n";
+    Speculate = SpeculateKind::None;
+  }
+
+  if (Speculate == SpeculateKind::None) {
+    if (!SpeculateOrder.empty()) {
+      errs() << "Warning: -speculate-order ignored because speculation is "
+                "disabled\n";
+      SpeculateOrder = "";
+    }
+
+    if (!RecordLazyExecs.empty()) {
+      errs() << "Warning: -record-lazy-execs ignored because speculation is "
+                "disabled\n";
+      RecordLazyExecs = "";
+    }
   }
 
   return Error::success();
@@ -1711,8 +1857,8 @@ static Error addAbsoluteSymbols(Session &S,
       return Err;
 
     // Register the absolute symbol with the session symbol infos.
-    S.SymbolInfos[InternedName] = {ArrayRef<char>(), Addr,
-                                   AbsDef.getFlags().getTargetFlags()};
+    S.SymbolInfos[std::move(InternedName)] =
+      {ArrayRef<char>(), Addr, AbsDef.getFlags().getTargetFlags()};
   }
 
   return Error::success();
@@ -2196,6 +2342,59 @@ static Error addLibraries(Session &S,
   return Error::success();
 }
 
+static Error addSpeculationOrder(Session &S) {
+
+  if (SpeculateOrder.empty())
+    return Error::success();
+
+  assert(S.LazyLinking && "SpeculateOrder set, but lazy linking not enabled");
+  assert(S.LazyLinking->Speculator && "SpeculatoOrder set, but no speculator");
+
+  auto SpecOrderBuffer = getFile(SpeculateOrder);
+  if (!SpecOrderBuffer)
+    return SpecOrderBuffer.takeError();
+
+  StringRef LineStream((*SpecOrderBuffer)->getBuffer());
+  std::vector<std::pair<std::string, SymbolStringPtr>> SpecOrder;
+
+  size_t LineNumber = 0;
+  while (!LineStream.empty()) {
+    ++LineNumber;
+
+    auto MakeSpecOrderErr = [&](StringRef Reason) {
+      return make_error<StringError>("Error in speculation order file \"" +
+                                         SpeculateOrder + "\" on line " +
+                                         Twine(LineNumber) + ": " + Reason,
+                                     inconvertibleErrorCode());
+    };
+
+    StringRef CurLine;
+    std::tie(CurLine, LineStream) = LineStream.split('\n');
+    CurLine = CurLine.trim();
+    if (CurLine.empty())
+      continue;
+
+    auto [JDName, FuncName] = CurLine.split(',');
+
+    if (FuncName.empty())
+      return MakeSpecOrderErr("missing ',' separator");
+
+    JDName = JDName.trim();
+    if (JDName.empty())
+      return MakeSpecOrderErr("no value for column 1 (JIT Dylib name)");
+
+    FuncName = FuncName.trim();
+    if (FuncName.empty())
+      return MakeSpecOrderErr("no value for column 2 (function name)");
+
+    SpecOrder.push_back({JDName.str(), S.ES.intern(FuncName)});
+  }
+
+  S.LazyLinking->Speculator->addSpeculationSuggestions(std::move(SpecOrder));
+
+  return Error::success();
+}
+
 static Error addSessionInputs(Session &S) {
   std::map<unsigned, JITDylib *> IdxToJD;
   DenseSet<unsigned> LazyLinkIdxs;
@@ -2226,6 +2425,9 @@ static Error addSessionInputs(Session &S) {
     return Err;
 
   if (auto Err = addLibraries(S, IdxToJD, LazyLinkIdxs))
+    return Err;
+
+  if (auto Err = addSpeculationOrder(S))
     return Err;
 
   return Error::success();
@@ -2314,6 +2516,8 @@ getTargetInfo(const Triple &TT,
 static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
   if (CheckFiles.empty())
     return Error::success();
+
+  S.waitForFilesLinkedFromEntryPointFile();
 
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 
@@ -2489,6 +2693,7 @@ int main(int argc, char *argv[]) {
     if (Timers)
       Timers->JITLinkTG.printAll(errs());
     reportLLVMJITLinkError(EntryPoint.takeError());
+    ExitOnErr(S->ES.endSession());
     exit(1);
   }
 

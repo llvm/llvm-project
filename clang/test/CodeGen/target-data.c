@@ -108,11 +108,11 @@
 
 // RUN: %clang_cc1 -triple wasm32-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=WEBASSEMBLY32
-// WEBASSEMBLY32: target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128-ni:1:10:20"
+// WEBASSEMBLY32: target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-S128-ni:1:10:20"
 
 // RUN: %clang_cc1 -triple wasm64-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=WEBASSEMBLY64
-// WEBASSEMBLY64: target datalayout = "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-n32:64-S128-ni:1:10:20"
+// WEBASSEMBLY64: target datalayout = "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-S128-ni:1:10:20"
 
 // RUN: %clang_cc1 -triple lanai-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=LANAI
@@ -160,11 +160,11 @@
 
 // RUN: %clang_cc1 -triple nvptx-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=NVPTX
-// NVPTX: target datalayout = "e-p:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64"
+// NVPTX: target datalayout = "e-p:32:32-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 
 // RUN: %clang_cc1 -triple nvptx64-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=NVPTX64
-// NVPTX64: target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
+// NVPTX64: target datalayout = "e-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 
 // RUN: %clang_cc1 -triple r600-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=R600

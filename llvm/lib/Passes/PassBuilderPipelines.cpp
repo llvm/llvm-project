@@ -189,9 +189,9 @@ static cl::opt<bool> EnableGlobalAnalyses(
     "enable-global-analyses", cl::init(true), cl::Hidden,
     cl::desc("Enable inter-procedural analyses"));
 
-static cl::opt<bool>
-    RunPartialInlining("enable-partial-inlining", cl::init(false), cl::Hidden,
-                       cl::desc("Run Partial inlinining pass"));
+static cl::opt<bool> RunPartialInlining("enable-partial-inlining",
+                                        cl::init(false), cl::Hidden,
+                                        cl::desc("Run Partial inlining pass"));
 
 static cl::opt<bool> ExtraVectorizerPasses(
     "extra-vectorizer-passes", cl::init(false), cl::Hidden,
@@ -264,7 +264,7 @@ static cl::opt<bool>
 static cl::opt<bool> FlattenedProfileUsed(
     "flattened-profile-used", cl::init(false), cl::Hidden,
     cl::desc("Indicate the sample profile being used is flattened, i.e., "
-             "no inline hierachy exists in the profile"));
+             "no inline hierarchy exists in the profile"));
 
 static cl::opt<bool> EnableOrderFileInstrumentation(
     "enable-order-file-instrumentation", cl::init(false), cl::Hidden,
@@ -358,6 +358,11 @@ void PassBuilder::invokeCGSCCOptimizerLateEPCallbacks(CGSCCPassManager &CGPM,
 void PassBuilder::invokeVectorizerStartEPCallbacks(FunctionPassManager &FPM,
                                                    OptimizationLevel Level) {
   for (auto &C : VectorizerStartEPCallbacks)
+    C(FPM, Level);
+}
+void PassBuilder::invokeVectorizerEndEPCallbacks(FunctionPassManager &FPM,
+                                                 OptimizationLevel Level) {
+  for (auto &C : VectorizerEndEPCallbacks)
     C(FPM, Level);
 }
 void PassBuilder::invokeOptimizerEarlyEPCallbacks(ModulePassManager &MPM,
@@ -964,7 +969,7 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   // Try to perform OpenMP specific optimizations. This is a (quick!) no-op if
   // there are no OpenMP runtime calls present in the module.
   if (Level == OptimizationLevel::O2 || Level == OptimizationLevel::O3)
-    MainCGPipeline.addPass(OpenMPOptCGSCCPass());
+    MainCGPipeline.addPass(OpenMPOptCGSCCPass(Phase));
 
   invokeCGSCCOptimizerLateEPCallbacks(MainCGPipeline, Level);
 
@@ -1132,7 +1137,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   // Try to perform OpenMP specific optimizations on the module. This is a
   // (quick!) no-op if there are no OpenMP runtime calls present in the module.
-  MPM.addPass(OpenMPOptPass());
+  MPM.addPass(OpenMPOptPass(Phase));
 
   if (AttributorRun & AttributorRunOption::MODULE)
     MPM.addPass(AttributorPass());
@@ -1534,6 +1539,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   addVectorPasses(Level, OptimizePM, /* IsFullLTO */ false);
 
+  invokeVectorizerEndEPCallbacks(OptimizePM, Level);
+
   // LoopSink pass sinks instructions hoisted by LICM, which serves as a
   // canonicalization pass that enables other optimizations. As a result,
   // LoopSink pass needs to be a very late IR pass to avoid undoing LICM
@@ -1594,9 +1601,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     MPM.addPass(CGProfilePass(LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
                               LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink));
 
-  // TODO: Relative look table converter pass caused an issue when full lto is
-  // enabled. See https://reviews.llvm.org/D94355 for more details.
-  // Until the issue fixed, disable this pass during pre-linking phase.
+  // RelLookupTableConverterPass runs later in LTO post-link pipeline.
   if (!LTOPreLink)
     MPM.addPass(RelLookupTableConverterPass());
 
@@ -2048,6 +2053,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MainFPM.addPass(MoveAutoInitPass());
   MainFPM.addPass(MergedLoadStoreMotionPass());
 
+  invokeVectorizerStartEPCallbacks(MainFPM, Level);
+
   LoopPassManager LPM;
   if (EnableLoopFlatten && Level.getSpeedupLevel() > 1)
     LPM.addPass(LoopFlattenPass());
@@ -2067,6 +2074,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MainFPM.addPass(LoopDistributePass());
 
   addVectorPasses(Level, MainFPM, /* IsFullLTO */ true);
+
+  invokeVectorizerEndEPCallbacks(MainFPM, Level);
 
   // Run the OpenMPOpt CGSCC pass again late.
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
@@ -2120,6 +2129,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   if (PTO.MergeFunctions)
     MPM.addPass(MergeFunctionsPass());
+
+  MPM.addPass(RelLookupTableConverterPass());
 
   if (PTO.CallGraphProfile)
     MPM.addPass(CGProfilePass(/*InLTOPostLink=*/true));
@@ -2227,6 +2238,13 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   if (!VectorizerStartEPCallbacks.empty()) {
     FunctionPassManager FPM;
     invokeVectorizerStartEPCallbacks(FPM, Level);
+    if (!FPM.isEmpty())
+      MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+  }
+
+  if (!VectorizerEndEPCallbacks.empty()) {
+    FunctionPassManager FPM;
+    invokeVectorizerEndEPCallbacks(FPM, Level);
     if (!FPM.isEmpty())
       MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }

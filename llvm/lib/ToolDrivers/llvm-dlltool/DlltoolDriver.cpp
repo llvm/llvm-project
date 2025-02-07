@@ -31,6 +31,10 @@ using namespace llvm::COFF;
 
 namespace {
 
+#define OPTTABLE_STR_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_STR_TABLE_CODE
+
 enum {
   OPT_INVALID = 0,
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
@@ -38,12 +42,9 @@ enum {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_PREFIXES_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -54,7 +55,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class DllOptTable : public opt::GenericOptTable {
 public:
-  DllOptTable() : opt::GenericOptTable(InfoTable, false) {}
+  DllOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
+                             false) {}
 };
 
 // Opens a file. Path has to be resolved already.
@@ -76,6 +79,7 @@ MachineTypes getEmulation(StringRef S) {
       .Case("arm", IMAGE_FILE_MACHINE_ARMNT)
       .Case("arm64", IMAGE_FILE_MACHINE_ARM64)
       .Case("arm64ec", IMAGE_FILE_MACHINE_ARM64EC)
+      .Case("r4000", IMAGE_FILE_MACHINE_R4000)
       .Default(IMAGE_FILE_MACHINE_UNKNOWN);
 }
 
@@ -90,6 +94,8 @@ MachineTypes getMachine(Triple T) {
   case Triple::aarch64:
     return T.isWindowsArm64EC() ? COFF::IMAGE_FILE_MACHINE_ARM64EC
                                 : COFF::IMAGE_FILE_MACHINE_ARM64;
+  case Triple::mipsel:
+    return COFF::IMAGE_FILE_MACHINE_R4000;
   default:
     return COFF::IMAGE_FILE_MACHINE_UNKNOWN;
   }
@@ -170,7 +176,8 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
       (!Args.hasArgNoClaim(OPT_d) && !Args.hasArgNoClaim(OPT_l))) {
     Table.printHelp(outs(), "llvm-dlltool [options] file...", "llvm-dlltool",
                     false);
-    llvm::outs() << "\nTARGETS: i386, i386:x86-64, arm, arm64, arm64ec\n";
+    llvm::outs()
+        << "\nTARGETS: i386, i386:x86-64, arm, arm64, arm64ec, r4000\n";
     return 1;
   }
 

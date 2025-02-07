@@ -42,6 +42,7 @@
 #include <array>
 #include <bitset>
 #include <memory>
+#include <unordered_map>
 
 using namespace llvm;
 
@@ -62,6 +63,12 @@ static cl::opt<std::string> InteractiveChannelBaseName(
         "have the name <regalloc-evict-interactive-channel-base>.in, while the "
         "outgoing name should be "
         "<regalloc-evict-interactive-channel-base>.out"));
+
+static cl::opt<unsigned> MaxEvictionCount(
+    "mlregalloc-max-eviction-count", cl::Hidden,
+    cl::desc("The maximum number of times a live range can be "
+             "evicted before preventing it from being evicted"),
+    cl::init(100));
 
 // Options that only make sense in development mode
 #ifdef LLVM_HAVE_TFLITE
@@ -358,6 +365,22 @@ private:
 
   using RegID = unsigned;
   mutable DenseMap<RegID, LIFeatureComponents> CachedFeatures;
+
+  mutable std::unordered_map<unsigned, unsigned> VirtRegEvictionCounts;
+
+  void onEviction(Register RegBeingEvicted) const {
+    // If we cannot find the virtual register in the map, we just assume it has
+    // not been evicted before and thus has a value of zero (which is what the
+    // subscript operator returns by default).
+    ++VirtRegEvictionCounts[RegBeingEvicted.id()];
+  }
+
+  unsigned getEvictionCount(Register Reg) const {
+    auto EvictionCountIt = VirtRegEvictionCounts.find(Reg.id());
+    if (EvictionCountIt != VirtRegEvictionCounts.end())
+      return EvictionCountIt->second;
+    return 0;
+  }
 };
 
 #define _DECL_FEATURES(type, name, shape, _)                                   \
@@ -554,7 +577,7 @@ private:
   std::unique_ptr<Logger> Log;
 };
 
-#endif //#ifdef LLVM_HAVE_TFLITE
+#endif // #ifdef LLVM_HAVE_TFLITE
 } // namespace
 
 float MLEvictAdvisor::getInitialQueueSize(const MachineFunction &MF) {
@@ -643,8 +666,18 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
            RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
                RegClassInfo.getNumAllocatableRegs(
                    MRI->getRegClass(Intf->reg())));
-      // Only evict older cascades or live ranges without a cascade.
+
       unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
+      // There is a potential that the model could be adversarial and
+      // continually evict live ranges over and over again, leading to a
+      // large amount of compile time being spent in regalloc. If we hit the
+      // threshold, prevent the range from being evicted. We still let the
+      // range through if it is urgent as we are required to produce an
+      // eviction if the candidate is not spillable.
+      if (getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
+        return false;
+
+      // Only evict older cascades or live ranges without a cascade.
       if (Cascade <= IntfCascade) {
         if (!Urgent)
           return false;
@@ -787,6 +820,22 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   }
   assert(CandidatePos < ValidPosLimit);
   (void)ValidPosLimit;
+
+  // Update information about how many times the virtual registers being
+  // evicted have been evicted so that we can prevent the model from evicting
+  // the same ranges continually and eating compile time.
+  if (CandidatePos == CandidateVirtRegPos) {
+    onEviction(VirtReg.reg());
+  } else {
+    for (MCRegUnit Unit : TRI->regunits(Regs[CandidatePos].first)) {
+      LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
+      const auto &IFIntervals = Q.interferingVRegs(EvictInterferenceCutoff);
+      for (const LiveInterval *Intf : reverse(IFIntervals)) {
+        onEviction(Intf->reg());
+      }
+    }
+  }
+
   return Regs[CandidatePos].first;
 }
 

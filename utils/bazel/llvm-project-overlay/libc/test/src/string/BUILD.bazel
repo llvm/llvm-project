@@ -23,7 +23,7 @@ libc_test(
     name = "strcpy_test",
     srcs = ["strcpy_test.cpp"],
     libc_function_deps = [
-        "//libc:strcpy_sanitized",
+        "//libc:strcpy",
     ],
 )
 
@@ -185,19 +185,6 @@ libc_test(
 )
 
 libc_test(
-    name = "bcopy_test",
-    srcs = ["bcopy_test.cpp"],
-    libc_function_deps = [
-        "//libc:bcopy",
-    ],
-    deps = [
-        ":memory_check_utils",
-        "//libc:__support_cpp_span",
-        "//libc/test/UnitTest:memory_matcher",
-    ],
-)
-
-libc_test(
     name = "memcmp_test",
     srcs = ["memcmp_test.cpp"],
     libc_function_deps = [
@@ -207,25 +194,4 @@ libc_test(
         ":memory_check_utils",
         "//libc/test/UnitTest:test_logger",
     ],
-)
-
-libc_test(
-    name = "bcmp_test",
-    srcs = ["bcmp_test.cpp"],
-    libc_function_deps = [
-        "//libc:bcmp",
-    ],
-    deps = [
-        ":memory_check_utils",
-        "//libc/test/UnitTest:test_logger",
-    ],
-)
-
-libc_test(
-    name = "bzero_test",
-    srcs = ["bzero_test.cpp"],
-    libc_function_deps = [
-        "//libc:bzero",
-    ],
-    deps = [":memory_check_utils"],
 )

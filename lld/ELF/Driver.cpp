@@ -105,6 +105,13 @@ llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
   using namespace llvm::sys::fs;
   OpenFlags flags =
       auxiliaryFiles.insert(filename).second ? OF_None : OF_Append;
+  if (e.disableOutput && filename == "-") {
+#ifdef _WIN32
+    filename = "NUL";
+#else
+    filename = "/dev/null";
+#endif
+  }
   return {filename, ec, flags};
 }
 
@@ -774,11 +781,8 @@ static StringRef getDynamicLinker(Ctx &ctx, opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_dynamic_linker, OPT_no_dynamic_linker);
   if (!arg)
     return "";
-  if (arg->getOption().getID() == OPT_no_dynamic_linker) {
-    // --no-dynamic-linker suppresses undefined weak symbols in .dynsym
-    ctx.arg.noDynamicLinker = true;
+  if (arg->getOption().getID() == OPT_no_dynamic_linker)
     return "";
-  }
   return arg->getValue();
 }
 
@@ -1114,6 +1118,53 @@ static CGProfileSortKind getCGProfileSortKind(Ctx &ctx,
   return CGProfileSortKind::None;
 }
 
+static void parseBPOrdererOptions(Ctx &ctx, opt::InputArgList &args) {
+  if (auto *arg = args.getLastArg(OPT_bp_compression_sort)) {
+    StringRef s = arg->getValue();
+    if (s == "function") {
+      ctx.arg.bpFunctionOrderForCompression = true;
+    } else if (s == "data") {
+      ctx.arg.bpDataOrderForCompression = true;
+    } else if (s == "both") {
+      ctx.arg.bpFunctionOrderForCompression = true;
+      ctx.arg.bpDataOrderForCompression = true;
+    } else if (s != "none") {
+      ErrAlways(ctx) << arg->getSpelling()
+                     << ": expected [none|function|data|both]";
+    }
+    if (s != "none" && args.hasArg(OPT_call_graph_ordering_file))
+      ErrAlways(ctx) << "--bp-compression-sort is incompatible with "
+                        "--call-graph-ordering-file";
+  }
+  if (auto *arg = args.getLastArg(OPT_bp_startup_sort)) {
+    StringRef s = arg->getValue();
+    if (s == "function") {
+      ctx.arg.bpStartupFunctionSort = true;
+    } else if (s != "none") {
+      ErrAlways(ctx) << arg->getSpelling() << ": expected [none|function]";
+    }
+    if (s != "none" && args.hasArg(OPT_call_graph_ordering_file))
+      ErrAlways(ctx) << "--bp-startup-sort=function is incompatible with "
+                        "--call-graph-ordering-file";
+  }
+
+  ctx.arg.bpCompressionSortStartupFunctions =
+      args.hasFlag(OPT_bp_compression_sort_startup_functions,
+                   OPT_no_bp_compression_sort_startup_functions, false);
+  ctx.arg.bpVerboseSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
+
+  ctx.arg.irpgoProfilePath = args.getLastArgValue(OPT_irpgo_profile);
+  if (ctx.arg.irpgoProfilePath.empty()) {
+    if (ctx.arg.bpStartupFunctionSort)
+      ErrAlways(ctx) << "--bp-startup-sort=function must be used with "
+                        "--irpgo-profile";
+    if (ctx.arg.bpCompressionSortStartupFunctions)
+      ErrAlways(ctx)
+          << "--bp-compression-sort-startup-functions must be used with "
+             "--irpgo-profile";
+  }
+}
+
 static DebugCompressionType getCompressionType(Ctx &ctx, StringRef s,
                                                StringRef option) {
   DebugCompressionType type = StringSwitch<DebugCompressionType>(s)
@@ -1255,6 +1306,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ctx.arg.bsymbolic = BsymbolicKind::All;
   }
   ctx.arg.callGraphProfileSort = getCGProfileSortKind(ctx, args);
+  parseBPOrdererOptions(ctx, args);
   ctx.arg.checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   ctx.arg.chroot = args.getLastArgValue(OPT_chroot);
@@ -1410,6 +1462,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.searchPaths = args::getStrings(args, OPT_library_path);
   ctx.arg.sectionStartMap = getSectionStartMap(ctx, args);
   ctx.arg.shared = args.hasArg(OPT_shared);
+  if (args.hasArg(OPT_randomize_section_padding))
+    ctx.arg.randomizeSectionPadding =
+        args::getInteger(args, OPT_randomize_section_padding, 0);
   ctx.arg.singleRoRx = !args.hasFlag(OPT_rosegment, OPT_no_rosegment, true);
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.sortSection = getSortSection(ctx, args);
@@ -1453,7 +1508,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
   ctx.arg.thinLTOModulesToCompile =
       args::getStrings(args, OPT_thinlto_single_module_eq);
-  ctx.arg.timeTraceEnabled = args.hasArg(OPT_time_trace_eq);
+  ctx.arg.timeTraceEnabled =
+      args.hasArg(OPT_time_trace_eq) && !ctx.e.disableOutput;
   ctx.arg.timeTraceGranularity =
       args::getInteger(args, OPT_time_trace_granularity, 500);
   ctx.arg.trace = args.hasArg(OPT_trace);
@@ -1484,6 +1540,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
       getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
+  ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
   ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
   ctx.arg.zNodelete = hasZOption(args, "nodelete");
   ctx.arg.zNodlopen = hasZOption(args, "nodlopen");
@@ -1742,13 +1799,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     if (args.hasArg(OPT_call_graph_ordering_file))
       ErrAlways(ctx) << "--symbol-ordering-file and --call-graph-order-file "
                         "may not be used together";
-    if (std::optional<MemoryBufferRef> buffer =
-            readFile(ctx, arg->getValue())) {
+    if (auto buffer = readFile(ctx, arg->getValue()))
       ctx.arg.symbolOrderingFile = getSymbolOrderingFile(ctx, *buffer);
-      // Also need to disable CallGraphProfileSort to prevent
-      // LLD order symbols with CGProfile
-      ctx.arg.callGraphProfileSort = CGProfileSortKind::None;
-    }
   }
 
   assert(ctx.arg.versionDefinitions.empty());
@@ -2150,9 +2202,12 @@ static void excludeLibs(Ctx &ctx, opt::InputArgList &args) {
     ArrayRef<Symbol *> symbols = file->getSymbols();
     if (isa<ELFFileBase>(file))
       symbols = cast<ELFFileBase>(file)->getGlobalSymbols();
-    for (Symbol *sym : symbols)
-      if (!sym->isUndefined() && sym->file == file)
+    for (Symbol *sym : symbols) {
+      if (!sym->isUndefined() && sym->file == file) {
         sym->versionId = VER_NDX_LOCAL;
+        sym->isExported = false;
+      }
+    }
   };
 
   for (ELFFileBase *file : ctx.objectFiles)
@@ -2403,7 +2458,7 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   // or DSOs, so we conservatively mark them as address-significant.
   bool icfSafe = ctx.arg.icf == ICFLevel::Safe;
   for (Symbol *sym : ctx.symtab->getSymbols())
-    if (sym->includeInDynsym(ctx))
+    if (sym->isExported)
       markAddrsig(icfSafe, sym);
 
   // Visit the address-significance table in each object file and mark each
@@ -2419,8 +2474,10 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
         unsigned size;
         const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
-        if (err)
-          Fatal(ctx) << f << ": could not decode addrsig section: " << err;
+        if (err) {
+          Err(ctx) << f << ": could not decode addrsig section: " << err;
+          break;
+        }
         markAddrsig(icfSafe, syms[symIndex]);
         cur += size;
       }
@@ -2536,11 +2593,18 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
 
-    // Parse '@' in symbol names for non-relocatable output.
+    // For defined symbols in non-relocatable output,
+    // compute isExported and parse '@'.
     if (!ctx.arg.relocatable)
-      for (Symbol *sym : obj->getGlobalSymbols())
+      for (Symbol *sym : obj->getGlobalSymbols()) {
+        if (!sym->isDefined())
+          continue;
+        if (ctx.hasDynsym && ctx.arg.exportDynamic &&
+            sym->computeBinding(ctx) != STB_LOCAL)
+          sym->isExported = true;
         if (sym->hasVersionSuffix)
           sym->parseSymbolVersion(ctx);
+      }
     ctx.objectFiles.push_back(obj);
   }
 }
@@ -2882,7 +2946,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   parseFiles(ctx, files);
 
   // Create dynamic sections for dynamic linking and static PIE.
-  ctx.arg.hasDynSymTab = !ctx.sharedFiles.empty() || ctx.arg.isPic;
+  ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))
@@ -3052,7 +3116,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Handle --exclude-libs again because lto.tmp may reference additional
   // libcalls symbols defined in an excluded archive. This may override
-  // versionId set by scanVersionScript().
+  // versionId set by scanVersionScript() and isExported.
   if (args.hasArg(OPT_exclude_libs))
     excludeLibs(ctx, args);
 
@@ -3211,11 +3275,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read the callgraph now that we know what was gced or icfed
   if (ctx.arg.callGraphProfileSort != CGProfileSortKind::None) {
-    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
+    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file)) {
       if (std::optional<MemoryBufferRef> buffer =
               readFile(ctx, arg->getValue()))
         readCallGraph(ctx, *buffer);
-    readCallGraphsFromObjectFiles<ELFT>(ctx);
+    } else
+      readCallGraphsFromObjectFiles<ELFT>(ctx);
   }
 
   // Write the result to the file.
