@@ -6285,7 +6285,6 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
 
       // Find the cost of vectorizing the call, if we can find a suitable
       // vector variant of the function.
-      bool UsesMask = false;
       VFInfo FuncInfo;
       Function *VecFunc = nullptr;
       // Search through any available variants for one we can use at this VF.
@@ -6337,7 +6336,6 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
             break;
           }
           case VFParamKind::GlobalPredicate:
-            UsesMask = true;
             break;
           default:
             ParamsOk = false;
@@ -6354,19 +6352,8 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
         break;
       }
 
-      // Add in the cost of synthesizing a mask if one wasn't required.
-      InstructionCost MaskCost = 0;
-      if (VecFunc && UsesMask && !MaskRequired)
-        MaskCost = TTI.getShuffleCost(
-            TargetTransformInfo::SK_Broadcast,
-            VectorType::get(IntegerType::getInt1Ty(
-                                VecFunc->getFunctionType()->getContext()),
-                            VF),
-            {}, CostKind);
-
       if (TLI && VecFunc && !CI->isNoBuiltin())
-        VectorCost =
-            TTI.getCallInstrCost(nullptr, RetTy, Tys, CostKind) + MaskCost;
+        VectorCost = TTI.getCallInstrCost(nullptr, RetTy, Tys, CostKind);
 
       // Find the cost of an intrinsic; some targets may have instructions that
       // perform the operation without needing an actual call.
