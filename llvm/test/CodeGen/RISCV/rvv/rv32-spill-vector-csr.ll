@@ -102,39 +102,35 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ;
 ; SPILL-O2-ZCMP-LABEL: foo:
 ; SPILL-O2-ZCMP:       # %bb.0:
-; SPILL-O2-ZCMP-NEXT:    cm.push {ra, s0}, -32
-; SPILL-O2-ZCMP-NEXT:    .cfi_def_cfa_offset 32
+; SPILL-O2-ZCMP-NEXT:    cm.push {ra, s0}, -16
+; SPILL-O2-ZCMP-NEXT:    .cfi_def_cfa_offset 16
 ; SPILL-O2-ZCMP-NEXT:    .cfi_offset ra, -8
 ; SPILL-O2-ZCMP-NEXT:    .cfi_offset s0, -4
 ; SPILL-O2-ZCMP-NEXT:    csrr a1, vlenb
 ; SPILL-O2-ZCMP-NEXT:    slli a1, a1, 1
 ; SPILL-O2-ZCMP-NEXT:    sub sp, sp, a1
-; SPILL-O2-ZCMP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 2 * vlenb
+; SPILL-O2-ZCMP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; SPILL-O2-ZCMP-NEXT:    mv s0, a0
-; SPILL-O2-ZCMP-NEXT:    addi a1, sp, 16
-; SPILL-O2-ZCMP-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
+; SPILL-O2-ZCMP-NEXT:    vs1r.v v8, (sp) # Unknown-size Folded Spill
 ; SPILL-O2-ZCMP-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; SPILL-O2-ZCMP-NEXT:    vfadd.vv v9, v8, v9
 ; SPILL-O2-ZCMP-NEXT:    csrr a0, vlenb
 ; SPILL-O2-ZCMP-NEXT:    add a0, a0, sp
-; SPILL-O2-ZCMP-NEXT:    addi a0, a0, 16
 ; SPILL-O2-ZCMP-NEXT:    vs1r.v v9, (a0) # Unknown-size Folded Spill
 ; SPILL-O2-ZCMP-NEXT:    lui a0, %hi(.L.str)
 ; SPILL-O2-ZCMP-NEXT:    addi a0, a0, %lo(.L.str)
 ; SPILL-O2-ZCMP-NEXT:    call puts
 ; SPILL-O2-ZCMP-NEXT:    csrr a0, vlenb
 ; SPILL-O2-ZCMP-NEXT:    add a0, a0, sp
-; SPILL-O2-ZCMP-NEXT:    addi a0, a0, 16
 ; SPILL-O2-ZCMP-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; SPILL-O2-ZCMP-NEXT:    addi a0, sp, 16
-; SPILL-O2-ZCMP-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
+; SPILL-O2-ZCMP-NEXT:    vl1r.v v9, (sp) # Unknown-size Folded Reload
 ; SPILL-O2-ZCMP-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
 ; SPILL-O2-ZCMP-NEXT:    vfadd.vv v8, v9, v8
 ; SPILL-O2-ZCMP-NEXT:    csrr a0, vlenb
 ; SPILL-O2-ZCMP-NEXT:    slli a0, a0, 1
 ; SPILL-O2-ZCMP-NEXT:    add sp, sp, a0
-; SPILL-O2-ZCMP-NEXT:    .cfi_def_cfa sp, 32
-; SPILL-O2-ZCMP-NEXT:    cm.popret {ra, s0}, 32
+; SPILL-O2-ZCMP-NEXT:    .cfi_def_cfa sp, 16
+; SPILL-O2-ZCMP-NEXT:    cm.popret {ra, s0}, 16
 {
    %x = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %a, <vscale x 1 x double> %b, i32 7, i32 %gvl)
    %call = call signext i32 @puts(ptr @.str)
