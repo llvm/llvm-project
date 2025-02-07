@@ -32,7 +32,8 @@ using namespace llvm::dxil;
 
 static bool checkWaveOps(Intrinsic::ID IID) {
   switch (IID) {
-  default: return false;
+  default:
+    return false;
   case Intrinsic::dx_wave_is_first_lane:
   case Intrinsic::dx_wave_getlaneindex:
   case Intrinsic::dx_wave_any:
@@ -45,20 +46,20 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_reduce_max:
   case Intrinsic::dx_wave_reduce_umax:
 
-  // Currently unsupported intrinsics
-  // case Intrinsic::dx_WaveGetLaneCount:
-  // case Intrinsic::dx_WaveActiveAllEqual:
-  // case Intrinsic::dx_WaveActiveBallot:
-  // case Intrinsic::dx_WaveReadLaneFirst:
-  // case Intrinsic::dx_WaveActiveBit:
-  // case Intrinsic::dx_WavePrefixOp:
-  // case Intrinsic::dx_QuadReadLaneAt:
-  // case Intrinsic::dx_QuadOp:
-  // case Intrinsic::dx_WavePrefixBitCount:
-  // case Intrinsic::dx_WaveMatch:
-  // case Intrinsic::dx_WaveMultiPrefixOp:
-  // case Intrinsic::dx_WaveMultiPrefixBitCount:
-  // case Intrinsic::dx_QuadVote:
+    // Currently unsupported intrinsics
+    // case Intrinsic::dx_WaveGetLaneCount:
+    // case Intrinsic::dx_WaveActiveAllEqual:
+    // case Intrinsic::dx_WaveActiveBallot:
+    // case Intrinsic::dx_WaveReadLaneFirst:
+    // case Intrinsic::dx_WaveActiveBit:
+    // case Intrinsic::dx_WavePrefixOp:
+    // case Intrinsic::dx_QuadReadLaneAt:
+    // case Intrinsic::dx_QuadOp:
+    // case Intrinsic::dx_WavePrefixBitCount:
+    // case Intrinsic::dx_WaveMatch:
+    // case Intrinsic::dx_WaveMultiPrefixOp:
+    // case Intrinsic::dx_WaveMultiPrefixBitCount:
+    // case Intrinsic::dx_QuadVote:
     return true;
   }
 }
