@@ -466,12 +466,12 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
 
 // Creates host layout struct for HLSL Buffer. The struct will include only
 // fields of types that are allowed in HLSL buffer and it will filter out:
-// - static variable declarations
+// - static or groupshared variable declarations
 // - resource classes
 // - empty structs
 // - zero-sized arrays
 // - non-variable declarations
-// The layour struct will be added to the HLSLBufferDecl declarations.
+// The layout struct will be added to the HLSLBufferDecl declarations.
 void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   ASTContext &AST = S.getASTContext();
   IdentifierInfo *II = getHostLayoutStructName(S, BufDecl, true);
