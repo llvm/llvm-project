@@ -3478,7 +3478,7 @@ public:
           m_cached = value;
         } else {
           return Status::FromErrorStringWithFormatv(
-              "invalid boolean value '%s' passed for -G option", option_arg);
+              "invalid boolean value '%s' passed for -c option", option_arg);
         }
         break;
 
@@ -3506,7 +3506,7 @@ public:
                                      // parsing options
     std::string m_str; // Holds name lookup
     lldb::addr_t m_addr = LLDB_INVALID_ADDRESS; // Holds the address to lookup
-    bool m_cached = false;
+    bool m_cached = true;
   };
 
   CommandObjectTargetModulesShowUnwind(CommandInterpreter &interpreter)
