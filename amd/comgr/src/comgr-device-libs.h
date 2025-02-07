@@ -9,7 +9,6 @@
 #ifndef COMGR_DEVICE_LIBS_H
 #define COMGR_DEVICE_LIBS_H
 
-#include "amd_comgr.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <tuple>
@@ -19,11 +18,8 @@ namespace COMGR {
 struct DataAction;
 struct DataSet;
 
-amd_comgr_status_t addPrecompiledHeaders(DataAction *ActionInfo,
-                                         DataSet *ResultSet);
-
 llvm::ArrayRef<unsigned char> getDeviceLibrariesIdentifier();
-
+llvm::StringRef getOpenCLCBaseHeaderContents();
 llvm::ArrayRef<std::tuple<llvm::StringRef, llvm::StringRef>>
 getDeviceLibraries();
 

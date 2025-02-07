@@ -1612,17 +1612,18 @@ typedef enum amd_comgr_action_kind_s {
    */
   AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR = 0x0,
   /**
-   * Copy all existing data objects in @p input to @p output, then add the
-   * device-specific and language-specific precompiled headers required for
-   * compilation.
+   * Copy all existing data objects in @p input to @p output.
    *
-   * Currently the only supported languages are @p AMD_COMGR_LANGUAGE_OPENCL_1_2
-   * and @p AMD_COMGR_LANGUAGE_OPENCL_2_0.
+   * Currently the action is a no-op, as the OpenCL pre-compiled headers
+   * are no longer used.
    *
-   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if isa name or language
-   * is not set in @p info, or the language is not supported.
+   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if any of the
+   * input or output are not initialized.
    */
-  AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS = 0x1,
+  AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS
+    AMD_COMGR_DEPRECATED("Will be removed in Comgr v4.0. Currently the action\
+    is a no-op, as the OpenCL pre-compiled headers are no longer used.")
+    = 0x1,
   /**
    * Compile each source data object in @p input in order. For each
    * successful compilation add a bc data object to @p result. Resolve

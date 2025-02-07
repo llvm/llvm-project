@@ -55,9 +55,9 @@ int main(int argc, char *argv[]) {
   amd_comgr_(action_data_count(DataSetPch,
                                AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER, &Count));
 
-  if (Count != 1) {
+  if (Count != 0) {
     printf("AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS Failed: "
-           "produced %zu precompiled header objects (expected 1)\n",
+           "produced %zu precompiled header objects (expected 0)\n",
            Count);
     exit(1);
   }

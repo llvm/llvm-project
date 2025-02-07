@@ -176,21 +176,6 @@ amd_comgr_status_t dispatchCompilerAction(amd_comgr_action_kind_t ActionKind,
   }
 }
 
-amd_comgr_status_t dispatchAddAction(amd_comgr_action_kind_t ActionKind,
-                                     DataAction *ActionInfo, DataSet *InputSet,
-                                     DataSet *ResultSet) {
-  for (DataObject *Data : InputSet->DataObjects) {
-    Data->RefCount++;
-    ResultSet->DataObjects.insert(Data);
-  }
-  switch (ActionKind) {
-  case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
-    return addPrecompiledHeaders(ActionInfo, ResultSet);
-  default:
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  }
-}
-
 StringRef getLanguageName(amd_comgr_language_t Language) {
   switch (Language) {
   case AMD_COMGR_LANGUAGE_NONE:
@@ -1381,8 +1366,13 @@ amd_comgr_status_t AMD_COMGR_API
                                             ResultSetP, *LogP);
       break;
     case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
-      ActionStatus =
-          dispatchAddAction(ActionKind, ActionInfoP, InputSetP, ResultSetP);
+      // Redirect the input to the output.
+      // Deprecate and remove this action.
+      for (DataObject *Data : InputSetP->DataObjects) {
+        Data->RefCount++;
+        ResultSetP->DataObjects.insert(Data);
+      }
+      ActionStatus = AMD_COMGR_STATUS_SUCCESS;
       break;
     default:
       ActionStatus = AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;

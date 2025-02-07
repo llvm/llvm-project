@@ -311,6 +311,14 @@ bool AssemblerInvocation::createFromArgs(AssemblerInvocation &Opts,
 }
 
 namespace {
+bool needsPreprocessing(DataObject *O) {
+  if (O->DataKind != AMD_COMGR_DATA_KIND_SOURCE)
+    return false;
+  StringRef Ext = path::extension(O->Name);
+  bool IsPreprocessedSource = Ext == ".i";
+  return !IsPreprocessedSource;
+}
+
 std::unique_ptr<raw_fd_ostream> getOutputStream(AssemblerInvocation &Opts,
                                                 DiagnosticsEngine &Diags,
                                                 bool Binary) {
@@ -941,7 +949,10 @@ AMDGPUCompiler::processFiles(amd_comgr_data_kind_t OutputKind,
     ScopedDataObjectReleaser SDOR(OutputT);
 
     DataObject *Output = DataObject::convert(OutputT);
-    Output->setName(std::string(Input->Name) + OutputSuffix);
+
+    SmallString<128> OutputName(Input->Name);
+    sys::path::replace_extension(OutputName, OutputSuffix);
+    Output->setName(OutputName);
 
     auto OutputFilePath = getFilePath(Output, OutputDir);
 
@@ -963,6 +974,28 @@ AMDGPUCompiler::processFiles(amd_comgr_data_kind_t OutputKind,
 }
 
 amd_comgr_status_t AMDGPUCompiler::addIncludeFlags() {
+  if (none_of(InSet->DataObjects, needsPreprocessing))
+    return AMD_COMGR_STATUS_SUCCESS;
+
+  switch (ActionInfo->Language) {
+  case AMD_COMGR_LANGUAGE_OPENCL_1_2:
+  case AMD_COMGR_LANGUAGE_OPENCL_2_0: {
+    SmallString<128> OpenCLCBasePath = IncludeDir;
+    sys::path::append(OpenCLCBasePath, "opencl-c-base.h");
+    if (auto Status =
+            outputToFile(getOpenCLCBaseHeaderContents(), OpenCLCBasePath)) {
+      return Status;
+    }
+    Args.push_back("-include");
+    Args.push_back(Saver.save(OpenCLCBasePath.c_str()).data());
+    Args.push_back("-Xclang");
+    Args.push_back("-fdeclare-opencl-builtins");
+    break;
+  }
+  default:
+    break;
+  }
+
   if (ActionInfo->Path) {
     Args.push_back("-I");
     Args.push_back(ActionInfo->Path);
@@ -1023,22 +1056,24 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
 
   Args.push_back("-x");
 
+  bool NeedsPreprocessing = any_of(InSet->DataObjects, needsPreprocessing);
+
   switch (ActionInfo->Language) {
   case AMD_COMGR_LANGUAGE_LLVM_IR:
     Args.push_back("ir");
     break;
   case AMD_COMGR_LANGUAGE_OPENCL_1_2:
-    Args.push_back("cl");
+    Args.push_back(NeedsPreprocessing ? "cl" : "cl-cpp-output");
     Args.push_back("-std=cl1.2");
     Args.push_back("-cl-no-stdinc");
     break;
   case AMD_COMGR_LANGUAGE_OPENCL_2_0:
-    Args.push_back("cl");
+    Args.push_back(NeedsPreprocessing ? "cl" : "cl-cpp-output");
     Args.push_back("-std=cl2.0");
     Args.push_back("-cl-no-stdinc");
     break;
   case AMD_COMGR_LANGUAGE_HIP:
-    Args.push_back("hip");
+    Args.push_back(NeedsPreprocessing ? "hip" : "hip-cpp-output");
     Args.push_back("--offload-device-only");
     // Pass a cuid that depends on the input files
     // Otherwise, a random (which depends on the /tmp/comgr-xxxxx path) cuid is
