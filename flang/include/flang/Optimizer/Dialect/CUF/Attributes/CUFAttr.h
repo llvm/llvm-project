@@ -13,7 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_CUF_CUFATTR_H
 #define FORTRAN_OPTIMIZER_DIALECT_CUF_CUFATTR_H
 
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
 namespace llvm {
