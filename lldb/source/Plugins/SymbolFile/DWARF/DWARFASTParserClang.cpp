@@ -3190,7 +3190,7 @@ void DWARFASTParserClang::ParseChildParameters(
     }
   }
 
-  assert(function_param_names.size() == function_param_names.size());
+  assert(function_param_names.size() == function_param_types.size());
 }
 
 clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
