@@ -44,22 +44,3 @@ def __builtin_common_type : BuiltinTemplate<
    Template<[Class<"TypeMember">], "HasTypeMember">,
    Class<"HasNoTypeMember">,
    Class<"Ts", /*is_variadic=*/1>]>;
-
-/*
-
-class BuiltinTemplate<string template_head> {
-  string TemplateHead = template_head;
-}
-
-def __make_integer_seq : BuiltinTemplate<
-  "template <template <class T, T... Ints> class IntSeq, class T, T N>">;
-
-def __type_pack_element : BuiltinTemplate<
-  "template <size_t, class... T>">;
-
-def __builtin_common_type : BuiltinTemplate<
-  "template <template <class... Args> class BaseTemplate,"
-  "          template <class TypeMember> class HasTypeMember,"
-  "          class HasNoTypeMember,"
-  "          class... Ts>">;
-*/
