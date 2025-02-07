@@ -741,29 +741,27 @@ foreach dim = [1, 2, 3, 4, 5] in {
 }
 
 //Prefetch and Prefetchu 
-class PREFETCH_INTRS<string InstName, Intrinsic Intrin> :
+class PREFETCH_INTRS<string InstName> :
           NVPTXInst<(outs), (ins Int64Regs:$addr),
-          !strconcat(InstName, " [$addr];"),
-          [(Intrin i64:$addr)]>,
+          InstName # " [$addr];",
+          [(!cast<Intrinsic>(!strconcat("int_nvvm_",
+          !subst(".", "_", InstName))) i64:$addr)]>,
           Requires<[hasPTX<80>, hasSM<90>]>;
    
 
 // Only global supports evictlast and evictnormal.
 // Other variants (local and default) only support evictnormal
-foreach addr = ["global", "local", ""] in {
-  foreach level = ["L1", "L2"] in {
-    foreach evict = !if(!eq(addr, "global"),
-                       ["evictlast", "evictnormal"],
-                       ["evictnormal"]) in {
-    
-      defvar inst_name = "prefetch." # !if(!eq(addr, ""), "", addr # ".") # level # "." # evict;
-      defvar intr_name = !strconcat("int_nvvm_", !subst(".", "_", inst_name));
-      def PREFETCH_# addr # "_" # level # "_" # evict : PREFETCH_INTRS<inst_name, !cast<Intrinsic>(intr_name)>;
+foreach level = ["L1", "L2"] in {
+  foreach addr = ["global", "local", ""] in {
+    foreach evict = !if(!eq(addr, "global"), ["evictlast", "evictnormal"], ["evictnormal"]) in {
+      defvar suffix = "" # !if(!eq(addr, ""), "", addr # "_") # level # "_" # evict;
+      defvar inst_name = "prefetch." # !subst("_", ".", suffix);
+      def PREFETCH_# suffix : PREFETCH_INTRS<inst_name>;
     }
   }
 }
 
-def PREFETCHU_L1_EVICTNORMAL : PREFETCH_INTRS<"prefetchu.L1.evictnormal",  int_nvvm_prefetchu_L1_evictnormal>;
+def PREFETCHU_L1_EVICTNORMAL : PREFETCH_INTRS<"prefetchu.L1.evictnormal">;
 
 //-----------------------------------
 // MBarrier Functions

@@ -5,20 +5,20 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-declare void  @llvm.nvvm.prefetch.local.L1.evictnormal(ptr addrspace(5) %localPtr)
-declare void  @llvm.nvvm.prefetch.local.L2.evictnormal(ptr addrspace(5) %localPtr)
+declare void  @llvm.nvvm.prefetch.local.L1.evictnormal(ptr addrspace(5) %local_ptr)
+declare void  @llvm.nvvm.prefetch.local.L2.evictnormal(ptr addrspace(5) %local_ptr)
 
-declare void  @llvm.nvvm.prefetch.global.L1.evictnormal(ptr addrspace(1) %globalPtr)
-declare void  @llvm.nvvm.prefetch.global.L2.evictnormal(ptr addrspace(1) %globalPtr)
-declare void  @llvm.nvvm.prefetch.global.L1.evictlast(ptr addrspace(1) %globalPtr)
-declare void  @llvm.nvvm.prefetch.global.L2.evictlast(ptr addrspace(1) %globalPtr)
+declare void  @llvm.nvvm.prefetch.global.L1.evictnormal(ptr addrspace(1) %global_ptr)
+declare void  @llvm.nvvm.prefetch.global.L2.evictnormal(ptr addrspace(1) %global_ptr)
+declare void  @llvm.nvvm.prefetch.global.L1.evictlast(ptr addrspace(1) %global_ptr)
+declare void  @llvm.nvvm.prefetch.global.L2.evictlast(ptr addrspace(1) %global_ptr)
 
 declare void  @llvm.nvvm.prefetch.L1.evictnormal(ptr %ptr)
 declare void  @llvm.nvvm.prefetch.L2.evictnormal(ptr %ptr)
 
 declare void  @llvm.nvvm.prefetchu.L1.evictnormal(ptr %ptr)
 
-define void @prefetch_local(ptr addrspace(5) %localPtr) {
+define void @prefetch_local(ptr addrspace(5) %local_ptr) {
 ; CHECK-PTX64-LABEL: prefetch_local(
 ; CHECK-PTX64:       {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
@@ -28,12 +28,12 @@ define void @prefetch_local(ptr addrspace(5) %localPtr) {
 ; CHECK-PTX64-NEXT:    prefetch.local.L1.evictnormal [%rd1];
 ; CHECK-PTX64-NEXT:    prefetch.local.L2.evictnormal [%rd1];
 ; CHECK-PTX64-NEXT:    ret;
-  tail call void @llvm.nvvm.prefetch.local.L1.evictnormal(ptr addrspace(5) %localPtr)
-  tail call void @llvm.nvvm.prefetch.local.L2.evictnormal(ptr addrspace(5) %localPtr)
+  tail call void @llvm.nvvm.prefetch.local.L1.evictnormal(ptr addrspace(5) %local_ptr)
+  tail call void @llvm.nvvm.prefetch.local.L2.evictnormal(ptr addrspace(5) %local_ptr)
   ret void
 }
 
-define void @prefetch_global(ptr addrspace(1) %globalPtr) {
+define void @prefetch_global(ptr addrspace(1) %global_ptr) {
 ; CHECK-PTX64-LABEL: prefetch_global(
 ; CHECK-PTX64:       {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
@@ -45,10 +45,10 @@ define void @prefetch_global(ptr addrspace(1) %globalPtr) {
 ; CHECK-PTX64-NEXT:    prefetch.global.L1.evictlast [%rd1];
 ; CHECK-PTX64-NEXT:    prefetch.global.L2.evictlast [%rd1];
 ; CHECK-PTX64-NEXT:    ret;
-  tail call void @llvm.nvvm.prefetch.global.L1.evictnormal(ptr addrspace(1) %globalPtr)
-  tail call void @llvm.nvvm.prefetch.global.L2.evictnormal(ptr addrspace(1) %globalPtr)
-  tail call void @llvm.nvvm.prefetch.global.L1.evictlast(ptr addrspace(1) %globalPtr)
-  tail call void @llvm.nvvm.prefetch.global.L2.evictlast(ptr addrspace(1) %globalPtr)
+  tail call void @llvm.nvvm.prefetch.global.L1.evictnormal(ptr addrspace(1) %global_ptr)
+  tail call void @llvm.nvvm.prefetch.global.L2.evictnormal(ptr addrspace(1) %global_ptr)
+  tail call void @llvm.nvvm.prefetch.global.L1.evictlast(ptr addrspace(1) %global_ptr)
+  tail call void @llvm.nvvm.prefetch.global.L2.evictlast(ptr addrspace(1) %global_ptr)
   ret void
 }
 

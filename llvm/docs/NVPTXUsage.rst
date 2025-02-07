@@ -589,13 +589,13 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void  @llvm.nvvm.prefetch.local.L1.evictnormal(ptr addrspace(5) %localPtr)
-  declare void  @llvm.nvvm.prefetch.local.L2.evictnormal(ptr addrspace(5) %localPtr)
+  declare void  @llvm.nvvm.prefetch.local.L1.evictnormal(ptr addrspace(5) %local_ptr)
+  declare void  @llvm.nvvm.prefetch.local.L2.evictnormal(ptr addrspace(5) %local_ptr)
   
-  declare void  @llvm.nvvm.prefetch.global.L1.evictnormal(ptr addrspace(1) %globalPtr)
-  declare void  @llvm.nvvm.prefetch.global.L2.evictnormal(ptr addrspace(1) %globalPtr)
-  declare void  @llvm.nvvm.prefetch.global.L1.evictlast(ptr addrspace(1) %globalPtr)
-  declare void  @llvm.nvvm.prefetch.global.L2.evictlast(ptr addrspace(1) %globalPtr)
+  declare void  @llvm.nvvm.prefetch.global.L1.evictnormal(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L2.evictnormal(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L1.evictlast(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L2.evictlast(ptr addrspace(1) %global_ptr)
   
   declare void  @llvm.nvvm.prefetch.L1.evictnormal(ptr %ptr)
   declare void  @llvm.nvvm.prefetch.L2.evictnormal(ptr %ptr)
@@ -618,7 +618,7 @@ uses and eviction priority which can be accessed by the '``.level::eviction_prio
 * A prefetch into the uniform cache requires a generic address, 
   and no operation occurs if the address maps to a const, local, or shared memory location.
 
-For more information, refer PTX ISA
+For more information, refer to the PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu>`_.
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'

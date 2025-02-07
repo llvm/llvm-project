@@ -5001,20 +5001,17 @@ foreach dim = [1, 2, 3, 4, 5] in {
 }
 
 // Intrinsics for Prefetch and Prefetchu
-foreach addr = ["global", "local", ""] in {
-  foreach level = ["L1", "L2"] in {
-    foreach evict = !if(!eq(addr, "global"),
-                    ["evictlast", "evictnormal"],
-                    ["evictnormal"]) in {
-                    
-      def int_nvvm_prefetch_ # !if(!eq(addr, ""), "", addr # "_") 
-          # level # "_" # evict : Intrinsic<[], 
-                                  !cond(
-                                  !eq(addr, "global") : [llvm_global_ptr_ty],
-                                  !eq(addr, "local") : [llvm_local_ptr_ty],
-                                  !eq(addr, "") : [llvm_ptr_ty]),
-                                  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>,
-                                  NoCapture<ArgIndex<0>>]>;   
+foreach level = ["L1", "L2"] in {
+   foreach addr = ["global", "local", ""] in {
+     foreach evict = !if(!eq(addr, "global"), ["evictlast", "evictnormal"], ["evictnormal"]) in {
+      defvar suffix = "" # !if(!eq(addr, ""), "", addr # "_") # level # "_" # evict;             
+      def int_nvvm_prefetch_ # suffix : Intrinsic<[], 
+                                        !cond(
+                                        !eq(addr, "global") : [llvm_global_ptr_ty],
+                                        !eq(addr, "local") : [llvm_local_ptr_ty],
+                                        !eq(addr, "") : [llvm_ptr_ty]),
+                                        [IntrArgMemOnly, ReadOnly<ArgIndex<0>>,
+                                        NoCapture<ArgIndex<0>>]>;   
     }
   }
 }
