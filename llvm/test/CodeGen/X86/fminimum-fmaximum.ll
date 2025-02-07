@@ -1930,7 +1930,7 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ; AVX512-NEXT:    cmovpl %eax, %esi
 ; AVX512-NEXT:    vmovd %esi, %xmm3
 ; AVX512-NEXT:    vpinsrw $1, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[1,1,1,1]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[1,1,3,3]
 ; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX512-NEXT:    vucomiss %xmm4, %xmm5
 ; AVX512-NEXT:    movl $65535, %edx # imm = 0xFFFF
@@ -1944,7 +1944,7 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ; AVX512-NEXT:    cmovnel %eax, %edx
 ; AVX512-NEXT:    cmovpl %eax, %edx
 ; AVX512-NEXT:    vpinsrw $3, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,0,1]
 ; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX512-NEXT:    vucomiss %xmm4, %xmm5
 ; AVX512-NEXT:    movl $65535, %edx # imm = 0xFFFF
