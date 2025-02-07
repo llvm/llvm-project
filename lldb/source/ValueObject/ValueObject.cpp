@@ -849,6 +849,22 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
   return true;
 }
 
+uint64_t ValueObject::GetLocalBufferSize() {
+  if (m_value.GetValueType() != Value::ValueType::HostAddress)
+    return LLDB_INVALID_ADDRESS;
+  auto start = m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+  if (start == LLDB_INVALID_ADDRESS)
+    return LLDB_INVALID_ADDRESS;
+  // Does our pointer point to this value object's m_data buffer?
+  if ((uint64_t)m_data.GetDataStart() == start)
+    return m_data.GetByteSize();
+  // Does our pointer point to the value's buffer?
+  if ((uint64_t)m_value.GetBuffer().GetBytes() == start)
+    return m_value.GetBuffer().GetByteSize();
+  // Our pointer points to something else. We can't know what the size is.
+  return LLDB_INVALID_ADDRESS;
+}
+
 static bool CopyStringDataToBufferSP(const StreamString &source,
                                      lldb::WritableDataBufferSP &destination) {
   llvm::StringRef src = source.GetString();

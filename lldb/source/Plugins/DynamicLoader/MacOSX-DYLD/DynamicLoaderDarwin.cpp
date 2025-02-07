@@ -1208,34 +1208,45 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
 
 bool DynamicLoaderDarwin::UseDYLDSPI(Process *process) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
-  bool use_new_spi_interface = false;
+  bool use_new_spi_interface = true;
 
   llvm::VersionTuple version = process->GetHostOSVersion();
   if (!version.empty()) {
-    const llvm::Triple::OSType os_type =
+    using namespace llvm;
+    const Triple::OSType os_type =
         process->GetTarget().GetArchitecture().GetTriple().getOS();
 
-    // macOS 10.12 and newer
-    if (os_type == llvm::Triple::MacOSX &&
-        version >= llvm::VersionTuple(10, 12))
-      use_new_spi_interface = true;
+    auto OlderThan = [os_type, version](llvm::Triple::OSType o,
+                                        llvm::VersionTuple v) -> bool {
+      return os_type == o && version < v;
+    };
 
-    // iOS 10 and newer
-    if (os_type == llvm::Triple::IOS && version >= llvm::VersionTuple(10))
-      use_new_spi_interface = true;
+    if (OlderThan(Triple::MacOSX, VersionTuple(10, 12)))
+      use_new_spi_interface = false;
 
-    // tvOS 10 and newer
-    if (os_type == llvm::Triple::TvOS && version >= llvm::VersionTuple(10))
-      use_new_spi_interface = true;
+    if (OlderThan(Triple::IOS, VersionTuple(10)))
+      use_new_spi_interface = false;
 
-    // watchOS 3 and newer
-    if (os_type == llvm::Triple::WatchOS && version >= llvm::VersionTuple(3))
-      use_new_spi_interface = true;
+    if (OlderThan(Triple::TvOS, VersionTuple(10)))
+      use_new_spi_interface = false;
 
-    // NEED_BRIDGEOS_TRIPLE // Any BridgeOS
-    // NEED_BRIDGEOS_TRIPLE if (os_type == llvm::Triple::BridgeOS)
-    // NEED_BRIDGEOS_TRIPLE   use_new_spi_interface = true;
+    if (OlderThan(Triple::WatchOS, VersionTuple(3)))
+      use_new_spi_interface = false;
+
+    // llvm::Triple::BridgeOS and llvm::Triple::XROS always use the new
+    // libdyld SPI interface.
+  } else {
+    // We could not get an OS version string, we are likely not
+    // connected to debugserver and the packets to call the libdyld SPI
+    // will not exist.
+    use_new_spi_interface = false;
   }
+
+  // Corefiles cannot use the libdyld SPI to get the inferior's
+  // binaries, we must find it through metadata or a scan
+  // of the corefile memory.
+  if (!process->IsLiveDebugSession())
+    use_new_spi_interface = false;
 
   if (log) {
     if (use_new_spi_interface)
