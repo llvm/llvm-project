@@ -285,6 +285,13 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode = std::nullopt;
   VPRecipeBase *BinOpR = getOperand(0)->getDefiningRecipe();
+
+  // If the partial reduction is predicated, a select will be operand 0 rather
+  // than the binary op
+  using namespace llvm::VPlanPatternMatch;
+  if (match(getOperand(0), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+    BinOpR = BinOpR->getOperand(1)->getDefiningRecipe();
+
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(BinOpR))
     Opcode = std::make_optional(WidenR->getOpcode());
 
