@@ -217,6 +217,14 @@ def SymbolUserOpInterface : OpInterface<"SymbolUserOpInterface"> {
       "::llvm::LogicalResult", "verifySymbolUses",
       (ins "::mlir::SymbolTableCollection &":$symbolTable)
     >,
+    InterfaceMethod<
+      /*desc=*/"Get user symbol attribute, returns empty if not set",
+      /*retTy=*/"std::optional<::mlir::StringRef>",
+      /*methodName=*/"getUserSymbol",
+      (ins), [{}],
+      /*defaultImplementation=*/[{
+        return {};
+      }]>
   ];
 }
 
