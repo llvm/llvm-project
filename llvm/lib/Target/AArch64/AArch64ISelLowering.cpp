@@ -1365,9 +1365,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BSWAP, VT, Expand);
       setOperationAction(ISD::CTTZ, VT, Expand);
 
-      setOperationAction(ISD::PARTIAL_REDUCE_UMLA, VT, Expand);
-      setOperationAction(ISD::PARTIAL_REDUCE_SMLA, VT, Expand);
-
       for (MVT InnerVT : MVT::fixedlen_vector_valuetypes()) {
         setTruncStoreAction(VT, InnerVT, Expand);
         setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Expand);
@@ -1579,11 +1576,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           MVT::v2i32, MVT::v4i32, MVT::v1i64, MVT::v2i64}) {
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::MSTORE, VT, Custom);
-    }
-
-    for (MVT VT : MVT::scalable_vector_valuetypes()) {
-      setOperationAction(ISD::PARTIAL_REDUCE_UMLA, VT, Expand);
-      setOperationAction(ISD::PARTIAL_REDUCE_SMLA, VT, Expand);
     }
 
     // Firstly, exclude all scalable vector extending loads/truncating stores,
@@ -22027,13 +22019,11 @@ static SDValue performIntrinsicCombine(SDNode *N,
       return Dot;
     if (SDValue WideAdd = tryLowerPartialReductionToWideAdd(N, Subtarget, DAG))
       return WideAdd;
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     SDLoc DL(N);
     SDValue Input = N->getOperand(2);
-    SDValue PRVal = DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, DL,
-                                N->getValueType(0), N->getOperand(1), Input,
-                                DAG.getConstant(1, DL, Input.getValueType()));
-    return TLI.expandPartialReduceMLA(PRVal.getNode(), DAG);
+    return DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, DL, N->getValueType(0),
+                       N->getOperand(1), Input,
+                       DAG.getConstant(1, DL, Input.getValueType()));
   }
   case Intrinsic::aarch64_neon_vcvtfxs2fp:
   case Intrinsic::aarch64_neon_vcvtfxu2fp:

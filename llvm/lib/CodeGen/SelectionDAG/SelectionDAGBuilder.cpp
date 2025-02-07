@@ -8118,17 +8118,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
-    SDValue Acc = getValue(I.getOperand(0));
-    EVT AccVT = Acc.getValueType();
-    SDValue Input = getValue(I.getOperand(1));
-    EVT InputVT = Input.getValueType();
-
     if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
       visitTargetIntrinsic(I, Intrinsic);
       return;
     }
-    setValue(&I, DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, sdl, AccVT, Acc, Input,
-                             DAG.getConstant(1, sdl, InputVT)));
+    SDValue Acc = getValue(I.getOperand(0));
+    SDValue Input = getValue(I.getOperand(1));
+    setValue(&I,
+             DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, sdl, Acc.getValueType(), Acc,
+                         Input, DAG.getConstant(1, sdl, Input.getValueType())));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {

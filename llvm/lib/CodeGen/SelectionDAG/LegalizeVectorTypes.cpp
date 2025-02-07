@@ -1376,6 +1376,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
     SplitVecRes_PARTIAL_REDUCE_MLA(N);
+    break;
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -3186,7 +3187,6 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
 }
 
 void DAGTypeLegalizer::SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
-  SDLoc DL(N);
   SDValue Res = TLI.expandPartialReduceMLA(N, DAG);
   ReplaceValueWith(SDValue(N, 0), Res);
 }
@@ -3393,6 +3393,7 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
     Res = SplitVecOp_PARTIAL_REDUCE_MLA(N);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -4448,7 +4449,6 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
-  SDLoc DL(N);
   SDValue Res = TLI.expandPartialReduceMLA(N, DAG);
   ReplaceValueWith(SDValue(N, 0), Res);
   return SDValue();

@@ -7856,23 +7856,21 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA: {
-    EVT AccVT = N1.getValueType();
-    EVT Input1VT = N2.getValueType();
-    EVT Input2VT = N3.getValueType();
-    assert(Input1VT == Input2VT &&
+    [[maybe_unused]] EVT AccVT = N1.getValueType();
+    [[maybe_unused]] EVT Input1VT = N2.getValueType();
+    [[maybe_unused]] EVT Input2VT = N3.getValueType();
+    assert(Input1VT.isVector() && Input1VT == Input2VT &&
            "Expected the second and third operands of the PARTIAL_REDUCE_MLA "
            "node to have the same type!");
-    assert(VT == AccVT &&
+    assert(VT.isVector() && VT == AccVT &&
            "Expected the first operand of the PARTIAL_REDUCE_MLA node to have "
            "the same type as its result!");
-    assert(Input1VT.getVectorElementCount().getKnownMinValue() %
-                   AccVT.getVectorElementCount().getKnownMinValue() ==
-               0 &&
+    assert(Input1VT.getVectorElementCount().hasKnownScalarFactor(
+               AccVT.getVectorElementCount()) &&
            "Expected the element count of the second and third operands of the "
            "PARTIAL_REDUCE_MLA node to be a positive integer multiple of the "
-           "element count of the first operand and result!");
-    assert(Input1VT.getVectorElementType().getSizeInBits() <=
-               AccVT.getVectorElementType().getSizeInBits() &&
+           "element count of the first operand and the result!");
+    assert(N2.getScalarValueSizeInBits() <= N1.getScalarValueSizeInBits() &&
            "Expected the second and third operands of the PARTIAL_REDUCE_MLA "
            "node to have an element type which is the same as or smaller than "
            "the element type of the first operand and result!");

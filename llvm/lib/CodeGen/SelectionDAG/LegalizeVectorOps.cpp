@@ -1198,11 +1198,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     return;
   case ISD::PARTIAL_REDUCE_UMLA:
-  case ISD::PARTIAL_REDUCE_SMLA: {
-    SDLoc DL(Node);
+  case ISD::PARTIAL_REDUCE_SMLA:
     Results.push_back(TLI.expandPartialReduceMLA(Node, DAG));
     return;
-  }
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:
     Results.push_back(TLI.expandVecReduceSeq(Node, DAG));
