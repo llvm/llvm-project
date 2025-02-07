@@ -1,9 +1,13 @@
 // RUN: %clangxx %s -### -o %t.o --target=amd64-unknown-freebsd -stdlib=platform 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-DEFAULT %s
 // RUN: %clangxx %s -### -o %t.o --target=amd64-unknown-freebsd10.0 -stdlib=platform 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-TEN %s
+// RUN:   | FileCheck --check-prefix=CHECK-DEFAULT %s
+// RUN: %clangxx %s -### -o %t.o --target=amdf64-unknown-freebsd -stdlib=libc++ 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-DEFAULT %s
+// RUN: %clangxx %s -### -o %t.o --target=amd64-unknown-freebsd -stdlib=libstdc++ 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-STDLIBCXX %s
 // CHECK-DEFAULT: "-lc++" "-lm"
-// CHECK-TEN: "-lc++" "-lm"
+// CHECK-STDLIBCXX: "-lstdc++" "-lm"
 
 // RUN: %clangxx %s -### -pg -o %t.o --target=amd64-unknown-freebsd -stdlib=platform 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG-DEFAULT %s
