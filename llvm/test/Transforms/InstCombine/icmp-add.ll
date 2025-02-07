@@ -1157,7 +1157,7 @@ bb:
   ret i1 %i4
 }
 
-; tests for sgt
+; tests for sgt, including samesign
 define i1 @test_cvt_icmp7(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_cvt_icmp7(
 ; CHECK-NEXT:  bb:
@@ -1169,6 +1169,20 @@ bb:
   %i2 = zext i1 %arg1 to i32
   %i3 = add i32 %i2, %i
   %i4 = icmp sgt i32 %i3, 1
+  ret i1 %i4
+}
+
+define i1 @test_cvt_icmp7_samesign(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_cvt_icmp7_samesign(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I4:%.*]] = and i1 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = zext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ugt i32 %i3, 1
   ret i1 %i4
 }
 
@@ -1185,6 +1199,19 @@ bb:
   ret i1 %i4
 }
 
+define i1 @test_zext_zext_cvt_neg_2_gt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_zext_cvt_neg_2_gt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret i1 false
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = zext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ugt i32 %i3, -2
+  ret i1 %i4
+}
+
 define i1 @test_zext_zext_cvt_neg_1_sgt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_zext_zext_cvt_neg_1_sgt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1198,6 +1225,19 @@ bb:
   ret i1 %i4
 }
 
+define i1 @test_zext_zext_cvt_neg_1_gt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_zext_cvt_neg_1_gt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret i1 false
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = zext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ugt i32 %i3, -1
+  ret i1 %i4
+}
+
 define i1 @test_zext_zext_cvt_2_sgt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_zext_zext_cvt_2_sgt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1208,6 +1248,19 @@ bb:
   %i2 = zext i1 %arg1 to i32
   %i3 = add i32 %i2, %i
   %i4 = icmp sgt i32 %i3, 2
+  ret i1 %i4
+}
+
+define i1 @test_zext_zext_cvt_2_gt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_zext_cvt_2_gt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret i1 false
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = zext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ugt i32 %i3, 2
   ret i1 %i4
 }
 
@@ -1226,6 +1279,20 @@ bb:
   ret i1 %i4
 }
 
+define i1 @test_sext_sext_cvt_neg_2_gt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_sext_sext_cvt_neg_2_gt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = sext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ugt i32 %i3, -2
+  ret i1 %i4
+}
+
 define i1 @test_sext_sext_cvt_0_sgt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_sext_sext_cvt_0_sgt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1236,6 +1303,20 @@ bb:
   %i2 = sext i1 %arg1 to i32
   %i3 = add i32 %i2, %i
   %i4 = icmp sgt i32 %i3, 0
+  ret i1 %i4
+}
+
+define i1 @test_sext_sext_cvt_0_gt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_sext_sext_cvt_0_gt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I4:%.*]] = or i1 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = sext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ugt i32 %i3, 0
   ret i1 %i4
 }
 
@@ -1252,6 +1333,20 @@ bb:
   ret i1 %i4
 }
 
+define i1 @test_sext_sext_cvt_2_gt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_sext_sext_cvt_2_gt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I4:%.*]] = or i1 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = sext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ugt i32 %i3, 2
+  ret i1 %i4
+}
+
 define i1 @test_zext_sext_cvt_neg_2_sgt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_zext_sext_cvt_neg_2_sgt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1262,6 +1357,21 @@ bb:
   %i2 = sext i1 %arg1 to i32
   %i3 = add i32 %i2, %i
   %i4 = icmp sgt i32 %i3, -2
+  ret i1 %i4
+}
+
+define i1 @test_zext_sext_cvt_neg_2_gt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_sext_cvt_neg_2_gt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG:%.*]], true
+; CHECK-NEXT:    [[I4:%.*]] = and i1 [[ARG1:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ugt i32 %i3, -2
   ret i1 %i4
 }
 
@@ -1280,6 +1390,19 @@ bb:
   ret i1 %i4
 }
 
+define i1 @test_zext_sext_cvt_neg_1_gt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_sext_cvt_neg_1_gt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret i1 false
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ugt i32 %i3, -1
+  ret i1 %i4
+}
+
 define i1 @test_zext_sext_cvt_0_sgt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_zext_sext_cvt_0_sgt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1292,6 +1415,20 @@ bb:
   %i2 = sext i1 %arg1 to i32
   %i3 = add i32 %i2, %i
   %i4 = icmp sgt i32 %i3, 0
+  ret i1 %i4
+}
+
+define i1 @test_zext_sext_cvt_0_gt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_sext_cvt_0_gt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ugt i32 %i3, 0
   ret i1 %i4
 }
 
@@ -1308,6 +1445,21 @@ bb:
   ret i1 %i4
 }
 
+define i1 @test_zext_sext_cvt_1_gt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_sext_cvt_1_gt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG:%.*]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[ARG1:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ugt i32 %i3, 1
+  ret i1 %i4
+}
+
 define i1 @test_zext_sext_cvt_2_sgt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_zext_sext_cvt_2_sgt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1321,7 +1473,22 @@ bb:
   ret i1 %i4
 }
 
-; tests for slt
+define i1 @test_zext_sext_cvt_2_gt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_sext_cvt_2_gt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG:%.*]], true
+; CHECK-NEXT:    [[I4:%.*]] = and i1 [[ARG1:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ugt i32 %i3, 2
+  ret i1 %i4
+}
+
+; tests for slt, including samesign
 define i1 @test_zext_zext_cvt_neg_2_slt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_zext_zext_cvt_neg_2_slt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1335,6 +1502,19 @@ bb:
   ret i1 %i4
 }
 
+define i1 @test_zext_zext_cvt_neg_2_lt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_zext_cvt_neg_2_lt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret i1 true
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = zext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ult i32 %i3, -2
+  ret i1 %i4
+}
+
 define i1 @test_zext_zext_cvt_neg_1_slt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_zext_zext_cvt_neg_1_slt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1345,6 +1525,19 @@ bb:
   %i2 = zext i1 %arg1 to i32
   %i3 = add i32 %i2, %i
   %i4 = icmp slt i32 %i3, -1
+  ret i1 %i4
+}
+
+define i1 @test_zext_zext_cvt_neg_1_lt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_zext_cvt_neg_1_lt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret i1 true
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = zext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ult i32 %i3, -1
   ret i1 %i4
 }
 
@@ -1363,6 +1556,21 @@ bb:
   ret i1 %i4
 }
 
+define i1 @test_zext_zext_cvt_2_lt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_zext_cvt_2_lt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[TMP0]], true
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = zext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ult i32 %i3, 2
+  ret i1 %i4
+}
+
 define i1 @test_sext_sext_cvt_neg_2_slt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_sext_sext_cvt_neg_2_slt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1373,6 +1581,21 @@ bb:
   %i2 = sext i1 %arg1 to i32
   %i3 = add i32 %i2, %i
   %i4 = icmp slt i32 %i3, -2
+  ret i1 %i4
+}
+
+define i1 @test_sext_sext_cvt_neg_2_lt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_sext_sext_cvt_neg_2_lt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[TMP0]], true
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = sext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ult i32 %i3, -2
   ret i1 %i4
 }
 
@@ -1390,6 +1613,19 @@ bb:
   ret i1 %i4
 }
 
+define i1 @test_sext_sext_cvt_0_lt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_sext_sext_cvt_0_lt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret i1 false
+;
+bb:
+  %i = sext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ult i32 %i3, 0
+  ret i1 %i4
+}
+
 define i1 @test_sext_sext_cvt_2_slt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_sext_sext_cvt_2_slt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1400,6 +1636,21 @@ bb:
   %i2 = sext i1 %arg1 to i32
   %i3 = add i32 %i2, %i
   %i4 = icmp slt i32 %i3, 2
+  ret i1 %i4
+}
+
+define i1 @test_sext_sext_cvt_2_lt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_sext_sext_cvt_2_lt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[TMP0]], true
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = sext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ult i32 %i3, 2
   ret i1 %i4
 }
 
@@ -1416,6 +1667,21 @@ bb:
   ret i1 %i4
 }
 
+define i1 @test_zext_sext_cvt_neg_2_lt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_sext_cvt_neg_2_lt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ARG1_NOT:%.*]] = xor i1 [[ARG1:%.*]], true
+; CHECK-NEXT:    [[I4:%.*]] = or i1 [[ARG:%.*]], [[ARG1_NOT]]
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ult i32 %i3, -2
+  ret i1 %i4
+}
+
 define i1 @test_zext_sext_cvt_neg_1_slt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_zext_sext_cvt_neg_1_slt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1426,6 +1692,21 @@ bb:
   %i2 = sext i1 %arg1 to i32
   %i3 = add i32 %i2, %i
   %i4 = icmp slt i32 %i3, -1
+  ret i1 %i4
+}
+
+define i1 @test_zext_sext_cvt_neg_1_lt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_sext_cvt_neg_1_lt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG1:%.*]], true
+; CHECK-NEXT:    [[I4:%.*]] = or i1 [[ARG:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ult i32 %i3, -1
   ret i1 %i4
 }
 
@@ -1444,6 +1725,19 @@ bb:
   ret i1 %i4
 }
 
+define i1 @test_zext_sext_cvt_0_lt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_sext_cvt_0_lt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret i1 false
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ult i32 %i3, 0
+  ret i1 %i4
+}
+
 define i1 @test_zext_sext_cvt_1_slt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_zext_sext_cvt_1_slt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1459,6 +1753,21 @@ bb:
   ret i1 %i4
 }
 
+define i1 @test_zext_sext_cvt_1_lt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_sext_cvt_1_lt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[TMP0]], true
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ult i32 %i3, 1
+  ret i1 %i4
+}
+
 define i1 @test_zext_sext_cvt_2_slt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_zext_sext_cvt_2_slt_icmp(
 ; CHECK-NEXT:  bb:
@@ -1469,6 +1778,21 @@ bb:
   %i2 = sext i1 %arg1 to i32
   %i3 = add i32 %i2, %i
   %i4 = icmp slt i32 %i3, 2
+  ret i1 %i4
+}
+
+define i1 @test_zext_sext_cvt_2_lt_icmp(i1 %arg, i1 %arg1) {
+; CHECK-LABEL: @test_zext_sext_cvt_2_lt_icmp(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ARG1_NOT:%.*]] = xor i1 [[ARG1:%.*]], true
+; CHECK-NEXT:    [[I4:%.*]] = or i1 [[ARG:%.*]], [[ARG1_NOT]]
+; CHECK-NEXT:    ret i1 [[I4]]
+;
+bb:
+  %i = zext i1 %arg to i32
+  %i2 = sext i1 %arg1 to i32
+  %i3 = add i32 %i2, %i
+  %i4 = icmp samesign ult i32 %i3, 2
   ret i1 %i4
 }
 
