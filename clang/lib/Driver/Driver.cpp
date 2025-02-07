@@ -6204,10 +6204,29 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   }
 
   llvm::PrettyStackTraceString CrashInfo("Computing output path");
+
   // Output to a user requested destination?
   if (AtTopLevel && !isa<DsymutilJobAction>(JA) && !isa<VerifyJobAction>(JA)) {
-    if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
+    bool IsCLNonPCH =
+        IsCLMode() && !C.getArgs().hasArg(options::OPT__SLASH_Yc) &&
+        (isa<PreprocessJobAction>(JA) || isa<PrecompileJobAction>(JA));
+    bool HasAnyOutputArg = C.getArgs().hasArg(
+        options::OPT_o, options::OPT__SLASH_Fo, options::OPT__SLASH_Fo_COLON);
+
+    Arg *FinalOutput = nullptr;
+    if (IsCLNonPCH && HasAnyOutputArg) {
+      FinalOutput = C.getArgs().getLastArg(
+          options::OPT_o, options::OPT__SLASH_Fo, options::OPT__SLASH_Fo_COLON);
+    } else if (IsCLNonPCH) {
+      FinalOutput = C.getArgs().getLastArg(options::OPT__SLASH_Fo,
+                                           options::OPT__SLASH_Fo_COLON);
+    } else {
+      FinalOutput = C.getArgs().getLastArg(options::OPT_o);
+    }
+
+    if (FinalOutput) {
       return C.addResultFile(FinalOutput->getValue(), &JA);
+    }
   }
 
   // For /P, preprocess to file named after BaseInput.
