@@ -19,7 +19,6 @@ class SBTypeMemberFunctionsTest(TestBase):
         self.source = "main.mm"
         self.line = line_number(self.source, "// set breakpoint here")
 
-    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     @skipUnlessDarwin
     def test(self):
         """Test SBType APIs to fetch member function types."""

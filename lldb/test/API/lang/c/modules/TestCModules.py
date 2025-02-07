@@ -20,7 +20,6 @@ class CModulesTestCase(TestBase):
     )
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureNetBSD
-    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     def test_expr(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

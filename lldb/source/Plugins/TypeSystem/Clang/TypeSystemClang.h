@@ -152,8 +152,6 @@ public:
   static LanguageSet GetSupportedLanguagesForTypes();
   static LanguageSet GetSupportedLanguagesForExpressions();
 
-  static void DebuggerInitialize(Debugger &debugger);
-
   static void Initialize();
 
   static void Terminate();
@@ -572,14 +570,6 @@ public:
   plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
   PDBASTParser *GetPDBParser() override;
   npdb::PdbAstBuilder *GetNativePDBParser() override;
-
-  /// If true, then declarations are completed by completing their redeclaration
-  /// chain.
-  ///
-  /// Initially declarations might just be forward declared in an AST but have a
-  /// defining redeclaration (that might be lazily added to the AST via the
-  /// ExternalASTSource).
-  static bool UseRedeclCompletion();
 
   // TypeSystemClang callbacks for external source lookups.
   void CompleteTagDecl(clang::TagDecl *);

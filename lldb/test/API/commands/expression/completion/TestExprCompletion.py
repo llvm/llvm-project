@@ -13,7 +13,6 @@ from lldbsuite.test import lldbutil
 class CommandLineExprCompletionTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     def test_expr_completion(self):
         self.build()
         self.main_source = "main.cpp"
@@ -252,7 +251,6 @@ class CommandLineExprCompletionTestCase(TestBase):
         self.complete_from_to("expr myVec.__m", "expr myVec.__mem")
         self.complete_from_to("expr myVec._M", "expr myVec._Mem")
 
-    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     def test_expr_completion_with_descriptions(self):
         self.build()
         self.main_source = "main.cpp"

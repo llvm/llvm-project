@@ -9,8 +9,6 @@ class TestSwiftClangImporterExplicitNoImplicit(TestBase):
     
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
-    # This triggers an infinite loop while completing types.
-    @skipIf(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'), bugnumber='rdar://128094135')
     @skipUnlessDarwin
     @swiftTest
     def test(self):

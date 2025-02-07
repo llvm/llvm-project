@@ -1336,13 +1336,6 @@ void ClangExpressionDeclMap::LookupFunction(
   }
 }
 
-void ClangExpressionDeclMap::FindExternalVisibleMethods(
-    NameSearchContext &context) {
-  assert(m_ast_context);
-
-  ClangASTSource::FindExternalVisibleMethods(context);
-}
-
 void ClangExpressionDeclMap::FindExternalVisibleDecls(
     NameSearchContext &context, lldb::ModuleSP module_sp,
     const CompilerDeclContext &namespace_decl) {

@@ -43,16 +43,9 @@ public:
   bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
                                       clang::DeclarationName Name) override;
 
-  bool FindExternalVisibleMethodsByName(const clang::DeclContext *DC,
-                                        clang::DeclarationName Name) override {
-    return false;
-  }
-
   void CompleteType(clang::TagDecl *tag_decl) override;
 
   void CompleteType(clang::ObjCInterfaceDecl *objc_decl) override;
-
-  void CompleteRedeclChain(clang::Decl const *D) override;
 
   bool layoutRecordType(
       const clang::RecordDecl *Record, uint64_t &Size, uint64_t &Alignment,

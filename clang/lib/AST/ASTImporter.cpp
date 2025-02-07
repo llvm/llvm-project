@@ -1063,8 +1063,7 @@ Expected<LambdaCapture> ASTNodeImporter::import(const LambdaCapture &From) {
 
 template <typename T>
 bool ASTNodeImporter::hasSameVisibilityContextAndLinkage(T *Found, T *From) {
-  if (!Importer.hasLLDBRedeclCompletion() &&
-      Found->getLinkageInternal() != From->getLinkageInternal())
+  if (Found->getLinkageInternal() != From->getLinkageInternal())
     return false;
 
   if (From->hasExternalFormalLinkage())
@@ -2026,8 +2025,7 @@ Error ASTNodeImporter::ImportDefinitionIfNeeded(Decl *FromD, Decl *ToD) {
   if (RecordDecl *FromRecord = dyn_cast<RecordDecl>(FromD)) {
     if (RecordDecl *ToRecord = cast<RecordDecl>(ToD)) {
       if (FromRecord->getDefinition() && !ToRecord->getDefinition() &&
-          (Importer.hasLLDBRedeclCompletion() ||
-           FromRecord->isCompleteDefinition())) {
+          FromRecord->isCompleteDefinition()) {
         if (Error Err = ImportDefinition(FromRecord, ToRecord))
           return Err;
       }
@@ -2129,14 +2127,12 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
       continue;
     }
 
-    if (!Importer.hasLLDBRedeclCompletion()) {
-      FieldDecl *FieldFrom = dyn_cast_or_null<FieldDecl>(From);
-      Decl *ImportedDecl = *ImportedOrErr;
-      FieldDecl *FieldTo = dyn_cast_or_null<FieldDecl>(ImportedDecl);
-      if (FieldFrom && FieldTo) {
-        Error Err = ImportFieldDeclDefinition(FieldFrom, FieldTo);
-        HandleChildErrors.handleChildImportResult(ChildErrors, std::move(Err));
-      }
+    FieldDecl *FieldFrom = dyn_cast_or_null<FieldDecl>(From);
+    Decl *ImportedDecl = *ImportedOrErr;
+    FieldDecl *FieldTo = dyn_cast_or_null<FieldDecl>(ImportedDecl);
+    if (FieldFrom && FieldTo) {
+      Error Err = ImportFieldDeclDefinition(FieldFrom, FieldTo);
+      HandleChildErrors.handleChildImportResult(ChildErrors, std::move(Err));
     }
   }
 
@@ -2297,11 +2293,7 @@ Error ASTNodeImporter::ImportDefinition(
     To->completeDefinition();
   };
 
-  bool hasDef = (Importer.hasLLDBRedeclCompletion() &&
-                 To->isThisDeclarationADefinition()) ||
-                To->getDefinition();
-
-  if (hasDef || To->isBeingDefined()) {
+  if (To->getDefinition() || To->isBeingDefined()) {
     if (Kind == IDK_Everything ||
         // In case of lambdas, the class already has a definition ptr set, but
         // the contained decls are not imported yet. Also, isBeingDefined was
@@ -2823,7 +2815,7 @@ ASTNodeImporter::VisitTypedefNameDecl(TypedefNameDecl *D, bool IsAlias) {
               continue;
           }
 
-          if (Importer.hasLLDBRedeclCompletion() && Importer.isMinimalImport())
+          if (Importer.isMinimalImport())
             return Importer.MapImported(D, FoundTypedef);
           // If the "From" context has a complete underlying type but we
           // already have a complete underlying type then return with that.
@@ -3096,11 +3088,9 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
       return POIOrErr.takeError();
   }
 
-  auto Kind = Importer.hasLLDBRedeclCompletion() ? IDK_Everything : IDK_Default;
-
   // Import the definition
   if (D->isCompleteDefinition())
-    if (Error Err = ImportDefinition(D, D2, Kind))
+    if (Error Err = ImportDefinition(D, D2, IDK_Default))
       return std::move(Err);
 
   return D2;
@@ -3182,8 +3172,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
 
         if (IsStructuralMatch(D, FoundRecord)) {
           RecordDecl *FoundDef = FoundRecord->getDefinition();
-          if (!Importer.hasLLDBRedeclCompletion() &&
-              D->isThisDeclarationADefinition() && FoundDef) {
+          if (D->isThisDeclarationADefinition() && FoundDef) {
             // FIXME: Structural equivalence check should check for same
             // user-defined methods.
             Importer.MapImported(D, FoundDef);
@@ -3354,9 +3343,8 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
   if (D->isAnonymousStructOrUnion())
     D2->setAnonymousStructOrUnion(true);
 
-  auto Kind = Importer.hasLLDBRedeclCompletion() ? IDK_Everything : IDK_Default;
   if (D->isCompleteDefinition())
-    if (Error Err = ImportDefinition(D, D2, Kind))
+    if (Error Err = ImportDefinition(D, D2, IDK_Default))
       return std::move(Err);
 
   return D2;
@@ -5541,8 +5529,7 @@ Error ASTNodeImporter::ImportDefinition(
                           diag::note_odr_objc_missing_superclass);
     }
 
-    if (Importer.hasLLDBRedeclCompletion() ||
-        shouldForceImportDeclContext(Kind))
+    if (shouldForceImportDeclContext(Kind))
       if (Error Err = ImportDeclContext(From))
         return Err;
     return Error::success();
@@ -6432,9 +6419,8 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     }
   }
 
-  auto Kind = Importer.hasLLDBRedeclCompletion() ? IDK_Everything : IDK_Default;
   if (D->isCompleteDefinition())
-    if (Error Err = ImportDefinition(D, D2, Kind))
+    if (Error Err = ImportDefinition(D, D2, IDK_Default))
       return std::move(Err);
 
   return D2;

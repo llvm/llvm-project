@@ -50,7 +50,6 @@ class TypeLookupTestCase(TestBase):
             substrs=["@interface MyObjCClass", "int x", "int y"],
         )
 
-    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     @skipUnlessDarwin
     @skipIf(archs=["i386"])
     @skipIfDarwinEmbedded  # swift crash inspecting swift stdlib with little other swift loaded <rdar://problem/55079456>

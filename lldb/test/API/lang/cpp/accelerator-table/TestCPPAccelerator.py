@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class CPPAcceleratorTableTestCase(TestBase):
-    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     @skipUnlessDarwin
     @skipIf(debug_info=no_match(["dwarf"]))
     @skipIf(dwarf_version=[">=", "5"])

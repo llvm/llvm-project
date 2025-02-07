@@ -476,7 +476,6 @@ public:
   // TypeSystem
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              TypeSystemCreateInstance create_callback,
-                             DebuggerInitializeCallback debugger_callback,
                              LanguageSet supported_languages_for_types,
                              LanguageSet supported_languages_for_expressions);
 
@@ -557,13 +556,6 @@ public:
   static bool CreateSettingForSymbolLocatorPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
-
-  static lldb::OptionValuePropertiesSP
-  GetSettingForTypeSystemPlugin(Debugger &debugger, ConstString setting_name);
-
-  static bool CreateSettingForTypeSystemPlugin(
-      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
-      ConstString description, bool is_global_property);
 
   static bool CreateSettingForTracePlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
