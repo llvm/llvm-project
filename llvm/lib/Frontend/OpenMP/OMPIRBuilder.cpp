@@ -6828,7 +6828,7 @@ static void FixupDebugInfoForOutlinedFunction(
       return NewVar;
 
     DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
-      *OldVar->getScope(), *NewSP, Builder.getContext(), Cache);
+        *OldVar->getScope(), *NewSP, Builder.getContext(), Cache);
     NewVar = llvm::DILocalVariable::get(
         Builder.getContext(), NewScope, OldVar->getName(), OldVar->getFile(),
         OldVar->getLine(), OldVar->getType(), arg, OldVar->getFlags(),
