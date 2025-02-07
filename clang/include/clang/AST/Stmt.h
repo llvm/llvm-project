@@ -2409,6 +2409,61 @@ public:
   }
 };
 
+/// WhenStmt - This represents a '_When' stmt.
+class WhenStmt : public Stmt, private llvm::TrailingObjects<WhenStmt, Stmt *> {
+    SourceLocation WhenLoc;
+    Expr *Condition;
+    bool IsAccept;
+    IdentifierInfo *VarName;
+    Stmt *Body;
+
+  /*
+    * WhenStmt is followed by several trailing objects, some of which optional.
+    * Note that it would be more convenient to put the optional trailing objects
+    * at the end but this would change the order in children().
+    * The trailing objects are in order:
+    *
+    * * A "Stmt *" for the condition.
+    *    Always present. This is in fact an "Expr *".
+    *
+    * * A "Stmt *" for the body.
+    *    Always present.
+  */
+  enum {
+    NumMandatoryStmtPtr = 2
+  };
+
+public:
+    // WhenStmt(SourceLocation Loc, Expr *Cond, bool Accept, IdentifierInfo *Var, Stmt *BodyStmt)
+    WhenStmt(SourceLocation Loc, Expr *Cond, Stmt *BodyStmt)
+        : Stmt(Stmt::WhenStmtClass), WhenLoc(Loc), Condition(Cond),
+          Body(BodyStmt) {}
+          // IsAccept(Accept), VarName(Var), Body(BodyStmt) {}
+
+    explicit WhenStmt(EmptyShell Empty)
+        : Stmt(Stmt::WhenStmtClass) {}
+
+    // static WhenStmt* Create(const ASTContext &Ctx, SourceLocation Loc, Expr *Cond, bool Accept, IdentifierInfo *Var, Stmt *BodyStmt);
+    static WhenStmt* Create(const ASTContext &Ctx, SourceLocation Loc, Expr *Cond, Stmt *BodyStmt);
+    static WhenStmt* CreateEmpty(const ASTContext &Ctx);
+
+    SourceLocation getBeginLoc() const { return WhenLoc; }
+    SourceLocation getEndLoc() const { return Body ? Body->getEndLoc() : WhenLoc; }
+    child_range children() { return child_range(&Body, &Body + 1); }
+    static bool classof(const Stmt *S) { return S->getStmtClass() == WhenStmtClass; }
+
+    bool isAccept() const { return IsAccept; }
+    IdentifierInfo *getVarName() const { return VarName; }
+    Expr *getCondition() const { return Condition; }
+    void setCondition(Expr *Cond) { Condition = Cond; }
+    Stmt *getBody() const { return Body; }
+    void setBody(Stmt *B) { Body = B; }
+
+    SourceLocation getWhenLoc() const { return WhenLoc; }
+    SourceLocation setWhenLoc(SourceLocation Loc) { return WhenLoc = Loc; }
+
+};
+
 /// SwitchStmt - This represents a 'switch' stmt.
 class SwitchStmt final : public Stmt,
                          private llvm::TrailingObjects<SwitchStmt, Stmt *> {

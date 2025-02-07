@@ -295,6 +295,10 @@ void StmtProfiler::VisitWhileStmt(const WhileStmt *S) {
   VisitDecl(S->getConditionVariable());
 }
 
+void StmtProfiler::VisitWhenStmt(const WhenStmt *S) {
+  VisitStmt(S);
+}
+
 void StmtProfiler::VisitDoStmt(const DoStmt *S) {
   VisitStmt(S);
 }

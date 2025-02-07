@@ -1179,6 +1179,19 @@ void WhileStmt::setConditionVariable(const ASTContext &Ctx, VarDecl *V) {
       DeclStmt(DeclGroupRef(V), VarRange.getBegin(), VarRange.getEnd());
 }
 
+// When Stmt
+WhenStmt* WhenStmt::Create(const ASTContext &Ctx, SourceLocation Loc, Expr *Cond, Stmt *BodyStmt) {
+// WhenStmt* WhenStmt::Create(const ASTContext &Ctx, SourceLocation Loc, Expr *Cond, bool Accept, IdentifierInfo *Var, Stmt *BodyStmt) {
+  
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(NumMandatoryStmtPtr), alignof(WhenStmt));
+  return new (Mem) WhenStmt(Loc, Cond, BodyStmt);
+}
+
+WhenStmt* WhenStmt::CreateEmpty(const ASTContext &Ctx) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(NumMandatoryStmtPtr), alignof(WhenStmt));
+  return new (Mem) WhenStmt(EmptyShell());
+}
+
 // IndirectGotoStmt
 LabelDecl *IndirectGotoStmt::getConstantTarget() {
   if (auto *E = dyn_cast<AddrLabelExpr>(getTarget()->IgnoreParenImpCasts()))

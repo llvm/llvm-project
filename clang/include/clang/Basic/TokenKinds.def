@@ -17,65 +17,65 @@
 #define TOK(X)
 #endif
 #ifndef PUNCTUATOR
-#define PUNCTUATOR(X,Y) TOK(X)
+#define PUNCTUATOR(X, Y) TOK(X)
 #endif
 #ifndef KEYWORD
-#define KEYWORD(X,Y) TOK(kw_ ## X)
+#define KEYWORD(X, Y) TOK(kw_##X)
 #endif
 #ifndef CXX11_KEYWORD
-#define CXX11_KEYWORD(X,Y) KEYWORD(X,KEYCXX11|(Y))
+#define CXX11_KEYWORD(X, Y) KEYWORD(X, KEYCXX11 | (Y))
 #endif
 #ifndef CXX20_KEYWORD
-#define CXX20_KEYWORD(X,Y) KEYWORD(X,KEYCXX20|(Y))
+#define CXX20_KEYWORD(X, Y) KEYWORD(X, KEYCXX20 | (Y))
 #endif
 #ifndef C99_KEYWORD
-#define C99_KEYWORD(X,Y) KEYWORD(X,KEYC99|(Y))
+#define C99_KEYWORD(X, Y) KEYWORD(X, KEYC99 | (Y))
 #endif
 #ifndef C23_KEYWORD
-#define C23_KEYWORD(X,Y) KEYWORD(X,KEYC23|(Y))
+#define C23_KEYWORD(X, Y) KEYWORD(X, KEYC23 | (Y))
 #endif
 #ifndef COROUTINES_KEYWORD
-#define COROUTINES_KEYWORD(X) CXX20_KEYWORD(X,KEYCOROUTINES)
+#define COROUTINES_KEYWORD(X) CXX20_KEYWORD(X, KEYCOROUTINES)
 #endif
 #ifndef MODULES_KEYWORD
-#define MODULES_KEYWORD(X) KEYWORD(X,KEYMODULES)
+#define MODULES_KEYWORD(X) KEYWORD(X, KEYMODULES)
 #endif
 #ifndef TYPE_TRAIT
-#define TYPE_TRAIT(N,I,K) KEYWORD(I,K)
+#define TYPE_TRAIT(N, I, K) KEYWORD(I, K)
 #endif
 #ifndef TYPE_TRAIT_1
-#define TYPE_TRAIT_1(I,E,K) TYPE_TRAIT(1,I,K)
+#define TYPE_TRAIT_1(I, E, K) TYPE_TRAIT(1, I, K)
 #endif
 #ifndef TYPE_TRAIT_2
-#define TYPE_TRAIT_2(I,E,K) TYPE_TRAIT(2,I,K)
+#define TYPE_TRAIT_2(I, E, K) TYPE_TRAIT(2, I, K)
 #endif
 #ifndef TYPE_TRAIT_N
-#define TYPE_TRAIT_N(I,E,K) TYPE_TRAIT(0,I,K)
+#define TYPE_TRAIT_N(I, E, K) TYPE_TRAIT(0, I, K)
 #endif
 #ifndef ARRAY_TYPE_TRAIT
-#define ARRAY_TYPE_TRAIT(I,E,K) KEYWORD(I,K)
+#define ARRAY_TYPE_TRAIT(I, E, K) KEYWORD(I, K)
 #endif
 #ifndef UNARY_EXPR_OR_TYPE_TRAIT
-#define UNARY_EXPR_OR_TYPE_TRAIT(I,E,K) KEYWORD(I,K)
+#define UNARY_EXPR_OR_TYPE_TRAIT(I, E, K) KEYWORD(I, K)
 #endif
 #ifndef CXX11_UNARY_EXPR_OR_TYPE_TRAIT
-#define CXX11_UNARY_EXPR_OR_TYPE_TRAIT(I,E,K) CXX11_KEYWORD(I,K)
+#define CXX11_UNARY_EXPR_OR_TYPE_TRAIT(I, E, K) CXX11_KEYWORD(I, K)
 #endif
 #ifndef EXPRESSION_TRAIT
-#define EXPRESSION_TRAIT(I,E,K) KEYWORD(I,K)
+#define EXPRESSION_TRAIT(I, E, K) KEYWORD(I, K)
 #endif
 #ifndef TRANSFORM_TYPE_TRAIT_DEF
 #define TRANSFORM_TYPE_TRAIT_DEF(K, Trait) KEYWORD(__##Trait, KEYCXX)
 #endif
 
 #ifndef ALIAS
-#define ALIAS(X,Y,Z)
+#define ALIAS(X, Y, Z)
 #endif
 #ifndef PPKEYWORD
 #define PPKEYWORD(X)
 #endif
 #ifndef CXX_KEYWORD_OPERATOR
-#define CXX_KEYWORD_OPERATOR(X,Y)
+#define CXX_KEYWORD_OPERATOR(X, Y)
 #endif
 #ifndef OBJC_AT_KEYWORD
 #define OBJC_AT_KEYWORD(X)
@@ -84,7 +84,7 @@
 #define TESTING_KEYWORD(X, L) KEYWORD(X, L)
 #endif
 #ifndef ANNOTATION
-#define ANNOTATION(X) TOK(annot_ ## X)
+#define ANNOTATION(X) TOK(annot_##X)
 #endif
 #ifndef PRAGMA_ANNOTATION
 #define PRAGMA_ANNOTATION(X) ANNOTATION(X)
@@ -152,32 +152,32 @@ PPKEYWORD(__private_macro)
 
 // These define members of the tok::* namespace.
 
-TOK(unknown)             // Not a token.
-TOK(eof)                 // End of file.
-TOK(eod)                 // End of preprocessing directive (end of line inside a
-                         // directive).
-TOK(code_completion)     // Code completion marker
+TOK(unknown)         // Not a token.
+TOK(eof)             // End of file.
+TOK(eod)             // End of preprocessing directive (end of line inside a
+                     // directive).
+TOK(code_completion) // Code completion marker
 
 // C99 6.4.9: Comments.
-TOK(comment)             // Comment (only in -E -C[C] mode)
+TOK(comment) // Comment (only in -E -C[C] mode)
 
 // C99 6.4.2: Identifiers.
-TOK(identifier)          // abcde123
-TOK(raw_identifier)      // Used only in raw lexing mode.
+TOK(identifier)     // abcde123
+TOK(raw_identifier) // Used only in raw lexing mode.
 
 // C99 6.4.4.1: Integer Constants
 // C99 6.4.4.2: Floating Constants
-TOK(numeric_constant)    // 0x123
+TOK(numeric_constant) // 0x123
 
 // Directly holds numerical value. Used to process C23 #embed.
 TOK(binary_data)
 
 // C99 6.4.4: Character Constants
-TOK(char_constant)       // 'a'
-TOK(wide_char_constant)  // L'b'
+TOK(char_constant)      // 'a'
+TOK(wide_char_constant) // L'b'
 
 // C++17 Character Constants
-TOK(utf8_char_constant)  // u8'a'
+TOK(utf8_char_constant) // u8'a'
 
 // C++11 Character Constants
 TOK(utf16_char_constant) // u'a'
@@ -188,75 +188,75 @@ TOK(string_literal)      // "foo"
 TOK(wide_string_literal) // L"foo"
 
 // C11 6.4.7: Header Names
-TOK(header_name)         // <foo>, or "foo" lexed as a header-name
+TOK(header_name) // <foo>, or "foo" lexed as a header-name
 
 // C++11 String Literals.
-TOK(utf8_string_literal) // u8"foo"
-TOK(utf16_string_literal)// u"foo"
-TOK(utf32_string_literal)// U"foo"
+TOK(utf8_string_literal)  // u8"foo"
+TOK(utf16_string_literal) // u"foo"
+TOK(utf32_string_literal) // U"foo"
 
 // C99 6.4.6: Punctuators.
-PUNCTUATOR(l_square,            "[")
-PUNCTUATOR(r_square,            "]")
-PUNCTUATOR(l_paren,             "(")
-PUNCTUATOR(r_paren,             ")")
-PUNCTUATOR(l_brace,             "{")
-PUNCTUATOR(r_brace,             "}")
-PUNCTUATOR(period,              ".")
-PUNCTUATOR(ellipsis,            "...")
-PUNCTUATOR(amp,                 "&")
-PUNCTUATOR(ampamp,              "&&")
-PUNCTUATOR(ampequal,            "&=")
-PUNCTUATOR(star,                "*")
-PUNCTUATOR(starequal,           "*=")
-PUNCTUATOR(plus,                "+")
-PUNCTUATOR(plusplus,            "++")
-PUNCTUATOR(plusequal,           "+=")
-PUNCTUATOR(minus,               "-")
-PUNCTUATOR(arrow,               "->")
-PUNCTUATOR(minusminus,          "--")
-PUNCTUATOR(minusequal,          "-=")
-PUNCTUATOR(tilde,               "~")
-PUNCTUATOR(exclaim,             "!")
-PUNCTUATOR(exclaimequal,        "!=")
-PUNCTUATOR(slash,               "/")
-PUNCTUATOR(slashequal,          "/=")
-PUNCTUATOR(percent,             "%")
-PUNCTUATOR(percentequal,        "%=")
-PUNCTUATOR(less,                "<")
-PUNCTUATOR(lessless,            "<<")
-PUNCTUATOR(lessequal,           "<=")
-PUNCTUATOR(lesslessequal,       "<<=")
-PUNCTUATOR(spaceship,           "<=>")
-PUNCTUATOR(greater,             ">")
-PUNCTUATOR(greatergreater,      ">>")
-PUNCTUATOR(greaterequal,        ">=")
+PUNCTUATOR(l_square, "[")
+PUNCTUATOR(r_square, "]")
+PUNCTUATOR(l_paren, "(")
+PUNCTUATOR(r_paren, ")")
+PUNCTUATOR(l_brace, "{")
+PUNCTUATOR(r_brace, "}")
+PUNCTUATOR(period, ".")
+PUNCTUATOR(ellipsis, "...")
+PUNCTUATOR(amp, "&")
+PUNCTUATOR(ampamp, "&&")
+PUNCTUATOR(ampequal, "&=")
+PUNCTUATOR(star, "*")
+PUNCTUATOR(starequal, "*=")
+PUNCTUATOR(plus, "+")
+PUNCTUATOR(plusplus, "++")
+PUNCTUATOR(plusequal, "+=")
+PUNCTUATOR(minus, "-")
+PUNCTUATOR(arrow, "->")
+PUNCTUATOR(minusminus, "--")
+PUNCTUATOR(minusequal, "-=")
+PUNCTUATOR(tilde, "~")
+PUNCTUATOR(exclaim, "!")
+PUNCTUATOR(exclaimequal, "!=")
+PUNCTUATOR(slash, "/")
+PUNCTUATOR(slashequal, "/=")
+PUNCTUATOR(percent, "%")
+PUNCTUATOR(percentequal, "%=")
+PUNCTUATOR(less, "<")
+PUNCTUATOR(lessless, "<<")
+PUNCTUATOR(lessequal, "<=")
+PUNCTUATOR(lesslessequal, "<<=")
+PUNCTUATOR(spaceship, "<=>")
+PUNCTUATOR(greater, ">")
+PUNCTUATOR(greatergreater, ">>")
+PUNCTUATOR(greaterequal, ">=")
 PUNCTUATOR(greatergreaterequal, ">>=")
-PUNCTUATOR(caret,               "^")
-PUNCTUATOR(caretequal,          "^=")
-PUNCTUATOR(pipe,                "|")
-PUNCTUATOR(pipepipe,            "||")
-PUNCTUATOR(pipeequal,           "|=")
-PUNCTUATOR(question,            "?")
-PUNCTUATOR(colon,               ":")
-PUNCTUATOR(semi,                ";")
-PUNCTUATOR(equal,               "=")
-PUNCTUATOR(equalequal,          "==")
-PUNCTUATOR(comma,               ",")
-PUNCTUATOR(hash,                "#")
-PUNCTUATOR(hashhash,            "##")
-PUNCTUATOR(hashat,              "#@")
+PUNCTUATOR(caret, "^")
+PUNCTUATOR(caretequal, "^=")
+PUNCTUATOR(pipe, "|")
+PUNCTUATOR(pipepipe, "||")
+PUNCTUATOR(pipeequal, "|=")
+PUNCTUATOR(question, "?")
+PUNCTUATOR(colon, ":")
+PUNCTUATOR(semi, ";")
+PUNCTUATOR(equal, "=")
+PUNCTUATOR(equalequal, "==")
+PUNCTUATOR(comma, ",")
+PUNCTUATOR(hash, "#")
+PUNCTUATOR(hashhash, "##")
+PUNCTUATOR(hashat, "#@")
 
 // C++ Support
-PUNCTUATOR(periodstar,          ".*")
-PUNCTUATOR(arrowstar,           "->*")
-PUNCTUATOR(coloncolon,          "::")
+PUNCTUATOR(periodstar, ".*")
+PUNCTUATOR(arrowstar, "->*")
+PUNCTUATOR(coloncolon, "::")
 
 // Objective C support.
-PUNCTUATOR(at,                  "@")
+PUNCTUATOR(at, "@")
 
 // CUDA support.
-PUNCTUATOR(lesslessless,          "<<<")
+PUNCTUATOR(lesslessless, "<<<")
 PUNCTUATOR(greatergreatergreater, ">>>")
 
 // C99 6.4.1: Keywords.  These turn into kw_* tokens.
@@ -295,34 +295,34 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 //                   extension.
 //   KEYZOS - This is a keyword in C/C++ on z/OS
 //
-KEYWORD(auto                        , KEYALL)
-KEYWORD(break                       , KEYALL)
-KEYWORD(case                        , KEYALL)
-KEYWORD(char                        , KEYALL)
-KEYWORD(const                       , KEYALL)
-KEYWORD(continue                    , KEYALL)
-KEYWORD(default                     , KEYALL)
-KEYWORD(do                          , KEYALL)
-KEYWORD(double                      , KEYALL)
-KEYWORD(else                        , KEYALL)
-KEYWORD(enum                        , KEYALL)
-KEYWORD(extern                      , KEYALL)
-KEYWORD(float                       , KEYALL)
+KEYWORD(auto, KEYALL)
+KEYWORD(break, KEYALL)
+KEYWORD(case, KEYALL)
+KEYWORD(char, KEYALL)
+KEYWORD(const, KEYALL)
+KEYWORD(continue, KEYALL)
+KEYWORD(default, KEYALL)
+KEYWORD(do, KEYALL)
+KEYWORD(double, KEYALL)
+KEYWORD(else, KEYALL)
+KEYWORD(enum, KEYALL)
+KEYWORD(extern, KEYALL)
+KEYWORD(float, KEYALL)
 KEYWORD(for                         , KEYALL)
-KEYWORD(goto                        , KEYALL)
-KEYWORD(if                          , KEYALL)
-KEYWORD(int                         , KEYALL)
-KEYWORD(_ExtInt                     , KEYALL)
-KEYWORD(_BitInt                     , KEYALL)
-KEYWORD(long                        , KEYALL)
-KEYWORD(register                    , KEYALL)
-KEYWORD(return                      , KEYALL)
-KEYWORD(short                       , KEYALL)
-KEYWORD(signed                      , KEYALL)
+KEYWORD(goto, KEYALL)
+KEYWORD(if, KEYALL)
+KEYWORD(int, KEYALL)
+KEYWORD(_ExtInt, KEYALL)
+KEYWORD(_BitInt, KEYALL)
+KEYWORD(long, KEYALL)
+KEYWORD(register, KEYALL)
+KEYWORD(return, KEYALL)
+KEYWORD(short, KEYALL)
+KEYWORD(signed, KEYALL)
 UNARY_EXPR_OR_TYPE_TRAIT(sizeof, SizeOf, KEYALL)
 UNARY_EXPR_OR_TYPE_TRAIT(__datasizeof, DataSizeOf, KEYCXX)
-KEYWORD(static                      , KEYALL)
-KEYWORD(struct                      , KEYALL)
+KEYWORD(static, KEYALL)
+KEYWORD(struct, KEYALL)
 KEYWORD(switch                      , KEYALL)
 KEYWORD(typedef                     , KEYALL)
 KEYWORD(union                       , KEYALL)
@@ -337,6 +337,9 @@ KEYWORD(_Bool                       , KEYNOCXX)
 KEYWORD(_Complex                    , KEYALL)
 KEYWORD(_Generic                    , KEYALL)
 KEYWORD(_Coroutine                  , KEYALL)
+KEYWORD(_When                       , KEYALL)
+// KEYWORD(_Accept                     , KEYALL)
+// KEYWORD(_Select                     , KEYALL)
 // Note, C2y removed support for _Imaginary; we retain it as a keyword because
 // 1) it's a reserved identifier, so we're allowed to steal it, 2) there's no
 // good way to specify a keyword in earlier but not later language modes within
@@ -640,7 +643,8 @@ ALIAS("read_write", __read_write    , KEYOPENCLC | KEYOPENCLCXX)
 // OpenCL builtins
 KEYWORD(__builtin_astype            , KEYOPENCLC | KEYOPENCLCXX)
 UNARY_EXPR_OR_TYPE_TRAIT(vec_step, VecStep, KEYOPENCLC | KEYOPENCLCXX | KEYALTIVEC | KEYZVECTOR)
-#define GENERIC_IMAGE_TYPE(ImgType, Id) KEYWORD(ImgType##_t, KEYOPENCLC | KEYOPENCLCXX)
+#define GENERIC_IMAGE_TYPE(ImgType, Id)                                        \
+  KEYWORD(ImgType##_t, KEYOPENCLC | KEYOPENCLCXX)
 #include "clang/Basic/OpenCLImageTypes.def"
 KEYWORD(pipe                        , KEYOPENCLC | KEYOPENCLCXX)
 // C++ for OpenCL s2.3.1: addrspace_cast operator
@@ -797,7 +801,7 @@ KEYWORD(__builtin_sycl_unique_stable_name, KEYSYCL)
 // Keywords defined by Attr.td.
 // The "EMPTY ## X" is used to prevent early macro-expansion of the keyword.
 #ifndef KEYWORD_ATTRIBUTE
-#define KEYWORD_ATTRIBUTE(X, HASARG, EMPTY) KEYWORD(EMPTY ## X, KEYALL)
+#define KEYWORD_ATTRIBUTE(X, HASARG, EMPTY) KEYWORD(EMPTY##X, KEYALL)
 #endif
 #include "clang/Basic/RegularKeywordAttrInfo.inc"
 

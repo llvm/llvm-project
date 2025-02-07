@@ -412,6 +412,23 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
       Hash.combine(PGOHash::EndOfScope);
     return true;
   }
+  
+  bool TraverseWhenStmt(WhenStmt *When) {
+    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
+    for (Stmt *CS : When->children()) {
+      if (!CS || NoSingleByteCoverage)
+        continue;
+      if (CS == When->getCondition())
+        CounterMap[When->getCondition()] = NextCounter++;
+      else if (CS == When->getBody())
+        CounterMap[When->getBody()] = NextCounter++;
+    }
+
+    Base::TraverseWhenStmt(When);
+    if (Hash.getHashVersion() != PGO_HASH_V1)
+      Hash.combine(PGOHash::EndOfScope);
+    return true;
+  }
 
   bool TraverseDoStmt(DoStmt *Do) {
     // When single byte coverage mode is enabled, add a counter to condition and

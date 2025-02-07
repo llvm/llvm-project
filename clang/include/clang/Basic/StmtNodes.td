@@ -25,6 +25,9 @@ def CaseStmt : StmtNode<SwitchCase>;
 def DefaultStmt : StmtNode<SwitchCase>;
 def CapturedStmt : StmtNode<Stmt>;
 
+// uC++ Statements
+def WhenStmt : StmtNode<Stmt>;
+
 // Statements that might produce a value (for example, as the last non-null
 // statement in a GNU statement-expression).
 def ValueStmt : StmtNode<Stmt, 1>;

@@ -26,6 +26,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -49,6 +50,19 @@
 
 using namespace clang;
 using namespace sema;
+
+StmtResult Sema::ActOnWhenStatement(SourceLocation WhenLoc, ConditionResult Cond, bool IsAccept,
+                                    IdentifierInfo *VarName, SourceLocation VarLoc, Stmt *Body) {
+    if (Cond.isInvalid())
+      return StmtError();
+
+    Expr *CondExpr = Cond.get().second;
+    if(!CondExpr) {
+      return StmtError();
+    }
+
+    return WhenStmt::Create(Context, WhenLoc, CondExpr, Body);
+}
 
 StmtResult Sema::ActOnExprStmt(ExprResult FE, bool DiscardedValue) {
   if (FE.isInvalid())
