@@ -8944,7 +8944,7 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
     auto *const Zero = ConstantInt::get(Reduction->getType(), 0);
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getOrAddLiveIn(Zero));
-    Ops.push_back(cast<VPWidenRecipe>(BinOp->getDefiningRecipe()));
+    Ops.push_back(BinOp);
     BinOp = new VPWidenRecipe(*Reduction, make_range(Ops.begin(), Ops.end()));
     ParentBlock->appendRecipe(BinOp->getDefiningRecipe());
     ReductionOpcode = Instruction::Add;
