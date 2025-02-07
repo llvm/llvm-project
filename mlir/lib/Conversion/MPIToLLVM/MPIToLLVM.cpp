@@ -198,12 +198,14 @@ struct SendOpLowering : public ConvertOpToLLVMPattern<mpi::SendOp> {
             .create<LLVM::ExtractValueOp>(loc, memRef, ArrayRef<int64_t>{3, 0})
             .getResult();
     size = rewriter.create<LLVM::TruncOp>(loc, i32, size).getResult();
-    auto dataType = MPIImplTraits::getDataType(loc, rewriter, elemType);
+    auto dataType =
+        MPIImplTraits::getDataType(moduleOp, loc, rewriter, elemType);
     auto commWorld = MPIImplTraits::getCommWorld(moduleOp, loc, rewriter);
 
-    // LLVM Function type representing `i32 MPI_send(datatype, dst, tag, comm)`
+    // LLVM Function type representing `i32 MPI_send(data, count, datatype, dst,
+    // tag, comm)`
     auto funcType = LLVM::LLVMFunctionType::get(
-        i32, {ptrType, i32, i32, i32, i32, commWorld.getType()});
+        i32, {ptrType, i32, dataType.getType(), i32, i32, commWorld.getType()});
     // get or create function declaration:
     LLVM::LLVMFuncOp funcDecl =
         getOrDefineFunction(moduleOp, loc, rewriter, "MPI_Send", funcType);
@@ -261,7 +263,8 @@ struct RecvOpLowering : public ConvertOpToLLVMPattern<mpi::RecvOp> {
             .create<LLVM::ExtractValueOp>(loc, memRef, ArrayRef<int64_t>{3, 0})
             .getResult();
     size = rewriter.create<LLVM::TruncOp>(loc, i32, size).getResult();
-    auto dataType = MPIImplTraits::getDataType(loc, rewriter, elemType);
+    auto dataType =
+        MPIImplTraits::getDataType(moduleOp, loc, rewriter, elemType);
     auto commWorld = MPIImplTraits::getCommWorld(moduleOp, loc, rewriter);
     auto statusIgnore =
         rewriter
@@ -271,9 +274,11 @@ struct RecvOpLowering : public ConvertOpToLLVMPattern<mpi::RecvOp> {
     statusIgnore = rewriter.create<LLVM::IntToPtrOp>(loc, ptrType, statusIgnore)
                        .getResult();
 
-    // LLVM Function type representing `i32 MPI_Recv(datatype, dst, tag, comm)`
-    auto funcType = LLVM::LLVMFunctionType::get(
-        i32, {ptrType, i32, i32, i32, i32, commWorld.getType(), ptrType});
+    // LLVM Function type representing `i32 MPI_Recv(data, count, datatype, dst,
+    // tag, comm)`
+    auto funcType =
+        LLVM::LLVMFunctionType::get(i32, {ptrType, i32, dataType.getType(), i32,
+                                          i32, commWorld.getType(), ptrType});
     // get or create function declaration:
     LLVM::LLVMFuncOp funcDecl =
         getOrDefineFunction(moduleOp, loc, rewriter, "MPI_Recv", funcType);

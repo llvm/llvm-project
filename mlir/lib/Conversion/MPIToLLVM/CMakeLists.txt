@@ -1,11 +1,20 @@
-find_package(MPI REQUIRED) # MPI_SKIP_COMPILER_WRAPPER TRUE MPI_CXX_SKIP_MPICXX TRUE)
+find_path(MPI_C_HEADER_DIR mpi.h
+    PATHS $ENV{I_MPI_ROOT}/include
+          $ENV{MPI_HOME}/include
+          $ENV{MPI_ROOT}/include)
+if(MPI_C_HEADER_DIR)
+  # cmake_path(REMOVE_FILENAME MPI_C_HEADER_DIR)
+  message(STATUS "found MPI_C_HEADER_DIR: ${MPI_C_HEADER_DIR}")
+else()
+  message(WARNING "MPI not found, disabling MLIRMPIToLLVM conversion")
+  return()
+endif()
 
 add_mlir_conversion_library(MLIRMPIToLLVM
   MPIToLLVM.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/MPIToLLVM
-  ${MPI_C_HEADER_DIR}
 
   DEPENDS
   MLIRConversionPassIncGen
@@ -17,4 +26,9 @@ add_mlir_conversion_library(MLIRMPIToLLVM
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRMPIDialect
-  )
+)
+target_include_directories(
+    MLIRMPIToLLVM
+    PRIVATE
+    ${MPI_C_HEADER_DIR}
+)

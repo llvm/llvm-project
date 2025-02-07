@@ -1,4 +1,5 @@
 #define MPICH_SKIP_MPICXX 1
+#define OMPI_SKIP_MPICXX 1
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -16,7 +17,8 @@ struct MPIImplTraits {
                                   mlir::ConversionPatternRewriter &rewriter);
   // get/create MPI datatype as a mlir::Value which corresponds to the given
   // mlir::Type
-  static mlir::Value getDataType(const mlir::Location loc,
+  static mlir::Value getDataType(mlir::ModuleOp &moduleOp,
+                                 const mlir::Location loc,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  mlir::Type type);
 };
@@ -33,7 +35,7 @@ MPIImplTraits::getCommWorld(mlir::ModuleOp &moduleOp, const mlir::Location loc,
 }
 
 mlir::Value
-MPIImplTraits::getDataType(const mlir::Location loc,
+MPIImplTraits::getDataType(mlir::ModuleOp &moduleOp, const mlir::Location loc,
                            mlir::ConversionPatternRewriter &rewriter,
                            mlir::Type type) {
   int32_t mtype = 0;
@@ -42,21 +44,21 @@ MPIImplTraits::getDataType(const mlir::Location loc,
   else if (type.isF64())
     mtype = MPI_DOUBLE;
   else if (type.isInteger(64) && !type.isUnsignedInteger())
-    mtype = MPI_LONG;
+    mtype = MPI_INT64_T;
   else if (type.isInteger(64))
-    mtype = MPI_UNSIGNED_LONG;
+    mtype = MPI_UINT64_T;
   else if (type.isInteger(32) && !type.isUnsignedInteger())
-    mtype = MPI_INT;
+    mtype = MPI_INT32_T;
   else if (type.isInteger(32))
-    mtype = MPI_UNSIGNED;
+    mtype = MPI_UINT32_T;
   else if (type.isInteger(16) && !type.isUnsignedInteger())
-    mtype = MPI_SHORT;
+    mtype = MPI_INT16_T;
   else if (type.isInteger(16))
-    mtype = MPI_UNSIGNED_SHORT;
+    mtype = MPI_UINT16_T;
   else if (type.isInteger(8) && !type.isUnsignedInteger())
-    mtype = MPI_CHAR;
+    mtype = MPI_INT8_T;
   else if (type.isInteger(8))
-    mtype = MPI_UNSIGNED_CHAR;
+    mtype = MPI_UINT8_T;
   else
     assert(false && "unsupported type");
   return rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI32Type(),
@@ -88,28 +90,58 @@ mlir::Value
 MPIImplTraits::getCommWorld(mlir::ModuleOp &moduleOp, const mlir::Location loc,
                             mlir::ConversionPatternRewriter &rewriter) {
   auto context = rewriter.getContext();
-  auto i32 = rewriter.getI32Type();
-  // ptrType `!llvm.ptr`
-  mlir::Type ptrType = mlir::LLVM::LLVMPointerType::get(context);
   // get external opaque struct pointer type
   auto commStructT =
-      mlir::LLVM::LLVMStructType::getOpaque("MPI_ABI_Comm", context);
+      mlir::LLVM::LLVMStructType::getOpaque("ompi_communicator_t", context);
+  const char *name = "ompi_mpi_comm_world";
 
   // make sure global op definition exists
-  getOrDefineExternalStruct(moduleOp, loc, rewriter, "MPI_COMM_WORLD",
-                            commStructT);
+  (void)getOrDefineExternalStruct(moduleOp, loc, rewriter, name, commStructT);
 
-  // get address of @MPI_COMM_WORLD
+  // get address of symbol
   return rewriter.create<mlir::LLVM::AddressOfOp>(
-      loc, ptrType, mlir::SymbolRefAttr::get(context, "MPI_COMM_WORLD"));
+      loc, mlir::LLVM::LLVMPointerType::get(context),
+      mlir::SymbolRefAttr::get(context, name));
 }
 
 mlir::Value
-MPIImplTraits::getDataType(const mlir::Location loc,
+MPIImplTraits::getDataType(mlir::ModuleOp &moduleOp, const mlir::Location loc,
                            mlir::ConversionPatternRewriter &rewriter,
                            mlir::Type type) {
-  assert(false && "getDataType not implemented for this MPI implementation");
-  return {};
+  const char *mtype = nullptr;
+  if (type.isF32())
+    mtype = "ompi_mpi_float";
+  else if (type.isF64())
+    mtype = "ompi_mpi_double";
+  else if (type.isInteger(64) && !type.isUnsignedInteger())
+    mtype = "ompi_mpi_int64_t";
+  else if (type.isInteger(64))
+    mtype = "ompi_mpi_uint64_t";
+  else if (type.isInteger(32) && !type.isUnsignedInteger())
+    mtype = "ompi_mpi_int32_t";
+  else if (type.isInteger(32))
+    mtype = "ompi_mpi_uint32_t";
+  else if (type.isInteger(16) && !type.isUnsignedInteger())
+    mtype = "ompi_mpi_int16_t";
+  else if (type.isInteger(16))
+    mtype = "ompi_mpi_uint16_t";
+  else if (type.isInteger(8) && !type.isUnsignedInteger())
+    mtype = "ompi_mpi_int8_t";
+  else if (type.isInteger(8))
+    mtype = "ompi_mpi_uint8_t";
+  else
+    assert(false && "unsupported type");
+
+  auto context = rewriter.getContext();
+  // get external opaque struct pointer type
+  auto commStructT = mlir::LLVM::LLVMStructType::getOpaque(
+      "ompi_predefined_datatype_t", context);
+  // make sure global op definition exists
+  (void)getOrDefineExternalStruct(moduleOp, loc, rewriter, mtype, commStructT);
+  // get address of symbol
+  return rewriter.create<mlir::LLVM::AddressOfOp>(
+      loc, mlir::LLVM::LLVMPointerType::get(context),
+      mlir::SymbolRefAttr::get(context, mtype));
 }
 
 #else
