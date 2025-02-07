@@ -31,9 +31,27 @@ using namespace mlir;
 // AliasAnalysis: alias
 //===----------------------------------------------------------------------===//
 
-/// Temporary function to skip through all the no op operations
-/// TODO: Generalize support of fir.load
-static mlir::Value getOriginalDef(mlir::Value v) {
+static fir::AliasAnalysis::Source::Attributes
+getAttrsFromVariable(fir::FortranVariableOpInterface var) {
+  fir::AliasAnalysis::Source::Attributes attrs;
+  if (var.isTarget())
+    attrs.set(fir::AliasAnalysis::Attribute::Target);
+  if (var.isPointer())
+    attrs.set(fir::AliasAnalysis::Attribute::Pointer);
+  if (var.isIntentIn())
+    attrs.set(fir::AliasAnalysis::Attribute::IntentIn);
+
+  return attrs;
+}
+
+static bool hasGlobalOpTargetAttr(mlir::Value v, fir::AddrOfOp op) {
+  auto globalOpName =
+      mlir::OperationName(fir::GlobalOp::getOperationName(), op->getContext());
+  return fir::valueHasFirAttribute(
+      v, fir::GlobalOp::getTargetAttrName(globalOpName));
+}
+
+mlir::Value getOriginalDef(mlir::Value v) {
   mlir::Operation *defOp;
   bool breakFromLoop = false;
   while (!breakFromLoop && (defOp = v.getDefiningOp())) {
@@ -44,6 +62,27 @@ static mlir::Value getOriginalDef(mlir::Value v) {
         .Default([&](auto op) { breakFromLoop = true; });
   }
   return v;
+}
+
+static bool isEvaluateInMemoryBlockArg(mlir::Value v) {
+  if (auto evalInMem = llvm::dyn_cast_or_null<hlfir::EvaluateInMemoryOp>(
+          v.getParentRegion()->getParentOp()))
+    return evalInMem.getMemory() == v;
+  return false;
+}
+
+template <typename OMPTypeOp, typename DeclTypeOp>
+static bool isPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
+                         OMPTypeOp &op, DeclTypeOp &declOp) {
+  if (!op.getPrivateSyms().has_value())
+    return false;
+  for (auto [opSym, blockArg] :
+       llvm::zip_equal(*op.getPrivateSyms(), argIface.getPrivateBlockArgs())) {
+    if (blockArg == declOp.getMemref()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 namespace fir {
@@ -88,13 +127,6 @@ bool AliasAnalysis::Source::isDummyArgument() const {
   if (auto v = origin.u.dyn_cast<mlir::Value>()) {
     return fir::isDummyArgument(v);
   }
-  return false;
-}
-
-static bool isEvaluateInMemoryBlockArg(mlir::Value v) {
-  if (auto evalInMem = llvm::dyn_cast_or_null<hlfir::EvaluateInMemoryOp>(
-          v.getParentRegion()->getParentOp()))
-    return evalInMem.getMemory() == v;
   return false;
 }
 
@@ -491,33 +523,6 @@ ModRefResult AliasAnalysis::getModRef(mlir::Region &region,
   return result;
 }
 
-AliasAnalysis::Source::Attributes
-getAttrsFromVariable(fir::FortranVariableOpInterface var) {
-  AliasAnalysis::Source::Attributes attrs;
-  if (var.isTarget())
-    attrs.set(AliasAnalysis::Attribute::Target);
-  if (var.isPointer())
-    attrs.set(AliasAnalysis::Attribute::Pointer);
-  if (var.isIntentIn())
-    attrs.set(AliasAnalysis::Attribute::IntentIn);
-
-  return attrs;
-}
-
-template <typename OMPTypeOp, typename DeclTypeOp>
-static bool isPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
-                         OMPTypeOp &op, DeclTypeOp &declOp) {
-  if (!op.getPrivateSyms().has_value())
-    return false;
-  for (auto [opSym, blockArg] :
-       llvm::zip_equal(*op.getPrivateSyms(), argIface.getPrivateBlockArgs())) {
-    if (blockArg == declOp.getMemref()) {
-      return true;
-    }
-  }
-  return false;
-}
-
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getLastInstantiationPoint) {
   auto *defOp = v.getDefiningOp();
@@ -604,10 +609,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           ty = v.getType();
           type = SourceKind::Global;
 
-          auto globalOpName = mlir::OperationName(
-              fir::GlobalOp::getOperationName(), defOp->getContext());
-          if (fir::valueHasFirAttribute(
-                  v, fir::GlobalOp::getTargetAttrName(globalOpName)))
+          if (hasGlobalOpTargetAttr(v, op))
             attributes.set(Attribute::Target);
 
           // TODO: Take followBoxData into account when setting the pointer

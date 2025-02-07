@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
   unsigned NumThreads =
       (NumThreadsOpt > 0 ? NumThreadsOpt : NumThreadsJson.value());
   // TODO: Print a warning if number of teams/threads is explicitly set in the
-  // kernel info but overriden through command line options.
+  // kernel info but overridden through command line options.
   auto LoopTripCount =
       JsonKernelInfo->getAsObject()->getInteger("LoopTripCount");
   auto KernelFunc = JsonKernelInfo->getAsObject()->getString("Name");

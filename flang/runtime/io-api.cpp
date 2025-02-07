@@ -887,13 +887,17 @@ bool IODEF(SetForm)(Cookie cookie, const char *keyword, std::size_t length) {
     io.GetIoErrorHandler().Crash(
         "SetForm() called after GetNewUnit() for an OPEN statement");
   }
-  static const char *keywords[]{"FORMATTED", "UNFORMATTED", nullptr};
+  static const char *keywords[]{"FORMATTED", "UNFORMATTED", "BINARY", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
   case 0:
     open->set_isUnformatted(false);
     break;
   case 1:
     open->set_isUnformatted(true);
+    break;
+  case 2: // legacy FORM='BINARY' means an unformatted stream
+    open->set_isUnformatted(true);
+    open->set_access(Access::Stream);
     break;
   default:
     open->SignalError(IostatErrorInKeyword, "Invalid FORM='%.*s'",

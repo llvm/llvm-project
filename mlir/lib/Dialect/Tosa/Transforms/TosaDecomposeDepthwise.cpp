@@ -61,20 +61,26 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
                     rewriter.getDenseI64ArrayAttr(revisedInputShape))
                 .getResult();
 
-    if (inputType.getElementType() != resultType.getElementType()) {
-      inputType = inputType.clone(resultType.getElementType());
+    Type inputETy = inputType.getElementType();
+    Type weightETy = weightType.getElementType();
+    Type resultETy = resultType.getElementType();
+
+    if (inputETy != resultETy) {
+      inputType = inputType.clone(resultETy);
       input = rewriter.create<tosa::CastOp>(op.getLoc(), inputType, input);
     }
 
-    if (weightType.getElementType() != resultType.getElementType()) {
-      weightType = weightType.clone(resultType.getElementType());
+    if (weightETy != resultETy) {
+      weightType = weightType.clone(resultETy);
       weight = rewriter.create<tosa::CastOp>(op.getLoc(), weightType, weight);
     }
 
-    if (auto quantizationInfo = op.getQuantizationInfo()) {
-      auto iZp = quantizationInfo->getInputZp();
-      auto wZp = quantizationInfo->getWeightZp();
+    auto failureOrMaybeZps = extractConvZpPair(op, rewriter);
+    if (failed(failureOrMaybeZps))
+      return failure();
 
+    auto maybeZps = failureOrMaybeZps.value();
+    if (maybeZps) {
       auto applyZp = [&](Value val, int64_t zp) -> Value {
         if (zp == 0)
           return val;
@@ -89,8 +95,8 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
                                             zpVal);
       };
 
-      input = applyZp(input, iZp);
-      weight = applyZp(weight, wZp);
+      input = applyZp(input, maybeZps->inputZp);
+      weight = applyZp(weight, maybeZps->weightZp);
     }
 
     ArrayRef<int64_t> padAttr = op.getPad();
@@ -99,7 +105,6 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       pad[it.index() + 2] = it.value();
 
     if (llvm::any_of(pad, [](int64_t p) { return p != 0; })) {
-      Type inputETy = inputType.getElementType();
       Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
 
       llvm::SmallVector<int64_t> newShape(inputType.getShape());

@@ -1908,6 +1908,7 @@ enum StmtCode {
   EXPR_PACK_EXPANSION,                    // PackExpansionExpr
   EXPR_PACK_INDEXING,                     // PackIndexingExpr
   EXPR_SIZEOF_PACK,                       // SizeOfPackExpr
+  EXPR_RESOLVED_UNEXPANDED_PACK,          // ResolvedUnexpandedPackExpr
   EXPR_SUBST_NON_TYPE_TEMPLATE_PARM,      // SubstNonTypeTemplateParmExpr
   EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK, // SubstNonTypeTemplateParmPackExpr
   EXPR_FUNCTION_PARM_PACK,                // FunctionParmPackExpr
@@ -2045,6 +2046,7 @@ enum StmtCode {
   STMT_OPENACC_SHUTDOWN_CONSTRUCT,
   STMT_OPENACC_SET_CONSTRUCT,
   STMT_OPENACC_UPDATE_CONSTRUCT,
+  STMT_OPENACC_ATOMIC_CONSTRUCT,
 
   // HLSL Constructs
   EXPR_HLSL_OUT_ARG,

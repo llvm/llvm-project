@@ -2006,12 +2006,70 @@ func.func @shuffle_1d() -> vector<4xi32> {
   return %shuffle : vector<4xi32>
 }
 
+// -----
+
+// Check that poison indices pick the first element of the first non-poison
+// input vector. That is, %v[0] (i.e., 5) in this test.
+
+// CHECK-LABEL: func @shuffle_1d_poison_idx
+//       CHECK:   %[[V:.+]] = arith.constant dense<[13, 10, 15, 10]> : vector<4xi32>
+//       CHECK:   return %[[V]]
+func.func @shuffle_1d_poison_idx() -> vector<4xi32> {
+  %v0 = arith.constant dense<[10, 11, 12]> : vector<3xi32>
+  %v1 = arith.constant dense<[13, 14, 15]> : vector<3xi32>
+  %shuffle = vector.shuffle %v0, %v1 [3, -1, 5, -1] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @shuffle_1d_rhs_lhs_poison
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   %[[V:.+]] = ub.poison : vector<4xi32>
+//       CHECK:   return %[[V]]
+func.func @shuffle_1d_rhs_lhs_poison() -> vector<4xi32> {
+  %v0 = ub.poison : vector<3xi32>
+  %v1 = ub.poison : vector<3xi32>
+  %shuffle = vector.shuffle %v0, %v1 [3, 1, 5, 4] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @shuffle_1d_lhs_poison
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   %[[V:.+]] = arith.constant dense<[11, 12, 11, 11]> : vector<4xi32>
+//       CHECK:   return %[[V]]
+func.func @shuffle_1d_lhs_poison() -> vector<4xi32> {
+  %v0 = arith.constant dense<[11, 12, 13]> : vector<3xi32>
+  %v1 = ub.poison : vector<3xi32>
+  %shuffle = vector.shuffle %v0, %v1 [3, 1, 5, 4] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @shuffle_1d_rhs_poison
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   %[[V:.+]] = arith.constant dense<[11, 11, 13, 12]> : vector<4xi32>
+//       CHECK:   return %[[V]]
+func.func @shuffle_1d_rhs_poison() -> vector<4xi32> {
+  %v0 = ub.poison : vector<3xi32>
+  %v1 = arith.constant dense<[11, 12, 13]> : vector<3xi32>
+  %shuffle = vector.shuffle %v0, %v1 [3, 1, 5, 4] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @shuffle_canonicalize_0d
 func.func @shuffle_canonicalize_0d(%v0 : vector<i32>, %v1 : vector<i32>) -> vector<1xi32> {
   // CHECK: vector.broadcast %{{.*}} : vector<i32> to vector<1xi32>
   %shuffle = vector.shuffle %v0, %v1 [0] : vector<i32>, vector<i32>
   return %shuffle : vector<1xi32>
 }
+
+// -----
 
 // CHECK-LABEL: func @shuffle_fold1
 //       CHECK:   %arg0 : vector<4xi32>
@@ -2020,12 +2078,16 @@ func.func @shuffle_fold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<4xi
   return %shuffle : vector<4xi32>
 }
 
+// -----
+
 // CHECK-LABEL: func @shuffle_fold2
 //       CHECK:   %arg1 : vector<2xi32>
 func.func @shuffle_fold2(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<2xi32> {
   %shuffle = vector.shuffle %v0, %v1 [4, 5] : vector<4xi32>, vector<2xi32>
   return %shuffle : vector<2xi32>
 }
+
+// -----
 
 // CHECK-LABEL: func @shuffle_fold3
 //       CHECK:   return %arg0 : vector<4x5x6xi32>
@@ -2034,12 +2096,16 @@ func.func @shuffle_fold3(%v0 : vector<4x5x6xi32>, %v1 : vector<2x5x6xi32>) -> ve
   return %shuffle : vector<4x5x6xi32>
 }
 
+// -----
+
 // CHECK-LABEL: func @shuffle_fold4
 //       CHECK:   return %arg1 : vector<2x5x6xi32>
 func.func @shuffle_fold4(%v0 : vector<4x5x6xi32>, %v1 : vector<2x5x6xi32>) -> vector<2x5x6xi32> {
   %shuffle = vector.shuffle %v0, %v1 [4, 5] : vector<4x5x6xi32>, vector<2x5x6xi32>
   return %shuffle : vector<2x5x6xi32>
 }
+
+// -----
 
 // CHECK-LABEL: func @shuffle_nofold1
 //       CHECK:   %[[V:.+]] = vector.shuffle %arg0, %arg1 [0, 1, 2, 3, 4] : vector<4xi32>, vector<2xi32>

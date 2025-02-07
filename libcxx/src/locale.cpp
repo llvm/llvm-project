@@ -5650,6 +5650,16 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
 
 void __do_nothing(void*) {}
 
+// Legacy ABI __num_get functions - the new ones are _LIBCPP_HIDE_FROM_ABI
+template <class _CharT>
+string __num_get<_CharT>::__stage2_int_prep(ios_base& __iob, _CharT* __atoms, _CharT& __thousands_sep) {
+  locale __loc = __iob.getloc();
+  std::use_facet<ctype<_CharT> >(__loc).widen(__src, __src + __int_chr_cnt, __atoms);
+  const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__loc);
+  __thousands_sep              = __np.thousands_sep();
+  return __np.grouping();
+}
+
 template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<char>;
 _LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<wchar_t>;)
 

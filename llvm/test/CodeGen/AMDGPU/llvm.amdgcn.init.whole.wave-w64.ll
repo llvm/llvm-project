@@ -26,8 +26,9 @@ define amdgpu_cs_chain void @basic(<3 x i32> inreg %sgpr, ptr inreg %callee, i64
 ; GISEL12-NEXT:    s_or_saveexec_b64 s[10:11], -1
 ; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v13, s[10:11]
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GISEL12-NEXT:    v_cmp_ne_u32_e64 s[12:13], 0, v0
+; GISEL12-NEXT:    s_wait_alu 0xf1ff
 ; GISEL12-NEXT:    v_mov_b32_e32 v0, s12
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GISEL12-NEXT:    v_mov_b32_e32 v1, s13
@@ -40,7 +41,6 @@ define amdgpu_cs_chain void @basic(<3 x i32> inreg %sgpr, ptr inreg %callee, i64
 ; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GISEL12-NEXT:    s_mov_b64 exec, s[4:5]
-; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_setpc_b64 s[8:9]
 ;
 ; DAGISEL12-LABEL: basic:
@@ -71,7 +71,6 @@ define amdgpu_cs_chain void @basic(<3 x i32> inreg %sgpr, ptr inreg %callee, i64
 ; DAGISEL12-NEXT:  ; %bb.2: ; %tail
 ; DAGISEL12-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; DAGISEL12-NEXT:    s_mov_b64 exec, s[6:7]
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_setpc_b64 s[4:5]
 ;
 ; GISEL10-LABEL: basic:

@@ -338,6 +338,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::EmbedExprClass:
   case Stmt::HLSLOutArgExprClass:
   case Stmt::OpenACCAsteriskSizeExprClass:
+  case Stmt::ResolvedUnexpandedPackExprClass:
     K = CXCursor_UnexposedExpr;
     break;
 
@@ -921,6 +922,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
   case Stmt::OpenACCUpdateConstructClass:
     K = CXCursor_OpenACCUpdateConstruct;
+    break;
+  case Stmt::OpenACCAtomicConstructClass:
+    K = CXCursor_OpenACCAtomicConstruct;
     break;
   case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     K = CXCursor_OMPTargetParallelGenericLoopDirective;

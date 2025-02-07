@@ -781,11 +781,8 @@ static StringRef getDynamicLinker(Ctx &ctx, opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_dynamic_linker, OPT_no_dynamic_linker);
   if (!arg)
     return "";
-  if (arg->getOption().getID() == OPT_no_dynamic_linker) {
-    // --no-dynamic-linker suppresses undefined weak symbols in .dynsym
-    ctx.arg.noDynamicLinker = true;
+  if (arg->getOption().getID() == OPT_no_dynamic_linker)
     return "";
-  }
   return arg->getValue();
 }
 
@@ -1121,6 +1118,53 @@ static CGProfileSortKind getCGProfileSortKind(Ctx &ctx,
   return CGProfileSortKind::None;
 }
 
+static void parseBPOrdererOptions(Ctx &ctx, opt::InputArgList &args) {
+  if (auto *arg = args.getLastArg(OPT_bp_compression_sort)) {
+    StringRef s = arg->getValue();
+    if (s == "function") {
+      ctx.arg.bpFunctionOrderForCompression = true;
+    } else if (s == "data") {
+      ctx.arg.bpDataOrderForCompression = true;
+    } else if (s == "both") {
+      ctx.arg.bpFunctionOrderForCompression = true;
+      ctx.arg.bpDataOrderForCompression = true;
+    } else if (s != "none") {
+      ErrAlways(ctx) << arg->getSpelling()
+                     << ": expected [none|function|data|both]";
+    }
+    if (s != "none" && args.hasArg(OPT_call_graph_ordering_file))
+      ErrAlways(ctx) << "--bp-compression-sort is incompatible with "
+                        "--call-graph-ordering-file";
+  }
+  if (auto *arg = args.getLastArg(OPT_bp_startup_sort)) {
+    StringRef s = arg->getValue();
+    if (s == "function") {
+      ctx.arg.bpStartupFunctionSort = true;
+    } else if (s != "none") {
+      ErrAlways(ctx) << arg->getSpelling() << ": expected [none|function]";
+    }
+    if (s != "none" && args.hasArg(OPT_call_graph_ordering_file))
+      ErrAlways(ctx) << "--bp-startup-sort=function is incompatible with "
+                        "--call-graph-ordering-file";
+  }
+
+  ctx.arg.bpCompressionSortStartupFunctions =
+      args.hasFlag(OPT_bp_compression_sort_startup_functions,
+                   OPT_no_bp_compression_sort_startup_functions, false);
+  ctx.arg.bpVerboseSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
+
+  ctx.arg.irpgoProfilePath = args.getLastArgValue(OPT_irpgo_profile);
+  if (ctx.arg.irpgoProfilePath.empty()) {
+    if (ctx.arg.bpStartupFunctionSort)
+      ErrAlways(ctx) << "--bp-startup-sort=function must be used with "
+                        "--irpgo-profile";
+    if (ctx.arg.bpCompressionSortStartupFunctions)
+      ErrAlways(ctx)
+          << "--bp-compression-sort-startup-functions must be used with "
+             "--irpgo-profile";
+  }
+}
+
 static DebugCompressionType getCompressionType(Ctx &ctx, StringRef s,
                                                StringRef option) {
   DebugCompressionType type = StringSwitch<DebugCompressionType>(s)
@@ -1262,6 +1306,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ctx.arg.bsymbolic = BsymbolicKind::All;
   }
   ctx.arg.callGraphProfileSort = getCGProfileSortKind(ctx, args);
+  parseBPOrdererOptions(ctx, args);
   ctx.arg.checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   ctx.arg.chroot = args.getLastArgValue(OPT_chroot);
@@ -2413,7 +2458,7 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   // or DSOs, so we conservatively mark them as address-significant.
   bool icfSafe = ctx.arg.icf == ICFLevel::Safe;
   for (Symbol *sym : ctx.symtab->getSymbols())
-    if (sym->includeInDynsym(ctx))
+    if (sym->isExported)
       markAddrsig(icfSafe, sym);
 
   // Visit the address-significance table in each object file and mark each
@@ -2554,7 +2599,8 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
       for (Symbol *sym : obj->getGlobalSymbols()) {
         if (!sym->isDefined())
           continue;
-        if (ctx.hasDynsym && sym->includeInDynsym(ctx))
+        if (ctx.hasDynsym && ctx.arg.exportDynamic &&
+            sym->computeBinding(ctx) != STB_LOCAL)
           sym->isExported = true;
         if (sym->hasVersionSuffix)
           sym->parseSymbolVersion(ctx);
@@ -2899,12 +2945,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   parseFiles(ctx, files);
 
-  // Dynamic linking is used if there is an input DSO,
-  // or -shared or non-static pie is specified.
-  ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.shared ||
-                  (ctx.arg.pie && !ctx.arg.noDynamicLinker);
   // Create dynamic sections for dynamic linking and static PIE.
-  ctx.arg.hasDynSymTab = ctx.hasDynsym || ctx.arg.isPic;
+  ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))

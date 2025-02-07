@@ -606,6 +606,9 @@ void OMPClauseProfiler::VisitOMPNoOpenMPClause(const OMPNoOpenMPClause *) {}
 void OMPClauseProfiler::VisitOMPNoOpenMPRoutinesClause(
     const OMPNoOpenMPRoutinesClause *) {}
 
+void OMPClauseProfiler::VisitOMPNoOpenMPConstructsClause(
+    const OMPNoOpenMPConstructsClause *) {}
+
 void OMPClauseProfiler::VisitOMPNoParallelismClause(
     const OMPNoParallelismClause *) {}
 
@@ -2284,6 +2287,10 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
     ID.AddInteger(0);
   }
 }
+void StmtProfiler::VisitResolvedUnexpandedPackExpr(
+    const ResolvedUnexpandedPackExpr *S) {
+  VisitExpr(S);
+}
 
 void StmtProfiler::VisitPackIndexingExpr(const PackIndexingExpr *E) {
   VisitExpr(E);
@@ -2807,6 +2814,11 @@ void StmtProfiler::VisitOpenACCUpdateConstruct(
   VisitStmt(S);
   OpenACCClauseProfiler P{*this};
   P.VisitOpenACCClauseList(S->clauses());
+}
+
+void StmtProfiler::VisitOpenACCAtomicConstruct(
+    const OpenACCAtomicConstruct *S) {
+  VisitStmt(S);
 }
 
 void StmtProfiler::VisitHLSLOutArgExpr(const HLSLOutArgExpr *S) {

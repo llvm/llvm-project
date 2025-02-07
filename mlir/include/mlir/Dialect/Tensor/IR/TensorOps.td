@@ -10,9 +10,11 @@
 #define TENSOR_OPS
 
 include "mlir/Dialect/Tensor/IR/TensorBase.td"
+include "mlir/Dialect/Tensor/IR/TensorInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/ShapedOpInterfaces.td"
@@ -197,7 +199,8 @@ def Tensor_ConcatOp : Tensor_Op<"concat",
 def Tensor_DimOp : Tensor_Op<"dim", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     ConditionallySpeculatable, NoMemoryEffect,
-    ShapedDimOpInterface]> {
+    ShapedDimOpInterface,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>]> {
   let summary = "dimension index operation";
   let description = [{
     The `tensor.dim` operation takes a tensor and a dimension operand of type
@@ -1831,6 +1834,7 @@ class Tensor_RelayoutOp<string mnemonic, list<Trait> traits = []> :
         DestinationStyleOpInterface,
         ConditionallySpeculatable, NoMemoryEffect,
         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+        TensorRelayoutOpInterface,
         TypesMatchWith<"result type matches type of dest",
                    "dest", "result",
                    "$_self">])> {
