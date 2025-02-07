@@ -219,6 +219,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FCOS:                       return "fcos";
   case ISD::STRICT_FCOS:                return "strict_fcos";
   case ISD::FSINCOS:                    return "fsincos";
+  case ISD::FMODF:                      return "fmodf";
   case ISD::FTAN:                       return "ftan";
   case ISD::STRICT_FTAN:                return "strict_ftan";
   case ISD::FASIN:                      return "fasin";
