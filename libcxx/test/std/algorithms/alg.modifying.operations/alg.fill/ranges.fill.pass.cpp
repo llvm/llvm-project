@@ -91,14 +91,28 @@ TEST_CONSTEXPR_CXX20 void test_bititer_with_custom_sized_types() {
     std::vector<bool, Alloc> in(100, false, Alloc(1));
     std::vector<bool, Alloc> expected(100, true, Alloc(1));
     std::ranges::fill(in, true);
-    assert(in == expected);
+
+    // FIXME: We are currently forced to use the standard `std::equal()` for general `input_iterator`s instead of
+    // the optimized version for `__bit_iterator`s. This is due to a recently discovered issue #126369 where the
+    // optimization fails to correctly compare `vector<bool>`s with small integral storage types. Once the issue is
+    // fixed, we should revert to the optimized version by uncommenting the last line in this code block.
+    using It = cpp17_input_iterator<std::vector<bool, Alloc>::iterator>;
+    assert(in.size() == expected.size() && std::equal(It(in.begin()), It(in.end()), It(expected.begin())));
+    // assert(in == expected); // FIXME: Uncomment this line once issue #126369 is fixed.
   }
   {
     using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
     std::vector<bool, Alloc> in(200, false, Alloc(1));
     std::vector<bool, Alloc> expected(200, true, Alloc(1));
     std::ranges::fill(in, true);
-    assert(in == expected);
+
+    // FIXME: We are currently forced to use the standard `std::equal()` for general `input_iterator`s instead of
+    // the optimized version for `__bit_iterator`s. This is due to a recently discovered issue #126369 where the
+    // optimization fails to correctly compare `vector<bool>`s with small integral storage types. Once the issue is
+    // fixed, we should revert to the optimized version by uncommenting the last line in this code block.
+    using It = cpp17_input_iterator<std::vector<bool, Alloc>::iterator>;
+    assert(in.size() == expected.size() && std::equal(It(in.begin()), It(in.end()), It(expected.begin())));
+    // assert(in == expected); // FIXME: Uncomment this line once issue #126369 is fixed.
   }
   {
     using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
