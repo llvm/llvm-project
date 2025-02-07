@@ -1,5 +1,8 @@
 ; RUN: opt -S --passes="print-dx-shader-flags" 2>&1 %s | FileCheck %s
 ;
+; Test that we have the correct shader flags to indicate that there are wave
+; ops set at the module level
+;
 ; CHECK: ; Shader Flags Value: [[WAVE_FLAG:0x00080000]]
 ; CHECK: ; Note: shader requires additional functionality:
 ; CHECK-NEXT: ;       Wave level operations
@@ -7,6 +10,9 @@
 ; CHECK-NEXT: {{^;$}}
 
 target triple = "dxil-pc-shadermodel6.7-library"
+
+; Test the indiviual ops that they have the same Shader Wave flag at the
+; function level to ensure that each op is setting it accordingly
 
 define noundef i1 @wave_is_first_lane() {
 entry:
