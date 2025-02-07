@@ -5,7 +5,7 @@ from string import Template
 from itertools import product
 
 cmpxchg_func = Template(
-"""define i$size @${success}_${failure}_i${size}_${addrspace}(ptr${addrspace_cast} %addr, i$size %cmp, i$size %new) {
+    """define i$size @${success}_${failure}_i${size}_${addrspace}(ptr${addrspace_cast} %addr, i$size %cmp, i$size %new) {
     %pairold = cmpxchg ptr${addrspace_cast} %addr, i$size %cmp, i$size %new $success $failure
     ret i$size %new
 }
@@ -38,9 +38,20 @@ if __name__ == "__main__":
     for sm, ptx in TESTS:
         with open("cmpxchg-sm{}.ll".format(str(sm)), "w") as fp:
             print(run_statement.substitute(sm=sm, ptx=ptx), file=fp)
-            for size, success, failure, addrspace in product(SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS, ADDRSPACES):
+            for size, success, failure, addrspace in product(
+                SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS, ADDRSPACES
+            ):
                 if addrspace == 0:
                     addrspace_cast = ""
                 else:
                     addrspace_cast = " addrspace({})".format(str(addrspace))
-                print(cmpxchg_func.substitute(success=success, failure=failure, size=size, addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace], addrspace_cast=addrspace_cast), file=fp)
+                print(
+                    cmpxchg_func.substitute(
+                        success=success,
+                        failure=failure,
+                        size=size,
+                        addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                        addrspace_cast=addrspace_cast,
+                    ),
+                    file=fp,
+                )
