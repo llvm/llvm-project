@@ -17,7 +17,7 @@
 ;        determine the minimum from metadata in this case.  Match current results
 ;        for now.
 
-define i64 @shl_metadata(i64 noundef %arg0, ptr %arg1.ptr) {
+define i64 @shl_metadata(i64 %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -30,7 +30,7 @@ define i64 @shl_metadata(i64 noundef %arg0, ptr %arg1.ptr) {
   ret i64 %shl
 }
 
-define <2 x i64> @shl_v2_metadata(<2 x i64> noundef %arg0, ptr %arg1.ptr) {
+define <2 x i64> @shl_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v2_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -44,7 +44,7 @@ define <2 x i64> @shl_v2_metadata(<2 x i64> noundef %arg0, ptr %arg1.ptr) {
   ret <2 x i64> %shl
 }
 
-define <3 x i64> @shl_v3_metadata(<3 x i64> noundef %arg0, ptr %arg1.ptr) {
+define <3 x i64> @shl_v3_metadata(<3 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v3_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -60,7 +60,7 @@ define <3 x i64> @shl_v3_metadata(<3 x i64> noundef %arg0, ptr %arg1.ptr) {
   ret <3 x i64> %shl
 }
 
-define <4 x i64> @shl_v4_metadata(<4 x i64> noundef %arg0, ptr %arg1.ptr) {
+define <4 x i64> @shl_v4_metadata(<4 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v4_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -79,7 +79,7 @@ define <4 x i64> @shl_v4_metadata(<4 x i64> noundef %arg0, ptr %arg1.ptr) {
   ret <4 x i64> %shl
 }
 
-define <5 x i64> @shl_v5_metadata(<5 x i64> noundef %arg0, ptr %arg1.ptr) {
+define <5 x i64> @shl_v5_metadata(<5 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v5_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -100,7 +100,7 @@ define <5 x i64> @shl_v5_metadata(<5 x i64> noundef %arg0, ptr %arg1.ptr) {
   ret <5 x i64> %shl
 }
 
-define <8 x i64> @shl_v8_metadata(<8 x i64> noundef %arg0, ptr %arg1.ptr) {
+define <8 x i64> @shl_v8_metadata(<8 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v8_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -126,7 +126,7 @@ define <8 x i64> @shl_v8_metadata(<8 x i64> noundef %arg0, ptr %arg1.ptr) {
   ret <8 x i64> %shl
 }
 
-define <16 x i64> @shl_v16_metadata(<16 x i64> noundef %arg0, ptr %arg1.ptr) {
+define <16 x i64> @shl_v16_metadata(<16 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v16_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -180,7 +180,7 @@ define <16 x i64> @shl_v16_metadata(<16 x i64> noundef %arg0, ptr %arg1.ptr) {
 
 ; These cases must not be reduced because the known minimum, 16, is not in range.
 
-define i64 @shl_or16(i64 noundef %arg0, i64 %shift_amt) {
+define i64 @shl_or16(i64 %arg0, i64 %shift_amt) {
 ; CHECK-LABEL: shl_or16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -192,7 +192,7 @@ define i64 @shl_or16(i64 noundef %arg0, i64 %shift_amt) {
   ret i64 %shl
 }
 
-define <2 x i64> @shl_v2_or16(<2 x i64> noundef %arg0, <2 x i64> %shift_amt) {
+define <2 x i64> @shl_v2_or16(<2 x i64> %arg0, <2 x i64> %shift_amt) {
 ; CHECK-LABEL: shl_v2_or16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -206,7 +206,7 @@ define <2 x i64> @shl_v2_or16(<2 x i64> noundef %arg0, <2 x i64> %shift_amt) {
   ret <2 x i64> %shl
 }
 
-define <3 x i64> @shl_v3_or16(<3 x i64> noundef %arg0, <3 x i64> %shift_amt) {
+define <3 x i64> @shl_v3_or16(<3 x i64> %arg0, <3 x i64> %shift_amt) {
 ; CHECK-LABEL: shl_v3_or16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -222,7 +222,7 @@ define <3 x i64> @shl_v3_or16(<3 x i64> noundef %arg0, <3 x i64> %shift_amt) {
   ret <3 x i64> %shl
 }
 
-define <4 x i64> @shl_v4_or16(<4 x i64> noundef %arg0, <4 x i64> %shift_amt) {
+define <4 x i64> @shl_v4_or16(<4 x i64> %arg0, <4 x i64> %shift_amt) {
 ; CHECK-LABEL: shl_v4_or16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -240,7 +240,7 @@ define <4 x i64> @shl_v4_or16(<4 x i64> noundef %arg0, <4 x i64> %shift_amt) {
   ret <4 x i64> %shl
 }
 
-define <5 x i64> @shl_v5_or16(<5 x i64> noundef %arg0, <5 x i64> %shift_amt) {
+define <5 x i64> @shl_v5_or16(<5 x i64> %arg0, <5 x i64> %shift_amt) {
 ; CHECK-LABEL: shl_v5_or16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -260,7 +260,7 @@ define <5 x i64> @shl_v5_or16(<5 x i64> noundef %arg0, <5 x i64> %shift_amt) {
   ret <5 x i64> %shl
 }
 
-define <8 x i64> @shl_v8_or16(<8 x i64> noundef %arg0, <8 x i64> %shift_amt) {
+define <8 x i64> @shl_v8_or16(<8 x i64> %arg0, <8 x i64> %shift_amt) {
 ; CHECK-LABEL: shl_v8_or16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -286,7 +286,7 @@ define <8 x i64> @shl_v8_or16(<8 x i64> noundef %arg0, <8 x i64> %shift_amt) {
   ret <8 x i64> %shl
 }
 
-define <16 x i64> @shl_v16_or16(<16 x i64> noundef %arg0, <16 x i64> %shift_amt) {
+define <16 x i64> @shl_v16_or16(<16 x i64> %arg0, <16 x i64> %shift_amt) {
 ; CHECK-LABEL: shl_v16_or16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -363,7 +363,7 @@ define <16 x i64> @shl_v16_or16(<16 x i64> noundef %arg0, <16 x i64> %shift_amt)
 
 ; test inreg
 
-define i64 @shl_or16_inreg(i64 noundef %arg0, i64 inreg %shift_amt) {
+define i64 @shl_or16_inreg(i64 %arg0, i64 inreg %shift_amt) {
 ; CHECK-LABEL: shl_or16_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -375,7 +375,7 @@ define i64 @shl_or16_inreg(i64 noundef %arg0, i64 inreg %shift_amt) {
   ret i64 %shl
 }
 
-define <2 x i64> @shl_v2_or16_inreg(<2 x i64> noundef %arg0, <2 x i64> inreg %shift_amt) {
+define <2 x i64> @shl_v2_or16_inreg(<2 x i64> %arg0, <2 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: shl_v2_or16_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -389,7 +389,7 @@ define <2 x i64> @shl_v2_or16_inreg(<2 x i64> noundef %arg0, <2 x i64> inreg %sh
   ret <2 x i64> %shl
 }
 
-define <3 x i64> @shl_v3_or16_inreg(<3 x i64> noundef %arg0, <3 x i64> inreg %shift_amt) {
+define <3 x i64> @shl_v3_or16_inreg(<3 x i64> %arg0, <3 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: shl_v3_or16_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -405,7 +405,7 @@ define <3 x i64> @shl_v3_or16_inreg(<3 x i64> noundef %arg0, <3 x i64> inreg %sh
   ret <3 x i64> %shl
 }
 
-define <4 x i64> @shl_v4_or16_inreg(<4 x i64> noundef %arg0, <4 x i64> inreg %shift_amt) {
+define <4 x i64> @shl_v4_or16_inreg(<4 x i64> %arg0, <4 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: shl_v4_or16_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -423,7 +423,7 @@ define <4 x i64> @shl_v4_or16_inreg(<4 x i64> noundef %arg0, <4 x i64> inreg %sh
   ret <4 x i64> %shl
 }
 
-define <5 x i64> @shl_v5_or16_inreg(<5 x i64> noundef %arg0, <5 x i64> inreg %shift_amt) {
+define <5 x i64> @shl_v5_or16_inreg(<5 x i64> %arg0, <5 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: shl_v5_or16_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -443,7 +443,7 @@ define <5 x i64> @shl_v5_or16_inreg(<5 x i64> noundef %arg0, <5 x i64> inreg %sh
   ret <5 x i64> %shl
 }
 
-define <8 x i64> @shl_v8_or16_inreg(<8 x i64> noundef %arg0, <8 x i64> inreg %shift_amt) {
+define <8 x i64> @shl_v8_or16_inreg(<8 x i64> %arg0, <8 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: shl_v8_or16_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -469,7 +469,7 @@ define <8 x i64> @shl_v8_or16_inreg(<8 x i64> noundef %arg0, <8 x i64> inreg %sh
   ret <8 x i64> %shl
 }
 
-define <16 x i64> @shl_v16_or16_inreg(<16 x i64> noundef %arg0, <16 x i64> inreg %shift_amt) {
+define <16 x i64> @shl_v16_or16_inreg(<16 x i64> %arg0, <16 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: shl_v16_or16_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -537,7 +537,7 @@ define <16 x i64> @shl_v16_or16_inreg(<16 x i64> noundef %arg0, <16 x i64> inreg
 ; These cases are reduced because computeKnownBits() can calculate a minimum of 32
 ; based on the OR with 32.
 
-define i64 @shl_or32(i64 noundef %arg0, i64 %shift_amt) {
+define i64 @shl_or32(i64 %arg0, i64 %shift_amt) {
 ; CHECK-LABEL: shl_or32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -549,7 +549,7 @@ define i64 @shl_or32(i64 noundef %arg0, i64 %shift_amt) {
   ret i64 %shl
 }
 
-define <2 x i64> @shl_v2_or32(<2 x i64> noundef %arg0, <2 x i64> %shift_amt) {
+define <2 x i64> @shl_v2_or32(<2 x i64> %arg0, <2 x i64> %shift_amt) {
 ; CHECK-LABEL: shl_v2_or32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -563,7 +563,7 @@ define <2 x i64> @shl_v2_or32(<2 x i64> noundef %arg0, <2 x i64> %shift_amt) {
   ret <2 x i64> %shl
 }
 
-define <3 x i64> @shl_v3_or32(<3 x i64> noundef %arg0, <3 x i64> %shift_amt) {
+define <3 x i64> @shl_v3_or32(<3 x i64> %arg0, <3 x i64> %shift_amt) {
 ; CHECK-LABEL: shl_v3_or32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -579,7 +579,7 @@ define <3 x i64> @shl_v3_or32(<3 x i64> noundef %arg0, <3 x i64> %shift_amt) {
   ret <3 x i64> %shl
 }
 
-define <4 x i64> @shl_v4_or32(<4 x i64> noundef %arg0, <4 x i64> %shift_amt) {
+define <4 x i64> @shl_v4_or32(<4 x i64> %arg0, <4 x i64> %shift_amt) {
 ; CHECK-LABEL: shl_v4_or32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -597,7 +597,7 @@ define <4 x i64> @shl_v4_or32(<4 x i64> noundef %arg0, <4 x i64> %shift_amt) {
   ret <4 x i64> %shl
 }
 
-define <5 x i64> @shl_v5_or32(<5 x i64> noundef %arg0, <5 x i64> %shift_amt) {
+define <5 x i64> @shl_v5_or32(<5 x i64> %arg0, <5 x i64> %shift_amt) {
 ; CHECK-LABEL: shl_v5_or32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -617,7 +617,7 @@ define <5 x i64> @shl_v5_or32(<5 x i64> noundef %arg0, <5 x i64> %shift_amt) {
   ret <5 x i64> %shl
 }
 
-define <8 x i64> @shl_v8_or32(<8 x i64> noundef %arg0, <8 x i64> %shift_amt) {
+define <8 x i64> @shl_v8_or32(<8 x i64> %arg0, <8 x i64> %shift_amt) {
 ; CHECK-LABEL: shl_v8_or32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -643,7 +643,7 @@ define <8 x i64> @shl_v8_or32(<8 x i64> noundef %arg0, <8 x i64> %shift_amt) {
   ret <8 x i64> %shl
 }
 
-define <16 x i64> @shl_v16_or32(<16 x i64> noundef %arg0, <16 x i64> %shift_amt) {
+define <16 x i64> @shl_v16_or32(<16 x i64> %arg0, <16 x i64> %shift_amt) {
 ; CHECK-LABEL: shl_v16_or32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -719,7 +719,7 @@ define <16 x i64> @shl_v16_or32(<16 x i64> noundef %arg0, <16 x i64> %shift_amt)
 
 ; test inreg
 
-define i64 @shl_or32_inreg(i64 noundef %arg0, i64 inreg %shift_amt) {
+define i64 @shl_or32_inreg(i64 %arg0, i64 inreg %shift_amt) {
 ; CHECK-LABEL: shl_or32_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -731,7 +731,7 @@ define i64 @shl_or32_inreg(i64 noundef %arg0, i64 inreg %shift_amt) {
   ret i64 %shl
 }
 
-define <2 x i64> @shl_v2_or32_inreg(<2 x i64> noundef %arg0, <2 x i64> inreg %shift_amt) {
+define <2 x i64> @shl_v2_or32_inreg(<2 x i64> %arg0, <2 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: shl_v2_or32_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -745,7 +745,7 @@ define <2 x i64> @shl_v2_or32_inreg(<2 x i64> noundef %arg0, <2 x i64> inreg %sh
   ret <2 x i64> %shl
 }
 
-define <3 x i64> @shl_v3_or32_inreg(<3 x i64> noundef %arg0, <3 x i64> inreg %shift_amt) {
+define <3 x i64> @shl_v3_or32_inreg(<3 x i64> %arg0, <3 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: shl_v3_or32_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -761,7 +761,7 @@ define <3 x i64> @shl_v3_or32_inreg(<3 x i64> noundef %arg0, <3 x i64> inreg %sh
   ret <3 x i64> %shl
 }
 
-define <4 x i64> @shl_v4_or32_inreg(<4 x i64> noundef %arg0, <4 x i64> inreg %shift_amt) {
+define <4 x i64> @shl_v4_or32_inreg(<4 x i64> %arg0, <4 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: shl_v4_or32_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -779,7 +779,7 @@ define <4 x i64> @shl_v4_or32_inreg(<4 x i64> noundef %arg0, <4 x i64> inreg %sh
   ret <4 x i64> %shl
 }
 
-define <5 x i64> @shl_v5_or32_inreg(<5 x i64> noundef %arg0, <5 x i64> inreg %shift_amt) {
+define <5 x i64> @shl_v5_or32_inreg(<5 x i64> %arg0, <5 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: shl_v5_or32_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -799,7 +799,7 @@ define <5 x i64> @shl_v5_or32_inreg(<5 x i64> noundef %arg0, <5 x i64> inreg %sh
   ret <5 x i64> %shl
 }
 
-define <8 x i64> @shl_v8_or32_inreg(<8 x i64> noundef %arg0, <8 x i64> inreg %shift_amt) {
+define <8 x i64> @shl_v8_or32_inreg(<8 x i64> %arg0, <8 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: shl_v8_or32_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -825,7 +825,7 @@ define <8 x i64> @shl_v8_or32_inreg(<8 x i64> noundef %arg0, <8 x i64> inreg %sh
   ret <8 x i64> %shl
 }
 
-define <16 x i64> @shl_v16_or32_inreg(<16 x i64> noundef %arg0, <16 x i64> inreg %shift_amt) {
+define <16 x i64> @shl_v16_or32_inreg(<16 x i64> %arg0, <16 x i64> inreg %shift_amt) {
 ; CHECK-LABEL: shl_v16_or32_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -891,7 +891,7 @@ define <16 x i64> @shl_v16_or32_inreg(<16 x i64> noundef %arg0, <16 x i64> inreg
 ; FIXME: This case should be reduced too, but computeKnownBits() cannot
 ;        determine the range.  Match current results for now.
 
-define i64 @shl_maxmin(i64 noundef %arg0, i64 noundef %arg1) {
+define i64 @shl_maxmin(i64 %arg0, i64 noundef %arg1) {
 ; CHECK-LABEL: shl_maxmin:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -908,7 +908,7 @@ define i64 @shl_maxmin(i64 noundef %arg0, i64 noundef %arg1) {
   ret i64 %shl
 }
 
-define <2 x i64> @shl_v2_maxmin(<2 x i64> noundef %arg0, <2 x i64> noundef %arg1) {
+define <2 x i64> @shl_v2_maxmin(<2 x i64> %arg0, <2 x i64> noundef %arg1) {
 ; CHECK-LABEL: shl_v2_maxmin:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -931,7 +931,7 @@ define <2 x i64> @shl_v2_maxmin(<2 x i64> noundef %arg0, <2 x i64> noundef %arg1
   ret <2 x i64> %shl
 }
 
-define <3 x i64> @shl_v3_maxmin(<3 x i64> noundef %arg0, <3 x i64> noundef %arg1) {
+define <3 x i64> @shl_v3_maxmin(<3 x i64> %arg0, <3 x i64> noundef %arg1) {
 ; CHECK-LABEL: shl_v3_maxmin:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -960,7 +960,7 @@ define <3 x i64> @shl_v3_maxmin(<3 x i64> noundef %arg0, <3 x i64> noundef %arg1
   ret <3 x i64> %shl
 }
 
-define <4 x i64> @shl_v4_maxmin(<4 x i64> noundef %arg0, <4 x i64> noundef %arg1) {
+define <4 x i64> @shl_v4_maxmin(<4 x i64> %arg0, <4 x i64> noundef %arg1) {
 ; CHECK-LABEL: shl_v4_maxmin:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -995,7 +995,7 @@ define <4 x i64> @shl_v4_maxmin(<4 x i64> noundef %arg0, <4 x i64> noundef %arg1
   ret <4 x i64> %shl
 }
 
-define <5 x i64> @shl_v5_maxmin(<5 x i64> noundef %arg0, <5 x i64> noundef %arg1) {
+define <5 x i64> @shl_v5_maxmin(<5 x i64> %arg0, <5 x i64> noundef %arg1) {
 ; CHECK-LABEL: shl_v5_maxmin:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1036,7 +1036,7 @@ define <5 x i64> @shl_v5_maxmin(<5 x i64> noundef %arg0, <5 x i64> noundef %arg1
   ret <5 x i64> %shl
 }
 
-define <8 x i64> @shl_v8_maxmin(<8 x i64> noundef %arg0, <8 x i64> noundef %arg1) {
+define <8 x i64> @shl_v8_maxmin(<8 x i64> %arg0, <8 x i64> noundef %arg1) {
 ; CHECK-LABEL: shl_v8_maxmin:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1097,7 +1097,7 @@ define <8 x i64> @shl_v8_maxmin(<8 x i64> noundef %arg0, <8 x i64> noundef %arg1
   ret <8 x i64> %shl
 }
 
-define <16 x i64> @shl_v16_maxmin(<16 x i64> noundef %arg0, <16 x i64> noundef %arg1) {
+define <16 x i64> @shl_v16_maxmin(<16 x i64> %arg0, <16 x i64> noundef %arg1) {
 ; CHECK-LABEL: shl_v16_maxmin:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
