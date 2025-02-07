@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -Wno-hlsl-extensions -emit-llvm -o - -disable-llvm-passes %s | FileCheck %s --check-prefixes=CHECK,NOINLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -Wno-hlsl-extensions -emit-llvm -o - -disable-llvm-passes %s | FileCheck %s --check-prefixes=CHECK,NOINLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -Wno-hlsl-extensions -emit-llvm -o - -O0 %s | FileCheck %s --check-prefixes=CHECK,INLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -Wno-hlsl-extensions -emit-llvm -o - -O0 %s | FileCheck %s --check-prefixes=CHECK,NOINLINE_LIB
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -Wno-hlsl-extensions -emit-llvm -o - -O1 %s | FileCheck %s --check-prefixes=CHECK,INLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -Wno-hlsl-extensions -emit-llvm -o - -O1 %s | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -emit-llvm -o - -disable-llvm-passes %s | FileCheck %s --check-prefixes=CHECK,NOINLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -emit-llvm -o - -disable-llvm-passes %s | FileCheck %s --check-prefixes=CHECK,NOINLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -emit-llvm -o - -O0 %s | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -emit-llvm -o - -O0 %s | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -emit-llvm -o - -O1 %s | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -emit-llvm -o - -O1 %s | FileCheck %s --check-prefixes=CHECK,INLINE
 
 // Tests that implicit constructor calls for user classes will always be inlined.
 
@@ -50,10 +50,6 @@ void NionsDay(int hours) {
 // NOINLINE-NEXT: call void @_GLOBAL__sub_I_inline_constructors.hlsl()
 // NOINLINE-NEXT: %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
 // NOINLINE-NEXT: call void @_Z4mainj(i32 %0)
-// NOINLINE_LIB: call void @_ZN4WeedC1Ev
-// NOINLINE_LIB-NEXT: call void @_ZN5KittyC1Ev
-// NOINLINE_LIB-NEXT: %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-// NOINLINE_LIB-NEXT: call void @_Z4mainj(i32 %0)
 // Verify inlining leaves only calls to "llvm." intrinsics
 // INLINE-NOT:    call {{[^@]*}} @{{[^l][^l][^v][^m][^\.]}}
 // CHECK:         ret void

@@ -449,13 +449,6 @@ void CGHLSLRuntime::setHLSLFunctionAttributes(const FunctionDecl *FD,
     const StringRef ExportAttrKindStr = "hlsl.export";
     Fn->addFnAttr(ExportAttrKindStr);
   }
-  llvm::Triple T(Fn->getParent()->getTargetTriple());
-  if (T.getEnvironment() == llvm::Triple::EnvironmentType::Library) {
-    if (CGM.getCodeGenOpts().OptimizationLevel == 0) {
-      Fn->addFnAttr(llvm::Attribute::OptimizeNone);
-      Fn->addFnAttr(llvm::Attribute::NoInline);
-    }
-  }
 }
 
 static void gatherFunctions(SmallVectorImpl<Function *> &Fns, llvm::Module &M,
