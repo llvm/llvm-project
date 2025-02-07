@@ -291,7 +291,8 @@ static std::pair<ProgramStateRef, ProgramStateRef>
 compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
                         SValBuilder &SVB, bool CheckEquality = false) {
   if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
-    std::tie(Value, Threshold) = getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
+    std::tie(Value, Threshold) =
+        getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
   }
 
   // We want to perform a _mathematical_ comparison between the numbers `Value`
