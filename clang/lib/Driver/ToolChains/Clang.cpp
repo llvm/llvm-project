@@ -9184,8 +9184,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_load,
       OPT_fno_lto,
       OPT_flto,
+      OPT_Zlinker_input,
       OPT_flto_EQ};
-  const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm};
+  const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A) {
     return Set.contains(A->getOption().getID()) ||
            (A->getOption().getGroup().isValid() &&
@@ -9203,7 +9204,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       ArgStringList CompilerArgs;
       ArgStringList LinkerArgs;
       for (Arg *A : C.getArgsForToolChain(TC, /*BoundArch=*/"", Kind)) {
-        if (ShouldForward(CompilerOptions, A))
+        if (A->getOption().matches(OPT_Zlinker_input))
+          LinkerArgs.emplace_back(A->getValue());
+        else if (ShouldForward(CompilerOptions, A))
           A->render(Args, CompilerArgs);
         else if (ShouldForward(LinkerOptions, A))
           A->render(Args, LinkerArgs);
