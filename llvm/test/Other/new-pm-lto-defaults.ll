@@ -35,6 +35,7 @@
 
 ; CHECK-EP: Running pass: NoOpModulePass
 ; CHECK-O: Running pass: CrossDSOCFIPass
+; CHECK-O-NEXT: CoroEarlyPass
 ; CHECK-O-NEXT: Running pass: OpenMPOptPass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
@@ -86,6 +87,8 @@
 ; CHECK-O23SZ-NEXT: Running pass: OpenMPOptPass
 ; CHECK-O23SZ-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O23SZ-NEXT: Running pass: ArgumentPromotionPass
+; CHECK-O23SZ-NEXT: CoroSplitPass on (foo)
+; CHECK-O23SZ-NEXT: CoroAnnotationElidePass on (foo)
 ; CHECK-O23SZ-NEXT: Running pass: InstCombinePass
 ; CHECK-EP-PEEPHOLE-NEXT: Running pass: NoOpFunctionPass
 ; CHECK-O23SZ-NEXT: Running pass: ConstraintEliminationPass
@@ -156,6 +159,7 @@
 ; CHECK-O23SZ-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O23SZ-NEXT: Running pass: RelLookupTableConverterPass
 ; CHECK-O23SZ-NEXT: Running pass: CGProfilePass
+; CHECK-O-NEXT: CoroCleanupPass
 ; CHECK-EP-NEXT: Running pass: NoOpModulePass
 ; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-O-NEXT: Running pass: PrintModulePass

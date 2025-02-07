@@ -14,6 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -1816,6 +1817,17 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // in the current module.
   MPM.addPass(CrossDSOCFIPass());
 
+  MPM.addPass(CoroEarlyPass());
+
+  auto Exit = llvm::make_scope_exit([&]() {
+    MPM.addPass(CoroCleanupPass());
+
+    invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
+
+    // Emit annotation remarks.
+    addAnnotationRemarksPass(MPM);
+  });
+
   if (Level == OptimizationLevel::O0) {
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type
     // metadata and intrinsics.
@@ -1825,11 +1837,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // in ICP.
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
                                    lowertypetests::DropTestKind::Assume));
-
-    invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
-
-    // Emit annotation remarks.
-    addAnnotationRemarksPass(MPM);
 
     return MPM;
   }
@@ -1910,11 +1917,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
                                    lowertypetests::DropTestKind::Assume));
 
-    invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
-
-    // Emit annotation remarks.
-    addAnnotationRemarksPass(MPM);
-
     return MPM;
   }
 
@@ -1983,7 +1985,11 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // If we didn't decide to inline a function, check to see if we can
   // transform it to pass arguments by value instead of by reference.
-  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(ArgumentPromotionPass()));
+  CGSCCPassManager CGPM;
+  CGPM.addPass(ArgumentPromotionPass());
+  CGPM.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
+  CGPM.addPass(CoroAnnotationElidePass());
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
 
   FunctionPassManager FPM;
   // The IPO Passes may leave cruft around. Clean up after them.
@@ -2134,11 +2140,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   if (PTO.CallGraphProfile)
     MPM.addPass(CGProfilePass(/*InLTOPostLink=*/true));
-
-  invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
-
-  // Emit annotation remarks.
-  addAnnotationRemarksPass(MPM);
 
   return MPM;
 }
