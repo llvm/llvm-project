@@ -748,6 +748,7 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
       auto *ImageType = cast<TargetExtType>(II->getOperand(0)->getType());
       assert(ImageType->getTargetExtName() == "spirv.Image");
+      (void)ImageType;
       if (II->hasOneUse()) {
         auto *U = *II->users().begin();
         Ty = cast<Instruction>(U)->getAccessType();
