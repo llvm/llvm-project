@@ -172,7 +172,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
       if (runtime)
         found_dynamic_type = runtime->GetDynamicTypeAndAddress(
             *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
-            value_type);
+            value_type, local_buffer);
     }
 #endif // LLDB_ENABLE_SWIFT
   if (!found_dynamic_type &&

@@ -1847,7 +1847,8 @@ static bool IsPrivateNSClass(NodePointer node) {
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
     ValueObject &in_value, CompilerType class_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
-    Address &address, Value::ValueType &value_type) {
+    Address &address, Value::ValueType &value_type,
+    llvm::ArrayRef<uint8_t> &local_buffer) {
   AddressType address_type;
   lldb::addr_t instance_ptr = in_value.GetPointerValue(&address_type);
   value_type = Value::GetValueTypeFromAddressType(address_type);
@@ -1873,8 +1874,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
     if (auto *objc_runtime =
             SwiftLanguageRuntime::GetObjCRuntime(GetProcess())) {
       Value::ValueType value_type;
-      if (objc_runtime->GetDynamicTypeAndAddress(
-              in_value, use_dynamic, class_type_or_name, address, value_type)) {
+      if (objc_runtime->GetDynamicTypeAndAddress(in_value, use_dynamic,
+                                                 class_type_or_name, address,
+                                                 value_type, local_buffer)) {
         bool found = false;
         // Return the most specific class which we can get the typeref.
         ForEachSuperClassType(in_value, [&](SuperClassType sc) -> bool {
@@ -2436,17 +2438,41 @@ bool SwiftLanguageRuntime::GetAbstractTypeName(StreamString &name,
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Value(
     ValueObject &in_value, CompilerType &bound_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
-    Address &address, Value::ValueType &value_type) {
+    Address &address, Value::ValueType &value_type,
+    llvm::ArrayRef<uint8_t> &local_buffer) {
+  auto static_type = in_value.GetCompilerType();
   value_type = Value::ValueType::Invalid;
   class_type_or_name.SetCompilerType(bound_type);
 
   ExecutionContext exe_ctx = in_value.GetExecutionContextRef().Lock(true);
+  ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
+  if (!exe_scope)
+    return false;
   std::optional<uint64_t> size =
       bound_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!size)
     return false;
   AddressType address_type;
   lldb::addr_t val_address = in_value.GetAddressOf(true, &address_type);
+  // If we couldn't find a load address, but the value object has a local
+  // buffer, use that.
+  if (val_address == LLDB_INVALID_ADDRESS && address_type == eAddressTypeHost) {
+    // Get the start and size of the local buffer.
+    auto start = in_value.GetValue().GetScalar().ULongLong();
+    auto local_buffer_size = in_value.GetLocalBufferSize();
+
+    // If we can't find the size of the local buffer we can't safely know if the
+    // dynamic type fits in it.
+    if (local_buffer_size == LLDB_INVALID_ADDRESS)
+      return false;
+    // If the dynamic type doesn't in the buffer we can't use it either.
+    if (local_buffer_size < bound_type.GetByteSize(exe_scope))
+      return false;
+
+    value_type = Value::GetValueTypeFromAddressType(address_type);
+    local_buffer = {(uint8_t *)start, local_buffer_size};
+    return true;
+  }
   if (*size && (!val_address || val_address == LLDB_INVALID_ADDRESS))
     return false;
 
@@ -2458,7 +2484,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Value(
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_IndirectEnumCase(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
-    Value::ValueType &value_type) {
+    Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) {
   Status error;
   CompilerType child_type = in_value.GetCompilerType();
   class_type_or_name.SetCompilerType(child_type);
@@ -2490,7 +2516,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_IndirectEnumCase(
       return false;
 
     return GetDynamicTypeAndAddress(*valobj_sp, use_dynamic, class_type_or_name,
-                                    address, value_type);
+                                    address, value_type, local_buffer);
   } else {
     // This is most likely a statically known type.
     address.SetLoadAddress(box_value, &GetProcess().GetTarget());
@@ -2516,7 +2542,8 @@ void SwiftLanguageRuntime::DumpTyperef(CompilerType type,
 
 Value::ValueType SwiftLanguageRuntime::GetValueType(
     ValueObject &in_value, CompilerType dynamic_type,
-    Value::ValueType static_value_type, bool is_indirect_enum_case) {
+    Value::ValueType static_value_type, bool is_indirect_enum_case,
+    llvm::ArrayRef<uint8_t> &local_buffer) {
   CompilerType static_type = in_value.GetCompilerType();
   Flags static_type_flags(static_type.GetTypeInfo());
   Flags dynamic_type_flags(dynamic_type.GetTypeInfo());
@@ -2570,6 +2597,12 @@ Value::ValueType SwiftLanguageRuntime::GetValueType(
       // If the data is not inlined, we have a pointer.
       return Value::ValueType::LoadAddress;
     }
+    // If we found a host address and the dynamic type fits in there, and
+    // this is not a pointer from an existential container, then this points to
+    // the local buffer.
+    if (static_value_type == Value::ValueType::HostAddress &&
+        !local_buffer.empty())
+      return static_value_type;
 
     if (static_type_flags.AllSet(eTypeIsSwift | eTypeIsGenericTypeParam)) {
       // if I am handling a non-pointer Swift type obtained from an archetype,
@@ -2677,7 +2710,7 @@ std::optional<SwiftNominalType> GetSwiftClass(ValueObject &valobj,
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_ClangType(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
-    Value::ValueType &value_type) {
+    Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) {
   AppleObjCRuntime *objc_runtime =
       SwiftLanguageRuntime::GetObjCRuntime(GetProcess());
   if (!objc_runtime)
@@ -2690,8 +2723,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_ClangType(
   // resolution first, and then map the dynamic Objective-C type back
   // into Swift.
   TypeAndOrName dyn_class_type_or_name = class_type_or_name;
-  if (!objc_runtime->GetDynamicTypeAndAddress(
-          in_value, use_dynamic, dyn_class_type_or_name, address, value_type))
+  if (!objc_runtime->GetDynamicTypeAndAddress(in_value, use_dynamic,
+                                              dyn_class_type_or_name, address,
+                                              value_type, local_buffer))
     return false;
 
   StringRef dyn_name = dyn_class_type_or_name.GetName().GetStringRef();
@@ -2797,7 +2831,7 @@ static bool CouldHaveDynamicValue(ValueObject &in_value) {
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
-    Value::ValueType &value_type) {
+    Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) {
   class_type_or_name.Clear();
   if (use_dynamic == lldb::eNoDynamicValues)
     return false;
@@ -2806,8 +2840,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
 
   // Try to import a Clang type into Swift.
   if (in_value.GetObjectRuntimeLanguage() == eLanguageTypeObjC)
-    return GetDynamicTypeAndAddress_ClangType(
-        in_value, use_dynamic, class_type_or_name, address, value_type);
+    return GetDynamicTypeAndAddress_ClangType(in_value, use_dynamic,
+                                              class_type_or_name, address,
+                                              value_type, local_buffer);
 
   if (!CouldHaveDynamicValue(in_value))
     return false;
@@ -2823,7 +2858,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
   // Type kinds with instance metadata don't need generic type resolution.
   if (is_indirect_enum_case)
     success = GetDynamicTypeAndAddress_IndirectEnumCase(
-        in_value, use_dynamic, class_type_or_name, address, static_value_type);
+        in_value, use_dynamic, class_type_or_name, address, static_value_type,
+        local_buffer);
   else if (type_info.AnySet(eTypeIsPack))
     success = GetDynamicTypeAndAddress_Pack(in_value, val_type, use_dynamic,
                                             class_type_or_name, address,
@@ -2832,7 +2868,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
            type_info.AllSet(eTypeIsBuiltIn | eTypeIsPointer | eTypeHasValue))
     success = GetDynamicTypeAndAddress_Class(in_value, val_type, use_dynamic,
                                              class_type_or_name, address,
-                                             static_value_type);
+                                             static_value_type, local_buffer);
   else if (type_info.AllSet(eTypeIsMetatype | eTypeIsProtocol))
     success = GetDynamicTypeAndAddress_ExistentialMetatype(
         in_value, val_type, use_dynamic, class_type_or_name, address);
@@ -2856,16 +2892,16 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
 
     Flags subst_type_info(bound_type.GetTypeInfo());
     if (subst_type_info.AnySet(eTypeIsClass)) {
-      success = GetDynamicTypeAndAddress_Class(in_value, bound_type,
-                                               use_dynamic, class_type_or_name,
-                                               address, static_value_type);
+      success = GetDynamicTypeAndAddress_Class(
+          in_value, bound_type, use_dynamic, class_type_or_name, address,
+          static_value_type, local_buffer);
     } else if (subst_type_info.AnySet(eTypeIsProtocol)) {
       success = GetDynamicTypeAndAddress_Existential(
           in_value, bound_type, use_dynamic, class_type_or_name, address);
     } else {
-      success = GetDynamicTypeAndAddress_Value(in_value, bound_type,
-                                               use_dynamic, class_type_or_name,
-                                               address, static_value_type);
+      success = GetDynamicTypeAndAddress_Value(
+          in_value, bound_type, use_dynamic, class_type_or_name, address,
+          static_value_type, local_buffer);
     }
   }
 
@@ -2875,8 +2911,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     if (static_value_type == Value::ValueType::Invalid)
       static_value_type = in_value.GetValue().GetValueType();
 
-    value_type = GetValueType(in_value, class_type_or_name.GetCompilerType(),
-                              static_value_type, is_indirect_enum_case);
+    value_type =
+        GetValueType(in_value, class_type_or_name.GetCompilerType(),
+                     static_value_type, is_indirect_enum_case, local_buffer);
   }
   return success;
 }
