@@ -71,7 +71,9 @@ STATISTIC(StrtabBytes, "Total size of SHT_STRTAB sections");
 STATISTIC(SymtabBytes, "Total size of SHT_SYMTAB sections");
 STATISTIC(RelocationBytes, "Total size of relocation sections");
 STATISTIC(DynsymBytes, "Total size of SHT_DYNSYM sections");
-STATISTIC(DebugBytes, "Total size of debug info sections (not including those written to .dwo)");
+STATISTIC(
+    DebugBytes,
+    "Total size of debug info sections (not including those written to .dwo)");
 STATISTIC(UnwindBytes, "Total size of unwind sections");
 STATISTIC(OtherBytes, "Total size of uncategorized sections");
 STATISTIC(DwoBytes, "Total size of sections written to .dwo file");
