@@ -130,8 +130,11 @@ namespace llvm {
   /// which components may be captured by following uses of the user of \p U.
   /// The \p IsDereferenceableOrNull callback is used to rule out capturing for
   /// certain comparisons.
+  ///
+  /// \p Base is the starting value of the capture analysis, which is
+  /// relevant for address_is_null captures.
   CaptureInfo
-  DetermineUseCaptureKind(const Use &U,
+  DetermineUseCaptureKind(const Use &U, const Value *Base,
                           llvm::function_ref<bool(Value *, const DataLayout &)>
                               IsDereferenceableOrNull);
 

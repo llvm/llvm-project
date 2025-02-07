@@ -1550,7 +1550,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
         }
         if (!Visited.insert(&U).second)
           continue;
-        CaptureInfo CI = DetermineUseCaptureKind(U, IsDereferenceableOrNull);
+        CaptureInfo CI =
+            DetermineUseCaptureKind(U, AI, IsDereferenceableOrNull);
         // TODO(captures): Make this more precise.
         if (capturesAnything(CI)) {
           if (CI.isRetOnly()) {

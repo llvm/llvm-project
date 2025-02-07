@@ -3971,7 +3971,8 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       //       is CGSCC runs. For those we would need to "allow" AANoCapture for
       //       a value in the module slice.
       // TODO(captures): Make this more precise.
-      CaptureInfo CI = DetermineUseCaptureKind(U, IsDereferenceableOrNull);
+      CaptureInfo CI =
+          DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
       if (capturesNothing(CI))
         return true;
       if (CI.isRetOnly()) {
@@ -6018,7 +6019,8 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
 
   auto UseCheck = [&](const Use &U, bool &Follow) -> bool {
     // TODO(captures): Make this more precise.
-    CaptureInfo CI = DetermineUseCaptureKind(U, IsDereferenceableOrNull);
+    CaptureInfo CI =
+        DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
     if (capturesNothing(CI))
       return true;
     if (CI.isRetOnly()) {
@@ -12149,7 +12151,7 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
     auto UsePred = [&](const Use &U, bool &Follow) -> bool {
       Uses.insert(&U);
       // TODO(captures): Make this more precise.
-      CaptureInfo CI = DetermineUseCaptureKind(U, nullptr);
+      CaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr, nullptr);
       if (capturesAnything(CI) && CI.isRetOnly()) {
         Follow = true;
         return true;

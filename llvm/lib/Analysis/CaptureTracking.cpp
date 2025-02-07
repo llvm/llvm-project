@@ -280,7 +280,7 @@ Instruction *llvm::FindEarliestCapture(const Value *V, Function &F,
 }
 
 CaptureInfo llvm::DetermineUseCaptureKind(
-    const Use &U,
+    const Use &U, const Value *Base,
     function_ref<bool(Value *, const DataLayout &)> IsDereferenceableOrNull) {
   Instruction *I = dyn_cast<Instruction>(U.getUser());
 
@@ -378,14 +378,15 @@ CaptureInfo llvm::DetermineUseCaptureKind(
   case Instruction::ICmp: {
     unsigned Idx = U.getOperandNo();
     unsigned OtherIdx = 1 - Idx;
-    if (auto *CPN = dyn_cast<ConstantPointerNull>(I->getOperand(OtherIdx))) {
+    if (isa<ConstantPointerNull>(I->getOperand(OtherIdx)) &&
+        cast<ICmpInst>(I)->isEquality()) {
       // TODO(captures): Remove these special cases once we make use of
       // captures(address_is_null).
 
       // Don't count comparisons of a no-alias return value against null as
       // captures. This allows us to ignore comparisons of malloc results
       // with null, for example.
-      if (CPN->getType()->getAddressSpace() == 0)
+      if (U->getType()->getPointerAddressSpace() == 0)
         if (isNoAliasCall(U.get()->stripPointerCasts()))
           return CaptureInfo::none();
       if (!I->getFunction()->nullPointerIsDefined()) {
@@ -397,7 +398,16 @@ CaptureInfo llvm::DetermineUseCaptureKind(
         if (IsDereferenceableOrNull && IsDereferenceableOrNull(O, DL))
           return CaptureInfo::none();
       }
-      return CaptureInfo::otherOnly(CaptureComponents::AddressIsNull);
+
+      // Check whether this is a comparison of the base pointer against
+      // null. We can also strip inbounds GEPs, as inbounds preserves
+      // the null-ness of the pointer.
+      Value *Stripped = U.get();
+      if (!NullPointerIsDefined(I->getFunction(),
+                                U->getType()->getPointerAddressSpace()))
+        Stripped = Stripped->stripInBoundsOffsets();
+      if (Stripped == Base)
+        return CaptureInfo::otherOnly(CaptureComponents::AddressIsNull);
     }
 
     // Otherwise, be conservative. There are crazy ways to capture pointers
@@ -445,7 +455,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
   };
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
-    CaptureInfo CI = DetermineUseCaptureKind(*U, IsDereferenceableOrNull);
+    CaptureInfo CI = DetermineUseCaptureKind(*U, V, IsDereferenceableOrNull);
     if (capturesNothing(CI))
       continue;
     CaptureComponents OtherCC = CI.getOtherComponents();

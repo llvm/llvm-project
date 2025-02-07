@@ -811,6 +811,46 @@ define i1 @nocaptureInboundsGEPICmpRev(ptr %x) {
   ret i1 %2
 }
 
+define i1 @notInboundsGEPICmp(ptr %x) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FNATTRS-LABEL: define i1 @notInboundsGEPICmp
+; FNATTRS-SAME: (ptr readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[X]], i32 5
+; FNATTRS-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
+; FNATTRS-NEXT:    ret i1 [[TMP2]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i1 @notInboundsGEPICmp
+; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[X]], i32 5
+; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
+; ATTRIBUTOR-NEXT:    ret i1 [[TMP2]]
+;
+  %1 = getelementptr i32, ptr %x, i32 5
+  %2 = icmp eq ptr %1, null
+  ret i1 %2
+}
+
+define i1 @inboundsGEPICmpNullPointerDefined(ptr %x) null_pointer_is_valid {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none)
+; FNATTRS-LABEL: define i1 @inboundsGEPICmpNullPointerDefined
+; FNATTRS-SAME: (ptr readnone captures(address) [[X:%.*]]) #[[ATTR16:[0-9]+]] {
+; FNATTRS-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[X]], i32 5
+; FNATTRS-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
+; FNATTRS-NEXT:    ret i1 [[TMP2]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i1 @inboundsGEPICmpNullPointerDefined
+; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR12:[0-9]+]] {
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[X]], i32 5
+; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
+; ATTRIBUTOR-NEXT:    ret i1 [[TMP2]]
+;
+  %1 = getelementptr i32, ptr %x, i32 5
+  %2 = icmp eq ptr %1, null
+  ret i1 %2
+}
+
 define i1 @nocaptureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define noundef i1 @nocaptureDereferenceableOrNullICmp
@@ -831,13 +871,13 @@ define i1 @nocaptureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x)
 define i1 @captureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x) null_pointer_is_valid {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none)
 ; FNATTRS-LABEL: define noundef i1 @captureDereferenceableOrNullICmp
-; FNATTRS-SAME: (ptr readnone captures(address_is_null) dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR16:[0-9]+]] {
+; FNATTRS-SAME: (ptr readnone captures(address_is_null) dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR16]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; FNATTRS-NEXT:    ret i1 [[TMP1]]
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none)
 ; ATTRIBUTOR-LABEL: define i1 @captureDereferenceableOrNullICmp
-; ATTRIBUTOR-SAME: (ptr nofree readnone dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR12:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr nofree readnone dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR12]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; ATTRIBUTOR-NEXT:    ret i1 [[TMP1]]
 ;
