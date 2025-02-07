@@ -447,3 +447,23 @@ func.func @tensor_desc_scatter_invalid_map_data_1(%src: ui64, %offsets: vector<1
         #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 2]>>
   return
 }
+
+// -----
+func.func @tensor_desc_scatter_invalid_chunk_size_1D(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      // expected-error@+1 {{expected non-contiguous elements for 1D tensor}}
+      !xegpu.tensor_desc<16xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_scatter_invalid_chunk_size_2D(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      // expected-error@+1 {{expected chunk blocks for 2D tensor}}
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 1>,
+        #xegpu.sg_map<wi_layout = [8, 1], wi_data = [1, 2]>>
+  return
+}
