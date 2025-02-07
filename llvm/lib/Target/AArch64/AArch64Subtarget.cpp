@@ -125,7 +125,12 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   // this in the future so we can specify it together with the subtarget
   // features.
   switch (ARMProcFamily) {
-  case Others:
+  case Generic:
+    // Using TuneCPU=generic we avoid ldapur instructions to line up with the
+    // cpus that use the AvoidLDAPUR feature. We don't want this to be on
+    // forever, so it is enabled between armv8.4 and armv8.7/armv9.2.
+    if (hasV8_4aOps() && !hasV8_8aOps())
+      AvoidLDAPUR = true;
     break;
   case Carmel:
     CacheLineSize = 64;
