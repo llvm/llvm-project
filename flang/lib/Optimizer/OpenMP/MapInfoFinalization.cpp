@@ -499,8 +499,7 @@ class MapInfoFinalizationPass
     // undergoes frequent re-iteration for the near future. So we loop
     // over function in the module and then map.info inside of those.
     getOperation()->walk([&](mlir::Operation *func) {
-      if (!(mlir::isa<mlir::func::FuncOp>(func) ||
-            mlir::isa<mlir::omp::DeclareMapperOp>(func)))
+      if (!mlir::isa<mlir::func::FuncOp, mlir::omp::DeclareMapperOp>(func))
         return;
       // clear all local allocations we made for any boxes in any prior
       // iterations from previous function scopes.

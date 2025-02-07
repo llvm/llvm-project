@@ -3151,7 +3151,6 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   auto mlirType = converter.genType(varType.declTypeSpec->derivedTypeSpec());
   auto declMapperOp = firOpBuilder.create<mlir::omp::DeclareMapperOp>(
       loc, mapperNameStr, mlirType);
-  converter.getMLIRSymbolTable()->insert(declMapperOp);
   auto &region = declMapperOp.getRegion();
   firOpBuilder.createBlock(&region);
   auto varVal = region.addArgument(firOpBuilder.getRefType(mlirType), loc);
