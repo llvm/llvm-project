@@ -151,12 +151,26 @@ def SPMem : MemOperand<SP>;
 
 def GPRCMem : MemOperand<GPRC>;
 
-class SImmAsmOperand<int width, string suffix = "">
-    : ImmAsmOperand<"S", width, suffix> {
+class RISCVRangedImmDiagnosticString<int lo, int hi, string prefix = "immediate must be an integer in the range"> {
+  string Message = prefix # " [" # lo # ", " # hi # "]";
 }
 
-class UImmAsmOperand<int width, string suffix = "">
+class RISCVSImmDiagnosticString<int bitsNum, string prefix = "immediate must be an integer in the range"> :
+  RISCVRangedImmDiagnosticString<!sub(0, !shl(1, !sub(bitsNum, 1))), !sub(!shl(1, !sub(bitsNum, 1)), 1), prefix> {
+}
+
+class RISCVUImmDiagnosticString<int bitsNum, string prefix = "immediate must be an integer in the range"> :
+  RISCVRangedImmDiagnosticString<0, !sub(!shl(1, bitsNum), 1), prefix> {
+}
+
+class SImmAsmOperand<int width, string suffix = "", string messagePrefix = "immediate must be an integer in the range">
+    : ImmAsmOperand<"S", width, suffix> {
+  let DiagnosticString = RISCVSImmDiagnosticString<width, messagePrefix>.Message;
+}
+
+class UImmAsmOperand<int width, string suffix = "", string messagePrefix = "immediate must be an integer in the range">
     : ImmAsmOperand<"U", width, suffix> {
+  let DiagnosticString = RISCVUImmDiagnosticString<width, messagePrefix>.Message;
 }
 
 class RISCVOp<ValueType vt = XLenVT> : Operand<vt> {
@@ -376,6 +390,8 @@ def CSRSystemRegister : AsmOperandClass {
   let Name = "CSRSystemRegister";
   let ParserMethod = "parseCSRSystemRegister";
   let DiagnosticType = "InvalidCSRSystemRegister";
+  let DiagnosticString = RISCVUImmDiagnosticString<12, "operand must be a valid system register "
+                                      "name or an integer in the range">.Message;
 }
 
 def csr_sysreg : RISCVOp, TImmLeaf<XLenVT, "return isUInt<12>(Imm);"> {

@@ -1532,45 +1532,15 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 6) - 1);
     return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5) - 1);
-  case Match_InvalidUImm1:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 1) - 1);
-  case Match_InvalidUImm2:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 2) - 1);
   case Match_InvalidUImm2Lsb0:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 2,
                                       "immediate must be one of");
-  case Match_InvalidUImm3:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 3) - 1);
-  case Match_InvalidUImm4:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 4) - 1);
-  case Match_InvalidUImm5:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
   case Match_InvalidUImm5NonZero:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5) - 1);
   case Match_InvalidUImm5GT3:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 4, (1 << 5) - 1);
-  case Match_InvalidUImm6:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
-  case Match_InvalidUImm7:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 7) - 1);
-  case Match_InvalidUImm8:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 8) - 1);
   case Match_InvalidUImm8GE32:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 32, (1 << 8) - 1);
-  case Match_InvalidSImm5:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 4),
-                                      (1 << 4) - 1);
-  case Match_InvalidSImm6:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 5),
-                                      (1 << 5) - 1);
-  case Match_InvalidSImm6NonZero:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 5), (1 << 5) - 1,
-        "immediate must be non-zero in the range");
-  case Match_InvalidCLUIImm:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 1, (1 << 5) - 1,
-        "immediate must be in [0xfffe0, 0xfffff] or");
   case Match_InvalidUImm5Lsb0:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 5) - 2,
@@ -1607,10 +1577,6 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 9), (1 << 9) - 16,
         "immediate must be a multiple of 16 bytes and non-zero in the range");
-  case Match_InvalidUImm10:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 10) - 1);
-  case Match_InvalidUImm11:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 11) - 1);
   case Match_InvalidSImm12:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 11), (1 << 11) - 1,
@@ -1633,8 +1599,6 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                       "operand must be a symbol with "
                                       "%hi/%tprel_hi modifier or an integer in "
                                       "the range");
-  case Match_InvalidUImm20:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 20) - 1);
   case Match_InvalidUImm20AUIPC:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 20) - 1,
@@ -1645,11 +1609,6 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 20), (1 << 20) - 2,
         "immediate must be a multiple of 2 bytes in the range");
-  case Match_InvalidCSRSystemRegister: {
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 12) - 1,
-                                      "operand must be a valid system register "
-                                      "name or an integer in the range");
-  }
   case Match_InvalidVTypeI: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return generateVTypeError(ErrorLoc);
@@ -1659,9 +1618,6 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                       (1 << 4),
                                       "immediate must be in the range");
   }
-  case Match_InvalidSImm26:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 25),
-                                      (1 << 25) - 1);
   case Match_InvalidRnumArg: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
   }

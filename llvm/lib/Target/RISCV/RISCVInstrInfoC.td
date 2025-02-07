@@ -47,7 +47,7 @@ def simm6 : RISCVSImmLeafOp<6> {
 
 def simm6nonzero : RISCVOp,
                    ImmLeaf<XLenVT, [{return (Imm != 0) && isInt<6>(Imm);}]> {
-  let ParserMatchClass = SImmAsmOperand<6, "NonZero">;
+  let ParserMatchClass = SImmAsmOperand<6, "NonZero", "immediate must be non-zero in the range">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmNonZeroOperand<6>";
   let OperandType = "OPERAND_SIMM6_NONZERO";
@@ -69,6 +69,7 @@ def CLUIImmAsmOperand : AsmOperandClass {
   let Name = "CLUIImm";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = !strconcat("Invalid", Name);
+  let DiagnosticString = "immediate must be in [0xfffe0, 0xfffff] or [1, 31]";
 }
 
 
