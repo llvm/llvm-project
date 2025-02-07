@@ -7,7 +7,6 @@
 ; CHECK: ; Note: shader requires additional functionality:
 ; CHECK-NEXT: ;       Wave level operations
 ; CHECK-NEXT: ; Note: extra DXIL module flags:
-; CHECK-NEXT: {{^;$}}
 
 target triple = "dxil-pc-shadermodel6.7-library"
 
