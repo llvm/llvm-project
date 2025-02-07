@@ -339,15 +339,8 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
   Value *PhiVal = State.get(getOperand(1));
   assert(PhiVal && BinOpVal && "Phi and Mul must be set");
 
-  unsigned Opcode = getOpcode();
-
-  if (Opcode == Instruction::Sub) {
-    bool HasNSW = cast<Instruction>(BinOpVal)->hasNoSignedWrap();
-    BinOpVal = Builder.CreateNeg(BinOpVal, "", HasNSW);
-    Opcode = Instruction::Add;
-  }
-
-  assert(Opcode == Instruction::Add && "Unhandled partial reduction opcode");
+  assert(getOpcode() == Instruction::Add &&
+         "Unhandled partial reduction opcode");
 
   Type *RetTy = PhiVal->getType();
 
