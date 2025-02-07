@@ -1550,16 +1550,16 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
         }
         if (!Visited.insert(&U).second)
           continue;
-        CaptureInfo CI =
+        UseCaptureInfo CI =
             DetermineUseCaptureKind(U, AI, IsDereferenceableOrNull);
         // TODO(captures): Make this more precise.
-        if (capturesAnything(CI)) {
-          if (CI.isRetOnly()) {
-            Worklist.push_back(UI);
-            continue;
-          }
-          return false;
+        if (CI.isPassthrough()) {
+          Worklist.push_back(UI);
+          continue;
         }
+
+        if (capturesAnything(CI))
+          return false;
 
         if (UI->isLifetimeStartOrEnd()) {
           // We note the locations of these intrinsic calls so that we can

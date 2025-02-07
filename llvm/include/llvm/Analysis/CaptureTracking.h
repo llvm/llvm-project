@@ -14,6 +14,7 @@
 #define LLVM_ANALYSIS_CAPTURETRACKING_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/ModRef.h"
 
 namespace llvm {
 
@@ -78,6 +79,28 @@ namespace llvm {
                                    const DominatorTree &DT,
                                    unsigned MaxUsesToExplore = 0);
 
+  /// Capture information for a specific Use.
+  struct UseCaptureInfo {
+    /// Components captured by this use.
+    CaptureComponents UseCC;
+    /// Components captured by the return value of the user of this Use.
+    CaptureComponents ResultCC;
+
+    UseCaptureInfo(CaptureComponents UseCC,
+                   CaptureComponents ResultCC = CaptureComponents::None)
+        : UseCC(UseCC), ResultCC(ResultCC) {}
+
+    static UseCaptureInfo passthrough() {
+      return UseCaptureInfo(CaptureComponents::None, CaptureComponents::All);
+    }
+
+    bool isPassthrough() const {
+      return capturesNothing(UseCC) && capturesAnything(ResultCC);
+    }
+
+    operator CaptureComponents() const { return UseCC | ResultCC; }
+  };
+
   /// This callback is used in conjunction with PointerMayBeCaptured. In
   /// addition to the interface here, you'll need to provide your own getters
   /// to see whether anything was captured.
@@ -110,12 +133,12 @@ namespace llvm {
     /// U->getUser() is always an Instruction.
     virtual bool shouldExplore(const Use *U);
 
-    /// Use U directly captures CI.getOtherComponents() and additionally
-    /// CI.getRetComponents() through the return value of the user of U.
+    /// Use U directly captures CI.UseCC and additionally CI.ResultCC
+    /// through the return value of the user of U.
     ///
     /// Return one of Stop, Continue or ContinueIgnoringReturn to control
     /// further traversal.
-    virtual Action captured(const Use *U, CaptureInfo CI) = 0;
+    virtual Action captured(const Use *U, UseCaptureInfo CI) = 0;
 
     /// isDereferenceableOrNull - Overload to allow clients with additional
     /// knowledge about pointer dereferenceability to provide it and thereby
@@ -125,15 +148,15 @@ namespace llvm {
 
   /// Determine what kind of capture behaviour \p U may exhibit.
   ///
-  /// The Other part of the returned CaptureInfo indicates which component of
-  /// the pointer may be captured directly by the use. The Ret part indicates
-  /// which components may be captured by following uses of the user of \p U.
-  /// The \p IsDereferenceableOrNull callback is used to rule out capturing for
-  /// certain comparisons.
+  /// The returned UseCaptureInfo contains the components captured directly
+  /// by the use (UseCC) and the components captured through the return value
+  /// of the user (ResultCC).
   ///
   /// \p Base is the starting value of the capture analysis, which is
   /// relevant for address_is_null captures.
-  CaptureInfo
+  /// The \p IsDereferenceableOrNull callback is used to rule out capturing for
+  /// certain comparisons.
+  UseCaptureInfo
   DetermineUseCaptureKind(const Use &U, const Value *Base,
                           llvm::function_ref<bool(Value *, const DataLayout &)>
                               IsDereferenceableOrNull);

@@ -549,8 +549,8 @@ struct ArgumentUsesTracker : public CaptureTracker {
 
   void tooManyUses() override { CI = CaptureInfo::all(); }
 
-  Action captured(const Use *U, CaptureInfo UseCI) override {
-    if (updateCaptureInfo(U, UseCI.getOtherComponents())) {
+  Action captured(const Use *U, UseCaptureInfo UseCI) override {
+    if (updateCaptureInfo(U, UseCI.UseCC)) {
       // Don't bother continuing if we already capture everything.
       if (capturesAll(CI.getOtherComponents()))
         return Stop;

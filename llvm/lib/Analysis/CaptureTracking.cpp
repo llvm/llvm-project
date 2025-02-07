@@ -81,8 +81,8 @@ struct SimpleCaptureTracker : public CaptureTracker {
     Captured = true;
   }
 
-  Action captured(const Use *U, CaptureInfo CI) override {
-    // TODO(captures): Use CaptureInfo.
+  Action captured(const Use *U, UseCaptureInfo CI) override {
+    // TODO(captures): Use UseCaptureInfo.
     if (isa<ReturnInst>(U->getUser()) && !ReturnCaptures)
       return ContinueIgnoringReturn;
 
@@ -123,8 +123,8 @@ struct CapturesBefore : public CaptureTracker {
     return !isPotentiallyReachable(I, BeforeHere, nullptr, DT, LI);
   }
 
-  Action captured(const Use *U, CaptureInfo CI) override {
-    // TODO(captures): Use CaptureInfo.
+  Action captured(const Use *U, UseCaptureInfo CI) override {
+    // TODO(captures): Use UseCaptureInfo.
     Instruction *I = cast<Instruction>(U->getUser());
     if (isa<ReturnInst>(I) && !ReturnCaptures)
       return ContinueIgnoringReturn;
@@ -169,8 +169,8 @@ struct EarliestCaptures : public CaptureTracker {
     EarliestCapture = &*F.getEntryBlock().begin();
   }
 
-  Action captured(const Use *U, CaptureInfo CI) override {
-    // TODO(captures): Use CaptureInfo.
+  Action captured(const Use *U, UseCaptureInfo CI) override {
+    // TODO(captures): Use UseCaptureInfo.
     Instruction *I = cast<Instruction>(U->getUser());
     if (isa<ReturnInst>(I) && !ReturnCaptures)
       return ContinueIgnoringReturn;
@@ -279,14 +279,14 @@ Instruction *llvm::FindEarliestCapture(const Value *V, Function &F,
   return CB.EarliestCapture;
 }
 
-CaptureInfo llvm::DetermineUseCaptureKind(
+UseCaptureInfo llvm::DetermineUseCaptureKind(
     const Use &U, const Value *Base,
     function_ref<bool(Value *, const DataLayout &)> IsDereferenceableOrNull) {
   Instruction *I = dyn_cast<Instruction>(U.getUser());
 
   // TODO: Investigate non-instruction uses.
   if (!I)
-    return CaptureInfo::otherOnly();
+    return CaptureComponents::All;
 
   switch (I->getOpcode()) {
   case Instruction::Call:
@@ -298,7 +298,7 @@ CaptureInfo llvm::DetermineUseCaptureKind(
     // by throwing an exception or not depending on the input value).
     if (Call->onlyReadsMemory() && Call->doesNotThrow() &&
         Call->getType()->isVoidTy())
-      return CaptureInfo::none();
+      return CaptureComponents::None;
 
     // The pointer is not captured if returned pointer is not captured.
     // NOTE: CaptureTracking users should not assume that only functions
@@ -306,13 +306,13 @@ CaptureInfo llvm::DetermineUseCaptureKind(
     // getUnderlyingObject in ValueTracking or DecomposeGEPExpression
     // in BasicAA also need to know about this property.
     if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(Call, true))
-      return CaptureInfo::retOnly();
+      return UseCaptureInfo::passthrough();
 
     // Volatile operations effectively capture the memory location that they
     // load and store to.
     if (auto *MI = dyn_cast<MemIntrinsic>(Call))
       if (MI->isVolatile())
-        return CaptureInfo::otherOnly();
+        return CaptureComponents::All;
 
     // Calling a function pointer does not in itself cause the pointer to
     // be captured.  This is a subtle point considering that (for example)
@@ -321,26 +321,27 @@ CaptureInfo llvm::DetermineUseCaptureKind(
     // captured, even though the loaded value might be the pointer itself
     // (think of self-referential objects).
     if (Call->isCallee(&U))
-      return CaptureInfo::none();
+      return CaptureComponents::None;
 
     // Not captured if only passed via 'nocapture' arguments.
     assert(Call->isDataOperand(&U) && "Non-callee must be data operand");
-    return Call->getCaptureInfo(Call->getDataOperandNo(&U));
+    CaptureInfo CI = Call->getCaptureInfo(Call->getDataOperandNo(&U));
+    return UseCaptureInfo(CI.getOtherComponents(), CI.getRetComponents());
   }
   case Instruction::Load:
     // Volatile loads make the address observable.
     if (cast<LoadInst>(I)->isVolatile())
-      return CaptureInfo::otherOnly();
-    return CaptureInfo::none();
+      return CaptureComponents::All;
+    return CaptureComponents::None;
   case Instruction::VAArg:
     // "va-arg" from a pointer does not cause it to be captured.
-    return CaptureInfo::none();
+    return CaptureComponents::None;
   case Instruction::Store:
     // Stored the pointer - conservatively assume it may be captured.
     // Volatile stores make the address observable.
     if (U.getOperandNo() == 0 || cast<StoreInst>(I)->isVolatile())
-      return CaptureInfo::otherOnly();
-    return CaptureInfo::none();
+      return CaptureComponents::All;
+    return CaptureComponents::None;
   case Instruction::AtomicRMW: {
     // atomicrmw conceptually includes both a load and store from
     // the same location.
@@ -349,8 +350,8 @@ CaptureInfo llvm::DetermineUseCaptureKind(
     // Volatile stores make the address observable.
     auto *ARMWI = cast<AtomicRMWInst>(I);
     if (U.getOperandNo() == 1 || ARMWI->isVolatile())
-      return CaptureInfo::otherOnly();
-    return CaptureInfo::none();
+      return CaptureComponents::All;
+    return CaptureComponents::None;
   }
   case Instruction::AtomicCmpXchg: {
     // cmpxchg conceptually includes both a load and store from
@@ -360,21 +361,21 @@ CaptureInfo llvm::DetermineUseCaptureKind(
     // Volatile stores make the address observable.
     auto *ACXI = cast<AtomicCmpXchgInst>(I);
     if (U.getOperandNo() == 1 || U.getOperandNo() == 2 || ACXI->isVolatile())
-      return CaptureInfo::otherOnly();
-    return CaptureInfo::none();
+      return CaptureComponents::All;
+    return CaptureComponents::None;
   }
   case Instruction::GetElementPtr:
     // AA does not support pointers of vectors, so GEP vector splats need to
     // be considered as captures.
     if (I->getType()->isVectorTy())
-      return CaptureInfo::otherOnly();
-    return CaptureInfo::retOnly();
+      return CaptureComponents::All;
+    return UseCaptureInfo::passthrough();
   case Instruction::BitCast:
   case Instruction::PHI:
   case Instruction::Select:
   case Instruction::AddrSpaceCast:
     // The original value is not captured via this if the new value isn't.
-    return CaptureInfo::retOnly();
+    return UseCaptureInfo::passthrough();
   case Instruction::ICmp: {
     unsigned Idx = U.getOperandNo();
     unsigned OtherIdx = 1 - Idx;
@@ -388,7 +389,7 @@ CaptureInfo llvm::DetermineUseCaptureKind(
       // with null, for example.
       if (U->getType()->getPointerAddressSpace() == 0)
         if (isNoAliasCall(U.get()->stripPointerCasts()))
-          return CaptureInfo::none();
+          return CaptureComponents::None;
       if (!I->getFunction()->nullPointerIsDefined()) {
         auto *O = I->getOperand(Idx)->stripPointerCastsSameRepresentation();
         // Comparing a dereferenceable_or_null pointer against null cannot
@@ -396,23 +397,23 @@ CaptureInfo llvm::DetermineUseCaptureKind(
         // valid (in-bounds) pointer.
         const DataLayout &DL = I->getDataLayout();
         if (IsDereferenceableOrNull && IsDereferenceableOrNull(O, DL))
-          return CaptureInfo::none();
+          return CaptureComponents::None;
       }
 
       // Check whether this is a comparison of the base pointer against
       // null.
       if (U.get() == Base)
-        return CaptureInfo::otherOnly(CaptureComponents::AddressIsNull);
+        return CaptureComponents::AddressIsNull;
     }
 
     // Otherwise, be conservative. There are crazy ways to capture pointers
     // using comparisons. However, only the address is captured, not the
     // provenance.
-    return CaptureInfo::otherOnly(CaptureComponents::Address);
+    return CaptureComponents::Address;
   }
   default:
     // Something else - be conservative and say it is captured.
-    return CaptureInfo::otherOnly();
+    return CaptureComponents::All;
   }
 }
 
@@ -450,29 +451,25 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
   };
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
-    CaptureInfo CI = DetermineUseCaptureKind(*U, V, IsDereferenceableOrNull);
-    if (capturesNothing(CI))
-      continue;
-    CaptureComponents OtherCC = CI.getOtherComponents();
-    CaptureComponents RetCC = CI.getRetComponents();
-    if (capturesAnything(OtherCC)) {
+    UseCaptureInfo CI = DetermineUseCaptureKind(*U, V, IsDereferenceableOrNull);
+    if (capturesAnything(CI.UseCC)) {
       switch (Tracker->captured(U, CI)) {
       case CaptureTracker::Stop:
         return;
       case CaptureTracker::ContinueIgnoringReturn:
         continue;
       case CaptureTracker::Continue:
-        // Fall through to passthrough handling, but only if RetCC contains
-        // additional components that OtherCC does not. We assume that a
+        // Fall through to passthrough handling, but only if ResultCC contains
+        // additional components that UseCC does not. We assume that a
         // capture at this point will be strictly more constraining than a
         // later capture from following the return value.
-        if (capturesNothing(RetCC & ~OtherCC))
+        if (capturesNothing(CI.ResultCC & ~CI.UseCC))
           continue;
         break;
       }
     }
-    // TODO(captures): We could keep track of RetCC for the users.
-    if (capturesAnything(RetCC) && !AddUses(U->getUser()))
+    // TODO(captures): We could keep track of ResultCC for the users.
+    if (capturesAnything(CI.ResultCC) && !AddUses(U->getUser()))
       return;
   }
 

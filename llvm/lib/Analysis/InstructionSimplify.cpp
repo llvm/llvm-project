@@ -2788,8 +2788,8 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
       struct CustomCaptureTracker : public CaptureTracker {
         bool Captured = false;
         void tooManyUses() override { Captured = true; }
-        Action captured(const Use *U, CaptureInfo CI) override {
-          // TODO(captures): Use CaptureInfo.
+        Action captured(const Use *U, UseCaptureInfo CI) override {
+          // TODO(captures): Use UseCaptureInfo.
           if (auto *ICmp = dyn_cast<ICmpInst>(U->getUser())) {
             // Comparison against value stored in global variable. Given the
             // pointer does not escape, its value cannot be guessed and stored
