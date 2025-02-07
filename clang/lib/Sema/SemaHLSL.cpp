@@ -2713,7 +2713,7 @@ bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
   if (SemaRef.getASTContext().hasSameUnqualifiedType(SrcTy, DestTy))
     return true;
 
-  switch (Type::ScalarTypeKind SrcKind = SrcTy->getScalarTypeKind()) {
+  switch (SrcTy->getScalarTypeKind()) {
   case Type::STK_Bool: // casting from bool is like casting from an integer
   case Type::STK_Integral:
     switch (DestTy->getScalarTypeKind()) {
