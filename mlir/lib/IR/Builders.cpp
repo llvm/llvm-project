@@ -34,44 +34,6 @@ Location Builder::getFusedLoc(ArrayRef<Location> locs, Attribute metadata) {
 // Types.
 //===----------------------------------------------------------------------===//
 
-FloatType Builder::getFloat4E2M1FNType() {
-  return Float4E2M1FNType::get(context);
-}
-
-FloatType Builder::getFloat6E2M3FNType() {
-  return Float6E2M3FNType::get(context);
-}
-
-FloatType Builder::getFloat6E3M2FNType() {
-  return Float6E3M2FNType::get(context);
-}
-
-FloatType Builder::getFloat8E5M2Type() { return Float8E5M2Type::get(context); }
-
-FloatType Builder::getFloat8E4M3Type() { return Float8E4M3Type::get(context); }
-
-FloatType Builder::getFloat8E4M3FNType() {
-  return Float8E4M3FNType::get(context);
-}
-
-FloatType Builder::getFloat8E5M2FNUZType() {
-  return Float8E5M2FNUZType::get(context);
-}
-
-FloatType Builder::getFloat8E4M3FNUZType() {
-  return Float8E4M3FNUZType::get(context);
-}
-
-FloatType Builder::getFloat8E4M3B11FNUZType() {
-  return Float8E4M3B11FNUZType::get(context);
-}
-
-FloatType Builder::getFloat8E3M4Type() { return Float8E3M4Type::get(context); }
-
-FloatType Builder::getFloat8E8M0FNUType() {
-  return Float8E8M0FNUType::get(context);
-}
-
 FloatType Builder::getBF16Type() { return BFloat16Type::get(context); }
 
 FloatType Builder::getF16Type() { return Float16Type::get(context); }
@@ -126,7 +88,7 @@ NoneType Builder::getNoneType() { return NoneType::get(context); }
 //===----------------------------------------------------------------------===//
 
 NamedAttribute Builder::getNamedAttr(StringRef name, Attribute val) {
-  return NamedAttribute(getStringAttr(name), val);
+  return NamedAttribute(name, val);
 }
 
 UnitAttr Builder::getUnitAttr() { return UnitAttr::get(context); }

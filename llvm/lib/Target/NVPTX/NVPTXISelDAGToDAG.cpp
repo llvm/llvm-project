@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXISelDAGToDAG.h"
+#include "NVPTX.h"
 #include "NVPTXUtilities.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -191,6 +192,12 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     }
     break;
   }
+  case ISD::FADD:
+  case ISD::FMUL:
+  case ISD::FSUB:
+    if (tryBF16ArithToFMA(N))
+      return;
+    break;
   default:
     break;
   }
@@ -641,9 +648,50 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
   if (S == NVPTX::Scope::Cluster)
     T->failIfClustersUnsupported(".cluster scope fence");
 
+  // Fall back to .acq_rel if .acquire, .release is not supported.
+  if (!T->hasSplitAcquireAndReleaseFences() &&
+      (O == NVPTX::Ordering::Acquire || O == NVPTX::Ordering::Release))
+    O = NVPTX::Ordering::AcquireRelease;
+
   switch (O) {
   case NVPTX::Ordering::Acquire:
+    switch (S) {
+    case NVPTX::Scope::System:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acquire_sys
+                                    : NVPTX::INT_MEMBAR_SYS;
+    case NVPTX::Scope::Block:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acquire_cta
+                                    : NVPTX::INT_MEMBAR_CTA;
+    case NVPTX::Scope::Cluster:
+      return NVPTX::atomic_thread_fence_acquire_cluster;
+    case NVPTX::Scope::Device:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acquire_gpu
+                                    : NVPTX::INT_MEMBAR_GL;
+    case NVPTX::Scope::Thread:
+      report_fatal_error(
+          formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
+                  ScopeToString(S)));
+    }
+    break;
   case NVPTX::Ordering::Release:
+    switch (S) {
+    case NVPTX::Scope::System:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_release_sys
+                                    : NVPTX::INT_MEMBAR_SYS;
+    case NVPTX::Scope::Block:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_release_cta
+                                    : NVPTX::INT_MEMBAR_CTA;
+    case NVPTX::Scope::Cluster:
+      return NVPTX::atomic_thread_fence_release_cluster;
+    case NVPTX::Scope::Device:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_release_gpu
+                                    : NVPTX::INT_MEMBAR_GL;
+    case NVPTX::Scope::Thread:
+      report_fatal_error(
+          formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
+                  ScopeToString(S)));
+    }
+    break;
   case NVPTX::Ordering::AcquireRelease: {
     switch (S) {
     case NVPTX::Scope::System:
@@ -2450,6 +2498,62 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
   return true;
 }
 
+// Select bf16/bf16v2 FADD, FSUB, FMUL as fma on targets with only fma
+bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
+  EVT VT = SDValue(N, 0).getValueType();
+  if (VT.getScalarType() != MVT::bf16)
+    return false;
+
+  const NVPTXSubtarget *STI = TM.getSubtargetImpl();
+  if (STI->hasNativeBF16Support(N->getOpcode()))
+    return false;
+
+  const bool IsVec = VT.isVector();
+  assert(!IsVec || VT.getVectorNumElements() == 2);
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SmallVector<SDValue, 3> Operands;
+  auto GetConstant = [&](float Value) -> SDValue {
+    // BF16 immediates must be legalized to integer register values
+    APFloat APF(Value);
+    bool LosesInfo;
+    APF.convert(APFloat::BFloat(), APFloat::rmNearestTiesToEven, &LosesInfo);
+    assert(!LosesInfo);
+    if (IsVec) {
+      auto API = APF.bitcastToAPInt();
+      API = API.concat(API);
+      auto Const = CurDAG->getTargetConstant(API, DL, MVT::i32);
+      return SDValue(CurDAG->getMachineNode(NVPTX::IMOV32ri, DL, VT, Const), 0);
+    }
+    auto Const = CurDAG->getTargetConstantFP(APF, DL, VT);
+    return SDValue(CurDAG->getMachineNode(NVPTX::BFMOV16ri, DL, VT, Const), 0);
+  };
+
+  switch (N->getOpcode()) {
+  case ISD::FADD:
+    // add(a, b) -> fma(a, 1.0, b)
+    Operands = {N0, GetConstant(1.0), N1};
+    break;
+  case ISD::FSUB:
+    // sub(a, b) -> fma(b, -1.0, a)
+    Operands = {N1, GetConstant(-1.0), N0};
+    break;
+  case ISD::FMUL:
+    // mul(a, b) -> fma(a, b, -0.0)
+    // NOTE: The identity is -0, not 0, because -0 + 0 == 0 for floats
+    Operands = {N0, N1, GetConstant(-0.0)};
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  };
+
+  int Opcode = IsVec ? NVPTX::BFMA16x2rrr : NVPTX::BFMA16rrr;
+  MachineSDNode *FMA = CurDAG->getMachineNode(Opcode, DL, VT, Operands);
+  ReplaceNode(N, FMA);
+  return true;
+}
+
 static inline bool isAddLike(const SDValue V) {
   return V.getOpcode() == ISD::ADD ||
          (V->getOpcode() == ISD::OR && V->getFlags().hasDisjoint());
@@ -3105,6 +3209,25 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkG2S(SDNode *N) {
   ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
+void NVPTXDAGToDAGISel::SelectCpAsyncBulkPrefetchL2(SDNode *N) {
+  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
+  // src, size, cache_hint, cache_hint_flag
+  // NumOperands = {Chain, IID} + {Actual intrinsic args}
+  //             = {2}          + {4}
+  size_t NumOps = N->getNumOperands();
+  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
+  size_t NumArgs = IsCacheHint ? 3 : 2; // src, size, cache_hint
+
+  SDLoc DL(N);
+  SmallVector<SDValue, 4> Ops(N->ops().slice(2, NumArgs));
+  Ops.push_back(N->getOperand(0)); // Chain operand
+  
+  unsigned Opcode = IsCacheHint 
+  ?  NVPTX::CP_ASYNC_BULK_PREFETCH_CH
+  :  NVPTX::CP_ASYNC_BULK_PREFETCH;
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
+}
+
 bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
   unsigned IID = N->getConstantOperandVal(1);
   using TMARedTy = llvm::nvvm::TMAReductionOp;
@@ -3117,6 +3240,9 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
     return true;
   case Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global:
     SelectCpAsyncBulkS2G(N);
+    return true;
+  case Intrinsic::nvvm_cp_async_bulk_prefetch_L2:
+    SelectCpAsyncBulkPrefetchL2(N);
     return true;
   case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_1d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_2d:

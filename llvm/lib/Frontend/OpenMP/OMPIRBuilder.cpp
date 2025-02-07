@@ -264,6 +264,33 @@ computeOpenMPScheduleType(ScheduleKind ClauseKind, bool HasChunks,
   return Result;
 }
 
+/// Emit an implicit cast to convert \p XRead to type of variable \p V
+static llvm::Value *emitImplicitCast(IRBuilder<> &Builder, llvm::Value *XRead,
+                                     llvm::Value *V) {
+  // TODO: Add this functionality to the `AtomicInfo` interface
+  llvm::Type *XReadType = XRead->getType();
+  llvm::Type *VType = V->getType();
+  if (llvm::AllocaInst *vAlloca = dyn_cast<llvm::AllocaInst>(V))
+    VType = vAlloca->getAllocatedType();
+
+  if (XReadType->isStructTy() && VType->isStructTy())
+    // No need to extract or convert. A direct
+    // `store` will suffice.
+    return XRead;
+
+  if (XReadType->isStructTy())
+    XRead = Builder.CreateExtractValue(XRead, /*Idxs=*/0);
+  if (VType->isIntegerTy() && XReadType->isFloatingPointTy())
+    XRead = Builder.CreateFPToSI(XRead, VType);
+  else if (VType->isFloatingPointTy() && XReadType->isIntegerTy())
+    XRead = Builder.CreateSIToFP(XRead, VType);
+  else if (VType->isIntegerTy() && XReadType->isIntegerTy())
+    XRead = Builder.CreateIntCast(XRead, VType, true);
+  else if (VType->isFloatingPointTy() && XReadType->isFloatingPointTy())
+    XRead = Builder.CreateFPCast(XRead, VType);
+  return XRead;
+}
+
 /// Make \p Source branch to \p Target.
 ///
 /// Handles two situations:
@@ -286,7 +313,7 @@ static void redirectTo(BasicBlock *Source, BasicBlock *Target, DebugLoc DL) {
 }
 
 void llvm::spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
-                    bool CreateBranch) {
+                    bool CreateBranch, DebugLoc DL) {
   assert(New->getFirstInsertionPt() == New->begin() &&
          "Target BB must not have PHI nodes");
 
@@ -294,15 +321,17 @@ void llvm::spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
   BasicBlock *Old = IP.getBlock();
   New->splice(New->begin(), Old, IP.getPoint(), Old->end());
 
-  if (CreateBranch)
-    BranchInst::Create(New, Old);
+  if (CreateBranch) {
+    auto *NewBr = BranchInst::Create(New, Old);
+    NewBr->setDebugLoc(DL);
+  }
 }
 
 void llvm::spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
   BasicBlock *Old = Builder.GetInsertBlock();
 
-  spliceBB(Builder.saveIP(), New, CreateBranch);
+  spliceBB(Builder.saveIP(), New, CreateBranch, DebugLoc);
   if (CreateBranch)
     Builder.SetInsertPoint(Old->getTerminator());
   else
@@ -314,12 +343,12 @@ void llvm::spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch) {
 }
 
 BasicBlock *llvm::splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
-                          llvm::Twine Name) {
+                          DebugLoc DL, llvm::Twine Name) {
   BasicBlock *Old = IP.getBlock();
   BasicBlock *New = BasicBlock::Create(
       Old->getContext(), Name.isTriviallyEmpty() ? Old->getName() : Name,
       Old->getParent(), Old->getNextNode());
-  spliceBB(IP, New, CreateBranch);
+  spliceBB(IP, New, CreateBranch, DL);
   New->replaceSuccessorsPhiUsesWith(Old, New);
   return New;
 }
@@ -327,7 +356,7 @@ BasicBlock *llvm::splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
 BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
                           llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
-  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, Name);
+  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, DebugLoc, Name);
   if (CreateBranch)
     Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
   else
@@ -341,7 +370,7 @@ BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
 BasicBlock *llvm::splitBB(IRBuilder<> &Builder, bool CreateBranch,
                           llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
-  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, Name);
+  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, DebugLoc, Name);
   if (CreateBranch)
     Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
   else
@@ -651,7 +680,7 @@ void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 static void raiseUserConstantDataAllocasToEntryBlock(IRBuilderBase &Builder,
                                                      Function *Function) {
   BasicBlock &EntryBlock = Function->getEntryBlock();
-  Instruction *MoveLocInst = EntryBlock.getFirstNonPHI();
+  BasicBlock::iterator MoveLocInst = EntryBlock.getFirstNonPHIIt();
 
   // Loop over blocks looking for constant allocas, skipping the entry block
   // as any allocas there are already in the desired location.
@@ -1461,12 +1490,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     // Add additional casts to enforce pointers in zero address space
     TIDAddr = new AddrSpaceCastInst(
         TIDAddrAlloca, PointerType ::get(M.getContext(), 0), "tid.addr.ascast");
-    TIDAddr->insertAfter(TIDAddrAlloca);
+    TIDAddr->insertAfter(TIDAddrAlloca->getIterator());
     ToBeDeleted.push_back(TIDAddr);
     ZeroAddr = new AddrSpaceCastInst(ZeroAddrAlloca,
                                      PointerType ::get(M.getContext(), 0),
                                      "zero.addr.ascast");
-    ZeroAddr->insertAfter(ZeroAddrAlloca);
+    ZeroAddr->insertAfter(ZeroAddrAlloca->getIterator());
     ToBeDeleted.push_back(ZeroAddr);
   }
 
@@ -5276,7 +5305,7 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
       Builder.CreateCondBr(IfCond, ThenBlock, /*ifFalse*/ ElseBlock);
   InsertPointTy IP{BrInstr->getParent(), ++BrInstr->getIterator()};
   // Then block contains branch to omp loop which needs to be vectorized
-  spliceBB(IP, ThenBlock, false);
+  spliceBB(IP, ThenBlock, false, Builder.getCurrentDebugLocation());
   ThenBlock->replaceSuccessorsPhiUsesWith(Head, ThenBlock);
 
   Builder.SetInsertPoint(ElseBlock);
@@ -6441,6 +6470,8 @@ void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
     OutlinedFn->setVisibility(GlobalValue::ProtectedVisibility);
     if (T.isAMDGCN())
       OutlinedFn->setCallingConv(CallingConv::AMDGPU_KERNEL);
+    else if (T.isNVPTX())
+      OutlinedFn->setCallingConv(CallingConv::PTX_Kernel);
   }
 }
 
@@ -6889,7 +6920,7 @@ static Expected<Function *> createOutlinedFunction(
   Builder.CreateRetVoid();
 
   // New Alloca IP at entry point of created device function.
-  Builder.SetInsertPoint(EntryBB->getFirstNonPHI());
+  Builder.SetInsertPoint(EntryBB->getFirstNonPHIIt());
   auto AllocaIP = Builder.saveIP();
 
   Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrDbg());
@@ -7229,10 +7260,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     // If `HasNoWait == true`, we call  @__kmpc_omp_target_task_alloc to provide
     // the DeviceID to the deferred task and also since
     // @__kmpc_omp_target_task_alloc creates an untied/async task.
+    bool NeedsTargetTask = HasNoWait && DeviceID;
     Function *TaskAllocFn =
-        !HasNoWait ? getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc)
-                   : getOrCreateRuntimeFunctionPtr(
-                         OMPRTL___kmpc_omp_target_task_alloc);
+        !NeedsTargetTask
+            ? getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc)
+            : getOrCreateRuntimeFunctionPtr(
+                  OMPRTL___kmpc_omp_target_task_alloc);
 
     // Arguments - `loc_ref` (Ident) and `gtid` (ThreadID)
     // call.
@@ -7281,8 +7314,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
         /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
         /*task_func=*/ProxyFn};
 
-    if (HasNoWait)
+    if (NeedsTargetTask) {
+      assert(DeviceID && "Expected non-empty device ID.");
       TaskAllocArgs.push_back(DeviceID);
+    }
 
     TaskData = Builder.CreateCall(TaskAllocFn, TaskAllocArgs);
 
@@ -7304,7 +7339,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     // ---------------------------------------------------------------
     // The above means that the lack of a nowait on the target construct
     // translates to '#pragma omp task if(0)'
-    if (!HasNoWait) {
+    if (!NeedsTargetTask) {
       if (DepArray) {
         Function *TaskWaitFn =
             getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_wait_deps);
@@ -7405,10 +7440,15 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
       // '@.omp_target_task_proxy_func' in the pseudo code above)
       // "@.omp_target_task_proxy_func' is generated by
       // emitTargetTaskProxyFunction.
-      if (OutlinedFnID)
+      if (OutlinedFnID && DeviceID)
         return OMPBuilder.emitKernelLaunch(Builder, OutlinedFnID,
                                            EmitTargetCallFallbackCB, KArgs,
                                            DeviceID, RTLoc, TargetTaskAllocaIP);
+
+      // We only need to do the outlining if `DeviceID` is set to avoid calling
+      // `emitKernelLaunch` if we want to code-gen for the host; e.g. if we are
+      // generating the `else` branch of an `if` clause.
+      //
       // When OutlinedFnID is set to nullptr, then it's not an offloading call.
       // In this case, we execute the host implementation directly.
       return EmitTargetCallFallbackCB(OMPBuilder.Builder.saveIP());
@@ -8501,6 +8541,8 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
     }
   }
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Read);
+  if (XRead->getType() != V.Var->getType())
+    XRead = emitImplicitCast(Builder, XRead, V.Var);
   Builder.CreateStore(XRead, V.Var, V.IsVolatile);
   return Builder.saveIP();
 }
@@ -8785,6 +8827,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
     return AtomicResult.takeError();
   Value *CapturedVal =
       (IsPostfixUpdate ? AtomicResult->first : AtomicResult->second);
+  if (CapturedVal->getType() != V.Var->getType())
+    CapturedVal = emitImplicitCast(Builder, CapturedVal, V.Var);
   Builder.CreateStore(CapturedVal, V.Var, V.IsVolatile);
 
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Capture);
@@ -9146,16 +9190,16 @@ void OpenMPIRBuilder::initializeTypes(Module &M) {
 #define OMP_TYPE(VarName, InitValue) VarName = InitValue;
 #define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
   VarName##Ty = ArrayType::get(ElemTy, ArraySize);                             \
-  VarName##PtrTy = PointerType::getUnqual(VarName##Ty);
+  VarName##PtrTy = PointerType::getUnqual(Ctx);
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
-  VarName##Ptr = PointerType::getUnqual(VarName);
+  VarName##Ptr = PointerType::getUnqual(Ctx);
 #define OMP_STRUCT_TYPE(VarName, StructName, Packed, ...)                      \
   T = StructType::getTypeByName(Ctx, StructName);                              \
   if (!T)                                                                      \
     T = StructType::create(Ctx, {__VA_ARGS__}, StructName, Packed);            \
   VarName = T;                                                                 \
-  VarName##Ptr = PointerType::getUnqual(T);
+  VarName##Ptr = PointerType::getUnqual(Ctx);
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 }
 
@@ -9182,8 +9226,8 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          StringRef Name) {
   if (!Config.isGPU()) {
     llvm::offloading::emitOffloadingEntry(
-        M, ID, Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0,
-        "omp_offloading_entries");
+        M, object::OffloadKind::OFK_OpenMP, ID,
+        Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0);
     return;
   }
   // TODO: Add support for global variables on the device after declare target
@@ -9192,20 +9236,8 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
   if (!Fn)
     return;
 
-  Module &M = *(Fn->getParent());
-  LLVMContext &Ctx = M.getContext();
-
-  // Get "nvvm.annotations" metadata node.
-  NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
-
-  Metadata *MDVals[] = {
-      ConstantAsMetadata::get(Fn), MDString::get(Ctx, "kernel"),
-      ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Ctx), 1))};
-  // Append metadata to nvvm.annotations.
-  MD->addOperand(MDNode::get(Ctx, MDVals));
-
   // Add a function attribute for the kernel.
-  Fn->addFnAttr(Attribute::get(Ctx, "kernel"));
+  Fn->addFnAttr("kernel");
   if (T.isAMDGCN())
     Fn->addFnAttr("uniform-work-group-size", "true");
   Fn->addFnAttr(Attribute::MustProgress);
@@ -9369,10 +9401,11 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
   //       entries should be redesigned to better suit this use-case.
   if (Config.hasRequiresFlags() && !Config.isTargetDevice())
     offloading::emitOffloadingEntry(
-        M, Constant::getNullValue(PointerType::getUnqual(M.getContext())),
-        /*Name=*/"",
-        /*Size=*/0, OffloadEntriesInfoManager::OMPTargetGlobalRegisterRequires,
-        Config.getRequiresFlags(), "omp_offloading_entries");
+        M, object::OffloadKind::OFK_OpenMP,
+        Constant::getNullValue(PointerType::getUnqual(M.getContext())),
+        ".requires", /*Size=*/0,
+        OffloadEntriesInfoManager::OMPTargetGlobalRegisterRequires,
+        Config.getRequiresFlags());
 }
 
 void TargetRegionEntryInfo::getTargetRegionEntryFnName(

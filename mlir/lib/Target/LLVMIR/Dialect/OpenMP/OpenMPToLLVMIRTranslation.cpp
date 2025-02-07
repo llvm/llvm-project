@@ -75,21 +75,6 @@ public:
   llvm::OpenMPIRBuilder::InsertPointTy allocaInsertPoint;
 };
 
-/// ModuleTranslation stack frame containing the partial mapping between MLIR
-/// values and their LLVM IR equivalents.
-class OpenMPVarMappingStackFrame
-    : public LLVM::ModuleTranslation::StackFrameBase<
-          OpenMPVarMappingStackFrame> {
-public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPVarMappingStackFrame)
-
-  explicit OpenMPVarMappingStackFrame(
-      const DenseMap<Value, llvm::Value *> &mapping)
-      : mapping(mapping) {}
-
-  DenseMap<Value, llvm::Value *> mapping;
-};
-
 /// Custom error class to signal translation errors that don't need reporting,
 /// since encountering them will have already triggered relevant error messages.
 ///
@@ -237,9 +222,13 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     }
   };
   auto checkReduction = [&todo](auto op, LogicalResult &result) {
-    if (!op.getReductionVars().empty() || op.getReductionByref() ||
-        op.getReductionSyms())
-      result = todo("reduction");
+    if (isa<omp::TeamsOp>(op) || isa<omp::SimdOp>(op))
+      if (!op.getReductionVars().empty() || op.getReductionByref() ||
+          op.getReductionSyms())
+        result = todo("reduction");
+    if (op.getReductionMod() &&
+        op.getReductionMod().value() != omp::ReductionModifier::defaultmod)
+      result = todo("reduction with modifier");
   };
   auto checkTaskReduction = [&todo](auto op, LogicalResult &result) {
     if (!op.getTaskReductionVars().empty() || op.getTaskReductionByref() ||
@@ -257,6 +246,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::SectionsOp op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
+        checkReduction(op, result);
       })
       .Case([&](omp::SingleOp op) {
         checkAllocate(op, result);
@@ -270,7 +260,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
-        checkUntied(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
         checkAllocate(op, result);
@@ -282,14 +271,19 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskloopOp op) {
         // TODO: Add other clauses check
+        checkUntied(op, result);
         checkPriority(op, result);
       })
       .Case([&](omp::WsloopOp op) {
         checkAllocate(op, result);
         checkLinear(op, result);
         checkOrder(op, result);
+        checkReduction(op, result);
       })
-      .Case([&](omp::ParallelOp op) { checkAllocate(op, result); })
+      .Case([&](omp::ParallelOp op) {
+        checkAllocate(op, result);
+        checkReduction(op, result);
+      })
       .Case([&](omp::SimdOp op) {
         checkLinear(op, result);
         checkNontemporal(op, result);
@@ -1031,6 +1025,18 @@ mapInitializationArgs(T loop, LLVM::ModuleTranslation &moduleTranslation,
   }
 }
 
+static void
+setInsertPointForPossiblyEmptyBlock(llvm::IRBuilderBase &builder,
+                                    llvm::BasicBlock *block = nullptr) {
+  if (block == nullptr)
+    block = builder.GetInsertBlock();
+
+  if (block->empty() || block->getTerminator() == nullptr)
+    builder.SetInsertPoint(block);
+  else
+    builder.SetInsertPoint(block->getTerminator());
+}
+
 /// Inline reductions' `init` regions. This functions assumes that the
 /// `builder`'s insertion point is where the user wants the `init` regions to be
 /// inlined; i.e. it does not try to find a proper insertion location for the
@@ -1069,10 +1075,7 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     }
   }
 
-  if (initBlock->empty() || initBlock->getTerminator() == nullptr)
-    builder.SetInsertPoint(initBlock);
-  else
-    builder.SetInsertPoint(initBlock->getTerminator());
+  setInsertPointForPossiblyEmptyBlock(builder, initBlock);
 
   // store result of the alloc region to the allocated pointer to the real
   // reduction variable
@@ -1097,11 +1100,7 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     assert(phis.size() == 1 && "expected one value to be yielded from the "
                                "reduction neutral element declaration region");
 
-    if (builder.GetInsertBlock()->empty() ||
-        builder.GetInsertBlock()->getTerminator() == nullptr)
-      builder.SetInsertPoint(builder.GetInsertBlock());
-    else
-      builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
+    setInsertPointForPossiblyEmptyBlock(builder);
 
     if (isByRef[i]) {
       if (!reductionDecls[i].getAllocRegion().empty())
@@ -1335,9 +1334,82 @@ findAssociatedValue(Value privateVar, llvm::IRBuilderBase &builder,
   return moduleTranslation.lookupValue(privateVar);
 }
 
-/// Allocate delayed private variables. Returns the basic block which comes
-/// after all of these allocations. llvm::Value * for each of these private
-/// variables are populated in llvmPrivateVars.
+/// Initialize a single (first)private variable. You probably want to use
+/// allocateAndInitPrivateVars instead of this.
+static llvm::Error initPrivateVar(
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
+    omp::PrivateClauseOp &privDecl, Value mlirPrivVar, BlockArgument &blockArg,
+    llvm::SmallVectorImpl<llvm::Value *>::iterator llvmPrivateVarIt,
+    llvm::BasicBlock *privInitBlock,
+    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+  Region &initRegion = privDecl.getInitRegion();
+  if (initRegion.empty()) {
+    moduleTranslation.mapValue(blockArg, *llvmPrivateVarIt);
+    return llvm::Error::success();
+  }
+
+  // map initialization region block arguments
+  llvm::Value *nonPrivateVar = findAssociatedValue(
+      mlirPrivVar, builder, moduleTranslation, mappedPrivateVars);
+  assert(nonPrivateVar);
+  moduleTranslation.mapValue(privDecl.getInitMoldArg(), nonPrivateVar);
+  moduleTranslation.mapValue(privDecl.getInitPrivateArg(), *llvmPrivateVarIt);
+
+  // in-place convert the private initialization region
+  SmallVector<llvm::Value *, 1> phis;
+  if (failed(inlineConvertOmpRegions(initRegion, "omp.private.init", builder,
+                                     moduleTranslation, &phis)))
+    return llvm::createStringError(
+        "failed to inline `init` region of `omp.private`");
+
+  assert(phis.size() == 1 && "expected one allocation to be yielded");
+
+  // prefer the value yielded from the init region to the allocated private
+  // variable in case the region is operating on arguments by-value (e.g.
+  // Fortran character boxes).
+  moduleTranslation.mapValue(blockArg, phis[0]);
+  *llvmPrivateVarIt = phis[0];
+
+  // clear init region block argument mapping in case it needs to be
+  // re-created with a different source for another use of the same
+  // reduction decl
+  moduleTranslation.forgetMapping(initRegion);
+  return llvm::Error::success();
+}
+
+static llvm::Error
+initPrivateVars(llvm::IRBuilderBase &builder,
+                LLVM::ModuleTranslation &moduleTranslation,
+                MutableArrayRef<BlockArgument> privateBlockArgs,
+                MutableArrayRef<omp::PrivateClauseOp> privateDecls,
+                MutableArrayRef<mlir::Value> mlirPrivateVars,
+                llvm::SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
+                llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+  if (privateBlockArgs.empty())
+    return llvm::Error::success();
+
+  llvm::BasicBlock *privInitBlock = splitBB(builder, true, "omp.private.init");
+  setInsertPointForPossiblyEmptyBlock(builder, privInitBlock);
+
+  for (auto [idx, zip] : llvm::enumerate(
+           llvm::zip_equal(privateDecls, mlirPrivateVars, privateBlockArgs))) {
+    auto [privDecl, mlirPrivVar, blockArg] = zip;
+    llvm::Error err = initPrivateVar(
+        builder, moduleTranslation, privDecl, mlirPrivVar, blockArg,
+        llvmPrivateVars.begin() + idx, privInitBlock, mappedPrivateVars);
+
+    if (err)
+      return err;
+
+    setInsertPointForPossiblyEmptyBlock(builder);
+  }
+
+  return llvm::Error::success();
+}
+
+/// Allocate and initialize delayed private variables. Returns the basic block
+/// which comes after all of these allocations. llvm::Value * for each of these
+/// private variables are populated in llvmPrivateVars.
 static llvm::Expected<llvm::BasicBlock *>
 allocatePrivateVars(llvm::IRBuilderBase &builder,
                     LLVM::ModuleTranslation &moduleTranslation,
@@ -1350,11 +1422,10 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
   // Allocate private vars
   llvm::BranchInst *allocaTerminator =
       llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
-  if (allocaTerminator->getNumSuccessors() != 1) {
-    splitBB(llvm::OpenMPIRBuilder::InsertPointTy(
-                allocaIP.getBlock(), allocaTerminator->getIterator()),
-            true, "omp.region.after_alloca");
-  }
+  splitBB(llvm::OpenMPIRBuilder::InsertPointTy(allocaIP.getBlock(),
+                                               allocaTerminator->getIterator()),
+          true, allocaTerminator->getStableDebugLoc(),
+          "omp.region.after_alloca");
 
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
   // Update the allocaTerminator in case the alloca block was split above.
@@ -1366,69 +1437,25 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
 
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
-  // FIXME: Some of the allocation regions do more than just allocating.
-  // They read from their block argument (amongst other non-alloca things).
-  // When OpenMPIRBuilder outlines the parallel region into a different
-  // function it places the loads for live in-values (such as these block
-  // arguments) at the end of the entry block (because the entry block is
-  // assumed to contain only allocas). Therefore, if we put these complicated
-  // alloc blocks in the entry block, these will not dominate the availability
-  // of the live-in values they are using. Fix this by adding a latealloc
-  // block after the entry block to put these in (this also helps to avoid
-  // mixing non-alloca code with allocas).
-  // Alloc regions which do not use the block argument can still be placed in
-  // the entry block (therefore keeping the allocas together).
-  llvm::BasicBlock *privAllocBlock = nullptr;
-  if (!privateBlockArgs.empty())
-    privAllocBlock = splitBB(builder, true, "omp.private.latealloc");
   for (auto [privDecl, mlirPrivVar, blockArg] :
        llvm::zip_equal(privateDecls, mlirPrivateVars, privateBlockArgs)) {
-    Region &allocRegion = privDecl.getAllocRegion();
-
-    // map allocation region block argument
-    llvm::Value *nonPrivateVar = findAssociatedValue(
-        mlirPrivVar, builder, moduleTranslation, mappedPrivateVars);
-    assert(nonPrivateVar);
-    moduleTranslation.mapValue(privDecl.getAllocMoldArg(), nonPrivateVar);
-
-    // in-place convert the private allocation region
-    SmallVector<llvm::Value *, 1> phis;
-    if (privDecl.getAllocMoldArg().getUses().empty()) {
-      // TODO this should use
-      // allocaIP.getBlock()->getFirstNonPHIOrDbgOrAlloca() so it goes before
-      // the code for fetching the thread id. Not doing this for now to avoid
-      // test churn.
-      builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
-    } else {
-      builder.SetInsertPoint(privAllocBlock->getTerminator());
-    }
-
-    if (failed(inlineConvertOmpRegions(allocRegion, "omp.private.alloc",
-                                       builder, moduleTranslation, &phis)))
-      return llvm::createStringError(
-          "failed to inline `alloc` region of `omp.private`");
-
-    assert(phis.size() == 1 && "expected one allocation to be yielded");
-
-    moduleTranslation.mapValue(blockArg, phis[0]);
-    llvmPrivateVars.push_back(phis[0]);
-
-    // clear alloc region block argument mapping in case it needs to be
-    // re-created with a different source for another use of the same
-    // reduction decl
-    moduleTranslation.forgetMapping(allocRegion);
+    llvm::Type *llvmAllocType =
+        moduleTranslation.convertType(privDecl.getType());
+    builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
+    llvm::Value *llvmPrivateVar = builder.CreateAlloca(
+        llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
+    llvmPrivateVars.push_back(llvmPrivateVar);
   }
+
   return afterAllocas;
 }
 
 static LogicalResult
-initFirstPrivateVars(llvm::IRBuilderBase &builder,
+copyFirstPrivateVars(llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation,
                      SmallVectorImpl<mlir::Value> &mlirPrivateVars,
                      SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
-                     SmallVectorImpl<omp::PrivateClauseOp> &privateDecls,
-                     llvm::BasicBlock *afterAllocas) {
-  llvm::IRBuilderBase::InsertPointGuard guard(builder);
+                     SmallVectorImpl<omp::PrivateClauseOp> &privateDecls) {
   // Apply copy region for firstprivate.
   bool needsFirstprivate =
       llvm::any_of(privateDecls, [](omp::PrivateClauseOp &privOp) {
@@ -1439,13 +1466,9 @@ initFirstPrivateVars(llvm::IRBuilderBase &builder,
   if (!needsFirstprivate)
     return success();
 
-  assert(afterAllocas->getSinglePredecessor());
-
-  // Find the end of the allocation blocks
-  builder.SetInsertPoint(afterAllocas->getSinglePredecessor()->getTerminator());
   llvm::BasicBlock *copyBlock =
       splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
-  builder.SetInsertPoint(copyBlock->getFirstNonPHIOrDbgOrAlloca());
+  setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
 
   for (auto [decl, mlirVar, llvmVar] :
        llvm::zip_equal(privateDecls, mlirPrivateVars, llvmPrivateVars)) {
@@ -1464,10 +1487,11 @@ initFirstPrivateVars(llvm::IRBuilderBase &builder,
     moduleTranslation.mapValue(decl.getCopyPrivateArg(), llvmVar);
 
     // in-place convert copy region
-    builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
     if (failed(inlineConvertOmpRegions(copyRegion, "omp.private.copy", builder,
                                        moduleTranslation)))
       return decl.emitError("failed to inline `copy` region of `omp.private`");
+
+    setInsertPointForPossiblyEmptyBlock(builder);
 
     // ignore unused value yielded from copy region
 
@@ -1533,12 +1557,6 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
           reductionDecls, privateReductionVariables, reductionVariableMap,
           isByRef)))
     return failure();
-
-  // Store the mapping between reduction variables and their private copies on
-  // ModuleTranslation stack. It can be then recovered when translating
-  // omp.reduce operations in a separate call.
-  LLVM::ModuleTranslation::SaveStack<OpenMPVarMappingStackFrame> mappingGuard(
-      moduleTranslation, reductionVariableMap);
 
   SmallVector<StorableBodyGenCallbackTy> sectionCBs;
 
@@ -1766,13 +1784,19 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     if (handleError(afterAllocas, *taskOp).failed())
       return llvm::make_error<PreviouslyReportedError>();
 
-    if (failed(initFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
-                                    llvmPrivateVars, privateDecls,
-                                    afterAllocas.get())))
+    builder.restoreIP(codegenIP);
+    if (handleError(initPrivateVars(builder, moduleTranslation,
+                                    privateBlockArgs, privateDecls,
+                                    mlirPrivateVars, llvmPrivateVars),
+                    *taskOp)
+            .failed())
+      return llvm::make_error<PreviouslyReportedError>();
+
+    if (failed(copyFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
+                                    llvmPrivateVars, privateDecls)))
       return llvm::make_error<PreviouslyReportedError>();
 
     // translate the body of the task:
-    builder.restoreIP(codegenIP);
     auto continuationBlockOrError = convertOmpOpRegions(
         taskOp.getRegion(), "omp.task.region", builder, moduleTranslation);
     if (failed(handleError(continuationBlockOrError, *taskOp)))
@@ -1913,9 +1937,15 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                                 deferredStores, isByRef)))
     return failure();
 
-  if (failed(initFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
-                                  llvmPrivateVars, privateDecls,
-                                  afterAllocas.get())))
+  if (handleError(initPrivateVars(builder, moduleTranslation, privateBlockArgs,
+                                  privateDecls, mlirPrivateVars,
+                                  llvmPrivateVars),
+                  opInst)
+          .failed())
+    return failure();
+
+  if (failed(copyFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
+                                  llvmPrivateVars, privateDecls)))
     return failure();
 
   assert(afterAllocas.get()->getSinglePredecessor());
@@ -1932,12 +1962,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   // since it's equivalent to always using a SIMD length of 1.
   if (failed(convertIgnoredWrappers(loopOp, wsloopOp, moduleTranslation)))
     return failure();
-
-  // Store the mapping between reduction variables and their private copies on
-  // ModuleTranslation stack. It can be then recovered when translating
-  // omp.reduce operations in a separate call.
-  LLVM::ModuleTranslation::SaveStack<OpenMPVarMappingStackFrame> mappingGuard(
-      moduleTranslation, reductionVariableMap);
 
   // Set up the source location value for OpenMP runtime.
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
@@ -2094,13 +2118,19 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
             deferredStores, isByRef)))
       return llvm::make_error<PreviouslyReportedError>();
 
-    if (failed(initFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
-                                    llvmPrivateVars, privateDecls,
-                                    afterAllocas.get())))
-      return llvm::make_error<PreviouslyReportedError>();
-
     assert(afterAllocas.get()->getSinglePredecessor());
     builder.restoreIP(codeGenIP);
+
+    if (handleError(initPrivateVars(builder, moduleTranslation,
+                                    privateBlockArgs, privateDecls,
+                                    mlirPrivateVars, llvmPrivateVars),
+                    *opInst)
+            .failed())
+      return llvm::make_error<PreviouslyReportedError>();
+
+    if (failed(copyFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
+                                    llvmPrivateVars, privateDecls)))
+      return llvm::make_error<PreviouslyReportedError>();
 
     if (failed(
             initReductionVars(opInst, reductionArgs, builder, moduleTranslation,
@@ -2108,12 +2138,6 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
                               reductionDecls, privateReductionVariables,
                               reductionVariableMap, isByRef, deferredStores)))
       return llvm::make_error<PreviouslyReportedError>();
-
-    // Store the mapping between reduction variables and their private copies on
-    // ModuleTranslation stack. It can be then recovered when translating
-    // omp.reduce operations in a separate call.
-    LLVM::ModuleTranslation::SaveStack<OpenMPVarMappingStackFrame> mappingGuard(
-        moduleTranslation, reductionVariableMap);
 
     // Save the alloca insertion point on ModuleTranslation stack for use in
     // nested regions.
@@ -2155,6 +2179,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       tempTerminator->eraseFromParent();
       builder.restoreIP(*contInsertPoint);
     }
+
     return llvm::Error::success();
   };
 
@@ -2256,13 +2281,21 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
   llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
       builder, moduleTranslation, privateBlockArgs, privateDecls,
       mlirPrivateVars, llvmPrivateVars, allocaIP);
   if (handleError(afterAllocas, opInst).failed())
     return failure();
+
+  if (handleError(initPrivateVars(builder, moduleTranslation, privateBlockArgs,
+                                  privateDecls, mlirPrivateVars,
+                                  llvmPrivateVars),
+                  opInst)
+          .failed())
+    return failure();
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
   // Generator of the canonical loop body.
   SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
@@ -3296,7 +3329,15 @@ static void processMapMembersWithParent(
     combinedInfo.BasePointers.emplace_back(
         mapData.BasePointers[basePointerIndex]);
     combinedInfo.Pointers.emplace_back(mapData.Pointers[memberDataIdx]);
-    combinedInfo.Sizes.emplace_back(mapData.Sizes[memberDataIdx]);
+
+    llvm::Value *size = mapData.Sizes[memberDataIdx];
+    if (checkIfPointerMap(memberClause)) {
+      size = builder.CreateSelect(
+          builder.CreateIsNull(mapData.Pointers[memberDataIdx]),
+          builder.getInt64(0), size);
+    }
+
+    combinedInfo.Sizes.emplace_back(size);
   }
 }
 
@@ -3676,6 +3717,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
       }
       break;
     case BodyGenTy::DupNoPriv:
+      // We must always restoreIP regardless of doing anything the caller
+      // does not restore it, leading to incorrect (no) branch generation.
+      builder.restoreIP(codeGenIP);
       break;
     case BodyGenTy::NoPriv:
       // If device info is available then region has already been generated
@@ -3821,7 +3865,7 @@ handleDeclareTargetMapVar(MapInfoData &mapData,
           if (insn->getFunction() == func) {
             auto *load = builder.CreateLoad(mapData.BasePointers[i]->getType(),
                                             mapData.BasePointers[i]);
-            load->moveBefore(insn);
+            load->moveBefore(insn->getIterator());
             user->replaceUsesOfWith(mapData.OriginalValue[i], load);
           }
         }
@@ -4231,6 +4275,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP)
       -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    builder.SetCurrentDebugLocation(llvm::DebugLoc());
     // Forward target-cpu and target-features function attributes from the
     // original function to the new outlined function.
     llvm::Function *llvmParentFn =
@@ -4274,13 +4320,21 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     if (failed(handleError(afterAllocas, *targetOp)))
       return llvm::make_error<PreviouslyReportedError>();
 
+    builder.restoreIP(codeGenIP);
+    if (handleError(initPrivateVars(builder, moduleTranslation,
+                                    privateBlockArgs, privateDecls,
+                                    mlirPrivateVars, llvmPrivateVars,
+                                    &mappedPrivateVars),
+                    *targetOp)
+            .failed())
+      return llvm::make_error<PreviouslyReportedError>();
+
     SmallVector<Region *> privateCleanupRegions;
     llvm::transform(privateDecls, std::back_inserter(privateCleanupRegions),
                     [](omp::PrivateClauseOp privatizer) {
                       return &privatizer.getDeallocRegion();
                     });
 
-    builder.restoreIP(codeGenIP);
     llvm::Expected<llvm::BasicBlock *> exitBlock = convertOmpOpRegions(
         targetRegion, "omp.target", builder, moduleTranslation);
 
@@ -4325,6 +4379,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                            llvm::Value *&retVal, InsertPointTy allocaIP,
                            InsertPointTy codeGenIP)
       -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    builder.SetCurrentDebugLocation(llvm::DebugLoc());
     // We just return the unaltered argument for the host function
     // for now, some alterations may be required in the future to
     // keep host fallback functions working identically to the device

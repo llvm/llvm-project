@@ -115,3 +115,45 @@ func.func @image_query_size_error_result2(%arg0 : !spirv.image<f32, Buffer, NoDe
 }
 
 // -----
+
+//===----------------------------------------------------------------------===//
+// spirv.ImageWrite
+//===----------------------------------------------------------------------===//
+
+func.func @image_write(%arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba16>, %arg1 : vector<2xsi32>, %arg2 : vector<4xf32>) -> () {
+  // CHECK:  spirv.ImageWrite %arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba16>, %arg1 : vector<2xsi32>, %arg2 : vector<4xf32>
+  spirv.ImageWrite %arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba16>, %arg1 : vector<2xsi32>, %arg2 : vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @image_write_scalar_texel(%arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba16>, %arg1 : vector<2xsi32>, %arg2 : f32) -> () {
+  // CHECK:  spirv.ImageWrite %arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba16>, %arg1 : vector<2xsi32>, %arg2 : f32
+  spirv.ImageWrite %arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba16>, %arg1 : vector<2xsi32>, %arg2 : f32
+  spirv.Return
+}
+
+// -----
+
+func.func @image_write_need_sampler(%arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba16>, %arg1 : vector<2xsi32>, %arg2 : vector<4xf32>) -> () {
+  // expected-error @+1 {{the sampled operand of the underlying image must be 0 or 2}}
+  spirv.ImageWrite %arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba16>, %arg1 : vector<2xsi32>, %arg2 : vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @image_write_subpass_data(%arg0 : !spirv.image<f32, SubpassData, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba16>, %arg1 : vector<2xsi32>, %arg2 : vector<4xf32>) -> () {
+  // expected-error @+1 {{the Dim operand of the underlying image must not be SubpassData}}
+  spirv.ImageWrite %arg0 : !spirv.image<f32, SubpassData, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba16>, %arg1 : vector<2xsi32>, %arg2 : vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @image_write_texel_type_mismatch(%arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba16>, %arg1 : vector<2xsi32>, %arg2 : vector<4xi32>) -> () {
+  // expected-error @+1 {{the texel component type must match the image sampled type}}
+  spirv.ImageWrite %arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba16>, %arg1 : vector<2xsi32>, %arg2 : vector<4xi32>
+  spirv.Return
+}

@@ -11,7 +11,7 @@ define void @update_counter_decrement_vector() {
           i32 0, i32 0, i32 1, i32 0, i1 false)
 
  ; CHECK-NEXT: [[BUFFANOT:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
- ; CHECK-NEXT: [[REG:%.*]] = call i32 @dx.op.bufferUpdateCounter(i32 70, %dx.types.Handle [[BUFFANOT]], i8 -1)
+ ; CHECK-NEXT: [[REG:%.*]] = call i32 @dx.op.bufferUpdateCounter(i32 70, %dx.types.Handle [[BUFFANOT]], i8 -1){{$}}
   %1 = call i32 @llvm.dx.resource.updatecounter(target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i8 -1)
   ret void
 }
@@ -23,7 +23,7 @@ define void @update_counter_increment_vector() {
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
   ; CHECK-NEXT: [[BUFFANOT:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
-  ; CHECK-NEXT: [[REG:%.*]] = call i32 @dx.op.bufferUpdateCounter(i32 70, %dx.types.Handle [[BUFFANOT]], i8 1)
+  ; CHECK-NEXT: [[REG:%.*]] = call i32 @dx.op.bufferUpdateCounter(i32 70, %dx.types.Handle [[BUFFANOT]], i8 1){{$}}
   %1 = call i32 @llvm.dx.resource.updatecounter(target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i8 1)
   ret void
 }
@@ -35,7 +35,7 @@ define void @update_counter_decrement_scalar() {
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(
           i32 1, i32 8, i32 1, i32 0, i1 false)
   ; CHECK-NEXT: [[BUFFANOT:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
-  ; CHECK-NEXT: [[REG:%.*]] = call i32 @dx.op.bufferUpdateCounter(i32 70, %dx.types.Handle [[BUFFANOT]], i8 -1)
+  ; CHECK-NEXT: [[REG:%.*]] = call i32 @dx.op.bufferUpdateCounter(i32 70, %dx.types.Handle [[BUFFANOT]], i8 -1){{$}}
   %1 = call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", i8, 0, 0) %buffer, i8 -1)
   ret void
 }

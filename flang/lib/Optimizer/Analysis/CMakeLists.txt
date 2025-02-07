@@ -12,10 +12,12 @@ add_flang_library(FIRAnalysis
   LINK_LIBS
   FIRBuilder
   FIRDialect
+  FIRSupport
   HLFIRDialect
+
+  MLIR_LIBS
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRMathTransforms
   MLIROpenMPDialect
-  FIRSupport
 )

@@ -48,7 +48,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
-  Occupancy = ST.computeOccupancy(F, getLDSSize());
+  Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();
 
   VRegFlags.reserve(1024);
@@ -185,8 +185,7 @@ MachineFunctionInfo *SIMachineFunctionInfo::clone(
 void SIMachineFunctionInfo::limitOccupancy(const MachineFunction &MF) {
   limitOccupancy(getMaxWavesPerEU());
   const GCNSubtarget& ST = MF.getSubtarget<GCNSubtarget>();
-  limitOccupancy(ST.getOccupancyWithLocalMemSize(getLDSSize(),
-                 MF.getFunction()));
+  limitOccupancy(ST.getOccupancyWithWorkGroupSizes(MF).second);
 }
 
 Register SIMachineFunctionInfo::addPrivateSegmentBuffer(
@@ -715,7 +714,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
-      Mode(MFI.getMode()) {
+      Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 

@@ -2412,6 +2412,11 @@ value of errno if unlink failed.
 
 ## "x" - Binary memory read
 
+> **Warning:** The format of this packet was decided before GDB 16
+> introduced its own format for `x`. Future versions of LLDB may not
+> support the format described here, and new code should produce and
+> expect the format used by GDB.
+
 Like the `m` (read) and `M` (write) packets, this is a partner to the
 `X` (write binary data) packet, `x`.
 

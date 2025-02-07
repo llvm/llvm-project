@@ -209,13 +209,25 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
   ExitSU.setInstr(ExitMI);
   // Add dependencies on the defs and uses of the instruction.
   if (ExitMI) {
+    const MCInstrDesc &MIDesc = ExitMI->getDesc();
     for (const MachineOperand &MO : ExitMI->all_uses()) {
+      unsigned OpIdx = MO.getOperandNo();
       Register Reg = MO.getReg();
       if (Reg.isPhysical()) {
+        // addPhysRegDataDeps uses the provided operand index to retrieve
+        // the operand use cycle from the scheduling model. If the operand
+        // is "fake" (e.g., an operand of a call instruction used to pass
+        // an argument to the called function.), the scheduling model may not
+        // have an entry for it. If this is the case, pass -1 as operand index,
+        // which will cause addPhysRegDataDeps to add an artificial dependency.
+        // FIXME: Using hasImplicitUseOfPhysReg here is inaccurate as it misses
+        //  aliases. When fixing, make sure to update addPhysRegDataDeps, too.
+        bool IsRealUse = OpIdx < MIDesc.getNumOperands() ||
+                         MIDesc.hasImplicitUseOfPhysReg(Reg);
         for (MCRegUnit Unit : TRI->regunits(Reg))
-          Uses.insert(PhysRegSUOper(&ExitSU, -1, Unit));
+          Uses.insert(PhysRegSUOper(&ExitSU, IsRealUse ? OpIdx : -1, Unit));
       } else if (Reg.isVirtual() && MO.readsReg()) {
-        addVRegUseDeps(&ExitSU, MO.getOperandNo());
+        addVRegUseDeps(&ExitSU, OpIdx);
       }
     }
   }
@@ -551,7 +563,7 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
 
 void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
                                             unsigned Latency) {
-  if (SUa->getInstr()->mayAlias(AAForDep, *SUb->getInstr(), UseTBAA)) {
+  if (SUa->getInstr()->mayAlias(getAAForDep(), *SUb->getInstr(), UseTBAA)) {
     SDep Dep(SUa, SDep::MayAliasMem);
     Dep.setLatency(Latency);
     SUb->addPred(Dep);
@@ -740,7 +752,8 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
   const TargetSubtargetInfo &ST = MF.getSubtarget();
   bool UseAA = EnableAASchedMI.getNumOccurrences() > 0 ? EnableAASchedMI
                                                        : ST.useAA();
-  AAForDep = UseAA ? AA : nullptr;
+  if (UseAA && AA)
+    AAForDep.emplace(*AA);
 
   BarrierChain = nullptr;
 

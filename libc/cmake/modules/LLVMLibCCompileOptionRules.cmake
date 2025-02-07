@@ -28,6 +28,13 @@ function(_get_compile_options_from_flags output_var)
       elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
         list(APPEND compile_options "-D__LIBC_RISCV_USE_FMA")
       endif()
+      # For clang, we will build the math functions with `-fno-math-errno` so that
+      # __builtin_fma* will generate the fused-mutliply-add instructions.  We
+      # don't put the control flag to the public config yet, and see if it makes
+      # sense to just enable this flag by default.
+      if(LIBC_ADD_FNO_MATH_ERRNO)
+        list(APPEND compile_options "-fno-math-errno")
+      endif()
     endif()
     if(ADD_ROUND_OPT_FLAG)
       if(LIBC_TARGET_ARCHITECTURE_IS_X86_64)
@@ -172,8 +179,9 @@ function(_get_common_compile_options output_var flags)
     endif()
     list(APPEND compile_options "-Wconversion")
     list(APPEND compile_options "-Wno-sign-conversion")
-    # Silence this warning because _Complex is a part of C99.
+    list(APPEND compile_options "-Wdeprecated")
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      # Silence this warning because _Complex is a part of C99.
       list(APPEND compile_options "-fext-numeric-literals")
     else()
       list(APPEND compile_options "-Wno-c99-extensions")

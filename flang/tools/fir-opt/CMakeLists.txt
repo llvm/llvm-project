@@ -24,6 +24,9 @@ target_link_libraries(fir-opt PRIVATE
   FlangOpenMPTransforms
   FIRAnalysis
   ${test_libs}
+)
+
+mlir_target_link_libraries(fir-opt PRIVATE
   ${dialect_libs}
   ${extension_libs}
 

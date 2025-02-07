@@ -142,6 +142,7 @@ def hasLDU : Predicate<"Subtarget->hasLDU()">;
 def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
 def noPTXASUnreachableBug : Predicate<"!Subtarget->hasPTXASUnreachableBug()">;
 def hasOptEnabled : Predicate<"TM.getOptLevel() != CodeGenOptLevel::None">;
+def hasAcceleratedFeatures : Predicate<"Subtarget->hasAAFeatures()">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
@@ -163,6 +164,7 @@ def do_SQRTF32_RN : Predicate<"usePrecSqrtF32()">;
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
+def hasTcgen05Instructions : Predicate<"Subtarget->hasTcgen05Instructions()">;
 
 def True : Predicate<"true">;
 def False : Predicate<"false">;
@@ -172,6 +174,9 @@ class hasSM<int version>: Predicate<"Subtarget->getSmVersion() >= " # version>;
 
 // Explicit records for arch-accelerated SM versions
 def hasSM90a : Predicate<"Subtarget->getFullSmVersion() == 901">;
+def hasSM100a : Predicate<"Subtarget->getFullSmVersion() == 1001">;
+def hasSM101a : Predicate<"Subtarget->getFullSmVersion() == 1011">;
+def hasSM120a : Predicate<"Subtarget->getFullSmVersion() == 1201">;
 
 // non-sync shfl instructions are not available on sm_70+ in PTX6.4+
 def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70"
@@ -569,6 +574,18 @@ multiclass F2_Support_Half<string OpcStr, SDNode OpNode> {
 
 }
 
+// Variant where only .ftz.bf16 is supported.
+multiclass F2_Support_Half_BF<string OpcStr, SDNode OpNode> {
+   def bf16_ftz :  NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),
+                           OpcStr # ".ftz.bf16 \t$dst, $a;",
+                           [(set bf16:$dst, (OpNode bf16:$a))]>,
+                           Requires<[hasSM<90>, hasPTX<78>]>;
+   def bf16x2_ftz: NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a),
+                           OpcStr # ".ftz.bf16x2 \t$dst, $a;",
+                           [(set v2bf16:$dst, (OpNode v2bf16:$a))]>,
+                           Requires<[hasSM<90>, hasPTX<78>]>;
+}
+
 //===----------------------------------------------------------------------===//
 // NVPTX Instructions.
 //===----------------------------------------------------------------------===//
@@ -749,6 +766,11 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rz_relu  : CVT_TO_TF32<"rz.relu">;
   defm CVT_to_tf32_rna      : CVT_TO_TF32<"rna", [hasPTX<70>, hasSM<80>]>;
   defm CVT_to_tf32_rna_satf : CVT_TO_TF32<"rna.satfinite", [hasPTX<81>, hasSM<89>]>;
+
+  defm CVT_to_tf32_rn_satf : CVT_TO_TF32<"rn.satfinite", [hasPTX<86>, hasSM<100>]>;
+  defm CVT_to_tf32_rz_satf : CVT_TO_TF32<"rz.satfinite", [hasPTX<86>, hasSM<100>]>;
+  defm CVT_to_tf32_rn_relu_satf  : CVT_TO_TF32<"rn.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
+  defm CVT_to_tf32_rz_relu_satf  : CVT_TO_TF32<"rz.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
 }
 
 def fpround_oneuse : PatFrag<(ops node:$a), (fpround node:$a), [{
@@ -1182,6 +1204,8 @@ defm FABS_H: F2_Support_Half<"abs", fabs>;
 defm FNEG_H: F2_Support_Half<"neg", fneg>;
 
 defm FSQRT : F2<"sqrt.rn", fsqrt>;
+
+defm FEXP2_H: F2_Support_Half_BF<"ex2.approx", fexp2>;
 
 //
 // F16 NEG
@@ -3844,33 +3868,16 @@ def : Pat <
 // PTX Fence instructions
 ////////////////////////////////////////////////////////////////////////////////
 
-def atomic_thread_fence_seq_cst_sys :
-  NVPTXInst<(outs), (ins), "fence.sc.sys;", []>,
-  Requires<[hasPTX<60>, hasSM<70>]>;
-def atomic_thread_fence_acq_rel_sys :
-  NVPTXInst<(outs), (ins), "fence.acq_rel.sys;", []>,
-  Requires<[hasPTX<60>, hasSM<70>]>;
+class NVPTXFenceInst<string scope, string sem, Predicate ptx>:
+    NVPTXInst<(outs), (ins), "fence."#sem#"."#scope#";", []>,
+    Requires<[ptx, hasSM<70>]>;
 
-def atomic_thread_fence_seq_cst_gpu :
-  NVPTXInst<(outs), (ins), "fence.sc.gpu;", []>,
-  Requires<[hasPTX<60>, hasSM<70>]>;
-def atomic_thread_fence_acq_rel_gpu :
-  NVPTXInst<(outs), (ins), "fence.acq_rel.gpu;", []>,
-  Requires<[hasPTX<60>, hasSM<70>]>;
-
-def atomic_thread_fence_seq_cst_cluster :
-  NVPTXInst<(outs), (ins), "fence.sc.cluster;", []>,
-  Requires<[hasPTX<78>, hasSM<90>]>;
-def atomic_thread_fence_acq_rel_cluster :
-  NVPTXInst<(outs), (ins), "fence.acq_rel.cluster;", []>,
-  Requires<[hasPTX<78>, hasSM<90>]>;
-
-def atomic_thread_fence_seq_cst_cta :
-  NVPTXInst<(outs), (ins), "fence.sc.cta;", []>,
-  Requires<[hasPTX<60>, hasSM<70>]>;
-def atomic_thread_fence_acq_rel_cta :
-  NVPTXInst<(outs), (ins), "fence.acq_rel.cta;", []>,
-  Requires<[hasPTX<60>, hasSM<70>]>;
+foreach scope = ["sys", "gpu", "cluster", "cta"] in {
+  def atomic_thread_fence_seq_cst_#scope: NVPTXFenceInst<scope, "sc", hasPTX<60>>;
+  def atomic_thread_fence_acq_rel_#scope: NVPTXFenceInst<scope, "acq_rel", hasPTX<60>>;
+  def atomic_thread_fence_acquire_#scope: NVPTXFenceInst<scope, "acquire", hasPTX<87>>;
+  def atomic_thread_fence_release_#scope: NVPTXFenceInst<scope, "release", hasPTX<87>>;
+}
 
 def fpimm_any_zero : FPImmLeaf<fAny, [{
   return Imm.isZero();

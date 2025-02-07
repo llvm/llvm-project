@@ -857,7 +857,7 @@ PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
 }
 
 PointerType *Type::getPointerTo(unsigned AddrSpace) const {
-  return PointerType::get(const_cast<Type*>(this), AddrSpace);
+  return PointerType::get(getContext(), AddrSpace);
 }
 
 bool PointerType::isValidElementType(Type *ElemTy) {

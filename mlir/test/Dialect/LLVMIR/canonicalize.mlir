@@ -85,6 +85,16 @@ llvm.func @fold_unrelated_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
 }
 
 // -----
+// CHECK-LABEL: fold_extract_extractvalue
+llvm.func @fold_extract_extractvalue(%arr: !llvm.struct<(i64, array<1 x ptr<1>>)>) -> !llvm.ptr<1> {
+  // CHECK: llvm.extractvalue %{{.*}}[1, 0] 
+  // CHECK-NOT: extractvalue
+  %a = llvm.extractvalue %arr[1] : !llvm.struct<(i64, array<1 x ptr<1>>)> 
+  %b = llvm.extractvalue %a[0] : !llvm.array<1 x ptr<1>> 
+  llvm.return %b : !llvm.ptr<1>
+}
+
+// -----
 
 // CHECK-LABEL: fold_bitcast
 // CHECK-SAME: %[[ARG:[[:alnum:]]+]]

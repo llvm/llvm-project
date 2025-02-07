@@ -1914,8 +1914,8 @@ variable 'buf', which is not memory allocated by 'malloc()' [unix.Malloc]}}
 
 (*crash_a)(); // expected-warning{{type specifier missing}}
 // A CallEvent without a corresponding FunctionDecl.
-crash_b() { crash_a(); } // no-crash
-// expected-warning@-1{{type specifier missing}} expected-warning@-1{{non-void}}
+crash_b() { crash_a(); return 0; } // no-crash
+// expected-warning@-1{{type specifier missing}}
 
 long *global_a;
 void realloc_crash(void) {

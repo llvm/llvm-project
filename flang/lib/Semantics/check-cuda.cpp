@@ -520,7 +520,8 @@ void CUDAChecker::Enter(const parser::SeparateModuleSubprogram &x) {
 
 static int DoConstructTightNesting(
     const parser::DoConstruct *doConstruct, const parser::Block *&innerBlock) {
-  if (!doConstruct || !doConstruct->IsDoNormal()) {
+  if (!doConstruct ||
+      (!doConstruct->IsDoNormal() && !doConstruct->IsDoConcurrent())) {
     return 0;
   }
   innerBlock = &std::get<parser::Block>(doConstruct->t);
@@ -553,7 +554,8 @@ static void CheckReduce(
         case parser::ReductionOperator::Operator::Multiply:
         case parser::ReductionOperator::Operator::Max:
         case parser::ReductionOperator::Operator::Min:
-          isOk = cat == TypeCategory::Integer || cat == TypeCategory::Real;
+          isOk = cat == TypeCategory::Integer || cat == TypeCategory::Real ||
+              cat == TypeCategory::Complex;
           break;
         case parser::ReductionOperator::Operator::Iand:
         case parser::ReductionOperator::Operator::Ior:

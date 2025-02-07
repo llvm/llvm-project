@@ -71,8 +71,10 @@ InputSectionBase::InputSectionBase(InputFile *file, StringRef name,
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraints.
   uint32_t v = std::max<uint32_t>(addralign, 1);
-  if (!isPowerOf2_64(v))
-    Fatal(getCtx()) << this << ": sh_addralign is not a power of 2";
+  if (!isPowerOf2_64(v)) {
+    Err(getCtx()) << this << ": sh_addralign is not a power of 2";
+    v = 1;
+  }
   this->addralign = v;
 
   // If SHF_COMPRESSED is set, parse the header. The legacy .zdebug format is no
@@ -104,8 +106,10 @@ InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
   // We reject object files having insanely large alignments even though
   // they are allowed by the spec. I think 4GB is a reasonable limitation.
   // We might want to relax this in the future.
-  if (hdr.sh_addralign > UINT32_MAX)
-    Fatal(getCtx()) << &file << ": section sh_addralign is too large";
+  if (hdr.sh_addralign > UINT32_MAX) {
+    Err(getCtx()) << &file << ": section sh_addralign is too large";
+    addralign = 1;
+  }
 }
 
 size_t InputSectionBase::getSize() const {
@@ -123,7 +127,7 @@ static void decompressAux(Ctx &ctx, const InputSectionBase &sec, uint8_t *out,
   if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                     ? compression::zlib::decompress(compressed, out, size)
                     : compression::zstd::decompress(compressed, out, size))
-    Fatal(ctx) << &sec << ": decompress failed: " << std::move(e);
+    Err(ctx) << &sec << ": decompress failed: " << std::move(e);
 }
 
 void InputSectionBase::decompress() const {
@@ -649,9 +653,11 @@ static uint64_t getRISCVUndefinedRelativeWeakVA(uint64_t type, uint64_t p) {
 // of the RW segment.
 static uint64_t getARMStaticBase(const Symbol &sym) {
   OutputSection *os = sym.getOutputSection();
-  if (!os || !os->ptLoad || !os->ptLoad->firstSec)
-    Fatal(os->ctx) << "SBREL relocation to " << sym.getName()
-                   << " without static base";
+  if (!os || !os->ptLoad || !os->ptLoad->firstSec) {
+    Err(os->ctx) << "SBREL relocation to " << sym.getName()
+                 << " without static base";
+    return 0;
+  }
   return os->ptLoad->firstSec->addr;
 }
 
@@ -966,12 +972,14 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_SIZE:
     return r.sym->getSize() + a;
   case R_TLSDESC:
+  case RE_AARCH64_AUTH_TLSDESC:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a;
   case R_TLSDESC_PC:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a - p;
   case R_TLSDESC_GOTPLT:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a - ctx.in.gotPlt->getVA();
   case RE_AARCH64_TLSDESC_PAGE:
+  case RE_AARCH64_AUTH_TLSDESC_PAGE:
     return getAArch64Page(ctx.in.got->getTlsDescAddr(*r.sym) + a) -
            getAArch64Page(p);
   case RE_LOONGARCH_TLSDESC_PAGE_PC:
@@ -1302,7 +1310,7 @@ template <class ELFT> void InputSection::writeTo(Ctx &ctx, uint8_t *buf) {
     if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                       ? compression::zlib::decompress(compressed, buf, size)
                       : compression::zstd::decompress(compressed, buf, size))
-      Fatal(ctx) << this << ": decompress failed: " << std::move(e);
+      Err(ctx) << this << ": decompress failed: " << std::move(e);
     uint8_t *bufEnd = buf + size;
     relocate<ELFT>(ctx, buf, bufEnd);
     return;
@@ -1425,8 +1433,11 @@ static size_t findNull(StringRef s, size_t entSize) {
 void MergeInputSection::splitStrings(StringRef s, size_t entSize) {
   const bool live = !(flags & SHF_ALLOC) || !getCtx().arg.gcSections;
   const char *p = s.data(), *end = s.data() + s.size();
-  if (!std::all_of(end - entSize, end, [](char c) { return c == 0; }))
-    Fatal(getCtx()) << this << ": string is not null terminated";
+  if (!std::all_of(end - entSize, end, [](char c) { return c == 0; })) {
+    Err(getCtx()) << this << ": string is not null terminated";
+    pieces.emplace_back(entSize, 0, false);
+    return;
+  }
   if (entSize == 1) {
     // Optimize the common case.
     do {
@@ -1486,8 +1497,10 @@ void MergeInputSection::splitIntoPieces() {
 }
 
 SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
-  if (content().size() <= offset)
-    Fatal(getCtx()) << this << ": offset is outside the section";
+  if (content().size() <= offset) {
+    Err(getCtx()) << this << ": offset is outside the section";
+    return pieces[0];
+  }
   return partition_point(
       pieces, [=](SectionPiece p) { return p.inputOff <= offset; })[-1];
 }

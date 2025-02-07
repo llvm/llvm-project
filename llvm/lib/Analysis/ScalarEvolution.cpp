@@ -5917,20 +5917,18 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
     //   PHI(f(0), f({1,+,1})) --> f({0,+,1})
 
     // Do not allow refinement in rewriting of BEValue.
-    if (isGuaranteedNotToCauseUB(BEValue)) {
-      const SCEV *Shifted = SCEVShiftRewriter::rewrite(BEValue, L, *this);
-      const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this, false);
-      if (Shifted != getCouldNotCompute() && Start != getCouldNotCompute() &&
-          ::impliesPoison(BEValue, Start)) {
-        const SCEV *StartVal = getSCEV(StartValueV);
-        if (Start == StartVal) {
-          // Okay, for the entire analysis of this edge we assumed the PHI
-          // to be symbolic.  We now need to go back and purge all of the
-          // entries for the scalars that use the symbolic expression.
-          forgetMemoizedResults(SymbolicName);
-          insertValueToMap(PN, Shifted);
-          return Shifted;
-        }
+    const SCEV *Shifted = SCEVShiftRewriter::rewrite(BEValue, L, *this);
+    const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this, false);
+    if (Shifted != getCouldNotCompute() && Start != getCouldNotCompute() &&
+        isGuaranteedNotToCauseUB(Shifted) && ::impliesPoison(Shifted, Start)) {
+      const SCEV *StartVal = getSCEV(StartValueV);
+      if (Start == StartVal) {
+        // Okay, for the entire analysis of this edge we assumed the PHI
+        // to be symbolic.  We now need to go back and purge all of the
+        // entries for the scalars that use the symbolic expression.
+        forgetMemoizedResults(SymbolicName);
+        insertValueToMap(PN, Shifted);
+        return Shifted;
       }
     }
   }
@@ -11167,9 +11165,8 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
 }
 
 std::optional<ScalarEvolution::LoopInvariantPredicate>
-ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
-                                           const SCEV *LHS, const SCEV *RHS,
-                                           const Loop *L,
+ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
+                                           const SCEV *RHS, const Loop *L,
                                            const Instruction *CtxI) {
   // If there is a loop-invariant, force it into the RHS, otherwise bail out.
   if (!isLoopInvariant(RHS, L)) {
@@ -11177,7 +11174,7 @@ ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
       return std::nullopt;
 
     std::swap(LHS, RHS);
-    Pred = ICmpInst::getSwappedPredicate(Pred);
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
   }
 
   const SCEVAddRecExpr *ArLHS = dyn_cast<SCEVAddRecExpr>(LHS);
@@ -11205,7 +11202,7 @@ ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
   // A similar reasoning applies for a monotonically decreasing predicate, by
   // replacing true with false and false with true in the above two bullets.
   bool Increasing = *MonotonicType == ScalarEvolution::MonotonicallyIncreasing;
-  auto P = Increasing ? Pred : ICmpInst::getInversePredicate(Pred);
+  auto P = Increasing ? Pred : ICmpInst::getInverseCmpPredicate(Pred);
 
   if (isLoopBackedgeGuardedByCond(L, P, LHS, RHS))
     return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(),
@@ -11863,15 +11860,13 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
   }
 
   // Check whether the found predicate is the same as the desired predicate.
-  // FIXME: use CmpPredicate::getMatching here.
-  if (FoundPred == static_cast<CmpInst::Predicate>(Pred))
-    return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
+  if (auto P = CmpPredicate::getMatching(FoundPred, Pred))
+    return isImpliedCondOperands(*P, LHS, RHS, FoundLHS, FoundRHS, CtxI);
 
   // Check whether swapping the found predicate makes it the same as the
   // desired predicate.
-  // FIXME: use CmpPredicate::getMatching here.
-  if (ICmpInst::getSwappedCmpPredicate(FoundPred) ==
-      static_cast<CmpInst::Predicate>(Pred)) {
+  if (auto P = CmpPredicate::getMatching(
+          ICmpInst::getSwappedCmpPredicate(FoundPred), Pred)) {
     // We can write the implication
     // 0.  LHS Pred      RHS  <-   FoundLHS SwapPred  FoundRHS
     // using one of the following ways:
@@ -11882,22 +11877,23 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     // Forms 1. and 2. require swapping the operands of one condition. Don't
     // do this if it would break canonical constant/addrec ordering.
     if (!isa<SCEVConstant>(RHS) && !isa<SCEVAddRecExpr>(LHS))
-      return isImpliedCondOperands(FoundPred, RHS, LHS, FoundLHS, FoundRHS,
-                                   CtxI);
+      return isImpliedCondOperands(ICmpInst::getSwappedCmpPredicate(*P), RHS,
+                                   LHS, FoundLHS, FoundRHS, CtxI);
     if (!isa<SCEVConstant>(FoundRHS) && !isa<SCEVAddRecExpr>(FoundLHS))
-      return isImpliedCondOperands(Pred, LHS, RHS, FoundRHS, FoundLHS, CtxI);
+      return isImpliedCondOperands(*P, LHS, RHS, FoundRHS, FoundLHS, CtxI);
 
     // There's no clear preference between forms 3. and 4., try both.  Avoid
     // forming getNotSCEV of pointer values as the resulting subtract is
     // not legal.
     if (!LHS->getType()->isPointerTy() && !RHS->getType()->isPointerTy() &&
-        isImpliedCondOperands(FoundPred, getNotSCEV(LHS), getNotSCEV(RHS),
-                              FoundLHS, FoundRHS, CtxI))
+        isImpliedCondOperands(ICmpInst::getSwappedCmpPredicate(*P),
+                              getNotSCEV(LHS), getNotSCEV(RHS), FoundLHS,
+                              FoundRHS, CtxI))
       return true;
 
     if (!FoundLHS->getType()->isPointerTy() &&
         !FoundRHS->getType()->isPointerTy() &&
-        isImpliedCondOperands(Pred, LHS, RHS, getNotSCEV(FoundLHS),
+        isImpliedCondOperands(*P, LHS, RHS, getNotSCEV(FoundLHS),
                               getNotSCEV(FoundRHS), CtxI))
       return true;
 
@@ -12567,14 +12563,16 @@ bool ScalarEvolution::isImpliedViaOperations(CmpPredicate Pred, const SCEV *LHS,
     return false;
 
   // We only want to work with GT comparison so far.
-  if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_SLT) {
+  if (ICmpInst::isLT(Pred)) {
     Pred = ICmpInst::getSwappedCmpPredicate(Pred);
     std::swap(LHS, RHS);
     std::swap(FoundLHS, FoundRHS);
   }
 
+  CmpInst::Predicate P = Pred.getPreferredSignedPredicate();
+
   // For unsigned, try to reduce it to corresponding signed comparison.
-  if (Pred == ICmpInst::ICMP_UGT)
+  if (P == ICmpInst::ICMP_UGT)
     // We can replace unsigned predicate with its signed counterpart if all
     // involved values are non-negative.
     // TODO: We could have better support for unsigned.
@@ -12587,10 +12585,10 @@ bool ScalarEvolution::isImpliedViaOperations(CmpPredicate Pred, const SCEV *LHS,
                                 FoundRHS) &&
           isImpliedCondOperands(ICmpInst::ICMP_SGT, RHS, MinusOne, FoundLHS,
                                 FoundRHS))
-        Pred = ICmpInst::ICMP_SGT;
+        P = ICmpInst::ICMP_SGT;
     }
 
-  if (Pred != ICmpInst::ICMP_SGT)
+  if (P != ICmpInst::ICMP_SGT)
     return false;
 
   auto GetOpFromSExt = [&](const SCEV *S) {
@@ -13601,7 +13599,7 @@ const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
   else
     return nullptr;
 
-  Type *ETy = getEffectiveSCEVType(PointerType::getUnqual(Ty));
+  Type *ETy = getEffectiveSCEVType(PointerType::getUnqual(Inst->getContext()));
   return getSizeOfExpr(ETy, Ty);
 }
 
@@ -15328,6 +15326,8 @@ ScalarEvolution::LoopGuards::collect(const Loop *L, ScalarEvolution &SE) {
   BasicBlock *Header = L->getHeader();
   BasicBlock *Pred = L->getLoopPredecessor();
   LoopGuards Guards(SE);
+  if (!Pred)
+    return Guards;
   SmallPtrSet<const BasicBlock *, 8> VisitedBlocks;
   collectFromBlock(SE, Guards, Header, Pred, VisitedBlocks);
   return Guards;

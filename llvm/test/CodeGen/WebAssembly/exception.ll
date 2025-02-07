@@ -2,6 +2,7 @@
 ; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs -O0
 ; RUN: llc < %s -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling
 ; RUN: llc < %s -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -filetype=obj
+; RUN: llc < %s -mtriple=wasm64-unknown-unknown -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s --check-prefix=WASM64
 
 target triple = "wasm32-unknown-unknown"
 
@@ -30,14 +31,17 @@ define void @throw(ptr %p) {
 ; }
 
 ; CHECK-LABEL: catch:
+; WASM64-LABEL: catch:
 ; CHECK: global.get  __stack_pointer
 ; CHECK: local.set  0
 ; CHECK: block
 ; CHECK:   block     () -> (i32, exnref)
 ; CHECK:     try_table    (catch_ref __cpp_exception 0)
+; WASM64:  block     () -> (i64, exnref)
 ; CHECK:       call  foo
 ; CHECK:       br        2
 ; CHECK:     end_try_table
+; CHECK:     unreachable
 ; CHECK:   end_block
 ; CHECK:   local.set  2
 ; CHECK:   local.get  0
@@ -137,8 +141,10 @@ ehcleanup:                                        ; preds = %entry
 ; }
 
 ; CHECK-LABEL: terminatepad
+; WASM64-LABEL: terminatepad
 ; CHECK: block
 ; CHECK:   block     i32
+; WASM64:  block     i64
 ; CHECK:     try_table    (catch __cpp_exception 0)
 ; CHECK:       call  foo
 ; CHECK:       br        2
