@@ -1427,7 +1427,7 @@ let SubtargetPredicate = isGFX12Plus in {
 
 } // End SubtargetPredicate = isGFX12Plus
 
-let SubtargetPredicate = isGFX1250Plus in {
+let SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32 in {
   defm V_PERMLANE_BCAST_B32   : VOP3Inst<"v_permlane_bcast_b32",   VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
   defm V_PERMLANE_UP_B32      : VOP3Inst<"v_permlane_up_b32",      VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
   defm V_PERMLANE_DOWN_B32    : VOP3Inst<"v_permlane_down_b32",    VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
@@ -1439,7 +1439,7 @@ let SubtargetPredicate = isGFX1250Plus in {
   def : PermlaneNoDppPat3Src<int_amdgcn_permlane_down,    V_PERMLANE_DOWN_B32_e64>;
   def : PermlaneNoDppPat3Src<int_amdgcn_permlane_xor,     V_PERMLANE_XOR_B32_e64>;
   def : PermlaneNoDppPat2Src<int_amdgcn_permlane_idx_gen, V_PERMLANE_IDX_GEN_B32_e64>;
-} // End SubtargetPredicate = isGFX1250Plus
+} // End SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32
 
 let SubtargetPredicate = HasBitOp3Insts in {
   let isReMaterializable = 1 in {
