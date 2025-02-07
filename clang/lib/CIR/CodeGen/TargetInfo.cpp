@@ -329,6 +329,30 @@ public:
 
 } // namespace
 
+//===----------------------------------------------------------------------===//
+// AMDGPU ABI Implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+class AMDGPUABIInfo : public ABIInfo {
+public:
+  AMDGPUABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+
+  cir::ABIArgInfo classifyReturnType(QualType retTy) const;
+  cir::ABIArgInfo classifyArgumentType(QualType ty) const;
+
+  void computeInfo(CIRGenFunctionInfo &fnInfo) const override;
+};
+
+class AMDGPUTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
+};
+
+} // namespace
+
 // TODO(cir): remove the attribute once this gets used.
 LLVM_ATTRIBUTE_UNUSED
 static bool classifyReturnType(const CIRGenCXXABI &CXXABI,
@@ -477,6 +501,34 @@ cir::ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType ty) const {
 }
 
 void NVPTXABIInfo::computeInfo(CIRGenFunctionInfo &fnInfo) const {
+  // Top level CIR has unlimited arguments and return types. Lowering for ABI
+  // specific concerns should happen during a lowering phase. Assume everything
+  // is direct for now.
+  for (CIRGenFunctionInfo::arg_iterator it = fnInfo.arg_begin(),
+                                        ie = fnInfo.arg_end();
+       it != ie; ++it) {
+    if (testIfIsVoidTy(it->type))
+      it->info = cir::ABIArgInfo::getIgnore();
+    else
+      it->info = cir::ABIArgInfo::getDirect(CGT.convertType(it->type));
+  }
+  auto retTy = fnInfo.getReturnType();
+  if (testIfIsVoidTy(retTy))
+    fnInfo.getReturnInfo() = cir::ABIArgInfo::getIgnore();
+  else
+    fnInfo.getReturnInfo() = cir::ABIArgInfo::getDirect(CGT.convertType(retTy));
+}
+
+// Skeleton only. Implement when used in TargetLower stage.
+cir::ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType retTy) const {
+  llvm_unreachable("not yet implemented");
+}
+
+cir::ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType ty) const {
+  llvm_unreachable("not yet implemented");
+}
+
+void AMDGPUABIInfo::computeInfo(CIRGenFunctionInfo &fnInfo) const {
   // Top level CIR has unlimited arguments and return types. Lowering for ABI
   // specific concerns should happen during a lowering phase. Assume everything
   // is direct for now.
@@ -689,6 +741,10 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
 
   case llvm::Triple::nvptx64: {
     return SetCIRGenInfo(new NVPTXTargetCIRGenInfo(genTypes));
+  }
+
+  case llvm::Triple::amdgcn: {
+    return SetCIRGenInfo(new AMDGPUTargetCIRGenInfo(genTypes));
   }
   }
 }
