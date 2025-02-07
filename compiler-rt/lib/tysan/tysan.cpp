@@ -102,20 +102,10 @@ static tysan_type_descriptor *getRootTD(tysan_type_descriptor *TD) {
   return RootTD;
 }
 
-static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
-                              tysan_type_descriptor *TDB, int TDAOffset) {
-  // Walk up the tree starting with TDA to see if we reach TDB.
-  uptr OffsetA = 0, OffsetB = 0;
-  if (TDB->Tag == TYSAN_MEMBER_TD) {
-    OffsetB = TDB->Member.Offset;
-    TDB = TDB->Member.Base;
-  }
-
-  if (TDA->Tag == TYSAN_MEMBER_TD) {
-    OffsetA = TDA->Member.Offset - TDAOffset;
-    TDA = TDA->Member.Base;
-  }
-
+bool walkAliasTree(
+  tysan_type_descriptor* TDA, tysan_type_descriptor* TDB,
+  uptr OffsetA, uptr OffsetB
+){
   do {
     if (TDA == TDB)
       return OffsetA == OffsetB;
@@ -153,8 +143,43 @@ static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
   return false;
 }
 
+static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
+                              tysan_type_descriptor *TDB) {
+  // Walk up the tree starting with TDA to see if we reach TDB.
+  uptr OffsetA = 0, OffsetB = 0;
+  if (TDB->Tag == TYSAN_MEMBER_TD) {
+    OffsetB = TDB->Member.Offset;
+    TDB = TDB->Member.Base;
+  }
+
+  if (TDA->Tag == TYSAN_MEMBER_TD) {
+    OffsetA = TDA->Member.Offset;
+    TDA = TDA->Member.Base;
+  }
+
+  return walkAliasTree(TDA, TDB, OffsetA, OffsetB);
+}
+
+static bool isAliasingLegalWithOffset(tysan_type_descriptor *AccessTD, tysan_type_descriptor *ShadowTD, int OffsetInShadow){
+  // This is handled in the other cases
+  if(OffsetInShadow == 0)
+    return false;
+  
+  // You can't have an offset into a member
+  if(ShadowTD->Tag == TYSAN_MEMBER_TD)
+    return false;
+
+  int OffsetInAccess = 0;
+  if(AccessTD->Tag == TYSAN_MEMBER_TD){
+    OffsetInAccess = AccessTD->Member.Offset;
+    AccessTD = AccessTD->Member.Base;
+  }
+
+  return walkAliasTree(ShadowTD, AccessTD, OffsetInShadow, OffsetInAccess);
+}
+
 static bool isAliasingLegal(tysan_type_descriptor *TDA,
-                            tysan_type_descriptor *TDB, int TDAOffset = 0) {
+                            tysan_type_descriptor *TDB) {
   if (TDA == TDB || !TDB || !TDA)
     return true;
 
@@ -165,8 +190,7 @@ static bool isAliasingLegal(tysan_type_descriptor *TDA,
   // TDB may have been adjusted by offset TDAOffset in the caller to point to
   // the outer type. Check for aliasing with and without adjusting for this
   // offset.
-  return isAliasingLegalUp(TDA, TDB, 0) || isAliasingLegalUp(TDB, TDA, 0) ||
-         isAliasingLegalUp(TDA, TDB, TDAOffset);
+  return isAliasingLegalUp(TDA, TDB) || isAliasingLegalUp(TDB, TDA);
 }
 
 namespace __tysan {
@@ -243,7 +267,7 @@ __tysan_check(void *addr, int size, tysan_type_descriptor *td, int flags) {
     OldTDPtr -= i;
     OldTD = *OldTDPtr;
 
-    if (!isAliasingLegal(td, OldTD, i))
+    if (!isAliasingLegal(td, OldTD) && !isAliasingLegalWithOffset(td, OldTD, i))
       reportError(addr, size, td, OldTD, AccessStr,
                   "accesses part of an existing object", -i, pc, bp, sp);
 
