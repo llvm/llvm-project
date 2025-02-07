@@ -17,8 +17,9 @@
 // * Latency:
 //   * Integer instructions: 1 cycle.
 //   * Multiplication instructions: 4 cycles.
-//   * Multiplication/Division instructions: 7-13 cycles.
+//   * Division instructions: 13-21 cycles.
 //   * Floating-point instructions: 2-6 cycles.
+//   * Floating-point fdiv/fsqrt instructions: 9-21 cycles.
 //   * Vector instructions: 2-6 cycles.
 //   * Load/Store:
 //     * IXU: 4 cycles.
@@ -327,12 +328,6 @@ let Latency = 2 in {
 let Latency = 2 in
 def : WriteRes<WriteFAdd16, [GenericOOOFPU]>;
 
-let Latency = 4 in
-def : WriteRes<WriteFMul16, [GenericOOOFPU]>;
-
-let Latency = 6 in
-def : WriteRes<WriteFMA16, [GenericOOOFPU]>;
-
 def : WriteRes<WriteFSGNJ16, [GenericOOOFPU]>;
 def : WriteRes<WriteFMinMax16, [GenericOOOFPU]>;
 
@@ -340,10 +335,18 @@ def : WriteRes<WriteFMinMax16, [GenericOOOFPU]>;
 let Latency = 2 in
 def : WriteRes<WriteFCmp16, [GenericOOOFPU]>;
 
+// Multiplication
+let Latency = 4 in
+def : WriteRes<WriteFMul16, [GenericOOOFMulDiv]>;
+
+// FMA
+let Latency = 6 in
+def : WriteRes<WriteFMA16, [GenericOOOFMulDiv]>;
+
 // Division
 let Latency = 9, ReleaseAtCycles = [9] in {
-  def : WriteRes<WriteFDiv16, [GenericOOOFPU]>;
-  def : WriteRes<WriteFSqrt16, [GenericOOOFPU]>;
+  def : WriteRes<WriteFDiv16, [GenericOOOFMulDiv]>;
+  def : WriteRes<WriteFSqrt16, [GenericOOOFMulDiv]>;
 }
 
 // Classify
