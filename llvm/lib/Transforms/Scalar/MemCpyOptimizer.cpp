@@ -1552,7 +1552,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
           continue;
         CaptureInfo CI = DetermineUseCaptureKind(U, IsDereferenceableOrNull);
         // TODO(captures): Make this more precise.
-        if (!capturesNothing(CI)) {
+        if (capturesAnything(CI)) {
           if (CI.isRetOnly()) {
             Worklist.push_back(UI);
             continue;

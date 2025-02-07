@@ -12150,7 +12150,7 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
       Uses.insert(&U);
       // TODO(captures): Make this more precise.
       CaptureInfo CI = DetermineUseCaptureKind(U, nullptr);
-      if (!capturesNothing(CI) && CI.isRetOnly()) {
+      if (capturesAnything(CI) && CI.isRetOnly()) {
         Follow = true;
         return true;
       }
