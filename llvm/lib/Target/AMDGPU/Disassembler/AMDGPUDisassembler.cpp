@@ -1758,6 +1758,8 @@ unsigned AMDGPUDisassembler::getVgprClassId(const OpWidthTy Width) const {
   case OPW128: return VReg_128RegClassID;
   case OPW160: return VReg_160RegClassID;
   case OPW192: return VReg_192RegClassID;
+  case OPW224:
+    return VReg_224RegClassID;
   case OPW256: return VReg_256RegClassID;
   case OPW288: return VReg_288RegClassID;
   case OPW320: return VReg_320RegClassID;

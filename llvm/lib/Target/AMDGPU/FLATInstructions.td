@@ -1384,6 +1384,26 @@ let SubtargetPredicate = isGFX13Plus in {
   def SWC_SET_EXCHANGE_STATE  : FLAT_SWC<"swc_set_exchange_state", 0, 1>;
   def SWC_ABORT_EXCHANGE      : FLAT_SWC<"swc_abort_exchange", 0, 0>;
   }
+
+  let WaveSizePredicate = isWave32 in {
+  defm GLOBAL_TILED_LOAD_HALF_B64        : FLAT_Global_Load_Pseudo<"global_tiled_load_half_b64", VGPR_32>;
+  defm GLOBAL_TILED_LOAD_B64             : FLAT_Global_Load_Pseudo<"global_tiled_load_b64", VReg_64>;
+  defm GLOBAL_TILED_LOAD_VST2_B64        : FLAT_Global_Load_Pseudo<"global_tiled_load_vst2_b64", VReg_96>;
+  defm GLOBAL_TILED_LOAD_QTR_B128        : FLAT_Global_Load_Pseudo<"global_tiled_load_qtr_b128", VGPR_32>;
+  defm GLOBAL_TILED_LOAD_HALF_B128       : FLAT_Global_Load_Pseudo<"global_tiled_load_half_b128", VReg_64>;
+  defm GLOBAL_TILED_LOAD_HALF_VST2_B128  : FLAT_Global_Load_Pseudo<"global_tiled_load_half_vst2_b128", VReg_96>;
+  defm GLOBAL_TILED_LOAD_B128            : FLAT_Global_Load_Pseudo<"global_tiled_load_b128", VReg_128>;
+  defm GLOBAL_TILED_LOAD_VST2_B128       : FLAT_Global_Load_Pseudo<"global_tiled_load_vst2_b128", VReg_224>;
+
+  defm GLOBAL_TILED_STORE_HALF_B64       : FLAT_Global_Store_Pseudo<"global_tiled_store_half_b64", VGPR_32>;
+  defm GLOBAL_TILED_STORE_B64            : FLAT_Global_Store_Pseudo<"global_tiled_store_b64", VReg_64>;
+  defm GLOBAL_TILED_STORE_VST2_B64       : FLAT_Global_Store_Pseudo<"global_tiled_store_vst2_b64", VReg_96>;
+  defm GLOBAL_TILED_STORE_QTR_B128       : FLAT_Global_Store_Pseudo<"global_tiled_store_qtr_b128", VGPR_32>;
+  defm GLOBAL_TILED_STORE_HALF_B128      : FLAT_Global_Store_Pseudo<"global_tiled_store_half_b128", VReg_64>;
+  defm GLOBAL_TILED_STORE_HALF_VST2_B128 : FLAT_Global_Store_Pseudo<"global_tiled_store_half_vst2_b128", VReg_96>;
+  defm GLOBAL_TILED_STORE_B128           : FLAT_Global_Store_Pseudo<"global_tiled_store_b128", VReg_128>;
+  defm GLOBAL_TILED_STORE_VST2_B128      : FLAT_Global_Store_Pseudo<"global_tiled_store_vst2_b128", VReg_224>;
+  } // end let WaveSizePredicate = isWave32
 }
 
 //===----------------------------------------------------------------------===//
@@ -3853,6 +3873,25 @@ defm SWC_SET_EXCHANGE_STATE           : VFLAT_Real_Base_gfx13<0xa6>;
 defm SWC_ABORT_EXCHANGE               : VFLAT_Real_Base_gfx13<0xa7>;
 // TODO-GFX13:
 // GLOBAL_WAVE_KILL
+
+defm GLOBAL_TILED_LOAD_HALF_B64        : VFLAT_Real_AllAddr_gfx13<0x0ac>;
+defm GLOBAL_TILED_LOAD_B64             : VFLAT_Real_AllAddr_gfx13<0x0ad>;
+defm GLOBAL_TILED_LOAD_VST2_B64        : VFLAT_Real_AllAddr_gfx13<0x0ae>;
+defm GLOBAL_TILED_LOAD_QTR_B128        : VFLAT_Real_AllAddr_gfx13<0x0af>;
+defm GLOBAL_TILED_LOAD_HALF_B128       : VFLAT_Real_AllAddr_gfx13<0x0b0>;
+defm GLOBAL_TILED_LOAD_HALF_VST2_B128  : VFLAT_Real_AllAddr_gfx13<0x0b1>;
+defm GLOBAL_TILED_LOAD_B128            : VFLAT_Real_AllAddr_gfx13<0x0b2>;
+defm GLOBAL_TILED_LOAD_VST2_B128       : VFLAT_Real_AllAddr_gfx13<0x0b3>;
+
+defm GLOBAL_TILED_STORE_HALF_B64       : VFLAT_Real_AllAddr_gfx13<0x0b4>;
+defm GLOBAL_TILED_STORE_B64            : VFLAT_Real_AllAddr_gfx13<0x0b5>;
+defm GLOBAL_TILED_STORE_VST2_B64       : VFLAT_Real_AllAddr_gfx13<0x0b6>;
+defm GLOBAL_TILED_STORE_QTR_B128       : VFLAT_Real_AllAddr_gfx13<0x0b7>;
+defm GLOBAL_TILED_STORE_HALF_B128      : VFLAT_Real_AllAddr_gfx13<0x0b8>;
+defm GLOBAL_TILED_STORE_HALF_VST2_B128 : VFLAT_Real_AllAddr_gfx13<0x0b9>;
+defm GLOBAL_TILED_STORE_B128           : VFLAT_Real_AllAddr_gfx13<0x0ba>;
+defm GLOBAL_TILED_STORE_VST2_B128      : VFLAT_Real_AllAddr_gfx13<0x0bb>;
+
 
 // ENC_VSCRATCH.
 defm SCRATCH_LOAD_UBYTE               : VSCRATCH_Real_AllAddr_gfx13<0x08, "scratch_load_u8">;
