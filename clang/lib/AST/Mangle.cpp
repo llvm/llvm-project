@@ -29,6 +29,25 @@
 
 using namespace clang;
 
+void clang::mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
+                                 bool isInstanceMethod,
+                                 bool isDirectAndExported, StringRef ClassName,
+                                 std::optional<StringRef> CategoryName,
+                                 StringRef MethodName, bool isThunk) {
+  // \01+[ContainerName(CategoryName) SelectorName]
+  if (includePrefixByte && !isDirectAndExported)
+    OS << "\01";
+  OS << (isInstanceMethod ? '-' : '+');
+  OS << (isDirectAndExported ? '<' : '[');
+  OS << ClassName;
+  if (CategoryName)
+    OS << "(" << CategoryName.value() << ")";
+  OS << " ";
+  OS << MethodName;
+  OS << (isDirectAndExported ? '>' : ']');
+  if (!isThunk)
+    OS << "_inner";
+}
 // FIXME: For blocks we currently mimic GCC's mangling scheme, which leaves
 // much to be desired. Come up with a better mangling scheme.
 
@@ -327,7 +346,8 @@ void MangleContext::mangleBlock(const DeclContext *DC, const BlockDecl *BD,
 void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
                                          raw_ostream &OS,
                                          bool includePrefixByte,
-                                         bool includeCategoryNamespace) {
+                                         bool includeCategoryNamespace,
+                                         bool isThunk) {
   if (getASTContext().getLangOpts().ObjCRuntime.isGNUFamily()) {
     // This is the mangling we've always used on the GNU runtimes, but it
     // has obvious collisions in the face of underscores within class
@@ -343,10 +363,9 @@ void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
     OS << '_';
 
     auto selector = MD->getSelector();
-    for (unsigned slotIndex = 0,
-                  numArgs = selector.getNumArgs(),
+    for (unsigned slotIndex = 0, numArgs = selector.getNumArgs(),
                   slotEnd = std::max(numArgs, 1U);
-           slotIndex != slotEnd; ++slotIndex) {
+         slotIndex != slotEnd; ++slotIndex) {
       if (auto name = selector.getIdentifierInfoForSlot(slotIndex))
         OS << name->getName();
 
@@ -361,24 +380,28 @@ void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
   }
 
   // \01+[ContainerName(CategoryName) SelectorName]
-  if (includePrefixByte) {
-    OS << '\01';
-  }
-  OS << (MD->isInstanceMethod() ? '-' : '+') << '[';
+  bool isDirectAndExported =
+      MD->isDirectMethod() &&
+      getASTContext().getLangOpts().ObjCExportDirectMethods;
+  auto CategoryName = std::optional<StringRef>();
+  StringRef ClassName;
   if (const auto *CID = MD->getCategory()) {
-    OS << CID->getClassInterface()->getName();
-    if (includeCategoryNamespace) {
-      OS << '(' << *CID << ')';
-    }
+    if (includeCategoryNamespace)
+      CategoryName = CID->getName();
+    ClassName = CID->getClassInterface()->getName();
+
   } else if (const auto *CD =
                  dyn_cast<ObjCContainerDecl>(MD->getDeclContext())) {
-    OS << CD->getName();
+    ClassName = CD->getName();
   } else {
     llvm_unreachable("Unexpected ObjC method decl context");
   }
-  OS << ' ';
-  MD->getSelector().print(OS);
-  OS << ']';
+  std::string MethodName;
+  llvm::raw_string_ostream MethodNameOS(MethodName);
+  MD->getSelector().print(MethodNameOS);
+  clang::mangleObjCMethodName(OS, includePrefixByte, MD->isInstanceMethod(),
+                              isDirectAndExported, ClassName, CategoryName,
+                              MethodName, isThunk);
 }
 
 void MangleContext::mangleObjCMethodNameAsSourceName(const ObjCMethodDecl *MD,

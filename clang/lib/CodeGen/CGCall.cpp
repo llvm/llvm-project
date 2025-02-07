@@ -2704,6 +2704,18 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     ArgAttrs[IRArgs.first] = llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
+  // Direct method prologue should not contain nil check anymore.
+  // As a result, we can set `self` to be NonNull to prepare for further
+  // optimizations.
+  if (getLangOpts().ObjCEmitNilCheckThunk && TargetDecl) {
+    auto OMD = dyn_cast<ObjCMethodDecl>(TargetDecl);
+    bool isDirect = OMD && OMD->isDirectMethod();
+    if (isDirect && !IsThunk) {
+      auto IRArgs = IRFunctionArgs.getIRArgs(0);
+      ArgAttrs[IRArgs.first] = ArgAttrs[IRArgs.first].addAttribute(
+          getLLVMContext(), llvm::Attribute::NonNull);
+    }
+  }
 
   unsigned ArgNo = 0;
   for (CGFunctionInfo::const_arg_iterator I = FI.arg_begin(),
@@ -3388,7 +3400,13 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
     }
   }
 
-  if (getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
+  if (InnerFn) {
+    // Don't emit any arg except for `self` if we are in a thunk function.
+    // We still need self for nil check, other arguments aren't used in this
+    // function and thus is not needed. Avoid emitting them also prevents
+    // accidental release/retain.
+    EmitParmDecl(*Args[0], ArgVals[0], 1);
+  } else if (getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
     for (int I = Args.size() - 1; I >= 0; --I)
       EmitParmDecl(*Args[I], ArgVals[I], I + 1);
   } else {

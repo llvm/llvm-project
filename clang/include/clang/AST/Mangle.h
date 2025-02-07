@@ -39,7 +39,12 @@ namespace clang {
   struct ThisAdjustment;
   struct ThunkInfo;
   class VarDecl;
-
+                 
+  void mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
+                            bool isInstanceMethod, bool isDirectAndExported,
+                            StringRef ClassName,
+                            std::optional<StringRef> CategoryName,
+                            StringRef MethodName, bool isThunk);
 /// MangleContext - Context for tracking state which persists across multiple
 /// calls to the C++ name mangler.
 class MangleContext {
@@ -157,7 +162,8 @@ public:
 
   void mangleObjCMethodName(const ObjCMethodDecl *MD, raw_ostream &OS,
                             bool includePrefixByte = true,
-                            bool includeCategoryNamespace = true);
+                            bool includeCategoryNamespace = true,
+                            bool isThunk = true);
   void mangleObjCMethodNameAsSourceName(const ObjCMethodDecl *MD,
                                         raw_ostream &);
 

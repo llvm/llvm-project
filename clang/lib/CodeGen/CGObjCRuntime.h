@@ -118,7 +118,8 @@ public:
   virtual ~CGObjCRuntime();
 
   std::string getSymbolNameForMethod(const ObjCMethodDecl *method,
-                                     bool includeCategoryName = true);
+                                     bool includeCategoryName = true,
+                                     bool isThunk = true);
 
   /// Generate the function required to register all Objective-C components in
   /// this compilation unit with the runtime library.
@@ -145,7 +146,7 @@ public:
   /// error to Sema.
   virtual llvm::Constant *GetEHType(QualType T) = 0;
 
-  virtual CatchTypeInfo getCatchAllTypeInfo() { return { nullptr, 0 }; }
+  virtual CatchTypeInfo getCatchAllTypeInfo() { return {nullptr, 0}; }
 
   /// Generate a constant string object.
   virtual ConstantAddress GenerateConstantString(const StringLiteral *) = 0;
@@ -165,11 +166,8 @@ public:
   /// \param Method - The method being called, this may be null if synthesizing
   /// a property setter or getter.
   virtual CodeGen::RValue
-  GenerateMessageSend(CodeGen::CodeGenFunction &CGF,
-                      ReturnValueSlot ReturnSlot,
-                      QualType ResultType,
-                      Selector Sel,
-                      llvm::Value *Receiver,
+  GenerateMessageSend(CodeGen::CodeGenFunction &CGF, ReturnValueSlot ReturnSlot,
+                      QualType ResultType, Selector Sel, llvm::Value *Receiver,
                       const CallArgList &CallArgs,
                       const ObjCInterfaceDecl *Class = nullptr,
                       const ObjCMethodDecl *Method = nullptr) = 0;
@@ -178,16 +176,11 @@ public:
   ///
   /// This variant allows for the call to be substituted with an optimized
   /// variant.
-  CodeGen::RValue
-  GeneratePossiblySpecializedMessageSend(CodeGenFunction &CGF,
-                                         ReturnValueSlot Return,
-                                         QualType ResultType,
-                                         Selector Sel,
-                                         llvm::Value *Receiver,
-                                         const CallArgList& Args,
-                                         const ObjCInterfaceDecl *OID,
-                                         const ObjCMethodDecl *Method,
-                                         bool isClassMessage);
+  CodeGen::RValue GeneratePossiblySpecializedMessageSend(
+      CodeGenFunction &CGF, ReturnValueSlot Return, QualType ResultType,
+      Selector Sel, llvm::Value *Receiver, const CallArgList &Args,
+      const ObjCInterfaceDecl *OID, const ObjCMethodDecl *Method,
+      bool isClassMessage);
 
   /// Generate an Objective-C message send operation to the super
   /// class initiated in a method for Class and with the given Self
@@ -195,17 +188,11 @@ public:
   ///
   /// \param Method - The method being called, this may be null if synthesizing
   /// a property setter or getter.
-  virtual CodeGen::RValue
-  GenerateMessageSendSuper(CodeGen::CodeGenFunction &CGF,
-                           ReturnValueSlot ReturnSlot,
-                           QualType ResultType,
-                           Selector Sel,
-                           const ObjCInterfaceDecl *Class,
-                           bool isCategoryImpl,
-                           llvm::Value *Self,
-                           bool IsClassMessage,
-                           const CallArgList &CallArgs,
-                           const ObjCMethodDecl *Method = nullptr) = 0;
+  virtual CodeGen::RValue GenerateMessageSendSuper(
+      CodeGen::CodeGenFunction &CGF, ReturnValueSlot ReturnSlot,
+      QualType ResultType, Selector Sel, const ObjCInterfaceDecl *Class,
+      bool isCategoryImpl, llvm::Value *Self, bool IsClassMessage,
+      const CallArgList &CallArgs, const ObjCMethodDecl *Method = nullptr) = 0;
 
   /// Walk the list of protocol references from a class, category or
   /// protocol to traverse the DAG formed from it's inheritance hierarchy. Find
@@ -238,7 +225,8 @@ public:
   // should also be generating the loads of the parameters, as the runtime
   // should have full control over how parameters are passed.
   virtual llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
-                                         const ObjCContainerDecl *CD) = 0;
+                                         const ObjCContainerDecl *CD,
+                                         bool isThunk = true) = 0;
 
   /// Generates prologue for direct Objective-C Methods.
   virtual void GenerateDirectMethodPrologue(CodeGenFunction &CGF,
@@ -246,6 +234,11 @@ public:
                                             const ObjCMethodDecl *OMD,
                                             const ObjCContainerDecl *CD) = 0;
 
+  virtual void GenerateObjCDirectNilCheck(CodeGenFunction &CGF,
+                                          const ObjCMethodDecl *OMD,
+                                          const ObjCContainerDecl *CD) = 0;
+  virtual void GenerateCmdIfNecessary(CodeGenFunction &CGF,
+                                      const ObjCMethodDecl *OMD) = 0;
   /// Return the runtime function for getting properties.
   virtual llvm::FunctionCallee GetPropertyGetFunction() = 0;
 

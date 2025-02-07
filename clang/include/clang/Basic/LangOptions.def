@@ -371,6 +371,8 @@ LANGOPT(IncludeDefaultHeader, 1, 0, "Include default header file for OpenCL")
 LANGOPT(DeclareOpenCLBuiltins, 1, 0, "Declare OpenCL builtin functions")
 BENIGN_LANGOPT(DelayedTemplateParsing , 1, 0, "delayed template parsing")
 LANGOPT(BlocksRuntimeOptional , 1, 0, "optional blocks runtime")
+LANGOPT(ObjCExportDirectMethods, 1, 0, "Make ObjC direct method exportable by renaming it")
+LANGOPT(ObjCEmitNilCheckThunk, 1, 0, "Emit a thunk to do nil check for objc direct methods")
 LANGOPT(
     CompleteMemberPointers, 1, 0,
     "Require member pointer base types to be complete at the point where the "
