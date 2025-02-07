@@ -49,7 +49,7 @@
 
 // TODO: Can the address in a pointer alias the address of a pointer, even when the
 // pointer has no box. Should this be NoAlias?
-// T3: 
+// T3 from <https://github.com/llvm/llvm-project/pull/117785#discussion_r1924348480>.
 // CHECK-DAG: p1.addr#0 <-> p1.tgt#0: MayAlias
 
 // The addresses stored in two different pointers can alias, even if one has no
