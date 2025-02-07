@@ -324,3 +324,39 @@ v_dual_max_num_f64 v[252:253], v[6:7], v[4:5] :: v_dual_add_f32 v8, v1, v3
 
 v_dual_min_num_f64 v[252:253], v[6:7], v[4:5] :: v_dual_add_f32 v8, v1, v3
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_add_max_i32 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_add_max_u32 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_add_min_i32 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_add_min_u32 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_add_max_i16 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_add_max_u16 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_add_min_i16 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_add_min_u16 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_max3_i16 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_max3_u16 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_min3_i16 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_pk_min3_u16 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

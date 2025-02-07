@@ -495,14 +495,11 @@ static bool allPtrInputsInSameClass(const Value &V, Instruction *Inst) {
     if (isa<ConstantPointerNull>(Op))
       continue;
 
-    const Value *Obj = getUnderlyingObjectAggressive(Op);
-    if (!isa<GlobalVariable>(Obj))
-      return false;
-
     // TODO-GFX13: if pointers are derived from two different
     // global lane-shared or private objects, it should still work. The
     // important part is both must be promotable into vgpr at
     // the end. It will require one more iteration of processing
+    const Value *Obj = getUnderlyingObjectAggressive(Op);
     if (Obj != &V) {
       LLVM_DEBUG(dbgs() << "Found a select/phi with ptrs derived from two "
                            "different objects\n");

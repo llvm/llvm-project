@@ -15,6 +15,7 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
 
@@ -76,8 +77,7 @@ static const MDNode *getPromotedPrivateObject(const MachineInstr &MI) {
   if (!Ptr)
     return nullptr;
 
-  if (auto *GEP = dyn_cast<GEPOperator>(Ptr))
-    Ptr = GEP->getPointerOperand();
+  Ptr = getUnderlyingObjectAggressive(Ptr);
   const auto *Alloca = dyn_cast<AllocaInst>(Ptr);
   if (!Alloca)
     return nullptr;
@@ -124,19 +124,19 @@ static void getObjectRegs(const MDNode *Obj, SmallVectorImpl<MCPhysReg> &Regs,
 
 using RegVector = SmallVector<MCPhysReg, 50>;
 
-static void insertObjectDef(MachineInstr &MI, const MDNode *Obj,
+static void insertObjectDef(MachineBasicBlock::instr_iterator DefPt,
+                            const MDNode *Obj, MachineBasicBlock &MBB,
                             const SIInstrInfo &TII, const SIRegisterInfo &TRI) {
   RegVector Regs;
   getObjectRegs(Obj, Regs, TRI);
 
-  MachineBasicBlock::instr_iterator DefPt = MI.getIterator();
-  while (DefPt->isBundledWithPred())
-    --DefPt;
-
-  for (MCPhysReg Reg : Regs) {
-    BuildMI(*MI.getParent(), DefPt, DebugLoc(),
-            TII.get(TargetOpcode::IMPLICIT_DEF), Reg);
+  if (DefPt != MBB.instr_end()) {
+    while (DefPt->isBundledWithPred())
+      --DefPt;
   }
+
+  for (MCPhysReg Reg : Regs)
+    BuildMI(MBB, DefPt, DebugLoc(), TII.get(TargetOpcode::IMPLICIT_DEF), Reg);
 }
 
 static void addUseDefOperands(MachineInstr &MI, const MDNode *Obj,
@@ -276,7 +276,7 @@ bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
         addUseDefOperands(MI, Obj, TRI);
         if (!is_contained(LiveObjs, Obj)) {
           LiveObjs.push_back(Obj);
-          insertObjectDef(MI, Obj, TII, TRI);
+          insertObjectDef(MI.getIterator(), Obj, MBB, TII, TRI);
         }
         Changed = true;
       }
@@ -286,7 +286,7 @@ bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
       for (const MDNode *Obj : LiveIns[Succ]) {
         if (!is_contained(LiveObjs, Obj)) {
           LiveObjs.push_back(Obj);
-          insertObjectDef(*MBB.getFirstTerminator(), Obj, TII, TRI);
+          insertObjectDef(MBB.getFirstInstrTerminator(), Obj, MBB, TII, TRI);
           Changed = true;
         }
       }
