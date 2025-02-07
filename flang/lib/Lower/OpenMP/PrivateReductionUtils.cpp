@@ -277,7 +277,8 @@ private:
   /// allocatedPrivVarArg: The allocation for the private
   ///                      variable.
   /// moldArg:             The original variable.
-  /// loadedMoldArg:       The original variable, loaded.
+  /// loadedMoldArg:       The original variable, loaded. Access via
+  ///                      getLoadedMoldArg().
   mlir::Value scalarInitValue, allocatedPrivVarArg, moldArg, loadedMoldArg;
 
   /// The first block in the init region.
@@ -321,6 +322,14 @@ private:
   void initAndCleanupUnboxedDerivedType(bool needsInitialization);
 
   fir::IfOp handleNullAllocatable();
+
+  // Do this lazily so that we don't load it when it is not used.
+  inline mlir::Value getLoadedMoldArg() {
+    if (loadedMoldArg)
+      return loadedMoldArg;
+    loadedMoldArg = builder.loadIfRef(loc, moldArg);
+    return loadedMoldArg;
+  }
 };
 
 } // namespace
@@ -333,7 +342,7 @@ void PopulateInitAndCleanupRegionsHelper::initBoxedPrivatePointer(
   // we need a shape with the right rank so that the embox op is lowered
   // to an llvm struct of the right type. This returns nullptr if the types
   // aren't right.
-  mlir::Value shape = generateZeroShapeForRank(builder, loc, loadedMoldArg);
+  mlir::Value shape = generateZeroShapeForRank(builder, loc, moldArg);
   // Just incase, do initialize the box with a null value
   mlir::Value null = builder.createNullConstant(loc, boxTy.getEleTy());
   mlir::Value nullBox;
@@ -355,7 +364,7 @@ void PopulateInitAndCleanupRegionsHelper::initBoxedPrivatePointer(
 /// }
 /// omp.yield %box_alloca
 fir::IfOp PopulateInitAndCleanupRegionsHelper::handleNullAllocatable() {
-  mlir::Value addr = builder.create<fir::BoxAddrOp>(loc, loadedMoldArg);
+  mlir::Value addr = builder.create<fir::BoxAddrOp>(loc, getLoadedMoldArg());
   mlir::Value isNotAllocated = builder.genIsNullAddr(loc, addr);
   fir::IfOp ifOp = builder.create<fir::IfOp>(loc, isNotAllocated,
                                              /*withElseRegion=*/true);
@@ -391,7 +400,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
       loc, valType, valAlloc, /*shape=*/mlir::Value{},
       /*slice=*/mlir::Value{}, lenParams);
   initializeIfDerivedTypeBox(
-      builder, loc, box, loadedMoldArg, needsInitialization,
+      builder, loc, box, getLoadedMoldArg(), needsInitialization,
       /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivate);
   fir::StoreOp lastOp =
       builder.create<fir::StoreOp>(loc, box, allocatedPrivVarArg);
@@ -410,7 +419,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     fir::BaseBoxType boxTy, bool needsInitialization) {
   bool isAllocatableOrPointer =
       mlir::isa<fir::HeapType, fir::PointerType>(boxTy.getEleTy());
-  getLengthParameters(builder, loc, loadedMoldArg, lenParams);
+  getLengthParameters(builder, loc, getLoadedMoldArg(), lenParams);
 
   fir::IfOp ifUnallocated{nullptr};
   if (isAllocatableOrPointer) {
@@ -419,7 +428,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
   }
 
   // Create the private copy from the initial fir.box:
-  hlfir::Entity source = hlfir::Entity{loadedMoldArg};
+  hlfir::Entity source = hlfir::Entity{getLoadedMoldArg()};
 
   // Special case for (possibly allocatable) arrays of polymorphic types
   // e.g. !fir.class<!fir.heap<!fir.array<?x!fir.type<>>>>
@@ -463,8 +472,9 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
   // Put the temporary inside of a box:
   // hlfir::genVariableBox doesn't handle non-default lower bounds
   mlir::Value box;
-  fir::ShapeShiftOp shapeShift = getShapeShift(builder, loc, loadedMoldArg);
-  mlir::Type boxType = loadedMoldArg.getType();
+  fir::ShapeShiftOp shapeShift =
+      getShapeShift(builder, loc, getLoadedMoldArg());
+  mlir::Type boxType = getLoadedMoldArg().getType();
   if (mlir::isa<fir::BaseBoxType>(temp.getType()))
     // the box created by the declare form createTempFromMold is missing
     // lower bounds info
@@ -480,7 +490,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     builder.create<hlfir::AssignOp>(loc, scalarInitValue, box);
 
   initializeIfDerivedTypeBox(
-      builder, loc, box, loadedMoldArg, needsInitialization,
+      builder, loc, box, getLoadedMoldArg(), needsInitialization,
       /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivate);
 
   builder.create<fir::StoreOp>(loc, box, allocatedPrivVarArg);
@@ -553,8 +563,7 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
     builder.setInsertionPointToEnd(initBlock);
 
     // TODO: don't do this unless it is needed
-    loadedMoldArg = builder.loadIfRef(loc, moldArg);
-    getLengthParameters(builder, loc, loadedMoldArg, lenParams);
+    getLengthParameters(builder, loc, getLoadedMoldArg(), lenParams);
 
     if (isPrivatization(kind) &&
         mlir::isa<fir::PointerType>(boxTy.getEleTy())) {
@@ -604,4 +613,16 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
       converter, loc, argType, scalarInitValue, allocatedPrivVarArg, moldArg,
       initBlock, cleanupRegion, kind, sym);
   helper.populateByRefInitAndCleanupRegions();
+
+  // Often we load moldArg to check something (e.g. length parameters, shape)
+  // but then those answers can be gotten statically without accessing the
+  // runtime value and so the only remaining use is a dead load. These loads can
+  // force us to insert additional barriers and so should be avoided where
+  // possible.
+  if (moldArg.hasOneUse()) {
+    mlir::Operation *user = *moldArg.getUsers().begin();
+    if (auto load = mlir::dyn_cast<fir::LoadOp>(user))
+      if (load.use_empty())
+        load.erase();
+  }
 }
