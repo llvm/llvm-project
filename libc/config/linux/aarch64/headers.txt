@@ -4,6 +4,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.ctype
     libc.include.dlfcn
     libc.include.elf
+    libc.include.endian
     libc.include.errno
     libc.include.features
     libc.include.fenv
@@ -28,6 +29,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_socket
     libc.include.sys_syscall
     libc.include.sys_time
+    libc.include.sys_wait
     libc.include.threads
     libc.include.time
     libc.include.uchar
