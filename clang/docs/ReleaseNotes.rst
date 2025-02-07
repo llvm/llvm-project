@@ -127,6 +127,7 @@ Improvements to Clang's diagnostics
 - The ``-Wunique-object-duplication`` warning has been added to warn about objects
   which are supposed to only exist once per program, but may get duplicated when
   built into a shared library.
+- Fixed a bug where Clang's Analysis did not correctly model the destructor behavior of ``union`` members (#GH119415).
 
 Improvements to Clang's time-trace
 ----------------------------------
