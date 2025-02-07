@@ -13,15 +13,29 @@ int test_aeabi_uldivmod(du_int a, du_int b, du_int expected_q, du_int expected_r
 {
     du_int q, r;
     __asm__(
+#if _YUGA_BIG_ENDIAN
+        "movs r1, %Q[a] \n"
+        "movs r0, %R[a] \n"
+        "movs r3, %Q[b] \n"
+        "movs r2, %R[b] \n"
+#else
         "movs r0, %Q[a] \n"
         "movs r1, %R[a] \n"
         "movs r2, %Q[b] \n"
         "movs r3, %R[b] \n"
+#endif
         "bl __aeabi_uldivmod \n"
+#if _YUGA_BIG_ENDIAN
+        "movs %Q[q], r1\n"
+        "movs %R[q], r0\n"
+        "movs %Q[r], r3\n"
+        "movs %R[r], r2\n"
+#else
         "movs %Q[q], r0\n"
         "movs %R[q], r1\n"
         "movs %Q[r], r2\n"
         "movs %R[r], r3\n"
+#endif
         : [q] "=r" (q), [r] "=r"(r)
         : [a] "r"(a), [b] "r"(b)
         : "lr", "r0", "r1", "r2", "r3"
