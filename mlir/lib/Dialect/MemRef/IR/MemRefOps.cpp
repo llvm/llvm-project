@@ -825,32 +825,19 @@ struct FoldSelfCopy : public OpRewritePattern<CopyOp> {
   LogicalResult matchAndRewrite(CopyOp copyOp,
                                 PatternRewriter &rewriter) const override {
     if (copyOp.getSource() != copyOp.getTarget()) {
-      // If the source and target are SubViews and they are identical, we can
-      // fold.
+      // We can still fold if source and target are similar SubViews.
       auto source = copyOp.getSource().getDefiningOp<SubViewOp>();
       auto target = copyOp.getTarget().getDefiningOp<SubViewOp>();
-      if (!source || !target || source.getSource() != target.getSource() ||
-          llvm::any_of(llvm::zip(source.getOffsets(), target.getOffsets()),
-                       [](std::tuple<Value, Value> offsetPair) {
-                         return std::get<0>(offsetPair) !=
-                                std::get<1>(offsetPair);
-                       }) ||
-          llvm::any_of(
-              llvm::zip(source.getStaticOffsets(), target.getStaticOffsets()),
-              [](std::tuple<int64_t, int64_t> offsetPair) {
-                return std::get<0>(offsetPair) != std::get<1>(offsetPair);
-              }) ||
-          // sizes must be the same anyway
-          llvm::any_of(llvm::zip(source.getStrides(), target.getStrides()),
-                       [](std::tuple<Value, Value> stridePair) {
-                         return std::get<0>(stridePair) !=
-                                std::get<1>(stridePair);
-                       }) ||
-          llvm::any_of(
-              llvm::zip(source.getStaticStrides(), target.getStaticStrides()),
-              [](std::tuple<int64_t, int64_t> stridePair) {
-                return std::get<0>(stridePair) != std::get<1>(stridePair);
-              })) {
+      if (!source || !target) {
+        return failure();
+      }
+      if (source.getSource() != target.getSource() ||
+          source.getOffsets() != target.getOffsets() ||
+          source.getStaticOffsets() != target.getStaticOffsets() ||
+          source.getStrides() != target.getStrides() ||
+          source.getStaticStrides() != target.getStaticStrides()) {
+        // By copy semantics, sizes of source and target must be the same
+        // -> no need to check sizes.
         return failure();
       }
     }
