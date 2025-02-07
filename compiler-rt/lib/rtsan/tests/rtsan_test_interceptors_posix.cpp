@@ -457,6 +457,12 @@ TEST(TestRtsanInterceptors, FchdirDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+TEST(TestRtsanInterceptors, ChrootDiesWhenRealtime) {
+  auto Func = []() { chroot("."); };
+  ExpectRealtimeDeath(Func, "chroot");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 TEST_F(RtsanFileTest, FopenDiesWhenRealtime) {
   auto Func = [this]() {
     FILE *f = fopen(GetTemporaryFilePath(), "w");
