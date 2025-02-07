@@ -444,6 +444,19 @@ public:
     IncompleteOnly = 3,
   };
 
+  enum class ArrayBoundsStrictFlexArraysLevelKind {
+    // Use same StrictFlexArrayLevel as compiler.
+    None = 0,
+    /// Any trailing array member is a FAM.
+    Default = 1,
+    /// Any trailing array member of undefined, 0, or 1 size is a FAM.
+    OneZeroOrIncomplete = 2,
+    /// Any trailing array member of undefined or 0 size is a FAM.
+    ZeroOrIncomplete = 3,
+    /// Any trailing array member of undefined size is a FAM.
+    IncompleteOnly = 4,
+  };
+
   /// Controls the various implementations for complex multiplication and
   // division.
   enum ComplexRangeKind {

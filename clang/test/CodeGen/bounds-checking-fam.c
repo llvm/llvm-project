@@ -7,6 +7,16 @@
 // RUN: %clang_cc1 -emit-llvm -triple x86_64 -fstrict-flex-arrays=2 -fsanitize=array-bounds -x c++ %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-2,CXX
 // RUN: %clang_cc1 -emit-llvm -triple x86_64 -fstrict-flex-arrays=3 -fsanitize=array-bounds        %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-3
 // RUN: %clang_cc1 -emit-llvm -triple x86_64 -fstrict-flex-arrays=3 -fsanitize=array-bounds -x c++ %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-3,CXX
+
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize-bounds-strict-flex-arrays=0 -fsanitize=array-bounds -x c++ %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-0,CXX,CXX-STRICT-0
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize-bounds-strict-flex-arrays=0 -fsanitize=array-bounds        %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-0
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize-bounds-strict-flex-arrays=1 -fsanitize=array-bounds        %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-1
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize-bounds-strict-flex-arrays=1 -fsanitize=array-bounds -x c++ %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-1,CXX
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize-bounds-strict-flex-arrays=2 -fsanitize=array-bounds        %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-2
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize-bounds-strict-flex-arrays=2 -fsanitize=array-bounds -x c++ %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-2,CXX
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize-bounds-strict-flex-arrays=3 -fsanitize=array-bounds        %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-3
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize-bounds-strict-flex-arrays=3 -fsanitize=array-bounds -x c++ %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-3,CXX
+
 // Before flexible array member was added to C99, many projects use a
 // one-element array as the last member of a structure as an alternative.
 // E.g. https://github.com/python/cpython/issues/84301

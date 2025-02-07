@@ -31,6 +31,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -1192,13 +1193,40 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
   return nullptr;
 }
 
+LangOptions::StrictFlexArraysLevelKind
+CodeGenFunction::effectiveArrayBoundsFlexArraysLevel() {
+  using StrictFlexArraysLevelKind = LangOptions::StrictFlexArraysLevelKind;
+  using ArrayBoundsStrictFlexArraysLevelKind =
+      LangOptions::ArrayBoundsStrictFlexArraysLevelKind;
+  StrictFlexArraysLevelKind StrictFlexArraysLevel;
+  switch (getLangOpts().getArrayBoundsStrictFlexArraysLevel()) {
+  case ArrayBoundsStrictFlexArraysLevelKind::Default:
+    StrictFlexArraysLevel = StrictFlexArraysLevelKind::Default;
+    break;
+  case ArrayBoundsStrictFlexArraysLevelKind::OneZeroOrIncomplete:
+    StrictFlexArraysLevel = StrictFlexArraysLevelKind::OneZeroOrIncomplete;
+    break;
+  case ArrayBoundsStrictFlexArraysLevelKind::ZeroOrIncomplete:
+    StrictFlexArraysLevel = StrictFlexArraysLevelKind::ZeroOrIncomplete;
+    break;
+  case ArrayBoundsStrictFlexArraysLevelKind::IncompleteOnly:
+    StrictFlexArraysLevel = StrictFlexArraysLevelKind::IncompleteOnly;
+    break;
+  case ArrayBoundsStrictFlexArraysLevelKind::None:
+    StrictFlexArraysLevel = getLangOpts().getStrictFlexArraysLevel();
+    break;
+  }
+  return StrictFlexArraysLevel;
+}
+
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
                                       llvm::Value *Index, QualType IndexType,
                                       bool Accessed) {
   assert(SanOpts.has(SanitizerKind::ArrayBounds) &&
          "should not be called unless adding bounds checks");
-  const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-      getLangOpts().getStrictFlexArraysLevel();
+  LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+      effectiveArrayBoundsFlexArraysLevel();
+
   QualType IndexedType;
   llvm::Value *Bound =
       getArrayIndexingBound(*this, Base, IndexedType, StrictFlexArraysLevel);
@@ -4383,7 +4411,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       // i.e. "a.b.count", so we shouldn't need the full force of EmitLValue or
       // similar to emit the correct GEP.
       const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-          getLangOpts().getStrictFlexArraysLevel();
+          effectiveArrayBoundsFlexArraysLevel();
 
       if (const auto *ME = dyn_cast<MemberExpr>(Array);
           ME &&

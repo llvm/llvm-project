@@ -6976,6 +6976,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                   options::OPT_fno_unroll_loops);
 
   Args.AddLastArg(CmdArgs, options::OPT_fstrict_flex_arrays_EQ);
+  Args.AddLastArg(CmdArgs,
+                  options::OPT_fsanitize_array_bounds_strict_flex_arrays_EQ);
 
   Args.AddLastArg(CmdArgs, options::OPT_pthread);
 
