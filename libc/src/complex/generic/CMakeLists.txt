@@ -196,8 +196,6 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
-    libc.src.__support.macros.properties.types
-    libc.src.__support.macros.properties.complex_types
 )
 
 add_entrypoint_object(
