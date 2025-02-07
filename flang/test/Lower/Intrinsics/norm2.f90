@@ -55,7 +55,7 @@ subroutine norm2_test_dim_2(a,r)
   ! CHECK-DAG:  %[[res:.*]] = fir.convert %[[r]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK:  %[[arr:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
   r = norm2(a,dim=1)
-  ! CHECK:  %{{.*}} = fir.call @_FortranANorm2Dim(%[[res]], %[[arr]], %[[dim]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+  ! CHECK:  fir.call @_FortranANorm2Dim(%[[res]], %[[arr]], %[[dim]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
   ! CHECK:  %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   ! CHECK-DAG:  %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
   ! CHECK-DAG:  fir.freemem %[[addr]]
@@ -71,7 +71,7 @@ subroutine norm2_test_dim_3(a,r)
   ! CHECK-DAG:  %[[res:.*]] = fir.convert %[[r]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK:  %[[arr:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<none>
   r = norm2(a,dim=3)
-  ! CHECK:  %{{.*}} = fir.call @_FortranANorm2Dim(%[[res]], %[[arr]], %[[dim]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+  ! CHECK:  fir.call @_FortranANorm2Dim(%[[res]], %[[arr]], %[[dim]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
   ! CHECK:  %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
   ! CHECK-DAG:  %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.heap<!fir.array<?x?xf32>>
   ! CHECK-DAG:  fir.freemem %[[addr]]
@@ -87,7 +87,7 @@ subroutine norm2_test_real16(a,r)
   ! CHECK-DAG:  %[[res:.*]] = fir.convert %[[r]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf128>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK:  %[[arr:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?x?x?xf128>>) -> !fir.box<none>
   r = norm2(a,dim=3)
-  ! CHECK:  %{{.*}} = fir.call @_FortranANorm2DimReal16(%[[res]], %[[arr]], %[[dim]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+  ! CHECK:  fir.call @_FortranANorm2DimReal16(%[[res]], %[[arr]], %[[dim]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
   ! CHECK:  %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf128>>>>
   ! CHECK-DAG:  %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?x?xf128>>>) -> !fir.heap<!fir.array<?x?xf128>>
   ! CHECK-DAG:  fir.freemem %[[addr]]

@@ -332,6 +332,12 @@ void emit(Program &P, std::vector<std::byte> &Code, const IntegralAP<true> &Val,
   emitSerialized(Code, Val, Success);
 }
 
+template <>
+void emit(Program &P, std::vector<std::byte> &Code, const FixedPoint &Val,
+          bool &Success) {
+  emitSerialized(Code, Val, Success);
+}
+
 template <typename... Tys>
 bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args,
                              const SourceInfo &SI) {

@@ -668,37 +668,32 @@ define amdgpu_ps float @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) 
 define amdgpu_ps float @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_0x100000000:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    v_add_co_u32_e64 v0, vcc, 0, s2
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 1, v1, vcc
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX9-NEXT:    s_add_i32 s3, s3, 1
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_load_saddr_i8_offset_0x100000000:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_add_co_u32 v0, s[0:1], 0, s2
-; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s[0:1], 1, s3, s[0:1]
-; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_add_i32 s3, s3, 1
+; GFX10-NEXT:    global_load_ubyte v0, v0, s[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_load_saddr_i8_offset_0x100000000:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], 0, s2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 1, s3, s[0:1]
-; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_add_i32 s3, s3, 1
+; GFX11-NEXT:    global_load_u8 v0, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: global_load_saddr_i8_offset_0x100000000:
 ; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_mov_b32 s0, 0
-; GFX12-SDAG-NEXT:    s_mov_b32 s1, 1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[2:3], s[0:1]
-; GFX12-SDAG-NEXT:    s_load_u8 s0, s[0:1], 0x0
+; GFX12-SDAG-NEXT:    s_add_co_i32 s3, s3, 1
+; GFX12-SDAG-NEXT:    s_load_u8 s0, s[2:3], 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
@@ -934,37 +929,32 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(
 define amdgpu_ps float @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_neg0x100000000:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    v_add_co_u32_e64 v0, vcc, 0, s2
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX9-NEXT:    s_add_i32 s3, s3, -1
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: global_load_saddr_i8_offset_neg0x100000000:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_add_co_u32 v0, s[0:1], 0, s2
-; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s[0:1], -1, s3, s[0:1]
-; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_add_i32 s3, s3, -1
+; GFX10-NEXT:    global_load_ubyte v0, v0, s[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_load_saddr_i8_offset_neg0x100000000:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], 0, s2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s3, s[0:1]
-; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_add_i32 s3, s3, -1
+; GFX11-NEXT:    global_load_u8 v0, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: global_load_saddr_i8_offset_neg0x100000000:
 ; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_mov_b32 s0, 0
-; GFX12-SDAG-NEXT:    s_mov_b32 s1, -1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[2:3], s[0:1]
-; GFX12-SDAG-NEXT:    s_load_u8 s0, s[0:1], 0x0
+; GFX12-SDAG-NEXT:    s_add_co_i32 s3, s3, -1
+; GFX12-SDAG-NEXT:    s_load_u8 s0, s[2:3], 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog

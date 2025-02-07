@@ -423,24 +423,34 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
       }
     }
 
+    auto CreateCmpSel = [&](std::optional<CmpPredicate> P,
+                            bool Swapped) -> CmpInst * {
+      if (!P)
+        return nullptr;
+      auto *MatchOp = getCommonOp(TI, FI, ICmpInst::isEquality(*P),
+                                  ICmpInst::isRelational(*P) && Swapped);
+      if (!MatchOp)
+        return nullptr;
+      Value *NewSel = Builder.CreateSelect(Cond, OtherOpT, OtherOpF,
+                                           SI.getName() + ".v", &SI);
+      return new ICmpInst(MatchIsOpZero ? *P
+                                        : ICmpInst::getSwappedCmpPredicate(*P),
+                          MatchOp, NewSel);
+    };
+
     // icmp with a common operand also can have the common operand
     // pulled after the select.
     CmpPredicate TPred, FPred;
     if (match(TI, m_ICmp(TPred, m_Value(), m_Value())) &&
         match(FI, m_ICmp(FPred, m_Value(), m_Value()))) {
-      // FIXME: Use CmpPredicate::getMatching here.
-      CmpInst::Predicate T = TPred, F = FPred;
-      if (T == F || T == ICmpInst::getSwappedCmpPredicate(F)) {
-        bool Swapped = T != F;
-        if (Value *MatchOp =
-                getCommonOp(TI, FI, ICmpInst::isEquality(TPred), Swapped)) {
-          Value *NewSel = Builder.CreateSelect(Cond, OtherOpT, OtherOpF,
-                                               SI.getName() + ".v", &SI);
-          return new ICmpInst(
-              MatchIsOpZero ? TPred : ICmpInst::getSwappedCmpPredicate(TPred),
-              MatchOp, NewSel);
-        }
-      }
+      if (auto *R =
+              CreateCmpSel(CmpPredicate::getMatching(TPred, FPred), false))
+        return R;
+      if (auto *R =
+              CreateCmpSel(CmpPredicate::getMatching(
+                               TPred, ICmpInst::getSwappedCmpPredicate(FPred)),
+                           true))
+        return R;
     }
   }
 
@@ -1225,8 +1235,12 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   // zext/trunc) have one use (ending at the select), the cttz/ctlz result will
   // not be used if the input is zero. Relax to 'zero is poison' for that case.
   if (II->hasOneUse() && SelectArg->hasOneUse() &&
-      !match(II->getArgOperand(1), m_One()))
+      !match(II->getArgOperand(1), m_One())) {
     II->setArgOperand(1, ConstantInt::getTrue(II->getContext()));
+    // noundef attribute on the intrinsic may no longer be valid.
+    II->dropUBImplyingAttrsAndMetadata();
+    IC.addToWorklist(II);
+  }
 
   return nullptr;
 }
@@ -1685,8 +1699,7 @@ tryToReuseConstantFromSelectInComparison(SelectInst &Sel, ICmpInst &Cmp,
     return nullptr;
 
   // Check the constant we'd have with flipped-strictness predicate.
-  auto FlippedStrictness =
-      InstCombiner::getFlippedStrictnessPredicateAndConstant(Pred, C0);
+  auto FlippedStrictness = getFlippedStrictnessPredicateAndConstant(Pred, C0);
   if (!FlippedStrictness)
     return nullptr;
 
@@ -1839,92 +1852,6 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
           foldSelectWithExtremeEqCond(CmpLHS, CmpRHS, TrueVal, FalseVal))
     return Res;
 
-  // Transform (X == C) ? X : Y -> (X == C) ? C : Y
-  // specific handling for Bitwise operation.
-  // x&y -> (x|y) ^ (x^y)  or  (x|y) & ~(x^y)
-  // x|y -> (x&y) | (x^y)  or  (x&y) ^  (x^y)
-  // x^y -> (x|y) ^ (x&y)  or  (x|y) & ~(x&y)
-  Value *X, *Y;
-  if (!match(CmpLHS, m_BitwiseLogic(m_Value(X), m_Value(Y))) ||
-      !match(TrueVal, m_c_BitwiseLogic(m_Specific(X), m_Specific(Y))))
-    return nullptr;
-
-  const unsigned AndOps = Instruction::And, OrOps = Instruction::Or,
-                 XorOps = Instruction::Xor, NoOps = 0;
-  enum NotMask { None = 0, NotInner, NotRHS };
-
-  auto matchFalseVal = [&](unsigned OuterOpc, unsigned InnerOpc,
-                           unsigned NotMask) {
-    auto matchInner = m_c_BinOp(InnerOpc, m_Specific(X), m_Specific(Y));
-    if (OuterOpc == NoOps)
-      return match(CmpRHS, m_Zero()) && match(FalseVal, matchInner);
-
-    if (NotMask == NotInner) {
-      return match(FalseVal, m_c_BinOp(OuterOpc, m_NotForbidPoison(matchInner),
-                                       m_Specific(CmpRHS)));
-    } else if (NotMask == NotRHS) {
-      return match(FalseVal, m_c_BinOp(OuterOpc, matchInner,
-                                       m_NotForbidPoison(m_Specific(CmpRHS))));
-    } else {
-      return match(FalseVal,
-                   m_c_BinOp(OuterOpc, matchInner, m_Specific(CmpRHS)));
-    }
-  };
-
-  // (X&Y)==C ? X|Y : X^Y -> (X^Y)|C : X^Y  or (X^Y)^ C : X^Y
-  // (X&Y)==C ? X^Y : X|Y -> (X|Y)^C : X|Y  or (X|Y)&~C : X|Y
-  if (match(CmpLHS, m_And(m_Value(X), m_Value(Y)))) {
-    if (match(TrueVal, m_c_Or(m_Specific(X), m_Specific(Y)))) {
-      // (X&Y)==C ? X|Y : (X^Y)|C -> (X^Y)|C : (X^Y)|C -> (X^Y)|C
-      // (X&Y)==C ? X|Y : (X^Y)^C -> (X^Y)^C : (X^Y)^C -> (X^Y)^C
-      if (matchFalseVal(OrOps, XorOps, None) ||
-          matchFalseVal(XorOps, XorOps, None))
-        return IC.replaceInstUsesWith(SI, FalseVal);
-    } else if (match(TrueVal, m_c_Xor(m_Specific(X), m_Specific(Y)))) {
-      // (X&Y)==C ? X^Y : (X|Y)^ C -> (X|Y)^ C : (X|Y)^ C -> (X|Y)^ C
-      // (X&Y)==C ? X^Y : (X|Y)&~C -> (X|Y)&~C : (X|Y)&~C -> (X|Y)&~C
-      if (matchFalseVal(XorOps, OrOps, None) ||
-          matchFalseVal(AndOps, OrOps, NotRHS))
-        return IC.replaceInstUsesWith(SI, FalseVal);
-    }
-  }
-
-  // (X|Y)==C ? X&Y : X^Y -> (X^Y)^C : X^Y  or  ~(X^Y)&C : X^Y
-  // (X|Y)==C ? X^Y : X&Y -> (X&Y)^C : X&Y  or  ~(X&Y)&C : X&Y
-  if (match(CmpLHS, m_Or(m_Value(X), m_Value(Y)))) {
-    if (match(TrueVal, m_c_And(m_Specific(X), m_Specific(Y)))) {
-      // (X|Y)==C ? X&Y: (X^Y)^C -> (X^Y)^C: (X^Y)^C ->  (X^Y)^C
-      // (X|Y)==C ? X&Y:~(X^Y)&C ->~(X^Y)&C:~(X^Y)&C -> ~(X^Y)&C
-      if (matchFalseVal(XorOps, XorOps, None) ||
-          matchFalseVal(AndOps, XorOps, NotInner))
-        return IC.replaceInstUsesWith(SI, FalseVal);
-    } else if (match(TrueVal, m_c_Xor(m_Specific(X), m_Specific(Y)))) {
-      // (X|Y)==C ? X^Y : (X&Y)^C ->  (X&Y)^C : (X&Y)^C ->  (X&Y)^C
-      // (X|Y)==C ? X^Y :~(X&Y)&C -> ~(X&Y)&C :~(X&Y)&C -> ~(X&Y)&C
-      if (matchFalseVal(XorOps, AndOps, None) ||
-          matchFalseVal(AndOps, AndOps, NotInner))
-        return IC.replaceInstUsesWith(SI, FalseVal);
-    }
-  }
-
-  // (X^Y)==C ? X&Y : X|Y -> (X|Y)^C : X|Y  or (X|Y)&~C : X|Y
-  // (X^Y)==C ? X|Y : X&Y -> (X&Y)|C : X&Y  or (X&Y)^ C : X&Y
-  if (match(CmpLHS, m_Xor(m_Value(X), m_Value(Y)))) {
-    if ((match(TrueVal, m_c_And(m_Specific(X), m_Specific(Y))))) {
-      // (X^Y)==C ? X&Y : (X|Y)^C -> (X|Y)^C
-      // (X^Y)==C ? X&Y : (X|Y)&~C -> (X|Y)&~C
-      if (matchFalseVal(XorOps, OrOps, None) ||
-          matchFalseVal(AndOps, OrOps, NotRHS))
-        return IC.replaceInstUsesWith(SI, FalseVal);
-    } else if (match(TrueVal, m_c_Or(m_Specific(X), m_Specific(Y)))) {
-      // (X^Y)==C ? (X|Y) : (X&Y)|C -> (X&Y)|C
-      // (X^Y)==C ? (X|Y) : (X&Y)^C -> (X&Y)^C
-      if (matchFalseVal(OrOps, AndOps, None) ||
-          matchFalseVal(XorOps, AndOps, None))
-        return IC.replaceInstUsesWith(SI, FalseVal);
-    }
-  }
-
   return nullptr;
 }
 
@@ -1966,8 +1893,7 @@ static Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
   Value *RHS;
   SelectPatternFlavor SPF;
   const DataLayout &DL = BOp->getDataLayout();
-  auto Flipped =
-      InstCombiner::getFlippedStrictnessPredicateAndConstant(Predicate, C1);
+  auto Flipped = getFlippedStrictnessPredicateAndConstant(Predicate, C1);
 
   if (C3 == ConstantFoldBinaryOpOperands(Opcode, C1, C2, DL)) {
     SPF = getSelectPattern(Predicate).Flavor;
@@ -2819,9 +2745,9 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   // %cnd = icmp slt i32 %rem, 0
   // %add = add i32 %rem, %n
   // %sel = select i1 %cnd, i32 %add, i32 %rem
-  if (match(TrueVal, m_Add(m_Specific(RemRes), m_Value(Remainder))) &&
+  if (match(TrueVal, m_c_Add(m_Specific(RemRes), m_Value(Remainder))) &&
       match(RemRes, m_SRem(m_Value(Op), m_Specific(Remainder))) &&
-      IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero*/ true) &&
+      IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero=*/true) &&
       FalseVal == RemRes)
     return FoldToBitwiseAnd(Remainder);
 
@@ -3910,12 +3836,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // (X ugt Y) ? X : Y -> (X ole Y) ? Y : X
       if (FCmp->hasOneUse() && FCmpInst::isUnordered(Pred)) {
         FCmpInst::Predicate InvPred = FCmp->getInversePredicate();
-        IRBuilder<>::FastMathFlagGuard FMFG(Builder);
         // FIXME: The FMF should propagate from the select, not the fcmp.
-        Builder.setFastMathFlags(FCmp->getFastMathFlags());
-        Value *NewCond = Builder.CreateFCmp(InvPred, Cmp0, Cmp1,
-                                            FCmp->getName() + ".inv");
-        Value *NewSel = Builder.CreateSelect(NewCond, FalseVal, TrueVal);
+        Value *NewCond = Builder.CreateFCmpFMF(InvPred, Cmp0, Cmp1, FCmp,
+                                               FCmp->getName() + ".inv");
+        Value *NewSel =
+            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FCmp);
         return replaceInstUsesWith(SI, NewSel);
       }
     }
@@ -4080,15 +4005,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         CmpInst::Predicate MinMaxPred = getMinMaxPred(SPF, SPR.Ordered);
 
         Value *Cmp;
-        if (CmpInst::isIntPredicate(MinMaxPred)) {
+        if (CmpInst::isIntPredicate(MinMaxPred))
           Cmp = Builder.CreateICmp(MinMaxPred, LHS, RHS);
-        } else {
-          IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-          auto FMF =
-              cast<FPMathOperator>(SI.getCondition())->getFastMathFlags();
-          Builder.setFastMathFlags(FMF);
-          Cmp = Builder.CreateFCmp(MinMaxPred, LHS, RHS);
-        }
+        else
+          Cmp = Builder.CreateFCmpFMF(MinMaxPred, LHS, RHS,
+                                      cast<Instruction>(SI.getCondition()));
 
         Value *NewSI = Builder.CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI);
         if (!IsCastNeeded)

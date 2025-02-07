@@ -295,7 +295,7 @@ private:
     const char *Suffix;
   };
 
-  static const std::array<ReinterpretTypeInfo, 12> Reinterprets;
+  static const std::array<ReinterpretTypeInfo, 13> Reinterprets;
 
   const RecordKeeper &Records;
   StringMap<uint64_t> EltTypes;
@@ -418,9 +418,10 @@ public:
                        SmallVectorImpl<std::unique_ptr<Intrinsic>> &Out);
 };
 
-const std::array<SVEEmitter::ReinterpretTypeInfo, 12> SVEEmitter::Reinterprets =
+const std::array<SVEEmitter::ReinterpretTypeInfo, 13> SVEEmitter::Reinterprets =
     {{{SVEType("c", 'd'), "s8"},
       {SVEType("Uc", 'd'), "u8"},
+      {SVEType("m", 'd'), "mf8"},
       {SVEType("s", 'd'), "s16"},
       {SVEType("Us", 'd'), "u16"},
       {SVEType("i", 'd'), "s32"},
@@ -448,7 +449,7 @@ std::string SVEType::builtinBaseType() const {
   case TypeKind::PredicatePattern:
     return "i";
   case TypeKind::Fpm:
-    return "Wi";
+    return "UWi";
   case TypeKind::Predicate:
     return "b";
   case TypeKind::BFloat16:
@@ -456,7 +457,7 @@ std::string SVEType::builtinBaseType() const {
     return "y";
   case TypeKind::MFloat8:
     assert(ElementBitwidth == 8 && "Invalid MFloat8!");
-    return "c";
+    return "m";
   case TypeKind::Float:
     switch (ElementBitwidth) {
     case 16:
@@ -1049,7 +1050,7 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
     else if (T.isBFloat())
       TypeCode = "bf";
     else if (T.isMFloat())
-      TypeCode = "mfp";
+      TypeCode = "mf";
     else
       TypeCode = 'f';
     Ret.replace(Pos, NumChars, TypeCode + utostr(T.getElementSizeInBits()));
@@ -1638,13 +1639,6 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "  uint64_t x0, x1;\n";
   OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
   OS << "  return x0 & (1ULL << 63);\n";
-  OS << "}\n\n";
-
-  OS << "__ai bool __arm_in_streaming_mode(void) __arm_streaming_compatible "
-        "{\n";
-  OS << "  uint64_t x0, x1;\n";
-  OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
-  OS << "  return x0 & 1;\n";
   OS << "}\n\n";
 
   OS << "void *__arm_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";

@@ -769,6 +769,11 @@ mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value cPtr, mlir::Type ty);
 
+/// The type(C_DEVPTR) is defined as the derived type with only one
+/// component of C_PTR type. Get the C address from the C_PTR component.
+mlir::Value genCDevPtrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value cDevPtr, mlir::Type ty);
+
 /// Get the C address value.
 mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::Value cPtr);
@@ -798,6 +803,15 @@ elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
 
 /// Get the address space which should be used for allocas
 uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
+
+/// The two vectors of MLIR values have the following property:
+///   \p extents1[i] must have the same value as \p extents2[i]
+/// The function returns a new vector of MLIR values that preserves
+/// the same property vs \p extents1 and \p extents2, but allows
+/// more optimizations. For example, if extents1[j] is a known constant,
+/// and extents2[j] is not, then result[j] is the MLIR value extents1[j].
+llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
+                                                    mlir::ValueRange extents2);
 
 } // namespace fir::factory
 

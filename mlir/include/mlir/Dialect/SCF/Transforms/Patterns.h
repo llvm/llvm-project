@@ -68,8 +68,7 @@ void populateSCFStructuralTypeConversionTarget(
 /// applyPartialOneToNConversion.
 /// FIXME: The 1:N dialect conversion is deprecated and will be removed soon.
 /// 1:N support has been added to the regular dialect conversion driver.
-LLVM_DEPRECATED("Use populateSCFStructuralTypeConversions() instead",
-                "populateSCFStructuralTypeConversions")
+/// Use populateSCFStructuralTypeConversions() instead.
 void populateSCFStructuralOneToNTypeConversions(
     const TypeConverter &typeConverter, RewritePatternSet &patterns);
 

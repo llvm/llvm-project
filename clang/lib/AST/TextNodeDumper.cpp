@@ -408,12 +408,15 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
     case OpenACCClauseKind::PresentOrCopy:
+    case OpenACCClauseKind::Host:
     case OpenACCClauseKind::If:
     case OpenACCClauseKind::IfPresent:
     case OpenACCClauseKind::Independent:
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::Delete:
+    case OpenACCClauseKind::Device:
     case OpenACCClauseKind::DeviceNum:
+    case OpenACCClauseKind::DefaultAsync:
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::FirstPrivate:
@@ -707,10 +710,36 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
          << GetApproxValue(Value.getComplexFloatImag()) << 'i';
     }
     return;
-  case APValue::LValue:
+  case APValue::LValue: {
     (void)Context;
-    OS << "LValue <todo>";
+    OS << "LValue Base=";
+    APValue::LValueBase B = Value.getLValueBase();
+    if (B.isNull())
+      OS << "null";
+    else if (const auto *BE = B.dyn_cast<const Expr *>()) {
+      OS << BE->getStmtClassName() << ' ';
+      dumpPointer(BE);
+    } else {
+      const auto *VDB = B.get<const ValueDecl *>();
+      OS << VDB->getDeclKindName() << "Decl";
+      dumpPointer(VDB);
+    }
+    OS << ", Null=" << Value.isNullPointer()
+       << ", Offset=" << Value.getLValueOffset().getQuantity()
+       << ", HasPath=" << Value.hasLValuePath();
+    if (Value.hasLValuePath()) {
+      OS << ", PathLength=" << Value.getLValuePath().size();
+      OS << ", Path=(";
+      llvm::ListSeparator Sep;
+      for (const auto &PathEntry : Value.getLValuePath()) {
+        // We're printing all entries as array indices because don't have the
+        // type information here to do anything else.
+        OS << Sep << PathEntry.getAsArrayIndex();
+      }
+      OS << ")";
+    }
     return;
+  }
   case APValue::Array: {
     unsigned ArraySize = Value.getArraySize();
     unsigned NumInitializedElements = Value.getArrayInitializedElts();
@@ -2930,7 +2959,6 @@ void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
   OS << " " << S->getDirectiveKind();
 }
 void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
-
   if (S->isOrphanedLoopConstruct())
     OS << " <orphan>";
   else
@@ -2939,37 +2967,44 @@ void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
 
 void TextNodeDumper::VisitOpenACCCombinedConstruct(
     const OpenACCCombinedConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCDataConstruct(const OpenACCDataConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCEnterDataConstruct(
     const OpenACCEnterDataConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCExitDataConstruct(
     const OpenACCExitDataConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCHostDataConstruct(
     const OpenACCHostDataConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 void TextNodeDumper::VisitOpenACCInitConstruct(const OpenACCInitConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 void TextNodeDumper::VisitOpenACCShutdownConstruct(
     const OpenACCShutdownConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCSetConstruct(const OpenACCSetConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCUpdateConstruct(
+    const OpenACCUpdateConstruct *S) {
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {

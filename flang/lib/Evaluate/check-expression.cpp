@@ -432,7 +432,8 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
                 "Implied-shape parameter '%s' has rank %d but its initializer has rank %d"_err_en_US,
                 symbol.name(), symRank, folded.Rank());
           }
-        } else if (auto extents{AsConstantExtents(context, symTS->shape())}) {
+        } else if (auto extents{AsConstantExtents(context, symTS->shape())};
+            extents && !HasNegativeExtent(*extents)) {
           if (folded.Rank() == 0 && symRank == 0) {
             // symbol and constant are both scalars
             return {std::move(folded)};

@@ -1,4 +1,5 @@
 header: search.h
+header_template: search.h.def
 macros: []
 types:
   - type_name: struct_hsearch_data

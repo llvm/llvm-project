@@ -557,7 +557,7 @@ struct CastAwayConstantMaskLeadingOneDim
     int64_t flatLeadingSize =
         std::accumulate(dimSizes.begin(), dimSizes.begin() + dropDim + 1,
                         static_cast<int64_t>(1), std::multiplies<int64_t>());
-    SmallVector<int64_t> newDimSizes({flatLeadingSize});
+    SmallVector<int64_t> newDimSizes = {flatLeadingSize};
     newDimSizes.append(dimSizes.begin() + dropDim + 1, dimSizes.end());
 
     auto newMask = rewriter.create<vector::ConstantMaskOp>(

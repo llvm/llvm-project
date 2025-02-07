@@ -53,10 +53,10 @@ MachOLinkGraphBuilder::MachOLinkGraphBuilder(
     std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
     SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
-    : Obj(Obj), G(std::make_unique<LinkGraph>(
-                    std::string(Obj.getFileName()), std::move(SSP),
-                    std::move(TT), std::move(Features), getPointerSize(Obj),
-                    getEndianness(Obj), std::move(GetEdgeKindName))) {
+    : Obj(Obj),
+      G(std::make_unique<LinkGraph>(
+          std::string(Obj.getFileName()), std::move(SSP), std::move(TT),
+          std::move(Features), std::move(GetEdgeKindName))) {
   auto &MachHeader = Obj.getHeader64();
   SubsectionsViaSymbols = MachHeader.flags & MachO::MH_SUBSECTIONS_VIA_SYMBOLS;
 }
@@ -102,17 +102,6 @@ bool MachOLinkGraphBuilder::isZeroFillSection(const NormalizedSection &NSec) {
   default:
     return false;
   }
-}
-
-unsigned
-MachOLinkGraphBuilder::getPointerSize(const object::MachOObjectFile &Obj) {
-  return Obj.is64Bit() ? 8 : 4;
-}
-
-llvm::endianness
-MachOLinkGraphBuilder::getEndianness(const object::MachOObjectFile &Obj) {
-  return Obj.isLittleEndian() ? llvm::endianness::little
-                              : llvm::endianness::big;
 }
 
 Section &MachOLinkGraphBuilder::getCommonSection() {

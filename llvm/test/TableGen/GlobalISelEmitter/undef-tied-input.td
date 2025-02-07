@@ -1,14 +1,25 @@
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common %s | FileCheck %s
+// RUN: llvm-tblgen -gen-global-isel -warn-on-skipped-patterns \
+// RUN:   -I %p/../../../include -I %p/../Common %s 2> %t | FileCheck %s
+// RUN: FileCheck -check-prefix=ERR %s < %t
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
 
-def undef_tied : OperandWithDefaultOps<untyped, (ops (i32 undef_tied_input))> {
+def undef_tied_1 : OperandWithDefaultOps<untyped, (ops (i32 undef_tied_input))> {
+  let MIOperandInfo = (ops GPR32:$inactive);
+}
+
+def undef_tied_2 : OperandWithDefaultOps<i32, (ops (untyped undef_tied_input))> {
   let MIOperandInfo = (ops GPR32:$inactive);
 }
 
 let Constraints = "$opt.inactive = $rd" in
-def I1 : I<(outs GPR32:$rd), (ins GPR32:$rs, undef_tied:$opt),
+def I1 : I<(outs GPR32:$rd), (ins GPR32:$rs, undef_tied_1:$opt),
+           [(set GPR32:$rd, (abs i32:$rs))]>;
+
+// ERR: [[#@LINE+2]]:5: warning: Skipped pattern: unsupported type
+let Constraints = "$opt.inactive = $rd" in
+def I2 : I<(outs GPR32:$rd), (ins GPR32:$rs, undef_tied_2:$opt),
            [(set GPR32:$rd, (abs i32:$rs))]>;
 
 // CHECK-LABEL: // (abs:{ *:[i32] } i32:{ *:[i32] }:$rs)  =>  (I1:{ *:[i32] } i32:{ *:[i32] }:$rs)

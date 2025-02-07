@@ -1,4 +1,5 @@
 header: dirent.h
+header_template: dirent.h.def
 macros: []
 types:
   - type_name: struct_dirent

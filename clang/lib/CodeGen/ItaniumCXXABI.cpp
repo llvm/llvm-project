@@ -779,7 +779,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
             llvm::MDString::get(CGM.getLLVMContext(), "all-vtables"));
         llvm::Value *ValidVtable = Builder.CreateCall(
             CGM.getIntrinsic(llvm::Intrinsic::type_test), {VTable, AllVtables});
-        CGF.EmitCheck(std::make_pair(CheckResult, SanitizerKind::CFIMFCall),
+        CGF.EmitCheck(std::make_pair(CheckResult, SanitizerKind::SO_CFIMFCall),
                       SanitizerHandler::CFICheckFail, StaticData,
                       {VTable, ValidVtable});
       }
@@ -823,7 +823,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
         Bit = Builder.CreateOr(Bit, TypeTest);
       }
 
-      CGF.EmitCheck(std::make_pair(Bit, SanitizerKind::CFIMFCall),
+      CGF.EmitCheck(std::make_pair(Bit, SanitizerKind::SO_CFIMFCall),
                     SanitizerHandler::CFICheckFail, StaticData,
                     {NonVirtualFn, llvm::UndefValue::get(CGF.IntPtrTy)});
 

@@ -186,7 +186,8 @@ DEFAULT_PARAMETERS = [
             AddFeature(std),
             AddSubstitution("%{cxx_std}", re.sub(r"\+", "x", std)),
             AddCompileFlag(lambda cfg: getStdFlag(cfg, std)),
-        ],
+        ]
+        + [AddFeature(f"std-at-least-{s}") for s in _allStandards if s <= std],
     ),
     Parameter(
         name="optimization",

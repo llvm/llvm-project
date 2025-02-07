@@ -617,7 +617,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   case 6:
     if (ArchProfile == llvm::ARM::ProfileKind::M)
       LDREX = 0;
-    else if (ArchKind == llvm::ARM::ArchKind::ARMV6K)
+    else if (ArchKind == llvm::ARM::ArchKind::ARMV6K ||
+             ArchKind == llvm::ARM::ArchKind::ARMV6KZ)
       LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
     else
       LDREX = LDREX_W;
@@ -1477,6 +1478,16 @@ void CygwinARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   DefineStd(Builder, "unix", Opts);
   if (Opts.CPlusPlus)
     Builder.defineMacro("_GNU_SOURCE");
+}
+
+AppleMachOARMTargetInfo::AppleMachOARMTargetInfo(const llvm::Triple &Triple,
+                                                 const TargetOptions &Opts)
+    : AppleMachOTargetInfo<ARMleTargetInfo>(Triple, Opts) {}
+
+void AppleMachOARMTargetInfo::getOSDefines(const LangOptions &Opts,
+                                           const llvm::Triple &Triple,
+                                           MacroBuilder &Builder) const {
+  getAppleMachODefines(Builder, Opts, Triple);
 }
 
 DarwinARMTargetInfo::DarwinARMTargetInfo(const llvm::Triple &Triple,

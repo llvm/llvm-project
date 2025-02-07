@@ -1055,7 +1055,7 @@ def GPU_PrintfOp : GPU_Op<"printf", [MemoryEffects<[MemWrite]>]>,
     imposed by one's target platform.
   }];
   let assemblyFormat = [{
-    $format attr-dict ($args^ `:` type($args))?
+    $format attr-dict (`,` $args^ `:` type($args))?
   }];
 }
 

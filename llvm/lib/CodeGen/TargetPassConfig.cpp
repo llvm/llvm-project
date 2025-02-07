@@ -261,6 +261,11 @@ static cl::opt<bool>
     GCEmptyBlocks("gc-empty-basic-blocks", cl::init(false), cl::Hidden,
                   cl::desc("Enable garbage-collecting empty basic blocks"));
 
+static cl::opt<bool>
+    SplitStaticData("split-static-data", cl::Hidden, cl::init(false),
+                    cl::desc("Split static data sections into hot and cold "
+                             "sections using profile information"));
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -1012,7 +1017,7 @@ bool TargetPassConfig::addCoreISelPasses() {
   if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
     DebugifyIsSafe = false;
 
-  // Add instruction selector passes.
+  // Add instruction selector passes for global isel if enabled.
   if (Selector == SelectorType::GlobalISel) {
     SaveAndRestore SavedAddingMachinePasses(AddingMachinePasses, true);
     if (addIRTranslator())
@@ -1038,14 +1043,13 @@ bool TargetPassConfig::addCoreISelPasses() {
     // Pass to reset the MachineFunction if the ISel failed.
     addPass(createResetMachineFunctionPass(
         reportDiagnosticWhenGlobalISelFallback(), isGlobalISelAbortEnabled()));
+  }
 
-    // Provide a fallback path when we do not want to abort on
-    // not-yet-supported input.
-    if (!isGlobalISelAbortEnabled() && addInstSelector())
+  // Run the SDAG InstSelector, providing a fallback path when we do not want to
+  // abort on not-yet-supported input.
+  if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
+    if (addInstSelector())
       return true;
-
-  } else if (addInstSelector())
-    return true;
 
   // Expand pseudo-instructions emitted by ISel. Don't run the verifier before
   // FinalizeISel.
@@ -1251,6 +1255,8 @@ void TargetPassConfig::addMachinePasses() {
       }
     }
     addPass(createMachineFunctionSplitterPass());
+    if (SplitStaticData)
+      addPass(createStaticDataSplitterPass());
   }
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).

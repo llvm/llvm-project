@@ -155,8 +155,8 @@ def HasSVE2SM4       : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2SM4), "sve2-sm4">;
 def HasSVE2SHA3      : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2SHA3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2SHA3), "sve2-sha3">;
-def HasSVE2BitPerm   : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2BitPerm()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureSVE2BitPerm), "sve2-bitperm">;
+def HasSVEBitPerm   : Predicate<"Subtarget->hasSVEBitPerm()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVEBitPerm), "sve-bitperm">;
 def HasSMEandIsNonStreamingSafe
                      : Predicate<"Subtarget->hasSME()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME), "sme">;
@@ -206,12 +206,16 @@ def HasSSVE_FP8DOT4  : Predicate<"Subtarget->hasSSVE_FP8DOT4() || "
                                  "ssve-fp8dot4 or (sve2 and fp8dot4)">;
 def HasLUT          : Predicate<"Subtarget->hasLUT()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLUT), "lut">;
-def HasSME_LUTv2     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSME_LUTv2()">,
+def HasSME_LUTv2    : Predicate<"Subtarget->isStreaming() && Subtarget->hasSME_LUTv2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME_LUTv2), "sme-lutv2">;
 def HasSMEF8F16     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF8F16()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEF8F16), "sme-f8f16">;
 def HasSMEF8F32     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF8F32()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEF8F32), "sme-f8f32">;
+def HasSME_MOP4     : Predicate<"(Subtarget->isStreaming() && Subtarget->hasSME_MOP4())">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSME_MOP4), "sme-mop4">;
+def HasSME_TMOP     : Predicate<"(Subtarget->isStreaming() && Subtarget->hasSME_TMOP())">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSME_TMOP), "sme-tmop">;
 
 def HasCMPBR        : Predicate<"Subtarget->hasCMPBR()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCMPBR), "cmpbr">;
@@ -240,52 +244,56 @@ def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
-def HasSVEorSME
+def HasSVE_or_SME
     : Predicate<"Subtarget->hasSVE() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
-def HasNonStreamingSVEorSME2p2
+def HasNonStreamingSVE_or_SME2p2
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME2p2),
                 "sve or sme2p2">;
-def HasSVE2orSME
+def HasSVE2_or_SME
     : Predicate<"Subtarget->hasSVE2() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME),
                 "sve2 or sme">;
-def HasSVE2orSME2
+def HasSVE2_or_SME2
     : Predicate<"Subtarget->hasSVE2() || (Subtarget->isStreaming() && Subtarget->hasSME2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME2),
                 "sve2 or sme2">;
-def HasNonStreamingSVE2orSSVE_AES
+def HasNonStreamingSVE2_or_SSVE_AES
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_AES())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSSVE_AES), "sve2 or ssve-aes">;
-def HasSVE2p1_or_HasSME
+def HasSVE2p1_or_SME
     : Predicate<"Subtarget->hasSVE2p1() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                  AssemblerPredicateWithAll<(any_of FeatureSME, FeatureSVE2p1), "sme or sve2p1">;
-def HasSVE2p1_or_HasSME2
+def HasSVE2p1_or_SME2
     : Predicate<"Subtarget->hasSVE2p1() || (Subtarget->isStreaming() && Subtarget->hasSME2())">,
                  AssemblerPredicateWithAll<(any_of FeatureSME2, FeatureSVE2p1), "sme2 or sve2p1">;
-def HasSVE2p1_or_HasSME2p1
+def HasSVE2p1_or_SME2p1
     : Predicate<"Subtarget->hasSVE2p1() || (Subtarget->isStreaming() && Subtarget->hasSME2p1())">,
                  AssemblerPredicateWithAll<(any_of FeatureSME2p1, FeatureSVE2p1), "sme2p1 or sve2p1">;
-def HasSVE2p2orSME2p2
+def HasSVE2p2_or_SME2p2
     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2())">,
                  AssemblerPredicateWithAll<(any_of FeatureSME2p2, FeatureSVE2p2), "sme2p2 or sve2p2">;
-def HasNonStreamingSVE2p1orSSVE_AES
+def HasNonStreamingSVE2p1_or_SSVE_AES
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p1()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_AES())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2p1, FeatureSSVE_AES), "sve2p1 or ssve-aes">;
-def HasSMEF16F16orSMEF8F16
+def HasSMEF16F16_or_SMEF8F16
     : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
                 AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
                 "sme-f16f16 or sme-f8f16">;
-def HasNonStreamingSVE2p2orSME2p2
+def HasNonStreamingSVE2p2_or_SME2p2
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2p2, FeatureSME2p2),
                 "sme2p2 or sve2p2">;
+def HasNonStreamingSVE2_or_SSVE_BitPerm
+    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2()) ||"
+                "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_BitPerm())">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSSVE_BitPerm), "sve2 or ssve-bitperm">;
 
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // so don't need the additional check for 'isNeonAvailable'.
@@ -380,6 +388,8 @@ def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
 def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
+
+def UseLDAPUR : Predicate<"!Subtarget->avoidLDAPUR()">;
 
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
@@ -1446,8 +1456,8 @@ def BFMLALTIdx   : SIMDBF16MLALIndex<1, "bfmlalt", int_aarch64_neon_bfmlalt>;
 def BFCVTN       : SIMD_BFCVTN;
 def BFCVTN2      : SIMD_BFCVTN2;
 
-def : Pat<(v4bf16 (any_fpround (v4f32 V128:$Rn))),
-          (EXTRACT_SUBREG (BFCVTN V128:$Rn), dsub)>;
+def : Pat<(concat_vectors (v4bf16 V64:$Rd), (any_fpround (v4f32 V128:$Rn))),
+          (BFCVTN2 (v8bf16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub)), V128:$Rn)>;
 
 // Vector-scalar BFDOT:
 // The second source operand of the 64-bit variant of BF16DOTlane is a 128-bit
@@ -1469,8 +1479,6 @@ def : Pat<(v2f32 (int_aarch64_neon_bfdot
 
 let Predicates = [HasNEONandIsStreamingSafe, HasBF16] in {
 def BFCVT : BF16ToSinglePrecision<"bfcvt">;
-// Round FP32 to BF16.
-def : Pat<(bf16 (any_fpround (f32 FPR32:$Rn))), (BFCVT $Rn)>;
 }
 
 // ARMv8.6A AArch64 matrix multiplication
@@ -1489,7 +1497,7 @@ class BaseSIMDSUDOTIndex<bit Q, string dst_kind, string lhs_kind,
                          ValueType AccumType, ValueType InputType>
       : BaseSIMDThreeSameVectorIndexS<Q, 0, 0b00, 0b1111, "sudot", dst_kind,
                                         lhs_kind, rhs_kind, RegType, AccumType,
-                                        InputType, null_frag> {
+                                        InputType, VectorIndexS, null_frag> {
   let Pattern = [(set (AccumType RegType:$dst),
                       (AccumType (AArch64usdot (AccumType RegType:$Rd),
                                  (InputType (bitconvert (AccumType
@@ -2022,6 +2030,8 @@ let Predicates = [HasPAuthLR] in {
     //                              opcode2, opcode,   asm
     def AUTIASPPCr : SignAuthOneReg<0b00001, 0b100100, "autiasppcr">;
     def AUTIBSPPCr : SignAuthOneReg<0b00001, 0b100101, "autibsppcr">;
+  }
+  let Defs = [X17], Uses = [X15, X16, X17] in {
     //                                  opcode2, opcode,   asm
     def PACIA171615 : SignAuthFixedRegs<0b00001, 0b100010, "pacia171615">;
     def PACIB171615 : SignAuthFixedRegs<0b00001, 0b100011, "pacib171615">;
@@ -2795,14 +2805,17 @@ def : Pat<(int_aarch64_ldg GPR64:$Rt, (am_indexeds9s128 GPR64sp:$Rn,  simm9s16:$
 
 def : InstAlias<"ldg $Rt, [$Rn]", (LDG GPR64:$Rt, GPR64sp:$Rn, 0), 1>;
 
+let mayLoad = 1 in
 def LDGM : MemTagVector<1, "ldgm", "\t$Rt, [$Rn]",
                    (outs GPR64:$Rt), (ins GPR64sp:$Rn)>;
+let mayStore = 1 in {
 def STGM : MemTagVector<0, "stgm", "\t$Rt, [$Rn]",
                    (outs), (ins GPR64:$Rt, GPR64sp:$Rn)>;
 def STZGM : MemTagVector<0, "stzgm", "\t$Rt, [$Rn]",
                    (outs), (ins GPR64:$Rt, GPR64sp:$Rn)> {
   let Inst{23} = 0;
 }
+} // mayStore = 1
 
 defm STG   : MemTagStore<0b00, "stg">;
 defm STZG  : MemTagStore<0b01, "stzg">;
@@ -4649,6 +4662,10 @@ def STRQpre : StorePreIdx<0b00, 1, 0b10, FPR128Op, "str", pre_store, f128>;
 def STRBBpre : StorePreIdx<0b00, 0, 0b00, GPR32z, "strb", pre_truncsti8,  i32>;
 def STRHHpre : StorePreIdx<0b01, 0, 0b00, GPR32z, "strh", pre_truncsti16, i32>;
 
+// bf16 pre-index store
+def : Pat<(pre_store (bf16 FPR16:$Rt), GPR64sp:$addr, simm9:$off),
+          (STRHpre FPR16:$Rt, GPR64sp:$addr, simm9:$off)>;
+
 // truncstore i64
 def : Pat<(pre_truncsti32 GPR64:$Rt, GPR64sp:$addr, simm9:$off),
   (STRWpre (EXTRACT_SUBREG GPR64:$Rt, sub_32), GPR64sp:$addr,
@@ -4674,6 +4691,8 @@ def : Pat<(pre_store (v1f64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
           (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
 def : Pat<(pre_store (v4f16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
           (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+def : Pat<(pre_store (v4bf16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+          (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
 
 def : Pat<(pre_store (v16i8 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
           (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
@@ -4688,6 +4707,8 @@ def : Pat<(pre_store (v2i64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
 def : Pat<(pre_store (v2f64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
           (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
 def : Pat<(pre_store (v8f16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+          (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+def : Pat<(pre_store (v8bf16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
           (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
 
 //---
@@ -5123,22 +5144,6 @@ let Predicates = [HasFullFP16] in {
 //===----------------------------------------------------------------------===//
 
 defm FCVT : FPConversion<"fcvt">;
-// Helper to get bf16 into fp32.
-def cvt_bf16_to_fp32 :
-  OutPatFrag<(ops node:$Rn),
-             (f32 (COPY_TO_REGCLASS
-	         (i32 (UBFMWri
-		   (i32 (COPY_TO_REGCLASS (INSERT_SUBREG (f32 (IMPLICIT_DEF)),
-		                           node:$Rn, hsub), GPR32)),
-	           (i64 (i32shift_a (i64 16))),
-                   (i64 (i32shift_b (i64 16))))),
-	         FPR32))>;
-// Pattern for bf16 -> fp32.
-def : Pat<(f32 (any_fpextend (bf16 FPR16:$Rn))),
-          (cvt_bf16_to_fp32 FPR16:$Rn)>;
-// Pattern for bf16 -> fp64.
-def : Pat<(f64 (any_fpextend (bf16 FPR16:$Rn))),
-          (FCVTDSr (f32 (cvt_bf16_to_fp32 FPR16:$Rn)))>;
 
 //===----------------------------------------------------------------------===//
 // Floating point single operand instructions.
@@ -8333,8 +8338,6 @@ def : Pat<(v4i32 (anyext (v4i16 V64:$Rn))), (USHLLv4i16_shift V64:$Rn, (i32 0))>
 def : Pat<(v2i64 (sext   (v2i32 V64:$Rn))), (SSHLLv2i32_shift V64:$Rn, (i32 0))>;
 def : Pat<(v2i64 (zext   (v2i32 V64:$Rn))), (USHLLv2i32_shift V64:$Rn, (i32 0))>;
 def : Pat<(v2i64 (anyext (v2i32 V64:$Rn))), (USHLLv2i32_shift V64:$Rn, (i32 0))>;
-// Vector bf16 -> fp32 is implemented morally as a zext + shift.
-def : Pat<(v4f32 (any_fpextend (v4bf16 V64:$Rn))), (SHLLv4i16 V64:$Rn)>;
 // Also match an extend from the upper half of a 128 bit source register.
 def : Pat<(v8i16 (anyext (v8i8 (extract_high_v16i8 (v16i8 V128:$Rn)) ))),
           (USHLLv16i8_shift V128:$Rn, (i32 0))>;
@@ -10032,8 +10035,10 @@ foreach i = 0-7 in {
 }
 
 let Predicates = [HasLS64] in {
+  let mayLoad = 1 in
   def LD64B: LoadStore64B<0b101, "ld64b", (ins GPR64sp:$Rn),
                                           (outs GPR64x8:$Rt)>;
+  let mayStore = 1 in
   def ST64B: LoadStore64B<0b001, "st64b", (ins GPR64x8:$Rt, GPR64sp:$Rn),
                                           (outs)>;
   def ST64BV:   Store64BV<0b011, "st64bv">;
@@ -10319,13 +10324,13 @@ let Predicates = [HasD128] in {
 // 2023 Architecture Extensions:
 //===----------------------------===//
 
-let Uses = [FPMR, FPCR], Predicates = [HasFP8] in {
-  defm F1CVTL  : SIMDMixedTwoVectorFP8<0b00, "f1cvtl">;
-  defm F2CVTL  : SIMDMixedTwoVectorFP8<0b01, "f2cvtl">;
-  defm BF1CVTL : SIMDMixedTwoVectorFP8<0b10, "bf1cvtl">;
-  defm BF2CVTL : SIMDMixedTwoVectorFP8<0b11, "bf2cvtl">;
-  defm FCVTN_F16_F8 : SIMDThreeSameSizeVectorCvt<"fcvtn">;
-  defm FCVTN_F32_F8 : SIMDThreeVectorCvt<"fcvtn">;
+let Predicates = [HasFP8] in {
+  defm F1CVTL  : SIMD_FP8_CVTL<0b00, "f1cvtl", v8f16, int_aarch64_neon_fp8_cvtl1>;
+  defm F2CVTL  : SIMD_FP8_CVTL<0b01, "f2cvtl", v8f16, int_aarch64_neon_fp8_cvtl2>;
+  defm BF1CVTL : SIMD_FP8_CVTL<0b10, "bf1cvtl", v8bf16, int_aarch64_neon_fp8_cvtl1>;
+  defm BF2CVTL : SIMD_FP8_CVTL<0b11, "bf2cvtl", v8bf16, int_aarch64_neon_fp8_cvtl2>;
+  defm FCVTN_F16 : SIMD_FP8_CVTN_F16<"fcvtn", int_aarch64_neon_fp8_fcvtn>;
+  defm FCVTN_F32 : SIMD_FP8_CVTN_F32<"fcvtn", int_aarch64_neon_fp8_fcvtn>;
   defm FSCALE : SIMDThreeVectorFscale<0b1, 0b1, 0b111, "fscale", int_aarch64_neon_fp8_fscale>;
 } // End let Predicates = [HasFP8]
 
@@ -10348,30 +10353,32 @@ let Predicates = [HasNEON, HasFAMINMAX] in {
  defm FAMIN : SIMDThreeSameVectorFP<0b1, 0b1, 0b011, "famin", AArch64famin>;
 } // End let Predicates = [HasNEON, HasFAMINMAX]
 
-let Uses = [FPMR, FPCR], Predicates = [HasFP8FMA] in {
- defm FMLALBlane : SIMDThreeSameVectorMLAIndex<0b0, "fmlalb">;
- defm FMLALTlane : SIMDThreeSameVectorMLAIndex<0b1, "fmlalt">;
- defm FMLALLBBlane : SIMDThreeSameVectorMLALIndex<0b0, 0b00, "fmlallbb">;
- defm FMLALLBTlane : SIMDThreeSameVectorMLALIndex<0b0, 0b01, "fmlallbt">;
- defm FMLALLTBlane : SIMDThreeSameVectorMLALIndex<0b1, 0b00, "fmlalltb">;
- defm FMLALLTTlane : SIMDThreeSameVectorMLALIndex<0b1, 0b01, "fmlalltt">;
+let Predicates = [HasFP8FMA] in {
+ defm FMLALBlane : SIMDThreeSameVectorMLAIndex<0b0, "fmlalb", int_aarch64_neon_fp8_fmlalb_lane>;
+ defm FMLALTlane : SIMDThreeSameVectorMLAIndex<0b1, "fmlalt", int_aarch64_neon_fp8_fmlalt_lane>;
+ defm FMLALLBBlane : SIMDThreeSameVectorMLALIndex<0b0, 0b00, "fmlallbb", int_aarch64_neon_fp8_fmlallbb_lane>;
+ defm FMLALLBTlane : SIMDThreeSameVectorMLALIndex<0b0, 0b01, "fmlallbt", int_aarch64_neon_fp8_fmlallbt_lane>;
+ defm FMLALLTBlane : SIMDThreeSameVectorMLALIndex<0b1, 0b00, "fmlalltb", int_aarch64_neon_fp8_fmlalltb_lane>;
+ defm FMLALLTTlane : SIMDThreeSameVectorMLALIndex<0b1, 0b01, "fmlalltt", int_aarch64_neon_fp8_fmlalltt_lane>;
+}
 
- defm FMLALB : SIMDThreeSameVectorMLA<0b0, "fmlalb">;
- defm FMLALT : SIMDThreeSameVectorMLA<0b1, "fmlalt">;
- defm FMLALLBB : SIMDThreeSameVectorMLAL<0b0, 0b00, "fmlallbb">;
- defm FMLALLBT : SIMDThreeSameVectorMLAL<0b0, 0b01, "fmlallbt">;
- defm FMLALLTB : SIMDThreeSameVectorMLAL<0b1, 0b00, "fmlalltb">;
- defm FMLALLTT : SIMDThreeSameVectorMLAL<0b1, 0b01, "fmlalltt">;
+let Predicates = [HasFP8FMA], Uses = [FPMR, FPCR], mayLoad = 1 in {
+ defm FMLALB : SIMDThreeSameVectorMLA<0b0, "fmlalb", int_aarch64_neon_fp8_fmlalb>;
+ defm FMLALT : SIMDThreeSameVectorMLA<0b1, "fmlalt", int_aarch64_neon_fp8_fmlalt>;
+ defm FMLALLBB : SIMDThreeSameVectorMLAL<0b0, 0b00, "fmlallbb", int_aarch64_neon_fp8_fmlallbb>;
+ defm FMLALLBT : SIMDThreeSameVectorMLAL<0b0, 0b01, "fmlallbt", int_aarch64_neon_fp8_fmlallbt>;
+ defm FMLALLTB : SIMDThreeSameVectorMLAL<0b1, 0b00, "fmlalltb", int_aarch64_neon_fp8_fmlalltb>;
+ defm FMLALLTT : SIMDThreeSameVectorMLAL<0b1, 0b01, "fmlalltt", int_aarch64_neon_fp8_fmlalltt>;
 } // End let Predicates = [HasFP8FMA]
 
-let Uses = [FPMR, FPCR], Predicates = [HasFP8DOT2] in {
- defm FDOTlane : SIMDThreeSameVectorFP8DOT2Index<"fdot">;
- defm FDOT : SIMDThreeSameVectorDOT2<"fdot">;
+let Predicates = [HasFP8DOT2] in {
+ defm FDOTlane : SIMD_FP8_Dot2_Index<"fdot", int_aarch64_neon_fp8_fdot2_lane>;
+ defm FDOT : SIMD_FP8_Dot2<"fdot", int_aarch64_neon_fp8_fdot2>;
 } // End let Predicates = [HasFP8DOT2]
 
-let Uses = [FPMR, FPCR], Predicates = [HasFP8DOT4] in {
- defm FDOTlane : SIMDThreeSameVectorFP8DOT4Index<"fdot">;
- defm FDOT : SIMDThreeSameVectorDOT4<"fdot">;
+let Predicates = [HasFP8DOT4] in {
+ defm FDOTlane : SIMD_FP8_Dot4_Index<"fdot", int_aarch64_neon_fp8_fdot4_lane>;
+ defm FDOT : SIMD_FP8_Dot4<"fdot", int_aarch64_neon_fp8_fdot4>;
 } // End let Predicates = [HasFP8DOT4]
 
 //===----------------------------------------------------------------------===//
@@ -10415,9 +10422,11 @@ multiclass PromoteUnaryv8f16Tov4f32<SDPatternOperator InOp, Instruction OutInst>
   let Predicates = [HasBF16] in
   def : Pat<(InOp (v8bf16 V128:$Rn)),
             (v8bf16 (BFCVTN2
-              (v8bf16 (BFCVTN
-                (v4f32 (OutInst
-                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))))))),
+              (INSERT_SUBREG (IMPLICIT_DEF),
+                (v4bf16 (BFCVTN
+                  (v4f32 (OutInst
+                    (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))))))),
+                dsub),
               (v4f32 (OutInst (v4f32 (SHLLv8i16 V128:$Rn))))))>;
 
   let Predicates = [HasNoBF16] in
@@ -10452,10 +10461,12 @@ multiclass PromoteBinaryv8f16Tov4f32<SDPatternOperator InOp, Instruction OutInst
   let Predicates = [HasBF16] in
   def : Pat<(InOp (v8bf16 V128:$Rn), (v8bf16 V128:$Rm)),
             (v8bf16 (BFCVTN2
-              (v8bf16 (BFCVTN
-                (v4f32 (OutInst
-                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
-                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub)))))))),
+              (INSERT_SUBREG (IMPLICIT_DEF),
+                (v4bf16 (BFCVTN
+                  (v4f32 (OutInst
+                    (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
+                    (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub)))))))),
+                dsub),
               (v4f32 (OutInst (v4f32 (SHLLv8i16 V128:$Rn)),
                               (v4f32 (SHLLv8i16 V128:$Rm))))))>;
 

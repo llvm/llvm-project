@@ -522,6 +522,7 @@ def HI16ForAddu16idAddiPair: SDNodeXForm<imm, [{
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 def AddrConstant : ComplexPattern<iPTR, 2, "SelectAddrConstant">;
 def NonFIBaseAddr : ComplexPattern<iPTR, 1, "selectNonFIBaseAddr">;
+def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm12">;
 
 def fma_nsz : PatFrag<(ops node:$fj, node:$fk, node:$fa),
                       (fma node:$fj, node:$fk, node:$fa), [{
@@ -2011,6 +2012,14 @@ class PseudoMaskedAMMinMax
 def PseudoMaskedAtomicLoadMax32 : PseudoMaskedAMMinMax;
 def PseudoMaskedAtomicLoadMin32 : PseudoMaskedAMMinMax;
 
+// Data prefetch
+
+// TODO: Supports for preldx instruction.
+def : Pat<(prefetch (AddrRegImm GPR:$rj, simm12:$imm12), (i32 0), timm, (i32 1)),
+          (PRELD 0, GPR:$rj, simm12:$imm12)>; // data prefetch for loads
+def : Pat<(prefetch (AddrRegImm GPR:$rj, simm12:$imm12), (i32 1), timm, (i32 1)),
+          (PRELD 8, GPR:$rj, simm12:$imm12)>; // data prefetch for stores
+
 /// Compare and exchange
 
 class PseudoCmpXchg
@@ -2025,6 +2034,20 @@ class PseudoCmpXchg
 
 def PseudoCmpXchg32 : PseudoCmpXchg;
 def PseudoCmpXchg64 : PseudoCmpXchg;
+
+class PseudoCmpXchg128Pat 
+    : Pseudo<(outs GPR:$res_lo, GPR:$res_hi, GPR:$scratch),
+             (ins GPR:$addr, GPR:$cmpval_lo, GPR:$cmpval_hi, 
+                  GPR:$newval_lo, GPR:$newval_hi)> {
+  let Constraints = "@earlyclobber $res_lo,@earlyclobber $res_hi,@earlyclobber $scratch";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+  let Size = 36;
+}
+
+def PseudoCmpXchg128 : PseudoCmpXchg128Pat;
+def PseudoCmpXchg128Acquire : PseudoCmpXchg128Pat;
 
 def PseudoMaskedCmpXchg32
     : Pseudo<(outs GPR:$res, GPR:$scratch),

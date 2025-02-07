@@ -313,12 +313,9 @@ protected:
   llvm::OpenMPIRBuilder OMPBuilder;
 
   /// Helper to determine the min/max number of threads/teams for \p D.
-  void computeMinAndMaxThreadsAndTeams(const OMPExecutableDirective &D,
-                                       CodeGenFunction &CGF,
-                                       int32_t &MinThreadsVal,
-                                       int32_t &MaxThreadsVal,
-                                       int32_t &MinTeamsVal,
-                                       int32_t &MaxTeamsVal);
+  void computeMinAndMaxThreadsAndTeams(
+      const OMPExecutableDirective &D, CodeGenFunction &CGF,
+      llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &Attrs);
 
   /// Helper to emit outlined function for 'target' directive.
   /// \param D Directive to emit.

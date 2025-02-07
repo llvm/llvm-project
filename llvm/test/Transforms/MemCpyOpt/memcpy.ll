@@ -803,6 +803,19 @@ define void @byval_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
   ret void
 }
 
+define void @byval_param_profile_metadata(ptr align 4 byval(i32) %ptr) {
+; CHECK-LABEL: @byval_param_profile_metadata(
+; CHECK-NEXT:    store i32 1, ptr [[PTR2:%.*]], align 4
+; CHECK-NEXT:    call void @f_byval(ptr byval(i32) align 4 [[PTR2]]), !prof [[PROF3:![0-9]+]], !memprof [[META4:![0-9]+]], !callsite [[META7:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca i32, align 4
+  store i32 1, ptr %ptr
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %tmp, ptr align 4 %ptr, i64 4, i1 false)
+  call void @f_byval(ptr align 4 byval(i32) %tmp), !memprof !3, !callsite !6, !prof !7
+  ret void
+}
+
 define void @memcpy_memory_none(ptr %p, ptr %p2, i64 %size) {
 ; CHECK-LABEL: @memcpy_memory_none(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[P2:%.*]], i64 [[SIZE:%.*]], i1 false) #[[ATTR7:[0-9]+]]
@@ -897,3 +910,8 @@ define void @memcpy_immut_escape_after(ptr align 4 noalias %val) {
 !0 = !{!0}
 !1 = !{!1, !0}
 !2 = !{!1}
+!3 = !{!4}
+!4 = !{!5, !"cold"}
+!5 = !{i64 123, i64 456}
+!6 = !{i64 123}
+!7 = !{!"branch_weights", i32 10}

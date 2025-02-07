@@ -20,6 +20,7 @@ add_flang_library(${CUFRT_LIBNAME}
   kernel.cpp
   memmove-function.cpp
   memory.cpp
+  pointer.cpp
   registration.cpp
 )
 

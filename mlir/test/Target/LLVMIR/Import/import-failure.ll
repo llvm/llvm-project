@@ -13,15 +13,6 @@ bb2:
 ; // -----
 
 ; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled value: ptr asm "bswap $0", "=r,r"
-define i32 @unhandled_value(i32 %arg1) {
-  %1 = call i32 asm "bswap $0", "=r,r"(i32 %arg1)
-  ret i32 %1
-}
-
-; // -----
-
-; CHECK:      <unknown>
 ; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_constant, %bb1) since blockaddress(...) is unsupported
 ; CHECK:      <unknown>
 ; CHECK-SAME: error: unhandled instruction: ret ptr blockaddress(@unhandled_constant, %bb1)

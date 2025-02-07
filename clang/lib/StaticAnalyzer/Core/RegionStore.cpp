@@ -931,7 +931,7 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
     Length = ExtentInt.getLimitedValue() * SVB.getContext().getCharWidth();
   } else if (const FieldRegion *FR = dyn_cast<FieldRegion>(Top)) {
     if (FR->getDecl()->isBitField())
-      Length = FR->getDecl()->getBitWidthValue(SVB.getContext());
+      Length = FR->getDecl()->getBitWidthValue();
   }
 
   for (const auto &StoreEntry : Cluster) {

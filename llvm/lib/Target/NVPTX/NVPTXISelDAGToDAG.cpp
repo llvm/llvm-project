@@ -11,13 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXISelDAGToDAG.h"
+#include "NVPTX.h"
 #include "NVPTXUtilities.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/IR/NVVMIntrinsicFlags.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -190,6 +192,12 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     }
     break;
   }
+  case ISD::FADD:
+  case ISD::FMUL:
+  case ISD::FSUB:
+    if (tryBF16ArithToFMA(N))
+      return;
+    break;
   default:
     break;
   }
@@ -2449,6 +2457,67 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
   return true;
 }
 
+// Select bf16/bf16v2 FADD, FSUB, FMUL as fma on targets with only fma
+bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
+  EVT VT = SDValue(N, 0).getValueType();
+  if (VT.getScalarType() != MVT::bf16)
+    return false;
+
+  const NVPTXSubtarget *STI = TM.getSubtargetImpl();
+  if (STI->hasNativeBF16Support(N->getOpcode()))
+    return false;
+
+  const bool IsVec = VT.isVector();
+  assert(!IsVec || VT.getVectorNumElements() == 2);
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SmallVector<SDValue, 3> Operands;
+  auto GetConstant = [&](float Value) -> SDValue {
+    // BF16 immediates must be legalized to integer register values
+    APFloat APF(Value);
+    bool LosesInfo;
+    APF.convert(APFloat::BFloat(), APFloat::rmNearestTiesToEven, &LosesInfo);
+    assert(!LosesInfo);
+    if (IsVec) {
+      auto API = APF.bitcastToAPInt();
+      API = API.concat(API);
+      auto Const = CurDAG->getTargetConstant(API, DL, MVT::i32);
+      return SDValue(CurDAG->getMachineNode(NVPTX::IMOV32ri, DL, VT, Const), 0);
+    }
+    auto Const = CurDAG->getTargetConstantFP(APF, DL, VT);
+    return SDValue(CurDAG->getMachineNode(NVPTX::BFMOV16ri, DL, VT, Const), 0);
+  };
+
+  switch (N->getOpcode()) {
+  case ISD::FADD:
+    // add(a, b) -> fma(a, 1.0, b)
+    Operands = {N0, GetConstant(1.0), N1};
+    break;
+  case ISD::FSUB:
+    // sub(a, b) -> fma(b, -1.0, a)
+    Operands = {N1, GetConstant(-1.0), N0};
+    break;
+  case ISD::FMUL:
+    // mul(a, b) -> fma(a, b, -0.0)
+    // NOTE: The identity is -0, not 0, because -0 + 0 == 0 for floats
+    Operands = {N0, N1, GetConstant(-0.0)};
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  };
+
+  int Opcode = IsVec ? NVPTX::BFMA16x2rrr : NVPTX::BFMA16rrr;
+  MachineSDNode *FMA = CurDAG->getMachineNode(Opcode, DL, VT, Operands);
+  ReplaceNode(N, FMA);
+  return true;
+}
+
+static inline bool isAddLike(const SDValue V) {
+  return V.getOpcode() == ISD::ADD ||
+         (V->getOpcode() == ISD::OR && V->getFlags().hasDisjoint());
+}
+
 // SelectDirectAddr - Match a direct address for DAG.
 // A direct address could be a globaladdress or externalsymbol.
 bool NVPTXDAGToDAGISel::SelectDirectAddr(SDValue N, SDValue &Address) {
@@ -2473,17 +2542,28 @@ bool NVPTXDAGToDAGISel::SelectDirectAddr(SDValue N, SDValue &Address) {
 }
 
 // symbol+offset
-bool NVPTXDAGToDAGISel::SelectADDRsi_imp(
-    SDNode *OpNode, SDValue Addr, SDValue &Base, SDValue &Offset, MVT mvt) {
-  if (Addr.getOpcode() == ISD::ADD) {
-    if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
-      SDValue base = Addr.getOperand(0);
-      if (SelectDirectAddr(base, Base)) {
-        Offset = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(OpNode),
-                                           mvt);
-        return true;
+bool NVPTXDAGToDAGISel::SelectADDRsi_imp(SDNode *OpNode, SDValue Addr,
+                                         SDValue &Base, SDValue &Offset,
+                                         MVT VT) {
+  std::function<std::optional<uint64_t>(SDValue, uint64_t)>
+      FindRootAddressAndTotalOffset =
+          [&](SDValue Addr,
+              uint64_t AccumulatedOffset) -> std::optional<uint64_t> {
+    if (isAddLike(Addr)) {
+      if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
+        SDValue PossibleBaseAddr = Addr.getOperand(0);
+        AccumulatedOffset += CN->getZExtValue();
+        if (SelectDirectAddr(PossibleBaseAddr, Base))
+          return AccumulatedOffset;
+        return FindRootAddressAndTotalOffset(PossibleBaseAddr,
+                                             AccumulatedOffset);
       }
     }
+    return std::nullopt;
+  };
+  if (auto AccumulatedOffset = FindRootAddressAndTotalOffset(Addr, 0)) {
+    Offset = CurDAG->getTargetConstant(*AccumulatedOffset, SDLoc(OpNode), VT);
+    return true;
   }
   return false;
 }
@@ -2501,18 +2581,19 @@ bool NVPTXDAGToDAGISel::SelectADDRsi64(SDNode *OpNode, SDValue Addr,
 }
 
 // register+offset
-bool NVPTXDAGToDAGISel::SelectADDRri_imp(
-    SDNode *OpNode, SDValue Addr, SDValue &Base, SDValue &Offset, MVT mvt) {
+bool NVPTXDAGToDAGISel::SelectADDRri_imp(SDNode *OpNode, SDValue Addr,
+                                         SDValue &Base, SDValue &Offset,
+                                         MVT VT) {
   if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
-    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), mvt);
-    Offset = CurDAG->getTargetConstant(0, SDLoc(OpNode), mvt);
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
+    Offset = CurDAG->getTargetConstant(0, SDLoc(OpNode), VT);
     return true;
   }
   if (Addr.getOpcode() == ISD::TargetExternalSymbol ||
       Addr.getOpcode() == ISD::TargetGlobalAddress)
     return false; // direct calls.
 
-  if (Addr.getOpcode() == ISD::ADD) {
+  if (isAddLike(Addr)) {
     if (SelectDirectAddr(Addr.getOperand(0), Addr)) {
       return false;
     }
@@ -2520,7 +2601,7 @@ bool NVPTXDAGToDAGISel::SelectADDRri_imp(
       if (FrameIndexSDNode *FIN =
               dyn_cast<FrameIndexSDNode>(Addr.getOperand(0)))
         // Constant offset from frame ref.
-        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), mvt);
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
       else
         Base = Addr.getOperand(0);
 
@@ -3018,6 +3099,94 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorReduceCommon(SDNode *N,
   ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
+void NVPTXDAGToDAGISel::SelectCpAsyncBulkS2G(SDNode *N) {
+  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
+  // dst, src, size, cache_hint, cache_hint_flag
+  // NumOperands = {Chain, IID} + {Actual intrinsic args}
+  //             = {2}          + {5}
+  size_t NumOps = N->getNumOperands();
+  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
+  size_t NumArgs = IsCacheHint ? 4 : 3; // src, dst, size, cache_hint
+
+  SDLoc DL(N);
+  SmallVector<SDValue, 8> Ops(N->ops().slice(2, NumArgs));
+  Ops.push_back(N->getOperand(0)); // Chain operand
+
+  bool IsShared32 =
+      CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED) == 32;
+  unsigned Opcode;
+  if (IsCacheHint)
+    Opcode = IsShared32 ? NVPTX::CP_ASYNC_BULK_S2G_SHARED32_CH
+                        : NVPTX::CP_ASYNC_BULK_S2G_CH;
+  else
+    Opcode = IsShared32 ? NVPTX::CP_ASYNC_BULK_S2G_SHARED32
+                        : NVPTX::CP_ASYNC_BULK_S2G;
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
+}
+
+void NVPTXDAGToDAGISel::SelectCpAsyncBulkG2S(SDNode *N) {
+  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
+  // {dst, mbar, src, size, multicast, cache_hint,
+  // multicast_flag, cache_hint_flag}
+  // NumOperands = {Chain, IID} + {Actual intrinsic args}
+  //             = {2}          + {8}
+  size_t NumOps = N->getNumOperands();
+  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
+  bool IsMultiCast = N->getConstantOperandVal(NumOps - 2) == 1;
+  size_t NumBaseArgs = 4;                // dst, mbar, src, size
+  size_t MultiCastIdx = NumBaseArgs + 2; // for Chain and IID
+
+  SDLoc DL(N);
+  SmallVector<SDValue, 8> Ops(N->ops().slice(2, NumBaseArgs));
+
+  // Push MultiCast operand, if available
+  if (IsMultiCast)
+    Ops.push_back(N->getOperand(MultiCastIdx));
+
+  // Push CacheHint operand, if available
+  if (IsCacheHint)
+    Ops.push_back(N->getOperand(MultiCastIdx + 1));
+
+  // Finally, the chain operand
+  Ops.push_back(N->getOperand(0));
+
+  bool IsShared32 =
+      CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED) == 32;
+  unsigned Opcode = [&]() {
+    if (IsMultiCast && IsCacheHint)
+      return IsShared32 ? NVPTX::CP_ASYNC_BULK_G2S_SHARED32_MC_CH
+                        : NVPTX::CP_ASYNC_BULK_G2S_MC_CH;
+    if (IsMultiCast)
+      return IsShared32 ? NVPTX::CP_ASYNC_BULK_G2S_SHARED32_MC
+                        : NVPTX::CP_ASYNC_BULK_G2S_MC;
+    if (IsCacheHint)
+      return IsShared32 ? NVPTX::CP_ASYNC_BULK_G2S_SHARED32_CH
+                        : NVPTX::CP_ASYNC_BULK_G2S_CH;
+    return IsShared32 ? NVPTX::CP_ASYNC_BULK_G2S_SHARED32
+                      : NVPTX::CP_ASYNC_BULK_G2S;
+  }();
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
+}
+
+void NVPTXDAGToDAGISel::SelectCpAsyncBulkPrefetchL2(SDNode *N) {
+  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
+  // src, size, cache_hint, cache_hint_flag
+  // NumOperands = {Chain, IID} + {Actual intrinsic args}
+  //             = {2}          + {4}
+  size_t NumOps = N->getNumOperands();
+  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
+  size_t NumArgs = IsCacheHint ? 3 : 2; // src, size, cache_hint
+
+  SDLoc DL(N);
+  SmallVector<SDValue, 4> Ops(N->ops().slice(2, NumArgs));
+  Ops.push_back(N->getOperand(0)); // Chain operand
+  
+  unsigned Opcode = IsCacheHint 
+  ?  NVPTX::CP_ASYNC_BULK_PREFETCH_CH
+  :  NVPTX::CP_ASYNC_BULK_PREFETCH;
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
+}
+
 bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
   unsigned IID = N->getConstantOperandVal(1);
   using TMARedTy = llvm::nvvm::TMAReductionOp;
@@ -3025,6 +3194,15 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
   switch (IID) {
   default:
     return false;
+  case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster:
+    SelectCpAsyncBulkG2S(N);
+    return true;
+  case Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global:
+    SelectCpAsyncBulkS2G(N);
+    return true;
+  case Intrinsic::nvvm_cp_async_bulk_prefetch_L2:
+    SelectCpAsyncBulkPrefetchL2(N);
+    return true;
   case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_1d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_2d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_3d:

@@ -13,6 +13,10 @@ module m1
 
 contains
 
+!CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_pointer
+!CHECK-NOT:   fir.call @_FortranAInitializeClone
+!CHECK:       omp.yield
+
 !CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_nested
 !CHECK:       fir.call @_FortranAInitializeClone
 !CHECK-NEXT:  omp.yield
@@ -20,6 +24,9 @@ contains
 !CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_array_of_allocs
 !CHECK:       fir.call @_FortranAInitializeClone
 !CHECK-NEXT:  omp.yield
+!CHECK:       } dealloc {
+!CHECK:       fir.call @_FortranAAllocatableDeallocate
+!CHECK:       omp.yield
 
 !CHECK-LABEL: omp.private {type = firstprivate} @_QMm1Ftest_array
 !CHECK-NOT:   fir.call @_FortranAInitializeClone
@@ -89,6 +96,13 @@ contains
     allocate(d2%d1%a(10))
 
     !$omp parallel private(d2)
+    !$omp end parallel
+  end subroutine
+
+  subroutine test_pointer()
+    type(x), pointer :: ptr
+
+    !$omp parallel private(ptr)
     !$omp end parallel
   end subroutine
 end module

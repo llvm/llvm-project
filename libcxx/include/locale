@@ -219,7 +219,7 @@ template <class charT> class messages_byname;
 #    include <streambuf>
 #    include <version>
 
-// TODO: Properly qualify calls now that __bsd_locale_defaults.h defines functions instead of macros
+// TODO: Properly qualify calls now that the locale base API defines functions instead of macros
 // NOLINTBEGIN(libcpp-robust-against-adl)
 
 #    if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))

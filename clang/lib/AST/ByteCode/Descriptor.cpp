@@ -428,17 +428,17 @@ QualType Descriptor::getElemQualType() const {
 }
 
 SourceLocation Descriptor::getLocation() const {
-  if (auto *D = Source.dyn_cast<const Decl *>())
+  if (auto *D = dyn_cast<const Decl *>(Source))
     return D->getLocation();
-  if (auto *E = Source.dyn_cast<const Expr *>())
+  if (auto *E = dyn_cast<const Expr *>(Source))
     return E->getExprLoc();
   llvm_unreachable("Invalid descriptor type");
 }
 
 SourceInfo Descriptor::getLoc() const {
-  if (const auto *D = Source.dyn_cast<const Decl *>())
+  if (const auto *D = dyn_cast<const Decl *>(Source))
     return SourceInfo(D);
-  if (const auto *E = Source.dyn_cast<const Expr *>())
+  if (const auto *E = dyn_cast<const Expr *>(Source))
     return SourceInfo(E);
   llvm_unreachable("Invalid descriptor type");
 }

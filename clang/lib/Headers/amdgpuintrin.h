@@ -158,16 +158,16 @@ __gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x) {
          ((uint64_t)__builtin_amdgcn_ds_bpermute(__idx << 2, __lo));
 }
 
-// Returns true if the flat pointer points to CUDA 'shared' memory.
+// Returns true if the flat pointer points to AMDGPU 'shared' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {
-  return __builtin_amdgcn_is_shared((void __attribute__((address_space(0))) *)((
+  return __builtin_amdgcn_is_shared((void [[clang::address_space(0)]] *)((
       void [[clang::opencl_generic]] *)ptr));
 }
 
-// Returns true if the flat pointer points to CUDA 'local' memory.
+// Returns true if the flat pointer points to AMDGPU 'private' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(void *ptr) {
-  return __builtin_amdgcn_is_private((void __attribute__((
-      address_space(0))) *)((void [[clang::opencl_generic]] *)ptr));
+  return __builtin_amdgcn_is_private((void [[clang::address_space(0)]] *)((
+      void [[clang::opencl_generic]] *)ptr));
 }
 
 // Terminates execution of the associated wavefront.

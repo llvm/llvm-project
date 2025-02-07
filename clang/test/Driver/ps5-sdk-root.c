@@ -1,12 +1,12 @@
 /// (Essentially identical to ps4-sdk-root.c except for the target.)
 
 /// PS5 clang emits warnings when SDK headers (<SDKROOT>/target/include/) or
-/// libraries (<SDKROOT>/target/lib/) are missing, unless the user takes control
-/// of search paths, when corresponding existence checks are skipped.
+/// libraries (<SDKROOT>/target/lib/) are missing. If the the user takes control
+/// of header search paths, the existence check for <SDKROOT>/target/include is
+/// skipped.
 ///
 /// User control of header search is assumed if `--sysroot`, `-isysroot`,
-/// `-nostdinc` or `-nostdlibinc` is supplied. User control of library search
-/// is assumed if `--sysroot` is supplied.
+/// `-nostdinc` or `-nostdlibinc` is supplied.
 ///
 /// Warnings are emitted if a specified `-isysroot` or `--sysroot` does not
 /// exist.
@@ -48,22 +48,23 @@
 // RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s -c -isysroot . 2>&1 | FileCheck -check-prefixes=NO-WARN %s
 // RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s -c --sysroot=. 2>&1 | FileCheck -check-prefixes=NO-WARN %s
 
-/// --sysroot disables the existence check for libraries and headers.
-// RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s --sysroot=. 2>&1 | FileCheck -check-prefix=NO-WARN %s
+/// --sysroot disables the existence check for headers. The check for libraries
+/// remains.
+// RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s --sysroot=. 2>&1 | FileCheck -check-prefixes=WARN-SYS-LIBS,NO-WARN %s
 
 /// -isysroot overrides --sysroot for header search, but not library search.
-// RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s -isysroot . --sysroot=.. 2>&1 | FileCheck -check-prefixes=ISYSTEM,NO-WARN %s
-// RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s --sysroot=.. -isysroot . 2>&1 | FileCheck -check-prefixes=ISYSTEM,NO-WARN %s
+// RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s -isysroot . --sysroot=%t.inconly 2>&1 | FileCheck -check-prefixes=ISYSTEM,WARN-SYS-LIBS,NO-WARN %s
+// RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s --sysroot=%t.inconly -isysroot . 2>&1 | FileCheck -check-prefixes=ISYSTEM,WARN-SYS-LIBS,NO-WARN %s
 
 /// Warnings are emitted if non-existent --sysroot/-isysroot are supplied.
-// RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s --sysroot=foo -isysroot . 2>&1 | FileCheck -check-prefixes=WARN-SYSROOT,NO-WARN %s
-// RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s -isysroot foo --sysroot=. 2>&1 | FileCheck -check-prefixes=WARN-SYSROOT,NO-WARN %s
-// RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s --sysroot=foo -isysroot bar 2>&1 | FileCheck -check-prefixes=WARN-SYSROOT,WARN-SYSROOT2,NO-WARN %s
+// RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s --sysroot=foo -isysroot %t.both 2>&1 | FileCheck -check-prefixes=WARN-SYSROOT,WARN-SYS-LIBS,NO-WARN %s
+// RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s -isysroot foo --sysroot=%t.both 2>&1 | FileCheck -check-prefixes=WARN-SYSROOT,NO-WARN %s
+// RUN: env SCE_PROSPERO_SDK_DIR=.. %clang @%t.rsp %s --sysroot=foo -isysroot bar 2>&1 | FileCheck -check-prefixes=WARN-SYSROOT,WARN-SYSROOT2,WARN-SYS-LIBS,NO-WARN %s
 
 // NO-WARN-NOT: {{warning:|error:}}
-// WARN-SYS-LIBS: warning: unable to find PS5 system libraries directory
-// WARN-SYS-HEADERS: warning: unable to find PS5 system headers directory
 // WARN-SYSROOT: warning: no such sysroot directory: 'foo'
 // WARN-SYSROOT2: warning: no such sysroot directory: 'bar'
+// WARN-SYS-LIBS: warning: unable to find PS5 system libraries directory
+// WARN-SYS-HEADERS: warning: unable to find PS5 system headers directory
 // NO-WARN-NOT: {{warning:|error:}}
 // ISYSTEM: "-cc1"{{.*}}"-internal-externc-isystem" "./target/include"

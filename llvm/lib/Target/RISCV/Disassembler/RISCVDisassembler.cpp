@@ -45,6 +45,10 @@ public:
 private:
   void addSPOperands(MCInst &MI) const;
 
+  DecodeStatus getInstruction48(MCInst &Instr, uint64_t &Size,
+                                ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                raw_ostream &CStream) const;
+
   DecodeStatus getInstruction32(MCInst &Instr, uint64_t &Size,
                                 ArrayRef<uint8_t> Bytes, uint64_t Address,
                                 raw_ostream &CStream) const;
@@ -290,6 +294,16 @@ static DecodeStatus DecodeVRM8RegisterClass(MCInst &Inst, uint32_t RegNo,
                               &RISCVMCRegisterClasses[RISCV::VRM8RegClassID]);
 
   Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeVMV0RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  if (RegNo)
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createReg(RISCV::V0));
   return MCDisassembler::Success;
 }
 
@@ -667,6 +681,11 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                         "SiFive sf.cflush.d.l1 custom opcode table");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfcease, DecoderTableXSfcease32,
                         "SiFive sf.cease custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXMIPSLSP, DecoderTableXmipslsp32,
+                        "MIPS mips.lsp custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXMIPSCMove,
+                        DecoderTableXmipscmove32,
+                        "MIPS mips.ccmov custom opcode table");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbitmanip,
                         DecoderTableXCVbitmanip32,
                         "CORE-V Bit Manipulation custom opcode table");
@@ -695,6 +714,13 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE(
       RISCV::FeatureVendorXqciac, DecoderTableXqciac32,
       "Qualcomm uC Load-Store Address Calculation custom opcode table");
+  TRY_TO_DECODE_FEATURE(
+      RISCV::FeatureVendorXqcicli, DecoderTableXqcicli32,
+      "Qualcomm uC Conditional Load Immediate custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcicm, DecoderTableXqcicm32,
+                        "Qualcomm uC Conditional Move custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqciint, DecoderTableXqciint32,
+                        "Qualcomm uC Interrupts custom opcode table");
   TRY_TO_DECODE(true, DecoderTable32, "RISCV32 table");
 
   return MCDisassembler::Fail;
@@ -724,11 +750,37 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE(
       RISCV::FeatureVendorXqciac, DecoderTableXqciac16,
       "Qualcomm uC Load-Store Address Calculation custom 16bit opcode table");
+  TRY_TO_DECODE_FEATURE(
+      RISCV::FeatureVendorXqcicm, DecoderTableXqcicm16,
+      "Qualcomm uC Conditional Move custom 16bit opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqciint, DecoderTableXqciint16,
+                        "Qualcomm uC Interrupts custom 16bit opcode table");
   TRY_TO_DECODE_AND_ADD_SP(STI.hasFeature(RISCV::FeatureVendorXwchc),
                            DecoderTableXwchc16,
                            "WCH QingKe XW custom opcode table");
   TRY_TO_DECODE_AND_ADD_SP(true, DecoderTable16,
                            "RISCV_C table (16-bit Instruction)");
+
+  return MCDisassembler::Fail;
+}
+
+DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
+                                                 ArrayRef<uint8_t> Bytes,
+                                                 uint64_t Address,
+                                                 raw_ostream &CS) const {
+  if (Bytes.size() < 6) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+  Size = 6;
+
+  uint64_t Insn = 0;
+  for (size_t i = Size; i-- != 0;) {
+    Insn += (static_cast<uint64_t>(Bytes[i]) << 8 * i);
+  }
+  TRY_TO_DECODE_FEATURE(
+      RISCV::FeatureVendorXqcilo, DecoderTableXqcilo48,
+      "Qualcomm uC Large Offset Load Store custom 48bit opcode table");
 
   return MCDisassembler::Fail;
 }
@@ -748,8 +800,7 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   // 48-bit instructions are encoded as 0bxx011111.
   if ((Bytes[0] & 0b11'1111) == 0b01'1111) {
-    Size = Bytes.size() >= 6 ? 6 : 0;
-    return MCDisassembler::Fail;
+    return getInstruction48(MI, Size, Bytes, Address, CS);
   }
 
   // 64-bit instructions are encoded as 0x0111111.

@@ -941,8 +941,8 @@ bool LLParser::parseMDNodeID(MDNode *&Result) {
     return true;
 
   // If not a forward reference, just return it now.
-  if (NumberedMetadata.count(MID)) {
-    Result = NumberedMetadata[MID];
+  if (auto It = NumberedMetadata.find(MID); It != NumberedMetadata.end()) {
+    Result = It->second;
     return false;
   }
 
@@ -1644,6 +1644,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     return parseRangeAttr(B);
   case Attribute::Initializes:
     return parseInitializesAttr(B);
+  case Attribute::Captures:
+    return parseCapturesAttr(B);
   default:
     B.addAttribute(Attr);
     Lex.Lex();
@@ -2973,7 +2975,7 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
         return tokError("pointers to void are invalid - use i8* instead");
       if (!PointerType::isValidElementType(Result))
         return tokError("pointer to this type is invalid");
-      Result = PointerType::getUnqual(Result);
+      Result = PointerType::getUnqual(Context);
       Lex.Lex();
       break;
 
@@ -2990,7 +2992,7 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
           parseToken(lltok::star, "expected '*' in address space"))
         return true;
 
-      Result = PointerType::get(Result, AddrSpace);
+      Result = PointerType::get(Context, AddrSpace);
       break;
     }
 
@@ -3162,6 +3164,65 @@ bool LLParser::parseInitializesAttr(AttrBuilder &B) {
   if (!CRLOrNull.has_value())
     return tokError("Invalid (unordered or overlapping) range list");
   B.addInitializesAttr(*CRLOrNull);
+  return false;
+}
+
+bool LLParser::parseCapturesAttr(AttrBuilder &B) {
+  CaptureComponents Other = CaptureComponents::None;
+  std::optional<CaptureComponents> Ret;
+
+  // We use syntax like captures(ret: address, provenance), so the colon
+  // should not be interpreted as a label terminator.
+  Lex.setIgnoreColonInIdentifiers(true);
+  auto _ = make_scope_exit([&] { Lex.setIgnoreColonInIdentifiers(false); });
+
+  Lex.Lex();
+  if (parseToken(lltok::lparen, "expected '('"))
+    return true;
+
+  CaptureComponents *Current = &Other;
+  bool SeenComponent = false;
+  while (true) {
+    if (EatIfPresent(lltok::kw_ret)) {
+      if (parseToken(lltok::colon, "expected ':'"))
+        return true;
+      if (Ret)
+        return tokError("duplicate 'ret' location");
+      Ret = CaptureComponents::None;
+      Current = &*Ret;
+      SeenComponent = false;
+    }
+
+    if (EatIfPresent(lltok::kw_none)) {
+      if (SeenComponent)
+        return tokError("cannot use 'none' with other component");
+      *Current = CaptureComponents::None;
+    } else {
+      if (SeenComponent && capturesNothing(*Current))
+        return tokError("cannot use 'none' with other component");
+
+      if (EatIfPresent(lltok::kw_address_is_null))
+        *Current |= CaptureComponents::AddressIsNull;
+      else if (EatIfPresent(lltok::kw_address))
+        *Current |= CaptureComponents::Address;
+      else if (EatIfPresent(lltok::kw_provenance))
+        *Current |= CaptureComponents::Provenance;
+      else if (EatIfPresent(lltok::kw_read_provenance))
+        *Current |= CaptureComponents::ReadProvenance;
+      else
+        return tokError("expected one of 'none', 'address', 'address_is_null', "
+                        "'provenance' or 'read_provenance'");
+    }
+
+    SeenComponent = true;
+    if (EatIfPresent(lltok::rparen))
+      break;
+
+    if (parseToken(lltok::comma, "expected ',' or ')'"))
+      return true;
+  }
+
+  B.addCapturesAttr(CaptureInfo(Other, Ret.value_or(Other)));
   return false;
 }
 
@@ -6454,7 +6515,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
     return error(RetTypeLoc, "functions with 'sret' argument must return void");
 
   FunctionType *FT = FunctionType::get(RetType, ParamTypeList, IsVarArg);
-  PointerType *PFT = PointerType::get(FT, AddrSpace);
+  PointerType *PFT = PointerType::get(Context, AddrSpace);
 
   Fn = nullptr;
   GlobalValue *FwdFn = nullptr;
@@ -7349,7 +7410,7 @@ bool LLParser::parseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
 
   // Look up the callee.
   Value *Callee;
-  if (convertValIDToValue(PointerType::get(Ty, InvokeAddrSpace), CalleeID,
+  if (convertValIDToValue(PointerType::get(Context, InvokeAddrSpace), CalleeID,
                           Callee, &PFS))
     return true;
 
@@ -7663,7 +7724,8 @@ bool LLParser::parseCallBr(Instruction *&Inst, PerFunctionState &PFS) {
 
   // Look up the callee.
   Value *Callee;
-  if (convertValIDToValue(PointerType::getUnqual(Ty), CalleeID, Callee, &PFS))
+  if (convertValIDToValue(PointerType::getUnqual(Context), CalleeID, Callee,
+                          &PFS))
     return true;
 
   // Set up the Attribute for the function.
@@ -8054,8 +8116,8 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
 
   // Look up the callee.
   Value *Callee;
-  if (convertValIDToValue(PointerType::get(Ty, CallAddrSpace), CalleeID, Callee,
-                          &PFS))
+  if (convertValIDToValue(PointerType::get(Context, CallAddrSpace), CalleeID,
+                          Callee, &PFS))
     return true;
 
   // Set up the Attribute for the function.

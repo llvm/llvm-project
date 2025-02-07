@@ -321,7 +321,7 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
     if (Ptr.isDynamic()) {
       S.FFDiag(Src, diag::note_constexpr_access_deleted_object) << AK;
-    } else {
+    } else if (!S.checkingPotentialConstantExpression()) {
       bool IsTemp = Ptr.isTemporary();
       S.FFDiag(Src, diag::note_constexpr_lifetime_ended, 1) << AK << !IsTemp;
 
@@ -416,9 +416,11 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 AccessKinds AK) {
   if (!Ptr.isOnePastEnd())
     return true;
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_access_past_end)
-      << AK << S.Current->getRange(OpPC);
+  if (S.getLangOpts().CPlusPlus) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+        << AK << S.Current->getRange(OpPC);
+  }
   return false;
 }
 
@@ -538,7 +540,7 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return true;
 
   if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
-      VD && VD->hasGlobalStorage()) {
+      VD && (VD->isConstexpr() || VD->hasGlobalStorage())) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     if (VD->getAnyInitializer()) {
       S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
@@ -871,12 +873,16 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
 
 bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
                        const Pointer &Ptr) {
-  // The two sources we currently allow are new expressions and
-  // __builtin_operator_new calls.
+  // Regular new type(...) call.
   if (isa_and_nonnull<CXXNewExpr>(Source))
     return true;
-  if (const CallExpr *CE = dyn_cast_if_present<CallExpr>(Source);
+  // operator new.
+  if (const auto *CE = dyn_cast_if_present<CallExpr>(Source);
       CE && CE->getBuiltinCallee() == Builtin::BI__builtin_operator_new)
+    return true;
+  // std::allocator.allocate() call
+  if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(Source);
+      MCE && MCE->getMethodDecl()->getIdentifier()->isStr("allocate"))
     return true;
 
   // Whatever this is, we didn't heap allocate it.
@@ -1487,7 +1493,8 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   const auto *NewExpr = cast<CXXNewExpr>(E);
   QualType StorageType = Ptr.getType();
 
-  if (isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr()) &&
+  if ((isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr()) ||
+       isa_and_nonnull<CXXMemberCallExpr>(Ptr.getFieldDesc()->asExpr())) &&
       StorageType->isPointerType()) {
     // FIXME: Are there other cases where this is a problem?
     StorageType = StorageType->getPointeeType();

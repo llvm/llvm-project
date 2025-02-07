@@ -580,7 +580,7 @@ void sinkSpillUsesAfterCoroBegin(const DominatorTree &Dom,
 
   Instruction *InsertPt = CoroBegin->getNextNode();
   for (Instruction *Inst : InsertionList)
-    Inst->moveBefore(InsertPt);
+    Inst->moveBefore(InsertPt->getIterator());
 }
 
 BasicBlock::iterator getSpillInsertionPt(const coro::Shape &Shape, Value *Def,

@@ -137,12 +137,12 @@ public:
 private:
   ScopeType getScopeType(const FormatToken &Token) const {
     switch (Token.getType()) {
-    case TT_LambdaLBrace:
-      return ST_ChildBlock;
     case TT_ClassLBrace:
     case TT_StructLBrace:
     case TT_UnionLBrace:
       return ST_Class;
+    case TT_CompoundRequirementLBrace:
+      return ST_CompoundRequirement;
     default:
       return ST_Other;
     }
@@ -252,10 +252,10 @@ private:
       // parameters.
       // FIXME: This is getting out of hand, write a decent parser.
       if (MaybeAngles && InExpr && !Line.startsWith(tok::kw_template) &&
-          Prev.is(TT_BinaryOperator)) {
-        const auto Precedence = Prev.getPrecedence();
-        if (Precedence > prec::Conditional && Precedence < prec::Relational)
-          MaybeAngles = false;
+          Prev.is(TT_BinaryOperator) &&
+          (Prev.isOneOf(tok::pipepipe, tok::ampamp) ||
+           Prev.getPrecedence() == prec::Equality)) {
+        MaybeAngles = false;
       }
       if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
         SeenTernaryOperator = true;
@@ -1115,7 +1115,7 @@ private:
       }
       if (!CurrentToken || CurrentToken->isNot(tok::l_paren))
         return false;
-      skipToNextNonComment();
+      next();
       // FIXME: Hack using inheritance to child context
       Contexts.back().IsTableGenBangOpe = true;
       bool Result = parseParens();
@@ -1124,12 +1124,10 @@ private:
     }
     // SimpleValue 9: Cond operator
     if (Tok->is(TT_TableGenCondOperator)) {
-      Tok = CurrentToken;
-      skipToNextNonComment();
-      if (!Tok || Tok->isNot(tok::l_paren))
+      if (!CurrentToken || CurrentToken->isNot(tok::l_paren))
         return false;
-      bool Result = parseParens();
-      return Result;
+      next();
+      return parseParens();
     }
     // We have to check identifier at the last because the kind of bang/cond
     // operators are also identifier.
@@ -1580,7 +1578,10 @@ private:
         return false;
       break;
     case tok::l_brace:
-      if (Style.Language == FormatStyle::LK_TextProto) {
+      if (IsCpp) {
+        if (Tok->is(TT_RequiresExpressionLBrace))
+          Line.Type = LT_RequiresExpression;
+      } else if (Style.Language == FormatStyle::LK_TextProto) {
         FormatToken *Previous = Tok->getPreviousNonComment();
         if (Previous && Previous->isNot(TT_DictLiteral))
           Previous->setType(TT_SelectorName);
@@ -2022,8 +2023,11 @@ public:
       if (!consumeToken())
         return LT_Invalid;
     }
-    if (Line.Type == LT_AccessModifier)
-      return LT_AccessModifier;
+    if (const auto Type = Line.Type; Type == LT_AccessModifier ||
+                                     Type == LT_RequiresExpression ||
+                                     Type == LT_SimpleRequirement) {
+      return Type;
+    }
     if (KeywordVirtualFound)
       return LT_VirtualFunctionDecl;
     if (ImportStatement)
@@ -2076,7 +2080,7 @@ private:
             TT_RecordLBrace, TT_StructLBrace, TT_UnionLBrace, TT_RequiresClause,
             TT_RequiresClauseInARequiresExpression, TT_RequiresExpression,
             TT_RequiresExpressionLParen, TT_RequiresExpressionLBrace,
-            TT_BracedListLBrace)) {
+            TT_CompoundRequirementLBrace, TT_BracedListLBrace)) {
       CurrentToken->setType(TT_Unknown);
     }
     CurrentToken->Role.reset();
@@ -3100,6 +3104,11 @@ private:
       }
     }
 
+    if (Line.Type == LT_SimpleRequirement ||
+        (!Scopes.empty() && Scopes.back() == ST_CompoundRequirement)) {
+      return TT_BinaryOperator;
+    }
+
     return TT_PointerOrReference;
   }
 
@@ -3382,13 +3391,13 @@ private:
   /// Parse unary operator expressions and surround them with fake
   /// parentheses if appropriate.
   void parseUnaryOperator() {
-    llvm::SmallVector<FormatToken *, 2> Tokens;
+    SmallVector<FormatToken *, 2> Tokens;
     while (Current && Current->is(TT_UnaryOperator)) {
       Tokens.push_back(Current);
       next();
     }
     parse(PrecedenceArrowAndPeriod);
-    for (FormatToken *Token : llvm::reverse(Tokens)) {
+    for (FormatToken *Token : reverse(Tokens)) {
       // The actual precedence doesn't matter.
       addFakeParenthesis(Token, prec::Unknown);
     }
@@ -3566,7 +3575,7 @@ private:
 void TokenAnnotator::setCommentLineLevels(
     SmallVectorImpl<AnnotatedLine *> &Lines) const {
   const AnnotatedLine *NextNonCommentLine = nullptr;
-  for (AnnotatedLine *Line : llvm::reverse(Lines)) {
+  for (AnnotatedLine *Line : reverse(Lines)) {
     assert(Line->First);
 
     // If the comment is currently aligned with the line immediately following
@@ -3687,9 +3696,16 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
   Line.Type = Parser.parseLine();
 
   if (!Line.Children.empty()) {
-    ScopeStack.push_back(ST_ChildBlock);
-    for (auto &Child : Line.Children)
+    ScopeStack.push_back(ST_Other);
+    const bool InRequiresExpression = Line.Type == LT_RequiresExpression;
+    for (auto &Child : Line.Children) {
+      if (InRequiresExpression &&
+          !Child->First->isOneOf(tok::kw_typename, tok::kw_requires,
+                                 TT_CompoundRequirementLBrace)) {
+        Child->Type = LT_SimpleRequirement;
+      }
       annotate(*Child);
+    }
     // ScopeStack can become empty if Child has an unmatched `}`.
     if (!ScopeStack.empty())
       ScopeStack.pop_back();
@@ -3766,7 +3782,7 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
         return Next;
       if (Next->is(TT_OverloadedOperator))
         continue;
-      if (Next->isOneOf(tok::kw_new, tok::kw_delete)) {
+      if (Next->isOneOf(tok::kw_new, tok::kw_delete, tok::kw_co_await)) {
         // For 'new[]' and 'delete[]'.
         if (Next->Next &&
             Next->Next->startsSequence(tok::l_square, tok::r_square)) {
@@ -4297,9 +4313,11 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     //
     //   aaaaaaa
     //       .aaaaaaaaa.bbbbbbbb(cccccccc);
-    return !Right.NextOperator || !Right.NextOperator->Previous->closesScope()
-               ? 150
-               : 35;
+    const auto *NextOperator = Right.NextOperator;
+    const auto Penalty = Style.PenaltyBreakBeforeMemberAccess;
+    return NextOperator && NextOperator->Previous->closesScope()
+               ? std::min(Penalty, 35u)
+               : Penalty;
   }
 
   if (Right.is(TT_TrailingAnnotation) &&
@@ -4941,6 +4959,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Right.is(TT_ModulePartitionColon)) {
       return true;
     }
+
+    if (Right.is(TT_AfterPPDirective))
+      return true;
+
     // No space between import foo:bar but keep a space between import :bar;
     if (Left.is(tok::identifier) && Right.is(TT_ModulePartitionColon))
       return false;
@@ -5466,8 +5488,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   }
   if ((Left.is(TT_TemplateOpener)) != (Right.is(TT_TemplateCloser)))
     return ShouldAddSpacesInAngles();
-  if (Left.is(tok::r_paren) && Right.is(TT_PointerOrReference) &&
-      Right.isOneOf(tok::amp, tok::ampamp)) {
+  if (Left.is(tok::r_paren) && Left.isNot(TT_TypeDeclarationParen) &&
+      Right.is(TT_PointerOrReference) && Right.isOneOf(tok::amp, tok::ampamp)) {
     return true;
   }
   // Space before TT_StructuredBindingLSquare.

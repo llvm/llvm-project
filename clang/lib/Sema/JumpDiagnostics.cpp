@@ -561,12 +561,12 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     // implementable but a lot of work which we haven't felt up to doing.
     ExprWithCleanups *EWC = cast<ExprWithCleanups>(S);
     for (unsigned i = 0, e = EWC->getNumObjects(); i != e; ++i) {
-      if (auto *BDecl = EWC->getObject(i).dyn_cast<BlockDecl *>())
+      if (auto *BDecl = dyn_cast<BlockDecl *>(EWC->getObject(i)))
         for (const auto &CI : BDecl->captures()) {
           VarDecl *variable = CI.getVariable();
           BuildScopeInformation(variable, BDecl, origParentScope);
         }
-      else if (auto *CLE = EWC->getObject(i).dyn_cast<CompoundLiteralExpr *>())
+      else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(EWC->getObject(i)))
         BuildScopeInformation(CLE, origParentScope);
       else
         llvm_unreachable("unexpected cleanup object type");

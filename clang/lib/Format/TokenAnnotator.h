@@ -33,14 +33,16 @@ enum LineType {
   LT_VirtualFunctionDecl,
   LT_ArrayOfStructInitializer,
   LT_CommentAbovePPDirective,
+  LT_RequiresExpression,
+  LT_SimpleRequirement,
 };
 
 enum ScopeType {
-  // Contained in child block.
-  ST_ChildBlock,
   // Contained in class declaration/definition.
   ST_Class,
-  // Contained within other scope block (function, loop, if/else, etc).
+  // Contained in compound requirement.
+  ST_CompoundRequirement,
+  // Contained in other blocks (function, lambda, loop, if/else, child, etc).
   ST_Other,
 };
 
@@ -150,6 +152,11 @@ public:
     return startsWith(tok::kw_namespace) || startsWith(TT_NamespaceMacro) ||
            startsWith(tok::kw_inline, tok::kw_namespace) ||
            startsWith(tok::kw_export, tok::kw_namespace);
+  }
+
+  /// \c true if this line starts a C++ export block.
+  bool startsWithExportBlock() const {
+    return startsWith(tok::kw_export, tok::l_brace);
   }
 
   FormatToken *getFirstNonComment() const {

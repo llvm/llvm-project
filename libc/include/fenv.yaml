@@ -1,4 +1,5 @@
 header: fenv.h
+header_template: fenv.h.def
 macros: []
 types:
   - type_name: fenv_t

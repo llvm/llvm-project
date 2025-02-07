@@ -90,43 +90,54 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   }
 
   // tosa::MulOp
-  if (isa<tosa::MulOp>(op) && isa<FloatType>(elementTy))
-    return rewriter.create<arith::MulFOp>(loc, resultTypes, args);
+  if (isa<tosa::MulOp>(op)) {
+    auto shift_val = cast<tosa::MulOp>(op).getShift();
 
-  if (isa<tosa::MulOp>(op) && isa<IntegerType>(elementTy)) {
-    Value a = args[0];
-    Value b = args[1];
-    auto shift =
-        cast<IntegerAttr>(op->getAttr("shift")).getValue().getSExtValue();
-    if (shift > 0) {
-      auto shiftConst =
-          rewriter.create<arith::ConstantIntOp>(loc, shift, /*bitwidth=*/8);
-      if (!a.getType().isInteger(32))
-        a = rewriter.create<arith::ExtSIOp>(loc, rewriter.getI32Type(), a);
-
-      if (!b.getType().isInteger(32))
-        b = rewriter.create<arith::ExtSIOp>(loc, rewriter.getI32Type(), b);
-
-      auto result = rewriter.create<tosa::ApplyScaleOp>(
-          loc, rewriter.getI32Type(), a, b, shiftConst,
-          rewriter.getBoolAttr(false));
-
-      if (elementTy.isInteger(32))
-        return result;
-
-      return rewriter.create<arith::TruncIOp>(loc, elementTy, result);
+    if (isa<FloatType>(elementTy)) {
+      return rewriter.create<arith::MulFOp>(loc, resultTypes, args[0], args[1]);
     }
 
-    int aWidth = a.getType().getIntOrFloatBitWidth();
-    int bWidth = b.getType().getIntOrFloatBitWidth();
-    int cWidth = resultTypes[0].getIntOrFloatBitWidth();
+    if (isa<IntegerType>(elementTy)) {
+      int32_t shift = 0;
+      ElementsAttr shift_elem;
+      if (shift_val.getImpl() &&
+          matchPattern(shift_val, m_Constant(&shift_elem))) {
+        // Explicit shift is set.
+        shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+      }
 
-    if (aWidth < cWidth)
-      a = rewriter.create<arith::ExtSIOp>(loc, resultTypes[0], a);
-    if (bWidth < cWidth)
-      b = rewriter.create<arith::ExtSIOp>(loc, resultTypes[0], b);
+      Value a = args[0];
+      Value b = args[1];
+      if (shift > 0) {
+        auto shiftConst =
+            rewriter.create<arith::ConstantIntOp>(loc, shift, /*bitwidth=*/8);
+        if (!a.getType().isInteger(32))
+          a = rewriter.create<arith::ExtSIOp>(loc, rewriter.getI32Type(), a);
 
-    return rewriter.create<arith::MulIOp>(loc, resultTypes, a, b);
+        if (!b.getType().isInteger(32))
+          b = rewriter.create<arith::ExtSIOp>(loc, rewriter.getI32Type(), b);
+
+        auto result = rewriter.create<tosa::ApplyScaleOp>(
+            loc, rewriter.getI32Type(), a, b, shiftConst,
+            rewriter.getBoolAttr(false));
+
+        if (elementTy.isInteger(32))
+          return result;
+
+        return rewriter.create<arith::TruncIOp>(loc, elementTy, result);
+      }
+
+      int aWidth = a.getType().getIntOrFloatBitWidth();
+      int bWidth = b.getType().getIntOrFloatBitWidth();
+      int cWidth = resultTypes[0].getIntOrFloatBitWidth();
+
+      if (aWidth < cWidth)
+        a = rewriter.create<arith::ExtSIOp>(loc, resultTypes[0], a);
+      if (bWidth < cWidth)
+        b = rewriter.create<arith::ExtSIOp>(loc, resultTypes[0], b);
+
+      return rewriter.create<arith::MulIOp>(loc, resultTypes, a, b);
+    }
   }
 
   // tosa::NegateOp
@@ -600,30 +611,33 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 static Value expandRank(PatternRewriter &rewriter, Location loc, Value tensor,
                         int64_t rank) {
   // No need to expand if we are already at the desired rank
-  auto shapedType = dyn_cast<ShapedType>(tensor.getType());
-  assert(shapedType && shapedType.hasRank() && "expected a ranked shaped type");
-  int64_t numExtraDims = rank - shapedType.getRank();
+  auto tensorType = dyn_cast<RankedTensorType>(tensor.getType());
+  assert(tensorType && "expected a ranked tensor type");
+  int64_t tensorRank = tensorType.getRank();
+  int64_t numExtraDims = rank - tensorRank;
   assert(numExtraDims >= 0 && "cannot expand tensor to a lower rank");
   if (!numExtraDims)
     return tensor;
 
   // Compute reassociation indices
-  SmallVector<SmallVector<int64_t, 2>> reassociationIndices(
-      shapedType.getRank());
+  SmallVector<ReassociationIndices> reassociationIndices(tensorRank);
   int64_t index = 0;
-  for (index = 0; index <= numExtraDims; index++)
-    reassociationIndices[0].push_back(index);
-  for (size_t position = 1; position < reassociationIndices.size(); position++)
-    reassociationIndices[position].push_back(index++);
+  if (tensorRank != 0) {
+    for (index = 0; index <= numExtraDims; index++)
+      reassociationIndices[0].push_back(index);
+    for (size_t position = 1; position < reassociationIndices.size();
+         position++)
+      reassociationIndices[position].push_back(index++);
+  }
 
   // Compute result type
   SmallVector<int64_t> resultShape;
   for (index = 0; index < numExtraDims; index++)
     resultShape.push_back(1);
-  for (auto size : shapedType.getShape())
+  for (auto size : tensorType.getShape())
     resultShape.push_back(size);
   auto resultType =
-      RankedTensorType::get(resultShape, shapedType.getElementType());
+      RankedTensorType::get(resultShape, tensorType.getElementType());
 
   // Emit 'tensor.expand_shape' op
   return rewriter.create<tensor::ExpandShapeOp>(loc, resultType, tensor,
@@ -879,8 +893,14 @@ emitElementwiseComputation(ConversionPatternRewriter &rewriter, Location loc,
     auto shape = cast<ShapedType>(operand.getType()).getShape();
     SmallVector<AffineExpr> affineExprs;
     for (auto it : llvm::enumerate(shape)) {
-      auto affineExpr = it.value() == 1 ? rewriter.getAffineConstantExpr(0)
-                                        : rewriter.getAffineDimExpr(it.index());
+      // Prefer producting identity maps whenever possible (i.e. no broadcasting
+      // needed) because some transforms (like reshape folding)
+      // do not support affine constant exprs.
+      bool requiresBroadcast =
+          (it.value() == 1 && resultType.getDimSize(it.index()) != 1);
+      auto affineExpr = requiresBroadcast
+                            ? rewriter.getAffineConstantExpr(0)
+                            : rewriter.getAffineDimExpr(it.index());
       affineExprs.push_back(affineExpr);
     }
     return AffineMap::get(rank, 0, affineExprs, rewriter.getContext());
@@ -931,7 +951,13 @@ elementwiseMatchAndRewriteHelper(Operation *operation, ValueRange operands,
   auto loc = operation->getLoc();
   auto rank =
       cast<RankedTensorType>(operation->getResultTypes().front()).getRank();
-  auto expandedOperands = expandInputRanks(rewriter, loc, operands, rank);
+  // For the mul op we need to avoid expanding the rank of the optional shift
+  // input.
+  auto operandsToExpand =
+      isa<tosa::MulOp>(operation) ? operands.take_front(2) : operands;
+
+  auto expandedOperands =
+      expandInputRanks(rewriter, loc, operandsToExpand, rank);
   auto [targetShape, masterOperands] =
       computeTargetShape(rewriter, loc, indexPool, expandedOperands);
   auto broadcastOperands = broadcastDynamicDimensions(
@@ -1467,7 +1493,7 @@ public:
       reassociationMap.push_back({});
     reassociationMap.back().push_back(builder.getAffineDimExpr(3));
 
-    llvm::SmallVector<int64_t> collapseShape{batch};
+    llvm::SmallVector<int64_t> collapseShape = {batch};
     if (inputH != 1)
       collapseShape.push_back(outputH);
     if (inputW != 1)
@@ -1883,7 +1909,9 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
     auto elementTy = inputTy.getElementType();
     int64_t rank = inputTy.getRank();
 
-    ArrayRef<int64_t> multiples = op.getMultiples();
+    SmallVector<int64_t> multiples;
+    if (failed(op.getConstantMultiples(multiples)))
+      return failure();
 
     // Broadcast the newly added dimensions to their appropriate multiple.
     SmallVector<int64_t, 2> genericShape;

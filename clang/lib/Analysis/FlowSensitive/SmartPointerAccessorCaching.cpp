@@ -132,6 +132,7 @@ ast_matchers::StatementMatcher isSmartPointerLikeOperatorArrow() {
       callee(cxxMethodDecl(parameterCountIs(0), returns(pointerType()),
                            ofClass(smartPointerClassWithGetOrValue()))));
 }
+
 ast_matchers::StatementMatcher isSmartPointerLikeValueMethodCall() {
   return cxxMemberCallExpr(callee(
       cxxMethodDecl(parameterCountIs(0), returns(referenceType()),
@@ -142,6 +143,26 @@ ast_matchers::StatementMatcher isSmartPointerLikeGetMethodCall() {
   return cxxMemberCallExpr(callee(
       cxxMethodDecl(parameterCountIs(0), returns(pointerType()), hasName("get"),
                     ofClass(smartPointerClassWithGet()))));
+}
+
+const FunctionDecl *
+getCanonicalSmartPointerLikeOperatorCallee(const CallExpr *CE) {
+  const FunctionDecl *CanonicalCallee = nullptr;
+  const CXXMethodDecl *Callee =
+      cast_or_null<CXXMethodDecl>(CE->getDirectCallee());
+  if (Callee == nullptr)
+    return nullptr;
+  const CXXRecordDecl *RD = Callee->getParent();
+  if (RD == nullptr)
+    return nullptr;
+  for (const auto *MD : RD->methods()) {
+    if (MD->getOverloadedOperator() == OO_Star && MD->isConst() &&
+        MD->getNumParams() == 0 && MD->getReturnType()->isReferenceType()) {
+      CanonicalCallee = MD;
+      break;
+    }
+  }
+  return CanonicalCallee;
 }
 
 } // namespace clang::dataflow

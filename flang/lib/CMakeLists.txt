@@ -4,6 +4,7 @@ add_subdirectory(Decimal)
 add_subdirectory(Lower)
 add_subdirectory(Parser)
 add_subdirectory(Semantics)
+add_subdirectory(Support)
 add_subdirectory(Frontend)
 add_subdirectory(FrontendTool)
 

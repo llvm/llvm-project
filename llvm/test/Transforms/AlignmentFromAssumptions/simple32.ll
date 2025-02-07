@@ -254,12 +254,12 @@ define i32 @moo(ptr nocapture %a) nounwind uwtable {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 32 [[A]], i8 0, i64 64, i1 false)
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32)]
   tail call void @llvm.memset.p0.i64(ptr align 4 %a, i8 0, i64 64, i1 false)
-  ret i32 undef
+  ret i32 0
 
 }
 
@@ -270,13 +270,13 @@ define i32 @moo2(ptr nocapture %a, ptr nocapture %b) nounwind uwtable {
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[B]], i64 128) ]
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 32 [[A]], ptr align 128 [[B]], i64 64, i1 false)
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32)]
   call void @llvm.assume(i1 true) ["align"(ptr %b, i64 128)]
   tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 64, i1 false)
-  ret i32 undef
+  ret i32 0
 
 }
 

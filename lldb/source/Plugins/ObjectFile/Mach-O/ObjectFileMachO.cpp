@@ -6253,9 +6253,9 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
                   "0x%" PRIx64,
                   section_sp->GetName().AsCString(),
                   section_sp->GetFileAddress() + value);
-        if (target.GetSectionLoadList().SetSectionLoadAddress(
-                section_sp, section_sp->GetFileAddress() + value,
-                warn_multiple))
+        if (target.SetSectionLoadAddress(section_sp,
+                                         section_sp->GetFileAddress() + value,
+                                         warn_multiple))
           ++num_loaded_sections;
       }
     }
@@ -6276,8 +6276,8 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
                     "ObjectFileMachO::SetLoadAddress segment '%s' load addr is "
                     "0x%" PRIx64,
                     section_sp->GetName().AsCString(), section_load_addr);
-          if (target.GetSectionLoadList().SetSectionLoadAddress(
-                  section_sp, section_load_addr, warn_multiple))
+          if (target.SetSectionLoadAddress(section_sp, section_load_addr,
+                                           warn_multiple))
             ++num_loaded_sections;
         }
       }

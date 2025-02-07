@@ -365,7 +365,7 @@ private:
       for (auto &PN : BB->phis())
         DeadInstructions.push_back(&PN);
 
-      if (auto *LandingPad = dyn_cast<LandingPadInst>(BB->getFirstNonPHI()))
+      if (auto *LandingPad = dyn_cast<LandingPadInst>(BB->getFirstNonPHIIt()))
         DeadInstructions.emplace_back(LandingPad);
 
       for (Instruction *I : DeadInstructions) {

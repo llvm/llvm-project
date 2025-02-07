@@ -86,8 +86,8 @@ extractConvInputSlices(RewriterBase &rewriter, Location loc, Value input,
   if (isSingleChanneled) {
     // Extract input slice of size {wSizeStep} @ [w + kw] for non-channeled
     // convolution.
-    SmallVector<int64_t> sizes{wSizeStep};
-    SmallVector<int64_t> strides{1};
+    SmallVector<int64_t> sizes = {wSizeStep};
+    SmallVector<int64_t> strides = {1};
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         result.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
@@ -97,8 +97,8 @@ extractConvInputSlices(RewriterBase &rewriter, Location loc, Value input,
   } else {
     // Extract lhs slice of size {n, wSizeStep, c} @ [0, sw * w + dw * kw, 0]
     // for channeled convolution.
-    SmallVector<int64_t> sizes{nSize, wSizeStep, cSize};
-    SmallVector<int64_t> strides{1, 1, 1};
+    SmallVector<int64_t> sizes = {nSize, wSizeStep, cSize};
+    SmallVector<int64_t> strides = {1, 1, 1};
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         result.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
@@ -135,8 +135,8 @@ extractConvResultSlices(RewriterBase &rewriter, Location loc, Value res,
   SmallVector<Value> result;
   if (isSingleChanneled) {
     // Extract res slice: {wSizeStep} @ [w] for non-channeled convolution.
-    SmallVector<int64_t> sizes{wSizeStep};
-    SmallVector<int64_t> strides{1};
+    SmallVector<int64_t> sizes = {wSizeStep};
+    SmallVector<int64_t> strides = {1};
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       result.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
           loc, res, /*offsets=*/ArrayRef<int64_t>{w}, sizes, strides));
@@ -144,8 +144,8 @@ extractConvResultSlices(RewriterBase &rewriter, Location loc, Value res,
   } else {
     // Extract res slice: {n, wSizeStep, f} @ [0, w, 0] for channeled
     // convolution.
-    SmallVector<int64_t> sizes{nSize, wSizeStep, fSize};
-    SmallVector<int64_t> strides{1, 1, 1};
+    SmallVector<int64_t> sizes = {nSize, wSizeStep, fSize};
+    SmallVector<int64_t> strides = {1, 1, 1};
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       result.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
           loc, res, /*offsets=*/ArrayRef<int64_t>{0, w, 0}, sizes, strides));
@@ -163,7 +163,7 @@ static Value insertConvResultSlices(RewriterBase &rewriter, Location loc,
   if (isSingleChanneled) {
     // Write back res slice: {wSizeStep} @ [w] for non-channeled convolution.
     // This does not depend on kw.
-    SmallVector<int64_t> strides{1};
+    SmallVector<int64_t> strides = {1};
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       res = rewriter.create<vector::InsertStridedSliceOp>(
           loc, resVals[w], res, /*offsets=*/ArrayRef<int64_t>{w}, strides);
@@ -171,7 +171,7 @@ static Value insertConvResultSlices(RewriterBase &rewriter, Location loc,
   } else {
     // Write back res slice: {n, wSizeStep, f} @ [0, w, 0] for channeled
     // convolution. This does not depend on kw.
-    SmallVector<int64_t> strides{1, 1, 1};
+    SmallVector<int64_t> strides = {1, 1, 1};
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       res = rewriter.create<vector::InsertStridedSliceOp>(
           loc, resVals[w], res, /*offsets=*/ArrayRef<int64_t>{0, w, 0},
@@ -3505,8 +3505,8 @@ struct Conv1DGenerator
     //===------------------------------------------------------------------===//
     // Unroll along kw and read slices of lhs and rhs.
     SmallVector<Value> lhsVals, rhsVals, resVals;
-    auto inOutSliceSizes = SmallVector<int64_t>{nSize, wSizeStep, cSize};
-    auto inOutStrides = SmallVector<int64_t>{1, 1, 1};
+    SmallVector<int64_t> inOutSliceSizes = {nSize, wSizeStep, cSize};
+    SmallVector<int64_t> inOutStrides = {1, 1, 1};
 
     // Extract lhs slice of size {n, wSizeStep, c}
     //   @ [0, sw * w + dw * kw, 0].
@@ -3538,8 +3538,7 @@ struct Conv1DGenerator
 
     // Note - the scalable flags are ignored as flattening combined with
     // scalable vectorization is not supported.
-    auto inOutFlattenSliceSizes =
-        SmallVector<int64_t>{nSize, wSizeStep * cSize};
+    SmallVector<int64_t> inOutFlattenSliceSizes = {nSize, wSizeStep * cSize};
     auto lhsTypeAfterFlattening =
         VectorType::get(inOutFlattenSliceSizes, lhsEltType);
     auto resTypeAfterFlattening =

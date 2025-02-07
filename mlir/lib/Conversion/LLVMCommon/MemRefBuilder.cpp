@@ -52,7 +52,7 @@ MemRefDescriptor MemRefDescriptor::fromStaticShape(
   assert(type.hasStaticShape() && "unexpected dynamic shape");
 
   // Extract all strides and offsets and verify they are static.
-  auto [strides, offset] = getStridesAndOffset(type);
+  auto [strides, offset] = type.getStridesAndOffset();
   assert(!ShapedType::isDynamic(offset) && "expected static offset");
   assert(!llvm::any_of(strides, ShapedType::isDynamic) &&
          "expected static strides");
@@ -193,7 +193,7 @@ Value MemRefDescriptor::bufferPtr(OpBuilder &builder, Location loc,
                                   MemRefType type) {
   // When we convert to LLVM, the input memref must have been normalized
   // beforehand. Hence, this call is guaranteed to work.
-  auto [strides, offsetCst] = getStridesAndOffset(type);
+  auto [strides, offsetCst] = type.getStridesAndOffset();
 
   Value ptr = alignedPtr(builder, loc);
   // For zero offsets, we already have the base pointer.

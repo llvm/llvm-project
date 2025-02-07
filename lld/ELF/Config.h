@@ -619,6 +619,7 @@ struct Ctx : CommonLinkerContext {
   };
   ElfSym sym{};
   std::unique_ptr<SymbolTable> symtab;
+  SmallVector<Symbol *, 0> synthesizedSymbols;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
@@ -654,6 +655,8 @@ struct Ctx : CommonLinkerContext {
   std::unique_ptr<llvm::TarWriter> tar;
   // InputFile for linker created symbols with no source location.
   InputFile *internalFile = nullptr;
+  // True if symbols can be exported (isExported) or preemptible.
+  bool hasDynsym = false;
   // True if SHT_LLVM_SYMPART is used.
   std::atomic<bool> hasSympart{false};
   // True if there are TLS IE relocations. Set DF_STATIC_TLS if -shared.

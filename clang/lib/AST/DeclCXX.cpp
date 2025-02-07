@@ -29,6 +29,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -456,6 +457,10 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     // Keep track of the presence of mutable fields.
     if (BaseClassDecl->hasMutableFields())
       data().HasMutableFields = true;
+
+    if (BaseClassDecl->hasUninitializedExplicitInitFields() &&
+        BaseClassDecl->isAggregate())
+      setHasUninitializedExplicitInitFields(true);
 
     if (BaseClassDecl->hasUninitializedReferenceMember())
       data().HasUninitializedReferenceMember = true;
@@ -993,7 +998,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       // C++ [meta.unary.prop]p4: [LWG2358]
       //   T is a class type [...] with [...] no unnamed bit-fields of non-zero
       //   length
-      if (data().Empty && !Field->isZeroLengthBitField(Context) &&
+      if (data().Empty && !Field->isZeroLengthBitField() &&
           Context.getLangOpts().getClangABICompat() >
               LangOptions::ClangABI::Ver6)
         data().Empty = false;
@@ -1112,6 +1117,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
       }
     } else if (!T.isCXX98PODType(Context))
       data().PlainOldData = false;
+
+    if (Field->hasAttr<ExplicitInitAttr>())
+      setHasUninitializedExplicitInitFields(true);
 
     if (T->isReferenceType()) {
       if (!Field->hasInClassInitializer())
@@ -1371,6 +1379,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
         //   parameter is of type 'const M&', 'const volatile M&' or 'M'.
         if (!FieldRec->hasCopyAssignmentWithConstParam())
           data().ImplicitCopyAssignmentHasConstParam = false;
+
+        if (FieldRec->hasUninitializedExplicitInitFields() &&
+            FieldRec->isAggregate())
+          setHasUninitializedExplicitInitFields(true);
 
         if (FieldRec->hasUninitializedReferenceMember() &&
             !Field->hasInClassInitializer())
@@ -1975,7 +1987,8 @@ CXXRecordDecl *CXXRecordDecl::getInstantiatedFromMemberClass() const {
 }
 
 MemberSpecializationInfo *CXXRecordDecl::getMemberSpecializationInfo() const {
-  return TemplateOrInstantiation.dyn_cast<MemberSpecializationInfo *>();
+  return dyn_cast_if_present<MemberSpecializationInfo *>(
+      TemplateOrInstantiation);
 }
 
 void
@@ -1989,7 +2002,7 @@ CXXRecordDecl::setInstantiationOfMemberClass(CXXRecordDecl *RD,
 }
 
 ClassTemplateDecl *CXXRecordDecl::getDescribedClassTemplate() const {
-  return TemplateOrInstantiation.dyn_cast<ClassTemplateDecl *>();
+  return dyn_cast_if_present<ClassTemplateDecl *>(TemplateOrInstantiation);
 }
 
 void CXXRecordDecl::setDescribedClassTemplate(ClassTemplateDecl *Template) {
@@ -2033,7 +2046,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
   // specialization from which it was instantiated.
   if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
     auto From = TD->getInstantiatedFrom();
-    if (auto *CTD = From.dyn_cast<ClassTemplateDecl *>()) {
+    if (auto *CTD = dyn_cast_if_present<ClassTemplateDecl *>(From)) {
       while (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate()) {
         if (NewCTD->isMemberSpecialization())
           break;
@@ -2042,7 +2055,8 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
       return GetDefinitionOrSelf(CTD->getTemplatedDecl());
     }
     if (auto *CTPSD =
-            From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
+            dyn_cast_if_present<ClassTemplatePartialSpecializationDecl *>(
+                From)) {
       while (auto *NewCTPSD = CTPSD->getInstantiatedFromMember()) {
         if (NewCTPSD->isMemberSpecialization())
           break;
@@ -2188,6 +2202,33 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
   for (conversion_iterator I = conversion_begin(), E = conversion_end();
        I != E; ++I)
     I.setAccess((*I)->getAccess());
+
+  ASTContext &Context = getASTContext();
+
+  if (isAggregate() && hasUserDeclaredConstructor() &&
+      !Context.getLangOpts().CPlusPlus20) {
+    // Diagnose any aggregate behavior changes in C++20
+    for (const FieldDecl *FD : fields()) {
+      if (const auto *AT = FD->getAttr<ExplicitInitAttr>())
+        Context.getDiagnostics().Report(
+            AT->getLocation(),
+            diag::warn_cxx20_compat_requires_explicit_init_non_aggregate)
+            << AT << FD << Context.getRecordType(this);
+    }
+  }
+
+  if (!isAggregate() && hasUninitializedExplicitInitFields()) {
+    // Diagnose any fields that required explicit initialization in a
+    // non-aggregate type. (Note that the fields may not be directly in this
+    // type, but in a subobject. In such cases we don't emit diagnoses here.)
+    for (const FieldDecl *FD : fields()) {
+      if (const auto *AT = FD->getAttr<ExplicitInitAttr>())
+        Context.getDiagnostics().Report(AT->getLocation(),
+                                        diag::warn_attribute_needs_aggregate)
+            << AT << Context.getRecordType(this);
+    }
+    setHasUninitializedExplicitInitFields(false);
+  }
 }
 
 bool CXXRecordDecl::mayBeAbstract() const {
@@ -2251,18 +2292,22 @@ CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
     ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
     ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
     TypeSourceInfo *TInfo, SourceLocation EndLocation, CXXConstructorDecl *Ctor,
-    DeductionCandidate Kind, Expr *TrailingRequiresClause) {
-  return new (C, DC)
-      CXXDeductionGuideDecl(C, DC, StartLoc, ES, NameInfo, T, TInfo,
-                            EndLocation, Ctor, Kind, TrailingRequiresClause);
+    DeductionCandidate Kind, Expr *TrailingRequiresClause,
+    const CXXDeductionGuideDecl *GeneratedFrom,
+    SourceDeductionGuideKind SourceKind) {
+  return new (C, DC) CXXDeductionGuideDecl(
+      C, DC, StartLoc, ES, NameInfo, T, TInfo, EndLocation, Ctor, Kind,
+      TrailingRequiresClause, GeneratedFrom, SourceKind);
 }
 
 CXXDeductionGuideDecl *
 CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) CXXDeductionGuideDecl(
-      C, nullptr, SourceLocation(), ExplicitSpecifier(), DeclarationNameInfo(),
-      QualType(), nullptr, SourceLocation(), nullptr,
-      DeductionCandidate::Normal, nullptr);
+      C, /*DC=*/nullptr, SourceLocation(), ExplicitSpecifier(),
+      DeclarationNameInfo(), QualType(), /*TInfo=*/nullptr, SourceLocation(),
+      /*Ctor=*/nullptr, DeductionCandidate::Normal,
+      /*TrailingRequiresClause=*/nullptr,
+      /*GeneratedFrom=*/nullptr, SourceDeductionGuideKind::None);
 }
 
 RequiresExprBodyDecl *RequiresExprBodyDecl::Create(
@@ -2967,6 +3012,28 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
     if (auto *L = getASTMutationListener())
       L->ResolvedOperatorDelete(First, OD, ThisArg);
   }
+}
+
+bool CXXDestructorDecl::isCalledByDelete(const FunctionDecl *OpDel) const {
+  // C++20 [expr.delete]p6: If the value of the operand of the delete-
+  // expression is not a null pointer value and the selected deallocation
+  // function (see below) is not a destroying operator delete, the delete-
+  // expression will invoke the destructor (if any) for the object or the
+  // elements of the array being deleted.
+  //
+  // This means we should not look at the destructor for a destroying
+  // delete operator, as that destructor is never called, unless the
+  // destructor is virtual (see [expr.delete]p8.1) because then the
+  // selected operator depends on the dynamic type of the pointer.
+  const FunctionDecl *SelectedOperatorDelete = OpDel ? OpDel : OperatorDelete;
+  if (!SelectedOperatorDelete)
+    return true;
+
+  if (!SelectedOperatorDelete->isDestroyingOperatorDelete())
+    return true;
+
+  // We have a destroying operator delete, so it depends on the dtor.
+  return isVirtual();
 }
 
 void CXXConversionDecl::anchor() {}
