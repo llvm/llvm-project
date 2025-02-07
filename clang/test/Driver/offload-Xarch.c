@@ -35,7 +35,7 @@
 
 // Make sure that `-Xarch_amdgcn` forwards libraries to the device linker.
 // RUN: %clang -fopenmp=libomp --offload-arch=gfx90a -nogpulib -nogpuinc \
-// RUN:   -Xarch_amdgcn -Wl,-lfoo -### %s 2>&1 \
+// RUN:   --target=x86_64-unknown-linux-gnu -Xarch_amdgcn -Wl,-lfoo -### %s 2>&1 \
 // RUN: | FileCheck -check-prefix=LIBS %s
 // RUN: %clang -fopenmp=libomp --offload-arch=gfx90a -nogpulib -nogpuinc \
 // RUN:   -Xoffload-linker-amdgcn-amd-amdhsa -lfoo -### %s 2>&1 \
