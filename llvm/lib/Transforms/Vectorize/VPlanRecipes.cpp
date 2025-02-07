@@ -720,6 +720,23 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
+  if (Instruction::isBinaryOp(getOpcode())) {
+    if (!getUnderlyingValue()) {
+      // TODO: Compute cost for VPInstructions without underlying values once
+      // the legacy cost model has been retired.
+      return 0;
+    }
+
+    assert(!doesGeneratePerAllLanes() &&
+           "Should only generate a vector value or single scalar, not scalars "
+           "for all lanes.");
+    Type *ResTy = Ctx.Types.inferScalarType(this);
+    if (!vputils::onlyFirstLaneUsed(this))
+      ResTy = toVectorTy(ResTy, VF);
+
+    return Ctx.TTI.getArithmeticInstrCost(getOpcode(), ResTy, Ctx.CostKind);
+  }
+
   switch (getOpcode()) {
   case VPInstruction::AnyOf: {
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
@@ -727,7 +744,10 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
   default:
-    // TODO: Fill out other opcodes!
+    // TODO: Compute cost other VPInstructions once the legacy cost model has
+    // been retired.
+    assert(!getUnderlyingValue() &&
+           "unexpected VPInstruction witht underlying value");
     return 0;
   }
 }
