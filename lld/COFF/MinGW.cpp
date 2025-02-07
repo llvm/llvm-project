@@ -50,7 +50,6 @@ AutoExporter::AutoExporter(
       "libc++",
       "libc++abi",
       "libFortranRuntime",
-      "libFortranDecimal",
       "libunwind",
       "libmsvcrt",
       "libucrtbase",
