@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, strncmp,
                    (const char *left, const char *right, size_t n)) {
-  if( n > 0) {
+  if (n > 0) {
     LIBC_CRASH_ON_NULLPTR(left);
     LIBC_CRASH_ON_NULLPTR(right);
   }
