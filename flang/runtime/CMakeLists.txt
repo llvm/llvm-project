@@ -59,7 +59,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     )
 endif()
 
-set(linked_libraries FortranDecimal)
+set(linked_libraries "")
 
 # function checks
 find_package(Backtrace)
@@ -116,6 +116,8 @@ add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 add_subdirectory(Float128Math)
 
 set(sources
+  ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
+  ${FLANG_SOURCE_DIR}/lib/Decimal/decimal-to-binary.cpp
   ISO_Fortran_binding.cpp
   allocator-registry.cpp
   allocatable.cpp
@@ -288,26 +290,18 @@ else()
   )
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
   add_flang_library(FortranRuntime.static ${sources}
-    LINK_LIBS
-    FortranDecimal.static
     INSTALL_WITH_TOOLCHAIN)
   set_target_properties(FortranRuntime.static PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
   add_flang_library(FortranRuntime.dynamic ${sources}
-    LINK_LIBS
-    FortranDecimal.dynamic
     INSTALL_WITH_TOOLCHAIN)
   set_target_properties(FortranRuntime.dynamic PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
   add_flang_library(FortranRuntime.static_dbg ${sources}
-    LINK_LIBS
-    FortranDecimal.static_dbg
     INSTALL_WITH_TOOLCHAIN)
   set_target_properties(FortranRuntime.static_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
   add_flang_library(FortranRuntime.dynamic_dbg ${sources}
-    LINK_LIBS
-    FortranDecimal.dynamic_dbg
     INSTALL_WITH_TOOLCHAIN)
   set_target_properties(FortranRuntime.dynamic_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
   add_dependencies(FortranRuntime FortranRuntime.static FortranRuntime.dynamic
