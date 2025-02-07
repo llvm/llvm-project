@@ -2439,19 +2439,24 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     if (Symbol)
       SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
 
-    const uint64_t SymAddress = SymbolAddress + Addend;
-    BinaryFunction *Func = BC->getBinaryFunctionContainingAddress(SymAddress);
+    const uint64_t ReferencedAddress = SymbolAddress + Addend;
+    BinaryFunction *Func =
+        BC->getBinaryFunctionContainingAddress(ReferencedAddress);
 
-    if (SymbolIter != InputFile->symbol_end()) {
-      const SymbolRef &RefSymbol = *SymbolIter;
-      uint64_t SymbolSize = ELFSymbolRef(RefSymbol).getSize();
-      if (Func && !Func->isSymbolValidInScope(RefSymbol, SymbolSize))
-        continue;
-    }
-
-    if (Func && !Func->isInConstantIsland(SymAddress)) {
-      if (const uint64_t SymOffset = SymAddress - Func->getAddress())
-        Func->addEntryPointAtOffset(SymOffset);
+    if (Func) {
+      if (!Func->isInConstantIsland(ReferencedAddress)) {
+        if (const uint64_t ReferenceOffset =
+                ReferencedAddress - Func->getAddress()) {
+          Func->addEntryPointAtOffset(ReferenceOffset);
+        } else if (ReferencedAddress < Func->getAddress()) {
+          BC->errs() << "BOLT-ERROR: Unable to compute symbol offset.\n";
+          exit(1);
+        }
+      } else {
+        BC->errs() << "BOLT-ERROR: Referenced address: " << ReferencedAddress
+                   << " is in constant island of function : " << Func << ".\n";
+        exit(1);
+      }
     }
 
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
@@ -5612,13 +5617,8 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
       // the function, then BOLT could get the new address.
       if (BF->isMultiEntry()) {
         for (const BinaryBasicBlock &BB : *BF) {
-          if (BF->forEachEntryPoint(
-                  [&](uint64_t Offset, const MCSymbol *Symbol) {
-                    if (BB.isEntryPoint() &&
-                        (BF->getAddress() + BB.getOffset()) == OldAddress)
-                      return true;
-                    return false;
-                  }))
+          if (BB.isEntryPoint() &&
+              (BF->getAddress() + BB.getOffset()) == OldAddress)
             return BB.getOutputStartAddress();
         }
       }
