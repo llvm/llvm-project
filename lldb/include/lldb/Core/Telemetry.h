@@ -25,14 +25,10 @@
 #include <unordered_map>
 
 namespace lldb_private {
+namespace telemetry {
 
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
   static const llvm::telemetry::KindType BaseInfo = 0b11000;
-};
-
-struct ExitDescription {
-  int exit_code;
-  std::string description;
 };
 
 /// Defines a convenient type for timestamp of various events.
@@ -73,5 +69,6 @@ private:
   std::unique_ptr<llvm::telemetry::Config> m_config;
 };
 
+} // namespace telemetry
 } // namespace lldb_private
 #endif // LLDB_CORE_TELEMETRY_H

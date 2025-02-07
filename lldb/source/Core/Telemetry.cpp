@@ -22,6 +22,7 @@
 #include <utility>
 
 namespace lldb_private {
+namespace telemetry {
 
 using ::llvm::Error;
 using ::llvm::telemetry::Destination;
@@ -64,4 +65,5 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   return Error::success();
 }
 
+} // namespace telemetry
 } // namespace lldb_private
