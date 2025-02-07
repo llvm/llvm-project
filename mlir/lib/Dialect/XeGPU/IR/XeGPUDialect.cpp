@@ -229,8 +229,24 @@ LogicalResult TensorDescType::verify(
     llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
     mlir::Attribute encoding, mlir::Attribute sg_map) {
   size_t rank = shape.size();
-  if (rank > 2)
-    return emitError() << "desc shape rank exceeds 2";
+  if (rank != 1 && rank != 2)
+    return emitError() << "expected 1D or 2D tensor";
+
+  // Scattered attribute imposes extra restriction on tensor descriptor.
+  // Block attribute can only be validated further against data transfer
+  // operations.
+  auto scatterAttr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(encoding);
+  if (scatterAttr) {
+    // Expected tensor ranks for scattered data:
+    //   - 1D tensor for fully non-contiguous elements (chunk size == 1)
+    //   - 2D tensor for scattered blocks (chunk size > 1)
+    IntegerAttr chunkAttr = scatterAttr.getChunkSize();
+    unsigned chunkSize = chunkAttr ? chunkAttr.getInt() : 1;
+    if (rank == 1 && chunkSize != 1)
+      return emitError() << "expected non-contiguous elements for 1D tensor";
+    if (rank == 2 && chunkSize < 2)
+      return emitError() << "expected chunk blocks for 2D tensor";
+  }
 
   if (auto sgMapAttr = llvm::dyn_cast_if_present<SGMapAttr>(sg_map)) {
     ArrayRef<uint32_t> wiLayout = sgMapAttr.getWiLayout();
@@ -238,8 +254,22 @@ LogicalResult TensorDescType::verify(
 
     if (rank == 1) {
       if (wiLayout[0] != 1 || wiData[0] != 1)
-        return emitError() << "outer layout and data mapping must be 1 "
-                              "for 1D tensor";
+        return emitError()
+               << "outer layout distribution and data mapping must be 1 "
+                  "for 1D tensor";
+    }
+
+    if (scatterAttr) {
+      // Validate subgroup mapping rules for scattered tensors.
+      if (wiData[0] != 1)
+        return emitError()
+               << "cannot map over non-contiguous scattered row elements";
+
+      IntegerAttr chunkAttr = scatterAttr.getChunkSize();
+      unsigned chunkSize = chunkAttr ? chunkAttr.getInt() : 1;
+      if (wiData[1] != chunkSize)
+        return emitError() << "work item data mapping must match the number of "
+                              "contiguous elements";
     }
 
     // For 1D tensor, pad the shape with an outer unit dimension to allow common
@@ -252,21 +282,9 @@ LogicalResult TensorDescType::verify(
     for (size_t i = 0; i < dims; ++i) {
       uint32_t numElemPerWi = wiLayout[i] * wiData[i];
       if (tensorShape[i] < numElemPerWi || tensorShape[i] % numElemPerWi != 0)
-        return emitError() << "cannot map " << tensorShape[i]
-                           << " elements into " << wiLayout[i] << " by "
-                           << wiData[i] << " tiles";
-    }
-
-    if (mlir::isa_and_nonnull<ScatterTensorDescAttr>(encoding)) {
-      auto scatterAttr = llvm::dyn_cast<ScatterTensorDescAttr>(encoding);
-      if (wiData[0] != 1)
-        return emitError()
-               << "cannot map over non-contiguous scattered elements";
-
-      unsigned chunkSize = scatterAttr.getChunkSize().getInt();
-      if (wiData[1] > chunkSize)
-        return emitError()
-               << "too few contiguous elements for work item mapping";
+        return emitError() << "cannot distribute " << tensorShape[i] << " over "
+                           << wiLayout[i] << " work items with " << wiData[i]
+                           << " elements each";
     }
   }
 

@@ -183,8 +183,8 @@ func.func @test_create_tdesc_vc_1(%src: ui64) {
 // -----
 func.func @test_create_tdesc_vc_2(%src: ui64) {
   %0 = arith.constant dense<[0, 2, 4, 6, 8, 10, 12, 14]> : vector<8xindex>
-  // expected-error@+1 {{Incorrect TensorDesc shape}}
   %1 = xegpu.create_tdesc %src, %0 : ui64, vector<8xindex>
+  // expected-error@+1 {{expected chunk blocks for 2D tensor}}
           -> !xegpu.tensor_desc<8x4xf16, #xegpu.scatter_tdesc_attr<>>
   return
 }
@@ -219,7 +219,7 @@ func.func @test_prefetch_vc_2(%src: ui64) {
 // -----
 func.func @test_create_tdesc_sg_map_1(%src: ui64) {
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  // expected-error@+1 {{Detected a conflict between SG map's work-item layout and TensorDesc shape. Check the index of `subgroup_size` in WI layout map}}
+  // expected-error@+1 {{outer layout distribution and data mapping must be 1 for 1D tensor}}
   %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4xf32, #xegpu.scatter_tdesc_attr<>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
   return
 }
@@ -227,7 +227,7 @@ func.func @test_create_tdesc_sg_map_1(%src: ui64) {
 // -----
 func.func @test_create_tdesc_sg_map_2(%src: ui64) {
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  // expected-error@+1 {{TensorDesc's SG map only supports multiple elements contiguous along rows}}
+  // expected-error@+1 {{cannot map over non-contiguous scattered row elements}}
   %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [1, 4], wi_data = [2, 1]>>
   return
 }
@@ -235,7 +235,7 @@ func.func @test_create_tdesc_sg_map_2(%src: ui64) {
 // -----
 func.func @test_create_tdesc_sg_map_3(%src: ui64) {
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  // expected-error@+1 {{TensorDesc's chunkSize must match WI's data mapping}}
+  // expected-error@+1 {{work item data mapping must match the number of contiguous elements}}
   %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x3xf32, #xegpu.scatter_tdesc_attr<chunk_size = 3>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
   return
 }
@@ -366,15 +366,23 @@ func.func @test_atomic_rmw(%src: ui64, %value : vector<16x4xf32>, %mask : vector
 // -----
 func.func @tensor_desc_invalid_rank(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-      // expected-error@+1 {{desc shape rank exceeds 2}}
+      // expected-error@+1 {{expected 1D or 2D tensor}}
       !xegpu.tensor_desc<16x2x2xf32>
+  return
+}
+
+// -----
+func.func @tensor_desc_invalid_rank_1(%src: memref<24x32xf32>) {
+  %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
+      // expected-error@+1 {{expected 1D or 2D tensor}}
+      !xegpu.tensor_desc<f32>
   return
 }
 
 // -----
 func.func @tensor_desc_1D_invalid_map_layout(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-      // expected-error@+1 {{outer layout and data mapping must be 1 for 1D tensor}}
+      // expected-error@+1 {{outer layout distribution and data mapping must be 1 for 1D tensor}}
       !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [2, 16], wi_data = [1, 1]>>
   return
 }
@@ -382,7 +390,7 @@ func.func @tensor_desc_1D_invalid_map_layout(%src: memref<24x32xf32>) {
 // -----
 func.func @tensor_desc_1D_invalid_map_data(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-      // expected-error@+1 {{outer layout and data mapping must be 1 for 1D tensor}}
+      // expected-error@+1 {{outer layout distribution and data mapping must be 1 for 1D tensor}}
       !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [2, 1]>>
   return
 }
@@ -390,7 +398,7 @@ func.func @tensor_desc_1D_invalid_map_data(%src: memref<24x32xf32>) {
 // -----
 func.func @tensor_desc_invalid_map_layout(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-      // expected-error@+1 {{cannot map 8 elements into 16 by 1 tiles}}
+      // expected-error@+1 {{cannot distribute 8 over 16 work items with 1 elements each}}
       !xegpu.tensor_desc<4x8xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
   return
 }
@@ -398,7 +406,7 @@ func.func @tensor_desc_invalid_map_layout(%src: memref<24x32xf32>) {
 // -----
 func.func @tensor_desc_invalid_map_layout_1(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-      // expected-error@+1 {{cannot map 4 elements into 8 by 1 tiles}}
+      // expected-error@+1 {{cannot distribute 4 over 8 work items with 1 elements each}}
       !xegpu.tensor_desc<4x8xf32, #xegpu.sg_map<wi_layout = [8, 2], wi_data = [1, 1]>>
   return
 }
@@ -406,7 +414,7 @@ func.func @tensor_desc_invalid_map_layout_1(%src: memref<24x32xf32>) {
 // -----
 func.func @tensor_desc_invalid_map_data(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-      // expected-error@+1 {{cannot map 4 elements into 2 by 4 tiles}}
+      // expected-error@+1 {{cannot distribute 4 over 2 work items with 4 elements each}}
       !xegpu.tensor_desc<4x8xf32, #xegpu.sg_map<wi_layout = [2, 8], wi_data = [4, 1]>>
   return
 }
@@ -414,7 +422,7 @@ func.func @tensor_desc_invalid_map_data(%src: memref<24x32xf32>) {
 // -----
 func.func @tensor_desc_invalid_map_data_1(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-      // expected-error@+1 {{cannot map 4 elements into 8 by 1 tiles}}
+      // expected-error@+1 {{cannot distribute 4 over 8 work items with 1 elements each}}
       !xegpu.tensor_desc<4x8xf32, #xegpu.sg_map<wi_layout = [8, 2], wi_data = [1, 2]>>
   return
 }
@@ -423,7 +431,7 @@ func.func @tensor_desc_invalid_map_data_1(%src: memref<24x32xf32>) {
 func.func @tensor_desc_scatter_invalid_map_data(%src: ui64) {
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %1 = xegpu.create_tdesc %src, %0 : ui64, vector<4xindex> ->
-      // expected-error@+1 {{cannot map over non-contiguous scattered elements}}
+      // expected-error@+1 {{cannot map over non-contiguous scattered row elements}}
       !xegpu.tensor_desc<4x2xf32,
         #xegpu.scatter_tdesc_attr<chunk_size = 2>,
         #xegpu.sg_map<wi_layout = [1, 1], wi_data = [2, 1]>>
@@ -433,7 +441,7 @@ func.func @tensor_desc_scatter_invalid_map_data(%src: ui64) {
 // -----
 func.func @tensor_desc_scatter_invalid_map_data_1(%src: ui64, %offsets: vector<16xindex>) {
   %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
-      // expected-error@+1 {{too few contiguous elements for work item mapping}}
+      // expected-error@+1 {{work item data mapping must match the number of contiguous elements}}
       !xegpu.tensor_desc<16xf32,
         #xegpu.scatter_tdesc_attr<chunk_size = 1>,
         #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 2]>>
