@@ -28,7 +28,7 @@ enum SDNP {
   SDNPVariadic,
 };
 
-enum SDTC {
+enum SDTC : uint8_t {
   SDTCisVT,
   SDTCisPtrTy,
   SDTCisInt,
@@ -56,8 +56,8 @@ struct SDTypeConstraint {
 };
 
 struct SDNodeDesc {
-  unsigned NumResults;
-  int NumOperands;
+  uint16_t NumResults;
+  int16_t NumOperands;
   uint32_t Properties;
   uint32_t Flags;
   uint32_t TSFlags;
