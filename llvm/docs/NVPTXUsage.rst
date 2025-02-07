@@ -1060,6 +1060,81 @@ flavors of the instruction respectively.
 For more information, refer to the PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
 
+'``llvm.nvvm.tcgen05.commit``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.commit.{cg1,cg2}(ptr %mbar)
+  declare void @llvm.nvvm.tcgen05.commit.shared.{cg1,cg2}(ptr addrspace(3) %mbar)
+  declare void @llvm.nvvm.tcgen05.commit.mc.{cg1,cg2}(ptr %mbar, i16 %mc)
+  declare void @llvm.nvvm.tcgen05.commit.mc.shared.{cg1,cg2}(ptr addrspace(3) %mbar, i16 %mc)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.commit.*``' intrinsics correspond to the
+``tcgen05.commit.{cg1/cg2}.mbarrier::arrive::one.*`` set of PTX instructions.
+The ``tcgen05.commit`` is an asynchronous instruction which makes the mbarrier
+object (``%mbar``) track the completion of all prior asynchronous tcgen05 operations.
+The ``.mc`` variants allow signaling on the mbarrier objects of multiple CTAs
+(specified by ``%mc``) in the cluster. The ``.cg1`` and ``.cg2`` variants generate
+``cta_group::1`` and ``cta_group::2`` flavors of the instruction respectively.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit>`_.
+
+'``llvm.nvvm.tcgen05.wait``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.wait.ld()
+  declare void @llvm.nvvm.tcgen05.wait.st()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.wait.ld/st``' intrinsics correspond to
+the ``tcgen05.wait::{ld/st}.sync.aligned`` pair of PTX instructions.
+The ``tcgen05.wait::ld`` causes the executing thread to block until
+all prior ``tcgen05.ld`` operations issued by the executing thread
+have completed. The ``tcgen05.wait::st`` causes the executing thread
+to block until all prior ``tcgen05.st`` operations issued by the
+executing thread have completed.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait>`_.
+
+'``llvm.nvvm.tcgen05.fence``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.fence.before.thread.sync()
+  declare void @llvm.nvvm.tcgen05.fence.after.thread.sync()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.fence.*``' intrinsics correspond to
+the ``tcgen05.fence::{before/after}_thread_sync`` pair of PTX instructions.
+These instructions act as code motion fences for asynchronous tcgen05
+operations.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence>`_.
+
+
 Other Intrinsics
 ----------------
 
