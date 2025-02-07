@@ -2686,10 +2686,9 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
   const DataLayout &DL = Q.DL;
   const TargetLibraryInfo *TLI = Q.TLI;
 
-  // We fold equality and unsigned integer predicates on pointer comparisons,
-  // but forbid signed predicates since a GEP with inbounds could cross the sign
-  // boundary.
-  if (!CmpInst::isIntPredicate(Pred) || CmpInst::isSigned(Pred))
+  // We fold equality and unsigned predicates on pointer comparisons, but forbid
+  // signed predicates since a GEP with inbounds could cross the sign boundary.
+  if (CmpInst::isSigned(Pred))
     return nullptr;
 
   // We have to switch to a signed predicate to handle negative indices from
