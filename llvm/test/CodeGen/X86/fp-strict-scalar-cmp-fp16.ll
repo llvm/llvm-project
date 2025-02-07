@@ -32,15 +32,12 @@ define i32 @test_f16_oeq_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_oeq_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vucomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    cmovpl %esi, %eax
 ; AVX-NEXT:    retq
@@ -96,15 +93,12 @@ define i32 @test_f16_ogt_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ogt_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vucomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovbel %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -157,15 +151,12 @@ define i32 @test_f16_oge_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_oge_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vucomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovbl %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -220,13 +211,10 @@ define i32 @test_f16_olt_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_olt_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm0, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX-NEXT:    cmovbel %esi, %eax
@@ -283,13 +271,10 @@ define i32 @test_f16_ole_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ole_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm0, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX-NEXT:    cmovbl %esi, %eax
@@ -344,15 +329,12 @@ define i32 @test_f16_one_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_one_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vucomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovel %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -405,15 +387,12 @@ define i32 @test_f16_ord_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ord_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vucomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovpl %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -466,15 +445,12 @@ define i32 @test_f16_ueq_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ueq_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vucomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -529,13 +505,10 @@ define i32 @test_f16_ugt_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ugt_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm0, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX-NEXT:    cmovael %esi, %eax
@@ -592,13 +565,10 @@ define i32 @test_f16_uge_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_uge_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm0, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX-NEXT:    cmoval %esi, %eax
@@ -653,15 +623,12 @@ define i32 @test_f16_ult_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ult_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vucomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovael %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -714,15 +681,12 @@ define i32 @test_f16_ule_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ule_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vucomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmoval %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -776,15 +740,12 @@ define i32 @test_f16_une_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_une_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %esi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vucomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovnel %edi, %eax
 ; AVX-NEXT:    cmovpl %edi, %eax
 ; AVX-NEXT:    retq
@@ -840,15 +801,12 @@ define i32 @test_f16_uno_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_uno_q:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vucomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovnpl %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -902,15 +860,12 @@ define i32 @test_f16_oeq_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_oeq_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vcomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    cmovpl %esi, %eax
 ; AVX-NEXT:    retq
@@ -966,15 +921,12 @@ define i32 @test_f16_ogt_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ogt_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vcomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovbel %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -1027,15 +979,12 @@ define i32 @test_f16_oge_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_oge_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vcomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovbl %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -1090,13 +1039,10 @@ define i32 @test_f16_olt_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_olt_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm0, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX-NEXT:    vcomiss %xmm0, %xmm1
 ; AVX-NEXT:    cmovbel %esi, %eax
@@ -1153,13 +1099,10 @@ define i32 @test_f16_ole_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ole_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm0, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX-NEXT:    vcomiss %xmm0, %xmm1
 ; AVX-NEXT:    cmovbl %esi, %eax
@@ -1214,15 +1157,12 @@ define i32 @test_f16_one_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_one_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vcomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovel %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -1275,15 +1215,12 @@ define i32 @test_f16_ord_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ord_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vcomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovpl %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -1336,15 +1273,12 @@ define i32 @test_f16_ueq_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ueq_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vcomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -1399,13 +1333,10 @@ define i32 @test_f16_ugt_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ugt_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm0, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX-NEXT:    vcomiss %xmm0, %xmm1
 ; AVX-NEXT:    cmovael %esi, %eax
@@ -1462,13 +1393,10 @@ define i32 @test_f16_uge_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_uge_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm0, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX-NEXT:    vcomiss %xmm0, %xmm1
 ; AVX-NEXT:    cmoval %esi, %eax
@@ -1523,15 +1451,12 @@ define i32 @test_f16_ult_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ult_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vcomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovael %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -1584,15 +1509,12 @@ define i32 @test_f16_ule_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_ule_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vcomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmoval %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -1646,15 +1568,12 @@ define i32 @test_f16_une_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_une_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %esi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vcomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovnel %edi, %eax
 ; AVX-NEXT:    cmovpl %edi, %eax
 ; AVX-NEXT:    retq
@@ -1710,15 +1629,12 @@ define i32 @test_f16_uno_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ; AVX-LABEL: test_f16_uno_s:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vcomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    cmovnpl %esi, %eax
 ; AVX-NEXT:    retq
 ;
@@ -1767,15 +1683,12 @@ define void @foo(half %0, half %1) #0 {
 ;
 ; AVX-LABEL: foo:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX-NEXT:    movzwl %cx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm0
-; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX-NEXT:    vucomiss %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    ja bar@PLT # TAILCALL
 ; AVX-NEXT:  # %bb.1:
 ; AVX-NEXT:    retq

@@ -24,8 +24,9 @@ define float @half_to_float() strictfp {
 ; X86-F16C:       # %bb.0:
 ; X86-F16C-NEXT:    pushl %eax
 ; X86-F16C-NEXT:    .cfi_def_cfa_offset 8
-; X86-F16C-NEXT:    movzwl a, %eax
-; X86-F16C-NEXT:    vmovd %eax, %xmm0
+; X86-F16C-NEXT:    vpinsrw $0, a, %xmm0, %xmm0
+; X86-F16C-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; X86-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X86-F16C-NEXT:    vmovss %xmm0, (%esp)
 ; X86-F16C-NEXT:    flds (%esp)
@@ -48,8 +49,9 @@ define float @half_to_float() strictfp {
 ; X64-F16C-LABEL: half_to_float:
 ; X64-F16C:       # %bb.0:
 ; X64-F16C-NEXT:    movq a@GOTPCREL(%rip), %rax
-; X64-F16C-NEXT:    movzwl (%rax), %eax
-; X64-F16C-NEXT:    vmovd %eax, %xmm0
+; X64-F16C-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; X64-F16C-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-F16C-NEXT:    retq
   %1 = load half, ptr @a, align 2
@@ -73,8 +75,9 @@ define double @half_to_double() strictfp {
 ; X86-F16C:       # %bb.0:
 ; X86-F16C-NEXT:    subl $12, %esp
 ; X86-F16C-NEXT:    .cfi_def_cfa_offset 16
-; X86-F16C-NEXT:    movzwl a, %eax
-; X86-F16C-NEXT:    vmovd %eax, %xmm0
+; X86-F16C-NEXT:    vpinsrw $0, a, %xmm0, %xmm0
+; X86-F16C-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; X86-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X86-F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; X86-F16C-NEXT:    vmovsd %xmm0, (%esp)
@@ -99,8 +102,9 @@ define double @half_to_double() strictfp {
 ; X64-F16C-LABEL: half_to_double:
 ; X64-F16C:       # %bb.0:
 ; X64-F16C-NEXT:    movq a@GOTPCREL(%rip), %rax
-; X64-F16C-NEXT:    movzwl (%rax), %eax
-; X64-F16C-NEXT:    vmovd %eax, %xmm0
+; X64-F16C-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; X64-F16C-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; X64-F16C-NEXT:    retq
@@ -342,15 +346,15 @@ define void @add() strictfp {
 ;
 ; X86-F16C-LABEL: add:
 ; X86-F16C:       # %bb.0:
-; X86-F16C-NEXT:    movzwl a, %eax
-; X86-F16C-NEXT:    vmovd %eax, %xmm0
+; X86-F16C-NEXT:    vpinsrw $0, a, %xmm0, %xmm0
+; X86-F16C-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; X86-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; X86-F16C-NEXT:    movzwl b, %eax
-; X86-F16C-NEXT:    vmovd %eax, %xmm1
-; X86-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X86-F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; X86-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X86-F16C-NEXT:    vpinsrw $0, b, %xmm0, %xmm2
+; X86-F16C-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3,4,5,6,7]
+; X86-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
+; X86-F16C-NEXT:    vaddss %xmm2, %xmm0, %xmm0
+; X86-F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; X86-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; X86-F16C-NEXT:    vpextrw $0, %xmm0, c
 ; X86-F16C-NEXT:    retl
@@ -378,16 +382,16 @@ define void @add() strictfp {
 ; X64-F16C-LABEL: add:
 ; X64-F16C:       # %bb.0:
 ; X64-F16C-NEXT:    movq a@GOTPCREL(%rip), %rax
-; X64-F16C-NEXT:    movzwl (%rax), %eax
-; X64-F16C-NEXT:    vmovd %eax, %xmm0
+; X64-F16C-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; X64-F16C-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-F16C-NEXT:    movq b@GOTPCREL(%rip), %rax
-; X64-F16C-NEXT:    movzwl (%rax), %eax
-; X64-F16C-NEXT:    vmovd %eax, %xmm1
-; X64-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X64-F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; X64-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64-F16C-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm2
+; X64-F16C-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3,4,5,6,7]
+; X64-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
+; X64-F16C-NEXT:    vaddss %xmm2, %xmm0, %xmm0
+; X64-F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; X64-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; X64-F16C-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; X64-F16C-NEXT:    vpextrw $0, %xmm0, (%rax)
