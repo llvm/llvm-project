@@ -114,16 +114,9 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
   switch (IID) {
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readfirstlane:
-  case Intrinsic::amdgcn_readlane: {
+  case Intrinsic::amdgcn_readlane:
+  case Intrinsic::amdgcn_ballot: {
     Value *Src = II.getArgOperand(0);
-
-    // readfirstlane (readfirstlane x) -> readfirstlane x
-    // readfirstlane (readlane x, y) -> readlane x, y
-    // readlane (readfirstlane x), y -> readfirstlane x
-    // readlane (readlane x, y), z -> readlane x, y
-    // All these cases are identical and are dependent on the inner intrinsic
-    // results value.(i.e.irrespective of the which of these case is inner
-    // intrinsic will write the same value across all output lane indexes)
     if (UI->isUniform(II.getOperandUse(0))) {
       II.replaceAllUsesWith(Src);
       return true;
