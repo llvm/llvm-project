@@ -1484,7 +1484,9 @@ void MicrosoftCXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   // <operator-name> ::= ?_G # scalar deleting destructor
   case Dtor_Deleting: Out << "?_G"; return;
   // <operator-name> ::= ?_E # vector deleting destructor
-  case Dtor_VectorDeleting: Out << "?_E"; return;
+  case Dtor_VectorDeleting:
+    Out << "?_E";
+    return;
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   }
@@ -2885,10 +2887,10 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   //               ::= @ # structors (they have no declared return type)
   if (IsStructor) {
     if (isa<CXXDestructorDecl>(D) && isStructorDecl(D)) {
-      // The deleting destructors take an extra argument of type int that indicates
-      // whether the storage for the object should be deleted and whether a single
-      // object or an array of objects is being destroyed. This extra argument is not
-      // reflected in the AST.
+      // The deleting destructors take an extra argument of type int that
+      // indicates whether the storage for the object should be deleted and
+      // whether a single object or an array of objects is being destroyed. This
+      // extra argument is not reflected in the AST.
       if (StructorType == Dtor_Deleting ||
           StructorType == Dtor_VectorDeleting) {
         Out << (PointersAre64Bit ? "PEAXI@Z" : "PAXI@Z");

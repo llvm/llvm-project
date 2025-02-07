@@ -1914,10 +1914,8 @@ static void EmitDestroyingObjectDelete(CodeGenFunction &CGF,
 /// Emit the code for deleting a single object.
 /// \return \c true if we started emitting UnconditionalDeleteBlock, \c false
 /// if not.
-static bool EmitObjectDelete(CodeGenFunction &CGF,
-                             const CXXDeleteExpr *DE,
-                             Address Ptr,
-                             QualType ElementType,
+static bool EmitObjectDelete(CodeGenFunction &CGF, const CXXDeleteExpr *DE,
+                             Address Ptr, QualType ElementType,
                              llvm::BasicBlock *UnconditionalDeleteBlock,
                              bool ArrayDeletion) {
   // C++11 [expr.delete]p3:
@@ -2164,7 +2162,7 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
 
         EmitBlock(bodyBB);
         if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd,
-                              /*ArrayDeletion*/true))
+                              /*ArrayDeletion*/ true))
           EmitBlock(DeleteEnd);
         return;
       }

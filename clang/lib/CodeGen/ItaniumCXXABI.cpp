@@ -182,9 +182,7 @@ public:
   }
 
   bool shouldTypeidBeNullChecked(QualType SrcRecordTy) override;
-  bool hasVectorDeletingDtors() override {
-    return false;
-  }
+  bool hasVectorDeletingDtors() override { return false; }
   void EmitBadTypeidCall(CodeGenFunction &CGF) override;
   llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                           Address ThisPtr,
@@ -455,7 +453,8 @@ public:
        if (!IsInlined)
          continue;
 
-       StringRef Name = CGM.getMangledName(VtableComponent.getGlobalDecl(false));
+       StringRef Name =
+           CGM.getMangledName(VtableComponent.getGlobalDecl(false));
        auto *Entry = CGM.GetGlobalValue(Name);
        // This checks if virtual inline function has already been emitted.
        // Note that it is possible that this inline function would be emitted
@@ -1373,8 +1372,7 @@ bool ItaniumCXXABI::isZeroInitializable(const MemberPointerType *MPT) {
 /// at entry -2 in the vtable.
 void ItaniumCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
                                             const CXXDeleteExpr *DE,
-                                            Address Ptr,
-                                            QualType ElementType,
+                                            Address Ptr, QualType ElementType,
                                             const CXXDestructorDecl *Dtor,
                                             bool ArrayDeletion) {
   bool UseGlobalDelete = DE->isGlobalDelete();

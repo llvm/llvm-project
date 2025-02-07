@@ -146,9 +146,7 @@ public:
   }
 
   bool shouldTypeidBeNullChecked(QualType SrcRecordTy) override;
-  bool hasVectorDeletingDtors() override {
-    return true;
-  }
+  bool hasVectorDeletingDtors() override { return true; }
   void EmitBadTypeidCall(CodeGenFunction &CGF) override;
   llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                           Address ThisPtr,
