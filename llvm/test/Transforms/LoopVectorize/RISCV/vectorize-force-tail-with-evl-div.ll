@@ -37,7 +37,7 @@ define void @test_sdiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP9]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP10]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[VP_OP_LOAD1]], <vscale x 2 x i64> splat (i64 1), i32 [[TMP5]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 2 x i64> @llvm.vp.sdiv.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = sdiv <vscale x 2 x i64> [[VP_OP_LOAD]], [[TMP11]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP6]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP]], ptr align 8 [[TMP13]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
@@ -134,7 +134,7 @@ define void @test_udiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP9]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP10]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[VP_OP_LOAD1]], <vscale x 2 x i64> splat (i64 1), i32 [[TMP5]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 2 x i64> @llvm.vp.udiv.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = udiv <vscale x 2 x i64> [[VP_OP_LOAD]], [[TMP11]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP6]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP]], ptr align 8 [[TMP13]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
@@ -230,7 +230,7 @@ define void @test_srem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP9]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP10]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[VP_OP_LOAD1]], <vscale x 2 x i64> splat (i64 1), i32 [[TMP5]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 2 x i64> @llvm.vp.srem.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = srem <vscale x 2 x i64> [[VP_OP_LOAD]], [[TMP11]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP6]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP]], ptr align 8 [[TMP13]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
@@ -326,7 +326,7 @@ define void @test_urem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP9]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP10]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[VP_OP_LOAD1]], <vscale x 2 x i64> splat (i64 1), i32 [[TMP5]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 2 x i64> @llvm.vp.urem.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = urem <vscale x 2 x i64> [[VP_OP_LOAD]], [[TMP11]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP6]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_OP]], ptr align 8 [[TMP13]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
