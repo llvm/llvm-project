@@ -400,13 +400,8 @@ CaptureInfo llvm::DetermineUseCaptureKind(
       }
 
       // Check whether this is a comparison of the base pointer against
-      // null. We can also strip inbounds GEPs, as inbounds preserves
-      // the null-ness of the pointer.
-      Value *Stripped = U.get();
-      if (!NullPointerIsDefined(I->getFunction(),
-                                U->getType()->getPointerAddressSpace()))
-        Stripped = Stripped->stripInBoundsOffsets();
-      if (Stripped == Base)
+      // null.
+      if (U.get() == Base)
         return CaptureInfo::otherOnly(CaptureComponents::AddressIsNull);
     }
 

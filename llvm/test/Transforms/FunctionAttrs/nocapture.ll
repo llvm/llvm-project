@@ -788,10 +788,12 @@ define i1 @captureICmpWrongPred(ptr %x) {
   ret i1 %1
 }
 
+; We could infer captures(address_is_null) here, but don't bother, because
+; InstCombine will optimize the GEP away.
 define i1 @nocaptureInboundsGEPICmp(ptr %x) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define i1 @nocaptureInboundsGEPICmp
-; FNATTRS-SAME: (ptr readnone captures(address_is_null) [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: (ptr readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 5
 ; FNATTRS-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
 ; FNATTRS-NEXT:    ret i1 [[TMP2]]
@@ -811,7 +813,7 @@ define i1 @nocaptureInboundsGEPICmp(ptr %x) {
 define i1 @nocaptureInboundsGEPICmpRev(ptr %x) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define i1 @nocaptureInboundsGEPICmpRev
-; FNATTRS-SAME: (ptr readnone captures(address_is_null) [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: (ptr readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 5
 ; FNATTRS-NEXT:    [[TMP2:%.*]] = icmp eq ptr null, [[TMP1]]
 ; FNATTRS-NEXT:    ret i1 [[TMP2]]
