@@ -187,12 +187,11 @@ countls(T f) {
   constexpr int CONTAIN_LEN = cpp::numeric_limits<BitType>::digits;
   constexpr int PADDING_LEN = CONTAIN_LEN - FXRep::TOTAL_LEN;
 
-  if constexpr (FXRep::SIGN_LEN != 0) {
-    if (x < 0)
-      x = bit_not(x);
-  }
+  if constexpr (FXRep::SIGN_LEN != 0)
+    if (f < 0)
+      f = bit_not(f);
 
-  BitType value_bits = FXBits(x)::get_bits();
+  BitType value_bits = FXBits(f)::get_bits();
   return cpp::countl_zero(value_bits) - PADDING_LEN;
 }
 
