@@ -3118,7 +3118,7 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
 
   Value *Op0, *Op1;
   Instruction *Ext0, *Ext1;
-  const CmpInst::Predicate Pred = Cmp.getPredicate();
+  const CmpPredicate Pred = Cmp.getCmpPredicate();
   if (match(Add,
             m_Add(m_CombineAnd(m_Instruction(Ext0), m_ZExtOrSExt(m_Value(Op0))),
                   m_CombineAnd(m_Instruction(Ext1),
@@ -3133,7 +3133,7 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
         Res += APInt(BW, isa<ZExtInst>(Ext0) ? 1 : -1, /*isSigned=*/true);
       if (Op1Val)
         Res += APInt(BW, isa<ZExtInst>(Ext1) ? 1 : -1, /*isSigned=*/true);
-      return ICmpInst::compare(Res, C, Pred);
+      return ICmpInst::compare(Res, C, Pred.getPreferredSignedPredicate());
     };
 
     Table[0] = ComputeTable(false, false);

@@ -1336,8 +1336,7 @@ bb:
 define i1 @test_sext_sext_cvt_2_gt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_sext_sext_cvt_2_gt_icmp(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I4:%.*]] = or i1 [[ARG1:%.*]], [[ARG:%.*]]
-; CHECK-NEXT:    ret i1 [[I4]]
+; CHECK-NEXT:    ret i1 false
 ;
 bb:
   %i = sext i1 %arg to i32
@@ -1476,9 +1475,7 @@ bb:
 define i1 @test_zext_sext_cvt_2_gt_icmp(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @test_zext_sext_cvt_2_gt_icmp(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG:%.*]], true
-; CHECK-NEXT:    [[I4:%.*]] = and i1 [[ARG1:%.*]], [[TMP0]]
-; CHECK-NEXT:    ret i1 [[I4]]
+; CHECK-NEXT:    ret i1 false
 ;
 bb:
   %i = zext i1 %arg to i32
