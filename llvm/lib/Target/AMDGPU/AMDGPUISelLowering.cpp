@@ -4056,6 +4056,7 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
       if (Known.getMinValue().getZExtValue() >= TargetType.getSizeInBits()) {
         SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
         const SDValue ShiftMask = DAG.getConstant(TargetType.getSizeInBits() - 1, SL, TargetType);
+	// This AND instruction will be removed during later instruction selection.
         SDValue MaskedShiftAmt =
             DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
         SDValue Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, LHS);
