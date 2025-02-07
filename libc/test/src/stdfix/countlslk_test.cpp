@@ -1,4 +1,4 @@
-//===-- Definition of struct __sighandler_t -------------------------------===//
+//===-- Unittests for countlslk -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TYPES___SIGHANDLER_T_H
-#define LLVM_LIBC_TYPES___SIGHANDLER_T_H
+#include "CountlsTest.h"
 
-typedef void (*__sighandler_t)(int);
+#include "src/stdfix/countlslk.h"
 
-#endif // LLVM_LIBC_TYPES___SIGHANDLER_T_H
+LIST_COUNTLS_TESTS(long accum, LIBC_NAMESPACE::countlslk);
