@@ -31,17 +31,29 @@ using namespace mlir;
 // AliasAnalysis: alias
 //===----------------------------------------------------------------------===//
 
-namespace fir {
-static AliasAnalysis::Source::Attributes
-getAttrsFromVariable(fir::FortranVariableOpInterface var);
+static fir::AliasAnalysis::Source::Attributes
+getAttrsFromVariable(fir::FortranVariableOpInterface var) {
+  fir::AliasAnalysis::Source::Attributes attrs;
+  if (var.isTarget())
+    attrs.set(fir::AliasAnalysis::Attribute::Target);
+  if (var.isPointer())
+    attrs.set(fir::AliasAnalysis::Attribute::Pointer);
+  if (var.isIntentIn())
+    attrs.set(fir::AliasAnalysis::Attribute::IntentIn);
+
+  return attrs;
 }
 
-/// Temporary function to skip through all the no op operations
-/// TODO: Generalize support of fir.load
-static mlir::Value
-getOriginalDef(mlir::Value v,
-               fir::AliasAnalysis::Source::Attributes &attributes,
-               bool &isCapturedInInternalProcedure) {
+static bool hasGlobalOpTargetAttr(mlir::Value v, fir::AddrOfOp op) {
+  auto globalOpName =
+      mlir::OperationName(fir::GlobalOp::getOperationName(), op->getContext());
+  return fir::valueHasFirAttribute(
+      v, fir::GlobalOp::getTargetAttrName(globalOpName));
+}
+
+mlir::Value getOriginalDef(mlir::Value v,
+                           fir::AliasAnalysis::Source::Attributes &attributes,
+                           bool &isCapturedInInternalProcedure) {
   mlir::Operation *defOp;
   bool breakFromLoop = false;
   while (!breakFromLoop && (defOp = v.getDefiningOp())) {
@@ -50,13 +62,34 @@ getOriginalDef(mlir::Value v,
         .Case<fir::DeclareOp, hlfir::DeclareOp>([&](auto op) {
           v = op.getMemref();
           auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
-          attributes |= fir::getAttrsFromVariable(varIf);
+          attributes |= getAttrsFromVariable(varIf);
           isCapturedInInternalProcedure |=
               varIf.isCapturedInInternalProcedure();
         })
         .Default([&](auto op) { breakFromLoop = true; });
   }
   return v;
+}
+
+static bool isEvaluateInMemoryBlockArg(mlir::Value v) {
+  if (auto evalInMem = llvm::dyn_cast_or_null<hlfir::EvaluateInMemoryOp>(
+          v.getParentRegion()->getParentOp()))
+    return evalInMem.getMemory() == v;
+  return false;
+}
+
+template <typename OMPTypeOp, typename DeclTypeOp>
+static bool isPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
+                         OMPTypeOp &op, DeclTypeOp &declOp) {
+  if (!op.getPrivateSyms().has_value())
+    return false;
+  for (auto [opSym, blockArg] :
+       llvm::zip_equal(*op.getPrivateSyms(), argIface.getPrivateBlockArgs())) {
+    if (blockArg == declOp.getMemref()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 namespace fir {
@@ -101,13 +134,6 @@ bool AliasAnalysis::Source::isDummyArgument() const {
   if (auto v = origin.u.dyn_cast<mlir::Value>()) {
     return fir::isDummyArgument(v);
   }
-  return false;
-}
-
-static bool isEvaluateInMemoryBlockArg(mlir::Value v) {
-  if (auto evalInMem = llvm::dyn_cast_or_null<hlfir::EvaluateInMemoryOp>(
-          v.getParentRegion()->getParentOp()))
-    return evalInMem.getMemory() == v;
   return false;
 }
 
@@ -504,33 +530,6 @@ ModRefResult AliasAnalysis::getModRef(mlir::Region &region,
   return result;
 }
 
-AliasAnalysis::Source::Attributes
-getAttrsFromVariable(fir::FortranVariableOpInterface var) {
-  AliasAnalysis::Source::Attributes attrs;
-  if (var.isTarget())
-    attrs.set(AliasAnalysis::Attribute::Target);
-  if (var.isPointer())
-    attrs.set(AliasAnalysis::Attribute::Pointer);
-  if (var.isIntentIn())
-    attrs.set(AliasAnalysis::Attribute::IntentIn);
-
-  return attrs;
-}
-
-template <typename OMPTypeOp, typename DeclTypeOp>
-static bool isPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
-                         OMPTypeOp &op, DeclTypeOp &declOp) {
-  if (!op.getPrivateSyms().has_value())
-    return false;
-  for (auto [opSym, blockArg] :
-       llvm::zip_equal(*op.getPrivateSyms(), argIface.getPrivateBlockArgs())) {
-    if (blockArg == declOp.getMemref()) {
-      return true;
-    }
-  }
-  return false;
-}
-
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getLastInstantiationPoint) {
   auto *defOp = v.getDefiningOp();
@@ -586,8 +585,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           v = op->getOperand(0);
           defOp = v.getDefiningOp();
           // C3
-          //if (fir::isPointerType(v.getType()))
-          //  attributes.set(Attribute::Pointer);
+          // if (fir::isPointerType(v.getType()))
+          //   attributes.set(Attribute::Pointer);
           if (mlir::isa<fir::BaseBoxType>(v.getType()))
             followBoxData = true;
         })
@@ -641,10 +640,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           ty = v.getType();
           type = SourceKind::Global;
 
-          auto globalOpName = mlir::OperationName(
-              fir::GlobalOp::getOperationName(), defOp->getContext());
-          if (fir::valueHasFirAttribute(
-                  v, fir::GlobalOp::getTargetAttrName(globalOpName)))
+          if (hasGlobalOpTargetAttr(v, op))
             attributes.set(Attribute::Target);
 
           // TODO: Take followBoxData into account when setting the pointer

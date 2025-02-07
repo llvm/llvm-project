@@ -50,8 +50,8 @@
 // CHECK-DAG: arg2.load#0 <-> arg2.addr#0: MustAlias
 // CHECK-DAG: boxp1.addr#0 <-> arg2.addr#0: MayAlias
 
-// The address in a pointer cannot alias the address of a pointer, even when the
-// pointer has no box.
+// TODO: Can the address in a pointer alias the address of a pointer when the
+// pointer has no box? Should this be MayAlias?
 // T3: CHECK-DAG: p1.addr#0 <-> p1.tgt#0: NoAlias
 
 // The addresses stored in two different pointers can alias, even if one has no

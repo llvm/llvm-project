@@ -1640,7 +1640,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareMapperConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContextAndClauseSets(
       dir.source, llvm::omp::Directive::OMPD_declare_mapper);
-  const auto &spec{std::get<parser::OmpDeclareMapperSpecifier>(x.t)};
+  const auto &spec{std::get<parser::OmpMapperSpecifier>(x.t)};
   const auto &type = std::get<parser::TypeSpec>(spec.t);
   if (!std::get_if<parser::DerivedTypeSpec>(&type.u)) {
     context_.Say(dir.source, "Type is not a derived type"_err_en_US);
@@ -2966,6 +2966,7 @@ CHECK_SIMPLE_CLAUSE(Indirect, OMPC_indirect)
 CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
 CHECK_SIMPLE_CLAUSE(NoOpenmp, OMPC_no_openmp)
 CHECK_SIMPLE_CLAUSE(NoOpenmpRoutines, OMPC_no_openmp_routines)
+CHECK_SIMPLE_CLAUSE(NoOpenmpConstructs, OMPC_no_openmp_constructs)
 CHECK_SIMPLE_CLAUSE(NoParallelism, OMPC_no_parallelism)
 CHECK_SIMPLE_CLAUSE(Nogroup, OMPC_nogroup)
 CHECK_SIMPLE_CLAUSE(Notinbranch, OMPC_notinbranch)
@@ -3225,9 +3226,12 @@ void OmpStructureChecker::CheckReductionObjects(
     }
   }
 
+  // Denied in all current versions of the standard because structure components
+  // are not definable (i.e. they are expressions not variables).
+  // Object cannot be a part of another object (except array elements).
+  CheckStructureComponent(objects, clauseId);
+
   if (version >= 50) {
-    // Object cannot be a part of another object (except array elements)
-    CheckStructureComponent(objects, clauseId);
     // If object is an array section or element, the base expression must be
     // a language identifier.
     for (const parser::OmpObject &object : objects.v) {

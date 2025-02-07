@@ -38,7 +38,7 @@ class Triple;
 class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:
   enum ARMProcFamilyEnum : uint8_t {
-    Others,
+    Generic,
 #define ARM_PROCESSOR_FAMILY(ENUM) ENUM,
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
 #undef ARM_PROCESSOR_FAMILY
@@ -46,7 +46,7 @@ public:
 
 protected:
   /// ARMProcFamily - ARM processor family: Cortex-A53, Cortex-A57, and others.
-  ARMProcFamilyEnum ARMProcFamily = Others;
+  ARMProcFamilyEnum ARMProcFamily = Generic;
 
   // Enable 64-bit vectorization in SLP.
   unsigned MinVectorRegisterBitWidth = 64;

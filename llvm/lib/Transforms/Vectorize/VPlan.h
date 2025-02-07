@@ -972,10 +972,7 @@ public:
 
   /// Return the cost of this VPInstruction.
   InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the VPInstruction to \p O.
@@ -2002,6 +1999,11 @@ public:
 
   /// Returns the \p I th incoming VPBasicBlock.
   VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
+
+  /// Set the \p I th incoming VPBasicBlock to \p IncomingBlock.
+  void setIncomingBlock(unsigned I, VPBasicBlock *IncomingBlock) {
+    IncomingBlocks[I] = IncomingBlock;
+  }
 
   /// Returns the \p I th incoming VPValue.
   VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
