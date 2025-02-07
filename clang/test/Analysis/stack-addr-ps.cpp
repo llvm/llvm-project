@@ -953,4 +953,11 @@ int return_comma_separated_expressions_container_safe() {
   Container Other;
   return Other = Container{&x}, x = 14; // no-warning
 }
+
+int make_x();
+int return_symbol_safe() {
+  int x = make_x();
+  clang_analyzer_dump(x); // expected-warning-re {{conj_$2{int, {{.+}}}}}
+  return x; // no-warning
+}
 }
