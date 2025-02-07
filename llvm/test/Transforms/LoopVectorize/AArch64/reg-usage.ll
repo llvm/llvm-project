@@ -16,11 +16,10 @@ define void @get_invariant_reg_usage(ptr %z) {
 ; CHECK-LABEL: LV: Checking a loop in 'get_invariant_reg_usage'
 ; CHECK: LV(REG): VF = vscale x 16
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 1 registers 
-; CHECK-NEXT: LV(REG): Found invariant usage: 2 item
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 8 registers
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 1 registers
+; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
 
 L.entry:
   %0 = load i128, ptr %z, align 16
