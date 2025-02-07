@@ -218,7 +218,7 @@ public:
 TEST_F(DynamicValueObjectLocalBufferTest, BufferTooSmall) {
   /// Test that a value object with a buffer to small to fit the
   /// "dynamic" type will return an invalid dynamic value object.
-  u_int8_t value = 1;
+  uint8_t value = 1;
   ByteOrder endian = endian::InlHostByteOrder();
   DataExtractor data_extractor{&value, sizeof(value), endian, 4};
   TestValueObjectWithLocalBuffer(data_extractor, false);
