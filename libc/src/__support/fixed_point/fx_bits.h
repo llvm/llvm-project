@@ -177,6 +177,7 @@ template <typename T> LIBC_INLINE constexpr T round(T x, int n) {
 }
 
 // count leading sign bits
+// TODO: support fixed_point_padding
 template <typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, int>
 countls(T f) {
@@ -184,16 +185,12 @@ countls(T f) {
   using BitType = typename FXRep::StorageType;
   using FXBits = FXBits<T>;
 
-  constexpr int CONTAIN_LEN = cpp::numeric_limits<BitType>::digits;
-  constexpr int PADDING_LEN = CONTAIN_LEN - FXRep::TOTAL_LEN;
+  if constexpr (FXRep::SIGN_LEN > 0)
+    if (f < 0)
+      f = bit_not(f);
 
-  if constexpr (FXRep::SIGN_LEN != 0) {
-    if (x < 0)
-      x = bit_not(x);
-  }
-
-  BitType value_bits = FXBits(x)::get_bits();
-  return cpp::countl_zero(value_bits) - PADDING_LEN;
+  BitType value_bits = FXBits(f).get_bits();
+  return cpp::countl_zero(value_bits) - FXRep::SIGN_LEN;
 }
 
 } // namespace fixed_point

@@ -1,4 +1,4 @@
-//===-- Implementation for countlsuhk function  ---------------------------===//
+//===-- Implementation for countlsuk function  ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "countlsuhk.h"
+#include "countlsuk.h"
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/fx_bits.h"
 #include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, countlsuhk, (unsigned accum f)) {
+LLVM_LIBC_FUNCTION(int, countlsuk, (unsigned accum f)) {
   return fixed_point::countls(f);
 }
 

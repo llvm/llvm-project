@@ -20,8 +20,6 @@ template <typename T> class CountlsTest : public LIBC_NAMESPACE::testing::Test {
   static constexpr T one_fourth = FXRep::ONE_FOURTH();
   static constexpr T eps = FXRep::EPS();
 
-  static constexpr auto value_len = FXRep::INTEGRAL_LEN + FXRep::FRACTION_LEN;
-
 public:
   typedef int (*CountlsFunc)(T);
 
@@ -30,13 +28,13 @@ public:
 
     EXPECT_EQ(FXRep::INTEGRAL_LEN, func(one_half));
     EXPECT_EQ(FXRep::INTEGRAL_LEN + 1, func(one_fourth));
-    EXPECT_EQ(value_len, func(zero));
-    EXPECT_EQ(value_len - 1, func(eps));
+    EXPECT_EQ(FXRep::VALUE_LEN, func(zero));
+    EXPECT_EQ(FXRep::VALUE_LEN - 1, func(eps));
     EXPECT_EQ(0, func(max));
     // If signed, left shifting the minimum value will overflow, so countls = 0.
     // If unsigned, the minimum value is zero, so countls is the number of value
     // bits according to ISO/IEC TR 18037.
-    EXPECT_EQ(is_signed ? 0 : value_len, func(min));
+    EXPECT_EQ(is_signed ? 0 : FXRep::VALUE_LEN, func(min));
 
     if (10 <= static_cast<int>(max)) {
       EXPECT_EQ(FXRep::INTEGRAL_LEN - 4, func(10));
@@ -47,7 +45,8 @@ public:
     }
 
     if constexpr (is_signed) {
-      EXPECT_EQ(value_len, func(-eps));
+      EXPECT_EQ(FXRep::VALUE_LEN, func(-zero));
+      EXPECT_EQ(FXRep::VALUE_LEN, func(-eps));
       EXPECT_EQ(FXRep::INTEGRAL_LEN + 1, func(-one_half));
       if (FXRep::FRACTION_LEN >= 2) {
         EXPECT_EQ(FXRep::INTEGRAL_LEN + 2, func(-one_fourth));

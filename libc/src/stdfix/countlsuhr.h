@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int countlsuhr(unsigned long fract f);
+int countlsuhr(unsigned short fract f);
 
 } // namespace LIBC_NAMESPACE_DECL
 
