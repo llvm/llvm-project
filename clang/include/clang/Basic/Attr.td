@@ -4654,9 +4654,9 @@ def HLSLRootSignature : Attr {
   let Documentation = [HLSLRootSignatureDocs];
   let AdditionalMembers = [{
 private:
-  ArrayRef<llvm::hlsl::root_signature::RootElement> RootElements;
+  ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements;
 public:
-  void setElements(ArrayRef<llvm::hlsl::root_signature::RootElement> Elements) {
+  void setElements(ArrayRef<llvm::hlsl::rootsig::RootElement> Elements) {
     RootElements = Elements;
   }
   auto getElements() const { return RootElements; }

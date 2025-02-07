@@ -664,21 +664,21 @@ void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
   if (Lexer.Lex(Tokens))
     return;
 
-  SmallVector<llvm::hlsl::root_signature::RootElement> Elements;
+  SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Tokens,
-                             SemaRef.getPreprocessor().getDiagnostics());
+                                   SemaRef.getPreprocessor().getDiagnostics());
   if (Parser.Parse())
     return;
 
   unsigned N = Elements.size();
-  auto RootElements =
-      MutableArrayRef<llvm::hlsl::root_signature::RootElement>(::new (getASTContext()) llvm::hlsl::root_signature::RootElement[N], N);
+  auto RootElements = MutableArrayRef<llvm::hlsl::rootsig::RootElement>(
+      ::new (getASTContext()) llvm::hlsl::rootsig::RootElement[N], N);
   for (unsigned I = 0; I < N; ++I)
     RootElements[I] = Elements[I];
 
   auto *Result = ::new (getASTContext())
       HLSLRootSignatureAttr(getASTContext(), AL, Signature);
-  Result->setElements(ArrayRef<llvm::hlsl::root_signature::RootElement>(RootElements));
+  Result->setElements(ArrayRef<llvm::hlsl::rootsig::RootElement>(RootElements));
   D->addAttr(Result);
 }
 
