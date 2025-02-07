@@ -29,6 +29,7 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
+#include "clang/Analysis/Analyses/DanglingReference.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
 #include "clang/Analysis/Analyses/UninitializedValues.h"
@@ -2637,6 +2638,46 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 }
 
+namespace {
+
+class DanglingReferenceReporterImpl : public DanglingReferenceReporter {
+public:
+  DanglingReferenceReporterImpl(Sema &S) : S(S) {}
+
+  void ReportReturnLocalVar(const Expr *RetExpr,
+                            const Decl *LocalDecl) override {
+    S.Diag(RetExpr->getExprLoc(), diag::warn_ret_stack_variable_ref_cfg)
+        << RetExpr->getExprLoc();
+    S.Diag(LocalDecl->getLocation(), diag::note_local_variable_declared_here)
+        << LocalDecl->getLocation();
+    llvm::errs() << "Debug: Return local var:\n";
+    RetExpr->getExprLoc().dump(S.getSourceManager());
+  }
+
+  void ReportReturnTemporaryExpr(const Expr *TemporaryExpr) override {
+    S.Diag(TemporaryExpr->getExprLoc(), diag::warn_ret_stack_temporary_ref_cfg)
+        << TemporaryExpr->getExprLoc();
+    llvm::errs() << "Debug: Return temporary expr:\n";
+    TemporaryExpr->getExprLoc().dump(S.getSourceManager());
+  }
+
+  void ReportDanglingReference(const VarDecl *VD) override {
+    S.Diag(VD->getLocation(), diag::warn_dangling_reference_cfg)
+        << VD->getLocation();
+    llvm::errs() << "Debug: Return temporary expr:\n";
+    VD->getLocation().dump(S.getSourceManager());
+  }
+
+  void SuggestLifetimebound(const ParmVarDecl *PVD,
+                            const Expr *RetExpr) override {
+    S.Diag(PVD->getLocation(), diag::warn_suggest_lifetimebound_cfg)
+        << PVD->getLocation();
+  }
+
+private:
+  Sema &S;
+};
+} // namespace
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     sema::AnalysisBasedWarnings::Policy P, sema::FunctionScopeInfo *fscope,
     const Decl *D, QualType BlockType) {
@@ -2826,6 +2867,14 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     }
   }
 
+  if (S.getLangOpts().CPlusPlus &&
+      !Diags.isIgnored(diag::warn_ret_stack_variable_ref_cfg,
+                       D->getBeginLoc())) {
+    if (CFG *cfg = AC.getCFG()) {
+      DanglingReferenceReporterImpl Reporter(S);
+      runDanglingReferenceAnalysis(*cast<DeclContext>(D), *cfg, AC, &Reporter);
+    }
+  }
   // Check for violations of "called once" parameter properties.
   if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&
       shouldAnalyzeCalledOnceParameters(Diags, D->getBeginLoc())) {

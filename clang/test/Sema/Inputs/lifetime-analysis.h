@@ -77,6 +77,7 @@ template<typename T>
 struct basic_string {
   basic_string();
   basic_string(const T *);
+  ~basic_string();
   const T *c_str() const;
   operator basic_string_view<T> () const;
   using const_iterator = iter<T>;
@@ -87,6 +88,7 @@ template<typename T>
 struct unique_ptr {
   T &operator*();
   T *get() const;
+  T *release();
 };
 
 template<typename T>
