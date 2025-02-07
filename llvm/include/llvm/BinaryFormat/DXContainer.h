@@ -557,10 +557,11 @@ struct RootSignatureValidations {
   }
 
   static Expected<uint32_t> validateVersion(uint32_t Version) {
-    if (Version < 1 || Version > 2)
-      return llvm::make_error<BinaryStreamError>(
-          "Invalid Root Signature Version");
-    return Version;
+    if (Version == 1 || Version == 2)
+      return Version;
+
+    return llvm::make_error<BinaryStreamError>(
+        "Invalid Root Signature Version");
   }
 };
 
