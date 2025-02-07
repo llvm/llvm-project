@@ -6234,9 +6234,6 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
       return this->emitGetPtrParam(It->second.Offset, E);
     }
-
-    if (D->getType()->isReferenceType())
-      return this->emitDummyPtr(D, E);
   }
 
   // In case we need to re-visit a declaration.
