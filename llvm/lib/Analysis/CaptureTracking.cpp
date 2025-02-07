@@ -458,7 +458,9 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
         continue;
       case CaptureTracker::Continue:
         // Fall through to passthrough handling, but only if RetCC contains
-        // additional components that OtherCC does not.
+        // additional components that OtherCC does not. We assume that a
+        // capture at this point will be strictly more constraining than a
+        // later capture from following the return value.
         if (capturesNothing(RetCC & ~OtherCC))
           continue;
         break;
