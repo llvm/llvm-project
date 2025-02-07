@@ -356,26 +356,25 @@ private:
   SmallVector<PHINode *, 8> InnerLoopInductions;
 };
 
+using CostMapTy = DenseMap<const Loop *, std::pair<unsigned, CacheCostTy>>;
+
 /// LoopInterchangeProfitability checks if it is profitable to interchange the
 /// loop.
 class LoopInterchangeProfitability {
 public:
   LoopInterchangeProfitability(Loop *Outer, Loop *Inner, ScalarEvolution *SE,
-                               OptimizationRemarkEmitter *ORE)
-      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), ORE(ORE) {}
+                               OptimizationRemarkEmitter *ORE,
+                               const std::optional<CostMapTy> &CM)
+      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), ORE(ORE), CostMap(CM) {}
 
   /// Check if the loop interchange is profitable.
   bool isProfitable(const Loop *InnerLoop, const Loop *OuterLoop,
                     unsigned InnerLoopId, unsigned OuterLoopId,
-                    CharMatrix &DepMatrix,
-                    const DenseMap<const Loop *, unsigned> &CostMap,
-                    std::unique_ptr<CacheCost> &CC);
+                    CharMatrix &DepMatrix);
 
 private:
   int getInstrOrderCost();
-  std::optional<bool> isProfitablePerLoopCacheAnalysis(
-      const DenseMap<const Loop *, unsigned> &CostMap,
-      std::unique_ptr<CacheCost> &CC);
+  std::optional<bool> isProfitablePerLoopCacheAnalysis();
   std::optional<bool> isProfitablePerInstrOrderCost();
   std::optional<bool> isProfitableForVectorization(unsigned InnerLoopId,
                                                    unsigned OuterLoopId,
@@ -388,6 +387,8 @@ private:
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter *ORE;
+
+  const std::optional<CostMapTy> &CostMap;
 };
 
 /// LoopInterchangeTransform interchanges the loop.
@@ -497,11 +498,13 @@ struct LoopInterchange {
     // indicates the loop should be placed as the innermost loop.
     //
     // For the old pass manager CacheCost would be null.
-    DenseMap<const Loop *, unsigned> CostMap;
+    std::optional<CostMapTy> CostMap = std::nullopt;
     if (CC != nullptr) {
+      CostMap = CostMapTy();
       const auto &LoopCosts = CC->getLoopCosts();
       for (unsigned i = 0; i < LoopCosts.size(); i++) {
-        CostMap[LoopCosts[i].first] = i;
+        const auto &Cost = LoopCosts[i];
+        (*CostMap)[Cost.first] = std::make_pair(i, Cost.second);
       }
     }
     // We try to achieve the globally optimal memory access for the loopnest,
@@ -537,7 +540,7 @@ struct LoopInterchange {
   bool processLoop(Loop *InnerLoop, Loop *OuterLoop, unsigned InnerLoopId,
                    unsigned OuterLoopId,
                    std::vector<std::vector<char>> &DependencyMatrix,
-                   const DenseMap<const Loop *, unsigned> &CostMap) {
+                   const std::optional<CostMapTy> &CostMap) {
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
     LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE);
@@ -546,9 +549,9 @@ struct LoopInterchange {
       return false;
     }
     LLVM_DEBUG(dbgs() << "Loops are legal to interchange\n");
-    LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
+    LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE, CostMap);
     if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
-                          DependencyMatrix, CostMap, CC)) {
+                          DependencyMatrix)) {
       LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
       return false;
     }
@@ -1127,29 +1130,60 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
 }
 
 std::optional<bool>
-LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis(
-    const DenseMap<const Loop *, unsigned> &CostMap,
-    std::unique_ptr<CacheCost> &CC) {
+LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis() {
   // This is the new cost model returned from loop cache analysis.
   // A smaller index means the loop should be placed an outer loop, and vice
   // versa.
-  if (CostMap.contains(InnerLoop) && CostMap.contains(OuterLoop)) {
-    unsigned InnerIndex = 0, OuterIndex = 0;
-    InnerIndex = CostMap.find(InnerLoop)->second;
-    OuterIndex = CostMap.find(OuterLoop)->second;
-    LLVM_DEBUG(dbgs() << "InnerIndex = " << InnerIndex
-                      << ", OuterIndex = " << OuterIndex << "\n");
-    if (InnerIndex < OuterIndex)
-      return std::optional<bool>(true);
-    assert(InnerIndex != OuterIndex && "CostMap should assign unique "
-                                       "numbers to each loop");
-    if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
-      return std::nullopt;
-    return std::optional<bool>(false);
-  }
-  return std::nullopt;
+  if (!CostMap.has_value())
+    return std::nullopt;
+
+  auto InnerIte = CostMap->find(InnerLoop);
+  auto OuterIte = CostMap->find(OuterLoop);
+  if (InnerIte == CostMap->end() || OuterIte == CostMap->end())
+    return std::nullopt;
+
+  const auto &[InnerIndex, InnerCost] = InnerIte->second;
+  const auto &[OuterIndex, OuterCost] = OuterIte->second;
+  LLVM_DEBUG(dbgs() << "InnerIndex = " << InnerIndex
+                    << ", OuterIndex = " << OuterIndex << "\n");
+  assert(InnerIndex != OuterIndex && "CostMap should assign unique "
+                                     "numbers to each loop");
+
+  if (InnerCost == OuterCost)
+    return std::nullopt;
+
+  return InnerIndex < OuterIndex;
 }
 
+// This function doesn't satisfy transitivity. Consider the following case.
+//
+// ```
+// for (int k = 0; k < N; k++) {
+//   for (int j = 0; j < N; j++) {
+//     for (int i = 0; i < N; i++) {
+//       dst0[i][j][k] += aa[i][j] + bb[i][j] + cc[j][k];
+//       dst1[k][j][i] += dd[i][j] + ee[i][j] + ff[j][k];
+//     }
+//   }
+// }
+//
+// ```
+//
+// The getInstrOrderCost will return the following value.
+//
+//  Outer | Inner | Cost
+// -------+-------+------
+//    k   |   j   |  -2
+//    j   |   i   |  -4
+//    k   |   i   |   0
+//
+// This means that this function says interchanging (k, j) loops and (j, i)
+// loops are profitable, but not (k, i). The root cause of this is that the
+// getInstrOrderCost only see the loops we are checking. We can resolve this if
+// we also consider the order going through other inductions. As for the above
+// case, we can induce that interchanging `k` and `i` is profitable (it is
+// better to move the `k` loop to inner position) by `bb[i][j]` and `cc[j][k]`.
+// However, such accurate calculation is expensive, so that we don't do it.
 std::optional<bool>
 LoopInterchangeProfitability::isProfitablePerInstrOrderCost() {
   // Legacy cost model: this is rough cost estimation algorithm. It counts the
@@ -1184,11 +1218,27 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
   return std::optional<bool>(!DepMatrix.empty());
 }
 
-bool LoopInterchangeProfitability::isProfitable(
-    const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
-    unsigned OuterLoopId, CharMatrix &DepMatrix,
-    const DenseMap<const Loop *, unsigned> &CostMap,
-    std::unique_ptr<CacheCost> &CC) {
+// The bubble-sort fashion algorithm is adopted to sort the loop nest, so the
+// comparison function should ideally induce a strict weak ordering required by
+// some standard C++ libraries. In particular, isProfitable should hold the
+// following properties.
+//
+// Asymmetry: If isProfitable(a, b) is true then isProfitable(b, a) is false.
+// Transitivity: If both isProfitable(a, b) and isProfitable(b, c) is true then
+// isProfitable(a, c) is true.
+//
+// The most important thing is not to make unprofitable interchange. From this
+// point of view, asymmetry is important. This is because if both
+// isProfitable(a, b) and isProfitable(b, a) are true, then an unprofitable
+// transformation (one of them) will be performed. On the other hand, a lack of
+// transitivity might cause some optimization opportunities to be lost, but
+// won't trigger an unprofitable one. Moreover, guaranteeing transitivity is
+// expensive. Therefore, isProfitable only holds the asymmetry.
+bool LoopInterchangeProfitability::isProfitable(const Loop *InnerLoop,
+                                                const Loop *OuterLoop,
+                                                unsigned InnerLoopId,
+                                                unsigned OuterLoopId,
+                                                CharMatrix &DepMatrix) {
   // isProfitable() is structured to avoid endless loop interchange.
   // If loop cache analysis could decide the profitability then,
   // profitability check will stop and return the analysis result.
@@ -1197,15 +1247,14 @@ bool LoopInterchangeProfitability::isProfitable(
   // profitable for InstrOrderCost. Likewise, if InstrOrderCost failed to
   // analysis the profitability then only, isProfitableForVectorization
   // will decide.
-  std::optional<bool> shouldInterchange =
-      isProfitablePerLoopCacheAnalysis(CostMap, CC);
-  if (!shouldInterchange.has_value()) {
-    shouldInterchange = isProfitablePerInstrOrderCost();
-    if (!shouldInterchange.has_value())
-      shouldInterchange =
+  std::optional<bool> ShouldInterchange = isProfitablePerLoopCacheAnalysis();
+  if (!ShouldInterchange.has_value()) {
+    ShouldInterchange = isProfitablePerInstrOrderCost();
+    if (!ShouldInterchange.has_value())
+      ShouldInterchange =
           isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
   }
-  if (!shouldInterchange.has_value()) {
+  if (!ShouldInterchange.has_value()) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "InterchangeNotProfitable",
                                       InnerLoop->getStartLoc(),
@@ -1214,7 +1263,8 @@ bool LoopInterchangeProfitability::isProfitable(
                 "interchange.";
     });
     return false;
-  } else if (!shouldInterchange.value()) {
+  }
+  if (!ShouldInterchange.value()) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "InterchangeNotProfitable",
                                       InnerLoop->getStartLoc(),
