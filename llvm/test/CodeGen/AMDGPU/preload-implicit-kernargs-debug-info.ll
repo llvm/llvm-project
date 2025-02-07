@@ -3,14 +3,13 @@
 ; CHECK: function declaration may only have a unique !dbg attachment
 ; CHECK-NEXT: ptr @0
 
-define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) %out) !dbg !4 {
+define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) %out) !dbg !4 !max_work_group_size !7 {
   %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %load = load i32, ptr addrspace(4) %imp_arg_ptr, align 4
   store i32 %load, ptr addrspace(1) %out, align 4
   ret void
 }
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
@@ -25,3 +24,4 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 !4 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 1, type: !5, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
 !5 = !DISubroutineType(cc: DW_CC_LLVM_OpenCLKernel, types: !6)
 !6 = !{null}
+!7 = !{i32 1024, i32 1, i32 1}
