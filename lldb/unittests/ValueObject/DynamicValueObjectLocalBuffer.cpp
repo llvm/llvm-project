@@ -68,7 +68,7 @@ struct MockLanguageRuntime : public LanguageRuntime {
     class_type_or_name.SetCompilerType(int_type);
     local_buffer = {(uint8_t *)in_value.GetValue().GetScalar().ULongLong(
                         LLDB_INVALID_ADDRESS),
-                    in_value.GetLocalBufferSize()};
+                    static_cast<size_t>(in_value.GetLocalBufferSize())};
     value_type = Value::ValueType::HostAddress;
 
     return true;
