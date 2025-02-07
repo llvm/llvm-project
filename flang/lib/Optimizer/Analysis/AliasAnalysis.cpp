@@ -597,9 +597,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty);
               boxTy && followingData) {
 
-            if (mlir::isa<fir::PointerType>(boxTy.getEleTy())) {
+            if (mlir::isa<fir::PointerType>(boxTy.getEleTy()))
               attributes.set(Attribute::Pointer);
-            }
 
             auto def = getOriginalDef(op.getMemref());
             if (auto addrOfOp = def.template getDefiningOp<fir::AddrOfOp>()) {
