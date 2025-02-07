@@ -1,3 +1,4 @@
+import("//clang/resource_dir.gni")
 import("//libcxx/config.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 
@@ -1949,6 +1950,7 @@ if (current_toolchain == default_toolchain) {
       "ext/hash_set",
       "fenv.h",
       "filesystem",
+      "flat_map",
       "float.h",
       "format",
       "forward_list",
@@ -2047,7 +2049,107 @@ config("include_config") {
   include_dirs = [ libcxx_generated_include_dir ]
 }
 
+config("module_config") {
+  cflags_cc = [
+    "-fmodules",
+    "-fmodule-map-file=include/c++/v1/module.modulemap",
+    "-fno-implicit-modules",
+    "-fno-implicit-module-maps",
+    "-nostdinc++",
+    "-std=c++23",
+
+    # Disable build config mismatch warning.
+    # e.g. exception handling.
+    "-Wno-module-file-config-mismatch",
+  ]
+}
+
+template("libcxx_module") {
+  source_set(target_name) {
+    if (libcxx_enable_explicit_modules) {
+      sources = [ "$root_build_dir/include/c++/v1/module.modulemap" ]
+    }
+
+    deps = [ ":copy_headers($default_toolchain)" ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    } else {
+      not_needed(invoker, "*")
+    }
+
+    configs += [
+      ":include_config",
+      ":module_config",
+    ]
+  }
+}
+
+libcxx_module("std_config") {
+}
+
+libcxx_module("std_core") {
+  deps = [
+    ":std_config",
+    "//clang/lib/Headers:_Builtin_stddef",
+    "//clang/lib/Headers:_Builtin_stdint",
+  ]
+}
+
+libcxx_module("std_ctype_h") {
+}
+
+libcxx_module("std_errno_h") {
+}
+
+libcxx_module("std_fenv_h") {
+}
+
+libcxx_module("std_float_h") {
+}
+
+libcxx_module("std_inttypes_h") {
+}
+
+libcxx_module("std_uchar_h") {
+}
+
+libcxx_module("std_private_mbstate_t") {
+}
+
+libcxx_module("std_math_h") {
+  deps = [ ":std_core" ]
+}
+
+libcxx_module("std_string_h") {
+}
+
+libcxx_module("std") {
+  deps = [
+    ":std_core",
+    ":std_ctype_h",
+    ":std_errno_h",
+    ":std_fenv_h",
+    ":std_float_h",
+    ":std_inttypes_h",
+    ":std_math_h",
+    ":std_private_mbstate_t",
+    ":std_string_h",
+    ":std_uchar_h",
+    ":std_wctype_h",
+  ]
+}
+
+libcxx_module("std_wctype_h") {
+  deps = [
+    ":std_core",
+    ":std_ctype_h",
+  ]
+}
+
 group("include") {
   deps = [ ":copy_headers($default_toolchain)" ]
-  public_configs = [ ":include_config" ]
+  public_configs = [
+    ":include_config",
+    ":module_config",
+  ]
 }

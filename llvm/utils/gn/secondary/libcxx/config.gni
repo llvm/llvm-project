@@ -7,4 +7,9 @@ declare_args() {
 
   # Build timezone database as part of libc++experimental.
   libcxx_enable_time_zone_database = target_os == "linux"
+
+  # Whether to enable explicit Clang modules build for libc++.
+  # See https://clang.llvm.org/docs/Modules.html for more details about Clang
+  # Modules.
+  libcxx_enable_explicit_modules = false
 }

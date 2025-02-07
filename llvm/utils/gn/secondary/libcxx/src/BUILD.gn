@@ -249,6 +249,7 @@ if (libcxx_enable_shared) {
       "//compiler-rt/lib/builtins",
       "//libc:common_utils",
       "//libcxx/include",
+      "//libcxx/include:std",
       "//libcxxabi/src:cxxabi_shared",
       "//libunwind/src:unwind_shared",
     ]
@@ -301,6 +302,7 @@ if (libcxx_enable_static) {
       "//compiler-rt/lib/builtins",
       "//libc:common_utils",
       "//libcxx/include",
+      "//libcxx/include:std",
       "//libcxxabi/src:cxxabi_static",
       "//libunwind/src:unwind_static",
     ]
@@ -331,7 +333,10 @@ if (libcxx_enable_experimental) {
         "experimental/tzdb_list.cpp",
       ]
     }
-    deps = [ "//libcxx/include" ]
+    deps = [
+      "//libcxx/include",
+      "//libcxx/include:std",
+    ]
     configs += [ ":cxx_config" ]
     configs -= [
       "//llvm/utils/gn/build:no_exceptions",

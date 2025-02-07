@@ -95,6 +95,7 @@ if (libcxxabi_enable_shared) {
     deps = [
       "//compiler-rt/lib/builtins",
       "//libcxx/include",
+      "//libcxx/include:std",
       "//libunwind/src:unwind_shared",
     ]
     configs += [ ":cxxabi_config" ]
@@ -126,6 +127,7 @@ if (libcxxabi_enable_static) {
     deps = [
       "//compiler-rt/lib/builtins",
       "//libcxx/include",
+      "//libcxx/include:std",
       "//libunwind/src:unwind_static",
     ]
     configs += [ ":cxxabi_config" ]
