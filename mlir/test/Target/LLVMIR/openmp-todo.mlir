@@ -104,12 +104,8 @@ llvm.func @distribute_order(%lb : i32, %ub : i32, %step : i32) {
 
 // -----
 
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
+omp.private {type = private} @x.privatizer : !llvm.ptr
+
 llvm.func @distribute_private(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.distribute operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.distribute}}
@@ -156,11 +152,11 @@ llvm.func @sections_allocate(%x : !llvm.ptr) {
 
 // -----
 
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
+omp.private {type = private} @x.privatizer : i32 init {
+^bb0(%mold: !llvm.ptr, %private: !llvm.ptr):
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.store %c0, %private : i32, !llvm.ptr
+  omp.yield(%private: !llvm.ptr)
 }
 llvm.func @sections_private(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.sections operation}}
@@ -268,11 +264,11 @@ llvm.func @single_allocate(%x : !llvm.ptr) {
 
 // -----
 
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
+omp.private {type = private} @x.privatizer : i32 init {
+^bb0(%mold: !llvm.ptr, %private: !llvm.ptr):
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.store %c0, %private : i32, !llvm.ptr
+  omp.yield(%private: !llvm.ptr)
 }
 llvm.func @single_private(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.single operation}}
@@ -357,12 +353,11 @@ llvm.func @target_is_device_ptr(%x : !llvm.ptr) {
 
 // -----
 
-omp.private {type = firstprivate} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  omp.yield(%arg0 : !llvm.ptr)
-} copy {
-^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
-  omp.yield(%arg0 : !llvm.ptr)
+omp.private {type = firstprivate} @x.privatizer : i32 copy {
+^bb0(%mold: !llvm.ptr, %private: !llvm.ptr):
+  %0 = llvm.load %mold : !llvm.ptr -> i32
+  llvm.store %0, %private : i32, !llvm.ptr
+  omp.yield(%private: !llvm.ptr)
 }
 llvm.func @target_firstprivate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause firstprivate in omp.target operation}}
@@ -545,11 +540,11 @@ llvm.func @teams_allocate(%x : !llvm.ptr) {
 
 // -----
 
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
+omp.private {type = private} @x.privatizer : i32 init {
+^bb0(%mold: !llvm.ptr, %private: !llvm.ptr):
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.store %c0, %private : i32, !llvm.ptr
+  omp.yield(%private: !llvm.ptr)
 }
 llvm.func @teams_private(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.teams operation}}

@@ -30,7 +30,9 @@ end program
 ! CHECK:           %[[C0_I64:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[IS_NULL:.*]] = arith.cmpi eq, %[[ADDRI]], %[[C0_I64]] : i64
 ! CHECK:           fir.if %[[IS_NULL]] {
-! CHECK:             %[[NULL_BOX:.*]] = fir.embox %[[ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:             %[[C0_INDEX:.*]] = arith.constant 0 : index
+! CHECK:             %[[SHAPE:.*]] = fir.shape %[[C0_INDEX]]
+! CHECK:             %[[NULL_BOX:.*]] = fir.embox %[[ADDR]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:             fir.store %[[NULL_BOX]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           } else {
 ! CHECK:             %[[VAL_3:.*]] = arith.constant 0 : index
