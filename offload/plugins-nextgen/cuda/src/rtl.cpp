@@ -1327,34 +1327,6 @@ public:
     DeviceGlobal.setPtr(reinterpret_cast<void *>(CUPtr));
     return Plugin::success();
   }
-
-  Error getGlobalMetadataFromImage(GenericDeviceTy &Device,
-                                   DeviceImageTy &Image,
-                                   GlobalTy &ImageGlobal) override {
-    // If the image is an ELF we can use the generic path, otherwise fall back
-    // and use cuModuleGetGlobal to query the image.
-    if (utils::elf::isELF(Image.getMemoryBuffer().getBuffer())) {
-      return GenericGlobalHandlerTy::getGlobalMetadataFromImage(Device, Image,
-                                                                ImageGlobal);
-    }
-
-    CUDADeviceImageTy &CUDAImage = static_cast<CUDADeviceImageTy &>(Image);
-
-    const char *GlobalName = ImageGlobal.getName().data();
-
-    size_t CUSize;
-    CUdeviceptr CUPtr;
-    CUresult Res =
-        cuModuleGetGlobal(&CUPtr, &CUSize, CUDAImage.getModule(), GlobalName);
-    if (auto Err = Plugin::check(Res, "Error in cuModuleGetGlobal for '%s': %s",
-                                 GlobalName))
-      return Err;
-
-    // Setup the global symbol's address and size.
-    ImageGlobal.setPtr(reinterpret_cast<void *>(CUPtr));
-    ImageGlobal.setSize(CUSize);
-    return Plugin::success();
-  }
 };
 
 /// Class implementing the CUDA-specific functionalities of the plugin.

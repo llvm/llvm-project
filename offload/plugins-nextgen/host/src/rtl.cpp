@@ -289,7 +289,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// This plugin does not support interoperability, do nothing
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    return Plugin::success();
+    return Plugin::error("initAsyncInfoImpl not supported");
   }
 
   /// This plugin does not support interoperability
