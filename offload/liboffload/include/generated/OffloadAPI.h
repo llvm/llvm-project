@@ -75,31 +75,31 @@ extern "C" {
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Handle of a platform instance
-typedef struct ol_platform_handle_t_ *ol_platform_handle_t;
+typedef struct ol_platform_impl_t *ol_platform_handle_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Handle of platform's device object
-typedef struct ol_device_handle_t_ *ol_device_handle_t;
+typedef struct ol_device_impl_t *ol_device_handle_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Handle of context object
-typedef struct ol_context_handle_t_ *ol_context_handle_t;
+typedef struct ol_context_impl_t *ol_context_handle_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Handle of queue object
-typedef struct ol_queue_handle_t_ *ol_queue_handle_t;
+typedef struct ol_queue_impl_t *ol_queue_handle_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Handle of event object
-typedef struct ol_event_handle_t_ *ol_event_handle_t;
+typedef struct ol_event_impl_t *ol_event_handle_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Handle of program object
-typedef struct ol_program_handle_t_ *ol_program_handle_t;
+typedef struct ol_program_impl_t *ol_program_handle_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Handle of kernel object
-typedef struct ol_kernel_handle_t_ *ol_kernel_handle_t;
+typedef struct ol_kernel_impl_t *ol_kernel_handle_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Defines Return/Error codes

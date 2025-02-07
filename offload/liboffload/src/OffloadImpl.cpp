@@ -22,32 +22,34 @@
 using namespace llvm;
 using namespace llvm::omp::target::plugin;
 
-// Handle type definitions. Ideally these would be 1:1 with the plugins
-struct ol_device_handle_t_ {
+// Handle type definitions. Ideally these would be 1:1 with the plugins, but
+// we add some additional data here for now to avoid churn in the plugin
+// interface.
+struct ol_device_impl_t {
   int DeviceNum;
   GenericDeviceTy &Device;
   ol_platform_handle_t Platform;
 };
 
-struct ol_platform_handle_t_ {
+struct ol_platform_impl_t {
   std::unique_ptr<GenericPluginTy> Plugin;
-  std::vector<ol_device_handle_t_> Devices;
+  std::vector<ol_device_impl_t> Devices;
 };
 
-struct ol_queue_handle_t_ {
+struct ol_queue_impl_t {
   __tgt_async_info *AsyncInfo;
   ol_device_handle_t Device;
   std::atomic_uint32_t RefCount;
 };
 
-struct ol_event_handle_t_ {
+struct ol_event_impl_t {
   void *EventInfo;
   ol_queue_handle_t Queue;
   ol_device_handle_t Device;
   std::atomic_uint32_t RefCount;
 };
 
-struct ol_program_handle_t_ {
+struct ol_program_impl_t {
   llvm::omp::target::plugin::DeviceImageTy *Image;
   std::unique_ptr<MemoryBuffer> ImageData;
   std::atomic_uint32_t RefCount;
@@ -92,14 +94,14 @@ struct OffloadKernelArguments {
   const char *getStorage() const noexcept { return Storage.data(); }
 };
 
-struct ol_kernel_handle_t_ {
+struct ol_kernel_impl_t {
   ol_program_handle_t Program;
   std::atomic_uint32_t RefCount;
   GenericKernelTy *KernelImpl;
   OffloadKernelArguments Args;
 };
 
-using PlatformVecT = SmallVector<ol_platform_handle_t_, 4>;
+using PlatformVecT = SmallVector<ol_platform_impl_t, 4>;
 PlatformVecT &Platforms() {
   static PlatformVecT Platforms;
   return Platforms;
@@ -128,7 +130,7 @@ void initPlugins() {
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    Platforms().emplace_back(ol_platform_handle_t_{                            \
+    Platforms().emplace_back(ol_platform_impl_t{                            \
         std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), {}});         \
   } while (false);
 #include "Shared/Targets.def"
@@ -141,7 +143,7 @@ void initPlugins() {
     for (auto DevNum = 0; DevNum < Platform.Plugin->number_of_devices();
          DevNum++) {
       if (Platform.Plugin->init_device(DevNum) == OFFLOAD_SUCCESS) {
-        Platform.Devices.emplace_back(ol_device_handle_t_{
+        Platform.Devices.emplace_back(ol_device_impl_t{
             DevNum, Platform.Plugin->getDevice(DevNum), &Platform});
       }
     }
@@ -346,7 +348,7 @@ ol_impl_result_t olMemFree_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
 
 ol_impl_result_t olCreateQueue_impl(ol_device_handle_t Device,
                                     ol_queue_handle_t *Queue) {
-  auto CreatedQueue = std::make_unique<ol_queue_handle_t_>();
+  auto CreatedQueue = std::make_unique<ol_queue_impl_t>();
   auto Err = Device->Device.initAsyncInfo(&(CreatedQueue->AsyncInfo));
   if (Err)
     return {OL_ERRC_UNKNOWN, "Could not initialize stream resource"};
@@ -409,7 +411,7 @@ ol_impl_result_t olReleaseEvent_impl(ol_event_handle_t Event) {
 }
 
 ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
-  auto EventImpl = std::make_unique<ol_event_handle_t_>();
+  auto EventImpl = std::make_unique<ol_event_impl_t>();
   EventImpl->Queue = Queue;
   auto Res = Queue->Device->Device.createEvent(&EventImpl->EventInfo);
   if (Res)
@@ -486,7 +488,7 @@ ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device, void *ProgData,
       const_cast<char *>(ImageData->getBuffer().data()) + ProgDataSize - 1,
       nullptr, nullptr};
 
-  ol_program_handle_t Prog = new ol_program_handle_t_();
+  ol_program_handle_t Prog = new ol_program_impl_t();
 
   auto Res = Device->Device.loadBinary(Device->Device.Plugin, &DeviceImage);
   if (!Res)
@@ -525,7 +527,7 @@ ol_impl_result_t olCreateKernel_impl(ol_program_handle_t Program,
   if (Err)
     return {OL_ERRC_UNKNOWN, "Could not initialize the kernel"};
 
-  ol_kernel_handle_t CreatedKernel = new ol_kernel_handle_t_();
+  ol_kernel_handle_t CreatedKernel = new ol_kernel_impl_t();
   CreatedKernel->Program = Program;
   CreatedKernel->RefCount = 1;
   CreatedKernel->KernelImpl = &*KernelImpl;
