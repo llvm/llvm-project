@@ -2773,22 +2773,13 @@ unsigned NVPTXTargetLowering::getJumpTableEncoding() const {
 
 SDValue NVPTXTargetLowering::LowerADDRSPACECAST(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  SDLoc DL(Op);
   AddrSpaceCastSDNode *N = cast<AddrSpaceCastSDNode>(Op.getNode());
-
-  EVT OperandVT = Op.getOperand(0).getValueType();
   unsigned SrcAS = N->getSrcAddressSpace();
-  EVT ResultVT = Op.getValueType();
   unsigned DestAS = N->getDestAddressSpace();
-
-  if (SrcAS == llvm::ADDRESS_SPACE_GENERIC ||
-      DestAS == llvm::ADDRESS_SPACE_GENERIC)
-    return Op;
-
-  SDValue ToGeneric = DAG.getAddrSpaceCast(DL, OperandVT, Op.getOperand(0),
-                                           SrcAS, llvm::ADDRESS_SPACE_GENERIC);
-  return DAG.getAddrSpaceCast(DL, ResultVT, ToGeneric,
-                              llvm::ADDRESS_SPACE_GENERIC, DestAS);
+  if (SrcAS != llvm::ADDRESS_SPACE_GENERIC &&
+      DestAS != llvm::ADDRESS_SPACE_GENERIC)
+    return DAG.getUNDEF(Op.getValueType());
+  return Op;
 }
 
 // This function is almost a copy of SelectionDAG::expandVAArg().
