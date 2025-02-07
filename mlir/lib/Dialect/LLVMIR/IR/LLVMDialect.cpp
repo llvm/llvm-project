@@ -1342,7 +1342,7 @@ void CallOp::print(OpAsmPrinter &p) {
   if (!isDirect)
     p << getOperand(0).getType() << ", ";
 
-  // Reconstruct the function MLIR function type from operand and result types.
+  // Reconstruct the MLIR function type from operand and result types.
   call_interface_impl::printFunctionSignature(
       p, args.getTypes(), getArgAttrsAttr(),
       /*isVariadic=*/false, getResultTypes(), getResAttrsAttr());

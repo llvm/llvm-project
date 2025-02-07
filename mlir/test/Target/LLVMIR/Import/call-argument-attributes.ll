@@ -16,7 +16,7 @@ define void @test_call_arg_attrs_direct(i32 %0, ptr %1) {
 ; CHECK-SAME:    %[[VAL_0:.*]]: i16,
 ; CHECK-SAME:    %[[VAL_1:.*]]: !llvm.ptr
 define i16 @test_call_arg_attrs_indirect(i16 %0, ptr %1) {
-; CHECK: llvm.call tail %[[VAL_1]](%[[VAL_0]]) : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  ; CHECK: llvm.call tail %[[VAL_1]](%[[VAL_0]]) : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
   %3 = tail call signext i16 %1(i16 noundef signext %0)
   ret i16 %3
 }

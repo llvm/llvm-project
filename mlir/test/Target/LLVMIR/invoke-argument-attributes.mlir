@@ -4,8 +4,8 @@
 llvm.func @test(%arg0: i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext}) attributes {personality = @__gxx_personality_v0} {
   %0 = llvm.mlir.zero : !llvm.ptr
   %1 = llvm.mlir.constant(0 : i16) : i16
-// CHECK:      invoke signext i16 @somefunc(i16 noundef signext %{{.*}})
-// CHECK-NEXT:   to label %{{.*}} unwind label %{{.*}}
+  // CHECK:      invoke signext i16 @somefunc(i16 noundef signext %{{.*}})
+  // CHECK-NEXT:   to label %{{.*}} unwind label %{{.*}}
   %2 = llvm.invoke @somefunc(%arg0) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
 ^bb1:  // pred: ^bb0
   %3 = llvm.landingpad (catch %0 : !llvm.ptr) : !llvm.struct<(ptr, i32)>

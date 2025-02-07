@@ -3,7 +3,7 @@
 ; CHECK-LABEL:   llvm.func @test(
 ; CHECK-SAME:      %[[VAL_0:.*]]: i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext}) attributes {personality = @__gxx_personality_v0} {
 define signext i16 @test(i16 noundef signext %0) personality ptr @__gxx_personality_v0 {
-; CHECK:           %[[VAL_3:.*]] = llvm.invoke @somefunc(%[[VAL_0]]) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  ; CHECK:           %[[VAL_3:.*]] = llvm.invoke @somefunc(%[[VAL_0]]) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
   %2 = invoke signext i16 @somefunc(i16 noundef signext %0)
           to label %7 unwind label %3
 
