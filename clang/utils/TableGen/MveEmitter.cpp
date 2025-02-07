@@ -210,7 +210,7 @@ public:
     return Name + " *";
   }
   std::string llvmName() const override {
-    return "llvm::PointerType::getUnqual(Builder.getPtrTy())";
+    return "Builder.getPtrTy()";
   }
   const Type *getPointeeType() const { return Pointee; }
 
