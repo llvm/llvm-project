@@ -11901,8 +11901,9 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
   EVT FullTy = MulLHS.getValueType();
 
   auto ExtendToAccEltVT = [&](SDValue V) {
-    unsigned ExtOpc = V->getOpcode() == ISD::SIGN_EXTEND ? ISD::SIGN_EXTEND
-                                                         : ISD::ZERO_EXTEND;
+    unsigned ExtOpc = V->getOpcode() == ISD::PARTIAL_REDUCE_SMLA
+                          ? ISD::SIGN_EXTEND
+                          : ISD::ZERO_EXTEND;
     EVT ExtVT = V.getValueType().changeVectorElementType(
         Acc.getValueType().getVectorElementType());
     if (ExtVT != FullTy)

@@ -2892,8 +2892,13 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
 
 SDValue DAGTypeLegalizer::PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N) {
   SmallVector<SDValue, 1> NewOps(N->ops());
-  NewOps[1] = GetPromotedInteger(N->getOperand(1));
-  NewOps[2] = GetPromotedInteger(N->getOperand(2));
+  if (N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA) {
+    NewOps[1] = SExtPromotedInteger(N->getOperand(1));
+    NewOps[2] = SExtPromotedInteger(N->getOperand(2));
+  } else {
+    NewOps[1] = ZExtPromotedInteger(N->getOperand(1));
+    NewOps[2] = ZExtPromotedInteger(N->getOperand(2));
+  }
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
