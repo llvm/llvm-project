@@ -188,6 +188,7 @@ TEST(TestRtsanInterceptors, PvallocDiesWhenRealtime) {
 }
 #endif
 
+#if !SANITIZER_FREEBSD
 TEST(TestRtsanInterceptors, MmapDiesWhenRealtime) {
   auto Func = []() {
     void *_ = mmap(nullptr, 8, PROT_READ | PROT_WRITE,
@@ -196,6 +197,7 @@ TEST(TestRtsanInterceptors, MmapDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, MAYBE_APPEND_64("mmap"));
   ExpectNonRealtimeSurvival(Func);
 }
+#endif
 
 #if SANITIZER_LINUX
 TEST(TestRtsanInterceptors, MremapDiesWhenRealtime) {
@@ -207,6 +209,7 @@ TEST(TestRtsanInterceptors, MremapDiesWhenRealtime) {
 }
 #endif
 
+#if !SANITIZER_FREEBSD
 TEST(TestRtsanInterceptors, MunmapDiesWhenRealtime) {
   void *ptr = mmap(nullptr, 8, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -216,6 +219,7 @@ TEST(TestRtsanInterceptors, MunmapDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "munmap");
   ExpectNonRealtimeSurvival(Func);
 }
+#endif
 
 class RtsanOpenedMmapTest : public RtsanFileTest {
 protected:

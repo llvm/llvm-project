@@ -864,11 +864,18 @@ INTERCEPTOR(void *, pvalloc, size_t size) {
 #define RTSAN_MAYBE_INTERCEPT_PVALLOC
 #endif
 
+#if !SANITIZER_FREEBSD
+// enabling this interception on freebsd leads to infinite recursion
+// on pthread lib initialization
 INTERCEPTOR(void *, mmap, void *addr, size_t length, int prot, int flags,
             int fd, off_t offset) {
   __rtsan_notify_intercepted_call("mmap");
   return REAL(mmap)(addr, length, prot, flags, fd, offset);
 }
+#define RTSAN_MAYBE_INTERCEPT_MMAP INTERCEPT_FUNCTION(mmap)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MMAP
+#endif // !SANITIZER_FREEBSD
 
 #if SANITIZER_INTERCEPT_MMAP64
 INTERCEPTOR(void *, mmap64, void *addr, size_t length, int prot, int flags,
@@ -907,10 +914,15 @@ INTERCEPTOR(void *, mremap, void *oaddr, size_t olength, size_t nlength,
 #define RTSAN_MAYBE_INTERCEPT_MREMAP
 #endif
 
+#if !SANITIZER_FREEBSD
 INTERCEPTOR(int, munmap, void *addr, size_t length) {
   __rtsan_notify_intercepted_call("munmap");
   return REAL(munmap)(addr, length);
 }
+#define RTSAN_MAYBE_INTERCEPT_MUNMAP INTERCEPT_FUNCTION(munmap)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MUNMAP
+#endif
 
 #if !SANITIZER_APPLE
 INTERCEPTOR(int, madvise, void *addr, size_t length, int flag) {
@@ -1381,10 +1393,10 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(valloc);
   RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC;
   INTERCEPT_FUNCTION(posix_memalign);
-  INTERCEPT_FUNCTION(mmap);
+  RTSAN_MAYBE_INTERCEPT_MMAP;
   RTSAN_MAYBE_INTERCEPT_MMAP64;
   RTSAN_MAYBE_INTERCEPT_MREMAP;
-  INTERCEPT_FUNCTION(munmap);
+  RTSAN_MAYBE_INTERCEPT_MUNMAP;
   RTSAN_MAYBE_INTERCEPT_MADVISE;
   RTSAN_MAYBE_INTERCEPT_POSIX_MADVISE;
   INTERCEPT_FUNCTION(mprotect);
