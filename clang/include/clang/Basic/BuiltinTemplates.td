@@ -6,6 +6,47 @@
 //
 //===----------------------------------------------------------------------===//
 
+class TemplateArg<string name> {
+  string Name = name;
+}
+
+class Template<list<TemplateArg> args, string name> : TemplateArg<name> {
+  list<TemplateArg> Args = args;
+}
+
+class Class<string name, bit is_variadic = 0> : TemplateArg<name> {
+  bit IsVariadic = is_variadic;
+}
+
+class NTTP<string type_name, string name, bit is_variadic = 0> : TemplateArg<name> {
+  string TypeName = type_name;
+  bit IsVariadic = is_variadic;
+}
+
+class BuiltinNTTP<string type_name> : TemplateArg<""> {
+  string TypeName = type_name;
+}
+
+def SizeT : BuiltinNTTP<"size_t"> {}
+
+class BuiltinTemplate<list<TemplateArg> template_head> {
+  list<TemplateArg> TemplateHead = template_head;
+}
+
+def __make_integer_seq : BuiltinTemplate<
+  [Template<[Class<"T">, NTTP<"T", "Ints", /*is_variadic=*/1>], "IntSeq">, Class<"T">, NTTP<"T", "N">]>;
+
+def __type_pack_element : BuiltinTemplate<
+  [SizeT, Class<"T", /*is_variadic=*/1>]>;
+
+def __builtin_common_type : BuiltinTemplate<
+  [Template<[Class<"Args", /*is_variadic=*/1>], "BaseTemplate">,
+   Template<[Class<"TypeMember">], "HasTypeMember">,
+   Class<"HasNoTypeMember">,
+   Class<"Ts", /*is_variadic=*/1>]>;
+
+/*
+
 class BuiltinTemplate<string template_head> {
   string TemplateHead = template_head;
 }
@@ -21,3 +62,4 @@ def __builtin_common_type : BuiltinTemplate<
   "          template <class TypeMember> class HasTypeMember,"
   "          class HasNoTypeMember,"
   "          class... Ts>">;
+*/

@@ -29,140 +29,116 @@ struct ParserState {
 };
 
 std::pair<std::string, std::string>
-ParseTemplateParameterList(ParserState &PS, StringRef &TemplateParmList) {
-  auto Alphabetic = [](char c) { return std::isalpha(c); };
-
-  std::ostringstream Generator;
-  Generator << std::boolalpha;
+ParseTemplateParameterList(ParserState &PS,
+                           ArrayRef<const Record *> TemplateArgs) {
   std::vector<std::string> Params;
   std::unordered_map<std::string, std::string> TemplateNameToParmName;
-  TemplateParmList = TemplateParmList.ltrim();
-  if (!TemplateParmList.consume_front("<"))
-    PrintFatalError("Expected '<' to start the parameter list");
+
+  std::ostringstream Code;
+  Code << std::boolalpha;
 
   size_t Position = 0;
-  while (true) {
+  for (const Record *Arg : TemplateArgs) {
     std::string ParmName = "Parm" + std::to_string(PS.UniqueCounter++);
-    if (TemplateParmList.consume_front("size_t")) {
-      if (!PS.EmittedSizeTInfo) {
-        PS.EmittedSizeTInfo = true;
-        Generator << R"C++(
-  TypeSourceInfo *SizeTInfo = C.getTrivialTypeSourceInfo(C.getSizeType());
-)C++";
-      }
-
-      Generator << "  auto *" << ParmName << R"C++(
-    = NonTypeTemplateParmDecl::Create(C, DC, SourceLocation(), SourceLocation(),
-        )C++" << PS.CurrentDepth
-                << ", " << Position++ << R"C++(, /*Id=*/nullptr,
-        SizeTInfo->getType(), /*ParameterPack=*/false, SizeTInfo);
-)C++";
-    } else if (TemplateParmList.consume_front("class")) {
-      bool ParameterPack = TemplateParmList.consume_front("...");
-
-      Generator << "  auto *" << ParmName << R"C++(
-    = TemplateTypeParmDecl::Create(C, DC, SourceLocation(), SourceLocation(),
-      )C++" << PS.CurrentDepth
-                << ", " << Position++
-                << R"C++(, /*Id=*/nullptr, /*Typename=*/false, )C++"
-                << ParameterPack << ");\n";
-    } else if (TemplateParmList.consume_front("template")) {
+    if (Arg->isSubClassOf("Template")) {
       ++PS.CurrentDepth;
-      auto [Code, TPLName] = ParseTemplateParameterList(PS, TemplateParmList);
+      auto [TemplateCode, TPLName] =
+          ParseTemplateParameterList(PS, Arg->getValueAsListOfDefs("Args"));
       --PS.CurrentDepth;
-      TemplateParmList = TemplateParmList.ltrim();
-      if (!TemplateParmList.consume_front("class")) {
-        PrintFatalError("Expected 'class' after template template list");
+      Code << TemplateCode << " auto *" << ParmName
+           << " = TemplateTemplateParmDecl::Create(C, DC, SourceLocation(), "
+           << PS.CurrentDepth << ", " << Position++
+           << ", /*ParameterPack=*/false, /*Id=*/nullptr, /*Typename=*/false, "
+           << TPLName << ");\n";
+    } else if (Arg->isSubClassOf("Class")) {
+      Code << " auto *" << ParmName
+           << " = TemplateTypeParmDecl::Create(C, DC, SourceLocation(), "
+              "SourceLocation(), "
+           << PS.CurrentDepth << ", " << Position++
+           << ", /*Id=*/nullptr, /*Typename=*/false, "
+           << Arg->getValueAsBit("IsVariadic") << ");\n";
+    } else if (Arg->isSubClassOf("NTTP")) {
+      auto Type = Arg->getValueAsString("TypeName");
+
+      if (TemplateNameToParmName.find(Type.str()) ==
+          TemplateNameToParmName.end()) {
+        PrintFatalError("Unkown Type Name");
       }
-      Generator << Code;
-      Generator
-          << "  auto *" << ParmName << R"C++(
-    = TemplateTemplateParmDecl::Create(C, DC, SourceLocation(), )C++"
-          << PS.CurrentDepth << ", " << Position++
-          << ", /*ParameterPack=*/false, /*Id=*/nullptr, /*Typename=*/false, "
-          << TPLName << ");\n";
+
+      auto TSIName = "TSI" + std::to_string(PS.UniqueCounter++);
+      Code << " auto *" << TSIName << " = C.getTrivialTypeSourceInfo(QualType("
+           << TemplateNameToParmName[Type.str()] << "->getTypeForDecl(), 0));\n"
+           << " auto *" << ParmName
+           << " = NonTypeTemplateParmDecl::Create(C, DC, SourceLocation(), "
+              "SourceLocation(), "
+           << PS.CurrentDepth << ", " << Position++ << ", /*Id=*/nullptr, "
+           << TSIName << "->getType(), " << Arg->getValueAsBit("IsVariadic")
+           << ", " << TSIName << ");\n";
+    } else if (Arg->isSubClassOf("BuiltinNTTP")) {
+      if (Arg->getValueAsString("TypeName") != "size_t")
+        PrintFatalError("Unkown Type Name");
+      if (!PS.EmittedSizeTInfo) {
+        Code << "TypeSourceInfo *SizeTInfo = "
+                "C.getTrivialTypeSourceInfo(C.getSizeType());\n";
+        PS.EmittedSizeTInfo = true;
+      }
+      Code << " auto *" << ParmName
+           << " = NonTypeTemplateParmDecl::Create(C, DC, SourceLocation(), "
+              "SourceLocation(), "
+           << PS.CurrentDepth << ", " << Position++
+           << ", /*Id=*/nullptr, SizeTInfo->getType(), "
+              "/*ParameterPack=*/false, SizeTInfo);\n";
     } else {
-      auto Name = TemplateParmList.take_while(Alphabetic).str();
-      if (TemplateNameToParmName.find(Name) != TemplateNameToParmName.end()) {
-        TemplateParmList = TemplateParmList.drop_front(Name.size());
-        bool ParameterPack = TemplateParmList.consume_front("...");
-
-        auto TSIName = "TSI" + std::to_string(PS.UniqueCounter++);
-        Generator << "  auto *" << TSIName << R"C++(
-    = C.getTrivialTypeSourceInfo(QualType()C++"
-                  << TemplateNameToParmName[Name] <<
-            R"C++(->getTypeForDecl(), 0));
-  auto *)C++" << ParmName
-                  <<
-            R"C++( = NonTypeTemplateParmDecl::Create(
-      C, DC, SourceLocation(), SourceLocation(), )C++"
-                  << PS.CurrentDepth << ", " << Position++
-                  << ", /*Id=*/nullptr, " << TSIName << "->getType(), "
-                  << ParameterPack << ", " << TSIName << ");\n";
-      } else {
-        PrintFatalError("Unknown argument");
-      }
-    }
-    TemplateParmList = TemplateParmList.ltrim();
-    auto ID = TemplateParmList.take_while(Alphabetic);
-    if (!ID.empty()) {
-      TemplateNameToParmName[ID.str()] = ParmName;
-      TemplateParmList = TemplateParmList.drop_front(ID.size());
+      PrintFatalError("Unknown Argument Type");
     }
 
+    TemplateNameToParmName[Arg->getValueAsString("Name").str()] = ParmName;
     Params.emplace_back(std::move(ParmName));
-
-    if (!TemplateParmList.consume_front(","))
-      break;
-    TemplateParmList = TemplateParmList.ltrim();
-  }
-
-  if (!TemplateParmList.consume_front(">")) {
-    PrintWarning("Expected '>' to close template parameter list");
-    PrintWarning(TemplateParmList);
   }
 
   auto TPLName = "TPL" + std::to_string(PS.UniqueCounter++);
-  Generator << "  auto *" << TPLName << R"C++( = TemplateParameterList::Create(
-      C, SourceLocation(), SourceLocation(), {)C++";
+  Code << " auto *" << TPLName
+       << " = TemplateParameterList::Create(C, SourceLocation(), "
+          "SourceLocation(), {";
 
-  if (Params.empty())
+  if (Params.empty()) {
     PrintFatalError(
         "Expected at least one argument in template parameter list");
+  }
 
   bool First = true;
   for (auto e : Params) {
     if (First) {
       First = false;
-      Generator << e;
+      Code << e;
     } else {
-      Generator << ", " << e;
+      Code << ", " << e;
     }
   }
-  Generator << "}, SourceLocation(), nullptr);\n";
+  Code << "}, SourceLocation(), nullptr);\n";
 
-  return {std::move(Generator).str(), std::move(TPLName)};
+  return {std::move(Code).str(), std::move(TPLName)};
 }
 
-void EmitCreateBuiltinTemplateParameterList(StringRef TemplateHead,
-                                            StringRef Name) {
+static void
+EmitCreateBuiltinTemplateParameterList(std::vector<const Record *> TemplateArgs,
+                                       StringRef Name) {
   using namespace std::string_literals;
   CreateBuiltinTemplateParameterList +=
       "case BTK"s + std::string{Name} + ": {\n"s;
-  if (!TemplateHead.consume_front("template"))
-    PrintFatalError(
-        "Expected template head to start with 'template' keyword");
 
   ParserState PS;
-  auto [Code, TPLName] = ParseTemplateParameterList(PS, TemplateHead);
+  auto [Code, TPLName] = ParseTemplateParameterList(PS, TemplateArgs);
   CreateBuiltinTemplateParameterList += Code + "\n  return " + TPLName + ";\n";
 
   CreateBuiltinTemplateParameterList += "  }\n";
 }
 
 void EmitBuiltinTemplate(raw_ostream &OS, const Record *BuiltinTemplate) {
-  auto TemplateHead = BuiltinTemplate->getValueAsString("TemplateHead");
   auto Name = BuiltinTemplate->getName();
+
+  std::vector<const Record *> TemplateHead =
+      BuiltinTemplate->getValueAsListOfDefs("TemplateHead");
 
   EmitCreateBuiltinTemplateParameterList(TemplateHead, Name);
 
