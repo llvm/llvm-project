@@ -926,6 +926,16 @@ add_entrypoint_object(
   HDRS
     ../roundevenl.h
   DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  roundevenf16
+  SRCS
+    roundevenf16.cpp
+  HDRS
+    ../roundevenf16.h
+  DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.FPUtil.cast
@@ -1699,6 +1709,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  copysignf
+  SRCS
+    copysignf.cpp
+  HDRS
+    ../copysignf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_entrypoint_object(
   copysignl
   SRCS
     copysignl.cpp
@@ -2082,7 +2104,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fma
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
-  )
+)
 
 add_entrypoint_object(
   log2f16

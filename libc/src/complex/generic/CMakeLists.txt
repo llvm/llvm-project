@@ -153,6 +153,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  crealf128
+  SRCS
+    crealf128.cpp
+  HDRS
+    ../crealf128.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
   cimag
   SRCS
     cimag.cpp
@@ -180,6 +193,19 @@ add_entrypoint_object(
     cimagl.cpp
   HDRS
     ../cimagl.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  cimagf16
+  SRCS
+    cimagf16.cpp
+  HDRS
+    ../cimagf16.h
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
