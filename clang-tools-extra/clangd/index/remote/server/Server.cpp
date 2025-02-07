@@ -59,13 +59,15 @@ This is an experimental remote index implementation. The server opens Dex and
 awaits gRPC lookup requests from the client.
 )";
 
-llvm::cl::opt<std::string> IndexPath(llvm::cl::desc("<INDEX FILE>"),
-                                     llvm::cl::Positional, llvm::cl::Required);
+static llvm::cl::opt<std::string> IndexPath(llvm::cl::desc("<INDEX FILE>"),
+                                            llvm::cl::Positional,
+                                            llvm::cl::Required);
 
-llvm::cl::opt<std::string> IndexRoot(llvm::cl::desc("<PROJECT ROOT>"),
-                                     llvm::cl::Positional, llvm::cl::Required);
+static llvm::cl::opt<std::string> IndexRoot(llvm::cl::desc("<PROJECT ROOT>"),
+                                            llvm::cl::Positional,
+                                            llvm::cl::Required);
 
-llvm::cl::opt<Logger::Level> LogLevel{
+static llvm::cl::opt<Logger::Level> LogLevel{
     "log",
     llvm::cl::desc("Verbosity of log messages written to stderr"),
     values(clEnumValN(Logger::Error, "error", "Error messages only"),
@@ -74,38 +76,38 @@ llvm::cl::opt<Logger::Level> LogLevel{
     llvm::cl::init(Logger::Info),
 };
 
-llvm::cl::opt<bool> LogPublic{
+static llvm::cl::opt<bool> LogPublic{
     "log-public",
     llvm::cl::desc("Avoid logging potentially-sensitive request details"),
     llvm::cl::init(false),
 };
 
-llvm::cl::opt<std::string> LogPrefix{
+static llvm::cl::opt<std::string> LogPrefix{
     "log-prefix",
     llvm::cl::desc("A string that'll be prepended to all log statements. "
                    "Useful when running multiple instances on same host."),
 };
 
-llvm::cl::opt<std::string> TraceFile(
+static llvm::cl::opt<std::string> TraceFile(
     "trace-file",
     llvm::cl::desc("Path to the file where tracer logs will be stored"));
 
-llvm::cl::opt<bool> PrettyPrint{
+static llvm::cl::opt<bool> PrettyPrint{
     "pretty",
     llvm::cl::desc("Pretty-print JSON output in the trace"),
     llvm::cl::init(false),
 };
 
-llvm::cl::opt<std::string> ServerAddress(
+static llvm::cl::opt<std::string> ServerAddress(
     "server-address", llvm::cl::init("0.0.0.0:50051"),
     llvm::cl::desc("Address of the invoked server. Defaults to 0.0.0.0:50051"));
 
-llvm::cl::opt<size_t> IdleTimeoutSeconds(
+static llvm::cl::opt<size_t> IdleTimeoutSeconds(
     "idle-timeout", llvm::cl::init(8 * 60),
     llvm::cl::desc("Maximum time a channel may stay idle until server closes "
                    "the connection, in seconds. Defaults to 480."));
 
-llvm::cl::opt<size_t> LimitResults(
+static llvm::cl::opt<size_t> LimitResults(
     "limit-results", llvm::cl::init(10000),
     llvm::cl::desc("Maximum number of results to stream as a response to "
                    "single request. Limit is to keep the server from being "

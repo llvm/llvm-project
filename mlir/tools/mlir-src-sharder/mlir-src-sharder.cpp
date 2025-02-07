@@ -44,21 +44,21 @@ int main(int argc, char **argv) {
   // options as static variables.. some of which overlap with our options.
   llvm::cl::ResetCommandLineParser();
 
-  llvm::cl::opt<unsigned> opShardIndex(
+  static llvm::cl::opt<unsigned> opShardIndex(
       "op-shard-index", llvm::cl::desc("The current shard index"));
-  llvm::cl::opt<std::string> inputFilename(llvm::cl::Positional,
-                                           llvm::cl::desc("<input file>"),
-                                           llvm::cl::init("-"));
-  llvm::cl::opt<std::string> outputFilename(
+  static llvm::cl::opt<std::string> inputFilename(
+      llvm::cl::Positional, llvm::cl::desc("<input file>"),
+      llvm::cl::init("-"));
+  static llvm::cl::opt<std::string> outputFilename(
       "o", llvm::cl::desc("Output filename"), llvm::cl::value_desc("filename"),
       llvm::cl::init("-"));
   llvm::cl::list<std::string> includeDirs(
       "I", llvm::cl::desc("Directory of include files"),
       llvm::cl::value_desc("directory"), llvm::cl::Prefix);
-  llvm::cl::opt<std::string> dependencyFilename(
+  static llvm::cl::opt<std::string> dependencyFilename(
       "d", llvm::cl::desc("Dependency filename"),
       llvm::cl::value_desc("filename"), llvm::cl::init(""));
-  llvm::cl::opt<bool> writeIfChanged(
+  static llvm::cl::opt<bool> writeIfChanged(
       "write-if-changed",
       llvm::cl::desc("Only write to the output file if it changed"));
 

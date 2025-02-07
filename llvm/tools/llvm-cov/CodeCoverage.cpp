@@ -652,24 +652,24 @@ void CodeCoverageTool::writeSourceFileView(StringRef SourceFile,
 }
 
 int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
-  cl::opt<std::string> CovFilename(
+  static cl::opt<std::string> CovFilename(
       cl::Positional, cl::desc("Covered executable or object file."));
 
   cl::list<std::string> CovFilenames(
       "object", cl::desc("Coverage executable or object file"));
 
-  cl::opt<bool> DebugDumpCollectedObjects(
+  static cl::opt<bool> DebugDumpCollectedObjects(
       "dump-collected-objects", cl::Optional, cl::Hidden,
       cl::desc("Show the collected coverage object files"));
 
   cl::list<std::string> InputSourceFiles("sources", cl::Positional,
                                          cl::desc("<Source files>"));
 
-  cl::opt<bool> DebugDumpCollectedPaths(
+  static cl::opt<bool> DebugDumpCollectedPaths(
       "dump-collected-paths", cl::Optional, cl::Hidden,
       cl::desc("Show the collected paths to source files"));
 
-  cl::opt<std::string, true> PGOFilename(
+  static cl::opt<std::string, true> PGOFilename(
       "instr-profile", cl::Required, cl::location(this->PGOFilename),
       cl::desc(
           "File with the profile data obtained after an instrumented run"));
@@ -677,18 +677,18 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   cl::list<std::string> Arches(
       "arch", cl::desc("architectures of the coverage mapping binaries"));
 
-  cl::opt<bool> DebugDump("dump", cl::Optional,
-                          cl::desc("Show internal debug dump"));
+  static cl::opt<bool> DebugDump("dump", cl::Optional,
+                                 cl::desc("Show internal debug dump"));
 
   cl::list<std::string> DebugFileDirectory(
       "debug-file-directory",
       cl::desc("Directories to search for object files by build ID"));
-  cl::opt<bool> Debuginfod(
+  static cl::opt<bool> Debuginfod(
       "debuginfod", cl::ZeroOrMore,
       cl::desc("Use debuginfod to look up object files from profile"),
       cl::init(canUseDebuginfod()));
 
-  cl::opt<CoverageViewOptions::OutputFormat> Format(
+  static cl::opt<CoverageViewOptions::OutputFormat> Format(
       "format", cl::desc("Output format for line-based coverage reports"),
       cl::values(clEnumValN(CoverageViewOptions::OutputFormat::Text, "text",
                             "Text output"),
@@ -703,7 +703,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       cl::desc("<from>,<to> Map coverage data paths to local source file "
                "paths"));
 
-  cl::OptionCategory FilteringCategory("Function filtering options");
+  static cl::OptionCategory FilteringCategory("Function filtering options");
 
   cl::list<std::string> NameFilters(
       "name", cl::Optional,
@@ -728,70 +728,69 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
                "regular expression"),
       cl::cat(FilteringCategory));
 
-  cl::opt<double> RegionCoverageLtFilter(
+  static cl::opt<double> RegionCoverageLtFilter(
       "region-coverage-lt", cl::Optional,
       cl::desc("Show code coverage only for functions with region coverage "
                "less than the given threshold"),
       cl::cat(FilteringCategory));
 
-  cl::opt<double> RegionCoverageGtFilter(
+  static cl::opt<double> RegionCoverageGtFilter(
       "region-coverage-gt", cl::Optional,
       cl::desc("Show code coverage only for functions with region coverage "
                "greater than the given threshold"),
       cl::cat(FilteringCategory));
 
-  cl::opt<double> LineCoverageLtFilter(
+  static cl::opt<double> LineCoverageLtFilter(
       "line-coverage-lt", cl::Optional,
       cl::desc("Show code coverage only for functions with line coverage less "
                "than the given threshold"),
       cl::cat(FilteringCategory));
 
-  cl::opt<double> LineCoverageGtFilter(
+  static cl::opt<double> LineCoverageGtFilter(
       "line-coverage-gt", cl::Optional,
       cl::desc("Show code coverage only for functions with line coverage "
                "greater than the given threshold"),
       cl::cat(FilteringCategory));
 
-  cl::opt<cl::boolOrDefault> UseColor(
+  static cl::opt<cl::boolOrDefault> UseColor(
       "use-color", cl::desc("Emit colored output (default=autodetect)"),
       cl::init(cl::BOU_UNSET));
 
   cl::list<std::string> DemanglerOpts(
       "Xdemangler", cl::desc("<demangler-path>|<demangler-option>"));
 
-  cl::opt<bool> RegionSummary(
+  static cl::opt<bool> RegionSummary(
       "show-region-summary", cl::Optional,
-      cl::desc("Show region statistics in summary table"),
-      cl::init(true));
+      cl::desc("Show region statistics in summary table"), cl::init(true));
 
-  cl::opt<bool> BranchSummary(
+  static cl::opt<bool> BranchSummary(
       "show-branch-summary", cl::Optional,
       cl::desc("Show branch condition statistics in summary table"),
       cl::init(true));
 
-  cl::opt<bool> MCDCSummary("show-mcdc-summary", cl::Optional,
-                            cl::desc("Show MCDC statistics in summary table"),
-                            cl::init(false));
+  static cl::opt<bool> MCDCSummary(
+      "show-mcdc-summary", cl::Optional,
+      cl::desc("Show MCDC statistics in summary table"), cl::init(false));
 
-  cl::opt<bool> InstantiationSummary(
+  static cl::opt<bool> InstantiationSummary(
       "show-instantiation-summary", cl::Optional,
       cl::desc("Show instantiation statistics in summary table"));
 
-  cl::opt<bool> SummaryOnly(
+  static cl::opt<bool> SummaryOnly(
       "summary-only", cl::Optional,
       cl::desc("Export only summary information for each source file"));
 
-  cl::opt<unsigned> NumThreads(
+  static cl::opt<unsigned> NumThreads(
       "num-threads", cl::init(0),
       cl::desc("Number of merge threads to use (default: autodetect)"));
   cl::alias NumThreadsA("j", cl::desc("Alias for --num-threads"),
                         cl::aliasopt(NumThreads));
 
-  cl::opt<std::string> CompilationDirectory(
+  static cl::opt<std::string> CompilationDirectory(
       "compilation-dir", cl::init(""),
       cl::desc("Directory used as a base for relative coverage mapping paths"));
 
-  cl::opt<bool> CheckBinaryIDs(
+  static cl::opt<bool> CheckBinaryIDs(
       "check-binary-ids", cl::desc("Fail if an object couldn't be found for a "
                                    "binary ID in the profile"));
 
@@ -969,19 +968,19 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 int CodeCoverageTool::doShow(int argc, const char **argv,
                              CommandLineParserType commandLineParser) {
 
-  cl::OptionCategory ViewCategory("Viewing options");
+  static cl::OptionCategory ViewCategory("Viewing options");
 
-  cl::opt<bool> ShowLineExecutionCounts(
+  static cl::opt<bool> ShowLineExecutionCounts(
       "show-line-counts", cl::Optional,
       cl::desc("Show the execution counts for each line"), cl::init(true),
       cl::cat(ViewCategory));
 
-  cl::opt<bool> ShowRegions(
+  static cl::opt<bool> ShowRegions(
       "show-regions", cl::Optional,
       cl::desc("Show the execution counts for each region"),
       cl::cat(ViewCategory));
 
-  cl::opt<CoverageViewOptions::BranchOutputType> ShowBranches(
+  static cl::opt<CoverageViewOptions::BranchOutputType> ShowBranches(
       "show-branches", cl::Optional,
       cl::desc("Show coverage for branch conditions"), cl::cat(ViewCategory),
       cl::values(clEnumValN(CoverageViewOptions::BranchOutputType::Count,
@@ -990,55 +989,57 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
                             "percent", "Show True/False percent")),
       cl::init(CoverageViewOptions::BranchOutputType::Off));
 
-  cl::opt<bool> ShowMCDC(
+  static cl::opt<bool> ShowMCDC(
       "show-mcdc", cl::Optional,
       cl::desc("Show the MCDC Coverage for each applicable boolean expression"),
       cl::cat(ViewCategory));
 
-  cl::opt<bool> ShowBestLineRegionsCounts(
+  static cl::opt<bool> ShowBestLineRegionsCounts(
       "show-line-counts-or-regions", cl::Optional,
       cl::desc("Show the execution counts for each line, or the execution "
                "counts for each region on lines that have multiple regions"),
       cl::cat(ViewCategory));
 
-  cl::opt<bool> ShowExpansions("show-expansions", cl::Optional,
-                               cl::desc("Show expanded source regions"),
-                               cl::cat(ViewCategory));
-
-  cl::opt<bool> ShowInstantiations("show-instantiations", cl::Optional,
-                                   cl::desc("Show function instantiations"),
-                                   cl::init(true), cl::cat(ViewCategory));
-
-  cl::opt<bool> ShowDirectoryCoverage("show-directory-coverage", cl::Optional,
-                                      cl::desc("Show directory coverage"),
+  static cl::opt<bool> ShowExpansions("show-expansions", cl::Optional,
+                                      cl::desc("Show expanded source regions"),
                                       cl::cat(ViewCategory));
 
-  cl::opt<bool> ShowCreatedTime("show-created-time", cl::Optional,
-                                cl::desc("Show created time for each page."),
-                                cl::init(true), cl::cat(ViewCategory));
+  static cl::opt<bool> ShowInstantiations(
+      "show-instantiations", cl::Optional,
+      cl::desc("Show function instantiations"), cl::init(true),
+      cl::cat(ViewCategory));
 
-  cl::opt<std::string> ShowOutputDirectory(
+  static cl::opt<bool> ShowDirectoryCoverage(
+      "show-directory-coverage", cl::Optional,
+      cl::desc("Show directory coverage"), cl::cat(ViewCategory));
+
+  static cl::opt<bool> ShowCreatedTime(
+      "show-created-time", cl::Optional,
+      cl::desc("Show created time for each page."), cl::init(true),
+      cl::cat(ViewCategory));
+
+  static cl::opt<std::string> ShowOutputDirectory(
       "output-dir", cl::init(""),
       cl::desc("Directory in which coverage information is written out"));
   cl::alias ShowOutputDirectoryA("o", cl::desc("Alias for --output-dir"),
                                  cl::aliasopt(ShowOutputDirectory));
 
-  cl::opt<bool> BinaryCounters(
+  static cl::opt<bool> BinaryCounters(
       "binary-counters", cl::Optional,
       cl::desc("Show binary counters (1/0) in lines and branches instead of "
                "integer execution counts"),
       cl::cat(ViewCategory));
 
-  cl::opt<uint32_t> TabSize(
+  static cl::opt<uint32_t> TabSize(
       "tab-size", cl::init(2),
       cl::desc(
           "Set tab expansion size for html coverage reports (default = 2)"));
 
-  cl::opt<std::string> ProjectTitle(
+  static cl::opt<std::string> ProjectTitle(
       "project-title", cl::Optional,
       cl::desc("Set project title for the coverage report"));
 
-  cl::opt<std::string> CovWatermark(
+  static cl::opt<std::string> CovWatermark(
       "coverage-watermark", cl::Optional,
       cl::desc("<high>,<low> value indicate thresholds for high and low"
                "coverage watermark"));
@@ -1223,7 +1224,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
 
 int CodeCoverageTool::doReport(int argc, const char **argv,
                                CommandLineParserType commandLineParser) {
-  cl::opt<bool> ShowFunctionSummaries(
+  static cl::opt<bool> ShowFunctionSummaries(
       "show-functions", cl::Optional, cl::init(false),
       cl::desc("Show coverage summaries for each function"));
 
@@ -1270,19 +1271,20 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
 int CodeCoverageTool::doExport(int argc, const char **argv,
                                CommandLineParserType commandLineParser) {
 
-  cl::OptionCategory ExportCategory("Exporting options");
+  static cl::OptionCategory ExportCategory("Exporting options");
 
-  cl::opt<bool> SkipExpansions("skip-expansions", cl::Optional,
-                               cl::desc("Don't export expanded source regions"),
-                               cl::cat(ExportCategory));
+  static cl::opt<bool> SkipExpansions(
+      "skip-expansions", cl::Optional,
+      cl::desc("Don't export expanded source regions"),
+      cl::cat(ExportCategory));
 
-  cl::opt<bool> SkipFunctions("skip-functions", cl::Optional,
-                              cl::desc("Don't export per-function data"),
-                              cl::cat(ExportCategory));
+  static cl::opt<bool> SkipFunctions("skip-functions", cl::Optional,
+                                     cl::desc("Don't export per-function data"),
+                                     cl::cat(ExportCategory));
 
-  cl::opt<bool> SkipBranches("skip-branches", cl::Optional,
-                              cl::desc("Don't export branch data (LCOV)"),
-                              cl::cat(ExportCategory));
+  static cl::opt<bool> SkipBranches("skip-branches", cl::Optional,
+                                    cl::desc("Don't export branch data (LCOV)"),
+                                    cl::cat(ExportCategory));
 
   auto Err = commandLineParser(argc, argv);
   if (Err)

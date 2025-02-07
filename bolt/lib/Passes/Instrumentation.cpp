@@ -71,7 +71,7 @@ cl::opt<bool> InstrumentationWaitForks(
              "(use with instrumentation-sleep-time option)"),
     cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
 
-cl::opt<bool>
+static cl::opt<bool>
     InstrumentHotOnly("instrument-hot-only",
                       cl::desc("only insert instrumentation on hot functions "
                                "(needs profile, default: false)"),

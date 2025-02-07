@@ -26,7 +26,7 @@ using namespace bolt;
 
 namespace opts {
 extern cl::opt<unsigned> Verbosity;
-cl::opt<unsigned> NumFunctionsForContinuityCheck(
+static cl::opt<unsigned> NumFunctionsForContinuityCheck(
     "num-functions-for-continuity-check",
     cl::desc("number of hottest functions to print aggregated "
              "CFG discontinuity stats of."),

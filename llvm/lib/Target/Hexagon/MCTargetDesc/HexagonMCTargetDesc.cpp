@@ -65,39 +65,39 @@ cl::opt<bool> llvm::HexagonDisableDuplex
    cl::desc("Disable looking for duplex instructions for Hexagon"));
 
 namespace { // These flags are to be deprecated
-cl::opt<bool> MV5("mv5", cl::Hidden, cl::desc("Build for Hexagon V5"),
-                  cl::init(false));
-cl::opt<bool> MV55("mv55", cl::Hidden, cl::desc("Build for Hexagon V55"),
-                   cl::init(false));
-cl::opt<bool> MV60("mv60", cl::Hidden, cl::desc("Build for Hexagon V60"),
-                   cl::init(false));
-cl::opt<bool> MV62("mv62", cl::Hidden, cl::desc("Build for Hexagon V62"),
-                   cl::init(false));
-cl::opt<bool> MV65("mv65", cl::Hidden, cl::desc("Build for Hexagon V65"),
-                   cl::init(false));
-cl::opt<bool> MV66("mv66", cl::Hidden, cl::desc("Build for Hexagon V66"),
-                   cl::init(false));
-cl::opt<bool> MV67("mv67", cl::Hidden, cl::desc("Build for Hexagon V67"),
-                   cl::init(false));
-cl::opt<bool> MV67T("mv67t", cl::Hidden, cl::desc("Build for Hexagon V67T"),
-                    cl::init(false));
-cl::opt<bool> MV68("mv68", cl::Hidden, cl::desc("Build for Hexagon V68"),
-                   cl::init(false));
-cl::opt<bool> MV69("mv69", cl::Hidden, cl::desc("Build for Hexagon V69"),
-                   cl::init(false));
-cl::opt<bool> MV71("mv71", cl::Hidden, cl::desc("Build for Hexagon V71"),
-                   cl::init(false));
-cl::opt<bool> MV71T("mv71t", cl::Hidden, cl::desc("Build for Hexagon V71T"),
-                    cl::init(false));
-cl::opt<bool> MV73("mv73", cl::Hidden, cl::desc("Build for Hexagon V73"),
-                   cl::init(false));
-cl::opt<bool> MV75("mv75", cl::Hidden, cl::desc("Build for Hexagon V75"),
-                   cl::init(false));
-cl::opt<bool> MV79("mv79", cl::Hidden, cl::desc("Build for Hexagon V79"),
-                   cl::init(false));
+static cl::opt<bool> MV5("mv5", cl::Hidden, cl::desc("Build for Hexagon V5"),
+                         cl::init(false));
+static cl::opt<bool> MV55("mv55", cl::Hidden, cl::desc("Build for Hexagon V55"),
+                          cl::init(false));
+static cl::opt<bool> MV60("mv60", cl::Hidden, cl::desc("Build for Hexagon V60"),
+                          cl::init(false));
+static cl::opt<bool> MV62("mv62", cl::Hidden, cl::desc("Build for Hexagon V62"),
+                          cl::init(false));
+static cl::opt<bool> MV65("mv65", cl::Hidden, cl::desc("Build for Hexagon V65"),
+                          cl::init(false));
+static cl::opt<bool> MV66("mv66", cl::Hidden, cl::desc("Build for Hexagon V66"),
+                          cl::init(false));
+static cl::opt<bool> MV67("mv67", cl::Hidden, cl::desc("Build for Hexagon V67"),
+                          cl::init(false));
+static cl::opt<bool> MV67T("mv67t", cl::Hidden,
+                           cl::desc("Build for Hexagon V67T"), cl::init(false));
+static cl::opt<bool> MV68("mv68", cl::Hidden, cl::desc("Build for Hexagon V68"),
+                          cl::init(false));
+static cl::opt<bool> MV69("mv69", cl::Hidden, cl::desc("Build for Hexagon V69"),
+                          cl::init(false));
+static cl::opt<bool> MV71("mv71", cl::Hidden, cl::desc("Build for Hexagon V71"),
+                          cl::init(false));
+static cl::opt<bool> MV71T("mv71t", cl::Hidden,
+                           cl::desc("Build for Hexagon V71T"), cl::init(false));
+static cl::opt<bool> MV73("mv73", cl::Hidden, cl::desc("Build for Hexagon V73"),
+                          cl::init(false));
+static cl::opt<bool> MV75("mv75", cl::Hidden, cl::desc("Build for Hexagon V75"),
+                          cl::init(false));
+static cl::opt<bool> MV79("mv79", cl::Hidden, cl::desc("Build for Hexagon V79"),
+                          cl::init(false));
 } // namespace
 
-cl::opt<Hexagon::ArchEnum> EnableHVX(
+static cl::opt<Hexagon::ArchEnum> EnableHVX(
     "mhvx", cl::desc("Enable Hexagon Vector eXtensions"),
     cl::values(clEnumValN(Hexagon::ArchEnum::V60, "v60", "Build for HVX v60"),
                clEnumValN(Hexagon::ArchEnum::V62, "v62", "Build for HVX v62"),

@@ -27,18 +27,18 @@
 
 #include <iterator>
 
-llvm::cl::opt<bool> treatIndexAsSection(
+static llvm::cl::opt<bool> treatIndexAsSection(
     "openmp-treat-index-as-section",
     llvm::cl::desc("In the OpenMP data clauses treat `a(N)` as `a(N:N)`."),
     llvm::cl::init(true));
 
-llvm::cl::opt<bool> enableDelayedPrivatization(
+static llvm::cl::opt<bool> enableDelayedPrivatization(
     "openmp-enable-delayed-privatization",
     llvm::cl::desc(
         "Emit `[first]private` variables as clauses on the MLIR ops."),
     llvm::cl::init(true));
 
-llvm::cl::opt<bool> enableDelayedPrivatizationStaging(
+static llvm::cl::opt<bool> enableDelayedPrivatizationStaging(
     "openmp-enable-delayed-privatization-staging",
     llvm::cl::desc("For partially supported constructs, emit `[first]private` "
                    "variables as clauses on the MLIR ops."),

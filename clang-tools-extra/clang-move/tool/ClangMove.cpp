@@ -37,55 +37,55 @@ std::error_code CreateNewFile(const llvm::Twine &path) {
   return llvm::sys::Process::SafelyCloseFileDescriptor(fd);
 }
 
-cl::OptionCategory ClangMoveCategory("clang-move options");
+static cl::OptionCategory ClangMoveCategory("clang-move options");
 
 cl::list<std::string> Names("names", cl::CommaSeparated,
                             cl::desc("The list of the names of classes being "
                                      "moved, e.g. \"Foo,a::Foo,b::Foo\"."),
                             cl::cat(ClangMoveCategory));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     OldHeader("old_header",
               cl::desc("The relative/absolute file path of old header."),
               cl::cat(ClangMoveCategory));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     OldCC("old_cc", cl::desc("The relative/absolute file path of old cc."),
           cl::cat(ClangMoveCategory));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     NewHeader("new_header",
               cl::desc("The relative/absolute file path of new header."),
               cl::cat(ClangMoveCategory));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     NewCC("new_cc", cl::desc("The relative/absolute file path of new cc."),
           cl::cat(ClangMoveCategory));
 
-cl::opt<bool>
+static cl::opt<bool>
     OldDependOnNew("old_depend_on_new",
                    cl::desc("Whether old header will depend on new header. If "
                             "true, clang-move will "
                             "add #include of new header to old header."),
                    cl::init(false), cl::cat(ClangMoveCategory));
 
-cl::opt<bool>
+static cl::opt<bool>
     NewDependOnOld("new_depend_on_old",
                    cl::desc("Whether new header will depend on old header. If "
                             "true, clang-move will "
                             "add #include of old header to new header."),
                    cl::init(false), cl::cat(ClangMoveCategory));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     Style("style",
           cl::desc("The style name used for reformatting. Default is \"llvm\""),
           cl::init("llvm"), cl::cat(ClangMoveCategory));
 
-cl::opt<bool> Dump("dump_result",
-                   cl::desc("Dump results in JSON format to stdout."),
-                   cl::cat(ClangMoveCategory));
+static cl::opt<bool> Dump("dump_result",
+                          cl::desc("Dump results in JSON format to stdout."),
+                          cl::cat(ClangMoveCategory));
 
-cl::opt<bool> DumpDecls(
+static cl::opt<bool> DumpDecls(
     "dump_decls",
     cl::desc("Dump all declarations in old header (JSON format) to stdout. If "
              "the option is specified, other command options will be ignored. "

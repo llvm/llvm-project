@@ -209,7 +209,7 @@ cl::opt<int> SwpForceIssueWidth(
     cl::init(-1));
 
 /// A command line argument to set the window scheduling option.
-cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
+static cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
     "window-sched", cl::Hidden, cl::init(WindowSchedulingFlag::WS_On),
     cl::desc("Set how to use window scheduling algorithm."),
     cl::values(clEnumValN(WindowSchedulingFlag::WS_Off, "off",

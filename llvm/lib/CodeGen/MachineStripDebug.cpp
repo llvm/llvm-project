@@ -23,7 +23,7 @@
 using namespace llvm;
 
 namespace {
-cl::opt<bool>
+static cl::opt<bool>
     OnlyDebugifiedDefault("mir-strip-debugify-only",
                           cl::desc("Should mir-strip-debug only strip debug "
                                    "info from debugified modules by default"),

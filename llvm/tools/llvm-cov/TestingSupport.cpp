@@ -23,10 +23,10 @@ using namespace llvm;
 using namespace object;
 
 int convertForTestingMain(int argc, const char *argv[]) {
-  cl::opt<std::string> InputSourceFile(cl::Positional, cl::Required,
-                                       cl::desc("<Source file>"));
+  static cl::opt<std::string> InputSourceFile(cl::Positional, cl::Required,
+                                              cl::desc("<Source file>"));
 
-  cl::opt<std::string> OutputFilename(
+  static cl::opt<std::string> OutputFilename(
       "o", cl::Required,
       cl::desc(
           "File with the profile data obtained after an instrumented run"));

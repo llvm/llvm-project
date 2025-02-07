@@ -89,22 +89,22 @@ cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
 
 namespace {
 
-cl::opt<bool> DoHashBasedCounterSplit(
+static cl::opt<bool> DoHashBasedCounterSplit(
     "hash-based-counter-split",
     cl::desc("Rename counter variable of a comdat function based on cfg hash"),
     cl::init(true));
 
-cl::opt<bool>
+static cl::opt<bool>
     RuntimeCounterRelocation("runtime-counter-relocation",
                              cl::desc("Enable relocating counters at runtime."),
                              cl::init(false));
 
-cl::opt<bool> ValueProfileStaticAlloc(
+static cl::opt<bool> ValueProfileStaticAlloc(
     "vp-static-alloc",
     cl::desc("Do static counter allocation for value profiler"),
     cl::init(true));
 
-cl::opt<double> NumCountersPerValueSite(
+static cl::opt<double> NumCountersPerValueSite(
     "vp-counters-per-site",
     cl::desc("The average number of profile counters allocated "
              "per value profiling site."),
@@ -114,24 +114,24 @@ cl::opt<double> NumCountersPerValueSite(
     // is usually smaller than 2.
     cl::init(1.0));
 
-cl::opt<bool> AtomicCounterUpdateAll(
+static cl::opt<bool> AtomicCounterUpdateAll(
     "instrprof-atomic-counter-update-all",
     cl::desc("Make all profile counter updates atomic (for testing only)"),
     cl::init(false));
 
-cl::opt<bool> AtomicCounterUpdatePromoted(
+static cl::opt<bool> AtomicCounterUpdatePromoted(
     "atomic-counter-update-promoted",
     cl::desc("Do counter update using atomic fetch add "
              " for promoted counters only"),
     cl::init(false));
 
-cl::opt<bool> AtomicFirstCounter(
+static cl::opt<bool> AtomicFirstCounter(
     "atomic-first-counter",
     cl::desc("Use atomic fetch add for first counter in a function (usually "
              "the entry counter)"),
     cl::init(false));
 
-cl::opt<bool> ConditionalCounterUpdate(
+static cl::opt<bool> ConditionalCounterUpdate(
     "conditional-counter-update",
     cl::desc("Do conditional counter updates in single byte counters mode)"),
     cl::init(false));
@@ -141,36 +141,37 @@ cl::opt<bool> ConditionalCounterUpdate(
 // pipeline is setup, i.e., the default value of true of this option
 // does not mean the promotion will be done by default. Explicitly
 // setting this option can override the default behavior.
-cl::opt<bool> DoCounterPromotion("do-counter-promotion",
-                                 cl::desc("Do counter register promotion"),
-                                 cl::init(false));
-cl::opt<unsigned> MaxNumOfPromotionsPerLoop(
+static cl::opt<bool>
+    DoCounterPromotion("do-counter-promotion",
+                       cl::desc("Do counter register promotion"),
+                       cl::init(false));
+static cl::opt<unsigned> MaxNumOfPromotionsPerLoop(
     "max-counter-promotions-per-loop", cl::init(20),
     cl::desc("Max number counter promotions per loop to avoid"
              " increasing register pressure too much"));
 
 // A debug option
-cl::opt<int>
+static cl::opt<int>
     MaxNumOfPromotions("max-counter-promotions", cl::init(-1),
                        cl::desc("Max number of allowed counter promotions"));
 
-cl::opt<unsigned> SpeculativeCounterPromotionMaxExiting(
+static cl::opt<unsigned> SpeculativeCounterPromotionMaxExiting(
     "speculative-counter-promotion-max-exiting", cl::init(3),
     cl::desc("The max number of exiting blocks of a loop to allow "
              " speculative counter promotion"));
 
-cl::opt<bool> SpeculativeCounterPromotionToLoop(
+static cl::opt<bool> SpeculativeCounterPromotionToLoop(
     "speculative-counter-promotion-to-loop",
     cl::desc("When the option is false, if the target block is in a loop, "
              "the promotion will be disallowed unless the promoted counter "
              " update can be further/iteratively promoted into an acyclic "
              " region."));
 
-cl::opt<bool> IterativeCounterPromotion(
+static cl::opt<bool> IterativeCounterPromotion(
     "iterative-counter-promotion", cl::init(true),
     cl::desc("Allow counter promotion across the whole loop nest."));
 
-cl::opt<bool> SkipRetExitBlock(
+static cl::opt<bool> SkipRetExitBlock(
     "skip-ret-exit-block", cl::init(true),
     cl::desc("Suppress counter promotion if exit blocks contain ret."));
 

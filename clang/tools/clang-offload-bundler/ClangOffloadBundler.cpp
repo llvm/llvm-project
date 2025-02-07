@@ -62,12 +62,12 @@ static void PrintVersion(raw_ostream &OS) {
 
 int main(int argc, const char **argv) {
 
-  cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
+  static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
   // Mark all our options with this category, everything else (except for
   // -version and -help) will be hidden.
-  cl::OptionCategory
-    ClangOffloadBundlerCategory("clang-offload-bundler options");
+  static cl::OptionCategory ClangOffloadBundlerCategory(
+      "clang-offload-bundler options");
   cl::list<std::string>
     InputFileNames("input",
                    cl::desc("Input file."
@@ -92,7 +92,7 @@ int main(int argc, const char **argv) {
     TargetNames("targets", cl::CommaSeparated,
                 cl::desc("[<offload kind>-<target triple>,...]"),
                 cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<std::string> FilesType(
+  static cl::opt<std::string> FilesType(
       "type", cl::Required,
       cl::desc("Type of the files to be bundled/unbundled.\n"
                "Current supported types are:\n"
@@ -109,43 +109,43 @@ int main(int argc, const char **argv) {
                "  gch  - precompiled-header\n"
                "  ast  - clang AST file"),
       cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<bool>
-    Unbundle("unbundle",
-             cl::desc("Unbundle bundled file into several output files.\n"),
-             cl::init(false), cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<bool>
-    ListBundleIDs("list", cl::desc("List bundle IDs in the bundled file.\n"),
-                  cl::init(false), cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<bool> PrintExternalCommands(
-    "###",
-    cl::desc("Print any external commands that are to be executed "
-             "instead of actually executing them - for testing purposes.\n"),
-    cl::init(false), cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<bool>
-    AllowMissingBundles("allow-missing-bundles",
-                        cl::desc("Create empty files if bundles are missing "
-                                 "when unbundling.\n"),
-                        cl::init(false), cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<unsigned>
-    BundleAlignment("bundle-align",
-                    cl::desc("Alignment of bundle for binary files"),
-                    cl::init(1), cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<bool> CheckInputArchive(
+  static cl::opt<bool> Unbundle(
+      "unbundle",
+      cl::desc("Unbundle bundled file into several output files.\n"),
+      cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  static cl::opt<bool> ListBundleIDs(
+      "list", cl::desc("List bundle IDs in the bundled file.\n"),
+      cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  static cl::opt<bool> PrintExternalCommands(
+      "###",
+      cl::desc("Print any external commands that are to be executed "
+               "instead of actually executing them - for testing purposes.\n"),
+      cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  static cl::opt<bool> AllowMissingBundles(
+      "allow-missing-bundles",
+      cl::desc("Create empty files if bundles are missing "
+               "when unbundling.\n"),
+      cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  static cl::opt<unsigned> BundleAlignment(
+      "bundle-align", cl::desc("Alignment of bundle for binary files"),
+      cl::init(1), cl::cat(ClangOffloadBundlerCategory));
+  static cl::opt<bool> CheckInputArchive(
       "check-input-archive",
       cl::desc("Check if input heterogeneous archive is "
                "valid in terms of TargetID rules.\n"),
       cl::init(false), cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<bool> HipOpenmpCompatible(
-    "hip-openmp-compatible",
-    cl::desc("Treat hip and hipv4 offload kinds as "
-             "compatible with openmp kind, and vice versa.\n"),
-    cl::init(false), cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<bool> Compress("compress",
-                         cl::desc("Compress output file when bundling.\n"),
-                         cl::init(false), cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<bool> Verbose("verbose", cl::desc("Print debug information.\n"),
-                        cl::init(false), cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<int> CompressionLevel(
+  static cl::opt<bool> HipOpenmpCompatible(
+      "hip-openmp-compatible",
+      cl::desc("Treat hip and hipv4 offload kinds as "
+               "compatible with openmp kind, and vice versa.\n"),
+      cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  static cl::opt<bool> Compress(
+      "compress", cl::desc("Compress output file when bundling.\n"),
+      cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  static cl::opt<bool> Verbose(
+      "verbose", cl::desc("Print debug information.\n"), cl::init(false),
+      cl::cat(ClangOffloadBundlerCategory));
+  static cl::opt<int> CompressionLevel(
       "compression-level", cl::desc("Specify the compression level (integer)"),
       cl::value_desc("n"), cl::Optional, cl::cat(ClangOffloadBundlerCategory));
 

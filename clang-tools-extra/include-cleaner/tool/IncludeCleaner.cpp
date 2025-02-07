@@ -48,16 +48,16 @@ missing entirely. (clang-include-fixer can do this).
 )")
                                .trim();
 
-cl::OptionCategory IncludeCleaner("clang-include-cleaner");
+static cl::OptionCategory IncludeCleaner("clang-include-cleaner");
 
-cl::opt<std::string> HTMLReportPath{
+static cl::opt<std::string> HTMLReportPath{
     "html",
     cl::desc("Specify an output filename for an HTML report. "
              "This describes both recommendations and reasons for changes."),
     cl::cat(IncludeCleaner),
 };
 
-cl::opt<std::string> OnlyHeaders{
+static cl::opt<std::string> OnlyHeaders{
     "only-headers",
     cl::desc("A comma-separated list of regexes to match against suffix of a "
              "header. Only headers that match will be analyzed."),
@@ -65,7 +65,7 @@ cl::opt<std::string> OnlyHeaders{
     cl::cat(IncludeCleaner),
 };
 
-cl::opt<std::string> IgnoreHeaders{
+static cl::opt<std::string> IgnoreHeaders{
     "ignore-headers",
     cl::desc("A comma-separated list of regexes to match against suffix of a "
              "header, and disable analysis if matched."),
@@ -74,7 +74,7 @@ cl::opt<std::string> IgnoreHeaders{
 };
 
 enum class PrintStyle { Changes, Final };
-cl::opt<PrintStyle> Print{
+static cl::opt<PrintStyle> Print{
     "print",
     cl::values(
         clEnumValN(PrintStyle::Changes, "changes", "Print symbolic changes"),
@@ -85,19 +85,19 @@ cl::opt<PrintStyle> Print{
     cl::cat(IncludeCleaner),
 };
 
-cl::opt<bool> Edit{
+static cl::opt<bool> Edit{
     "edit",
     cl::desc("Apply edits to analyzed source files"),
     cl::cat(IncludeCleaner),
 };
 
-cl::opt<bool> Insert{
+static cl::opt<bool> Insert{
     "insert",
     cl::desc("Allow header insertions"),
     cl::init(true),
     cl::cat(IncludeCleaner),
 };
-cl::opt<bool> Remove{
+static cl::opt<bool> Remove{
     "remove",
     cl::desc("Allow header removals"),
     cl::init(true),

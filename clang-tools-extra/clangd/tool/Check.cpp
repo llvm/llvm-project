@@ -83,11 +83,11 @@ namespace clangd {
 namespace {
 
 // These will never be shown in --help, ClangdMain doesn't list the category.
-llvm::cl::opt<std::string> CheckTidyTime{
+static llvm::cl::opt<std::string> CheckTidyTime{
     "check-tidy-time",
     llvm::cl::desc("Print the overhead of checks matching this glob"),
     llvm::cl::init("")};
-llvm::cl::opt<std::string> CheckFileLines{
+static llvm::cl::opt<std::string> CheckFileLines{
     "check-lines",
     llvm::cl::desc(
         "Limits the range of tokens in -check file on which "
@@ -95,19 +95,18 @@ llvm::cl::opt<std::string> CheckFileLines{
         "testing to lines 3 to 7 (inclusive) or --check-lines=5 to restrict "
         "to one line. Default is testing entire file."),
     llvm::cl::init("")};
-llvm::cl::opt<bool> CheckLocations{
+static llvm::cl::opt<bool> CheckLocations{
     "check-locations",
     llvm::cl::desc(
         "Runs certain features (e.g. hover) at each point in the file. "
         "Somewhat slow."),
     llvm::cl::init(true)};
-llvm::cl::opt<bool> CheckCompletion{
+static llvm::cl::opt<bool> CheckCompletion{
     "check-completion",
     llvm::cl::desc("Run code-completion at each point (slow)"),
     llvm::cl::init(false)};
-llvm::cl::opt<bool> CheckWarnings{
-    "check-warnings",
-    llvm::cl::desc("Print warnings as well as errors"),
+static llvm::cl::opt<bool> CheckWarnings{
+    "check-warnings", llvm::cl::desc("Print warnings as well as errors"),
     llvm::cl::init(false)};
 
 // Print the diagnostics meeting severity threshold, and return count of errors.

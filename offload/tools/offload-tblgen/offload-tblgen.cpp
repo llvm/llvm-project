@@ -34,7 +34,7 @@ enum ActionType {
 };
 
 namespace {
-cl::opt<ActionType> Action(
+static cl::opt<ActionType> Action(
     cl::desc("Action to perform:"),
     cl::values(
         clEnumValN(PrintRecords, "print-records",

@@ -27,23 +27,20 @@ using namespace llvm;
 #define DEBUG_TYPE "hexagon-isel"
 #define PASS_NAME "Hexagon DAG->DAG Pattern Instruction Selection"
 
-static
-cl::opt<bool>
-EnableAddressRebalancing("isel-rebalance-addr", cl::Hidden, cl::init(true),
-  cl::desc("Rebalance address calculation trees to improve "
-          "instruction selection"));
+static cl::opt<bool> EnableAddressRebalancing(
+    "isel-rebalance-addr", cl::Hidden, cl::init(true),
+    cl::desc("Rebalance address calculation trees to improve "
+             "instruction selection"));
 
 // Rebalance only if this allows e.g. combining a GA with an offset or
 // factoring out a shift.
-static
-cl::opt<bool>
-RebalanceOnlyForOptimizations("rebalance-only-opt", cl::Hidden, cl::init(false),
-  cl::desc("Rebalance address tree only if this allows optimizations"));
+static cl::opt<bool> RebalanceOnlyForOptimizations(
+    "rebalance-only-opt", cl::Hidden, cl::init(false),
+    cl::desc("Rebalance address tree only if this allows optimizations"));
 
-static
-cl::opt<bool>
-RebalanceOnlyImbalancedTrees("rebalance-only-imbal", cl::Hidden,
-  cl::init(false), cl::desc("Rebalance address tree only if it is imbalanced"));
+static cl::opt<bool> RebalanceOnlyImbalancedTrees(
+    "rebalance-only-imbal", cl::Hidden, cl::init(false),
+    cl::desc("Rebalance address tree only if it is imbalanced"));
 
 static cl::opt<bool> CheckSingleUse("hexagon-isel-su", cl::Hidden,
   cl::init(true), cl::desc("Enable checking of SDNode's single-use status"));

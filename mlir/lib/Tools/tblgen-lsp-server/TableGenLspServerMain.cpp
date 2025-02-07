@@ -18,7 +18,7 @@ using namespace mlir;
 using namespace mlir::lsp;
 
 LogicalResult mlir::TableGenLspServerMain(int argc, char **argv) {
-  llvm::cl::opt<JSONStreamStyle> inputStyle{
+  static llvm::cl::opt<JSONStreamStyle> inputStyle{
       "input-style",
       llvm::cl::desc("Input JSON stream encoding"),
       llvm::cl::values(clEnumValN(JSONStreamStyle::Standard, "standard",
@@ -29,14 +29,14 @@ LogicalResult mlir::TableGenLspServerMain(int argc, char **argv) {
       llvm::cl::init(JSONStreamStyle::Standard),
       llvm::cl::Hidden,
   };
-  llvm::cl::opt<bool> litTest{
+  static llvm::cl::opt<bool> litTest{
       "lit-test",
       llvm::cl::desc(
           "Abbreviation for -input-style=delimited -pretty -log=verbose. "
           "Intended to simplify lit tests"),
       llvm::cl::init(false),
   };
-  llvm::cl::opt<Logger::Level> logLevel{
+  static llvm::cl::opt<Logger::Level> logLevel{
       "log",
       llvm::cl::desc("Verbosity of log messages written to stderr"),
       llvm::cl::values(
@@ -46,7 +46,7 @@ LogicalResult mlir::TableGenLspServerMain(int argc, char **argv) {
           clEnumValN(Logger::Level::Debug, "verbose", "Low level details")),
       llvm::cl::init(Logger::Level::Info),
   };
-  llvm::cl::opt<bool> prettyPrint{
+  static llvm::cl::opt<bool> prettyPrint{
       "pretty",
       llvm::cl::desc("Pretty-print JSON output"),
       llvm::cl::init(false),

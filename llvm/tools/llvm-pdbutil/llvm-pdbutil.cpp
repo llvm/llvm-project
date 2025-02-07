@@ -124,9 +124,9 @@ cl::SubCommand ExplainSubcommand("explain",
 cl::SubCommand ExportSubcommand("export",
                                 "Write binary data from a stream to a file");
 
-cl::OptionCategory TypeCategory("Symbol Type Options");
-cl::OptionCategory FilterCategory("Filtering and Sorting Options");
-cl::OptionCategory OtherOptions("Other Options");
+static cl::OptionCategory TypeCategory("Symbol Type Options");
+static cl::OptionCategory FilterCategory("Filtering and Sorting Options");
+static cl::OptionCategory OtherOptions("Other Options");
 
 cl::ValuesClass ChunkValues = cl::values(
     clEnumValN(ModuleSubsection::CrossScopeExports, "cme",
@@ -366,14 +366,14 @@ cl::opt<bool> NoEnumDefs("no-enum-definitions",
                          cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 }
 
-cl::OptionCategory FileOptions("Module & File Options");
+static cl::OptionCategory FileOptions("Module & File Options");
 
 namespace bytes {
-cl::OptionCategory MsfBytes("MSF File Options");
-cl::OptionCategory DbiBytes("Dbi Stream Options");
-cl::OptionCategory PdbBytes("PDB Stream Options");
-cl::OptionCategory Types("Type Options");
-cl::OptionCategory ModuleCategory("Module Options");
+static cl::OptionCategory MsfBytes("MSF File Options");
+static cl::OptionCategory DbiBytes("Dbi Stream Options");
+static cl::OptionCategory PdbBytes("PDB Stream Options");
+static cl::OptionCategory Types("Type Options");
+static cl::OptionCategory ModuleCategory("Module Options");
 
 std::optional<NumberRange> DumpBlockRange;
 std::optional<NumberRange> DumpByteRange;
@@ -446,10 +446,10 @@ cl::list<std::string> InputFilenames(cl::Positional,
 
 namespace dump {
 
-cl::OptionCategory MsfOptions("MSF Container Options");
-cl::OptionCategory TypeOptions("Type Record Options");
-cl::OptionCategory SymbolOptions("Symbol Options");
-cl::OptionCategory MiscOptions("Miscellaneous Options");
+static cl::OptionCategory MsfOptions("MSF Container Options");
+static cl::OptionCategory TypeOptions("Type Record Options");
+static cl::OptionCategory SymbolOptions("Symbol Options");
+static cl::OptionCategory MiscOptions("Miscellaneous Options");
 
 // MSF OPTIONS
 cl::opt<bool> DumpSummary("summary", cl::desc("dump file summary"),

@@ -49,9 +49,9 @@ namespace {
 // otherwise the raw input run through an interpreter is used as the reference
 // source.
 //
-cl::opt<std::string> OutputFile("output",
-                                cl::desc("Specify a reference program output "
-                                         "(for miscompilation detection)"));
+static cl::opt<std::string>
+    OutputFile("output", cl::desc("Specify a reference program output "
+                                  "(for miscompilation detection)"));
 }
 
 /// If we reduce or update the program somehow, call this method to update

@@ -44,7 +44,7 @@
 using namespace llvm;
 
 /// Query value using AddLinkageNamesToDeclCallOriginsForTuning.
-cl::opt<cl::boolOrDefault> AddLinkageNamesToDeclCallOrigins(
+static cl::opt<cl::boolOrDefault> AddLinkageNamesToDeclCallOrigins(
     "add-linkage-names-to-declaration-call-origins", cl::Hidden,
     cl::desc("Add DW_AT_linkage_name to function declaration DIEs "
              "referenced by DW_AT_call_origin attributes. Enabled by default "

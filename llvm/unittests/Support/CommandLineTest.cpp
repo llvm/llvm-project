@@ -88,8 +88,7 @@ public:
   ~StackSubCommand() { unregisterSubCommand(); }
 };
 
-
-cl::OptionCategory TestCategory("Test Options", "Description");
+static cl::OptionCategory TestCategory("Test Options", "Description");
 TEST(CommandLineTest, ModifyExisitingOption) {
   StackOption<int> TestOption("test-option", cl::desc("old description"));
 
@@ -169,7 +168,8 @@ TEST(CommandLineTest, UseMultipleCategories) {
                     }))
       << "Failed to assign General Category.";
 
-  cl::OptionCategory AnotherCategory("Additional test Options", "Description");
+  static cl::OptionCategory AnotherCategory("Additional test Options",
+                                            "Description");
   StackOption<int> TestOption("test-option", cl::cat(TestCategory),
                               cl::cat(AnotherCategory));
   ASSERT_EQ(TestOption.Categories.end(),
@@ -425,7 +425,7 @@ TEST(CommandLineTest, HideUnrelatedOptions) {
       << "Hid default option that should be visable.";
 }
 
-cl::OptionCategory TestCategory2("Test Options set 2", "Description");
+static cl::OptionCategory TestCategory2("Test Options set 2", "Description");
 
 TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
   StackOption<int> TestOption1("multi-hide-option-1");
@@ -2296,8 +2296,8 @@ TEST(CommandLineTest, SubCommandGroups) {
 TEST(CommandLineTest, HelpWithEmptyCategory) {
   cl::ResetCommandLineParser();
 
-  cl::OptionCategory Category1("First Category");
-  cl::OptionCategory Category2("Second Category");
+  static cl::OptionCategory Category1("First Category");
+  static cl::OptionCategory Category2("Second Category");
   StackOption<int> Opt1("opt1", cl::cat(Category1));
   StackOption<int> Opt2("opt2", cl::cat(Category2));
   cl::HideUnrelatedOptions(Category2);

@@ -28,7 +28,7 @@ This tool requests monitoring information (uptime, index freshness) from the
 server and prints it to stdout.
 )";
 
-llvm::cl::opt<std::string>
+static llvm::cl::opt<std::string>
     ServerAddress("server-address", llvm::cl::Positional,
                   llvm::cl::desc("Address of the invoked server."),
                   llvm::cl::Required);

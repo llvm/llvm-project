@@ -90,7 +90,7 @@ cl::opt<MISched::Direction> PreRADirection(
         clEnumValN(MISched::Bidirectional, "bidirectional",
                    "Force bidirectional pre reg-alloc list scheduling")));
 
-cl::opt<MISched::Direction> PostRADirection(
+static cl::opt<MISched::Direction> PostRADirection(
     "misched-postra-direction", cl::Hidden,
     cl::desc("Post reg-alloc list scheduling direction"),
     cl::init(MISched::Unspecified),
@@ -102,24 +102,24 @@ cl::opt<MISched::Direction> PostRADirection(
         clEnumValN(MISched::Bidirectional, "bidirectional",
                    "Force bidirectional post reg-alloc list scheduling")));
 
-cl::opt<bool>
-DumpCriticalPathLength("misched-dcpl", cl::Hidden,
-                       cl::desc("Print critical path length to stdout"));
+static cl::opt<bool>
+    DumpCriticalPathLength("misched-dcpl", cl::Hidden,
+                           cl::desc("Print critical path length to stdout"));
 
 cl::opt<bool> VerifyScheduling(
     "verify-misched", cl::Hidden,
     cl::desc("Verify machine instrs before and after machine scheduling"));
 
 #ifndef NDEBUG
-cl::opt<bool> ViewMISchedDAGs(
+static cl::opt<bool> ViewMISchedDAGs(
     "view-misched-dags", cl::Hidden,
     cl::desc("Pop up a window to show MISched dags after they are processed"));
-cl::opt<bool> PrintDAGs("misched-print-dags", cl::Hidden,
-                        cl::desc("Print schedule DAGs"));
-cl::opt<bool> MISchedDumpReservedCycles(
+static cl::opt<bool> PrintDAGs("misched-print-dags", cl::Hidden,
+                               cl::desc("Print schedule DAGs"));
+static cl::opt<bool> MISchedDumpReservedCycles(
     "misched-dump-reserved-cycles", cl::Hidden, cl::init(false),
     cl::desc("Dump resource usage at schedule boundary."));
-cl::opt<bool> MischedDetailResourceBooking(
+static cl::opt<bool> MischedDetailResourceBooking(
     "misched-detail-resource-booking", cl::Hidden, cl::init(false),
     cl::desc("Show details of invoking getNextResoufceCycle."));
 #else

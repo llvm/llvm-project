@@ -137,11 +137,12 @@ static list<std::string>
     InputFilenames(Positional, desc("<input object files or .dSYM bundles>"),
                    cat(DwarfDumpCategory));
 
-cl::OptionCategory SectionCategory("Section-specific Dump Options",
-                                   "These control which sections are dumped. "
-                                   "Where applicable these parameters take an "
-                                   "optional =<offset> argument to dump only "
-                                   "the entry at the specified offset.");
+static cl::OptionCategory
+    SectionCategory("Section-specific Dump Options",
+                    "These control which sections are dumped. "
+                    "Where applicable these parameters take an "
+                    "optional =<offset> argument to dump only "
+                    "the entry at the specified offset.");
 
 static opt<bool> DumpAll("all", desc("Dump all debug info sections"),
                          cat(SectionCategory));

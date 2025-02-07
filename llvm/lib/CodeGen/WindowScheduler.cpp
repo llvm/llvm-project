@@ -61,32 +61,32 @@ STATISTIC(NumWindowSchedule,
 STATISTIC(NumFailAnalyseII,
           "Window scheduling abort due to the failure of the II analysis");
 
-cl::opt<unsigned>
+static cl::opt<unsigned>
     WindowSearchNum("window-search-num",
                     cl::desc("The number of searches per loop in the window "
                              "algorithm. 0 means no search number limit."),
                     cl::Hidden, cl::init(6));
 
-cl::opt<unsigned> WindowSearchRatio(
+static cl::opt<unsigned> WindowSearchRatio(
     "window-search-ratio",
     cl::desc("The ratio of searches per loop in the window algorithm. 100 "
              "means search all positions in the loop, while 0 means not "
              "performing any search."),
     cl::Hidden, cl::init(40));
 
-cl::opt<unsigned> WindowIICoeff(
+static cl::opt<unsigned> WindowIICoeff(
     "window-ii-coeff",
     cl::desc(
         "The coefficient used when initializing II in the window algorithm."),
     cl::Hidden, cl::init(5));
 
-cl::opt<unsigned> WindowRegionLimit(
+static cl::opt<unsigned> WindowRegionLimit(
     "window-region-limit",
     cl::desc(
         "The lower limit of the scheduling region in the window algorithm."),
     cl::Hidden, cl::init(3));
 
-cl::opt<unsigned> WindowDiffLimit(
+static cl::opt<unsigned> WindowDiffLimit(
     "window-diff-limit",
     cl::desc("The lower limit of the difference between best II and base II in "
              "the window algorithm. If the difference is smaller than "
@@ -96,7 +96,7 @@ cl::opt<unsigned> WindowDiffLimit(
 
 // WindowIILimit serves as an indicator of abnormal scheduling results and could
 // potentially be referenced by the derived target window scheduler.
-cl::opt<unsigned>
+static cl::opt<unsigned>
     WindowIILimit("window-ii-limit",
                   cl::desc("The upper limit of II in the window algorithm."),
                   cl::Hidden, cl::init(1000));

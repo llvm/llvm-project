@@ -30,10 +30,10 @@
 using namespace llvm;
 
 namespace {
-cl::OptionCategory Cat("yaml2obj Options");
+static cl::OptionCategory Cat("yaml2obj Options");
 
-cl::opt<std::string> Input(cl::Positional, cl::desc("<input file>"),
-                           cl::init("-"), cl::cat(Cat));
+static cl::opt<std::string> Input(cl::Positional, cl::desc("<input file>"),
+                                  cl::init("-"), cl::cat(Cat));
 
 cl::list<std::string>
     D("D", cl::Prefix,
@@ -41,10 +41,11 @@ cl::list<std::string>
                "definition. The syntax is <macro>=<definition>"),
       cl::cat(Cat));
 
-cl::opt<bool> PreprocessOnly("E", cl::desc("Just print the preprocessed file"),
-                             cl::cat(Cat));
+static cl::opt<bool>
+    PreprocessOnly("E", cl::desc("Just print the preprocessed file"),
+                   cl::cat(Cat));
 
-cl::opt<unsigned>
+static cl::opt<unsigned>
     DocNum("docnum", cl::init(1),
            cl::desc("Read specified document from input (default = 1)"),
            cl::cat(Cat));
@@ -55,9 +56,10 @@ static cl::opt<uint64_t> MaxSize(
         "Sets the maximum allowed output size (0 means no limit) [ELF only]"),
     cl::cat(Cat));
 
-cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
-                                    cl::value_desc("filename"), cl::init("-"),
-                                    cl::Prefix, cl::cat(Cat));
+static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
+                                           cl::value_desc("filename"),
+                                           cl::init("-"), cl::Prefix,
+                                           cl::cat(Cat));
 } // namespace
 
 static std::optional<std::string> preprocess(StringRef Buf,

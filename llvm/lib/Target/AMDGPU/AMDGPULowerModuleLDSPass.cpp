@@ -216,13 +216,13 @@ using namespace AMDGPU;
 
 namespace {
 
-cl::opt<bool> SuperAlignLDSGlobals(
+static cl::opt<bool> SuperAlignLDSGlobals(
     "amdgpu-super-align-lds-globals",
     cl::desc("Increase alignment of LDS if it is not on align boundary"),
     cl::init(true), cl::Hidden);
 
 enum class LoweringKind { module, table, kernel, hybrid };
-cl::opt<LoweringKind> LoweringKindLoc(
+static cl::opt<LoweringKind> LoweringKindLoc(
     "amdgpu-lower-module-lds-strategy",
     cl::desc("Specify lowering strategy for function LDS access:"), cl::Hidden,
     cl::init(LoweringKind::hybrid),

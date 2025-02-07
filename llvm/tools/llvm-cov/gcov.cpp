@@ -84,85 +84,89 @@ int gcovMain(int argc, const char *argv[]) {
   cl::list<std::string> SourceFiles(cl::Positional, cl::OneOrMore,
                                     cl::desc("SOURCEFILE"));
 
-  cl::opt<bool> AllBlocks("a", cl::Grouping, cl::init(false),
-                          cl::desc("Display all basic blocks"));
+  static cl::opt<bool> AllBlocks("a", cl::Grouping, cl::init(false),
+                                 cl::desc("Display all basic blocks"));
   cl::alias AllBlocksA("all-blocks", cl::aliasopt(AllBlocks));
 
-  cl::opt<bool> BranchProb("b", cl::Grouping, cl::init(false),
-                           cl::desc("Display branch probabilities"));
+  static cl::opt<bool> BranchProb("b", cl::Grouping, cl::init(false),
+                                  cl::desc("Display branch probabilities"));
   cl::alias BranchProbA("branch-probabilities", cl::aliasopt(BranchProb));
 
-  cl::opt<bool> BranchCount("c", cl::Grouping, cl::init(false),
-                            cl::desc("Display branch counts instead "
-                                     "of percentages (requires -b)"));
+  static cl::opt<bool> BranchCount("c", cl::Grouping, cl::init(false),
+                                   cl::desc("Display branch counts instead "
+                                            "of percentages (requires -b)"));
   cl::alias BranchCountA("branch-counts", cl::aliasopt(BranchCount));
 
-  cl::opt<bool> LongNames("l", cl::Grouping, cl::init(false),
-                          cl::desc("Prefix filenames with the main file"));
+  static cl::opt<bool> LongNames(
+      "l", cl::Grouping, cl::init(false),
+      cl::desc("Prefix filenames with the main file"));
   cl::alias LongNamesA("long-file-names", cl::aliasopt(LongNames));
 
-  cl::opt<bool> FuncSummary("f", cl::Grouping, cl::init(false),
-                            cl::desc("Show coverage for each function"));
+  static cl::opt<bool> FuncSummary("f", cl::Grouping, cl::init(false),
+                                   cl::desc("Show coverage for each function"));
   cl::alias FuncSummaryA("function-summaries", cl::aliasopt(FuncSummary));
 
   // Supported by gcov 4.9~8. gcov 9 (GCC r265587) removed --intermediate-format
   // and -i was changed to mean --json-format. We consider this format still
   // useful and support -i.
-  cl::opt<bool> Intermediate(
+  static cl::opt<bool> Intermediate(
       "intermediate-format", cl::init(false),
       cl::desc("Output .gcov in intermediate text format"));
   cl::alias IntermediateA("i", cl::desc("Alias for --intermediate-format"),
                           cl::Grouping, cl::NotHidden,
                           cl::aliasopt(Intermediate));
 
-  cl::opt<bool> Demangle("demangled-names", cl::init(false),
-                         cl::desc("Demangle function names"));
+  static cl::opt<bool> Demangle("demangled-names", cl::init(false),
+                                cl::desc("Demangle function names"));
   cl::alias DemangleA("m", cl::desc("Alias for --demangled-names"),
                       cl::Grouping, cl::NotHidden, cl::aliasopt(Demangle));
 
-  cl::opt<bool> NoOutput("n", cl::Grouping, cl::init(false),
-                         cl::desc("Do not output any .gcov files"));
+  static cl::opt<bool> NoOutput("n", cl::Grouping, cl::init(false),
+                                cl::desc("Do not output any .gcov files"));
   cl::alias NoOutputA("no-output", cl::aliasopt(NoOutput));
 
-  cl::opt<std::string> ObjectDir(
+  static cl::opt<std::string> ObjectDir(
       "o", cl::value_desc("DIR|FILE"), cl::init(""),
       cl::desc("Find objects in DIR or based on FILE's path"));
   cl::alias ObjectDirA("object-directory", cl::aliasopt(ObjectDir));
   cl::alias ObjectDirB("object-file", cl::aliasopt(ObjectDir));
 
-  cl::opt<bool> PreservePaths("p", cl::Grouping, cl::init(false),
-                              cl::desc("Preserve path components"));
+  static cl::opt<bool> PreservePaths("p", cl::Grouping, cl::init(false),
+                                     cl::desc("Preserve path components"));
   cl::alias PreservePathsA("preserve-paths", cl::aliasopt(PreservePaths));
 
-  cl::opt<bool> RelativeOnly(
+  static cl::opt<bool> RelativeOnly(
       "r", cl::Grouping,
       cl::desc("Only dump files with relative paths or absolute paths with the "
                "prefix specified by -s"));
   cl::alias RelativeOnlyA("relative-only", cl::aliasopt(RelativeOnly));
-  cl::opt<std::string> SourcePrefix("s", cl::desc("Source prefix to elide"));
+  static cl::opt<std::string> SourcePrefix("s",
+                                           cl::desc("Source prefix to elide"));
   cl::alias SourcePrefixA("source-prefix", cl::aliasopt(SourcePrefix));
 
-  cl::opt<bool> UseStdout("t", cl::Grouping, cl::init(false),
-                          cl::desc("Print to stdout"));
+  static cl::opt<bool> UseStdout("t", cl::Grouping, cl::init(false),
+                                 cl::desc("Print to stdout"));
   cl::alias UseStdoutA("stdout", cl::aliasopt(UseStdout));
 
-  cl::opt<bool> UncondBranch("u", cl::Grouping, cl::init(false),
-                             cl::desc("Display unconditional branch info "
-                                      "(requires -b)"));
+  static cl::opt<bool> UncondBranch(
+      "u", cl::Grouping, cl::init(false),
+      cl::desc("Display unconditional branch info "
+               "(requires -b)"));
   cl::alias UncondBranchA("unconditional-branches", cl::aliasopt(UncondBranch));
 
-  cl::opt<bool> HashFilenames("x", cl::Grouping, cl::init(false),
-                              cl::desc("Hash long pathnames"));
+  static cl::opt<bool> HashFilenames("x", cl::Grouping, cl::init(false),
+                                     cl::desc("Hash long pathnames"));
   cl::alias HashFilenamesA("hash-filenames", cl::aliasopt(HashFilenames));
 
-
-  cl::OptionCategory DebugCat("Internal and debugging options");
-  cl::opt<bool> DumpGCOV("dump", cl::init(false), cl::cat(DebugCat),
-                         cl::desc("Dump the gcov file to stderr"));
-  cl::opt<std::string> InputGCNO("gcno", cl::cat(DebugCat), cl::init(""),
-                                 cl::desc("Override inferred gcno file"));
-  cl::opt<std::string> InputGCDA("gcda", cl::cat(DebugCat), cl::init(""),
-                                 cl::desc("Override inferred gcda file"));
+  static cl::OptionCategory DebugCat("Internal and debugging options");
+  static cl::opt<bool> DumpGCOV("dump", cl::init(false), cl::cat(DebugCat),
+                                cl::desc("Dump the gcov file to stderr"));
+  static cl::opt<std::string> InputGCNO(
+      "gcno", cl::cat(DebugCat), cl::init(""),
+      cl::desc("Override inferred gcno file"));
+  static cl::opt<std::string> InputGCDA(
+      "gcda", cl::cat(DebugCat), cl::init(""),
+      cl::desc("Override inferred gcda file"));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
 

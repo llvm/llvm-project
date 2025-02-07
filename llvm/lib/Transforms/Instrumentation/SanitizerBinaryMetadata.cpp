@@ -86,26 +86,27 @@ using MetadataInfoSet = SetVector<const MetadataInfo *>;
 
 //===--- Command-line options ---------------------------------------------===//
 
-cl::opt<bool> ClWeakCallbacks(
+static cl::opt<bool> ClWeakCallbacks(
     "sanitizer-metadata-weak-callbacks",
     cl::desc("Declare callbacks extern weak, and only call if non-null."),
     cl::Hidden, cl::init(true));
-cl::opt<bool>
+static cl::opt<bool>
     ClNoSanitize("sanitizer-metadata-nosanitize-attr",
                  cl::desc("Mark some metadata features uncovered in functions "
                           "with associated no_sanitize attributes."),
                  cl::Hidden, cl::init(true));
 
-cl::opt<bool> ClEmitCovered("sanitizer-metadata-covered",
-                            cl::desc("Emit PCs for covered functions."),
-                            cl::Hidden, cl::init(false));
-cl::opt<bool> ClEmitAtomics("sanitizer-metadata-atomics",
-                            cl::desc("Emit PCs for atomic operations."),
-                            cl::Hidden, cl::init(false));
-cl::opt<bool> ClEmitUAR("sanitizer-metadata-uar",
-                        cl::desc("Emit PCs for start of functions that are "
-                                 "subject for use-after-return checking"),
-                        cl::Hidden, cl::init(false));
+static cl::opt<bool> ClEmitCovered("sanitizer-metadata-covered",
+                                   cl::desc("Emit PCs for covered functions."),
+                                   cl::Hidden, cl::init(false));
+static cl::opt<bool> ClEmitAtomics("sanitizer-metadata-atomics",
+                                   cl::desc("Emit PCs for atomic operations."),
+                                   cl::Hidden, cl::init(false));
+static cl::opt<bool>
+    ClEmitUAR("sanitizer-metadata-uar",
+              cl::desc("Emit PCs for start of functions that are "
+                       "subject for use-after-return checking"),
+              cl::Hidden, cl::init(false));
 
 //===--- Statistics -------------------------------------------------------===//
 

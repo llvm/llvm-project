@@ -140,7 +140,7 @@ static cl::opt<unsigned> FPAssociationUpperLimit(
         "Set upper limit for the number of transformations performed "
         "during a single round of hoisting the reassociated expressions."));
 
-cl::opt<unsigned> IntAssociationUpperLimit(
+static cl::opt<unsigned> IntAssociationUpperLimit(
     "licm-max-num-int-reassociations", cl::init(5U), cl::Hidden,
     cl::desc(
         "Set upper limit for the number of transformations performed "

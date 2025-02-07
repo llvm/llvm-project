@@ -45,34 +45,35 @@ using namespace llvm;
 
 namespace {
 
-cl::OptionCategory ChangeNamespaceCategory("Change namespace.");
+static cl::OptionCategory ChangeNamespaceCategory("Change namespace.");
 
-cl::opt<std::string> OldNamespace("old_namespace", cl::Required,
-                                  cl::desc("Old namespace."),
-                                  cl::cat(ChangeNamespaceCategory));
+static cl::opt<std::string> OldNamespace("old_namespace", cl::Required,
+                                         cl::desc("Old namespace."),
+                                         cl::cat(ChangeNamespaceCategory));
 
-cl::opt<std::string> NewNamespace("new_namespace", cl::Required,
-                                  cl::desc("New namespace."),
-                                  cl::cat(ChangeNamespaceCategory));
+static cl::opt<std::string> NewNamespace("new_namespace", cl::Required,
+                                         cl::desc("New namespace."),
+                                         cl::cat(ChangeNamespaceCategory));
 
-cl::opt<std::string> FilePattern(
+static cl::opt<std::string> FilePattern(
     "file_pattern", cl::Required,
     cl::desc("Only rename namespaces in files that match the given pattern."),
     cl::cat(ChangeNamespaceCategory));
 
-cl::opt<bool> Inplace("i", cl::desc("Inplace edit <file>s, if specified."),
-                      cl::cat(ChangeNamespaceCategory));
+static cl::opt<bool> Inplace("i",
+                             cl::desc("Inplace edit <file>s, if specified."),
+                             cl::cat(ChangeNamespaceCategory));
 
-cl::opt<bool>
+static cl::opt<bool>
     DumpYAML("dump_result",
-         cl::desc("Dump new file contents in YAML, if specified."),
-         cl::cat(ChangeNamespaceCategory));
+             cl::desc("Dump new file contents in YAML, if specified."),
+             cl::cat(ChangeNamespaceCategory));
 
-cl::opt<std::string> Style("style",
-                           cl::desc("The style name used for reformatting."),
-                           cl::init("LLVM"), cl::cat(ChangeNamespaceCategory));
+static cl::opt<std::string>
+    Style("style", cl::desc("The style name used for reformatting."),
+          cl::init("LLVM"), cl::cat(ChangeNamespaceCategory));
 
-cl::opt<std::string> AllowedFile(
+static cl::opt<std::string> AllowedFile(
     "allowed_file",
     cl::desc("A file containing regexes of symbol names that are not expected "
              "to be updated when changing namespaces around them."),

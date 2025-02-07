@@ -35,24 +35,24 @@ using namespace llvm;
 
 namespace {
 
-cl::opt<int>
+static cl::opt<int>
     DelicmMaxOps("polly-delicm-max-ops",
                  cl::desc("Maximum number of isl operations to invest for "
                           "lifetime analysis; 0=no limit"),
                  cl::init(1000000), cl::cat(PollyCategory));
 
-cl::opt<bool> DelicmOverapproximateWrites(
+static cl::opt<bool> DelicmOverapproximateWrites(
     "polly-delicm-overapproximate-writes",
     cl::desc(
         "Do more PHI writes than necessary in order to avoid partial accesses"),
     cl::init(false), cl::Hidden, cl::cat(PollyCategory));
 
-cl::opt<bool> DelicmPartialWrites("polly-delicm-partial-writes",
-                                  cl::desc("Allow partial writes"),
-                                  cl::init(true), cl::Hidden,
-                                  cl::cat(PollyCategory));
+static cl::opt<bool> DelicmPartialWrites("polly-delicm-partial-writes",
+                                         cl::desc("Allow partial writes"),
+                                         cl::init(true), cl::Hidden,
+                                         cl::cat(PollyCategory));
 
-cl::opt<bool>
+static cl::opt<bool>
     DelicmComputeKnown("polly-delicm-compute-known",
                        cl::desc("Compute known content of array elements"),
                        cl::init(true), cl::Hidden, cl::cat(PollyCategory));

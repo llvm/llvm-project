@@ -90,9 +90,10 @@ extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
                llvm::bolt::DeprecatedICFNumericOptionParser>
     ICF;
 
-cl::opt<bool> AllowStripped("allow-stripped",
-                            cl::desc("allow processing of stripped binaries"),
-                            cl::Hidden, cl::cat(BoltCategory));
+static cl::opt<bool>
+    AllowStripped("allow-stripped",
+                  cl::desc("allow processing of stripped binaries"), cl::Hidden,
+                  cl::cat(BoltCategory));
 
 static cl::opt<bool> ForceToDataRelocations(
     "force-data-relocations",
@@ -100,7 +101,7 @@ static cl::opt<bool> ForceToDataRelocations(
 
     cl::Hidden, cl::cat(BoltCategory));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     BoltID("bolt-id",
            cl::desc("add any string to tag this execution in the "
                     "output binary via bolt info section"),
@@ -174,9 +175,10 @@ cl::opt<bool> PrintAll("print-all",
                        cl::desc("print functions after each stage"), cl::Hidden,
                        cl::cat(BoltCategory));
 
-cl::opt<bool> PrintProfile("print-profile",
-                           cl::desc("print functions after attaching profile"),
-                           cl::Hidden, cl::cat(BoltCategory));
+static cl::opt<bool>
+    PrintProfile("print-profile",
+                 cl::desc("print functions after attaching profile"),
+                 cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool> PrintCFG("print-cfg",
                        cl::desc("print functions after CFG construction"),
@@ -217,11 +219,10 @@ SkipFunctionNamesFile("skip-funcs-file",
   cl::Hidden,
   cl::cat(BoltCategory));
 
-cl::opt<bool>
-TrapOldCode("trap-old-code",
-  cl::desc("insert traps in old function bodies (relocation mode)"),
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<bool> TrapOldCode(
+    "trap-old-code",
+    cl::desc("insert traps in old function bodies (relocation mode)"),
+    cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<std::string> DWPPathName("dwp",
                                         cl::desc("Path and name to DWP file."),

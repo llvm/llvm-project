@@ -41,12 +41,11 @@ static cl::opt<bool>
     IsConst64Disabled("disable-const64", cl::Hidden,
 
                       cl::desc("Disable generation of const64"));
-static
-cl::opt<unsigned>
-MaxNumOfInstsBetweenNewValueStoreAndTFR("max-num-inst-between-tfr-and-nv-store",
-                   cl::Hidden, cl::init(4),
-                   cl::desc("Maximum distance between a tfr feeding a store we "
-                            "consider the store still to be newifiable"));
+
+static cl::opt<unsigned> MaxNumOfInstsBetweenNewValueStoreAndTFR(
+    "max-num-inst-between-tfr-and-nv-store", cl::Hidden, cl::init(4),
+    cl::desc("Maximum distance between a tfr feeding a store we "
+             "consider the store still to be newifiable"));
 
 namespace llvm {
   FunctionPass *createHexagonCopyToCombine();

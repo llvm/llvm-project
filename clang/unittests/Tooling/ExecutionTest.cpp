@@ -143,7 +143,7 @@ TEST(CreateToolExecutorTest, FailedCreateExecutorUndefinedFlag) {
 }
 
 TEST(CreateToolExecutorTest, RegisterFlagsBeforeReset) {
-  llvm::cl::opt<std::string> BeforeReset(
+  static llvm::cl::opt<std::string> BeforeReset(
       "before_reset", llvm::cl::desc("Defined before reset."),
       llvm::cl::init(""));
 

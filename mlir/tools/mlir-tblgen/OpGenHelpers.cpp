@@ -21,7 +21,7 @@ using namespace llvm;
 using namespace mlir;
 using namespace mlir::tblgen;
 
-cl::OptionCategory opDefGenCat("Options for op definition generators");
+static cl::OptionCategory opDefGenCat("Options for op definition generators");
 
 static cl::opt<std::string> opIncFilter(
     "op-include-regex",

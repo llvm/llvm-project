@@ -46,9 +46,10 @@ using namespace llvm;
 
 namespace opts {
 
-cl::opt<bool> NoHugePages("no-huge-pages",
-                          cl::desc("use regular size pages for code alignment"),
-                          cl::Hidden, cl::cat(BoltCategory));
+static cl::opt<bool>
+    NoHugePages("no-huge-pages",
+                cl::desc("use regular size pages for code alignment"),
+                cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
 PrintDebugInfo("print-debug-info",

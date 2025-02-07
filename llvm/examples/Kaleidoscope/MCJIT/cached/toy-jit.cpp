@@ -28,10 +28,10 @@ using namespace llvm;
 //===----------------------------------------------------------------------===//
 
 namespace {
-  cl::opt<std::string>
-  InputIR("input-IR",
-              cl::desc("Specify the name of an IR file to load for function definitions"),
-              cl::value_desc("input IR file name"));
+static cl::opt<std::string> InputIR(
+    "input-IR",
+    cl::desc("Specify the name of an IR file to load for function definitions"),
+    cl::value_desc("input IR file name"));
 } // namespace
 
 //===----------------------------------------------------------------------===//

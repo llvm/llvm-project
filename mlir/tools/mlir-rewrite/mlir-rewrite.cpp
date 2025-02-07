@@ -356,7 +356,8 @@ int main(int argc, char **argv) {
       "o", llvm::cl::desc("Output filename"), llvm::cl::value_desc("filename"),
       llvm::cl::init("-"));
 
-  llvm::cl::opt<const mlir::RewriterInfo *, false, mlir::RewriterNameParser>
+  static llvm::cl::opt<const mlir::RewriterInfo *, false,
+                       mlir::RewriterNameParser>
       rewriter("", llvm::cl::desc("Rewriter to run"));
 
   std::string helpHeader = "mlir-rewrite";

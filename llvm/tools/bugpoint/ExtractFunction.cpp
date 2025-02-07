@@ -41,9 +41,10 @@ extern cl::opt<std::string> OutputPrefix;
 } // End llvm namespace
 
 namespace {
-cl::opt<bool> NoDCE("disable-dce",
-                    cl::desc("Do not use the -dce pass to reduce testcases"));
-cl::opt<bool, true>
+static cl::opt<bool>
+    NoDCE("disable-dce",
+          cl::desc("Do not use the -dce pass to reduce testcases"));
+static cl::opt<bool, true>
     NoSCFG("disable-simplifycfg", cl::location(DisableSimplifyCFG),
            cl::desc("Do not use the -simplifycfg pass to reduce testcases"));
 

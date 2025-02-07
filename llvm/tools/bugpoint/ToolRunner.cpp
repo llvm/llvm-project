@@ -31,20 +31,20 @@ cl::opt<bool> SaveTemps("save-temps", cl::init(false),
 }
 
 namespace {
-cl::opt<std::string>
+static cl::opt<std::string>
     RemoteClient("remote-client",
                  cl::desc("Remote execution client (rsh/ssh)"));
 
-cl::opt<std::string> RemoteHost("remote-host",
-                                cl::desc("Remote execution (rsh/ssh) host"));
+static cl::opt<std::string>
+    RemoteHost("remote-host", cl::desc("Remote execution (rsh/ssh) host"));
 
-cl::opt<std::string> RemotePort("remote-port",
-                                cl::desc("Remote execution (rsh/ssh) port"));
+static cl::opt<std::string>
+    RemotePort("remote-port", cl::desc("Remote execution (rsh/ssh) port"));
 
-cl::opt<std::string> RemoteUser("remote-user",
-                                cl::desc("Remote execution (rsh/ssh) user id"));
+static cl::opt<std::string>
+    RemoteUser("remote-user", cl::desc("Remote execution (rsh/ssh) user id"));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     RemoteExtra("remote-extra-options",
                 cl::desc("Remote execution (rsh/ssh) extra options"));
 }

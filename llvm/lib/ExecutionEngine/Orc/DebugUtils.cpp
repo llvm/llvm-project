@@ -24,20 +24,22 @@ namespace {
 
 #ifndef NDEBUG
 
-cl::opt<bool> PrintHidden("debug-orc-print-hidden", cl::init(true),
-                          cl::desc("debug print hidden symbols defined by "
-                                   "materialization units"),
-                          cl::Hidden);
+static cl::opt<bool>
+    PrintHidden("debug-orc-print-hidden", cl::init(true),
+                cl::desc("debug print hidden symbols defined by "
+                         "materialization units"),
+                cl::Hidden);
 
-cl::opt<bool> PrintCallable("debug-orc-print-callable", cl::init(true),
-                            cl::desc("debug print callable symbols defined by "
-                                     "materialization units"),
-                            cl::Hidden);
+static cl::opt<bool>
+    PrintCallable("debug-orc-print-callable", cl::init(true),
+                  cl::desc("debug print callable symbols defined by "
+                           "materialization units"),
+                  cl::Hidden);
 
-cl::opt<bool> PrintData("debug-orc-print-data", cl::init(true),
-                        cl::desc("debug print data symbols defined by "
-                                 "materialization units"),
-                        cl::Hidden);
+static cl::opt<bool> PrintData("debug-orc-print-data", cl::init(true),
+                               cl::desc("debug print data symbols defined by "
+                                        "materialization units"),
+                               cl::Hidden);
 
 #endif // NDEBUG
 

@@ -70,7 +70,7 @@ using namespace llvm;
 
 namespace {
 
-cl::opt<ExpandVariadicsMode> ExpandVariadicsModeOption(
+static cl::opt<ExpandVariadicsMode> ExpandVariadicsModeOption(
     DEBUG_TYPE "-override", cl::desc("Override the behaviour of " DEBUG_TYPE),
     cl::init(ExpandVariadicsMode::Unspecified),
     cl::values(clEnumValN(ExpandVariadicsMode::Unspecified, "unspecified",

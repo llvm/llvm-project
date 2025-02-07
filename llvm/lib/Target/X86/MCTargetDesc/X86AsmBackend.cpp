@@ -74,7 +74,7 @@ public:
 
 X86AlignBranchKind X86AlignBranchKindLoc;
 
-cl::opt<unsigned> X86AlignBranchBoundary(
+static cl::opt<unsigned> X86AlignBranchBoundary(
     "x86-align-branch-boundary", cl::init(0),
     cl::desc(
         "Control how the assembler should align branches with NOP. If the "
@@ -83,19 +83,20 @@ cl::opt<unsigned> X86AlignBranchBoundary(
         "against the boundary of specified size. The default value 0 does not "
         "align branches."));
 
-cl::opt<X86AlignBranchKind, true, cl::parser<std::string>> X86AlignBranch(
-    "x86-align-branch",
-    cl::desc(
-        "Specify types of branches to align (plus separated list of types):"
-             "\njcc      indicates conditional jumps"
-             "\nfused    indicates fused conditional jumps"
-             "\njmp      indicates direct unconditional jumps"
-             "\ncall     indicates direct and indirect calls"
-             "\nret      indicates rets"
-             "\nindirect indicates indirect unconditional jumps"),
-    cl::location(X86AlignBranchKindLoc));
+static cl::opt<X86AlignBranchKind, true, cl::parser<std::string>>
+    X86AlignBranch(
+        "x86-align-branch",
+        cl::desc(
+            "Specify types of branches to align (plus separated list of types):"
+            "\njcc      indicates conditional jumps"
+            "\nfused    indicates fused conditional jumps"
+            "\njmp      indicates direct unconditional jumps"
+            "\ncall     indicates direct and indirect calls"
+            "\nret      indicates rets"
+            "\nindirect indicates indirect unconditional jumps"),
+        cl::location(X86AlignBranchKindLoc));
 
-cl::opt<bool> X86AlignBranchWithin32BBoundaries(
+static cl::opt<bool> X86AlignBranchWithin32BBoundaries(
     "x86-branches-within-32B-boundaries", cl::init(false),
     cl::desc(
         "Align selected instructions to mitigate negative performance impact "
@@ -103,15 +104,15 @@ cl::opt<bool> X86AlignBranchWithin32BBoundaries(
         "assumptions about labels corresponding to particular instructions, "
         "and should be used with caution."));
 
-cl::opt<unsigned> X86PadMaxPrefixSize(
+static cl::opt<unsigned> X86PadMaxPrefixSize(
     "x86-pad-max-prefix-size", cl::init(0),
     cl::desc("Maximum number of prefixes to use for padding"));
 
-cl::opt<bool> X86PadForAlign(
+static cl::opt<bool> X86PadForAlign(
     "x86-pad-for-align", cl::init(false), cl::Hidden,
     cl::desc("Pad previous instructions to implement align directives"));
 
-cl::opt<bool> X86PadForBranchAlign(
+static cl::opt<bool> X86PadForBranchAlign(
     "x86-pad-for-branch-align", cl::init(true), cl::Hidden,
     cl::desc("Pad previous instructions to implement branch alignment"));
 

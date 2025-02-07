@@ -760,7 +760,7 @@ static llvm::cl::opt<bool> outlineAllIntrinsics(
 /// Command line option to modify math runtime behavior used to implement
 /// intrinsics. This option applies both to early and late math-lowering modes.
 enum MathRuntimeVersion { fastVersion, relaxedVersion, preciseVersion };
-llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
+static llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
     "math-runtime", llvm::cl::desc("Select math operations' runtime behavior:"),
     llvm::cl::values(
         clEnumValN(fastVersion, "fast", "use fast runtime behavior"),

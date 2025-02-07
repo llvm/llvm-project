@@ -44,7 +44,7 @@ using namespace polly;
 
 namespace {
 
-cl::opt<int> DCEPreciseSteps(
+static cl::opt<int> DCEPreciseSteps(
     "polly-dce-precise-steps",
     cl::desc("The number of precise steps between two approximating "
              "iterations. (A value of -1 schedules another approximation stage "

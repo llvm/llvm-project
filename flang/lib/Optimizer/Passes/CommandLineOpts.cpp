@@ -14,26 +14,26 @@
 using namespace llvm;
 
 #define DisableOption(DOName, DOOption, DODescription)                         \
-  cl::opt<bool> disable##DOName("disable-" DOOption,                           \
-                                cl::desc("disable " DODescription " pass"),    \
-                                cl::init(false), cl::Hidden)
+  static cl::opt<bool> disable##DOName(                                        \
+      "disable-" DOOption, cl::desc("disable " DODescription " pass"),         \
+      cl::init(false), cl::Hidden)
 #define EnableOption(EOName, EOOption, EODescription)                          \
-  cl::opt<bool> enable##EOName("enable-" EOOption,                             \
-                               cl::desc("enable " EODescription " pass"),      \
-                               cl::init(false), cl::Hidden)
+  static cl::opt<bool> enable##EOName(                                         \
+      "enable-" EOOption, cl::desc("enable " EODescription " pass"),           \
+      cl::init(false), cl::Hidden)
 
-cl::opt<bool> dynamicArrayStackToHeapAllocation(
+static cl::opt<bool> dynamicArrayStackToHeapAllocation(
     "fdynamic-heap-array",
     cl::desc("place all array allocations of dynamic size on the heap"),
     cl::init(false), cl::Hidden);
 
-cl::opt<std::size_t> arrayStackAllocationThreshold(
+static cl::opt<std::size_t> arrayStackAllocationThreshold(
     "fstack-array-size",
     cl::desc(
         "place all array allocations more than <size> elements on the heap"),
     cl::init(~static_cast<std::size_t>(0)), cl::Hidden);
 
-cl::opt<bool> ignoreMissingTypeDescriptors(
+static cl::opt<bool> ignoreMissingTypeDescriptors(
     "ignore-missing-type-desc",
     cl::desc("ignore failures to find derived type descriptors when "
              "translating FIR to LLVM"),
@@ -50,7 +50,7 @@ DisableOption(FirMao, "memory-allocation-opt",
               "memory allocation optimization");
 
 DisableOption(FirAliasTags, "fir-alias-tags", "fir alias analysis");
-cl::opt<bool> useOldAliasTags(
+static cl::opt<bool> useOldAliasTags(
     "use-old-alias-tags",
     cl::desc("Use a single TBAA tree for all functions and do not use "
              "the FIR alias tags pass"),

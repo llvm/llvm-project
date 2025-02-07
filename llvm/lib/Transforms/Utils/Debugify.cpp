@@ -35,10 +35,10 @@ using namespace llvm;
 
 namespace {
 
-cl::opt<bool> Quiet("debugify-quiet",
-                    cl::desc("Suppress verbose debugify output"));
+static cl::opt<bool> Quiet("debugify-quiet",
+                           cl::desc("Suppress verbose debugify output"));
 
-cl::opt<uint64_t> DebugifyFunctionsLimit(
+static cl::opt<uint64_t> DebugifyFunctionsLimit(
     "debugify-func-limit",
     cl::desc("Set max number of processed functions per pass."),
     cl::init(UINT_MAX));
@@ -48,7 +48,7 @@ enum class Level {
   LocationsAndVariables
 };
 
-cl::opt<Level> DebugifyLevel(
+static cl::opt<Level> DebugifyLevel(
     "debugify-level", cl::desc("Kind of debug info to add"),
     cl::values(clEnumValN(Level::Locations, "locations", "Locations only"),
                clEnumValN(Level::LocationsAndVariables, "location+variables",

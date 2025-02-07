@@ -32,7 +32,8 @@
 using namespace llvm;
 using namespace clang;
 
-cl::OptionCategory ClangReorderFieldsCategory("clang-reorder-fields options");
+static cl::OptionCategory
+    ClangReorderFieldsCategory("clang-reorder-fields options");
 
 static cl::opt<std::string>
     RecordName("record-name", cl::Required,

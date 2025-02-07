@@ -61,22 +61,22 @@ using namespace llvm::gi;
 #define DEBUG_TYPE "gicombiner-emitter"
 
 namespace {
-cl::OptionCategory
+static cl::OptionCategory
     GICombinerEmitterCat("Options for -gen-global-isel-combiner");
-cl::opt<bool> StopAfterParse(
+static cl::opt<bool> StopAfterParse(
     "gicombiner-stop-after-parse",
     cl::desc("Stop processing after parsing rules and dump state"),
     cl::cat(GICombinerEmitterCat));
 cl::list<std::string>
     SelectedCombiners("combiners", cl::desc("Emit the specified combiners"),
                       cl::cat(GICombinerEmitterCat), cl::CommaSeparated);
-cl::opt<bool> DebugCXXPreds(
+static cl::opt<bool> DebugCXXPreds(
     "gicombiner-debug-cxxpreds",
     cl::desc("Add Contextual/Debug comments to all C++ predicates"),
     cl::cat(GICombinerEmitterCat));
-cl::opt<bool> DebugTypeInfer("gicombiner-debug-typeinfer",
-                             cl::desc("Print type inference debug logs"),
-                             cl::cat(GICombinerEmitterCat));
+static cl::opt<bool> DebugTypeInfer("gicombiner-debug-typeinfer",
+                                    cl::desc("Print type inference debug logs"),
+                                    cl::cat(GICombinerEmitterCat));
 
 constexpr StringLiteral CXXCustomActionPrefix = "GICXXCustomAction_";
 constexpr StringLiteral CXXPredPrefix = "GICXXPred_MI_Predicate_";

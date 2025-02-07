@@ -35,7 +35,7 @@ static cl::opt<int, true>
                      cl::Hidden, cl::location(polly::PollyNumThreads),
                      cl::init(0), cl::cat(PollyCategory));
 
-cl::opt<bool> PollyVectorizeMetadata(
+static cl::opt<bool> PollyVectorizeMetadata(
     "polly-annotate-metadata-vectorize",
     cl::desc("Append vectorize enable/disable metadata from polly"),
     cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));

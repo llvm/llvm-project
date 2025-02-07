@@ -79,7 +79,7 @@ template <> struct MappingTraits<IncludeFixerContext> {
 } // namespace llvm
 
 namespace {
-cl::OptionCategory IncludeFixerCategory("Tool options");
+static cl::OptionCategory IncludeFixerCategory("Tool options");
 
 enum DatabaseFormatTy {
   fixed,     ///< Hard-coded mapping.
@@ -87,32 +87,32 @@ enum DatabaseFormatTy {
   fuzzyYaml, ///< Yaml database with fuzzy-matched identifiers.
 };
 
-cl::opt<DatabaseFormatTy> DatabaseFormat(
+static cl::opt<DatabaseFormatTy> DatabaseFormat(
     "db", cl::desc("Specify input format"),
     cl::values(clEnumVal(fixed, "Hard-coded mapping"),
                clEnumVal(yaml, "Yaml database created by find-all-symbols"),
                clEnumVal(fuzzyYaml, "Yaml database, with fuzzy-matched names")),
     cl::init(yaml), cl::cat(IncludeFixerCategory));
 
-cl::opt<std::string> Input("input",
-                           cl::desc("String to initialize the database"),
-                           cl::cat(IncludeFixerCategory));
+static cl::opt<std::string> Input("input",
+                                  cl::desc("String to initialize the database"),
+                                  cl::cat(IncludeFixerCategory));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     QuerySymbol("query-symbol",
-                 cl::desc("Query a given symbol (e.g. \"a::b::foo\") in\n"
-                          "database directly without parsing the file."),
-                 cl::cat(IncludeFixerCategory));
+                cl::desc("Query a given symbol (e.g. \"a::b::foo\") in\n"
+                         "database directly without parsing the file."),
+                cl::cat(IncludeFixerCategory));
 
-cl::opt<bool>
+static cl::opt<bool>
     MinimizeIncludePaths("minimize-paths",
                          cl::desc("Whether to minimize added include paths"),
                          cl::init(true), cl::cat(IncludeFixerCategory));
 
-cl::opt<bool> Quiet("q", cl::desc("Reduce terminal output"), cl::init(false),
-                    cl::cat(IncludeFixerCategory));
+static cl::opt<bool> Quiet("q", cl::desc("Reduce terminal output"),
+                           cl::init(false), cl::cat(IncludeFixerCategory));
 
-cl::opt<bool>
+static cl::opt<bool>
     STDINMode("stdin",
               cl::desc("Override source file's content (in the overlaying\n"
                        "virtual file system) with input from <stdin> and run\n"
@@ -121,7 +121,7 @@ cl::opt<bool>
                        "used for editor integration."),
               cl::init(false), cl::cat(IncludeFixerCategory));
 
-cl::opt<bool> OutputHeaders(
+static cl::opt<bool> OutputHeaders(
     "output-headers",
     cl::desc("Print the symbol being queried and all its relevant headers in\n"
              "JSON format to stdout:\n"
@@ -136,7 +136,7 @@ cl::opt<bool> OutputHeaders(
              "  }"),
     cl::init(false), cl::cat(IncludeFixerCategory));
 
-cl::opt<std::string> InsertHeader(
+static cl::opt<std::string> InsertHeader(
     "insert-header",
     cl::desc("Insert a specific header. This should run with STDIN mode.\n"
              "The result is written to stdout. It is currently used for\n"
@@ -151,7 +151,7 @@ cl::opt<std::string> InsertHeader(
              "                     QualifiedName: \"a::foo\"} ]}\""),
     cl::init(""), cl::cat(IncludeFixerCategory));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     Style("style",
           cl::desc("Fallback style for reformatting after inserting new\n"
                    "headers if there is no clang-format config file found."),

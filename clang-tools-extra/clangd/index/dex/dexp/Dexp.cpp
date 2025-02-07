@@ -27,14 +27,14 @@ namespace clang {
 namespace clangd {
 namespace {
 
-llvm::cl::opt<std::string> IndexLocation(
+static llvm::cl::opt<std::string> IndexLocation(
     llvm::cl::desc("<path to index file | remote:server.address>"),
     llvm::cl::Positional);
 
-llvm::cl::opt<std::string>
+static llvm::cl::opt<std::string>
     ExecCommand("c", llvm::cl::desc("Command to execute and then exit."));
 
-llvm::cl::opt<std::string> ProjectRoot(
+static llvm::cl::opt<std::string> ProjectRoot(
     "project-root",
     llvm::cl::desc(
         "Path to the project. Required when connecting using remote index."));

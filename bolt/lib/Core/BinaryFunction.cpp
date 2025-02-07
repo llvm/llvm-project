@@ -66,7 +66,7 @@ extern cl::opt<unsigned> Verbosity;
 
 extern bool processAllFunctions();
 
-cl::opt<bool> CheckEncoding(
+static cl::opt<bool> CheckEncoding(
     "check-encoding",
     cl::desc("perform verification of LLVM instruction encoding/decoding. "
              "Every instruction in the input is decoded and re-encoded. "
@@ -143,14 +143,11 @@ cl::opt<bool>
               cl::desc("print time spent constructing binary functions"),
               cl::Hidden, cl::cat(BoltCategory));
 
-cl::opt<bool>
-TrapOnAVX512("trap-avx512",
-  cl::desc("in relocation mode trap upon entry to any function that uses "
-            "AVX-512 instructions"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<bool> TrapOnAVX512(
+    "trap-avx512",
+    cl::desc("in relocation mode trap upon entry to any function that uses "
+             "AVX-512 instructions"),
+    cl::init(false), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 bool shouldPrint(const BinaryFunction &Function) {
   if (Function.isIgnored())

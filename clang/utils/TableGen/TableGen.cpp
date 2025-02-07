@@ -114,7 +114,7 @@ enum ActionType {
 };
 
 namespace {
-cl::opt<ActionType> Action(
+static cl::opt<ActionType> Action(
     cl::desc("Action to perform:"),
     cl::values(
         clEnumValN(PrintRecords, "print-records",
@@ -317,10 +317,10 @@ cl::opt<ActionType> Action(
                    "Generate a list of attributes supported by #pragma clang "
                    "attribute for testing purposes")));
 
-cl::opt<std::string>
-ClangComponent("clang-component",
-               cl::desc("Only use warnings from specified component"),
-               cl::value_desc("component"), cl::Hidden);
+static cl::opt<std::string>
+    ClangComponent("clang-component",
+                   cl::desc("Only use warnings from specified component"),
+                   cl::value_desc("component"), cl::Hidden);
 
 bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   switch (Action) {

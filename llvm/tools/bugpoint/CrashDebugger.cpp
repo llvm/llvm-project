@@ -37,37 +37,43 @@
 using namespace llvm;
 
 namespace {
-cl::opt<bool> KeepMain("keep-main",
-                       cl::desc("Force function reduction to keep main"),
-                       cl::init(false));
-cl::opt<bool> NoGlobalRM("disable-global-remove",
-                         cl::desc("Do not remove global variables"),
-                         cl::init(false));
+static cl::opt<bool> KeepMain("keep-main",
+                              cl::desc("Force function reduction to keep main"),
+                              cl::init(false));
+static cl::opt<bool> NoGlobalRM("disable-global-remove",
+                                cl::desc("Do not remove global variables"),
+                                cl::init(false));
 
-cl::opt<bool> NoAttributeRM("disable-attribute-remove",
-                         cl::desc("Do not remove function attributes"),
-                         cl::init(false));
+static cl::opt<bool>
+    NoAttributeRM("disable-attribute-remove",
+                  cl::desc("Do not remove function attributes"),
+                  cl::init(false));
 
-cl::opt<bool> ReplaceFuncsWithNull(
+static cl::opt<bool> ReplaceFuncsWithNull(
     "replace-funcs-with-null",
     cl::desc("When stubbing functions, replace all uses will null"),
     cl::init(false));
-cl::opt<bool> DontReducePassList("disable-pass-list-reduction",
-                                 cl::desc("Skip pass list reduction steps"),
-                                 cl::init(false));
+static cl::opt<bool>
+    DontReducePassList("disable-pass-list-reduction",
+                       cl::desc("Skip pass list reduction steps"),
+                       cl::init(false));
 
-cl::opt<bool> NoNamedMDRM("disable-namedmd-remove",
-                          cl::desc("Do not remove global named metadata"),
-                          cl::init(false));
-cl::opt<bool> NoStripDebugInfo("disable-strip-debuginfo",
-                               cl::desc("Do not strip debug info metadata"),
-                               cl::init(false));
-cl::opt<bool> NoStripDebugTypeInfo("disable-strip-debug-types",
-                               cl::desc("Do not strip debug type info metadata"),
-                               cl::init(false));
-cl::opt<bool> VerboseErrors("verbose-errors",
-                            cl::desc("Print the output of crashing program"),
-                            cl::init(false));
+static cl::opt<bool>
+    NoNamedMDRM("disable-namedmd-remove",
+                cl::desc("Do not remove global named metadata"),
+                cl::init(false));
+static cl::opt<bool>
+    NoStripDebugInfo("disable-strip-debuginfo",
+                     cl::desc("Do not strip debug info metadata"),
+                     cl::init(false));
+static cl::opt<bool>
+    NoStripDebugTypeInfo("disable-strip-debug-types",
+                         cl::desc("Do not strip debug type info metadata"),
+                         cl::init(false));
+static cl::opt<bool>
+    VerboseErrors("verbose-errors",
+                  cl::desc("Print the output of crashing program"),
+                  cl::init(false));
 }
 
 static bool isValidModule(std::unique_ptr<Module> &M,

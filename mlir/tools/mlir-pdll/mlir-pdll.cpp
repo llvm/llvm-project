@@ -119,11 +119,11 @@ int main(int argc, char **argv) {
   // options as static variables.. some of which overlap with our options.
   llvm::cl::ResetCommandLineParser();
 
-  llvm::cl::opt<std::string> inputFilename(
+  static llvm::cl::opt<std::string> inputFilename(
       llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init("-"),
       llvm::cl::value_desc("filename"));
 
-  llvm::cl::opt<std::string> outputFilename(
+  static llvm::cl::opt<std::string> outputFilename(
       "o", llvm::cl::desc("Output filename"), llvm::cl::value_desc("filename"),
       llvm::cl::init("-"));
 
@@ -131,12 +131,12 @@ int main(int argc, char **argv) {
       "I", llvm::cl::desc("Directory of include files"),
       llvm::cl::value_desc("directory"), llvm::cl::Prefix);
 
-  llvm::cl::opt<bool> dumpODS(
+  static llvm::cl::opt<bool> dumpODS(
       "dump-ods",
       llvm::cl::desc(
           "Print out the parsed ODS information from the input file"),
       llvm::cl::init(false));
-  llvm::cl::opt<std::string> inputSplitMarker{
+  static llvm::cl::opt<std::string> inputSplitMarker{
       "split-input-file", llvm::cl::ValueOptional,
       llvm::cl::callback([&](const std::string &str) {
         // Implicit value: use default marker if flag was used without value.
@@ -146,11 +146,11 @@ int main(int argc, char **argv) {
       llvm::cl::desc("Split the input file into chunks using the given or "
                      "default marker and process each chunk independently"),
       llvm::cl::init("")};
-  llvm::cl::opt<std::string> outputSplitMarker(
+  static llvm::cl::opt<std::string> outputSplitMarker(
       "output-split-marker",
       llvm::cl::desc("Split marker to use for merging the ouput"),
       llvm::cl::init(kDefaultSplitMarker));
-  llvm::cl::opt<enum OutputType> outputType(
+  static llvm::cl::opt<enum OutputType> outputType(
       "x", llvm::cl::init(OutputType::AST),
       llvm::cl::desc("The type of output desired"),
       llvm::cl::values(clEnumValN(OutputType::AST, "ast",
@@ -160,10 +160,10 @@ int main(int argc, char **argv) {
                        clEnumValN(OutputType::CPP, "cpp",
                                   "generate a C++ source file containing the "
                                   "patterns for the input file")));
-  llvm::cl::opt<std::string> dependencyFilename(
+  static llvm::cl::opt<std::string> dependencyFilename(
       "d", llvm::cl::desc("Dependency filename"),
       llvm::cl::value_desc("filename"), llvm::cl::init(""));
-  llvm::cl::opt<bool> writeIfChanged(
+  static llvm::cl::opt<bool> writeIfChanged(
       "write-if-changed",
       llvm::cl::desc("Only write to the output file if it changed"));
 

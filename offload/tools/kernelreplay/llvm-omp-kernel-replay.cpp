@@ -23,7 +23,7 @@
 
 using namespace llvm;
 
-cl::OptionCategory ReplayOptions("llvm-omp-kernel-replay Options");
+static cl::OptionCategory ReplayOptions("llvm-omp-kernel-replay Options");
 
 // InputFilename - The filename to read the json description of the kernel.
 static cl::opt<std::string> InputFilename(cl::Positional,

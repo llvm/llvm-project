@@ -44,7 +44,7 @@ AllowStridedPointerIVs("lv-strided-pointer-ivs", cl::init(false), cl::Hidden,
                                 "pointer induction variables."));
 
 namespace llvm {
-cl::opt<bool>
+static cl::opt<bool>
     HintsAllowReordering("hints-allow-reordering", cl::init(true), cl::Hidden,
                          cl::desc("Allow enabling loop hints to reorder "
                                   "FP operations during vectorization."));

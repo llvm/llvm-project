@@ -141,7 +141,7 @@ int mlir::MlirTblgenMain(int argc, char **argv) {
 
   llvm::InitLLVM y(argc, argv);
 
-  llvm::cl::opt<DeprecatedAction, true> actionOnDeprecated(
+  static llvm::cl::opt<DeprecatedAction, true> actionOnDeprecated(
       "on-deprecated", llvm::cl::desc("Action to perform on deprecated def"),
       llvm::cl::values(
           clEnumValN(DeprecatedAction::None, "none", "No action"),
@@ -149,8 +149,9 @@ int mlir::MlirTblgenMain(int argc, char **argv) {
           clEnumValN(DeprecatedAction::Error, "error", "Error on use")),
       cl::location(actionOnDeprecatedValue), llvm::cl::init(Warn));
 
-  llvm::cl::opt<const mlir::GenInfo *, true, mlir::GenNameParser> generator(
-      "", llvm::cl::desc("Generator to run"), cl::location(::generator));
+  static llvm::cl::opt<const mlir::GenInfo *, true, mlir::GenNameParser>
+      generator("", llvm::cl::desc("Generator to run"),
+                cl::location(::generator));
 
   cl::ParseCommandLineOptions(argc, argv);
 

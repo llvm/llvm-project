@@ -352,7 +352,7 @@ static cl::opt<bool> PreferPredicatedReductionSelect(
         "Prefer predicating a reduction operation over an after loop select."));
 
 namespace llvm {
-cl::opt<bool> EnableVPlanNativePath(
+static cl::opt<bool> EnableVPlanNativePath(
     "enable-vplan-native-path", cl::Hidden,
     cl::desc("Enable VPlan-native vectorization path with "
              "support for outer loop vectorization."));

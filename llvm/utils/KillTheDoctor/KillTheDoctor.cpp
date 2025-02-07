@@ -61,52 +61,45 @@ using namespace llvm;
 #undef max
 
 namespace {
-  cl::opt<std::string> ProgramToRun(cl::Positional,
-    cl::desc("<program to run>"));
-  cl::list<std::string>  Argv(cl::ConsumeAfter,
-    cl::desc("<program arguments>..."));
-  cl::opt<bool> TraceExecution("x",
-    cl::desc("Print detailed output about what is being run to stderr."));
-  cl::opt<unsigned> Timeout("t", cl::init(0),
-    cl::desc("Set maximum runtime in seconds. Defaults to infinite."));
-  cl::opt<bool> NoUser32("no-user32",
-    cl::desc("Terminate process if it loads user32.dll."));
+static cl::opt<std::string> ProgramToRun(cl::Positional,
+                                         cl::desc("<program to run>"));
+cl::list<std::string> Argv(cl::ConsumeAfter,
+                           cl::desc("<program arguments>..."));
+static cl::opt<bool> TraceExecution(
+    "x", cl::desc("Print detailed output about what is being run to stderr."));
+static cl::opt<unsigned>
+    Timeout("t", cl::init(0),
+            cl::desc("Set maximum runtime in seconds. Defaults to infinite."));
+static cl::opt<bool>
+    NoUser32("no-user32",
+             cl::desc("Terminate process if it loads user32.dll."));
 
-  StringRef ToolName;
+StringRef ToolName;
 
-  template <typename HandleType>
-  class ScopedHandle {
-    typedef typename HandleType::handle_type handle_type;
+template <typename HandleType> class ScopedHandle {
+  typedef typename HandleType::handle_type handle_type;
 
-    handle_type Handle;
+  handle_type Handle;
 
-  public:
-    ScopedHandle()
-      : Handle(HandleType::GetInvalidHandle()) {}
+public:
+  ScopedHandle() : Handle(HandleType::GetInvalidHandle()) {}
 
-    explicit ScopedHandle(handle_type handle)
-      : Handle(handle) {}
+  explicit ScopedHandle(handle_type handle) : Handle(handle) {}
 
-    ~ScopedHandle() {
+  ~ScopedHandle() { HandleType::Destruct(Handle); }
+
+  ScopedHandle &operator=(handle_type handle) {
+    // Cleanup current handle.
+    if (!HandleType::isValid(Handle))
       HandleType::Destruct(Handle);
-    }
+    Handle = handle;
+    return *this;
+  }
 
-    ScopedHandle& operator=(handle_type handle) {
-      // Cleanup current handle.
-      if (!HandleType::isValid(Handle))
-        HandleType::Destruct(Handle);
-      Handle = handle;
-      return *this;
-    }
+  operator bool() const { return HandleType::isValid(Handle); }
 
-    operator bool() const {
-      return HandleType::isValid(Handle);
-    }
-
-    operator handle_type() {
-      return Handle;
-    }
-  };
+  operator handle_type() { return Handle; }
+};
 
   // This implements the most common handle in the Windows API.
   struct CommonHandle {

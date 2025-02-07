@@ -31,33 +31,34 @@ using namespace llvm;
 //===----------------------------------------------------------------------===//
 
 namespace {
-  cl::opt<std::string>
-  InputIR("input-IR",
-              cl::desc("Specify the name of an IR file to load for function definitions"),
-              cl::value_desc("input IR file name"));
+static cl::opt<std::string> InputIR(
+    "input-IR",
+    cl::desc("Specify the name of an IR file to load for function definitions"),
+    cl::value_desc("input IR file name"));
 
-  cl::opt<bool>
-  VerboseOutput("verbose",
-                cl::desc("Enable verbose output (results, IR, etc.) to stderr"),
-                cl::init(false));
+static cl::opt<bool> VerboseOutput(
+    "verbose", cl::desc("Enable verbose output (results, IR, etc.) to stderr"),
+    cl::init(false));
 
-  cl::opt<bool>
-  SuppressPrompts("suppress-prompts",
-                  cl::desc("Disable printing the 'ready' prompt"),
-                  cl::init(false));
+static cl::opt<bool>
+    SuppressPrompts("suppress-prompts",
+                    cl::desc("Disable printing the 'ready' prompt"),
+                    cl::init(false));
 
-  cl::opt<bool>
-  DumpModulesOnExit("dump-modules",
-                  cl::desc("Dump IR from modules to stderr on shutdown"),
-                  cl::init(false));
+static cl::opt<bool>
+    DumpModulesOnExit("dump-modules",
+                      cl::desc("Dump IR from modules to stderr on shutdown"),
+                      cl::init(false));
 
-  cl::opt<bool> EnableLazyCompilation(
-    "enable-lazy-compilation", cl::desc("Enable lazy compilation when using the MCJIT engine"),
+static cl::opt<bool> EnableLazyCompilation(
+    "enable-lazy-compilation",
+    cl::desc("Enable lazy compilation when using the MCJIT engine"),
     cl::init(true));
 
-  cl::opt<bool> UseObjectCache(
-    "use-object-cache", cl::desc("Enable use of the MCJIT object caching"),
-    cl::init(false));
+static cl::opt<bool>
+    UseObjectCache("use-object-cache",
+                   cl::desc("Enable use of the MCJIT object caching"),
+                   cl::init(false));
 } // namespace
 
 //===----------------------------------------------------------------------===//

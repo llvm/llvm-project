@@ -120,7 +120,7 @@ using namespace AMDGPU;
 
 namespace {
 
-cl::opt<bool>
+static cl::opt<bool>
     AsanInstrumentLDS("amdgpu-asan-instrument-lds",
                       cl::desc("Run asan instrumentation on LDS instructions "
                                "lowered to global memory"),

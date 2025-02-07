@@ -59,15 +59,15 @@
 using namespace llvm;
 
 namespace {
-cl::opt<bool> DumpModule("hvc-dump-module", cl::Hidden);
-cl::opt<bool> VAEnabled("hvc-va", cl::Hidden, cl::init(true)); // Align
-cl::opt<bool> VIEnabled("hvc-vi", cl::Hidden, cl::init(true)); // Idioms
-cl::opt<bool> VADoFullStores("hvc-va-full-stores", cl::Hidden);
+static cl::opt<bool> DumpModule("hvc-dump-module", cl::Hidden);
+static cl::opt<bool> VAEnabled("hvc-va", cl::Hidden, cl::init(true)); // Align
+static cl::opt<bool> VIEnabled("hvc-vi", cl::Hidden, cl::init(true)); // Idioms
+static cl::opt<bool> VADoFullStores("hvc-va-full-stores", cl::Hidden);
 
-cl::opt<unsigned> VAGroupCountLimit("hvc-va-group-count-limit", cl::Hidden,
-                                    cl::init(~0));
-cl::opt<unsigned> VAGroupSizeLimit("hvc-va-group-size-limit", cl::Hidden,
-                                   cl::init(~0));
+static cl::opt<unsigned> VAGroupCountLimit("hvc-va-group-count-limit",
+                                           cl::Hidden, cl::init(~0));
+static cl::opt<unsigned> VAGroupSizeLimit("hvc-va-group-size-limit", cl::Hidden,
+                                          cl::init(~0));
 
 class HexagonVectorCombine {
 public:

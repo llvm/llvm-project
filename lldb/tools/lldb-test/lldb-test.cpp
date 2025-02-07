@@ -66,12 +66,12 @@ cl::SubCommand SymTabSubcommand("symtab",
 cl::SubCommand IRMemoryMapSubcommand("ir-memory-map", "Test IRMemoryMap");
 cl::SubCommand AssertSubcommand("assert", "Test assert handling");
 
-cl::opt<std::string> Log("log", cl::desc("Path to a log file"), cl::init(""),
-                         cl::sub(BreakpointSubcommand),
-                         cl::sub(ObjectFileSubcommand),
-                         cl::sub(SymbolsSubcommand),
-                         cl::sub(SymTabSubcommand),
-                         cl::sub(IRMemoryMapSubcommand));
+static cl::opt<std::string> Log("log", cl::desc("Path to a log file"),
+                                cl::init(""), cl::sub(BreakpointSubcommand),
+                                cl::sub(ObjectFileSubcommand),
+                                cl::sub(SymbolsSubcommand),
+                                cl::sub(SymTabSubcommand),
+                                cl::sub(IRMemoryMapSubcommand));
 
 /// Create a target using the file pointed to by \p Filename, or abort.
 TargetSP createTarget(Debugger &Dbg, const std::string &Filename);
@@ -98,12 +98,13 @@ static int evaluateBreakpoints(Debugger &Dbg);
 } // namespace breakpoint
 
 namespace object {
-cl::opt<bool> SectionContents("contents",
-                              cl::desc("Dump each section's contents"),
-                              cl::sub(ObjectFileSubcommand));
-cl::opt<bool> SectionDependentModules("dep-modules",
-                                      cl::desc("Dump each dependent module"),
-                                      cl::sub(ObjectFileSubcommand));
+static cl::opt<bool> SectionContents("contents",
+                                     cl::desc("Dump each section's contents"),
+                                     cl::sub(ObjectFileSubcommand));
+static cl::opt<bool>
+    SectionDependentModules("dep-modules",
+                            cl::desc("Dump each dependent module"),
+                            cl::sub(ObjectFileSubcommand));
 cl::list<std::string> InputFilenames(cl::Positional, cl::desc("<input files>"),
                                      cl::OneOrMore,
                                      cl::sub(ObjectFileSubcommand));
