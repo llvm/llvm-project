@@ -2457,20 +2457,19 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Value(
   // If we couldn't find a load address, but the value object has a local
   // buffer, use that.
   if (val_address == LLDB_INVALID_ADDRESS && address_type == eAddressTypeHost) {
-    // Get the start and size of the local buffer.
-    auto start = in_value.GetValue().GetScalar().ULongLong();
-    auto local_buffer_size = in_value.GetLocalBufferSize();
+    // Check if the dynamic type fits in the value object's buffer.
+    auto in_value_buffer = in_value.GetLocalBuffer();
 
-    // If we can't find the size of the local buffer we can't safely know if the
+    // If we can't find the local buffer we can't safely know if the
     // dynamic type fits in it.
-    if (local_buffer_size == LLDB_INVALID_ADDRESS)
+    if (in_value_buffer.empty())
       return false;
     // If the dynamic type doesn't in the buffer we can't use it either.
-    if (local_buffer_size < bound_type.GetByteSize(exe_scope))
+    if (in_value_buffer.size() < bound_type.GetByteSize(exe_scope))
       return false;
 
     value_type = Value::GetValueTypeFromAddressType(address_type);
-    local_buffer = {(uint8_t *)start, local_buffer_size};
+    local_buffer = in_value_buffer;
     return true;
   }
   if (*size && (!val_address || val_address == LLDB_INVALID_ADDRESS))
