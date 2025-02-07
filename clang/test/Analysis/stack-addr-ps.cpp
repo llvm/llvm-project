@@ -928,6 +928,11 @@ void top_malloc_no_crash_fn() {
 namespace true_negatives_return_expressions {
 struct Container { int *x; };
 
+int test2() {
+  int x = 14;
+  return x; // no-warning
+}
+
 void return_void() {
   return void(); // no-warning
 }
