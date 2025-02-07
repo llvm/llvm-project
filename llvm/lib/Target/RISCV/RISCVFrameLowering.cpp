@@ -1182,7 +1182,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (getLibCallID(MF, CSI) != -1) {
     // tail __riscv_restore_[0-12] instruction is considered as a terminator,
-    // therefor it is unnecessary to place any CFI instructions after it. Just
+    // therefore it is unnecessary to place any CFI instructions after it. Just
     // deallocate stack if needed and return.
     if (StackSize != 0)
       deallocateStack(MF, MBB, MBBI, DL, StackSize,
