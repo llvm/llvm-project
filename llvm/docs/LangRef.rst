@@ -3057,20 +3057,21 @@ A "convergencectrl" operand bundle is only valid on a ``convergent`` operation.
 When present, the operand bundle must contain exactly one value of token type.
 See the :doc:`ConvergentOperations` document for details.
 
-.. _ob_fpe:
+.. _ob_fp:
 
-Floating-point Environment Operand Bundles
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Floating-point Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-These operand bundles provide details on how the operation interacts with the
-:ref:`floating-point environment <floatenv>`. There are two kinds of such
-operand bundles, which characterize interaction with floating-point control
-modes and status bits respectively.
+These operand bundles are used for calls that involve floating-point
+operations and interact with :ref:`floating-point environment <floatenv>` or
+depend on floating-point options, such as rounding mode, denormal modes, etc.
+There are two kinds of such operand bundles, which represent the value of
+floating-point control modes and the treatment of status bits respectively.
 
-An operand bundle tagged with "fpe.control" keeps information about control
-modes used by the operation. Only rounding mode is supported now. It is
-represented by a metadata string value and specifies the rounding mode, which
-will be used for the operation evaluation. Possible values are:
+An operand bundle tagged with "fpe.control" contains information about the
+control modes used for the operation execution. Currently, only rounding mode is
+supported. It is represented by a metadata string value, which specifies the
+rounding mode to be used for the operation evaluation. Possible values are:
 
 ::
 
@@ -3081,12 +3082,14 @@ will be used for the operation evaluation. Possible values are:
     "rmm"  - to nearest, ties away from zero
     "dyn"  - rounding mode is taken from control register
 
-If "fpe.control" is absent, default rounding rounding to nearest, ties to even
-is assumed. 
+If "fpe.control" is absent, the default rounding rounding mode is taken from the
+control register (dynamic rounding). In the particular case of
+:ref:`default floating-point environment <floatenv>`, it must be rounding to
+nearest, ties to even.
 
-An operand bundle tagged with "fpe.except" may be associated with the operations
-that may read or write floating-point exception flags. It has a single metadata
-string value, which may have one of the values:
+An operand bundle tagged with "fpe.except" may be associated with operations
+that can read or write floating-point exception flags. It contains a single
+metadata string value, which can have one of the following values:
 
 ::
 
@@ -3791,9 +3794,9 @@ round-to-nearest rounding mode, and subnormals are assumed to be preserved.
 Running LLVM code in an environment where these assumptions are not met
 typically leads to undefined behavior. The ``strictfp`` and ``denormal-fp-math``
 attributes as well as :ref:`Constrained Floating-Point Intrinsics
-<constrainedfp>` can be used to weaken LLVM's assumptions and ensure defined
-behavior in non-default floating-point environments; see their respective
-documentation for details.
+<constrainedfp>` or :ref:`floating-point operand bundles<ob_fp>` can be used to
+weaken LLVM's assumptions and ensure defined behavior in non-default
+floating-point environments; see their respective documentation for details.
 
 .. _floatnan:
 
@@ -3845,7 +3848,8 @@ Floating-point math operations are allowed to treat all NaNs as if they were
 quiet NaNs. For example, "pow(1.0, SNaN)" may be simplified to 1.0.
 
 Code that requires different behavior than this should use the
-:ref:`Constrained Floating-Point Intrinsics <constrainedfp>`.
+:ref:`Constrained Floating-Point Intrinsics <constrainedfp>` or
+:ref:`floating-point operand bundles<ob_fp>`.
 In particular, constrained intrinsics rule out the "Unchanged NaN propagation"
 case; they are guaranteed to return a QNaN.
 
@@ -17292,7 +17296,7 @@ would, and handles error conditions in the same way. Since LLVM assumes the
 :ref:`default floating-point environment <floatenv>`, the rounding mode is
 assumed to be set to "nearest", so halfway cases are rounded to the even
 integer. Use :ref:`Constrained Floating-Point Intrinsics <constrainedfp>`
-to avoid that assumption.
+or :ref:`floating-point operand bundles<ob_fp>` to avoid that assumption.
 
 .. _int_nearbyint:
 
@@ -17333,8 +17337,8 @@ This function returns the same values as the libm ``nearbyint``
 functions would, and handles error conditions in the same way. Since LLVM
 assumes the :ref:`default floating-point environment <floatenv>`, the rounding
 mode is assumed to be set to "nearest", so halfway cases are rounded to the even
-integer. Use :ref:`Constrained Floating-Point Intrinsics <constrainedfp>` to
-avoid that assumption.
+integer. Use :ref:`Constrained Floating-Point Intrinsics <constrainedfp>` or
+:ref:`floating-point operand bundles<ob_fp>` to avoid that assumption.
 
 .. _int_round:
 
