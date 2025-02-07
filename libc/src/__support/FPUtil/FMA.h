@@ -38,7 +38,6 @@ template <> LIBC_INLINE double fma(double x, double y, double z) {
 #else
   return __builtin_fma(x, y, z);
 #endif
-
 }
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
