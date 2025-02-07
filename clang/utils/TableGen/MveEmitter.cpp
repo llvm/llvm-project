@@ -209,9 +209,7 @@ public:
       Name = "const " + Name;
     return Name + " *";
   }
-  std::string llvmName() const override {
-    return "llvm::PointerType::getUnqual(" + Pointee->llvmName() + ")";
-  }
+  std::string llvmName() const override { return "Builder.getPtrTy()"; }
   const Type *getPointeeType() const { return Pointee; }
 
   static bool classof(const Type *T) {
