@@ -27,9 +27,9 @@ declare void @sink() cold
 ; CHECK: define {{.*}} @fun.cold.1{{.*}} ![[PROF:[0-9]+]] {{.*}}section_prefix ![[UNLIKELY:[0-9]+]]
 
 ; CHECK: ![[HOTPROF]] = !{!"function_entry_count", i64 100}
-; CHECK: ![[LIKELY]] = !{!"function_section_prefix", !"hot"}
+; CHECK: ![[LIKELY]] = !{!"section_prefix", !"hot"}
 ; CHECK: ![[PROF]] = !{!"function_entry_count", i64 0}
-; CHECK: ![[UNLIKELY]] = !{!"function_section_prefix", !"unlikely"}
+; CHECK: ![[UNLIKELY]] = !{!"section_prefix", !"unlikely"}
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
