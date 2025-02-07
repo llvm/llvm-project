@@ -17,8 +17,10 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void *, memcpy,
                    (void *__restrict dst, const void *__restrict src,
                     size_t size)) {
+  if(size > 0) {
   LIBC_CRASH_ON_NULLPTR(dst);
   LIBC_CRASH_ON_NULLPTR(src);
+  }
   inline_memcpy(dst, src, size);
   return dst;
 }

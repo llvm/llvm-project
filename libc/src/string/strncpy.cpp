@@ -18,8 +18,10 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(char *, strncpy,
                    (char *__restrict dest, const char *__restrict src,
                     size_t n)) {
+  if( n > 0) {
   LIBC_CRASH_ON_NULLPTR(dest);
   LIBC_CRASH_ON_NULLPTR(src);
+  }
   size_t i = 0;
   // Copy up until \0 is found.
   for (; i < n && src[i] != '\0'; ++i)
