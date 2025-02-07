@@ -850,7 +850,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   } else {
     DBuilder.insertDeclare(Shape.FramePtr, FrameDIVar,
                            DBuilder.createExpression(), DILoc,
-                           &*Shape.getInsertPtAfterFramePtr());
+                           Shape.getInsertPtAfterFramePtr());
   }
 }
 
@@ -1145,7 +1145,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
             DIBuilder(*CurrentBlock->getParent()->getParent(), AllowUnresolved)
                 .insertDeclare(CurrentReload, DDI->getVariable(),
                                DDI->getExpression(), DDI->getDebugLoc(),
-                               &*Builder.GetInsertPoint());
+                               Builder.GetInsertPoint());
           }
           // This dbg.declare is for the main function entry point.  It
           // will be deleted in all coro-split functions.

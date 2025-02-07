@@ -923,12 +923,13 @@ TEST_F(IRBuilderTest, DIBuilder) {
 
     { /* dbg.label | DbgLabelRecord */
       // Insert before I and check order.
-      ExpectOrder(DIB.insertLabel(Label, LabelLoc, I), I->getIterator());
+      ExpectOrder(DIB.insertLabel(Label, LabelLoc, I->getIterator()),
+                  I->getIterator());
 
       // We should be able to insert at the end of the block, even if there's
       // no terminator yet. Note that in RemoveDIs mode this record won't get
       // inserted into the block untill another instruction is added.
-      DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB);
+      DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB->end());
       // Specifically do not insert a terminator, to check this works. `I`
       // should have absorbed the DbgLabelRecord in the new debug info mode.
       I = Builder.CreateAlloca(Builder.getInt32Ty());
@@ -945,7 +946,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
         DIB.createAutoVariable(BarSP, "Y", File, 2, IntType, true);
     { /* dbg.value | DbgVariableRecord::Value */
       ExpectOrder(DIB.insertDbgValueIntrinsic(I, VarX, DIB.createExpression(),
-                                              VarLoc, I),
+                                              VarLoc, I->getIterator()),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
       DbgInstPtr VarXValue = DIB.insertDbgValueIntrinsic(
@@ -955,11 +956,12 @@ TEST_F(IRBuilderTest, DIBuilder) {
       EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
     }
     { /* dbg.declare | DbgVariableRecord::Declare */
-      ExpectOrder(DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, I),
+      ExpectOrder(DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc,
+                                    I->getIterator()),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
       DbgInstPtr VarYDeclare =
-          DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, BB);
+          DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, BB->end());
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(VarYDeclare, I->getIterator());
       EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
