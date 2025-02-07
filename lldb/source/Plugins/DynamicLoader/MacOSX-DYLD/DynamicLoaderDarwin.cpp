@@ -1212,23 +1212,25 @@ bool DynamicLoaderDarwin::UseDYLDSPI(Process *process) {
 
   llvm::VersionTuple version = process->GetHostOSVersion();
   if (!version.empty()) {
-    const llvm::Triple::OSType os_type =
+    using namespace llvm;
+    const Triple::OSType os_type =
         process->GetTarget().GetArchitecture().GetTriple().getOS();
 
-    // Older than macOS 10.12
-    if (os_type == llvm::Triple::MacOSX && version < llvm::VersionTuple(10, 12))
+    auto OlderThan = [os_type, version](llvm::Triple::OSType o,
+                                        llvm::VersionTuple v) -> bool {
+      return os_type == o && version < v;
+    };
+
+    if (OlderThan(Triple::MacOSX, VersionTuple(10, 12)))
       use_new_spi_interface = false;
 
-    // Older than iOS 10
-    if (os_type == llvm::Triple::IOS && version < llvm::VersionTuple(10))
+    if (OlderThan(Triple::IOS, VersionTuple(10)))
       use_new_spi_interface = false;
 
-    // Older than tvOS 10
-    if (os_type == llvm::Triple::TvOS && version < llvm::VersionTuple(10))
+    if (OlderThan(Triple::TvOS, VersionTuple(10)))
       use_new_spi_interface = false;
 
-    // Older than watchOS 3
-    if (os_type == llvm::Triple::WatchOS && version < llvm::VersionTuple(3))
+    if (OlderThan(Triple::WatchOS, VersionTuple(3)))
       use_new_spi_interface = false;
 
     // llvm::Triple::BridgeOS and llvm::Triple::XROS always use the new
