@@ -3577,8 +3577,7 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
       *declMapperOp.getOps<omp::DeclareMapperInfoOp>().begin();
   DataLayout dl = DataLayout(declMapperOp->getParentOfType<ModuleOp>());
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  llvm::Type *varType =
-      moduleTranslation.convertType(declMapperOp.getVarType());
+  llvm::Type *varType = moduleTranslation.convertType(declMapperOp.getType());
   std::string mapperName = ompBuilder->createPlatformSpecificName(
       {"omp_mapper", declMapperOp.getSymName()});
   SmallVector<Value> mapVars = declMapperInfoOp.getMapVars();
