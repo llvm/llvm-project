@@ -230,8 +230,11 @@ SmallVector<T> applyTOSAPermutation(ArrayRef<T> input,
 }
 
 // Computes shape value using tosa const_shape op.
+Value getTosaConstShape(ImplicitLocOpBuilder &builder,
+                        llvm::ArrayRef<int64_t> shape);
 Value getTosaConstShape(PatternRewriter &rewriter, Location loc,
                         llvm::ArrayRef<int64_t> shape);
+
 SmallVector<int64_t> convertFromMlirShape(ArrayRef<int64_t> shape);
 
 bool getConstShapeValue(Operation *op,
