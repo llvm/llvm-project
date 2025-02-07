@@ -3439,8 +3439,6 @@ def : Pat<(v2bf16 (build_vector bf16:$a, bf16:$b)),
           (V2I16toI32 $a, $b)>;
 def : Pat<(v2i16 (build_vector i16:$a, i16:$b)),
           (V2I16toI32 $a, $b)>;
-def : Pat<(v2f32 (build_vector f32:$a, f32:$b)),
-          (V2F32toI64 $a, $b)>;
 def : Pat<(i64 (build_pair (i32 (bitconvert f32:$a)),
                            (i32 (bitconvert f32:$b)))),
           (V2F32toI64 $a, $b)>;
