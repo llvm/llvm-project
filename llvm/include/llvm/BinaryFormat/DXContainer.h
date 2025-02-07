@@ -14,8 +14,6 @@
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/BinaryStreamError.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 

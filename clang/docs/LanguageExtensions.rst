@@ -757,6 +757,9 @@ The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``
 ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
 ``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
 
+No implicit promotion of integer types takes place. The mixing of integer types
+of different sizes and signs is forbidden in binary and ternary builtins.
+
 ============================================== ====================================================================== =========================================
          Name                                   Operation                                                             Supported element types
 ============================================== ====================================================================== =========================================
@@ -1800,10 +1803,6 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_pointer_interconvertible_base_of`` (C++, GNU, Microsoft)
 * ``__is_polymorphic`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_reference`` (C++, Embarcadero)
-* ``__is_referenceable`` (C++, GNU, Microsoft, Embarcadero):
-  Returns true if a type is referenceable, and false otherwise. A referenceable
-  type is a type that's either an object type, a reference type, or an unqualified
-  function type. This trait is deprecated and will be removed in Clang 21.
 * ``__is_rvalue_reference`` (C++, Embarcadero)
 * ``__is_same`` (C++, Embarcadero)
 * ``__is_same_as`` (GCC): Synonym for ``__is_same``.

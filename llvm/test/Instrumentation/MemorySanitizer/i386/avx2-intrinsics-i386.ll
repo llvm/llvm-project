@@ -651,7 +651,7 @@ define <8 x i32> @test_x86_avx2_phsub_d(<8 x i32> %a0, <8 x i32> %a1) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = call <8 x i32> @llvm.x86.avx2.phsub.d(<8 x i32> [[TMP1]], <8 x i32> [[TMP2]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = call <8 x i32> @llvm.x86.avx2.phadd.d(<8 x i32> [[TMP1]], <8 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx2.phsub.d(<8 x i32> [[A0:%.*]], <8 x i32> [[A1:%.*]])
 ; CHECK-NEXT:    store <8 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
@@ -668,7 +668,7 @@ define <16 x i16> @test_x86_avx2_phsub_sw(<16 x i16> %a0, <16 x i16> %a1) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = call <16 x i16> @llvm.x86.avx2.phsub.sw(<16 x i16> [[TMP1]], <16 x i16> [[TMP2]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = call <16 x i16> @llvm.x86.avx2.phadd.sw(<16 x i16> [[TMP1]], <16 x i16> [[TMP2]])
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x i16> @llvm.x86.avx2.phsub.sw(<16 x i16> [[A0:%.*]], <16 x i16> [[A1:%.*]])
 ; CHECK-NEXT:    store <16 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i16> [[RES]]
@@ -685,7 +685,7 @@ define <16 x i16> @test_x86_avx2_phsub_w(<16 x i16> %a0, <16 x i16> %a1) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = call <16 x i16> @llvm.x86.avx2.phsub.w(<16 x i16> [[TMP1]], <16 x i16> [[TMP2]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = call <16 x i16> @llvm.x86.avx2.phadd.w(<16 x i16> [[TMP1]], <16 x i16> [[TMP2]])
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x i16> @llvm.x86.avx2.phsub.w(<16 x i16> [[A0:%.*]], <16 x i16> [[A1:%.*]])
 ; CHECK-NEXT:    store <16 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i16> [[RES]]

@@ -2019,6 +2019,10 @@ def : ClassPat<V_CMP_CLASS_F16_e64, f16> {
   let True16Predicate = NotHasTrue16BitInsts;
 }
 
+def : ClassPat_t16<V_CMP_CLASS_F16_t16_e64, f16> {
+  let True16Predicate = UseRealTrue16Insts;
+}
+
 def : ClassPat_t16<V_CMP_CLASS_F16_fake16_e64, f16> {
   let True16Predicate = UseFakeTrue16Insts;
 }

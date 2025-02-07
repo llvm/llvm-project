@@ -11,11 +11,16 @@
 #include "flang/Runtime/exceptions.h"
 #include "terminator.h"
 #include <cfenv>
-#if __x86_64__
+#if defined(__aarch64__) && defined(__GLIBC__)
+#include <fpu_control.h>
+#elif defined(__x86_64__) && !defined(_WIN32)
 #include <xmmintrin.h>
 #endif
 
-// fenv.h may not define exception macros.
+// File fenv.h usually, but not always, defines standard exceptions as both
+// enumerator values and preprocessor #defines. Some x86 environments also
+// define a nonstandard __FE_DENORM enumerator, but without a corresponding
+// #define, which makes it more difficult to determine if it is present or not.
 #ifndef FE_INVALID
 #define FE_INVALID 0
 #endif
@@ -31,6 +36,12 @@
 #ifndef FE_INEXACT
 #define FE_INEXACT 0
 #endif
+#if FE_INVALID == 1 && FE_DIVBYZERO == 4 && FE_OVERFLOW == 8 && \
+    FE_UNDERFLOW == 16 && FE_INEXACT == 32
+#define __FE_DENORM 2
+#else
+#define __FE_DENORM 0
+#endif
 
 namespace Fortran::runtime {
 
@@ -42,11 +53,7 @@ uint32_t RTNAME(MapException)(uint32_t excepts) {
   Terminator terminator{__FILE__, __LINE__};
 
   static constexpr uint32_t v{FE_INVALID};
-#if __x86_64__
-  static constexpr uint32_t s{__FE_DENORM}; // nonstandard, not a #define
-#else
-  static constexpr uint32_t s{0};
-#endif
+  static constexpr uint32_t s{__FE_DENORM};
   static constexpr uint32_t z{FE_DIVBYZERO};
   static constexpr uint32_t o{FE_OVERFLOW};
   static constexpr uint32_t u{FE_UNDERFLOW};
@@ -90,20 +97,40 @@ bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
 #endif
 }
 
+// A hardware FZ (flush to zero) bit is the negation of the
+// ieee_[get|set]_underflow_mode GRADUAL argument.
+#if defined(_MM_FLUSH_ZERO_MASK)
+// The x86_64 MXCSR FZ bit affects computations of real kinds 3, 4, and 8.
+#elif defined(_FPU_GETCW)
+// The aarch64 FPCR FZ bit affects computations of real kinds 3, 4, and 8.
+// bit 24: FZ   -- single, double precision flush to zero bit
+// bit 19: FZ16 -- half precision flush to zero bit [not currently relevant]
+#define _FPU_FPCR_FZ_MASK_ 0x01080000
+#endif
+
 bool RTNAME(GetUnderflowMode)(void) {
-#if _MM_FLUSH_ZERO_MASK
-  // The MXCSR Flush to Zero flag is the negation of the ieee_get_underflow_mode
-  // GRADUAL argument. It affects real computations of kinds 3, 4, and 8.
+#if defined(_MM_FLUSH_ZERO_MASK)
   return _MM_GET_FLUSH_ZERO_MODE() == _MM_FLUSH_ZERO_OFF;
+#elif defined(_FPU_GETCW)
+  uint64_t fpcr;
+  _FPU_GETCW(fpcr);
+  return (fpcr & _FPU_FPCR_FZ_MASK_) == 0;
 #else
   return false;
 #endif
 }
 void RTNAME(SetUnderflowMode)(bool flag) {
-#if _MM_FLUSH_ZERO_MASK
-  // The MXCSR Flush to Zero flag is the negation of the ieee_set_underflow_mode
-  // GRADUAL argument. It affects real computations of kinds 3, 4, and 8.
+#if defined(_MM_FLUSH_ZERO_MASK)
   _MM_SET_FLUSH_ZERO_MODE(flag ? _MM_FLUSH_ZERO_OFF : _MM_FLUSH_ZERO_ON);
+#elif defined(_FPU_GETCW)
+  uint64_t fpcr;
+  _FPU_GETCW(fpcr);
+  if (flag) {
+    fpcr &= ~_FPU_FPCR_FZ_MASK_;
+  } else {
+    fpcr |= _FPU_FPCR_FZ_MASK_;
+  }
+  _FPU_SETCW(fpcr);
 #endif
 }
 

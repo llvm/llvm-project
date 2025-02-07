@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -21,11 +22,19 @@ EHFrameRegistrationPlugin::EHFrameRegistrationPlugin(
     : ES(ES), Registrar(std::move(Registrar)) {}
 
 void EHFrameRegistrationPlugin::modifyPassConfig(
-    MaterializationResponsibility &MR, LinkGraph &G,
+    MaterializationResponsibility &MR, LinkGraph &LG,
     PassConfiguration &PassConfig) {
 
+  if (LG.getTargetTriple().isOSBinFormatMachO())
+    PassConfig.PrePrunePasses.insert(
+        PassConfig.PrePrunePasses.begin(), [](LinkGraph &G) {
+          if (auto *CUSec = G.findSectionByName(MachOCompactUnwindSectionName))
+            G.removeSection(*CUSec);
+          return Error::success();
+        });
+
   PassConfig.PostFixupPasses.push_back(createEHFrameRecorderPass(
-      G.getTargetTriple(), [this, &MR](ExecutorAddr Addr, size_t Size) {
+      LG.getTargetTriple(), [this, &MR](ExecutorAddr Addr, size_t Size) {
         if (Addr) {
           std::lock_guard<std::mutex> Lock(EHFramePluginMutex);
           assert(!InProcessLinks.count(&MR) &&

@@ -2366,11 +2366,11 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     assert(ST.useVGPRIndexMode());
     Register VecReg = MI.getOperand(0).getReg();
     bool IsUndef = MI.getOperand(1).isUndef();
-    Register Idx = MI.getOperand(3).getReg();
+    MachineOperand &Idx = MI.getOperand(3);
     Register SubReg = MI.getOperand(4).getImm();
 
     MachineInstr *SetOn = BuildMI(MBB, MI, DL, get(AMDGPU::S_SET_GPR_IDX_ON))
-                              .addReg(Idx)
+                              .add(Idx)
                               .addImm(AMDGPU::VGPRIndexMode::DST_ENABLE);
     SetOn->getOperand(3).setIsUndef();
 

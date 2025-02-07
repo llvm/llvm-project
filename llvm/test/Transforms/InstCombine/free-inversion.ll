@@ -740,3 +740,23 @@ exit:
 b4:
   ret i1 true
 }
+
+define i64 @PR71390(i64 %v) {
+; CHECK-LABEL: @PR71390(
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[V:%.*]], 9187201950435737471
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i64 -72340172838076674, [[AND]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[AND]], 6872316419617283935
+; CHECK-NEXT:    [[OR_NOT:%.*]] = and i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[NOT5:%.*]] = or i64 [[V]], [[OR_NOT]]
+; CHECK-NEXT:    ret i64 [[NOT5]]
+;
+  %and = and i64 %v, 9187201950435737471
+  %add = add nuw i64 %and, 72340172838076673
+  %add2 = add nuw i64 %and, 6872316419617283935
+  %not = xor i64 %v, -1
+  %not3 = xor i64 %add2, -1
+  %or = or i64 %add, %not3
+  %and4 = and i64 %not, %or
+  %not5 = xor i64 %and4, -1
+  ret i64 %not5
+}

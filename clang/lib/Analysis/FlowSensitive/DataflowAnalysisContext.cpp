@@ -160,8 +160,9 @@ Atom
 DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
                                             Atom SecondToken) {
   Atom Token = arena().makeFlowConditionToken();
-  FlowConditionDeps[Token].insert(FirstToken);
-  FlowConditionDeps[Token].insert(SecondToken);
+  auto &TokenDeps = FlowConditionDeps[Token];
+  TokenDeps.insert(FirstToken);
+  TokenDeps.insert(SecondToken);
   addFlowConditionConstraint(Token,
                              arena().makeOr(arena().makeAtomRef(FirstToken),
                                             arena().makeAtomRef(SecondToken)));

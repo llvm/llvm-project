@@ -2208,6 +2208,16 @@ void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
     Exprs[I] = Record.readExpr();
 }
 
+void ASTStmtReader::VisitResolvedUnexpandedPackExpr(
+    ResolvedUnexpandedPackExpr *E) {
+  VisitExpr(E);
+  E->NumExprs = Record.readInt();
+  E->BeginLoc = readSourceLocation();
+  auto **Exprs = E->getTrailingObjects<Expr *>();
+  for (unsigned I = 0; I < E->NumExprs; ++I)
+    Exprs[I] = Record.readExpr();
+}
+
 void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
@@ -2911,6 +2921,15 @@ void ASTStmtReader::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
     assert((I == 0 || S->getExprPtr()[I] != nullptr) &&
            "Only first expression should be null");
   }
+}
+
+void ASTStmtReader::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
+  VisitStmt(S);
+  S->Kind = Record.readEnum<OpenACCDirectiveKind>();
+  S->Range = Record.readSourceRange();
+  S->DirectiveLoc = Record.readSourceLocation();
+  S->AtomicKind = Record.readEnum<OpenACCAtomicKind>();
+  S->setAssociatedStmt(Record.readSubStmt());
 }
 
 //===----------------------------------------------------------------------===//
@@ -4291,6 +4310,12 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
           /*TransformedExprs=*/Record[ASTStmtReader::NumExprFields]);
       break;
 
+    case EXPR_RESOLVED_UNEXPANDED_PACK:
+      S = ResolvedUnexpandedPackExpr::CreateDeserialized(
+          Context,
+          /*NumExprs=*/Record[ASTStmtReader::NumExprFields]);
+      break;
+
     case EXPR_SUBST_NON_TYPE_TEMPLATE_PARM:
       S = new (Context) SubstNonTypeTemplateParmExpr(Empty);
       break;
@@ -4436,6 +4461,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_OPENACC_UPDATE_CONSTRUCT: {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
       S = OpenACCUpdateConstruct::CreateEmpty(Context, NumClauses);
+      break;
+    }
+    case STMT_OPENACC_ATOMIC_CONSTRUCT: {
+      S = OpenACCAtomicConstruct::CreateEmpty(Context);
       break;
     }
     case EXPR_REQUIRES: {
