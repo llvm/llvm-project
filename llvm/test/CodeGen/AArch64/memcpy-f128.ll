@@ -1,3 +1,4 @@
+; RUN: llc < %s -mtriple=aarch64-linux-gnu | FileCheck %s
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=-neon | FileCheck %s
 
 %structA = type { i128 }
