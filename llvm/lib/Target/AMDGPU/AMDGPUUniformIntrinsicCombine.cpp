@@ -66,7 +66,14 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   switch (IID) {
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readfirstlane:
+<<<<<<< HEAD
 >>>>>>> f6cc7aa1522d (store newly inserted inst and its uniformity)
+=======
+  case Intrinsic::amdgcn_readlane:
+  case Intrinsic::amdgcn_ballot: {
+    Value *Src = II.getArgOperand(0);
+    if (isDivergentUseWithNew(II.getOperandUse(0), UI, NewUMap))
+>>>>>>> b854d2fb61ff (added pass to llc pipeline, more test added)
       return false;
     LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << '\n');
     II.replaceAllUsesWith(Src);
