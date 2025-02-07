@@ -770,6 +770,23 @@ void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
   }
 }
 
+SmallVector<dxil::ResourceBindingInfo>::const_iterator DXILBindingMap::findByUse(const Value *Key) const {
+    const CallInst *CI = dyn_cast<CallInst>(Key);
+    if (!CI) {
+      // TODO: Any other cases to follow up the tree?
+      return Infos.end();
+    }
+
+    switch (CI->getIntrinsicID()) {
+      case Intrinsic::not_intrinsic:
+        return Infos.end();
+      case Intrinsic::dx_resource_handlefrombinding:
+        return find(CI);
+    }
+
+    return Infos.end();
+}
+
 //===----------------------------------------------------------------------===//
 
 AnalysisKey DXILResourceTypeAnalysis::Key;
@@ -828,7 +845,8 @@ bool DXILResourceBindingWrapperPass::runOnModule(Module &M) {
   return false;
 }
 
-void DXILResourceBindingWrapperPass::releaseMemory() { Map.reset(); }
+void DXILResourceBindingWrapperPass::releaseMemory() { 
+  /*Map.reset();*/ }
 
 void DXILResourceBindingWrapperPass::print(raw_ostream &OS,
                                            const Module *M) const {

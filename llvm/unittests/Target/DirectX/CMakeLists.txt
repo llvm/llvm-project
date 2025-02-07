@@ -14,4 +14,5 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_target_unittest(DirectXTests
   CBufferDataLayoutTests.cpp
   PointerTypeAnalysisTests.cpp
+  UniqueResourceFromUseTests.cpp
   )
