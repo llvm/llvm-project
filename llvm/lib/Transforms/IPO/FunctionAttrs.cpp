@@ -1320,8 +1320,9 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       if (ArgumentSCC[0]->Uses.size() == 1 &&
           ArgumentSCC[0]->Uses[0] == ArgumentSCC[0]) {
         Argument *A = ArgumentSCC[0]->Definition;
-        CaptureInfo NewCI = ArgumentSCC[0]->CC;
-        if (NewCI != A->getAttributes().getCaptureInfo()) {
+        CaptureInfo OrigCI = A->getAttributes().getCaptureInfo();
+        CaptureInfo NewCI = CaptureInfo(ArgumentSCC[0]->CC) & OrigCI;
+        if (NewCI != OrigCI) {
           A->addAttr(Attribute::getWithCaptureInfo(A->getContext(), NewCI));
           addCapturesStat(NewCI);
           Changed.insert(A->getParent());
@@ -1361,10 +1362,13 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
     if (!capturesAll(CC)) {
       for (ArgumentGraphNode *N : ArgumentSCC) {
         Argument *A = N->Definition;
-        CaptureInfo CI = N->CC | CC;
-        A->addAttr(Attribute::getWithCaptureInfo(A->getContext(), CI));
-        addCapturesStat(CI);
-        Changed.insert(A->getParent());
+        CaptureInfo OrigCI = A->getAttributes().getCaptureInfo();
+        CaptureInfo NewCI = CaptureInfo(N->CC | CC) & OrigCI;
+        if (NewCI != OrigCI) {
+          A->addAttr(Attribute::getWithCaptureInfo(A->getContext(), NewCI));
+          addCapturesStat(NewCI);
+          Changed.insert(A->getParent());
+        }
       }
     }
 

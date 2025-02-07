@@ -1018,5 +1018,72 @@ else:
   ret ptr %p
 }
 
+define i1 @improve_existing_captures(ptr captures(address) %p) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FNATTRS-LABEL: define i1 @improve_existing_captures
+; FNATTRS-SAME: (ptr readnone captures(address_is_null) [[P:%.*]]) #[[ATTR0]] {
+; FNATTRS-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], null
+; FNATTRS-NEXT:    ret i1 [[CMP]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i1 @improve_existing_captures
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(address) [[P:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], null
+; ATTRIBUTOR-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr %p, null
+  ret i1 %cmp
+}
+
+define void @dont_increase_existing_captures(ptr captures(address) %p) {
+; COMMON-LABEL: define void @dont_increase_existing_captures
+; COMMON-SAME: (ptr captures(address) [[P:%.*]]) {
+; COMMON-NEXT:    call void @capture(ptr [[P]])
+; COMMON-NEXT:    ret void
+;
+  call void @capture(ptr %p)
+  ret void
+}
+
+define void @dont_increase_existing_captures_trivial_scc(ptr captures(address) %p) {
+; COMMON-LABEL: define void @dont_increase_existing_captures_trivial_scc
+; COMMON-SAME: (ptr captures(address) [[P:%.*]]) {
+; COMMON-NEXT:    call void @capture(ptr captures(address, read_provenance) [[P]])
+; COMMON-NEXT:    call void @dont_increase_existing_captures_trivial_scc(ptr [[P]])
+; COMMON-NEXT:    ret void
+;
+  call void @capture(ptr captures(address, read_provenance) %p)
+  call void @dont_increase_existing_captures_trivial_scc(ptr %p)
+  ret void
+}
+
+define void @dont_increase_existing_captures_scc1(ptr captures(address) %p) {
+; COMMON-LABEL: define void @dont_increase_existing_captures_scc1
+; COMMON-SAME: (ptr captures(address) [[P:%.*]]) {
+; COMMON-NEXT:    call void @dont_increase_existing_captures_scc2(ptr [[P]])
+; COMMON-NEXT:    ret void
+;
+  call void @dont_increase_existing_captures_scc2(ptr %p)
+  ret void
+}
+
+define void @dont_increase_existing_captures_scc2(ptr %p) {
+; FNATTRS-LABEL: define void @dont_increase_existing_captures_scc2
+; FNATTRS-SAME: (ptr captures(address, read_provenance) [[P:%.*]]) {
+; FNATTRS-NEXT:    call void @capture(ptr captures(address, read_provenance) [[P]])
+; FNATTRS-NEXT:    call void @dont_increase_existing_captures_scc1(ptr [[P]])
+; FNATTRS-NEXT:    ret void
+;
+; ATTRIBUTOR-LABEL: define void @dont_increase_existing_captures_scc2
+; ATTRIBUTOR-SAME: (ptr [[P:%.*]]) {
+; ATTRIBUTOR-NEXT:    call void @capture(ptr captures(address, read_provenance) [[P]])
+; ATTRIBUTOR-NEXT:    call void @dont_increase_existing_captures_scc1(ptr [[P]])
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call void @capture(ptr captures(address, read_provenance) %p)
+  call void @dont_increase_existing_captures_scc1(ptr %p)
+  ret void
+}
+
 declare ptr @llvm.launder.invariant.group.p0(ptr)
 declare ptr @llvm.strip.invariant.group.p0(ptr)
