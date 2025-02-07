@@ -1623,7 +1623,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
   }
 
-  if (const char* MatchDiag = getMatchKindDiag((RISCVMatchResultTy)Result)) {
+  if (const char *MatchDiag = getMatchKindDiag((RISCVMatchResultTy)Result)) {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, MatchDiag);
   }
