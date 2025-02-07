@@ -1627,7 +1627,7 @@ namespace {
           TemplateArgumentLoc Input = SemaRef.getTrivialTemplateArgumentLoc(
               pack, QualType(), SourceLocation{});
           TemplateArgumentLoc Output;
-          if (SemaRef.SubstTemplateArgument(Input, TemplateArgs, Output))
+          if (TransformTemplateArgument(Input, Output, Uneval))
             return true; // fails
           TArgs.push_back(Output.getArgument());
         }
@@ -2041,9 +2041,11 @@ TemplateName TemplateInstantiator::TransformTemplateName(
         // We're rewriting the template parameter as a reference to another
         // template parameter.
         if (Arg.getKind() == TemplateArgument::Pack) {
-          assert(Arg.pack_size() == 1 && Arg.pack_begin()->isPackExpansion() &&
+          assert(Arg.pack_size() == 1 &&
                  "unexpected pack arguments in template rewrite");
-          Arg = Arg.pack_begin()->getPackExpansionPattern();
+          Arg = *Arg.pack_begin();
+          if (Arg.isPackExpansion())
+            Arg = Arg.getPackExpansionPattern();
         }
         assert(Arg.getKind() == TemplateArgument::Template &&
                "unexpected nontype template argument kind in template rewrite");
@@ -2126,9 +2128,11 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
     // We're rewriting the template parameter as a reference to another
     // template parameter.
     if (Arg.getKind() == TemplateArgument::Pack) {
-      assert(Arg.pack_size() == 1 && Arg.pack_begin()->isPackExpansion() &&
+      assert(Arg.pack_size() == 1 &&
              "unexpected pack arguments in template rewrite");
-      Arg = Arg.pack_begin()->getPackExpansionPattern();
+      Arg = *Arg.pack_begin();
+      if (Arg.isPackExpansion())
+        Arg = Arg.getPackExpansionPattern();
     }
     assert(Arg.getKind() == TemplateArgument::Expression &&
            "unexpected nontype template argument kind in template rewrite");
@@ -2592,9 +2596,11 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
       // We're rewriting the template parameter as a reference to another
       // template parameter.
       if (Arg.getKind() == TemplateArgument::Pack) {
-        assert(Arg.pack_size() == 1 && Arg.pack_begin()->isPackExpansion() &&
+        assert(Arg.pack_size() == 1 &&
                "unexpected pack arguments in template rewrite");
-        Arg = Arg.pack_begin()->getPackExpansionPattern();
+        Arg = *Arg.pack_begin();
+        if (Arg.isPackExpansion())
+          Arg = Arg.getPackExpansionPattern();
       }
       assert(Arg.getKind() == TemplateArgument::Type &&
              "unexpected nontype template argument kind in template rewrite");
