@@ -864,6 +864,7 @@ public:
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
+    WideIVStep,
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
@@ -3693,6 +3694,10 @@ public:
     assert(hasUF(UF) && "Cannot set the UF not already in plan");
     UFs.clear();
     UFs.insert(UF);
+  }
+
+  unsigned hasSingleUF() const {
+    return UFs.size() == 1;
   }
 
   /// Return a string with the name of the plan and the applicable VFs and UFs.
