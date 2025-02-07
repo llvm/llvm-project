@@ -870,8 +870,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     // Handle custom lowering for: v2f32 = OP v2f32, v2f32
     for (const auto &Op : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FMA})
       setOperationAction(Op, MVT::v2f32, Custom);
-    // Handle custom lowering for: i64 = bitcast v2f32
-    setOperationAction(ISD::BITCAST, MVT::v2f32, Custom);
     // Handle custom lowering for: f32 = extract_vector_elt v2f32
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f32, Custom);
     // Combine:
@@ -2123,58 +2121,24 @@ SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   // Handle bitcasting from v2i8 without hitting the default promotion
   // strategy which goes through stack memory.
   EVT FromVT = Op->getOperand(0)->getValueType(0);
-  EVT ToVT = Op->getValueType(0);
+  if (FromVT != MVT::v2i8) {
+    return Op;
+  }
+
+  // Pack vector elements into i16 and bitcast to final type
   SDLoc DL(Op);
-
-  if (FromVT == MVT::v2i8) {
-    // Pack vector elements into i16 and bitcast to final type
-    SDValue Vec0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
-                               Op->getOperand(0), DAG.getIntPtrConstant(0, DL));
-    SDValue Vec1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
-                               Op->getOperand(0), DAG.getIntPtrConstant(1, DL));
-    SDValue Extend0 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec0);
-    SDValue Extend1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec1);
-    SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
-    SDValue AsInt = DAG.getNode(
-        ISD::OR, DL, MVT::i16,
-        {Extend0, DAG.getNode(ISD::SHL, DL, MVT::i16, {Extend1, Const8})});
-    EVT ToVT = Op->getValueType(0);
-    return MaybeBitcast(DAG, DL, ToVT, AsInt);
-  }
-
-  if (FromVT == MVT::v2f32) {
-    // A bitcast to i64 from v2f32.
-    // See if we can legalize the operand.
-    const SDValue &Operand = Op->getOperand(0);
-    if (ToVT == MVT::i64 && Operand.getOpcode() == ISD::BUILD_VECTOR) {
-      const SDValue &BVOp0 = Operand.getOperand(0);
-      const SDValue &BVOp1 = Operand.getOperand(1);
-
-      auto CastToAPInt = [](SDValue Op) -> APInt {
-        if (Op->isUndef())
-          return APInt(64, 0); // undef values default to 0
-        return cast<ConstantFPSDNode>(Op)->getValueAPF().bitcastToAPInt().zext(
-            64);
-      };
-
-      if ((BVOp0->isUndef() || isa<ConstantFPSDNode>(BVOp0)) &&
-          (BVOp1->isUndef() || isa<ConstantFPSDNode>(BVOp1))) {
-        // cast two constants
-        APInt Value(64, 0);
-        Value = CastToAPInt(BVOp0) | CastToAPInt(BVOp1).shl(32);
-        return DAG.getConstant(Value, DL, MVT::i64);
-      }
-
-      // otherwise build an i64
-      return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
-                         DAG.getBitcast(MVT::i32, BVOp0),
-                         DAG.getBitcast(MVT::i32, BVOp1));
-    }
-
-    // Otherwise, let SelectionDAG expand the operand
-    return SDValue();
-  }
-  return Op;
+  SDValue Vec0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
+                             Op->getOperand(0), DAG.getIntPtrConstant(0, DL));
+  SDValue Vec1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
+                             Op->getOperand(0), DAG.getIntPtrConstant(1, DL));
+  SDValue Extend0 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec0);
+  SDValue Extend1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec1);
+  SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
+  SDValue AsInt = DAG.getNode(
+      ISD::OR, DL, MVT::i16,
+      {Extend0, DAG.getNode(ISD::SHL, DL, MVT::i16, {Extend1, Const8})});
+  EVT ToVT = Op->getValueType(0);
+  return MaybeBitcast(DAG, DL, ToVT, AsInt);
 }
 
 // We can init constant f16x2/v2i16/v4i8 with a single .b32 move.  Normally it
