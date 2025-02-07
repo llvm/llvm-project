@@ -78,9 +78,6 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
   if (count > 0) {
     SymbolContext sc;
     if (sc_list.GetContextAtIndex(0, sc)) {
-      const uint32_t range_scope =
-          eSymbolContextFunction | eSymbolContextSymbol;
-      const bool use_inline_block_range = false;
       EvaluateExpressionOptions options;
       options.SetStopOthers(true);
       options.SetUnwindOnError(true);
@@ -103,9 +100,8 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
           prot_arg |= PROT_WRITE;
       }
 
-      AddressRange mmap_range;
-      if (sc.GetAddressRange(range_scope, 0, use_inline_block_range,
-                             mmap_range)) {
+      Address mmap_addr = sc.GetFunctionOrSymbolAddress();
+      if (mmap_addr.IsValid()) {
         auto type_system_or_err =
             process->GetTarget().GetScratchTypeSystemForLanguage(
                 eLanguageTypeC);
@@ -128,10 +124,8 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
                                        toc_range.GetBaseAddress(),
                                        void_ptr_type, args, options));
 #else
-        lldb::ThreadPlanSP call_plan_sp(
-            new ThreadPlanCallFunction(*thread, mmap_range.GetBaseAddress(),
-                                       void_ptr_type, args, options));
-#endif
+        lldb::ThreadPlanSP call_plan_sp(new ThreadPlanCallFunction(
+            *thread, mmap_addr, void_ptr_type, args, options));
         if (call_plan_sp) {
           DiagnosticManager diagnostics;
 
@@ -182,9 +176,6 @@ bool lldb_private::InferiorCallMunmap(Process *process, addr_t addr,
   if (count > 0) {
     SymbolContext sc;
     if (sc_list.GetContextAtIndex(0, sc)) {
-      const uint32_t range_scope =
-          eSymbolContextFunction | eSymbolContextSymbol;
-      const bool use_inline_block_range = false;
       EvaluateExpressionOptions options;
       options.SetStopOthers(true);
       options.SetUnwindOnError(true);
@@ -194,13 +185,11 @@ bool lldb_private::InferiorCallMunmap(Process *process, addr_t addr,
       options.SetTimeout(process->GetUtilityExpressionTimeout());
       options.SetTrapExceptions(false);
 
-      AddressRange munmap_range;
-      if (sc.GetAddressRange(range_scope, 0, use_inline_block_range,
-                             munmap_range)) {
+      Address munmap_addr = sc.GetFunctionOrSymbolAddress();
+      if (munmap_addr.IsValid()) {
         lldb::addr_t args[] = {addr, length};
-        lldb::ThreadPlanSP call_plan_sp(
-            new ThreadPlanCallFunction(*thread, munmap_range.GetBaseAddress(),
-                                       CompilerType(), args, options));
+        lldb::ThreadPlanSP call_plan_sp(new ThreadPlanCallFunction(
+            *thread, munmap_addr, CompilerType(), args, options));
         if (call_plan_sp) {
           DiagnosticManager diagnostics;
 

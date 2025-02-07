@@ -1651,7 +1651,8 @@ void ToolChain::TranslateXarchArgs(
   const InputArgList &BaseArgs = Args.getBaseArgs();
   unsigned Index = BaseArgs.MakeIndex(A->getValue(ValuePos));
   unsigned Prev = Index;
-  std::unique_ptr<llvm::opt::Arg> XarchArg(Opts.ParseOneArg(Args, Index));
+  std::unique_ptr<llvm::opt::Arg> XarchArg(Opts.ParseOneArg(
+      Args, Index, llvm::opt::Visibility(clang::driver::options::ClangOption)));
 
   // If the argument parsing failed or more than one argument was
   // consumed, the -Xarch_ argument's parameter tried to consume

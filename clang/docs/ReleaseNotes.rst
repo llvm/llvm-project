@@ -42,6 +42,10 @@ C/C++ Language Potentially Breaking Changes
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
+- The type trait builtin ``__is_referenceable`` has been removed, since it has
+  very few users and all the type traits that could benefit from it in the
+  standard library already have their own bespoke builtins.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -231,6 +235,8 @@ AST Matchers
 clang-format
 ------------
 
+- Adds ``BreakBeforeTemplateCloser`` option.
+
 libclang
 --------
 
@@ -257,6 +263,11 @@ Improvements
 Moved checkers
 ^^^^^^^^^^^^^^
 
+- After lots of improvements, the checker ``alpha.security.ArrayBoundV2`` is
+  renamed to ``security.ArrayBound``. As this checker is stable now, the old
+  checker ``alpha.security.ArrayBound`` (which was searching for the same kind
+  of bugs with an different, simpler and less accurate algorithm) is removed.
+
 .. _release-notes-sanitizers:
 
 Sanitizers
@@ -267,6 +278,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support 'no_openmp_constructs' assumption clause.
 
 Improvements
 ^^^^^^^^^^^^
