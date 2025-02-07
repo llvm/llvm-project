@@ -14,45 +14,37 @@ TRIPLES = [
 ]
 
 
-class ByteSizes:
-    def __init__(self, pairs):
-        if not isinstance(pairs, list):
-            raise ValueError("Must init with a list of key-value pairs")
+class byteSizes:
+    def __init__(self):
+        self._data = {}
 
-        self._data = pairs[:]
+    def __setitem__(self, k, v):
+        self._data[k] = v
+
+    def __getitem__(self, k):
+        return self._data[k]
 
     def __iter__(self):
-        return iter(self._data)
+        return iter(self._data.items())
 
 
-# fmt: off
-Type = ByteSizes([
-   ("i8",   1),
-   ("i16",  2),
-   ("i32",  4),
-   ("i64",  8),
-   ("i128", 16)])
-
-FPType = ByteSizes([
-   ("half",   2),
-   ("bfloat", 2),
-   ("float",  4),
-   ("double", 8)])
-# fmt: on
+def align(val, aligned: bool) -> int:
+    return val if aligned else 1
 
 
-# FP Type name size
-class FPType(enum.Enum):
-    # Value is the size in bytes
-    half = 2
-    float = 4
-    double = 8
+# Value is the size in bytes
+Type = byteSizes()
+Type["i8"] = 1
+Type["i16"] = 2
+Type["i32"] = 4
+Type["i64"] = 8
+Type["i128"] = 16
 
-    def align(self, aligned: bool) -> int:
-        return self.value if aligned else 1
-
-    def __str__(self) -> str:
-        return self.name
+FPType = byteSizes()
+FPType["half"] = 2
+FPType["float"] = 4
+FPType["bfloat"] = 4
+FPType["double"] = 8
 
 
 # Is this an aligned or unaligned access?
@@ -200,7 +192,8 @@ FP_ATOMICRMW_OPS = [
 def all_atomicrmw(f, datatype, atomicrmw_ops):
     for op in atomicrmw_ops:
         for aligned in Aligned:
-            for ty in datatype:
+            for ty, val in datatype:
+                alignval = align(val, aligned)
                 for ordering in ATOMICRMW_ORDERS:
                     name = f"atomicrmw_{op}_{ty}_{aligned}_{ordering}"
                     instr = "atomicrmw"

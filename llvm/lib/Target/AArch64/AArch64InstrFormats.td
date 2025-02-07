@@ -12509,6 +12509,10 @@ multiclass LDFPOPregister_patterns<string inst, string op> {
   defm : LDFPOPregister_patterns_ord<inst, "D", op, f64, (f64 FPR64:$Rm)>;
 }
 
+multiclass LDBFPOPregister_patterns<string inst, string op> {
+  defm : LDFPOPregister_patterns_ord<inst, "", op, bf16, (bf16 FPR16:$Rm)>;
+}
+
 let Predicates = [HasLSE] in
 multiclass CASregister_patterns_ord_dag<string inst, string suffix, string op,
                                         ValueType vt, dag OLD, dag NEW> {

@@ -548,9 +548,13 @@ defm atomic_load_fmin  : binary_atomic_op_fp<atomic_load_fmin>;
 defm atomic_load_fmax  : binary_atomic_op_fp<atomic_load_fmax>;
 
 let Predicates = [HasLSFE] in {
-  defm : LDFPOPregister_patterns<"LDFADD", "atomic_load_fadd">;
-  defm : LDFPOPregister_patterns<"LDFMAX", "atomic_load_fmax">;
-  defm : LDFPOPregister_patterns<"LDFMIN", "atomic_load_fmin">;
+  defm : LDFPOPregister_patterns<"LDFADD",   "atomic_load_fadd">;
+  defm : LDFPOPregister_patterns<"LDFMAXNM", "atomic_load_fmax">;
+  defm : LDFPOPregister_patterns<"LDFMINNM", "atomic_load_fmin">;
+
+  defm : LDBFPOPregister_patterns<"LDBFADD",   "atomic_load_fadd">;
+  defm : LDBFPOPregister_patterns<"LDBFMAXNM", "atomic_load_fmax">;
+  defm : LDBFPOPregister_patterns<"LDBFMINNM", "atomic_load_fmin">;
 }
 
 // v8.9a/v9.4a FEAT_LRCPC patterns

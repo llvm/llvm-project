@@ -979,14 +979,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f16, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f32, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::bf16, LibCall);
 
     setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f16, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f32, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::bf16, LibCall);
 
     setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f16, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f32, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::bf16, LibCall);
   }
 
   if (Subtarget->hasLSE128()) {
