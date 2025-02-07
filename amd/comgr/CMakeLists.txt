@@ -178,9 +178,12 @@ message("")
 option(COMGR_DISABLE_SPIRV "To disable SPIRV in Comgr" OFF)
 
 if (NOT COMGR_DISABLE_SPIRV)
-  CHECK_INCLUDE_FILE_CXX(LLVMSPIRVLib/LLVMSPIRVLib.h HAVE_LLVMSPIRVLIB_H)
-  if (NOT HAVE_LLVMSPIRVLIB_H)
+  # TODO: Explore switching this to CHECK_INCLUDE_FILE_CXX() macro
+  if (NOT EXISTS "${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib/LLVMSPIRVLib.h")
+    message("-- LLVMSPIRVLib/LLVMSPIRVLib.h not found")
     set(COMGR_DISABLE_SPIRV ON)
+  else()
+    message("-- LLVMSPIRVLib/LLVMSPIRVLib.h found")
   endif()
 endif()
 
