@@ -58,7 +58,7 @@ LIBC_INLINE double multiply_add(double x, double y, double z) {
 #if __has_builtin(__builtin_elementwise_fma)
   return __builtin_elementwise_fma(x, y, z);
 #else
-  return __builtin_fmaf(x, y, z);
+  return __builtin_fma(x, y, z);
 #endif
 }
 
