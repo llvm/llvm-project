@@ -6974,6 +6974,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fwritable_strings);
   Args.AddLastArg(CmdArgs, options::OPT_funroll_loops,
                   options::OPT_fno_unroll_loops);
+  Args.AddLastArg(CmdArgs, options::OPT_floop_interchange,
+                  options::OPT_fno_loop_interchange);
 
   Args.AddLastArg(CmdArgs, options::OPT_fstrict_flex_arrays_EQ);
 
@@ -9185,7 +9187,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fno_lto,
       OPT_flto,
       OPT_flto_EQ};
-  const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm};
+  const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A) {
     return Set.contains(A->getOption().getID()) ||
            (A->getOption().getGroup().isValid() &&
@@ -9203,7 +9205,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       ArgStringList CompilerArgs;
       ArgStringList LinkerArgs;
       for (Arg *A : C.getArgsForToolChain(TC, /*BoundArch=*/"", Kind)) {
-        if (ShouldForward(CompilerOptions, A))
+        if (A->getOption().matches(OPT_Zlinker_input))
+          LinkerArgs.emplace_back(A->getValue());
+        else if (ShouldForward(CompilerOptions, A))
           A->render(Args, CompilerArgs);
         else if (ShouldForward(LinkerOptions, A))
           A->render(Args, LinkerArgs);
