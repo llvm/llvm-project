@@ -22,7 +22,8 @@ namespace direct {
 
 /// Convert a CIR attribute to an LLVM attribute. May use the datalayout for
 /// lowering attributes to-be-stored in memory.
-mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
+mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
+                                const mlir::Attribute attr,
                                 mlir::ConversionPatternRewriter &rewriter,
                                 const mlir::TypeConverter *converter,
                                 mlir::DataLayout const &dataLayout);
