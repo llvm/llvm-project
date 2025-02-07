@@ -17,9 +17,9 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, memmove,
                    (void *dst, const void *src, size_t count)) {
-  if( count > 0){
-  LIBC_CRASH_ON_NULLPTR(dst);
-  LIBC_CRASH_ON_NULLPTR(src);
+  if (count > 0) {
+    LIBC_CRASH_ON_NULLPTR(dst);
+    LIBC_CRASH_ON_NULLPTR(src);
   }
   // Memmove may handle some small sizes as efficiently as inline_memcpy.
   // For these sizes we may not do is_disjoint check.
