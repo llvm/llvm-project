@@ -352,6 +352,13 @@ void param_ptr_to_ptr_to_ptr_callee(void*** ppp) {
   **ppp = &local; // expected-warning{{local variable 'local' is still referred to by the caller variable 'pp'}}
 }
 
+void ***param_ptr_to_ptr_to_ptr_return(void ***ppp) {
+  int local = 0;
+  **ppp = &local;
+  return ppp;
+  // expected-warning@-1 {{Address of stack memory associated with local variable 'local' is still referred to by the caller variable 'ppp' upon returning to the caller.  This will be a dangling reference}}
+}
+
 void param_ptr_to_ptr_to_ptr_caller(void** pp) {
   param_ptr_to_ptr_to_ptr_callee(&pp);
 }
@@ -959,5 +966,9 @@ int return_symbol_safe() {
   int x = make_x();
   clang_analyzer_dump(x); // expected-warning-re {{conj_$2{int, {{.+}}}}}
   return x; // no-warning
+}
+
+int *return_symbolic_region_safe(int **ptr) {
+  return *ptr; // no-warning
 }
 }
