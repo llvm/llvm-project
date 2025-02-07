@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fobjc-emit-nil-check-thunk -fobjc-export-direct-methods -emit-llvm -fobjc-arc -triple arm64-apple-darwin %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fobjc-export-direct-methods -emit-llvm -fobjc-arc -triple arm64-apple-darwin %s -o - | FileCheck %s
 
 __attribute__((objc_root_class))
 @interface Root

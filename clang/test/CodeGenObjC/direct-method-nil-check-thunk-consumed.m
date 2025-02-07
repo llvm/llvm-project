@@ -1,6 +1,6 @@
 // REQUIRES: system-darwin
 
-// RUN: %clang -fobjc-emit-nil-check-thunk -fobjc-export-direct-methods \
+// RUN: %clang -fobjc-export-direct-methods   \
 // RUN: -target arm64-apple-darwin -fobjc-arc \
 // RUN: -O0 -S -emit-llvm %s -o - | FileCheck %s
 

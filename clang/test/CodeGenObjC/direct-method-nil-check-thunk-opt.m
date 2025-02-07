@@ -1,7 +1,7 @@
 // This file checks that certain nil checks can be removed from direct method calls.
 
-// RUN: %clang_cc1 -fobjc-emit-nil-check-thunk -fobjc-export-direct-methods -O0 -emit-llvm -fobjc-arc -triple arm64-apple-darwin %s -o - | FileCheck %s
-// RUN: %clang_cc1 -fobjc-emit-nil-check-thunk -fobjc-export-direct-methods -O2 -emit-llvm -fobjc-arc -triple arm64-apple-darwin %s -o - | FileCheck %s --check-prefixes=OPT
+// RUN: %clang_cc1 -fobjc-export-direct-methods -O0 -emit-llvm -fobjc-arc -triple arm64-apple-darwin %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fobjc-export-direct-methods -O2 -emit-llvm -fobjc-arc -triple arm64-apple-darwin %s -o - | FileCheck %s --check-prefixes=OPT
 
 __attribute__((objc_root_class))
 @interface Root

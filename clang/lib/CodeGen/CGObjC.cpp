@@ -1664,7 +1664,7 @@ void CodeGenFunction::GenerateObjCSetter(ObjCImplementationDecl *IMP,
 void CodeGenFunction::GenerateObjCDirectThunk(const ObjCMethodDecl *OMD,
                                               const ObjCContainerDecl *CD) {
   assert(InnerFn && OMD->isDirectMethod() &&
-         CGM.getCodeGenOpts().ObjCEmitNilCheckThunk &&
+         CGM.getCodeGenOpts().ObjCExportDirectMethods &&
          "Should only generate wrapper when the flag is set.");
   StartObjCMethod(OMD, CD);
 

@@ -1611,8 +1611,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
 
   if (Opts.ObjCExportDirectMethods)
     GenerateArg(Consumer, OPT_fobjc_export_direct_methods);
-  if (Opts.ObjCEmitNilCheckThunk)
-    GenerateArg(Consumer, OPT_fobjc_emit_nil_check_thunk);
 
   std::optional<StringRef> DebugInfoVal;
   switch (Opts.DebugInfo) {
@@ -1941,8 +1939,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   if (Args.hasArg(OPT_fobjc_export_direct_methods))
     Opts.ObjCExportDirectMethods = 1;
-
-  Opts.ObjCEmitNilCheckThunk = Args.hasArg(OPT_fobjc_emit_nil_check_thunk);
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
@@ -4174,8 +4170,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Args.hasFlag(OPT_fzos_extensions, OPT_fno_zos_extensions, T.isOSzOS());
 
   Opts.ObjCExportDirectMethods = Args.hasArg(OPT_fobjc_export_direct_methods);
-
-  Opts.ObjCEmitNilCheckThunk = Args.hasArg(OPT_fobjc_emit_nil_check_thunk);
 
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);

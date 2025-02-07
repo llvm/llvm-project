@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fobjc-emit-nil-check-thunk -fobjc-export-direct-methods -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -O0 -o - | FileCheck %s
-// RUN: %clang_cc1 -fobjc-emit-nil-check-thunk -fobjc-export-direct-methods -emit-llvm -triple x86_64-apple-darwin10 %s -O0 -o - | FileCheck --check-prefix=NO-ARC %s
+// RUN: %clang_cc1 -fobjc-export-direct-methods -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -O0 -o - | FileCheck %s
+// RUN: %clang_cc1 -fobjc-export-direct-methods -emit-llvm -triple x86_64-apple-darwin10 %s -O0 -o - | FileCheck --check-prefix=NO-ARC %s
 
 // If objc-arc is not set, we should not emit any arc related intrinsics.
 // NO-ARC-NOT: retainAutoreleasedReturnValue

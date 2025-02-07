@@ -2707,7 +2707,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   // Direct method prologue should not contain nil check anymore.
   // As a result, we can set `self` to be NonNull to prepare for further
   // optimizations.
-  if (getLangOpts().ObjCEmitNilCheckThunk && TargetDecl) {
+  if (getLangOpts().ObjCExportDirectMethods && TargetDecl) {
     auto OMD = dyn_cast<ObjCMethodDecl>(TargetDecl);
     bool isDirect = OMD && OMD->isDirectMethod();
     if (isDirect && !IsThunk) {

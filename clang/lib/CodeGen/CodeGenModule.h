@@ -331,7 +331,7 @@ public:
   // thunkable. A method is thunkable if it is a direct instance method that
   // have a fixed number of arguments.
   bool shouldHaveNilCheckThunk(const ObjCMethodDecl *OMD) const {
-    return getCodeGenOpts().ObjCEmitNilCheckThunk &&
+    return getCodeGenOpts().ObjCExportDirectMethods &&
            getLangOpts().ObjCRuntime.isNeXTFamily() && OMD &&
            OMD->canHaveNilCheckThunk();
   }

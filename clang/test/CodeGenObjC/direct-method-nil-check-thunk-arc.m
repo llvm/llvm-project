@@ -2,15 +2,15 @@
 
 // RUN: mkdir -p %t
 
-// RUN: %clang -fobjc-emit-nil-check-thunk -fobjc-export-direct-methods   \
-// RUN:   -target arm64-apple-darwin -O0 -S -emit-llvm %s -o - -fobjc-arc \
+// RUN: %clang -fobjc-export-direct-methods -S -emit-llvm   \
+// RUN:   -target arm64-apple-darwin -O0 %s -o - -fobjc-arc \
 // RUN:   | FileCheck %s
 
-// RUN: %clang -fobjc-emit-nil-check-thunk -fobjc-export-direct-methods   \
-// RUN:   -target arm64-apple-darwin -O0 -S -emit-llvm %s -o -            \
+// RUN: %clang -fobjc-export-direct-methods -S -emit-llvm  \
+// RUN:   -target arm64-apple-darwin -O0 %s -o -           \
 // RUN:   | FileCheck --check-prefix=NO-ARC %s
 
-// RUN: %clang -fobjc-emit-nil-check-thunk -fobjc-export-direct-methods   \
+// RUN: %clang -fobjc-export-direct-methods     \
 // RUN:   -target arm64-apple-darwin -fobjc-arc \
 // RUN:   -O2 -framework Foundation %s -o %t/shape
 

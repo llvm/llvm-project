@@ -2992,8 +2992,6 @@ def fthin_link_bitcode_EQ : Joined<["-"], "fthin-link-bitcode=">,
   MarshallingInfoString<CodeGenOpts<"ThinLinkBitcodeFile">>;
 def fobjc_export_direct_methods :
   Flag<["-"], "fobjc-export-direct-methods">, Visibility<[ClangOption, CC1Option]>, Group<f_Group>;
-def fobjc_emit_nil_check_thunk:
-  Flag<["-"], "fobjc-emit-nil-check-thunk">, Visibility<[ClangOption, CC1Option]>, Group<f_Group>;
 defm fat_lto_objects : BoolFOption<"fat-lto-objects",
   CodeGenOpts<"FatLTO">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,

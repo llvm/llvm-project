@@ -8072,8 +8072,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_fobjc_export_direct_methods))
     CmdArgs.push_back("-fobjc-export-direct-methods");
-  if (Args.hasArg(options::OPT_fobjc_emit_nil_check_thunk))
-    CmdArgs.push_back("-fobjc-emit-nil-check-thunk");
   
   if (D.CC1Main && !D.CCGenDiagnostics) {
     // Invoke the CC1 directly in this process

@@ -357,7 +357,6 @@ CODEGENOPT(EmitLLVMUseLists, 1, 0) ///< Control whether to serialize use-lists.
 CODEGENOPT(WholeProgramVTables, 1, 0) ///< Whether to apply whole-program
                                       ///  vtable optimization.
 CODEGENOPT(ObjCExportDirectMethods , 1, 0) ///< Whether objc_direct methods are exported.
-CODEGENOPT(ObjCEmitNilCheckThunk , 1, 0) ///< Whether objc_direct methods should emit a nil check thunk.
 
 CODEGENOPT(VirtualFunctionElimination, 1, 0) ///< Whether to apply the dead
                                              /// virtual function elimination
