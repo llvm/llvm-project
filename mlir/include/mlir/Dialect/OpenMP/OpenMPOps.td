@@ -1753,11 +1753,9 @@ def ScanOp : OpenMP_Op<"scan", [
 // 2.19.7.3 Declare Mapper Directive
 //===----------------------------------------------------------------------===//
 def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
-    AffineScope,
-    AutomaticAllocationScope,
     IsolatedFromAbove,
-    OutlineableOpenMPOpInterface,
     RecipeInterface,
+    SingleBlock,
     Symbol
   ]> {
   let summary = "declare mapper directive";
@@ -1767,14 +1765,15 @@ def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
   }] # clausesDescription;
 
   let arguments = (ins  SymbolNameAttr:$sym_name,
-                        TypeAttr:$var_type);
+                        TypeAttr:$type);
 
   let regions = (region AnyRegion:$body);
 
-  let assemblyFormat = "$sym_name `:` $var_type $body attr-dict";
+  let assemblyFormat = "$sym_name `:` $type $body attr-dict";
 }
 
-def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper_info", [
+def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info", [
+    HasParent<"DeclareMapperOp">,
     Terminator
   ], clauses = [
     OpenMP_MapClause
@@ -1782,7 +1781,7 @@ def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper_info", [
   let summary = "declare mapper info";
   let description = [{
     This Op is used to capture the map information related to it's
-    parent DeclareMapperOp.]>
+    parent DeclareMapperOp.
   }] # clausesDescription;
 
   let builders = [

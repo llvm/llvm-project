@@ -884,8 +884,8 @@ omp.declare_mapper @my_mapper : !llvm.struct<"my_type", (i32)> {
 ^bb0(%arg: !llvm.ptr):
   // CHECK: %[[DECL_MAP_INFO:.*]] = omp.map.info var_ptr(%{{.*}} : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
   %decl_map_info = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  // CHECK: omp.declare_mapper_info map_entries(%[[DECL_MAP_INFO]] : !llvm.ptr)
-  omp.declare_mapper_info map_entries(%decl_map_info : !llvm.ptr)
+  // CHECK: omp.declare_mapper.info map_entries(%[[DECL_MAP_INFO]] : !llvm.ptr)
+  omp.declare_mapper.info map_entries(%decl_map_info : !llvm.ptr)
 }
 
 // CHECK-LABEL: func @wsloop_reduction
