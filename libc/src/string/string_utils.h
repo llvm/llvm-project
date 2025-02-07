@@ -18,7 +18,6 @@
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/CPP/type_traits.h" // cpp::is_same_v
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/inline_bzero.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -84,7 +83,6 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
 // Returns the length of a string, denoted by the first occurrence
 // of a null terminator.
 template <typename T> LIBC_INLINE size_t string_length(const T *src) {
-  LIBC_CRASH_ON_NULLPTR(src);
 #ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
   // Unsigned int is the default size for most processors, and on x86-64 it
   // performs better than larger sizes when the src pointer can't be assumed to
