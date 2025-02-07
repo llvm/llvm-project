@@ -11900,22 +11900,22 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
   EVT ReducedTy = Acc.getValueType();
   EVT FullTy = MulLHS.getValueType();
 
-  auto ExtendToAccEltVT = [&](SDValue V) {
-    unsigned ExtOpc = V->getOpcode() == ISD::PARTIAL_REDUCE_SMLA
-                          ? ISD::SIGN_EXTEND
-                          : ISD::ZERO_EXTEND;
-    EVT ExtVT = V.getValueType().changeVectorElementType(
-        Acc.getValueType().getVectorElementType());
-    if (ExtVT != FullTy)
-      return DAG.getNode(ExtOpc, DL, ExtVT, V);
-    return V;
-  };
-
   EVT NewVT =
       EVT::getVectorVT(*DAG.getContext(), ReducedTy.getVectorElementType(),
                        FullTy.getVectorElementCount());
-  MulLHS = ExtendToAccEltVT(MulLHS);
-  MulRHS = ExtendToAccEltVT(MulRHS);
+  unsigned ExtOpc = N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA
+                        ? ISD::SIGN_EXTEND
+                        : ISD::ZERO_EXTEND;
+  EVT MulLHSVT = MulLHS.getValueType();
+  assert(MulLHSVT == MulRHS.getValueType() &&
+         "The second and third operands of a PARTIAL_REDUCE_MLA node must have "
+         "the same value type!");
+  EVT ExtVT = MulLHSVT.changeVectorElementType(
+      Acc.getValueType().getVectorElementType());
+  if (ExtVT != FullTy) {
+    MulLHS = DAG.getNode(ExtOpc, DL, ExtVT, MulLHS);
+    MulRHS = DAG.getNode(ExtOpc, DL, ExtVT, MulRHS);
+  }
   SDValue Input = MulLHS;
   APInt ConstantOne;
   if (!ISD::isConstantSplatVector(MulRHS.getNode(), ConstantOne) ||
