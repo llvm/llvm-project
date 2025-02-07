@@ -1013,7 +1013,7 @@ void ClauseProcessor::processMapObjects(
         mapperIdName = typeSpec.name().ToString() + ".default";
         mapperIdName = converter.mangleName(mapperIdName, *typeSpec.GetScope());
       }
-      assert(converter.getMLIRSymbolTable()->lookup(mapperIdName) &&
+      assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
              "mapper not found");
       mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
                                               mapperIdName);
@@ -1032,8 +1032,8 @@ void ClauseProcessor::processMapObjects(
         static_cast<
             std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
             mapTypeBits),
-        mlir::omp::VariableCaptureKind::ByRef, baseOp.getType(), false,
-        mapperId);
+        mlir::omp::VariableCaptureKind::ByRef, baseOp.getType(),
+        /*partialMap=*/false, mapperId);
 
     if (parentObj.has_value()) {
       parentMemberIndices[parentObj.value()].addChildIndexAndMapToParent(
