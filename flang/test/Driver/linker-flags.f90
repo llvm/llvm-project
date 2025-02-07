@@ -34,7 +34,7 @@
 ! SOLARIS-F128NONE-NOT: FortranFloat128Math
 ! UNIX-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
 ! SOLARIS-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "-z" "ignore" "-lquadmath" "-z" "record"
-! UNIX-SAME: "-lFortranRuntime" "-lFortranDecimal" "-lm"
+! UNIX-SAME: "-lFortranRuntime" "-lm"
 ! COMPILER-RT: "{{.*}}{{\\|/}}libclang_rt.builtins.a"
 
 ! BSD-LABEL:  "{{.*}}ld{{(\.exe)?}}"
@@ -42,7 +42,6 @@
 ! BSD-F128NONE-NOT: FortranFloat128Math
 ! BSD-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
 ! BSD-SAME: -lFortranRuntime
-! BSD-SAME: -lFortranDecimal
 ! BSD-SAME: -lexecinfo
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
@@ -50,20 +49,18 @@
 ! DARWIN-F128NONE-NOT: FortranFloat128Math
 ! DARWIN-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
 ! DARWIN-SAME: -lFortranRuntime
-! DARWIN-SAME: -lFortranDecimal
 
 ! HAIKU-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! HAIKU-SAME: "[[object_file]]"
 ! HAIKU-F128NONE-NOT: FortranFloat128Math
 ! HAIKU-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
-! HAIKU-SAME: "-lFortranRuntime" "-lFortranDecimal"
+! HAIKU-SAME: "-lFortranRuntime"
 
 ! MINGW-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! MINGW-SAME: "[[object_file]]"
 ! MINGW-F128NONE-NOT: FortranFloat128Math
 ! MINGW-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
 ! MINGW-SAME: -lFortranRuntime
-! MINGW-SAME: -lFortranDecimal
 
 ! NOTE: This also matches lld-link (when CLANG_DEFAULT_LINKER=lld) and
 !       any .exe suffix that is added when resolving to the full path of
