@@ -1096,8 +1096,6 @@ public:
 
   bool hasPermlaneUp() const { return getGeneration() >= GFX13; }
 
-  bool hasPermlaneBcast() const { return getGeneration() >= GFX13; }
-
   bool hasDPP() const {
     return HasDPP;
   }

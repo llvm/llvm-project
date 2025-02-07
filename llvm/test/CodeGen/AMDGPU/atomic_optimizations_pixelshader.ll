@@ -692,15 +692,16 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1364-LABEL: add_i32_varying:
 ; GFX1364:       ; %bb.0: ; %entry
 ; GFX1364-NEXT:    s_mov_b64 s[8:9], exec
-; GFX1364-NEXT:    ; implicit-def: $vgpr3
+; GFX1364-NEXT:    ; implicit-def: $vgpr4
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1364-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX1364-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX1364-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1364-NEXT:  ; %bb.1:
 ; GFX1364-NEXT:    s_or_saveexec_b64 s[10:11], -1
-; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1364-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[10:11]
+; GFX1364-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1364-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1364-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -710,21 +711,28 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1364-NEXT:    v_permlanex16_b32 v2, v1, -1, -1
 ; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1364-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
-; GFX1364-NEXT:    v_permlane_bcast_b32 v2, v1, 31, 64
-; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1364-NEXT:    v_readlane_b32 s12, v1, 31
+; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1364-NEXT:    v_mov_b32_e32 v2, s12
 ; GFX1364-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
+; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX1364-NEXT:    v_mov_b32_dpp v3, v1 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1364-NEXT:    v_readlane_b32 s12, v1, 15
+; GFX1364-NEXT:    v_readlane_b32 s13, v1, 31
+; GFX1364-NEXT:    v_writelane_b32 v3, s12, 16
 ; GFX1364-NEXT:    s_mov_b64 exec, s[10:11]
+; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1364-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1364-NEXT:    s_or_saveexec_b64 s[10:11], -1
-; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1364-NEXT:    v_readlane_b32 s12, v1, 63
-; GFX1364-NEXT:    v_permlane_up_b32 v2, v1, 1, 64
+; GFX1364-NEXT:    v_readlane_b32 s14, v1, 47
+; GFX1364-NEXT:    v_writelane_b32 v3, s13, 32
 ; GFX1364-NEXT:    s_mov_b64 exec, s[10:11]
+; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX1364-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1364-NEXT:    s_or_saveexec_b64 s[10:11], -1
-; GFX1364-NEXT:    v_writelane_b32 v2, 0, 0
+; GFX1364-NEXT:    v_writelane_b32 v3, s14, 48
 ; GFX1364-NEXT:    s_mov_b64 exec, s[10:11]
-; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1364-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1364-NEXT:    ; implicit-def: $vgpr0
 ; GFX1364-NEXT:    s_and_saveexec_b64 s[10:11], vcc
@@ -736,9 +744,9 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1364-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX1364-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1364-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1364-NEXT:    v_add_nc_u32_e32 v3, s4, v0
+; GFX1364-NEXT:    v_add_nc_u32_e32 v4, s4, v0
 ; GFX1364-NEXT:  .LBB1_4: ; %Flow
 ; GFX1364-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX1364-NEXT:    s_wqm_b64 s[4:5], -1
@@ -747,7 +755,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1364-NEXT:    s_and_not1_b64 vcc, exec, s[4:5]
 ; GFX1364-NEXT:    s_cbranch_vccnz .LBB1_6
 ; GFX1364-NEXT:  ; %bb.5: ; %if
-; GFX1364-NEXT:    buffer_store_b32 v3, off, s[0:3], null
+; GFX1364-NEXT:    buffer_store_b32 v4, off, s[0:3], null
 ; GFX1364-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
 ; GFX1364-NEXT:    s_endpgm
 ;

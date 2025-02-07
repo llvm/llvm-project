@@ -484,15 +484,8 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
 
     if (!ST.isWave32()) {
       // Combine lane 31 into lanes 32..63.
-      Value *Lane31 = nullptr;
-      if (ST.hasPermlaneBcast()) {
-        Lane31 =
-            B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_permlane_bcast,
-                              {V, B.getInt32(31), B.getInt32(64)});
-      } else {
-        Lane31 = B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_readlane,
-                                   {V, B.getInt32(31)});
-      }
+      Value *Lane31 = B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_readlane,
+                                        {V, B.getInt32(31)});
 
       Value *UpdateDPPCall = B.CreateCall(
           UpdateDPP, {Identity, Lane31, B.getInt32(DPP::QUAD_PERM_ID),
@@ -517,7 +510,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildShiftRight(IRBuilder<> &B, Value *V,
     V = B.CreateCall(UpdateDPP,
                      {Identity, V, B.getInt32(DPP::WAVE_SHR1), B.getInt32(0xf),
                       B.getInt32(0xf), B.getFalse()});
-  } else if (ST.hasPermlaneUp()) {
+  } else if (ST.hasPermlaneUp() && ST.isWave32()) {
     V = B.CreateIntrinsic(
         AtomicTy, Intrinsic::amdgcn_permlane_up,
         {V, B.getInt32(1), B.getInt32(ST.getWavefrontSize())});
