@@ -231,6 +231,8 @@ AST Matchers
 clang-format
 ------------
 
+- Adds ``BreakBeforeTemplateCloser`` option.
+
 libclang
 --------
 
