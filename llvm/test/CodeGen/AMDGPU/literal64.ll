@@ -74,15 +74,15 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GFX1250-NEXT:  .LBB6_1: ; %atomicrmw.start
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_add_f64_e32 v[2:3], 0x4063233333333333, v[4:5]
 ; GFX1250-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
-; GFX1250-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX1250-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -173,9 +173,7 @@ define i1 @class_f64() noinline optnone {
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s2, 1
 ; GFX1250-SDAG-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
-; GFX1250-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-SDAG-NEXT:    v_cmp_class_f64_e64 s0, s[0:1], s2
-; GFX1250-SDAG-NEXT:    s_wait_alu 0xf1ff
 ; GFX1250-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -185,13 +183,11 @@ define i1 @class_f64() noinline optnone {
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s2, 1
 ; GFX1250-GISEL-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
-; GFX1250-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1250-GISEL-NEXT:    v_cmp_class_f64_e64 s0, v[0:1], v2
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-GISEL-NEXT:    s_wait_alu 0xf1ff
 ; GFX1250-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s0
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;

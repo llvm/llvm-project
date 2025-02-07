@@ -1495,7 +1495,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat(ptr addrspace(1) %pt
 ; GFX1250-NEXT:  ; %bb.1:
 ; GFX1250-NEXT:    s_bcnt1_i32_b32 s0, s0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1567,7 +1566,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent(ptr addrspace(
 ; GFX1250-NEXT:  ; %bb.1:
 ; GFX1250-NEXT:    s_bcnt1_i32_b32 s0, s0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1641,7 +1639,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_system(ptr addrspace
 ; GFX1250-NEXT:  ; %bb.1:
 ; GFX1250-NEXT:    s_bcnt1_i32_b32 s0, s0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1713,7 +1710,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_flush(ptr addrspace(
 ; GFX1250-NEXT:  ; %bb.1:
 ; GFX1250-NEXT:    s_bcnt1_i32_b32 s0, s0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1900,7 +1896,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent_safe(ptr addrs
 ; GFX1250-NEXT:  ; %bb.1:
 ; GFX1250-NEXT:    s_bcnt1_i32_b32 s0, s0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2254,11 +2249,10 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat(ptr addrspace(3) %ptr
 ; GFX1250-NEXT:    s_cbranch_execz .LBB51_2
 ; GFX1250-NEXT:  ; %bb.1:
 ; GFX1250-NEXT:    s_bcnt1_i32_b32 s0, s0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_dual_mul_f64 v[0:1], 4.0, v[0:1] :: v_dual_mov_b32 v2, s0
 ; GFX1250-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
@@ -2320,11 +2314,10 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush(ptr addrspace(3
 ; GFX1250-NEXT:    s_cbranch_execz .LBB52_2
 ; GFX1250-NEXT:  ; %bb.1:
 ; GFX1250-NEXT:    s_bcnt1_i32_b32 s0, s0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_dual_mul_f64 v[0:1], 4.0, v[0:1] :: v_dual_mov_b32 v2, s0
 ; GFX1250-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
@@ -2386,11 +2379,10 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush_safe(ptr addrsp
 ; GFX1250-NEXT:    s_cbranch_execz .LBB53_2
 ; GFX1250-NEXT:  ; %bb.1:
 ; GFX1250-NEXT:    s_bcnt1_i32_b32 s0, s0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_dual_mul_f64 v[0:1], 4.0, v[0:1] :: v_dual_mov_b32 v2, s0
 ; GFX1250-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX1250-NEXT:    s_wait_dscnt 0x0

@@ -127,6 +127,7 @@ Improvements to Clang's diagnostics
 - The ``-Wunique-object-duplication`` warning has been added to warn about objects
   which are supposed to only exist once per program, but may get duplicated when
   built into a shared library.
+- Fixed a bug where Clang's Analysis did not correctly model the destructor behavior of ``union`` members (#GH119415).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -263,6 +264,11 @@ Improvements
 Moved checkers
 ^^^^^^^^^^^^^^
 
+- After lots of improvements, the checker ``alpha.security.ArrayBoundV2`` is
+  renamed to ``security.ArrayBound``. As this checker is stable now, the old
+  checker ``alpha.security.ArrayBound`` (which was searching for the same kind
+  of bugs with an different, simpler and less accurate algorithm) is removed.
+
 .. _release-notes-sanitizers:
 
 Sanitizers
@@ -273,6 +279,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support 'no_openmp_constructs' assumption clause.
 
 Improvements
 ^^^^^^^^^^^^

@@ -1723,7 +1723,7 @@ define amdgpu_kernel void @constant_sextload_i32_to_i64(ptr addrspace(1) %out, p
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1250-NEXT:    s_ashr_i32 s3, s2, 31
-; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
@@ -1920,7 +1920,7 @@ define amdgpu_kernel void @constant_sextload_v1i32_to_v1i64(ptr addrspace(1) %ou
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1250-NEXT:    s_ashr_i32 s3, s2, 31
-; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
@@ -4839,7 +4839,6 @@ define amdgpu_kernel void @constant_sextload_v32i32_to_v32i64(ptr addrspace(1) %
 ; GFX1250-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:208
 ; GFX1250-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:192
 ; GFX1250-NEXT:    s_wait_xcnt 0x3
-; GFX1250-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-NEXT:    v_dual_mov_b32 v0, s22 :: v_dual_mov_b32 v1, s24
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, s23 :: v_dual_mov_b32 v3, s57
 ; GFX1250-NEXT:    s_wait_xcnt 0x2

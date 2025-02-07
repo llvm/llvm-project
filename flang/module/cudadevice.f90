@@ -49,7 +49,7 @@ implicit none
   public :: syncthreads_or
 
   interface
-    attributes(device) subroutine syncwarp(mask) bind(c, name='__syncwarp')
+    attributes(device) subroutine syncwarp(mask)
       integer, value :: mask
     end subroutine
   end interface
@@ -384,34 +384,82 @@ implicit none
     end function
   end interface
   public :: signbit
-  
-  interface sincos
+
+  interface
     attributes(device) subroutine sincosf(x, y, z) bind(c,name='__nv_sincosf')
       real(4), value :: x
       real(4), device :: y
       real(4), device :: z
     end subroutine
+  end interface
+  public :: sincosf
+  interface
     attributes(device) subroutine sincos(x, y, z) bind(c,name='__nv_sincos')
       real(8), value :: x
       real(8), device :: y
       real(8), device :: z
     end subroutine
   end interface
+  interface sincos
+    procedure :: sincosf
+    procedure :: sincos
+  end interface
   public :: sincos
-  
-  interface sincospi
+
+  interface
     attributes(device) subroutine sincospif(x, y, z) bind(c,name='__nv_sincospif')
       real(4), value :: x
       real(4), device :: y
       real(4), device :: z
     end subroutine
+  end interface
+  public :: sincospif
+  interface
     attributes(device) subroutine sincospi(x, y, z) bind(c,name='__nv_sincospi')
       real(8), value :: x
       real(8), device :: y
       real(8), device :: z
     end subroutine
   end interface
+  interface sincospi
+    procedure :: sincospif
+    procedure :: sincospi
+  end interface
   public :: sincospi
+
+  interface
+    attributes(device) real(4) function cospif(x) bind(c,name='__nv_cospif')
+      real(4), value :: x
+    end function
+  end interface
+  public :: cospif
+  interface
+    attributes(device) real(8) function cospi(x) bind(c,name='__nv_cospi')
+      real(8), value :: x
+    end function
+  end interface
+  interface cospi
+    procedure :: cospif
+    procedure :: cospi
+  end interface
+  public :: cospi
+
+  interface  
+    attributes(device) real(4) function sinpif(x) bind(c,name='__nv_sinpif')
+      real(4), value :: x
+    end function
+  end interface
+  public :: sinpif
+  interface
+    attributes(device) real(8) function sinpi(x) bind(c,name='__nv_sinpi')
+      real(8), value :: x
+    end function
+  end interface
+  interface sinpi
+    procedure :: sinpif
+    procedure :: sinpi
+  end interface
+  public :: sinpi
   
   interface mulhi
    attributes(device) integer function __mulhi(i,j) bind(c,name='__nv_mulhi')
