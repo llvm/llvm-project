@@ -261,6 +261,9 @@ LogicalResult TensorDescType::verify(
 
     if (scatterAttr) {
       // Validate subgroup mapping rules for scattered tensors.
+      // A work-item's slice of the tensor with shape [sg_size] or
+      // [sg_size, chunk_size] will be [1] or [1, chunks_size] respectively,
+      // the mapping should reflect that.
       if (wiData[0] != 1)
         return emitError()
                << "cannot map over non-contiguous scattered row elements";

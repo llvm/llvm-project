@@ -458,22 +458,7 @@ LogicalResult CreateDescOp::verify() {
   if (shape != tdescShape)
     return emitOpError("Incorrect TensorDesc shape. ")
            << "Expected is " << makeString(shape) << "\n";
-  if (auto sgMap = tdescTy.getSGMapAttr()) {
-    // A work-item's slice of the TensorDesc with shape [sg_size] or
-    // [sg_size, chunk_size] will be [1] or [1, chunks_size] respectively,
-    // the mapping should reflect that.
-    if (sgMap.getWiData()[0] > 1)
-      return emitOpError("TensorDesc's SG map only supports multiple elements "
-                         "contiguous along rows.");
-    if (chunkSize != static_cast<int>(sgMap.getWiData()[1]))
-      return emitOpError(
-          "TensorDesc's chunkSize must match WI's data mapping.");
-    if (int rank = tdescTy.getRank();
-        (sgMap.getWiLayout()[2 - rank] != tdescShape[0]))
-      return emitOpError("Detected a conflict between SG map's work-item "
-                         "layout and TensorDesc shape. Check the index of "
-                         "`subgroup_size` in WI layout map.");
-  }
+
   return success();
 }
 
