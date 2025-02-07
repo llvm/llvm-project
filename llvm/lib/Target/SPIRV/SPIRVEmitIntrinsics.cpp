@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/TypedPointerType.h"
 
@@ -1337,6 +1338,24 @@ static void createSaturatedConversionDecoration(Instruction *I,
   createDecorationIntrinsic(I, SaturatedConversionNode, B);
 }
 
+static void addSaturatedDecorationToIntrinsic(Instruction *I, IRBuilder<> &B) {
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    if (Function *Fu = CI->getCalledFunction()) {
+      if (Fu->isIntrinsic()) {
+        unsigned const int IntrinsicId = Fu->getIntrinsicID();
+        switch (IntrinsicId) {
+        case Intrinsic::fptosi_sat:
+        case Intrinsic::fptoui_sat:
+          createSaturatedConversionDecoration(I, B);
+          break;
+        default:
+          break;
+        }
+      }
+    }
+  }
+}
+
 Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   if (!Call.isInlineAsm())
     return &Call;
@@ -2400,6 +2419,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     if (isConvergenceIntrinsic(I))
       continue;
 
+    addSaturatedDecorationToIntrinsic(I, B);
     processInstrAfterVisit(I, B);
   }
 
