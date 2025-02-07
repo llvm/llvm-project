@@ -1181,52 +1181,15 @@ class DebugAdaptorServer(DebugCommunication):
         env=None,
     ):
         self.process = None
+        self.connection = None
         if executable is not None:
-            adaptor_env = os.environ.copy()
-            if env is not None:
-                adaptor_env.update(env)
-
-            if log_file:
-                adaptor_env["LLDBDAP_LOG"] = log_file
-            args = [executable]
-
-            if connection is not None:
-                args.append("--connection")
-                args.append(connection)
-
-            self.process = subprocess.Popen(
-                args,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=adaptor_env,
+            process, connection = DebugAdaptorServer.launch(
+                executable=executable, connection=connection, env=env, log_file=log_file
             )
+            self.process = process
+            self.connection = connection
 
         if connection is not None:
-            # If the process was also launched, parse the connection from the
-            # resolved connection. For example, if the connection
-            # `connection://localhost:0` was specified then the OS would pick a
-            # random port for listening and lldb-dap would print the listening
-            # port to stdout.
-            if self.process is not None:
-                # lldb-dap will print the listening address once the listener is
-                # made to stdout. The listener is formatted like
-                # `connection://host:port` or `unix-connection:///path`.
-                expected_prefix = "Listening for: "
-                out = self.process.stdout.readline().decode()
-                if not out.startswith(expected_prefix):
-                    self.process.kill()
-                    raise ValueError(
-                        "lldb-dap failed to print listening address, expected '{}', got '{}'".format(
-                            expected_prefix, out
-                        )
-                    )
-
-                # If the listener expanded into multiple addresses, use the first.
-                connection = (
-                    out.removeprefix(expected_prefix).rstrip("\r\n").split(",", 1)[0]
-                )
-
             scheme, address = connection.split("://")
             if scheme == "unix-connect":  # unix-connect:///path
                 s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -1245,6 +1208,49 @@ class DebugAdaptorServer(DebugCommunication):
             DebugCommunication.__init__(
                 self, self.process.stdout, self.process.stdin, init_commands, log_file
             )
+
+    @classmethod
+    def launch(cls, /, executable, env=None, log_file=None, connection=None):
+        adaptor_env = os.environ.copy()
+        if env is not None:
+            adaptor_env.update(env)
+
+        if log_file:
+            adaptor_env["LLDBDAP_LOG"] = log_file
+        args = [executable]
+
+        if connection is not None:
+            args.append("--connection")
+            args.append(connection)
+
+        process = subprocess.Popen(
+            args,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=adaptor_env,
+        )
+
+        if connection is None:
+            return (process, None)
+
+        # lldb-dap will print the listening address once the listener is
+        # made to stdout. The listener is formatted like
+        # `connection://host:port` or `unix-connection:///path`.
+        expected_prefix = "Listening for: "
+        out = process.stdout.readline().decode()
+        if not out.startswith(expected_prefix):
+            self.process.kill()
+            raise ValueError(
+                "lldb-dap failed to print listening address, expected '{}', got '{}'".format(
+                    expected_prefix, out
+                )
+            )
+
+        # If the listener expanded into multiple addresses, use the first.
+        connection = out.removeprefix(expected_prefix).rstrip("\r\n").split(",", 1)[0]
+
+        return (process, connection)
 
     def get_pid(self):
         if self.process:

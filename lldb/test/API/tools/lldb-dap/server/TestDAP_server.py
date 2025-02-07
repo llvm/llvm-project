@@ -15,19 +15,18 @@ import lldbdap_testcase
 class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
     def start_server(self, connection):
         log_file_path = self.getBuildArtifact("dap.txt")
-        server = dap_server.DebugAdaptorServer(
+        (process, connection) = dap_server.DebugAdaptorServer.launch(
             executable=self.lldbDAPExec,
             connection=connection,
-            init_commands=self.setUpCommands(),
             log_file=log_file_path,
         )
 
         def cleanup():
-            server.terminate()
+            process.terminate()
 
         self.addTearDownHook(cleanup)
 
-        return server
+        return (process, connection)
 
     def run_debug_session(self, connection, name):
         self.dap_server = dap_server.DebugAdaptorServer(
@@ -54,9 +53,9 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         Test launching a binary with a lldb-dap in server mode on a specific port.
         """
         self.build()
-        server = self.start_server(connection="tcp://localhost:0")
-        self.run_debug_session(server.connection, "Alice")
-        self.run_debug_session(server.connection, "Bob")
+        (_, connection) = self.start_server(connection="tcp://localhost:0")
+        self.run_debug_session(connection, "Alice")
+        self.run_debug_session(connection, "Bob")
 
     @skipIfWindows
     def test_server_unix_socket(self):
@@ -72,9 +71,9 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         self.addTearDownHook(cleanup)
 
         self.build()
-        server = self.start_server(connection="unix://" + name)
-        self.run_debug_session(server.connection, "Alice")
-        self.run_debug_session(server.connection, "Bob")
+        (_, connection) = self.start_server(connection="unix://" + name)
+        self.run_debug_session(connection, "Alice")
+        self.run_debug_session(connection, "Bob")
 
     @skipIfWindows
     def test_server_interrupt(self):
@@ -82,9 +81,9 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         Test launching a binary with lldb-dap in server mode and shutting down the server while the debug session is still active.
         """
         self.build()
-        server = self.start_server(connection="tcp://localhost:0")
+        (process, connection) = self.start_server(connection="tcp://localhost:0")
         self.dap_server = dap_server.DebugAdaptorServer(
-            connection=server.connection,
+            connection=connection,
         )
         program = self.getBuildArtifact("a.out")
         source = "main.c"
@@ -99,7 +98,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
 
         # Interrupt the server which should disconnect all clients.
-        server.process.send_signal(signal.SIGINT)
+        process.send_signal(signal.SIGINT)
 
         self.dap_server.wait_for_terminated()
         self.assertIsNone(
