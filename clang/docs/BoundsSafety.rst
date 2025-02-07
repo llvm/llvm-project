@@ -959,7 +959,8 @@ that has the define.
    #if defined(__has_feature) && __has_feature(bounds_safety)
    #define __counted_by(T) __attribute__((__counted_by__(T)))
    // ... other bounds annotations
-   #else #define __counted_by(T) // defined as nothing
+   #else
+   #define __counted_by(T) // defined as nothing
    // ... other bounds annotations
    #endif
 
