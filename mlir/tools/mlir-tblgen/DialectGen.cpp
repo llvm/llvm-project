@@ -38,6 +38,12 @@ llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
 
+static llvm::cl::opt<bool> clUseFallbackTypeIDs(
+    "gen-dialect-use-fallback-type-ids",
+    llvm::cl::desc(
+        "Don't generate static TypeID decls; fall back to string comparison."),
+    llvm::cl::init(false), llvm::cl::cat(dialectGenCat));
+
 /// Utility iterator used for filtering records for a specific dialect.
 namespace {
 using DialectFilterIterator =
@@ -293,7 +299,7 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
     // End the dialect decl.
     os << "};\n";
   }
-  if (!dialect.getCppNamespace().empty())
+  if (!clUseFallbackTypeIDs && !dialect.getCppNamespace().empty())
     os << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << dialect.getCppNamespace()
        << "::" << dialect.getCppClassName() << ")\n";
 }
@@ -347,7 +353,7 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
   std::string cppClassName = dialect.getCppClassName();
 
   // Emit the TypeID explicit specializations to have a single symbol def.
-  if (!dialect.getCppNamespace().empty())
+  if (!clUseFallbackTypeIDs && !dialect.getCppNamespace().empty())
     os << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << dialect.getCppNamespace()
        << "::" << cppClassName << ")\n";
 
