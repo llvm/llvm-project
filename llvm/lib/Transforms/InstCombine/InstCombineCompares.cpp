@@ -882,8 +882,7 @@ bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
 
     void tooManyUses() override { Captured = true; }
 
-    std::optional<CaptureComponents> captured(const Use *U,
-                                              CaptureInfo CI) override {
+    Action captured(const Use *U, CaptureInfo CI) override {
       // TODO(captures): Use CaptureInfo.
       auto *ICmp = dyn_cast<ICmpInst>(U->getUser());
       // We need to check that U is based *only* on the alloca, and doesn't
@@ -894,11 +893,11 @@ bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
         // Collect equality icmps of the alloca, and don't treat them as
         // captures.
         ICmps[ICmp] |= 1u << U->getOperandNo();
-        return continueDefault(CI);
+        return Continue;
       }
 
       Captured = true;
-      return stop();
+      return Stop;
     }
   };
 

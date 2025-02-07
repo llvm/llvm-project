@@ -14,7 +14,6 @@
 #define LLVM_ANALYSIS_CAPTURETRACKING_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/ModRef.h"
 
 namespace llvm {
 
@@ -83,6 +82,21 @@ namespace llvm {
   /// addition to the interface here, you'll need to provide your own getters
   /// to see whether anything was captured.
   struct CaptureTracker {
+    /// Action returned from captures().
+    enum Action {
+      /// Stop the traversal.
+      Stop,
+      /// Continue traversal, and also follow the return value of the user if
+      /// it has additional capture components (that is, if it has capture
+      /// components in Ret that are not part of Other).
+      Continue,
+      /// Continue traversal, but do not follow the return value of the user,
+      /// even if it has additional capture components. Should only be used if
+      /// captures() has already taken the potential return captures into
+      /// account.
+      ContinueIgnoringReturn,
+    };
+
     virtual ~CaptureTracker();
 
     /// tooManyUses - The depth of traversal has breached a limit. There may be
@@ -96,38 +110,12 @@ namespace llvm {
     /// U->getUser() is always an Instruction.
     virtual bool shouldExplore(const Use *U);
 
-    /// When returned from captures(), stop the traversal.
-    static std::optional<CaptureComponents> stop() { return std::nullopt; }
-
-    /// When returned from captures(), continue traversal, but do not follow
-    /// the return value of this user, even if it has additional capture
-    /// components. Should only be used if captures() has already taken the
-    /// potential return caputres into account.
-    static std::optional<CaptureComponents> continueIgnoringReturn() {
-      return CaptureComponents::None;
-    }
-
-    /// When returned from captures(), continue traversal, and also follow
-    /// the return value of this user if it has additional capture components
-    /// (that is, capture components in Ret that are not part of Other).
-    static std::optional<CaptureComponents> continueDefault(CaptureInfo CI) {
-      CaptureComponents RetCC = CI.getRetComponents();
-      if (!capturesNothing(RetCC & ~CI.getOtherComponents()))
-        return RetCC;
-      return CaptureComponents::None;
-    }
-
     /// Use U directly captures CI.getOtherComponents() and additionally
     /// CI.getRetComponents() through the return value of the user of U.
     ///
-    /// Return std::nullopt to stop the traversal, or the CaptureComponents to
-    /// follow via the return value, which must be a subset of
-    /// CI.getRetComponents().
-    ///
-    /// For convenience, prefer returning one of stop(), continueDefault(CI) or
-    /// continueIgnoringReturn().
-    virtual std::optional<CaptureComponents> captured(const Use *U,
-                                                      CaptureInfo CI) = 0;
+    /// Return one of Stop, Continue or ContinueIgnoringReturn to control
+    /// further traversal.
+    virtual Action captured(const Use *U, CaptureInfo CI) = 0;
 
     /// isDereferenceableOrNull - Overload to allow clients with additional
     /// knowledge about pointer dereferenceability to provide it and thereby

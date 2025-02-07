@@ -81,16 +81,15 @@ struct SimpleCaptureTracker : public CaptureTracker {
     Captured = true;
   }
 
-  std::optional<CaptureComponents> captured(const Use *U,
-                                            CaptureInfo CI) override {
+  Action captured(const Use *U, CaptureInfo CI) override {
     // TODO(captures): Use CaptureInfo.
     if (isa<ReturnInst>(U->getUser()) && !ReturnCaptures)
-      return continueIgnoringReturn();
+      return ContinueIgnoringReturn;
 
     LLVM_DEBUG(dbgs() << "Captured by: " << *U->getUser() << "\n");
 
     Captured = true;
-    return stop();
+    return Stop;
   }
 
   bool ReturnCaptures;
@@ -124,22 +123,21 @@ struct CapturesBefore : public CaptureTracker {
     return !isPotentiallyReachable(I, BeforeHere, nullptr, DT, LI);
   }
 
-  std::optional<CaptureComponents> captured(const Use *U,
-                                            CaptureInfo CI) override {
+  Action captured(const Use *U, CaptureInfo CI) override {
     // TODO(captures): Use CaptureInfo.
     Instruction *I = cast<Instruction>(U->getUser());
     if (isa<ReturnInst>(I) && !ReturnCaptures)
-      return continueIgnoringReturn();
+      return ContinueIgnoringReturn;
 
     // Check isSafeToPrune() here rather than in shouldExplore() to avoid
     // an expensive reachability query for every instruction we look at.
     // Instead we only do one for actual capturing candidates.
     if (isSafeToPrune(I))
       // If the use is not reachable, the instruction result isn't either.
-      return continueIgnoringReturn();
+      return ContinueIgnoringReturn;
 
     Captured = true;
-    return stop();
+    return Stop;
   }
 
   const Instruction *BeforeHere;
@@ -171,12 +169,11 @@ struct EarliestCaptures : public CaptureTracker {
     EarliestCapture = &*F.getEntryBlock().begin();
   }
 
-  std::optional<CaptureComponents> captured(const Use *U,
-                                            CaptureInfo CI) override {
+  Action captured(const Use *U, CaptureInfo CI) override {
     // TODO(captures): Use CaptureInfo.
     Instruction *I = cast<Instruction>(U->getUser());
     if (isa<ReturnInst>(I) && !ReturnCaptures)
-      return continueIgnoringReturn();
+      return ContinueIgnoringReturn;
 
     if (!EarliestCapture)
       EarliestCapture = I;
@@ -187,7 +184,7 @@ struct EarliestCaptures : public CaptureTracker {
     // Continue analysis, as we need to see all potential captures. However,
     // we do not need to follow the instruction result, as this use will
     // dominate any captures made through the instruction result..
-    return continueIgnoringReturn();
+    return ContinueIgnoringReturn;
   }
 
   Instruction *EarliestCapture = nullptr;
@@ -451,17 +448,24 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
     CaptureInfo CI = DetermineUseCaptureKind(*U, IsDereferenceableOrNull);
     if (capturesNothing(CI))
       continue;
+    CaptureComponents OtherCC = CI.getOtherComponents();
     CaptureComponents RetCC = CI.getRetComponents();
-    if (!capturesNothing(CI.getOtherComponents())) {
-      std::optional<CaptureComponents> Res = Tracker->captured(U, CI);
-      if (!Res)
+    if (capturesAnything(OtherCC)) {
+      switch (Tracker->captured(U, CI)) {
+      case CaptureTracker::Stop:
         return;
-      assert(capturesNothing(*Res & ~RetCC) &&
-             "captures() result must be subset of getRetComponents()");
-      RetCC = *Res;
+      case CaptureTracker::ContinueIgnoringReturn:
+        continue;
+      case CaptureTracker::Continue:
+        // Fall through to passthrough handling, but only if RetCC contains
+        // additional components that OtherCC does not.
+        if (capturesNothing(RetCC & ~OtherCC))
+          continue;
+        break;
+      }
     }
     // TODO(captures): We could keep track of RetCC for the users.
-    if (!capturesNothing(RetCC) && !AddUses(U->getUser()))
+    if (capturesAnything(RetCC) && !AddUses(U->getUser()))
       return;
   }
 

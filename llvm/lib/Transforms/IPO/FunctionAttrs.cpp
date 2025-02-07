@@ -72,8 +72,8 @@ using namespace llvm;
 
 STATISTIC(NumMemoryAttr, "Number of functions with improved memory attribute");
 STATISTIC(NumCapturesNone, "Number of arguments marked captures(none)");
-STATISTIC(NumCapturesOther, "Number of arguments marked with captures "
-                            "attribute other than captures(none)");
+STATISTIC(NumCapturesPartial, "Number of arguments marked with captures "
+                              "attribute other than captures(none)");
 STATISTIC(NumReturned, "Number of arguments marked returned");
 STATISTIC(NumReadNoneArg, "Number of arguments marked readnone");
 STATISTIC(NumReadOnlyArg, "Number of arguments marked readonly");
@@ -114,7 +114,7 @@ static void addCapturesStat(CaptureInfo CI) {
   if (capturesNothing(CI))
     ++NumCapturesNone;
   else
-    ++NumCapturesOther;
+    ++NumCapturesPartial;
 }
 
 namespace {
@@ -549,18 +549,17 @@ struct ArgumentUsesTracker : public CaptureTracker {
 
   void tooManyUses() override { CI = CaptureInfo::all(); }
 
-  std::optional<CaptureComponents> captured(const Use *U,
-                                            CaptureInfo UseCI) override {
+  Action captured(const Use *U, CaptureInfo UseCI) override {
     if (updateCaptureInfo(U, UseCI.getOtherComponents())) {
       // Don't bother continuing if we already capture everything.
       if (capturesAll(CI.getOtherComponents()))
-        return stop();
-      return continueDefault(UseCI);
+        return Stop;
+      return Continue;
     }
 
     // For SCC argument tracking, we're not going to analyze other/ret
     // components separately, so don't follow the return value.
-    return continueIgnoringReturn();
+    return ContinueIgnoringReturn;
   }
 
   bool updateCaptureInfo(const Use *U, CaptureComponents CC) {
@@ -1329,7 +1328,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         }
 
         // Infer the access attributes given the new captures one
-        DetermineAccessAttrsForSingleton(A);
+        if (DetermineAccessAttrsForSingleton(A))
+          Changed.insert(A->getParent());
       }
       continue;
     }
@@ -1369,7 +1369,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
     }
 
     // TODO(captures): Ignore address-only captures.
-    if (!capturesNothing(CC)) {
+    if (capturesAnything(CC)) {
       // As the pointer may be captured, determine the pointer attributes
       // looking at each argument invidivually.
       for (ArgumentGraphNode *N : ArgumentSCC) {

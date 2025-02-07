@@ -2788,8 +2788,7 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
       struct CustomCaptureTracker : public CaptureTracker {
         bool Captured = false;
         void tooManyUses() override { Captured = true; }
-        std::optional<CaptureComponents> captured(const Use *U,
-                                                  CaptureInfo CI) override {
+        Action captured(const Use *U, CaptureInfo CI) override {
           // TODO(captures): Use CaptureInfo.
           if (auto *ICmp = dyn_cast<ICmpInst>(U->getUser())) {
             // Comparison against value stored in global variable. Given the
@@ -2798,11 +2797,11 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
             unsigned OtherIdx = 1 - U->getOperandNo();
             auto *LI = dyn_cast<LoadInst>(ICmp->getOperand(OtherIdx));
             if (LI && isa<GlobalVariable>(LI->getPointerOperand()))
-              return continueDefault(CI);
+              return Continue;
           }
 
           Captured = true;
-          return stop();
+          return Stop;
         }
       };
       CustomCaptureTracker Tracker;
