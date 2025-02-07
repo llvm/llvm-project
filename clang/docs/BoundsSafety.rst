@@ -988,7 +988,7 @@ and it does not guarantee other types of memory safety properties. Consequently,
 it may not prevent some of the secondary bounds safety violations caused by
 other types of safety violations such as type confusion. For instance,
 ``-fbounds-safety`` does not perform type-safety checks on conversions between
-`__single`` pointers of different pointee types (e.g., ``char *__single`` →
+``__single`` pointers of different pointee types (e.g., ``char *__single`` →
 ``void *__single`` → ``int *__single``) beyond what the foundation languages
 (C/C++) already offer.
 
