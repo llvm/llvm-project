@@ -17,8 +17,10 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, memcmp,
                    (const void *lhs, const void *rhs, size_t count)) {
+  if ( count > 0 ) {
   LIBC_CRASH_ON_NULLPTR(lhs);
   LIBC_CRASH_ON_NULLPTR(rhs);
+  }
   return inline_memcmp(lhs, rhs, count);
 }
 
