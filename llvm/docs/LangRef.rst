@@ -16156,13 +16156,13 @@ the argument type in a struct.
 Semantics:
 """"""""""
 
-This is equivalent to the `llvm.sincos.*` intrinsic where the argument has been
+This is equivalent to the ``llvm.sincos.*`` intrinsic where the argument has been
 multiplied by pi, however, it computes the result more accurately especially
 for large input values.
 
 .. note::
 
-  Currently, the default lowering of this intrinsic relies on the `sincospi[f|l]`
+  Currently, the default lowering of this intrinsic relies on the ``sincospi[f|l]``
   functions being available in the target's runtime (e.g. libc).
 
 When specified with the fast-math-flag 'afn', the result may be approximated
