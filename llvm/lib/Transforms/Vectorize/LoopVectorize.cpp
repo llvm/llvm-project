@@ -8758,13 +8758,6 @@ bool VPRecipeBuilder::getScaledReductions(
   if (!CM.TheLoop->contains(RdxExitInstr))
     return false;
 
-  // TODO: Allow scaling reductions when predicating. The select at
-  // the end of the loop chooses between the phi value and most recent
-  // reduction result, both of which have different VFs to the active lane
-  // mask when scaling.
-  if (CM.blockNeedsPredicationForAnyReason(RdxExitInstr->getParent()))
-    return false;
-
   auto *Update = dyn_cast<BinaryOperator>(RdxExitInstr);
   if (!Update)
     return false;
@@ -8926,8 +8919,19 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
       isa<VPPartialReductionRecipe>(BinOpRecipe))
     std::swap(BinOp, Accumulator);
 
-  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp,
-                                      Accumulator, Reduction);
+  unsigned ReductionOpcode = Reduction->getOpcode();
+  if (CM.blockNeedsPredicationForAnyReason(Reduction->getParent())) {
+    assert((ReductionOpcode == Instruction::Add ||
+            ReductionOpcode == Instruction::Sub) &&
+           "Expected an ADD or SUB operation for predicated partial "
+           "reductions (because the neutral element in the mask is zero)!");
+    VPValue *Mask = getBlockInMask(Reduction->getParent());
+    VPValue *Zero =
+        Plan.getOrAddLiveIn(ConstantInt::get(Reduction->getType(), 0));
+    BinOp = Builder.createSelect(Mask, BinOp, Zero, Reduction->getDebugLoc());
+  }
+  return new VPPartialReductionRecipe(ReductionOpcode, BinOp, Accumulator,
+                                      Reduction);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -9735,7 +9739,11 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // beginning of the dedicated latch block.
     auto *OrigExitingVPV = PhiR->getBackedgeValue();
     auto *NewExitingVPV = PhiR->getBackedgeValue();
-    if (!PhiR->isInLoop() && CM.foldTailByMasking()) {
+    // Don't output selects for partial reductions because they have an output
+    // with fewer lanes than the VF. So the operands of the select would have
+    // different numbers of lanes. Partial reductions mask the input instead.
+    if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
+        !isa<VPPartialReductionRecipe>(OrigExitingVPV->getDefiningRecipe())) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(OrigLoop->getHeader());
       assert(OrigExitingVPV->getDefiningRecipe()->getParent() != LatchVPBB &&
              "reduction recipe must be defined before latch");
