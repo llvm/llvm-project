@@ -2563,11 +2563,11 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
     if ((i < ResultRegIsFlagReg.size()) && ResultRegIsFlagReg[i]) {
       // Target must guarantee the Value `Tmp` here is lowered to a boolean
       // value.
-      unsigned CCUpperBound = 2;
-      if (CGF.getTarget().getTriple().getArch() == llvm::Triple::systemz) {
-        // On this target CC value can be in range [0, 3].
-        CCUpperBound = 4;
-      }
+      // Lowering 'Tmp' as - 'icmp ult %Tmp , CCUpperBound'. On some targets
+      // CCUpperBound is not binary. CCUpperBound is 4 for SystemZ,
+      // interval [0, 4). With this range known, llvm.assume intrinsic guides
+      // optimizer to generate more optimized IR. Verified it for SystemZ.
+      unsigned CCUpperBound = CGF.getTarget().getFlagOutputCCUpperBound();
       llvm::Constant *CCUpperBoundConst =
           llvm::ConstantInt::get(Tmp->getType(), CCUpperBound);
       llvm::Value *IsBooleanValue =

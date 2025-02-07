@@ -92,7 +92,7 @@ bool SystemZTargetInfo::validateAsmConstraint(
     return true;
   case '@':
     // CC condition changes.
-    if (strlen(Name) >= 3 && *(Name + 1) == 'c' && *(Name + 2) == 'c') {
+    if (!StringRef("@cc").compare(Name)) {
       Name += 2;
       Info.setAllowsRegister();
       return true;

@@ -1212,6 +1212,11 @@ public:
                              std::string &/*SuggestedModifier*/) const {
     return true;
   }
+
+  // CC is binary on most targets. SystemZ overrides it as CC interval is
+  // [0, 4).
+  virtual unsigned getFlagOutputCCUpperBound() const { return 2; }
+
   virtual bool
   validateAsmConstraint(const char *&Name,
                         TargetInfo::ConstraintInfo &info) const = 0;

@@ -114,6 +114,8 @@ public:
     return RegName == "r15";
   }
 
+  // CC has interval [0, 4).
+  unsigned getFlagOutputCCUpperBound() const override { return 4; }
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
 
