@@ -130,7 +130,8 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
-- llvm-objcopy now correct path in error message when section output path doesn't exist.
+- llvm-objcopy now prints the correct file path in the error message when
+the output file specified by --dump-section cannot be opened.
 
 Changes to LLDB
 ---------------------------------
