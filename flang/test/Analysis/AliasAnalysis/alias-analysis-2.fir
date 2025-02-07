@@ -47,7 +47,7 @@
 // CHECK-DAG: arg2.load#0 <-> arg2.addr#0: MustAlias
 // CHECK-DAG: boxp1.addr#0 <-> arg2.addr#0: MayAlias
 
-// TODO: Can the address in a pointer alias the address of a pointer, even when the
+// TODO: Can the address in a pointer alias the address of a pointer, when the
 // pointer has no box. Should this be NoAlias?
 // T3 from <https://github.com/llvm/llvm-project/pull/117785#discussion_r1924348480>.
 // CHECK-DAG: p1.addr#0 <-> p1.tgt#0: MayAlias
