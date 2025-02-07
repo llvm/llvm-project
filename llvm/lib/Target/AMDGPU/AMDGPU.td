@@ -2814,15 +2814,15 @@ def HasFmaakFmamkF64Insts :
 
 def HasAddMinMaxInsts :
   Predicate<"Subtarget->hasAddMinMaxInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+  AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
 
 def HasPkAddMinMaxInsts :
   Predicate<"Subtarget->hasPkAddMinMaxInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+  AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
 
 def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
-  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+  AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
 
 def HasSGetShaderCyclesInst :
   Predicate<"Subtarget->hasSGetShaderCyclesInst()">,
