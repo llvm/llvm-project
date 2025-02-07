@@ -78,7 +78,7 @@ static cl::opt<bool> EnableRISCVCopyPropagation(
 static cl::opt<bool> EnableRISCVDeadRegisterElimination(
     "riscv-enable-dead-defs", cl::Hidden,
     cl::desc("Enable the pass that removes dead"
-             " definitons and replaces stores to"
+             " definitions and replaces stores to"
              " them with stores to x0"),
     cl::init(true));
 

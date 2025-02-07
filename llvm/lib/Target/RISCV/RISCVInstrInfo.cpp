@@ -1516,7 +1516,7 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
   SeenMIs.erase(DefMI);
 
   // If MI is inside a loop, and DefMI is outside the loop, then kill flags on
-  // DefMI would be invalid when tranferred inside the loop.  Checking for a
+  // DefMI would be invalid when transferred inside the loop.  Checking for a
   // loop is expensive, but at least remove kill flags if they are in different
   // BBs.
   if (DefMI->getParent() != MI.getParent())

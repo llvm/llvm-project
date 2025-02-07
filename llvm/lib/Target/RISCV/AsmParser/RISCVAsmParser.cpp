@@ -130,7 +130,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   void emitToStreamer(MCStreamer &S, const MCInst &Inst);
 
   // Helper to emit a combination of LUI, ADDI(W), and SLLI instructions that
-  // synthesize the desired immedate value into the destination register.
+  // synthesize the desired immediate value into the destination register.
   void emitLoadImm(MCRegister DestReg, int64_t Value, MCStreamer &Out);
 
   // Helper to emit a combination of AUIPC and SecondOpcode. Used to implement
@@ -2626,7 +2626,7 @@ ParseStatus RISCVAsmParser::parseZeroOffsetMemOp(OperandVector &Operands) {
   std::unique_ptr<RISCVOperand> OptionalImmOp;
 
   if (getLexer().isNot(AsmToken::LParen)) {
-    // Parse an Integer token. We do not accept arbritrary constant expressions
+    // Parse an Integer token. We do not accept arbitrary constant expressions
     // in the offset field (because they may include parens, which complicates
     // parsing a lot).
     int64_t ImmVal;
