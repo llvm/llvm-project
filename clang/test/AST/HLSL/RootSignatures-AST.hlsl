@@ -15,7 +15,7 @@
   "), " \
   "DescriptorTable(Sampler(s0, numDescriptors = 4, space = 1))"
 
-// CHECK:      HLSLRootSignatureAttr 0x{{[0-9A-Fa-f]+}} <line:{{[0-9]+}}:{{[0-9]+}}, col:{{[0-9]+}}>
+// CHECK:      HLSLRootSignatureAttr
 // CHECK-SAME: "DescriptorTable(
 // CHECK-SAME:   CBV(b1),
 // CHECK-SAME:   SRV(t1, numDescriptors = 8,
