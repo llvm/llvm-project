@@ -6262,7 +6262,6 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
 
       // Find the cost of vectorizing the call, if we can find a suitable
       // vector variant of the function.
-      bool UsesMask = false;
       VFInfo FuncInfo;
       Function *VecFunc = nullptr;
       // Search through any available variants for one we can use at this VF.
@@ -6314,7 +6313,6 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
             break;
           }
           case VFParamKind::GlobalPredicate:
-            UsesMask = true;
             break;
           default:
             ParamsOk = false;
