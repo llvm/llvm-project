@@ -8622,7 +8622,7 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
   // It's undefined behavior if a function marked with the amdgpu-no-*
   // attributes uses the corresponding intrinsic.
   if (!Arg)
-    return DAG.getUNDEF(EVT::getIntegerVT(*DAG.getContext(), 32));
+    return DAG.getUNDEF(Op->getValueType(0));
 
   SDValue Val = loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                                SDLoc(DAG.getEntryNode()), Arg);
