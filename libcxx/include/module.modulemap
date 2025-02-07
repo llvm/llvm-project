@@ -967,6 +967,10 @@ module std [system] {
       header "__chrono/system_clock.h"
       export std.chrono.time_point
     }
+    module tai_clock {
+      header "__chrono/tai_clock.h"
+      export std.chrono.time_point
+    }
     module time_point                 { header "__chrono/time_point.h" }
     module time_zone_link             { header "__chrono/time_zone_link.h" }
     module time_zone                  { header "__chrono/time_zone.h" }
