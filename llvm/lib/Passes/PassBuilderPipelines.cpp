@@ -14,7 +14,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -1819,15 +1818,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   MPM.addPass(CoroEarlyPass());
 
-  auto Exit = llvm::make_scope_exit([&]() {
-    MPM.addPass(CoroCleanupPass());
-
-    invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
-
-    // Emit annotation remarks.
-    addAnnotationRemarksPass(MPM);
-  });
-
   if (Level == OptimizationLevel::O0) {
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type
     // metadata and intrinsics.
@@ -1837,6 +1827,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // in ICP.
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
                                    lowertypetests::DropTestKind::Assume));
+    MPM.addPass(CoroCleanupPass());
+
+    invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
+
+    // Emit annotation remarks.
+    addAnnotationRemarksPass(MPM);
 
     return MPM;
   }
@@ -1916,6 +1912,13 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // pipeline).
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
                                    lowertypetests::DropTestKind::Assume));
+
+    MPM.addPass(CoroCleanupPass());
+
+    invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
+
+    // Emit annotation remarks.
+    addAnnotationRemarksPass(MPM);
 
     return MPM;
   }
@@ -2140,6 +2143,13 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   if (PTO.CallGraphProfile)
     MPM.addPass(CGProfilePass(/*InLTOPostLink=*/true));
+
+  MPM.addPass(CoroCleanupPass());
+
+  invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
+
+  // Emit annotation remarks.
+  addAnnotationRemarksPass(MPM);
 
   return MPM;
 }
