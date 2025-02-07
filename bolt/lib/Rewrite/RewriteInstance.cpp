@@ -5616,11 +5616,10 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
       // If OldAddress is the another entry point of
       // the function, then BOLT could get the new address.
       if (BF->isMultiEntry()) {
-        for (const BinaryBasicBlock &BB : *BF) {
+        for (const BinaryBasicBlock &BB : *BF)
           if (BB.isEntryPoint() &&
               (BF->getAddress() + BB.getOffset()) == OldAddress)
             return BB.getOutputStartAddress();
-        }
       }
       BC->errs() << "BOLT-ERROR: unable to get new address corresponding to "
                     "input address 0x"
