@@ -326,12 +326,6 @@ FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
     if (RetRegion == MR && (IsCopyAndAutoreleaseBlockObj || IsConstructExpr))
       continue;
 
-    // If this is a construct expr of an unelided return value copy, then don't
-    // warn about returning a region that currently lives on the stack.
-    if (IsConstructExpr && RetVal.getAs<nonloc::LazyCompoundVal>() &&
-        isa<CXXTempObjectRegion>(MR))
-      continue;
-
     WillEscape.push_back(MR);
   }
 
