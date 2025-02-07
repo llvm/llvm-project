@@ -13,5 +13,5 @@ c.sspopchk ra
 # CHECK-ERR: error: invalid operand for instruction
 sspush a0
 
-# CHECK-ERR: error: invalid operand for instruction
+# CHECK-ERR: error: register must be a GPR excluding zero (x0)
 ssrdp zero
