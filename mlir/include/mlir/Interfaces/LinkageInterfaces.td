@@ -200,6 +200,30 @@ def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface">
       /*args=*/        (ins)
     >,
     InterfaceMethod<
+      /*desc=*/        "Returns comdat name for the operation",
+      /*returnType=*/  "std::optional<StringRef>",
+      /*methodName=*/  "getComdatName",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImplementation=*/[{
+        if (auto comdatPair = $_op.getComdatPair())
+          return comdatPair->first;
+        return std::nullopt;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/        "Returns comdat selection kind for the operation",
+      /*returnType=*/  "std::optional<::mlir::link::ComdatSelectionKind>",
+      /*methodName=*/  "getComdatSelectionKind",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImplementation=*/[{
+        if (auto comdatPair = $_op.getComdatPair())
+          return comdatPair->second;
+        return std::nullopt;
+      }]
+    >,
+    InterfaceMethod<
       /*desc=*/        [{
         Return true if the primary definition of this global value is outside of
         the current translation unit.
@@ -210,12 +234,14 @@ def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface">
     >,
     InterfaceMethod<
       /*desc=*/        "Returns linked name of the operation",
-      /*returnType=*/  "StringRef",
+      /*returnType=*/  "FailureOr<StringRef>",
       /*methodName=*/  "getLinkedName",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImplementation=*/[{
-        return cast<SymbolOpInterface>($_op.getOperation()).getName();
+        if (auto symbol = dyn_cast<SymbolOpInterface>($_op.getOperation()))
+          return symbol.getName();
+        return emitError($_op.getLoc(), "expected a symbol operation");
       }]
     >
   ];
