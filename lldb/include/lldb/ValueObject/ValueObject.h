@@ -865,6 +865,18 @@ public:
 
   virtual void SetLanguageFlags(uint64_t flags) { m_language_flags = flags; }
 
+  /// Returns the size of the local buffer if it's available.
+  /// \return
+  ///     The size of the local buffer if this value object's value points to a
+  ///     host address, and if that size can be determined. Otherwise, returns
+  ///     LLDB_INVALID_ADDRESS.
+  ///
+  /// TODO: Because a ValueObject's Value can point to any arbitrary memory
+  /// location, it is possible that the size of the local buffer can't be
+  /// determined at all. See the comment in Value::m_value for a more thorough
+  /// explanation of why that is.
+  uint64_t GetLocalBufferSize();
+
 protected:
   typedef ClusterManager<ValueObject> ValueObjectManager;
 
