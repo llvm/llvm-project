@@ -104,6 +104,11 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+* ``-fcomplex-ppc-gnu-abi`` follow ABI ATR-PASS-COMPLEX-IN-GPRS for ppc32 and pass
+  complex parameters on GPRs instead of stack.
+  For more info check `Power Architecture™ 32-bit ABI Supplement 1.0 - Embedded
+  <https://www.polyomino.org.uk/publications/2011/Power-Arch-32-bit-ABI-supp-1.0-Embedded.pdf>`_
+
 Deprecated Compiler Flags
 -------------------------
 
