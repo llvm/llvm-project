@@ -132,10 +132,35 @@ func.func @extract_from_create_mask_dynamic_position(%dim0: index, %index: index
 
 // -----
 
+// CHECK-LABEL: @extract_scalar_poison
+func.func @extract_scalar_poison() -> f32 {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : f32
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: return %[[UB]] : f32
+  %0 = ub.poison : vector<4x8xf32>
+  %1 = vector.extract %0[2, 4] : f32 from vector<4x8xf32>
+  return %1 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @extract_vector_poison
+func.func @extract_vector_poison() -> vector<8xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<8xf32>
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: return %[[UB]] : vector<8xf32>
+  %0 = ub.poison : vector<4x8xf32>
+  %1 = vector.extract %0[2] : vector<8xf32> from vector<4x8xf32>
+  return %1 : vector<8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @extract_scalar_poison_idx
 func.func @extract_scalar_poison_idx(%a: vector<4x5xf32>) -> f32 {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : f32
   //  CHECK-NOT: vector.extract
-  // CHECK-NEXT: ub.poison : f32
+  // CHECK-NEXT: return %[[UB]] : f32
   %0 = vector.extract %a[-1, 0] : f32 from vector<4x5xf32>
   return %0 : f32
 }
@@ -144,8 +169,9 @@ func.func @extract_scalar_poison_idx(%a: vector<4x5xf32>) -> f32 {
 
 // CHECK-LABEL: @extract_vector_poison_idx
 func.func @extract_vector_poison_idx(%a: vector<4x5xf32>) -> vector<5xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<5xf32>
   //  CHECK-NOT: vector.extract
-  // CHECK-NEXT: ub.poison : vector<5xf32>
+  // CHECK-NEXT: return %[[UB]] : vector<5xf32>
   %0 = vector.extract %a[-1] : vector<5xf32> from vector<4x5xf32>
   return %0 : vector<5xf32>
 }
@@ -155,8 +181,9 @@ func.func @extract_vector_poison_idx(%a: vector<4x5xf32>) -> vector<5xf32> {
 // CHECK-LABEL: @extract_multiple_poison_idx
 func.func @extract_multiple_poison_idx(%a: vector<4x5x8xf32>)
     -> vector<8xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<8xf32>
   //  CHECK-NOT: vector.extract
-  // CHECK-NEXT: ub.poison : vector<8xf32>
+  // CHECK-NEXT: return %[[UB]] : vector<8xf32>
   %0 = vector.extract %a[-1, -1] : vector<8xf32> from vector<4x5x8xf32>
   return %0 : vector<8xf32>
 }
@@ -2888,11 +2915,45 @@ func.func @vector_insert_const_regression(%arg0: i8) -> vector<4xi8> {
 
 // -----
 
+// Insert a poison value shouldn't be folded as the resulting vector is not
+// fully poison.
+
+// CHECK-LABEL: @insert_scalar_poison
+func.func @insert_scalar_poison(%a: vector<4x8xf32>)
+    -> vector<4x8xf32> {
+  //  CHECK-NEXT: %[[UB:.*]] = ub.poison : f32
+  //  CHECK-NEXT: %[[RES:.*]] = vector.insert %[[UB]]
+  //  CHECK-NEXT: return %[[RES]] : vector<4x8xf32>
+  %0 = ub.poison : f32
+  %1 = vector.insert %0, %a[2, 3] : f32 into vector<4x8xf32>
+  return %1 : vector<4x8xf32>
+}
+
+// -----
+
+// Insert a poison value shouldn't be folded as the resulting vector is not
+// fully poison.
+
+// CHECK-LABEL: @insert_vector_poison
+func.func @insert_vector_poison(%a: vector<4x8xf32>)
+    -> vector<4x8xf32> {
+  //  CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<8xf32>
+  //  CHECK-NEXT: %[[RES:.*]] = vector.insert %[[UB]]
+  //  CHECK-NEXT: return %[[RES]] : vector<4x8xf32>
+  %0 = ub.poison : vector<8xf32>
+  %1 = vector.insert %0, %a[2] : vector<8xf32> into vector<4x8xf32>
+  return %1 : vector<4x8xf32>
+}
+
+
+// -----
+
 // CHECK-LABEL: @insert_scalar_poison_idx
 func.func @insert_scalar_poison_idx(%a: vector<4x5xf32>, %b: f32)
     -> vector<4x5xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<4x5xf32>
   //  CHECK-NOT: vector.insert
-  // CHECK-NEXT: ub.poison : vector<4x5xf32>
+  // CHECK-NEXT: return %[[UB]] : vector<4x5xf32>
   %0 = vector.insert %b, %a[-1, 0] : f32 into vector<4x5xf32>
   return %0 : vector<4x5xf32>
 }
@@ -2902,8 +2963,9 @@ func.func @insert_scalar_poison_idx(%a: vector<4x5xf32>, %b: f32)
 // CHECK-LABEL: @insert_vector_poison_idx
 func.func @insert_vector_poison_idx(%a: vector<4x5xf32>, %b: vector<5xf32>)
     -> vector<4x5xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<4x5xf32>
   //  CHECK-NOT: vector.insert
-  // CHECK-NEXT: ub.poison : vector<4x5xf32>
+  // CHECK-NEXT: return %[[UB]] : vector<4x5xf32>
   %0 = vector.insert %b, %a[-1] : vector<5xf32> into vector<4x5xf32>
   return %0 : vector<4x5xf32>
 }
@@ -2913,8 +2975,9 @@ func.func @insert_vector_poison_idx(%a: vector<4x5xf32>, %b: vector<5xf32>)
 // CHECK-LABEL: @insert_multiple_poison_idx
 func.func @insert_multiple_poison_idx(%a: vector<4x5x8xf32>, %b: vector<8xf32>)
     -> vector<4x5x8xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<4x5x8xf32>
   //  CHECK-NOT: vector.insert
-  // CHECK-NEXT: ub.poison : vector<4x5x8xf32>
+  // CHECK-NEXT: return %[[UB]] : vector<4x5x8xf32>
   %0 = vector.insert %b, %a[-1, -1] : vector<8xf32> into vector<4x5x8xf32>
   return %0 : vector<4x5x8xf32>
 }
