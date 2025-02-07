@@ -10,6 +10,7 @@
 #include "FormatToken.h"
 #include "NamespaceEndCommentsFixer.h"
 #include "WhitespaceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
 
@@ -434,7 +435,7 @@ private:
                                    tok::kw_for, tok::kw_switch, tok::kw_try,
                                    tok::kw_do, TT_ForEachMacro) ||
            (TheLine->First->is(tok::r_brace) && TheLine->First->Next &&
-            TheLine->First->Next->isOneOf(tok::kw_else, tok::kw_catch))) &&
+            TheLine->First->Next->isOneOf(tok::kw_else, tok::kw_catch, tok::kw__CatchResume))) &&
           Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_MultiLine) {
         // If possible, merge the next line's wrapped left brace with the
@@ -453,7 +454,7 @@ private:
                    ? tryMergeSimpleBlock(I, E, Limit)
                    : 0;
       }
-      if (TheLine->First->isOneOf(tok::kw_else, tok::kw_catch) &&
+      if (TheLine->First->isOneOf(tok::kw_else, tok::kw_catch, tok::kw__CatchResume) &&
           Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_MultiLine) {
         // This case if different from the upper BWACS_MultiLine processing
@@ -755,7 +756,7 @@ private:
          I[1]->First->isNot(tok::r_brace));
 
     if (IsCtrlStmt(Line) ||
-        Line.First->isOneOf(tok::kw_try, tok::kw___try, tok::kw_catch,
+        Line.First->isOneOf(tok::kw_try, tok::kw___try, tok::kw_catch, tok::kw__CatchResume,
                             tok::kw___finally, tok::r_brace,
                             Keywords.kw___except)) {
       if (IsSplitBlock)

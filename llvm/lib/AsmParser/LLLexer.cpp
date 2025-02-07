@@ -765,6 +765,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(personality);
   KEYWORD(cleanup);
   KEYWORD(catch);
+  KEYWORD(catchresume);
   KEYWORD(filter);
 
   // Summary index keywords.

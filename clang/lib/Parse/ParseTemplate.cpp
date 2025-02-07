@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -1708,7 +1709,7 @@ void Parser::LexTemplateFunctionForLateParsing(CachedTokens &Toks) {
 
   // If we're in a function-try-block, we need to store all the catch blocks.
   if (kind == tok::kw_try) {
-    while (Tok.is(tok::kw_catch)) {
+    while (Tok.isOneOf(tok::kw_catch, tok::kw__CatchResume)) {
       ConsumeAndStoreUntil(tok::l_brace, Toks, /*StopAtSemi=*/false);
       ConsumeAndStoreUntil(tok::r_brace, Toks, /*StopAtSemi=*/false);
     }

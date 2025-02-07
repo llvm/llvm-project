@@ -28,6 +28,8 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cmath>
 #include <optional>
 
 using namespace clang;
@@ -2652,7 +2654,7 @@ bool Parser::trySkippingFunctionBody() {
     PA.Revert();
     return false;
   }
-  while (IsTryCatch && Tok.is(tok::kw_catch)) {
+  while (IsTryCatch && Tok.isOneOf(tok::kw_catch, tok::kw__CatchResume)) {
     if (!SkipUntil(tok::l_brace, StopAtCodeCompletion) ||
         !SkipUntil(tok::r_brace, StopAtCodeCompletion)) {
       PA.Revert();
@@ -2732,9 +2734,9 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
     // statement-like.
     DiagnoseAndSkipCXX11Attributes();
 
-    if (Tok.isNot(tok::kw_catch))
+    if (Tok.isNot(tok::kw_catch) && Tok.isNot(tok::kw__CatchResume) )
       return StmtError(Diag(Tok, diag::err_expected_catch));
-    while (Tok.is(tok::kw_catch)) {
+    while ( Tok.isOneOf(tok::kw_catch, tok::kw__CatchResume)) {
       StmtResult Handler(ParseCXXCatchBlock(FnTry));
       if (!Handler.isInvalid())
         Handlers.push_back(Handler.get());
@@ -2759,14 +2761,13 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
 ///     '...'
 ///
 StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
-  assert(Tok.is(tok::kw_catch) && "Expected 'catch'");
+  assert(Tok.isOneOf(tok::kw_catch, tok::kw__CatchResume) && "Expected 'catch'");
 
+  bool is_catchresume = Tok.is(tok::kw__CatchResume);
   SourceLocation CatchLoc = ConsumeToken();
-
   BalancedDelimiterTracker T(*this, tok::l_paren);
   if (T.expectAndConsume())
     return StmtError();
-
   // C++ 3.3.2p3:
   // The name in a catch exception-declaration is local to the handler and
   // shall not be redeclared in the outermost block of the handler.
@@ -2777,7 +2778,12 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
   // exception-declaration is equivalent to '...' or a parameter-declaration
   // without default arguments.
   Decl *ExceptionDecl = nullptr;
-  if (Tok.isNot(tok::ellipsis)) {
+  if (is_catchresume) {
+    // skip/consume everything inside the () of '_CatchResume ( )`
+    // we can maybe remove this case later
+    SkipUntil(tok::r_paren, Parser::StopAtSemi | Parser::StopBeforeMatch);
+  }
+  else if (Tok.isNot(tok::ellipsis)) { // Token is catchs
     ParsedAttributes Attributes(AttrFactory);
     MaybeParseCXX11Attributes(Attributes);
 

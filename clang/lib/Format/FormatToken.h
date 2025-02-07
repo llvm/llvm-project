@@ -17,6 +17,7 @@
 
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/OperatorPrecedence.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
 #include <unordered_set>
@@ -793,10 +794,10 @@ public:
     if (isAttribute())
       return true;
 
-    return isOneOf(tok::kw_throw, tok::kw_typeid, tok::kw_return,
-                   tok::kw_sizeof, tok::kw_alignof, tok::kw_alignas,
-                   tok::kw_decltype, tok::kw_noexcept, tok::kw_static_assert,
-                   tok::kw__Atomic,
+    return isOneOf(tok::kw_throw, tok::kw__Throw, tok::kw_typeid,
+                   tok::kw_return, tok::kw_sizeof, tok::kw_alignof,
+                   tok::kw_alignas, tok::kw_decltype, tok::kw_noexcept,
+                   tok::kw_static_assert, tok::kw__Atomic,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
 #include "clang/Basic/TransformTypeTraits.def"
                    tok::kw_requires);
@@ -1697,6 +1698,7 @@ struct AdditionalKeywords {
     case tok::kw_switch:
     case tok::kw_this:
     case tok::kw_throw:
+    case tok::kw__Throw:
     case tok::kw_true:
     case tok::kw_try:
     case tok::kw_typeof:
@@ -1770,6 +1772,7 @@ struct AdditionalKeywords {
     case tok::kw_switch:
     case tok::kw_this:
     case tok::kw_throw:
+    case tok::kw__Throw:
     case tok::kw_true:
     case tok::kw_try:
     case tok::kw_typeof:

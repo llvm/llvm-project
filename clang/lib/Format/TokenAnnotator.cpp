@@ -81,7 +81,7 @@ static bool isLambdaParameterList(const FormatToken *Left) {
 /// otherwise.
 static bool isKeywordWithCondition(const FormatToken &Tok) {
   return Tok.isOneOf(tok::kw_if, tok::kw_for, tok::kw_while, tok::kw_switch,
-                     tok::kw_constexpr, tok::kw_catch);
+                     tok::kw_constexpr, tok::kw_catch, tok::kw__CatchResume); //add catchresume here?
 }
 
 /// Returns \c true if the token starts a C++ attribute, \c false otherwise.
@@ -411,7 +411,7 @@ private:
                (!Line.InPPDirective || (Line.InMacroBody && !Scopes.empty()))) {
       bool IsForOrCatch =
           OpeningParen.Previous &&
-          OpeningParen.Previous->isOneOf(tok::kw_for, tok::kw_catch);
+          OpeningParen.Previous->isOneOf(tok::kw_for, tok::kw_catch, tok::kw__CatchResume);
       Contexts.back().IsExpression = !IsForOrCatch;
     }
 
@@ -706,7 +706,7 @@ private:
         !CurrentToken->isOneOf(tok::l_brace, tok::r_square) &&
         (!Parent ||
          Parent->isOneOf(tok::colon, tok::l_square, tok::l_paren,
-                         tok::kw_return, tok::kw_throw) ||
+                         tok::kw_return, tok::kw_throw, tok::kw__Throw) ||
          Parent->isUnaryOperator() ||
          // FIXME(bug 36976): ObjC return types shouldn't use TT_CastRParen.
          Parent->isOneOf(TT_ObjCForIn, TT_CastRParen) ||
@@ -2254,7 +2254,7 @@ private:
                (!Current.Previous ||
                 Current.Previous->isNot(tok::kw_operator))) {
       Contexts.back().IsExpression = true;
-    } else if (Current.isOneOf(tok::kw_return, tok::kw_throw)) {
+    } else if (Current.isOneOf(tok::kw_return, tok::kw_throw, tok::kw__Throw)) {
       Contexts.back().IsExpression = true;
     } else if (Current.is(TT_TrailingReturnArrow)) {
       Contexts.back().IsExpression = false;
@@ -2748,7 +2748,7 @@ private:
       // before the parentheses, this is unlikely to be a cast.
       if (LeftOfParens->Tok.getIdentifierInfo() &&
           !LeftOfParens->isOneOf(Keywords.kw_in, tok::kw_return, tok::kw_case,
-                                 tok::kw_delete, tok::kw_throw)) {
+                                 tok::kw_delete, tok::kw_throw, tok::kw__Throw)) {
         return false;
       }
 
@@ -2772,7 +2772,7 @@ private:
     // Functions which end with decorations like volatile, noexcept are unlikely
     // to be casts.
     if (AfterRParen->isOneOf(tok::kw_noexcept, tok::kw_volatile, tok::kw_const,
-                             tok::kw_requires, tok::kw_throw, tok::arrow,
+                             tok::kw_requires, tok::kw_throw, tok::kw__Throw, tok::arrow,
                              Keywords.kw_override, Keywords.kw_final) ||
         isCppAttribute(IsCpp, *AfterRParen)) {
       return false;
@@ -2926,7 +2926,7 @@ private:
             TT_ConditionalExpr, tok::l_paren, tok::comma, tok::colon, tok::semi,
             tok::equal, tok::question, tok::l_square, tok::l_brace,
             tok::kw_case, tok::kw_co_await, tok::kw_co_return, tok::kw_co_yield,
-            tok::kw_delete, tok::kw_return, tok::kw_throw)) {
+            tok::kw_delete, tok::kw_return, tok::kw_throw, tok::kw__Throw)) {
       return true;
     }
 
@@ -4414,7 +4414,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       !Right.isOneOf(tok::semi, tok::r_paren, tok::hashhash)) {
     return true;
   }
-  if (Left.is(tok::kw_throw) && Right.is(tok::l_paren) && Right.MatchingParen &&
+  if (Left.isOneOf(tok::kw_throw, tok::kw__Throw) && Right.is(tok::l_paren) && Right.MatchingParen &&
       Right.MatchingParen->is(TT_CastRParen)) {
     return true;
   }
@@ -4796,7 +4796,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
              spaceRequiredBeforeParens(Right);
     }
     if (!BeforeLeft || !BeforeLeft->isOneOf(tok::period, tok::arrow)) {
-      if (Left.isOneOf(tok::kw_try, Keywords.kw___except, tok::kw_catch)) {
+      if (Left.isOneOf(tok::kw_try, Keywords.kw___except, tok::kw_catch, tok::kw__CatchResume)) {
         return Style.SpaceBeforeParensOptions.AfterControlStatements ||
                spaceRequiredBeforeParens(Right);
       }
@@ -5109,7 +5109,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         return false;
       }
       // Additional unary JavaScript operators that need a space after.
-      if (Left.isOneOf(tok::kw_throw, Keywords.kw_await, Keywords.kw_typeof,
+      if (Left.isOneOf(tok::kw_throw, tok::kw__Throw, Keywords.kw_await, Keywords.kw_typeof,
                        tok::kw_void)) {
         return true;
       }
@@ -6011,7 +6011,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
         (NonComment->isAccessSpecifierKeyword() ||
          NonComment->isOneOf(
              tok::kw_return, Keywords.kw_yield, tok::kw_continue, tok::kw_break,
-             tok::kw_throw, Keywords.kw_interface, Keywords.kw_type,
+             tok::kw_throw, tok::kw__Throw, Keywords.kw_interface, Keywords.kw_type,
              tok::kw_static, Keywords.kw_readonly, Keywords.kw_override,
              Keywords.kw_abstract, Keywords.kw_get, Keywords.kw_set,
              Keywords.kw_async, Keywords.kw_await))) {

@@ -16,6 +16,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -1536,7 +1537,7 @@ void Parser::SkipFunctionBody() {
     SkipMalformedDecl();
   else {
     SkipUntil(tok::r_brace);
-    while (IsFunctionTryBlock && Tok.is(tok::kw_catch)) {
+    while (IsFunctionTryBlock && Tok.isOneOf(tok::kw_catch, tok::kw__CatchResume)) {
       SkipUntil(tok::l_brace);
       SkipUntil(tok::r_brace);
     }

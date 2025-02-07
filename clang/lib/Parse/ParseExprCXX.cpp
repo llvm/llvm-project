@@ -1950,7 +1950,7 @@ ExprResult Parser::ParseCXXBoolLiteral() {
 ///       throw-expression: [C++ 15]
 ///         'throw' assignment-expression[opt]
 ExprResult Parser::ParseThrowExpression() {
-  assert(Tok.is(tok::kw_throw) && "Not throw!");
+  assert(Tok.isOneOf(tok::kw_throw, tok::kw__Throw) && "Not throw!");
   SourceLocation ThrowLoc = ConsumeToken();           // Eat the throw token.
 
   // If the current token isn't the start of an assignment-expression,

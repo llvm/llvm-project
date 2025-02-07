@@ -2027,7 +2027,7 @@ bool Parser::isCXXFunctionDeclarator(
     else {
       const Token &Next = NextToken();
       if (Next.isOneOf(tok::amp, tok::ampamp, tok::kw_const, tok::kw_volatile,
-                       tok::kw_throw, tok::kw_noexcept, tok::l_square,
+                       tok::kw_throw, tok::kw__Throw, tok::kw_noexcept, tok::l_square,
                        tok::l_brace, tok::kw_try, tok::equal, tok::arrow) ||
           isCXX11VirtSpecifier(Next))
         // The next token cannot appear after a constructor-style initializer,
@@ -2213,7 +2213,7 @@ Parser::TryParseFunctionDeclarator(bool MayHaveTrailingReturnType) {
     ConsumeToken();
 
   // exception-specification
-  if (Tok.is(tok::kw_throw)) {
+  if (Tok.isOneOf(tok::kw_throw, tok::kw__Throw)) {
     ConsumeToken();
     if (Tok.isNot(tok::l_paren))
       return TPResult::Error;

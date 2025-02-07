@@ -1277,7 +1277,7 @@ static bool isJSDeclOrStmt(const AdditionalKeywords &Keywords,
       // switch/case
       tok::kw_switch, tok::kw_case,
       // exceptions
-      tok::kw_throw, tok::kw_try, tok::kw_catch, Keywords.kw_finally,
+      tok::kw_throw, tok::kw__Throw, tok::kw_try, tok::kw_catch, tok::kw__CatchResume, Keywords.kw_finally,
       // declaration
       tok::kw_const, tok::kw_class, Keywords.kw_var, Keywords.kw_let,
       Keywords.kw_async, Keywords.kw_function,

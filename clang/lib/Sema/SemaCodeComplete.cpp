@@ -2677,6 +2677,12 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
         Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
         Builder.AddPlaceholderChunk("expression");
         Results.AddResult(Result(Builder.TakeString()));
+        // _Throw expression
+        Builder.AddResultTypeChunk("void");
+        Builder.AddTypedTextChunk("_Throw");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddPlaceholderChunk("expression");
+        Results.AddResult(Result(Builder.TakeString()));
       }
 
       // FIXME: Rethrow?

@@ -16,6 +16,7 @@
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -1099,6 +1100,7 @@ IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
   case tok::kw_break:
   case tok::kw_case:
   case tok::kw_catch:
+  case tok::kw__CatchResume:
   case tok::kw_char:
   case tok::kw_class:
   case tok::kw_const:
@@ -1144,6 +1146,7 @@ IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
   case tok::kw_template:
   case tok::kw_this:
   case tok::kw_throw:
+  case tok::kw__Throw:
   case tok::kw_true:
   case tok::kw_try:
   case tok::kw_typedef:
@@ -2748,7 +2751,7 @@ void Parser::StashAwayMethodOrFunctionBodyTokens(Decl *MDecl) {
   ConsumeBrace();
   // Consume everything up to (and including) the matching right brace.
   ConsumeAndStoreUntil(tok::r_brace, Toks, /*StopAtSemi=*/false);
-  while (Tok.is(tok::kw_catch)) {
+  while (Tok.isOneOf(tok::kw_catch, tok::kw__CatchResume)) { //could skip I think
     ConsumeAndStoreUntil(tok::l_brace, Toks, /*StopAtSemi=*/false);
     ConsumeAndStoreUntil(tok::r_brace, Toks, /*StopAtSemi=*/false);
   }

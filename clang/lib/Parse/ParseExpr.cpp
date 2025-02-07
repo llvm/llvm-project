@@ -176,7 +176,7 @@ ExprResult Parser::ParseAssignmentExpression(TypeCastState isTypeCast) {
     return ExprError();
   }
 
-  if (Tok.is(tok::kw_throw))
+  if (Tok.isOneOf(tok::kw_throw, tok::kw__Throw))
     return ParseThrowExpression();
   if (Tok.is(tok::kw_co_yield))
     return ParseCoyieldExpression();

@@ -317,6 +317,7 @@ enum Kind {
   kw_personality,
   kw_cleanup,
   kw_catch,
+  kw_catchresume,
   kw_filter,
 
   kw_ret,
