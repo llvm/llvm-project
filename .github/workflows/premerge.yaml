@@ -19,15 +19,16 @@ on:
       - 'main'
       - 'release/**'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   premerge-checks-linux:
     if: >-
         false && github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
     runs-on: llvm-premerge-linux-runners
-    concurrency:
-      group: ${{ github.workflow }}-linux-${{ github.event.pull_request.number || github.sha }}
-      cancel-in-progress: true
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
@@ -86,9 +87,6 @@ jobs:
         false && github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
     runs-on: llvm-premerge-windows-runners
-    concurrency:
-      group: ${{ github.workflow }}-windows-${{ github.event.pull_request.number || github.sha }}
-      cancel-in-progress: true
     defaults:
       run:
         shell: bash
@@ -146,9 +144,6 @@ jobs:
 
   permerge-check-macos:
     runs-on: macos-14
-    concurrency:
-      group: ${{ github.workflow }}-macos-${{ github.event.pull_request.number || github.sha }}
-      cancel-in-progress: true
     if: >-
       github.repository_owner == 'llvm' &&
       (startswith(github.ref_name, 'release/') ||
