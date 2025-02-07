@@ -604,6 +604,8 @@ Changes to LLDB
 
 * Incorrect floating-point register DWARF numbers for LoongArch were [fixed](https://github.com/llvm/llvm-project/pull/120391).
 
+* Support was added for handling the GDB Remote Protocol `x` packet in the format introduced by GDB 16.2. LLDB currently uses a different format for `x` and LLDB is now able to handle both formats. At some point in the future support for LLDB's format of `x` will be removed.
+
 Changes to BOLT
 ---------------------------------
 
