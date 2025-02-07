@@ -4,6 +4,7 @@
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineSSAUpdater.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -24,11 +25,11 @@ namespace {
   
 
 class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
-  const LiveIntervals &LIS;
+  LiveIntervals &LIS;
   MachineLoopInfo &LI;
   MachineDominatorTree &MDT;
   AMDGPUNextUseAnalysis::Result &NU;
-  const MachineRegisterInfo *MRI;
+  MachineRegisterInfo *MRI;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
   const GCNSubtarget *ST;
@@ -187,7 +188,7 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
 public:
   AMDGPUSSASpiller() = default;
 
-  AMDGPUSSASpiller(const LiveIntervals &LIS, MachineLoopInfo &LI,
+  AMDGPUSSASpiller(LiveIntervals &LIS, MachineLoopInfo &LI,
                    MachineDominatorTree &MDT, AMDGPUNextUseAnalysis::Result &NU)
       : LIS(LIS), LI(LI), MDT(MDT), NU(NU), NumSpillSlots(0) //,
         // Virt2StackSlotMap(NO_STACK_SLOT) {
@@ -293,7 +294,7 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
 
       // We don't need to make room for the PHI uses as they operands must
       // already present in the corresponding predecessor Active set! Just make
-      // sure it is.
+      // sure they really are.
       if (I->isPHI()) {
         auto OpNo = U.getOperandNo();
         auto B = I->getOperand(++OpNo);
@@ -312,17 +313,25 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
         // predecessors and should already contain all spilled before!
         // SPECIAL CASE: undef
         if (!U.isUndef()) {
-          Spilled.insert(VMP);
           Reloads.insert(VMP);
         }
       }
     }
 
-    // if (I->isPHI())
-    //   // We don't need to make room for the PHI-defined values as they will be
-    //   // lowered to the copies at the end of the corresponding predecessors and
-    //   // occupies the same register with the corresponding PHI input value.
-    //   continue;
+    if (I->isPHI()) {
+      // We don't need to make room for the PHI-defined values as they will be
+      // lowered to the copies at the end of the corresponding predecessors and
+      // occupies the same register with the corresponding PHI input value.
+      // Nevertheless, we must add them to the Active to indicate their values
+      // are available.
+      for (auto D : I->defs()) {
+        Register R = D.getReg();
+        if (takeReg(R)) {
+          Active.insert({R, LaneBitmask::getAll()});
+        }
+      }
+      continue;
+    }
 
     RegisterSet Defs;
     for (auto D : I->defs()) {
@@ -336,15 +345,21 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
     }
     // T4->stopTimer();
 
-    dumpRegSet(Active);
+    LLVM_DEBUG(dbgs() << "\nCurrent Active set is:\n"; dumpRegSet(Active));
+    LLVM_DEBUG(dbgs() << "\nVRegs used but spilled before, we're to reload:\n";
+               dumpRegSet(Reloads));
+
+    Active.insert(Reloads.begin(), Reloads.end());
+    Spilled.insert(Reloads.begin(), Reloads.end());
+
+    LLVM_DEBUG(dbgs() << "\nActive set with uses reloaded:\n";
+               dumpRegSet(Active));
 
     RegisterSet ToSpill;
     limit(MBB, Active, Spilled, I, NumAvailableRegs, ToSpill);
     limit(MBB, Active, Spilled, std::next(I),
           NumAvailableRegs - getSizeInRegs(Defs), ToSpill);
     // T4->startTimer();
-
-    dumpRegSet(Active);
 
     for (auto R : ToSpill) {
       spillBefore(MBB, I, R);
@@ -358,16 +373,51 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
       reloadBefore(MBB, I, R);
     // T4->stopTimer();
   }
-  // Now, clear dead registers.
+  // Now, clear dead registers. We generally take care of trimming deads at the
+  // entry to "limit". The dangling deads may appear when operand is SGPR but
+  // result is VGPR, so we don't enter to the limit second time to make room for
+  // the result. If this is the last use of the SGPR operand it is effectively
+  // dead.
+  // %X:sreg_32 = ...
+  //   ***
+  // %Y:vgpr_32 = COPY %X:sreg_32 <-- %X is dead but we won't call "limit" for
+  // %Y in this pass.
   RegisterSet Deads;
   for (auto R : Active) {
     if (NU.isDead(MBB, MBB.end(), R))
       Deads.insert(R);
   }
-  dumpRegSet(Deads);
-  dumpRegSet(Active);
-  Active.set_subtract(Deads);
-  dumpRegSet(Active);
+
+  if (!Deads.empty()) {
+    LLVM_DEBUG(dbgs() << "\nThese VRegs are DEAD at the end of MBB_"
+                      << MBB.getNumber() << "." << MBB.getName() << "\n";
+               dumpRegSet(Deads));
+    Active.set_subtract(Deads);
+    LLVM_DEBUG(dbgs() << "\nActive set after DEAD VRegs removed:\n";
+               dumpRegSet(Active));
+  }
+
+  // Take care of the LiveOuts which are Succ's PHI operands.
+  for (auto Succ : successors(&MBB)) {
+    for (auto &PHI : Succ->phis()) {
+      for (auto &U : PHI.uses()) {
+        if (U.isReg() && takeReg(U.getReg())) {
+          auto OpNo = U.getOperandNo();
+          auto B = PHI.getOperand(++OpNo);
+          assert(B.isMBB());
+          MachineBasicBlock *ValueSrc = B.getMBB();
+          if (ValueSrc->getNumber() == MBB.getNumber()) {
+            VRegMaskPair VMP(U, *TRI);
+            if (!isCoveredActive(VMP, Active)) {
+              reloadBefore(MBB, MBB.getFirstInstrTerminator(), VMP);
+            }
+          }
+        }
+      }
+    }
+  }
+  LLVM_DEBUG(dbgs() << "\nActive set after Succs PHI operands processing:\n";
+             dumpRegSet(Active));
 }
 
 void AMDGPUSSASpiller::processLoop(MachineLoop *L) {
@@ -422,15 +472,19 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
   set_intersect(Entry.SpillSet, Entry.ActiveSet);
   for (auto Pred : Preds) {
     auto PE = getBlockInfo(*Pred);
-    LLVM_DEBUG(dbgs() << "Curr block " << MBB.getName() << "Active Set:\n";
+    LLVM_DEBUG(dbgs() << "\nCurr block [ MBB_" << MBB.getNumber() << "."
+                      << MBB.getName() << " ] Active Set:\n";
                dumpRegSet(Entry.ActiveSet);
-               dbgs() << "\nPred " << Pred->getName() << "ActiveSet:\n";
+               dbgs() << "\nPred [ MBB_" << Pred->getNumber() << "."
+                      << Pred->getName() << " ] ActiveSet:\n";
                dumpRegSet(PE.ActiveSet));
     RegisterSet Tmp = set_difference(Entry.ActiveSet, PE.ActiveSet);
     dumpRegSet(Tmp);
     // Pred LiveOuts which are current block PHI operands don't need to be
     // active across both edges.
     RegisterSet ReloadInPred = set_difference(Tmp, PHIOps);
+    dumpRegSet(ReloadInPred);
+    set_intersect(ReloadInPred, PE.SpillSet);
     dumpRegSet(ReloadInPred);
     if (!ReloadInPred.empty()) {
       // We're about to insert N reloads at the end of the predecessor block.
@@ -597,8 +651,39 @@ void AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
   unsigned SubRegIdx = 0;
   const TargetRegisterClass *RC = getRegClassForVregMaskPair(VMP, SubRegIdx);
   int FI = getStackSlot(VMP);
-  TII->loadRegFromStackSlot(MBB, InsertBefore, VMP.VReg, FI,
-                            RC, TRI, VMP.VReg, SubRegIdx);
+  Register NewVReg = MRI->createVirtualRegister(RC);
+  TII->loadRegFromStackSlot(MBB, InsertBefore, NewVReg, FI, RC, TRI, NewVReg,
+                            SubRegIdx);
+  // FIXME: dirty hack! To avoid further changing the TargetInstrInfo interface.
+  MachineInstr &ReloadMI = *(--InsertBefore);
+  LIS.InsertMachineInstrInMaps(ReloadMI);
+  MachineSSAUpdater Updater(*MBB.getParent());
+  Updater.Initialize(NewVReg);
+  Updater.AddAvailableValue(ReloadMI.getParent(), NewVReg);
+  // FIXME: we'd better pass the exact UseMI here to avoid scanning all the
+  // users. isCoveredActive takes care of possible uses with the mask narrower
+  // then this, reloaded here.
+  SmallVector<MachineOperand*> ToUpdate;
+  for (auto &U : MRI->use_nodbg_operands(VMP.VReg)) {
+    MachineInstr *UseMI = U.getParent();
+    if (MDT.dominates(&ReloadMI, UseMI)) {
+      ToUpdate.push_back(&U);
+    } else if (UseMI->isPHI()) {
+      unsigned OpNo = U.getOperandNo();
+      MachineOperand MBBOp = UseMI->getOperand(++OpNo);
+      assert(MBBOp.isMBB() && "Not PHI instruction or malformed PHI!");
+      MachineBasicBlock *SourceMBB = MBBOp.getMBB();
+      if (SourceMBB == &MBB)
+        ToUpdate.push_back(&U);
+    }
+  }
+  for (auto U : ToUpdate) {
+    // FIXME: Do we always want "AtEndOfBlock"?
+    U->setReg(Updater.GetValueAtEndOfBlock(&MBB));
+  }
+  LIS.createAndComputeVirtRegInterval(NewVReg);
+  auto &Entry = getBlockInfo(MBB);
+  Entry.ActiveSet.insert({NewVReg, LaneBitmask::getAll()});
 }
 
 void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
@@ -618,6 +703,22 @@ void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
   int FI = assignVirt2StackSlot(VMP);
   TII->storeRegToStackSlot(MBB, InsertBefore, VMP.VReg, true, FI, RC, TRI,
                            VMP.VReg, SubRegIdx);
+  // FIXME: dirty hack! To avoid further changing the TargetInstrInfo interface.
+  MachineInstr &Spill = *(--InsertBefore);
+  LIS.InsertMachineInstrInMaps(Spill);
+
+  if (LIS.hasInterval(VMP.VReg)) {
+    LiveInterval &LI = LIS.getInterval(VMP.VReg);
+    SlotIndex KillIdx = LIS.getInstructionIndex(Spill);
+    auto LR = LI.find(KillIdx);
+    if (LR != LI.end()) {
+      SlotIndex Start = LR->start;
+      SlotIndex End = LR->end;
+      if (Start < KillIdx) {
+        LI.removeSegment(KillIdx, End);
+      }
+    }
+  }
 }
 
 unsigned AMDGPUSSASpiller::getLoopMaxRP(MachineLoop *L) {
@@ -643,7 +744,12 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
                              RegisterSet &ToSpill) {
 
   // T2->startTimer();
+  LLVM_DEBUG(dbgs() << "\nIn \"limit\" with Limit = " << Limit << "\n");
+
   Active.remove_if([&](VRegMaskPair P) { return NU.isDead(MBB, I, P); });
+
+  LLVM_DEBUG(dbgs() << "\nActive set after DEAD VRegs removed:\n";
+             dumpRegSet(Active));
 
   unsigned CurRP = getSizeInRegs(Active);
   if (CurRP <= Limit) {
@@ -652,8 +758,8 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
   }
 
   sortRegSetAt(MBB, I, Active);
-  
-  dumpRegSet(Active);
+
+  LLVM_DEBUG(dbgs() << "\nActive set sorted at" << *I; dumpRegSet(Active));
 
   while (CurRP > Limit) {
     auto P = Active.pop_back_val();
@@ -687,6 +793,8 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
         ToSpill.insert(P);
     }
   }
+  LLVM_DEBUG(dbgs() << "\nActive set after at the end of the \"limit\":\n";
+             dumpRegSet(Active));
   // T2->stopTimer();
 }
 
@@ -744,6 +852,7 @@ bool AMDGPUSSASpiller::run(MachineFunction &MF) {
   init(MF, true);
 
   processFunction(MF);
+  MF.viewCFG();
   T1->stopTimer();
   TG->print(llvm::errs());
   return false;
@@ -792,7 +901,7 @@ public:
 };
 
 bool AMDGPUSSASpillerLegacy::runOnMachineFunction(MachineFunction &MF) {
-  const LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MachineDominatorTree &MDT =
       getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();

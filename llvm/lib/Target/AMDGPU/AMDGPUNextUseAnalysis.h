@@ -112,9 +112,7 @@ class NextUseResult {
       return {false, SortedRecords()};
     }
 
-    SortedRecords operator[] (unsigned Key) {
-      return NextUseMap[Key];
-    }
+    SortedRecords &operator[](unsigned Key) { return NextUseMap[Key]; }
 
     SmallVector<unsigned> keys() {
       SmallVector<unsigned> Keys;
@@ -246,8 +244,8 @@ public:
   
 
 private:
-  DenseMap<unsigned, SetVector<Register>> UsedInBlock;
-  DenseMap<int, int> EdgeWeigths;
+  DenseMap<unsigned, SetVector<VRegMaskPair>> UsedInBlock;
+  DenseMap<int, int> LoopExits;
   const uint16_t Infinity = std::numeric_limits<unsigned short>::max();
   void init(const MachineFunction &MF);
   void analyze(const MachineFunction &MF);
@@ -278,7 +276,7 @@ private:
 
   void clear() {
     NextUseMap.clear();
-    EdgeWeigths.clear();
+    LoopExits.clear();
   }
 
 public:
