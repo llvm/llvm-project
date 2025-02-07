@@ -2888,7 +2888,7 @@ void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
 
     Entry->mutateType(PTy);
     llvm::Constant *NewPtrForOldDecl =
-        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+        llvm::ConstantExpr::getAddrSpaceCast(
             Entry, DummyGV->getType());
 
     // Now we have a casted version of the changed global, the dummy can be
