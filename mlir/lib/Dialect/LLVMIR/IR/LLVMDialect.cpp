@@ -309,8 +309,8 @@ getComdatPairImpl(SymbolOpInterface op) {
     for (auto selectorOp : comdatOp.getOps<ComdatSelectorOp>()) {
       return std::make_pair(selectorOp.getSymName(), selectorOp.getComdat());
     }
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
