@@ -9487,6 +9487,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_foptimization_record_file_EQ,
       OPT_foptimization_record_passes_EQ,
       OPT_save_temps,
+      OPT_save_temps_EQ,
       OPT_mcode_object_version_EQ,
       OPT_load,
       OPT_fno_lto,
@@ -9555,7 +9556,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--embed-bitcode");
 
   // Save temporary files created by the linker wrapper.
-  if (Args.hasArg(options::OPT_save_temps))
+  if (Args.hasArg(options::OPT_save_temps_EQ) ||
+      Args.hasArg(options::OPT_save_temps))
     CmdArgs.push_back("--save-temps");
 
   // Pass in the C library for GPUs if present and not disabled.
