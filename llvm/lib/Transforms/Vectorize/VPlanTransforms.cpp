@@ -2113,11 +2113,13 @@ void VPlanTransforms::handleUncountableEarlyExit(
   LatchExitingBranch->eraseFromParent();
 }
 
-void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
+void VPlanTransforms::materializeLiveInBroadcasts(VPlan &Plan) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
   auto *VectorPreheader = Plan.getVectorPreheader();
   VPBuilder Builder(VectorPreheader);
+  if (Plan.hasScalarVFOnly())
+    return;
   for (VPValue *LiveIn : Plan.getLiveIns()) {
     if (all_of(LiveIn->users(),
                [LiveIn](VPUser *U) {

@@ -92,7 +92,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return IntegerType::get(Ctx, 1);
   case VPInstruction::Broadcast:
   case VPInstruction::PtrAdd:
-    // Return the type based on the pointer argument (i.e. first operand).
+    // Return the type based on first operand.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:

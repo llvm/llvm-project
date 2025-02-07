@@ -1520,7 +1520,7 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return Op == getOperand(0);
+    return Op == getOperand(0) && isPointerLoopInvariant();
   }
 };
 
@@ -3712,7 +3712,14 @@ public:
   VPValue *getLiveIn(Value *V) const { return Value2VPValue.lookup(V); }
 
   /// Return the list of live-in VPValues available in the VPlan.
-  ArrayRef<VPValue *> getLiveIns() const { return VPLiveIns; }
+  ArrayRef<VPValue *> getLiveIns() const {
+    assert(all_of(Value2VPValue,
+                  [this](const auto &P) {
+                    return is_contained(VPLiveIns, P.second);
+                  }) &&
+           "all VPValues in Value2VPValue must also be in VPLiveIns");
+    return VPLiveIns;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the live-ins of this VPlan to \p O.

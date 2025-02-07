@@ -175,7 +175,7 @@ struct VPlanTransforms {
                              DenseMap<VPValue *, VPValue *> &EndValues);
 
   /// Add explicit broadcasts for live-ins used as vectors.
-  static void materializeBroadcasts(VPlan &Plan);
+  static void materializeLiveInBroadcasts(VPlan &Plan);
 };
 
 } // namespace llvm
