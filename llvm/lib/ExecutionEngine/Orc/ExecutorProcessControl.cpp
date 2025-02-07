@@ -55,6 +55,9 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
       ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionWrapper);
 
 #ifdef __APPLE__
+  // FIXME: Don't add an UnwindInfoManager by default -- it's redundant when
+  //        the ORC runtime is loaded. We'll need a way to document this and
+  //        allow clients to choose.
   this->UnwindInfoMgr = UnwindInfoManager::TryCreate();
   if (this->UnwindInfoMgr)
     this->UnwindInfoMgr->addBootstrapSymbols(this->BootstrapSymbols);
