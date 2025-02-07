@@ -96,7 +96,7 @@ jobs:
         run: |
           function push_container {
             image_name=$1
-            latest_name=$(echo $image_name | sed 's/:[.0-9]\+$/:latest/g')
+            latest_name=$(echo $image_name | sed 's/:[a-f0-9]\+$/:latest/g')
             podman tag $image_name $latest_name
             echo "Pushing $image_name ..."
             podman push $image_name
