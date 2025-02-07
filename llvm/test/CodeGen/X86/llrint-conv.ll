@@ -184,15 +184,6 @@ entry:
 }
 
 define i32 @combine_f32_trunc(float %x) nounwind {
-; SSE-LABEL: combine_trunc:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    cvtss2si %xmm0, %eax
-; SSE-NEXT:    retq
-;
-; AVX-LABEL: combine_trunc:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtss2si %xmm0, %eax
-; AVX-NEXT:    retq
 ; X86-NOSSE-LABEL: combine_f32_trunc:
 ; X86-NOSSE:       # %bb.0: # %entry
 ; X86-NOSSE-NEXT:    pushl %eax
@@ -228,15 +219,6 @@ entry:
 }
 
 define i32 @combine_f64_trunc(double %x) nounwind {
-; SSE-LABEL: combine_trunc:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    cvtss2si %xmm0, %eax
-; SSE-NEXT:    retq
-;
-; AVX-LABEL: combine_trunc:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtss2si %xmm0, %eax
-; AVX-NEXT:    retq
 ; X86-NOSSE-LABEL: combine_f64_trunc:
 ; X86-NOSSE:       # %bb.0: # %entry
 ; X86-NOSSE-NEXT:    pushl %eax
