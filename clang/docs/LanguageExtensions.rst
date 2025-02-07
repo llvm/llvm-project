@@ -67,6 +67,10 @@ It can be used like this:
   ``__has_builtin`` should not be used to detect support for a builtin macro;
   use ``#ifdef`` instead.
 
+  When using device offloading, a builtin is considered available if it is
+  available on either the host or the device targets.
+  Use ``__has_target_builtin`` to consider only the current target.
+
 ``__has_constexpr_builtin``
 ---------------------------
 
@@ -95,6 +99,35 @@ For example, ``__has_constexpr_builtin`` is used in libcxx's implementation of
 the ``<cmath>`` header file to conditionally make a function constexpr whenever
 the constant evaluation of the corresponding builtin (for example,
 ``std::fmax`` calls ``__builtin_fmax``) is supported in Clang.
+
+``__has_target_builtin``
+------------------------
+
+This function-like macro takes a single identifier argument that is the name of
+a builtin function, a builtin pseudo-function (taking one or more type
+arguments), or a builtin template.
+It evaluates to 1 if the builtin is supported on the current target or 0 if not.
+The behavior is different than ``__has_builtin`` when there is an auxiliary target,
+such when offloading to a target device.
+It can be used like this:
+
+.. code-block:: c++
+
+  #ifndef __has_target_builtin         // Optional of course.
+    #define __has_target_builtin(x) 0  // Compatibility with non-clang compilers.
+  #endif
+
+  ...
+  #if __has_target_builtin(__builtin_trap)
+    __builtin_trap();
+  #else
+    abort();
+  #endif
+  ...
+
+.. note::
+  ``__has_target_builtin`` should not be used to detect support for a builtin macro;
+  use ``#ifdef`` instead.
 
 .. _langext-__has_feature-__has_extension:
 
