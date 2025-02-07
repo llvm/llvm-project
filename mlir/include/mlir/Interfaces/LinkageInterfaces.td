@@ -27,7 +27,7 @@ def LinkableModuleOpInterface : OpInterface<"LinkableModuleOpInterface"> {
   let extraClassDeclaration = [{
     ::mlir::link::ComdatSymbolTable getComdatSymbolTable();
 
-    ::mlir::link::ComdatPair *
+    ::mlir::link::ComdatEntry *
     getOrInsertComdat(::mlir::link::ComdatSymbolTable &table, StringRef name);
   }];
 }
@@ -195,7 +195,7 @@ def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface">
     >,
     InterfaceMethod<
       /*desc=*/        "Returns comdat name and selection kind of the operation",
-      /*returnType=*/  "std::optional<std::pair<StringRef, ::mlir::link::ComdatSelectionKind>>",
+      /*returnType=*/  "std::optional<::mlir::link::ComdatPair>",
       /*methodName=*/  "getComdatPair",
       /*args=*/        (ins)
     >,

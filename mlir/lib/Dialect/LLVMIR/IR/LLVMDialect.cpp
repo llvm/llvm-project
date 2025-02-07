@@ -301,7 +301,7 @@ static std::optional<ParseResult> parseOpBundles(
 // Linkage helpers.
 //===----------------------------------------------------------------------===//
 
-static std::optional<std::pair<StringRef, ::mlir::link::ComdatSelectionKind>>
+static std::optional<::mlir::link::ComdatPair>
 getComdatPairImpl(SymbolOpInterface op) {
   auto mod = op->getParentOfType<LinkableModuleOpInterface>();
   auto &moduleBody = mod->getRegion(0).front();

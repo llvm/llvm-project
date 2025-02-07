@@ -16,10 +16,10 @@ using namespace mlir::link;
 /// Include the definitions of the interface.
 #include "mlir/Interfaces/LinkageInterfaces.cpp.inc"
 
-ComdatPair *
+ComdatEntry *
 LinkableModuleOpInterface::getOrInsertComdat(ComdatSymbolTable &table,
                                              StringRef name) {
-  auto &entry = *table.try_emplace(name, ComdatPair()).first;
+  auto &entry = *table.try_emplace(name, ComdatEntry()).first;
   entry.second.name = &entry;
   return &(entry.second);
 }
@@ -30,7 +30,7 @@ ComdatSymbolTable LinkableModuleOpInterface::getComdatSymbolTable() {
   this->walk([&](GlobalValueLinkageOpInterface op) {
     if (auto pair = op.getComdatPair()) {
       auto [name, kind] = *pair;
-      ComdatPair *comdat = getOrInsertComdat(table, name);
+      ComdatEntry *comdat = getOrInsertComdat(table, name);
       comdat->setSelectionKind(kind);
     }
 

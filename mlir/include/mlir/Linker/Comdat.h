@@ -21,10 +21,10 @@ namespace link {
 
 using ComdatSelectionKind = LLVM::comdat::Comdat;
 
-class ComdatPair {
+class ComdatEntry {
 public:
-  ComdatPair(const ComdatPair &) = delete;
-  ComdatPair(ComdatPair &&) = default;
+  ComdatEntry(const ComdatEntry &) = delete;
+  ComdatEntry(ComdatEntry &&) = default;
 
   StringRef getName() const { return name->getKey(); }
 
@@ -38,19 +38,21 @@ public:
 private:
   friend class ::mlir::LinkableModuleOpInterface;
 
-  ComdatPair() = default;
+  ComdatEntry() = default;
 
   void addUser(Operation *user) { users.insert(user); }
   void removeUser(Operation *user) { users.erase(user); }
 
-  llvm::StringMapEntry<ComdatPair> *name = nullptr;
+  llvm::StringMapEntry<ComdatEntry> *name = nullptr;
   ComdatSelectionKind kind = ComdatSelectionKind::Any;
 
   // Globals using this comdat.
   llvm::SmallPtrSet<Operation *, 2> users;
 };
 
-using ComdatSymbolTable = llvm::StringMap<ComdatPair>;
+using ComdatSymbolTable = llvm::StringMap<ComdatEntry>;
+
+using ComdatPair = std::pair<StringRef, ComdatSelectionKind>;
 
 } // namespace link
 } // namespace mlir

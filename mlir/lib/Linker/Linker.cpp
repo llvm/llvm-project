@@ -20,7 +20,7 @@ using llvm::Error;
 
 enum class LinkFrom { Dst, Src, Both };
 
-using ComdatHandle = const ComdatPair *;
+using ComdatHandle = const ComdatEntry *;
 using ComdatChoice = std::pair<ComdatSelectionKind, LinkFrom>;
 
 using GlobalValue = GlobalValueLinkageOpInterface;
