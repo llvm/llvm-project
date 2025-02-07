@@ -232,7 +232,7 @@ rotl(T value, int rotate) {
     return value;
   if (rotate < 0)
     return cpp::rotr<T>(value, -rotate);
-  return (value << rotate) | (value >> (N - rotate));
+  return static_cast<T>((value << rotate) | (value >> (N - rotate)));
 }
 
 template <typename T>
@@ -244,7 +244,7 @@ rotr(T value, int rotate) {
     return value;
   if (rotate < 0)
     return cpp::rotl<T>(value, -rotate);
-  return (value >> rotate) | (value << (N - rotate));
+  return static_cast<T>((value >> rotate) | (value << (N - rotate)));
 }
 
 // TODO: Do we need this function at all? How is it different from
