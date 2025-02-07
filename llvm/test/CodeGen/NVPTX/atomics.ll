@@ -177,6 +177,7 @@ define float @atomicrmw_add_f32_generic(ptr %addr, float %val) {
 
 ; CHECK-LABEL: atomicrmw_add_f16_generic
 define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
+; CHECK: membar.sys
 ; CHECK: atom.cas
   %ret = atomicrmw fadd ptr %addr, half %val seq_cst
   ret half %ret
@@ -198,6 +199,7 @@ define float @atomicrmw_add_f32_addrspace3(ptr addrspace(3) %addr, float %val) {
 
 ; CHECK-LABEL: atomic_cmpxchg_i32
 define i32 @atomic_cmpxchg_i32(ptr %addr, i32 %cmp, i32 %new) {
+; CHECK: membar.sys
 ; CHECK: atom.cas.b32
   %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new seq_cst seq_cst
   ret i32 %new
@@ -205,6 +207,7 @@ define i32 @atomic_cmpxchg_i32(ptr %addr, i32 %cmp, i32 %new) {
 
 ; CHECK-LABEL: atomic_cmpxchg_i64
 define i64 @atomic_cmpxchg_i64(ptr %addr, i64 %cmp, i64 %new) {
+; CHECK: membar.sys
 ; CHECK: atom.cas.b64
   %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new seq_cst seq_cst
   ret i64 %new
