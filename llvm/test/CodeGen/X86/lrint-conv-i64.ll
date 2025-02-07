@@ -63,6 +63,38 @@ entry:
   ret i32 %1
 }
 
+define i32 @combine_f32_trunc(float %x) {
+; SSE-LABEL: combine_f32_trunc:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvtss2si %xmm0, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_f32_trunc:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtss2si %xmm0, %eax
+; AVX-NEXT:    retq
+entry:
+  %0 = tail call i64 @llvm.lrint.i64.f32(float %x)
+  %1 = trunc nuw i64 %0 to i32
+  ret i32 %1
+}
+
+define i32 @combine_f64_trunc(double %x) {
+; SSE-LABEL: combine_f64_trunc:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvtsd2si %xmm0, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_f64_trunc:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtsd2si %xmm0, %eax
+; AVX-NEXT:    retq
+entry:
+  %0 = tail call i64 @llvm.lrint.i64.f64(double %x)
+  %1 = trunc nsw i64 %0 to i32
+  ret i32 %1
+}
+
 declare i64 @llvm.lrint.i64.f32(float) nounwind readnone
 declare i64 @llvm.lrint.i64.f64(double) nounwind readnone
 declare i64 @llvm.lrint.i64.f80(x86_fp80) nounwind readnone

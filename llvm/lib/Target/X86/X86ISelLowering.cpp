@@ -53919,6 +53919,11 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(X86ISD::MMX_MOVD2W, DL, MVT::i32, BCSrc);
   }
 
+  if ((N->getFlags().hasNoUnsignedWrap() || N->getFlags().hasNoSignedWrap()) &&
+      (Src.getOpcode() == ISD::LRINT || Src.getOpcode() == ISD::LLRINT) &&
+      VT.getScalarType() == MVT::i32 && Src.hasOneUse())
+    return DAG.getNode(ISD::LRINT, DL, VT, Src.getOperand(0));
+
   return SDValue();
 }
 

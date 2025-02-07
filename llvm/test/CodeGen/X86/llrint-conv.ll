@@ -183,6 +183,94 @@ entry:
   ret i64 %0
 }
 
+define i32 @combine_f32_trunc(float %x) nounwind {
+; SSE-LABEL: combine_trunc:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvtss2si %xmm0, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_trunc:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtss2si %xmm0, %eax
+; AVX-NEXT:    retq
+; X86-NOSSE-LABEL: combine_f32_trunc:
+; X86-NOSSE:       # %bb.0: # %entry
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    fistpl (%esp)
+; X86-NOSSE-NEXT:    movl (%esp), %eax
+; X86-NOSSE-NEXT:    popl %ecx
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE2-LABEL: combine_f32_trunc:
+; X86-SSE2:       # %bb.0: # %entry
+; X86-SSE2-NEXT:    cvtss2si {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    retl
+;
+; X86-AVX-LABEL: combine_f32_trunc:
+; X86-AVX:       # %bb.0: # %entry
+; X86-AVX-NEXT:    vcvtss2si {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    retl
+;
+; X64-SSE-LABEL: combine_f32_trunc:
+; X64-SSE:       # %bb.0: # %entry
+; X64-SSE-NEXT:    cvtss2si %xmm0, %eax
+; X64-SSE-NEXT:    retq
+;
+; X64-AVX-LABEL: combine_f32_trunc:
+; X64-AVX:       # %bb.0: # %entry
+; X64-AVX-NEXT:    vcvtss2si %xmm0, %eax
+; X64-AVX-NEXT:    retq
+entry:
+  %0 = tail call i64 @llvm.llrint.f32(float %x)
+  %1 = trunc nsw i64 %0 to i32
+  ret i32 %1
+}
+
+define i32 @combine_f64_trunc(double %x) nounwind {
+; SSE-LABEL: combine_trunc:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvtss2si %xmm0, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_trunc:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtss2si %xmm0, %eax
+; AVX-NEXT:    retq
+; X86-NOSSE-LABEL: combine_f64_trunc:
+; X86-NOSSE:       # %bb.0: # %entry
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    fistpl (%esp)
+; X86-NOSSE-NEXT:    movl (%esp), %eax
+; X86-NOSSE-NEXT:    popl %ecx
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE2-LABEL: combine_f64_trunc:
+; X86-SSE2:       # %bb.0: # %entry
+; X86-SSE2-NEXT:    cvtsd2si {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    retl
+;
+; X86-AVX-LABEL: combine_f64_trunc:
+; X86-AVX:       # %bb.0: # %entry
+; X86-AVX-NEXT:    vcvtsd2si {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    retl
+;
+; X64-SSE-LABEL: combine_f64_trunc:
+; X64-SSE:       # %bb.0: # %entry
+; X64-SSE-NEXT:    cvtsd2si %xmm0, %eax
+; X64-SSE-NEXT:    retq
+;
+; X64-AVX-LABEL: combine_f64_trunc:
+; X64-AVX:       # %bb.0: # %entry
+; X64-AVX-NEXT:    vcvtsd2si %xmm0, %eax
+; X64-AVX-NEXT:    retq
+entry:
+  %0 = tail call i64 @llvm.llrint.f64(double %x)
+  %1 = trunc nuw i64 %0 to i32
+  ret i32 %1
+}
+
 declare i64 @llvm.llrint.f32(float) nounwind readnone
 declare i64 @llvm.llrint.f64(double) nounwind readnone
 declare i64 @llvm.llrint.f80(x86_fp80) nounwind readnone
