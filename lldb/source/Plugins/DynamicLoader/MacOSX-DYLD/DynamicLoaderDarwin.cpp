@@ -1240,7 +1240,7 @@ bool DynamicLoaderDarwin::UseDYLDSPI(Process *process) {
     use_new_spi_interface = false;
   }
 
-  // Corefiles cannot use the dyld SPI to get the inferior's
+  // Corefiles cannot use the libdyld SPI to get the inferior's
   // binaries, we must find it through metadata or a scan
   // of the corefile memory.
   if (!process->IsLiveDebugSession())
