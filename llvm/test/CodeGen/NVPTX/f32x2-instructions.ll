@@ -115,7 +115,7 @@ define <2 x float> @test_fadd(<2 x float> %a, <2 x float> %b) #0 {
 ;
 ; CHECK-O0-LABEL: test_fadd(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<7>;
+; CHECK-O0-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<10>;
 ; CHECK-O0-EMPTY:
@@ -135,15 +135,12 @@ define <2 x float> @test_fadd(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-O0-NEXT:    shl.b64 %rd8, %rd7, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd9, %rd6, %rd8;
 ; CHECK-O0-NEXT:    add.rn.f32x2 %rd1, %rd5, %rd9;
-; CHECK-O0-NEXT:    mov.b64 {%r5, %r6}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f5, %r6;
-; CHECK-O0-NEXT:    mov.b32 %f6, %r5;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O0-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fadd(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -153,10 +150,8 @@ define <2 x float> @test_fadd(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-O3-NEXT:    ld.param.v2.f32 {%f3, %f4}, [test_fadd_param_1];
 ; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
 ; CHECK-O3-NEXT:    add.rn.f32x2 %rd1, %rd2, %rd3;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f5, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f6, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O3-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O3-NEXT:    ret;
   %r = fadd <2 x float> %a, %b
   ret <2 x float> %r
@@ -166,7 +161,7 @@ define <2 x float> @test_fadd_imm_0(<2 x float> %a) #0 {
 ;
 ; CHECK-O0-LABEL: test_fadd_imm_0(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<5>;
+; CHECK-O0-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<5>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-O0-EMPTY:
@@ -180,15 +175,12 @@ define <2 x float> @test_fadd_imm_0(<2 x float> %a) #0 {
 ; CHECK-O0-NEXT:    or.b64 %rd5, %rd2, %rd4;
 ; CHECK-O0-NEXT:    mov.b64 %rd6, 4611686019492741120;
 ; CHECK-O0-NEXT:    add.rn.f32x2 %rd1, %rd5, %rd6;
-; CHECK-O0-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f3, %r4;
-; CHECK-O0-NEXT:    mov.b32 %f4, %r3;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-O0-NEXT:    mov.b64 {%f3, %f4}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f3, %f4};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fadd_imm_0(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<5>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -197,10 +189,8 @@ define <2 x float> @test_fadd_imm_0(<2 x float> %a) #0 {
 ; CHECK-O3-NEXT:    mov.b64 %rd2, {%f1, %f2};
 ; CHECK-O3-NEXT:    mov.b64 %rd3, 4611686019492741120;
 ; CHECK-O3-NEXT:    add.rn.f32x2 %rd1, %rd2, %rd3;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f3, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f4, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-O3-NEXT:    mov.b64 {%f3, %f4}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f3, %f4};
 ; CHECK-O3-NEXT:    ret;
   %r = fadd <2 x float> <float 1.0, float 2.0>, %a
   ret <2 x float> %r
@@ -210,7 +200,7 @@ define <2 x float> @test_fadd_imm_1(<2 x float> %a) #0 {
 ;
 ; CHECK-O0-LABEL: test_fadd_imm_1(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<5>;
+; CHECK-O0-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<5>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-O0-EMPTY:
@@ -224,15 +214,12 @@ define <2 x float> @test_fadd_imm_1(<2 x float> %a) #0 {
 ; CHECK-O0-NEXT:    or.b64 %rd5, %rd2, %rd4;
 ; CHECK-O0-NEXT:    mov.b64 %rd6, 4611686019492741120;
 ; CHECK-O0-NEXT:    add.rn.f32x2 %rd1, %rd5, %rd6;
-; CHECK-O0-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f3, %r4;
-; CHECK-O0-NEXT:    mov.b32 %f4, %r3;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-O0-NEXT:    mov.b64 {%f3, %f4}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f3, %f4};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fadd_imm_1(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<5>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -241,10 +228,8 @@ define <2 x float> @test_fadd_imm_1(<2 x float> %a) #0 {
 ; CHECK-O3-NEXT:    mov.b64 %rd2, {%f1, %f2};
 ; CHECK-O3-NEXT:    mov.b64 %rd3, 4611686019492741120;
 ; CHECK-O3-NEXT:    add.rn.f32x2 %rd1, %rd2, %rd3;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f3, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f4, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-O3-NEXT:    mov.b64 {%f3, %f4}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f3, %f4};
 ; CHECK-O3-NEXT:    ret;
   %r = fadd <2 x float> %a, <float 1.0, float 2.0>
   ret <2 x float> %r
@@ -254,70 +239,61 @@ define <4 x float> @test_fadd_v4(<4 x float> %a, <4 x float> %b) #0 {
 ;
 ; CHECK-O0-LABEL: test_fadd_v4(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<13>;
+; CHECK-O0-NEXT:    .reg .b32 %r<9>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<13>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<19>;
 ; CHECK-O0-EMPTY:
 ; CHECK-O0-NEXT:  // %bb.0:
 ; CHECK-O0-NEXT:    ld.param.v4.f32 {%f1, %f2, %f3, %f4}, [test_fadd_v4_param_0];
-; CHECK-O0-NEXT:    mov.b32 %r1, %f3;
+; CHECK-O0-NEXT:    mov.b32 %r1, %f1;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd3, %r1;
-; CHECK-O0-NEXT:    mov.b32 %r2, %f4;
+; CHECK-O0-NEXT:    mov.b32 %r2, %f2;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd4, %r2;
 ; CHECK-O0-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; CHECK-O0-NEXT:    mov.b32 %r3, %f1;
+; CHECK-O0-NEXT:    mov.b32 %r3, %f3;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd7, %r3;
-; CHECK-O0-NEXT:    mov.b32 %r4, %f2;
+; CHECK-O0-NEXT:    mov.b32 %r4, %f4;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd8, %r4;
 ; CHECK-O0-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; CHECK-O0-NEXT:    ld.param.v4.f32 {%f5, %f6, %f7, %f8}, [test_fadd_v4_param_1];
-; CHECK-O0-NEXT:    mov.b32 %r5, %f5;
+; CHECK-O0-NEXT:    mov.b32 %r5, %f7;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd11, %r5;
-; CHECK-O0-NEXT:    mov.b32 %r6, %f6;
+; CHECK-O0-NEXT:    mov.b32 %r6, %f8;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd12, %r6;
 ; CHECK-O0-NEXT:    shl.b64 %rd13, %rd12, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd14, %rd11, %rd13;
-; CHECK-O0-NEXT:    add.rn.f32x2 %rd2, %rd10, %rd14;
-; CHECK-O0-NEXT:    mov.b32 %r7, %f7;
+; CHECK-O0-NEXT:    add.rn.f32x2 %rd1, %rd10, %rd14;
+; CHECK-O0-NEXT:    mov.b32 %r7, %f5;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd15, %r7;
-; CHECK-O0-NEXT:    mov.b32 %r8, %f8;
+; CHECK-O0-NEXT:    mov.b32 %r8, %f6;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd16, %r8;
 ; CHECK-O0-NEXT:    shl.b64 %rd17, %rd16, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd18, %rd15, %rd17;
-; CHECK-O0-NEXT:    add.rn.f32x2 %rd1, %rd6, %rd18;
-; CHECK-O0-NEXT:    mov.b64 {%r9, %r10}, %rd2;
-; CHECK-O0-NEXT:    mov.b64 {%r11, %r12}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f9, %r12;
-; CHECK-O0-NEXT:    mov.b32 %f10, %r11;
-; CHECK-O0-NEXT:    mov.b32 %f11, %r10;
-; CHECK-O0-NEXT:    mov.b32 %f12, %r9;
-; CHECK-O0-NEXT:    st.param.v4.f32 [func_retval0], {%f12, %f11, %f10, %f9};
+; CHECK-O0-NEXT:    add.rn.f32x2 %rd2, %rd6, %rd18;
+; CHECK-O0-NEXT:    mov.b64 {%f9, %f10}, %rd1;
+; CHECK-O0-NEXT:    mov.b64 {%f11, %f12}, %rd2;
+; CHECK-O0-NEXT:    st.param.v4.f32 [func_retval0], {%f11, %f12, %f9, %f10};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fadd_v4(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<13>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-O3-EMPTY:
 ; CHECK-O3-NEXT:  // %bb.0:
 ; CHECK-O3-NEXT:    ld.param.v4.f32 {%f1, %f2, %f3, %f4}, [test_fadd_v4_param_0];
-; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
-; CHECK-O3-NEXT:    mov.b64 %rd4, {%f1, %f2};
+; CHECK-O3-NEXT:    mov.b64 %rd3, {%f1, %f2};
+; CHECK-O3-NEXT:    mov.b64 %rd4, {%f3, %f4};
 ; CHECK-O3-NEXT:    ld.param.v4.f32 {%f5, %f6, %f7, %f8}, [test_fadd_v4_param_1];
-; CHECK-O3-NEXT:    mov.b64 %rd5, {%f5, %f6};
-; CHECK-O3-NEXT:    add.rn.f32x2 %rd2, %rd4, %rd5;
-; CHECK-O3-NEXT:    mov.b64 %rd6, {%f7, %f8};
-; CHECK-O3-NEXT:    add.rn.f32x2 %rd1, %rd3, %rd6;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-O3-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f9, %r4;
-; CHECK-O3-NEXT:    mov.b32 %f10, %r3;
-; CHECK-O3-NEXT:    mov.b32 %f11, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f12, %r1;
-; CHECK-O3-NEXT:    st.param.v4.f32 [func_retval0], {%f12, %f11, %f10, %f9};
+; CHECK-O3-NEXT:    mov.b64 %rd5, {%f7, %f8};
+; CHECK-O3-NEXT:    add.rn.f32x2 %rd1, %rd4, %rd5;
+; CHECK-O3-NEXT:    mov.b64 %rd6, {%f5, %f6};
+; CHECK-O3-NEXT:    add.rn.f32x2 %rd2, %rd3, %rd6;
+; CHECK-O3-NEXT:    mov.b64 {%f9, %f10}, %rd1;
+; CHECK-O3-NEXT:    mov.b64 {%f11, %f12}, %rd2;
+; CHECK-O3-NEXT:    st.param.v4.f32 [func_retval0], {%f11, %f12, %f9, %f10};
 ; CHECK-O3-NEXT:    ret;
   %r = fadd <4 x float> %a, %b
   ret <4 x float> %r
@@ -327,58 +303,49 @@ define <4 x float> @test_fadd_imm_0_v4(<4 x float> %a) #0 {
 ;
 ; CHECK-O0-LABEL: test_fadd_imm_0_v4(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<9>;
+; CHECK-O0-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<9>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<13>;
 ; CHECK-O0-EMPTY:
 ; CHECK-O0-NEXT:  // %bb.0:
 ; CHECK-O0-NEXT:    ld.param.v4.f32 {%f1, %f2, %f3, %f4}, [test_fadd_imm_0_v4_param_0];
-; CHECK-O0-NEXT:    mov.b32 %r1, %f3;
+; CHECK-O0-NEXT:    mov.b32 %r1, %f1;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd3, %r1;
-; CHECK-O0-NEXT:    mov.b32 %r2, %f4;
+; CHECK-O0-NEXT:    mov.b32 %r2, %f2;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd4, %r2;
 ; CHECK-O0-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; CHECK-O0-NEXT:    mov.b32 %r3, %f1;
+; CHECK-O0-NEXT:    mov.b32 %r3, %f3;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd7, %r3;
-; CHECK-O0-NEXT:    mov.b32 %r4, %f2;
+; CHECK-O0-NEXT:    mov.b32 %r4, %f4;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd8, %r4;
 ; CHECK-O0-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; CHECK-O0-NEXT:    mov.b64 %rd11, 4611686019492741120;
-; CHECK-O0-NEXT:    add.rn.f32x2 %rd2, %rd10, %rd11;
-; CHECK-O0-NEXT:    mov.b64 %rd12, 4647714816524288000;
-; CHECK-O0-NEXT:    add.rn.f32x2 %rd1, %rd6, %rd12;
-; CHECK-O0-NEXT:    mov.b64 {%r5, %r6}, %rd2;
-; CHECK-O0-NEXT:    mov.b64 {%r7, %r8}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f5, %r8;
-; CHECK-O0-NEXT:    mov.b32 %f6, %r7;
-; CHECK-O0-NEXT:    mov.b32 %f7, %r6;
-; CHECK-O0-NEXT:    mov.b32 %f8, %r5;
-; CHECK-O0-NEXT:    st.param.v4.f32 [func_retval0], {%f8, %f7, %f6, %f5};
+; CHECK-O0-NEXT:    mov.b64 %rd11, 4647714816524288000;
+; CHECK-O0-NEXT:    add.rn.f32x2 %rd1, %rd10, %rd11;
+; CHECK-O0-NEXT:    mov.b64 %rd12, 4611686019492741120;
+; CHECK-O0-NEXT:    add.rn.f32x2 %rd2, %rd6, %rd12;
+; CHECK-O0-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O0-NEXT:    mov.b64 {%f7, %f8}, %rd2;
+; CHECK-O0-NEXT:    st.param.v4.f32 [func_retval0], {%f7, %f8, %f5, %f6};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fadd_imm_0_v4(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<9>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-O3-EMPTY:
 ; CHECK-O3-NEXT:  // %bb.0:
 ; CHECK-O3-NEXT:    ld.param.v4.f32 {%f1, %f2, %f3, %f4}, [test_fadd_imm_0_v4_param_0];
-; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
-; CHECK-O3-NEXT:    mov.b64 %rd4, {%f1, %f2};
-; CHECK-O3-NEXT:    mov.b64 %rd5, 4611686019492741120;
-; CHECK-O3-NEXT:    add.rn.f32x2 %rd2, %rd4, %rd5;
-; CHECK-O3-NEXT:    mov.b64 %rd6, 4647714816524288000;
-; CHECK-O3-NEXT:    add.rn.f32x2 %rd1, %rd3, %rd6;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-O3-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f5, %r4;
-; CHECK-O3-NEXT:    mov.b32 %f6, %r3;
-; CHECK-O3-NEXT:    mov.b32 %f7, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f8, %r1;
-; CHECK-O3-NEXT:    st.param.v4.f32 [func_retval0], {%f8, %f7, %f6, %f5};
+; CHECK-O3-NEXT:    mov.b64 %rd3, {%f1, %f2};
+; CHECK-O3-NEXT:    mov.b64 %rd4, {%f3, %f4};
+; CHECK-O3-NEXT:    mov.b64 %rd5, 4647714816524288000;
+; CHECK-O3-NEXT:    add.rn.f32x2 %rd1, %rd4, %rd5;
+; CHECK-O3-NEXT:    mov.b64 %rd6, 4611686019492741120;
+; CHECK-O3-NEXT:    add.rn.f32x2 %rd2, %rd3, %rd6;
+; CHECK-O3-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O3-NEXT:    mov.b64 {%f7, %f8}, %rd2;
+; CHECK-O3-NEXT:    st.param.v4.f32 [func_retval0], {%f7, %f8, %f5, %f6};
 ; CHECK-O3-NEXT:    ret;
   %r = fadd <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, %a
   ret <4 x float> %r
@@ -388,58 +355,49 @@ define <4 x float> @test_fadd_imm_1_v4(<4 x float> %a) #0 {
 ;
 ; CHECK-O0-LABEL: test_fadd_imm_1_v4(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<9>;
+; CHECK-O0-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<9>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<13>;
 ; CHECK-O0-EMPTY:
 ; CHECK-O0-NEXT:  // %bb.0:
 ; CHECK-O0-NEXT:    ld.param.v4.f32 {%f1, %f2, %f3, %f4}, [test_fadd_imm_1_v4_param_0];
-; CHECK-O0-NEXT:    mov.b32 %r1, %f3;
+; CHECK-O0-NEXT:    mov.b32 %r1, %f1;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd3, %r1;
-; CHECK-O0-NEXT:    mov.b32 %r2, %f4;
+; CHECK-O0-NEXT:    mov.b32 %r2, %f2;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd4, %r2;
 ; CHECK-O0-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; CHECK-O0-NEXT:    mov.b32 %r3, %f1;
+; CHECK-O0-NEXT:    mov.b32 %r3, %f3;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd7, %r3;
-; CHECK-O0-NEXT:    mov.b32 %r4, %f2;
+; CHECK-O0-NEXT:    mov.b32 %r4, %f4;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd8, %r4;
 ; CHECK-O0-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; CHECK-O0-NEXT:    mov.b64 %rd11, 4611686019492741120;
-; CHECK-O0-NEXT:    add.rn.f32x2 %rd2, %rd10, %rd11;
-; CHECK-O0-NEXT:    mov.b64 %rd12, 4647714816524288000;
-; CHECK-O0-NEXT:    add.rn.f32x2 %rd1, %rd6, %rd12;
-; CHECK-O0-NEXT:    mov.b64 {%r5, %r6}, %rd2;
-; CHECK-O0-NEXT:    mov.b64 {%r7, %r8}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f5, %r8;
-; CHECK-O0-NEXT:    mov.b32 %f6, %r7;
-; CHECK-O0-NEXT:    mov.b32 %f7, %r6;
-; CHECK-O0-NEXT:    mov.b32 %f8, %r5;
-; CHECK-O0-NEXT:    st.param.v4.f32 [func_retval0], {%f8, %f7, %f6, %f5};
+; CHECK-O0-NEXT:    mov.b64 %rd11, 4647714816524288000;
+; CHECK-O0-NEXT:    add.rn.f32x2 %rd1, %rd10, %rd11;
+; CHECK-O0-NEXT:    mov.b64 %rd12, 4611686019492741120;
+; CHECK-O0-NEXT:    add.rn.f32x2 %rd2, %rd6, %rd12;
+; CHECK-O0-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O0-NEXT:    mov.b64 {%f7, %f8}, %rd2;
+; CHECK-O0-NEXT:    st.param.v4.f32 [func_retval0], {%f7, %f8, %f5, %f6};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fadd_imm_1_v4(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<9>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-O3-EMPTY:
 ; CHECK-O3-NEXT:  // %bb.0:
 ; CHECK-O3-NEXT:    ld.param.v4.f32 {%f1, %f2, %f3, %f4}, [test_fadd_imm_1_v4_param_0];
-; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
-; CHECK-O3-NEXT:    mov.b64 %rd4, {%f1, %f2};
-; CHECK-O3-NEXT:    mov.b64 %rd5, 4611686019492741120;
-; CHECK-O3-NEXT:    add.rn.f32x2 %rd2, %rd4, %rd5;
-; CHECK-O3-NEXT:    mov.b64 %rd6, 4647714816524288000;
-; CHECK-O3-NEXT:    add.rn.f32x2 %rd1, %rd3, %rd6;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-O3-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f5, %r4;
-; CHECK-O3-NEXT:    mov.b32 %f6, %r3;
-; CHECK-O3-NEXT:    mov.b32 %f7, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f8, %r1;
-; CHECK-O3-NEXT:    st.param.v4.f32 [func_retval0], {%f8, %f7, %f6, %f5};
+; CHECK-O3-NEXT:    mov.b64 %rd3, {%f1, %f2};
+; CHECK-O3-NEXT:    mov.b64 %rd4, {%f3, %f4};
+; CHECK-O3-NEXT:    mov.b64 %rd5, 4647714816524288000;
+; CHECK-O3-NEXT:    add.rn.f32x2 %rd1, %rd4, %rd5;
+; CHECK-O3-NEXT:    mov.b64 %rd6, 4611686019492741120;
+; CHECK-O3-NEXT:    add.rn.f32x2 %rd2, %rd3, %rd6;
+; CHECK-O3-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O3-NEXT:    mov.b64 {%f7, %f8}, %rd2;
+; CHECK-O3-NEXT:    st.param.v4.f32 [func_retval0], {%f7, %f8, %f5, %f6};
 ; CHECK-O3-NEXT:    ret;
   %r = fadd <4 x float> %a, <float 1.0, float 2.0, float 3.0, float 4.0>
   ret <4 x float> %r
@@ -449,7 +407,7 @@ define <2 x float> @test_fsub(<2 x float> %a, <2 x float> %b) #0 {
 ;
 ; CHECK-O0-LABEL: test_fsub(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<7>;
+; CHECK-O0-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<10>;
 ; CHECK-O0-EMPTY:
@@ -469,15 +427,12 @@ define <2 x float> @test_fsub(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-O0-NEXT:    shl.b64 %rd8, %rd7, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd9, %rd6, %rd8;
 ; CHECK-O0-NEXT:    sub.rn.f32x2 %rd1, %rd5, %rd9;
-; CHECK-O0-NEXT:    mov.b64 {%r5, %r6}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f5, %r6;
-; CHECK-O0-NEXT:    mov.b32 %f6, %r5;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O0-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fsub(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -487,10 +442,8 @@ define <2 x float> @test_fsub(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-O3-NEXT:    ld.param.v2.f32 {%f3, %f4}, [test_fsub_param_1];
 ; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
 ; CHECK-O3-NEXT:    sub.rn.f32x2 %rd1, %rd2, %rd3;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f5, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f6, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O3-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O3-NEXT:    ret;
   %r = fsub <2 x float> %a, %b
   ret <2 x float> %r
@@ -500,7 +453,7 @@ define <2 x float> @test_fneg(<2 x float> %a) #0 {
 ;
 ; CHECK-O0-LABEL: test_fneg(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<5>;
+; CHECK-O0-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<5>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-O0-EMPTY:
@@ -514,15 +467,12 @@ define <2 x float> @test_fneg(<2 x float> %a) #0 {
 ; CHECK-O0-NEXT:    or.b64 %rd5, %rd2, %rd4;
 ; CHECK-O0-NEXT:    mov.b64 %rd6, 0;
 ; CHECK-O0-NEXT:    sub.rn.f32x2 %rd1, %rd6, %rd5;
-; CHECK-O0-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f3, %r4;
-; CHECK-O0-NEXT:    mov.b32 %f4, %r3;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-O0-NEXT:    mov.b64 {%f3, %f4}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f3, %f4};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fneg(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<5>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -531,10 +481,8 @@ define <2 x float> @test_fneg(<2 x float> %a) #0 {
 ; CHECK-O3-NEXT:    mov.b64 %rd2, {%f1, %f2};
 ; CHECK-O3-NEXT:    mov.b64 %rd3, 0;
 ; CHECK-O3-NEXT:    sub.rn.f32x2 %rd1, %rd3, %rd2;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f3, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f4, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-O3-NEXT:    mov.b64 {%f3, %f4}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f3, %f4};
 ; CHECK-O3-NEXT:    ret;
   %r = fsub <2 x float> <float 0.0, float 0.0>, %a
   ret <2 x float> %r
@@ -544,7 +492,7 @@ define <2 x float> @test_fmul(<2 x float> %a, <2 x float> %b) #0 {
 ;
 ; CHECK-O0-LABEL: test_fmul(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<7>;
+; CHECK-O0-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<10>;
 ; CHECK-O0-EMPTY:
@@ -564,15 +512,12 @@ define <2 x float> @test_fmul(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-O0-NEXT:    shl.b64 %rd8, %rd7, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd9, %rd6, %rd8;
 ; CHECK-O0-NEXT:    mul.rn.f32x2 %rd1, %rd5, %rd9;
-; CHECK-O0-NEXT:    mov.b64 {%r5, %r6}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f5, %r6;
-; CHECK-O0-NEXT:    mov.b32 %f6, %r5;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O0-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fmul(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -582,10 +527,8 @@ define <2 x float> @test_fmul(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-O3-NEXT:    ld.param.v2.f32 {%f3, %f4}, [test_fmul_param_1];
 ; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
 ; CHECK-O3-NEXT:    mul.rn.f32x2 %rd1, %rd2, %rd3;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f5, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f6, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O3-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O3-NEXT:    ret;
   %r = fmul <2 x float> %a, %b
   ret <2 x float> %r
@@ -595,7 +538,7 @@ define <2 x float> @test_fma(<2 x float> %a, <2 x float> %b, <2 x float> %c) #0 
 ;
 ; CHECK-O0-LABEL: test_fma(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<9>;
+; CHECK-O0-NEXT:    .reg .b32 %r<7>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<9>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-O0-EMPTY:
@@ -622,15 +565,12 @@ define <2 x float> @test_fma(<2 x float> %a, <2 x float> %b, <2 x float> %c) #0 
 ; CHECK-O0-NEXT:    shl.b64 %rd12, %rd11, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd13, %rd10, %rd12;
 ; CHECK-O0-NEXT:    fma.rn.f32x2 %rd1, %rd5, %rd9, %rd13;
-; CHECK-O0-NEXT:    mov.b64 {%r7, %r8}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f7, %r8;
-; CHECK-O0-NEXT:    mov.b32 %f8, %r7;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f8, %f7};
+; CHECK-O0-NEXT:    mov.b64 {%f7, %f8}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f7, %f8};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fma(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<9>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-O3-EMPTY:
@@ -642,10 +582,8 @@ define <2 x float> @test_fma(<2 x float> %a, <2 x float> %b, <2 x float> %c) #0 
 ; CHECK-O3-NEXT:    ld.param.v2.f32 {%f5, %f6}, [test_fma_param_2];
 ; CHECK-O3-NEXT:    mov.b64 %rd4, {%f5, %f6};
 ; CHECK-O3-NEXT:    fma.rn.f32x2 %rd1, %rd2, %rd3, %rd4;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f7, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f8, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f8, %f7};
+; CHECK-O3-NEXT:    mov.b64 {%f7, %f8}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f7, %f8};
 ; CHECK-O3-NEXT:    ret;
   %r = call <2 x float> @llvm.fma(<2 x float> %a, <2 x float> %b, <2 x float> %c)
   ret <2 x float> %r
@@ -735,7 +673,7 @@ define <2 x float> @test_fadd_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ;
 ; CHECK-O0-LABEL: test_fadd_ftz(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<7>;
+; CHECK-O0-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<10>;
 ; CHECK-O0-EMPTY:
@@ -755,15 +693,12 @@ define <2 x float> @test_fadd_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-O0-NEXT:    shl.b64 %rd8, %rd7, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd9, %rd6, %rd8;
 ; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd1, %rd5, %rd9;
-; CHECK-O0-NEXT:    mov.b64 {%r5, %r6}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f5, %r6;
-; CHECK-O0-NEXT:    mov.b32 %f6, %r5;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O0-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fadd_ftz(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -773,10 +708,8 @@ define <2 x float> @test_fadd_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-O3-NEXT:    ld.param.v2.f32 {%f3, %f4}, [test_fadd_ftz_param_1];
 ; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
 ; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd1, %rd2, %rd3;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f5, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f6, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O3-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O3-NEXT:    ret;
   %r = fadd <2 x float> %a, %b
   ret <2 x float> %r
@@ -786,7 +719,7 @@ define <2 x float> @test_fadd_imm_0_ftz(<2 x float> %a) #2 {
 ;
 ; CHECK-O0-LABEL: test_fadd_imm_0_ftz(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<5>;
+; CHECK-O0-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<5>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-O0-EMPTY:
@@ -800,15 +733,12 @@ define <2 x float> @test_fadd_imm_0_ftz(<2 x float> %a) #2 {
 ; CHECK-O0-NEXT:    or.b64 %rd5, %rd2, %rd4;
 ; CHECK-O0-NEXT:    mov.b64 %rd6, 4611686019492741120;
 ; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd1, %rd5, %rd6;
-; CHECK-O0-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f3, %r4;
-; CHECK-O0-NEXT:    mov.b32 %f4, %r3;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-O0-NEXT:    mov.b64 {%f3, %f4}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f3, %f4};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fadd_imm_0_ftz(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<5>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -817,10 +747,8 @@ define <2 x float> @test_fadd_imm_0_ftz(<2 x float> %a) #2 {
 ; CHECK-O3-NEXT:    mov.b64 %rd2, {%f1, %f2};
 ; CHECK-O3-NEXT:    mov.b64 %rd3, 4611686019492741120;
 ; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd1, %rd2, %rd3;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f3, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f4, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-O3-NEXT:    mov.b64 {%f3, %f4}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f3, %f4};
 ; CHECK-O3-NEXT:    ret;
   %r = fadd <2 x float> <float 1.0, float 2.0>, %a
   ret <2 x float> %r
@@ -830,7 +758,7 @@ define <2 x float> @test_fadd_imm_1_ftz(<2 x float> %a) #2 {
 ;
 ; CHECK-O0-LABEL: test_fadd_imm_1_ftz(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<5>;
+; CHECK-O0-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<5>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-O0-EMPTY:
@@ -844,15 +772,12 @@ define <2 x float> @test_fadd_imm_1_ftz(<2 x float> %a) #2 {
 ; CHECK-O0-NEXT:    or.b64 %rd5, %rd2, %rd4;
 ; CHECK-O0-NEXT:    mov.b64 %rd6, 4611686019492741120;
 ; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd1, %rd5, %rd6;
-; CHECK-O0-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f3, %r4;
-; CHECK-O0-NEXT:    mov.b32 %f4, %r3;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-O0-NEXT:    mov.b64 {%f3, %f4}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f3, %f4};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fadd_imm_1_ftz(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<5>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -861,10 +786,8 @@ define <2 x float> @test_fadd_imm_1_ftz(<2 x float> %a) #2 {
 ; CHECK-O3-NEXT:    mov.b64 %rd2, {%f1, %f2};
 ; CHECK-O3-NEXT:    mov.b64 %rd3, 4611686019492741120;
 ; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd1, %rd2, %rd3;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f3, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f4, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-O3-NEXT:    mov.b64 {%f3, %f4}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f3, %f4};
 ; CHECK-O3-NEXT:    ret;
   %r = fadd <2 x float> %a, <float 1.0, float 2.0>
   ret <2 x float> %r
@@ -874,70 +797,61 @@ define <4 x float> @test_fadd_v4_ftz(<4 x float> %a, <4 x float> %b) #2 {
 ;
 ; CHECK-O0-LABEL: test_fadd_v4_ftz(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<13>;
+; CHECK-O0-NEXT:    .reg .b32 %r<9>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<13>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<19>;
 ; CHECK-O0-EMPTY:
 ; CHECK-O0-NEXT:  // %bb.0:
 ; CHECK-O0-NEXT:    ld.param.v4.f32 {%f1, %f2, %f3, %f4}, [test_fadd_v4_ftz_param_0];
-; CHECK-O0-NEXT:    mov.b32 %r1, %f3;
+; CHECK-O0-NEXT:    mov.b32 %r1, %f1;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd3, %r1;
-; CHECK-O0-NEXT:    mov.b32 %r2, %f4;
+; CHECK-O0-NEXT:    mov.b32 %r2, %f2;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd4, %r2;
 ; CHECK-O0-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; CHECK-O0-NEXT:    mov.b32 %r3, %f1;
+; CHECK-O0-NEXT:    mov.b32 %r3, %f3;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd7, %r3;
-; CHECK-O0-NEXT:    mov.b32 %r4, %f2;
+; CHECK-O0-NEXT:    mov.b32 %r4, %f4;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd8, %r4;
 ; CHECK-O0-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; CHECK-O0-NEXT:    ld.param.v4.f32 {%f5, %f6, %f7, %f8}, [test_fadd_v4_ftz_param_1];
-; CHECK-O0-NEXT:    mov.b32 %r5, %f5;
+; CHECK-O0-NEXT:    mov.b32 %r5, %f7;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd11, %r5;
-; CHECK-O0-NEXT:    mov.b32 %r6, %f6;
+; CHECK-O0-NEXT:    mov.b32 %r6, %f8;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd12, %r6;
 ; CHECK-O0-NEXT:    shl.b64 %rd13, %rd12, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd14, %rd11, %rd13;
-; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd2, %rd10, %rd14;
-; CHECK-O0-NEXT:    mov.b32 %r7, %f7;
+; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd1, %rd10, %rd14;
+; CHECK-O0-NEXT:    mov.b32 %r7, %f5;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd15, %r7;
-; CHECK-O0-NEXT:    mov.b32 %r8, %f8;
+; CHECK-O0-NEXT:    mov.b32 %r8, %f6;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd16, %r8;
 ; CHECK-O0-NEXT:    shl.b64 %rd17, %rd16, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd18, %rd15, %rd17;
-; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd1, %rd6, %rd18;
-; CHECK-O0-NEXT:    mov.b64 {%r9, %r10}, %rd2;
-; CHECK-O0-NEXT:    mov.b64 {%r11, %r12}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f9, %r12;
-; CHECK-O0-NEXT:    mov.b32 %f10, %r11;
-; CHECK-O0-NEXT:    mov.b32 %f11, %r10;
-; CHECK-O0-NEXT:    mov.b32 %f12, %r9;
-; CHECK-O0-NEXT:    st.param.v4.f32 [func_retval0], {%f12, %f11, %f10, %f9};
+; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd2, %rd6, %rd18;
+; CHECK-O0-NEXT:    mov.b64 {%f9, %f10}, %rd1;
+; CHECK-O0-NEXT:    mov.b64 {%f11, %f12}, %rd2;
+; CHECK-O0-NEXT:    st.param.v4.f32 [func_retval0], {%f11, %f12, %f9, %f10};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fadd_v4_ftz(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<13>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-O3-EMPTY:
 ; CHECK-O3-NEXT:  // %bb.0:
 ; CHECK-O3-NEXT:    ld.param.v4.f32 {%f1, %f2, %f3, %f4}, [test_fadd_v4_ftz_param_0];
-; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
-; CHECK-O3-NEXT:    mov.b64 %rd4, {%f1, %f2};
+; CHECK-O3-NEXT:    mov.b64 %rd3, {%f1, %f2};
+; CHECK-O3-NEXT:    mov.b64 %rd4, {%f3, %f4};
 ; CHECK-O3-NEXT:    ld.param.v4.f32 {%f5, %f6, %f7, %f8}, [test_fadd_v4_ftz_param_1];
-; CHECK-O3-NEXT:    mov.b64 %rd5, {%f5, %f6};
-; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd2, %rd4, %rd5;
-; CHECK-O3-NEXT:    mov.b64 %rd6, {%f7, %f8};
-; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd1, %rd3, %rd6;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-O3-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f9, %r4;
-; CHECK-O3-NEXT:    mov.b32 %f10, %r3;
-; CHECK-O3-NEXT:    mov.b32 %f11, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f12, %r1;
-; CHECK-O3-NEXT:    st.param.v4.f32 [func_retval0], {%f12, %f11, %f10, %f9};
+; CHECK-O3-NEXT:    mov.b64 %rd5, {%f7, %f8};
+; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd1, %rd4, %rd5;
+; CHECK-O3-NEXT:    mov.b64 %rd6, {%f5, %f6};
+; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd2, %rd3, %rd6;
+; CHECK-O3-NEXT:    mov.b64 {%f9, %f10}, %rd1;
+; CHECK-O3-NEXT:    mov.b64 {%f11, %f12}, %rd2;
+; CHECK-O3-NEXT:    st.param.v4.f32 [func_retval0], {%f11, %f12, %f9, %f10};
 ; CHECK-O3-NEXT:    ret;
   %r = fadd <4 x float> %a, %b
   ret <4 x float> %r
@@ -947,58 +861,49 @@ define <4 x float> @test_fadd_imm_0_v4_ftz(<4 x float> %a) #2 {
 ;
 ; CHECK-O0-LABEL: test_fadd_imm_0_v4_ftz(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<9>;
+; CHECK-O0-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<9>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<13>;
 ; CHECK-O0-EMPTY:
 ; CHECK-O0-NEXT:  // %bb.0:
 ; CHECK-O0-NEXT:    ld.param.v4.f32 {%f1, %f2, %f3, %f4}, [test_fadd_imm_0_v4_ftz_param_0];
-; CHECK-O0-NEXT:    mov.b32 %r1, %f3;
+; CHECK-O0-NEXT:    mov.b32 %r1, %f1;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd3, %r1;
-; CHECK-O0-NEXT:    mov.b32 %r2, %f4;
+; CHECK-O0-NEXT:    mov.b32 %r2, %f2;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd4, %r2;
 ; CHECK-O0-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; CHECK-O0-NEXT:    mov.b32 %r3, %f1;
+; CHECK-O0-NEXT:    mov.b32 %r3, %f3;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd7, %r3;
-; CHECK-O0-NEXT:    mov.b32 %r4, %f2;
+; CHECK-O0-NEXT:    mov.b32 %r4, %f4;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd8, %r4;
 ; CHECK-O0-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; CHECK-O0-NEXT:    mov.b64 %rd11, 4611686019492741120;
-; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd2, %rd10, %rd11;
-; CHECK-O0-NEXT:    mov.b64 %rd12, 4647714816524288000;
-; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd1, %rd6, %rd12;
-; CHECK-O0-NEXT:    mov.b64 {%r5, %r6}, %rd2;
-; CHECK-O0-NEXT:    mov.b64 {%r7, %r8}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f5, %r8;
-; CHECK-O0-NEXT:    mov.b32 %f6, %r7;
-; CHECK-O0-NEXT:    mov.b32 %f7, %r6;
-; CHECK-O0-NEXT:    mov.b32 %f8, %r5;
-; CHECK-O0-NEXT:    st.param.v4.f32 [func_retval0], {%f8, %f7, %f6, %f5};
+; CHECK-O0-NEXT:    mov.b64 %rd11, 4647714816524288000;
+; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd1, %rd10, %rd11;
+; CHECK-O0-NEXT:    mov.b64 %rd12, 4611686019492741120;
+; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd2, %rd6, %rd12;
+; CHECK-O0-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O0-NEXT:    mov.b64 {%f7, %f8}, %rd2;
+; CHECK-O0-NEXT:    st.param.v4.f32 [func_retval0], {%f7, %f8, %f5, %f6};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fadd_imm_0_v4_ftz(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<9>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-O3-EMPTY:
 ; CHECK-O3-NEXT:  // %bb.0:
 ; CHECK-O3-NEXT:    ld.param.v4.f32 {%f1, %f2, %f3, %f4}, [test_fadd_imm_0_v4_ftz_param_0];
-; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
-; CHECK-O3-NEXT:    mov.b64 %rd4, {%f1, %f2};
-; CHECK-O3-NEXT:    mov.b64 %rd5, 4611686019492741120;
-; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd2, %rd4, %rd5;
-; CHECK-O3-NEXT:    mov.b64 %rd6, 4647714816524288000;
-; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd1, %rd3, %rd6;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-O3-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f5, %r4;
-; CHECK-O3-NEXT:    mov.b32 %f6, %r3;
-; CHECK-O3-NEXT:    mov.b32 %f7, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f8, %r1;
-; CHECK-O3-NEXT:    st.param.v4.f32 [func_retval0], {%f8, %f7, %f6, %f5};
+; CHECK-O3-NEXT:    mov.b64 %rd3, {%f1, %f2};
+; CHECK-O3-NEXT:    mov.b64 %rd4, {%f3, %f4};
+; CHECK-O3-NEXT:    mov.b64 %rd5, 4647714816524288000;
+; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd1, %rd4, %rd5;
+; CHECK-O3-NEXT:    mov.b64 %rd6, 4611686019492741120;
+; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd2, %rd3, %rd6;
+; CHECK-O3-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O3-NEXT:    mov.b64 {%f7, %f8}, %rd2;
+; CHECK-O3-NEXT:    st.param.v4.f32 [func_retval0], {%f7, %f8, %f5, %f6};
 ; CHECK-O3-NEXT:    ret;
   %r = fadd <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, %a
   ret <4 x float> %r
@@ -1008,58 +913,49 @@ define <4 x float> @test_fadd_imm_1_v4_ftz(<4 x float> %a) #2 {
 ;
 ; CHECK-O0-LABEL: test_fadd_imm_1_v4_ftz(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<9>;
+; CHECK-O0-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<9>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<13>;
 ; CHECK-O0-EMPTY:
 ; CHECK-O0-NEXT:  // %bb.0:
 ; CHECK-O0-NEXT:    ld.param.v4.f32 {%f1, %f2, %f3, %f4}, [test_fadd_imm_1_v4_ftz_param_0];
-; CHECK-O0-NEXT:    mov.b32 %r1, %f3;
+; CHECK-O0-NEXT:    mov.b32 %r1, %f1;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd3, %r1;
-; CHECK-O0-NEXT:    mov.b32 %r2, %f4;
+; CHECK-O0-NEXT:    mov.b32 %r2, %f2;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd4, %r2;
 ; CHECK-O0-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; CHECK-O0-NEXT:    mov.b32 %r3, %f1;
+; CHECK-O0-NEXT:    mov.b32 %r3, %f3;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd7, %r3;
-; CHECK-O0-NEXT:    mov.b32 %r4, %f2;
+; CHECK-O0-NEXT:    mov.b32 %r4, %f4;
 ; CHECK-O0-NEXT:    cvt.u64.u32 %rd8, %r4;
 ; CHECK-O0-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; CHECK-O0-NEXT:    mov.b64 %rd11, 4611686019492741120;
-; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd2, %rd10, %rd11;
-; CHECK-O0-NEXT:    mov.b64 %rd12, 4647714816524288000;
-; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd1, %rd6, %rd12;
-; CHECK-O0-NEXT:    mov.b64 {%r5, %r6}, %rd2;
-; CHECK-O0-NEXT:    mov.b64 {%r7, %r8}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f5, %r8;
-; CHECK-O0-NEXT:    mov.b32 %f6, %r7;
-; CHECK-O0-NEXT:    mov.b32 %f7, %r6;
-; CHECK-O0-NEXT:    mov.b32 %f8, %r5;
-; CHECK-O0-NEXT:    st.param.v4.f32 [func_retval0], {%f8, %f7, %f6, %f5};
+; CHECK-O0-NEXT:    mov.b64 %rd11, 4647714816524288000;
+; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd1, %rd10, %rd11;
+; CHECK-O0-NEXT:    mov.b64 %rd12, 4611686019492741120;
+; CHECK-O0-NEXT:    add.rn.ftz.f32x2 %rd2, %rd6, %rd12;
+; CHECK-O0-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O0-NEXT:    mov.b64 {%f7, %f8}, %rd2;
+; CHECK-O0-NEXT:    st.param.v4.f32 [func_retval0], {%f7, %f8, %f5, %f6};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fadd_imm_1_v4_ftz(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<9>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-O3-EMPTY:
 ; CHECK-O3-NEXT:  // %bb.0:
 ; CHECK-O3-NEXT:    ld.param.v4.f32 {%f1, %f2, %f3, %f4}, [test_fadd_imm_1_v4_ftz_param_0];
-; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
-; CHECK-O3-NEXT:    mov.b64 %rd4, {%f1, %f2};
-; CHECK-O3-NEXT:    mov.b64 %rd5, 4611686019492741120;
-; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd2, %rd4, %rd5;
-; CHECK-O3-NEXT:    mov.b64 %rd6, 4647714816524288000;
-; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd1, %rd3, %rd6;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-O3-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f5, %r4;
-; CHECK-O3-NEXT:    mov.b32 %f6, %r3;
-; CHECK-O3-NEXT:    mov.b32 %f7, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f8, %r1;
-; CHECK-O3-NEXT:    st.param.v4.f32 [func_retval0], {%f8, %f7, %f6, %f5};
+; CHECK-O3-NEXT:    mov.b64 %rd3, {%f1, %f2};
+; CHECK-O3-NEXT:    mov.b64 %rd4, {%f3, %f4};
+; CHECK-O3-NEXT:    mov.b64 %rd5, 4647714816524288000;
+; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd1, %rd4, %rd5;
+; CHECK-O3-NEXT:    mov.b64 %rd6, 4611686019492741120;
+; CHECK-O3-NEXT:    add.rn.ftz.f32x2 %rd2, %rd3, %rd6;
+; CHECK-O3-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O3-NEXT:    mov.b64 {%f7, %f8}, %rd2;
+; CHECK-O3-NEXT:    st.param.v4.f32 [func_retval0], {%f7, %f8, %f5, %f6};
 ; CHECK-O3-NEXT:    ret;
   %r = fadd <4 x float> %a, <float 1.0, float 2.0, float 3.0, float 4.0>
   ret <4 x float> %r
@@ -1069,7 +965,7 @@ define <2 x float> @test_fsub_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ;
 ; CHECK-O0-LABEL: test_fsub_ftz(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<7>;
+; CHECK-O0-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<10>;
 ; CHECK-O0-EMPTY:
@@ -1089,15 +985,12 @@ define <2 x float> @test_fsub_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-O0-NEXT:    shl.b64 %rd8, %rd7, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd9, %rd6, %rd8;
 ; CHECK-O0-NEXT:    sub.rn.ftz.f32x2 %rd1, %rd5, %rd9;
-; CHECK-O0-NEXT:    mov.b64 {%r5, %r6}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f5, %r6;
-; CHECK-O0-NEXT:    mov.b32 %f6, %r5;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O0-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fsub_ftz(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -1107,10 +1000,8 @@ define <2 x float> @test_fsub_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-O3-NEXT:    ld.param.v2.f32 {%f3, %f4}, [test_fsub_ftz_param_1];
 ; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
 ; CHECK-O3-NEXT:    sub.rn.ftz.f32x2 %rd1, %rd2, %rd3;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f5, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f6, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O3-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O3-NEXT:    ret;
   %r = fsub <2 x float> %a, %b
   ret <2 x float> %r
@@ -1120,7 +1011,7 @@ define <2 x float> @test_fneg_ftz(<2 x float> %a) #2 {
 ;
 ; CHECK-O0-LABEL: test_fneg_ftz(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<5>;
+; CHECK-O0-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<5>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-O0-EMPTY:
@@ -1134,15 +1025,12 @@ define <2 x float> @test_fneg_ftz(<2 x float> %a) #2 {
 ; CHECK-O0-NEXT:    or.b64 %rd5, %rd2, %rd4;
 ; CHECK-O0-NEXT:    mov.b64 %rd6, 0;
 ; CHECK-O0-NEXT:    sub.rn.ftz.f32x2 %rd1, %rd6, %rd5;
-; CHECK-O0-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f3, %r4;
-; CHECK-O0-NEXT:    mov.b32 %f4, %r3;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-O0-NEXT:    mov.b64 {%f3, %f4}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f3, %f4};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fneg_ftz(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<5>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -1151,10 +1039,8 @@ define <2 x float> @test_fneg_ftz(<2 x float> %a) #2 {
 ; CHECK-O3-NEXT:    mov.b64 %rd2, {%f1, %f2};
 ; CHECK-O3-NEXT:    mov.b64 %rd3, 0;
 ; CHECK-O3-NEXT:    sub.rn.ftz.f32x2 %rd1, %rd3, %rd2;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f3, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f4, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-O3-NEXT:    mov.b64 {%f3, %f4}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f3, %f4};
 ; CHECK-O3-NEXT:    ret;
   %r = fsub <2 x float> <float 0.0, float 0.0>, %a
   ret <2 x float> %r
@@ -1164,7 +1050,7 @@ define <2 x float> @test_fmul_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ;
 ; CHECK-O0-LABEL: test_fmul_ftz(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<7>;
+; CHECK-O0-NEXT:    .reg .b32 %r<5>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<10>;
 ; CHECK-O0-EMPTY:
@@ -1184,15 +1070,12 @@ define <2 x float> @test_fmul_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-O0-NEXT:    shl.b64 %rd8, %rd7, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd9, %rd6, %rd8;
 ; CHECK-O0-NEXT:    mul.rn.ftz.f32x2 %rd1, %rd5, %rd9;
-; CHECK-O0-NEXT:    mov.b64 {%r5, %r6}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f5, %r6;
-; CHECK-O0-NEXT:    mov.b32 %f6, %r5;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O0-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fmul_ftz(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -1202,10 +1085,8 @@ define <2 x float> @test_fmul_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-O3-NEXT:    ld.param.v2.f32 {%f3, %f4}, [test_fmul_ftz_param_1];
 ; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
 ; CHECK-O3-NEXT:    mul.rn.ftz.f32x2 %rd1, %rd2, %rd3;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f5, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f6, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O3-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O3-NEXT:    ret;
   %r = fmul <2 x float> %a, %b
   ret <2 x float> %r
@@ -1215,7 +1096,7 @@ define <2 x float> @test_fma_ftz(<2 x float> %a, <2 x float> %b, <2 x float> %c)
 ;
 ; CHECK-O0-LABEL: test_fma_ftz(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<9>;
+; CHECK-O0-NEXT:    .reg .b32 %r<7>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<9>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-O0-EMPTY:
@@ -1242,15 +1123,12 @@ define <2 x float> @test_fma_ftz(<2 x float> %a, <2 x float> %b, <2 x float> %c)
 ; CHECK-O0-NEXT:    shl.b64 %rd12, %rd11, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd13, %rd10, %rd12;
 ; CHECK-O0-NEXT:    fma.rn.ftz.f32x2 %rd1, %rd5, %rd9, %rd13;
-; CHECK-O0-NEXT:    mov.b64 {%r7, %r8}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f7, %r8;
-; CHECK-O0-NEXT:    mov.b32 %f8, %r7;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f8, %f7};
+; CHECK-O0-NEXT:    mov.b64 {%f7, %f8}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f7, %f8};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_fma_ftz(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<9>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-O3-EMPTY:
@@ -1262,10 +1140,8 @@ define <2 x float> @test_fma_ftz(<2 x float> %a, <2 x float> %b, <2 x float> %c)
 ; CHECK-O3-NEXT:    ld.param.v2.f32 {%f5, %f6}, [test_fma_ftz_param_2];
 ; CHECK-O3-NEXT:    mov.b64 %rd4, {%f5, %f6};
 ; CHECK-O3-NEXT:    fma.rn.ftz.f32x2 %rd1, %rd2, %rd3, %rd4;
-; CHECK-O3-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f7, %r2;
-; CHECK-O3-NEXT:    mov.b32 %f8, %r1;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f8, %f7};
+; CHECK-O3-NEXT:    mov.b64 {%f7, %f8}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f7, %f8};
 ; CHECK-O3-NEXT:    ret;
   %r = call <2 x float> @llvm.fma(<2 x float> %a, <2 x float> %b, <2 x float> %c)
   ret <2 x float> %r
@@ -2585,7 +2461,7 @@ define <2 x float> @test_uitofp_2xi32_fadd(<2 x i32> %a, <2 x float> %b) #0 {
 ;
 ; CHECK-O0-LABEL: test_uitofp_2xi32_fadd(
 ; CHECK-O0:       {
-; CHECK-O0-NEXT:    .reg .b32 %r<9>;
+; CHECK-O0-NEXT:    .reg .b32 %r<7>;
 ; CHECK-O0-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O0-NEXT:    .reg .b64 %rd<10>;
 ; CHECK-O0-EMPTY:
@@ -2607,15 +2483,13 @@ define <2 x float> @test_uitofp_2xi32_fadd(<2 x i32> %a, <2 x float> %b) #0 {
 ; CHECK-O0-NEXT:    shl.b64 %rd8, %rd7, 32;
 ; CHECK-O0-NEXT:    or.b64 %rd9, %rd6, %rd8;
 ; CHECK-O0-NEXT:    add.rn.f32x2 %rd1, %rd5, %rd9;
-; CHECK-O0-NEXT:    mov.b64 {%r7, %r8}, %rd1;
-; CHECK-O0-NEXT:    mov.b32 %f5, %r8;
-; CHECK-O0-NEXT:    mov.b32 %f6, %r7;
-; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O0-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O0-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O0-NEXT:    ret;
 ;
 ; CHECK-O3-LABEL: test_uitofp_2xi32_fadd(
 ; CHECK-O3:       {
-; CHECK-O3-NEXT:    .reg .b32 %r<5>;
+; CHECK-O3-NEXT:    .reg .b32 %r<3>;
 ; CHECK-O3-NEXT:    .reg .f32 %f<7>;
 ; CHECK-O3-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-O3-EMPTY:
@@ -2627,10 +2501,8 @@ define <2 x float> @test_uitofp_2xi32_fadd(<2 x i32> %a, <2 x float> %b) #0 {
 ; CHECK-O3-NEXT:    ld.param.v2.f32 {%f3, %f4}, [test_uitofp_2xi32_fadd_param_1];
 ; CHECK-O3-NEXT:    mov.b64 %rd3, {%f3, %f4};
 ; CHECK-O3-NEXT:    add.rn.f32x2 %rd1, %rd3, %rd2;
-; CHECK-O3-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-O3-NEXT:    mov.b32 %f5, %r4;
-; CHECK-O3-NEXT:    mov.b32 %f6, %r3;
-; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; CHECK-O3-NEXT:    mov.b64 {%f5, %f6}, %rd1;
+; CHECK-O3-NEXT:    st.param.v2.f32 [func_retval0], {%f5, %f6};
 ; CHECK-O3-NEXT:    ret;
   %c = uitofp <2 x i32> %a to <2 x float>
   %r = fadd <2 x float> %b, %c

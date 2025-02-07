@@ -3387,6 +3387,9 @@ let hasSideEffects = false in {
   def I64toV2I32 : NVPTXInst<(outs Int32Regs:$d1, Int32Regs:$d2),
                              (ins Int64Regs:$s),
                              "mov.b64 \t{{$d1, $d2}}, $s;", []>;
+  def I64toV2F32 : NVPTXInst<(outs Float32Regs:$d1, Float32Regs:$d2),
+                             (ins Int64Regs:$s),
+                             "mov.b64 \t{{$d1, $d2}}, $s;", []>;
   def I128toV2I64: NVPTXInst<(outs Int64Regs:$d1, Int64Regs:$d2),
                               (ins Int128Regs:$s),
                               "mov.b128 \t{{$d1, $d2}}, $s;", []>;

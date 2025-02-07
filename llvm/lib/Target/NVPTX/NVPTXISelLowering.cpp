@@ -5638,20 +5638,22 @@ static void ReplaceF32x2Op(SDNode *N, SelectionDAG &DAG,
 
   SDValue Chain = DAG.getEntryNode();
 
-  // break i64 result into two i32 registers for later instructions that may
-  // access element #0 or #1. otherwise, this code will be eliminated
+  // break packed result into two f32 registers for later instructions that may
+  // access element #0 or #1
   SDValue NewValue = DAG.getNode(Opcode, DL, MVT::i64, NewOps);
   MachineRegisterInfo &RegInfo = DAG.getMachineFunction().getRegInfo();
   Register DestReg = RegInfo.createVirtualRegister(
       DAG.getTargetLoweringInfo().getRegClassFor(MVT::i64));
   SDValue RegCopy = DAG.getCopyToReg(Chain, DL, DestReg, NewValue);
   SDValue Explode = DAG.getNode(ISD::CopyFromReg, DL,
-                                {MVT::i32, MVT::i32, Chain.getValueType()},
+                                {MVT::f32, MVT::f32, Chain.getValueType()},
                                 {RegCopy, DAG.getRegister(DestReg, MVT::i64)});
   // cast i64 result of new op back to <2 x float>
   Results.push_back(DAG.getBitcast(
-      OldResultTy, DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
-                               {Explode.getValue(0), Explode.getValue(1)})));
+      OldResultTy,
+      DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
+                  {DAG.getBitcast(MVT::i32, Explode.getValue(0)),
+                   DAG.getBitcast(MVT::i32, Explode.getValue(1))})));
 }
 
 void NVPTXTargetLowering::ReplaceNodeResults(
