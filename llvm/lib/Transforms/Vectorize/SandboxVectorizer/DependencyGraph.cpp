@@ -368,8 +368,13 @@ MemDGNode *DependencyGraph::getMemDGNodeAfter(DGNode *N, bool IncludingN,
 }
 
 void DependencyGraph::notifyCreateInstr(Instruction *I) {
-  auto *MemN = dyn_cast<MemDGNode>(getOrCreateNode(I));
-  // TODO: Update the dependencies for the new node.
+  // Nothing to do if the node is not in the focus range of the DAG.
+  if (!(DAGInterval.contains(I) || DAGInterval.touches(I)))
+    return;
+  // Include `I` into the interval.
+  DAGInterval = DAGInterval.getUnionInterval({I, I});
+  auto *N = getOrCreateNode(I);
+  auto *MemN = dyn_cast<MemDGNode>(N);
 
   // Update the MemDGNode chain if this is a memory node.
   if (MemN != nullptr) {
@@ -380,6 +385,21 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
     if (auto *NextMemN = getMemDGNodeAfter(MemN, /*IncludingN=*/false)) {
       NextMemN->PrevMemN = MemN;
       MemN->NextMemN = NextMemN;
+    }
+
+    // Add Mem dependencies.
+    // 1. Scan for deps above `I` for deps to `I`: AboveN->MemN.
+    if (DAGInterval.top()->comesBefore(I)) {
+      Interval<Instruction> AboveIntvl(DAGInterval.top(), I->getPrevNode());
+      auto SrcInterval = MemDGNodeIntervalBuilder::make(AboveIntvl, *this);
+      scanAndAddDeps(*MemN, SrcInterval);
+    }
+    // 2. Scan for deps below `I` for deps from `I`: MemN->BelowN.
+    if (I->comesBefore(DAGInterval.bottom())) {
+      Interval<Instruction> BelowIntvl(I->getNextNode(), DAGInterval.bottom());
+      for (MemDGNode &BelowN :
+           MemDGNodeIntervalBuilder::make(BelowIntvl, *this))
+        scanAndAddDeps(BelowN, Interval<MemDGNode>(MemN, MemN));
     }
   }
 }
