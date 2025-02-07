@@ -50,7 +50,6 @@ AutoExporter::AutoExporter(
       "libc++",
       "libc++abi",
       "libFortranRuntime",
-      "libFortranDecimal",
       "libunwind",
       "libmsvcrt",
       "libucrtbase",
@@ -93,6 +92,7 @@ AutoExporter::AutoExporter(
         "__fmode",
         "_environ",
         "___dso_handle",
+        "__load_config_used",
         // These are the MinGW names that differ from the standard
         // ones (lacking an extra underscore).
         "_DllMain@12",
@@ -110,6 +110,7 @@ AutoExporter::AutoExporter(
         "_fmode",
         "environ",
         "__dso_handle",
+        "_load_config_used",
         // These are the MinGW names that differ from the standard
         // ones (lacking an extra underscore).
         "DllMain",
@@ -117,6 +118,10 @@ AutoExporter::AutoExporter(
         "DllMainCRTStartup",
     };
     excludeSymbolPrefixes.insert("_head_");
+  }
+  if (symtab.isEC()) {
+    excludeSymbols.insert("__chpe_metadata");
+    excludeSymbolPrefixes.insert("__os_arm64x_");
   }
 }
 

@@ -832,9 +832,10 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
   }
 }
 
+// Check that the DAG gets updated when we create a new instruction.
 TEST_F(DependencyGraphTest, CreateInstrCallback) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr, ptr noalias %ptr2, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
+define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %new1, i8 %new2) {
   store i8 %v1, ptr %ptr
   store i8 %v2, ptr %ptr
   store i8 %v3, ptr %ptr
@@ -851,42 +852,52 @@ define void @foo(ptr %ptr, ptr noalias %ptr2, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
   auto *S3 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  // Check new instruction callback.
   sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
-  DAG.extend({S1, Ret});
-  auto *Arg = F->getArg(3);
+  // Create a DAG spanning S1 to S3.
+  DAG.extend({S1, S3});
+  auto *ArgNew1 = F->getArg(4);
+  auto *ArgNew2 = F->getArg(5);
   auto *Ptr = S1->getPointerOperand();
-  {
-    sandboxir::StoreInst *NewS =
-        sandboxir::StoreInst::create(Arg, Ptr, Align(8), S3->getIterator(),
-                                     /*IsVolatile=*/true, Ctx);
-    auto *NewSN = DAG.getNode(NewS);
-    EXPECT_TRUE(NewSN != nullptr);
 
-    // Check the MemDGNode chain.
-    auto *S2MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
-    auto *NewMemSN = cast<sandboxir::MemDGNode>(NewSN);
-    auto *S3MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
-    EXPECT_EQ(S2MemN->getNextNode(), NewMemSN);
-    EXPECT_EQ(NewMemSN->getPrevNode(), S2MemN);
-    EXPECT_EQ(NewMemSN->getNextNode(), S3MemN);
-    EXPECT_EQ(S3MemN->getPrevNode(), NewMemSN);
-  }
-
+  auto *S1MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+  auto *S2MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+  auto *S3MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+  sandboxir::MemDGNode *New1MemN = nullptr;
+  sandboxir::MemDGNode *New2MemN = nullptr;
   {
-    // Also check if new node is at the end of the BB, after Ret.
+    // Create a new store before S3 (within the span of the DAG).
     sandboxir::StoreInst *NewS =
-        sandboxir::StoreInst::create(Arg, Ptr, Align(8), BB->end(),
+        sandboxir::StoreInst::create(ArgNew1, Ptr, Align(8), S3->getIterator(),
                                      /*IsVolatile=*/true, Ctx);
     // Check the MemDGNode chain.
-    auto *S3MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
-    auto *NewMemSN = cast<sandboxir::MemDGNode>(DAG.getNode(NewS));
-    EXPECT_EQ(S3MemN->getNextNode(), NewMemSN);
-    EXPECT_EQ(NewMemSN->getPrevNode(), S3MemN);
-    EXPECT_EQ(NewMemSN->getNextNode(), nullptr);
-  }
+    New1MemN = cast<sandboxir::MemDGNode>(DAG.getNode(NewS));
+    EXPECT_EQ(S2MemN->getNextNode(), New1MemN);
+    EXPECT_EQ(New1MemN->getPrevNode(), S2MemN);
+    EXPECT_EQ(New1MemN->getNextNode(), S3MemN);
+    EXPECT_EQ(S3MemN->getPrevNode(), New1MemN);
 
-  // TODO: Check the dependencies to/from NewSN after they land.
+    // Check dependencies.
+    EXPECT_TRUE(memDependency(S1MemN, New1MemN));
+    EXPECT_TRUE(memDependency(S2MemN, New1MemN));
+    EXPECT_TRUE(memDependency(New1MemN, S3MemN));
+  }
+  {
+    // Create a new store before Ret (outside the current DAG).
+    sandboxir::StoreInst *NewS =
+        sandboxir::StoreInst::create(ArgNew2, Ptr, Align(8), Ret->getIterator(),
+                                     /*IsVolatile=*/true, Ctx);
+    // Check the MemDGNode chain.
+    New2MemN = cast<sandboxir::MemDGNode>(DAG.getNode(NewS));
+    EXPECT_EQ(S3MemN->getNextNode(), New2MemN);
+    EXPECT_EQ(New2MemN->getPrevNode(), S3MemN);
+    EXPECT_EQ(New2MemN->getNextNode(), nullptr);
+
+    // Check dependencies.
+    EXPECT_TRUE(memDependency(S1MemN, New2MemN));
+    EXPECT_TRUE(memDependency(S2MemN, New2MemN));
+    EXPECT_TRUE(memDependency(New1MemN, New2MemN));
+    EXPECT_TRUE(memDependency(S3MemN, New2MemN));
+  }
 }
 
 TEST_F(DependencyGraphTest, EraseInstrCallback) {

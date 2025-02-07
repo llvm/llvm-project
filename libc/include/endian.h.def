@@ -1,4 +1,4 @@
-//===-- Definition of struct __sighandler_t -------------------------------===//
+//===-- POSIX header endian.h ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TYPES___SIGHANDLER_T_H
-#define LLVM_LIBC_TYPES___SIGHANDLER_T_H
+#ifndef LLVM_LIBC_ENDIAN_H
+#define LLVM_LIBC_ENDIAN_H
 
-typedef void (*__sighandler_t)(int);
+#include "__llvm-libc-common.h"
+#include "llvm-libc-macros/endian-macros.h"
 
-#endif // LLVM_LIBC_TYPES___SIGHANDLER_T_H
+%%public_api()
+
+#endif // LLVM_LIBC_ENDIAN_H
