@@ -228,10 +228,29 @@ class MachineSchedulerImpl : public MachineSchedulerBase {
   MachineFunctionAnalysisManager *MFAM = nullptr;
 
 public:
-  MachineSchedulerImpl(MachineFunction &Func, MachineFunctionPass *P);
+  MachineSchedulerImpl(MachineFunction &Func, MachineFunctionPass *P) : P(P) {
+    MF = &Func;
+    MLI = &P->getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+    MDT = &P->getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    TM = &P->getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+    AA = &P->getAnalysis<AAResultsWrapperPass>().getAAResults();
+    LIS = &P->getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  }
+
   MachineSchedulerImpl(MachineFunction &Func,
                        MachineFunctionAnalysisManager &MFAM,
-                       const TargetMachine *TargetM);
+                       const TargetMachine *TargetM)
+      : MFAM(&MFAM) {
+    MF = &Func;
+    TM = TargetM;
+    MLI = &MFAM.getResult<MachineLoopAnalysis>(Func);
+    MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(Func);
+    auto &FAM =
+        MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(Func)
+            .getManager();
+    AA = &FAM.getResult<AAManager>(Func.getFunction());
+    LIS = &MFAM.getResult<LiveIntervalsAnalysis>(Func);
+  }
   bool run();
 
 protected:
@@ -244,10 +263,26 @@ class PostMachineSchedulerImpl : public MachineSchedulerBase {
   MachineFunctionAnalysisManager *MFAM = nullptr;
 
 public:
-  PostMachineSchedulerImpl(MachineFunction &Func, MachineFunctionPass *P);
+  PostMachineSchedulerImpl(MachineFunction &Func, MachineFunctionPass *P)
+      : P(P) {
+    MF = &Func;
+    MLI = &P->getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+    TM = &P->getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+    AA = &P->getAnalysis<AAResultsWrapperPass>().getAAResults();
+  }
+
   PostMachineSchedulerImpl(MachineFunction &Func,
                            MachineFunctionAnalysisManager &MFAM,
-                           const TargetMachine *TargetM);
+                           const TargetMachine *TargetM)
+      : MFAM(&MFAM) {
+    MF = &Func;
+    TM = TargetM;
+    MLI = &MFAM.getResult<MachineLoopAnalysis>(Func);
+    auto &FAM =
+        MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(Func)
+            .getManager();
+    AA = &FAM.getResult<AAManager>(Func.getFunction());
+  }
   bool run();
 
 protected:
@@ -257,7 +292,9 @@ protected:
 /// MachineScheduler runs after coalescing and before register allocation.
 class MachineSchedulerLegacy : public MachineFunctionPass {
 public:
-  MachineSchedulerLegacy();
+  MachineSchedulerLegacy() : MachineFunctionPass(ID) {
+    initializeMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
+  }
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction&) override;
 
@@ -267,7 +304,10 @@ public:
 /// PostMachineScheduler runs after shortly before code emission.
 class PostMachineSchedulerLegacy : public MachineFunctionPass {
 public:
-  PostMachineSchedulerLegacy();
+  PostMachineSchedulerLegacy() : MachineFunctionPass(ID) {
+    initializePostMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
+  }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction&) override;
 
@@ -289,10 +329,6 @@ INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(MachineSchedulerLegacy, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
-
-MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {
-  initializeMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
-}
 
 void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -318,11 +354,6 @@ INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(PostMachineSchedulerLegacy, "postmisched",
                     "PostRA Machine Instruction Scheduler", false, false)
-
-PostMachineSchedulerLegacy::PostMachineSchedulerLegacy()
-    : MachineFunctionPass(ID) {
-  initializePostMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
-}
 
 void PostMachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -403,31 +434,6 @@ nextIfDebug(MachineBasicBlock::iterator I,
       .getNonConstIterator();
 }
 
-MachineSchedulerImpl::MachineSchedulerImpl(MachineFunction &Func,
-                                           MachineFunctionPass *P)
-    : P(P) {
-  MF = &Func;
-  MLI = &P->getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  MDT = &P->getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  TM = &P->getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-  AA = &P->getAnalysis<AAResultsWrapperPass>().getAAResults();
-  LIS = &P->getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-}
-
-MachineSchedulerImpl::MachineSchedulerImpl(MachineFunction &Func,
-                                           MachineFunctionAnalysisManager &MFAM,
-                                           const TargetMachine *TargetM)
-    : MFAM(&MFAM) {
-  MF = &Func;
-  TM = TargetM;
-  MLI = &MFAM.getResult<MachineLoopAnalysis>(Func);
-  MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(Func);
-  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(Func)
-                  .getManager();
-  AA = &FAM.getResult<AAManager>(Func.getFunction());
-  LIS = &MFAM.getResult<LiveIntervalsAnalysis>(Func);
-}
-
 /// Instantiate a ScheduleDAGInstrs that will be owned by the caller.
 ScheduleDAGInstrs *MachineSchedulerImpl::createMachineScheduler() {
   // Select the scheduler, or set the default.
@@ -469,27 +475,6 @@ bool MachineSchedulerImpl::run() {
       MF->verify(*MFAM, MSchedBanner, &errs());
   }
   return true;
-}
-
-PostMachineSchedulerImpl::PostMachineSchedulerImpl(MachineFunction &Func,
-                                                   MachineFunctionPass *P)
-    : P(P) {
-  MF = &Func;
-  MLI = &P->getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  TM = &P->getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-  AA = &P->getAnalysis<AAResultsWrapperPass>().getAAResults();
-}
-
-PostMachineSchedulerImpl::PostMachineSchedulerImpl(
-    MachineFunction &Func, MachineFunctionAnalysisManager &MFAM,
-    const TargetMachine *TargetM)
-    : MFAM(&MFAM) {
-  MF = &Func;
-  TM = TargetM;
-  MLI = &MFAM.getResult<MachineLoopAnalysis>(Func);
-  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(Func)
-                  .getManager();
-  AA = &FAM.getResult<AAManager>(Func.getFunction());
 }
 
 /// Instantiate a ScheduleDAGInstrs for PostRA scheduling that will be owned by
