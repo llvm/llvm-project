@@ -481,6 +481,15 @@ MachOPlatform::MachOPlatform(
   ObjLinkingLayer.addPlugin(std::make_unique<MachOPlatformPlugin>(*this));
   PlatformJD.addGenerator(std::move(OrcRuntimeGenerator));
 
+  {
+    // Check for force-eh-frame
+    std::optional<bool> ForceEHFrames;
+    if ((Err = ES.getBootstrapMapValue<bool, bool>("darwin-use-ehframes-only",
+                                                   ForceEHFrames)))
+      return;
+    this->ForceEHFrames = ForceEHFrames.has_value() ? *ForceEHFrames : false;
+  }
+
   BootstrapInfo BI;
   Bootstrap = &BI;
 
@@ -810,6 +819,12 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
     if (I != MP.JITDylibToHeaderAddr.end())
       HeaderAddr = I->second;
   }
+
+  // If we're forcing eh-frame use then discard the compact-unwind section
+  // immediately to prevent FDEs from being stripped.
+  if (MP.ForceEHFrames)
+    if (auto *CUSec = LG.findSectionByName(MachOCompactUnwindSectionName))
+      LG.removeSection(*CUSec);
 
   // Point the libunwind dso-base absolute symbol at the header for the
   // JITDylib. This will prevent us from synthesizing a new header for
