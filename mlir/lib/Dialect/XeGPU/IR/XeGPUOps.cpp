@@ -231,10 +231,6 @@ LogicalResult CreateNdDescOp::verify() {
   if (getType().isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
-  if (getType().getRank() == 2 &&
-      tdescMemorySpace == static_cast<unsigned>(MemorySpace::SLM))
-    return emitOpError("SLM is not supported for 2D Block TensorDesc.\n");
-
   return success();
 }
 

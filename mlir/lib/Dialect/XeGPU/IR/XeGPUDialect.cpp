@@ -232,9 +232,6 @@ LogicalResult TensorDescType::verify(
   if (rank != 1 && rank != 2)
     return emitError() << "expected 1D or 2D tensor";
 
-  // Scattered attribute imposes extra restriction on tensor descriptor.
-  // Block attribute can only be validated further against data transfer
-  // operations.
   auto scatterAttr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(encoding);
   if (scatterAttr) {
     // Expected tensor ranks for scattered data:
@@ -246,6 +243,14 @@ LogicalResult TensorDescType::verify(
       return emitError() << "expected non-contiguous elements for 1D tensor";
     if (rank == 2 && chunkSize < 2)
       return emitError() << "expected chunk blocks for 2D tensor";
+  }
+
+  if (auto blockAttr =
+          mlir::dyn_cast_if_present<BlockTensorDescAttr>(encoding)) {
+    MemorySpaceAttr memorySpaceAttr = blockAttr.getMemorySpace();
+    if (rank == 2 && memorySpaceAttr &&
+        memorySpaceAttr.getValue() == MemorySpace::SLM)
+      return emitError() << "SLM is not supported for 2D block tensor";
   }
 
   if (auto sgMapAttr = llvm::dyn_cast_if_present<SGMapAttr>(sg_map)) {

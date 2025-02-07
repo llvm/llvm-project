@@ -17,7 +17,7 @@ func.func @test_create_nd_tdesc_vc_2(%src: memref<24x32xf32>) {
 
 // -----
 func.func @test_create_nd_tdesc_vc_3(%src: memref<2x24x32xf32, 3>) {
-  // expected-error@+1 {{SLM is not supported for 2D Block TensorDesc}}
+  // expected-error@+1 {{SLM is not supported for 2D block tensor}}
   %1 = xegpu.create_nd_tdesc %src[0, 0, 0] : memref<2x24x32xf32, 3> -> !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<memory_space = slm>>
   return
 }
