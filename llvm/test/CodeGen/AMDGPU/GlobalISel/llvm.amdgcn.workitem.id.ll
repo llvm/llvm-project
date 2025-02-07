@@ -9,6 +9,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a -verify-machineinstrs < %t.v4.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
 ; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %t.v4.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
 ; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=6 -mcpu=gfx11-generic -verify-machineinstrs -amdgpu-enable-vopd=0 < %t.v6.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx942 -o - %t.v4.ll | FileCheck --check-prefixes=UNDEF %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0
@@ -192,6 +193,30 @@ define amdgpu_kernel void @test_reqd_workgroup_size_z_only(ptr %out) !reqd_work_
   store volatile i32 %id.x, ptr %out
   store volatile i32 %id.y, ptr %out
   store volatile i32 %id.z, ptr %out
+  ret void
+}
+
+define amdgpu_kernel void @undefined_workitem_x_only() {
+; UNDEF-LABEL: undefined_workitem_x_only:
+; UNDEF:       ; %bb.0:
+; UNDEF-NEXT:    s_endpgm
+  %id.x = call i32 @llvm.amdgcn.workitem.id.x()
+  ret void
+}
+
+define amdgpu_kernel void @undefined_workitem_y_only() {
+; UNDEF-LABEL: undefined_workitem_y_only:
+; UNDEF:       ; %bb.0:
+; UNDEF-NEXT:    s_endpgm
+  %id.y = call i32 @llvm.amdgcn.workitem.id.y()
+  ret void
+}
+
+define amdgpu_kernel void @undefined_workitem_z_only() {
+; UNDEF-LABEL: undefined_workitem_z_only:
+; UNDEF:       ; %bb.0:
+; UNDEF-NEXT:    s_endpgm
+  %id.z = call i32 @llvm.amdgcn.workitem.id.z()
   ret void
 }
 

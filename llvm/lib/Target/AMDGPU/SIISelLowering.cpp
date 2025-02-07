@@ -8619,6 +8619,11 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
   if (MaxID == 0)
     return DAG.getConstant(0, SL, MVT::i32);
 
+  // It's undefined behavior if a function marked with the amdgpu-no-*
+  // attributes uses the corresponding intrinsic.
+  if (!Arg)
+    return DAG.getUNDEF(EVT::getIntegerVT(*DAG.getContext(), 32));
+
   SDValue Val = loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                                SDLoc(DAG.getEntryNode()), Arg);
 
@@ -8790,28 +8795,11 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                              AMDGPUFunctionArgInfo::LDS_KERNEL_ID);
   }
   case Intrinsic::amdgcn_workitem_id_x:
-    if (!MFI->getArgInfo().WorkItemIDX) {
-      // It's undefined behavior if a function marked with the amdgpu-no-*
-      // attributes uses the corresponding intrinsic.
-      return DAG.getConstant(0, SDLoc(Op),
-                             EVT::getIntegerVT(*DAG.getContext(), 32));
-    } else {
-      return lowerWorkitemID(DAG, Op, 0, MFI->getArgInfo().WorkItemIDX);
-    }
+    return lowerWorkitemID(DAG, Op, 0, MFI->getArgInfo().WorkItemIDX);
   case Intrinsic::amdgcn_workitem_id_y:
-    if (!MFI->getArgInfo().WorkItemIDY) {
-      return DAG.getConstant(0, SDLoc(Op),
-                             EVT::getIntegerVT(*DAG.getContext(), 32));
-    } else {
-      return lowerWorkitemID(DAG, Op, 1, MFI->getArgInfo().WorkItemIDY);
-    }
+    return lowerWorkitemID(DAG, Op, 1, MFI->getArgInfo().WorkItemIDY);
   case Intrinsic::amdgcn_workitem_id_z:
-    if (!MFI->getArgInfo().WorkItemIDZ) {
-      return DAG.getConstant(0, SDLoc(Op),
-                             EVT::getIntegerVT(*DAG.getContext(), 32));
-    } else {
-      return lowerWorkitemID(DAG, Op, 2, MFI->getArgInfo().WorkItemIDZ);
-    }
+    return lowerWorkitemID(DAG, Op, 2, MFI->getArgInfo().WorkItemIDZ);
   case Intrinsic::amdgcn_wavefrontsize:
     return DAG.getConstant(MF.getSubtarget<GCNSubtarget>().getWavefrontSize(),
                            SDLoc(Op), MVT::i32);
