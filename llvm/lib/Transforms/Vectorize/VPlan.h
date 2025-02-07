@@ -2000,6 +2000,11 @@ public:
   /// Returns the \p I th incoming VPBasicBlock.
   VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
 
+  /// Set the \p I th incoming VPBasicBlock to \p IncomingBlock.
+  void setIncomingBlock(unsigned I, VPBasicBlock *IncomingBlock) {
+    IncomingBlocks[I] = IncomingBlock;
+  }
+
   /// Returns the \p I th incoming VPValue.
   VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
 };
