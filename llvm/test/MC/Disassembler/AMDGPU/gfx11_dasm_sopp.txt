@@ -115,6 +115,9 @@
 # GFX11: s_delay_alu instid0(/* invalid instid value */) | instskip(/* invalid instskip value */) | instid1(/* invalid instid value */) ; encoding: [0xff,0x07,0x87,0xbf]
 0xff,0x07,0x87,0xbf
 
+# GFX11: s_delay_alu instid1(/* invalid instid value */)
+0x80,0x06,0x87,0xbf
+
 # GFX11: s_denorm_mode 0                         ; encoding: [0x00,0x00,0x92,0xbf]
 0x00,0x00,0x92,0xbf
 

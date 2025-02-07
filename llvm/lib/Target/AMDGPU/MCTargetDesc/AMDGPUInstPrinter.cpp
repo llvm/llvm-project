@@ -1874,11 +1874,12 @@ void AMDGPUInstPrinter::printSDelayALU(const MCInst *MI, unsigned OpNo,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
   const char *BadInstId = "/* invalid instid value */";
-  static const std::array<const char *, 12> InstIds = {
+  static const std::array<const char *, 14> InstIds = {
       "NO_DEP",        "VALU_DEP_1",    "VALU_DEP_2",
       "VALU_DEP_3",    "VALU_DEP_4",    "TRANS32_DEP_1",
       "TRANS32_DEP_2", "TRANS32_DEP_3", "FMA_ACCUM_CYCLE_1",
-      "SALU_CYCLE_1",  "SALU_CYCLE_2",  "SALU_CYCLE_3"};
+      "SALU_CYCLE_1",  "SALU_CYCLE_2",  "SALU_CYCLE_3",
+      "XDL_DEP_1",     "XDL_DEP_2"};
 
   const char *BadInstSkip = "/* invalid instskip value */";
   static const std::array<const char *, 6> InstSkips = {
@@ -1887,9 +1888,12 @@ void AMDGPUInstPrinter::printSDelayALU(const MCInst *MI, unsigned OpNo,
   unsigned SImm16 = MI->getOperand(OpNo).getImm();
   const char *Prefix = "";
 
+  // XDL_DEP_1 and XDL_DEP_2 are only valid for GFX13, thus max Value should
+  // be 2 less than the actual size.
+  size_t InstIdSize = AMDGPU::isGFX13Plus(STI) ? InstIds.size() : InstIds.size() - 2;
   unsigned Value = SImm16 & 0xF;
   if (Value) {
-    const char *Name = Value < InstIds.size() ? InstIds[Value] : BadInstId;
+    const char *Name = Value < InstIdSize ? InstIds[Value] : BadInstId;
     O << Prefix << "instid0(" << Name << ')';
     Prefix = " | ";
   }
@@ -1904,7 +1908,7 @@ void AMDGPUInstPrinter::printSDelayALU(const MCInst *MI, unsigned OpNo,
 
   Value = (SImm16 >> 7) & 0xF;
   if (Value) {
-    const char *Name = Value < InstIds.size() ? InstIds[Value] : BadInstId;
+    const char *Name = Value < InstIdSize ? InstIds[Value] : BadInstId;
     O << Prefix << "instid1(" << Name << ')';
     Prefix = " | ";
   }

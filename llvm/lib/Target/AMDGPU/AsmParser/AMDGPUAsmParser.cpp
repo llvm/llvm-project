@@ -8094,6 +8094,8 @@ bool AMDGPUAsmParser::parseDelay(int64_t &Delay) {
                 .Case("SALU_CYCLE_1", 9)
                 .Case("SALU_CYCLE_2", 10)
                 .Case("SALU_CYCLE_3", 11)
+                .Case("XDL_DEP_1", isGFX13Plus() ? 12 : -1)
+                .Case("XDL_DEP_2", isGFX13Plus() ? 13 : -1)
                 .Default(-1);
   }
   if (Value < 0) {
