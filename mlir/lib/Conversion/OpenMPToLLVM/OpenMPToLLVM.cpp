@@ -196,8 +196,8 @@ struct DeclMapperOpConversion
     SmallVector<NamedAttribute> newAttrs;
     newAttrs.emplace_back(curOp.getSymNameAttrName(), curOp.getSymNameAttr());
     newAttrs.emplace_back(
-        curOp.getVarTypeAttrName(),
-        TypeAttr::get(converter->convertType(curOp.getVarType())));
+        curOp.getTypeAttrName(),
+        TypeAttr::get(converter->convertType(curOp.getType())));
 
     auto newOp = rewriter.create<omp::DeclareMapperOp>(
         curOp.getLoc(), TypeRange(), adaptor.getOperands(), newAttrs);
@@ -252,12 +252,13 @@ void mlir::configureOpenMPToLLVMConversionLegality(
   target.addDynamicallyLegalOp<
       omp::AtomicReadOp, omp::AtomicWriteOp, omp::CancellationPointOp,
       omp::CancelOp, omp::CriticalDeclareOp, omp::DeclareMapperInfoOp,
-      omp::FlushOp, omp::MapBoundsOp, omp::MapInfoOp, omp::OrderedOp, omp::ScanOp,
-      omp::TargetEnterDataOp, omp::TargetExitDataOp, omp::TargetUpdateOp,
-      omp::ThreadprivateOp, omp::YieldOp>([&](Operation *op) {
-    return typeConverter.isLegal(op->getOperandTypes()) &&
-           typeConverter.isLegal(op->getResultTypes());
-  });
+      omp::FlushOp, omp::MapBoundsOp, omp::MapInfoOp, omp::OrderedOp,
+      omp::ScanOp, omp::TargetEnterDataOp, omp::TargetExitDataOp,
+      omp::TargetUpdateOp, omp::ThreadprivateOp, omp::YieldOp>(
+      [&](Operation *op) {
+        return typeConverter.isLegal(op->getOperandTypes()) &&
+               typeConverter.isLegal(op->getResultTypes());
+      });
   target.addDynamicallyLegalOp<
       omp::AtomicUpdateOp, omp::CriticalOp, omp::DeclareMapperOp,
       omp::DeclareReductionOp, omp::DistributeOp, omp::LoopNestOp, omp::LoopOp,

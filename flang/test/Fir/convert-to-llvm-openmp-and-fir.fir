@@ -1290,7 +1290,7 @@ omp.declare_mapper @my_mapper : !fir.type<_QFdeclare_mapperTmy_type{data:i32}> {
   %3 = omp.map.info var_ptr(%2 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "var%data"}
 // CHECK:           %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !llvm.ptr, !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) members(%[[VAL_3]] : [0] : !llvm.ptr) -> !llvm.ptr {name = "var", partial_map = true}
   %4 = omp.map.info var_ptr(%0 : !fir.ref<!fir.type<_QFdeclare_mapperTmy_type{data:i32}>>, !fir.type<_QFdeclare_mapperTmy_type{data:i32}>) map_clauses(tofrom) capture(ByRef) members(%3 : [0] : !fir.ref<i32>) -> !fir.ref<!fir.type<_QFdeclare_mapperTmy_type{data:i32}>> {name = "var", partial_map = true}
-// CHECK:           omp.declare_mapper_info map_entries(%[[VAL_5]], %[[VAL_3]] : !llvm.ptr, !llvm.ptr)
-  omp.declare_mapper_info map_entries(%4, %3 : !fir.ref<!fir.type<_QFdeclare_mapperTmy_type{data:i32}>>, !fir.ref<i32>)
+// CHECK:           omp.declare_mapper.info map_entries(%[[VAL_5]], %[[VAL_3]] : !llvm.ptr, !llvm.ptr)
+  omp.declare_mapper.info map_entries(%4, %3 : !fir.ref<!fir.type<_QFdeclare_mapperTmy_type{data:i32}>>, !fir.ref<i32>)
 // CHECK:         }
 }
