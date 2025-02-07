@@ -145,7 +145,7 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
 template <typename TosaOp, typename... Args>
 TosaOp CreateOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
                              Args &&...args) {
-  if (TosaOp::template hasTrait<OpTrait::SameOperandsAndResultRank>()) {
+  if (TosaOp::template hasTrait<::mlir::OpTrait::SameOperandsAndResultRank>()) {
     // op requires same ranks for tensor operands
     if constexpr (sizeof...(Args) == 2) {
       auto argX = std::get<0>(std::tie(args...));
