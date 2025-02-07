@@ -67,7 +67,7 @@ public:
   std::string getLibDeviceFile(StringRef Gpu) const {
     return LibDeviceMap.lookup(Gpu);
   }
-  void WarnIfUnsupportedVersion();
+  void WarnIfUnsupportedVersion() const;
 };
 namespace tools {
 namespace NVPTX {
