@@ -188,8 +188,8 @@ countls(T f) {
   constexpr int PADDING_LEN = CONTAIN_LEN - FXRep::TOTAL_LEN;
 
   if constexpr (FXRep::SIGN_LEN != 0) {
-    if (x < 0)
-      x = bit_not(x);
+    if (f < 0)
+      f = bit_not(f);
   }
 
   BitType value_bits = FXBits(x)::get_bits();
