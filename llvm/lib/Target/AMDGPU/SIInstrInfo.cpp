@@ -9725,6 +9725,40 @@ MachineInstr *SIInstrInfo::foldMemoryOperandImpl(
   return nullptr;
 }
 
+bool SIInstrInfo::getRegSequenceLikeInputs(
+    const MachineInstr &MI, unsigned DefIdx,
+    SmallVectorImpl<RegSubRegPairAndIdx> &InputRegs) const {
+  assert(MI.getOpcode() == AMDGPU::V_PK_MOV_B32 &&
+         "v_pk_mov_b32 is the only reg-sequence like instruction");
+  assert(DefIdx == 0);
+
+  unsigned Src0Mods = MI.getOperand(1).getImm();
+  const MachineOperand &Src0 = MI.getOperand(2);
+  unsigned Src1Mods = MI.getOperand(3).getImm();
+  const MachineOperand &Src1 = MI.getOperand(4);
+
+  unsigned SubReg0 =
+      Src0Mods & SISrcMods::OP_SEL_0 ? AMDGPU::sub1 : AMDGPU::sub0;
+  unsigned SubReg1 =
+      Src1Mods & SISrcMods::OP_SEL_0 ? AMDGPU::sub1 : AMDGPU::sub0;
+
+  if (!Src0.isUndef()) {
+    // src0 will provide the result sub0 from src0.
+    SubReg0 = RI.composeSubRegIndices(Src0.getSubReg(), SubReg0);
+    InputRegs.push_back(
+        RegSubRegPairAndIdx(Src0.getReg(), SubReg0, AMDGPU::sub0));
+  }
+
+  if (!Src1.isUndef()) {
+    // src1 will provide the result's sub1 from src1.
+    SubReg1 = RI.composeSubRegIndices(Src1.getSubReg(), SubReg1);
+    InputRegs.push_back(
+        RegSubRegPairAndIdx(Src1.getReg(), SubReg1, AMDGPU::sub1));
+  }
+
+  return true;
+}
+
 unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
                                       const MachineInstr &MI,
                                       unsigned *PredCost) const {
