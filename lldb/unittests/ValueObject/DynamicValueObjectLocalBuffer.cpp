@@ -68,7 +68,7 @@ struct MockLanguageRuntime : public LanguageRuntime {
     class_type_or_name.SetCompilerType(int_type);
     local_buffer = {(uint8_t *)in_value.GetValue().GetScalar().ULongLong(
                         LLDB_INVALID_ADDRESS),
-                    in_value.GetLocalBufferSize()};
+                    static_cast<size_t>(in_value.GetLocalBufferSize())};
     value_type = Value::ValueType::HostAddress;
 
     return true;
@@ -218,7 +218,7 @@ public:
 TEST_F(DynamicValueObjectLocalBufferTest, BufferTooSmall) {
   /// Test that a value object with a buffer to small to fit the
   /// "dynamic" type will return an invalid dynamic value object.
-  u_int8_t value = 1;
+  uint8_t value = 1;
   ByteOrder endian = endian::InlHostByteOrder();
   DataExtractor data_extractor{&value, sizeof(value), endian, 4};
   TestValueObjectWithLocalBuffer(data_extractor, false);
