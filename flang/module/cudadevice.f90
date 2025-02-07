@@ -49,7 +49,7 @@ implicit none
   public :: syncthreads_or
 
   interface
-    attributes(device) subroutine syncwarp(mask) bind(c, name='__syncwarp')
+    attributes(device) subroutine syncwarp(mask)
       integer, value :: mask
     end subroutine
   end interface
