@@ -463,7 +463,17 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     }
   }];
   let hasVerifier = 1;
+
   let assemblyFormat = "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
+
+  let builders = [
+    OpBuilder<(ins), [{
+      return build($_builder, $_state, Value{}, Value{});
+    }]>,
+    OpBuilder<(ins "Value":$barrierId), [{
+      return build($_builder, $_state, barrierId, Value{});
+    }]>
+  ];
 }
 
 def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive"> 
