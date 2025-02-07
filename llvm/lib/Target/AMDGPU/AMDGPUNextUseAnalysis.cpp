@@ -34,14 +34,10 @@ void NextUseResult::init(const MachineFunction &MF) {
   T2 = new Timer("Next Use Analysis", "Time spent in computeNextUseDistance()",
                  *TG);
   for (auto L : LI->getLoopsInPreorder()) {
-    SmallVector<MachineBasicBlock *> Exiting;
-    L->getExitingBlocks(Exiting);
-    for (auto B : Exiting) {
-      for (auto S : successors(B)) {
-        if (!L->contains(S)) {
-          EdgeWeigths[B->getNumber()] = S->getNumber();
-        }
-      }
+    SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock *>> Exiting;
+    L->getExitEdges(Exiting);
+    for (auto P : Exiting) {
+      LoopExits[P.first->getNumber()] = P.second->getNumber();
     }
   }
 }
@@ -54,7 +50,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
   DenseMap<unsigned, VRegDistances> UpwardNextUses;
   T1->startTimer();
   bool Changed = true;
-  while(Changed) {
+  while (Changed) {
     Changed = false;
     for (auto MBB : post_order(&MF)) {
       unsigned MBBNum = MBB->getNumber();
@@ -63,38 +59,80 @@ void NextUseResult::analyze(const MachineFunction &MF) {
         Prev = UpwardNextUses[MBBNum];
       }
 
-      LLVM_DEBUG(dbgs() << "\nMerging successors for " << MBB->getName()
-                        << "\n";);
+      LLVM_DEBUG(dbgs() << "\nMerging successors for " << "MBB_"
+                        << MBB->getNumber() << "." << MBB->getName() << "\n";);
 
       for (auto Succ : successors(MBB)) {
         unsigned SuccNum = Succ->getNumber();
 
-        LLVM_DEBUG(dbgs() << "Merging " << Succ->getName() << "\n");
+        if (!UpwardNextUses.contains(SuccNum))
+          continue;
 
-        if (UpwardNextUses.contains(SuccNum)) {
-          VRegDistances SuccDist = UpwardNextUses[SuccNum];
-          // Check if the edge from MBB to Succ goes out of the Loop
-          unsigned Weight = 0;
-          if (EdgeWeigths.contains(MBB->getNumber())) {
-            int SuccNum = EdgeWeigths[MBB->getNumber()];
-            if (Succ->getNumber() == SuccNum)
-              Weight = Infinity;
+        VRegDistances SuccDist = UpwardNextUses[SuccNum];
+        LLVM_DEBUG(dbgs() << "\nMerging " << "MBB_" << Succ->getNumber() << "."
+                          << Succ->getName() << "\n");
+
+        // Check if the edge from MBB to Succ goes out of the Loop
+        unsigned Weight = 0;
+        if (LoopExits.contains(MBB->getNumber())) {
+          int SuccNum = LoopExits[MBB->getNumber()];
+          if (Succ->getNumber() == SuccNum)
+            Weight = Infinity;
+        }
+
+        if (LI->getLoopDepth(MBB) < LI->getLoopDepth(Succ)) {
+          // MBB->Succ is entering the Succ's loop
+          // Clear out the Loop-Exiting wights.
+          for (auto &P : SuccDist) {
+            auto &Dists = P.second;
+            for (auto R : Dists) {
+              if (R.second >= Infinity) {
+                std::pair<LaneBitmask, unsigned> New = R;
+                New.second -= Infinity;
+                Dists.erase(R);
+                Dists.insert(New);
+              }
+            }
           }
-          LLVM_DEBUG(
-            dbgs() << "Curr: ";
-            printVregDistances(Curr);
-            dbgs() << "Succ: ";
-            printVregDistances(SuccDist));
-          Curr.merge(SuccDist, Weight);
-          LLVM_DEBUG(dbgs() << "Curr after merge: ";
-                     printVregDistances(Curr));
+        }
+        LLVM_DEBUG(dbgs() << "\nCurr: "; printVregDistances(Curr);
+                   dbgs() << "\nSucc: "; printVregDistances(SuccDist));
+
+        Curr.merge(SuccDist, Weight);
+        LLVM_DEBUG(dbgs() << "\nCurr after merge: "; printVregDistances(Curr));
+        // Now take care of the PHIs operands in the Succ
+        for (auto &PHI : Succ->phis()) {
+          for (auto &U : PHI.uses()) {
+            if (U.isReg()) {
+              auto OpNo = U.getOperandNo();
+              auto B = PHI.getOperand(++OpNo);
+              assert(B.isMBB());
+              MachineBasicBlock *ValueSrc = B.getMBB();
+              if (ValueSrc->getNumber() == MBB->getNumber()) {
+                // We assume that all the PHIs have zero distance from the
+                // succ end!
+                Curr.insert({U.getReg(), LaneBitmask::getAll()}, 0);
+              }
+            }
+          }
+          for (auto &U : PHI.defs())
+            Curr.clear({U.getReg(), LaneBitmask::getAll()});
         }
       }
 
+      LLVM_DEBUG(dbgs() << "\nCurr after succsessors processing: ";
+                 printVregDistances(Curr));
       NextUseMap[MBBNum].Bottom = Curr;
 
       for (auto &MI : make_range(MBB->rbegin(), MBB->rend())) {
-        
+
+        if (MI.isPHI())
+          // We'll take care of PHIs when merging this block to it's
+          // predecessor.
+          continue;
+
+        // TODO: Compute distances in some modifiable container and copy to
+        // the std::set once when ready in one loop!
         for (auto &P : Curr) {
           VRegDistances::SortedRecords Tmp;
           for (auto D : P.second)
@@ -105,38 +143,32 @@ void NextUseResult::analyze(const MachineFunction &MF) {
         for (auto &MO : MI.operands()) {
           if (MO.isReg() && MO.getReg().isVirtual()) {
             VRegMaskPair P(MO, *TRI);
-            if(MO.isUse()) {
+            if (MO.isUse()) {
               Curr.insert(P, 0);
               UsedInBlock[MBB->getNumber()].insert(P);
             } else if (MO.isDef()) {
               Curr.clear(P);
-              // if (!(MI.isPHI() && LI->isLoopHeader(MI.getParent())))
-                // FIXME: we add a PHIs defined Regs in the LiveIn for the loop
-                // header block. Then we compute the Take set as UsedInBlock
-                // INTERSECT LiveIn. If we remove it here we will not have it in
-                // the Active set for the loop header. We either should not add
-                // PHIs defines to LiveIn, assumiong that the room for them will
-                // be created by the "limit" as for any usual instruction, or
-                // preserve removing PHIs defines from the UsedInBlock set.
-                UsedInBlock[MBB->getNumber()].remove(P);
+              UsedInBlock[MBB->getNumber()].remove(P);
             }
           }
         }
         NextUseMap[MBBNum].InstrDist[&MI] = Curr;
-        // printVregDistances(Curr);
       }
 
+      LLVM_DEBUG(dbgs() << "\nFinal distances for MBB_" << MBB->getNumber()
+                        << "." << MBB->getName() << "\n";
+                 printVregDistances(Curr));
       UpwardNextUses[MBBNum] = std::move(Curr);
 
       bool Changed4MBB = (Prev != UpwardNextUses[MBBNum]);
 
       Changed |= Changed4MBB;
     }
+    }
+    dumpUsedInBlock();
+    T1->stopTimer();
+    TG->print(llvm::errs());
   }
-  dumpUsedInBlock();
-  T1->stopTimer();
-  TG->print(llvm::errs());
-}
 
 void NextUseResult::getFromSortedRecords(
     const VRegDistances::SortedRecords Dists, LaneBitmask Mask, unsigned &D) {
