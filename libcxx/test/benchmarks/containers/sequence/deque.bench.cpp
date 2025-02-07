@@ -11,12 +11,12 @@
 #include <deque>
 #include <string>
 
-#include "container_benchmarks.h"
+#include "sequence_container_benchmarks.h"
 #include "benchmark/benchmark.h"
 
 int main(int argc, char** argv) {
-  ContainerBenchmarks::sequence_container_benchmarks<std::deque<int>>("std::deque<int>");
-  ContainerBenchmarks::sequence_container_benchmarks<std::deque<std::string>>("std::deque<std::string>");
+  support::sequence_container_benchmarks<std::deque<int>>("std::deque<int>");
+  support::sequence_container_benchmarks<std::deque<std::string>>("std::deque<std::string>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

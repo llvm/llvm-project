@@ -8,15 +8,15 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+#include <list>
 #include <string>
-#include <vector>
 
-#include "container_benchmarks.h"
+#include "sequence_container_benchmarks.h"
 #include "benchmark/benchmark.h"
 
 int main(int argc, char** argv) {
-  ContainerBenchmarks::sequence_container_benchmarks<std::vector<int>>("std::vector<int>");
-  ContainerBenchmarks::sequence_container_benchmarks<std::vector<std::string>>("std::vector<std::string>");
+  support::sequence_container_benchmarks<std::list<int>>("std::list<int>");
+  support::sequence_container_benchmarks<std::list<std::string>>("std::list<std::string>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
