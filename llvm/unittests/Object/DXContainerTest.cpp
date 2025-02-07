@@ -837,12 +837,12 @@ TEST(RootSignature, ParseRootFlags) {
 
     const auto &RS = C.getRootSignature();
     ASSERT_TRUE(RS.has_value());
-    ASSERT_EQ(RS->getVersion(), 2);
-    ASSERT_EQ(RS->getNumParameters(), 0);
-    ASSERT_EQ(RS->getRootParametersOffset(), 0);
-    ASSERT_EQ(RS->getNumStaticSamplers(), 0);
-    ASSERT_EQ(RS->getStaticSamplersOffset(), 0);
-    ASSERT_EQ(RS->getFlags(), 0x01);
+    ASSERT_EQ(RS->getVersion(), 2u);
+    ASSERT_EQ(RS->getNumParameters(), 0u);
+    ASSERT_EQ(RS->getRootParametersOffset(), 0u);
+    ASSERT_EQ(RS->getNumStaticSamplers(), 0u);
+    ASSERT_EQ(RS->getStaticSamplersOffset(), 0u);
+    ASSERT_EQ(RS->getFlags(), 0x01u);
   }
 
   {
