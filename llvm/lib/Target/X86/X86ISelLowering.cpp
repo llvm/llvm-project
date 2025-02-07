@@ -55491,7 +55491,7 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
       break;
     }
 
-    if (!EltBits[I].isOneBitSet(N + I))
+    if (EltBits[I].getBitWidth() <= N + I || !EltBits[I].isOneBitSet(N + I))
       return SDValue();
   }
 
@@ -55505,6 +55505,8 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
                               Broadcast, DAG.getConstant(0, DL, VecIdxTy));
   } else {
     BroadcastOp = Broadcast.getOperand(0);
+    if (BroadcastOp.getValueType().isVector())
+      return SDValue();
   }
 
   SDValue Masked = BroadcastOp;
