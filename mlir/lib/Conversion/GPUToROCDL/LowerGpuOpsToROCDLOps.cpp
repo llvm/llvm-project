@@ -199,7 +199,7 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 //
 // This pass only handles device code and is not meant to be run on GPU host
 // code.
-struct LowerGpuOpsToROCDLOpsPass
+struct LowerGpuOpsToROCDLOpsPass final
     : public impl::ConvertGpuOpsToROCDLOpsBase<LowerGpuOpsToROCDLOpsPass> {
   LowerGpuOpsToROCDLOpsPass() = default;
   LowerGpuOpsToROCDLOpsPass(const std::string &chipset, unsigned indexBitwidth,
@@ -215,7 +215,7 @@ struct LowerGpuOpsToROCDLOpsPass
       this->runtime = runtime;
   }
 
-  void getDependentDialects(DialectRegistry &registry) const override final {
+  void getDependentDialects(DialectRegistry &registry) const override {
     Base::getDependentDialects(registry);
     registerConvertToLLVMDependentDialectLoading(registry);
   }
@@ -304,7 +304,7 @@ struct LowerGpuOpsToROCDLOpsPass
         if (!iface) {
           m.emitError()
               << "dialect does not implement ConvertToLLVMPatternInterface: "
-              << dialectName << "\n";
+              << dialectName;
           return signalPassFailure();
         }
 

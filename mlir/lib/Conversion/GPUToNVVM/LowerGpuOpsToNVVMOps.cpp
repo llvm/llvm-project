@@ -337,11 +337,11 @@ struct AssertOpToAssertfailLowering
 ///
 /// This pass only handles device code and is not meant to be run on GPU host
 /// code.
-struct LowerGpuOpsToNVVMOpsPass
+struct LowerGpuOpsToNVVMOpsPass final
     : public impl::ConvertGpuOpsToNVVMOpsBase<LowerGpuOpsToNVVMOpsPass> {
   using Base::Base;
 
-  void getDependentDialects(DialectRegistry &registry) const override final {
+  void getDependentDialects(DialectRegistry &registry) const override {
     Base::getDependentDialects(registry);
     registerConvertToLLVMDependentDialectLoading(registry);
   }
@@ -389,7 +389,7 @@ struct LowerGpuOpsToNVVMOpsPass
         if (!iface) {
           m.emitError()
               << "dialect does not implement ConvertToLLVMPatternInterface: "
-              << dialectName << "\n";
+              << dialectName;
           return signalPassFailure();
         }
 
@@ -398,7 +398,8 @@ struct LowerGpuOpsToNVVMOpsPass
       }
     } else {
       for (Dialect *dialect : getContext().getLoadedDialects()) {
-        if (isa<math::MathDialect>(dialect)) // Need custom math lowering
+        // Skip math patterns as nvvm needs custom math lowering.
+        if (isa<math::MathDialect>(dialect))
           continue;
 
         auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
