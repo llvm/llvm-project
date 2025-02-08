@@ -247,7 +247,7 @@ enable_omp_offload_compilation("${supported_files}")
 if (NOT TARGET flang_rt.quadmath)
   # If flang_rt.quadmath is not defined, then we are not building
   # standalone flang_rt.quadmath library. Instead, include
-  # the relevant sources into flang_rt itself.
+  # the relevant sources into flang_rt.runtime itself.
   # The information is provided via FortranFloat128MathILib
   # interface library.
   get_target_property(f128_sources
