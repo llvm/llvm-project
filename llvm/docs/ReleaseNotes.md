@@ -130,9 +130,6 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
-- llvm-objcopy now prints the correct file path in the error message when
-the output file specified by --dump-section cannot be opened.
-
 Changes to LLDB
 ---------------------------------
 
