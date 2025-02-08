@@ -729,7 +729,7 @@ define x86_fp80 @trunc(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
-  %trunc = call x86_fp80 @llvm.trunc.f80(x86_fp80 %x) #0 [ "fpe.except"(metadata !"strict") ]
+  %trunc = call x86_fp80 @llvm.trunc.f80(x86_fp80 %x) #0 [ "fp.except"(metadata !"strict") ]
   ret x86_fp80 %trunc
 }
 

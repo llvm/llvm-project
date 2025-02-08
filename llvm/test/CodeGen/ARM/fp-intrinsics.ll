@@ -291,7 +291,7 @@ define float @round_f32(float %x) #0 {
 ; CHECK-SP-NOV8: bl truncf
 ; CHECK-SP-V8: vrintz.f32
 define float @trunc_f32(float %x) #0 {
-  %val = call float @llvm.trunc.f32(float %x) #0 [ "fpe.except"(metadata !"strict") ]
+  %val = call float @llvm.trunc.f32(float %x) #0 [ "fp.except"(metadata !"strict") ]
   ret float %val
 }
 
@@ -762,7 +762,7 @@ define double @round_f64(double %x) #0 {
 ; CHECK-DP-NOV8: bl trunc
 ; CHECK-DP-V8: vrintz.f64
 define double @trunc_f64(double %x) #0 {
-  %val = call double @llvm.trunc.f64(double %x) #0 [ "fpe.except"(metadata !"strict") ]
+  %val = call double @llvm.trunc.f64(double %x) #0 [ "fp.except"(metadata !"strict") ]
   ret double %val
 }
 
@@ -1070,7 +1070,6 @@ declare float @llvm.experimental.constrained.floor.f32(float, metadata)
 declare i32 @llvm.experimental.constrained.lround.i32.f32(float, metadata)
 declare i32 @llvm.experimental.constrained.llround.i32.f32(float, metadata)
 declare float @llvm.experimental.constrained.round.f32(float, metadata)
-declare float @llvm.experimental.constrained.trunc.f32(float, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f32(float, float, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
 
@@ -1105,7 +1104,6 @@ declare double @llvm.experimental.constrained.floor.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.lround.i32.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.llround.i32.f64(double, metadata)
 declare double @llvm.experimental.constrained.round.f64(double, metadata)
-declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
 

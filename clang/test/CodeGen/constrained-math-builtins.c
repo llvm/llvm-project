@@ -242,10 +242,10 @@ __builtin_atan2(f,f);        __builtin_atan2f(f,f);       __builtin_atan2l(f,f);
 
   __builtin_trunc(f);      __builtin_truncf(f);     __builtin_truncl(f); __builtin_truncf128(f);
 
-// CHECK: call double @llvm.trunc.f64(double %{{.*}}) #[[ATTR_CALL:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
-// CHECK: call float @llvm.trunc.f32(float %{{.*}}) #[[ATTR_CALL]] [ "fpe.except"(metadata !"strict") ]
-// CHECK: call x86_fp80 @llvm.trunc.f80(x86_fp80 %{{.*}}) #[[ATTR_CALL]] [ "fpe.except"(metadata !"strict") ]
-// CHECK: call fp128 @llvm.trunc.f128(fp128 %{{.*}}) #[[ATTR_CALL]] [ "fpe.except"(metadata !"strict") ]
+// CHECK: call double @llvm.trunc.f64(double %{{.*}}) #[[ATTR_CALL:[0-9]+]] [ "fp.except"(metadata !"strict") ]
+// CHECK: call float @llvm.trunc.f32(float %{{.*}}) #[[ATTR_CALL]] [ "fp.except"(metadata !"strict") ]
+// CHECK: call x86_fp80 @llvm.trunc.f80(x86_fp80 %{{.*}}) #[[ATTR_CALL]] [ "fp.except"(metadata !"strict") ]
+// CHECK: call fp128 @llvm.trunc.f128(fp128 %{{.*}}) #[[ATTR_CALL]] [ "fp.except"(metadata !"strict") ]
 };
 
 // CHECK: declare double @llvm.experimental.constrained.frem.f64(double, double, metadata, metadata)

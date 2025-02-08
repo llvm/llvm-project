@@ -165,7 +165,7 @@ define float @f13(float %f) #0 {
 ; CHECK-LABEL: f13:
 ; CHECK: brasl %r14, truncf@PLT
 ; CHECK: br %r14
-  %res = call float @llvm.trunc.f32(float %f) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call float @llvm.trunc.f32(float %f) #0 [ "fp.except"(metadata !"strict") ]
   ret float %res
 }
 
@@ -174,7 +174,7 @@ define double @f14(double %f) #0 {
 ; CHECK-LABEL: f14:
 ; CHECK: brasl %r14, trunc@PLT
 ; CHECK: br %r14
-  %res = call double @llvm.trunc.f64(double %f) #0 [ "fpe.except"(metadata !"strict") ] 
+  %res = call double @llvm.trunc.f64(double %f) #0 [ "fp.except"(metadata !"strict") ] 
   ret double %res
 }
 
@@ -184,7 +184,7 @@ define void @f15(ptr %ptr) #0 {
 ; CHECK: brasl %r14, truncl@PLT
 ; CHECK: br %r14
   %src = load fp128, ptr %ptr
-  %res = call fp128 @llvm.trunc.f128(fp128 %src) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call fp128 @llvm.trunc.f128(fp128 %src) #0 [ "fp.except"(metadata !"strict") ]
   store fp128 %res, ptr %ptr
   ret void
 }

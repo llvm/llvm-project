@@ -61,7 +61,7 @@ define <2 x double> @f5(<2 x double> %val) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: vfidb %v24, %v24, 4, 5
 ; CHECK: br %r14
-  %res = call <2 x double> @llvm.trunc.v2f64(<2 x double> %val) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call <2 x double> @llvm.trunc.v2f64(<2 x double> %val) #0 [ "fp.except"(metadata !"strict") ]
   ret <2 x double> %res
 }
 
@@ -137,7 +137,7 @@ define double @f12(<2 x double> %val) #0 {
 ; CHECK: wfidb %f0, %v24, 4, 5
 ; CHECK: br %r14
   %scalar = extractelement <2 x double> %val, i32 0
-  %res = call double @llvm.trunc.f64(double %scalar) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call double @llvm.trunc.f64(double %scalar) #0 [ "fp.except"(metadata !"strict") ]
   ret double %res
 }
 

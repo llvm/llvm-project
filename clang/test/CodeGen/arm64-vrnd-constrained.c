@@ -14,7 +14,7 @@
 float64x2_t rnd5(float64x2_t a) { return vrndq_f64(a); }
 // COMMON-LABEL: rnd5
 // UNCONSTRAINED: call <2 x double> @llvm.trunc.v2f64(<2 x double>
-// CONSTRAINED:   call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{.*}}) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
+// CONSTRAINED:   call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{.*}}) #[[ATTR:[0-9]+]] [ "fp.except"(metadata !"strict") ]
 // CHECK-ASM:     frintz.2d v{{[0-9]+}}, v{{[0-9]+}}
 
 float64x2_t rnd13(float64x2_t a) { return vrndmq_f64(a); }

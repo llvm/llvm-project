@@ -6372,7 +6372,7 @@ define <1 x float> @constrained_vector_trunc_v1f32_var(ptr %a) #0 {
 ; AVX-NEXT:    retq
 entry:
   %b = load <1 x float>, ptr %a
-  %trunc = call <1 x float> @llvm.trunc.v1f32(<1 x float> %b) #0 [ "fpe.except"(metadata !"strict") ]
+  %trunc = call <1 x float> @llvm.trunc.v1f32(<1 x float> %b) #0 [ "fp.except"(metadata !"strict") ]
   ret <1 x float> %trunc
 }
 
@@ -6401,7 +6401,7 @@ define <2 x double> @constrained_vector_trunc_v2f64_var(ptr %a) #0 {
 ; AVX-NEXT:    retq
 entry:
   %b = load <2 x double>, ptr %a
-  %trunc = call <2 x double> @llvm.trunc.v2f64(<2 x double> %b) #0 [ "fpe.except"(metadata !"strict") ]
+  %trunc = call <2 x double> @llvm.trunc.v2f64(<2 x double> %b) #0 [ "fp.except"(metadata !"strict") ]
   ret <2 x double> %trunc
 }
 
@@ -6442,7 +6442,7 @@ define <3 x float> @constrained_vector_trunc_v3f32_var(ptr %a) #0 {
 ; AVX-NEXT:    retq
 entry:
   %b = load <3 x float>, ptr %a
-  %trunc = call <3 x float> @llvm.trunc.v3f32(<3 x float> %b) #0 [ "fpe.except"(metadata !"strict") ]
+  %trunc = call <3 x float> @llvm.trunc.v3f32(<3 x float> %b) #0 [ "fp.except"(metadata !"strict") ]
   ret <3 x float> %trunc
 }
 
@@ -6484,7 +6484,7 @@ define <3 x double> @constrained_vector_trunc_v3f64_var(ptr %a) #0 {
 ; AVX-NEXT:    retq
 entry:
   %b = load <3 x double>, ptr %a
-  %trunc = call <3 x double> @llvm.trunc.v3f64(<3 x double> %b) #0 [ "fpe.except"(metadata !"strict") ]
+  %trunc = call <3 x double> @llvm.trunc.v3f64(<3 x double> %b) #0 [ "fp.except"(metadata !"strict") ]
   ret <3 x double> %trunc
 }
 

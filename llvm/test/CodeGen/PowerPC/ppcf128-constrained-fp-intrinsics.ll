@@ -1061,7 +1061,7 @@ define ppc_fp128 @test_trunc_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-NEXT:    mtlr 0
 ; PC64-NEXT:    blr
 entry:
-  %trunc = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %first) #1 [ "fpe.except"(metadata !"strict") ]
+  %trunc = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %first) #1 [ "fp.except"(metadata !"strict") ]
   ret ppc_fp128 %trunc
 }
 

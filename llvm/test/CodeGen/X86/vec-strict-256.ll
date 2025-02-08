@@ -232,7 +232,7 @@ define <8 x float> @ftruncv8f32(<8 x float> %f) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vroundps $11, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <8 x float> @llvm.trunc.v8f32(<8 x float> %f) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call <8 x float> @llvm.trunc.v8f32(<8 x float> %f) #0 [ "fp.except"(metadata !"strict") ]
   ret <8 x float> %res
 }
 
@@ -241,7 +241,7 @@ define <4 x double> @ftruncv4f64(<4 x double> %f) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vroundpd $11, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <4 x double> @llvm.trunc.v4f64(<4 x double> %f) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call <4 x double> @llvm.trunc.v4f64(<4 x double> %f) #0 [ "fp.except"(metadata !"strict") ]
   ret <4 x double> %res
 }
 

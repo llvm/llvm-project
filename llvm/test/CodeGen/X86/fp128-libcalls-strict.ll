@@ -1407,7 +1407,7 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl $4
 entry:
-  %trunc = call fp128 @llvm.trunc.f128(fp128 %x) #0 [ "fpe.except"(metadata !"strict") ]
+  %trunc = call fp128 @llvm.trunc.f128(fp128 %x) #0 [ "fp.except"(metadata !"strict") ]
   ret fp128 %trunc
 }
 

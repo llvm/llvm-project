@@ -300,7 +300,7 @@ define <4 x float> @trunc_v4f32(<4 x float> %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintz v0.4s, v0.4s
 ; CHECK-NEXT:    ret
-  %val = call <4 x float> @llvm.trunc.v4f32(<4 x float> %x) #0 [ "fpe.except"(metadata !"strict") ]
+  %val = call <4 x float> @llvm.trunc.v4f32(<4 x float> %x) #0 [ "fp.except"(metadata !"strict") ]
   ret <4 x float> %val
 }
 
@@ -571,7 +571,7 @@ define <2 x double> @trunc_v2f64(<2 x double> %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintz v0.2d, v0.2d
 ; CHECK-NEXT:    ret
-  %val = call <2 x double> @llvm.trunc.v2f64(<2 x double> %x) #0 [ "fpe.except"(metadata !"strict") ]
+  %val = call <2 x double> @llvm.trunc.v2f64(<2 x double> %x) #0 [ "fp.except"(metadata !"strict") ]
   ret <2 x double> %val
 }
 
@@ -829,7 +829,7 @@ define <1 x double> @trunc_v1f64(<1 x double> %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintz d0, d0
 ; CHECK-NEXT:    ret
-  %val = call <1 x double> @llvm.trunc.v1f64(<1 x double> %x) #0 [ "fpe.except"(metadata !"strict") ]
+  %val = call <1 x double> @llvm.trunc.v1f64(<1 x double> %x) #0 [ "fp.except"(metadata !"strict") ]
   ret <1 x double> %val
 }
 

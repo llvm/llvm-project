@@ -154,7 +154,7 @@ define <32 x half> @strict_vector_ftrunc_v32f16(<32 x half> %f) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrndscaleph $11, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <32 x half> @llvm.trunc.v32f16(<32 x half> %f) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call <32 x half> @llvm.trunc.v32f16(<32 x half> %f) #0 [ "fp.except"(metadata !"strict") ]
   ret <32 x half> %res
 }
 

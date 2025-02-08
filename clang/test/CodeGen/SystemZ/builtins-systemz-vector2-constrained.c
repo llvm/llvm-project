@@ -62,7 +62,7 @@ void test_float(void) {
   vf = __builtin_s390_vfisb(vf, 4, 4);
   // CHECK: call <4 x float> @llvm.experimental.constrained.roundeven.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
   vf = __builtin_s390_vfisb(vf, 4, 5);
-  // CHECK: call <4 x float> @llvm.trunc.v4f32(<4 x float> %{{.*}}) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
+  // CHECK: call <4 x float> @llvm.trunc.v4f32(<4 x float> %{{.*}}) #[[ATTR:[0-9]+]] [ "fp.except"(metadata !"strict") ]
   vf = __builtin_s390_vfisb(vf, 4, 6);
   // CHECK: call <4 x float> @llvm.experimental.constrained.ceil.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
   vf = __builtin_s390_vfisb(vf, 4, 7);

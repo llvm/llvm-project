@@ -47,7 +47,7 @@ void test_float(void) {
   vd = __builtin_s390_vfidb(vd, 4, 4);
   // CHECK: call <2 x double> @llvm.experimental.constrained.roundeven.v2f64(<2 x double> %{{.*}})
   vd = __builtin_s390_vfidb(vd, 4, 5);
-  // CHECK: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{.*}}) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
+  // CHECK: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{.*}}) #[[ATTR:[0-9]+]] [ "fp.except"(metadata !"strict") ]
   vd = __builtin_s390_vfidb(vd, 4, 6);
   // CHECK: call <2 x double> @llvm.experimental.constrained.ceil.v2f64(<2 x double> %{{.*}})
   vd = __builtin_s390_vfidb(vd, 4, 7);

@@ -215,7 +215,7 @@ define void @func(double %a, double %b, double %c, i32 %i) strictfp {
                                                double %a,
                                                metadata !"fpexcept.strict")
 
-  %trunc = call double @llvm.trunc.f64(double %a) strictfp [ "fpe.except"(metadata !"strict") ]
+  %trunc = call double @llvm.trunc.f64(double %a) strictfp [ "fp.except"(metadata !"strict") ]
 
   %q1 = call i1 @llvm.experimental.constrained.fcmp.f64(
                                                double %a, double %b,

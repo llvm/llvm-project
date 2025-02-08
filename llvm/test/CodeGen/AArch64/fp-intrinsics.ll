@@ -765,7 +765,7 @@ define float @trunc_f32(float %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintz s0, s0
 ; CHECK-NEXT:    ret
-  %val = call float @llvm.trunc.f32(float %x) #0 [ "fpe.except"(metadata !"strict") ]
+  %val = call float @llvm.trunc.f32(float %x) #0 [ "fp.except"(metadata !"strict") ]
   ret float %val
 }
 
@@ -1559,7 +1559,7 @@ define double @trunc_f64(double %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintz d0, d0
 ; CHECK-NEXT:    ret
-  %val = call double @llvm.trunc.f64(double %x) #0 [ "fpe.except"(metadata !"strict") ]
+  %val = call double @llvm.trunc.f64(double %x) #0 [ "fp.except"(metadata !"strict") ]
   ret double %val
 }
 
@@ -2428,7 +2428,7 @@ define fp128 @trunc_f128(fp128 %x) #0 {
 ; CHECK-NEXT:    bl truncl
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %val = call fp128 @llvm.trunc.f128(fp128 %x) #0 [ "fpe.except"(metadata !"strict") ]
+  %val = call fp128 @llvm.trunc.f128(fp128 %x) #0 [ "fp.except"(metadata !"strict") ]
   ret fp128 %val
 }
 

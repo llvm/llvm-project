@@ -225,7 +225,7 @@ define <16 x float> @strict_vector_ftrunc_v16f32(<16 x float> %f) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrndscaleps $11, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <16 x float> @llvm.trunc.v16f32(<16 x float> %f) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call <16 x float> @llvm.trunc.v16f32(<16 x float> %f) #0 [ "fp.except"(metadata !"strict") ]
   ret <16 x float> %res
 }
 
@@ -234,7 +234,7 @@ define <8 x double> @strict_vector_ftrunc_v8f64(<8 x double> %f) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrndscalepd $11, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <8 x double> @llvm.trunc.v8f64(<8 x double> %f) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call <8 x double> @llvm.trunc.v8f64(<8 x double> %f) #0 [ "fp.except"(metadata !"strict") ]
   ret <8 x double> %res
 }
 

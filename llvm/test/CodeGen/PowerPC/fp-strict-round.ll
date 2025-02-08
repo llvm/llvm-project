@@ -562,7 +562,7 @@ define float @trunc_f32(float %f1) strictfp {
 ; P9:       # %bb.0:
 ; P9-NEXT:    xsrdpiz f1, f1
 ; P9-NEXT:    blr
-  %res = call float @llvm.trunc.f32(float %f1) [ "fpe.except"(metadata !"strict") ]
+  %res = call float @llvm.trunc.f32(float %f1) [ "fp.except"(metadata !"strict") ]
   ret float %res
 }
 
@@ -576,7 +576,7 @@ define double @trunc_f64(double %f1) strictfp {
 ; P9:       # %bb.0:
 ; P9-NEXT:    xsrdpiz f1, f1
 ; P9-NEXT:    blr
-  %res = call double @llvm.trunc.f64(double %f1) [ "fpe.except"(metadata !"strict") ] 
+  %res = call double @llvm.trunc.f64(double %f1) [ "fp.except"(metadata !"strict") ] 
   ret double %res
 }
 
@@ -590,7 +590,7 @@ define <4 x float> @trunc_v4f32(<4 x float> %vf1) strictfp {
 ; P9:       # %bb.0:
 ; P9-NEXT:    xvrspiz v2, v2
 ; P9-NEXT:    blr
-  %res = call <4 x float> @llvm.trunc.v4f32(<4 x float> %vf1) [ "fpe.except"(metadata !"strict") ]
+  %res = call <4 x float> @llvm.trunc.v4f32(<4 x float> %vf1) [ "fp.except"(metadata !"strict") ]
   ret <4 x float> %res
 }
 
@@ -604,6 +604,6 @@ define <2 x double> @trunc_v2f64(<2 x double> %vf1) strictfp {
 ; P9:       # %bb.0:
 ; P9-NEXT:    xvrdpiz v2, v2
 ; P9-NEXT:    blr
-  %res = call <2 x double> @llvm.trunc.v2f64(<2 x double> %vf1) [ "fpe.except"(metadata !"strict") ]
+  %res = call <2 x double> @llvm.trunc.v2f64(<2 x double> %vf1) [ "fp.except"(metadata !"strict") ]
   ret <2 x double> %res
 }

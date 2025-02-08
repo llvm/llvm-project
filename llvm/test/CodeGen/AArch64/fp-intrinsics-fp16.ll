@@ -830,7 +830,7 @@ define half @trunc_f16(half %x) #0 {
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    frintz h0, h0
 ; CHECK-FP16-NEXT:    ret
-  %val = call half @llvm.trunc.f16(half %x) #0 [ "fpe.except"(metadata !"strict") ]
+  %val = call half @llvm.trunc.f16(half %x) #0 [ "fp.except"(metadata !"strict") ]
   ret half %val
 }
 

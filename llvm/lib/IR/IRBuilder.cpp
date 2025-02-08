@@ -98,7 +98,7 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
     if (const auto *Func = dyn_cast<Function>(Callee)) {
       if (Intrinsic::ID ID = Func->getIntrinsicID()) {
         if (IntrinsicInst::canAccessFPEnvironment(ID) ||
-            Intrinsic::isConstrainedFPIntrinsic(ID)) {
+            Intrinsic::isLegacyConstrainedIntrinsic(ID)) {
           bool NeedRound = true, NeedExcept = true;
           doesCallAccessFPEnv = true;
           for (const auto &Item : OpBundles) {

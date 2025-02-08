@@ -6441,7 +6441,7 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
 /// Lower the call to the specified intrinsic function.
 void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                              unsigned Intrinsic) {
-  if (I.isConstrained()) {
+  if (I.hasFloatingPointBundles()) {
     visitConstrainedFPIntrinsic(cast<IntrinsicInst>(I));
     return;
   }

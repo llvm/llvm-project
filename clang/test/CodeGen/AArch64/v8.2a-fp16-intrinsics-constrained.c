@@ -150,7 +150,7 @@ uint64_t test_vcvth_u64_f16 (float16_t a) {
 
 // COMMON-LABEL: test_vrndh_f16
 // UNCONSTRAINED:  [[RND:%.*]] = call half @llvm.trunc.f16(half %a)
-// CONSTRAINED:    [[RND:%.*]] = call half @llvm.trunc.f16(half %a) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
+// CONSTRAINED:    [[RND:%.*]] = call half @llvm.trunc.f16(half %a) #[[ATTR:[0-9]+]] [ "fp.except"(metadata !"strict") ]
 // COMMONIR:       ret half [[RND]]
 float16_t test_vrndh_f16(float16_t a) {
   return vrndh_f16(a);

@@ -2174,7 +2174,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
   // Process constrained intrinsics in a way compatible with the pre-bundle
   // implementation..
-  if (CI.isConstrained() &&
+  if (CI.hasFloatingPointBundles() &&
       !Intrinsic::isLegacyConstrainedIntrinsic(CI.getIntrinsicID()))
     return false;
 

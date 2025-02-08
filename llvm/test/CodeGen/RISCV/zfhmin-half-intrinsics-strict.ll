@@ -282,7 +282,7 @@ define half @trunc_f16(half %a) nounwind strictfp {
 ; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZDINXZHINXMIN-NEXT:    ret
-  %1 = call half @llvm.trunc.f16(half %a) strictfp [ "fpe.except"(metadata !"strict") ]
+  %1 = call half @llvm.trunc.f16(half %a) strictfp [ "fp.except"(metadata !"strict") ]
   ret half %1
 }
 

@@ -61,7 +61,7 @@ define <4 x float> @f5(<4 x float> %val) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: vfisb %v24, %v24, 4, 5
 ; CHECK: br %r14
-  %res = call <4 x float> @llvm.trunc.v4f32(<4 x float> %val) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call <4 x float> @llvm.trunc.v4f32(<4 x float> %val) #0 [ "fp.except"(metadata !"strict") ]
   ret <4 x float> %res
 }
 
@@ -136,7 +136,7 @@ define float @f12(<4 x float> %val) #0 {
 ; CHECK: wfisb %f0, %v24, 4, 5
 ; CHECK: br %r14
   %scalar = extractelement <4 x float> %val, i32 0
-  %res = call float @llvm.trunc.f32(float %scalar) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call float @llvm.trunc.f32(float %scalar) #0 [ "fp.except"(metadata !"strict") ]
   ret float %res
 }
 

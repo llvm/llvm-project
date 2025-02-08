@@ -115,7 +115,7 @@ define half @ftrunc32(half %f) #0 {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vrndscalesh $11, %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %res = call half @llvm.trunc.f16(half %f) #1 [ "fpe.except"(metadata !"strict") ]
+  %res = call half @llvm.trunc.f16(half %f) #1 [ "fp.except"(metadata !"strict") ]
   ret half %res
 }
 

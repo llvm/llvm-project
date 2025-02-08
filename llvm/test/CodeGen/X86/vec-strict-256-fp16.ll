@@ -159,7 +159,7 @@ define <16 x half> @ftruncv16f16(<16 x half> %f) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrndscaleph $11, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <16 x half> @llvm.trunc.v16f16(<16 x half> %f) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call <16 x half> @llvm.trunc.v16f16(<16 x half> %f) #0 [ "fp.except"(metadata !"strict") ]
   ret <16 x half> %res
 }
 

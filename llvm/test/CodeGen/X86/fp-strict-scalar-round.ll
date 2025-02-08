@@ -243,7 +243,7 @@ define float @ftrunc32(float %f) #0 {
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
-  %res = call float @llvm.trunc.f32(float %f) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call float @llvm.trunc.f32(float %f) #0 [ "fp.except"(metadata !"strict") ]
   ret float %res
 }
 
@@ -295,7 +295,7 @@ define double @ftruncf64(double %f) #0 {
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
-  %res = call double @llvm.trunc.f64(double %f) #0 [ "fpe.except"(metadata !"strict") ]
+  %res = call double @llvm.trunc.f64(double %f) #0 [ "fp.except"(metadata !"strict") ]
   ret double %res
 }
 

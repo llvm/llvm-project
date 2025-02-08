@@ -28524,39 +28524,6 @@ This function returns the same values as the libm ``llround`` functions
 would and handles error conditions in the same way.
 
 
-'``llvm.experimental.constrained.trunc``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.trunc(<type> <op1>,
-                                           metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.trunc``' intrinsic returns the first
-argument rounded to the nearest integer not larger in magnitude than the
-argument.
-
-Arguments:
-""""""""""
-
-The first argument and the return value are floating-point numbers of the same
-type.
-
-The second argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the same values as the libm ``trunc`` functions
-would and handles error conditions in the same way.
-
 .. _int_experimental_noalias_scope_decl:
 
 '``llvm.experimental.noalias.scope.decl``' Intrinsic
