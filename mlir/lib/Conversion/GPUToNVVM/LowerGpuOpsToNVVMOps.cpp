@@ -378,16 +378,36 @@ struct LowerGpuOpsToNVVMOpsPass
     RewritePatternSet llvmPatterns(m.getContext());
     LLVMConversionTarget target(getContext());
 
-    for (Dialect *dialect : getContext().getLoadedDialects()) {
-      if (isa<math::MathDialect>(dialect))
-        continue;
+    if (!filterDialects.empty()) {
+      for (StringRef dialectName : filterDialects) {
+        Dialect *dialect = getContext().getLoadedDialect(dialectName);
+        // Dialect may not be loaded if it wasn't used in source module, ignore.
+        if (!dialect)
+          continue;
 
-      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
-      if (!iface)
-        continue;
+        auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+        if (!iface) {
+          m.emitError()
+              << "dialect does not implement ConvertToLLVMPatternInterface: "
+              << dialectName << "\n";
+          return signalPassFailure();
+        }
 
-      iface->populateConvertToLLVMConversionPatterns(target, converter,
-                                                     llvmPatterns);
+        iface->populateConvertToLLVMConversionPatterns(target, converter,
+                                                       llvmPatterns);
+      }
+    } else {
+      for (Dialect *dialect : getContext().getLoadedDialects()) {
+        if (isa<math::MathDialect>(dialect)) // Need custom math lowering
+          continue;
+
+        auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+        if (!iface)
+          continue;
+
+        iface->populateConvertToLLVMConversionPatterns(target, converter,
+                                                       llvmPatterns);
+      }
     }
 
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
@@ -404,6 +424,7 @@ struct LowerGpuOpsToNVVMOpsPass
 
 void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addIllegalOp<func::FuncOp>();
+  target.addIllegalOp<cf::AssertOp>();
   target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
