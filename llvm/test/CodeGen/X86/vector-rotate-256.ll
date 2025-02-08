@@ -517,7 +517,7 @@ define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 define <4 x i64> @splatvar_rotate_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; AVX1-LABEL: splatvar_rotate_v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [64,64]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = [64,0]
 ; AVX1-NEXT:    vpsubq %xmm1, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpsllq %xmm1, %xmm3, %xmm4
@@ -532,7 +532,7 @@ define <4 x i64> @splatvar_rotate_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; AVX2-LABEL: splatvar_rotate_v4i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllq %xmm1, %ymm0, %ymm2
-; AVX2-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [64,64]
+; AVX2-NEXT:    vmovq {{.*#+}} xmm3 = [64,0]
 ; AVX2-NEXT:    vpsubq %xmm1, %xmm3, %xmm1
 ; AVX2-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0

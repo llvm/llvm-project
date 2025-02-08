@@ -26,7 +26,7 @@ declare <4 x float> @llvm.x86.sse41.blendps(<4 x float>, <4 x float>, i8) nounwi
 define <2 x double> @commute_fold_blendpd(<2 x double> %a, ptr %b) {
 ; CHECK-LABEL: commute_fold_blendpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; CHECK-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; CHECK-NEXT:    retq
   %1 = load <2 x double>, ptr %b
   %2 = call <2 x double> @llvm.x86.sse41.blendpd(<2 x double> %1, <2 x double> %a, i8 1)
@@ -54,11 +54,11 @@ define <4 x i32> @commute_fold_blend_v4i32(ptr %a, <4 x i32> %b) {
 define void @baz(ptr %arg, ptr %arg1) optsize {
 ; CHECK-LABEL: baz:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movaps (%rdi), %xmm0
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [3,3]
-; CHECK-NEXT:    andps %xmm0, %xmm1
-; CHECK-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3]
-; CHECK-NEXT:    movups %xmm1, (%rsi)
+; CHECK-NEXT:    movdqa (%rdi), %xmm0
+; CHECK-NEXT:    pinsrq $1, {{\.?LCPI[0-9]+_[0-9]+}}+8(%rip), %xmm1
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; CHECK-NEXT:    movdqu %xmm1, (%rsi)
 ; CHECK-NEXT:    retq
 bb:
   %tmp = load <2 x i64>, ptr %arg, align 16

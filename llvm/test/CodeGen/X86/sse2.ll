@@ -392,19 +392,19 @@ define <2 x double> @test11(double %a, double %b) nounwind {
 define void @test12() nounwind {
 ; SSE-LABEL: test12:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movapd 0, %xmm0
-; SSE-NEXT:    movapd {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSE-NEXT:    xorps %xmm2, %xmm2
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm0[1],xmm2[1]
-; SSE-NEXT:    addps %xmm1, %xmm2
-; SSE-NEXT:    movaps %xmm2, 0
+; SSE-NEXT:    movaps 0, %xmm0
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; SSE-NEXT:    addps %xmm0, %xmm1
+; SSE-NEXT:    movaps %xmm1, 0
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: test12:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovaps 0, %xmm0
-; AVX1-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0,1],mem[2,3]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX1-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3]
 ; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm2[1]
 ; AVX1-NEXT:    vaddps %xmm0, %xmm1, %xmm0
@@ -529,29 +529,45 @@ define <4 x float> @test15(ptr %x, ptr %y) nounwind {
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    movaps (%ecx), %xmm0
-; X86-SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],mem[1]
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X86-SSE-NEXT:    retl
 ;
-; X86-AVX-LABEL: test15:
-; X86-AVX:       # %bb.0: # %entry
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    vmovaps (%ecx), %xmm0
-; X86-AVX-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],mem[1]
-; X86-AVX-NEXT:    retl
+; X86-AVX1-LABEL: test15:
+; X86-AVX1:       # %bb.0: # %entry
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; X86-AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX512-LABEL: test15:
+; X86-AVX512:       # %bb.0: # %entry
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-AVX512-NEXT:    vunpcklpd 8(%eax){1to2}, %xmm0, %xmm0
+; X86-AVX512-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test15:
 ; X64-SSE:       # %bb.0: # %entry
-; X64-SSE-NEXT:    movaps (%rdi), %xmm0
-; X64-SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],mem[1]
+; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X64-SSE-NEXT:    retq
 ;
-; X64-AVX-LABEL: test15:
-; X64-AVX:       # %bb.0: # %entry
-; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],mem[1]
-; X64-AVX-NEXT:    retq
+; X64-AVX1-LABEL: test15:
+; X64-AVX1:       # %bb.0: # %entry
+; X64-AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; X64-AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX512-LABEL: test15:
+; X64-AVX512:       # %bb.0: # %entry
+; X64-AVX512-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-AVX512-NEXT:    vunpcklpd 8(%rsi){1to2}, %xmm0, %xmm0
+; X64-AVX512-NEXT:    retq
 entry:
   %tmp = load <4 x float>, ptr %y             ; <<4 x float>> [#uses=1]
   %tmp3 = load <4 x float>, ptr %x            ; <<4 x float>> [#uses=1]
@@ -565,27 +581,27 @@ define  <2 x double> @test16(ptr nocapture %srcA, ptr nocapture %dst) {
 ; X86-SSE-LABEL: test16:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movaps 96(%eax), %xmm0
-; X86-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test16:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovaps 96(%eax), %xmm0
-; X86-AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test16:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movaps 96(%rdi), %xmm0
-; X64-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test16:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps 96(%rdi), %xmm0
-; X64-AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X64-AVX-NEXT:    retq
   %i5 = getelementptr inbounds <4 x double>, ptr %srcA, i32 3
   %i6 = load <4 x double>, ptr %i5, align 32
@@ -700,8 +716,3 @@ define <4 x i32> @test_mul(<4 x i32> %x, <4 x i32> %y) {
   %m = mul <4 x i32> %x, %y
   ret <4 x i32> %m
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; X64-AVX1: {{.*}}
-; X64-AVX512: {{.*}}
-; X86-AVX1: {{.*}}
-; X86-AVX512: {{.*}}

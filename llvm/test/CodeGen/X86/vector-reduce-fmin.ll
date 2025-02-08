@@ -635,7 +635,7 @@ define double @test_v3f64(<3 x double> %a0) {
 ; SSE2-LABEL: test_v3f64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE2-NEXT:    shufpd {{.*#+}} xmm2 = xmm2[0],mem[1]
+; SSE2-NEXT:    movhpd {{.*#+}} xmm2 = xmm2[0],mem[0]
 ; SSE2-NEXT:    movapd %xmm2, %xmm1
 ; SSE2-NEXT:    minpd %xmm0, %xmm1
 ; SSE2-NEXT:    cmpunordpd %xmm0, %xmm0
@@ -656,7 +656,7 @@ define double @test_v3f64(<3 x double> %a0) {
 ; SSE41-LABEL: test_v3f64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE41-NEXT:    blendpd {{.*#+}} xmm2 = xmm2[0],mem[1]
+; SSE41-NEXT:    movhpd {{.*#+}} xmm2 = xmm2[0],mem[0]
 ; SSE41-NEXT:    movapd %xmm2, %xmm1
 ; SSE41-NEXT:    minpd %xmm0, %xmm1
 ; SSE41-NEXT:    cmpunordpd %xmm0, %xmm0

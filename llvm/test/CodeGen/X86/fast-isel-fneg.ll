@@ -40,8 +40,9 @@ define float @fneg_f32(float %x) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushl %eax
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; SSE2-NEXT:    movss %xmm0, (%esp)
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    xorps %xmm0, %xmm1
+; SSE2-NEXT:    movss %xmm1, (%esp)
 ; SSE2-NEXT:    flds (%esp)
 ; SSE2-NEXT:    popl %eax
 ; SSE2-NEXT:    retl

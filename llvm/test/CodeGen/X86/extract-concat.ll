@@ -153,14 +153,16 @@ define <16 x i64> @load_catcat(ptr %p) {
 define <4 x i32> @cat_ext_straddle(ptr %px, ptr %py) {
 ; SSE-LABEL: cat_ext_straddle:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps 16(%rdi), %xmm0
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: cat_ext_straddle:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps 16(%rdi), %xmm0
-; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX-NEXT:    retq
   %x = load <6 x i32>, ptr %px
   %y = load <6 x i32>, ptr %py

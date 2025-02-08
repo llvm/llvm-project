@@ -1609,10 +1609,12 @@ define <2 x i64> @combine_vec_sdiv_by_pow2b_v2i64(<2 x i64> %x) {
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v2i64:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpshaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; XOP-NEXT:    vpinsrq $1, {{\.?LCPI[0-9]+_[0-9]+}}+8(%rip), %xmm0, %xmm1
+; XOP-NEXT:    vpshaq %xmm1, %xmm0, %xmm1
 ; XOP-NEXT:    vpsrlq $62, %xmm1, %xmm1
 ; XOP-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
-; XOP-NEXT:    vpshaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vpinsrq $1, {{\.?LCPI[0-9]+_[0-9]+}}+8(%rip), %xmm0, %xmm2
+; XOP-NEXT:    vpshaq %xmm2, %xmm1, %xmm1
 ; XOP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; XOP-NEXT:    retq
   %1 = sdiv <2 x i64> %x, <i64 1, i64 4>
@@ -1739,7 +1741,8 @@ define <4 x i64> @combine_vec_sdiv_by_pow2b_v4i64(<4 x i64> %x) {
 ; XOP-NEXT:    vpshaq %xmm1, %xmm0, %xmm2
 ; XOP-NEXT:    vpsrlq $62, %xmm2, %xmm2
 ; XOP-NEXT:    vpaddq %xmm2, %xmm0, %xmm2
-; XOP-NEXT:    vpshaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; XOP-NEXT:    vpinsrq $1, {{\.?LCPI[0-9]+_[0-9]+}}+8(%rip), %xmm0, %xmm3
+; XOP-NEXT:    vpshaq %xmm3, %xmm2, %xmm2
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; XOP-NEXT:    vpshaq %xmm1, %xmm3, %xmm1
 ; XOP-NEXT:    vpshlq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
@@ -3051,7 +3054,8 @@ define <16 x i8> @pr38658(<16 x i8> %x) {
 ; XOP-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[1,3,5,7,9,11,13,15],xmm2[1,3,5,7,9,11,13,15]
 ; XOP-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    vpshab {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; XOP-NEXT:    vpshlb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vpinsrb $15, {{\.?LCPI[0-9]+_[0-9]+}}+15(%rip), %xmm0, %xmm2
+; XOP-NEXT:    vpshlb %xmm2, %xmm0, %xmm0
 ; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; XOP-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    retq

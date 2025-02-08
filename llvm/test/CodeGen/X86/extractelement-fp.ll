@@ -353,9 +353,9 @@ define float @select_fcmp_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z, 
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vmovaps 8(%ebp), %xmm3
 ; X86-NEXT:    vcmpneq_oqss %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0
+; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; X86-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -546,7 +546,8 @@ define float @fabs_v4f32(<4 x float> %x) nounwind {
 define double @fabs_v4f64(<4 x double> %x) nounwind {
 ; X64-LABEL: fabs_v4f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vmovsd {{.*#+}} xmm1 = [NaN,0.0E+0]
+; X64-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 ;

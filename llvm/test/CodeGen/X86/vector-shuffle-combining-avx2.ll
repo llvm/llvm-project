@@ -914,16 +914,15 @@ define void @PR63030(ptr %p0) {
 ;
 ; X64-AVX2-LABEL: PR63030:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX2-NEXT:    vmovddup {{.*#+}} xmm1 = [3,3]
-; X64-AVX2-NEXT:    # xmm1 = mem[0,0]
-; X64-AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm0[1,1,0,0]
-; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2,3],ymm2[4,5,6,7]
-; X64-AVX2-NEXT:    vmovaps {{.*#+}} xmm2 = [3,2]
-; X64-AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,1,1]
-; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3],ymm0[4,5,6,7]
-; X64-AVX2-NEXT:    vmovaps %ymm0, (%rax)
-; X64-AVX2-NEXT:    vmovaps %ymm1, (%rax)
+; X64-AVX2-NEXT:    vmovdqa (%rdi), %xmm0
+; X64-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [3,3]
+; X64-AVX2-NEXT:    vpermq {{.*#+}} ymm2 = ymm0[1,1,0,0]
+; X64-AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1],ymm1[2,3],ymm2[4,5,6,7]
+; X64-AVX2-NEXT:    vpinsrq $1, {{\.?LCPI[0-9]+_[0-9]+}}+8(%rip), %xmm0, %xmm2
+; X64-AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,1,1]
+; X64-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3],ymm0[4,5,6,7]
+; X64-AVX2-NEXT:    vmovdqa %ymm0, (%rax)
+; X64-AVX2-NEXT:    vmovdqa %ymm1, (%rax)
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;

@@ -796,21 +796,26 @@ define <16 x i8> @constant_fold_pshufb_2() {
 define i32 @mask_zzz3_v16i8(<16 x i8> %a0) {
 ; SSSE3-LABEL: mask_zzz3_v16i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSSE3-NEXT:    movzbl {{\.?LCPI[0-9]+_[0-9]+}}+3(%rip), %eax
+; SSSE3-NEXT:    movd %eax, %xmm1
+; SSSE3-NEXT:    pslld $24, %xmm1
+; SSSE3-NEXT:    pshufb %xmm1, %xmm0
 ; SSSE3-NEXT:    movd %xmm0, %eax
 ; SSSE3-NEXT:    andl $-16777216, %eax # imm = 0xFF000000
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: mask_zzz3_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    psllw $8, %xmm0
+; SSE41-NEXT:    pinsrb $15, {{\.?LCPI[0-9]+_[0-9]+}}+15(%rip), %xmm1
+; SSE41-NEXT:    pshufb %xmm1, %xmm0
 ; SSE41-NEXT:    pextrd $3, %xmm0, %eax
 ; SSE41-NEXT:    andl $-16777216, %eax # imm = 0xFF000000
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: mask_zzz3_v16i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpsllw $8, %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $15, {{\.?LCPI[0-9]+_[0-9]+}}+15(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpextrd $3, %xmm0, %eax
 ; AVX-NEXT:    andl $-16777216, %eax # imm = 0xFF000000
 ; AVX-NEXT:    retq

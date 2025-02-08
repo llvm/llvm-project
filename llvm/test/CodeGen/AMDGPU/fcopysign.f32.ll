@@ -880,44 +880,43 @@ define amdgpu_kernel void @s_test_copysign_f32_fptrunc_f64(ptr addrspace(1) %out
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_load_dword s6, s[4:5], 0xb
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_brev_b32 s4, -2
+; SI-NEXT:    s_load_dword s4, s[4:5], 0xe
+; SI-NEXT:    s_brev_b32 s5, -2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s5
-; SI-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; SI-NEXT:    v_mov_b32_e32 v1, s4
+; SI-NEXT:    v_bfi_b32 v0, s5, v0, v1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: s_test_copysign_f32_fptrunc_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s6, s[4:5], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
-; VI-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VI-NEXT:    s_load_dword s3, s[4:5], 0x38
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_brev_b32 s4, -2
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_brev_b32 s0, -2
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    v_bfi_b32 v2, s0, v0, v1
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    v_bfi_b32 v2, s4, v0, v1
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_test_copysign_f32_fptrunc_f64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34
+; GFX11-NEXT:    s_clause 0x2
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x38
+; GFX11-NEXT:    s_load_b32 s3, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x2c
-; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
-; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s1
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, s0, v0
-; GFX11-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, s3, v0
+; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %sign.trunc = fptrunc double %sign to float
   %result = call float @llvm.copysign.f32(float %mag, float %sign.trunc)

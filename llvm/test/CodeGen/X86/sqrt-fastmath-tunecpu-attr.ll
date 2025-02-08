@@ -12,7 +12,8 @@ define float @f32_tune_nhm(float %f) #0 {
 ; CHECK-NEXT:    mulss %xmm1, %xmm2
 ; CHECK-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; CHECK-NEXT:    mulss %xmm3, %xmm2
-; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    cmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    andnps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
@@ -49,7 +50,8 @@ define float @f32_tune_x86_64(float %f) #3 {
 ; CHECK-NEXT:    mulss %xmm1, %xmm2
 ; CHECK-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; CHECK-NEXT:    mulss %xmm3, %xmm2
-; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    cmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    andnps %xmm2, %xmm0
 ; CHECK-NEXT:    retq

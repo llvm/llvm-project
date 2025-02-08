@@ -34,7 +34,7 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_load_dwordx16 s[36:51], s[4:5], 0x0
 ; CHECK-NEXT:    ; implicit-def: $vgpr7 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    s_load_dwordx4 s[28:31], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dword s22, s[4:5], 0x0
 ; CHECK-NEXT:    s_movk_i32 s20, 0x130
 ; CHECK-NEXT:    s_mov_b32 s21, s24
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -55,7 +55,7 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_mov_b32 s20, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    v_writelane_b32 v7, s49, 13
-; CHECK-NEXT:    v_mov_b32_e32 v2, s28
+; CHECK-NEXT:    v_mov_b32_e32 v2, s22
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v1
 ; CHECK-NEXT:    s_mov_b32 s21, s20
 ; CHECK-NEXT:    s_mov_b32 s22, s20
@@ -318,8 +318,8 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_mov_b64 s[16:17], s[40:41]
 ; CHECK-NEXT:    s_mov_b64 s[18:19], s[42:43]
 ; CHECK-NEXT:    ; kill: killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-; CHECK-NEXT:    ; kill: killed $sgpr8_sgpr9_sgpr10 killed $sgpr11
 ; CHECK-NEXT:    ; kill: killed $sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59
+; CHECK-NEXT:    ; kill: killed $sgpr8_sgpr9_sgpr10 killed $sgpr11
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_sub_f32_e32 v1, v4, v3
 ; CHECK-NEXT:    v_mul_f32_e32 v0, v1, v0

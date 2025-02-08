@@ -93,8 +93,8 @@ define amdgpu_kernel void @sgpr_trunc_i32_to_i1(ptr addrspace(1) %out, i32 %a) {
 }
 
 ; GCN-LABEL: {{^}}s_trunc_i64_to_i1:
-; SI: s_load_dwordx2 s[[[SLO:[0-9]+]]:{{[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x13
-; VI: s_load_dwordx2 s[[[SLO:[0-9]+]]:{{[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x4c
+; SI: s_load_dword s[[SLO:[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x13
+; VI: s_load_dword s[[SLO:[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x4c
 ; GCN: s_bitcmp1_b32 s[[SLO]], 0
 ; GCN: s_cselect_b32 {{s[0-9]+}}, 63, -12
 define amdgpu_kernel void @s_trunc_i64_to_i1(ptr addrspace(1) %out, [8 x i32], i64 %x) {

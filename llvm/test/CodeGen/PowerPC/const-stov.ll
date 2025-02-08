@@ -132,28 +132,29 @@ entry:
 define  <2 x i64> @i64(ptr nocapture noundef readonly %p) {
 ; PWR7-BE-LABEL: i64:
 ; PWR7-BE:       # %bb.0: # %entry
-; PWR7-BE-NEXT:    lxvd2x v2, 0, r3
+; PWR7-BE-NEXT:    lfd f0, 0(r3)
 ; PWR7-BE-NEXT:    li r3, 10
+; PWR7-BE-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; PWR7-BE-NEXT:    std r3, -16(r1)
-; PWR7-BE-NEXT:    std r3, -8(r1)
-; PWR7-BE-NEXT:    addi r3, r1, -16
-; PWR7-BE-NEXT:    lxvd2x v3, 0, r3
+; PWR7-BE-NEXT:    lfd f0, -16(r1)
+; PWR7-BE-NEXT:    xxpermdi v3, vs0, vs0, 1
 ; PWR7-BE-NEXT:    xxmrghd v2, v2, v3
 ; PWR7-BE-NEXT:    blr
 ;
 ; PWR8-BE-LABEL: i64:
 ; PWR8-BE:       # %bb.0: # %entry
-; PWR8-BE-NEXT:    lxvd2x v2, 0, r3
+; PWR8-BE-NEXT:    lfd f0, 0(r3)
 ; PWR8-BE-NEXT:    li r3, 10
+; PWR8-BE-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; PWR8-BE-NEXT:    mtfprd f0, r3
 ; PWR8-BE-NEXT:    xxmrghd v2, v2, vs0
 ; PWR8-BE-NEXT:    blr
 ;
 ; PWR8-LE-LABEL: i64:
 ; PWR8-LE:       # %bb.0: # %entry
-; PWR8-LE-NEXT:    lxvd2x vs0, 0, r3
+; PWR8-LE-NEXT:    lfd f0, 0(r3)
 ; PWR8-LE-NEXT:    li r3, 10
-; PWR8-LE-NEXT:    xxswapd v2, vs0
+; PWR8-LE-NEXT:    xxspltd v2, vs0, 0
 ; PWR8-LE-NEXT:    mtfprd f0, r3
 ; PWR8-LE-NEXT:    xxpermdi v2, vs0, v2, 1
 ; PWR8-LE-NEXT:    blr

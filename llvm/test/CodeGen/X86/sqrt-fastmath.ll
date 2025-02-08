@@ -764,16 +764,18 @@ define <4 x float> @div_sqrt_fabs_v4f32_fmf(<4 x float> %x, <4 x float> %y, <4 x
 define double @div_sqrt_fabs_f64(double %x, double %y, double %z) {
 ; SSE-LABEL: div_sqrt_fabs_f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    sqrtsd %xmm2, %xmm2
-; SSE-NEXT:    mulsd %xmm2, %xmm1
-; SSE-NEXT:    divsd %xmm1, %xmm0
+; SSE-NEXT:    movsd {{.*#+}} xmm3 = [NaN,0.0E+0]
+; SSE-NEXT:    andpd %xmm1, %xmm3
+; SSE-NEXT:    mulsd %xmm2, %xmm3
+; SSE-NEXT:    divsd %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: div_sqrt_fabs_f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vsqrtsd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vmovsd {{.*#+}} xmm3 = [NaN,0.0E+0]
+; AVX-NEXT:    vandpd %xmm3, %xmm1, %xmm1
 ; AVX-NEXT:    vmulsd %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
