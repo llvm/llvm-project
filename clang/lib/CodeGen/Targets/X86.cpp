@@ -1391,7 +1391,7 @@ class WinX86_64ABIInfo : public ABIInfo {
 public:
   WinX86_64ABIInfo(CodeGen::CodeGenTypes &CGT, X86AVXABILevel AVXLevel)
       : ABIInfo(CGT), AVXLevel(AVXLevel),
-        IsMingw64(getTarget().getTriple().isWindowsGNUEnvironment()) {}
+        IsMingw64(getTarget().getTriple().isOSCygMing()) {}
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
