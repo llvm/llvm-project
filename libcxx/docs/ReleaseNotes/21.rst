@@ -38,16 +38,18 @@ What's New in Libc++ 21.0.0?
 Implemented Papers
 ------------------
 
-- P2441R2 - ``views::join_with``
-- P2711R1 - Making multi-param constructors of ``views`` ``explicit``
-- P2770R0 - Stashing stashing ``iterators`` for proper flattening
-
+- N4258: Cleaning-up noexcept in the Library (`Github <https://github.com/llvm/llvm-project/issues/99937>`__)
+- P2441R2: ``views::join_with``
+- P2711R1: Making multi-param constructors of ``views`` ``explicit``
+- P2770R0: Stashing stashing ``iterators`` for proper flattening
 
 Improvements and New Features
 -----------------------------
 
-- TODO
+- The ``std::ranges::{copy, copy_n, copy_backward}`` algorithms have been optimized for ``std::vector<bool>::iterator``\s,
+  resulting in a performance improvement of up to 2000x.
 
+- Updated formatting library to Unicode 16.0.0.
 
 Deprecations and Removals
 -------------------------

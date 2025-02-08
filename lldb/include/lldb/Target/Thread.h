@@ -200,13 +200,14 @@ public:
   ///    The User resume state for this thread.
   lldb::StateType GetResumeState() const { return m_resume_state; }
 
-  // This function is called to determine whether the thread needs to
-  // step over a breakpoint and if so, push a step-over-breakpoint thread
-  // plan.
+  /// This function is called on all the threads before "ShouldResume" and
+  /// "WillResume" in case a thread needs to change its state before the
+  /// ThreadList polls all the threads to figure out which ones actually will
+  /// get to run and how.
   ///
   /// \return
   ///    True if we pushed a ThreadPlanStepOverBreakpoint
-  bool SetupToStepOverBreakpointIfNeeded(lldb::RunDirection direction);
+  bool SetupForResume();
 
   // Do not override this function, it is for thread plan logic only
   bool ShouldResume(lldb::StateType resume_state);
@@ -468,6 +469,26 @@ public:
   CreateRegisterContextForFrame(StackFrame *frame) = 0;
 
   virtual void ClearStackFrames();
+
+  /// Sets the thread that is backed by this thread.
+  /// If backed_thread.GetBackedThread() is null, this method also calls
+  /// backed_thread.SetBackingThread(this).
+  /// If backed_thread.GetBackedThread() is non-null, asserts that it is equal
+  /// to `this`.
+  void SetBackedThread(Thread &backed_thread) {
+    m_backed_thread = backed_thread.shared_from_this();
+
+    // Ensure the bidrectional relationship is preserved.
+    Thread *backing_thread = backed_thread.GetBackingThread().get();
+    assert(backing_thread == nullptr || backing_thread == this);
+    if (backing_thread == nullptr)
+      backed_thread.SetBackingThread(shared_from_this());
+  }
+
+  void ClearBackedThread() { m_backed_thread.reset(); }
+
+  /// Returns the thread that is backed by this thread, if any.
+  lldb::ThreadSP GetBackedThread() const { return m_backed_thread.lock(); }
 
   virtual bool SetBackingThread(const lldb::ThreadSP &thread_sp) {
     return false;
@@ -1347,6 +1368,9 @@ protected:
                          // classes call DestroyThread.
   LazyBool m_override_should_notify;
   mutable std::unique_ptr<ThreadPlanStack> m_null_plan_stack_up;
+
+  /// The Thread backed by this thread, if any.
+  lldb::ThreadWP m_backed_thread;
 
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info

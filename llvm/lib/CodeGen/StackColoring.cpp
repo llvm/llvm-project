@@ -914,10 +914,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     if (!VI.Var || !VI.inStackSlot())
       continue;
     int Slot = VI.getStackSlot();
-    if (SlotRemap.count(Slot)) {
+    if (auto It = SlotRemap.find(Slot); It != SlotRemap.end()) {
       LLVM_DEBUG(dbgs() << "Remapping debug info for ["
                         << cast<DILocalVariable>(VI.Var)->getName() << "].\n");
-      VI.updateStackSlot(SlotRemap[Slot]);
+      VI.updateStackSlot(It->second);
       FixedDbg++;
     }
   }
@@ -1004,10 +1004,11 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         if (!AI)
           continue;
 
-        if (!Allocas.count(AI))
+        auto It = Allocas.find(AI);
+        if (It == Allocas.end())
           continue;
 
-        MMO->setValue(Allocas[AI]);
+        MMO->setValue(It->second);
         FixedMemOp++;
       }
 
@@ -1173,8 +1174,8 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
   // Expunge slot remap map.
   for (unsigned i=0; i < NumSlots; ++i) {
     // If we are remapping i
-    if (SlotRemap.count(i)) {
-      int Target = SlotRemap[i];
+    if (auto It = SlotRemap.find(i); It != SlotRemap.end()) {
+      int Target = It->second;
       // As long as our target is mapped to something else, follow it.
       while (SlotRemap.count(Target)) {
         Target = SlotRemap[Target];

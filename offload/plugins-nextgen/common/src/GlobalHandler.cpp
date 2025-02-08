@@ -67,7 +67,7 @@ Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
       return Err;
   }
 
-  DP("Succesfully %s %u bytes associated with global symbol '%s' %s the "
+  DP("Successfully %s %u bytes associated with global symbol '%s' %s the "
      "device "
      "(%p -> %p).\n",
      Device2Host ? "read" : "write", HostGlobal.getSize(),

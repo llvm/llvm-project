@@ -402,15 +402,9 @@ lldb_private::DynamicLoader *ProcessKDP::GetDynamicLoader() {
 
 Status ProcessKDP::WillResume() { return Status(); }
 
-Status ProcessKDP::DoResume(RunDirection direction) {
+Status ProcessKDP::DoResume() {
   Status error;
   Log *log = GetLog(KDPLog::Process);
-
-  if (direction == RunDirection::eRunReverse)
-    return Status::FromErrorStringWithFormatv(
-        "error: {0} does not support reverse execution of processes",
-        GetPluginName());
-
   // Only start the async thread if we try to do any process control
   if (!m_async_thread.IsJoinable())
     StartAsyncThread();

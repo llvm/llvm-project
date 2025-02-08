@@ -932,7 +932,9 @@ def W_Joined : Joined<["-"], "W">, Group<W_Group>,
 def Xanalyzer : Separate<["-"], "Xanalyzer">,
   HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">,
   Group<StaticAnalyzer_Group>;
-def Xarch__ : JoinedAndSeparate<["-"], "Xarch_">, Flags<[NoXarchOption]>;
+def Xarch__ : JoinedAndSeparate<["-"], "Xarch_">, Flags<[NoXarchOption]>,
+  HelpText<"Pass <arg> to the compiliation if the target matches <arch>">,
+  MetaVarName<"<arch> <arg>">;
 def Xarch_host : Separate<["-"], "Xarch_host">, Flags<[NoXarchOption]>,
   HelpText<"Pass <arg> to the CUDA/HIP host compilation">, MetaVarName<"<arg>">;
 def Xarch_device : Separate<["-"], "Xarch_device">, Flags<[NoXarchOption]>,
@@ -1115,8 +1117,8 @@ def fno_convergent_functions : Flag<["-"], "fno-convergent-functions">,
 
 // Common offloading options
 let Group = offload_Group in {
-def offload_arch_EQ : Joined<["--"], "offload-arch=">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, FlangOption]>,
+def offload_arch_EQ : Joined<["--"], "offload-arch=">,
+  Visibility<[ClangOption, FlangOption]>, Flags<[NoXarchOption]>,
   HelpText<"Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). "
            "If 'native' is used the compiler will detect locally installed architectures. "
            "For HIP offloading, the device architecture can be followed by target ID features "
@@ -2524,6 +2526,10 @@ defm sanitize_cfi_canonical_jump_tables : BoolOption<"f", "sanitize-cfi-canonica
           "Do not make">,
   BothFlags<[], [ClangOption], " the jump table addresses canonical in the symbol table">>,
   Group<f_clang_Group>;
+def fsanitize_kcfi_arity : Flag<["-"], "fsanitize-kcfi-arity">,
+                           Group<f_clang_Group>,
+                           HelpText<"Embed function arity information into the KCFI patchable function prefix">,
+                           MarshallingInfoFlag<CodeGenOpts<"SanitizeKcfiArity">>;
 defm sanitize_stats : BoolOption<"f", "sanitize-stats",
   CodeGenOpts<"SanitizeStats">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Enable">,
@@ -4063,6 +4069,10 @@ def ftrap_function_EQ : Joined<["-"], "ftrap-function=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Issue call to specified function rather than a trap instruction">,
   MarshallingInfoString<CodeGenOpts<"TrapFuncName">>;
+def floop_interchange : Flag<["-"], "floop-interchange">, Group<f_Group>,
+  HelpText<"Enable the loop interchange pass">, Visibility<[ClangOption, CC1Option]>;
+def fno_loop_interchange: Flag<["-"], "fno-loop-interchange">, Group<f_Group>,
+  HelpText<"Disable the loop interchange pass">, Visibility<[ClangOption, CC1Option]>;
 def funroll_loops : Flag<["-"], "funroll-loops">, Group<f_Group>,
   HelpText<"Turn on loop unroller">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fno_unroll_loops : Flag<["-"], "fno-unroll-loops">, Group<f_Group>,
@@ -5825,6 +5835,9 @@ def start_no_unused_arguments : Flag<["--"], "start-no-unused-arguments">,
   HelpText<"Don't emit warnings about unused arguments for the following arguments">;
 def static_libgcc : Flag<["-"], "static-libgcc">;
 def static_libstdcxx : Flag<["-"], "static-libstdc++">;
+def static_libclosure : Flag<["-"], "static-libclosure">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Generate code for statically linking libclosure (BlocksRuntime)">;
 def static : Flag<["-", "--"], "static">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>,
   Flags<[NoArgumentUnused]>;
@@ -6876,6 +6889,7 @@ defm backslash : OptInFC1FFlag<"backslash", "Specify that backslash in string in
 defm xor_operator : OptInFC1FFlag<"xor-operator", "Enable .XOR. as a synonym of .NEQV.">;
 defm logical_abbreviations : OptInFC1FFlag<"logical-abbreviations", "Enable logical abbreviations">;
 defm implicit_none : OptInFC1FFlag<"implicit-none", "No implicit typing allowed unless overridden by IMPLICIT statements">;
+defm implicit_none_ext : OptInFC1FFlag<"implicit-none-ext", "No implicit externals allowed">;
 defm underscoring : OptInFC1FFlag<"underscoring", "Appends one trailing underscore to external names">;
 defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-vector-element-order",
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
@@ -7302,6 +7316,9 @@ let Visibility = [CC1Option, FC1Option] in {
 def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
   HelpText<"Link and internalize needed symbols from the given bitcode file "
            "before performing optimizations.">;
+def mlink_bitcode_file
+    : Separate<["-"], "mlink-bitcode-file">,
+      HelpText<"Link the given bitcode file before performing optimizations.">;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -7405,14 +7422,13 @@ def msmall_data_limit : Separate<["-"], "msmall-data-limit">,
 def funwind_tables_EQ : Joined<["-"], "funwind-tables=">,
   HelpText<"Generate unwinding tables for all functions">,
   MarshallingInfoInt<CodeGenOpts<"UnwindTables">>;
-defm constructor_aliases : BoolMOption<"constructor-aliases",
-  CodeGenOpts<"CXXCtorDtorAliases">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption, CC1Option],
-          " emitting complete constructors and destructors as aliases when possible">>;
-def mlink_bitcode_file : Separate<["-"], "mlink-bitcode-file">,
-  HelpText<"Link the given bitcode file before performing optimizations.">;
+defm constructor_aliases
+    : BoolMOption<"constructor-aliases", CodeGenOpts<"CXXCtorDtorAliases">,
+                  DefaultFalse, PosFlag<SetTrue, [], [ClangOption], "Enable">,
+                  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+                  BothFlags<[], [ClangOption, CC1Option],
+                            " emitting complete constructors and destructors "
+                            "as aliases when possible">>;
 defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   CodeGenOpts<"LinkBitcodePostopt">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
@@ -7586,6 +7602,11 @@ def fexperimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignme
 
 def enable_tlsdesc : Flag<["-"], "enable-tlsdesc">,
   MarshallingInfoFlag<CodeGenOpts<"EnableTLSDESC">>;
+
+def import_call_optimization : Flag<["-"], "import-call-optimization">,
+    HelpText<"Emit Import Call sections on supported targets that can be used "
+             "by the Windows kernel to enable import call optimization">,
+    MarshallingInfoFlag<CodeGenOpts<"ImportCallOptimization">>;
 
 } // let Visibility = [CC1Option]
 

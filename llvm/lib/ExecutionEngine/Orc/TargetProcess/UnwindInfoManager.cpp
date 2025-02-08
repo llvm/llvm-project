@@ -145,12 +145,12 @@ Error UnwindInfoManager::registerSections(
     ExecutorAddrRange DWARFEHFrame, ExecutorAddrRange CompactUnwind) {
   std::lock_guard<std::mutex> Lock(M);
   for (auto &R : CodeRanges)
-    UWSecs[R.Start.getValue()] = UnwindSections{
-        static_cast<uintptr_t>(DSOBase.getValue()),
-        static_cast<uintptr_t>(DWARFEHFrame.Start.getValue()),
-        static_cast<size_t>(DWARFEHFrame.size()),
-        static_cast<uintptr_t>(CompactUnwind.Start.getValue()),
-        static_cast<size_t>(CompactUnwind.size())};
+    UWSecs[R.Start.getValue()] =
+        UnwindSections{static_cast<uintptr_t>(DSOBase.getValue()),
+                       static_cast<uintptr_t>(DWARFEHFrame.Start.getValue()),
+                       static_cast<size_t>(DWARFEHFrame.size()),
+                       static_cast<uintptr_t>(CompactUnwind.Start.getValue()),
+                       static_cast<size_t>(CompactUnwind.size())};
   return Error::success();
 }
 

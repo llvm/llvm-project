@@ -67,9 +67,16 @@ public:
   /// Converts all global variables of the LLVM module to MLIR global variables.
   LogicalResult convertGlobals();
 
+  /// Converts all aliases of the LLVM module to MLIR variables.
+  LogicalResult convertAliases();
+
   /// Converts the data layout of the LLVM module to an MLIR data layout
   /// specification.
   LogicalResult convertDataLayout();
+
+  /// Converts target triple of the LLVM module to an MLIR target triple
+  /// specification.
+  void convertTargetTriple();
 
   /// Stores the mapping between an LLVM value and its MLIR counterpart.
   void mapValue(llvm::Value *llvm, Value mlir) { mapValue(llvm) = mlir; }
@@ -284,6 +291,9 @@ private:
   LogicalResult convertGlobal(llvm::GlobalVariable *globalVar);
   /// Imports the magic globals "global_ctors" and "global_dtors".
   LogicalResult convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar);
+  /// Converts an LLVM global alias variable into an MLIR LLVM dialect alias
+  /// operation if a conversion exists. Otherwise, returns failure.
+  LogicalResult convertAlias(llvm::GlobalAlias *alias);
   /// Returns personality of `func` as a FlatSymbolRefAttr.
   FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *func);
   /// Imports `bb` into `block`, which must be initially empty.
@@ -402,6 +412,8 @@ private:
   Operation *constantInsertionOp = nullptr;
   /// Operation to insert the next global after.
   Operation *globalInsertionOp = nullptr;
+  /// Operation to insert the next alias after.
+  Operation *aliasInsertionOp = nullptr;
   /// Operation to insert comdat selector operations into.
   ComdatOp globalComdatOp = nullptr;
   /// The current context.
