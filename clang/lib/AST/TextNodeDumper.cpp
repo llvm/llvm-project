@@ -1226,7 +1226,8 @@ void TextNodeDumper::VisitIntegralTemplateArgument(const TemplateArgument &TA) {
   dumpTemplateArgument(TA);
 }
 
-void TextNodeDumper::VisitStructuralValueTemplateArgument(const TemplateArgument &TA) {
+void TextNodeDumper::VisitStructuralValueTemplateArgument(
+    const TemplateArgument &TA) {
   OS << " structural value";
   dumpTemplateArgument(TA);
 }
