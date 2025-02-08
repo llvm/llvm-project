@@ -10,7 +10,6 @@ add_flang_library(FIROpenACCSupport
   FIRDialectSupport
   FIRSupport
   HLFIRDialect
-  MLIROpenACCDialect
 
   LINK_LIBS
   FIRBuilder
@@ -18,6 +17,9 @@ add_flang_library(FIROpenACCSupport
   FIRDialectSupport
   FIRSupport
   HLFIRDialect
+
+  MLIR_DEPS
+  MLIROpenACCDialect
 
   MLIR_LIBS
   MLIROpenACCDialect
