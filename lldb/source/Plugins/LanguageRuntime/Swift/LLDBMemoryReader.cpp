@@ -531,9 +531,9 @@ LLDBMemoryReader::addModuleToAddressMap(ModuleSP module,
       (uint64_t)signedPointerStripper(
           swift::remote::RemoteAbsolutePointer("", module_end_address))
           .getOffset()) {
-    lldbassert(false &&
-               "LLDBMemoryReader module to address map ran into pointer "
-               "authentication mask!");
+    LLDB_LOG(GetLog(LLDBLog::Types),
+             "[MemoryReader] module to address map ran into pointer "
+             "authentication mask!");
     return {};
   }
   // The address for the next image is the next pointer aligned address
