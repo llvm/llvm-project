@@ -86,6 +86,11 @@ static cl::alias AArch64StreamingStackHazardSize(
     cl::desc("alias for -aarch64-streaming-hazard-size"),
     cl::aliasopt(AArch64StreamingHazardSize));
 
+static cl::opt<bool> EnableZPRPredicateSpills(
+    "aarch64-enable-zpr-predicate-spills", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Enables spilling/reloading SVE predicates as data vectors (ZPRs)"));
+
 // Subreg liveness tracking is disabled by default for now until all issues
 // are ironed out. This option allows the feature to be used in tests.
 static cl::opt<bool>
@@ -125,7 +130,12 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   // this in the future so we can specify it together with the subtarget
   // features.
   switch (ARMProcFamily) {
-  case Others:
+  case Generic:
+    // Using TuneCPU=generic we avoid ldapur instructions to line up with the
+    // cpus that use the AvoidLDAPUR feature. We don't want this to be on
+    // forever, so it is enabled between armv8.4 and armv8.7/armv9.2.
+    if (hasV8_4aOps() && !hasV8_8aOps())
+      AvoidLDAPUR = true;
     break;
   case Carmel:
     CacheLineSize = 64;
@@ -398,6 +408,20 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
     ReserveXRegisterForRA.set(29);
 
   EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
+}
+
+unsigned AArch64Subtarget::getHwModeSet() const {
+  AArch64HwModeBits Modes = AArch64HwModeBits::DefaultMode;
+
+  // Use a special hardware mode in streaming[-compatible] functions with
+  // aarch64-enable-zpr-predicate-spills. This changes the spill size (and
+  // alignment) for the predicate register class.
+  if (EnableZPRPredicateSpills.getValue() &&
+      (isStreaming() || isStreamingCompatible())) {
+    Modes |= AArch64HwModeBits::SMEWithZPRPredicateSpills;
+  }
+
+  return to_underlying(Modes);
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {

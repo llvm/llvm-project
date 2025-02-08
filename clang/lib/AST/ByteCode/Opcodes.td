@@ -394,6 +394,11 @@ def GetLocal : AccessOpcode { let HasCustomEval = 1; }
 // [] -> [Pointer]
 def SetLocal : AccessOpcode { let HasCustomEval = 1; }
 
+def Kill : Opcode {
+  let Types = [];
+  let Args = [];
+}
+
 def CheckDecl : Opcode {
   let Args = [ArgVarDecl];
 }

@@ -480,6 +480,55 @@ if.else:
   ret i64 13
 }
 
+define i64 @test_icmp_trunc_nuw(i64 %a) {
+; CHECK-LABEL: @test_icmp_trunc_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw i64 [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CAST]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i64 [[A]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %cast = trunc nuw i64 %a to i32
+  %cmp = icmp sgt i32 %cast, 0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %b = and i64 %a, 2147483647
+  ret i64 %b
+
+if.else:
+  ret i64 0
+}
+
+define i64 @test_icmp_trunc_no_nuw(i64 %a) {
+; CHECK-LABEL: @test_icmp_trunc_no_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CAST]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[B:%.*]] = and i64 [[A]], 2147483647
+; CHECK-NEXT:    ret i64 [[B]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %cast = trunc i64 %a to i32
+  %cmp = icmp sgt i32 %cast, 0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %b = and i64 %a, 2147483647
+  ret i64 %b
+
+if.else:
+  ret i64 0
+}
+
 define i1 @test_icmp_or_distjoint(i8 %n, i1 %other) {
 ; CHECK-LABEL: @test_icmp_or_distjoint(
 ; CHECK-NEXT:  entry:

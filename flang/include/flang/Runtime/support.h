@@ -10,7 +10,7 @@
 #ifndef FORTRAN_RUNTIME_SUPPORT_H_
 #define FORTRAN_RUNTIME_SUPPORT_H_
 
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/entry-names.h"
 #include <cstddef>
 #include <cstdint>

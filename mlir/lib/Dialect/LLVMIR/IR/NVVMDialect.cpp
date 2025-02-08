@@ -1243,6 +1243,47 @@ llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   }
 }
 
+llvm::Intrinsic::ID
+Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
+                                      LLVM::ModuleTranslation &mt,
+                                      llvm::SmallVector<llvm::Value *> &args) {
+  auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
+  unsigned AS = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
+                    .getAddressSpace();
+  bool isShared = AS == NVVMMemorySpace::kSharedMemorySpace;
+  bool is2CTAMode = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+
+  llvm::Intrinsic::ID id;
+  if (isShared) {
+    id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_shared_cg2
+                    : llvm::Intrinsic::nvvm_tcgen05_alloc_shared_cg1;
+  } else {
+    id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2
+                    : llvm::Intrinsic::nvvm_tcgen05_alloc_cg1;
+  }
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(curOp.getAddr()));
+  args.push_back(mt.lookupValue(curOp.getNCols()));
+
+  return id;
+}
+
+llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt,
+    llvm::SmallVector<llvm::Value *> &args) {
+  auto curOp = cast<NVVM::Tcgen05DeallocOp>(op);
+  auto id = (curOp.getGroup() == Tcgen05GroupKind::CTA_1)
+                ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
+                : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(curOp.getTaddr()));
+  args.push_back(mt.lookupValue(curOp.getNCols()));
+
+  return id;
+}
+
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
 /// have ConstantRangeAttr.
 static void nvvmInferResultRanges(Operation *op, Value result,
