@@ -48,6 +48,10 @@ using namespace mlir;
 using VectorValue = TypedValue<VectorType>;
 using MemRefValue = TypedValue<MemRefType>;
 
+//===----------------------------------------------------------------------===//
+// Utils
+//===----------------------------------------------------------------------===//
+
 /// Returns a compressed mask for the emulated vector. For example, when
 /// emulating an eight-element `i8` vector with `i32` (i.e. when the source
 /// elements span two dest elements), this method compresses `vector<8xi1>`
@@ -278,23 +282,27 @@ static Value dynamicallyInsertSubVector(RewriterBase &rewriter, Location loc,
   return dest;
 }
 
-/// Returns the op sequence for an emulated sub-byte data type vector load.
-/// specifically, use `emulatedElemType` for loading a vector of `origElemType`.
-/// The load location is given by `base` and `linearizedIndices`, and the
-/// load size is given by `numEmulatedElementsToLoad`.
+/// Emulate a vector load for `emulatedElemTy` using `containerElemTy`
+///
+/// Specifically, use `containerElemTy` for loading a vector of
+/// `emulatedElemTy`. The load location is given by `base` and
+/// `linearizedIndices`, and the load size is given by
+/// `numEmulatedElementsToLoad`.
 static VectorValue emulatedVectorLoad(OpBuilder &rewriter, Location loc,
                                       Value base,
                                       OpFoldResult linearizedIndices,
-                                      int64_t numEmultedElementsToLoad,
-                                      Type origElemType,
-                                      Type emulatedElemType) {
-  auto scale = emulatedElemType.getIntOrFloatBitWidth() /
-               origElemType.getIntOrFloatBitWidth();
+                                      int64_t numContainerElemsToLoad,
+                                      Type emulatedElemTy,
+                                      Type containerElemTy) {
+  auto emulatedPerContainerElem = containerElemTy.getIntOrFloatBitWidth() /
+                                  emulatedElemTy.getIntOrFloatBitWidth();
   auto newLoad = rewriter.create<vector::LoadOp>(
-      loc, VectorType::get(numEmultedElementsToLoad, emulatedElemType), base,
+      loc, VectorType::get(numContainerElemsToLoad, containerElemTy), base,
       getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
   return rewriter.create<vector::BitCastOp>(
-      loc, VectorType::get(numEmultedElementsToLoad * scale, origElemType),
+      loc,
+      VectorType::get(numContainerElemsToLoad * emulatedPerContainerElem,
+                      emulatedElemTy),
       newLoad);
 }
 
@@ -334,9 +342,9 @@ static Value downcastSelectAndUpcast(OpBuilder &builder, Location loc,
 ///
 /// Result:
 ///   linearizedMemref = |2|2|3|3| : <4xi2> (<1xi8>)
-static void atomicStore(OpBuilder &builder, Location loc,
-                        MemRefValue linearizedMemref, Value storeIdx,
-                        VectorValue valueToStore, Value mask) {
+static void atomicRMW(OpBuilder &builder, Location loc,
+                      MemRefValue linearizedMemref, Value storeIdx,
+                      VectorValue valueToStore, Value mask) {
   assert(valueToStore.getType().getRank() == 1 && "expected 1-D vector");
 
   // Create an atomic load-modify-write region using
@@ -363,6 +371,27 @@ static void atomicStore(OpBuilder &builder, Location loc,
   builder.create<memref::AtomicYieldOp>(loc, scalarMaskedValue);
 }
 
+/// Generate a non-atomic read-modify-write sequence for storing to the emulated
+/// type. It has similar logic to `atomicRMWStore`, but without atomicity.
+static void nonAtomicRMW(OpBuilder &builder, Location loc,
+                         MemRefValue linearizedMemref, Value linearizedIndex,
+                         VectorValue valueToStore, Value mask) {
+  assert(valueToStore.getType().getRank() == 1 && "expected 1-D vector");
+
+  auto oneElemVecType =
+      VectorType::get({1}, linearizedMemref.getType().getElementType());
+  Value origVecValue = builder.create<vector::LoadOp>(
+      loc, oneElemVecType, linearizedMemref, ValueRange{linearizedIndex});
+  origVecValue = builder.create<vector::BitCastOp>(loc, valueToStore.getType(),
+                                                   origVecValue);
+
+  Value maskedValue =
+      downcastSelectAndUpcast(builder, loc, valueToStore.getType(),
+                              oneElemVecType, mask, valueToStore, origVecValue);
+  builder.create<vector::StoreOp>(loc, maskedValue, linearizedMemref,
+                                  linearizedIndex);
+}
+
 /// Extract `sliceNumElements` from source `vector` at `extractOffset`,
 /// and insert it into an empty vector at `insertOffset`.
 /// Inputs:
@@ -386,10 +415,11 @@ static Value extractSliceIntoByte(ConversionPatternRewriter &rewriter,
       "sliceNumElements * vector element size must be less than or equal to 8");
   assert(8 % vectorElementType.getIntOrFloatBitWidth() == 0 &&
          "vector element must be a valid sub-byte type");
-  auto scale = 8 / vectorElementType.getIntOrFloatBitWidth();
+  auto emulatedPerContainerElem = 8 / vectorElementType.getIntOrFloatBitWidth();
   auto emptyByteVector = rewriter.create<arith::ConstantOp>(
-      loc, VectorType::get({scale}, vectorElementType),
-      rewriter.getZeroAttr(VectorType::get({scale}, vectorElementType)));
+      loc, VectorType::get({emulatedPerContainerElem}, vectorElementType),
+      rewriter.getZeroAttr(
+          VectorType::get({emulatedPerContainerElem}, vectorElementType)));
   auto extracted = staticallyExtractSubvector(rewriter, loc, vector,
                                               extractOffset, sliceNumElements);
   return staticallyInsertSubvector(rewriter, loc, extracted, emptyByteVector,
@@ -402,8 +432,13 @@ namespace {
 // ConvertVectorStore
 //===----------------------------------------------------------------------===//
 
+// TODO: Document-me
 struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   using OpConversionPattern::OpConversionPattern;
+
+  ConvertVectorStore(MLIRContext *context, bool disableAtomicRMW)
+      : OpConversionPattern<vector::StoreOp>(context),
+        disableAtomicRMW(disableAtomicRMW) {}
 
   LogicalResult
   matchAndRewrite(vector::StoreOp op, OpAdaptor adaptor,
@@ -534,6 +569,8 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     auto subWidthStoreMaskType =
         VectorType::get({numSrcElemsPerDest}, rewriter.getI1Type());
 
+    auto storeFunc = disableAtomicRMW ? nonAtomicRMW : atomicRMW;
+
     // 1. Partial width store for the leading byte.
     // When the store address is not aligned to emulated width boundary, deal
     // with the unaligned part so that the rest elements are aligned to width
@@ -558,8 +595,8 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
           extractSliceIntoByte(rewriter, loc, valueToStore, 0,
                                frontSubWidthStoreElem, *foldedNumFrontPadElems);
 
-      atomicStore(rewriter, loc, memrefBase, currentDestIndex,
-                  cast<VectorValue>(value), frontMask.getResult());
+      storeFunc(rewriter, loc, memrefBase, currentDestIndex,
+                cast<VectorValue>(value), frontMask.getResult());
     }
 
     if (currentSourceIndex >= origElements) {
@@ -614,19 +651,23 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       auto backMask = rewriter.create<arith::ConstantOp>(
           loc, DenseElementsAttr::get(subWidthStoreMaskType, maskValues));
 
-      atomicStore(rewriter, loc, memrefBase, currentDestIndex,
-                  cast<VectorValue>(subWidthStorePart), backMask.getResult());
+      storeFunc(rewriter, loc, memrefBase, currentDestIndex,
+                cast<VectorValue>(subWidthStorePart), backMask.getResult());
     }
 
     rewriter.eraseOp(op);
     return success();
   }
+
+private:
+  const bool disableAtomicRMW;
 };
 
 //===----------------------------------------------------------------------===//
 // ConvertVectorMaskedStore
 //===----------------------------------------------------------------------===//
 
+// TODO: Document-me
 struct ConvertVectorMaskedStore final
     : OpConversionPattern<vector::MaskedStoreOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -654,9 +695,9 @@ struct ConvertVectorMaskedStore final
               "(bit-wise misalignment)");
     }
 
-    int scale = containerBits / emulatedBits;
+    int emulatedPerContainerElem = containerBits / emulatedBits;
     int origElements = op.getValueToStore().getType().getNumElements();
-    if (origElements % scale != 0)
+    if (origElements % emulatedPerContainerElem != 0)
       return failure();
 
     auto stridedMetadata =
@@ -705,12 +746,13 @@ struct ConvertVectorMaskedStore final
     //
     // FIXME: Make an example based on the comment above work (see #115460 for
     // reproducer).
-    FailureOr<Operation *> newMask =
-        getCompressedMaskOp(rewriter, loc, op.getMask(), origElements, scale);
+    FailureOr<Operation *> newMask = getCompressedMaskOp(
+        rewriter, loc, op.getMask(), origElements, emulatedPerContainerElem);
     if (failed(newMask))
       return failure();
 
-    auto numElements = (origElements + scale - 1) / scale;
+    auto numElements = (origElements + emulatedPerContainerElem - 1) /
+                       emulatedPerContainerElem;
     auto newType = VectorType::get(numElements, containerElemTy);
     auto passThru = rewriter.create<arith::ConstantOp>(
         loc, newType, rewriter.getZeroAttr(newType));
@@ -719,7 +761,8 @@ struct ConvertVectorMaskedStore final
         loc, newType, adaptor.getBase(), linearizedIndices,
         newMask.value()->getResult(0), passThru);
 
-    auto newBitCastType = VectorType::get(numElements * scale, emulatedElemTy);
+    auto newBitCastType =
+        VectorType::get(numElements * emulatedPerContainerElem, emulatedElemTy);
     Value valueToStore =
         rewriter.create<vector::BitCastOp>(loc, newBitCastType, newLoad);
     valueToStore = rewriter.create<arith::SelectOp>(
@@ -738,6 +781,7 @@ struct ConvertVectorMaskedStore final
 // ConvertVectorLoad
 //===----------------------------------------------------------------------===//
 
+// TODO: Document-me
 struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -763,7 +807,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
           op, "impossible to pack emulated elements into container elements "
               "(bit-wise misalignment)");
     }
-    int scale = containerBits / emulatedBits;
+    int emulatedPerContainerElem = containerBits / emulatedBits;
 
     // Adjust the number of elements to load when emulating narrow types,
     // and then cast back to the original type with vector.bitcast op.
@@ -795,7 +839,8 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
     // compile time as they must be constants.
 
     auto origElements = op.getVectorType().getNumElements();
-    bool isAlignedEmulation = origElements % scale == 0;
+    // Note, per-element-alignment was already verified above.
+    bool isFullyAligned = origElements % emulatedPerContainerElem == 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
@@ -811,14 +856,14 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedIntraVectorOffset =
-        isAlignedEmulation
-            ? 0
-            : getConstantIntValue(linearizedInfo.intraDataOffset);
+        isFullyAligned ? 0
+                       : getConstantIntValue(linearizedInfo.intraDataOffset);
 
     // Always load enough elements which can cover the original elements.
-    int64_t maxintraDataOffset = foldedIntraVectorOffset.value_or(scale - 1);
-    auto numElements =
-        llvm::divideCeil(maxintraDataOffset + origElements, scale);
+    int64_t maxintraDataOffset =
+        foldedIntraVectorOffset.value_or(emulatedPerContainerElem - 1);
+    auto numElements = llvm::divideCeil(maxintraDataOffset + origElements,
+                                        emulatedPerContainerElem);
     Value result =
         emulatedVectorLoad(rewriter, loc, adaptor.getBase(), linearizedIndices,
                            numElements, emulatedElemTy, containerElemTy);
@@ -826,10 +871,10 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
     if (!foldedIntraVectorOffset) {
       auto resultVector = rewriter.create<arith::ConstantOp>(
           loc, op.getType(), rewriter.getZeroAttr(op.getType()));
-      result = dynamicallyExtractSubVector(rewriter, loc, result, resultVector,
-                                           linearizedInfo.intraDataOffset,
-                                           origElements);
-    } else if (!isAlignedEmulation) {
+      result = dynamicallyExtractSubVector(
+          rewriter, loc, dyn_cast<TypedValue<VectorType>>(result), resultVector,
+          linearizedInfo.intraDataOffset, origElements);
+    } else if (!isFullyAligned) {
       result = staticallyExtractSubvector(
           rewriter, loc, result, *foldedIntraVectorOffset, origElements);
     }
@@ -842,6 +887,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
 // ConvertVectorMaskedLoad
 //===----------------------------------------------------------------------===//
 
+// TODO: Document-me
 struct ConvertVectorMaskedLoad final
     : OpConversionPattern<vector::MaskedLoadOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -868,7 +914,7 @@ struct ConvertVectorMaskedLoad final
           op, "impossible to pack emulated elements into container elements "
               "(bit-wise misalignment)");
     }
-    int scale = containerBits / emulatedBits;
+    int emulatedPerContainerElem = containerBits / emulatedBits;
 
     // Adjust the number of elements to load when emulating narrow types,
     // and then cast back to the original type with vector.bitcast op.
@@ -914,7 +960,7 @@ struct ConvertVectorMaskedLoad final
     // subvector at the proper offset after bit-casting.
     auto origType = op.getVectorType();
     auto origElements = origType.getNumElements();
-    bool isAlignedEmulation = origElements % scale == 0;
+    bool isAlignedEmulation = origElements % emulatedPerContainerElem == 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
@@ -933,18 +979,21 @@ struct ConvertVectorMaskedLoad final
             ? 0
             : getConstantIntValue(linearizedInfo.intraDataOffset);
 
-    int64_t maxIntraDataOffset = foldedIntraVectorOffset.value_or(scale - 1);
-    FailureOr<Operation *> newMask = getCompressedMaskOp(
-        rewriter, loc, op.getMask(), origElements, scale, maxIntraDataOffset);
+    int64_t maxIntraDataOffset =
+        foldedIntraVectorOffset.value_or(emulatedPerContainerElem - 1);
+    FailureOr<Operation *> newMask =
+        getCompressedMaskOp(rewriter, loc, op.getMask(), origElements,
+                            emulatedPerContainerElem, maxIntraDataOffset);
     if (failed(newMask))
       return failure();
 
     Value passthru = op.getPassThru();
 
-    auto numElements =
-        llvm::divideCeil(maxIntraDataOffset + origElements, scale);
+    auto numElements = llvm::divideCeil(maxIntraDataOffset + origElements,
+                                        emulatedPerContainerElem);
     auto loadType = VectorType::get(numElements, containerElemTy);
-    auto newBitcastType = VectorType::get(numElements * scale, emulatedElemTy);
+    auto newBitcastType =
+        VectorType::get(numElements * emulatedPerContainerElem, emulatedElemTy);
 
     auto emptyVector = rewriter.create<arith::ConstantOp>(
         loc, newBitcastType, rewriter.getZeroAttr(newBitcastType));
@@ -971,8 +1020,8 @@ struct ConvertVectorMaskedLoad final
         rewriter.create<vector::BitCastOp>(loc, newBitcastType, newLoad);
 
     Value mask = op.getMask();
-    auto newSelectMaskType =
-        VectorType::get(numElements * scale, rewriter.getI1Type());
+    auto newSelectMaskType = VectorType::get(
+        numElements * emulatedPerContainerElem, rewriter.getI1Type());
     // TODO: try to fold if op's mask is constant
     auto emptyMask = rewriter.create<arith::ConstantOp>(
         loc, newSelectMaskType, rewriter.getZeroAttr(newSelectMaskType));
@@ -1005,6 +1054,7 @@ struct ConvertVectorMaskedLoad final
 // ConvertVectorTransferRead
 //===----------------------------------------------------------------------===//
 
+// TODO: Document-me
 struct ConvertVectorTransferRead final
     : OpConversionPattern<vector::TransferReadOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -1031,11 +1081,12 @@ struct ConvertVectorTransferRead final
           op, "impossible to pack emulated elements into container elements "
               "(bit-wise misalignment)");
     }
-    int scale = containerBits / emulatedBits;
+    int emulatedPerContainerElem = containerBits / emulatedBits;
 
     auto origElements = op.getVectorType().getNumElements();
 
-    bool isAlignedEmulation = origElements % scale == 0;
+    // Note, per-element-alignment was already verified above.
+    bool isFullyAligned = origElements % emulatedPerContainerElem == 0;
 
     auto newPadding = rewriter.create<arith::ExtUIOp>(loc, containerElemTy,
                                                       adaptor.getPadding());
@@ -1054,13 +1105,13 @@ struct ConvertVectorTransferRead final
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedIntraVectorOffset =
-        isAlignedEmulation
-            ? 0
-            : getConstantIntValue(linearizedInfo.intraDataOffset);
+        isFullyAligned ? 0
+                       : getConstantIntValue(linearizedInfo.intraDataOffset);
 
-    int64_t maxIntraDataOffset = foldedIntraVectorOffset.value_or(scale - 1);
-    auto numElements =
-        llvm::divideCeil(maxIntraDataOffset + origElements, scale);
+    int64_t maxIntraDataOffset =
+        foldedIntraVectorOffset.value_or(emulatedPerContainerElem - 1);
+    auto numElements = llvm::divideCeil(maxIntraDataOffset + origElements,
+                                        emulatedPerContainerElem);
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
         loc, VectorType::get(numElements, containerElemTy), adaptor.getSource(),
@@ -1068,7 +1119,9 @@ struct ConvertVectorTransferRead final
         newPadding);
 
     auto bitCast = rewriter.create<vector::BitCastOp>(
-        loc, VectorType::get(numElements * scale, emulatedElemTy), newRead);
+        loc,
+        VectorType::get(numElements * emulatedPerContainerElem, emulatedElemTy),
+        newRead);
 
     Value result = bitCast->getResult(0);
     if (!foldedIntraVectorOffset) {
@@ -1077,7 +1130,7 @@ struct ConvertVectorTransferRead final
       result = dynamicallyExtractSubVector(rewriter, loc, bitCast, zeros,
                                            linearizedInfo.intraDataOffset,
                                            origElements);
-    } else if (!isAlignedEmulation) {
+    } else if (!isFullyAligned) {
       result = staticallyExtractSubvector(
           rewriter, loc, result, *foldedIntraVectorOffset, origElements);
     }
@@ -1760,33 +1813,34 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
 /// LLVM to scramble with peephole optimizations. Templated to choose between
 /// signed and unsigned conversions.
 ///
-/// For example (signed):
+/// EXAMPLE 1 (signed):
 ///    arith.extsi %in : vector<8xi4> to vector<8xi32>
-///      is rewriten as
-///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
-///        %1 = arith.shli %0, 4 : vector<4xi8>
-///        %2 = arith.shrsi %1, 4 : vector<4xi8>
-///        %3 = arith.shrsi %0, 4 : vector<4xi8>
-///        %4 = vector.interleave %2, %3 : vector<4xi8> -> vector<8xi8>
-///        %5 = arith.extsi %4 : vector<8xi8> to vector<8xi32>
+/// is rewriten as:
+///    %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
+///    %1 = arith.shli %0, 4 : vector<4xi8>
+///    %2 = arith.shrsi %1, 4 : vector<4xi8>
+///    %3 = arith.shrsi %0, 4 : vector<4xi8>
+///    %4 = vector.interleave %2, %3 : vector<4xi8> -> vector<8xi8>
+///    %5 = arith.extsi %4 : vector<8xi8> to vector<8xi32>
 ///
+/// EXAMPLE 2 (fp):
 ///    arith.sitofp %in : vector<8xi4> to vector<8xf32>
-///      is rewriten as
-///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
-///        %1 = arith.shli %0, 4 : vector<4xi8>
-///        %2 = arith.shrsi %1, 4 : vector<4xi8>
-///        %3 = arith.shrsi %0, 4 : vector<4xi8>
-///        %4 = vector.interleave %2, %3 : vector<4xi8> -> vector<8xi8>
-///        %5 = arith.sitofp %4 : vector<8xi8> to vector<8xf32>
+/// is rewriten as:
+///    %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
+///    %1 = arith.shli %0, 4 : vector<4xi8>
+///    %2 = arith.shrsi %1, 4 : vector<4xi8>
+///    %3 = arith.shrsi %0, 4 : vector<4xi8>
+///    %4 = vector.interleave %2, %3 : vector<4xi8> -> vector<8xi8>
+///    %5 = arith.sitofp %4 : vector<8xi8> to vector<8xf32>
 ///
-/// Example (unsigned):
+/// EXAMPLE 3 (unsigned):
 ///    arith.extui %in : vector<8xi4> to vector<8xi32>
-///      is rewritten as
-///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
-///        %1 = arith.andi %0, 15 : vector<4xi8>
-///        %2 = arith.shrui %0, 4 : vector<4xi8>
-///        %3 = vector.interleave %1, %2 : vector<4xi8> -> vector<8xi8>
-///        %4 = arith.extui %3 : vector<8xi8> to vector<8xi32>
+///  is rewritten as:
+///    %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
+///    %1 = arith.andi %0, 15 : vector<4xi8>
+///    %2 = arith.shrui %0, 4 : vector<4xi8>
+///    %3 = vector.interleave %1, %2 : vector<4xi8> -> vector<8xi8>
+///    %4 = arith.extui %3 : vector<8xi8> to vector<8xi32>
 ///
 template <typename ConversionOpType, bool isSigned>
 struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
@@ -1796,8 +1850,8 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
                                 PatternRewriter &rewriter) const override {
     // Verify the preconditions.
     Value srcValue = conversionOp.getIn();
-    auto srcVecType = dyn_cast<VectorType>(srcValue.getType());
-    auto dstVecType = dyn_cast<VectorType>(conversionOp.getType());
+    VectorType srcVecType = dyn_cast<VectorType>(srcValue.getType());
+    VectorType dstVecType = dyn_cast<VectorType>(conversionOp.getType());
 
     if (failed(
             commonConversionPrecondition(rewriter, dstVecType, conversionOp)))
@@ -1837,15 +1891,16 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
 ///
 /// For example:
 ///    arith.trunci %in : vector<8xi32> to vector<8xi4>
-///      is rewriten as
 ///
-///        %cst = arith.constant dense<15> : vector<4xi8>
-///        %cst_0 = arith.constant dense<4> : vector<4xi8>
-///        %0, %1 = vector.deinterleave %in : vector<8xi8>, vector<8xi8>
-///        %2 = arith.andi %0, %cst : vector<4xi8>
-///        %3 = arith.shli %1, %cst_0 : vector<4xi8>
-///        %4 = arith.ori %2, %3 : vector<4xi8>
-///        %5 = vector.bitcast %4 : vector<4xi8> to vector<8xi4>
+/// is rewriten as:
+///
+///   %cst = arith.constant dense<15> : vector<4xi8>
+///   %cst_0 = arith.constant dense<4> : vector<4xi8>
+///   %0, %1 = vector.deinterleave %in : vector<8xi8>, vector<8xi8>
+///   %2 = arith.andi %0, %cst : vector<4xi8>
+///   %3 = arith.shli %1, %cst_0 : vector<4xi8>
+///   %4 = arith.ori %2, %3 : vector<4xi8>
+///   %5 = vector.bitcast %4 : vector<4xi8> to vector<8xi4>
 ///
 struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
   using OpRewritePattern<arith::TruncIOp>::OpRewritePattern;
@@ -1889,10 +1944,11 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
 
 /// Rewrite a sub-byte vector transpose into a sequence of instructions that
 /// perform the transpose on wider (byte) element types.
-/// For example:
+///
+/// EXAMPLE:
 ///   %0 = vector.transpose %a, [1, 0] : vector<8x16xi4> to vector<16x8xi4>
 ///
-///   is rewritten as:
+/// is rewritten as:
 ///
 ///   %0 = arith.extsi %arg0 : vector<8x16xi4> to vector<8x16xi8>
 ///   %1 = vector.transpose %0, [1, 0] : vector<8x16xi8> to vector<16x8xi8>
@@ -1940,34 +1996,45 @@ struct RewriteVectorTranspose : OpRewritePattern<vector::TransposeOp> {
 // Public Interface Definition
 //===----------------------------------------------------------------------===//
 
+// The emulated type is inferred from the converted memref type.
 void vector::populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, bool disableAtomicRMW) {
 
   // Populate `vector.*` conversion patterns.
-  patterns.add<ConvertVectorLoad, ConvertVectorMaskedLoad, ConvertVectorStore,
+  // TODO: #119553 support atomicity
+  patterns.add<ConvertVectorLoad, ConvertVectorMaskedLoad,
                ConvertVectorMaskedStore, ConvertVectorTransferRead>(
       typeConverter, patterns.getContext());
+
+  // Populate `vector.*` store conversion patterns. The caller can choose
+  // to avoid emitting atomic operations and reduce it to read-modify-write
+  // sequence for stores if it is known there are no thread contentions.
+  patterns.insert<ConvertVectorStore>(patterns.getContext(), disableAtomicRMW);
 }
 
 void vector::populateVectorNarrowTypeRewritePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
+  // TODO: Document what the emulated type is.
   patterns.add<RewriteBitCastOfTruncI, RewriteExtOfBitCast<arith::ExtUIOp>,
                RewriteExtOfBitCast<arith::ExtSIOp>>(patterns.getContext(),
                                                     benefit);
 
   // Patterns for aligned cases. We set higher priority as they are expected to
   // generate better performance for aligned cases.
+  // The emulated type is always i8.
   patterns.add<RewriteAlignedSubByteIntExt<arith::ExtSIOp, /*isSigned=*/true>,
                RewriteAlignedSubByteIntExt<arith::SIToFPOp, /*isSigned=*/true>,
                RewriteAlignedSubByteIntTrunc>(patterns.getContext(),
                                               benefit.getBenefit() + 1);
+  // The emulated type is always i8.
   patterns
       .add<RewriteAlignedSubByteIntExt<arith::ExtUIOp, /*isSigned=*/false>,
            RewriteAlignedSubByteIntExt<arith::UIToFPOp, /*isSigned=*/false>>(
           patterns.getContext(), benefit.getBenefit() + 1);
 }
 
+// The emulated type is always i8.
 void vector::populateVectorTransposeNarrowTypeRewritePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<RewriteVectorTranspose>(patterns.getContext(), benefit);

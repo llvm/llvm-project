@@ -16,9 +16,7 @@ define signext i32 @pack_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64ZBKB-LABEL: pack_i32:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    zext.h a0, a0
-; RV64ZBKB-NEXT:    slliw a1, a1, 16
-; RV64ZBKB-NEXT:    or a0, a1, a0
+; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    ret
   %shl = and i32 %a, 65535
   %shl1 = shl i32 %b, 16
@@ -37,9 +35,7 @@ define signext i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
 ;
 ; RV64ZBKB-LABEL: pack_i32_2:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a1, a1, 16
-; RV64ZBKB-NEXT:    or a0, a1, a0
-; RV64ZBKB-NEXT:    sext.w a0, a0
+; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    ret
   %zexta = zext i16 %a to i32
   %zextb = zext i16 %b to i32
@@ -60,8 +56,7 @@ define signext i32 @pack_i32_3(i16 zeroext %0, i16 zeroext %1, i32 signext %2) {
 ;
 ; RV64ZBKB-LABEL: pack_i32_3:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a0, a0, 16
-; RV64ZBKB-NEXT:    or a0, a0, a1
+; RV64ZBKB-NEXT:    packw a0, a1, a0
 ; RV64ZBKB-NEXT:    addw a0, a0, a2
 ; RV64ZBKB-NEXT:    ret
   %4 = zext i16 %0 to i32
@@ -343,9 +338,7 @@ define signext i32 @pack_i32_allWUsers(i16 zeroext %0, i16 zeroext %1, i16 zeroe
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    add a0, a1, a0
 ; RV64ZBKB-NEXT:    zext.h a0, a0
-; RV64ZBKB-NEXT:    slli a0, a0, 16
-; RV64ZBKB-NEXT:    or a0, a0, a2
-; RV64ZBKB-NEXT:    sext.w a0, a0
+; RV64ZBKB-NEXT:    packw a0, a2, a0
 ; RV64ZBKB-NEXT:    ret
   %4 = add i16 %1, %0
   %5 = zext i16 %4 to i32

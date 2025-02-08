@@ -1,12 +1,12 @@
 ; REQUIRES: x86_64-linux
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch.prof -report-profile-staleness -persist-profile-staleness -S 2>%t -o %t.ll
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch.prof --salvage-unused-profile=false -report-profile-staleness -persist-profile-staleness -S 2>%t -o %t.ll
 ; RUN: FileCheck %s --input-file %t
 ; RUN: FileCheck %s --input-file %t.ll -check-prefix=CHECK-MD
 ; RUN: llc < %t.ll -filetype=obj -o %t.obj
 ; RUN: llvm-objdump --section-headers %t.obj | FileCheck %s --check-prefix=CHECK-OBJ
 ; RUN: llc < %t.ll -filetype=asm -o - | FileCheck %s --check-prefix=CHECK-ASM
 
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-nested.prof -report-profile-staleness -persist-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-NESTED
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-nested.prof --salvage-unused-profile=false -report-profile-staleness -persist-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-NESTED
 
 
 ; CHECK: (2/3) of functions' profile are invalid and (40/50) of samples are discarded due to function hash mismatch.

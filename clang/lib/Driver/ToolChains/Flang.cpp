@@ -42,6 +42,7 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fopenacc,
                             options::OPT_finput_charset_EQ,
                             options::OPT_fimplicit_none,
+                            options::OPT_fimplicit_none_ext,
                             options::OPT_fno_implicit_none,
                             options::OPT_fbackslash,
                             options::OPT_fno_backslash,
@@ -364,21 +365,18 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("--dependent-lib=libcmt");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
-    CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
     break;
   case options::OPT__SLASH_MTd:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("--dependent-lib=libcmtd");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
-    CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
     break;
   case options::OPT__SLASH_MD:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrt");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
-    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
     break;
   case options::OPT__SLASH_MDd:
     CmdArgs.push_back("-D_MT");
@@ -386,7 +384,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrtd");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
-    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
     break;
   }
 }

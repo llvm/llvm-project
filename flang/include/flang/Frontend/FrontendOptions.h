@@ -13,10 +13,10 @@
 #ifndef FORTRAN_FRONTEND_FRONTENDOPTIONS_H
 #define FORTRAN_FRONTEND_FRONTENDOPTIONS_H
 
-#include "flang/Common/Fortran-features.h"
 #include "flang/Lower/EnvironmentDefault.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/unparse.h"
+#include "flang/Support/Fortran-features.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cstdint>

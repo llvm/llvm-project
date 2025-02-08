@@ -9,6 +9,7 @@
 #include "Writer.h"
 #include "AArch64ErrataFix.h"
 #include "ARMErrataFix.h"
+#include "BPSectionOrderer.h"
 #include "CallGraphSort.h"
 #include "Config.h"
 #include "InputFiles.h"
@@ -1082,8 +1083,18 @@ static void maybeShuffle(Ctx &ctx,
 // that don't appear in the order file.
 static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   DenseMap<const InputSectionBase *, int> sectionOrder;
-  if (!ctx.arg.callGraphProfile.empty())
+  if (ctx.arg.bpStartupFunctionSort || ctx.arg.bpFunctionOrderForCompression ||
+      ctx.arg.bpDataOrderForCompression) {
+    TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
+    sectionOrder = runBalancedPartitioning(
+        ctx, ctx.arg.bpStartupFunctionSort ? ctx.arg.irpgoProfilePath : "",
+        ctx.arg.bpFunctionOrderForCompression,
+        ctx.arg.bpDataOrderForCompression,
+        ctx.arg.bpCompressionSortStartupFunctions,
+        ctx.arg.bpVerboseSectionOrderer);
+  } else if (!ctx.arg.callGraphProfile.empty()) {
     sectionOrder = computeCallGraphProfileOrder(ctx);
+  }
 
   if (ctx.arg.symbolOrderingFile.empty())
     return sectionOrder;
@@ -1931,8 +1942,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (ctx.in.symTab)
         ctx.in.symTab->addSymbol(sym);
 
-      // computeBinding might localize a linker-synthesized hidden symbol
-      // (e.g. __global_pointer$) that was considered exported.
+      // computeBinding might localize a symbol that was considered exported
+      // but then synthesized as hidden (e.g. _DYNAMIC).
       if ((sym->isExported || sym->isPreemptible) && !sym->isLocal()) {
         ctx.partitions[sym->partition - 1].dynSymTab->addSymbol(sym);
         if (auto *file = dyn_cast<SharedFile>(sym->file))
