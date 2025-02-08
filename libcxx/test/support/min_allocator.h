@@ -394,15 +394,9 @@ public:
     template <class U>
     TEST_CONSTEXPR_CXX20 min_allocator(min_allocator<U>) {}
 
-    TEST_CONSTEXPR_CXX20 pointer allocate(std::ptrdiff_t n)
-    {
-        return pointer(std::allocator<T>().allocate(n));
-    }
+    TEST_CONSTEXPR_CXX20 pointer allocate(std::size_t n) { return pointer(std::allocator<T>().allocate(n)); }
 
-    TEST_CONSTEXPR_CXX20 void deallocate(pointer p, std::ptrdiff_t n)
-    {
-        std::allocator<T>().deallocate(p.ptr_, n);
-    }
+    TEST_CONSTEXPR_CXX20 void deallocate(pointer p, std::size_t n) { std::allocator<T>().deallocate(p.ptr_, n); }
 
     TEST_CONSTEXPR_CXX20 friend bool operator==(min_allocator, min_allocator) {return true;}
     TEST_CONSTEXPR_CXX20 friend bool operator!=(min_allocator x, min_allocator y) {return !(x == y);}
