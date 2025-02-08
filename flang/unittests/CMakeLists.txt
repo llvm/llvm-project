@@ -2,7 +2,7 @@ include(AddFlangOffloadRuntime)
 
 if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
   # If Fortran runtime is built as CUDA library, the linking
-  # of targets that link FortranRuntime must be done
+  # of targets that link flang_rt.runtime must be done
   # with CUDA_RESOLVE_DEVICE_SYMBOLS.
   # CUDA language must be enabled for CUDA_RESOLVE_DEVICE_SYMBOLS
   # to take effect.
