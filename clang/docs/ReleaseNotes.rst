@@ -54,6 +54,8 @@ ABI Changes in This Version
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
+- Added support for dumping structural value template arguments in AST dumps. (#GH126341)
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 
