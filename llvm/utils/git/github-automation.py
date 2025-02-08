@@ -519,7 +519,7 @@ class ReleaseWorkflow:
               }
             }
         """
-        variables = {"node_id": pr.node_id }
+        variables = {"node_id": pr.node_id}
         res_header, res_data = gh._Github__requester.graphql_query(
             query=query, variables=variables
         )
