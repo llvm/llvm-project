@@ -2004,7 +2004,7 @@ void MDFieldPrinter::printNameTableKind(StringRef Name,
 template <class IntTy, class Stringifier>
 void MDFieldPrinter::printDwarfEnum(StringRef Name, IntTy Value,
                                     Stringifier toString, bool ShouldSkipZero) {
-  if (!Value)
+  if (ShouldSkipZero && !Value)
     return;
 
   Out << FS << Name << ": ";
@@ -2257,6 +2257,11 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printMetadata("annotations", N->getRawAnnotations());
   if (auto *Specification = N->getRawSpecification())
     Printer.printMetadata("specification", Specification);
+
+  if (auto EnumKind = N->getEnumKind())
+    Printer.printDwarfEnum("enumKind", *EnumKind, dwarf::EnumKindString,
+                           /*ShouldSkipZero=*/false);
+
   Out << ")";
 }
 

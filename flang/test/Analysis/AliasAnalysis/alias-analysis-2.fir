@@ -47,6 +47,14 @@
 // CHECK-DAG: arg2.load#0 <-> arg2.addr#0: MustAlias
 // CHECK-DAG: boxp1.addr#0 <-> arg2.addr#0: MayAlias
 
+// TODO: Can the address in a pointer alias the address of a pointer, even when the
+// pointer has no box. Should this be NoAlias?
+// T3: CHECK-DAG: p1.addr#0 <-> p1.tgt#0: MayAlias
+
+// The addresses stored in two different pointers can alias, even if one has no
+// box.  In this program, they happen to be the same address.
+// T4: CHECK-DAG: p1.tgt#0 <-> boxp1.addr#0: MayAlias
+
 func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %arg1: !fir.ref<f32> {fir.bindc_name = "v2", fir.target}, %arg2: !fir.ref<!fir.box<!fir.ptr<f32>>> ) attributes {test.ptr = "func"} {
 
   %1 = fir.alloca !fir.ptr<f32> {test.ptr = "p1.addr"}
@@ -63,7 +71,7 @@ func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %a
   fir.store %6 to %4 : !fir.ref<!fir.ptr<f32>>
 
   %0 = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "p1", uniq_name = "_QFtestEp1"}
-  %7 = fir.load %1 : !fir.ref<!fir.ptr<f32>>
+  %7 = fir.load %1 {test.ptr="p1.tgt"} : !fir.ref<!fir.ptr<f32>>
   %8 = fir.embox %7 : (!fir.ptr<f32>) -> !fir.box<!fir.ptr<f32>>
   fir.store %8 to %0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 
