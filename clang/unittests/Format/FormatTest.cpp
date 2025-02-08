@@ -14405,7 +14405,7 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
                "    ddddd,\n"
                "    eeeee,\n"
                "    ffffff,\n"
-               "    gggggg,\n"
+               "    ggggg,\n"
                "    hhhhhh,\n"
                "    iiiiii,\n"
                "    jjjjjj,\n"
