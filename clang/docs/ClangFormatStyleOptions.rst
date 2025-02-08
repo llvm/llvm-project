@@ -3822,7 +3822,6 @@ the configuration (without a prefix: ``Auto``).
   the parentheses of a function call with that name. If there is no name,
   a zero-length name is assumed.
 
-
   .. code-block:: c++
 
      true:                                  false:
