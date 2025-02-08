@@ -2405,9 +2405,6 @@ foreach size = ["i16", "i32", "i64"] in {
 multiclass INT_PTX_ATOM_CAS_AS<string atomic_cmp_swap_without_as, string type, string order, list<Predicate> preds> {
   // eg. with type = 32, order = .acquire, atomic_cmp_swap_without_as = atomic_cmp_swap_i32_acquire, and _GEN becomes
   // F_ATOMIC_3<i32, Int32Regs, ".acquire", ".b32", ".cas", atomic_cmp_swap_i32_acquire, i32imm>
-
-
-  // For SM70, PTX63 +, memory orders are supported
   defm _GEN: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), order, "", ".b"#type, ".cas",
                        !cast<PatFrag>(atomic_cmp_swap_without_as#_gen), !cast<Operand>("i"#type#"imm"), preds>;
 
@@ -2427,6 +2424,8 @@ foreach size = ["32", "64"] in {
   // *before* the instructions with the unspecified memory order [""]. 
   // This ensures that `cmpxchg ... acquire` is lowered to "atom.acquire.cas" instead of "atom.cas"
   // Note that AtomicExpand will convert cmpxchg seq_cst to a cmpxchg monotonic with fences around it.
+  // Memory orders are only supported for SM70+, PTX63+- so we have two sets of instruction definitions- 
+  // for SM70+, and "old" ones which lower to "atom.cas", for earlier archs.
   foreach order = ["acquire", "release", "acq_rel", ""] in {
     if !eq(order, "") then {
       defm INT_PTX_ATOM_CAS_#size : INT_PTX_ATOM_CAS_AS<"atomic_cmp_swap_i"#size, size, ".relaxed", [hasSM<70>, hasPTX<63>]>;
