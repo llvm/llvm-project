@@ -1065,8 +1065,9 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
       assert(!MRI->isReserved(DestReg));
 
       // Update matching debug values, if any.
-      SmallVector<MachineInstr *> MaybeDeadDbgUsers(
-          CopyDbgUsers[MaybeDead].begin(), CopyDbgUsers[MaybeDead].end());
+      const auto &DbgUsers = CopyDbgUsers[MaybeDead];
+      SmallVector<MachineInstr *> MaybeDeadDbgUsers(DbgUsers.begin(),
+                                                    DbgUsers.end());
       MRI->updateDbgUsersToReg(DestReg.asMCReg(), SrcReg.asMCReg(),
                                MaybeDeadDbgUsers);
 
@@ -1238,8 +1239,9 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
         isCopyInstr(*Copy, *TII, UseCopyInstr);
     Register Src = CopyOperands->Source->getReg();
     Register Def = CopyOperands->Destination->getReg();
-    SmallVector<MachineInstr *> MaybeDeadDbgUsers(CopyDbgUsers[Copy].begin(),
-                                                  CopyDbgUsers[Copy].end());
+    const auto &DbgUsers = CopyDbgUsers[Copy];
+    SmallVector<MachineInstr *> MaybeDeadDbgUsers(DbgUsers.begin(),
+                                                  DbgUsers.end());
 
     MRI->updateDbgUsersToReg(Src.asMCReg(), Def.asMCReg(), MaybeDeadDbgUsers);
     Copy->eraseFromParent();
