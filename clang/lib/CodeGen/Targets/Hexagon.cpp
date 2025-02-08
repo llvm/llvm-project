@@ -393,7 +393,7 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
   llvm::Type *MemTy = CGF.ConvertTypeForMem(Ty);
   llvm::PHINode *ArgAddr = CGF.Builder.CreatePHI(
       llvm::PointerType::getUnqual(MemTy->getContext()), 2, "vaarg.addr");
-  ArgAddr->addIncoming(__new_saved_reg_area_pointer, InRegBlock);
+  ArgAddr->addIncoming(__current_saved_reg_area_pointer, InRegBlock);
   ArgAddr->addIncoming(__overflow_area_pointer, OnStackBlock);
 
   return Address(ArgAddr, MemTy, CharUnits::fromQuantity(ArgAlign));
