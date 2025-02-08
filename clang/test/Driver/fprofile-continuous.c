@@ -1,5 +1,5 @@
 // 1) test on platforms that (do or do not) require runtime relocation
-//
+
 // RUN: %clang --target=x86_64-darwin -fprofile-generate -fprofile-continuous -### -c %s 2>&1 | FileCheck %s --check-prefix=NO_RELOC
 // NO_RELOC: "-cc1" {{.*}} "-fprofile-continuous"
 // NO_RELOC-NOT: "-mllvm" "-runtime-counter-relocation"
@@ -9,7 +9,7 @@
 // RELOC: "-cc1" {{.*}} "-fprofile-continuous" "-mllvm" "-runtime-counter-relocation"
 
 // 2) test -fprofile-continuous with cs-profile-generate and -fprofile-instr-generate
-//
+
 // RUN: %clang --target=powerpc-ibm-aix -fprofile-instr-generate -fprofile-continuous -### -c %s 2>&1 | FileCheck %s --check-prefix=CLANG_PGO
 // RUN: %clang --target=powerpc64le-unknown-linux -fprofile-instr-generate= -fprofile-continuous -### -c %s 2>&1 | FileCheck %s --check-prefix=CLANG_PGO
 // CLANG_PGO: "-cc1" {{.*}} "-fprofile-continuous" "-mllvm" "-runtime-counter-relocation" "-fprofile-instrument-path=default.profraw"
