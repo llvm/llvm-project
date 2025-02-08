@@ -2402,36 +2402,23 @@ foreach size = ["i16", "i32", "i64"] in {
   }
 }
 
-multiclass INT_PTX_ATOM_CAS_AS<string atomic_cmp_swap_without_as, string type, string order> {
+multiclass INT_PTX_ATOM_CAS_AS<string atomic_cmp_swap_without_as, string type, string order, list<Predicate> preds> {
   // eg. with type = 32, order = .acquire, atomic_cmp_swap_without_as = atomic_cmp_swap_i32_acquire, and _GEN becomes
   // F_ATOMIC_3<i32, Int32Regs, ".acquire", ".b32", ".cas", atomic_cmp_swap_i32_acquire, i32imm>
 
 
   // For SM70, PTX63 +, memory orders are supported
   defm _GEN: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), order, "", ".b"#type, ".cas",
-                       !cast<PatFrag>(atomic_cmp_swap_without_as#_gen), !cast<Operand>("i"#type#"imm"), [hasSM<70>, hasPTX<63>]>;
+                       !cast<PatFrag>(atomic_cmp_swap_without_as#_gen), !cast<Operand>("i"#type#"imm"), preds>;
 
   defm _GEN_USE_G: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), order, ".global", ".b"#type, ".cas",
-                       !cast<PatFrag>(atomic_cmp_swap_without_as#_gen), !cast<Operand>("i"#type#"imm"), [hasSM<70>, hasPTX<63>]>;
+                       !cast<PatFrag>(atomic_cmp_swap_without_as#_gen), !cast<Operand>("i"#type#"imm"), preds>;
 
   defm _G: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), order, ".global", ".b"#type, ".cas",
-                       !cast<PatFrag>(atomic_cmp_swap_without_as#_g), !cast<Operand>("i"#type#"imm"), [hasSM<70>, hasPTX<63>]>;
+                       !cast<PatFrag>(atomic_cmp_swap_without_as#_g), !cast<Operand>("i"#type#"imm"), preds>;
 
   defm _S: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), order, ".shared", ".b"#type, ".cas",
-                       !cast<PatFrag>(atomic_cmp_swap_without_as#_s), !cast<Operand>("i"#type#"imm"), [hasSM<70>, hasPTX<63>]>;
-
-  // For older archs, we fall back to lowering to relaxed atom.cas
-  defm _GEN_OLD: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), "", "", ".b"#type, ".cas",
-                       !cast<PatFrag>(atomic_cmp_swap_without_as#_gen), !cast<Operand>("i"#type#"imm")>;
-
-  defm _GEN_USE_G_OLD: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), "", ".global", ".b"#type, ".cas",
-                       !cast<PatFrag>(atomic_cmp_swap_without_as#_gen), !cast<Operand>("i"#type#"imm")>;
-
-  defm _G_OLD: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), "", ".global", ".b"#type, ".cas",
-                       !cast<PatFrag>(atomic_cmp_swap_without_as#_g), !cast<Operand>("i"#type#"imm")>;
-
-  defm _S_OLD: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), "", ".shared", ".b"#type, ".cas",
-                       !cast<PatFrag>(atomic_cmp_swap_without_as#_s), !cast<Operand>("i"#type#"imm")>;
+                       !cast<PatFrag>(atomic_cmp_swap_without_as#_s), !cast<Operand>("i"#type#"imm"), preds>;
 }
 
 // Define atom.cas for all combinations of size x memory order supported in PTX *and* on the hardware.
@@ -2442,9 +2429,11 @@ foreach size = ["32", "64"] in {
   // Note that AtomicExpand will convert cmpxchg seq_cst to a cmpxchg monotonic with fences around it.
   foreach order = ["acquire", "release", "acq_rel", ""] in {
     if !eq(order, "") then {
-      defm INT_PTX_ATOM_CAS_#size : INT_PTX_ATOM_CAS_AS<"atomic_cmp_swap_i"#size, size, ".relaxed">;
+      defm INT_PTX_ATOM_CAS_#size : INT_PTX_ATOM_CAS_AS<"atomic_cmp_swap_i"#size, size, ".relaxed", [hasSM<70>, hasPTX<63>]>;
+      defm INT_PTX_ATOM_CAS_#size#_old : INT_PTX_ATOM_CAS_AS<"atomic_cmp_swap_i"#size, size, "", []>;
     } else {
-      defm INT_PTX_ATOM_CAS_#size#_#order : INT_PTX_ATOM_CAS_AS<"atomic_cmp_swap_i"#size#_#order, size, "."#order>;
+      defm INT_PTX_ATOM_CAS_#size#_#order : INT_PTX_ATOM_CAS_AS<"atomic_cmp_swap_i"#size#_#order, size, "."#order, [hasSM<70>, hasPTX<63>]>;
+      defm INT_PTX_ATOM_CAS_#size#_#order#_old : INT_PTX_ATOM_CAS_AS<"atomic_cmp_swap_i"#size#_#order, size, "", []>;
     }
   }
 }
