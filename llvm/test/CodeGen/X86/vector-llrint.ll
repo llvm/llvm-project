@@ -673,3 +673,23 @@ define <8 x i64> @llrint_v8i64_v8f64(<8 x double> %x) {
   ret <8 x i64> %a
 }
 declare <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double>)
+
+define <4 x i32> @llrint_v4i32_v4f32(<4 x float> %x) {
+; SSE-LABEL: llrint_v4i32_v4f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cvtps2dq %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: llrint_v4i32_v4f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtps2dq %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX512DQ-LABEL: llrint_v4i32_v4f32:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vcvtps2dq %xmm0, %xmm0
+; AVX512DQ-NEXT:    retq
+  %a = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> %x)
+  %b = trunc nsw <4 x i64> %a to <4 x i32>
+  ret <4 x i32> %b
+}

@@ -537,3 +537,28 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
   ret <8 x iXLen> %a
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f64(<8 x double>)
+
+define <4 x i32> @llrint_v4i32_v4f32(<4 x float> %x) {
+; X86-SSE2-LABEL: llrint_v4i32_v4f32:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    cvtps2dq %xmm0, %xmm0
+; X86-SSE2-NEXT:    retl
+;
+; X86-AVX-LABEL: llrint_v4i32_v4f32:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vcvtps2dq %xmm0, %xmm0
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-i32-LABEL: llrint_v4i32_v4f32:
+; X64-AVX-i32:       # %bb.0:
+; X64-AVX-i32-NEXT:    vcvtps2dq %xmm0, %xmm0
+; X64-AVX-i32-NEXT:    retq
+;
+; X64-AVX-i64-LABEL: llrint_v4i32_v4f32:
+; X64-AVX-i64:       # %bb.0:
+; X64-AVX-i64-NEXT:    vcvtps2dq %xmm0, %xmm0
+; X64-AVX-i64-NEXT:    retq
+  %a = call <4 x i64> @llvm.lrint.v4i64.v4f32(<4 x float> %x)
+  %b = trunc nuw <4 x i64> %a to <4 x i32>
+  ret <4 x i32> %b
+}
