@@ -1399,3 +1399,23 @@ start:
   %div = udiv i8 %x, %y
   ret i8 %div
 }
+
+define i32 @udiv_shl_pair_const_vscale() vscale_range(1, 16) {
+; CHECK-LABEL: @udiv_shl_pair_const_vscale(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A]], 2
+; CHECK-NEXT:    [[RHS:%.*]] = shl nuw nsw i32 [[B]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 1, 33) i32 @llvm.cttz.i32(i32 [[RHS]], i1 true)
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[LHS]], [[TMP0]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %a = call i32 @llvm.vscale()
+  %b = call i32 @llvm.vscale()
+  %lhs = shl nuw i32 %a, 2
+  %rhs = shl nuw i32 %b, 1
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
