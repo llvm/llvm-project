@@ -237,6 +237,8 @@ clang-format
 ------------
 
 - Adds ``BreakBeforeTemplateCloser`` option.
+- Adds ``BinPackLongBracedList`` option to override bin packing options in
+  long (20 item or more) braced list initializer lists.
 
 libclang
 --------
