@@ -117,6 +117,8 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
         auto *isec = subsec.isec;
         if (!isec || isec->data.empty())
           continue;
+        if (isa<ConcatInputSection>(isec) && !isec->isLive(0))
+          continue;
         size_t idx = sections.size();
         sections.emplace_back(isec);
         for (auto *sym : BPOrdererMachO::getSymbols(*isec)) {
