@@ -22364,6 +22364,9 @@ static SDValue performZExtDeinterleaveShuffleCombine(SDNode *N,
   if (!IsDeInterleave)
     IsUndefDeInterleave =
         Shuffle->getOperand(1).isUndef() &&
+        all_of(
+            Shuffle->getMask().slice(ExtOffset, VT.getVectorNumElements() / 2),
+            [](int M) { return M < 0; }) &&
         ShuffleVectorInst::isDeInterleaveMaskOfFactor(
             Shuffle->getMask().slice(ExtOffset + VT.getVectorNumElements() / 2,
                                      VT.getVectorNumElements() / 2),
