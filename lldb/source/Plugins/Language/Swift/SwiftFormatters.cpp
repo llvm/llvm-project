@@ -17,6 +17,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -755,12 +756,33 @@ private:
 class TaskSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   TaskSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-      : SyntheticChildrenFrontEnd(*valobj_sp.get()) {}
+      : SyntheticChildrenFrontEnd(*valobj_sp.get()) {
+    auto target_sp = m_backend.GetTargetSP();
+    auto ts_or_err =
+        target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
+    if (auto err = ts_or_err.takeError()) {
+      LLDB_LOG(
+          GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+          "could not get Swift type system for Task synthetic provider: {0}",
+          fmt_consume(std::move(err)));
+      return;
+    }
+    m_ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(ts_or_err->get());
+  }
 
   constexpr static StringLiteral TaskChildren[] = {
-      "isChildTask",    "isFuture",    "isGroupChildTask",
-      "isAsyncLetTask", "isCancelled", "isStatusRecordLocked",
-      "isEscalated",    "isEnqueued",  "isRunning",
+      "id",
+      "kind",
+      "enqueuPriority",
+      "isChildTask",
+      "isFuture",
+      "isGroupChildTask",
+      "isAsyncLetTask",
+      "isCancelled",
+      "isStatusRecordLocked",
+      "isEscalated",
+      "isEnqueued",
+      "isRunning",
   };
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
@@ -770,31 +792,53 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     auto target_sp = m_backend.GetTargetSP();
-#define RETURN_CHILD(FIELD, NAME)                                              \
-  if (!FIELD)                                                                  \
-    FIELD = ValueObject::CreateValueObjectFromBool(target_sp,                  \
-                                                   m_task_info.NAME, #NAME);   \
-  return FIELD
+
+    // TypeMangling for "Swift.Bool"
+    CompilerType bool_type =
+        m_ts->GetTypeFromMangledTypename(ConstString("$sSbD"));
+    // TypeMangling for "Swift.UInt32"
+    CompilerType uint32_type =
+        m_ts->GetTypeFromMangledTypename(ConstString("$ss6UInt32VD"));
+    // TypeMangling for "Swift.UInt64"
+    CompilerType uint64_type =
+        m_ts->GetTypeFromMangledTypename(ConstString("$ss6UInt64VD"));
+
+#define RETURN_CHILD(FIELD, NAME, TYPE)                                        \
+  if (!FIELD) {                                                                \
+    auto value = m_task_info.NAME;                                             \
+    DataExtractor data{reinterpret_cast<const void *>(&value), sizeof(value),  \
+                       endian::InlHostByteOrder(), sizeof(void *)};            \
+    FIELD = ValueObject::CreateValueObjectFromData(                            \
+        #NAME, data, m_backend.GetExecutionContextRef(), TYPE);                \
+  }                                                                            \
+  return FIELD;
 
     switch (idx) {
     case 0:
-      RETURN_CHILD(m_is_child_task_sp, isChildTask);
+      RETURN_CHILD(m_id_sp, id, uint64_type);
     case 1:
-      RETURN_CHILD(m_is_future_sp, isFuture);
+      RETURN_CHILD(m_kind_sp, kind, uint32_type);
     case 2:
-      RETURN_CHILD(m_is_group_child_task_sp, isGroupChildTask);
+      RETURN_CHILD(m_enqueue_priority_sp, enqueuePriority, uint32_type);
     case 3:
-      RETURN_CHILD(m_is_async_let_task_sp, isAsyncLetTask);
+      RETURN_CHILD(m_is_child_task_sp, isChildTask, bool_type);
     case 4:
-      RETURN_CHILD(m_is_cancelled_sp, isCancelled);
+      RETURN_CHILD(m_is_future_sp, isFuture, bool_type);
     case 5:
-      RETURN_CHILD(m_is_status_record_locked_sp, isStatusRecordLocked);
+      RETURN_CHILD(m_is_group_child_task_sp, isGroupChildTask, bool_type);
     case 6:
-      RETURN_CHILD(m_is_escalated_sp, isEscalated);
+      RETURN_CHILD(m_is_async_let_task_sp, isAsyncLetTask, bool_type);
     case 7:
-      RETURN_CHILD(m_is_enqueued_sp, isEnqueued);
+      RETURN_CHILD(m_is_cancelled_sp, isCancelled, bool_type);
     case 8:
-      RETURN_CHILD(m_is_running_sp, isRunning);
+      RETURN_CHILD(m_is_status_record_locked_sp, isStatusRecordLocked,
+                   bool_type);
+    case 9:
+      RETURN_CHILD(m_is_escalated_sp, isEscalated, bool_type);
+    case 10:
+      RETURN_CHILD(m_is_enqueued_sp, isEnqueued, bool_type);
+    case 11:
+      RETURN_CHILD(m_is_running_sp, isRunning, bool_type);
     default:
       return {};
     }
@@ -820,7 +864,8 @@ public:
         } else {
           m_task_info = *task_info;
           for (auto child :
-               {m_is_child_task_sp, m_is_future_sp, m_is_group_child_task_sp,
+               {m_id_sp, m_kind_sp, m_enqueue_priority_sp, m_is_child_task_sp,
+                m_is_future_sp, m_is_group_child_task_sp,
                 m_is_async_let_task_sp, m_is_cancelled_sp,
                 m_is_status_record_locked_sp, m_is_escalated_sp,
                 m_is_enqueued_sp, m_is_running_sp})
@@ -835,14 +880,18 @@ public:
 
   size_t GetIndexOfChildWithName(ConstString name) override {
     ArrayRef children = TaskChildren;
-    auto it = llvm::find(children, name);
+    const auto *it = llvm::find(children, name);
     if (it == children.end())
       return UINT32_MAX;
     return std::distance(children.begin(), it);
   }
 
 private:
+  TypeSystemSwiftTypeRef *m_ts = nullptr;
   ReflectionContextInterface::AsyncTaskInfo m_task_info;
+  ValueObjectSP m_id_sp;
+  ValueObjectSP m_kind_sp;
+  ValueObjectSP m_enqueue_priority_sp;
   ValueObjectSP m_is_child_task_sp;
   ValueObjectSP m_is_future_sp;
   ValueObjectSP m_is_group_child_task_sp;

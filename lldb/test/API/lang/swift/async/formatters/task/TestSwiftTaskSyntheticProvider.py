@@ -19,6 +19,9 @@ class TestCase(TestBase):
             "frame var task",
             substrs=[
                 "(Task<(), Error>) task = {",
+                "id = 2",
+                "kind = 0",
+                "enqueuePriority = 21",
                 "isChildTask = false",
                 "isFuture = true",
                 "isGroupChildTask = false",

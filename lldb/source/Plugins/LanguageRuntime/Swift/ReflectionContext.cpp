@@ -404,6 +404,8 @@ public:
     result.isRunning = task_info.IsRunning;
     result.isEnqueued = task_info.IsEnqueued;
     result.id = task_info.Id;
+    result.kind = task_info.Kind;
+    result.enqueuePriority = task_info.EnqueuePriority;
     result.resumeAsyncContext = task_info.ResumeAsyncContext;
     return result;
   }
