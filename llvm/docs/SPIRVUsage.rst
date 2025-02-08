@@ -265,7 +265,11 @@ previous type has the representation
 Inline SPIR-V Types
 -------------------
 
-User-specified types may be represented using target extension types:
+HLSL allows users to create types representing specific SPIR-V types, using ``vk::SpirvType`` and
+``vk::SpirvOpaqueType``. These are specified in the `Inline SPIR-V`_ proposal. They may be
+represented using target extension types:
+
+.. _Inline SPIR-V: https://microsoft.github.io/hlsl-specs/proposals/0011-inline-spirv.html#types
 
   .. table:: Inline SPIR-V Types
 
