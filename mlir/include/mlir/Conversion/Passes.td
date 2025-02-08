@@ -558,7 +558,7 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
            /*default=*/"false",
            "Replace memref arguments in GPU functions with bare pointers. "
            "All memrefs must have static shape.">,
-    ListOption<"filterDialects", "filter-dialects", "std::string",
+    ListOption<"allowedDialects", "allowed-dialects", "std::string",
                "Run conversion patterns of only the specified dialects">,
   ];
 }
@@ -589,14 +589,14 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
     Option<"runtime", "runtime", "::mlir::gpu::amd::Runtime",
            "::mlir::gpu::amd::Runtime::Unknown",
            "Runtime code will be run on (default is Unknown, can also use HIP "
-           "or OpenCl)",
+           "or OpenCL)",
            [{::llvm::cl::values(
                clEnumValN(::mlir::gpu::amd::Runtime::Unknown, "unknown",
                           "Unknown (default)"),
                clEnumValN(::mlir::gpu::amd::Runtime::HIP, "HIP", "HIP"),
                clEnumValN(::mlir::gpu::amd::Runtime::OpenCL, "OpenCL",
                           "OpenCL"))}]>,
-    ListOption<"filterDialects", "filter-dialects", "std::string",
+    ListOption<"allowedDialects", "allowed-dialects", "std::string",
                "Run conversion patterns of only the specified dialects">,
   ];
 }

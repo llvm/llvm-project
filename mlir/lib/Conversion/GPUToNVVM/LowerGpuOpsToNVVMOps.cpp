@@ -378,8 +378,8 @@ struct LowerGpuOpsToNVVMOpsPass
     RewritePatternSet llvmPatterns(m.getContext());
     LLVMConversionTarget target(getContext());
 
-    if (!filterDialects.empty()) {
-      for (StringRef dialectName : filterDialects) {
+    if (!allowedDialects.empty()) {
+      for (StringRef dialectName : allowedDialects) {
         Dialect *dialect = getContext().getLoadedDialect(dialectName);
         // Dialect may not be loaded if it wasn't used in source module, ignore.
         if (!dialect)
