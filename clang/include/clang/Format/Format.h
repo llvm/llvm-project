@@ -2563,7 +2563,6 @@ struct FormatStyle {
   /// (e.g. a type or variable name), clang-format formats as if the ``{}`` were
   /// the parentheses of a function call with that name. If there is no name,
   /// a zero-length name is assumed.
-  ///
   /// \code
   ///    true:                                  false:
   ///    vector<int> x{1, 2, 3, 4};     vs.     vector<int> x{ 1, 2, 3, 4 };
