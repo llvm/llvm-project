@@ -79,6 +79,7 @@ typedef struct lprofFilename {
   char Hostname[COMPILER_RT_MAX_HOSTLEN];
   unsigned NumPids;
   unsigned NumHosts;
+  unsigned NumBinaryIds;
   /* When in-process merging is enabled, this parameter specifies
    * the total number of profile data files shared by all the processes
    * spawned from the same binary. By default the value is 1. If merging
@@ -92,8 +93,8 @@ typedef struct lprofFilename {
   ProfileNameSpecifier PNS;
 } lprofFilename;
 
-static lprofFilename lprofCurFilename = {0, 0, 0, {0}, NULL, {0},
-                                         0, 0, 0, {0}, 0,    PNS_unknown};
+static lprofFilename lprofCurFilename = {0, 0, 0, {0}, NULL,       {0},
+                                         0, 0, 0, 0, {0}, 0,    PNS_unknown};
 
 static int ProfileMergeRequested = 0;
 static int getProfileFileSizeForMerging(FILE *ProfileFile,
@@ -818,7 +819,7 @@ static int checkBounds(int Idx, int Strlen) {
  * lprofcurFilename structure. */
 static int parseFilenamePattern(const char *FilenamePat,
                                 unsigned CopyFilenamePat) {
-  int NumPids = 0, NumHosts = 0, I;
+  int NumPids = 0, NumHosts = 0, NumBinaryIds = 0, I;
   char *PidChars = &lprofCurFilename.PidChars[0];
   char *Hostname = &lprofCurFilename.Hostname[0];
   int MergingEnabled = 0;
@@ -884,6 +885,16 @@ static int parseFilenamePattern(const char *FilenamePat,
                     FilenamePat);
           return -1;
         }
+      } else if (FilenamePat[I] == 'b') {
+        if (!NumBinaryIds++) {
+          /* Check if binary ID does not exist or if its size is 0. */
+          if (__llvm_write_binary_ids(NULL) <= 0) {
+            PROF_WARN("Unable to get binary ID for filename pattern %s. Using "
+                      "the default name.",
+                      FilenamePat);
+            return -1;
+          }
+        }
       } else if (FilenamePat[I] == 'c') {
         if (__llvm_profile_is_continuous_mode_enabled()) {
           PROF_WARN("%%c specifier can only be specified once in %s.\n",
@@ -932,6 +943,7 @@ static int parseFilenamePattern(const char *FilenamePat,
 
   lprofCurFilename.NumPids = NumPids;
   lprofCurFilename.NumHosts = NumHosts;
+  lprofCurFilename.NumBinaryIds = NumBinaryIds;
   return 0;
 }
 
@@ -980,6 +992,8 @@ static void parseAndSetFilename(const char *FilenamePat,
  * filename with PID and hostname substitutions. */
 /* The length to hold uint64_t followed by 3 digits pool id including '_' */
 #define SIGLEN 24
+/* The length to hold 160-bit hash in hexadecimal form */
+#define BINARY_ID_LEN 40
 static int getCurFilenameLength(void) {
   int Len;
   unsigned I;
@@ -987,13 +1001,14 @@ static int getCurFilenameLength(void) {
     return 0;
 
   if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
-        lprofCurFilename.TmpDir || lprofCurFilename.MergePoolSize ||
-        lprofCurFilename.NumExitSignals))
+        lprofCurFilename.NumBinaryIds || lprofCurFilename.TmpDir ||
+        lprofCurFilename.MergePoolSize || lprofCurFilename.NumExitSignals))
     return strlen(lprofCurFilename.FilenamePat);
 
   Len = strlen(lprofCurFilename.FilenamePat) +
         lprofCurFilename.NumPids * (strlen(lprofCurFilename.PidChars) - 2) +
         lprofCurFilename.NumHosts * (strlen(lprofCurFilename.Hostname) - 2) +
+        lprofCurFilename.NumBinaryIds * BINARY_ID_LEN +
         (lprofCurFilename.TmpDir ? (strlen(lprofCurFilename.TmpDir) - 1) : 0);
   if (lprofCurFilename.MergePoolSize)
     Len += SIGLEN;
@@ -1003,6 +1018,31 @@ static int getCurFilenameLength(void) {
       --Len; /* Drop the second digit of the signal number. */
   }
   return Len;
+}
+
+typedef struct lprofBinaryIdsBuffer {
+  char String[BINARY_ID_LEN + 1];
+  int Length;
+} lprofBinaryIdsBuffer;
+
+/* Reads binary ID length and then its data, writes it into lprofBinaryIdsBuffer
+ * in hexadecimal form. */
+static uint32_t binaryIdsStringWriter(ProfDataWriter *This,
+                                      ProfDataIOVec *IOVecs,
+                                      uint32_t NumIOVecs) {
+  if (NumIOVecs < 2 || IOVecs[0].ElmSize != sizeof(uint64_t))
+    return -1;
+  uint64_t BinaryIdLen = *(const uint64_t *)IOVecs[0].Data;
+  if (IOVecs[1].ElmSize != sizeof(uint8_t) || IOVecs[1].NumElm != BinaryIdLen)
+    return -1;
+  const uint8_t *BinaryIdData = (const uint8_t *)IOVecs[1].Data;
+  lprofBinaryIdsBuffer *Data = (lprofBinaryIdsBuffer *)This->WriterCtx;
+  for (uint64_t I = 0; I < BinaryIdLen; I++) {
+    Data->Length +=
+        snprintf(Data->String + Data->Length, BINARY_ID_LEN + 1 - Data->Length,
+                 "%02hhx", BinaryIdData[I]);
+  }
+  return 0;
 }
 
 /* Return the pointer to the current profile file name (after substituting
@@ -1018,7 +1058,8 @@ static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf) {
     return 0;
 
   if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
-        lprofCurFilename.TmpDir || lprofCurFilename.MergePoolSize ||
+        lprofCurFilename.NumBinaryIds || lprofCurFilename.TmpDir ||
+        lprofCurFilename.MergePoolSize ||
         __llvm_profile_is_continuous_mode_enabled() ||
         lprofCurFilename.NumExitSignals)) {
     if (!ForceUseBuf)
@@ -1049,6 +1090,12 @@ static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf) {
         memcpy(FilenameBuf + J, lprofCurFilename.TmpDir, TmpDirLength);
         FilenameBuf[J + TmpDirLength] = DIR_SEPARATOR;
         J += TmpDirLength + 1;
+      } else if (FilenamePat[I] == 'b') {
+        lprofBinaryIdsBuffer Data = {{0}, 0};
+        ProfDataWriter Writer = {binaryIdsStringWriter, &Data};
+        __llvm_write_binary_ids(&Writer);
+        memcpy(FilenameBuf + J, Data.String, Data.Length);
+        J += Data.Length;
       } else {
         if (!getMergePoolSize(FilenamePat, &I))
           continue;
