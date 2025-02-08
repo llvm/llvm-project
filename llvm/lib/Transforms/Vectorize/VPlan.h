@@ -3669,8 +3669,8 @@ public:
     VFs.insert(VF);
   }
 
-  bool hasVF(ElementCount VF) { return VFs.count(VF); }
-  bool hasScalableVF() {
+  bool hasVF(ElementCount VF) const { return VFs.count(VF); }
+  bool hasScalableVF() const {
     return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
   }
 
