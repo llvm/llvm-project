@@ -1368,15 +1368,6 @@ enum Severity {
   eSeverityInfo, // Equivalent to Remark used in clang.
 };
 
-/// Callback return value, indicating whether it handled printing the
-/// CommandReturnObject or deferred doing so to the CommandInterpreter.
-enum CommandReturnObjectCallbackResult {
-  /// The callback deferred printing the command return object.
-  eCommandReturnObjectPrintCallbackSkipped = 0,
-  /// The callback handled printing the command return object.
-  eCommandReturnObjectPrintCallbackHandled = 1,
-};
-
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H

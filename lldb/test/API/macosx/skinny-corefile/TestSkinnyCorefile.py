@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestSkinnyCorefile(TestBase):
+    @skipIfOutOfTreeDebugserver  # newer debugserver required for these qMemoryRegionInfo types
     @skipIf(
         debug_info=no_match(["dsym"]),
         bugnumber="This test is looking explicitly for a dSYM",

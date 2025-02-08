@@ -73,9 +73,7 @@ public:
 
   unsigned getMinGlobalAlign(uint64_t, bool HasNonWeakDef) const override;
 
-  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
-    return {};
-  }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return VoidPtrBuiltinVaList;

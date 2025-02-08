@@ -1518,7 +1518,8 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
 
     AI->replaceUsesWithIf(Replacement, [AICast, AILong](const Use &U) {
       auto *User = U.getUser();
-      return User != AILong && User != AICast && !isa<LifetimeIntrinsic>(User);
+      return User != AILong && User != AICast &&
+             !memtag::isLifetimeIntrinsic(User);
     });
 
     memtag::annotateDebugRecords(Info, retagMask(N));

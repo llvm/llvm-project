@@ -132,15 +132,6 @@ struct ImageQueryBuiltin {
 #define GET_ImageQueryBuiltins_DECL
 #define GET_ImageQueryBuiltins_IMPL
 
-struct IntegerDotProductBuiltin {
-  StringRef Name;
-  uint32_t Opcode;
-  bool IsSwapReq;
-};
-
-#define GET_IntegerDotProductBuiltins_DECL
-#define GET_IntegerDotProductBuiltins_IMPL
-
 struct ConvertBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;
@@ -1588,84 +1579,20 @@ static bool generateCastToPtrInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
-static bool generateDotOrFMulInst(const StringRef DemangledCall,
-                                  const SPIRV::IncomingCall *Call,
+static bool generateDotOrFMulInst(const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
     return buildOpFromWrapper(MIRBuilder, SPIRV::OpDot, Call,
                               GR->getSPIRVTypeID(Call->ReturnType));
-
-  bool IsVec = GR->getSPIRVTypeForVReg(Call->Arguments[0])->getOpcode() ==
-               SPIRV::OpTypeVector;
+  unsigned Opcode = GR->getSPIRVTypeForVReg(Call->Arguments[0])->getOpcode();
+  bool IsVec = Opcode == SPIRV::OpTypeVector;
   // Use OpDot only in case of vector args and OpFMul in case of scalar args.
-  uint32_t OC = IsVec ? SPIRV::OpDot : SPIRV::OpFMulS;
-  bool IsSwapReq = false;
-
-  const auto *ST =
-      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
-  if (GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeInt) &&
-      (ST->canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) ||
-       ST->isAtLeastSPIRVVer(VersionTuple(1, 6)))) {
-    const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
-    const SPIRV::IntegerDotProductBuiltin *IntDot =
-        SPIRV::lookupIntegerDotProductBuiltin(Builtin->Name);
-    if (IntDot) {
-      OC = IntDot->Opcode;
-      IsSwapReq = IntDot->IsSwapReq;
-    } else if (IsVec) {
-      // Handling "dot" and "dot_acc_sat" builtins which use vectors of
-      // integers.
-      LLVMContext &Ctx = MIRBuilder.getContext();
-      SmallVector<StringRef, 10> TypeStrs;
-      SPIRV::parseBuiltinTypeStr(TypeStrs, DemangledCall, Ctx);
-      bool IsFirstSigned = TypeStrs[0].trim()[0] != 'u';
-      bool IsSecondSigned = TypeStrs[1].trim()[0] != 'u';
-
-      if (Call->BuiltinName == "dot") {
-        if (IsFirstSigned && IsSecondSigned)
-          OC = SPIRV::OpSDot;
-        else if (!IsFirstSigned && !IsSecondSigned)
-          OC = SPIRV::OpUDot;
-        else {
-          OC = SPIRV::OpSUDot;
-          if (!IsFirstSigned)
-            IsSwapReq = true;
-        }
-      } else if (Call->BuiltinName == "dot_acc_sat") {
-        if (IsFirstSigned && IsSecondSigned)
-          OC = SPIRV::OpSDotAccSat;
-        else if (!IsFirstSigned && !IsSecondSigned)
-          OC = SPIRV::OpUDotAccSat;
-        else {
-          OC = SPIRV::OpSUDotAccSat;
-          if (!IsFirstSigned)
-            IsSwapReq = true;
-        }
-      }
-    }
-  }
-
-  MachineInstrBuilder MIB = MIRBuilder.buildInstr(OC)
-                                .addDef(Call->ReturnRegister)
-                                .addUse(GR->getSPIRVTypeID(Call->ReturnType));
-
-  if (IsSwapReq) {
-    MIB.addUse(Call->Arguments[1]);
-    MIB.addUse(Call->Arguments[0]);
-    // needed for dot_acc_sat* builtins
-    for (size_t i = 2; i < Call->Arguments.size(); ++i)
-      MIB.addUse(Call->Arguments[i]);
-  } else {
-    for (size_t i = 0; i < Call->Arguments.size(); ++i)
-      MIB.addUse(Call->Arguments[i]);
-  }
-
-  // Add Packed Vector Format for Integer dot product builtins if arguments are
-  // scalar
-  if (!IsVec && OC != SPIRV::OpFMulS)
-    MIB.addImm(0);
-
+  MIRBuilder.buildInstr(IsVec ? SPIRV::OpDot : SPIRV::OpFMulS)
+      .addDef(Call->ReturnRegister)
+      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+      .addUse(Call->Arguments[0])
+      .addUse(Call->Arguments[1]);
   return true;
 }
 
@@ -2649,11 +2576,6 @@ mapBuiltinToOpcode(const StringRef DemangledCall,
     if (const auto *R = SPIRV::lookupGroupUniformBuiltin(Call->Builtin->Name))
       return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
     break;
-  case SPIRV::IntegerDot:
-    if (const auto *R =
-            SPIRV::lookupIntegerDotProductBuiltin(Call->Builtin->Name))
-      return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
-    break;
   case SPIRV::WriteImage:
     return std::make_tuple(Call->Builtin->Group, SPIRV::OpImageWrite, 0);
   case SPIRV::Select:
@@ -2713,8 +2635,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
   case SPIRV::CastToPtr:
     return generateCastToPtrInst(Call.get(), MIRBuilder);
   case SPIRV::Dot:
-  case SPIRV::IntegerDot:
-    return generateDotOrFMulInst(DemangledCall, Call.get(), MIRBuilder, GR);
+    return generateDotOrFMulInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Wave:
     return generateWaveInst(Call.get(), MIRBuilder, GR);
   case SPIRV::ICarryBorrow:

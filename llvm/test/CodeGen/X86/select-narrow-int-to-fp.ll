@@ -64,6 +64,8 @@ define half @uint8ToHalf(i8 %int8) {
 ; CHECK-NO_FP16-NEXT:    movzbl %dil, %eax
 ; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; CHECK-NO_FP16-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NO_FP16-NEXT:    vmovd %xmm0, %eax
+; CHECK-NO_FP16-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: uint8ToHalf:
@@ -145,6 +147,8 @@ define half @sint8ToHalf(i8 %int8) {
 ; CHECK-NO_FP16-NEXT:    movsbl %dil, %eax
 ; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; CHECK-NO_FP16-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NO_FP16-NEXT:    vmovd %xmm0, %eax
+; CHECK-NO_FP16-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: sint8ToHalf:
@@ -218,6 +222,8 @@ define half @uint16ToHalf(i16 %int16) {
 ; CHECK-NO_FP16-NEXT:    movzwl %di, %eax
 ; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; CHECK-NO_FP16-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NO_FP16-NEXT:    vmovd %xmm0, %eax
+; CHECK-NO_FP16-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: uint16ToHalf:
@@ -283,6 +289,8 @@ define half @sint16ToHalf(i16 %int16) {
 ; CHECK-NO_FP16-NEXT:    movswl %di, %eax
 ; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; CHECK-NO_FP16-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NO_FP16-NEXT:    vmovd %xmm0, %eax
+; CHECK-NO_FP16-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: sint16ToHalf:

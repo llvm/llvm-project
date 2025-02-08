@@ -1069,7 +1069,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
     const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
     if (VLOp.isImm()) {
       int64_t Imm = VLOp.getImm();
-      // Convert the VLMax sentintel to X0 register.
+      // Conver the VLMax sentintel to X0 register.
       if (Imm == RISCV::VLMaxSentinel) {
         // If we know the exact VLEN, see if we can use the constant encoding
         // for the VLMAX instead.  This reduces register pressure slightly.

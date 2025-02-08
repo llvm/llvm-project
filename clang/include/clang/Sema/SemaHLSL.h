@@ -141,9 +141,6 @@ public:
   // Diagnose whether the input ID is uint/unit2/uint3 type.
   bool diagnoseInputIDType(QualType T, const ParsedAttr &AL);
 
-  bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
-  bool ContainsBitField(QualType BaseTy);
-  bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 
   QualType getInoutParameterType(QualType Ty);
@@ -163,9 +160,9 @@ private:
   ResourceBindings Bindings;
 
 private:
-  void collectResourceBindingsOnVarDecl(VarDecl *D);
-  void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
-                                               const RecordType *RT);
+  void collectResourcesOnVarDecl(VarDecl *D);
+  void collectResourcesOnUserRecordDecl(const VarDecl *VD,
+                                        const RecordType *RT);
   void processExplicitBindingsOnDecl(VarDecl *D);
 };
 

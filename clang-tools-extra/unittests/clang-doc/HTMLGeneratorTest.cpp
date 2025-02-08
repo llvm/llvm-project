@@ -319,12 +319,7 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
       <a href="path/to/int.html">int</a>
        P)
     </p>
-    <p>
-      Defined at line 
-      <a href="https://www.repository.com/dir/test.cpp#10">10</a>
-       of file 
-      <a href="https://www.repository.com/dir/test.cpp">test.cpp</a>
-    </p>
+    <p>Defined at line 10 of file dir/test.cpp</p>
   </div>
   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right"></div>
 </main>

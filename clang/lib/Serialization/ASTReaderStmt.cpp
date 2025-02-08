@@ -2923,15 +2923,6 @@ void ASTStmtReader::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
   }
 }
 
-void ASTStmtReader::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
-  VisitStmt(S);
-  S->Kind = Record.readEnum<OpenACCDirectiveKind>();
-  S->Range = Record.readSourceRange();
-  S->DirectiveLoc = Record.readSourceLocation();
-  S->AtomicKind = Record.readEnum<OpenACCAtomicKind>();
-  S->setAssociatedStmt(Record.readSubStmt());
-}
-
 //===----------------------------------------------------------------------===//
 // HLSL Constructs/Directives.
 //===----------------------------------------------------------------------===//
@@ -4461,10 +4452,6 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_OPENACC_UPDATE_CONSTRUCT: {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
       S = OpenACCUpdateConstruct::CreateEmpty(Context, NumClauses);
-      break;
-    }
-    case STMT_OPENACC_ATOMIC_CONSTRUCT: {
-      S = OpenACCAtomicConstruct::CreateEmpty(Context);
       break;
     }
     case EXPR_REQUIRES: {

@@ -131,7 +131,7 @@ FuzzySymbolIndex::queryRegexp(const std::vector<std::string> &Tokens) {
 
 llvm::Expected<std::unique_ptr<FuzzySymbolIndex>>
 FuzzySymbolIndex::createFromYAML(StringRef FilePath) {
-  auto Buffer = llvm::MemoryBuffer::getFile(FilePath, /*IsText=*/true);
+  auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
   if (!Buffer)
     return llvm::errorCodeToError(Buffer.getError());
   return std::make_unique<MemSymbolIndex>(

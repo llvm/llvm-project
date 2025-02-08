@@ -451,23 +451,6 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFDIV_VF:
   case RISCV::VFDIV_VV:
   case RISCV::VFRDIV_VF:
-  // Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-  case RISCV::VFMACC_VV:
-  case RISCV::VFMACC_VF:
-  case RISCV::VFNMACC_VV:
-  case RISCV::VFNMACC_VF:
-  case RISCV::VFMSAC_VV:
-  case RISCV::VFMSAC_VF:
-  case RISCV::VFNMSAC_VV:
-  case RISCV::VFNMSAC_VF:
-  case RISCV::VFMADD_VV:
-  case RISCV::VFMADD_VF:
-  case RISCV::VFNMADD_VV:
-  case RISCV::VFNMADD_VF:
-  case RISCV::VFMSUB_VV:
-  case RISCV::VFMSUB_VF:
-  case RISCV::VFNMSUB_VV:
-  case RISCV::VFNMSUB_VF:
   // Vector Floating-Point Square-Root Instruction
   case RISCV::VFSQRT_V:
   // Vector Floating-Point Reciprocal Square-Root Estimate Instruction
@@ -1033,23 +1016,6 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // Vector Widening Floating-Point Multiply
   case RISCV::VFWMUL_VF:
   case RISCV::VFWMUL_VV:
-  // Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-  case RISCV::VFMACC_VV:
-  case RISCV::VFMACC_VF:
-  case RISCV::VFNMACC_VV:
-  case RISCV::VFNMACC_VF:
-  case RISCV::VFMSAC_VV:
-  case RISCV::VFMSAC_VF:
-  case RISCV::VFNMSAC_VV:
-  case RISCV::VFNMSAC_VF:
-  case RISCV::VFMADD_VV:
-  case RISCV::VFMADD_VF:
-  case RISCV::VFNMADD_VV:
-  case RISCV::VFNMADD_VF:
-  case RISCV::VFMSUB_VV:
-  case RISCV::VFMSUB_VF:
-  case RISCV::VFNMSUB_VV:
-  case RISCV::VFNMSUB_VF:
   // Vector Floating-Point MIN/MAX Instructions
   case RISCV::VFMIN_VF:
   case RISCV::VFMIN_VV:
@@ -1368,7 +1334,6 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) {
 }
 
 bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
-  assert(DemandedVLs.size() == 0);
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -1407,6 +1372,5 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  DemandedVLs.clear();
   return MadeChange;
 }

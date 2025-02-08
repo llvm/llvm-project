@@ -24,18 +24,15 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
-#include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -124,13 +121,13 @@ namespace {
 
 class JoinVals;
 
-class RegisterCoalescer : private LiveRangeEdit::Delegate {
+class RegisterCoalescer : public MachineFunctionPass,
+                          private LiveRangeEdit::Delegate {
   MachineFunction *MF = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   LiveIntervals *LIS = nullptr;
-  SlotIndexes *SI = nullptr;
   const MachineLoopInfo *Loops = nullptr;
   RegisterClassInfo RegClassInfo;
 
@@ -376,23 +373,10 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
                                         LiveRange &RegRange, JoinVals &Vals2);
 
 public:
-  // For legacy pass only.
-  RegisterCoalescer() {}
-  RegisterCoalescer &operator=(RegisterCoalescer &&Other) = default;
-
-  RegisterCoalescer(LiveIntervals *LIS, SlotIndexes *SI,
-                    const MachineLoopInfo *Loops)
-      : LIS(LIS), SI(SI), Loops(Loops) {}
-
-  bool run(MachineFunction &MF);
-};
-
-class RegisterCoalescerLegacy : public MachineFunctionPass {
-public:
   static char ID; ///< Class identification, replacement for typeinfo
 
-  RegisterCoalescerLegacy() : MachineFunctionPass(ID) {
-    initializeRegisterCoalescerLegacyPass(*PassRegistry::getPassRegistry());
+  RegisterCoalescer() : MachineFunctionPass(ID) {
+    initializeRegisterCoalescerPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -402,22 +386,24 @@ public:
         MachineFunctionProperties::Property::IsSSA);
   }
 
+  void releaseMemory() override;
+
   /// This is the pass entry point.
   bool runOnMachineFunction(MachineFunction &) override;
 };
 
 } // end anonymous namespace
 
-char RegisterCoalescerLegacy::ID = 0;
+char RegisterCoalescer::ID = 0;
 
-char &llvm::RegisterCoalescerID = RegisterCoalescerLegacy::ID;
+char &llvm::RegisterCoalescerID = RegisterCoalescer::ID;
 
-INITIALIZE_PASS_BEGIN(RegisterCoalescerLegacy, "register-coalescer",
+INITIALIZE_PASS_BEGIN(RegisterCoalescer, "register-coalescer",
                       "Register Coalescer", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_END(RegisterCoalescerLegacy, "register-coalescer",
+INITIALIZE_PASS_END(RegisterCoalescer, "register-coalescer",
                     "Register Coalescer", false, false)
 
 [[nodiscard]] static bool isMoveInstr(const TargetRegisterInfo &tri,
@@ -594,9 +580,8 @@ bool CoalescerPair::isCoalescable(const MachineInstr *MI) const {
   }
 }
 
-void RegisterCoalescerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+void RegisterCoalescer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
@@ -4241,35 +4226,15 @@ void RegisterCoalescer::joinAllIntervals() {
   lateLiveIntervalUpdate();
 }
 
-PreservedAnalyses
-RegisterCoalescerPass::run(MachineFunction &MF,
-                           MachineFunctionAnalysisManager &MFAM) {
-  MFPropsModifier _(*this, MF);
-  auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  auto &Loops = MFAM.getResult<MachineLoopAnalysis>(MF);
-  auto *SI = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
-  RegisterCoalescer Impl(&LIS, SI, &Loops);
-  if (!Impl.run(MF))
-    return PreservedAnalyses::all();
-  auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  PA.preserve<LiveIntervalsAnalysis>();
-  PA.preserve<SlotIndexesAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  return PA;
+void RegisterCoalescer::releaseMemory() {
+  ErasedInstrs.clear();
+  WorkList.clear();
+  DeadDefs.clear();
+  InflateRegs.clear();
+  LargeLIVisitCounter.clear();
 }
 
-bool RegisterCoalescerLegacy::runOnMachineFunction(MachineFunction &MF) {
-  auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  auto *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
-  SlotIndexes *SI = SIWrapper ? &SIWrapper->getSI() : nullptr;
-  RegisterCoalescer Impl(LIS, SI, Loops);
-  return Impl.run(MF);
-}
-
-bool RegisterCoalescer::run(MachineFunction &fn) {
+bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   LLVM_DEBUG(dbgs() << "********** REGISTER COALESCER **********\n"
                     << "********** Function: " << fn.getName() << '\n');
 
@@ -4292,6 +4257,8 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
   const TargetSubtargetInfo &STI = fn.getSubtarget();
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   if (EnableGlobalCopies == cl::BOU_UNSET)
     JoinGlobalCopies = STI.enableJoinGlobalCopies();
   else
@@ -4316,7 +4283,7 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
   JoinSplitEdges = EnableJoinSplits;
 
   if (VerifyCoalescing)
-    MF->verify(LIS, SI, "Before register coalescing", &errs());
+    MF->verify(this, "Before register coalescing", &errs());
 
   DbgVRegToValues.clear();
   buildVRegToDbgValueMap(fn);
@@ -4375,8 +4342,7 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
   RegToPHIIdx.clear();
 
   LLVM_DEBUG(LIS->dump());
-
   if (VerifyCoalescing)
-    MF->verify(LIS, SI, "After register coalescing", &errs());
+    MF->verify(this, "After register coalescing", &errs());
   return true;
 }

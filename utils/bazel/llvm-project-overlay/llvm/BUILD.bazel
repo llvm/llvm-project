@@ -1225,7 +1225,6 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Analysis",
-        ":BinaryFormat",
         ":BitReader",
         ":BitstreamWriter",
         ":Core",
@@ -1644,7 +1643,6 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":Object",
-        ":ObjectYAML",
         ":Support",
         ":TargetParser",
         ":TransformUtils",

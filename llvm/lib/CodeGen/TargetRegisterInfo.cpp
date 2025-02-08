@@ -420,10 +420,7 @@ static bool shareSameRegisterFile(const TargetRegisterInfo &TRI,
                                   const TargetRegisterClass *SrcRC,
                                   unsigned SrcSubReg) {
   // Same register class.
-  //
-  // When processing uncoalescable copies / bitcasts, it is possible we reach
-  // here with the same register class, but mismatched subregister indices.
-  if (DefRC == SrcRC && DefSubReg == SrcSubReg)
+  if (DefRC == SrcRC)
     return true;
 
   // Both operands are sub registers. Check if they share a register class.

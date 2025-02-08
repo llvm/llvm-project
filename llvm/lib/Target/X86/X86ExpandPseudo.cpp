@@ -284,7 +284,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     // Adjust stack pointer.
     int StackAdj = StackAdjust.getImm();
     int MaxTCDelta = X86FI->getTCReturnAddrDelta();
-    int64_t Offset = 0;
+    int Offset = 0;
     assert(MaxTCDelta <= 0 && "MaxTCDelta should never be positive");
 
     // Incoporate the retaddr area.
@@ -297,7 +297,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
 
     if (Offset) {
       // Check for possible merge with preceding ADD instruction.
-      Offset = X86FL->mergeSPAdd(MBB, MBBI, Offset, true);
+      Offset += X86FL->mergeSPUpdates(MBB, MBBI, true);
       X86FL->emitSPUpdate(MBB, MBBI, DL, Offset, /*InEpilogue=*/true);
     }
 

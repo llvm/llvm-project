@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // The pass adds LPAD (AUIPC with rs1 = X0) machine instructions at the
-// beginning of each basic block or function that is referenced by an indirect
+// beginning of each basic block or function that is referenced by an indrect
 // jump/call instruction.
 //
 //===----------------------------------------------------------------------===//

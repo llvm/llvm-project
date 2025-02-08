@@ -1382,46 +1382,43 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
     if (!ctx.config.dll)
       return;
 
-    if (ctx.symtab.hadExplicitExports ||
-        (ctx.hybridSymtab && ctx.hybridSymtab->hadExplicitExports))
+    if (!ctx.symtab.exports.empty())
       return;
     if (args.hasArg(OPT_exclude_all_symbols))
       return;
   }
 
-  ctx.forEachSymtab([&](SymbolTable &symtab) {
-    AutoExporter exporter(symtab, excludedSymbols);
+  AutoExporter exporter(ctx, excludedSymbols);
 
-    for (auto *arg : args.filtered(OPT_wholearchive_file))
-      if (std::optional<StringRef> path = findFile(arg->getValue()))
-        exporter.addWholeArchive(*path);
+  for (auto *arg : args.filtered(OPT_wholearchive_file))
+    if (std::optional<StringRef> path = findFile(arg->getValue()))
+      exporter.addWholeArchive(*path);
 
-    for (auto *arg : args.filtered(OPT_exclude_symbols)) {
-      SmallVector<StringRef, 2> vec;
-      StringRef(arg->getValue()).split(vec, ',');
-      for (StringRef sym : vec)
-        exporter.addExcludedSymbol(symtab.mangle(sym));
+  for (auto *arg : args.filtered(OPT_exclude_symbols)) {
+    SmallVector<StringRef, 2> vec;
+    StringRef(arg->getValue()).split(vec, ',');
+    for (StringRef sym : vec)
+      exporter.addExcludedSymbol(ctx.symtab.mangle(sym));
+  }
+
+  ctx.symtab.forEachSymbol([&](Symbol *s) {
+    auto *def = dyn_cast<Defined>(s);
+    if (!exporter.shouldExport(def))
+      return;
+
+    if (!def->isGCRoot) {
+      def->isGCRoot = true;
+      ctx.config.gcroot.push_back(def);
     }
 
-    symtab.forEachSymbol([&](Symbol *s) {
-      auto *def = dyn_cast<Defined>(s);
-      if (!exporter.shouldExport(def))
-        return;
-
-      if (!def->isGCRoot) {
-        def->isGCRoot = true;
-        ctx.config.gcroot.push_back(def);
-      }
-
-      Export e;
-      e.name = def->getName();
-      e.sym = def;
-      if (Chunk *c = def->getChunk())
-        if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
-          e.data = true;
-      s->isUsedInRegularObj = true;
-      symtab.exports.push_back(e);
-    });
+    Export e;
+    e.name = def->getName();
+    e.sym = def;
+    if (Chunk *c = def->getChunk())
+      if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
+        e.data = true;
+    s->isUsedInRegularObj = true;
+    ctx.symtab.exports.push_back(e);
   });
 }
 
@@ -2695,7 +2692,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /output-def (MinGW specific).
   if (auto *arg = args.getLastArg(OPT_output_def))
-    writeDefFile(ctx, arg->getValue(), mainSymtab.exports);
+    writeDefFile(ctx, arg->getValue(), ctx.symtab.exports);
 
   // Set extra alignment for .comm symbols
   for (auto pair : config->alignComm) {

@@ -2321,7 +2321,8 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
       continue;
 
     const char *name = nullptr;
-    std::optional<uint64_t> enum_value;
+    bool got_value = false;
+    int64_t enum_value = 0;
     Declaration decl;
 
     for (size_t i = 0; i < attributes.Size(); ++i) {
@@ -2330,6 +2331,7 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
       if (attributes.ExtractFormValueAtIndex(i, form_value)) {
         switch (attr) {
         case DW_AT_const_value:
+          got_value = true;
           if (is_signed)
             enum_value = form_value.Signed();
           else
@@ -2358,9 +2360,9 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
       }
     }
 
-    if (name && name[0] && enum_value) {
+    if (name && name[0] && got_value) {
       m_ast.AddEnumerationValueToEnumerationType(
-          clang_type, decl, name, *enum_value, enumerator_byte_size * 8);
+          clang_type, decl, name, enum_value, enumerator_byte_size * 8);
       ++enumerators_added;
     }
   }
@@ -3190,7 +3192,7 @@ void DWARFASTParserClang::ParseChildParameters(
     }
   }
 
-  assert(function_param_names.size() == function_param_types.size());
+  assert(function_param_names.size() == function_param_names.size());
 }
 
 clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {

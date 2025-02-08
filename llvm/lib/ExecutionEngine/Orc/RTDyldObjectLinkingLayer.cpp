@@ -88,10 +88,7 @@ RTDyldObjectLinkingLayer::RTDyldObjectLinkingLayer(
 }
 
 RTDyldObjectLinkingLayer::~RTDyldObjectLinkingLayer() {
-  assert(MemMgrs.empty() &&
-         "Layer destroyed with resources still attached"
-         "(ExecutionSession::endSession() must be called prior to "
-         "destruction)");
+  assert(MemMgrs.empty() && "Layer destroyed with resources still attached");
 }
 
 void RTDyldObjectLinkingLayer::emit(

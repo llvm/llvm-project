@@ -8,6 +8,7 @@
 ! MSVC-SAME: -D_MT
 ! MSVC-SAME: --dependent-lib=libcmt
 ! MSVC-SAME: --dependent-lib=FortranRuntime.static.lib
+! MSVC-SAME: --dependent-lib=FortranDecimal.static.lib
 
 ! MSVC-DEBUG: -fc1
 ! MSVC-DEBUG-SAME: --dependent-lib=clang_rt.builtins.lib
@@ -15,6 +16,7 @@
 ! MSVC-DEBUG-SAME: -D_DEBUG
 ! MSVC-DEBUG-SAME: --dependent-lib=libcmtd
 ! MSVC-DEBUG-SAME: --dependent-lib=FortranRuntime.static_dbg.lib
+! MSVC-DEBUG-SAME: --dependent-lib=FortranDecimal.static_dbg.lib
 
 ! MSVC-DLL: -fc1
 ! MSVC-DLL-SAME: --dependent-lib=clang_rt.builtins.lib
@@ -22,6 +24,7 @@
 ! MSVC-DLL-SAME: -D_DLL
 ! MSVC-DLL-SAME: --dependent-lib=msvcrt
 ! MSVC-DLL-SAME: --dependent-lib=FortranRuntime.dynamic.lib
+! MSVC-DLL-SAME: --dependent-lib=FortranDecimal.dynamic.lib
 
 ! MSVC-DLL-DEBUG: -fc1
 ! MSVC-DLL-DEBUG-SAME: --dependent-lib=clang_rt.builtins.lib
@@ -30,3 +33,4 @@
 ! MSVC-DLL-DEBUG-SAME: -D_DLL
 ! MSVC-DLL-DEBUG-SAME: --dependent-lib=msvcrtd
 ! MSVC-DLL-DEBUG-SAME: --dependent-lib=FortranRuntime.dynamic_dbg.lib
+! MSVC-DLL-DEBUG-SAME: --dependent-lib=FortranDecimal.dynamic_dbg.lib

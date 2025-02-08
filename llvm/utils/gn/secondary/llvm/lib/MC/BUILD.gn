@@ -14,7 +14,6 @@ static_library("MC") {
   sources = [
     "ConstantPools.cpp",
     "DXContainerPSVInfo.cpp",
-    "DXContainerRootSignature.cpp",
     "ELFObjectWriter.cpp",
     "GOFFObjectWriter.cpp",
     "MCAsmBackend.cpp",

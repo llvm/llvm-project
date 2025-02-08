@@ -63,19 +63,6 @@ template<typename Out, typename... In> Function<Out(In...)> adopt(Detail::Callab
     return Function<Out(In...)>(impl, Function<Out(In...)>::Adopt);
 }
 
-template <typename KeyType, typename ValueType>
-class HashMap {
-public:
-  HashMap();
-  HashMap([[clang::noescape]] const Function<ValueType()>&);
-  void ensure(const KeyType&, [[clang::noescape]] const Function<ValueType()>&);
-  bool operator+([[clang::noescape]] const Function<ValueType()>&) const;
-  static void ifAny(HashMap, [[clang::noescape]] const Function<bool(ValueType)>&);
-
-private:
-  ValueType* m_table { nullptr };
-};
-
 } // namespace WTF
 
 struct A {
@@ -265,40 +252,13 @@ struct RefCountableWithLambdaCapturingThis {
     call(lambda);
   }
 
-  void method_captures_this_with_guardian_refptr() {
+  void method_captures_this_with_guardian_refPtr() {
     auto lambda = [this, protectedThis = RefPtr { &*this }]() {
       nonTrivial();
     };
     call(lambda);
   }
 
-  void forEach(const WTF::Function<void(RefCountable&)>&);
-  void method_captures_this_with_lambda_with_no_escape() {
-    auto run = [&]([[clang::noescape]] const WTF::Function<void(RefCountable&)>& func) {
-      forEach(func);
-    };
-    run([&](RefCountable&) {
-      nonTrivial();
-    });
-  }
-
-  static void callLambda([[clang::noescape]] const WTF::Function<RefPtr<RefCountable>()>&);
-  void method_captures_this_in_template_method() {
-    RefCountable* obj = make_obj();
-    WTF::HashMap<int, RefPtr<RefCountable>> nextMap;
-    nextMap.ensure(3, [&] {
-      return obj->next();
-    });
-    nextMap+[&] {
-      return obj->next();
-    };
-    WTF::HashMap<int, RefPtr<RefCountable>>::ifAny(nextMap, [&](auto& item) -> bool {
-      return item->next() && obj->next();
-    });
-    callLambda([&]() -> RefPtr<RefCountable> {
-      return obj->next();
-    });
-  }
 };
 
 struct NonRefCountableWithLambdaCapturingThis {

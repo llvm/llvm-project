@@ -349,7 +349,8 @@ Below are the rules regarding patching the release branch:
 
 #. *Bug fix releases* Patches should be limited to bug fixes or very safe
    and critical performance improvements.  Patches must maintain both API and
-   ABI compatibility with the X.1.0 release.
+   ABI compatibility with the previous major release.
+
 
 Release Final Tasks
 -------------------

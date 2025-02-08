@@ -15,7 +15,7 @@
 #ifndef FLANG_LOWER_LOWERINGOPTIONS_H
 #define FLANG_LOWER_LOWERINGOPTIONS_H
 
-#include "flang/Support/MathOptionsBase.h"
+#include "flang/Common/MathOptionsBase.h"
 
 namespace Fortran::lower {
 

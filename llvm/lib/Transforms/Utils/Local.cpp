@@ -497,7 +497,10 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
       // are lifetime intrinsics then the intrinsics are dead.
       if (isa<AllocaInst>(Arg) || isa<GlobalValue>(Arg) || isa<Argument>(Arg))
         return llvm::all_of(Arg->uses(), [](Use &Use) {
-          return isa<LifetimeIntrinsic>(Use.getUser());
+          if (IntrinsicInst *IntrinsicUse =
+                  dyn_cast<IntrinsicInst>(Use.getUser()))
+            return IntrinsicUse->isLifetimeStartOrEnd();
+          return false;
         });
       return false;
     }

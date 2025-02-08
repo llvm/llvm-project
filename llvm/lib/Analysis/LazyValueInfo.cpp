@@ -398,8 +398,6 @@ class LazyValueInfoImpl {
   std::optional<ValueLatticeElement>
   getValueFromICmpCondition(Value *Val, ICmpInst *ICI, bool isTrueDest,
                             bool UseBlockValue);
-  ValueLatticeElement getValueFromTrunc(Value *Val, TruncInst *Trunc,
-                                        bool IsTrueDest);
 
   std::optional<ValueLatticeElement>
   getValueFromCondition(Value *Val, Value *Cond, bool IsTrueDest,
@@ -624,12 +622,10 @@ LazyValueInfoImpl::solveBlockValueImpl(Value *Val, BasicBlock *BB) {
   return getFromRangeMetadata(BBI);
 }
 
-static void AddNonNullPointer(Value *Ptr, NonNullPointerSet &PtrSet,
-                              bool IsDereferenced = true) {
+static void AddNonNullPointer(Value *Ptr, NonNullPointerSet &PtrSet) {
   // TODO: Use NullPointerIsDefined instead.
   if (Ptr->getType()->getPointerAddressSpace() == 0)
-    PtrSet.insert(IsDereferenced ? getUnderlyingObject(Ptr)
-                                 : Ptr->stripInBoundsOffsets());
+    PtrSet.insert(getUnderlyingObject(Ptr));
 }
 
 static void AddNonNullPointersByInstruction(
@@ -648,13 +644,6 @@ static void AddNonNullPointersByInstruction(
     AddNonNullPointer(MI->getRawDest(), PtrSet);
     if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI))
       AddNonNullPointer(MTI->getRawSource(), PtrSet);
-  } else if (auto *CB = dyn_cast<CallBase>(I)) {
-    for (auto &U : CB->args()) {
-      if (U->getType()->isPointerTy() &&
-          CB->paramHasNonNullAttr(CB->getArgOperandNo(&U),
-                                  /*AllowUndefOrPoison=*/false))
-        AddNonNullPointer(U.get(), PtrSet, /*IsDereferenced=*/false);
-    }
   }
 }
 
@@ -1294,27 +1283,6 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
   return ValueLatticeElement::getOverdefined();
 }
 
-ValueLatticeElement LazyValueInfoImpl::getValueFromTrunc(Value *Val,
-                                                         TruncInst *Trunc,
-                                                         bool IsTrueDest) {
-  assert(Trunc->getType()->isIntOrIntVectorTy(1));
-
-  if (Trunc->getOperand(0) != Val)
-    return ValueLatticeElement::getOverdefined();
-
-  Type *Ty = Val->getType();
-
-  if (Trunc->hasNoUnsignedWrap()) {
-    if (IsTrueDest)
-      return ValueLatticeElement::get(ConstantInt::get(Ty, 1));
-    return ValueLatticeElement::get(Constant::getNullValue(Ty));
-  }
-
-  if (IsTrueDest)
-    return ValueLatticeElement::getNot(Constant::getNullValue(Ty));
-  return ValueLatticeElement::getNot(Constant::getAllOnesValue(Ty));
-}
-
 // Handle conditions of the form
 // extractvalue(op.with.overflow(%x, C), 1).
 static ValueLatticeElement getValueFromOverflowCondition(
@@ -1343,9 +1311,6 @@ LazyValueInfoImpl::getValueFromCondition(Value *Val, Value *Cond,
                                          unsigned Depth) {
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(Cond))
     return getValueFromICmpCondition(Val, ICI, IsTrueDest, UseBlockValue);
-
-  if (auto *Trunc = dyn_cast<TruncInst>(Cond))
-    return getValueFromTrunc(Val, Trunc, IsTrueDest);
 
   if (auto *EVI = dyn_cast<ExtractValueInst>(Cond))
     if (auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand()))

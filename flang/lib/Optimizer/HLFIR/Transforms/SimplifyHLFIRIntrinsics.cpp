@@ -1094,18 +1094,17 @@ private:
     mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
     mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
     mlir::Value linearIndex = zero;
-    std::size_t idx = 0;
-    for (auto index : llvm::reverse(indices)) {
+    for (auto idx : llvm::enumerate(llvm::reverse(indices))) {
       mlir::Value tmp = builder.create<mlir::arith::SubIOp>(
-          loc, builder.createConvert(loc, indexType, index), one);
+          loc, builder.createConvert(loc, indexType, idx.value()), one);
       tmp = builder.create<mlir::arith::AddIOp>(loc, linearIndex, tmp);
-      if (idx + 1 < rank)
+      if (idx.index() + 1 < rank)
         tmp = builder.create<mlir::arith::MulIOp>(
             loc, tmp,
-            builder.createConvert(loc, indexType, extents[rank - idx - 2]));
+            builder.createConvert(loc, indexType,
+                                  extents[rank - idx.index() - 2]));
 
       linearIndex = tmp;
-      ++idx;
     }
     return linearIndex;
   }

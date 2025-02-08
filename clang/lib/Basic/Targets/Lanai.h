@@ -78,9 +78,7 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
-  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
-    return {};
-  }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override {

@@ -125,7 +125,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-matcher-emitter"
 
-static cl::OptionCategory AsmMatcherEmitterCat("Options for -gen-asm-matcher");
+cl::OptionCategory AsmMatcherEmitterCat("Options for -gen-asm-matcher");
 
 static cl::opt<std::string>
     MatchPrefix("match-prefix", cl::init(""),

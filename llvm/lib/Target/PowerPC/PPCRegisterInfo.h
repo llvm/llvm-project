@@ -65,10 +65,9 @@ public:
   /// for a given imm form load/store opcode \p ImmFormOpcode.
   /// FIXME: move this to PPCInstrInfo class.
   unsigned getMappedIdxOpcForImmOpc(unsigned ImmOpcode) const {
-    auto It = ImmToIdxMap.find(ImmOpcode);
-    if (It == ImmToIdxMap.end())
+    if (!ImmToIdxMap.count(ImmOpcode))
       return PPC::INSTRUCTION_LIST_END;
-    return It->second;
+    return ImmToIdxMap.find(ImmOpcode)->second;
   }
 
   /// getPointerRegClass - Return the register class to use to hold pointers.

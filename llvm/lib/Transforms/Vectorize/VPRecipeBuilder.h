@@ -128,7 +128,8 @@ class VPRecipeBuilder {
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
   /// that widening should be performed.
-  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands);
+  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
+                            VPBasicBlock *VPBB);
 
   /// Makes Histogram count operations safe for vectorization, by emitting a
   /// llvm.experimental.vector.histogram.add intrinsic in place of the
@@ -173,7 +174,7 @@ public:
   /// the given VF \p Range.
   VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr,
                                        ArrayRef<VPValue *> Operands,
-                                       VFRange &Range);
+                                       VFRange &Range, VPBasicBlock *VPBB);
 
   /// Create and return a partial reduction recipe for a reduction instruction
   /// along with binary operation and reduction phi operands.

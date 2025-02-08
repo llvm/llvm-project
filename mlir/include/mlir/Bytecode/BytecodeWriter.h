@@ -82,7 +82,6 @@ public:
   /// printers for the fallback resources within the map.
   BytecodeWriterConfig(FallbackAsmResourceMap &map,
                        StringRef producer = "MLIR" LLVM_VERSION_STRING);
-  BytecodeWriterConfig(BytecodeWriterConfig &&);
   ~BytecodeWriterConfig();
 
   /// An internal implementation class that contains the state of the

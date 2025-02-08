@@ -58,7 +58,6 @@ add_mlir_library(MLIRFunctionInterfaces
   MLIRFunctionInterfacesIncGen
 
   LINK_LIBS PUBLIC
-  MLIRCallInterfaces
   MLIRIR
 )
 

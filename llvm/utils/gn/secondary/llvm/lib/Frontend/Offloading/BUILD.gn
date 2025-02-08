@@ -2,7 +2,6 @@ static_library("Offloading") {
   output_name = "LLVMFrontendOffloading"
   deps = [
     "//llvm/lib/IR",
-    "//llvm/lib/ObjectYAML",
     "//llvm/lib/Support",
     "//llvm/lib/Transforms/Utils",
   ]

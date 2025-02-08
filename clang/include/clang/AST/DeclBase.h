@@ -1257,11 +1257,8 @@ public:
   int64_t getID() const;
 
   /// Looks through the Decl's underlying type to extract a FunctionType
-  /// when possible. This includes direct FunctionDecls, along with various
-  /// function types and typedefs. This includes function pointers/references,
-  /// member function pointers, and optionally if \p BlocksToo is set
-  /// Objective-C block pointers. Returns nullptr if the type underlying the
-  /// Decl does not have a FunctionType.
+  /// when possible. Will return null if the type underlying the Decl does not
+  /// have a FunctionType.
   const FunctionType *getFunctionType(bool BlocksToo = true) const;
 
   // Looks through the Decl's underlying type to determine if it's a
@@ -1780,8 +1777,6 @@ protected:
     uint64_t HasImplicitReturnZero : 1;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsLateTemplateParsed : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    uint64_t IsInstantiatedFromMemberTemplate : 1;
 
     /// Kind of contexpr specifier as defined by ConstexprSpecKind.
     LLVM_PREFERRED_TYPE(ConstexprSpecKind)
@@ -1832,7 +1827,7 @@ protected:
   };
 
   /// Number of inherited and non-inherited bits in FunctionDeclBitfields.
-  enum { NumFunctionDeclBits = NumDeclContextBits + 32 };
+  enum { NumFunctionDeclBits = NumDeclContextBits + 31 };
 
   /// Stores the bits used by CXXConstructorDecl. If modified
   /// NumCXXConstructorDeclBits and the accessor
@@ -1843,12 +1838,12 @@ protected:
     LLVM_PREFERRED_TYPE(FunctionDeclBitfields)
     uint64_t : NumFunctionDeclBits;
 
-    /// 19 bits to fit in the remaining available space.
+    /// 20 bits to fit in the remaining available space.
     /// Note that this makes CXXConstructorDeclBitfields take
     /// exactly 64 bits and thus the width of NumCtorInitializers
     /// will need to be shrunk if some bit is added to NumDeclContextBitfields,
     /// NumFunctionDeclBitfields or CXXConstructorDeclBitfields.
-    uint64_t NumCtorInitializers : 16;
+    uint64_t NumCtorInitializers : 17;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsInheritingConstructor : 1;
 
@@ -1862,7 +1857,7 @@ protected:
   };
 
   /// Number of inherited and non-inherited bits in CXXConstructorDeclBitfields.
-  enum { NumCXXConstructorDeclBits = NumFunctionDeclBits + 19 };
+  enum { NumCXXConstructorDeclBits = NumFunctionDeclBits + 20 };
 
   /// Stores the bits used by ObjCMethodDecl.
   /// If modified NumObjCMethodDeclBits and the accessor

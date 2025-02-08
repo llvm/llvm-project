@@ -96,10 +96,6 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override;
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override;
 };
 
 /// ARM/Thumb little endian target machine.

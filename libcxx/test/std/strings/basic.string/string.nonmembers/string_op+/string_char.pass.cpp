@@ -16,32 +16,41 @@
 //   basic_string<charT,traits,Allocator>&&
 //   operator+(basic_string<charT,traits,Allocator>&& lhs, charT rhs); // constexpr since C++20
 
-#include <cassert>
 #include <string>
 #include <utility>
+#include <cassert>
 
-#include "asan_testing.h"
-#include "min_allocator.h"
 #include "test_macros.h"
+#include "min_allocator.h"
+#include "asan_testing.h"
+
+template <class S>
+TEST_CONSTEXPR_CXX20 void test0(const S& lhs, typename S::value_type rhs, const S& x) {
+  assert(lhs + rhs == x);
+  LIBCPP_ASSERT(is_string_asan_correct(lhs + rhs));
+}
+
+#if TEST_STD_VER >= 11
+template <class S>
+TEST_CONSTEXPR_CXX20 void test1(S&& lhs, typename S::value_type rhs, const S& x) {
+  assert(std::move(lhs) + rhs == x);
+}
+#endif
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test_string() {
-  const char* test_data[] = {"", "12345", "1234567890", "12345678901234567890"};
-  const char* results[]   = {"a", "12345a", "1234567890a", "12345678901234567890a"};
+  test0(S(""), '1', S("1"));
+  test0(S(""), '1', S("1"));
+  test0(S("abcde"), '1', S("abcde1"));
+  test0(S("abcdefghij"), '1', S("abcdefghij1"));
+  test0(S("abcdefghijklmnopqrst"), '1', S("abcdefghijklmnopqrst1"));
 
-  for (size_t i = 0; i != 4; ++i) {
-    { // operator+(const string&, value_type);
-      const S str(test_data[i]);
-      assert(str + 'a' == results[i]);
-      LIBCPP_ASSERT(is_string_asan_correct(str + 'a'));
-    }
 #if TEST_STD_VER >= 11
-    { // operator+(string&&, value_type);
-      S str(test_data[i]);
-      assert(std::move(str) + 'a' == results[i]);
-    }
+  test1(S(""), '1', S("1"));
+  test1(S("abcde"), '1', S("abcde1"));
+  test1(S("abcdefghij"), '1', S("abcdefghij1"));
+  test1(S("abcdefghijklmnopqrst"), '1', S("abcdefghijklmnopqrst1"));
 #endif
-  }
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -56,7 +65,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
 int main(int, char**) {
   test();
-#if TEST_STD_VER >= 20
+#if TEST_STD_VER > 17
   static_assert(test());
 #endif
 

@@ -273,55 +273,13 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
-static constexpr int NumBaseBuiltins =
-    LoongArch::FirstLSXBuiltin - Builtin::FirstTSBuiltin;
-static constexpr int NumLSXBuiltins =
-    LoongArch::FirstLASXBuiltin - LoongArch::FirstLSXBuiltin;
-static constexpr int NumLASXBuiltins =
-    LoongArch::LastTSBuiltin - LoongArch::FirstLASXBuiltin;
-static constexpr int NumBuiltins =
-    LoongArch::LastTSBuiltin - Builtin::FirstTSBuiltin;
-static_assert(NumBuiltins ==
-              (NumBaseBuiltins + NumLSXBuiltins + NumLASXBuiltins));
-
-static constexpr llvm::StringTable BuiltinBaseStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsLoongArchBase.def"
-#undef TARGET_BUILTIN
-    ;
-
-static constexpr auto BuiltinBaseInfos = Builtin::MakeInfos<NumBaseBuiltins>({
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsLoongArchBase.def"
-#undef TARGET_BUILTIN
-});
-
-static constexpr llvm::StringTable BuiltinLSXStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsLoongArchLSX.def"
-#undef TARGET_BUILTIN
-    ;
-
-static constexpr auto BuiltinLSXInfos = Builtin::MakeInfos<NumLSXBuiltins>({
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsLoongArchLSX.def"
-#undef TARGET_BUILTIN
-});
-
-static constexpr llvm::StringTable BuiltinLASXStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsLoongArchLASX.def"
-#undef TARGET_BUILTIN
-    ;
-
-static constexpr auto BuiltinLASXInfos = Builtin::MakeInfos<NumLASXBuiltins>({
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsLoongArchLASX.def"
-#undef TARGET_BUILTIN
-});
+static constexpr Builtin::Info BuiltinInfo[] = {
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#include "clang/Basic/BuiltinsLoongArch.def"
+};
 
 bool LoongArchTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
@@ -348,13 +306,9 @@ bool LoongArchTargetInfo::hasFeature(StringRef Feature) const {
       .Default(false);
 }
 
-llvm::SmallVector<Builtin::InfosShard>
-LoongArchTargetInfo::getTargetBuiltins() const {
-  return {
-      {&BuiltinBaseStrings, BuiltinBaseInfos},
-      {&BuiltinLSXStrings, BuiltinLSXInfos},
-      {&BuiltinLASXStrings, BuiltinLASXInfos},
-  };
+ArrayRef<Builtin::Info> LoongArchTargetInfo::getTargetBuiltins() const {
+  return llvm::ArrayRef(BuiltinInfo, clang::LoongArch::LastTSBuiltin -
+                                         Builtin::FirstTSBuiltin);
 }
 
 bool LoongArchTargetInfo::handleTargetFeatures(

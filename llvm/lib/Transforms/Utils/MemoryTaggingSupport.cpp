@@ -154,7 +154,9 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
     }
     return;
   }
-  if (auto *II = dyn_cast<LifetimeIntrinsic>(&Inst)) {
+  auto *II = dyn_cast<IntrinsicInst>(&Inst);
+  if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+             II->getIntrinsicID() == Intrinsic::lifetime_end)) {
     AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
     if (!AI) {
       Info.UnrecognizedLifetimes.push_back(&Inst);
@@ -257,6 +259,11 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   Info.AI->replaceAllUsesWith(NewPtr);
   Info.AI->eraseFromParent();
   Info.AI = NewAI;
+}
+
+bool isLifetimeIntrinsic(Value *V) {
+  auto *II = dyn_cast<IntrinsicInst>(V);
+  return II && II->isLifetimeStartOrEnd();
 }
 
 Value *readRegister(IRBuilder<> &IRB, StringRef Name) {

@@ -8,6 +8,7 @@
 
 #ifndef MLIR_CONVERSION_MATHTOEMITC_MATHTOEMITC_H
 #define MLIR_CONVERSION_MATHTOEMITC_MATHTOEMITC_H
+#include "mlir/Dialect/EmitC/IR/EmitC.h"
 namespace mlir {
 class RewritePatternSet;
 namespace emitc {

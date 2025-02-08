@@ -535,8 +535,11 @@ void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
 
       Instruction *Bitcast = cast<Instruction>(U);
       for (User *BU : Bitcast->users()) {
-        auto *IntrInst = dyn_cast<LifetimeIntrinsic>(BU);
+        IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(BU);
         if (!IntrInst)
+          continue;
+
+        if (!IntrInst->isLifetimeStartOrEnd())
           continue;
 
         if (definedInRegion(Blocks, IntrInst))
@@ -1080,8 +1083,8 @@ static void eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
                                          SetVector<Value *> &LifetimesStart) {
   for (BasicBlock *BB : Blocks) {
     for (Instruction &I : llvm::make_early_inc_range(*BB)) {
-      auto *II = dyn_cast<LifetimeIntrinsic>(&I);
-      if (!II)
+      auto *II = dyn_cast<IntrinsicInst>(&I);
+      if (!II || !II->isLifetimeStartOrEnd())
         continue;
 
       // Get the memory operand of the lifetime marker. If the underlying

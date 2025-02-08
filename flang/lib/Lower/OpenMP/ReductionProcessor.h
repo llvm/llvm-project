@@ -19,7 +19,6 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 
@@ -121,14 +120,13 @@ public:
 
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
-  static void processReductionArguments(
+  static void addDeclareReduction(
       mlir::Location currentLocation, lower::AbstractConverter &converter,
       const omp::clause::Reduction &reduction,
       llvm::SmallVectorImpl<mlir::Value> &reductionVars,
       llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
-      mlir::omp::ReductionModifierAttr &reductionMod);
+      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
 };
 
 template <typename FloatOp, typename IntegerOp>

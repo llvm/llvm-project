@@ -12,7 +12,6 @@ add_llvm_component_library(LLVMFrontendOffloading
   Core
   BinaryFormat
   Object
-  ObjectYAML
   Support
   TransformUtils
   TargetParser

@@ -305,7 +305,7 @@ void BalancedPartitioning::split(const FunctionNodeRange Nodes,
   unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
   auto NodesMid = Nodes.begin() + (NumNodes + 1) / 2;
 
-  llvm::sort(Nodes.begin(), Nodes.end(), [](auto &L, auto &R) {
+  std::nth_element(Nodes.begin(), NodesMid, Nodes.end(), [](auto &L, auto &R) {
     return L.InputOrderIndex < R.InputOrderIndex;
   });
 

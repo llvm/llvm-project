@@ -224,8 +224,6 @@ cc_test(
         # Skip a test that relies on reading files in a way that doesn't easily
         # work with Bazel.
         "--gtest_filter=-NativeSymbolReuseTest.*",
-        # TODO: this test is failing on some configs, investigate and re-enable it.
-        "--gtest_filter=-DebugLineBasicFixture.LookupAddressRangeWithStmtSequenceOffset",
     ],
     features = ["-layering_check"],  # #include "../lib/CodeGen/AsmPrinter/DwarfStringPool.h"
     deps = [

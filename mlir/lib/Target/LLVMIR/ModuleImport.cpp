@@ -647,16 +647,6 @@ LogicalResult ModuleImport::convertGlobals() {
   return success();
 }
 
-LogicalResult ModuleImport::convertAliases() {
-  for (llvm::GlobalAlias &alias : llvmModule->aliases()) {
-    if (failed(convertAlias(&alias))) {
-      return emitError(UnknownLoc::get(context))
-             << "unhandled global alias: " << diag(alias);
-    }
-  }
-  return success();
-}
-
 LogicalResult ModuleImport::convertDataLayout() {
   Location loc = mlirModule.getLoc();
   DataLayoutImporter dataLayoutImporter(context, llvmModule->getDataLayout());
@@ -962,38 +952,6 @@ ModuleImport::getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar) {
   return symbolRef;
 }
 
-LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
-  // Insert the global after the last one or at the start of the module.
-  OpBuilder::InsertionGuard guard(builder);
-  if (!aliasInsertionOp)
-    builder.setInsertionPointToStart(mlirModule.getBody());
-  else
-    builder.setInsertionPointAfter(aliasInsertionOp);
-
-  Type type = convertType(alias->getValueType());
-  AliasOp aliasOp = builder.create<AliasOp>(
-      mlirModule.getLoc(), type, convertLinkageFromLLVM(alias->getLinkage()),
-      alias->getName(),
-      /*dso_local=*/alias->isDSOLocal(),
-      /*thread_local=*/alias->isThreadLocal(),
-      /*attrs=*/ArrayRef<NamedAttribute>());
-  aliasInsertionOp = aliasOp;
-
-  clearRegionState();
-  Block *block = builder.createBlock(&aliasOp.getInitializerRegion());
-  setConstantInsertionPointToStart(block);
-  FailureOr<Value> initializer = convertConstantExpr(alias->getAliasee());
-  if (failed(initializer))
-    return failure();
-  builder.create<ReturnOp>(aliasOp.getLoc(), *initializer);
-
-  if (alias->hasAtLeastLocalUnnamedAddr())
-    aliasOp.setUnnamedAddr(convertUnnamedAddrFromLLVM(alias->getUnnamedAddr()));
-  aliasOp.setVisibility_(convertVisibilityFromLLVM(alias->getVisibility()));
-
-  return success();
-}
-
 LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   // Insert the global after the last one or at the start of the module.
   OpBuilder::InsertionGuard guard(builder);
@@ -1131,7 +1089,7 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
     llvm::Constant *current = workList.back();
     // References of global objects are just pointers to the object. Avoid
     // walking the elements of these here.
-    if (isa<llvm::GlobalObject>(current) || isa<llvm::GlobalAlias>(current)) {
+    if (isa<llvm::GlobalObject>(current)) {
       orderedSet.insert(current);
       workList.pop_back();
       continue;
@@ -1224,14 +1182,6 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
           getOrCreateNamelessSymbolName(cast<llvm::GlobalVariable>(globalObj));
     else
       symbolRef = FlatSymbolRefAttr::get(context, globalName);
-    return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
-  }
-
-  // Convert global alias accesses.
-  if (auto *globalAliasObj = dyn_cast<llvm::GlobalAlias>(constant)) {
-    Type type = convertType(globalAliasObj->getType());
-    StringRef aliaseeName = globalAliasObj->getName();
-    FlatSymbolRefAttr symbolRef = FlatSymbolRefAttr::get(context, aliaseeName);
     return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
   }
 
@@ -2505,8 +2455,6 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
   if (failed(moduleImport.convertGlobals()))
     return {};
   if (failed(moduleImport.convertFunctions()))
-    return {};
-  if (failed(moduleImport.convertAliases()))
     return {};
   moduleImport.convertTargetTriple();
   return module;

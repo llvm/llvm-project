@@ -1884,23 +1884,17 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
   // llvm.is.fpclass(X, fcInf|fcNan)
   // (icmp ne (and (bitcast X to int), ExponentMask), ExponentMask) -->
   // llvm.is.fpclass(X, ~(fcInf|fcNan))
-  // (icmp eq (and (bitcast X to int), ExponentMask), 0) -->
-  // llvm.is.fpclass(X, fcSubnormal|fcZero)
-  // (icmp ne (and (bitcast X to int), ExponentMask), 0) -->
-  // llvm.is.fpclass(X, ~(fcSubnormal|fcZero))
   Value *V;
   if (!Cmp.getParent()->getParent()->hasFnAttribute(
           Attribute::NoImplicitFloat) &&
       Cmp.isEquality() &&
       match(X, m_OneUse(m_ElementWiseBitCast(m_Value(V))))) {
     Type *FPType = V->getType()->getScalarType();
-    if (FPType->isIEEELikeFPTy() && (C1.isZero() || C1 == *C2)) {
+    if (FPType->isIEEELikeFPTy() && C1 == *C2) {
       APInt ExponentMask =
           APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt();
-      if (*C2 == ExponentMask) {
-        unsigned Mask = C1.isZero()
-                            ? FPClassTest::fcZero | FPClassTest::fcSubnormal
-                            : FPClassTest::fcNan | FPClassTest::fcInf;
+      if (C1 == ExponentMask) {
+        unsigned Mask = FPClassTest::fcNan | FPClassTest::fcInf;
         if (isICMP_NE)
           Mask = ~Mask & fcAllFlags;
         return replaceInstUsesWith(Cmp, Builder.createIsFPClass(V, Mask));
@@ -5064,27 +5058,6 @@ static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
   CmpInst::Predicate PredOut = CmpInst::getStrictPredicate(Pred);
   if (PredOut != Pred && isKnownNonZero(A, Q))
     return new ICmpInst(PredOut, Op0, Op1);
-
-  // These transform work when A is negative.
-  // X s< X^A, X s<= X^A, X u> X^A, X u>= X^A  --> X s< 0
-  // X s> X^A, X s>= X^A, X u< X^A, X u<= X^A  --> X s>= 0
-  if (match(A, m_Negative())) {
-    CmpInst::Predicate NewPred;
-    switch (ICmpInst::getStrictPredicate(Pred)) {
-    default:
-      return nullptr;
-    case ICmpInst::ICMP_SLT:
-    case ICmpInst::ICMP_UGT:
-      NewPred = ICmpInst::ICMP_SLT;
-      break;
-    case ICmpInst::ICMP_SGT:
-    case ICmpInst::ICMP_ULT:
-      NewPred = ICmpInst::ICMP_SGE;
-      break;
-    }
-    Constant *Const = Constant::getNullValue(Op0->getType());
-    return new ICmpInst(NewPred, Op0, Const);
-  }
 
   return nullptr;
 }

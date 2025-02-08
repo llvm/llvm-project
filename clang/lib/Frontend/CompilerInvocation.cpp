@@ -1665,11 +1665,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   else if (!Opts.UnrollLoops && Opts.OptimizationLevel > 1)
     GenerateArg(Consumer, OPT_fno_unroll_loops);
 
-  if (Opts.InterchangeLoops)
-    GenerateArg(Consumer, OPT_floop_interchange);
-  else
-    GenerateArg(Consumer, OPT_fno_loop_interchange);
-
   if (!Opts.BinutilsVersion.empty())
     GenerateArg(Consumer, OPT_fbinutils_version_EQ, Opts.BinutilsVersion);
 
@@ -1848,9 +1843,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, OPT_fno_finite_loops);
     break;
   }
-
-  if (Opts.StaticClosure)
-    GenerateArg(Consumer, OPT_static_libclosure);
 }
 
 bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
@@ -1976,8 +1968,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   Opts.UnrollLoops =
       Args.hasFlag(OPT_funroll_loops, OPT_fno_unroll_loops,
                    (Opts.OptimizationLevel > 1));
-  Opts.InterchangeLoops =
-      Args.hasFlag(OPT_floop_interchange, OPT_fno_loop_interchange, false);
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
 
@@ -2339,8 +2329,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       options::OPT_mamdgpu_ieee, options::OPT_mno_amdgpu_ieee, true);
   if (!Opts.EmitIEEENaNCompliantInsts && !LangOptsRef.NoHonorNaNs)
     Diags.Report(diag::err_drv_amdgpu_ieee_without_no_honor_nans);
-
-  Opts.StaticClosure = Args.hasArg(options::OPT_static_libclosure);
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -3899,9 +3887,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     break;
   case LangOptions::ClangABI::Ver19:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "19.0");
-    break;
-  case LangOptions::ClangABI::Ver20:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "20.0");
     break;
   case LangOptions::ClangABI::Latest:
     break;

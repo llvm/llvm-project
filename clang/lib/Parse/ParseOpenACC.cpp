@@ -156,14 +156,14 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
 // second part of the directive.
 OpenACCAtomicKind getOpenACCAtomicKind(Token Tok) {
   if (!Tok.is(tok::identifier))
-    return OpenACCAtomicKind::None;
+    return OpenACCAtomicKind::Invalid;
   return llvm::StringSwitch<OpenACCAtomicKind>(
              Tok.getIdentifierInfo()->getName())
       .Case("read", OpenACCAtomicKind::Read)
       .Case("write", OpenACCAtomicKind::Write)
       .Case("update", OpenACCAtomicKind::Update)
       .Case("capture", OpenACCAtomicKind::Capture)
-      .Default(OpenACCAtomicKind::None);
+      .Default(OpenACCAtomicKind::Invalid);
 }
 
 OpenACCDefaultClauseKind getOpenACCDefaultClauseKind(Token Tok) {
@@ -398,16 +398,17 @@ OpenACCAtomicKind ParseOpenACCAtomicKind(Parser &P) {
 
   // #pragma acc atomic is equivilent to update:
   if (AtomicClauseToken.isAnnotation())
-    return OpenACCAtomicKind::None;
+    return OpenACCAtomicKind::Update;
 
   OpenACCAtomicKind AtomicKind = getOpenACCAtomicKind(AtomicClauseToken);
 
-  // If this isn't a valid atomic-kind, don't consume the token, and treat the
-  // rest as a clause list, which despite there being no permissible clauses,
-  // will diagnose as a clause.
-  if (AtomicKind != OpenACCAtomicKind::None)
-    P.ConsumeToken();
+  // If we don't know what this is, treat it as 'nothing', and treat the rest of
+  // this as a clause list, which, despite being invalid, is likely what the
+  // user was trying to do.
+  if (AtomicKind == OpenACCAtomicKind::Invalid)
+    return OpenACCAtomicKind::Update;
 
+  P.ConsumeToken();
   return AtomicKind;
 }
 
@@ -569,19 +570,12 @@ void SkipUntilEndOfDirective(Parser &P) {
 
 bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
   switch (DirKind) {
-  case OpenACCDirectiveKind::Routine:
-    // FIXME: Routine MIGHT end up needing to be 'true' here, as it needs a way
-    // to capture a lambda-expression on the next line.
-  case OpenACCDirectiveKind::Cache:
-  case OpenACCDirectiveKind::Declare:
-  case OpenACCDirectiveKind::Set:
+  default:
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::Wait:
   case OpenACCDirectiveKind::Init:
   case OpenACCDirectiveKind::Shutdown:
-  case OpenACCDirectiveKind::Update:
-  case OpenACCDirectiveKind::Invalid:
     return false;
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
@@ -592,7 +586,6 @@ bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::Loop:
   case OpenACCDirectiveKind::Data:
   case OpenACCDirectiveKind::HostData:
-  case OpenACCDirectiveKind::Atomic:
     return true;
   }
   llvm_unreachable("Unhandled directive->assoc stmt");
@@ -1435,7 +1428,6 @@ Parser::ParseOpenACCDirective() {
   SourceLocation DirLoc = getCurToken().getLocation();
   OpenACCDirectiveKind DirKind = ParseOpenACCDirectiveKind(*this);
   Parser::OpenACCWaitParseInfo WaitInfo;
-  OpenACCAtomicKind AtomicKind = OpenACCAtomicKind::None;
 
   getActions().OpenACC().ActOnConstruct(DirKind, DirLoc);
 
@@ -1443,7 +1435,7 @@ Parser::ParseOpenACCDirective() {
   // specifiers that need to be taken care of. Atomic has an 'atomic-clause'
   // that needs to be parsed.
   if (DirKind == OpenACCDirectiveKind::Atomic)
-    AtomicKind = ParseOpenACCAtomicKind(*this);
+    ParseOpenACCAtomicKind(*this);
 
   // We've successfully parsed the construct/directive name, however a few of
   // the constructs have optional parens that contain further details.
@@ -1498,7 +1490,6 @@ Parser::ParseOpenACCDirective() {
                                       T.getCloseLocation(),
                                       /*EndLoc=*/SourceLocation{},
                                       WaitInfo.QueuesLoc,
-                                      AtomicKind,
                                       WaitInfo.getAllExprs(),
                                       ParseOpenACCClauseList(DirKind)};
 
@@ -1547,12 +1538,11 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
     ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));
 
     AssocStmt = getActions().OpenACC().ActOnAssociatedStmt(
-        DirInfo.StartLoc, DirInfo.DirKind, DirInfo.AtomicKind, DirInfo.Clauses,
-        ParseStatement());
+        DirInfo.StartLoc, DirInfo.DirKind, DirInfo.Clauses, ParseStatement());
   }
 
   return getActions().OpenACC().ActOnEndStmtDirective(
       DirInfo.DirKind, DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.LParenLoc,
-      DirInfo.MiscLoc, DirInfo.Exprs, DirInfo.AtomicKind, DirInfo.RParenLoc,
-      DirInfo.EndLoc, DirInfo.Clauses, AssocStmt);
+      DirInfo.MiscLoc, DirInfo.Exprs, DirInfo.RParenLoc, DirInfo.EndLoc,
+      DirInfo.Clauses, AssocStmt);
 }

@@ -71,12 +71,9 @@ STATISTIC(StrtabBytes, "Total size of SHT_STRTAB sections");
 STATISTIC(SymtabBytes, "Total size of SHT_SYMTAB sections");
 STATISTIC(RelocationBytes, "Total size of relocation sections");
 STATISTIC(DynsymBytes, "Total size of SHT_DYNSYM sections");
-STATISTIC(
-    DebugBytes,
-    "Total size of debug info sections (not including those written to .dwo)");
+STATISTIC(DebugBytes, "Total size of debug info sections");
 STATISTIC(UnwindBytes, "Total size of unwind sections");
 STATISTIC(OtherBytes, "Total size of uncategorized sections");
-STATISTIC(DwoBytes, "Total size of sections written to .dwo file");
 
 } // namespace stats
 
@@ -972,9 +969,7 @@ void ELFWriter::writeSectionHeaders(const MCAssembler &Asm) {
       return Section->getFlags() & Flag;
     };
 
-    if (Mode == DwoOnly) {
-      stats::DwoBytes += Size;
-    } else if (Section->getName().starts_with(".debug")) {
+    if (Section->getName().starts_with(".debug")) {
       stats::DebugBytes += Size;
     } else if (Section->getName().starts_with(".eh_frame")) {
       stats::UnwindBytes += Size;

@@ -774,12 +774,6 @@ public:
     return 1;
   }
 
-  InstructionCost getExpandCompressMemoryOpCost(
-      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
-      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) const {
-    return 1;
-  }
-
   InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,

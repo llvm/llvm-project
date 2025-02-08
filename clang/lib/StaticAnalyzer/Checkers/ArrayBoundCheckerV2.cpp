@@ -6,16 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines security.ArrayBound, which is a path-sensitive checker
-// that looks for out of bounds access of memory regions.
+// This file defines ArrayBoundCheckerV2, which is a path-sensitive check
+// which looks for an out-of-bound array element access.
 //
 //===----------------------------------------------------------------------===//
-
-// NOTE: The name of this file ends with "V2" because previously
-// "ArrayBoundChecker.cpp" contained the implementation of another (older and
-// simpler) checker that was called `alpha.security.ArrayBound`.
-// TODO: Rename this file to "ArrayBoundChecker.cpp" when it won't be confused
-// with that older file.
 
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/ParentMapContext.h"
@@ -130,9 +124,9 @@ struct Messages {
 // callbacks, we'd need to duplicate the logic that evaluates these
 // expressions.) The `MemberExpr` callback would work as `PreStmt` but it's
 // defined as `PostStmt` for the sake of consistency with the other callbacks.
-class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
-                                         check::PostStmt<UnaryOperator>,
-                                         check::PostStmt<MemberExpr>> {
+class ArrayBoundCheckerV2 : public Checker<check::PostStmt<ArraySubscriptExpr>,
+                                           check::PostStmt<UnaryOperator>,
+                                           check::PostStmt<MemberExpr>> {
   BugType BT{this, "Out-of-bound access"};
   BugType TaintBT{this, "Out-of-bound access", categories::TaintedData};
 
@@ -553,7 +547,7 @@ bool StateUpdateReporter::providesInformationAboutInteresting(
   return false;
 }
 
-void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
+void ArrayBoundCheckerV2::performCheck(const Expr *E, CheckerContext &C) const {
   const SVal Location = C.getSVal(E);
 
   // The header ctype.h (from e.g. glibc) implements the isXXXXX() macros as
@@ -676,9 +670,9 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
   C.addTransition(State, SUR.createNoteTag(C));
 }
 
-void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
-                                             ProgramStateRef ErrorState,
-                                             NonLoc Val, bool MarkTaint) {
+void ArrayBoundCheckerV2::markPartsInteresting(PathSensitiveBugReport &BR,
+                                               ProgramStateRef ErrorState,
+                                               NonLoc Val, bool MarkTaint) {
   if (SymbolRef Sym = Val.getAsSymbol()) {
     // If the offset is a symbolic value, iterate over its "parts" with
     // `SymExpr::symbols()` and mark each of them as interesting.
@@ -699,10 +693,10 @@ void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
   }
 }
 
-void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
-                                  Messages Msgs, NonLoc Offset,
-                                  std::optional<NonLoc> Extent,
-                                  bool IsTaintBug /*=false*/) const {
+void ArrayBoundCheckerV2::reportOOB(CheckerContext &C,
+                                    ProgramStateRef ErrorState, Messages Msgs,
+                                    NonLoc Offset, std::optional<NonLoc> Extent,
+                                    bool IsTaintBug /*=false*/) const {
 
   ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
   if (!ErrorNode)
@@ -731,7 +725,7 @@ void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
   C.emitReport(std::move(BR));
 }
 
-bool ArrayBoundChecker::isFromCtypeMacro(const Stmt *S, ASTContext &ACtx) {
+bool ArrayBoundCheckerV2::isFromCtypeMacro(const Stmt *S, ASTContext &ACtx) {
   SourceLocation Loc = S->getBeginLoc();
   if (!Loc.isMacroID())
     return false;
@@ -750,7 +744,7 @@ bool ArrayBoundChecker::isFromCtypeMacro(const Stmt *S, ASTContext &ACtx) {
           (MacroName == "isupper") || (MacroName == "isxdigit"));
 }
 
-bool ArrayBoundChecker::isInAddressOf(const Stmt *S, ASTContext &ACtx) {
+bool ArrayBoundCheckerV2::isInAddressOf(const Stmt *S, ASTContext &ACtx) {
   ParentMapContext &ParentCtx = ACtx.getParentMapContext();
   do {
     const DynTypedNodeList Parents = ParentCtx.getParents(*S);
@@ -762,10 +756,10 @@ bool ArrayBoundChecker::isInAddressOf(const Stmt *S, ASTContext &ACtx) {
   return UnaryOp && UnaryOp->getOpcode() == UO_AddrOf;
 }
 
-bool ArrayBoundChecker::isIdiomaticPastTheEndPtr(const Expr *E,
-                                                 ProgramStateRef State,
-                                                 NonLoc Offset, NonLoc Limit,
-                                                 CheckerContext &C) {
+bool ArrayBoundCheckerV2::isIdiomaticPastTheEndPtr(const Expr *E,
+                                                   ProgramStateRef State,
+                                                   NonLoc Offset, NonLoc Limit,
+                                                   CheckerContext &C) {
   if (isa<ArraySubscriptExpr>(E) && isInAddressOf(E, C.getASTContext())) {
     auto [EqualsToThreshold, NotEqualToThreshold] = compareValueToThreshold(
         State, Offset, Limit, C.getSValBuilder(), /*CheckEquality=*/true);
@@ -774,10 +768,10 @@ bool ArrayBoundChecker::isIdiomaticPastTheEndPtr(const Expr *E,
   return false;
 }
 
-void ento::registerArrayBoundChecker(CheckerManager &mgr) {
-  mgr.registerChecker<ArrayBoundChecker>();
+void ento::registerArrayBoundCheckerV2(CheckerManager &mgr) {
+  mgr.registerChecker<ArrayBoundCheckerV2>();
 }
 
-bool ento::shouldRegisterArrayBoundChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterArrayBoundCheckerV2(const CheckerManager &mgr) {
   return true;
 }

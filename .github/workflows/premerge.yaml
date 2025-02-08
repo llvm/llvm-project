@@ -5,15 +5,6 @@ permissions:
 
 on:
   pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-      # When a PR is closed, we still start this workflow, but then skip
-      # all the jobs, which makes it effectively a no-op.  The reason to
-      # do this is that it allows us to take advantage of concurrency groups
-      # to cancel in progress CI jobs whenever the PR is closed.
-      - closed
     paths:
       - .github/workflows/premerge.yaml
   push:
@@ -21,16 +12,13 @@ on:
       - 'main'
       - 'release/**'
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
-
 jobs:
   premerge-checks-linux:
-    if: >-
-        github.repository_owner == 'llvm' &&
-        (github.event_name != 'pull_request' || github.event.action != 'closed')
+    if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-runners
+    concurrency:
+      group: ${{ github.workflow }}-linux-${{ github.event.pull_request.number || github.sha }}
+      cancel-in-progress: true
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
@@ -85,10 +73,11 @@ jobs:
           ./.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"
 
   premerge-checks-windows:
-    if: >-
-        github.repository_owner == 'llvm' &&
-        (github.event_name != 'pull_request' || github.event.action != 'closed')
+    if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-windows-runners
+    concurrency:
+      group: ${{ github.workflow }}-windows-${{ github.event.pull_request.number || github.sha }}
+      cancel-in-progress: true
     defaults:
       run:
         shell: bash
@@ -146,11 +135,13 @@ jobs:
 
   permerge-check-macos:
     runs-on: macos-14
+    concurrency:
+      group: ${{ github.workflow }}-macos-${{ github.event.pull_request.number || github.sha }}
+      cancel-in-progress: true
     if: >-
       github.repository_owner == 'llvm' &&
       (startswith(github.ref_name, 'release/') ||
-       startswith(github.base_ref, 'release/')) &&
-      (github.event_name != 'pull_request' || github.event.action != 'closed')
+       startswith(github.base_ref, 'release/'))
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4

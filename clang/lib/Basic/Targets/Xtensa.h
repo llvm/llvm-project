@@ -56,8 +56,8 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
-    return {};
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
+    return std::nullopt;
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

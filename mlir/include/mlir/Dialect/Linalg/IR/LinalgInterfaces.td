@@ -710,10 +710,7 @@ def LinalgStructuredInterface
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Returns true if the user has supplied explicit indexing maps that are
-        different from default indexing maps for this op. Returns `false` otherwise.
-        Note, if the user define maps that are identical to the default maps,
-        this method returns `false`.
+        Return true if the user has supplied an explicit indexing maps for this op.
       }],
       /*retTy=*/"bool",
       /*methodName=*/"hasUserDefinedMaps",

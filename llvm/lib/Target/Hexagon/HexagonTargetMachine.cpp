@@ -351,11 +351,6 @@ MachineFunctionInfo *HexagonTargetMachine::createMachineFunctionInfo(
 
 HexagonTargetMachine::~HexagonTargetMachine() = default;
 
-ScheduleDAGInstrs *
-HexagonTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
-  return createVLIWMachineSched(C);
-}
-
 namespace {
 /// Hexagon Code Generator Pass Configuration Options.
 class HexagonPassConfig : public TargetPassConfig {
@@ -365,6 +360,11 @@ public:
 
   HexagonTargetMachine &getHexagonTargetMachine() const {
     return getTM<HexagonTargetMachine>();
+  }
+
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override {
+    return createVLIWMachineSched(C);
   }
 
   void addIRPasses() override;

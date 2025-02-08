@@ -541,9 +541,9 @@ public:
 
   std::string getConditionHeaderString(unsigned Condition) {
     std::ostringstream OS;
-    const auto &[Line, Col] = CondLoc[Condition];
-    OS << "Condition C" << Condition + 1 << " --> (" << Line << ":" << Col
-       << ")\n";
+    OS << "Condition C" << Condition + 1 << " --> (";
+    OS << CondLoc[Condition].first << ":" << CondLoc[Condition].second;
+    OS << ")\n";
     return OS.str();
   }
 

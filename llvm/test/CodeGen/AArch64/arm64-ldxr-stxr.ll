@@ -127,6 +127,7 @@ declare i64 @llvm.aarch64.ldxr.p0(ptr) nounwind
 define dso_local i32 @test_store_i8(i32, i8 %val, ptr %addr) {
 ; CHECK-LABEL: test_store_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    stxrb w0, w1, [x2]
 ; CHECK-NEXT:    ret
   %extval = zext i8 %val to i64
@@ -137,6 +138,7 @@ define dso_local i32 @test_store_i8(i32, i8 %val, ptr %addr) {
 define dso_local i32 @test_store_i16(i32, i16 %val, ptr %addr) {
 ; CHECK-LABEL: test_store_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    stxrh w0, w1, [x2]
 ; CHECK-NEXT:    ret
   %extval = zext i16 %val to i64
@@ -297,6 +299,7 @@ declare i64 @llvm.aarch64.ldaxr.p0(ptr) nounwind
 define dso_local i32 @test_store_release_i8(i32, i8 %val, ptr %addr) {
 ; CHECK-LABEL: test_store_release_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    stlxrb w0, w1, [x2]
 ; CHECK-NEXT:    ret
   %extval = zext i8 %val to i64
@@ -307,6 +310,7 @@ define dso_local i32 @test_store_release_i8(i32, i8 %val, ptr %addr) {
 define dso_local i32 @test_store_release_i16(i32, i16 %val, ptr %addr) {
 ; CHECK-LABEL: test_store_release_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    stlxrh w0, w1, [x2]
 ; CHECK-NEXT:    ret
   %extval = zext i16 %val to i64

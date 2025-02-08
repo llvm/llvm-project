@@ -14,7 +14,6 @@
 #ifndef LLVM_LIB_CODEGEN_REGISTERCOALESCER_H
 #define LLVM_LIB_CODEGEN_REGISTERCOALESCER_H
 
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Register.h"
 
 namespace llvm {

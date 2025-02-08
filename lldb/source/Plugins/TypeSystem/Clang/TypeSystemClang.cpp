@@ -1666,12 +1666,6 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
   ast.getTypeDeclType(class_template_specialization_decl, nullptr);
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
-
-  // FIXME: set to fixed value for now so it's not uninitialized.
-  // One way to determine StrictPackMatch would be
-  // Sema::CheckTemplateTemplateArgument.
-  class_template_specialization_decl->setStrictPackMatch(false);
-
   SetOwningModule(class_template_specialization_decl, owning_module);
   decl_ctx->addDecl(class_template_specialization_decl);
 
@@ -8547,10 +8541,12 @@ clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
 
 clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
     const CompilerType &enum_type, const Declaration &decl, const char *name,
-    uint64_t enum_value, uint32_t enum_value_bit_size) {
-  assert(enum_type.IsEnumerationType());
-  llvm::APSInt value(enum_value_bit_size,
-                     !enum_type.IsEnumerationIntegerTypeSigned());
+    int64_t enum_value, uint32_t enum_value_bit_size) {
+  CompilerType underlying_type = GetEnumerationIntegerType(enum_type);
+  bool is_signed = false;
+  underlying_type.IsIntegerType(is_signed);
+
+  llvm::APSInt value(enum_value_bit_size, !is_signed);
   value = enum_value;
 
   return AddEnumerationValueToEnumerationType(enum_type, decl, name, value);

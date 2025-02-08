@@ -78,8 +78,7 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr4:$pad,
     TypeAttrOf<Tosa_AccType>:$acc_type,
-    OptionalAttr<I32Attr>:$input_zp,
-    OptionalAttr<I32Attr>:$output_zp
+    OptionalAttr<Tosa_UnaryOpQuantizationAttr>:$quantization_info
   );
 
   let results = (outs
@@ -93,7 +92,7 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
 //===----------------------------------------------------------------------===//
 // Operator: conv2d
 //===----------------------------------------------------------------------===//
-def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
+def Tosa_Conv2DOp : Tosa_InferShapedTypeOp<"conv2d"> {
   let summary = "2D Convolution Operator";
 
   let description = [{
@@ -105,12 +104,11 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
     Tosa_Tensor4D:$input,
     TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
     Tosa_Tensor1D:$bias,
-    Optional<Tosa_ZeroPointTensor>:$input_zp,
-    Optional<Tosa_ZeroPointTensor>:$weight_zp,
     Tosa_IntArrayAttr4:$pad,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr2:$dilation,
     TypeAttrOf<Tosa_AccType>:$acc_type,
+    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
@@ -125,7 +123,7 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
 //===----------------------------------------------------------------------===//
 // Operator: conv3d
 //===----------------------------------------------------------------------===//
-def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
+def Tosa_Conv3DOp : Tosa_InferShapedTypeOp<"conv3d"> {
   let summary = "3D Convolution operator";
 
   let description = [{
@@ -136,12 +134,11 @@ def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
     Tosa_Tensor5D:$input,
     TosaTensorRankOf<[Tosa_Weight], [5]>:$weight,
     Tosa_Tensor1D:$bias,
-    Optional<Tosa_ZeroPointTensor>:$input_zp,
-    Optional<Tosa_ZeroPointTensor>:$weight_zp,
     Tosa_IntArrayAttr6:$pad,
     Tosa_IntArrayAttr3:$stride,
     Tosa_IntArrayAttr3:$dilation,
     TypeAttrOf<Tosa_AccType>:$acc_type,
+    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
@@ -156,7 +153,7 @@ def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
 //===----------------------------------------------------------------------===//
 // Operator: depthwise_conv2d
 //===----------------------------------------------------------------------===//
-def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
+def Tosa_DepthwiseConv2DOp : Tosa_InferShapedTypeOp<"depthwise_conv2d"> {
   let summary = "Depthwise 2D Convolution operator";
 
   let description = [{
@@ -168,12 +165,11 @@ def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
     Tosa_Tensor4D:$input,
     TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
     Tosa_Tensor1D:$bias,
-    Optional<Tosa_ZeroPointTensor>:$input_zp,
-    Optional<Tosa_ZeroPointTensor>:$weight_zp,
     Tosa_IntArrayAttr4:$pad,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr2:$dilation,
     TypeAttrOf<Tosa_AccType>:$acc_type,
+    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
@@ -238,8 +234,7 @@ def Tosa_FullyConnectedOp : Tosa_InferShapedTypeOp<"fully_connected"> {
     Tosa_Tensor2D:$input,
     TosaTensorRankOf<[Tosa_Weight], [2]>:$weight,
     Tosa_Tensor1D:$bias,
-    OptionalAttr<I32Attr>:$input_zp,
-    OptionalAttr<I32Attr>:$weight_zp
+    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info
   );
 
   let results = (outs
@@ -265,8 +260,7 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
   let arguments = (ins
     Tosa_Tensor3D:$a,
     Tosa_Tensor3D:$b,
-    OptionalAttr<I32Attr>:$a_zp,
-    OptionalAttr<I32Attr>:$b_zp
+    OptionalAttr<Tosa_MatMulOpQuantizationAttr>:$quantization_info
   );
 
   let results = (outs
@@ -344,7 +338,7 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d"> {
 //===----------------------------------------------------------------------===//
 // Operator: transpose_conv2d
 //===----------------------------------------------------------------------===//
-def Tosa_TransposeConv2DOp : Tosa_ConvOp<"transpose_conv2d"> {
+def Tosa_TransposeConv2DOp : Tosa_InferShapedTypeOp<"transpose_conv2d"> {
   let summary = "Transpose 2D Convolution operator.";
 
   let description = [{
@@ -354,14 +348,13 @@ def Tosa_TransposeConv2DOp : Tosa_ConvOp<"transpose_conv2d"> {
 
   let arguments = (ins
     Tosa_Tensor4D:$input,
-    TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
+    TosaTensorRankOf<[Tosa_Weight], [4]>:$filter,
     Tosa_Tensor1D:$bias,
-    Optional<Tosa_ZeroPointTensor>:$input_zp,
-    Optional<Tosa_ZeroPointTensor>:$weight_zp,
     Tosa_IntArrayAttr4:$out_pad,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr4:$out_shape,
     TypeAttrOf<Tosa_AccType>:$acc_type,
+    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
@@ -1117,8 +1110,7 @@ def Tosa_NegateOp : Tosa_ElementwiseUnaryOp<"negate"> {
 
   let arguments = (ins
       Tosa_Tensor:$input1,
-      OptionalAttr<I32Attr>:$input1_zp,
-      OptionalAttr<I32Attr>:$output_zp
+      OptionalAttr<Tosa_UnaryOpQuantizationAttr>:$quantization_info
   );
 
   let results = (outs
@@ -1593,7 +1585,7 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
     Tosa_RankedTensor:$input1,
     Tosa_Shape:$padding,
     Optional<Tosa_ScalarTensor>:$pad_const,
-    OptionalAttr<I32Attr>:$input_zp
+    OptionalAttr<Tosa_PadOpQuantizationAttr>:$quantization_info
   );
 
   let results = (outs
@@ -1625,7 +1617,7 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape"> {
 
   let arguments = (ins
     Tosa_Tensor:$input1,
-    Tosa_Shape:$shape
+    DenseI64ArrayAttr:$new_shape
   );
 
   let results = (outs
@@ -1704,7 +1696,7 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
   let summary = "Tile operator";
 
   let description = [{
-    Replicates input1 multiplies times along each dimension.
+    Replicates input 0 multiplies times along each dimension.
   }];
 
   let arguments = (ins

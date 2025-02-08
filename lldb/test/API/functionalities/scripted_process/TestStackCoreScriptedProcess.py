@@ -32,6 +32,7 @@ class StackCoreScriptedProcesTestCase(TestBase):
         return None
 
     @skipUnlessDarwin
+    @skipIfOutOfTreeDebugserver
     @skipIfRemote
     @skipIfAsan  # On ASAN builds, this test times-out (rdar://98678134)
     @skipIfDarwin

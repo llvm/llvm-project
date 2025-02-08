@@ -15,6 +15,8 @@
 #include "DeviceTypes.h"
 #include "Shared/Utils.h"
 
+#pragma omp begin declare target device_type(nohost)
+
 namespace utils {
 
 template <typename T> struct type_identity {
@@ -92,5 +94,7 @@ bool isThreadLocalMemPtr(void *Ptr);
 #define OMP_UNLIKELY(EXPR) __builtin_expect((bool)(EXPR), false)
 
 } // namespace utils
+
+#pragma omp end declare target
 
 #endif

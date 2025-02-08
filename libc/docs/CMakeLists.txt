@@ -39,7 +39,6 @@ if (SPHINX_FOUND)
       assert
       cpio
       ctype
-      endian
       errno
       fenv
       float

@@ -465,8 +465,7 @@ private:
   bool optimizeUncoalescableCopy(MachineInstr &MI,
                                  SmallPtrSetImpl<MachineInstr *> &LocalMIs);
   bool optimizeRecurrence(MachineInstr &PHI);
-  bool findNextSource(const TargetRegisterClass *DefRC, unsigned DefSubReg,
-                      RegSubRegPair RegSubReg, RewriteMapTy &RewriteMap);
+  bool findNextSource(RegSubRegPair RegSubReg, RewriteMapTy &RewriteMap);
   bool isMoveImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
                        DenseMap<Register, MachineInstr *> &ImmDefMIs);
   bool foldImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
@@ -505,7 +504,7 @@ private:
 
   /// Check whether \p MI is understood by the register coalescer
   /// but may require some rewriting.
-  static bool isCoalescableCopy(const MachineInstr &MI) {
+  bool isCoalescableCopy(const MachineInstr &MI) {
     // SubregToRegs are not interesting, because they are already register
     // coalescer friendly.
     return MI.isCopy() ||
@@ -515,7 +514,7 @@ private:
 
   /// Check whether \p MI is a copy like instruction that is
   /// not recognized by the register coalescer.
-  static bool isUncoalescableCopy(const MachineInstr &MI) {
+  bool isUncoalescableCopy(const MachineInstr &MI) {
     return MI.isBitcast() || (!DisableAdvCopyOpt && (MI.isRegSequenceLike() ||
                                                      MI.isInsertSubregLike() ||
                                                      MI.isExtractSubregLike()));
@@ -992,10 +991,8 @@ bool PeepholeOptimizer::optimizeCondBranch(MachineInstr &MI) {
   return TII->optimizeCondBranch(MI);
 }
 
-/// Try to find a better source value that shares the same register file to
-/// replace \p RegSubReg in an instruction like
-/// `DefRC.DefSubReg = COPY RegSubReg`
-///
+/// Try to find the next source that share the same register file
+/// for the value defined by \p Reg and \p SubReg.
 /// When true is returned, the \p RewriteMap can be used by the client to
 /// retrieve all Def -> Use along the way up to the next source. Any found
 /// Use that is not itself a key for another entry, is the next source to
@@ -1005,15 +1002,17 @@ bool PeepholeOptimizer::optimizeCondBranch(MachineInstr &MI) {
 /// share the same register file as \p Reg and \p SubReg. The client should
 /// then be capable to rewrite all intermediate PHIs to get the next source.
 /// \return False if no alternative sources are available. True otherwise.
-bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
-                                       unsigned DefSubReg,
-                                       RegSubRegPair RegSubReg,
+bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
                                        RewriteMapTy &RewriteMap) {
   // Do not try to find a new source for a physical register.
   // So far we do not have any motivating example for doing that.
   // Thus, instead of maintaining untested code, we will revisit that if
   // that changes at some point.
   Register Reg = RegSubReg.Reg;
+  if (Reg.isPhysical())
+    return false;
+  const TargetRegisterClass *DefRC = MRI->getRegClass(Reg);
+
   SmallVector<RegSubRegPair, 4> SrcToLook;
   RegSubRegPair CurSrcPair = RegSubReg;
   SrcToLook.push_back(CurSrcPair);
@@ -1077,7 +1076,7 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
 
       // Keep following the chain if the value isn't any better yet.
       const TargetRegisterClass *SrcRC = MRI->getRegClass(CurSrcPair.Reg);
-      if (!TRI->shouldRewriteCopySrc(DefRC, DefSubReg, SrcRC,
+      if (!TRI->shouldRewriteCopySrc(DefRC, RegSubReg.SubReg, SrcRC,
                                      CurSrcPair.SubReg))
         continue;
 
@@ -1185,33 +1184,21 @@ bool PeepholeOptimizer::optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter) {
   bool Changed = false;
   // Get the right rewriter for the current copy.
   // Rewrite each rewritable source.
-  RegSubRegPair Dst;
+  RegSubRegPair Src;
   RegSubRegPair TrackPair;
-  while (CpyRewriter.getNextRewritableSource(TrackPair, Dst)) {
-    if (Dst.Reg.isPhysical()) {
-      // Do not try to find a new source for a physical register.
-      // So far we do not have any motivating example for doing that.
-      // Thus, instead of maintaining untested code, we will revisit that if
-      // that changes at some point.
-      continue;
-    }
-
-    const TargetRegisterClass *DefRC = MRI->getRegClass(Dst.Reg);
-
+  while (CpyRewriter.getNextRewritableSource(Src, TrackPair)) {
     // Keep track of PHI nodes and its incoming edges when looking for sources.
     RewriteMapTy RewriteMap;
     // Try to find a more suitable source. If we failed to do so, or get the
     // actual source, move to the next source.
-    if (!findNextSource(DefRC, Dst.SubReg, TrackPair, RewriteMap))
+    if (!findNextSource(TrackPair, RewriteMap))
       continue;
 
     // Get the new source to rewrite. TODO: Only enable handling of multiple
     // sources (PHIs) once we have a motivating example and testcases for it.
     RegSubRegPair NewSrc = getNewSource(MRI, TII, TrackPair, RewriteMap,
                                         /*HandleMultipleSources=*/false);
-    assert(TrackPair.Reg != NewSrc.Reg &&
-           "should not rewrite source to original value");
-    if (!NewSrc.Reg)
+    if (Src.Reg == NewSrc.Reg || NewSrc.Reg == 0)
       continue;
 
     // Rewrite source.
@@ -1338,14 +1325,9 @@ bool PeepholeOptimizer::optimizeUncoalescableCopy(
     if (Def.Reg.isPhysical())
       return false;
 
-    // FIXME: Uncoalescable copies are treated differently by
-    // UncoalescableRewriter, and this probably should not share
-    // API. getNextRewritableSource really finds rewritable defs.
-    const TargetRegisterClass *DefRC = MRI->getRegClass(Def.Reg);
-
     // If we do not know how to rewrite this definition, there is no point
     // in trying to kill this instruction.
-    if (!findNextSource(DefRC, Def.SubReg, Def, RewriteMap))
+    if (!findNextSource(Def, RewriteMap))
       return false;
 
     RewritePairs.push_back(Def);

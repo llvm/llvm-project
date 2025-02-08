@@ -1621,15 +1621,12 @@ static void DumpSymbolContextList(
     if (!first_module)
       strm.EOL();
 
-    Address addr;
-    if (sc.line_entry.IsValid())
-      addr = sc.line_entry.range.GetBaseAddress();
-    else if (sc.block && sc.block->GetContainingInlinedBlock())
-      sc.block->GetContainingInlinedBlock()->GetStartAddress(addr);
-    else
-      addr = sc.GetFunctionOrSymbolAddress();
+    AddressRange range;
 
-    DumpAddress(exe_scope, addr, verbose, all_ranges, strm, settings);
+    sc.GetAddressRange(eSymbolContextEverything, 0, true, range);
+
+    DumpAddress(exe_scope, range.GetBaseAddress(), verbose, all_ranges, strm,
+                settings);
     first_module = false;
   }
   strm.IndentLess();
@@ -3474,17 +3471,6 @@ public:
         m_type = eLookupTypeFunctionOrSymbol;
         break;
 
-      case 'c':
-        bool value, success;
-        value = OptionArgParser::ToBoolean(option_arg, false, &success);
-        if (success) {
-          m_cached = value;
-        } else {
-          return Status::FromErrorStringWithFormatv(
-              "invalid boolean value '%s' passed for -c option", option_arg);
-        }
-        break;
-
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -3496,7 +3482,6 @@ public:
       m_type = eLookupTypeInvalid;
       m_str.clear();
       m_addr = LLDB_INVALID_ADDRESS;
-      m_cached = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -3509,7 +3494,6 @@ public:
                                      // parsing options
     std::string m_str; // Holds name lookup
     lldb::addr_t m_addr = LLDB_INVALID_ADDRESS; // Holds the address to lookup
-    bool m_cached = true;
   };
 
   CommandObjectTargetModulesShowUnwind(CommandInterpreter &interpreter)
@@ -3586,22 +3570,22 @@ protected:
         continue;
       if (!sc.module_sp || sc.module_sp->GetObjectFile() == nullptr)
         continue;
-      Address addr = sc.GetFunctionOrSymbolAddress();
-      if (!addr.IsValid())
+      AddressRange range;
+      if (!sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
+                              false, range))
+        continue;
+      if (!range.GetBaseAddress().IsValid())
         continue;
       ConstString funcname(sc.GetFunctionName());
       if (funcname.IsEmpty())
         continue;
-      addr_t start_addr = addr.GetLoadAddress(target);
+      addr_t start_addr = range.GetBaseAddress().GetLoadAddress(target);
       if (abi)
         start_addr = abi->FixCodeAddress(start_addr);
 
-      UnwindTable &uw_table = sc.module_sp->GetUnwindTable();
-      FuncUnwindersSP func_unwinders_sp =
-          m_options.m_cached
-              ? uw_table.GetFuncUnwindersContainingAddress(start_addr, sc)
-              : uw_table.GetUncachedFuncUnwindersContainingAddress(start_addr,
-                                                                   sc);
+      FuncUnwindersSP func_unwinders_sp(
+          sc.module_sp->GetUnwindTable()
+              .GetUncachedFuncUnwindersContainingAddress(start_addr, sc));
       if (!func_unwinders_sp)
         continue;
 

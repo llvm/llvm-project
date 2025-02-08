@@ -9,4 +9,3 @@ double Circle::area() const {
 double Circle::perimeter() const {
     return 3.141 * radius_;
 }
-

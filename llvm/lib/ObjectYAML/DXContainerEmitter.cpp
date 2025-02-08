@@ -13,7 +13,6 @@
 
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
-#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Errc.h"
@@ -262,20 +261,6 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
     }
     case dxbc::PartType::Unknown:
       break; // Skip any handling for unrecognized parts.
-    case dxbc::PartType::RTS0:
-      if (!P.RootSignature.has_value())
-        continue;
-
-      mcdxbc::RootSignatureHeader Header;
-      Header.Flags = P.RootSignature->getEncodedFlags();
-      Header.Version = P.RootSignature->Version;
-      Header.NumParameters = P.RootSignature->NumParameters;
-      Header.RootParametersOffset = P.RootSignature->RootParametersOffset;
-      Header.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
-      Header.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
-
-      Header.write(OS);
-      break;
     }
     uint64_t BytesWritten = OS.tell() - DataStart;
     RollingOffset += BytesWritten;

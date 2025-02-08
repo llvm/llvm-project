@@ -74,7 +74,7 @@ public:
   std::string getLibDeviceFile(StringRef Gpu) const {
     return LibDeviceMap.lookup(Gpu);
   }
-  void WarnIfUnsupportedVersion() const;
+  void WarnIfUnsupportedVersion();
 };
 
 namespace tools {

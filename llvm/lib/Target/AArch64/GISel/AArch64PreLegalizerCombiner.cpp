@@ -267,12 +267,10 @@ bool matchExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
     SrcTy = MRI.getType(ExtMI1->getOperand(1).getReg());
     std::get<0>(MatchInfo) = ExtMI1->getOperand(1).getReg();
     std::get<1>(MatchInfo) = ExtMI2->getOperand(1).getReg();
-  } else if (I1Opc == TargetOpcode::G_ZEXT || I1Opc == TargetOpcode::G_SEXT) {
+  } else {
     SrcTy = MRI.getType(I1->getOperand(1).getReg());
     std::get<0>(MatchInfo) = I1->getOperand(1).getReg();
     std::get<1>(MatchInfo) = 0;
-  } else {
-    return false;
   }
 
   if (I1Opc == TargetOpcode::G_ZEXT)

@@ -19,6 +19,8 @@
 #include "Mapping.h"
 #include "State.h"
 
+#pragma omp begin declare target device_type(nohost)
+
 using namespace ompx;
 
 namespace impl {
@@ -26,12 +28,34 @@ namespace impl {
 /// Atomics
 ///
 ///{
+/// NOTE: This function needs to be implemented by every target.
+uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
+                   atomic::MemScopeTy MemScope);
 ///}
+
+// Forward declarations defined to be defined for AMDGCN and NVPTX.
+uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
+                   atomic::MemScopeTy MemScope);
+void namedBarrierInit();
+void namedBarrier();
+void fenceTeam(atomic::OrderingTy Ordering);
+void fenceKernel(atomic::OrderingTy Ordering);
+void fenceSystem(atomic::OrderingTy Ordering);
+void syncWarp(__kmpc_impl_lanemask_t);
+void syncThreads(atomic::OrderingTy Ordering);
+void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
+void unsetLock(omp_lock_t *);
+int testLock(omp_lock_t *);
+void initLock(omp_lock_t *);
+void destroyLock(omp_lock_t *);
+void setLock(omp_lock_t *);
+void unsetCriticalLock(omp_lock_t *);
+void setCriticalLock(omp_lock_t *);
 
 /// AMDGCN Implementation
 ///
 ///{
-#ifdef __AMDGPU__
+#pragma omp begin declare variant match(device = {arch(amdgcn)})
 
 uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
                    atomic::MemScopeTy MemScope) {
@@ -178,13 +202,15 @@ void setCriticalLock(omp_lock_t *Lock) {
   }
 }
 
-#endif
+#pragma omp end declare variant
 ///}
 
 /// NVPTX Implementation
 ///
 ///{
-#ifdef __NVPTX__
+#pragma omp begin declare variant match(                                       \
+        device = {arch(nvptx, nvptx64)},                                       \
+            implementation = {extension(match_any)})
 
 uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
                    atomic::MemScopeTy MemScope) {
@@ -257,7 +283,7 @@ void unsetCriticalLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
 void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 
-#endif
+#pragma omp end declare variant
 ///}
 
 } // namespace impl
@@ -375,3 +401,5 @@ void ompx_sync_block_divergent(int Ordering) {
   impl::syncThreads(atomic::OrderingTy(Ordering));
 }
 } // extern "C"
+
+#pragma omp end declare target

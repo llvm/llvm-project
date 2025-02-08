@@ -1692,10 +1692,6 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpSDot:
   case SPIRV::OpUDot:
-  case SPIRV::OpSUDot:
-  case SPIRV::OpSDotAccSat:
-  case SPIRV::OpUDotAccSat:
-  case SPIRV::OpSUDotAccSat:
     AddDotProductRequirements(MI, Reqs, ST);
     break;
   case SPIRV::OpImageRead: {

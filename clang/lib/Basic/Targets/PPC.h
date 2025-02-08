@@ -187,7 +187,7 @@ public:
 
   StringRef getABI() const override { return ABI; }
 
-  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   bool isCLZForZeroUndef() const override { return false; }
 

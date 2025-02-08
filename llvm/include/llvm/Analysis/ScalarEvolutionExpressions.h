@@ -944,11 +944,10 @@ public:
       Operands.push_back(visit(Op));
 
     const Loop *L = Expr->getLoop();
-    auto It = Map.find(L);
-    if (It == Map.end())
+    if (0 == Map.count(L))
       return SE.getAddRecExpr(Operands, L, Expr->getNoWrapFlags());
 
-    return SCEVAddRecExpr::evaluateAtIteration(Operands, It->second, SE);
+    return SCEVAddRecExpr::evaluateAtIteration(Operands, Map[L], SE);
   }
 
 private:

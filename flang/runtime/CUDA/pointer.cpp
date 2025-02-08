@@ -21,9 +21,8 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-int RTDEF(CUFPointerAllocate)(Descriptor &desc, int64_t stream, bool *pinned,
-    bool hasStat, const Descriptor *errMsg, const char *sourceFile,
-    int sourceLine) {
+int RTDEF(CUFPointerAllocate)(Descriptor &desc, int64_t stream, bool hasStat,
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   if (desc.HasAddendum()) {
     Terminator terminator{sourceFile, sourceLine};
     // TODO: This require a bit more work to set the correct type descriptor
@@ -34,19 +33,14 @@ int RTDEF(CUFPointerAllocate)(Descriptor &desc, int64_t stream, bool *pinned,
   // Perform the standard allocation.
   int stat{
       RTNAME(PointerAllocate)(desc, hasStat, errMsg, sourceFile, sourceLine)};
-  if (pinned) {
-    // Set pinned according to stat. More infrastructre is needed to set it
-    // closer to the actual allocation call.
-    *pinned = (stat == StatOk);
-  }
   return stat;
 }
 
 int RTDEF(CUFPointerAllocateSync)(Descriptor &desc, int64_t stream,
-    bool *pinned, bool hasStat, const Descriptor *errMsg,
-    const char *sourceFile, int sourceLine) {
+    bool hasStat, const Descriptor *errMsg, const char *sourceFile,
+    int sourceLine) {
   int stat{RTNAME(CUFPointerAllocate)(
-      desc, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
+      desc, stream, hasStat, errMsg, sourceFile, sourceLine)};
 #ifndef RT_DEVICE_COMPILATION
   // Descriptor synchronization is only done when the allocation is done
   // from the host.
@@ -61,10 +55,10 @@ int RTDEF(CUFPointerAllocateSync)(Descriptor &desc, int64_t stream,
 }
 
 int RTDEF(CUFPointerAllocateSource)(Descriptor &pointer,
-    const Descriptor &source, int64_t stream, bool *pinned, bool hasStat,
+    const Descriptor &source, int64_t stream, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFPointerAllocate)(
-      pointer, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
+      pointer, stream, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
     Fortran::runtime::DoFromSourceAssign(
@@ -74,10 +68,10 @@ int RTDEF(CUFPointerAllocateSource)(Descriptor &pointer,
 }
 
 int RTDEF(CUFPointerAllocateSourceSync)(Descriptor &pointer,
-    const Descriptor &source, int64_t stream, bool *pinned, bool hasStat,
+    const Descriptor &source, int64_t stream, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFPointerAllocateSync)(
-      pointer, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
+      pointer, stream, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
     Fortran::runtime::DoFromSourceAssign(

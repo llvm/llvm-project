@@ -4167,13 +4167,6 @@ public:
     // but in the future we will implement some sort of IR.
   }
 
-  void EmitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &S) {
-    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
-    // simply emitting its associated stmt, but in the future we will implement
-    // some sort of IR.
-    EmitStmt(S.getAssociatedStmt());
-  }
-
   //===--------------------------------------------------------------------===//
   //                         LValue Expression Emission
   //===--------------------------------------------------------------------===//
@@ -4438,11 +4431,6 @@ public:
   RValue EmitPseudoObjectRValue(const PseudoObjectExpr *e,
                                 AggValueSlot slot = AggValueSlot::ignored());
   LValue EmitPseudoObjectLValue(const PseudoObjectExpr *e);
-
-  void FlattenAccessAndType(
-      Address Addr, QualType AddrTy,
-      SmallVectorImpl<std::pair<Address, llvm::Value *>> &AccessList,
-      SmallVectorImpl<QualType> &FlatTypes);
 
   llvm::Value *EmitIvarOffset(const ObjCInterfaceDecl *Interface,
                               const ObjCIvarDecl *Ivar);

@@ -17,13 +17,19 @@
 
 #include "Debug.h"
 
+#pragma omp begin declare target device_type(nohost)
+
 namespace ompx {
 namespace impl {
+
+double getWTick();
+
+double getWTime();
 
 /// AMDGCN Implementation
 ///
 ///{
-#ifdef __AMDGPU__
+#pragma omp begin declare variant match(device = {arch(amdgcn)})
 
 double getWTick() {
   // The number of ticks per second for the AMDGPU clock varies by card and can
@@ -36,12 +42,14 @@ double getWTime() {
   return static_cast<double>(__builtin_readsteadycounter()) * getWTick();
 }
 
-#endif
+#pragma omp end declare variant
 
 /// NVPTX Implementation
 ///
 ///{
-#ifdef __NVPTX__
+#pragma omp begin declare variant match(                                       \
+        device = {arch(nvptx, nvptx64)},                                       \
+            implementation = {extension(match_any)})
 
 double getWTick() {
   // Timer precision is 1ns
@@ -53,7 +61,7 @@ double getWTime() {
   return static_cast<double>(nsecs) * getWTick();
 }
 
-#endif
+#pragma omp end declare variant
 
 /// Lookup a device-side function using a host pointer /p HstPtr using the table
 /// provided by the device plugin. The table is an ordered pair of host and
@@ -163,3 +171,4 @@ unsigned long long __llvm_omp_host_call(void *fn, void *data, size_t size) {
 }
 
 ///}
+#pragma omp end declare target

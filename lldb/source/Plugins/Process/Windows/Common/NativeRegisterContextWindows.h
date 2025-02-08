@@ -24,10 +24,6 @@ public:
   CreateHostNativeRegisterContextWindows(const ArchSpec &target_arch,
                                          NativeThreadProtocol &native_thread);
 
-  // MSVC compiler deletes the default constructor due to virtual inheritance.
-  // Explicitly defining it ensures the class remains constructible.
-  NativeRegisterContextWindows() {}
-
 protected:
   lldb::thread_t GetThreadHandle() const;
 };

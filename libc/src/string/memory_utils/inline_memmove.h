@@ -9,8 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMOVE_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMOVE_H
 
-#include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
+#include "src/__support/macros/config.h"
 #include <stddef.h> // size_t, ptrdiff_t
 
 #if defined(LIBC_TARGET_ARCH_IS_X86)

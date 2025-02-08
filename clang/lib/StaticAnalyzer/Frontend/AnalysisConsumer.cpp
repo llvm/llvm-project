@@ -39,7 +39,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -359,40 +358,9 @@ private:
 
   /// Print \p S to stderr if \c Opts.AnalyzerDisplayProgress is set.
   void reportAnalyzerProgress(StringRef S);
-};
+}; // namespace
+} // end anonymous namespace
 
-std::string timeTraceScopeDeclName(StringRef FunName, const Decl *D) {
-  if (llvm::timeTraceProfilerEnabled()) {
-    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
-      return (FunName + " " + ND->getQualifiedNameAsString()).str();
-    return (FunName + " <anonymous> ").str();
-  }
-  return "";
-}
-
-llvm::TimeTraceMetadata timeTraceScopeDeclMetadata(const Decl *D) {
-  // If time-trace profiler is not enabled, this function is never called.
-  assert(llvm::timeTraceProfilerEnabled());
-  if (const auto &Loc = D->getBeginLoc(); Loc.isValid()) {
-    const auto &SM = D->getASTContext().getSourceManager();
-    std::string DeclName = AnalysisDeclContext::getFunctionName(D);
-    return llvm::TimeTraceMetadata{
-        std::move(DeclName), SM.getFilename(Loc).str(),
-        static_cast<int>(SM.getExpansionLineNumber(Loc))};
-  }
-  return llvm::TimeTraceMetadata{"", ""};
-}
-
-void flushReports(llvm::Timer *BugReporterTimer, BugReporter &BR) {
-  llvm::TimeTraceScope TCS{"Flushing reports"};
-  // Display warnings.
-  if (BugReporterTimer)
-    BugReporterTimer->startTimer();
-  BR.FlushReports();
-  if (BugReporterTimer)
-    BugReporterTimer->stopTimer();
-}
-} // namespace
 
 //===----------------------------------------------------------------------===//
 // AnalysisConsumer implementation.
@@ -690,8 +658,6 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
 void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
                                   ExprEngine::InliningModes IMode,
                                   SetOfConstDecls *VisitedCallees) {
-  llvm::TimeTraceScope TCS(timeTraceScopeDeclName("HandleCode", D),
-                           [D]() { return timeTraceScopeDeclMetadata(D); });
   if (!D->hasBody())
     return;
   Mode = getModeForDecl(D, Mode);
@@ -776,7 +742,12 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   if (Mgr->options.visualizeExplodedGraphWithGraphViz)
     Eng.ViewGraph(Mgr->options.TrimGraph);
 
-  flushReports(BugReporterTimer.get(), Eng.getBugReporter());
+  // Display warnings.
+  if (BugReporterTimer)
+    BugReporterTimer->startTimer();
+  Eng.getBugReporter().FlushReports();
+  if (BugReporterTimer)
+    BugReporterTimer->stopTimer();
 }
 
 //===----------------------------------------------------------------------===//

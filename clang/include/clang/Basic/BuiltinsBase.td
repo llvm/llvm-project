@@ -86,13 +86,6 @@ def Consteval : Attribute<"EG">;
 // indicated by the remaining indices.
 class Callback<list<int> ArgIndices> : MultiIndexAttribute<"C", ArgIndices>;
 
-// Prefixes
-// ========
-
-class NamePrefix<string spelling> {
-  string Spelling = spelling;
-}
-
 // Builtin kinds
 // =============
 
@@ -106,9 +99,6 @@ class Builtin {
   bit RequiresUndef = 0;
   // Enables builtins to generate `long long` outside of OpenCL and `long` inside.
   bit EnableOpenCLLong = 0;
-  // Requires a common prefix to be prepended. Each generated set of builtins
-  // can optionally extract one common prefix that is handled separately.
-  NamePrefix RequiredNamePrefix;
 }
 
 class AtomicBuiltin : Builtin;

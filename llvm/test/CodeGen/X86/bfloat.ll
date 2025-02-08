@@ -82,6 +82,8 @@ define bfloat @add2(bfloat %a, bfloat %b) nounwind {
 ; X86-NEXT:    vmovd %eax, %xmm1
 ; X86-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; X86-NEXT:    vmovw %xmm0, %eax
+; X86-NEXT:    vmovw %eax, %xmm0
 ; X86-NEXT:    retl
 ;
 ; SSE2-LABEL: add2:
@@ -108,6 +110,8 @@ define bfloat @add2(bfloat %a, bfloat %b) nounwind {
 ; FP16-NEXT:    vmovd %eax, %xmm1
 ; FP16-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; FP16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; FP16-NEXT:    vmovw %xmm0, %eax
+; FP16-NEXT:    vmovw %eax, %xmm0
 ; FP16-NEXT:    retq
 ;
 ; AVXNC-LABEL: add2:
@@ -120,6 +124,8 @@ define bfloat @add2(bfloat %a, bfloat %b) nounwind {
 ; AVXNC-NEXT:    vmovd %eax, %xmm1
 ; AVXNC-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
+; AVXNC-NEXT:    vmovd %xmm0, %eax
+; AVXNC-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVXNC-NEXT:    retq
   %add = fadd bfloat %a, %b
   ret bfloat %add
@@ -426,6 +432,8 @@ define bfloat @add_constant2(bfloat %a) nounwind {
 ; X86-NEXT:    vmovd %eax, %xmm0
 ; X86-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; X86-NEXT:    vmovw %xmm0, %eax
+; X86-NEXT:    vmovw %eax, %xmm0
 ; X86-NEXT:    retl
 ;
 ; SSE2-LABEL: add_constant2:
@@ -446,6 +454,8 @@ define bfloat @add_constant2(bfloat %a) nounwind {
 ; FP16-NEXT:    vmovd %eax, %xmm0
 ; FP16-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FP16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; FP16-NEXT:    vmovw %xmm0, %eax
+; FP16-NEXT:    vmovw %eax, %xmm0
 ; FP16-NEXT:    retq
 ;
 ; AVXNC-LABEL: add_constant2:
@@ -455,6 +465,8 @@ define bfloat @add_constant2(bfloat %a) nounwind {
 ; AVXNC-NEXT:    vmovd %eax, %xmm0
 ; AVXNC-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
+; AVXNC-NEXT:    vmovd %xmm0, %eax
+; AVXNC-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVXNC-NEXT:    retq
   %add = fadd bfloat %a, 1.0
   ret bfloat %add

@@ -133,21 +133,18 @@ __gpu_read_first_lane_f64(uint64_t __lane_mask, double __x) {
 
 // Shuffles the the lanes according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ float
-__gpu_shuffle_idx_f32(uint64_t __lane_mask, uint32_t __idx, float __x,
-                      uint32_t __width) {
+__gpu_shuffle_idx_f32(uint64_t __lane_mask, uint32_t __idx, float __x) {
   return __builtin_bit_cast(
       float, __gpu_shuffle_idx_u32(__lane_mask, __idx,
-                                   __builtin_bit_cast(uint32_t, __x), __width));
+                                   __builtin_bit_cast(uint32_t, __x)));
 }
 
 // Shuffles the the lanes according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ double
-__gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
-                      uint32_t __width) {
+__gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x) {
   return __builtin_bit_cast(
-      double,
-      __gpu_shuffle_idx_u64(__lane_mask, __idx,
-                            __builtin_bit_cast(uint64_t, __x), __width));
+      double, __gpu_shuffle_idx_u64(__lane_mask, __idx,
+                                    __builtin_bit_cast(uint64_t, __x)));
 }
 
 // Gets the sum of all lanes inside the warp or wavefront.
@@ -156,8 +153,7 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
       uint64_t __lane_mask, __type __x) {                                      \
     for (uint32_t __step = __gpu_num_lanes() / 2; __step > 0; __step /= 2) {   \
       uint32_t __index = __step + __gpu_lane_id();                             \
-      __x += __gpu_shuffle_idx_##__suffix(__lane_mask, __index, __x,           \
-                                          __gpu_num_lanes());                  \
+      __x += __gpu_shuffle_idx_##__suffix(__lane_mask, __index, __x);          \
     }                                                                          \
     return __gpu_read_first_lane_##__suffix(__lane_mask, __x);                 \
   }
@@ -175,10 +171,10 @@ __DO_LANE_SUM(double, f64);   // double __gpu_lane_sum_f64(m, x)
       uint32_t __index = __gpu_lane_id() - __step;                             \
       __bitmask_type bitmask = __gpu_lane_id() >= __step;                      \
       __x += __builtin_bit_cast(                                               \
-          __type, -bitmask & __builtin_bit_cast(__bitmask_type,                \
-                                                __gpu_shuffle_idx_##__suffix(  \
-                                                    __lane_mask, __index, __x, \
-                                                    __gpu_num_lanes())));      \
+          __type,                                                              \
+          -bitmask & __builtin_bit_cast(__bitmask_type,                        \
+                                        __gpu_shuffle_idx_##__suffix(          \
+                                            __lane_mask, __index, __x)));      \
     }                                                                          \
     return __x;                                                                \
   }

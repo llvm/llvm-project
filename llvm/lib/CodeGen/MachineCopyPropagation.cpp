@@ -48,7 +48,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -450,7 +449,7 @@ public:
   }
 };
 
-class MachineCopyPropagation {
+class MachineCopyPropagation : public MachineFunctionPass {
   const TargetRegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
@@ -459,10 +458,24 @@ class MachineCopyPropagation {
   bool UseCopyInstr;
 
 public:
-  MachineCopyPropagation(bool CopyInstr = false)
-      : UseCopyInstr(CopyInstr || MCPUseCopyInstr) {}
+  static char ID; // Pass identification, replacement for typeid
 
-  bool run(MachineFunction &MF);
+  MachineCopyPropagation(bool CopyInstr = false)
+      : MachineFunctionPass(ID), UseCopyInstr(CopyInstr || MCPUseCopyInstr) {
+    initializeMachineCopyPropagationPass(*PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoVRegs);
+  }
 
 private:
   typedef enum { DebugUse = false, RegularUse = true } DebugType;
@@ -497,35 +510,13 @@ private:
   bool Changed = false;
 };
 
-class MachineCopyPropagationLegacy : public MachineFunctionPass {
-  bool UseCopyInstr;
-
-public:
-  static char ID; // pass identification
-
-  MachineCopyPropagationLegacy(bool UseCopyInstr = false)
-      : MachineFunctionPass(ID), UseCopyInstr(UseCopyInstr) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
-  }
-};
-
 } // end anonymous namespace
 
-char MachineCopyPropagationLegacy::ID = 0;
+char MachineCopyPropagation::ID = 0;
 
-char &llvm::MachineCopyPropagationID = MachineCopyPropagationLegacy::ID;
+char &llvm::MachineCopyPropagationID = MachineCopyPropagation::ID;
 
-INITIALIZE_PASS(MachineCopyPropagationLegacy, DEBUG_TYPE,
+INITIALIZE_PASS(MachineCopyPropagation, DEBUG_TYPE,
                 "Machine Copy Propagation Pass", false, false)
 
 void MachineCopyPropagation::ReadRegister(MCRegister Reg, MachineInstr &Reader,
@@ -1572,25 +1563,10 @@ void MachineCopyPropagation::EliminateSpillageCopies(MachineBasicBlock &MBB) {
   Tracker.clear();
 }
 
-bool MachineCopyPropagationLegacy::runOnMachineFunction(MachineFunction &MF) {
+bool MachineCopyPropagation::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  return MachineCopyPropagation(UseCopyInstr).run(MF);
-}
-
-PreservedAnalyses
-MachineCopyPropagationPass::run(MachineFunction &MF,
-                                MachineFunctionAnalysisManager &) {
-  MFPropsModifier _(*this, MF);
-  if (!MachineCopyPropagation(UseCopyInstr).run(MF))
-    return PreservedAnalyses::all();
-  auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
-}
-
-bool MachineCopyPropagation::run(MachineFunction &MF) {
   bool isSpillageCopyElimEnabled = false;
   switch (EnableSpillageCopyElimination) {
   case cl::BOU_UNSET:
@@ -1623,5 +1599,5 @@ bool MachineCopyPropagation::run(MachineFunction &MF) {
 
 MachineFunctionPass *
 llvm::createMachineCopyPropagationPass(bool UseCopyInstr = false) {
-  return new MachineCopyPropagationLegacy(UseCopyInstr);
+  return new MachineCopyPropagation(UseCopyInstr);
 }

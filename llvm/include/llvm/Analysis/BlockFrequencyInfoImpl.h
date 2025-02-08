@@ -1143,15 +1143,14 @@ void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB,
                                               BlockFrequency Freq) {
-  auto [It, Inserted] = Nodes.try_emplace(BB);
-  if (!Inserted)
-    BlockFrequencyInfoImplBase::setBlockFreq(It->second.first, Freq);
+  if (Nodes.count(BB))
+    BlockFrequencyInfoImplBase::setBlockFreq(getNode(BB), Freq);
   else {
     // If BB is a newly added block after BFI is done, we need to create a new
     // BlockNode for it assigned with a new index. The index can be determined
     // by the size of Freqs.
     BlockNode NewNode(Freqs.size());
-    It->second = {NewNode, BFICallbackVH(BB, this)};
+    Nodes[BB] = {NewNode, BFICallbackVH(BB, this)};
     Freqs.emplace_back();
     BlockFrequencyInfoImplBase::setBlockFreq(NewNode, Freq);
   }

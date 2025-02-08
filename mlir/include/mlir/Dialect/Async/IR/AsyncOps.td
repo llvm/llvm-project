@@ -208,13 +208,7 @@ def Async_CallOp : Async_Op<"call",
     ```
   }];
 
-  let arguments = (ins
-    FlatSymbolRefAttr:$callee,
-    Variadic<AnyType>:$operands,
-    OptionalAttr<DictArrayAttr>:$arg_attrs,
-    OptionalAttr<DictArrayAttr>:$res_attrs
-  );
-
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
   let results = (outs Variadic<Async_AnyValueOrTokenType>);
 
   let builders = [

@@ -6677,8 +6677,11 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
 
   for (const auto &range : regions) {
     auto entry = option_ranges.FindEntryThatContains(range.GetRange());
-    if (entry)
-      AddRegion(range, true, ranges);
+    if (entry) {
+      ranges.Append(range.GetRange().GetRangeBase(),
+                    range.GetRange().GetByteSize(),
+                    CreateCoreFileMemoryRange(range));
+    }
   }
 }
 

@@ -10,7 +10,6 @@
 #define TENSOR_OPS
 
 include "mlir/Dialect/Tensor/IR/TensorBase.td"
-include "mlir/Dialect/Tensor/IR/TensorInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
@@ -1834,7 +1833,6 @@ class Tensor_RelayoutOp<string mnemonic, list<Trait> traits = []> :
         DestinationStyleOpInterface,
         ConditionallySpeculatable, NoMemoryEffect,
         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
-        TensorRelayoutOpInterface,
         TypesMatchWith<"result type matches type of dest",
                    "dest", "result",
                    "$_self">])> {

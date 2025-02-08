@@ -66,7 +66,7 @@ public:
     BoolWidth = BoolAlign = 8;
   }
 
-  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {

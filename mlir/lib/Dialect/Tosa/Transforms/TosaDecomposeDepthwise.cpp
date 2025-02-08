@@ -55,33 +55,26 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     inputType = RankedTensorType::get(
         revisedInputShape,
         dyn_cast<RankedTensorType>(input.getType()).getElementType());
-    auto revisedInputShapeValue =
-        getTosaConstShape(rewriter, op.getLoc(), revisedInputShape);
     input = rewriter
-                .create<tosa::ReshapeOp>(op.getLoc(), inputType, input,
-                                         revisedInputShapeValue)
+                .create<tosa::ReshapeOp>(
+                    op.getLoc(), inputType, input,
+                    rewriter.getDenseI64ArrayAttr(revisedInputShape))
                 .getResult();
 
-    Type inputETy = inputType.getElementType();
-    Type weightETy = weightType.getElementType();
-    Type resultETy = resultType.getElementType();
-
-    if (inputETy != resultETy) {
-      inputType = inputType.clone(resultETy);
+    if (inputType.getElementType() != resultType.getElementType()) {
+      inputType = inputType.clone(resultType.getElementType());
       input = rewriter.create<tosa::CastOp>(op.getLoc(), inputType, input);
     }
 
-    if (weightETy != resultETy) {
-      weightType = weightType.clone(resultETy);
+    if (weightType.getElementType() != resultType.getElementType()) {
+      weightType = weightType.clone(resultType.getElementType());
       weight = rewriter.create<tosa::CastOp>(op.getLoc(), weightType, weight);
     }
 
-    auto failureOrMaybeZps = extractConvZpPair(op, rewriter);
-    if (failed(failureOrMaybeZps))
-      return failure();
+    if (auto quantizationInfo = op.getQuantizationInfo()) {
+      auto iZp = quantizationInfo->getInputZp();
+      auto wZp = quantizationInfo->getWeightZp();
 
-    auto maybeZps = failureOrMaybeZps.value();
-    if (maybeZps) {
       auto applyZp = [&](Value val, int64_t zp) -> Value {
         if (zp == 0)
           return val;
@@ -96,8 +89,8 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
                                             zpVal);
       };
 
-      input = applyZp(input, maybeZps->inputZp);
-      weight = applyZp(weight, maybeZps->weightZp);
+      input = applyZp(input, iZp);
+      weight = applyZp(weight, wZp);
     }
 
     ArrayRef<int64_t> padAttr = op.getPad();
@@ -106,6 +99,7 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       pad[it.index() + 2] = it.value();
 
     if (llvm::any_of(pad, [](int64_t p) { return p != 0; })) {
+      Type inputETy = inputType.getElementType();
       Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
 
       llvm::SmallVector<int64_t> newShape(inputType.getShape());
@@ -154,10 +148,9 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     auto outputShapeType = RankedTensorType::get(
         outputShape,
         dyn_cast<RankedTensorType>(input.getType()).getElementType());
-    auto outputShapeValue =
-        getTosaConstShape(rewriter, op->getLoc(), outputShape);
     Value outputValue = rewriter.create<tosa::ReshapeOp>(
-        op.getLoc(), outputShapeType, mulValue, outputShapeValue);
+        op.getLoc(), outputShapeType, mulValue,
+        rewriter.getDenseI64ArrayAttr(outputShape));
 
     Value bias = op.getBias();
     if (EqualizeRanks(rewriter, op.getLoc(), outputValue, bias).failed()) {

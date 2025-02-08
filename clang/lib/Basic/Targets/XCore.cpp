@@ -18,20 +18,13 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr int NumBuiltins =
-    XCore::LastTSBuiltin - Builtin::FirstTSBuiltin;
-
-static constexpr llvm::StringTable BuiltinStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
+static constexpr Builtin::Info BuiltinInfo[] = {
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsXCore.def"
-    ;
-
-static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
-#include "clang/Basic/BuiltinsXCore.def"
-});
+};
 
 void XCoreTargetInfo::getTargetDefines(const LangOptions &Opts,
                                        MacroBuilder &Builder) const {
@@ -39,7 +32,7 @@ void XCoreTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__XS1B__");
 }
 
-llvm::SmallVector<Builtin::InfosShard>
-XCoreTargetInfo::getTargetBuiltins() const {
-  return {{&BuiltinStrings, BuiltinInfos}};
+ArrayRef<Builtin::Info> XCoreTargetInfo::getTargetBuiltins() const {
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::XCore::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }

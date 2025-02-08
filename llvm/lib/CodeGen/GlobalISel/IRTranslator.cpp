@@ -2441,7 +2441,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::invariant_start: {
-    MIRBuilder.buildUndef(getOrCreateVReg(CI));
+    LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL);
+    Register Undef = MRI->createGenericVirtualRegister(PtrTy);
+    MIRBuilder.buildUndef(Undef);
     return true;
   }
   case Intrinsic::invariant_end:

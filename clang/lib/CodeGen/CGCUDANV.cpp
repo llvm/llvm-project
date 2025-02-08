@@ -40,6 +40,8 @@ class CGNVCUDARuntime : public CGCUDARuntime {
 
   /// The prefix used for function calls and section names (CUDA, HIP, LLVM)
   StringRef Prefix;
+  /// TODO: We should transition the OpenMP section to LLVM/Offload
+  StringRef SectionPrefix;
 
 private:
   llvm::IntegerType *IntTy, *SizeTy;
@@ -232,12 +234,13 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   VoidTy = CGM.VoidTy;
   PtrTy = CGM.UnqualPtrTy;
 
-  if (CGM.getLangOpts().OffloadViaLLVM)
+  if (CGM.getLangOpts().OffloadViaLLVM) {
     Prefix = "llvm";
-  else if (CGM.getLangOpts().HIP)
-    Prefix = "hip";
+    SectionPrefix = "omp";
+  } else if (CGM.getLangOpts().HIP)
+    SectionPrefix = Prefix = "hip";
   else
-    Prefix = "cuda";
+    SectionPrefix = Prefix = "cuda";
 }
 
 llvm::FunctionCallee CGNVCUDARuntime::getSetupArgumentFn() const {
@@ -1195,19 +1198,17 @@ void CGNVCUDARuntime::transformManagedVars() {
 // register the symbols with the linked device image.
 void CGNVCUDARuntime::createOffloadingEntries() {
   SmallVector<char, 32> Out;
+  StringRef Section = (SectionPrefix + "_offloading_entries").toStringRef(Out);
   llvm::object::OffloadKind Kind = CGM.getLangOpts().HIP
                                        ? llvm::object::OffloadKind::OFK_HIP
                                        : llvm::object::OffloadKind::OFK_Cuda;
-  // For now, just spoof this as OpenMP because that's the runtime it uses.
-  if (CGM.getLangOpts().OffloadViaLLVM)
-    Kind = llvm::object::OffloadKind::OFK_OpenMP;
 
   llvm::Module &M = CGM.getModule();
   for (KernelInfo &I : EmittedKernels)
     llvm::offloading::emitOffloadingEntry(
         M, Kind, KernelHandles[I.Kernel->getName()],
         getDeviceSideName(cast<NamedDecl>(I.D)), /*Flags=*/0, /*Data=*/0,
-        llvm::offloading::OffloadGlobalEntry);
+        llvm::offloading::OffloadGlobalEntry, Section);
 
   for (VarInfo &I : DeviceVars) {
     uint64_t VarSize =
@@ -1232,23 +1233,23 @@ void CGNVCUDARuntime::createOffloadingEntries() {
         llvm::offloading::emitOffloadingEntry(
             M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
             llvm::offloading::OffloadGlobalManagedEntry | Flags,
-            /*Data=*/I.Var->getAlignment(), ManagedVar);
+            /*Data=*/I.Var->getAlignment(), Section, ManagedVar);
       } else {
         llvm::offloading::emitOffloadingEntry(
             M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
             llvm::offloading::OffloadGlobalEntry | Flags,
-            /*Data=*/0);
+            /*Data=*/0, Section);
       }
     } else if (I.Flags.getKind() == DeviceVarFlags::Surface) {
       llvm::offloading::emitOffloadingEntry(
           M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
           llvm::offloading::OffloadGlobalSurfaceEntry | Flags,
-          I.Flags.getSurfTexType());
+          I.Flags.getSurfTexType(), Section);
     } else if (I.Flags.getKind() == DeviceVarFlags::Texture) {
       llvm::offloading::emitOffloadingEntry(
           M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
           llvm::offloading::OffloadGlobalTextureEntry | Flags,
-          I.Flags.getSurfTexType());
+          I.Flags.getSurfTexType(), Section);
     }
   }
 }

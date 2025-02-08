@@ -149,9 +149,8 @@ public:
   LiveInterval &createEmptyInterval(Register Reg) {
     assert(!hasInterval(Reg) && "Interval already exists!");
     VirtRegIntervals.grow(Reg.id());
-    auto &Interval = VirtRegIntervals[Reg.id()];
-    Interval = createInterval(Reg);
-    return *Interval;
+    VirtRegIntervals[Reg.id()] = createInterval(Reg);
+    return *VirtRegIntervals[Reg.id()];
   }
 
   LiveInterval &createAndComputeVirtRegInterval(Register Reg) {
@@ -169,9 +168,8 @@ public:
 
   /// Interval removal.
   void removeInterval(Register Reg) {
-    auto &Interval = VirtRegIntervals[Reg];
-    delete Interval;
-    Interval = nullptr;
+    delete VirtRegIntervals[Reg];
+    VirtRegIntervals[Reg] = nullptr;
   }
 
   /// Given a register and an instruction, adds a live segment from that

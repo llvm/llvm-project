@@ -205,12 +205,6 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
-ScheduleDAGInstrs *
-SystemZTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  return new ScheduleDAGMI(C, std::make_unique<SystemZPostRASchedStrategy>(C),
-                           /*RemoveKillFlags=*/true);
-}
-
 namespace {
 
 /// SystemZ Code Generator Pass Configuration Options.
@@ -221,6 +215,13 @@ public:
 
   SystemZTargetMachine &getSystemZTargetMachine() const {
     return getTM<SystemZTargetMachine>();
+  }
+
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override {
+    return new ScheduleDAGMI(C,
+                             std::make_unique<SystemZPostRASchedStrategy>(C),
+                             /*RemoveKillFlags=*/true);
   }
 
   void addIRPasses() override;

@@ -940,16 +940,6 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
-  case Intrinsic::experimental_cttz_elts: {
-    EVT ArgVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-    if (!getTLI()->shouldExpandCttzElements(ArgVT)) {
-      // This will consist of a SVE brkb and a cntp instruction. These
-      // typically have the same latency and half the throughput as a vector
-      // add instruction.
-      return 4;
-    }
-    break;
-  }
   default:
     break;
   }
@@ -4282,7 +4272,7 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // If mcpu is omitted, getProcFamily() returns AArch64Subtarget::Others, so by
   // checking for that case, we can ensure that the default behaviour is
   // unchanged
-  if (ST->getProcFamily() != AArch64Subtarget::Generic &&
+  if (ST->getProcFamily() != AArch64Subtarget::Others &&
       !ST->getSchedModel().isOutOfOrder()) {
     UP.Runtime = true;
     UP.Partial = true;
@@ -4692,24 +4682,13 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   EVT InputEVT = EVT::getEVT(InputTypeA);
   EVT AccumEVT = EVT::getEVT(AccumType);
 
-  unsigned VFMinValue = VF.getKnownMinValue();
-
-  if (VF.isScalable()) {
-    if (!ST->isSVEorStreamingSVEAvailable())
-      return Invalid;
-
-    // Don't accept a partial reduction if the scaled accumulator is vscale x 1,
-    // since we can't lower that type.
-    unsigned Scale =
-        AccumEVT.getScalarSizeInBits() / InputEVT.getScalarSizeInBits();
-    if (VFMinValue == Scale)
-      return Invalid;
-  }
+  if (VF.isScalable() && !ST->isSVEorStreamingSVEAvailable())
+    return Invalid;
   if (VF.isFixed() && (!ST->isNeonAvailable() || !ST->hasDotProd()))
     return Invalid;
 
   if (InputEVT == MVT::i8) {
-    switch (VFMinValue) {
+    switch (VF.getKnownMinValue()) {
     default:
       return Invalid;
     case 8:
@@ -4728,7 +4707,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   } else if (InputEVT == MVT::i16) {
     // FIXME: Allow i32 accumulator but increase cost, as we would extend
     //        it to i64.
-    if (VFMinValue != 8 || AccumEVT != MVT::i64)
+    if (VF.getKnownMinValue() != 8 || AccumEVT != MVT::i64)
       return Invalid;
   } else
     return Invalid;

@@ -237,8 +237,8 @@ public:
            TargetABI == RISCVABI::ABI_ILP32E;
   }
   bool isRegisterReservedByUser(Register i) const override {
-    assert(i.id() < RISCV::NUM_TARGET_REGS && "Register out of range");
-    return UserReservedRegister[i.id()];
+    assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
+    return UserReservedRegister[i];
   }
 
   // XRay support - require D and C extensions.

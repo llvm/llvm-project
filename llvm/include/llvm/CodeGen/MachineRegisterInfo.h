@@ -810,10 +810,9 @@ public:
   void setRegAllocationHint(Register VReg, unsigned Type, Register PrefReg) {
     assert(VReg.isVirtual());
     RegAllocHints.grow(Register::index2VirtReg(getNumVirtRegs()));
-    auto &Hint = RegAllocHints[VReg];
-    Hint.first = Type;
-    Hint.second.clear();
-    Hint.second.push_back(PrefReg);
+    RegAllocHints[VReg].first  = Type;
+    RegAllocHints[VReg].second.clear();
+    RegAllocHints[VReg].second.push_back(PrefReg);
   }
 
   /// addRegAllocationHint - Add a register allocation hint to the hints
@@ -844,9 +843,9 @@ public:
     assert(VReg.isVirtual());
     if (!RegAllocHints.inBounds(VReg))
       return {0, Register()};
-    auto &Hint = RegAllocHints[VReg.id()];
-    Register BestHint = (Hint.second.size() ? Hint.second[0] : Register());
-    return {Hint.first, BestHint};
+    Register BestHint = (RegAllocHints[VReg.id()].second.size() ?
+                         RegAllocHints[VReg.id()].second[0] : Register());
+    return {RegAllocHints[VReg.id()].first, BestHint};
   }
 
   /// getSimpleHint - same as getRegAllocationHint except it will only return

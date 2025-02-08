@@ -21,6 +21,8 @@
 
 using namespace ompx;
 
+#pragma omp begin declare target device_type(nohost)
+
 extern "C" {
 void __assert_assume(bool condition) { __builtin_assume(condition); }
 
@@ -42,3 +44,5 @@ void __assert_fail_internal(const char *expr, const char *msg, const char *file,
   __builtin_trap();
 }
 }
+
+#pragma omp end declare target

@@ -5040,7 +5040,7 @@ public:
   }
 
   const FieldDecl *getInitializedFieldInUnion() const {
-    return dyn_cast_if_present<FieldDecl *>(ArrayFillerOrUnionFieldInit);
+    return ArrayFillerOrUnionFieldInit.dyn_cast<FieldDecl *>();
   }
 
   child_range children() {

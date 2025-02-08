@@ -48,14 +48,6 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   /// actual target hardware.
   unsigned getEstimatedVLFor(VectorType *Ty);
 
-  /// This function calculates the costs for one or more RVV opcodes based
-  /// on the vtype and the cost kind.
-  /// \param Opcodes A list of opcodes of the RVV instruction to evaluate.
-  /// \param VT The MVT of vtype associated with the RVV instructions.
-  /// For widening/narrowing instructions where the result and source types
-  /// differ, it is important to check the spec to determine whether the vtype
-  /// refers to the result or source type.
-  /// \param CostKind The type of cost to compute.
   InstructionCost getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                           TTI::TargetCostKind CostKind);
 
@@ -173,12 +165,6 @@ public:
                                          Align Alignment,
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I);
-
-  InstructionCost getExpandCompressMemoryOpCost(unsigned Opcode, Type *Src,
-                                                bool VariableMask,
-                                                Align Alignment,
-                                                TTI::TargetCostKind CostKind,
-                                                const Instruction *I = nullptr);
 
   InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,

@@ -271,17 +271,6 @@ ParseResult Parser::parseToken(Token::Kind expectedToken,
   return emitWrongTokenError(message);
 }
 
-/// Parses a quoted string token if present.
-ParseResult Parser::parseOptionalString(std::string *string) {
-  if (!getToken().is(Token::string))
-    return failure();
-
-  if (string)
-    *string = getToken().getStringValue();
-  consumeToken();
-  return success();
-}
-
 /// Parse an optional integer value from the stream.
 OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
   // Parse `false` and `true` keywords as 0 and 1 respectively.
@@ -423,25 +412,15 @@ ParseResult Parser::parseOptionalKeyword(StringRef *keyword) {
   return success();
 }
 
-ParseResult Parser::parseOptionalKeywordOrString(std::string *result) {
-  StringRef keyword;
-  if (succeeded(parseOptionalKeyword(&keyword))) {
-    *result = keyword.str();
-    return success();
-  }
-
-  return parseOptionalString(result);
-}
-
 //===----------------------------------------------------------------------===//
 // Resource Parsing
 
 FailureOr<AsmDialectResourceHandle>
 Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
-                            std::string &name) {
+                            StringRef &name) {
   assert(dialect && "expected valid dialect interface");
   SMLoc nameLoc = getToken().getLoc();
-  if (failed(parseOptionalKeywordOrString(&name)))
+  if (failed(parseOptionalKeyword(&name)))
     return emitError("expected identifier key for 'resource' entry");
   auto &resources = getState().symbols.dialectResources;
 
@@ -472,7 +451,7 @@ Parser::parseResourceHandle(Dialect *dialect) {
     return emitError() << "dialect '" << dialect->getNamespace()
                        << "' does not expect resource handles";
   }
-  std::string resourceName;
+  StringRef resourceName;
   return parseResourceHandle(interface, resourceName);
 }
 
@@ -2551,8 +2530,8 @@ private:
 /// textual format.
 class ParsedResourceEntry : public AsmParsedResourceEntry {
 public:
-  ParsedResourceEntry(std::string key, SMLoc keyLoc, Token value, Parser &p)
-      : key(std::move(key)), keyLoc(keyLoc), value(value), p(p) {}
+  ParsedResourceEntry(StringRef key, SMLoc keyLoc, Token value, Parser &p)
+      : key(key), keyLoc(keyLoc), value(value), p(p) {}
   ~ParsedResourceEntry() override = default;
 
   StringRef getKey() const final { return key; }
@@ -2628,7 +2607,7 @@ public:
   }
 
 private:
-  std::string key;
+  StringRef key;
   SMLoc keyLoc;
   Token value;
   Parser &p;
@@ -2757,7 +2736,7 @@ ParseResult TopLevelOperationParser::parseDialectResourceFileMetadata() {
     return parseCommaSeparatedListUntil(Token::r_brace, [&]() -> ParseResult {
       // Parse the name of the resource entry.
       SMLoc keyLoc = getToken().getLoc();
-      std::string key;
+      StringRef key;
       if (failed(parseResourceHandle(handler, key)) ||
           parseToken(Token::colon, "expected ':'"))
         return failure();
@@ -2784,8 +2763,8 @@ ParseResult TopLevelOperationParser::parseExternalResourceFileMetadata() {
     return parseCommaSeparatedListUntil(Token::r_brace, [&]() -> ParseResult {
       // Parse the name of the resource entry.
       SMLoc keyLoc = getToken().getLoc();
-      std::string key;
-      if (failed(parseOptionalKeywordOrString(&key)))
+      StringRef key;
+      if (failed(parseOptionalKeyword(&key)))
         return emitError(
             "expected identifier key for 'external_resources' entry");
       if (parseToken(Token::colon, "expected ':'"))

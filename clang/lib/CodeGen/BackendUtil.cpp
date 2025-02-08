@@ -890,7 +890,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 
   PipelineTuningOptions PTO;
   PTO.LoopUnrolling = CodeGenOpts.UnrollLoops;
-  PTO.LoopInterchange = CodeGenOpts.InterchangeLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
   // unrolling.
   PTO.LoopInterleaving = CodeGenOpts.UnrollLoops;
@@ -1315,7 +1314,6 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   initTargetOptions(CI, Diags, Conf.Options);
   Conf.SampleProfile = std::move(SampleProfile);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
-  Conf.PTO.LoopInterchange = CGOpts.InterchangeLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
   // unrolling.
   Conf.PTO.LoopInterleaving = CGOpts.UnrollLoops;

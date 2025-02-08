@@ -4862,13 +4862,9 @@ static void TryListInitialization(Sema &S,
         assert(
             S.Context.hasSameUnqualifiedType(SubInit[0]->getType(), DestType) &&
             "Deduced to other type?");
-        assert(Kind.getKind() == clang::InitializationKind::IK_DirectList &&
-               "List-initialize structured bindings but not "
-               "direct-list-initialization?");
         TryArrayCopy(S,
-                     InitializationKind::CreateDirect(Kind.getLocation(),
-                                                      InitList->getLBraceLoc(),
-                                                      InitList->getRBraceLoc()),
+                     InitializationKind::CreateCopy(Kind.getLocation(),
+                                                    InitList->getLBraceLoc()),
                      Entity, SubInit[0], DestType, Sequence,
                      TreatUnavailableAsInvalid);
         if (Sequence)
@@ -9152,17 +9148,6 @@ bool InitializationSequence::Diagnose(Sema &S,
               << (Msg ? Msg->getString() : StringRef()) << ArgsRange;
         }
 
-        // If it's a default constructed member, but it's not in the
-        // constructor's initializer list, explicitly note where the member is
-        // declared so the user can see which member is erroneously initialized
-        // with a deleted default constructor.
-        if (Kind.getKind() == InitializationKind::IK_Default &&
-            (Entity.getKind() == InitializedEntity::EK_Member ||
-             Entity.getKind() == InitializedEntity::EK_ParenAggInitMember)) {
-          S.Diag(Entity.getDecl()->getLocation(),
-                 diag::note_default_constructed_field)
-              << Entity.getDecl();
-        }
         S.NoteDeletedFunction(Best->Function);
         break;
       }

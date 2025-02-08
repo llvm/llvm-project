@@ -3261,16 +3261,13 @@ namespace ISD {
   template <typename ConstNodeType>
   bool matchUnaryPredicateImpl(SDValue Op,
                                std::function<bool(ConstNodeType *)> Match,
-                               bool AllowUndefs = false,
-                               bool AllowTruncation = false);
+                               bool AllowUndefs = false);
 
   /// Hook for matching ConstantSDNode predicate
   inline bool matchUnaryPredicate(SDValue Op,
                                   std::function<bool(ConstantSDNode *)> Match,
-                                  bool AllowUndefs = false,
-                                  bool AllowTruncation = false) {
-    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs,
-                                                   AllowTruncation);
+                                  bool AllowUndefs = false) {
+    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs);
   }
 
   /// Hook for matching ConstantFPSDNode predicate

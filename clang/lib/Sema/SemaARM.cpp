@@ -709,18 +709,22 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
                                            CallExpr *TheCall) {
   if (const FunctionDecl *FD =
           SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
-    std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
     default:
       break;
-#define GET_NEON_STREAMING_COMPAT_FLAG
+#define GET_NEON_BUILTINS
+#define TARGET_BUILTIN(id, ...) case NEON::BI##id:
+#define BUILTIN(id, ...) case NEON::BI##id:
 #include "clang/Basic/arm_neon.inc"
-#undef GET_NEON_STREAMING_COMPAT_FLAG
+      if (checkArmStreamingBuiltin(SemaRef, TheCall, FD, ArmNonStreaming,
+                                   BuiltinID))
+        return true;
+      break;
+#undef TARGET_BUILTIN
+#undef BUILTIN
+#undef GET_NEON_BUILTINS
     }
-    if (BuiltinType &&
-        checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID))
-      return true;
   }
 
   llvm::APSInt Result;

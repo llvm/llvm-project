@@ -1,5 +1,3 @@
-include(AddFlangOffloadRuntime)
-
 if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
   # If Fortran runtime is built as CUDA library, the linking
   # of targets that link FortranRuntime must be done
@@ -13,11 +11,6 @@ add_custom_target(FlangUnitTests)
 set_target_properties(FlangUnitTests PROPERTIES FOLDER "Flang/Tests")
 
 function(add_flang_unittest_offload_properties target)
-  # Do not apply runtime properties if not even compiling the runtime.
-  if (NOT FLANG_INCLUDE_RUNTIME)
-    return ()
-  endif ()
-
   # Set CUDA_RESOLVE_DEVICE_SYMBOLS.
   if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
     set_target_properties(${target}
@@ -82,7 +75,5 @@ add_subdirectory(Optimizer)
 add_subdirectory(Common)
 add_subdirectory(Decimal)
 add_subdirectory(Evaluate)
-if (FLANG_INCLUDE_RUNTIME)
-  add_subdirectory(Runtime)
-endif ()
+add_subdirectory(Runtime)
 add_subdirectory(Frontend)

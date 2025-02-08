@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "resolve-names-utils.h"
+#include "flang/Common/Fortran-features.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/fold.h"
@@ -18,8 +20,6 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
-#include "flang/Support/Fortran-features.h"
-#include "flang/Support/Fortran.h"
 #include <initializer_list>
 #include <variant>
 

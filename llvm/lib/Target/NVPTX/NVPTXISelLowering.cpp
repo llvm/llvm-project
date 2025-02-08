@@ -1156,6 +1156,11 @@ std::string NVPTXTargetLowering::getPrototype(
     const CallBase &CB, unsigned UniqueCallSite) const {
   auto PtrVT = getPointerTy(DL);
 
+  bool isABI = (STI.getSmVersion() >= 20);
+  assert(isABI && "Non-ABI compilation is not supported");
+  if (!isABI)
+    return "";
+
   std::string Prototype;
   raw_string_ostream O(Prototype);
   O << "prototype_" << UniqueCallSite << " : .callprototype ";
@@ -1423,6 +1428,11 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Type *RetTy = CLI.RetTy;
   const CallBase *CB = CLI.CB;
   const DataLayout &DL = DAG.getDataLayout();
+
+  bool isABI = (STI.getSmVersion() >= 20);
+  assert(isABI && "Non-ABI compilation is not supported");
+  if (!isABI)
+    return Chain;
 
   // Variadic arguments.
   //
@@ -3081,6 +3091,11 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   SDValue Root = DAG.getRoot();
   std::vector<SDValue> OutChains;
 
+  bool isABI = (STI.getSmVersion() >= 20);
+  assert(isABI && "Non-ABI compilation is not supported");
+  if (!isABI)
+    return Chain;
+
   std::vector<Type *> argTypes;
   std::vector<const Argument *> theArgs;
   for (const Argument &I : F->args()) {
@@ -3294,6 +3309,11 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   const MachineFunction &MF = DAG.getMachineFunction();
   const Function &F = MF.getFunction();
   Type *RetTy = MF.getFunction().getReturnType();
+
+  bool isABI = (STI.getSmVersion() >= 20);
+  assert(isABI && "Non-ABI compilation is not supported");
+  if (!isABI)
+    return Chain;
 
   const DataLayout &DL = DAG.getDataLayout();
   SmallVector<SDValue, 16> PromotedOutVals;

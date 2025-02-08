@@ -20,6 +20,8 @@
 
 using namespace ompx;
 
+#pragma omp begin declare target device_type(nohost)
+
 extern "C" {
 
 TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, int32_t, int32_t,
@@ -27,7 +29,7 @@ TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, int32_t, int32_t,
                                         size_t SharedValuesSize,
                                         TaskFnTy TaskFn) {
   auto TaskSizeInclPrivateValuesPadded =
-      utils::roundUp(TaskSizeInclPrivateValues, sizeof(void *));
+      utils::roundUp(TaskSizeInclPrivateValues, uint64_t(sizeof(void *)));
   auto TaskSizeTotal = TaskSizeInclPrivateValuesPadded + SharedValuesSize;
   TaskDescriptorTy *TaskDescriptor = (TaskDescriptorTy *)memory::allocGlobal(
       TaskSizeTotal, "explicit task descriptor");
@@ -101,3 +103,5 @@ int omp_in_final(void) {
 
 int omp_get_max_task_priority(void) { return 0; }
 }
+
+#pragma omp end declare target

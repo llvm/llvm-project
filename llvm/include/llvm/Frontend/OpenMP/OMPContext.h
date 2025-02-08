@@ -62,7 +62,7 @@ StringRef getOpenMPContextTraitSetName(TraitSet Kind);
 
 /// Parse \p Str and return the trait set it matches or
 /// TraitSelector::invalid.
-TraitSelector getOpenMPContextTraitSelectorKind(StringRef Str, TraitSet Set);
+TraitSelector getOpenMPContextTraitSelectorKind(StringRef Str);
 
 /// Return the trait selector for which \p Property is a property.
 TraitSelector getOpenMPContextTraitSelectorForProperty(TraitProperty Property);
@@ -139,8 +139,6 @@ struct VariantMatchInfo {
     // the raw string.
     if (Property == TraitProperty::device_isa___ANY)
       ISATraits.push_back(RawString);
-    if (Property == TraitProperty::target_device_isa___ANY)
-      ISATraits.push_back(RawString);
 
     RequiredTraits.set(unsigned(Property));
     if (Set == TraitSet::construct)
@@ -157,8 +155,7 @@ struct VariantMatchInfo {
 /// e.g., device={kind(host)}, and constructs traits which describe the nesting
 /// in OpenMP constructs at the location.
 struct OMPContext {
-  OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
-             Triple TargetOffloadTriple, int DeviceNum);
+  OMPContext(bool IsDeviceCompilation, Triple TargetTriple);
   virtual ~OMPContext() = default;
 
   void addTrait(TraitProperty Property) {

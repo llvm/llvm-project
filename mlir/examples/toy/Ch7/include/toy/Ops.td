@@ -237,12 +237,7 @@ def GenericCallOp : Toy_Op<"generic_call",
 
   // The generic call operation takes a symbol reference attribute as the
   // callee, and inputs for the call.
-  let arguments = (ins
-    FlatSymbolRefAttr:$callee,
-    Variadic<Toy_Type>:$inputs,
-    OptionalAttr<DictArrayAttr>:$arg_attrs,
-    OptionalAttr<DictArrayAttr>:$res_attrs
-  );
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<Toy_Type>:$inputs);
 
   // The generic call operation returns a single value of TensorType or
   // StructType.
@@ -255,8 +250,7 @@ def GenericCallOp : Toy_Op<"generic_call",
 
   // Add custom build methods for the generic call operation.
   let builders = [
-    OpBuilder<(ins "Type":$result_type, "StringRef":$callee,
-              "ArrayRef<Value>":$arguments)>
+    OpBuilder<(ins "StringRef":$callee, "ArrayRef<Value>":$arguments)>
   ];
 }
 

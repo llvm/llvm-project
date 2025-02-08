@@ -7634,66 +7634,6 @@ bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
            NumAltInsts) < S.getMainOp()->getNumOperands() * VL.size());
 }
 
-/// Builds the arguments types vector for the given call instruction with the
-/// given \p ID for the specified vector factor.
-static SmallVector<Type *>
-buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
-                       const unsigned VF, unsigned MinBW,
-                       const TargetTransformInfo *TTI) {
-  SmallVector<Type *> ArgTys;
-  for (auto [Idx, Arg] : enumerate(CI->args())) {
-    if (ID != Intrinsic::not_intrinsic) {
-      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx, TTI)) {
-        ArgTys.push_back(Arg->getType());
-        continue;
-      }
-      if (MinBW > 0) {
-        ArgTys.push_back(
-            getWidenedType(IntegerType::get(CI->getContext(), MinBW), VF));
-        continue;
-      }
-    }
-    ArgTys.push_back(getWidenedType(Arg->getType(), VF));
-  }
-  return ArgTys;
-}
-
-/// Calculates the costs of vectorized intrinsic (if possible) and vectorized
-/// function (if possible) calls. Returns invalid cost for the corresponding
-/// calls, if they cannot be vectorized/will be scalarized.
-static std::pair<InstructionCost, InstructionCost>
-getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
-                   TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
-                   ArrayRef<Type *> ArgTys) {
-  auto Shape = VFShape::get(CI->getFunctionType(),
-                            ElementCount::getFixed(VecTy->getNumElements()),
-                            false /*HasGlobalPred*/);
-  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
-  auto LibCost = InstructionCost::getInvalid();
-  if (!CI->isNoBuiltin() && VecFunc) {
-    // Calculate the cost of the vector library call.
-    // If the corresponding vector call is cheaper, return its cost.
-    LibCost =
-        TTI->getCallInstrCost(nullptr, VecTy, ArgTys, TTI::TCK_RecipThroughput);
-  }
-  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-
-  // Calculate the cost of the vector intrinsic call.
-  FastMathFlags FMF;
-  if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
-    FMF = FPCI->getFastMathFlags();
-  const InstructionCost ScalarLimit = 10000;
-  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF, nullptr,
-                                    LibCost.isValid() ? LibCost : ScalarLimit);
-  auto IntrinsicCost =
-      TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
-  if ((LibCost.isValid() && IntrinsicCost > LibCost) ||
-      (!LibCost.isValid() && IntrinsicCost > ScalarLimit))
-    IntrinsicCost = InstructionCost::getInvalid();
-
-  return {IntrinsicCost, LibCost};
-}
-
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     const InstructionsState &S, ArrayRef<Value *> VL,
     bool IsScatterVectorizeUserTE, OrdersType &CurrentOrder,
@@ -8034,12 +7974,6 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         return TreeEntry::NeedToGather;
       }
     }
-    SmallVector<Type *> ArgTys =
-        buildIntrinsicArgTypes(CI, ID, VL.size(), 0, TTI);
-    auto *VecTy = getWidenedType(S.getMainOp()->getType(), VL.size());
-    auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys);
-    if (!VecCallCosts.first.isValid() && !VecCallCosts.second.isValid())
-      return TreeEntry::NeedToGather;
 
     return TreeEntry::Vectorize;
   }
@@ -9081,6 +9015,34 @@ bool BoUpSLP::areAllUsersVectorized(
            return isVectorized(U) || isVectorLikeInstWithConstOps(U) ||
                   (isa<ExtractElementInst>(U) && MustGather.contains(U));
          });
+}
+
+static std::pair<InstructionCost, InstructionCost>
+getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
+                   TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
+                   ArrayRef<Type *> ArgTys) {
+  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+
+  // Calculate the cost of the scalar and vector calls.
+  FastMathFlags FMF;
+  if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
+    FMF = FPCI->getFastMathFlags();
+  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF);
+  auto IntrinsicCost =
+    TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
+
+  auto Shape = VFShape::get(CI->getFunctionType(),
+                            ElementCount::getFixed(VecTy->getNumElements()),
+                            false /*HasGlobalPred*/);
+  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
+  auto LibCost = IntrinsicCost;
+  if (!CI->isNoBuiltin() && VecFunc) {
+    // Calculate the cost of the vector library call.
+    // If the corresponding vector call is cheaper, return its cost.
+    LibCost =
+        TTI->getCallInstrCost(nullptr, VecTy, ArgTys, TTI::TCK_RecipThroughput);
+  }
+  return {IntrinsicCost, LibCost};
 }
 
 void BoUpSLP::TreeEntry::buildAltOpShuffleMask(
@@ -10718,7 +10680,6 @@ public:
         });
     SmallPtrSet<Value *, 4> UniqueBases;
     unsigned SliceSize = getPartNumElems(VL.size(), NumParts);
-    SmallDenseMap<Value *, APInt, 4> VectorOpsToExtracts;
     for (unsigned Part : seq<unsigned>(NumParts)) {
       unsigned Limit = getNumElems(VL.size(), SliceSize, Part);
       ArrayRef<int> SubMask = Mask.slice(Part * SliceSize, Limit);
@@ -10769,18 +10730,10 @@ public:
             continue;
           }
         }
-        APInt &DemandedElts =
-            VectorOpsToExtracts
-                .try_emplace(VecBase,
-                             APInt::getZero(getNumElements(VecBase->getType())))
-                .first->getSecond();
-        DemandedElts.setBit(Idx);
+        Cost -= TTI.getVectorInstrCost(*EE, EE->getVectorOperandType(),
+                                       CostKind, Idx);
       }
     }
-    for (const auto &[Vec, DemandedElts] : VectorOpsToExtracts)
-      Cost -= TTI.getScalarizationOverhead(cast<VectorType>(Vec->getType()),
-                                           DemandedElts, /*Insert=*/false,
-                                           /*Extract=*/true, CostKind);
     // Check that gather of extractelements can be represented as just a
     // shuffle of a single/two vectors the scalars are extracted from.
     // Found the bunch of extractelement instructions that must be gathered
@@ -11092,6 +11045,30 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
   return TTI::CastContextHint::None;
 }
 
+/// Builds the arguments types vector for the given call instruction with the
+/// given \p ID for the specified vector factor.
+static SmallVector<Type *>
+buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
+                       const unsigned VF, unsigned MinBW,
+                       const TargetTransformInfo *TTI) {
+  SmallVector<Type *> ArgTys;
+  for (auto [Idx, Arg] : enumerate(CI->args())) {
+    if (ID != Intrinsic::not_intrinsic) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx, TTI)) {
+        ArgTys.push_back(Arg->getType());
+        continue;
+      }
+      if (MinBW > 0) {
+        ArgTys.push_back(
+            getWidenedType(IntegerType::get(CI->getContext(), MinBW), VF));
+        continue;
+      }
+    }
+    ArgTys.push_back(getWidenedType(Arg->getType(), VF));
+  }
+  return ArgTys;
+}
+
 InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
@@ -11304,27 +11281,24 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   }
   case Instruction::ExtractValue:
   case Instruction::ExtractElement: {
-    APInt DemandedElts;
-    VectorType *SrcVecTy = nullptr;
     auto GetScalarCost = [&](unsigned Idx) {
       if (isa<PoisonValue>(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
 
       auto *I = cast<Instruction>(UniqueValues[Idx]);
-      if (!SrcVecTy) {
-        if (ShuffleOrOp == Instruction::ExtractElement) {
-          auto *EE = cast<ExtractElementInst>(I);
-          SrcVecTy = EE->getVectorOperandType();
-        } else {
-          auto *EV = cast<ExtractValueInst>(I);
-          Type *AggregateTy = EV->getAggregateOperand()->getType();
-          unsigned NumElts;
-          if (auto *ATy = dyn_cast<ArrayType>(AggregateTy))
-            NumElts = ATy->getNumElements();
-          else
-            NumElts = AggregateTy->getStructNumElements();
-          SrcVecTy = getWidenedType(OrigScalarTy, NumElts);
-        }
+      VectorType *SrcVecTy;
+      if (ShuffleOrOp == Instruction::ExtractElement) {
+        auto *EE = cast<ExtractElementInst>(I);
+        SrcVecTy = EE->getVectorOperandType();
+      } else {
+        auto *EV = cast<ExtractValueInst>(I);
+        Type *AggregateTy = EV->getAggregateOperand()->getType();
+        unsigned NumElts;
+        if (auto *ATy = dyn_cast<ArrayType>(AggregateTy))
+          NumElts = ATy->getNumElements();
+        else
+          NumElts = AggregateTy->getStructNumElements();
+        SrcVecTy = getWidenedType(OrigScalarTy, NumElts);
       }
       if (I->hasOneUse()) {
         Instruction *Ext = I->user_back();
@@ -11341,18 +11315,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           return Cost;
         }
       }
-      if (DemandedElts.isZero())
-        DemandedElts = APInt::getZero(getNumElements(SrcVecTy));
-      DemandedElts.setBit(*getExtractIndex(I));
-      return InstructionCost(TTI::TCC_Free);
+      return TTI->getVectorInstrCost(Instruction::ExtractElement, SrcVecTy,
+                                     CostKind, *getExtractIndex(I));
     };
-    auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
-      return CommonCost - (DemandedElts.isZero()
-                               ? TTI::TCC_Free
-                               : TTI.getScalarizationOverhead(
-                                     SrcVecTy, DemandedElts, /*Insert=*/false,
-                                     /*Extract=*/true, CostKind));
-    };
+    auto GetVectorCost = [](InstructionCost CommonCost) { return CommonCost; };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
   case Instruction::InsertElement: {
@@ -12272,12 +12238,18 @@ InstructionCost BoUpSLP::getSpillCost() {
           return false;
         if (II->isAssumeLikeIntrinsic())
           return true;
-        IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II);
+        FastMathFlags FMF;
+        SmallVector<Type *, 4> Tys;
+        for (auto &ArgOp : II->args())
+          Tys.push_back(ArgOp->getType());
+        if (auto *FPMO = dyn_cast<FPMathOperator>(II))
+          FMF = FPMO->getFastMathFlags();
+        IntrinsicCostAttributes ICA(II->getIntrinsicID(), II->getType(), Tys,
+                                    FMF);
         InstructionCost IntrCost =
             TTI->getIntrinsicInstrCost(ICA, TTI::TCK_RecipThroughput);
-        InstructionCost CallCost =
-            TTI->getCallInstrCost(nullptr, II->getType(), ICA.getArgTypes(),
-                                  TTI::TCK_RecipThroughput);
+        InstructionCost CallCost = TTI->getCallInstrCost(
+            nullptr, II->getType(), Tys, TTI::TCK_RecipThroughput);
         return IntrCost < CallCost;
       };
 
@@ -13695,7 +13667,6 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
   APInt ShuffledElements = APInt::getZero(VL.size());
-  APInt DemandedElements = APInt::getZero(VL.size());
   DenseMap<Value *, unsigned> UniqueElements;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
@@ -13706,7 +13677,9 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
       V = nullptr;
     }
     if (!ForPoisonSrc)
-      DemandedElements.setBit(I);
+      Cost +=
+          TTI->getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
+                                  I, Constant::getNullValue(VecTy), V);
   };
   SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
   for (unsigned I = 0, E = VL.size(); I < E; ++I) {
@@ -13729,10 +13702,6 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     ShuffledElements.setBit(I);
     ShuffleMask[I] = Res.first->second;
   }
-  if (!DemandedElements.isZero())
-    Cost +=
-        TTI->getScalarizationOverhead(VecTy, DemandedElements, /*Insert=*/true,
-                                      /*Extract=*/false, CostKind, VL);
   if (ForPoisonSrc) {
     if (isa<FixedVectorType>(ScalarTy)) {
       assert(SLPReVec && "Only supported by REVEC.");
@@ -20184,7 +20153,7 @@ public:
         }
         V.reorderTopToBottom();
         // No need to reorder the root node at all.
-        V.reorderBottomToTop(!V.doesRootHaveInTreeUses());
+        V.reorderBottomToTop(/*IgnoreReorder=*/true);
         // Keep extracted other reduction values, if they are used in the
         // vectorization trees.
         BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues(

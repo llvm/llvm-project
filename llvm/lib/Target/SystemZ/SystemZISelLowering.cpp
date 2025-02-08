@@ -6173,8 +6173,8 @@ SystemZTargetLowering::buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
     for (unsigned I = 0; I < NumElements; ++I)
       if (isVectorElementLoad(Elems[I])) {
         SDNode *Ld = Elems[I].getNode();
-        unsigned Count = ++UseCounts[Ld];
-        if (LoadMaxUses == nullptr || UseCounts[LoadMaxUses] < Count)
+        UseCounts[Ld]++;
+        if (LoadMaxUses == nullptr || UseCounts[LoadMaxUses] < UseCounts[Ld])
           LoadMaxUses = Ld;
       }
     if (LoadMaxUses != nullptr) {

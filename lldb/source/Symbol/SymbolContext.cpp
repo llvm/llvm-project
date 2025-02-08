@@ -370,16 +370,6 @@ bool SymbolContext::GetAddressRange(uint32_t scope, uint32_t range_idx,
   return false;
 }
 
-Address SymbolContext::GetFunctionOrSymbolAddress() const {
-  if (function)
-    return function->GetAddress();
-
-  if (symbol)
-    return symbol->GetAddress();
-
-  return Address();
-}
-
 LanguageType SymbolContext::GetLanguage() const {
   LanguageType lang;
   if (function && (lang = function->GetLanguage()) != eLanguageTypeUnknown) {

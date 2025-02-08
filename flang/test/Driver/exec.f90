@@ -1,5 +1,4 @@
 ! UNSUPPORTED: system-windows
-! REQUIRES: flang-rt
 ! Verify that flang can correctly build executables.
 
 ! RUN: %flang %s -o %t

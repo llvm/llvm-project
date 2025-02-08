@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
@@ -33,7 +32,7 @@ namespace {
 ///
 /// Would be unrolled to:
 ///
-/// %result = ub.poison : vector<1x2x3x8xi32>
+/// %result = arith.constant dense<0> : vector<1x2x3x8xi32>
 /// %0 = vector.extract %a[0, 0, 0]                 ─┐
 ///        : vector<4xi64> from vector<1x2x3x4xi64>  |
 /// %1 = vector.bitcast %0                           | - Repeated 6x for
@@ -64,7 +63,8 @@ public:
         VectorType::get(shape, resultType.getElementType(), scalableDims);
 
     Location loc = op.getLoc();
-    Value result = rewriter.create<ub::PoisonOp>(loc, resultType);
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, resultType, rewriter.getZeroAttr(resultType));
     for (auto position : *unrollIterator) {
       Value extract =
           rewriter.create<vector::ExtractOp>(loc, op.getSource(), position);

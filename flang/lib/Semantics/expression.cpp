@@ -11,6 +11,7 @@
 #include "pointer-assignment.h"
 #include "resolve-names-utils.h"
 #include "resolve-names.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/fold.h"
@@ -23,7 +24,6 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
-#include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <functional>

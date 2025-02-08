@@ -8,6 +8,8 @@
 
 #include "Profiling.h"
 
+#pragma omp begin declare target device_type(nohost)
+
 extern "C" {
 
 // Provides empty implementations for certain functions in compiler-rt
@@ -16,3 +18,5 @@ void __llvm_profile_register_function(void *Ptr) {}
 void __llvm_profile_register_names_function(void *Ptr, long int I) {}
 void __llvm_profile_instrument_memop(long int I, void *Ptr, int I2) {}
 }
+
+#pragma omp end declare target

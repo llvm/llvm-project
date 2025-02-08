@@ -614,12 +614,6 @@ public:
     return getBlockEnd(Ptr) - reinterpret_cast<uptr>(Ptr);
   }
 
-  static uptr getGuardPageSize() {
-    if (Config::getEnableGuardPages())
-      return getPageSizeCached();
-    return 0U;
-  }
-
   static constexpr uptr getHeadersSize() {
     return Chunk::getHeaderSize() + LargeBlock::getHeaderSize();
   }
@@ -769,11 +763,11 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
 
   uptr RoundedSize =
       roundUp(roundUp(Size, Alignment) + getHeadersSize(), PageSize);
-  if (UNLIKELY(Alignment > PageSize))
+  if (Alignment > PageSize)
     RoundedSize += Alignment - PageSize;
 
   ReservedMemoryT ReservedMemory;
-  const uptr MapSize = RoundedSize + 2 * getGuardPageSize();
+  const uptr MapSize = RoundedSize + 2 * PageSize;
   if (UNLIKELY(!ReservedMemory.create(/*Addr=*/0U, MapSize, nullptr,
                                       MAP_ALLOWNOMEM))) {
     return nullptr;
@@ -783,7 +777,7 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
   MemMapT MemMap = ReservedMemory.dispatch(ReservedMemory.getBase(),
                                            ReservedMemory.getCapacity());
   uptr MapBase = MemMap.getBase();
-  uptr CommitBase = MapBase + getGuardPageSize();
+  uptr CommitBase = MapBase + PageSize;
   uptr MapEnd = MapBase + MapSize;
 
   // In the unlikely event of alignments larger than a page, adjust the amount
@@ -792,30 +786,25 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
     // For alignments greater than or equal to a page, the user pointer (eg:
     // the pointer that is returned by the C or C++ allocation APIs) ends up
     // on a page boundary , and our headers will live in the preceding page.
-    CommitBase =
-        roundUp(MapBase + getGuardPageSize() + 1, Alignment) - PageSize;
+    CommitBase = roundUp(MapBase + PageSize + 1, Alignment) - PageSize;
+    const uptr NewMapBase = CommitBase - PageSize;
+    DCHECK_GE(NewMapBase, MapBase);
     // We only trim the extra memory on 32-bit platforms: 64-bit platforms
     // are less constrained memory wise, and that saves us two syscalls.
-    if (SCUDO_WORDSIZE == 32U) {
-      const uptr NewMapBase = CommitBase - getGuardPageSize();
-      DCHECK_GE(NewMapBase, MapBase);
-      if (NewMapBase != MapBase) {
-        MemMap.unmap(MapBase, NewMapBase - MapBase);
-        MapBase = NewMapBase;
-      }
-      // CommitBase is past the first guard page, but this computation needs
-      // to include a page where the header lives.
-      const uptr NewMapEnd =
-          CommitBase + PageSize + roundUp(Size, PageSize) + getGuardPageSize();
-      DCHECK_LE(NewMapEnd, MapEnd);
-      if (NewMapEnd != MapEnd) {
-        MemMap.unmap(NewMapEnd, MapEnd - NewMapEnd);
-        MapEnd = NewMapEnd;
-      }
+    if (SCUDO_WORDSIZE == 32U && NewMapBase != MapBase) {
+      MemMap.unmap(MapBase, NewMapBase - MapBase);
+      MapBase = NewMapBase;
+    }
+    const uptr NewMapEnd =
+        CommitBase + PageSize + roundUp(Size, PageSize) + PageSize;
+    DCHECK_LE(NewMapEnd, MapEnd);
+    if (SCUDO_WORDSIZE == 32U && NewMapEnd != MapEnd) {
+      MemMap.unmap(NewMapEnd, MapEnd - NewMapEnd);
+      MapEnd = NewMapEnd;
     }
   }
 
-  const uptr CommitSize = MapEnd - getGuardPageSize() - CommitBase;
+  const uptr CommitSize = MapEnd - PageSize - CommitBase;
   const uptr AllocPos = roundDown(CommitBase + CommitSize - Size, Alignment);
   if (!mapSecondary<Config>(Options, CommitBase, CommitSize, AllocPos, 0,
                             MemMap)) {
@@ -823,8 +812,6 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
     return nullptr;
   }
   const uptr HeaderPos = AllocPos - getHeadersSize();
-  // Make sure that the header is not in the guard page or before the base.
-  DCHECK_GE(HeaderPos, MapBase + getGuardPageSize());
   LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(
       LargeBlock::addHeaderTag<Config>(HeaderPos));
   if (useMemoryTagging<Config>(Options))

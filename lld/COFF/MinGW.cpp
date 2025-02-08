@@ -25,8 +25,9 @@ using namespace lld;
 using namespace lld::coff;
 
 AutoExporter::AutoExporter(
-    SymbolTable &symtab, const llvm::DenseSet<StringRef> &manualExcludeSymbols)
-    : manualExcludeSymbols(manualExcludeSymbols), symtab(symtab) {
+    COFFLinkerContext &ctx,
+    const llvm::DenseSet<StringRef> &manualExcludeSymbols)
+    : manualExcludeSymbols(manualExcludeSymbols), ctx(ctx) {
   excludeLibs = {
       "libgcc",
       "libgcc_s",
@@ -50,6 +51,7 @@ AutoExporter::AutoExporter(
       "libc++",
       "libc++abi",
       "libFortranRuntime",
+      "libFortranDecimal",
       "libunwind",
       "libmsvcrt",
       "libucrtbase",
@@ -82,7 +84,7 @@ AutoExporter::AutoExporter(
       "_NULL_THUNK_DATA",
   };
 
-  if (symtab.machine == I386) {
+  if (ctx.config.machine == I386) {
     excludeSymbols = {
         "__NULL_IMPORT_DESCRIPTOR",
         "__pei386_runtime_relocator",
@@ -92,7 +94,6 @@ AutoExporter::AutoExporter(
         "__fmode",
         "_environ",
         "___dso_handle",
-        "__load_config_used",
         // These are the MinGW names that differ from the standard
         // ones (lacking an extra underscore).
         "_DllMain@12",
@@ -110,7 +111,6 @@ AutoExporter::AutoExporter(
         "_fmode",
         "environ",
         "__dso_handle",
-        "_load_config_used",
         // These are the MinGW names that differ from the standard
         // ones (lacking an extra underscore).
         "DllMain",
@@ -118,10 +118,6 @@ AutoExporter::AutoExporter(
         "DllMainCRTStartup",
     };
     excludeSymbolPrefixes.insert("_head_");
-  }
-  if (symtab.isEC()) {
-    excludeSymbols.insert("__chpe_metadata");
-    excludeSymbolPrefixes.insert("__os_arm64x_");
   }
 }
 
@@ -155,7 +151,7 @@ bool AutoExporter::shouldExport(Defined *sym) const {
       return false;
 
   // If a corresponding __imp_ symbol exists and is defined, don't export it.
-  if (symtab.find(("__imp_" + sym->getName()).str()))
+  if (ctx.symtab.find(("__imp_" + sym->getName()).str()))
     return false;
 
   // Check that file is non-null before dereferencing it, symbols not

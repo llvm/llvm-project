@@ -25,7 +25,7 @@ class COFFLinkerContext;
 // symbols for MinGW.
 class AutoExporter {
 public:
-  AutoExporter(SymbolTable &symtab,
+  AutoExporter(COFFLinkerContext &ctx,
                const llvm::DenseSet<StringRef> &manualExcludeSymbols);
 
   void addWholeArchive(StringRef path);
@@ -42,7 +42,7 @@ public:
   bool shouldExport(Defined *sym) const;
 
 private:
-  SymbolTable &symtab;
+  COFFLinkerContext &ctx;
 };
 
 void writeDefFile(COFFLinkerContext &, StringRef name,

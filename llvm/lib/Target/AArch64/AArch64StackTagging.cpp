@@ -575,7 +575,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       TagPCall->setName(Info.AI->getName() + ".tag");
     // Does not replace metadata, so we don't have to handle DbgVariableRecords.
     Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
-      return !isa<LifetimeIntrinsic>(U.getUser());
+      return !memtag::isLifetimeIntrinsic(U.getUser());
     });
     TagPCall->setOperand(0, Info.AI);
 

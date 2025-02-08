@@ -24,7 +24,6 @@ static_library("ValueObject") {
   ]
   include_dirs = [ ".." ]
   sources = [
-    "DILLexer.cpp",
     "ValueObject.cpp",
     "ValueObjectCast.cpp",
     "ValueObjectChild.cpp",
@@ -38,7 +37,7 @@ static_library("ValueObject") {
     "ValueObjectRegister.cpp",
     "ValueObjectSyntheticFilter.cpp",
     "ValueObjectUpdater.cpp",
-    "ValueObjectVTable.cpp",
     "ValueObjectVariable.cpp",
+    "ValueObjectVTable.cpp",
   ]
 }

@@ -15,14 +15,8 @@
 #ifndef __OMP_H
 #   define __OMP_H
 
-#   ifndef __has_include
-#   define __has_include(x) 0
-#   endif
-
 #   include <stddef.h>
-#   if (__has_include(<stdlib.h>))
-#     include <stdlib.h>
-#   endif
+#   include <stdlib.h>
 #   include <stdint.h>
 
 #   define KMP_VERSION_MAJOR    @LIBOMP_VERSION_MAJOR@

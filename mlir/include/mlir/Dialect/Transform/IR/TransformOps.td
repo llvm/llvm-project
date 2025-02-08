@@ -886,9 +886,7 @@ def IncludeOp : TransformDialectOp<"include",
 
   let arguments = (ins SymbolRefAttr:$target,
                        FailurePropagationMode:$failure_propagation_mode,
-                       Variadic<Transform_AnyHandleOrParamType>:$operands,
-                       OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs);
+                       Variadic<Transform_AnyHandleOrParamType>:$operands);
   let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
 
   let assemblyFormat =

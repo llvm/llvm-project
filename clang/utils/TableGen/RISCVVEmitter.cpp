@@ -18,12 +18,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include "llvm/TableGen/StringToOffsetTable.h"
 #include <optional>
 
 using namespace llvm;
@@ -500,68 +498,31 @@ void RVVEmitter::createBuiltins(raw_ostream &OS) {
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
   createRVVIntrinsics(Defs);
 
-  llvm::StringToOffsetTable Table;
-  // Ensure offset zero is the empty string.
-  Table.GetOrAddStringOffset("");
-  // Hard coded strings used in the builtin structures.
-  Table.GetOrAddStringOffset("n");
-  Table.GetOrAddStringOffset("zve32x");
-
-  // Map to unique the builtin names.
+  // Map to keep track of which builtin names have already been emitted.
   StringMap<RVVIntrinsic *> BuiltinMap;
-  std::vector<RVVIntrinsic *> UniqueDefs;
+
+  OS << "#if defined(TARGET_BUILTIN) && !defined(RISCVV_BUILTIN)\n";
+  OS << "#define RISCVV_BUILTIN(ID, TYPE, ATTRS) TARGET_BUILTIN(ID, TYPE, "
+        "ATTRS, \"zve32x\")\n";
+  OS << "#endif\n";
   for (auto &Def : Defs) {
-    auto P = BuiltinMap.insert({Def->getBuiltinName(), Def.get()});
-    if (P.second) {
-      Table.GetOrAddStringOffset(Def->getBuiltinName());
-      if (!Def->hasBuiltinAlias())
-        Table.GetOrAddStringOffset(Def->getBuiltinTypeStr());
-      UniqueDefs.push_back(Def.get());
+    auto P =
+        BuiltinMap.insert(std::make_pair(Def->getBuiltinName(), Def.get()));
+    if (!P.second) {
+      // Verf that this would have produced the same builtin definition.
+      if (P.first->second->hasBuiltinAlias() != Def->hasBuiltinAlias())
+        PrintFatalError("Builtin with same name has different hasAutoDef");
+      else if (!Def->hasBuiltinAlias() &&
+               P.first->second->getBuiltinTypeStr() != Def->getBuiltinTypeStr())
+        PrintFatalError("Builtin with same name has different type string");
       continue;
     }
-
-    // Verf that this would have produced the same builtin definition.
-    if (P.first->second->hasBuiltinAlias() != Def->hasBuiltinAlias())
-      PrintFatalError("Builtin with same name has different hasAutoDef");
-    else if (!Def->hasBuiltinAlias() &&
-             P.first->second->getBuiltinTypeStr() != Def->getBuiltinTypeStr())
-      PrintFatalError("Builtin with same name has different type string");
+    OS << "RISCVV_BUILTIN(__builtin_rvv_" << Def->getBuiltinName() << ",\"";
+    if (!Def->hasBuiltinAlias())
+      OS << Def->getBuiltinTypeStr();
+    OS << "\", \"n\")\n";
   }
-
-  // Emit the enumerators of RVV builtins. Note that these are emitted without
-  // any outer context to enable concatenating them.
-  OS << "// RISCV Vector builtin enumerators\n";
-  OS << "#ifdef GET_RISCVV_BUILTIN_ENUMERATORS\n";
-  for (RVVIntrinsic *Def : UniqueDefs)
-    OS << "  BI__builtin_rvv_" << Def->getBuiltinName() << ",\n";
-  OS << "#endif // GET_RISCVV_BUILTIN_ENUMERATORS\n\n";
-
-  // Emit the string table for the RVV builtins.
-  OS << "// RISCV Vector builtin enumerators\n";
-  OS << "#ifdef GET_RISCVV_BUILTIN_STR_TABLE\n";
-  Table.EmitStringTableDef(OS, "BuiltinStrings");
-  OS << "#endif // GET_RISCVV_BUILTIN_STR_TABLE\n\n";
-
-  // Emit the info structs of RVV builtins. Note that these are emitted without
-  // any outer context to enable concatenating them.
-  OS << "// RISCV Vector builtin infos\n";
-  OS << "#ifdef GET_RISCVV_BUILTIN_INFOS\n";
-  for (RVVIntrinsic *Def : UniqueDefs) {
-    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
-       << Table.GetStringOffset(Def->getBuiltinName()) << " /* "
-       << Def->getBuiltinName() << " */, ";
-    if (Def->hasBuiltinAlias()) {
-      OS << "0, ";
-    } else {
-      OS << Table.GetStringOffset(Def->getBuiltinTypeStr()) << " /* "
-         << Def->getBuiltinTypeStr() << " */, ";
-    }
-    OS << Table.GetStringOffset("n") << " /* n */, ";
-    OS << Table.GetStringOffset("zve32x") << " /* zve32x */}, ";
-
-    OS << "HeaderDesc::NO_HEADER, ALL_LANGUAGES},\n";
-  }
-  OS << "#endif // GET_RISCVV_BUILTIN_INFOS\n\n";
+  OS << "#undef RISCVV_BUILTIN\n";
 }
 
 void RVVEmitter::createCodeGen(raw_ostream &OS) {

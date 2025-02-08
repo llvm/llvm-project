@@ -70,11 +70,6 @@ public:
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
     return getPointerSize(SrcAS) == getPointerSize(DestAS);
   }
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override;
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override;
 
 private:
   bool isLittle;

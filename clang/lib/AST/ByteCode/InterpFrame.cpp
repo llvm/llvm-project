@@ -99,7 +99,7 @@ void InterpFrame::initScope(unsigned Idx) {
 }
 
 void InterpFrame::destroy(unsigned Idx) {
-  for (auto &Local : Func->getScope(Idx).locals_reverse()) {
+  for (auto &Local : Func->getScope(Idx).locals()) {
     S.deallocate(localBlock(Local.Offset));
   }
 }

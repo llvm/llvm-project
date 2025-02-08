@@ -142,13 +142,11 @@ llvm::Expected<TranslationUnitDeps>
 DependencyScanningTool::getTranslationUnitDependencies(
     const std::vector<std::string> &CommandLine, StringRef CWD,
     const llvm::DenseSet<ModuleID> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput,
-    std::optional<llvm::MemoryBufferRef> TUBuffer) {
+    LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
-  llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer,
-                                                  Controller, TUBuffer);
-
+  llvm::Error Result =
+      Worker.computeDependencies(CWD, CommandLine, Consumer, Controller);
   if (Result)
     return std::move(Result);
   return Consumer.takeTranslationUnitDeps();

@@ -37,7 +37,7 @@ static void sigfpeHandler(int sig) {
 }
 
 FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
-  auto *oldSIGFPEHandler = signal(SIGFPE, &sigfpeHandler);
+  sighandler_t oldSIGFPEHandler = signal(SIGFPE, &sigfpeHandler);
 
   caughtExcept = false;
   fenv_t oldEnv;

@@ -172,4 +172,7 @@ class LibcxxSpanDataFormatterTestCase(TestBase):
 
         # The pointer should just show the right number of elements:
 
-        self.expect("frame variable ptr", patterns=["ptr = 0x.*", " size=5"])
+        ptrAddr = self.findVariable("ptr").GetValue()
+        self.expect_expr(
+            "ptr", result_type="std::span<int, 5> *", result_summary=f"{ptrAddr} size=5"
+        )

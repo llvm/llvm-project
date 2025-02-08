@@ -10,7 +10,6 @@ Implementation Status
    complex
    cpio
    ctype
-   endian
    errno
    fenv
    float

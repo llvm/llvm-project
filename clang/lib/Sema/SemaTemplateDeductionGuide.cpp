@@ -1227,14 +1227,11 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
         NewParam->setScopeInfo(0, I);
         FPTL.setParam(I, NewParam);
       }
-      auto *Transformed = cast<CXXDeductionGuideDecl>(buildDeductionGuide(
+      auto *Transformed = cast<FunctionDecl>(buildDeductionGuide(
           SemaRef, AliasTemplate, /*TemplateParams=*/nullptr,
           /*Constructor=*/nullptr, DG->getExplicitSpecifier(), FunctionType,
           AliasTemplate->getBeginLoc(), AliasTemplate->getLocation(),
           AliasTemplate->getEndLoc(), DG->isImplicit()));
-      Transformed->setSourceDeductionGuide(DG);
-      Transformed->setSourceDeductionGuideKind(
-          CXXDeductionGuideDecl::SourceDeductionGuideKind::Alias);
 
       // FIXME: Here the synthesized deduction guide is not a templated
       // function. Per [dcl.decl]p4, the requires-clause shall be present only

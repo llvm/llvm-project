@@ -765,12 +765,6 @@ bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind) {
   return false;
 }
 
-bool clang::isOpenMPOrderConcurrentNestableDirective(
-    OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_atomic || DKind == OMPD_loop || DKind == OMPD_simd ||
-         DKind == OMPD_parallel || isOpenMPLoopTransformationDirective(DKind);
-}
-
 void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {

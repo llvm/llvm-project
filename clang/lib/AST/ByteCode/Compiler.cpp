@@ -4676,7 +4676,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       OCE && OCE->isAssignmentOp()) {
     // Just like with regular assignments, we need to special-case assignment
     // operators here and evaluate the RHS (the second arg) before the LHS (the
-    // first arg). We fix this by using a Flip op later.
+    // first arg. We fix this by using a Flip op later.
     assert(Args.size() == 2);
     IsAssignmentOperatorCall = true;
     std::reverse(Args.begin(), Args.end());
@@ -4715,14 +4715,6 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     } else if (!this->visit(MC->getImplicitObjectArgument())) {
       return false;
     }
-  } else if (const auto *PD =
-                 dyn_cast<CXXPseudoDestructorExpr>(E->getCallee())) {
-    const Expr *Base = PD->getBase();
-    if (!Base->isGLValue())
-      return this->discard(Base);
-    if (!this->visit(Base))
-      return false;
-    return this->emitKill(E);
   } else if (!FuncDecl) {
     const Expr *Callee = E->getCallee();
     CalleeOffset = this->allocateLocalPrimitive(Callee, PT_FnPtr, true, false);
@@ -5604,22 +5596,6 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
 
       if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr))
         return false;
-
-      // Mark all chain links as initialized.
-      unsigned InitFieldOffset = 0;
-      for (const NamedDecl *ND : IFD->chain().drop_back()) {
-        const auto *FD = cast<FieldDecl>(ND);
-        const Record *FieldRecord = this->P.getOrCreateRecord(FD->getParent());
-        assert(FieldRecord);
-        NestedField = FieldRecord->getField(FD);
-        InitFieldOffset += NestedField->Offset;
-        assert(NestedField);
-        if (!this->emitGetPtrThisField(InitFieldOffset, InitExpr))
-          return false;
-        if (!this->emitFinishInitPop(InitExpr))
-          return false;
-      }
-
     } else {
       assert(Init->isDelegatingInitializer());
       if (!this->emitThis(InitExpr))
@@ -5689,21 +5665,6 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::compileUnionAssignmentOperator(
-    const CXXMethodDecl *MD) {
-  if (!this->emitThis(MD))
-    return false;
-
-  auto PVD = MD->getParamDecl(0);
-  ParamOffset PO = this->Params[PVD]; // Must exist.
-
-  if (!this->emitGetParam(PT_Ptr, PO.Offset, MD))
-    return false;
-
-  return this->emitMemcpy(MD) && this->emitRet(PT_Ptr, MD);
-}
-
-template <class Emitter>
 bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
@@ -5714,16 +5675,9 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
     return this->compileDestructor(Dtor);
 
   // Emit custom code if this is a lambda static invoker.
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
-    const RecordDecl *RD = MD->getParent();
-
-    if (RD->isUnion() &&
-        (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()))
-      return this->compileUnionAssignmentOperator(MD);
-
-    if (MD->isLambdaStaticInvoker())
-      return this->emitLambdaStaticInvokerBody(MD);
-  }
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(F);
+      MD && MD->isLambdaStaticInvoker())
+    return this->emitLambdaStaticInvokerBody(MD);
 
   // Regular functions.
   if (const auto *Body = F->getBody())
@@ -6234,6 +6188,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
       return this->emitGetPtrParam(It->second.Offset, E);
     }
+
+    if (D->getType()->isReferenceType())
+      return this->emitDummyPtr(D, E);
   }
 
   // In case we need to re-visit a declaration.

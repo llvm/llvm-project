@@ -25,7 +25,7 @@ add_flang_library(FortranParser
   user-state.cpp
 
   LINK_LIBS
-  FortranSupport
+  FortranCommon
 
   LINK_COMPONENTS
   Support

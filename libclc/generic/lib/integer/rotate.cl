@@ -1,7 +1,4 @@
 #include <clc/clc.h>
-#include <clc/integer/clc_rotate.h>
 
-#define FUNCTION rotate
-#define __CLC_BODY <clc/shared/binary_def.inc>
-
+#define __CLC_BODY <rotate.inc>
 #include <clc/integer/gentype.inc>

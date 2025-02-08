@@ -8,9 +8,6 @@
 
 // Intrinsic subroutines RANDOM_INIT, RANDOM_NUMBER, and RANDOM_SEED.
 
-#ifndef FORTRAN_RUNTIME_RANDOM_H_
-#define FORTRAN_RUNTIME_RANDOM_H_
-
 #include "flang/Runtime/entry-names.h"
 #include <cstdint>
 
@@ -38,5 +35,3 @@ void RTNAME(RandomSeed)(const Descriptor *size, const Descriptor *put,
 
 } // extern "C"
 } // namespace Fortran::runtime
-
-#endif // FORTRAN_RUNTIME_RANDOM_H_

@@ -44,6 +44,8 @@ struct DynamicScheduleTracker {
 #define NOT_FINISHED 1
 #define LAST_CHUNK 2
 
+#pragma omp begin declare target device_type(nohost)
+
 // TODO: This variable is a hack inherited from the old runtime.
 static uint64_t SHARED(Cnt);
 
@@ -933,3 +935,5 @@ OMP_LOOP_ENTRY(_4u, uint32_t)
 OMP_LOOP_ENTRY(_8, int64_t)
 OMP_LOOP_ENTRY(_8u, uint64_t)
 }
+
+#pragma omp end declare target

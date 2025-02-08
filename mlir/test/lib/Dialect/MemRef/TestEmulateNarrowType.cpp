@@ -99,8 +99,7 @@ struct TestEmulateNarrowTypePass
 
     arith::populateArithNarrowTypeEmulationPatterns(typeConverter, patterns);
     memref::populateMemRefNarrowTypeEmulationPatterns(typeConverter, patterns);
-    vector::populateVectorNarrowTypeEmulationPatterns(typeConverter, patterns,
-                                                      disableAtomicRMW);
+    vector::populateVectorNarrowTypeEmulationPatterns(typeConverter, patterns);
 
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
@@ -118,12 +117,6 @@ struct TestEmulateNarrowTypePass
   Option<bool> disableMemrefTypeConversion{
       *this, "skip-memref-type-conversion",
       llvm::cl::desc("disable memref type conversion (to test failures)"),
-      llvm::cl::init(false)};
-
-  Option<bool> disableAtomicRMW{
-      *this, "disable-atomic-rmw",
-      llvm::cl::desc("disable atomic read-modify-write and prefer generating "
-                     "normal sequence"),
       llvm::cl::init(false)};
 };
 } // namespace

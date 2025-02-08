@@ -291,9 +291,10 @@ struct Allocator {
 
   atomic_uint8_t destructing;
   atomic_uint8_t constructed;
+  bool print_text;
 
   // ------------------- Initialization ------------------------
-  explicit Allocator(LinkerInitialized) {
+  explicit Allocator(LinkerInitialized) : print_text(flags()->print_text) {
     atomic_store_relaxed(&destructing, 0);
     atomic_store_relaxed(&constructed, 1);
   }
@@ -349,13 +350,13 @@ struct Allocator {
   }
 
   void FinishAndWrite() {
-    if (flags()->print_text && common_flags()->print_module_map)
+    if (print_text && common_flags()->print_module_map)
       DumpProcessMap();
 
     allocator.ForceLock();
 
     InsertLiveBlocks();
-    if (flags()->print_text) {
+    if (print_text) {
       if (!flags()->print_terse)
         Printf("Recorded MIBs (incl. live on exit):\n");
       MIBMap.ForEach(PrintCallback,

@@ -19,6 +19,8 @@
 
 using namespace ompx;
 
+#pragma omp begin declare target device_type(nohost)
+
 [[gnu::used, gnu::retain, gnu::weak,
   gnu::visibility(
       "protected")]] DeviceMemoryPoolTy __omp_rtl_device_memory_pool;
@@ -75,3 +77,5 @@ void *allocator::alloc(uint64_t Size) { return BumpAllocator.alloc(Size); }
 void allocator::free(void *Ptr) { BumpAllocator.free(Ptr); }
 
 ///}
+
+#pragma omp end declare target

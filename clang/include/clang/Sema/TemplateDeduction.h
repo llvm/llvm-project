@@ -54,7 +54,7 @@ class TemplateDeductionInfo {
   /// Have we matched any packs on the parameter side, versus any non-packs on
   /// the argument side, in a context where the opposite matching is also
   /// allowed?
-  bool StrictPackMatch = false;
+  bool MatchedPackOnParmToNonPackOnArg = false;
 
   /// The template parameter depth for which we're performing deduction.
   unsigned DeducedDepth;
@@ -92,9 +92,13 @@ public:
     return DeducedDepth;
   }
 
-  bool hasStrictPackMatch() const { return StrictPackMatch; }
+  bool hasMatchedPackOnParmToNonPackOnArg() const {
+    return MatchedPackOnParmToNonPackOnArg;
+  }
 
-  void setStrictPackMatch() { StrictPackMatch = true; }
+  void setMatchedPackOnParmToNonPackOnArg() {
+    MatchedPackOnParmToNonPackOnArg = true;
+  }
 
   /// Get the number of explicitly-specified arguments.
   unsigned getNumExplicitArgs() const {

@@ -347,7 +347,7 @@ YAMLGenerator::generateDocs(StringRef RootDir,
     }
 
     std::error_code FileErr;
-    llvm::raw_fd_ostream InfoOS(Path, FileErr, llvm::sys::fs::OF_Text);
+    llvm::raw_fd_ostream InfoOS(Path, FileErr, llvm::sys::fs::OF_None);
     if (FileErr) {
       return llvm::createStringError(FileErr, "Error opening file '%s'",
                                      Path.c_str());

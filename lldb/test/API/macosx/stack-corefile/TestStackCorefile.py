@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestStackCorefile(TestBase):
+    @skipIfOutOfTreeDebugserver  # newer debugserver required for these qMemoryRegionInfo types
     @no_debug_info_test
     @skipUnlessDarwin
     @skipIfRemote

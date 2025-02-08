@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/intrinsics.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/check-expression.h"
@@ -18,7 +19,6 @@
 #include "flang/Evaluate/type.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
-#include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cmath>

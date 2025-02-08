@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -236,12 +235,7 @@ public:
       return rewriter.notifyMatchFailure(reshape.getLoc(),
                                          "expected input type to be tensor");
     }
-
-    llvm::SmallVector<int64_t> newShape;
-    if (!tosa::getConstShapeValue(reshape.getShape().getDefiningOp(),
-                                  newShape)) {
-      return failure();
-    }
+    auto newShape = reshape.getNewShape();
 
     // Infer all intermediate types
     auto inputType = inferReshapeInputType(input, newShape);
@@ -364,10 +358,10 @@ public:
       TypedAttr constantAttr;
       if (isa<FloatType>(elementTy)) {
         constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-      } else if (isa<IntegerType>(elementTy) && !padOp.getInputZpAttr()) {
+      } else if (isa<IntegerType>(elementTy) && !padOp.getQuantizationInfo()) {
         constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-      } else if (isa<IntegerType>(elementTy) && padOp.getInputZpAttr()) {
-        int64_t value = padOp.getInputZpAttr().getInt();
+      } else if (isa<IntegerType>(elementTy) && padOp.getQuantizationInfo()) {
+        int64_t value = padOp.getQuantizationInfo()->getInputZp();
         constantAttr = rewriter.getIntegerAttr(elementTy, value);
       }
       if (constantAttr)

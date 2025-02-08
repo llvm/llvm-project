@@ -445,36 +445,6 @@ TEST(TestRtsanInterceptors, CloseDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
-TEST(TestRtsanInterceptors, ChdirDiesWhenRealtime) {
-  auto Func = []() { chdir("."); };
-  ExpectRealtimeDeath(Func, "chdir");
-  ExpectNonRealtimeSurvival(Func);
-}
-
-TEST(TestRtsanInterceptors, FchdirDiesWhenRealtime) {
-  auto Func = []() { fchdir(0); };
-  ExpectRealtimeDeath(Func, "fchdir");
-  ExpectNonRealtimeSurvival(Func);
-}
-
-#if SANITIZER_INTERCEPT_READLINK
-TEST(TestRtsanInterceptors, ReadlinkDiesWhenRealtime) {
-  char buf[1024];
-  auto Func = [&buf]() { readlink("/proc/self", buf, sizeof(buf)); };
-  ExpectRealtimeDeath(Func, "readlink");
-  ExpectNonRealtimeSurvival(Func);
-}
-#endif
-
-#if SANITIZER_INTERCEPT_READLINKAT
-TEST(TestRtsanInterceptors, ReadlinkatDiesWhenRealtime) {
-  char buf[1024];
-  auto Func = [&buf]() { readlinkat(0, "/proc/self", buf, sizeof(buf)); };
-  ExpectRealtimeDeath(Func, "readlinkat");
-  ExpectNonRealtimeSurvival(Func);
-}
-#endif
-
 TEST_F(RtsanFileTest, FopenDiesWhenRealtime) {
   auto Func = [this]() {
     FILE *f = fopen(GetTemporaryFilePath(), "w");

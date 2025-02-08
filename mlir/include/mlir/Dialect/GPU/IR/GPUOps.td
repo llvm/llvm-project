@@ -794,9 +794,9 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
 }
 
 def GPU_LaunchOp : GPU_Op<"launch", [
-      AffineScope, AutomaticAllocationScope, AttrSizedOperandSegments,
+      AutomaticAllocationScope, AttrSizedOperandSegments, GPU_AsyncOpInterface,
       DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-      GPU_AsyncOpInterface, RecursiveMemoryEffects]>,
+      RecursiveMemoryEffects]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,

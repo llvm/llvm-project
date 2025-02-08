@@ -34,7 +34,6 @@ add_flang_library(FortranLower
   OpenMP/Utils.cpp
   PFTBuilder.cpp
   Runtime.cpp
-  Support/Utils.cpp
   SymbolMap.cpp
   VectorSubscripts.cpp
   
@@ -56,7 +55,7 @@ add_flang_library(FortranLower
   FIRSupport
   FIRTransforms
   HLFIRDialect
-  FortranSupport
+  FortranCommon
   FortranParser
   FortranEvaluate
   FortranSemantics

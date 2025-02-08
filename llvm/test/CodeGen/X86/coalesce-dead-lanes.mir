@@ -1,5 +1,4 @@
 # RUN: llc -run-pass register-coalescer -O0 -mtriple x86_64-pc-linux-gnu -o - %s | FileCheck %s
-# RUN: llc -passes register-coalescer -O0 -mtriple x86_64-pc-linux-gnu -o - %s | FileCheck %s
 
 ---
 name:            foo

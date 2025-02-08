@@ -1708,13 +1708,10 @@ FailureOr<Block *> ConversionPatternRewriter::convertRegionTypes(
 void ConversionPatternRewriter::replaceUsesOfBlockArgument(BlockArgument from,
                                                            Value to) {
   LLVM_DEBUG({
-    impl->logger.startLine() << "** Replace Argument : '" << from << "'";
-    if (Operation *parentOp = from.getOwner()->getParentOp()) {
-      impl->logger.getOStream() << " (in region of '" << parentOp->getName()
-                                << "' (" << parentOp << ")\n";
-    } else {
-      impl->logger.getOStream() << " (unlinked block)\n";
-    }
+    Operation *parentOp = from.getOwner()->getParentOp();
+    impl->logger.startLine() << "** Replace Argument : '" << from
+                             << "'(in region of '" << parentOp->getName()
+                             << "'(" << from.getOwner()->getParentOp() << ")\n";
   });
   impl->appendRewrite<ReplaceBlockArgRewrite>(from.getOwner(), from,
                                               impl->currentTypeConverter);

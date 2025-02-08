@@ -1,9 +1,0 @@
-header: endian.h
-header_template: endian.h.def
-standards:
-  - POSIX
-macros: []
-types: []
-enums: []
-objects: []
-functions: []

@@ -240,7 +240,7 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
   else if (isRecord())
     OS << " record";
   else if (isPrimitive())
-    OS << " primitive " << primTypeToString(getPrimType());
+    OS << " primitive";
 
   if (isZeroSizeArray())
     OS << " zero-size-array";

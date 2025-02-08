@@ -305,7 +305,7 @@ add_fp_unittest(
   SRCS
     hypotf_test.cpp
   COMPILE_OPTIONS
-    ${libc_opt_high_flag}
+    -O3
   DEPENDS
     .exhaustive_test
     libc.src.math.hypotf

@@ -20,7 +20,7 @@ namespace llvm {
 
 /// Note that you have to add:
 ///   DAG.addMutation(createARMMacroFusionDAGMutation());
-/// to ARMTargetMachine::createMachineScheduler() to have an effect.
+/// to ARMPassConfig::createMachineScheduler() to have an effect.
 std::unique_ptr<ScheduleDAGMutation> createARMMacroFusionDAGMutation();
 
 } // llvm

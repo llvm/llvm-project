@@ -21,21 +21,20 @@ inline clang::DeclarationName getDeclarationName(TypeSystemClang &ast,
   return ast.getASTContext().DeclarationNames.getIdentifier(&II);
 }
 
-inline CompilerType
-createRecord(TypeSystemClang &ast, llvm::StringRef name,
-             lldb::LanguageType lang = lldb::LanguageType::eLanguageTypeC) {
+inline CompilerType createRecord(TypeSystemClang &ast, llvm::StringRef name) {
   return ast.CreateRecordType(ast.getASTContext().getTranslationUnitDecl(),
                               OptionalClangModuleID(),
-                              lldb::AccessType::eAccessPublic, name, 0, lang);
+                              lldb::AccessType::eAccessPublic, name, 0,
+                              lldb::LanguageType::eLanguageTypeC);
 }
 
 /// Create a record with the given name and a field with the given type
 /// and name.
-inline CompilerType createRecordWithField(
-    TypeSystemClang &ast, llvm::StringRef record_name, CompilerType field_type,
-    llvm::StringRef field_name,
-    lldb::LanguageType lang = lldb::LanguageType::eLanguageTypeC) {
-  CompilerType t = createRecord(ast, record_name, lang);
+inline CompilerType createRecordWithField(TypeSystemClang &ast,
+                                          llvm::StringRef record_name,
+                                          CompilerType field_type,
+                                          llvm::StringRef field_name) {
+  CompilerType t = createRecord(ast, record_name);
 
   TypeSystemClang::StartTagDeclarationDefinition(t);
   ast.AddFieldToRecordType(t, field_name, field_type,
@@ -64,13 +63,12 @@ struct SourceASTWithRecord {
   CompilerType record_type;
   clang::RecordDecl *record_decl = nullptr;
   clang::FieldDecl *field_decl = nullptr;
-  SourceASTWithRecord(
-      lldb::LanguageType lang = lldb::LanguageType::eLanguageTypeC) {
+  SourceASTWithRecord() {
     holder = std::make_unique<TypeSystemClangHolder>("test ASTContext");
     ast = holder->GetAST();
     record_type = createRecordWithField(
         *ast, "Source", ast->GetBasicType(lldb::BasicType::eBasicTypeChar),
-        "a_field", lang);
+        "a_field");
     record_decl =
         llvm::cast<clang::RecordDecl>(ClangUtil::GetAsTagDecl(record_type));
     field_decl = *record_decl->fields().begin();

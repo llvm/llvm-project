@@ -1044,9 +1044,9 @@ struct EmulateWideIntPass final
       return typeConverter.isLegal(op);
     };
     target.addDynamicallyLegalOp<func::CallOp, func::ReturnOp>(opLegalCallback);
-    target.addDynamicallyLegalOp<vector::PrintOp>(opLegalCallback);
-    target.addDynamicallyLegalDialect<arith::ArithDialect>(opLegalCallback);
-    target.addLegalDialect<vector::VectorDialect>();
+    target
+        .addDynamicallyLegalDialect<arith::ArithDialect, vector::VectorDialect>(
+            opLegalCallback);
 
     RewritePatternSet patterns(ctx);
     arith::populateArithWideIntEmulationPatterns(typeConverter, patterns);

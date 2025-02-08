@@ -18,6 +18,7 @@
 #include "Decomposer.h"
 #include "ReductionProcessor.h"
 #include "Utils.h"
+#include "flang/Common/OpenMP-utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
@@ -34,7 +35,6 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
-#include "flang/Support/OpenMP-utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -1584,15 +1584,6 @@ static void genParallelClauses(
   cp.processReduction(loc, clauseOps, reductionSyms);
 }
 
-static void genScanClauses(lower::AbstractConverter &converter,
-                           semantics::SemanticsContext &semaCtx,
-                           const List<Clause> &clauses, mlir::Location loc,
-                           mlir::omp::ScanOperands &clauseOps) {
-  ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processInclusive(loc, clauseOps);
-  cp.processExclusive(loc, clauseOps);
-}
-
 static void genSectionsClauses(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     const List<Clause> &clauses, mlir::Location loc,
@@ -1990,16 +1981,6 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   return parallelOp;
 }
 
-static mlir::omp::ScanOp
-genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
-          semantics::SemanticsContext &semaCtx, mlir::Location loc,
-          const ConstructQueue &queue, ConstructQueue::const_iterator item) {
-  mlir::omp::ScanOperands clauseOps;
-  genScanClauses(converter, semaCtx, item->clauses, loc, clauseOps);
-  return converter.getFirOpBuilder().create<mlir::omp::ScanOp>(
-      converter.getCurrentLocation(), clauseOps);
-}
-
 /// This breaks the normal prototype of the gen*Op functions: adding the
 /// sectionBlocks argument so that the enclosed section constructs can be
 /// lowered here with correct reduction symbol remapping.
@@ -2108,13 +2089,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       const auto &objList = std::get<ObjectList>(lastp->t);
       for (const Object &object : objList) {
         semantics::Symbol *sym = object.sym();
-        if (const auto *common =
-                sym->detailsIf<semantics::CommonBlockDetails>()) {
-          for (const auto &obj : common->objects())
-            converter.copyHostAssociateVar(*obj, &insp, /*hostIsSource=*/false);
-        } else {
-          converter.copyHostAssociateVar(*sym, &insp, /*hostIsSource=*/false);
-        }
+        converter.copyHostAssociateVar(*sym, &insp, /*hostIsSource=*/false);
       }
     }
   }
@@ -2544,7 +2519,7 @@ static void genStandaloneDo(lower::AbstractConverter &converter,
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatization, symTable);
+                           enableDelayedPrivatizationStaging, symTable);
   dsp.processStep1(&wsloopClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -3009,7 +2984,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     genStandaloneParallel(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_scan:
-    genScanOp(converter, symTable, semaCtx, loc, queue, item);
+    TODO(loc, "Unhandled directive " + llvm::omp::getOpenMPDirectiveName(dir));
     break;
   case llvm::omp::Directive::OMPD_section:
     llvm_unreachable("genOMPDispatch: OMPD_section");
@@ -3170,13 +3145,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OmpMetadirectiveDirective &meta) {
-  TODO(converter.getCurrentLocation(), "METADIRECTIVE");
-}
-
-static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
-                   semantics::SemanticsContext &semaCtx,
-                   lower::pft::Evaluation &eval,
                    const parser::OpenMPDeclarativeConstruct &ompDeclConstruct) {
   Fortran::common::visit(
       [&](auto &&s) { return genOMP(converter, symTable, semaCtx, eval, s); },
@@ -3265,6 +3233,11 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   TODO(converter.getCurrentLocation(), "OpenMPDepobjConstruct");
 }
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OmpMetadirectiveDirective &construct) {}
 
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

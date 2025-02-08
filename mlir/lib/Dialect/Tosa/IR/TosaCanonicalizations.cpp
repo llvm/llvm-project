@@ -180,7 +180,7 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
 
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
         op, op.getType(), op.getInput1(),
-        getTosaConstShape(rewriter, op.getLoc(), newShape));
+        rewriter.getDenseI64ArrayAttr(newShape));
     return success();
   }
 };
@@ -207,10 +207,10 @@ struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
     Attribute constantAttr;
     if (llvm::isa<FloatType>(elementTy)) {
       constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-    } else if (llvm::isa<IntegerType>(elementTy) && !op.getInputZpAttr()) {
+    } else if (llvm::isa<IntegerType>(elementTy) && !op.getQuantizationInfo()) {
       constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-    } else if (llvm::isa<IntegerType>(elementTy) && op.getInputZpAttr()) {
-      int64_t value = op.getInputZpAttr().getInt();
+    } else if (llvm::isa<IntegerType>(elementTy) && op.getQuantizationInfo()) {
+      auto value = op.getQuantizationInfo()->getInputZp();
       constantAttr = rewriter.getIntegerAttr(elementTy, value);
     }
 
@@ -948,12 +948,8 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
     if (!getInput1().hasOneUse())
       return {};
 
-    llvm::SmallVector<int64_t> shapeVec;
-    if (!tosa::getConstShapeValue(getShape().getDefiningOp(), shapeVec))
-      return {};
-
     return operand.reshape(
-        llvm::cast<ShapedType>(operand.getType()).clone(shapeVec));
+        llvm::cast<ShapedType>(operand.getType()).clone(getNewShape()));
   }
 
   return {};

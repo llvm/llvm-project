@@ -21,7 +21,6 @@
 #include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
-#include "flang/Lower/DumpEvaluateExpr.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Complex.h"
@@ -221,8 +220,7 @@ private:
     // Non simply contiguous ref require a fir.box to carry the byte stride.
     if (mlir::isa<fir::SequenceType>(resultValueType) &&
         !Fortran::evaluate::IsSimplyContiguous(
-            designatorNode, getConverter().getFoldingContext(),
-            /*namedConstantSectionsAreAlwaysContiguous=*/false))
+            designatorNode, getConverter().getFoldingContext()))
       return fir::BoxType::get(resultValueType);
     // Other designators can be handled as raw addresses.
     return fir::ReferenceType::get(resultValueType);

@@ -12,7 +12,6 @@ add_flang_library(FIRAnalysis
   LINK_LIBS
   FIRBuilder
   FIRDialect
-  FIRSupport
   HLFIRDialect
 
   MLIR_LIBS
@@ -20,4 +19,5 @@ add_flang_library(FIRAnalysis
   MLIRLLVMDialect
   MLIRMathTransforms
   MLIROpenMPDialect
+  FIRSupport
 )

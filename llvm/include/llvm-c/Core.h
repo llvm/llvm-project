@@ -322,6 +322,11 @@ typedef enum {
 } LLVMRealPredicate;
 
 typedef enum {
+  LLVMLandingPadCatch,    /**< A catch clause   */
+  LLVMLandingPadFilter    /**< A filter clause  */
+} LLVMLandingPadClauseTy;
+
+typedef enum {
   LLVMNotThreadLocal = 0,
   LLVMGeneralDynamicTLSModel,
   LLVMLocalDynamicTLSModel,

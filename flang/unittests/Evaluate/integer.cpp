@@ -1,5 +1,5 @@
 #include "flang/Evaluate/integer.h"
-#include "flang/Testing/testing.h"
+#include "testing.h"
 #include <cstdio>
 #include <string>
 

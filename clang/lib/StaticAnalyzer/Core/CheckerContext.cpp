@@ -55,7 +55,7 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
   if (BId != 0) {
     if (Name.empty())
       return true;
-    std::string BName = FD->getASTContext().BuiltinInfo.getName(BId);
+    StringRef BName = FD->getASTContext().BuiltinInfo.getName(BId);
     size_t start = BName.find(Name);
     if (start != StringRef::npos) {
       // Accept exact match.

@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInvocation.h"
+#include "flang/Common/Fortran-features.h"
+#include "flang/Common/OpenMP-features.h"
+#include "flang/Common/Version.h"
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Semantics/semantics.h"
-#include "flang/Support/Fortran-features.h"
-#include "flang/Support/OpenMP-features.h"
-#include "flang/Support/Version.h"
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/AllDiagnostics.h"
@@ -739,12 +739,6 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       Fortran::common::LanguageFeature::ImplicitNoneTypeAlways,
       args.hasFlag(clang::driver::options::OPT_fimplicit_none,
                    clang::driver::options::OPT_fno_implicit_none, false));
-
-  // -f{no-}implicit-none-ext
-  opts.features.Enable(
-      Fortran::common::LanguageFeature::ImplicitNoneExternal,
-      args.hasFlag(clang::driver::options::OPT_fimplicit_none_ext,
-                   clang::driver::options::OPT_fno_implicit_none_ext, false));
 
   // -f{no-}backslash
   opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,

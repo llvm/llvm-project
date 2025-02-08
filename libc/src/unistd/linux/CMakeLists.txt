@@ -460,18 +460,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  setsid
-  SRCS
-    setsid.cpp
-  HDRS
-    ../setsid.h
-  DEPENDS
-    libc.hdr.types.pid_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-)
-
-add_entrypoint_object(
   symlink
   SRCS
     symlink.cpp

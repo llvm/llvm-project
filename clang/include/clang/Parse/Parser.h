@@ -3710,7 +3710,6 @@ private:
     SourceLocation RParenLoc;
     SourceLocation EndLoc;
     SourceLocation MiscLoc;
-    OpenACCAtomicKind AtomicKind;
     SmallVector<Expr *> Exprs;
     SmallVector<OpenACCClause *> Clauses;
     // TODO OpenACC: As we implement support for the Atomic, Routine, and Cache

@@ -28,8 +28,8 @@
 #include <tuple>
 using namespace llvm;
 
-static cl::OptionCategory AsmParserCat("Options for -gen-asm-parser");
-static cl::OptionCategory AsmWriterCat("Options for -gen-asm-writer");
+cl::OptionCategory AsmParserCat("Options for -gen-asm-parser");
+cl::OptionCategory AsmWriterCat("Options for -gen-asm-writer");
 
 static cl::opt<unsigned>
     AsmParserNum("asmparsernum", cl::init(0),
@@ -64,9 +64,9 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
 std::string llvm::getQualifiedName(const Record *R) {
   std::string Namespace;
   if (R->getValue("Namespace"))
-    Namespace = R->getValueAsString("Namespace").str();
+    Namespace = std::string(R->getValueAsString("Namespace"));
   if (Namespace.empty())
-    return R->getName().str();
+    return std::string(R->getName());
   return Namespace + "::" + R->getName().str();
 }
 
@@ -166,15 +166,14 @@ CodeGenRegBank &CodeGenTarget::getRegBank() const {
 const CodeGenRegisterClass *CodeGenTarget::getSuperRegForSubReg(
     const ValueTypeByHwMode &ValueTy, CodeGenRegBank &RegBank,
     const CodeGenSubRegIndex *SubIdx, bool MustBeAllocatable) const {
-  std::vector<const CodeGenRegisterClass *> Candidates;
+  std::vector<CodeGenRegisterClass *> Candidates;
   auto &RegClasses = RegBank.getRegClasses();
 
   // Try to find a register class which supports ValueTy, and also contains
   // SubIdx.
-  for (const CodeGenRegisterClass &RC : RegClasses) {
+  for (CodeGenRegisterClass &RC : RegClasses) {
     // Is there a subclass of this class which contains this subregister index?
-    const CodeGenRegisterClass *SubClassWithSubReg =
-        RC.getSubClassWithSubReg(SubIdx);
+    CodeGenRegisterClass *SubClassWithSubReg = RC.getSubClassWithSubReg(SubIdx);
     if (!SubClassWithSubReg)
       continue;
 
@@ -262,40 +261,39 @@ void CodeGenTarget::ReadInstructions() const {
 
   // Parse the instructions defined in the .td file.
   for (const Record *R : Insts) {
-    auto &Inst = Instructions[R];
-    Inst = std::make_unique<CodeGenInstruction>(R);
-    if (Inst->isVariableLengthEncoding())
+    Instructions[R] = std::make_unique<CodeGenInstruction>(R);
+    if (Instructions[R]->isVariableLengthEncoding())
       HasVariableLengthEncodings = true;
   }
 }
 
 static const CodeGenInstruction *GetInstByName(
-    StringRef Name,
+    const char *Name,
     const DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>> &Insts,
     const RecordKeeper &Records) {
   const Record *Rec = Records.getDef(Name);
 
   const auto I = Insts.find(Rec);
   if (!Rec || I == Insts.end())
-    PrintFatalError("Could not find '" + Name + "' instruction!");
+    PrintFatalError(Twine("Could not find '") + Name + "' instruction!");
   return I->second.get();
 }
 
 static const char *FixedInstrs[] = {
 #define HANDLE_TARGET_OPCODE(OPC) #OPC,
 #include "llvm/Support/TargetOpcodes.def"
-};
+    nullptr};
 
 unsigned CodeGenTarget::getNumFixedInstructions() {
-  return std::size(FixedInstrs);
+  return std::size(FixedInstrs) - 1;
 }
 
 /// Return all of the instructions defined by the target, ordered by
 /// their enum value.
 void CodeGenTarget::ComputeInstrsByEnum() const {
   const auto &Insts = getInstructions();
-  for (const char *Name : FixedInstrs) {
-    const CodeGenInstruction *Instr = GetInstByName(Name, Insts, Records);
+  for (const char *const *p = FixedInstrs; *p; ++p) {
+    const CodeGenInstruction *Instr = GetInstByName(*p, Insts, Records);
     assert(Instr && "Missing target independent instruction");
     assert(Instr->Namespace == "TargetOpcode" && "Bad namespace");
     InstrsByEnum.push_back(Instr);
@@ -326,8 +324,9 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
       });
 
   // Assign an enum value to each instruction according to the sorted order.
-  for (const auto &[Idx, Inst] : enumerate(InstrsByEnum))
-    Inst->EnumVal = Idx;
+  unsigned Num = 0;
+  for (const CodeGenInstruction *Inst : InstrsByEnum)
+    Inst->EnumVal = Num++;
 }
 
 /// isLittleEndianEncoding - Return whether this target encodes its instruction

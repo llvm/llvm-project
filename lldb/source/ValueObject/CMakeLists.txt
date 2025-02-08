@@ -1,5 +1,4 @@
 add_lldb_library(lldbValueObject
-  DILLexer.cpp
   ValueObject.cpp
   ValueObjectCast.cpp
   ValueObjectChild.cpp

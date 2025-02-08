@@ -3073,8 +3073,7 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   if (ParsedAttrs.BranchProtection.empty())
     return false;
   if (!Context.getTargetInfo().validateBranchProtection(
-          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI,
-          Context.getLangOpts(), DiagMsg)) {
+          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI, DiagMsg)) {
     if (DiagMsg.empty())
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "branch-protection" << Target;

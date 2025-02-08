@@ -69,12 +69,22 @@ public:
     auto reverse2 = rewriter.create<tosa::ReverseOp>(
         loc, weightTy, reverse1, /* axis = */ rewriter.getI32IntegerAttr(2));
 
-    Value conv2d = rewriter.create<tosa::Conv2DOp>(
-        loc, resultTy, input, reverse2, bias, op.getInputZp(), op.getWeightZp(),
-        rewriter.getDenseI64ArrayAttr(convPad),
-        rewriter.getDenseI64ArrayAttr(stride),
-        rewriter.getDenseI64ArrayAttr({1, 1}),
-        /* acc_type = */ op.getAccType());
+    Value conv2d;
+    if (op.getQuantizationInfo()) {
+      conv2d = rewriter.create<tosa::Conv2DOp>(
+          loc, resultTy, input, reverse2, bias,
+          rewriter.getDenseI64ArrayAttr(convPad),
+          rewriter.getDenseI64ArrayAttr(stride),
+          rewriter.getDenseI64ArrayAttr({1, 1}),
+          /* acc_type = */ op.getAccType(), *op.getQuantizationInfo());
+    } else {
+      conv2d = rewriter.create<tosa::Conv2DOp>(
+          loc, resultTy, input, reverse2, bias,
+          rewriter.getDenseI64ArrayAttr(convPad),
+          rewriter.getDenseI64ArrayAttr(stride),
+          rewriter.getDenseI64ArrayAttr({1, 1}),
+          /* acc_type = */ op.getAccTypeAttr());
+    }
 
     rewriter.replaceOp(op, conv2d);
     return success();
@@ -134,16 +144,13 @@ public:
     Value weightPaddingVal =
         getTosaConstShape(rewriter, op->getLoc(), weightPadding);
 
-    auto failureOrMaybeZps = extractConvZpPair(op, rewriter);
-    if (failed(failureOrMaybeZps))
-      return failure();
-
-    auto maybeZps = failureOrMaybeZps.value();
-    if (maybeZps) {
+    if (op.getQuantizationInfo().has_value()) {
+      auto quantInfo = op.getQuantizationInfo().value();
       weight = CreateOpAndInferShape<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(weightETy), weight,
           weightPaddingVal, nullptr,
-          rewriter.getI32IntegerAttr(maybeZps->weightZp));
+          rewriter.getAttr<PadOpQuantizationAttr>(quantInfo.getWeightZp()));
+
     } else {
       weight = CreateOpAndInferShape<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(weightETy), weight,
@@ -159,11 +166,9 @@ public:
         outputChannels, weightHeight / stride[0],
         stride[0],      weightWidth / stride[1],
         stride[1],      inputChannels};
-
-    ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
     weight = CreateOpAndInferShape<tosa::ReshapeOp>(
-        builder, UnrankedTensorType::get(weightETy), weight,
-        getTosaConstShape(rewriter, loc, weightReshapeDims0));
+        rewriter, loc, UnrankedTensorType::get(weightETy), weight,
+        rewriter.getDenseI64ArrayAttr(weightReshapeDims0));
 
     // Transpose the factored-out stride to the output channels.
     Value transposeWeightVal = rewriter.create<tosa::ConstOp>(
@@ -175,13 +180,12 @@ public:
         transposeWeightVal);
 
     // Collapse the strides and output channels into a single dimension.
-    llvm::SmallVector<int64_t, 4> weightReshapeDims1 = {
+    llvm::SmallVector<int64_t, 6> weightReshapeDims1 = {
         outputChannels * stride[0] * stride[1], weightHeight / stride[0],
         weightWidth / stride[1], inputChannels};
-
     weight = CreateOpAndInferShape<tosa::ReshapeOp>(
         rewriter, loc, UnrankedTensorType::get(weightETy), weight,
-        getTosaConstShape(rewriter, loc, weightReshapeDims1));
+        rewriter.getDenseI64ArrayAttr(weightReshapeDims1));
     ShapedType restridedWeightTy = cast<ShapedType>(weight.getType());
 
     weight = CreateOpAndInferShape<tosa::ReverseOp>(
@@ -201,11 +205,12 @@ public:
     Value inputPaddingVal =
         getTosaConstShape(rewriter, op->getLoc(), inputPadding);
 
-    if (maybeZps) {
+    if (op.getQuantizationInfo().has_value()) {
+      auto quantInfo = op.getQuantizationInfo().value();
       input = CreateOpAndInferShape<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(inputETy), input,
           inputPaddingVal, nullptr,
-          rewriter.getI32IntegerAttr(maybeZps->inputZp));
+          rewriter.getAttr<PadOpQuantizationAttr>(quantInfo.getInputZp()));
     } else {
       input = CreateOpAndInferShape<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(inputETy), input,
@@ -222,33 +227,27 @@ public:
                                   biasETy),
             rewriter.getZeroAttr(biasETy)));
 
-    Value inputZp, weightZp;
-    if (maybeZps) {
-      auto maybeInputZp = createZeroPointTensor(
-          rewriter, loc, getElementTypeOrSelf(input.getType()),
-          maybeZps->inputZp);
-      auto maybeWeightZp = createZeroPointTensor(
-          rewriter, loc, getElementTypeOrSelf(weight.getType()),
-          maybeZps->weightZp);
-
-      if (!maybeInputZp.has_value() || !maybeWeightZp.has_value()) {
-        return rewriter.notifyMatchFailure(
-            op, "fail to create a const zero point tensor");
-      }
-
-      inputZp = *maybeInputZp;
-      weightZp = *maybeWeightZp;
-    }
-
     // Perform the convolution using the zero bias.
-    Value conv2d = CreateOpAndInferShape<tosa::Conv2DOp>(
-                       rewriter, loc, UnrankedTensorType::get(resultETy), input,
-                       weight, zeroBias, inputZp, weightZp,
-                       /*pad=*/rewriter.getDenseI64ArrayAttr({0, 0, 0, 0}),
-                       /*stride=*/rewriter.getDenseI64ArrayAttr({1, 1}),
-                       /*dilation=*/rewriter.getDenseI64ArrayAttr({1, 1}),
-                       /* acc_type = */ op.getAccType())
-                       .getResult();
+    Value conv2d;
+    if (op.getQuantizationInfo()) {
+      conv2d = CreateOpAndInferShape<tosa::Conv2DOp>(
+                   rewriter, loc, UnrankedTensorType::get(resultETy), input,
+                   weight, zeroBias,
+                   /*pad=*/rewriter.getDenseI64ArrayAttr({0, 0, 0, 0}),
+                   /*stride=*/rewriter.getDenseI64ArrayAttr({1, 1}),
+                   /*dilation=*/rewriter.getDenseI64ArrayAttr({1, 1}),
+                   /* acc_type = */ op.getAccType(), *op.getQuantizationInfo())
+                   .getResult();
+    } else {
+      conv2d = CreateOpAndInferShape<tosa::Conv2DOp>(
+                   rewriter, loc, UnrankedTensorType::get(resultETy), input,
+                   weight, zeroBias,
+                   /*pad=*/rewriter.getDenseI64ArrayAttr({0, 0, 0, 0}),
+                   /*stride=*/rewriter.getDenseI64ArrayAttr({1, 1}),
+                   /*dilation=*/rewriter.getDenseI64ArrayAttr({1, 1}),
+                   /* acc_type = */ op.getAccTypeAttr())
+                   .getResult();
+    }
 
     // Factor the resulting width / height.
     ShapedType convTy = cast<ShapedType>(conv2d.getType());
@@ -260,13 +259,9 @@ public:
     // Factor striding out of the convolution result.
     llvm::SmallVector<int64_t, 6> convReshapeDims0 = {
         batch, convHeight, convWidth, stride[0], stride[1], outputChannels};
-
-    auto convReshapeDims0Value =
-        getTosaConstShape(rewriter, loc, convReshapeDims0);
-
     conv2d = CreateOpAndInferShape<tosa::ReshapeOp>(
         rewriter, loc, UnrankedTensorType::get(resultETy), conv2d,
-        convReshapeDims0Value);
+        rewriter.getDenseI64ArrayAttr(convReshapeDims0));
 
     // Transpose the factored-out stride to the output channels.
     Value transposeConvVal = rewriter.create<tosa::ConstOp>(
@@ -280,13 +275,9 @@ public:
     // Fuse striding behavior back into width / height.
     llvm::SmallVector<int64_t, 6> convReshapeDims1 = {
         batch, convHeight * stride[0], convWidth * stride[1], outputChannels};
-
-    auto convReshapeDims1Value =
-        getTosaConstShape(rewriter, loc, convReshapeDims1);
-
     conv2d = CreateOpAndInferShape<tosa::ReshapeOp>(
         rewriter, loc, UnrankedTensorType::get(resultETy), conv2d,
-        convReshapeDims1Value);
+        rewriter.getDenseI64ArrayAttr(convReshapeDims1));
 
     // Determine the amount to slice / pad from the result start.
     int64_t resultSliceTop = std::max<int64_t>(0, -pad[0]);

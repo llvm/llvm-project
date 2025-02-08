@@ -2182,24 +2182,6 @@ the configuration (without a prefix: ``Auto``).
         aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
     }
 
-.. _BinPackLongBracedList:
-
-**BinPackLongBracedList** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BinPackLongBracedList>`
-  If ``BinPackLongBracedList`` is ``true`` it overrides
-  ``BinPackArguments`` if there are 20 or more items in a braced
-  initializer list.
-
-  .. code-block:: c++
-
-     BinPackLongBracedList: false  vs.    BinPackLongBracedList: true
-     vector<int> x{                       vector<int> x{1, 2, ...,
-                                                        20, 21};
-                 1,
-                 2,
-                 ...,
-                 20,
-                 21};
-
 .. _BinPackParameters:
 
 **BinPackParameters** (``BinPackParametersStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
@@ -3438,35 +3420,6 @@ the configuration (without a prefix: ``Auto``).
                     : val);
 
 
-
-.. _BreakBeforeTemplateCloser:
-
-**BreakBeforeTemplateCloser** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeTemplateCloser>`
-  If ``true``, break before a template closing bracket (``>``) when there is
-  a line break after the matching opening bracket (``<``).
-
-  .. code-block:: c++
-
-     true:
-     template <typename Foo, typename Bar>
-
-     template <typename Foo,
-               typename Bar>
-
-     template <
-         typename Foo,
-         typename Bar
-     >
-
-     false:
-     template <typename Foo, typename Bar>
-
-     template <typename Foo,
-               typename Bar>
-
-     template <
-         typename Foo,
-         typename Bar>
 
 .. _BreakBeforeTernaryOperators:
 

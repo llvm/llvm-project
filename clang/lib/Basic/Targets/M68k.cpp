@@ -115,8 +115,7 @@ void M68kTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__HAVE_68881__");
 }
 
-llvm::SmallVector<Builtin::InfosShard>
-M68kTargetInfo::getTargetBuiltins() const {
+ArrayRef<Builtin::Info> M68kTargetInfo::getTargetBuiltins() const {
   // FIXME: Implement.
   return {};
 }

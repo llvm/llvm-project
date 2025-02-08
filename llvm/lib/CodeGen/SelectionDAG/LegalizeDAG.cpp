@@ -4609,15 +4609,12 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandFPLibCall(Node, RTLIB::LDEXP_F32, RTLIB::LDEXP_F64, RTLIB::LDEXP_F80,
                     RTLIB::LDEXP_F128, RTLIB::LDEXP_PPCF128, Results);
     break;
-  case ISD::FMODF:
   case ISD::FFREXP: {
-    EVT VT = Node->getValueType(0);
-    RTLIB::Libcall LC = Node->getOpcode() == ISD::FMODF ? RTLIB::getMODF(VT)
-                                                        : RTLIB::getFREXP(VT);
+    RTLIB::Libcall LC = RTLIB::getFREXP(Node->getValueType(0));
     bool Expanded = DAG.expandMultipleResultFPLibCall(LC, Node, Results,
                                                       /*CallRetResNo=*/0);
     if (!Expanded)
-      llvm_unreachable("Expected scalar FFREXP/FMODF to expand to libcall!");
+      llvm_unreachable("Expected scalar FFREXP to expand to libcall!");
     break;
   }
   case ISD::FPOWI:
@@ -5506,10 +5503,9 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(Tmp2.getValue(1));
     break;
   }
-  case ISD::FMODF:
   case ISD::FSINCOS: {
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
-    Tmp2 = DAG.getNode(Node->getOpcode(), dl, DAG.getVTList(NVT, NVT), Tmp1,
+    Tmp2 = DAG.getNode(ISD::FSINCOS, dl, DAG.getVTList(NVT, NVT), Tmp1,
                        Node->getFlags());
     Tmp3 = DAG.getIntPtrConstant(0, dl, /*isTarget=*/true);
     for (unsigned ResNum = 0; ResNum < Node->getNumValues(); ResNum++)

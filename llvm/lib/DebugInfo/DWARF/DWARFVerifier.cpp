@@ -967,20 +967,21 @@ void DWARFVerifier::verifyDebugLineStmtOffsets() {
       // here because we validate this in the .debug_info verifier.
       continue;
     }
-    auto [Iter, Inserted] = StmtListToDie.try_emplace(LineTableOffset, Die);
-    if (!Inserted) {
+    auto Iter = StmtListToDie.find(LineTableOffset);
+    if (Iter != StmtListToDie.end()) {
       ++NumDebugLineErrors;
-      const auto &OldDie = Iter->second;
       ErrorCategory.Report("Identical DW_AT_stmt_list section offset", [&]() {
         error() << "two compile unit DIEs, "
-                << format("0x%08" PRIx64, OldDie.getOffset()) << " and "
+                << format("0x%08" PRIx64, Iter->second.getOffset()) << " and "
                 << format("0x%08" PRIx64, Die.getOffset())
                 << ", have the same DW_AT_stmt_list section offset:\n";
-        dump(OldDie);
+        dump(Iter->second);
         dump(Die) << '\n';
       });
       // Already verified this line table before, no need to do it again.
+      continue;
     }
+    StmtListToDie[LineTableOffset] = Die;
   }
 }
 

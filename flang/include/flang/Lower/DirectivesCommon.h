@@ -584,11 +584,10 @@ void createEmptyRegionBlocks(
 inline fir::factory::AddrAndBoundsInfo
 getDataOperandBaseAddr(Fortran::lower::AbstractConverter &converter,
                        fir::FirOpBuilder &builder,
-                       Fortran::lower::SymbolRef sym, mlir::Location loc,
-                       bool unwrapFirBox = true) {
+                       Fortran::lower::SymbolRef sym, mlir::Location loc) {
   return fir::factory::getDataOperandBaseAddr(
       builder, converter.getSymbolAddress(sym),
-      Fortran::semantics::IsOptional(sym), loc, unwrapFirBox);
+      Fortran::semantics::IsOptional(sym), loc);
 }
 
 namespace detail {
@@ -881,15 +880,13 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
     Fortran::semantics::SymbolRef symbol,
     const Fortran::semantics::MaybeExpr &maybeDesignator,
     mlir::Location operandLocation, std::stringstream &asFortran,
-    llvm::SmallVector<mlir::Value> &bounds, bool treatIndexAsSection = false,
-    bool unwrapFirBox = true, bool genDefaultBounds = true) {
+    llvm::SmallVector<mlir::Value> &bounds, bool treatIndexAsSection = false) {
   using namespace Fortran;
 
   fir::factory::AddrAndBoundsInfo info;
 
   if (!maybeDesignator) {
-    info = getDataOperandBaseAddr(converter, builder, symbol, operandLocation,
-                                  unwrapFirBox);
+    info = getDataOperandBaseAddr(converter, builder, symbol, operandLocation);
     asFortran << symbol->name().ToString();
     return info;
   }
@@ -933,8 +930,7 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       const semantics::Symbol &sym = arrayRef->GetLastSymbol();
       dataExvIsAssumedSize =
           Fortran::semantics::IsAssumedSizeArray(sym.GetUltimate());
-      info = getDataOperandBaseAddr(converter, builder, sym, operandLocation,
-                                    unwrapFirBox);
+      info = getDataOperandBaseAddr(converter, builder, sym, operandLocation);
       dataExv = converter.getSymbolExtendedValue(sym);
       asFortran << sym.name().ToString();
     }
@@ -951,8 +947,7 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
         converter.genExprAddr(operandLocation, designator, stmtCtx);
     info.addr = fir::getBase(compExv);
     info.rawInput = info.addr;
-    if (genDefaultBounds &&
-        mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
+    if (mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
       bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
           builder, operandLocation, compExv,
           /*isAssumedSize=*/false);
@@ -963,17 +958,14 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
           operandLocation, builder.getI1Type(), info.rawInput);
     }
 
-    if (unwrapFirBox) {
-      if (auto loadOp =
-              mlir::dyn_cast_or_null<fir::LoadOp>(info.addr.getDefiningOp())) {
-        if (fir::isAllocatableType(loadOp.getType()) ||
-            fir::isPointerType(loadOp.getType())) {
-          info.boxType = info.addr.getType();
-          info.addr =
-              builder.create<fir::BoxAddrOp>(operandLocation, info.addr);
-        }
-        info.rawInput = info.addr;
+    if (auto loadOp =
+            mlir::dyn_cast_or_null<fir::LoadOp>(info.addr.getDefiningOp())) {
+      if (fir::isAllocatableType(loadOp.getType()) ||
+          fir::isPointerType(loadOp.getType())) {
+        info.boxType = info.addr.getType();
+        info.addr = builder.create<fir::BoxAddrOp>(operandLocation, info.addr);
       }
+      info.rawInput = info.addr;
     }
 
     // If the component is an allocatable or pointer the result of
@@ -985,9 +977,8 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       info.addr = boxAddrOp.getVal();
       info.boxType = info.addr.getType();
       info.rawInput = info.addr;
-      if (genDefaultBounds)
-        bounds = fir::factory::genBoundsOpsFromBox<BoundsOp, BoundsType>(
-            builder, operandLocation, compExv, info);
+      bounds = fir::factory::genBoundsOpsFromBox<BoundsOp, BoundsType>(
+          builder, operandLocation, compExv, info);
     }
   } else {
     if (detail::getRef<evaluate::ArrayRef>(designator)) {
@@ -999,18 +990,17 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
     } else if (auto symRef = detail::getRef<semantics::SymbolRef>(designator)) {
       // Scalar or full array.
       fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*symRef);
-      info = getDataOperandBaseAddr(converter, builder, *symRef,
-                                    operandLocation, unwrapFirBox);
-      if (genDefaultBounds && mlir::isa<fir::BaseBoxType>(
-                                  fir::unwrapRefType(info.addr.getType()))) {
+      info =
+          getDataOperandBaseAddr(converter, builder, *symRef, operandLocation);
+      if (mlir::isa<fir::BaseBoxType>(
+              fir::unwrapRefType(info.addr.getType()))) {
         info.boxType = fir::unwrapRefType(info.addr.getType());
         bounds = fir::factory::genBoundsOpsFromBox<BoundsOp, BoundsType>(
             builder, operandLocation, dataExv, info);
       }
       bool dataExvIsAssumedSize =
           Fortran::semantics::IsAssumedSizeArray(symRef->get().GetUltimate());
-      if (genDefaultBounds &&
-          mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
+      if (mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
         bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
             builder, operandLocation, dataExv, dataExvIsAssumedSize);
       asFortran << symRef->get().name().ToString();

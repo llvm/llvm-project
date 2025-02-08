@@ -116,28 +116,6 @@ template <typename T> struct ViewArray {
 };
 
 namespace DirectX {
-
-class RootSignature {
-private:
-  uint32_t Version;
-  uint32_t NumParameters;
-  uint32_t RootParametersOffset;
-  uint32_t NumStaticSamplers;
-  uint32_t StaticSamplersOffset;
-  uint32_t Flags;
-
-public:
-  RootSignature() {}
-
-  Error parse(StringRef Data);
-  uint32_t getVersion() const { return Version; }
-  uint32_t getNumParameters() const { return NumParameters; }
-  uint32_t getRootParametersOffset() const { return RootParametersOffset; }
-  uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
-  uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
-  uint32_t getFlags() const { return Flags; }
-};
-
 class PSVRuntimeInfo {
 
   using ResourceArray = ViewArray<dxbc::PSV::v2::ResourceBindInfo>;
@@ -309,7 +287,6 @@ private:
   std::optional<uint64_t> ShaderFeatureFlags;
   std::optional<dxbc::ShaderHash> Hash;
   std::optional<DirectX::PSVRuntimeInfo> PSVInfo;
-  std::optional<DirectX::RootSignature> RootSignature;
   DirectX::Signature InputSignature;
   DirectX::Signature OutputSignature;
   DirectX::Signature PatchConstantSignature;
@@ -319,7 +296,6 @@ private:
   Error parseDXILHeader(StringRef Part);
   Error parseShaderFeatureFlags(StringRef Part);
   Error parseHash(StringRef Part);
-  Error parseRootSignature(StringRef Part);
   Error parsePSVInfo(StringRef Part);
   Error parseSignature(StringRef Part, DirectX::Signature &Array);
   friend class PartIterator;
@@ -405,10 +381,6 @@ public:
   }
 
   std::optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
-
-  std::optional<DirectX::RootSignature> getRootSignature() const {
-    return RootSignature;
-  }
 
   const std::optional<DirectX::PSVRuntimeInfo> &getPSVInfo() const {
     return PSVInfo;

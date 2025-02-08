@@ -30,8 +30,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cassert>
 #include <memory>
@@ -181,41 +179,8 @@ bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned MaxSteps,
   return WList->hasWork();
 }
 
-static std::string timeTraceScopeName(const ProgramPoint &Loc) {
-  if (llvm::timeTraceProfilerEnabled()) {
-    return llvm::formatv("Loc {0}",
-                         ProgramPoint::getProgramPointKindName(Loc.getKind()))
-        .str();
-  }
-  return "";
-}
-
-static llvm::TimeTraceMetadata timeTraceMetadata(const ExplodedNode *Pred,
-                                                 const ProgramPoint &Loc) {
-  // If time-trace profiler is not enabled, this function is never called.
-  assert(llvm::timeTraceProfilerEnabled());
-  std::string Detail = "";
-  if (const auto SP = Loc.getAs<StmtPoint>()) {
-    if (const Stmt *S = SP->getStmt())
-      Detail = S->getStmtClassName();
-  }
-  auto SLoc = Loc.getSourceLocation();
-  if (!SLoc)
-    return llvm::TimeTraceMetadata{Detail, ""};
-  const auto &SM = Pred->getLocationContext()
-                       ->getAnalysisDeclContext()
-                       ->getASTContext()
-                       .getSourceManager();
-  auto Line = SM.getPresumedLineNumber(*SLoc);
-  auto Fname = SM.getFilename(*SLoc);
-  return llvm::TimeTraceMetadata{Detail, Fname.str(), static_cast<int>(Line)};
-}
-
-void CoreEngine::dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,
-                                  const WorkListUnit &WU) {
-  llvm::TimeTraceScope tcs{timeTraceScopeName(Loc), [Loc, Pred]() {
-                             return timeTraceMetadata(Pred, Loc);
-                           }};
+void CoreEngine::dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
+                                  const WorkListUnit& WU) {
   // Dispatch on the location type.
   switch (Loc.getKind()) {
     case ProgramPoint::BlockEdgeKind:

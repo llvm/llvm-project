@@ -12,6 +12,8 @@
 #ifndef CLANG_CIR_LOWERTOLLVM_H
 #define CLANG_CIR_LOWERTOLLVM_H
 
+#include "mlir/Pass/Pass.h"
+
 #include <memory>
 
 namespace llvm {

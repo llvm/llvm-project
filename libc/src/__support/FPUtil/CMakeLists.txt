@@ -110,7 +110,6 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.FPUtil.generic.sqrt
-    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(
@@ -121,7 +120,6 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.generic.fma
-    libc.src.__support.macros.properties.cpu_features
   FLAGS
     FMA_OPT
 )
@@ -132,7 +130,6 @@ add_header_library(
     multiply_add.h
   DEPENDS
     libc.src.__support.common
-    libc.src.__support.macros.properties.cpu_features
   FLAGS
     FMA_OPT
 )
@@ -153,7 +150,6 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.cpu_features
   FLAGS
     ROUND_OPT
 )
@@ -165,7 +161,6 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.number_pair
-    libc.src.__support.macros.properties.cpu_features
     .multiply_add
 )
 

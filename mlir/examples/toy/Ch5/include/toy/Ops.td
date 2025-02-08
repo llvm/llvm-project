@@ -214,12 +214,7 @@ def GenericCallOp : Toy_Op<"generic_call",
 
   // The generic call operation takes a symbol reference attribute as the
   // callee, and inputs for the call.
-  let arguments = (ins
-    FlatSymbolRefAttr:$callee,
-    Variadic<F64Tensor>:$inputs,
-    OptionalAttr<DictArrayAttr>:$arg_attrs,
-    OptionalAttr<DictArrayAttr>:$res_attrs
-  );
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<F64Tensor>:$inputs);
 
   // The generic call operation returns a single value of TensorType.
   let results = (outs F64Tensor);

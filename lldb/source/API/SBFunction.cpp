@@ -144,7 +144,7 @@ SBAddress SBFunction::GetStartAddress() {
 
   SBAddress addr;
   if (m_opaque_ptr)
-    addr.SetAddress(m_opaque_ptr->GetAddress());
+    addr.SetAddress(m_opaque_ptr->GetAddressRange().GetBaseAddress());
   return addr;
 }
 

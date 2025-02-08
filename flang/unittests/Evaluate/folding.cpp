@@ -1,3 +1,4 @@
+#include "testing.h"
 #include "../../lib/Evaluate/host.h"
 #include "flang/Evaluate/call.h"
 #include "flang/Evaluate/expression.h"
@@ -6,7 +7,6 @@
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Evaluate/tools.h"
-#include "flang/Testing/testing.h"
 #include <tuple>
 
 using namespace Fortran::evaluate;

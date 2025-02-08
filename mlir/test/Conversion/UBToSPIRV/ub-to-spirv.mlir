@@ -13,7 +13,8 @@ func.func @check_poison() {
   %1 = ub.poison : i16
 // CHECK: {{.*}} = spirv.Undef : f64
   %2 = ub.poison : f64
-// CHECK: {{.*}} = spirv.Undef : vector<4xf32>
+// TODO: vector is not covered yet
+// CHECK: {{.*}} = ub.poison : vector<4xf32>
   %3 = ub.poison : vector<4xf32>
   return
 }

@@ -22,6 +22,8 @@
 // Forward declaration.
 struct KernelEnvironmentTy;
 
+#pragma omp begin declare target device_type(nohost)
+
 namespace ompx {
 
 namespace memory {
@@ -86,7 +88,8 @@ struct TeamStateTy {
   ParallelRegionFnTy ParallelRegionFnVar;
 };
 
-extern TeamStateTy [[clang::address_space(3)]] TeamState;
+extern TeamStateTy TeamState;
+#pragma omp allocate(TeamState) allocator(omp_pteam_mem_alloc)
 
 struct ThreadStateTy {
 
@@ -112,7 +115,8 @@ struct ThreadStateTy {
   }
 };
 
-extern ThreadStateTy **[[clang::address_space(3)]] ThreadStates;
+extern ThreadStateTy **ThreadStates;
+#pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
 
 /// Initialize the state machinery. Must be called by all threads.
 void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
@@ -373,5 +377,7 @@ inline state::Value<uint32_t, state::VK_RunSched> RunSched;
 } // namespace icv
 
 } // namespace ompx
+
+#pragma omp end declare target
 
 #endif

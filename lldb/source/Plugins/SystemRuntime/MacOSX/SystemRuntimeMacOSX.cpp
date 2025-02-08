@@ -632,8 +632,10 @@ bool SystemRuntimeMacOSX::BacktraceRecordingHeadersInitialized() {
   if (!sc_list.IsEmpty()) {
     SymbolContext sc;
     sc_list.GetContextAtIndex(0, sc);
-    Address addr = sc.GetFunctionOrSymbolAddress();
-    queue_info_version_address = addr.GetLoadAddress(&target);
+    AddressRange addr_range;
+    sc.GetAddressRange(eSymbolContextSymbol, 0, false, addr_range);
+    queue_info_version_address =
+        addr_range.GetBaseAddress().GetLoadAddress(&target);
   }
   sc_list.Clear();
 
@@ -644,8 +646,10 @@ bool SystemRuntimeMacOSX::BacktraceRecordingHeadersInitialized() {
   if (!sc_list.IsEmpty()) {
     SymbolContext sc;
     sc_list.GetContextAtIndex(0, sc);
-    Address addr = sc.GetFunctionOrSymbolAddress();
-    queue_info_data_offset_address = addr.GetLoadAddress(&target);
+    AddressRange addr_range;
+    sc.GetAddressRange(eSymbolContextSymbol, 0, false, addr_range);
+    queue_info_data_offset_address =
+        addr_range.GetBaseAddress().GetLoadAddress(&target);
   }
   sc_list.Clear();
 
@@ -656,8 +660,10 @@ bool SystemRuntimeMacOSX::BacktraceRecordingHeadersInitialized() {
   if (!sc_list.IsEmpty()) {
     SymbolContext sc;
     sc_list.GetContextAtIndex(0, sc);
-    Address addr = sc.GetFunctionOrSymbolAddress();
-    item_info_version_address = addr.GetLoadAddress(&target);
+    AddressRange addr_range;
+    sc.GetAddressRange(eSymbolContextSymbol, 0, false, addr_range);
+    item_info_version_address =
+        addr_range.GetBaseAddress().GetLoadAddress(&target);
   }
   sc_list.Clear();
 
@@ -668,8 +674,10 @@ bool SystemRuntimeMacOSX::BacktraceRecordingHeadersInitialized() {
   if (!sc_list.IsEmpty()) {
     SymbolContext sc;
     sc_list.GetContextAtIndex(0, sc);
-    Address addr = sc.GetFunctionOrSymbolAddress();
-    item_info_data_offset_address = addr.GetLoadAddress(&target);
+    AddressRange addr_range;
+    sc.GetAddressRange(eSymbolContextSymbol, 0, false, addr_range);
+    item_info_data_offset_address =
+        addr_range.GetBaseAddress().GetLoadAddress(&target);
   }
 
   if (queue_info_version_address != LLDB_INVALID_ADDRESS &&

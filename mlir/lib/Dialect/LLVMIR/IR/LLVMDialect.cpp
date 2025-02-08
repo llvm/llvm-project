@@ -1033,7 +1033,6 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1061,7 +1060,6 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*convergent=*/nullptr,
         /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1075,7 +1073,6 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1090,7 +1087,6 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
@@ -1531,8 +1527,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   auto calleeType = func.getFunctionType();
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), ops,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
-        nullptr, nullptr, {}, {}, normal, unwind);
+        normalOps, unwindOps, nullptr, nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -1540,9 +1535,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
                      ValueRange normalOps, Block *unwind,
                      ValueRange unwindOps) {
   build(builder, state, tys,
-        /*var_callee_type=*/nullptr, callee, ops, /*arg_attrs=*/nullptr,
-        /*res_attrs=*/nullptr, normalOps, unwindOps, nullptr, nullptr, {}, {},
-        normal, unwind);
+        /*var_callee_type=*/nullptr, callee, ops, normalOps, unwindOps, nullptr,
+        nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
@@ -1550,8 +1544,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
                      ValueRange ops, Block *normal, ValueRange normalOps,
                      Block *unwind, ValueRange unwindOps) {
   build(builder, state, getCallOpResultTypes(calleeType),
-        getCallOpVarCalleeType(calleeType), callee, ops,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
+        getCallOpVarCalleeType(calleeType), callee, ops, normalOps, unwindOps,
         nullptr, nullptr, {}, {}, normal, unwind);
 }
 
@@ -1898,13 +1891,6 @@ static Type getInsertExtractValueElementType(Type llvmType,
 }
 
 OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
-  if (auto extractValueOp = getContainer().getDefiningOp<ExtractValueOp>()) {
-    SmallVector<int64_t, 4> newPos(extractValueOp.getPosition());
-    newPos.append(getPosition().begin(), getPosition().end());
-    setPosition(newPos);
-    getContainerMutable().set(extractValueOp.getContainer());
-    return getResult();
-  }
   auto insertValueOp = getContainer().getDefiningOp<InsertValueOp>();
   OpFoldResult result = {};
   while (insertValueOp) {
@@ -2050,11 +2036,6 @@ LLVMFuncOp AddressOfOp::getFunction(SymbolTableCollection &symbolTable) {
       symbolTable.lookupSymbolIn(parentLLVMModule(*this), getGlobalNameAttr()));
 }
 
-AliasOp AddressOfOp::getAlias(SymbolTableCollection &symbolTable) {
-  return dyn_cast_or_null<AliasOp>(
-      symbolTable.lookupSymbolIn(parentLLVMModule(*this), getGlobalNameAttr()));
-}
-
 LogicalResult
 AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   Operation *symbol =
@@ -2062,17 +2043,15 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   auto global = dyn_cast_or_null<GlobalOp>(symbol);
   auto function = dyn_cast_or_null<LLVMFuncOp>(symbol);
-  auto alias = dyn_cast_or_null<AliasOp>(symbol);
 
-  if (!global && !function && !alias)
-    return emitOpError("must reference a global defined by 'llvm.mlir.global', "
-                       "'llvm.mlir.alias' or 'llvm.func'");
+  if (!global && !function)
+    return emitOpError(
+        "must reference a global defined by 'llvm.mlir.global' or 'llvm.func'");
 
   LLVMPointerType type = getType();
-  if ((global && global.getAddrSpace() != type.getAddressSpace()) ||
-      (alias && alias.getAddrSpace() != type.getAddressSpace()))
+  if (global && global.getAddrSpace() != type.getAddressSpace())
     return emitOpError("pointer address space must match address space of the "
-                       "referenced global or alias");
+                       "referenced global");
 
   return success();
 }
@@ -2209,37 +2188,6 @@ static LogicalResult verifyComdat(Operation *op,
   return success();
 }
 
-/// Parse common attributes that might show up in the same order in both
-/// GlobalOp and AliasOp.
-template <typename OpType>
-static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
-                                             OperationState &result) {
-  MLIRContext *ctx = parser.getContext();
-  // Parse optional linkage, default to External.
-  result.addAttribute(OpType::getLinkageAttrName(result.name),
-                      LLVM::LinkageAttr::get(
-                          ctx, parseOptionalLLVMKeyword<Linkage>(
-                                   parser, result, LLVM::Linkage::External)));
-
-  // Parse optional visibility, default to Default.
-  result.addAttribute(OpType::getVisibility_AttrName(result.name),
-                      parser.getBuilder().getI64IntegerAttr(
-                          parseOptionalLLVMKeyword<LLVM::Visibility, int64_t>(
-                              parser, result, LLVM::Visibility::Default)));
-
-  // Parse optional UnnamedAddr, default to None.
-  result.addAttribute(OpType::getUnnamedAddrAttrName(result.name),
-                      parser.getBuilder().getI64IntegerAttr(
-                          parseOptionalLLVMKeyword<UnnamedAddr, int64_t>(
-                              parser, result, LLVM::UnnamedAddr::None)));
-
-  if (succeeded(parser.parseOptionalKeyword("thread_local")))
-    result.addAttribute(OpType::getThreadLocal_AttrName(result.name),
-                        parser.getBuilder().getUnitAttr());
-
-  return success();
-}
-
 // operation ::= `llvm.mlir.global` linkage? visibility?
 //               (`unnamed_addr` | `local_unnamed_addr`)?
 //               `thread_local`? `constant`? `@` identifier
@@ -2249,9 +2197,28 @@ static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
 // The type can be omitted for string attributes, in which case it will be
 // inferred from the value of the string as [strlen(value) x i8].
 ParseResult GlobalOp::parse(OpAsmParser &parser, OperationState &result) {
-  // Call into common parsing between GlobalOp and AliasOp.
-  if (parseCommonGlobalAndAlias<GlobalOp>(parser, result).failed())
-    return failure();
+  MLIRContext *ctx = parser.getContext();
+  // Parse optional linkage, default to External.
+  result.addAttribute(getLinkageAttrName(result.name),
+                      LLVM::LinkageAttr::get(
+                          ctx, parseOptionalLLVMKeyword<Linkage>(
+                                   parser, result, LLVM::Linkage::External)));
+
+  // Parse optional visibility, default to Default.
+  result.addAttribute(getVisibility_AttrName(result.name),
+                      parser.getBuilder().getI64IntegerAttr(
+                          parseOptionalLLVMKeyword<LLVM::Visibility, int64_t>(
+                              parser, result, LLVM::Visibility::Default)));
+
+  // Parse optional UnnamedAddr, default to None.
+  result.addAttribute(getUnnamedAddrAttrName(result.name),
+                      parser.getBuilder().getI64IntegerAttr(
+                          parseOptionalLLVMKeyword<UnnamedAddr, int64_t>(
+                              parser, result, LLVM::UnnamedAddr::None)));
+
+  if (succeeded(parser.parseOptionalKeyword("thread_local")))
+    result.addAttribute(getThreadLocal_AttrName(result.name),
+                        parser.getBuilder().getUnitAttr());
 
   if (succeeded(parser.parseOptionalKeyword("constant")))
     result.addAttribute(getConstantAttrName(result.name),
@@ -2456,145 +2423,6 @@ LogicalResult GlobalDtorsOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Builder, printer and verifier for LLVM::AliasOp.
-//===----------------------------------------------------------------------===//
-
-void AliasOp::build(OpBuilder &builder, OperationState &result, Type type,
-                    Linkage linkage, StringRef name, bool dsoLocal,
-                    bool threadLocal, ArrayRef<NamedAttribute> attrs) {
-  result.addAttribute(getSymNameAttrName(result.name),
-                      builder.getStringAttr(name));
-  result.addAttribute(getAliasTypeAttrName(result.name), TypeAttr::get(type));
-  if (dsoLocal)
-    result.addAttribute(getDsoLocalAttrName(result.name),
-                        builder.getUnitAttr());
-  if (threadLocal)
-    result.addAttribute(getThreadLocal_AttrName(result.name),
-                        builder.getUnitAttr());
-
-  result.addAttribute(getLinkageAttrName(result.name),
-                      LinkageAttr::get(builder.getContext(), linkage));
-  result.attributes.append(attrs.begin(), attrs.end());
-
-  result.addRegion();
-}
-
-void AliasOp::print(OpAsmPrinter &p) {
-  p << ' ' << stringifyLinkage(getLinkage()) << ' ';
-  StringRef visibility = stringifyVisibility(getVisibility_());
-  if (!visibility.empty())
-    p << visibility << ' ';
-
-  if (std::optional<mlir::LLVM::UnnamedAddr> unnamedAddr = getUnnamedAddr()) {
-    StringRef str = stringifyUnnamedAddr(*unnamedAddr);
-    if (!str.empty())
-      p << str << ' ';
-  }
-
-  if (getThreadLocal_())
-    p << "thread_local ";
-
-  p.printSymbolName(getSymName());
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {SymbolTable::getSymbolAttrName(),
-                           getAliasTypeAttrName(), getLinkageAttrName(),
-                           getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
-                           getVisibility_AttrName(), getUnnamedAddrAttrName()});
-
-  // Print the trailing type.
-  p << " : " << getType() << ' ';
-  // Print the initializer region.
-  p.printRegion(getInitializerRegion(), /*printEntryBlockArgs=*/false);
-}
-
-// operation ::= `llvm.mlir.alias` linkage? visibility?
-//               (`unnamed_addr` | `local_unnamed_addr`)?
-//               `thread_local`? `@` identifier
-//               `(` attribute? `)`
-//               attribute-list? `:` type region
-//
-ParseResult AliasOp::parse(OpAsmParser &parser, OperationState &result) {
-  // Call into common parsing between GlobalOp and AliasOp.
-  if (parseCommonGlobalAndAlias<AliasOp>(parser, result).failed())
-    return failure();
-
-  StringAttr name;
-  if (parser.parseSymbolName(name, getSymNameAttrName(result.name),
-                             result.attributes))
-    return failure();
-
-  SmallVector<Type, 1> types;
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseOptionalColonTypeList(types))
-    return failure();
-
-  if (types.size() > 1)
-    return parser.emitError(parser.getNameLoc(), "expected zero or one type");
-
-  Region &initRegion = *result.addRegion();
-  if (parser.parseRegion(initRegion).failed())
-    return failure();
-
-  result.addAttribute(getAliasTypeAttrName(result.name),
-                      TypeAttr::get(types[0]));
-  return success();
-}
-
-LogicalResult AliasOp::verify() {
-  bool validType = isCompatibleOuterType(getType())
-                       ? !llvm::isa<LLVMVoidType, LLVMTokenType,
-                                    LLVMMetadataType, LLVMLabelType>(getType())
-                       : llvm::isa<PointerElementTypeInterface>(getType());
-  if (!validType)
-    return emitOpError(
-        "expects type to be a valid element type for an LLVM global alias");
-
-  // This matches LLVM IR verification logic, see llvm/lib/IR/Verifier.cpp
-  switch (getLinkage()) {
-  case Linkage::External:
-  case Linkage::Internal:
-  case Linkage::Private:
-  case Linkage::Weak:
-  case Linkage::Linkonce:
-  case Linkage::LinkonceODR:
-  case Linkage::AvailableExternally:
-    break;
-  default:
-    return emitOpError()
-           << "'" << stringifyLinkage(getLinkage())
-           << "' linkage not supported in aliases, available options: private, "
-              "internal, linkonce, weak, linkonce_odr, weak_odr, external or "
-              "available_externally";
-  }
-
-  return success();
-}
-
-LogicalResult AliasOp::verifyRegions() {
-  Block &b = getInitializerBlock();
-  auto ret = cast<ReturnOp>(b.getTerminator());
-  if (ret.getNumOperands() == 0 ||
-      !isa<LLVM::LLVMPointerType>(ret.getOperand(0).getType()))
-    return emitOpError("initializer region must always return a pointer");
-
-  for (Operation &op : b) {
-    auto iface = dyn_cast<MemoryEffectOpInterface>(op);
-    if (!iface || !iface.hasNoEffect())
-      return op.emitError()
-             << "ops with side effects are not allowed in alias initializers";
-  }
-
-  return success();
-}
-
-unsigned AliasOp::getAddrSpace() {
-  Block &initializer = getInitializerBlock();
-  auto ret = cast<ReturnOp>(initializer.getTerminator());
-  auto ptrTy = cast<LLVMPointerType>(ret.getOperand(0).getType());
-  return ptrTy.getAddressSpace();
-}
-
-//===----------------------------------------------------------------------===//
 // ShuffleVectorOp
 //===----------------------------------------------------------------------===//
 
@@ -2682,7 +2510,7 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
 
   assert(llvm::cast<LLVMFunctionType>(type).getNumParams() == argAttrs.size() &&
          "expected as many argument attribute lists as arguments");
-  call_interface_impl::addArgAndResultAttrs(
+  function_interface_impl::addArgAndResultAttrs(
       builder, result, argAttrs, /*resultAttrs=*/std::nullopt,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 }
@@ -2767,7 +2595,7 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   auto signatureLocation = parser.getCurrentLocation();
   if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
                              result.attributes) ||
-      function_interface_impl::parseFunctionSignatureWithArguments(
+      function_interface_impl::parseFunctionSignature(
           parser, /*allowVariadic=*/true, entryArgs, isVariadic, resultTypes,
           resultAttrs))
     return failure();
@@ -2808,7 +2636,7 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
-  call_interface_impl::addArgAndResultAttrs(
+  function_interface_impl::addArgAndResultAttrs(
       parser.getBuilder(), result, entryArgs, resultAttrs,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 

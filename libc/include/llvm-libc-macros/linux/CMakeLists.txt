@@ -11,12 +11,6 @@ add_header(
 )
 
 add_header(
-  poll-macros
-  HDR
-    poll-macros.h
-)
-
-add_header(
   sched_macros
   HDR
     sched-macros.h

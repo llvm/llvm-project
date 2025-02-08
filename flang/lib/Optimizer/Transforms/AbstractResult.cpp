@@ -147,7 +147,6 @@ public:
       newResultTypes.emplace_back(getVoidPtrType(result.getContext()));
 
     Op newOp;
-    // TODO: propagate argument and result attributes (need to be shifted).
     // fir::CallOp specific handling.
     if constexpr (std::is_same_v<Op, fir::CallOp>) {
       if (op.getCallee()) {
@@ -190,11 +189,9 @@ public:
       if (op.getPassArgPos())
         passArgPos =
             rewriter.getI32IntegerAttr(*op.getPassArgPos() + passArgShift);
-      // TODO: propagate argument and result attributes (need to be shifted).
       newOp = rewriter.create<fir::DispatchOp>(
           loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
           op.getOperands()[0], newOperands, passArgPos,
-          /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
           op.getProcedureAttrsAttr());
     }
 

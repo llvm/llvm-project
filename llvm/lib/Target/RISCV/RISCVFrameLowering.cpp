@@ -102,13 +102,13 @@ RISCVFrameLowering::RISCVFrameLowering(const RISCVSubtarget &STI)
       STI(STI) {}
 
 // The register used to hold the frame pointer.
-static constexpr MCPhysReg FPReg = RISCV::X8;
+static constexpr Register FPReg = RISCV::X8;
 
 // The register used to hold the stack pointer.
-static constexpr MCPhysReg SPReg = RISCV::X2;
+static constexpr Register SPReg = RISCV::X2;
 
 // The register used to hold the return address.
-static constexpr MCPhysReg RAReg = RISCV::X1;
+static constexpr Register RAReg = RISCV::X1;
 
 // Offsets which need to be scale by XLen representing locations of CSRs which
 // are given a fixed location by save/restore libcalls or Zcmp Push/Pop.
@@ -250,17 +250,17 @@ static int getLibCallID(const MachineFunction &MF,
   if (CSI.empty() || !RVFI->useSaveRestoreLibCalls(MF))
     return -1;
 
-  Register MaxReg;
+  Register MaxReg = RISCV::NoRegister;
   for (auto &CS : CSI)
     // assignCalleeSavedSpillSlots assigns negative frame indexes to
     // registers which can be saved by libcall.
     if (CS.getFrameIdx() < 0)
       MaxReg = std::max(MaxReg.id(), CS.getReg().id());
 
-  if (!MaxReg)
+  if (MaxReg == RISCV::NoRegister)
     return -1;
 
-  switch (MaxReg.id()) {
+  switch (MaxReg) {
   default:
     llvm_unreachable("Something has gone wrong!");
     // clang-format off
@@ -339,7 +339,7 @@ getRestoreLibCallName(const MachineFunction &MF,
 // representing registers to store/load.
 static std::pair<unsigned, unsigned>
 getPushPopEncodingAndNum(const Register MaxReg) {
-  switch (MaxReg.id()) {
+  switch (MaxReg) {
   default:
     llvm_unreachable("Unexpected Reg for Push/Pop Inst");
   case RISCV::X27: /*s11*/
@@ -1182,7 +1182,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (getLibCallID(MF, CSI) != -1) {
     // tail __riscv_restore_[0-12] instruction is considered as a terminator,
-    // therefore it is unnecessary to place any CFI instructions after it. Just
+    // therefor it is unnecessary to place any CFI instructions after it. Just
     // deallocate stack if needed and return.
     if (StackSize != 0)
       deallocateStack(MF, MBB, MBBI, DL, StackSize,
@@ -1809,7 +1809,7 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   for (auto &CS : CSI) {
-    Register Reg = CS.getReg();
+    unsigned Reg = CS.getReg();
     const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
     unsigned Size = RegInfo->getSpillSize(*RC);
 
@@ -1847,16 +1847,11 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
       MFI.setStackID(FrameIdx, TargetStackID::ScalableVector);
   }
 
+  // Allocate a fixed object that covers the full push or libcall size.
   if (RVFI->isPushable(MF)) {
-    // Allocate a fixed object that covers all the registers that are pushed.
-    if (unsigned PushedRegs = RVFI->getRVPushRegs()) {
-      int64_t PushedRegsBytes =
-          static_cast<int64_t>(PushedRegs) * (STI.getXLen() / 8);
-      MFI.CreateFixedSpillStackObject(PushedRegsBytes, -PushedRegsBytes);
-    }
+    if (int64_t PushSize = RVFI->getRVPushStackSize())
+      MFI.CreateFixedSpillStackObject(PushSize, -PushSize);
   } else if (int LibCallRegs = getLibCallID(MF, CSI) + 1) {
-    // Allocate a fixed object that covers all of the stack allocated by the
-    // libcall.
     int64_t LibCallFrameSize =
         alignTo((STI.getXLen() / 8) * LibCallRegs, getStackAlign());
     MFI.CreateFixedSpillStackObject(LibCallFrameSize, -LibCallFrameSize);

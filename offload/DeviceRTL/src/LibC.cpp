@@ -8,6 +8,8 @@
 
 #include "LibC.h"
 
+#pragma omp begin declare target device_type(nohost)
+
 #if defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
 extern "C" int vprintf(const char *format, __builtin_va_list) { return -1; }
 #else
@@ -46,3 +48,5 @@ namespace ompx {
   return ::vprintf(Format, vlist);
 }
 } // namespace ompx
+
+#pragma omp end declare target

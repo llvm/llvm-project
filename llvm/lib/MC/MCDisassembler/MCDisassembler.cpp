@@ -29,21 +29,17 @@ bool MCDisassembler::tryAddingSymbolicOperand(MCInst &Inst, int64_t Value,
                                               uint64_t Address, bool IsBranch,
                                               uint64_t Offset, uint64_t OpSize,
                                               uint64_t InstSize) const {
-  if (Symbolizer) {
-    assert(CommentStream && "CommentStream is not set.");
+  if (Symbolizer)
     return Symbolizer->tryAddingSymbolicOperand(Inst, *CommentStream, Value,
                                                 Address, IsBranch, Offset,
                                                 OpSize, InstSize);
-  }
   return false;
 }
 
 void MCDisassembler::tryAddingPcLoadReferenceComment(int64_t Value,
                                                      uint64_t Address) const {
-  if (Symbolizer) {
-    assert(CommentStream && "CommentStream is not set.");
+  if (Symbolizer)
     Symbolizer->tryAddingPcLoadReferenceComment(*CommentStream, Value, Address);
-  }
 }
 
 void MCDisassembler::setSymbolizer(std::unique_ptr<MCSymbolizer> Symzer) {

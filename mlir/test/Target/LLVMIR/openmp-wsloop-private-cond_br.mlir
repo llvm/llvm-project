@@ -30,6 +30,9 @@ llvm.func @wsloop_private_(%arg0: !llvm.ptr {fir.bindc_name = "y"}) attributes {
 }
 
 // CHECK:   %[[INT:.*]] = alloca i32, i64 1, align 4
+// CHECK:   br label %[[OMP_PRIVATE_INIT:.*]]
+
+// CHECK: [[OMP_PRIVATE_INIT]]:
 // CHECK:   br label %[[AFTER_ALLOC_BB:.*]]
 
 // CHECK: [[AFTER_ALLOC_BB]]:
@@ -42,8 +45,5 @@ llvm.func @wsloop_private_(%arg0: !llvm.ptr {fir.bindc_name = "y"}) attributes {
 // CHECK:   br label %[[BB3:.*]]
 
 // CHECK: [[BB3]]:
-// CHECK:   br label %[[OMP_PRIVATE_INIT:.*]]
-
-// CHECK: [[OMP_PRIVATE_INIT]]:
 // CHECK:   br label %omp_loop.preheader
 

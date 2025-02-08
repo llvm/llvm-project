@@ -199,8 +199,6 @@ int main(int, char**) {
 #if TEST_STD_VER >= 26
   static_assert(test<int>());
   static_assert(test<float>());
-  // test constexprness of radix sort branch
-  static_assert(test<char>());
 #endif
   return 0;
 }

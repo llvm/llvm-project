@@ -94,7 +94,6 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetTransformInfo;
 class Value;
-class VPIntrinsic;
 
 namespace Sched {
 
@@ -3157,30 +3156,6 @@ public:
     return false;
   }
 
-  /// Lower an interleaved load to target specific intrinsics. Return
-  /// true on success.
-  ///
-  /// \p Load is a vp.load instruction.
-  /// \p Mask is a mask value
-  /// \p DeinterleaveRes is a list of deinterleaved results.
-  virtual bool
-  lowerDeinterleavedIntrinsicToVPLoad(VPIntrinsic *Load, Value *Mask,
-                                      ArrayRef<Value *> DeinterleaveRes) const {
-    return false;
-  }
-
-  /// Lower an interleaved store to target specific intrinsics. Return
-  /// true on success.
-  ///
-  /// \p Store is the vp.store instruction.
-  /// \p Mask is a mask value
-  /// \p InterleaveOps is a list of values being interleaved.
-  virtual bool
-  lowerInterleavedIntrinsicToVPStore(VPIntrinsic *Store, Value *Mask,
-                                     ArrayRef<Value *> InterleaveOps) const {
-    return false;
-  }
-
   /// Lower a deinterleave intrinsic to a target specific load intrinsic.
   /// Return true on success. Currently only supports
   /// llvm.vector.deinterleave2
@@ -5646,18 +5621,6 @@ public:
   // Expand vector operation by dividing it into smaller length operations and
   // joining their results. SDValue() is returned when expansion did not happen.
   SDValue expandVectorNaryOpBySplitting(SDNode *Node, SelectionDAG &DAG) const;
-
-  /// Replace an extraction of a load with a narrowed load.
-  ///
-  /// \param ResultVT type of the result extraction.
-  /// \param InVecVT type of the input vector to with bitcasts resolved.
-  /// \param EltNo index of the vector element to load.
-  /// \param OriginalLoad vector load that to be replaced.
-  /// \returns \p ResultVT Load on success SDValue() on failure.
-  SDValue scalarizeExtractedVectorLoad(EVT ResultVT, const SDLoc &DL,
-                                       EVT InVecVT, SDValue EltNo,
-                                       LoadSDNode *OriginalLoad,
-                                       SelectionDAG &DAG) const;
 
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,

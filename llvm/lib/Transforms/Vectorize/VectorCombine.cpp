@@ -126,7 +126,6 @@ private:
   bool foldShuffleFromReductions(Instruction &I);
   bool foldCastFromReductions(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
-  bool foldInterleaveIntrinsics(Instruction &I);
   bool shrinkType(Instruction &I);
 
   void replaceValue(Value &Old, Value &New) {
@@ -3147,73 +3146,42 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
                          m_ConstantInt(InsIdx))))
     return false;
 
-  auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
-  auto *SrcVecTy = dyn_cast<FixedVectorType>(SrcVec->getType());
-  // We can try combining vectors with different element sizes.
-  if (!DstVecTy || !SrcVecTy ||
-      SrcVecTy->getElementType() != DstVecTy->getElementType())
+  auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
+  if (!VecTy || SrcVec->getType() != VecTy)
     return false;
 
-  unsigned NumDstElts = DstVecTy->getNumElements();
-  unsigned NumSrcElts = SrcVecTy->getNumElements();
-  if (InsIdx >= NumDstElts || ExtIdx >= NumSrcElts || NumDstElts == 1)
+  unsigned NumElts = VecTy->getNumElements();
+  if (ExtIdx >= NumElts || InsIdx >= NumElts)
     return false;
 
   // Insertion into poison is a cheaper single operand shuffle.
   TargetTransformInfo::ShuffleKind SK;
-  SmallVector<int> Mask(NumDstElts, PoisonMaskElem);
-
-  bool NeedExpOrNarrow = NumSrcElts != NumDstElts;
-  bool IsExtIdxInBounds = ExtIdx < NumDstElts;
-  bool NeedDstSrcSwap = isa<PoisonValue>(DstVec) && !isa<UndefValue>(SrcVec);
-  if (NeedDstSrcSwap) {
+  SmallVector<int> Mask(NumElts, PoisonMaskElem);
+  if (isa<PoisonValue>(DstVec) && !isa<UndefValue>(SrcVec)) {
     SK = TargetTransformInfo::SK_PermuteSingleSrc;
-    if (!IsExtIdxInBounds && NeedExpOrNarrow)
-      Mask[InsIdx] = 0;
-    else
-      Mask[InsIdx] = ExtIdx;
+    Mask[InsIdx] = ExtIdx;
     std::swap(DstVec, SrcVec);
   } else {
     SK = TargetTransformInfo::SK_PermuteTwoSrc;
     std::iota(Mask.begin(), Mask.end(), 0);
-    if (!IsExtIdxInBounds && NeedExpOrNarrow)
-      Mask[InsIdx] = NumDstElts;
-    else
-      Mask[InsIdx] = ExtIdx + NumDstElts;
+    Mask[InsIdx] = ExtIdx + NumElts;
   }
 
   // Cost
   auto *Ins = cast<InsertElementInst>(&I);
   auto *Ext = cast<ExtractElementInst>(I.getOperand(1));
   InstructionCost InsCost =
-      TTI.getVectorInstrCost(*Ins, DstVecTy, CostKind, InsIdx);
+      TTI.getVectorInstrCost(*Ins, VecTy, CostKind, InsIdx);
   InstructionCost ExtCost =
-      TTI.getVectorInstrCost(*Ext, DstVecTy, CostKind, ExtIdx);
+      TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx);
   InstructionCost OldCost = ExtCost + InsCost;
 
+  // Ignore 'free' identity insertion shuffle.
+  // TODO: getShuffleCost should return TCC_Free for Identity shuffles.
   InstructionCost NewCost = 0;
-  SmallVector<int> ExtToVecMask;
-  if (!NeedExpOrNarrow) {
-    // Ignore 'free' identity insertion shuffle.
-    // TODO: getShuffleCost should return TCC_Free for Identity shuffles.
-    if (!ShuffleVectorInst::isIdentityMask(Mask, NumSrcElts))
-      NewCost += TTI.getShuffleCost(SK, DstVecTy, Mask, CostKind, 0, nullptr,
-                                    {DstVec, SrcVec});
-  } else {
-    // When creating length-changing-vector, always create with a Mask whose
-    // first element has an ExtIdx, so that the first element of the vector
-    // being created is always the target to be extracted.
-    ExtToVecMask.assign(NumDstElts, PoisonMaskElem);
-    if (IsExtIdxInBounds)
-      ExtToVecMask[ExtIdx] = ExtIdx;
-    else
-      ExtToVecMask[0] = ExtIdx;
-    // Add cost for expanding or narrowing
-    NewCost = TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
-                                 SrcVecTy, ExtToVecMask, CostKind);
-    NewCost += TTI.getShuffleCost(SK, DstVecTy, Mask, CostKind);
-  }
-
+  if (!ShuffleVectorInst::isIdentityMask(Mask, NumElts))
+    NewCost += TTI.getShuffleCost(SK, VecTy, Mask, CostKind, 0, nullptr,
+                                  {DstVec, SrcVec});
   if (!Ext->hasOneUse())
     NewCost += ExtCost;
 
@@ -3224,63 +3192,15 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   if (OldCost < NewCost)
     return false;
 
-  if (NeedExpOrNarrow) {
-    if (!NeedDstSrcSwap)
-      SrcVec = Builder.CreateShuffleVector(SrcVec, ExtToVecMask);
-    else
-      DstVec = Builder.CreateShuffleVector(DstVec, ExtToVecMask);
-  }
-
   // Canonicalize undef param to RHS to help further folds.
   if (isa<UndefValue>(DstVec) && !isa<UndefValue>(SrcVec)) {
-    ShuffleVectorInst::commuteShuffleMask(Mask, NumDstElts);
+    ShuffleVectorInst::commuteShuffleMask(Mask, NumElts);
     std::swap(DstVec, SrcVec);
   }
 
   Value *Shuf = Builder.CreateShuffleVector(DstVec, SrcVec, Mask);
   replaceValue(I, *Shuf);
 
-  return true;
-}
-
-/// If we're interleaving 2 constant splats, for instance `<vscale x 8 x i32>
-/// <splat of 666>` and `<vscale x 8 x i32> <splat of 777>`, we can create a
-/// larger splat `<vscale x 8 x i64> <splat of ((777 << 32) | 666)>` first
-/// before casting it back into `<vscale x 16 x i32>`.
-bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
-  const APInt *SplatVal0, *SplatVal1;
-  if (!match(&I, m_Intrinsic<Intrinsic::vector_interleave2>(
-                     m_APInt(SplatVal0), m_APInt(SplatVal1))))
-    return false;
-
-  LLVM_DEBUG(dbgs() << "VC: Folding interleave2 with two splats: " << I
-                    << "\n");
-
-  auto *VTy =
-      cast<VectorType>(cast<IntrinsicInst>(I).getArgOperand(0)->getType());
-  auto *ExtVTy = VectorType::getExtendedElementVectorType(VTy);
-  unsigned Width = VTy->getElementType()->getIntegerBitWidth();
-
-  // Just in case the cost of interleave2 intrinsic and bitcast are both
-  // invalid, in which case we want to bail out, we use <= rather
-  // than < here. Even they both have valid and equal costs, it's probably
-  // not a good idea to emit a high-cost constant splat.
-  if (TTI.getInstructionCost(&I, CostKind) <=
-      TTI.getCastInstrCost(Instruction::BitCast, I.getType(), ExtVTy,
-                           TTI::CastContextHint::None, CostKind)) {
-    LLVM_DEBUG(dbgs() << "VC: The cost to cast from " << *ExtVTy << " to "
-                      << *I.getType() << " is too high.\n");
-    return false;
-  }
-
-  APInt NewSplatVal = SplatVal1->zext(Width * 2);
-  NewSplatVal <<= Width;
-  NewSplatVal |= SplatVal0->zext(Width * 2);
-  auto *NewSplat = ConstantVector::getSplat(
-      ExtVTy->getElementCount(), ConstantInt::get(F.getContext(), NewSplatVal));
-
-  IRBuilder<> Builder(&I);
-  replaceValue(I, *Builder.CreateBitCast(NewSplat, I.getType()));
   return true;
 }
 
@@ -3328,7 +3248,6 @@ bool VectorCombine::run() {
       MadeChange |= scalarizeBinopOrCmp(I);
       MadeChange |= scalarizeLoadExtract(I);
       MadeChange |= scalarizeVPIntrinsic(I);
-      MadeChange |= foldInterleaveIntrinsics(I);
     }
 
     if (Opcode == Instruction::Store)

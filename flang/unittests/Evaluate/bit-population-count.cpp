@@ -1,5 +1,5 @@
 #include "flang/Common/bit-population-count.h"
-#include "flang/Testing/testing.h"
+#include "testing.h"
 
 using Fortran::common::BitPopulationCount;
 using Fortran::common::Parity;

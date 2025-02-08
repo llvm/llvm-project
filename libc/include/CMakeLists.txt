@@ -74,15 +74,6 @@ add_header_macro(
 )
 
 add_header_macro(
-  endian
-  ../libc/include/endian.yaml
-  endian.h
-  DEPENDS
-    .llvm-libc-macros.endian_macros
-    .llvm_libc_common_h
-)
-
-add_header_macro(
   features
   ../libc/include/features.yaml
   features.h
@@ -284,14 +275,13 @@ add_header_macro(
   signal.h
   DEPENDS
     .llvm-libc-macros.signal_macros
-    .llvm-libc-types.pid_t
     .llvm-libc-types.sig_atomic_t
-    .llvm-libc-types.sighandler_t
-    .llvm-libc-types.siginfo_t
     .llvm-libc-types.sigset_t
-    .llvm-libc-types.stack_t
     .llvm-libc-types.struct_sigaction
     .llvm-libc-types.union_sigval
+    .llvm-libc-types.siginfo_t
+    .llvm-libc-types.stack_t
+    .llvm-libc-types.pid_t
 )
 
 add_header_macro(
@@ -713,16 +703,6 @@ add_header_macro(
     .llvm-libc-types.locale_t
     .llvm-libc-types.struct_lconv
 )
-
-add_header_macro(
-  poll
-  ../libc/include/poll.yaml
-  poll.h
-  DEPENDS
-    .llvm-libc-types.struct_pollfd
-    .llvm-libc-types.nfds_t
-    .llvm-libc-macros.poll-macros
-  )
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   # We don't install headers in non-fullbuild mode.

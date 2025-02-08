@@ -35,9 +35,6 @@ void computeMultiplierAndShift(double scale, int32_t &multiplier,
 ConvOpQuantizationAttr buildConvOpQuantizationAttr(OpBuilder &builder,
                                                    Value input, Value weight);
 
-std::pair<Value, Value> createZPsAsConst(OpBuilder &builder, Value input,
-                                         Value weight);
-
 //// Builds MatMulOpQuantizationAttr for MatMul operations from A and B.
 MatMulOpQuantizationAttr buildMatMulOpQuantizationAttr(OpBuilder &builder,
                                                        Value a, Value b);

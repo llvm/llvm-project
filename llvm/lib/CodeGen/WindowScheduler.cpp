@@ -45,7 +45,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -168,7 +167,7 @@ WindowScheduler::createMachineScheduler(bool OnlyBuildGraph) {
              ? new ScheduleDAGMI(
                    Context, std::make_unique<PostGenericScheduler>(Context),
                    true)
-             : Context->TM->createMachineScheduler(Context);
+             : Context->PassConfig->createMachineScheduler(Context);
 }
 
 bool WindowScheduler::initialize() {

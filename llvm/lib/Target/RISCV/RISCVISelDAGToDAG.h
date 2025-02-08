@@ -278,7 +278,6 @@ struct VLX_VSXPseudo {
 #define GET_RISCVVSETable_DECL
 #define GET_RISCVVLXTable_DECL
 #define GET_RISCVVSXTable_DECL
-#include "RISCVGenSearchableTables.inc"
 } // namespace RISCV
 
 } // namespace llvm

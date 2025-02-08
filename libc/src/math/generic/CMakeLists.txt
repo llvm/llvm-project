@@ -534,7 +534,7 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.types
   COMPILE_OPTIONS
-    ${libc_opt_high_flag}
+    -O3
 )
 
 add_entrypoint_object(
