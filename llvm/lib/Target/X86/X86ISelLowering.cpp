@@ -54645,10 +54645,22 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
 
   // If either operand is NaN, the 2nd source operand (Op0) is passed through.
   SDValue MinOrMax = DAG.getNode(MinMaxOp, DL, VT, Op1, Op0);
-  SDValue IsOp0Nan = DAG.getSetCC(DL, SetCCType, Op0, Op0, ISD::SETUO);
 
   // If Op0 is a NaN, select Op1. Otherwise, select the max. If both operands
   // are NaN, the NaN value of Op1 is the result.
+
+  // Manually lower f32 SSE Select to fix Bug 25959
+  if (!Subtarget.hasAVX() && VT == MVT::f32) {
+    unsigned SSECC = 3; // UNORD
+    SDValue IsOp0Nan = DAG.getNode(X86ISD::FSETCC, DL, VT, Op0, Op0,
+                                   DAG.getTargetConstant(SSECC, DL, MVT::i8));
+    SDValue AndN = DAG.getNode(X86ISD::FANDN, DL, VT, IsOp0Nan, MinOrMax);
+    SDValue And = DAG.getNode(X86ISD::FAND, DL, VT, Op1, IsOp0Nan);
+    return DAG.getNode(X86ISD::FOR, DL, VT, And, AndN);
+  }
+
+  SDValue IsOp0Nan = DAG.getSetCC(DL, SetCCType, Op0, Op0, ISD::SETUO);
+
   return DAG.getSelect(DL, VT, IsOp0Nan, Op1, MinOrMax);
 }
 
