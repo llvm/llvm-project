@@ -346,11 +346,15 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
          "can only add VS runtime library on Windows!");
-  // if -fno-fortran-main has been passed, skip linking Fortran_main.a
-  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    CmdArgs.push_back(Args.MakeArgString(
-        "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
-  }
+
+  // Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
+  // should only depend on msv(u)crt. LLVM still emits libgcc/compiler-rt
+  // functions in some cases like 128-bit integer math (__udivti3, __modti3,
+  // __fixsfti, __floattidf, ...) that msvc does not support. We are injecting a
+  // dependency to Compiler-RT's builtin library where these are implemented.
+  CmdArgs.push_back(Args.MakeArgString(
+      "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
+
   unsigned RTOptionID = options::OPT__SLASH_MT;
   if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
     RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
@@ -364,26 +368,26 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   case options::OPT__SLASH_MT:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("--dependent-lib=libcmt");
-    CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
+    CmdArgs.push_back("--dependent-lib=flang_rt.runtime.static.lib");
     break;
   case options::OPT__SLASH_MTd:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("--dependent-lib=libcmtd");
-    CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=flang_rt.runtime.static_dbg.lib");
     break;
   case options::OPT__SLASH_MD:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrt");
-    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
+    CmdArgs.push_back("--dependent-lib=flang_rt.runtime.dynamic.lib");
     break;
   case options::OPT__SLASH_MDd:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrtd");
-    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=flang_rt.runtime.dynamic_dbg.lib");
     break;
   }
 }
