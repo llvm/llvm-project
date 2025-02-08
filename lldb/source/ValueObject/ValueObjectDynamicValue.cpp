@@ -241,7 +241,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
       SetValueDidChange(true);
 
     // If we found a host address, and the dynamic type fits in the local buffer
-    // that was found, point to thar buffer. Later on this function will copy
+    // that was found, point to that buffer. Later on this function will copy
     // the buffer over.
     if (value_type == Value::ValueType::HostAddress && !local_buffer.empty()) {
       auto *exe_scope = exe_ctx.GetBestExecutionContextScope();
