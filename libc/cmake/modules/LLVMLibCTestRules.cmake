@@ -785,6 +785,7 @@ function(add_libc_hermetic test_name)
                    ${fq_deps_list})
   # TODO: currently the dependency chain is broken such that getauxval cannot properly
   # propagate to hermetic tests. This is a temporary workaround.
+  # getauxval does not exist on UEFI.
   if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT LIBC_TARGET_OS_IS_UEFI)
     target_link_libraries(
       ${fq_build_target_name}
