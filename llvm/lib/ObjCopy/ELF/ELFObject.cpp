@@ -768,7 +768,7 @@ Error SymbolTableSection::removeSymbols(
       std::remove_if(std::begin(Symbols) + 1, std::end(Symbols),
                [ToRemove](const SymPtr &Sym) {
                    if (ToRemove(*Sym)) {
-                       dbgs()<<"Symbols Removed:"<<Sym->Name<< "\n";
+                       llvm::outs() << "Symbols Removed:" << Sym->Name<< "\n";
                        return true;
                    }
                    return false;
@@ -2236,6 +2236,9 @@ Error Object::removeSections(
   for (auto &RemoveSec : make_range(Iter, std::end(Sections))) {
     for (auto &Segment : Segments)
       Segment->removeSection(RemoveSec.get());
+    if (isVerboseEnabled) {
+      llvm::outs() << "Removed Section: " << (RemoveSec.get()->Name);
+    }
     RemoveSec->onRemove();
     RemoveSections.insert(RemoveSec.get());
   }
@@ -2255,18 +2258,10 @@ Error Object::removeSections(
 
   // Transfer removed sections into the Object RemovedSections container for use
   // later.
-  for(auto &KeepSec : make_range(std::begin(Sections) , Iter))
-  {
-    
-    if (Error E = KeepSec->removeSectionReferences(
-            AllowBrokenLinks, [&RemoveSections](const SectionBase *Sec) {
-              return RemoveSections.find(Sec) != RemoveSections.end();
-            }))
-      std::move(Iter, Sections.end(), std::back_inserter(RemovedSections));
-      dbgs()<<"Sections Removed:"<<KeepSec->Name<<'\n';
-      Sections.erase(Iter, std::end(Sections));
-      return Error::success();
-  }
+  std::move(Iter, Sections.end(), std::back_inserter(RemovedSections));
+  // Now finally get rid of them all together.
+  Sections.erase(Iter, std::end(Sections));
+  return Error::success();
 }
 
 Error Object::replaceSections(
@@ -2296,8 +2291,12 @@ Error Object::replaceSections(
 Error Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
   if (SymbolTable)
     for (const SecPtr &Sec : Sections)
-      if (Error E = Sec->removeSymbols(ToRemove))
+      if (Error E = Sec->removeSymbols(ToRemove)){
+        if (isVerboseEnabled){
+          llvm::outs() << "Removed Symbols:" << Sec->Name;
+        }
         return E;
+      }
   return Error::success();
 }
 

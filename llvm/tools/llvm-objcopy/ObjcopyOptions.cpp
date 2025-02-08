@@ -1103,6 +1103,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
       OBJCOPY_verify_note_sections, OBJCOPY_no_verify_note_sections, true);
 
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
+  Config.Verbose = InputArgs.hasArg(OBJCOPY_verbose);
   ELFConfig.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   MachOConfig.KeepUndefined = InputArgs.hasArg(OBJCOPY_keep_undefined);
   Config.DecompressDebugSections =
@@ -1586,6 +1587,7 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
   Config.StripAllGNU = InputArgs.hasArg(STRIP_strip_all_gnu);
   MachOConfig.StripSwiftSymbols = InputArgs.hasArg(STRIP_strip_swift_symbols);
   Config.OnlyKeepDebug = InputArgs.hasArg(STRIP_only_keep_debug);
+  Config.Verbose = InputArgs.hasArg(STRIP_verbose);
   ELFConfig.KeepFileSymbols = InputArgs.hasArg(STRIP_keep_file_symbols);
   MachOConfig.KeepUndefined = InputArgs.hasArg(STRIP_keep_undefined);
 

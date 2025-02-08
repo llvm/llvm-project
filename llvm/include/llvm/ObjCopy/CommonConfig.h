@@ -274,6 +274,7 @@ struct CommonConfig {
   bool StripNonAlloc = false;
   bool StripSections = false;
   bool StripUnneeded = false;
+  bool Verbose = false;
   bool Weaken = false;
   bool DecompressDebugSections = false;
 
