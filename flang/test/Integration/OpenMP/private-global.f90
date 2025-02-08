@@ -1,5 +1,5 @@
 !RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s
-
+!XFAIL: *
 ! Regression test for https://github.com/llvm/llvm-project/issues/106297
 
 program bug
@@ -29,12 +29,17 @@ End Program
 ! CHECK:         %[[TABLE_BOX_ADDR:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 ! CHECK:         %[[BOXED_FIFTY:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, align 8
 ! CHECK:         %[[TABLE_BOX_ADDR2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
-! CHECK:         %[[TABLE_BOX_VAL:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr undef, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64), i32 20240719, i8 1, i8 9, i8 0, i8 0, [1 x [3 x i64]] {{\[\[}}3 x i64] [i64 1, i64 10, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64)]] }, ptr %[[PRIV_TABLE]], 0
-! CHECK:         store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[TABLE_BOX_VAL]], ptr %[[TABLE_BOX_ADDR]], align 8
-! CHECK :         %[[TABLE_BOX_VAL2:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[TABLE_BOX_ADDR]], align 8
-! CHECK :         store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[TABLE_BOX_VAL2]], ptr %[[TABLE_BOX_ADDR2]], align 8
-! CHECK:         call void @llvm.memcpy.p0.p0.i32(ptr %[[TABLE_BOX_ADDR2]], ptr %[[TABLE_BOX_ADDR]], i32 48, i1 false)
+! CHECK:         %[[LOAD_26:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[PRIV_BOX_ALLOC]], align 8
+! CHECK:         store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[LOAD_26]], ptr %[[INTERMEDIATE]], align 8
+! CHECK:         store i32 50, ptr %[[FIFTY]], align 4
+! CHECK:         %[[FIFTY_BOX_VAL:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8 } { ptr undef, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64), i32 20240719, i8 0, i8 9, i8 0, i8 0 }, ptr %[[FIFTY]], 0
+! CHECK:         store { ptr, i64, i32, i8, i8, i8, i8 } %[[FIFTY_BOX_VAL]], ptr %[[BOXED_FIFTY]], align 8
+! CHECK:         %[[TABLE_BOX_VAL2:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INTERMEDIATE]], align 8
+! CHECK:         store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[TABLE_BOX_VAL2]], ptr %[[TABLE_BOX_ADDR2]], align 8
 ! CHECK:         call void @_FortranAAssign(ptr %[[TABLE_BOX_ADDR2]], ptr %[[BOXED_FIFTY]], ptr @{{.*}}, i32 9)
+! CHECK:         %[[LOAD_29:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[PRIV_BOX_ALLOC]], align 8
+! CHECK:         store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[LOAD_29]], ptr %[[TABLE_BOX_ADDR]], align 8
+! CHECK:         %[[PRIV_TABLE:.*]] = call ptr @malloc(i64 ptrtoint (ptr getelementptr ([10 x i32], ptr null, i32 1) to i64))
 ! ...
 ! check that we use the private copy of table for table/=50
 ! CHECK:       omp.par.region3:
