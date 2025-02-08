@@ -21,16 +21,16 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=NVPTX-LINK
 
-// NVPTX-LINK: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 -O2 -flto {{.*}}.o {{.*}}.o
+// NVPTX-LINK: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.o {{.*}}.o
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
-// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --device-debug -O0 \
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --device-compiler=-g \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=NVPTX-LINK-DEBUG
 
-// NVPTX-LINK-DEBUG: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 -O2 -flto {{.*}}.o {{.*}}.o -g
+// NVPTX-LINK-DEBUG: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}-g
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
@@ -39,16 +39,16 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=AMDGPU-LINK
 
-// AMDGPU-LINK: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx908 -O2 -flto -Wl,--no-undefined {{.*}}.o {{.*}}.o
+// AMDGPU-LINK: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx908 -Wl,--no-undefined {{.*}}.o {{.*}}.o
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.amdgpu.bc,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030 \
 // RUN:   --image=file=%t.amdgpu.bc,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
-// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --save-temps -O2 \
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --device-compiler=--save-temps \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=AMDGPU-LTO-TEMPS
 
-// AMDGPU-LTO-TEMPS: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -O2 -flto -Wl,--no-undefined {{.*}}.o -save-temps
+// AMDGPU-LTO-TEMPS: clang{{.*}} --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}-save-temps
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \
@@ -59,7 +59,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --linker-path=/usr/bin/ld.lld --whole-archive %t.a --no-whole-archive \
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CPU-LINK
 
-// CPU-LINK: clang{{.*}} -o {{.*}}.img --target=x86_64-unknown-linux-gnu -march=native -O2 -flto -Wl,--no-undefined {{.*}}.o {{.*}}.o -Wl,-Bsymbolic -shared -Wl,--whole-archive {{.*}}.a -Wl,--no-whole-archive
+// CPU-LINK: clang{{.*}} -o {{.*}}.img --target=x86_64-unknown-linux-gnu -march=native -Wl,--no-undefined {{.*}}.o {{.*}}.o -Wl,-Bsymbolic -shared -Wl,--whole-archive {{.*}}.a -Wl,--no-whole-archive
 
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o
 // RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu -mllvm -openmp-opt-disable \
@@ -148,7 +148,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --clang-backend \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CLANG-BACKEND
 
-// CLANG-BACKEND: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx908 -O2 -flto -Wl,--no-undefined {{.*}}.o
+// CLANG-BACKEND: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx908 -Wl,--no-undefined {{.*}}.o
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
@@ -171,8 +171,8 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t-on.o %t-off.o %t.a -o a.out 2>&1 | FileCheck %s --check-prefix=AMD-TARGET-ID
 
-// AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+ -O2 -flto -Wl,--no-undefined {{.*}}.o {{.*}}.o
-// AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack- -O2 -flto -Wl,--no-undefined {{.*}}.o {{.*}}.o
+// AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+ -Wl,--no-undefined {{.*}}.o {{.*}}.o
+// AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack- -Wl,--no-undefined {{.*}}.o {{.*}}.o
 
 // RUN: clang-offload-packager -o %t-lib.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=generic
@@ -187,8 +187,8 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t1.o %t2.o %t.a -o a.out 2>&1 | FileCheck %s --check-prefix=ARCH-ALL
 
-// ARCH-ALL: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a -O2 -flto -Wl,--no-undefined {{.*}}.o {{.*}}.o
-// ARCH-ALL: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx908 -O2 -flto -Wl,--no-undefined {{.*}}.o {{.*}}.o
+// ARCH-ALL: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a -Wl,--no-undefined {{.*}}.o {{.*}}.o
+// ARCH-ALL: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx908 -Wl,--no-undefined {{.*}}.o {{.*}}.o
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \
