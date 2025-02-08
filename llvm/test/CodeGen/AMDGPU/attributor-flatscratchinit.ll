@@ -614,12 +614,12 @@ define amdgpu_kernel void @with_cast_call_with_private_to_flat_addrspacecast_cc_
 
 define amdgpu_kernel void @private_constant_expression_use(ptr addrspace(1) nocapture %out) {
 ; GFX9-LABEL: define amdgpu_kernel void @private_constant_expression_use(
-; GFX9-SAME: ptr addrspace(1) nocapture [[OUT:%.*]]) #[[ATTR1]] {
+; GFX9-SAME: ptr addrspace(1) captures(none) [[OUT:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    store volatile ptr addrspacecast (ptr addrspace(5) inttoptr (i32 123 to ptr addrspace(5)) to ptr), ptr addrspace(1) [[OUT]], align 8
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @private_constant_expression_use(
-; GFX10-SAME: ptr addrspace(1) nocapture [[OUT:%.*]]) #[[ATTR1]] {
+; GFX10-SAME: ptr addrspace(1) captures(none) [[OUT:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    store volatile ptr addrspacecast (ptr addrspace(5) inttoptr (i32 123 to ptr addrspace(5)) to ptr), ptr addrspace(1) [[OUT]], align 8
 ; GFX10-NEXT:    ret void
 ;
