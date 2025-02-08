@@ -8441,7 +8441,7 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // recusive call to getBackedgeTakenInfo (on a different
   // loop), which would invalidate the iterator computed
   // earlier.
-  return BackedgeTakenCounts[L] = std::move(Result);
+  return BackedgeTakenCounts.find(L)->second = std::move(Result);
 }
 
 void ScalarEvolution::forgetAllLoops() {
@@ -9866,10 +9866,8 @@ const SCEV *ScalarEvolution::getSCEVAtScope(const SCEV *V, const Loop *L) {
   for (auto &LS : reverse(ValuesAtScopes[V]))
     if (LS.first == L) {
       LS.second = C;
-      if (!isa<SCEVConstant>(C)) {
+      if (!isa<SCEVConstant>(C))
         ValuesAtScopesUsers[C].push_back({L, V});
-        SCEVUsers[V].insert(C);
-      }
       break;
     }
   return C;
@@ -14202,8 +14200,7 @@ void ScalarEvolution::forgetBackedgeTakenCounts(const Loop *L,
       for (const SCEV *S : {ENT.ExactNotTaken, ENT.SymbolicMaxNotTaken}) {
         if (!isa<SCEVConstant>(S)) {
           auto UserIt = BECountUsers.find(S);
-          if (UserIt == BECountUsers.end())
-            continue;
+          assert(UserIt != BECountUsers.end());
           UserIt->second.erase({L, Predicated});
         }
       }
