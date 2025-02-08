@@ -15,7 +15,6 @@
 // For the original RFC of this pass please see
 // https://discourse.llvm.org/t/rfc-profile-guided-static-data-partitioning/83744
 
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
@@ -31,7 +30,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 
 using namespace llvm;
@@ -54,7 +55,7 @@ class StaticDataSplitter : public MachineFunctionPass {
   const GlobalVariable *getLocalLinkageGlobalVariable(const GlobalValue *GV);
 
   // Returns true if the global variable is in one of {.rodata, .bss, .data,
-  // .data.rel.ro} sections
+  // .data.rel.ro} sections.
   bool inStaticDataSection(const GlobalVariable *GV, const TargetMachine &TM);
 
   // Iterate all global variables in the module and update the section prefix
@@ -62,7 +63,7 @@ class StaticDataSplitter : public MachineFunctionPass {
   bool updateGlobalVariableSectionPrefix(MachineFunction &MF);
 
   // Accummulated data profile count across machine functions in the module.
-  DenseMap<const GlobalVariable *, APInt> DataProfileCounts;
+  DenseMap<const GlobalVariable *, uint64_t> DataProfileCounts;
   // Update LLVM statistics for a machine function without profiles.
   void updateStatsWithoutProfiles(const MachineFunction &MF);
   // Update LLVM statistics for a machine function with profiles.
@@ -147,20 +148,27 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
 
           if (MJTI->updateJumpTableEntryHotness(JTI, Hotness))
             ++NumChangedJumpTables;
-        } else if (Op.isGlobal()) {
-          // Find global variables with local linkage
+        } else {
+          // Find global variables with local linkage.
           const GlobalVariable *GV =
               getLocalLinkageGlobalVariable(Op.getGlobal());
-          if (!GV || !inStaticDataSection(GV, TM))
+          // Skip 'special' global variables conservatively because they are
+          // often handled specially, and skip those not in static data
+          // sections.
+          if (!GV || GV->getName().starts_with("llvm.") ||
+              !inStaticDataSection(GV, TM))
             continue;
 
           // Acccumulate data profile count across machine function
           // instructions.
           // TODO: Analyze global variable's initializers.
           if (Count) {
-            auto [It, Inserted] =
-                DataProfileCounts.try_emplace(GV, APInt(128, 0));
-            It->second += *Count;
+            uint64_t &GVCount = DataProfileCounts[GV];
+            GVCount = llvm::SaturatingAdd(GVCount, *Count);
+            // Clamp the count to getInstrMaxCountValue. InstrFDO reserves a few
+            // large values for special use.
+            if (GVCount > getInstrMaxCountValue())
+              GVCount = getInstrMaxCountValue();
           }
         }
       }
@@ -171,19 +179,15 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
 
 const GlobalVariable *
 StaticDataSplitter::getLocalLinkageGlobalVariable(const GlobalValue *GV) {
-  if (!GV || GV->isDeclarationForLinker())
-    return nullptr;
-
-  return GV->hasLocalLinkage() ? dyn_cast<GlobalVariable>(GV) : nullptr;
+  // LLVM IR Verifier requires that a declaration must have valid declaration
+  // linkage, and local linkages are not among the valid ones. So there is no
+  // need to check GV is not a declaration here.
+  return (GV && GV->hasLocalLinkage()) ? dyn_cast<GlobalVariable>(GV) : nullptr;
 }
 
 bool StaticDataSplitter::inStaticDataSection(const GlobalVariable *GV,
                                              const TargetMachine &TM) {
   assert(GV && "Caller guaranteed");
-
-  // Skip LLVM reserved symbols.
-  if (GV->getName().starts_with("llvm."))
-    return false;
 
   SectionKind Kind = TargetLoweringObjectFile::getKindForGlobal(GV, TM);
   return Kind.isData() || Kind.isReadOnly() || Kind.isReadOnlyWithRel() ||
@@ -206,6 +210,8 @@ bool StaticDataSplitter::updateGlobalVariableSectionPrefix(
     if (Iter == DataProfileCounts.end())
       continue;
 
+    const std::optional<StringRef> Prefix = GV.getSectionPrefix();
+
     // StaticDataSplitter is made a machine function pass rather than a module
     // pass because (Lazy)MachineBlockFrequencyInfo is a machine-function
     // analysis pass and cannot be used for a legacy module pass.
@@ -215,11 +221,19 @@ bool StaticDataSplitter::updateGlobalVariableSectionPrefix(
     // FIXME: Make StaticDataSplitter a module pass under new pass manager
     // framework, and set global variable section prefix once per module after
     // analyzing all machine functions.
-    if (PSI->isColdCount(Iter->second.getZExtValue())) {
-      Changed |= GV.updateSectionPrefix("unlikely",
-                                        std::make_optional(StringRef("hot")));
-    } else if (PSI->isHotCount(Iter->second.getZExtValue())) {
-      Changed |= GV.updateSectionPrefix("hot");
+    if (PSI->isColdCount(Iter->second)) {
+      assert((!Prefix || *Prefix != "hot") &&
+             "Count monotonically increased so a hot variable won't become "
+             "cold again.");
+      if (!Prefix || *Prefix != "unlikely") {
+        GV.setSectionPrefix("unlikely");
+        Changed |= true;
+      }
+    } else if (PSI->isHotCount(Iter->second)) {
+      if (!Prefix || *Prefix != "hot") {
+        GV.setSectionPrefix("hot");
+        Changed |= true;
+      }
     }
   }
   return Changed;

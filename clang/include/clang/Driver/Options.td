@@ -2526,6 +2526,10 @@ defm sanitize_cfi_canonical_jump_tables : BoolOption<"f", "sanitize-cfi-canonica
           "Do not make">,
   BothFlags<[], [ClangOption], " the jump table addresses canonical in the symbol table">>,
   Group<f_clang_Group>;
+def fsanitize_kcfi_arity : Flag<["-"], "fsanitize-kcfi-arity">,
+                           Group<f_clang_Group>,
+                           HelpText<"Embed function arity information into the KCFI patchable function prefix">,
+                           MarshallingInfoFlag<CodeGenOpts<"SanitizeKcfiArity">>;
 defm sanitize_stats : BoolOption<"f", "sanitize-stats",
   CodeGenOpts<"SanitizeStats">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Enable">,
@@ -5827,6 +5831,9 @@ def start_no_unused_arguments : Flag<["--"], "start-no-unused-arguments">,
   HelpText<"Don't emit warnings about unused arguments for the following arguments">;
 def static_libgcc : Flag<["-"], "static-libgcc">;
 def static_libstdcxx : Flag<["-"], "static-libstdc++">;
+def static_libclosure : Flag<["-"], "static-libclosure">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Generate code for statically linking libclosure (BlocksRuntime)">;
 def static : Flag<["-", "--"], "static">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>,
   Flags<[NoArgumentUnused]>;

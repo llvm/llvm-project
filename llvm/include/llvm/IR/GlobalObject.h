@@ -127,11 +127,6 @@ public:
   /// Set the section prefix for this global object.
   void setSectionPrefix(StringRef Prefix);
 
-  /// Update the section prefix, unless the existing prefix is the same as
-  /// `KeepPrefix`.
-  bool updateSectionPrefix(StringRef Prefix,
-                           std::optional<StringRef> KeepPrefix = std::nullopt);
-
   /// Get the section prefix for this global object.
   std::optional<StringRef> getSectionPrefix() const;
 
