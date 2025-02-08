@@ -444,7 +444,7 @@ public:
     IncompleteOnly = 3,
   };
 
-  enum class ArrayBoundsStrictFlexArraysLevelKind {
+  enum class UbsanStrictFlexArraysLevelKind {
     // Use same StrictFlexArrayLevel as compiler.
     None = 0,
     /// Any trailing array member is a FAM.

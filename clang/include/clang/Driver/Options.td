@@ -1535,19 +1535,19 @@ def fstrict_flex_arrays_EQ : Joined<["-"], "fstrict-flex-arrays=">, Group<f_Grou
   MarshallingInfoEnum<LangOpts<"StrictFlexArraysLevel">, "Default">;
 // We might want a different (generally stricter) definition of flexible arrays
 // for sanitization than for the codegen.
-def fsanitize_array_bounds_strict_flex_arrays_EQ
-    : Joined<["-"], "fsanitize-bounds-strict-flex-arrays=">,
+def fsanitize_undefined_strict_flex_arrays_EQ
+    : Joined<["-"], "fsanitize-undefined-strict-flex-arrays=">,
       Group<f_Group>,
       MetaVarName<"<n>">,
       Values<"none,0,1,2,3">,
-      LangOpts<"ArrayBoundsStrictFlexArraysLevel">,
+      LangOpts<"UbsanStrictFlexArraysLevel">,
       Visibility<[ClangOption, CC1Option]>,
       NormalizedValuesScope<
-          "LangOptions::ArrayBoundsStrictFlexArraysLevelKind">,
+          "LangOptions::UbsanStrictFlexArraysLevelKind">,
       NormalizedValues<["None", "Default", "OneZeroOrIncomplete",
                         "ZeroOrIncomplete", "IncompleteOnly"]>,
       HelpText<"Set definition of flexible arrays for bounds checks">,
-      MarshallingInfoEnum<LangOpts<"ArrayBoundsStrictFlexArraysLevel">, "None">;
+      MarshallingInfoEnum<LangOpts<"UbsanStrictFlexArraysLevel">, "None">;
 defm apple_pragma_pack : BoolFOption<"apple-pragma-pack",
   LangOpts<"ApplePragmaPack">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],

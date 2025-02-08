@@ -3315,7 +3315,7 @@ public:
                      SanitizerSet SkippedChecks = SanitizerSet(),
                      llvm::Value *ArraySize = nullptr);
 
-  LangOptions::StrictFlexArraysLevelKind effectiveArrayBoundsFlexArraysLevel();
+  LangOptions::StrictFlexArraysLevelKind effectiveUbsanFlexArraysLevel();
   /// Emit a check that \p Base points into an array object, which
   /// we can access at index \p Index. \p Accessed should be \c false if we
   /// this expression is used as an lvalue, for instance in "&Arr[Idx]".

@@ -1194,20 +1194,20 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
 }
 
 LangOptions::StrictFlexArraysLevelKind
-CodeGenFunction::effectiveArrayBoundsFlexArraysLevel() {
+CodeGenFunction::effectiveUbsanFlexArraysLevel() {
   using StrictFlexArraysLevelKind = LangOptions::StrictFlexArraysLevelKind;
-  using ArrayBoundsStrictFlexArraysLevelKind =
-      LangOptions::ArrayBoundsStrictFlexArraysLevelKind;
-  switch (getLangOpts().getArrayBoundsStrictFlexArraysLevel()) {
-  case ArrayBoundsStrictFlexArraysLevelKind::Default:
+  using UbsansStrictFlexArraysLevelKind =
+      LangOptions::UbsanStrictFlexArraysLevelKind;
+  switch (getLangOpts().getUbsanStrictFlexArraysLevel()) {
+  case UbsansStrictFlexArraysLevelKind::Default:
     return StrictFlexArraysLevelKind::Default;
-  case ArrayBoundsStrictFlexArraysLevelKind::OneZeroOrIncomplete:
+  case UbsansStrictFlexArraysLevelKind::OneZeroOrIncomplete:
     return StrictFlexArraysLevelKind::OneZeroOrIncomplete;
-  case ArrayBoundsStrictFlexArraysLevelKind::ZeroOrIncomplete:
+  case UbsansStrictFlexArraysLevelKind::ZeroOrIncomplete:
     return StrictFlexArraysLevelKind::ZeroOrIncomplete;
-  case ArrayBoundsStrictFlexArraysLevelKind::IncompleteOnly:
+  case UbsansStrictFlexArraysLevelKind::IncompleteOnly:
     return StrictFlexArraysLevelKind::IncompleteOnly;
-  case ArrayBoundsStrictFlexArraysLevelKind::None:
+  case UbsansStrictFlexArraysLevelKind::None:
     return getLangOpts().getStrictFlexArraysLevel();
   }
 }
@@ -1218,7 +1218,7 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
   assert(SanOpts.has(SanitizerKind::ArrayBounds) &&
          "should not be called unless adding bounds checks");
   LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-      effectiveArrayBoundsFlexArraysLevel();
+      effectiveUbsanFlexArraysLevel();
 
   QualType IndexedType;
   llvm::Value *Bound =
@@ -4404,7 +4404,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       // i.e. "a.b.count", so we shouldn't need the full force of EmitLValue or
       // similar to emit the correct GEP.
       const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-          effectiveArrayBoundsFlexArraysLevel();
+          effectiveUbsanFlexArraysLevel();
 
       if (const auto *ME = dyn_cast<MemberExpr>(Array);
           ME &&

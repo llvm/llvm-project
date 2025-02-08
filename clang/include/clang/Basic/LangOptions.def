@@ -481,8 +481,8 @@ LANGOPT(RawStringLiterals, 1, 1, "Enable or disable raw string literals")
 ENUM_LANGOPT(StrictFlexArraysLevel, StrictFlexArraysLevelKind, 2,
              StrictFlexArraysLevelKind::Default,
              "Rely on strict definition of flexible arrays")
-ENUM_LANGOPT(ArrayBoundsStrictFlexArraysLevel, ArrayBoundsStrictFlexArraysLevelKind, 3,
-             ArrayBoundsStrictFlexArraysLevelKind::None,
+ENUM_LANGOPT(UbsanStrictFlexArraysLevel, UbsanStrictFlexArraysLevelKind, 3,
+             UbsanStrictFlexArraysLevelKind::None,
              "Definition of flexible arrays for bounds checks")
 
 COMPATIBLE_VALUE_LANGOPT(MaxTokens, 32, 0, "Max number of tokens per TU or 0")

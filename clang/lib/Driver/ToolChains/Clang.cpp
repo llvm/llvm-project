@@ -6977,7 +6977,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fstrict_flex_arrays_EQ);
   Args.AddLastArg(CmdArgs,
-                  options::OPT_fsanitize_array_bounds_strict_flex_arrays_EQ);
+                  options::OPT_fsanitize_undefined_strict_flex_arrays_EQ);
 
   Args.AddLastArg(CmdArgs, options::OPT_pthread);
 
