@@ -913,10 +913,23 @@ func.func @test_negate_quantized(%arg0: tensor<1xi8>) -> () {
 
   // CHECK: linalg.generic
   // CHECK: ^bb0(%[[BBARG0:.+]]: i8,
+  // CHECK: [[C_128:%.+]] = arith.constant -128
+  // CHECK: [[EXT:%.+]] = arith.extsi %[[BBARG0]] : i8 to i16
+  // CHECK: [[SUB:%.+]] = arith.subi [[C_128]], [[EXT]]
+  // CHECK: [[MIN:%.+]] = arith.constant -128
+  // CHECK: [[MAX:%.+]] = arith.constant 127
+  // CHECK: [[LBOUND:%.+]] = arith.maxsi [[MIN]], [[SUB]]
+  // CHECK: [[UBOUND:%.+]] = arith.minsi [[MAX]], [[LBOUND]]
+  // CHECK: [[TRUNC:%.+]] = arith.trunci [[UBOUND]]
+  // CHECK: linalg.yield [[TRUNC]]
+  %3 = tosa.negate %arg0 {input1_zp = -128 : i32, output_zp = 0 : i32} : (tensor<1xi8>) -> tensor<1xi8>
+
+  // CHECK: linalg.generic
+  // CHECK: ^bb0(%[[BBARG0:.+]]: i8,
   // CHECK: [[ZERO:%.+]] = arith.constant 0
   // CHECK: [[SUB:%.+]] = arith.subi [[ZERO]],
   // CHECK: linalg.yield [[SUB]]
-  %3 = tosa.negate %arg0 {quantization_info = #tosa.unary_quant<input_zp = 0, output_zp = 0>} : (tensor<1xi8>) -> tensor<1xi8>
+  %4 = tosa.negate %arg0 {quantization_info = #tosa.unary_quant<input_zp = 0, output_zp = 0>} : (tensor<1xi8>) -> tensor<1xi8>
 
   return
 }
