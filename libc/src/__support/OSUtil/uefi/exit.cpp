@@ -16,8 +16,8 @@ namespace internal {
 
 [[noreturn]] void exit(int status) {
   efi_system_table->BootServices->Exit(efi_image_handle, status, 0, NULL);
-  while (true)
-    ;
+
+  __builtin_unreachable();
 }
 
 } // namespace internal
