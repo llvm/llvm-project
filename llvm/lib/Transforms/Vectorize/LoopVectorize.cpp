@@ -9337,10 +9337,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
   VPBlockBase *PrevVPBB = nullptr;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
-    // Skip VPBBs not corresponding to any input IR basic blocks.
-    if (!HCFGBuilder.getIRBBForVPB(VPBB)) {
-      assert(VPBB == LoopRegion->getExiting() &&
-             "only the latch block shouldn't have a corresponding IRBB");
+    // Handle VPBBs down to the latch.
+    if (VPBB == LoopRegion->getExiting()) {
+      assert(!HCFGBuilder.getIRBBForVPB(VPBB) &&
+             "the latch block shouldn't have a corresponding IRBB");
       VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
       break;
     }
@@ -9358,15 +9358,18 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     // Convert input VPInstructions to widened recipes.
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *SingleDef = cast<VPSingleDefRecipe>(&R);
+      auto *UnderlyingValue = SingleDef->getUnderlyingValue();
       // Skip recipes that do not need transforming, including canonical IV,
       // wide canonical IV and VPInstructions without underlying values. The
-      // latter is added by masking.
-      if (isa<VPCanonicalIVPHIRecipe>(SingleDef) ||
-          isa<VPWidenCanonicalIVRecipe>(SingleDef) ||
-          (isa<VPInstruction>(&R) && !SingleDef->getUnderlyingValue()))
+      // latter are added above by masking.
+      // FIXME: Migrate code relying on the underlying instruction from VPlan0 to construct recipes below to not use the underlying instruction.
+      if (isa<VPCanonicalIVPHIRecipe, VPWidenCanonicalIVRecipe>(SingleDef) ||
+          (isa<VPInstruction>(&R) && !UnderlyingValue))
         continue;
-      assert(isa<VPWidenPHIRecipe>(&R) || (isa<VPInstruction>(SingleDef) &&
-                                           SingleDef->getUnderlyingValue()) &&
+
+      // FIXME: VPlan0, which models a copy of the original scalar loop, should not use VPWidenPHIRecipe to model the phis.
+      assert((isa<VPWidenPHIRecipe>(SingleDef) || isa<VPInstruction>(SingleDef)) &&
+                                           UnderlyingValue &&
                                               "unsupported recipe");
 
       if (match(&R, m_BranchOnCond(m_VPValue())) ||
@@ -9378,11 +9381,12 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
       // TODO: Gradually replace uses of underlying instruction by analyses on
       // VPlan.
-      Instruction *Instr = SingleDef->getUnderlyingInstr();
+      Instruction *Instr = cast<Instruction>(UnderlyingValue);
       Builder.setInsertPoint(SingleDef);
       SmallVector<VPValue *, 4> Operands;
       auto *Phi = dyn_cast<PHINode>(Instr);
       if (Phi && Phi->getParent() == HeaderBB) {
+        // The backedge value will be added in fixHeaderPhis later.
         Operands.push_back(Plan->getOrAddLiveIn(
             Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader())));
       } else {
@@ -9414,11 +9418,11 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
       RecipeBuilder.setRecipe(Instr, Recipe);
       if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) && isa<TruncInst>(Instr)) {
-        // Optimized a truncate truncates to VPWidenIntOrFpInductionRecipe Move
-        // it to the phi section in the header.
+        // Optimized a truncate to VPWidenIntOrFpInductionRecipe. It needs to be moved to the phi section in the header.
         Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
-      } else
+      } else {
         Builder.insert(Recipe);
+      }
       if (Recipe->getNumDefinedValues() == 1)
         SingleDef->replaceAllUsesWith(Recipe->getVPSingleValue());
       else
@@ -9429,8 +9433,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
     // Flatten the CFG in the loop. Masks for blocks have already been generated
     // and added to recipes as needed. To do so, first disconnect VPBB from its
-    // predecessors and successors. Then connect VPBB to the previously visited
-    // VPBB.
+    // successors. Then connect VPBB to the previously visited$ VPBB.
     for (auto *Succ : to_vector(VPBB->getSuccessors()))
       VPBlockUtils::disconnectBlocks(VPBB, Succ);
     if (PrevVPBB)
