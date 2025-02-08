@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -convert-gpu-to-rocdl -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='filter-dialects=func,arith,math' -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -convert-gpu-to-rocdl='index-bitwidth=32' -split-input-file | FileCheck --check-prefix=CHECK32 %s
 
 // CHECK-LABEL: @test_module

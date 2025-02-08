@@ -293,13 +293,33 @@ struct LowerGpuOpsToROCDLOpsPass
     RewritePatternSet llvmPatterns(ctx);
     LLVMConversionTarget target(getContext());
 
-    for (Dialect *dialect : ctx->getLoadedDialects()) {
-      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
-      if (!iface)
-        continue;
+    if (!filterDialects.empty()) {
+      for (StringRef dialectName : filterDialects) {
+        Dialect *dialect = ctx->getLoadedDialect(dialectName);
+        // Dialect may not be loaded if it wasn't used in source module, ignore.
+        if (!dialect)
+          continue;
 
-      iface->populateConvertToLLVMConversionPatterns(target, converter,
-                                                     llvmPatterns);
+        auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+        if (!iface) {
+          m.emitError()
+              << "dialect does not implement ConvertToLLVMPatternInterface: "
+              << dialectName << "\n";
+          return signalPassFailure();
+        }
+
+        iface->populateConvertToLLVMConversionPatterns(target, converter,
+                                                       llvmPatterns);
+      }
+    } else {
+      for (Dialect *dialect : ctx->getLoadedDialects()) {
+        auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+        if (!iface)
+          continue;
+
+        iface->populateConvertToLLVMConversionPatterns(target, converter,
+                                                       llvmPatterns);
+      }
     }
 
     populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns,
