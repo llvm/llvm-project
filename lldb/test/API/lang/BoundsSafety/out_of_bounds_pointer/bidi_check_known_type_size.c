@@ -26,8 +26,9 @@ get_next_fam_struct(FAMS_t *__bidi_indexable current) {
 static FAMS_t *__bidi_indexable alloc_fams_buffer(size_t num_fams,
                                                   size_t num_elts_in_buffer) {
   const size_t buffer_size = sizeof(int) * num_elts_in_buffer;
+  const size_t alloc_size = num_fams * (sizeof(FAMS_t) + buffer_size);
   FAMS_t *__bidi_indexable fams =
-      malloc(num_fams * (sizeof(FAMS_t) + buffer_size));
+      __unsafe_forge_bidi_indexable(FAMS_t *, malloc(alloc_size), alloc_size);
   // Set the counts and zero init buffer
   FAMS_t *__bidi_indexable current = fams;
   for (size_t fam_num = 0; fam_num < num_fams; ++fam_num) {

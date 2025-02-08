@@ -80,7 +80,6 @@ class TestOutOfBoundsPointer(TestBase):
     def overflow_oob(self, type_name):
         return self.get_idx_var_regex(oob_kind=OOBKind.Overflow, type_name=type_name)
 
-    @skipIf(bugnumber="rdar://141363609")
     def test_bidi_known_type_size(self):
         self.build()
 
@@ -151,7 +150,6 @@ class TestOutOfBoundsPointer(TestBase):
         lldbutil.continue_to_breakpoint(self.process, bkpt)
         self.expect("frame variable fams2", patterns=[self.bidi_full_oob("FAMS_t *")])
 
-    @skipIf(bugnumber="rdar://141363609")
     def test_bidi_unknown_type_size(self):
         self.build()
 
@@ -203,7 +201,6 @@ class TestOutOfBoundsPointer(TestBase):
         lldbutil.continue_to_breakpoint(self.process, bkpt)
         self.expect("frame variable oob_null", patterns=[self.bidi_full_oob("void *")])
 
-    @skipIf(bugnumber="rdar://141363609")
     def test_idx_known_type_size(self):
         self.build()
 
@@ -255,7 +252,6 @@ class TestOutOfBoundsPointer(TestBase):
         lldbutil.continue_to_breakpoint(self.process, bkpt)
         self.expect("frame variable fams2", patterns=[self.full_oob("FAMS_t *")])
 
-    @skipIf(bugnumber="rdar://141363609")
     def test_idx_unknown_type_size(self):
         self.build()
 
