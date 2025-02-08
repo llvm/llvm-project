@@ -1163,14 +1163,13 @@ void AliasInitializer::generateAlias(T symbol, InProgressAliasInfo &alias,
 
   OpAsmDialectInterface::AliasResult symbolInterfaceResult =
       OpAsmDialectInterface::AliasResult::NoAlias;
-  if constexpr (std::is_base_of_v<Attribute, T>) {
-    if (auto symbolInterface = dyn_cast<OpAsmAttrInterface>(symbol)) {
-      symbolInterfaceResult = symbolInterface.getAlias(aliasOS);
-      if (symbolInterfaceResult !=
-          OpAsmDialectInterface::AliasResult::NoAlias) {
-        nameBuffer = std::move(aliasBuffer);
-        assert(!nameBuffer.empty() && "expected valid alias name");
-      }
+  using InterfaceT = std::conditional_t<std::is_base_of_v<Attribute, T>,
+                                        OpAsmAttrInterface, OpAsmTypeInterface>;
+  if (auto symbolInterface = dyn_cast<InterfaceT>(symbol)) {
+    symbolInterfaceResult = symbolInterface.getAlias(aliasOS);
+    if (symbolInterfaceResult != OpAsmDialectInterface::AliasResult::NoAlias) {
+      nameBuffer = std::move(aliasBuffer);
+      assert(!nameBuffer.empty() && "expected valid alias name");
     }
   }
 
