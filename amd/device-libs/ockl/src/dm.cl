@@ -181,6 +181,8 @@ typedef struct heap_s {
 #define AFO(P, V, O) __opencl_atomic_fetch_or (P, V, O, memory_scope_device)
 #define ACE(P, E, V, O) __opencl_atomic_compare_exchange_strong(P, E, V, O, O, memory_scope_device)
 
+#define NEED_RELEASE __oclc_ISA_version >= 9400 && __oclc_ISA_version < 10000
+
 // get the heap pointer
 static __global heap_t *
 get_heap_ptr(void) {
@@ -385,6 +387,10 @@ __ockl_dm_dealloc(ulong addr)
         return;
     }
 
+    if (NEED_RELEASE) {
+         __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent", "global");
+    }
+ 
     // Find a slab block
     ulong saddr = addr & ~(ulong)0x1fffffUL;
     __global slab_t *sptr = (__global slab_t *)saddr;
