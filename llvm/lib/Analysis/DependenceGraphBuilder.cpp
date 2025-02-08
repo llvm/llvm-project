@@ -241,8 +241,8 @@ template <class G> void AbstractDependenceGraphBuilder<G>::createDefUseEdges() {
         if (!UI)
           continue;
         NodeType *DstNode = nullptr;
-        if (IMap.find(UI) != IMap.end())
-          DstNode = IMap.find(UI)->second;
+        if (auto It = IMap.find(UI); It != IMap.end())
+          DstNode = It->second;
 
         // In the case of loops, the scope of the subgraph is all the
         // basic blocks (and instructions within them) belonging to the loop. We
