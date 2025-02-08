@@ -163,10 +163,13 @@ bool isConstOwnerPtrMemberExpr(const clang::Expr *E) {
     if (OCE->getOperator() == OO_Star && OCE->getNumArgs() == 1)
       E = OCE->getArg(0);
   }
-  auto *ME = dyn_cast<MemberExpr>(E);
-  if (!ME)
+  const ValueDecl *D = nullptr;
+  if (auto *ME = dyn_cast<MemberExpr>(E))
+    D = ME->getMemberDecl();
+  else if (auto *IVR = dyn_cast<ObjCIvarRefExpr>(E))
+    D = IVR->getDecl();
+  else
     return false;
-  auto *D = ME->getMemberDecl();
   if (!D)
     return false;
   auto T = D->getType();
