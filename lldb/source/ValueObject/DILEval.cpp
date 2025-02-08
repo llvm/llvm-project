@@ -16,9 +16,7 @@
 #include "llvm/Support/FormatAdapters.h"
 #include <memory>
 
-namespace lldb_private {
-
-namespace dil {
+namespace lldb_private::dil {
 
 static lldb::ValueObjectSP
 LookupStaticIdentifier(lldb::TargetSP target_sp,
@@ -283,6 +281,4 @@ DILInterpreter::Visit(const IdentifierNode *node) {
   return val;
 }
 
-} // namespace dil
-
-} // namespace lldb_private
+} // namespace lldb_private::dil

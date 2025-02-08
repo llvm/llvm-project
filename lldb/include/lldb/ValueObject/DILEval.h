@@ -6,17 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_VALUEOBJECT_DILEVAL_H_
-#define LLDB_VALUEOBJECT_DILEVAL_H_
+#ifndef LLDB_VALUEOBJECT_DILEVAL_H
+#define LLDB_VALUEOBJECT_DILEVAL_H
 
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
 #include <memory>
 #include <vector>
 
-namespace lldb_private {
-
-namespace dil {
+namespace lldb_private::dil {
 
 /// Class used to store & manipulate information about identifiers.
 class IdentifierInfo {
@@ -89,8 +87,6 @@ private:
   std::shared_ptr<ExecutionContextScope> m_exe_ctx_scope;
 };
 
-} // namespace dil
+} // namespace lldb_private::dil
 
-} // namespace lldb_private
-
-#endif // LLDB_VALUEOBJECT_DILEVAL_H_
+#endif // LLDB_VALUEOBJECT_DILEVAL_H

@@ -8,9 +8,7 @@
 
 #include "lldb/ValueObject/DILAST.h"
 
-namespace lldb_private {
-
-namespace dil {
+namespace lldb_private::dil {
 
 llvm::Expected<lldb::ValueObjectSP> ErrorNode::Accept(Visitor *v) const {
   return v->Visit(this);
@@ -20,6 +18,4 @@ llvm::Expected<lldb::ValueObjectSP> IdentifierNode::Accept(Visitor *v) const {
   return v->Visit(this);
 }
 
-} // namespace dil
-
-} // namespace lldb_private
+} // namespace lldb_private::dil

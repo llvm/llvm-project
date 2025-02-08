@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_VALUEOBJECT_DILPARSER_H_
-#define LLDB_VALUEOBJECT_DILPARSER_H_
+#ifndef LLDB_VALUEOBJECT_DILPARSER_H
+#define LLDB_VALUEOBJECT_DILPARSER_H
 
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Utility/Status.h"
@@ -19,9 +19,7 @@
 #include <tuple>
 #include <vector>
 
-namespace lldb_private {
-
-namespace dil {
+namespace lldb_private::dil {
 
 enum class ErrorCode : unsigned char {
   kOk = 0,
@@ -37,7 +35,7 @@ std::string FormatDiagnostics(llvm::StringRef input_expr,
 /// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
 class DILParser {
 public:
-  explicit DILParser(llvm::StringRef dil_input_expr,
+  explicit DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
                      std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
                      bool fragile_ivar, bool check_ptr_vs_member);
@@ -50,7 +48,7 @@ public:
 
   lldb::DynamicValueType UseDynamic() { return m_use_dynamic; }
 
-  using PtrOperator = std::tuple<dil::TokenKind, uint32_t>;
+  using PtrOperator = std::tuple<Token::Kind, uint32_t>;
 
 private:
   DILASTNodeUP ParseExpression();
@@ -67,9 +65,9 @@ private:
 
   void BailOut(Status error);
 
-  void Expect(dil::TokenKind kind);
+  void Expect(Token::Kind kind);
 
-  std::string TokenDescription(const DILToken &token);
+  std::string TokenDescription(const Token &token);
 
   void TentativeParsingRollback(uint32_t saved_idx) {
     m_error.Clear();
@@ -83,8 +81,10 @@ private:
   std::shared_ptr<ExecutionContextScope> m_ctx_scope;
 
   llvm::StringRef m_input_expr;
+
+  DILLexer m_dil_lexer;
   // The token lexer is stopped at (aka "current token").
-  DILToken m_dil_token;
+  Token m_dil_token;
   // Holds an error if it occures during parsing.
   Status m_error;
 
@@ -92,11 +92,8 @@ private:
   bool m_use_synthetic;
   bool m_fragile_ivar;
   bool m_check_ptr_vs_member;
-  DILLexer m_dil_lexer;
 }; // class DILParser
 
-} // namespace dil
+} // namespace lldb_private::dil
 
-} // namespace lldb_private
-
-#endif // LLDB_VALUEOBJECT_DILPARSER_H_
+#endif // LLDB_VALUEOBJECT_DILPARSER_H

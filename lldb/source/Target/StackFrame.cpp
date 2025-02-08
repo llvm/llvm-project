@@ -32,6 +32,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/ValueObject/DILEval.h"
+#include "lldb/ValueObject/DILLexer.h"
 #include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
@@ -535,8 +536,16 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   const bool no_synth_child =
       (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
 
+  // Lex the expression.
+  auto lex_or_err = dil::DILLexer::Create(var_expr);
+  if (!lex_or_err) {
+    error = Status::FromError(lex_or_err.takeError());
+    return ValueObjectSP();
+  }
+  dil::DILLexer lexer = *lex_or_err;
+
   // Parse the expression.
-  dil::DILParser parser(var_expr, shared_from_this(), use_dynamic,
+  dil::DILParser parser(var_expr, lexer, shared_from_this(), use_dynamic,
                         !no_synth_child, !no_fragile_ivar, check_ptr_vs_member);
   auto tree_or_error = parser.Run();
   if (!tree_or_error) {

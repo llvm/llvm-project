@@ -12,9 +12,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include <string>
 
-namespace lldb_private {
-
-namespace dil {
+namespace lldb_private::dil {
 
 /// The various types DIL AST nodes (used by the DIL parser).
 enum class NodeKind {
@@ -98,8 +96,6 @@ public:
   Visit(const IdentifierNode *node) = 0;
 };
 
-} // namespace dil
-
-} // namespace lldb_private
+} // namespace lldb_private::dil
 
 #endif // LLDB_VALUEOBJECT_DILAST_H
