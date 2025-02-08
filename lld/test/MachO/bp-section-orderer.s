@@ -5,11 +5,12 @@
 # RUN: llvm-profdata merge %t/a.proftext -o %t/a.profdata
 
 # RUN: %no-fatal-warnings-lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile-sort=%t/a.profdata --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=STARTUP
-# RUN: %no-fatal-warnings-lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile-sort=%t/a.profdata --verbose-bp-section-orderer --icf=all --compression-sort=none 2>&1 | FileCheck %s --check-prefix=STARTUP
+# RUN: %no-fatal-warnings-lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile-sort=%t/a.profdata --verbose-bp-section-orderer --icf=all --compression-sort=none 2>&1 | FileCheck %s --check-prefix=STARTUP-ICF
 
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile %t/a.profdata --bp-startup-sort=function --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=STARTUP
-# RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile=%t/a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all --bp-compression-sort=none 2>&1 | FileCheck %s --check-prefix=STARTUP
-# STARTUP: Ordered 3 sections using balanced partitioning
+# RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile=%t/a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all --bp-compression-sort=none 2>&1 | FileCheck %s --check-prefix=STARTUP-ICF
+# STARTUP: Ordered 5 sections using balanced partitioning
+# STARTUP-ICF: Ordered 4 sections using balanced partitioning
 
 # Check that orderfiles take precedence over BP
 # RUN: %no-fatal-warnings-lld -arch arm64 -lSystem -e _main -o - %t/a.o -order_file %t/a.orderfile --irpgo-profile-sort=%t/a.profdata  | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
@@ -26,6 +27,8 @@
 # ORDERFILE-DAG: _main
 # ORDERFILE-DAG: _B
 # ORDERFILE-DAG: l_C
+# ORDERFILE-DAG: merged1.Tgm
+# ORDERFILE-DAG: merged2.Tgm
 
 # Data
 # ORDERFILE: s3
@@ -80,10 +83,10 @@ F:
   add w0, w0, #3
   bl l_C.__uniq.111111111111111111111111111111111111111.llvm.2222222222222222222
   ret
-merged1:
+merged1.Tgm:
   add w0, w0, #101
   ret
-merged2:
+merged2.Tgm:
   add w0, w0, #101
   ret
 
@@ -114,7 +117,7 @@ r4:
 1
 # Weight
 1
-A, B, C.__uniq.555555555555555555555555555555555555555.llvm.6666666666666666666
+A, B, C.__uniq.555555555555555555555555555555555555555.llvm.6666666666666666666, merged1, merged2
 
 A
 # Func Hash:
@@ -147,6 +150,23 @@ D
 1
 # Counter Values:
 1
+
+merged1
+# Func Hash:
+5555
+# Num Counters:
+1
+# Counter Values:
+1
+
+merged2
+# Func Hash:
+6666
+# Num Counters:
+1
+# Counter Values:
+1
+
 
 #--- a.orderfile
 A
