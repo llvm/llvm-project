@@ -70,36 +70,23 @@ public:
             Trimmed.drop_front(2).starts_with("*"));
   }
 
-  bool CheckForInlineComments(Preprocessor &PP, SourceRange Range) {
+  bool CheckForTextAfterComment(Preprocessor &PP, SourceRange Range) {
     const SourceManager &SM = PP.getSourceManager();
-    const SourceLocation CommentStart = Range.getBegin();
     const SourceLocation CommentEnd = Range.getEnd();
 
-    unsigned StartLine = SM.getSpellingLineNumber(CommentStart);
     unsigned EndLine = SM.getSpellingLineNumber(CommentEnd);
+    unsigned EndCol = SM.getSpellingColumnNumber(CommentEnd);
+  
+    const SourceLocation LineBegin =
+        SM.translateLineCol(SM.getFileID(CommentEnd),EndLine, EndCol);
+    const SourceLocation LineEnd =
+        SM.translateLineCol(SM.getFileID(CommentEnd), EndLine,
+                            std::numeric_limits<unsigned>::max());
+    const StringRef AfterComment = Lexer::getSourceText(
+        CharSourceRange::getCharRange(LineBegin, LineEnd), SM,
+        PP.getLangOpts());
 
-    const StringRef Text = Lexer::getSourceText(
-        CharSourceRange::getCharRange(Range), SM, PP.getLangOpts());
-
-    if (StartLine == EndLine) {
-      const SourceLocation LineBegin =
-          SM.translateLineCol(SM.getFileID(CommentStart), StartLine, 1);
-      const SourceLocation LineEnd =
-          SM.translateLineCol(SM.getFileID(CommentEnd), EndLine,
-                              std::numeric_limits<unsigned>::max());
-      const StringRef LineContent = Lexer::getSourceText(
-          CharSourceRange::getCharRange(LineBegin, LineEnd), SM,
-          PP.getLangOpts());
-      const size_t CommentStartOffset =
-          SM.getSpellingColumnNumber(CommentStart) - 1;
-      const StringRef AfterComment =
-          LineContent.drop_front(CommentStartOffset + Text.size());
-
-      if (!AfterComment.trim().empty()) {
-        return true;
-      }
-    }
-    return false;
+  return !AfterComment.trim().empty();
   }
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
@@ -121,7 +108,7 @@ public:
       return false;
     }
 
-    if (CheckForInlineComments(PP, Range)) {
+    if (CheckForTextAfterComment(PP, Range)) {
       return false;
     }
 

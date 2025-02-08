@@ -41,3 +41,11 @@ Output:
   .. code-block:: c++
 
     int a = /* this is a comment */ 5;
+
+Options
+-------
+
+.. option:: ExcludeDoxygenStyleComments
+
+   A boolean option that determines whether Doxygen-style comments should be excluded.  
+   By default, this option is set to ``false``.  

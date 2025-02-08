@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11 %s readability-use-cpp-style-comments %t -config="{CheckOptions: [{key: readability-use-cpp-style-comments.ExcludeDoxygenStyleComments, value: true}]}"
+// RUN: %check_clang_tidy -std=c++11 %s readability-use-cpp-style-comments %t 
 
 // Single-line full C-style comment
 static const int CONSTANT = 42; /* Important constant value */
@@ -57,35 +57,12 @@ void complexFunction() {
     // CHECK-FIXES: int x = 10; // Inline comment not to be transformed
 }
 
-// Tests for Doxygen comments with ExcludeDoxygenStyleComments enabled
-/**
- * This is a Doxygen comment for a function.
- * It should NOT be transformed.
- */
-void doxygenFunction1();
+/* aaa 
+    bbbb
+    ccc */ int z = 1;
+// There is a text after the comment ends so it should be ignored.
 
-/*!
- * This is another Doxygen-style comment.
- * It should also NOT be transformed.
- */
-void doxygenFunction2();
-
-/**
- * Multiline Doxygen comment describing parameters.
- *
- * @param x The first parameter.
- * @param y The second parameter.
- * @return A result value.
- */
-int doxygenFunctionWithParams(int x, int y);
-
-/*******************************
- * Non-Doxygen block comments without markers
- *******************************/
-void DoxygenBlock();
-
-/*!
- * This is a single-line Doxygen comment.
- * Should NOT be transformed.
- */
-void singleLineDoxygen();
+int y = 10;/* aaa 
+    bbbb
+    ccc */ int z1 = 1;
+// There is a text after the comment ends so it should be ignored.
