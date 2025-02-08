@@ -126,6 +126,7 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
       case llvm::Triple::MacOSX:
       case llvm::Triple::IOS:
       case llvm::Triple::WatchOS:
+      case llvm::Triple::XROS:
       case llvm::Triple::TvOS:
       case llvm::Triple::BridgeOS:
         break;
@@ -329,6 +330,8 @@ void PlatformDarwinKernel::CollectKextAndKernelDirectories() {
                                "/Platforms/AppleTVOS.platform/Developer/SDKs");
     AddSDKSubdirsToSearchPaths(developer_dir +
                                "/Platforms/WatchOS.platform/Developer/SDKs");
+    AddSDKSubdirsToSearchPaths(developer_dir +
+                               "/Platforms/XROS.platform/Developer/SDKs");
     AddSDKSubdirsToSearchPaths(developer_dir +
                                "/Platforms/BridgeOS.platform/Developer/SDKs");
   }
