@@ -2450,9 +2450,9 @@ path of execution, but that can be confusing:
 
 .. code-block:: c++
 
-  if (b) {
-    [[unlikely]] --b; // In the path of execution,
-                      // this branch is considered unlikely.
+  if (b) [[unlikely]] {
+    --b; // In the path of execution,
+         // this branch is considered unlikely.
   }
 
   if (b) {
