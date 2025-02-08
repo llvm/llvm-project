@@ -5338,6 +5338,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
   case CK_HLSLArrayRValue:
+  case CK_HLSLElementwiseCast:
     return EmitUnsupportedLValue(E, "unexpected cast lvalue");
 
   case CK_Dependent:
@@ -6375,4 +6376,76 @@ RValue CodeGenFunction::EmitPseudoObjectRValue(const PseudoObjectExpr *E,
 
 LValue CodeGenFunction::EmitPseudoObjectLValue(const PseudoObjectExpr *E) {
   return emitPseudoObjectExpr(*this, E, true, AggValueSlot::ignored()).LV;
+}
+
+void CodeGenFunction::FlattenAccessAndType(
+    Address Addr, QualType AddrType,
+    SmallVectorImpl<std::pair<Address, llvm::Value *>> &AccessList,
+    SmallVectorImpl<QualType> &FlatTypes) {
+  // WorkList is list of type we are processing + the Index List to access
+  // the field of that type in Addr for use in a GEP
+  llvm::SmallVector<std::pair<QualType, llvm::SmallVector<llvm::Value *, 4>>,
+                    16>
+      WorkList;
+  llvm::IntegerType *IdxTy = llvm::IntegerType::get(getLLVMContext(), 32);
+  // Addr should be a pointer so we need to 'dereference' it
+  WorkList.push_back({AddrType, {llvm::ConstantInt::get(IdxTy, 0)}});
+
+  while (!WorkList.empty()) {
+    auto [T, IdxList] = WorkList.pop_back_val();
+    T = T.getCanonicalType().getUnqualifiedType();
+    assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(T)) {
+      uint64_t Size = CAT->getZExtSize();
+      for (int64_t I = Size - 1; I > -1; I--) {
+        llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
+        IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, I));
+        WorkList.emplace_back(CAT->getElementType(), IdxListCopy);
+      }
+    } else if (const auto *RT = dyn_cast<RecordType>(T)) {
+      const RecordDecl *Record = RT->getDecl();
+      assert(!Record->isUnion() && "Union types not supported in flat cast.");
+
+      const CXXRecordDecl *CXXD = dyn_cast<CXXRecordDecl>(Record);
+
+      llvm::SmallVector<QualType, 16> FieldTypes;
+      if (CXXD && CXXD->isStandardLayout())
+        Record = CXXD->getStandardLayoutBaseWithFields();
+
+      // deal with potential base classes
+      if (CXXD && !CXXD->isStandardLayout()) {
+        for (auto &Base : CXXD->bases())
+          FieldTypes.push_back(Base.getType());
+      }
+
+      for (auto *FD : Record->fields())
+        FieldTypes.push_back(FD->getType());
+
+      for (int64_t I = FieldTypes.size() - 1; I > -1; I--) {
+        llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
+        IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, I));
+        WorkList.insert(WorkList.end(), {FieldTypes[I], IdxListCopy});
+      }
+    } else if (const auto *VT = dyn_cast<VectorType>(T)) {
+      llvm::Type *LLVMT = ConvertTypeForMem(T);
+      CharUnits Align = getContext().getTypeAlignInChars(T);
+      Address GEP =
+          Builder.CreateInBoundsGEP(Addr, IdxList, LLVMT, Align, "vector.gep");
+      for (unsigned I = 0, E = VT->getNumElements(); I < E; I++) {
+        llvm::Value *Idx = llvm::ConstantInt::get(IdxTy, I);
+        // gep on vector fields is not recommended so combine gep with
+        // extract/insert
+        AccessList.emplace_back(GEP, Idx);
+        FlatTypes.push_back(VT->getElementType());
+      }
+    } else {
+      // a scalar/builtin type
+      llvm::Type *LLVMT = ConvertTypeForMem(T);
+      CharUnits Align = getContext().getTypeAlignInChars(T);
+      Address GEP =
+          Builder.CreateInBoundsGEP(Addr, IdxList, LLVMT, Align, "gep");
+      AccessList.emplace_back(GEP, nullptr);
+      FlatTypes.push_back(T);
+    }
+  }
 }
