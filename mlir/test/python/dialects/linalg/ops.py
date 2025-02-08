@@ -307,13 +307,10 @@ def testMatmulOp():
                     result_tensors=(C.type,),
                     inputs=(A, B),
                     outputs=(C,),
-                    indexing_maps=[a_map, b_map, c_map],
                 )
                 linalg.fill_builtin_region(res.operation)
                 # CHECK: linalg.matmul ins(%[[A]], %[[B]] : tensor<4x8xf32>, tensor<8x12xf32>) outs(%[[C]] : tensor<4x12xf32>)
-                res = linalg.matmul(
-                    (A, B), outs=(C,), indexing_maps=[a_map, b_map, c_map]
-                )
+                res = linalg.matmul((A, B), outs=(C,))
 
                 # CHECK: linalg.matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[A]], %[[BTrans]] : tensor<4x8xf32>, tensor<12x8xf32>) outs(%[[C]] : tensor<4x12xf32>)
                 res = linalg.MatmulOp(
@@ -337,12 +334,11 @@ def testMatmulOp():
                     result_tensors=[],
                     inputs=(Amem, Bmem),
                     outputs=(Cmem,),
-                    indexing_maps=[a_map, b_map, c_map],
                 )
                 linalg.fill_builtin_region(res.operation)
                 # CHECK: linalg.matmul ins(%[[Amem]], %[[Bmem]] : memref<4x8xf32>, memref<8x12xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
                 linalg.matmul(
-                    (Amem, Bmem), outs=(Cmem,), indexing_maps=[a_map, b_map, c_map]
+                    (Amem, Bmem), outs=(Cmem,)
                 )
 
                 # CHECK: linalg.matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[Amem]], %[[BTransmem]] : memref<4x8xf32>, memref<12x8xf32>) outs(%[[Cmem]] : memref<4x12xf32>)

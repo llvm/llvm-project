@@ -153,7 +153,7 @@ def matmul(
     inputs: Sequence[Union[Operation, OpView, Value]],
     *,
     outs: Sequence[Union[Operation, OpView, Value]],
-    indexing_maps: Sequence[AffineMapAttr],
+    indexing_maps: Optional[Sequence[AffineMapAttr]] = None,
     cast: Optional[Union[TypeFn, Attribute]] = None,
 ):
     inputs = [_get_op_result_or_value(input) for input in inputs]
