@@ -5686,8 +5686,7 @@ static void ReplaceCopyFromReg_128(SDNode *N, SelectionDAG &DAG,
 }
 
 static void ReplaceF32x2Op(SDNode *N, SelectionDAG &DAG,
-                           SmallVectorImpl<SDValue> &Results,
-                           bool UseFTZ) {
+                           SmallVectorImpl<SDValue> &Results) {
   SDLoc DL(N);
   EVT OldResultTy = N->getValueType(0); // <2 x float>
   assert(OldResultTy == MVT::v2f32 && "Unexpected result type for F32x2 op!");
@@ -5760,7 +5759,7 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   case ISD::FSUB:
   case ISD::FMUL:
   case ISD::FMA:
-    ReplaceF32x2Op(N, DAG, Results, useF32FTZ(DAG.getMachineFunction()));
+    ReplaceF32x2Op(N, DAG, Results);
     return;
   }
 }
