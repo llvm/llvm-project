@@ -8,7 +8,6 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "llvm/IR/DerivedTypes.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
