@@ -19,7 +19,7 @@
 #include "DeviceTypes.h"
 #include "DeviceUtils.h"
 
-#define __XTEAM_SHARED_LDS volatile __attribute__((address_space(3)))
+#define __XTEAM_SHARED_LDS volatile __gpu_local
 
 using namespace ompx::mapping;
 
@@ -280,7 +280,7 @@ _xteam_scan_phase2(T *storage, int segment_size, T *team_vals, T *segment_vals,
 #define _CF float _Complex
 #define _UI unsigned int
 #define _UL unsigned long
-#define _LDS volatile __attribute__((address_space(3)))
+#define _LDS volatile __gpu_local
 _EXT_ATTR
 __kmpc_xteams_d_16x64(double v, double* storage, double* r_p, double *tvs, uint32_t *td,
                       void (*rf)(double *, double),

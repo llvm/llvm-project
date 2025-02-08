@@ -19,7 +19,7 @@
 #include "DeviceTypes.h"
 #include "DeviceUtils.h"
 
-#define __XTEAM_SHARED_LDS volatile __attribute__((address_space(3)))
+#define __XTEAM_SHARED_LDS volatile __gpu_local
 
 using namespace  ompx::mapping;
 
@@ -394,7 +394,7 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
 #define _US unsigned short
 #define _UI unsigned int
 #define _UL unsigned long
-#define _LDS volatile __attribute__((address_space(3)))
+#define _LDS volatile __gpu_local
 
 _EXT_ATTR
 __kmpc_xteamr_d_16x64(double v, double *r_p, double *tvs, uint32_t *td,
@@ -828,7 +828,7 @@ __kmpc_iteamr_ul_32x32(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
 // Built-in pair reduction functions used as function pointers for
 // cross team reduction functions.
 
-#define _RF_LDS volatile __attribute__((address_space(3)))
+#define _RF_LDS volatile __gpu_local
 
 _EXT_ATTR __kmpc_rfun_sum_d(double *val, double otherval) { *val += otherval; }
 _EXT_ATTR __kmpc_rfun_sum_lds_d(_RF_LDS double *val, _RF_LDS double *otherval) {
