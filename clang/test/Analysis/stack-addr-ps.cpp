@@ -190,6 +190,11 @@ void test_copy_elision() {
   C c1 = make1();
 }
 
+C&& return_bind_rvalue_reference_to_temporary() {
+  return C(); // expected-warning{{Address of stack memory associated with temporary object of type 'C' returned to caller}}
+  // expected-warning@-1{{returning reference to local temporary object}} -Wreturn-stack-address
+}
+
 namespace leaking_via_direct_pointer {
 void* returned_direct_pointer_top() {
   int local = 42;
