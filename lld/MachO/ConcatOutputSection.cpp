@@ -116,6 +116,30 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
 
 DenseMap<Symbol *, ThunkInfo> lld::macho::thunkMap;
 
+// Returns the target Symbol that a relocation refers to.
+// A Reloc can refer to either a Symbol directly, or to an InputSection.
+// For InputSection referents, we return the first Symbol at offset 0.
+// This conversion is necessary because the thunk generation algorithm
+// can only handle Symbols as branch targets, not InputSections.
+static Symbol *getReferentSymbol(const Reloc &r) {
+  if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
+    return sym;
+  } else if (auto *isec = r.referent.dyn_cast<InputSection *>()) {
+    // Use the first symbol at offset 0 in the InputSection
+    for (Defined *sym : isec->symbols) {
+      if (sym->value == 0) {
+        return sym;
+      }
+    }
+    // Handle absence of suitable symbol
+    warn("Branch-range extension: No symbol at offset 0 in InputSection '" +
+         toString(isec) + "', possible branch out of range errors may occur.");
+    return nullptr;
+  } else {
+    llvm_unreachable("Unexpected referent type");
+  }
+}
+
 // Determine whether we need thunks, which depends on the target arch -- RISC
 // (i.e., ARM) generally does because it has limited-range branch/call
 // instructions, whereas CISC (i.e., x86) generally doesn't. RISC only needs
@@ -145,7 +169,10 @@ bool TextOutputSection::needsThunks() const {
     for (Reloc &r : isec->relocs) {
       if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
         continue;
-      auto *sym = cast<Symbol *>(r.referent);
+      // Get the Symbol that the relocation targets.
+      Symbol *sym = getReferentSymbol(r);
+      if (!sym)
+        continue;
       // Pre-populate the thunkMap and memoize call site counts for every
       // InputSection and ThunkInfo. We do this for the benefit of
       // estimateStubsInRangeVA().
@@ -325,7 +352,10 @@ void TextOutputSection::finalize() {
           backwardBranchRange < callVA ? callVA - backwardBranchRange : 0;
       uint64_t highVA = callVA + forwardBranchRange;
       // Calculate our call referent address
-      auto *funcSym = cast<Symbol *>(r.referent);
+      Symbol *funcSym = getReferentSymbol(r);
+      if (!funcSym)
+        continue;
+
       ThunkInfo &thunkInfo = thunkMap[funcSym];
       // The referent is not reachable, so we need to use a thunk ...
       if (funcSym->isInStubs() && callVA >= stubsInRangeVA) {
