@@ -242,5 +242,5 @@ Quick Links
 * `LLVM Bug Tracker <https://github.com/llvm/llvm-project/labels/libc++/>`_
 * `libcxx-commits Mailing List <http://lists.llvm.org/mailman/listinfo/libcxx-commits>`_
 * `libc++ forum <https://discourse.llvm.org/c/runtimes/libcxx/>`_
-* `libc++ chat <https://discord.com/channels/636084430946959380/636732894974312448>`_
+* `libc++ chat <https://discord.com/channels/636084430946959380/636732894974312448>`_ (`invite link <https://discord.gg/xS7Z362>`_)
 * `Browse libc++ Sources <https://github.com/llvm/llvm-project/tree/main/libcxx/>`_
