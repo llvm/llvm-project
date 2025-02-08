@@ -2876,49 +2876,46 @@ static SPIRVType *getInlineSpirvType(const TargetExtType *ExtensionType,
          "parameter");
   auto Opcode = ExtensionType->getIntParameter(0);
 
-  return GR->getOrCreateUnknownType(
-      ExtensionType, MIRBuilder, Opcode,
-      [&ExtensionType, &GR, &MIRBuilder](llvm::MachineInstrBuilder Instr) {
-        for (llvm::Type *Param : ExtensionType->type_params()) {
-          if (const TargetExtType *ParamEType =
-                  dyn_cast<TargetExtType>(Param)) {
-            if (ParamEType->getName() == "spirv.IntegralConstant") {
-              assert(ParamEType->getNumTypeParameters() == 1 &&
-                     "Inline SPIR-V integral constant builtin must have a type "
-                     "parameter");
-              assert(ParamEType->getNumIntParameters() == 1 &&
-                     "Inline SPIR-V integral constant builtin must have a "
-                     "value parameter");
+  SmallVector<MCOperand> Operands;
+  for (llvm::Type *Param : ExtensionType->type_params()) {
+    if (const TargetExtType *ParamEType = dyn_cast<TargetExtType>(Param)) {
+      if (ParamEType->getName() == "spirv.IntegralConstant") {
+        assert(ParamEType->getNumTypeParameters() == 1 &&
+               "Inline SPIR-V integral constant builtin must have a type "
+               "parameter");
+        assert(ParamEType->getNumIntParameters() == 1 &&
+               "Inline SPIR-V integral constant builtin must have a "
+               "value parameter");
 
-              auto OperandValue = ParamEType->getIntParameter(0);
-              auto *OperandType = ParamEType->getTypeParameter(0);
+        auto OperandValue = ParamEType->getIntParameter(0);
+        auto *OperandType = ParamEType->getTypeParameter(0);
 
-              const SPIRVType *OperandSPIRVType =
-                  GR->getOrCreateSPIRVType(OperandType, MIRBuilder);
+        const SPIRVType *OperandSPIRVType =
+            GR->getOrCreateSPIRVType(OperandType, MIRBuilder);
 
-              Instr = Instr.addUse(GR->buildConstantInt(
-                  OperandValue, MIRBuilder, OperandSPIRVType, true));
-              continue;
-            } else if (ParamEType->getName() == "spirv.Literal") {
-              assert(ParamEType->getNumTypeParameters() == 0 &&
-                     "Inline SPIR-V literal builtin does not take type "
-                     "parameters");
-              assert(ParamEType->getNumIntParameters() == 1 &&
-                     "Inline SPIR-V literal builtin must have an integer "
-                     "parameter");
+        Operands.push_back(MCOperand::createReg(GR->buildConstantInt(
+            OperandValue, MIRBuilder, OperandSPIRVType, true)));
+        continue;
+      } else if (ParamEType->getName() == "spirv.Literal") {
+        assert(ParamEType->getNumTypeParameters() == 0 &&
+               "Inline SPIR-V literal builtin does not take type "
+               "parameters");
+        assert(ParamEType->getNumIntParameters() == 1 &&
+               "Inline SPIR-V literal builtin must have an integer "
+               "parameter");
 
-              auto OperandValue = ParamEType->getIntParameter(0);
+        auto OperandValue = ParamEType->getIntParameter(0);
 
-              Instr = Instr.addImm(OperandValue);
-              continue;
-            }
-          }
-          const SPIRVType *TypeOperand =
-              GR->getOrCreateSPIRVType(Param, MIRBuilder);
-          Instr = Instr.addUse(GR->getSPIRVTypeID(TypeOperand));
-        }
-        return Instr;
-      });
+        Operands.push_back(MCOperand::createImm(OperandValue));
+        continue;
+      }
+    }
+    const SPIRVType *TypeOperand = GR->getOrCreateSPIRVType(Param, MIRBuilder);
+    Operands.push_back(MCOperand::createReg(GR->getSPIRVTypeID(TypeOperand)));
+  }
+
+  return GR->getOrCreateUnknownType(ExtensionType, MIRBuilder, Opcode,
+                                    Operands);
 }
 
 namespace SPIRV {
