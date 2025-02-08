@@ -241,13 +241,13 @@ set(supported_files
   utf.cpp
   )
 
-enable_cuda_compilation(FortranRuntime "${supported_files}")
+enable_cuda_compilation(flang_rt "${supported_files}")
 enable_omp_offload_compilation("${supported_files}")
 
-if (NOT TARGET FortranFloat128Math)
-  # If FortranFloat128Math is not defined, then we are not building
-  # standalone FortranFloat128Math library. Instead, include
-  # the relevant sources into FortranRuntime itself.
+if (NOT TARGET flang_rt.quadmath)
+  # If flang_rt.quadmath is not defined, then we are not building
+  # standalone flang_rt.quadmath library. Instead, include
+  # the relevant sources into flang_rt.runtime itself.
   # The information is provided via FortranFloat128MathILib
   # interface library.
   get_target_property(f128_sources
@@ -275,7 +275,7 @@ if (NOT TARGET FortranFloat128Math)
 endif()
 
 if (NOT DEFINED MSVC)
-  add_flang_library(FortranRuntime
+  add_flang_library(flang_rt.runtime
     ${sources}
     LINK_LIBS
     ${linked_libraries}
@@ -283,33 +283,36 @@ if (NOT DEFINED MSVC)
     INSTALL_WITH_TOOLCHAIN
   )
 else()
-  add_flang_library(FortranRuntime
+  add_flang_library(flang_rt.runtime
     ${sources}
     LINK_LIBS
     ${linked_libraries}
   )
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
-  add_flang_library(FortranRuntime.static ${sources}
+  add_flang_library(flang_rt.runtime.static ${sources}
     INSTALL_WITH_TOOLCHAIN)
-  set_target_properties(FortranRuntime.static PROPERTIES FOLDER "Flang/Runtime Libraries")
+  set_target_properties(flang_rt.runtime.static PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
-  add_flang_library(FortranRuntime.dynamic ${sources}
+  add_flang_library(flang_rt.runtime.dynamic ${sources}
     INSTALL_WITH_TOOLCHAIN)
-  set_target_properties(FortranRuntime.dynamic PROPERTIES FOLDER "Flang/Runtime Libraries")
+  set_target_properties(flang_rt.runtime.dynamic PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
-  add_flang_library(FortranRuntime.static_dbg ${sources}
+  add_flang_library(flang_rt.runtime.static_dbg ${sources}
     INSTALL_WITH_TOOLCHAIN)
-  set_target_properties(FortranRuntime.static_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
+  set_target_properties(flang_rt.runtime.static_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
-  add_flang_library(FortranRuntime.dynamic_dbg ${sources}
+  add_flang_library(flang_rt.runtime.dynamic_dbg ${sources}
     INSTALL_WITH_TOOLCHAIN)
-  set_target_properties(FortranRuntime.dynamic_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
-  add_dependencies(FortranRuntime FortranRuntime.static FortranRuntime.dynamic
-    FortranRuntime.static_dbg FortranRuntime.dynamic_dbg)
+  set_target_properties(flang_rt.runtime.dynamic_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
+  add_dependencies(flang_rt.runtime
+    flang_rt.runtime.static
+    flang_rt.runtime.dynamic
+    flang_rt.runtime.static_dbg
+    flang_rt.runtime.dynamic_dbg)
 endif()
-set_target_properties(FortranRuntime PROPERTIES FOLDER "Flang/Runtime Libraries")
+set_target_properties(flang_rt.runtime PROPERTIES FOLDER "Flang/Runtime Libraries")
 
-# If FortranRuntime is part of a Flang build (and not a separate build) then
+# If flang_rt is part of a Flang build (and not a separate build) then
 # add dependency to make sure that Fortran runtime library is being built after
 # we have the Flang compiler available.  This also includes the MODULE files
 # that compile when the 'flang' target is built.
@@ -317,9 +320,21 @@ set_target_properties(FortranRuntime PROPERTIES FOLDER "Flang/Runtime Libraries"
 # TODO: This is a workaround and should be updated when runtime build procedure
 # is changed to a regular runtime build.  See discussion in PR #95388.
 if (TARGET flang AND TARGET module_files)
-  add_dependencies(FortranRuntime flang module_files)
+  add_dependencies(flang_rt.runtime flang module_files)
 endif()
 
 if (FLANG_CUF_RUNTIME)
   add_subdirectory(CUDA)
 endif()
+
+# Compatibility targets.
+add_custom_target(flang-rt)
+add_dependencies(flang-rt flang_rt.runtime)
+if (TARGET flang_rt.quadmath)
+  add_dependencies(flang-rt flang_rt.quadmath)
+endif ()
+if (TARGET flang_rt.cuda_${CUDAToolkit_VERSION_MAJOR})
+  add_dependencies(flang-rt flang_rt.cuda_${CUDAToolkit_VERSION_MAJOR})
+endif ()
+add_custom_target(FortranRuntime)
+add_dependencies(FortranRuntime flang_rt.runtime)

@@ -301,7 +301,7 @@ set(FLANG_DEFAULT_LINKER "" CACHE STRING
   "Default linker to use (linker name or absolute path, empty for platform default)")
 
 set(FLANG_DEFAULT_RTLIB "" CACHE STRING
-   "Default Fortran runtime library to use (\"libFortranRuntime\"), leave empty for platform default.")
+   "Default Fortran runtime library to use (\"libflang_rt.runtime\"), leave empty for platform default.")
 
 if (NOT(FLANG_DEFAULT_RTLIB STREQUAL ""))
   message(WARNING "Resetting Flang's default runtime library to use platform default.")
