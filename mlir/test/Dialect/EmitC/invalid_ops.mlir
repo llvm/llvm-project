@@ -130,9 +130,17 @@ func.func @cast_tensor(%arg : tensor<f32>) {
 
 // -----
 
-func.func @cast_array(%arg : !emitc.array<4xf32>) {
-    // expected-error @+1 {{'emitc.cast' op operand type '!emitc.array<4xf32>' and result type '!emitc.array<4xf32>' are cast incompatible}}
-    %1 = emitc.cast %arg: !emitc.array<4xf32> to !emitc.array<4xf32>
+func.func @cast_to_array(%arg : f32) {
+    // expected-error @+1 {{'emitc.cast' op operand type 'f32' and result type '!emitc.array<4xf32>' are cast incompatible}}
+    %1 = emitc.cast %arg: f32 to !emitc.array<4xf32>
+    return
+}
+
+// -----
+
+func.func @cast_pointer_to_array(%arg : !emitc.ptr<i32>) {
+    // expected-error @+1 {{'emitc.cast' op operand type '!emitc.ptr<i32>' and result type '!emitc.array<3xi32>' are cast incompatible}}
+    %1 = emitc.cast %arg: !emitc.ptr<i32> to !emitc.array<3xi32>
     return
 }
 

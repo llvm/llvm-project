@@ -266,8 +266,7 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpression]> {
 
 def EmitC_CastOp : EmitC_Op<"cast",
     [CExpression,
-     DeclareOpInterfaceMethods<CastOpInterface>,
-     SameOperandsAndResultShape]> {
+     DeclareOpInterfaceMethods<CastOpInterface>]> {
   let summary = "Cast operation";
   let description = [{
     The `emitc.cast` operation performs an explicit type conversion and is emitted

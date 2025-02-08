@@ -247,11 +247,12 @@ LogicalResult emitc::AssignOp::verify() {
 bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   Type input = inputs.front(), output = outputs.front();
 
-  return (
-      (emitc::isIntegerIndexOrOpaqueType(input) ||
-       emitc::isSupportedFloatType(input) || isa<emitc::PointerType>(input)) &&
-      (emitc::isIntegerIndexOrOpaqueType(output) ||
-       emitc::isSupportedFloatType(output) || isa<emitc::PointerType>(output)));
+  return ((emitc::isIntegerIndexOrOpaqueType(input) ||
+           emitc::isSupportedFloatType(input) ||
+           isa<emitc::PointerType>(input) || isa<emitc::ArrayType>(input)) &&
+          (emitc::isIntegerIndexOrOpaqueType(output) ||
+           emitc::isSupportedFloatType(output) ||
+           isa<emitc::PointerType>(output)));
 }
 
 //===----------------------------------------------------------------------===//
