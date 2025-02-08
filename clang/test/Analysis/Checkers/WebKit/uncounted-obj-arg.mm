@@ -1,5 +1,4 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
-// expected-no-diagnostics
 
 #import "mock-types.h"
 #import "mock-system-header.h"
@@ -8,6 +7,7 @@
 @interface Foo : NSObject {
   const Ref<RefCountable> _obj1;
   const RefPtr<RefCountable> _obj2;
+  Ref<RefCountable> _obj3;
 }
 
 @property (nonatomic, readonly) RefPtr<RefCountable> countable;
@@ -23,6 +23,8 @@
   _obj1->method();
   _obj1.get().method();
   (*_obj2).method();
+  _obj3->method();
+  // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
 }
 
 - (RefPtr<RefCountable>)_protectedRefCountable {
