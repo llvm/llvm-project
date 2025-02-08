@@ -1795,6 +1795,11 @@ def fprofile_update_EQ : Joined<["-"], "fprofile-update=">,
     Values<"atomic,prefer-atomic,single">,
     MetaVarName<"<method>">, HelpText<"Set update method of profile counters">,
     MarshallingInfoFlag<CodeGenOpts<"AtomicProfileUpdate">>;
+def fprofile_continuous : Flag<["-"], "fprofile-continuous">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Enable continuous instrumentation profiling mode">,
+    MarshallingInfoFlag<CodeGenOpts<"ContinuousProfileSync">>;
+
 defm pseudo_probe_for_profiling : BoolFOption<"pseudo-probe-for-profiling",
   CodeGenOpts<"PseudoProbeForProfiling">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Emit">,
