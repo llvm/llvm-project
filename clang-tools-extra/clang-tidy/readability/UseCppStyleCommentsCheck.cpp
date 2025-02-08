@@ -76,17 +76,17 @@ public:
 
     unsigned EndLine = SM.getSpellingLineNumber(CommentEnd);
     unsigned EndCol = SM.getSpellingColumnNumber(CommentEnd);
-  
+
     const SourceLocation LineBegin =
-        SM.translateLineCol(SM.getFileID(CommentEnd),EndLine, EndCol);
+        SM.translateLineCol(SM.getFileID(CommentEnd), EndLine, EndCol);
     const SourceLocation LineEnd =
         SM.translateLineCol(SM.getFileID(CommentEnd), EndLine,
                             std::numeric_limits<unsigned>::max());
-    const StringRef AfterComment = Lexer::getSourceText(
-        CharSourceRange::getCharRange(LineBegin, LineEnd), SM,
-        PP.getLangOpts());
+    const StringRef AfterComment =
+        Lexer::getSourceText(CharSourceRange::getCharRange(LineBegin, LineEnd),
+                             SM, PP.getLangOpts());
 
-  return !AfterComment.trim().empty();
+    return !AfterComment.trim().empty();
   }
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
