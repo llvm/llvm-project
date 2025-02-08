@@ -368,6 +368,9 @@ MemDGNode *DependencyGraph::getMemDGNodeAfter(DGNode *N, bool IncludingN,
 }
 
 void DependencyGraph::notifyCreateInstr(Instruction *I) {
+  if (Ctx->getTracker().getState() == Tracker::TrackerState::Reverting)
+    // We don't maintain the DAG while reverting.
+    return;
   // Nothing to do if the node is not in the focus range of the DAG.
   if (!(DAGInterval.contains(I) || DAGInterval.touches(I)))
     return;
@@ -405,6 +408,9 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
 }
 
 void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
+  if (Ctx->getTracker().getState() == Tracker::TrackerState::Reverting)
+    // We don't maintain the DAG while reverting.
+    return;
   // NOTE: This function runs before `I` moves to its new destination.
   BasicBlock *BB = To.getNodeParent();
   assert(!(To != BB->end() && &*To == I->getNextNode()) &&
@@ -472,6 +478,9 @@ void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
 }
 
 void DependencyGraph::notifyEraseInstr(Instruction *I) {
+  if (Ctx->getTracker().getState() == Tracker::TrackerState::Reverting)
+    // We don't maintain the DAG while reverting.
+    return;
   // Update the MemDGNode chain if this is a memory node.
   if (auto *MemN = dyn_cast_or_null<MemDGNode>(getNodeOrNull(I))) {
     auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false);
