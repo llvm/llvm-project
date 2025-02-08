@@ -41,7 +41,7 @@ namespace affine {
 } // namespace affine
 } // namespace mlir
 
-#define DEBUG_TYPE "affine-loop-fusion"
+#define DEBUG_TYPE "affine-fusion"
 
 using namespace mlir;
 using namespace mlir::affine;
@@ -237,29 +237,67 @@ static void sinkSequentialLoops(MemRefDependenceGraph::Node *node) {
   node->op = newRootForOp;
 }
 
-// Creates and returns a private (single-user) memref for fused loop rooted
-// at 'forOp', with (potentially reduced) memref size based on the
-// MemRefRegion written to by 'srcStoreOpInst' at depth 'dstLoopDepth'.
-// TODO: consider refactoring the common code from generateDma and
-// this one.
-static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
+/// Get the operation that should act as a dominance filter while replacing
+/// memref uses with a private memref for which `producerStores` and
+/// `sliceInsertionBlock` are provided. This effectively determines in what
+/// part of the IR we should be performing the replacement.
+static Operation *
+getDominanceFilterForPrivateMemRefRepl(Block *sliceInsertionBlock,
+                                       ArrayRef<Operation *> producerStores) {
+  assert(!producerStores.empty() && "expected producer store");
+
+  // We first find the common block that contains the producer stores and
+  // the slice computation. The first ancestor among the ancestors of the
+  // producer stores in that common block is the dominance filter to use for
+  // replacement.
+  Block *commonBlock = nullptr;
+  // Find the common block of all relevant operations.
+  for (Operation *store : producerStores) {
+    Operation *otherOp =
+        !commonBlock ? &*sliceInsertionBlock->begin() : &*commonBlock->begin();
+    commonBlock = findInnermostCommonBlockInScope(store, otherOp);
+  }
+  assert(commonBlock &&
+         "common block of producer stores and slice should exist");
+
+  // Find the first ancestor among the ancestors of `producerStores` in
+  // `commonBlock`.
+  Operation *firstAncestor = nullptr;
+  for (Operation *store : producerStores) {
+    Operation *ancestor = commonBlock->findAncestorOpInBlock(*store);
+    assert(ancestor && "producer store should be contained in common block");
+    firstAncestor = !firstAncestor || ancestor->isBeforeInBlock(firstAncestor)
+                        ? ancestor
+                        : firstAncestor;
+  }
+  return firstAncestor;
+}
+
+// Creates and returns a private (single-user) memref for fused loop rooted at
+// 'forOp', with (potentially reduced) memref size based on the memref region
+// written to by `storeOps` at depth 'dstLoopDepth'. 'sliceInsertionBlock'
+// specifies the block in which the slice was/will be inserted.
+static Value createPrivateMemRef(AffineForOp forOp,
+                                 ArrayRef<Operation *> storeOps,
                                  unsigned dstLoopDepth,
                                  std::optional<unsigned> fastMemorySpace,
+                                 Block *sliceInsertionBlock,
                                  uint64_t localBufSizeThreshold) {
-  Operation *forInst = forOp.getOperation();
+  assert(!storeOps.empty() && "no source stores supplied");
+  Operation *srcStoreOp = storeOps[0];
 
   // Create builder to insert alloc op just before 'forOp'.
-  OpBuilder b(forInst);
+  OpBuilder b(forOp);
   // Builder to create constants at the top level.
-  OpBuilder top(forInst->getParentRegion());
+  OpBuilder top(forOp->getParentRegion());
   // Create new memref type based on slice bounds.
-  auto oldMemRef = cast<AffineWriteOpInterface>(srcStoreOpInst).getMemRef();
+  auto oldMemRef = cast<AffineWriteOpInterface>(srcStoreOp).getMemRef();
   auto oldMemRefType = cast<MemRefType>(oldMemRef.getType());
   unsigned rank = oldMemRefType.getRank();
 
   // Compute MemRefRegion for 'srcStoreOpInst' at depth 'dstLoopDepth'.
-  MemRefRegion region(srcStoreOpInst->getLoc());
-  bool validRegion = succeeded(region.compute(srcStoreOpInst, dstLoopDepth));
+  MemRefRegion region(srcStoreOp->getLoc());
+  bool validRegion = succeeded(region.compute(srcStoreOp, dstLoopDepth));
   (void)validRegion;
   assert(validRegion && "unexpected memref region failure");
   SmallVector<int64_t, 4> newShape;
@@ -332,11 +370,12 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
       AffineMap::get(outerIVs.size() + rank, 0, remapExprs, forOp.getContext());
 
   // Replace all users of 'oldMemRef' with 'newMemRef'.
-  LogicalResult res =
-      replaceAllMemRefUsesWith(oldMemRef, newMemRef, {}, indexRemap,
-                               /*extraOperands=*/outerIVs,
-                               /*symbolOperands=*/{},
-                               /*domOpFilter=*/&*forOp.getBody()->begin());
+  Operation *domFilter =
+      getDominanceFilterForPrivateMemRefRepl(sliceInsertionBlock, storeOps);
+  LogicalResult res = replaceAllMemRefUsesWith(
+      oldMemRef, newMemRef, /*extraIndices=*/{}, indexRemap,
+      /*extraOperands=*/outerIVs,
+      /*symbolOperands=*/{}, domFilter);
   assert(succeeded(res) &&
          "replaceAllMemrefUsesWith should always succeed here");
   (void)res;
@@ -944,6 +983,10 @@ public:
 
         // Create private memrefs.
         if (!privateMemrefs.empty()) {
+          // Note the block into which fusion was performed. This can be used to
+          // place `alloc`s that create private memrefs.
+          Block *sliceInsertionBlock = bestSlice.insertPoint->getBlock();
+
           // Gather stores for all the private-to-be memrefs.
           DenseMap<Value, SmallVector<Operation *, 4>> privateMemRefToStores;
           dstAffineForOp.walk([&](AffineWriteOpInterface storeOp) {
@@ -962,8 +1005,8 @@ public:
             SmallVector<Operation *, 4> &storesForMemref =
                 memrefToStoresPair.second;
             Value newMemRef = createPrivateMemRef(
-                dstAffineForOp, storesForMemref[0], bestDstLoopDepth,
-                fastMemorySpace, localBufSizeThreshold);
+                dstAffineForOp, storesForMemref, bestDstLoopDepth,
+                fastMemorySpace, sliceInsertionBlock, localBufSizeThreshold);
             // Create new node in dependence graph for 'newMemRef' alloc op.
             unsigned newMemRefNodeId = mdg->addNode(newMemRef.getDefiningOp());
             // Add edge from 'newMemRef' node to dstNode.
