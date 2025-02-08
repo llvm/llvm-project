@@ -1991,13 +1991,21 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
 
 /// Fold an insert or extract operation into an poison value when a poison index
 /// is found at any dimension of the static position.
-static ub::PoisonAttr
-foldPoisonIndexInsertExtractOp(MLIRContext *context,
-                               ArrayRef<int64_t> staticPos, int64_t poisonVal) {
+static Attribute foldPoisonIndexInsertExtractOp(MLIRContext *context,
+                                                ArrayRef<int64_t> staticPos,
+                                                int64_t poisonVal) {
   if (!llvm::is_contained(staticPos, poisonVal))
-    return ub::PoisonAttr();
+    return {};
 
   return ub::PoisonAttr::get(context);
+}
+
+/// Fold a vector extract from is a poison source.
+static Attribute foldPoisonSrcExtractOp(Attribute srcAttr) {
+  if (llvm::isa_and_nonnull<ub::PoisonAttr>(srcAttr))
+    return srcAttr;
+
+  return {};
 }
 
 OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
@@ -2008,6 +2016,8 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
     return getVector();
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
+    return res;
+  if (auto res = foldPoisonSrcExtractOp(adaptor.getVector()))
     return res;
   if (succeeded(foldExtractOpFromExtractChain(*this)))
     return getResult();
