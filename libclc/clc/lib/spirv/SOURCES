@@ -11,6 +11,7 @@
 ../generic/integer/clc_mul_hi.cl
 ../generic/integer/clc_popcount.cl
 ../generic/integer/clc_rhadd.cl
+../generic/integer/clc_rotate.cl
 ../generic/integer/clc_sub_sat.cl
 ../generic/integer/clc_upsample.cl
 ../generic/math/clc_ceil.cl

@@ -174,6 +174,12 @@ public:
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I);
 
+  InstructionCost getExpandCompressMemoryOpCost(unsigned Opcode, Type *Src,
+                                                bool VariableMask,
+                                                Align Alignment,
+                                                TTI::TargetCostKind CostKind,
+                                                const Instruction *I = nullptr);
+
   InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,

@@ -285,7 +285,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
 ! CHECK: acc.loop {{.*}} cache(%[[CACHE]] : !fir.ref<!fir.array<10xf32>>)
 
   !$acc loop
