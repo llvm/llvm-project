@@ -14421,6 +14421,27 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
       NoBinPacking);
 
   NoBinPacking.BinPackLongBracedList = false;
+  verifyFormat("const Aaaaaa aaaaa = {aaaaa,\n"
+               "                      bbbbb,\n"
+               "                      ccccc,\n"
+               "                      ddddd,\n"
+               "                      eeeee,\n"
+               "                      ffffff,\n"
+               "                      ggggg,\n"
+               "                      hhhhhh,\n"
+               "                      iiiiii,\n"
+               "                      jjjjjj,\n"
+               "                      kkkkkk,\n"
+               "                      aaaaa,\n"
+               "                      bbbbb,\n"
+               "                      ccccc,\n"
+               "                      ddddd,\n"
+               "                      eeeee,\n"
+               "                      ffffff,\n"
+               "                      ggggg,\n"
+               "                      hhhhhh,\n"
+               "                      iiiiii};",
+               NoBinPacking);
   verifyFormat("const Aaaaaa aaaaa = {\n"
                "    aaaaa,\n"
                "    bbbbb,\n"
@@ -14442,27 +14463,6 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
                "    ggggg,\n"
                "    hhhhhh,\n"
                "};",
-               NoBinPacking);
-  verifyFormat("const Aaaaaa aaaaa = {aaaaa,\n"
-               "                      bbbbb,\n"
-               "                      ccccc,\n"
-               "                      ddddd,\n"
-               "                      eeeee,\n"
-               "                      ffffff,\n"
-               "                      ggggg,\n"
-               "                      hhhhhh,\n"
-               "                      iiiiii,\n"
-               "                      jjjjjj,\n"
-               "                      kkkkkk,\n"
-               "                      aaaaa,\n"
-               "                      bbbbb,\n"
-               "                      ccccc,\n"
-               "                      ddddd,\n"
-               "                      eeeee,\n"
-               "                      ffffff,\n"
-               "                      ggggg,\n"
-               "                      hhhhhh,\n"
-               "                      iiiiii};",
                NoBinPacking);
 
   NoBinPacking.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
