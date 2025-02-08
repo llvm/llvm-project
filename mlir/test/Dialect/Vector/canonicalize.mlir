@@ -779,25 +779,9 @@ func.func @fold_extract_splat(%a : f32, %idx0 : index, %idx1 : index) -> f32 {
 //  CHECK-SAME:   %[[A:.*]]: vector<4xf32>
 //       CHECK:   %[[R:.*]] = vector.extract %[[A]][2] : f32 from vector<4xf32>
 //       CHECK:   return %[[R]] : f32
-func.func @fold_extract_broadcast_dim1_broadcasting(%a : vector<4xf32>) -> f32 {
+func.func @fold_extract_broadcast_dim1_broadcasting(%a : vector<4xf32>, %idx : index) -> f32 {
   %b = vector.broadcast %a : vector<4xf32> to vector<1x2x4xf32>
-  %r = vector.extract %b[0, 1, 2] : f32 from vector<1x2x4xf32>
-  return %r : f32
-}
-
-// -----
-
-// CHECK-LABEL: fold_extract_broadcast_dim1_broadcasting_dynamic_negative
-//  CHECK-SAME:   %[[A:.*]]: vector<4xf32>
-//  CHECK-SAME:   %[[IDX:.*]]: index
-//       CHECK:   %[[B:.*]] = vector.broadcast %[[A]] : vector<4xf32> to vector<1x2x4xf32>
-//       CHECK:   %[[R:.*]] = vector.extract %[[B]][%[[IDX]], 1, 2]
-//       CHECK:   return %[[R]] : f32
-// This folder is not yet implemented. Check that this does not fold.
-func.func @fold_extract_broadcast_dim1_broadcasting_dynamic_negative(
-                                                            %a : vector<4xf32>, 
-                                                            %idx : index) -> f32 {
-  %b = vector.broadcast %a : vector<4xf32> to vector<1x2x4xf32>
+  // The indices don't matter for this folder, so we use mixed indices.
   %r = vector.extract %b[%idx, 1, 2] : f32 from vector<1x2x4xf32>
   return %r : f32
 }
