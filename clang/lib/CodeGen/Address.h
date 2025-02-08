@@ -19,8 +19,6 @@
 #include "clang/AST/Type.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace clang {
