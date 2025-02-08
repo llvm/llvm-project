@@ -32,6 +32,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.open
     libc.src.fcntl.openat
 
+    # poll.h entrypoints
+    libc.src.poll.poll
+
     # sched.h entrypoints
     libc.src.sched.sched_get_priority_max
     libc.src.sched.sched_get_priority_min
@@ -356,6 +359,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
+    libc.src.sys.uio.readv
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)

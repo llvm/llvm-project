@@ -913,10 +913,23 @@ func.func @test_negate_quantized(%arg0: tensor<1xi8>) -> () {
 
   // CHECK: linalg.generic
   // CHECK: ^bb0(%[[BBARG0:.+]]: i8,
+  // CHECK: [[C_128:%.+]] = arith.constant -128
+  // CHECK: [[EXT:%.+]] = arith.extsi %[[BBARG0]] : i8 to i16
+  // CHECK: [[SUB:%.+]] = arith.subi [[C_128]], [[EXT]]
+  // CHECK: [[MIN:%.+]] = arith.constant -128
+  // CHECK: [[MAX:%.+]] = arith.constant 127
+  // CHECK: [[LBOUND:%.+]] = arith.maxsi [[MIN]], [[SUB]]
+  // CHECK: [[UBOUND:%.+]] = arith.minsi [[MAX]], [[LBOUND]]
+  // CHECK: [[TRUNC:%.+]] = arith.trunci [[UBOUND]]
+  // CHECK: linalg.yield [[TRUNC]]
+  %3 = tosa.negate %arg0 {input1_zp = -128 : i32, output_zp = 0 : i32} : (tensor<1xi8>) -> tensor<1xi8>
+
+  // CHECK: linalg.generic
+  // CHECK: ^bb0(%[[BBARG0:.+]]: i8,
   // CHECK: [[ZERO:%.+]] = arith.constant 0
   // CHECK: [[SUB:%.+]] = arith.subi [[ZERO]],
   // CHECK: linalg.yield [[SUB]]
-  %3 = tosa.negate %arg0 {quantization_info = #tosa.unary_quant<input_zp = 0, output_zp = 0>} : (tensor<1xi8>) -> tensor<1xi8>
+  %4 = tosa.negate %arg0 {quantization_info = #tosa.unary_quant<input_zp = 0, output_zp = 0>} : (tensor<1xi8>) -> tensor<1xi8>
 
   return
 }
@@ -1387,7 +1400,8 @@ func.func @tile(%arg0 : tensor<2x3xi8>) -> () {
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[ARG0]] : tensor<2x3xi8>) outs([[INIT]] : tensor<2x2x1x3xi8>)
   // CHECK: ^bb0(%[[ARG1:[0-9a-zA-Z_]+]]: i8
   // CHECK:   linalg.yield %[[ARG1]] : i8
-  // CHECK: tosa.reshape [[GENERIC]] {new_shape = array<i64: 4, 3>}
+  // CHECK: [[CONST3:%.+]] = tosa.const_shape {value = dense<[4, 3]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // CHECK: tosa.reshape [[GENERIC]], [[CONST3]]
   %cst21 = tosa.const_shape { value = dense<[2, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
   %0 = tosa.tile %arg0, %cst21: (tensor<2x3xi8>, !tosa.shape<2>) -> tensor<4x3xi8>
 
@@ -1395,7 +1409,8 @@ func.func @tile(%arg0 : tensor<2x3xi8>) -> () {
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[ARG0]] : tensor<2x3xi8>) outs([[INIT]] : tensor<1x2x2x3xi8>)
   // CHECK: ^bb0(%[[ARG1:[0-9a-zA-Z_]+]]: i8
   // CHECK:   linalg.yield %[[ARG1]] : i8
-  // CHECK: tosa.reshape [[GENERIC]] {new_shape = array<i64: 2, 6>}
+  // CHECK: [[CONST8:%.+]] = tosa.const_shape {value = dense<[2, 6]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // tosa.reshape [[GENERIC]], [[CONST8]]
   %cst12 = tosa.const_shape { value = dense<[1, 2]> : tensor<2xindex> } : () -> !tosa.shape<2>
   %1 = tosa.tile %arg0, %cst12: (tensor<2x3xi8>, !tosa.shape<2>) -> tensor<2x6xi8>
 
@@ -1403,8 +1418,9 @@ func.func @tile(%arg0 : tensor<2x3xi8>) -> () {
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[ARG0]] : tensor<2x3xi8>) outs([[INIT]] : tensor<5x2x7x3xi8>)
   // CHECK: ^bb0(%[[ARG1:[0-9a-zA-Z_]+]]: i8
   // CHECK:   linalg.yield %[[ARG1]] : i8
-  // CHECK: tosa.reshape [[GENERIC]] {new_shape = array<i64: 10, 21>}
   %cst57 = tosa.const_shape { value = dense<[5, 7]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // CHECK: [[CONST13:%.+]] = tosa.const_shape {value = dense<[10, 21]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // CHECK: tosa.reshape [[GENERIC]], [[CONST13]]
   %2 = tosa.tile %arg0, %cst57: (tensor<2x3xi8>, !tosa.shape<2>)  -> tensor<10x21xi8>
 
   return
@@ -1424,7 +1440,8 @@ func.func @tile_dyn_input(%arg0 : tensor<?x3xi8>) -> () {
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[ARG0]] : tensor<?x3xi8>) outs(%[[INIT]] : tensor<2x?x1x3xi8>)
   // CHECK: ^bb0(%[[ARG1:.+]]: i8,
   // CHECK:   linalg.yield %[[ARG1]] : i8
-  // CHECK: tosa.reshape %[[GENERIC]] {new_shape = array<i64: -9223372036854775808, 3>}
+  // CHECK: %[[CONST3:.+]] = tosa.const_shape {value = dense<[-1, 3]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // CHECK: tosa.reshape %[[GENERIC]], %[[CONST3]]
   %cst21 = tosa.const_shape { value = dense<[2, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
   %0 = tosa.tile %arg0, %cst21: (tensor<?x3xi8>, !tosa.shape<2>)  -> tensor<?x3xi8>
 
@@ -1445,7 +1462,8 @@ func.func @tile_dyn_multiples(%arg0 : tensor<2x3xi8>) -> () {
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[ARG0]] : tensor<2x3xi8>) outs(%[[INIT]] : tensor<2x2x?x3xi8>)
   // CHECK: ^bb0(%[[ARG1:.+]]: i8,
   // CHECK:   linalg.yield %[[ARG1]] : i8
-  // CHECK: tosa.reshape %[[GENERIC]] {new_shape = array<i64: 2, -9223372036854775808>}
+  // CHECK: %[[CONST2:.+]] = tosa.const_shape {value = dense<[2, -1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // CHECK: tosa.reshape %[[GENERIC]], %[[CONST2]]
   %cst = tosa.const_shape { value = dense<[2, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
   %0 = tosa.tile %arg0, %cst: (tensor<2x3xi8>, !tosa.shape<2>)  -> tensor<2x?xi8>
 

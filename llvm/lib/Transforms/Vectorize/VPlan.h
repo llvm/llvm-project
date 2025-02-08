@@ -2000,6 +2000,11 @@ public:
   /// Returns the \p I th incoming VPBasicBlock.
   VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
 
+  /// Set the \p I th incoming VPBasicBlock to \p IncomingBlock.
+  void setIncomingBlock(unsigned I, VPBasicBlock *IncomingBlock) {
+    IncomingBlocks[I] = IncomingBlock;
+  }
+
   /// Returns the \p I th incoming VPValue.
   VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
 };
@@ -3668,8 +3673,8 @@ public:
     VFs.insert(VF);
   }
 
-  bool hasVF(ElementCount VF) { return VFs.count(VF); }
-  bool hasScalableVF() {
+  bool hasVF(ElementCount VF) const { return VFs.count(VF); }
+  bool hasScalableVF() const {
     return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
   }
 
