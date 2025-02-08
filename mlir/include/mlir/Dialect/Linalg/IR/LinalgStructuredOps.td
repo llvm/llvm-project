@@ -555,6 +555,22 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
 // Op definition for MatmulOp
 //===----------------------------------------------------------------------===//
 
+
+// DONOTMERGE(rolfmorel): explain why the below is necessary
+def DefaultValuedMatmulIndexingMapsAttr :
+    Attr<AffineMapArrayAttr.predicate, AffineMapArrayAttr.summary> {
+  let storageType = AffineMapArrayAttr.storageType;
+  let returnType = AffineMapArrayAttr.returnType;
+  let convertFromStorage = AffineMapArrayAttr.convertFromStorage;
+  let constBuilderCall = "$_builder.getAffineMapArrayAttr($0.empty() ? MatmulOp::getDefaultIndexingMaps($_builder.getContext()) : $0)";
+  let defaultValue = "SmallVector<AffineMap>()";
+  let valueType = AffineMapArrayAttr.valueType;
+  let isOptional = 1;
+
+  let baseAttr = AffineMapArrayAttr;
+}
+
+
 def MatmulOp : LinalgStructuredBase_Op<"matmul", [
                AttrSizedOperandSegments,
                LinalgContractionOpInterface]> {
@@ -606,7 +622,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
     let arguments = (ins
       Variadic<AnyType>:$inputs,
       Variadic<AnyShaped>:$outputs,
-      DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps,
+      DefaultValuedMatmulIndexingMapsAttr:$indexing_maps, // DONOTMERGE(rolfmorel): explain why this is necessary
       DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
     );
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);

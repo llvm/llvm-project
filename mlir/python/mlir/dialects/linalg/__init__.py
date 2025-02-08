@@ -149,6 +149,11 @@ class GenericOp_(GenericOp):
 generic = region_op(GenericOp_, terminator=YieldOp)
 
 
+@register_attribute_builder("DefaultValuedMatmulIndexingMapsAttr")
+def _DefaultValuedMatmulIndexingMapsAttr(x, context):
+    return ArrayAttr.get([AffineMapAttr.get(v) for v in x])
+
+
 def matmul(
     inputs: Sequence[Union[Operation, OpView, Value]],
     *,

@@ -337,9 +337,7 @@ def testMatmulOp():
                 )
                 linalg.fill_builtin_region(res.operation)
                 # CHECK: linalg.matmul ins(%[[Amem]], %[[Bmem]] : memref<4x8xf32>, memref<8x12xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
-                linalg.matmul(
-                    (Amem, Bmem), outs=(Cmem,)
-                )
+                linalg.matmul((Amem, Bmem), outs=(Cmem,))
 
                 # CHECK: linalg.matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[Amem]], %[[BTransmem]] : memref<4x8xf32>, memref<12x8xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
                 res = linalg.MatmulOp(
