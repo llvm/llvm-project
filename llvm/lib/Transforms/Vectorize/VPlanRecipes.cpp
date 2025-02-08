@@ -3609,6 +3609,21 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+VPBasicBlock *VPWidenPHIRecipe::getIncomingBlock(unsigned I) {
+  VPBasicBlock *Parent = getParent();
+  VPBlockBase *Pred = nullptr;
+  if (Parent->getNumPredecessors() == 0) {
+    auto *R = Parent->getParent();
+    assert(R && R->getEntry() == Parent);
+    assert(I < 2);
+    Pred = I == 0 ? R->getSinglePredecessor() : R;
+  } else {
+    Pred = Parent->getPredecessors()[I];
+  }
+
+  return Pred->getExitingBasicBlock();
+}
+
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   assert(EnableVPlanNativePath &&
          "Non-native vplans are not expected to have VPWidenPHIRecipes.");

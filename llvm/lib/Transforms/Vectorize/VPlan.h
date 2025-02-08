@@ -1958,13 +1958,12 @@ public:
 #endif
 };
 
-/// A recipe for handling phis that are widened in the vector loop.
-/// In the VPlan native path, all incoming VPValues & VPBasicBlock pairs are
-/// managed in the recipe directly.
+/// A recipe for widened phis. Incoming values are operands of the recipe and
+/// their operand index corresponds to the incoming predeocessor block. If the
+/// recipe is placed in an entry block to a (non-replicate) region, it must have
+/// exactly 2 incoming values, from from the predecessors of the region and one
+/// from the exiting block of the region.
 class VPWidenPHIRecipe : public VPSingleDefRecipe {
-  /// List of incoming blocks. Only used in the VPlan native path.
-  SmallVector<VPBasicBlock *, 2> IncomingBlocks;
-
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
   /// debug location \p DL.
@@ -1991,19 +1990,8 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  /// Adds a pair (\p IncomingV, \p IncomingBlock) to the phi.
-  void addIncoming(VPValue *IncomingV, VPBasicBlock *IncomingBlock) {
-    addOperand(IncomingV);
-    IncomingBlocks.push_back(IncomingBlock);
-  }
-
   /// Returns the \p I th incoming VPBasicBlock.
-  VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
-
-  /// Set the \p I th incoming VPBasicBlock to \p IncomingBlock.
-  void setIncomingBlock(unsigned I, VPBasicBlock *IncomingBlock) {
-    IncomingBlocks[I] = IncomingBlock;
-  }
+  VPBasicBlock *getIncomingBlock(unsigned I);
 
   /// Returns the \p I th incoming VPValue.
   VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
