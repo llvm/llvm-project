@@ -1198,25 +1198,18 @@ CodeGenFunction::effectiveArrayBoundsFlexArraysLevel() {
   using StrictFlexArraysLevelKind = LangOptions::StrictFlexArraysLevelKind;
   using ArrayBoundsStrictFlexArraysLevelKind =
       LangOptions::ArrayBoundsStrictFlexArraysLevelKind;
-  StrictFlexArraysLevelKind StrictFlexArraysLevel;
   switch (getLangOpts().getArrayBoundsStrictFlexArraysLevel()) {
   case ArrayBoundsStrictFlexArraysLevelKind::Default:
-    StrictFlexArraysLevel = StrictFlexArraysLevelKind::Default;
-    break;
+    return StrictFlexArraysLevelKind::Default;
   case ArrayBoundsStrictFlexArraysLevelKind::OneZeroOrIncomplete:
-    StrictFlexArraysLevel = StrictFlexArraysLevelKind::OneZeroOrIncomplete;
-    break;
+    return StrictFlexArraysLevelKind::OneZeroOrIncomplete;
   case ArrayBoundsStrictFlexArraysLevelKind::ZeroOrIncomplete:
-    StrictFlexArraysLevel = StrictFlexArraysLevelKind::ZeroOrIncomplete;
-    break;
+    return StrictFlexArraysLevelKind::ZeroOrIncomplete;
   case ArrayBoundsStrictFlexArraysLevelKind::IncompleteOnly:
-    StrictFlexArraysLevel = StrictFlexArraysLevelKind::IncompleteOnly;
-    break;
+    return StrictFlexArraysLevelKind::IncompleteOnly;
   case ArrayBoundsStrictFlexArraysLevelKind::None:
-    StrictFlexArraysLevel = getLangOpts().getStrictFlexArraysLevel();
-    break;
+    return getLangOpts().getStrictFlexArraysLevel();
   }
-  return StrictFlexArraysLevel;
 }
 
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
