@@ -606,9 +606,8 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   }
 
   if (VPBB->getNumSuccessors() > 2) {
-    assert(IsSwitch &&
-           "block with more than 2 successors not terminated by "
-           "a switch recipe");
+    assert(IsSwitch && "block with more than 2 successors not terminated by "
+                       "a switch recipe");
     return true;
   }
 

@@ -9362,15 +9362,17 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       // Skip recipes that do not need transforming, including canonical IV,
       // wide canonical IV and VPInstructions without underlying values. The
       // latter are added above by masking.
-      // FIXME: Migrate code relying on the underlying instruction from VPlan0 to construct recipes below to not use the underlying instruction.
+      // FIXME: Migrate code relying on the underlying instruction from VPlan0
+      // to construct recipes below to not use the underlying instruction.
       if (isa<VPCanonicalIVPHIRecipe, VPWidenCanonicalIVRecipe>(SingleDef) ||
           (isa<VPInstruction>(&R) && !UnderlyingValue))
         continue;
 
-      // FIXME: VPlan0, which models a copy of the original scalar loop, should not use VPWidenPHIRecipe to model the phis.
-      assert((isa<VPWidenPHIRecipe>(SingleDef) || isa<VPInstruction>(SingleDef)) &&
-                                           UnderlyingValue &&
-                                              "unsupported recipe");
+      // FIXME: VPlan0, which models a copy of the original scalar loop, should
+      // not use VPWidenPHIRecipe to model the phis.
+      assert(
+          (isa<VPWidenPHIRecipe>(SingleDef) || isa<VPInstruction>(SingleDef)) &&
+          UnderlyingValue && "unsupported recipe");
 
       if (match(&R, m_BranchOnCond(m_VPValue())) ||
           (isa<VPInstruction>(&R) &&
@@ -9418,7 +9420,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
       RecipeBuilder.setRecipe(Instr, Recipe);
       if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) && isa<TruncInst>(Instr)) {
-        // Optimized a truncate to VPWidenIntOrFpInductionRecipe. It needs to be moved to the phi section in the header.
+        // Optimized a truncate to VPWidenIntOrFpInductionRecipe. It needs to be
+        // moved to the phi section in the header.
         Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       } else {
         Builder.insert(Recipe);
