@@ -24,6 +24,8 @@
 #include <cassert>
 #include <ranges>
 
+#include <cstdio>
+
 #include "test_iterators.h"
 #include "type_algorithms.h"
 
@@ -102,43 +104,18 @@ constexpr void test_sentinel() {
   assert(std::ranges::equal(j, std::array{1, 2, 3}));
 }
 
-template <class Iter1>
-struct Test {
-  template <class Iter2>
-  TEST_CONSTEXPR_CXX20 void operator()() {
-    using Expected = std::ranges::swap_ranges_result<Iter1, Iter2>;
-    int a[3]       = {1, 2, 3};
-    int b[3]       = {4, 5, 6};
-    std::same_as<Expected> auto r =
-        std::ranges::swap_ranges(Iter1(a), sentinel_wrapper(Iter1(a + 3)), Iter2(b), sentinel_wrapper(Iter2(b + 3)));
-    assert(base(r.in1) == a + 3);
-    assert(base(r.in2) == b + 3);
-    assert(std::ranges::equal(a, std::array{4, 5, 6}));
-    assert(std::ranges::equal(b, std::array{1, 2, 3}));
-  }
-};
-
-struct TestIterators {
-  template <class Iter>
-  TEST_CONSTEXPR_CXX20 void operator()() {
-    types::for_each(types::cpp20_input_iterator_list<int*>(), Test<Iter>());
-  }
-};
-
-template <class Ptr>
-using cpp20_proxy_in_iterator_list =
-    types::type_list<Cpp20InputProxyIterator<Ptr>,
-                     ForwardProxyIterator<Ptr>,
-                     BidirectionalProxyIterator<Ptr>,
-                     RandomAccessProxyIterator<Ptr>,
-                     ContiguousProxyIterator<Ptr>>;
-
-struct TestProxyInIterators {
-  template <class Iter>
-  TEST_CONSTEXPR_CXX20 void operator()() {
-    types::for_each(cpp20_proxy_in_iterator_list<int*>(), Test<Iter>());
-  }
-};
+template <class Iter1, class Iter2>
+TEST_CONSTEXPR_CXX20 void test_iterators() {
+  using Expected = std::ranges::swap_ranges_result<Iter1, Iter2>;
+  int a[3]       = {1, 2, 3};
+  int b[3]       = {4, 5, 6};
+  std::same_as<Expected> auto r =
+      std::ranges::swap_ranges(Iter1(a), sentinel_wrapper(Iter1(a + 3)), Iter2(b), sentinel_wrapper(Iter2(b + 3)));
+  assert(base(r.in1) == a + 3);
+  assert(base(r.in2) == b + 3);
+  assert(std::ranges::equal(a, std::array{4, 5, 6}));
+  assert(std::ranges::equal(b, std::array{1, 2, 3}));
+}
 
 constexpr void test_rval_range() {
   {
@@ -163,8 +140,13 @@ constexpr bool test() {
   test_different_lengths();
   test_borrowed_input_range();
   test_rval_range();
-  types::for_each(types::cpp20_input_iterator_list<int*>(), TestIterators());
-  types::for_each(cpp20_proxy_in_iterator_list<int*>(), TestProxyInIterators());
+
+  types::for_each(types::cpp20_input_iterator_list<int*>(), []<class Iter1>() {
+    types::for_each(types::cpp20_input_iterator_list<int*>(), []<class Iter2>() {
+      test_iterators<Iter1, Iter2>();
+      test_iterators<ProxyIterator<Iter1>, ProxyIterator<Iter2>>();
+    });
+  });
 
   return true;
 }
