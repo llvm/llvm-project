@@ -62,7 +62,9 @@ def Int16Regs : NVPTXRegClass<[i16, f16, bf16], 16, (add (sequence "RS%u", 0, 4)
 def Int32Regs : NVPTXRegClass<[i32, v2f16, v2bf16, v2i16, v4i8], 32,
                               (add (sequence "R%u", 0, 4),
                               VRFrame32, VRFrameLocal32)>;
-def Int64Regs : NVPTXRegClass<[i64], 64, (add (sequence "RL%u", 0, 4), VRFrame64, VRFrameLocal64)>;
+def Int64Regs : NVPTXRegClass<[i64, v2f32], 64,
+                              (add (sequence "RL%u", 0, 4),
+                              VRFrame64, VRFrameLocal64)>;
 // 128-bit regs are not defined as general regs in NVPTX. They are used for inlineASM only.
 def Int128Regs : NVPTXRegClass<[i128], 128, (add (sequence "RQ%u", 0, 4))>;
 def Float32Regs : NVPTXRegClass<[f32], 32, (add (sequence "F%u", 0, 4))>;

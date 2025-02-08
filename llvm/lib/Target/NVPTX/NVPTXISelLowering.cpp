@@ -292,8 +292,8 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
       // TargetLoweringBase::getVectorTypeBreakdown() which is invoked in
       // ComputePTXValueVTs() cannot currently break down non-power-of-2 sized
       // vectors.
-      if ((Is16bitsType(EltVT.getSimpleVT())) && NumElts % 2 == 0 &&
-          isPowerOf2_32(NumElts)) {
+      if ((Is16bitsType(EltVT.getSimpleVT()) || EltVT == MVT::f32) &&
+          NumElts % 2 == 0 && isPowerOf2_32(NumElts)) {
         // Vectors with an even number of f16 elements will be passed to
         // us as an array of v2f16/v2bf16 elements. We must match this so we
         // stay in sync with Ins/Outs.
@@ -306,6 +306,9 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
           break;
         case MVT::i16:
           EltVT = MVT::v2i16;
+          break;
+        case MVT::f32:
+          EltVT = MVT::v2f32;
           break;
         default:
           llvm_unreachable("Unexpected type");
@@ -580,6 +583,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   addRegisterClass(MVT::v2f16, &NVPTX::Int32RegsRegClass);
   addRegisterClass(MVT::bf16, &NVPTX::Int16RegsRegClass);
   addRegisterClass(MVT::v2bf16, &NVPTX::Int32RegsRegClass);
+  addRegisterClass(MVT::v2f32, &NVPTX::Int64RegsRegClass);
 
   // Conversion to/from FP16/FP16x2 is always legal.
   setOperationAction(ISD::BUILD_VECTOR, MVT::v2f16, Custom);
@@ -845,6 +849,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
     if (getOperationAction(Op, MVT::bf16) == Promote)
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
+    if (STI.hasF32x2Instructions())
+      setOperationAction(Op, MVT::v2f32, Legal);
   }
 
   // On SM80, we select add/mul/sub as fma to avoid promotion to float
@@ -3415,6 +3421,8 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
             // vectors which contain v2f16 or v2bf16 elements. So we must load
             // using i32 here and then bitcast back.
             LoadVT = MVT::i32;
+          else if (EltVT == MVT::v2f32)
+            LoadVT = MVT::i64;
 
           EVT VecVT = EVT::getVectorVT(F->getContext(), LoadVT, NumElts);
           SDValue VecAddr =
