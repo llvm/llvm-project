@@ -154,7 +154,7 @@ def matmul(
     *,
     outs: Sequence[Union[Operation, OpView, Value]],
     indexing_maps: Sequence[AffineMapAttr],
-    cast: Optional[Union[TypeFn, Attribute]]=None
+    cast: Optional[Union[TypeFn, Attribute]] = None,
 ):
     inputs = [_get_op_result_or_value(input) for input in inputs]
     if len(outs) > 1:
@@ -167,7 +167,7 @@ def matmul(
         inputs=inputs,
         outputs=[init],
         indexing_maps=indexing_maps,
-        cast=cast
+        cast=cast,
     )
     fill_builtin_region(op.operation)
     return op
@@ -178,7 +178,7 @@ def contract(
     *,
     outs: Sequence[Union[Operation, OpView, Value]],
     indexing_maps: Sequence[AffineMapAttr],
-    cast: Optional[Union[TypeFn, Attribute]]=None
+    cast: Optional[Union[TypeFn, Attribute]] = None,
 ):
     inputs = [_get_op_result_or_value(input) for input in inputs]
     if len(outs) > 1:
@@ -191,7 +191,7 @@ def contract(
         inputs=inputs,
         outputs=[init],
         indexing_maps=indexing_maps,
-        cast=cast
+        cast=cast,
     )
     fill_builtin_region(op.operation)
     return op
