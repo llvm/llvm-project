@@ -147,7 +147,7 @@ template <class _Tp>
 struct __atomic_base<_Tp, true> : public __atomic_base<_Tp, false> {
   using __base _LIBCPP_NODEBUG = __atomic_base<_Tp, false>;
 
-  using difference_type = __base::value_type;
+  using difference_type = typename __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __atomic_base() _NOEXCEPT = default;
 
