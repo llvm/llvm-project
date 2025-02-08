@@ -670,7 +670,6 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
   }
 
   bool HasPrefix = false;
-
   if (const auto *F = dyn_cast<Function>(GO)) {
     // Jump table hotness takes precedence over its enclosing function's hotness
     // if it's known. The function's section prefix is used if jump table entry
