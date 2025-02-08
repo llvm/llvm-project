@@ -752,7 +752,8 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
   let arguments = (ins
     Variadic<AnyType>:$inputs,
     Variadic<AnyShaped>:$outputs,
-    AffineMapArrayAttr:$indexing_maps
+    AffineMapArrayAttr:$indexing_maps,
+    DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
   );
   let results = (outs Variadic<AnyShaped>:$result_tensors);
   // NB: The only reason this op has a region - and it get populated at op build
