@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 /// Implementation of a simple passthrough mutex which guards nothing. A
-/// complete Mutex locks in general cannot be implemented on the GPU. We simply
+/// complete Mutex locks in general cannot be implemented in UEFI. We simply
 /// define the Mutex interface and require that only a single thread executes
 /// code requiring a mutex lock.
 struct Mutex {
@@ -29,4 +29,4 @@ struct Mutex {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_GPU_MUTEX_H
+#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_UEFI_MUTEX_H

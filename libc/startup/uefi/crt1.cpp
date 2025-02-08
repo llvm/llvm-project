@@ -23,7 +23,7 @@ static void call_init_array_callbacks() {
   unsigned long nptrs = (unsigned long)__CTOR_LIST__[0];
   unsigned long i;
 
-  if (nptrs == (unsigned long)-1) {
+  if (nptrs == ~0ul) {
     for (nptrs = 0; __CTOR_LIST__[nptrs + 1] != 0; nptrs++)
       ;
   }
