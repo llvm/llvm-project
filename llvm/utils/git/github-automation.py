@@ -498,66 +498,65 @@ class ReleaseWorkflow:
                   url
                   projectItems(first:100){
                     nodes {
+                      id
+                      project {
                         id
-                        project {
-                          id
-                          number
-                          field(name: "Status") {
-                            ... on ProjectV2SingleSelectField {
+                        number
+                        field(name: "Status") {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options {
                               id
                               name
-                              options {
-                                id
-                                name
-                              }
                             }
                           }
                         }
+                      }
                     }
                   }
                 }
               }
             }
         """
-        variables = {
-            "node_id" : pr.node_id
-        }
+        variables = {"node_id": pr.node_id }
         res_header, res_data = gh._Github__requester.graphql_query(
             query=query, variables=variables
         )
         print(res_header)
 
-        for item in res_data['data']['node']['projectItems']['nodes']:
-            project = item['project']
-            if project['number'] != 3:
+        llvm_release_status_project_number = 3
+        for item in res_data["data"]["node"]["projectItems"]["nodes"]:
+            project = item["project"]
+            if project["number"] != llvm_release_status_project_number:
                 continue
-            status_field = project['field']
-            for option in status_field['options']:
-                if option['name'] != "Done":
+            status_field = project["field"]
+            for option in status_field["options"]:
+                if option["name"] != "Done":
                     continue
                 variables = {
-                    "project" : project["id"],
-                    "item" : item["id"],
-                    "status_field" : status_field["id"],
-                    "status_value" : option["id"],
+                    "project": project["id"],
+                    "item": item["id"],
+                    "status_field": status_field["id"],
+                    "status_value": option["id"],
                 }
 
                 query = """
-                    mutation($project: ID!, $item: ID!, $status_field: ID!, $status_value: String!) {
-                      set_status:
-                      updateProjectV2ItemFieldValue(input: {
-                        projectId: $project
-                        itemId: $item
-                        fieldId: $status_field
-                        value: {
-                          singleSelectOptionId: $status_value
-                        }
-                      }) {
-                        projectV2Item {
-                          id
-                        }
+                  mutation($project: ID!, $item: ID!, $status_field: ID!, $status_value: String!) {
+                    set_status:
+                    updateProjectV2ItemFieldValue(input: {
+                      projectId: $project
+                      itemId: $item
+                      fieldId: $status_field
+                      value: {
+                        singleSelectOptionId: $status_value
+                      }
+                    }) {
+                      projectV2Item {
+                        id
                       }
                     }
+                  }
                 """
 
                 res_header, res_data = gh._Github__requester.graphql_query(
