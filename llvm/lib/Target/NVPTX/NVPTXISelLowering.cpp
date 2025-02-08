@@ -4619,26 +4619,109 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+// If {Lo, Hi} = <packed f32x2 val>, returns that value
+static SDValue peekThroughF32x2Copy(const SDValue &Lo, const SDValue &Hi) {
+  if (Lo.getValueType() != MVT::f32 || Lo.getOpcode() != ISD::CopyFromReg ||
+      Lo.getNode() != Hi.getNode() || Lo == Hi)
+    return SDValue();
+
+  SDNode *CopyF = Lo.getNode();
+  SDNode *CopyT = CopyF->getOperand(0).getNode();
+  if (CopyT->getOpcode() != ISD::CopyToReg)
+    return SDValue();
+
+  // check the two registers are the same
+  if (cast<RegisterSDNode>(CopyF->getOperand(1))->getReg() !=
+      cast<RegisterSDNode>(CopyT->getOperand(1))->getReg())
+    return SDValue();
+
+  SDValue OrigV = CopyT->getOperand(2);
+  if (OrigV.getValueType() != MVT::i64)
+    return SDValue();
+  return OrigV;
+}
+
+static SDValue
+PerformPackedF32StoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                             CodeGenOptLevel OptLevel) {
+  if (OptLevel == CodeGenOptLevel::None)
+    return SDValue();
+
+  // rewrite stores of packed f32 values
+  auto *MemN = cast<MemSDNode>(N);
+  if (MemN->getMemoryVT() == MVT::f32) {
+    std::optional<NVPTXISD::NodeType> NewOpcode;
+    switch (MemN->getOpcode()) {
+    case NVPTXISD::StoreRetvalV2:
+      NewOpcode = NVPTXISD::StoreRetval;
+      break;
+    case NVPTXISD::StoreRetvalV4:
+      NewOpcode = NVPTXISD::StoreRetvalV2;
+      break;
+    case NVPTXISD::StoreParamV2:
+      NewOpcode = NVPTXISD::StoreParam;
+      break;
+    case NVPTXISD::StoreParamV4:
+      NewOpcode = NVPTXISD::StoreParamV2;
+      break;
+    }
+
+    if (NewOpcode) {
+      SmallVector<SDValue> NewOps = {N->getOperand(0), N->getOperand(1)};
+      unsigned NumPacked = 0;
+
+      // gather all packed operands
+      for (unsigned I = 2, E = MemN->getNumOperands(); I < E; I += 2) {
+        if (SDValue Packed = peekThroughF32x2Copy(MemN->getOperand(I),
+                                                  MemN->getOperand(I + 1))) {
+          NewOps.push_back(Packed);
+          ++NumPacked;
+        } else {
+          NumPacked = 0;
+          break;
+        }
+      }
+
+      if (NumPacked) {
+        return DCI.DAG.getMemIntrinsicNode(
+            *NewOpcode, SDLoc(N), N->getVTList(), NewOps, MVT::i64,
+            MemN->getPointerInfo(), MemN->getAlign(),
+            MachineMemOperand::MOStore);
+      }
+    }
+  }
+  return SDValue();
+}
+
 static SDValue PerformStoreCombineHelper(SDNode *N, std::size_t Front,
-                                         std::size_t Back) {
+                                         std::size_t Back,
+                                         TargetLowering::DAGCombinerInfo &DCI,
+                                         CodeGenOptLevel OptLevel) {
   if (all_of(N->ops().drop_front(Front).drop_back(Back),
              [](const SDUse &U) { return U.get()->isUndef(); }))
     // Operand 0 is the previous value in the chain. Cannot return EntryToken
     // as the previous value will become unused and eliminated later.
     return N->getOperand(0);
 
+  if (SDValue V = PerformPackedF32StoreCombine(N, DCI, OptLevel))
+    return V;
+
   return SDValue();
 }
 
-static SDValue PerformStoreParamCombine(SDNode *N) {
+static SDValue PerformStoreParamCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        CodeGenOptLevel OptLevel) {
   // Operands from the 3rd to the 2nd last one are the values to be stored.
   //   {Chain, ArgID, Offset, Val, Glue}
-  return PerformStoreCombineHelper(N, 3, 1);
+  return PerformStoreCombineHelper(N, 3, 1, DCI, OptLevel);
 }
 
-static SDValue PerformStoreRetvalCombine(SDNode *N) {
+static SDValue PerformStoreRetvalCombine(SDNode *N,
+                                         TargetLowering::DAGCombinerInfo &DCI,
+                                         CodeGenOptLevel OptLevel) {
   // Operands from the 2nd to the last one are the values to be stored
-  return PerformStoreCombineHelper(N, 2, 0);
+  return PerformStoreCombineHelper(N, 2, 0, DCI, OptLevel);
 }
 
 /// PerformADDCombine - Target-specific dag combine xforms for ISD::ADD.
@@ -5329,11 +5412,11 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case NVPTXISD::StoreRetval:
     case NVPTXISD::StoreRetvalV2:
     case NVPTXISD::StoreRetvalV4:
-      return PerformStoreRetvalCombine(N);
+      return PerformStoreRetvalCombine(N, DCI, OptLevel);
     case NVPTXISD::StoreParam:
     case NVPTXISD::StoreParamV2:
     case NVPTXISD::StoreParamV4:
-      return PerformStoreParamCombine(N);
+      return PerformStoreParamCombine(N, DCI, OptLevel);
     case ISD::EXTRACT_VECTOR_ELT:
       return PerformEXTRACTCombine(N, DCI);
     case ISD::VSELECT:
