@@ -741,6 +741,10 @@ foreach dim = [1, 2, 3, 4, 5] in {
 }
 
 //Prefetch and Prefetchu 
+class Join<string sep, list<string> lst> {
+  string ret = !foldl("", lst, a, b, !if(!eq(a, ""), b, !if(!eq(b,""), a, !strconcat(a, sep, b))));
+}
+
 class PREFETCH_INTRS<string InstName> :
           NVPTXInst<(outs), (ins Int64Regs:$addr),
           InstName # " [$addr];",
@@ -754,7 +758,7 @@ class PREFETCH_INTRS<string InstName> :
 foreach level = ["L1", "L2"] in {
   foreach addr = ["global", "local", ""] in {
     foreach evict = !if(!eq(addr, "global"), ["evictlast", "evictnormal"], ["evictnormal"]) in {
-      defvar suffix = "" # !if(!eq(addr, ""), "", addr # "_") # level # "_" # evict;
+      defvar suffix = Join<"_", [addr, level, evict]>.ret;
       defvar inst_name = "prefetch." # !subst("_", ".", suffix);
       def PREFETCH_# suffix : PREFETCH_INTRS<inst_name>;
     }
