@@ -184,7 +184,7 @@ class VOP6Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   let Inst{83-76} = !if(pfl.HasAux, aux_data{13-6}, ?); // mod1
 
   let Inst{93-84} = src5;
-  let Inst{94-95} = idxs{25-24};    // src5_idx
+  let Inst{95-94} = idxs{25-24};    // src5_idx
 
   let Inst{105-96} = src3;
   let Inst{107-106} = idxs{17-16};  // src3_idx
