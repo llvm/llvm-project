@@ -190,7 +190,8 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
       SelectI128toV2I64(N);
       return;
     }
-    if (N->getOperand(1).getValueType() == MVT::i64) {
+    if (N->getOperand(1).getValueType() == MVT::i64 &&
+        N->getValueType(0) == MVT::f32 && N->getValueType(1) == MVT::f32) {
       // {f32,f32} = mov i64
       SelectI64ToV2F32(N);
       return;
