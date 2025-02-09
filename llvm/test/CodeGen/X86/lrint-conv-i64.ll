@@ -63,15 +63,34 @@ entry:
   ret i32 %1
 }
 
-define i32 @combine_f32_trunc(float %x) {
-; SSE-LABEL: combine_f32_trunc:
+define i32 @combine_f32_nsw_trunc(float %x) {
+; SSE-LABEL: combine_f32_nsw_trunc:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtss2si %xmm0, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_f32_trunc:
+; AVX-LABEL: combine_f32_nsw_trunc:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vcvtss2si %xmm0, %eax
+; AVX-NEXT:    retq
+entry:
+  %0 = tail call i64 @llvm.lrint.i64.f32(float %x)
+  %1 = trunc nsw i64 %0 to i32
+  ret i32 %1
+}
+
+;; Check we don't combine trunc when nuw.
+define i32 @not_combine_f32_nuw_trunc(float %x) {
+; SSE-LABEL: not_combine_f32_nuw_trunc:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvtss2si %xmm0, %rax
+; SSE-NEXT:    # kill: def $eax killed $eax killed $rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: not_combine_f32_nuw_trunc:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtss2si %xmm0, %rax
+; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX-NEXT:    retq
 entry:
   %0 = tail call i64 @llvm.lrint.i64.f32(float %x)
@@ -93,6 +112,22 @@ entry:
   %0 = tail call i64 @llvm.lrint.i64.f64(double %x)
   %1 = trunc nsw i64 %0 to i32
   ret i32 %1
+}
+
+;; Check "movl %eax, %eax" is present.
+define i64 @zero_upperbits_softfloat(double %x) nounwind "target-features"="+soft-float" {
+; CHECK-LABEL: zero_upperbits_softfloat:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq lrint@PLT
+; CHECK-NEXT:    movl %eax, %eax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+entry:
+  %0 = tail call i64 @llvm.lrint.i64.f64(double %x)
+  %1 = trunc nsw i64 %0 to i32
+  %2 = zext i32 %1 to i64
+  ret i64 %2
 }
 
 declare i64 @llvm.lrint.i64.f32(float) nounwind readnone

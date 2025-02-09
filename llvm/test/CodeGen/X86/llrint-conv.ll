@@ -249,7 +249,7 @@ define i32 @combine_f64_trunc(double %x) nounwind {
 ; X64-AVX-NEXT:    retq
 entry:
   %0 = tail call i64 @llvm.llrint.f64(double %x)
-  %1 = trunc nuw i64 %0 to i32
+  %1 = trunc nsw i64 %0 to i32
   ret i32 %1
 }
 

@@ -559,6 +559,6 @@ define <4 x i32> @llrint_v4i32_v4f32(<4 x float> %x) {
 ; X64-AVX-i64-NEXT:    vcvtps2dq %xmm0, %xmm0
 ; X64-AVX-i64-NEXT:    retq
   %a = call <4 x i64> @llvm.lrint.v4i64.v4f32(<4 x float> %x)
-  %b = trunc nuw <4 x i64> %a to <4 x i32>
+  %b = trunc nsw <4 x i64> %a to <4 x i32>
   ret <4 x i32> %b
 }
