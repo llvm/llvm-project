@@ -2507,6 +2507,15 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   }
   VPBlockUtils::connectBlocks(PreVectorPH, ScalarPH);
   PreVectorPH->swapSuccessors();
+
+  // We just connected a new block to the scalar preheader. Update all
+  // ResumePhis by adding an incoming value for it.
+  for (VPRecipeBase &R : *cast<VPBasicBlock>(ScalarPH)) {
+    auto *ResumePhi = dyn_cast<VPInstruction>(&R);
+    if (!ResumePhi || ResumePhi->getOpcode() != VPInstruction::ResumePhi)
+      continue;
+    ResumePhi->addOperand(ResumePhi->getOperand(1));
+  }
 }
 
 void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
@@ -7642,8 +7651,8 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   // over the incoming values correctly.
   using namespace VPlanPatternMatch;
   auto IsResumePhi = [](VPUser *U) {
-    return match(
-        U, m_VPInstruction<VPInstruction::ResumePhi>(m_VPValue(), m_VPValue()));
+    auto *VPI = dyn_cast<VPInstruction>(U);
+    return VPI && VPI->getOpcode() == VPInstruction::ResumePhi;
   };
   assert(count_if(EpiRedResult->users(), IsResumePhi) == 1 &&
          "ResumePhi must have a single user");
@@ -7747,12 +7756,20 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (VectorizingEpilogue) {
     assert(!ILV.Legal->hasUncountableEarlyExit() &&
            "Epilogue vectorisation not yet supported with early exits");
+    BasicBlock *PH = OrigLoop->getLoopPreheader();
     BasicBlock *BypassBlock = ILV.getAdditionalBypassBlock();
+    for (auto *Pred : predecessors(PH)) {
+      for (PHINode &Phi : PH->phis()) {
+        if (Phi.getBasicBlockIndex(Pred) != -1)
+          continue;
+        Phi.addIncoming(Phi.getIncomingValueForBlock(BypassBlock), Pred);
+      }
+    }
+
     for (VPRecipeBase &R : *MiddleVPBB) {
       fixReductionScalarResumeWhenVectorizingEpilog(
           &R, State, State.CFG.VPBB2IRBB[MiddleVPBB], BypassBlock);
     }
-    BasicBlock *PH = OrigLoop->getLoopPreheader();
     for (const auto &[IVPhi, _] : Legal->getInductionVars()) {
       auto *Inc = cast<PHINode>(IVPhi->getIncomingValueForBlock(PH));
       Value *V = ILV.getInductionAdditionalBypassValue(IVPhi);
