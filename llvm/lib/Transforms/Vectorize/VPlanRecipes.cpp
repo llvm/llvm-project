@@ -685,20 +685,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::ResumePhi: {
-    Value *IncomingFromVPlanPred =
-        State.get(getOperand(0), /* IsScalar */ true);
-    Value *IncomingFromOtherPreds =
-        State.get(getOperand(1), /* IsScalar */ true);
     auto *NewPhi =
         Builder.CreatePHI(State.TypeAnalysis.inferScalarType(this), 2, Name);
-    BasicBlock *VPlanPred =
-        State.CFG
-            .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getPredecessors()[0])];
-    NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
-    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
-      if (OtherPred == VPlanPred)
-        continue;
-      NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
+    for (const auto &[IncVPV, PredVPBB] :
+         zip(operands(), getParent()->getPredecessors())) {
+      Value *IncV = State.get(IncVPV, /* IsScalar */ true);
+      BasicBlock *PredBB = State.CFG.VPBB2IRBB.at(cast<VPBasicBlock>(PredVPBB));
+      NewPhi->addIncoming(IncV, PredBB);
     }
     return NewPhi;
   }
