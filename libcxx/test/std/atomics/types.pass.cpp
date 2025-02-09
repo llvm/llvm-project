@@ -38,54 +38,62 @@ template <typename T>
 struct has_difference_type<T, myvoid_t<typename T::difference_type> > : std::true_type {};
 
 template <class T,
-          bool IntegralOrFloating =
-              (std::is_integral<T>::value && !std::is_same<T, bool>::value) || std::is_floating_point<T>::value,
-          bool Pointer = std::is_pointer<T>::value>
+          bool Integral = (std::is_integral<T>::value && !std::is_same<T, bool>::value),
+          bool Floating = std::is_floating_point<T>::value,
+          bool Pointer  = std::is_pointer<T>::value>
 struct test_atomic {
   test_atomic() {
-    static_assert(!IntegralOrFloating && !Pointer, "");
+    static_assert(!Integral && !Floating && !Pointer, "");
     using A = std::atomic<T>;
     A a;
     (void)a;
-#if TEST_STD_VER >= 17
-    static_assert((std::is_same_v<typename A::value_type, decltype(a.load())>), "");
+    static_assert(std::is_same<typename A::value_type, T>::value, "");
+    static_assert(!has_difference_type<A>::value, "");
+  }
+};
+
+template <class T>
+struct test_atomic<T, /*Integral=*/true, false, false> {
+  test_atomic() {
+    static_assert(!std::is_same<T, bool>::value, "");
+    using A = std::atomic<T>;
+    A a;
+    (void)a;
+    static_assert(std::is_same<typename A::value_type, T>::value, "");
+    static_assert(std::is_same<typename A::difference_type, T>::value, "");
+  }
+};
+
+template <class T>
+struct test_atomic<T, false, /*Foating=*/true, false> {
+  test_atomic() {
+    using A = std::atomic<T>;
+    A a;
+    (void)a;
+    static_assert(std::is_same<typename A::value_type, T>::value, "");
+#if TEST_STD_VER >= 20
+    static_assert(std::is_same<typename A::difference_type, T>::value, "");
+#else
     static_assert(!has_difference_type<A>::value, "");
 #endif
   }
 };
 
 template <class T>
-struct test_atomic<T, true, false> {
+struct test_atomic<T, false, false, /*Pointer=*/true> {
   test_atomic() {
     using A = std::atomic<T>;
     A a;
     (void)a;
-#if TEST_STD_VER >= 17
-    static_assert((std::is_same_v<typename A::value_type, decltype(a.load())>), "");
-    static_assert((std::is_same_v<typename A::value_type, typename A::difference_type>), "");
-#endif
-  }
-};
-
-template <class T>
-struct test_atomic<T, false, true> {
-  test_atomic() {
-    using A = std::atomic<T>;
-    A a;
-    (void)a;
-#if TEST_STD_VER >= 17
-    static_assert((std::is_same_v<typename A::value_type, decltype(a.load())>), "");
-    static_assert((std::is_same_v<typename A::difference_type, std::ptrdiff_t>), "");
-#endif
+    static_assert(std::is_same<typename A::value_type, T>::value, "");
+    static_assert(std::is_same<typename A::difference_type, std::ptrdiff_t>::value, "");
   }
 };
 
 template <class T>
 void test() {
   using A = std::atomic<T>;
-#if TEST_STD_VER >= 17
-  static_assert((std::is_same_v<typename A::value_type, T>), "");
-#endif
+  static_assert(std::is_same<typename A::value_type, T>::value, "");
   test_atomic<T>();
 }
 
