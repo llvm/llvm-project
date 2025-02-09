@@ -2313,6 +2313,58 @@ if.else:
   ret i8 %c
 }
 
+define i8 @test_trunc_cond_and(i8 %x, i1 %c) {
+; CHECK-LABEL: @test_trunc_cond_and(
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[C:%.*]], [[CMP]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -2
+; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -2
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %cmp = trunc i8 %x to i1
+  %cond = and i1 %cmp, %c
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -2
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -2
+  ret i8 %or2
+}
+
+define i8 @test_not_trunc_cond_and(i8 %x, i1 %c) {
+; CHECK-LABEL: @test_not_trunc_cond_and(
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[C:%.*]], [[NOT]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -2
+; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -2
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %cmp = trunc i8 %x to i1
+  %not = xor i1 %cmp, true
+  %cond = and i1 %not, %c
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -2
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -2
+  ret i8 %or2
+}
+
 declare void @dummy()
 declare void @use(i1)
 declare void @sink(i8)
