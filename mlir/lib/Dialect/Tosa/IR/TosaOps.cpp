@@ -271,11 +271,11 @@ static LogicalResult verifyConvOp(T op) {
     }
   }
 
-  bool inputIsQuant = !llvm::isa<FloatType>(inputEType);
-  bool weightIsQuant = !llvm::isa<FloatType>(weightEType);
+  bool inputIsFloat = llvm::isa<FloatType>(inputEType);
+  bool weightIsFloat = llvm::isa<FloatType>(weightEType);
 
-  // Either both must be quantized or both unquantized.
-  if (inputIsQuant != weightIsQuant) {
+  // Either both must be float or both non-float.
+  if (inputIsFloat != weightIsFloat) {
     op.emitOpError(
         "expect both input and weight to be float or not together, got ")
         << inputEType << " and " << weightEType;
@@ -527,7 +527,12 @@ static void buildTransConvOpWithQuantInfo(
   auto quantAttr = ::buildConvOpQuantizationAttr(builder, input, weight);
 
   if (quantAttr) {
-    result.addAttribute("quantization_info", quantAttr);
+    result.addAttribute("input_zp",
+                        builder.getI32IntegerAttr(
+                            static_cast<int32_t>(quantAttr.getInputZp())));
+    result.addAttribute("weight_zp",
+                        builder.getI32IntegerAttr(
+                            static_cast<int32_t>(quantAttr.getWeightZp())));
     result.addTypes(
         buildConvOpResultTypeInfo(builder, outputType, input, weight));
   } else {
@@ -563,7 +568,10 @@ static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
   auto quantAttr = ::buildMatMulOpQuantizationAttr(builder, a, b);
 
   if (quantAttr) {
-    result.addAttribute("quantization_info", quantAttr);
+    result.addAttribute("a_zp", builder.getI32IntegerAttr(
+                                    static_cast<int32_t>(quantAttr.getAZp())));
+    result.addAttribute("b_zp", builder.getI32IntegerAttr(
+                                    static_cast<int32_t>(quantAttr.getBZp())));
 
     auto inputType = llvm::dyn_cast<ShapedType>(a.getType());
     assert(inputType && "Input must be a shaped tensor type!");
@@ -603,8 +611,14 @@ buildAvgPool2dOpWithQuantInfo(OpBuilder &builder, OperationState &result,
   result.addAttribute("pad", pad);
   result.addAttribute("acc_type", accType);
   auto quantAttr = buildUnaryOpQuantizationAttr(builder, input, outputType);
-  if (quantAttr)
-    result.addAttribute("quantization_info", quantAttr);
+  if (quantAttr) {
+    result.addAttribute("input_zp",
+                        builder.getI32IntegerAttr(
+                            static_cast<int32_t>(quantAttr.getInputZp())));
+    result.addAttribute("output_zp",
+                        builder.getI32IntegerAttr(
+                            static_cast<int32_t>(quantAttr.getOutputZp())));
+  }
   result.types.push_back(outputType);
 }
 
@@ -616,8 +630,15 @@ static void buildUnaryOpWithQuantInfo(OpBuilder &builder,
                                       Value input) {
   result.addOperands(input);
   auto quantAttr = buildUnaryOpQuantizationAttr(builder, input, outputType);
-  if (quantAttr)
-    result.addAttribute("quantization_info", quantAttr);
+  if (quantAttr) {
+    // note: negateOp has attributes input1_zp and output_zp
+    result.addAttribute("input1_zp",
+                        builder.getI32IntegerAttr(
+                            static_cast<int32_t>(quantAttr.getInputZp())));
+    result.addAttribute("output_zp",
+                        builder.getI32IntegerAttr(
+                            static_cast<int32_t>(quantAttr.getOutputZp())));
+  }
   result.types.push_back(outputType);
 }
 
@@ -629,8 +650,11 @@ static void buildPadOpWithQuantInfo(OpBuilder &builder, OperationState &result,
                                     Value paddings) {
   result.addOperands({input, paddings});
   auto quantAttr = buildPadOpQuantizationAttr(builder, input);
-  if (quantAttr)
-    result.addAttribute("quantization_info", quantAttr);
+  if (quantAttr) {
+    result.addAttribute("input_zp",
+                        builder.getI32IntegerAttr(
+                            static_cast<int32_t>(quantAttr.getInputZp())));
+  }
   result.types.push_back(outputType);
 }
 
@@ -643,8 +667,11 @@ static void buildExplicitValuePadOpWithQuantInfo(OpBuilder &builder,
                                                  Value padConst) {
   result.addOperands({input, paddings, padConst});
   auto quantAttr = buildPadOpQuantizationAttr(builder, input);
-  if (quantAttr)
-    result.addAttribute("quantization_info", quantAttr);
+  if (quantAttr) {
+    result.addAttribute("input_zp",
+                        builder.getI32IntegerAttr(
+                            static_cast<int32_t>(quantAttr.getInputZp())));
+  }
   result.types.push_back(outputType);
 }
 
@@ -898,9 +925,8 @@ LogicalResult FullyConnectedOp::verify() {
 
   // Quantized type must have constructed the quantizationattr, and unquantized
   // types should not have a quantizationattr.
-  if ((inputIsQuant && !getQuantizationInfo()) ||
-      (!inputIsQuant && getQuantizationInfo())) {
-    emitOpError("quantizationattr is required for quantized type, and not "
+  if ((inputIsQuant && !getInputZp()) || (!inputIsQuant && getInputZp())) {
+    emitOpError("input zero point is required for quantized type, and not "
                 "allowed for float type");
     return failure();
   }
@@ -1309,8 +1335,16 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   Type inputType = getElementTypeOrSelf(adaptor.getInput1().getType());
-  llvm::SmallVector<int64_t> newShapeValue =
-      convertToMlirShape(adaptor.getNewShape());
+  llvm::SmallVector<int64_t> newShapeValue;
+  if (!tosa::getConstShapeValue(adaptor.getShape().getDefiningOp(),
+                                newShapeValue)) {
+    auto rank = cast<tosa::shapeType>(adaptor.getShape().getType()).getRank();
+    SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
+    inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
+    return success();
+  } else {
+    newShapeValue = convertToMlirShape(newShapeValue);
+  }
 
   // We cannot infer from the total number of elements so we must take the
   // shape attribute as exact.
@@ -1346,13 +1380,19 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
   TensorType inputType = getInput1().getType();
   RankedTensorType outputType = getType();
 
-  if ((int64_t)getNewShape().size() != outputType.getRank())
+  SmallVector<int64_t> shapeValues;
+  if (!tosa::getConstShapeValue(getShape().getDefiningOp(), shapeValues)) {
+    // skip following checks if shape is not constant
+    return mlir::success();
+  }
+
+  if ((int64_t)shapeValues.size() != outputType.getRank())
     return emitOpError() << "new shape does not match result rank";
 
   for (auto [newShapeDim, outputShapeDim] :
-       zip(getNewShape(), outputType.getShape())) {
-    if (newShapeDim != -1 && outputShapeDim != ShapedType::kDynamic &&
-        newShapeDim != outputShapeDim)
+       zip(shapeValues, outputType.getShape())) {
+    if (newShapeDim != -1 && newShapeDim != ShapedType::kDynamic &&
+        outputShapeDim != ShapedType::kDynamic && newShapeDim != outputShapeDim)
       return emitOpError() << "new shape is inconsistent with result shape";
 
     if (newShapeDim != ShapedType::kDynamic && newShapeDim < -1)
@@ -1371,10 +1411,10 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
     }
 
     int64_t newShapeElementsNum = std::accumulate(
-        getNewShape().begin(), getNewShape().end(), 1LL,
+        shapeValues.begin(), shapeValues.end(), 1LL,
         [](int64_t acc, int64_t dim) { return (dim > 0) ? acc * dim : acc; });
     bool isStaticNewShape =
-        llvm::all_of(getNewShape(), [](int64_t s) { return s > 0; });
+        llvm::all_of(shapeValues, [](int64_t s) { return s > 0; });
     if ((isStaticNewShape && inputElementsNum != newShapeElementsNum) ||
         (!isStaticNewShape && newShapeElementsNum > inputElementsNum)) {
       return emitOpError() << "cannot reshape " << inputElementsNum
@@ -1382,7 +1422,7 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
     }
   }
 
-  int missingDims = llvm::count(getNewShape(), -1);
+  int missingDims = llvm::count(shapeValues, -1);
   if (missingDims > 1)
     return emitOpError() << "expected at most one target dimension to be -1";
 

@@ -167,6 +167,8 @@ static void ParseArgs(int argc, char **argv) {
             .Case("system-warnings", ScanningOptimizations::SystemWarnings)
             .Case("vfs", ScanningOptimizations::VFS)
             .Case("canonicalize-macros", ScanningOptimizations::Macros)
+            .Case("ignore-current-working-dir",
+                  ScanningOptimizations::IgnoreCWD)
             .Case("all", ScanningOptimizations::All)
             .Default(std::nullopt);
     if (!Optimization) {

@@ -4715,6 +4715,14 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     } else if (!this->visit(MC->getImplicitObjectArgument())) {
       return false;
     }
+  } else if (const auto *PD =
+                 dyn_cast<CXXPseudoDestructorExpr>(E->getCallee())) {
+    const Expr *Base = PD->getBase();
+    if (!Base->isGLValue())
+      return this->discard(Base);
+    if (!this->visit(Base))
+      return false;
+    return this->emitKill(E);
   } else if (!FuncDecl) {
     const Expr *Callee = E->getCallee();
     CalleeOffset = this->allocateLocalPrimitive(Callee, PT_FnPtr, true, false);
@@ -5596,6 +5604,22 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
 
       if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr))
         return false;
+
+      // Mark all chain links as initialized.
+      unsigned InitFieldOffset = 0;
+      for (const NamedDecl *ND : IFD->chain().drop_back()) {
+        const auto *FD = cast<FieldDecl>(ND);
+        const Record *FieldRecord = this->P.getOrCreateRecord(FD->getParent());
+        assert(FieldRecord);
+        NestedField = FieldRecord->getField(FD);
+        InitFieldOffset += NestedField->Offset;
+        assert(NestedField);
+        if (!this->emitGetPtrThisField(InitFieldOffset, InitExpr))
+          return false;
+        if (!this->emitFinishInitPop(InitExpr))
+          return false;
+      }
+
     } else {
       assert(Init->isDelegatingInitializer());
       if (!this->emitThis(InitExpr))
@@ -6210,9 +6234,6 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
       return this->emitGetPtrParam(It->second.Offset, E);
     }
-
-    if (D->getType()->isReferenceType())
-      return this->emitDummyPtr(D, E);
   }
 
   // In case we need to re-visit a declaration.

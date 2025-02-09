@@ -288,6 +288,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  setsid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    setsid_test.cpp
+  DEPENDS
+    libc.src.unistd.setsid
+)
+
+add_libc_unittest(
   symlink_test
   SUITE
     libc_unistd_unittests

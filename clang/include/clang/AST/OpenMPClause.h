@@ -2423,6 +2423,28 @@ public:
   OMPNoOpenMPRoutinesClause() : OMPNoChildClause() {}
 };
 
+/// This represents the 'no_openmp_constructs' clause in the
+//// '#pragma omp assume' directive.
+///
+/// \code
+/// #pragma omp assume no_openmp_constructs
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'no_openmp_constructs'
+/// clause.
+class OMPNoOpenMPConstructsClause final
+    : public OMPNoChildClause<llvm::omp::OMPC_no_openmp_constructs> {
+public:
+  /// Build 'no_openmp_constructs' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPNoOpenMPConstructsClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPNoOpenMPConstructsClause() : OMPNoChildClause() {}
+};
+
 /// This represents the 'no_parallelism' clause in the '#pragma omp assume'
 /// directive.
 ///
@@ -9451,7 +9473,8 @@ struct TargetOMPContext final : public llvm::omp::OMPContext {
   TargetOMPContext(ASTContext &ASTCtx,
                    std::function<void(StringRef)> &&DiagUnknownTrait,
                    const FunctionDecl *CurrentFunctionDecl,
-                   ArrayRef<llvm::omp::TraitProperty> ConstructTraits);
+                   ArrayRef<llvm::omp::TraitProperty> ConstructTraits,
+                   int DeviceNum);
 
   virtual ~TargetOMPContext() = default;
 
