@@ -114,3 +114,25 @@ void PR40286_3(int the_value) {
 void PR40286_4(int the_value) { // expected-note {{'the_value' declared here}}
   PR40286_h(the_value, the_value, the_walue); // expected-error {{use of undeclared identifier 'the_walue'; did you mean 'the_value'?}}
 }
+
+#define FOO1() 10
+// expected-note@-1 4 {{'FOO1' defined here as a function-like macro}}
+
+int x = FOO1; // expected-error {{use of undeclared identifier FOO1; did you mean FOO1(...)?}}
+
+void test3() {
+  int iter = FOO1;
+  // expected-error@-1 {{use of undeclared identifier FOO1; did you mean FOO1(...)?}}
+}
+
+void bar(int);
+
+void test4() {
+    int FOO; // expected-note {{'FOO' declared here}}
+    int x = FOO1; // expected-error {{use of undeclared identifier 'FOO1'; did you mean 'FOO'?}}
+}
+
+void test5() {
+    FOO1 + 1; // expected-error {{use of undeclared identifier FOO1; did you mean FOO1(...)?}}
+    bar(FOO1); // expected-error {{use of undeclared identifier FOO1; did you mean FOO1(...)?}}
+}
