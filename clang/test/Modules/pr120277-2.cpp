@@ -1,7 +1,6 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
-// RUN: cd %t
 
 // RUN: %clang_cc1 -std=c++20 -emit-header-unit -xc++-user-header %t/hu-01.h \
 // RUN:  -o %t/hu-01.pcm
