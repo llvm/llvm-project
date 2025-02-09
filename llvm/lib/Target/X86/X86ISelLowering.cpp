@@ -12689,6 +12689,20 @@ static bool isShuffleMaskInputInPlace(int Input, ArrayRef<int> Mask) {
   return true;
 }
 
+/// Test whether the specified input (0 or 1) is a broadcast/splat blended by
+/// the given mask.
+///
+static bool isShuffleMaskInputBroadcastable(int Input, ArrayRef<int> Mask,
+                                            int BroadcastableElement = 0) {
+  assert((Input == 0 || Input == 1) && "Only two inputs to shuffles.");
+  int Size = Mask.size();
+  for (int i = 0; i < Size; ++i)
+    if (Mask[i] >= 0 && Mask[i] / Size == Input &&
+        Mask[i] % Size != BroadcastableElement)
+      return false;
+  return true;
+}
+
 /// If we are extracting two 128-bit halves of a vector and shuffling the
 /// result, match that to a 256-bit AVX2 vperm* instruction to avoid a
 /// multi-shuffle lowering.
@@ -16190,6 +16204,8 @@ static SDValue lowerV4F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   bool V1IsInPlace = isShuffleMaskInputInPlace(0, Mask);
   bool V2IsInPlace = isShuffleMaskInputInPlace(1, Mask);
+  bool V1IsSplat = isShuffleMaskInputBroadcastable(0, Mask);
+  bool V2IsSplat = isShuffleMaskInputBroadcastable(1, Mask);
 
   // If we have lane crossing shuffles AND they don't all come from the lower
   // lane elements, lower to SHUFPD(VPERM2F128(V1, V2), VPERM2F128(V1, V2)).
@@ -16198,7 +16214,9 @@ static SDValue lowerV4F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (is128BitLaneCrossingShuffleMask(MVT::v4f64, Mask) &&
       !all_of(Mask, [](int M) { return M < 2 || (4 <= M && M < 6); }) &&
       (V1.getOpcode() != ISD::BUILD_VECTOR) &&
-      (V2.getOpcode() != ISD::BUILD_VECTOR))
+      (V2.getOpcode() != ISD::BUILD_VECTOR) &&
+      (!Subtarget.hasAVX2() ||
+       !((V1IsInPlace || V1IsSplat) && (V2IsInPlace || V2IsSplat))))
     return lowerShuffleAsLanePermuteAndSHUFP(DL, MVT::v4f64, V1, V2, Mask, DAG);
 
   // If we have one input in place, then we can permute the other input and
