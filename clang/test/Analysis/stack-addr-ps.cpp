@@ -976,4 +976,36 @@ int return_symbol_safe() {
 int *return_symbolic_region_safe(int **ptr) {
   return *ptr; // no-warning
 }
+
+int *return_arg_ptr(int *arg) {
+  return arg; // no-warning
+}
+
+// This has a false positive with -Wreturn-stack-address, but CSA should not
+// warn on this
+int *return_conditional_never_false(int *arg) {
+  int x = 14;
+  return true ? arg : &x; // expected-warning {{address of stack memory associated with local variable 'x' returned}}
+}
+
+// This has a false positive with -Wreturn-stack-address, but CSA should not
+// warn on this
+int *return_conditional_never_true(int *arg) {
+  int x = 14;
+  return false ? &x : arg; // expected-warning {{address of stack memory associated with local variable 'x' returned}}
+}
+
+int *return_conditional_path_split(int *arg, bool b) {
+  int x = 14;
+  return b ? arg : &x; // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory associated with local variable 'x' returned}} -Wreturn-stack-address
+}
+
+// compare of two symbolic regions
+// maybe in some implementation, make_ptr returns interior pointers that are comparable
+int *make_ptr();
+bool return_symbolic_exxpression() {
+  int *a = make_ptr();
+  int *b = make_ptr();
+  return a < b; // no-warning
+}
 }
