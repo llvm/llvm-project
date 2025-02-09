@@ -2548,6 +2548,27 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   return E;
 }
 
+// Check whether a similar function-like macro exists and suggest it
+static bool isFunctionLikeMacro(const DeclarationName &Name, Sema &SemaRef,
+                                const SourceLocation &TypoLoc) {
+
+  if (IdentifierInfo *II = Name.getAsIdentifierInfo()) {
+    if (II->hasMacroDefinition()) {
+      MacroInfo *MI = SemaRef.PP.getMacroInfo(II);
+      if (MI && MI->isFunctionLike()) {
+        SemaRef.Diag(TypoLoc,
+                     diag::err_undeclared_var_use_suggest_func_like_macro)
+            << II->getName();
+        SemaRef.Diag(MI->getDefinitionLoc(),
+                     diag::note_function_like_macro_requires_parens)
+            << II->getName();
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void
 Sema::DecomposeUnqualifiedId(const UnqualifiedId &Id,
                              TemplateArgumentListInfo &Buffer,
@@ -2569,6 +2590,42 @@ Sema::DecomposeUnqualifiedId(const UnqualifiedId &Id,
     NameInfo = GetNameFromUnqualifiedId(Id);
     TemplateArgs = nullptr;
   }
+}
+
+static void emitEmptyLookupTypoDiagnostic(
+    const TypoCorrection &TC, Sema &SemaRef, const CXXScopeSpec &SS,
+    DeclarationName Typo, SourceLocation TypoLoc, ArrayRef<Expr *> Args,
+    unsigned DiagnosticID, unsigned DiagnosticSuggestID) {
+  DeclContext *Ctx =
+      SS.isEmpty() ? nullptr : SemaRef.computeDeclContext(SS, false);
+  if (!TC) {
+    // Emit a special diagnostic for failed member lookups.
+    // FIXME: computing the declaration context might fail here (?)
+    if (Ctx)
+      SemaRef.Diag(TypoLoc, diag::err_no_member) << Typo << Ctx
+                                                 << SS.getRange();
+    else {
+      if (isFunctionLikeMacro(Typo, SemaRef, TypoLoc))
+        return;
+      SemaRef.Diag(TypoLoc, DiagnosticID) << Typo;
+    }
+    return;
+  }
+
+  std::string CorrectedStr = TC.getAsString(SemaRef.getLangOpts());
+  bool DroppedSpecifier =
+      TC.WillReplaceSpecifier() && Typo.getAsString() == CorrectedStr;
+  unsigned NoteID = TC.getCorrectionDeclAs<ImplicitParamDecl>()
+                        ? diag::note_implicit_param_decl
+                        : diag::note_previous_decl;
+  if (!Ctx)
+    SemaRef.diagnoseTypo(TC, SemaRef.PDiag(DiagnosticSuggestID) << Typo,
+                         SemaRef.PDiag(NoteID));
+  else
+    SemaRef.diagnoseTypo(TC, SemaRef.PDiag(diag::err_no_member_suggest)
+                                 << Typo << Ctx << DroppedSpecifier
+                                 << SS.getRange(),
+                         SemaRef.PDiag(NoteID));
 }
 
 bool Sema::DiagnoseDependentMemberLookup(const LookupResult &R) {
@@ -2690,20 +2747,6 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
     DC = DC->getLookupParent();
   }
 
-  // Check whether a similar function-like macro exists and suggest it
-  if (IdentifierInfo *II = Name.getAsIdentifierInfo()) {
-    if (II->hasMacroDefinition()) {
-      MacroInfo *MI = PP.getMacroInfo(II);
-      if (MI && MI->isFunctionLike()) {
-        Diag(R.getNameLoc(), diag::err_undeclared_var_use) << II->getName();
-        Diag(MI->getDefinitionLoc(),
-             diag::note_function_like_macro_requires_parens)
-            << II->getName();
-        return true;
-      }
-    }
-  }
-
   // We didn't find anything, so try to correct for a typo.
   TypoCorrection Corrected;
   if (S && (Corrected =
@@ -2797,6 +2840,9 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
     }
   }
   R.clear();
+
+  if (isFunctionLikeMacro(Name, SemaRef, R.getNameLoc()))
+    return true;
 
   // Emit a special diagnostic for failed member lookups.
   // FIXME: computing the declaration context might fail here (?)
