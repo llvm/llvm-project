@@ -386,15 +386,14 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_cvthf8_ph(__m128i __A) {
       (__v16qi)__A, (__v8hf)(__m128h)_mm_undefined_ph(), (__mmask8)-1);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_mask_cvthf8_ph(__m128h __W,
-                                                                __mmask8 __U,
-                                                                __m128i __A) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128
+_mm_mask_cvthf8_ph(__m128h __W, __mmask8 __U, __m128i __A) {
   return (__m128h)__builtin_ia32_vcvthf8_2ph128_mask(
       (__v16qi)__A, (__v8hf)(__m128h)__W, (__mmask8)__U);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_maskz_cvthf8_ph(__mmask8 __U,
-                                                                 __m128i __A) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128
+_mm_maskz_cvthf8_ph(__mmask8 __U, __m128i __A) {
   return (__m128h)__builtin_ia32_vcvthf8_2ph128_mask(
       (__v16qi)__A, (__v8hf)(__m128h)_mm_setzero_ph(), (__mmask8)__U);
 }
