@@ -3168,6 +3168,10 @@ public:
         hasFastMathFlags() ? getFastMathFlags() : FastMathFlags());
   }
 
+  /// Return true if this VPScalarIVStepsRecipe corresponds to part 0. Note that
+  /// this is only accurate after the VPlan has been unrolled.
+  bool isPart0() { return getUnrollPart(*this) == 0; }
+
   VP_CLASSOF_IMPL(VPDef::VPScalarIVStepsSC)
 
   /// Generate the scalarized versions of the phi node as needed by their users.
@@ -3699,6 +3703,9 @@ public:
     UFs.clear();
     UFs.insert(UF);
   }
+
+  /// Returns true if the VPlan already has been unrolled, i.e. it has UF = 1.
+  unsigned isUnrolled() const { return UFs.size() == 1 && UFs.back() == 1; }
 
   /// Return a string with the name of the plan and the applicable VFs and UFs.
   std::string getName() const;

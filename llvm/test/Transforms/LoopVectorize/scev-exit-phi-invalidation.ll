@@ -55,8 +55,7 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK:       vector.body5:
 ; CHECK-NEXT:    [[INDEX8:%.*]] = phi i32 [ 0, [[VECTOR_PH4]] ], [ [[INDEX_NEXT9:%.*]], [[VECTOR_BODY5]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX8]] to i8
-; CHECK-NEXT:    [[TMP14:%.*]] = add i8 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 1
+; CHECK-NEXT:    [[TMP15:%.*]] = add i8 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[A]], i8 [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP16]], i32 0
 ; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP17]], align 1
