@@ -26,11 +26,11 @@
 struct TestPtr {
   template <class Iter>
   TEST_CONSTEXPR_CXX20 void operator()() {
-    types::for_each(types::forward_iterator_list<int*>(), TestPtrImpl<Iter>());
+    types::for_each(types::forward_iterator_list<int*>(), TestImpl<Iter>());
   }
 
   template <class Iter1>
-  struct TestPtrImpl {
+  struct TestImpl {
     template <class Iter2>
     TEST_CONSTEXPR_CXX20 void operator()() {
       int a[] = {1, 2, 3};
@@ -46,12 +46,12 @@ struct TestPtr {
 #if TEST_STD_VER >= 11
 struct TestUniquePtr {
   template <class Iter>
-  TEST_CONSTEXPR_CXX20 void operator()() {
-    types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestUniquePtrImpl<Iter>());
+  TEST_CONSTEXPR_CXX23 void operator()() {
+    types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestImpl<Iter>());
   }
 
   template <class Iter1>
-  struct TestUniquePtrImpl {
+  struct TestImpl {
     template <class Iter2>
     TEST_CONSTEXPR_CXX23 void operator()() {
       std::unique_ptr<int> a[3];
@@ -67,6 +67,12 @@ struct TestUniquePtr {
     }
   };
 };
+
+// This test is constexpr only since C++23 because constexpr std::unique_ptr is only available since C++23
+TEST_CONSTEXPR_CXX23 bool test_unique_ptr() {
+  types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestUniquePtr());
+  return true;
+}
 #endif
 
 TEST_CONSTEXPR_CXX20 bool test_simple_cases() {
@@ -95,19 +101,22 @@ TEST_CONSTEXPR_CXX20 bool test_simple_cases() {
   return true;
 }
 
-TEST_CONSTEXPR_CXX20 bool tests() {
+TEST_CONSTEXPR_CXX20 bool test() {
   test_simple_cases();
   types::for_each(types::forward_iterator_list<int*>(), TestPtr());
-#if TEST_STD_VER >= 11
-  types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestUniquePtr());
-#endif
   return true;
 }
 
 int main(int, char**) {
-  tests();
+  test();
+#if TEST_STD_VER >= 11
+  test_unique_ptr();
+#endif
 #if TEST_STD_VER >= 20
-  static_assert(tests());
+  static_assert(test());
+#endif
+#if TEST_STD_VER >= 23
+  static_assert(test_unique_ptr());
 #endif
 
   return 0;
