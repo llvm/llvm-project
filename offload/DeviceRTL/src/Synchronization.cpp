@@ -69,7 +69,7 @@ uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
   }
 }
 
-uint32_t SHARED(namedBarrierTracker);
+[[clang::loader_uninitialized]] static uint32_t __gpu_local namedBarrierTracker;
 
 void namedBarrierInit() {
   // Don't have global ctors, and shared memory is not zero init
@@ -123,32 +123,16 @@ void namedBarrier() {
   fence::team(atomic::release);
 }
 
-void fenceTeam(atomic::OrderingTy Ordering) {
-  return __scoped_atomic_thread_fence(Ordering, atomic::workgroup);
-}
-
-void fenceKernel(atomic::OrderingTy Ordering) {
-  return __scoped_atomic_thread_fence(Ordering, atomic::device);
-}
-
-void fenceSystem(atomic::OrderingTy Ordering) {
-  return __scoped_atomic_thread_fence(Ordering, atomic::system);
-}
-
-void syncWarp(__kmpc_impl_lanemask_t) {
-  // This is a no-op on current AMDGPU hardware but it is used by the optimizer
-  // to enforce convergent behaviour between control flow graphs.
-  __builtin_amdgcn_wave_barrier();
-}
-
 void syncThreads(atomic::OrderingTy Ordering) {
   if (Ordering != atomic::relaxed)
-    fenceTeam(Ordering == atomic::acq_rel ? atomic::release : atomic::seq_cst);
+    fence::team(Ordering == atomic::acq_rel ? atomic::release
+                                            : atomic::seq_cst);
 
   __builtin_amdgcn_s_barrier();
 
   if (Ordering != atomic::relaxed)
-    fenceTeam(Ordering == atomic::acq_rel ? atomic::acquire : atomic::seq_cst);
+    fence::team(Ordering == atomic::acq_rel ? atomic::acquire
+                                            : atomic::seq_cst);
 }
 void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
 
@@ -169,12 +153,12 @@ void unsetCriticalLock(omp_lock_t *Lock) {
 void setCriticalLock(omp_lock_t *Lock) {
   uint64_t LowestActiveThread = utils::ffs(mapping::activemask()) - 1;
   if (mapping::getThreadIdInWarp() == LowestActiveThread) {
-    fenceKernel(atomic::release);
+    fence::kernel(atomic::release);
     while (
         !cas((uint32_t *)Lock, UNSET, SET, atomic::relaxed, atomic::relaxed)) {
       __builtin_amdgcn_s_sleep(32);
     }
-    fenceKernel(atomic::acquire);
+    fence::kernel(atomic::acquire);
   }
 }
 
@@ -202,14 +186,6 @@ void namedBarrier() {
   constexpr int BarrierNo = 7;
   __nvvm_barrier_sync_cnt(BarrierNo, NumThreads);
 }
-
-void fenceTeam(atomic::OrderingTy) { __nvvm_membar_cta(); }
-
-void fenceKernel(atomic::OrderingTy) { __nvvm_membar_gl(); }
-
-void fenceSystem(atomic::OrderingTy) { __nvvm_membar_sys(); }
-
-void syncWarp(__kmpc_impl_lanemask_t Mask) { __nvvm_bar_warp_sync(Mask); }
 
 void syncThreads(atomic::OrderingTy Ordering) {
   constexpr int BarrierNo = 8;
@@ -267,7 +243,7 @@ void synchronize::init(bool IsSPMD) {
     impl::namedBarrierInit();
 }
 
-void synchronize::warp(LaneMaskTy Mask) { impl::syncWarp(Mask); }
+void synchronize::warp(LaneMaskTy Mask) { __gpu_sync_lane(Mask); }
 
 void synchronize::threads(atomic::OrderingTy Ordering) {
   impl::syncThreads(Ordering);
@@ -277,11 +253,29 @@ void synchronize::threadsAligned(atomic::OrderingTy Ordering) {
   impl::syncThreadsAligned(Ordering);
 }
 
-void fence::team(atomic::OrderingTy Ordering) { impl::fenceTeam(Ordering); }
+void fence::team(atomic::OrderingTy Ordering) {
+#ifdef __NVPTX__
+  __nvvm_membar_cta();
+#else
+  return __scoped_atomic_thread_fence(Ordering, atomic::workgroup);
+#endif
+}
 
-void fence::kernel(atomic::OrderingTy Ordering) { impl::fenceKernel(Ordering); }
+void fence::kernel(atomic::OrderingTy Ordering) {
+#ifdef __NVPTX__
+  __nvvm_membar_gl();
+#else
+  return __scoped_atomic_thread_fence(Ordering, atomic::device);
+#endif
+}
 
-void fence::system(atomic::OrderingTy Ordering) { impl::fenceSystem(Ordering); }
+void fence::system(atomic::OrderingTy Ordering) {
+#ifdef __NVPTX__
+  __nvvm_membar_sys();
+#else
+  return __scoped_atomic_thread_fence(Ordering, atomic::system);
+#endif
+}
 
 uint32_t atomic::inc(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering,
                      atomic::MemScopeTy MemScope) {

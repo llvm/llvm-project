@@ -32,10 +32,6 @@ double getWTick() {
   return 1.0 / config::getClockFrequency();
 }
 
-double getWTime() {
-  return static_cast<double>(__builtin_readsteadycounter()) * getWTick();
-}
-
 #endif
 
 /// NVPTX Implementation
@@ -48,12 +44,11 @@ double getWTick() {
   return ((double)1E-9);
 }
 
-double getWTime() {
-  uint64_t nsecs = __nvvm_read_ptx_sreg_globaltimer();
-  return static_cast<double>(nsecs) * getWTick();
-}
-
 #endif
+
+double getWTime() {
+  return static_cast<double>(__builtin_readsteadycounter()) * getWTick();
+}
 
 /// Lookup a device-side function using a host pointer /p HstPtr using the table
 /// provided by the device plugin. The table is an ordered pair of host and
