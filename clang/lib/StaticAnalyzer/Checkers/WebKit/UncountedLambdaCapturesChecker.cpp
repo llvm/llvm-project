@@ -41,6 +41,7 @@ public:
       const UncountedLambdaCapturesChecker *Checker;
       llvm::DenseSet<const DeclRefExpr *> DeclRefExprsToIgnore;
       llvm::DenseSet<const LambdaExpr *> LambdasToIgnore;
+      llvm::DenseSet<const ValueDecl *> ProtectedThisDecls;
       QualType ClsType;
 
       explicit LocalVisitor(const UncountedLambdaCapturesChecker *Checker)
@@ -65,7 +66,7 @@ public:
       bool VisitLambdaExpr(LambdaExpr *L) override {
         if (LambdasToIgnore.contains(L))
           return true;
-        Checker->visitLambdaExpr(L, shouldCheckThis());
+        Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L));
         return true;
       }
 
@@ -93,7 +94,7 @@ public:
         if (!L)
           return true;
         LambdasToIgnore.insert(L);
-        Checker->visitLambdaExpr(L, shouldCheckThis());
+        Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L));
         return true;
       }
 
@@ -118,7 +119,8 @@ public:
             if (auto *L = findLambdaInArg(Arg)) {
               LambdasToIgnore.insert(L);
               if (!Param->hasAttr<NoEscapeAttr>() && !TreatAllArgsAsNoEscape)
-                Checker->visitLambdaExpr(L, shouldCheckThis());
+                Checker->visitLambdaExpr(L, shouldCheckThis() &&
+                                            !hasProtectedThis(L));
             }
             ++ArgIndex;
           }
@@ -145,6 +147,11 @@ public:
           return nullptr;
         if (auto *Lambda = dyn_cast<LambdaExpr>(CtorArg))
           return Lambda;
+        if (auto *TempExpr = dyn_cast<CXXBindTemporaryExpr>(CtorArg)) {
+          E = TempExpr->getSubExpr()->IgnoreParenCasts();
+          if (auto *Lambda = dyn_cast<LambdaExpr>(E))
+            return Lambda;
+        }
         auto *DRE = dyn_cast<DeclRefExpr>(CtorArg);
         if (!DRE)
           return nullptr;
@@ -189,8 +196,67 @@ public:
           return;
         DeclRefExprsToIgnore.insert(ArgRef);
         LambdasToIgnore.insert(L);
-        Checker->visitLambdaExpr(L, shouldCheckThis(),
+        Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L),
                                  /* ignoreParamVarDecl */ true);
+      }
+
+      bool hasProtectedThis(LambdaExpr *L) {
+        for (const LambdaCapture &OtherCapture : L->captures()) {
+          if (!OtherCapture.capturesVariable())
+            continue;
+          if (auto *ValueDecl = OtherCapture.getCapturedVar()) {
+            if (declProtectsThis(ValueDecl)) {
+              ProtectedThisDecls.insert(ValueDecl);
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      bool declProtectsThis(const ValueDecl *ValueDecl) const {
+        auto *VD = dyn_cast<VarDecl>(ValueDecl);
+        if (!VD)
+          return false;
+        auto *Init = VD->getInit()->IgnoreParenCasts();
+        if (!Init)
+          return false;
+        const Expr *Arg = Init;
+        do {
+          if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Arg))
+            Arg = BTE->getSubExpr()->IgnoreParenCasts();
+          if (auto *CE = dyn_cast_or_null<CXXConstructExpr>(Arg)) {
+            auto *Ctor = CE->getConstructor();
+            if (!Ctor)
+              return false;
+            auto clsName = safeGetName(Ctor->getParent());
+            if (!isRefType(clsName) || !CE->getNumArgs())
+              return false;
+            Arg = CE->getArg(0)->IgnoreParenCasts();
+            continue;
+          }
+          if (auto *OpCE = dyn_cast<CXXOperatorCallExpr>(Arg)) {
+            auto OpCode = OpCE->getOperator();
+            if (OpCode == OO_Star || OpCode == OO_Amp) {
+              auto *Callee = OpCE->getDirectCallee();
+              auto clsName = safeGetName(Callee->getParent());
+              if (!isRefType(clsName) || !OpCE->getNumArgs())
+                return false;
+              Arg = OpCE->getArg(0)->IgnoreParenCasts();
+              continue;
+            }
+          }
+          if (auto *UO = dyn_cast<UnaryOperator>(Arg)) {
+            auto OpCode = UO->getOpcode();
+            if (OpCode == UO_Deref || OpCode == UO_AddrOf)
+              Arg = UO->getSubExpr()->IgnoreParenCasts();
+            continue;
+          }
+          break;
+        } while (Arg);
+        if (auto *DRE = dyn_cast<DeclRefExpr>(Arg))
+          return ProtectedThisDecls.contains(DRE->getDecl());
+        return isa<CXXThisExpr>(Arg);
       }
     };
 
@@ -214,51 +280,9 @@ public:
       } else if (C.capturesThis() && shouldCheckThis) {
         if (ignoreParamVarDecl) // this is always a parameter to this function.
           continue;
-        bool hasProtectThis = false;
-        for (const LambdaCapture &OtherCapture : L->captures()) {
-          if (!OtherCapture.capturesVariable())
-            continue;
-          if (auto *ValueDecl = OtherCapture.getCapturedVar()) {
-            if (protectThis(ValueDecl)) {
-              hasProtectThis = true;
-              break;
-            }
-          }
-        }
-        if (!hasProtectThis)
-          reportBugOnThisPtr(C);
+        reportBugOnThisPtr(C);
       }
     }
-  }
-
-  bool protectThis(const ValueDecl *ValueDecl) const {
-    auto *VD = dyn_cast<VarDecl>(ValueDecl);
-    if (!VD)
-      return false;
-    auto *Init = VD->getInit()->IgnoreParenCasts();
-    if (!Init)
-      return false;
-    auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Init);
-    if (!BTE)
-      return false;
-    auto *CE = dyn_cast_or_null<CXXConstructExpr>(BTE->getSubExpr());
-    if (!CE)
-      return false;
-    auto *Ctor = CE->getConstructor();
-    if (!Ctor)
-      return false;
-    auto clsName = safeGetName(Ctor->getParent());
-    if (!isRefType(clsName) || !CE->getNumArgs())
-      return false;
-    auto *Arg = CE->getArg(0)->IgnoreParenCasts();
-    while (auto *UO = dyn_cast<UnaryOperator>(Arg)) {
-      auto OpCode = UO->getOpcode();
-      if (OpCode == UO_Deref || OpCode == UO_AddrOf)
-        Arg = UO->getSubExpr();
-      else
-        break;
-    }
-    return isa<CXXThisExpr>(Arg);
   }
 
   void reportBug(const LambdaCapture &Capture, ValueDecl *CapturedVar,

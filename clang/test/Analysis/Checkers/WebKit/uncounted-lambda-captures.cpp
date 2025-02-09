@@ -89,6 +89,7 @@ template <typename Callback> void call(Callback callback) {
   someFunction();
   callback();
 }
+void callAsync(const WTF::Function<void()>&);
 
 void raw_ptr() {
   RefCountable* ref_countable = make_obj();
@@ -297,6 +298,29 @@ struct RefCountableWithLambdaCapturingThis {
     });
     callLambda([&]() -> RefPtr<RefCountable> {
       return obj->next();
+    });
+  }
+
+  void callAsyncNoescape([[clang::noescape]] WTF::Function<bool(RefCountable&)>&&);
+  void method_temp_lambda(RefCountable* obj) {
+    callAsyncNoescape([this, otherObj = RefPtr { obj }](auto& obj) {
+      return otherObj == &obj;
+    });
+  }
+
+  void method_nested_lambda() {
+    callAsync([this, protectedThis = Ref { *this }] {
+      callAsync([this, protectedThis = static_cast<const Ref<RefCountableWithLambdaCapturingThis>&&>(protectedThis)] {
+        nonTrivial();
+      });
+    });
+  }
+
+  void method_nested_lambda2() {
+    callAsync([this, protectedThis = RefPtr { this }] {
+      callAsync([this, protectedThis = static_cast<const Ref<RefCountableWithLambdaCapturingThis>&&>(*protectedThis)] {
+        nonTrivial();
+      });
     });
   }
 };
