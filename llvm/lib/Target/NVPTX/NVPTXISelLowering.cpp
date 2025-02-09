@@ -5565,10 +5565,10 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
       IsPTXVectorType(VectorVT.getSimpleVT()))
     return SDValue(); // Native vector loads already combine nicely w/
                       // extract_vector_elt.
-  // Don't mess with singletons or v2*16, v4i8 and v8i8 types, we already
+  // Don't mess with singletons or v2*16, v2f32, v4i8 and v8i8 types, we already
   // handle them OK.
   if (VectorVT.getVectorNumElements() == 1 || Isv2x16VT(VectorVT) ||
-      VectorVT == MVT::v4i8 || VectorVT == MVT::v8i8)
+      VectorVT == MVT::v2f32 || VectorVT == MVT::v4i8 || VectorVT == MVT::v8i8)
     return SDValue();
 
   // Don't mess with undef values as sra may be simplified to 0, not undef.
