@@ -293,33 +293,29 @@ struct LowerGpuOpsToROCDLOpsPass final
     RewritePatternSet llvmPatterns(ctx);
     LLVMConversionTarget target(getContext());
 
-    if (!allowedDialects.empty()) {
-      for (StringRef dialectName : allowedDialects) {
-        Dialect *dialect = ctx->getLoadedDialect(dialectName);
-        // Dialect may not be loaded if it wasn't used in source module, ignore.
-        if (!dialect)
-          continue;
+    llvm::SmallDenseSet<StringRef> allowedDialectsSet(allowedDialects.begin(),
+                                                      allowedDialects.end());
+    for (Dialect *dialect : ctx->getLoadedDialects()) {
+      bool allowed = allowedDialectsSet.contains(dialect->getNamespace());
+      // Empty `allowedDialectsSet` means all dialects are allowed.
+      if (!allowedDialectsSet.empty() && !allowed)
+        continue;
 
-        auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
-        if (!iface) {
+      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+      if (!iface) {
+        // Error out if dialect was explicily specified but doesn't implement
+        // conversion interface.
+        if (allowed) {
           m.emitError()
               << "dialect does not implement ConvertToLLVMPatternInterface: "
-              << dialectName;
+              << dialect->getNamespace();
           return signalPassFailure();
         }
-
-        iface->populateConvertToLLVMConversionPatterns(target, converter,
-                                                       llvmPatterns);
+        continue;
       }
-    } else {
-      for (Dialect *dialect : ctx->getLoadedDialects()) {
-        auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
-        if (!iface)
-          continue;
 
-        iface->populateConvertToLLVMConversionPatterns(target, converter,
-                                                       llvmPatterns);
-      }
+      iface->populateConvertToLLVMConversionPatterns(target, converter,
+                                                     llvmPatterns);
     }
 
     populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns,
