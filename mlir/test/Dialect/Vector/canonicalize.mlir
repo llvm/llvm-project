@@ -713,7 +713,7 @@ func.func @fold_extract_transpose(
 // CHECK-LABEL: fold_extract_broadcast_same_input_output_scalar
 //  CHECK-SAME:   %[[A:.*]]: f32
 //       CHECK:   return %[[A]] : f32
-func.func @fold_extract_broadcast_same_input_output_vec(%a : f32, 
+func.func @fold_extract_broadcast_same_input_output_scalar(%a : f32, 
                                             %idx0 : index, 
                                             %idx1 : index) -> f32 {
   %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
