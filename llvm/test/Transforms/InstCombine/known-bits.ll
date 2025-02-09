@@ -2365,6 +2365,37 @@ exit:
   ret i8 %or2
 }
 
+define i8 @test_inv_cond_and(i8 %x, i1 %c) {
+; CHECK-LABEL: @test_inv_cond_and(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[C:%.*]], [[NOT]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %and = and i8 %x, 3
+  %cmp = icmp ne i8 %and, 0
+  call void @use(i1 %cmp)
+  %not = xor i1 %cmp, true
+  %cond = and i1 %not, %c
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
+  ret i8 %or2
+}
+
 declare void @dummy()
 declare void @use(i1)
 declare void @sink(i8)
