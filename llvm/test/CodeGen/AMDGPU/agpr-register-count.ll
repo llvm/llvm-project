@@ -154,27 +154,28 @@ bb:
 declare void @undef_func()
 
 ; GCN-LABEL: {{^}}kernel_call_undef_func:
-; GFX908: .amdhsa_next_free_vgpr 32
-; GFX90A: .amdhsa_next_free_vgpr 64
-; GFX90A: .amdhsa_accum_offset 32
-; GCN908: NumVgprs: 128
-; GCN908: NumAgprs: 128
-; GCN90A: NumVgprs: 256
-; GCN90A: NumAgprs: 256
-; GFX908: TotalNumVgprs: 32
-; GFX90A: TotalNumVgprs: 64
-; GFX908: VGPRBlocks: 7
-; GFX90A: VGPRBlocks: 7
-; GFX908: NumVGPRsForWavesPerEU: 32
-; GFX90A: NumVGPRsForWavesPerEU: 64
-; GFX90A: AccumOffset: 32
-; GFX908: Occupancy: 8
-; GFX90A: Occupancy: 8
-; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 7
+; GCN:    .amdhsa_next_free_vgpr max(totalnumvgprs(kernel_call_undef_func.num_agpr, kernel_call_undef_func.num_vgpr), 1, 0)
+; GFX90A: .amdhsa_accum_offset ((((((alignto(max(1, kernel_call_undef_func.num_vgpr), 4))/4)-1)&(~65536))&63)+1)*4
+; GCN:    .set kernel_call_undef_func.num_vgpr, max(32, amdgpu.max_num_vgpr)
+; GCN:    .set kernel_call_undef_func.num_agpr, max(0, amdgpu.max_num_agpr)
+; GCN:    NumVgprs: kernel_call_undef_func.num_vgpr
+; GCN:    NumAgprs: kernel_call_undef_func.num_agpr
+; GCN:    TotalNumVgprs: totalnumvgprs(kernel_call_undef_func.num_agpr, kernel_call_undef_func.num_vgpr)
+; GFX908: VGPRBlocks: ((alignto(max(max(totalnumvgprs(kernel_call_undef_func.num_agpr, kernel_call_undef_func.num_vgpr), 1, 0), 1), 4))/4)-1
+; GFX90A: VGPRBlocks: ((alignto(max(max(totalnumvgprs(kernel_call_undef_func.num_agpr, kernel_call_undef_func.num_vgpr), 1, 0), 1), 8))/8)-1
+; GCN:    NumVGPRsForWavesPerEU: max(totalnumvgprs(kernel_call_undef_func.num_agpr, kernel_call_undef_func.num_vgpr), 1, 0)
+; GFX90A: AccumOffset: ((((alignto(max(1, kernel_call_undef_func.num_vgpr), 4))/4)-1)+1)*4
+; GFX908: Occupancy: occupancy(10, 4, 256, 8, 10, max(kernel_call_undef_func.numbered_sgpr+(extrasgprs(kernel_call_undef_func.uses_vcc, kernel_call_undef_func.uses_flat_scratch, 1)), 1, 0), max(totalnumvgprs(kernel_call_undef_func.num_agpr, kernel_call_undef_func.num_vgpr), 1, 0))
+; GFX90A: Occupancy: occupancy(8, 8, 512, 8, 8, max(kernel_call_undef_func.numbered_sgpr+(extrasgprs(kernel_call_undef_func.uses_vcc, kernel_call_undef_func.uses_flat_scratch, 1)), 1, 0), max(totalnumvgprs(kernel_call_undef_func.num_agpr, kernel_call_undef_func.num_vgpr), 1, 0))
+; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: ((((alignto(max(1, kernel_call_undef_func.num_vgpr), 4))/4)-1)&(~65536))&63
 define amdgpu_kernel void @kernel_call_undef_func() #0 {
 bb:
   call void @undef_func()
   ret void
 }
 
-attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" }
+; GCN:      .set amdgpu.max_num_vgpr, 32
+; GCN-NEXT: .set amdgpu.max_num_agpr, 32
+; GCN-NEXT: .set amdgpu.max_num_sgpr, 34
+
+attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

@@ -13,7 +13,6 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
@@ -62,11 +61,16 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
       llvm::cl::desc("Allow operation with no registered dialects (discouraged: testing only!)"),
       llvm::cl::init(false));
 
-  static llvm::cl::opt<bool> splitInputFile(
-      "split-input-file",
-      llvm::cl::desc("Split the input file into pieces and "
-                     "process each chunk independently"),
-      llvm::cl::init(false));
+  static llvm::cl::opt<std::string> inputSplitMarker{
+      "split-input-file", llvm::cl::ValueOptional,
+      llvm::cl::callback([&](const std::string &str) {
+        // Implicit value: use default marker if flag was used without value.
+        if (str.empty())
+          inputSplitMarker.setValue(kDefaultSplitMarker);
+      }),
+      llvm::cl::desc("Split the input file into chunks using the given or "
+                     "default marker and process each chunk independently"),
+      llvm::cl::init("")};
 
   static llvm::cl::opt<bool> verifyDiagnostics(
       "verify-diagnostics",
@@ -79,6 +83,11 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
       llvm::cl::desc("Filter all non-error diagnostics "
                      "(discouraged: testing only!)"),
       llvm::cl::init(false));
+
+  static llvm::cl::opt<std::string> outputSplitMarker(
+      "output-split-marker",
+      llvm::cl::desc("Split marker to use for merging the ouput"),
+      llvm::cl::init(""));
 
   llvm::InitLLVM y(argc, argv);
 
@@ -176,7 +185,8 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
   };
 
   if (failed(splitAndProcessBuffer(std::move(input), processBuffer,
-                                   output->os(), splitInputFile)))
+                                   output->os(), inputSplitMarker,
+                                   outputSplitMarker)))
     return failure();
 
   output->keep();

@@ -1,10 +1,10 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti  -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX6 %s
-; RUN: llc -march=amdgcn -mcpu=tonga   -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX8 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900  -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx90a  -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX101 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOMADMACF32,GFX103 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti  -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX6 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga   -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX8 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900  -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a  -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX101 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOMADMACF32,GFX103 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 
 ; GCN-LABEL: {{^}}test_mul_legacy_f32:
 ; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
@@ -107,4 +107,4 @@ declare float @llvm.amdgcn.fmul.legacy(float, float) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "denormal-fp-math"="preserve-sign" }
+attributes #2 = { nounwind "denormal-fp-math"="preserve-sign" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

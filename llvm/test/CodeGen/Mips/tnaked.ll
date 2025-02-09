@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel < %s -verify-machineinstrs | FileCheck %s
+; RUN: llc -mtriple=mipsel < %s -verify-machineinstrs | FileCheck %s
 
 
 define void @tnaked() #0 {

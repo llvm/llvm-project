@@ -18,9 +18,9 @@
 // CHECK: #pragma nounroll{{$}}
 // CHECK: #pragma clang loop vectorize_width(V)
 // CHECK: #pragma clang loop interleave_count(I)
-// CHECK: #pragma omp simd
-// CHECK: #pragma omp for
-// CHECK: #pragma omp distribute
+// CHECK: #pragma omp loop bind(thread)
+// CHECK: #pragma omp loop bind(parallel)
+// CHECK: #pragma omp loop bind(teams)
 
 #ifndef HEADER
 #define HEADER
@@ -116,9 +116,13 @@ public:
 
   inline void run10(int *List, int Length) {
     int i = 0;
-#pragma omp loop bind(teams)
+    int j = 0;
+    #pragma omp teams
     for (int i = 0; i < Length; i++) {
-      List[i] = i;
+      #pragma omp loop bind(teams)
+      for (int j = 0; j < Length; j++) {
+        List[i] = i+j;
+      }
     }
   }
 

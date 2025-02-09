@@ -1,5 +1,6 @@
 ;;; clang-include-fixer.el --- Emacs integration of the clang include fixer  -*- lexical-binding: t; -*-
 
+;; Version: 0.1.0
 ;; Keywords: tools, c
 ;; Package-Requires: ((cl-lib "0.5") (json "1.2") (let-alist "1.0.4"))
 

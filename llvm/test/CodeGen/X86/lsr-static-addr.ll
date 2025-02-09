@@ -11,8 +11,8 @@ define void @foo(i64 %n) nounwind {
 ; CHECK-NEXT:    jle .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
@@ -30,8 +30,8 @@ define void @foo(i64 %n) nounwind {
 ; ATOM-NEXT:    jle .LBB0_3
 ; ATOM-NEXT:  # %bb.1: # %for.body.preheader
 ; ATOM-NEXT:    xorl %eax, %eax
-; ATOM-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; ATOM-NEXT:    .p2align 4, 0x90
+; ATOM-NEXT:    movsd {{.*#+}} xmm0 = [2.2999999999999998E+0,0.0E+0]
+; ATOM-NEXT:    .p2align 4
 ; ATOM-NEXT:  .LBB0_2: # %for.body
 ; ATOM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ATOM-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero

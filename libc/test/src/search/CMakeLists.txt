@@ -14,3 +14,24 @@ add_libc_unittest(
     libc.src.search.hdestroy
     libc.src.errno.errno
 )
+
+add_libc_unittest(
+  insque_test
+  SUITE
+    libc_search_unittests
+  SRCS
+    insque_test.cpp
+  DEPENDS
+    libc.src.search.insque
+    libc.src.search.remque
+)
+
+add_libc_unittest(
+  lfind_test
+  SUITE
+    libc_search_unittests
+  SRCS
+    lfind_test.cpp
+  DEPENDS
+    libc.src.search.lfind
+)

@@ -114,14 +114,18 @@ void f8() {
 int f9() { return M2(1); }
 
 template <typename T>
-T f10(const int x10) {
+T f_unknown_target(const int x10) {
   return std::move(x10);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the const variable 'x10' of the trivially-copyable type 'const int' has no effect; remove std::move() [performance-move-const-arg]
-  // CHECK-FIXES: return x10;
 }
+
 void f11() {
-  f10<int>(1);
-  f10<double>(1);
+  f_unknown_target<int>(1);
+  f_unknown_target<double>(1);
+}
+
+A&& f_return_right_ref() {
+  static A a{};
+  return std::move(a);
 }
 
 class NoMoveSemantics {
@@ -542,3 +546,17 @@ void testAlsoNonMoveable() {
 }
 
 } // namespace issue_62550
+
+namespace GH111450 {
+struct Status;
+
+struct Error {
+    Error(const Status& S);
+};
+
+struct Result {
+  Error E;
+  Result(Status&& S) : E(std::move(S)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: passing result of std::move() as a const reference argument; no move will actually happen [performance-move-const-arg]
+};
+} // namespace GH111450

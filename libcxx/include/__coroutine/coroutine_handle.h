@@ -11,11 +11,12 @@
 
 #include <__assert>
 #include <__config>
+#include <__cstddef/nullptr_t.h>
+#include <__cstddef/size_t.h>
 #include <__functional/hash.h>
 #include <__memory/addressof.h>
 #include <__type_traits/remove_cv.h>
 #include <compare>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -55,7 +56,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return __handle_ != nullptr; }
 
   _LIBCPP_HIDE_FROM_ABI bool done() const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__is_suspended(), "done() can be called only on suspended coroutines");
+    _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(__is_suspended(), "done() can be called only on suspended coroutines");
     return __builtin_coro_done(__handle_);
   }
 
@@ -63,13 +64,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI void operator()() const { resume(); }
 
   _LIBCPP_HIDE_FROM_ABI void resume() const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__is_suspended(), "resume() can be called only on suspended coroutines");
-    _LIBCPP_ASSERT_UNCATEGORIZED(!done(), "resume() has undefined behavior when the coroutine is done");
+    _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(__is_suspended(), "resume() can be called only on suspended coroutines");
+    _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(!done(), "resume() has undefined behavior when the coroutine is done");
     __builtin_coro_resume(__handle_);
   }
 
   _LIBCPP_HIDE_FROM_ABI void destroy() const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__is_suspended(), "destroy() can be called only on suspended coroutines");
+    _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(__is_suspended(), "destroy() can be called only on suspended coroutines");
     __builtin_coro_destroy(__handle_);
   }
 
@@ -130,7 +131,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return __handle_ != nullptr; }
 
   _LIBCPP_HIDE_FROM_ABI bool done() const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__is_suspended(), "done() can be called only on suspended coroutines");
+    _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(__is_suspended(), "done() can be called only on suspended coroutines");
     return __builtin_coro_done(__handle_);
   }
 
@@ -138,13 +139,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI void operator()() const { resume(); }
 
   _LIBCPP_HIDE_FROM_ABI void resume() const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__is_suspended(), "resume() can be called only on suspended coroutines");
-    _LIBCPP_ASSERT_UNCATEGORIZED(!done(), "resume() has undefined behavior when the coroutine is done");
+    _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(__is_suspended(), "resume() can be called only on suspended coroutines");
+    _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(!done(), "resume() has undefined behavior when the coroutine is done");
     __builtin_coro_resume(__handle_);
   }
 
   _LIBCPP_HIDE_FROM_ABI void destroy() const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__is_suspended(), "destroy() can be called only on suspended coroutines");
+    _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(__is_suspended(), "destroy() can be called only on suspended coroutines");
     __builtin_coro_destroy(__handle_);
   }
 

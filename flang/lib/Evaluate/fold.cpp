@@ -82,6 +82,11 @@ Expr<SomeDerived> FoldOperation(
       } else {
         isConstant &= IsInitialDataTarget(expr);
       }
+    } else if (IsAllocatable(symbol)) {
+      // F2023: 10.1.12 (3)(a)
+      // If comp-spec is not null() for the allocatable component the
+      // structure constructor is not a constant expression.
+      isConstant &= IsNullPointer(expr);
     } else {
       isConstant &= IsActuallyConstant(expr) || IsNullPointer(expr);
       if (auto valueShape{GetConstantExtents(context, expr)}) {
@@ -267,6 +272,7 @@ std::optional<Expr<SomeType>> FoldTransfer(
     }
   }
   if (sourceBytes && IsActuallyConstant(*source) && moldType && extents &&
+      !moldType->IsPolymorphic() &&
       (moldLength || moldType->category() != TypeCategory::Character)) {
     std::size_t elements{
         extents->empty() ? 1 : static_cast<std::size_t>((*extents)[0])};

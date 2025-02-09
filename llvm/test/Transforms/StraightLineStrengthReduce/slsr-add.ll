@@ -105,13 +105,13 @@ define void @stride_is_minus_2s(i32 %b, i32 %s) {
 
 define void @stride_is_minus_2s_vec(<2 x i32> %b, <2 x i32> %s) {
 ; CHECK-LABEL: @stride_is_minus_2s_vec(
-; CHECK-NEXT:    [[S6:%.*]] = mul <2 x i32> [[S:%.*]], <i32 6, i32 6>
+; CHECK-NEXT:    [[S6:%.*]] = mul <2 x i32> [[S:%.*]], splat (i32 6)
 ; CHECK-NEXT:    [[T1:%.*]] = add <2 x i32> [[B:%.*]], [[S6]]
 ; CHECK-NEXT:    call void @voo(<2 x i32> [[T1]])
-; CHECK-NEXT:    [[S4:%.*]] = shl <2 x i32> [[S]], <i32 2, i32 2>
+; CHECK-NEXT:    [[S4:%.*]] = shl <2 x i32> [[S]], splat (i32 2)
 ; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[B]], [[S4]]
 ; CHECK-NEXT:    call void @voo(<2 x i32> [[T2]])
-; CHECK-NEXT:    [[S2:%.*]] = shl <2 x i32> [[S]], <i32 1, i32 1>
+; CHECK-NEXT:    [[S2:%.*]] = shl <2 x i32> [[S]], splat (i32 1)
 ; CHECK-NEXT:    [[T3:%.*]] = add <2 x i32> [[B]], [[S2]]
 ; CHECK-NEXT:    call void @voo(<2 x i32> [[T3]])
 ; CHECK-NEXT:    ret void

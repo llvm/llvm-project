@@ -13,6 +13,7 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 class DriverBatchModeTest(PExpectTest):
     source = "main.c"
 
+    @skipIf(macos_version=["<", "14.0"], asan=True)
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     def test_batch_mode_run_crash(self):
@@ -50,6 +51,7 @@ class DriverBatchModeTest(PExpectTest):
         self.expect_prompt()
         self.expect("frame variable touch_me_not", substrs=["(char *) touch_me_not"])
 
+    @skipIf(macos_version=["<", "14.0"], asan=True)
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     def test_batch_mode_run_exit(self):
@@ -86,6 +88,7 @@ class DriverBatchModeTest(PExpectTest):
 
         child.expect(pexpect.EOF)
 
+    @skipIf(macos_version=["<", "14.0"], asan=True)
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     def test_batch_mode_launch_stop_at_entry(self):
@@ -125,6 +128,7 @@ class DriverBatchModeTest(PExpectTest):
             self.victim.close()
             self.victim = None
 
+    @skipIf(macos_version=["<", "14.0"], asan=True)
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     @expectedFailureNetBSD

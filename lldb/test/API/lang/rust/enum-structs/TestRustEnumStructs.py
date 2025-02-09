@@ -287,7 +287,7 @@ class TestRustEnumStructs(TestBase):
             (137, 1),
         )
 
-    def test_niche_layout_with_fields_3_a(self):
+    def test_niche_layout_with_fields_3_c(self):
         # static NICHE_W_FIELDS_3_C: NicheLayoutWithFields3 = NicheLayoutWithFields3::C(false);
         value = self.getFromGlobal("NICHE_W_FIELDS_3_C").getCurrentValue()
         self.assertEqual(

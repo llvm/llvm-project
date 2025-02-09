@@ -20,6 +20,12 @@ pmov    p0.h, z0[0]  // 00000101-00101100-00111000-00000000
 // CHECK-ERROR: instruction requires: sme2p1 or sve2p1
 // CHECK-UNKNOWN: 052c3800 <unknown>
 
+pmov    p0.h, z0  // 00000101-00101100-00111000-00000000
+// CHECK-INST: pmov    p0.h, z0[0]
+// CHECK-ENCODING: [0x00,0x38,0x2c,0x05]
+// CHECK-ERROR: instruction requires: sme2p1 or sve2p1
+// CHECK-UNKNOWN: 052c3800 <unknown>
+
 pmov    p5.h, z10[0]  // 00000101-00101100-00111001-01000101
 // CHECK-INST: pmov    p5.h, z10[0]
 // CHECK-ENCODING: [0x45,0x39,0x2c,0x05]
@@ -44,6 +50,12 @@ pmov    p0.s, z0[0]  // 00000101-01101000-00111000-00000000
 // CHECK-ERROR: instruction requires: sme2p1 or sve2p1
 // CHECK-UNKNOWN: 05683800 <unknown>
 
+pmov    p0.s, z0  // 00000101-01101000-00111000-00000000
+// CHECK-INST: pmov    p0.s, z0[0]
+// CHECK-ENCODING: [0x00,0x38,0x68,0x05]
+// CHECK-ERROR: instruction requires: sme2p1 or sve2p1
+// CHECK-UNKNOWN: 05683800 <unknown>
+
 pmov    p5.s, z10[2]  // 00000101-01101100-00111001-01000101
 // CHECK-INST: pmov    p5.s, z10[2]
 // CHECK-ENCODING: [0x45,0x39,0x6c,0x05]
@@ -63,6 +75,12 @@ pmov    p15.s, z31[3]  // 00000101-01101110-00111011-11101111
 // CHECK-UNKNOWN: 056e3bef <unknown>
 
 pmov    p0.d, z0[0]  // 00000101-10101000-00111000-00000000
+// CHECK-INST: pmov    p0.d, z0[0]
+// CHECK-ENCODING: [0x00,0x38,0xa8,0x05]
+// CHECK-ERROR: instruction requires: sme2p1 or sve2p1
+// CHECK-UNKNOWN: 05a83800 <unknown>
+
+pmov    p0.d, z0  // 00000101-10101000-00111000-00000000
 // CHECK-INST: pmov    p0.d, z0[0]
 // CHECK-ENCODING: [0x00,0x38,0xa8,0x05]
 // CHECK-ERROR: instruction requires: sme2p1 or sve2p1
@@ -122,6 +140,12 @@ pmov    z0[0], p0.h  // 00000101-00101101-00111000-00000000
 // CHECK-ERROR: instruction requires: sme2p1 or sve2p1
 // CHECK-UNKNOWN: 052d3800 <unknown>
 
+pmov    z0, p0.h  // 00000101-00101101-00111000-00000000
+// CHECK-INST: pmov    z0[0], p0.h
+// CHECK-ENCODING: [0x00,0x38,0x2d,0x05]
+// CHECK-ERROR: instruction requires: sme2p1 or sve2p1
+// CHECK-UNKNOWN: 052d3800 <unknown>
+
 pmov    z21[0], p10.h  // 00000101-00101101-00111001-01010101
 // CHECK-INST: pmov    z21[0], p10.h
 // CHECK-ENCODING: [0x55,0x39,0x2d,0x05]
@@ -147,6 +171,12 @@ pmov    z0[0], p0.s  // 00000101-01101001-00111000-00000000
 // CHECK-ERROR: instruction requires: sme2p1 or sve2p1
 // CHECK-UNKNOWN: 05693800 <unknown>
 
+pmov    z0, p0.s  // 00000101-01101001-00111000-00000000
+// CHECK-INST: pmov    z0[0], p0.s
+// CHECK-ENCODING: [0x00,0x38,0x69,0x05]
+// CHECK-ERROR: instruction requires: sme2p1 or sve2p1
+// CHECK-UNKNOWN: 05693800 <unknown>
+
 pmov    z21[2], p10.s  // 00000101-01101101-00111001-01010101
 // CHECK-INST: pmov    z21[2], p10.s
 // CHECK-ENCODING: [0x55,0x39,0x6d,0x05]
@@ -166,6 +196,12 @@ pmov    z31[3], p15.s  // 00000101-01101111-00111001-11111111
 // CHECK-UNKNOWN: 056f39ff <unknown>
 
 pmov    z0[0], p0.d  // 00000101-10101001-00111000-00000000
+// CHECK-INST: pmov    z0[0], p0.d
+// CHECK-ENCODING: [0x00,0x38,0xa9,0x05]
+// CHECK-ERROR: instruction requires: sme2p1 or sve2p1
+// CHECK-UNKNOWN: 05a93800 <unknown>
+
+pmov    z0, p0.d  // 00000101-10101001-00111000-00000000
 // CHECK-INST: pmov    z0[0], p0.d
 // CHECK-ENCODING: [0x00,0x38,0xa9,0x05]
 // CHECK-ERROR: instruction requires: sme2p1 or sve2p1

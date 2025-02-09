@@ -170,6 +170,9 @@ public:
   /// Returns whether the quantity is scaled by a runtime quantity (vscale).
   constexpr bool isScalable() const { return Scalable; }
 
+  /// Returns true if the quantity is not scaled by vscale.
+  constexpr bool isFixed() const { return !Scalable; }
+
   /// A return value of true indicates we know at compile time that the number
   /// of elements (vscale * Min) is definitely even. However, returning false
   /// does not guarantee that the total number of elements is odd.
@@ -179,6 +182,18 @@ public:
   /// compile time to be a multiple of the scalar value RHS.
   constexpr bool isKnownMultipleOf(ScalarTy RHS) const {
     return getKnownMinValue() % RHS == 0;
+  }
+
+  /// Returns whether or not the callee is known to be a multiple of RHS.
+  constexpr bool isKnownMultipleOf(const FixedOrScalableQuantity &RHS) const {
+    // x % y == 0 => x % y == 0
+    // x % y == 0 => (vscale * x) % y == 0
+    // x % y == 0 => (vscale * x) % (vscale * y) == 0
+    // but
+    // x % y == 0 !=> x % (vscale * y) == 0
+    if (!isScalable() && RHS.isScalable())
+      return false;
+    return getKnownMinValue() % RHS.getKnownMinValue() == 0;
   }
 
   // Return the minimum value with the assumption that the count is exact.
@@ -321,8 +336,6 @@ class TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
       : FixedOrScalableQuantity(V) {}
 
 public:
-  constexpr TypeSize() : FixedOrScalableQuantity(0, false) {}
-
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
       : FixedOrScalableQuantity(Quantity, Scalable) {}
 
@@ -335,6 +348,7 @@ public:
   static constexpr TypeSize getScalable(ScalarTy MinimumSize) {
     return TypeSize(MinimumSize, true);
   }
+  static constexpr TypeSize getZero() { return TypeSize(0, false); }
 
   // All code for this class below this point is needed because of the
   // temporary implicit conversion to uint64_t. The operator overloads are

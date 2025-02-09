@@ -25,14 +25,15 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __rotate {
-
-struct __fn {
+struct __rotate {
   template <class _Iter, class _Sent>
   _LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter> __rotate_fn_impl(_Iter __first, _Iter __middle, _Sent __last) {
     auto __ret = std::__rotate<_RangeAlgPolicy>(std::move(__first), std::move(__middle), std::move(__last));
@@ -52,15 +53,15 @@ struct __fn {
   }
 };
 
-} // namespace __rotate
-
 inline namespace __cpo {
-inline constexpr auto rotate = __rotate::__fn{};
+inline constexpr auto rotate = __rotate{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_ROTATE_H

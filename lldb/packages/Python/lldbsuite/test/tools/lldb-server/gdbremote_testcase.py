@@ -130,9 +130,9 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         self.stub_sends_two_stop_notifications_on_kill = False
         if configuration.lldb_platform_url:
             if configuration.lldb_platform_url.startswith("unix-"):
-                url_pattern = "(.+)://\[?(.+?)\]?/.*"
+                url_pattern = r"(.+)://\[?(.+?)\]?/.*"
             else:
-                url_pattern = "(.+)://(.+):\d+"
+                url_pattern = r"(.+)://(.+):\d+"
             scheme, host = re.match(
                 url_pattern, configuration.lldb_platform_url
             ).groups()
@@ -185,7 +185,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             ]
 
     def get_next_port(self):
-        return 12000 + random.randint(0, 3999)
+        return 12000 + random.randint(0, 7999)
 
     def reset_test_sequence(self):
         self.test_sequence = GdbRemoteTestSequence(self.logger)
@@ -388,7 +388,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         # We're using a random port algorithm to try not to collide with other ports,
         # and retry a max # times.
         attempts = 0
-        MAX_ATTEMPTS = 20
+        MAX_ATTEMPTS = 10
+        attempt_wait = 3
 
         while attempts < MAX_ATTEMPTS:
             server = self.launch_debug_monitor(attach_pid=attach_pid)
@@ -424,7 +425,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
             # And wait a random length of time before next attempt, to avoid
             # collisions.
-            time.sleep(random.randint(1, 5))
+            time.sleep(attempt_wait)
+            attempt_wait *= 1.2
 
             # Now grab a new port number.
             self.port = self.get_next_port()
@@ -921,6 +923,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "qSaveCore",
         "native-signals",
         "QNonStop",
+        "SupportedWatchpointTypes",
+        "SupportedCompressions",
     ]
 
     def parse_qSupported_response(self, context):
@@ -1406,7 +1410,17 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             p_response = context.get("p_response")
             self.assertIsNotNone(p_response)
             self.assertTrue(len(p_response) > 0)
-            self.assertFalse(p_response[0] == "E")
+
+            # on x86 Darwin, 4 GPR registers are often
+            # unavailable, this is expected and correct.
+            if (
+                self.getArchitecture() == "x86_64"
+                and self.platformIsDarwin()
+                and p_response[0] == "E"
+            ):
+                values[reg_index] = 0
+            else:
+                self.assertFalse(p_response[0] == "E")
 
             values[reg_index] = unpack_register_hex_unsigned(endian, p_response)
 

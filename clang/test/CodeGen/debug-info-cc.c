@@ -22,6 +22,7 @@
 //    CC_SwiftAsync,   // __attribute__((swiftasynccall))
 //    CC_PreserveMost, // __attribute__((preserve_most))
 //    CC_PreserveAll,  // __attribute__((preserve_all))
+//    CC_PreserveNone,  // __attribute__((preserve_none))
 //  };
 
 #ifdef __x86_64__
@@ -51,17 +52,22 @@ __attribute__((preserve_all)) int add_preserve_all(int a, int b) {
   return a+b;
 }
 
+// LINUX: !DISubprogram({{.*}}"add_preserve_none", {{.*}}type: ![[FTY:[0-9]+]]
+// LINUX: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_PreserveNone,
+__attribute__((preserve_none)) int add_preserve_none(int a, int b) {
+  return a+b;
+}
+
 // LINUX: !DISubprogram({{.*}}"add_swiftcall", {{.*}}type: ![[FTY:[0-9]+]]
 // LINUX: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_Swift,
 __attribute__((swiftcall)) int add_swiftcall(int a, int b) {
   return a+b;
 }
 
-// [FIXME: swiftasynccc] Update debuginfo tag to SwiftAsync once LLVM support lands.
 // LINUX: !DISubprogram({{.*}}"add_swiftasynccall", {{.*}}type: ![[FTY:[0-9]+]]
-// LINUX: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_Swift,
-__attribute__((swiftasynccall)) int add_swiftasynccall(int a, int b, int c) {
-  return a+b+c;
+// LINUX: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_SwiftTail,
+__attribute__((swiftasynccall)) int add_swiftasynccall(int a, int b) {
+  return a+b;
 }
 
 // LINUX: !DISubprogram({{.*}}"add_inteloclbicc", {{.*}}type: ![[FTY:[0-9]+]]

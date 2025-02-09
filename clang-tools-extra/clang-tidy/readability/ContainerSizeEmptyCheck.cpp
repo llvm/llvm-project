@@ -96,9 +96,14 @@ AST_MATCHER(QualType, isIntegralType) {
 
 AST_MATCHER_P(UserDefinedLiteral, hasLiteral,
               clang::ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
-  if (const Expr *CookedLiteral = Node.getCookedLiteral()) {
+  const UserDefinedLiteral::LiteralOperatorKind LOK =
+      Node.getLiteralOperatorKind();
+  if (LOK == UserDefinedLiteral::LOK_Template ||
+      LOK == UserDefinedLiteral::LOK_Raw)
+    return false;
+
+  if (const Expr *CookedLiteral = Node.getCookedLiteral())
     return InnerMatcher.matches(*CookedLiteral, Finder, Builder);
-  }
   return false;
 }
 
@@ -150,6 +155,7 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       cxxMemberCallExpr(
+          argumentCountIs(0),
           on(expr(anyOf(hasType(ValidContainer),
                         hasType(pointsTo(ValidContainer)),
                         hasType(references(ValidContainer))))
@@ -163,7 +169,8 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   Finder->addMatcher(
-      callExpr(has(cxxDependentScopeMemberExpr(
+      callExpr(argumentCountIs(0),
+               has(cxxDependentScopeMemberExpr(
                        hasObjectExpression(
                            expr(anyOf(hasType(ValidContainer),
                                       hasType(pointsTo(ValidContainer)),
@@ -291,10 +298,14 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
                        OpCode == BinaryOperatorKind::BO_NE))
       return;
 
-    // Always true, no warnings for that.
-    if ((OpCode == BinaryOperatorKind::BO_GE && Value == 0 && ContainerIsLHS) ||
-        (OpCode == BinaryOperatorKind::BO_LE && Value == 0 && !ContainerIsLHS))
-      return;
+    // Always true/false, no warnings for that.
+    if (Value == 0) {
+      if ((OpCode == BinaryOperatorKind::BO_GT && !ContainerIsLHS) ||
+          (OpCode == BinaryOperatorKind::BO_LT && ContainerIsLHS) ||
+          (OpCode == BinaryOperatorKind::BO_LE && !ContainerIsLHS) ||
+          (OpCode == BinaryOperatorKind::BO_GE && ContainerIsLHS))
+        return;
+    }
 
     // Do not warn for size > 1, 1 < size, size <= 1, 1 >= size.
     if (Value == 1) {
@@ -306,12 +317,32 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
         return;
     }
 
+    // Do not warn for size < 1, 1 > size, size <= 0, 0 >= size for non signed
+    // types
+    if ((OpCode == BinaryOperatorKind::BO_GT && Value == 1 &&
+         !ContainerIsLHS) ||
+        (OpCode == BinaryOperatorKind::BO_LT && Value == 1 && ContainerIsLHS) ||
+        (OpCode == BinaryOperatorKind::BO_GE && Value == 0 &&
+         !ContainerIsLHS) ||
+        (OpCode == BinaryOperatorKind::BO_LE && Value == 0 && ContainerIsLHS)) {
+      const Expr *Container = ContainerIsLHS
+                                  ? BinaryOp->getLHS()->IgnoreImpCasts()
+                                  : BinaryOp->getRHS()->IgnoreImpCasts();
+      if (Container->getType()
+              .getCanonicalType()
+              .getNonReferenceType()
+              ->isSignedIntegerType())
+        return;
+    }
+
     if (OpCode == BinaryOperatorKind::BO_NE && Value == 0)
       Negation = true;
+
     if ((OpCode == BinaryOperatorKind::BO_GT ||
          OpCode == BinaryOperatorKind::BO_GE) &&
         ContainerIsLHS)
       Negation = true;
+
     if ((OpCode == BinaryOperatorKind::BO_LT ||
          OpCode == BinaryOperatorKind::BO_LE) &&
         !ContainerIsLHS)

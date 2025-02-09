@@ -27,11 +27,6 @@ func.func private @it6() -> !fir.char<2, >
 
 // -----
 
-// expected-error@+1 {{expected integer value}}
-func.func private @it3() -> !fir.complex<>
-
-// -----
-
 // expected-error@+1 {{expected non-function type}}
 func.func private @mem3() -> !fir.heap<>
 
@@ -49,11 +44,6 @@ func.func private @it1() -> !fir.logical<b>
 
 // expected-error@+1 {{expected non-function type}}
 func.func private @mem3() -> !fir.ptr<>
-
-// -----
-
-// expected-error@+1 {{expected integer value}}
-func.func private @mem3() -> !fir.real<>
 
 // -----
 

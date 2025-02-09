@@ -1,5 +1,5 @@
-# RUN: not llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs=0 -start-before=greedy,1 -stop-after=virtregrewriter,1 %s -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
-# RUN: not --crash llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs -start-before=greedy,1 -stop-after=virtregrewriter,1 %s -o /dev/null 2>&1 | FileCheck -check-prefixes=ERR,VERIFIER %s
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs=0 -start-before=greedy,1 -stop-after=virtregrewriter,2 %s -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -start-before=greedy,1 -stop-after=virtregrewriter,2 %s -o /dev/null 2>&1 | FileCheck -check-prefixes=ERR,VERIFIER %s
 
 # FIXME: We should not produce a verifier error after erroring
 

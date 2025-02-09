@@ -18,21 +18,26 @@
 
 TEST(LlvmLibcLinkatTest, CreateAndUnlink) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_DIR = "testdata";
-  constexpr const char *TEST_FILE = "linkat.test";
-  constexpr const char *TEST_FILE_PATH = "testdata/linkat.test";
-  constexpr const char *TEST_FILE_LINK = "linkat.test.link";
-  constexpr const char *TEST_FILE_LINK_PATH = "testdata/linkat.test.link";
+  constexpr const char *FILENAME = "testdata";
+  auto TEST_DIR = libc_make_test_file_path(FILENAME);
+  constexpr const char *FILENAME2 = "linkat.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME2);
+  constexpr const char *FILENAME3 = "testdata/linkat.test";
+  auto TEST_FILE_PATH = libc_make_test_file_path(FILENAME3);
+  constexpr const char *FILENAME4 = "linkat.test.link";
+  auto TEST_FILE_LINK = libc_make_test_file_path(FILENAME4);
+  constexpr const char *FILENAME5 = "testdata/linkat.test.link";
+  auto TEST_FILE_LINK_PATH = libc_make_test_file_path(FILENAME5);
 
   // The test strategy is as follows:
   //   1. Create a normal file
   //   2. Create a link to that file.
   //   3. Open the link to check that the link was created.
   //   4. Cleanup the file and its link.
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   int write_fd =
       LIBC_NAMESPACE::open(TEST_FILE_PATH, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), Succeeds(0));
 
@@ -43,7 +48,7 @@ TEST(LlvmLibcLinkatTest, CreateAndUnlink) {
 
   int link_fd = LIBC_NAMESPACE::open(TEST_FILE_LINK_PATH, O_PATH);
   ASSERT_GT(link_fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::close(link_fd), Succeeds(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_PATH), Succeeds(0));

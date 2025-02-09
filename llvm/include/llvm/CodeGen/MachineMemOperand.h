@@ -17,8 +17,9 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -151,8 +152,9 @@ public:
     MOTargetFlag1 = 1u << 6,
     MOTargetFlag2 = 1u << 7,
     MOTargetFlag3 = 1u << 8,
+    MOTargetFlag4 = 1u << 9,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ MOTargetFlag3)
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ MOTargetFlag4)
   };
 
 private:
@@ -186,7 +188,7 @@ public:
   /// and atomic ordering requirements must also be specified. For cmpxchg
   /// atomic operations the atomic ordering requirements when store does not
   /// occur must also be specified.
-  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, uint64_t s,
+  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LocationSize TS,
                     Align a, const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
                     SyncScope::ID SSID = SyncScope::System,
@@ -235,13 +237,17 @@ public:
   LLT getMemoryType() const { return MemoryType; }
 
   /// Return the size in bytes of the memory reference.
-  uint64_t getSize() const {
-    return MemoryType.isValid() ? MemoryType.getSizeInBytes() : ~UINT64_C(0);
+  LocationSize getSize() const {
+    return MemoryType.isValid()
+               ? LocationSize::precise(MemoryType.getSizeInBytes())
+               : LocationSize::beforeOrAfterPointer();
   }
 
   /// Return the size in bits of the memory reference.
-  uint64_t getSizeInBits() const {
-    return MemoryType.isValid() ? MemoryType.getSizeInBits() : ~UINT64_C(0);
+  LocationSize getSizeInBits() const {
+    return MemoryType.isValid()
+               ? LocationSize::precise(MemoryType.getSizeInBits())
+               : LocationSize::beforeOrAfterPointer();
   }
 
   LLT getType() const {
@@ -325,6 +331,9 @@ public:
   void setType(LLT NewTy) {
     MemoryType = NewTy;
   }
+
+  /// Unset the tracked range metadata.
+  void clearRanges() { Ranges = nullptr; }
 
   /// Support for operator<<.
   /// @{

@@ -17,7 +17,7 @@ class TestSimulatorPlatformLaunching(TestBase):
         for line in load_cmds.split("\n"):
             if expected_load_command in line:
                 found += 1
-        self.assertEquals(
+        self.assertEqual(
             found,
             1,
             "wrong number of load commands for {}".format(expected_load_command),
@@ -27,7 +27,7 @@ class TestSimulatorPlatformLaunching(TestBase):
         """scan the debugserver packet log"""
         process_info = lldbutil.packetlog_get_process_info(log)
         self.assertIn("ostype", process_info)
-        self.assertEquals(process_info["ostype"], expected_platform)
+        self.assertEqual(process_info["ostype"], expected_platform)
         dylib_info = lldbutil.packetlog_get_dylib_info(log)
         self.assertTrue(dylib_info)
         aout_info = None
@@ -35,9 +35,9 @@ class TestSimulatorPlatformLaunching(TestBase):
             if image["pathname"].endswith("a.out"):
                 aout_info = image
         self.assertTrue(aout_info)
-        self.assertEquals(aout_info["min_version_os_name"], expected_platform)
+        self.assertEqual(aout_info["min_version_os_name"], expected_platform)
         if expected_version:
-            self.assertEquals(aout_info["min_version_os_sdk"], expected_version)
+            self.assertEqual(aout_info["min_version_os_sdk"], expected_version)
 
     @skipIf(bugnumber="rdar://76995109")
     def run_with(self, arch, os, vers, env, expected_load_command):
@@ -59,10 +59,10 @@ class TestSimulatorPlatformLaunching(TestBase):
         self.build(
             dictionary={
                 "ARCH": arch,
-                "CC": clang,
                 "ARCH_CFLAGS": "-target {} {}".format(triple, version_min),
                 "SDKROOT": sdk_root,
-            }
+            },
+            compiler=clang,
         )
 
         self.check_load_commands(expected_load_command)
@@ -79,7 +79,6 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     @apple_simulator_test("iphone")
-    @skipIfOutOfTreeDebugserver
     def test_ios(self):
         """Test running an iOS simulator binary"""
         self.run_with(
@@ -94,7 +93,6 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     @apple_simulator_test("appletv")
-    @skipIfOutOfTreeDebugserver
     def test_tvos(self):
         """Test running an tvOS simulator binary"""
         self.run_with(
@@ -111,7 +109,6 @@ class TestSimulatorPlatformLaunching(TestBase):
     @apple_simulator_test("watch")
     @skipIfDarwin  # rdar://problem/64552748
     @skipIf(archs=["arm64", "arm64e"])
-    @skipIfOutOfTreeDebugserver
     def test_watchos_i386(self):
         """Test running a 32-bit watchOS simulator binary"""
         self.run_with(
@@ -128,7 +125,6 @@ class TestSimulatorPlatformLaunching(TestBase):
     @apple_simulator_test("watch")
     @skipIfDarwin  # rdar://problem/64552748
     @skipIf(archs=["i386", "x86_64"])
-    @skipIfOutOfTreeDebugserver
     def test_watchos_armv7k(self):
         """Test running a 32-bit watchOS simulator binary"""
         self.run_with(
@@ -150,7 +146,6 @@ class TestSimulatorPlatformLaunching(TestBase):
 
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
-    @skipIfOutOfTreeDebugserver
     def test_lc_version_min_macosx(self):
         """Test running a back-deploying non-simulator MacOS X binary"""
         self.run_with(
@@ -166,7 +161,6 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipIfDarwinEmbedded
     @apple_simulator_test("iphone")
     @skipIf(archs=["arm64", "arm64e"])
-    @skipIfOutOfTreeDebugserver
     def test_lc_version_min_iphoneos(self):
         """Test running a back-deploying iOS simulator binary
         with a legacy iOS load command"""
@@ -183,7 +177,6 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipIfDarwinEmbedded
     @apple_simulator_test("iphone")
     @skipIf(archs=["arm64", "arm64e"])
-    @skipIfOutOfTreeDebugserver
     def test_ios_backdeploy_x86(self):
         """Test running a back-deploying iOS simulator binary
         with a legacy iOS load command"""
@@ -200,7 +193,6 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipIfDarwinEmbedded
     @apple_simulator_test("iphone")
     @skipIf(archs=["i386", "x86_64"])
-    @skipIfOutOfTreeDebugserver
     def test_ios_backdeploy_apple_silicon(self):
         """Test running a back-deploying iOS simulator binary"""
         self.run_with(
@@ -216,7 +208,6 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipIfDarwinEmbedded
     @apple_simulator_test("appletv")
     @skipIf(archs=["arm64", "arm64e"])
-    @skipIfOutOfTreeDebugserver
     def test_lc_version_min_tvos(self):
         """Test running a back-deploying tvOS simulator binary
         with a legacy tvOS load command"""
@@ -233,7 +224,6 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipIfDarwinEmbedded
     @apple_simulator_test("appletv")
     @skipIf(archs=["i386", "x86_64"])
-    @skipIfOutOfTreeDebugserver
     def test_tvos_backdeploy_apple_silicon(self):
         """Test running a back-deploying tvOS simulator binary"""
         self.run_with(
@@ -250,7 +240,6 @@ class TestSimulatorPlatformLaunching(TestBase):
     @apple_simulator_test("watch")
     @skipIf(archs=["arm64", "arm64e"])
     @skipIfDarwin  # rdar://problem/64552748
-    @skipIfOutOfTreeDebugserver
     def test_lc_version_min_watchos(self):
         """Test running a back-deploying watchOS simulator binary
         with a legacy watchOS load command"""
@@ -268,7 +257,6 @@ class TestSimulatorPlatformLaunching(TestBase):
     @apple_simulator_test("watch")
     @skipIf(archs=["arm64", "arm64e"])
     @skipIfDarwin  # rdar://problem/64552748
-    @skipIfOutOfTreeDebugserver
     def test_watchos_backdeploy_apple_silicon(self):
         """Test running a back-deploying watchOS simulator binary"""
         self.run_with(

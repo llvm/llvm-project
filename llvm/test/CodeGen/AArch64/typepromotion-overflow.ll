@@ -107,11 +107,11 @@ define i32 @overflow_add_const_limit(i8 zeroext %a, i8 zeroext %b) {
 define i32 @overflow_add_positive_const_limit(i8 zeroext %a) {
 ; CHECK-LABEL: overflow_add_positive_const_limit:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    cmp w8, w0, sxtb
+; CHECK-NEXT:    sxtb w9, w0
 ; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    csel w0, w9, w8, gt
+; CHECK-NEXT:    cmn w9, #1
+; CHECK-NEXT:    mov w9, #8 // =0x8
+; CHECK-NEXT:    csel w0, w9, w8, lt
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i8 %a, -1
   %res = select i1 %cmp, i32 8, i32 16
@@ -162,11 +162,11 @@ define i32 @safe_add_underflow_neg(i8 zeroext %a) {
 define i32 @overflow_sub_negative_const_limit(i8 zeroext %a) {
 ; CHECK-LABEL: overflow_sub_negative_const_limit:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    cmp w8, w0, sxtb
+; CHECK-NEXT:    sxtb w9, w0
 ; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    csel w0, w9, w8, gt
+; CHECK-NEXT:    cmn w9, #1
+; CHECK-NEXT:    mov w9, #8 // =0x8
+; CHECK-NEXT:    csel w0, w9, w8, lt
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i8 %a, -1
   %res = select i1 %cmp, i32 8, i32 16
@@ -246,9 +246,8 @@ define i32 @safe_sub_var_imm(ptr nocapture readonly %b) local_unnamed_addr #1 {
 ; CHECK-LABEL: safe_sub_var_imm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    add w8, w8, #8
-; CHECK-NEXT:    and w8, w8, #0xff
-; CHECK-NEXT:    cmp w8, #252
+; CHECK-NEXT:    sub w8, w8, #248
+; CHECK-NEXT:    cmn w8, #4
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:

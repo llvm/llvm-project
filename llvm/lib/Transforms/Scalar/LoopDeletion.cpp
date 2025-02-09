@@ -273,9 +273,9 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
       if (LiveEdges.count({ Pred, BB })) {
         HasLivePreds = true;
         Value *Incoming = PN.getIncomingValueForBlock(Pred);
-        // Skip undefs. If they are present, we can assume they are equal to
-        // the non-undef input.
-        if (isa<UndefValue>(Incoming))
+        // Skip poison. If they are present, we can assume they are equal to
+        // the non-poison input.
+        if (isa<PoisonValue>(Incoming))
           continue;
         // Two inputs.
         if (OnlyInput && OnlyInput != Incoming)
@@ -284,8 +284,8 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
       }
 
     assert(HasLivePreds && "No live predecessors?");
-    // If all incoming live value were undefs, return undef.
-    return OnlyInput ? OnlyInput : UndefValue::get(PN.getType());
+    // If all incoming live value were poison, return poison.
+    return OnlyInput ? OnlyInput : PoisonValue::get(PN.getType());
   };
   DenseMap<Value *, Value *> FirstIterValue;
 
@@ -299,7 +299,7 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
   //     iteration, mark this successor live.
   // 3b. If we cannot prove it, conservatively assume that all successors are
   //     live.
-  auto &DL = Header->getModule()->getDataLayout();
+  auto &DL = Header->getDataLayout();
   const SimplifyQuery SQ(DL);
   for (auto *BB : RPOT) {
     Visited.insert(BB);
@@ -404,9 +404,9 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   if (!L->getLoopLatch())
     return LoopDeletionResult::Unmodified;
 
-  auto *BTCMax = SE.getConstantMaxBackedgeTakenCount(L);
+  const SCEV *BTCMax = SE.getConstantMaxBackedgeTakenCount(L);
   if (!BTCMax->isZero()) {
-    auto *BTC = SE.getBackedgeTakenCount(L);
+    const SCEV *BTC = SE.getBackedgeTakenCount(L);
     if (!BTC->isZero()) {
       if (!isa<SCEVCouldNotCompute>(BTC) && SE.isKnownNonZero(BTC))
         return LoopDeletionResult::Unmodified;
@@ -452,6 +452,13 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
 
   BasicBlock *ExitBlock = L->getUniqueExitBlock();
 
+  // We can't directly branch to an EH pad. Don't bother handling this edge
+  // case.
+  if (ExitBlock && ExitBlock->isEHPad()) {
+    LLVM_DEBUG(dbgs() << "Cannot delete loop exiting to EH pad.\n");
+    return LoopDeletionResult::Unmodified;
+  }
+
   if (ExitBlock && isLoopNeverExecuted(L)) {
     LLVM_DEBUG(dbgs() << "Loop is proven to never execute, delete it!\n");
     // We need to forget the loop before setting the incoming values of the exit
@@ -484,13 +491,6 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   // invariant manner.
   if (!ExitBlock && !L->hasNoExitBlocks()) {
     LLVM_DEBUG(dbgs() << "Deletion requires at most one exit block.\n");
-    return LoopDeletionResult::Unmodified;
-  }
-
-  // We can't directly branch to an EH pad. Don't bother handling this edge
-  // case.
-  if (ExitBlock && ExitBlock->isEHPad()) {
-    LLVM_DEBUG(dbgs() << "Cannot delete loop exiting to EH pad.\n");
     return LoopDeletionResult::Unmodified;
   }
 

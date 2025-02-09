@@ -19,6 +19,29 @@ func.func @inline_with_arg(%arg0 : i32) -> i32 {
   return %0 : i32
 }
 
+// CHECK-LABEL: func @noinline_with_arg
+func.func @noinline_with_arg(%arg0 : i32) -> i32 {
+  // CHECK-NEXT: func_with_arg
+  // CHECK-NEXT: return
+
+  %0 = call @func_with_arg(%arg0) {no_inline} : (i32) -> i32
+  return %0 : i32
+}
+
+func.func @non_inlinable_func_with_arg(%c : i32) -> i32 attributes {no_inline} {
+  %b = arith.addi %c, %c : i32
+  return %b : i32
+}
+
+// CHECK-LABEL: func @noinline_with_func_arg
+func.func @noinline_with_func_arg(%arg0 : i32) -> i32 {
+  // CHECK-NEXT: non_inlinable_func_with_arg
+  // CHECK-NEXT: return
+
+  %0 = call @non_inlinable_func_with_arg(%arg0) : (i32) -> i32
+  return %0 : i32
+}
+
 // Inline a function that has multiple return operations.
 func.func @func_with_multi_return(%a : i1) -> (i32) {
   cf.cond_br %a, ^bb1, ^bb2
@@ -215,9 +238,9 @@ func.func @func_with_block_args_location(%arg0 : i32) {
 
 // INLINE-LOC-LABEL: func @func_with_block_args_location_callee1
 // INLINE-LOC: cf.br
-// INLINE-LOC: ^bb{{[0-9]+}}(%{{.*}}: i32 loc("foo")
+// INLINE-LOC: ^bb{{[0-9]+}}(%{{.*}}: i32 loc(callsite("foo" at "bar"))
 func.func @func_with_block_args_location_callee1(%arg0 : i32) {
-  call @func_with_block_args_location(%arg0) : (i32) -> ()
+  call @func_with_block_args_location(%arg0) : (i32) -> () loc("bar")
   return
 }
 
@@ -296,4 +319,24 @@ func.func @inline_convert_and_handle_attr_call(%arg0 : i16) -> (i16) {
   // CHECK: return %[[CAST_RESULT]]
   %res = "test.conversion_call_op"(%arg0) { callee=@handle_attr_callee_fn } : (i16) -> (i16)
   return %res : i16
+}
+
+// Check a function with complex ops is inlined.
+func.func @double_square_complex(%cplx: complex<f32>) -> complex<f32> {
+  %double = complex.add %cplx, %cplx : complex<f32>
+  %square = complex.mul %double, %double : complex<f32>
+  return %square : complex<f32>
+}
+
+// CHECK-LABEL: func @inline_with_complex_ops
+func.func @inline_with_complex_ops() -> complex<f32> {
+  %c1 = arith.constant 1.0 : f32
+  %c2 = arith.constant 2.0 : f32
+  %c = complex.create %c1, %c2 : complex<f32>
+
+  // CHECK: complex.add
+  // CHECK: complex.mul
+  // CHECK-NOT: call
+  %r = call @double_square_complex(%c) : (complex<f32>) -> (complex<f32>)
+  return %r : complex<f32>
 }

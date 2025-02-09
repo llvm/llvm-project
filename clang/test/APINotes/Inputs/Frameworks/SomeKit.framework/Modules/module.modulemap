@@ -1,0 +1,5 @@
+framework module SomeKit {
+  umbrella header "SomeKit.h"
+  export *
+  module * { export * }
+}

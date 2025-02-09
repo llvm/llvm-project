@@ -2,11 +2,11 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 
 ; Function Attrs: nounwind uwtable
-define void @tail_dup_merge_loops(i32 %a, i8* %b, i8* %c) local_unnamed_addr #0 {
+define void @tail_dup_merge_loops(i32 %a, ptr %b, ptr %c) local_unnamed_addr #0 {
 ; CHECK-LABEL: tail_dup_merge_loops:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    jmp .LBB0_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %inner_loop_exit
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    incq %rsi
@@ -15,7 +15,7 @@ define void @tail_dup_merge_loops(i32 %a, i8* %b, i8* %c) local_unnamed_addr #0 
 ; CHECK-NEXT:    # Child Loop BB0_4 Depth 2
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    je .LBB0_5
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  # %bb.2: # %inner_loop_top
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    cmpb $0, (%rsi)
@@ -34,15 +34,15 @@ entry:
   br label %outer_loop_top
 
 outer_loop_top:                         ; preds = %inner_loop_exit, %entry
-  %dst.0.ph.i = phi i8* [ %b, %entry ], [ %scevgep679.i, %inner_loop_exit ]
+  %dst.0.ph.i = phi ptr [ %b, %entry ], [ %scevgep679.i, %inner_loop_exit ]
   br i1 %notlhs674.i, label %exit, label %inner_loop_preheader
 
 inner_loop_preheader:                           ; preds = %outer_loop_top
   br label %inner_loop_top
 
 inner_loop_top:                                     ; preds = %inner_loop_latch, %inner_loop_preheader
-  %dst.0.i = phi i8* [ %inc, %inner_loop_latch ], [ %dst.0.ph.i, %inner_loop_preheader ]
-  %var = load i8, i8* %dst.0.i
+  %dst.0.i = phi ptr [ %inc, %inner_loop_latch ], [ %dst.0.ph.i, %inner_loop_preheader ]
+  %var = load i8, ptr %dst.0.i
   %tobool1.i = icmp slt i8 %var, 0
   br label %inner_loop_test
 
@@ -50,13 +50,13 @@ inner_loop_test:                                       ; preds = %inner_loop_top
   br i1 %tobool1.i, label %inner_loop_exit, label %inner_loop_latch
 
 inner_loop_exit:                       ; preds = %inner_loop_test
-  %scevgep.i = getelementptr i8, i8* %dst.0.i, i64 1
-  %scevgep679.i = getelementptr i8, i8* %scevgep.i, i64 0
+  %scevgep.i = getelementptr i8, ptr %dst.0.i, i64 1
+  %scevgep679.i = getelementptr i8, ptr %scevgep.i, i64 0
   br label %outer_loop_top
 
 inner_loop_latch:                                ; preds = %inner_loop_test
-  %cmp75.i = icmp ult i8* %dst.0.i, %c
-  %inc = getelementptr i8, i8* %dst.0.i, i64 2
+  %cmp75.i = icmp ult ptr %dst.0.i, %c
+  %inc = getelementptr i8, ptr %dst.0.i, i64 2
   br label %inner_loop_top
 
 exit:                              ; preds = %outer_loop_top
@@ -85,140 +85,121 @@ exit:                              ; preds = %outer_loop_top
 ; The rest of the blocks in the function are noise unfortunately. Bugpoint
 ; couldn't shrink the test any further.
 
-define i32 @loop_shared_header(i8* %exe, i32 %exesz, i32 %headsize, i32 %min, i32 %wwprva, i32 %e_lfanew, i8* readonly %wwp, i32 %wwpsz, i16 zeroext %sects) local_unnamed_addr #0 {
+define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i32 %wwprva, i32 %e_lfanew, ptr readonly %wwp, i32 %wwpsz, i16 zeroext %sects) local_unnamed_addr #0 {
 ; CHECK-LABEL: loop_shared_header:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r13
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl $1, %ebx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB1_24
+; CHECK-NEXT:    jne .LBB1_12
 ; CHECK-NEXT:  # %bb.1: # %if.end19
-; CHECK-NEXT:    movl %esi, %ebp
-; CHECK-NEXT:    movq %rdi, %r15
-; CHECK-NEXT:    movl (%rax), %r13d
-; CHECK-NEXT:    leal (,%r13,4), %ebx
-; CHECK-NEXT:    movl %ebx, %r12d
+; CHECK-NEXT:    movl (%rax), %r12d
+; CHECK-NEXT:    leal (,%r12,4), %ebp
+; CHECK-NEXT:    movl %ebp, %r15d
 ; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    movq %r12, %rdi
+; CHECK-NEXT:    movq %r15, %rdi
 ; CHECK-NEXT:    callq cli_calloc@PLT
-; CHECK-NEXT:    testl %ebp, %ebp
-; CHECK-NEXT:    je .LBB1_23
-; CHECK-NEXT:  # %bb.2: # %if.end19
-; CHECK-NEXT:    testl %r13d, %r13d
-; CHECK-NEXT:    je .LBB1_23
-; CHECK-NEXT:  # %bb.3: # %if.end19
 ; CHECK-NEXT:    movq %rax, %r14
-; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB1_23
-; CHECK-NEXT:  # %bb.4: # %if.end19
-; CHECK-NEXT:    cmpq %r15, %r14
-; CHECK-NEXT:    jb .LBB1_23
-; CHECK-NEXT:  # %bb.5: # %if.end50
+; CHECK-NEXT:    jne .LBB1_12
+; CHECK-NEXT:  # %bb.2: # %if.end50
 ; CHECK-NEXT:    movq %r14, %rdi
-; CHECK-NEXT:    movq %r12, %rdx
+; CHECK-NEXT:    movq %r15, %rdx
 ; CHECK-NEXT:    callq memcpy@PLT
-; CHECK-NEXT:    cmpl $4, %ebx
-; CHECK-NEXT:    jb .LBB1_26
-; CHECK-NEXT:  # %bb.6: # %shared_preheader
+; CHECK-NEXT:    cmpl $4, %ebp
+; CHECK-NEXT:    jb .LBB1_19
+; CHECK-NEXT:  # %bb.3: # %shared_preheader
 ; CHECK-NEXT:    movb $32, %cl
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    jmp .LBB1_8
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB1_7: # %merge_predecessor_split
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:    jmp .LBB1_4
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB1_15: # %merge_predecessor_split
+; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    movb $32, %cl
-; CHECK-NEXT:  .LBB1_8: # %outer_loop_header
+; CHECK-NEXT:  .LBB1_4: # %outer_loop_header
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB1_9 Depth 2
-; CHECK-NEXT:    testl %r13d, %r13d
-; CHECK-NEXT:    je .LBB1_16
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB1_9: # %shared_loop_header
-; CHECK-NEXT:    # Parent Loop BB1_8 Depth=1
+; CHECK-NEXT:    # Child Loop BB1_8 Depth 2
+; CHECK-NEXT:    testl %r12d, %r12d
+; CHECK-NEXT:    je .LBB1_5
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB1_8: # %shared_loop_header
+; CHECK-NEXT:    # Parent Loop BB1_4 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    testq %r14, %r14
-; CHECK-NEXT:    jne .LBB1_25
-; CHECK-NEXT:  # %bb.10: # %inner_loop_body
-; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=2
+; CHECK-NEXT:    jne .LBB1_18
+; CHECK-NEXT:  # %bb.9: # %inner_loop_body
+; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=2
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB1_9
-; CHECK-NEXT:  # %bb.11: # %if.end96.i
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
-; CHECK-NEXT:    cmpl $3, %r13d
-; CHECK-NEXT:    jae .LBB1_20
-; CHECK-NEXT:  # %bb.12: # %if.end287.i
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:    je .LBB1_8
+; CHECK-NEXT:  # %bb.10: # %if.end96.i
+; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    cmpl $3, %r12d
+; CHECK-NEXT:    jae .LBB1_11
+; CHECK-NEXT:  # %bb.13: # %if.end287.i
+; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    # implicit-def: $cl
-; CHECK-NEXT:    jne .LBB1_8
-; CHECK-NEXT:  # %bb.13: # %if.end308.i
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:    jne .LBB1_4
+; CHECK-NEXT:  # %bb.14: # %if.end308.i
+; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB1_7
-; CHECK-NEXT:  # %bb.14: # %if.end335.i
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:    je .LBB1_15
+; CHECK-NEXT:  # %bb.16: # %if.end335.i
+; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne .LBB1_8
-; CHECK-NEXT:  # %bb.15: # %merge_other
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
+; CHECK-NEXT:    jne .LBB1_4
+; CHECK-NEXT:  # %bb.17: # %merge_other
+; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    # implicit-def: $cl
-; CHECK-NEXT:    jmp .LBB1_8
-; CHECK-NEXT:  .LBB1_23:
-; CHECK-NEXT:    movl $1, %ebx
-; CHECK-NEXT:    jmp .LBB1_24
-; CHECK-NEXT:  .LBB1_16: # %while.cond.us1412.i
+; CHECK-NEXT:    jmp .LBB1_4
+; CHECK-NEXT:  .LBB1_5: # %while.cond.us1412.i
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    movl $1, %ebx
-; CHECK-NEXT:    jne .LBB1_18
-; CHECK-NEXT:  # %bb.17: # %while.cond.us1412.i
+; CHECK-NEXT:    jne .LBB1_7
+; CHECK-NEXT:  # %bb.6: # %while.cond.us1412.i
 ; CHECK-NEXT:    decb %cl
-; CHECK-NEXT:    jne .LBB1_24
-; CHECK-NEXT:  .LBB1_18: # %if.end41.us1436.i
-; CHECK-NEXT:  .LBB1_20: # %if.then99.i
+; CHECK-NEXT:    jne .LBB1_12
+; CHECK-NEXT:  .LBB1_7: # %if.end41.us1436.i
+; CHECK-NEXT:  .LBB1_11: # %if.then99.i
 ; CHECK-NEXT:    movq .str.6@GOTPCREL(%rip), %rdi
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq cli_dbgmsg@PLT
-; CHECK-NEXT:  .LBB1_24: # %cleanup
+; CHECK-NEXT:  .LBB1_12: # %cleanup
 ; CHECK-NEXT:    movl %ebx, %eax
-; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB1_25: # %wunpsect.exit.thread.loopexit389
-; CHECK-NEXT:  .LBB1_26: # %wunpsect.exit.thread.loopexit391
+; CHECK-NEXT:  .LBB1_18: # %wunpsect.exit.thread.loopexit389
+; CHECK-NEXT:  .LBB1_19: # %wunpsect.exit.thread.loopexit391
 entry:
-  %0 = load i32, i32* undef, align 4
+  %0 = load i32, ptr undef, align 4
   %mul = shl nsw i32 %0, 2
   br i1 undef, label %if.end19, label %cleanup
 
 if.end19:                                         ; preds = %entry
   %conv = zext i32 %mul to i64
-  %call = tail call i8* @cli_calloc(i64 %conv, i64 1)
+  %call = tail call ptr @cli_calloc(i64 %conv, i64 1)
   %1 = icmp eq i32 %exesz, 0
   %notrhs = icmp eq i32 %0, 0
   %or.cond117.not = or i1 %1, %notrhs
   %or.cond202 = or i1 %or.cond117.not, undef
-  %cmp35 = icmp ult i8* %call, %exe
+  %cmp35 = icmp ult ptr %call, %exe
   %or.cond203 = or i1 %or.cond202, %cmp35
   br i1 %or.cond203, label %cleanup, label %if.end50
 
 if.end50:                                         ; preds = %if.end19
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %call, i8* undef, i64 %conv, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull %call, ptr undef, i64 %conv, i1 false)
   %cmp1.i.i = icmp ugt i32 %mul, 3
   br i1 %cmp1.i.i, label %shared_preheader, label %wunpsect.exit.thread.loopexit391
 
@@ -227,7 +208,7 @@ shared_preheader:                                 ; preds = %if.end50
 
 outer_loop_header:                                ; preds = %outer_loop_latch, %shared_preheader
   %bits.1.i = phi i8 [ 32, %shared_preheader ], [ %bits.43.i, %outer_loop_latch ]
-  %dst.0.ph.i = phi i8* [ undef, %shared_preheader ], [ %scevgep679.i, %outer_loop_latch ]
+  %dst.0.ph.i = phi ptr [ undef, %shared_preheader ], [ %scevgep679.i, %outer_loop_latch ]
   %2 = icmp eq i32 %0, 0
   br i1 %2, label %while.cond.us1412.i, label %shared_loop_header
 
@@ -241,8 +222,8 @@ if.end41.us1436.i:                                ; preds = %while.cond.us1412.i
   unreachable
 
 shared_loop_header:                               ; preds = %dup_early2, %dup_early1
-  %dst.0.i = phi i8* [ undef, %inner_loop_body ], [ %dst.0.ph.i, %outer_loop_header ], [ undef, %dead_block ]
-  %cmp3.i1172.i = icmp ult i8* null, %call
+  %dst.0.i = phi ptr [ undef, %inner_loop_body ], [ %dst.0.ph.i, %outer_loop_header ], [ undef, %dead_block ]
+  %cmp3.i1172.i = icmp ult ptr null, %call
   br i1 %cmp3.i1172.i, label %wunpsect.exit.thread.loopexit389, label %inner_loop_body
 
 inner_loop_body:                                  ; preds = %shared_loop_header
@@ -250,7 +231,7 @@ inner_loop_body:                                  ; preds = %shared_loop_header
   br i1 %3, label %if.end96.i, label %shared_loop_header
 
 dead_block:                                       ; preds = %inner_loop_body
-  %cmp75.i = icmp ult i8* %dst.0.i, null
+  %cmp75.i = icmp ult ptr %dst.0.i, null
   br label %shared_loop_header
 
 if.end96.i:                                       ; preds = %inner_loop_body
@@ -258,7 +239,7 @@ if.end96.i:                                       ; preds = %inner_loop_body
   br i1 %cmp97.i, label %if.then99.i, label %if.end287.i
 
 if.then99.i:                                      ; preds = %if.end96.i
-  tail call void (i8*, ...) @cli_dbgmsg(i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str.6, i64 0, i64 0), i32 undef)
+  tail call void (ptr, ...) @cli_dbgmsg(ptr @.str.6, i32 undef)
   br label %cleanup
 
 if.end287.i:                                      ; preds = %if.end96.i
@@ -270,7 +251,7 @@ if.end308.i:                                      ; preds = %if.end287.i
   br i1 undef, label %if.end335.i, label %merge_predecessor_split
 
 merge_predecessor_split:                          ; preds = %if.end308.i
-  %4 = bitcast i8* undef to i32*
+  %4 = bitcast ptr undef to ptr
   br label %outer_loop_latch
 
 if.end335.i:                                      ; preds = %if.end308.i
@@ -284,8 +265,8 @@ outer_loop_latch:                                 ; preds = %merge_other, %if.en
   %backsize.0.i = phi i16 [ %conv294.i, %if.end287.i ], [ 0, %merge_other ], [ 0, %merge_predecessor_split ], [ 0, %if.end335.i ]
   %5 = add i16 %backsize.0.i, -1
   %6 = zext i16 %5 to i64
-  %scevgep.i = getelementptr i8, i8* %dst.0.ph.i, i64 1
-  %scevgep679.i = getelementptr i8, i8* %scevgep.i, i64 %6
+  %scevgep.i = getelementptr i8, ptr %dst.0.ph.i, i64 1
+  %scevgep679.i = getelementptr i8, ptr %scevgep.i, i64 %6
   br label %outer_loop_header
 
 wunpsect.exit.thread.loopexit389:                 ; preds = %shared_loop_header
@@ -300,12 +281,12 @@ cleanup:                                          ; preds = %if.then99.i, %while
 }
 
 ; Function Attrs: nounwind
-declare void @cli_dbgmsg(i8*, ...) local_unnamed_addr #0
+declare void @cli_dbgmsg(ptr, ...) local_unnamed_addr #0
 
 ; Function Attrs: nounwind
-declare i8* @cli_calloc(i64, i64) local_unnamed_addr #0
+declare ptr @cli_calloc(i64, i64) local_unnamed_addr #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }

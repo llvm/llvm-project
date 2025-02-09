@@ -1,5 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=OPT %s
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=NOOPT %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O2 | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefix=OPT %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O0 | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefix=NOOPT %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O0 | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefix=NOOPT %s
 
 ; Check that AMDGPUAttributor is not run with -O0.
 ; OPT: .amdhsa_user_sgpr_private_segment_buffer 1
@@ -32,3 +33,6 @@
 define amdgpu_kernel void @foo() {
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

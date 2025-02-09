@@ -26,6 +26,7 @@ using namespace lld::elf;
 constexpr uint64_t ppc64TocOffset = 0x8000;
 constexpr uint64_t dynamicThreadPointerOffset = 0x8000;
 
+namespace {
 // The instruction encoding of bits 21-30 from the ISA for the Xform and Dform
 // instructions that can be used as part of the initial exec TLS sequence.
 enum XFormOpcd {
@@ -139,6 +140,7 @@ enum class PPCPrefixedInsn : uint64_t {
   PSTXV = PREFIX_8LS | 0xd8000000,
   PSTXVP = PREFIX_8LS | 0xf8000000
 };
+
 static bool checkPPCLegacyInsn(uint32_t encoding) {
   PPCLegacyInsn insn = static_cast<PPCLegacyInsn>(encoding);
   if (insn == PPCLegacyInsn::NOINSN)
@@ -164,10 +166,9 @@ enum class LegacyToPrefixMask : uint64_t {
       0x8000000003e00000, // S/T (6-10) - The [S/T]X bit moves from 28 to 5.
 };
 
-namespace {
 class PPC64 final : public TargetInfo {
 public:
-  PPC64();
+  PPC64(Ctx &);
   int getTlsGdRelaxSkip(RelType type) const override;
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
@@ -204,12 +205,12 @@ private:
 };
 } // namespace
 
-uint64_t elf::getPPC64TocBase() {
+uint64_t elf::getPPC64TocBase(Ctx &ctx) {
   // The TOC consists of sections .got, .toc, .tocbss, .plt in that order. The
   // TOC starts where the first of these sections starts. We always create a
   // .got when we see a relocation that uses it, so for us the start is always
   // the .got.
-  uint64_t tocVA = in.got->getVA();
+  uint64_t tocVA = ctx.in.got->getVA();
 
   // Per the ppc64-elf-linux ABI, The TOC base is TOC value plus 0x8000
   // thus permitting a full 64 Kbytes segment. Note that the glibc startup
@@ -218,7 +219,7 @@ uint64_t elf::getPPC64TocBase() {
   return tocVA + ppc64TocOffset;
 }
 
-unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther) {
+unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(Ctx &ctx, uint8_t stOther) {
   // The offset is encoded into the 3 most significant bits of the st_other
   // field, with some special values described in section 3.4.1 of the ABI:
   // 0   --> Zero offset between the GEP and LEP, and the function does NOT use
@@ -239,23 +240,24 @@ unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther) {
   if (gepToLep < 7)
     return 1 << gepToLep;
 
-  error("reserved value of 7 in the 3 most-significant-bits of st_other");
+  ErrAlways(ctx)
+      << "reserved value of 7 in the 3 most-significant-bits of st_other";
   return 0;
 }
 
-void elf::writePrefixedInstruction(uint8_t *loc, uint64_t insn) {
-  insn = config->isLE ? insn << 32 | insn >> 32 : insn;
-  write64(loc, insn);
+void elf::writePrefixedInst(Ctx &ctx, uint8_t *loc, uint64_t insn) {
+  insn = ctx.arg.isLE ? insn << 32 | insn >> 32 : insn;
+  write64(ctx, loc, insn);
 }
 
-static bool addOptional(StringRef name, uint64_t value,
+static bool addOptional(Ctx &ctx, StringRef name, uint64_t value,
                         std::vector<Defined *> &defined) {
-  Symbol *sym = symtab.find(name);
+  Symbol *sym = ctx.symtab->find(name);
   if (!sym || sym->isDefined())
     return false;
-  sym->resolve(Defined{/*file=*/nullptr, StringRef(), STB_GLOBAL, STV_HIDDEN,
-                       STT_FUNC, value,
-                       /*size=*/0, /*section=*/nullptr});
+  sym->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+                            STV_HIDDEN, STT_FUNC, value,
+                            /*size=*/0, /*section=*/nullptr});
   defined.push_back(cast<Defined>(sym));
   return true;
 }
@@ -263,21 +265,22 @@ static bool addOptional(StringRef name, uint64_t value,
 // If from is 14, write ${prefix}14: firstInsn; ${prefix}15:
 // firstInsn+0x200008; ...; ${prefix}31: firstInsn+(31-14)*0x200008; $tail
 // The labels are defined only if they exist in the symbol table.
-static void writeSequence(MutableArrayRef<uint32_t> buf, const char *prefix,
-                          int from, uint32_t firstInsn,
-                          ArrayRef<uint32_t> tail) {
+static void writeSequence(Ctx &ctx, const char *prefix, int from,
+                          uint32_t firstInsn, ArrayRef<uint32_t> tail) {
   std::vector<Defined *> defined;
   char name[16];
   int first;
+  const size_t size = 32 - from + tail.size();
+  MutableArrayRef<uint32_t> buf(ctx.bAlloc.Allocate<uint32_t>(size), size);
   uint32_t *ptr = buf.data();
   for (int r = from; r < 32; ++r) {
     format("%s%d", prefix, r).snprint(name, sizeof(name));
-    if (addOptional(name, 4 * (r - from), defined) && defined.size() == 1)
+    if (addOptional(ctx, name, 4 * (r - from), defined) && defined.size() == 1)
       first = r - from;
-    write32(ptr++, firstInsn + 0x200008 * (r - from));
+    write32(ctx, ptr++, firstInsn + 0x200008 * (r - from));
   }
   for (uint32_t insn : tail)
-    write32(ptr++, insn);
+    write32(ctx, ptr++, insn);
   assert(ptr == &*buf.end());
 
   if (defined.empty())
@@ -285,10 +288,10 @@ static void writeSequence(MutableArrayRef<uint32_t> buf, const char *prefix,
   // The full section content has the extent of [begin, end). We drop unused
   // instructions and write [first,end).
   auto *sec = make<InputSection>(
-      nullptr, SHF_ALLOC, SHT_PROGBITS, 4,
+      ctx.internalFile, ".text", SHT_PROGBITS, SHF_ALLOC, /*addralign=*/4,
+      /*entsize=*/0,
       ArrayRef(reinterpret_cast<uint8_t *>(buf.data() + first),
-               4 * (buf.size() - first)),
-      ".text");
+               4 * (buf.size() - first)));
   ctx.inputSections.push_back(sec);
   for (Defined *sym : defined) {
     sym->section = sec;
@@ -307,23 +310,21 @@ static void writeSequence(MutableArrayRef<uint32_t> buf, const char *prefix,
 // avoid long branch thunks. However, we don't consider the advantage
 // significant enough to complicate our trunk implementation, so we take the
 // simple approach and synthesize .text sections providing the implementation.
-void elf::addPPC64SaveRestore() {
-  static uint32_t savegpr0[20], restgpr0[21], savegpr1[19], restgpr1[19];
+void elf::addPPC64SaveRestore(Ctx &ctx) {
   constexpr uint32_t blr = 0x4e800020, mtlr_0 = 0x7c0803a6;
 
   // _restgpr0_14: ld 14, -144(1); _restgpr0_15: ld 15, -136(1); ...
   // Tail: ld 0, 16(1); mtlr 0; blr
-  writeSequence(restgpr0, "_restgpr0_", 14, 0xe9c1ff70,
-                {0xe8010010, mtlr_0, blr});
+  writeSequence(ctx, "_restgpr0_", 14, 0xe9c1ff70, {0xe8010010, mtlr_0, blr});
   // _restgpr1_14: ld 14, -144(12); _restgpr1_15: ld 15, -136(12); ...
   // Tail: blr
-  writeSequence(restgpr1, "_restgpr1_", 14, 0xe9ccff70, {blr});
+  writeSequence(ctx, "_restgpr1_", 14, 0xe9ccff70, {blr});
   // _savegpr0_14: std 14, -144(1); _savegpr0_15: std 15, -136(1); ...
   // Tail: std 0, 16(1); blr
-  writeSequence(savegpr0, "_savegpr0_", 14, 0xf9c1ff70, {0xf8010010, blr});
+  writeSequence(ctx, "_savegpr0_", 14, 0xf9c1ff70, {0xf8010010, blr});
   // _savegpr1_14: std 14, -144(12); _savegpr1_15: std 15, -136(12); ...
   // Tail: blr
-  writeSequence(savegpr1, "_savegpr1_", 14, 0xf9ccff70, {blr});
+  writeSequence(ctx, "_savegpr1_", 14, 0xf9ccff70, {blr});
 }
 
 // Find the R_PPC64_ADDR64 in .rela.toc with matching offset.
@@ -346,7 +347,7 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
   uint64_t index = std::min<uint64_t>(offset / 8, relas.size() - 1);
   for (;;) {
     if (relas[index].r_offset == offset) {
-      Symbol &sym = tocSec->getFile<ELFT>()->getRelocTargetSym(relas[index]);
+      Symbol &sym = tocSec->file->getRelocTargetSym(relas[index]);
       return {dyn_cast<Defined>(&sym), getAddend<ELFT>(relas[index])};
     }
     if (relas[index].r_offset < offset || index == 0)
@@ -376,9 +377,9 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
 //   ld/lwa 3, 0(3)           # load the value from the address
 //
 // Returns true if the relaxation is performed.
-static bool tryRelaxPPC64TocIndirection(const Relocation &rel,
+static bool tryRelaxPPC64TocIndirection(Ctx &ctx, const Relocation &rel,
                                         uint8_t *bufLoc) {
-  assert(config->tocOptimize);
+  assert(ctx.arg.tocOptimize);
   if (rel.addend < 0)
     return false;
 
@@ -391,7 +392,7 @@ static bool tryRelaxPPC64TocIndirection(const Relocation &rel,
   int64_t addend;
   auto *tocISB = cast<InputSectionBase>(defSym->section);
   std::tie(d, addend) =
-      config->isLE ? getRelaTocSymAndAddend<ELF64LE>(tocISB, rel.addend)
+      ctx.arg.isLE ? getRelaTocSymAndAddend<ELF64LE>(tocISB, rel.addend)
                    : getRelaTocSymAndAddend<ELF64BE>(tocISB, rel.addend);
 
   // Only non-preemptable defined symbols can be relaxed.
@@ -403,13 +404,13 @@ static bool tryRelaxPPC64TocIndirection(const Relocation &rel,
   assert(!d->isGnuIFunc());
 
   // Two instructions can materialize a 32-bit signed offset from the toc base.
-  uint64_t tocRelative = d->getVA(addend) - getPPC64TocBase();
+  uint64_t tocRelative = d->getVA(ctx, addend) - getPPC64TocBase(ctx);
   if (!isInt<32>(tocRelative))
     return false;
 
   // Add PPC64TocOffset that will be subtracted by PPC64::relocate().
-  static_cast<const PPC64 &>(*target).relaxGot(bufLoc, rel,
-                                               tocRelative + ppc64TocOffset);
+  static_cast<const PPC64 &>(*ctx.target)
+      .relaxGot(bufLoc, rel, tocRelative + ppc64TocOffset);
   return true;
 }
 
@@ -564,20 +565,20 @@ static int64_t getTotalDisp(uint64_t prefixedInsn, uint32_t accessInsn) {
 // pointer is pointing into the middle of the word we want to extract, and on
 // little-endian it is pointing to the start of the word. These 2 helpers are to
 // simplify reading and writing in that context.
-static void writeFromHalf16(uint8_t *loc, uint32_t insn) {
-  write32(config->isLE ? loc : loc - 2, insn);
+static void writeFromHalf16(Ctx &ctx, uint8_t *loc, uint32_t insn) {
+  write32(ctx, ctx.arg.isLE ? loc : loc - 2, insn);
 }
 
-static uint32_t readFromHalf16(const uint8_t *loc) {
-  return read32(config->isLE ? loc : loc - 2);
+static uint32_t readFromHalf16(Ctx &ctx, const uint8_t *loc) {
+  return read32(ctx, ctx.arg.isLE ? loc : loc - 2);
 }
 
-static uint64_t readPrefixedInstruction(const uint8_t *loc) {
-  uint64_t fullInstr = read64(loc);
-  return config->isLE ? (fullInstr << 32 | fullInstr >> 32) : fullInstr;
+static uint64_t readPrefixedInst(Ctx &ctx, const uint8_t *loc) {
+  uint64_t fullInstr = read64(ctx, loc);
+  return ctx.arg.isLE ? (fullInstr << 32 | fullInstr >> 32) : fullInstr;
 }
 
-PPC64::PPC64() {
+PPC64::PPC64(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_PPC64_COPY;
   gotRel = R_PPC64_GLOB_DAT;
   pltRel = R_PPC64_JMP_SLOT;
@@ -612,7 +613,7 @@ PPC64::PPC64() {
   // use 0x10000000 as the starting address.
   defaultImageBase = 0x10000000;
 
-  write32(trapInstr.data(), 0x7fe00008);
+  write32(ctx, trapInstr.data(), 0x7fe00008);
 }
 
 int PPC64::getTlsGdRelaxSkip(RelType type) const {
@@ -641,9 +642,9 @@ uint32_t PPC64::calcEFlags() const {
   for (InputFile *f : ctx.objectFiles) {
     uint32_t flag = getEFlags(f);
     if (flag == 1)
-      error(toString(f) + ": ABI version 1 is not supported");
+      ErrAlways(ctx) << f << ": ABI version 1 is not supported";
     else if (flag > 2)
-      error(toString(f) + ": unrecognized e_flags: " + Twine(flag));
+      ErrAlways(ctx) << f << ": unrecognized e_flags: " << flag;
   }
   return 2;
 }
@@ -657,24 +658,26 @@ void PPC64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC64_TOC16_LO_DS: {
     // Convert "ld reg, .LC0@toc@l(reg)" to "addi reg, reg, var@toc@l" or
     // "addi reg, 2, var@toc".
-    uint32_t insn = readFromHalf16(loc);
+    uint32_t insn = readFromHalf16(ctx, loc);
     if (getPrimaryOpCode(insn) != LD)
-      error("expected a 'ld' for got-indirect to toc-relative relaxing");
-    writeFromHalf16(loc, (insn & 0x03ffffff) | 0x38000000);
+      ErrAlways(ctx)
+          << "expected a 'ld' for got-indirect to toc-relative relaxing";
+    writeFromHalf16(ctx, loc, (insn & 0x03ffffff) | 0x38000000);
     relocateNoSym(loc, R_PPC64_TOC16_LO, val);
     break;
   }
   case R_PPC64_GOT_PCREL34: {
     // Clear the first 8 bits of the prefix and the first 6 bits of the
     // instruction (the primary opcode).
-    uint64_t insn = readPrefixedInstruction(loc);
+    uint64_t insn = readPrefixedInst(ctx, loc);
     if ((insn & 0xfc000000) != 0xe4000000)
-      error("expected a 'pld' for got-indirect to pc-relative relaxing");
+      ErrAlways(ctx)
+          << "expected a 'pld' for got-indirect to pc-relative relaxing";
     insn &= ~0xff000000fc000000;
 
     // Replace the cleared bits with the values for PADDI (0x600000038000000);
     insn |= 0x600000038000000;
-    writePrefixedInstruction(loc, insn);
+    writePrefixedInst(ctx, loc, insn);
     relocate(loc, rel, val);
     break;
   }
@@ -682,17 +685,17 @@ void PPC64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // We can only relax this if the R_PPC64_GOT_PCREL34 at this offset can
     // be relaxed. The eligibility for the relaxation needs to be determined
     // on that relocation since this one does not relocate a symbol.
-    uint64_t insn = readPrefixedInstruction(loc);
-    uint32_t accessInsn = read32(loc + rel.addend);
+    uint64_t insn = readPrefixedInst(ctx, loc);
+    uint32_t accessInsn = read32(ctx, loc + rel.addend);
     uint64_t pcRelInsn = getPCRelativeForm(accessInsn);
 
     // This error is not necessary for correctness but is emitted for now
     // to ensure we don't miss these opportunities in real code. It can be
     // removed at a later date.
     if (pcRelInsn == UINT64_C(-1)) {
-      errorOrWarn(
-          "unrecognized instruction for R_PPC64_PCREL_OPT relaxation: 0x" +
-          Twine::utohexstr(accessInsn));
+      Err(ctx)
+          << "unrecognized instruction for R_PPC64_PCREL_OPT relaxation: 0x"
+          << utohexstr(accessInsn, true);
       break;
     }
 
@@ -701,10 +704,10 @@ void PPC64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       break; // Displacement doesn't fit.
     // Convert the PADDI to the prefixed version of accessInsn and convert
     // accessInsn to a nop.
-    writePrefixedInstruction(loc, pcRelInsn |
-                                      ((totalDisp & 0x3ffff0000) << 16) |
-                                      (totalDisp & 0xffff));
-    write32(loc + rel.addend, NOP); // nop accessInsn.
+    writePrefixedInst(ctx, loc,
+                      pcRelInsn | ((totalDisp & 0x3ffff0000) << 16) |
+                          (totalDisp & 0xffff));
+    write32(ctx, loc + rel.addend, NOP); // nop accessInsn.
     break;
   }
   default:
@@ -731,17 +734,17 @@ void PPC64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
 
   switch (rel.type) {
   case R_PPC64_GOT_TLSGD16_HA:
-    writeFromHalf16(loc, NOP);
+    writeFromHalf16(ctx, loc, NOP);
     break;
   case R_PPC64_GOT_TLSGD16:
   case R_PPC64_GOT_TLSGD16_LO:
-    writeFromHalf16(loc, 0x3c6d0000); // addis r3, r13
+    writeFromHalf16(ctx, loc, 0x3c6d0000); // addis r3, r13
     relocateNoSym(loc, R_PPC64_TPREL16_HA, val);
     break;
   case R_PPC64_GOT_TLSGD_PCREL34:
     // Relax from paddi r3, 0, x@got@tlsgd@pcrel, 1 to
     //            paddi r3, r13, x@tprel, 0
-    writePrefixedInstruction(loc, 0x06000000386d0000);
+    writePrefixedInst(ctx, loc, 0x06000000386d0000);
     relocateNoSym(loc, R_PPC64_TPREL34, val);
     break;
   case R_PPC64_TLSGD: {
@@ -756,17 +759,17 @@ void PPC64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
     //            addi r3, r3, x@tprel@l
     const uintptr_t locAsInt = reinterpret_cast<uintptr_t>(loc);
     if (locAsInt % 4 == 0) {
-      write32(loc, NOP);            // nop
-      write32(loc + 4, 0x38630000); // addi r3, r3
+      write32(ctx, loc, NOP);            // nop
+      write32(ctx, loc + 4, 0x38630000); // addi r3, r3
       // Since we are relocating a half16 type relocation and Loc + 4 points to
       // the start of an instruction we need to advance the buffer by an extra
       // 2 bytes on BE.
-      relocateNoSym(loc + 4 + (config->ekind == ELF64BEKind ? 2 : 0),
+      relocateNoSym(loc + 4 + (ctx.arg.ekind == ELF64BEKind ? 2 : 0),
                     R_PPC64_TPREL16_LO, val);
     } else if (locAsInt % 4 == 1) {
-      write32(loc - 1, NOP);
+      write32(ctx, loc - 1, NOP);
     } else {
-      errorOrWarn("R_PPC64_TLSGD has unexpected byte alignment");
+      Err(ctx) << "R_PPC64_TLSGD has unexpected byte alignment";
     }
     break;
   }
@@ -794,15 +797,15 @@ void PPC64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
 
   switch (rel.type) {
   case R_PPC64_GOT_TLSLD16_HA:
-    writeFromHalf16(loc, NOP);
+    writeFromHalf16(ctx, loc, NOP);
     break;
   case R_PPC64_GOT_TLSLD16_LO:
-    writeFromHalf16(loc, 0x3c6d0000); // addis r3, r13, 0
+    writeFromHalf16(ctx, loc, 0x3c6d0000); // addis r3, r13, 0
     break;
   case R_PPC64_GOT_TLSLD_PCREL34:
     // Relax from paddi r3, 0, x1@got@tlsld@pcrel, 1 to
     //            paddi r3, r13, 0x1000, 0
-    writePrefixedInstruction(loc, 0x06000000386d1000);
+    writePrefixedInst(ctx, loc, 0x06000000386d1000);
     break;
   case R_PPC64_TLSLD: {
     // PC Relative Relaxation:
@@ -817,12 +820,12 @@ void PPC64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
     //            addi r3, r3, 4096
     const uintptr_t locAsInt = reinterpret_cast<uintptr_t>(loc);
     if (locAsInt % 4 == 0) {
-      write32(loc, NOP);
-      write32(loc + 4, 0x38631000); // addi r3, r3, 4096
+      write32(ctx, loc, NOP);
+      write32(ctx, loc + 4, 0x38631000); // addi r3, r3, 4096
     } else if (locAsInt % 4 == 1) {
-      write32(loc - 1, NOP);
+      write32(ctx, loc - 1, NOP);
     } else {
-      errorOrWarn("R_PPC64_TLSLD has unexpected byte alignment");
+      Err(ctx) << "R_PPC64_TLSLD has unexpected byte alignment";
     }
     break;
   }
@@ -908,51 +911,51 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   // instruction, if we are accessing memory it will use any of the X-form
   // indexed load or store instructions.
 
-  unsigned offset = (config->ekind == ELF64BEKind) ? 2 : 0;
+  unsigned offset = (ctx.arg.ekind == ELF64BEKind) ? 2 : 0;
   switch (rel.type) {
   case R_PPC64_GOT_TPREL16_HA:
-    write32(loc - offset, NOP);
+    write32(ctx, loc - offset, NOP);
     break;
   case R_PPC64_GOT_TPREL16_LO_DS:
   case R_PPC64_GOT_TPREL16_DS: {
-    uint32_t regNo = read32(loc - offset) & 0x03E00000; // bits 6-10
-    write32(loc - offset, 0x3C0D0000 | regNo);          // addis RegNo, r13
+    uint32_t regNo = read32(ctx, loc - offset) & 0x03e00000; // bits 6-10
+    write32(ctx, loc - offset, 0x3c0d0000 | regNo);          // addis RegNo, r13
     relocateNoSym(loc, R_PPC64_TPREL16_HA, val);
     break;
   }
   case R_PPC64_GOT_TPREL_PCREL34: {
-    const uint64_t pldRT = readPrefixedInstruction(loc) & 0x0000000003e00000;
+    const uint64_t pldRT = readPrefixedInst(ctx, loc) & 0x0000000003e00000;
     // paddi RT(from pld), r13, symbol@tprel, 0
-    writePrefixedInstruction(loc, 0x06000000380d0000 | pldRT);
+    writePrefixedInst(ctx, loc, 0x06000000380d0000 | pldRT);
     relocateNoSym(loc, R_PPC64_TPREL34, val);
     break;
   }
   case R_PPC64_TLS: {
     const uintptr_t locAsInt = reinterpret_cast<uintptr_t>(loc);
     if (locAsInt % 4 == 0) {
-      uint32_t primaryOp = getPrimaryOpCode(read32(loc));
+      uint32_t primaryOp = getPrimaryOpCode(read32(ctx, loc));
       if (primaryOp != 31)
-        error("unrecognized instruction for IE to LE R_PPC64_TLS");
-      uint32_t secondaryOp = (read32(loc) & 0x000007FE) >> 1; // bits 21-30
+        ErrAlways(ctx) << "unrecognized instruction for IE to LE R_PPC64_TLS";
+      uint32_t secondaryOp = (read32(ctx, loc) & 0x000007fe) >> 1; // bits 21-30
       uint32_t dFormOp = getPPCDFormOp(secondaryOp);
       uint32_t finalReloc;
       if (dFormOp == 0) { // Expecting a DS-Form instruction.
         dFormOp = getPPCDSFormOp(secondaryOp);
         if (dFormOp == 0)
-          error("unrecognized instruction for IE to LE R_PPC64_TLS");
+          ErrAlways(ctx) << "unrecognized instruction for IE to LE R_PPC64_TLS";
         finalReloc = R_PPC64_TPREL16_LO_DS;
       } else
         finalReloc = R_PPC64_TPREL16_LO;
-      write32(loc, dFormOp | (read32(loc) & 0x03ff0000));
+      write32(ctx, loc, dFormOp | (read32(ctx, loc) & 0x03ff0000));
       relocateNoSym(loc + offset, finalReloc, val);
     } else if (locAsInt % 4 == 1) {
       // If the offset is not 4 byte aligned then we have a PCRel type reloc.
       // This version of the relocation is offset by one byte from the
       // instruction it references.
-      uint32_t tlsInstr = read32(loc - 1);
+      uint32_t tlsInstr = read32(ctx, loc - 1);
       uint32_t primaryOp = getPrimaryOpCode(tlsInstr);
       if (primaryOp != 31)
-        errorOrWarn("unrecognized instruction for IE to LE R_PPC64_TLS");
+        Err(ctx) << "unrecognized instruction for IE to LE R_PPC64_TLS";
       uint32_t secondaryOp = (tlsInstr & 0x000007FE) >> 1; // bits 21-30
       // The add is a special case and should be turned into a nop. The paddi
       // that comes before it will already have computed the address of the
@@ -962,23 +965,24 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
         uint32_t rt = (tlsInstr & 0x03E00000) >> 21; // bits 6-10
         uint32_t ra = (tlsInstr & 0x001F0000) >> 16; // bits 11-15
         if (ra == rt) {
-          write32(loc - 1, NOP);
+          write32(ctx, loc - 1, NOP);
         } else {
           // mr rt, ra
-          write32(loc - 1, 0x7C000378 | (rt << 16) | (ra << 21) | (ra << 11));
+          write32(ctx, loc - 1,
+                  0x7C000378 | (rt << 16) | (ra << 21) | (ra << 11));
         }
       } else {
         uint32_t dFormOp = getPPCDFormOp(secondaryOp);
         if (dFormOp == 0) { // Expecting a DS-Form instruction.
           dFormOp = getPPCDSFormOp(secondaryOp);
           if (dFormOp == 0)
-            errorOrWarn("unrecognized instruction for IE to LE R_PPC64_TLS");
+            Err(ctx) << "unrecognized instruction for IE to LE R_PPC64_TLS";
         }
-        write32(loc - 1, (dFormOp | (tlsInstr & 0x03ff0000)));
+        write32(ctx, loc - 1, (dFormOp | (tlsInstr & 0x03ff0000)));
       }
     } else {
-      errorOrWarn("R_PPC64_TLS must be either 4 byte aligned or one byte "
-                  "offset from 4 byte aligned");
+      Err(ctx) << "R_PPC64_TLS must be either 4 byte aligned or one byte "
+                  "offset from 4 byte aligned";
     }
     break;
   }
@@ -1025,12 +1029,12 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
     return R_GOT_PC;
   case R_PPC64_TOC16_HA:
   case R_PPC64_TOC16_LO_DS:
-    return config->tocOptimize ? R_PPC64_RELAX_TOC : R_GOTREL;
+    return ctx.arg.tocOptimize ? RE_PPC64_RELAX_TOC : R_GOTREL;
   case R_PPC64_TOC:
-    return R_PPC64_TOCBASE;
+    return RE_PPC64_TOCBASE;
   case R_PPC64_REL14:
   case R_PPC64_REL24:
-    return R_PPC64_CALL_PLT;
+    return RE_PPC64_CALL_PLT;
   case R_PPC64_REL24_NOTOC:
     return R_PLT_PC;
   case R_PPC64_REL16_LO:
@@ -1096,8 +1100,8 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_TLS:
     return R_TLSIE_HINT;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -1115,7 +1119,7 @@ int64_t PPC64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_PPC64_JMP_SLOT:
     return 0;
   case R_PPC64_REL32:
-    return SignExtend64<32>(read32(buf));
+    return SignExtend64<32>(read32(ctx, buf));
   case R_PPC64_ADDR64:
   case R_PPC64_REL64:
   case R_PPC64_RELATIVE:
@@ -1123,51 +1127,51 @@ int64_t PPC64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_PPC64_DTPMOD64:
   case R_PPC64_DTPREL64:
   case R_PPC64_TPREL64:
-    return read64(buf);
+    return read64(ctx, buf);
   default:
-    internalLinkerError(getErrorLocation(buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }
 
 void PPC64::writeGotHeader(uint8_t *buf) const {
-  write64(buf, getPPC64TocBase());
+  write64(ctx, buf, getPPC64TocBase(ctx));
 }
 
 void PPC64::writePltHeader(uint8_t *buf) const {
   // The generic resolver stub goes first.
-  write32(buf +  0, 0x7c0802a6); // mflr r0
-  write32(buf +  4, 0x429f0005); // bcl  20,4*cr7+so,8 <_glink+0x8>
-  write32(buf +  8, 0x7d6802a6); // mflr r11
-  write32(buf + 12, 0x7c0803a6); // mtlr r0
-  write32(buf + 16, 0x7d8b6050); // subf r12, r11, r12
-  write32(buf + 20, 0x380cffcc); // subi r0,r12,52
-  write32(buf + 24, 0x7800f082); // srdi r0,r0,62,2
-  write32(buf + 28, 0xe98b002c); // ld   r12,44(r11)
-  write32(buf + 32, 0x7d6c5a14); // add  r11,r12,r11
-  write32(buf + 36, 0xe98b0000); // ld   r12,0(r11)
-  write32(buf + 40, 0xe96b0008); // ld   r11,8(r11)
-  write32(buf + 44, 0x7d8903a6); // mtctr   r12
-  write32(buf + 48, 0x4e800420); // bctr
+  write32(ctx, buf + 0, 0x7c0802a6);  // mflr r0
+  write32(ctx, buf + 4, 0x429f0005);  // bcl  20,4*cr7+so,8 <_glink+0x8>
+  write32(ctx, buf + 8, 0x7d6802a6);  // mflr r11
+  write32(ctx, buf + 12, 0x7c0803a6); // mtlr r0
+  write32(ctx, buf + 16, 0x7d8b6050); // subf r12, r11, r12
+  write32(ctx, buf + 20, 0x380cffcc); // subi r0,r12,52
+  write32(ctx, buf + 24, 0x7800f082); // srdi r0,r0,62,2
+  write32(ctx, buf + 28, 0xe98b002c); // ld   r12,44(r11)
+  write32(ctx, buf + 32, 0x7d6c5a14); // add  r11,r12,r11
+  write32(ctx, buf + 36, 0xe98b0000); // ld   r12,0(r11)
+  write32(ctx, buf + 40, 0xe96b0008); // ld   r11,8(r11)
+  write32(ctx, buf + 44, 0x7d8903a6); // mtctr   r12
+  write32(ctx, buf + 48, 0x4e800420); // bctr
 
   // The 'bcl' instruction will set the link register to the address of the
   // following instruction ('mflr r11'). Here we store the offset from that
   // instruction  to the first entry in the GotPlt section.
-  int64_t gotPltOffset = in.gotPlt->getVA() - (in.plt->getVA() + 8);
-  write64(buf + 52, gotPltOffset);
+  int64_t gotPltOffset = ctx.in.gotPlt->getVA() - (ctx.in.plt->getVA() + 8);
+  write64(ctx, buf + 52, gotPltOffset);
 }
 
 void PPC64::writePlt(uint8_t *buf, const Symbol &sym,
                      uint64_t /*pltEntryAddr*/) const {
-  int32_t offset = pltHeaderSize + sym.getPltIdx() * pltEntrySize;
+  int32_t offset = pltHeaderSize + sym.getPltIdx(ctx) * pltEntrySize;
   // bl __glink_PLTresolve
-  write32(buf, 0x48000000 | ((-offset) & 0x03FFFFFc));
+  write32(ctx, buf, 0x48000000 | ((-offset) & 0x03fffffc));
 }
 
 void PPC64::writeIplt(uint8_t *buf, const Symbol &sym,
                       uint64_t /*pltEntryAddr*/) const {
-  writePPC64LoadAndBranch(buf, sym.getGotPltVA() - getPPC64TocBase());
+  writePPC64LoadAndBranch(ctx, buf,
+                          sym.getGotPltVA(ctx) - getPPC64TocBase(ctx));
 }
 
 static std::pair<RelType, uint64_t> toAddr16Rel(RelType type, uint64_t val) {
@@ -1264,63 +1268,63 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   switch (type) {
   case R_PPC64_ADDR14: {
-    checkAlignment(loc, val, 4, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     // Preserve the AA/LK bits in the branch instruction
     uint8_t aalk = loc[3];
-    write16(loc + 2, (aalk & 3) | (val & 0xfffc));
+    write16(ctx, loc + 2, (aalk & 3) | (val & 0xfffc));
     break;
   }
   case R_PPC64_ADDR16:
-    checkIntUInt(loc, val, 16, rel);
-    write16(loc, val);
+    checkIntUInt(ctx, loc, val, 16, rel);
+    write16(ctx, loc, val);
     break;
   case R_PPC64_ADDR32:
-    checkIntUInt(loc, val, 32, rel);
-    write32(loc, val);
+    checkIntUInt(ctx, loc, val, 32, rel);
+    write32(ctx, loc, val);
     break;
   case R_PPC64_ADDR16_DS:
   case R_PPC64_TPREL16_DS: {
-    checkInt(loc, val, 16, rel);
+    checkInt(ctx, loc, val, 16, rel);
     // DQ-form instructions use bits 28-31 as part of the instruction encoding
     // DS-form instructions only use bits 30-31.
-    uint16_t mask = isDQFormInstruction(readFromHalf16(loc)) ? 0xf : 0x3;
-    checkAlignment(loc, lo(val), mask + 1, rel);
-    write16(loc, (read16(loc) & mask) | lo(val));
+    uint16_t mask = isDQFormInstruction(readFromHalf16(ctx, loc)) ? 0xf : 0x3;
+    checkAlignment(ctx, loc, lo(val), mask + 1, rel);
+    write16(ctx, loc, (read16(ctx, loc) & mask) | lo(val));
   } break;
   case R_PPC64_ADDR16_HA:
   case R_PPC64_REL16_HA:
   case R_PPC64_TPREL16_HA:
-    if (config->tocOptimize && shouldTocOptimize && ha(val) == 0)
-      writeFromHalf16(loc, NOP);
+    if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0)
+      writeFromHalf16(ctx, loc, NOP);
     else {
-      checkInt(loc, val + 0x8000, 32, rel);
-      write16(loc, ha(val));
+      checkInt(ctx, loc, val + 0x8000, 32, rel);
+      write16(ctx, loc, ha(val));
     }
     break;
   case R_PPC64_ADDR16_HI:
   case R_PPC64_REL16_HI:
   case R_PPC64_TPREL16_HI:
-    checkInt(loc, val, 32, rel);
-    write16(loc, hi(val));
+    checkInt(ctx, loc, val, 32, rel);
+    write16(ctx, loc, hi(val));
     break;
   case R_PPC64_ADDR16_HIGH:
-    write16(loc, hi(val));
+    write16(ctx, loc, hi(val));
     break;
   case R_PPC64_ADDR16_HIGHER:
   case R_PPC64_TPREL16_HIGHER:
-    write16(loc, higher(val));
+    write16(ctx, loc, higher(val));
     break;
   case R_PPC64_ADDR16_HIGHERA:
   case R_PPC64_TPREL16_HIGHERA:
-    write16(loc, highera(val));
+    write16(ctx, loc, highera(val));
     break;
   case R_PPC64_ADDR16_HIGHEST:
   case R_PPC64_TPREL16_HIGHEST:
-    write16(loc, highest(val));
+    write16(ctx, loc, highest(val));
     break;
   case R_PPC64_ADDR16_HIGHESTA:
   case R_PPC64_TPREL16_HIGHESTA:
-    write16(loc, highesta(val));
+    write16(ctx, loc, highesta(val));
     break;
   case R_PPC64_ADDR16_LO:
   case R_PPC64_REL16_LO:
@@ -1328,68 +1332,68 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // When the high-adjusted part of a toc relocation evaluates to 0, it is
     // changed into a nop. The lo part then needs to be updated to use the
     // toc-pointer register r2, as the base register.
-    if (config->tocOptimize && shouldTocOptimize && ha(val) == 0) {
-      uint32_t insn = readFromHalf16(loc);
+    if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0) {
+      uint32_t insn = readFromHalf16(ctx, loc);
       if (isInstructionUpdateForm(insn))
-        error(getErrorLocation(loc) +
-              "can't toc-optimize an update instruction: 0x" +
-              utohexstr(insn));
-      writeFromHalf16(loc, (insn & 0xffe00000) | 0x00020000 | lo(val));
+        Err(ctx) << getErrorLoc(ctx, loc)
+                 << "can't toc-optimize an update instruction: 0x"
+                 << utohexstr(insn, true);
+      writeFromHalf16(ctx, loc, (insn & 0xffe00000) | 0x00020000 | lo(val));
     } else {
-      write16(loc, lo(val));
+      write16(ctx, loc, lo(val));
     }
     break;
   case R_PPC64_ADDR16_LO_DS:
   case R_PPC64_TPREL16_LO_DS: {
     // DQ-form instructions use bits 28-31 as part of the instruction encoding
     // DS-form instructions only use bits 30-31.
-    uint32_t insn = readFromHalf16(loc);
+    uint32_t insn = readFromHalf16(ctx, loc);
     uint16_t mask = isDQFormInstruction(insn) ? 0xf : 0x3;
-    checkAlignment(loc, lo(val), mask + 1, rel);
-    if (config->tocOptimize && shouldTocOptimize && ha(val) == 0) {
+    checkAlignment(ctx, loc, lo(val), mask + 1, rel);
+    if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0) {
       // When the high-adjusted part of a toc relocation evaluates to 0, it is
       // changed into a nop. The lo part then needs to be updated to use the toc
       // pointer register r2, as the base register.
       if (isInstructionUpdateForm(insn))
-        error(getErrorLocation(loc) +
-              "Can't toc-optimize an update instruction: 0x" +
-              Twine::utohexstr(insn));
+        Err(ctx) << getErrorLoc(ctx, loc)
+                 << "can't toc-optimize an update instruction: 0x"
+                 << utohexstr(insn, true);
       insn &= 0xffe00000 | mask;
-      writeFromHalf16(loc, insn | 0x00020000 | lo(val));
+      writeFromHalf16(ctx, loc, insn | 0x00020000 | lo(val));
     } else {
-      write16(loc, (read16(loc) & mask) | lo(val));
+      write16(ctx, loc, (read16(ctx, loc) & mask) | lo(val));
     }
   } break;
   case R_PPC64_TPREL16:
-    checkInt(loc, val, 16, rel);
-    write16(loc, val);
+    checkInt(ctx, loc, val, 16, rel);
+    write16(ctx, loc, val);
     break;
   case R_PPC64_REL32:
-    checkInt(loc, val, 32, rel);
-    write32(loc, val);
+    checkInt(ctx, loc, val, 32, rel);
+    write32(ctx, loc, val);
     break;
   case R_PPC64_ADDR64:
   case R_PPC64_REL64:
   case R_PPC64_TOC:
-    write64(loc, val);
+    write64(ctx, loc, val);
     break;
   case R_PPC64_REL14: {
     uint32_t mask = 0x0000FFFC;
-    checkInt(loc, val, 16, rel);
-    checkAlignment(loc, val, 4, rel);
-    write32(loc, (read32(loc) & ~mask) | (val & mask));
+    checkInt(ctx, loc, val, 16, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
+    write32(ctx, loc, (read32(ctx, loc) & ~mask) | (val & mask));
     break;
   }
   case R_PPC64_REL24:
   case R_PPC64_REL24_NOTOC: {
     uint32_t mask = 0x03FFFFFC;
-    checkInt(loc, val, 26, rel);
-    checkAlignment(loc, val, 4, rel);
-    write32(loc, (read32(loc) & ~mask) | (val & mask));
+    checkInt(ctx, loc, val, 26, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
+    write32(ctx, loc, (read32(ctx, loc) & ~mask) | (val & mask));
     break;
   }
   case R_PPC64_DTPREL64:
-    write64(loc, val - dynamicThreadPointerOffset);
+    write64(ctx, loc, val - dynamicThreadPointerOffset);
     break;
   case R_PPC64_DTPREL34:
     // The Dynamic Thread Vector actually points 0x8000 bytes past the start
@@ -1406,11 +1410,11 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     const uint64_t si0Mask = 0x00000003ffff0000;
     const uint64_t si1Mask = 0x000000000000ffff;
     const uint64_t fullMask = 0x0003ffff0000ffff;
-    checkInt(loc, val, 34, rel);
+    checkInt(ctx, loc, val, 34, rel);
 
-    uint64_t instr = readPrefixedInstruction(loc) & ~fullMask;
-    writePrefixedInstruction(loc, instr | ((val & si0Mask) << 16) |
-                             (val & si1Mask));
+    uint64_t instr = readPrefixedInst(ctx, loc) & ~fullMask;
+    writePrefixedInst(ctx, loc,
+                      instr | ((val & si0Mask) << 16) | (val & si1Mask));
     break;
   }
   // If we encounter a PCREL_OPT relocation that we won't optimize.
@@ -1428,7 +1432,7 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     return false;
 
   // If a function is in the Plt it needs to be called with a call-stub.
-  if (s.isInPlt())
+  if (s.isInPlt(ctx))
     return true;
 
   // This check looks at the st_other bits of the callee with relocation
@@ -1448,10 +1452,10 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
 
   // If the offset exceeds the range of the branch type then it will need
   // a range-extending thunk.
-  // See the comment in getRelocTargetVA() about R_PPC64_CALL.
-  return !inBranchRange(type, branchAddr,
-                        s.getVA(a) +
-                            getPPC64GlobalEntryToLocalEntryOffset(s.stOther));
+  // See the comment in getRelocTargetVA() about RE_PPC64_CALL.
+  return !inBranchRange(
+      type, branchAddr,
+      s.getVA(ctx, a) + getPPC64GlobalEntryToLocalEntryOffset(ctx, s.stOther));
 }
 
 uint32_t PPC64::getThunkSectionSpacing() const {
@@ -1482,11 +1486,11 @@ RelExpr PPC64::adjustTlsExpr(RelType type, RelExpr expr) const {
 RelExpr PPC64::adjustGotPcExpr(RelType type, int64_t addend,
                                const uint8_t *loc) const {
   if ((type == R_PPC64_GOT_PCREL34 || type == R_PPC64_PCREL_OPT) &&
-      config->pcRelOptimize) {
+      ctx.arg.pcRelOptimize) {
     // It only makes sense to optimize pld since paddi means that the address
     // of the object in the GOT is required rather than the object itself.
-    if ((readPrefixedInstruction(loc) & 0xfc000000) == 0xe4000000)
-      return R_PPC64_RELAX_GOT_PC;
+    if ((readPrefixedInst(ctx, loc) & 0xfc000000) == 0xe4000000)
+      return RE_PPC64_RELAX_GOT_PC;
   }
   return R_GOT_PC;
 }
@@ -1520,15 +1524,15 @@ void PPC64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   case R_PPC64_GOT_TLSGD16_LO: {
     // Relax from addi  r3, rA, sym@got@tlsgd@l to
     //            ld r3, sym@got@tprel@l(rA)
-    uint32_t ra = (readFromHalf16(loc) & (0x1f << 16));
-    writeFromHalf16(loc, 0xe8600000 | ra);
+    uint32_t ra = (readFromHalf16(ctx, loc) & (0x1f << 16));
+    writeFromHalf16(ctx, loc, 0xe8600000 | ra);
     relocateNoSym(loc, R_PPC64_GOT_TPREL16_LO_DS, val);
     return;
   }
   case R_PPC64_GOT_TLSGD_PCREL34: {
     // Relax from paddi r3, 0, sym@got@tlsgd@pcrel, 1 to
     //            pld r3, sym@got@tprel@pcrel
-    writePrefixedInstruction(loc, 0x04100000e4600000);
+    writePrefixedInst(ctx, loc, 0x04100000e4600000);
     relocateNoSym(loc, R_PPC64_GOT_TPREL_PCREL34, val);
     return;
   }
@@ -1544,13 +1548,13 @@ void PPC64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     //            add r3, r3, r13
     const uintptr_t locAsInt = reinterpret_cast<uintptr_t>(loc);
     if (locAsInt % 4 == 0) {
-      write32(loc, NOP);            // bl __tls_get_addr(sym@tlsgd) --> nop
-      write32(loc + 4, 0x7c636A14); // nop --> add r3, r3, r13
+      write32(ctx, loc, NOP);            // bl __tls_get_addr(sym@tlsgd) --> nop
+      write32(ctx, loc + 4, 0x7c636a14); // nop --> add r3, r3, r13
     } else if (locAsInt % 4 == 1) {
       // bl __tls_get_addr(sym@tlsgd) --> add r3, r3, r13
-      write32(loc - 1, 0x7c636a14);
+      write32(ctx, loc - 1, 0x7c636a14);
     } else {
-      errorOrWarn("R_PPC64_TLSGD has unexpected byte alignment");
+      Err(ctx) << "R_PPC64_TLSGD has unexpected byte alignment";
     }
     return;
   }
@@ -1568,11 +1572,9 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t lastPPCRelaxedRelocOff = -1;
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
-    const uint64_t val =
-        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
-                             secAddr + rel.offset, *rel.sym, rel.expr);
+    const uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
     switch (rel.expr) {
-    case R_PPC64_RELAX_GOT_PC: {
+    case RE_PPC64_RELAX_GOT_PC: {
       // The R_PPC64_PCREL_OPT relocation must appear immediately after
       // R_PPC64_GOT_PCREL34 in the relocations table at the same offset.
       // We can only relax R_PPC64_PCREL_OPT if we have also relaxed
@@ -1586,21 +1588,21 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       relaxGot(loc, rel, val);
       break;
     }
-    case R_PPC64_RELAX_TOC:
+    case RE_PPC64_RELAX_TOC:
       // rel.sym refers to the STT_SECTION symbol associated to the .toc input
       // section. If an R_PPC64_TOC16_LO (.toc + addend) references the TOC
       // entry, there may be R_PPC64_TOC16_HA not paired with
       // R_PPC64_TOC16_LO_DS. Don't relax. This loses some relaxation
       // opportunities but is safe.
-      if (ppc64noTocRelax.count({rel.sym, rel.addend}) ||
-          !tryRelaxPPC64TocIndirection(rel, loc))
+      if (ctx.ppc64noTocRelax.count({rel.sym, rel.addend}) ||
+          !tryRelaxPPC64TocIndirection(ctx, rel, loc))
         relocate(loc, rel, val);
       break;
-    case R_PPC64_CALL:
+    case RE_PPC64_CALL:
       // If this is a call to __tls_get_addr, it may be part of a TLS
       // sequence that has been relaxed and turned into a nop. In this
       // case, we don't want to handle it as a call.
-      if (read32(loc) == 0x60000000) // nop
+      if (read32(ctx, loc) == 0x60000000) // nop
         break;
 
       // Patch a nop (0x60000000) to a ld.
@@ -1610,15 +1612,15 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
         // wrong in the common case where the function is not preempted at
         // runtime. Just ignore.
         if ((rel.offset + 8 > sec.content().size() ||
-             read32(loc + 4) != 0x60000000) &&
+             read32(ctx, loc + 4) != 0x60000000) &&
             rel.sym->file != sec.file) {
           // Use substr(6) to remove the "__plt_" prefix.
-          errorOrWarn(getErrorLocation(loc) + "call to " +
-                      lld::toString(*rel.sym).substr(6) +
-                      " lacks nop, can't restore toc");
+          Err(ctx) << getErrorLoc(ctx, loc) << "call to "
+                   << toStr(ctx, *rel.sym).substr(6)
+                   << " lacks nop, can't restore toc";
           break;
         }
-        write32(loc + 4, 0xe8410018); // ld %r2, 24(%r1)
+        write32(ctx, loc + 4, 0xe8410018); // ld %r2, 24(%r1)
       }
       relocate(loc, rel, val);
       break;
@@ -1674,7 +1676,7 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                              uint8_t stOther) const {
   // If the caller has a global entry point adjust the buffer past it. The start
   // of the split-stack prologue will be at the local entry point.
-  loc += getPPC64GlobalEntryToLocalEntryOffset(stOther);
+  loc += getPPC64GlobalEntryToLocalEntryOffset(ctx, stOther);
 
   // At the very least we expect to see a load of some split-stack data from the
   // tcb, and 2 instructions that calculate the ending stack address this
@@ -1684,14 +1686,14 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
     return false;
 
   // First instruction must be `ld r0, -0x7000-64(r13)`
-  if (read32(loc) != 0xe80d8fc0)
+  if (read32(ctx, loc) != 0xe80d8fc0)
     return false;
 
   int16_t hiImm = 0;
   int16_t loImm = 0;
   // First instruction can be either an addis if the frame size is larger then
   // 32K, or an addi if the size is less then 32K.
-  int32_t firstInstr = read32(loc + 4);
+  int32_t firstInstr = read32(ctx, loc + 4);
   if (getPrimaryOpCode(firstInstr) == 15) {
     hiImm = firstInstr & 0xFFFF;
   } else if (getPrimaryOpCode(firstInstr) == 14) {
@@ -1702,7 +1704,7 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
 
   // Second instruction is either an addi or a nop. If the first instruction was
   // an addi then LoImm is set and the second instruction must be a nop.
-  uint32_t secondInstr = read32(loc + 8);
+  uint32_t secondInstr = read32(ctx, loc + 8);
   if (!loImm && getPrimaryOpCode(secondInstr) == 14) {
     loImm = secondInstr & 0xFFFF;
   } else if (secondInstr != NOP) {
@@ -1725,31 +1727,29 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   int32_t stackFrameSize = (hiImm * 65536) + loImm;
   // Check that the adjusted size doesn't overflow what we can represent with 2
   // instructions.
-  if (stackFrameSize < config->splitStackAdjustSize + INT32_MIN) {
-    error(getErrorLocation(loc) + "split-stack prologue adjustment overflows");
+  if (stackFrameSize < ctx.arg.splitStackAdjustSize + INT32_MIN) {
+    Err(ctx) << getErrorLoc(ctx, loc)
+             << "split-stack prologue adjustment overflows";
     return false;
   }
 
   int32_t adjustedStackFrameSize =
-      stackFrameSize - config->splitStackAdjustSize;
+      stackFrameSize - ctx.arg.splitStackAdjustSize;
 
   loImm = adjustedStackFrameSize & 0xFFFF;
   hiImm = (adjustedStackFrameSize + 0x8000) >> 16;
   if (hiImm) {
-    write32(loc + 4, 0x3D810000 | (uint16_t)hiImm);
+    write32(ctx, loc + 4, 0x3d810000 | (uint16_t)hiImm);
     // If the low immediate is zero the second instruction will be a nop.
     secondInstr = loImm ? 0x398C0000 | (uint16_t)loImm : NOP;
-    write32(loc + 8, secondInstr);
+    write32(ctx, loc + 8, secondInstr);
   } else {
     // addi r12, r1, imm
-    write32(loc + 4, (0x39810000) | (uint16_t)loImm);
-    write32(loc + 8, NOP);
+    write32(ctx, loc + 4, (0x39810000) | (uint16_t)loImm);
+    write32(ctx, loc + 8, NOP);
   }
 
   return true;
 }
 
-TargetInfo *elf::getPPC64TargetInfo() {
-  static PPC64 target;
-  return &target;
-}
+void elf::setPPC64TargetInfo(Ctx &ctx) { ctx.target.reset(new PPC64(ctx)); }

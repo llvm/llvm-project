@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Enforce 18.2.3.3
 
 program test
@@ -12,6 +12,13 @@ program test
   character(len=:), pointer :: charDeferredF
   integer :: j
   integer, dimension(2, 2) :: rankTwoArray
+  class(*), pointer :: unlimited
+  type :: notBindCType
+    integer :: n
+  end type
+  type(notBindCType), pointer :: notBindC
+  character(2), pointer :: c2ptr
+  character(1,4), pointer :: unicodePtr
   rankTwoArray = reshape([1, 2, 3, 4], shape(rankTwoArray))
   call c_f_pointer(scalarC, scalarIntF) ! ok
   call c_f_pointer(scalarC, arrayIntF, [1_8]) ! ok
@@ -38,4 +45,12 @@ program test
   call c_f_pointer(scalarC, multiDimIntF, shape=[1_8])
   !ERROR: SHAPE= argument to C_F_POINTER() must be a rank-one array.
   call c_f_pointer(scalarC, multiDimIntF, shape=rankTwoArray)
+  !WARNING: FPTR= argument to C_F_POINTER() should not be unlimited polymorphic
+  call c_f_pointer(scalarC, unlimited)
+  !PORTABILITY: FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)
+  call c_f_pointer(scalarC, notBindC)
+  !WARNING: FPTR= argument to C_F_POINTER() should not have the non-interoperable character length CHARACTER(KIND=1,LEN=2_8)
+  call c_f_pointer(scalarC, c2ptr)
+  !WARNING: FPTR= argument to C_F_POINTER() should not have the non-interoperable intrinsic type or kind CHARACTER(KIND=4,LEN=1_8)
+  call c_f_pointer(scalarC, unicodePtr)
 end program

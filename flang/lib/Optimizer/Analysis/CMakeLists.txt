@@ -4,15 +4,20 @@ add_flang_library(FIRAnalysis
 
   DEPENDS
   FIRDialect
+  FIRSupport
   HLFIRDialect
   MLIRIR
+  MLIROpenMPDialect
 
   LINK_LIBS
   FIRBuilder
   FIRDialect
+  FIRSupport
   HLFIRDialect
+
+  MLIR_LIBS
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRMathTransforms
-  FIRSupport
+  MLIROpenMPDialect
 )

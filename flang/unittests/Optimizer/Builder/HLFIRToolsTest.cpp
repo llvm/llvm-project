@@ -25,14 +25,14 @@ public:
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    mlir::ModuleOp mod = builder.create<mlir::ModuleOp>(loc);
-    mlir::func::FuncOp func = mlir::func::FuncOp::create(
+    moduleOp = builder.create<mlir::ModuleOp>(loc);
+    builder.setInsertionPointToStart(moduleOp->getBody());
+    mlir::func::FuncOp func = builder.create<mlir::func::FuncOp>(
         loc, "func1", builder.getFunctionType(std::nullopt, std::nullopt));
     auto *entryBlock = func.addEntryBlock();
-    mod.push_back(mod);
     builder.setInsertionPointToStart(entryBlock);
 
-    firBuilder = std::make_unique<fir::FirOpBuilder>(mod, kindMap);
+    firBuilder = std::make_unique<fir::FirOpBuilder>(builder, kindMap);
   }
 
   mlir::Value createDeclare(fir::ExtendedValue exv) {
@@ -52,13 +52,14 @@ public:
 
   int varCounter = 0;
   mlir::MLIRContext context;
+  mlir::OwningOpRef<mlir::ModuleOp> moduleOp;
   std::unique_ptr<fir::FirOpBuilder> firBuilder;
 };
 
 TEST_F(HLFIRToolsTest, testScalarRoundTrip) {
   auto &builder = getBuilder();
   mlir::Location loc = getLoc();
-  mlir::Type f32Type = mlir::FloatType::getF32(&context);
+  mlir::Type f32Type = mlir::Float32Type::get(&context);
   mlir::Type scalarf32Type = builder.getRefType(f32Type);
   mlir::Value scalarf32Addr = builder.create<fir::UndefOp>(loc, scalarf32Type);
   fir::ExtendedValue scalarf32{scalarf32Addr};
@@ -81,7 +82,7 @@ TEST_F(HLFIRToolsTest, testArrayRoundTrip) {
   llvm::SmallVector<mlir::Value> lbounds{
       createConstant(-1), createConstant(-2)};
 
-  mlir::Type f32Type = mlir::FloatType::getF32(&context);
+  mlir::Type f32Type = mlir::Float32Type::get(&context);
   mlir::Type seqf32Type = builder.getVarLenSeqTy(f32Type, 2);
   mlir::Type arrayf32Type = builder.getRefType(seqf32Type);
   mlir::Value arrayf32Addr = builder.create<fir::UndefOp>(loc, arrayf32Type);

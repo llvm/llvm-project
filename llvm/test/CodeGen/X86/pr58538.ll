@@ -1,5 +1,5 @@
-; RUN: opt -codegenprepare -mtriple=x86_64 %s -S -o - | FileCheck %s
-; RUN: opt -codegenprepare -mtriple=i386 %s -S -o - | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -mtriple=x86_64 %s -S -o - | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -mtriple=i386 %s -S -o - | FileCheck %s
 
 define i32 @f(i32 %0) {
 ; CHECK-LABEL: @f

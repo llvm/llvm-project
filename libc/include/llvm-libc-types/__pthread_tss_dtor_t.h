@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_PTHREAD_TSS_DTOR_T_H__
-#define __LLVM_LIBC_TYPES_PTHREAD_TSS_DTOR_T_H__
+#ifndef LLVM_LIBC_TYPES___PTHREAD_TSS_DTOR_T_H
+#define LLVM_LIBC_TYPES___PTHREAD_TSS_DTOR_T_H
 
 typedef void (*__pthread_tss_dtor_t)(void *);
 
-#endif // __LLVM_LIBC_TYPES_PTHREAD_TSS_DTOR_T_H__
+#endif // LLVM_LIBC_TYPES___PTHREAD_TSS_DTOR_T_H

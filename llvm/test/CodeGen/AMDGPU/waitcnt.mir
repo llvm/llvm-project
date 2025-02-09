@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefixes=CHECK,GFX89 %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefixes=CHECK,GFX89 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefixes=CHECK,GFX89 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefixes=CHECK,GFX89 %s
 
 --- |
   define amdgpu_kernel void @flat_zero_waitcnt(ptr addrspace(1) %global4,
@@ -301,8 +301,8 @@ body: |
 # CHECK: BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
 # CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK-NEXT: }
-# CHECK-NEXT: S_WAITCNT 112
 # CHECK-NEXT: BUNDLE implicit $vgpr0, implicit $vgpr1_vgpr2 {
+# CHECK-NEXT: S_WAITCNT 112
 # CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK-NEXT: }
 

@@ -1,0 +1,55 @@
+# UNSUPPORTED: system-windows
+# Test different name formats.
+
+# RUN: %build %S/Inputs/names.cpp --std c++17 -o %t.out
+# RUN: split-file %s %t
+
+#--- name_with_args.input
+# RUN: %lldb -b -s %t/name_with_args.input %t.out | FileCheck %s --check-prefix=NAME_WITH_ARGS
+settings set -f frame-format "frame ${function.name-with-args}\n"
+break set -n foo
+break set -n operator<<
+break set -n returns_func_ptr
+break set -n inlined_foo
+run
+# NAME_WITH_ARGS: frame int ns::foo<int ()>(t={{.*}})
+c
+# NAME_WITH_ARGS: frame int ns::foo<int ()>(str="bar")
+c
+# NAME_WITH_ARGS: frame int ns::foo<(anonymous namespace)::$_0>(t=(anonymous namespace)::(unnamed class) @ {{.*}})
+c
+# NAME_WITH_ARGS: frame int ns::foo<int (*)()>(t=({{.*}}`(anonymous namespace)::anon_bar() at {{.*}}))
+c
+# NAME_WITH_ARGS: frame int ns::foo<void (Foo::*)(int (*)(int)) const noexcept>(str="method")
+c
+# NAME_WITH_ARGS: frame ns::returns_func_ptr<int>((null)={{.*}})
+c
+# NAME_WITH_ARGS: frame void Foo::foo<int (*)()>(this={{.*}}, arg=({{.*}}`(anonymous namespace)::anon_bar() at {{.*}}))
+c
+# NAME_WITH_ARGS: frame void Foo::operator<<<1>(this={{.*}}, (null)=0)
+c
+# NAME_WITH_ARGS: frame Foo::returns_func_ptr<int>(this={{.*}}, (null)={{.*}})
+c
+# NAME_WITH_ARGS: frame main [inlined] inlined_foo(str="bar")
+q
+
+#--- name.input
+# RUN: %lldb -b -s %t/name.input %t.out | FileCheck %s --check-prefix=NAME
+settings set -f frame-format "frame ${function.name}\n"
+break set -n inlined_foo
+run
+# NAME: frame main [inlined] inlined_foo(char const*)
+
+#--- name_without_args.input
+# RUN: %lldb -b -s %t/name_without_args.input %t.out | FileCheck %s --check-prefix=NAME_WITHOUT_ARGS
+settings set -f frame-format "frame ${function.name-without-args}\n"
+break set -n inlined_foo
+run
+# NAME_WITHOUT_ARGS: frame main [inlined] inlined_foo(char const*)
+
+#--- mangled_name.input
+# RUN: %lldb -b -s %t/mangled_name.input %t.out | FileCheck %s --check-prefix=MANGLED_NAME
+settings set -f frame-format "frame ${function.mangled-name}\n"
+break set -n inlined_foo
+run
+# MANGLED_NAME: frame main [inlined] inlined_foo(char const*)

@@ -10,10 +10,10 @@ target triple = "x86_64-apple-macosx10.8.0"
 define void @test1(ptr %a, ptr %b, ptr %c) {
 ; SLP-LABEL: @test1(
 ; SLP-NEXT:  entry:
-; SLP-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; SLP-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
-; SLP-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
-; SLP-NEXT:    store <2 x double> [[TMP4]], ptr [[C:%.*]], align 8
+; SLP-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
+; SLP-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
+; SLP-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP0]], [[TMP1]]
+; SLP-NEXT:    store <2 x double> [[TMP2]], ptr [[C:%.*]], align 8
 ; SLP-NEXT:    ret void
 ;
 ; NOSLP-LABEL: @test1(
@@ -21,13 +21,13 @@ define void @test1(ptr %a, ptr %b, ptr %c) {
 ; NOSLP-NEXT:    [[I0:%.*]] = load double, ptr [[A:%.*]], align 8
 ; NOSLP-NEXT:    [[I1:%.*]] = load double, ptr [[B:%.*]], align 8
 ; NOSLP-NEXT:    [[MUL:%.*]] = fmul double [[I0]], [[I1]]
-; NOSLP-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
+; NOSLP-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
 ; NOSLP-NEXT:    [[I3:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
-; NOSLP-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
+; NOSLP-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 8
 ; NOSLP-NEXT:    [[I4:%.*]] = load double, ptr [[ARRAYIDX4]], align 8
 ; NOSLP-NEXT:    [[MUL5:%.*]] = fmul double [[I3]], [[I4]]
 ; NOSLP-NEXT:    store double [[MUL]], ptr [[C:%.*]], align 8
-; NOSLP-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, ptr [[C]], i64 1
+; NOSLP-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 8
 ; NOSLP-NEXT:    store double [[MUL5]], ptr [[ARRAYIDX5]], align 8
 ; NOSLP-NEXT:    ret void
 ;

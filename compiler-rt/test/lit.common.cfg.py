@@ -14,6 +14,27 @@ import lit.formats
 import lit.util
 
 
+def get_path_from_clang(args, allow_failure):
+    clang_cmd = [
+        config.clang.strip(),
+        f"--target={config.target_triple}",
+        *args,
+    ]
+    path = None
+    try:
+        result = subprocess.run(
+            clang_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+        )
+        path = result.stdout.decode().strip()
+    except subprocess.CalledProcessError as e:
+        msg = f"Failed to run {clang_cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"
+        if allow_failure:
+            lit_config.warning(msg)
+        else:
+            lit_config.fatal(msg)
+    return path, clang_cmd
+
+
 def find_compiler_libdir():
     """
     Returns the path to library resource directory used
@@ -25,26 +46,6 @@ def find_compiler_libdir():
         )
         # TODO: Support other compilers.
         return None
-
-    def get_path_from_clang(args, allow_failure):
-        clang_cmd = [
-            config.clang.strip(),
-            f"--target={config.target_triple}",
-        ]
-        clang_cmd.extend(args)
-        path = None
-        try:
-            result = subprocess.run(
-                clang_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-            )
-            path = result.stdout.decode().strip()
-        except subprocess.CalledProcessError as e:
-            msg = f"Failed to run {clang_cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"
-            if allow_failure:
-                lit_config.warning(msg)
-            else:
-                lit_config.fatal(msg)
-        return path, clang_cmd
 
     # Try using `-print-runtime-dir`. This is only supported by very new versions of Clang.
     # so allow failure here.
@@ -81,6 +82,8 @@ def push_dynamic_library_lookup_path(config, new_path):
         dynamic_library_lookup_var = "PATH"
     elif platform.system() == "Darwin":
         dynamic_library_lookup_var = "DYLD_LIBRARY_PATH"
+    elif platform.system() == "Haiku":
+        dynamic_library_lookup_var = "LIBRARY_PATH"
     else:
         dynamic_library_lookup_var = "LD_LIBRARY_PATH"
 
@@ -130,6 +133,7 @@ if execute_external:
     config.available_features.add("shell")
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
+target_is_windows = bool(re.match(r".*-windows.*$", config.target_triple))
 
 compiler_id = getattr(config, "compiler_id", None)
 if compiler_id == "Clang":
@@ -146,6 +150,9 @@ if compiler_id == "Clang":
         # requested it because it makes ASan reports more precise.
         config.debug_info_flags.append("-gcodeview")
         config.debug_info_flags.append("-gcolumn-info")
+elif compiler_id == "MSVC":
+    config.debug_info_flags = ["/Z7"]
+    config.cxx_mode_flags = []
 elif compiler_id == "GNU":
     config.cxx_mode_flags = ["-x c++"]
     config.debug_info_flags = ["-g"]
@@ -156,22 +163,73 @@ config.available_features.add(compiler_id)
 
 # When LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=on, the initial value of
 # config.compiler_rt_libdir (COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR) has the
-# triple as the trailing path component. The value is incorrect for -m32/-m64.
-# Adjust config.compiler_rt accordingly.
+# host triple as the trailing path component. The value is incorrect for 32-bit
+# tests on 64-bit hosts and vice versa. Adjust config.compiler_rt_libdir
+# accordingly.
 if config.enable_per_target_runtime_dir:
-    if "-m32" in shlex.split(config.target_cflags):
+    if config.target_arch == "i386":
         config.compiler_rt_libdir = re.sub(
             r"/x86_64(?=-[^/]+$)", "/i386", config.compiler_rt_libdir
         )
-    elif "-m64" in shlex.split(config.target_cflags):
+    elif config.target_arch == "x86_64":
         config.compiler_rt_libdir = re.sub(
             r"/i386(?=-[^/]+$)", "/x86_64", config.compiler_rt_libdir
         )
+    if config.target_arch == "sparc":
+        config.compiler_rt_libdir = re.sub(
+            r"/sparcv9(?=-[^/]+$)", "/sparc", config.compiler_rt_libdir
+        )
+    elif config.target_arch == "sparcv9":
+        config.compiler_rt_libdir = re.sub(
+            r"/sparc(?=-[^/]+$)", "/sparcv9", config.compiler_rt_libdir
+        )
+
+# Check if the test compiler resource dir matches the local build directory
+# (which happens with -DLLVM_ENABLE_PROJECTS=clang;compiler-rt) or if we are
+# using an installed clang to test compiler-rt standalone. In the latter case
+# we may need to override the resource dir to match the path of the just-built
+# compiler-rt libraries.
+test_cc_resource_dir, _ = get_path_from_clang(
+    shlex.split(config.target_cflags) + ["-print-resource-dir"], allow_failure=True
+)
+# Normalize the path for comparison
+if test_cc_resource_dir is not None:
+    test_cc_resource_dir = os.path.realpath(test_cc_resource_dir)
+if lit_config.debug:
+    lit_config.note(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
+local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
+if test_cc_resource_dir != local_build_resource_dir and config.test_standalone_build_libs:
+    if config.compiler_id == "Clang":
+        if lit_config.debug:
+            lit_config.note(
+                f"Overriding test compiler resource dir to use "
+                f'libraries in "{config.compiler_rt_libdir}"'
+            )
+        # Ensure that we use the just-built static libraries when linking by
+        # overriding the Clang resource directory. Additionally, we want to use
+        # the builtin headers shipped with clang (e.g. stdint.h), so we
+        # explicitly add this as an include path (since the headers are not
+        # going to be in the current compiler-rt build directory).
+        # We also tell the linker to add an RPATH entry for the local library
+        # directory so that the just-built shared libraries are used.
+        config.target_cflags += f" -nobuiltininc"
+        config.target_cflags += f" -I{config.compiler_rt_src_root}/include"
+        config.target_cflags += f" -idirafter {test_cc_resource_dir}/include"
+        config.target_cflags += f" -resource-dir={config.compiler_rt_output_dir}"
+        if not target_is_windows:
+            # Avoid passing -rpath on Windows where it is not supported.
+            config.target_cflags += f" -Wl,-rpath,{config.compiler_rt_libdir}"
+    else:
+        lit_config.warning(
+            f"Cannot override compiler-rt library directory with non-Clang "
+            f"compiler: {config.compiler_id}"
+        )
+
 
 # Ask the compiler for the path to libraries it is going to use. If this
 # doesn't match config.compiler_rt_libdir then it means we might be testing the
 # compiler's own runtime libraries rather than the ones we just built.
-# Warn about about this and handle appropriately.
+# Warn about this and handle appropriately.
 compiler_libdir = find_compiler_libdir()
 if compiler_libdir:
     compiler_rt_libdir_real = os.path.realpath(config.compiler_rt_libdir)
@@ -182,7 +240,7 @@ if compiler_libdir:
             f'compiler-rt libdir:  "{compiler_rt_libdir_real}"'
         )
         if config.test_standalone_build_libs:
-            # Use just built runtime libraries, i.e. the the libraries this built just built.
+            # Use just built runtime libraries, i.e. the libraries this build just built.
             if not config.test_suite_supports_overriding_runtime_lib_path:
                 # Test suite doesn't support this configuration.
                 # TODO(dliew): This should be an error but it seems several bots are
@@ -219,7 +277,6 @@ possibly_dangerous_env_vars = [
     "COMPILER_PATH",
     "RC_DEBUG_OPTIONS",
     "CINDEXTEST_PREAMBLE_FILE",
-    "LIBRARY_PATH",
     "CPATH",
     "C_INCLUDE_PATH",
     "CPLUS_INCLUDE_PATH",
@@ -267,6 +324,8 @@ config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 
 if config.have_zlib:
     config.available_features.add("zlib")
+    config.substitutions.append(("%zlib_include_dir", config.zlib_include_dir))
+    config.substitutions.append(("%zlib_library", config.zlib_library))
 
 if config.have_internal_symbolizer:
     config.available_features.add("internal_symbolizer")
@@ -454,6 +513,9 @@ if not getattr(config, "sanitizer_uses_static_unwind", False):
 if config.has_lld:
     config.available_features.add("lld-available")
 
+if config.aarch64_sme:
+    config.available_features.add("aarch64-sme-available")
+
 if config.use_lld:
     config.available_features.add("lld")
 
@@ -538,21 +600,18 @@ if config.host_os == "Darwin":
     for vers in min_macos_deployment_target_substitutions:
         flag = config.apple_platform_min_deployment_target_flag
         major, minor = get_macos_aligned_version(vers)
-        if "mtargetos" in flag:
+        apple_device = ""
+        sim = ""
+        if "target" in flag:
+            apple_device = config.apple_platform.split("sim")[0]
             sim = "-simulator" if "sim" in config.apple_platform else ""
-            config.substitutions.append(
-                (
-                    "%%min_macos_deployment_target=%s.%s" % vers,
-                    "{}{}.{}{}".format(flag, major, minor, sim),
-                )
+
+        config.substitutions.append(
+            (
+                "%%min_macos_deployment_target=%s.%s" % vers,
+                "{}={}{}.{}{}".format(flag, apple_device, major, minor, sim),
             )
-        else:
-            config.substitutions.append(
-                (
-                    "%%min_macos_deployment_target=%s.%s" % vers,
-                    "{}={}.{}".format(flag, major, minor),
-                )
-            )
+        )
 else:
     for vers in min_macos_deployment_target_substitutions:
         config.substitutions.append(("%%min_macos_deployment_target=%s.%s" % vers, ""))
@@ -629,7 +688,16 @@ if config.host_os == "Linux":
 
         ver = LooseVersion(ver_string)
         any_glibc = False
-        for required in ["2.19", "2.27", "2.30", "2.33", "2.34", "2.37"]:
+        for required in [
+            "2.19",
+            "2.27",
+            "2.30",
+            "2.33",
+            "2.34",
+            "2.37",
+            "2.38",
+            "2.40",
+        ]:
             if ver >= LooseVersion(required):
                 config.available_features.add("glibc-" + required)
                 any_glibc = True
@@ -696,6 +764,13 @@ def is_binutils_lto_supported():
     return True
 
 
+def is_lld_lto_supported():
+    # LLD does support LTO, but we require it to be built with the latest
+    # changes to claim support. Otherwise older copies of LLD may not
+    # understand new bitcode versions.
+    return os.path.exists(os.path.join(config.llvm_tools_dir, "lld"))
+
+
 def is_windows_lto_supported():
     if not target_is_msvc:
         return True
@@ -707,7 +782,7 @@ if config.host_os == "Darwin" and is_darwin_lto_supported():
     config.lto_flags = ["-Wl,-lto_library," + liblto_path()]
 elif config.host_os in ["Linux", "FreeBSD", "NetBSD"]:
     config.lto_supported = False
-    if config.use_lld:
+    if config.use_lld and is_lld_lto_supported():
         config.lto_supported = True
     if is_binutils_lto_supported():
         config.available_features.add("binutils_lto")
@@ -734,22 +809,6 @@ if config.lto_supported:
 
 if config.have_rpc_xdr_h:
     config.available_features.add("sunrpc")
-
-# Ask llvm-config about assertion mode.
-try:
-    llvm_config_cmd = subprocess.Popen(
-        [os.path.join(config.llvm_tools_dir, "llvm-config"), "--assertion-mode"],
-        stdout=subprocess.PIPE,
-        env=config.environment,
-    )
-except OSError as e:
-    print("Could not launch llvm-config in " + config.llvm_tools_dir)
-    print("    Failed with error #{0}: {1}".format(e.errno, e.strerror))
-    exit(42)
-
-if re.search(r"ON", llvm_config_cmd.stdout.read().decode("ascii")):
-    config.available_features.add("asserts")
-llvm_config_cmd.wait()
 
 # Sanitizer tests tend to be flaky on Windows due to PR24554, so add some
 # retries. We don't do this on otther platforms because it's slower.
@@ -895,6 +954,10 @@ if config.use_lld and config.has_lld and not config.use_lto:
 elif config.use_lld and (not config.has_lld):
     config.unsupported = True
 
+if config.host_os == "Darwin":
+    if getattr(config, "darwin_linker_version", None):
+        extra_cflags += ["-mlinker-version=" + config.darwin_linker_version]
+
 # Append any extra flags passed in lit_config
 append_target_cflags = lit_config.params.get("append_target_cflags", None)
 if append_target_cflags:
@@ -931,7 +994,11 @@ if config.host_os == "Darwin":
 # default configs for the test runs. In particular, anything hardening
 # related is likely to cause issues with sanitizer tests, because it may
 # preempt something we're looking to trap (e.g. _FORTIFY_SOURCE vs our ASAN).
-config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+#
+# Only set this if we know we can still build for the target while disabling
+# default configs.
+if config.has_no_default_config_flag:
+    config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
 
 if config.has_compiler_rt_libatomic:
   base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.atomic%s.so"
@@ -951,3 +1018,9 @@ if config.compiler_id == "GNU":
     gcc_dir = os.path.dirname(config.clang)
     libasan_dir = os.path.join(gcc_dir, "..", "lib" + config.bits)
     push_dynamic_library_lookup_path(config, libasan_dir)
+
+
+# Help tests that make sure certain files are in-sync between compiler-rt and
+# llvm.
+config.substitutions.append(("%crt_src", config.compiler_rt_src_root))
+config.substitutions.append(("%llvm_src", config.llvm_src_root))

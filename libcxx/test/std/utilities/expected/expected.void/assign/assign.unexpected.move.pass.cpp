@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -172,6 +173,23 @@ constexpr bool test() {
     assert(e1.error().data_ == 10);
     assert(oldState.moveAssignCalled);
   }
+
+  // CheckForInvalidWrites
+  {
+    {
+      CheckForInvalidWrites<true, true> e;
+      std::unexpected<int> un(std::in_place, 42);
+      e = std::move(un);
+      assert(e.check());
+    }
+    {
+      CheckForInvalidWrites<false, true> e;
+      std::unexpected<bool> un(std::in_place, true);
+      e = std::move(un);
+      assert(e.check());
+    }
+  }
+
   return true;
 }
 

@@ -61,19 +61,19 @@ template <template <class ...> class Container,
           std::size_t N,
           class ValidateFunc>
 constexpr void test_sequence_container_with_input(std::array<T, N>&& input, ValidateFunc validate) {
-  auto in = wrap_input<Iter, Sent>(input);
-
   { // (range)
+    auto in = wrap_input<Iter, Sent>(input);
     Container<T> c(std::from_range, in);
 
     if constexpr (HasSize<Container<T>>) {
       assert(c.size() == static_cast<std::size_t>(std::distance(c.begin(), c.end())));
     }
-    assert(std::ranges::equal(in, c));
+    assert(std::ranges::equal(input, c));
     validate(c);
   }
 
   { // (range, allocator)
+    auto in = wrap_input<Iter, Sent>(input);
     Alloc alloc;
     Container<T, Alloc> c(std::from_range, in, alloc);
 
@@ -81,7 +81,7 @@ constexpr void test_sequence_container_with_input(std::array<T, N>&& input, Vali
     if constexpr (HasSize<Container<T, Alloc>>) {
       assert(c.size() == static_cast<std::size_t>(std::distance(c.begin(), c.end())));
     }
-    assert(std::ranges::equal(in, c));
+    assert(std::ranges::equal(input, c));
     validate(c);
   }
 }

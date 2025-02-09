@@ -14,6 +14,7 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
@@ -54,6 +55,10 @@ static cl::list<std::string> DisassembleFunctions(
     "disassemble-functions", cl::CommaSeparated,
     cl::desc("List of functions to print disassembly for. Accept demangled "
              "names only. Only work with show-disassembly-only"));
+
+static cl::opt<bool>
+    KernelBinary("kernel",
+                 cl::desc("Generate the profile for Linux kernel binary."));
 
 extern cl::opt<bool> ShowDetailedWarning;
 extern cl::opt<bool> InferMissingFrames;
@@ -127,12 +132,13 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
     MCPseudoProbeDecoder &ProbeDecoder) {
   ProbeFrameStack ProbeContext;
   for (const auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren())
-    trackInlineesOptimizedAway(ProbeDecoder, *Child.second.get(), ProbeContext);
+    trackInlineesOptimizedAway(ProbeDecoder, Child, ProbeContext);
 }
 
 void BinarySizeContextTracker::trackInlineesOptimizedAway(
     MCPseudoProbeDecoder &ProbeDecoder,
-    MCDecodedPseudoProbeInlineTree &ProbeNode, ProbeFrameStack &ProbeContext) {
+    const MCDecodedPseudoProbeInlineTree &ProbeNode,
+    ProbeFrameStack &ProbeContext) {
   StringRef FuncName =
       ProbeDecoder.getFuncDescForGUID(ProbeNode.Guid)->FuncName;
   ProbeContext.emplace_back(FuncName, 0);
@@ -154,10 +160,9 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
 
   // DFS down the probe inline tree
   for (const auto &ChildNode : ProbeNode.getChildren()) {
-    InlineSite Location = ChildNode.first;
+    InlineSite Location = ChildNode.getInlineSite();
     ProbeContext.back().second = std::get<1>(Location);
-    trackInlineesOptimizedAway(ProbeDecoder, *ChildNode.second.get(),
-                               ProbeContext);
+    trackInlineesOptimizedAway(ProbeDecoder, ChildNode, ProbeContext);
   }
 
   ProbeContext.pop_back();
@@ -211,13 +216,17 @@ void ProfiledBinary::load() {
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
   Binary &ExeBinary = *OBinary.getBinary();
 
-  auto *Obj = dyn_cast<ELFObjectFileBase>(&ExeBinary);
-  if (!Obj)
-    exitWithError("not a valid Elf image", Path);
+  IsCOFF = isa<COFFObjectFile>(&ExeBinary);
+  if (!isa<ELFObjectFileBase>(&ExeBinary) && !IsCOFF)
+    exitWithError("not a valid ELF/COFF image", Path);
 
+  auto *Obj = cast<ObjectFile>(&ExeBinary);
   TheTriple = Obj->makeTriple();
 
   LLVM_DEBUG(dbgs() << "Loading " << Path << "\n");
+
+  // Mark the binary as a kernel image;
+  IsKernel = KernelBinary;
 
   // Find the preferred load address for text sections.
   setPreferredTextSegmentAddresses(Obj);
@@ -236,13 +245,14 @@ void ProfiledBinary::load() {
   DisassembleFunctionSet.insert(DisassembleFunctions.begin(),
                                 DisassembleFunctions.end());
 
-  checkPseudoProbe(Obj);
+  if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(Obj)) {
+    checkPseudoProbe(ELFObj);
+    if (UsePseudoProbes)
+      populateElfSymbolAddressList(ELFObj);
 
-  if (UsePseudoProbes)
-    populateElfSymbolAddressList(Obj);
-
-  if (ShowDisassemblyOnly)
-    decodePseudoProbe(Obj);
+    if (ShowDisassemblyOnly)
+      decodePseudoProbe(ELFObj);
+  }
 
   // Disassemble the text sections.
   disassemble(Obj);
@@ -317,7 +327,7 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
   // However such info isn't available at post-processing time, assuming
   // 4K page now. Note that we don't use EXEC_PAGESIZE from <linux/param.h>
   // because we may build the tools on non-linux.
-  uint32_t PageSize = 0x1000;
+  uint64_t PageSize = 0x1000;
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
     if (Phdr.p_type == ELF::PT_LOAD) {
       if (!FirstLoadableAddress)
@@ -335,18 +345,35 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
     exitWithError("no executable segment found", FileName);
 }
 
-void ProfiledBinary::setPreferredTextSegmentAddresses(
-    const ELFObjectFileBase *Obj) {
+void ProfiledBinary::setPreferredTextSegmentAddresses(const COFFObjectFile *Obj,
+                                                      StringRef FileName) {
+  uint64_t ImageBase = Obj->getImageBase();
+  if (!ImageBase)
+    exitWithError("Not a COFF image", FileName);
+
+  PreferredTextSegmentAddresses.push_back(ImageBase);
+  FirstLoadableAddress = ImageBase;
+
+  for (SectionRef Section : Obj->sections()) {
+    const coff_section *Sec = Obj->getCOFFSection(Section);
+    if (Sec->Characteristics & COFF::IMAGE_SCN_CNT_CODE)
+      TextSegmentOffsets.push_back(Sec->VirtualAddress);
+  }
+}
+
+void ProfiledBinary::setPreferredTextSegmentAddresses(const ObjectFile *Obj) {
   if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
     setPreferredTextSegmentAddresses(ELFObj->getELFFile(), Obj->getFileName());
   else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
     setPreferredTextSegmentAddresses(ELFObj->getELFFile(), Obj->getFileName());
   else if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(Obj))
     setPreferredTextSegmentAddresses(ELFObj->getELFFile(), Obj->getFileName());
-  else if (const auto *ELFObj = cast<ELF64BEObjectFile>(Obj))
+  else if (const auto *ELFObj = dyn_cast<ELF64BEObjectFile>(Obj))
     setPreferredTextSegmentAddresses(ELFObj->getELFFile(), Obj->getFileName());
+  else if (const auto *COFFObj = dyn_cast<COFFObjectFile>(Obj))
+    setPreferredTextSegmentAddresses(COFFObj, Obj->getFileName());
   else
-    llvm_unreachable("invalid ELF object format");
+    llvm_unreachable("invalid object format");
 }
 
 void ProfiledBinary::checkPseudoProbe(const ELFObjectFileBase *Obj) {
@@ -396,8 +423,8 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
       GuidFilter.insert(Function::getGUID(F->FuncName));
       for (auto &Range : F->Ranges) {
         auto GUIDs = StartAddrToSymMap.equal_range(Range.first);
-        for (auto I = GUIDs.first; I != GUIDs.second; ++I)
-          FuncStartAddresses[I->second] = I->first;
+        for (const auto &[StartAddr, Func] : make_range(GUIDs))
+          FuncStartAddresses[Func] = StartAddr;
       }
     }
   }
@@ -427,8 +454,8 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
   // Build TopLevelProbeFrameMap to track size for optimized inlinees when probe
   // is available
   if (TrackFuncContextSize) {
-    for (const auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren()) {
-      auto *Frame = Child.second.get();
+    for (auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren()) {
+      auto *Frame = &Child;
       StringRef FuncName =
           ProbeDecoder.getFuncDescForGUID(Frame->Guid)->FuncName;
       TopLevelProbeFrameMap[FuncName] = Frame;
@@ -442,7 +469,7 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
 void ProfiledBinary::decodePseudoProbe() {
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
   Binary &ExeBinary = *OBinary.getBinary();
-  auto *Obj = dyn_cast<ELFObjectFileBase>(&ExeBinary);
+  auto *Obj = cast<ELFObjectFileBase>(&ExeBinary);
   decodePseudoProbe(Obj);
 }
 
@@ -500,7 +527,7 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       outs() << format("%8" PRIx64 ":", Address);
       size_t Start = outs().tell();
       if (Disassembled)
-        IPrinter->printInst(&Inst, Address + Size, "", *STI.get(), outs());
+        IPrinter->printInst(&Inst, Address + Size, "", *STI, outs());
       else
         outs() << "\t<unknown>";
       if (ShowSourceLocations) {
@@ -593,7 +620,7 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
   return true;
 }
 
-void ProfiledBinary::setUpDisassembler(const ELFObjectFileBase *Obj) {
+void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
   const Target *TheTarget = getTarget(Obj);
   std::string TripleName = TheTriple.getTriple();
   StringRef FileName = Obj->getFileName();
@@ -635,7 +662,7 @@ void ProfiledBinary::setUpDisassembler(const ELFObjectFileBase *Obj) {
   IPrinter->setPrintBranchImmAsAddress(true);
 }
 
-void ProfiledBinary::disassemble(const ELFObjectFileBase *Obj) {
+void ProfiledBinary::disassemble(const ObjectFile *Obj) {
   // Set up disassembler and related components.
   setUpDisassembler(Obj);
 
@@ -687,7 +714,7 @@ void ProfiledBinary::disassemble(const ELFObjectFileBase *Obj) {
              << "]:\n\n";
     }
 
-    if (SectionName == ".plt")
+    if (isa<ELFObjectFileBase>(Obj) && SectionName == ".plt")
       continue;
 
     // Get the section data.
@@ -722,8 +749,7 @@ void ProfiledBinary::disassemble(const ELFObjectFileBase *Obj) {
 }
 
 void ProfiledBinary::checkUseFSDiscriminator(
-    const ELFObjectFileBase *Obj,
-    std::map<SectionRef, SectionSymbolsTy> &AllSymbols) {
+    const ObjectFile *Obj, std::map<SectionRef, SectionSymbolsTy> &AllSymbols) {
   const char *FSDiscriminatorVar = "__llvm_fs_discriminator__";
   for (section_iterator SI = Obj->section_begin(), SE = Obj->section_end();
        SI != SE; ++SI) {
@@ -819,7 +845,7 @@ void ProfiledBinary::loadSymbolsFromDWARF(ObjectFile &Obj) {
     exitWithError("Error creating the debug info context", Path);
 
   for (const auto &CompilationUnit : DebugContext->compile_units())
-    loadSymbolsFromDWARFUnit(*CompilationUnit.get());
+    loadSymbolsFromDWARFUnit(*CompilationUnit);
 
   // Handles DWO sections that can either be in .o, .dwo or .dwp files.
   uint32_t NumOfDWOMissing = 0;

@@ -8,14 +8,49 @@
 
 def TruePredicate : Predicate<"true">;
 
+// Intel x86 instructions have three separate encoding spaces: legacy, VEX, and
+// EVEX. Not all X86 instructions are extended for EGPR. The following is an
+// overview of which instructions are extended and how we implement them.
+//
+// * Legacy space
+//   All instructions in legacy maps 0 and 1 that have explicit GPR or memory
+//   operands can use the REX2 prefix to access the EGPR, except XSAVE*/XRSTOR.
+//
+// * EVEX space
+//   All instructions in the EVEX space can access the EGPR in their
+//   register/memory operands.
+//
+// For the above intructions, the only difference in encoding is reflected in
+// the REX2/EVEX prefix when EGPR is used, i.e. the opcode and opcode name are
+// unchanged. We don’t add new entries in TD, and instead we extend GPR with
+// R16-R31 and make them allocatable only when the feature EGPR is available.
+//
+// Besides, some instructions in legacy space with map 2/3 and VEX space are
+// promoted into EVEX space. Encoding space changes after the promotion, opcode
+// and opcode map may change too sometimes. For these instructions, we add new
+// entries in TD to avoid overcomplicating the assembler and disassembler.
+//
+// HasEGPR is for the new entries and NoEGPR is for the entries before
+// promotion, so that the promoted variant can be selected first to benefit RA.
 def HasEGPR      : Predicate<"Subtarget->hasEGPR()">;
 def NoEGPR       : Predicate<"!Subtarget->hasEGPR()">;
+
+// APX extends some instructions with a new form that has an extra register
+// operand called a new data destination (NDD). In such forms, NDD is the new
+// destination register receiving the result of the computation and all other
+// operands (including the original destination operand) become read-only source
+// operands.
+//
+// HasNDD is for the new NDD entries and NoNDD is for the legacy 2-address
+// entries, so that the NDD variant can be selected first to benefit RA.
+def HasNDD       : Predicate<"Subtarget->hasNDD()">;
+def NoNDD        : Predicate<"!Subtarget->hasNDD()">;
+def HasZU        : Predicate<"Subtarget->hasZU()">;
+def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
 def HasNOPL      : Predicate<"Subtarget->hasNOPL()">;
 def HasMMX       : Predicate<"Subtarget->hasMMX()">;
-def Has3DNow     : Predicate<"Subtarget->hasThreeDNow()">;
-def Has3DNowA    : Predicate<"Subtarget->hasThreeDNowA()">;
 def HasSSE1      : Predicate<"Subtarget->hasSSE1()">;
 def UseSSE1      : Predicate<"Subtarget->hasSSE1() && !Subtarget->hasAVX()">;
 def HasSSE2      : Predicate<"Subtarget->hasSSE2()">;
@@ -37,14 +72,15 @@ def HasAVX1Only  : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX2()">;
 def HasEVEX512   : Predicate<"Subtarget->hasEVEX512()">;
 def HasAVX10_1   : Predicate<"Subtarget->hasAVX10_1()">;
 def HasAVX10_1_512 : Predicate<"Subtarget->hasAVX10_1_512()">;
+def HasAVX10_2   : Predicate<"Subtarget->hasAVX10_2()">;
+def HasAVX10_2_512 : Predicate<"Subtarget->hasAVX10_2_512()">;
+def NoAVX10_2    : Predicate<"!Subtarget->hasAVX10_2()">;
 def HasAVX512    : Predicate<"Subtarget->hasAVX512()">;
 def UseAVX       : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX512()">;
 def UseAVX2      : Predicate<"Subtarget->hasAVX2() && !Subtarget->hasAVX512()">;
 def NoAVX512     : Predicate<"!Subtarget->hasAVX512()">;
 def HasCDI       : Predicate<"Subtarget->hasCDI()">;
 def HasVPOPCNTDQ : Predicate<"Subtarget->hasVPOPCNTDQ()">;
-def HasPFI       : Predicate<"Subtarget->hasPFI()">;
-def HasERI       : Predicate<"Subtarget->hasERI()">;
 def HasDQI       : Predicate<"Subtarget->hasDQI()">;
 def NoDQI        : Predicate<"!Subtarget->hasDQI()">;
 def HasBWI       : Predicate<"Subtarget->hasBWI()">;
@@ -87,6 +123,7 @@ def HasTBM       : Predicate<"Subtarget->hasTBM()">;
 def NoTBM        : Predicate<"!Subtarget->hasTBM()">;
 def HasLWP       : Predicate<"Subtarget->hasLWP()">;
 def HasMOVBE     : Predicate<"Subtarget->hasMOVBE()">;
+def NoNDD_Or_NoMOVBE     : Predicate<"!Subtarget->hasNDD() || !Subtarget->hasMOVBE()">;
 def HasRDRAND    : Predicate<"Subtarget->hasRDRAND()">;
 def HasF16C      : Predicate<"Subtarget->hasF16C()">;
 def HasFSGSBase  : Predicate<"Subtarget->hasFSGSBase()">;
@@ -100,18 +137,15 @@ def HasIFMA      : Predicate<"Subtarget->hasIFMA()">;
 def HasAVXIFMA   : Predicate<"Subtarget->hasAVXIFMA()">;
 def NoVLX_Or_NoIFMA : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasIFMA()">;
 def HasRTM       : Predicate<"Subtarget->hasRTM()">;
-def HasADX       : Predicate<"Subtarget->hasADX()">;
 def HasSHA       : Predicate<"Subtarget->hasSHA()">;
 def HasSHA512    : Predicate<"Subtarget->hasSHA512()">;
 def HasSGX       : Predicate<"Subtarget->hasSGX()">;
 def HasSM3       : Predicate<"Subtarget->hasSM3()">;
 def HasRDSEED    : Predicate<"Subtarget->hasRDSEED()">;
 def HasSSEPrefetch : Predicate<"Subtarget->hasSSEPrefetch()">;
-def NoSSEPrefetch : Predicate<"!Subtarget->hasSSEPrefetch()">;
 def HasPRFCHW    : Predicate<"Subtarget->hasPRFCHW()">;
 def HasPREFETCHI : Predicate<"Subtarget->hasPREFETCHI()">;
 def HasPrefetchW : Predicate<"Subtarget->hasPrefetchW()">;
-def HasPREFETCHWT1 : Predicate<"Subtarget->hasPREFETCHWT1()">;
 def HasLAHFSAHF  : Predicate<"Subtarget->hasLAHFSAHF()">;
 def HasLAHFSAHF64 : Predicate<"Subtarget->hasLAHFSAHF64()">;
 def HasMWAITX    : Predicate<"Subtarget->hasMWAITX()">;
@@ -119,6 +153,7 @@ def HasCLZERO    : Predicate<"Subtarget->hasCLZERO()">;
 def HasCLDEMOTE  : Predicate<"Subtarget->hasCLDEMOTE()">;
 def HasMOVDIRI   : Predicate<"Subtarget->hasMOVDIRI()">;
 def HasMOVDIR64B : Predicate<"Subtarget->hasMOVDIR64B()">;
+def HasMOVRS     : Predicate<"Subtarget->hasMOVRS()">;
 def HasPTWRITE   : Predicate<"Subtarget->hasPTWRITE()">;
 def FPStackf32   : Predicate<"!Subtarget->hasSSE1()">;
 def FPStackf64   : Predicate<"!Subtarget->hasSSE2()">;
@@ -149,6 +184,11 @@ def HasAMXTILE   : Predicate<"Subtarget->hasAMXTILE()">;
 def HasAMXBF16   : Predicate<"Subtarget->hasAMXBF16()">;
 def HasAMXINT8   : Predicate<"Subtarget->hasAMXINT8()">;
 def HasAMXCOMPLEX : Predicate<"Subtarget->hasAMXCOMPLEX()">;
+def HasAMXFP8    : Predicate<"Subtarget->hasAMXFP8()">;
+def HasAMXMOVRS  : Predicate<"Subtarget->hasAMXMOVRS()">;
+def HasAMXTRANSPOSE : Predicate<"Subtarget->hasAMXTRANSPOSE()">;
+def HasAMXAVX512 : Predicate<"Subtarget->hasAMXAVX512()">;
+def HasAMXTF32   : Predicate<"Subtarget->hasAMXTF32()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
 def HasUSERMSR   : Predicate<"Subtarget->hasUSERMSR()">;
 def HasCRC32     : Predicate<"Subtarget->hasCRC32()">;
@@ -203,5 +243,6 @@ def HasFastSHLDRotate : Predicate<"Subtarget->hasFastSHLDRotate()">;
 def HasERMSB : Predicate<"Subtarget->hasERMSB()">;
 def HasFSRM : Predicate<"Subtarget->hasFSRM()">;
 def HasMFence    : Predicate<"Subtarget->hasMFence()">;
+def HasFastDPWSSD: Predicate<"Subtarget->hasFastDPWSSD()">;
 def UseIndirectThunkCalls : Predicate<"Subtarget->useIndirectThunkCalls()">;
 def NotUseIndirectThunkCalls : Predicate<"!Subtarget->useIndirectThunkCalls()">;

@@ -16,6 +16,7 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 
+#include <map>
 #include <ostream>
 #include <utility>
 
@@ -187,23 +188,26 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
                 : CounterMappingRegion::makeRegion(C, FileID, LS, CS, LE, CE));
   }
 
-  void addMCDCDecisionCMR(unsigned Mask, unsigned NC, StringRef File,
+  void addSkipped(StringRef File, unsigned LS, unsigned CS, unsigned LE,
+                  unsigned CE) {
+    addCMR(Counter::getZero(), File, LS, CS, LE, CE, true);
+  }
+
+  void addMCDCDecisionCMR(unsigned Mask, uint16_t NC, StringRef File,
                           unsigned LS, unsigned CS, unsigned LE, unsigned CE) {
     auto &Regions = InputFunctions.back().Regions;
     unsigned FileID = getFileIndexForFunction(File);
     Regions.push_back(CounterMappingRegion::makeDecisionRegion(
-        CounterMappingRegion::MCDCParameters{Mask, NC}, FileID, LS, CS, LE,
-        CE));
+        mcdc::DecisionParameters{Mask, NC}, FileID, LS, CS, LE, CE));
   }
 
-  void addMCDCBranchCMR(Counter C1, Counter C2, unsigned ID, unsigned TrueID,
-                        unsigned FalseID, StringRef File, unsigned LS,
+  void addMCDCBranchCMR(Counter C1, Counter C2, mcdc::ConditionID ID,
+                        mcdc::ConditionIDs Conds, StringRef File, unsigned LS,
                         unsigned CS, unsigned LE, unsigned CE) {
     auto &Regions = InputFunctions.back().Regions;
     unsigned FileID = getFileIndexForFunction(File);
     Regions.push_back(CounterMappingRegion::makeBranchRegion(
-        C1, C2, CounterMappingRegion::MCDCParameters{0, 0, ID, TrueID, FalseID},
-        FileID, LS, CS, LE, CE));
+        C1, C2, FileID, LS, CS, LE, CE, mcdc::BranchParameters{ID, Conds}));
   }
 
   void addExpansionCMR(StringRef File, StringRef ExpandedFile, unsigned LS,
@@ -286,6 +290,45 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
     return Error::success();
   }
 };
+
+TEST(CoverageMappingTest, expression_subst) {
+  CounterExpressionBuilder Builder;
+  CounterExpressionBuilder::SubstMap MapToExpand;
+
+  auto C = [](unsigned ID) { return Counter::getCounter(ID); };
+  auto A = [&](Counter LHS, Counter RHS) { return Builder.add(LHS, RHS); };
+  // returns {E, N} in clangCodeGen
+  auto getBranchCounterPair = [&](Counter E, Counter P, Counter N) {
+    auto Skipped = Builder.subtract(P, E);
+    MapToExpand[N] = Builder.subst(Skipped, MapToExpand);
+  };
+
+  auto E18 = C(5);
+  auto P18 = C(2);
+  auto S18 = C(18);
+  // #18 => (#2 - #5)
+  getBranchCounterPair(E18, P18, S18);
+
+  auto E22 = S18;
+  auto P22 = C(0);
+  auto S22 = C(22);
+  // #22 => #0 - (#2 - #5)
+  getBranchCounterPair(E22, P22, S22);
+
+  auto E28 = A(A(C(9), C(11)), C(14));
+  auto P28 = S22;
+  auto S28 = C(28);
+  // #28 => (((((#0 + #5) - #2) - #9) - #11) - #14)
+  getBranchCounterPair(E28, P28, S28);
+
+  auto LHS = A(E28, A(S28, S18));
+  auto RHS = C(0);
+
+  // W/o subst, LHS cannot be reduced.
+  ASSERT_FALSE(Builder.subtract(LHS, RHS).isZero());
+  // W/ subst, C(18) and C(28) in LHS will be reduced.
+  ASSERT_TRUE(Builder.subst(Builder.subtract(LHS, RHS), MapToExpand).isZero());
+}
 
 TEST_P(CoverageMappingTest, basic_write_read) {
   startFunction("func", 0x1234);
@@ -700,22 +743,33 @@ TEST_P(CoverageMappingTest, test_line_coverage_iterator) {
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
+  addSkipped("file1", 1, 3, 1, 8); // skipped region inside previous block
   addCMR(Counter::getCounter(1), "file1", 1, 1, 4, 7);
+  addSkipped("file1", 4, 1, 4, 20); // skipped line
   addCMR(Counter::getCounter(2), "file1", 5, 8, 9, 1);
+  addSkipped("file1", 10, 1, 12,
+             20); // skipped region which contains next region
   addCMR(Counter::getCounter(3), "file1", 10, 10, 11, 11);
   EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
-
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
 
   unsigned Line = 0;
-  unsigned LineCounts[] = {20, 20, 20, 20, 30, 10, 10, 10, 10, 0, 0};
+  const unsigned LineCounts[] = {20, 20, 20, 0, 30, 10, 10, 10, 10, 0, 0, 0, 0};
+  const bool MappedLines[] = {1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0};
+  ASSERT_EQ(std::size(LineCounts), std::size(MappedLines));
+
   for (const auto &LCS : getLineCoverageStats(Data)) {
+    ASSERT_LT(Line, std::size(LineCounts));
+    ASSERT_LT(Line, std::size(MappedLines));
+
     ASSERT_EQ(Line + 1, LCS.getLine());
-    errs() << "Line: " << Line + 1 << ", count = " << LCS.getExecutionCount() << "\n";
+    errs() << "Line: " << Line + 1 << ", count = " << LCS.getExecutionCount()
+           << ", mapped = " << LCS.isMapped() << "\n";
     ASSERT_EQ(LineCounts[Line], LCS.getExecutionCount());
+    ASSERT_EQ(MappedLines[Line], LCS.isMapped());
     ++Line;
   }
-  ASSERT_EQ(11U, Line);
+  ASSERT_EQ(12U, Line);
 
   // Check that operator->() works / compiles.
   ASSERT_EQ(1U, LineCoverageIterator(Data)->getLine());
@@ -857,10 +911,10 @@ TEST_P(CoverageMappingTest, non_code_region_bitmask) {
   addCMR(Counter::getCounter(2), "file", 1, 1, 5, 5);
   addCMR(Counter::getCounter(3), "file", 1, 1, 5, 5);
 
-  addMCDCDecisionCMR(0, 2, "file", 7, 1, 7, 6);
-  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 1, 2, 0,
+  addMCDCDecisionCMR(3, 2, "file", 7, 1, 7, 6);
+  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 0, {-1, 1},
                    "file", 7, 2, 7, 3);
-  addMCDCBranchCMR(Counter::getCounter(2), Counter::getCounter(3), 2, 0, 0,
+  addMCDCBranchCMR(Counter::getCounter(2), Counter::getCounter(3), 1, {-1, -1},
                    "file", 7, 4, 7, 5);
 
   EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
@@ -872,6 +926,42 @@ TEST_P(CoverageMappingTest, non_code_region_bitmask) {
     ASSERT_EQ(1U, Func.MCDCRecords.size());
   }
   ASSERT_EQ(1U, Names.size());
+}
+
+// Test the order of MCDCDecision before Expansion
+TEST_P(CoverageMappingTest, decision_before_expansion) {
+  startFunction("foo", 0x1234);
+  addCMR(Counter::getCounter(0), "foo", 3, 23, 5, 2);
+
+  // This(4:11) was put after Expansion(4:11) before the fix
+  addMCDCDecisionCMR(3, 2, "foo", 4, 11, 4, 20);
+
+  addExpansionCMR("foo", "A", 4, 11, 4, 12);
+  addExpansionCMR("foo", "B", 4, 19, 4, 20);
+  addCMR(Counter::getCounter(0), "A", 1, 14, 1, 17);
+  addCMR(Counter::getCounter(0), "A", 1, 14, 1, 17);
+  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 0, {-1, 1},
+                   "A", 1, 14, 1, 17);
+  addCMR(Counter::getCounter(1), "B", 1, 14, 1, 17);
+  addMCDCBranchCMR(Counter::getCounter(1), Counter::getCounter(2), 1, {-1, -1},
+                   "B", 1, 14, 1, 17);
+
+  // InputFunctionCoverageData::Regions is rewritten after the write.
+  auto InputRegions = InputFunctions.back().Regions;
+
+  writeAndReadCoverageRegions();
+
+  const auto &OutputRegions = OutputFunctions.back().Regions;
+
+  size_t N = ArrayRef(InputRegions).size();
+  ASSERT_EQ(N, OutputRegions.size());
+  for (size_t I = 0; I < N; ++I) {
+    ASSERT_EQ(InputRegions[I].Kind, OutputRegions[I].Kind);
+    ASSERT_EQ(InputRegions[I].FileID, OutputRegions[I].FileID);
+    ASSERT_EQ(InputRegions[I].ExpandedFileID, OutputRegions[I].ExpandedFileID);
+    ASSERT_EQ(InputRegions[I].startLoc(), OutputRegions[I].startLoc());
+    ASSERT_EQ(InputRegions[I].endLoc(), OutputRegions[I].endLoc());
+  }
 }
 
 TEST_P(CoverageMappingTest, strip_filename_prefix) {
@@ -1022,6 +1112,61 @@ TEST(CoverageMappingTest, filename_compilation_dir) {
       ASSERT_EQ(ReadFilenames[I], P);
     }
   }
+}
+
+TEST(CoverageMappingTest, TVIdxBuilder) {
+  // ((n0 && n3) || (n2 && n4) || (n1 && n5))
+  static const std::array<mcdc::ConditionIDs, 6> Branches = {{
+      {2, 3},
+      {-1, 5},
+      {1, 4},
+      {2, -1},
+      {1, -1},
+      {-1, -1},
+  }};
+  int Offset = 1000;
+  auto TheBuilder = mcdc::TVIdxBuilder(
+      SmallVector<mcdc::ConditionIDs>(ArrayRef(Branches)), Offset);
+  EXPECT_TRUE(TheBuilder.NumTestVectors < TheBuilder.HardMaxTVs);
+  EXPECT_EQ(TheBuilder.Indices.size(), 6u);
+  EXPECT_EQ(TheBuilder.NumTestVectors, 15);
+
+  std::map<int, int> Decisions;
+  for (unsigned I = 0; I < TheBuilder.Indices.size(); ++I) {
+    struct Rec {
+      int Width;
+      std::array<int, 2> Indices;
+    };
+    static const std::array<Rec, 6> IndicesRefs = {{
+        {1, {0, 0}},
+        {4, {1000, 0}},
+        {2, {0, 0}},
+        {1, {1, 1014}},
+        {2, {2, 1012}},
+        {4, {1004, 1008}},
+    }};
+    EXPECT_EQ(TheBuilder.Indices[I], IndicesRefs[I].Indices);
+
+#ifndef NDEBUG
+    const auto &Node = TheBuilder.SavedNodes[I];
+    EXPECT_EQ(Node.Width, IndicesRefs[I].Width);
+    for (int C = 0; C < 2; ++C) {
+      auto Index = TheBuilder.Indices[I][C];
+      if (Node.NextIDs[C] < 0)
+        EXPECT_TRUE(Decisions.insert({Index, Node.Width}).second);
+    }
+#endif
+  }
+
+#ifndef NDEBUG
+  int NextIdx = Offset;
+  for (const auto [Index, Width] : Decisions) {
+    EXPECT_EQ(Index, NextIdx);
+    NextIdx += Width;
+  }
+  // The sum of Width(s) is NumTVs.
+  EXPECT_EQ(NextIdx, Offset + TheBuilder.NumTestVectors);
+#endif
 }
 
 } // end anonymous namespace

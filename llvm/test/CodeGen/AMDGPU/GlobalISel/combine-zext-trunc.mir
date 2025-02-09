@@ -12,9 +12,11 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: %var:_(s32) = COPY $vgpr0
-    ; GCN-NEXT: %c3FFF:_(s32) = G_CONSTANT i32 16383
-    ; GCN-NEXT: %low_bits:_(s32) = G_AND %var, %c3FFF
-    ; GCN-NEXT: $vgpr0 = COPY %low_bits(s32)
+    ; GCN-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC %var(s32)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 16383
+    ; GCN-NEXT: %trunc:_(s16) = G_AND [[TRUNC]], [[C]]
+    ; GCN-NEXT: %zext:_(s32) = G_ZEXT %trunc(s16)
+    ; GCN-NEXT: $vgpr0 = COPY %zext(s32)
     %var:_(s32) = COPY $vgpr0
     %c3FFF:_(s32) = G_CONSTANT i32 16383
     %low_bits:_(s32) = G_AND %var, %c3FFF
@@ -34,10 +36,8 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: %var:_(s32) = COPY $vgpr0
-    ; GCN-NEXT: %cFFFFF:_(s32) = G_CONSTANT i32 1048575
-    ; GCN-NEXT: %low_bits:_(s32) = G_AND %var, %cFFFFF
-    ; GCN-NEXT: %trunc:_(s16) = G_TRUNC %low_bits(s32)
-    ; GCN-NEXT: %zext:_(s32) = G_ZEXT %trunc(s16)
+    ; GCN-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC %var(s32)
+    ; GCN-NEXT: %zext:_(s32) = G_ZEXT [[TRUNC]](s16)
     ; GCN-NEXT: $vgpr0 = COPY %zext(s32)
     %var:_(s32) = COPY $vgpr0
     %cFFFFF:_(s32) = G_CONSTANT i32 1048575
@@ -58,9 +58,9 @@ body: |
     ; GCN: liveins: $vgpr0_vgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: %var:_(s64) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: %c3FFF:_(s64) = G_CONSTANT i64 16383
-    ; GCN-NEXT: %low_bits:_(s64) = G_AND %var, %c3FFF
-    ; GCN-NEXT: %trunc:_(s16) = G_TRUNC %low_bits(s64)
+    ; GCN-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC %var(s64)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 16383
+    ; GCN-NEXT: %trunc:_(s16) = G_AND [[TRUNC]], [[C]]
     ; GCN-NEXT: %zext:_(s32) = G_ZEXT %trunc(s16)
     ; GCN-NEXT: $vgpr0 = COPY %zext(s32)
     %var:_(s64) = COPY $vgpr0_vgpr1
@@ -82,9 +82,9 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: %var:_(s32) = COPY $vgpr0
-    ; GCN-NEXT: %c3FFF:_(s32) = G_CONSTANT i32 16383
-    ; GCN-NEXT: %low_bits:_(s32) = G_AND %var, %c3FFF
-    ; GCN-NEXT: %trunc:_(s16) = G_TRUNC %low_bits(s32)
+    ; GCN-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC %var(s32)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 16383
+    ; GCN-NEXT: %trunc:_(s16) = G_AND [[TRUNC]], [[C]]
     ; GCN-NEXT: %zext:_(s64) = G_ZEXT %trunc(s16)
     ; GCN-NEXT: $vgpr0_vgpr1 = COPY %zext(s64)
     %var:_(s32) = COPY $vgpr0

@@ -1,4 +1,6 @@
+// RUN: %clang_cc1 -triple i386-unknown-unknown -fms-compatibility -std=c++03 -E -P %s -o - | FileCheck %s --check-prefixes=CHECK,ITANIUM --implicit-check-not=:
 // RUN: %clang_cc1 -triple i386-unknown-unknown -fms-compatibility -std=c++11 -E -P %s -o - | FileCheck %s --check-prefixes=CHECK,ITANIUM --implicit-check-not=:
+// RUN: %clang_cc1 -triple i386-windows -fms-compatibility -std=c++03 -E -P %s -o - | FileCheck %s --check-prefixes=CHECK,WINDOWS --implicit-check-not=:
 // RUN: %clang_cc1 -triple i386-windows -fms-compatibility -std=c++11 -E -P %s -o - | FileCheck %s --check-prefixes=CHECK,WINDOWS --implicit-check-not=:
 
 #define CXX11(x) x: __has_cpp_attribute(x)
@@ -65,7 +67,7 @@ CXX11(unlikely)
 // CHECK: likely: 201803L
 // CHECK: maybe_unused: 201603L
 // ITANIUM: no_unique_address: 201803L
-// WINDOWS: no_unique_address: 0 
+// WINDOWS: no_unique_address: 0
 // ITANIUM: msvc::no_unique_address: 0
 // WINDOWS: msvc::no_unique_address: 201803L
 // CHECK: nodiscard: 201907L

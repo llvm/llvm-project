@@ -26,20 +26,20 @@
 ; GCNHSA:         .amdhsa_group_segment_fixed_size 0
 ; GCNHSA:         .amdhsa_private_segment_fixed_size 32772
 ; GCNHSA:         .amdhsa_user_sgpr_private_segment_buffer 1
-; GCNHSA:         .amdhsa_user_sgpr_dispatch_ptr 0
-; GCNHSA:         .amdhsa_user_sgpr_queue_ptr 0
+; GCNHSA:         .amdhsa_user_sgpr_dispatch_ptr 1
+; GCNHSA:         .amdhsa_user_sgpr_queue_ptr 1
 ; GCNHSA:         .amdhsa_user_sgpr_kernarg_segment_ptr 1
-; GCNHSA:         .amdhsa_user_sgpr_dispatch_id 0
+; GCNHSA:         .amdhsa_user_sgpr_dispatch_id 1
 ; GCNHSA:         .amdhsa_user_sgpr_flat_scratch_init 1
 ; GCNHSA:         .amdhsa_user_sgpr_private_segment_size 0
 ; GCNHSA:         .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 ; GCNHSA:         .amdhsa_system_sgpr_workgroup_id_x 1
-; GCNHSA:         .amdhsa_system_sgpr_workgroup_id_y 0
-; GCNHSA:         .amdhsa_system_sgpr_workgroup_id_z 0
+; GCNHSA:         .amdhsa_system_sgpr_workgroup_id_y 1
+; GCNHSA:         .amdhsa_system_sgpr_workgroup_id_z 1
 ; GCNHSA:         .amdhsa_system_sgpr_workgroup_info 0
-; GCNHSA:         .amdhsa_system_vgpr_workitem_id 0
-; GCNHSA:         .amdhsa_next_free_vgpr 3
-; GCNHSA:         .amdhsa_next_free_sgpr 10
+; GCNHSA:         .amdhsa_system_vgpr_workitem_id 2
+; GCNHSA:         .amdhsa_next_free_vgpr {{2|3}}
+; GCNHSA:         .amdhsa_next_free_sgpr 18
 ; GCNHSA:         .amdhsa_float_round_mode_32 0
 ; GCNHSA:         .amdhsa_float_round_mode_16_64 0
 ; GCNHSA:         .amdhsa_float_denorm_mode_32 3
@@ -70,4 +70,4 @@ define amdgpu_kernel void @large_alloca_compute_shader(i32 %x, i32 %y) #0 {
 attributes #0 = { nounwind  }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

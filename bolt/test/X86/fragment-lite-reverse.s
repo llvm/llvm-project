@@ -1,4 +1,4 @@
-# Check that BOLT in lite mode processes fragments as expected.
+## Check that BOLT in lite mode processes fragments as expected.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata

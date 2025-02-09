@@ -6,25 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "futex_word.h"
-
-#include "src/__support/CPP/atomic.h"
-#include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/threads/callonce.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/threads/linux/callonce.h"
+#include "src/__support/threads/linux/futex_utils.h"
 
-#include <limits.h>
-#include <linux/futex.h>
-#include <sys/syscall.h> // For syscall numbers.
-
-namespace LIBC_NAMESPACE {
-
-static constexpr FutexWordType NOT_CALLED = 0x0;
-static constexpr FutexWordType START = 0x11;
-static constexpr FutexWordType WAITING = 0x22;
-static constexpr FutexWordType FINISH = 0x33;
-
-int callonce(CallOnceFlag *flag, CallOnceCallback *func) {
-  auto *futex_word = reinterpret_cast<cpp::Atomic<FutexWordType> *>(flag);
+namespace LIBC_NAMESPACE_DECL {
+namespace callonce_impl {
+int callonce_slowpath(CallOnceFlag *flag, CallOnceCallback *func) {
+  auto *futex_word = reinterpret_cast<Futex *>(flag);
 
   FutexWordType not_called = NOT_CALLED;
 
@@ -33,25 +23,18 @@ int callonce(CallOnceFlag *flag, CallOnceCallback *func) {
   if (futex_word->compare_exchange_strong(not_called, START)) {
     func();
     auto status = futex_word->exchange(FINISH);
-    if (status == WAITING) {
-      LIBC_NAMESPACE::syscall_impl<long>(FUTEX_SYSCALL_ID, &futex_word->val,
-                                         FUTEX_WAKE_PRIVATE,
-                                         INT_MAX, // Wake all waiters.
-                                         0, 0, 0);
-    }
+    if (status == WAITING)
+      futex_word->notify_all();
     return 0;
   }
 
   FutexWordType status = START;
   if (futex_word->compare_exchange_strong(status, WAITING) ||
       status == WAITING) {
-    LIBC_NAMESPACE::syscall_impl<long>(
-        FUTEX_SYSCALL_ID, &futex_word->val, FUTEX_WAIT_PRIVATE,
-        WAITING, // Block only if status is still |WAITING|.
-        0, 0, 0);
+    futex_word->wait(WAITING);
   }
 
   return 0;
 }
-
-} // namespace LIBC_NAMESPACE
+} // namespace callonce_impl
+} // namespace LIBC_NAMESPACE_DECL

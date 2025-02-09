@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mipsel -verify-machineinstrs
+; RUN: llc < %s -mtriple=mipsel -verify-machineinstrs
 ; Make sure machine verifier understands the last instruction of a basic block
 ; is not the terminator instruction after delay slot filler pass is run.
 

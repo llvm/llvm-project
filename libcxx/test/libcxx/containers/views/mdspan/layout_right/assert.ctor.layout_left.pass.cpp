@@ -9,7 +9,7 @@
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
 
@@ -44,9 +44,12 @@ int main(int, char**) {
   }
   // non-representability of extents itself
   {
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_right::mapping<std::extents<char, D>> m(
-                                 std::layout_left::mapping<std::extents<int, D>>(std::extents<int, D>(500))); }()),
-                               "extents ctor: arguments must be representable as index_type and nonnegative");
+    TEST_LIBCPP_ASSERT_FAILURE(
+        ([=] {
+          std::layout_right::mapping<std::extents<signed char, D>> m(
+              std::layout_left::mapping<std::extents<int, D>>(std::extents<int, D>(500)));
+        }()),
+        "extents ctor: arguments must be representable as index_type and nonnegative");
   }
 
   // Can't trigger required_span_size() representability assertion, since for rank-1 the above check will trigger first,

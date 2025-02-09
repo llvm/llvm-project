@@ -15,6 +15,8 @@
 
 // UNSUPPORTED: no-wide-characters
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <ostream>
 #include <string>
 
@@ -22,4 +24,4 @@ struct test_ostream
     : public std::basic_ostream<char, std::char_traits<wchar_t> > {};
 
 // expected-error-re@ios:* {{static assertion failed{{.*}}traits_type::char_type must be the same type as CharT}}
-// expected-error@ostream:* {{only virtual member functions can be marked 'override'}}
+// expected-error@*:* {{only virtual member functions can be marked 'override'}}

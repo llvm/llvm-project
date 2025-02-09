@@ -10,53 +10,53 @@ target triple = "thumbv7-apple-macosx10.6.7"
 @.str = private unnamed_addr constant [11 x i8] c"%p %lf %c\0A\00"
 @.str1 = private unnamed_addr constant [6 x i8] c"point\00"
 
-define i32 @inlineprinter(i8* %ptr, float %val, i8 zeroext %c) nounwind optsize ssp !dbg !0 {
+define i32 @inlineprinter(ptr %ptr, float %val, i8 zeroext %c) nounwind optsize ssp !dbg !0 {
 entry:
-  tail call void @llvm.dbg.value(metadata i8* %ptr, metadata !8, metadata !DIExpression()), !dbg !24
+  tail call void @llvm.dbg.value(metadata ptr %ptr, metadata !8, metadata !DIExpression()), !dbg !24
   tail call void @llvm.dbg.value(metadata float %val, metadata !10, metadata !DIExpression()), !dbg !25
   tail call void @llvm.dbg.value(metadata i8 %c, metadata !12, metadata !DIExpression()), !dbg !26
   %conv = fpext float %val to double, !dbg !27
   %conv3 = zext i8 %c to i32, !dbg !27
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i8* %ptr, double %conv, i32 %conv3) nounwind optsize, !dbg !27
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str, ptr %ptr, double %conv, i32 %conv3) nounwind optsize, !dbg !27
   ret i32 0, !dbg !29
 }
 
-declare i32 @printf(i8* nocapture, ...) nounwind optsize
+declare i32 @printf(ptr nocapture, ...) nounwind optsize
 
-define i32 @printer(i8* %ptr, float %val, i8 zeroext %c) nounwind optsize noinline ssp !dbg !6 {
+define i32 @printer(ptr %ptr, float %val, i8 zeroext %c) nounwind optsize noinline ssp !dbg !6 {
 entry:
-  tail call void @llvm.dbg.value(metadata i8* %ptr, metadata !14, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata ptr %ptr, metadata !14, metadata !DIExpression()), !dbg !30
   tail call void @llvm.dbg.value(metadata float %val, metadata !15, metadata !DIExpression()), !dbg !31
   tail call void @llvm.dbg.value(metadata i8 %c, metadata !16, metadata !DIExpression()), !dbg !32
   %conv = fpext float %val to double, !dbg !33
   %conv3 = zext i8 %c to i32, !dbg !33
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i8* %ptr, double %conv, i32 %conv3) nounwind optsize, !dbg !33
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str, ptr %ptr, double %conv, i32 %conv3) nounwind optsize, !dbg !33
   ret i32 0, !dbg !35
 }
 
-define i32 @main(i32 %argc, i8** nocapture %argv) nounwind optsize ssp !dbg !7 {
+define i32 @main(i32 %argc, ptr nocapture %argv) nounwind optsize ssp !dbg !7 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 %argc, metadata !17, metadata !DIExpression()), !dbg !36
-  tail call void @llvm.dbg.value(metadata i8** %argv, metadata !18, metadata !DIExpression()), !dbg !37
+  tail call void @llvm.dbg.value(metadata ptr %argv, metadata !18, metadata !DIExpression()), !dbg !37
   %conv = sitofp i32 %argc to double, !dbg !38
   %add = fadd double %conv, 5.555552e+05, !dbg !38
   %conv1 = fptrunc double %add to float, !dbg !38
   tail call void @llvm.dbg.value(metadata float %conv1, metadata !22, metadata !DIExpression()), !dbg !38
-  %call = tail call i32 @puts(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str1, i32 0, i32 0)) nounwind optsize, !dbg !39
-  %add.ptr = getelementptr i8, i8* bitcast (i32 (i32, i8**)* @main to i8*), i32 %argc, !dbg !40
+  %call = tail call i32 @puts(ptr @.str1) nounwind optsize, !dbg !39
+  %add.ptr = getelementptr i8, ptr @main, i32 %argc, !dbg !40
   %add5 = add nsw i32 %argc, 97, !dbg !40
   %conv6 = trunc i32 %add5 to i8, !dbg !40
-  tail call void @llvm.dbg.value(metadata i8* %add.ptr, metadata !58, metadata !DIExpression()) nounwind, !dbg !41
+  tail call void @llvm.dbg.value(metadata ptr %add.ptr, metadata !58, metadata !DIExpression()) nounwind, !dbg !41
   tail call void @llvm.dbg.value(metadata float %conv1, metadata !60, metadata !DIExpression()) nounwind, !dbg !42
   tail call void @llvm.dbg.value(metadata i8 %conv6, metadata !62, metadata !DIExpression()) nounwind, !dbg !43
   %conv.i = fpext float %conv1 to double, !dbg !44
   %conv3.i = and i32 %add5, 255, !dbg !44
-  %call.i = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i8* %add.ptr, double %conv.i, i32 %conv3.i) nounwind optsize, !dbg !44
-  %call14 = tail call i32 @printer(i8* %add.ptr, float %conv1, i8 zeroext %conv6) optsize, !dbg !45
+  %call.i = tail call i32 (ptr, ...) @printf(ptr @.str, ptr %add.ptr, double %conv.i, i32 %conv3.i) nounwind optsize, !dbg !44
+  %call14 = tail call i32 @printer(ptr %add.ptr, float %conv1, i8 zeroext %conv6) optsize, !dbg !45
   ret i32 0, !dbg !46
 }
 
-declare i32 @puts(i8* nocapture) nounwind optsize
+declare i32 @puts(ptr nocapture) nounwind optsize
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 

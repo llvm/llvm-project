@@ -67,7 +67,7 @@ uint32_t InputChunk::getSize() const {
     return ms->builder.getSize();
 
   if (const auto *f = dyn_cast<InputFunction>(this)) {
-    if (config->compressRelocations && f->file) {
+    if (ctx.arg.compressRelocations && f->file) {
       return f->getCompressedSize();
     }
   }
@@ -84,7 +84,7 @@ uint32_t InputChunk::getInputSize() const {
 // Copy this input chunk to an mmap'ed output file and apply relocations.
 void InputChunk::writeTo(uint8_t *buf) const {
   if (const auto *f = dyn_cast<InputFunction>(this)) {
-    if (file && config->compressRelocations)
+    if (file && ctx.arg.compressRelocations)
       return f->writeCompressed(buf);
   } else if (const auto *ms = dyn_cast<SyntheticMergedChunk>(this)) {
     ms->builder.write(buf + outSecOff);
@@ -269,7 +269,7 @@ static unsigned getRelocWidth(const WasmRelocation &rel, uint64_t value) {
 // This function only computes the final output size.  It must be called
 // before getSize() is used to calculate of layout of the code section.
 void InputFunction::calculateSize() {
-  if (!file || !config->compressRelocations)
+  if (!file || !ctx.arg.compressRelocations)
     return;
 
   LLVM_DEBUG(dbgs() << "calculateSize: " << name << "\n");
@@ -361,11 +361,12 @@ uint64_t InputChunk::getVA(uint64_t offset) const {
 // Generate code to apply relocations to the data section at runtime.
 // This is only called when generating shared libraries (PIC) where address are
 // not known at static link time.
-void InputChunk::generateRelocationCode(raw_ostream &os) const {
+bool InputChunk::generateRelocationCode(raw_ostream &os) const {
   LLVM_DEBUG(dbgs() << "generating runtime relocations: " << name
                     << " count=" << relocations.size() << "\n");
 
-  bool is64 = config->is64.value_or(false);
+  bool is64 = ctx.arg.is64.value_or(false);
+  bool generated = false;
   unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
                                    : WASM_OPCODE_I32_CONST;
   unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD
@@ -378,7 +379,10 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
     uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
 
     Symbol *sym = file->getSymbol(rel);
-    if (!config->isPic && sym->isDefined())
+    // Runtime relocations are needed when we don't know the address of
+    // a symbol statically.
+    bool requiresRuntimeReloc = ctx.isPic || sym->hasGOTIndex();
+    if (!requiresRuntimeReloc)
       continue;
 
     LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
@@ -390,7 +394,7 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
     writeSleb128(os, offset, "offset");
 
     // In PIC mode we need to add the __memory_base
-    if (config->isPic) {
+    if (ctx.isPic) {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       if (isTLS())
         writeUleb128(os, WasmSym::tlsBase->getGlobalIndex(), "tls_base");
@@ -417,7 +421,7 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
         writeU8(os, opcode_reloc_add, "ADD");
       }
     } else {
-      assert(config->isPic);
+      assert(ctx.isPic);
       const GlobalSymbol* baseSymbol = WasmSym::memoryBase;
       if (rel.Type == R_WASM_TABLE_INDEX_I32 ||
           rel.Type == R_WASM_TABLE_INDEX_I64)
@@ -435,7 +439,9 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
     writeU8(os, opcode_reloc_store, "I32_STORE");
     writeUleb128(os, 2, "align");
     writeUleb128(os, 0, "offset");
+    generated = true;
   }
+  return generated;
 }
 
 // Split WASM_SEG_FLAG_STRINGS section. Such a section is a sequence of
@@ -519,8 +525,8 @@ uint64_t InputSection::getTombstoneForSection(StringRef name) {
   // If they occur in DWARF debug symbols, we want to change the pc of the
   // function to -1 to avoid overlapping with a valid range. However for the
   // debug_ranges and debug_loc sections that would conflict with the existing
-  // meaning of -1 so we use -2.  
-  if (name.equals(".debug_ranges") || name.equals(".debug_loc"))
+  // meaning of -1 so we use -2.
+  if (name == ".debug_ranges" || name == ".debug_loc")
     return UINT64_C(-2);
   if (name.starts_with(".debug_"))
     return UINT64_C(-1);

@@ -4,3 +4,4 @@
 
 from ._nvgpu_ops_gen import *
 from ._nvgpu_enum_gen import *
+from .._mlir_libs._mlirDialectsNVGPU import *

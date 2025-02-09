@@ -7,23 +7,25 @@
 define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ; RV32-LABEL: test:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    th.lbib a3, (a1), -1, 0
-; RV32-NEXT:    th.lrb a0, a1, a0, 0
+; RV32-NEXT:    addi a3, a2, 1
+; RV32-NEXT:    th.lbib a4, (a1), -1, 0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vmv.v.x v8, a3
-; RV32-NEXT:    addi a1, a2, 1
+; RV32-NEXT:    vmv.v.x v8, a4
+; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vsetvli zero, a3, e8, mf2, tu, ma
+; RV32-NEXT:    vslideup.vx v8, v9, a2
+; RV32-NEXT:    addi a2, a0, 1
 ; RV32-NEXT:  .LBB0_1: # %for.body
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    vmv.s.x v9, zero
-; RV32-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
-; RV32-NEXT:    vmv1r.v v10, v8
-; RV32-NEXT:    vslideup.vx v10, v9, a2
-; RV32-NEXT:    vsetivli zero, 8, e8, mf2, tu, ma
-; RV32-NEXT:    vmv.s.x v10, a0
-; RV32-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vmseq.vi v9, v10, 0
-; RV32-NEXT:    vmv.x.s a3, v9
-; RV32-NEXT:    andi a3, a3, 255
+; RV32-NEXT:    th.lrb a0, a1, a0, 0
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, tu, ma
+; RV32-NEXT:    vmv1r.v v9, v8
+; RV32-NEXT:    vmv.s.x v9, a0
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vmseq.vi v9, v9, 0
+; RV32-NEXT:    vmv.x.s a0, v9
+; RV32-NEXT:    andi a3, a0, 255
+; RV32-NEXT:    mv a0, a2
 ; RV32-NEXT:    bnez a3, .LBB0_1
 ; RV32-NEXT:  # %bb.2: # %if.then381
 ; RV32-NEXT:    li a0, 0
@@ -31,24 +33,26 @@ define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ;
 ; RV64-LABEL: test:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    th.lbib a3, (a1), -1, 0
-; RV64-NEXT:    sext.w a0, a0
-; RV64-NEXT:    th.lrb a0, a1, a0, 0
+; RV64-NEXT:    addi a3, a2, 1
+; RV64-NEXT:    th.lbib a4, (a1), -1, 0
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a3
-; RV64-NEXT:    addi a1, a2, 1
+; RV64-NEXT:    vmv.v.x v8, a4
+; RV64-NEXT:    vmv.s.x v9, zero
+; RV64-NEXT:    vsetvli zero, a3, e8, mf2, tu, ma
+; RV64-NEXT:    vslideup.vx v8, v9, a2
+; RV64-NEXT:    addi a2, a0, 1
 ; RV64-NEXT:  .LBB0_1: # %for.body
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64-NEXT:    vmv.s.x v9, zero
-; RV64-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
-; RV64-NEXT:    vmv1r.v v10, v8
-; RV64-NEXT:    vslideup.vx v10, v9, a2
-; RV64-NEXT:    vsetivli zero, 8, e8, mf2, tu, ma
-; RV64-NEXT:    vmv.s.x v10, a0
-; RV64-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vmseq.vi v9, v10, 0
-; RV64-NEXT:    vmv.x.s a3, v9
-; RV64-NEXT:    andi a3, a3, 255
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    th.lrb a0, a1, a0, 0
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, tu, ma
+; RV64-NEXT:    vmv1r.v v9, v8
+; RV64-NEXT:    vmv.s.x v9, a0
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vmseq.vi v9, v9, 0
+; RV64-NEXT:    vmv.x.s a0, v9
+; RV64-NEXT:    andi a3, a0, 255
+; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    bnez a3, .LBB0_1
 ; RV64-NEXT:  # %bb.2: # %if.then381
 ; RV64-NEXT:    li a0, 0
@@ -57,8 +61,9 @@ entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
+  %size.actual = phi i32 [%size, %entry], [%size.inc, %for.body]
   %add.ptr1 = getelementptr i8, ptr %add.ptr, i32 -1
-  %add.ptr2 = getelementptr i8, ptr %add.ptr1, i32 %size
+  %add.ptr2 = getelementptr i8, ptr %add.ptr1, i32 %size.actual
   %0 = load i8, ptr %add.ptr1, align 1
   %1 = load i8, ptr %add.ptr2, align 1
   %2 = insertelement <8 x i8> poison, i8 %0, i64 0
@@ -68,6 +73,7 @@ for.body:                                         ; preds = %for.body, %entry
   %6 = bitcast <8 x i1> %5 to i8
   %7 = zext i8 %6 to i32
   %cond = icmp eq i32 %7, 0
+  %size.inc = add i32 %size, 1
   br i1 %cond, label %if.then381, label %for.body
 
 if.then381:                                       ; preds = %for.body

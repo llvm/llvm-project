@@ -34,6 +34,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -99,6 +100,8 @@ public:
 #define REGION(Id, Parent) Id ## Kind,
 #define REGION_RANGE(Id, First, Last) BEGIN_##Id = First, END_##Id = Last,
 #include "clang/StaticAnalyzer/Core/PathSensitive/Regions.def"
+#undef REGION
+#undef REGION_RANGE
   };
 
 private:
@@ -170,6 +173,8 @@ public:
   virtual void printPrettyAsExpr(raw_ostream &os) const;
 
   Kind getKind() const { return kind; }
+
+  StringRef getKindStr() const;
 
   template<typename RegionTy> const RegionTy* getAs() const;
   template <typename RegionTy>
@@ -339,7 +344,7 @@ public:
 };
 
 /// The region containing globals which can be modified by calls to
-/// "internally" defined functions - (for now just) functions other then system
+/// "internally" defined functions - (for now just) functions other than system
 /// calls.
 class GlobalInternalSpaceRegion : public NonStaticGlobalSpaceRegion {
   friend class MemRegionManager;
@@ -781,7 +786,7 @@ class SymbolicRegion : public SubRegion {
       : SubRegion(sreg, SymbolicRegionKind), sym(s) {
     // Because pointer arithmetic is represented by ElementRegion layers,
     // the base symbol here should not contain any arithmetic.
-    assert(s && isa<SymbolData>(s));
+    assert(isa_and_nonnull<SymbolData>(s));
     assert(s->getType()->isAnyPointerType() ||
            s->getType()->isReferenceType() ||
            s->getType()->isBlockPointerType());
@@ -1016,7 +1021,7 @@ public:
   }
 };
 
-/// ParamVarRegion - Represents a region for paremters. Only parameters of the
+/// ParamVarRegion - Represents a region for parameters. Only parameters of the
 /// function in the current stack frame are represented as `ParamVarRegion`s.
 /// Parameters of top-level analyzed functions as well as captured paremeters
 /// by lambdas and blocks are repesented as `VarRegion`s.
@@ -1201,7 +1206,7 @@ class ElementRegion : public TypedValueRegion {
       : TypedValueRegion(sReg, ElementRegionKind), ElementType(elementType),
         Index(Idx) {
     assert((!isa<nonloc::ConcreteInt>(Idx) ||
-            Idx.castAs<nonloc::ConcreteInt>().getValue().isSigned()) &&
+            Idx.castAs<nonloc::ConcreteInt>().getValue()->isSigned()) &&
            "The index must be signed");
     assert(!elementType.isNull() && !elementType->isVoidType() &&
            "Invalid region type!");
@@ -1503,7 +1508,7 @@ public:
   ///  associated element type, index, and super region.
   const ElementRegion *getElementRegion(QualType elementType, NonLoc Idx,
                                         const SubRegion *superRegion,
-                                        ASTContext &Ctx);
+                                        const ASTContext &Ctx);
 
   const ElementRegion *getElementRegionWithSuper(const ElementRegion *ER,
                                                  const SubRegion *superRegion) {

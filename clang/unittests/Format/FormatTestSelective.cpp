@@ -17,9 +17,9 @@ namespace clang {
 namespace format {
 namespace {
 
-class FormatTestSelective : public ::testing::Test {
+class FormatTestSelective : public testing::Test {
 protected:
-  std::string format(llvm::StringRef Code, unsigned Offset, unsigned Length) {
+  std::string format(StringRef Code, unsigned Offset, unsigned Length) {
     LLVM_DEBUG(llvm::errs() << "---\n");
     LLVM_DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
@@ -388,6 +388,17 @@ TEST_F(FormatTestSelective, WrongIndent) {
                    "  int j;\n" // Format here.
                    "}",
                    24, 0));
+  EXPECT_EQ("namespace {\n"
+            "class C {\n"
+            "  int i;\n"
+            "};\n"
+            "} // namespace",
+            format("namespace {\n" // Format here.
+                   "  class C {\n"
+                   "    int i;\n"
+                   "  };\n"
+                   "}",
+                   1, 0));
 }
 
 TEST_F(FormatTestSelective, AlwaysFormatsEntireMacroDefinitions) {

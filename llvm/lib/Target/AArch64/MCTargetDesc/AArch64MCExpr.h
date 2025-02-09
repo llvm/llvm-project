@@ -24,21 +24,24 @@ namespace llvm {
 class AArch64MCExpr : public MCTargetExpr {
 public:
   enum VariantKind {
+    // clang-format off
     // Symbol locations specifying (roughly speaking) what calculation should be
     // performed to construct the final address for the relocated
     // symbol. E.g. direct, via the GOT, ...
-    VK_ABS      = 0x001,
-    VK_SABS     = 0x002,
-    VK_PREL     = 0x003,
-    VK_GOT      = 0x004,
-    VK_DTPREL   = 0x005,
-    VK_GOTTPREL = 0x006,
-    VK_TPREL    = 0x007,
-    VK_TLSDESC  = 0x008,
-    VK_SECREL   = 0x009,
-    VK_AUTH     = 0x00a,
-    VK_AUTHADDR = 0x00b,
-    VK_SymLocBits = 0x00f,
+    VK_ABS          = 0x001,
+    VK_SABS         = 0x002,
+    VK_PREL         = 0x003,
+    VK_GOT          = 0x004,
+    VK_DTPREL       = 0x005,
+    VK_GOTTPREL     = 0x006,
+    VK_TPREL        = 0x007,
+    VK_TLSDESC      = 0x008,
+    VK_SECREL       = 0x009,
+    VK_AUTH         = 0x00a,
+    VK_AUTHADDR     = 0x00b,
+    VK_GOT_AUTH     = 0x00c,
+    VK_TLSDESC_AUTH = 0x00d,
+    VK_SymLocBits   = 0x00f,
 
     // Variants specifying which part of the final address calculation is
     // used. E.g. the low 12 bits for an ADD/LDR, the middle 16 bits for a
@@ -65,55 +68,60 @@ public:
     // omitted in line with assembly syntax here (VK_LO12 rather than VK_LO12_NC
     // since a user would write ":lo12:").
     VK_CALL              = VK_ABS,
-    VK_ABS_PAGE          = VK_ABS      | VK_PAGE,
-    VK_ABS_PAGE_NC       = VK_ABS      | VK_PAGE    | VK_NC,
-    VK_ABS_G3            = VK_ABS      | VK_G3,
-    VK_ABS_G2            = VK_ABS      | VK_G2,
-    VK_ABS_G2_S          = VK_SABS     | VK_G2,
-    VK_ABS_G2_NC         = VK_ABS      | VK_G2      | VK_NC,
-    VK_ABS_G1            = VK_ABS      | VK_G1,
-    VK_ABS_G1_S          = VK_SABS     | VK_G1,
-    VK_ABS_G1_NC         = VK_ABS      | VK_G1      | VK_NC,
-    VK_ABS_G0            = VK_ABS      | VK_G0,
-    VK_ABS_G0_S          = VK_SABS     | VK_G0,
-    VK_ABS_G0_NC         = VK_ABS      | VK_G0      | VK_NC,
-    VK_LO12              = VK_ABS      | VK_PAGEOFF | VK_NC,
-    VK_PREL_G3           = VK_PREL     | VK_G3,
-    VK_PREL_G2           = VK_PREL     | VK_G2,
-    VK_PREL_G2_NC        = VK_PREL     | VK_G2      | VK_NC,
-    VK_PREL_G1           = VK_PREL     | VK_G1,
-    VK_PREL_G1_NC        = VK_PREL     | VK_G1      | VK_NC,
-    VK_PREL_G0           = VK_PREL     | VK_G0,
-    VK_PREL_G0_NC        = VK_PREL     | VK_G0      | VK_NC,
-    VK_GOT_LO12          = VK_GOT      | VK_PAGEOFF | VK_NC,
-    VK_GOT_PAGE          = VK_GOT      | VK_PAGE,
-    VK_GOT_PAGE_LO15     = VK_GOT      | VK_LO15    | VK_NC,
-    VK_DTPREL_G2         = VK_DTPREL   | VK_G2,
-    VK_DTPREL_G1         = VK_DTPREL   | VK_G1,
-    VK_DTPREL_G1_NC      = VK_DTPREL   | VK_G1      | VK_NC,
-    VK_DTPREL_G0         = VK_DTPREL   | VK_G0,
-    VK_DTPREL_G0_NC      = VK_DTPREL   | VK_G0      | VK_NC,
-    VK_DTPREL_HI12       = VK_DTPREL   | VK_HI12,
-    VK_DTPREL_LO12       = VK_DTPREL   | VK_PAGEOFF,
-    VK_DTPREL_LO12_NC    = VK_DTPREL   | VK_PAGEOFF | VK_NC,
-    VK_GOTTPREL_PAGE     = VK_GOTTPREL | VK_PAGE,
-    VK_GOTTPREL_LO12_NC  = VK_GOTTPREL | VK_PAGEOFF | VK_NC,
-    VK_GOTTPREL_G1       = VK_GOTTPREL | VK_G1,
-    VK_GOTTPREL_G0_NC    = VK_GOTTPREL | VK_G0      | VK_NC,
-    VK_TPREL_G2          = VK_TPREL    | VK_G2,
-    VK_TPREL_G1          = VK_TPREL    | VK_G1,
-    VK_TPREL_G1_NC       = VK_TPREL    | VK_G1      | VK_NC,
-    VK_TPREL_G0          = VK_TPREL    | VK_G0,
-    VK_TPREL_G0_NC       = VK_TPREL    | VK_G0      | VK_NC,
-    VK_TPREL_HI12        = VK_TPREL    | VK_HI12,
-    VK_TPREL_LO12        = VK_TPREL    | VK_PAGEOFF,
-    VK_TPREL_LO12_NC     = VK_TPREL    | VK_PAGEOFF | VK_NC,
-    VK_TLSDESC_LO12      = VK_TLSDESC  | VK_PAGEOFF,
-    VK_TLSDESC_PAGE      = VK_TLSDESC  | VK_PAGE,
-    VK_SECREL_LO12       = VK_SECREL   | VK_PAGEOFF,
-    VK_SECREL_HI12       = VK_SECREL   | VK_HI12,
+    VK_ABS_PAGE          = VK_ABS          | VK_PAGE,
+    VK_ABS_PAGE_NC       = VK_ABS          | VK_PAGE    | VK_NC,
+    VK_ABS_G3            = VK_ABS          | VK_G3,
+    VK_ABS_G2            = VK_ABS          | VK_G2,
+    VK_ABS_G2_S          = VK_SABS         | VK_G2,
+    VK_ABS_G2_NC         = VK_ABS          | VK_G2      | VK_NC,
+    VK_ABS_G1            = VK_ABS          | VK_G1,
+    VK_ABS_G1_S          = VK_SABS         | VK_G1,
+    VK_ABS_G1_NC         = VK_ABS          | VK_G1      | VK_NC,
+    VK_ABS_G0            = VK_ABS          | VK_G0,
+    VK_ABS_G0_S          = VK_SABS         | VK_G0,
+    VK_ABS_G0_NC         = VK_ABS          | VK_G0      | VK_NC,
+    VK_LO12              = VK_ABS          | VK_PAGEOFF | VK_NC,
+    VK_PREL_G3           = VK_PREL         | VK_G3,
+    VK_PREL_G2           = VK_PREL         | VK_G2,
+    VK_PREL_G2_NC        = VK_PREL         | VK_G2      | VK_NC,
+    VK_PREL_G1           = VK_PREL         | VK_G1,
+    VK_PREL_G1_NC        = VK_PREL         | VK_G1      | VK_NC,
+    VK_PREL_G0           = VK_PREL         | VK_G0,
+    VK_PREL_G0_NC        = VK_PREL         | VK_G0      | VK_NC,
+    VK_GOT_LO12          = VK_GOT          | VK_PAGEOFF | VK_NC,
+    VK_GOT_PAGE          = VK_GOT          | VK_PAGE,
+    VK_GOT_PAGE_LO15     = VK_GOT          | VK_LO15    | VK_NC,
+    VK_GOT_AUTH_LO12     = VK_GOT_AUTH     | VK_PAGEOFF | VK_NC,
+    VK_GOT_AUTH_PAGE     = VK_GOT_AUTH     | VK_PAGE,
+    VK_DTPREL_G2         = VK_DTPREL       | VK_G2,
+    VK_DTPREL_G1         = VK_DTPREL       | VK_G1,
+    VK_DTPREL_G1_NC      = VK_DTPREL       | VK_G1      | VK_NC,
+    VK_DTPREL_G0         = VK_DTPREL       | VK_G0,
+    VK_DTPREL_G0_NC      = VK_DTPREL       | VK_G0      | VK_NC,
+    VK_DTPREL_HI12       = VK_DTPREL       | VK_HI12,
+    VK_DTPREL_LO12       = VK_DTPREL       | VK_PAGEOFF,
+    VK_DTPREL_LO12_NC    = VK_DTPREL       | VK_PAGEOFF | VK_NC,
+    VK_GOTTPREL_PAGE     = VK_GOTTPREL     | VK_PAGE,
+    VK_GOTTPREL_LO12_NC  = VK_GOTTPREL     | VK_PAGEOFF | VK_NC,
+    VK_GOTTPREL_G1       = VK_GOTTPREL     | VK_G1,
+    VK_GOTTPREL_G0_NC    = VK_GOTTPREL     | VK_G0      | VK_NC,
+    VK_TPREL_G2          = VK_TPREL        | VK_G2,
+    VK_TPREL_G1          = VK_TPREL        | VK_G1,
+    VK_TPREL_G1_NC       = VK_TPREL        | VK_G1      | VK_NC,
+    VK_TPREL_G0          = VK_TPREL        | VK_G0,
+    VK_TPREL_G0_NC       = VK_TPREL        | VK_G0      | VK_NC,
+    VK_TPREL_HI12        = VK_TPREL        | VK_HI12,
+    VK_TPREL_LO12        = VK_TPREL        | VK_PAGEOFF,
+    VK_TPREL_LO12_NC     = VK_TPREL        | VK_PAGEOFF | VK_NC,
+    VK_TLSDESC_LO12      = VK_TLSDESC      | VK_PAGEOFF,
+    VK_TLSDESC_PAGE      = VK_TLSDESC      | VK_PAGE,
+    VK_TLSDESC_AUTH_LO12 = VK_TLSDESC_AUTH | VK_PAGEOFF,
+    VK_TLSDESC_AUTH_PAGE = VK_TLSDESC_AUTH | VK_PAGE,
+    VK_SECREL_LO12       = VK_SECREL       | VK_PAGEOFF,
+    VK_SECREL_HI12       = VK_SECREL       | VK_HI12,
 
     VK_INVALID  = 0xfff
+    // clang-format on
   };
 
 private:
@@ -167,7 +175,7 @@ public:
 
   MCFragment *findAssociatedFragment() const override;
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                  const MCFixup *Fixup) const override;
 
   void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
@@ -201,7 +209,7 @@ public:
 
   MCFragment *findAssociatedFragment() const override;
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                  const MCFixup *Fixup) const override;
 
   static bool classof(const MCExpr *E) {

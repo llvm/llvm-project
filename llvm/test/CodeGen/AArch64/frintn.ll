@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-eabi -mattr=+fullfp16 %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64 -mattr=+fullfp16 %s -o - | FileCheck %s
 
 ; The llvm.aarch64.neon.frintn intrinsic should be auto-upgraded to the
 ; target-independent roundeven intrinsic.

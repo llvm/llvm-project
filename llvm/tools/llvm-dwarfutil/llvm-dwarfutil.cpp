@@ -38,12 +38,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -54,7 +55,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class DwarfutilOptTable : public opt::GenericOptTable {
 public:
-  DwarfutilOptTable() : opt::GenericOptTable(InfoTable) {}
+  DwarfutilOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // namespace
 
@@ -118,10 +120,10 @@ static Error validateAndSetOptions(opt::InputArgList &Args, Options &Options) {
 
   if (opt::Arg *LinkerKind = Args.getLastArg(OPT_linker)) {
     StringRef S = LinkerKind->getValue();
-    if (S == "apple")
-      Options.UseLLVMDWARFLinker = false;
-    else if (S == "llvm")
-      Options.UseLLVMDWARFLinker = true;
+    if (S == "classic")
+      Options.UseDWARFLinkerParallel = false;
+    else if (S == "parallel")
+      Options.UseDWARFLinkerParallel = true;
     else
       return createStringError(
           std::errc::invalid_argument,

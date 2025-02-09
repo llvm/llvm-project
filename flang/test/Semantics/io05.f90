@@ -55,6 +55,7 @@
   inquire(1, read=c(1), write=c(2), sign=c(3), sign=c(4), read=c(5), write=c(1))
 
   !ERROR: Duplicate IOMSG specifier
+  !WARNING: IOMSG= is useless without either ERR= or IOSTAT=
   inquire(10, iomsg=msg, pos=ipos, iomsg=msg)
 
   !ERROR: If ID appears, PENDING must also appear

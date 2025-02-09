@@ -6,6 +6,10 @@
 // RUN: %clang_cc1 -std=c++20 %t/Use.cpp -fmodule-file=Fibonacci.Cache=%t/Cache.pcm \
 // RUN:     -fsyntax-only -verify
 
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/Cache.cppm -o %t/Cache.pcm
+// RUN: %clang_cc1 -std=c++20 %t/Use.cpp -fmodule-file=Fibonacci.Cache=%t/Cache.pcm \
+// RUN:     -fsyntax-only -verify
+
 //--- Cache.cppm
 export module Fibonacci.Cache;
 

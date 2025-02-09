@@ -34,14 +34,15 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __stable_partition {
-
-struct __fn {
+struct __stable_partition {
   template <class _Iter, class _Sent, class _Proj, class _Pred>
   _LIBCPP_HIDE_FROM_ABI static subrange<__remove_cvref_t<_Iter>>
   __stable_partition_fn_impl(_Iter&& __first, _Sent&& __last, _Pred&& __pred, _Proj&& __proj) {
@@ -73,15 +74,15 @@ struct __fn {
   }
 };
 
-} // namespace __stable_partition
-
 inline namespace __cpo {
-inline constexpr auto stable_partition = __stable_partition::__fn{};
+inline constexpr auto stable_partition = __stable_partition{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_STABLE_PARTITION_H

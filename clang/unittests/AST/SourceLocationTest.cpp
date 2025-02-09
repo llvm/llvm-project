@@ -105,7 +105,7 @@ protected:
       RParenLoc.print(Msg, *Result.SourceManager);
       Msg << ">";
 
-      this->setFailure(Msg.str());
+      this->setFailure(MsgStr);
     }
   }
 };

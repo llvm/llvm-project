@@ -16,15 +16,17 @@
 #define LLVM_ADT_SMALLPTRSET_H
 
 #include "llvm/ADT/EpochTracker.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/type_traits.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <utility>
 
 namespace llvm {
@@ -51,10 +53,7 @@ class SmallPtrSetImplBase : public DebugEpochBase {
   friend class SmallPtrSetIteratorImpl;
 
 protected:
-  /// SmallArray - Points to a fixed size set of buckets, used in 'small mode'.
-  const void **SmallArray;
-  /// CurArray - This is the current set of buckets.  If equal to SmallArray,
-  /// then the set is in 'small mode'.
+  /// The current set of buckets, in either small or big representation.
   const void **CurArray;
   /// CurArraySize - The allocated size of CurArray, always a power of two.
   unsigned CurArraySize;
@@ -65,16 +64,18 @@ protected:
   unsigned NumNonEmpty;
   /// Number of tombstones in CurArray.
   unsigned NumTombstones;
+  /// Whether the set is in small representation.
+  bool IsSmall;
 
   // Helpers to copy and move construct a SmallPtrSet.
   SmallPtrSetImplBase(const void **SmallStorage,
                       const SmallPtrSetImplBase &that);
   SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize,
-                      SmallPtrSetImplBase &&that);
+                      const void **RHSSmallStorage, SmallPtrSetImplBase &&that);
 
   explicit SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize)
-      : SmallArray(SmallStorage), CurArray(SmallStorage),
-        CurArraySize(SmallSize), NumNonEmpty(0), NumTombstones(0) {
+      : CurArray(SmallStorage), CurArraySize(SmallSize), NumNonEmpty(0),
+        NumTombstones(0), IsSmall(true) {
     assert(SmallSize && (SmallSize & (SmallSize-1)) == 0 &&
            "Initial size must be a power of two!");
   }
@@ -91,6 +92,7 @@ public:
 
   [[nodiscard]] bool empty() const { return size() == 0; }
   size_type size() const { return NumNonEmpty - NumTombstones; }
+  size_type capacity() const { return CurArraySize; }
 
   void clear() {
     incrementEpoch();
@@ -105,6 +107,27 @@ public:
 
     NumNonEmpty = 0;
     NumTombstones = 0;
+  }
+
+  void reserve(size_type NumEntries) {
+    incrementEpoch();
+    // Do nothing if we're given zero as a reservation size.
+    if (NumEntries == 0)
+      return;
+    // No need to expand if we're small and NumEntries will fit in the space.
+    if (isSmall() && NumEntries <= CurArraySize)
+      return;
+    // insert_imp_big will reallocate if stores is more than 75% full, on the
+    // /final/ insertion.
+    if (!isSmall() && ((NumEntries - 1) * 4) < (CurArraySize * 3))
+      return;
+    // We must Grow -- find the size where we'd be 75% full, then round up to
+    // the next power of two.
+    size_type NewSize = NumEntries + (NumEntries / 3);
+    NewSize = 1 << (Log2_32_Ceil(NewSize) + 1);
+    // Like insert_imp_big, always allocate at least 128 elements.
+    NewSize = std::max(128u, NewSize);
+    Grow(NewSize);
   }
 
 protected:
@@ -126,29 +149,18 @@ protected:
   std::pair<const void *const *, bool> insert_imp(const void *Ptr) {
     if (isSmall()) {
       // Check to see if it is already in the set.
-      const void **LastTombstone = nullptr;
-      for (const void **APtr = SmallArray, **E = SmallArray + NumNonEmpty;
+      for (const void **APtr = CurArray, **E = CurArray + NumNonEmpty;
            APtr != E; ++APtr) {
         const void *Value = *APtr;
         if (Value == Ptr)
           return std::make_pair(APtr, false);
-        if (Value == getTombstoneMarker())
-          LastTombstone = APtr;
-      }
-
-      // Did we find any tombstone marker?
-      if (LastTombstone != nullptr) {
-        *LastTombstone = Ptr;
-        --NumTombstones;
-        incrementEpoch();
-        return std::make_pair(LastTombstone, true);
       }
 
       // Nope, there isn't.  If we stay small, just 'pushback' now.
       if (NumNonEmpty < CurArraySize) {
-        SmallArray[NumNonEmpty++] = Ptr;
+        CurArray[NumNonEmpty++] = Ptr;
         incrementEpoch();
-        return std::make_pair(SmallArray + (NumNonEmpty - 1), true);
+        return std::make_pair(CurArray + (NumNonEmpty - 1), true);
       }
       // Otherwise, hit the big set case, which will call grow.
     }
@@ -160,14 +172,27 @@ protected:
   /// that the derived class can check that the right type of pointer is passed
   /// in.
   bool erase_imp(const void * Ptr) {
-    const void *const *P = find_imp(Ptr);
-    if (P == EndPointer())
+    if (isSmall()) {
+      for (const void **APtr = CurArray, **E = CurArray + NumNonEmpty;
+           APtr != E; ++APtr) {
+        if (*APtr == Ptr) {
+          *APtr = CurArray[--NumNonEmpty];
+          incrementEpoch();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    auto *Bucket = doFind(Ptr);
+    if (!Bucket)
       return false;
 
-    const void **Loc = const_cast<const void **>(P);
-    assert(*Loc == Ptr && "broken find!");
-    *Loc = getTombstoneMarker();
+    *const_cast<const void **>(Bucket) = getTombstoneMarker();
     NumTombstones++;
+    // Treat this consistently from an API perspective, even if we don't
+    // actually invalidate iterators here.
+    incrementEpoch();
     return true;
   }
 
@@ -177,25 +202,40 @@ protected:
   const void *const * find_imp(const void * Ptr) const {
     if (isSmall()) {
       // Linear search for the item.
-      for (const void *const *APtr = SmallArray,
-                      *const *E = SmallArray + NumNonEmpty; APtr != E; ++APtr)
+      for (const void *const *APtr = CurArray, *const *E =
+                                                   CurArray + NumNonEmpty;
+           APtr != E; ++APtr)
         if (*APtr == Ptr)
           return APtr;
       return EndPointer();
     }
 
     // Big set case.
-    auto *Bucket = FindBucketFor(Ptr);
-    if (*Bucket == Ptr)
+    if (auto *Bucket = doFind(Ptr))
       return Bucket;
     return EndPointer();
   }
 
-private:
-  bool isSmall() const { return CurArray == SmallArray; }
+  bool contains_imp(const void *Ptr) const {
+    if (isSmall()) {
+      // Linear search for the item.
+      const void *const *APtr = CurArray;
+      const void *const *E = CurArray + NumNonEmpty;
+      for (; APtr != E; ++APtr)
+        if (*APtr == Ptr)
+          return true;
+      return false;
+    }
 
+    return doFind(Ptr) != nullptr;
+  }
+
+  bool isSmall() const { return IsSmall; }
+
+private:
   std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
 
+  const void *const *doFind(const void *Ptr) const;
   const void * const *FindBucketFor(const void *Ptr) const;
   void shrink_and_clear();
 
@@ -205,16 +245,19 @@ private:
 protected:
   /// swap - Swaps the elements of two sets.
   /// Note: This method assumes that both sets have the same small size.
-  void swap(SmallPtrSetImplBase &RHS);
+  void swap(const void **SmallStorage, const void **RHSSmallStorage,
+            SmallPtrSetImplBase &RHS);
 
-  void CopyFrom(const SmallPtrSetImplBase &RHS);
-  void MoveFrom(unsigned SmallSize, SmallPtrSetImplBase &&RHS);
+  void copyFrom(const void **SmallStorage, const SmallPtrSetImplBase &RHS);
+  void moveFrom(const void **SmallStorage, unsigned SmallSize,
+                const void **RHSSmallStorage, SmallPtrSetImplBase &&RHS);
 
 private:
-  /// Code shared by MoveFrom() and move constructor.
-  void MoveHelper(unsigned SmallSize, SmallPtrSetImplBase &&RHS);
-  /// Code shared by CopyFrom() and copy constructor.
-  void CopyHelper(const SmallPtrSetImplBase &RHS);
+  /// Code shared by moveFrom() and move constructor.
+  void moveHelper(const void **SmallStorage, unsigned SmallSize,
+                  const void **RHSSmallStorage, SmallPtrSetImplBase &&RHS);
+  /// Code shared by copyFrom() and copy constructor.
+  void copyHelper(const SmallPtrSetImplBase &RHS);
 };
 
 /// SmallPtrSetIteratorImpl - This is the common base class shared between all
@@ -311,31 +354,6 @@ public:
   }
 };
 
-/// RoundUpToPowerOfTwo - This is a helper template that rounds N up to the next
-/// power of two (which means N itself if N is already a power of two).
-template<unsigned N>
-struct RoundUpToPowerOfTwo;
-
-/// RoundUpToPowerOfTwoH - If N is not a power of two, increase it.  This is a
-/// helper template used to implement RoundUpToPowerOfTwo.
-template<unsigned N, bool isPowerTwo>
-struct RoundUpToPowerOfTwoH {
-  enum { Val = N };
-};
-template<unsigned N>
-struct RoundUpToPowerOfTwoH<N, false> {
-  enum {
-    // We could just use NextVal = N+1, but this converges faster.  N|(N-1) sets
-    // the right-most zero bits to one all at once, e.g. 0b0011000 -> 0b0011111.
-    Val = RoundUpToPowerOfTwo<(N|(N-1)) + 1>::Val
-  };
-};
-
-template<unsigned N>
-struct RoundUpToPowerOfTwo {
-  enum { Val = RoundUpToPowerOfTwoH<N, (N&(N-1)) == 0>::Val };
-};
-
 /// A templated base class for \c SmallPtrSet which provides the
 /// typesafe interface that is common across all small sizes.
 ///
@@ -375,20 +393,70 @@ public:
     return insert(Ptr).first;
   }
 
-  /// erase - If the set contains the specified pointer, remove it and return
-  /// true, otherwise return false.
+  /// Remove pointer from the set.
+  ///
+  /// Returns whether the pointer was in the set. Invalidates iterators if
+  /// true is returned. To remove elements while iterating over the set, use
+  /// remove_if() instead.
   bool erase(PtrType Ptr) {
     return erase_imp(PtrTraits::getAsVoidPointer(Ptr));
   }
+
+  /// Remove elements that match the given predicate.
+  ///
+  /// This method is a safe replacement for the following pattern, which is not
+  /// valid, because the erase() calls would invalidate the iterator:
+  ///
+  ///     for (PtrType *Ptr : Set)
+  ///       if (Pred(P))
+  ///         Set.erase(P);
+  ///
+  /// Returns whether anything was removed. It is safe to read the set inside
+  /// the predicate function. However, the predicate must not modify the set
+  /// itself, only indicate a removal by returning true.
+  template <typename UnaryPredicate>
+  bool remove_if(UnaryPredicate P) {
+    bool Removed = false;
+    if (isSmall()) {
+      const void **APtr = CurArray, **E = CurArray + NumNonEmpty;
+      while (APtr != E) {
+        PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(*APtr));
+        if (P(Ptr)) {
+          *APtr = *--E;
+          --NumNonEmpty;
+          incrementEpoch();
+          Removed = true;
+        } else {
+          ++APtr;
+        }
+      }
+      return Removed;
+    }
+
+    for (const void **APtr = CurArray, **E = EndPointer(); APtr != E; ++APtr) {
+      const void *Value = *APtr;
+      if (Value == getTombstoneMarker() || Value == getEmptyMarker())
+        continue;
+      PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(Value));
+      if (P(Ptr)) {
+        *APtr = getTombstoneMarker();
+        ++NumTombstones;
+        incrementEpoch();
+        Removed = true;
+      }
+    }
+    return Removed;
+  }
+
   /// count - Return 1 if the specified pointer is in the set, 0 otherwise.
   size_type count(ConstPtrType Ptr) const {
-    return find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)) != EndPointer();
+    return contains_imp(ConstPtrTraits::getAsVoidPointer(Ptr));
   }
   iterator find(ConstPtrType Ptr) const {
     return makeIterator(find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)));
   }
   bool contains(ConstPtrType Ptr) const {
-    return find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)) != EndPointer();
+    return contains_imp(ConstPtrTraits::getAsVoidPointer(Ptr));
   }
 
   template <typename IterT>
@@ -456,8 +524,18 @@ class SmallPtrSet : public SmallPtrSetImpl<PtrType> {
 
   using BaseT = SmallPtrSetImpl<PtrType>;
 
+  // A constexpr version of llvm::bit_ceil.
+  // TODO: Replace this with std::bit_ceil once C++20 is available.
+  static constexpr size_t RoundUpToPowerOfTwo(size_t X) {
+    size_t C = 1;
+    size_t CMax = C << (std::numeric_limits<size_t>::digits - 1);
+    while (C < X && C < CMax)
+      C <<= 1;
+    return C;
+  }
+
   // Make sure that SmallSize is a power of two, round up if not.
-  enum { SmallSizePowTwo = RoundUpToPowerOfTwo<SmallSize>::Val };
+  static constexpr size_t SmallSizePowTwo = RoundUpToPowerOfTwo(SmallSize);
   /// SmallStorage - Fixed size storage used in 'small mode'.
   const void *SmallStorage[SmallSizePowTwo];
 
@@ -465,7 +543,8 @@ public:
   SmallPtrSet() : BaseT(SmallStorage, SmallSizePowTwo) {}
   SmallPtrSet(const SmallPtrSet &that) : BaseT(SmallStorage, that) {}
   SmallPtrSet(SmallPtrSet &&that)
-      : BaseT(SmallStorage, SmallSizePowTwo, std::move(that)) {}
+      : BaseT(SmallStorage, SmallSizePowTwo, that.SmallStorage,
+              std::move(that)) {}
 
   template<typename It>
   SmallPtrSet(It I, It E) : BaseT(SmallStorage, SmallSizePowTwo) {
@@ -480,14 +559,15 @@ public:
   SmallPtrSet<PtrType, SmallSize> &
   operator=(const SmallPtrSet<PtrType, SmallSize> &RHS) {
     if (&RHS != this)
-      this->CopyFrom(RHS);
+      this->copyFrom(SmallStorage, RHS);
     return *this;
   }
 
   SmallPtrSet<PtrType, SmallSize> &
   operator=(SmallPtrSet<PtrType, SmallSize> &&RHS) {
     if (&RHS != this)
-      this->MoveFrom(SmallSizePowTwo, std::move(RHS));
+      this->moveFrom(SmallStorage, SmallSizePowTwo, RHS.SmallStorage,
+                     std::move(RHS));
     return *this;
   }
 
@@ -500,7 +580,7 @@ public:
 
   /// swap - Swaps the elements of two sets.
   void swap(SmallPtrSet<PtrType, SmallSize> &RHS) {
-    SmallPtrSetImplBase::swap(RHS);
+    SmallPtrSetImplBase::swap(SmallStorage, RHS.SmallStorage, RHS);
   }
 };
 

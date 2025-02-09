@@ -6,15 +6,18 @@ unittest("CoreTests") {
   deps = [
     "//bolt/lib/Core",
     "//bolt/lib/Rewrite",
+    "//bolt/lib/Profile",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "BinaryContext.cpp",
     "DynoStats.cpp",
     "MCPlusBuilder.cpp",
+    "MemoryMaps.cpp",
   ]
 
   defines = []

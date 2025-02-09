@@ -9,6 +9,7 @@ static_library("Breakpoint") {
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//llvm/lib/Support",
   ]
   sources = [
@@ -34,9 +35,9 @@ static_library("Breakpoint") {
     "StoppointCallbackContext.cpp",
     "StoppointSite.cpp",
     "Watchpoint.cpp",
+    "WatchpointAlgorithms.cpp",
     "WatchpointList.cpp",
     "WatchpointOptions.cpp",
     "WatchpointResource.cpp",
-    "WatchpointResourceList.cpp",
   ]
 }

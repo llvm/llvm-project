@@ -4,8 +4,8 @@
 
 define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[E:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[J:%.*]] = select i1 [[E]], i32 [[C:%.*]], i32 [[D:%.*]]
+; CHECK-NEXT:    [[E_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[J:%.*]] = select i1 [[E_NOT]], i32 [[C:%.*]], i32 [[D:%.*]]
 ; CHECK-NEXT:    ret i32 [[J]]
 ;
   %e = icmp slt i32 %a, %b
@@ -19,8 +19,8 @@ define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 define i32 @bar(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT:    [[E:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[J:%.*]] = select i1 [[E]], i32 [[C:%.*]], i32 [[D:%.*]]
+; CHECK-NEXT:    [[E_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[J:%.*]] = select i1 [[E_NOT]], i32 [[C:%.*]], i32 [[D:%.*]]
 ; CHECK-NEXT:    ret i32 [[J]]
 ;
   %e = icmp slt i32 %a, %b
@@ -34,8 +34,8 @@ define i32 @bar(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 define i32 @goo(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @goo(
-; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T0]], i32 [[C:%.*]], i32 [[D:%.*]]
+; CHECK-NEXT:    [[T0_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T0_NOT]], i32 [[C:%.*]], i32 [[D:%.*]]
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = icmp slt i32 %a, %b
@@ -141,8 +141,8 @@ define <2 x i32> @fold_inverted_icmp_vector_preds(<2 x i32> %a, <2 x i32> %b, <2
 
 define i32 @par(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @par(
-; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T0]], i32 [[C:%.*]], i32 [[D:%.*]]
+; CHECK-NEXT:    [[T0_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T0_NOT]], i32 [[C:%.*]], i32 [[D:%.*]]
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = icmp slt i32 %a, %b
@@ -343,10 +343,10 @@ define <2 x i64> @bitcast_select_multi_uses(<4 x i1> %cmp, <2 x i64> %a, <2 x i6
 ; CHECK-LABEL: @bitcast_select_multi_uses(
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i32> [[SEXT]] to <2 x i64>
-; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i64> [[BC1]], [[A:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i64> [[A:%.*]], [[BC1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[SEXT]] to <2 x i64>
-; CHECK-NEXT:    [[BC2:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
-; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[BC2]], [[B:%.*]]
+; CHECK-NEXT:    [[BC2:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 -1)
+; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[B:%.*]], [[BC2]]
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[AND2]], [[AND1]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i64> [[AND2]], [[BC2]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i64> [[OR]], [[ADD]]
@@ -393,7 +393,7 @@ define i1 @bools_logical(i1 %a, i1 %b, i1 %c) {
 define i1 @bools_multi_uses1(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools_multi_uses1(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[NOT]], [[A:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[A:%.*]], [[NOT]]
 ; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C]], i1 [[B:%.*]], i1 [[A]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[OR]], [[AND1]]
 ; CHECK-NEXT:    ret i1 [[XOR]]
@@ -647,7 +647,7 @@ define <4 x i32> @computesignbits_through_shuffles(<4 x float> %x, <4 x float> %
 ; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x i32> [[SHUF_OR1]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[S4:%.*]] = shufflevector <4 x i32> [[SHUF_OR1]], <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
 ; CHECK-NEXT:    [[SHUF_OR2:%.*]] = or <4 x i32> [[S3]], [[S4]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[SHUF_OR2]] to <4 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw <4 x i32> [[SHUF_OR2]] to <4 x i1>
 ; CHECK-NEXT:    [[SEL_V:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[Z:%.*]], <4 x float> [[X]]
 ; CHECK-NEXT:    [[SEL:%.*]] = bitcast <4 x float> [[SEL_V]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
@@ -671,11 +671,8 @@ define <4 x i32> @computesignbits_through_shuffles(<4 x float> %x, <4 x float> %
 
 define <4 x i32> @computesignbits_through_two_input_shuffle(<4 x i32> %x, <4 x i32> %y, <4 x i1> %cond1, <4 x i1> %cond2) {
 ; CHECK-LABEL: @computesignbits_through_two_input_shuffle(
-; CHECK-NEXT:    [[SEXT1:%.*]] = sext <4 x i1> [[COND1:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[SEXT2:%.*]] = sext <4 x i1> [[COND2:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i32> [[SEXT1]], <4 x i32> [[SEXT2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[COND]] to <4 x i1>
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i1> [[COND1:%.*]], <4 x i1> [[COND2:%.*]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND]], <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
   %sext1 = sext <4 x i1> %cond1 to <4 x i32>

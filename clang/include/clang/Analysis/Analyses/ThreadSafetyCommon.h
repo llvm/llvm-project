@@ -330,9 +330,9 @@ public:
 
   bool shouldIgnore() const { return sexpr() == nullptr; }
 
-  bool isInvalid() const { return sexpr() && isa<til::Undefined>(sexpr()); }
+  bool isInvalid() const { return isa_and_nonnull<til::Undefined>(sexpr()); }
 
-  bool isUniversal() const { return sexpr() && isa<til::Wildcard>(sexpr()); }
+  bool isUniversal() const { return isa_and_nonnull<til::Wildcard>(sexpr()); }
 };
 
 // Translate clang::Expr to til::SExpr.
@@ -527,8 +527,10 @@ private:
   BlockInfo *CurrentBlockInfo = nullptr;
 };
 
+#ifndef NDEBUG
 // Dump an SCFG to llvm::errs().
 void printSCFG(CFGWalker &Walker);
+#endif // NDEBUG
 
 } // namespace threadSafety
 } // namespace clang

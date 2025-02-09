@@ -11,7 +11,7 @@ define i32 @t1(i32 %a, i32 %b) nounwind  {
 ; CHECK-NEXT:    je LBB0_4
 ; CHECK-NEXT:  ## %bb.1: ## %while.body.preheader
 ; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_2: ## %while.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %edx, %ecx
@@ -62,7 +62,7 @@ define i32 @t3(i64 %a, i64 %b) nounwind  {
 ; CHECK-NEXT:    je LBB2_4
 ; CHECK-NEXT:  ## %bb.1: ## %while.body.preheader
 ; CHECK-NEXT:    movq %rsi, %rdx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB2_2: ## %while.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rdx, %rcx

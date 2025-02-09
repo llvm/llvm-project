@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; Make sure the globals constant initializers are not prone to host endianess 
 ; issues.
@@ -26,6 +26,6 @@
 @Gblf64 = global [2 x double] [double 5.75e-25, double 12.25e+56]
 
 ; Make sure we fill in alignment gaps correctly.
-; CHECK-DAG: .b8 GblU[12] = {7, 6, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0};
+; CHECK-DAG: .b8 GblU[12] = {7, 6, 0, 0, 5, 4, 3, 2, 1};
 @GblU = global {i16, i32, i8} {i16 1543, i32 33752069, i8 1}
 

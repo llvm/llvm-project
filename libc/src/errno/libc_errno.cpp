@@ -1,4 +1,4 @@
-//===-- Implementation of errno -------------------------------------------===//
+//===-- Implementation of libc_errno --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,35 +6,91 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/macros/attributes.h"
-#include "src/__support/macros/properties/architectures.h"
+#include "libc_errno.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+// libc uses a fallback default value, either system or thread local.
+#define LIBC_ERRNO_MODE_DEFAULT 0
+// libc never stores a value; `errno` macro uses get link-time failure.
+#define LIBC_ERRNO_MODE_UNDEFINED 1
+// libc maintains per-thread state (requires C++ `thread_local` support).
+#define LIBC_ERRNO_MODE_THREAD_LOCAL 2
+// libc maintains shared state used by all threads, contrary to standard C
+// semantics unless always single-threaded; nothing prevents data races.
+#define LIBC_ERRNO_MODE_SHARED 3
+// libc doesn't maintain any internal state, instead the embedder must define
+// `int *__llvm_libc_errno(void);` C function.
+#define LIBC_ERRNO_MODE_EXTERNAL 4
+// libc uses system `<errno.h>` `errno` macro directly in the overlay mode; in
+// fullbuild mode, effectively the same as `LIBC_ERRNO_MODE_EXTERNAL`.
+#define LIBC_ERRNO_MODE_SYSTEM 5
 
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-struct ErrnoConsumer {
-  void operator=(int) {}
-};
+#if !defined(LIBC_ERRNO_MODE) || LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_DEFAULT
+#undef LIBC_ERRNO_MODE
+#if defined(LIBC_FULL_BUILD) || !defined(LIBC_COPT_PUBLIC_PACKAGING)
+#define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_THREAD_LOCAL
+#else
+#define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_SYSTEM
+#endif
+#endif // LIBC_ERRNO_MODE
+
+#if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_DEFAULT &&                              \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_UNDEFINED &&                            \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_THREAD_LOCAL &&                         \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SHARED &&                               \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_EXTERNAL &&                             \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM
+#error LIBC_ERRNO_MODE must be one of the following values: \
+LIBC_ERRNO_MODE_DEFAULT, \
+LIBC_ERRNO_MODE_UNDEFINED, \
+LIBC_ERRNO_MODE_THREAD_LOCAL, \
+LIBC_ERRNO_MODE_SHARED, \
+LIBC_ERRNO_MODE_EXTERNAL, \
+LIBC_ERRNO_MODE_SYSTEM
 #endif
 
-extern "C" {
-#ifdef LIBC_COPT_PUBLIC_PACKAGING
-// TODO: Declare __llvmlibc_errno only under LIBC_COPT_PUBLIC_PACKAGING and
-// __llvmlibc_internal_errno otherwise.
-// In overlay mode, this will be an unused thread local variable as libc_errno
-// will resolve to errno from the system libc's errno.h. In full build mode
-// however, libc_errno will resolve to this thread local variable via the errno
-// macro defined in LLVM libc's public errno.h header file.
-// TODO: Use a macro to distinguish full build and overlay build which can be
-//       used to exclude __llvmlibc_errno under overlay build.
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-ErrnoConsumer __llvmlibc_errno;
-#else
-LIBC_THREAD_LOCAL int __llvmlibc_errno;
-#endif // LIBC_TARGET_ARCH_IS_GPU
-#else
-LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
-#endif
-} // extern "C"
+namespace LIBC_NAMESPACE_DECL {
 
-} // namespace LIBC_NAMESPACE
+#if LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_UNDEFINED
+
+void Errno::operator=(int) {}
+Errno::operator int() { return 0; }
+
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_THREAD_LOCAL
+
+namespace {
+LIBC_THREAD_LOCAL int thread_errno;
+}
+
+extern "C" int *__llvm_libc_errno() noexcept { return &thread_errno; }
+
+void Errno::operator=(int a) { thread_errno = a; }
+Errno::operator int() { return thread_errno; }
+
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SHARED
+
+namespace {
+int shared_errno;
+}
+
+extern "C" int *__llvm_libc_errno() noexcept { return &shared_errno; }
+
+void Errno::operator=(int a) { shared_errno = a; }
+Errno::operator int() { return shared_errno; }
+
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_EXTERNAL
+
+void Errno::operator=(int a) { *__llvm_libc_errno() = a; }
+Errno::operator int() { return *__llvm_libc_errno(); }
+
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SYSTEM
+
+void Errno::operator=(int a) { errno = a; }
+Errno::operator int() { return errno; }
+
+#endif
+
+// Define the global `libc_errno` instance.
+Errno libc_errno;
+
+} // namespace LIBC_NAMESPACE_DECL

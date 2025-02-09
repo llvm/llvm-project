@@ -19,7 +19,7 @@ vcx3at   p1, q3, q7, q6, #15
 vcx3e    p0, q0, q2, q0, #12
 
 vpt.i8 eq, q0, q0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: incorrect predication in VPT block; got 'none', but expected 't'
+// ERROR: error: incorrect predication in VPT block; got 'none', but expected 't'
 vcx1    p0, q1, #1234
 
 vpt.i8 eq, q0, q0

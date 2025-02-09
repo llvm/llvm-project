@@ -214,12 +214,23 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
 
   let arguments = (ins
     FlatSymbolRefAttr:$callee,
-    Variadic<SPIRV_Type>:$arguments
+    Variadic<SPIRV_Type>:$arguments,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
 
   let results = (outs
     Optional<SPIRV_Type>:$return_value
   );
+
+  let builders = [
+    OpBuilder<(ins "Type":$returnType, "FlatSymbolRefAttr":$callee,
+      "ValueRange":$arguments),
+    [{
+      build($_builder, $_state, returnType, callee, arguments,
+            /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
+    }]>
+  ];
 
   let autogenSerialization = 0;
 
@@ -285,7 +296,7 @@ def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
 
     // Adds an empty entry block and loop merge block containing one
     // spirv.mlir.merge op.
-    void addEntryAndMergeBlock();
+    void addEntryAndMergeBlock(OpBuilder &builder);
   }];
 
   let hasOpcode = 0;
@@ -427,7 +438,7 @@ def SPIRV_SelectionOp : SPIRV_Op<"mlir.selection", [InFunctionScope]> {
     Block *getMergeBlock();
 
     /// Adds a selection merge block containing one spirv.mlir.merge op.
-    void addMergeBlock();
+    void addMergeBlock(OpBuilder &builder);
 
     /// Creates a spirv.mlir.selection op for `if (<condition>) then { <thenBody> }`
     /// with `builder`. `builder`'s insertion point will remain at after the

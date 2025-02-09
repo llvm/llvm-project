@@ -100,9 +100,9 @@ define <6 x i32> @uaddo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    mov v0.s[3], w3
 ; CHECK-NEXT:    cmhi v3.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    str d2, [x8, #16]
-; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    mov w5, v3.s[1]
 ; CHECK-NEXT:    fmov w4, s3
+; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    str q1, [x8]
 ; CHECK-NEXT:    mov w1, v0.s[1]
@@ -248,10 +248,10 @@ define <4 x i32> @uaddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    eor v2.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    adrp x8, .LCPI10_0
-; CHECK-NEXT:    shl v2.4h, v2.4h, #15
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    cmlt v1.4h, v2.4h, #0
+; CHECK-NEXT:    shl v1.4h, v2.4h, #15
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI10_0]
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0

@@ -15,7 +15,7 @@ namespace Fortran::runtime::typeInfo {
 
 RT_OFFLOAD_API_GROUP_BEGIN
 
-RT_API_ATTRS std::optional<TypeParameterValue> Value::GetValue(
+RT_API_ATTRS Fortran::common::optional<TypeParameterValue> Value::GetValue(
     const Descriptor *descriptor) const {
   switch (genre_) {
   case Genre::Explicit:
@@ -26,9 +26,9 @@ RT_API_ATTRS std::optional<TypeParameterValue> Value::GetValue(
         return addendum->LenParameterValue(value_);
       }
     }
-    return std::nullopt;
+    return Fortran::common::nullopt;
   default:
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
 }
 
@@ -36,6 +36,7 @@ RT_API_ATTRS std::size_t Component::GetElementByteSize(
     const Descriptor &instance) const {
   switch (category()) {
   case TypeCategory::Integer:
+  case TypeCategory::Unsigned:
   case TypeCategory::Real:
   case TypeCategory::Logical:
     return kind_;

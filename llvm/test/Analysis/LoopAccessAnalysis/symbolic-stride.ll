@@ -48,6 +48,51 @@ exit:                                          ; preds = %loop
   ret void
 }
 
+; A forwarding in the presence of symbolic strides,
+; with nusw instead of inbounds on the GEPs.
+define void @single_stride_nusw(ptr noalias %A, ptr noalias %B, i64 %N, i64 %stride) {
+; CHECK-LABEL: 'single_stride_nusw'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Backward:
+; CHECK-NEXT:            %load = load i32, ptr %gep.A, align 4 ->
+; CHECK-NEXT:            store i32 %add, ptr %gep.A.next, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Equal predicate: %stride == 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep.A = getelementptr nusw i32, ptr %A, i64 %mul:
+; CHECK-NEXT:        {%A,+,(4 * %stride)}<%loop>
+; CHECK-NEXT:        --> {%A,+,4}<%loop>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul i64 %iv, %stride
+  %gep.A = getelementptr nusw i32, ptr %A, i64 %mul
+  %load = load i32, ptr %gep.A, align 4
+  %gep.B = getelementptr nusw i32, ptr %B, i64 %iv
+  %load_1 = load i32, ptr %gep.B, align 4
+  %add = add i32 %load_1, %load
+  %iv.next = add nuw nsw i64 %iv, 1
+  %gep.A.next = getelementptr nusw i32, ptr %A, i64 %iv.next
+  store i32 %add, ptr %gep.A.next, align 4
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %exit, label %loop
+
+exit:                                          ; preds = %loop
+  ret void
+}
+
 ; Similar to @single_stride, but with struct types.
 define void @single_stride_struct(ptr noalias %A, ptr noalias %B, i64 %N, i64 %stride) {
 ; CHECK-LABEL: 'single_stride_struct'
@@ -95,6 +140,182 @@ exit:
   ret void
 }
 
+define void @single_stride_castexpr(i32 %offset, ptr %src, ptr %dst, i1 %cond) {
+; CHECK-LABEL: 'single_stride_castexpr'
+; CHECK-NEXT:    inner.loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2
+; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i32 %iv.3
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:          (Low: ((4 * %iv.1) + %dst) High: (804 + (4 * %iv.1) + %dst))
+; CHECK-NEXT:            Member: {((4 * %iv.1) + %dst),+,4}<%inner.loop>
+; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:          (Low: %src High: (804 + %src))
+; CHECK-NEXT:            Member: {%src,+,4}<nuw><%inner.loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Equal predicate: %offset == 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2:
+; CHECK-NEXT:        {((4 * %iv.1) + %dst),+,(4 * (sext i32 %offset to i64))<nsw>}<%inner.loop>
+; CHECK-NEXT:        --> {((4 * %iv.1) + %dst),+,4}<%inner.loop>
+; CHECK-NEXT:    outer.header:
+; CHECK-NEXT:      Report: loop is not the innermost loop
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %offset.ext = sext i32 %offset to i64
+  br label %outer.header
+
+outer.header:
+  %iv.1 = phi i64 [ 0, %entry ], [ %iv.2.next, %inner.loop ]
+  br i1 %cond, label %inner.loop, label %exit
+
+inner.loop:
+  %iv.2 = phi i64 [ %iv.1, %outer.header ], [ %iv.2.next, %inner.loop ]
+  %iv.3 = phi i32 [ 0, %outer.header ], [ %iv.3.next, %inner.loop ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i32 %iv.3
+  %load = load i32, ptr %gep.src, align 8
+  %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2
+  store i32 %load, ptr %gep.dst, align 8
+  %iv.2.next = add i64 %iv.2, %offset.ext
+  %iv.3.next = add i32 %iv.3, 1
+  %ec = icmp eq i32 %iv.3, 200
+  br i1 %ec, label %outer.header, label %inner.loop
+
+exit:
+  ret void
+}
+
+define void @single_stride_castexpr_multiuse(i32 %offset, ptr %src, ptr %dst, i1 %cond) {
+; CHECK-LABEL: 'single_stride_castexpr_multiuse'
+; CHECK-NEXT:    inner.loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2
+; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv.3
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:          (Low: ((4 * %iv.1) + %dst) High: (804 + (4 * %iv.1) + (-4 * (zext i32 %offset to i64))<nsw> + %dst))
+; CHECK-NEXT:            Member: {((4 * %iv.1) + %dst),+,4}<%inner.loop>
+; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:          (Low: (4 + %src) High: (808 + (-4 * (zext i32 %offset to i64))<nsw> + %src))
+; CHECK-NEXT:            Member: {(4 + %src),+,4}<%inner.loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Equal predicate: %offset == 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv.3:
+; CHECK-NEXT:        {((4 * (zext i32 %offset to i64))<nuw><nsw> + %src),+,4}<%inner.loop>
+; CHECK-NEXT:        --> {(4 + %src),+,4}<%inner.loop>
+; CHECK-NEXT:      [PSE] %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2:
+; CHECK-NEXT:        {((4 * %iv.1) + %dst),+,(4 * (sext i32 %offset to i64))<nsw>}<%inner.loop>
+; CHECK-NEXT:        --> {((4 * %iv.1) + %dst),+,4}<%inner.loop>
+; CHECK-NEXT:    outer.header:
+; CHECK-NEXT:      Report: loop is not the innermost loop
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %offset.ext = sext i32 %offset to i64
+  %offset.zext = zext i32 %offset to i64
+  br label %outer.header
+
+outer.header:
+  %iv.1 = phi i64 [ 0, %entry ], [ %iv.2.next, %inner.loop ]
+  br i1 %cond, label %inner.loop, label %exit
+
+inner.loop:
+  %iv.2 = phi i64 [ %iv.1, %outer.header ], [ %iv.2.next, %inner.loop ]
+  %iv.3 = phi i64 [ %offset.zext, %outer.header ], [ %iv.3.next, %inner.loop ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv.3
+  %load = load i32, ptr %gep.src, align 8
+  %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2
+  store i32 %load, ptr %gep.dst, align 8
+  %iv.2.next = add i64 %iv.2, %offset.ext
+  %iv.3.next = add i64 %iv.3, 1
+  %ec = icmp eq i64 %iv.3, 200
+  br i1 %ec, label %outer.header, label %inner.loop
+
+exit:
+  ret void
+}
+
+define double @single_iteration_unknown_stride(i32 %x, ptr %y, i1 %cond) {
+; CHECK-LABEL: 'single_iteration_unknown_stride'
+; CHECK-NEXT:    loop.body:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Equal predicate: %x == 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep10 = getelementptr double, ptr %gep8, i64 %mul:
+; CHECK-NEXT:        {(8 + %y),+,(8 * (sext i32 %x to i64))<nsw>}<%loop.body>
+; CHECK-NEXT:        --> {(8 + %y),+,8}<%loop.body>
+;
+entry:
+  br i1 %cond, label %noloop.exit, label %loop.ph
+
+loop.ph:                                          ; preds = %entry
+  %sext7 = sext i32 %x to i64
+  %gep8 = getelementptr i8, ptr %y, i64 8
+  br label %loop.body
+
+loop.body:                                        ; preds = %loop.body, %loop.ph
+  %iv = phi i64 [ 0, %loop.ph ], [ %iv.next, %loop.body ]
+  %mul = mul i64 %iv, %sext7
+  %gep10 = getelementptr double, ptr %gep8, i64 %mul
+  %load11 = load double, ptr %gep10, align 8
+  store double %load11, ptr %y, align 8
+  %iv.next = add i64 %iv, 1
+  %icmp = icmp eq i64 %iv, 0
+  br i1 %icmp, label %loop.exit, label %loop.body
+
+noloop.exit:                                      ; preds = %entry
+  %sext = sext i32 %x to i64
+  %gep = getelementptr double, ptr %y, i64 %sext
+  %load5 = load double, ptr %gep, align 8
+  ret double %load5
+
+loop.exit:                                        ; preds = %loop.body
+  %sext2 = sext i32 %x to i64
+  %gep2 = getelementptr double, ptr %y, i64 %sext2
+  %load6 = load double, ptr %gep2, align 8
+  ret double %load6
+}
+
 ; A loop with two symbolic strides.
 define void @two_strides(ptr noalias %A, ptr noalias %B, i64 %N, i64 %stride.1, i64 %stride.2) {
 ; CHECK-LABEL: 'two_strides'
@@ -138,6 +359,250 @@ loop:
   %gep.A.next = getelementptr inbounds i32, ptr %A, i64 %mul.2
   store i32 %add, ptr %gep.A.next, align 4
   %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @single_stride_used_for_trip_count(ptr noalias %A, ptr noalias %B, i64 %N, i64 %stride) {
+; CHECK-LABEL: 'single_stride_used_for_trip_count'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %load = load i32, ptr %gep.A, align 4 ->
+; CHECK-NEXT:            store i32 %add, ptr %gep.A.next, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul i64 %iv, %stride
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %mul
+  %load = load i32, ptr %gep.A, align 4
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+  %load_1 = load i32, ptr %gep.B, align 4
+  %add = add i32 %load_1, %load
+  %iv.next = add nuw nsw i64 %iv, 1
+  %gep.A.next = getelementptr inbounds i32, ptr %A, i64 %iv.next
+  store i32 %add, ptr %gep.A.next, align 4
+  %exitcond = icmp eq i64 %iv.next, %stride
+  br i1 %exitcond, label %exit, label %loop
+
+exit:                                          ; preds = %loop
+  ret void
+}
+
+; Check the scenario where we have an unknown Stride, which happens to also be
+; the loop iteration count. If we speculate Stride==1, it implies that the loop
+; will iterate no more than a single iteration.
+define void @unknown_stride_equalto_tc(i32 %N, ptr %A, ptr %B, i32 %j)  {
+; CHECK-LABEL: 'unknown_stride_equalto_tc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        ptr %A
+; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:          (Low: %A High: (4 + %A))
+; CHECK-NEXT:            Member: %A
+; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + %N) to i64) * (sext i32 %N to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + %N) to i64) * (sext i32 %N to i64)) + %B))))
+; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i32 %N to i64))<nsw>}<%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%j,+,%N}<%loop> Added Flags: <nssw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
+; CHECK-NEXT:        ((2 * (sext i32 {%j,+,%N}<%loop> to i64))<nsw> + %B)
+; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i32 %N to i64))<nsw>}<%loop>
+;
+entry:
+  %cmp = icmp eq i32 %N, 0
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul i32 %iv, %N
+  %add = add i32 %mul, %j
+  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %load = load i16, ptr %arrayidx
+  %sext = sext i16 %load to i32
+  store i32 %sext, ptr %A
+  %iv.next = add nuw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %N
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+
+; Check the scenario where we have an unknown Stride, which happens to also be
+; the loop iteration count, but the TC is zero-extended from a narrower type.
+define void @unknown_stride_equalto_zext_tc(i16 zeroext %N, ptr %A, ptr %B, i32 %j) {
+; CHECK-LABEL: 'unknown_stride_equalto_zext_tc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
+; CHECK-NEXT:        ptr %A
+; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP7]]:
+; CHECK-NEXT:          (Low: %A High: (4 + %A))
+; CHECK-NEXT:            Member: %A
+; CHECK-NEXT:        Group [[GRP8]]:
+; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (zext i16 %N to i32))<nsw> to i64) * (zext i16 %N to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (zext i16 %N to i32))<nsw> to i64) * (zext i16 %N to i64)) + %B))))
+; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (zext i16 %N to i64))<nuw><nsw>}<%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%j,+,(zext i16 %N to i32)}<nw><%loop> Added Flags: <nssw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
+; CHECK-NEXT:        ((2 * (sext i32 {%j,+,(zext i16 %N to i32)}<nw><%loop> to i64))<nsw> + %B)
+; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (zext i16 %N to i64))<nuw><nsw>}<%loop>
+;
+entry:
+  %N.ext = zext i16 %N to i32
+  %cmp = icmp eq i16 %N, 0
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul nuw i32 %iv, %N.ext
+  %add = add i32 %mul, %j
+  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %load = load i16, ptr %arrayidx
+  %sext = sext i16 %load to i32
+  store i32 %sext, ptr %A
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %N.ext
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Check the scenario where we have an unknown Stride, which happens to also be
+; the loop iteration count, but the TC is sign-extended from a narrower type.
+define void @unknown_stride_equalto_sext_tc(i16 %N, ptr %A, ptr %B, i32 %j) {
+; CHECK-LABEL: 'unknown_stride_equalto_sext_tc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP9:0x[0-9a-f]+]]):
+; CHECK-NEXT:        ptr %A
+; CHECK-NEXT:        Against group ([[GRP10:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP9]]:
+; CHECK-NEXT:          (Low: %A High: (4 + %A))
+; CHECK-NEXT:            Member: %A
+; CHECK-NEXT:        Group [[GRP10]]:
+; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (sext i16 %N to i32))<nsw> to i64) * (sext i16 %N to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (sext i16 %N to i32))<nsw> to i64) * (sext i16 %N to i64)) + %B))))
+; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i16 %N to i64))<nsw>}<%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%j,+,(sext i16 %N to i32)}<nw><%loop> Added Flags: <nssw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
+; CHECK-NEXT:        ((2 * (sext i32 {%j,+,(sext i16 %N to i32)}<nw><%loop> to i64))<nsw> + %B)
+; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i16 %N to i64))<nsw>}<%loop>
+;
+entry:
+  %N.ext = sext i16 %N to i32
+  %cmp = icmp eq i16 %N, 0
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul nuw i32 %iv, %N.ext
+  %add = add i32 %mul, %j
+  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %load = load i16, ptr %arrayidx
+  %sext = sext i16 %load to i32
+  store i32 %sext, ptr %A
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %N.ext
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Check the scenario where we have an unknown Stride, which happens to also be
+; the loop iteration count, but the TC is truncated from a wider type.
+define void @unknown_stride_equalto_trunc_tc(i64 %N, ptr %A, ptr %B, i32 %j) {
+; CHECK-LABEL: 'unknown_stride_equalto_trunc_tc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP11:0x[0-9a-f]+]]):
+; CHECK-NEXT:        ptr %A
+; CHECK-NEXT:        Against group ([[GRP12:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP11]]:
+; CHECK-NEXT:          (Low: %A High: (4 + %A))
+; CHECK-NEXT:            Member: %A
+; CHECK-NEXT:        Group [[GRP12]]:
+; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (trunc i64 %N to i32)) to i64) * (sext i32 (trunc i64 %N to i32) to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (trunc i64 %N to i32)) to i64) * (sext i32 (trunc i64 %N to i32) to i64)) + %B))))
+; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i32 (trunc i64 %N to i32) to i64))<nsw>}<%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%j,+,(trunc i64 %N to i32)}<nw><%loop> Added Flags: <nssw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
+; CHECK-NEXT:        ((2 * (sext i32 {%j,+,(trunc i64 %N to i32)}<nw><%loop> to i64))<nsw> + %B)
+; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i32 (trunc i64 %N to i32) to i64))<nsw>}<%loop>
+;
+entry:
+  %N.trunc = trunc i64 %N to i32
+  %cmp = icmp eq i64 %N, 0
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul nuw i32 %iv, %N.trunc
+  %add = add i32 %mul, %j
+  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %load = load i16, ptr %arrayidx
+  %sext = sext i16 %load to i32
+  store i32 %sext, ptr %A
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %N.trunc
   br i1 %exitcond, label %exit, label %loop
 
 exit:

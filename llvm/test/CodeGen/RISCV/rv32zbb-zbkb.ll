@@ -138,27 +138,26 @@ declare i64 @llvm.fshl.i64(i64, i64, i64)
 define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: rol_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a3, a2, 26
-; CHECK-NEXT:    srli a3, a3, 31
-; CHECK-NEXT:    mv a4, a1
-; CHECK-NEXT:    bnez a3, .LBB7_2
+; CHECK-NEXT:    slli a5, a2, 26
+; CHECK-NEXT:    srli a5, a5, 31
+; CHECK-NEXT:    mv a3, a1
+; CHECK-NEXT:    bnez a5, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a4, a0
+; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    sll a5, a4, a2
-; CHECK-NEXT:    bnez a3, .LBB7_4
+; CHECK-NEXT:    sll a4, a3, a2
+; CHECK-NEXT:    bnez a5, .LBB7_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB7_4:
 ; CHECK-NEXT:    srli a1, a0, 1
-; CHECK-NEXT:    not a6, a2
-; CHECK-NEXT:    srl a3, a1, a6
-; CHECK-NEXT:    or a3, a5, a3
-; CHECK-NEXT:    sll a0, a0, a2
-; CHECK-NEXT:    srli a4, a4, 1
-; CHECK-NEXT:    srl a1, a4, a6
-; CHECK-NEXT:    or a1, a0, a1
-; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    not a5, a2
+; CHECK-NEXT:    sll a2, a0, a2
+; CHECK-NEXT:    srli a3, a3, 1
+; CHECK-NEXT:    srl a0, a1, a5
+; CHECK-NEXT:    srl a1, a3, a5
+; CHECK-NEXT:    or a0, a4, a0
+; CHECK-NEXT:    or a1, a2, a1
 ; CHECK-NEXT:    ret
   %or = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 %b)
   ret i64 %or
@@ -191,24 +190,24 @@ declare i64 @llvm.fshr.i64(i64, i64, i64)
 define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: ror_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a4, a2, 32
+; CHECK-NEXT:    andi a5, a2, 32
 ; CHECK-NEXT:    mv a3, a0
-; CHECK-NEXT:    beqz a4, .LBB9_2
+; CHECK-NEXT:    beqz a5, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a3, a1
 ; CHECK-NEXT:  .LBB9_2:
-; CHECK-NEXT:    srl a5, a3, a2
-; CHECK-NEXT:    beqz a4, .LBB9_4
+; CHECK-NEXT:    srl a4, a3, a2
+; CHECK-NEXT:    beqz a5, .LBB9_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:  .LBB9_4:
 ; CHECK-NEXT:    slli a0, a1, 1
-; CHECK-NEXT:    not a4, a2
-; CHECK-NEXT:    sll a0, a0, a4
-; CHECK-NEXT:    or a0, a0, a5
+; CHECK-NEXT:    not a5, a2
 ; CHECK-NEXT:    srl a1, a1, a2
 ; CHECK-NEXT:    slli a3, a3, 1
-; CHECK-NEXT:    sll a2, a3, a4
+; CHECK-NEXT:    sll a0, a0, a5
+; CHECK-NEXT:    sll a2, a3, a5
+; CHECK-NEXT:    or a0, a0, a4
 ; CHECK-NEXT:    or a1, a2, a1
 ; CHECK-NEXT:    ret
   %or = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 %b)
@@ -252,11 +251,10 @@ define i64 @rori_i64(i64 %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srli a2, a0, 1
 ; CHECK-NEXT:    slli a3, a1, 31
-; CHECK-NEXT:    or a2, a3, a2
 ; CHECK-NEXT:    srli a1, a1, 1
-; CHECK-NEXT:    slli a0, a0, 31
-; CHECK-NEXT:    or a1, a0, a1
-; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    slli a4, a0, 31
+; CHECK-NEXT:    or a0, a3, a2
+; CHECK-NEXT:    or a1, a4, a1
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 63)
   ret i64 %1
@@ -267,11 +265,10 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srli a2, a1, 31
 ; CHECK-NEXT:    slli a3, a0, 1
-; CHECK-NEXT:    or a2, a3, a2
-; CHECK-NEXT:    srli a0, a0, 31
+; CHECK-NEXT:    srli a4, a0, 31
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    or a1, a1, a0
-; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    or a0, a3, a2
+; CHECK-NEXT:    or a1, a1, a4
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 63)
   ret i64 %1
@@ -298,14 +295,14 @@ define i32 @not_shl_one_i32(i32 %x) {
 define i64 @not_shl_one_i64(i64 %x) {
 ; CHECK-LABEL: not_shl_one_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    sll a1, a1, a0
-; CHECK-NEXT:    addi a0, a0, -32
-; CHECK-NEXT:    slti a0, a0, 0
-; CHECK-NEXT:    neg a2, a0
-; CHECK-NEXT:    and a2, a2, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a1, a0, a1
+; CHECK-NEXT:    addi a1, a0, -32
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    slti a1, a1, 0
+; CHECK-NEXT:    sll a0, a2, a0
+; CHECK-NEXT:    neg a2, a1
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a2, a2, a0
+; CHECK-NEXT:    and a1, a1, a0
 ; CHECK-NEXT:    not a0, a2
 ; CHECK-NEXT:    not a1, a1
 ; CHECK-NEXT:    ret

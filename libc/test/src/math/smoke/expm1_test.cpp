@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/expm1.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcExpm1Test = LIBC_NAMESPACE::testing::FPTest<double>;
@@ -34,3 +33,30 @@ TEST_F(LlvmLibcExpm1Test, SpecialNumbers) {
   // log(2^-54)
   EXPECT_FP_EQ(-1.0, LIBC_NAMESPACE::expm1(-0x1.2b708872320e2p5));
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcExpm1Test, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::expm1(min_denormal));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::expm1(max_denormal));
+}
+
+TEST_F(LlvmLibcExpm1Test, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::expm1(min_denormal));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::expm1(max_denormal));
+}
+
+TEST_F(LlvmLibcExpm1Test, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::expm1(min_denormal));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::expm1(max_denormal));
+}
+
+#endif

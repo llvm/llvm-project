@@ -301,15 +301,6 @@ void test_integer(void) {
   vul = __builtin_s390_vmlof(vui, vui);
   // CHECK: call <2 x i64> @llvm.s390.vmlof(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
-  vuc = __builtin_s390_vpopctb(vuc);
-  // CHECK: call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %{{.*}})
-  vus = __builtin_s390_vpopcth(vus);
-  // CHECK: call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %{{.*}})
-  vui = __builtin_s390_vpopctf(vui);
-  // CHECK: call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %{{.*}})
-  vul = __builtin_s390_vpopctg(vul);
-  // CHECK: call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %{{.*}})
-
   si128 = __builtin_s390_vsq(si128, si128);
   // CHECK: call i128 @llvm.s390.vsq(i128 %{{.*}}, i128 %{{.*}})
   ui128 = __builtin_s390_vsbiq(ui128, ui128, ui128);

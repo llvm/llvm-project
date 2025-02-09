@@ -39,6 +39,7 @@ using CeilOpLowering = ConvertFMFMathToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
 using CopySignOpLowering =
     ConvertFMFMathToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
 using CosOpLowering = ConvertFMFMathToLLVMPattern<math::CosOp, LLVM::CosOp>;
+using CoshOpLowering = ConvertFMFMathToLLVMPattern<math::CoshOp, LLVM::CoshOp>;
 using CtPopFOpLowering =
     VectorConvertToLLVMPattern<math::CtPopOp, LLVM::CtPopOp>;
 using Exp2OpLowering = ConvertFMFMathToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
@@ -58,9 +59,12 @@ using RoundEvenOpLowering =
 using RoundOpLowering =
     ConvertFMFMathToLLVMPattern<math::RoundOp, LLVM::RoundOp>;
 using SinOpLowering = ConvertFMFMathToLLVMPattern<math::SinOp, LLVM::SinOp>;
+using SinhOpLowering = ConvertFMFMathToLLVMPattern<math::SinhOp, LLVM::SinhOp>;
 using SqrtOpLowering = ConvertFMFMathToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
 using FTruncOpLowering =
     ConvertFMFMathToLLVMPattern<math::TruncOp, LLVM::FTruncOp>;
+using TanOpLowering = ConvertFMFMathToLLVMPattern<math::TanOp, LLVM::TanOp>;
+using TanhOpLowering = ConvertFMFMathToLLVMPattern<math::TanhOp, LLVM::TanhOp>;
 
 // A `CtLz/CtTz/absi(a)` is converted into `CtLz/CtTz/absi(a, false)`.
 template <typename MathOp, typename LLVMOp>
@@ -148,10 +152,10 @@ struct ExpM1OpLowering : public ConvertOpToLLVMPattern<math::ExpM1Op> {
     return LLVM::detail::handleMultidimensionalVectors(
         op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
         [&](Type llvm1DVectorTy, ValueRange operands) {
+          auto numElements = LLVM::getVectorNumElements(llvm1DVectorTy);
           auto splatAttr = SplatElementsAttr::get(
-              mlir::VectorType::get(
-                  {LLVM::getVectorNumElements(llvm1DVectorTy).getFixedValue()},
-                  floatType),
+              mlir::VectorType::get({numElements.getKnownMinValue()}, floatType,
+                                    {numElements.isScalable()}),
               floatOne);
           auto one =
               rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
@@ -207,10 +211,10 @@ struct Log1pOpLowering : public ConvertOpToLLVMPattern<math::Log1pOp> {
     return LLVM::detail::handleMultidimensionalVectors(
         op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
         [&](Type llvm1DVectorTy, ValueRange operands) {
+          auto numElements = LLVM::getVectorNumElements(llvm1DVectorTy);
           auto splatAttr = SplatElementsAttr::get(
-              mlir::VectorType::get(
-                  {LLVM::getVectorNumElements(llvm1DVectorTy).getFixedValue()},
-                  floatType),
+              mlir::VectorType::get({numElements.getKnownMinValue()}, floatType,
+                                    {numElements.isScalable()}),
               floatOne);
           auto one =
               rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
@@ -266,10 +270,10 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
     return LLVM::detail::handleMultidimensionalVectors(
         op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
         [&](Type llvm1DVectorTy, ValueRange operands) {
+          auto numElements = LLVM::getVectorNumElements(llvm1DVectorTy);
           auto splatAttr = SplatElementsAttr::get(
-              mlir::VectorType::get(
-                  {LLVM::getVectorNumElements(llvm1DVectorTy).getFixedValue()},
-                  floatType),
+              mlir::VectorType::get({numElements.getKnownMinValue()}, floatType,
+                                    {numElements.isScalable()}),
               floatOne);
           auto one =
               rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
@@ -298,9 +302,9 @@ struct ConvertMathToLLVMPass
 };
 } // namespace
 
-void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                                RewritePatternSet &patterns,
-                                                bool approximateLog1p) {
+void mlir::populateMathToLLVMConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    bool approximateLog1p) {
   if (approximateLog1p)
     patterns.add<Log1pOpLowering>(converter);
   // clang-format off
@@ -310,6 +314,7 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     CeilOpLowering,
     CopySignOpLowering,
     CosOpLowering,
+    CoshOpLowering,
     CountLeadingZerosOpLowering,
     CountTrailingZerosOpLowering,
     CtPopFOpLowering,
@@ -327,8 +332,11 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     RoundOpLowering,
     RsqrtOpLowering,
     SinOpLowering,
+    SinhOpLowering,
     SqrtOpLowering,
-    FTruncOpLowering
+    FTruncOpLowering,
+    TanOpLowering,
+    TanhOpLowering
   >(converter);
   // clang-format on
 }

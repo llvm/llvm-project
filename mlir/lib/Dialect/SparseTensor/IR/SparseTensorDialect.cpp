@@ -16,12 +16,15 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -29,11 +32,27 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.cpp.inc"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrEnums.cpp.inc"
 
+// Forward declarations, following custom print/parsing methods are referenced
+// by the generated code for SparseTensorTypes.td.
+static mlir::ParseResult parseLevelRange(mlir::AsmParser &,
+                                         mlir::sparse_tensor::Level &,
+                                         mlir::sparse_tensor::Level &);
+static void printLevelRange(mlir::AsmPrinter &, mlir::sparse_tensor::Level,
+                            mlir::sparse_tensor::Level);
+
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorTypes.cpp.inc"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
+
+// Support hashing LevelType such that SparseTensorEncodingAttr can be hashed as
+// well.
+namespace mlir::sparse_tensor {
+llvm::hash_code hash_value(LevelType lt) {
+  return llvm::hash_value(static_cast<uint64_t>(lt));
+}
+} // namespace mlir::sparse_tensor
 
 //===----------------------------------------------------------------------===//
 // Local Convenience Methods.
@@ -52,6 +71,26 @@ static constexpr bool acceptBitWidth(unsigned bitWidth) {
   }
 }
 
+static SmallVector<Size>
+getSparseFieldShape(const SparseTensorEncodingAttr enc,
+                    std::optional<ArrayRef<int64_t>> dimShape) {
+  assert(enc);
+  // With only encoding, we can not determine the static shape for leading
+  // batch levels, we therefore return a dynamic shape memref instead.
+  SmallVector<int64_t> memrefShape(enc.getBatchLvlRank(), ShapedType::kDynamic);
+  if (dimShape.has_value()) {
+    // If the actual tensor shape is provided, we can then refine the leading
+    // batch dimension.
+    SmallVector<int64_t> lvlShape =
+        enc.translateShape(*dimShape, CrdTransDirectionKind::dim2lvl);
+    memrefShape.assign(lvlShape.begin(),
+                       lvlShape.begin() + enc.getBatchLvlRank());
+  }
+  // Another dynamic dimension to store the sparse level.
+  memrefShape.push_back(ShapedType::kDynamic);
+  return memrefShape;
+}
+
 //===----------------------------------------------------------------------===//
 // SparseTensorDialect StorageLayout.
 //===----------------------------------------------------------------------===//
@@ -66,11 +105,12 @@ void StorageLayout::foreachField(
         callback) const {
   const auto lvlTypes = enc.getLvlTypes();
   const Level lvlRank = enc.getLvlRank();
-  const Level cooStart = SparseTensorType(enc).getCOOStart();
-  const Level end = cooStart == lvlRank ? cooStart : cooStart + 1;
+  SmallVector<COOSegment> cooSegs = enc.getCOOSegments();
   FieldIndex fieldIdx = kDataFieldStartingIdx;
+
+  ArrayRef cooSegsRef = cooSegs;
   // Per-level storage.
-  for (Level l = 0; l < end; l++) {
+  for (Level l = 0; l < lvlRank; /*l += 1 or l += AoSCooLen*/) {
     const auto lt = lvlTypes[l];
     if (isWithPosLT(lt)) {
       if (!(callback(fieldIdx++, SparseTensorFieldKind::PosMemRef, l, lt)))
@@ -80,14 +120,29 @@ void StorageLayout::foreachField(
       if (!(callback(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, lt)))
         return;
     }
+    if (!cooSegsRef.empty() && cooSegsRef.front().isSegmentStart(l)) {
+      if (!cooSegsRef.front().isSoA) {
+        // AoS COO, all singletons are fused into one memrefs. Skips the entire
+        // COO segement.
+        l = cooSegsRef.front().lvlRange.second;
+      } else {
+        // SoA COO, each singleton level has one memref.
+        l++;
+      }
+      // Expire handled COO segment.
+      cooSegsRef = cooSegsRef.drop_front();
+    } else {
+      // Non COO levels.
+      l++;
+    }
   }
   // The values array.
   if (!(callback(fieldIdx++, SparseTensorFieldKind::ValMemRef, kInvalidLevel,
-                 LevelType::Undef)))
+                 LevelFormat::Undef)))
     return;
   // Put metadata at the end.
   if (!(callback(fieldIdx++, SparseTensorFieldKind::StorageSpec, kInvalidLevel,
-                 LevelType::Undef)))
+                 LevelFormat::Undef)))
     return;
 }
 
@@ -97,18 +152,17 @@ void sparse_tensor::foreachFieldAndTypeInSparseTensor(
                             LevelType)>
         callback) {
   assert(stt.hasEncoding());
-  // Construct the basic types.
-  const Type crdType = stt.getCrdType();
-  const Type posType = stt.getPosType();
-  const Type eltType = stt.getElementType();
+
+  SmallVector<int64_t> memrefShape =
+      getSparseFieldShape(stt.getEncoding(), stt.getDimShape());
 
   const Type specType = StorageSpecifierType::get(stt.getEncoding());
-  // memref<? x pos>  positions
-  const Type posMemType = MemRefType::get({ShapedType::kDynamic}, posType);
-  // memref<? x crd>  coordinates
-  const Type crdMemType = MemRefType::get({ShapedType::kDynamic}, crdType);
-  // memref<? x eltType> values
-  const Type valMemType = MemRefType::get({ShapedType::kDynamic}, eltType);
+  // memref<[batch] x ? x pos>  positions
+  const Type posMemType = MemRefType::get(memrefShape, stt.getPosType());
+  // memref<[batch] x ? x crd>  coordinates
+  const Type crdMemType = MemRefType::get(memrefShape, stt.getCrdType());
+  // memref<[batch] x ? x eltType> values
+  const Type valMemType = MemRefType::get(memrefShape, stt.getElementType());
 
   StorageLayout(stt).foreachField([specType, posMemType, crdMemType, valMemType,
                                    callback](FieldIndex fieldIdx,
@@ -158,7 +212,7 @@ StorageLayout::getFieldIndexAndStride(SparseTensorFieldKind kind,
   unsigned stride = 1;
   if (kind == SparseTensorFieldKind::CrdMemRef) {
     assert(lvl.has_value());
-    const Level cooStart = SparseTensorType(enc).getCOOStart();
+    const Level cooStart = enc.getAoSCOOStart();
     const Level lvlRank = enc.getLvlRank();
     if (lvl.value() >= cooStart && lvl.value() < lvlRank) {
       lvl = cooStart;
@@ -274,9 +328,9 @@ SparseTensorDimSliceAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 SparseTensorEncodingAttr
 SparseTensorEncodingAttr::withDimToLvl(AffineMap dimToLvl) const {
   assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
-  return SparseTensorEncodingAttr::get(getContext(), getLvlTypes(), dimToLvl,
-                                       AffineMap(), getPosWidth(),
-                                       getCrdWidth());
+  return SparseTensorEncodingAttr::get(
+      getContext(), getLvlTypes(), dimToLvl, AffineMap(), getPosWidth(),
+      getCrdWidth(), getExplicitVal(), getImplicitVal());
 }
 
 SparseTensorEncodingAttr
@@ -292,24 +346,54 @@ SparseTensorEncodingAttr
 SparseTensorEncodingAttr::withBitWidths(unsigned posWidth,
                                         unsigned crdWidth) const {
   assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
-  return SparseTensorEncodingAttr::get(getContext(), getLvlTypes(),
-                                       getDimToLvl(), getLvlToDim(), posWidth,
-                                       crdWidth);
+  return SparseTensorEncodingAttr::get(
+      getContext(), getLvlTypes(), getDimToLvl(), getLvlToDim(), posWidth,
+      crdWidth, getExplicitVal(), getImplicitVal());
 }
 
 SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutBitWidths() const {
   return withBitWidths(0, 0);
 }
 
+SparseTensorEncodingAttr
+SparseTensorEncodingAttr::withExplicitVal(Attribute explicitVal) const {
+  assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
+  return SparseTensorEncodingAttr::get(
+      getContext(), getLvlTypes(), getDimToLvl(), getLvlToDim(), getPosWidth(),
+      getCrdWidth(), explicitVal, getImplicitVal());
+}
+
+SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutExplicitVal() const {
+  return withExplicitVal(Attribute());
+}
+
+SparseTensorEncodingAttr
+SparseTensorEncodingAttr::withImplicitVal(Attribute implicitVal) const {
+  assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
+  return SparseTensorEncodingAttr::get(
+      getContext(), getLvlTypes(), getDimToLvl(), getLvlToDim(), getPosWidth(),
+      getCrdWidth(), getExplicitVal(), implicitVal);
+}
+
+SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutImplicitVal() const {
+  return withImplicitVal(Attribute());
+}
+
 SparseTensorEncodingAttr SparseTensorEncodingAttr::withDimSlices(
     ArrayRef<SparseTensorDimSliceAttr> dimSlices) const {
-  return SparseTensorEncodingAttr::get(getContext(), getLvlTypes(),
-                                       getDimToLvl(), getLvlToDim(),
-                                       getPosWidth(), getCrdWidth(), dimSlices);
+  return SparseTensorEncodingAttr::get(
+      getContext(), getLvlTypes(), getDimToLvl(), getLvlToDim(), getPosWidth(),
+      getCrdWidth(), getExplicitVal(), getImplicitVal(), dimSlices);
 }
 
 SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutDimSlices() const {
   return withDimSlices(ArrayRef<SparseTensorDimSliceAttr>{});
+}
+
+uint64_t SparseTensorEncodingAttr::getBatchLvlRank() const {
+  ArrayRef<LevelType> lvlTypes = getLvlTypes();
+  auto lastBatch = std::find_if(lvlTypes.rbegin(), lvlTypes.rend(), isBatchLT);
+  return std::distance(lastBatch, lvlTypes.rend());
 }
 
 bool SparseTensorEncodingAttr::isAllDense() const {
@@ -318,6 +402,34 @@ bool SparseTensorEncodingAttr::isAllDense() const {
 
 bool SparseTensorEncodingAttr::isAllOrdered() const {
   return !getImpl() || llvm::all_of(getLvlTypes(), isOrderedLT);
+}
+
+Type SparseTensorEncodingAttr::getCrdElemType() const {
+  if (!getImpl())
+    return nullptr;
+  if (getCrdWidth())
+    return IntegerType::get(getContext(), getCrdWidth());
+  return IndexType::get(getContext());
+}
+
+Type SparseTensorEncodingAttr::getPosElemType() const {
+  if (!getImpl())
+    return nullptr;
+  if (getPosWidth())
+    return IntegerType::get(getContext(), getPosWidth());
+  return IndexType::get(getContext());
+}
+
+MemRefType SparseTensorEncodingAttr::getCrdMemRefType(
+    std::optional<ArrayRef<int64_t>> dimShape) const {
+  SmallVector<Size> shape = getSparseFieldShape(*this, dimShape);
+  return MemRefType::get(shape, getCrdElemType());
+}
+
+MemRefType SparseTensorEncodingAttr::getPosMemRefType(
+    std::optional<ArrayRef<int64_t>> dimShape) const {
+  SmallVector<Size> shape = getSparseFieldShape(*this, dimShape);
+  return MemRefType::get(shape, getPosElemType());
 }
 
 bool SparseTensorEncodingAttr::isIdentity() const {
@@ -341,7 +453,7 @@ Level SparseTensorEncodingAttr::getLvlRank() const {
 
 LevelType SparseTensorEncodingAttr::getLvlType(Level l) const {
   if (!getImpl())
-    return LevelType::Dense;
+    return LevelFormat::Batch;
   assert(l < getLvlRank() && "Level is out of bounds");
   return getLvlTypes()[l];
 }
@@ -380,8 +492,8 @@ SparseTensorEncodingAttr::getStaticLvlSliceStride(Level lvl) const {
 }
 
 SmallVector<int64_t>
-SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
-                                        CrdTransDirectionKind dir) const {
+SparseTensorEncodingAttr::translateShape(ArrayRef<int64_t> srcShape,
+                                         CrdTransDirectionKind dir) const {
   if (isIdentity())
     return SmallVector<int64_t>(srcShape);
 
@@ -467,8 +579,11 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   AffineMap lvlToDim = {};
   unsigned posWidth = 0;
   unsigned crdWidth = 0;
+  Attribute explicitVal;
+  Attribute implicitVal;
   StringRef attrName;
-  SmallVector<StringRef, 3> keys = {"map", "posWidth", "crdWidth"};
+  SmallVector<StringRef, 5> keys = {"map", "posWidth", "crdWidth",
+                                    "explicitVal", "implicitVal"};
   while (succeeded(parser.parseOptionalKeyword(&attrName))) {
     // Detect admissible keyword.
     auto *it = find(keys, attrName);
@@ -542,6 +657,40 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
       crdWidth = intAttr.getInt();
       break;
     }
+    case 3: { // explicitVal
+      Attribute attr;
+      if (failed(parser.parseAttribute(attr)))
+        return {};
+      if (auto result = llvm::dyn_cast<FloatAttr>(attr)) {
+        explicitVal = result;
+      } else if (auto result = llvm::dyn_cast<IntegerAttr>(attr)) {
+        explicitVal = result;
+      } else if (auto result = llvm::dyn_cast<complex::NumberAttr>(attr)) {
+        explicitVal = result;
+      } else {
+        parser.emitError(parser.getNameLoc(),
+                         "expected a numeric value for explicitVal");
+        return {};
+      }
+      break;
+    }
+    case 4: { // implicitVal
+      Attribute attr;
+      if (failed(parser.parseAttribute(attr)))
+        return {};
+      if (auto result = llvm::dyn_cast<FloatAttr>(attr)) {
+        implicitVal = result;
+      } else if (auto result = llvm::dyn_cast<IntegerAttr>(attr)) {
+        implicitVal = result;
+      } else if (auto result = llvm::dyn_cast<complex::NumberAttr>(attr)) {
+        implicitVal = result;
+      } else {
+        parser.emitError(parser.getNameLoc(),
+                         "expected a numeric value for implicitVal");
+        return {};
+      }
+      break;
+    }
     } // switch
     // Only last item can omit the comma.
     if (parser.parseOptionalComma().failed())
@@ -560,7 +709,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   }
   return parser.getChecked<SparseTensorEncodingAttr>(
       parser.getContext(), lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth,
-      dimSlices);
+      explicitVal, implicitVal, dimSlices);
 }
 
 void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
@@ -580,6 +729,11 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
     printer << ", posWidth = " << getPosWidth();
   if (getCrdWidth())
     printer << ", crdWidth = " << getCrdWidth();
+  if (getExplicitVal()) {
+    printer << ", explicitVal = " << getExplicitVal();
+  }
+  if (getImplicitVal())
+    printer << ", implicitVal = " << getImplicitVal();
   printer << " }>";
 }
 
@@ -629,21 +783,81 @@ void SparseTensorEncodingAttr::printLevels(AffineMap &map, AsmPrinter &printer,
 LogicalResult SparseTensorEncodingAttr::verify(
     function_ref<InFlightDiagnostic()> emitError, ArrayRef<LevelType> lvlTypes,
     AffineMap dimToLvl, AffineMap lvlToDim, unsigned posWidth,
-    unsigned crdWidth, ArrayRef<SparseTensorDimSliceAttr> dimSlices) {
+    unsigned crdWidth, Attribute explicitVal, Attribute implicitVal,
+    ArrayRef<SparseTensorDimSliceAttr> dimSlices) {
   if (!acceptBitWidth(posWidth))
     return emitError() << "unexpected position bitwidth: " << posWidth;
   if (!acceptBitWidth(crdWidth))
     return emitError() << "unexpected coordinate bitwidth: " << crdWidth;
-  if (auto it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isSingletonLT);
-      it != std::end(lvlTypes)) {
+
+  // Verify every COO segment.
+  auto *it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isSingletonLT);
+  while (it != lvlTypes.end()) {
     if (it == lvlTypes.begin() ||
-        (!isCompressedLT(*(it - 1)) && !isLooseCompressedLT(*(it - 1))))
+        !(it - 1)->isa<LevelFormat::Compressed, LevelFormat::LooseCompressed>())
       return emitError() << "expected compressed or loose_compressed level "
                             "before singleton level";
-    if (!std::all_of(it, lvlTypes.end(),
+
+    auto *curCOOEnd = std::find_if_not(it, lvlTypes.end(), isSingletonLT);
+    if (!std::all_of(it, curCOOEnd,
                      [](LevelType i) { return isSingletonLT(i); }))
       return emitError() << "expected all singleton lvlTypes "
                             "following a singleton level";
+    // We can potentially support mixed SoA/AoS singleton levels.
+    if (!std::all_of(it, curCOOEnd, [it](LevelType i) {
+          return it->isa<LevelPropNonDefault::SoA>() ==
+                 i.isa<LevelPropNonDefault::SoA>();
+        })) {
+      return emitError() << "expected all singleton lvlTypes stored in the "
+                            "same memory layout (SoA vs AoS).";
+    }
+    it = std::find_if(curCOOEnd, lvlTypes.end(), isSingletonLT);
+  }
+
+  auto lastBatch = std::find_if(lvlTypes.rbegin(), lvlTypes.rend(), isBatchLT);
+  if (!std::all_of(lastBatch, lvlTypes.rend(), isBatchLT))
+    return emitError() << "Batch lvlType can only be leading levels.";
+
+  // SoA property can only be applied on singleton level.
+  auto soaLvls = llvm::make_filter_range(lvlTypes, [](LevelType lt) {
+    return lt.isa<LevelPropNonDefault::SoA>();
+  });
+  if (llvm::any_of(soaLvls, [](LevelType lt) {
+        return !lt.isa<LevelFormat::Singleton>();
+      })) {
+    return emitError() << "SoA is only applicable to singleton lvlTypes.";
+  }
+
+  // TODO: audit formats that actually are supported by backend.
+  if (auto it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isNOutOfMLT);
+      it != std::end(lvlTypes)) {
+    if (it != lvlTypes.end() - 1)
+      return emitError() << "expected n_out_of_m to be the last level type";
+    if (!std::all_of(lvlTypes.begin(), it,
+                     [](LevelType i) { return isDenseLT(i); }))
+      return emitError() << "expected all dense lvlTypes "
+                            "before a n_out_of_m level";
+    if (dimToLvl && (dimToLvl.getNumDims() != dimToLvl.getNumResults())) {
+      if (!isBlockSparsity(dimToLvl)) {
+        return emitError()
+               << "expected 1xm block structure for n_out_of_m level";
+      }
+      auto sizes = getBlockSize(dimToLvl);
+      unsigned coefficient = 0;
+      for (const auto &elem : sizes) {
+        if (elem != 0) {
+          if (elem != coefficient && coefficient != 0) {
+            return emitError() << "expected only one blocked level "
+                                  "with the same coefficients";
+          }
+          coefficient = elem;
+        }
+      }
+      if (coefficient != getM(*it)) {
+        return emitError() << "expected coeffiencts of Affine expressions "
+                              "to be equal to m of n_out_of_m level";
+      }
+    }
   }
   // Before we can check that the level-rank is consistent/coherent
   // across all fields, we need to define it.  The source-of-truth for
@@ -691,7 +905,8 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
   // Check structural integrity.  In particular, this ensures that the
   // level-rank is coherent across all the fields.
   if (failed(verify(emitError, getLvlTypes(), getDimToLvl(), getLvlToDim(),
-                    getPosWidth(), getCrdWidth(), getDimSlices())))
+                    getPosWidth(), getCrdWidth(), getExplicitVal(),
+                    getImplicitVal(), getDimSlices())))
     return failure();
   // Check integrity with tensor type specifics.  In particular, we
   // need only check that the dimension-rank of the tensor agrees with
@@ -703,7 +918,74 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
     return emitError()
            << "dimension-rank mismatch between encoding and tensor shape: "
            << getDimRank() << " != " << dimRank;
+  if (auto expVal = getExplicitVal()) {
+    Type attrType = llvm::dyn_cast<TypedAttr>(expVal).getType();
+    if (attrType != elementType) {
+      return emitError() << "explicit value type mismatch between encoding and "
+                         << "tensor element type: " << attrType
+                         << " != " << elementType;
+    }
+  }
+  if (auto impVal = getImplicitVal()) {
+    Type attrType = llvm::dyn_cast<TypedAttr>(impVal).getType();
+    if (attrType != elementType) {
+      return emitError() << "implicit value type mismatch between encoding and "
+                         << "tensor element type: " << attrType
+                         << " != " << elementType;
+    }
+    // Currently, we only support zero as the implicit value.
+    auto impFVal = llvm::dyn_cast<FloatAttr>(impVal);
+    auto impIntVal = llvm::dyn_cast<IntegerAttr>(impVal);
+    auto impComplexVal = llvm::dyn_cast<complex::NumberAttr>(impVal);
+    if ((impFVal && impFVal.getValue().isNonZero()) ||
+        (impIntVal && !impIntVal.getValue().isZero()) ||
+        (impComplexVal && (impComplexVal.getImag().isNonZero() ||
+                           impComplexVal.getReal().isNonZero()))) {
+      return emitError() << "implicit value must be zero";
+    }
+  }
   return success();
+}
+
+Level mlir::sparse_tensor::SparseTensorEncodingAttr::getAoSCOOStart() const {
+  SmallVector<COOSegment> coo = getCOOSegments();
+  assert(coo.size() == 1 || coo.empty());
+  if (!coo.empty() && coo.front().isAoS()) {
+    return coo.front().lvlRange.first;
+  }
+  return getLvlRank();
+}
+
+SmallVector<COOSegment>
+mlir::sparse_tensor::SparseTensorEncodingAttr::getCOOSegments() const {
+  SmallVector<COOSegment> ret;
+  if (getLvlRank() <= 1)
+    return ret;
+
+  ArrayRef<LevelType> lts = getLvlTypes();
+  Level l = 0;
+  while (l < getLvlRank()) {
+    auto lt = lts[l];
+    if (lt.isa<LevelFormat::Compressed, LevelFormat::LooseCompressed>()) {
+      auto cur = lts.begin() + l;
+      auto end = std::find_if(cur + 1, lts.end(), [](LevelType lt) {
+        return !lt.isa<LevelFormat::Singleton>();
+      });
+      unsigned cooLen = std::distance(cur, end);
+      if (cooLen > 1) {
+        // To support mixed SoA/AoS COO, we should break the segment when the
+        // storage scheme changes, for now we faithfully assume that all
+        // consecutive singleton levels have the same storage format as verified
+        // STEA.
+        ret.push_back(COOSegment{std::make_pair(l, l + cooLen),
+                                 lts[l + 1].isa<LevelPropNonDefault::SoA>()});
+      }
+      l += cooLen;
+    } else {
+      l++;
+    }
+  }
+  return ret;
 }
 
 //===----------------------------------------------------------------------===//
@@ -725,14 +1007,6 @@ bool mlir::sparse_tensor::SparseTensorType::isCOOType(Level startLvl,
   return !isUnique || isUniqueLvl(lvlRank - 1);
 }
 
-Level mlir::sparse_tensor::SparseTensorType::getCOOStart() const {
-  if (hasEncoding() && lvlRank > 1)
-    for (Level l = 0; l < lvlRank - 1; l++)
-      if (isCOOType(l, /*isUnique=*/false))
-        return l;
-  return lvlRank;
-}
-
 RankedTensorType
 mlir::sparse_tensor::SparseTensorType::getCOOType(bool ordered) const {
   SmallVector<LevelType> lvlTypes;
@@ -748,9 +1022,9 @@ mlir::sparse_tensor::SparseTensorType::getCOOType(bool ordered) const {
     // Ends by a unique singleton level.
     lvlTypes.push_back(*buildLevelType(LevelFormat::Singleton, ordered, true));
   }
-  auto enc = SparseTensorEncodingAttr::get(getContext(), lvlTypes,
-                                           getDimToLvl(), getLvlToDim(),
-                                           getPosWidth(), getCrdWidth());
+  auto enc = SparseTensorEncodingAttr::get(
+      getContext(), lvlTypes, getDimToLvl(), getLvlToDim(), getPosWidth(),
+      getCrdWidth(), getExplicitVal(), getImplicitVal());
   return RankedTensorType::get(getDimShape(), getElementType(), enc);
 }
 
@@ -868,16 +1142,18 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
       auto pos = dimOp.getPosition();
       if (binOp.getKind() == AffineExprKind::FloorDiv) {
         // Expect only one floordiv for each dimension.
-        if (coeffientMap.find(pos) != coeffientMap.end())
+        auto [it, inserted] = coeffientMap.try_emplace(pos);
+        if (!inserted)
           return false;
         // Record coefficient of the floordiv.
-        coeffientMap[pos] = conOp.getValue();
+        it->second = conOp.getValue();
       } else if (binOp.getKind() == AffineExprKind::Mod) {
         // Expect floordiv before mod.
-        if (coeffientMap.find(pos) == coeffientMap.end())
+        auto it = coeffientMap.find(pos);
+        if (it == coeffientMap.end())
           return false;
         // Expect mod to have the same coefficient as floordiv.
-        if (conOp.getValue() != coeffientMap[pos])
+        if (conOp.getValue() != it->second)
           return false;
         hasBlock = true;
       } else {
@@ -886,9 +1162,8 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
     } else if (auto dimOp = dyn_cast<AffineDimExpr>(result)) {
       auto pos = dimOp.getPosition();
       // Expect dim to be unset.
-      if (coeffientMap.find(pos) != coeffientMap.end())
+      if (!coeffientMap.try_emplace(pos, 0).second)
         return false;
-      coeffientMap[pos] = 0;
     } else {
       return false;
     }
@@ -932,7 +1207,7 @@ static SparseTensorEncodingAttr
 getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
   SmallVector<LevelType> lts;
   for (auto lt : enc.getLvlTypes())
-    lts.push_back(*buildLevelType(*getLevelFormat(lt), true, true));
+    lts.push_back(lt.stripStorageIrrelevantProperties());
 
   return SparseTensorEncodingAttr::get(
       enc.getContext(), lts,
@@ -942,12 +1217,23 @@ getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
       // `getPosWidth` and `getCrdWidth`. It allows us to reuse the same SSA
       // value for different bitwidth, it also avoids casting between index and
       // integer (returned by DimOp)
-      0, 0, enc.getDimSlices());
+      0, 0,
+      Attribute(), // explicitVal (irrelevant to storage specifier)
+      Attribute(), // implicitVal (irrelevant to storage specifier)
+      enc.getDimSlices());
 }
 
 StorageSpecifierType
 StorageSpecifierType::get(MLIRContext *ctx, SparseTensorEncodingAttr encoding) {
   return Base::get(ctx, getNormalizedEncodingForSpecifier(encoding));
+}
+
+StorageSpecifierType
+StorageSpecifierType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                 MLIRContext *ctx,
+                                 SparseTensorEncodingAttr encoding) {
+  return Base::getChecked(emitError, ctx,
+                          getNormalizedEncodingForSpecifier(encoding));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1016,18 +1302,16 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
     return op->emitError("the sparse-tensor must have static shape");
   if (!stt.hasEncoding())
     return op->emitError("the sparse-tensor must have an encoding attribute");
-  if (!stt.isIdentity())
-    return op->emitError("the sparse-tensor must have the identity mapping");
 
   // Verifies the trailing COO.
-  Level cooStartLvl = stt.getCOOStart();
+  Level cooStartLvl = stt.getAoSCOOStart();
   if (cooStartLvl < stt.getLvlRank()) {
     // We only supports trailing COO for now, must be the last input.
     auto cooTp = llvm::cast<ShapedType>(lvlTps.back());
     // The coordinates should be in shape of <? x rank>
     unsigned expCOORank = stt.getLvlRank() - cooStartLvl;
     if (cooTp.getRank() != 2 || expCOORank != cooTp.getShape().back()) {
-      op->emitError("input/output trailing COO level-ranks don't match");
+      return op->emitError("input/output trailing COO level-ranks don't match");
     }
   }
 
@@ -1067,7 +1351,7 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
 }
 
 LogicalResult AssembleOp::verify() {
-  const auto valuesTp = getRankedTensorType(getValues());
+  RankedTensorType valuesTp = getValues().getType();
   const auto lvlsTp = getLevels().getTypes();
   const auto resTp = getSparseTensorType(getResult());
   return verifyPackUnPack(*this, true, resTp, valuesTp, lvlsTp);
@@ -1081,34 +1365,31 @@ LogicalResult DisassembleOp::verify() {
     if (ot.getType() != rt.getType())
       return emitError("output levels and return levels type mismatch");
 
-  const auto valuesTp = getRankedTensorType(getRetValues());
+  RankedTensorType valuesTp = getRetValues().getType();
   const auto lvlsTp = getRetLevels().getTypes();
   const auto srcTp = getSparseTensorType(getTensor());
   return verifyPackUnPack(*this, false, srcTp, valuesTp, lvlsTp);
 }
 
 LogicalResult ConvertOp::verify() {
-  if (auto tp1 = llvm::dyn_cast<RankedTensorType>(getSource().getType())) {
-    if (auto tp2 = llvm::dyn_cast<RankedTensorType>(getDest().getType())) {
-      if (tp1.getRank() != tp2.getRank())
-        return emitError("unexpected conversion mismatch in rank");
-      auto dstEnc =
-          llvm::dyn_cast_or_null<SparseTensorEncodingAttr>(tp2.getEncoding());
-      if (dstEnc && dstEnc.isSlice())
-        return emitError("cannot convert to a sparse tensor slice");
+  RankedTensorType tp1 = getSource().getType();
+  RankedTensorType tp2 = getDest().getType();
+  if (tp1.getRank() != tp2.getRank())
+    return emitError("unexpected conversion mismatch in rank");
+  auto dstEnc =
+      llvm::dyn_cast_or_null<SparseTensorEncodingAttr>(tp2.getEncoding());
+  if (dstEnc && dstEnc.isSlice())
+    return emitError("cannot convert to a sparse tensor slice");
 
-      auto shape1 = tp1.getShape();
-      auto shape2 = tp2.getShape();
-      // Accept size matches between the source and the destination type
-      // (e.g. 10 vs. 10, 10 vs. ?, or ? vs. ?), but reject direct mismatches or
-      // matches that would need a runtime assert (e.g. 10 vs. 20 or ? vs. 10).
-      for (Dimension d = 0, dimRank = tp1.getRank(); d < dimRank; d++)
-        if (shape1[d] != shape2[d] && shape2[d] != ShapedType::kDynamic)
-          return emitError("unexpected conversion mismatch in dimension ") << d;
-      return success();
-    }
-  }
-  return emitError("unexpected type in convert");
+  auto shape1 = tp1.getShape();
+  auto shape2 = tp2.getShape();
+  // Accept size matches between the source and the destination type
+  // (e.g. 10 vs. 10, 10 vs. ?, or ? vs. ?), but reject direct mismatches or
+  // matches that would need a runtime assert (e.g. 10 vs. 20 or ? vs. 10).
+  for (Dimension d = 0, dimRank = tp1.getRank(); d < dimRank; d++)
+    if (shape1[d] != shape2[d] && shape2[d] != ShapedType::kDynamic)
+      return emitError("unexpected conversion mismatch in dimension ") << d;
+  return success();
 }
 
 OpFoldResult ConvertOp::fold(FoldAdaptor adaptor) {
@@ -1212,7 +1493,8 @@ LogicalResult LvlOp::verify() {
   if (std::optional<uint64_t> lvl = getConstantLvlIndex()) {
     auto stt = getSparseTensorType(getSource());
     if (static_cast<uint64_t>(lvl.value()) >= stt.getLvlRank())
-      emitError("Level index exceeds the rank of the input sparse tensor");
+      return emitError(
+          "Level index exceeds the rank of the input sparse tensor");
   }
   return success();
 }
@@ -1262,7 +1544,7 @@ void ReinterpretMapOp::build(OpBuilder &odsBuilder, OperationState &odsState,
   auto srcStt = getSparseTensorType(source);
   SmallVector<int64_t> srcLvlShape = srcStt.getLvlShape();
   SmallVector<int64_t> dstDimShape =
-      dstEnc.tranlateShape(srcLvlShape, CrdTransDirectionKind::lvl2dim);
+      dstEnc.translateShape(srcLvlShape, CrdTransDirectionKind::lvl2dim);
   auto dstTp =
       RankedTensorType::get(dstDimShape, srcStt.getElementType(), dstEnc);
   return build(odsBuilder, odsState, dstTp, source);
@@ -1315,6 +1597,38 @@ OpFoldResult ReinterpretMapOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+template <typename ToBufferOp>
+static LogicalResult inferSparseBufferType(ValueRange ops, DictionaryAttr attr,
+                                           OpaqueProperties prop,
+                                           RegionRange region,
+                                           SmallVectorImpl<mlir::Type> &ret) {
+  typename ToBufferOp::Adaptor adaptor(ops, attr, prop, region);
+  SparseTensorType stt = getSparseTensorType(adaptor.getTensor());
+  Type elemTp = nullptr;
+  bool withStride = false;
+  if constexpr (std::is_same_v<ToBufferOp, ToPositionsOp>) {
+    elemTp = stt.getPosType();
+  } else if constexpr (std::is_same_v<ToBufferOp, ToCoordinatesOp> ||
+                       std::is_same_v<ToBufferOp, ToCoordinatesBufferOp>) {
+    elemTp = stt.getCrdType();
+    if constexpr (std::is_same_v<ToBufferOp, ToCoordinatesOp>)
+      withStride = stt.getAoSCOOStart() <= adaptor.getLevel();
+  } else if constexpr (std::is_same_v<ToBufferOp, ToValuesOp>) {
+    elemTp = stt.getElementType();
+  }
+
+  assert(elemTp && "unhandled operation.");
+  SmallVector<int64_t> bufShape = stt.getBatchLvlShape();
+  bufShape.push_back(ShapedType::kDynamic);
+
+  auto layout = withStride ? StridedLayoutAttr::StridedLayoutAttr::get(
+                                 stt.getContext(), ShapedType::kDynamic,
+                                 {ShapedType::kDynamic})
+                           : StridedLayoutAttr();
+  ret.emplace_back(MemRefType::get(bufShape, elemTp, layout));
+  return success();
+}
+
 LogicalResult ToPositionsOp::verify() {
   auto stt = getSparseTensorType(getTensor());
   if (failed(lvlIsInBounds(getLevel(), getTensor())))
@@ -1322,6 +1636,14 @@ LogicalResult ToPositionsOp::verify() {
   if (failed(isMatchingWidth(getResult(), stt.getPosWidth())))
     return emitError("unexpected type for positions");
   return success();
+}
+
+LogicalResult
+ToPositionsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
+                                ValueRange ops, DictionaryAttr attr,
+                                OpaqueProperties prop, RegionRange region,
+                                SmallVectorImpl<mlir::Type> &ret) {
+  return inferSparseBufferType<ToPositionsOp>(ops, attr, prop, region, ret);
 }
 
 LogicalResult ToCoordinatesOp::verify() {
@@ -1333,11 +1655,27 @@ LogicalResult ToCoordinatesOp::verify() {
   return success();
 }
 
+LogicalResult
+ToCoordinatesOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
+                                  ValueRange ops, DictionaryAttr attr,
+                                  OpaqueProperties prop, RegionRange region,
+                                  SmallVectorImpl<mlir::Type> &ret) {
+  return inferSparseBufferType<ToCoordinatesOp>(ops, attr, prop, region, ret);
+}
+
 LogicalResult ToCoordinatesBufferOp::verify() {
   auto stt = getSparseTensorType(getTensor());
-  if (stt.getCOOStart() >= stt.getLvlRank())
+  if (stt.getAoSCOOStart() >= stt.getLvlRank())
     return emitError("expected sparse tensor with a COO region");
   return success();
+}
+
+LogicalResult ToCoordinatesBufferOp::inferReturnTypes(
+    MLIRContext *ctx, std::optional<Location> loc, ValueRange ops,
+    DictionaryAttr attr, OpaqueProperties prop, RegionRange region,
+    SmallVectorImpl<mlir::Type> &ret) {
+  return inferSparseBufferType<ToCoordinatesBufferOp>(ops, attr, prop, region,
+                                                      ret);
 }
 
 LogicalResult ToValuesOp::verify() {
@@ -1348,15 +1686,24 @@ LogicalResult ToValuesOp::verify() {
   return success();
 }
 
+LogicalResult ToValuesOp::inferReturnTypes(MLIRContext *ctx,
+                                           std::optional<Location> loc,
+                                           ValueRange ops, DictionaryAttr attr,
+                                           OpaqueProperties prop,
+                                           RegionRange region,
+                                           SmallVectorImpl<mlir::Type> &ret) {
+  return inferSparseBufferType<ToValuesOp>(ops, attr, prop, region, ret);
+}
+
 LogicalResult ToSliceOffsetOp::verify() {
-  auto rank = getRankedTensorType(getSlice()).getRank();
+  auto rank = getSlice().getType().getRank();
   if (rank <= getDim().getSExtValue() || getDim().getSExtValue() < 0)
     return emitError("requested dimension out of bound");
   return success();
 }
 
 LogicalResult ToSliceStrideOp::verify() {
-  auto rank = getRankedTensorType(getSlice()).getRank();
+  auto rank = getSlice().getType().getRank();
   if (rank <= getDim().getSExtValue() || getDim().getSExtValue() < 0)
     return emitError("requested dimension out of bound");
   return success();
@@ -1407,7 +1754,8 @@ static LogicalResult verifyNumBlockArgs(T *op, Region &region,
   if (!yield)
     return op->emitError() << regionName
                            << " region must end with sparse_tensor.yield";
-  if (!yield.getResult() || yield.getResult().getType() != outputType)
+  if (!yield.hasSingleResult() ||
+      yield.getSingleResult().getType() != outputType)
     return op->emitError() << regionName << " region yield type mismatch";
 
   return success();
@@ -1470,7 +1818,8 @@ LogicalResult UnaryOp::verify() {
     // Absent branch can only yield invariant values.
     Block *absentBlock = &absent.front();
     Block *parent = getOperation()->getBlock();
-    Value absentVal = cast<YieldOp>(absentBlock->getTerminator()).getResult();
+    Value absentVal =
+        cast<YieldOp>(absentBlock->getTerminator()).getSingleResult();
     if (auto arg = dyn_cast<BlockArgument>(absentVal)) {
       if (arg.getOwner() == parent)
         return emitError("absent region cannot yield linalg argument");
@@ -1558,13 +1907,6 @@ LogicalResult ConcatenateOp::verify() {
   return success();
 }
 
-LogicalResult InsertOp::verify() {
-  const auto stt = getSparseTensorType(getTensor());
-  if (stt.getLvlRank() != static_cast<Level>(getLvlCoords().size()))
-    return emitOpError("incorrect number of coordinates");
-  return success();
-}
-
 void PushBackOp::build(OpBuilder &builder, OperationState &result,
                        Value curSize, Value inBuffer, Value value) {
   build(builder, result, curSize, inBuffer, value, Value());
@@ -1643,15 +1985,16 @@ LogicalResult ForeachOp::verify() {
   const auto iTp = IndexType::get(getContext());
   for (Dimension d = 0; d < dimRank; d++)
     if (args[d].getType() != iTp)
-      emitError(
+      return emitError(
           llvm::formatv("Expecting Index type for argument at index {0}", d));
 
   const auto elemTp = t.getElementType();
   const auto valueTp = args[dimRank].getType();
   if (elemTp != valueTp)
-    emitError(llvm::formatv("Unmatched element type between input tensor and "
-                            "block argument, expected:{0}, got: {1}",
-                            elemTp, valueTp));
+    return emitError(
+        llvm::formatv("Unmatched element type between input tensor and "
+                      "block argument, expected:{0}, got: {1}",
+                      elemTp, valueTp));
   return success();
 }
 
@@ -1668,15 +2011,15 @@ LogicalResult ReorderCOOOp::verify() {
   SparseTensorType dstStt = getSparseTensorType(getResultCoo());
 
   if (!srcStt.isCOOType() || !dstStt.isCOOType())
-    emitError("Expected COO sparse tensors only");
+    return emitError("Expected COO sparse tensors only");
 
   if (!srcStt.hasSameDimToLvl(dstStt))
-    emitError("Unmatched dim2lvl map between input and result COO");
+    return emitError("Unmatched dim2lvl map between input and result COO");
 
   if (srcStt.getPosType() != dstStt.getPosType() ||
       srcStt.getCrdType() != dstStt.getCrdType() ||
       srcStt.getElementType() != dstStt.getElementType())
-    emitError("Unmatched storage format between input and result COO");
+    return emitError("Unmatched storage format between input and result COO");
 
   return success();
 }
@@ -1701,10 +2044,11 @@ LogicalResult SortOp::verify() {
   AffineMap xPerm = getPermMap();
   uint64_t nx = xPerm.getNumDims();
   if (nx < 1)
-    emitError(llvm::formatv("Expected rank(perm_map) > 1, got {0}", nx));
+    return emitError(llvm::formatv("Expected rank(perm_map) > 1, got {0}", nx));
 
   if (!xPerm.isPermutation())
-    emitError(llvm::formatv("Expected a permutation map, got {0}", xPerm));
+    return emitError(
+        llvm::formatv("Expected a permutation map, got {0}", xPerm));
 
   // We can't check the size of the buffers when n or buffer dimensions aren't
   // compile-time constants.
@@ -1713,34 +2057,716 @@ LogicalResult SortOp::verify() {
     return success();
 
   // Verify dimensions.
-  const auto checkDim = [&](Value v, Size minSize, const char *message) {
+  const auto checkDim = [&](Value v, Size minSize,
+                            const char *message) -> LogicalResult {
     const Size sh = getMemRefType(v).getShape()[0];
     if (!ShapedType::isDynamic(sh) && sh < minSize)
-      emitError(llvm::formatv("{0} got {1} < {2}", message, sh, minSize));
+      return emitError(
+          llvm::formatv("{0} got {1} < {2}", message, sh, minSize));
+    return success();
   };
   uint64_t n = cn.value();
   uint64_t ny = 0;
   if (auto nyAttr = getNyAttr())
     ny = nyAttr.getInt();
-  checkDim(getXy(), n * (nx + ny),
-           "Expected dimension(xy) >= n * (rank(perm_map) + ny)");
+  if (failed(checkDim(getXy(), n * (nx + ny),
+                      "Expected dimension(xy) >= n * (rank(perm_map) + ny)")))
+    return failure();
   for (Value opnd : getYs())
-    checkDim(opnd, n, "Expected dimension(y) >= n");
+    if (failed(checkDim(opnd, n, "Expected dimension(y) >= n")))
+      return failure();
 
   return success();
 }
 
-LogicalResult YieldOp::verify() {
-  // Check for compatible parent.
-  auto *parentOp = (*this)->getParentOp();
-  if (isa<BinaryOp>(parentOp) || isa<UnaryOp>(parentOp) ||
-      isa<ReduceOp>(parentOp) || isa<SelectOp>(parentOp) ||
-      isa<ForeachOp>(parentOp))
-    return success();
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Iteration Operations.
+//===----------------------------------------------------------------------===//
 
-  return emitOpError("expected parent op to be sparse_tensor unary, binary, "
-                     "reduce, select or foreach");
+IterSpaceType IteratorType::getIterSpaceType() const {
+  return IterSpaceType::get(getContext(), getEncoding(), getLoLvl(),
+                            getHiLvl());
 }
+
+IteratorType IterSpaceType::getIteratorType() const {
+  return IteratorType::get(getContext(), getEncoding(), getLoLvl(), getHiLvl());
+}
+
+/// Parses a level range in the form "$lo `to` $hi"
+/// or simply "$lo" if $hi - $lo = 1
+static ParseResult parseLevelRange(AsmParser &parser, Level &lvlLo,
+                                   Level &lvlHi) {
+  if (parser.parseInteger(lvlLo))
+    return failure();
+
+  if (succeeded(parser.parseOptionalKeyword("to"))) {
+    if (parser.parseInteger(lvlHi))
+      return failure();
+  } else {
+    lvlHi = lvlLo + 1;
+  }
+
+  if (lvlHi <= lvlLo)
+    return parser.emitError(parser.getNameLoc(),
+                            "expect larger level upper bound than lower bound");
+
+  return success();
+}
+
+/// Parses a level range in the form "$lo `to` $hi"
+/// or simply "$lo" if $hi - $lo = 1
+static ParseResult parseLevelRange(OpAsmParser &parser, IntegerAttr &lvlLoAttr,
+                                   IntegerAttr &lvlHiAttr) {
+  Level lvlLo, lvlHi;
+  if (parseLevelRange(parser, lvlLo, lvlHi))
+    return failure();
+
+  lvlLoAttr = IntegerAttr::get(parser.getBuilder().getIndexType(), lvlLo);
+  lvlHiAttr = IntegerAttr::get(parser.getBuilder().getIndexType(), lvlHi);
+  return success();
+}
+
+/// Prints a level range in the form "$lo `to` $hi"
+/// or simply "$lo" if $hi - $lo = 1
+static void printLevelRange(AsmPrinter &p, Level lo, Level hi) {
+
+  if (lo + 1 == hi)
+    p << lo;
+  else
+    p << lo << " to " << hi;
+}
+
+/// Prints a level range in the form "$lo `to` $hi"
+/// or simply "$lo" if $hi - $lo = 1
+static void printLevelRange(OpAsmPrinter &p, Operation *, IntegerAttr lvlLo,
+                            IntegerAttr lvlHi) {
+  unsigned lo = lvlLo.getValue().getZExtValue();
+  unsigned hi = lvlHi.getValue().getZExtValue();
+  printLevelRange(p, lo, hi);
+}
+
+/// Parses a list of `optional` defined list in the form of
+/// "(%val0, _, %val1, ...)", where `_` is used to annotate that the
+/// corresponding value is not defined (e.g., to represent an undefined
+/// coordinate in the sparse iteration space).
+static ParseResult parseOptionalDefinedList(
+    OpAsmParser &parser, OperationState &state, I64BitSet &definedSet,
+    SmallVectorImpl<OpAsmParser::Argument> &definedArgs,
+    unsigned maxCnt = std::numeric_limits<unsigned>::max(),
+    OpAsmParser::Delimiter delimiter = OpAsmParser::Delimiter::Paren) {
+  unsigned cnt = 0;
+  ParseResult crdList =
+      parser.parseCommaSeparatedList(delimiter, [&]() -> ParseResult {
+        if (parser.parseOptionalKeyword("_")) {
+          if (parser.parseArgument(definedArgs.emplace_back()))
+            return failure();
+          definedSet.set(cnt);
+        }
+        cnt += 1;
+        return success();
+      });
+
+  if (cnt > maxCnt)
+    return parser.emitError(parser.getNameLoc(),
+                            "parsed more value than expected.");
+
+  if (failed(crdList)) {
+    return parser.emitError(
+        parser.getNameLoc(),
+        "expecting SSA value or \"_\" for level coordinates");
+  }
+  assert(definedArgs.size() == definedSet.count());
+  return success();
+}
+
+static void printOptionalDefinedList(OpAsmPrinter &p, unsigned size,
+                                     Block::BlockArgListType blocksArgs,
+                                     I64BitSet definedSet) {
+  if (definedSet.empty())
+    return;
+
+  for (unsigned i = 0; i < size; i++) {
+    if (definedSet[i]) {
+      p << blocksArgs.front();
+      blocksArgs = blocksArgs.drop_front();
+    } else {
+      p << "_";
+    }
+    if (i != size - 1)
+      p << ", ";
+  }
+  assert(blocksArgs.empty());
+}
+
+static ParseResult
+parseUsedCoordList(OpAsmParser &parser, OperationState &state,
+                   SmallVectorImpl<OpAsmParser::Argument> &coords) {
+  // Parse "at(%crd0, _, ...)"
+  I64BitSet crdUsedLvlSet;
+  if (succeeded(parser.parseOptionalKeyword("at")) &&
+      failed(parseOptionalDefinedList(parser, state, crdUsedLvlSet, coords)))
+    return failure();
+
+  // Always use IndexType for the coordinate.
+  for (auto &coord : coords)
+    coord.type = parser.getBuilder().getIndexType();
+
+  // Set the CrdUsedLvl bitset.
+  state.addAttribute("crdUsedLvls",
+                     parser.getBuilder().getI64IntegerAttr(crdUsedLvlSet));
+  return success();
+}
+
+static ParseResult
+parseSparseIterateLoop(OpAsmParser &parser, OperationState &state,
+                       SmallVectorImpl<OpAsmParser::Argument> &iterators,
+                       SmallVectorImpl<OpAsmParser::Argument> &blockArgs) {
+  SmallVector<OpAsmParser::UnresolvedOperand> spaces;
+  SmallVector<OpAsmParser::UnresolvedOperand> initArgs;
+
+  // Parse "%iters, ... in %spaces, ..."
+  if (parser.parseArgumentList(iterators) || parser.parseKeyword("in") ||
+      parser.parseOperandList(spaces))
+    return failure();
+
+  if (iterators.size() != spaces.size())
+    return parser.emitError(
+        parser.getNameLoc(),
+        "mismatch in number of sparse iterators and sparse spaces");
+
+  SmallVector<OpAsmParser::Argument> coords;
+  if (failed(parseUsedCoordList(parser, state, coords)))
+    return failure();
+  size_t numCrds = coords.size();
+
+  // Parse "iter_args(%arg = %init, ...)"
+  bool hasIterArgs = succeeded(parser.parseOptionalKeyword("iter_args"));
+  if (hasIterArgs)
+    if (parser.parseAssignmentList(blockArgs, initArgs))
+      return failure();
+
+  blockArgs.append(coords);
+
+  SmallVector<Type> iterSpaceTps;
+  // parse ": sparse_tensor.iter_space -> ret"
+  if (parser.parseColon() || parser.parseTypeList(iterSpaceTps))
+    return failure();
+  if (iterSpaceTps.size() != spaces.size())
+    return parser.emitError(parser.getNameLoc(),
+                            "mismatch in number of iteration space operands "
+                            "and iteration space types");
+
+  for (auto [it, tp] : llvm::zip_equal(iterators, iterSpaceTps)) {
+    IterSpaceType spaceTp = llvm::dyn_cast<IterSpaceType>(tp);
+    if (!spaceTp)
+      return parser.emitError(parser.getNameLoc(),
+                              "expected sparse_tensor.iter_space type for "
+                              "iteration space operands");
+    it.type = spaceTp.getIteratorType();
+  }
+
+  if (hasIterArgs)
+    if (parser.parseArrowTypeList(state.types))
+      return failure();
+
+  // Resolves input operands.
+  if (parser.resolveOperands(spaces, iterSpaceTps, parser.getNameLoc(),
+                             state.operands))
+    return failure();
+
+  if (hasIterArgs) {
+    // Strip off leading args that used for coordinates.
+    MutableArrayRef args = MutableArrayRef(blockArgs).drop_back(numCrds);
+    if (args.size() != initArgs.size() || args.size() != state.types.size()) {
+      return parser.emitError(
+          parser.getNameLoc(),
+          "mismatch in number of iteration arguments and return values");
+    }
+
+    for (auto [it, init, tp] : llvm::zip_equal(args, initArgs, state.types)) {
+      it.type = tp;
+      if (parser.resolveOperand(init, tp, state.operands))
+        return failure();
+    }
+  }
+  return success();
+}
+
+static ParseResult
+parseSparseCoIterateLoop(OpAsmParser &parser, OperationState &state,
+                         SmallVectorImpl<Value> &spacesVals,
+                         SmallVectorImpl<OpAsmParser::Argument> &blockArgs) {
+
+  // Parse "(%spaces, ...)"
+  SmallVector<OpAsmParser::UnresolvedOperand> spaces;
+  if (parser.parseOperandList(spaces, OpAsmParser::Delimiter::Paren))
+    return failure();
+
+  SmallVector<OpAsmParser::Argument> coords;
+  if (failed(parseUsedCoordList(parser, state, coords)))
+    return failure();
+  size_t numCrds = coords.size();
+
+  // Parse "iter_args(%arg = %init, ...)"
+  SmallVector<OpAsmParser::UnresolvedOperand> initArgs;
+  bool hasIterArgs = succeeded(parser.parseOptionalKeyword("iter_args"));
+  if (hasIterArgs)
+    if (parser.parseAssignmentList(blockArgs, initArgs))
+      return failure();
+  blockArgs.append(coords);
+
+  SmallVector<Type> iterSpaceTps;
+  // parse ": (sparse_tensor.iter_space, ...) -> ret"
+  if (parser.parseColon() || parser.parseLParen() ||
+      parser.parseTypeList(iterSpaceTps) || parser.parseRParen())
+    return failure();
+
+  if (iterSpaceTps.size() != spaces.size())
+    return parser.emitError(parser.getNameLoc(),
+                            "mismatch in number of iteration space operands "
+                            "and iteration space types");
+
+  if (hasIterArgs)
+    if (parser.parseArrowTypeList(state.types))
+      return failure();
+
+  // Resolves input sparse iteration spaces.
+  if (parser.resolveOperands(spaces, iterSpaceTps, parser.getNameLoc(),
+                             spacesVals))
+    return failure();
+  state.operands.append(spacesVals);
+
+  if (hasIterArgs) {
+    // Strip off trailing args that used for coordinates.
+    MutableArrayRef args = MutableArrayRef(blockArgs).drop_back(numCrds);
+    if (args.size() != initArgs.size() || args.size() != state.types.size()) {
+      return parser.emitError(
+          parser.getNameLoc(),
+          "mismatch in number of iteration arguments and return values");
+    }
+
+    for (auto [it, init, tp] : llvm::zip_equal(args, initArgs, state.types)) {
+      it.type = tp;
+      if (parser.resolveOperand(init, tp, state.operands))
+        return failure();
+    }
+  }
+  return success();
+}
+
+LogicalResult ExtractIterSpaceOp::inferReturnTypes(
+    MLIRContext *ctx, std::optional<Location> loc, ValueRange ops,
+    DictionaryAttr attr, OpaqueProperties prop, RegionRange region,
+    SmallVectorImpl<mlir::Type> &ret) {
+
+  ExtractIterSpaceOp::Adaptor adaptor(ops, attr, prop, region);
+  SparseTensorType stt = getSparseTensorType(adaptor.getTensor());
+  ret.push_back(IterSpaceType::get(ctx, stt.getEncoding(), adaptor.getLoLvl(),
+                                   adaptor.getHiLvl()));
+  return success();
+}
+
+LogicalResult ExtractIterSpaceOp::verify() {
+  if (getLoLvl() >= getHiLvl())
+    return emitOpError("expected smaller level low than level high");
+
+  TypedValue<IteratorType> pIter = getParentIter();
+  if ((pIter && getLoLvl() == 0) || (!pIter && getLoLvl() != 0)) {
+    return emitOpError(
+        "parent iterator should be specified iff level lower bound equals 0");
+  }
+
+  if (pIter) {
+    IterSpaceType spaceTp = getExtractedSpace().getType();
+    if (pIter.getType().getEncoding() != spaceTp.getEncoding())
+      return emitOpError(
+          "mismatch in parent iterator encoding and iteration space encoding.");
+
+    if (spaceTp.getLoLvl() != pIter.getType().getHiLvl())
+      return emitOpError("parent iterator should be used to extract an "
+                         "iteration space from a consecutive level.");
+  }
+
+  return success();
+}
+
+LogicalResult ExtractValOp::verify() {
+  auto stt = getSparseTensorType(getTensor());
+  auto itTp = getIterator().getType();
+
+  if (stt.getEncoding() != itTp.getEncoding())
+    return emitOpError("mismatch in tensor encoding and iterator encoding.");
+
+  if (stt.getLvlRank() != itTp.getHiLvl())
+    return emitOpError("must use last-level iterator to extract values. ");
+
+  return success();
+}
+
+struct RemoveUnusedLvlCrds : public OpRewritePattern<IterateOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IterateOp iterateOp,
+                                PatternRewriter &rewriter) const override {
+    I64BitSet newUsedLvls(0);
+    llvm::BitVector toRemove(iterateOp.getBody()->getNumArguments());
+    for (unsigned i = 0, e = iterateOp.getSpaceDim(); i < e; i++) {
+      if (auto crd = iterateOp.getLvlCrd(i)) {
+        if (crd->getUsers().empty())
+          toRemove.set(crd->getArgNumber());
+        else
+          newUsedLvls.set(i);
+      }
+    }
+
+    // All coordinates are used.
+    if (toRemove.none())
+      return failure();
+
+    rewriter.startOpModification(iterateOp);
+    iterateOp.setCrdUsedLvls(newUsedLvls);
+    iterateOp.getBody()->eraseArguments(toRemove);
+    rewriter.finalizeOpModification(iterateOp);
+    return success();
+  }
+};
+
+void IterateOp::getCanonicalizationPatterns(mlir::RewritePatternSet &results,
+                                            mlir::MLIRContext *context) {
+  results.add<RemoveUnusedLvlCrds>(context);
+}
+
+void IterateOp::build(OpBuilder &builder, OperationState &odsState,
+                      Value iterSpace, ValueRange initArgs) {
+  unsigned rank = llvm::cast<IterSpaceType>(iterSpace.getType()).getSpaceDim();
+  // All ones.
+  I64BitSet set((1 << rank) - 1);
+  return build(builder, odsState, iterSpace, initArgs, set);
+}
+
+void IterateOp::build(OpBuilder &builder, OperationState &odsState,
+                      Value iterSpace, ValueRange initArgs,
+                      I64BitSet crdUsedLvls) {
+  OpBuilder::InsertionGuard guard(builder);
+
+  odsState.addOperands(iterSpace);
+  odsState.addOperands(initArgs);
+  odsState.getOrAddProperties<Properties>().crdUsedLvls =
+      builder.getIntegerAttr(builder.getIntegerType(64), crdUsedLvls);
+  Region *bodyRegion = odsState.addRegion();
+  odsState.addTypes(initArgs.getTypes());
+  Block *bodyBlock = builder.createBlock(bodyRegion);
+
+  // Starts with a list of user-provided loop arguments.
+  for (Value v : initArgs)
+    bodyBlock->addArgument(v.getType(), v.getLoc());
+
+  // Follows by a list of used coordinates.
+  for (unsigned i = 0, e = crdUsedLvls.count(); i < e; i++)
+    bodyBlock->addArgument(builder.getIndexType(), odsState.location);
+
+  // Ends with sparse iterator
+  bodyBlock->addArgument(
+      llvm::cast<IterSpaceType>(iterSpace.getType()).getIteratorType(),
+      odsState.location);
+}
+
+ParseResult IterateOp::parse(OpAsmParser &parser, OperationState &result) {
+  OpAsmParser::Argument iterator;
+  OpAsmParser::UnresolvedOperand iterSpace;
+
+  SmallVector<OpAsmParser::Argument> iters, iterArgs;
+  if (parseSparseIterateLoop(parser, result, iters, iterArgs))
+    return failure();
+  if (iters.size() != 1)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected only one iterator/iteration space");
+
+  iterArgs.append(iters);
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, iterArgs))
+    return failure();
+
+  IterateOp::ensureTerminator(*body, parser.getBuilder(), result.location);
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
+}
+
+/// Prints the initialization list in the form of
+///   <prefix>(%inner = %outer, %inner2 = %outer2, <...>)
+/// where 'inner' values are assumed to be region arguments and 'outer' values
+/// are regular SSA values.
+static void printInitializationList(OpAsmPrinter &p,
+                                    Block::BlockArgListType blocksArgs,
+                                    ValueRange initializers,
+                                    StringRef prefix = "") {
+  assert(blocksArgs.size() == initializers.size() &&
+         "expected same length of arguments and initializers");
+  if (initializers.empty())
+    return;
+
+  p << prefix << '(';
+  llvm::interleaveComma(llvm::zip(blocksArgs, initializers), p, [&](auto it) {
+    p << std::get<0>(it) << " = " << std::get<1>(it);
+  });
+  p << ")";
+}
+
+template <typename SparseLoopOp>
+static LogicalResult verifySparseLoopOp(SparseLoopOp op) {
+  if (op.getInitArgs().size() != op.getNumResults()) {
+    return op.emitOpError(
+        "mismatch in number of loop-carried values and defined values");
+  }
+  if (op.getCrdUsedLvls().max() > op.getSpaceDim())
+    return op.emitOpError("required out-of-bound coordinates");
+
+  return success();
+}
+
+LogicalResult IterateOp::verify() { return verifySparseLoopOp(*this); }
+LogicalResult CoIterateOp::verify() { return verifySparseLoopOp(*this); }
+
+void IterateOp::print(OpAsmPrinter &p) {
+  p << " " << getIterator() << " in " << getIterSpace();
+  if (!getCrdUsedLvls().empty()) {
+    p << " at(";
+    printOptionalDefinedList(p, getSpaceDim(), getCrds(), getCrdUsedLvls());
+    p << ")";
+  }
+  printInitializationList(p, getRegionIterArgs(), getInitArgs(), " iter_args");
+
+  p << " : " << getIterSpace().getType() << " ";
+  if (!getInitArgs().empty())
+    p.printArrowTypeList(getInitArgs().getTypes());
+
+  p << " ";
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/!getInitArgs().empty());
+}
+
+LogicalResult IterateOp::verifyRegions() {
+  if (getIterator().getType() != getIterSpace().getType().getIteratorType())
+    return emitOpError("mismatch in iterator and iteration space type");
+  if (getNumRegionIterArgs() != getNumResults())
+    return emitOpError(
+        "mismatch in number of basic block args and defined values");
+
+  auto initArgs = getInitArgs();
+  auto iterArgs = getRegionIterArgs();
+  auto yieldVals = getYieldedValues();
+  auto opResults = getResults();
+  if (!llvm::all_equal({initArgs.size(), iterArgs.size(), yieldVals.size(),
+                        opResults.size()})) {
+    return emitOpError() << "number mismatch between iter args and results.";
+  }
+
+  for (auto [i, init, iter, yield, ret] :
+       llvm::enumerate(initArgs, iterArgs, yieldVals, opResults)) {
+    if (init.getType() != ret.getType())
+      return emitOpError() << "types mismatch between " << i
+                           << "th iter operand and defined value";
+    if (iter.getType() != ret.getType())
+      return emitOpError() << "types mismatch between " << i
+                           << "th iter region arg and defined value";
+    if (yield.getType() != ret.getType())
+      return emitOpError() << "types mismatch between " << i
+                           << "th yield value and defined value";
+  }
+
+  return success();
+}
+
+/// OpInterfaces' methods implemented by IterateOp.
+SmallVector<Region *> IterateOp::getLoopRegions() { return {&getRegion()}; }
+
+MutableArrayRef<OpOperand> IterateOp::getInitsMutable() {
+  return getInitArgsMutable();
+}
+
+Block::BlockArgListType IterateOp::getRegionIterArgs() {
+  return getRegion().getArguments().take_front(getNumRegionIterArgs());
+}
+
+std::optional<MutableArrayRef<OpOperand>> IterateOp::getYieldedValuesMutable() {
+  return cast<sparse_tensor::YieldOp>(
+             getRegion().getBlocks().front().getTerminator())
+      .getResultsMutable();
+}
+
+std::optional<ResultRange> IterateOp::getLoopResults() { return getResults(); }
+
+OperandRange IterateOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+  return getInitArgs();
+}
+
+void IterateOp::getSuccessorRegions(RegionBranchPoint point,
+                                    SmallVectorImpl<RegionSuccessor> &regions) {
+  // Both the operation itself and the region may be branching into the body
+  // or back into the operation itself.
+  regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
+  // It is possible for loop not to enter the body.
+  regions.push_back(RegionSuccessor(getResults()));
+}
+
+void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,
+                        ValueRange iterSpaces, ValueRange initArgs,
+                        unsigned numCases) {
+  unsigned rank =
+      cast<IterSpaceType>(iterSpaces.front().getType()).getSpaceDim();
+  // All ones.
+  I64BitSet set((1 << rank) - 1);
+  // Generates all-zero case bits (they only serve as placeholders), which are
+  // supposed to be overriden later. We need to preallocate all the regions as
+  // mlir::Region cannot be dynamically added later after the operation is
+  // created.
+  SmallVector<int64_t> caseBits(numCases, 0);
+  ArrayAttr cases = builder.getI64ArrayAttr(caseBits);
+  return CoIterateOp::build(builder, odsState, initArgs.getTypes(), iterSpaces,
+                            initArgs, set, cases,
+                            /*caseRegionsCount=*/numCases);
+}
+
+ParseResult CoIterateOp::parse(OpAsmParser &parser, OperationState &result) {
+
+  SmallVector<Value> spaces;
+  // The block argument list of each regions, it is arranged in the order of
+  // ([used coordinate list], [loop iterations args], [sparse iterator list]).
+  SmallVector<OpAsmParser::Argument> blockArgs;
+  if (parseSparseCoIterateLoop(parser, result, spaces, blockArgs))
+    return failure();
+
+  result.addAttribute("operandSegmentSizes",
+                      parser.getBuilder().getDenseI32ArrayAttr(
+                          {static_cast<int32_t>(spaces.size()),
+                           static_cast<int32_t>(result.types.size())}));
+
+  SmallVector<Attribute> cases;
+  while (succeeded(parser.parseOptionalKeyword("case"))) {
+    // Parse one region per case.
+    I64BitSet definedItSet;
+    SmallVector<OpAsmParser::Argument> definedIts;
+    if (parseOptionalDefinedList(parser, result, definedItSet, definedIts,
+                                 spaces.size(), OpAsmParser::Delimiter::None))
+      return failure();
+
+    cases.push_back(parser.getBuilder().getI64IntegerAttr(definedItSet));
+
+    for (auto [i, definedIdx] : llvm::enumerate(definedItSet.bits())) {
+      // Resolve the iterator type based on the iteration space type.
+      auto spaceTp = llvm::cast<IterSpaceType>(spaces[definedIdx].getType());
+      definedIts[i].type = spaceTp.getIteratorType();
+    }
+    definedIts.insert(definedIts.begin(), blockArgs.begin(), blockArgs.end());
+    Region *body = result.addRegion();
+    if (parser.parseRegion(*body, definedIts))
+      return failure();
+
+    CoIterateOp::ensureTerminator(*body, parser.getBuilder(), result.location);
+  }
+
+  result.addAttribute("cases", ArrayAttr::get(parser.getContext(), cases));
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
+}
+
+void CoIterateOp::print(OpAsmPrinter &p) {
+  p << " (";
+  llvm::interleaveComma(getIterSpaces(), p, [&](auto s) { p << s; });
+  p << ")";
+
+  if (!getCrdUsedLvls().empty()) {
+    p << " at(";
+    printOptionalDefinedList(p, getSpaceDim(), getCrds(0), getCrdUsedLvls());
+    p << ")";
+  }
+
+  printInitializationList(p, getRegionIterArgs(0), getInitArgs(), " iter_args");
+
+  p << " : (" << getIterSpaces().getTypes() << ")";
+  if (!getInitArgs().empty())
+    p.printArrowTypeList(getInitArgs().getTypes());
+
+  for (unsigned idx = 0, e = getRegions().size(); idx < e; idx++) {
+    p.printNewline();
+    p << "case ";
+    printOptionalDefinedList(p, getIterSpaces().size(), getRegionIterators(idx),
+                             getRegionDefinedSpace(idx));
+    p << " ";
+    p.printRegion(getRegion(idx), /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/!getInitArgs().empty());
+  }
+}
+
+ValueRange CoIterateOp::getYieldedValues(unsigned regionIdx) {
+  return cast<sparse_tensor::YieldOp>(
+             getRegion(regionIdx).getBlocks().front().getTerminator())
+      .getResults();
+}
+
+LogicalResult CoIterateOp::verifyRegions() {
+  for (unsigned r = 0, e = getNumRegions(); r < e; r++) {
+    if (getNumRegionIterArgs() != getNumResults())
+      return emitOpError(
+          "mismatch in number of basic block args and defined values");
+
+    auto initArgs = getInitArgs();
+    auto iterArgs = getRegionIterArgs(r);
+    auto yieldVals = getYieldedValues(r);
+    auto opResults = getResults();
+    if (!llvm::all_equal({initArgs.size(), iterArgs.size(), yieldVals.size(),
+                          opResults.size()})) {
+      return emitOpError()
+             << "number mismatch between iter args and results on " << r
+             << "th region";
+    }
+
+    for (auto [i, init, iter, yield, ret] :
+         llvm::enumerate(initArgs, iterArgs, yieldVals, opResults)) {
+      if (init.getType() != ret.getType())
+        return emitOpError()
+               << "types mismatch between " << i
+               << "th iter operand and defined value on " << r << "th region";
+      if (iter.getType() != ret.getType())
+        return emitOpError() << "types mismatch between " << i
+                             << "th iter region arg and defined value on " << r
+                             << "th region";
+      if (yield.getType() != ret.getType())
+        return emitOpError()
+               << "types mismatch between " << i
+               << "th yield value and defined value on " << r << "th region";
+    }
+  }
+
+  auto cases = getRegionDefinedSpaces();
+  llvm::SmallSetVector<uint64_t, 8> set(cases.begin(), cases.end());
+  if (set.size() != getNumRegions())
+    return emitOpError("contains duplicated cases.");
+
+  return success();
+}
+
+SmallVector<Region *> CoIterateOp::getSubCasesOf(unsigned regionIdx) {
+  SmallVector<Region *> ret;
+  I64BitSet caseBit = getRegionDefinedSpace(regionIdx);
+  for (Region &r : getCaseRegions())
+    if (getRegionDefinedSpace(r.getRegionNumber()).isSubSetOf(caseBit))
+      ret.push_back(&r);
+
+  return ret;
+}
+
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Dialect Setups.
+//===----------------------------------------------------------------------===//
 
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
@@ -1757,7 +2783,7 @@ struct SparseTensorAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
-    if (attr.isa<SparseTensorEncodingAttr>()) {
+    if (isa<SparseTensorEncodingAttr>(attr)) {
       os << "sparse";
       return AliasResult::OverridableAlias;
     }
@@ -1780,6 +2806,10 @@ void SparseTensorDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorOps.cpp.inc"
       >();
+  declarePromisedInterfaces<
+      bufferization::BufferizableOpInterface, ConcatenateOp, ConvertOp, LoadOp,
+      NewOp, NumberOfEntriesOp, AssembleOp, DisassembleOp,
+      ToCoordinatesBufferOp, ToCoordinatesOp, ToPositionsOp, ToValuesOp>();
 }
 
 #define GET_OP_CLASSES

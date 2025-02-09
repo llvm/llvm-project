@@ -35,8 +35,8 @@ Type Type::refineWith(Type other) const {
     return *this;
 
   // Operation types are compatible if the operation names don't conflict.
-  if (auto opTy = dyn_cast<OperationType>()) {
-    auto otherOpTy = other.dyn_cast<ast::OperationType>();
+  if (auto opTy = mlir::dyn_cast<OperationType>(*this)) {
+    auto otherOpTy = mlir::dyn_cast<ast::OperationType>(other);
     if (!otherOpTy)
       return nullptr;
     if (!otherOpTy.getName())
@@ -105,25 +105,26 @@ Type RangeType::getElementType() const {
 // TypeRangeType
 
 bool TypeRangeType::classof(Type type) {
-  RangeType range = type.dyn_cast<RangeType>();
-  return range && range.getElementType().isa<TypeType>();
+  RangeType range = mlir::dyn_cast<RangeType>(type);
+  return range && mlir::isa<TypeType>(range.getElementType());
 }
 
 TypeRangeType TypeRangeType::get(Context &context) {
-  return RangeType::get(context, TypeType::get(context)).cast<TypeRangeType>();
+  return mlir::cast<TypeRangeType>(
+      RangeType::get(context, TypeType::get(context)));
 }
 
 //===----------------------------------------------------------------------===//
 // ValueRangeType
 
 bool ValueRangeType::classof(Type type) {
-  RangeType range = type.dyn_cast<RangeType>();
-  return range && range.getElementType().isa<ValueType>();
+  RangeType range = mlir::dyn_cast<RangeType>(type);
+  return range && mlir::isa<ValueType>(range.getElementType());
 }
 
 ValueRangeType ValueRangeType::get(Context &context) {
-  return RangeType::get(context, ValueType::get(context))
-      .cast<ValueRangeType>();
+  return mlir::cast<ValueRangeType>(
+      RangeType::get(context, ValueType::get(context)));
 }
 
 //===----------------------------------------------------------------------===//

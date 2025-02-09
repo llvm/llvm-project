@@ -16,11 +16,11 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
 ;.
-; CHECK: @[[T45:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_TT0:%.*]] { i64 1335139741, i64 438042995 }, align 8
+; CHECK: @t45 = internal global %struct.tt0 { i64 1335139741, i64 438042995 }, align 8
 ;.
 define i32 @main(i32 %argc, ptr nocapture readnone %argv) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@main
-; CHECK-SAME: (i32 [[ARGC:%.*]], ptr nocapture nofree readnone [[ARGV:%.*]]) {
+; CHECK-SAME: (i32 [[ARGC:%.*]], ptr nofree readnone captures(none) [[ARGV:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void (ptr, ptr, ptr, ptr, ptr, ...) @callee_t0f(ptr nofree undef, ptr nofree undef, ptr nofree undef, ptr nofree undef, ptr nofree undef, ptr noalias noundef nonnull byval([[STRUCT_TT0:%.*]]) align 8 dereferenceable(16) @t45)
 ; CHECK-NEXT:    ret i32 0
@@ -33,7 +33,7 @@ entry:
 ; Function Attrs: nounwind uwtable
 define internal void @callee_t0f(ptr nocapture readnone %tp13, ptr nocapture readnone %tp14, ptr nocapture readnone %tp15, ptr nocapture readnone %tp16, ptr nocapture readnone %tp17, ...) {
 ; CHECK-LABEL: define {{[^@]+}}@callee_t0f
-; CHECK-SAME: (ptr noalias nocapture nofree readnone align 4294967296 [[TP13:%.*]], ptr noalias nocapture nofree readnone align 4294967296 [[TP14:%.*]], ptr noalias nocapture nofree readnone align 4294967296 [[TP15:%.*]], ptr noalias nocapture nofree readnone align 4294967296 [[TP16:%.*]], ptr noalias nocapture nofree readnone align 4294967296 [[TP17:%.*]], ...) {
+; CHECK-SAME: (ptr noalias nofree readnone align 4294967296 captures(none) [[TP13:%.*]], ptr noalias nofree readnone align 4294967296 captures(none) [[TP14:%.*]], ptr noalias nofree readnone align 4294967296 captures(none) [[TP15:%.*]], ptr noalias nofree readnone align 4294967296 captures(none) [[TP16:%.*]], ptr noalias nofree readnone align 4294967296 captures(none) [[TP17:%.*]], ...) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @sink(i32 noundef 0)
 ; CHECK-NEXT:    ret void

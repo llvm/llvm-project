@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/log10f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcLog10fTest = LIBC_NAMESPACE::testing::FPTest<float>;
@@ -59,7 +58,7 @@ TEST_F(LlvmLibcLog10fTest, TrickyInputs) {
   };
 
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log10, x,
                                    LIBC_NAMESPACE::log10f(x), 0.5);
   }
@@ -69,7 +68,7 @@ TEST_F(LlvmLibcLog10fTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits(v));
+    float x = FPBits(v).get_val();
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log10, x,
                                    LIBC_NAMESPACE::log10f(x), 0.5);
   }

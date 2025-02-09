@@ -13,8 +13,6 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
@@ -35,6 +33,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
 
 #include <vector>
 
@@ -90,6 +90,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
       TypeResults results;
       TypeQuery query(const_lookup_name.GetStringRef(),
                       TypeQueryOptions::e_exact_match |
+                          TypeQueryOptions::e_strict_namespaces |
                           TypeQueryOptions::e_find_one);
       if (module_sp) {
         module_sp->FindTypes(query, results);
@@ -288,7 +289,7 @@ llvm::Expected<LanguageRuntime::VTableInfo>
 bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &dynamic_address,
-    Value::ValueType &value_type) {
+    Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) {
   // For Itanium, if the type has a vtable pointer in the object, it will be at
   // offset 0 in the object.  That will point to the "address point" within the
   // vtable (not the beginning of the vtable.)  We can then look up the symbol
@@ -419,19 +420,7 @@ public:
       : CommandObjectParsed(
             interpreter, "demangle", "Demangle a C++ mangled name.",
             "language cplusplus demangle [<mangled-name> ...]") {
-    CommandArgumentEntry arg;
-    CommandArgumentData index_arg;
-
-    // Define the first (and only) variant of this arg.
-    index_arg.arg_type = eArgTypeSymbol;
-    index_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(index_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeSymbol, eArgRepeatPlus);
   }
 
   ~CommandObjectMultiwordItaniumABI_Demangle() override = default;

@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../test/lib/Dialect/Test/TestOps.h"
 
 using namespace mlir;
 

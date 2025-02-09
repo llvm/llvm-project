@@ -13,19 +13,24 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'llvm/llvm-project'
     steps:
+      - name: Checkout Automation Script
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: llvm/utils/git/
+          ref: main
+
       - name: Setup Automation Script
+        working-directory: ./llvm/utils/git/
         run: |
-          curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/"$GITHUB_SHA"/llvm/utils/git/github-automation.py
-          curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/"$GITHUB_SHA"/llvm/utils/git/requirements.txt
-          chmod a+x github-automation.py
-          pip install -r requirements.txt
+          pip install --require-hashes -r requirements.txt
 
       - name: Update watchers
+        working-directory: ./llvm/utils/git/
         # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
         env:
           LABEL_NAME: ${{ github.event.label.name }}
         run: |
-          ./github-automation.py \
+          python3 ./github-automation.py \
             --token '${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}' \
             issue-subscriber \
             --issue-number '${{ github.event.issue.number }}' \

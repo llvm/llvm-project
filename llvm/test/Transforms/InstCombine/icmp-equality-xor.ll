@@ -84,11 +84,11 @@ define i1 @cmpeq_xor_cst1_multiuse(i32 %a, i32 %b) {
 define i1 @cmpeq_xor_cst1_commuted(i32 %a, i32 %b) {
 ; CHECK-LABEL: @cmpeq_xor_cst1_commuted(
 ; CHECK-NEXT:    [[B2:%.*]] = mul i32 [[B:%.*]], [[B]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B2]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], [[B2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 10
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %b2 = mul i32 %b, %b ; thwart complexity-based canonicalization
+  %b2 = mul i32 %b, %b  ; thwart complexity-based canonicalization
   %c = xor i32 %a, 10
   %cmp = icmp eq i32 %b2, %c
   ret i1 %cmp
@@ -144,4 +144,44 @@ entry:
   %xor = xor <2 x i8> %x, <i8 -2, i8 -1>
   %cmp = icmp ne <2 x i8> %xor, <i8 9, i8 79>
   ret <2 x i1> %cmp
+}
+
+declare void @use.i8(i8)
+define i1 @fold_xorC_eq0_multiuse(i8 %x, i8 %y) {
+; CHECK-LABEL: @fold_xorC_eq0_multiuse(
+; CHECK-NEXT:    [[XX:%.*]] = xor i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], [[Y]]
+; CHECK-NEXT:    call void @use.i8(i8 [[XX]])
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xx = xor i8 %x, %y
+  %r = icmp eq i8 %xx, 0
+  call void @use.i8(i8 %xx)
+  ret i1 %r
+}
+
+define i1 @fold_xorC_eq1_multiuse_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @fold_xorC_eq1_multiuse_fail(
+; CHECK-NEXT:    [[XX:%.*]] = xor i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[XX]], 1
+; CHECK-NEXT:    call void @use.i8(i8 [[XX]])
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xx = xor i8 %x, %y
+  %r = icmp eq i8 %xx, 1
+  call void @use.i8(i8 %xx)
+  ret i1 %r
+}
+
+define i1 @fold_xorC_neC_multiuse(i8 %x) {
+; CHECK-LABEL: @fold_xorC_neC_multiuse(
+; CHECK-NEXT:    [[XX:%.*]] = xor i8 [[X:%.*]], 45
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 110
+; CHECK-NEXT:    call void @use.i8(i8 [[XX]])
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xx = xor i8 %x, 45
+  %r = icmp ne i8 %xx, 67
+  call void @use.i8(i8 %xx)
+  ret i1 %r
 }

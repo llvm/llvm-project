@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DeclTemplate.h"
-#include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -19,6 +19,49 @@
 #include "clang/Sema/Scope.h"
 
 using namespace clang;
+
+/// Parse the optional ("message") part of a deleted-function-body.
+StringLiteral *Parser::ParseCXXDeletedFunctionMessage() {
+  if (!Tok.is(tok::l_paren))
+    return nullptr;
+  StringLiteral *Message = nullptr;
+  BalancedDelimiterTracker BT{*this, tok::l_paren};
+  BT.consumeOpen();
+
+  if (isTokenStringLiteral()) {
+    ExprResult Res = ParseUnevaluatedStringLiteralExpression();
+    if (Res.isUsable()) {
+      Message = Res.getAs<StringLiteral>();
+      Diag(Message->getBeginLoc(), getLangOpts().CPlusPlus26
+                                       ? diag::warn_cxx23_delete_with_message
+                                       : diag::ext_delete_with_message)
+          << Message->getSourceRange();
+    }
+  } else {
+    Diag(Tok.getLocation(), diag::err_expected_string_literal)
+        << /*Source='in'*/ 0 << "'delete'";
+    SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
+  }
+
+  BT.consumeClose();
+  return Message;
+}
+
+/// If we've encountered '= delete' in a context where it is ill-formed, such
+/// as in the declaration of a non-function, also skip the ("message") part if
+/// it is present to avoid issuing further diagnostics.
+void Parser::SkipDeletedFunctionBody() {
+  if (!Tok.is(tok::l_paren))
+    return;
+
+  BalancedDelimiterTracker BT{*this, tok::l_paren};
+  BT.consumeOpen();
+
+  // Just skip to the end of the current declaration.
+  SkipUntil(tok::r_paren, tok::comma, StopAtSemi | StopBeforeMatch);
+  if (Tok.is(tok::r_paren))
+    BT.consumeClose();
+}
 
 /// ParseCXXInlineMethodDef - We parsed and verified that the specified
 /// Declarator is a well formed C++ inline method definition. Now lex its body
@@ -70,7 +113,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
                       : diag::ext_defaulted_deleted_function)
         << 1 /* deleted */;
-      Actions.SetDeclDeleted(FnD, KWLoc);
+      StringLiteral *Message = ParseCXXDeletedFunctionMessage();
+      Actions.SetDeclDeleted(FnD, KWLoc, Message);
       Delete = true;
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {
         DeclAsFunction->setRangeEnd(KWEndLoc);
@@ -422,14 +466,14 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
         ConsumeAnyToken();
     } else if (HasUnparsed) {
       assert(Param->hasInheritedDefaultArg());
-      const FunctionDecl *Old;
+      FunctionDecl *Old;
       if (const auto *FunTmpl = dyn_cast<FunctionTemplateDecl>(LM.Method))
         Old =
             cast<FunctionDecl>(FunTmpl->getTemplatedDecl())->getPreviousDecl();
       else
         Old = cast<FunctionDecl>(LM.Method)->getPreviousDecl();
       if (Old) {
-        ParmVarDecl *OldParam = const_cast<ParmVarDecl*>(Old->getParamDecl(I));
+        ParmVarDecl *OldParam = Old->getParamDecl(I);
         assert(!OldParam->hasUnparsedDefaultArg());
         if (OldParam->hasUninstantiatedDefaultArg())
           Param->setUninstantiatedDefaultArg(
@@ -467,11 +511,28 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     //   and the end of the function-definition, member-declarator, or
     //   declarator.
     CXXMethodDecl *Method;
+    FunctionDecl *FunctionToPush;
     if (FunctionTemplateDecl *FunTmpl
           = dyn_cast<FunctionTemplateDecl>(LM.Method))
-      Method = dyn_cast<CXXMethodDecl>(FunTmpl->getTemplatedDecl());
+      FunctionToPush = FunTmpl->getTemplatedDecl();
     else
-      Method = dyn_cast<CXXMethodDecl>(LM.Method);
+      FunctionToPush = cast<FunctionDecl>(LM.Method);
+    Method = dyn_cast<CXXMethodDecl>(FunctionToPush);
+
+    // Push a function scope so that tryCaptureVariable() can properly visit
+    // function scopes involving function parameters that are referenced inside
+    // the noexcept specifier e.g. through a lambda expression.
+    // Example:
+    // struct X {
+    //   void ICE(int val) noexcept(noexcept([val]{}));
+    // };
+    // Setup the CurScope to match the function DeclContext - we have such
+    // assumption in IsInFnTryBlockHandler().
+    ParseScope FnScope(this, Scope::FnScope);
+    Sema::ContextRAII FnContext(Actions, FunctionToPush,
+                                /*NewThisContext=*/false);
+    Sema::FunctionScopeRAII PopFnContext(Actions);
+    Actions.PushFunctionScope();
 
     Sema::CXXThisScopeRAII ThisScope(
         Actions, Method ? Method->getParent() : nullptr,
@@ -559,6 +620,8 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
   // to be re-used for method bodies as well.
   ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope |
                                Scope::CompoundStmtScope);
+  Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
+
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
   if (Tok.is(tok::kw_try)) {
@@ -659,8 +722,7 @@ void Parser::ParseLexedMemberInitializer(LateParsedMemberInitializer &MI) {
   ExprResult Init = ParseCXXMemberInitializer(MI.Field, /*IsFunction=*/false,
                                               EqualLoc);
 
-  Actions.ActOnFinishCXXInClassMemberInitializer(MI.Field, EqualLoc,
-                                                 Init.get());
+  Actions.ActOnFinishCXXInClassMemberInitializer(MI.Field, EqualLoc, Init);
 
   // The next token should be our artificial terminating EOF token.
   if (Tok.isNot(tok::eof)) {
@@ -978,6 +1040,19 @@ bool Parser::ConsumeAndStoreFunctionPrologue(CachedTokens &Toks) {
       } else {
         break;
       }
+      // Pack indexing
+      if (Tok.is(tok::ellipsis) && NextToken().is(tok::l_square)) {
+        Toks.push_back(Tok);
+        SourceLocation OpenLoc = ConsumeToken();
+        Toks.push_back(Tok);
+        ConsumeBracket();
+        if (!ConsumeAndStoreUntil(tok::r_square, Toks, /*StopAtSemi=*/true)) {
+          Diag(Tok.getLocation(), diag::err_expected) << tok::r_square;
+          Diag(OpenLoc, diag::note_matching) << tok::l_square;
+          return true;
+        }
+      }
+
     } while (Tok.is(tok::coloncolon));
 
     if (Tok.is(tok::code_completion)) {
@@ -1129,41 +1204,6 @@ bool Parser::ConsumeAndStoreConditional(CachedTokens &Toks) {
   return true;
 }
 
-/// A tentative parsing action that can also revert token annotations.
-class Parser::UnannotatedTentativeParsingAction : public TentativeParsingAction {
-public:
-  explicit UnannotatedTentativeParsingAction(Parser &Self,
-                                             tok::TokenKind EndKind)
-      : TentativeParsingAction(Self), Self(Self), EndKind(EndKind) {
-    // Stash away the old token stream, so we can restore it once the
-    // tentative parse is complete.
-    TentativeParsingAction Inner(Self);
-    Self.ConsumeAndStoreUntil(EndKind, Toks, true, /*ConsumeFinalToken*/false);
-    Inner.Revert();
-  }
-
-  void RevertAnnotations() {
-    Revert();
-
-    // Put back the original tokens.
-    Self.SkipUntil(EndKind, StopAtSemi | StopBeforeMatch);
-    if (Toks.size()) {
-      auto Buffer = std::make_unique<Token[]>(Toks.size());
-      std::copy(Toks.begin() + 1, Toks.end(), Buffer.get());
-      Buffer[Toks.size() - 1] = Self.Tok;
-      Self.PP.EnterTokenStream(std::move(Buffer), Toks.size(), true,
-                               /*IsReinject*/ true);
-
-      Self.Tok = Toks.front();
-    }
-  }
-
-private:
-  Parser &Self;
-  CachedTokens Toks;
-  tok::TokenKind EndKind;
-};
-
 /// ConsumeAndStoreInitializer - Consume and store the token at the passed token
 /// container until the end of the current initializer expression (either a
 /// default argument or an in-class initializer for a non-static data member).
@@ -1201,9 +1241,7 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
       //    syntactically-valid init-declarator-list, then this comma ends
       //    the default initializer.
       {
-        UnannotatedTentativeParsingAction PA(*this,
-                                             CIK == CIK_DefaultInitializer
-                                               ? tok::semi : tok::r_paren);
+        TentativeParsingAction TPA(*this, /*Unannotated=*/true);
         Sema::TentativeAnalysisScope Scope(Actions);
 
         TPResult Result = TPResult::Error;
@@ -1231,7 +1269,7 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
         // Put the token stream back and undo any annotations we performed
         // after the comma. They may reflect a different parse than the one
         // we will actually perform at the end of the class.
-        PA.RevertAnnotations();
+        TPA.Revert();
 
         // If what follows could be a declaration, it is a declaration.
         if (Result != TPResult::False && Result != TPResult::Error)

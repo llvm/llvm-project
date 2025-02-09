@@ -144,7 +144,23 @@ findBBsToSinkInto(const Loop &L, const SmallPtrSetImpl<BasicBlock *> &UseBBs,
         BBsToSinkInto.erase(DominatedBB);
       }
       BBsToSinkInto.insert(ColdestBB);
+      continue;
     }
+    // Otherwise, see if we can stop the search through the cold BBs early.
+    // Since the ColdLoopBBs list is sorted in increasing magnitude of
+    // frequency the cold BB frequencies can only get larger. The
+    // BBsToSinkInto set can only get smaller and have a smaller
+    // adjustedSumFreq, due to the earlier checking. So once we find a cold BB
+    // with a frequency at least as large as the adjustedSumFreq of the
+    // current BBsToSinkInto set, the earlier frequency check can never be
+    // true for a future iteration. Note we could do check this more
+    // aggressively earlier, but in practice this ended up being more
+    // expensive overall (added checking to the critical path through the loop
+    // that often ended up continuing early due to an empty
+    // BBsDominatedByColdestBB set, and the frequency check there was false
+    // most of the time anyway).
+    if (adjustedSumFreq(BBsToSinkInto, BFI) <= BFI.getBlockFreq(ColdestBB))
+      break;
   }
 
   // Can't sink into blocks that have no valid insertion point.
@@ -236,7 +252,7 @@ static bool sinkInstruction(
     // Clone I and replace its uses.
     Instruction *IC = I.clone();
     IC->setName(I.getName());
-    IC->insertBefore(&*N->getFirstInsertionPt());
+    IC->insertBefore(N->getFirstInsertionPt());
 
     if (MSSAU && MSSAU->getMemorySSA()->getMemoryAccess(&I)) {
       // Create a new MemoryAccess and let MemorySSA set its defining access.
@@ -266,7 +282,7 @@ static bool sinkInstruction(
   }
   LLVM_DEBUG(dbgs() << "Sinking " << I << " To: " << MoveBB->getName() << '\n');
   NumLoopSunk++;
-  I.moveBefore(&*MoveBB->getFirstInsertionPt());
+  I.moveBefore(MoveBB->getFirstInsertionPt());
 
   if (MSSAU)
     if (MemoryUseOrDef *OldMemAcc = cast_or_null<MemoryUseOrDef>(

@@ -62,6 +62,22 @@ constexpr bool test() {
     static_assert(std::same_as<typename TIter::difference_type, std::ptrdiff_t>);
   }
   {
+    // Member typedefs for random access iterator, LWG3564 mutable overload
+    using TView = std::ranges::transform_view<RandomAccessView, PlusOneMutableOverload>;
+    using TIter = std::ranges::iterator_t<TView>;
+    static_assert(std::same_as<typename TIter::iterator_concept, std::random_access_iterator_tag>);
+    static_assert(std::same_as<typename TIter::iterator_category, std::random_access_iterator_tag>);
+    static_assert(std::same_as<typename TIter::value_type, int>);
+    static_assert(std::same_as<typename TIter::difference_type, std::ptrdiff_t>);
+
+    using CTIter = std::ranges::iterator_t<const TView>;
+    static_assert(std::same_as<typename CTIter::iterator_concept, std::random_access_iterator_tag>);
+    static_assert(std::same_as<typename CTIter::iterator_category,
+                               std::input_iterator_tag>); // Note: this is now input_iterator_tag.
+    static_assert(std::same_as<typename CTIter::value_type, int>);
+    static_assert(std::same_as<typename CTIter::difference_type, std::ptrdiff_t>);
+  }
+  {
     // Member typedefs for bidirectional iterator.
     using TView = std::ranges::transform_view<BidirectionalView, Increment>;
     using TIter = std::ranges::iterator_t<TView>;

@@ -42,7 +42,6 @@ void OutputSection::createHeader(size_t bodySize) {
   debugWrite(os.tell(), "section type [" + getSectionName() + "]");
   encodeULEB128(type, os);
   writeUleb128(os, bodySize, "section size");
-  os.flush();
   log("createHeader: " + toString(*this) + " body=" + Twine(bodySize) +
       " total=" + Twine(getSize()));
 }
@@ -50,7 +49,6 @@ void OutputSection::createHeader(size_t bodySize) {
 void CodeSection::finalizeContents() {
   raw_string_ostream os(codeSectionHeader);
   writeUleb128(os, functions.size(), "function count");
-  os.flush();
   bodySize = codeSectionHeader.size();
 
   for (InputFunction *func : functions) {
@@ -107,14 +105,13 @@ void DataSection::finalizeContents() {
   });
 #endif
 
-  assert((config->sharedMemory || !config->isPic || config->extendedConst ||
+  assert((ctx.arg.sharedMemory || !ctx.isPic || ctx.arg.extendedConst ||
           activeCount <= 1) &&
          "output segments should have been combined by now");
 
   writeUleb128(os, segmentCount, "data segment count");
-  os.flush();
   bodySize = dataSectionHeader.size();
-  bool is64 = config->is64.value_or(false);
+  bool is64 = ctx.arg.is64.value_or(false);
 
   for (OutputSegment *segment : segments) {
     if (!segment->requiredInBinary())
@@ -124,7 +121,7 @@ void DataSection::finalizeContents() {
     if (segment->initFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX)
       writeUleb128(os, 0, "memory index");
     if ((segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
-      if (config->isPic && config->extendedConst) {
+      if (ctx.isPic && ctx.arg.extendedConst) {
         writeU8(os, WASM_OPCODE_GLOBAL_GET, "global get");
         writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
                      "literal (global index)");
@@ -136,7 +133,7 @@ void DataSection::finalizeContents() {
       } else {
         WasmInitExpr initExpr;
         initExpr.Extended = false;
-        if (config->isPic) {
+        if (ctx.isPic) {
           assert(segment->startVA == 0);
           initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
           initExpr.Inst.Value.Global = WasmSym::memoryBase->getGlobalIndex();
@@ -147,7 +144,6 @@ void DataSection::finalizeContents() {
       }
     }
     writeUleb128(os, segment->size, "segment size");
-    os.flush();
 
     segment->sectionOffset = bodySize;
     bodySize += segment->header.size() + segment->size;
@@ -245,10 +241,10 @@ void CustomSection::finalizeContents() {
   raw_string_ostream os(nameData);
   encodeULEB128(name.size(), os);
   os << name;
-  os.flush();
 
   for (InputChunk *section : inputSections) {
     assert(!section->discarded);
+    payloadSize = alignTo(payloadSize, section->alignment);
     section->outSecOff = payloadSize;
     payloadSize += section->getSize();
   }

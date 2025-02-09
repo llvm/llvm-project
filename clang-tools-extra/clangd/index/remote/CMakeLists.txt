@@ -19,20 +19,24 @@ if (CLANGD_ENABLE_REMOTE)
   # target-local?
   add_definitions(-DGOOGLE_PROTOBUF_NO_RTTI=1)
 
-  add_clang_library(clangdRemoteIndex
+  add_clang_library(clangdRemoteIndex STATIC
     Client.cpp
 
     LINK_LIBS
     clangdRemoteIndexProto
     clangdRemoteIndexServiceProto
     clangdRemoteMarshalling
-    clangBasic
     clangDaemon
     clangdSupport
 
     DEPENDS
     clangdRemoteIndexProto
     clangdRemoteIndexServiceProto
+    )
+
+  clang_target_link_libraries(clangdRemoteIndex
+    PRIVATE
+    clangBasic
     )
 
   add_subdirectory(marshalling)

@@ -7,17 +7,17 @@
 # CHECK: LETP
 
 --- |
-  %struct.DCT_InstanceTypeDef = type { float*, i32, i32 }
+  %struct.DCT_InstanceTypeDef = type { ptr, i32, i32 }
   
   ; Function Attrs: nofree nounwind
-  define hidden arm_aapcs_vfpcc void @test(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float* %pIn, float* nocapture %pOut) {
+  define hidden arm_aapcs_vfpcc void @test(ptr nocapture readonly %S, ptr %pIn, ptr nocapture %pOut) {
   entry:
-    %NumInputs = getelementptr inbounds %struct.DCT_InstanceTypeDef, %struct.DCT_InstanceTypeDef* %S, i32 0, i32 2
-    %0 = load i32, i32* %NumInputs, align 4
-    %NumFilters = getelementptr inbounds %struct.DCT_InstanceTypeDef, %struct.DCT_InstanceTypeDef* %S, i32 0, i32 1
-    %1 = load i32, i32* %NumFilters, align 4
-    %pDCTCoefs34 = bitcast %struct.DCT_InstanceTypeDef* %S to float**
-    %2 = load float*, float** %pDCTCoefs34, align 4
+    %NumInputs = getelementptr inbounds %struct.DCT_InstanceTypeDef, ptr %S, i32 0, i32 2
+    %0 = load i32, ptr %NumInputs, align 4
+    %NumFilters = getelementptr inbounds %struct.DCT_InstanceTypeDef, ptr %S, i32 0, i32 1
+    %1 = load i32, ptr %NumFilters, align 4
+    %pDCTCoefs34 = bitcast ptr %S to ptr
+    %2 = load ptr, ptr %pDCTCoefs34, align 4
     %3 = add i32 %0, 3
     %4 = icmp slt i32 %0, 4
     %smin36 = select i1 %4, i32 %0, i32 4
@@ -29,14 +29,14 @@
   
   do.body:                                          ; preds = %do.body, %entry
     %count.0 = phi i32 [ %0, %entry ], [ %12, %do.body ]
-    %pInT.0 = phi float* [ %pIn, %entry ], [ %add.ptr, %do.body ]
+    %pInT.0 = phi ptr [ %pIn, %entry ], [ %add.ptr, %do.body ]
     %sumVec.0 = phi <4 x float> [ zeroinitializer, %entry ], [ %11, %do.body ]
     %8 = phi i32 [ %start1, %entry ], [ %13, %do.body ]
-    %pInT.033 = bitcast float* %pInT.0 to <4 x float>*
+    %pInT.033 = bitcast ptr %pInT.0 to ptr
     %9 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %count.0)
-    %10 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %pInT.033, i32 4, <4 x i1> %9, <4 x float> zeroinitializer)
+    %10 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0(ptr %pInT.033, i32 4, <4 x i1> %9, <4 x float> zeroinitializer)
     %11 = tail call fast <4 x float> @llvm.arm.mve.add.predicated.v4f32.v4i1(<4 x float> %sumVec.0, <4 x float> %10, <4 x i1> %9, <4 x float> undef)
-    %add.ptr = getelementptr inbounds float, float* %pInT.0, i32 4
+    %add.ptr = getelementptr inbounds float, ptr %pInT.0, i32 4
     %12 = add i32 %count.0, -4
     %13 = call i32 @llvm.loop.decrement.reg.i32(i32 %8, i32 1)
     %14 = icmp ne i32 %13, 0
@@ -50,27 +50,27 @@
     %add1 = fadd fast float %add, %17
     %18 = extractelement <4 x float> %11, i32 3
     %add2 = fadd fast float %add1, %18
-    %19 = load float, float* %2, align 4
+    %19 = load float, ptr %2, align 4
     %mul = fmul fast float %19, %add2
-    store float %mul, float* %pOut, align 4
+    store float %mul, ptr %pOut, align 4
     %sub4 = add i32 %1, -4
     %cmp5201 = icmp ugt i32 %sub4, 1
     br i1 %cmp5201, label %for.body.lr.ph, label %for.cond54.preheader
   
   for.body.lr.ph:                                   ; preds = %do.end
-    %scevgep = getelementptr float, float* %pIn, i32 4
+    %scevgep = getelementptr float, ptr %pIn, i32 4
     %20 = add i32 %0, 4
-    %scevgep5 = getelementptr float, float* %2, i32 %20
+    %scevgep5 = getelementptr float, ptr %2, i32 %20
     %21 = shl i32 %0, 4
     %22 = shl i32 %0, 1
     %23 = add i32 %22, 4
-    %scevgep12 = getelementptr float, float* %2, i32 %23
+    %scevgep12 = getelementptr float, ptr %2, i32 %23
     %24 = mul i32 %0, 3
     %25 = add i32 %24, 4
-    %scevgep19 = getelementptr float, float* %2, i32 %25
+    %scevgep19 = getelementptr float, ptr %2, i32 %25
     %26 = shl i32 %0, 2
     %27 = add i32 %26, 4
-    %scevgep26 = getelementptr float, float* %2, i32 %27
+    %scevgep26 = getelementptr float, ptr %2, i32 %27
     %28 = add i32 %0, -1
     %29 = add i32 %0, -4
     %30 = icmp slt i32 %29, 4
@@ -95,78 +95,78 @@
     br label %for.body56
   
   for.body:                                         ; preds = %do.end33, %for.body.lr.ph
-    %lsr.iv27 = phi float* [ %88, %do.end33 ], [ %scevgep26, %for.body.lr.ph ]
-    %lsr.iv20 = phi float* [ %87, %do.end33 ], [ %scevgep19, %for.body.lr.ph ]
-    %lsr.iv13 = phi float* [ %86, %do.end33 ], [ %scevgep12, %for.body.lr.ph ]
-    %lsr.iv6 = phi float* [ %85, %do.end33 ], [ %scevgep5, %for.body.lr.ph ]
+    %lsr.iv27 = phi ptr [ %88, %do.end33 ], [ %scevgep26, %for.body.lr.ph ]
+    %lsr.iv20 = phi ptr [ %87, %do.end33 ], [ %scevgep19, %for.body.lr.ph ]
+    %lsr.iv13 = phi ptr [ %86, %do.end33 ], [ %scevgep12, %for.body.lr.ph ]
+    %lsr.iv6 = phi ptr [ %85, %do.end33 ], [ %scevgep5, %for.body.lr.ph ]
     %k.0202 = phi i32 [ 1, %for.body.lr.ph ], [ %add53, %do.end33 ]
-    %39 = bitcast float* %pIn to <4 x float>*
+    %39 = bitcast ptr %pIn to ptr
     %mul7 = mul i32 %k.0202, %0
-    %arrayidx8 = getelementptr inbounds float, float* %2, i32 %mul7
+    %arrayidx8 = getelementptr inbounds float, ptr %2, i32 %mul7
     %add9 = add nuw nsw i32 %k.0202, 1
     %mul10 = mul i32 %add9, %0
-    %arrayidx11 = getelementptr inbounds float, float* %2, i32 %mul10
+    %arrayidx11 = getelementptr inbounds float, ptr %2, i32 %mul10
     %add12 = add nuw nsw i32 %k.0202, 2
     %mul13 = mul i32 %add12, %0
-    %arrayidx14 = getelementptr inbounds float, float* %2, i32 %mul13
+    %arrayidx14 = getelementptr inbounds float, ptr %2, i32 %mul13
     %add15 = add i32 %k.0202, 3
     %mul16 = mul i32 %add15, %0
-    %arrayidx17 = getelementptr inbounds float, float* %2, i32 %mul16
-    %40 = load <4 x float>, <4 x float>* %39, align 4
-    %41 = bitcast float* %arrayidx8 to <4 x float>*
-    %42 = load <4 x float>, <4 x float>* %41, align 4
+    %arrayidx17 = getelementptr inbounds float, ptr %2, i32 %mul16
+    %40 = load <4 x float>, ptr %39, align 4
+    %41 = bitcast ptr %arrayidx8 to ptr
+    %42 = load <4 x float>, ptr %41, align 4
     %43 = fmul fast <4 x float> %42, %40
-    %44 = bitcast float* %arrayidx11 to <4 x float>*
-    %45 = load <4 x float>, <4 x float>* %44, align 4
+    %44 = bitcast ptr %arrayidx11 to ptr
+    %45 = load <4 x float>, ptr %44, align 4
     %46 = fmul fast <4 x float> %45, %40
-    %47 = bitcast float* %arrayidx14 to <4 x float>*
-    %48 = load <4 x float>, <4 x float>* %47, align 4
+    %47 = bitcast ptr %arrayidx14 to ptr
+    %48 = load <4 x float>, ptr %47, align 4
     %49 = fmul fast <4 x float> %48, %40
-    %50 = bitcast float* %arrayidx17 to <4 x float>*
-    %51 = load <4 x float>, <4 x float>* %50, align 4
+    %50 = bitcast ptr %arrayidx17 to ptr
+    %51 = load <4 x float>, ptr %50, align 4
     %52 = fmul fast <4 x float> %51, %40
     %start2 = call i32 @llvm.start.loop.iterations.i32(i32 %33)
     br label %do.body24
   
   do.body24:                                        ; preds = %do.body24, %for.body
-    %lsr.iv30 = phi float* [ %scevgep31, %do.body24 ], [ %lsr.iv27, %for.body ]
-    %lsr.iv23 = phi float* [ %scevgep24, %do.body24 ], [ %lsr.iv20, %for.body ]
-    %lsr.iv16 = phi float* [ %scevgep17, %do.body24 ], [ %lsr.iv13, %for.body ]
-    %lsr.iv9 = phi float* [ %scevgep10, %do.body24 ], [ %lsr.iv6, %for.body ]
-    %lsr.iv = phi float* [ %scevgep3, %do.body24 ], [ %scevgep, %for.body ]
+    %lsr.iv30 = phi ptr [ %scevgep31, %do.body24 ], [ %lsr.iv27, %for.body ]
+    %lsr.iv23 = phi ptr [ %scevgep24, %do.body24 ], [ %lsr.iv20, %for.body ]
+    %lsr.iv16 = phi ptr [ %scevgep17, %do.body24 ], [ %lsr.iv13, %for.body ]
+    %lsr.iv9 = phi ptr [ %scevgep10, %do.body24 ], [ %lsr.iv6, %for.body ]
+    %lsr.iv = phi ptr [ %scevgep3, %do.body24 ], [ %scevgep, %for.body ]
     %sumVec0.0 = phi <4 x float> [ %43, %for.body ], [ %56, %do.body24 ]
     %sumVec1.0 = phi <4 x float> [ %46, %for.body ], [ %58, %do.body24 ]
     %sumVec2.0 = phi <4 x float> [ %49, %for.body ], [ %60, %do.body24 ]
     %sumVec3.0 = phi <4 x float> [ %52, %for.body ], [ %62, %do.body24 ]
     %53 = phi i32 [ %start2, %for.body ], [ %63, %do.body24 ]
-    %lsr.iv4 = bitcast float* %lsr.iv to <4 x float>*
-    %lsr.iv911 = bitcast float* %lsr.iv9 to <4 x float>*
-    %lsr.iv1618 = bitcast float* %lsr.iv16 to <4 x float>*
-    %lsr.iv2325 = bitcast float* %lsr.iv23 to <4 x float>*
-    %lsr.iv3032 = bitcast float* %lsr.iv30 to <4 x float>*
-    %54 = load <4 x float>, <4 x float>* %lsr.iv4, align 4
-    %55 = load <4 x float>, <4 x float>* %lsr.iv911, align 4
+    %lsr.iv4 = bitcast ptr %lsr.iv to ptr
+    %lsr.iv911 = bitcast ptr %lsr.iv9 to ptr
+    %lsr.iv1618 = bitcast ptr %lsr.iv16 to ptr
+    %lsr.iv2325 = bitcast ptr %lsr.iv23 to ptr
+    %lsr.iv3032 = bitcast ptr %lsr.iv30 to ptr
+    %54 = load <4 x float>, ptr %lsr.iv4, align 4
+    %55 = load <4 x float>, ptr %lsr.iv911, align 4
     %56 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %54, <4 x float> %55, <4 x float> %sumVec0.0)
-    %57 = load <4 x float>, <4 x float>* %lsr.iv1618, align 4
+    %57 = load <4 x float>, ptr %lsr.iv1618, align 4
     %58 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %54, <4 x float> %57, <4 x float> %sumVec1.0)
-    %59 = load <4 x float>, <4 x float>* %lsr.iv2325, align 4
+    %59 = load <4 x float>, ptr %lsr.iv2325, align 4
     %60 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %54, <4 x float> %59, <4 x float> %sumVec2.0)
-    %61 = load <4 x float>, <4 x float>* %lsr.iv3032, align 4
+    %61 = load <4 x float>, ptr %lsr.iv3032, align 4
     %62 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %54, <4 x float> %61, <4 x float> %sumVec3.0)
-    %scevgep3 = getelementptr float, float* %lsr.iv, i32 4
-    %scevgep10 = getelementptr float, float* %lsr.iv9, i32 4
-    %scevgep17 = getelementptr float, float* %lsr.iv16, i32 4
-    %scevgep24 = getelementptr float, float* %lsr.iv23, i32 4
-    %scevgep31 = getelementptr float, float* %lsr.iv30, i32 4
+    %scevgep3 = getelementptr float, ptr %lsr.iv, i32 4
+    %scevgep10 = getelementptr float, ptr %lsr.iv9, i32 4
+    %scevgep17 = getelementptr float, ptr %lsr.iv16, i32 4
+    %scevgep24 = getelementptr float, ptr %lsr.iv23, i32 4
+    %scevgep31 = getelementptr float, ptr %lsr.iv30, i32 4
     %63 = call i32 @llvm.loop.decrement.reg.i32(i32 %53, i32 1)
     %64 = icmp ne i32 %63, 0
     br i1 %64, label %do.body24, label %do.end33
   
   do.end33:                                         ; preds = %do.body24
-    %65 = bitcast float* %lsr.iv27 to i1*
-    %66 = bitcast float* %lsr.iv20 to i1*
-    %67 = bitcast float* %lsr.iv13 to i1*
-    %68 = bitcast float* %lsr.iv6 to i1*
+    %65 = bitcast ptr %lsr.iv27 to ptr
+    %66 = bitcast ptr %lsr.iv20 to ptr
+    %67 = bitcast ptr %lsr.iv13 to ptr
+    %68 = bitcast ptr %lsr.iv6 to ptr
     %69 = extractelement <4 x float> %56, i32 0
     %70 = extractelement <4 x float> %56, i32 1
     %add34 = fadd fast float %69, %70
@@ -174,8 +174,8 @@
     %add35 = fadd fast float %add34, %71
     %72 = extractelement <4 x float> %56, i32 3
     %add36 = fadd fast float %add35, %72
-    %arrayidx37 = getelementptr inbounds float, float* %pOut, i32 %k.0202
-    store float %add36, float* %arrayidx37, align 4
+    %arrayidx37 = getelementptr inbounds float, ptr %pOut, i32 %k.0202
+    store float %add36, ptr %arrayidx37, align 4
     %73 = extractelement <4 x float> %58, i32 0
     %74 = extractelement <4 x float> %58, i32 1
     %add38 = fadd fast float %73, %74
@@ -183,8 +183,8 @@
     %add39 = fadd fast float %add38, %75
     %76 = extractelement <4 x float> %58, i32 3
     %add40 = fadd fast float %add39, %76
-    %arrayidx42 = getelementptr inbounds float, float* %pOut, i32 %add9
-    store float %add40, float* %arrayidx42, align 4
+    %arrayidx42 = getelementptr inbounds float, ptr %pOut, i32 %add9
+    store float %add40, ptr %arrayidx42, align 4
     %77 = extractelement <4 x float> %60, i32 0
     %78 = extractelement <4 x float> %60, i32 1
     %add43 = fadd fast float %77, %78
@@ -192,8 +192,8 @@
     %add44 = fadd fast float %add43, %79
     %80 = extractelement <4 x float> %60, i32 3
     %add45 = fadd fast float %add44, %80
-    %arrayidx47 = getelementptr inbounds float, float* %pOut, i32 %add12
-    store float %add45, float* %arrayidx47, align 4
+    %arrayidx47 = getelementptr inbounds float, ptr %pOut, i32 %add12
+    store float %add45, ptr %arrayidx47, align 4
     %81 = extractelement <4 x float> %62, i32 0
     %82 = extractelement <4 x float> %62, i32 1
     %add48 = fadd fast float %81, %82
@@ -201,41 +201,41 @@
     %add49 = fadd fast float %add48, %83
     %84 = extractelement <4 x float> %62, i32 3
     %add50 = fadd fast float %add49, %84
-    %arrayidx52 = getelementptr inbounds float, float* %pOut, i32 %add15
-    store float %add50, float* %arrayidx52, align 4
+    %arrayidx52 = getelementptr inbounds float, ptr %pOut, i32 %add15
+    store float %add50, ptr %arrayidx52, align 4
     %add53 = add i32 %k.0202, 4
-    %scevgep8 = getelementptr i1, i1* %68, i32 %21
-    %85 = bitcast i1* %scevgep8 to float*
-    %scevgep15 = getelementptr i1, i1* %67, i32 %21
-    %86 = bitcast i1* %scevgep15 to float*
-    %scevgep22 = getelementptr i1, i1* %66, i32 %21
-    %87 = bitcast i1* %scevgep22 to float*
-    %scevgep29 = getelementptr i1, i1* %65, i32 %21
-    %88 = bitcast i1* %scevgep29 to float*
+    %scevgep8 = getelementptr i1, ptr %68, i32 %21
+    %85 = bitcast ptr %scevgep8 to ptr
+    %scevgep15 = getelementptr i1, ptr %67, i32 %21
+    %86 = bitcast ptr %scevgep15 to ptr
+    %scevgep22 = getelementptr i1, ptr %66, i32 %21
+    %87 = bitcast ptr %scevgep22 to ptr
+    %scevgep29 = getelementptr i1, ptr %65, i32 %21
+    %88 = bitcast ptr %scevgep29 to ptr
     %cmp5 = icmp ult i32 %add53, %sub4
     br i1 %cmp5, label %for.body, label %for.cond54.preheader
   
   for.body56:                                       ; preds = %for.body56.preheader, %do.end66
     %k.1200 = phi i32 [ %inc, %do.end66 ], [ %k.0.lcssa, %for.body56.preheader ]
     %mul57 = mul i32 %k.1200, %0
-    %arrayidx58 = getelementptr inbounds float, float* %2, i32 %mul57
+    %arrayidx58 = getelementptr inbounds float, ptr %2, i32 %mul57
     %start3 = call i32 @llvm.start.loop.iterations.i32(i32 %38)
     br label %do.body59
   
   do.body59:                                        ; preds = %do.body59, %for.body56
     %count.2 = phi i32 [ %0, %for.body56 ], [ %94, %do.body59 ]
-    %pInT.2 = phi float* [ %pIn, %for.body56 ], [ %add.ptr61, %do.body59 ]
-    %pCos0.1 = phi float* [ %arrayidx58, %for.body56 ], [ %add.ptr62, %do.body59 ]
+    %pInT.2 = phi ptr [ %pIn, %for.body56 ], [ %add.ptr61, %do.body59 ]
+    %pCos0.1 = phi ptr [ %arrayidx58, %for.body56 ], [ %add.ptr62, %do.body59 ]
     %sumVec.1 = phi <4 x float> [ zeroinitializer, %for.body56 ], [ %93, %do.body59 ]
     %89 = phi i32 [ %start3, %for.body56 ], [ %95, %do.body59 ]
-    %pInT.21 = bitcast float* %pInT.2 to <4 x float>*
-    %pCos0.12 = bitcast float* %pCos0.1 to <4 x float>*
+    %pInT.21 = bitcast ptr %pInT.2 to ptr
+    %pCos0.12 = bitcast ptr %pCos0.1 to ptr
     %90 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %count.2)
-    %91 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %pInT.21, i32 4, <4 x i1> %90, <4 x float> zeroinitializer)
-    %92 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %pCos0.12, i32 4, <4 x i1> %90, <4 x float> zeroinitializer)
+    %91 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0(ptr %pInT.21, i32 4, <4 x i1> %90, <4 x float> zeroinitializer)
+    %92 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0(ptr %pCos0.12, i32 4, <4 x i1> %90, <4 x float> zeroinitializer)
     %93 = tail call fast <4 x float> @llvm.arm.mve.fma.predicated.v4f32.v4i1(<4 x float> %91, <4 x float> %92, <4 x float> %sumVec.1, <4 x i1> %90)
-    %add.ptr61 = getelementptr inbounds float, float* %pInT.2, i32 4
-    %add.ptr62 = getelementptr inbounds float, float* %pCos0.1, i32 4
+    %add.ptr61 = getelementptr inbounds float, ptr %pInT.2, i32 4
+    %add.ptr62 = getelementptr inbounds float, ptr %pCos0.1, i32 4
     %94 = add i32 %count.2, -4
     %95 = call i32 @llvm.loop.decrement.reg.i32(i32 %89, i32 1)
     %96 = icmp ne i32 %95, 0
@@ -249,8 +249,8 @@
     %add68 = fadd fast float %add67, %99
     %100 = extractelement <4 x float> %93, i32 3
     %add69 = fadd fast float %add68, %100
-    %arrayidx70 = getelementptr inbounds float, float* %pOut, i32 %k.1200
-    store float %add69, float* %arrayidx70, align 4
+    %arrayidx70 = getelementptr inbounds float, ptr %pOut, i32 %k.1200
+    store float %add69, ptr %arrayidx70, align 4
     %inc = add nuw i32 %k.1200, 1
     %exitcond.not = icmp eq i32 %inc, %1
     br i1 %exitcond.not, label %for.end72, label %for.body56
@@ -260,7 +260,7 @@
   }
 
   declare <4 x i1> @llvm.arm.mve.vctp32(i32) #1
-  declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32 immarg, <4 x i1>, <4 x float>) #2
+  declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32 immarg, <4 x i1>, <4 x float>) #2
   declare <4 x float> @llvm.arm.mve.add.predicated.v4f32.v4i1(<4 x float>, <4 x float>, <4 x i1>, <4 x float>) #1
   declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) #3
   declare <4 x float> @llvm.arm.mve.fma.predicated.v4f32.v4i1(<4 x float>, <4 x float>, <4 x float>, <4 x i1>) #1

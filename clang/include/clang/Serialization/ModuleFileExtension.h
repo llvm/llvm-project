@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_SERIALIZATION_MODULEFILEEXTENSION_H
 #define LLVM_CLANG_SERIALIZATION_MODULEFILEEXTENSION_H
 
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/MD5.h"

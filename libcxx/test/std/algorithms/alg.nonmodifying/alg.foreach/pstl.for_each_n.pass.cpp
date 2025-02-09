@@ -25,10 +25,10 @@
 #include "test_execution_policies.h"
 #include "test_iterators.h"
 
-EXECUTION_POLICY_SFINAE_TEST(for_each);
+EXECUTION_POLICY_SFINAE_TEST(for_each_n);
 
-static_assert(sfinae_test_for_each<int, int*, int*, bool (*)(int)>);
-static_assert(!sfinae_test_for_each<std::execution::parallel_policy, int*, int*, bool (*)(int)>);
+static_assert(sfinae_test_for_each_n<int, int*, int, bool (*)(int)>);
+static_assert(!sfinae_test_for_each_n<std::execution::parallel_policy, int*, int, bool (*)(int)>);
 
 template <class Iter>
 struct Test {

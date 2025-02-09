@@ -51,7 +51,7 @@ static void writeHeader(raw_ostream &os, int64_t vma, uint64_t lma,
 // Returns a list of all symbols that we want to print out.
 static std::vector<Symbol *> getSymbols() {
   std::vector<Symbol *> v;
-  for (InputFile *file : symtab->objectFiles)
+  for (InputFile *file : ctx.objectFiles)
     for (Symbol *b : file->getSymbols())
       if (auto *dr = dyn_cast<Symbol>(b))
         if ((!isa<SectionSymbol>(dr)) && dr->isLive() &&
@@ -103,14 +103,14 @@ getSymbolStrings(ArrayRef<Symbol *> syms) {
 }
 
 void lld::wasm::writeMapFile(ArrayRef<OutputSection *> outputSections) {
-  if (config->mapFile.empty())
+  if (ctx.arg.mapFile.empty())
     return;
 
   // Open a map file for writing.
   std::error_code ec;
-  raw_fd_ostream os(config->mapFile, ec, sys::fs::OF_None);
+  raw_fd_ostream os(ctx.arg.mapFile, ec, sys::fs::OF_None);
   if (ec) {
-    error("cannot open " + config->mapFile + ": " + ec.message());
+    error("cannot open " + ctx.arg.mapFile + ": " + ec.message());
     return;
   }
 

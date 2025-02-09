@@ -9,7 +9,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bitalg,+avx512vl | FileCheck %s --check-prefixes=ALL,BITALG
 ;
 ; Just one 32-bit run to make sure we do reasonable things for i64 tzcnt.
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=ALL,X32-AVX
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=ALL,X86-AVX
 
 define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ; AVX1-LABEL: testv4i64:
@@ -115,23 +115,23 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    retq
 ;
-; X32-AVX-LABEL: testv4i64:
-; X32-AVX:       # %bb.0:
-; X32-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; X32-AVX-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
-; X32-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; X32-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; X32-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
-; X32-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
-; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
-; X32-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X32-AVX-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    retl
+; X86-AVX-LABEL: testv4i64:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; X86-AVX-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; X86-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
+; X86-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X86-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
+; X86-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
+; X86-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
+; X86-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-AVX-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    retl
   %out = call <4 x i64> @llvm.cttz.v4i64(<4 x i64> %in, i1 0)
   ret <4 x i64> %out
 }
@@ -240,23 +240,23 @@ define <4 x i64> @testv4i64u(<4 x i64> %in) nounwind {
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    retq
 ;
-; X32-AVX-LABEL: testv4i64u:
-; X32-AVX:       # %bb.0:
-; X32-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; X32-AVX-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
-; X32-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; X32-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; X32-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
-; X32-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
-; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
-; X32-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X32-AVX-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    retl
+; X86-AVX-LABEL: testv4i64u:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; X86-AVX-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; X86-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
+; X86-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X86-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
+; X86-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
+; X86-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
+; X86-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-AVX-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    retl
   %out = call <4 x i64> @llvm.cttz.v4i64(<4 x i64> %in, i1 -1)
   ret <4 x i64> %out
 }
@@ -385,27 +385,27 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ; BITALG-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
 ; BITALG-NEXT:    retq
 ;
-; X32-AVX-LABEL: testv8i32:
-; X32-AVX:       # %bb.0:
-; X32-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; X32-AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
-; X32-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; X32-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; X32-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
-; X32-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
-; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
-; X32-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X32-AVX-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
-; X32-AVX-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
-; X32-AVX-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
-; X32-AVX-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
-; X32-AVX-NEXT:    retl
+; X86-AVX-LABEL: testv8i32:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; X86-AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
+; X86-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
+; X86-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X86-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
+; X86-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
+; X86-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
+; X86-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-AVX-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
+; X86-AVX-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
+; X86-AVX-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
+; X86-AVX-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    retl
   %out = call <8 x i32> @llvm.cttz.v8i32(<8 x i32> %in, i1 0)
   ret <8 x i32> %out
 }
@@ -534,27 +534,27 @@ define <8 x i32> @testv8i32u(<8 x i32> %in) nounwind {
 ; BITALG-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
 ; BITALG-NEXT:    retq
 ;
-; X32-AVX-LABEL: testv8i32u:
-; X32-AVX:       # %bb.0:
-; X32-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; X32-AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
-; X32-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; X32-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; X32-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
-; X32-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
-; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
-; X32-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X32-AVX-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
-; X32-AVX-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
-; X32-AVX-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
-; X32-AVX-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
-; X32-AVX-NEXT:    retl
+; X86-AVX-LABEL: testv8i32u:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; X86-AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
+; X86-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
+; X86-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X86-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
+; X86-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
+; X86-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
+; X86-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-AVX-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
+; X86-AVX-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
+; X86-AVX-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
+; X86-AVX-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    retl
   %out = call <8 x i32> @llvm.cttz.v8i32(<8 x i32> %in, i1 -1)
   ret <8 x i32> %out
 }
@@ -685,24 +685,24 @@ define <16 x i16> @testv16i16(<16 x i16> %in) nounwind {
 ; BITALG-NEXT:    vpopcntw %ymm0, %ymm0
 ; BITALG-NEXT:    retq
 ;
-; X32-AVX-LABEL: testv16i16:
-; X32-AVX:       # %bb.0:
-; X32-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; X32-AVX-NEXT:    vpaddw %ymm1, %ymm0, %ymm1
-; X32-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; X32-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; X32-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
-; X32-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
-; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
-; X32-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpsllw $8, %ymm0, %ymm1
-; X32-AVX-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
-; X32-AVX-NEXT:    vpsrlw $8, %ymm0, %ymm0
-; X32-AVX-NEXT:    retl
+; X86-AVX-LABEL: testv16i16:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; X86-AVX-NEXT:    vpaddw %ymm1, %ymm0, %ymm1
+; X86-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
+; X86-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X86-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
+; X86-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
+; X86-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
+; X86-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpsllw $8, %ymm0, %ymm1
+; X86-AVX-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
+; X86-AVX-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; X86-AVX-NEXT:    retl
   %out = call <16 x i16> @llvm.cttz.v16i16(<16 x i16> %in, i1 0)
   ret <16 x i16> %out
 }
@@ -833,24 +833,24 @@ define <16 x i16> @testv16i16u(<16 x i16> %in) nounwind {
 ; BITALG-NEXT:    vpopcntw %ymm0, %ymm0
 ; BITALG-NEXT:    retq
 ;
-; X32-AVX-LABEL: testv16i16u:
-; X32-AVX:       # %bb.0:
-; X32-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; X32-AVX-NEXT:    vpaddw %ymm1, %ymm0, %ymm1
-; X32-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; X32-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; X32-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
-; X32-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
-; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
-; X32-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpsllw $8, %ymm0, %ymm1
-; X32-AVX-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
-; X32-AVX-NEXT:    vpsrlw $8, %ymm0, %ymm0
-; X32-AVX-NEXT:    retl
+; X86-AVX-LABEL: testv16i16u:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; X86-AVX-NEXT:    vpaddw %ymm1, %ymm0, %ymm1
+; X86-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
+; X86-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X86-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
+; X86-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
+; X86-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
+; X86-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpsllw $8, %ymm0, %ymm1
+; X86-AVX-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
+; X86-AVX-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; X86-AVX-NEXT:    retl
   %out = call <16 x i16> @llvm.cttz.v16i16(<16 x i16> %in, i1 -1)
   ret <16 x i16> %out
 }
@@ -978,21 +978,21 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    retq
 ;
-; X32-AVX-LABEL: testv32i8:
-; X32-AVX:       # %bb.0:
-; X32-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; X32-AVX-NEXT:    vpaddb %ymm1, %ymm0, %ymm1
-; X32-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; X32-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; X32-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
-; X32-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
-; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
-; X32-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
-; X32-AVX-NEXT:    retl
+; X86-AVX-LABEL: testv32i8:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; X86-AVX-NEXT:    vpaddb %ymm1, %ymm0, %ymm1
+; X86-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
+; X86-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X86-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
+; X86-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
+; X86-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
+; X86-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    retl
   %out = call <32 x i8> @llvm.cttz.v32i8(<32 x i8> %in, i1 0)
   ret <32 x i8> %out
 }
@@ -1120,87 +1120,217 @@ define <32 x i8> @testv32i8u(<32 x i8> %in) nounwind {
 ; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    retq
 ;
-; X32-AVX-LABEL: testv32i8u:
-; X32-AVX:       # %bb.0:
-; X32-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; X32-AVX-NEXT:    vpaddb %ymm1, %ymm0, %ymm1
-; X32-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; X32-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; X32-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
-; X32-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
-; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
-; X32-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
-; X32-AVX-NEXT:    retl
+; X86-AVX-LABEL: testv32i8u:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; X86-AVX-NEXT:    vpaddb %ymm1, %ymm0, %ymm1
+; X86-AVX-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm2
+; X86-AVX-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X86-AVX-NEXT:    # ymm3 = mem[0,1,0,1]
+; X86-AVX-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
+; X86-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
+; X86-AVX-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    retl
   %out = call <32 x i8> @llvm.cttz.v32i8(<32 x i8> %in, i1 -1)
   ret <32 x i8> %out
 }
 
 define <4 x i64> @foldv4i64() nounwind {
-; AVX-LABEL: foldv4i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,64,0]
-; AVX-NEXT:    retq
+; AVX1-LABEL: foldv4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,64,0]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: foldv4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,64,0]
+; AVX2-NEXT:    retq
+;
+; AVX512CDVL-LABEL: foldv4i64:
+; AVX512CDVL:       # %bb.0:
+; AVX512CDVL-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [8,0,64,0]
+; AVX512CDVL-NEXT:    retq
+;
+; AVX512CD-LABEL: foldv4i64:
+; AVX512CD:       # %bb.0:
+; AVX512CD-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [8,0,64,0]
+; AVX512CD-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: foldv4i64:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [8,0,64,0]
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: foldv4i64:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [8,0,64,0]
+; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: foldv4i64:
 ; BITALG_NOVLX:       # %bb.0:
-; BITALG_NOVLX-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,64,0]
+; BITALG_NOVLX-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [8,0,64,0]
 ; BITALG_NOVLX-NEXT:    retq
 ;
 ; BITALG-LABEL: foldv4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,64,0]
+; BITALG-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [8,0,64,0]
 ; BITALG-NEXT:    retq
 ;
-; X32-AVX-LABEL: foldv4i64:
-; X32-AVX:       # %bb.0:
-; X32-AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,0,0,64,0,0,0]
-; X32-AVX-NEXT:    retl
+; X86-AVX-LABEL: foldv4i64:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,0,0,64,0,0,0]
+; X86-AVX-NEXT:    retl
   %out = call <4 x i64> @llvm.cttz.v4i64(<4 x i64> <i64 256, i64 -1, i64 0, i64 255>, i1 0)
   ret <4 x i64> %out
 }
 
 define <4 x i64> @foldv4i64u() nounwind {
-; AVX-LABEL: foldv4i64u:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,64,0]
-; AVX-NEXT:    retq
+; AVX1-LABEL: foldv4i64u:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,64,0]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: foldv4i64u:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,64,0]
+; AVX2-NEXT:    retq
+;
+; AVX512CDVL-LABEL: foldv4i64u:
+; AVX512CDVL:       # %bb.0:
+; AVX512CDVL-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [8,0,64,0]
+; AVX512CDVL-NEXT:    retq
+;
+; AVX512CD-LABEL: foldv4i64u:
+; AVX512CD:       # %bb.0:
+; AVX512CD-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [8,0,64,0]
+; AVX512CD-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: foldv4i64u:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [8,0,64,0]
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: foldv4i64u:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [8,0,64,0]
+; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: foldv4i64u:
 ; BITALG_NOVLX:       # %bb.0:
-; BITALG_NOVLX-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,64,0]
+; BITALG_NOVLX-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [8,0,64,0]
 ; BITALG_NOVLX-NEXT:    retq
 ;
 ; BITALG-LABEL: foldv4i64u:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,64,0]
+; BITALG-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [8,0,64,0]
 ; BITALG-NEXT:    retq
 ;
-; X32-AVX-LABEL: foldv4i64u:
-; X32-AVX:       # %bb.0:
-; X32-AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,0,0,64,0,0,0]
-; X32-AVX-NEXT:    retl
+; X86-AVX-LABEL: foldv4i64u:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,0,0,64,0,0,0]
+; X86-AVX-NEXT:    retl
   %out = call <4 x i64> @llvm.cttz.v4i64(<4 x i64> <i64 256, i64 -1, i64 0, i64 255>, i1 -1)
   ret <4 x i64> %out
 }
 
 define <8 x i32> @foldv8i32() nounwind {
-; ALL-LABEL: foldv8i32:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
-; ALL-NEXT:    ret{{[l|q]}}
+; AVX1-LABEL: foldv8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: foldv8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; AVX2-NEXT:    retq
+;
+; AVX512CDVL-LABEL: foldv8i32:
+; AVX512CDVL:       # %bb.0:
+; AVX512CDVL-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; AVX512CDVL-NEXT:    retq
+;
+; AVX512CD-LABEL: foldv8i32:
+; AVX512CD:       # %bb.0:
+; AVX512CD-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; AVX512CD-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: foldv8i32:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: foldv8i32:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: foldv8i32:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: foldv8i32:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; BITALG-NEXT:    retq
+;
+; X86-AVX-LABEL: foldv8i32:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; X86-AVX-NEXT:    retl
   %out = call <8 x i32> @llvm.cttz.v8i32(<8 x i32> <i32 256, i32 -1, i32 0, i32 255, i32 -65536, i32 7, i32 24, i32 88>, i1 0)
   ret <8 x i32> %out
 }
 
 define <8 x i32> @foldv8i32u() nounwind {
-; ALL-LABEL: foldv8i32u:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
-; ALL-NEXT:    ret{{[l|q]}}
+; AVX1-LABEL: foldv8i32u:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: foldv8i32u:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; AVX2-NEXT:    retq
+;
+; AVX512CDVL-LABEL: foldv8i32u:
+; AVX512CDVL:       # %bb.0:
+; AVX512CDVL-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; AVX512CDVL-NEXT:    retq
+;
+; AVX512CD-LABEL: foldv8i32u:
+; AVX512CD:       # %bb.0:
+; AVX512CD-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; AVX512CD-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: foldv8i32u:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: foldv8i32u:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: foldv8i32u:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: foldv8i32u:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; BITALG-NEXT:    retq
+;
+; X86-AVX-LABEL: foldv8i32u:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [8,0,32,0,16,0,3,3]
+; X86-AVX-NEXT:    retl
   %out = call <8 x i32> @llvm.cttz.v8i32(<8 x i32> <i32 256, i32 -1, i32 0, i32 255, i32 -65536, i32 7, i32 24, i32 88>, i1 -1)
   ret <8 x i32> %out
 }
@@ -1245,3 +1375,5 @@ declare <4 x i64> @llvm.cttz.v4i64(<4 x i64>, i1)
 declare <8 x i32> @llvm.cttz.v8i32(<8 x i32>, i1)
 declare <16 x i16> @llvm.cttz.v16i16(<16 x i16>, i1)
 declare <32 x i8> @llvm.cttz.v32i8(<32 x i8>, i1)
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; AVX: {{.*}}

@@ -23,6 +23,7 @@ struct PhdrEntry;
 
 struct CompressedData {
   std::unique_ptr<SmallVector<uint8_t, 0>[]> shards;
+  uint32_t type = 0;
   uint32_t numShards = 0;
   uint32_t checksum = 0;
   uint64_t uncompressedSize;
@@ -34,15 +35,16 @@ struct CompressedData {
 // non-overlapping file offsets and VAs.
 class OutputSection final : public SectionBase {
 public:
-  OutputSection(StringRef name, uint32_t type, uint64_t flags);
+  OutputSection(Ctx &, StringRef name, uint32_t type, uint64_t flags);
 
   static bool classof(const SectionBase *s) {
     return s->kind() == SectionBase::Output;
   }
 
-  uint64_t getLMA() const { return ptLoad ? addr + ptLoad->lmaOffset : addr; }
+  uint64_t getLMA() const;
   template <typename ELFT> void writeHeaderTo(typename ELFT::Shdr *sHdr);
 
+  Ctx &ctx;
   uint32_t sectionIndex = UINT32_MAX;
   unsigned sortRank;
 
@@ -83,6 +85,11 @@ public:
   Expr alignExpr;
   Expr lmaExpr;
   Expr subalignExpr;
+
+  // Used by non-alloc SHT_CREL to hold the header and content byte stream.
+  uint64_t crelHeader = 0;
+  SmallVector<char, 0> crelBody;
+
   SmallVector<SectionCommand *, 0> commands;
   SmallVector<StringRef, 0> phdrs;
   std::optional<std::array<uint8_t, 4>> filler;
@@ -105,34 +112,56 @@ public:
   // DATA_RELRO_END.
   bool relro = false;
 
-  void finalize();
+  template <bool is64> void finalizeNonAllocCrel(Ctx &);
+  void finalize(Ctx &);
   template <class ELFT>
-  void writeTo(uint8_t *buf, llvm::parallel::TaskGroup &tg);
+  void writeTo(Ctx &, uint8_t *buf, llvm::parallel::TaskGroup &tg);
   // Check that the addends for dynamic relocations were written correctly.
-  void checkDynRelAddends(const uint8_t *bufStart);
-  template <class ELFT> void maybeCompress();
+  void checkDynRelAddends(Ctx &);
+  template <class ELFT> void maybeCompress(Ctx &);
 
   void sort(llvm::function_ref<int(InputSectionBase *s)> order);
   void sortInitFini();
   void sortCtorsDtors();
 
-private:
-  SmallVector<InputSection *, 0> storage;
+  std::array<uint8_t, 4> getFiller(Ctx &);
 
-  // Used for implementation of --compress-debug-sections option.
+  // Used for implementation of --compress-debug-sections and
+  // --compress-sections.
   CompressedData compressed;
 
-  std::array<uint8_t, 4> getFiller();
+private:
+  SmallVector<InputSection *, 0> storage;
 };
 
 struct OutputDesc final : SectionCommand {
   OutputSection osec;
-  OutputDesc(StringRef name, uint32_t type, uint64_t flags)
-      : SectionCommand(OutputSectionKind), osec(name, type, flags) {}
+  OutputDesc(Ctx &ctx, StringRef name, uint32_t type, uint64_t flags)
+      : SectionCommand(OutputSectionKind), osec(ctx, name, type, flags) {}
 
   static bool classof(const SectionCommand *c) {
     return c->kind == OutputSectionKind;
   }
+};
+
+// This represents a CLASS(class_name) { ... } that can be referenced by output
+// section descriptions. If referenced more than once, the sections can be
+// spilled to the next reference like --enable-non-contiguous-regions.
+struct SectionClass final : public SectionBase {
+  SmallVector<InputSectionDescription *, 0> commands;
+  bool assigned = false;
+
+  SectionClass(StringRef name)
+      : SectionBase(Class, nullptr, name, 0, 0, 0, 0, 0, 0) {}
+  static bool classof(const SectionBase *s) { return s->kind() == Class; }
+};
+
+struct SectionClassDesc : SectionCommand {
+  SectionClass sc;
+
+  SectionClassDesc(StringRef name) : SectionCommand(ClassKind), sc(name) {}
+
+  static bool classof(const SectionCommand *c) { return c->kind == ClassKind; }
 };
 
 int getPriority(StringRef s);
@@ -142,23 +171,7 @@ llvm::ArrayRef<InputSection *>
 getInputSections(const OutputSection &os,
                  SmallVector<InputSection *, 0> &storage);
 
-// All output sections that are handled by the linker specially are
-// globally accessible. Writer initializes them, so don't use them
-// until Writer is initialized.
-struct Out {
-  static uint8_t *bufferStart;
-  static PhdrEntry *tlsPhdr;
-  static OutputSection *elfHeader;
-  static OutputSection *programHeaders;
-  static OutputSection *preinitArray;
-  static OutputSection *initArray;
-  static OutputSection *finiArray;
-};
-
-uint64_t getHeaderSize();
-
-LLVM_LIBRARY_VISIBILITY extern llvm::SmallVector<OutputSection *, 0>
-    outputSections;
+uint64_t getHeaderSize(Ctx &);
 } // namespace lld::elf
 
 #endif

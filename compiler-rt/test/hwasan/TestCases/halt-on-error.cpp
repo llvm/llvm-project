@@ -26,15 +26,15 @@ int main() {
   // COMMON: READ of size 4 at
   // When instrumenting with callbacks, main is actually #1, and #0 is __hwasan_load4.
   // COMMON: #{{.*}} in main {{.*}}halt-on-error.cpp:[[@LINE-3]]
-  // COMMON: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in
+  // COMMON: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
 
   // RECOVER: READ of size 1 at
   // RECOVER: #{{.*}} in main {{.*}}halt-on-error.cpp:[[@LINE-7]]
-  // RECOVER: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in
+  // RECOVER: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
 
   // RECOVER: READ of size 1 at
   // RECOVER: #{{.*}} in main {{.*}}halt-on-error.cpp:[[@LINE-11]]
-  // RECOVER: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in
+  // RECOVER: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
 
   // COMMON-NOT: tag-mismatch
 }

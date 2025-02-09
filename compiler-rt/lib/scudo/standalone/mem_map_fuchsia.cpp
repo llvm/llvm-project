@@ -22,11 +22,10 @@ namespace scudo {
 
 static void NORETURN dieOnError(zx_status_t Status, const char *FnName,
                                 uptr Size) {
-  char Error[128];
-  formatString(Error, sizeof(Error),
-               "SCUDO ERROR: %s failed with size %zuKB (%s)", FnName,
+  ScopedString Error;
+  Error.append("SCUDO ERROR: %s failed with size %zuKB (%s)", FnName,
                Size >> 10, _zx_status_get_string(Status));
-  outputRaw(Error);
+  outputRaw(Error.data());
   die();
 }
 
@@ -85,12 +84,22 @@ static zx_handle_t getPlaceholderVmo() {
   return Vmo;
 }
 
+// Checks if MAP_ALLOWNOMEM allows the given error code.
+static bool IsNoMemError(zx_status_t Status) {
+  // Note: _zx_vmar_map returns ZX_ERR_NO_RESOURCES if the VMAR does not contain
+  // a suitable free spot.
+  return Status == ZX_ERR_NO_MEMORY || Status == ZX_ERR_NO_RESOURCES;
+}
+
+// Note: this constructor is only called by ReservedMemoryFuchsia::dispatch.
 MemMapFuchsia::MemMapFuchsia(uptr Base, uptr Capacity)
     : MapAddr(Base), WindowBase(Base), WindowSize(Capacity) {
   // Create the VMO.
   zx_status_t Status = _zx_vmo_create(Capacity, 0, &Vmo);
   if (UNLIKELY(Status != ZX_OK))
     dieOnError(Status, "zx_vmo_create", Capacity);
+
+  setVmoName(Vmo, "scudo:dispatched");
 }
 
 bool MemMapFuchsia::mapImpl(UNUSED uptr Addr, uptr Size, const char *Name,
@@ -102,9 +111,9 @@ bool MemMapFuchsia::mapImpl(UNUSED uptr Addr, uptr Size, const char *Name,
   // Create the VMO.
   zx_status_t Status = _zx_vmo_create(Size, 0, &Vmo);
   if (UNLIKELY(Status != ZX_OK)) {
-    if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
-      dieOnError(Status, "zx_vmo_create", Size);
-    return false;
+    if (AllowNoMem && IsNoMemError(Status))
+      return false;
+    dieOnError(Status, "zx_vmo_create", Size);
   }
 
   if (Name != nullptr)
@@ -117,15 +126,15 @@ bool MemMapFuchsia::mapImpl(UNUSED uptr Addr, uptr Size, const char *Name,
   Status =
       _zx_vmar_map(_zx_vmar_root_self(), MapFlags, 0, Vmo, 0, Size, &MapAddr);
   if (UNLIKELY(Status != ZX_OK)) {
-    if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
-      dieOnError(Status, "zx_vmar_map", Size);
+    if (AllowNoMem && IsNoMemError(Status)) {
+      Status = _zx_handle_close(Vmo);
+      CHECK_EQ(Status, ZX_OK);
 
-    Status = _zx_handle_close(Vmo);
-    CHECK_EQ(Status, ZX_OK);
-
-    MapAddr = 0;
-    Vmo = ZX_HANDLE_INVALID;
-    return false;
+      MapAddr = 0;
+      Vmo = ZX_HANDLE_INVALID;
+      return false;
+    }
+    dieOnError(Status, "zx_vmar_map", Size);
   }
 
   if (PreCommit) {
@@ -188,9 +197,9 @@ bool MemMapFuchsia::remapImpl(uptr Addr, uptr Size, const char *Name,
       _zx_vmar_map(_zx_vmar_root_self(), MapFlags, Addr - getRootVmarBase(),
                    Vmo, Addr - MapAddr, Size, &MappedAddr);
   if (UNLIKELY(Status != ZX_OK)) {
-    if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
-      dieOnError(Status, "zx_vmar_map", Size);
-    return false;
+    if (AllowNoMem && IsNoMemError(Status))
+      return false;
+    dieOnError(Status, "zx_vmar_map", Size);
   }
   DCHECK_EQ(Addr, MappedAddr);
 
@@ -228,9 +237,9 @@ bool ReservedMemoryFuchsia::createImpl(UNUSED uptr Addr, uptr Size,
   zx_status_t Status = _zx_vmar_map(_zx_vmar_root_self(), ZX_VM_ALLOW_FAULTS, 0,
                                     getPlaceholderVmo(), 0, Size, &Base);
   if (UNLIKELY(Status != ZX_OK)) {
-    if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
-      dieOnError(Status, "zx_vmar_map", Size);
-    return false;
+    if (AllowNoMem && IsNoMemError(Status))
+      return false;
+    dieOnError(Status, "zx_vmar_map", Size);
   }
 
   Capacity = Size;

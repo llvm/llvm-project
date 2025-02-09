@@ -66,6 +66,9 @@ public:
                                 MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
 
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
+
 private:
   void emitEntryFunctionFlatScratchInit(MachineFunction &MF,
                                         MachineBasicBlock &MBB,
@@ -82,8 +85,6 @@ private:
       Register ScratchWaveOffsetReg) const;
 
 public:
-  bool hasFP(const MachineFunction &MF) const override;
-
   bool requiresStackPointerReference(const MachineFunction &MF) const;
 };
 

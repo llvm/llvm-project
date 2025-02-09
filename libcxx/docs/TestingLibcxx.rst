@@ -1,11 +1,11 @@
+.. _testing:
+
 ==============
 Testing libc++
 ==============
 
 .. contents::
   :local:
-
-.. _testing:
 
 Getting Started
 ===============
@@ -26,7 +26,7 @@ Please see the `Lit Command Guide`_ for more information about LIT.
 Usage
 -----
 
-After building libc++, you can run parts of the libc++ test suite by simply
+After :ref:`building libc++ <VendorDocumentation>`, you can run parts of the libc++ test suite by simply
 running ``llvm-lit`` on a specified test or directory. If you're unsure
 whether the required libraries have been built, you can use the
 ``cxx-test-depends`` target. For example:
@@ -83,6 +83,12 @@ like the compiler to use for running the tests, which default compiler and linke
 flags to use, and how to run an executable. This system is meant to be easily
 extended for custom needs, in particular when porting the libc++ test suite to
 new platforms.
+
+.. note::
+  If you run the test suite on Apple platforms, we recommend adding the terminal application
+  used to run the test suite to the list of "Developer Tools". This prevents the system from
+  trying to scan each individual test binary for malware and dramatically speeds up the test
+  suite.
 
 Using a Custom Site Configuration
 ---------------------------------
@@ -325,18 +331,141 @@ This macro is in a different header as ``assert_macros.h`` since it pulls in
 additional headers.
 
  .. note: This macro can only be used in test using C++20 or newer. The macro
-          was added at a time where most of lib++'s C++17 support was complete.
+          was added at a time where most of libc++'s C++17 support was complete.
           Since it is not expected to add this to existing tests no effort was
           taken to make it work in earlier language versions.
 
 
-Additional reading
-------------------
+Test names
+----------
 
-The function ``CxxStandardLibraryTest`` in the file
-``libcxx/utils/libcxx/test/format.py`` has documentation about writing test. It
-explains the difference between the test named  ``foo.pass.cpp`` and named
-``foo.verify.cpp`` are.
+The names of test files have meaning for the libc++-specific configuration of
+Lit. Based on the pattern that matches the name of a test file, Lit will test
+the code contained therein in different ways. Refer to the `Lit Meaning of libc++
+Test Filenames`_ when determining the names for new test files.
+
+.. _Lit Meaning of libc++ Test Filenames:
+.. list-table:: Lit Meaning of libc++ Test Filenames
+   :widths: 25 75
+   :header-rows: 1
+
+   * - Name Pattern
+     - Meaning
+   * - ``FOO.pass.cpp``
+     - Checks whether the C++ code in the file compiles, links and runs successfully.
+   * - ``FOO.pass.mm``
+     - Same as ``FOO.pass.cpp``, but for Objective-C++.
+
+   * - ``FOO.compile.pass.cpp``
+     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests,
+       subject to the specific recommendations, below, for when to write ``verify`` tests.
+   * - ``FOO.compile.pass.mm``
+     - Same as ``FOO.compile.pass.cpp``, but for Objective-C++.
+   * - ``FOO.compile.fail.cpp``
+     - Checks that the code in the file does *not* compile successfully.
+
+   * - ``FOO.verify.cpp``
+     - Compiles with clang-verify. This type of test is automatically marked as UNSUPPORTED if the compiler does not support clang-verify.
+       For additional information about how to write ``verify`` tests, see the `Internals Manual <https://clang.llvm.org/docs/InternalsManual.html#verifying-diagnostics>`_.
+       Prefer `verify` tests over ``compile`` tests to test that compilation fails for a particular reason. For example, use a ``verify`` test
+       to ensure that
+
+       * an expected ``static_assert`` is triggered;
+       * the use of deprecated functions generates the proper warning;
+       * removed functions are no longer usable; or
+       * return values from functions marked ``[[nodiscard]]`` are stored.
+
+   * - ``FOO.link.pass.cpp``
+     - Checks that the C++ code in the file compiles and links successfully -- no run attempted.
+   * - ``FOO.link.pass.mm``
+     - Same as ``FOO.link.pass.cpp``, but for Objective-C++.
+   * - ``FOO.link.fail.cpp``
+     - Checks whether the C++ code in the file fails to link after successful compilation.
+   * - ``FOO.link.fail.mm``
+     - Same as ``FOO.link.fail.cpp``, but for Objective-C++.
+
+   * - ``FOO.sh.<anything>``
+     - A *builtin Lit Shell* test.
+   * - ``FOO.gen.<anything>``
+     - A variant of a *Lit Shell* test that generates one or more Lit tests on the fly. Executing this test must generate one or more files as expected
+       by LLVM split-file. Each generated file will drive an invocation of a separate Lit test. The format of the generated file will determine the type
+       of Lit test to be executed. This can be used to generate multiple Lit tests from a single source file, which is useful for testing repetitive properties
+       in the library. Be careful not to abuse this since this is not a replacement for usual code reuse techniques.
+
+   * - ``FOO.bench.cpp``
+     - A benchmark test. These tests are linked against the GoogleBenchmark library and generally consist of micro-benchmarks of individual
+       components of the library.
+
+
+libc++-Specific Lit Features
+----------------------------
+
+Custom Directives
+~~~~~~~~~~~~~~~~~
+
+Lit has many directives built in (e.g., ``DEFINE``, ``UNSUPPORTED``). In addition to those directives, libc++ adds two additional libc++-specific directives that makes
+writing tests easier. See `libc++-specific Lit Directives`_ for more information about the ``FILE_DEPENDENCIES``, ``ADDITIONAL_COMPILE_FLAGS``, and ``MODULE_DEPENDENCIES`` libc++-specific directives.
+
+.. _libc++-specific Lit Directives:
+.. list-table:: libc++-specific Lit Directives
+   :widths: 20 35 45
+   :header-rows: 1
+
+   * - Directive
+     - Parameters
+     - Usage
+   * - ``FILE_DEPENDENCIES``
+     - ``// FILE_DEPENDENCIES: file, directory, /path/to/file, ...``
+     - The paths given to the ``FILE_DEPENDENCIES`` directive can specify directories or specific files upon which a given test depend. For example, a test that requires some test
+       input stored in a data file would use this libc++-specific Lit directive. When a test file contains the ``FILE_DEPENDENCIES`` directive, Lit will collect the named files and copy
+       them to the directory represented by the ``%T`` substitution before the test executes. The copy is performed from the directory represented by the ``%S`` substitution
+       (i.e. the source directory of the test being executed) which makes it possible to use relative paths to specify the location of dependency files. After Lit copies
+       all the dependent files to the directory specified by the ``%T`` substitution, that directory should contain *all* the necessary inputs to run. In other words,
+       it should be possible to copy the contents of the directory specified by the ``%T`` substitution to a remote host where the execution of the test will actually occur.
+   * - ``ADDITIONAL_COMPILE_FLAGS``
+     - ``// ADDITIONAL_COMPILE_FLAGS: flag1 flag2 ...``
+     - The additional compiler flags specified by a space-separated list to the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive will be added to the end of the ``%{compile_flags}``
+       substitution for the test that contains it. This libc++-specific Lit directive makes it possible to add special compilation flags without having to resort to writing a ``.sh.cpp`` test (see
+       `Lit Meaning of libc++ Test Filenames`_), more powerful but perhaps overkill.
+   * - ``MODULE_DEPENDENCIES``
+     - ``// MODULE_DEPENDENCIES: std std.compat``
+     - This directive will build the required C++23 standard library
+       modules and add the additional compiler flags in
+       %{compile_flags}. (Libc++ offers these modules in C++20 as an
+       extension.)
+
+
+C++ Standard version tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Historically libc++ tests used to filter the tests for C++ Standard versions
+with lit directives like:
+
+.. code-block:: cpp
+
+   // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+
+With C++ Standards released every 3 years, this solution is not scalable.
+Instead use:
+
+.. code-block:: cpp
+
+   // UNSUPPORTED: std-at-least-c++26
+
+There is no corresponding ``std-at-most-c++23``. This could be useful when
+tests are only valid for a small set of standard versions. For example, a
+deprecation test is only valid when the feature is deprecated until it is
+removed from the Standard. These tests should be written like:
+
+.. code-block:: cpp
+
+   // REQUIRES: c++17 || c++20 || c++23
+
+.. note::
+
+   There are a lot of tests with the first style, these can remain as they are.
+   The new style is only intended to be used for new tests.
+
 
 Benchmarks
 ==========
@@ -345,51 +474,87 @@ Libc++ contains benchmark tests separately from the test of the test suite.
 The benchmarks are written using the `Google Benchmark`_ library, a copy of which
 is stored in the libc++ repository.
 
-For more information about using the Google Benchmark library see the
+For more information about using the Google Benchmark library, see the
 `official documentation <https://github.com/google/benchmark>`_.
+
+The benchmarks are located under ``libcxx/test/benchmarks``. Running a benchmark
+works in the same way as running a test. Both the benchmarks and the tests share
+the same configuration, so make sure to enable the relevant optimization level
+when running the benchmarks. For example,
+
+.. code-block:: bash
+
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/string.bench.cpp --show-all --param optimization=speed
+
+Note that benchmarks are only dry-run when run via the ``check-cxx`` target since
+we only want to make sure they don't rot. Do not rely on the results of benchmarks
+run through ``check-cxx`` for anything, instead run the benchmarks manually using
+the instructions for running individual tests.
+
+If you want to compare the results of different benchmark runs, we recommend using the
+``libcxx-compare-benchmarks`` helper tool. First, configure CMake in a build directory
+and run the benchmark:
+
+.. code-block:: bash
+
+  $ cmake -S runtimes -B <build1> [...]
+  $ libcxx/utils/libcxx-lit <build1> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+Then, do the same for the second configuration you want to test. Use a different build
+directory for that configuration:
+
+.. code-block:: bash
+
+  $ cmake -S runtimes -B <build2> [...]
+  $ libcxx/utils/libcxx-lit <build2> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+Finally, use ``libcxx-compare-benchmarks`` to compare both:
+
+.. code-block:: bash
+
+  $ libcxx/utils/libcxx-compare-benchmarks <build1> <build2> libcxx/test/benchmarks/string.bench.cpp
 
 .. _`Google Benchmark`: https://github.com/google/benchmark
 
-Building Benchmarks
--------------------
+.. _testing-hardening-assertions:
 
-The benchmark tests are not built by default. The benchmarks can be built using
-the ``cxx-benchmarks`` target.
+Testing hardening assertions
+============================
 
-An example build would look like:
+Each hardening assertion should be tested using death tests (via the
+``TEST_LIBCPP_ASSERT_FAILURE`` macro). Use the ``libcpp-hardening-mode`` Lit
+feature to make sure the assertion is enabled in (and only in) the intended
+modes. The convention is to use `assert.` in the name of the test file to make
+it easier to identify as a hardening test, e.g. ``assert.my_func.pass.cpp``.
+A toy example:
 
-.. code-block:: bash
+.. code-block:: cpp
 
-  $ cd build
-  $ ninja cxx-benchmarks
+  // Note: the following three annotations are currently needed to use the
+  // `TEST_LIBCPP_ASSERT_FAILURE`.
+  // REQUIRES: has-unix-headers
+  // UNSUPPORTED: c++03
+  // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
-This will build all of the benchmarks under ``<libcxx-src>/benchmarks`` to be
-built against the just-built libc++. The compiled tests are output into
-``build/projects/libcxx/benchmarks``.
+  // Example: only run this test in `fast`/`extensive`/`debug` modes.
+  // UNSUPPORTED: libcpp-hardening-mode=none
+  // Example: only run this test in the `debug` mode.
+  // REQUIRES: libcpp-hardening-mode=debug
+  // Example: only run this test in `extensive`/`debug` modes.
+  // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
 
-The benchmarks can also be built against the platforms native standard library
-using the ``-DLIBCXX_BUILD_BENCHMARKS_NATIVE_STDLIB=ON`` CMake option. This
-is useful for comparing the performance of libc++ to other standard libraries.
-The compiled benchmarks are named ``<test>.libcxx.out`` if they test libc++ and
-``<test>.native.out`` otherwise.
+  #include <header_being_tested>
 
-Also See:
+  #include "check_assertion.h" // Contains the `TEST_LIBCPP_ASSERT_FAILURE` macro
 
-  * :ref:`Building Libc++ <build instructions>`
-  * :ref:`CMake Options`
+  int main(int, char**) {
+    std::type_being_tested foo;
+    int bad_input = -1;
+    TEST_LIBCPP_ASSERT_FAILURE(foo.some_function_that_asserts(bad_input),
+        "The expected assertion message");
 
-Running Benchmarks
-------------------
+    return 0;
+  }
 
-The benchmarks must be run manually by the user. Currently there is no way
-to run them as part of the build.
-
-For example:
-
-.. code-block:: bash
-
-  $ cd build/projects/libcxx/benchmarks
-  $ ./algorithms.libcxx.out # Runs all the benchmarks
-  $ ./algorithms.libcxx.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
-
-For more information about running benchmarks see `Google Benchmark`_.
+Note that error messages are only tested (matched) if the ``debug``
+hardening mode is used.

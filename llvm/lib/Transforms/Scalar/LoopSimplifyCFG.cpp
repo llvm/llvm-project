@@ -16,7 +16,6 @@
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -366,7 +365,7 @@ private:
       for (auto &PN : BB->phis())
         DeadInstructions.push_back(&PN);
 
-      if (auto *LandingPad = dyn_cast<LandingPadInst>(BB->getFirstNonPHI()))
+      if (auto *LandingPad = dyn_cast<LandingPadInst>(BB->getFirstNonPHIIt()))
         DeadInstructions.emplace_back(LandingPad);
 
       for (Instruction *I : DeadInstructions) {

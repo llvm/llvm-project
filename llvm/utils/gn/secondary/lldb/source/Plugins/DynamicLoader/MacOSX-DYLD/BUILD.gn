@@ -1,3 +1,14 @@
+import("//lldb/utils/TableGen/lldb_tablegen.gni")
+
+lldb_tablegen("DynamicLoaderDarwinProperties") {
+  args = [ "-gen-lldb-property-defs" ]
+}
+
+lldb_tablegen("DynamicLoaderDarwinPropertiesEnum") {
+  args = [ "-gen-lldb-property-enum-defs" ]
+  td_file = "DynamicLoaderDarwinProperties.td"
+}
+
 static_library("MacOSX-DYLD") {
   output_name = "lldbPluginDynamicLoaderMacOSXDYLD"
   configs += [
@@ -5,6 +16,8 @@ static_library("MacOSX-DYLD") {
     "//llvm/utils/gn/build:lldb_code",
   ]
   deps = [
+    ":DynamicLoaderDarwinProperties",
+    ":DynamicLoaderDarwinPropertiesEnum",
     "//lldb/source/Breakpoint",
     "//lldb/source/Core",
     "//lldb/source/Expression",
@@ -21,6 +34,7 @@ static_library("MacOSX-DYLD") {
   include_dirs = [ "//lldb/source" ]
   sources = [
     "DynamicLoaderDarwin.cpp",
+    "DynamicLoaderDarwinProperties.cpp",
     "DynamicLoaderMacOS.cpp",
     "DynamicLoaderMacOSXDYLD.cpp",
   ]

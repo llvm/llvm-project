@@ -61,7 +61,7 @@ define <vscale x 4 x i32> @insertelement_inline_to_ret() {
 
 define <vscale x 4 x i32> @insertelement_shufflevector_inline_to_ret() {
 ; CHECK-LABEL: @insertelement_shufflevector_inline_to_ret(
-; CHECK-NEXT:    ret <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 4 x i32> splat (i32 1)
 ;
   %i = insertelement <vscale x 4 x i32> undef, i32 1, i32 0
   %i2 = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
@@ -144,15 +144,15 @@ entry:
 
 define <vscale x 2 x i1> @cmp_le_smax_always_true(<vscale x 2 x i64> %x) {
 ; CHECK-LABEL: @cmp_le_smax_always_true(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
-  %cmp = icmp sle <vscale x 2 x i64> %x, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 9223372036854775807, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %cmp = icmp sle <vscale x 2 x i64> %x, splat (i64 9223372036854775807)
   ret <vscale x 2 x i1> %cmp
 }
 
 define <vscale x 4 x float> @bitcast() {
 ; CHECK-LABEL: @bitcast(
-; CHECK-NEXT:    ret <vscale x 4 x float> bitcast (<vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer) to <vscale x 4 x float>)
+; CHECK-NEXT:    ret <vscale x 4 x float> bitcast (<vscale x 4 x i32> splat (i32 1) to <vscale x 4 x float>)
 ;
   %i1 = insertelement <vscale x 4 x i32> undef, i32 1, i32 0
   %i2 = shufflevector <vscale x 4 x i32> %i1, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer

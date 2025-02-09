@@ -7,10 +7,11 @@
 # RUN: echo "SECTIONS { bar = 1; }" > %t.script
 # RUN: ld.lld --symbol-ordering-file %t.ord %t.o --script %t.script \
 # RUN:   -o %t.out 2>&1 | FileCheck %s
-# CHECK: warning: <internal>: unable to order absolute symbol: bar
+# CHECK: warning: {{.*}}.script:1: unable to order absolute symbol: bar
 
 ## Check we do not crash when trying to order --defsym symbol.
 
 # RUN: echo "bar" > %t.ord
 # RUN: ld.lld --symbol-ordering-file %t.ord %t.o -defsym=bar=1 \
-# RUN:   -o %t.out 2>&1 | FileCheck %s
+# RUN:   -o %t.out 2>&1 | FileCheck %s --check-prefix=DEFSYM
+# DEFSYM: warning: --defsym: unable to order absolute symbol: bar

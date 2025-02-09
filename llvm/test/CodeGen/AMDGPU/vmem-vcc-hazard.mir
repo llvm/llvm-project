@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: vmem_vcc_fallthrough
 # GCN:      bb.1:

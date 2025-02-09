@@ -1,4 +1,4 @@
-# Verifies that llvm-bolt correctly sorts functions by their execution counts.
+## Verifies that llvm-bolt correctly sorts functions by their execution counts.
 
 # REQUIRES: x86_64-linux, asserts
 

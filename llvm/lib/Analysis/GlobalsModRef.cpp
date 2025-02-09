@@ -344,6 +344,14 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
       if (AnalyzeUsesOfPointer(I, Readers, Writers, OkayStoreDest))
         return true;
     } else if (auto *Call = dyn_cast<CallBase>(I)) {
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+        if (II->getIntrinsicID() == Intrinsic::threadlocal_address &&
+            V == II->getArgOperand(0)) {
+          if (AnalyzeUsesOfPointer(II, Readers, Writers))
+            return true;
+          continue;
+        }
+      }
       // Make sure that this is just the function being called, not that it is
       // passing into the function.
       if (Call->isDataOperand(&U)) {

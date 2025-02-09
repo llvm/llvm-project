@@ -43,7 +43,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %9 = fir.convert %0 : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<none>>
     %10 = fir.convert %7 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
     %11 = fir.convert %8 : (!fir.ref<!fir.char<1,16>>) -> !fir.ref<i8>
-    %12 = fir.call @_FortranAAssign(%9, %10, %11, %c3_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+    fir.call @_FortranAAssign(%9, %10, %11, %c3_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
     fir.freemem %6 : !fir.heap<!fir.array<?xi32>>
     %13 = fir.array_coor %2 %c2 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     // load modified not to have tbaa
@@ -53,14 +53,14 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     fir.store %14 to %15 {tbaa = [#tbaa_tag]} : !fir.ref<i32>
     return
   }
-  func.func private @_FortranAAssign(!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none attributes {fir.runtime}
+  func.func private @_FortranAAssign(!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> () attributes {fir.runtime}
   fir.global linkonce @_QQclX2F746D702F73696D706C652E66393000 constant : !fir.char<1,16> {
     %0 = fir.string_lit "/tmp/simple.f90\00"(16) : !fir.char<1,16>
     fir.has_value %0 : !fir.char<1,16>
   }
 }
 // CHECK-LABEL: define void @_QPfunc(
-// CHECK-SAME:      ptr %[[ARG0:.*]]) {
+// CHECK-SAME:      ptr %[[ARG0:.*]]){{.*}}{
 // [...]
 // CHECK:  %[[VAL5:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[ARG0]], i32 0, i32 7, i32 0, i32 0
 // box access:
@@ -74,7 +74,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:  %[[VAL11:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[ARG0]], i32 0, i32 0
 // box access:
 // CHECK:  %[[VAL12:.*]] = load ptr, ptr %[[VAL11]], align 8, !tbaa ![[BOX_ACCESS_TAG]]
-// CHECK:  %[[VAL15:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %14, ptr %[[VAL12]], 0
+// CHECK:  %[[VAL15:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %{{.*}}, ptr %[[VAL12]], 0
 // CHECK:  store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL15]], ptr %{{.*}}, align 8, !tbaa ![[BOX_ACCESS_TAG]]
 // CHECK:  %[[VAL16:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 7, i64 0, i32 0
 // box access:

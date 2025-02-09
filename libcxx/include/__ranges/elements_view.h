@@ -37,11 +37,14 @@
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <cstddef>
+#include <tuple> // std::get
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -168,7 +171,7 @@ class elements_view<_View, _Np>::__iterator
   template <bool>
   friend class __sentinel;
 
-  using _Base = __maybe_const<_Const, _View>;
+  using _Base _LIBCPP_NODEBUG = __maybe_const<_Const, _View>;
 
   iterator_t<_Base> __current_ = iterator_t<_Base>();
 
@@ -332,7 +335,7 @@ template <input_range _View, size_t _Np>
 template <bool _Const>
 class elements_view<_View, _Np>::__sentinel {
 private:
-  using _Base                                        = __maybe_const<_Const, _View>;
+  using _Base _LIBCPP_NODEBUG                        = __maybe_const<_Const, _View>;
   _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
   template <bool>
@@ -409,5 +412,7 @@ inline constexpr auto values   = elements<1>;
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_ELEMENTS_VIEW_H

@@ -50,7 +50,8 @@ private:
 
   /// Generate interpreter operations for the tree rooted at the given matcher
   /// node, in the specified region.
-  Block *generateMatcher(MatcherNode &node, Region &region);
+  Block *generateMatcher(MatcherNode &node, Region &region,
+                         Block *block = nullptr);
 
   /// Get or create an access to the provided positional value in the current
   /// block. This operation may mutate the provided block pointer if nested
@@ -148,6 +149,10 @@ private:
   /// A mapping between pattern operations and the corresponding configuration
   /// set.
   DenseMap<Operation *, PDLPatternConfigSet *> *configMap;
+
+  /// A mapping from a constraint question to the ApplyConstraintOp
+  /// that implements it.
+  DenseMap<ConstraintQuestion *, pdl_interp::ApplyConstraintOp> constraintOpMap;
 };
 } // namespace
 
@@ -182,9 +187,11 @@ void PatternLowering::lower(ModuleOp module) {
   firstMatcherBlock->erase();
 }
 
-Block *PatternLowering::generateMatcher(MatcherNode &node, Region &region) {
+Block *PatternLowering::generateMatcher(MatcherNode &node, Region &region,
+                                        Block *block) {
   // Push a new scope for the values used by this matcher.
-  Block *block = &region.emplaceBlock();
+  if (!block)
+    block = &region.emplaceBlock();
   ValueMapScope scope(values);
 
   // If this is the return node, simply insert the corresponding interpreter
@@ -364,6 +371,15 @@ Value PatternLowering::getValueAt(Block *&currentBlock, Position *pos) {
           loc, cast<ArrayAttr>(rawTypeAttr));
     break;
   }
+  case Predicates::ConstraintResultPos: {
+    // Due to the order of traversal, the ApplyConstraintOp has already been
+    // created and we can find it in constraintOpMap.
+    auto *constrResPos = cast<ConstraintPosition>(pos);
+    auto i = constraintOpMap.find(constrResPos->getQuestion());
+    assert(i != constraintOpMap.end());
+    value = i->second->getResult(constrResPos->getIndex());
+    break;
+  }
   default:
     llvm_unreachable("Generating unknown Position getter");
     break;
@@ -390,12 +406,11 @@ void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
       args.push_back(getValueAt(currentBlock, position));
   }
 
-  // Generate the matcher in the current (potentially nested) region
-  // and get the failure successor.
-  Block *success = generateMatcher(*boolNode->getSuccessNode(), *region);
+  // Generate a new block as success successor and get the failure successor.
+  Block *success = &region->emplaceBlock();
   Block *failure = failureBlockStack.back();
 
-  // Finally, create the predicate.
+  // Create the predicate.
   builder.setInsertionPointToEnd(currentBlock);
   Predicates::Kind kind = question->getKind();
   switch (kind) {
@@ -447,14 +462,20 @@ void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
   }
   case Predicates::ConstraintQuestion: {
     auto *cstQuestion = cast<ConstraintQuestion>(question);
-    builder.create<pdl_interp::ApplyConstraintOp>(
-        loc, cstQuestion->getName(), args, cstQuestion->getIsNegated(), success,
-        failure);
+    auto applyConstraintOp = builder.create<pdl_interp::ApplyConstraintOp>(
+        loc, cstQuestion->getResultTypes(), cstQuestion->getName(), args,
+        cstQuestion->getIsNegated(), success, failure);
+
+    constraintOpMap.insert({cstQuestion, applyConstraintOp});
     break;
   }
   default:
     llvm_unreachable("Generating unknown Predicate operation");
   }
+
+  // Generate the matcher in the current (potentially nested) region.
+  // This might use the results of the current predicate.
+  generateMatcher(*boolNode->getSuccessNode(), *region, success);
 }
 
 template <typename OpT, typename PredT, typename ValT = typename PredT::KeyTy>

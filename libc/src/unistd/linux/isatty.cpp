@@ -11,11 +11,12 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <sys/ioctl.h>   // For ioctl numbers.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, isatty, (int fd)) {
   constexpr int INIT_VAL = 0x1234abcd;
@@ -31,4 +32,4 @@ LLVM_LIBC_FUNCTION(int, isatty, (int fd)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

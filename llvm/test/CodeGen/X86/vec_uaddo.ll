@@ -604,7 +604,7 @@ define <16 x i32> @uaddo_v16i32(<16 x i32> %a0, <16 x i32> %a1, ptr %p2) nounwin
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm1
 ; AVX512-NEXT:    vpcmpltud %zmm0, %zmm1, %k1
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512-NEXT:    vmovdqa64 %zmm1, (%rdi)
 ; AVX512-NEXT:    retq
   %t = call {<16 x i32>, <16 x i1>} @llvm.uadd.with.overflow.v16i32(<16 x i32> %a0, <16 x i32> %a1)
@@ -730,7 +730,7 @@ define <16 x i32> @uaddo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpltub %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX512-NEXT:    retq
   %t = call {<16 x i8>, <16 x i1>} @llvm.uadd.with.overflow.v16i8(<16 x i8> %a0, <16 x i8> %a1)
@@ -1046,7 +1046,7 @@ define <4 x i32> @uaddo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpand %xmm2, %xmm1, %xmm0
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512-NEXT:    vpextrd $3, %xmm1, %eax
 ; AVX512-NEXT:    movw %ax, 9(%rdi)
 ; AVX512-NEXT:    vpextrd $2, %xmm1, %ecx
@@ -1098,16 +1098,12 @@ define <4 x i32> @uaddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ;
 ; AVX512-LABEL: uaddo_v4i1:
 ; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vpslld $31, %xmm2, %xmm2
+; AVX512-NEXT:    vptestmd %xmm2, %xmm2, %k0
+; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k0
-; AVX512-NEXT:    vpslld $31, %xmm1, %xmm0
-; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k2
-; AVX512-NEXT:    kandw %k1, %k0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    kshiftlw $12, %k2, %k0
-; AVX512-NEXT:    kshiftrw $12, %k0, %k0
+; AVX512-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    movb %al, (%rdi)
 ; AVX512-NEXT:    retq

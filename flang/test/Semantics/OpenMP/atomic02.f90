@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! REQUIRES: openmp_runtime
+
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 
 ! OpenMP Atomic construct
 ! section 2.17.7
@@ -28,9 +30,11 @@ program OmpAtomic
    !$omp atomic
    !ERROR: Invalid or missing operator in atomic update statement
    a = a**4
-   !$omp atomic
+   !$omp atomic 
+   !ERROR: Expected scalar variable on the LHS of atomic update assignment statement
    !ERROR: Invalid or missing operator in atomic update statement
-   c = c//d
+   !ERROR: Expected scalar expression on the RHS of atomic update assignment statement
+   c = d 
    !$omp atomic
    !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`
    !ERROR: Invalid or missing operator in atomic update statement
@@ -75,7 +79,9 @@ program OmpAtomic
    !ERROR: Invalid or missing operator in atomic update statement
    a = a**4
    !$omp atomic update
+   !ERROR: Expected scalar variable on the LHS of atomic update assignment statement
    !ERROR: Invalid or missing operator in atomic update statement
+   !ERROR: Expected scalar expression on the RHS of atomic update assignment statement
    c = c//d
    !$omp atomic update
    !ERROR: Atomic update statement should be of form `l = l operator expr` OR `l = expr operator l`

@@ -15,7 +15,6 @@
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/Basic/TargetInfo.h"
-#include <optional>
 
 using namespace clang;
 using namespace CodeGen;
@@ -78,7 +77,7 @@ void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
 
     QualType eltType = arrayType->getElementType();
     auto eltSize = CGM.getContext().getTypeSizeInChars(eltType);
-    for (uint64_t i = 0, e = arrayType->getSize().getZExtValue(); i != e; ++i) {
+    for (uint64_t i = 0, e = arrayType->getZExtSize(); i != e; ++i) {
       addTypedData(eltType, begin + i * eltSize);
     }
 
@@ -187,7 +186,7 @@ void SwiftAggLowering::addBitFieldData(const FieldDecl *bitfield,
                                        uint64_t bitfieldBitBegin) {
   assert(bitfield->isBitField());
   auto &ctx = CGM.getContext();
-  auto width = bitfield->getBitWidthValue(ctx);
+  auto width = bitfield->getBitWidthValue();
 
   // We can ignore zero-width bit-fields.
   if (width == 0) return;

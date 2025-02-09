@@ -12,6 +12,7 @@
 
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVRegisterInfo.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/RegisterBank.h"
 
 #define GET_REGINFO_ENUM
@@ -27,21 +28,7 @@ using namespace llvm;
 const RegisterBank &
 SPIRVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
                                               LLT Ty) const {
-  switch (RC.getID()) {
-  case SPIRV::TYPERegClassID:
+  if (RC.getID() == SPIRV::TYPERegClassID)
     return SPIRV::TYPERegBank;
-  case SPIRV::pIDRegClassID:
-  case SPIRV::IDRegClassID:
-    return SPIRV::IDRegBank;
-  case SPIRV::fIDRegClassID:
-    return SPIRV::fIDRegBank;
-  case SPIRV::vIDRegClassID:
-    return SPIRV::vIDRegBank;
-  case SPIRV::vfIDRegClassID:
-    return SPIRV::vfIDRegBank;
-  case SPIRV::ANYIDRegClassID:
-  case SPIRV::ANYRegClassID:
-    return SPIRV::IDRegBank;
-  }
-  llvm_unreachable("Unknown register class");
+  return SPIRV::IDRegBank;
 }

@@ -44,7 +44,7 @@ using namespace lld::elf;
 namespace {
 template <class ELFT> class MarkLive {
 public:
-  MarkLive(unsigned partition) : partition(partition) {}
+  MarkLive(Ctx &ctx, unsigned partition) : ctx(ctx), partition(partition) {}
 
   void run();
   void moveToMain();
@@ -60,6 +60,7 @@ private:
   template <class RelTy>
   void scanEhFrameSection(EhInputSection &eh, ArrayRef<RelTy> rels);
 
+  Ctx &ctx;
   // The index of the partition that we are currently processing.
   unsigned partition;
 
@@ -73,15 +74,22 @@ private:
 } // namespace
 
 template <class ELFT>
-static uint64_t getAddend(InputSectionBase &sec,
+static uint64_t getAddend(Ctx &ctx, InputSectionBase &sec,
                           const typename ELFT::Rel &rel) {
-  return target->getImplicitAddend(sec.content().begin() + rel.r_offset,
-                                   rel.getType(config->isMips64EL));
+  return ctx.target->getImplicitAddend(sec.content().begin() + rel.r_offset,
+                                       rel.getType(ctx.arg.isMips64EL));
 }
 
 template <class ELFT>
-static uint64_t getAddend(InputSectionBase &sec,
+static uint64_t getAddend(Ctx &, InputSectionBase &sec,
                           const typename ELFT::Rela &rel) {
+  return rel.r_addend;
+}
+
+// Currently, we assume all input CREL relocations have an explicit addend.
+template <class ELFT>
+static uint64_t getAddend(Ctx &, InputSectionBase &sec,
+                          const typename ELFT::Crel &rel) {
   return rel.r_addend;
 }
 
@@ -89,9 +97,8 @@ template <class ELFT>
 template <class RelTy>
 void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
                                   bool fromFDE) {
-  Symbol &sym = sec.getFile<ELFT>()->getRelocTargetSym(rel);
-
   // If a symbol is referenced in a live section, it is used.
+  Symbol &sym = sec.file->getRelocTargetSym(rel);
   sym.used = true;
 
   if (auto *d = dyn_cast<Defined>(&sym)) {
@@ -101,7 +108,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
 
     uint64_t offset = d->value;
     if (d->isSection())
-      offset += getAddend<ELFT>(sec, rel);
+      offset += getAddend<ELFT>(ctx, sec, rel);
 
     // fromFDE being true means this is referenced by a FDE in a .eh_frame
     // piece. The relocation points to the described function or to a LSDA. We
@@ -213,8 +220,8 @@ template <class ELFT> void MarkLive<ELFT>::run() {
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interpose other ELF file's symbols at runtime.
-  for (Symbol *sym : symtab.getSymbols())
-    if (sym->includeInDynsym() && sym->partition == partition)
+  for (Symbol *sym : ctx.symtab->getSymbols())
+    if (sym->isExported && sym->partition == partition)
       markSymbol(sym);
 
   // If this isn't the main partition, that's all that we need to preserve.
@@ -223,16 +230,16 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     return;
   }
 
-  markSymbol(symtab.find(config->entry));
-  markSymbol(symtab.find(config->init));
-  markSymbol(symtab.find(config->fini));
-  for (StringRef s : config->undefined)
-    markSymbol(symtab.find(s));
-  for (StringRef s : script->referencedSymbols)
-    markSymbol(symtab.find(s));
-  for (auto [symName, _] : symtab.cmseSymMap) {
-    markSymbol(symtab.cmseSymMap[symName].sym);
-    markSymbol(symtab.cmseSymMap[symName].acleSeSym);
+  markSymbol(ctx.symtab->find(ctx.arg.entry));
+  markSymbol(ctx.symtab->find(ctx.arg.init));
+  markSymbol(ctx.symtab->find(ctx.arg.fini));
+  for (StringRef s : ctx.arg.undefined)
+    markSymbol(ctx.symtab->find(s));
+  for (StringRef s : ctx.script->referencedSymbols)
+    markSymbol(ctx.symtab->find(s));
+  for (auto [symName, _] : ctx.symtab->cmseSymMap) {
+    markSymbol(ctx.symtab->cmseSymMap[symName].sym);
+    markSymbol(ctx.symtab->cmseSymMap[symName].acleSeSym);
   }
 
   // Mark .eh_frame sections as live because there are usually no relocations
@@ -240,7 +247,8 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   // all of them. We also want to preserve personality routines and LSDA
   // referenced by .eh_frame sections, so we scan them for that here.
   for (EhInputSection *eh : ctx.ehInputSections) {
-    const RelsOrRelas<ELFT> rels = eh->template relsOrRelas<ELFT>();
+    const RelsOrRelas<ELFT> rels =
+        eh->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
     if (rels.areRelocsRel())
       scanEhFrameSection(*eh, rels.rels);
     else if (rels.relas.size())
@@ -277,8 +285,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     //   collection.
     // - Groups members are retained or discarded as a unit.
     if (!(sec->flags & SHF_ALLOC)) {
-      bool isRel = sec->type == SHT_REL || sec->type == SHT_RELA;
-      if (!isRel && !sec->nextInSectionGroup) {
+      if (!isStaticRelSecType(sec->type) && !sec->nextInSectionGroup) {
         sec->markLive();
         for (InputSection *isec : sec->dependentSections)
           isec->markLive();
@@ -287,15 +294,15 @@ template <class ELFT> void MarkLive<ELFT>::run() {
 
     // Preserve special sections and those which are specified in linker
     // script KEEP command.
-    if (isReserved(sec) || script->shouldKeep(sec)) {
+    if (isReserved(sec) || ctx.script->shouldKeep(sec)) {
       enqueue(sec, 0);
-    } else if ((!config->zStartStopGC || sec->name.starts_with("__libc_")) &&
+    } else if ((!ctx.arg.zStartStopGC || sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
       // As a workaround for glibc libc.a before 2.34
       // (https://sourceware.org/PR27492), retain __libc_atexit and similar
       // sections regardless of zStartStopGC.
-      cNamedSections[saver().save("__start_" + sec->name)].push_back(sec);
-      cNamedSections[saver().save("__stop_" + sec->name)].push_back(sec);
+      cNamedSections[ctx.saver.save("__start_" + sec->name)].push_back(sec);
+      cNamedSections[ctx.saver.save("__stop_" + sec->name)].push_back(sec);
     }
   }
 
@@ -311,6 +318,8 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
     for (const typename ELFT::Rel &rel : rels.rels)
       resolveReloc(sec, rel, false);
     for (const typename ELFT::Rela &rel : rels.relas)
+      resolveReloc(sec, rel, false);
+    for (const typename ELFT::Crel &rel : rels.crels)
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
@@ -342,8 +351,8 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
   for (InputSectionBase *sec : ctx.inputSections) {
     if (!sec->isLive() || !isValidCIdentifier(sec->name))
       continue;
-    if (symtab.find(("__start_" + sec->name).str()) ||
-        symtab.find(("__stop_" + sec->name).str()))
+    if (ctx.symtab->find(("__start_" + sec->name).str()) ||
+        ctx.symtab->find(("__stop_" + sec->name).str()))
       enqueue(sec, 0);
   }
 
@@ -353,12 +362,12 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
 // Before calling this function, Live bits are off for all
 // input sections. This function make some or all of them on
 // so that they are emitted to the output file.
-template <class ELFT> void elf::markLive() {
+template <class ELFT> void elf::markLive(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("markLive");
   // If --gc-sections is not given, retain all input sections.
-  if (!config->gcSections) {
+  if (!ctx.arg.gcSections) {
     // If a DSO defines a symbol referenced in a regular object, it is needed.
-    for (Symbol *sym : symtab.getSymbols())
+    for (Symbol *sym : ctx.symtab->getSymbols())
       if (auto *s = dyn_cast<SharedSymbol>(sym))
         if (s->isUsedInRegularObj && !s->isWeak())
           cast<SharedFile>(s->file)->isNeeded = true;
@@ -369,23 +378,23 @@ template <class ELFT> void elf::markLive() {
     sec->markDead();
 
   // Follow the graph to mark all live sections.
-  for (unsigned curPart = 1; curPart <= partitions.size(); ++curPart)
-    MarkLive<ELFT>(curPart).run();
+  for (unsigned i = 1, e = ctx.partitions.size(); i <= e; ++i)
+    MarkLive<ELFT>(ctx, i).run();
 
   // If we have multiple partitions, some sections need to live in the main
   // partition even if they were allocated to a loadable partition. Move them
   // there now.
-  if (partitions.size() != 1)
-    MarkLive<ELFT>(1).moveToMain();
+  if (ctx.partitions.size() != 1)
+    MarkLive<ELFT>(ctx, 1).moveToMain();
 
   // Report garbage-collected sections.
-  if (config->printGcSections)
+  if (ctx.arg.printGcSections)
     for (InputSectionBase *sec : ctx.inputSections)
       if (!sec->isLive())
-        message("removing unused section " + toString(sec));
+        Msg(ctx) << "removing unused section " << sec;
 }
 
-template void elf::markLive<ELF32LE>();
-template void elf::markLive<ELF32BE>();
-template void elf::markLive<ELF64LE>();
-template void elf::markLive<ELF64BE>();
+template void elf::markLive<ELF32LE>(Ctx &);
+template void elf::markLive<ELF32BE>(Ctx &);
+template void elf::markLive<ELF64LE>(Ctx &);
+template void elf::markLive<ELF64BE>(Ctx &);

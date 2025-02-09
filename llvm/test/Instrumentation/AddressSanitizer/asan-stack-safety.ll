@@ -1,7 +1,7 @@
 ; REQUIRES: x86-registered-target
 
 ; RUN: opt < %s -S -asan-instrumentation-with-call-threshold=0 -passes=asan -asan-use-stack-safety=0 -o - | FileCheck %s --implicit-check-not="call {{.*}} @__asan_{{load|store|stack}}" --check-prefixes=CHECK,NOSAFETY
-; RUN: opt < %s -S -asan-instrumentation-with-call-threshold=0 -passes=asan -asan-use-stack-safety=1 -o - | FileCheck %s --implicit-check-not="call {{.*}} @__asan_{{load|store|stack}}"
+; RUN: opt < %s -S -asan-instrumentation-with-call-threshold=0 -passes=asan | FileCheck %s --implicit-check-not="call {{.*}} @__asan_{{load|store|stack}}"
 
 ; CHECK-LABEL: define i32 @load
 define i32 @load() sanitize_address {
@@ -50,3 +50,21 @@ define void @cmpxchg(i8 %compare_to, i8 %new_value) sanitize_address {
   ; NOSAFETY: call void @__asan_store1
   ret void
 }
+
+%struct.S = type { i32, i32 }
+
+; CHECK-LABEL: define %struct.S @exchange(
+; NOSAFETY: call i64 @__asan_stack_malloc
+; CHECK:    call ptr @__asan_memcpy(
+; CHECK:    call ptr @__asan_memcpy(
+; NOSAFETY: call void @__asan_loadN(
+define %struct.S @exchange(ptr %a, ptr %b) sanitize_address {
+entry:
+  %tmp = alloca %struct.S, align 4
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %tmp, ptr align 4 %a, i64 8, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 8, i1 false)
+  %ret = load %struct.S, ptr %tmp
+  ret %struct.S %ret
+}
+
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) nounwind

@@ -70,8 +70,8 @@ define float @test5(float %p) #0 {
 ; ALL-NEXT:    retq
 ; ALL-NEXT:  LBB3_1: ## %if.end
 ; ALL-NEXT:    vcmpltss %xmm0, %xmm1, %k1
-; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; ALL-NEXT:    vmovss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1}
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 {%k1} = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; ALL-NEXT:    retq
 entry:
   %cmp = fcmp oeq float %p, 0.000000e+00
@@ -190,7 +190,7 @@ define <8 x i32> @legalize_loop(<8 x double> %arg) {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    vcmpnltpd %zmm0, %zmm1, %k1
-; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; KNL-NEXT:    vpshufd {{.*#+}} ymm1 = ymm0[3,2,1,0,7,6,5,4]
 ; KNL-NEXT:    vpsrld $31, %ymm1, %ymm1
 ; KNL-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]

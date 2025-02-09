@@ -3,6 +3,9 @@
 //
 // REQUIRES: stable-runtime
 
+// See https://github.com/llvm/llvm-project/issues/110956
+// XFAIL: target=sparc{{.*}}
+
 // This testcase checks correct interaction between VLAs and allocas.
 
 #include <assert.h>
@@ -33,6 +36,8 @@ __attribute__((noinline)) void foo(int len) {
     if (i) assert(!__asan_region_is_poisoned(bot, 96));
     // VLA is unpoisoned at the end of iteration.
     volatile char array[i];
+    // Ensure that asan-use-stack-safety does not optimize out the poisoning.
+    if (i) array[0] = 0;
     assert(!(reinterpret_cast<uintptr_t>(array) & 31L));
     // Alloca is unpoisoned at the end of iteration,
     // because dominated by VLA.

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wsystem-headers -isystem %S %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -isystem %S %s
 
 #include <no-warn-user-defined-literals-in-system-headers.h>
 

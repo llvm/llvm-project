@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -58,7 +57,6 @@ class MachineLateInstrsCleanup : public MachineFunctionPass {
 
   void removeRedundantDef(MachineInstr *MI);
   void clearKillsForDef(Register Reg, MachineBasicBlock *MBB,
-                        MachineBasicBlock::iterator I,
                         BitVector &VisitedPreds);
 
 public:
@@ -111,14 +109,11 @@ bool MachineLateInstrsCleanup::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-// Clear any previous kill flag on Reg found before I in MBB. Walk backwards
-// in MBB and if needed continue in predecessors until a use/def of Reg is
-// encountered. This seems to be faster in practice than tracking kill flags
-// in a map.
-void MachineLateInstrsCleanup::
-clearKillsForDef(Register Reg, MachineBasicBlock *MBB,
-                 MachineBasicBlock::iterator I,
-                 BitVector &VisitedPreds) {
+// Clear any preceding kill flag on Reg after removing a redundant
+// definition.
+void MachineLateInstrsCleanup::clearKillsForDef(Register Reg,
+                                                MachineBasicBlock *MBB,
+                                                BitVector &VisitedPreds) {
   VisitedPreds.set(MBB->getNumber());
 
   // Kill flag in MBB
@@ -138,13 +133,13 @@ clearKillsForDef(Register Reg, MachineBasicBlock *MBB,
   assert(!MBB->pred_empty() && "Predecessor def not found!");
   for (MachineBasicBlock *Pred : MBB->predecessors())
     if (!VisitedPreds.test(Pred->getNumber()))
-      clearKillsForDef(Reg, Pred, Pred->end(), VisitedPreds);
+      clearKillsForDef(Reg, Pred, VisitedPreds);
 }
 
 void MachineLateInstrsCleanup::removeRedundantDef(MachineInstr *MI) {
   Register Reg = MI->getOperand(0).getReg();
   BitVector VisitedPreds(MI->getMF()->getNumBlockIDs());
-  clearKillsForDef(Reg, MI->getParent(), MI->getIterator(), VisitedPreds);
+  clearKillsForDef(Reg, MI->getParent(), VisitedPreds);
   MI->eraseFromParent();
   ++NumRemoved;
 }
@@ -158,8 +153,7 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
                         Register FrameReg) {
   DefedReg = MCRegister::NoRegister;
   bool SawStore = true;
-  if (!MI->isSafeToMove(nullptr, SawStore) || MI->isImplicitDef() ||
-      MI->isInlineAsm())
+  if (!MI->isSafeToMove(SawStore) || MI->isImplicitDef() || MI->isInlineAsm())
     return false;
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
@@ -195,7 +189,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
               })) {
         MBBDefs[Reg] = DefMI;
         LLVM_DEBUG(dbgs() << "Reusable instruction from pred(s): in "
-                          << printMBBReference(*MBB) << ":  " << *DefMI;);
+                          << printMBBReference(*MBB) << ":  " << *DefMI);
       }
   }
 
@@ -218,7 +212,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     // Check for an earlier identical and reusable instruction.
     if (IsCandidate && MBBDefs.hasIdentical(DefedReg, &MI)) {
       LLVM_DEBUG(dbgs() << "Removing redundant instruction in "
-                        << printMBBReference(*MBB) << ":  " << MI;);
+                        << printMBBReference(*MBB) << ":  " << MI);
       removeRedundantDef(&MI);
       Changed = true;
       continue;
@@ -230,7 +224,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
       if (MI.modifiesRegister(Reg, TRI)) {
         MBBDefs.erase(Reg);
         MBBKills.erase(Reg);
-      } else if (MI.findRegisterUseOperandIdx(Reg, true /*isKill*/, TRI) != -1)
+      } else if (MI.findRegisterUseOperandIdx(Reg, TRI, true /*isKill*/) != -1)
         // Keep track of register kills.
         MBBKills[Reg] = &MI;
     }
@@ -238,7 +232,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     // Record this MI for potential later reuse.
     if (IsCandidate) {
       LLVM_DEBUG(dbgs() << "Found interesting instruction in "
-                        << printMBBReference(*MBB) << ":  " << MI;);
+                        << printMBBReference(*MBB) << ":  " << MI);
       MBBDefs[DefedReg] = &MI;
       assert(!MBBKills.count(DefedReg) && "Should already have been removed.");
     }

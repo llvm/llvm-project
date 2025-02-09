@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,SICIVI %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs< %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,SICIVI,CIPLUS %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs< %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,SICIVI,CIPLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs< %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,CIPLUS %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs< %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,SICIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs< %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,SICIVI,CIPLUS %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs< %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,SICIVI,CIPLUS %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs< %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,CIPLUS %s
 
 ; GCN-LABEL: {{^}}local_i32_load
 ; SICIVI: s_mov_b32 m0
@@ -9,7 +9,7 @@
 
 ; GCN: ds_read_b32 [[REG:v[0-9]+]], v{{[0-9]+}} offset:28
 ; GCN: buffer_store_dword [[REG]],
-define amdgpu_kernel void @local_i32_load(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
+define amdgpu_kernel void @local_i32_load(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
   %gep = getelementptr i32, ptr addrspace(3) %in, i32 7
   %val = load i32, ptr addrspace(3) %gep, align 4
   store i32 %val, ptr addrspace(1) %out, align 4
@@ -22,7 +22,7 @@ define amdgpu_kernel void @local_i32_load(ptr addrspace(1) %out, ptr addrspace(3
 
 ; GCN: ds_read_b32 [[REG:v[0-9]+]], v{{[0-9]+}}
 ; GCN: buffer_store_dword [[REG]],
-define amdgpu_kernel void @local_i32_load_0_offset(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
+define amdgpu_kernel void @local_i32_load_0_offset(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
   %val = load i32, ptr addrspace(3) %in, align 4
   store i32 %val, ptr addrspace(1) %out, align 4
   ret void
@@ -35,7 +35,7 @@ define amdgpu_kernel void @local_i32_load_0_offset(ptr addrspace(1) %out, ptr ad
 ; GCN-NOT: add
 ; GCN: ds_read_u8 [[REG:v[0-9]+]], {{v[0-9]+}} offset:65535
 ; GCN: buffer_store_byte [[REG]],
-define amdgpu_kernel void @local_i8_load_i16_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
+define amdgpu_kernel void @local_i8_load_i16_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
   %gep = getelementptr i8, ptr addrspace(3) %in, i32 65535
   %val = load i8, ptr addrspace(3) %gep, align 4
   store i8 %val, ptr addrspace(1) %out, align 4
@@ -56,7 +56,7 @@ define amdgpu_kernel void @local_i8_load_i16_max_offset(ptr addrspace(1) %out, p
 ; GCN-DAG: v_mov_b32_e32 [[VREGADDR:v[0-9]+]], [[ADDR]]
 ; GCN: ds_read_u8 [[REG:v[0-9]+]], [[VREGADDR]]
 ; GCN: buffer_store_byte [[REG]],
-define amdgpu_kernel void @local_i8_load_over_i16_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
+define amdgpu_kernel void @local_i8_load_over_i16_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
   %gep = getelementptr i8, ptr addrspace(3) %in, i32 65536
   %val = load i8, ptr addrspace(3) %gep, align 4
   store i8 %val, ptr addrspace(1) %out, align 4
@@ -70,7 +70,7 @@ define amdgpu_kernel void @local_i8_load_over_i16_max_offset(ptr addrspace(1) %o
 ; GCN-NOT: add
 ; GCN: ds_read_b64 [[REG:v[[0-9]+:[0-9]+]]], v{{[0-9]+}} offset:56
 ; GCN: buffer_store_dwordx2 [[REG]],
-define amdgpu_kernel void @local_i64_load(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
+define amdgpu_kernel void @local_i64_load(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
   %gep = getelementptr i64, ptr addrspace(3) %in, i32 7
   %val = load i64, ptr addrspace(3) %gep, align 8
   store i64 %val, ptr addrspace(1) %out, align 8
@@ -83,7 +83,7 @@ define amdgpu_kernel void @local_i64_load(ptr addrspace(1) %out, ptr addrspace(3
 
 ; GCN: ds_read_b64 [[REG:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}
 ; GCN: buffer_store_dwordx2 [[REG]],
-define amdgpu_kernel void @local_i64_load_0_offset(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
+define amdgpu_kernel void @local_i64_load_0_offset(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
   %val = load i64, ptr addrspace(3) %in, align 8
   store i64 %val, ptr addrspace(1) %out, align 8
   ret void
@@ -96,7 +96,7 @@ define amdgpu_kernel void @local_i64_load_0_offset(ptr addrspace(1) %out, ptr ad
 ; GCN-NOT: add
 ; GCN: ds_read_b64 [[REG:v[[0-9]+:[0-9]+]]], v{{[0-9]+}} offset:56
 ; GCN: buffer_store_dwordx2 [[REG]],
-define amdgpu_kernel void @local_f64_load(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
+define amdgpu_kernel void @local_f64_load(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
   %gep = getelementptr double, ptr addrspace(3) %in, i32 7
   %val = load double, ptr addrspace(3) %gep, align 8
   store double %val, ptr addrspace(1) %out, align 8
@@ -109,7 +109,7 @@ define amdgpu_kernel void @local_f64_load(ptr addrspace(1) %out, ptr addrspace(3
 
 ; GCN: ds_read_b64 [[REG:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}
 ; GCN: buffer_store_dwordx2 [[REG]],
-define amdgpu_kernel void @local_f64_load_0_offset(ptr addrspace(1) %out, ptr addrspace(3) %in) nounwind {
+define amdgpu_kernel void @local_f64_load_0_offset(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
   %val = load double, ptr addrspace(3) %in, align 8
   store double %val, ptr addrspace(1) %out, align 8
   ret void
@@ -121,7 +121,7 @@ define amdgpu_kernel void @local_f64_load_0_offset(ptr addrspace(1) %out, ptr ad
 
 ; GCN-NOT: add
 ; GCN: ds_write_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}} offset:56
-define amdgpu_kernel void @local_i64_store(ptr addrspace(3) %out) nounwind {
+define amdgpu_kernel void @local_i64_store(ptr addrspace(3) %out) #0 {
   %gep = getelementptr i64, ptr addrspace(3) %out, i32 7
   store i64 5678, ptr addrspace(3) %gep, align 8
   ret void
@@ -133,7 +133,7 @@ define amdgpu_kernel void @local_i64_store(ptr addrspace(3) %out) nounwind {
 
 ; GCN-NOT: add
 ; GCN: ds_write_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @local_i64_store_0_offset(ptr addrspace(3) %out) nounwind {
+define amdgpu_kernel void @local_i64_store_0_offset(ptr addrspace(3) %out) #0 {
   store i64 1234, ptr addrspace(3) %out, align 8
   ret void
 }
@@ -144,7 +144,7 @@ define amdgpu_kernel void @local_i64_store_0_offset(ptr addrspace(3) %out) nounw
 
 ; GCN-NOT: add
 ; GCN: ds_write_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}} offset:56
-define amdgpu_kernel void @local_f64_store(ptr addrspace(3) %out) nounwind {
+define amdgpu_kernel void @local_f64_store(ptr addrspace(3) %out) #0 {
   %gep = getelementptr double, ptr addrspace(3) %out, i32 7
   store double 16.0, ptr addrspace(3) %gep, align 8
   ret void
@@ -155,7 +155,7 @@ define amdgpu_kernel void @local_f64_store(ptr addrspace(3) %out) nounwind {
 ; GFX9-NOT: m0
 
 ; GCN: ds_write_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @local_f64_store_0_offset(ptr addrspace(3) %out) nounwind {
+define amdgpu_kernel void @local_f64_store_0_offset(ptr addrspace(3) %out) #0 {
   store double 20.0, ptr addrspace(3) %out, align 8
   ret void
 }
@@ -168,7 +168,7 @@ define amdgpu_kernel void @local_f64_store_0_offset(ptr addrspace(3) %out) nounw
 ; SI: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset0:14 offset1:15
 ; CIPLUS: ds_write_b128 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}} offset:112
 ; GCN: s_endpgm
-define amdgpu_kernel void @local_v2i64_store(ptr addrspace(3) %out) nounwind {
+define amdgpu_kernel void @local_v2i64_store(ptr addrspace(3) %out) #0 {
   %gep = getelementptr <2 x i64>, ptr addrspace(3) %out, i32 7
   store <2 x i64> <i64 5678, i64 5678>, ptr addrspace(3) %gep, align 16
   ret void
@@ -184,7 +184,7 @@ define amdgpu_kernel void @local_v2i64_store(ptr addrspace(3) %out) nounwind {
 ; CIPLUS: ds_write_b128 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]$}}
 
 ; GCN: s_endpgm
-define amdgpu_kernel void @local_v2i64_store_0_offset(ptr addrspace(3) %out) nounwind {
+define amdgpu_kernel void @local_v2i64_store_0_offset(ptr addrspace(3) %out) #0 {
   store <2 x i64> <i64 1234, i64 1234>, ptr addrspace(3) %out, align 16
   ret void
 }
@@ -201,7 +201,7 @@ define amdgpu_kernel void @local_v2i64_store_0_offset(ptr addrspace(3) %out) nou
 ; CIPLUS-DAG: ds_write_b128 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}} offset:240{{$}}
 
 ; GCN: s_endpgm
-define amdgpu_kernel void @local_v4i64_store(ptr addrspace(3) %out) nounwind {
+define amdgpu_kernel void @local_v4i64_store(ptr addrspace(3) %out) #0 {
   %gep = getelementptr <4 x i64>, ptr addrspace(3) %out, i32 7
   store <4 x i64> <i64 5678, i64 5678, i64 5678, i64 5678>, ptr addrspace(3) %gep, align 16
   ret void
@@ -219,7 +219,9 @@ define amdgpu_kernel void @local_v4i64_store(ptr addrspace(3) %out) nounwind {
 ; CIPLUS-DAG: ds_write_b128 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}} offset:16{{$}}
 
 ; GCN: s_endpgm
-define amdgpu_kernel void @local_v4i64_store_0_offset(ptr addrspace(3) %out) nounwind {
+define amdgpu_kernel void @local_v4i64_store_0_offset(ptr addrspace(3) %out) #0 {
   store <4 x i64> <i64 1234, i64 1234, i64 1234, i64 1234>, ptr addrspace(3) %out, align 16
   ret void
 }
+
+attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

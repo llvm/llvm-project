@@ -36,7 +36,8 @@ bool mutex::try_lock() noexcept { return __libcpp_mutex_trylock(&__m_); }
 void mutex::unlock() noexcept {
   int ec = __libcpp_mutex_unlock(&__m_);
   (void)ec;
-  _LIBCPP_ASSERT_UNCATEGORIZED(ec == 0, "call to mutex::unlock failed");
+  _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(
+      ec == 0, "call to mutex::unlock failed. A possible reason is that the mutex wasn't locked");
 }
 
 // recursive_mutex
@@ -50,7 +51,7 @@ recursive_mutex::recursive_mutex() {
 recursive_mutex::~recursive_mutex() {
   int e = __libcpp_recursive_mutex_destroy(&__m_);
   (void)e;
-  _LIBCPP_ASSERT_UNCATEGORIZED(e == 0, "call to ~recursive_mutex() failed");
+  _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(e == 0, "call to ~recursive_mutex() failed");
 }
 
 void recursive_mutex::lock() {
@@ -62,7 +63,8 @@ void recursive_mutex::lock() {
 void recursive_mutex::unlock() noexcept {
   int e = __libcpp_recursive_mutex_unlock(&__m_);
   (void)e;
-  _LIBCPP_ASSERT_UNCATEGORIZED(e == 0, "call to recursive_mutex::unlock() failed");
+  _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(
+      e == 0, "call to recursive_mutex::unlock() failed. A possible reason is that the mutex wasn't locked");
 }
 
 bool recursive_mutex::try_lock() noexcept { return __libcpp_recursive_mutex_trylock(&__m_); }

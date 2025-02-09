@@ -101,3 +101,56 @@ define void @atomic_store_monotonic_offset_i64(ptr addrspace(3) %ptr, i64 %val) 
   ret void
 }
 
+; GCN-LABEL: {{^}}atomic_store_monotonic_f16:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_write_b16 v0, v1{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define void @atomic_store_monotonic_f16(ptr addrspace(3) %ptr, i16 %arg.val) {
+  %val = bitcast i16 %arg.val to half
+  store atomic half %val, ptr addrspace(3) %ptr monotonic, align 2
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_store_monotonic_offset_f16:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_write_b16 v0, v1 offset:32{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define void @atomic_store_monotonic_offset_f16(ptr addrspace(3) %ptr, i16 %arg.val) {
+  %val = bitcast i16 %arg.val to half
+  %gep = getelementptr inbounds half, ptr addrspace(3) %ptr, i32 16
+  store atomic half %val, ptr addrspace(3) %gep monotonic, align 2
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_store_monotonic_bf16:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_write_b16 v0, v1{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define void @atomic_store_monotonic_bf16(ptr addrspace(3) %ptr, i16 %arg.val) {
+  %val = bitcast i16 %arg.val to bfloat
+  store atomic bfloat %val, ptr addrspace(3) %ptr monotonic, align 2
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_store_monotonic_offset_bf16:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_write_b16 v0, v1 offset:32{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define void @atomic_store_monotonic_offset_bf16(ptr addrspace(3) %ptr, i16 %arg.val) {
+  %val = bitcast i16 %arg.val to bfloat
+  %gep = getelementptr inbounds bfloat, ptr addrspace(3) %ptr, i32 16
+  store atomic bfloat %val, ptr addrspace(3) %gep monotonic, align 2
+  ret void
+}

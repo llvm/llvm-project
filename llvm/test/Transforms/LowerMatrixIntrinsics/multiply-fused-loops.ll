@@ -22,30 +22,30 @@ define void @multiply_noalias_4x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP7:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP9:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP5:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP7:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INNER_IV]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[A:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[TMP1]], i64 [[ROWS_IV]]
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP2]], i64 4
+; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 5
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[DOTIDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[TMP0]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[COLS_IV]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[TMP4]], i64 [[INNER_IV]]
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP5]], i64 4
+; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[COLS_IV]], 5
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[DOTIDX17]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[TMP2]], i64 [[INNER_IV]]
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[TMP3]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT]], <2 x double> [[RESULT_VEC_0]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT]], <2 x double> [[RESULT_VEC_0]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT8:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP7]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT8]], <2 x double> [[TMP6]])
+; CHECK-NEXT:    [[TMP5]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT8]], <2 x double> [[TMP4]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT12:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT12]], <2 x double> [[RESULT_VEC_1]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT12]], <2 x double> [[RESULT_VEC_1]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT15:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP9]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT15]], <2 x double> [[TMP8]])
+; CHECK-NEXT:    [[TMP7]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT15]], <2 x double> [[TMP6]])
 ; CHECK-NEXT:    br label [[INNER_LATCH]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
@@ -54,12 +54,12 @@ define void @multiply_noalias_4x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
-; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[COLS_IV]], 2
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr double, ptr [[C:%.*]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr double, ptr [[TMP11]], i64 [[ROWS_IV]]
-; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[TMP12]], align 8
-; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr double, ptr [[TMP12]], i64 4
-; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[VEC_GEP16]], align 8
+; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[COLS_IV]], 5
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[DOTIDX18]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr double, ptr [[TMP8]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr i8, ptr [[TMP9]], i64 32
+; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[VEC_GEP16]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]]
 ; CHECK:       cols.latch:
 ; CHECK-NEXT:    [[COLS_STEP]] = add i64 [[COLS_IV]], 2
@@ -98,34 +98,34 @@ define void @multiply_noalias_2x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP9:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP13:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP7:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INNER_IV]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP1]], i64 [[ROWS_IV]]
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i64, ptr [[TMP2]], i64 2
+; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[DOTIDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x i64>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[COLS_IV]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP4]], i64 [[INNER_IV]]
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i64, ptr [[TMP5]], i64 4
+; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[COLS_IV]], 5
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[DOTIDX17]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP2]], i64 [[INNER_IV]]
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[TMP3]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i64>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x i64> [[COL_LOAD2]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[RESULT_VEC_0]], [[TMP6]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[RESULT_VEC_0]], [[TMP4]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT8:%.*]] = shufflevector <2 x i64> [[COL_LOAD2]], <2 x i64> poison, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP8:%.*]] = mul <2 x i64> [[COL_LOAD1]], [[SPLAT_SPLAT8]]
-; CHECK-NEXT:    [[TMP9]] = add <2 x i64> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i64> [[COL_LOAD1]], [[SPLAT_SPLAT8]]
+; CHECK-NEXT:    [[TMP7]] = add <2 x i64> [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT12:%.*]] = shufflevector <2 x i64> [[COL_LOAD4]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT12]]
-; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i64> [[RESULT_VEC_1]], [[TMP10]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT12]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i64> [[RESULT_VEC_1]], [[TMP8]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT15:%.*]] = shufflevector <2 x i64> [[COL_LOAD4]], <2 x i64> poison, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[COL_LOAD1]], [[SPLAT_SPLAT15]]
-; CHECK-NEXT:    [[TMP13]] = add <2 x i64> [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[COL_LOAD1]], [[SPLAT_SPLAT15]]
+; CHECK-NEXT:    [[TMP11]] = add <2 x i64> [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    br label [[INNER_LATCH]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
@@ -134,12 +134,12 @@ define void @multiply_noalias_2x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_IV]], 0
-; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[COLS_IV]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[C:%.*]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[TMP15]], i64 [[ROWS_IV]]
-; CHECK-NEXT:    store <2 x i64> [[TMP9]], ptr [[TMP16]], align 8
-; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr i64, ptr [[TMP16]], i64 2
-; CHECK-NEXT:    store <2 x i64> [[TMP13]], ptr [[VEC_GEP16]], align 8
+; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[COLS_IV]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[DOTIDX18]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr i8, ptr [[TMP13]], i64 16
+; CHECK-NEXT:    store <2 x i64> [[TMP11]], ptr [[VEC_GEP16]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]]
 ; CHECK:       cols.latch:
 ; CHECK-NEXT:    [[COLS_STEP]] = add i64 [[COLS_IV]], 2
@@ -184,34 +184,34 @@ define void @multiply_noalias_4x2_2x8(ptr noalias %A, ptr noalias %B, ptr noalia
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP9:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP13:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP7:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INNER_IV]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP1]], i64 [[ROWS_IV]]
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i64, ptr [[TMP2]], i64 4
+; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 5
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[DOTIDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x i64>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[COLS_IV]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP4]], i64 [[INNER_IV]]
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i64, ptr [[TMP5]], i64 2
+; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[COLS_IV]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[DOTIDX17]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP2]], i64 [[INNER_IV]]
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i64>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x i64> [[COL_LOAD2]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[RESULT_VEC_0]], [[TMP6]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[RESULT_VEC_0]], [[TMP4]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT8:%.*]] = shufflevector <2 x i64> [[COL_LOAD2]], <2 x i64> poison, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP8:%.*]] = mul <2 x i64> [[COL_LOAD1]], [[SPLAT_SPLAT8]]
-; CHECK-NEXT:    [[TMP9]] = add <2 x i64> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i64> [[COL_LOAD1]], [[SPLAT_SPLAT8]]
+; CHECK-NEXT:    [[TMP7]] = add <2 x i64> [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT12:%.*]] = shufflevector <2 x i64> [[COL_LOAD4]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT12]]
-; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i64> [[RESULT_VEC_1]], [[TMP10]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT12]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i64> [[RESULT_VEC_1]], [[TMP8]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT15:%.*]] = shufflevector <2 x i64> [[COL_LOAD4]], <2 x i64> poison, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[COL_LOAD1]], [[SPLAT_SPLAT15]]
-; CHECK-NEXT:    [[TMP13]] = add <2 x i64> [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[COL_LOAD1]], [[SPLAT_SPLAT15]]
+; CHECK-NEXT:    [[TMP11]] = add <2 x i64> [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    br label [[INNER_LATCH]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
@@ -220,12 +220,12 @@ define void @multiply_noalias_4x2_2x8(ptr noalias %A, ptr noalias %B, ptr noalia
 ; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
-; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[COLS_IV]], 2
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[C:%.*]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[TMP15]], i64 [[ROWS_IV]]
-; CHECK-NEXT:    store <2 x i64> [[TMP9]], ptr [[TMP16]], align 8
-; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr i64, ptr [[TMP16]], i64 4
-; CHECK-NEXT:    store <2 x i64> [[TMP13]], ptr [[VEC_GEP16]], align 8
+; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[COLS_IV]], 5
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[DOTIDX18]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr i8, ptr [[TMP13]], i64 32
+; CHECK-NEXT:    store <2 x i64> [[TMP11]], ptr [[VEC_GEP16]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]]
 ; CHECK:       cols.latch:
 ; CHECK-NEXT:    [[COLS_STEP]] = add i64 [[COLS_IV]], 2
@@ -305,17 +305,17 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x float> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
-; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[INNER_IV]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[TMP3]], i64 [[TMP9]]
+; CHECK-NEXT:    [[DOTIDX1:%.*]] = shl i64 [[INNER_IV]], 3
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[DOTIDX1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[TMP10]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP10]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x float>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[COLS_IV]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], [[INNER_IV]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[TMP7]], i64 [[TMP12]]
+; CHECK-NEXT:    [[DOTIDX24:%.*]] = shl i64 [[COLS_IV]], 3
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP7]], i64 [[DOTIDX24]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[TMP11]], i64 [[INNER_IV]]
 ; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <2 x float>, ptr [[TMP13]], align 4
-; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr float, ptr [[TMP13]], i64 2
+; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr i8, ptr [[TMP13]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD11:%.*]] = load <2 x float>, ptr [[VEC_GEP10]], align 4
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x float> [[COL_LOAD9]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = call contract <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD]], <2 x float> [[SPLAT_SPLAT]], <2 x float> [[RESULT_VEC_0]])
@@ -333,11 +333,11 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_IV]], 0
-; CHECK-NEXT:    [[TMP18:%.*]] = shl i64 [[COLS_IV]], 1
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr float, ptr [[C]], i64 [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr float, ptr [[TMP19]], i64 [[ROWS_IV]]
-; CHECK-NEXT:    store <2 x float> [[TMP15]], ptr [[TMP20]], align 8
-; CHECK-NEXT:    [[VEC_GEP23:%.*]] = getelementptr float, ptr [[TMP20]], i64 2
+; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[COLS_IV]], 3
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[C]], i64 [[DOTIDX]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr float, ptr [[TMP18]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    store <2 x float> [[TMP15]], ptr [[TMP19]], align 8
+; CHECK-NEXT:    [[VEC_GEP23:%.*]] = getelementptr i8, ptr [[TMP19]], i64 8
 ; CHECK-NEXT:    store <2 x float> [[TMP17]], ptr [[VEC_GEP23]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]]
 ; CHECK:       cols.latch:

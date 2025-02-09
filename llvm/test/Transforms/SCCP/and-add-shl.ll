@@ -59,7 +59,7 @@ define i8 @and_not_shl_1(i8 %x) {
 
 ; Negative test: https://alive2.llvm.org/ce/z/Zv4Pyu
 define i8 @and_add_shl_overlap(i8 %x) {
-; CHECK-LABEL: define i8 @and_add_shl_overlap
+; CHECK-LABEL: define range(i8 0, 33) i8 @and_add_shl_overlap
 ; CHECK-SAME: (i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[OP1_P2:%.*]] = icmp ule i8 [[X]], 6
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OP1_P2]])
@@ -77,7 +77,7 @@ define i8 @and_add_shl_overlap(i8 %x) {
 }
 
 define i8 @and_not_shl_overlap(i8 %x) {
-; CHECK-LABEL: define i8 @and_not_shl_overlap
+; CHECK-LABEL: define range(i8 0, 5) i8 @and_not_shl_overlap
 ; CHECK-SAME: (i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[OP1_P2:%.*]] = icmp ule i8 [[X]], 3
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OP1_P2]])

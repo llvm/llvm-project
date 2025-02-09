@@ -14,15 +14,33 @@
 #endif
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #ifndef LLVM_LIBC_FUNCTION_ATTR
 #define LLVM_LIBC_FUNCTION_ATTR
 #endif
 
+// clang-format off
+// Allow each function `func` to have extra attributes specified by defining:
+// `LLVM_LIBC_FUNCTION_ATTR_func` macro, which should always start with
+// "LLVM_LIBC_EMPTY, "
+//
+// For examples:
+// #define LLVM_LIBC_FUNCTION_ATTR_memcpy LLVM_LIBC_EMPTY, [[gnu::weak]]
+// #define LLVM_LIBC_FUNCTION_ATTR_memchr LLVM_LIBC_EMPTY, [[gnu::weak]] [[gnu::visibility("default")]]
+// clang-format on
+#define LLVM_LIBC_EMPTY
+
+#define GET_SECOND(first, second, ...) second
+#define EXPAND_THEN_SECOND(name) GET_SECOND(name, LLVM_LIBC_EMPTY)
+
+#define LLVM_LIBC_ATTR(name) EXPAND_THEN_SECOND(LLVM_LIBC_FUNCTION_ATTR_##name)
+
 // MacOS needs to be excluded because it does not support aliasing.
 #if defined(LIBC_COPT_PUBLIC_PACKAGING) && (!defined(__APPLE__))
 #define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
+  LLVM_LIBC_ATTR(name)                                                         \
   LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name)                       \
       __##name##_impl__ __asm__(#name);                                        \
   decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#name)]];                   \
@@ -35,7 +53,7 @@
 #define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
   LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 LIBC_INLINE constexpr bool same_string(char const *lhs, char const *rhs) {
   for (; *lhs || *rhs; ++lhs, ++rhs)
@@ -44,7 +62,7 @@ LIBC_INLINE constexpr bool same_string(char const *lhs, char const *rhs) {
   return true;
 }
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #define __LIBC_MACRO_TO_STRING(str) #str
 #define LIBC_MACRO_TO_STRING(str) __LIBC_MACRO_TO_STRING(str)

@@ -48,7 +48,7 @@ std::string CoveragePrinter::getOutputPath(StringRef Path, StringRef Extension,
   sys::path::append(FullPath, PathFilename);
   sys::path::native(FullPath);
 
-  return std::string(FullPath.str());
+  return std::string(FullPath);
 }
 
 Expected<CoveragePrinter::OwnedStream>
@@ -130,6 +130,8 @@ bool SourceCoverageView::shouldRenderRegionMarkers(
     const auto *CurSeg = Segments[I];
     if (!CurSeg->IsRegionEntry || CurSeg->Count == LCS.getExecutionCount())
       continue;
+    if (!CurSeg->HasCount) // don't show tooltips for SkippedRegions
+      continue;
     return true;
   }
   return false;
@@ -137,7 +139,7 @@ bool SourceCoverageView::shouldRenderRegionMarkers(
 
 bool SourceCoverageView::hasSubViews() const {
   return !ExpansionSubViews.empty() || !InstantiationSubViews.empty() ||
-         !BranchSubViews.empty();
+         !BranchSubViews.empty() || !MCDCSubViews.empty();
 }
 
 std::unique_ptr<SourceCoverageView>
@@ -163,7 +165,7 @@ std::string SourceCoverageView::getSourceName() const {
   SmallString<128> SourceText(SourceName);
   sys::path::remove_dots(SourceText, /*remove_dot_dot=*/true);
   sys::path::native(SourceText);
-  return std::string(SourceText.str());
+  return std::string(SourceText);
 }
 
 void SourceCoverageView::addExpansion(
@@ -173,15 +175,13 @@ void SourceCoverageView::addExpansion(
 }
 
 void SourceCoverageView::addBranch(unsigned Line,
-                                   ArrayRef<CountedRegion> Regions,
-                                   std::unique_ptr<SourceCoverageView> View) {
-  BranchSubViews.emplace_back(Line, Regions, std::move(View));
+                                   SmallVector<CountedRegion, 0> Regions) {
+  BranchSubViews.emplace_back(Line, std::move(Regions));
 }
 
-void SourceCoverageView::addMCDCRecord(
-    unsigned Line, ArrayRef<MCDCRecord> Records,
-    std::unique_ptr<SourceCoverageView> View) {
-  MCDCSubViews.emplace_back(Line, Records, std::move(View));
+void SourceCoverageView::addMCDCRecord(unsigned Line,
+                                       SmallVector<MCDCRecord, 0> Records) {
+  MCDCSubViews.emplace_back(Line, std::move(Records));
 }
 
 void SourceCoverageView::addInstantiation(
@@ -201,8 +201,7 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
   if (ShowSourceName)
     renderSourceName(OS, WholeFile);
 
-  renderTableHeader(OS, (ViewDepth > 0) ? 0 : getFirstUncoveredLineNo(),
-                    ViewDepth);
+  renderTableHeader(OS, ViewDepth);
 
   // We need the expansions, instantiations, and branches sorted so we can go
   // through them while we iterate lines.

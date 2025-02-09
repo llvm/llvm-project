@@ -3,11 +3,12 @@ architecture and/or the platform dependent nature of the tests. """
 
 # System modules
 import itertools
+import json
 import re
 import subprocess
 import sys
 import os
-from distutils.version import LooseVersion
+from packaging import version
 from urllib.parse import urlparse
 
 # LLDB modules
@@ -16,6 +17,7 @@ from . import configuration
 from . import lldbtest_config
 import lldbsuite.test.lldbplatform as lldbplatform
 from lldbsuite.test.builders import get_builder
+from lldbsuite.test.lldbutil import is_exe
 
 
 def check_first_register_readable(test_case):
@@ -33,6 +35,8 @@ def check_first_register_readable(test_case):
         test_case.expect("register read r0", substrs=["r0 = 0x"])
     elif arch in ["powerpc64le"]:
         test_case.expect("register read r0", substrs=["r0 = 0x"])
+    elif re.match("^rv(32|64)", arch):
+        test_case.expect("register read zero", substrs=["zero = 0x"])
     else:
         # TODO: Add check for other architectures
         test_case.fail(
@@ -91,11 +95,28 @@ def match_android_device(device_arch, valid_archs=None, valid_api_levels=None):
 
 
 def finalize_build_dictionary(dictionary):
+    # Provide uname-like platform name
+    platform_name_to_uname = {
+        "linux": "Linux",
+        "netbsd": "NetBSD",
+        "freebsd": "FreeBSD",
+        "windows": "Windows_NT",
+        "macosx": "Darwin",
+        "darwin": "Darwin",
+    }
+
+    if dictionary is None:
+        dictionary = {}
     if target_is_android():
-        if dictionary is None:
-            dictionary = {}
         dictionary["OS"] = "Android"
         dictionary["PIE"] = 1
+    elif platformIsDarwin():
+        dictionary["OS"] = "Darwin"
+    else:
+        dictionary["OS"] = platform_name_to_uname[getPlatform()]
+
+    dictionary["HOST_OS"] = platform_name_to_uname[getHostPlatform()]
+
     return dictionary
 
 
@@ -154,6 +175,22 @@ def findMainThreadCheckerDylib():
     with os.popen("xcode-select -p") as output:
         xcode_developer_path = output.read().strip()
         mtc_dylib_path = "%s/usr/lib/libMainThreadChecker.dylib" % xcode_developer_path
+        if os.path.isfile(mtc_dylib_path):
+            return mtc_dylib_path
+
+    return ""
+
+
+def findBacktraceRecordingDylib():
+    if not platformIsDarwin():
+        return ""
+
+    if getPlatform() in lldbplatform.translate(lldbplatform.darwin_embedded):
+        return "/Developer/usr/lib/libBacktraceRecording.dylib"
+
+    with os.popen("xcode-select -p") as output:
+        xcode_developer_path = output.read().strip()
+        mtc_dylib_path = "%s/usr/lib/libBacktraceRecording.dylib" % xcode_developer_path
         if os.path.isfile(mtc_dylib_path):
             return mtc_dylib_path
 
@@ -245,17 +282,13 @@ def getCompiler():
     return module.getCompiler()
 
 
-def getCompilerBinary():
-    """Returns the compiler binary the test suite is running with."""
-    return getCompiler().split()[0]
-
-
 def getCompilerVersion():
     """Returns a string that represents the compiler version.
     Supports: llvm, clang.
     """
-    compiler = getCompilerBinary()
-    version_output = subprocess.check_output([compiler, "--version"], errors="replace")
+    version_output = subprocess.check_output(
+        [getCompiler(), "--version"], errors="replace"
+    )
     m = re.search("version ([0-9.]+)", version_output)
     if m:
         return m.group(1)
@@ -297,27 +330,30 @@ def expectedCompilerVersion(compiler_version):
     if compiler_version is None:
         return True
     operator = str(compiler_version[0])
-    version = compiler_version[1]
+    version_str = str(compiler_version[1])
 
-    if version is None:
+    if not version_str:
         return True
 
-    test_compiler_version = getCompilerVersion()
-    if test_compiler_version == "unknown":
+    test_compiler_version_str = getCompilerVersion()
+    if test_compiler_version_str == "unknown":
         # Assume the compiler version is at or near the top of trunk.
         return operator in [">", ">=", "!", "!=", "not"]
 
+    actual_version = version.parse(version_str)
+    test_compiler_version = version.parse(test_compiler_version_str)
+
     if operator == ">":
-        return LooseVersion(test_compiler_version) > LooseVersion(version)
+        return test_compiler_version > actual_version
     if operator == ">=" or operator == "=>":
-        return LooseVersion(test_compiler_version) >= LooseVersion(version)
+        return test_compiler_version >= actual_version
     if operator == "<":
-        return LooseVersion(test_compiler_version) < LooseVersion(version)
+        return test_compiler_version < actual_version
     if operator == "<=" or operator == "=<":
-        return LooseVersion(test_compiler_version) <= LooseVersion(version)
+        return test_compiler_version <= actual_version
     if operator == "!=" or operator == "!" or operator == "not":
-        return str(version) not in str(test_compiler_version)
-    return str(version) in str(test_compiler_version)
+        return version_str not in test_compiler_version_str
+    return version_str in test_compiler_version_str
 
 
 def expectedCompiler(compilers):
@@ -328,5 +364,30 @@ def expectedCompiler(compilers):
     for compiler in compilers:
         if compiler in getCompiler():
             return True
+
+    return False
+
+
+# This is a helper function to determine if a specific version of Xcode's linker
+# contains a TLS bug. We want to skip TLS tests if they contain this bug, but
+# adding a linker/linker_version conditions to a decorator is challenging due to
+# the number of ways linkers can enter the build process.
+def xcode15LinkerBug():
+    """Returns true iff a test is running on a darwin platform and the host linker is between versions 1000 and 1109."""
+    darwin_platforms = lldbplatform.translate(lldbplatform.darwin_all)
+    if getPlatform() not in darwin_platforms:
+        return False
+
+    try:
+        raw_version_details = subprocess.check_output(
+            ("xcrun", "ld", "-version_details")
+        )
+        version_details = json.loads(raw_version_details)
+        version = version_details.get("version", "0")
+        version_tuple = tuple(int(x) for x in version.split("."))
+        if (1000,) <= version_tuple <= (1109,):
+            return True
+    except:
+        pass
 
     return False

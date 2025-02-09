@@ -70,13 +70,13 @@ entry:
   ret void
 }
 
-; CHECK:      define dso_local void @quux(ptr nocapture noundef writeonly %[[p:.*]])
+; CHECK:      define dso_local void @quux(ptr noundef writeonly captures(none) %[[p:.*]])
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   tail call void (i32, ptr, i1, i8, i8, i8, i1, ...)
 ; CHECK-SAME:     @llvm.bpf.getelementptr.and.store.i32
 ; CHECK-SAME:       (i32 1,
-; CHECK-SAME:        ptr writeonly elementtype(%struct.foo) %[[p]],
-; CHECK-SAME:        i1 false, i8 0, i8 1, i8 2, i1 true, i64 immarg 0, i32 immarg 1)
+; CHECK-SAME:        ptr writeonly elementtype(i8) %[[p]],
+; CHECK-SAME:        i1 false, i8 0, i8 1, i8 2, i1 true, i64 immarg 4)
 ; CHECK-NEXT:   ret void
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)

@@ -75,13 +75,13 @@ int main()
 // CHECK: [[PTRS:%.+]] = alloca [3 x ptr]{{.+}}
 
 // First gep of pointers inside lambdas to store the values across function call need to be ignored
-// CHECK: {{%.+}} = getelementptr inbounds [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 0
-// CHECK: {{%.+}} = getelementptr inbounds [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 1
+// CHECK: {{%.+}} = getelementptr inbounds nuw [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 0
+// CHECK: {{%.+}} = getelementptr inbounds nuw [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 1
 
 // access of pointers inside lambdas
-// CHECK: [[BASE_PTR1:%.+]] = getelementptr inbounds [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 0
+// CHECK: [[BASE_PTR1:%.+]] = getelementptr inbounds nuw [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 0
 // CHECK: [[PTR1:%.+]] = load ptr, ptr [[BASE_PTR1]]
-// CHECK: [[BASE_PTR2:%.+]] = getelementptr inbounds [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 1
+// CHECK: [[BASE_PTR2:%.+]] = getelementptr inbounds nuw [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 1
 // CHECK: [[PTR2:%.+]] = load ptr, ptr [[BASE_PTR2]]
 
 // storage of pointers in baseptrs and ptrs arrays
@@ -114,9 +114,9 @@ int main()
 // CHECK: [[PTRS:%.+]] = alloca [5 x ptr]{{.+}}
 
 // access of pointers inside lambdas
-// CHECK: [[BASE_PTR1:%.+]] = getelementptr inbounds [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 0
+// CHECK: [[BASE_PTR1:%.+]] = getelementptr inbounds nuw [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 0
 // CHECK: [[PTR1:%.+]] = load ptr, ptr [[BASE_PTR1]]
-// CHECK: [[BASE_PTR2:%.+]] = getelementptr inbounds [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 1
+// CHECK: [[BASE_PTR2:%.+]] = getelementptr inbounds nuw [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 1
 // CHECK: [[PTR2:%.+]] = load ptr, ptr [[BASE_PTR2]]
 
 // storage of pointers in baseptrs and ptrs arrays
@@ -166,7 +166,7 @@ int main()
 // CHECK: [[L1:%.+]] = load ptr, ptr [[TMP]]
 // CHECK-NOT: %4 = load ptr, ptr [[TMP]]
 // CHECK-NOT: %5 = load ptr, ptr [[TMP]]
-// CHECK: [[L4:%.+]] = getelementptr inbounds %class.anon.0, ptr [[L1]], i32 0, i32 0
+// CHECK: [[L4:%.+]] = getelementptr inbounds nuw %class.anon.0, ptr [[L1]], i32 0, i32 0
 // CHECK: [[L5:%.+]] = load ptr, ptr [[L4]]
 // CHECK: ret void
 

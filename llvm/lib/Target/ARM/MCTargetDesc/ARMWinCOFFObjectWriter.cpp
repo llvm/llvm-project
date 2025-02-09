@@ -13,12 +13,10 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWinCOFFObjectWriter.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -61,8 +59,8 @@ unsigned ARMWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
 
   switch (FixupKind) {
   default: {
-    const MCFixupKindInfo &Info = MAB.getFixupKindInfo(Fixup.getKind());
-    report_fatal_error(Twine("unsupported relocation type: ") + Info.Name);
+    Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
+    return COFF::IMAGE_REL_ARM_ABSOLUTE;
   }
   case FK_Data_4:
     switch (Modifier) {

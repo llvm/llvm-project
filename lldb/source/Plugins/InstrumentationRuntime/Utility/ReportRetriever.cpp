@@ -11,9 +11,9 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Target/InstrumentationRuntimeStopInfo.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -84,15 +84,15 @@ ReportRetriever::RetrieveReportData(const ProcessSP process_sp) {
 
   ValueObjectSP return_value_sp;
   ExecutionContext exe_ctx;
-  Status eval_error;
   frame_sp->CalculateExecutionContext(exe_ctx);
   ExpressionResults result = UserExpression::Evaluate(
       exe_ctx, options, address_sanitizer_retrieve_report_data_command, "",
-      return_value_sp, eval_error);
+      return_value_sp);
   if (result != eExpressionCompleted) {
     StreamString ss;
     ss << "cannot evaluate AddressSanitizer expression:\n";
-    ss << eval_error.AsCString();
+    if (return_value_sp)
+      ss << return_value_sp->GetError().AsCString();
     Debugger::ReportWarning(ss.GetString().str(),
                             process_sp->GetTarget().GetDebugger().GetID());
     return StructuredData::ObjectSP();
@@ -234,19 +234,13 @@ Breakpoint *ReportRetriever::SetupBreakpoint(ModuleSP module_sp,
   if (!symbol->ValueIsAddress() || !symbol->GetAddressRef().IsValid())
     return nullptr;
 
-  Target &target = process_sp->GetTarget();
-  addr_t symbol_address = symbol->GetAddressRef().GetOpcodeLoadAddress(&target);
-
-  if (symbol_address == LLDB_INVALID_ADDRESS)
-    return nullptr;
-
+  const Address &address = symbol->GetAddressRef();
   const bool internal = true;
   const bool hardware = false;
 
-  Breakpoint *breakpoint =
-      process_sp->GetTarget()
-          .CreateBreakpoint(symbol_address, internal, hardware)
-          .get();
+  Breakpoint *breakpoint = process_sp->GetTarget()
+                               .CreateBreakpoint(address, internal, hardware)
+                               .get();
 
   return breakpoint;
 }

@@ -206,7 +206,7 @@ define float @fadd_fast(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK: %[[ADD2:.*]] = fadd fast <vscale x 8 x float> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[ADD:.*]] = fadd fast <vscale x 8 x float> %[[ADD2]], %[[ADD1]]
-; CHECK-NEXT: call fast float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> %[[ADD]])
+; CHECK-NEXT: call fast float @llvm.vector.reduce.fadd.nxv8f32(float 0.000000e+00, <vscale x 8 x float> %[[ADD]])
 entry:
   br label %for.body
 
@@ -224,9 +224,66 @@ for.end:
   ret float %add
 }
 
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
+define half @fadd_fast_half_zvfh(ptr noalias nocapture readonly %a, i64 %n) "target-features"="+zvfh" {
+; CHECK-LABEL: @fadd_fast_half_zvfh
+; CHECK: vector.body:
+; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x half>
+; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x half>
+; CHECK: %[[FADD1:.*]] = fadd fast <vscale x 8 x half> %[[LOAD1]]
+; CHECK: %[[FADD2:.*]] = fadd fast <vscale x 8 x half> %[[LOAD2]]
+; CHECK: middle.block:
+; CHECK: %[[RDX:.*]] = fadd fast <vscale x 8 x half> %[[FADD2]], %[[FADD1]]
+; CHECK: call fast half @llvm.vector.reduce.fadd.nxv8f16(half 0xH0000, <vscale x 8 x half> %[[RDX]])
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi half [ 0.000000e+00, %entry ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds half, ptr %a, i64 %iv
+  %0 = load half, ptr %arrayidx, align 4
+  %add = fadd fast half %0, %sum.07
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+
+for.end:
+  ret half %add
+}
+
 ; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
 ; CHECK-REMARK: vectorized loop (vectorization width: 16, interleaved count: 2)
-define bfloat @fadd_fast_bfloat(ptr noalias nocapture readonly %a, i64 %n) {
+define half @fadd_fast_half_zvfhmin(ptr noalias nocapture readonly %a, i64 %n) "target-features"="+zvfhmin" {
+; CHECK-LABEL: @fadd_fast_half_zvfhmin
+; CHECK: vector.body:
+; CHECK: %[[LOAD1:.*]] = load <16 x half>
+; CHECK: %[[LOAD2:.*]] = load <16 x half>
+; CHECK: %[[FADD1:.*]] = fadd fast <16 x half> %[[LOAD1]]
+; CHECK: %[[FADD2:.*]] = fadd fast <16 x half> %[[LOAD2]]
+; CHECK: middle.block:
+; CHECK: %[[RDX:.*]] = fadd fast <16 x half> %[[FADD2]], %[[FADD1]]
+; CHECK: call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> %[[RDX]])
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi half [ 0.000000e+00, %entry ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds half, ptr %a, i64 %iv
+  %0 = load half, ptr %arrayidx, align 4
+  %add = fadd fast half %0, %sum.07
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+
+for.end:
+  ret half %add
+}
+
+; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
+; CHECK-REMARK: vectorized loop (vectorization width: 16, interleaved count: 2)
+define bfloat @fadd_fast_bfloat(ptr noalias nocapture readonly %a, i64 %n) "target-features"="+zvfbfmin" {
 ; CHECK-LABEL: @fadd_fast_bfloat
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <16 x bfloat>
@@ -235,7 +292,7 @@ define bfloat @fadd_fast_bfloat(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK: %[[FADD2:.*]] = fadd fast <16 x bfloat> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[RDX:.*]] = fadd fast <16 x bfloat> %[[FADD2]], %[[FADD1]]
-; CHECK: call fast bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0xR8000, <16 x bfloat> %[[RDX]])
+; CHECK: call fast bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0xR0000, <16 x bfloat> %[[RDX]])
 entry:
   br label %for.body
 
@@ -425,6 +482,110 @@ for.body:
 
 for.end:
   ret float %muladd
+}
+
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
+define half @fmuladd_f16_zvfh(ptr %a, ptr %b, i64 %n) "target-features"="+zvfh" {
+; CHECK-LABEL: @fmuladd_f16_zvfh(
+; CHECK: vector.body:
+; CHECK: [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>
+; CHECK: [[WIDE_LOAD2:%.*]] = load <vscale x 8 x half>
+; CHECK: [[WIDE_LOAD3:%.*]] = load <vscale x 8 x half>
+; CHECK: [[WIDE_LOAD4:%.*]] = load <vscale x 8 x half>
+; CHECK: [[MULADD1:%.*]] = call reassoc <vscale x 8 x half> @llvm.fmuladd.nxv8f16(<vscale x 8 x half> [[WIDE_LOAD]], <vscale x 8 x half> [[WIDE_LOAD3]],
+; CHECK: [[MULADD2:%.*]] = call reassoc <vscale x 8 x half> @llvm.fmuladd.nxv8f16(<vscale x 8 x half> [[WIDE_LOAD2]], <vscale x 8 x half> [[WIDE_LOAD4]],
+; CHECK: middle.block:
+; CHECK: [[BIN_RDX:%.*]] = fadd reassoc <vscale x 8 x half> [[MULADD2]], [[MULADD1]]
+; CHECK: call reassoc half @llvm.vector.reduce.fadd.nxv8f16(half 0xH8000, <vscale x 8 x half> [[BIN_RDX]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi half [ 0.000000e+00, %entry ], [ %muladd, %for.body ]
+  %arrayidx = getelementptr inbounds half, ptr %a, i64 %iv
+  %0 = load half, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds half, ptr %b, i64 %iv
+  %1 = load half, ptr %arrayidx2, align 4
+  %muladd = tail call reassoc half @llvm.fmuladd.f16(half %0, half %1, half %sum.07)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !1
+
+for.end:
+  ret half %muladd
+}
+
+
+; We can't scalably vectorize reductions of f16 with zvfhmin or bf16 with zvfbfmin, so make sure we use fixed-length vectors instead.
+
+; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
+; CHECK-REMARK: vectorized loop (vectorization width: 16, interleaved count: 2)
+define half @fmuladd_f16_zvfhmin(ptr %a, ptr %b, i64 %n) "target-features"="+zvfhmin" {
+; CHECK-LABEL: @fmuladd_f16_zvfhmin(
+; CHECK: vector.body:
+; CHECK: [[WIDE_LOAD:%.*]] = load <16 x half>
+; CHECK: [[WIDE_LOAD2:%.*]] = load <16 x half>
+; CHECK: [[WIDE_LOAD3:%.*]] = load <16 x half>
+; CHECK: [[WIDE_LOAD4:%.*]] = load <16 x half>
+; CHECK: [[MULADD1:%.*]] = call reassoc <16 x half> @llvm.fmuladd.v16f16(<16 x half> [[WIDE_LOAD]], <16 x half> [[WIDE_LOAD3]],
+; CHECK: [[MULADD2:%.*]] = call reassoc <16 x half> @llvm.fmuladd.v16f16(<16 x half> [[WIDE_LOAD2]], <16 x half> [[WIDE_LOAD4]],
+; CHECK: middle.block:
+; CHECK: [[BIN_RDX:%.*]] = fadd reassoc <16 x half> [[MULADD2]], [[MULADD1]]
+; CHECK: call reassoc half @llvm.vector.reduce.fadd.v16f16(half 0xH8000, <16 x half> [[BIN_RDX]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi half [ 0.000000e+00, %entry ], [ %muladd, %for.body ]
+  %arrayidx = getelementptr inbounds half, ptr %a, i64 %iv
+  %0 = load half, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds half, ptr %b, i64 %iv
+  %1 = load half, ptr %arrayidx2, align 4
+  %muladd = tail call reassoc half @llvm.fmuladd.f16(half %0, half %1, half %sum.07)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !1
+
+for.end:
+  ret half %muladd
+}
+
+; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
+; CHECK-REMARK: vectorized loop (vectorization width: 16, interleaved count: 2)
+define bfloat @fmuladd_bf16(ptr %a, ptr %b, i64 %n) "target-features"="+zvfbfmin" {
+; CHECK-LABEL: @fmuladd_bf16(
+; CHECK: vector.body:
+; CHECK: [[WIDE_LOAD:%.*]] = load <16 x bfloat>
+; CHECK: [[WIDE_LOAD2:%.*]] = load <16 x bfloat>
+; CHECK: [[WIDE_LOAD3:%.*]] = load <16 x bfloat>
+; CHECK: [[WIDE_LOAD4:%.*]] = load <16 x bfloat>
+; CHECK: [[MULADD1:%.*]] = call reassoc <16 x bfloat> @llvm.fmuladd.v16bf16(<16 x bfloat> [[WIDE_LOAD]], <16 x bfloat> [[WIDE_LOAD3]],
+; CHECK: [[MULADD2:%.*]] = call reassoc <16 x bfloat> @llvm.fmuladd.v16bf16(<16 x bfloat> [[WIDE_LOAD2]], <16 x bfloat> [[WIDE_LOAD4]],
+; CHECK: middle.block:
+; CHECK: [[BIN_RDX:%.*]] = fadd reassoc <16 x bfloat> [[MULADD2]], [[MULADD1]]
+; CHECK: call reassoc bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0xR8000, <16 x bfloat> [[BIN_RDX]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi bfloat [ 0.000000e+00, %entry ], [ %muladd, %for.body ]
+  %arrayidx = getelementptr inbounds bfloat, ptr %a, i64 %iv
+  %0 = load bfloat, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds bfloat, ptr %b, i64 %iv
+  %1 = load bfloat, ptr %arrayidx2, align 4
+  %muladd = tail call reassoc bfloat @llvm.fmuladd.bf16(bfloat %0, bfloat %1, bfloat %sum.07)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !1
+
+for.end:
+  ret bfloat %muladd
 }
 
 declare float @llvm.fmuladd.f32(float, float, float)

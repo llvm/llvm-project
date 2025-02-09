@@ -1,0 +1,21 @@
+# REQUIRES: x86-registered-target
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -filetype=null %s \
+# RUN: -p no-op-machine-function -print-changed 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OP
+
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -filetype=null %s \
+# RUN: -p dead-mi-elimination -print-changed 2>&1 | FileCheck %s --check-prefix=CHECK-SIMPLE
+
+---
+name:            test
+body:             |
+  bb.0:
+    %1:gr64 = MOV64ri 0
+    %2:gr64 = MOV64ri 0
+    $eax = COPY %1
+    RET64 implicit $eax
+...
+
+# CHECK-NO-OP: *** IR Dump After NoOpMachineFunctionPass on test omitted because no change ***
+
+# CHECK-SIMPLE: *** IR Dump After DeadMachineInstructionElimPass on test ***
+# CHECK-SIMPLE-NOT: %2:gr64 = MOV64ri 0

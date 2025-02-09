@@ -39,7 +39,8 @@ void NoexceptSwapCheck::registerMatchers(MatchFinder *Finder) {
                      .bind("type"))))),
       hasParameter(1, hasType(qualType(hasCanonicalType(
                           qualType(equalsBoundNode("type")))))));
-  Finder->addMatcher(functionDecl(unless(isDeleted()), hasName("swap"),
+  Finder->addMatcher(functionDecl(unless(isDeleted()),
+                                  hasAnyName("swap", "iter_swap"),
                                   anyOf(MethodMatcher, FunctionMatcher))
                          .bind(BindFuncDeclName),
                      this);

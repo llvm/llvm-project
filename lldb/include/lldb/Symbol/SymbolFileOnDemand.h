@@ -81,7 +81,7 @@ public:
       llvm::function_ref<bool(lldb_private::Module &)>) override;
 
   bool ParseSupportFiles(lldb_private::CompileUnit &comp_unit,
-                         lldb_private::FileSpecList &support_files) override;
+                         lldb_private::SupportFileList &support_files) override;
 
   bool ParseIsOptimized(lldb_private::CompileUnit &comp_unit) override;
 
@@ -178,9 +178,11 @@ public:
 
   void PreloadSymbols() override;
 
-  uint64_t GetDebugInfoSize() override;
+  uint64_t GetDebugInfoSize(bool load_all_debug_info = false) override;
   lldb_private::StatsDuration::Duration GetDebugInfoParseTime() override;
   lldb_private::StatsDuration::Duration GetDebugInfoIndexTime() override;
+
+  void ResetStatistics() override;
 
   uint32_t GetAbilities() override;
 

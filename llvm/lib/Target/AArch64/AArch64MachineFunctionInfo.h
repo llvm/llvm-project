@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,6 +35,11 @@ struct AArch64FunctionInfo;
 
 class AArch64Subtarget;
 class MachineInstr;
+
+struct TPIDR2Object {
+  int FrameIndex = std::numeric_limits<int>::max();
+  unsigned Uses = 0;
+};
 
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private AArch64-specific information for each MachineFunction.
@@ -103,6 +109,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// registers.
   unsigned VarArgsFPRSize = 0;
 
+  /// The stack slots used to add space between FPR and GPR accesses when using
+  /// hazard padding. StackHazardCSRSlotIndex is added between GPR and FPR CSRs.
+  /// StackHazardSlotIndex is added between (sorted) stack objects.
+  int StackHazardSlotIndex = std::numeric_limits<int>::max();
+  int StackHazardCSRSlotIndex = std::numeric_limits<int>::max();
+
   /// True if this function has a subset of CSRs that is handled explicitly via
   /// copies.
   bool IsSplitCSR = false;
@@ -165,6 +177,11 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// SignWithBKey modifies the default PAC-RET mode to signing with the B key.
   bool SignWithBKey = false;
 
+  /// HasELFSignedGOT is true if the target binary format is ELF and the IR
+  /// module containing the corresponding function has "ptrauth-elf-got" flag
+  /// set to 1.
+  bool HasELFSignedGOT = false;
+
   /// SigningInstrOffset captures the offset of the PAC-RET signing instruction
   /// within the prologue, so it can be re-used for authentication in the
   /// epilogue when using PC as a second salt (FEAT_PAuth_LR)
@@ -195,7 +212,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   bool IsSVECC = false;
 
   /// The frame-index for the TPIDR2 object used for lazy saves.
-  Register LazySaveTPIDR2Obj = 0;
+  TPIDR2Object TPIDR2;
 
   /// Whether this function changes streaming mode within the function.
   bool HasStreamingModeChanges = false;
@@ -208,6 +225,26 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   int64_t StackProbeSize = 0;
 
+  // Holds a register containing pstate.sm. This is set
+  // on function entry to record the initial pstate of a function.
+  Register PStateSMReg = MCRegister::NoRegister;
+
+  // Holds a pointer to a buffer that is large enough to represent
+  // all SME ZA state and any additional state required by the
+  // __arm_sme_save/restore support routines.
+  Register SMESaveBufferAddr = MCRegister::NoRegister;
+
+  // true if SMESaveBufferAddr is used.
+  bool SMESaveBufferUsed = false;
+
+  // Has the PNReg used to build PTRUE instruction.
+  // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
+  unsigned PredicateRegForFillSpill = 0;
+
+  // The stack slots where VG values are stored to.
+  int64_t VGIdx = std::numeric_limits<int>::max();
+  int64_t StreamingVGIdx = std::numeric_limits<int>::max();
+
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
 
@@ -216,11 +253,32 @@ public:
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
 
+  void setPredicateRegForFillSpill(unsigned Reg) {
+    PredicateRegForFillSpill = Reg;
+  }
+  unsigned getPredicateRegForFillSpill() const {
+    return PredicateRegForFillSpill;
+  }
+
+  Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
+  void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
+
+  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
+  void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
+
+  Register getPStateSMReg() const { return PStateSMReg; };
+  void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
+
+  int64_t getVGIdx() const { return VGIdx; };
+  void setVGIdx(unsigned Idx) { VGIdx = Idx; };
+
+  int64_t getStreamingVGIdx() const { return StreamingVGIdx; };
+  void setStreamingVGIdx(unsigned FrameIdx) { StreamingVGIdx = FrameIdx; };
+
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
 
-  unsigned getLazySaveTPIDR2Obj() const { return LazySaveTPIDR2Obj; }
-  void setLazySaveTPIDR2Obj(unsigned Reg) { LazySaveTPIDR2Obj = Reg; }
+  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 
@@ -264,7 +322,7 @@ public:
   void setLocalStackSize(uint64_t Size) { LocalStackSize = Size; }
   uint64_t getLocalStackSize() const { return LocalStackSize; }
 
-  void setOutliningStyle(std::string Style) { OutliningStyle = Style; }
+  void setOutliningStyle(const std::string &Style) { OutliningStyle = Style; }
   std::optional<std::string> getOutliningStyle() const {
     return OutliningStyle;
   }
@@ -309,6 +367,13 @@ public:
       if (SwiftAsyncContextFrameIdx != std::numeric_limits<int>::max()) {
         int64_t Offset = MFI.getObjectOffset(getSwiftAsyncContextFrameIdx());
         int64_t ObjSize = MFI.getObjectSize(getSwiftAsyncContextFrameIdx());
+        MinOffset = std::min<int64_t>(Offset, MinOffset);
+        MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
+      }
+
+      if (StackHazardCSRSlotIndex != std::numeric_limits<int>::max()) {
+        int64_t Offset = MFI.getObjectOffset(StackHazardCSRSlotIndex);
+        int64_t ObjSize = MFI.getObjectSize(StackHazardCSRSlotIndex);
         MinOffset = std::min<int64_t>(Offset, MinOffset);
         MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
       }
@@ -369,6 +434,20 @@ public:
 
   unsigned getVarArgsFPRSize() const { return VarArgsFPRSize; }
   void setVarArgsFPRSize(unsigned Size) { VarArgsFPRSize = Size; }
+
+  bool hasStackHazardSlotIndex() const {
+    return StackHazardSlotIndex != std::numeric_limits<int>::max();
+  }
+  int getStackHazardSlotIndex() const { return StackHazardSlotIndex; }
+  void setStackHazardSlotIndex(int Index) {
+    assert(StackHazardSlotIndex == std::numeric_limits<int>::max());
+    StackHazardSlotIndex = Index;
+  }
+  int getStackHazardCSRSlotIndex() const { return StackHazardCSRSlotIndex; }
+  void setStackHazardCSRSlotIndex(int Index) {
+    assert(StackHazardCSRSlotIndex == std::numeric_limits<int>::max());
+    StackHazardCSRSlotIndex = Index;
+  }
 
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
@@ -448,6 +527,8 @@ public:
   bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) const;
 
   bool shouldSignWithBKey() const { return SignWithBKey; }
+
+  bool hasELFSignedGOT() const { return HasELFSignedGOT; }
 
   MCSymbol *getSigningInstrLabel() const { return SignInstrLabel; }
   void setSigningInstrLabel(MCSymbol *Label) { SignInstrLabel = Label; }

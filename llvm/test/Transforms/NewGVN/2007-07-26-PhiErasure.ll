@@ -20,7 +20,7 @@ define i32 @reload(ptr %first, i32 %global, ptr %dumpfile) {
 ; CHECK:       cond_next2943:
 ; CHECK-NEXT:    br i1 false, label [[BB2982_PREHEADER:%.*]], label [[BB2928]]
 ; CHECK:       bb2982.preheader:
-; CHECK-NEXT:    store i8 poison, ptr null
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    ret i32 poison
 ;
 cond_next2835.1:		; preds = %cond_next2861

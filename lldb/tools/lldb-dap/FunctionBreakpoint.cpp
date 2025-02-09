@@ -8,25 +8,18 @@
 
 #include "FunctionBreakpoint.h"
 #include "DAP.h"
+#include "JSONUtils.h"
 
 namespace lldb_dap {
 
-FunctionBreakpoint::FunctionBreakpoint(const llvm::json::Object &obj)
-    : BreakpointBase(obj), functionName(std::string(GetString(obj, "name"))) {}
+FunctionBreakpoint::FunctionBreakpoint(DAP &d, const llvm::json::Object &obj)
+    : Breakpoint(d, obj), functionName(std::string(GetString(obj, "name"))) {}
 
 void FunctionBreakpoint::SetBreakpoint() {
   if (functionName.empty())
     return;
-  bp = g_dap.target.BreakpointCreateByName(functionName.c_str());
-  // See comments in BreakpointBase::GetBreakpointLabel() for details of why
-  // we add a label to our breakpoints.
-  bp.AddName(GetBreakpointLabel());
-  if (!condition.empty())
-    SetCondition();
-  if (!hitCondition.empty())
-    SetHitCondition();
-  if (!logMessage.empty())
-    SetLogMessage();
+  bp = dap.target.BreakpointCreateByName(functionName.c_str());
+  Breakpoint::SetBreakpoint();
 }
 
 } // namespace lldb_dap

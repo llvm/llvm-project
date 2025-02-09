@@ -36,7 +36,6 @@
 
 // RUN: %clangxx -### --target=hexagon-unknown-elf -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
-// RUN:   --gcc-toolchain="" \
 // RUN:   -nostdlibinc %s 2>&1 | FileCheck -check-prefix=CHECK113 %s
 // CHECK113: "-cc1"
 // CHECK113-NOT: "-internal-isystem"
@@ -152,6 +151,20 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK230 %s
 // CHECK230: "-cc1" {{.*}} "-target-cpu" "hexagonv73"
 // CHECK230: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v73/crt0
+
+// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv75 -fuse-ld=hexagon-link \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK240 %s
+// CHECK240: "-cc1" {{.*}} "-target-cpu" "hexagonv75"
+// CHECK240: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v75/crt0
+
+// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv79 -fuse-ld=hexagon-link \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK250 %s
+// CHECK250: "-cc1" {{.*}} "-target-cpu" "hexagonv79"
+// CHECK250: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v79/crt0
 
 // -----------------------------------------------------------------------------
 // Test Linker related args
@@ -533,7 +546,6 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=fake-value-to-ignore-CLANG_DEFAULT_LINKER %s 2>&1 | FileCheck -check-prefix=CHECK381 %s
-// REQUIRES: hexagon-registered-target
 // CHECK381:      "-march=hexagon"
 // CHECK381:      "-mcpu=hexagonv60"
 // -----------------------------------------------------------------------------

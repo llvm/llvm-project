@@ -34,7 +34,7 @@ define i32 @foo(i32 %N) {
 ; EPILOG-NEXT:    [[I_UNR_PH:%.*]] = phi i32 [ [[INC_1]], [[WHILE_BODY]] ]
 ; EPILOG-NEXT:    br label [[WHILE_END_UNR_LCSSA]]
 ; EPILOG:       while.end.unr-lcssa:
-; EPILOG-NEXT:    [[I_LCSSA_PH:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[I_LCSSA_PH_PH]], [[WHILE_END_UNR_LCSSA_LOOPEXIT]] ]
+; EPILOG-NEXT:    [[I_LCSSA_PH:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[I_LCSSA_PH_PH]], [[WHILE_END_UNR_LCSSA_LOOPEXIT]] ]
 ; EPILOG-NEXT:    [[I_UNR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[I_UNR_PH]], [[WHILE_END_UNR_LCSSA_LOOPEXIT]] ]
 ; EPILOG-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
 ; EPILOG-NEXT:    br i1 [[LCMP_MOD]], label [[WHILE_BODY_EPIL_PREHEADER:%.*]], label [[WHILE_END:%.*]]
@@ -57,7 +57,7 @@ define i32 @foo(i32 %N) {
 ; PROLOG:       while.body.prol:
 ; PROLOG-NEXT:    br label [[WHILE_BODY_PROL_LOOPEXIT]]
 ; PROLOG:       while.body.prol.loopexit:
-; PROLOG-NEXT:    [[I_LCSSA_UNR:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ 0, [[WHILE_BODY_PROL]] ]
+; PROLOG-NEXT:    [[I_LCSSA_UNR:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ 0, [[WHILE_BODY_PROL]] ]
 ; PROLOG-NEXT:    [[I_UNR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ 1, [[WHILE_BODY_PROL]] ]
 ; PROLOG-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[N]], 1
 ; PROLOG-NEXT:    br i1 [[TMP1]], label [[WHILE_END:%.*]], label [[ENTRY_NEW:%.*]]

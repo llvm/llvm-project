@@ -34,5 +34,5 @@ define zeroext i1 @test5(i32 %y) nounwind {
   ret i1 %conv
   ; CHECK-LABEL: test5:
   ; CHECK: andb $1
-  ; CHECK: movzbl {{.*}}, %eax
+  ; CHECK-NEXT: ret
 }

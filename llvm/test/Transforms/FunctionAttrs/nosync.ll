@@ -236,7 +236,7 @@ declare void @llvm.memset(ptr %dest, i8 %val, i32 %len, i1 %isvolatile)
 
 ; negative, checking volatile intrinsics.
 define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
-; CHECK: Function Attrs: mustprogress nofree nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: @memcpy_volatile(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], i32 8, i1 true)
 ; CHECK-NEXT:    ret i32 4
@@ -247,7 +247,7 @@ define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
 
 ; positive, non-volatile intrinsic.
 define i32 @memset_non_volatile(ptr %ptr1, i8 %val) {
-; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: write)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: @memset_non_volatile(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr [[PTR1:%.*]], i8 [[VAL:%.*]], i32 8, i1 false)
 ; CHECK-NEXT:    ret i32 4
@@ -298,7 +298,7 @@ define void @i_totally_sync() {
 declare float @llvm.cos(float %val) readnone
 
 define float @cos_test(float %x) {
-; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @cos_test(
 ; CHECK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[C]]

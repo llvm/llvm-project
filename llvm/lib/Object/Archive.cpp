@@ -27,7 +27,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -269,11 +268,11 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       return Name;
     // System libraries from the Windows SDK for Windows 11 contain this symbol.
     // It looks like a CFG guard: we just skip it for now.
-    if (Name.equals("/<XFGHASHMAP>/"))
+    if (Name == "/<XFGHASHMAP>/")
       return Name;
     // Some libraries (e.g., arm64rt.lib) from the Windows WDK
     // (version 10.0.22000.0) contain this undocumented special member.
-    if (Name.equals("/<ECSYMBOLS>/"))
+    if (Name == "/<ECSYMBOLS>/")
       return Name;
     // It's a long name.
     // Get the string table offset.
@@ -567,7 +566,7 @@ Expected<std::string> Archive::Child::getFullName() const {
   SmallString<128> FullName = sys::path::parent_path(
       Parent->getMemoryBufferRef().getBufferIdentifier());
   sys::path::append(FullName, Name);
-  return std::string(FullName.str());
+  return std::string(FullName);
 }
 
 Expected<StringRef> Archive::Child::getBuffer() const {
@@ -708,7 +707,7 @@ void Archive::setFirstRegular(const Child &C) {
 
 Archive::Archive(MemoryBufferRef Source, Error &Err)
     : Binary(Binary::ID_Archive, Source) {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   StringRef Buffer = Data.getBuffer();
   // Check for sufficient magic.
   if (Buffer.starts_with(ThinArchiveMagic)) {
@@ -969,12 +968,19 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   Err = Error::success();
 }
 
-object::Archive::Kind Archive::getDefaultKindForHost() {
-  Triple HostTriple(sys::getProcessTriple());
-  return HostTriple.isOSDarwin()
-             ? object::Archive::K_DARWIN
-             : (HostTriple.isOSAIX() ? object::Archive::K_AIXBIG
-                                     : object::Archive::K_GNU);
+object::Archive::Kind Archive::getDefaultKindForTriple(const Triple &T) {
+  if (T.isOSDarwin())
+    return object::Archive::K_DARWIN;
+  if (T.isOSAIX())
+    return object::Archive::K_AIXBIG;
+  if (T.isOSWindows())
+    return object::Archive::K_COFF;
+  return object::Archive::K_GNU;
+}
+
+object::Archive::Kind Archive::getDefaultKind() {
+  Triple HostTriple(sys::getDefaultTargetTriple());
+  return getDefaultKindForTriple(HostTriple);
 }
 
 Archive::child_iterator Archive::child_begin(Error &Err,

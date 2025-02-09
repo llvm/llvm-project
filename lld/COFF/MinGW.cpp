@@ -25,9 +25,8 @@ using namespace lld;
 using namespace lld::coff;
 
 AutoExporter::AutoExporter(
-    COFFLinkerContext &ctx,
-    const llvm::DenseSet<StringRef> &manualExcludeSymbols)
-    : manualExcludeSymbols(manualExcludeSymbols), ctx(ctx) {
+    SymbolTable &symtab, const llvm::DenseSet<StringRef> &manualExcludeSymbols)
+    : manualExcludeSymbols(manualExcludeSymbols), symtab(symtab) {
   excludeLibs = {
       "libgcc",
       "libgcc_s",
@@ -50,9 +49,7 @@ AutoExporter::AutoExporter(
       "libclang_rt.profile-x86_64",
       "libc++",
       "libc++abi",
-      "libFortran_main",
-      "libFortranRuntime",
-      "libFortranDecimal",
+      "libflang_rt.runtime",
       "libunwind",
       "libmsvcrt",
       "libucrtbase",
@@ -85,7 +82,7 @@ AutoExporter::AutoExporter(
       "_NULL_THUNK_DATA",
   };
 
-  if (ctx.config.machine == I386) {
+  if (symtab.machine == I386) {
     excludeSymbols = {
         "__NULL_IMPORT_DESCRIPTOR",
         "__pei386_runtime_relocator",
@@ -95,6 +92,7 @@ AutoExporter::AutoExporter(
         "__fmode",
         "_environ",
         "___dso_handle",
+        "__load_config_used",
         // These are the MinGW names that differ from the standard
         // ones (lacking an extra underscore).
         "_DllMain@12",
@@ -112,6 +110,7 @@ AutoExporter::AutoExporter(
         "_fmode",
         "environ",
         "__dso_handle",
+        "_load_config_used",
         // These are the MinGW names that differ from the standard
         // ones (lacking an extra underscore).
         "DllMain",
@@ -119,6 +118,10 @@ AutoExporter::AutoExporter(
         "DllMainCRTStartup",
     };
     excludeSymbolPrefixes.insert("_head_");
+  }
+  if (symtab.isEC()) {
+    excludeSymbols.insert("__chpe_metadata");
+    excludeSymbolPrefixes.insert("__os_arm64x_");
   }
 }
 
@@ -152,7 +155,7 @@ bool AutoExporter::shouldExport(Defined *sym) const {
       return false;
 
   // If a corresponding __imp_ symbol exists and is defined, don't export it.
-  if (ctx.symtab.find(("__imp_" + sym->getName()).str()))
+  if (symtab.find(("__imp_" + sym->getName()).str()))
     return false;
 
   // Check that file is non-null before dereferencing it, symbols not
@@ -171,13 +174,13 @@ bool AutoExporter::shouldExport(Defined *sym) const {
   return !excludeObjects.count(fileName);
 }
 
-void lld::coff::writeDefFile(StringRef name,
+void lld::coff::writeDefFile(COFFLinkerContext &ctx, StringRef name,
                              const std::vector<Export> &exports) {
   llvm::TimeTraceScope timeScope("Write .def file");
   std::error_code ec;
   raw_fd_ostream os(name, ec, sys::fs::OF_None);
   if (ec)
-    fatal("cannot open " + name + ": " + ec.message());
+    Fatal(ctx) << "cannot open " << name << ": " << ec.message();
 
   os << "EXPORTS\n";
   for (const Export &e : exports) {

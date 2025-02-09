@@ -2,6 +2,7 @@
 #
 # Copyright (c) 2013 Victor Oliveira <victormatheus@gmail.com>
 # Copyright (c) 2013 Jesse Towner <jessetowner@lavabit.com>
+# Copyright (c) 2024 Romaric Jodin <rjodin@chromium.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +27,16 @@
 #
 # convert_<destTypen><_sat><_roundingMode>(<sourceTypen>)
 
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--clspv", action="store_true", help="Generate the clspv variant of the code"
+)
+args = parser.parse_args()
+
+clspv = args.clspv
+
 types = [
     "char",
     "uchar",
@@ -35,21 +46,21 @@ types = [
     "uint",
     "long",
     "ulong",
+    "half",
     "float",
     "double",
 ]
 int_types = ["char", "uchar", "short", "ushort", "int", "uint", "long", "ulong"]
 unsigned_types = ["uchar", "ushort", "uint", "ulong"]
-float_types = ["float", "double"]
+float_types = ["half", "float", "double"]
 int64_types = ["long", "ulong"]
 float64_types = ["double"]
+float16_types = ["half"]
 vector_sizes = ["", "2", "3", "4", "8", "16"]
 half_sizes = [("2", ""), ("4", "2"), ("8", "4"), ("16", "8")]
 
 saturation = ["", "_sat"]
 rounding_modes = ["_rtz", "_rte", "_rtp", "_rtn"]
-float_prefix = {"float": "FLT_", "double": "DBL_"}
-float_suffix = {"float": "f", "double": ""}
 
 bool_type = {
     "char": "char",
@@ -60,6 +71,7 @@ bool_type = {
     "uint": "int",
     "long": "long",
     "ulong": "long",
+    "half": "short",
     "float": "int",
     "double": "long",
 }
@@ -84,6 +96,7 @@ sizeof_type = {
     "uint": 4,
     "long": 8,
     "ulong": 8,
+    "half": 2,
     "float": 4,
     "double": 8,
 }
@@ -97,6 +110,7 @@ limit_max = {
     "uint": "UINT_MAX",
     "long": "LONG_MAX",
     "ulong": "ULONG_MAX",
+    "half": "0x1.ffcp+15",
 }
 
 limit_min = {
@@ -108,23 +122,35 @@ limit_min = {
     "uint": "0",
     "long": "LONG_MIN",
     "ulong": "0",
+    "half": "-0x1.ffcp+15",
 }
 
 
 def conditional_guard(src, dst):
     int64_count = 0
     float64_count = 0
+    float16_count = 0
     if src in int64_types:
         int64_count = int64_count + 1
     elif src in float64_types:
         float64_count = float64_count + 1
+    elif src in float16_types:
+        float16_count = float16_count + 1
     if dst in int64_types:
         int64_count = int64_count + 1
     elif dst in float64_types:
         float64_count = float64_count + 1
-    if float64_count > 0:
+    elif dst in float16_types:
+        float16_count = float16_count + 1
+    if float64_count > 0 and float16_count > 0:
+        print("#if defined(cl_khr_fp16) && defined(cl_khr_fp64)")
+        return True
+    elif float64_count > 0:
         # In embedded profile, if cl_khr_fp64 is supported cles_khr_int64 has to be
         print("#ifdef cl_khr_fp64")
+        return True
+    elif float16_count > 0:
+        print("#if defined cl_khr_fp16")
         return True
     elif int64_count > 0:
         print("#if defined cles_khr_int64 || !defined(__EMBEDDED_PROFILE__)")
@@ -163,6 +189,10 @@ print(
 */
 
 #include <clc/clc.h>
+
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -211,53 +241,39 @@ print(
 def generate_default_conversion(src, dst, mode):
     close_conditional = conditional_guard(src, dst)
 
-    # scalar conversions
-    print(
-        """_CLC_DEF _CLC_OVERLOAD
-{DST} convert_{DST}{M}({SRC} x)
-{{
-  return ({DST})x;
+    for size in vector_sizes:
+        if not size:
+            print(
+                f"""_CLC_DEF _CLC_OVERLOAD {dst} convert_{dst}{mode}({src} x) {{
+  return ({dst})x;
 }}
-""".format(
-            SRC=src, DST=dst, M=mode
-        )
-    )
-
-    # vector conversions, done through decomposition to components
-    for size, half_size in half_sizes:
-        print(
-            """_CLC_DEF _CLC_OVERLOAD
-{DST}{N} convert_{DST}{N}{M}({SRC}{N} x)
-{{
-  return ({DST}{N})(convert_{DST}{H}(x.lo), convert_{DST}{H}(x.hi));
-}}
-""".format(
-                SRC=src, DST=dst, N=size, H=half_size, M=mode
+"""
             )
-        )
-
-    # 3-component vector conversions
-    print(
-        """_CLC_DEF _CLC_OVERLOAD
-{DST}3 convert_{DST}3{M}({SRC}3 x)
-{{
-  return ({DST}3)(convert_{DST}2(x.s01), convert_{DST}(x.s2));
-}}""".format(
-            SRC=src, DST=dst, M=mode
-        )
-    )
+        else:
+            print(
+                f"""_CLC_DEF _CLC_OVERLOAD {dst}{size} convert_{dst}{size}{mode}({src}{size} x) {{
+  return __builtin_convertvector(x, {dst}{size});
+}}
+"""
+            )
 
     if close_conditional:
         print("#endif")
 
 
-for src in types:
-    for dst in types:
-        generate_default_conversion(src, dst, "")
+# Do not generate default conversion for clspv as they are handled natively
+if not clspv:
+    for src in types:
+        for dst in types:
+            generate_default_conversion(src, dst, "")
 
 for src in int_types:
     for dst in int_types:
         for mode in rounding_modes:
+            # Do not generate "_rte" conversion for clspv as they are handled
+            # natively
+            if clspv and mode == "_rte":
+                continue
             generate_default_conversion(src, dst, mode)
 
 #
@@ -304,21 +320,38 @@ def generate_saturated_conversion(src, dst, size):
 
     elif src in float_types:
 
-        # Conversion from float to int
-        print(
-            """  {DST}{N} y = convert_{DST}{N}(x);
-  y = select(y, ({DST}{N}){DST_MIN}, {BP}(x < ({SRC}{N}){DST_MIN}){BS});
-  y = select(y, ({DST}{N}){DST_MAX}, {BP}(x > ({SRC}{N}){DST_MAX}){BS});
-  return y;""".format(
-                SRC=src,
-                DST=dst,
-                N=size,
-                DST_MIN=limit_min[dst],
-                DST_MAX=limit_max[dst],
-                BP=bool_prefix,
-                BS=bool_suffix,
+        if clspv:
+            # Conversion from float to int
+            print(
+                """  {DST}{N} y = convert_{DST}{N}(x);
+                y = select(y, ({DST}{N}){DST_MIN}, {BP}(x <= ({SRC}{N}){DST_MIN}){BS});
+                y = select(y, ({DST}{N}){DST_MAX}, {BP}(x >= ({SRC}{N}){DST_MAX}){BS});
+                return y;""".format(
+                    SRC=src,
+                    DST=dst,
+                    N=size,
+                    DST_MIN=limit_min[dst],
+                    DST_MAX=limit_max[dst],
+                    BP=bool_prefix,
+                    BS=bool_suffix,
+                )
             )
-        )
+        else:
+            # Conversion from float to int
+            print(
+                """  {DST}{N} y = convert_{DST}{N}(x);
+                y = select(y, ({DST}{N}){DST_MIN}, {BP}(x < ({SRC}{N}){DST_MIN}){BS});
+                y = select(y, ({DST}{N}){DST_MAX}, {BP}(x > ({SRC}{N}){DST_MAX}){BS});
+                return y;""".format(
+                    SRC=src,
+                    DST=dst,
+                    N=size,
+                    DST_MIN=limit_min[dst],
+                    DST_MAX=limit_max[dst],
+                    BP=bool_prefix,
+                    BS=bool_suffix,
+                )
+            )
 
     else:
 
@@ -432,7 +465,10 @@ def generate_float_conversion(src, dst, size, mode, sat):
         print("  return convert_{DST}{N}(x);".format(DST=dst, N=size))
     else:
         print("  {DST}{N} r = convert_{DST}{N}(x);".format(DST=dst, N=size))
-        print("  {SRC}{N} y = convert_{SRC}{N}(r);".format(SRC=src, N=size))
+        if clspv:
+            print("  {SRC}{N} y = convert_{SRC}{N}_sat(r);".format(SRC=src, N=size))
+        else:
+            print("  {SRC}{N} y = convert_{SRC}{N}(r);".format(SRC=src, N=size))
         if mode == "_rtz":
             if src in int_types:
                 print(
@@ -448,23 +484,91 @@ def generate_float_conversion(src, dst, size, mode, sat):
             else:
                 print("  {SRC}{N} abs_x = fabs(x);".format(SRC=src, N=size))
                 print("  {SRC}{N} abs_y = fabs(y);".format(SRC=src, N=size))
-            print(
-                "  return select(r, nextafter(r, sign(r) * ({DST}{N})-INFINITY), convert_{BOOL}{N}(abs_y > abs_x));".format(
-                    DST=dst, N=size, BOOL=bool_type[dst]
+            if clspv:
+                print(
+                    "  {BOOL}{N} c = convert_{BOOL}{N}(abs_y > abs_x);".format(
+                        BOOL=bool_type[dst], N=size
+                    )
                 )
-            )
+                if sizeof_type[src] >= 4 and src in int_types:
+                    print(
+                        "  c = c || convert_{BOOL}{N}(({SRC}{N}){SRC_MAX} == x);".format(
+                            BOOL=bool_type[dst], N=size, SRC=src, SRC_MAX=limit_max[src]
+                        )
+                    )
+                print(
+                    "  {DST}{N} sel = select(r, nextafter(r, sign(r) * ({DST}{N})-INFINITY), c);".format(
+                        DST=dst, N=size, BOOL=bool_type[dst], SRC=src
+                    )
+                )
+            else:
+                print(
+                    "  {DST}{N} sel = select(r, nextafter(r, sign(r) * ({DST}{N})-INFINITY), convert_{BOOL}{N}(abs_y > abs_x));".format(
+                        DST=dst, N=size, BOOL=bool_type[dst]
+                    )
+                )
+            if dst == "half" and src in int_types and sizeof_type[src] >= 2:
+                dst_max = limit_max[dst]
+                # short is 16 bits signed, so the maximum value rounded to zero is 0x1.ffcp+14 (0x1p+15 == 32768 > 0x7fff == 32767)
+                if src == "short":
+                    dst_max = "0x1.ffcp+14"
+                print(
+                    "  return clamp(sel, ({DST}{N}){DST_MIN}, ({DST}{N}){DST_MAX});".format(
+                        DST=dst, N=size, DST_MIN=limit_min[dst], DST_MAX=dst_max
+                    )
+                )
+            else:
+                print("  return sel;")
         if mode == "_rtp":
             print(
-                "  return select(r, nextafter(r, ({DST}{N})INFINITY), convert_{BOOL}{N}(y < x));".format(
+                "  {DST}{N} sel = select(r, nextafter(r, ({DST}{N})INFINITY), convert_{BOOL}{N}(y < x));".format(
                     DST=dst, N=size, BOOL=bool_type[dst]
                 )
             )
+            if dst == "half" and src in int_types and sizeof_type[src] >= 2:
+                print(
+                    "  return max(sel, ({DST}{N}){DST_MIN});".format(
+                        DST=dst, N=size, DST_MIN=limit_min[dst]
+                    )
+                )
+            else:
+                print("  return sel;")
         if mode == "_rtn":
-            print(
-                "  return select(r, nextafter(r, ({DST}{N})-INFINITY), convert_{BOOL}{N}(y > x));".format(
-                    DST=dst, N=size, BOOL=bool_type[dst]
+            if clspv:
+                print(
+                    "  {BOOL}{N} c = convert_{BOOL}{N}(y > x);".format(
+                        BOOL=bool_type[dst], N=size
+                    )
                 )
-            )
+                if sizeof_type[src] >= 4 and src in int_types:
+                    print(
+                        "  c = c || convert_{BOOL}{N}(({SRC}{N}){SRC_MAX} == x);".format(
+                            BOOL=bool_type[dst], N=size, SRC=src, SRC_MAX=limit_max[src]
+                        )
+                    )
+                print(
+                    "  {DST}{N} sel = select(r, nextafter(r, ({DST}{N})-INFINITY), c);".format(
+                        DST=dst, N=size, BOOL=bool_type[dst], SRC=src
+                    )
+                )
+            else:
+                print(
+                    "  {DST}{N} sel = select(r, nextafter(r, ({DST}{N})-INFINITY), convert_{BOOL}{N}(y > x));".format(
+                        DST=dst, N=size, BOOL=bool_type[dst]
+                    )
+                )
+            if dst == "half" and src in int_types and sizeof_type[src] >= 2:
+                dst_max = limit_max[dst]
+                # short is 16 bits signed, so the maximum value rounded to negative infinity is 0x1.ffcp+14 (0x1p+15 == 32768 > 0x7fff == 32767)
+                if src == "short":
+                    dst_max = "0x1.ffcp+14"
+                print(
+                    "  return min(sel, ({DST}{N}){DST_MAX});".format(
+                        DST=dst, N=size, DST_MAX=dst_max
+                    )
+                )
+            else:
+                print("  return sel;")
 
     # Footer
     print("}")
@@ -484,4 +588,8 @@ for src in types:
     for dst in float_types:
         for size in vector_sizes:
             for mode in rounding_modes:
+                # Do not generate "_rte" conversion for clspv as they are
+                # handled natively
+                if clspv and mode == "_rte":
+                    continue
                 generate_float_conversion(src, dst, size, mode, "")

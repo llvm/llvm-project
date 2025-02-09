@@ -5,7 +5,136 @@ declare i8 @llvm.abs.i8(i8, i1)
 declare i32 @llvm.abs.i32(i32, i1)
 declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
 declare <3 x i82> @llvm.abs.v3i82(<3 x i82>, i1)
+declare <2 x i8> @llvm.abs.v2i8(<2 x i8>, i1)
 declare void @llvm.assume(i1)
+declare void @use(i32)
+
+define i8 @test_abs_abs_a_mul_b_i8(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i8 [[ABS2]]
+;
+  %abs1 = call i8 @llvm.abs.i8(i8 %a, i1 true)
+  %mul = mul i8 %abs1, %b
+  %abs2 = call i8 @llvm.abs.i8(i8 %mul, i1 true)
+  ret i8 %abs2
+}
+
+define i8 @test_abs_a_mul_abs_b_i8(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_abs_a_mul_abs_b_i8(
+; CHECK-NEXT:    [[A1:%.*]] = urem i8 123, [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[A1]], [[B:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i8 [[ABS2]]
+;
+  %a1 = urem i8 123, %a  ; thwart complexity-based canonicalization
+  %abs1 = call i8 @llvm.abs.i8(i8 %b, i1 true)
+  %mul = mul i8 %a1, %abs1
+  %abs2 = call i8 @llvm.abs.i8(i8 %mul, i1 true)
+  ret i8 %abs2
+}
+
+define i32 @test_abs_abs_a_mul_b_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i32 [[ABS2]]
+;
+  %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 true)
+  %mul = mul i32 %abs1, %b
+  %abs2 = call i32 @llvm.abs.i32(i32 %mul, i1 true)
+  ret i32 %abs2
+}
+
+define i32 @test_abs_abs_a_mul_b_i32_abs_false_true(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_i32_abs_false_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i32 [[ABS2]]
+;
+  %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 false)
+  %mul = mul i32 %abs1, %b
+  %abs2 = call i32 @llvm.abs.i32(i32 %mul, i1 true)
+  ret i32 %abs2
+}
+
+define i32 @test_abs_abs_a_mul_b_i32_abs_true_false(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_i32_abs_true_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 false)
+; CHECK-NEXT:    ret i32 [[ABS2]]
+;
+  %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 true)
+  %mul = mul i32 %abs1, %b
+  %abs2 = call i32 @llvm.abs.i32(i32 %mul, i1 false)
+  ret i32 %abs2
+}
+
+define i32 @test_abs_abs_a_mul_b_i32_abs_false_false(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_i32_abs_false_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 false)
+; CHECK-NEXT:    ret i32 [[ABS2]]
+;
+  %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 false)
+  %mul = mul i32 %abs1, %b
+  %abs2 = call i32 @llvm.abs.i32(i32 %mul, i1 false)
+  ret i32 %abs2
+}
+
+; this should work
+define i8 @test_nsw_with_true(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_nsw_with_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i8 [[ABS2]]
+;
+  %abs1 = call i8 @llvm.abs.i8(i8 %a, i1 false)
+  %mul = mul nsw i8 %abs1, %b
+  %abs2 = call i8 @llvm.abs.i8(i8 %mul, i1 true)
+  ret i8 %abs2
+}
+
+; this should't propagate the nsw
+define i8 @test_nsw_with_false(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_nsw_with_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 false)
+; CHECK-NEXT:    ret i8 [[ABS2]]
+;
+  %abs1 = call i8 @llvm.abs.i8(i8 %a, i1 false)
+  %mul = mul nsw i8 %abs1, %b
+  %abs2 = call i8 @llvm.abs.i8(i8 %mul, i1 false)
+  ret i8 %abs2
+}
+
+define i32 @test_abs_abs_a_mul_b_more_one_use(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_more_one_use(
+; CHECK-NEXT:    [[ABS1:%.*]] = call i32 @llvm.abs.i32(i32 [[A:%.*]], i1 true)
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ABS1]], [[B:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[MUL]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[MUL]])
+; CHECK-NEXT:    ret i32 [[ABS2]]
+;
+  %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 true)
+  %mul = mul i32 %abs1, %b
+  %abs2 = call i32 @llvm.abs.i32(i32 %mul, i1 false)
+  call void @use(i32 %mul)
+  ret i32 %abs2
+}
+
+define <2 x i8> @test_abs_abs_a_mul_b_vector_i8(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_vector_i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i8> [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[TMP1]], i1 true)
+; CHECK-NEXT:    ret <2 x i8> [[ABS2]]
+;
+  %abs = call <2 x i8> @llvm.abs.v2i8(<2 x i8> %a, i1 true)
+  %mul = mul <2 x i8> %abs, %b
+  %abs2 = call <2 x i8> @llvm.abs.v2i8(<2 x i8> %mul, i1 true)
+  ret <2 x i8> %abs2
+}
 
 ; abs preserves trailing zeros so the second and is unneeded
 define i32 @abs_trailing_zeros(i32 %x) {
@@ -49,9 +178,9 @@ define i32 @abs_trailing_zeros_negative(i32 %x) {
 
 define <4 x i32> @abs_trailing_zeros_negative_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @abs_trailing_zeros_negative_vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[X:%.*]], <i32 -2, i32 -2, i32 -2, i32 -2>
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 -2)
 ; CHECK-NEXT:    [[ABS:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[AND]], i1 false)
-; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i32> [[ABS]], <i32 -4, i32 -4, i32 -4, i32 -4>
+; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i32> [[ABS]], splat (i32 -4)
 ; CHECK-NEXT:    ret <4 x i32> [[AND2]]
 ;
   %and = and <4 x i32> %x, <i32 -2, i32 -2, i32 -2, i32 -2>
@@ -78,7 +207,7 @@ define i32 @abs_signbits(i30 %x) {
 define <4 x i32> @abs_signbits_vec(<4 x i30> %x) {
 ; CHECK-LABEL: @abs_signbits_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i30> @llvm.abs.v4i30(<4 x i30> [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[NARROW:%.*]] = add nuw <4 x i30> [[TMP1]], <i30 1, i30 1, i30 1, i30 1>
+; CHECK-NEXT:    [[NARROW:%.*]] = add nuw <4 x i30> [[TMP1]], splat (i30 1)
 ; CHECK-NEXT:    [[ADD:%.*]] = zext <4 x i30> [[NARROW]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[ADD]]
 ;
@@ -188,7 +317,7 @@ define i32 @zext_abs(i31 %x) {
 
 define <3 x i82> @lshr_abs(<3 x i82> %x) {
 ; CHECK-LABEL: @lshr_abs(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i82> [[X:%.*]], <i82 1, i82 1, i82 1>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i82> [[X:%.*]], splat (i82 1)
 ; CHECK-NEXT:    ret <3 x i82> [[LSHR]]
 ;
   %lshr = lshr <3 x i82> %x, <i82 1, i82 1, i82 1>
@@ -368,7 +497,7 @@ define i32 @demand_low_bit(i32 %x) {
 
 define <3 x i82> @demand_low_bit_int_min_is_poison(<3 x i82> %x) {
 ; CHECK-LABEL: @demand_low_bit_int_min_is_poison(
-; CHECK-NEXT:    [[R:%.*]] = shl <3 x i82> [[X:%.*]], <i82 81, i82 81, i82 81>
+; CHECK-NEXT:    [[R:%.*]] = shl <3 x i82> [[X:%.*]], splat (i82 81)
 ; CHECK-NEXT:    ret <3 x i82> [[R]]
 ;
   %a = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %x, i1 true)
@@ -401,9 +530,9 @@ define i32 @srem_by_2_int_min_is_poison(i32 %x) {
 
 define <3 x i82> @srem_by_2(<3 x i82> %x, ptr %p) {
 ; CHECK-LABEL: @srem_by_2(
-; CHECK-NEXT:    [[S:%.*]] = srem <3 x i82> [[X:%.*]], <i82 2, i82 2, i82 2>
+; CHECK-NEXT:    [[S:%.*]] = srem <3 x i82> [[X:%.*]], splat (i82 2)
 ; CHECK-NEXT:    store <3 x i82> [[S]], ptr [[P:%.*]], align 32
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i82> [[X]], <i82 1, i82 1, i82 1>
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i82> [[X]], splat (i82 1)
 ; CHECK-NEXT:    ret <3 x i82> [[R]]
 ;
   %s = srem <3 x i82> %x, <i82 2, i82 2, i82 2>
@@ -671,7 +800,7 @@ define i32 @sub_abs_wrong_pred(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 true)
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:

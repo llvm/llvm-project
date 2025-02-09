@@ -16,6 +16,7 @@
 #include <cassert>
 #include <utility>
 #include "test_iterators.h"
+#include "test_range.h"
 #include "types.h"
 
 template <class View>
@@ -32,8 +33,8 @@ constexpr bool test() {
 
     static_assert(std::ranges::forward_range<V>);
     static_assert(std::ranges::forward_range<const V>);
-    LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<V>);
-    LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<P>);
+    static_assert(simple_view<V>);
+    static_assert(simple_view<P>);
 
     {
       std::ranges::lazy_split_view<V, P> v;
@@ -58,8 +59,8 @@ constexpr bool test() {
 
     static_assert(std::ranges::forward_range<V>);
     static_assert(std::ranges::forward_range<const V>);
-    LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<V>);
-    LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<P>);
+    static_assert(!simple_view<V>);
+    static_assert(!simple_view<P>);
 
     {
       std::ranges::lazy_split_view<V, P> v;
@@ -83,8 +84,8 @@ constexpr bool test() {
     using P = V;
     static_assert(std::ranges::forward_range<V>);
     static_assert(!std::ranges::forward_range<const V>);
-    LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<V>);
-    LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<P>);
+    static_assert(!simple_view<V>);
+    static_assert(!simple_view<P>);
 
     std::ranges::lazy_split_view<V, P> v;
     auto it = v.begin();
@@ -102,8 +103,8 @@ constexpr bool test() {
 
     static_assert(std::ranges::forward_range<V>);
     static_assert(std::ranges::forward_range<const V>);
-    LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<V>);
-    LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<P>);
+    static_assert(simple_view<V>);
+    static_assert(!simple_view<P>);
 
     {
       std::ranges::lazy_split_view<V, P> v;

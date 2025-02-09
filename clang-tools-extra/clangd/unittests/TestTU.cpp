@@ -164,7 +164,7 @@ SymbolSlab TestTU::headerSymbols() const {
   auto AST = build();
   return std::get<0>(indexHeaderSymbols(
       /*Version=*/"null", AST.getASTContext(), AST.getPreprocessor(),
-      *AST.getPragmaIncludes()));
+      AST.getPragmaIncludes()));
 }
 
 RefSlab TestTU::headerRefs() const {
@@ -174,10 +174,10 @@ RefSlab TestTU::headerRefs() const {
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
-  auto Idx = std::make_unique<FileIndex>();
+  auto Idx = std::make_unique<FileIndex>(/*SupportContainedRefs=*/true);
   Idx->updatePreamble(testPath(Filename), /*Version=*/"null",
                       AST.getASTContext(), AST.getPreprocessor(),
-                      *AST.getPragmaIncludes());
+                      AST.getPragmaIncludes());
   Idx->updateMain(testPath(Filename), AST);
   return std::move(Idx);
 }

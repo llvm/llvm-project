@@ -2,7 +2,7 @@
 ; RUN: opt -O1 -S < %s  | FileCheck %s
 
 define i32 @testa(i32 %mul) {
-; CHECK-LABEL: define i32 @testa(
+; CHECK-LABEL: define range(i32 -65536, 32768) i32 @testa(
 ; CHECK-SAME: i32 [[MUL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[MUL]], 15
 ; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = tail call i32 @llvm.smin.i32(i32 [[SHR]], i32 32767)
@@ -16,7 +16,7 @@ define i32 @testa(i32 %mul) {
 }
 
 define i32 @testb(i32 %mul) {
-; CHECK-LABEL: define i32 @testb(
+; CHECK-LABEL: define range(i32 -128, 128) i32 @testb(
 ; CHECK-SAME: i32 [[MUL:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[SHR102:%.*]] = ashr i32 [[MUL]], 7
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smax.i32(i32 [[SHR102]], i32 -128)

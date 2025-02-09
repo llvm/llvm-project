@@ -5,8 +5,8 @@
 # RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks that BOLT handles correctly backward and forward cross CU references
-# for DWARF4 with -fdebug-types-section
+## This test checks that BOLT handles correctly backward and forward cross CU references
+## for DWARF4 with -fdebug-types-section
 
 # POSTCHECK: version = 0x0004
 # POSTCHECK: DW_TAG_variable [10]

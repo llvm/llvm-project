@@ -135,6 +135,14 @@ Limitations
   flag had been supplied if compiling without ``-fPIC``, and as though the
   ``-pie`` flag had been supplied if linking an executable.
 
+Security Considerations
+-----------------------
+
+ThreadSanitizer is a bug detection tool and its runtime is not meant to be
+linked against production executables. While it may be useful for testing,
+ThreadSanitizer's runtime was not developed with security-sensitive
+constraints in mind and may compromise the security of the resulting executable.
+
 Current Status
 --------------
 

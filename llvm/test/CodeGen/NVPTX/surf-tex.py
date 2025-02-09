@@ -1,6 +1,6 @@
 # RUN: %python %s --target=cuda --tests=suld,sust,tex,tld4 --gen-list=%t.list > %t-cuda.ll
-# RUN: llc -mcpu=sm_20 %t-cuda.ll -verify-machineinstrs -o - | FileCheck %t-cuda.ll
-# RUN: %if ptxas %{ llc -mcpu=sm_20 %t-cuda.ll -verify-machineinstrs -o - | %ptxas-verify %}
+# RUN: llc -mcpu=sm_60 -mattr=+ptx43 %t-cuda.ll -verify-machineinstrs -o - | FileCheck %t-cuda.ll
+# RUN: %if ptxas %{ llc -mcpu=sm_60 -mattr=+ptx43 %t-cuda.ll -verify-machineinstrs -o - | %ptxas-verify %}
 
 # We only need to run this second time for texture tests, because
 # there is a difference between unified and non-unified intrinsics.
@@ -115,6 +115,15 @@ def get_llvm_value_type(vec, ty_ptx):
     return value[vec].format(ty=ty)
 
 
+id_counter = 0
+
+
+def get_table_gen_id():
+    global id_counter
+    id_counter += 1
+    return id_counter
+
+
 def gen_triple(target):
     if target == "cuda":
         print('target triple = "nvptx64-unknown-cuda"\n')
@@ -215,11 +224,6 @@ def get_ptx_surface(target):
 def get_surface_metadata(target, fun_ty, fun_name, has_surface_param):
     metadata = []
 
-    md_kernel = '!{{{fun_ty} @{fun_name}, !"kernel", i32 1}}'.format(
-        fun_ty=fun_ty, fun_name=fun_name
-    )
-    metadata.append(md_kernel)
-
     if target == "cuda":
         # When a parameter is lowered as a .surfref, it still has the
         # corresponding ld.param.u64, which is illegal. Do not emit the
@@ -254,15 +258,14 @@ def gen_suld_tests(target, global_surf):
   ; CHECK-LABEL: .entry ${test_name}_param
   ; CHECK: ${instruction} ${reg_ret}, [${reg_surf}, ${reg_access}]
   ;
-  define void @${test_name}_param(i64 %s, ${retty}* %ret, ${access}) {
+  define ptx_kernel void @${test_name}_param(i64 %s, ${retty}* %ret, ${access}) {
     %val = tail call ${retty} @${intrinsic}(i64 %s, ${access})
     store ${retty} %val, ${retty}* %ret
     ret void
   }
   ; CHECK-LABEL: .entry ${test_name}_global
   ; CHECK: ${instruction} ${reg_ret}, [${global_surf}, ${reg_access}]
-  ;
-  define void @${test_name}_global(${retty}* %ret, ${access}) {
+  define ptx_kernel void @${test_name}_global(${retty}* %ret, ${access}) {
     %gs = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @${global_surf})
     %val = tail call ${retty} @${intrinsic}(i64 %gs, ${access})
     store ${retty} %val, ${retty}* %ret
@@ -348,14 +351,13 @@ def gen_sust_tests(target, global_surf):
   ; CHECK-LABEL: .entry ${test_name}_param
   ; CHECK: ${instruction} [${reg_surf}, ${reg_access}], ${reg_value}
   ;
-  define void @${test_name}_param(i64 %s, ${value}, ${access}) {
+  define ptx_kernel void @${test_name}_param(i64 %s, ${value}, ${access}) {
     tail call void @${intrinsic}(i64 %s, ${access}, ${value})
     ret void
   }
   ; CHECK-LABEL: .entry ${test_name}_global
   ; CHECK: ${instruction} [${global_surf}, ${reg_access}], ${reg_value}
-  ;
-  define void @${test_name}_global(${value}, ${access}) {
+  define ptx_kernel void @${test_name}_global(${value}, ${access}) {
     %gs = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @${global_surf})
     tail call void @${intrinsic}(i64 %gs, ${access}, ${value})
     ret void
@@ -413,19 +415,13 @@ def gen_sust_tests(target, global_surf):
         generated_items.append((params["intrinsic"], params["instruction"]))
 
         fun_name = test_name + "_param"
-        fun_ty = "void (i64, {value_ty}, {access_ty})*".format(
-            value_ty=get_llvm_value_type(vec, ctype),
-            access_ty=get_llvm_surface_access_type(geom),
-        )
+        fun_ty = "ptr"
         generated_metadata += get_surface_metadata(
             target, fun_ty, fun_name, has_surface_param=True
         )
 
         fun_name = test_name + "_global"
-        fun_ty = "void ({value_ty}, {access_ty})*".format(
-            value_ty=get_llvm_value_type(vec, ctype),
-            access_ty=get_llvm_surface_access_type(geom),
-        )
+        fun_ty = "ptr"
         generated_metadata += get_surface_metadata(
             target, fun_ty, fun_name, has_surface_param=False
         )
@@ -552,11 +548,6 @@ def get_ptx_global_sampler(target, global_sampler):
 def get_texture_metadata(target, fun_ty, fun_name, has_texture_params):
     metadata = []
 
-    md_kernel = '!{{{fun_ty} @{fun_name}, !"kernel", i32 1}}'.format(
-        fun_ty=fun_ty, fun_name=fun_name
-    )
-    metadata.append(md_kernel)
-
     if target == "cuda":
         # When a parameter is lowered as a .texref, it still has the
         # corresponding ld.param.u64, which is illegal. Do not emit the
@@ -608,14 +599,14 @@ def gen_tex_tests(target, global_tex, global_sampler):
 
   ; CHECK-LABEL: .entry ${test_name}_param
   ; CHECK: ${instruction} ${ptx_ret}, [${ptx_tex}, ${ptx_access}]
-  define void @${test_name}_param(i64 %tex, ${sampler} ${retty}* %ret, ${access}) {
+  define ptx_kernel void @${test_name}_param(i64 %tex, ${sampler} ${retty}* %ret, ${access}) {
     %val = tail call ${retty} @${intrinsic}(i64 %tex, ${sampler} ${access})
     store ${retty} %val, ${retty}* %ret
     ret void
   }
   ; CHECK-LABEL: .entry ${test_name}_global
   ; CHECK: ${instruction} ${ptx_ret}, [${global_tex}, ${ptx_global_sampler} ${ptx_access}]
-  define void @${test_name}_global(${retty}* %ret, ${access}) {
+  define ptx_kernel void @${test_name}_global(${retty}* %ret, ${access}) {
     %gt = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @${global_tex})
     ${get_sampler_handle}
     %val = tail call ${retty} @${intrinsic}(i64 %gt, ${sampler} ${access})
@@ -656,8 +647,8 @@ def gen_tex_tests(target, global_tex, global_sampler):
 
         # FIXME: missing intrinsics.
         # Support for tex.grad.{cube, acube} introduced in PTX ISA version
-        # 4.3.
-        if mipmap == "grad" and geom in ("cube", "acube"):
+        # 4.3, currently supported only in unified mode.
+        if not is_unified(target) and mipmap == "grad" and geom in ("cube", "acube"):
             continue
 
         # The instruction returns a two-element vector for destination
@@ -792,14 +783,14 @@ def gen_tld4_tests(target, global_tex, global_sampler):
 
   ; CHECK-LABEL: .entry ${test_name}_param
   ; CHECK: ${instruction} ${ptx_ret}, [${ptx_tex}, ${ptx_access}]
-  define void @${test_name}_param(i64 %tex, ${sampler} ${retty}* %ret, ${access}) {
+  define ptx_kernel void @${test_name}_param(i64 %tex, ${sampler} ${retty}* %ret, ${access}) {
     %val = tail call ${retty} @${intrinsic}(i64 %tex, ${sampler} ${access})
     store ${retty} %val, ${retty}* %ret
     ret void
   }
   ; CHECK-LABEL: .entry ${test_name}_global
   ; CHECK: ${instruction} ${ptx_ret}, [${global_tex}, ${ptx_global_sampler} ${ptx_access}]
-  define void @${test_name}_global(${retty}* %ret, ${access}) {
+  define ptx_kernel void @${test_name}_global(${retty}* %ret, ${access}) {
     %gt = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @${global_tex})
     ${get_sampler_handle}
     %val = tail call ${retty} @${intrinsic}(i64 %gt, ${sampler} ${access})

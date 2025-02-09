@@ -22,7 +22,7 @@ The libc can be built and tested in two different modes:
    static archive will be run with the above command.
 
 #. **The full build mode** - In this mode, the libc is used as the only libc
-   for the user's application. See :ref:`fullbuild_mode` for more details on
+   for the user's application. See :ref:`full_host_build` for more details on
    building and using the libc in this mode. Once configured for a full libc
    build, you can run three kinds of tests:
 
@@ -37,13 +37,6 @@ The libc can be built and tested in two different modes:
       .. code-block:: sh
 
         $> ninja libc-integration-tests
-
-   #. API verification test - See :ref:`api_test` for more information about
-      the API test. It can be run by the command:
-
-      .. code-block:: sh
-
-        $> ninja libc-api-test
 
 Building with VSCode
 ====================
@@ -79,3 +72,33 @@ Building with Bazel
     $> bazel test --config=generic_clang @llvm-project//libc/...
 
 #. The bazel target layout of `libc` is located at: `utils/bazel/llvm-project-overlay/libc/BUILD.bazel <https://github.com/llvm/llvm-project/tree/main/utils/bazel/llvm-project-overlay/libc/BUILD.bazel>`_.
+
+Building in a container for a different architecture
+====================================================
+
+`Podman <https://podman.io/>`_ can be used together with
+`QEMU <https://www.qemu.org/>`_ to run container images built for architectures
+other than the host's. This can be used to build and test the libc on other
+supported architectures for which you do not have access to hardware. It can
+also be used if the hardware is slower than emulation of its architecture on a
+more powerful machine under a different architecture.
+
+As an example, to build and test in a container for 32-bit Arm:
+
+#. To install the necessary packages on Arch Linux:
+
+   .. code-block:: sh
+
+     $> pacman -S podman qemu-user-static qemu-user-static-binfmt \
+        qemu-system-arm
+
+#. To run Bash interactively in an Ubuntu 22.04 container for 32-bit Arm and
+   bind-mount an existing checkout of llvm-project on the host:
+
+   .. code-block:: sh
+
+     $> podman run -it \
+        -v </host/path/to/llvm-project>:</container/path/to/llvm-project> \
+        --arch arm docker.io/ubuntu:jammy bash
+
+#. Install necessary packages, invoke CMake, build, and run tests.

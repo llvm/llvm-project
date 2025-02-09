@@ -13,7 +13,7 @@ define void @test11() {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    br label [[LOOP:%.*]], !dbg [[DBG11:![0-9]+]]
 ; CHECK:       Loop:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr @X2, metadata [[META9:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value)), !dbg [[DBG12:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(ptr @X2, [[META9:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value), [[META12:![0-9]+]])
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[OUT:%.*]], !dbg [[DBG13:![0-9]+]]
 ; CHECK:       Out:
 ; CHECK-NEXT:    ret void, !dbg [[DBG14:![0-9]+]]

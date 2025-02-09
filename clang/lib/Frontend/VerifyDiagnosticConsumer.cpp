@@ -396,6 +396,12 @@ public:
   }
 };
 
+static std::string DetailedErrorString(const DiagnosticsEngine &Diags) {
+  if (Diags.getDiagnosticOptions().VerifyPrefixes.empty())
+    return "expected";
+  return *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
+}
+
 /// ParseDirective - Go through the comment and see if it indicates expected
 /// diagnostics. If so, then put them in the appropriate directive list.
 ///
@@ -445,10 +451,9 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     // others.
 
     // Regex in initial directive token: -re
-    if (DToken.ends_with("-re")) {
+    if (DToken.consume_back("-re")) {
       D.RegexKind = true;
       KindStr = "regex";
-      DToken = DToken.substr(0, DToken.size()-3);
     }
 
     // Type in initial directive token: -{error|warning|note|no-diagnostics}
@@ -479,14 +484,14 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     if (NoDiag) {
       if (Status == VerifyDiagnosticConsumer::HasOtherExpectedDirectives)
         Diags.Report(Pos, diag::err_verify_invalid_no_diags)
-          << /*IsExpectedNoDiagnostics=*/true;
+            << DetailedErrorString(Diags) << /*IsExpectedNoDiagnostics=*/true;
       else
         Status = VerifyDiagnosticConsumer::HasExpectedNoDiagnostics;
       continue;
     }
     if (Status == VerifyDiagnosticConsumer::HasExpectedNoDiagnostics) {
       Diags.Report(Pos, diag::err_verify_invalid_no_diags)
-        << /*IsExpectedNoDiagnostics=*/false;
+          << DetailedErrorString(Diags) << /*IsExpectedNoDiagnostics=*/false;
       continue;
     }
     Status = VerifyDiagnosticConsumer::HasOtherExpectedDirectives;
@@ -611,12 +616,19 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
                    diag::err_verify_missing_start) << KindStr;
       continue;
     }
+    llvm::SmallString<8> CloseBrace("}}");
+    const char *const DelimBegin = PH.C;
     PH.Advance();
+    // Count the number of opening braces for `string` kinds
+    for (; !D.RegexKind && PH.Next("{"); PH.Advance())
+      CloseBrace += '}';
     const char* const ContentBegin = PH.C; // mark content begin
-    // Search for token: }}
-    if (!PH.SearchClosingBrace("{{", "}}")) {
-      Diags.Report(Pos.getLocWithOffset(PH.C-PH.Begin),
-                   diag::err_verify_missing_end) << KindStr;
+    // Search for closing brace
+    StringRef OpenBrace(DelimBegin, ContentBegin - DelimBegin);
+    if (!PH.SearchClosingBrace(OpenBrace, CloseBrace)) {
+      Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
+                   diag::err_verify_missing_end)
+          << KindStr << CloseBrace;
       continue;
     }
     const char* const ContentEnd = PH.P; // mark content end
@@ -1098,7 +1110,8 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
     // Produce an error if no expected-* directives could be found in the
     // source file(s) processed.
     if (Status == HasNoDirectives) {
-      Diags.Report(diag::err_verify_no_directives).setForceEmit();
+      Diags.Report(diag::err_verify_no_directives).setForceEmit()
+          << DetailedErrorString(Diags);
       ++NumErrors;
       Status = HasNoDirectivesReported;
     }
@@ -1144,8 +1157,7 @@ std::unique_ptr<Directive> Directive::create(bool RegexKind,
   std::string RegexStr;
   StringRef S = Text;
   while (!S.empty()) {
-    if (S.starts_with("{{")) {
-      S = S.drop_front(2);
+    if (S.consume_front("{{")) {
       size_t RegexMatchLength = S.find("}}");
       assert(RegexMatchLength != StringRef::npos);
       // Append the regex, enclosed in parentheses.

@@ -1,11 +1,11 @@
-; RUN: llc -global-isel=0 -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -global-isel=1 -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
 
 ; FUNC-LABEL: {{^}}ds_ordered_swap:
 ; GCN: s_mov_b32 m0, s0

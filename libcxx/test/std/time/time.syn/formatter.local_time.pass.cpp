@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -820,7 +821,9 @@ static void test_valid_values_date_time() {
   // Use the global locale (fr_FR)
   check(
 // https://sourceware.org/bugzilla/show_bug.cgi?id=24054
-#if defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
+#if defined(__powerpc__) && defined(__linux__)
+      SV("%c='jeu. 01 janv. 1970 00:00:00 UTC'\t%Ec='jeu. 01 janv. 1970 00:00:00 UTC'\n"),
+#elif defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
       SV("%c='jeu. 01 janv. 1970 00:00:00 GMT'\t%Ec='jeu. 01 janv. 1970 00:00:00 GMT'\n"),
 #elif defined(_AIX)
       SV("%c=' 1 janvier 1970 à 00:00:00 UTC'\t%Ec=' 1 janvier 1970 à 00:00:00 UTC'\n"),
@@ -838,7 +841,9 @@ static void test_valid_values_date_time() {
 
   check(
 // https://sourceware.org/bugzilla/show_bug.cgi?id=24054
-#if defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
+#if defined(__powerpc__) && defined(__linux__)
+      SV("%c='ven. 13 févr. 2009 23:31:30 UTC'\t%Ec='ven. 13 févr. 2009 23:31:30 UTC'\n"),
+#elif defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
       SV("%c='ven. 13 févr. 2009 23:31:30 GMT'\t%Ec='ven. 13 févr. 2009 23:31:30 GMT'\n"),
 #elif defined(_AIX)
       SV("%c='13 février 2009 à 23:31:30 UTC'\t%Ec='13 février 2009 à 23:31:30 UTC'\n"),

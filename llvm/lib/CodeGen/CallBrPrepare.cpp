@@ -52,7 +52,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "callbrprepare"
+#define DEBUG_TYPE "callbr-prepare"
 
 static bool SplitCriticalEdges(ArrayRef<CallBrInst *> CBRs, DominatorTree &DT);
 static bool InsertIntrinsicCalls(ArrayRef<CallBrInst *> CBRs,
@@ -94,9 +94,11 @@ PreservedAnalyses CallBrPreparePass::run(Function &Fn,
 }
 
 char CallBrPrepare::ID = 0;
-INITIALIZE_PASS_BEGIN(CallBrPrepare, DEBUG_TYPE, "Prepare callbr", false, false)
+INITIALIZE_PASS_BEGIN(CallBrPrepare, "callbrprepare", "Prepare callbr", false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(CallBrPrepare, DEBUG_TYPE, "Prepare callbr", false, false)
+INITIALIZE_PASS_END(CallBrPrepare, "callbrprepare", "Prepare callbr", false,
+                    false)
 
 FunctionPass *llvm::createCallBrPass() { return new CallBrPrepare(); }
 

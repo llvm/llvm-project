@@ -5,17 +5,21 @@ add_flang_library(HLFIRDialect
   HLFIROps.cpp
 
   DEPENDS
+  CUFAttrsIncGen
   FIRDialect
   HLFIROpsIncGen
   ${dialect_libs}
 
   LINK_LIBS
+  CUFAttrs
   FIRDialect
-  MLIRIR
-  ${dialect_libs}
 
   LINK_COMPONENTS
   AsmParser
   AsmPrinter
   Remarks
+
+  MLIR_LIBS
+  MLIRIR
+  ${dialect_libs}
 )

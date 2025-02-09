@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-func-to-llvm -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm -convert-cf-to-llvm -reconcile-unrealized-casts -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //CHECK: llvm.func @second_order_arg(!llvm.ptr)
 func.func private @second_order_arg(%arg0 : () -> ())
@@ -32,7 +32,7 @@ func.func @pass_through(%arg0: () -> ()) -> (() -> ()) {
 func.func private @llvmlinkage(i32) attributes { "llvm.linkage" = #llvm.linkage<extern_weak> }
 
 // CHECK-LABEL: llvm.func @llvmreadnone(i32)
-// CHECK-SAME: memory = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>
+// CHECK-SAME: memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>
 func.func private @llvmreadnone(i32) attributes { llvm.readnone }
 
 // CHECK-LABEL: llvm.func @body(i32)
@@ -59,6 +59,16 @@ func.func @indirect_call(%arg0: (f32) -> i32, %arg1: f32) -> i32 {
 
 func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true } {
   return
+}
+
+// CHECK-LABEL: llvm.func @target_cpu()
+// CHECK-SAME: target_cpu = "gfx90a"
+func.func private @target_cpu() attributes { "target_cpu" = "gfx90a" }
+
+// CHECK-LABEL: llvm.func @target_features()
+// CHECK-SAME: target_features = #llvm.target_features<["+sme", "+sve"]>
+func.func private @target_features() attributes {
+  "target_features" = #llvm.target_features<["+sme", "+sve"]>
 }
 
 // -----

@@ -1,4 +1,5 @@
 ; RUN: opt -S %s -passes=sroa -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -passes=sroa -o - | FileCheck %s
 
 ;; $ cat test.cpp
 ;; #include <cstddef>
@@ -7,12 +8,12 @@
 ;; Check that migrateDebugInfo doesn't crash when encountering an alloca for a
 ;; variable with a type of unspecified size (e.g. DW_TAG_unspecified_type).
 
-; CHECK: @llvm.dbg.value(metadata ptr %0,{{.+}}, metadata !DIExpression())
+; CHECK: #dbg_value(ptr %0,{{.+}}, !DIExpression(),
 ;; There should be no new fragment and the value component should remain as %0.
 
 define dso_local void @_Z3funDn(ptr %0) #0 !dbg !14 {
 entry:
-  %.addr = alloca i8*, align 8, !DIAssignID !22
+  %.addr = alloca ptr, align 8, !DIAssignID !22
   call void @llvm.dbg.assign(metadata i1 undef, metadata !21, metadata !DIExpression(), metadata !22, metadata ptr %.addr, metadata !DIExpression()), !dbg !23
   store ptr %0, ptr %.addr, align 8, !DIAssignID !28
   call void @llvm.dbg.assign(metadata ptr %0, metadata !21, metadata !DIExpression(), metadata !28, metadata ptr %.addr, metadata !DIExpression()), !dbg !23

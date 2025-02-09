@@ -1,5 +1,5 @@
-;RUN: llc -march=sparc < %s -verify-machineinstrs | FileCheck %s
-;RUN: llc -march=sparc -O0 < %s -verify-machineinstrs | FileCheck %s -check-prefix=UNOPT
+;RUN: llc -mtriple=sparc < %s -verify-machineinstrs | FileCheck %s
+;RUN: llc -mtriple=sparc -O0 < %s -verify-machineinstrs | FileCheck %s -check-prefix=UNOPT
 
 target triple = "sparc-unknown-linux-gnu"
 
@@ -14,7 +14,7 @@ entry:
   ret i32 %0
 }
 
-define i32 @test_jmpl(i32 (i32, i32)* nocapture %f, i32 %a, i32 %b) #0 {
+define i32 @test_jmpl(ptr nocapture %f, i32 %a, i32 %b) #0 {
 entry:
 ; CHECK:      test_jmpl
 ; CHECK:      call
@@ -84,7 +84,7 @@ entry:
 ;UNOPT-LABEL:       test_implicit_def:
 ;UNOPT:       call func
 ;UNOPT-NEXT:  nop
-  %0 = tail call i32 @func(i32* undef) nounwind
+  %0 = tail call i32 @func(ptr undef) nounwind
   ret i32 0
 }
 
@@ -105,7 +105,7 @@ entry:
 }
 
 
-declare i32 @func(i32*)
+declare i32 @func(ptr)
 
 
 define i32 @restore_add(i32 %a, i32 %b) {

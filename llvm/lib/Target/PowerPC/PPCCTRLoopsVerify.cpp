@@ -33,10 +33,8 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -55,7 +53,7 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -70,7 +68,7 @@ namespace {
 
 INITIALIZE_PASS_BEGIN(PPCCTRLoopsVerify, "ppc-ctr-loops-verify",
                       "PowerPC CTR Loops Verify", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(PPCCTRLoopsVerify, "ppc-ctr-loops-verify",
                     "PowerPC CTR Loops Verify", false, false)
 
@@ -160,7 +158,7 @@ queue_preds:
 }
 
 bool PPCCTRLoopsVerify::runOnMachineFunction(MachineFunction &MF) {
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   // Verify that all bdnz/bdz instructions are dominated by a loop mtctr before
   // any other instructions that might clobber the ctr register.

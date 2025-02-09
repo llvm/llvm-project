@@ -94,7 +94,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -172,14 +171,14 @@ namespace {
 
 class FunctionNode {
   mutable AssertingVH<Function> F;
-  IRHash Hash;
+  stable_hash Hash;
 
 public:
   // Note the hash is recalculated potentially multiple times, but it is cheap.
   FunctionNode(Function *F) : F(F), Hash(StructuralHash(*F)) {}
 
   Function *getFunc() const { return F; }
-  IRHash getHash() const { return Hash; }
+  stable_hash getHash() const { return Hash; }
 
   /// Replace the reference to the function F by the function G, assuming their
   /// implementations are equal.
@@ -197,7 +196,10 @@ public:
   MergeFunctions() : FnTree(FunctionNodeCmp(&GlobalNumbers)) {
   }
 
-  bool runOnModule(Module &M);
+  template <typename FuncContainer> bool run(FuncContainer &Functions);
+  DenseMap<Function *, Function *> runOnFunctions(ArrayRef<Function *> F);
+
+  SmallPtrSet<GlobalValue *, 4> &getUsed();
 
 private:
   // The function comparison operator is provided here so that FunctionNodes do
@@ -256,15 +258,22 @@ private:
 
   /// Fill PDIUnrelatedWL with instructions from the entry block that are
   /// unrelated to parameter related debug info.
-  void filterInstsUnrelatedToPDI(BasicBlock *GEntryBlock,
-                                 std::vector<Instruction *> &PDIUnrelatedWL);
+  /// \param PDVRUnrelatedWL The equivalent non-intrinsic debug records.
+  void
+  filterInstsUnrelatedToPDI(BasicBlock *GEntryBlock,
+                            std::vector<Instruction *> &PDIUnrelatedWL,
+                            std::vector<DbgVariableRecord *> &PDVRUnrelatedWL);
 
   /// Erase the rest of the CFG (i.e. barring the entry block).
   void eraseTail(Function *G);
 
   /// Erase the instructions in PDIUnrelatedWL as they are unrelated to the
   /// parameter debug info, from the entry block.
-  void eraseInstsUnrelatedToPDI(std::vector<Instruction *> &PDIUnrelatedWL);
+  /// \param PDVRUnrelatedWL contains the equivalent set of non-instruction
+  /// debug-info records.
+  void
+  eraseInstsUnrelatedToPDI(std::vector<Instruction *> &PDIUnrelatedWL,
+                           std::vector<DbgVariableRecord *> &PDVRUnrelatedWL);
 
   /// Replace G with a simple tail call to bitcast(F). Also (unless
   /// MergeFunctionsPDI holds) replace direct uses of G with bitcast(F),
@@ -291,15 +300,34 @@ private:
   // dangling iterators into FnTree. The invariant that preserves this is that
   // there is exactly one mapping F -> FN for each FunctionNode FN in FnTree.
   DenseMap<AssertingVH<Function>, FnTreeType::iterator> FNodesInTree;
+
+  /// Deleted-New functions mapping
+  DenseMap<Function *, Function *> DelToNewMap;
 };
 } // end anonymous namespace
 
 PreservedAnalyses MergeFunctionsPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  MergeFunctions MF;
-  if (!MF.runOnModule(M))
+  if (!MergeFunctionsPass::runOnModule(M))
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
+}
+
+SmallPtrSet<GlobalValue *, 4> &MergeFunctions::getUsed() { return Used; }
+
+bool MergeFunctionsPass::runOnModule(Module &M) {
+  MergeFunctions MF;
+  SmallVector<GlobalValue *, 4> UsedV;
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
+  MF.getUsed().insert(UsedV.begin(), UsedV.end());
+  return MF.run(M);
+}
+
+DenseMap<Function *, Function *>
+MergeFunctionsPass::runOnFunctions(ArrayRef<Function *> F) {
+  MergeFunctions MF;
+  return MF.runOnFunctions(F);
 }
 
 #ifndef NDEBUG
@@ -403,20 +431,19 @@ static bool isEligibleForMerging(Function &F) {
          !hasDistinctMetadataIntrinsic(F);
 }
 
-bool MergeFunctions::runOnModule(Module &M) {
-  bool Changed = false;
+inline Function *asPtr(Function *Fn) { return Fn; }
+inline Function *asPtr(Function &Fn) { return &Fn; }
 
-  SmallVector<GlobalValue *, 4> UsedV;
-  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
-  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
-  Used.insert(UsedV.begin(), UsedV.end());
+template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
+  bool Changed = false;
 
   // All functions in the module, ordered by hash. Functions with a unique
   // hash value are easily eliminated.
-  std::vector<std::pair<IRHash, Function *>> HashedFuncs;
-  for (Function &Func : M) {
-    if (isEligibleForMerging(Func)) {
-      HashedFuncs.push_back({StructuralHash(Func), &Func});
+  std::vector<std::pair<stable_hash, Function *>> HashedFuncs;
+  for (auto &Func : M) {
+    Function *FuncPtr = asPtr(Func);
+    if (isEligibleForMerging(*FuncPtr)) {
+      HashedFuncs.push_back({StructuralHash(*FuncPtr), FuncPtr});
     }
   }
 
@@ -427,7 +454,7 @@ bool MergeFunctions::runOnModule(Module &M) {
     // If the hash value matches the previous value or the next one, we must
     // consider merging it. Otherwise it is dropped and never considered again.
     if ((I != S && std::prev(I)->first == I->first) ||
-        (std::next(I) != IE && std::next(I)->first == I->first) ) {
+        (std::next(I) != IE && std::next(I)->first == I->first)) {
       Deferred.push_back(WeakTrackingVH(I->second));
     }
   }
@@ -461,9 +488,16 @@ bool MergeFunctions::runOnModule(Module &M) {
   return Changed;
 }
 
+DenseMap<Function *, Function *>
+MergeFunctions::runOnFunctions(ArrayRef<Function *> F) {
+  [[maybe_unused]] bool MergeResult = this->run(F);
+  assert(MergeResult == !DelToNewMap.empty());
+  return this->DelToNewMap;
+}
+
 // Replace direct callers of Old with New.
 void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
-  for (Use &U : llvm::make_early_inc_range(Old->uses())) {
+  for (Use &U : make_early_inc_range(Old->uses())) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     if (CB && CB->isCallee(&U)) {
       // Do not copy attributes from the called function to the call-site.
@@ -506,7 +540,8 @@ static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
 // Erase the instructions in PDIUnrelatedWL as they are unrelated to the
 // parameter debug info, from the entry block.
 void MergeFunctions::eraseInstsUnrelatedToPDI(
-    std::vector<Instruction *> &PDIUnrelatedWL) {
+    std::vector<Instruction *> &PDIUnrelatedWL,
+    std::vector<DbgVariableRecord *> &PDVRUnrelatedWL) {
   LLVM_DEBUG(
       dbgs() << " Erasing instructions (in reverse order of appearance in "
                 "entry block) unrelated to parameter debug info from entry "
@@ -519,6 +554,16 @@ void MergeFunctions::eraseInstsUnrelatedToPDI(
     I->eraseFromParent();
     PDIUnrelatedWL.pop_back();
   }
+
+  while (!PDVRUnrelatedWL.empty()) {
+    DbgVariableRecord *DVR = PDVRUnrelatedWL.back();
+    LLVM_DEBUG(dbgs() << "  Deleting DbgVariableRecord ");
+    LLVM_DEBUG(DVR->print(dbgs()));
+    LLVM_DEBUG(dbgs() << "\n");
+    DVR->eraseFromParent();
+    PDVRUnrelatedWL.pop_back();
+  }
+
   LLVM_DEBUG(dbgs() << " } // Done erasing instructions unrelated to parameter "
                        "debug info from entry block. \n");
 }
@@ -547,75 +592,99 @@ void MergeFunctions::eraseTail(Function *G) {
 // The rest are unrelated to debug info for the parameters; fill up
 // PDIUnrelatedWL with such instructions.
 void MergeFunctions::filterInstsUnrelatedToPDI(
-    BasicBlock *GEntryBlock, std::vector<Instruction *> &PDIUnrelatedWL) {
+    BasicBlock *GEntryBlock, std::vector<Instruction *> &PDIUnrelatedWL,
+    std::vector<DbgVariableRecord *> &PDVRUnrelatedWL) {
   std::set<Instruction *> PDIRelated;
-  for (BasicBlock::iterator BI = GEntryBlock->begin(), BIE = GEntryBlock->end();
-       BI != BIE; ++BI) {
-    if (auto *DVI = dyn_cast<DbgValueInst>(&*BI)) {
-      LLVM_DEBUG(dbgs() << " Deciding: ");
-      LLVM_DEBUG(BI->print(dbgs()));
+  std::set<DbgVariableRecord *> PDVRRelated;
+
+  // Work out whether a dbg.value intrinsic or an equivalent DbgVariableRecord
+  // is a parameter to be preserved.
+  auto ExamineDbgValue = [](auto *DbgVal, auto &Container) {
+    LLVM_DEBUG(dbgs() << " Deciding: ");
+    LLVM_DEBUG(DbgVal->print(dbgs()));
+    LLVM_DEBUG(dbgs() << "\n");
+    DILocalVariable *DILocVar = DbgVal->getVariable();
+    if (DILocVar->isParameter()) {
+      LLVM_DEBUG(dbgs() << "  Include (parameter): ");
+      LLVM_DEBUG(DbgVal->print(dbgs()));
       LLVM_DEBUG(dbgs() << "\n");
-      DILocalVariable *DILocVar = DVI->getVariable();
-      if (DILocVar->isParameter()) {
-        LLVM_DEBUG(dbgs() << "  Include (parameter): ");
-        LLVM_DEBUG(BI->print(dbgs()));
-        LLVM_DEBUG(dbgs() << "\n");
-        PDIRelated.insert(&*BI);
-      } else {
-        LLVM_DEBUG(dbgs() << "  Delete (!parameter): ");
-        LLVM_DEBUG(BI->print(dbgs()));
-        LLVM_DEBUG(dbgs() << "\n");
-      }
-    } else if (auto *DDI = dyn_cast<DbgDeclareInst>(&*BI)) {
-      LLVM_DEBUG(dbgs() << " Deciding: ");
-      LLVM_DEBUG(BI->print(dbgs()));
+      Container.insert(DbgVal);
+    } else {
+      LLVM_DEBUG(dbgs() << "  Delete (!parameter): ");
+      LLVM_DEBUG(DbgVal->print(dbgs()));
       LLVM_DEBUG(dbgs() << "\n");
-      DILocalVariable *DILocVar = DDI->getVariable();
-      if (DILocVar->isParameter()) {
-        LLVM_DEBUG(dbgs() << "  Parameter: ");
-        LLVM_DEBUG(DILocVar->print(dbgs()));
-        AllocaInst *AI = dyn_cast_or_null<AllocaInst>(DDI->getAddress());
-        if (AI) {
-          LLVM_DEBUG(dbgs() << "  Processing alloca users: ");
-          LLVM_DEBUG(dbgs() << "\n");
-          for (User *U : AI->users()) {
-            if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
-              if (Value *Arg = SI->getValueOperand()) {
-                if (isa<Argument>(Arg)) {
-                  LLVM_DEBUG(dbgs() << "  Include: ");
-                  LLVM_DEBUG(AI->print(dbgs()));
-                  LLVM_DEBUG(dbgs() << "\n");
-                  PDIRelated.insert(AI);
-                  LLVM_DEBUG(dbgs() << "   Include (parameter): ");
-                  LLVM_DEBUG(SI->print(dbgs()));
-                  LLVM_DEBUG(dbgs() << "\n");
-                  PDIRelated.insert(SI);
-                  LLVM_DEBUG(dbgs() << "  Include: ");
-                  LLVM_DEBUG(BI->print(dbgs()));
-                  LLVM_DEBUG(dbgs() << "\n");
-                  PDIRelated.insert(&*BI);
-                } else {
-                  LLVM_DEBUG(dbgs() << "   Delete (!parameter): ");
-                  LLVM_DEBUG(SI->print(dbgs()));
-                  LLVM_DEBUG(dbgs() << "\n");
-                }
+    }
+  };
+
+  auto ExamineDbgDeclare = [&PDIRelated](auto *DbgDecl, auto &Container) {
+    LLVM_DEBUG(dbgs() << " Deciding: ");
+    LLVM_DEBUG(DbgDecl->print(dbgs()));
+    LLVM_DEBUG(dbgs() << "\n");
+    DILocalVariable *DILocVar = DbgDecl->getVariable();
+    if (DILocVar->isParameter()) {
+      LLVM_DEBUG(dbgs() << "  Parameter: ");
+      LLVM_DEBUG(DILocVar->print(dbgs()));
+      AllocaInst *AI = dyn_cast_or_null<AllocaInst>(DbgDecl->getAddress());
+      if (AI) {
+        LLVM_DEBUG(dbgs() << "  Processing alloca users: ");
+        LLVM_DEBUG(dbgs() << "\n");
+        for (User *U : AI->users()) {
+          if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
+            if (Value *Arg = SI->getValueOperand()) {
+              if (isa<Argument>(Arg)) {
+                LLVM_DEBUG(dbgs() << "  Include: ");
+                LLVM_DEBUG(AI->print(dbgs()));
+                LLVM_DEBUG(dbgs() << "\n");
+                PDIRelated.insert(AI);
+                LLVM_DEBUG(dbgs() << "   Include (parameter): ");
+                LLVM_DEBUG(SI->print(dbgs()));
+                LLVM_DEBUG(dbgs() << "\n");
+                PDIRelated.insert(SI);
+                LLVM_DEBUG(dbgs() << "  Include: ");
+                LLVM_DEBUG(DbgDecl->print(dbgs()));
+                LLVM_DEBUG(dbgs() << "\n");
+                Container.insert(DbgDecl);
+              } else {
+                LLVM_DEBUG(dbgs() << "   Delete (!parameter): ");
+                LLVM_DEBUG(SI->print(dbgs()));
+                LLVM_DEBUG(dbgs() << "\n");
               }
-            } else {
-              LLVM_DEBUG(dbgs() << "   Defer: ");
-              LLVM_DEBUG(U->print(dbgs()));
-              LLVM_DEBUG(dbgs() << "\n");
             }
+          } else {
+            LLVM_DEBUG(dbgs() << "   Defer: ");
+            LLVM_DEBUG(U->print(dbgs()));
+            LLVM_DEBUG(dbgs() << "\n");
           }
-        } else {
-          LLVM_DEBUG(dbgs() << "  Delete (alloca NULL): ");
-          LLVM_DEBUG(BI->print(dbgs()));
-          LLVM_DEBUG(dbgs() << "\n");
         }
       } else {
-        LLVM_DEBUG(dbgs() << "  Delete (!parameter): ");
-        LLVM_DEBUG(BI->print(dbgs()));
+        LLVM_DEBUG(dbgs() << "  Delete (alloca NULL): ");
+        LLVM_DEBUG(DbgDecl->print(dbgs()));
         LLVM_DEBUG(dbgs() << "\n");
       }
+    } else {
+      LLVM_DEBUG(dbgs() << "  Delete (!parameter): ");
+      LLVM_DEBUG(DbgDecl->print(dbgs()));
+      LLVM_DEBUG(dbgs() << "\n");
+    }
+  };
+
+  for (BasicBlock::iterator BI = GEntryBlock->begin(), BIE = GEntryBlock->end();
+       BI != BIE; ++BI) {
+    // Examine DbgVariableRecords as they happen "before" the instruction. Are
+    // they connected to parameters?
+    for (DbgVariableRecord &DVR : filterDbgVars(BI->getDbgRecordRange())) {
+      if (DVR.isDbgValue() || DVR.isDbgAssign()) {
+        ExamineDbgValue(&DVR, PDVRRelated);
+      } else {
+        assert(DVR.isDbgDeclare());
+        ExamineDbgDeclare(&DVR, PDVRRelated);
+      }
+    }
+
+    if (auto *DVI = dyn_cast<DbgValueInst>(&*BI)) {
+      ExamineDbgValue(DVI, PDIRelated);
+    } else if (auto *DDI = dyn_cast<DbgDeclareInst>(&*BI)) {
+      ExamineDbgDeclare(DDI, PDIRelated);
     } else if (BI->isTerminator() && &*BI == GEntryBlock->getTerminator()) {
       LLVM_DEBUG(dbgs() << " Will Include Terminator: ");
       LLVM_DEBUG(BI->print(dbgs()));
@@ -630,17 +699,25 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
   LLVM_DEBUG(
       dbgs()
       << " Report parameter debug info related/related instructions: {\n");
-  for (Instruction &I : *GEntryBlock) {
-    if (PDIRelated.find(&I) == PDIRelated.end()) {
+
+  auto IsPDIRelated = [](auto *Rec, auto &Container, auto &UnrelatedCont) {
+    if (Container.find(Rec) == Container.end()) {
       LLVM_DEBUG(dbgs() << "  !PDIRelated: ");
-      LLVM_DEBUG(I.print(dbgs()));
+      LLVM_DEBUG(Rec->print(dbgs()));
       LLVM_DEBUG(dbgs() << "\n");
-      PDIUnrelatedWL.push_back(&I);
+      UnrelatedCont.push_back(Rec);
     } else {
       LLVM_DEBUG(dbgs() << "   PDIRelated: ");
-      LLVM_DEBUG(I.print(dbgs()));
+      LLVM_DEBUG(Rec->print(dbgs()));
       LLVM_DEBUG(dbgs() << "\n");
     }
+  };
+
+  // Collect the set of unrelated instructions and debug records.
+  for (Instruction &I : *GEntryBlock) {
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+      IsPDIRelated(&DVR, PDVRRelated, PDVRUnrelatedWL);
+    IsPDIRelated(&I, PDIRelated, PDIUnrelatedWL);
   }
   LLVM_DEBUG(dbgs() << " }\n");
 }
@@ -662,11 +739,13 @@ static bool canCreateThunkFor(Function *F) {
   return true;
 }
 
-/// Copy metadata from one function to another.
-static void copyMetadataIfPresent(Function *From, Function *To, StringRef Key) {
-  if (MDNode *MD = From->getMetadata(Key)) {
-    To->setMetadata(Key, MD);
-  }
+/// Copy all metadata of a specific kind from one function to another.
+static void copyMetadataIfPresent(Function *From, Function *To,
+                                  StringRef Kind) {
+  SmallVector<MDNode *, 4> MDs;
+  From->getMetadata(Kind, MDs);
+  for (MDNode *MD : MDs)
+    To->addMetadata(Kind, *MD);
 }
 
 // Replace G with a simple tail call to bitcast(F). Also (unless
@@ -680,6 +759,7 @@ static void copyMetadataIfPresent(Function *From, Function *To, StringRef Key) {
 void MergeFunctions::writeThunk(Function *F, Function *G) {
   BasicBlock *GEntryBlock = nullptr;
   std::vector<Instruction *> PDIUnrelatedWL;
+  std::vector<DbgVariableRecord *> PDVRUnrelatedWL;
   BasicBlock *BB = nullptr;
   Function *NewG = nullptr;
   if (MergeFunctionsPDI) {
@@ -691,13 +771,14 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
         dbgs() << "writeThunk: (MergeFunctionsPDI) filter parameter related "
                   "debug info for "
                << G->getName() << "() {\n");
-    filterInstsUnrelatedToPDI(GEntryBlock, PDIUnrelatedWL);
+    filterInstsUnrelatedToPDI(GEntryBlock, PDIUnrelatedWL, PDVRUnrelatedWL);
     GEntryBlock->getTerminator()->eraseFromParent();
     BB = GEntryBlock;
   } else {
     NewG = Function::Create(G->getFunctionType(), G->getLinkage(),
                             G->getAddressSpace(), "", G->getParent());
     NewG->setComdat(G->getComdat());
+    NewG->IsNewDbgInfoFormat = G->IsNewDbgInfoFormat;
     BB = BasicBlock::Create(F->getContext(), "", NewG);
   }
 
@@ -715,8 +796,8 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   ReturnInst *RI = nullptr;
   bool isSwiftTailCall = F->getCallingConv() == CallingConv::SwiftTail &&
                          G->getCallingConv() == CallingConv::SwiftTail;
-  CI->setTailCallKind(isSwiftTailCall ? llvm::CallInst::TCK_MustTail
-                                      : llvm::CallInst::TCK_Tail);
+  CI->setTailCallKind(isSwiftTailCall ? CallInst::TCK_MustTail
+                                      : CallInst::TCK_Tail);
   CI->setCallingConv(F->getCallingConv());
   CI->setAttributes(F->getAttributes());
   if (H->getReturnType()->isVoidTy()) {
@@ -740,7 +821,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
                  << G->getName() << "()\n");
     }
     eraseTail(G);
-    eraseInstsUnrelatedToPDI(PDIUnrelatedWL);
+    eraseInstsUnrelatedToPDI(PDIUnrelatedWL, PDVRUnrelatedWL);
     LLVM_DEBUG(
         dbgs() << "} // End of parameter related debug info filtering for: "
                << G->getName() << "()\n");
@@ -825,6 +906,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
                                       F->getAddressSpace(), "", F->getParent());
     NewF->copyAttributesFrom(F);
     NewF->takeName(F);
+    NewF->IsNewDbgInfoFormat = F->IsNewDbgInfoFormat;
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(F, NewF, "type");
     copyMetadataIfPresent(F, NewF, "kcfi_type");
@@ -949,6 +1031,7 @@ bool MergeFunctions::insert(Function *NewFunction) {
 
   Function *DeleteF = NewFunction;
   mergeTwoFunctions(OldF.getFunc(), DeleteF);
+  this->DelToNewMap.insert({DeleteF, OldF.getFunc()});
   return true;
 }
 

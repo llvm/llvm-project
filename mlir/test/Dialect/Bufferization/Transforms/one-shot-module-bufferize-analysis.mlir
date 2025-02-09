@@ -1,9 +1,14 @@
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only" -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+
+// Try different heuristics. Not checking the result, just make sure that we do
+// not crash.
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-heuristic=bottom-up-from-terminators" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-heuristic=top-down" -split-input-file -o /dev/null
 
 // TODO: Extract op-specific test cases and move them to their respective
 // dialects.
@@ -772,7 +777,7 @@ func.func @insert_slice_chain(
 // CHECK-SAME: bufferization.access = "none"
     %arg2: tensor<62x90xf32> {bufferization.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, bufferization.writable = true})
 // CHECK-SAME: bufferization.access = "write"
-  -> tensor<62x90xf32> attributes {passthrough = [["target-cpu", "skylake-avx512"], ["prefer-vector-width", "512"]]}
+  -> tensor<62x90xf32> attributes {passthrough = [["prefer-vector-width", "512"]], target_cpu = "skylake-avx512"}
 {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
@@ -1059,7 +1064,7 @@ func.func @main_func(%A : tensor<?xf32> {bufferization.writable = true},
 func.func @to_tensor_op_not_writable(%m: memref<?xf32>, %v:  vector<5xf32>,
                                      %idx1: index, %idx2: index)
     -> vector<10xf32> {
-  %0 = bufferization.to_tensor %m restrict : memref<?xf32>
+  %0 = bufferization.to_tensor %m restrict : memref<?xf32> to tensor<?xf32>
 
   // Write to the tensor. Cannot be inplace due to tensor_load.
   //      CHECK: vector.transfer_write
@@ -1343,3 +1348,61 @@ func.func @private_func_aliasing(%t: tensor<?xf32>) -> f32 {
   %2 = tensor.extract %1[%c0] : tensor<6xf32>
   return %2 : f32
 }
+
+// -----
+
+// CHECK-LABEL: func @recursive_function
+func.func @recursive_function(%a: tensor<?xf32>, %b: tensor<?xf32>) -> (tensor<?xf32>, tensor<?xf32>) {
+  // The analysis does not support recursive function calls and is conservative
+  // around them.
+  // CHECK: call @recursive_function
+  // CHECK-SAME: {__inplace_operands_attr__ = ["false", "false"]}
+  %0:2 = call @recursive_function(%a, %b) : (tensor<?xf32>, tensor<?xf32>) -> (tensor<?xf32>, tensor<?xf32>)
+  return %0#0, %0#1 : tensor<?xf32>, tensor<?xf32>
+}
+
+// -----
+
+// CHECK-ALIAS-SETS-LABEL: func @multiple_returns(
+func.func @multiple_returns(%c: i1, %t0: tensor<5xf32>, %t1: tensor<5xf32>, %t2: tensor<5xf32>) -> tensor<5xf32> {
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  return %t0 : tensor<5xf32>
+^bb2:
+  return %t1 : tensor<5xf32>
+}
+
+//       CHECK-ALIAS-SETS: func @caller(
+//  CHECK-ALIAS-SETS-SAME:     %{{.*}}: i1, %[[t0:.*]]: tensor<5xf32> {bufferization.access = "read"}, %[[t1:.*]]: tensor<5xf32> {bufferization.access = "read"}, %[[t2:.*]]: tensor<5xf32> {bufferization.access = "none"})
+func.func @caller(%c: i1, %t0: tensor<5xf32>, %t1: tensor<5xf32>, %t2: tensor<5xf32>) {
+  // Check that alias sets are computed correctly.
+  //      CHECK-ALIAS-SETS: %[[result:.*]] = call @multiple_returns
+  // CHECK-ALIAS-SETS-SAME: {__inplace_operands_attr__ = ["none", "true", "true", "true"],
+  // CHECK-ALIAS-SETS-SAME:  __opresult_alias_set_attr__ = [{{\[}}"%[[result]]", "%[[t0]]", "%[[t1]]"]]}
+  call @multiple_returns(%c, %t0, %t1, %t2) : (i1, tensor<5xf32>, tensor<5xf32>, tensor<5xf32>) -> (tensor<5xf32>)
+  return
+}
+
+// -----
+
+// CHECK-ALIAS-SETS-LABEL: func @multiple_equivalent_returns(
+func.func @multiple_equivalent_returns(%c: i1, %t0: tensor<5xf32>, %t1: tensor<5xf32>, %t2: tensor<5xf32>) -> tensor<5xf32> {
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  return %t0 : tensor<5xf32>
+^bb2:
+  return %t0 : tensor<5xf32>
+}
+
+//       CHECK-ALIAS-SETS: func @caller(
+//  CHECK-ALIAS-SETS-SAME:     %{{.*}}: i1, %[[t0:.*]]: tensor<5xf32> {bufferization.access = "read"}, %[[t1:.*]]: tensor<5xf32> {bufferization.access = "none"}, %[[t2:.*]]: tensor<5xf32> {bufferization.access = "none"})
+func.func @caller(%c: i1, %t0: tensor<5xf32>, %t1: tensor<5xf32>, %t2: tensor<5xf32>) -> tensor<5xf32> {
+  // Check that equivalence sets are computed correctly.
+  //      CHECK-ALIAS-SETS: %[[result:.*]] = call @multiple_equivalent_returns
+  // CHECK-ALIAS-SETS-SAME: {__inplace_operands_attr__ = ["none", "true", "true", "true"],
+  // CHECK-ALIAS-SETS-SAME:  __opresult_alias_set_attr__ = [{{\[}}"%[[result]]", "%[[t0]]"]]}
+  %r = call @multiple_equivalent_returns(%c, %t0, %t1, %t2) : (i1, tensor<5xf32>, tensor<5xf32>, tensor<5xf32>) -> (tensor<5xf32>)
+  // CHECK-ALIAS-SETS-SAME: {__equivalent_func_args__ = [1], __inplace_operands_attr__ = ["true"]} %[[result]] : tensor<5xf32>
+  return %r : tensor<5xf32>
+}
+

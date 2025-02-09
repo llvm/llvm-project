@@ -11,6 +11,8 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
@@ -82,30 +84,46 @@ SBCommandReturnObject::operator bool() const {
   return true;
 }
 
+const char *SBCommandReturnObject::GetCommand() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ConstString output(ref().GetCommand());
+  return output.AsCString(/*value_if_empty*/ "");
+}
+
 const char *SBCommandReturnObject::GetOutput() {
   LLDB_INSTRUMENT_VA(this);
 
-  ConstString output(ref().GetOutputData());
+  ConstString output(ref().GetOutputString());
   return output.AsCString(/*value_if_empty*/ "");
 }
 
 const char *SBCommandReturnObject::GetError() {
   LLDB_INSTRUMENT_VA(this);
 
-  ConstString output(ref().GetErrorData());
+  ConstString output(ref().GetErrorString());
   return output.AsCString(/*value_if_empty*/ "");
+}
+
+SBStructuredData SBCommandReturnObject::GetErrorData() {
+  LLDB_INSTRUMENT_VA(this);
+
+  StructuredData::ObjectSP data(ref().GetErrorData());
+  SBStructuredData sb_data;
+  sb_data.m_impl_up->SetObjectSP(data);
+  return sb_data;
 }
 
 size_t SBCommandReturnObject::GetOutputSize() {
   LLDB_INSTRUMENT_VA(this);
 
-  return ref().GetOutputData().size();
+  return ref().GetOutputString().size();
 }
 
 size_t SBCommandReturnObject::GetErrorSize() {
   LLDB_INSTRUMENT_VA(this);
 
-  return ref().GetErrorData().size();
+  return ref().GetErrorString().size();
 }
 
 size_t SBCommandReturnObject::PutOutput(FILE *fh) {
@@ -326,10 +344,10 @@ void SBCommandReturnObject::SetError(lldb::SBError &error,
                                      const char *fallback_error_cstr) {
   LLDB_INSTRUMENT_VA(this, error, fallback_error_cstr);
 
-  if (error.IsValid())
-    ref().SetError(error.ref(), fallback_error_cstr);
+  if (error.IsValid() && !error.Fail())
+    ref().SetError(error.ref().Clone());
   else if (fallback_error_cstr)
-    ref().SetError(Status(), fallback_error_cstr);
+    ref().SetError(Status::FromErrorString(fallback_error_cstr));
 }
 
 void SBCommandReturnObject::SetError(const char *error_cstr) {

@@ -41,8 +41,8 @@ makeSetFromConstraints(unsigned ids, ArrayRef<SmallVector<int64_t, 4>> ineqs,
   return set;
 }
 
-static void dump(ArrayRef<MPInt> vec) {
-  for (const MPInt &x : vec)
+static void dump(ArrayRef<DynamicAPInt> vec) {
+  for (const DynamicAPInt &x : vec)
     llvm::errs() << x << ' ';
   llvm::errs() << '\n';
 }
@@ -60,8 +60,8 @@ static void dump(ArrayRef<MPInt> vec) {
 /// opposite of hasSample.
 static void checkSample(bool hasSample, const IntegerPolyhedron &poly,
                         TestFunction fn = TestFunction::Sample) {
-  std::optional<SmallVector<MPInt, 8>> maybeSample;
-  MaybeOptimum<SmallVector<MPInt, 8>> maybeLexMin;
+  std::optional<SmallVector<DynamicAPInt, 8>> maybeSample;
+  MaybeOptimum<SmallVector<DynamicAPInt, 8>> maybeLexMin;
   switch (fn) {
   case TestFunction::Sample:
     maybeSample = poly.findIntegerSample();
@@ -585,10 +585,12 @@ TEST(IntegerPolyhedronTest, removeRedundantConstraintsTest) {
   // y >= 128x >= 0.
   poly5.removeRedundantConstraints();
   EXPECT_EQ(poly5.getNumInequalities(), 3u);
-  SmallVector<MPInt, 8> redundantConstraint = getMPIntVec({0, 1, 0});
+  SmallVector<DynamicAPInt, 8> redundantConstraint =
+      getDynamicAPIntVec({0, 1, 0});
   for (unsigned i = 0; i < 3; ++i) {
     // Ensure that the removed constraint was the redundant constraint [3].
-    EXPECT_NE(poly5.getInequality(i), ArrayRef<MPInt>(redundantConstraint));
+    EXPECT_NE(poly5.getInequality(i),
+              ArrayRef<DynamicAPInt>(redundantConstraint));
   }
 }
 
@@ -631,7 +633,7 @@ static void checkDivisionRepresentation(
   DivisionRepr divs = poly.getLocalReprs();
 
   // Check that the `denominators` and `expectedDenominators` match.
-  EXPECT_EQ(ArrayRef<MPInt>(getMPIntVec(expectedDenominators)),
+  EXPECT_EQ(ArrayRef<DynamicAPInt>(getDynamicAPIntVec(expectedDenominators)),
             divs.getDenoms());
 
   // Check that the `dividends` and `expectedDividends` match. If the
@@ -1166,9 +1168,9 @@ TEST(IntegerPolyhedronTest, findRationalLexMin) {
 }
 
 void expectIntegerLexMin(const IntegerPolyhedron &poly, ArrayRef<int64_t> min) {
-  MaybeOptimum<SmallVector<MPInt, 8>> lexMin = poly.findIntegerLexMin();
+  MaybeOptimum<SmallVector<DynamicAPInt, 8>> lexMin = poly.findIntegerLexMin();
   ASSERT_TRUE(lexMin.isBounded());
-  EXPECT_EQ(*lexMin, getMPIntVec(min));
+  EXPECT_EQ(*lexMin, getDynamicAPIntVec(min));
 }
 
 void expectNoIntegerLexMin(OptimumKind kind, const IntegerPolyhedron &poly) {
@@ -1463,7 +1465,7 @@ TEST(IntegerPolyhedronTest, computeVolume) {
 
 bool containsPointNoLocal(const IntegerPolyhedron &poly,
                           ArrayRef<int64_t> point) {
-  return poly.containsPointNoLocal(getMPIntVec(point)).has_value();
+  return poly.containsPointNoLocal(getDynamicAPIntVec(point)).has_value();
 }
 
 TEST(IntegerPolyhedronTest, containsPointNoLocal) {

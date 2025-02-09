@@ -248,16 +248,16 @@ void __kmp_common_destroy_gtid(int gtid) {
         if (d_tn->is_vec) {
           if (d_tn->dt.dtorv != 0) {
             (void)(*d_tn->dt.dtorv)(tn->par_addr, d_tn->vec_len);
-          }
-          if (d_tn->obj_init != 0) {
-            (void)(*d_tn->dt.dtorv)(d_tn->obj_init, d_tn->vec_len);
+            if (d_tn->obj_init != 0) {
+              (void)(*d_tn->dt.dtorv)(d_tn->obj_init, d_tn->vec_len);
+            }
           }
         } else {
           if (d_tn->dt.dtor != 0) {
             (void)(*d_tn->dt.dtor)(tn->par_addr);
-          }
-          if (d_tn->obj_init != 0) {
-            (void)(*d_tn->dt.dtor)(d_tn->obj_init);
+            if (d_tn->obj_init != 0) {
+              (void)(*d_tn->dt.dtor)(d_tn->obj_init);
+            }
           }
         }
       }

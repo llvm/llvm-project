@@ -11,7 +11,7 @@
 
 #include <__config>
 #include <__functional/invoke.h>
-#include <__memory/shared_ptr.h> // __libcpp_acquire_load
+#include <__memory/shared_count.h> // __libcpp_acquire_load
 #include <__tuple/tuple_indices.h>
 #include <__tuple/tuple_size.h>
 #include <__utility/forward.h>
@@ -24,6 +24,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -150,5 +153,7 @@ inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, const _Callable& 
 #endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___MUTEX_ONCE_FLAG_H

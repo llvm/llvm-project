@@ -4,7 +4,7 @@
 // Test lldb finds the correct parent context decl for functions and class methods when icf happens.
 // RUN: %clang_cl --target=x86_64-windows-msvc -Od -Z7 -GS- -fno-addrsig -c /Fo%t.obj -- %s
 // RUN: lld-link -opt:icf -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols --dump-ast %t.exe | FileCheck %s
+// RUN: lldb-test symbols --dump-ast %t.exe | FileCheck %s
 
 struct A {
   int f1(int x) {

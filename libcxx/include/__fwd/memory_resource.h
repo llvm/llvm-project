@@ -9,12 +9,13 @@
 #ifndef _LIBCPP___FWD_MEMORY_RESOURCE_H
 #define _LIBCPP___FWD_MEMORY_RESOURCE_H
 
-#include <__availability>
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -24,5 +25,7 @@ class _LIBCPP_AVAILABILITY_PMR _LIBCPP_TEMPLATE_VIS polymorphic_allocator;
 } // namespace pmr
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___FWD_MEMORY_RESOURCE_H

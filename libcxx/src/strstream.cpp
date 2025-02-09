@@ -120,7 +120,7 @@ strstreambuf::int_type strstreambuf::overflow(int_type __c) {
     if (buf == nullptr)
       return int_type(EOF);
     if (old_size != 0) {
-      _LIBCPP_ASSERT_UNCATEGORIZED(eback(), "overflow copying from NULL");
+      _LIBCPP_ASSERT_INTERNAL(eback(), "strstreambuf::overflow reallocating but the get area is a null pointer");
       memcpy(buf, eback(), static_cast<size_t>(old_size));
     }
     ptrdiff_t ninp = gptr() - eback();

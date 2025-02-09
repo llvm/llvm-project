@@ -14,9 +14,12 @@
 #include <__algorithm/max.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_integral.h>
+#include <__type_traits/is_unsigned.h>
+#include <__vector/vector.h>
 #include <cstdint>
 #include <initializer_list>
-#include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -35,7 +38,7 @@ public:
   // constructors
   _LIBCPP_HIDE_FROM_ABI seed_seq() _NOEXCEPT {}
 #ifndef _LIBCPP_CXX03_LANG
-  template <class _Tp, __enable_if_t<is_integral<_Tp>::value>* = nullptr>
+  template <class _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI seed_seq(initializer_list<_Tp> __il) {
     __init(__il.begin(), __il.end());
   }
@@ -79,6 +82,11 @@ void seed_seq::__init(_InputIterator __first, _InputIterator __last) {
 
 template <class _RandomAccessIterator>
 void seed_seq::generate(_RandomAccessIterator __first, _RandomAccessIterator __last) {
+  using _ValueType = typename iterator_traits<_RandomAccessIterator>::value_type;
+  static_assert(is_unsigned<_ValueType>::value && sizeof(_ValueType) >= sizeof(uint32_t),
+                "[rand.util.seedseq]/7 requires the value_type of the iterator to be an unsigned "
+                "integer capable of accommodating 32-bit quantities.");
+
   if (__first != __last) {
     std::fill(__first, __last, 0x8b8b8b8b);
     const size_t __n = static_cast<size_t>(__last - __first);

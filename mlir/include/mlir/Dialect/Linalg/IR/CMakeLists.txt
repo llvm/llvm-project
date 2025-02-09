@@ -15,14 +15,12 @@ function(add_linalg_ods_yaml_gen yaml_ast_file output_file)
     MAIN_DEPENDENCY
     ${YAML_AST_SOURCE}
     DEPENDS
-    ${MLIR_LINALG_ODS_YAML_GEN_EXE}
     ${MLIR_LINALG_ODS_YAML_GEN_TARGET})
   add_custom_target(
     MLIR${output_file}YamlIncGen
     DEPENDS
-    ${MLIR_LINALG_ODS_YAML_GEN_EXE}
-    ${MLIR_LINALG_ODS_YAML_GEN_TARGET}
     ${GEN_ODS_FILE} ${GEN_CPP_FILE})
+  set_target_properties(MLIR${output_file}YamlIncGen PROPERTIES FOLDER "MLIR/Tablegenning")
   list(APPEND LLVM_TARGET_DEPENDS ${GEN_ODS_FILE})
   set(LLVM_TARGET_DEPENDS ${LLVM_TARGET_DEPENDS} PARENT_SCOPE)
 endfunction()
@@ -40,6 +38,7 @@ add_custom_target(LinalgOdsGen
   DEPENDS
   MLIRLinalgNamedStructuredOpsYamlIncGen
 )
+set_target_properties(LinalgOdsGen PROPERTIES FOLDER "MLIR/Tablegenning")
 add_dependencies(mlir-headers LinalgOdsGen)
 
 add_mlir_dialect(LinalgOps linalg)

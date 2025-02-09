@@ -10,7 +10,6 @@
 #include "MCTargetDesc/LanaiMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
-#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -55,13 +54,6 @@ public:
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
-
-  // No instruction requires relaxation
-  bool fixupNeedsRelaxation(const MCFixup & /*Fixup*/, uint64_t /*Value*/,
-                            const MCRelaxableFragment * /*DF*/,
-                            const MCAsmLayout & /*Layout*/) const override {
-    return false;
-  }
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 

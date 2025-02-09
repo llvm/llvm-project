@@ -8,7 +8,10 @@
 
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -20,7 +23,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
@@ -67,6 +69,11 @@ void ControlFlowDialect::initialize() {
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.cpp.inc"
       >();
   addInterfaces<ControlFlowInlinerInterface>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, ControlFlowDialect>();
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface, BranchOp,
+                            CondBranchOp>();
+  declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
+                           CondBranchOp>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -80,6 +87,13 @@ LogicalResult AssertOp::canonicalize(AssertOp op, PatternRewriter &rewriter) {
     return success();
   }
   return failure();
+}
+
+// This side effect models "program termination". 
+void AssertOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Write::get());
 }
 
 //===----------------------------------------------------------------------===//
@@ -401,8 +415,8 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
             constantTrue = rewriter.create<arith::ConstantOp>(
                 condbr.getLoc(), ty, rewriter.getBoolAttr(true));
 
-          rewriter.updateRootInPlace(use.getOwner(),
-                                     [&] { use.set(constantTrue); });
+          rewriter.modifyOpInPlace(use.getOwner(),
+                                   [&] { use.set(constantTrue); });
         }
       }
     }
@@ -416,8 +430,8 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
             constantFalse = rewriter.create<arith::ConstantOp>(
                 condbr.getLoc(), ty, rewriter.getBoolAttr(false));
 
-          rewriter.updateRootInPlace(use.getOwner(),
-                                     [&] { use.set(constantFalse); });
+          rewriter.modifyOpInPlace(use.getOwner(),
+                                   [&] { use.set(constantFalse); });
         }
       }
     }
@@ -514,7 +528,7 @@ static ParseResult parseSwitchOpCases(
     int64_t value = 0;
     if (failed(parser.parseInteger(value)))
       return failure();
-    values.push_back(APInt(bitWidth, value));
+    values.push_back(APInt(bitWidth, value, /*isSigned=*/true));
 
     Block *destination;
     SmallVector<OpAsmParser::UnresolvedOperand> operands;
@@ -523,8 +537,8 @@ static ParseResult parseSwitchOpCases(
         failed(parser.parseSuccessor(destination)))
       return failure();
     if (succeeded(parser.parseOptionalLParen())) {
-      if (failed(parser.parseOperandList(operands, OpAsmParser::Delimiter::None,
-                                         /*allowResultNumber=*/false)) ||
+      if (failed(parser.parseOperandList(operands,
+                                         OpAsmParser::Delimiter::None)) ||
           failed(parser.parseColonTypeList(operandTypes)) ||
           failed(parser.parseRParen()))
         return failure();

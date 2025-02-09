@@ -55,5 +55,6 @@ static_library("misc") {
     "UnusedParametersCheck.cpp",
     "UnusedUsingDeclsCheck.cpp",
     "UseAnonymousNamespaceCheck.cpp",
+    "UseInternalLinkageCheck.cpp",
   ]
 }

@@ -24,10 +24,11 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -66,11 +67,10 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   CodeEmitter.reset(TM.getTarget().createMCCodeEmitter(
       *Subtarget->getInstrInfo(), MF.getContext()));
 
-  EmitFPOData =
-      Subtarget->isTargetWin32() && MF.getMMI().getModule()->getCodeViewFlag();
+  const Module *M = MF.getFunction().getParent();
+  EmitFPOData = Subtarget->isTargetWin32() && M->getCodeViewFlag();
 
-  IndCSPrefix =
-      MF.getMMI().getModule()->getModuleFlag("indirect_branch_cs_prefix");
+  IndCSPrefix = M->getModuleFlag("indirect_branch_cs_prefix");
 
   SetupMachineFunction(MF);
 
@@ -181,8 +181,29 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   // Embed the type hash in the X86::MOV32ri instruction to avoid special
   // casing object file parsers.
   EmitKCFITypePadding(MF);
+  unsigned DestReg = X86::EAX;
+
+  if (F.getParent()->getModuleFlag("kcfi-arity")) {
+    // The ArityToRegMap assumes the 64-bit Linux kernel ABI
+    [[maybe_unused]] const auto &Triple = MF.getTarget().getTargetTriple();
+    assert(Triple.isArch64Bit() && Triple.isOSLinux());
+
+    // Determine the function's arity (i.e., the number of arguments) at the ABI
+    // level by counting the number of parameters that are passed
+    // as registers, such as pointers and 64-bit (or smaller) integers. The
+    // Linux x86-64 ABI allows up to 6 parameters to be passed in GPRs.
+    // Additional parameters or parameters larger than 64 bits may be passed on
+    // the stack, in which case the arity is denoted as 7.
+    const unsigned ArityToRegMap[8] = {X86::EAX, X86::ECX, X86::EDX, X86::EBX,
+                                       X86::ESP, X86::EBP, X86::ESI, X86::EDI};
+    int Arity = MF.getInfo<X86MachineFunctionInfo>()->getArgumentStackSize() > 0
+                    ? 7
+                    : MF.getRegInfo().liveins().size();
+    DestReg = ArityToRegMap[Arity];
+  }
+
   EmitAndCountInstruction(MCInstBuilder(X86::MOV32ri)
-                              .addReg(X86::EAX)
+                              .addReg(DestReg)
                               .addImm(MaskKCFIType(Type->getZExtValue())));
 
   if (MAI->hasDotTypeDotSizeDirective()) {
@@ -774,6 +795,14 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       PrintOperand(MI, OpNo, O);
       return false;
 
+    case 'p': {
+      const MachineOperand &MO = MI->getOperand(OpNo);
+      if (MO.getType() != MachineOperand::MO_GlobalAddress)
+        return true;
+      PrintSymbolOperand(MO, O);
+      return false;
+    }
+
     case 'P': // This is the operand of a call, treat specially.
       PrintPCRelImm(MI, OpNo, O);
       return false;
@@ -869,7 +898,6 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       OutStreamer->emitInt32(FeatureFlagsAnd);            // data
       emitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
 
-      OutStreamer->endSection(Nt);
       OutStreamer->switchSection(Cur);
     }
   }
@@ -969,6 +997,33 @@ static void emitNonLazyStubs(MachineModuleInfo *MMI, MCStreamer &OutStreamer) {
   }
 }
 
+/// True if this module is being built for windows/msvc, and uses floating
+/// point. This is used to emit an undefined reference to _fltused. This is
+/// needed in Windows kernel or driver contexts to find and prevent code from
+/// modifying non-GPR registers.
+///
+/// TODO: It would be better if this was computed from MIR by looking for
+/// selected floating-point instructions.
+static bool usesMSVCFloatingPoint(const Triple &TT, const Module &M) {
+  // Only needed for MSVC
+  if (!TT.isWindowsMSVCEnvironment())
+    return false;
+
+  for (const Function &F : M) {
+    for (const Instruction &I : instructions(F)) {
+      if (I.getType()->isFPOrFPVectorTy())
+        return true;
+
+      for (const auto &Op : I.operands()) {
+        if (Op->getType()->isFPOrFPVectorTy())
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
@@ -987,7 +1042,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
     // safe to set.
     OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
   } else if (TT.isOSBinFormatCOFF()) {
-    if (MMI->usesMSVCFloatingPoint()) {
+    if (usesMSVCFloatingPoint(TT, M)) {
       // In Windows' libcmt.lib, there is a file which is linked in only if the
       // symbol _fltused is referenced. Linking this in causes some
       // side-effects:
@@ -1033,7 +1088,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
 //===----------------------------------------------------------------------===//
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86AsmPrinter() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86AsmPrinter() {
   RegisterAsmPrinter<X86AsmPrinter> X(getTheX86_32Target());
   RegisterAsmPrinter<X86AsmPrinter> Y(getTheX86_64Target());
 }

@@ -1,5 +1,5 @@
-# Check that BOLT generates .debug_aranges section for an input
-# where it was removed when .gdb_index was generated.
+## Check that BOLT generates .debug_aranges section for an input
+## where it was removed when .gdb_index was generated.
 
 REQUIRES: system-linux
 

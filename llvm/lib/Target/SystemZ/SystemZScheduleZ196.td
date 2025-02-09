@@ -469,9 +469,9 @@ def : InstRW<[WLat5LSU, WLat5LSU, FXU4, LSU, GroupAlone2],
 def : InstRW<[WLat2LSU, FXU, LSU, NormalGr], (instregex "RLL(G)?$")>;
 
 // Rotate and insert
-def : InstRW<[WLat1, FXU, NormalGr], (instregex "RISBG(32)?$")>;
 def : InstRW<[WLat1, FXU, NormalGr], (instregex "RISBH(G|H|L)$")>;
 def : InstRW<[WLat1, FXU, NormalGr], (instregex "RISBL(G|H|L)$")>;
+def : InstRW<[WLat1, FXU, NormalGr], (instregex "RISBG(32)?(Z)?$")>;
 def : InstRW<[WLat1, FXU, NormalGr], (instregex "RISBMux$")>;
 
 // Rotate and Select
@@ -716,8 +716,7 @@ def : InstRW<[WLat2, FXU2, GroupAlone2], (instregex "LXR$")>;
 
 // Load and Test
 def : InstRW<[WLat9, WLat9, FPU, NormalGr], (instregex "LT(E|D)BR$")>;
-def : InstRW<[WLat9, FPU, NormalGr], (instregex "LT(E|D)BRCompare$")>;
-def : InstRW<[WLat10, WLat10, FPU4, GroupAlone], (instregex "LTXBR(Compare)?$")>;
+def : InstRW<[WLat10, WLat10, FPU4, GroupAlone], (instregex "LTXBR$")>;
 
 // Copy sign
 def : InstRW<[WLat5, FXU2, GroupAlone], (instregex "CPSDR(d|s)(d|s)$")>;
@@ -1236,5 +1235,11 @@ def : InstRW<[WLat30, MCD], (instregex "STC(PS|RW)$")>;
 def : InstRW<[WLat30, MCD], (instregex "TPI$")>;
 def : InstRW<[WLat30, MCD], (instregex "SAL$")>;
 
+//===----------------------------------------------------------------------===//
+// NOPs
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[WLat1, LSU, EndGroup], (instregex "NOP(R)?(Opt)?$")>;
+def : InstRW<[WLat1, LSU, EndGroup], (instregex "J(G)?NOP$")>;
 }
 

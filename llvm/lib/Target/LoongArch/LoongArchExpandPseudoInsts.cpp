@@ -13,7 +13,7 @@
 
 #include "LoongArch.h"
 #include "LoongArchInstrInfo.h"
-#include "LoongArchTargetMachine.h"
+#include "LoongArchMachineFunctionInfo.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -26,6 +26,8 @@
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
+
+extern cl::opt<bool> LArchAnnotateTableJump;
 
 #define LOONGARCH_PRERA_EXPAND_PSEUDO_NAME                                     \
   "LoongArch Pre-RA pseudo instruction expansion pass"
@@ -95,10 +97,16 @@ private:
                               MachineBasicBlock::iterator MBBI,
                               MachineBasicBlock::iterator &NextMBBI,
                               bool Large = false);
+  bool expandLoadAddressTLSDesc(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                MachineBasicBlock::iterator &NextMBBI,
+                                bool Large = false);
   bool expandFunctionCALL(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI,
                           MachineBasicBlock::iterator &NextMBBI,
                           bool IsTailCall);
+  void annotateTableJump(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI);
 };
 
 char LoongArchPreRAExpandPseudo::ID = 0;
@@ -151,10 +159,22 @@ bool LoongArchPreRAExpandPseudo::expandMI(
     return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI);
   case LoongArch::PseudoLA_TLS_GD_LARGE:
     return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI, /*Large=*/true);
+  case LoongArch::PseudoLA_TLS_DESC:
+    return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI);
+  case LoongArch::PseudoLA_TLS_DESC_LARGE:
+    return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI, /*Large=*/true);
   case LoongArch::PseudoCALL:
+  case LoongArch::PseudoCALL_LARGE:
     return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false);
   case LoongArch::PseudoTAIL:
+  case LoongArch::PseudoTAIL_LARGE:
     return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
+  case LoongArch::PseudoBRIND:
+    // If the PseudoBRIND is used to table jump, then emit a label to annotate
+    // the `jr` instruction, and save the instructions.
+    if (LArchAnnotateTableJump)
+      annotateTableJump(MBB, MBBI);
+    break;
   }
   return false;
 }
@@ -167,18 +187,21 @@ bool LoongArchPreRAExpandPseudo::expandPcalau12iInstPair(
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
 
+  const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
+  bool EnableRelax = STI.hasFeature(LoongArch::FeatureRelax);
+
   Register DestReg = MI.getOperand(0).getReg();
   Register ScratchReg =
       MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
   MachineOperand &Symbol = MI.getOperand(1);
 
   BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), ScratchReg)
-      .addDisp(Symbol, 0, FlagsHi);
+      .addDisp(Symbol, 0, LoongArchII::encodeFlags(FlagsHi, EnableRelax));
 
   MachineInstr *SecondMI =
       BuildMI(MBB, MBBI, DL, TII->get(SecondOpcode), DestReg)
           .addReg(ScratchReg)
-          .addDisp(Symbol, 0, FlagsLo);
+          .addDisp(Symbol, 0, LoongArchII::encodeFlags(FlagsLo, EnableRelax));
 
   if (MI.hasOneMemOperand())
     SecondMI->addMemOperand(*MF, *MI.memoperands_begin());
@@ -332,11 +355,13 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLE(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) {
   // Code Sequence:
+  // lu12i.w $rd, %le_hi20_r(sym)
+  // add.w/d $rd, $rd, $tp, %le_add_r(sym)
+  // addi.w/d $rd, $rd, %le_lo12_r(sym)
+  //
+  // Code Sequence while using the large code model:
   // lu12i.w $rd, %le_hi20(sym)
   // ori $rd, $rd, %le_lo12(sym)
-  //
-  // And additionally if generating code using the large code model:
-  //
   // lu32i.d $rd, %le64_lo20(sym)
   // lu52i.d $rd, $rd, %le64_hi12(sym)
   MachineFunction *MF = MBB.getParent();
@@ -346,20 +371,35 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLE(
   bool Large = MF->getTarget().getCodeModel() == CodeModel::Large;
   Register DestReg = MI.getOperand(0).getReg();
   Register Parts01 =
-      Large ? MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass)
-            : DestReg;
+      MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
   Register Part1 =
       MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
   MachineOperand &Symbol = MI.getOperand(1);
 
-  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU12I_W), Part1)
-      .addDisp(Symbol, 0, LoongArchII::MO_LE_HI);
+  if (!Large) {
+    BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU12I_W), Part1)
+        .addDisp(Symbol, 0, LoongArchII::MO_LE_HI_R);
 
-  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::ORI), Parts01)
-      .addReg(Part1, RegState::Kill)
-      .addDisp(Symbol, 0, LoongArchII::MO_LE_LO);
+    const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
+    unsigned AddOp = STI.is64Bit() ? LoongArch::PseudoAddTPRel_D
+                                   : LoongArch::PseudoAddTPRel_W;
+    BuildMI(MBB, MBBI, DL, TII->get(AddOp), Parts01)
+        .addReg(Part1, RegState::Kill)
+        .addReg(LoongArch::R2)
+        .addDisp(Symbol, 0, LoongArchII::MO_LE_ADD_R);
 
-  if (Large) {
+    unsigned AddiOp = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+    BuildMI(MBB, MBBI, DL, TII->get(AddiOp), DestReg)
+        .addReg(Parts01, RegState::Kill)
+        .addDisp(Symbol, 0, LoongArchII::MO_LE_LO_R);
+  } else {
+    BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU12I_W), Part1)
+        .addDisp(Symbol, 0, LoongArchII::MO_LE_HI);
+
+    BuildMI(MBB, MBBI, DL, TII->get(LoongArch::ORI), Parts01)
+        .addReg(Part1, RegState::Kill)
+        .addDisp(Symbol, 0, LoongArchII::MO_LE_LO);
+
     Register Parts012 =
         MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
 
@@ -433,6 +473,92 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSGD(
                                  SecondOpcode, LoongArchII::MO_GOT_PC_LO);
 }
 
+bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSDesc(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI, bool Large) {
+  MachineFunction *MF = MBB.getParent();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
+  unsigned ADD = STI.is64Bit() ? LoongArch::ADD_D : LoongArch::ADD_W;
+  unsigned ADDI = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+  unsigned LD = STI.is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
+  bool EnableRelax = STI.hasFeature(LoongArch::FeatureRelax);
+
+  Register DestReg = MI.getOperand(0).getReg();
+  Register Tmp1Reg =
+      MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
+  MachineOperand &Symbol = MI.getOperand(Large ? 2 : 1);
+
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), Tmp1Reg)
+      .addDisp(Symbol, 0,
+               LoongArchII::encodeFlags(LoongArchII::MO_DESC_PC_HI,
+                                        EnableRelax && !Large));
+
+  if (Large) {
+    // Code Sequence:
+    //
+    // pcalau12i  $a0, %desc_pc_hi20(sym)
+    // addi.d     $a1, $zero, %desc_pc_lo12(sym)
+    // lu32i.d    $a1, %desc64_pc_lo20(sym)
+    // lu52i.d    $a1, $a1, %desc64_pc_hi12(sym)
+    // add.d      $a0, $a0, $a1
+    // ld.d       $ra, $a0, %desc_ld(sym)
+    // jirl       $ra, $ra, %desc_call(sym)
+    // add.d      $dst, $a0, $tp
+    assert(MBB.getParent()->getSubtarget<LoongArchSubtarget>().is64Bit() &&
+           "Large code model requires LA64");
+    Register Tmp2Reg =
+        MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
+    Register Tmp3Reg =
+        MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
+    Register Tmp4Reg =
+        MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
+    BuildMI(MBB, MBBI, DL, TII->get(LoongArch::ADDI_D), Tmp2Reg)
+        .addReg(LoongArch::R0)
+        .addDisp(Symbol, 0, LoongArchII::MO_DESC_PC_LO);
+    BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU32I_D), Tmp3Reg)
+        .addReg(Tmp2Reg, RegState::Kill)
+        .addDisp(Symbol, 0, LoongArchII::MO_DESC64_PC_LO);
+    BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU52I_D), Tmp4Reg)
+        .addReg(Tmp3Reg)
+        .addDisp(Symbol, 0, LoongArchII::MO_DESC64_PC_HI);
+    BuildMI(MBB, MBBI, DL, TII->get(LoongArch::ADD_D), LoongArch::R4)
+        .addReg(Tmp1Reg)
+        .addReg(Tmp4Reg);
+  } else {
+    // Code Sequence:
+    // pcalau12i $a0, %desc_pc_hi20(sym)
+    // addi.w/d  $a0, $a0, %desc_pc_lo12(sym)
+    // ld.w/d    $ra, $a0, %desc_ld(sym)
+    // jirl      $ra, $ra, %desc_call(sym)
+    // add.w/d   $dst, $a0, $tp
+    BuildMI(MBB, MBBI, DL, TII->get(ADDI), LoongArch::R4)
+        .addReg(Tmp1Reg)
+        .addDisp(
+            Symbol, 0,
+            LoongArchII::encodeFlags(LoongArchII::MO_DESC_PC_LO, EnableRelax));
+  }
+
+  BuildMI(MBB, MBBI, DL, TII->get(LD), LoongArch::R1)
+      .addReg(LoongArch::R4)
+      .addDisp(Symbol, 0,
+               LoongArchII::encodeFlags(LoongArchII::MO_DESC_LD,
+                                        EnableRelax && !Large));
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PseudoDESC_CALL), LoongArch::R1)
+      .addReg(LoongArch::R1)
+      .addDisp(Symbol, 0,
+               LoongArchII::encodeFlags(LoongArchII::MO_DESC_CALL,
+                                        EnableRelax && !Large));
+  BuildMI(MBB, MBBI, DL, TII->get(ADD), DestReg)
+      .addReg(LoongArch::R4)
+      .addReg(LoongArch::R2);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI, bool IsTailCall) {
@@ -445,7 +571,7 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
 
   switch (MF->getTarget().getCodeModel()) {
   default:
-    report_fatal_error("Unsupported code model");
+    report_fatal_error("Unexpected code model");
     break;
   case CodeModel::Small: {
     // CALL:
@@ -454,34 +580,6 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
     // b func
     Opcode = IsTailCall ? LoongArch::PseudoB_TAIL : LoongArch::BL;
     CALL = BuildMI(MBB, MBBI, DL, TII->get(Opcode)).add(Func);
-    break;
-  }
-  case CodeModel::Medium: {
-    // CALL:
-    // pcalau12i  $ra, %pc_hi20(func)
-    // jirl       $ra, $ra, %pc_lo12(func)
-    // TAIL:
-    // pcalau12i  $scratch, %pc_hi20(func)
-    // jirl       $r0, $scratch, %pc_lo12(func)
-    Opcode =
-        IsTailCall ? LoongArch::PseudoJIRL_TAIL : LoongArch::PseudoJIRL_CALL;
-    Register ScratchReg =
-        IsTailCall
-            ? MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass)
-            : LoongArch::R1;
-    MachineInstrBuilder MIB =
-        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), ScratchReg);
-    CALL = BuildMI(MBB, MBBI, DL, TII->get(Opcode)).addReg(ScratchReg);
-    if (Func.isSymbol()) {
-      const char *FnName = Func.getSymbolName();
-      MIB.addExternalSymbol(FnName, LoongArchII::MO_PCREL_HI);
-      CALL.addExternalSymbol(FnName, LoongArchII::MO_PCREL_LO);
-      break;
-    }
-    assert(Func.isGlobal() && "Expected a GlobalValue at this time");
-    const GlobalValue *GV = Func.getGlobal();
-    MIB.addGlobalAddress(GV, 0, LoongArchII::MO_PCREL_HI);
-    CALL.addGlobalAddress(GV, 0, LoongArchII::MO_PCREL_LO);
     break;
   }
   case CodeModel::Large: {
@@ -495,7 +593,7 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
             ? MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass)
             : LoongArch::R1;
 
-    bool UseGOT = Func.isGlobal() && !Func.getGlobal()->isDSOLocal();
+    bool UseGOT = Func.getTargetFlags() == LoongArchII::MO_CALL_PLT;
     unsigned MO = UseGOT ? LoongArchII::MO_GOT_PC_HI : LoongArchII::MO_PCREL_LO;
     unsigned LAOpcode = UseGOT ? LoongArch::LDX_D : LoongArch::ADD_D;
     expandLargeAddressLoad(MBB, MBBI, NextMBBI, LAOpcode, MO, Func, AddrReg,
@@ -513,6 +611,44 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
 
   MI.eraseFromParent();
   return true;
+}
+
+void LoongArchPreRAExpandPseudo::annotateTableJump(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  MachineFunction *MF = MBB.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+
+  bool IsFound = false;
+
+  std::function<void(MachineInstr *, int)> FindJTIMI = [&](MachineInstr *MInst,
+                                                           int FindDepth) {
+    if (FindDepth < 0)
+      return;
+    for (auto &MO : MInst->all_uses()) {
+      if (IsFound)
+        return;
+      Register Reg = MO.getReg();
+      if (!Reg.isVirtual())
+        continue;
+      MachineInstr *DefMI = MRI.getVRegDef(Reg);
+      if (!DefMI)
+        continue;
+      for (unsigned Idx = 0; Idx < DefMI->getNumOperands(); ++Idx) {
+        MachineOperand &MO = DefMI->getOperand(Idx);
+        if (MO.isJTI()) {
+          MBBI->setPreInstrSymbol(
+              *MF, MF->getContext().createNamedTempSymbol("jrtb_"));
+          MF->getInfo<LoongArchMachineFunctionInfo>()->setJumpInfo(&*MBBI, &MO);
+          IsFound = true;
+          return;
+        }
+      }
+      FindJTIMI(DefMI, --FindDepth);
+    }
+  };
+
+  // FindDepth = 3, probably sufficient.
+  FindJTIMI(&*MBBI, /*FindDepth=*/3);
 }
 
 class LoongArchExpandPseudo : public MachineFunctionPass {
@@ -536,6 +672,10 @@ private:
                 MachineBasicBlock::iterator &NextMBBI);
   bool expandCopyCFR(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      MachineBasicBlock::iterator &NextMBBI);
+  bool expandFunctionCALL(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          MachineBasicBlock::iterator &NextMBBI,
+                          bool IsTailCall);
 };
 
 char LoongArchExpandPseudo::ID = 0;
@@ -570,6 +710,10 @@ bool LoongArchExpandPseudo::expandMI(MachineBasicBlock &MBB,
   switch (MBBI->getOpcode()) {
   case LoongArch::PseudoCopyCFR:
     return expandCopyCFR(MBB, MBBI, NextMBBI);
+  case LoongArch::PseudoCALL_MEDIUM:
+    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false);
+  case LoongArch::PseudoTAIL_MEDIUM:
+    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
   }
 
   return false;
@@ -625,6 +769,54 @@ bool LoongArchExpandPseudo::expandCopyCFR(
   computeAndAddLiveIns(LiveRegs, *FalseBB);
   computeAndAddLiveIns(LiveRegs, *SinkBB);
 
+  return true;
+}
+
+bool LoongArchExpandPseudo::expandFunctionCALL(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI, bool IsTailCall) {
+  MachineFunction *MF = MBB.getParent();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  const MachineOperand &Func = MI.getOperand(0);
+  MachineInstrBuilder CALL;
+  unsigned Opcode;
+
+  switch (MF->getTarget().getCodeModel()) {
+  default:
+    report_fatal_error("Unexpected code model");
+    break;
+  case CodeModel::Medium: {
+    // CALL:
+    // pcaddu18i $ra, %call36(func)
+    // jirl      $ra, $ra, 0
+    // TAIL:
+    // pcaddu18i $t8, %call36(func)
+    // jirl      $r0, $t8, 0
+    Opcode =
+        IsTailCall ? LoongArch::PseudoJIRL_TAIL : LoongArch::PseudoJIRL_CALL;
+    Register ScratchReg = IsTailCall ? LoongArch::R20 : LoongArch::R1;
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCADDU18I), ScratchReg);
+
+    CALL =
+        BuildMI(MBB, MBBI, DL, TII->get(Opcode)).addReg(ScratchReg).addImm(0);
+
+    if (Func.isSymbol())
+      MIB.addExternalSymbol(Func.getSymbolName(), LoongArchII::MO_CALL36);
+    else
+      MIB.addDisp(Func, 0, LoongArchII::MO_CALL36);
+    break;
+  }
+  }
+
+  // Transfer implicit operands.
+  CALL.copyImplicitOps(MI);
+
+  // Transfer MI flags.
+  CALL.setMIFlags(MI.getFlags());
+
+  MI.eraseFromParent();
   return true;
 }
 

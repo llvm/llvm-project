@@ -9,6 +9,8 @@
 #ifndef LLDB_LLDB_PRIVATE_ENUMERATIONS_H
 #define LLDB_LLDB_PRIVATE_ENUMERATIONS_H
 
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/raw_ostream.h"
@@ -63,6 +65,7 @@ enum ArchitectureType {
   eArchTypeMachO,
   eArchTypeELF,
   eArchTypeCOFF,
+  eArchTypeXCOFF,
   kNumArchTypes
 };
 
@@ -107,7 +110,12 @@ enum ArgumentRepetitionType {
                               // optional
 };
 
-enum SortOrder { eSortOrderNone, eSortOrderByAddress, eSortOrderByName };
+enum SortOrder {
+  eSortOrderNone,
+  eSortOrderByAddress,
+  eSortOrderByName,
+  eSortOrderBySize
+};
 
 // LazyBool is for boolean values that need to be calculated lazily. Values
 // start off set to eLazyBoolCalculate, and then they can be calculated once
@@ -191,8 +199,7 @@ enum class CompilerContextKind : uint16_t {
   TranslationUnit = 1,
   Module = 1 << 1,
   Namespace = 1 << 2,
-  Class = 1 << 3,
-  Struct = 1 << 4,
+  ClassOrStruct = 1 << 3,
   Union = 1 << 5,
   Function = 1 << 6,
   Variable = 1 << 7,
@@ -201,13 +208,13 @@ enum class CompilerContextKind : uint16_t {
   Builtin = 1 << 10,
 
   Any = 1 << 15,
-  /// Match 0..n nested modules.
-  AnyModule = Any | Module,
   /// Match any type.
-  AnyType = Any | Class | Struct | Union | Enum | Typedef | Builtin,
+  AnyType = Any | ClassOrStruct | Union | Enum | Typedef | Builtin,
   /// Math any declaration context.
-  AnyDeclContext = Any | Namespace | Class | Struct | Union | Enum | Function
+  AnyDeclContext = Any | Namespace | ClassOrStruct | Union | Enum | Function,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/AnyDeclContext),
 };
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 // Enumerations that can be used to specify the kind of metric we're looking at
 // when collecting stats.
@@ -232,6 +239,13 @@ enum LoadDependentFiles {
   eLoadDependentsDefault,
   eLoadDependentsYes,
   eLoadDependentsNo,
+};
+
+/// Useful for callbacks whose return type indicates
+/// whether to continue iteration or short-circuit.
+enum class IterationAction {
+  Continue = 0,
+  Stop,
 };
 
 inline std::string GetStatDescription(lldb_private::StatisticKind K) {
@@ -281,5 +295,31 @@ enum InterruptionControl : bool {
   AllowInterruption = true,
   DoNotAllowInterruption = false,
 };
+
+/// The hardware and native stub capabilities for a given target,
+/// for translating a user's watchpoint request into hardware
+/// capable watchpoint resources.
+FLAGS_ENUM(WatchpointHardwareFeature){
+    /// lldb will fall back to a default that assumes the target
+    /// can watch up to pointer-size power-of-2 regions, aligned to
+    /// power-of-2.
+    eWatchpointHardwareFeatureUnknown = (1u << 0),
+
+    /// Intel systems can watch 1, 2, 4, or 8 bytes (in 64-bit targets),
+    /// aligned naturally.
+    eWatchpointHardwareX86 = (1u << 1),
+
+    /// ARM systems with Byte Address Select watchpoints
+    /// can watch any consecutive series of bytes up to the
+    /// size of a pointer (4 or 8 bytes), at a pointer-size
+    /// alignment.
+    eWatchpointHardwareArmBAS = (1u << 2),
+
+    /// ARM systems with MASK watchpoints can watch any power-of-2
+    /// sized region from 8 bytes to 2 gigabytes, aligned to that
+    /// same power-of-2 alignment.
+    eWatchpointHardwareArmMASK = (1u << 3),
+};
+LLDB_MARK_AS_BITMASK_ENUM(WatchpointHardwareFeature)
 
 #endif // LLDB_LLDB_PRIVATE_ENUMERATIONS_H

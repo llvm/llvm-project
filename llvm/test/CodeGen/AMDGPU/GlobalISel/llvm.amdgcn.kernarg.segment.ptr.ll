@@ -4,9 +4,9 @@
 
 ; ALL-LABEL: {{^}}test:
 ; OS-MESA3D: enable_sgpr_kernarg_segment_ptr = 1
-; CO-V4: s_load_dword s{{[0-9]+}}, s[4:5], 0xa
+; CO-V4: s_load_dword s{{[0-9]+}}, s[8:9], 0xa
 
-; OS-UNKNOWN: s_load_dword s{{[0-9]+}}, s[0:1], 0xa
+; OS-UNKNOWN: s_load_dword s{{[0-9]+}}, s[4:5], 0xa
 
 ; HSA: .amdhsa_kernarg_size 8
 ; HSA: .amdhsa_user_sgpr_kernarg_segment_ptr 1
@@ -81,7 +81,7 @@ define amdgpu_kernel void @opencl_test_implicit_alignment(ptr addrspace(1) %out,
 
 ; HSA: .amdhsa_kernarg_size 0
 ; HSA: .amdhsa_user_sgpr_kernarg_segment_ptr 0
-define amdgpu_kernel void @test_no_kernargs() #1 {
+define amdgpu_kernel void @test_no_kernargs() #4 {
   %kernarg.segment.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
   %gep = getelementptr i32, ptr addrspace(4) %kernarg.segment.ptr, i64 10
   %value = load i32, ptr addrspace(4) %gep
@@ -126,6 +126,7 @@ attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind "amdgpu-implicitarg-num-bytes"="0" }
 attributes #2 = { nounwind "amdgpu-implicitarg-num-bytes"="48" }
 attributes #3 = { nounwind "amdgpu-implicitarg-num-bytes"="38" }
+attributes #4 = { nounwind "amdgpu-implicitarg-num-bytes"="0" "amdgpu-no-implicitarg-ptr" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

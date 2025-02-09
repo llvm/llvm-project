@@ -96,7 +96,7 @@ int main(int, char**)
     int i = 67;
     char c = 'e';
     std::shared_ptr<A> p = std::make_shared<A>(i, c);
-    assert(globalMemCounter.checkOutstandingNewEq(nc+1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(nc+1));
     assert(A::count == 1);
     assert(p->get_int() == 67);
     assert(p->get_char() == 'e');
@@ -116,7 +116,7 @@ int main(int, char**)
     {
     char c = 'e';
     std::shared_ptr<A> p = std::make_shared<A>(67, c);
-    assert(globalMemCounter.checkOutstandingNewEq(nc+1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(nc+1));
     assert(A::count == 1);
     assert(p->get_int() == 67);
     assert(p->get_char() == 'e');

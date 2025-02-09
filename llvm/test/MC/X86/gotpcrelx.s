@@ -1,6 +1,6 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 # RUN: llvm-readobj -r %t.o | FileCheck %s --check-prefixes=CHECK,COMMON
-# RUN: llvm-mc -filetype=obj -triple=x86_64 -relax-relocations=false %s -o %t1.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 -x86-relax-relocations=false %s -o %t1.o
 # RUN: llvm-readobj -r %t1.o | FileCheck %s --check-prefixes=NORELAX,COMMON
 
 # COMMON:     Relocations [
@@ -37,6 +37,16 @@
 # CHECK-NEXT:     R_X86_64_REX_GOTPCRELX sbb
 # CHECK-NEXT:     R_X86_64_REX_GOTPCRELX sub
 # CHECK-NEXT:     R_X86_64_REX_GOTPCRELX xor
+# CHECK-NEXT:     R_X86_64_CODE_4_GOTPCRELX mov
+# CHECK-NEXT:     R_X86_64_CODE_4_GOTPCRELX test
+# CHECK-NEXT:     R_X86_64_CODE_4_GOTPCRELX adc
+# CHECK-NEXT:     R_X86_64_CODE_4_GOTPCRELX add
+# CHECK-NEXT:     R_X86_64_CODE_4_GOTPCRELX and
+# CHECK-NEXT:     R_X86_64_CODE_4_GOTPCRELX cmp
+# CHECK-NEXT:     R_X86_64_CODE_4_GOTPCRELX or
+# CHECK-NEXT:     R_X86_64_CODE_4_GOTPCRELX sbb
+# CHECK-NEXT:     R_X86_64_CODE_4_GOTPCRELX sub
+# CHECK-NEXT:     R_X86_64_CODE_4_GOTPCRELX xor
 # CHECK-NEXT:   }
 
 # NORELAX-NEXT:     R_X86_64_GOTPCREL mov
@@ -51,6 +61,16 @@
 # NORELAX-NEXT:     R_X86_64_GOTPCREL xor
 # NORELAX-NEXT:     R_X86_64_GOTPCREL call
 # NORELAX-NEXT:     R_X86_64_GOTPCREL jmp
+# NORELAX-NEXT:     R_X86_64_GOTPCREL mov
+# NORELAX-NEXT:     R_X86_64_GOTPCREL test
+# NORELAX-NEXT:     R_X86_64_GOTPCREL adc
+# NORELAX-NEXT:     R_X86_64_GOTPCREL add
+# NORELAX-NEXT:     R_X86_64_GOTPCREL and
+# NORELAX-NEXT:     R_X86_64_GOTPCREL cmp
+# NORELAX-NEXT:     R_X86_64_GOTPCREL or
+# NORELAX-NEXT:     R_X86_64_GOTPCREL sbb
+# NORELAX-NEXT:     R_X86_64_GOTPCREL sub
+# NORELAX-NEXT:     R_X86_64_GOTPCREL xor
 # NORELAX-NEXT:     R_X86_64_GOTPCREL mov
 # NORELAX-NEXT:     R_X86_64_GOTPCREL test
 # NORELAX-NEXT:     R_X86_64_GOTPCREL adc
@@ -108,10 +128,22 @@ sbb sbb@GOTPCREL(%rip), %rax
 sub sub@GOTPCREL(%rip), %rax
 xor xor@GOTPCREL(%rip), %rax
 
+movq mov@GOTPCREL(%rip), %r16
+test %r16, test@GOTPCREL(%rip)
+adc adc@GOTPCREL(%rip), %r16
+add add@GOTPCREL(%rip), %r16
+and and@GOTPCREL(%rip), %r16
+cmp cmp@GOTPCREL(%rip), %r16
+or  or@GOTPCREL(%rip), %r16
+sbb sbb@GOTPCREL(%rip), %r16
+sub sub@GOTPCREL(%rip), %r16
+xor xor@GOTPCREL(%rip), %r16
+
 # COMMON-NEXT:   Section ({{.*}}) .rela.norelax {
 # COMMON-NEXT:     R_X86_64_GOTPCREL mov 0x0
 # COMMON-NEXT:     R_X86_64_GOTPCREL mov 0xFFFFFFFFFFFFFFFD
 # COMMON-NEXT:     R_X86_64_GOTPCREL mov 0xFFFFFFFFFFFFFFFC
+# COMMON-NEXT:     R_X86_64_GOTPCREL mov 0xFFFFFFFFFFFFFFFD
 # COMMON-NEXT:   }
 # COMMON-NEXT: ]
 
@@ -123,3 +155,5 @@ movl mov@GOTPCREL+4(%rip), %eax
 movq mov@GOTPCREL+1(%rip), %rax
 ## We could emit R_X86_64_GOTPCRELX, but it is probably unnecessary.
 movl mov@GOTPCREL+0(%rip), %eax
+## Don't emit R_X86_64_GOTPCRELX.
+movq mov@GOTPCREL+1(%rip), %r16

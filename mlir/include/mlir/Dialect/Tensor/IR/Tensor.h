@@ -18,6 +18,7 @@
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/ParallelCombiningOpInterface.h"
 #include "mlir/Interfaces/ShapedOpInterfaces.h"
@@ -44,6 +45,12 @@ SmallVector<Range, 8> getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tensor/IR/TensorOpsDialect.h.inc"
+
+//===----------------------------------------------------------------------===//
+// Tensor Interfaces
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/Tensor/IR/TensorInterfaces.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Tensor Dialect Operations
@@ -162,9 +169,6 @@ void populateFoldConstantExtractSlicePatterns(
           // constant tensor, which would affect the compile time and storage.
           return false;
         });
-
-/// Patterns to simplify tensor.pack.
-void populateSimplifyTensorPack(RewritePatternSet &patterns);
 
 } // namespace tensor
 } // namespace mlir

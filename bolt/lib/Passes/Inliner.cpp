@@ -27,7 +27,6 @@
 #include "bolt/Passes/Inliner.h"
 #include "bolt/Core/MCPlus.h"
 #include "llvm/Support/CommandLine.h"
-#include <map>
 
 #define DEBUG_TYPE "bolt-inliner"
 
@@ -311,13 +310,13 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
       if (MIB.isPseudo(Inst))
         continue;
 
-      MIB.stripAnnotations(Inst, /*KeepTC=*/BC.isX86());
+      MIB.stripAnnotations(Inst, /*KeepTC=*/BC.isX86() || BC.isAArch64());
 
       // Fix branch target. Strictly speaking, we don't have to do this as
       // targets of direct branches will be fixed later and don't matter
       // in the CFG state. However, disassembly may look misleading, and
       // hence we do the fixing.
-      if (MIB.isBranch(Inst)) {
+      if (MIB.isBranch(Inst) && !MIB.isTailCall(Inst)) {
         assert(!MIB.isIndirectBranch(Inst) &&
                "unexpected indirect branch in callee");
         const BinaryBasicBlock *TargetBB =
@@ -356,7 +355,9 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
     std::vector<BinaryBasicBlock *> Successors(BB.succ_size());
     llvm::transform(BB.successors(), Successors.begin(),
                     [&InlinedBBMap](const BinaryBasicBlock *BB) {
-                      return InlinedBBMap.at(BB);
+                      auto It = InlinedBBMap.find(BB);
+                      assert(It != InlinedBBMap.end());
+                      return It->second;
                     });
 
     if (CallerFunction.hasValidProfile() && Callee.hasValidProfile())
@@ -496,11 +497,11 @@ bool Inliner::inlineCallsInFunction(BinaryFunction &Function) {
   return DidInlining;
 }
 
-void Inliner::runOnFunctions(BinaryContext &BC) {
+Error Inliner::runOnFunctions(BinaryContext &BC) {
   opts::syncOptions();
 
   if (!opts::inliningEnabled())
-    return;
+    return Error::success();
 
   bool InlinedOnce;
   unsigned NumIters = 0;
@@ -540,10 +541,11 @@ void Inliner::runOnFunctions(BinaryContext &BC) {
   } while (InlinedOnce && NumIters < opts::InlineMaxIters);
 
   if (NumInlinedCallSites)
-    outs() << "BOLT-INFO: inlined " << NumInlinedDynamicCalls << " calls at "
-           << NumInlinedCallSites << " call sites in " << NumIters
-           << " iteration(s). Change in binary size: " << TotalInlinedBytes
-           << " bytes.\n";
+    BC.outs() << "BOLT-INFO: inlined " << NumInlinedDynamicCalls << " calls at "
+              << NumInlinedCallSites << " call sites in " << NumIters
+              << " iteration(s). Change in binary size: " << TotalInlinedBytes
+              << " bytes.\n";
+  return Error::success();
 }
 
 } // namespace bolt

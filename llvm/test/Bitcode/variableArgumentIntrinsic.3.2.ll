@@ -10,7 +10,7 @@ define i32 @varArgIntrinsic(i32 %X, ...) {
   %ap = alloca i8*
   %ap2 = bitcast i8** %ap to i8*
 
-; CHECK: call void @llvm.va_start(ptr %ap2)
+; CHECK: call void @llvm.va_start.p0(ptr %ap2)
   call void @llvm.va_start(i8* %ap2)
 
 ; CHECK-NEXT: %tmp = va_arg ptr %ap, i32
@@ -19,12 +19,12 @@ define i32 @varArgIntrinsic(i32 %X, ...) {
   %aq = alloca i8*
   %aq2 = bitcast i8** %aq to i8*
 
-; CHECK: call void @llvm.va_copy(ptr %aq2, ptr %ap2)
+; CHECK: call void @llvm.va_copy.p0(ptr %aq2, ptr %ap2)
   call void @llvm.va_copy(i8* %aq2, i8* %ap2)
-; CHECK-NEXT: call void @llvm.va_end(ptr %aq2)
+; CHECK-NEXT: call void @llvm.va_end.p0(ptr %aq2)
   call void @llvm.va_end(i8* %aq2)
 
-; CHECK-NEXT:  call void @llvm.va_end(ptr %ap2)
+; CHECK-NEXT:  call void @llvm.va_end.p0(ptr %ap2)
   call void @llvm.va_end(i8* %ap2)
   ret i32 %tmp
 }

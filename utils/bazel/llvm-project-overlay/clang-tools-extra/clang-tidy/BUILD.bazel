@@ -57,7 +57,7 @@ genrule(
     srcs = ["misc/ConfusableTable/confusables.txt"],
     outs = ["Confusables.inc"],
     cmd = "$(location :confusable_table_builder) $(SRCS) $(OUTS)",
-    exec_tools = [":confusable_table_builder"],
+    tools = [":confusable_table_builder"],
     visibility = ["//visibility:private"],
 )
 
@@ -79,6 +79,7 @@ clang_tidy_library(
         "//clang:rewrite",
         "//clang:sema",
         "//clang:serialization",
+        "//clang:static_analyzer_checkers_gen",
         "//clang:tooling",
         "//clang:tooling_core",
     ] + select({
@@ -196,7 +197,10 @@ clang_tidy_library(
 
 clang_tidy_library(
     name = "boost",
-    deps = [":lib"],
+    deps = [
+        ":lib",
+        ":utils",
+    ],
 )
 
 clang_tidy_library(
@@ -261,6 +265,7 @@ clang_tidy_library(
 clang_tidy_library(
     name = "cppcoreguidelines",
     deps = [
+        ":bugprone",
         ":lib",
         ":misc",
         ":modernize",
@@ -274,7 +279,6 @@ clang_tidy_library(
 clang_tidy_library(
     name = "bugprone",
     deps = [
-        ":cppcoreguidelines",
         ":lib",
         ":utils",
         "//clang:analysis",
@@ -364,6 +368,7 @@ cc_library(
         ":utils",
         "//clang:tooling",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

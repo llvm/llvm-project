@@ -32,9 +32,10 @@ TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
 
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
-  constexpr const char *TEST_FILE = "testdata/pread_pwrite.test";
+  constexpr const char *FILENAME = "pread_pwrite.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::write(fd, HELLO, HELLO_SIZE),
               Succeeds(HELLO_SIZE));
@@ -42,7 +43,7 @@ TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::pwrite(fd, HELLO, HELLO_SIZE, OFFSET),
               Succeeds(HELLO_SIZE));
@@ -50,7 +51,7 @@ TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   char read_buf[OFFSET_TEXT_SIZE];
   ASSERT_THAT(LIBC_NAMESPACE::pread(fd, read_buf, HELLO_SIZE, OFFSET),

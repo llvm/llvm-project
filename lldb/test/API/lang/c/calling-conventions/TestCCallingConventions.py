@@ -62,7 +62,10 @@ class TestCase(TestBase):
             return
         self.expect_expr("func(1, 2, 3, 4)", result_type="int", result_value="10")
 
+    # Fails on x86, passes elsewhere because clang doesn't support vectorcall on
+    # any other architectures.
     @expectedFailureAll(
+        triple=re.compile("^(x86|i386)"),
         oslist=["freebsd"], bugnumber="github.com/llvm/llvm-project/issues/56084"
     )
     def test_vectorcall(self):

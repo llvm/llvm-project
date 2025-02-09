@@ -27,7 +27,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsXCore.h"
@@ -264,7 +263,7 @@ static bool IsSmallObject(const GlobalValue *GV, const XCoreTargetLowering &XTL)
   if (!ObjType->isSized())
     return false;
 
-  auto &DL = GV->getParent()->getDataLayout();
+  auto &DL = GV->getDataLayout();
   unsigned ObjSize = DL.getTypeAllocSize(ObjType);
   return ObjSize < CodeModelLargeSize && ObjSize != 0;
 }
@@ -283,7 +282,8 @@ LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const
     GA = getGlobalAddressWrapper(GA, GV, DAG);
     // Handle the rest of the offset.
     if (Offset != FoldedOffset) {
-      SDValue Remaining = DAG.getConstant(Offset - FoldedOffset, DL, MVT::i32);
+      SDValue Remaining =
+          DAG.getSignedConstant(Offset - FoldedOffset, DL, MVT::i32);
       GA = DAG.getNode(ISD::ADD, DL, MVT::i32, GA, Remaining);
     }
     return GA;
@@ -767,7 +767,7 @@ SDValue XCoreTargetLowering::LowerFRAMEADDR(SDValue Op,
   // An index of zero corresponds to the current function's frame address.
   // An index of one to the parent's frame address, and so on.
   // Depths > 0 not supported yet!
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() > 0)
+  if (Op.getConstantOperandVal(0) > 0)
     return SDValue();
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -783,7 +783,7 @@ LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const {
   // An index of zero corresponds to the current function's return address.
   // An index of one to the parent's return address, and so on.
   // Depths > 0 not supported yet!
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() > 0)
+  if (Op.getConstantOperandVal(0) > 0)
     return SDValue();
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -905,7 +905,7 @@ LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const {
 SDValue XCoreTargetLowering::
 LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned IntNo = Op.getConstantOperandVal(0);
   switch (IntNo) {
     case Intrinsic::xcore_crc8:
       EVT VT = Op.getValueType();
@@ -973,8 +973,7 @@ static SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                                SmallVectorImpl<SDValue> &InVals) {
   SmallVector<std::pair<int, unsigned>, 4> ResultMemLocs;
   // Copy results out of physical registers.
-  for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
-    const CCValAssign &VA = RVLocs[i];
+  for (const CCValAssign &VA : RVLocs) {
     if (VA.isRegLoc()) {
       Chain = DAG.getCopyFromReg(Chain, dl, VA.getLocReg(), VA.getValVT(),
                                  InGlue).getValue(1);
@@ -1302,8 +1301,8 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
       InVals.push_back(FIN);
       MemOps.push_back(DAG.getMemcpy(
           Chain, dl, FIN, ArgDI.SDV, DAG.getConstant(Size, dl, MVT::i32),
-          Alignment, false, false, false, MachinePointerInfo(),
-          MachinePointerInfo()));
+          Alignment, false, false, /*CI=*/nullptr, std::nullopt,
+          MachinePointerInfo(), MachinePointerInfo()));
     } else {
       InVals.push_back(ArgDI.SDV);
     }
@@ -1326,7 +1325,7 @@ bool XCoreTargetLowering::
 CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                bool isVarArg,
                const SmallVectorImpl<ISD::OutputArg> &Outs,
-               LLVMContext &Context) const {
+               LLVMContext &Context, const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   if (!CCInfo.CheckReturn(Outs, RetCC_XCore))
@@ -1497,7 +1496,7 @@ SDValue XCoreTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   default: break;
   case ISD::INTRINSIC_VOID:
-    switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
+    switch (N->getConstantOperandVal(1)) {
     case Intrinsic::xcore_outt:
     case Intrinsic::xcore_outct:
     case Intrinsic::xcore_chkct: {
@@ -1705,7 +1704,7 @@ SDValue XCoreTargetLowering::PerformDAGCombine(SDNode *N,
         bool isTail = isInTailCallPosition(DAG, ST, Chain);
         return DAG.getMemmove(Chain, dl, ST->getBasePtr(), LD->getBasePtr(),
                               DAG.getConstant(StoreBits / 8, dl, MVT::i32),
-                              Alignment, false, isTail,
+                              Alignment, false, nullptr, isTail,
                               ST->getPointerInfo(), LD->getPointerInfo());
       }
     }
@@ -1733,30 +1732,30 @@ void XCoreTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     break;
   case ISD::INTRINSIC_W_CHAIN:
     {
-      unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
-      switch (IntNo) {
-      case Intrinsic::xcore_getts:
-        // High bits are known to be zero.
-        Known.Zero = APInt::getHighBitsSet(Known.getBitWidth(),
-                                           Known.getBitWidth() - 16);
-        break;
-      case Intrinsic::xcore_int:
-      case Intrinsic::xcore_inct:
-        // High bits are known to be zero.
-        Known.Zero = APInt::getHighBitsSet(Known.getBitWidth(),
-                                           Known.getBitWidth() - 8);
-        break;
-      case Intrinsic::xcore_testct:
-        // Result is either 0 or 1.
-        Known.Zero = APInt::getHighBitsSet(Known.getBitWidth(),
-                                           Known.getBitWidth() - 1);
-        break;
-      case Intrinsic::xcore_testwct:
-        // Result is in the range 0 - 4.
-        Known.Zero = APInt::getHighBitsSet(Known.getBitWidth(),
-                                           Known.getBitWidth() - 3);
-        break;
-      }
+    unsigned IntNo = Op.getConstantOperandVal(1);
+    switch (IntNo) {
+    case Intrinsic::xcore_getts:
+      // High bits are known to be zero.
+      Known.Zero =
+          APInt::getHighBitsSet(Known.getBitWidth(), Known.getBitWidth() - 16);
+      break;
+    case Intrinsic::xcore_int:
+    case Intrinsic::xcore_inct:
+      // High bits are known to be zero.
+      Known.Zero =
+          APInt::getHighBitsSet(Known.getBitWidth(), Known.getBitWidth() - 8);
+      break;
+    case Intrinsic::xcore_testct:
+      // Result is either 0 or 1.
+      Known.Zero =
+          APInt::getHighBitsSet(Known.getBitWidth(), Known.getBitWidth() - 1);
+      break;
+    case Intrinsic::xcore_testwct:
+      // Result is in the range 0 - 4.
+      Known.Zero =
+          APInt::getHighBitsSet(Known.getBitWidth(), Known.getBitWidth() - 3);
+      break;
+    }
     }
     break;
   }

@@ -34,7 +34,7 @@ public:
 
   explicit operator bool() { return m_pid != LLDB_INVALID_PROCESS_ID; }
 
-  lldb_private::Status GetError() { return m_error; }
+  lldb_private::Status GetError() { return m_error.Clone(); }
 
 private:
   Process(lldb::pid_t p);
@@ -73,7 +73,8 @@ public:
     iPhone = 1,
     iPad = 2,
     appleTV = 3,
-    appleWatch = 4
+    appleWatch = 4,
+    appleXR = 7,
   };
 
   DeviceType();

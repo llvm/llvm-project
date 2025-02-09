@@ -319,7 +319,6 @@ std::string mainMessage(const Diag &D, const ClangdDiagnosticOptions &Opts) {
       OS << "\n\n";
       printDiag(OS, Note);
     }
-  OS.flush();
   return capitalize(std::move(Result));
 }
 
@@ -335,7 +334,6 @@ std::string noteMessage(const Diag &Main, const DiagBase &Note,
     OS << "\n\n";
     printDiag(OS, Main);
   }
-  OS.flush();
   return capitalize(std::move(Result));
 }
 
@@ -579,7 +577,17 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
   for (auto &Diag : Output) {
     if (const char *ClangDiag = getDiagnosticCode(Diag.ID)) {
       // Warnings controlled by -Wfoo are better recognized by that name.
-      StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(Diag.ID);
+      StringRef Warning = [&] {
+        if (OrigSrcMgr) {
+          return OrigSrcMgr->getDiagnostics()
+              .getDiagnosticIDs()
+              ->getWarningOptionForDiag(Diag.ID);
+        }
+        if (!DiagnosticIDs::IsCustomDiag(Diag.ID))
+          return DiagnosticIDs{}.getWarningOptionForDiag(Diag.ID);
+        return StringRef{};
+      }();
+
       if (!Warning.empty()) {
         Diag.Name = ("-W" + Warning).str();
       } else {
@@ -663,7 +671,7 @@ static void fillNonLocationData(DiagnosticsEngine::Level DiagLevel,
   llvm::SmallString<64> Message;
   Info.FormatDiagnostic(Message);
 
-  D.Message = std::string(Message.str());
+  D.Message = std::string(Message);
   D.Severity = DiagLevel;
   D.Category = DiagnosticIDs::getCategoryNameFromID(
                    DiagnosticIDs::getCategoryNumberForDiag(Info.getID()))
@@ -798,7 +806,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     if (Message.empty()) // either !SyntheticMessage, or we failed to make one.
       Info.FormatDiagnostic(Message);
     LastDiag->Fixes.push_back(
-        Fix{std::string(Message.str()), std::move(Edits), {}});
+        Fix{std::string(Message), std::move(Edits), {}});
     return true;
   };
 
@@ -896,20 +904,23 @@ void StoreDiags::flushLastDiag() {
   Output.push_back(std::move(*LastDiag));
 }
 
-bool isBuiltinDiagnosticSuppressed(unsigned ID,
-                                   const llvm::StringSet<> &Suppress,
-                                   const LangOptions &LangOpts) {
+bool isDiagnosticSuppressed(const clang::Diagnostic &Diag,
+                            const llvm::StringSet<> &Suppress,
+                            const LangOptions &LangOpts) {
   // Don't complain about header-only stuff in mainfiles if it's a header.
   // FIXME: would be cleaner to suppress in clang, once we decide whether the
   //        behavior should be to silently-ignore or respect the pragma.
-  if (ID == diag::pp_pragma_sysheader_in_main_file && LangOpts.IsHeaderFile)
+  if (Diag.getID() == diag::pp_pragma_sysheader_in_main_file &&
+      LangOpts.IsHeaderFile)
     return true;
 
-  if (const char *CodePtr = getDiagnosticCode(ID)) {
+  if (const char *CodePtr = getDiagnosticCode(Diag.getID())) {
     if (Suppress.contains(normalizeSuppressedCode(CodePtr)))
       return true;
   }
-  StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(ID);
+  StringRef Warning =
+      Diag.getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(
+          Diag.getID());
   if (!Warning.empty() && Suppress.contains(Warning))
     return true;
   return false;

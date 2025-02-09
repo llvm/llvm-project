@@ -58,8 +58,8 @@ define i64 @test4(i64 %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a0, 28
 ; RV32-NEXT:    slli a1, a1, 4
-; RV32-NEXT:    or a1, a1, a2
 ; RV32-NEXT:    slli a0, a0, 4
+; RV32-NEXT:    or a1, a1, a2
 ; RV32-NEXT:    addi a0, a0, 13
 ; RV32-NEXT:    ret
 ;
@@ -106,4 +106,18 @@ define i64 @test6(i64 %x) {
   %a = lshr i64 %x, 54
   %b = xor i64 %a, 1024
   ret i64 %b
+}
+
+define signext i32 @test7(i32 signext %x) {
+; RV32-LABEL: test7:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi a0, a0, 1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test7:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ori a0, a0, 1
+; RV64-NEXT:    ret
+  %a = or disjoint i32 %x, 1
+  ret i32 %a
 }

@@ -25,7 +25,7 @@
 ; Function Attrs: uwtable
 define dso_local i32 @_Z3fooi1S(i32 %count, ptr nocapture readonly byval(%struct.S) align 8 %p1) local_unnamed_addr #0 {
 ; CHECK-LABEL: define {{[^@]+}}@_Z3fooi1S
-; CHECK-SAME: (i32 [[COUNT:%.*]], ptr nocapture byval([[STRUCT_S:%.*]]) align 8 [[P1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i32 [[COUNT:%.*]], ptr byval([[STRUCT_S:%.*]]) align 8 captures(none) [[P1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP_I1:%.*]] = alloca [[STRUCT_S]], align 8
 ; CHECK-NEXT:    [[AGG_TMP_I:%.*]] = alloca [[STRUCT_S]], align 8

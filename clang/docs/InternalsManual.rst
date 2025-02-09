@@ -123,6 +123,48 @@ severe that error recovery won't be able to recover sensibly from them (thus
 spewing a ton of bogus errors).  One example of this class of error are failure
 to ``#include`` a file.
 
+Diagnostic Wording
+^^^^^^^^^^^^^^^^^^
+The wording used for a diagnostic is critical because it is the only way for a
+user to know how to correct their code. Use the following suggestions when
+wording a diagnostic.
+
+* Diagnostics in Clang do not start with a capital letter and do not end with
+  punctuation.
+
+    * This does not apply to proper nouns like ``Clang`` or ``OpenMP``, to
+      acronyms like ``GCC`` or ``ARC``, or to language standards like ``C23``
+      or ``C++17``.
+    * A trailing question mark is allowed. e.g., ``unknown identifier %0; did
+      you mean %1?``.
+
+* Appropriately capitalize proper nouns like ``Clang``, ``OpenCL``, ``GCC``,
+  ``Objective-C``, etc and language standard versions like ``C11`` or ``C++11``.
+* The wording should be succinct. If necessary, use a semicolon to combine
+  sentence fragments instead of using complete sentences. e.g., prefer wording
+  like ``'%0' is deprecated; it will be removed in a future release of Clang``
+  over wording like ``'%0' is deprecated. It will be removed in a future release
+  of Clang``.
+* The wording should be actionable and avoid using standards terms or grammar
+  productions that a new user would not be familiar with. e.g., prefer wording
+  like ``missing semicolon`` over wording like ``syntax error`` (which is not
+  actionable) or ``expected unqualified-id`` (which uses standards terminology).
+* The wording should clearly explain what is wrong with the code rather than
+  restating what the code does. e.g., prefer wording like ``type %0 requires a
+  value in the range %1 to %2`` over wording like ``%0 is invalid``.
+* The wording should have enough contextual information to help the user
+  identify the issue in a complex expression. e.g., prefer wording like
+  ``both sides of the %0 binary operator are identical`` over wording like
+  ``identical operands to binary operator``.
+* Use single quotes to denote syntactic constructs or command line arguments
+  named in a diagnostic message. e.g., prefer wording like ``'this' pointer
+  cannot be null in well-defined C++ code`` over wording like ``this pointer
+  cannot be null in well-defined C++ code``.
+* Prefer diagnostic wording without contractions whenever possible. The single
+  quote in a contraction can be visually distracting due to its use with
+  syntactic constructs and contractions can be harder to understand for non-
+  native English speakers.
+
 The Format String
 ^^^^^^^^^^^^^^^^^
 
@@ -234,6 +276,21 @@ Description:
   diagnostic instead of having to do things textually.  The selected string
   does undergo formatting.
 
+**"enum_select format**
+
+Example:
+  ``unknown frobbling of a %enum_select<FrobbleKind>{%VarDecl{variable declaration}|%FuncDecl{function declaration}}0 when blarging``
+Class:
+  Integers
+Description:
+  This format specifier is used exactly like a ``select`` specifier, except it
+  additionally generates a namespace, enumeration, and enumerator list based on
+  the format string given. In the above case, a namespace is generated named
+  ``FrobbleKind`` that has an unscoped enumeration with the enumerators
+  ``VarDecl`` and ``FuncDecl`` which correspond to the values 0 and 1. This
+  permits a clearer use of the ``Diag`` in source code, as the above could be
+  called as: ``Diag(Loc, diag::frobble) << diag::FrobbleKind::VarDecl``.
+
 **"plural" format**
 
 Example:
@@ -276,6 +333,17 @@ Description:
   value ``1`` becomes ``1st``, ``3`` becomes ``3rd``, and so on.  Values less
   than ``1`` are not supported.  This formatter is currently hard-coded to use
   English ordinals.
+
+**"human" format**
+
+Example:
+  ``"total size is %human0 bytes"``
+Class:
+  Integers
+Description:
+  This is a formatter which represents the argument number in a human readable
+  format: the value ``123`` stays ``123``, ``12345`` becomes ``12.34k``,
+  ``6666666` becomes ``6.67M``, and so on for 'G' and 'T'.
 
 **"objcclass" format**
 
@@ -931,7 +999,7 @@ the option appears on the command line, the argument value is simply copied.
 .. code-block:: text
 
   def isysroot : JoinedOrSeparate<["-"], "isysroot">,
-    Visibility<[ClangOption, CC1Option]>,
+    Visibility<[ClangOption, CC1Option, FlangOption]>,
     MarshallingInfoString<HeaderSearchOpts<"Sysroot">, [{"/"}]>;
 
 **List of Strings**
@@ -3162,7 +3230,7 @@ are similar.
    always involve two functions: an ``ActOnXXX`` function that will be called
    directly from the parser, and a ``BuildXXX`` function that performs the
    actual semantic analysis and will (eventually!) build the AST node.  It's
-   fairly common for the ``ActOnCXX`` function to do very little (often just
+   fairly common for the ``ActOnXXX`` function to do very little (often just
    some minor translation from the parser's representation to ``Sema``'s
    representation of the same thing), but the separation is still important:
    C++ template instantiation, for example, should always call the ``BuildXXX``
@@ -3364,7 +3432,7 @@ Multiple occurrences accumulate prefixes.  For example,
 
 Specifying Diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^
-Indicating that a line expects an error or a warning is simple. Put a comment
+Indicating that a line expects an error or a warning is easy. Put a comment
 on the line that has the diagnostic, use
 ``expected-{error,warning,remark,note}`` to tag if it's an expected error,
 warning, remark, or note (respectively), and place the expected text between
@@ -3372,6 +3440,9 @@ warning, remark, or note (respectively), and place the expected text between
 enough to ensure that the correct diagnostic was emitted. (Note: full text
 should be included in test cases unless there is a compelling reason to use
 truncated text instead.)
+
+For a full description of the matching behavior, including more complex
+matching scenarios, see :ref:`matching <DiagnosticMatching>` below.
 
 Here's an example of the most commonly used way to specify expected
 diagnostics:
@@ -3458,8 +3529,33 @@ A range can also be specified by ``<n>-<m>``. For example:
 
 In this example, the diagnostic may appear only once, if at all.
 
+.. _DiagnosticMatching:
+
+Matching Modes
+~~~~~~~~~~~~~~
+
+The default matching mode is simple string, which looks for the expected text
+that appears between the first `{{` and `}}` pair of the comment. The string is
+interpreted just as-is, with one exception: the sequence `\n` is converted to a
+single newline character. This mode matches the emitted diagnostic when the
+text appears as a substring at any position of the emitted message.
+
+To enable matching against desired strings that contain `}}` or `{{`, the
+string-mode parser accepts opening delimiters of more than two curly braces,
+like `{{{`. It then looks for a closing delimiter of equal "width" (i.e `}}}`).
+For example:
+
+.. code-block:: c++
+
+  // expected-note {{{evaluates to '{{2, 3, 4}} == {0, 3, 4}'}}}
+
+The intent is to allow the delimeter to be wider than the longest `{` or `}`
+brace sequence in the content, so that if your expected text contains `{{{`
+(three braces) it may be delimited with `{{{{` (four braces), and so on.
+
 Regex matching mode may be selected by appending ``-re`` to the diagnostic type
-and including regexes wrapped in double curly braces in the directive, such as:
+and including regexes wrapped in double curly braces (`{{` and `}}`) in the
+directive, such as:
 
 .. code-block:: text
 
@@ -3471,6 +3567,8 @@ Examples matching error: "variable has incomplete type 'struct s'"
 
   // expected-error {{variable has incomplete type 'struct s'}}
   // expected-error {{variable has incomplete type}}
+  // expected-error {{{variable has incomplete type}}}
+  // expected-error {{{{variable has incomplete type}}}}
 
   // expected-error-re {{variable has type 'struct {{.}}'}}
   // expected-error-re {{variable has type 'struct {{.*}}'}}

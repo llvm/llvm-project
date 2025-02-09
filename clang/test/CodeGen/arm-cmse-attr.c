@@ -29,9 +29,9 @@ void f4(void) __attribute__((cmse_nonsecure_entry))
 {
 }
 
-// CHECK: define{{.*}} void @f1(ptr nocapture noundef readonly %fptr) {{[^#]*}}#0 {
+// CHECK: define{{.*}} void @f1(ptr noundef readonly captures(none) %fptr) {{[^#]*}}#0 {
 // CHECK: call void %fptr() #2
-// CHECK: define{{.*}} void @f2(ptr nocapture noundef readonly %fptr) {{[^#]*}}#0 {
+// CHECK: define{{.*}} void @f2(ptr noundef readonly captures(none) %fptr) {{[^#]*}}#0 {
 // CHECK: call void %fptr() #2
 // CHECK: define{{.*}} void @f3() {{[^#]*}}#1 {
 // CHECK: define{{.*}} void @f4() {{[^#]*}}#1 {

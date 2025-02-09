@@ -716,15 +716,12 @@ Intermediate Representation (IR) from the AST.
 Full Code Listing
 =================
 
-Here is the complete code listing for our running example. Because this
-uses the LLVM libraries, we need to link them in. To do this, we use the
-`llvm-config <https://llvm.org/cmds/llvm-config.html>`_ tool to inform
-our makefile/command line about which options to use:
+Here is the complete code listing for our running example.
 
 .. code-block:: bash
 
     # Compile
-    clang++ -g -O3 toy.cpp `llvm-config --cxxflags`
+    clang++ -g -O3 toy.cpp
     # Run
     ./a.out
 

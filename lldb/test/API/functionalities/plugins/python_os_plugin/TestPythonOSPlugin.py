@@ -5,6 +5,7 @@ Test that the Python operating system plugin works correctly
 
 import os
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -17,7 +18,8 @@ class PluginPythonOSPlugin(TestBase):
         self.build()
         self.run_python_os_funcionality()
 
-    def run_python_os_step(self):
+    @skipIfWindows  # This is flaky on Windows
+    def test_run_python_os_step(self):
         """Test that the Python operating system plugin works correctly when single stepping a virtual thread"""
         self.build()
         self.run_python_os_step()
@@ -158,6 +160,8 @@ class PluginPythonOSPlugin(TestBase):
         )
         self.assertTrue(process, PROCESS_IS_VALID)
 
+        core_thread_zero = process.GetThreadAtIndex(0)
+
         # Make sure there are no OS plug-in created thread when we first stop
         # at our breakpoint in main
         thread = process.GetThreadByID(0x111111111)
@@ -181,6 +185,10 @@ class PluginPythonOSPlugin(TestBase):
             thread.IsValid(),
             "Make sure there is a thread 0x111111111 after we load the python OS plug-in",
         )
+        # This OS plugin does not set thread names / queue names, so it should
+        # inherit the core thread's name.
+        self.assertEqual(core_thread_zero.GetName(), thread.GetName())
+        self.assertEqual(core_thread_zero.GetQueueName(), thread.GetQueueName())
 
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(
@@ -212,8 +220,17 @@ class PluginPythonOSPlugin(TestBase):
             "main.c",
             "Make sure we stepped from line 5 to line 6 in main.c",
         )
-        self.assertEquals(
+        self.assertEqual(
             line_entry.GetLine(),
             6,
             "Make sure we stepped from line 5 to line 6 in main.c",
         )
+
+        thread_bp_number = lldbutil.run_break_set_by_source_regexp(
+            self, "Set tid-specific breakpoint here", num_expected_locations=1
+        )
+        breakpoint = target.FindBreakpointByID(thread_bp_number)
+        # This breakpoint should not be hit.
+        breakpoint.SetThreadID(123)
+        process.Continue()
+        self.assertState(process.GetState(), lldb.eStateExited)

@@ -28,7 +28,6 @@ define i32 @divergent_lshr_and_cmp(i32 %x) {
 entry:
   %0 = and i32 %x, 2
   %1 = icmp ne i32 %0, 0
-  ; Prevent removal of truncate in SDag by inserting llvm.amdgcn.if
   br i1 %1, label %out.true, label %out.else
 
 out.true:
@@ -84,7 +83,6 @@ define amdgpu_kernel void @uniform_opt_lshr_and_cmp(ptr addrspace(1) %out, i32 %
 entry:
   %0 = and i32 %x, 2
   %1 = icmp ne i32 %0, 0
-  ; Don't optimize the truncate in the SDag away.
   br i1 %1, label %out.true, label %out.else
 
 out.true:
@@ -96,3 +94,6 @@ out.else:
   store i1 %1, ptr addrspace(1) %out
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

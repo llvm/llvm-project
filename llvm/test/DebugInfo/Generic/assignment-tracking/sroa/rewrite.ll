@@ -1,5 +1,7 @@
 ; RUN: opt -passes=sroa,verify -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa,verify -S %s -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ; Check that the new slices of an alloca and memset intructions get dbg.assign
 ; intrinsics with the correct fragment info. Ensure that only the
@@ -24,25 +26,25 @@
 
 ; CHECK: entry:
 ; CHECK-NEXT:   %S.sroa.0 = alloca { i32, i32, i32 }, align 8, !DIAssignID ![[ID_1:[0-9]+]]
-; CHECK-NEXT:   call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_1]], metadata ptr %S.sroa.0, metadata !DIExpression()), !dbg
+; CHECK-NEXT:   #dbg_assign(i1 undef, ![[VAR:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 96), ![[ID_1]], ptr %S.sroa.0, !DIExpression(),
 
 ;; The middle slice has been promoted, so the alloca has gone away.
 
 ; CHECK-NEXT:   %S.sroa.5 = alloca { i32, i32, i32 }, align 8, !DIAssignID ![[ID_3:[0-9]+]]
-; CHECK-NEXT:   call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_3]], metadata ptr %S.sroa.5, metadata !DIExpression()), !dbg
+; CHECK-NEXT:   #dbg_assign(i1 undef, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 128, 96), ![[ID_3]], ptr %S.sroa.5, !DIExpression(),
 
 ;; The memset has been sliced up (middle slice removed).
 ; CHECK: call void @llvm.memset{{.*}}(ptr align 8 %S.sroa.0, i8 0, i64 12, i1 false), !dbg !{{.+}}, !DIAssignID ![[ID_5:[0-9]+]]
 ; CHECK: call void @llvm.memset{{.*}}(ptr align 8 %S.sroa.5, i8 0, i64 12, i1 false), !dbg !{{.+}}, !DIAssignID ![[ID_6:[0-9]+]]
 
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_5]], metadata ptr %S.sroa.0, metadata !DIExpression()), !dbg
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 0, 96), ![[ID_5]], ptr %S.sroa.0, !DIExpression(),
 ;; Check the middle slice (no memset) gets a correct dbg.assign.
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32))
-; CHECK-NEXT:   call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_6]], metadata ptr %S.sroa.5, metadata !DIExpression()), !dbg
+; CHECK-NEXT: #dbg_value(i32 0, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 96, 32),
+; CHECK-NEXT:   #dbg_assign(i8 0, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 128, 96), ![[ID_6]], ptr %S.sroa.5, !DIExpression(),
 
 ;; mem2reg promotes the load/store to the middle slice created by SROA:
 ; CHECK-NEXT: %0 = load i32, ptr @Glob, align 4, !dbg !{{.+}}
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32))
+; CHECK-NEXT: #dbg_value(i32 %0, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 96, 32),
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -57,9 +59,9 @@ entry:
   %S = alloca %struct.LargeStruct, align 4, !DIAssignID !28
   call void @llvm.dbg.assign(metadata i1 undef, metadata !18, metadata !DIExpression(), metadata !28, metadata ptr %S, metadata !DIExpression()), !dbg !29
   %0 = bitcast ptr %S to ptr, !dbg !30
-  call void @llvm.lifetime.start.p0i8(i64 28, ptr %0) #4, !dbg !30
+  call void @llvm.lifetime.start.p0(i64 28, ptr %0) #4, !dbg !30
   %1 = bitcast ptr %S to ptr, !dbg !31
-  call void @llvm.memset.p0i8.i64(ptr align 4 %1, i8 0, i64 28, i1 false), !dbg !31, !DIAssignID !32
+  call void @llvm.memset.p0.i64(ptr align 4 %1, i8 0, i64 28, i1 false), !dbg !31, !DIAssignID !32
   call void @llvm.dbg.assign(metadata i8 0, metadata !18, metadata !DIExpression(), metadata !32, metadata ptr %1, metadata !DIExpression()), !dbg !31
   %2 = load i32, ptr @Glob, align 4, !dbg !33
   %Var = getelementptr inbounds %struct.LargeStruct, ptr %S, i32 0, i32 3, !dbg !38
@@ -68,18 +70,18 @@ entry:
   %Var1 = getelementptr inbounds %struct.LargeStruct, ptr %S, i32 0, i32 3, !dbg !43
   %3 = load i32, ptr %Var1, align 4, !dbg !43
   %4 = bitcast ptr %S to ptr, !dbg !44
-  call void @llvm.lifetime.end.p0i8(i64 28, ptr %4) #4, !dbg !44
+  call void @llvm.lifetime.end.p0(i64 28, ptr %4) #4, !dbg !44
   ret i32 %3, !dbg !45
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
-declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3

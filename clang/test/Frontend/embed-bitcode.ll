@@ -7,7 +7,10 @@
 ; RUN: %clang_cc1 -triple thumbv7-apple-ios8.0.0 -emit-llvm \
 ; RUN:    -fembed-bitcode=marker -x ir %s -o - \
 ; RUN:    | FileCheck %s -check-prefix=CHECK-MARKER
-; RUN: %clang_cc1 -triple aarch64-unknown-linux-gnueabi -emit-llvm \
+; RUN: %clang_cc1 -triple aarch64 -emit-llvm \
+; RUN:    -fembed-bitcode=all -x ir %s -o - \
+; RUN:    | FileCheck %s -check-prefix=CHECK-ELF
+; RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm \
 ; RUN:    -fembed-bitcode=all -x ir %s -o - \
 ; RUN:    | FileCheck %s -check-prefix=CHECK-ELF
 

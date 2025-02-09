@@ -79,7 +79,7 @@ define i64 @mls_i64_C(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 ; CHECK-LABEL: mls_i64_C:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mul x8, x2, x1
-; CHECK-NEXT:    mov w9, #10
+; CHECK-NEXT:    mov w9, #10 // =0xa
 ; CHECK-NEXT:    madd x8, x4, x3, x8
 ; CHECK-NEXT:    sub x0, x9, x8
 ; CHECK-NEXT:    ret
@@ -290,9 +290,9 @@ define <vscale x 8 x i16> @smlsl_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i8
 define <vscale x 8 x i16> @umlsl_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i8> %b, <vscale x 8 x i8> %c, <vscale x 8 x i8> %d, <vscale x 8 x i8> %e) {
 ; CHECK-LABEL: umlsl_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z3.h, z3.h, #0xff
 ; CHECK-NEXT:    and z4.h, z4.h, #0xff
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEXT:    and z2.h, z2.h, #0xff
 ; CHECK-NEXT:    mls z0.h, p0/m, z4.h, z3.h
@@ -326,8 +326,8 @@ define <vscale x 8 x i16> @mls_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16>
 define <vscale x 8 x i16> @mla_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c, <vscale x 8 x i16> %d, <vscale x 8 x i16> %e) {
 ; CHECK-LABEL: mla_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mul z1.h, z2.h, z1.h
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mla z1.h, p0/m, z4.h, z3.h
 ; CHECK-NEXT:    add z0.h, z1.h, z0.h
 ; CHECK-NEXT:    ret

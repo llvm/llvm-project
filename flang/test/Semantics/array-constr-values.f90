@@ -35,8 +35,10 @@ subroutine arrayconstructorvalues()
   intarray = [integer:: EMPLOYEE (19, "Jack"), 2, 3, 4, 5]
 
   ! C7112
+  !ERROR: Dimension 1 of left-hand side has extent 3, but right-hand side has extent 2
   !ERROR: Value in array constructor of type 'INTEGER(4)' could not be converted to the type of the array 'employee'
   emparray = (/ EMPLOYEE:: EMPLOYEE(19, "Ganesh"), EMPLOYEE(22, "Omkar"), 19 /)
+  !ERROR: Dimension 1 of left-hand side has extent 3, but right-hand side has extent 2
   !ERROR: Value in array constructor of type 'employeer' could not be converted to the type of the array 'employee'
   emparray = (/ EMPLOYEE:: EMPLOYEE(19, "Ganesh"), EMPLOYEE(22, "Ram"),EMPLOYEER("ShriniwasPvtLtd") /)
 

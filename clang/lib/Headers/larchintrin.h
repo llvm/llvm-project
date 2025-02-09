@@ -156,7 +156,7 @@ extern __inline unsigned char
   return (unsigned char)__builtin_loongarch_iocsrrd_b((unsigned int)_1);
 }
 
-extern __inline unsigned char
+extern __inline unsigned short
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))
     __iocsrrd_h(unsigned int _1) {
   return (unsigned short)__builtin_loongarch_iocsrrd_h((unsigned int)_1);
@@ -226,6 +226,32 @@ extern __inline void
 
 #define __ldpte_d(/*long int*/ _1, /*ui5*/ _2)                                 \
   ((void)__builtin_loongarch_ldpte_d((long int)(_1), (_2)))
+#endif
+
+#ifdef __loongarch_frecipe
+extern __inline float
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __frecipe_s(float _1) {
+  return __builtin_loongarch_frecipe_s(_1);
+}
+
+extern __inline double
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __frecipe_d(double _1) {
+  return __builtin_loongarch_frecipe_d(_1);
+}
+
+extern __inline float
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __frsqrte_s(float _1) {
+  return __builtin_loongarch_frsqrte_s(_1);
+}
+
+extern __inline double
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __frsqrte_d(double _1) {
+  return __builtin_loongarch_frsqrte_d(_1);
+}
 #endif
 
 #ifdef __cplusplus

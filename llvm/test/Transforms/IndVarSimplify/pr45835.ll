@@ -82,7 +82,7 @@ entry:
   br label %while.cond
 
 while.cond:
-  br i1 icmp ne (i8 0, i8 0), label %cont, label %while.end
+  br i1 false, label %cont, label %while.end
 
 cont:
   %a.mux = select i1 %cmp, ptr @a, ptr %c

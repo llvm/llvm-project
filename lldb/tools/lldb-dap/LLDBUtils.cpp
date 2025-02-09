@@ -8,10 +8,14 @@
 
 #include "LLDBUtils.h"
 #include "DAP.h"
+#include "JSONUtils.h"
+#include "lldb/API/SBStringList.h"
+
+#include <mutex>
 
 namespace lldb_dap {
 
-bool RunLLDBCommands(llvm::StringRef prefix,
+bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                      const llvm::ArrayRef<std::string> &commands,
                      llvm::raw_ostream &strm, bool parse_command_directives) {
   if (commands.empty())
@@ -19,7 +23,7 @@ bool RunLLDBCommands(llvm::StringRef prefix,
 
   bool did_print_prefix = false;
 
-  lldb::SBCommandInterpreter interp = g_dap.debugger.GetCommandInterpreter();
+  lldb::SBCommandInterpreter interp = debugger.GetCommandInterpreter();
   for (llvm::StringRef command : commands) {
     lldb::SBCommandReturnObject result;
     bool quiet_on_success = false;
@@ -37,7 +41,16 @@ bool RunLLDBCommands(llvm::StringRef prefix,
       }
     }
 
-    interp.HandleCommand(command.str().c_str(), result);
+    {
+      // Prevent simultaneous calls to HandleCommand, e.g. EventThreadFunction
+      // may asynchronously call RunExitCommands when we are already calling
+      // RunTerminateCommands.
+      static std::mutex handle_command_mutex;
+      std::lock_guard<std::mutex> locker(handle_command_mutex);
+      interp.HandleCommand(command.str().c_str(), result,
+                           /*add_to_history=*/true);
+    }
+
     const bool got_error = !result.Succeeded();
     // The if statement below is assuming we always print out `!` prefixed
     // lines. The only time we don't print is when we have `quiet_on_success ==
@@ -65,24 +78,23 @@ bool RunLLDBCommands(llvm::StringRef prefix,
   return true;
 }
 
-std::string RunLLDBCommands(llvm::StringRef prefix,
+std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                             const llvm::ArrayRef<std::string> &commands,
                             bool &required_command_failed,
                             bool parse_command_directives) {
   required_command_failed = false;
   std::string s;
   llvm::raw_string_ostream strm(s);
-  required_command_failed =
-      !RunLLDBCommands(prefix, commands, strm, parse_command_directives);
-  strm.flush();
+  required_command_failed = !RunLLDBCommands(debugger, prefix, commands, strm,
+                                             parse_command_directives);
   return s;
 }
 
 std::string
-RunLLDBCommandsVerbatim(llvm::StringRef prefix,
+RunLLDBCommandsVerbatim(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                         const llvm::ArrayRef<std::string> &commands) {
   bool required_command_failed = false;
-  return RunLLDBCommands(prefix, commands, required_command_failed,
+  return RunLLDBCommands(debugger, prefix, commands, required_command_failed,
                          /*parse_command_directives=*/false);
 }
 
@@ -100,6 +112,7 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   case lldb::eStopReasonFork:
   case lldb::eStopReasonVFork:
   case lldb::eStopReasonVForkDone:
+  case lldb::eStopReasonInterrupt:
     return true;
   case lldb::eStopReasonThreadExiting:
   case lldb::eStopReasonInvalid:
@@ -122,6 +135,31 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id) {
 int64_t MakeDAPFrameID(lldb::SBFrame &frame) {
   return ((int64_t)frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT) |
          frame.GetFrameID();
+}
+
+lldb::SBEnvironment
+GetEnvironmentFromArguments(const llvm::json::Object &arguments) {
+  lldb::SBEnvironment envs{};
+  constexpr llvm::StringRef env_key = "env";
+  const llvm::json::Value *raw_json_env = arguments.get(env_key);
+
+  if (!raw_json_env)
+    return envs;
+
+  if (raw_json_env->kind() == llvm::json::Value::Object) {
+    auto env_map = GetStringMap(arguments, env_key);
+    for (const auto &[key, value] : env_map)
+      envs.Set(key.c_str(), value.c_str(), true);
+
+  } else if (raw_json_env->kind() == llvm::json::Value::Array) {
+    const auto envs_strings = GetStrings(&arguments, env_key);
+    lldb::SBStringList entries{};
+    for (const auto &env : envs_strings)
+      entries.AppendString(env.c_str());
+
+    envs.SetEntries(entries, true);
+  }
+  return envs;
 }
 
 } // namespace lldb_dap

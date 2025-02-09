@@ -17,6 +17,7 @@
 namespace Fortran::runtime {
 
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
 
 void RTDEF(Initialize)(
     const Descriptor &descriptor, const char *sourceFile, int sourceLine) {
@@ -26,6 +27,16 @@ void RTDEF(Initialize)(
         Terminator terminator{sourceFile, sourceLine};
         Initialize(descriptor, *derived, terminator);
       }
+    }
+  }
+}
+
+void RTDEF(InitializeClone)(const Descriptor &clone, const Descriptor &orig,
+    const char *sourceFile, int sourceLine) {
+  if (const DescriptorAddendum * addendum{clone.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      Terminator terminator{sourceFile, sourceLine};
+      InitializeClone(clone, orig, *derived, terminator);
     }
   }
 }
@@ -94,7 +105,7 @@ inline RT_API_ATTRS bool CompareDerivedType(
   return a == b || CompareDerivedTypeNames(a->name(), b->name());
 }
 
-static const RT_API_ATTRS typeInfo::DerivedType *GetDerivedType(
+static RT_API_ATTRS const typeInfo::DerivedType *GetDerivedType(
     const Descriptor &desc) {
   if (const DescriptorAddendum * addendum{desc.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
@@ -166,5 +177,6 @@ void RTDEF(DestroyWithoutFinalization)(const Descriptor &descriptor) {
   }
 }
 
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

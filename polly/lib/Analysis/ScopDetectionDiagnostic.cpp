@@ -45,7 +45,7 @@ using namespace llvm;
 #define DEBUG_TYPE "polly-detect"
 
 #define SCOP_STAT(NAME, DESC)                                                  \
-  { "polly-detect", "NAME", "Number of rejected regions: " DESC }
+  {"polly-detect", "NAME", "Number of rejected regions: " DESC}
 
 static Statistic RejectStatistics[] = {
     SCOP_STAT(CFG, ""),
@@ -71,7 +71,7 @@ static Statistic RejectStatistics[] = {
     SCOP_STAT(LoopOnlySomeLatches, "Not all loop latches in scop"),
     SCOP_STAT(FuncCall, "Function call with side effects"),
     SCOP_STAT(NonSimpleMemoryAccess,
-              "Compilated access semantics (volatile or atomic)"),
+              "Complicated access semantics (volatile or atomic)"),
     SCOP_STAT(Alias, "Base address aliasing"),
     SCOP_STAT(Other, ""),
     SCOP_STAT(IntToPtr, "Integer to pointer conversions"),
@@ -89,7 +89,6 @@ template <typename T> std::string operator+(Twine LHS, const T &RHS) {
   std::string Buf;
   raw_string_ostream fmt(Buf);
   fmt << RHS;
-  fmt.flush();
 
   return LHS.concat(Buf).str();
 }
@@ -122,7 +121,7 @@ void getDebugLocations(const BBPair &P, DebugLoc &Begin, DebugLoc &End) {
       continue;
     Todo.append(succ_begin(BB), succ_end(BB));
     for (const Instruction &Inst : *BB) {
-      DebugLoc DL = Inst.getDebugLoc();
+      DebugLoc DL = Inst.getStableDebugLoc();
       if (!DL)
         continue;
 
@@ -638,8 +637,7 @@ bool ReportNonSimpleMemoryAccess::classof(const RejectReason *RR) {
 
 ReportAlias::ReportAlias(Instruction *Inst, AliasSet &AS)
     : RejectReason(RejectReasonKind::Alias), Inst(Inst) {
-  for (const auto &I : AS)
-    Pointers.push_back(I.getValue());
+  append_range(Pointers, AS.getPointers());
 }
 
 std::string ReportAlias::formatInvalidAlias(std::string Prefix,
@@ -670,7 +668,7 @@ std::string ReportAlias::formatInvalidAlias(std::string Prefix,
 
   OS << Suffix;
 
-  return OS.str();
+  return Message;
 }
 
 std::string ReportAlias::getRemarkName() const { return "Alias"; }
@@ -822,7 +820,7 @@ std::string ReportUnprofitable::getEndUserMessage() const {
 const DebugLoc &ReportUnprofitable::getDebugLoc() const {
   for (const BasicBlock *BB : R->blocks())
     for (const Instruction &Inst : *BB)
-      if (const DebugLoc &DL = Inst.getDebugLoc())
+      if (const DebugLoc &DL = Inst.getStableDebugLoc())
         return DL;
 
   return R->getEntry()->getTerminator()->getDebugLoc();

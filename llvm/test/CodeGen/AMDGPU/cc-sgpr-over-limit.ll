@@ -1,6 +1,6 @@
-; RUN: not --crash llc -march=amdgcn -mcpu=verde -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
-; RUN: not --crash llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
-; RUN: not --crash llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
 
 ;CHECK: LLVM ERROR: unable to allocate function argument
 define amdgpu_gs { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32 } @_amdgpu_gs_sgpr_i32 (i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg) {

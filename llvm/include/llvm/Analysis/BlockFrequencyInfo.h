@@ -25,7 +25,6 @@ namespace llvm {
 
 class BasicBlock;
 class BranchProbabilityInfo;
-class Function;
 class LoopInfo;
 class Module;
 class raw_ostream;
@@ -134,6 +133,8 @@ public:
   explicit BlockFrequencyPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c BlockFrequencyInfo.

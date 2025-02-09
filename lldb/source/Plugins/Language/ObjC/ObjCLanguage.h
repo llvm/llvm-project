@@ -194,6 +194,11 @@ public:
 
   llvm::StringRef GetInstanceVariableName() override { return "self"; }
 
+  virtual std::optional<bool>
+  GetBooleanFromString(llvm::StringRef str) const override;
+
+  bool SupportsExceptionBreakpointsOnThrow() const override { return true; }
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };

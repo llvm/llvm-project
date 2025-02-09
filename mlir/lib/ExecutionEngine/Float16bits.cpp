@@ -150,6 +150,10 @@ std::ostream &operator<<(std::ostream &os, const bf16 &d) {
   return os;
 }
 
+bool operator==(const f16 &f1, const f16 &f2) { return f1.bits == f2.bits; }
+
+bool operator==(const bf16 &f1, const bf16 &f2) { return f1.bits == f2.bits; }
+
 // Mark these symbols as weak so they don't conflict when compiler-rt also
 // defines them.
 #define ATTR_WEAK
@@ -161,7 +165,7 @@ std::ostream &operator<<(std::ostream &os, const bf16 &d) {
 #endif
 #endif
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(_M_X64)
 // On x86 bfloat16 is passed in SSE registers. Since both float and __bf16
 // are passed in the same register we can use the wider type and careful casting
 // to conform to x86_64 psABI. This only works with the assumption that we're

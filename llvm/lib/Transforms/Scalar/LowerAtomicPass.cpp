@@ -13,14 +13,13 @@
 
 #include "llvm/Transforms/Scalar/LowerAtomicPass.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/LowerAtomic.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "loweratomic"
+#define DEBUG_TYPE "lower-atomic"
 
 static bool LowerFenceInst(FenceInst *FI) {
   FI->eraseFromParent();

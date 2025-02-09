@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/TargetInfo.h"
@@ -20,7 +19,6 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -71,13 +69,8 @@ static void removeLValueToRValueCast(Expr *E) {
 /// and fix the argument with removing LValueToRValue cast from the expression.
 static void emitAndFixInvalidAsmCastLValue(const Expr *LVal, Expr *BadArgument,
                                            Sema &S) {
-  if (!S.getLangOpts().HeinousExtensions) {
-    S.Diag(LVal->getBeginLoc(), diag::err_invalid_asm_cast_lvalue)
-        << BadArgument->getSourceRange();
-  } else {
-    S.Diag(LVal->getBeginLoc(), diag::warn_invalid_asm_cast_lvalue)
-        << BadArgument->getSourceRange();
-  }
+  S.Diag(LVal->getBeginLoc(), diag::warn_invalid_asm_cast_lvalue)
+      << BadArgument->getSourceRange();
   removeLValueToRValueCast(BadArgument);
 }
 
@@ -671,11 +664,16 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       SmallerValueMentioned |= OutSize < InSize;
     }
 
+    // If the input is an integer register while the output is floating point,
+    // or vice-versa, there is no way they can work together.
+    bool FPTiedToInt = (InputDomain == AD_FP) ^ (OutputDomain == AD_FP);
+
     // If the smaller value wasn't mentioned in the asm string, and if the
     // output was a register, just extend the shorter one to the size of the
     // larger one.
-    if (!SmallerValueMentioned && InputDomain != AD_Other &&
+    if (!SmallerValueMentioned && !FPTiedToInt && InputDomain != AD_Other &&
         OutputConstraintInfos[TiedTo].allowsRegister()) {
+
       // FIXME: GCC supports the OutSize to be 128 at maximum. Currently codegen
       // crash when the size larger than the register size. So we limit it here.
       if (OutTy->isStructureType() &&
@@ -829,7 +827,7 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
   NamedDecl *FoundDecl = nullptr;
 
   // MS InlineAsm uses 'this' as a base
-  if (getLangOpts().CPlusPlus && Base.equals("this")) {
+  if (getLangOpts().CPlusPlus && Base == "this") {
     if (const Type *PT = getCurrentThisType().getTypePtrOrNull())
       FoundDecl = PT->getPointeeType()->getAsTagDecl();
   } else {

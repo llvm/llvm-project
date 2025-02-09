@@ -35,8 +35,9 @@ namespace lldb_private {
 
 template <typename ValueType>
 int AddNamesMatchingPartialString(
-    const std::map<std::string, ValueType> &in_map, llvm::StringRef cmd_str,
-    StringList &matches, StringList *descriptions = nullptr) {
+    const std::map<std::string, ValueType, std::less<>> &in_map,
+    llvm::StringRef cmd_str, StringList &matches,
+    StringList *descriptions = nullptr) {
   int number_added = 0;
 
   const bool add_all = cmd_str.empty();
@@ -54,7 +55,8 @@ int AddNamesMatchingPartialString(
 }
 
 template <typename ValueType>
-size_t FindLongestCommandWord(std::map<std::string, ValueType> &dict) {
+size_t
+FindLongestCommandWord(std::map<std::string, ValueType, std::less<>> &dict) {
   auto end = dict.end();
   size_t max_len = 0;
 
@@ -107,7 +109,7 @@ public:
   typedef std::vector<CommandArgumentData>
       CommandArgumentEntry; // Used to build individual command argument lists
 
-  typedef std::map<std::string, lldb::CommandObjectSP> CommandMap;
+  typedef std::map<std::string, lldb::CommandObjectSP, std::less<>> CommandMap;
 
   CommandObject(CommandInterpreter &interpreter, llvm::StringRef name,
     llvm::StringRef help = "", llvm::StringRef syntax = "",
@@ -207,6 +209,20 @@ public:
   static const ArgumentTableEntry *
   FindArgumentDataByType(lldb::CommandArgumentType arg_type);
 
+  // Sets the argument list for this command to one homogenous argument type,
+  // with the repeat specified.
+  void AddSimpleArgumentList(
+      lldb::CommandArgumentType arg_type,
+      ArgumentRepetitionType repetition_type = eArgRepeatPlain);
+
+  // Helper function to set BP IDs or ID ranges as the command argument data
+  // for this command.
+  // This used to just populate an entry you could add to, but that was never
+  // used.  If we ever need that we can take optional extra args here.
+  // Use this to define a simple argument list:
+  enum IDType { eBreakpointArgs = 0, eWatchpointArgs = 1 };
+  void AddIDsArgumentData(IDType type);
+
   int GetNumArgumentEntries();
 
   CommandArgumentEntry *GetArgumentEntryAtIndex(int idx);
@@ -224,7 +240,10 @@ public:
   void GetFormattedCommandArguments(Stream &str,
                                     uint32_t opt_set_mask = LLDB_OPT_SET_ALL);
 
-  bool IsPairType(ArgumentRepetitionType arg_repeat_type);
+  static bool IsPairType(ArgumentRepetitionType arg_repeat_type);
+
+  static std::optional<ArgumentRepetitionType> 
+    ArgRepetitionFromString(llvm::StringRef string);
 
   bool ParseOptions(Args &args, CommandReturnObject &result);
 
@@ -239,6 +258,13 @@ public:
   ///    The completion request that needs to be answered.
   virtual void HandleCompletion(CompletionRequest &request);
 
+  /// The default version handles argument definitions that have only one
+  /// argument type, and use one of the argument types that have an entry in
+  /// the CommonCompletions.  Override this if you have a more complex
+  /// argument setup.
+  /// FIXME: we should be able to extend this to more complex argument
+  /// definitions provided we have completers for all the argument types.
+  ///
   /// The input array contains a parsed version of the line.
   ///
   /// We've constructed the map of options and their arguments as well if that
@@ -248,7 +274,7 @@ public:
   ///    The completion request that needs to be answered.
   virtual void
   HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) {}
+                           OptionElementVector &opt_element_vector);
 
   bool HelpTextContainsWord(llvm::StringRef search_word,
                             bool search_short_help = true,
@@ -272,6 +298,10 @@ public:
   ///
   /// \param[in] current_command_args
   ///    The command arguments.
+  ///
+  /// \param[in] index
+  ///    This is for internal use - it is how the completion request is tracked
+  ///    in CommandObjectMultiword, and should otherwise be ignored.
   ///
   /// \return
   ///     std::nullopt if there is no special repeat command - it will use the
@@ -312,6 +342,13 @@ public:
       return false;
   }
 
+  /// Set the command input as it appeared in the terminal. This
+  /// is used to have errors refer directly to the original command.
+  void SetOriginalCommandString(std::string s) { m_original_command = s; }
+
+  /// \param offset_in_command is on what column \c args_string
+  /// appears, if applicable. This enables diagnostics that refer back
+  /// to the user input.
   virtual void Execute(const char *args_string,
                        CommandReturnObject &result) = 0;
 
@@ -341,12 +378,13 @@ protected:
            "currently stopped.";
   }
 
-  // This is for use in the command interpreter, when you either want the
-  // selected target, or if no target is present you want to prime the dummy
-  // target with entities that will be copied over to new targets.
-  Target &GetSelectedOrDummyTarget(bool prefer_dummy = false);
-  Target &GetSelectedTarget();
   Target &GetDummyTarget();
+
+  // This is for use in the command interpreter, and returns the most relevant
+  // target. In order of priority, that's the target from the command object's
+  // execution context, the target from the interpreter's execution context, the
+  // selected target or the dummy target.
+  Target &GetTarget();
 
   // If a command needs to use the "current" thread, use this call. Command
   // objects will have an ExecutionContext to use, and that may or may not have
@@ -375,18 +413,13 @@ protected:
   std::string m_cmd_help_short;
   std::string m_cmd_help_long;
   std::string m_cmd_syntax;
+  std::string m_original_command;
   Flags m_flags;
   std::vector<CommandArgumentEntry> m_arguments;
   lldb::CommandOverrideCallback m_deprecated_command_override_callback;
   lldb_private::CommandOverrideCallbackWithResult m_command_override_callback;
   void *m_command_override_baton;
   bool m_is_user_command = false;
-
-  // Helper function to populate IDs or ID ranges as the command argument data
-  // to the specified command argument entry.
-  static void AddIDsArgumentData(CommandArgumentEntry &arg,
-                                 lldb::CommandArgumentType ID,
-                                 lldb::CommandArgumentType IDRange);
 };
 
 class CommandObjectParsed : public CommandObject {

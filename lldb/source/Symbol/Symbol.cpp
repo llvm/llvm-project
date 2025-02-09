@@ -101,18 +101,15 @@ const Symbol &Symbol::operator=(const Symbol &rhs) {
 llvm::Expected<Symbol> Symbol::FromJSON(const JSONSymbol &symbol,
                                         SectionList *section_list) {
   if (!section_list)
-    return llvm::make_error<llvm::StringError>("no section list provided",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("no section list provided");
 
   if (!symbol.value && !symbol.address)
-    return llvm::make_error<llvm::StringError>(
-        "symbol must contain either a value or an address",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "symbol must contain either a value or an address");
 
   if (symbol.value && symbol.address)
-    return llvm::make_error<llvm::StringError>(
-        "symbol cannot contain both a value and an address",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "symbol cannot contain both a value and an address");
 
   const uint64_t size = symbol.size.value_or(0);
   const bool is_artificial = false;
@@ -133,9 +130,8 @@ llvm::Expected<Symbol> Symbol::FromJSON(const JSONSymbol &symbol,
                     AddressRange(section_sp, offset, size), size_is_valid,
                     contains_linker_annotations, flags);
     }
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("no section found for address: {0:x}", *symbol.address),
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        llvm::formatv("no section found for address: {0:x}", *symbol.address));
   }
 
   // Absolute symbols encode the integer value in the m_offset of the
@@ -226,8 +222,9 @@ bool Symbol::IsTrampoline() const { return m_type == eSymbolTypeTrampoline; }
 
 bool Symbol::IsIndirect() const { return m_type == eSymbolTypeResolver; }
 
-void Symbol::GetDescription(Stream *s, lldb::DescriptionLevel level,
-                            Target *target, llvm::StringRef pattern) const {
+void Symbol::GetDescription(
+    Stream *s, lldb::DescriptionLevel level, Target *target,
+    std::optional<Stream::HighlightSettings> settings) const {
   s->Printf("id = {0x%8.8x}", m_uid);
 
   if (m_addr_range.GetBaseAddress().GetSection()) {
@@ -254,22 +251,14 @@ void Symbol::GetDescription(Stream *s, lldb::DescriptionLevel level,
       s->Printf(", value = 0x%16.16" PRIx64,
                 m_addr_range.GetBaseAddress().GetOffset());
   }
-  llvm::StringRef ansi_prefix;
-  llvm::StringRef ansi_suffix;
-  if (target) {
-    ansi_prefix = target->GetDebugger().GetRegexMatchAnsiPrefix();
-    ansi_suffix = target->GetDebugger().GetRegexMatchAnsiSuffix();
-  }
   if (ConstString demangled = m_mangled.GetDemangledName()) {
     s->PutCString(", name=\"");
-    s->PutCStringColorHighlighted(demangled.GetStringRef(), pattern,
-                                  ansi_prefix, ansi_suffix);
+    s->PutCStringColorHighlighted(demangled.GetStringRef(), settings);
     s->PutCString("\"");
   }
   if (ConstString mangled_name = m_mangled.GetMangledName()) {
     s->PutCString(", mangled=\"");
-    s->PutCStringColorHighlighted(mangled_name.GetStringRef(), pattern,
-                                  ansi_prefix, ansi_suffix);
+    s->PutCStringColorHighlighted(mangled_name.GetStringRef(), settings);
     s->PutCString("\"");
   }
 }
@@ -602,9 +591,9 @@ lldb::DisassemblerSP Symbol::GetInstructions(const ExecutionContext &exe_ctx,
                                              bool prefer_file_cache) {
   ModuleSP module_sp(m_addr_range.GetBaseAddress().GetModule());
   if (module_sp && exe_ctx.HasTargetScope()) {
-    return Disassembler::DisassembleRange(module_sp->GetArchitecture(), nullptr,
-                                          flavor, exe_ctx.GetTargetRef(),
-                                          m_addr_range, !prefer_file_cache);
+    return Disassembler::DisassembleRange(
+        module_sp->GetArchitecture(), nullptr, flavor, nullptr, nullptr,
+        exe_ctx.GetTargetRef(), m_addr_range, !prefer_file_cache);
   }
   return lldb::DisassemblerSP();
 }

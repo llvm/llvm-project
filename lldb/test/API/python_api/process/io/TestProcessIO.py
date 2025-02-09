@@ -95,6 +95,43 @@ class ProcessIOTestCase(TestBase):
         error = self.read_error_file_and_delete()
         self.check_process_output(output, error)
 
+    @skipIfWindows  # stdio manipulation unsupported on Windows
+    @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
+    @skipIfDarwinEmbedded  # debugserver can't create/write files on the device
+    def test_stdout_stderr_redirection_to_existing_files(self):
+        """Exercise SBLaunchInfo::AddOpenFileAction() for STDOUT and STDERR redirect to output files already exist."""
+        self.setup_test()
+        self.build()
+        self.create_target()
+
+        # Create the output and error files with placeholder
+        placeholder = "This content should be overwritten."
+        # Local file directory and working directory are the same for local debugging
+        f = open(self.local_output_file, "w")
+        f.write(placeholder)
+        f.close()
+        f = open(self.local_error_file, "w")
+        f.write(placeholder)
+        f.close()
+        if lldb.remote_platform:
+            self.runCmd(
+                'platform put-file "{local}" "{remote}"'.format(
+                    local=self.local_output_file, remote=self.output_file
+                )
+            )
+            self.runCmd(
+                'platform put-file "{local}" "{remote}"'.format(
+                    local=self.local_error_file, remote=self.error_file
+                )
+            )
+
+        self.redirect_stdout()
+        self.redirect_stderr()
+        self.run_process(True)
+        output = self.read_output_file_and_delete()
+        error = self.read_error_file_and_delete()
+        self.check_process_output(output, error)
+
     # target_file - path on local file system or remote file system if running remote
     # local_file - path on local system
     def read_file_and_delete(self, target_file, local_file):
@@ -175,7 +212,7 @@ class ProcessIOTestCase(TestBase):
         self.breakpoint = self.target.BreakpointCreateBySourceRegex(
             "Set breakpoint here", lldb.SBFileSpec("main.c")
         )
-        self.assertTrue(self.breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
+        self.assertGreater(self.breakpoint.GetNumLocations(), 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         error = lldb.SBError()
@@ -223,11 +260,7 @@ class ProcessIOTestCase(TestBase):
 
         for line in self.lines:
             check_line = "input line to stdout: %s" % (line)
-            self.assertTrue(
-                check_line in output, "verify stdout line shows up in STDOUT"
-            )
+            self.assertIn(check_line, output, "verify stdout line shows up in STDOUT")
         for line in self.lines:
             check_line = "input line to stderr: %s" % (line)
-            self.assertTrue(
-                check_line in error, "verify stderr line shows up in STDERR"
-            )
+            self.assertIn(check_line, error, "verify stderr line shows up in STDERR")

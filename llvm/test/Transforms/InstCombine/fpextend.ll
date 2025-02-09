@@ -142,7 +142,7 @@ define float @test9(half %x, half %y) nounwind  {
 define float @test10(half %x, float %y) nounwind  {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext half [[X:%.*]] to float
-; CHECK-NEXT:    [[T56:%.*]] = fmul float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[T56:%.*]] = fmul float [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[T56]]
 ;
   %t1 = fpext half %x to double
@@ -167,7 +167,7 @@ define float @test11(half %x) nounwind  {
 define float @test12(float %x, half %y) nounwind  {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext half [[Y:%.*]] to float
-; CHECK-NEXT:    [[T34:%.*]] = fadd float [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[T34:%.*]] = fadd float [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[T34]]
 ;
   %t1 = fpext float %x to double
@@ -436,4 +436,15 @@ define half @bf16_to_f32_to_f16(bfloat %a) nounwind {
   %y = fpext bfloat %a to float
   %z = fptrunc float %y to half
   ret half %z
+}
+
+define bfloat @bf16_frem(bfloat %x) {
+; CHECK-LABEL: @bf16_frem(
+; CHECK-NEXT:    [[TMP1:%.*]] = frem bfloat [[X:%.*]], 0xR40C9
+; CHECK-NEXT:    ret bfloat [[TMP1]]
+;
+  %t1 = fpext bfloat %x to float
+  %t2 = frem float %t1, 6.281250e+00
+  %t3 = fptrunc float %t2 to bfloat
+  ret bfloat %t3
 }

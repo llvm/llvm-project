@@ -219,6 +219,11 @@ ExecutionEngine::ExecutionEngine(bool enableObjectDump,
 }
 
 ExecutionEngine::~ExecutionEngine() {
+  // Execute the global destructors from the module being processed.
+  // TODO: Allow JIT deinitialize for AArch64. Currently there's a bug causing a
+  // crash for AArch64 see related issue #71963.
+  if (jit && !jit->getTargetTriple().isAArch64())
+    llvm::consumeError(jit->deinitialize(jit->getMainJITDylib()));
   // Run all dynamic library destroy callbacks to prepare for the shutdown.
   for (LibraryDestroyFn destroy : destroyFns)
     destroy();
@@ -396,6 +401,12 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   };
   engine->registerSymbols(runtimeSymbolMap);
 
+  // Execute the global constructors from the module being processed.
+  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
+  // crash for AArch64 see related issue #71963.
+  if (!engine->jit->getTargetTriple().isAArch64())
+    cantFail(engine->jit->initialize(engine->jit->getMainJITDylib()));
+
   return std::move(engine);
 }
 
@@ -421,7 +432,7 @@ Expected<void *> ExecutionEngine::lookup(StringRef name) const {
     llvm::raw_string_ostream os(errorMessage);
     llvm::handleAllErrors(expectedSymbol.takeError(),
                           [&os](llvm::ErrorInfoBase &ei) { ei.log(os); });
-    return makeStringError(os.str());
+    return makeStringError(errorMessage);
   }
 
   if (void *fptr = expectedSymbol->toPtr<void *>())

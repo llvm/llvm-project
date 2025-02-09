@@ -991,7 +991,7 @@ end subroutine test19f
 ! CHECK:         %[[VAL_24:.*]] = fir.array_load %[[VAL_5]](%[[VAL_22]]) {{\[}}%[[VAL_23]]] : (!fir.ref<!fir.array<140x!fir.char<2,13>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<140x!fir.char<2,13>>
 ! CHECK:         %[[VAL_25:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i32) -> i64
-! CHECK:         %[[char_temp:.*]] = fir.alloca !fir.char<4,?>(%16 : i64) {bindc_name = ".chrtmp"}
+! CHECK:         %[[char_temp:.*]] = fir.alloca !fir.char<4,?>(%{{[0-9]+}} : i64) {bindc_name = ".chrtmp"}
 ! CHECK:         %[[VAL_27:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_28:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_29:.*]] = arith.subi %[[VAL_13]], %[[VAL_27]] : index
@@ -1113,7 +1113,7 @@ end subroutine test19h
 ! CHECK:         %[[VAL_6:.*]] = fir.convert %[[VAL_5]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<10x!fir.char<1,?>>>
 ! CHECK:         %[[VAL_7:.*]] = arith.constant 2 : index
 ! CHECK:         %[[VAL_8:.*]] = arith.constant 10 : index
-! CHECK:         %[[VAL_9:.*]] = arith.constant -1 : i32
+! CHECK:         %[[VAL_9:.*]] = arith.constant 6 : i32
 ! CHECK:         %[[VAL_10:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_12:.*]] = arith.constant {{.*}} : i32

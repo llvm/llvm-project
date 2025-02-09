@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Dialect/Func/Transforms/OneToNFuncConversions.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Pass/Pass.h"
@@ -128,8 +129,9 @@ public:
 
 } // namespace
 
-static void populateDecomposeTuplesTestPatterns(TypeConverter &typeConverter,
-                                                RewritePatternSet &patterns) {
+static void
+populateDecomposeTuplesTestPatterns(const TypeConverter &typeConverter,
+                                    RewritePatternSet &patterns) {
   patterns.add<
       // clang-format off
       ConvertMakeTupleOp,
@@ -145,9 +147,14 @@ static void populateDecomposeTuplesTestPatterns(TypeConverter &typeConverter,
 ///
 /// This function has been copied (with small adaptions) from
 /// TestDecomposeCallGraphTypes.cpp.
-static std::optional<SmallVector<Value>>
-buildGetTupleElementOps(OpBuilder &builder, TypeRange resultTypes, Value input,
-                        Location loc) {
+static SmallVector<Value> buildGetTupleElementOps(OpBuilder &builder,
+                                                  TypeRange resultTypes,
+                                                  ValueRange inputs,
+                                                  Location loc) {
+  if (inputs.size() != 1)
+    return {};
+  Value input = inputs.front();
+
   TupleType inputType = dyn_cast<TupleType>(input.getType());
   if (!inputType)
     return {};
@@ -178,9 +185,8 @@ buildGetTupleElementOps(OpBuilder &builder, TypeRange resultTypes, Value input,
 ///
 /// This function has been copied (with small adaptions) from
 /// TestDecomposeCallGraphTypes.cpp.
-static std::optional<Value> buildMakeTupleOp(OpBuilder &builder,
-                                             TupleType resultType,
-                                             ValueRange inputs, Location loc) {
+static Value buildMakeTupleOp(OpBuilder &builder, TupleType resultType,
+                              ValueRange inputs, Location loc) {
   // Build one value for each element at this nesting level.
   SmallVector<Value> elements;
   elements.reserve(resultType.getTypes().size());
@@ -199,13 +205,13 @@ static std::optional<Value> buildMakeTupleOp(OpBuilder &builder,
       inputIt += numNestedFlattenedTypes;
 
       // Recurse on the values for the nested TupleType.
-      std::optional<Value> res = buildMakeTupleOp(builder, nestedTupleType,
-                                                  nestedFlattenedelements, loc);
-      if (!res.has_value())
-        return {};
+      Value res = buildMakeTupleOp(builder, nestedTupleType,
+                                   nestedFlattenedelements, loc);
+      if (!res)
+        return Value();
 
       // The tuple constructed by the conversion is the element value.
-      elements.push_back(res.value());
+      elements.push_back(res);
     } else {
       // Base case: take one input as is.
       elements.push_back(*inputIt++);
@@ -221,7 +227,7 @@ void TestOneToNTypeConversionPass::runOnOperation() {
   auto *context = &getContext();
 
   // Assemble type converter.
-  OneToNTypeConverter typeConverter;
+  TypeConverter typeConverter;
 
   typeConverter.addConversion([](Type type) { return type; });
   typeConverter.addConversion(
@@ -233,6 +239,11 @@ void TestOneToNTypeConversionPass::runOnOperation() {
   typeConverter.addArgumentMaterialization(buildMakeTupleOp);
   typeConverter.addSourceMaterialization(buildMakeTupleOp);
   typeConverter.addTargetMaterialization(buildGetTupleElementOps);
+  // Test the other target materialization variant that takes the original type
+  // as additional argument. This materialization function always fails.
+  typeConverter.addTargetMaterialization(
+      [](OpBuilder &builder, TypeRange resultTypes, ValueRange inputs,
+         Location loc, Type originalType) -> SmallVector<Value> { return {}; });
 
   // Assemble patterns.
   RewritePatternSet patterns(context);

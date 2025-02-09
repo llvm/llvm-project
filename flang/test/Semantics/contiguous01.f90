@@ -5,7 +5,7 @@ module m0
 end
 module m
   use m0
-  !ERROR: Cannot change CONTIGUOUS attribute on use-associated 'p1'
+  !WARNING: Use-associated 'p1' already has 'CONTIGUOUS' attribute
   contiguous p1
   !ERROR: Cannot change CONTIGUOUS attribute on use-associated 'p2'
   contiguous p2
@@ -30,8 +30,10 @@ module m
     contiguous r2
     !PORTABILITY: CONTIGUOUS entity 'e' should be an array pointer, assumed-shape, or assumed-rank
     entry e() result(r2)
+    r2 = 0
   end
   function fp()
     real, pointer, contiguous :: fp(:) ! ok
+    nullify(fp)
   end
 end

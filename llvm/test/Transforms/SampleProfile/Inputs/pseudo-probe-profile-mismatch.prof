@@ -5,7 +5,7 @@ main:30:0
  13: foo_mismatch:10
   1: 10
   !CFGChecksum: 4294967295
- !CFGChecksum: 844635331715433
+ !CFGChecksum: 84463533171543
 bar:10:10
  1: 10
  !CFGChecksum: 42949671295

@@ -320,7 +320,7 @@ define <3 x double> @extvselectsetcc_crash(<2 x double> %x) {
 ; X64-LABEL: extvselectsetcc_crash:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcmpeqpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; X64-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X64-NEXT:    vmovsd {{.*#+}} xmm2 = [1.0E+0,0.0E+0]
 ; X64-NEXT:    vandpd %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,3,3]
@@ -329,7 +329,7 @@ define <3 x double> @extvselectsetcc_crash(<2 x double> %x) {
 ; X86-LABEL: extvselectsetcc_crash:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vcmpeqpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
-; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vmovsd {{.*#+}} xmm2 = [1.0E+0,0.0E+0]
 ; X86-NEXT:    vandpd %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X86-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,3,3]
@@ -1310,15 +1310,14 @@ define float @rcp_v4f32(<4 x float> %x) nounwind {
 define float @rcp_v8f32(<8 x float> %x) nounwind {
 ; X64-LABEL: rcp_v8f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vrcpps %ymm0, %ymm0
-; X64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; X64-NEXT:    vrcpss %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: rcp_v8f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vrcpps %ymm0, %ymm0
+; X86-NEXT:    vrcpss %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -1351,15 +1350,14 @@ define float @rsqrt_v4f32(<4 x float> %x) nounwind {
 define float @rsqrt_v8f32(<8 x float> %x) nounwind {
 ; X64-LABEL: rsqrt_v8f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vrsqrtps %ymm0, %ymm0
-; X64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; X64-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: rsqrt_v8f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vrsqrtps %ymm0, %ymm0
+; X86-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax

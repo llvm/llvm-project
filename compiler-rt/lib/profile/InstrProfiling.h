@@ -12,6 +12,17 @@
 #include "InstrProfilingPort.h"
 #include <stdio.h>
 
+// Make sure __LLVM_INSTR_PROFILE_GENERATE is always defined before
+// including instr_prof_interface.h so the interface functions are
+// declared correctly for the runtime.
+// __LLVM_INSTR_PROFILE_GENERATE is always `#undef`ed after the header,
+// because compiler-rt does not support profiling the profiling runtime itself.
+#ifndef __LLVM_INSTR_PROFILE_GENERATE
+#define __LLVM_INSTR_PROFILE_GENERATE
+#endif
+#include "profile/instr_prof_interface.h"
+#undef __LLVM_INSTR_PROFILE_GENERATE
+
 #define INSTR_PROF_VISIBILITY COMPILER_RT_VISIBILITY
 #include "profile/InstrProfData.inc"
 
@@ -37,6 +48,17 @@ typedef struct ValueProfNode {
 #define INSTR_PROF_VALUE_NODE(Type, LLVMType, Name, Initializer) Type Name;
 #include "profile/InstrProfData.inc"
 } ValueProfNode;
+
+typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT) VTableProfData {
+#define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Initializer) Type Name;
+#include "profile/InstrProfData.inc"
+} VTableProfData;
+
+typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
+    __llvm_gcov_init_func_struct {
+#define COVINIT_FUNC(Type, LLVMType, Name, Initializer) Type Name;
+#include "profile/InstrProfData.inc"
+} __llvm_gcov_init_func_struct;
 
 /*!
  * \brief Return 1 if profile counters are continuously synced to the raw
@@ -92,19 +114,17 @@ const __llvm_profile_data *__llvm_profile_begin_data(void);
 const __llvm_profile_data *__llvm_profile_end_data(void);
 const char *__llvm_profile_begin_names(void);
 const char *__llvm_profile_end_names(void);
+const char *__llvm_profile_begin_vtabnames(void);
+const char *__llvm_profile_end_vtabnames(void);
 char *__llvm_profile_begin_counters(void);
 char *__llvm_profile_end_counters(void);
 char *__llvm_profile_begin_bitmap(void);
 char *__llvm_profile_end_bitmap(void);
-ValueProfNode *__llvm_profile_begin_vnodes();
-ValueProfNode *__llvm_profile_end_vnodes();
-uint32_t *__llvm_profile_begin_orderfile();
-
-/*!
- * \brief Clear profile counters to zero.
- *
- */
-void __llvm_profile_reset_counters(void);
+ValueProfNode *__llvm_profile_begin_vnodes(void);
+ValueProfNode *__llvm_profile_end_vnodes(void);
+const VTableProfData *__llvm_profile_begin_vtables(void);
+const VTableProfData *__llvm_profile_end_vtables(void);
+uint32_t *__llvm_profile_begin_orderfile(void);
 
 /*!
  * \brief Merge profile data from buffer.
@@ -156,50 +176,6 @@ void __llvm_profile_instrument_target_value(uint64_t TargetValue, void *Data,
 int __llvm_profile_write_file(void);
 
 int __llvm_orderfile_write_file(void);
-/*!
- * \brief this is a wrapper interface to \c __llvm_profile_write_file.
- * After this interface is invoked, an already dumped flag will be set
- * so that profile won't be dumped again during program exit.
- * Invocation of interface __llvm_profile_reset_counters will clear
- * the flag. This interface is designed to be used to collect profile
- * data from user selected hot regions. The use model is
- *      __llvm_profile_reset_counters();
- *      ... hot region 1
- *      __llvm_profile_dump();
- *      .. some other code
- *      __llvm_profile_reset_counters();
- *       ... hot region 2
- *      __llvm_profile_dump();
- *
- *  It is expected that on-line profile merging is on with \c %m specifier
- *  used in profile filename . If merging is  not turned on, user is expected
- *  to invoke __llvm_profile_set_filename  to specify different profile names
- *  for different regions before dumping to avoid profile write clobbering.
- */
-int __llvm_profile_dump(void);
-
-int __llvm_orderfile_dump(void);
-
-/*!
- * \brief Set the filename for writing instrumentation data.
- *
- * Sets the filename to be used for subsequent calls to
- * \a __llvm_profile_write_file().
- *
- * \c Name is not copied, so it must remain valid.  Passing NULL resets the
- * filename logic to the default behaviour.
- *
- * Note: There may be multiple copies of the profile runtime (one for each
- * instrumented image/DSO). This API only modifies the filename within the
- * copy of the runtime available to the calling image.
- *
- * Warning: This is a no-op if continuous mode (\ref
- * __llvm_profile_is_continuous_mode_enabled) is on. The reason for this is
- * that in continuous mode, profile counters are mmap()'d to the profile at
- * program initialization time. Support for transferring the mmap'd profile
- * counts to a new file has not been implemented.
- */
-void __llvm_profile_set_filename(const char *Name);
 
 /*!
  * \brief Set the FILE object for writing instrumentation data. Return 0 if set
@@ -238,6 +214,9 @@ void __llvm_profile_initialize_file(void);
 /*! \brief Initialize the profile runtime. */
 void __llvm_profile_initialize(void);
 
+/*! \brief Initialize the gcov profile runtime. */
+void __llvm_profile_gcov_initialize(void);
+
 /*!
  * \brief Return path prefix (excluding the base filename) of the profile data.
  * This is useful for users using \c -fprofile-generate=./path_prefix who do
@@ -246,7 +225,7 @@ void __llvm_profile_initialize(void);
  * merge mode is turned on for instrumented programs with shared libs).
  * Side-effect: this API call will invoke malloc with dynamic memory allocation.
  */
-const char *__llvm_profile_get_path_prefix();
+const char *__llvm_profile_get_path_prefix(void);
 
 /*!
  * \brief Return filename (including path) of the profile data. Note that if the
@@ -259,7 +238,7 @@ const char *__llvm_profile_get_path_prefix();
  * instrumented image/DSO). This API only retrieves the filename from the copy
  * of the runtime available to the calling image.
  */
-const char *__llvm_profile_get_filename();
+const char *__llvm_profile_get_filename(void);
 
 /*! \brief Get the magic token for the file format. */
 uint64_t __llvm_profile_get_magic(void);
@@ -291,20 +270,31 @@ uint64_t __llvm_profile_get_num_bitmap_bytes(const char *Begin,
 /*! \brief Get the size of the profile name section in bytes. */
 uint64_t __llvm_profile_get_name_size(const char *Begin, const char *End);
 
-/* ! \brief Given the sizes of the data and counter information, return the
- * number of padding bytes before and after the counters, and after the names,
- * in the raw profile.
+/*! \brief Get the number of virtual table profile data entries */
+uint64_t __llvm_profile_get_num_vtable(const VTableProfData *Begin,
+                                       const VTableProfData *End);
+
+/*! \brief Get the size of virtual table profile data in bytes. */
+uint64_t __llvm_profile_get_vtable_section_size(const VTableProfData *Begin,
+                                                const VTableProfData *End);
+
+/* ! \brief Given the sizes of the data and counter information, computes the
+ * number of padding bytes before and after the counter section, as well as the
+ * number of padding bytes after other setions in the raw profile.
+ * Returns -1 upon errors and 0 upon success. Output parameters should be used
+ * iff return value is 0.
  *
  * Note: When mmap() mode is disabled, no padding bytes before/after counters
  * are needed. However, in mmap() mode, the counter section in the raw profile
  * must be page-aligned: this API computes the number of padding bytes
  * needed to achieve that.
  */
-void __llvm_profile_get_padding_sizes_for_counters(
+int __llvm_profile_get_padding_sizes_for_counters(
     uint64_t DataSize, uint64_t CountersSize, uint64_t NumBitmapBytes,
-    uint64_t NamesSize, uint64_t *PaddingBytesBeforeCounters,
-    uint64_t *PaddingBytesAfterCounters, uint64_t *PaddingBytesAfterBitmap,
-    uint64_t *PaddingBytesAfterNames);
+    uint64_t NamesSize, uint64_t VTableSize, uint64_t VNameSize,
+    uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
+    uint64_t *PaddingBytesAfterBitmap, uint64_t *PaddingBytesAfterNames,
+    uint64_t *PaddingBytesAfterVTable, uint64_t *PaddingBytesAfterVNames);
 
 /*!
  * \brief Set the flag that profile data has been dumped to the file.
@@ -312,7 +302,7 @@ void __llvm_profile_get_padding_sizes_for_counters(
  * certain processes in case the processes don't have permission to write to
  * the disks, and trying to do so would result in side effects such as crashes.
  */
-void __llvm_profile_set_dumped();
+void __llvm_profile_set_dumped(void);
 
 /*!
  * This variable is defined in InstrProfilingRuntime.cpp as a hidden
@@ -333,7 +323,8 @@ COMPILER_RT_VISIBILITY extern int INSTR_PROF_PROFILE_RUNTIME_VAR;
  * variable is defined as weak so that compiler can emit an overriding
  * definition depending on user option.
  */
-extern uint64_t INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
+COMPILER_RT_VISIBILITY extern uint64_t
+    INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
 
 /*!
  * This variable is a weak symbol defined in InstrProfiling.c. It allows
@@ -342,4 +333,6 @@ extern uint64_t INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
  */
 extern char INSTR_PROF_PROFILE_NAME_VAR[1]; /* __llvm_profile_filename. */
 
+const __llvm_gcov_init_func_struct *__llvm_profile_begin_covinit();
+const __llvm_gcov_init_func_struct *__llvm_profile_end_covinit();
 #endif /* PROFILE_INSTRPROFILING_H_ */

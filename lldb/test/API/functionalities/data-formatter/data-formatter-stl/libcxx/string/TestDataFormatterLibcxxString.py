@@ -83,21 +83,31 @@ class LibcxxStringDataFormatterTestCase(TestBase):
         uncappedSummaryStream = lldb.SBStream()
         TheVeryLongOne.GetSummary(uncappedSummaryStream, summaryOptions)
         uncappedSummary = uncappedSummaryStream.GetData()
-        self.assertTrue(
-            uncappedSummary.find("someText") > 0,
+        self.assertGreater(
+            uncappedSummary.find("someText"),
+            0,
             "uncappedSummary does not include the full string",
         )
         summaryOptions.SetCapping(lldb.eTypeSummaryCapped)
         cappedSummaryStream = lldb.SBStream()
         TheVeryLongOne.GetSummary(cappedSummaryStream, summaryOptions)
         cappedSummary = cappedSummaryStream.GetData()
-        self.assertTrue(
-            cappedSummary.find("someText") <= 0,
-            "cappedSummary includes the full string",
+        self.assertLessEqual(
+            cappedSummary.find("someText"), 0, "cappedSummary includes the full string"
         )
 
         self.expect_expr(
             "s", result_type=ns + "::wstring", result_summary='L"hello world! מזל טוב!"'
+        )
+
+        self.expect_expr(
+            "q", result_type=ns + "::string", result_summary='"hello world"'
+        )
+
+        self.expect_expr(
+            "Q",
+            result_type=ns + "::string",
+            result_summary='"quite a long std::strin with lots of info inside it"',
         )
 
         self.expect(

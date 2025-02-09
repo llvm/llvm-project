@@ -69,9 +69,7 @@ void foo() {
 // CHECK-NEXT:    [[X_TRAITS:%.*]] = alloca [1 x %struct.omp_alloctrait_t], align 16
 // CHECK-NEXT:    [[X_ALLOC:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[X_TRAITS]]) #[[ATTR5:[0-9]+]]
-// CHECK-NEXT:    store i32 2, ptr [[X_TRAITS]], align 16
-// CHECK-NEXT:    [[LOC0:%.*]] = getelementptr inbounds i8, ptr [[X_TRAITS]], i64 8
-// CHECK-NEXT:    store i64 64, ptr [[LOC0]], align 8
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(16) [[X_TRAITS]], ptr noundef nonnull align 16 dereferenceable(16) @__const.foo.x_traits, i64 16, i1 false)
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[X_ALLOC]]) #[[ATTR5]]
 // CHECK-NEXT:    [[CALL:%.*]] = call i64 @omp_init_allocator(i64 noundef 0, i32 noundef 1, ptr noundef nonnull [[X_TRAITS]]) #[[ATTR5]]
 // CHECK-NEXT:    store i64 [[CALL]], ptr [[X_ALLOC]], align 8, !tbaa [[TBAA3:![0-9]+]]
@@ -82,28 +80,28 @@ void foo() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@foo.omp_outlined
-// CHECK-SAME: (ptr noalias nocapture noundef readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture readnone [[DOTBOUND_TID_:%.*]], ptr nocapture noundef nonnull readonly align 8 dereferenceable(8) [[X_ALLOC:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK-SAME: (ptr noalias noundef readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[X_ALLOC:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[DOTOMP_LB]]) #[[ATTR5]]
-// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4, !tbaa [[TBAA7:![0-9]+]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[DOTOMP_UB]]) #[[ATTR5]]
-// CHECK-NEXT:    store i32 1023, ptr [[DOTOMP_UB]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store i32 1023, ptr [[DOTOMP_UB]], align 4, !tbaa [[TBAA7]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[DOTOMP_STRIDE]]) #[[ATTR5]]
-// CHECK-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA7]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[DOTOMP_IS_LAST]]) #[[ATTR5]]
-// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !tbaa [[TBAA7]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X_ALLOC]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CONV:%.*]] = inttoptr i64 [[TMP1]] to ptr
 // CHECK-NEXT:    [[DOTX__VOID_ADDR:%.*]] = tail call ptr @__kmpc_alloc(i32 [[TMP0]], i64 8, ptr [[CONV]])
 // CHECK-NEXT:    call void @__kmpc_for_static_init_4(ptr nonnull @[[GLOB1:[0-9]+]], i32 [[TMP0]], i32 34, ptr nonnull [[DOTOMP_IS_LAST]], ptr nonnull [[DOTOMP_LB]], ptr nonnull [[DOTOMP_UB]], ptr nonnull [[DOTOMP_STRIDE]], i32 1, i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !tbaa [[TBAA7]]
 // CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP2]], i32 1023)
-// CHECK-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4, !tbaa [[TBAA7]]
 // CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr nonnull @[[GLOB1]], i32 [[TMP0]])
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[X_ALLOC]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CONV5:%.*]] = inttoptr i64 [[TMP3]] to ptr

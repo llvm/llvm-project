@@ -266,3 +266,18 @@ namespace PR18777 {
   struct S { explicit operator bool() const; } s;
   int *p = new int(s); // expected-error {{no viable conversion}}
 }
+
+namespace DoubleDiags {
+  struct ExplicitConvert{
+    explicit operator int();//#DOUBLE_DIAG_OP_INT
+  } EC;
+  template<typename T>
+  void Template(){
+      // expected-error@+2{{switch condition type 'struct ExplicitConvert' requires explicit conversion to 'int'}}
+      // expected-note@#DOUBLE_DIAG_OP_INT{{conversion to integral type 'int'}}
+      switch(EC){}
+  };
+  void Inst() {
+    Template<int>();
+  }
+}

@@ -16,10 +16,11 @@
 # RELOC-NEXT: Offset Info Type Symbol's Value Symbol's Name + Addend
 # RELOC-NEXT: {{.*}} 0000000100000001 R_X86_64_64 0000000000000000 foo + 0
 
-# COMMON:       Symbol table '.dynsym' contains 2 entries:
-# COMMON-NEXT:  Num: Value Size Type Bind Vis Ndx Name
-# COMMON-NEXT:  0: 0000000000000000 0 NOTYPE LOCAL DEFAULT UND
-# COMMON-NEXT:  1: 0000000000000000 0 NOTYPE WEAK DEFAULT UND foo
+# NORELOC-NOT: Symbol table '.dynsym'
+# RELOC:       Symbol table '.dynsym' contains 2 entries:
+# RELOC-NEXT:  Num: Value Size Type Bind Vis Ndx Name
+# RELOC-NEXT:  0: 0000000000000000 0 NOTYPE LOCAL DEFAULT UND
+# RELOC-NEXT:  1: 0000000000000000 0 NOTYPE WEAK DEFAULT UND foo
 # COMMON:      Hex dump of section '.data':
 # COMMON-NEXT: {{.*}} 00000000 00000000 
 # COMMON-EMPTY:

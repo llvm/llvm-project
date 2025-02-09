@@ -9,12 +9,12 @@
 ! RUN: %flang -c -emit-llvm -O0 %s -o - | llvm-dis | FileCheck %s --check-prefix=CHECK-NOAA --check-prefix=CHECK-ALL
 ! RUN: %flang -c -emit-llvm %s -o - | llvm-dis | FileCheck %s --check-prefix=CHECK-NOAA --check-prefix=CHECK-ALL
 
-! RUN: %flang -fc1 -emit-llvm -O3 %s -o - | FileCheck %s --check-prefix=CHECK-AA --check-prefix=CHECK-ALL
-! RUN: %flang -fc1 -emit-llvm -O2 %s -o - | FileCheck %s --check-prefix=CHECK-AA --check-prefix=CHECK-ALL
-! RUN: %flang -fc1 -emit-llvm -O1 %s -o - | FileCheck %s --check-prefix=CHECK-AA --check-prefix=CHECK-ALL
+! RUN: %flang_fc1 -emit-llvm -O3 %s -o - | FileCheck %s --check-prefix=CHECK-AA --check-prefix=CHECK-ALL
+! RUN: %flang_fc1 -emit-llvm -O2 %s -o - | FileCheck %s --check-prefix=CHECK-AA --check-prefix=CHECK-ALL
+! RUN: %flang_fc1 -emit-llvm -O1 %s -o - | FileCheck %s --check-prefix=CHECK-AA --check-prefix=CHECK-ALL
 
-! RUN: %flang -fc1 -emit-llvm -O0 %s -o - | FileCheck %s --check-prefix=CHECK-NOAA --check-prefix=CHECK-ALL
-! RUN: %flang -fc1 -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-NOAA --check-prefix=CHECK-ALL
+! RUN: %flang_fc1 -emit-llvm -O0 %s -o - | FileCheck %s --check-prefix=CHECK-NOAA --check-prefix=CHECK-ALL
+! RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-NOAA --check-prefix=CHECK-ALL
 
 subroutine simple(a)
   integer, intent(inout) :: a(:)

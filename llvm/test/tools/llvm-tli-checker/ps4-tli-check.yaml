@@ -32,25 +32,32 @@
 # RUN: FileCheck %s --check-prefix=AVAIL --input-file %t3.txt
 # RUN: FileCheck %s --check-prefix=UNAVAIL --input-file %t3.txt
 #
-# CHECK: << Total TLI yes SDK no:  8
+# CHECK: << Total TLI yes SDK no:  18
 # CHECK: >> Total TLI no  SDK yes: 0
-# CHECK: == Total TLI yes SDK yes: 235
+# CHECK: == Total TLI yes SDK yes: 271
 #
 # WRONG_DETAIL: << TLI yes SDK no : '_ZdaPv' aka operator delete[](void*)
 # WRONG_DETAIL: >> TLI no  SDK yes: '_ZdaPvj' aka operator delete[](void*, unsigned int)
 # WRONG_DETAIL-COUNT-8: << TLI yes SDK no : {{.*}}__hot_cold_t
-# WRONG_SUMMARY: << Total TLI yes SDK no:  9{{$}}
+# WRONG_DETAIL-COUNT-4: << TLI yes SDK no : '__size_returning_new{{.*}}
+# WRONG_DETAIL: << TLI yes SDK no : 'fmaximum_num'
+# WRONG_DETAIL: << TLI yes SDK no : 'fmaximum_numf'
+# WRONG_DETAIL: << TLI yes SDK no : 'fmaximum_numl'
+# WRONG_DETAIL: << TLI yes SDK no : 'fminimum_num'
+# WRONG_DETAIL: << TLI yes SDK no : 'fminimum_numf'
+# WRONG_DETAIL: << TLI yes SDK no : 'fminimum_numl'
+# WRONG_SUMMARY: << Total TLI yes SDK no:  19{{$}}
 # WRONG_SUMMARY: >> Total TLI no  SDK yes: 1{{$}}
-# WRONG_SUMMARY: == Total TLI yes SDK yes: 234
+# WRONG_SUMMARY: == Total TLI yes SDK yes: 270
 #
 ## The -COUNT suffix doesn't care if there are too many matches, so check
 ## the exact count first; the two directives should add up to that.
 ## Yes, this means additions to TLI will fail this test, but the argument
 ## to -COUNT can't be an expression.
-# AVAIL: TLI knows 476 symbols, 243 available
-# AVAIL-COUNT-243: {{^}} available
+# AVAIL: TLI knows 523 symbols, 289 available
+# AVAIL-COUNT-289: {{^}} available
 # AVAIL-NOT:       {{^}} available
-# UNAVAIL-COUNT-233: not available
+# UNAVAIL-COUNT-234: not available
 # UNAVAIL-NOT:       not available
 
 ## This is a large file so it's worth telling lit to stop here.
@@ -167,6 +174,10 @@ DynamicSymbols:
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
+  - Name:            __cxa_throw
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
   - Name:            __cxa_guard_release
     Type:            STT_FUNC
     Section:         .text
@@ -263,6 +274,26 @@ DynamicSymbols:
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
+  - Name:            atexit
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            abort
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            exit
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            _Exit
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            _ZSt9terminatev
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
   - Name:            atof
     Type:            STT_FUNC
     Section:         .text
@@ -344,6 +375,30 @@ DynamicSymbols:
     Section:         .text
     Binding:         STB_GLOBAL
   - Name:            cosl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            erf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            erff
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            erfl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            tgamma
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            tgammaf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            tgammal
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
@@ -547,6 +602,18 @@ DynamicSymbols:
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
+  - Name:            hypot
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            hypotf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            hypotl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
   - Name:            isdigit
     Type:            STT_FUNC
     Section:         .text
@@ -611,6 +678,18 @@ DynamicSymbols:
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
+  - Name:            ilogb
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            ilogbf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            ilogbl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
   - Name:            logb
     Type:            STT_FUNC
     Section:         .text
@@ -672,6 +751,18 @@ DynamicSymbols:
     Section:         .text
     Binding:         STB_GLOBAL
   - Name:            modfl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            nan
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            nanf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            nanl
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
@@ -747,6 +838,30 @@ DynamicSymbols:
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
+  - Name:            remquo
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            remquof
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            remquol
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            fdim
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            fdimf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            fdiml
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
   - Name:            rewind
     Type:            STT_FUNC
     Section:         .text
@@ -775,6 +890,30 @@ DynamicSymbols:
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
+  - Name:            scalbln
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            scalblnf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            scalblnl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            scalbn
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            scalbnf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            scalbnl
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
   - Name:            scanf
     Type:            STT_FUNC
     Section:         .text
@@ -792,6 +931,18 @@ DynamicSymbols:
     Section:         .text
     Binding:         STB_GLOBAL
   - Name:            sinf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            sincos
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            sincosf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            sincosl
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL

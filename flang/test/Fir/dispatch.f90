@@ -1,5 +1,5 @@
-! RUN: bbc -polymorphic-type -emit-hlfir %s -o - | fir-opt --fir-polymorphic-op | FileCheck %s
-! RUN: bbc -polymorphic-type -emit-hlfir %s -o - | FileCheck %s --check-prefix=BT
+! RUN: bbc -emit-hlfir %s -o - | fir-opt --fir-polymorphic-op | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s --check-prefix=BT
 
 ! Tests codegen of fir.dispatch operation. This test is intentionally run from
 ! Fortran through bbc and tco so we have all the binding tables lowered to FIR
@@ -18,6 +18,7 @@ module dispatch1
     procedure :: proc_with_values => proc_p1
     procedure, nopass :: proc_nopass => proc_nopass_p1
     procedure, pass(this) :: proc_pass => proc_pass_p1
+    procedure, nopass :: z_proc_nopass_bindc => proc_nopass_bindc_p1
   end type
 
   type, extends(p1) :: p2
@@ -30,6 +31,7 @@ module dispatch1
     procedure :: proc_with_values => proc_p2
     procedure, nopass :: proc_nopass => proc_nopass_p2
     procedure, pass(this) :: proc_pass => proc_pass_p2
+    procedure, nopass :: z_proc_nopass_bindc => proc_nopass_bindc_p2
   end type
 
   type, abstract :: a1
@@ -118,16 +120,24 @@ contains
     print*, 'call proc_nopass_p2'
   end subroutine
 
+  subroutine proc_nopass_bindc_p1() bind(c)
+    print*, 'call proc_nopass_bindc_p1'
+  end subroutine
+
+  subroutine proc_nopass_bindc_p2() bind(c)
+    print*, 'call proc_nopass_bindc_p2'
+  end subroutine
+
   subroutine proc_pass_p1(i, this)
     integer :: i
     class(p1) :: this
-    print*, 'call proc_nopass_p1'
+    print*, 'call proc_pass_p1'
   end subroutine
 
   subroutine proc_pass_p2(i, this)
     integer :: i
     class(p2) :: this
-    print*, 'call proc_nopass_p2'
+    print*, 'call proc_pass_p2'
   end subroutine
 
   subroutine display_class(p)
@@ -140,6 +150,7 @@ contains
     call p%proc_with_values(2.5)
     call p%proc_nopass()
     call p%proc_pass(1)
+    call p%z_proc_nopass_bindc()
   end subroutine
 
   subroutine no_pass_array(a)
@@ -184,7 +195,7 @@ end
 
 ! CHECK-LABEL: func.func @_QMdispatch1Pdisplay_class(
 ! CHECK-SAME: %[[ARG:.*]]: [[CLASS:!fir.class<.*>>]]
-! CHECK: %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] {uniq_name = "_QMdispatch1Fdisplay_classEp"} : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>)
+! CHECK: %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMdispatch1Fdisplay_classEp"} : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>)
 
 ! Check dynamic dispatch equal to `call p%display2()` with binding index = 2.
 ! CHECK: %[[BOXDESC:.*]] = fir.box_tdesc %[[ARG_DECL]]#0 : ([[CLASS]]) -> !fir.tdesc<none>
@@ -297,6 +308,10 @@ end
 ! CHECK: %[[FUNC_PTR:.*]] = fir.convert %[[FUNC_ADDR]] : (i64) -> ((!fir.ref<i32>, [[CLASS]]) -> ())
 ! CHECK: fir.call %[[FUNC_PTR]](%{{.*}}, %[[ARG_DECL]]#0) : (!fir.ref<i32>, [[CLASS]]) -> ()
 
+! Test attributes are propagated from fir.dispatch to fir.call
+! for `call p%z_proc_nopass_bindc()`
+! CHECK: fir.call %{{.*}}() proc_attrs<bind_c> : () -> ()
+
 ! CHECK-LABEL: _QMdispatch1Pno_pass_array
 ! CHECK-LABEL: _QMdispatch1Pno_pass_array_allocatable
 ! CHECK-LABEL: _QMdispatch1Pno_pass_array_pointer
@@ -316,6 +331,7 @@ end
 ! BT: fir.dt_entry "proc_nopass", @_QMdispatch1Pproc_nopass_p1
 ! BT: fir.dt_entry "proc_pass", @_QMdispatch1Pproc_pass_p1
 ! BT: fir.dt_entry "proc_with_values", @_QMdispatch1Pproc_p1
+! BT: fir.dt_entry "z_proc_nopass_bindc", @proc_nopass_bindc_p1
 ! BT: }
 
 ! BT-LABEL: fir.type_info @_QMdispatch1Ta1
@@ -334,5 +350,6 @@ end
 ! BT:  fir.dt_entry "proc_nopass", @_QMdispatch1Pproc_nopass_p2
 ! BT:  fir.dt_entry "proc_pass", @_QMdispatch1Pproc_pass_p2
 ! BT:  fir.dt_entry "proc_with_values", @_QMdispatch1Pproc_p2
+! BT:  fir.dt_entry "z_proc_nopass_bindc", @proc_nopass_bindc_p2
 ! BT:  fir.dt_entry "display3", @_QMdispatch1Pdisplay3
 ! BT: }

@@ -17,6 +17,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -68,10 +69,11 @@ public:
 
 static bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT,
                           const TargetTransformInfo &TTI, const DataLayout &DL,
-                          DomTreeUpdater *DTU);
+                          bool HasBranchDivergence, DomTreeUpdater *DTU);
 static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
                              const TargetTransformInfo &TTI,
-                             const DataLayout &DL, DomTreeUpdater *DTU);
+                             const DataLayout &DL, bool HasBranchDivergence,
+                             DomTreeUpdater *DTU);
 
 char ScalarizeMaskedMemIntrinLegacyPass::ID = 0;
 
@@ -140,8 +142,9 @@ static unsigned adjustForEndian(const DataLayout &DL, unsigned VectorWidth,
 //  %10 = extractelement <16 x i1> %mask, i32 2
 //  br i1 %10, label %cond.load4, label %else5
 //
-static void scalarizeMaskedLoad(const DataLayout &DL, CallInst *CI,
-                                DomTreeUpdater *DTU, bool &ModifiedDT) {
+static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
+                                CallInst *CI, DomTreeUpdater *DTU,
+                                bool &ModifiedDT) {
   Value *Ptr = CI->getArgOperand(0);
   Value *Alignment = CI->getArgOperand(1);
   Value *Mask = CI->getArgOperand(2);
@@ -161,7 +164,9 @@ static void scalarizeMaskedLoad(const DataLayout &DL, CallInst *CI,
 
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
-    Value *NewI = Builder.CreateAlignedLoad(VecType, Ptr, AlignVal);
+    LoadInst *NewI = Builder.CreateAlignedLoad(VecType, Ptr, AlignVal);
+    NewI->copyMetadata(*CI);
+    NewI->takeName(CI);
     CI->replaceAllUsesWith(NewI);
     CI->eraseFromParent();
     return;
@@ -188,10 +193,40 @@ static void scalarizeMaskedLoad(const DataLayout &DL, CallInst *CI,
     return;
   }
 
+  // Optimize the case where the "masked load" is a predicated load - that is,
+  // where the mask is the splat of a non-constant scalar boolean. In that case,
+  // use that splated value as the guard on a conditional vector load.
+  if (isSplatValue(Mask, /*Index=*/0)) {
+    Value *Predicate = Builder.CreateExtractElement(Mask, uint64_t(0ull),
+                                                    Mask->getName() + ".first");
+    Instruction *ThenTerm =
+        SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
+                                  /*BranchWeights=*/nullptr, DTU);
+
+    BasicBlock *CondBlock = ThenTerm->getParent();
+    CondBlock->setName("cond.load");
+    Builder.SetInsertPoint(CondBlock->getTerminator());
+    LoadInst *Load = Builder.CreateAlignedLoad(VecType, Ptr, AlignVal,
+                                               CI->getName() + ".cond.load");
+    Load->copyMetadata(*CI);
+
+    BasicBlock *PostLoad = ThenTerm->getSuccessor(0);
+    Builder.SetInsertPoint(PostLoad, PostLoad->begin());
+    PHINode *Phi = Builder.CreatePHI(VecType, /*NumReservedValues=*/2);
+    Phi->addIncoming(Load, CondBlock);
+    Phi->addIncoming(Src0, IfBlock);
+    Phi->takeName(CI);
+
+    CI->replaceAllUsesWith(Phi);
+    CI->eraseFromParent();
+    ModifiedDT = true;
+    return;
+  }
   // If the mask is not v1i1, use scalar bit test operations. This generates
-  // better results on X86 at least.
-  Value *SclrMask;
-  if (VectorWidth != 1) {
+  // better results on X86 at least. However, don't do this on GPUs and other
+  // machines with divergence, as there each i1 needs a vector register.
+  Value *SclrMask = nullptr;
+  if (VectorWidth != 1 && !HasBranchDivergence) {
     Type *SclrMaskTy = Builder.getIntNTy(VectorWidth);
     SclrMask = Builder.CreateBitCast(Mask, SclrMaskTy, "scalar_mask");
   }
@@ -199,13 +234,15 @@ static void scalarizeMaskedLoad(const DataLayout &DL, CallInst *CI,
   for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
     // Fill the "else" block, created in the previous iteration
     //
-    //  %res.phi.else3 = phi <16 x i32> [ %11, %cond.load1 ], [ %res.phi.else, %else ]
-    //  %mask_1 = and i16 %scalar_mask, i32 1 << Idx
-    //  %cond = icmp ne i16 %mask_1, 0
-    //  br i1 %mask_1, label %cond.load, label %else
+    //  %res.phi.else3 = phi <16 x i32> [ %11, %cond.load1 ], [ %res.phi.else,
+    //  %else ] %mask_1 = and i16 %scalar_mask, i32 1 << Idx %cond = icmp ne i16
+    //  %mask_1, 0 br i1 %mask_1, label %cond.load, label %else
     //
+    // On GPUs, use
+    //  %cond = extrectelement %mask, Idx
+    // instead
     Value *Predicate;
-    if (VectorWidth != 1) {
+    if (SclrMask != nullptr) {
       Value *Mask = Builder.getInt(APInt::getOneBitSet(
           VectorWidth, adjustForEndian(DL, VectorWidth, Idx)));
       Predicate = Builder.CreateICmpNE(Builder.CreateAnd(SclrMask, Mask),
@@ -278,8 +315,9 @@ static void scalarizeMaskedLoad(const DataLayout &DL, CallInst *CI,
 //   store i32 %6, i32* %7
 //   br label %else2
 //   . . .
-static void scalarizeMaskedStore(const DataLayout &DL, CallInst *CI,
-                                 DomTreeUpdater *DTU, bool &ModifiedDT) {
+static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
+                                 CallInst *CI, DomTreeUpdater *DTU,
+                                 bool &ModifiedDT) {
   Value *Src = CI->getArgOperand(0);
   Value *Ptr = CI->getArgOperand(1);
   Value *Alignment = CI->getArgOperand(2);
@@ -297,7 +335,9 @@ static void scalarizeMaskedStore(const DataLayout &DL, CallInst *CI,
 
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
-    Builder.CreateAlignedStore(Src, Ptr, AlignVal);
+    StoreInst *Store = Builder.CreateAlignedStore(Src, Ptr, AlignVal);
+    Store->takeName(CI);
+    Store->copyMetadata(*CI);
     CI->eraseFromParent();
     return;
   }
@@ -319,10 +359,33 @@ static void scalarizeMaskedStore(const DataLayout &DL, CallInst *CI,
     return;
   }
 
+  // Optimize the case where the "masked store" is a predicated store - that is,
+  // when the mask is the splat of a non-constant scalar boolean. In that case,
+  // optimize to a conditional store.
+  if (isSplatValue(Mask, /*Index=*/0)) {
+    Value *Predicate = Builder.CreateExtractElement(Mask, uint64_t(0ull),
+                                                    Mask->getName() + ".first");
+    Instruction *ThenTerm =
+        SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
+                                  /*BranchWeights=*/nullptr, DTU);
+    BasicBlock *CondBlock = ThenTerm->getParent();
+    CondBlock->setName("cond.store");
+    Builder.SetInsertPoint(CondBlock->getTerminator());
+
+    StoreInst *Store = Builder.CreateAlignedStore(Src, Ptr, AlignVal);
+    Store->takeName(CI);
+    Store->copyMetadata(*CI);
+
+    CI->eraseFromParent();
+    ModifiedDT = true;
+    return;
+  }
+
   // If the mask is not v1i1, use scalar bit test operations. This generates
-  // better results on X86 at least.
-  Value *SclrMask;
-  if (VectorWidth != 1) {
+  // better results on X86 at least. However, don't do this on GPUs or other
+  // machines with branch divergence, as there each i1 takes up a register.
+  Value *SclrMask = nullptr;
+  if (VectorWidth != 1 && !HasBranchDivergence) {
     Type *SclrMaskTy = Builder.getIntNTy(VectorWidth);
     SclrMask = Builder.CreateBitCast(Mask, SclrMaskTy, "scalar_mask");
   }
@@ -334,8 +397,11 @@ static void scalarizeMaskedStore(const DataLayout &DL, CallInst *CI,
     //  %cond = icmp ne i16 %mask_1, 0
     //  br i1 %mask_1, label %cond.store, label %else
     //
+    // On GPUs, use
+    //  %cond = extrectelement %mask, Idx
+    // instead
     Value *Predicate;
-    if (VectorWidth != 1) {
+    if (SclrMask != nullptr) {
       Value *Mask = Builder.getInt(APInt::getOneBitSet(
           VectorWidth, adjustForEndian(DL, VectorWidth, Idx)));
       Predicate = Builder.CreateICmpNE(Builder.CreateAnd(SclrMask, Mask),
@@ -402,7 +468,8 @@ static void scalarizeMaskedStore(const DataLayout &DL, CallInst *CI,
 // . . .
 // %Result = select <16 x i1> %Mask, <16 x i32> %res.phi.select, <16 x i32> %Src
 // ret <16 x i32> %Result
-static void scalarizeMaskedGather(const DataLayout &DL, CallInst *CI,
+static void scalarizeMaskedGather(const DataLayout &DL,
+                                  bool HasBranchDivergence, CallInst *CI,
                                   DomTreeUpdater *DTU, bool &ModifiedDT) {
   Value *Ptrs = CI->getArgOperand(0);
   Value *Alignment = CI->getArgOperand(1);
@@ -441,9 +508,10 @@ static void scalarizeMaskedGather(const DataLayout &DL, CallInst *CI,
   }
 
   // If the mask is not v1i1, use scalar bit test operations. This generates
-  // better results on X86 at least.
-  Value *SclrMask;
-  if (VectorWidth != 1) {
+  // better results on X86 at least. However, don't do this on GPUs or other
+  // machines with branch divergence, as there, each i1 takes up a register.
+  Value *SclrMask = nullptr;
+  if (VectorWidth != 1 && !HasBranchDivergence) {
     Type *SclrMaskTy = Builder.getIntNTy(VectorWidth);
     SclrMask = Builder.CreateBitCast(Mask, SclrMaskTy, "scalar_mask");
   }
@@ -455,9 +523,12 @@ static void scalarizeMaskedGather(const DataLayout &DL, CallInst *CI,
     //  %cond = icmp ne i16 %mask_1, 0
     //  br i1 %Mask1, label %cond.load, label %else
     //
+    // On GPUs, use
+    //  %cond = extrectelement %mask, Idx
+    // instead
 
     Value *Predicate;
-    if (VectorWidth != 1) {
+    if (SclrMask != nullptr) {
       Value *Mask = Builder.getInt(APInt::getOneBitSet(
           VectorWidth, adjustForEndian(DL, VectorWidth, Idx)));
       Predicate = Builder.CreateICmpNE(Builder.CreateAnd(SclrMask, Mask),
@@ -532,7 +603,8 @@ static void scalarizeMaskedGather(const DataLayout &DL, CallInst *CI,
 // store i32 %Elt1, i32* %Ptr1, align 4
 // br label %else2
 //   . . .
-static void scalarizeMaskedScatter(const DataLayout &DL, CallInst *CI,
+static void scalarizeMaskedScatter(const DataLayout &DL,
+                                   bool HasBranchDivergence, CallInst *CI,
                                    DomTreeUpdater *DTU, bool &ModifiedDT) {
   Value *Src = CI->getArgOperand(0);
   Value *Ptrs = CI->getArgOperand(1);
@@ -570,8 +642,8 @@ static void scalarizeMaskedScatter(const DataLayout &DL, CallInst *CI,
 
   // If the mask is not v1i1, use scalar bit test operations. This generates
   // better results on X86 at least.
-  Value *SclrMask;
-  if (VectorWidth != 1) {
+  Value *SclrMask = nullptr;
+  if (VectorWidth != 1 && !HasBranchDivergence) {
     Type *SclrMaskTy = Builder.getIntNTy(VectorWidth);
     SclrMask = Builder.CreateBitCast(Mask, SclrMaskTy, "scalar_mask");
   }
@@ -583,8 +655,11 @@ static void scalarizeMaskedScatter(const DataLayout &DL, CallInst *CI,
     //  %cond = icmp ne i16 %mask_1, 0
     //  br i1 %Mask1, label %cond.store, label %else
     //
+    // On GPUs, use
+    //  %cond = extrectelement %mask, Idx
+    // instead
     Value *Predicate;
-    if (VectorWidth != 1) {
+    if (SclrMask != nullptr) {
       Value *Mask = Builder.getInt(APInt::getOneBitSet(
           VectorWidth, adjustForEndian(DL, VectorWidth, Idx)));
       Predicate = Builder.CreateICmpNE(Builder.CreateAnd(SclrMask, Mask),
@@ -622,11 +697,13 @@ static void scalarizeMaskedScatter(const DataLayout &DL, CallInst *CI,
   ModifiedDT = true;
 }
 
-static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
+static void scalarizeMaskedExpandLoad(const DataLayout &DL,
+                                      bool HasBranchDivergence, CallInst *CI,
                                       DomTreeUpdater *DTU, bool &ModifiedDT) {
   Value *Ptr = CI->getArgOperand(0);
   Value *Mask = CI->getArgOperand(1);
   Value *PassThru = CI->getArgOperand(2);
+  Align Alignment = CI->getParamAlign(0).valueOrOne();
 
   auto *VecType = cast<FixedVectorType>(CI->getType());
 
@@ -644,6 +721,10 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
   // The result vector
   Value *VResult = PassThru;
 
+  // Adjust alignment for the scalar instruction.
+  const Align AdjustedAlignment =
+      commonAlignment(Alignment, EltTy->getPrimitiveSizeInBits() / 8);
+
   // Shorten the way if the mask is a vector of constants.
   // Create a build_vector pattern, with loads/poisons as necessary and then
   // shuffle blend with the pass through value.
@@ -659,7 +740,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
       } else {
         Value *NewPtr =
             Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
-        InsertElt = Builder.CreateAlignedLoad(EltTy, NewPtr, Align(1),
+        InsertElt = Builder.CreateAlignedLoad(EltTy, NewPtr, AdjustedAlignment,
                                               "Load" + Twine(Idx));
         ShuffleMask[Idx] = Idx;
         ++MemIndex;
@@ -674,9 +755,10 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
   }
 
   // If the mask is not v1i1, use scalar bit test operations. This generates
-  // better results on X86 at least.
-  Value *SclrMask;
-  if (VectorWidth != 1) {
+  // better results on X86 at least. However, don't do this on GPUs or other
+  // machines with branch divergence, as there, each i1 takes up a register.
+  Value *SclrMask = nullptr;
+  if (VectorWidth != 1 && !HasBranchDivergence) {
     Type *SclrMaskTy = Builder.getIntNTy(VectorWidth);
     SclrMask = Builder.CreateBitCast(Mask, SclrMaskTy, "scalar_mask");
   }
@@ -684,13 +766,16 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
   for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
     // Fill the "else" block, created in the previous iteration
     //
-    //  %res.phi.else3 = phi <16 x i32> [ %11, %cond.load1 ], [ %res.phi.else, %else ]
-    //  %mask_1 = extractelement <16 x i1> %mask, i32 Idx
-    //  br i1 %mask_1, label %cond.load, label %else
+    //  %res.phi.else3 = phi <16 x i32> [ %11, %cond.load1 ], [ %res.phi.else,
+    //  %else ] %mask_1 = extractelement <16 x i1> %mask, i32 Idx br i1 %mask_1,
+    //  label %cond.load, label %else
     //
+    // On GPUs, use
+    //  %cond = extrectelement %mask, Idx
+    // instead
 
     Value *Predicate;
-    if (VectorWidth != 1) {
+    if (SclrMask != nullptr) {
       Value *Mask = Builder.getInt(APInt::getOneBitSet(
           VectorWidth, adjustForEndian(DL, VectorWidth, Idx)));
       Predicate = Builder.CreateICmpNE(Builder.CreateAnd(SclrMask, Mask),
@@ -713,7 +798,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
     CondBlock->setName("cond.load");
 
     Builder.SetInsertPoint(CondBlock->getTerminator());
-    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, Align(1));
+    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, AdjustedAlignment);
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
     // Move the pointer if there are more blocks to come.
@@ -749,12 +834,14 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
   ModifiedDT = true;
 }
 
-static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
+static void scalarizeMaskedCompressStore(const DataLayout &DL,
+                                         bool HasBranchDivergence, CallInst *CI,
                                          DomTreeUpdater *DTU,
                                          bool &ModifiedDT) {
   Value *Src = CI->getArgOperand(0);
   Value *Ptr = CI->getArgOperand(1);
   Value *Mask = CI->getArgOperand(2);
+  Align Alignment = CI->getParamAlign(1).valueOrOne();
 
   auto *VecType = cast<FixedVectorType>(Src->getType());
 
@@ -767,6 +854,10 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
 
   Type *EltTy = VecType->getElementType();
 
+  // Adjust alignment for the scalar instruction.
+  const Align AdjustedAlignment =
+      commonAlignment(Alignment, EltTy->getPrimitiveSizeInBits() / 8);
+
   unsigned VectorWidth = VecType->getNumElements();
 
   // Shorten the way if the mask is a vector of constants.
@@ -778,7 +869,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
       Value *OneElt =
           Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
       Value *NewPtr = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
-      Builder.CreateAlignedStore(OneElt, NewPtr, Align(1));
+      Builder.CreateAlignedStore(OneElt, NewPtr, AdjustedAlignment);
       ++MemIndex;
     }
     CI->eraseFromParent();
@@ -786,9 +877,10 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
   }
 
   // If the mask is not v1i1, use scalar bit test operations. This generates
-  // better results on X86 at least.
-  Value *SclrMask;
-  if (VectorWidth != 1) {
+  // better results on X86 at least. However, don't do this on GPUs or other
+  // machines with branch divergence, as there, each i1 takes up a register.
+  Value *SclrMask = nullptr;
+  if (VectorWidth != 1 && !HasBranchDivergence) {
     Type *SclrMaskTy = Builder.getIntNTy(VectorWidth);
     SclrMask = Builder.CreateBitCast(Mask, SclrMaskTy, "scalar_mask");
   }
@@ -799,8 +891,11 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
     //  %mask_1 = extractelement <16 x i1> %mask, i32 Idx
     //  br i1 %mask_1, label %cond.store, label %else
     //
+    // On GPUs, use
+    //  %cond = extrectelement %mask, Idx
+    // instead
     Value *Predicate;
-    if (VectorWidth != 1) {
+    if (SclrMask != nullptr) {
       Value *Mask = Builder.getInt(APInt::getOneBitSet(
           VectorWidth, adjustForEndian(DL, VectorWidth, Idx)));
       Predicate = Builder.CreateICmpNE(Builder.CreateAnd(SclrMask, Mask),
@@ -824,7 +919,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
 
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *OneElt = Builder.CreateExtractElement(Src, Idx);
-    Builder.CreateAlignedStore(OneElt, Ptr, Align(1));
+    Builder.CreateAlignedStore(OneElt, Ptr, AdjustedAlignment);
 
     // Move the pointer if there are more blocks to come.
     Value *NewPtr;
@@ -852,6 +947,69 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL, CallInst *CI,
   ModifiedDT = true;
 }
 
+static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
+                                           DomTreeUpdater *DTU,
+                                           bool &ModifiedDT) {
+  // If we extend histogram to return a result someday (like the updated vector)
+  // then we'll need to support it here.
+  assert(CI->getType()->isVoidTy() && "Histogram with non-void return.");
+  Value *Ptrs = CI->getArgOperand(0);
+  Value *Inc = CI->getArgOperand(1);
+  Value *Mask = CI->getArgOperand(2);
+
+  auto *AddrType = cast<FixedVectorType>(Ptrs->getType());
+  Type *EltTy = Inc->getType();
+
+  IRBuilder<> Builder(CI->getContext());
+  Instruction *InsertPt = CI;
+  Builder.SetInsertPoint(InsertPt);
+
+  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+
+  // FIXME: Do we need to add an alignment parameter to the intrinsic?
+  unsigned VectorWidth = AddrType->getNumElements();
+
+  // Shorten the way if the mask is a vector of constants.
+  if (isConstantIntVector(Mask)) {
+    for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
+      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
+        continue;
+      Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
+      LoadInst *Load = Builder.CreateLoad(EltTy, Ptr, "Load" + Twine(Idx));
+      Value *Add = Builder.CreateAdd(Load, Inc);
+      Builder.CreateStore(Add, Ptr);
+    }
+    CI->eraseFromParent();
+    return;
+  }
+
+  for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
+    Value *Predicate =
+        Builder.CreateExtractElement(Mask, Idx, "Mask" + Twine(Idx));
+
+    Instruction *ThenTerm =
+        SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
+                                  /*BranchWeights=*/nullptr, DTU);
+
+    BasicBlock *CondBlock = ThenTerm->getParent();
+    CondBlock->setName("cond.histogram.update");
+
+    Builder.SetInsertPoint(CondBlock->getTerminator());
+    Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
+    LoadInst *Load = Builder.CreateLoad(EltTy, Ptr, "Load" + Twine(Idx));
+    Value *Add = Builder.CreateAdd(Load, Inc);
+    Builder.CreateStore(Add, Ptr);
+
+    // Create "else" block, fill it in the next iteration
+    BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
+    NewIfBlock->setName("else");
+    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+  }
+
+  CI->eraseFromParent();
+  ModifiedDT = true;
+}
+
 static bool runImpl(Function &F, const TargetTransformInfo &TTI,
                     DominatorTree *DT) {
   std::optional<DomTreeUpdater> DTU;
@@ -860,13 +1018,14 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI,
 
   bool EverMadeChange = false;
   bool MadeChange = true;
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
+  bool HasBranchDivergence = TTI.hasBranchDivergence(&F);
   while (MadeChange) {
     MadeChange = false;
     for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
       bool ModifiedDTOnIteration = false;
       MadeChange |= optimizeBlock(BB, ModifiedDTOnIteration, TTI, DL,
-                                  DTU ? &*DTU : nullptr);
+                                  HasBranchDivergence, DTU ? &*DTU : nullptr);
 
       // Restart BB iteration if the dominator tree of the Function was changed
       if (ModifiedDTOnIteration)
@@ -900,13 +1059,14 @@ ScalarizeMaskedMemIntrinPass::run(Function &F, FunctionAnalysisManager &AM) {
 
 static bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT,
                           const TargetTransformInfo &TTI, const DataLayout &DL,
-                          DomTreeUpdater *DTU) {
+                          bool HasBranchDivergence, DomTreeUpdater *DTU) {
   bool MadeChange = false;
 
   BasicBlock::iterator CurInstIterator = BB.begin();
   while (CurInstIterator != BB.end()) {
     if (CallInst *CI = dyn_cast<CallInst>(&*CurInstIterator++))
-      MadeChange |= optimizeCallInst(CI, ModifiedDT, TTI, DL, DTU);
+      MadeChange |=
+          optimizeCallInst(CI, ModifiedDT, TTI, DL, HasBranchDivergence, DTU);
     if (ModifiedDT)
       return true;
   }
@@ -916,7 +1076,8 @@ static bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT,
 
 static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
                              const TargetTransformInfo &TTI,
-                             const DataLayout &DL, DomTreeUpdater *DTU) {
+                             const DataLayout &DL, bool HasBranchDivergence,
+                             DomTreeUpdater *DTU) {
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
   if (II) {
     // The scalarization code below does not work for scalable vectors.
@@ -924,24 +1085,29 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
         any_of(II->args(),
                [](Value *V) { return isa<ScalableVectorType>(V->getType()); }))
       return false;
-
     switch (II->getIntrinsicID()) {
     default:
       break;
+    case Intrinsic::experimental_vector_histogram_add:
+      if (TTI.isLegalMaskedVectorHistogram(CI->getArgOperand(0)->getType(),
+                                           CI->getArgOperand(1)->getType()))
+        return false;
+      scalarizeMaskedVectorHistogram(DL, CI, DTU, ModifiedDT);
+      return true;
     case Intrinsic::masked_load:
       // Scalarize unsupported vector masked load
       if (TTI.isLegalMaskedLoad(
               CI->getType(),
               cast<ConstantInt>(CI->getArgOperand(1))->getAlignValue()))
         return false;
-      scalarizeMaskedLoad(DL, CI, DTU, ModifiedDT);
+      scalarizeMaskedLoad(DL, HasBranchDivergence, CI, DTU, ModifiedDT);
       return true;
     case Intrinsic::masked_store:
       if (TTI.isLegalMaskedStore(
               CI->getArgOperand(0)->getType(),
               cast<ConstantInt>(CI->getArgOperand(2))->getAlignValue()))
         return false;
-      scalarizeMaskedStore(DL, CI, DTU, ModifiedDT);
+      scalarizeMaskedStore(DL, HasBranchDivergence, CI, DTU, ModifiedDT);
       return true;
     case Intrinsic::masked_gather: {
       MaybeAlign MA =
@@ -952,7 +1118,7 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
       if (TTI.isLegalMaskedGather(LoadTy, Alignment) &&
           !TTI.forceScalarizeMaskedGather(cast<VectorType>(LoadTy), Alignment))
         return false;
-      scalarizeMaskedGather(DL, CI, DTU, ModifiedDT);
+      scalarizeMaskedGather(DL, HasBranchDivergence, CI, DTU, ModifiedDT);
       return true;
     }
     case Intrinsic::masked_scatter: {
@@ -965,18 +1131,23 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
           !TTI.forceScalarizeMaskedScatter(cast<VectorType>(StoreTy),
                                            Alignment))
         return false;
-      scalarizeMaskedScatter(DL, CI, DTU, ModifiedDT);
+      scalarizeMaskedScatter(DL, HasBranchDivergence, CI, DTU, ModifiedDT);
       return true;
     }
     case Intrinsic::masked_expandload:
-      if (TTI.isLegalMaskedExpandLoad(CI->getType()))
+      if (TTI.isLegalMaskedExpandLoad(
+              CI->getType(),
+              CI->getAttributes().getParamAttrs(0).getAlignment().valueOrOne()))
         return false;
-      scalarizeMaskedExpandLoad(DL, CI, DTU, ModifiedDT);
+      scalarizeMaskedExpandLoad(DL, HasBranchDivergence, CI, DTU, ModifiedDT);
       return true;
     case Intrinsic::masked_compressstore:
-      if (TTI.isLegalMaskedCompressStore(CI->getArgOperand(0)->getType()))
+      if (TTI.isLegalMaskedCompressStore(
+              CI->getArgOperand(0)->getType(),
+              CI->getAttributes().getParamAttrs(1).getAlignment().valueOrOne()))
         return false;
-      scalarizeMaskedCompressStore(DL, CI, DTU, ModifiedDT);
+      scalarizeMaskedCompressStore(DL, HasBranchDivergence, CI, DTU,
+                                   ModifiedDT);
       return true;
     }
   }

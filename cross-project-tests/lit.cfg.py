@@ -4,9 +4,6 @@ import re
 import subprocess
 import sys
 
-# TODO: LooseVersion is undocumented; use something else.
-from distutils.version import LooseVersion
-
 import lit.formats
 import lit.util
 
@@ -54,7 +51,7 @@ tools = [
 
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
-    if attr_value == None:
+    if attr_value is None:
         lit_config.fatal(
             "No attribute %r in test configuration! You may need to run "
             "tests from your build directory or add this attribute "
@@ -226,7 +223,7 @@ if platform.system() == "Darwin":
     xcode_lldb_vers = subprocess.check_output(["xcrun", "lldb", "--version"]).decode(
         "utf-8"
     )
-    match = re.search("lldb-(\d+)", xcode_lldb_vers)
+    match = re.search(r"lldb-(\d+)", xcode_lldb_vers)
     if match:
         apple_lldb_vers = int(match.group(1))
         if apple_lldb_vers < 1000:
@@ -250,7 +247,7 @@ def get_gdb_version_string():
     if len(gdb_vers_lines) < 1:
         print("Unkown GDB version format (too few lines)", file=sys.stderr)
         return None
-    match = re.search("GNU gdb \(.*?\) ((\d|\.)+)", gdb_vers_lines[0].strip())
+    match = re.search(r"GNU gdb \(.*?\) ((\d|\.)+)", gdb_vers_lines[0].strip())
     if match is None:
         print(f"Unkown GDB version format: {gdb_vers_lines[0]}", file=sys.stderr)
         return None
@@ -264,7 +261,7 @@ def get_clang_default_dwarf_version_string(triple):
     # Get the flags passed by the driver and look for -dwarf-version.
     cmd = f'{llvm_config.use_llvm_tool("clang")} -g -xc  -c - -v -### --target={triple}'
     stderr = subprocess.run(cmd.split(), stderr=subprocess.PIPE).stderr.decode()
-    match = re.search("-dwarf-version=(\d+)", stderr)
+    match = re.search(r"-dwarf-version=(\d+)", stderr)
     if match is None:
         print("Cannot determine default dwarf version", file=sys.stderr)
         return None
@@ -279,7 +276,11 @@ dwarf_version_string = get_clang_default_dwarf_version_string(config.host_triple
 gdb_version_string = get_gdb_version_string()
 if dwarf_version_string and gdb_version_string:
     if int(dwarf_version_string) >= 5:
-        if LooseVersion(gdb_version_string) < LooseVersion("10.1"):
+        try:
+            from packaging import version
+        except:
+            lit_config.fatal("Running gdb tests requires the packaging package")
+        if version.parse(gdb_version_string) < version.parse("10.1"):
             # Example for llgdb-tests, which use lldb on darwin but gdb elsewhere:
             # XFAIL: !system-darwin && gdb-clang-incompatibility
             config.available_features.add("gdb-clang-incompatibility")

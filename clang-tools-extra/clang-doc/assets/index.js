@@ -1,42 +1,17 @@
-// Append using posix-style a file name or directory to Base
-function append(Base, New) {
-  if (!New)
-    return Base;
-  if (Base)
-    Base += "/";
-  Base += New;
-  return Base;
-}
-
-// Get relative path to access FilePath from CurrentDirectory
-function computeRelativePath(FilePath, CurrentDirectory) {
-  var Path = FilePath;
-  while (Path) {
-    if (CurrentDirectory == Path)
-      return FilePath.substring(Path.length + 1);
-    Path = Path.substring(0, Path.lastIndexOf("/"));
+function genLink(Ref) {
+  // we treat the file paths different depending on if we're
+  // serving via a http server or viewing from a local
+  var Path = window.location.protocol.startsWith("file") ?
+      `${window.location.protocol}//${window.location.host}/${Ref.Path}` :
+      `${window.location.protocol}//${RootPath}/${Ref.Path}`;
+  if (Ref.RefType === "namespace") {
+    Path = `${Path}/index.html`
+  } else if (Ref.Path === "") {
+      Path = `${Path}${Ref.Name}.html`;
+  } else {
+    Path = `${Path}/${Ref.Name}.html`;
   }
-
-  var Dir = CurrentDirectory;
-  var Result = "";
-  while (Dir) {
-    if (Dir == FilePath)
-      break;
-    Dir = Dir.substring(0, Dir.lastIndexOf("/"));
-    Result = append(Result, "..")
-  }
-  Result = append(Result, FilePath.substring(Dir.length))
-  return Result;
-}
-
-function genLink(Ref, CurrentDirectory) {
-  var Path = computeRelativePath(Ref.Path, CurrentDirectory);
-  if (Ref.RefType == "namespace")
-    Path = append(Path, "index.html");
-  else
-    Path = append(Path, Ref.Name + ".html")
-
-    ANode = document.createElement("a");
+  ANode = document.createElement("a");
   ANode.setAttribute("href", Path);
   var TextNode = document.createTextNode(Ref.Name);
   ANode.appendChild(TextNode);
@@ -80,8 +55,8 @@ function createIndex(Index) {
 
 // Runs after DOM loads
 document.addEventListener("DOMContentLoaded", function() {
-  // JsonIndex is a variable from another file that contains the index
-  // in JSON format
-  var Index = JSON.parse(JsonIndex);
-  createIndex(Index);
+  // LoadIndex is an asynchronous function that will be generated clang-doc.
+  // It ensures that the function call will not block as soon the page loads,
+  // since the index object are often huge and can contain thousands of lines.
+  LoadIndex().then((Index) => { createIndex(Index); });
 });

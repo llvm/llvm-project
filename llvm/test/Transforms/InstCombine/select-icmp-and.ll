@@ -40,8 +40,8 @@ define i32 @test35(i32 %x) {
 
 define <2 x i32> @test35vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test35vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> <i32 60, i32 60>, <2 x i32> <i32 100, i32 100>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[X:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> splat (i32 60), <2 x i32> splat (i32 100)
 ; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %cmp = icmp sge <2 x i32> %x, <i32 0, i32 0>
@@ -77,7 +77,7 @@ define i32 @test36(i32 %x) {
 define <2 x i32> @test36vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test36vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> <i32 60, i32 60>, <2 x i32> <i32 100, i32 100>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> splat (i32 60), <2 x i32> splat (i32 100)
 ; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %cmp = icmp slt <2 x i32> %x, <i32 0, i32 0>
@@ -98,8 +98,8 @@ define i32 @test37(i32 %x) {
 
 define <2 x i32> @test37vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test37vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> <i32 1, i32 1>, <2 x i32> <i32 -1, i32 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[X:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> splat (i32 1), <2 x i32> splat (i32 -1)
 ; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %cmp = icmp sgt <2 x i32> %x, <i32 -1, i32 -1>
@@ -122,9 +122,9 @@ define i32 @test65(i64 %x) {
 
 define <2 x i32> @test65vec(<2 x i64> %x) {
 ; CHECK-LABEL: @test65vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[X:%.*]], <i64 16, i64 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[X:%.*]], splat (i64 16)
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq <2 x i64> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[DOTNOT]], <2 x i32> <i32 42, i32 42>, <2 x i32> <i32 40, i32 40>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[DOTNOT]], <2 x i32> splat (i32 42), <2 x i32> splat (i32 40)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %1 = and <2 x i64> %x, <i64 16, i64 16>
@@ -148,9 +148,9 @@ define i32 @test66(i64 %x) {
 
 define <2 x i32> @test66vec(<2 x i64> %x) {
 ; CHECK-LABEL: @test66vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[X:%.*]], <i64 4294967296, i64 4294967296>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[X:%.*]], splat (i64 4294967296)
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq <2 x i64> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[DOTNOT]], <2 x i32> <i32 42, i32 42>, <2 x i32> <i32 40, i32 40>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[DOTNOT]], <2 x i32> splat (i32 42), <2 x i32> splat (i32 40)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %1 = and <2 x i64> %x, <i64 4294967296, i64 4294967296>
@@ -164,7 +164,7 @@ define <2 x i32> @test66vec_scalar_and(i64 %x) {
 ; CHECK-LABEL: @test66vec_scalar_and(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 4294967296
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[DOTNOT]], <2 x i32> <i32 42, i32 42>, <2 x i32> <i32 40, i32 40>
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[DOTNOT]], <2 x i32> splat (i32 42), <2 x i32> splat (i32 40)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %1 = and i64 %x, 4294967296
@@ -188,9 +188,9 @@ define i32 @test67(i16 %x) {
 
 define <2 x i32> @test67vec(<2 x i16> %x) {
 ; CHECK-LABEL: @test67vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], <i16 4, i16 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], splat (i16 4)
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq <2 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[DOTNOT]], <2 x i32> <i32 42, i32 42>, <2 x i32> <i32 40, i32 40>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[DOTNOT]], <2 x i32> splat (i32 42), <2 x i32> splat (i32 40)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %1 = and <2 x i16> %x, <i16 4, i16 4>
@@ -214,9 +214,9 @@ define i32 @test71(i32 %x) {
 
 define <2 x i32> @test71vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test71vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 128, i32 128>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 128)
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[DOTNOT]], <2 x i32> <i32 42, i32 42>, <2 x i32> <i32 40, i32 40>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[DOTNOT]], <2 x i32> splat (i32 42), <2 x i32> splat (i32 40)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %1 = and <2 x i32> %x, <i32 128, i32 128>
@@ -240,9 +240,9 @@ define i32 @test72(i32 %x) {
 
 define <2 x i32> @test72vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test72vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 128, i32 128>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 128)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> <i32 40, i32 40>, <2 x i32> <i32 42, i32 42>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> splat (i32 40), <2 x i32> splat (i32 42)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
 ;
   %1 = and <2 x i32> %x, <i32 128, i32 128>
@@ -266,9 +266,9 @@ define i32 @test73(i32 %x) {
 
 define <2 x i32> @test73vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test73vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 128, i32 128>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 128)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> <i32 40, i32 40>, <2 x i32> <i32 42, i32 42>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> splat (i32 40), <2 x i32> splat (i32 42)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
 ;
   %1 = trunc <2 x i32> %x to <2 x i8>
@@ -290,13 +290,24 @@ define i32 @test74(i32 %x) {
 
 define <2 x i32> @test74vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test74vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> <i32 40, i32 40>, <2 x i32> <i32 42, i32 42>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[X:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> splat (i32 40), <2 x i32> splat (i32 42)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %1 = icmp sgt <2 x i32> %x, <i32 -1, i32 -1>
   %2 = select <2 x i1> %1, <2 x i32> <i32 40, i32 40>, <2 x i32> <i32 42, i32 42>
   ret <2 x i32> %2
+}
+
+define i64 @test75(i32 %X) {
+; CHECK-LABEL: @test75(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 0, i64 8
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %1 = icmp slt i32 %X, 0
+  %2 = select i1 %1, i64 0, i64 8
+  ret i64 %2
 }
 
 ;; Code sequence for (X & 16) ? 16 : 0
@@ -618,3 +629,89 @@ define i8 @set_to_clear_decomposebittest_extra_use(i8 %x) {
   ret i8 %t3
 }
 
+define i32 @select_bittest_to_add(i32 %x) {
+; CHECK-LABEL: @select_bittest_to_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i32 [[AND]], 3
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+entry:
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %ret = select i1 %cmp, i32 3, i32 4
+  ret i32 %ret
+}
+
+define i32 @select_bittest_to_sub(i32 %x) {
+; CHECK-LABEL: @select_bittest_to_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[RET:%.*]] = sub nuw nsw i32 4, [[AND]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+entry:
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %ret = select i1 %cmp, i32 4, i32 3
+  ret i32 %ret
+}
+
+define i32 @select_bittest_to_shl(i32 %x) {
+; CHECK-LABEL: @select_bittest_to_shl(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 2, i32 4
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+entry:
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %ret = select i1 %cmp, i32 2, i32 4
+  ret i32 %ret
+}
+
+define i32 @select_bittest_to_lshr(i32 %x) {
+; CHECK-LABEL: @select_bittest_to_lshr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 4, i32 2
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+entry:
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %ret = select i1 %cmp, i32 4, i32 2
+  ret i32 %ret
+}
+
+define i32 @select_bittest_to_ashr(i32 %x) {
+; CHECK-LABEL: @select_bittest_to_ashr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 -4, i32 -1
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+entry:
+  %and = and i32 %x, 2
+  %cmp = icmp eq i32 %and, 0
+  %ret = select i1 %cmp, i32 -4, i32 -1
+  ret i32 %ret
+}
+
+define i32 @select_bittest_to_shl_negative_test(i32 %x) {
+; CHECK-LABEL: @select_bittest_to_shl_negative_test(
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[MASK]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND]], i32 4, i32 6
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %mask = and i32 %x, 1
+  %cond = icmp eq i32 %mask, 0
+  %y = select i1 %cond, i32 2, i32 4
+  %res = add nuw nsw i32 %y, 2
+  ret i32 %res
+}

@@ -34,6 +34,8 @@ class Function;
 class Instruction;
 struct KnownBits;
 class raw_ostream;
+class Use;
+class Value;
 
 class DemandedBits {
 public:
@@ -120,6 +122,8 @@ public:
   explicit DemandedBitsPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

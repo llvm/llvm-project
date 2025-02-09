@@ -20,6 +20,8 @@ static_library("Passes") {
     "//llvm/lib/Transforms/Vectorize",
   ]
   sources = [
+    "CodeGenPassBuilder.cpp",
+    "DroppedVariableStatsIR.cpp",
     "OptimizationLevel.cpp",
     "PassBuilder.cpp",
     "PassBuilderBindings.cpp",

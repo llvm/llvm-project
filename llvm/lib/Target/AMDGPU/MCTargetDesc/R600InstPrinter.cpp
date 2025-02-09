@@ -14,14 +14,12 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 void R600InstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                 StringRef Annot, const MCSubtargetInfo &STI,
                                 raw_ostream &O) {
-  O.flush();
   printInstruction(MI, Address, O);
   printAnnotation(O, Annot);
 }
@@ -142,7 +140,7 @@ void R600InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    switch (Op.getReg()) {
+    switch (Op.getReg().id()) {
     // This is the default predicate state, so we don't need to print it.
     case R600::PRED_SEL_OFF:
       break;

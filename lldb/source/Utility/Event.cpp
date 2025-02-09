@@ -83,14 +83,20 @@ void Event::Dump(Stream *s) const {
 void Event::DoOnRemoval() {
   std::lock_guard<std::mutex> guard(m_listeners_mutex);
 
-  if (m_data_sp)
-    m_data_sp->DoOnRemoval(this);
+  if (!m_data_sp)
+    return;
+
+  m_data_sp->DoOnRemoval(this);
+
   // Now that the event has been handled by the primary event Listener, forward
   // it to the other Listeners.
+
   EventSP me_sp = shared_from_this();
-  for (auto listener_sp : m_pending_listeners)
-    listener_sp->AddEvent(me_sp);
-  m_pending_listeners.clear();
+  if (m_data_sp->ForwardEventToPendingListeners(this)) {
+    for (auto listener_sp : m_pending_listeners)
+      listener_sp->AddEvent(me_sp);
+    m_pending_listeners.clear();
+  }
 }
 
 #pragma mark -
@@ -111,17 +117,7 @@ void EventData::Dump(Stream *s) const { s->PutCString("Generic Event Data"); }
 
 EventDataBytes::EventDataBytes() : m_bytes() {}
 
-EventDataBytes::EventDataBytes(const char *cstr) : m_bytes() {
-  SetBytesFromCString(cstr);
-}
-
-EventDataBytes::EventDataBytes(llvm::StringRef str) : m_bytes() {
-  SetBytes(str.data(), str.size());
-}
-
-EventDataBytes::EventDataBytes(const void *src, size_t src_len) : m_bytes() {
-  SetBytes(src, src_len);
-}
+EventDataBytes::EventDataBytes(llvm::StringRef str) : m_bytes(str.str()) {}
 
 EventDataBytes::~EventDataBytes() = default;
 
@@ -147,20 +143,6 @@ const void *EventDataBytes::GetBytes() const {
 
 size_t EventDataBytes::GetByteSize() const { return m_bytes.size(); }
 
-void EventDataBytes::SetBytes(const void *src, size_t src_len) {
-  if (src != nullptr && src_len > 0)
-    m_bytes.assign(static_cast<const char *>(src), src_len);
-  else
-    m_bytes.clear();
-}
-
-void EventDataBytes::SetBytesFromCString(const char *cstr) {
-  if (cstr != nullptr && cstr[0])
-    m_bytes.assign(cstr);
-  else
-    m_bytes.clear();
-}
-
 const void *EventDataBytes::GetBytesFromEvent(const Event *event_ptr) {
   const EventDataBytes *e = GetEventDataFromEvent(event_ptr);
   if (e != nullptr)
@@ -184,10 +166,6 @@ EventDataBytes::GetEventDataFromEvent(const Event *event_ptr) {
       return static_cast<const EventDataBytes *>(event_data);
   }
   return nullptr;
-}
-
-void EventDataBytes::SwapBytes(std::string &new_bytes) {
-  m_bytes.swap(new_bytes);
 }
 
 llvm::StringRef EventDataReceipt::GetFlavorString() {

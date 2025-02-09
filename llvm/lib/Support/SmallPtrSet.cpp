@@ -62,7 +62,25 @@ SmallPtrSetImplBase::insert_imp_big(const void *Ptr) {
   return std::make_pair(Bucket, true);
 }
 
-const void * const *SmallPtrSetImplBase::FindBucketFor(const void *Ptr) const {
+const void *const *SmallPtrSetImplBase::doFind(const void *Ptr) const {
+  unsigned BucketNo =
+      DenseMapInfo<void *>::getHashValue(Ptr) & (CurArraySize - 1);
+  unsigned ProbeAmt = 1;
+  while (true) {
+    const void *const *Bucket = CurArray + BucketNo;
+    if (LLVM_LIKELY(*Bucket == Ptr))
+      return Bucket;
+    if (LLVM_LIKELY(*Bucket == getEmptyMarker()))
+      return nullptr;
+
+    // Otherwise, it's a hash collision or a tombstone, continue quadratic
+    // probing.
+    BucketNo += ProbeAmt++;
+    BucketNo &= CurArraySize - 1;
+  }
+}
+
+const void *const *SmallPtrSetImplBase::FindBucketFor(const void *Ptr) const {
   unsigned Bucket = DenseMapInfo<void *>::getHashValue(Ptr) & (CurArraySize-1);
   unsigned ArraySize = CurArraySize;
   unsigned ProbeAmt = 1;
@@ -116,32 +134,33 @@ void SmallPtrSetImplBase::Grow(unsigned NewSize) {
     free(OldBuckets);
   NumNonEmpty -= NumTombstones;
   NumTombstones = 0;
+  IsSmall = false;
 }
 
 SmallPtrSetImplBase::SmallPtrSetImplBase(const void **SmallStorage,
                                          const SmallPtrSetImplBase &that) {
-  SmallArray = SmallStorage;
-
-  // If we're becoming small, prepare to insert into our stack space
-  if (that.isSmall()) {
-    CurArray = SmallArray;
-  // Otherwise, allocate new heap space (unless we were the same size)
+  IsSmall = that.isSmall();
+  if (IsSmall) {
+    // If we're becoming small, prepare to insert into our stack space
+    CurArray = SmallStorage;
   } else {
+    // Otherwise, allocate new heap space (unless we were the same size)
     CurArray = (const void**)safe_malloc(sizeof(void*) * that.CurArraySize);
   }
 
   // Copy over the that array.
-  CopyHelper(that);
+  copyHelper(that);
 }
 
 SmallPtrSetImplBase::SmallPtrSetImplBase(const void **SmallStorage,
                                          unsigned SmallSize,
+                                         const void **RHSSmallStorage,
                                          SmallPtrSetImplBase &&that) {
-  SmallArray = SmallStorage;
-  MoveHelper(SmallSize, std::move(that));
+  moveHelper(SmallStorage, SmallSize, RHSSmallStorage, std::move(that));
 }
 
-void SmallPtrSetImplBase::CopyFrom(const SmallPtrSetImplBase &RHS) {
+void SmallPtrSetImplBase::copyFrom(const void **SmallStorage,
+                                   const SmallPtrSetImplBase &RHS) {
   assert(&RHS != this && "Self-copy should be handled by the caller.");
 
   if (isSmall() && RHS.isSmall())
@@ -152,8 +171,9 @@ void SmallPtrSetImplBase::CopyFrom(const SmallPtrSetImplBase &RHS) {
   if (RHS.isSmall()) {
     if (!isSmall())
       free(CurArray);
-    CurArray = SmallArray;
-  // Otherwise, allocate new heap space (unless we were the same size)
+    CurArray = SmallStorage;
+    IsSmall = true;
+    // Otherwise, allocate new heap space (unless we were the same size)
   } else if (CurArraySize != RHS.CurArraySize) {
     if (isSmall())
       CurArray = (const void**)safe_malloc(sizeof(void*) * RHS.CurArraySize);
@@ -162,12 +182,13 @@ void SmallPtrSetImplBase::CopyFrom(const SmallPtrSetImplBase &RHS) {
                                              sizeof(void*) * RHS.CurArraySize);
       CurArray = T;
     }
+    IsSmall = false;
   }
 
-  CopyHelper(RHS);
+  copyHelper(RHS);
 }
 
-void SmallPtrSetImplBase::CopyHelper(const SmallPtrSetImplBase &RHS) {
+void SmallPtrSetImplBase::copyHelper(const SmallPtrSetImplBase &RHS) {
   // Copy over the new array size
   CurArraySize = RHS.CurArraySize;
 
@@ -178,39 +199,46 @@ void SmallPtrSetImplBase::CopyHelper(const SmallPtrSetImplBase &RHS) {
   NumTombstones = RHS.NumTombstones;
 }
 
-void SmallPtrSetImplBase::MoveFrom(unsigned SmallSize,
+void SmallPtrSetImplBase::moveFrom(const void **SmallStorage,
+                                   unsigned SmallSize,
+                                   const void **RHSSmallStorage,
                                    SmallPtrSetImplBase &&RHS) {
   if (!isSmall())
     free(CurArray);
-  MoveHelper(SmallSize, std::move(RHS));
+  moveHelper(SmallStorage, SmallSize, RHSSmallStorage, std::move(RHS));
 }
 
-void SmallPtrSetImplBase::MoveHelper(unsigned SmallSize,
+void SmallPtrSetImplBase::moveHelper(const void **SmallStorage,
+                                     unsigned SmallSize,
+                                     const void **RHSSmallStorage,
                                      SmallPtrSetImplBase &&RHS) {
   assert(&RHS != this && "Self-move should be handled by the caller.");
 
   if (RHS.isSmall()) {
     // Copy a small RHS rather than moving.
-    CurArray = SmallArray;
+    CurArray = SmallStorage;
     std::copy(RHS.CurArray, RHS.CurArray + RHS.NumNonEmpty, CurArray);
   } else {
     CurArray = RHS.CurArray;
-    RHS.CurArray = RHS.SmallArray;
+    RHS.CurArray = RHSSmallStorage;
   }
 
   // Copy the rest of the trivial members.
   CurArraySize = RHS.CurArraySize;
   NumNonEmpty = RHS.NumNonEmpty;
   NumTombstones = RHS.NumTombstones;
+  IsSmall = RHS.IsSmall;
 
   // Make the RHS small and empty.
   RHS.CurArraySize = SmallSize;
-  assert(RHS.CurArray == RHS.SmallArray);
   RHS.NumNonEmpty = 0;
   RHS.NumTombstones = 0;
+  RHS.IsSmall = true;
 }
 
-void SmallPtrSetImplBase::swap(SmallPtrSetImplBase &RHS) {
+void SmallPtrSetImplBase::swap(const void **SmallStorage,
+                               const void **RHSSmallStorage,
+                               SmallPtrSetImplBase &RHS) {
   if (this == &RHS) return;
 
   // We can only avoid copying elements if neither set is small.
@@ -227,42 +255,42 @@ void SmallPtrSetImplBase::swap(SmallPtrSetImplBase &RHS) {
   // If only RHS is small, copy the small elements into LHS and move the pointer
   // from LHS to RHS.
   if (!this->isSmall() && RHS.isSmall()) {
-    assert(RHS.CurArray == RHS.SmallArray);
-    std::copy(RHS.CurArray, RHS.CurArray + RHS.NumNonEmpty, this->SmallArray);
+    std::copy(RHS.CurArray, RHS.CurArray + RHS.NumNonEmpty, SmallStorage);
     std::swap(RHS.CurArraySize, this->CurArraySize);
     std::swap(this->NumNonEmpty, RHS.NumNonEmpty);
     std::swap(this->NumTombstones, RHS.NumTombstones);
     RHS.CurArray = this->CurArray;
-    this->CurArray = this->SmallArray;
+    RHS.IsSmall = false;
+    this->CurArray = SmallStorage;
+    this->IsSmall = true;
     return;
   }
 
   // If only LHS is small, copy the small elements into RHS and move the pointer
   // from RHS to LHS.
   if (this->isSmall() && !RHS.isSmall()) {
-    assert(this->CurArray == this->SmallArray);
     std::copy(this->CurArray, this->CurArray + this->NumNonEmpty,
-              RHS.SmallArray);
+              RHSSmallStorage);
     std::swap(RHS.CurArraySize, this->CurArraySize);
     std::swap(RHS.NumNonEmpty, this->NumNonEmpty);
     std::swap(RHS.NumTombstones, this->NumTombstones);
     this->CurArray = RHS.CurArray;
-    RHS.CurArray = RHS.SmallArray;
+    this->IsSmall = false;
+    RHS.CurArray = RHSSmallStorage;
+    RHS.IsSmall = true;
     return;
   }
 
   // Both a small, just swap the small elements.
   assert(this->isSmall() && RHS.isSmall());
   unsigned MinNonEmpty = std::min(this->NumNonEmpty, RHS.NumNonEmpty);
-  std::swap_ranges(this->SmallArray, this->SmallArray + MinNonEmpty,
-                   RHS.SmallArray);
+  std::swap_ranges(this->CurArray, this->CurArray + MinNonEmpty, RHS.CurArray);
   if (this->NumNonEmpty > MinNonEmpty) {
-    std::copy(this->SmallArray + MinNonEmpty,
-              this->SmallArray + this->NumNonEmpty,
-              RHS.SmallArray + MinNonEmpty);
+    std::copy(this->CurArray + MinNonEmpty, this->CurArray + this->NumNonEmpty,
+              RHS.CurArray + MinNonEmpty);
   } else {
-    std::copy(RHS.SmallArray + MinNonEmpty, RHS.SmallArray + RHS.NumNonEmpty,
-              this->SmallArray + MinNonEmpty);
+    std::copy(RHS.CurArray + MinNonEmpty, RHS.CurArray + RHS.NumNonEmpty,
+              this->CurArray + MinNonEmpty);
   }
   assert(this->CurArraySize == RHS.CurArraySize);
   std::swap(this->NumNonEmpty, RHS.NumNonEmpty);

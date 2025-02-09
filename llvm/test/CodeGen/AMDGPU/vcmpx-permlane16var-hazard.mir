@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: hazard_vcmpx_permlane16var
 # GCN:      V_CMPX_LE_F32_nosdst_e32

@@ -176,6 +176,56 @@ def testForSugar():
             memref.store(add, memref_v, [i])
             scf.yield_([])
 
+    # CHECK:  func.func @loop_yield_1(%[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index, %[[VAL_3:.*]]: memref<10xindex>) {
+    # CHECK:    %[[VAL_4:.*]] = arith.constant 0 : index
+    # CHECK:    %[[VAL_5:.*]] = arith.constant 0 : index
+    # CHECK:    %[[VAL_6:.*]] = arith.constant 0 : index
+    # CHECK:    %[[VAL_7:.*]] = arith.constant 100 : index
+    # CHECK:    %[[VAL_8:.*]] = arith.constant 1 : index
+    # CHECK:    %[[VAL_10:.*]] = scf.for %[[IV:.*]] = %[[VAL_6]] to %[[VAL_7]] step %[[VAL_8]] iter_args(%[[ITER:.*]] = %[[VAL_4]]) -> (index) {
+    # CHECK:      %[[VAL_9:.*]] = arith.addi %[[ITER]], %[[IV]] : index
+    # CHECK:      scf.yield %[[VAL_9]] : index
+    # CHECK:    }
+    # CHECK:    memref.store %[[VAL_10]], %[[VAL_3]]{{\[}}%[[VAL_5]]] : memref<10xindex>
+    # CHECK:    return
+    # CHECK:  }
+    @func.FuncOp.from_py_func(index_type, index_type, index_type, memref_t)
+    def loop_yield_1(lb, ub, step, memref_v):
+        sum = arith.ConstantOp.create_index(0)
+        c0 = arith.ConstantOp.create_index(0)
+        for i, loc_sum, sum in scf.for_(0, 100, 1, [sum]):
+            loc_sum = arith.addi(loc_sum, i)
+            scf.yield_([loc_sum])
+        memref.store(sum, memref_v, [c0])
+
+    # CHECK:  func.func @loop_yield_2(%[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index, %[[VAL_3:.*]]: memref<10xindex>) {
+    # CHECK:    %[[c0:.*]] = arith.constant 0 : index
+    # CHECK:    %[[c2:.*]] = arith.constant 2 : index
+    # CHECK:    %[[REF1:.*]] = arith.constant 0 : index
+    # CHECK:    %[[REF2:.*]] = arith.constant 1 : index
+    # CHECK:    %[[VAL_6:.*]] = arith.constant 0 : index
+    # CHECK:    %[[VAL_7:.*]] = arith.constant 100 : index
+    # CHECK:    %[[VAL_8:.*]] = arith.constant 1 : index
+    # CHECK:    %[[RES:.*]] = scf.for %[[IV:.*]] = %[[VAL_6]] to %[[VAL_7]] step %[[VAL_8]] iter_args(%[[ITER1:.*]] = %[[c0]], %[[ITER2:.*]] = %[[c2]]) -> (index, index) {
+    # CHECK:      %[[VAL_9:.*]] = arith.addi %[[ITER1]], %[[IV]] : index
+    # CHECK:      %[[VAL_10:.*]] = arith.addi %[[ITER2]], %[[IV]] : index
+    # CHECK:      scf.yield %[[VAL_9]], %[[VAL_10]] : index, index
+    # CHECK:    }
+    # CHECK:    return
+    # CHECK:  }
+    @func.FuncOp.from_py_func(index_type, index_type, index_type, memref_t)
+    def loop_yield_2(lb, ub, step, memref_v):
+        sum1 = arith.ConstantOp.create_index(0)
+        sum2 = arith.ConstantOp.create_index(2)
+        c0 = arith.ConstantOp.create_index(0)
+        c1 = arith.ConstantOp.create_index(1)
+        for i, [loc_sum1, loc_sum2], [sum1, sum2] in scf.for_(0, 100, 1, [sum1, sum2]):
+            loc_sum1 = arith.addi(loc_sum1, i)
+            loc_sum2 = arith.addi(loc_sum2, i)
+            scf.yield_([loc_sum1, loc_sum2])
+        memref.store(sum1, memref_v, [c0])
+        memref.store(sum2, memref_v, [c1])
+
 
 @constructAndPrintInModule
 def testOpsAsArguments():
@@ -225,6 +275,32 @@ def testIfWithoutElse():
 # CHECK: scf.if %[[ARG0:.*]]
 # CHECK:   %[[ONE:.*]] = arith.constant 1
 # CHECK:   %[[ADD:.*]] = arith.addi %[[ONE]], %[[ONE]]
+# CHECK: return
+
+
+@constructAndPrintInModule
+def testNestedIf():
+    bool = IntegerType.get_signless(1)
+    i32 = IntegerType.get_signless(32)
+
+    @func.FuncOp.from_py_func(bool, bool)
+    def nested_if(b, c):
+        if_op = scf.IfOp(b)
+        with InsertionPoint(if_op.then_block) as ip:
+            if_op = scf.IfOp(c, ip=ip)
+            with InsertionPoint(if_op.then_block):
+                one = arith.ConstantOp(i32, 1)
+                add = arith.AddIOp(one, one)
+                scf.YieldOp([])
+            scf.YieldOp([])
+        return
+
+
+# CHECK: func @nested_if(%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i1)
+# CHECK: scf.if %[[ARG0:.*]]
+# CHECK:   scf.if %[[ARG1:.*]]
+# CHECK:     %[[ONE:.*]] = arith.constant 1
+# CHECK:     %[[ADD:.*]] = arith.addi %[[ONE]], %[[ONE]]
 # CHECK: return
 
 

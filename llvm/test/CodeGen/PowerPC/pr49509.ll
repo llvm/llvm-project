@@ -23,32 +23,23 @@ define void @test() {
 ; CHECK-NEXT:    lbz 3, 0(3)
 ; CHECK-NEXT:    and 5, 5, 6
 ; CHECK-NEXT:    and 4, 4, 7
-; CHECK-NEXT:    and 4, 4, 5
+; CHECK-NEXT:    and 5, 4, 5
 ; CHECK-NEXT:    cmpwi 3, 0
-; CHECK-NEXT:    lis 3, 256
-; CHECK-NEXT:    lis 7, 512
-; CHECK-NEXT:    bc 12, 2, .LBB0_4
-; CHECK-NEXT:    b .LBB0_5
-; CHECK-NEXT:  .LBB0_4: # %bb66
 ; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    cmpwi 1, 5, -1
+; CHECK-NEXT:    li 4, 0
+; CHECK-NEXT:    bc 12, 2, .LBB0_5
+; CHECK-NEXT:  # %bb.4: # %bb66
+; CHECK-NEXT:    lis 4, 256
 ; CHECK-NEXT:  .LBB0_5: # %bb66
-; CHECK-NEXT:    cmpwi 1, 4, -1
-; CHECK-NEXT:    cmpwi 5, 4, -1
-; CHECK-NEXT:    li 6, 0
-; CHECK-NEXT:    bc 12, 6, .LBB0_6
-; CHECK-NEXT:    b .LBB0_7
-; CHECK-NEXT:  .LBB0_6: # %bb66
-; CHECK-NEXT:    addi 3, 7, 0
+; CHECK-NEXT:    cmpwi 5, 5, -1
+; CHECK-NEXT:    lis 5, 512
+; CHECK-NEXT:    beq 5, .LBB0_7
+; CHECK-NEXT:  # %bb.6: # %bb66
+; CHECK-NEXT:    mr 5, 4
 ; CHECK-NEXT:  .LBB0_7: # %bb66
-; CHECK-NEXT:    cror 20, 22, 2
-; CHECK-NEXT:    stw 3, 0(3)
-; CHECK-NEXT:    bc 12, 20, .LBB0_9
-; CHECK-NEXT:  # %bb.8: # %bb66
-; CHECK-NEXT:    ori 3, 6, 0
-; CHECK-NEXT:    b .LBB0_10
-; CHECK-NEXT:  .LBB0_9: # %bb66
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:  .LBB0_10: # %bb66
+; CHECK-NEXT:    cror 20, 6, 2
+; CHECK-NEXT:    stw 5, 0(3)
 ; CHECK-NEXT:    stw 3, 0(3)
 ; CHECK-NEXT:    blr
 bb:

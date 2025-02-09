@@ -5,24 +5,24 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void @fixed() {
 ; CHECK-LABEL: 'fixed'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v2i8 = call <2 x i8> @llvm.masked.load.v2i8.p0(ptr undef, i32 8, <2 x i1> undef, <2 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v4i8 = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr undef, i32 8, <4 x i1> undef, <4 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v8i8 = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr undef, i32 8, <8 x i1> undef, <8 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v16i8 = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr undef, i32 8, <16 x i1> undef, <16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v2i16 = call <2 x i16> @llvm.masked.load.v2i16.p0(ptr undef, i32 8, <2 x i1> undef, <2 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v4i16 = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr undef, i32 8, <4 x i1> undef, <4 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v8i16 = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr undef, i32 8, <8 x i1> undef, <8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v2i32 = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr undef, i32 8, <2 x i1> undef, <2 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v4i32 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr undef, i32 8, <4 x i1> undef, <4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v2i64 = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr undef, i32 8, <2 x i1> undef, <2 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v2f16 = call <2 x half> @llvm.masked.load.v2f16.p0(ptr undef, i32 8, <2 x i1> undef, <2 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %v4f16 = call <4 x half> @llvm.masked.load.v4f16.p0(ptr undef, i32 8, <4 x i1> undef, <4 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 46 for instruction: %v8f16 = call <8 x half> @llvm.masked.load.v8f16.p0(ptr undef, i32 8, <8 x i1> undef, <8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v2f32 = call <2 x float> @llvm.masked.load.v2f32.p0(ptr undef, i32 8, <2 x i1> undef, <2 x float> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %v4f32 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr undef, i32 8, <4 x i1> undef, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v2f64 = call <2 x double> @llvm.masked.load.v2f64.p0(ptr undef, i32 8, <2 x i1> undef, <2 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v4i64 = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr undef, i32 8, <4 x i1> undef, <4 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 184 for instruction: %v32f16 = call <32 x half> @llvm.masked.load.v32f16.p0(ptr undef, i32 8, <32 x i1> undef, <32 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v2i8 = call <2 x i8> @llvm.masked.load.v2i8.p0(ptr undef, i32 8, <2 x i1> undef, <2 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v4i8 = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr undef, i32 8, <4 x i1> undef, <4 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v8i8 = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr undef, i32 8, <8 x i1> undef, <8 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v16i8 = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr undef, i32 8, <16 x i1> undef, <16 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v2i16 = call <2 x i16> @llvm.masked.load.v2i16.p0(ptr undef, i32 8, <2 x i1> undef, <2 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v4i16 = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr undef, i32 8, <4 x i1> undef, <4 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v8i16 = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr undef, i32 8, <8 x i1> undef, <8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v2i32 = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr undef, i32 8, <2 x i1> undef, <2 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v4i32 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr undef, i32 8, <4 x i1> undef, <4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v2i64 = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr undef, i32 8, <2 x i1> undef, <2 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = call <2 x half> @llvm.masked.load.v2f16.p0(ptr undef, i32 8, <2 x i1> undef, <2 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v4f16 = call <4 x half> @llvm.masked.load.v4f16.p0(ptr undef, i32 8, <4 x i1> undef, <4 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %v8f16 = call <8 x half> @llvm.masked.load.v8f16.p0(ptr undef, i32 8, <8 x i1> undef, <8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = call <2 x float> @llvm.masked.load.v2f32.p0(ptr undef, i32 8, <2 x i1> undef, <2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v4f32 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr undef, i32 8, <4 x i1> undef, <4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f64 = call <2 x double> @llvm.masked.load.v2f64.p0(ptr undef, i32 8, <2 x i1> undef, <2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v4i64 = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr undef, i32 8, <4 x i1> undef, <4 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v32f16 = call <32 x half> @llvm.masked.load.v32f16.p0(ptr undef, i32 8, <32 x i1> undef, <32 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 entry:
@@ -75,6 +75,7 @@ define void @scalable() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr undef, i32 8, <vscale x 1 x i1> undef, <vscale x 1 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0(ptr undef, i32 8, <vscale x 4 x i1> undef, <vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.load.nxv32f16.p0(ptr undef, i32 8, <vscale x 32 x i1> undef, <vscale x 32 x half> undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nxv4i1 = call <vscale x 4 x i1> @llvm.masked.load.nxv4i1.p0(ptr undef, i32 16, <vscale x 4 x i1> undef, <vscale x 4 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 entry:
@@ -102,6 +103,9 @@ entry:
   %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr undef, i32 8, <vscale x 1 x i1> undef, <vscale x 1 x i64> undef)
   %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0(ptr undef, i32 8, <vscale x 4 x i1> undef, <vscale x 4 x i64> undef)
   %nxv32f16 = call <vscale x 32 x half> @llvm.masked.load.nxv32f16.p0(ptr undef, i32 8, <vscale x 32 x i1> undef, <vscale x 32 x half> undef)
+
+  ; Types that are legal, but for which we have no masked load/store lowering
+  %nxv4i1 = call <vscale x 4 x i1> @llvm.masked.load.nxv4i1.p0(ptr undef, i32 16, <vscale x 4 x i1> undef, <vscale x 4 x i1> undef)
 
   ret void
 }
@@ -265,6 +269,7 @@ declare <32 x half> @llvm.masked.load.v32f16.p0(ptr, i32, <32 x i1>, <32 x half>
 declare <2 x float> @llvm.masked.load.v2f32.p0(ptr, i32, <2 x i1>, <2 x float>)
 declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32, <4 x i1>, <4 x float>)
 declare <2 x double> @llvm.masked.load.v2f64.p0(ptr, i32, <2 x i1>, <2 x double>)
+declare <vscale x 4 x i1> @llvm.masked.load.nxv4i1.p0(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x i1>)
 
 
 declare <vscale x 2 x i8> @llvm.masked.load.nxv2i8.p0(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)

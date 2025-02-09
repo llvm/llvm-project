@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/time_utils.h"
+#include "src/__support/CPP/limits.h" // INT_MIN, INT_MAX
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/time/time_constants.h"
 
-#include <limits.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
-
-using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 static int64_t computeRemainingYears(int64_t daysPerYears,
                                      int64_t quotientYears,
@@ -52,36 +51,36 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
       (sizeof(time_t) == 4)
           ? INT_MIN
           : INT_MIN * static_cast<int64_t>(
-                          TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
+                          time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
   constexpr time_t time_max =
       (sizeof(time_t) == 4)
           ? INT_MAX
           : INT_MAX * static_cast<int64_t>(
-                          TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
+                          time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
 
   time_t ts = static_cast<time_t>(total_seconds);
   if (ts < time_min || ts > time_max)
     return time_utils::out_of_range();
 
   int64_t seconds =
-      total_seconds - TimeConstants::SECONDS_UNTIL2000_MARCH_FIRST;
-  int64_t days = seconds / TimeConstants::SECONDS_PER_DAY;
-  int64_t remainingSeconds = seconds % TimeConstants::SECONDS_PER_DAY;
+      total_seconds - time_constants::SECONDS_UNTIL2000_MARCH_FIRST;
+  int64_t days = seconds / time_constants::SECONDS_PER_DAY;
+  int64_t remainingSeconds = seconds % time_constants::SECONDS_PER_DAY;
   if (remainingSeconds < 0) {
-    remainingSeconds += TimeConstants::SECONDS_PER_DAY;
+    remainingSeconds += time_constants::SECONDS_PER_DAY;
     days--;
   }
 
-  int64_t wday = (TimeConstants::WEEK_DAY_OF2000_MARCH_FIRST + days) %
-                 TimeConstants::DAYS_PER_WEEK;
+  int64_t wday = (time_constants::WEEK_DAY_OF2000_MARCH_FIRST + days) %
+                 time_constants::DAYS_PER_WEEK;
   if (wday < 0)
-    wday += TimeConstants::DAYS_PER_WEEK;
+    wday += time_constants::DAYS_PER_WEEK;
 
   // Compute the number of 400 year cycles.
-  int64_t numOfFourHundredYearCycles = days / TimeConstants::DAYS_PER400_YEARS;
-  int64_t remainingDays = days % TimeConstants::DAYS_PER400_YEARS;
+  int64_t numOfFourHundredYearCycles = days / time_constants::DAYS_PER400_YEARS;
+  int64_t remainingDays = days % time_constants::DAYS_PER400_YEARS;
   if (remainingDays < 0) {
-    remainingDays += TimeConstants::DAYS_PER400_YEARS;
+    remainingDays += time_constants::DAYS_PER400_YEARS;
     numOfFourHundredYearCycles--;
   }
 
@@ -89,17 +88,17 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
   // "four hundred year cycles" will be 4 hundred year cycles or less in 400
   // years.
   int64_t numOfHundredYearCycles = computeRemainingYears(
-      TimeConstants::DAYS_PER100_YEARS, 4, &remainingDays);
+      time_constants::DAYS_PER100_YEARS, 4, &remainingDays);
 
   // The remaining number of years after computing the number of
   // "hundred year cycles" will be 25 four year cycles or less in 100 years.
-  int64_t numOfFourYearCycles =
-      computeRemainingYears(TimeConstants::DAYS_PER4_YEARS, 25, &remainingDays);
+  int64_t numOfFourYearCycles = computeRemainingYears(
+      time_constants::DAYS_PER4_YEARS, 25, &remainingDays);
 
   // The remaining number of years after computing the number of
   // "four year cycles" will be 4 one year cycles or less in 4 years.
   int64_t remainingYears = computeRemainingYears(
-      TimeConstants::DAYS_PER_NON_LEAP_YEAR, 4, &remainingDays);
+      time_constants::DAYS_PER_NON_LEAP_YEAR, 4, &remainingDays);
 
   // Calculate number of years from year 2000.
   int64_t years = remainingYears + 4 * numOfFourYearCycles +
@@ -112,8 +111,8 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
   // We add 31 and 28 for the number of days in January and February, since our
   // starting point was March 1st.
   int64_t yday = remainingDays + 31 + 28 + leapDay;
-  if (yday >= TimeConstants::DAYS_PER_NON_LEAP_YEAR + leapDay)
-    yday -= TimeConstants::DAYS_PER_NON_LEAP_YEAR + leapDay;
+  if (yday >= time_constants::DAYS_PER_NON_LEAP_YEAR + leapDay)
+    yday -= time_constants::DAYS_PER_NON_LEAP_YEAR + leapDay;
 
   int64_t months = 0;
   while (daysInMonth[months] <= remainingDays) {
@@ -121,8 +120,8 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
     months++;
   }
 
-  if (months >= TimeConstants::MONTHS_PER_YEAR - 2) {
-    months -= TimeConstants::MONTHS_PER_YEAR;
+  if (months >= time_constants::MONTHS_PER_YEAR - 2) {
+    months -= time_constants::MONTHS_PER_YEAR;
     years++;
   }
 
@@ -131,19 +130,19 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
 
   // All the data (years, month and remaining days) was calculated from
   // March, 2000. Thus adjust the data to be from January, 1900.
-  tm->tm_year = static_cast<int>(years + 2000 - TimeConstants::TIME_YEAR_BASE);
+  tm->tm_year = static_cast<int>(years + 2000 - time_constants::TIME_YEAR_BASE);
   tm->tm_mon = static_cast<int>(months + 2);
   tm->tm_mday = static_cast<int>(remainingDays + 1);
   tm->tm_wday = static_cast<int>(wday);
   tm->tm_yday = static_cast<int>(yday);
 
   tm->tm_hour =
-      static_cast<int>(remainingSeconds / TimeConstants::SECONDS_PER_HOUR);
+      static_cast<int>(remainingSeconds / time_constants::SECONDS_PER_HOUR);
   tm->tm_min =
-      static_cast<int>(remainingSeconds / TimeConstants::SECONDS_PER_MIN %
-                       TimeConstants::SECONDS_PER_MIN);
+      static_cast<int>(remainingSeconds / time_constants::SECONDS_PER_MIN %
+                       time_constants::SECONDS_PER_MIN);
   tm->tm_sec =
-      static_cast<int>(remainingSeconds % TimeConstants::SECONDS_PER_MIN);
+      static_cast<int>(remainingSeconds % time_constants::SECONDS_PER_MIN);
   // TODO(rtenneti): Need to handle timezone and update of tm_isdst.
   tm->tm_isdst = 0;
 
@@ -151,4 +150,4 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
 }
 
 } // namespace time_utils
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

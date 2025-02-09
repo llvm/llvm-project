@@ -12,6 +12,7 @@ struct Foo {
 
 int
 forgot_termination(int input, struct Foo my_foo) {
+  char frame_increasing_buffer[0x1000]; // To blow the stack sooner.
   return forgot_termination(++input, my_foo);
 }
 

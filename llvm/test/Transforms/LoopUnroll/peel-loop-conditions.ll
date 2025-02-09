@@ -1637,7 +1637,7 @@ for.body:                                         ; preds = %entry, %if.end
   br i1 %or.cond, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.body
-  tail call void (i32, ...) bitcast (void (...)* @f1 to void (i32, ...)*)(i32 %a)
+  tail call void (i32, ...) @f1(i32 %a)
   br label %if.end
 
 if.end:                                           ; preds = %for.body, %if.then
@@ -1745,7 +1745,7 @@ for.body:                                         ; preds = %entry, %if.end
   br i1 %or.cond, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.body
-  tail call void (i32, ...) bitcast (void (...)* @f1 to void (i32, ...)*)(i32 %a)
+  tail call void (i32, ...) @f1(i32 %a)
   br label %if.end
 
 if.end:                                           ; preds = %for.body, %if.then
@@ -1971,7 +1971,7 @@ for.body:                                         ; preds = %entry, %if.end
   br i1 %cmp1, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.body
-  tail call void (i32, ...) bitcast (void (...)* @f1 to void (i32, ...)*)(i32 %a)
+  tail call void (i32, ...) @f1(i32 %a)
   br label %if.end
 
 if.end:                                           ; preds = %for.body, %if.then
@@ -2049,7 +2049,7 @@ for.body:                                         ; preds = %entry, %if.end
   br i1 %or.cond5, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.body
-  tail call void (i32, ...) bitcast (void (...)* @f1 to void (i32, ...)*)(i32 %a)
+  tail call void (i32, ...) @f1(i32 %a)
   br label %if.end
 
 if.end:                                           ; preds = %for.body, %if.then

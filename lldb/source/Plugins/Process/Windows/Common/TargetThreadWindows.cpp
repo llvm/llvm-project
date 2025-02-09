@@ -29,8 +29,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-using GetThreadDescriptionFunctionPtr = HRESULT
-WINAPI (*)(HANDLE hThread, PWSTR *ppszThreadDescription);
+using GetThreadDescriptionFunctionPtr =
+    HRESULT(WINAPI *)(HANDLE hThread, PWSTR *ppszThreadDescription);
 
 TargetThreadWindows::TargetThreadWindows(ProcessWindows &process,
                                          const HostThread &thread)
@@ -179,9 +179,10 @@ const char *TargetThreadWindows::GetName() {
   Log *log = GetLog(LLDBLog::Thread);
   static GetThreadDescriptionFunctionPtr GetThreadDescription = []() {
     HMODULE hModule = ::LoadLibraryW(L"Kernel32.dll");
-    return hModule ? reinterpret_cast<GetThreadDescriptionFunctionPtr>(
-                         ::GetProcAddress(hModule, "GetThreadDescription"))
-                   : nullptr;
+    return hModule
+               ? reinterpret_cast<GetThreadDescriptionFunctionPtr>(
+                     (void *)::GetProcAddress(hModule, "GetThreadDescription"))
+               : nullptr;
   }();
   LLDB_LOGF(log, "GetProcAddress: %p",
             reinterpret_cast<void *>(GetThreadDescription));

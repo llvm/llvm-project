@@ -17,6 +17,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/Iterable.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -90,15 +91,6 @@ public:
   /// their default state.
   void Clear(bool clear_target);
 
-  /// Dump a description of this object to a Stream.
-  ///
-  /// Dump a description of the contents of this object to the supplied stream
-  /// \a s.
-  ///
-  /// \param[in] s
-  ///     The stream to which to dump the object description.
-  void Dump(Stream *s, Target *target) const;
-
   /// Dump the stop context in this object to a Stream.
   ///
   /// Dump the best description of this object to the stream. The information
@@ -153,11 +145,12 @@ public:
   ///
   /// \return
   ///     \b true if some text was dumped, \b false otherwise.
-  bool DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
-                       const Address &so_addr, bool show_fullpaths,
-                       bool show_module, bool show_inlined_frames,
-                       bool show_function_arguments, bool show_function_name,
-                       llvm::StringRef pattern = "") const;
+  bool DumpStopContext(
+      Stream *s, ExecutionContextScope *exe_scope, const Address &so_addr,
+      bool show_fullpaths, bool show_module, bool show_inlined_frames,
+      bool show_function_arguments, bool show_function_name,
+      bool show_function_display_name = false,
+      std::optional<Stream::HighlightSettings> settings = std::nullopt) const;
 
   /// Get the address range contained within a symbol context.
   ///
@@ -172,8 +165,8 @@ public:
   ///     eSymbolContextSymbol is set in \a scope
   ///
   /// \param[in] scope
-  ///     A mask of symbol context bits telling this function which
-  ///     address ranges it can use when trying to extract one from
+  ///     A mask bits from the \b SymbolContextItem enum telling this function
+  ///     which address ranges it can use when trying to extract one from
   ///     the valid (non-nullptr) symbol context classes.
   ///
   /// \param[in] range_idx
@@ -199,8 +192,15 @@ public:
   bool GetAddressRange(uint32_t scope, uint32_t range_idx,
                        bool use_inline_block_range, AddressRange &range) const;
 
-  bool GetAddressRangeFromHereToEndLine(uint32_t end_line, AddressRange &range,
-                                        Status &error);
+  /// Get the address of the function or symbol represented by this symbol
+  /// context.
+  ///
+  /// If both fields are present, the address of the function is returned. If
+  /// both are empty, the result is an invalid address.
+  Address GetFunctionOrSymbolAddress() const;
+
+  llvm::Error GetAddressRangeFromHereToEndLine(uint32_t end_line,
+                                               AddressRange &range);
 
   /// Find the best global data symbol visible from this context.
   ///
@@ -223,8 +223,9 @@ public:
   ///     The symbol that was found, or \b nullptr if none was found.
   const Symbol *FindBestGlobalDataSymbol(ConstString name, Status &error);
 
-  void GetDescription(Stream *s, lldb::DescriptionLevel level, Target *target,
-                      llvm::StringRef pattern = "") const;
+  void GetDescription(
+      Stream *s, lldb::DescriptionLevel level, Target *target,
+      std::optional<Stream::HighlightSettings> settings = std::nullopt) const;
 
   uint32_t GetResolvedMask() const;
 

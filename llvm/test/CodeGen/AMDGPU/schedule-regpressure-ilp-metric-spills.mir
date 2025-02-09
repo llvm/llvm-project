@@ -1,4 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1100 -start-before=machine-scheduler -stop-after=greedy,1 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -start-before=machine-scheduler -stop-after=greedy,2 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -start-before=machine-scheduler -stop-after=greedy,2 -amdgpu-use-amdgpu-trackers=1 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN-GCNTRACKER %s
 
 --- |
   define amdgpu_kernel void @no_sched_metric_due_to_spills() #0 {
@@ -11,6 +12,20 @@
 # GCN-LABEL: name: no_sched_metric_due_to_spills
 # GCN-NOT: SI_SPILL_
 # GCN: S_ENDPGM
+
+# GCN-GCNTRACKER-LABEL: name: no_sched_metric_due_to_spills
+# GCN-GCNTRACKER: SI_SPILL_V32_SAVE
+# GCN-GCNTRACKER: SI_SPILL_V32_SAVE
+# GCN-GCNTRACKER: SI_SPILL_V32_SAVE
+# GCN-GCNTRACKER: SI_SPILL_V32_SAVE
+# GCN-GCNTRACKER: SI_SPILL_V32_SAVE
+# GCN-GCNTRACKER: SI_SPILL_V32_SAVE
+# GCN-GCNTRACKER: S_ENDPGM
+
+# When using the GCN Trackers, the scheduler is able to acieve desired occupancy without running high-RP-reschedule stage. However, the RP is still high,
+# and RA is unable to allocate without spills. By running the high-RP-reschedule schedule we would have furhter decreased RP, which provides increased 
+# flexibility for RA.
+
 ---
 name:            no_sched_metric_due_to_spills
 tracksRegLiveness: true
@@ -409,14 +424,14 @@ body:             |
     %264:vgpr_32 = V_LSHL_OR_B32_e64 %254, 8, %263, implicit $exec
     %265:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %266:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %267:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %265.sub0, 0, 0, implicit $mode, implicit $exec
-    %268:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %265.sub1, 0, 0, implicit $mode, implicit $exec
-    %269:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %265.sub2, 0, 0, implicit $mode, implicit $exec
-    %270:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %265.sub3, 0, 0, implicit $mode, implicit $exec
-    %271:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %266.sub0, 0, 0, implicit $mode, implicit $exec
-    %272:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %266.sub1, 0, 0, implicit $mode, implicit $exec
-    %273:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %266.sub2, 0, 0, implicit $mode, implicit $exec
-    %274:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %266.sub3, 0, 0, implicit $mode, implicit $exec
+    %267:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %265.sub0, 0, 0, implicit $mode, implicit $exec
+    %268:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %265.sub1, 0, 0, implicit $mode, implicit $exec
+    %269:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %265.sub2, 0, 0, implicit $mode, implicit $exec
+    %270:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %265.sub3, 0, 0, implicit $mode, implicit $exec
+    %271:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %266.sub0, 0, 0, implicit $mode, implicit $exec
+    %272:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %266.sub1, 0, 0, implicit $mode, implicit $exec
+    %273:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %266.sub2, 0, 0, implicit $mode, implicit $exec
+    %274:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %266.sub3, 0, 0, implicit $mode, implicit $exec
     undef %275.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %273, 0, %274, 0, 0, implicit $mode, implicit $exec
     %275.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %271, 0, %272, 0, 0, implicit $mode, implicit $exec
     %275.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %269, 0, %270, 0, 0, implicit $mode, implicit $exec
@@ -431,14 +446,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %212.sub6, %212.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %277:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %278:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %279:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %277.sub0, 0, 0, implicit $mode, implicit $exec
-    %280:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %277.sub1, 0, 0, implicit $mode, implicit $exec
-    %281:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %277.sub2, 0, 0, implicit $mode, implicit $exec
-    %282:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %277.sub3, 0, 0, implicit $mode, implicit $exec
-    %283:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %278.sub0, 0, 0, implicit $mode, implicit $exec
-    %284:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %278.sub1, 0, 0, implicit $mode, implicit $exec
-    %285:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %278.sub2, 0, 0, implicit $mode, implicit $exec
-    %286:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %278.sub3, 0, 0, implicit $mode, implicit $exec
+    %279:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %277.sub0, 0, 0, implicit $mode, implicit $exec
+    %280:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %277.sub1, 0, 0, implicit $mode, implicit $exec
+    %281:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %277.sub2, 0, 0, implicit $mode, implicit $exec
+    %282:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %277.sub3, 0, 0, implicit $mode, implicit $exec
+    %283:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %278.sub0, 0, 0, implicit $mode, implicit $exec
+    %284:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %278.sub1, 0, 0, implicit $mode, implicit $exec
+    %285:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %278.sub2, 0, 0, implicit $mode, implicit $exec
+    %286:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %278.sub3, 0, 0, implicit $mode, implicit $exec
     undef %287.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %285, 0, %286, 0, 0, implicit $mode, implicit $exec
     %287.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %283, 0, %284, 0, 0, implicit $mode, implicit $exec
     %287.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %281, 0, %282, 0, 0, implicit $mode, implicit $exec
@@ -450,14 +465,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %246.sub6, %246.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %288:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %289:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %290:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %288.sub0, 0, 0, implicit $mode, implicit $exec
-    %291:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %288.sub1, 0, 0, implicit $mode, implicit $exec
-    %292:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %288.sub2, 0, 0, implicit $mode, implicit $exec
-    %293:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %288.sub3, 0, 0, implicit $mode, implicit $exec
-    %294:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %289.sub0, 0, 0, implicit $mode, implicit $exec
-    %295:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %289.sub1, 0, 0, implicit $mode, implicit $exec
-    %296:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %289.sub2, 0, 0, implicit $mode, implicit $exec
-    %297:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %289.sub3, 0, 0, implicit $mode, implicit $exec
+    %290:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %288.sub0, 0, 0, implicit $mode, implicit $exec
+    %291:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %288.sub1, 0, 0, implicit $mode, implicit $exec
+    %292:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %288.sub2, 0, 0, implicit $mode, implicit $exec
+    %293:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %288.sub3, 0, 0, implicit $mode, implicit $exec
+    %294:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %289.sub0, 0, 0, implicit $mode, implicit $exec
+    %295:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %289.sub1, 0, 0, implicit $mode, implicit $exec
+    %296:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %289.sub2, 0, 0, implicit $mode, implicit $exec
+    %297:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %289.sub3, 0, 0, implicit $mode, implicit $exec
     undef %298.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %296, 0, %297, 0, 0, implicit $mode, implicit $exec
     %298.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %294, 0, %295, 0, 0, implicit $mode, implicit $exec
     %298.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %292, 0, %293, 0, 0, implicit $mode, implicit $exec
@@ -470,14 +485,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %250.sub6, %250.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %300:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %301:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %302:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %300.sub0, 0, 0, implicit $mode, implicit $exec
-    %303:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %300.sub1, 0, 0, implicit $mode, implicit $exec
-    %304:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %300.sub2, 0, 0, implicit $mode, implicit $exec
-    %305:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %300.sub3, 0, 0, implicit $mode, implicit $exec
-    %306:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %301.sub0, 0, 0, implicit $mode, implicit $exec
-    %307:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %301.sub1, 0, 0, implicit $mode, implicit $exec
-    %308:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %301.sub2, 0, 0, implicit $mode, implicit $exec
-    %309:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %301.sub3, 0, 0, implicit $mode, implicit $exec
+    %302:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %300.sub0, 0, 0, implicit $mode, implicit $exec
+    %303:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %300.sub1, 0, 0, implicit $mode, implicit $exec
+    %304:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %300.sub2, 0, 0, implicit $mode, implicit $exec
+    %305:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %300.sub3, 0, 0, implicit $mode, implicit $exec
+    %306:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %301.sub0, 0, 0, implicit $mode, implicit $exec
+    %307:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %301.sub1, 0, 0, implicit $mode, implicit $exec
+    %308:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %301.sub2, 0, 0, implicit $mode, implicit $exec
+    %309:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %301.sub3, 0, 0, implicit $mode, implicit $exec
     undef %310.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %308, 0, %309, 0, 0, implicit $mode, implicit $exec
     %310.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %306, 0, %307, 0, 0, implicit $mode, implicit $exec
     %310.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %304, 0, %305, 0, 0, implicit $mode, implicit $exec
@@ -491,14 +506,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %253.sub6, %253.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %313:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %314:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %315:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %313.sub0, 0, 0, implicit $mode, implicit $exec
-    %316:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %313.sub1, 0, 0, implicit $mode, implicit $exec
-    %317:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %313.sub2, 0, 0, implicit $mode, implicit $exec
-    %318:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %313.sub3, 0, 0, implicit $mode, implicit $exec
-    %319:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %314.sub0, 0, 0, implicit $mode, implicit $exec
-    %320:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %314.sub1, 0, 0, implicit $mode, implicit $exec
-    %321:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %314.sub2, 0, 0, implicit $mode, implicit $exec
-    %322:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %314.sub3, 0, 0, implicit $mode, implicit $exec
+    %315:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %313.sub0, 0, 0, implicit $mode, implicit $exec
+    %316:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %313.sub1, 0, 0, implicit $mode, implicit $exec
+    %317:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %313.sub2, 0, 0, implicit $mode, implicit $exec
+    %318:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %313.sub3, 0, 0, implicit $mode, implicit $exec
+    %319:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %314.sub0, 0, 0, implicit $mode, implicit $exec
+    %320:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %314.sub1, 0, 0, implicit $mode, implicit $exec
+    %321:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %314.sub2, 0, 0, implicit $mode, implicit $exec
+    %322:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %314.sub3, 0, 0, implicit $mode, implicit $exec
     undef %323.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %321, 0, %322, 0, 0, implicit $mode, implicit $exec
     %323.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %319, 0, %320, 0, 0, implicit $mode, implicit $exec
     %323.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %317, 0, %318, 0, 0, implicit $mode, implicit $exec
@@ -511,14 +526,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %214.sub6, %214.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %325:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %326:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %327:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %325.sub0, 0, 0, implicit $mode, implicit $exec
-    %328:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %325.sub1, 0, 0, implicit $mode, implicit $exec
-    %329:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %325.sub2, 0, 0, implicit $mode, implicit $exec
-    %330:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %325.sub3, 0, 0, implicit $mode, implicit $exec
-    %331:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %326.sub0, 0, 0, implicit $mode, implicit $exec
-    %332:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %326.sub1, 0, 0, implicit $mode, implicit $exec
-    %333:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %326.sub2, 0, 0, implicit $mode, implicit $exec
-    %334:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %326.sub3, 0, 0, implicit $mode, implicit $exec
+    %327:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %325.sub0, 0, 0, implicit $mode, implicit $exec
+    %328:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %325.sub1, 0, 0, implicit $mode, implicit $exec
+    %329:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %325.sub2, 0, 0, implicit $mode, implicit $exec
+    %330:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %325.sub3, 0, 0, implicit $mode, implicit $exec
+    %331:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %326.sub0, 0, 0, implicit $mode, implicit $exec
+    %332:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %326.sub1, 0, 0, implicit $mode, implicit $exec
+    %333:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %326.sub2, 0, 0, implicit $mode, implicit $exec
+    %334:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %326.sub3, 0, 0, implicit $mode, implicit $exec
     undef %335.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %333, 0, %334, 0, 0, implicit $mode, implicit $exec
     %335.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %331, 0, %332, 0, 0, implicit $mode, implicit $exec
     %335.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %329, 0, %330, 0, 0, implicit $mode, implicit $exec
@@ -531,14 +546,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %247.sub6, %247.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %337:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %338:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %339:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %337.sub0, 0, 0, implicit $mode, implicit $exec
-    %340:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %337.sub1, 0, 0, implicit $mode, implicit $exec
-    %341:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %337.sub2, 0, 0, implicit $mode, implicit $exec
-    %342:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %337.sub3, 0, 0, implicit $mode, implicit $exec
-    %343:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %338.sub0, 0, 0, implicit $mode, implicit $exec
-    %344:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %338.sub1, 0, 0, implicit $mode, implicit $exec
-    %345:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %338.sub2, 0, 0, implicit $mode, implicit $exec
-    %346:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %338.sub3, 0, 0, implicit $mode, implicit $exec
+    %339:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %337.sub0, 0, 0, implicit $mode, implicit $exec
+    %340:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %337.sub1, 0, 0, implicit $mode, implicit $exec
+    %341:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %337.sub2, 0, 0, implicit $mode, implicit $exec
+    %342:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %337.sub3, 0, 0, implicit $mode, implicit $exec
+    %343:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %338.sub0, 0, 0, implicit $mode, implicit $exec
+    %344:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %338.sub1, 0, 0, implicit $mode, implicit $exec
+    %345:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %338.sub2, 0, 0, implicit $mode, implicit $exec
+    %346:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %338.sub3, 0, 0, implicit $mode, implicit $exec
     undef %347.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %345, 0, %346, 0, 0, implicit $mode, implicit $exec
     %347.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %343, 0, %344, 0, 0, implicit $mode, implicit $exec
     %347.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %341, 0, %342, 0, 0, implicit $mode, implicit $exec
@@ -552,14 +567,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %213.sub6, %213.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %350:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %351:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %352:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %350.sub0, 0, 0, implicit $mode, implicit $exec
-    %353:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %350.sub1, 0, 0, implicit $mode, implicit $exec
-    %354:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %350.sub2, 0, 0, implicit $mode, implicit $exec
-    %355:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %350.sub3, 0, 0, implicit $mode, implicit $exec
-    %356:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %351.sub0, 0, 0, implicit $mode, implicit $exec
-    %357:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %351.sub1, 0, 0, implicit $mode, implicit $exec
-    %358:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %351.sub2, 0, 0, implicit $mode, implicit $exec
-    %359:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %351.sub3, 0, 0, implicit $mode, implicit $exec
+    %352:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %350.sub0, 0, 0, implicit $mode, implicit $exec
+    %353:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %350.sub1, 0, 0, implicit $mode, implicit $exec
+    %354:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %350.sub2, 0, 0, implicit $mode, implicit $exec
+    %355:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %350.sub3, 0, 0, implicit $mode, implicit $exec
+    %356:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %351.sub0, 0, 0, implicit $mode, implicit $exec
+    %357:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %351.sub1, 0, 0, implicit $mode, implicit $exec
+    %358:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %351.sub2, 0, 0, implicit $mode, implicit $exec
+    %359:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %351.sub3, 0, 0, implicit $mode, implicit $exec
     undef %360.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %358, 0, %359, 0, 0, implicit $mode, implicit $exec
     %360.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %356, 0, %357, 0, 0, implicit $mode, implicit $exec
     %360.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %354, 0, %355, 0, 0, implicit $mode, implicit $exec
@@ -573,14 +588,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %216.sub6, %216.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %363:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %364:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %365:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %363.sub0, 0, 0, implicit $mode, implicit $exec
-    %366:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %363.sub1, 0, 0, implicit $mode, implicit $exec
-    %367:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %363.sub2, 0, 0, implicit $mode, implicit $exec
-    %368:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %363.sub3, 0, 0, implicit $mode, implicit $exec
-    %369:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %364.sub0, 0, 0, implicit $mode, implicit $exec
-    %370:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %364.sub1, 0, 0, implicit $mode, implicit $exec
-    %371:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %364.sub2, 0, 0, implicit $mode, implicit $exec
-    %372:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %364.sub3, 0, 0, implicit $mode, implicit $exec
+    %365:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %363.sub0, 0, 0, implicit $mode, implicit $exec
+    %366:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %363.sub1, 0, 0, implicit $mode, implicit $exec
+    %367:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %363.sub2, 0, 0, implicit $mode, implicit $exec
+    %368:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %363.sub3, 0, 0, implicit $mode, implicit $exec
+    %369:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %364.sub0, 0, 0, implicit $mode, implicit $exec
+    %370:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %364.sub1, 0, 0, implicit $mode, implicit $exec
+    %371:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %364.sub2, 0, 0, implicit $mode, implicit $exec
+    %372:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %364.sub3, 0, 0, implicit $mode, implicit $exec
     undef %373.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %371, 0, %372, 0, 0, implicit $mode, implicit $exec
     %373.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %369, 0, %370, 0, 0, implicit $mode, implicit $exec
     %373.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %367, 0, %368, 0, 0, implicit $mode, implicit $exec
@@ -593,14 +608,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %248.sub6, %248.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %375:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %376:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %377:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %375.sub0, 0, 0, implicit $mode, implicit $exec
-    %378:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %375.sub1, 0, 0, implicit $mode, implicit $exec
-    %379:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %375.sub2, 0, 0, implicit $mode, implicit $exec
-    %380:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %375.sub3, 0, 0, implicit $mode, implicit $exec
-    %381:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %376.sub0, 0, 0, implicit $mode, implicit $exec
-    %382:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %376.sub1, 0, 0, implicit $mode, implicit $exec
-    %383:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %376.sub2, 0, 0, implicit $mode, implicit $exec
-    %384:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %376.sub3, 0, 0, implicit $mode, implicit $exec
+    %377:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %375.sub0, 0, 0, implicit $mode, implicit $exec
+    %378:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %375.sub1, 0, 0, implicit $mode, implicit $exec
+    %379:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %375.sub2, 0, 0, implicit $mode, implicit $exec
+    %380:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %375.sub3, 0, 0, implicit $mode, implicit $exec
+    %381:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %376.sub0, 0, 0, implicit $mode, implicit $exec
+    %382:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %376.sub1, 0, 0, implicit $mode, implicit $exec
+    %383:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %376.sub2, 0, 0, implicit $mode, implicit $exec
+    %384:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %376.sub3, 0, 0, implicit $mode, implicit $exec
     undef %385.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %383, 0, %384, 0, 0, implicit $mode, implicit $exec
     %385.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %381, 0, %382, 0, 0, implicit $mode, implicit $exec
     %385.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %379, 0, %380, 0, 0, implicit $mode, implicit $exec
@@ -612,14 +627,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %217.sub6, %217.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %386:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %387:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %388:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %386.sub0, 0, 0, implicit $mode, implicit $exec
-    %389:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %386.sub1, 0, 0, implicit $mode, implicit $exec
-    %390:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %386.sub2, 0, 0, implicit $mode, implicit $exec
-    %391:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %386.sub3, 0, 0, implicit $mode, implicit $exec
-    %392:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %387.sub0, 0, 0, implicit $mode, implicit $exec
-    %393:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %387.sub1, 0, 0, implicit $mode, implicit $exec
-    %394:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %387.sub2, 0, 0, implicit $mode, implicit $exec
-    %395:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %387.sub3, 0, 0, implicit $mode, implicit $exec
+    %388:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %386.sub0, 0, 0, implicit $mode, implicit $exec
+    %389:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %386.sub1, 0, 0, implicit $mode, implicit $exec
+    %390:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %386.sub2, 0, 0, implicit $mode, implicit $exec
+    %391:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %386.sub3, 0, 0, implicit $mode, implicit $exec
+    %392:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %387.sub0, 0, 0, implicit $mode, implicit $exec
+    %393:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %387.sub1, 0, 0, implicit $mode, implicit $exec
+    %394:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %387.sub2, 0, 0, implicit $mode, implicit $exec
+    %395:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %387.sub3, 0, 0, implicit $mode, implicit $exec
     undef %396.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %394, 0, %395, 0, 0, implicit $mode, implicit $exec
     %396.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %392, 0, %393, 0, 0, implicit $mode, implicit $exec
     %396.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %390, 0, %391, 0, 0, implicit $mode, implicit $exec
@@ -632,14 +647,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %251.sub6, %251.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %398:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %399:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %400:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %398.sub0, 0, 0, implicit $mode, implicit $exec
-    %401:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %398.sub1, 0, 0, implicit $mode, implicit $exec
-    %402:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %398.sub2, 0, 0, implicit $mode, implicit $exec
-    %403:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %398.sub3, 0, 0, implicit $mode, implicit $exec
-    %404:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %399.sub0, 0, 0, implicit $mode, implicit $exec
-    %405:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %399.sub1, 0, 0, implicit $mode, implicit $exec
-    %406:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %399.sub2, 0, 0, implicit $mode, implicit $exec
-    %407:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %399.sub3, 0, 0, implicit $mode, implicit $exec
+    %400:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %398.sub0, 0, 0, implicit $mode, implicit $exec
+    %401:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %398.sub1, 0, 0, implicit $mode, implicit $exec
+    %402:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %398.sub2, 0, 0, implicit $mode, implicit $exec
+    %403:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %398.sub3, 0, 0, implicit $mode, implicit $exec
+    %404:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %399.sub0, 0, 0, implicit $mode, implicit $exec
+    %405:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %399.sub1, 0, 0, implicit $mode, implicit $exec
+    %406:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %399.sub2, 0, 0, implicit $mode, implicit $exec
+    %407:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %399.sub3, 0, 0, implicit $mode, implicit $exec
     undef %408.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %406, 0, %407, 0, 0, implicit $mode, implicit $exec
     %408.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %404, 0, %405, 0, 0, implicit $mode, implicit $exec
     %408.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %402, 0, %403, 0, 0, implicit $mode, implicit $exec
@@ -652,14 +667,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %252.sub6, %252.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %410:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %411:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %412:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %410.sub0, 0, 0, implicit $mode, implicit $exec
-    %413:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %410.sub1, 0, 0, implicit $mode, implicit $exec
-    %414:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %410.sub2, 0, 0, implicit $mode, implicit $exec
-    %415:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %410.sub3, 0, 0, implicit $mode, implicit $exec
-    %416:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %411.sub0, 0, 0, implicit $mode, implicit $exec
-    %417:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %411.sub1, 0, 0, implicit $mode, implicit $exec
-    %418:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %411.sub2, 0, 0, implicit $mode, implicit $exec
-    %419:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %411.sub3, 0, 0, implicit $mode, implicit $exec
+    %412:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %410.sub0, 0, 0, implicit $mode, implicit $exec
+    %413:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %410.sub1, 0, 0, implicit $mode, implicit $exec
+    %414:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %410.sub2, 0, 0, implicit $mode, implicit $exec
+    %415:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %410.sub3, 0, 0, implicit $mode, implicit $exec
+    %416:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %411.sub0, 0, 0, implicit $mode, implicit $exec
+    %417:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %411.sub1, 0, 0, implicit $mode, implicit $exec
+    %418:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %411.sub2, 0, 0, implicit $mode, implicit $exec
+    %419:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %411.sub3, 0, 0, implicit $mode, implicit $exec
     undef %420.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %418, 0, %419, 0, 0, implicit $mode, implicit $exec
     %420.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %416, 0, %417, 0, 0, implicit $mode, implicit $exec
     %420.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %414, 0, %415, 0, 0, implicit $mode, implicit $exec
@@ -672,14 +687,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %220.sub6, %220.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %422:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %423:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %424:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %422.sub0, 0, 0, implicit $mode, implicit $exec
-    %425:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %422.sub1, 0, 0, implicit $mode, implicit $exec
-    %426:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %422.sub2, 0, 0, implicit $mode, implicit $exec
-    %427:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %422.sub3, 0, 0, implicit $mode, implicit $exec
-    %428:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %423.sub0, 0, 0, implicit $mode, implicit $exec
-    %429:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %423.sub1, 0, 0, implicit $mode, implicit $exec
-    %430:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %423.sub2, 0, 0, implicit $mode, implicit $exec
-    %431:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %423.sub3, 0, 0, implicit $mode, implicit $exec
+    %424:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %422.sub0, 0, 0, implicit $mode, implicit $exec
+    %425:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %422.sub1, 0, 0, implicit $mode, implicit $exec
+    %426:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %422.sub2, 0, 0, implicit $mode, implicit $exec
+    %427:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %422.sub3, 0, 0, implicit $mode, implicit $exec
+    %428:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %423.sub0, 0, 0, implicit $mode, implicit $exec
+    %429:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %423.sub1, 0, 0, implicit $mode, implicit $exec
+    %430:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %423.sub2, 0, 0, implicit $mode, implicit $exec
+    %431:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %423.sub3, 0, 0, implicit $mode, implicit $exec
     undef %432.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %430, 0, %431, 0, 0, implicit $mode, implicit $exec
     %432.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %428, 0, %429, 0, 0, implicit $mode, implicit $exec
     %432.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %426, 0, %427, 0, 0, implicit $mode, implicit $exec
@@ -692,14 +707,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %249.sub6, %249.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %434:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %435:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %436:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %434.sub0, 0, 0, implicit $mode, implicit $exec
-    %437:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %434.sub1, 0, 0, implicit $mode, implicit $exec
-    %438:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %434.sub2, 0, 0, implicit $mode, implicit $exec
-    %439:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %434.sub3, 0, 0, implicit $mode, implicit $exec
-    %440:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %435.sub0, 0, 0, implicit $mode, implicit $exec
-    %441:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %435.sub1, 0, 0, implicit $mode, implicit $exec
-    %442:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %435.sub2, 0, 0, implicit $mode, implicit $exec
-    %443:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %435.sub3, 0, 0, implicit $mode, implicit $exec
+    %436:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %434.sub0, 0, 0, implicit $mode, implicit $exec
+    %437:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %434.sub1, 0, 0, implicit $mode, implicit $exec
+    %438:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %434.sub2, 0, 0, implicit $mode, implicit $exec
+    %439:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %434.sub3, 0, 0, implicit $mode, implicit $exec
+    %440:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %435.sub0, 0, 0, implicit $mode, implicit $exec
+    %441:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %435.sub1, 0, 0, implicit $mode, implicit $exec
+    %442:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %435.sub2, 0, 0, implicit $mode, implicit $exec
+    %443:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %435.sub3, 0, 0, implicit $mode, implicit $exec
     undef %444.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %442, 0, %443, 0, 0, implicit $mode, implicit $exec
     %444.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %440, 0, %441, 0, 0, implicit $mode, implicit $exec
     %444.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %438, 0, %439, 0, 0, implicit $mode, implicit $exec
@@ -712,14 +727,14 @@ body:             |
     DS_WRITE2ST64_B32_gfx9 %262, %219.sub6, %219.sub7, 6, 7, 0, implicit $exec :: (store (s32), addrspace 3)
     %446:vreg_128 = DS_READ_B128_gfx9 %264, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     %447:vreg_128 = DS_READ_B128_gfx9 %264, 16, 0, implicit $exec :: (load (s128), addrspace 3)
-    %448:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %446.sub0, 0, 0, implicit $mode, implicit $exec
-    %449:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %446.sub1, 0, 0, implicit $mode, implicit $exec
-    %450:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %446.sub2, 0, 0, implicit $mode, implicit $exec
-    %451:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %446.sub3, 0, 0, implicit $mode, implicit $exec
-    %452:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %447.sub0, 0, 0, implicit $mode, implicit $exec
-    %453:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %447.sub1, 0, 0, implicit $mode, implicit $exec
-    %454:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %447.sub2, 0, 0, implicit $mode, implicit $exec
-    %455:vgpr_32 = V_CVT_F16_F32_t16_e64 0, %447.sub3, 0, 0, implicit $mode, implicit $exec
+    %448:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %446.sub0, 0, 0, implicit $mode, implicit $exec
+    %449:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %446.sub1, 0, 0, implicit $mode, implicit $exec
+    %450:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %446.sub2, 0, 0, implicit $mode, implicit $exec
+    %451:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %446.sub3, 0, 0, implicit $mode, implicit $exec
+    %452:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %447.sub0, 0, 0, implicit $mode, implicit $exec
+    %453:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %447.sub1, 0, 0, implicit $mode, implicit $exec
+    %454:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %447.sub2, 0, 0, implicit $mode, implicit $exec
+    %455:vgpr_32 = V_CVT_F16_F32_fake16_e64 0, %447.sub3, 0, 0, implicit $mode, implicit $exec
     undef %456.sub3:vreg_128 = V_PACK_B32_F16_e64 0, %454, 0, %455, 0, 0, implicit $mode, implicit $exec
     %456.sub2:vreg_128 = V_PACK_B32_F16_e64 0, %452, 0, %453, 0, 0, implicit $mode, implicit $exec
     %456.sub1:vreg_128 = V_PACK_B32_F16_e64 0, %450, 0, %451, 0, 0, implicit $mode, implicit $exec

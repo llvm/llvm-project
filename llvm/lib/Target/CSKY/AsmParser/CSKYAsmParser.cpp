@@ -67,14 +67,14 @@ class CSKYAsmParser : public MCTargetAsmParser {
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
@@ -154,7 +154,7 @@ struct CSKYOperand : public MCParsedAsmOperand {
   } Kind;
 
   struct RegOp {
-    unsigned RegNum;
+    MCRegister RegNum;
   };
 
   struct ImmOp {
@@ -166,19 +166,19 @@ struct CSKYOperand : public MCParsedAsmOperand {
   };
 
   struct RegSeqOp {
-    unsigned RegNumFrom;
-    unsigned RegNumTo;
+    MCRegister RegNumFrom;
+    MCRegister RegNumTo;
   };
 
   struct RegListOp {
-    unsigned List1From = 0;
-    unsigned List1To = 0;
-    unsigned List2From = 0;
-    unsigned List2To = 0;
-    unsigned List3From = 0;
-    unsigned List3To = 0;
-    unsigned List4From = 0;
-    unsigned List4To = 0;
+    MCRegister List1From;
+    MCRegister List1To;
+    MCRegister List2From;
+    MCRegister List2To;
+    MCRegister List3From;
+    MCRegister List3To;
+    MCRegister List4From;
+    MCRegister List4To;
   };
 
   SMLoc StartLoc, EndLoc;
@@ -400,14 +400,14 @@ public:
   /// Gets location of the last token of this operand.
   SMLoc getEndLoc() const override { return EndLoc; }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert(Kind == Register && "Invalid type access!");
     return Reg.RegNum;
   }
 
-  std::pair<unsigned, unsigned> getRegSeq() const {
+  std::pair<MCRegister, MCRegister> getRegSeq() const {
     assert(Kind == RegisterSeq && "Invalid type access!");
-    return std::pair<unsigned, unsigned>(RegSeq.RegNumFrom, RegSeq.RegNumTo);
+    return {RegSeq.RegNumFrom, RegSeq.RegNumTo};
   }
 
   RegListOp getRegList() const {
@@ -478,7 +478,7 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<CSKYOperand> createReg(unsigned RegNo, SMLoc S,
+  static std::unique_ptr<CSKYOperand> createReg(MCRegister RegNo, SMLoc S,
                                                 SMLoc E) {
     auto Op = std::make_unique<CSKYOperand>(Register);
     Op->Reg.RegNum = RegNo;
@@ -487,8 +487,8 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<CSKYOperand> createRegSeq(unsigned RegNoFrom,
-                                                   unsigned RegNoTo, SMLoc S) {
+  static std::unique_ptr<CSKYOperand>
+  createRegSeq(MCRegister RegNoFrom, MCRegister RegNoTo, SMLoc S) {
     auto Op = std::make_unique<CSKYOperand>(RegisterSeq);
     Op->RegSeq.RegNumFrom = RegNoFrom;
     Op->RegSeq.RegNumTo = RegNoTo;
@@ -498,7 +498,7 @@ public:
   }
 
   static std::unique_ptr<CSKYOperand>
-  createRegList(SmallVector<unsigned, 4> reglist, SMLoc S) {
+  createRegList(const SmallVector<MCRegister, 4> &reglist, SMLoc S) {
     auto Op = std::make_unique<CSKYOperand>(RegisterList);
     Op->RegList.List1From = 0;
     Op->RegList.List1To = 0;
@@ -656,7 +656,7 @@ bool CSKYAsmParser::generateImmOutOfRangeError(
   return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
 }
 
-bool CSKYAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool CSKYAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                             OperandVector &Operands,
                                             MCStreamer &Out,
                                             uint64_t &ErrorInfo,
@@ -1445,9 +1445,7 @@ ParseStatus CSKYAsmParser::parseRegSeq(OperandVector &Operands) {
 
 ParseStatus CSKYAsmParser::parseRegList(OperandVector &Operands) {
   SMLoc S = getLoc();
-
-  SmallVector<unsigned, 4> reglist;
-
+  SmallVector<MCRegister, 4> reglist;
   while (true) {
 
     if (!parseRegister(Operands).isSuccess())
@@ -1485,7 +1483,7 @@ ParseStatus CSKYAsmParser::parseRegList(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-bool CSKYAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+bool CSKYAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                      SMLoc NameLoc, OperandVector &Operands) {
   // First operand is token for instruction.
   Operands.push_back(CSKYOperand::createToken(Name, NameLoc));

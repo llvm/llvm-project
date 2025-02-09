@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass=si-memory-legalizer  %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass=si-memory-legalizer  %s -o - | FileCheck %s
 
 --- |
   declare i32 @llvm.amdgcn.workitem.id.x() #0

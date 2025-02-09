@@ -36,6 +36,29 @@ TEST(Endian, Read) {
                                                                   1)));
 }
 
+TEST(Endian, WriteNext) {
+  unsigned char bigval[] = {0x00, 0x00}, *p = bigval;
+  endian::writeNext<int16_t, llvm::endianness::big>(p, short(0xaabb));
+  EXPECT_EQ(bigval[0], 0xaa);
+  EXPECT_EQ(bigval[1], 0xbb);
+  EXPECT_EQ(p, bigval + 2);
+
+  char littleval[8] = {}, *q = littleval;
+  endian::writeNext<uint32_t, llvm::endianness::little>(q, 0x44556677);
+  EXPECT_EQ(littleval[0], 0x77);
+  EXPECT_EQ(littleval[1], 0x66);
+  EXPECT_EQ(littleval[2], 0x55);
+  EXPECT_EQ(littleval[3], 0x44);
+  EXPECT_EQ(q, littleval + 4);
+
+  endian::writeNext<uint32_t>(q, 0x11223344, llvm::endianness::little);
+  EXPECT_EQ(littleval[4], 0x44);
+  EXPECT_EQ(littleval[5], 0x33);
+  EXPECT_EQ(littleval[6], 0x22);
+  EXPECT_EQ(littleval[7], 0x11);
+  EXPECT_EQ(q, littleval + 8);
+}
+
 TEST(Endian, ReadBitAligned) {
   // Simple test to make sure we properly pull out the 0x0 word.
   unsigned char littleval[] = {0x3f, 0x00, 0x00, 0x00, 0xc0, 0xff, 0xff, 0xff};

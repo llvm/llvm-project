@@ -68,7 +68,32 @@
 // RUN: %clang -### -c -g %s -target x86_64-apple-driverkit19.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_STANDALONE \
 // RUN:                         -check-prefix=G_DWARF4 %s
-// RUN: %clang -### -c -fsave-optimization-record %s \
+// RUN: %clang -### -c -g %s -target x86_64-apple-macosx15 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF5 %s
+// RUN: %clang -### -c -g %s -target arm64-apple-ios17.0 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF4 %s
+// RUN: %clang -### -c -g %s -target arm64-apple-ios18.0 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF5 %s
+// RUN: %clang -### -c -g %s -target arm64_32-apple-watchos11 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF5 %s
+// RUN: %clang -### -c -g %s -target arm64-apple-tvos18.0 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF5 %s
+// RUN: %clang -### -c -g %s -target x86_64-apple-driverkit24.0 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF5 %s
+// RUN: %clang -### -c -g %s -target arm64-apple-xros1 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF4 %s
+// RUN: %clang -### -c -g %s -target arm64-apple-xros2 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF5 %s
+//
+// RUN: %clang -### -c -fsave-optimization-record %s    \
 // RUN:        -target x86_64-apple-darwin 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
 // RUN: %clang -### -c -g -fsave-optimization-record %s \
@@ -93,28 +118,29 @@
 // RUN: %clang_cl -### -c -Z7 -target x86_64-windows-msvc -- %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_NOTUNING %s
 
-// On the PS4/PS5, -g defaults to -gno-column-info, and we always generate the
-// arange section.
+// On the PS4/PS5, -g defaults to -gno-column-info. We default to always
+// generating the arange section, but keyed off SCE DebuggerTuning being in
+// play during codegen, instead of -generate-arange-section.
 // RUN: %clang -### -c %s -target x86_64-scei-ps4 2>&1 \
 // RUN:             | FileCheck -check-prefix=NOG_PS %s
 // RUN: %clang -### -c %s -target x86_64-sie-ps5 2>&1 \
 // RUN:             | FileCheck -check-prefix=NOG_PS %s
 /// PS4 will stay on v4 even if the generic default version changes.
 // RUN: %clang -### -c %s -g -target x86_64-scei-ps4 2>&1 \
-// RUN:             | FileCheck -check-prefixes=G_DWARF4,GARANGE,G_SCE,NOCI,FWD_TMPL_PARAMS %s
+// RUN:             | FileCheck -check-prefixes=G_DWARF4,G_SCE,NOCI,FWD_TMPL_PARAMS %s
 // RUN: %clang -### -c %s -g -target x86_64-sie-ps5 2>&1 \
-// RUN:             | FileCheck -check-prefixes=G_DWARF5,GARANGE,G_SCE,NOCI,FWD_TMPL_PARAMS %s
+// RUN:             | FileCheck -check-prefixes=G_DWARF5,G_SCE,NOCI,FWD_TMPL_PARAMS %s
 // RUN: %clang -### -c %s -g -gcolumn-info -target x86_64-scei-ps4 2>&1 \
 // RUN:             | FileCheck -check-prefix=CI %s
 // RUN: %clang -### -c %s -gsce -target x86_64-unknown-linux 2>&1 \
 // RUN:             | FileCheck -check-prefix=NOCI %s
 // RUN: %clang -### %s -g -flto=thin -target x86_64-scei-ps4 2>&1 \
-// RUN:             | FileCheck -check-prefix=SNLDTLTOGARANGE %s
+// RUN:             | FileCheck -check-prefix=LDGARANGE %s
 // RUN: %clang -### %s -g -flto=full -target x86_64-scei-ps4 2>&1 \
-// RUN:             | FileCheck -check-prefix=SNLDFLTOGARANGE %s
-// RUN: %clang -### %s -g -flto -target x86_64-scei-ps5 2>&1 \
-// RUN:             | FileCheck -check-prefix=LLDGARANGE %s
-// RUN: %clang -### %s -g -target x86_64-scei-ps5 2>&1 \
+// RUN:             | FileCheck -check-prefix=LDGARANGE %s
+// RUN: %clang -### %s -g -flto -target x86_64-sie-ps5 2>&1 \
+// RUN:             | FileCheck -check-prefix=LDGARANGE %s
+// RUN: %clang -### %s -g -target x86_64-sie-ps5 2>&1 \
 // RUN:             | FileCheck -check-prefix=LDGARANGE %s
 
 // On the AIX, -g defaults to limited debug info.
@@ -242,6 +268,12 @@
 // RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NORNGBSE %s
 // RUN: %clang -### -c -fdebug-ranges-base-address -fno-debug-ranges-base-address %s 2>&1 | FileCheck -check-prefix=NORNGBSE %s
 //
+// RUN: %clang -### -c -gomit-unreferenced-methods -fno-standalone-debug %s 2>&1 | FileCheck -check-prefix=INCTYPES %s
+// RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NOINCTYPES %s
+// RUN: %clang -### -c -gomit-unreferenced-methods -fdebug-types-section -target x86_64-unknown-linux %s 2>&1 \
+// RUN:        | FileCheck -check-prefix=NOINCTYPES %s
+// RUN: %clang -### -c -gomit-unreferenced-methods -fstandalone-debug %s 2>&1 | FileCheck -check-prefix=NOINCTYPES %s
+//
 // RUN: %clang -### -c -glldb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -glldb -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
@@ -290,8 +322,7 @@
 //
 // NOG_PS: "-cc1"
 // NOG_PS-NOT: "-dwarf-version=
-// NOG_PS: "-generate-arange-section"
-// NOG_PS-NOT: "-dwarf-version=
+// NOG_PS-NOT: "-generate-arange-section"
 //
 // G_ERR: error: unknown argument:
 //
@@ -371,8 +402,7 @@
 //
 
 // LDGARANGE: {{".*ld.*"}} {{.*}}
-// LDGARANGE-NOT: "-plugin-opt=-generate-arange-section"
-// LLDGARANGE: {{".*lld.*"}} {{.*}} "-plugin-opt=-generate-arange-section"
+// LDGARANGE-NOT: -generate-arange-section"
 // SNLDTLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-thin-debug-options= -generate-arange-section"
 // SNLDFLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-debug-options= -generate-arange-section"
 
@@ -380,6 +410,9 @@
 //
 // RNGBSE: -fdebug-ranges-base-address
 // NORNGBSE-NOT: -fdebug-ranges-base-address
+//
+// INCTYPES: -gomit-unreferenced-methods
+// NOINCTYPES-NOT: -gomit-unreferenced-methods
 //
 // GARANGE-DAG: -generate-arange-section
 //
@@ -409,16 +442,6 @@
 // RUN: %clang -###                  %s 2>&1 | FileCheck -check-prefix=NOMACRO %s
 // MACRO: "-debug-info-macro"
 // NOMACRO-NOT: "-debug-info-macro"
-//
-// RUN: %clang -### -gdwarf-5 -gembed-source %s 2>&1 | FileCheck -check-prefix=GEMBED_5 %s
-// RUN: not %clang -### -gdwarf-2 -gembed-source %s 2>&1 | FileCheck -check-prefix=GEMBED_2 %s
-// RUN: %clang -### -gdwarf-5 -gno-embed-source %s 2>&1 | FileCheck -check-prefix=NOGEMBED_5 %s
-// RUN: %clang -### -gdwarf-2 -gno-embed-source %s 2>&1 | FileCheck -check-prefix=NOGEMBED_2 %s
-//
-// GEMBED_5:  "-gembed-source"
-// GEMBED_2:  error: invalid argument '-gembed-source' only allowed with '-gdwarf-5'
-// NOGEMBED_5-NOT:  "-gembed-source"
-// NOGEMBED_2-NOT:  error: invalid argument '-gembed-source' only allowed with '-gdwarf-5'
 //
 // RUN: %clang -### -g -fno-eliminate-unused-debug-types -c %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=DEBUG_UNUSED_TYPES %s
@@ -465,3 +488,13 @@
 // MANGLED_TEMP_NAMES: error: unknown argument '-gsimple-template-names=mangled'; did you mean '-Xclang -gsimple-template-names=mangled'
 // RUN: %clang -### -target x86_64 -c -g %s 2>&1 | FileCheck --check-prefix=FULL_TEMP_NAMES --implicit-check-not=debug-forward-template-params %s
 // FULL_TEMP_NAMES-NOT: -gsimple-template-names
+
+//// Test -g[no-]template-alias (enabled by default with SCE debugger tuning and DWARF version >= 4).
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -gsce %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS
+// RUN: %clang -### -target x86_64 -c -gdwarf-3 -gsce %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -gsce -gtemplate-alias %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -gsce -gno-template-alias %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -gtemplate-alias %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -gtemplate-alias -gno-template-alias %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
+// TEMPLATE-ALIAS: "-gtemplate-alias"
+// NO-TEMPLATE-ALIAS-NOT: "-gtemplate-alias"

@@ -1,0 +1,207 @@
+===========================================
+Libc++ 20.0.0 (In-Progress) Release Notes
+===========================================
+
+.. contents::
+   :local:
+   :depth: 2
+
+Written by the `Libc++ Team <https://libcxx.llvm.org>`_
+
+.. warning::
+
+   These are in-progress notes for the upcoming libc++ 20.0.0 release.
+   Release notes for previous releases can be found on
+   `the Download Page <https://releases.llvm.org/download.html>`_.
+
+Introduction
+============
+
+This document contains the release notes for the libc++ C++ Standard Library,
+part of the LLVM Compiler Infrastructure, release 20.0.0. Here we describe the
+status of libc++ in some detail, including major improvements from the previous
+release and new feature work. For the general LLVM release notes, see `the LLVM
+documentation <https://llvm.org/docs/ReleaseNotes.html>`_. All LLVM releases may
+be downloaded from the `LLVM releases web site <https://llvm.org/releases/>`_.
+
+For more information about libc++, please see the `Libc++ Web Site
+<https://libcxx.llvm.org>`_ or the `LLVM Web Site <https://llvm.org>`_.
+
+Note that if you are reading this file from a Git checkout or the
+main Libc++ web page, this document applies to the *next* release, not
+the current one. To see the release notes for a specific release, please
+see the `releases page <https://llvm.org/releases/>`_.
+
+What's New in Libc++ 20.0.0?
+==============================
+
+The main focus of the libc++ team has been to implement new C++20, C++23, and C++26 features.
+
+Implemented Papers
+------------------
+
+- P0619R4: Reviewing Deprecated Facilities of C++17 for C++20 (`Github <https://github.com/llvm/llvm-project/issues/99985>`__)
+- P2747R2: ``constexpr`` placement new (`Github <https://github.com/llvm/llvm-project/issues/105427>`__)
+- P2609R3: Relaxing Ranges Just A Smidge (`Github <https://github.com/llvm/llvm-project/issues/105253>`__)
+- P2985R0: A type trait for detecting virtual base classes (`Github <https://github.com/llvm/llvm-project/issues/105432>`__)
+- ``std::jthread`` and ``<stop_token>`` are not guarded behind ``-fexperimental-library`` anymore
+- P2674R1: A trait for implicit lifetime types (`Github <https://github.com/llvm/llvm-project/issues/105259>`__)
+- P0429R9: A Standard ``flat_map`` (`Github <https://github.com/llvm/llvm-project/issues/105190>`__)
+
+Improvements and New Features
+-----------------------------
+
+- The ``lexicographical_compare`` and ``ranges::lexicographical_compare`` algorithms have been optimized for trivially
+  equality comparable types, resulting in a performance improvement of up to 40x.
+
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER`` macro has been added to make ``std::get_temporary_buffer`` and
+  ``std::return_temporary_buffer`` available.
+
+- The ``std::uncaught_exception`` function was marked as deprecated since C++17 and removed since C++20. The
+  ``_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION`` macro has been added to make ``std::uncaught_exception``
+  available in C++20 and later modes.
+
+- The internal structure ``__compressed_pair`` has been replaced with ``[[no_unique_address]]``, resulting in reduced
+  compile times and smaller debug information as well as better code generation if optimizations are disabled.
+  The Chromium project measured a 5% reduction in object file and debug information size.
+
+- The ``_LIBCPP_ABI_BOUNDED_UNIQUE_PTR`` ABI configuration was added, which allows ``std::unique_ptr<T[]>`` to
+  detect out-of-bounds accesses in certain circumstances. ``std::unique_ptr<T[]>`` can now also detect out-of-bounds
+  accesses for a limited set of types (non-trivially destructible types) when the ABI configuration is disabled.
+
+- The ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY`` ABI configuration was added, which allows storing valid bounds
+  in ``std::array::iterator`` and detecting OOB accesses when the appropriate hardening mode is enabled.
+
+- The ``input_iterator``-pair overload of ``void assign(InputIt, InputIt)`` has been optimized for ``std::vector``,
+  resulting in a performance improvement of up to 2x for trivial element types (e.g., ``std::vector<int>``), and up
+  to 3.4x for non-trivial element types (e.g., ``std::vector<std::vector<int>>``).
+
+- The ``input_iterator``-pair overload of ``iterator insert(const_iterator, InputIt, InputIt)`` has been optimized
+  for ``std::vector``, resulting in a performance improvement of up to 10x for ``std::vector<int>``, and up to 2.3x
+  for ``std::vector<std::vector<int>>``.
+
+- On Windows, ``<system_error>``'s ``std::system_category`` is now distinct from ``std::generic_category``. The behavior
+  on other operating systems is unchanged.
+
+  On Windows -- unlike on Unix systems -- the libc and system APIs use distinct error codes. The libc functions return
+  ``errno.h`` error codes via the ``errno`` global, while Win32 API functions return ``winerror.h`` error codes via
+  ``GetLastError()``.
+
+  The C++ standard's ``std::error_code`` and ``std::error_category`` functionality was designed to support multiple
+  error domains, precisely in order to handle situations such as this. However, libc++ formerly treated
+  ``generic_category()`` and ``system_category()`` as equivalent, even on Windows. It now implements the intended split,
+  where ``system_category`` represents native ``winerror.h`` error codes, and ``generic_category`` represents libc error
+  codes (and, equivalently, ``std::errc::*`` errors).
+
+  This change enables code like ``std::error_code(GetLastError(), std::system_category()) ==
+  std::errc::invalid_argument`` to function as desired: constructing an ``error_code`` with the Windows error number in
+  the "system" category, and then mapping it to a generic code with ``error_condition``, for comparison with the
+  ``std::errc`` constant.
+
+  This is an incompatible change: ``std::error_code(ENOSYS, std::system_category()) ==
+  std::errc::function_not_supported`` would formerly have returned true, but now returns false on Windows. Code
+  providing a number from the ``errno.h`` domain should be migrated to construct a ``generic_category`` error_code,
+  instead. (E.g., use ``std::error_code(ENOSYS, std::generic_category())``). The new behavior matches MSVC.
+
+- On Windows, the ``std::filesystem`` library now returns the Win32 ``system_category`` error codes, where it's feasible
+  to do so. This allows interrogation and reporting of the original error code, which is useful if multiple Windows
+  errors map to a single generic error (such as with ``std::errc::no_such_file_or_directory``).
+
+  This is also a slightly-incompatible API change: code inspecting the raw integer value from the returned error_code
+  expecting an integer from ``generic_category`` (e.g. ``err.value() == ENOTDIR``) will not work as desired. Instead,
+  such code should use the comparison operators which implicitly handle eror mappings, ``err ==
+  std::errc::not_a_directory``, or use ``err.default_error_condition()`` to map to an ``error_condition``, and then test
+  its ``value()`` and ``category()``.
+
+- ``std::stable_sort`` uses radix sort for integral types now, which can improve the performance up to 10 times, depending
+  on type of sorted elements and the initial state of the sorted array.
+
+- Reduced the amount of debug information generated for internal typedefs. This reduces the size of debug builds.
+
+- Added :ref:`hardening mode <hardening>` support for ``forward_list`` and ``bitset``.
+
+Deprecations and Removals
+-------------------------
+
+- The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to
+  enable the safe mode have been removed in LLVM 20. Please use :ref:`support for hardening <using-hardening-modes>`
+  instead.
+
+- Support for the C++20 synchronization library (``<barrier>``, ``<latch>``, ``atomic::wait``, etc.) has been
+  removed in language modes prior to C++20. If you are using these features prior to C++20, you will need to
+  update to ``-std=c++20``.
+
+- The relational operators for ``std::chrono::weekday`` has been removed entirely, and the
+  ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro is now ignored.
+
+- The ``_LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST`` macro no longer has any effect. ``std::allocator<const T>`` is not
+  supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be
+  standards conforming.
+
+- Non-conforming member typedefs ``base``, ``iterator``, ``const_iterator``, ``size_type``, ``difference_type``, and
+  ``const_reference`` of ``std::bitset``, and member typedef ``base`` of ``std::forward_list`` and ``std::list`` are
+  removed. Previously, these member typedefs (except ``const_reference``) were private but could cause ambiguity in name
+  lookup. Code that expects such ambiguity will possibly not compile in LLVM 20.
+
+- The function ``__libcpp_verbose_abort()`` is now ``noexcept``, to match ``std::terminate()``. (The combination of
+  ``noexcept`` and ``[[noreturn]]`` has special significance for function effects analysis.) For backwards compatibility,
+  the ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` macro can be defined to make the function non-``noexcept``. That macro
+  will be removed in LLVM 21.
+
+- ``<ccomplex>``, ``<cstdalign>`` (previously missing), ``<cstdbool>``, and ``<ctgmath>`` are deprecated since C++17 as
+  specified by the standard. They, together with ``<ciso646>``, are removed in C++20, but libc++ still provides these
+  headers as an extension and only deprecates them. The ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS`` macro can be defined to
+  suppress deprecation for these headers.
+
+- The ``_LIBCPP_DISABLE_AVAILABILITY`` macro that was used to force-disable availability markup has now been removed.
+  Whether availability markup is used by the library is now solely controlled at configuration-time.
+
+- The pointer safety functions ``declare_reachable``, ``declare_no_pointers``, ``undeclare_no_pointers`` and
+  ``__undeclare_reachable`` have been removed from the library. These functions were never implemented in a non-trivial
+  way, making it very unlikely that any binary depends on them.
+
+- Non-conforming extension ``packaged_task::result_type`` is deprecated. It will be removed in LLVM 21.
+
+Upcoming Deprecations and Removals
+----------------------------------
+
+LLVM 21
+~~~~~~~
+
+- The status of the C++03 implementation will be frozen after the LLVM 21 release. This means that starting in LLVM 22,
+  non-critical bug fixes may not be back-ported to C++03, including LWG issues. C++03 is a legacy platform, where most
+  projects are no longer actively maintained. To reduce the amount of fixes required to keep such legacy projects
+  compiling with up-to-date toolchains, libc++ will aim to freeze the status of the headers in C++03 mode to avoid
+  unintended breaking changes. See https://discourse.llvm.org/t/rfc-freezing-c-03-headers-in-libc for more details.
+
+  If you are using C++03 in your project, you should consider moving to a newer version of the Standard to get the most
+  out of libc++.
+
+- The ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` macro will be removed in LLVM 21, making ``std::__libcpp_verbose_abort``
+  unconditionally ``noexcept``.
+
+- Non-conforming extension ``packaged_task::result_type`` will be removed in LLVM 21.
+
+
+ABI Affecting Changes
+---------------------
+
+- The ABI breaks for removing undefined behaviour in ``std::forward_list``, ``std::list``, ``std::map``, ``std::set``,
+  ``std::multimap``, ``std::multiset``, ``std::unordered_map``, ``std::unordered_set``, ``std::unordered_multimap`` and
+  ``std::unordered_multiset`` are now applied unconditionally. This only affects fancy pointers which have a different
+  value representation when pointing at the base of an internal node type instead of the type itself. A size or
+  alignment difference is diagnosed, but more subtle ABI breaks may result in unexpected behaviour.
+
+- The internal structure ``__compressed_pair`` has been replaced with ``[[no_unique_address]]``. The ABI impact is:
+
+  - When using the Itanium ABI (most non-MSVC platforms), empty types are now placed at the beginning of the enclosing
+    object instead of where the beginning of the ``__compressed_pair`` subobject was. This is only observable by
+    checking the address of the empty allocator, equality comparator or hasher.
+  - Additionally, using an overaligned empty type as an allocator, comparator or hasher in the associative containers
+    (and only those containers) may result in the container's object object size and data layout changing beyond only
+    the address of the empty member.
+  - When using the MSVC ABI, this change results in some classes having a completely different memory layout, so this is
+    a genuine ABI break. However, the library does not currently guarantee ABI stability on MSVC platforms.
+
+- The localization support base API has been reimplemented, leading to different functions being exported from the
+  libc++ built library on Windows and Windows-like platforms.

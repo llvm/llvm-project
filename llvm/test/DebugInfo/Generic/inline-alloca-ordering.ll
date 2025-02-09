@@ -15,18 +15,16 @@
 ;; doesn't transfer the dbg.value to the entry block. This needs Special
 ;; Handling once we get rid of debug-intrinsics.
 
-; CHECK: declare void @llvm.dbg.value(metadata,
-
 ; CHECK:    define i32 @bar()
 ; CHECK-NEXT: %1 = alloca [65 x i32], align 16
 ; CHECK-NEXT: call void @ext()
 ; CHECK-NEXT: call void @llvm.lifetime.start.p0(
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 0, metadata !10, metadata !DIExpression()), !dbg !12
+; CHECK-NEXT: #dbg_value(i32 0, !10, !DIExpression(), !12
 ; CHECK-NEXT: call void @init(ptr %1)
+
 
 declare void @ext()
 declare void @init(ptr)
-declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 define internal i32 @foo() !dbg !4 {
   %1 = alloca [65 x i32], align 16
@@ -41,6 +39,8 @@ define i32 @bar() !dbg !16 {
   %1 = call i32 @foo(), !dbg !17
   ret i32 %1
 }
+
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}

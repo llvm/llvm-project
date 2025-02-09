@@ -27,7 +27,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/FileSystemStatCache.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -55,7 +54,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Capacity.h"
@@ -71,6 +69,9 @@
 #include <vector>
 
 using namespace clang;
+
+/// Minimum distance between two check points, in tokens.
+static constexpr unsigned CheckPointStepSize = 1024;
 
 LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
 
@@ -166,7 +167,7 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
 }
 
 Preprocessor::~Preprocessor() {
-  assert(BacktrackPositions.empty() && "EnableBacktrack/Backtrack imbalance!");
+  assert(!isBacktrackEnabled() && "EnableBacktrack/Backtrack imbalance!");
 
   IncludeMacroStack.clear();
 
@@ -756,7 +757,7 @@ void Preprocessor::HandlePoisonedIdentifier(Token & Identifier) {
     Diag(Identifier,it->second) << Identifier.getIdentifierInfo();
 }
 
-void Preprocessor::updateOutOfDateIdentifier(IdentifierInfo &II) const {
+void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
   assert(II.isOutOfDate() && "not out of date");
   getExternalSource()->updateOutOfDateIdentifier(II);
 }
@@ -898,6 +899,10 @@ void Preprocessor::Lex(Token &Result) {
     case tok::r_brace:
       StdCXXImportSeqState.handleCloseBrace();
       break;
+#define PRAGMA_ANNOTATION(X) case tok::annot_##X:
+// For `#pragma ...` mimic ';'.
+#include "clang/Basic/TokenKinds.def"
+#undef PRAGMA_ANNOTATION
     // This token is injected to represent the translation of '#include "a.h"'
     // into "import a.h;". Mimic the notional ';'.
     case tok::annot_module_include:
@@ -954,6 +959,11 @@ void Preprocessor::Lex(Token &Result) {
     }
   }
 
+  if (CurLexer && ++CheckPointCounter == CheckPointStepSize) {
+    CheckPoints[CurLexer->getFileID()].push_back(CurLexer->BufferPtr);
+    CheckPointCounter = 0;
+  }
+
   LastTokenWasAt = Result.is(tok::at);
   --LexLevel;
 
@@ -979,7 +989,7 @@ void Preprocessor::LexTokensUntilEOF(std::vector<Token> *Tokens) {
 }
 
 /// Lex a header-name token (including one formed from header-name-tokens if
-/// \p AllowConcatenation is \c true).
+/// \p AllowMacroExpansion is \c true).
 ///
 /// \param FilenameTok Filled in with the next token. On success, this will
 ///        be either a header_name token. On failure, it will be whatever other
@@ -1457,6 +1467,11 @@ void Preprocessor::emitRestrictExpansionWarning(const Token &Identifier) const {
   Diag(Info.Location, diag::note_pp_macro_annotation) << 1;
 }
 
+void Preprocessor::emitRestrictInfNaNWarning(const Token &Identifier,
+                                             unsigned DiagSelection) const {
+  Diag(Identifier, diag::warn_fp_nan_inf_when_disabled) << DiagSelection << 1;
+}
+
 void Preprocessor::emitFinalMacroWarning(const Token &Identifier,
                                          bool IsUndef) const {
   const MacroAnnotations &A =
@@ -1470,26 +1485,56 @@ void Preprocessor::emitFinalMacroWarning(const Token &Identifier,
 }
 
 bool Preprocessor::isSafeBufferOptOut(const SourceManager &SourceMgr,
-                                           const SourceLocation &Loc) const {
-  // Try to find a region in `SafeBufferOptOutMap` where `Loc` is in:
-  auto FirstRegionEndingAfterLoc = llvm::partition_point(
-      SafeBufferOptOutMap,
-      [&SourceMgr,
-       &Loc](const std::pair<SourceLocation, SourceLocation> &Region) {
-        return SourceMgr.isBeforeInTranslationUnit(Region.second, Loc);
-      });
+                                      const SourceLocation &Loc) const {
+  // The lambda that tests if a `Loc` is in an opt-out region given one opt-out
+  // region map:
+  auto TestInMap = [&SourceMgr](const SafeBufferOptOutRegionsTy &Map,
+                                const SourceLocation &Loc) -> bool {
+    // Try to find a region in `SafeBufferOptOutMap` where `Loc` is in:
+    auto FirstRegionEndingAfterLoc = llvm::partition_point(
+        Map, [&SourceMgr,
+              &Loc](const std::pair<SourceLocation, SourceLocation> &Region) {
+          return SourceMgr.isBeforeInTranslationUnit(Region.second, Loc);
+        });
 
-  if (FirstRegionEndingAfterLoc != SafeBufferOptOutMap.end()) {
-    // To test if the start location of the found region precedes `Loc`:
-    return SourceMgr.isBeforeInTranslationUnit(FirstRegionEndingAfterLoc->first,
-                                               Loc);
-  }
-  // If we do not find a region whose end location passes `Loc`, we want to
-  // check if the current region is still open:
-  if (!SafeBufferOptOutMap.empty() &&
-      SafeBufferOptOutMap.back().first == SafeBufferOptOutMap.back().second)
-    return SourceMgr.isBeforeInTranslationUnit(SafeBufferOptOutMap.back().first,
-                                               Loc);
+    if (FirstRegionEndingAfterLoc != Map.end()) {
+      // To test if the start location of the found region precedes `Loc`:
+      return SourceMgr.isBeforeInTranslationUnit(
+          FirstRegionEndingAfterLoc->first, Loc);
+    }
+    // If we do not find a region whose end location passes `Loc`, we want to
+    // check if the current region is still open:
+    if (!Map.empty() && Map.back().first == Map.back().second)
+      return SourceMgr.isBeforeInTranslationUnit(Map.back().first, Loc);
+    return false;
+  };
+
+  // What the following does:
+  //
+  // If `Loc` belongs to the local TU, we just look up `SafeBufferOptOutMap`.
+  // Otherwise, `Loc` is from a loaded AST.  We look up the
+  // `LoadedSafeBufferOptOutMap` first to get the opt-out region map of the
+  // loaded AST where `Loc` is at.  Then we find if `Loc` is in an opt-out
+  // region w.r.t. the region map.  If the region map is absent, it means there
+  // is no opt-out pragma in that loaded AST.
+  //
+  // Opt-out pragmas in the local TU or a loaded AST is not visible to another
+  // one of them.  That means if you put the pragmas around a `#include
+  // "module.h"`, where module.h is a module, it is not actually suppressing
+  // warnings in module.h.  This is fine because warnings in module.h will be
+  // reported when module.h is compiled in isolation and nothing in module.h
+  // will be analyzed ever again.  So you will not see warnings from the file
+  // that imports module.h anyway. And you can't even do the same thing for PCHs
+  //  because they can only be included from the command line.
+
+  if (SourceMgr.isLocalSourceLocation(Loc))
+    return TestInMap(SafeBufferOptOutMap, Loc);
+
+  const SafeBufferOptOutRegionsTy *LoadedRegions =
+      LoadedSafeBufferOptOutMap.lookupLoadedOptOutMap(Loc, SourceMgr);
+
+  if (LoadedRegions)
+    return TestInMap(*LoadedRegions, Loc);
   return false;
 }
 
@@ -1538,6 +1583,47 @@ bool Preprocessor::isPPInSafeBufferOptOutRegion(SourceLocation &StartLoc) {
   return InSafeBufferOptOutRegion;
 }
 
+SmallVector<SourceLocation, 64>
+Preprocessor::serializeSafeBufferOptOutMap() const {
+  assert(!InSafeBufferOptOutRegion &&
+         "Attempt to serialize safe buffer opt-out regions before file being "
+         "completely preprocessed");
+
+  SmallVector<SourceLocation, 64> SrcSeq;
+
+  for (const auto &[begin, end] : SafeBufferOptOutMap) {
+    SrcSeq.push_back(begin);
+    SrcSeq.push_back(end);
+  }
+  // Only `SafeBufferOptOutMap` gets serialized. No need to serialize
+  // `LoadedSafeBufferOptOutMap` because if this TU loads a pch/module, every
+  // pch/module in the pch-chain/module-DAG will be loaded one by one in order.
+  // It means that for each loading pch/module m, it just needs to load m's own
+  // `SafeBufferOptOutMap`.
+  return SrcSeq;
+}
+
+bool Preprocessor::setDeserializedSafeBufferOptOutMap(
+    const SmallVectorImpl<SourceLocation> &SourceLocations) {
+  if (SourceLocations.size() == 0)
+    return false;
+
+  assert(SourceLocations.size() % 2 == 0 &&
+         "ill-formed SourceLocation sequence");
+
+  auto It = SourceLocations.begin();
+  SafeBufferOptOutRegionsTy &Regions =
+      LoadedSafeBufferOptOutMap.findAndConsLoadedOptOutMap(*It, SourceMgr);
+
+  do {
+    SourceLocation Begin = *It++;
+    SourceLocation End = *It++;
+
+    Regions.emplace_back(Begin, End);
+  } while (It != SourceLocations.end());
+  return true;
+}
+
 ModuleLoader::~ModuleLoader() = default;
 
 CommentHandler::~CommentHandler() = default;
@@ -1552,4 +1638,20 @@ void Preprocessor::createPreprocessingRecord() {
 
   Record = new PreprocessingRecord(getSourceManager());
   addPPCallbacks(std::unique_ptr<PPCallbacks>(Record));
+}
+
+const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
+  if (auto It = CheckPoints.find(FID); It != CheckPoints.end()) {
+    const SmallVector<const char *> &FileCheckPoints = It->second;
+    const char *Last = nullptr;
+    // FIXME: Do better than a linear search.
+    for (const char *P : FileCheckPoints) {
+      if (P > Start)
+        break;
+      Last = P;
+    }
+    return Last;
+  }
+
+  return nullptr;
 }

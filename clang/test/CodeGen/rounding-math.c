@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -S -emit-llvm -ffp-exception-behavior=strict -Wno-unknown-pragmas %s -o - | FileCheck %s
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -S -emit-llvm -frounding-math -Wno-unknown-pragmas %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -emit-llvm -ffp-exception-behavior=strict -Wno-unknown-pragmas %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -emit-llvm -frounding-math -Wno-unknown-pragmas %s -o - | FileCheck %s
 
 float PR47807 = -8.6563630030e-03;
 

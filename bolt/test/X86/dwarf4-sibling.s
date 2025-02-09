@@ -5,9 +5,9 @@
 # RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks that BOLT handles DW_AT_sibling.
+## This test checks that BOLT handles DW_AT_sibling.
 
-# The assembly was manually modified to do cross CU reference.
+## The assembly was manually modified to do cross CU reference.
 
 # POSTCHECK: version = 0x0004
 # POSTCHECK: DW_TAG_structure_type [5]

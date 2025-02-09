@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wparentheses -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wparentheses -std=c++2a -verify %s
 
 struct A {
   int foo();
@@ -142,5 +142,50 @@ void f(T t) {
 struct S { int g; };
 void test() {
   f(S()); // expected-note {{in instantiation}}
+}
+}
+
+namespace GH101863 {
+void t1(auto... args) {
+  if (((args == 0) or ...)) { }
+}
+
+template <typename... Args>
+void t2(Args... args) {
+    if (((args == 0) or ...)) { }
+}
+
+void t3(auto... args) {
+  if ((... && (args == 0))) { }
+}
+
+void t4(auto... a, auto... b) {
+  if (((a == 0) or ...) && ((b == 0) or ...)) { }
+}
+
+void t5(auto... args) {
+  if ((((args == 0) or ...))) { }
+}
+
+void t6(auto a, auto... b) {
+    static_assert(__is_same_as(decltype((a)), int&));
+    static_assert(__is_same_as(decltype(((b), ...)), int&));
+};
+
+void t7(auto... args) {
+  if ((((args == 0)) or ...)) { } // expected-warning {{equality comparison with extraneous parentheses}} \
+                                  // expected-note {{use '=' to turn this equality comparison into an assignment}} \
+                                  // expected-note {{remove extraneous parentheses around the comparison to silence this warning}}
+}
+
+void test() {
+  t1(0, 1);
+  t2<>();
+  t3(1, 2, 3);
+  t3(0, 1);
+  t4(0, 1);
+  t5(0, 1);
+  t6(0, 0);
+  t7(0); // expected-note {{in instantiation of function template specialization 'GH101863::t7<int>' requested here}}
 }
 }

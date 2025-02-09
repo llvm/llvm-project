@@ -9,9 +9,11 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+using ::testing::HasSubstr;
 
 // Compile-time tests templates in the detail namespace.
 namespace {
@@ -20,8 +22,8 @@ struct Format : public FormatAdapter<int> {
   void format(raw_ostream &OS, StringRef Opt) override { OS << "Format"; }
 };
 
-using detail::uses_format_member;
-using detail::uses_missing_provider;
+using support::detail::uses_format_member;
+using support::detail::uses_missing_provider;
 
 static_assert(uses_format_member<Format>::value, "");
 static_assert(uses_format_member<Format &>::value, "");
@@ -35,14 +37,19 @@ struct NoFormat {};
 static_assert(uses_missing_provider<NoFormat>::value, "");
 }
 
+// Helper to parse format string with no validation.
+static SmallVector<ReplacementItem, 2> parseFormatString(StringRef Fmt) {
+  return formatv_object_base::parseFormatString(Fmt, 0, false);
+}
+
 TEST(FormatVariadicTest, EmptyFormatString) {
-  auto Replacements = formatv_object_base::parseFormatString("");
+  auto Replacements = parseFormatString("");
   EXPECT_EQ(0U, Replacements.size());
 }
 
 TEST(FormatVariadicTest, NoReplacements) {
   const StringRef kFormatString = "This is a test";
-  auto Replacements = formatv_object_base::parseFormatString(kFormatString);
+  auto Replacements = parseFormatString(kFormatString);
   ASSERT_EQ(1U, Replacements.size());
   EXPECT_EQ(kFormatString, Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Literal, Replacements[0].Type);
@@ -50,25 +57,25 @@ TEST(FormatVariadicTest, NoReplacements) {
 
 TEST(FormatVariadicTest, EscapedBrace) {
   // {{ should be replaced with {
-  auto Replacements = formatv_object_base::parseFormatString("{{");
+  auto Replacements = parseFormatString("{{");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ("{", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Literal, Replacements[0].Type);
 
   // An even number N of braces should be replaced with N/2 braces.
-  Replacements = formatv_object_base::parseFormatString("{{{{{{");
+  Replacements = parseFormatString("{{{{{{");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ("{{{", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Literal, Replacements[0].Type);
 
   // } does not require doubling up.
-  Replacements = formatv_object_base::parseFormatString("}");
+  Replacements = parseFormatString("}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ("}", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Literal, Replacements[0].Type);
 
   // } does not require doubling up.
-  Replacements = formatv_object_base::parseFormatString("}}}");
+  Replacements = parseFormatString("}}}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ("}}}", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Literal, Replacements[0].Type);
@@ -76,134 +83,134 @@ TEST(FormatVariadicTest, EscapedBrace) {
 
 TEST(FormatVariadicTest, ValidReplacementSequence) {
   // 1. Simple replacement - parameter index only
-  auto Replacements = formatv_object_base::parseFormatString("{0}");
+  auto Replacements = parseFormatString("{0}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(0u, Replacements[0].Align);
+  EXPECT_EQ(0u, Replacements[0].Width);
   EXPECT_EQ("", Replacements[0].Options);
 
-  Replacements = formatv_object_base::parseFormatString("{1}");
+  Replacements = parseFormatString("{1}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(1u, Replacements[0].Index);
-  EXPECT_EQ(0u, Replacements[0].Align);
+  EXPECT_EQ(0u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ("", Replacements[0].Options);
 
   // 2. Parameter index with right alignment
-  Replacements = formatv_object_base::parseFormatString("{0,3}");
+  Replacements = parseFormatString("{0,3}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ("", Replacements[0].Options);
 
   // 3. And left alignment
-  Replacements = formatv_object_base::parseFormatString("{0,-3}");
+  Replacements = parseFormatString("{0,-3}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Left, Replacements[0].Where);
   EXPECT_EQ("", Replacements[0].Options);
 
   // 4. And center alignment
-  Replacements = formatv_object_base::parseFormatString("{0,=3}");
+  Replacements = parseFormatString("{0,=3}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Center, Replacements[0].Where);
   EXPECT_EQ("", Replacements[0].Options);
 
   // 4. Parameter index with option string
-  Replacements = formatv_object_base::parseFormatString("{0:foo}");
+  Replacements = parseFormatString("{0:foo}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(0u, Replacements[0].Align);
+  EXPECT_EQ(0u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ("foo", Replacements[0].Options);
 
   // 5. Parameter index with alignment before option string
-  Replacements = formatv_object_base::parseFormatString("{0,-3:foo}");
+  Replacements = parseFormatString("{0,-3:foo}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Left, Replacements[0].Where);
   EXPECT_EQ("foo", Replacements[0].Options);
 
   // 7. Parameter indices, options, and alignment can all have whitespace.
-  Replacements = formatv_object_base::parseFormatString("{ 0, -3 : foo }");
+  Replacements = parseFormatString("{ 0, -3 : foo }");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Left, Replacements[0].Where);
-  EXPECT_EQ("foo", Replacements[0].Options);
+  EXPECT_EQ(" foo ", Replacements[0].Options);
 
   // 8. Everything after the first option specifier is part of the style, even
   // if it contains another option specifier.
-  Replacements = formatv_object_base::parseFormatString("{0:0:1}");
+  Replacements = parseFormatString("{0:0:1}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ("0:0:1", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(0u, Replacements[0].Align);
+  EXPECT_EQ(0u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ("0:1", Replacements[0].Options);
 
   // 9. Custom padding character
-  Replacements = formatv_object_base::parseFormatString("{0,p+4:foo}");
+  Replacements = parseFormatString("{0,p+4:foo}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ("0,p+4:foo", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(4u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ('p', Replacements[0].Pad);
   EXPECT_EQ("foo", Replacements[0].Options);
 
   // Format string special characters are allowed as padding character
-  Replacements = formatv_object_base::parseFormatString("{0,-+4:foo}");
+  Replacements = parseFormatString("{0,-+4:foo}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ("0,-+4:foo", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(4u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ('-', Replacements[0].Pad);
   EXPECT_EQ("foo", Replacements[0].Options);
 
-  Replacements = formatv_object_base::parseFormatString("{0,+-4:foo}");
+  Replacements = parseFormatString("{0,+-4:foo}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ("0,+-4:foo", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(4u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Left, Replacements[0].Where);
   EXPECT_EQ('+', Replacements[0].Pad);
   EXPECT_EQ("foo", Replacements[0].Options);
 
-  Replacements = formatv_object_base::parseFormatString("{0,==4:foo}");
+  Replacements = parseFormatString("{0,==4:foo}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ("0,==4:foo", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(4u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Center, Replacements[0].Where);
   EXPECT_EQ('=', Replacements[0].Pad);
   EXPECT_EQ("foo", Replacements[0].Options);
 
-  Replacements = formatv_object_base::parseFormatString("{0,:=4:foo}");
+  Replacements = parseFormatString("{0,:=4:foo}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ("0,:=4:foo", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(4u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Center, Replacements[0].Where);
   EXPECT_EQ(':', Replacements[0].Pad);
   EXPECT_EQ("foo", Replacements[0].Options);
@@ -211,40 +218,39 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
 
 TEST(FormatVariadicTest, DefaultReplacementValues) {
   // 2. If options string is missing, it defaults to empty.
-  auto Replacements = formatv_object_base::parseFormatString("{0,3}");
+  auto Replacements = parseFormatString("{0,3}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ("", Replacements[0].Options);
 
   // Including if the colon is present but contains no text.
-  Replacements = formatv_object_base::parseFormatString("{0,3:}");
+  Replacements = parseFormatString("{0,3:}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ("", Replacements[0].Options);
 
   // 3. If alignment is missing, it defaults to 0, right, space
-  Replacements = formatv_object_base::parseFormatString("{0:foo}");
+  Replacements = parseFormatString("{0:foo}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ(' ', Replacements[0].Pad);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(0u, Replacements[0].Align);
+  EXPECT_EQ(0u, Replacements[0].Width);
   EXPECT_EQ("foo", Replacements[0].Options);
 }
 
 TEST(FormatVariadicTest, MultipleReplacements) {
-  auto Replacements =
-      formatv_object_base::parseFormatString("{0} {1:foo}-{2,-3:bar}");
+  auto Replacements = parseFormatString("{0} {1:foo}-{2,-3:bar}");
   ASSERT_EQ(5u, Replacements.size());
   // {0}
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(0u, Replacements[0].Align);
+  EXPECT_EQ(0u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ("", Replacements[0].Options);
 
@@ -255,7 +261,7 @@ TEST(FormatVariadicTest, MultipleReplacements) {
   // {1:foo} - Options=foo
   EXPECT_EQ(ReplacementType::Format, Replacements[2].Type);
   EXPECT_EQ(1u, Replacements[2].Index);
-  EXPECT_EQ(0u, Replacements[2].Align);
+  EXPECT_EQ(0u, Replacements[2].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[2].Where);
   EXPECT_EQ("foo", Replacements[2].Options);
 
@@ -263,12 +269,57 @@ TEST(FormatVariadicTest, MultipleReplacements) {
   EXPECT_EQ(ReplacementType::Literal, Replacements[3].Type);
   EXPECT_EQ("-", Replacements[3].Spec);
 
-  // {2:bar,-3} - Options=bar, Align=-3
+  // {2,-3:bar} - Options=bar, Align=-3
   EXPECT_EQ(ReplacementType::Format, Replacements[4].Type);
   EXPECT_EQ(2u, Replacements[4].Index);
-  EXPECT_EQ(3u, Replacements[4].Align);
+  EXPECT_EQ(3u, Replacements[4].Width);
   EXPECT_EQ(AlignStyle::Left, Replacements[4].Where);
   EXPECT_EQ("bar", Replacements[4].Options);
+}
+
+TEST(FormatVariadicTest, AutomaticIndices) {
+  auto Replacements = parseFormatString("{}");
+  ASSERT_EQ(1u, Replacements.size());
+  EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
+  EXPECT_EQ(0u, Replacements[0].Index);
+
+  Replacements = parseFormatString("{}bar{}");
+  ASSERT_EQ(3u, Replacements.size());
+  EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
+  EXPECT_EQ(0u, Replacements[0].Index);
+  EXPECT_EQ(ReplacementType::Literal, Replacements[1].Type);
+  EXPECT_EQ("bar", Replacements[1].Spec);
+  EXPECT_EQ(ReplacementType::Format, Replacements[2].Type);
+  EXPECT_EQ(1u, Replacements[2].Index);
+
+  Replacements = parseFormatString("{}{}");
+  ASSERT_EQ(2u, Replacements.size());
+  EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
+  EXPECT_EQ(0u, Replacements[0].Index);
+  EXPECT_EQ(ReplacementType::Format, Replacements[1].Type);
+  EXPECT_EQ(1u, Replacements[1].Index);
+
+  Replacements = parseFormatString("{}{:foo}{,-3:bar}");
+  ASSERT_EQ(3u, Replacements.size());
+  EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
+  EXPECT_EQ(0u, Replacements[0].Index);
+  EXPECT_EQ(0u, Replacements[0].Width);
+  EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
+  EXPECT_EQ("", Replacements[0].Options);
+
+  // {:foo} - Options=foo
+  EXPECT_EQ(ReplacementType::Format, Replacements[1].Type);
+  EXPECT_EQ(1u, Replacements[1].Index);
+  EXPECT_EQ(0u, Replacements[1].Width);
+  EXPECT_EQ(AlignStyle::Right, Replacements[1].Where);
+  EXPECT_EQ("foo", Replacements[1].Options);
+
+  // {,-3:bar} - Options=bar, Align=-3
+  EXPECT_EQ(ReplacementType::Format, Replacements[2].Type);
+  EXPECT_EQ(2u, Replacements[2].Index);
+  EXPECT_EQ(3u, Replacements[2].Width);
+  EXPECT_EQ(AlignStyle::Left, Replacements[2].Where);
+  EXPECT_EQ("bar", Replacements[2].Options);
 }
 
 TEST(FormatVariadicTest, FormatNoReplacements) {
@@ -283,6 +334,12 @@ TEST(FormatVariadicTest, FormatBasicTypesOneReplacement) {
   EXPECT_EQ("Test", formatv("{0}", "Test").str());
   EXPECT_EQ("Test2", formatv("{0}", StringRef("Test2")).str());
   EXPECT_EQ("Test3", formatv("{0}", std::string("Test3")).str());
+}
+
+TEST(FormatVariadicTest, FormatAutomaticIndices) {
+  EXPECT_EQ("1", formatv("{}", 1).str());
+  EXPECT_EQ("c1", formatv("{}{}", 'c', 1).str());
+  EXPECT_EQ("c-1rrr-0xFF", formatv("{}-{,r-4}-{:X}", 'c', 1, 255).str());
 }
 
 TEST(FormatVariadicTest, IntegralHexFormatting) {
@@ -537,7 +594,6 @@ TEST(FormatVariadicTest, BigTest) {
   for (auto &Item : Ts) {
     Stream << std::apply(format_tuple(Line), Item) << "\n";
   }
-  Stream.flush();
   const char *Expected =
       R"foo(There are {14} items in the tuple, and {2} tuple(s) in the array.
   Char|  HexInt|   Str    |   Ref    |  std::str   | double|  float|   pointer|comma  |       exp|          bigint|          bigint2| limit|byte
@@ -702,6 +758,29 @@ TEST(FormatVariadicTest, FormatFilterRange) {
   std::vector<int> Vec{0, 1, 2};
   auto Range = map_range(Vec, [](int V) { return V + 1; });
   EXPECT_EQ("1, 2, 3", formatv("{0}", Range).str());
+}
+
+TEST(FormatVariadicTest, Validate) {
+#ifndef NDEBUG
+#if GTEST_HAS_DEATH_TEST
+  // If asserts are enabled, verify that invalid formatv calls cause assertions.
+  EXPECT_DEATH(formatv("{0}", 1, 2).str(), "Expected 1 Args, but got 2");
+  EXPECT_DEATH(formatv("{0} {2}", 1, 2, 3).str(),
+               "Replacement field indices cannot have holes");
+  EXPECT_DEATH(formatv("{}{1}", 0, 1).str(),
+               "Cannot mix automatic and explicit indices");
+  EXPECT_DEATH(formatv("{}{0}{}", 0, 1).str(),
+               "Cannot mix automatic and explicit indices");
+#else  // GTEST_HAS_DEATH_TEST
+  GTEST_SKIP() << "No support for EXPECT_DEATH";
+#endif // GTEST_HAS_DEATH_TEST
+#else  // NDEBUG
+  // If asserts are disabled, verify that validation is disabled.
+  EXPECT_EQ(formatv("{0}", 1, 2).str(), "1");
+  EXPECT_EQ(formatv("{0} {2}", 1, 2, 3).str(), "1 3");
+  EXPECT_EQ(formatv("{}{1}", 0, 1).str(), "01");
+  EXPECT_EQ(formatv("{}{0}{}", 0, 1).str(), "001");
+#endif // NDEBUG
 }
 
 namespace {

@@ -91,7 +91,7 @@ Status PipePosix::CreateNew(bool child_processes_inherit) {
 #ifdef FD_CLOEXEC
     if (!child_processes_inherit) {
       if (!SetCloexecFlag(m_fds[0]) || !SetCloexecFlag(m_fds[1])) {
-        error.SetErrorToErrno();
+        error = Status::FromErrno();
         CloseUnlocked();
         return error;
       }
@@ -101,21 +101,20 @@ Status PipePosix::CreateNew(bool child_processes_inherit) {
   }
 #endif
 
-  error.SetErrorToErrno();
+  error = Status::FromErrno();
   m_fds[READ] = PipePosix::kInvalidDescriptor;
   m_fds[WRITE] = PipePosix::kInvalidDescriptor;
   return error;
 }
 
 Status PipePosix::CreateNew(llvm::StringRef name, bool child_process_inherit) {
-  std::scoped_lock<std::mutex, std::mutex> (m_read_mutex, m_write_mutex);
+  std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
   if (CanReadUnlocked() || CanWriteUnlocked())
-    return Status("Pipe is already opened");
+    return Status::FromErrorString("Pipe is already opened");
 
   Status error;
   if (::mkfifo(name.str().c_str(), 0660) != 0)
-    error.SetErrorToErrno();
-
+    error = Status::FromErrno();
   return error;
 }
 
@@ -146,10 +145,10 @@ Status PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
 
 Status PipePosix::OpenAsReader(llvm::StringRef name,
                                bool child_process_inherit) {
-  std::scoped_lock<std::mutex, std::mutex> (m_read_mutex, m_write_mutex);
+  std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
 
   if (CanReadUnlocked() || CanWriteUnlocked())
-    return Status("Pipe is already opened");
+    return Status::FromErrorString("Pipe is already opened");
 
   int flags = O_RDONLY | O_NONBLOCK;
   if (!child_process_inherit)
@@ -160,7 +159,7 @@ Status PipePosix::OpenAsReader(llvm::StringRef name,
   if (fd != -1)
     m_fds[READ] = fd;
   else
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   return error;
 }
@@ -171,7 +170,7 @@ PipePosix::OpenAsWriterWithTimeout(llvm::StringRef name,
                                    const std::chrono::microseconds &timeout) {
   std::lock_guard<std::mutex> guard(m_write_mutex);
   if (CanReadUnlocked() || CanWriteUnlocked())
-    return Status("Pipe is already opened");
+    return Status::FromErrorString("Pipe is already opened");
 
   int flags = O_WRONLY | O_NONBLOCK;
   if (!child_process_inherit)
@@ -184,7 +183,8 @@ PipePosix::OpenAsWriterWithTimeout(llvm::StringRef name,
     if (timeout != microseconds::zero()) {
       const auto dur = duration_cast<microseconds>(finish_time - Now()).count();
       if (dur <= 0)
-        return Status("timeout exceeded - reader hasn't opened so far");
+        return Status::FromErrorString(
+            "timeout exceeded - reader hasn't opened so far");
     }
 
     errno = 0;
@@ -327,7 +327,7 @@ Status PipePosix::ReadWithTimeout(void *buf, size_t size,
       } else if (errno == EINTR) {
         continue;
       } else {
-        error.SetErrorToErrno();
+        error = Status::FromErrno();
         break;
       }
     }
@@ -335,7 +335,9 @@ Status PipePosix::ReadWithTimeout(void *buf, size_t size,
   return error;
 }
 
-Status PipePosix::Write(const void *buf, size_t size, size_t &bytes_written) {
+Status PipePosix::WriteWithTimeout(const void *buf, size_t size,
+                                   const std::chrono::microseconds &timeout,
+                                   size_t &bytes_written) {
   std::lock_guard<std::mutex> guard(m_write_mutex);
   bytes_written = 0;
   if (!CanWriteUnlocked())
@@ -343,7 +345,7 @@ Status PipePosix::Write(const void *buf, size_t size, size_t &bytes_written) {
 
   const int fd = GetWriteFileDescriptorUnlocked();
   SelectHelper select_helper;
-  select_helper.SetTimeout(std::chrono::seconds(0));
+  select_helper.SetTimeout(timeout);
   select_helper.FDSetWrite(fd);
 
   Status error;
@@ -359,7 +361,7 @@ Status PipePosix::Write(const void *buf, size_t size, size_t &bytes_written) {
       } else if (errno == EINTR) {
         continue;
       } else {
-        error.SetErrorToErrno();
+        error = Status::FromErrno();
       }
     }
   }

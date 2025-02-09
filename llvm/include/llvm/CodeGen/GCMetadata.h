@@ -186,6 +186,17 @@ public:
   Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
+/// LowerIntrinsics - This pass rewrites calls to the llvm.gcread or
+/// llvm.gcwrite intrinsics, replacing them with simple loads and stores as
+/// directed by the GCStrategy. It also performs automatic root initialization
+/// and custom intrinsic lowering.
+///
+/// This pass requires `CollectorMetadataAnalysis`.
+class GCLoweringPass : public PassInfoMixin<GCLoweringPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
 /// An analysis pass which caches information about the entire Module.
 /// Records both the function level information used by GCRoots and a
 /// cache of the 'active' gc strategy objects for the current Module.

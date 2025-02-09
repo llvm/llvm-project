@@ -33,7 +33,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/KnownBits.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "ve-lower"
@@ -66,7 +65,8 @@ CCAssignFn *getParamCC(CallingConv::ID CallConv, bool IsVarArg) {
 
 bool VETargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   CCAssignFn *RetCC = getReturnCC(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
@@ -459,8 +459,7 @@ SDValue VETargetLowering::LowerFormalArguments(
   // by CC_VE would be correct now.
   CCInfo.AnalyzeFormalArguments(Ins, getParamCC(CallConv, false));
 
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
+  for (const CCValAssign &VA : ArgLocs) {
     assert(!VA.needsCustom() && "Unexpected custom lowering");
     if (VA.isRegLoc()) {
       // This argument is passed in a register.
@@ -648,12 +647,11 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // PC-relative references to external symbols should go through $stub.
   // If so, we need to prepare GlobalBaseReg first.
   const TargetMachine &TM = DAG.getTarget();
-  const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
   const GlobalValue *GV = nullptr;
   auto *CalleeG = dyn_cast<GlobalAddressSDNode>(Callee);
   if (CalleeG)
     GV = CalleeG->getGlobal();
-  bool Local = TM.shouldAssumeDSOLocal(*Mod, GV);
+  bool Local = TM.shouldAssumeDSOLocal(GV);
   bool UsePlt = !Local;
   MachineFunction &MF = DAG.getMachineFunction();
 
@@ -1101,10 +1099,10 @@ Instruction *VETargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 SDValue VETargetLowering::lowerATOMIC_FENCE(SDValue Op,
                                             SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  AtomicOrdering FenceOrdering = static_cast<AtomicOrdering>(
-      cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue());
-  SyncScope::ID FenceSSID = static_cast<SyncScope::ID>(
-      cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue());
+  AtomicOrdering FenceOrdering =
+      static_cast<AtomicOrdering>(Op.getConstantOperandVal(1));
+  SyncScope::ID FenceSSID =
+      static_cast<SyncScope::ID>(Op.getConstantOperandVal(2));
 
   // VE uses Release consistency, so need a fence instruction if it is a
   // cross-thread fence.
@@ -1766,7 +1764,7 @@ static SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
 SDValue VETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                   SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned IntNo = Op.getConstantOperandVal(0);
   switch (IntNo) {
   default: // Don't custom lower most intrinsics.
     return SDValue();
@@ -2186,8 +2184,7 @@ VETargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   MachineFunction::iterator I = ++MBB->getIterator();
 
   // Memory Reference.
-  SmallVector<MachineMemOperand *, 2> MMOs(MI.memoperands_begin(),
-                                           MI.memoperands_end());
+  SmallVector<MachineMemOperand *, 2> MMOs(MI.memoperands());
   Register BufReg = MI.getOperand(1).getReg();
 
   Register DstReg;
@@ -2313,8 +2310,7 @@ VETargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
   MachineRegisterInfo &MRI = MF->getRegInfo();
 
   // Memory Reference.
-  SmallVector<MachineMemOperand *, 2> MMOs(MI.memoperands_begin(),
-                                           MI.memoperands_end());
+  SmallVector<MachineMemOperand *, 2> MMOs(MI.memoperands());
   Register BufReg = MI.getOperand(0).getReg();
 
   Register Tmp = MRI.createVirtualRegister(&VE::I64RegClass);
@@ -2937,8 +2933,8 @@ static bool isI32Insn(const SDNode *User, const SDNode *N) {
     if (User->getOperand(1).getNode() != N &&
         User->getOperand(2).getNode() != N &&
         isa<ConstantSDNode>(User->getOperand(3))) {
-      VECC::CondCode VECCVal = static_cast<VECC::CondCode>(
-          cast<ConstantSDNode>(User->getOperand(3))->getZExtValue());
+      VECC::CondCode VECCVal =
+          static_cast<VECC::CondCode>(User->getConstantOperandVal(3));
       return isIntVECondCode(VECCVal);
     }
     [[fallthrough]];
@@ -2956,7 +2952,7 @@ static bool isI32Insn(const SDNode *User, const SDNode *N) {
 static bool isI32InsnAllUses(const SDNode *User, const SDNode *N) {
   // Check all use of User node.  If all of them are safe, optimize
   // truncate to extract_subreg.
-  for (const SDNode *U : User->uses()) {
+  for (const SDNode *U : User->users()) {
     switch (U->getOpcode()) {
     default:
       // If the use is an instruction which treats the source operand as i32,
@@ -3007,7 +3003,7 @@ SDValue VETargetLowering::combineTRUNCATE(SDNode *N,
     return SDValue();
 
   // Check all use of this TRUNCATE.
-  for (const SDNode *User : N->uses()) {
+  for (const SDNode *User : N->users()) {
     // Make sure that we're not going to replace TRUNCATE for non i32
     // instructions.
     //

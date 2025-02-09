@@ -1,9 +1,12 @@
 ; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOOPT %s
 ; RUN: llc -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,OPT %s
 
+; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s --try-experimental-debuginfo-iterators | FileCheck -check-prefixes=GCN,NOOPT %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s --try-experimental-debuginfo-iterators | FileCheck -check-prefixes=GCN,OPT %s
+
 ; GCN-LABEL: {{^}}test_debug_value:
 ; NOOPT: .loc	1 1 42 prologue_end     ; /tmp/test_debug_value.cl:1:42
-; NOOPT-NEXT: s_load_dwordx2 s[4:5], s[6:7], 0x0
+; NOOPT-NEXT: s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; NOOPT-NEXT: .Ltmp
 ; NOOPT-NEXT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- $sgpr4_sgpr5
 
@@ -52,4 +55,4 @@ attributes #1 = { nounwind readnone }
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !DIExpression()
 !14 = !DILocation(line: 1, column: 42, scope: !4)
-!15 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!15 = !{i32 1, !"amdhsa_code_object_version", i32 500}

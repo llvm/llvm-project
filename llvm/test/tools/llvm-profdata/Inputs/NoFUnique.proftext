@@ -18,7 +18,7 @@ main
 1
 0
 
-test.c:_ZL3foom
+test.c;_ZL3foom
 # Func Hash:
 1124680652115249575
 # Num Counters:

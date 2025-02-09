@@ -107,7 +107,7 @@ def main():
     foundSpec = True
     ModifySpec(x, isBuiltinAnalyzer, path)
 
-  if foundSpec == False:
+  if not foundSpec:
       print "(-) No compiler configuration file was found.  Xcode's analyzer has not been updated."
 
 if __name__ == '__main__':

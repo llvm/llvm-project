@@ -10,10 +10,11 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_STRING_VIEW_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 // This is very simple alternate of the std::string_view class. There is no
@@ -30,8 +31,8 @@ private:
 
   LIBC_INLINE static int compareMemory(const char *Lhs, const char *Rhs,
                                        size_t Length) {
-    for (size_t I = 0; I < Length; ++I)
-      if (int Diff = (int)Lhs[I] - (int)Rhs[I])
+    for (size_t i = 0; i < Length; ++i)
+      if (int Diff = (int)Lhs[i] - (int)Rhs[i])
         return Diff;
     return 0;
   }
@@ -179,7 +180,8 @@ public:
   LIBC_INLINE char back() const { return Data[Len - 1]; }
 
   // Finds the first occurence of c in this view, starting at position From.
-  LIBC_INLINE size_t find_first_of(const char c, size_t From = 0) const {
+  LIBC_INLINE constexpr size_t find_first_of(const char c,
+                                             size_t From = 0) const {
     for (size_t Pos = From; Pos < size(); ++Pos)
       if ((*this)[Pos] == c)
         return Pos;
@@ -187,16 +189,32 @@ public:
   }
 
   // Finds the last occurence of c in this view, ending at position End.
-  LIBC_INLINE size_t find_last_of(const char c, size_t End = npos) const {
+  LIBC_INLINE constexpr size_t find_last_of(const char c,
+                                            size_t End = npos) const {
     End = End >= size() ? size() : End + 1;
     for (; End > 0; --End)
       if ((*this)[End - 1] == c)
         return End - 1;
     return npos;
   }
+
+  // Finds the first character not equal to c in this view, starting at position
+  // From.
+  LIBC_INLINE constexpr size_t find_first_not_of(const char c,
+                                                 size_t From = 0) const {
+    for (size_t Pos = From; Pos < size(); ++Pos)
+      if ((*this)[Pos] != c)
+        return Pos;
+    return npos;
+  }
+
+  // Check if this view contains the given character.
+  LIBC_INLINE constexpr bool contains(char c) const {
+    return find_first_of(c) != npos;
+  }
 };
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRING_VIEW_H

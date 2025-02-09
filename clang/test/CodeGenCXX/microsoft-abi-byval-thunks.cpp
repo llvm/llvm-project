@@ -45,7 +45,7 @@ C::C() {} // force emission
 
 // CHECK32-LABEL: define linkonce_odr dso_local x86_stdcallcc void @"?foo@C@stdcall_thunk@@W3AGXUAgg@2@@Z"
 // CHECK32:             (ptr inalloca(<{ ptr, %"struct.stdcall_thunk::Agg" }>) %0)
-// CHECK32:   %[[this_slot:[^ ]*]] = getelementptr inbounds <{ ptr, %"struct.stdcall_thunk::Agg" }>, ptr %0, i32 0, i32 0
+// CHECK32:   %[[this_slot:[^ ]*]] = getelementptr inbounds nuw <{ ptr, %"struct.stdcall_thunk::Agg" }>, ptr %0, i32 0, i32 0
 // CHECK32:   load ptr, ptr %[[this_slot]]
 // CHECK32:   getelementptr i8, ptr %{{.*}}, i32 -4
 // CHECK32:   store ptr %{{.*}}, ptr %[[this_slot]]
@@ -77,7 +77,7 @@ C::C() {} // force emission
 
 // CHECK32-LABEL: define linkonce_odr dso_local ptr @"?foo@C@sret_thunk@@W3AA?AUAgg@2@U32@@Z"
 // CHECK32:             (ptr inalloca(<{ ptr, ptr, %"struct.sret_thunk::Agg" }>) %0)
-// CHECK32:   %[[this_slot:[^ ]*]] = getelementptr inbounds <{ ptr, ptr, %"struct.sret_thunk::Agg" }>, ptr %0, i32 0, i32 0
+// CHECK32:   %[[this_slot:[^ ]*]] = getelementptr inbounds nuw <{ ptr, ptr, %"struct.sret_thunk::Agg" }>, ptr %0, i32 0, i32 0
 // CHECK32:   load ptr, ptr %[[this_slot]]
 // CHECK32:   getelementptr i8, ptr %{{.*}}, i32 -4
 // CHECK32:   store ptr %{{.*}}, ptr %[[this_slot]]
@@ -86,10 +86,10 @@ C::C() {} // force emission
 // CHECK32-NEXT: ret ptr %[[rv]]
 
 // CHECK64-LABEL: define linkonce_odr dso_local void @"?foo@C@sret_thunk@@W7EAA?AUAgg@2@U32@@Z"
-// CHECK64:             (ptr noundef %this, ptr noalias sret(%"struct.sret_thunk::Agg") align 4 %agg.result, ptr noundef %x)
+// CHECK64:             (ptr noundef %this, ptr dead_on_unwind noalias writable sret(%"struct.sret_thunk::Agg") align 4 %agg.result, ptr noundef %x)
 // CHECK64:   getelementptr i8, ptr %{{.*}}, i32 -8
 // CHECK64:   call void @"?foo@C@sret_thunk@@UEAA?AUAgg@2@U32@@Z"
-// CHECK64:       (ptr {{[^,]*}} %{{.*}}, ptr sret(%"struct.sret_thunk::Agg") align 4 %agg.result, ptr noundef %x)
+// CHECK64:       (ptr {{[^,]*}} %{{.*}}, ptr dead_on_unwind writable sret(%"struct.sret_thunk::Agg") align 4 %agg.result, ptr noundef %x)
 // CHECK64-NOT: call
 // CHECK64:   ret void
 }

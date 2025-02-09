@@ -29,8 +29,8 @@ private:
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
   Address EmitVAArgFromMemory(CodeGenFunction &CFG, Address VAListAddr,
                               QualType Ty) const;
   Address EmitVAArgForHexagon(CodeGenFunction &CFG, Address VAListAddr,
@@ -336,10 +336,6 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
   // Implement the block where argument is in register saved area
   CGF.EmitBlock(InRegBlock);
 
-  llvm::Type *PTy = CGF.ConvertType(Ty);
-  llvm::Value *__saved_reg_area_p = CGF.Builder.CreateBitCast(
-      __current_saved_reg_area_pointer, llvm::PointerType::getUnqual(PTy));
-
   CGF.Builder.CreateStore(__new_saved_reg_area_pointer,
                           __current_saved_reg_area_pointer_p);
 
@@ -388,33 +384,30 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
   CGF.Builder.CreateStore(__new_overflow_area_pointer,
                           __current_saved_reg_area_pointer_p);
 
-  // Bitcast the overflow area pointer to the type of argument.
-  llvm::Type *OverflowPTy = CGF.ConvertTypeForMem(Ty);
-  llvm::Value *__overflow_area_p = CGF.Builder.CreateBitCast(
-      __overflow_area_pointer, llvm::PointerType::getUnqual(OverflowPTy));
-
   CGF.EmitBranch(ContBlock);
-
   // Get the correct pointer to load the variable argument
   // Implement the ContBlock
   CGF.EmitBlock(ContBlock);
 
   llvm::Type *MemTy = CGF.ConvertTypeForMem(Ty);
-  llvm::Type *MemPTy = llvm::PointerType::getUnqual(MemTy);
-  llvm::PHINode *ArgAddr = CGF.Builder.CreatePHI(MemPTy, 2, "vaarg.addr");
-  ArgAddr->addIncoming(__saved_reg_area_p, InRegBlock);
-  ArgAddr->addIncoming(__overflow_area_p, OnStackBlock);
+  llvm::PHINode *ArgAddr = CGF.Builder.CreatePHI(
+      llvm::PointerType::getUnqual(MemTy->getContext()), 2, "vaarg.addr");
+  ArgAddr->addIncoming(__current_saved_reg_area_pointer, InRegBlock);
+  ArgAddr->addIncoming(__overflow_area_pointer, OnStackBlock);
 
   return Address(ArgAddr, MemTy, CharUnits::fromQuantity(ArgAlign));
 }
 
-Address HexagonABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                  QualType Ty) const {
+RValue HexagonABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType Ty, AggValueSlot Slot) const {
 
   if (getTarget().getTriple().isMusl())
-    return EmitVAArgForHexagonLinux(CGF, VAListAddr, Ty);
+    return CGF.EmitLoadOfAnyValue(
+        CGF.MakeAddrLValue(EmitVAArgForHexagonLinux(CGF, VAListAddr, Ty), Ty),
+        Slot);
 
-  return EmitVAArgForHexagon(CGF, VAListAddr, Ty);
+  return CGF.EmitLoadOfAnyValue(
+      CGF.MakeAddrLValue(EmitVAArgForHexagon(CGF, VAListAddr, Ty), Ty), Slot);
 }
 
 std::unique_ptr<TargetCodeGenInfo>

@@ -15,6 +15,7 @@
 #include <filesystem>
 #include <iterator>
 #include <string_view>
+#include <system_error>
 #include <type_traits>
 #include <vector>
 
@@ -32,11 +33,24 @@
 #  include <dirent.h>
 #  include <sys/stat.h>
 #  include <sys/statvfs.h>
+#  include <sys/types.h>
 #  include <unistd.h>
 #endif
 #include <fcntl.h> /* values for fchmodat */
 #include <time.h>
 
+// since Linux 4.5 and FreeBSD 13, but the Linux libc wrapper is only provided by glibc >= 2.27 and musl
+#if defined(__linux__)
+#  if defined(_LIBCPP_GLIBC_PREREQ)
+#    if _LIBCPP_GLIBC_PREREQ(2, 27)
+#      define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
+#    endif
+#  elif _LIBCPP_HAS_MUSL_LIBC
+#    define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
+#  endif
+#elif defined(__FreeBSD__)
+#  define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
+#endif
 #if __has_include(<sys/sendfile.h>)
 #  include <sys/sendfile.h>
 #  define _LIBCPP_FILESYSTEM_USE_SENDFILE
@@ -44,8 +58,16 @@
 #  include <copyfile.h>
 #  define _LIBCPP_FILESYSTEM_USE_COPYFILE
 #else
-#  include <fstream>
 #  define _LIBCPP_FILESYSTEM_USE_FSTREAM
+#endif
+
+// sendfile and copy_file_range need to fall back
+// to the fstream implementation for special files
+#if (defined(_LIBCPP_FILESYSTEM_USE_SENDFILE) || defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE) ||                    \
+     defined(_LIBCPP_FILESYSTEM_USE_FSTREAM)) &&                                                                       \
+    _LIBCPP_HAS_LOCALIZATION
+#  include <fstream>
+#  define _LIBCPP_FILESYSTEM_NEED_FSTREAM
 #endif
 
 #if defined(__ELF__) && defined(_LIBCPP_LINK_RT_LIB)
@@ -86,7 +108,7 @@ path __canonical(path const& orig_p, error_code* ec) {
 #if (defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112) || defined(_LIBCPP_WIN32API)
   std::unique_ptr<path::value_type, decltype(&::free)> hold(detail::realpath(p.c_str(), nullptr), &::free);
   if (hold.get() == nullptr)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
   return {hold.get()};
 #else
 #  if defined(__MVS__) && !defined(PATH_MAX)
@@ -96,7 +118,7 @@ path __canonical(path const& orig_p, error_code* ec) {
 #  endif
   path::value_type* ret;
   if ((ret = detail::realpath(p.c_str(), buff)) == nullptr)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
   return {ret};
 #endif
 }
@@ -109,25 +131,22 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
   const bool sym_status2 = bool(options & copy_options::copy_symlinks);
 
   error_code m_ec1;
-  StatT f_st = {};
+  StatT f_st;
   const file_status f =
       sym_status || sym_status2 ? detail::posix_lstat(from, f_st, &m_ec1) : detail::posix_stat(from, f_st, &m_ec1);
   if (m_ec1)
     return err.report(m_ec1);
 
-  StatT t_st          = {};
+  StatT t_st;
   const file_status t = sym_status ? detail::posix_lstat(to, t_st, &m_ec1) : detail::posix_stat(to, t_st, &m_ec1);
 
   if (not status_known(t))
     return err.report(m_ec1);
 
   if (!exists(f) || is_other(f) || is_other(t) || (is_directory(f) && is_regular_file(t)) ||
-      detail::stat_equivalent(f_st, t_st)) {
+      (exists(t) && detail::stat_equivalent(f_st, t_st))) {
     return err.report(errc::function_not_supported);
   }
-
-  if (ec)
-    ec->clear();
 
   if (is_symlink(f)) {
     if (bool(copy_options::skip_symlinks & options)) {
@@ -166,14 +185,14 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
       return;
     }
     error_code m_ec2;
-    for (; it != directory_iterator(); it.increment(m_ec2)) {
-      if (m_ec2) {
-        return err.report(m_ec2);
-      }
+    for (; !m_ec2 && it != directory_iterator(); it.increment(m_ec2)) {
       __copy(it->path(), to / it->path().filename(), options | copy_options::__in_recursive_copy, ec);
       if (ec && *ec) {
         return;
       }
+    }
+    if (m_ec2) {
+      return err.report(m_ec2);
     }
   }
 }
@@ -181,45 +200,8 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
 namespace detail {
 namespace {
 
-#if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
-bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
-  size_t count = read_fd.get_stat().st_size;
-  do {
-    ssize_t res;
-    if ((res = ::sendfile(write_fd.fd, read_fd.fd, nullptr, count)) == -1) {
-      ec = capture_errno();
-      return false;
-    }
-    count -= res;
-  } while (count > 0);
-
-  ec.clear();
-
-  return true;
-}
-#elif defined(_LIBCPP_FILESYSTEM_USE_COPYFILE)
-bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
-  struct CopyFileState {
-    copyfile_state_t state;
-    CopyFileState() { state = copyfile_state_alloc(); }
-    ~CopyFileState() { copyfile_state_free(state); }
-
-  private:
-    CopyFileState(CopyFileState const&)            = delete;
-    CopyFileState& operator=(CopyFileState const&) = delete;
-  };
-
-  CopyFileState cfs;
-  if (fcopyfile(read_fd.fd, write_fd.fd, cfs.state, COPYFILE_DATA) < 0) {
-    ec = capture_errno();
-    return false;
-  }
-
-  ec.clear();
-  return true;
-}
-#elif defined(_LIBCPP_FILESYSTEM_USE_FSTREAM)
-bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+#if defined(_LIBCPP_FILESYSTEM_NEED_FSTREAM)
+bool copy_file_impl_fstream(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
   ifstream in;
   in.__open(read_fd.fd, ios::binary);
   if (!in.is_open()) {
@@ -252,12 +234,147 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
   ec.clear();
   return true;
 }
+#endif
+
+#if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE)
+bool copy_file_impl_copy_file_range(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+  size_t count = read_fd.get_stat().st_size;
+  // a zero-length file is either empty, or not copyable by this syscall
+  // return early to avoid the syscall cost
+  if (count == 0) {
+    ec = {EINVAL, generic_category()};
+    return false;
+  }
+  // do not modify the fd positions as copy_file_impl_sendfile may be called after a partial copy
+#  if defined(__linux__)
+  loff_t off_in  = 0;
+  loff_t off_out = 0;
+#  else
+  off_t off_in  = 0;
+  off_t off_out = 0;
+#  endif
+
+  do {
+    ssize_t res;
+
+    if ((res = ::copy_file_range(read_fd.fd, &off_in, write_fd.fd, &off_out, count, 0)) == -1) {
+      ec = capture_errno();
+      return false;
+    }
+    count -= res;
+  } while (count > 0);
+
+  ec.clear();
+
+  return true;
+}
+#endif
+
+#if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
+bool copy_file_impl_sendfile(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+  size_t count = read_fd.get_stat().st_size;
+  // a zero-length file is either empty, or not copyable by this syscall
+  // return early to avoid the syscall cost
+  // however, we can't afford this luxury in the no-locale build,
+  // as we can't utilize the fstream impl to copy empty files
+#  if _LIBCPP_HAS_LOCALIZATION
+  if (count == 0) {
+    ec = {EINVAL, generic_category()};
+    return false;
+  }
+#  endif
+  do {
+    ssize_t res;
+    if ((res = ::sendfile(write_fd.fd, read_fd.fd, nullptr, count)) == -1) {
+      ec = capture_errno();
+      return false;
+    }
+    count -= res;
+  } while (count > 0);
+
+  ec.clear();
+
+  return true;
+}
+#endif
+
+#if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE) || defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
+// If we have copy_file_range or sendfile, try both in succession (if available).
+// If both fail, fall back to using fstream.
+bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+#  if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE)
+  if (copy_file_impl_copy_file_range(read_fd, write_fd, ec)) {
+    return true;
+  }
+  // EINVAL: src and dst are the same file (this is not cheaply
+  // detectable from userspace)
+  // EINVAL: copy_file_range is unsupported for this file type by the
+  // underlying filesystem
+  // ENOTSUP: undocumented, can arise with old kernels and NFS
+  // EOPNOTSUPP: filesystem does not implement copy_file_range
+  // ETXTBSY: src or dst is an active swapfile (nonsensical, but allowed
+  // with normal copying)
+  // EXDEV: src and dst are on different filesystems that do not support
+  // cross-fs copy_file_range
+  // ENOENT: undocumented, can arise with CIFS
+  // ENOSYS: unsupported by kernel or blocked by seccomp
+  if (ec.value() != EINVAL && ec.value() != ENOTSUP && ec.value() != EOPNOTSUPP && ec.value() != ETXTBSY &&
+      ec.value() != EXDEV && ec.value() != ENOENT && ec.value() != ENOSYS) {
+    return false;
+  }
+  ec.clear();
+#  endif
+
+#  if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
+  if (copy_file_impl_sendfile(read_fd, write_fd, ec)) {
+    return true;
+  }
+  // EINVAL: unsupported file type
+  if (ec.value() != EINVAL) {
+    return false;
+  }
+  ec.clear();
+#  endif
+
+#  if defined(_LIBCPP_FILESYSTEM_NEED_FSTREAM)
+  return copy_file_impl_fstream(read_fd, write_fd, ec);
+#  else
+  // since iostreams are unavailable in the no-locale build, just fail after a failed sendfile
+  ec.assign(EINVAL, std::system_category());
+  return false;
+#  endif
+}
+#elif defined(_LIBCPP_FILESYSTEM_USE_COPYFILE)
+bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+  struct CopyFileState {
+    copyfile_state_t state;
+    CopyFileState() { state = copyfile_state_alloc(); }
+    ~CopyFileState() { copyfile_state_free(state); }
+
+  private:
+    CopyFileState(CopyFileState const&)            = delete;
+    CopyFileState& operator=(CopyFileState const&) = delete;
+  };
+
+  CopyFileState cfs;
+  if (fcopyfile(read_fd.fd, write_fd.fd, cfs.state, COPYFILE_DATA) < 0) {
+    ec = capture_errno();
+    return false;
+  }
+
+  ec.clear();
+  return true;
+}
+#elif defined(_LIBCPP_FILESYSTEM_USE_FSTREAM)
+bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+  return copy_file_impl_fstream(read_fd, write_fd, ec);
+}
 #else
 #  error "Unknown implementation for copy_file_impl"
 #endif // copy_file_impl implementation
 
 } // end anonymous namespace
-} // end namespace detail
+} // namespace detail
 
 bool __copy_file(const path& from, const path& to, copy_options options, error_code* ec) {
   using detail::FileDescriptor;
@@ -396,9 +513,9 @@ bool __create_directory(const path& p, error_code* ec) {
   if (detail::mkdir(p.c_str(), static_cast<int>(perms::all)) == 0)
     return true;
 
-  if (errno != EEXIST)
-    return err.report(capture_errno());
-  error_code mec = capture_errno();
+  error_code mec = detail::get_last_error();
+  if (mec != errc::file_exists)
+    return err.report(mec);
   error_code ignored_ec;
   const file_status st = status(p, ignored_ec);
   if (!is_directory(st))
@@ -420,10 +537,10 @@ bool __create_directory(path const& p, path const& attributes, error_code* ec) {
   if (detail::mkdir(p.c_str(), attr_stat.st_mode) == 0)
     return true;
 
-  if (errno != EEXIST)
-    return err.report(capture_errno());
+  mec = detail::get_last_error();
+  if (mec != errc::file_exists)
+    return err.report(mec);
 
-  mec = capture_errno();
   error_code ignored_ec;
   st = status(p, ignored_ec);
   if (!is_directory(st))
@@ -434,19 +551,19 @@ bool __create_directory(path const& p, path const& attributes, error_code* ec) {
 void __create_directory_symlink(path const& from, path const& to, error_code* ec) {
   ErrorHandler<void> err("create_directory_symlink", ec, &from, &to);
   if (detail::symlink_dir(from.c_str(), to.c_str()) == -1)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
 }
 
 void __create_hard_link(const path& from, const path& to, error_code* ec) {
   ErrorHandler<void> err("create_hard_link", ec, &from, &to);
   if (detail::link(from.c_str(), to.c_str()) == -1)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
 }
 
 void __create_symlink(path const& from, path const& to, error_code* ec) {
   ErrorHandler<void> err("create_symlink", ec, &from, &to);
   if (detail::symlink_file(from.c_str(), to.c_str()) == -1)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
 }
 
 path __current_path(error_code* ec) {
@@ -460,8 +577,21 @@ path __current_path(error_code* ec) {
   typedef decltype(&::free) Deleter;
   Deleter deleter = &::free;
 #else
+  errno     = 0; // Note: POSIX mandates that modifying `errno` is thread-safe.
   auto size = ::pathconf(".", _PC_PATH_MAX);
-  _LIBCPP_ASSERT_UNCATEGORIZED(size >= 0, "pathconf returned a 0 as max size");
+  if (size == -1) {
+    if (errno != 0) {
+      return err.report(capture_errno(), "call to pathconf failed");
+
+      // `pathconf` returns `-1` without an error to indicate no limit.
+    } else {
+#  if defined(__MVS__) && !defined(PATH_MAX)
+      size = _XOPEN_PATH_MAX + 1;
+#  else
+      size = PATH_MAX + 1;
+#  endif
+    }
+  }
 
   auto buff             = unique_ptr<path::value_type[]>(new path::value_type[size + 1]);
   path::value_type* ptr = buff.get();
@@ -476,7 +606,7 @@ path __current_path(error_code* ec) {
 
   unique_ptr<path::value_type, Deleter> hold(detail::getcwd(ptr, size), deleter);
   if (hold.get() == nullptr)
-    return err.report(capture_errno(), "call to getcwd failed");
+    return err.report(detail::get_last_error(), "call to getcwd failed");
 
   return {hold.get()};
 }
@@ -484,7 +614,7 @@ path __current_path(error_code* ec) {
 void __current_path(const path& p, error_code* ec) {
   ErrorHandler<void> err("current_path", ec, &p);
   if (detail::chdir(p.c_str()) == -1)
-    err.report(capture_errno());
+    err.report(detail::get_last_error());
 }
 
 bool __equivalent(const path& p1, const path& p2, error_code* ec) {
@@ -572,10 +702,10 @@ void __last_write_time(const path& p, file_time_type new_time, error_code* ec) {
     return err.report(errc::value_too_large);
   detail::WinHandle h(p.c_str(), FILE_WRITE_ATTRIBUTES, 0);
   if (!h)
-    return err.report(detail::make_windows_error(GetLastError()));
+    return err.report(detail::get_last_error());
   FILETIME last_write = timespec_to_filetime(ts);
   if (!SetFileTime(h, nullptr, nullptr, &last_write))
-    return err.report(detail::make_windows_error(GetLastError()));
+    return err.report(detail::get_last_error());
 #else
   error_code m_ec;
   array<TimeSpec, 2> tbuf;
@@ -608,10 +738,9 @@ void __permissions(const path& p, perms prms, perm_options opts, error_code* ec)
   const bool resolve_symlinks = !has_opt(perm_options::nofollow);
   const bool add_perms        = has_opt(perm_options::add);
   const bool remove_perms     = has_opt(perm_options::remove);
-  _LIBCPP_ASSERT_UNCATEGORIZED(
+  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
       (add_perms + remove_perms + has_opt(perm_options::replace)) == 1,
-      "One and only one of the perm_options constants replace, add, or remove "
-      "is present in opts");
+      "One and only one of the perm_options constants 'replace', 'add', or 'remove' must be present in opts");
 
   bool set_sym_perms = false;
   prms &= perms::mask;
@@ -621,7 +750,9 @@ void __permissions(const path& p, perms prms, perm_options opts, error_code* ec)
     set_sym_perms  = is_symlink(st);
     if (m_ec)
       return err.report(m_ec);
-    _LIBCPP_ASSERT_UNCATEGORIZED(st.permissions() != perms::unknown, "Permissions unexpectedly unknown");
+    // TODO(hardening): double-check this assertion -- it might be a valid (if rare) case when the permissions are
+    // unknown.
+    _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(st.permissions() != perms::unknown, "Permissions unexpectedly unknown");
     if (add_perms)
       prms |= st.permissions();
     else if (remove_perms)
@@ -632,7 +763,7 @@ void __permissions(const path& p, perms prms, perm_options opts, error_code* ec)
 #if defined(AT_SYMLINK_NOFOLLOW) && defined(AT_FDCWD)
   const int flags = set_sym_perms ? AT_SYMLINK_NOFOLLOW : 0;
   if (detail::fchmodat(AT_FDCWD, p.c_str(), real_perms, flags) == -1) {
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
   }
 #else
   if (set_sym_perms)
@@ -660,15 +791,15 @@ path __read_symlink(const path& p, error_code* ec) {
 #else
   StatT sb;
   if (detail::lstat(p.c_str(), &sb) == -1) {
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
   }
   const size_t size = sb.st_size + 1;
   auto buff         = unique_ptr<path::value_type[]>(new path::value_type[size]);
 #endif
   detail::SSizeT ret;
   if ((ret = detail::readlink(p.c_str(), buff.get(), size)) == -1)
-    return err.report(capture_errno());
-  _LIBCPP_ASSERT_UNCATEGORIZED(ret > 0, "TODO");
+    return err.report(detail::get_last_error());
+  // Note that `ret` returning `0` would work, resulting in a valid empty string being returned.
   if (static_cast<size_t>(ret) >= size)
     return err.report(errc::value_too_large);
   buff[ret] = 0;
@@ -678,8 +809,9 @@ path __read_symlink(const path& p, error_code* ec) {
 bool __remove(const path& p, error_code* ec) {
   ErrorHandler<bool> err("remove", ec, &p);
   if (detail::remove(p.c_str()) == -1) {
-    if (errno != ENOENT)
-      err.report(capture_errno());
+    error_code mec = detail::get_last_error();
+    if (mec != errc::no_such_file_or_directory)
+      err.report(mec);
     return false;
   }
   return true;
@@ -721,7 +853,7 @@ uintmax_t remove_all_impl(path const& p, error_code& ec) {
   return count;
 }
 
-} // end namespace
+} // namespace
 
 uintmax_t __remove_all(const path& p, error_code* ec) {
   ErrorHandler<uintmax_t> err("remove_all", ec, &p);
@@ -801,8 +933,9 @@ uintmax_t remove_all_impl(int parent_directory, const path& p, error_code& ec) {
 
   // If opening `p` failed because it wasn't a directory, remove it as
   // a normal file instead. Note that `openat()` can return either ENOTDIR
-  // or ELOOP depending on the exact reason of the failure.
-  if (ec == errc::not_a_directory || ec == errc::too_many_symbolic_link_levels) {
+  // or ELOOP depending on the exact reason of the failure. On FreeBSD it
+  // may return EMLINK instead of ELOOP, contradicting POSIX.
+  if (ec == errc::not_a_directory || ec == errc::too_many_symbolic_link_levels || ec == errc::too_many_links) {
     ec.clear();
     if (::unlinkat(parent_directory, p.c_str(), /* flags = */ 0) == -1) {
       ec = detail::capture_errno();
@@ -815,7 +948,7 @@ uintmax_t remove_all_impl(int parent_directory, const path& p, error_code& ec) {
   return 0;
 }
 
-} // end namespace
+} // namespace
 
 uintmax_t __remove_all(const path& p, error_code* ec) {
   ErrorHandler<uintmax_t> err("remove_all", ec, &p);
@@ -831,13 +964,13 @@ uintmax_t __remove_all(const path& p, error_code* ec) {
 void __rename(const path& from, const path& to, error_code* ec) {
   ErrorHandler<void> err("rename", ec, &from, &to);
   if (detail::rename(from.c_str(), to.c_str()) == -1)
-    err.report(capture_errno());
+    err.report(detail::get_last_error());
 }
 
 void __resize_file(const path& p, uintmax_t size, error_code* ec) {
   ErrorHandler<void> err("resize_file", ec, &p);
   if (detail::truncate(p.c_str(), static_cast< ::off_t>(size)) == -1)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
 }
 
 space_info __space(const path& p, error_code* ec) {
@@ -845,7 +978,7 @@ space_info __space(const path& p, error_code* ec) {
   space_info si;
   detail::StatVFS m_svfs = {};
   if (detail::statvfs(p.c_str(), &m_svfs) == -1) {
-    err.report(capture_errno());
+    err.report(detail::get_last_error());
     si.capacity = si.free = si.available = static_cast<uintmax_t>(-1);
     return si;
   }
@@ -872,7 +1005,7 @@ path __temp_directory_path(error_code* ec) {
   wchar_t buf[MAX_PATH];
   DWORD retval = GetTempPathW(MAX_PATH, buf);
   if (!retval)
-    return err.report(detail::make_windows_error(GetLastError()));
+    return err.report(detail::get_last_error());
   if (retval > MAX_PATH)
     return err.report(errc::filename_too_long);
   // GetTempPathW returns a path with a trailing slash, which we
@@ -921,23 +1054,28 @@ path __weakly_canonical(const path& p, error_code* ec) {
   --PP;
   vector<string_view_t> DNEParts;
 
-  while (PP.State != PathParser::PS_BeforeBegin) {
+  error_code m_ec;
+  while (PP.State_ != PathParser::PS_BeforeBegin) {
     tmp.assign(createView(p.native().data(), &PP.RawEntry.back()));
-    error_code m_ec;
     file_status st = __status(tmp, &m_ec);
     if (!status_known(st)) {
       return err.report(m_ec);
     } else if (exists(st)) {
-      result = __canonical(tmp, ec);
+      result = __canonical(tmp, &m_ec);
+      if (m_ec) {
+        return err.report(m_ec);
+      }
       break;
     }
     DNEParts.push_back(*PP);
     --PP;
   }
-  if (PP.State == PathParser::PS_BeforeBegin)
-    result = __canonical("", ec);
-  if (ec)
-    ec->clear();
+  if (PP.State_ == PathParser::PS_BeforeBegin) {
+    result = __canonical("", &m_ec);
+    if (m_ec) {
+      return err.report(m_ec);
+    }
+  }
   if (DNEParts.empty())
     return result;
   for (auto It = DNEParts.rbegin(); It != DNEParts.rend(); ++It)

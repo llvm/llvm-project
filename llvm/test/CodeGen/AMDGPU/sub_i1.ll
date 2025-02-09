@@ -1,11 +1,11 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,WAVE64 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,WAVE32 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,WAVE32 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,WAVE64 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,WAVE32 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,WAVE32 %s
 
 
 ; GCN-LABEL: {{^}}sub_var_var_i1:
-; WAVE32: s_xor_b32
-; WAVE64: s_xor_b64
+; WAVE32: v_xor_b32_e32
+; WAVE64: v_xor_b32_e32
 define amdgpu_kernel void @sub_var_var_i1(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
   %a = load volatile i1, ptr addrspace(1) %in0
   %b = load volatile i1, ptr addrspace(1) %in1
@@ -15,8 +15,8 @@ define amdgpu_kernel void @sub_var_var_i1(ptr addrspace(1) %out, ptr addrspace(1
 }
 
 ; GCN-LABEL: {{^}}sub_var_imm_i1:
-; WAVE32: s_not_b32
-; WAVE64: s_not_b64
+; WAVE32: s_xor_b32
+; WAVE64: s_xor_b64
 define amdgpu_kernel void @sub_var_imm_i1(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %a = load volatile i1, ptr addrspace(1) %in
   %sub = sub i1 %a, 1
@@ -26,8 +26,8 @@ define amdgpu_kernel void @sub_var_imm_i1(ptr addrspace(1) %out, ptr addrspace(1
 
 ; GCN-LABEL: {{^}}sub_i1_cf:
 ; GCN: ; %endif
-; WAVE32: s_not_b32
-; WAVE64: s_not_b64
+; WAVE32: s_xor_b32
+; WAVE64: s_xor_b64
 define amdgpu_kernel void @sub_i1_cf(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

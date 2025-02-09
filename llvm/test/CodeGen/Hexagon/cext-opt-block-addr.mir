@@ -1,0 +1,173 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=hexagon -run-pass hexagon-cext-opt %s -o - | FileCheck %s
+
+# Check that the HexagonConstantExtenders pass does not assert when block
+# addresses from different functions are used
+# CHECK-LABEL: name: wibble
+# CHECK: A2_tfrsi blockaddress(@baz
+# CHECK: A2_tfrsi blockaddress(@wibble
+
+--- |
+  target triple = "hexagon"
+
+  define dso_local void @baz() {
+  bb:
+    br label %bb1
+
+  bb1:                                              ; preds = %bb
+    %call = tail call fastcc i32 @wibble(i32 poison)
+    ret void
+  }
+
+  define internal fastcc i32 @wibble(i32 %arg) {
+  bb:
+    %call = tail call i32 @eggs(i32 noundef ptrtoint (ptr blockaddress(@baz, %bb1) to i32))
+    br label %bb1
+
+  bb1:                                              ; preds = %bb
+    tail call void @baz.1(i32 noundef ptrtoint (ptr blockaddress(@wibble, %bb1) to i32))
+    ret i32 %call
+  }
+
+  declare i32 @eggs(i32 noundef) local_unnamed_addr
+
+  declare void @baz.1(i32 noundef) local_unnamed_addr
+
+...
+---
+name:            baz
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: intregs, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     true
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.bb:
+    successors: %bb.1(0x80000000)
+
+  bb.1.bb1 (ir-block-address-taken %ir-block.bb1):
+    %0:intregs = IMPLICIT_DEF
+    $r0 = COPY %0
+    PS_tailcall_i @wibble, hexagoncsr, implicit $r0
+
+...
+---
+name:            wibble
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: intregs, preferred-register: '' }
+  - { id: 1, class: intregs, preferred-register: '' }
+  - { id: 2, class: intregs, preferred-register: '' }
+  - { id: 3, class: intregs, preferred-register: '' }
+  - { id: 4, class: intregs, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.bb:
+    successors: %bb.1(0x80000000)
+
+    %2:intregs = A2_tfrsi blockaddress(@baz, %ir-block.bb1)
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    $r0 = COPY %2
+    J2_call @eggs, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit $r0, implicit-def $r29, implicit-def $r0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    %3:intregs = COPY $r0
+
+  bb.1.bb1 (ir-block-address-taken %ir-block.bb1):
+    %4:intregs = A2_tfrsi blockaddress(@wibble, %ir-block.bb1)
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    $r0 = COPY %4
+    J2_call @baz.1, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit $r0, implicit-def $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    $r0 = COPY %3
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+...

@@ -81,7 +81,7 @@ void test_pair_deduction(int *ip, float *fp, double *dp) {
 template<typename ...Types> struct tuple { };
 
 template<typename ...Types>
-void pack_not_at_end(tuple<Types...>, Types... values, int); // expected-note {{<int *, double *> vs. <>}}
+void pack_not_at_end(tuple<Types...>, Types... values, int); // expected-note {{<int *, double *> vs. <int, int>}}
 
 void test_pack_not_at_end(tuple<int*, double*> t2) {
   pack_not_at_end(t2, 0, 0, 0); // expected-error {{no match}}

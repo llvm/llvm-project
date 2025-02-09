@@ -106,6 +106,10 @@ def AtomicBinOpUIncWrap : LLVM_EnumAttrCase<"uinc_wrap",
                                             "uinc_wrap", "UIncWrap", 15>;
 def AtomicBinOpUDecWrap : LLVM_EnumAttrCase<"udec_wrap",
                                             "udec_wrap", "UDecWrap", 16>;
+def AtomicBinOpUSubCond : LLVM_EnumAttrCase<"usub_cond",
+                                            "usub_cond", "USubCond", 17>;
+def AtomicBinOpUSubSat : LLVM_EnumAttrCase<"usub_sat",
+                                           "usub_sat", "USubSat", 18>;
 
 // A sentinel value that has no MLIR counterpart.
 def AtomicBadBinOp : LLVM_EnumAttrCase<"", "", "BAD_BINOP", 0>;
@@ -118,7 +122,7 @@ def AtomicBinOp : LLVM_EnumAttr<
      AtomicBinOpNand, AtomicBinOpOr, AtomicBinOpXor, AtomicBinOpMax,
      AtomicBinOpMin, AtomicBinOpUMax, AtomicBinOpUMin, AtomicBinOpFAdd,
      AtomicBinOpFSub, AtomicBinOpFMax, AtomicBinOpFMin, AtomicBinOpUIncWrap,
-     AtomicBinOpUDecWrap],
+     AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat],
     [AtomicBadBinOp]> {
   let cppNamespace = "::mlir::LLVM";
 }
@@ -280,6 +284,35 @@ def CConv : DialectAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// TailCallKind
+//===----------------------------------------------------------------------===//
+
+def TailCallKindNone : LLVM_EnumAttrCase<"None", "none", "TCK_None", 0>;
+def TailCallKindTail : LLVM_EnumAttrCase<"Tail", "tail", "TCK_Tail", 1>;
+def TailCallKindMustTail : LLVM_EnumAttrCase<"MustTail", "musttail", "TCK_MustTail", 2>;
+def TailCallKindNoTailCall : LLVM_EnumAttrCase<"NoTail", "notail", "TCK_NoTail", 3>;
+
+def TailCallKindEnum : LLVM_EnumAttr<
+    "TailCallKind",
+    "::llvm::CallInst::TailCallKind",
+    "Tail Call Kind",
+    [TailCallKindNone, TailCallKindNoTailCall,
+    TailCallKindMustTail, TailCallKindTail]> {
+  let cppNamespace = "::mlir::LLVM::tailcallkind";
+}
+
+def TailCallKind : DialectAttr<
+    LLVM_Dialect,
+    CPred<"::llvm::isa<::mlir::LLVM::TailCallKindAttr>($_self)">,
+    "LLVM Calling Convention specification"> {
+  let storageType = "::mlir::LLVM::TailCallKindAttr";
+  let returnType = "::mlir::LLVM::tailcallkind::TailCallKind";
+  let convertFromStorage = "$_self.getTailCallKind()";
+  let constBuilderCall =
+          "::mlir::LLVM::TailCallKindAttr::get($_builder.getContext(), $0)";
+}
+
+//===----------------------------------------------------------------------===//
 // DIEmissionKind
 //===----------------------------------------------------------------------===//
 
@@ -391,6 +424,26 @@ def DIFlags : I32BitEnumAttr<
     ]> {
   let cppNamespace = "::mlir::LLVM";
   let printBitEnumPrimaryGroups = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// DINameTableKind
+//===----------------------------------------------------------------------===//
+
+def LLVM_DINameTableDefault : I64EnumAttrCase<"Default", 0>;
+def LLVM_DINameTableGNU     : I64EnumAttrCase<"GNU", 1>;
+def LLVM_DINameTableNone    : I64EnumAttrCase<"None", 2>;
+def LLVM_DINameTableApple   : I64EnumAttrCase<"Apple", 3>;
+
+def LLVM_DINameTableKind : I64EnumAttr<
+    "DINameTableKind",
+    "LLVM debug name table kind", [
+      LLVM_DINameTableDefault,
+      LLVM_DINameTableGNU,
+      LLVM_DINameTableNone,
+      LLVM_DINameTableApple,
+    ]> {
+  let cppNamespace = "::mlir::LLVM";
 }
 
 //===----------------------------------------------------------------------===//
@@ -562,40 +615,40 @@ def ICmpPredicate : LLVM_EnumAttr<
 //===----------------------------------------------------------------------===//
 
 // Linkage attribute is used on functions and globals. The order follows that of
-// https://llvm.org/docs/LangRef.html#linkage-types. The names are equivalent to
-// visible names in the IR rather than to enum values names in llvm::GlobalValue
-// since the latter is easier to change.
-def LinkagePrivate
-    : LLVM_EnumAttrCase<"Private", "private", "PrivateLinkage", 0>;
-def LinkageInternal
-    : LLVM_EnumAttrCase<"Internal", "internal", "InternalLinkage", 1>;
+// llvm::GlobalValue::LinkageTypes from llvm/IR/GlobalValue.h. The names are
+// equivalent to visible names in the IR rather than to enum values names in
+// llvm::GlobalValue since the latter is easier to change.
+def LinkageExternal
+    : LLVM_EnumAttrCase<"External", "external", "ExternalLinkage", 0>;
 def LinkageAvailableExternally
     : LLVM_EnumAttrCase<"AvailableExternally", "available_externally",
-                        "AvailableExternallyLinkage", 2>;
+                        "AvailableExternallyLinkage", 1>;
 def LinkageLinkonce
-    : LLVM_EnumAttrCase<"Linkonce", "linkonce", "LinkOnceAnyLinkage", 3>;
+    : LLVM_EnumAttrCase<"Linkonce", "linkonce", "LinkOnceAnyLinkage", 2>;
+def LinkageLinkonceODR
+    : LLVM_EnumAttrCase<"LinkonceODR", "linkonce_odr", "LinkOnceODRLinkage", 3>;
 def LinkageWeak
     : LLVM_EnumAttrCase<"Weak", "weak", "WeakAnyLinkage", 4>;
-def LinkageCommon
-    : LLVM_EnumAttrCase<"Common", "common", "CommonLinkage", 5>;
+def LinkageWeakODR
+    : LLVM_EnumAttrCase<"WeakODR", "weak_odr", "WeakODRLinkage", 5>;
 def LinkageAppending
     : LLVM_EnumAttrCase<"Appending", "appending", "AppendingLinkage", 6>;
+def LinkageInternal
+    : LLVM_EnumAttrCase<"Internal", "internal", "InternalLinkage", 7>;
+def LinkagePrivate
+    : LLVM_EnumAttrCase<"Private", "private", "PrivateLinkage", 8>;
 def LinkageExternWeak
-   : LLVM_EnumAttrCase<"ExternWeak", "extern_weak", "ExternalWeakLinkage", 7>;
-def LinkageLinkonceODR
-    : LLVM_EnumAttrCase<"LinkonceODR", "linkonce_odr", "LinkOnceODRLinkage", 8>;
-def LinkageWeakODR
-    : LLVM_EnumAttrCase<"WeakODR", "weak_odr", "WeakODRLinkage", 9>;
-def LinkageExternal
-    : LLVM_EnumAttrCase<"External", "external", "ExternalLinkage", 10>;
+   : LLVM_EnumAttrCase<"ExternWeak", "extern_weak", "ExternalWeakLinkage", 9>;
+def LinkageCommon
+    : LLVM_EnumAttrCase<"Common", "common", "CommonLinkage", 10>;
 
 def LinkageEnum : LLVM_EnumAttr<
     "Linkage",
     "::llvm::GlobalValue::LinkageTypes",
     "LLVM linkage types",
-    [LinkagePrivate, LinkageInternal, LinkageAvailableExternally,
-     LinkageLinkonce, LinkageWeak, LinkageCommon, LinkageAppending,
-     LinkageExternWeak, LinkageLinkonceODR, LinkageWeakODR, LinkageExternal]> {
+    [LinkageExternal, LinkageAvailableExternally, LinkageLinkonce,
+      LinkageLinkonceODR, LinkageWeak, LinkageWeakODR, LinkageAppending,
+      LinkageInternal, LinkagePrivate, LinkageExternWeak, LinkageCommon]> {
   let cppNamespace = "::mlir::LLVM::linkage";
 }
 
@@ -696,13 +749,73 @@ def FramePointerKindNonLeaf
     : LLVM_EnumAttrCase<"NonLeaf", "non-leaf", "NonLeaf", 1>;
 def FramePointerKindAll
     : LLVM_EnumAttrCase<"All", "all", "All", 2>;
+def FramePointerKindReserved
+    : LLVM_EnumAttrCase<"Reserved", "reserved", "Reserved", 3>;
 
 def FramePointerKindEnum : LLVM_EnumAttr<
     "FramePointerKind",
     "::llvm::FramePointerKind",
     "LLVM FramePointerKind",
-    [FramePointerKindNone, FramePointerKindNonLeaf, FramePointerKindAll]> {
+    [FramePointerKindNone, FramePointerKindNonLeaf,
+     FramePointerKindAll, FramePointerKindReserved]> {
   let cppNamespace = "::mlir::LLVM::framePointerKind";
+}
+
+//===----------------------------------------------------------------------===//
+// RoundingMode
+//===----------------------------------------------------------------------===//
+
+// These values must match llvm::RoundingMode ones.
+// See llvm/include/llvm/ADT/FloatingPointMode.h.
+def RoundTowardZero
+    : LLVM_EnumAttrCase<"TowardZero", "towardzero", "TowardZero", 0>;
+def RoundNearestTiesToEven
+    : LLVM_EnumAttrCase<"NearestTiesToEven", "tonearest", "NearestTiesToEven", 1>;
+def RoundTowardPositive
+    : LLVM_EnumAttrCase<"TowardPositive", "upward", "TowardPositive", 2>;
+def RoundTowardNegative
+    : LLVM_EnumAttrCase<"TowardNegative", "downward", "TowardNegative", 3>;
+def RoundNearestTiesToAway
+    : LLVM_EnumAttrCase<"NearestTiesToAway", "tonearestaway", "NearestTiesToAway", 4>;
+def RoundDynamic
+    : LLVM_EnumAttrCase<"Dynamic", "dynamic", "Dynamic", 7>;
+// Needed as llvm::RoundingMode defines this.
+def RoundInvalid
+    : LLVM_EnumAttrCase<"Invalid", "invalid", "Invalid", -1>;
+
+// RoundingModeAttr should not be used in operations definitions.
+// Use ValidRoundingModeAttr instead.
+def RoundingModeAttr : LLVM_EnumAttr<
+    "RoundingMode",
+    "::llvm::RoundingMode",
+    "LLVM Rounding Mode",
+    [RoundTowardZero, RoundNearestTiesToEven, RoundTowardPositive,
+     RoundTowardNegative, RoundNearestTiesToAway, RoundDynamic, RoundInvalid]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+def ValidRoundingModeAttr : ConfinedAttr<RoundingModeAttr, [IntMinValue<0>]>;
+
+//===----------------------------------------------------------------------===//
+// FPExceptionBehavior
+//===----------------------------------------------------------------------===//
+
+// These values must match llvm::fp::ExceptionBehavior ones.
+// See llvm/include/llvm/IR/FPEnv.h.
+def FPExceptionBehaviorIgnore
+    : LLVM_EnumAttrCase<"Ignore", "ignore", "ebIgnore", 0>;
+def FPExceptionBehaviorMayTrap
+    : LLVM_EnumAttrCase<"MayTrap", "maytrap", "ebMayTrap", 1>;
+def FPExceptionBehaviorStrict
+    : LLVM_EnumAttrCase<"Strict", "strict", "ebStrict", 2>;
+
+def FPExceptionBehaviorAttr : LLVM_EnumAttr<
+    "FPExceptionBehavior",
+    "::llvm::fp::ExceptionBehavior",
+    "LLVM Exception Behavior",
+    [FPExceptionBehaviorIgnore, FPExceptionBehaviorMayTrap,
+     FPExceptionBehaviorStrict]> {
+  let cppNamespace = "::mlir::LLVM";
 }
 
 #endif // LLVMIR_ENUMS

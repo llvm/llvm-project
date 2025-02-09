@@ -10,7 +10,7 @@ define void @st1_nxv16i8(ptr %addr, i64 %off, <vscale x 16 x i8> %val) {
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  store <vscale x 16 x i8> %val, <vscale x 16 x i8>* %ptr
+  store <vscale x 16 x i8> %val, ptr %ptr
   ret void
 }
 
@@ -21,7 +21,7 @@ define void @st1_nxv16i8_bitcast_from_i16(ptr %addr, i64 %off, <vscale x 8 x i16
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  store <vscale x 8 x i16> %val, <vscale x 8 x i16>* %ptr
+  store <vscale x 8 x i16> %val, ptr %ptr
   ret void
 }
 
@@ -32,7 +32,7 @@ define void @st1_nxv16i8_bitcast_from_i32(ptr %addr, i64 %off, <vscale x 4 x i32
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  store <vscale x 4 x i32> %val, <vscale x 4 x i32>* %ptr
+  store <vscale x 4 x i32> %val, ptr %ptr
   ret void
 }
 
@@ -43,7 +43,7 @@ define void @st1_nxv16i8_bitcast_from_i64(ptr %addr, i64 %off, <vscale x 2 x i64
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  store <vscale x 2 x i64> %val, <vscale x 2 x i64>* %ptr
+  store <vscale x 2 x i64> %val, ptr %ptr
   ret void
 }
 
@@ -55,7 +55,7 @@ define void @st1_nxv8i16_trunc8(ptr %addr, i64 %off, <vscale x 8 x i16> %val) {
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
   %trunc = trunc <vscale x 8 x i16> %val to <vscale x 8 x i8>
-  store <vscale x 8 x i8> %trunc, <vscale x 8 x i8>* %ptr
+  store <vscale x 8 x i8> %trunc, ptr %ptr
   ret void
 }
 
@@ -67,7 +67,7 @@ define void @st1_nxv4i32_trunc8(ptr %addr, i64 %off, <vscale x 4 x i32> %val) {
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
   %trunc = trunc <vscale x 4 x i32> %val to <vscale x 4 x i8>
-  store <vscale x 4 x i8> %trunc, <vscale x 4 x i8>* %ptr
+  store <vscale x 4 x i8> %trunc, ptr %ptr
   ret void
 }
 
@@ -79,7 +79,7 @@ define void @st1_nxv2i64_trunc8(ptr %addr, i64 %off, <vscale x 2 x i64> %val) {
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
   %trunc = trunc <vscale x 2 x i64> %val to <vscale x 2 x i8>
-  store <vscale x 2 x i8> %trunc, <vscale x 2 x i8>* %ptr
+  store <vscale x 2 x i8> %trunc, ptr %ptr
   ret void
 }
 
@@ -92,7 +92,7 @@ define void @st1_nxv8i16(ptr %addr, i64 %off, <vscale x 8 x i16> %val) {
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
-  store <vscale x 8 x i16> %val, <vscale x 8 x i16>* %ptr
+  store <vscale x 8 x i16> %val, ptr %ptr
   ret void
 }
 
@@ -104,7 +104,7 @@ define void @st1_nxv4i32_trunc16(ptr %addr, i64 %off, <vscale x 4 x i32> %val) {
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
   %trunc = trunc <vscale x 4 x i32> %val to <vscale x 4 x i16>
-  store <vscale x 4 x i16> %trunc, <vscale x 4 x i16>* %ptr
+  store <vscale x 4 x i16> %trunc, ptr %ptr
   ret void
 }
 
@@ -116,7 +116,7 @@ define void @st1_nxv2i64_trunc16(ptr %addr, i64 %off, <vscale x 2 x i64> %val) {
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
   %trunc = trunc <vscale x 2 x i64> %val to <vscale x 2 x i16>
-  store <vscale x 2 x i16> %trunc, <vscale x 2 x i16>* %ptr
+  store <vscale x 2 x i16> %trunc, ptr %ptr
   ret void
 }
 
@@ -127,7 +127,7 @@ define void @st1_nxv8f16(ptr %addr, i64 %off, <vscale x 8 x half> %val) {
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds half, ptr %addr, i64 %off
-  store <vscale x 8 x half> %val, <vscale x 8 x half>* %ptr
+  store <vscale x 8 x half> %val, ptr %ptr
   ret void
 }
 
@@ -138,7 +138,7 @@ define void @st1_nxv8bf16(ptr %addr, i64 %off, <vscale x 8 x bfloat> %val) {
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %off
-  store <vscale x 8 x bfloat> %val, <vscale x 8 x bfloat>* %ptr
+  store <vscale x 8 x bfloat> %val, ptr %ptr
   ret void
 }
 
@@ -149,7 +149,7 @@ define void @st1_nxv4f16(ptr %addr, i64 %off, <vscale x 4 x half> %val) {
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds half, ptr %addr, i64 %off
-  store <vscale x 4 x half> %val, <vscale x 4 x half>* %ptr
+  store <vscale x 4 x half> %val, ptr %ptr
   ret void
 }
 
@@ -160,7 +160,7 @@ define void @st1_nxv4bf16(ptr %addr, i64 %off, <vscale x 4 x bfloat> %val) {
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %off
-  store <vscale x 4 x bfloat> %val, <vscale x 4 x bfloat>* %ptr
+  store <vscale x 4 x bfloat> %val, ptr %ptr
   ret void
 }
 
@@ -171,7 +171,7 @@ define void @st1_nxv2f16(ptr %addr, i64 %off, <vscale x 2 x half> %val) {
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds half, ptr %addr, i64 %off
-  store <vscale x 2 x half> %val, <vscale x 2 x half>* %ptr
+  store <vscale x 2 x half> %val, ptr %ptr
   ret void
 }
 
@@ -182,7 +182,7 @@ define void @st1_nxv2bf16(ptr %addr, i64 %off, <vscale x 2 x bfloat> %val) {
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %off
-  store <vscale x 2 x bfloat> %val, <vscale x 2 x bfloat>* %ptr
+  store <vscale x 2 x bfloat> %val, ptr %ptr
   ret void
 }
 
@@ -195,7 +195,7 @@ define void @st1_nxv4i32(ptr %addr, i64 %off, <vscale x 4 x i32> %val) {
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i32, ptr %addr, i64 %off
-  store <vscale x 4 x i32> %val, <vscale x 4 x i32>* %ptr
+  store <vscale x 4 x i32> %val, ptr %ptr
   ret void
 }
 
@@ -207,7 +207,7 @@ define void @st1_nxv2i64_trunc32(ptr %addr, i64 %off, <vscale x 2 x i64> %val) {
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i32, ptr %addr, i64 %off
   %trunc = trunc <vscale x 2 x i64> %val to <vscale x 2 x i32>
-  store <vscale x 2 x i32> %trunc, <vscale x 2 x i32>* %ptr
+  store <vscale x 2 x i32> %trunc, ptr %ptr
   ret void
 }
 
@@ -218,7 +218,7 @@ define void @st1_nxv4f32(ptr %addr, i64 %off, <vscale x 4 x float> %val) {
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds float, ptr %addr, i64 %off
-  store <vscale x 4 x float> %val, <vscale x 4 x float>* %ptr
+  store <vscale x 4 x float> %val, ptr %ptr
   ret void
 }
 
@@ -229,7 +229,7 @@ define void @st1_nxv2f32(ptr %addr, i64 %off, <vscale x 2 x float> %val) {
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds float, ptr %addr, i64 %off
-  store <vscale x 2 x float> %val, <vscale x 2 x float>* %ptr
+  store <vscale x 2 x float> %val, ptr %ptr
   ret void
 }
 
@@ -242,7 +242,7 @@ define void @st1_nxv2i64(ptr %addr, i64 %off, <vscale x 2 x i64> %val) {
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i64, ptr %addr, i64 %off
-  store <vscale x 2 x i64> %val, <vscale x 2 x i64>* %ptr
+  store <vscale x 2 x i64> %val, ptr %ptr
   ret void
 }
 
@@ -253,6 +253,6 @@ define void @st1_nxv2f64(ptr %addr, i64 %off, <vscale x 2 x double> %val) {
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds double, ptr %addr, i64 %off
-  store <vscale x 2 x double> %val, <vscale x 2 x double>* %ptr
+  store <vscale x 2 x double> %val, ptr %ptr
   ret void
 }

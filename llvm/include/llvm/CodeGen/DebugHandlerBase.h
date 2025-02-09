@@ -70,7 +70,7 @@ protected:
 
   /// This location indicates end of function prologue and beginning of
   /// function body.
-  DebugLoc PrologEndLoc;
+  const MachineInstr *PrologEndLoc;
 
   /// This block includes epilogue instructions.
   const MachineBasicBlock *EpilogBeginBlock = nullptr;
@@ -118,6 +118,8 @@ private:
 
   // AsmPrinterHandler overrides.
 public:
+  virtual ~DebugHandlerBase() override;
+
   void beginModule(Module *M) override;
 
   void beginInstruction(const MachineInstr *MI) override;

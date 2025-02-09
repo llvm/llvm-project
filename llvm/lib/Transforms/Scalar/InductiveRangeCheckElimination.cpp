@@ -84,11 +84,9 @@
 #include "llvm/Transforms/Utils/LoopConstrainer.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <optional>
 #include <utility>
 
@@ -107,8 +105,8 @@ static cl::opt<bool> PrintRangeChecks("irce-print-range-checks", cl::Hidden,
 static cl::opt<bool> SkipProfitabilityChecks("irce-skip-profitability-checks",
                                              cl::Hidden, cl::init(false));
 
-static cl::opt<unsigned> MinRuntimeIterations("irce-min-runtime-iterations",
-                                              cl::Hidden, cl::init(10));
+static cl::opt<unsigned> MinEliminatedChecks("irce-min-eliminated-checks",
+                                             cl::Hidden, cl::init(10));
 
 static cl::opt<bool> AllowUnsignedLatchCondition("irce-allow-unsigned-latch",
                                                  cl::Hidden, cl::init(true));
@@ -132,15 +130,9 @@ static cl::opt<bool>
 
 namespace {
 
-/// An inductive range check is conditional branch in a loop with
-///
-///  1. a very cold successor (i.e. the branch jumps to that successor very
-///     rarely)
-///
-///  and
-///
-///  2. a condition that is provably true for some contiguous range of values
-///     taken by the containing loop's induction variable.
+/// An inductive range check is conditional branch in a loop with a condition
+/// that is provably true for some contiguous range of values taken by the
+/// containing loop's induction variable.
 ///
 class InductiveRangeCheck {
 
@@ -235,6 +227,7 @@ public:
   /// checks, and hence don't end up in \p Checks.
   static void extractRangeChecksFromBranch(
       BranchInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
+      std::optional<uint64_t> EstimatedTripCount,
       SmallVectorImpl<InductiveRangeCheck> &Checks, bool &Changed);
 };
 
@@ -248,9 +241,10 @@ class InductiveRangeCheckElimination {
       std::optional<llvm::function_ref<llvm::BlockFrequencyInfo &()>>;
   GetBFIFunc GetBFI;
 
-  // Returns true if it is profitable to do a transform basing on estimation of
-  // number of iterations.
-  bool isProfitableToTransform(const Loop &L, LoopStructure &LS);
+  // Returns the estimated number of iterations based on block frequency info if
+  // available, or on branch probability info. Nullopt is returned if the number
+  // of iterations cannot be estimated.
+  std::optional<uint64_t> estimatedTripCount(const Loop &L);
 
 public:
   InductiveRangeCheckElimination(ScalarEvolution &SE,
@@ -278,6 +272,9 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
+
+  if (!LHS->getType()->isIntegerTy())
+    return false;
 
   // Canonicalize to the `Index Pred Invariant` comparison
   if (IsLoopInvariant(LHS)) {
@@ -521,6 +518,7 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
 
 void InductiveRangeCheck::extractRangeChecksFromBranch(
     BranchInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
+    std::optional<uint64_t> EstimatedTripCount,
     SmallVectorImpl<InductiveRangeCheck> &Checks, bool &Changed) {
   if (BI->isUnconditional() || BI->getParent() == L->getLoopLatch())
     return;
@@ -528,11 +526,32 @@ void InductiveRangeCheck::extractRangeChecksFromBranch(
   unsigned IndexLoopSucc = L->contains(BI->getSuccessor(0)) ? 0 : 1;
   assert(L->contains(BI->getSuccessor(IndexLoopSucc)) &&
          "No edges coming to loop?");
-  BranchProbability LikelyTaken(15, 16);
 
-  if (!SkipProfitabilityChecks && BPI &&
-      BPI->getEdgeProbability(BI->getParent(), IndexLoopSucc) < LikelyTaken)
-    return;
+  if (!SkipProfitabilityChecks && BPI) {
+    auto SuccessProbability =
+        BPI->getEdgeProbability(BI->getParent(), IndexLoopSucc);
+    if (EstimatedTripCount) {
+      auto EstimatedEliminatedChecks =
+          SuccessProbability.scale(*EstimatedTripCount);
+      if (EstimatedEliminatedChecks < MinEliminatedChecks) {
+        LLVM_DEBUG(dbgs() << "irce: could not prove profitability for branch "
+                          << *BI << ": "
+                          << "estimated eliminated checks too low "
+                          << EstimatedEliminatedChecks << "\n";);
+        return;
+      }
+    } else {
+      BranchProbability LikelyTaken(15, 16);
+      if (SuccessProbability < LikelyTaken) {
+        LLVM_DEBUG(dbgs() << "irce: could not prove profitability for branch "
+                          << *BI << ": "
+                          << "could not estimate trip count "
+                          << "and branch success probability too low "
+                          << SuccessProbability << "\n";);
+        return;
+      }
+    }
+  }
 
   // IRCE expects branch's true edge comes to loop. Invert branch for opposite
   // case.
@@ -937,35 +956,34 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   return getLoopPassPreservedAnalyses();
 }
 
-bool
-InductiveRangeCheckElimination::isProfitableToTransform(const Loop &L,
-                                                        LoopStructure &LS) {
-  if (SkipProfitabilityChecks)
-    return true;
+std::optional<uint64_t>
+InductiveRangeCheckElimination::estimatedTripCount(const Loop &L) {
   if (GetBFI) {
     BlockFrequencyInfo &BFI = (*GetBFI)();
-    uint64_t hFreq = BFI.getBlockFreq(LS.Header).getFrequency();
+    uint64_t hFreq = BFI.getBlockFreq(L.getHeader()).getFrequency();
     uint64_t phFreq = BFI.getBlockFreq(L.getLoopPreheader()).getFrequency();
-    if (phFreq != 0 && hFreq != 0 && (hFreq / phFreq < MinRuntimeIterations)) {
-      LLVM_DEBUG(dbgs() << "irce: could not prove profitability: "
-                        << "the estimated number of iterations basing on "
-                           "frequency info is " << (hFreq / phFreq) << "\n";);
-      return false;
-    }
-    return true;
+    if (phFreq == 0 || hFreq == 0)
+      return std::nullopt;
+    return {hFreq / phFreq};
   }
 
   if (!BPI)
-    return true;
+    return std::nullopt;
+
+  auto *Latch = L.getLoopLatch();
+  if (!Latch)
+    return std::nullopt;
+  auto *LatchBr = dyn_cast<BranchInst>(Latch->getTerminator());
+  if (!LatchBr)
+    return std::nullopt;
+
+  auto LatchBrExitIdx = LatchBr->getSuccessor(0) == L.getHeader() ? 1 : 0;
   BranchProbability ExitProbability =
-      BPI->getEdgeProbability(LS.Latch, LS.LatchBrExitIdx);
-  if (ExitProbability > BranchProbability(1, MinRuntimeIterations)) {
-    LLVM_DEBUG(dbgs() << "irce: could not prove profitability: "
-                      << "the exit probability is too big " << ExitProbability
-                      << "\n";);
-    return false;
-  }
-  return true;
+      BPI->getEdgeProbability(Latch, LatchBrExitIdx);
+  if (ExitProbability.isUnknown() || ExitProbability.isZero())
+    return std::nullopt;
+
+  return {ExitProbability.scaleByInverse(1)};
 }
 
 bool InductiveRangeCheckElimination::run(
@@ -981,14 +999,23 @@ bool InductiveRangeCheckElimination::run(
     return false;
   }
 
+  auto EstimatedTripCount = estimatedTripCount(*L);
+  if (!SkipProfitabilityChecks && EstimatedTripCount &&
+      *EstimatedTripCount < MinEliminatedChecks) {
+    LLVM_DEBUG(dbgs() << "irce: could not prove profitability: "
+                      << "the estimated number of iterations is "
+                      << *EstimatedTripCount << "\n");
+    return false;
+  }
+
   LLVMContext &Context = Preheader->getContext();
   SmallVector<InductiveRangeCheck, 16> RangeChecks;
   bool Changed = false;
 
   for (auto *BBI : L->getBlocks())
     if (BranchInst *TBI = dyn_cast<BranchInst>(BBI->getTerminator()))
-      InductiveRangeCheck::extractRangeChecksFromBranch(TBI, L, SE, BPI,
-                                                        RangeChecks, Changed);
+      InductiveRangeCheck::extractRangeChecksFromBranch(
+          TBI, L, SE, BPI, EstimatedTripCount, RangeChecks, Changed);
 
   if (RangeChecks.empty())
     return Changed;
@@ -1016,8 +1043,6 @@ bool InductiveRangeCheckElimination::run(
     return Changed;
   }
   LoopStructure LS = *MaybeLoopStructure;
-  if (!isProfitableToTransform(*L, LS))
-    return Changed;
   const SCEVAddRecExpr *IndVar =
       cast<SCEVAddRecExpr>(SE.getMinusSCEV(SE.getSCEV(LS.IndVarBase), SE.getSCEV(LS.IndVarStep)));
 

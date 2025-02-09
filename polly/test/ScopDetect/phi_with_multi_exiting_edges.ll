@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Region with an exit node that has a PHI node multiple incoming edges from
 ; inside the region. Motivation for supporting such cases in Polly.

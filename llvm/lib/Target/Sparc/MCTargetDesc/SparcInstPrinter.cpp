@@ -14,7 +14,6 @@
 #include "Sparc.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/raw_ostream.h"
@@ -38,7 +37,7 @@ bool SparcInstPrinter::isV9(const MCSubtargetInfo &STI) const {
   return (STI.hasFeature(Sparc::FeatureV9)) != 0;
 }
 
-void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   OS << '%' << getRegisterName(Reg);
 }
 
@@ -250,6 +249,17 @@ void SparcInstPrinter::printASITag(const MCInst *MI, int opNum,
   auto ASITag = SparcASITag::lookupASITagByEncoding(Imm);
   if (isV9(STI) && ASITag)
     O << '#' << ASITag->Name;
+  else
+    O << Imm;
+}
+
+void SparcInstPrinter::printPrefetchTag(const MCInst *MI, int opNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  unsigned Imm = MI->getOperand(opNum).getImm();
+  auto PrefetchTag = SparcPrefetchTag::lookupPrefetchTagByEncoding(Imm);
+  if (PrefetchTag)
+    O << '#' << PrefetchTag->Name;
   else
     O << Imm;
 }

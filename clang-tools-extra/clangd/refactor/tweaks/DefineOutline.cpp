@@ -109,14 +109,13 @@ findContextForNS(llvm::StringRef TargetNS, const DeclContext *CurContext) {
 // afterwards it can be shared with define-inline code action.
 llvm::Expected<std::string>
 getFunctionSourceAfterReplacements(const FunctionDecl *FD,
-                                   const tooling::Replacements &Replacements) {
+                                   const tooling::Replacements &Replacements,
+                                   bool TargetFileIsHeader) {
   const auto &SM = FD->getASTContext().getSourceManager();
   auto OrigFuncRange = toHalfOpenFileRange(
       SM, FD->getASTContext().getLangOpts(), FD->getSourceRange());
   if (!OrigFuncRange)
     return error("Couldn't get range for function.");
-  assert(!FD->getDescribedFunctionTemplate() &&
-         "Define out-of-line doesn't apply to function templates.");
 
   // Get new begin and end positions for the qualified function definition.
   unsigned FuncBegin = SM.getFileOffset(OrigFuncRange->getBegin());
@@ -128,7 +127,42 @@ getFunctionSourceAfterReplacements(const FunctionDecl *FD,
       SM.getBufferData(SM.getMainFileID()), Replacements);
   if (!QualifiedFunc)
     return QualifiedFunc.takeError();
-  return QualifiedFunc->substr(FuncBegin, FuncEnd - FuncBegin + 1);
+
+  auto Source = QualifiedFunc->substr(FuncBegin, FuncEnd - FuncBegin + 1);
+  std::string TemplatePrefix;
+  auto AddToTemplatePrefixIfApplicable = [&](const Decl *D) {
+    const TemplateParameterList *Params = D->getDescribedTemplateParams();
+    if (!Params)
+      return;
+    for (Decl *P : *Params) {
+      if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(P))
+        TTP->removeDefaultArgument();
+      else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P))
+        NTTP->removeDefaultArgument();
+      else if (auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(P))
+        TTPD->removeDefaultArgument();
+    }
+    std::string S;
+    llvm::raw_string_ostream Stream(S);
+    Params->print(Stream, FD->getASTContext());
+    if (!S.empty())
+      *S.rbegin() = '\n'; // Replace space with newline
+    TemplatePrefix.insert(0, S);
+  };
+  AddToTemplatePrefixIfApplicable(FD);
+  if (auto *MD = llvm::dyn_cast<CXXMethodDecl>(FD)) {
+    for (const CXXRecordDecl *Parent = MD->getParent(); Parent;
+         Parent =
+             llvm::dyn_cast_or_null<const CXXRecordDecl>(Parent->getParent())) {
+      AddToTemplatePrefixIfApplicable(Parent);
+    }
+  }
+
+  if (TargetFileIsHeader)
+    Source.insert(0, "inline ");
+  if (!TemplatePrefix.empty())
+    Source.insert(0, TemplatePrefix);
+  return Source;
 }
 
 // Returns replacements to delete tokens with kind `Kind` in the range
@@ -179,14 +213,12 @@ deleteTokensWithKind(const syntax::TokenBuffer &TokBuf, tok::TokenKind Kind,
 // looked up in the context containing the function/method.
 // FIXME: Drop attributes in function signature.
 llvm::Expected<std::string>
-getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
+getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
                       const syntax::TokenBuffer &TokBuf,
-                      const HeuristicResolver *Resolver) {
+                      const HeuristicResolver *Resolver,
+                      bool TargetFileIsHeader) {
   auto &AST = FD->getASTContext();
   auto &SM = AST.getSourceManager();
-  auto TargetContext = findContextForNS(TargetNamespace, FD->getDeclContext());
-  if (!TargetContext)
-    return error("define outline: couldn't find a context for target");
 
   llvm::Error Errors = llvm::Error::success();
   tooling::Replacements DeclarationCleanups;
@@ -207,6 +239,8 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
           return;
 
         for (const NamedDecl *ND : Ref.Targets) {
+          if (ND->getKind() == Decl::TemplateTypeParm)
+            return;
           if (ND->getDeclContext() != Ref.Targets.front()->getDeclContext()) {
             elog("Targets from multiple contexts: {0}, {1}",
                  printQualifiedName(*Ref.Targets.front()),
@@ -215,9 +249,13 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
           }
         }
         const NamedDecl *ND = Ref.Targets.front();
-        const std::string Qualifier =
-            getQualification(AST, *TargetContext,
+        std::string Qualifier =
+            getQualification(AST, TargetContext,
                              SM.getLocForStartOfFile(SM.getMainFileID()), ND);
+        if (ND->getDeclContext()->isDependentContext() &&
+            llvm::isa<TypeDecl>(ND)) {
+          Qualifier.insert(0, "typename ");
+        }
         if (auto Err = DeclarationCleanups.add(
                 tooling::Replacement(SM, Ref.NameLoc, 0, Qualifier)))
           Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
@@ -232,7 +270,7 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
   if (const auto *Destructor = llvm::dyn_cast<CXXDestructorDecl>(FD)) {
     if (auto Err = DeclarationCleanups.add(tooling::Replacement(
             SM, Destructor->getLocation(), 0,
-            getQualification(AST, *TargetContext,
+            getQualification(AST, TargetContext,
                              SM.getLocForStartOfFile(SM.getMainFileID()),
                              Destructor))))
       Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
@@ -315,33 +353,14 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
 
   if (Errors)
     return std::move(Errors);
-  return getFunctionSourceAfterReplacements(FD, DeclarationCleanups);
+  return getFunctionSourceAfterReplacements(FD, DeclarationCleanups,
+                                            TargetFileIsHeader);
 }
 
 struct InsertionPoint {
-  std::string EnclosingNamespace;
+  const DeclContext *EnclosingNamespace = nullptr;
   size_t Offset;
 };
-// Returns the most natural insertion point for \p QualifiedName in \p Contents.
-// This currently cares about only the namespace proximity, but in feature it
-// should also try to follow ordering of declarations. For example, if decls
-// come in order `foo, bar, baz` then this function should return some point
-// between foo and baz for inserting bar.
-llvm::Expected<InsertionPoint> getInsertionPoint(llvm::StringRef Contents,
-                                                 llvm::StringRef QualifiedName,
-                                                 const LangOptions &LangOpts) {
-  auto Region = getEligiblePoints(Contents, QualifiedName, LangOpts);
-
-  assert(!Region.EligiblePoints.empty());
-  // FIXME: This selection can be made smarter by looking at the definition
-  // locations for adjacent decls to Source. Unfortunately pseudo parsing in
-  // getEligibleRegions only knows about namespace begin/end events so we
-  // can't match function start/end positions yet.
-  auto Offset = positionToOffset(Contents, Region.EligiblePoints.back());
-  if (!Offset)
-    return Offset.takeError();
-  return InsertionPoint{Region.EnclosingNamespace, *Offset};
-}
 
 // Returns the range that should be deleted from declaration, which always
 // contains function body. In addition to that it might contain constructor
@@ -409,39 +428,56 @@ public:
   }
 
   bool prepare(const Selection &Sel) override {
-    // Bail out if we are not in a header file.
-    // FIXME: We might want to consider moving method definitions below class
-    // definition even if we are inside a source file.
-    if (!isHeaderFile(Sel.AST->getSourceManager().getFilename(Sel.Cursor),
-                      Sel.AST->getLangOpts()))
-      return false;
-
+    SameFile = !isHeaderFile(Sel.AST->tuPath(), Sel.AST->getLangOpts());
     Source = getSelectedFunction(Sel.ASTSelection.commonAncestor());
+
     // Bail out if the selection is not a in-line function definition.
     if (!Source || !Source->doesThisDeclarationHaveABody() ||
         Source->isOutOfLine())
       return false;
 
-    // Bail out if this is a function template or specialization, as their
+    // Bail out if this is a function template specialization, as their
     // definitions need to be visible in all including translation units.
-    if (Source->getDescribedFunctionTemplate())
-      return false;
     if (Source->getTemplateSpecializationInfo())
       return false;
 
-    if (auto *MD = llvm::dyn_cast<CXXMethodDecl>(Source)) {
-      // Bail out in templated classes, as it is hard to spell the class name,
-      // i.e if the template parameter is unnamed.
-      if (MD->getParent()->isTemplated())
+    auto *MD = llvm::dyn_cast<CXXMethodDecl>(Source);
+    if (!MD) {
+      if (Source->getDescribedFunctionTemplate())
         return false;
+      // Can't outline free-standing functions in the same file.
+      return !SameFile;
+    }
 
-      // The refactoring is meaningless for unnamed classes and definitions
-      // within unnamed namespaces.
-      for (const DeclContext *DC = MD->getParent(); DC; DC = DC->getParent()) {
-        if (auto *ND = llvm::dyn_cast<NamedDecl>(DC)) {
-          if (ND->getDeclName().isEmpty())
+    for (const CXXRecordDecl *Parent = MD->getParent(); Parent;
+         Parent =
+             llvm::dyn_cast_or_null<const CXXRecordDecl>(Parent->getParent())) {
+      if (const TemplateParameterList *Params =
+              Parent->getDescribedTemplateParams()) {
+
+        // Class template member functions must be defined in the
+        // same file.
+        SameFile = true;
+
+        // Bail out if the template parameter is unnamed.
+        for (NamedDecl *P : *Params) {
+          if (!P->getIdentifier())
             return false;
         }
+      }
+    }
+
+    // Function templates must be defined in the same file.
+    if (MD->getDescribedTemplate())
+      SameFile = true;
+
+    // The refactoring is meaningless for unnamed classes and namespaces,
+    // unless we're outlining in the same file
+    for (const DeclContext *DC = MD->getParent(); DC; DC = DC->getParent()) {
+      if (auto *ND = llvm::dyn_cast<NamedDecl>(DC)) {
+        if (ND->getDeclName().isEmpty() &&
+            (!SameFile || !llvm::dyn_cast<NamespaceDecl>(ND)))
+          return false;
       }
     }
 
@@ -453,8 +489,8 @@ public:
 
   Expected<Effect> apply(const Selection &Sel) override {
     const SourceManager &SM = Sel.AST->getSourceManager();
-    auto CCFile = getSourceFile(Sel.AST->tuPath(), Sel);
-
+    auto CCFile = SameFile ? Sel.AST->tuPath().str()
+                           : getSourceFile(Sel.AST->tuPath(), Sel);
     if (!CCFile)
       return error("Couldn't find a suitable implementation file.");
     assert(Sel.FS && "FS Must be set in apply");
@@ -464,14 +500,14 @@ public:
     if (!Buffer)
       return llvm::errorCodeToError(Buffer.getError());
     auto Contents = Buffer->get()->getBuffer();
-    auto InsertionPoint = getInsertionPoint(
-        Contents, Source->getQualifiedNameAsString(), Sel.AST->getLangOpts());
+    auto InsertionPoint = getInsertionPoint(Contents, Sel);
     if (!InsertionPoint)
       return InsertionPoint.takeError();
 
     auto FuncDef = getFunctionSourceCode(
         Source, InsertionPoint->EnclosingNamespace, Sel.AST->getTokens(),
-        Sel.AST->getHeuristicResolver());
+        Sel.AST->getHeuristicResolver(),
+        SameFile && isHeaderFile(Sel.AST->tuPath(), Sel.AST->getLangOpts()));
     if (!FuncDef)
       return FuncDef.takeError();
 
@@ -499,17 +535,77 @@ public:
       HeaderUpdates = HeaderUpdates.merge(*DelInline);
     }
 
-    auto HeaderFE = Effect::fileEdit(SM, SM.getMainFileID(), HeaderUpdates);
-    if (!HeaderFE)
-      return HeaderFE.takeError();
-
-    Effect->ApplyEdits.try_emplace(HeaderFE->first,
-                                   std::move(HeaderFE->second));
+    if (SameFile) {
+      tooling::Replacements &R = Effect->ApplyEdits[*CCFile].Replacements;
+      R = R.merge(HeaderUpdates);
+    } else {
+      auto HeaderFE = Effect::fileEdit(SM, SM.getMainFileID(), HeaderUpdates);
+      if (!HeaderFE)
+        return HeaderFE.takeError();
+      Effect->ApplyEdits.try_emplace(HeaderFE->first,
+                                     std::move(HeaderFE->second));
+    }
     return std::move(*Effect);
+  }
+
+  // Returns the most natural insertion point for \p QualifiedName in \p
+  // Contents. This currently cares about only the namespace proximity, but in
+  // feature it should also try to follow ordering of declarations. For example,
+  // if decls come in order `foo, bar, baz` then this function should return
+  // some point between foo and baz for inserting bar.
+  // FIXME: The selection can be made smarter by looking at the definition
+  // locations for adjacent decls to Source. Unfortunately pseudo parsing in
+  // getEligibleRegions only knows about namespace begin/end events so we
+  // can't match function start/end positions yet.
+  llvm::Expected<InsertionPoint> getInsertionPoint(llvm::StringRef Contents,
+                                                   const Selection &Sel) {
+    // If the definition goes to the same file and there is a namespace,
+    // we should (and, in the case of anonymous namespaces, need to)
+    // put the definition into the original namespace block.
+    if (SameFile) {
+      auto *Klass = Source->getDeclContext()->getOuterLexicalRecordContext();
+      if (!Klass)
+        return error("moving to same file not supported for free functions");
+      const SourceLocation EndLoc = Klass->getBraceRange().getEnd();
+      const auto &TokBuf = Sel.AST->getTokens();
+      auto Tokens = TokBuf.expandedTokens();
+      auto It = llvm::lower_bound(
+          Tokens, EndLoc, [](const syntax::Token &Tok, SourceLocation EndLoc) {
+            return Tok.location() < EndLoc;
+          });
+      while (It != Tokens.end()) {
+        if (It->kind() != tok::semi) {
+          ++It;
+          continue;
+        }
+        unsigned Offset = Sel.AST->getSourceManager()
+                              .getDecomposedLoc(It->endLocation())
+                              .second;
+        return InsertionPoint{Klass->getEnclosingNamespaceContext(), Offset};
+      }
+      return error(
+          "failed to determine insertion location: no end of class found");
+    }
+
+    auto Region = getEligiblePoints(
+        Contents, Source->getQualifiedNameAsString(), Sel.AST->getLangOpts());
+
+    assert(!Region.EligiblePoints.empty());
+    auto Offset = positionToOffset(Contents, Region.EligiblePoints.back());
+    if (!Offset)
+      return Offset.takeError();
+
+    auto TargetContext =
+        findContextForNS(Region.EnclosingNamespace, Source->getDeclContext());
+    if (!TargetContext)
+      return error("define outline: couldn't find a context for target");
+
+    return InsertionPoint{*TargetContext, *Offset};
   }
 
 private:
   const FunctionDecl *Source = nullptr;
+  bool SameFile = false;
 };
 
 REGISTER_TWEAK(DefineOutline)

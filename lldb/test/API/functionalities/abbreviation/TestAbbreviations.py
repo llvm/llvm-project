@@ -20,6 +20,10 @@ class AbbreviationsTestCase(TestBase):
         self.assertTrue(result.Succeeded())
         self.assertEqual("apropos script", result.GetOutput())
 
+        command_interpreter.ResolveCommand("e", result)
+        self.assertTrue(result.Succeeded())
+        self.assertEqual("expression", result.GetOutput())
+
         command_interpreter.ResolveCommand("h", result)
         self.assertTrue(result.Succeeded())
         self.assertEqual("help", result.GetOutput())
@@ -41,10 +45,12 @@ class AbbreviationsTestCase(TestBase):
 
         # Make sure an unabbreviated command is not mangled.
         command_interpreter.ResolveCommand(
-            "breakpoint set --name main --line 123", result
+            "breakpoint set --name main --ignore-count 123", result
         )
         self.assertTrue(result.Succeeded())
-        self.assertEqual("breakpoint set --name main --line 123", result.GetOutput())
+        self.assertEqual(
+            "breakpoint set --name main --ignore-count 123", result.GetOutput()
+        )
 
         # Create some aliases.
         self.runCmd("com a alias com al")
@@ -68,10 +74,10 @@ class AbbreviationsTestCase(TestBase):
             "process launch -s -o /dev/tty0 -e /dev/tty0", result.GetOutput()
         )
 
-        self.runCmd("alias xyzzy breakpoint set -n %1 -l %2")
+        self.runCmd("alias xyzzy breakpoint set -n %1 -i %2")
         command_interpreter.ResolveCommand("xyzzy main 123", result)
         self.assertTrue(result.Succeeded())
-        self.assertEqual("breakpoint set -n main -l 123", result.GetOutput().strip())
+        self.assertEqual("breakpoint set -n main -i 123", result.GetOutput().strip())
 
         # And again, without enough parameters.
         command_interpreter.ResolveCommand("xyzzy main", result)
@@ -80,7 +86,19 @@ class AbbreviationsTestCase(TestBase):
         # Check a command that wants the raw input.
         command_interpreter.ResolveCommand(r"""sc print("\n\n\tHello!\n")""", result)
         self.assertTrue(result.Succeeded())
-        self.assertEqual(r"""script print("\n\n\tHello!\n")""", result.GetOutput())
+        self.assertEqual(
+            r"""scripting run print("\n\n\tHello!\n")""", result.GetOutput()
+        )
+
+        command_interpreter.ResolveCommand("script 1+1", result)
+        self.assertTrue(result.Succeeded())
+        self.assertEqual("scripting run 1+1", result.GetOutput())
+
+        # Name and line are incompatible options.
+        command_interpreter.HandleCommand(
+            "alias zzyx breakpoint set -n %1 -l %2", result
+        )
+        self.assertFalse(result.Succeeded())
 
         # Prompt changing stuff should be tested, but this doesn't seem like the
         # right test to do it in.  It has nothing to do with aliases or abbreviations.

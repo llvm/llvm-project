@@ -27,7 +27,7 @@ S1:
 ; CHECK: call void @llvm.aarch64.settag(ptr %w, i64 48)
 ; CHECK-NOT: settag{{.*}}%v
   call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %w) #1
-; CHECK: call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %w.tag)
+; CHECK: call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %w)
   %b1 = icmp eq i32 %t1, 0
   br i1 %b1, label %S2, label %S3
 ; CHECK-NOT: settag

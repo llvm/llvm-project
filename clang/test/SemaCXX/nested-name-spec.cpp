@@ -25,7 +25,7 @@ int A::C::cx = 17;
 
 static int A::C::cx2 = 17; // expected-error{{'static' can}}
 
-class C2 {
+class C2 { // #defined-here-C2
   void m(); // expected-note{{member declaration does not match because it is not const qualified}}
 
   void f(const int& parm); // expected-note{{type of 1st parameter of member declaration does not match definition ('const int &' vs 'int')}}
@@ -36,8 +36,10 @@ class C2 {
 };
 
 void C2::m() const { } // expected-error{{out-of-line definition of 'm' does not match any declaration in 'C2'}}
+                       // expected-note@#defined-here-C2{{defined here}}
 
 void C2::f(int) { } // expected-error{{out-of-line definition of 'f' does not match any declaration in 'C2'}}
+                    // expected-note@#defined-here-C2{{defined here}}
 
 void C2::m() {
   x = 0;
@@ -65,7 +67,7 @@ A::C c1;
 struct A::C c2;
 struct S : public A::C {};
 struct A::undef; // expected-error {{no struct named 'undef' in namespace 'A'}}
-
+                 // expected-error@-1 {{forward declaration of struct cannot have a nested name specifier}}
 namespace A2 {
   typedef int INT;
   struct RC;
@@ -122,12 +124,13 @@ namespace E {
 }
 
 
-class Operators {
+class Operators { // #defined-here-Operators
   Operators operator+(const Operators&) const; // expected-note{{member declaration does not match because it is const qualified}}
   operator bool();
 };
 
 Operators Operators::operator+(const Operators&) { // expected-error{{out-of-line definition of 'operator+' does not match any declaration in 'Operators'}}
+                                                   // expected-note@#defined-here-Operators{{defined here}}
   Operators ops;
   return ops;
 }
@@ -149,9 +152,10 @@ void A::f() {} // expected-error-re{{out-of-line definition of 'f' does not matc
 
 void A::g(const int&) { } // expected-error{{out-of-line definition of 'g' does not match any declaration in namespace 'A'}}
 
-struct Struct { };
+struct Struct { }; // #defined-here-Struct
 
 void Struct::f() { } // expected-error{{out-of-line definition of 'f' does not match any declaration in 'Struct'}}
+                     // expected-note@#defined-here-Struct{{defined here}}
 
 void global_func(int);
 void global_func2(int);
@@ -280,9 +284,11 @@ template<typename T>
 struct A {
 protected:
   struct B;
-  struct B::C; // expected-error {{requires a template parameter list}} \
-               // expected-error {{no struct named 'C'}} \
-    // expected-error{{non-friend class member 'C' cannot have a qualified name}}
+  struct B::C;
+  // expected-error@-1 {{requires a template parameter list}}
+  // expected-error@-2 {{no struct named 'C'}}
+  // expected-error@-3 {{non-friend class member 'C' cannot have a qualified name}}
+  // expected-error@-4 {{forward declaration of struct cannot have a nested name specifier}}
 };
 
 template<typename T>
@@ -292,6 +298,7 @@ protected:
 };
 template <typename T>
 struct A2<T>::B::C; // expected-error {{no struct named 'C'}}
+                    // expected-error@-1 {{forward declaration of struct cannot have a nested name specifier}}
 }
 
 namespace PR13033 {

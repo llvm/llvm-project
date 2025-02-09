@@ -29,9 +29,9 @@ static_assert(test<a::b::C2>); // expected-error {{too few template arguments fo
 static_assert(test<C3>); // expected-error {{too few template arguments for concept 'C3'}} \
                          // expected-note@#C3 {{here}}
 
-static_assert(test<a::V1>); // expected-error {{use of variable template 'V1' requires template arguments}} \
+static_assert(test<a::V1>); // expected-error {{use of variable template 'a::V1' requires template arguments}} \
                             // expected-note@#V1 {{here}}
-static_assert(test<a::b::V2>); // expected-error {{use of variable template 'V2' requires template arguments}} \
+static_assert(test<a::b::V2>); // expected-error {{use of variable template 'a::b::V2' requires template arguments}} \
                             // expected-note@#V2 {{here}}
 static_assert(test<V3>); // expected-error {{use of variable template 'V3' requires template arguments}} \
                          // expected-note@#V3 {{here}}

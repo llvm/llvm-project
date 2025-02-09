@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineStableHash.h"
 #include <initializer_list>
 
 namespace llvm {
@@ -87,7 +88,7 @@ private:
     // Compute liveness from the end of the block up to the beginning of the
     // outlining candidate.
     for (auto &MI : make_range(MBB->rbegin(),
-                               (MachineBasicBlock::reverse_iterator)front()))
+                               (MachineBasicBlock::reverse_iterator)begin()))
       FromEndOfBlockToStartOfSeq.stepBackward(MI);
   }
 
@@ -100,7 +101,7 @@ private:
       return;
     InSeqWasSet = true;
     InSeq.init(TRI);
-    for (auto &MI : make_range(front(), std::next(back())))
+    for (auto &MI : *this)
       InSeq.accumulate(MI);
   }
 
@@ -135,8 +136,11 @@ public:
   /// Returns the call overhead of this candidate if it is in the list.
   unsigned getCallOverhead() const { return CallOverhead; }
 
-  MachineBasicBlock::iterator &front() { return FirstInst; }
-  MachineBasicBlock::iterator &back() { return LastInst; }
+  MachineBasicBlock::iterator begin() { return FirstInst; }
+  MachineBasicBlock::iterator end() { return std::next(LastInst); }
+
+  MachineInstr &front() { return *FirstInst; }
+  MachineInstr &back() { return *LastInst; }
   MachineFunction *getMF() const { return MBB->getParent(); }
   MachineBasicBlock *getMBB() const { return MBB; }
 
@@ -231,11 +235,11 @@ public:
   unsigned FrameConstructionID = 0;
 
   /// Return the number of candidates for this \p OutlinedFunction.
-  unsigned getOccurrenceCount() const { return Candidates.size(); }
+  virtual unsigned getOccurrenceCount() const { return Candidates.size(); }
 
   /// Return the number of bytes it would take to outline this
   /// function.
-  unsigned getOutliningCost() const {
+  virtual unsigned getOutliningCost() const {
     unsigned CallOverhead = 0;
     for (const Candidate &C : Candidates)
       CallOverhead += C.getCallOverhead();
@@ -269,7 +273,42 @@ public:
   }
 
   OutlinedFunction() = delete;
+  virtual ~OutlinedFunction() = default;
 };
+
+/// The information necessary to create an outlined function that is matched
+/// globally.
+struct GlobalOutlinedFunction : public OutlinedFunction {
+  explicit GlobalOutlinedFunction(std::unique_ptr<OutlinedFunction> OF,
+                                  unsigned GlobalOccurrenceCount)
+      : OutlinedFunction(*OF), GlobalOccurrenceCount(GlobalOccurrenceCount) {}
+
+  unsigned GlobalOccurrenceCount;
+
+  /// Return the number of times that appear globally.
+  /// Global outlining candidate is uniquely created per each match, but this
+  /// might be erased out when it's overlapped with the previous outlining
+  /// instance.
+  unsigned getOccurrenceCount() const override {
+    assert(Candidates.size() <= 1);
+    return Candidates.empty() ? 0 : GlobalOccurrenceCount;
+  }
+
+  /// Return the outlining cost using the global occurrence count
+  /// with the same cost as the first (unique) candidate.
+  unsigned getOutliningCost() const override {
+    assert(Candidates.size() <= 1);
+    unsigned CallOverhead =
+        Candidates.empty()
+            ? 0
+            : Candidates[0].getCallOverhead() * getOccurrenceCount();
+    return CallOverhead + SequenceSize + FrameOverhead;
+  }
+
+  GlobalOutlinedFunction() = delete;
+  ~GlobalOutlinedFunction() = default;
+};
+
 } // namespace outliner
 } // namespace llvm
 

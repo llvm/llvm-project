@@ -1,5 +1,5 @@
 ; Checks that case when GEP is bound to trivial PHI node is correctly handled.
-; RUN: opt %s -mtriple=aarch64-linux-gnu -codegenprepare -S -o - | FileCheck %s
+; RUN: opt %s -mtriple=aarch64-linux-gnu -passes='require<profile-summary>,function(codegenprepare)' -S -o - | FileCheck %s
 
 ; CHECK:      define void @crash(ptr %s, i32 %n) {
 ; CHECK-NEXT: entry:

@@ -28,6 +28,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -37,9 +40,7 @@ namespace ranges {
 template <class _InIter1, class _InIter2, class _OutIter>
 using set_intersection_result = in_in_out_result<_InIter1, _InIter2, _OutIter>;
 
-namespace __set_intersection {
-
-struct __fn {
+struct __set_intersection {
   template <input_iterator _InIter1,
             sentinel_for<_InIter1> _Sent1,
             input_iterator _InIter2,
@@ -95,14 +96,15 @@ struct __fn {
   }
 };
 
-} // namespace __set_intersection
-
 inline namespace __cpo {
-inline constexpr auto set_intersection = __set_intersection::__fn{};
+inline constexpr auto set_intersection = __set_intersection{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
+
 #endif // _LIBCPP___ALGORITHM_RANGES_SET_INTERSECTION_H

@@ -1,19 +1,19 @@
 ; RUN: opt -passes=licm < %s -S | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<target-ir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
 
-define void @f_0(i1 %p) nounwind ssp {
+define void @f_0(i1 %p, i1 %arg) nounwind ssp {
 ; CHECK-LABEL: @f_0(
 entry:
   br label %for.body
 
 for.body:
-  br i1 undef, label %if.then, label %for.cond.backedge
+  br i1 %arg, label %if.then, label %for.cond.backedge
 
 for.cond.backedge:
-  br i1 undef, label %for.end104, label %for.body
+  br i1 %arg, label %for.end104, label %for.body
 
 if.then:
-  br i1 undef, label %if.then27, label %if.end.if.end.split_crit_edge.critedge
+  br i1 %arg, label %if.then27, label %if.end.if.end.split_crit_edge.critedge
 
 if.then27:
 ; CHECK: tail call void @llvm.assume
@@ -24,10 +24,10 @@ if.end.if.end.split_crit_edge.critedge:
   br label %for.body61
 
 for.body61.us:
-  br i1 undef, label %for.cond.backedge, label %for.body61.us
+  br i1 %arg, label %for.cond.backedge, label %for.body61.us
 
 for.body61:
-  br i1 undef, label %for.cond.backedge, label %for.body61
+  br i1 %arg, label %for.cond.backedge, label %for.body61
 
 for.end104:
   ret void

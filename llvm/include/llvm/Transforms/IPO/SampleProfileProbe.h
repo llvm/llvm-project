@@ -17,6 +17,7 @@
 
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include <unordered_map>
 
@@ -81,9 +82,16 @@ private:
   uint64_t getFunctionHash() const { return FunctionHash; }
   uint32_t getBlockId(const BasicBlock *BB) const;
   uint32_t getCallsiteId(const Instruction *Call) const;
-  void computeCFGHash();
-  void computeProbeIdForBlocks();
-  void computeProbeIdForCallsites();
+  void findUnreachableBlocks(DenseSet<BasicBlock *> &BlocksToIgnore);
+  void findInvokeNormalDests(DenseSet<BasicBlock *> &InvokeNormalDests);
+  void computeBlocksToIgnore(DenseSet<BasicBlock *> &BlocksToIgnore,
+                             DenseSet<BasicBlock *> &BlocksAndCallsToIgnore);
+  const Instruction *
+  getOriginalTerminator(const BasicBlock *Head,
+                        const DenseSet<BasicBlock *> &BlocksToIgnore);
+  void computeCFGHash(const DenseSet<BasicBlock *> &BlocksToIgnore);
+  void computeProbeId(const DenseSet<BasicBlock *> &BlocksToIgnore,
+                      const DenseSet<BasicBlock *> &BlocksAndCallsToIgnore);
 
   Function *F;
 

@@ -19,12 +19,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <clc/clc.h>
 
-#include "math.h"
 #include "sincos_helpers.h"
-#include "../clcmacro.h"
-#include "tables.h"
+#include <clc/clc.h>
+#include <clc/clcmacro.h>
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
 
 _CLC_DEF _CLC_OVERLOAD float __clc_tanpi(float x)
 {

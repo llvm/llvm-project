@@ -73,10 +73,10 @@ complex function test_optional_as_value(real, imaginary)
 end function
 ! CHECK-LABEL:   func.func @_QPtest_optional_as_value(
 ! CHECK-SAME:                                         %[[REAL_ARG:.*]]: !fir.ref<f32> {fir.bindc_name = "real"},
-! CHECK-SAME:                                         %[[IMAG_ARG:.*]]: !fir.ref<f32> {fir.bindc_name = "imaginary", fir.optional}) -> !fir.complex<4> {
+! CHECK-SAME:                                         %[[IMAG_ARG:.*]]: !fir.ref<f32> {fir.bindc_name = "imaginary", fir.optional}) -> complex<f32> {
 ! CHECK:           %[[IMAG_VAR:.*]]:2 = hlfir.declare %[[IMAG_ARG]]
 ! CHECK:           %[[REAL_VAR:.*]]:2 = hlfir.declare %[[REAL_ARG]]
-! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca !fir.complex<4> {bindc_name = "test_optional_as_value", uniq_name = "_QFtest_optional_as_valueEtest_optional_as_value"}
+! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca complex<f32> {bindc_name = "test_optional_as_value", uniq_name = "_QFtest_optional_as_valueEtest_optional_as_value"}
 ! CHECK:           %[[RET_VAR:.*]]:2 = hlfir.declare %[[RET_ALLOC]]
 ! CHECK:           %[[IS_PRESENT:.*]] = fir.is_present %[[IMAG_VAR]]#0 : (!fir.ref<f32>) -> i1
 ! CHECK:           %[[REAL_LD:.*]] = fir.load %[[REAL_VAR]]#0 : !fir.ref<f32>
@@ -87,12 +87,12 @@ end function
 ! CHECK:             %[[IMAG_ABSENT:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:             fir.result %[[IMAG_ABSENT]] : f32
 ! CHECK:           }
-! CHECK:           %[[UNDEF:.*]] = fir.undefined !fir.complex<4>
-! CHECK:           %[[INS_REAL:.*]] = fir.insert_value %[[UNDEF]], %[[REAL_LD]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:           %[[INS_IMAG:.*]] = fir.insert_value %[[INS_REAL]], %[[IMAG_LD:.*]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:           %[[UNDEF:.*]] = fir.undefined complex<f32>
+! CHECK:           %[[INS_REAL:.*]] = fir.insert_value %[[UNDEF]], %[[REAL_LD]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:           %[[INS_IMAG:.*]] = fir.insert_value %[[INS_REAL]], %[[IMAG_LD:.*]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 ! CHECK:           hlfir.assign %[[INS_IMAG]] to %[[RET_VAR]]#0
-! CHECK:           %[[RET:.*]] = fir.load %[[RET_VAR]]#1 : !fir.ref<!fir.complex<4>>
-! CHECK:           return %[[RET]] : !fir.complex<4>
+! CHECK:           %[[RET:.*]] = fir.load %[[RET_VAR]]#1 : !fir.ref<complex<f32>>
+! CHECK:           return %[[RET]] : complex<f32>
 ! CHECK:         }
 
 ! stat argument is dynamically optional, lowered as an address
@@ -163,19 +163,19 @@ function test_elemental_optional_as_value(real, imaginary)
 end function
 ! CHECK-LABEL:   func.func @_QPtest_elemental_optional_as_value(
 ! CHECK-SAME:                                                   %[[VAL_0:.*]]: !fir.ref<!fir.array<3xf32>> {fir.bindc_name = "real"},
-! CHECK-SAME:                                                   %[[VAL_1:.*]]: !fir.ref<!fir.array<3xf32>> {fir.bindc_name = "imaginary", fir.optional}) -> !fir.array<3x!fir.complex<4>> {
+! CHECK-SAME:                                                   %[[VAL_1:.*]]: !fir.ref<!fir.array<3xf32>> {fir.bindc_name = "imaginary", fir.optional}) -> !fir.array<3xcomplex<f32>> {
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_elemental_optional_as_valueEimaginary"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_elemental_optional_as_valueEimaginary"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) {uniq_name = "_QFtest_elemental_optional_as_valueEreal"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_elemental_optional_as_valueEreal"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<3x!fir.complex<4>> {bindc_name = "test_elemental_optional_as_value", uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"}
+! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<3xcomplex<f32>> {bindc_name = "test_elemental_optional_as_value", uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"}
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) {uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"} : (!fir.ref<!fir.array<3x!fir.complex<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.complex<4>>>, !fir.ref<!fir.array<3x!fir.complex<4>>>)
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) {uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"} : (!fir.ref<!fir.array<3xcomplex<f32>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xcomplex<f32>>>, !fir.ref<!fir.array<3xcomplex<f32>>>)
 ! CHECK:           %[[VAL_12:.*]] = fir.is_present %[[VAL_4]]#0 : (!fir.ref<!fir.array<3xf32>>) -> i1
-! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_6]] unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.complex<4>> {
+! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_6]] unordered : (!fir.shape<1>) -> !hlfir.expr<3xcomplex<f32>> {
 ! CHECK:           ^bb0(%[[VAL_14:.*]]: index):
 ! CHECK:             %[[VAL_15:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_14]])  : (!fir.ref<!fir.array<3xf32>>, index) -> !fir.ref<f32>
 ! CHECK:             %[[VAL_16:.*]] = fir.load %[[VAL_15]] : !fir.ref<f32>
@@ -187,15 +187,15 @@ end function
 ! CHECK:               %[[VAL_20:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:               fir.result %[[VAL_20]] : f32
 ! CHECK:             }
-! CHECK:             %[[VAL_21:.*]] = fir.undefined !fir.complex<4>
-! CHECK:             %[[VAL_22:.*]] = fir.insert_value %[[VAL_21]], %[[VAL_16]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:             %[[VAL_23:.*]] = fir.insert_value %[[VAL_22]], %[[VAL_17]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:             hlfir.yield_element %[[VAL_23]] : !fir.complex<4>
+! CHECK:             %[[VAL_21:.*]] = fir.undefined complex<f32>
+! CHECK:             %[[VAL_22:.*]] = fir.insert_value %[[VAL_21]], %[[VAL_16]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:             %[[VAL_23:.*]] = fir.insert_value %[[VAL_22]], %[[VAL_17]], [1 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:             hlfir.yield_element %[[VAL_23]] : complex<f32>
 ! CHECK:           }
-! CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_11]]#0 : !hlfir.expr<3x!fir.complex<4>>, !fir.ref<!fir.array<3x!fir.complex<4>>>
-! CHECK:           hlfir.destroy %[[VAL_13]] : !hlfir.expr<3x!fir.complex<4>>
-! CHECK:           %[[VAL_24:.*]] = fir.load %[[VAL_11]]#1 : !fir.ref<!fir.array<3x!fir.complex<4>>>
-! CHECK:           return %[[VAL_24]] : !fir.array<3x!fir.complex<4>>
+! CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_11]]#0 : !hlfir.expr<3xcomplex<f32>>, !fir.ref<!fir.array<3xcomplex<f32>>>
+! CHECK:           hlfir.destroy %[[VAL_13]] : !hlfir.expr<3xcomplex<f32>>
+! CHECK:           %[[VAL_24:.*]] = fir.load %[[VAL_11]]#1 : !fir.ref<!fir.array<3xcomplex<f32>>>
+! CHECK:           return %[[VAL_24]] : !fir.array<3xcomplex<f32>>
 ! CHECK:         }
 
 ! TODO: there seem to be no intrinsics with dynamically optional arguments lowered asInquired

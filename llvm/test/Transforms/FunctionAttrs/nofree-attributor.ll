@@ -32,7 +32,7 @@ define void @only_return() #0 {
 define void @only_free(ptr nocapture %0) local_unnamed_addr #0 {
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@only_free
-; FNATTR-SAME: (ptr nocapture [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; FNATTR-SAME: (ptr captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; FNATTR-NEXT:    tail call void @free(ptr [[TMP0]]) #[[ATTR0:[0-9]+]]
 ; FNATTR-NEXT:    ret void
 ;
@@ -54,7 +54,7 @@ define void @only_free(ptr nocapture %0) local_unnamed_addr #0 {
 define void @free_in_scc1(ptr nocapture %0) local_unnamed_addr #0 {
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@free_in_scc1
-; FNATTR-SAME: (ptr nocapture [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; FNATTR-SAME: (ptr captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; FNATTR-NEXT:    tail call void @free_in_scc2(ptr [[TMP0]]) #[[ATTR0]]
 ; FNATTR-NEXT:    ret void
 ;
@@ -65,7 +65,7 @@ define void @free_in_scc1(ptr nocapture %0) local_unnamed_addr #0 {
 define void @free_in_scc2(ptr nocapture %0) local_unnamed_addr #0 {
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@free_in_scc2
-; FNATTR-SAME: (ptr nocapture [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; FNATTR-SAME: (ptr captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; FNATTR-NEXT:    [[CMP:%.*]] = icmp eq ptr [[TMP0]], null
 ; FNATTR-NEXT:    br i1 [[CMP]], label [[REC:%.*]], label [[CALL:%.*]]
 ; FNATTR:       call:
@@ -158,7 +158,7 @@ define void @_Z9delete_opPc(ptr %0) local_unnamed_addr #0 {
 define noalias ptr @call_realloc(ptr nocapture %0, i64 %1) local_unnamed_addr #0 {
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@call_realloc
-; FNATTR-SAME: (ptr nocapture [[TMP0:%.*]], i64 [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; FNATTR-SAME: (ptr captures(none) [[TMP0:%.*]], i64 [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; FNATTR-NEXT:    [[RET:%.*]] = tail call ptr @realloc(ptr [[TMP0]], i64 [[TMP1]]) #[[ATTR2]]
 ; FNATTR-NEXT:    ret ptr [[RET]]
 ;
@@ -225,9 +225,9 @@ define void @call_both() #0 {
 declare float @llvm.floor.f32(float)
 
 define void @call_floor(float %a) #0 {
-; FNATTR: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
+; FNATTR: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@call_floor
-; FNATTR-SAME: (float [[A:%.*]]) #[[ATTR7:[0-9]+]] {
+; FNATTR-SAME: (float [[A:%.*]]) #[[ATTR3]] {
 ; FNATTR-NEXT:    [[TMP1:%.*]] = tail call float @llvm.floor.f32(float [[A]])
 ; FNATTR-NEXT:    ret void
 ;

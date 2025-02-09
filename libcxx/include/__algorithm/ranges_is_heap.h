@@ -26,14 +26,15 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __is_heap {
-
-struct __fn {
+struct __is_heap {
   template <class _Iter, class _Sent, class _Proj, class _Comp>
   _LIBCPP_HIDE_FROM_ABI constexpr static bool
   __is_heap_fn_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
@@ -48,7 +49,7 @@ struct __fn {
             sentinel_for<_Iter> _Sent,
             class _Proj                                               = identity,
             indirect_strict_weak_order<projected<_Iter, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
   operator()(_Iter __first, _Sent __last, _Comp __comp = {}, _Proj __proj = {}) const {
     return __is_heap_fn_impl(std::move(__first), std::move(__last), __comp, __proj);
   }
@@ -56,21 +57,21 @@ struct __fn {
   template <random_access_range _Range,
             class _Proj                                                            = identity,
             indirect_strict_weak_order<projected<iterator_t<_Range>, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
   operator()(_Range&& __range, _Comp __comp = {}, _Proj __proj = {}) const {
     return __is_heap_fn_impl(ranges::begin(__range), ranges::end(__range), __comp, __proj);
   }
 };
 
-} // namespace __is_heap
-
 inline namespace __cpo {
-inline constexpr auto is_heap = __is_heap::__fn{};
+inline constexpr auto is_heap = __is_heap{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_IS_HEAP_H

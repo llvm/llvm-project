@@ -19,6 +19,11 @@ class ObjCDataFormatterNSDate(ObjCDataFormatterTestCase):
         """Test formatters for  NSDate."""
         self.appkit_tester_impl(self.nsdate_data_formatter_commands, False)
 
+    @skipIf(macos_version=[">=", "14.0"])
+    def test_timezone_with_run_command(self):
+        """Test formatters for NSTimeZone and CFTimeZone."""
+        self.appkit_tester_impl(self.timezone_data_formatter_commands, False)
+
     def nsdate_data_formatter_commands(self):
         self.expect(
             "frame variable date1 date2",
@@ -52,16 +57,6 @@ class ObjCDataFormatterNSDate(ObjCDataFormatterTestCase):
         self.expect_expr("date_1970_plus_04", result_summary="1970-01-01 00:00:00 UTC")
 
         self.expect(
-            "frame variable cupertino home europe",
-            substrs=['"America/Los_Angeles"', '"Europe/Rome"', '"Europe/Paris"'],
-        )
-
-        self.expect(
-            "frame variable cupertino_ns home_ns europe_ns",
-            substrs=['"America/Los_Angeles"', '"Europe/Rome"', '"Europe/Paris"'],
-        )
-
-        self.expect(
             "frame variable mut_bv",
             substrs=[
                 "(CFMutableBitVectorRef) mut_bv = ",
@@ -71,3 +66,14 @@ class ObjCDataFormatterNSDate(ObjCDataFormatterTestCase):
 
         self.expect_expr("distant_past", result_summary="0001-01-01 00:00:00 UTC")
         self.expect_expr("distant_future", result_summary="4001-01-01 00:00:00 UTC")
+
+    def timezone_data_formatter_commands(self):
+        self.expect(
+            "frame variable cupertino home europe",
+            substrs=['"America/Los_Angeles"', '"Europe/Rome"', '"Europe/Paris"'],
+        )
+
+        self.expect(
+            "frame variable cupertino_ns home_ns europe_ns",
+            substrs=['"America/Los_Angeles"', '"Europe/Rome"', '"Europe/Paris"'],
+        )

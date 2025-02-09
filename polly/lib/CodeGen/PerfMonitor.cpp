@@ -13,6 +13,7 @@
 #include "polly/ScopInfo.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -58,7 +59,7 @@ void PerfMonitor::addToGlobalConstructors(Function *Fn) {
 }
 
 Function *PerfMonitor::getRDTSCP() {
-  return Intrinsic::getDeclaration(M, Intrinsic::x86_rdtscp);
+  return Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_rdtscp);
 }
 
 PerfMonitor::PerfMonitor(const Scop &S, Module *M)

@@ -125,11 +125,11 @@ lookup_rnglists2:
         .long   .Ldebug_ranges0-.Lrnglists_table_base0
 .Ldebug_ranges0:
         .byte   4                       # DW_RLE_offset_pair
-        .uleb128 .Lblock1_begin-rnglists  #   starting offset
-        .uleb128 .Lblock1_end-rnglists    #   ending offset
-        .byte   4                       # DW_RLE_offset_pair
         .uleb128 .Lblock2_begin-rnglists  #   starting offset
         .uleb128 .Lblock2_end-rnglists    #   ending offset
+        .byte   4                       # DW_RLE_offset_pair
+        .uleb128 .Lblock1_begin-rnglists  #   starting offset
+        .uleb128 .Lblock1_end-rnglists    #   ending offset
         .byte   0                       # DW_RLE_end_of_list
 .Ldebug_rnglist_table_end0:
 

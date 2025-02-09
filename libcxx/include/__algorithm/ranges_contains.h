@@ -25,37 +25,40 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 23
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __contains {
-struct __fn {
+struct __contains {
   template <input_iterator _Iter, sentinel_for<_Iter> _Sent, class _Type, class _Proj = identity>
     requires indirect_binary_predicate<ranges::equal_to, projected<_Iter, _Proj>, const _Type*>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool static
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool static
   operator()(_Iter __first, _Sent __last, const _Type& __value, _Proj __proj = {}) {
     return ranges::find(std::move(__first), __last, __value, std::ref(__proj)) != __last;
   }
 
   template <input_range _Range, class _Type, class _Proj = identity>
     requires indirect_binary_predicate<ranges::equal_to, projected<iterator_t<_Range>, _Proj>, const _Type*>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool static
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool static
   operator()(_Range&& __range, const _Type& __value, _Proj __proj = {}) {
     return ranges::find(ranges::begin(__range), ranges::end(__range), __value, std::ref(__proj)) !=
            ranges::end(__range);
   }
 };
-} // namespace __contains
 
 inline namespace __cpo {
-inline constexpr auto contains = __contains::__fn{};
+inline constexpr auto contains = __contains{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_CONTAINS_H

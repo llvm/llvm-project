@@ -150,9 +150,6 @@ public:
       CodeGenFunction &CGF,
       const std::pair<llvm::Value *, llvm::Value *> &AddrSizePair) override;
 
-  /// Get the GPU warp size.
-  llvm::Value *getGPUWarpSize(CodeGenFunction &CGF);
-
   /// Get the id of the current thread on the GPU.
   llvm::Value *getGPUThreadID(CodeGenFunction &CGF);
 
@@ -297,9 +294,10 @@ public:
 
   /// Emits call of the outlined function with the provided arguments,
   /// translating these arguments to correct target-specific arguments.
-  void emitOutlinedFunctionCall(
-      CodeGenFunction &CGF, SourceLocation Loc, llvm::FunctionCallee OutlinedFn,
-      ArrayRef<llvm::Value *> Args = std::nullopt) const override;
+  void
+  emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
+                           llvm::FunctionCallee OutlinedFn,
+                           ArrayRef<llvm::Value *> Args = {}) const override;
 
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.

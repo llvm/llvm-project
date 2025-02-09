@@ -10,14 +10,18 @@
 #define LLVM_LIBC_TEST_SRC_MATH_NEXTTOWARDTEST_H
 
 #include "src/__support/CPP/bit.h"
-#include "src/__support/CPP/type_traits.h"
-#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <fenv.h>
-#include <math.h>
 
+#include "hdr/fenv_macros.h"
+
+using LIBC_NAMESPACE::Sign;
+
+// TODO: Strengthen errno,exception checks and remove these assert macros
+// after new matchers/test fixtures are added
 #define ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, expected_exception)      \
   ASSERT_FP_EQ(result, expected);                                              \
   ASSERT_FP_EXCEPTION(expected_exception);                                     \
@@ -30,25 +34,29 @@
   ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, FE_INEXACT | FE_OVERFLOW)
 
 template <typename T>
-class NextTowardTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class NextTowardTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using ToFPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
   using StorageType = typename FPBits::StorageType;
 
-  const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
-  const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
-  const T nan = T(FPBits::build_quiet_nan(1));
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
 
-  const long double to_zero = ToFPBits::zero();
-  const long double to_neg_zero = ToFPBits::neg_zero();
-  const long double to_nan = ToFPBits::build_quiet_nan(1);
+  const long double to_inf = ToFPBits::inf(Sign::POS).get_val();
+  const long double to_neg_inf = ToFPBits::inf(Sign::NEG).get_val();
+  const long double to_zero = ToFPBits::zero().get_val();
+  const long double to_neg_zero = ToFPBits::zero(Sign::NEG).get_val();
+  const long double to_nan = ToFPBits::quiet_nan().get_val();
 
-  const StorageType min_subnormal = FPBits::MIN_SUBNORMAL;
-  const StorageType max_subnormal = FPBits::MAX_SUBNORMAL;
-  const StorageType min_normal = FPBits::MIN_NORMAL;
-  const StorageType max_normal = FPBits::MAX_NORMAL;
+  static constexpr StorageType min_subnormal =
+      FPBits::min_subnormal().uintval();
+  static constexpr StorageType max_subnormal =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType min_normal = FPBits::min_normal().uintval();
+  static constexpr StorageType max_normal = FPBits::max_normal().uintval();
 
 public:
   typedef T (*NextTowardFunc)(T, long double);
@@ -130,7 +138,7 @@ public:
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
-    result = func(x, inf);
+    result = func(x, to_inf);
     expected_bits = min_normal + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
@@ -141,7 +149,7 @@ public:
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
-    result = func(x, -inf);
+    result = func(x, to_neg_inf);
     expected_bits = FPBits::SIGN_MASK + min_normal + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
@@ -152,14 +160,14 @@ public:
     expected_bits = max_normal - 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
-    ASSERT_FP_EQ_WITH_OVERFLOW(func(x, inf), inf);
+    ASSERT_FP_EQ_WITH_OVERFLOW(func(x, to_inf), inf);
 
     x = -x;
     result = func(x, 0);
     expected_bits = FPBits::SIGN_MASK + max_normal - 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
-    ASSERT_FP_EQ_WITH_OVERFLOW(func(x, -inf), -inf);
+    ASSERT_FP_EQ_WITH_OVERFLOW(func(x, to_neg_inf), neg_inf);
 
     // 'from' is infinity.
     x = inf;
@@ -167,14 +175,14 @@ public:
     expected_bits = max_normal;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
-    ASSERT_FP_EQ(func(x, inf), inf);
+    ASSERT_FP_EQ(func(x, to_inf), inf);
 
     x = neg_inf;
     result = func(x, 0);
     expected_bits = FPBits::SIGN_MASK + max_normal;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
-    ASSERT_FP_EQ(func(x, neg_inf), neg_inf);
+    ASSERT_FP_EQ(func(x, to_neg_inf), neg_inf);
 
     // 'from' is a power of 2.
     x = T(32.0);
@@ -189,7 +197,7 @@ public:
     result_bits = FPBits(result);
     ASSERT_EQ(result_bits.get_biased_exponent(), x_bits.get_biased_exponent());
     ASSERT_EQ(result_bits.get_mantissa(),
-              x_bits.get_mantissa() + StorageType(1));
+              static_cast<StorageType>(x_bits.get_mantissa() + StorageType(1)));
 
     x = -x;
 
@@ -203,7 +211,7 @@ public:
     result_bits = FPBits(result);
     ASSERT_EQ(result_bits.get_biased_exponent(), x_bits.get_biased_exponent());
     ASSERT_EQ(result_bits.get_mantissa(),
-              x_bits.get_mantissa() + StorageType(1));
+              static_cast<StorageType>(x_bits.get_mantissa() + StorageType(1)));
   }
 };
 

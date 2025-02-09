@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -verify-machineinstrs -run-pass branch-folder -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -verify-machineinstrs -run-pass branch-folder -o - %s | FileCheck %s
 
 # CHECK-LABEL: name: fred
 

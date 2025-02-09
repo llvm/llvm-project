@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __clang__ // 16.0.3 lacks <charconv>
-
 #include "gtest/gtest.h"
 #include "flang/Runtime/time-intrinsic.h"
 #include <algorithm>
 #include <cctype>
-#include <charconv>
+#include <cerrno>
 #include <string>
 
 using namespace Fortran::runtime;
@@ -89,6 +87,7 @@ TEST(TimeIntrinsics, SystemClock) {
 }
 
 TEST(TimeIntrinsics, DateAndTime) {
+  errno = 0;
   constexpr std::size_t bufferSize{16};
   std::string date(bufferSize, 'Z'), time(bufferSize, 'Z'),
       zone(bufferSize, 'Z');
@@ -104,10 +103,9 @@ TEST(TimeIntrinsics, DateAndTime) {
     EXPECT_TRUE(true);
   } else {
     count_t number{-1};
-    auto [_, ec]{
-        std::from_chars(date.data(), date.data() + date.size(), number)};
-    ASSERT_TRUE(ec != std::errc::invalid_argument &&
-        ec != std::errc::result_out_of_range);
+    // Use stol to allow GCC 7.5 to build tests
+    number = std::stol(date);
+    ASSERT_TRUE(errno != ERANGE);
     EXPECT_GE(number, 0);
     auto year = number / 10000;
     auto month = (number - year * 10000) / 100;
@@ -121,14 +119,15 @@ TEST(TimeIntrinsics, DateAndTime) {
   }
 
   // Validate time is hhmmss.sss or blank.
+  std::string acceptedPattern("hhmmss.sss");
   if (isBlank(time)) {
     EXPECT_TRUE(true);
   } else {
     count_t number{-1};
-    auto [next, ec]{
-        std::from_chars(time.data(), time.data() + date.size(), number)};
-    ASSERT_TRUE(ec != std::errc::invalid_argument &&
-        ec != std::errc::result_out_of_range);
+    // Use stol to allow GCC 7.5 to build tests
+    auto dotPosition = acceptedPattern.find('.');
+    number = std::stol(time.substr(0, dotPosition));
+    ASSERT_TRUE(errno != ERANGE);
     ASSERT_GE(number, 0);
     auto hours = number / 10000;
     auto minutes = (number - hours * 10000) / 100;
@@ -137,15 +136,11 @@ TEST(TimeIntrinsics, DateAndTime) {
     EXPECT_LE(minutes, 59);
     // Accept 60 for leap seconds.
     EXPECT_LE(seconds, 60);
-    ASSERT_TRUE(next != time.data() + time.size());
-    EXPECT_EQ(*next, '.');
+    EXPECT_EQ(time.substr(dotPosition, 1), ".");
 
     count_t milliseconds{-1};
-    ASSERT_TRUE(next + 1 != time.data() + time.size());
-    auto [_, ec2]{
-        std::from_chars(next + 1, time.data() + date.size(), milliseconds)};
-    ASSERT_TRUE(ec2 != std::errc::invalid_argument &&
-        ec2 != std::errc::result_out_of_range);
+    milliseconds = std::stol(time.substr(dotPosition + 1, 3));
+    ASSERT_TRUE(errno != ERANGE);
     EXPECT_GE(milliseconds, 0);
     EXPECT_LE(milliseconds, 999);
   }
@@ -157,10 +152,9 @@ TEST(TimeIntrinsics, DateAndTime) {
     ASSERT_TRUE(zone.size() > 1);
     EXPECT_TRUE(zone[0] == '+' || zone[0] == '-');
     count_t number{-1};
-    auto [next, ec]{
-        std::from_chars(zone.data() + 1, zone.data() + zone.size(), number)};
-    ASSERT_TRUE(ec != std::errc::invalid_argument &&
-        ec != std::errc::result_out_of_range);
+    // Use stol to allow GCC 7.5 to build tests
+    number = std::stol(zone.substr(1, 4));
+    ASSERT_TRUE(errno != ERANGE);
     ASSERT_GE(number, 0);
     auto hours = number / 100;
     auto minutes = number % 100;
@@ -168,4 +162,3 @@ TEST(TimeIntrinsics, DateAndTime) {
     EXPECT_LE(minutes, 59);
   }
 }
-#endif // __clang__

@@ -1,5 +1,5 @@
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck -check-prefix=GENERATE %s
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck -check-prefix=TERMINATE %s
+# RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck -check-prefix=GENERATE %s
+# RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck -check-prefix=TERMINATE %s
 # 
 # Check that spills are recognized in the Live Debug Values pass and that
 # DBG_VALUE instructions are generated to keep track of spilled user
@@ -108,28 +108,28 @@
     tail call void @llvm.dbg.value(metadata i32 %int2, i64 0, metadata !28, metadata !38), !dbg !43
     tail call void @llvm.dbg.value(metadata i32 %int3, i64 0, metadata !29, metadata !38), !dbg !44
     tail call void @llvm.dbg.value(metadata i32 %int4, i64 0, metadata !30, metadata !38), !dbg !45
-    %0 = load i32, i32* @glob0, align 4, !dbg !46, !tbaa !47
+    %0 = load i32, ptr @glob0, align 4, !dbg !46, !tbaa !47
     tail call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !31, metadata !38), !dbg !51
-    %1 = load i32, i32* @glob1, align 4, !dbg !52, !tbaa !47
+    %1 = load i32, ptr @glob1, align 4, !dbg !52, !tbaa !47
     tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !32, metadata !38), !dbg !53
-    %2 = load i32, i32* @glob2, align 4, !dbg !54, !tbaa !47
+    %2 = load i32, ptr @glob2, align 4, !dbg !54, !tbaa !47
     tail call void @llvm.dbg.value(metadata i32 %2, i64 0, metadata !33, metadata !38), !dbg !55
-    %3 = load i32, i32* @glob3, align 4, !dbg !56, !tbaa !47
+    %3 = load i32, ptr @glob3, align 4, !dbg !56, !tbaa !47
     tail call void @llvm.dbg.value(metadata i32 %3, i64 0, metadata !34, metadata !38), !dbg !57
-    %4 = bitcast i32* %inte to i8*, !dbg !58
-    call void @llvm.lifetime.start(i64 4, i8* nonnull %4) #4, !dbg !58
-    %5 = load i32, i32* @glob4, align 4, !dbg !59, !tbaa !47
+    %4 = bitcast ptr %inte to ptr, !dbg !58
+    call void @llvm.lifetime.start(i64 4, ptr nonnull %4) #4, !dbg !58
+    %5 = load i32, ptr @glob4, align 4, !dbg !59, !tbaa !47
     tail call void @llvm.dbg.value(metadata i32 %5, i64 0, metadata !35, metadata !38), !dbg !60
     tail call void @llvm.dbg.value(metadata i32 %5, i64 0, metadata !35, metadata !38), !dbg !60
-    store i32 %5, i32* %inte, align 4, !dbg !60, !tbaa !47
-    %6 = bitcast i32* %intf to i8*, !dbg !61
-    call void @llvm.lifetime.start(i64 4, i8* nonnull %6) #4, !dbg !61
-    %7 = load i32, i32* @glob5, align 4, !dbg !62, !tbaa !47
+    store i32 %5, ptr %inte, align 4, !dbg !60, !tbaa !47
+    %6 = bitcast ptr %intf to ptr, !dbg !61
+    call void @llvm.lifetime.start(i64 4, ptr nonnull %6) #4, !dbg !61
+    %7 = load i32, ptr @glob5, align 4, !dbg !62, !tbaa !47
     tail call void @llvm.dbg.value(metadata i32 %7, i64 0, metadata !36, metadata !38), !dbg !63
     tail call void @llvm.dbg.value(metadata i32 %7, i64 0, metadata !36, metadata !38), !dbg !63
-    store i32 %7, i32* %intf, align 4, !dbg !63, !tbaa !47
-    %8 = bitcast i32* %intg to i8*, !dbg !64
-    call void @llvm.lifetime.start(i64 4, i8* nonnull %8) #4, !dbg !64
+    store i32 %7, ptr %intf, align 4, !dbg !63, !tbaa !47
+    %8 = bitcast ptr %intg to ptr, !dbg !64
+    call void @llvm.lifetime.start(i64 4, ptr nonnull %8) #4, !dbg !64
     %tobool = icmp eq i32 %b0, 0, !dbg !65
     br i1 %tobool, label %if.end, label %cleanup, !dbg !67
   
@@ -146,11 +146,11 @@
     br i1 %tobool3, label %if.end13, label %if.then4, !dbg !76
   
   if.then4:                                         ; preds = %if.end
-    tail call void @llvm.dbg.value(metadata i32* %inte, i64 0, metadata !35, metadata !77), !dbg !60
-    tail call void @llvm.dbg.value(metadata i32* %intf, i64 0, metadata !36, metadata !77), !dbg !63
-    tail call void @llvm.dbg.value(metadata i32* %intg, i64 0, metadata !37, metadata !77), !dbg !78
-    call void @set(i32* nonnull %inte, i32* nonnull %intf, i32* nonnull %intg) #4, !dbg !79
-    %9 = load i32, i32* %inte, align 4, !dbg !81, !tbaa !47
+    tail call void @llvm.dbg.value(metadata ptr %inte, i64 0, metadata !35, metadata !77), !dbg !60
+    tail call void @llvm.dbg.value(metadata ptr %intf, i64 0, metadata !36, metadata !77), !dbg !63
+    tail call void @llvm.dbg.value(metadata ptr %intg, i64 0, metadata !37, metadata !77), !dbg !78
+    call void @set(ptr nonnull %inte, ptr nonnull %intf, ptr nonnull %intg) #4, !dbg !79
+    %9 = load i32, ptr %inte, align 4, !dbg !81, !tbaa !47
     call void @llvm.dbg.value(metadata i32 %9, i64 0, metadata !35, metadata !38), !dbg !60
     %mul833 = add i32 %2, %1, !dbg !82
     %add10 = mul i32 %9, %mul833, !dbg !82
@@ -171,30 +171,30 @@
     br label %cleanup, !dbg !89
   
   cleanup:                                          ; preds = %if.end13, %entry
-    %10 = bitcast i32* %intg to i8*
-    %11 = bitcast i32* %intf to i8*
-    %12 = bitcast i32* %inte to i8*
-    call void @llvm.lifetime.end(i64 4, i8* nonnull %10) #4, !dbg !89
-    call void @llvm.lifetime.end(i64 4, i8* nonnull %11) #4, !dbg !89
-    call void @llvm.lifetime.end(i64 4, i8* nonnull %12) #4, !dbg !89
+    %10 = bitcast ptr %intg to ptr
+    %11 = bitcast ptr %intf to ptr
+    %12 = bitcast ptr %inte to ptr
+    call void @llvm.lifetime.end(i64 4, ptr nonnull %10) #4, !dbg !89
+    call void @llvm.lifetime.end(i64 4, ptr nonnull %11) #4, !dbg !89
+    call void @llvm.lifetime.end(i64 4, ptr nonnull %12) #4, !dbg !89
     ret void, !dbg !90
   }
   
   ; Function Attrs: argmemonly nounwind
-  declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+  declare void @llvm.lifetime.start(i64, ptr nocapture) #1
   
   declare void @use(i32) local_unnamed_addr #2
   
-  declare void @set(i32*, i32*, i32*) local_unnamed_addr #2
+  declare void @set(ptr, ptr, ptr) local_unnamed_addr #2
   
   ; Function Attrs: argmemonly nounwind
-  declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+  declare void @llvm.lifetime.end(i64, ptr nocapture) #1
   
   ; Function Attrs: nounwind readnone
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #3
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #4
+  declare void @llvm.stackprotector(ptr, ptr) #4
   
   attributes #0 = { nounwind uwtable "frame-pointer"="non-leaf" }
   attributes #1 = { argmemonly nounwind }

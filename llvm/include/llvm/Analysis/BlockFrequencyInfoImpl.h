@@ -539,9 +539,6 @@ public:
   }
 };
 
-void printBlockFreqImpl(raw_ostream &OS, BlockFrequency EntryFreq,
-                        BlockFrequency Freq);
-
 namespace bfi_detail {
 
 template <class BlockT> struct TypeMap {};
@@ -1146,14 +1143,15 @@ void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB,
                                               BlockFrequency Freq) {
-  if (Nodes.count(BB))
-    BlockFrequencyInfoImplBase::setBlockFreq(getNode(BB), Freq);
+  auto [It, Inserted] = Nodes.try_emplace(BB);
+  if (!Inserted)
+    BlockFrequencyInfoImplBase::setBlockFreq(It->second.first, Freq);
   else {
     // If BB is a newly added block after BFI is done, we need to create a new
     // BlockNode for it assigned with a new index. The index can be determined
     // by the size of Freqs.
     BlockNode NewNode(Freqs.size());
-    Nodes[BB] = {NewNode, BFICallbackVH(BB, this)};
+    It->second = {NewNode, BFICallbackVH(BB, this)};
     Freqs.emplace_back();
     BlockFrequencyInfoImplBase::setBlockFreq(NewNode, Freq);
   }
@@ -1412,11 +1410,10 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::applyIterativeInference() {
     auto Node = getNode(&BB);
     if (!Node.isValid())
       continue;
-    if (BlockIndex.count(&BB)) {
-      Freqs[Node.Index].Scaled = Freq[BlockIndex[&BB]];
-    } else {
+    if (auto It = BlockIndex.find(&BB); It != BlockIndex.end())
+      Freqs[Node.Index].Scaled = Freq[It->second];
+    else
       Freqs[Node.Index].Scaled = Scaled64::getZero();
-    }
   }
 }
 
@@ -1532,8 +1529,7 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
   SmallPtrSet<const BlockT *, 8> InverseReachable;
   for (const BlockT &BB : *F) {
     // An exit block is a block without any successors
-    bool HasSucc = GraphTraits<const BlockT *>::child_begin(&BB) !=
-                   GraphTraits<const BlockT *>::child_end(&BB);
+    bool HasSucc = !llvm::children<const BlockT *>(&BB).empty();
     if (!HasSucc && Reachable.count(&BB)) {
       Queue.push(&BB);
       InverseReachable.insert(&BB);
@@ -1542,7 +1538,7 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
   while (!Queue.empty()) {
     const BlockT *SrcBB = Queue.front();
     Queue.pop();
-    for (const BlockT *DstBB : children<Inverse<const BlockT *>>(SrcBB)) {
+    for (const BlockT *DstBB : inverse_children<const BlockT *>(SrcBB)) {
       auto EP = BPI->getEdgeProbability(DstBB, SrcBB);
       if (EP.isZero())
         continue;
@@ -1768,8 +1764,8 @@ void BlockFrequencyInfoImpl<BT>::verifyMatch(
     for (auto &Entry : ValidNodes) {
       const BlockT *BB = Entry.first;
       BlockNode Node = Entry.second;
-      if (OtherValidNodes.count(BB)) {
-        BlockNode OtherNode = OtherValidNodes[BB];
+      if (auto It = OtherValidNodes.find(BB); It != OtherValidNodes.end()) {
+        BlockNode OtherNode = It->second;
         const auto &Freq = Freqs[Node.Index];
         const auto &OtherFreq = Other.Freqs[OtherNode.Index];
         if (Freq.Integer != OtherFreq.Integer) {

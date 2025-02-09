@@ -68,12 +68,14 @@ body:             |
     ; RV32: liveins: $x10
     ; RV32-NEXT: {{  $}}
     ; RV32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; RV32-NEXT: $x10 = COPY [[COPY]](s32)
+    ; RV32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; RV32-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; RV32-NEXT: $x10 = COPY [[AND]](s32)
     ; RV32-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
-    %1:_(s64) = G_ZEXT %0(s32)
-    %2:_(s32), %3:_(s32) = G_UNMERGE_VALUES %1(s64)
-    $x10 = COPY %2(s32)
+    %2:_(s16), %3:_(s16) = G_UNMERGE_VALUES %0(s32)
+    %4:_(s32) = G_ZEXT %2(s16)
+    $x10 = COPY %4(s32)
     PseudoRET implicit $x10
 ...
 ---

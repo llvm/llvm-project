@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs -run-pass si-form-memory-clauses %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs -run-pass si-form-memory-clauses %s -o - | FileCheck -check-prefix=GCN %s
 
 # Make sure we do not produce early-clobber list with odd subregs.
 

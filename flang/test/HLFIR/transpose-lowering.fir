@@ -18,6 +18,7 @@ func.func @_QPtranspose1(%arg0: !fir.ref<!fir.array<1x2xi32>> {fir.bindc_name = 
 // CHECK-LABEL: func.func @_QPtranspose1(
 // CHECK:           %[[ARG0:.*]]: !fir.ref<!fir.array<1x2xi32>> {fir.bindc_name = "m"}
 // CHECK:           %[[ARG1:.*]]: !fir.ref<!fir.array<2x1xi32>> {fir.bindc_name = "res"}
+// CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[M_VAR:.*]]:2 = hlfir.declare %[[ARG0]]
 // CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[ARG1]]
 
@@ -32,7 +33,7 @@ func.func @_QPtranspose1(%arg0: !fir.ref<!fir.array<1x2xi32>> {fir.bindc_name = 
 
 // CHECK:         %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>)
 // CHECK:         %[[M_ARG:.*]] = fir.convert %[[M_BOX]] : (!fir.box<!fir.array<1x2xi32>>) -> !fir.box<none>
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranATranspose(%[[RET_ARG]], %[[M_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
+// CHECK:         fir.call @_FortranATranspose(%[[RET_ARG]], %[[M_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
 
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK-DAG:     %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
@@ -40,7 +41,6 @@ func.func @_QPtranspose1(%arg0: !fir.ref<!fir.array<1x2xi32>> {fir.bindc_name = 
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
 // TODO: fix alias analysis in hlfir.assign bufferization
 // CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
-// CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         %[[ASEXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x?xi32>>, i1) -> !hlfir.expr<?x?xi32>
 // CHECK:         hlfir.assign %[[ASEXPR]] to %[[RES_VAR]]#0
 // CHECK:         hlfir.destroy %[[ASEXPR]]

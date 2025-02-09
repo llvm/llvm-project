@@ -187,7 +187,7 @@ define i32 @sink_gep1(i1 %c) {
 ; CHECK:       early_return:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       use_block:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[VAR]], i64 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[VAR]], i64 4
 ; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(ptr nonnull [[GEP]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[VAR3]]
 ;

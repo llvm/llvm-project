@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
-// UNSUPPORTED: !non-lockfree-atomics
 
 //  T exchange(T, memory_order = memory_order::seq_cst) volatile noexcept;
 //  T exchange(T, memory_order = memory_order::seq_cst) noexcept;
@@ -16,6 +15,7 @@
 #include <cassert>
 #include <concepts>
 #include <type_traits>
+#include <utility>
 
 #include "test_helper.h"
 #include "test_macros.h"

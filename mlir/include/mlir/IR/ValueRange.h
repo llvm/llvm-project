@@ -155,6 +155,9 @@ public:
   /// Returns if the current range is empty.
   bool empty() const { return size() == 0; }
 
+  /// Explicit conversion to an OperandRange.
+  OperandRange getAsOperandRange() const;
+
   /// Allow implicit conversion to an OperandRange.
   operator OperandRange() const;
 
@@ -388,9 +391,11 @@ public:
             typename = std::enable_if_t<
                 std::is_constructible<ArrayRef<Value>, Arg>::value &&
                 !std::is_convertible<Arg, Value>::value>>
-  ValueRange(Arg &&arg) : ValueRange(ArrayRef<Value>(std::forward<Arg>(arg))) {}
-  ValueRange(const Value &value) : ValueRange(&value, /*count=*/1) {}
-  ValueRange(const std::initializer_list<Value> &values)
+  ValueRange(Arg &&arg LLVM_LIFETIME_BOUND)
+      : ValueRange(ArrayRef<Value>(std::forward<Arg>(arg))) {}
+  ValueRange(const Value &value LLVM_LIFETIME_BOUND)
+      : ValueRange(&value, /*count=*/1) {}
+  ValueRange(const std::initializer_list<Value> &values LLVM_LIFETIME_BOUND)
       : ValueRange(ArrayRef<Value>(values)) {}
   ValueRange(iterator_range<OperandRange::iterator> values)
       : ValueRange(OperandRange(values)) {}

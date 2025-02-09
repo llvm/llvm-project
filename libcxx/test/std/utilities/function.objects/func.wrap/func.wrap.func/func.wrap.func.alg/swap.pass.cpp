@@ -69,12 +69,12 @@ int main(int, char**)
     static_assert(noexcept(swap(f1, f2)), "" );
 #endif
     assert(A::count == 2);
-    assert(globalMemCounter.checkOutstandingNewEq(2));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(2));
     RTTI_ASSERT(f1.target<A>()->id() == 1);
     RTTI_ASSERT(f2.target<A>()->id() == 2);
     swap(f1, f2);
     assert(A::count == 2);
-    assert(globalMemCounter.checkOutstandingNewEq(2));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(2));
     RTTI_ASSERT(f1.target<A>()->id() == 2);
     RTTI_ASSERT(f2.target<A>()->id() == 1);
     }
@@ -87,12 +87,12 @@ int main(int, char**)
     static_assert(noexcept(swap(f1, f2)), "" );
 #endif
     assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
     RTTI_ASSERT(f1.target<A>()->id() == 1);
     RTTI_ASSERT(*f2.target<int(*)(int)>() == g);
     swap(f1, f2);
     assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
     RTTI_ASSERT(*f1.target<int(*)(int)>() == g);
     RTTI_ASSERT(f2.target<A>()->id() == 1);
     }
@@ -105,12 +105,12 @@ int main(int, char**)
     static_assert(noexcept(swap(f1, f2)), "" );
 #endif
     assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
     RTTI_ASSERT(*f1.target<int(*)(int)>() == g);
     RTTI_ASSERT(f2.target<A>()->id() == 1);
     swap(f1, f2);
     assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
     RTTI_ASSERT(f1.target<A>()->id() == 1);
     RTTI_ASSERT(*f2.target<int(*)(int)>() == g);
     }
@@ -123,12 +123,12 @@ int main(int, char**)
     static_assert(noexcept(swap(f1, f2)), "" );
 #endif
     assert(A::count == 0);
-    assert(globalMemCounter.checkOutstandingNewEq(0));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(0));
     RTTI_ASSERT(*f1.target<int(*)(int)>() == g);
     RTTI_ASSERT(*f2.target<int(*)(int)>() == h);
     swap(f1, f2);
     assert(A::count == 0);
-    assert(globalMemCounter.checkOutstandingNewEq(0));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(0));
     RTTI_ASSERT(*f1.target<int(*)(int)>() == h);
     RTTI_ASSERT(*f2.target<int(*)(int)>() == g);
     }

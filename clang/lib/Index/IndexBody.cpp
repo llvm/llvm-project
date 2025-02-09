@@ -130,6 +130,9 @@ public:
 
   void addCallRole(SymbolRoleSet &Roles,
                    SmallVectorImpl<SymbolRelation> &Relations) {
+    if (isa<CXXDeductionGuideDecl>(ParentDC))
+      return;
+
     Roles |= (unsigned)SymbolRole::Call;
     if (auto *FD = dyn_cast<FunctionDecl>(ParentDC))
       Relations.emplace_back((unsigned)SymbolRole::RelationCalledBy, FD);
@@ -268,7 +271,7 @@ public:
         }
         return true;
       };
-      bool IsPropCall = Containing && isa<PseudoObjectExpr>(Containing);
+      bool IsPropCall = isa_and_nonnull<PseudoObjectExpr>(Containing);
       // Implicit property message sends are not 'implicit'.
       if ((E->isImplicit() || IsPropCall) &&
           !(IsPropCall &&

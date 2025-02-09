@@ -7,7 +7,7 @@
 
 ; Try a custom pipeline
 ; RUN: llvm-lto2 run %t1.bc -o %t.o -save-temps \
-; RUN:  -r %t1.bc,patatino,px -opt-pipeline loweratomic \
+; RUN:  -r %t1.bc,patatino,px -opt-pipeline lower-atomic \
 ; RUN:  -aa-pipeline basic-aa
 ; RUN: llvm-dis < %t.o.0.4.opt.bc | FileCheck %s --check-prefix=CUSTOM
 
@@ -36,7 +36,7 @@ define void @patatino() {
 
 ; RUN: not --crash llvm-lto2 run %t1.bc -o %t.o \
 ; RUN:  -r %t1.bc,patatino,px -aa-pipeline patatino \
-; RUN:  -opt-pipeline loweratomic 2>&1 | \
+; RUN:  -opt-pipeline lower-atomic 2>&1 | \
 ; RUN:  FileCheck %s --check-prefix=AAERR
 
 ; AAERR: LLVM ERROR: unable to parse AA pipeline description 'patatino': unknown alias analysis name 'patatino'

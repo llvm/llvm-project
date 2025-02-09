@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
 // TODO: Split this file if it becomes too big.
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 class Class {};
 union Union {};
@@ -110,6 +112,15 @@ TEST(LlvmLibcTypeTraitsTest, add_rvalue_reference_void) {
       (is_same_v<add_rvalue_reference_t<volatile void>, volatile void>));
   EXPECT_TRUE((is_same_v<add_rvalue_reference_t<const volatile void>,
                          const volatile void>));
+}
+
+TEST(LlvmLibcTypeTraitsTest, aligned_storage) {
+  struct S {
+    int a, b;
+  };
+  aligned_storage_t<sizeof(S), alignof(S)> buf;
+  EXPECT_EQ(alignof(decltype(buf)), alignof(S));
+  EXPECT_EQ(sizeof(buf), sizeof(S));
 }
 
 TEST(LlvmLibcTypeTraitsTest, bool_constant) {
@@ -428,8 +439,31 @@ TEST(LlvmLibcTypeTraitsTest, is_object) {
 
 TEST(LlvmLibcTypeTraitsTest, true_type) { EXPECT_TRUE((true_type::value)); }
 
+struct CompilerLeadingPadded {
+  char b;
+  int a;
+};
+
+struct CompilerTrailingPadded {
+  int a;
+  char b;
+};
+
+struct alignas(long long) ManuallyPadded {
+  int b;
+  char padding[sizeof(long long) - sizeof(int)];
+};
+
+TEST(LlvmLibcTypeTraitsTest, has_unique_object_representations) {
+  EXPECT_TRUE(has_unique_object_representations<int>::value);
+  EXPECT_FALSE(has_unique_object_representations_v<CompilerLeadingPadded>);
+  EXPECT_FALSE(has_unique_object_representations_v<CompilerTrailingPadded>);
+  EXPECT_TRUE(has_unique_object_representations_v<ManuallyPadded>);
+}
+
 // TODO type_identity
 
 // TODO void_t
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL

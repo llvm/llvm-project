@@ -36,7 +36,7 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> UseDerefAtPointSemantics(
+cl::opt<bool> UseDerefAtPointSemantics(
     "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(false),
     cl::desc("Deref attributes and metadata infer facts at definition only"));
 
@@ -51,9 +51,9 @@ static inline Type *checkType(Type *Ty) {
 }
 
 Value::Value(Type *ty, unsigned scid)
-    : VTy(checkType(ty)), UseList(nullptr), SubclassID(scid), HasValueHandle(0),
-      SubclassOptionalData(0), SubclassData(0), NumUserOperands(0),
-      IsUsedByMD(false), HasName(false), HasMetadata(false) {
+    : SubclassID(scid), HasValueHandle(0), SubclassOptionalData(0),
+      SubclassData(0), NumUserOperands(0), IsUsedByMD(false), HasName(false),
+      HasMetadata(false), VTy(checkType(ty)), UseList(nullptr) {
   static_assert(ConstantFirstVal == 0, "!(SubclassID < ConstantFirstVal)");
   // FIXME: Why isn't this in the subclass gunk??
   // Note, we cannot call isa<CallInst> before the CallInst has been
@@ -574,16 +574,16 @@ void Value::replaceUsesWithIf(Value *New,
 /// with New.
 static void replaceDbgUsesOutsideBlock(Value *V, Value *New, BasicBlock *BB) {
   SmallVector<DbgVariableIntrinsic *> DbgUsers;
-  SmallVector<DPValue *> DPUsers;
+  SmallVector<DbgVariableRecord *> DPUsers;
   findDbgUsers(DbgUsers, V, &DPUsers);
   for (auto *DVI : DbgUsers) {
     if (DVI->getParent() != BB)
       DVI->replaceVariableLocationOp(V, New);
   }
-  for (auto *DPV : DPUsers) {
-    DPMarker *Marker = DPV->getMarker();
+  for (auto *DVR : DPUsers) {
+    DbgMarker *Marker = DVR->getMarker();
     if (Marker->getParent() != BB)
-      DPV->replaceVariableLocationOp(V, New);
+      DVR->replaceVariableLocationOp(V, New);
   }
 }
 
@@ -652,9 +652,10 @@ static const Value *stripPointerCastsAndOffsets(
       }
       V = GEP->getPointerOperand();
     } else if (Operator::getOpcode(V) == Instruction::BitCast) {
-      V = cast<Operator>(V)->getOperand(0);
-      if (!V->getType()->isPointerTy())
+      Value *NewV = cast<Operator>(V)->getOperand(0);
+      if (!NewV->getType()->isPointerTy())
         return V;
+      V = NewV;
     } else if (StripKind != PSK_ZeroIndicesSameRepresentation &&
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       // TODO: If we know an address space cast will not change the
@@ -713,7 +714,8 @@ const Value *Value::stripPointerCastsForAliasAnalysis() const {
 const Value *Value::stripAndAccumulateConstantOffsets(
     const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
     bool AllowInvariantGroup,
-    function_ref<bool(Value &, APInt &)> ExternalAnalysis) const {
+    function_ref<bool(Value &, APInt &)> ExternalAnalysis,
+    bool LookThroughIntToPtr) const {
   if (!getType()->isPtrOrPtrVectorTy())
     return this;
 
@@ -774,6 +776,24 @@ const Value *Value::stripAndAccumulateConstantOffsets(
           V = RV;
         if (AllowInvariantGroup && Call->isLaunderOrStripInvariantGroup())
           V = Call->getArgOperand(0);
+    } else if (auto *Int2Ptr = dyn_cast<Operator>(V)) {
+      // Try to accumulate across (inttoptr (add (ptrtoint p), off)).
+      if (!AllowNonInbounds || !LookThroughIntToPtr || !Int2Ptr ||
+          Int2Ptr->getOpcode() != Instruction::IntToPtr ||
+          Int2Ptr->getOperand(0)->getType()->getScalarSizeInBits() != BitWidth)
+        return V;
+
+      auto *Add = dyn_cast<AddOperator>(Int2Ptr->getOperand(0));
+      if (!Add)
+        return V;
+
+      auto *Ptr2Int = dyn_cast<PtrToIntOperator>(Add->getOperand(0));
+      auto *CI = dyn_cast<ConstantInt>(Add->getOperand(1));
+      if (!Ptr2Int || !CI)
+        return V;
+
+      Offset += CI->getValue();
+      V = Ptr2Int->getOperand(0);
     }
     assert(V->getType()->isPtrOrPtrVectorTy() && "Unexpected operand type!");
   } while (Visited.insert(V).second);
@@ -1015,7 +1035,7 @@ getOffsetFromIndex(const GEPOperator *GEP, unsigned Idx, const DataLayout &DL) {
 
     // Otherwise, we have a sequential type like an array or fixed-length
     // vector. Multiply the index by the ElementSize.
-    TypeSize Size = DL.getTypeAllocSize(GTI.getIndexedType());
+    TypeSize Size = GTI.getSequentialElementStride(DL);
     if (Size.isScalable())
       return std::nullopt;
     Offset += Size.getFixedValue() * OpC->getSExtValue();

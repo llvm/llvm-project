@@ -262,6 +262,12 @@ public:
   size_t GetPointerByteSize() const;
   /// \}
 
+  unsigned GetPtrAuthKey() const;
+
+  unsigned GetPtrAuthDiscriminator() const;
+
+  bool GetPtrAuthAddressDiversity() const;
+
   /// Accessors.
   /// \{
 
@@ -272,6 +278,8 @@ public:
   ConstString GetTypeName(bool BaseOnly = false) const;
 
   ConstString GetDisplayTypeName() const;
+
+  ConstString GetMangledTypeName() const;
 
   uint32_t
   GetTypeInfo(CompilerType *pointee_or_element_compiler_type = nullptr) const;
@@ -369,6 +377,12 @@ public:
 
   /// Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) const;
+
+  /// Return a new CompilerType adds a ptrauth modifier from the given 32-bit
+  /// opaque payload to this type if this type is valid and the type system
+  /// supports ptrauth modifiers, else return an invalid type. Note that this
+  /// does not check if this type is a pointer.
+  CompilerType AddPtrAuthModifier(uint32_t payload) const;
   /// \}
 
   /// Exploring the type.
@@ -386,8 +400,9 @@ public:
 
   std::optional<size_t> GetTypeBitAlign(ExecutionContextScope *exe_scope) const;
 
-  uint32_t GetNumChildren(bool omit_empty_base_classes,
-                          const ExecutionContext *exe_ctx) const;
+  llvm::Expected<uint32_t>
+  GetNumChildren(bool omit_empty_base_classes,
+                 const ExecutionContext *exe_ctx) const;
 
   lldb::BasicType GetBasicTypeEnumeration() const;
 
@@ -415,13 +430,15 @@ public:
   CompilerType GetVirtualBaseClassAtIndex(size_t idx,
                                           uint32_t *bit_offset_ptr) const;
 
+  CompilerDecl GetStaticFieldWithName(llvm::StringRef name) const;
+
   uint32_t GetIndexOfFieldWithName(const char *name,
                                    CompilerType *field_compiler_type = nullptr,
                                    uint64_t *bit_offset_ptr = nullptr,
                                    uint32_t *bitfield_bit_size_ptr = nullptr,
                                    bool *is_bitfield_ptr = nullptr) const;
 
-  CompilerType GetChildCompilerTypeAtIndex(
+  llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
       bool omit_empty_base_classes, bool ignore_array_bounds,
       std::string &child_name, uint32_t &child_byte_size,
@@ -445,6 +462,8 @@ public:
   GetIndexOfChildMemberWithName(llvm::StringRef name,
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) const;
+
+  CompilerType GetDirectNestedTypeWithName(llvm::StringRef name) const;
 
   /// Return the number of template arguments the type has.
   /// If expand_pack is true, then variadic argument packs are automatically

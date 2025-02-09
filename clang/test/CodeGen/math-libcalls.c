@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm              %s | FileCheck %s --check-prefix=NO__ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -disable-llvm-passes -O2              %s | FileCheck %s --check-prefix=NO__ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -disable-llvm-passes -O2 -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -ffp-exception-behavior=maytrap %s | FileCheck %s --check-prefix=HAS_MAYTRAP
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown-gnu -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm %s | FileCheck %s --check-prefixes=COMMON,NO__ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefixes=COMMON,HAS_ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -disable-llvm-passes -O2 %s | FileCheck %s --check-prefixes=COMMON,NO__ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -disable-llvm-passes -O2 -fmath-errno %s | FileCheck %s --check-prefixes=COMMON,HAS_ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -ffp-exception-behavior=maytrap %s | FileCheck %s --check-prefixes=COMMON,HAS_MAYTRAP
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown-gnu -Wno-implicit-function-declaration -w -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -Wno-implicit-function-declaration -w -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN
 
 // Test attributes and builtin codegen of math library calls.
 
@@ -23,19 +23,19 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   atan2(f,f);    atan2f(f,f) ;  atan2l(f, f);
 
-  // NO__ERRNO: declare double @atan2(double noundef, double noundef) [[READNONE:#[0-9]+]]
-  // NO__ERRNO: declare float @atan2f(float noundef, float noundef) [[READNONE]]
-  // NO__ERRNO: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[READNONE]]
+  // NO__ERRNO: declare double @llvm.atan2.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
+  // NO__ERRNO: declare float @llvm.atan2.f32(float, float) [[READNONE_INTRINSIC]]
+  // NO__ERRNO: declare x86_fp80 @llvm.atan2.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
   // HAS_ERRNO: declare double @atan2(double noundef, double noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare float @atan2f(float noundef, float noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare double @atan2(double noundef, double noundef) [[NOT_READNONE:#[0-9]+]]
-  // HAS_MAYTRAP: declare float @atan2f(float noundef, float noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare double @llvm.experimental.constrained.atan2.f64(
+  // HAS_MAYTRAP: declare float @llvm.experimental.constrained.atan2.f32(
+  // HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.atan2.f80(
 
   copysign(f,f); copysignf(f,f);copysignl(f,f);
 
-  // NO__ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
+  // NO__ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC]]
   // NO__ERRNO: declare float @llvm.copysign.f32(float, float) [[READNONE_INTRINSIC]]
   // NO__ERRNO: declare x86_fp80 @llvm.copysign.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
   // HAS_ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
@@ -65,13 +65,13 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
   // HAS_ERRNO: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE:#[0-9]+]]
   // HAS_MAYTRAP: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
   // HAS_MAYTRAP: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
 
   ldexp(f,f);    ldexpf(f,f);   ldexpl(f,f);
 
-  // NO__ERRNO: declare double @ldexp(double noundef, i32 noundef) [[READNONE]]
+  // NO__ERRNO: declare double @ldexp(double noundef, i32 noundef) [[READNONE:#[0-9]+]]
   // NO__ERRNO: declare float @ldexpf(float noundef, i32 noundef) [[READNONE]]
   // NO__ERRNO: declare x86_fp80 @ldexpl(x86_fp80 noundef, i32 noundef) [[READNONE]]
   // HAS_ERRNO: declare double @ldexp(double noundef, i32 noundef) [[NOT_READNONE]]
@@ -121,15 +121,15 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
   /* math */
   acos(f);       acosf(f);      acosl(f);
 
-// NO__ERRNO: declare double @acos(double noundef) [[READNONE]]
-// NO__ERRNO: declare float @acosf(float noundef) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @acosl(x86_fp80 noundef) [[READNONE]]
+// NO__ERRNO: declare double @llvm.acos.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.acos.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.acos.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @acos(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @acosf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @acosl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @acos(double noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare float @acosf(float noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @acosl(x86_fp80 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare double @llvm.experimental.constrained.acos.f64(
+// HAS_MAYTRAP: declare float  @llvm.experimental.constrained.acos.f32(
+// HAS_MAYTRAP: declare x86_fp80  @llvm.experimental.constrained.acos.f80(
 
 
   acosh(f);      acoshf(f);     acoshl(f);
@@ -146,15 +146,15 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   asin(f);       asinf(f);      asinl(f);
 
-// NO__ERRNO: declare double @asin(double noundef) [[READNONE]]
-// NO__ERRNO: declare float @asinf(float noundef) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @asinl(x86_fp80 noundef) [[READNONE]]
+// NO__ERRNO: declare double @llvm.asin.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.asin.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.asin.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @asin(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @asinf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @asinl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @asin(double noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare float @asinf(float noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @asinl(x86_fp80 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare double @llvm.experimental.constrained.asin.f64(
+// HAS_MAYTRAP: declare float @llvm.experimental.constrained.asin.f32(
+// HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.asin.f80(
 
   asinh(f);      asinhf(f);     asinhl(f);
 
@@ -170,15 +170,15 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   atan(f);       atanf(f);      atanl(f);
 
-// NO__ERRNO: declare double @atan(double noundef) [[READNONE]]
-// NO__ERRNO: declare float @atanf(float noundef) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @atanl(x86_fp80 noundef) [[READNONE]]
+// NO__ERRNO: declare double @llvm.atan.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.atan.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.atan.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @atan(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @atanf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @atanl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @atan(double noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare float @atanf(float noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @atanl(x86_fp80 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare double @llvm.experimental.constrained.atan.f64(
+// HAS_MAYTRAP: declare float @llvm.experimental.constrained.atan.f32(
+// HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.atan.f80(
 
   atanh(f);      atanhf(f);     atanhl(f);
 
@@ -230,15 +230,15 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   cosh(f);       coshf(f);      coshl(f);
 
-// NO__ERRNO: declare double @cosh(double noundef) [[READNONE]]
-// NO__ERRNO: declare float @coshf(float noundef) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @coshl(x86_fp80 noundef) [[READNONE]]
+// NO__ERRNO: declare double @llvm.cosh.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.cosh.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.cosh.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @cosh(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @coshf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @coshl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @cosh(double noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare float @coshf(float noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @coshl(x86_fp80 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare double @llvm.experimental.constrained.cosh.f64(
+// HAS_MAYTRAP: declare float @llvm.experimental.constrained.cosh.f32(
+// HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.cosh.f80(
 
   erf(f);        erff(f);       erfl(f);
 
@@ -371,6 +371,18 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_MAYTRAP: declare double @llvm.experimental.constrained.minnum.f64(
 // HAS_MAYTRAP: declare float @llvm.experimental.constrained.minnum.f32(
 // HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.minnum.f80(
+
+  fmaximum_num(*d,*d);       fmaximum_numf(f,f);      fmaximum_numl(*l,*l);
+
+// COMMON: declare double @llvm.maximumnum.f64(double, double) [[READNONE_INTRINSIC]]
+// COMMON: declare float @llvm.maximumnum.f32(float, float) [[READNONE_INTRINSIC]]
+// COMMON: declare x86_fp80 @llvm.maximumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+
+  fminimum_num(*d,*d);       fminimum_numf(f,f);      fminimum_numl(*l,*l);
+
+// COMMON: declare double @llvm.minimumnum.f64(double, double) [[READNONE_INTRINSIC]]
+// COMMON: declare float @llvm.minimumnum.f32(float, float) [[READNONE_INTRINSIC]]
+// COMMON: declare x86_fp80 @llvm.minimumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
 
   hypot(f,f);      hypotf(f,f);     hypotl(f,f);
 
@@ -638,15 +650,16 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   sinh(f);       sinhf(f);      sinhl(f);
 
-// NO__ERRNO: declare double @sinh(double noundef) [[READNONE]]
-// NO__ERRNO: declare float @sinhf(float noundef) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @sinhl(x86_fp80 noundef) [[READNONE]]
+// NO__ERRNO: declare double @llvm.sinh.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.sinh.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.sinh.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @sinh(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @sinhf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @sinhl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @sinh(double noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare float @sinhf(float noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @sinhl(x86_fp80 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare double @llvm.experimental.constrained.sinh.f64(
+// HAS_MAYTRAP: declare float @llvm.experimental.constrained.sinh.f32(
+// HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.sinh.f80(
+
 
   sqrt(f);       sqrtf(f);      sqrtl(f);
 
@@ -662,27 +675,27 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   tan(f);        tanf(f);       tanl(f);
 
-// NO__ERRNO: declare double @tan(double noundef) [[READNONE]]
-// NO__ERRNO: declare float @tanf(float noundef) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @tanl(x86_fp80 noundef) [[READNONE]]
+// NO__ERRNO: declare double @llvm.tan.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.tan.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.tan.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @tan(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @tanf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @tanl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @tan(double noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare float @tanf(float noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @tanl(x86_fp80 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare double @llvm.experimental.constrained.tan.f64(
+// HAS_MAYTRAP: declare float @llvm.experimental.constrained.tan.f32(
+// HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.tan.f80(
 
   tanh(f);       tanhf(f);      tanhl(f);
 
-// NO__ERRNO: declare double @tanh(double noundef) [[READNONE]]
-// NO__ERRNO: declare float @tanhf(float noundef) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @tanhl(x86_fp80 noundef) [[READNONE]]
+// NO__ERRNO: declare double @llvm.tanh.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.tanh.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.tanh.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @tanh(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @tanhf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @tanhl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @tanh(double noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare float @tanhf(float noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @tanhl(x86_fp80 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare double @llvm.experimental.constrained.tanh.f64(
+// HAS_MAYTRAP: declare float @llvm.experimental.constrained.tanh.f32(
+// HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.tanh.f80(
 
   tgamma(f);     tgammaf(f);    tgammal(f);
 
@@ -706,9 +719,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare x86_fp80 @llvm.trunc.f80(x86_fp80) [[READNONE_INTRINSIC]]
 };
 
-// NO__ERRNO: attributes [[READNONE]] = { {{.*}}memory(none){{.*}} }
 // NO__ERRNO: attributes [[READNONE_INTRINSIC]] = { {{.*}}memory(none){{.*}} }
 // NO__ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
+// NO__ERRNO: attributes [[READNONE]] = { {{.*}}memory(none){{.*}} }
 // NO__ERRNO: attributes [[READONLY]] = { {{.*}}memory(read){{.*}} }
 
 // HAS_ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }

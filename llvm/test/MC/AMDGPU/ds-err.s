@@ -18,19 +18,19 @@ ds_write2_b32 v2, v4, v6 offset0:4 offset0:8
 ds_write2_b32 v2, v4, v6 offset1:4 offset1:8
 
 // offset0 too big
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid offset0 value.
 ds_write2_b32 v2, v4, v6 offset0:1000000000
 
 // offset0 too big
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid offset0 value.
 ds_write2_b32 v2, v4, v6 offset0:0x100
 
 // offset1 too big
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid offset1 value.
 ds_write2_b32 v2, v4, v6 offset1:1000000000
 
 // offset1 too big
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid offset1 value.
 ds_write2_b32 v2, v4, v6 offset1:0x100
 
 //===----------------------------------------------------------------------===//

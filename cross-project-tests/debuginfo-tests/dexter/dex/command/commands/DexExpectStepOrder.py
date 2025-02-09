@@ -12,7 +12,7 @@ from dex.dextIR import ValueIR
 
 class DexExpectStepOrder(CommandBase):
     """Expect the line every `DexExpectStepOrder` is found on to be stepped on
-    in `order`. Each instance must have a set of unique ascending indicies.
+    in `order`. Each instance must have a set of unique ascending indices.
 
     DexExpectStepOrder(*order)
 

@@ -197,3 +197,53 @@ the current location to a max-page-size boundary, ensuring that the next
 
 LLD will insert ``.relro_padding`` immediately before the symbol assignment
 using ``DATA_SEGMENT_RELRO_END``.
+
+Section Classes
+~~~~~~~~~~~~~~~
+
+The ``CLASS`` keyword inside a ``SECTIONS`` command defines classes of input
+sections:
+
+::
+
+  SECTIONS {
+    CLASS(class_name) {
+      input-section-description
+      input-section-description
+      ...
+    }
+  }
+
+Input section descriptions refer to a class using ``CLASS(class_name)``
+instead of the usual filename and section name patterns. For example:
+
+::
+
+  SECTIONS {
+    CLASS(c) { *(.rodata.earlier) }
+    .rodata { *(.rodata) CLASS(c) (*.rodata.later) }
+  }
+
+Input sections that are assigned to a class are not matched by later patterns,
+just as if they had been assigned to an earlier output section. If a class is
+referenced in multiple output sections, when a memory region would overflow,
+the linker spills input sections from a reference to later references rather
+than failing the link.
+
+Classes cannot reference other classes; an input section is assigned to at most
+one class.
+
+Sections cannot be specified to possibly spill into or out of
+``INSERT [AFTER|BEFORE]``, ``OVERWRITE_SECTIONS``, or ``/DISCARD/``.
+
+Non-contiguous regions
+~~~~~~~~~~~~~~~~~~~~~~
+
+The flag ``--enable-non-contiguous-regions`` provides a version of the above
+spilling functionality that is more compatible with GNU LD. It allows input
+sections to spill to later pattern matches. (This globally changes the behavior
+of patterns.) Unlike GNU ld, ``/DISCARD/`` only matches previously-unmatched
+sections (i.e., the flag does not affect it). Also, if a section fails to fit
+at any of its matches, the link fails instead of discarding the section.
+Accordingly, the GNU flag ``--enable-non-contiguous-regions-warnings`` is not
+implemented, as it exists to warn about such occurrences.

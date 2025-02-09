@@ -13,6 +13,7 @@
 #include "DWARFDebugInfoEntry.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/Support/RWMutex.h"
@@ -33,57 +34,8 @@ enum DWARFProducer {
   eProducerInvalid = 0,
   eProducerClang,
   eProducerGCC,
-  eProducerLLVMGCC,
   eProducerSwift,
   eProducerOther
-};
-
-/// Base class describing the header of any kind of "unit."  Some information
-/// is specific to certain unit types.  We separate this class out so we can
-/// parse the header before deciding what specific kind of unit to construct.
-class DWARFUnitHeader {
-  dw_offset_t m_offset = 0;
-  dw_offset_t m_length = 0;
-  uint16_t m_version = 0;
-  dw_offset_t m_abbr_offset = 0;
-
-  const llvm::DWARFUnitIndex::Entry *m_index_entry = nullptr;
-
-  uint8_t m_unit_type = 0;
-  uint8_t m_addr_size = 0;
-
-  uint64_t m_type_hash = 0;
-  uint32_t m_type_offset = 0;
-
-  std::optional<uint64_t> m_dwo_id;
-
-  DWARFUnitHeader() = default;
-
-public:
-  dw_offset_t GetOffset() const { return m_offset; }
-  uint16_t GetVersion() const { return m_version; }
-  uint16_t GetAddressByteSize() const { return m_addr_size; }
-  dw_offset_t GetLength() const { return m_length; }
-  dw_offset_t GetAbbrOffset() const { return m_abbr_offset; }
-  uint8_t GetUnitType() const { return m_unit_type; }
-  const llvm::DWARFUnitIndex::Entry *GetIndexEntry() const {
-    return m_index_entry;
-  }
-  uint64_t GetTypeHash() const { return m_type_hash; }
-  dw_offset_t GetTypeOffset() const { return m_type_offset; }
-  std::optional<uint64_t> GetDWOId() const { return m_dwo_id; }
-  bool IsTypeUnit() const {
-    return m_unit_type == llvm::dwarf::DW_UT_type ||
-           m_unit_type == llvm::dwarf::DW_UT_split_type;
-  }
-  dw_offset_t GetNextUnitOffset() const { return m_offset + m_length + 4; }
-
-  llvm::Error ApplyIndexEntry(const llvm::DWARFUnitIndex::Entry *index_entry);
-
-  static llvm::Expected<DWARFUnitHeader> extract(const DWARFDataExtractor &data,
-                                                 DIERef::Section section,
-                                                 DWARFContext &dwarf_context,
-                                                 lldb::offset_t *offset_ptr);
 };
 
 class DWARFUnit : public UserID {
@@ -98,8 +50,14 @@ public:
   virtual ~DWARFUnit();
 
   bool IsDWOUnit() { return m_is_dwo; }
+  /// Get the DWO ID from the DWARFUnitHeader for DWARF5, or from the unit DIE's
+  /// DW_AT_dwo_id or DW_AT_GNU_dwo_id for DWARF4 and earlier.
   std::optional<uint64_t> GetDWOId();
-
+  /// Get the DWO ID from the DWARFUnitHeader only. DWARF5 skeleton units have
+  /// the DWO ID in the compile unit header and we sometimes only want to access
+  /// this cheap value without causing the more expensive attribute fetches that
+  /// GetDWOId() uses.
+  std::optional<uint64_t> GetHeaderDWOId() { return m_header.getDWOId(); }
   void ExtractUnitDIEIfNeeded();
   void ExtractUnitDIENoDwoIfNeeded();
   void ExtractDIEsIfNeeded();
@@ -137,7 +95,7 @@ public:
   uint32_t GetHeaderByteSize() const;
 
   // Offset of the initial length field.
-  dw_offset_t GetOffset() const { return m_header.GetOffset(); }
+  dw_offset_t GetOffset() const { return m_header.getOffset(); }
   /// Get the size in bytes of the length field in the header.
   ///
   /// In DWARF32 this is just 4 bytes
@@ -153,15 +111,15 @@ public:
   dw_offset_t GetFirstDIEOffset() const {
     return GetOffset() + GetHeaderByteSize();
   }
-  dw_offset_t GetNextUnitOffset() const { return m_header.GetNextUnitOffset(); }
+  dw_offset_t GetNextUnitOffset() const { return m_header.getNextUnitOffset(); }
   // Size of the CU data (without initial length and without header).
   size_t GetDebugInfoSize() const;
   // Size of the CU data incl. header but without initial length.
-  dw_offset_t GetLength() const { return m_header.GetLength(); }
-  uint16_t GetVersion() const { return m_header.GetVersion(); }
+  dw_offset_t GetLength() const { return m_header.getLength(); }
+  uint16_t GetVersion() const { return m_header.getVersion(); }
   const llvm::DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
   dw_offset_t GetAbbrevOffset() const;
-  uint8_t GetAddressByteSize() const { return m_header.GetAddressByteSize(); }
+  uint8_t GetAddressByteSize() const { return m_header.getAddressByteSize(); }
   dw_addr_t GetAddrBase() const { return m_addr_base.value_or(0); }
   dw_addr_t GetBaseAddress() const { return m_base_addr; }
   dw_offset_t GetLineTableOffset();
@@ -187,19 +145,32 @@ public:
 
   DWARFDIE GetDIE(dw_offset_t die_offset);
 
+  /// Returns the AT_Name of the DIE at `die_offset`, if it exists, without
+  /// parsing the entire compile unit. An empty is string is returned upon
+  /// error or if the attribute is not present.
+  llvm::StringRef PeekDIEName(dw_offset_t die_offset);
+
   DWARFUnit &GetNonSkeletonUnit();
 
   static uint8_t GetAddressByteSize(const DWARFUnit *cu);
 
   static uint8_t GetDefaultAddressSize();
 
-  void *GetUserData() const;
+  lldb_private::CompileUnit *GetLLDBCompUnit() const { return m_lldb_cu; }
 
-  void SetUserData(void *d);
+  void SetLLDBCompUnit(lldb_private::CompileUnit *cu) { m_lldb_cu = cu; }
 
-  bool Supports_DW_AT_APPLE_objc_complete_type();
+  /// Get the skeleton compile unit for a DWO file.
+  ///
+  /// We need to keep track of the skeleton compile unit for a DWO file so
+  /// we can access it. Sometimes this value is cached when the skeleton
+  /// compile unit is first parsed, but if a .dwp file parses all of the
+  /// DWARFUnits in the file, the skeleton compile unit might not have been
+  /// parsed yet, to there might not be a backlink. This accessor handles
+  /// both cases correctly and avoids crashes.
+  DWARFCompileUnit *GetSkeletonUnit();
 
-  bool DW_AT_decl_file_attributes_are_invalid();
+  bool LinkToSkeletonUnit(DWARFUnit &skeleton_unit);
 
   bool Supports_unnamed_objc_bitfields();
 
@@ -218,7 +189,7 @@ public:
   FileSpec GetFile(size_t file_idx);
   FileSpec::Style GetPathStyle();
 
-  SymbolFileDWARFDwo *GetDwoSymbolFile();
+  SymbolFileDWARFDwo *GetDwoSymbolFile(bool load_all_debug_info = true);
 
   die_iterator_range dies() {
     ExtractDIEsIfNeeded();
@@ -227,8 +198,8 @@ public:
 
   DIERef::Section GetDebugSection() const { return m_section; }
 
-  uint8_t GetUnitType() const { return m_header.GetUnitType(); }
-  bool IsTypeUnit() const { return m_header.IsTypeUnit(); }
+  uint8_t GetUnitType() const { return m_header.getUnitType(); }
+  bool IsTypeUnit() const { return m_header.isTypeUnit(); }
   /// Note that this check only works for DWARF5+.
   bool IsSkeletonUnit() const {
     return GetUnitType() == llvm::dwarf::DW_UT_skeleton;
@@ -238,12 +209,14 @@ public:
 
   /// Return a list of address ranges resulting from a (possibly encoded)
   /// range list starting at a given offset in the appropriate ranges section.
-  llvm::Expected<DWARFRangeList> FindRnglistFromOffset(dw_offset_t offset);
+  llvm::Expected<llvm::DWARFAddressRangesVector>
+  FindRnglistFromOffset(dw_offset_t offset);
 
   /// Return a list of address ranges retrieved from an encoded range
   /// list whose offset is found via a table lookup given an index (DWARF v5
   /// and later).
-  llvm::Expected<DWARFRangeList> FindRnglistFromIndex(uint32_t index);
+  llvm::Expected<llvm::DWARFAddressRangesVector>
+  FindRnglistFromIndex(uint32_t index);
 
   /// Return a rangelist's offset based on an index. The index designates
   /// an entry in the rangelist table's offset array and is supplied by
@@ -293,11 +266,11 @@ public:
   /// .dwo file. Things like a missing .dwo file, DWO ID mismatch, and other
   /// .dwo errors can be stored in each compile unit so the issues can be
   /// communicated to the user.
-  void SetDwoError(const Status &error) { m_dwo_error = error; }
+  void SetDwoError(Status &&error) { m_dwo_error = std::move(error); }
 
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
-            const DWARFUnitHeader &header,
+            const llvm::DWARFUnitHeader &header,
             const llvm::DWARFAbbreviationDeclarationSet &abbrevs,
             DIERef::Section section, bool is_dwo);
 
@@ -329,9 +302,11 @@ protected:
 
   SymbolFileDWARF &m_dwarf;
   std::shared_ptr<DWARFUnit> m_dwo;
-  DWARFUnitHeader m_header;
+  llvm::DWARFUnitHeader m_header;
   const llvm::DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
-  void *m_user_data = nullptr;
+  lldb_private::CompileUnit *m_lldb_cu = nullptr;
+  // If this is a DWO file, we have a backlink to our skeleton compile unit.
+  std::atomic<DWARFUnit *> m_skeleton_unit = nullptr;
   // The compile unit debug information entry item
   DWARFDebugInfoEntry::collection m_die_array;
   mutable llvm::sys::RWMutex m_die_array_mutex;

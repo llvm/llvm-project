@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_PARSE_RAIIOBJECTSFORPARSER_H
 #define LLVM_CLANG_PARSE_RAIIOBJECTSFORPARSER_H
 
-#include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ParsedTemplate.h"
@@ -323,7 +323,7 @@ namespace clang {
 
     /// This can be used to restore the state early, before the dtor
     /// is run.
-    void restore() { P.OpenMPDirectiveParsing = OldVal; }
+    void restore() { P.OpenACCDirectiveParsing = OldVal; }
 
     ~ParsingOpenACCDirectiveRAII() { restore(); }
   };

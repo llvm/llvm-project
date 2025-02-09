@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX12 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -mattr=-WavefrontSize32,+WavefrontSize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX12 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX12 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX12 %s
 
 # GFX12: s_addk_co_i32 exec_hi, 0x1234           ; encoding: [0x34,0x12,0xff,0xb7]
 0x34,0x12,0xff,0xb7
@@ -165,6 +165,21 @@
 
 # GFX12: s_version 0xc1d1                        ; encoding: [0xd1,0xc1,0x80,0xb0]
 0xd1,0xc1,0x80,0xb0
+
+# GFX12: s_version UC_VERSION_GFX12              ; encoding: [0x09,0x00,0x80,0xb0]
+0x09,0x00,0x80,0xb0
+
+# GFX12: s_version UC_VERSION_GFX12|UC_VERSION_W32_BIT ; encoding: [0x09,0x40,0x80,0xb0]
+0x09,0x40,0x80,0xb0
+
+# GFX12: s_version UC_VERSION_GFX12|UC_VERSION_W64_BIT ; encoding: [0x09,0x20,0x80,0xb0]
+0x09,0x20,0x80,0xb0
+
+# GFX12: s_version UC_VERSION_GFX12|UC_VERSION_MDP_BIT ; encoding: [0x09,0x80,0x80,0xb0]
+0x09,0x80,0x80,0xb0
+
+# GFX12: s_version ((128|UC_VERSION_W64_BIT)|UC_VERSION_W32_BIT)|UC_VERSION_MDP_BIT ; encoding: [0x80,0xe0,0x80,0xb0]
+0x80,0xe0,0x80,0xb0
 
 # GFX12: s_setreg_imm32_b32 hwreg(HW_REG_MODE), 0xaf123456 ; encoding: [0x01,0xf8,0x80,0xb9,0x56,0x34,0x12,0xaf]
 0x01,0xf8,0x80,0xb9,0x56,0x34,0x12,0xaf

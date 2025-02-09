@@ -114,7 +114,7 @@ static bool getWindowsSDKDirViaCommandLine(
       else
         llvm::sys::path::append(
             SDKPath, getHighestNumericTupleInDirectory(VFS, SDKPath));
-      Path = std::string(SDKPath.str());
+      Path = std::string(SDKPath);
     } else {
       Path = WinSdkDir->str();
     }
@@ -268,6 +268,7 @@ const char *archToWindowsSDKArch(Triple::ArchType Arch) {
   case Triple::ArchType::x86_64:
     return "x64";
   case Triple::ArchType::arm:
+  case Triple::ArchType::thumb:
     return "arm";
   case Triple::ArchType::aarch64:
     return "arm64";
@@ -285,6 +286,7 @@ const char *archToLegacyVCArch(Triple::ArchType Arch) {
   case Triple::ArchType::x86_64:
     return "amd64";
   case Triple::ArchType::arm:
+  case Triple::ArchType::thumb:
     return "arm";
   case Triple::ArchType::aarch64:
     return "arm64";
@@ -300,6 +302,7 @@ const char *archToDevDivInternalArch(Triple::ArchType Arch) {
   case Triple::ArchType::x86_64:
     return "amd64";
   case Triple::ArchType::arm:
+  case Triple::ArchType::thumb:
     return "arm";
   case Triple::ArchType::aarch64:
     return "arm64";
@@ -321,6 +324,7 @@ bool appendArchToWindowsSDKLibPath(int SDKMajor, SmallString<128> LibPath,
       sys::path::append(LibPath, "x64");
       break;
     case Triple::arm:
+    case Triple::thumb:
       // It is not necessary to link against Windows SDK 7.x when targeting ARM.
       return false;
     default:
@@ -328,7 +332,7 @@ bool appendArchToWindowsSDKLibPath(int SDKMajor, SmallString<128> LibPath,
     }
   }
 
-  path = std::string(LibPath.str());
+  path = std::string(LibPath);
   return true;
 }
 
@@ -383,7 +387,7 @@ std::string getSubDirectoryPath(SubDirectoryType Type, ToolsetLayout VSLayout,
     sys::path::append(Path, "lib", SubdirName);
     break;
   }
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 bool useUniversalCRT(ToolsetLayout VSLayout, const std::string &VCToolChainPath,
@@ -491,7 +495,7 @@ bool findVCToolChainViaCommandLine(vfs::FileSystem &VFS,
       else
         ToolsVersion = getHighestNumericTupleInDirectory(VFS, ToolsPath);
       sys::path::append(ToolsPath, ToolsVersion);
-      Path = std::string(ToolsPath.str());
+      Path = std::string(ToolsPath);
     } else {
       Path = VCToolsDir->str();
     }
@@ -720,7 +724,7 @@ bool findVCToolChainViaRegistry(std::string &Path, ToolsetLayout &VSLayout) {
       SmallString<256> VCPath(StringRef(VSInstallPath.c_str(), pos));
       sys::path::append(VCPath, "VC");
 
-      Path = std::string(VCPath.str());
+      Path = std::string(VCPath);
       VSLayout = ToolsetLayout::OlderVS;
       return true;
     }

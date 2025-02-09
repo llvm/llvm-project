@@ -7,7 +7,7 @@ declare void @llvm.va_start(ptr)
 declare void @llvm.va_end(ptr)
 
 define void @va_func(ptr readonly %b, ...) readonly nounwind {
-; CHECK-LABEL: define void @va_func(ptr nocapture readonly %b, ...)
+; CHECK-LABEL: define void @va_func(ptr readonly captures(none) %b, ...)
  entry:
   %valist = alloca i8
   call void @llvm.va_start(ptr %valist)
@@ -17,14 +17,14 @@ define void @va_func(ptr readonly %b, ...) readonly nounwind {
 }
 
 define i32 @caller(ptr %x) {
-; CHECK-LABEL: define i32 @caller(ptr nocapture readonly %x)
+; CHECK-LABEL: define noundef i32 @caller(ptr readonly captures(none) %x)
  entry:
   call void(ptr,...) @va_func(ptr null, i32 0, i32 0, i32 0, ptr %x)
   ret i32 42
 }
 
 define void @va_func2(ptr readonly %b, ...) {
-; CHECK-LABEL: define void @va_func2(ptr nocapture readonly %b, ...)
+; CHECK-LABEL: define void @va_func2(ptr readonly captures(none) %b, ...)
  entry:
   %valist = alloca i8
   call void @llvm.va_start(ptr %valist)
@@ -34,7 +34,7 @@ define void @va_func2(ptr readonly %b, ...) {
 }
 
 define i32 @caller2(ptr %x, ptr %y) {
-; CHECK-LABEL: define i32 @caller2(ptr nocapture readonly %x, ptr %y)
+; CHECK-LABEL: define noundef i32 @caller2(ptr readonly captures(none) %x, ptr %y)
  entry:
   call void(ptr,...) @va_func2(ptr %x, i32 0, i32 0, i32 0, ptr %y)
   ret i32 42

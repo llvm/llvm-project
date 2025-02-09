@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <cassert>
 #include <list>
 #include <memory>
@@ -117,7 +118,7 @@ class CompilerInstance : public ModuleLoader {
   std::unique_ptr<Sema> TheSema;
 
   /// The frontend timer group.
-  std::unique_ptr<llvm::TimerGroup> FrontendTimerGroup;
+  std::unique_ptr<llvm::TimerGroup> timerGroup;
 
   /// The frontend timer.
   std::unique_ptr<llvm::Timer> FrontendTimer;
@@ -132,6 +133,24 @@ class CompilerInstance : public ModuleLoader {
   std::shared_ptr<PCHContainerOperations> ThePCHContainerOperations;
 
   std::vector<std::shared_ptr<DependencyCollector>> DependencyCollectors;
+
+  /// Records the set of modules
+  class FailedModulesSet {
+    llvm::StringSet<> Failed;
+
+  public:
+    bool hasAlreadyFailed(StringRef module) { return Failed.count(module) > 0; }
+
+    void addFailed(StringRef module) { Failed.insert(module); }
+  };
+
+  /// The set of modules that failed to build.
+  ///
+  /// This pointer will be shared among all of the compiler instances created
+  /// to (re)build modules, so that once a module fails to build anywhere,
+  /// other instances will see that the module has failed and won't try to
+  /// build it again.
+  std::shared_ptr<FailedModulesSet> FailedModules;
 
   /// The set of top-level modules that has already been built on the
   /// fly as part of this overall compilation action.
@@ -225,6 +244,9 @@ public:
   // of the context or else not CompilerInstance specific.
   bool ExecuteAction(FrontendAction &Act);
 
+  /// At the end of a compilation, print the number of warnings/errors.
+  void printDiagnosticStats();
+
   /// Load the list of plugins requested in the \c FrontendOptions.
   void LoadRequestedPlugins();
 
@@ -311,6 +333,9 @@ public:
 
   LangOptions &getLangOpts() { return Invocation->getLangOpts(); }
   const LangOptions &getLangOpts() const { return Invocation->getLangOpts(); }
+  std::shared_ptr<LangOptions> getLangOptsPtr() const {
+    return Invocation->getLangOptsPtr();
+  }
 
   PreprocessorOptions &getPreprocessorOpts() {
     return Invocation->getPreprocessorOpts();
@@ -605,7 +630,7 @@ public:
   /// @name Frontend timer
   /// @{
 
-  bool hasFrontendTimer() const { return (bool)FrontendTimer; }
+  llvm::TimerGroup &getTimerGroup() const { return *timerGroup; }
 
   llvm::Timer &getFrontendTimer() const {
     assert(FrontendTimer && "Compiler instance has no frontend timer!");
@@ -613,6 +638,24 @@ public:
   }
 
   /// @}
+  /// @name Failed modules set
+  /// @{
+
+  bool hasFailedModulesSet() const { return (bool)FailedModules; }
+
+  void createFailedModulesSet() {
+    FailedModules = std::make_shared<FailedModulesSet>();
+  }
+
+  std::shared_ptr<FailedModulesSet> getFailedModulesSetPtr() const {
+    return FailedModules;
+  }
+
+  void setFailedModulesSet(std::shared_ptr<FailedModulesSet> FMS) {
+    FailedModules = FMS;
+  }
+
+  /// }
   /// @name Output Files
   /// @{
 
@@ -632,13 +675,17 @@ public:
   /// Note that this routine also replaces the diagnostic client,
   /// allocating one if one is not provided.
   ///
+  /// \param VFS is used for any IO needed when creating DiagnosticsEngine. It
+  /// doesn't replace VFS in the CompilerInstance (if any).
+  ///
   /// \param Client If non-NULL, a diagnostic client that will be
   /// attached to (and, then, owned by) the DiagnosticsEngine inside this AST
   /// unit.
   ///
   /// \param ShouldOwnClient If Client is non-NULL, specifies whether
   /// the diagnostic object should take ownership of the client.
-  void createDiagnostics(DiagnosticConsumer *Client = nullptr,
+  void createDiagnostics(llvm::vfs::FileSystem &VFS,
+                         DiagnosticConsumer *Client = nullptr,
                          bool ShouldOwnClient = true);
 
   /// Create a DiagnosticsEngine object with a the TextDiagnosticPrinter.
@@ -660,7 +707,7 @@ public:
   ///
   /// \return The new object on success, or null on failure.
   static IntrusiveRefCntPtr<DiagnosticsEngine>
-  createDiagnostics(DiagnosticOptions *Opts,
+  createDiagnostics(llvm::vfs::FileSystem &VFS, DiagnosticOptions *Opts,
                     DiagnosticConsumer *Client = nullptr,
                     bool ShouldOwnClient = true,
                     const CodeGenOptions *CodeGenOpts = nullptr);

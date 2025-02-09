@@ -1,0 +1,51 @@
+! RUN: %flang_fc1 -x cuda -fdebug-unparse %s | FileCheck %s
+
+module matching
+  interface sub
+    module procedure sub_host
+    module procedure sub_device
+    module procedure sub_managed
+    module procedure sub_unified
+  end interface
+
+contains
+  subroutine sub_host(a)
+    integer :: a(:)
+  end
+
+  subroutine sub_device(a)
+    integer, device :: a(:)
+  end
+
+  subroutine sub_managed(a)
+    integer, managed :: a(:)
+  end
+
+  subroutine sub_unified(a)
+    integer, unified :: a(:)
+  end
+end module
+
+program m
+  use matching
+
+  integer, pinned, allocatable :: a(:)
+  integer, managed, allocatable :: b(:)
+  integer, unified, allocatable :: u(:)
+  integer, device :: d(10)
+  logical :: plog
+  allocate(a(100), pinned = plog)
+  allocate(b(200))
+  allocate(u(100))
+
+  call sub(a) ! Should resolve to sub_host
+  call sub(b) ! Should resolve to sub_managed
+  call sub(u) ! Should resolve to sub_unified
+  call sub(d) ! Should resolve to sub_device
+
+end
+
+! CHECK: CALL sub_host
+! CHECK: CALL sub_managed
+! CHECK: CALL sub_unified
+! CHECK: CALL sub_device

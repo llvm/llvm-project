@@ -16,9 +16,9 @@
 
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <string>
@@ -94,7 +94,7 @@ class InstrItineraryData;
     /// are input.  This SUnit graph is similar to the SelectionDAG, but
     /// excludes nodes that aren't interesting to scheduling, and represents
     /// flagged together nodes with a single SUnit.
-    void BuildSchedGraph(AAResults *AA);
+    void BuildSchedGraph();
 
     /// InitNumRegDefsLeft - Determine the # of regs defined by this node.
     ///
@@ -184,7 +184,8 @@ class InstrItineraryData;
     void BuildSchedUnits();
     void AddSchedEdges();
 
-    void EmitPhysRegCopy(SUnit *SU, DenseMap<SUnit*, Register> &VRBaseMap,
+    void EmitPhysRegCopy(SUnit *SU,
+                         SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
                          MachineBasicBlock::iterator InsertPos);
   };
 

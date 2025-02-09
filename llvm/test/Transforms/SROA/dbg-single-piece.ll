@@ -14,7 +14,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 define void @_ZL18findInsertLocationPN4llvm17MachineBasicBlockENS_9SlotIndexERNS_13LiveIntervalsE() {
 ; CHECK-LABEL: @_ZL18findInsertLocationPN4llvm17MachineBasicBlockENS_9SlotIndexERNS_13LiveIntervalsE(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr poison, metadata [[META3:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg [[DBG8:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(ptr poison, [[META3:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 64, 64), [[META8:![0-9]+]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

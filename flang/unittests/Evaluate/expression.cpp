@@ -1,10 +1,10 @@
 #include "flang/Evaluate/expression.h"
-#include "testing.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
+#include "flang/Testing/testing.h"
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -23,8 +23,9 @@ int main() {
   auto intrinsics{Fortran::evaluate::IntrinsicProcTable::Configure(defaults)};
   TargetCharacteristics targetCharacteristics;
   Fortran::common::LanguageFeatureControl languageFeatures;
+  std::set<std::string> tempNames;
   FoldingContext context{Fortran::parser::ContextualMessages{nullptr}, defaults,
-      intrinsics, targetCharacteristics, languageFeatures};
+      intrinsics, targetCharacteristics, languageFeatures, tempNames};
   ex1 = Fold(context, std::move(ex1));
   MATCH("-10_4", ex1.AsFortran());
   MATCH("1_4/2_4", (DefaultIntegerExpr{1} / DefaultIntegerExpr{2}).AsFortran());

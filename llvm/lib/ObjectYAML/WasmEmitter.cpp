@@ -497,7 +497,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
 
     writeInitExpr(OS, Segment.Offset);
 
-    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) {
       // We only support active function table initializers, for which the elem
       // kind is specified to be written as 0x00 and interpreted to mean
       // "funcref".
@@ -604,7 +604,8 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
     if (auto S = dyn_cast<WasmYAML::CustomSection>(Sec.get()))
       SecName = S->Name;
     if (!Checker.isValidSectionOrder(Sec->Type, SecName)) {
-      reportError("out of order section type: " + Twine(Sec->Type));
+      reportError("out of order section type: " +
+                  wasm::sectionTypeToString(Sec->Type));
       return false;
     }
     encodeULEB128(Sec->Type, OS);
@@ -647,7 +648,7 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
     StringStream.flush();
 
     unsigned HeaderSecSizeEncodingLen =
-        Sec->HeaderSecSizeEncodingLen ? *Sec->HeaderSecSizeEncodingLen : 5;
+        Sec->HeaderSecSizeEncodingLen.value_or(5);
     unsigned RequiredLen = getULEB128Size(OutString.size());
     // Wasm spec does not allow LEBs larger than 5 bytes
     assert(RequiredLen <= 5);

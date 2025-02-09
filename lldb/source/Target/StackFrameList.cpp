@@ -38,7 +38,7 @@ using namespace lldb_private;
 StackFrameList::StackFrameList(Thread &thread,
                                const lldb::StackFrameListSP &prev_frames_sp,
                                bool show_inline_frames)
-    : m_thread(thread), m_prev_frames_sp(prev_frames_sp), m_mutex(), m_frames(),
+    : m_thread(thread), m_prev_frames_sp(prev_frames_sp), m_frames(),
       m_selected_frame_idx(), m_concrete_frames_fetched(0),
       m_current_inlined_depth(UINT32_MAX),
       m_current_inlined_pc(LLDB_INVALID_ADDRESS),
@@ -63,6 +63,7 @@ void StackFrameList::CalculateCurrentInlinedDepth() {
 }
 
 uint32_t StackFrameList::GetCurrentInlinedDepth() {
+  std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
   if (m_show_inlined_frames && m_current_inlined_pc != LLDB_INVALID_ADDRESS) {
     lldb::addr_t cur_pc = m_thread.GetRegisterContext()->GetPC();
     if (cur_pc != m_current_inlined_pc) {
@@ -84,122 +85,32 @@ void StackFrameList::ResetCurrentInlinedDepth() {
   if (!m_show_inlined_frames)
     return;
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  
-  GetFramesUpTo(0, DoNotAllowInterruption);
-  if (m_frames.empty())
-    return;
-  if (!m_frames[0]->IsInlined()) {
-    m_current_inlined_depth = UINT32_MAX;
-    m_current_inlined_pc = LLDB_INVALID_ADDRESS;
-    Log *log = GetLog(LLDBLog::Step);
-    if (log && log->GetVerbose())
-      LLDB_LOGF(
-          log,
-          "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
-    return;
-  }
-
-  // We only need to do something special about inlined blocks when we are
-  // at the beginning of an inlined function:
-  // FIXME: We probably also have to do something special if the PC is at
-  // the END of an inlined function, which coincides with the end of either
-  // its containing function or another inlined function.
-
-  Block *block_ptr = m_frames[0]->GetFrameBlock();
-  if (!block_ptr)
-    return;
-
-  Address pc_as_address;
-  lldb::addr_t curr_pc = m_thread.GetRegisterContext()->GetPC();
-  pc_as_address.SetLoadAddress(curr_pc, &(m_thread.GetProcess()->GetTarget()));
-  AddressRange containing_range;
-  if (!block_ptr->GetRangeContainingAddress(pc_as_address, containing_range) ||
-      pc_as_address != containing_range.GetBaseAddress())
-    return;
-
-  // If we got here because of a breakpoint hit, then set the inlined depth
-  // depending on where the breakpoint was set. If we got here because of a
-  // crash, then set the inlined depth to the deepest most block.  Otherwise,
-  // we stopped here naturally as the result of a step, so set ourselves in the
-  // containing frame of the whole set of nested inlines, so the user can then
-  // "virtually" step into the frames one by one, or next over the whole mess.
-  // Note: We don't have to handle being somewhere in the middle of the stack
-  // here, since ResetCurrentInlinedDepth doesn't get called if there is a
-  // valid inlined depth set.
   StopInfoSP stop_info_sp = m_thread.GetStopInfo();
   if (!stop_info_sp)
     return;
-  switch (stop_info_sp->GetStopReason()) {
-  case eStopReasonWatchpoint:
-  case eStopReasonException:
-  case eStopReasonExec:
-  case eStopReasonFork:
-  case eStopReasonVFork:
-  case eStopReasonVForkDone:
-  case eStopReasonSignal:
-    // In all these cases we want to stop in the deepest frame.
-    m_current_inlined_pc = curr_pc;
-    m_current_inlined_depth = 0;
-    break;
-  case eStopReasonBreakpoint: {
-    // FIXME: Figure out what this break point is doing, and set the inline
-    // depth appropriately.  Be careful to take into account breakpoints that
-    // implement step over prologue, since that should do the default
-    // calculation. For now, if the breakpoints corresponding to this hit are
-    // all internal, I set the stop location to the top of the inlined stack,
-    // since that will make things like stepping over prologues work right.
-    // But if there are any non-internal breakpoints I do to the bottom of the
-    // stack, since that was the old behavior.
-    uint32_t bp_site_id = stop_info_sp->GetValue();
-    BreakpointSiteSP bp_site_sp(
-        m_thread.GetProcess()->GetBreakpointSiteList().FindByID(bp_site_id));
-    bool all_internal = true;
-    if (bp_site_sp) {
-      uint32_t num_owners = bp_site_sp->GetNumberOfConstituents();
-      for (uint32_t i = 0; i < num_owners; i++) {
-        Breakpoint &bp_ref =
-            bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint();
-        if (!bp_ref.IsInternal()) {
-          all_internal = false;
-        }
-      }
-    }
-    if (!all_internal) {
-      m_current_inlined_pc = curr_pc;
-      m_current_inlined_depth = 0;
-      break;
-    }
-  }
-    [[fallthrough]];
-  default: {
-    // Otherwise, we should set ourselves at the container of the inlining, so
-    // that the user can descend into them. So first we check whether we have
-    // more than one inlined block sharing this PC:
-    int num_inlined_functions = 0;
 
-    for (Block *container_ptr = block_ptr->GetInlinedParent();
-         container_ptr != nullptr;
-         container_ptr = container_ptr->GetInlinedParent()) {
-      if (!container_ptr->GetRangeContainingAddress(pc_as_address,
-                                                    containing_range))
-        break;
-      if (pc_as_address != containing_range.GetBaseAddress())
-        break;
+  bool inlined = true;
+  auto inline_depth = stop_info_sp->GetSuggestedStackFrameIndex(inlined);
+  // We're only adjusting the inlined stack here.
+  Log *log = GetLog(LLDBLog::Step);
+  if (inline_depth) {
+    std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
+    m_current_inlined_depth = *inline_depth;
+    m_current_inlined_pc = m_thread.GetRegisterContext()->GetPC();
 
-      num_inlined_functions++;
-    }
-    m_current_inlined_pc = curr_pc;
-    m_current_inlined_depth = num_inlined_functions + 1;
-    Log *log = GetLog(LLDBLog::Step);
     if (log && log->GetVerbose())
       LLDB_LOGF(log,
                 "ResetCurrentInlinedDepth: setting inlined "
                 "depth: %d 0x%" PRIx64 ".\n",
-                m_current_inlined_depth, curr_pc);
-
-    break;
-  }
+                m_current_inlined_depth, m_current_inlined_pc);
+  } else {
+    std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
+    m_current_inlined_pc = LLDB_INVALID_ADDRESS;
+    m_current_inlined_depth = UINT32_MAX;
+    if (log && log->GetVerbose())
+      LLDB_LOGF(
+          log,
+          "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
   }
 }
 
@@ -208,6 +119,7 @@ bool StackFrameList::DecrementCurrentInlinedDepth() {
     uint32_t current_inlined_depth = GetCurrentInlinedDepth();
     if (current_inlined_depth != UINT32_MAX) {
       if (current_inlined_depth > 0) {
+        std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
         m_current_inlined_depth--;
         return true;
       }
@@ -217,6 +129,7 @@ bool StackFrameList::DecrementCurrentInlinedDepth() {
 }
 
 void StackFrameList::SetCurrentInlinedDepth(uint32_t new_depth) {
+  std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
   m_current_inlined_depth = new_depth;
   if (new_depth == UINT32_MAX)
     m_current_inlined_pc = LLDB_INVALID_ADDRESS;
@@ -224,23 +137,9 @@ void StackFrameList::SetCurrentInlinedDepth(uint32_t new_depth) {
     m_current_inlined_pc = m_thread.GetRegisterContext()->GetPC();
 }
 
-void StackFrameList::GetOnlyConcreteFramesUpTo(uint32_t end_idx,
-                                               Unwind &unwinder) {
-  assert(m_thread.IsValid() && "Expected valid thread");
-  assert(m_frames.size() <= end_idx && "Expected there to be frames to fill");
-
-  if (end_idx < m_concrete_frames_fetched)
-    return;
-
-  uint32_t num_frames = unwinder.GetFramesUpTo(end_idx);
-  if (num_frames <= end_idx + 1) {
-    // Done unwinding.
-    m_concrete_frames_fetched = UINT32_MAX;
-  }
-
-  // Don't create the frames eagerly. Defer this work to GetFrameAtIndex,
-  // which can lazily query the unwinder to create frames.
-  m_frames.resize(num_frames);
+bool StackFrameList::WereAllFramesFetched() const {
+  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+  return GetAllFramesFetched();
 }
 
 /// A sequence of calls that comprise some portion of a backtrace. Each frame
@@ -256,6 +155,8 @@ using CallSequence = std::vector<CallDescriptor>;
 /// Find the unique path through the call graph from \p begin (with return PC
 /// \p return_pc) to \p end. On success this path is stored into \p path, and
 /// on failure \p path is unchanged.
+/// This function doesn't currently access StackFrameLists at all, it only looks
+/// at the frame set in the ExecutionContext it passes around.
 static void FindInterveningFrames(Function &begin, Function &end,
                                   ExecutionContext &exe_ctx, Target &target,
                                   addr_t return_pc, CallSequence &path,
@@ -439,22 +340,64 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
 
 bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
                                    InterruptionControl allow_interrupt) {
+  // GetFramesUpTo is always called with the intent to add frames, so get the
+  // writer lock:
+  std::unique_lock<std::shared_mutex> guard(m_list_mutex);
+  // Now that we have the lock, check to make sure someone didn't get there
+  // ahead of us:
+  if (m_frames.size() > end_idx || GetAllFramesFetched())
+    return false;
+
   // Do not fetch frames for an invalid thread.
   bool was_interrupted = false;
   if (!m_thread.IsValid())
     return false;
 
-  // We've already gotten more frames than asked for, or we've already finished
-  // unwinding, return.
-  if (m_frames.size() > end_idx || GetAllFramesFetched())
+  // lock the writer side of m_list_mutex as we're going to add frames here:
+  if (!m_show_inlined_frames) {
+    if (end_idx < m_concrete_frames_fetched)
+      return false;
+    // We're adding concrete frames now:
+    // FIXME: This should also be interruptible:
+    FetchOnlyConcreteFramesUpTo(end_idx);
     return false;
+  }
+
+  // We're adding concrete and inlined frames now:
+  was_interrupted = FetchFramesUpTo(end_idx, allow_interrupt);
+
+#if defined(DEBUG_STACK_FRAMES)
+  s.PutCString("\n\nNew frames:\n");
+  Dump(&s);
+  s.EOL();
+#endif
+  return was_interrupted;
+}
+
+void StackFrameList::FetchOnlyConcreteFramesUpTo(uint32_t end_idx) {
+  assert(m_thread.IsValid() && "Expected valid thread");
+  assert(m_frames.size() <= end_idx && "Expected there to be frames to fill");
 
   Unwind &unwinder = m_thread.GetUnwinder();
 
-  if (!m_show_inlined_frames) {
-    GetOnlyConcreteFramesUpTo(end_idx, unwinder);
-    return false;
+  if (end_idx < m_concrete_frames_fetched)
+    return;
+
+  uint32_t num_frames = unwinder.GetFramesUpTo(end_idx);
+  if (num_frames <= end_idx + 1) {
+    // Done unwinding.
+    m_concrete_frames_fetched = UINT32_MAX;
   }
+
+  // Don't create the frames eagerly. Defer this work to GetFrameAtIndex,
+  // which can lazily query the unwinder to create frames.
+  m_frames.resize(num_frames);
+}
+
+bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
+                                     InterruptionControl allow_interrupt) {
+  Unwind &unwinder = m_thread.GetUnwinder();
+  bool was_interrupted = false;
 
 #if defined(DEBUG_STACK_FRAMES)
   StreamFile s(stdout, false);
@@ -510,11 +453,11 @@ bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
     } else {
       // Check for interruption when building the frames.
       // Do the check in idx > 0 so that we'll always create a 0th frame.
-      if (allow_interrupt 
-          && INTERRUPT_REQUESTED(dbg, "Interrupted having fetched {0} frames",
-                                 m_frames.size())) {
-          was_interrupted = true;
-          break;
+      if (allow_interrupt &&
+          INTERRUPT_REQUESTED(dbg, "Interrupted having fetched {0} frames",
+                              m_frames.size())) {
+        was_interrupted = true;
+        break;
       }
 
       const bool success =
@@ -623,12 +566,6 @@ bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
     // We are done with the old stack frame list, we can release it now.
     m_prev_frames_sp.reset();
   }
-
-#if defined(DEBUG_STACK_FRAMES)
-  s.PutCString("\n\nNew frames:\n");
-  Dump(&s);
-  s.EOL();
-#endif
   // Don't report interrupted if we happen to have gotten all the frames:
   if (!GetAllFramesFetched())
     return was_interrupted;
@@ -636,20 +573,23 @@ bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
 }
 
 uint32_t StackFrameList::GetNumFrames(bool can_create) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-
-  if (can_create) {
+  if (!WereAllFramesFetched() && can_create) {
     // Don't allow interrupt or we might not return the correct count
-    GetFramesUpTo(UINT32_MAX, DoNotAllowInterruption); 
+    GetFramesUpTo(UINT32_MAX, DoNotAllowInterruption);
   }
-  return GetVisibleStackFrameIndex(m_frames.size());
+  uint32_t frame_idx;
+  {
+    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+    frame_idx = GetVisibleStackFrameIndex(m_frames.size());
+  }
+  return frame_idx;
 }
 
 void StackFrameList::Dump(Stream *s) {
   if (s == nullptr)
     return;
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
 
   const_iterator pos, begin = m_frames.begin(), end = m_frames.end();
   for (pos = begin; pos != end; ++pos) {
@@ -667,72 +607,53 @@ void StackFrameList::Dump(Stream *s) {
 
 StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
   StackFrameSP frame_sp;
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   uint32_t original_idx = idx;
 
-  uint32_t inlined_depth = GetCurrentInlinedDepth();
-  if (inlined_depth != UINT32_MAX)
-    idx += inlined_depth;
+  // We're going to consult the m_frames.size, but if there are already
+  // enough frames for our request we don't want to block other readers, so
+  // first acquire the shared lock:
+  { // Scope for shared lock:
+    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
 
-  if (idx < m_frames.size())
-    frame_sp = m_frames[idx];
+    uint32_t inlined_depth = GetCurrentInlinedDepth();
+    if (inlined_depth != UINT32_MAX)
+      idx += inlined_depth;
 
-  if (frame_sp)
-    return frame_sp;
+    if (idx < m_frames.size())
+      frame_sp = m_frames[idx];
+
+    if (frame_sp)
+      return frame_sp;
+  } // End of reader lock scope
 
   // GetFramesUpTo will fill m_frames with as many frames as you asked for, if
   // there are that many.  If there weren't then you asked for too many frames.
   // GetFramesUpTo returns true if interrupted:
-  if (GetFramesUpTo(idx)) {
+  if (GetFramesUpTo(idx, AllowInterruption)) {
     Log *log = GetLog(LLDBLog::Thread);
     LLDB_LOG(log, "GetFrameAtIndex was interrupted");
     return {};
   }
 
-  if (idx < m_frames.size()) {
-    if (m_show_inlined_frames) {
-      // When inline frames are enabled we actually create all the frames in
-      // GetFramesUpTo.
+  { // Now we're accessing m_frames as a reader, so acquire the reader lock.
+    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+    if (idx < m_frames.size()) {
       frame_sp = m_frames[idx];
-    } else {
-      addr_t pc, cfa;
-      bool behaves_like_zeroth_frame = (idx == 0);
-      if (m_thread.GetUnwinder().GetFrameInfoAtIndex(
-              idx, cfa, pc, behaves_like_zeroth_frame)) {
-        const bool cfa_is_valid = true;
-        frame_sp = std::make_shared<StackFrame>(
-            m_thread.shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
-            StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
-
-        Function *function =
-            frame_sp->GetSymbolContext(eSymbolContextFunction).function;
-        if (function) {
-          // When we aren't showing inline functions we always use the top
-          // most function block as the scope.
-          frame_sp->SetSymbolContextScope(&function->GetBlock(false));
-        } else {
-          // Set the symbol scope from the symbol regardless if it is nullptr
-          // or valid.
-          frame_sp->SetSymbolContextScope(
-              frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol);
-        }
-        SetFrameAtIndex(idx, frame_sp);
+    } else if (original_idx == 0) {
+      // There should ALWAYS be a frame at index 0.  If something went wrong
+      // with the CurrentInlinedDepth such that there weren't as many frames as
+      // we thought taking that into account, then reset the current inlined
+      // depth and return the real zeroth frame.
+      if (m_frames.empty()) {
+        // Why do we have a thread with zero frames, that should not ever
+        // happen...
+        assert(!m_thread.IsValid() && "A valid thread has no frames.");
+      } else {
+        ResetCurrentInlinedDepth();
+        frame_sp = m_frames[original_idx];
       }
     }
-  } else if (original_idx == 0) {
-    // There should ALWAYS be a frame at index 0.  If something went wrong with
-    // the CurrentInlinedDepth such that there weren't as many frames as we
-    // thought taking that into account, then reset the current inlined depth
-    // and return the real zeroth frame.
-    if (m_frames.empty()) {
-      // Why do we have a thread with zero frames, that should not ever
-      // happen...
-      assert(!m_thread.IsValid() && "A valid thread has no frames.");
-    } else {
-      ResetCurrentInlinedDepth();
-      frame_sp = m_frames[original_idx];
-    }
-  }
+  } // End of reader lock scope
 
   return frame_sp;
 }
@@ -764,19 +685,18 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
   StackFrameSP frame_sp;
 
   if (stack_id.IsValid()) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     uint32_t frame_idx = 0;
-    // Do a binary search in case the stack frame is already in our cache
-    collection::const_iterator begin = m_frames.begin();
-    collection::const_iterator end = m_frames.end();
-    if (begin != end) {
+    {
+      // First see if the frame is already realized.  This is the scope for
+      // the shared mutex:
+      std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+      // Do a binary search in case the stack frame is already in our cache
       collection::const_iterator pos =
-          std::lower_bound(begin, end, stack_id, CompareStackID);
-      if (pos != end) {
-        if ((*pos)->GetStackID() == stack_id)
-          return *pos;
-      }
+          llvm::lower_bound(m_frames, stack_id, CompareStackID);
+      if (pos != m_frames.end() && (*pos)->GetStackID() == stack_id)
+        return *pos;
     }
+    // If we needed to add more frames, we would get to here.
     do {
       frame_sp = GetFrameAtIndex(frame_idx);
       if (frame_sp && frame_sp->GetStackID() == stack_id)
@@ -788,6 +708,7 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
 }
 
 bool StackFrameList::SetFrameAtIndex(uint32_t idx, StackFrameSP &frame_sp) {
+  std::unique_lock<std::shared_mutex> guard(m_list_mutex);
   if (idx >= m_frames.size())
     m_frames.resize(idx + 1);
   // Make sure allocation succeeded by checking bounds again
@@ -816,24 +737,52 @@ void StackFrameList::SelectMostRelevantFrame() {
 
   RecognizedStackFrameSP recognized_frame_sp = frame_sp->GetRecognizedFrame();
 
-  if (!recognized_frame_sp) {
-    LLDB_LOG(log, "Frame #0 not recognized");
-    return;
+  if (recognized_frame_sp) {
+    if (StackFrameSP most_relevant_frame_sp =
+            recognized_frame_sp->GetMostRelevantFrame()) {
+      LLDB_LOG(log, "Found most relevant frame at index {0}",
+               most_relevant_frame_sp->GetFrameIndex());
+      SetSelectedFrame(most_relevant_frame_sp.get());
+      return;
+    }
+  }
+  LLDB_LOG(log, "Frame #0 not recognized");
+
+  // If this thread has a non-trivial StopInfo, then let it suggest
+  // a most relevant frame:
+  StopInfoSP stop_info_sp = m_thread.GetStopInfo();
+  uint32_t stack_idx = 0;
+  bool found_relevant = false;
+  if (stop_info_sp) {
+    // Here we're only asking the stop info if it wants to adjust the real stack
+    // index.  We have to ask about the m_inlined_stack_depth in
+    // Thread::ShouldStop since the plans need to reason with that info.
+    bool inlined = false;
+    std::optional<uint32_t> stack_opt =
+        stop_info_sp->GetSuggestedStackFrameIndex(inlined);
+    if (stack_opt) {
+      stack_idx = *stack_opt;
+      found_relevant = true;
+    }
   }
 
-  if (StackFrameSP most_relevant_frame_sp =
-          recognized_frame_sp->GetMostRelevantFrame()) {
-    LLDB_LOG(log, "Found most relevant frame at index {0}",
-             most_relevant_frame_sp->GetFrameIndex());
-    SetSelectedFrame(most_relevant_frame_sp.get());
-  } else {
+  frame_sp = GetFrameAtIndex(stack_idx);
+  if (!frame_sp)
+    LLDB_LOG(log, "Stop info suggested relevant frame {0} but it didn't exist",
+             stack_idx);
+  else if (found_relevant)
+    LLDB_LOG(log, "Setting selected frame from stop info to {0}", stack_idx);
+  // Note, we don't have to worry about "inlined" frames here, because we've
+  // already calculated the inlined frame in Thread::ShouldStop, and
+  // SetSelectedFrame will take care of that adjustment for us.
+  SetSelectedFrame(frame_sp.get());
+
+  if (!found_relevant)
     LLDB_LOG(log, "No relevant frame!");
-  }
 }
 
-uint32_t StackFrameList::GetSelectedFrameIndex(
-    SelectMostRelevant select_most_relevant) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+uint32_t
+StackFrameList::GetSelectedFrameIndex(SelectMostRelevant select_most_relevant) {
   if (!m_selected_frame_idx && select_most_relevant)
     SelectMostRelevantFrame();
   if (!m_selected_frame_idx) {
@@ -841,13 +790,15 @@ uint32_t StackFrameList::GetSelectedFrameIndex(
     // isn't set, then don't force a selection here, just return 0.
     if (!select_most_relevant)
       return 0;
+    // If the inlined stack frame is set, then use that:
     m_selected_frame_idx = 0;
   }
   return *m_selected_frame_idx;
 }
 
 uint32_t StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+
   const_iterator pos;
   const_iterator begin = m_frames.begin();
   const_iterator end = m_frames.end();
@@ -862,13 +813,11 @@ uint32_t StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
       break;
     }
   }
-
   SetDefaultFileAndLineToSelectedFrame();
   return *m_selected_frame_idx;
 }
 
 bool StackFrameList::SetSelectedFrameByIndex(uint32_t idx) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   StackFrameSP frame_sp(GetFrameAtIndex(idx));
   if (frame_sp) {
     SetSelectedFrame(frame_sp.get());
@@ -884,9 +833,9 @@ void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
         GetFrameAtIndex(GetSelectedFrameIndex(DoNoSelectMostRelevantFrame)));
     if (frame_sp) {
       SymbolContext sc = frame_sp->GetSymbolContext(eSymbolContextLineEntry);
-      if (sc.line_entry.file)
+      if (sc.line_entry.GetFile())
         m_thread.CalculateTarget()->GetSourceManager().SetDefaultFileAndLine(
-            sc.line_entry.file, sc.line_entry.line);
+            sc.line_entry.file_sp, sc.line_entry.line);
     }
   }
 }
@@ -899,7 +848,7 @@ void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
 // does not describe how StackFrameLists are currently used.
 // Clear is currently only used to clear the list in the destructor.
 void StackFrameList::Clear() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  std::unique_lock<std::shared_mutex> guard(m_list_mutex);
   m_frames.clear();
   m_concrete_frames_fetched = 0;
   m_selected_frame_idx.reset();
@@ -907,6 +856,7 @@ void StackFrameList::Clear() {
 
 lldb::StackFrameSP
 StackFrameList::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
+  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
   const_iterator pos;
   const_iterator begin = m_frames.begin();
   const_iterator end = m_frames.end();
@@ -924,7 +874,7 @@ StackFrameList::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
 size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
                                  uint32_t num_frames, bool show_frame_info,
                                  uint32_t num_frames_with_source,
-                                 bool show_unique,
+                                 bool show_unique, bool show_hidden,
                                  const char *selected_frame_marker) {
   size_t num_frames_displayed = 0;
 
@@ -951,7 +901,6 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
     unselected_marker = buffer.c_str();
   }
   const char *marker = nullptr;
-
   for (frame_idx = first_frame; frame_idx < last_frame; ++frame_idx) {
     frame_sp = GetFrameAtIndex(frame_idx);
     if (!frame_sp)
@@ -963,12 +912,17 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
       else
         marker = unselected_marker;
     }
+
+    // Hide uninteresting frames unless it's the selected frame.
+    if (!show_hidden && frame_sp != selected_frame_sp && frame_sp->IsHidden())
+      continue;
+
     // Check for interruption here.  If we're fetching arguments, this loop
     // can go slowly:
     Debugger &dbg = m_thread.GetProcess()->GetTarget().GetDebugger();
-    if (INTERRUPT_REQUESTED(dbg, 
-          "Interrupted dumping stack for thread {0:hex} with {1} shown.",
-          m_thread.GetID(), num_frames_displayed))
+    if (INTERRUPT_REQUESTED(
+            dbg, "Interrupted dumping stack for thread {0:x} with {1} shown.",
+            m_thread.GetID(), num_frames_displayed))
       break;
 
 

@@ -28,18 +28,10 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
-#if HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
-#if HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
-#endif
-#if HAVE_SIGNAL_H
 #include <signal.h>
-#endif
-#if HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -91,7 +83,7 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
     SmallString<128> FilePath(Path);
     sys::path::append(FilePath, Name);
     if (sys::fs::can_execute(FilePath.c_str()))
-      return std::string(FilePath.str()); // Found the executable!
+      return std::string(FilePath); // Found the executable!
   }
   return errc::no_such_file_or_directory;
 }
@@ -146,7 +138,6 @@ static bool RedirectIO_PS(const std::string *Path, int FD, std::string *ErrMsg,
 static void TimeOutHandler(int Sig) {}
 
 static void SetMemoryLimits(unsigned size) {
-#if HAVE_SYS_RESOURCE_H && HAVE_GETRLIMIT && HAVE_SETRLIMIT
   struct rlimit r;
   __typeof__(r.rlim_cur) limit = (__typeof__(r.rlim_cur))(size)*1048576;
 
@@ -160,7 +151,6 @@ static void SetMemoryLimits(unsigned size) {
   r.rlim_cur = limit;
   setrlimit(RLIMIT_RSS, &r);
 #endif
-#endif
 }
 
 static std::vector<const char *>
@@ -173,10 +163,11 @@ toNullTerminatedCStringArray(ArrayRef<StringRef> Strings, StringSaver &Saver) {
 }
 
 static bool Execute(ProcessInfo &PI, StringRef Program,
-                    ArrayRef<StringRef> Args, std::optional<ArrayRef<StringRef>> Env,
+                    ArrayRef<StringRef> Args,
+                    std::optional<ArrayRef<StringRef>> Env,
                     ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
-                    BitVector *AffinityMask) {
+                    BitVector *AffinityMask, bool DetachProcess) {
   if (!llvm::sys::fs::exists(Program)) {
     if (ErrMsg)
       *ErrMsg = std::string("Executable \"") + Program.str() +
@@ -202,7 +193,8 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   // If this OS has posix_spawn and there is no memory limit being implied, use
   // posix_spawn.  It is more efficient than fork/exec.
 #ifdef HAVE_POSIX_SPAWN
-  if (MemoryLimit == 0) {
+  // Cannot use posix_spawn if you would like to detach the process
+  if (MemoryLimit == 0 && !DetachProcess) {
     posix_spawn_file_actions_t FileActionsStore;
     posix_spawn_file_actions_t *FileActions = nullptr;
 
@@ -270,7 +262,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
 
     return true;
   }
-#endif
+#endif // HAVE_POSIX_SPAWN
 
   // Create a child process.
   int child = fork();
@@ -304,6 +296,14 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
         if (RedirectIO(Redirects[2], 2, ErrMsg)) {
           return false;
         }
+      }
+    }
+
+    if (DetachProcess) {
+      // Detach from controlling terminal
+      if (::setsid() == -1) {
+        MakeErrMsg(ErrMsg, "Could not detach process, ::setsid failed");
+        return false;
       }
     }
 
@@ -523,7 +523,7 @@ std::error_code llvm::sys::ChangeStdoutMode(fs::OpenFlags Flags) {
 
 std::error_code llvm::sys::ChangeStdinToBinary() {
 #ifdef __MVS__
-  return disableAutoConversion(STDIN_FILENO);
+  return disablezOSAutoConversion(STDIN_FILENO);
 #else
   // Do nothing, as Unix doesn't differentiate between text and binary.
   return std::error_code();

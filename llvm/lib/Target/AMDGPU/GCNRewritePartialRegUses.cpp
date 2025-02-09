@@ -34,10 +34,8 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;
@@ -57,8 +55,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<LiveIntervals>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -88,7 +86,7 @@ private:
   };
 
   /// Map OldSubReg -> { RC, NewSubReg }. Used as in/out container.
-  typedef SmallDenseMap<unsigned, SubRegInfo> SubRegMap;
+  using SubRegMap = SmallDenseMap<unsigned, SubRegInfo>;
 
   /// Given register class RC and the set of used subregs as keys in the SubRegs
   /// map return new register class and indexes of right-shifted subregs as
@@ -397,7 +395,7 @@ void GCNRewritePartialRegUses::updateLiveIntervals(Register OldReg,
   }
   if (NewLI.empty())
     NewLI.assign(OldLI, Allocator);
-  NewLI.verify(MRI);
+  assert(NewLI.verify(MRI));
   LIS->removeInterval(OldReg);
 }
 
@@ -482,7 +480,8 @@ bool GCNRewritePartialRegUses::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = static_cast<const SIRegisterInfo *>(MRI->getTargetRegisterInfo());
   TII = MF.getSubtarget().getInstrInfo();
-  LIS = getAnalysisIfAvailable<LiveIntervals>();
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   bool Changed = false;
   for (size_t I = 0, E = MRI->getNumVirtRegs(); I < E; ++I) {
     Changed |= rewriteReg(Register::index2VirtReg(I));

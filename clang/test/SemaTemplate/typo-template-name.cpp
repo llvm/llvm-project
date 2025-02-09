@@ -36,7 +36,7 @@ namespace InExpr {
 
     // These are valid expressions.
     foo<foo; // expected-warning {{self-comparison}}
-    foo<int()>(0);
+    foo<int()>(0); // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
     foo<int(), true>(false);
     foo<Base{}.n;
   }

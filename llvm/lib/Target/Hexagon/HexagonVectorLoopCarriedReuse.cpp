@@ -28,7 +28,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/Use.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -39,9 +38,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
-#include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <map>
 #include <memory>
 #include <set>
@@ -546,7 +543,7 @@ void HexagonVectorLoopCarriedReuse::reuseValue() {
     }
     InstsInPreheader.push_back(InstInPreheader);
     InstInPreheader->setName(Inst2Replace->getName() + ".hexagon.vlcr");
-    InstInPreheader->insertBefore(LoopPH->getTerminator());
+    InstInPreheader->insertBefore(LoopPH->getTerminator()->getIterator());
     LLVM_DEBUG(dbgs() << "Added " << *InstInPreheader << " to "
                       << LoopPH->getName() << "\n");
   }

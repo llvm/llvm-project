@@ -1,4 +1,5 @@
 ; RUN: opt -S -loop-reduce < %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S -loop-reduce < %s | FileCheck %s
 
 ; During Loop Strength Reduce, if the terminating condition for the loop is not
 ; immediately adjacent to the terminating branch and it has more than one use,
@@ -11,7 +12,7 @@
 ; CHECK-LABEL: i:
 ; CHECK-NOT: icmp
 ; CHECK: [[COND:%.*]] = icmp eq i8
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i1 [[COND]]
+; CHECK-NEXT: #dbg_value(i1 [[COND]]
 ; CHECK-NEXT: br i1 [[COND]]
 
 

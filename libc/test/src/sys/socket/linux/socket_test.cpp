@@ -18,7 +18,7 @@
 TEST(LlvmLibcSocketTest, LocalSocket) {
   int sock = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_DGRAM, 0);
   ASSERT_GE(sock, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   LIBC_NAMESPACE::close(sock);
 }

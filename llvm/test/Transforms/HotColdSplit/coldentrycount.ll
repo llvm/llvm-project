@@ -1,5 +1,5 @@
 ; REQUIRES: x86-registered-target
-; RUN: opt -passes=hotcoldsplit -hotcoldsplit-threshold=0 < %s | opt -codegenprepare -S | FileCheck %s
+; RUN: opt -passes=hotcoldsplit -hotcoldsplit-threshold=0 < %s | opt -passes='require<profile-summary>,function(codegenprepare)' -S | FileCheck %s
 
 ; Test to ensure that split cold function gets 0 entry count profile
 ; metadata when compiling with pgo.
@@ -27,9 +27,9 @@ declare void @sink() cold
 ; CHECK: define {{.*}} @fun.cold.1{{.*}} ![[PROF:[0-9]+]] {{.*}}section_prefix ![[UNLIKELY:[0-9]+]]
 
 ; CHECK: ![[HOTPROF]] = !{!"function_entry_count", i64 100}
-; CHECK: ![[LIKELY]] = !{!"function_section_prefix", !"hot"}
+; CHECK: ![[LIKELY]] = !{!"section_prefix", !"hot"}
 ; CHECK: ![[PROF]] = !{!"function_entry_count", i64 0}
-; CHECK: ![[UNLIKELY]] = !{!"function_section_prefix", !"unlikely"}
+; CHECK: ![[UNLIKELY]] = !{!"section_prefix", !"unlikely"}
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}

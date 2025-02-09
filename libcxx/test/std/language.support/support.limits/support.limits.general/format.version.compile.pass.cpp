@@ -16,7 +16,7 @@
 // Test the feature test macros defined by <format>
 
 /*  Constant                   Value
-    __cpp_lib_format           202106L [C++20]
+    __cpp_lib_format           202110L [C++20]
     __cpp_lib_format_ranges    202207L [C++23]
     __cpp_lib_format_uchar     202311L [C++20]
 */
@@ -68,17 +68,11 @@
 
 #elif TEST_STD_VER == 20
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++20"
-#   endif
-#   if __cpp_lib_format != 202106L
-#     error "__cpp_lib_format should have the value 202106L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_format
+#   error "__cpp_lib_format should be defined in c++20"
+# endif
+# if __cpp_lib_format != 202110L
+#   error "__cpp_lib_format should have the value 202110L in c++20"
 # endif
 
 # ifdef __cpp_lib_format_ranges
@@ -94,17 +88,11 @@
 
 #elif TEST_STD_VER == 23
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++23"
-#   endif
-#   if __cpp_lib_format != 202106L
-#     error "__cpp_lib_format should have the value 202106L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_format
+#   error "__cpp_lib_format should be defined in c++23"
+# endif
+# if __cpp_lib_format != 202110L
+#   error "__cpp_lib_format should have the value 202110L in c++23"
 # endif
 
 # ifndef __cpp_lib_format_ranges
@@ -123,17 +111,11 @@
 
 #elif TEST_STD_VER > 23
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++26"
-#   endif
-#   if __cpp_lib_format != 202106L
-#     error "__cpp_lib_format should have the value 202106L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_format
+#   error "__cpp_lib_format should be defined in c++26"
+# endif
+# if __cpp_lib_format != 202110L
+#   error "__cpp_lib_format should have the value 202110L in c++26"
 # endif
 
 # ifndef __cpp_lib_format_ranges

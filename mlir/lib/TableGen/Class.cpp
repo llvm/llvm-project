@@ -113,7 +113,7 @@ MethodBody::MethodBody(bool declOnly)
     : declOnly(declOnly), stringOs(body), os(stringOs) {}
 
 void MethodBody::writeTo(raw_indented_ostream &os) const {
-  auto bodyRef = StringRef(body).drop_while([](char c) { return c == '\n'; });
+  auto bodyRef = StringRef(body).ltrim('\n');
   os << bodyRef;
   if (bodyRef.empty())
     return;
@@ -369,9 +369,7 @@ void Class::finalize() {
 
 Visibility Class::getLastVisibilityDecl() const {
   auto reverseDecls = llvm::reverse(declarations);
-  auto it = llvm::find_if(reverseDecls, [](auto &decl) {
-    return isa<VisibilityDeclaration>(decl);
-  });
+  auto it = llvm::find_if(reverseDecls, llvm::IsaPred<VisibilityDeclaration>);
   return it == reverseDecls.end()
              ? (isStruct ? Visibility::Public : Visibility::Private)
              : cast<VisibilityDeclaration>(**it).getVisibility();

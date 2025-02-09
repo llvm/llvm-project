@@ -1,11 +1,17 @@
 # REQUIRES: asserts
-# RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs -run-pass=machine-scheduler -verify-misched -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched -run-pass=machine-scheduler -verify-misched -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched -run-pass=machine-scheduler -amdgpu-use-amdgpu-trackers=1 -verify-misched -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN-GCNTRACKER %s
 
 --- |
   define amdgpu_kernel void @high-RP-reschedule() { ret void }
 ...
 
-# CHECK: Unclustered High Register Pressure Reschedule stage successfully increased occupancy to 4
+# GCN: Unclustered High Register Pressure Reschedule stage successfully increased occupancy to 4
+
+# GCN-GCNTRACKER: Occupancy before scheduling: 3, after 4.
+# GCN-GCNTRACKER-NEXT: Ending scheduling stage: Max Occupancy Initial Schedule
+
+# When using the GCN Trackers, the scheduler is able to acieve desired occupancy without running high-RP-reschedule stage.
 
 ---
 name: high-RP-reschedule
@@ -25,7 +31,7 @@ body: |
     %8:vreg_128 = IMPLICIT_DEF
     %9:vreg_128 = IMPLICIT_DEF
     %10:vreg_128 = IMPLICIT_DEF
-    %11:sreg_64_xexec = IMPLICIT_DEF
+    %11:sreg_64_xexec_xnull = IMPLICIT_DEF
     %12:vreg_64 = IMPLICIT_DEF
 
   bb.1:

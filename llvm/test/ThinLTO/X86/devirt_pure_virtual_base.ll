@@ -66,7 +66,7 @@ target triple = "x86_64-grtev4-linux-gnu"
 ;; Prevent the vtables from being dead code eliminated.
 @llvm.used = appending global [2 x ptr] [ ptr @_ZTV1A, ptr @_ZTV1B]
 
-; CHECK-IR-LABEL: define dso_local i32 @_start
+; CHECK-IR-LABEL: define dso_local {{(noundef )?}}i32 @_start
 define i32 @_start(ptr %obj, i32 %a) {
 entry:
   %vtable = load ptr, ptr %obj

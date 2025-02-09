@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! 15.4.3.4.5 Restrictions on generic declarations
 ! Specific procedures of generic interfaces must be distinguishable.
 
@@ -227,14 +227,17 @@ contains
   real function f1(x, y)
     real, intent(in) :: x
     logical, intent(in) :: y
+    f1 = 0.
   end
   integer function f2(x, y)
     integer, intent(in) :: x
     logical, intent(in) :: y
+    f2 = 0.
   end
   real function f3(x, y)
     real, value :: x
     logical, value :: y
+    f3 = 0.
   end
 end module
 
@@ -447,12 +450,15 @@ module m19
 contains
   integer function f1(i)
     integer, intent(in) :: i
+    f1 = 0
   end
   integer function f2(i, j)
     integer, value :: i, j
+    f2 = 0
   end
   integer function f3(i, j)
     integer, intent(in) :: i, j
+    f3 = 0
   end
 end
 
@@ -504,3 +510,21 @@ module m21
     class(*), allocatable :: x
   end subroutine
 end module
+
+! Example reduced from pFUnit
+module m22
+  !PORTABILITY: Generic 'generic' should not have specific procedures 'sub1' and 'sub2' as their interfaces are not distinguishable by the rules in the standard
+  interface generic
+    procedure sub1, sub2
+  end interface
+ contains
+  subroutine sub1(b, c)
+    class(*) b
+    integer, optional :: c
+  end
+  subroutine sub2(a, b, c)
+    real a
+    class(*) b
+    integer, optional :: c
+  end
+end

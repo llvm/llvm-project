@@ -2,10 +2,6 @@
 /// Perform several driver tests for OpenMP offloading
 ///
 
-// REQUIRES: x86-registered-target
-// REQUIRES: powerpc-registered-target
-// REQUIRES: nvptx-registered-target
-
 /// ###########################################################################
 
 /// Check whether an invalid OpenMP target is specified:
@@ -39,7 +35,7 @@
 /// ###########################################################################
 
 /// Check -Xopenmp-target=powerpc64le-ibm-linux-gnu -mcpu=pwr7 is passed when compiling for the device.
-// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target=powerpc64le-ibm-linux-gnu -mcpu=pwr7 %s 2>&1 \
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target=powerpc64le-ibm-linux-gnu -mcpu=pwr7 %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-FOPENMP-EQ-TARGET %s
 
 // CHK-FOPENMP-EQ-TARGET: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-target-device"
@@ -47,7 +43,7 @@
 /// ###########################################################################
 
 /// Check -Xopenmp-target -mcpu=pwr7 is passed when compiling for the device.
-// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target -mcpu=pwr7 %s 2>&1 \
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target -mcpu=pwr7 %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET %s
 
 // CHK-FOPENMP-TARGET: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-target-device"
@@ -55,7 +51,7 @@
 /// ##########################################################################
 
 /// Check -mcpu=pwr7 is passed to the same triple.
-// RUN:    %clang -### -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu --target=powerpc64le-ibm-linux-gnu -mcpu=pwr7 %s 2>&1 \
+// RUN:    %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu --target=powerpc64le-ibm-linux-gnu -mcpu=pwr7 %s 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHK-FOPENMP-MCPU-TO-SAME-TRIPLE %s
 
 // CHK-FOPENMP-MCPU-TO-SAME-TRIPLE: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-target-device"
@@ -63,7 +59,7 @@
 /// ##########################################################################
 
 /// Check -march=pwr7 is NOT passed to nvptx64-nvidia-cuda.
-// RUN:    not %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda --target=powerpc64le-ibm-linux-gnu -march=pwr7 %s 2>&1 \
+// RUN:    not %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda --target=powerpc64le-ibm-linux-gnu -march=pwr7 %s 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHK-FOPENMP-MARCH-TO-GPU %s
 
 // CHK-FOPENMP-MARCH-TO-GPU-NOT: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-target-device"
@@ -71,7 +67,7 @@
 /// ###########################################################################
 
 /// Check -march=pwr7 is NOT passed to x86_64-unknown-linux-gnu.
-// RUN:    not %clang -### -fopenmp=libomp -fopenmp-targets=x86_64-unknown-linux-gnu --target=powerpc64le-ibm-linux-gnu -march=pwr7 %s 2>&1 \
+// RUN:    not %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=x86_64-unknown-linux-gnu --target=powerpc64le-ibm-linux-gnu -march=pwr7 %s 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHK-FOPENMP-MARCH-TO-X86 %s
 
 // CHK-FOPENMP-MARCH-TO-X86-NOT: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-target-device"
@@ -79,7 +75,7 @@
 /// ###########################################################################
 
 /// Check -Xopenmp-target triggers error when multiple triples are used.
-// RUN:   not %clang -### -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu,powerpc64le-unknown-linux-gnu -Xopenmp-target -mcpu=pwr8 %s 2>&1 \
+// RUN:   not %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu,powerpc64le-unknown-linux-gnu -Xopenmp-target -mcpu=pwr8 %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-AMBIGUOUS-ERROR %s
 
 // CHK-FOPENMP-TARGET-AMBIGUOUS-ERROR: clang{{.*}} error: cannot deduce implicit triple value for -Xopenmp-target, specify triple using -Xopenmp-target=<triple>
@@ -87,10 +83,16 @@
 /// ###########################################################################
 
 /// Check -Xopenmp-target triggers error when an option requiring arguments is passed to it.
-// RUN:   not %clang -### -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target -Xopenmp-target -mcpu=pwr8 %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-NESTED-ERROR %s
+// RUN:   not %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target -Xopenmp-target -mcpu=pwr8 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-NESTED-ERROR_0 %s
 
-// CHK-FOPENMP-TARGET-NESTED-ERROR: clang{{.*}} error: invalid -Xopenmp-target argument: '-Xopenmp-target -Xopenmp-target', options requiring arguments are unsupported
+// CHK-FOPENMP-TARGET-NESTED-ERROR_0: error: invalid -Xopenmp-target argument: '-Xopenmp-target -Xopenmp-target', options requiring arguments are unsupported
+
+/// Check -Xopenmp-target= triggers error when an option requiring arguments is passed to it.
+// RUN:   not %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target=powerpc64le-ibm-linux-gnu -Xopenmp-target -mcpu=pwr8 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-NESTED-ERROR_1 %s
+
+// CHK-FOPENMP-TARGET-NESTED-ERROR_1: error: invalid -Xopenmp-target argument: '-Xopenmp-target=powerpc64le-ibm-linux-gnu -Xopenmp-target', options requiring arguments are unsupported
 
 /// ###########################################################################
 
@@ -182,13 +184,13 @@
 // RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -g %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-NEW-DRIVER-DEBUG %s
 
-// CHK-NEW-DRIVER-DEBUG: clang-linker-wrapper{{.*}} "--device-debug"
+// CHK-NEW-DRIVER-DEBUG: clang-linker-wrapper{{.*}} "--device-compiler=powerpc64le-ibm-linux-gnu=-g"
 
 /// Check arguments to the linker wrapper
 // RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu \
 // RUN:     -mllvm -abc %s 2>&1 | FileCheck -check-prefix=CHK-NEW-DRIVER-MLLVM %s
 
-// CHK-NEW-DRIVER-MLLVM: clang-linker-wrapper{{.*}} "-abc"
+// CHK-NEW-DRIVER-MLLVM: clang-linker-wrapper{{.*}} "--device-linker=powerpc64le-ibm-linux-gnu=-mllvm" "--device-linker=powerpc64le-ibm-linux-gnu=-abc"
 
 //
 // Ensure that we generate the correct bindings for '-fsyntax-only' for OpenMP.
@@ -206,3 +208,13 @@
 // RUN:     -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHK-SYNTAX-ONLY-ARGS %s
 // CHK-SYNTAX-ONLY-ARGS: "-cc1" "-triple" "powerpc64le-ibm-linux-gnu"{{.*}}"-fsyntax-only"
 // CHK-SYNTAX-ONLY-ARGS: "-cc1" "-triple" "powerpc64le-unknown-linux"{{.*}}"-fsyntax-only"
+
+//
+// Ensure `-foffload-lto` is forwarded properly.
+//
+// RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu \
+// RUN:     -foffload-lto %s 2>&1 | FileCheck -check-prefix=CHK-DEVICE-LTO-FULL %s
+// CHK-DEVICE-LTO-FULL: clang-linker-wrapper{{.*}} "--device-compiler=powerpc64le-ibm-linux-gnu=-flto=full"
+// RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu \
+// RUN:     -foffload-lto=thin %s 2>&1 | FileCheck -check-prefix=CHK-DEVICE-LTO-THIN %s
+// CHK-DEVICE-LTO-THIN: clang-linker-wrapper{{.*}} "--device-compiler=powerpc64le-ibm-linux-gnu=-flto=thin"

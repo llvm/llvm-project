@@ -9,7 +9,7 @@ declare void @hey() #0
 
 define void @hello(ptr noalias nocapture %a, ptr noalias nocapture readonly %c, ptr nocapture %b) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@hello
-; CHECK-SAME: (ptr noalias nocapture [[A:%.*]], ptr noalias nocapture readonly [[C:%.*]], ptr nocapture [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (ptr noalias captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[C:%.*]], ptr captures(none) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L:%.*]] = alloca i8, i32 512, align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr align 16 [[B]], i64 16, i1 false)
@@ -31,17 +31,17 @@ entry:
 
 define void @foo(ptr nocapture %a, ptr nocapture readonly %c, ptr nocapture %b) #2 {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture readonly [[C:%.*]], ptr nocapture [[B:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[C:%.*]], ptr captures(none) [[B:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L_I:%.*]] = alloca i8, i32 512, align 1
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 512, ptr [[L_I]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr align 16 [[B]], i64 16, i1 false), !noalias !3
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[B]], ptr align 16 [[C]], i64 16, i1 false), !noalias !0
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr align 16 [[C]], i64 16, i1 false), !alias.scope !5
-; CHECK-NEXT:    call void @hey(), !noalias !5
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[L_I]], ptr align 16 [[C]], i64 16, i1 false), !noalias !0
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr align 16 [[B]], i64 16, i1 false), !noalias [[META3]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[B]], ptr readonly align 16 [[C]], i64 16, i1 false), !noalias [[META0]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr readonly align 16 [[C]], i64 16, i1 false), !alias.scope [[META5:![0-9]+]]
+; CHECK-NEXT:    call void @hey(), !noalias [[META5]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[L_I]], ptr readonly align 16 [[C]], i64 16, i1 false), !noalias [[META0]]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 512, ptr [[L_I]])
 ; CHECK-NEXT:    ret void
 ;
@@ -52,7 +52,7 @@ entry:
 
 define void @hello_cs(ptr nocapture %a, ptr nocapture readonly %c, ptr nocapture %b) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@hello_cs
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture readonly [[C:%.*]], ptr nocapture [[B:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[C:%.*]], ptr captures(none) [[B:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L:%.*]] = alloca i8, i32 512, align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr align 16 [[B]], i64 16, i1 false)
@@ -74,17 +74,17 @@ entry:
 
 define void @foo_cs(ptr nocapture %a, ptr nocapture readonly %c, ptr nocapture %b) #2 {
 ; CHECK-LABEL: define {{[^@]+}}@foo_cs
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture readonly [[C:%.*]], ptr nocapture [[B:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[C:%.*]], ptr captures(none) [[B:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L_I:%.*]] = alloca i8, i32 512, align 1
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META6:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META9:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 512, ptr [[L_I]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr align 16 [[B]], i64 16, i1 false), !noalias !9
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[B]], ptr align 16 [[C]], i64 16, i1 false), !noalias !6
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr align 16 [[C]], i64 16, i1 false), !alias.scope !11
-; CHECK-NEXT:    call void @hey(), !noalias !11
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[L_I]], ptr align 16 [[C]], i64 16, i1 false), !noalias !6
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr align 16 [[B]], i64 16, i1 false), !noalias [[META9]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[B]], ptr readonly align 16 [[C]], i64 16, i1 false), !noalias [[META6]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr readonly align 16 [[C]], i64 16, i1 false), !alias.scope [[META11:![0-9]+]]
+; CHECK-NEXT:    call void @hey(), !noalias [[META11]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[L_I]], ptr readonly align 16 [[C]], i64 16, i1 false), !noalias [[META6]]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 512, ptr [[L_I]])
 ; CHECK-NEXT:    ret void
 ;

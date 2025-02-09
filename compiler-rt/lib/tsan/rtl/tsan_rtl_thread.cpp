@@ -160,15 +160,21 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
   }
   Free(thr->tctx->sync);
 
+#if !SANITIZER_GO
+  thr->is_inited = true;
+#endif
+
   uptr stk_addr = 0;
-  uptr stk_size = 0;
+  uptr stk_end = 0;
   uptr tls_addr = 0;
-  uptr tls_size = 0;
+  uptr tls_end = 0;
 #if !SANITIZER_GO
   if (thread_type != ThreadType::Fiber)
-    GetThreadStackAndTls(tid == kMainTid, &stk_addr, &stk_size, &tls_addr,
-                         &tls_size);
+    GetThreadStackAndTls(tid == kMainTid, &stk_addr, &stk_end, &tls_addr,
+                         &tls_end);
 #endif
+  uptr stk_size = stk_end - stk_addr;
+  uptr tls_size = tls_end - tls_addr;
   thr->stk_addr = stk_addr;
   thr->stk_size = stk_size;
   thr->tls_addr = tls_addr;
@@ -200,15 +206,11 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
 }
 
 void ThreadContext::OnStarted(void *arg) {
-  thr = static_cast<ThreadState *>(arg);
   DPrintf("#%d: ThreadStart\n", tid);
-  new (thr) ThreadState(tid);
+  thr = new (arg) ThreadState(tid);
   if (common_flags()->detect_deadlocks)
     thr->dd_lt = ctx->dd->CreateLogicalThread(tid);
   thr->tctx = this;
-#if !SANITIZER_GO
-  thr->is_inited = true;
-#endif
 }
 
 void ThreadFinish(ThreadState *thr) {

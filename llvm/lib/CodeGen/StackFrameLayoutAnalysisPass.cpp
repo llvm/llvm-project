@@ -34,8 +34,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <sstream>
-
 using namespace llvm;
 
 #define DEBUG_TYPE "stack-frame-layout"
@@ -51,6 +49,8 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
 
   enum SlotType {
     Spill,          // a Spill slot
+    Fixed,          // a Fixed slot (e.g. arguments passed on the stack)
+    VariableSized,  // a variable sized object
     StackProtector, // Stack Protector slot
     Variable,       // a slot used to store a local data (could be a tmp)
     Invalid         // It's an error for a slot to have this type
@@ -60,24 +60,43 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
     int Slot;
     int Size;
     int Align;
-    int Offset;
+    StackOffset Offset;
     SlotType SlotTy;
+    bool Scalable;
 
-    SlotData(const MachineFrameInfo &MFI, const int ValOffset, const int Idx)
+    SlotData(const MachineFrameInfo &MFI, const StackOffset Offset,
+             const int Idx)
         : Slot(Idx), Size(MFI.getObjectSize(Idx)),
-          Align(MFI.getObjectAlign(Idx).value()),
-          Offset(MFI.getObjectOffset(Idx) - ValOffset), SlotTy(Invalid) {
+          Align(MFI.getObjectAlign(Idx).value()), Offset(Offset),
+          SlotTy(Invalid), Scalable(false) {
+      Scalable = MFI.getStackID(Idx) == TargetStackID::ScalableVector;
       if (MFI.isSpillSlotObjectIndex(Idx))
         SlotTy = SlotType::Spill;
-      else if (Idx == MFI.getStackProtectorIndex())
+      else if (MFI.isFixedObjectIndex(Idx))
+        SlotTy = SlotType::Fixed;
+      else if (MFI.isVariableSizedObjectIndex(Idx))
+        SlotTy = SlotType::VariableSized;
+      else if (MFI.hasStackProtectorIndex() &&
+               Idx == MFI.getStackProtectorIndex())
         SlotTy = SlotType::StackProtector;
       else
         SlotTy = SlotType::Variable;
     }
 
-    // we use this to sort in reverse order, so that the layout is displayed
-    // correctly
-    bool operator<(const SlotData &Rhs) const { return Offset > Rhs.Offset; }
+    bool isVarSize() const { return SlotTy == SlotType::VariableSized; }
+
+    // We use this to sort in reverse order, so that the layout is displayed
+    // correctly. Variable sized slots are sorted to the end of the list, as
+    // offsets are currently incorrect for these but they reside at the end of
+    // the stack frame. The Slot index is used to ensure deterministic order
+    // when offsets are equal.
+    bool operator<(const SlotData &Rhs) const {
+      return std::make_tuple(!isVarSize(),
+                             Offset.getFixed() + Offset.getScalable(), Slot) >
+             std::make_tuple(!Rhs.isVarSize(),
+                             Rhs.Offset.getFixed() + Rhs.Offset.getScalable(),
+                             Rhs.Slot);
+    }
   };
 
   StackFrameLayoutAnalysisPass() : MachineFunctionPass(ID) {}
@@ -115,6 +134,10 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
     switch (Ty) {
     case SlotType::Spill:
       return "Spill";
+    case SlotType::Fixed:
+      return "Fixed";
+    case SlotType::VariableSized:
+      return "VariableSized";
     case SlotType::StackProtector:
       return "Protector";
     case SlotType::Variable:
@@ -143,17 +166,29 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
     // For example we store the Offset in YAML as:
     //    ...
     //    - Offset: -8
+    //    - ScalableOffset: -16
+    // Note: the ScalableOffset entries are added only for slots with non-zero
+    // scalable offsets.
     //
-    // But we print it to the CLI as
+    // But we print it to the CLI as:
     //   Offset: [SP-8]
+    //
+    // Or with non-zero scalable offset:
+    //   Offset: [SP-8-16 x vscale]
 
     // Negative offsets will print a leading `-`, so only add `+`
     std::string Prefix =
-        formatv("\nOffset: [SP{0}", (D.Offset < 0) ? "" : "+").str();
-    Rem << Prefix << ore::NV("Offset", D.Offset)
-        << "], Type: " << ore::NV("Type", getTypeString(D.SlotTy))
+        formatv("\nOffset: [SP{0}", (D.Offset.getFixed() < 0) ? "" : "+").str();
+    Rem << Prefix << ore::NV("Offset", D.Offset.getFixed());
+
+    if (D.Offset.getScalable()) {
+      Rem << ((D.Offset.getScalable() < 0) ? "" : "+")
+          << ore::NV("ScalableOffset", D.Offset.getScalable()) << " x vscale";
+    }
+
+    Rem << "], Type: " << ore::NV("Type", getTypeString(D.SlotTy))
         << ", Align: " << ore::NV("Align", D.Align)
-        << ", Size: " << ore::NV("Size", D.Size);
+        << ", Size: " << ore::NV("Size", ElementCount::get(D.Size, D.Scalable));
   }
 
   void emitSourceLocRemark(const MachineFunction &MF, const DILocalVariable *N,
@@ -164,17 +199,22 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
     Rem << "\n    " << ore::NV("DataLoc", Loc);
   }
 
+  StackOffset getStackOffset(const MachineFunction &MF,
+                             const MachineFrameInfo &MFI,
+                             const TargetFrameLowering *FI, int FrameIdx) {
+    if (!FI)
+      return StackOffset::getFixed(MFI.getObjectOffset(FrameIdx));
+
+    return FI->getFrameIndexReferenceFromSP(MF, FrameIdx);
+  }
+
   void emitStackFrameLayoutRemarks(MachineFunction &MF,
                                    MachineOptimizationRemarkAnalysis &Rem) {
     const MachineFrameInfo &MFI = MF.getFrameInfo();
     if (!MFI.hasStackObjects())
       return;
 
-    // ValOffset is the offset to the local area from the SP at function entry.
-    // To display the true offset from SP, we need to subtract ValOffset from
-    // MFI's ObjectOffset.
     const TargetFrameLowering *FI = MF.getSubtarget().getFrameLowering();
-    const int ValOffset = (FI ? FI->getOffsetOfLocalArea() : 0);
 
     LLVM_DEBUG(dbgs() << "getStackProtectorIndex =="
                       << MFI.getStackProtectorIndex() << "\n");
@@ -188,7 +228,7 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
          Idx != EndIdx; ++Idx) {
       if (MFI.isDeadObjectIndex(Idx))
         continue;
-      SlotInfo.emplace_back(MFI, ValOffset, Idx);
+      SlotInfo.emplace_back(MFI, getStackOffset(MF, MFI, FI, Idx), Idx);
     }
 
     // sort the ordering, to match the actual layout in memory

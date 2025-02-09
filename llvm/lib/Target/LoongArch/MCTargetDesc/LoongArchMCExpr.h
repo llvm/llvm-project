@@ -61,25 +61,45 @@ public:
     VK_LoongArch_TLS_LD_HI20,
     VK_LoongArch_TLS_GD_PC_HI20,
     VK_LoongArch_TLS_GD_HI20,
+    VK_LoongArch_CALL36,
+    VK_LoongArch_TLS_DESC_PC_HI20,
+    VK_LoongArch_TLS_DESC_PC_LO12,
+    VK_LoongArch_TLS_DESC64_PC_LO20,
+    VK_LoongArch_TLS_DESC64_PC_HI12,
+    VK_LoongArch_TLS_DESC_HI20,
+    VK_LoongArch_TLS_DESC_LO12,
+    VK_LoongArch_TLS_DESC64_LO20,
+    VK_LoongArch_TLS_DESC64_HI12,
+    VK_LoongArch_TLS_DESC_LD,
+    VK_LoongArch_TLS_DESC_CALL,
+    VK_LoongArch_TLS_LE_HI20_R,
+    VK_LoongArch_TLS_LE_ADD_R,
+    VK_LoongArch_TLS_LE_LO12_R,
+    VK_LoongArch_PCREL20_S2,
+    VK_LoongArch_TLS_LD_PCREL20_S2,
+    VK_LoongArch_TLS_GD_PCREL20_S2,
+    VK_LoongArch_TLS_DESC_PCREL20_S2,
     VK_LoongArch_Invalid // Must be the last item.
   };
 
 private:
   const MCExpr *Expr;
   const VariantKind Kind;
+  const bool RelaxHint;
 
-  explicit LoongArchMCExpr(const MCExpr *Expr, VariantKind Kind)
-      : Expr(Expr), Kind(Kind) {}
+  explicit LoongArchMCExpr(const MCExpr *Expr, VariantKind Kind, bool Hint)
+      : Expr(Expr), Kind(Kind), RelaxHint(Hint) {}
 
 public:
   static const LoongArchMCExpr *create(const MCExpr *Expr, VariantKind Kind,
-                                       MCContext &Ctx);
+                                       MCContext &Ctx, bool Hint = false);
 
   VariantKind getKind() const { return Kind; }
   const MCExpr *getSubExpr() const { return Expr; }
+  bool getRelaxHint() const { return RelaxHint; }
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                  const MCFixup *Fixup) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override {

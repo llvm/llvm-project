@@ -23,7 +23,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/IPO.h"
 
 using namespace llvm;
 
@@ -125,11 +124,11 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
     ConstantInt *CaseTypeId = ConstantInt::get(Type::getInt64Ty(Ctx), TypeId);
     BasicBlock *TestBB = BasicBlock::Create(Ctx, "test", F);
     IRBuilder<> IRBTest(TestBB);
-    Function *BitsetTestFn = Intrinsic::getDeclaration(&M, Intrinsic::type_test);
 
-    Value *Test = IRBTest.CreateCall(
-        BitsetTestFn, {&Addr, MetadataAsValue::get(
-                                  Ctx, ConstantAsMetadata::get(CaseTypeId))});
+    Value *Test = IRBTest.CreateIntrinsic(
+        Intrinsic::type_test, {},
+        {&Addr,
+         MetadataAsValue::get(Ctx, ConstantAsMetadata::get(CaseTypeId))});
     BranchInst *BI = IRBTest.CreateCondBr(Test, ExitBB, TrapBB);
     BI->setMetadata(LLVMContext::MD_prof, VeryLikelyWeights);
 
@@ -139,8 +138,7 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
 }
 
 bool CrossDSOCFI::runOnModule(Module &M) {
-  VeryLikelyWeights =
-    MDBuilder(M.getContext()).createBranchWeights((1U << 20) - 1, 1);
+  VeryLikelyWeights = MDBuilder(M.getContext()).createLikelyBranchWeights();
   if (M.getModuleFlag("Cross-DSO CFI") == nullptr)
     return false;
   buildCFICheck(M);

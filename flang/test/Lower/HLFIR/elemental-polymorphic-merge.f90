@@ -1,5 +1,5 @@
 ! Test that the produced hlfir.elemental had proper result type and the mold.
-! RUN: bbc --emit-hlfir --polymorphic-type -I nowhere -o - %s | FileCheck %s
+! RUN: bbc --emit-hlfir -I nowhere -o - %s | FileCheck %s
 
 subroutine test_polymorphic_merge(x, y, r, m)
   type t
@@ -14,10 +14,10 @@ end subroutine test_polymorphic_merge
 ! CHECK-SAME:        %[[VAL_1:.*]]: !fir.class<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>> {fir.bindc_name = "y"},
 ! CHECK-SAME:        %[[VAL_2:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>>> {fir.bindc_name = "r"},
 ! CHECK-SAME:        %[[VAL_3:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "m"}) {
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFtest_polymorphic_mergeEm"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_polymorphic_mergeEr"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>>>)
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_polymorphic_mergeEx"} : (!fir.class<!fir.type<_QFtest_polymorphic_mergeTt>>) -> (!fir.class<!fir.type<_QFtest_polymorphic_mergeTt>>, !fir.class<!fir.type<_QFtest_polymorphic_mergeTt>>)
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_polymorphic_mergeEy"} : (!fir.class<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>) -> (!fir.class<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>, !fir.class<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_polymorphic_mergeEm"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_polymorphic_mergeEr"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_polymorphic_mergeEx"} : (!fir.class<!fir.type<_QFtest_polymorphic_mergeTt>>, !fir.dscope) -> (!fir.class<!fir.type<_QFtest_polymorphic_mergeTt>>, !fir.class<!fir.type<_QFtest_polymorphic_mergeTt>>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_polymorphic_mergeEy"} : (!fir.class<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>, !fir.class<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_9:.*]]:3 = fir.box_dims %[[VAL_7]]#0, %[[VAL_8]] : (!fir.class<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_9]]#1 : (index) -> !fir.shape<1>

@@ -36,9 +36,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT:    [[WIDE_VEC1:%.*]] = load <80 x float>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <80 x float> [[WIDE_VEC1]], <80 x float> poison, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <16 x float> [[STRIDED_VEC2]], [[TMP2]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> [[TMP5]], <16 x ptr> [[TMP3]], i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> [[TMP5]], <16 x ptr> [[TMP3]], i32 4, <16 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i64> [[VEC_IND]], <i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i64> [[VEC_IND]], splat (i64 80)
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 
 %data = type { [32000 x float], [3 x i32], [4 x i8], [32000 x float] }
@@ -76,7 +76,7 @@ attributes #0 = { "target-cpu"="knl" }
 ; CHECK:     LV: Found trip count: 3
 ; CHECK:     LV: Found uniform instruction:   {{%.*}} = icmp eq i32 {{%.*}}, 0
 ; CHECK-NOT: LV: Found uniform instruction:   {{%.*}} = load i32, ptr {{%.*}}, align 1
-; CHECK:     LV: Found not uniform being ScalarWithPredication:  {{%.*}} = load i32, ptr {{%.*}}, align 1
+; CHECK:     LV: Found not uniform due to requiring predication:  {{%.*}} = load i32, ptr {{%.*}}, align 1
 ; CHECK:     LV: Found scalar instruction:   {{%.*}} = getelementptr inbounds [3 x i32], ptr @a, i32 0, i32 {{%.*}}
 ;
 ; FORCE-LABEL: @PR40816(
@@ -87,7 +87,7 @@ attributes #0 = { "target-cpu"="knl" }
 ; FORCE:       vector.body:
 ; FORCE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
 ; FORCE-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE4]] ]
-; FORCE-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i32> [[VEC_IND]], <i32 2, i32 2>
+; FORCE-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i32> [[VEC_IND]], splat (i32 2)
 ; FORCE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; FORCE-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; FORCE:       pred.store.if:
@@ -102,8 +102,8 @@ attributes #0 = { "target-cpu"="knl" }
 ; FORCE-NEXT:    store i32 [[TMP1]], ptr @b, align 1
 ; FORCE-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; FORCE:       pred.store.continue2:
-; FORCE-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
-; FORCE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
+; FORCE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; FORCE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
 ; FORCE-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; FORCE-NEXT:    br i1 [[TMP15]], label {{%.*}}, label [[VECTOR_BODY]]
 ;

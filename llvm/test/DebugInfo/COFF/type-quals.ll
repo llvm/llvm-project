@@ -1,6 +1,9 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
 
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
+
 ; C++ source to regenerate:
 ; $ cat m.cpp
 ; union Union {
@@ -404,24 +407,24 @@ target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.11.25507"
 
 %struct.Foo = type { i32 }
-%union.Union = type { i32* }
+%union.Union = type { ptr }
 
 @"\01?str@?1??g@@YAXAEIAH@Z@3QBDB" = internal constant [4 x i8] c"abc\00", align 1, !dbg !0
 @"\01?s@?1??h@@YAXXZ@3UFoo@?1??1@YAXXZ@A" = private unnamed_addr constant %struct.Foo { i32 10 }, align 4
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define i32 @"\01?f@@YAHPEIDH@Z"(i32* noalias %arg_crv) #0 !dbg !22 {
+define i32 @"\01?f@@YAHPEIDH@Z"(ptr noalias %arg_crv) #0 !dbg !22 {
 entry:
-  %arg_crv.addr = alloca i32*, align 8
+  %arg_crv.addr = alloca ptr, align 8
   %u = alloca %union.Union, align 8
-  %p = alloca i32*, align 8
+  %p = alloca ptr, align 8
   %v = alloca i32, align 4
-  store i32* %arg_crv, i32** %arg_crv.addr, align 8
-  call void @llvm.dbg.declare(metadata i32** %arg_crv.addr, metadata !29, metadata !DIExpression()), !dbg !30
-  call void @llvm.dbg.declare(metadata %union.Union* %u, metadata !31, metadata !DIExpression()), !dbg !43
-  call void @llvm.dbg.declare(metadata i32** %p, metadata !44, metadata !DIExpression()), !dbg !47
-  call void @llvm.dbg.declare(metadata i32* %v, metadata !48, metadata !DIExpression()), !dbg !49
-  store volatile i32 0, i32* %v, align 4, !dbg !49
+  store ptr %arg_crv, ptr %arg_crv.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg_crv.addr, metadata !29, metadata !DIExpression()), !dbg !30
+  call void @llvm.dbg.declare(metadata ptr %u, metadata !31, metadata !DIExpression()), !dbg !43
+  call void @llvm.dbg.declare(metadata ptr %p, metadata !44, metadata !DIExpression()), !dbg !47
+  call void @llvm.dbg.declare(metadata ptr %v, metadata !48, metadata !DIExpression()), !dbg !49
+  store volatile i32 0, ptr %v, align 4, !dbg !49
   ret i32 1, !dbg !50
 }
 
@@ -429,14 +432,14 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define void @"\01?g@@YAXAEIAH@Z"(i32* noalias dereferenceable(4) %arg_ref) #0 !dbg !2 {
+define void @"\01?g@@YAXAEIAH@Z"(ptr noalias dereferenceable(4) %arg_ref) #0 !dbg !2 {
 entry:
-  %arg_ref.addr = alloca i32*, align 8
+  %arg_ref.addr = alloca ptr, align 8
   %x = alloca i32, align 4
-  store i32* %arg_ref, i32** %arg_ref.addr, align 8
-  call void @llvm.dbg.declare(metadata i32** %arg_ref.addr, metadata !51, metadata !DIExpression()), !dbg !52
-  call void @llvm.dbg.declare(metadata i32* %x, metadata !53, metadata !DIExpression()), !dbg !54
-  store i32 10, i32* %x, align 4, !dbg !54
+  store ptr %arg_ref, ptr %arg_ref.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg_ref.addr, metadata !51, metadata !DIExpression()), !dbg !52
+  call void @llvm.dbg.declare(metadata ptr %x, metadata !53, metadata !DIExpression()), !dbg !54
+  store i32 10, ptr %x, align 4, !dbg !54
   ret void, !dbg !55
 }
 
@@ -444,35 +447,35 @@ entry:
 define void @"\01?h@@YAXXZ"() #0 !dbg !56 {
 entry:
   %s = alloca %struct.Foo, align 4
-  %p_object = alloca i32*, align 8
+  %p_object = alloca ptr, align 8
   %p_data_member = alloca i32, align 8
-  %p_member_func = alloca i8*, align 8
-  call void @llvm.dbg.declare(metadata %struct.Foo* %s, metadata !59, metadata !DIExpression()), !dbg !68
-  %0 = bitcast %struct.Foo* %s to i8*, !dbg !68
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 bitcast (%struct.Foo* @"\01?s@?1??h@@YAXXZ@3UFoo@?1??1@YAXXZ@A" to i8*), i64 4, i1 false), !dbg !68
-  call void @llvm.dbg.declare(metadata i32** %p_object, metadata !69, metadata !DIExpression()), !dbg !70
-  %a = getelementptr inbounds %struct.Foo, %struct.Foo* %s, i32 0, i32 0, !dbg !71
-  store i32* %a, i32** %p_object, align 8, !dbg !70
-  call void @llvm.dbg.declare(metadata i32* %p_data_member, metadata !72, metadata !DIExpression()), !dbg !75
-  store i32 0, i32* %p_data_member, align 8, !dbg !75
-  call void @llvm.dbg.declare(metadata i8** %p_member_func, metadata !76, metadata !DIExpression()), !dbg !78
-  store i8* bitcast (i32 (%struct.Foo*, i32)* @"\01?func@Foo@?1??h@@YAXXZ@QEIAAHH@Z" to i8*), i8** %p_member_func, align 8, !dbg !78
+  %p_member_func = alloca ptr, align 8
+  call void @llvm.dbg.declare(metadata ptr %s, metadata !59, metadata !DIExpression()), !dbg !68
+  %0 = bitcast ptr %s to ptr, !dbg !68
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 @"\01?s@?1??h@@YAXXZ@3UFoo@?1??1@YAXXZ@A", i64 4, i1 false), !dbg !68
+  call void @llvm.dbg.declare(metadata ptr %p_object, metadata !69, metadata !DIExpression()), !dbg !70
+  %a = getelementptr inbounds %struct.Foo, ptr %s, i32 0, i32 0, !dbg !71
+  store ptr %a, ptr %p_object, align 8, !dbg !70
+  call void @llvm.dbg.declare(metadata ptr %p_data_member, metadata !72, metadata !DIExpression()), !dbg !75
+  store i32 0, ptr %p_data_member, align 8, !dbg !75
+  call void @llvm.dbg.declare(metadata ptr %p_member_func, metadata !76, metadata !DIExpression()), !dbg !78
+  store ptr @"\01?func@Foo@?1??h@@YAXXZ@QEIAAHH@Z", ptr %p_member_func, align 8, !dbg !78
   ret void, !dbg !79
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #2
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define internal i32 @"\01?func@Foo@?1??h@@YAXXZ@QEIAAHH@Z"(%struct.Foo* %this, i32 %x) #0 align 2 !dbg !80 {
+define internal i32 @"\01?func@Foo@?1??h@@YAXXZ@QEIAAHH@Z"(ptr %this, i32 %x) #0 align 2 !dbg !80 {
 entry:
   %x.addr = alloca i32, align 4
-  %this.addr = alloca %struct.Foo*, align 8
-  store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !81, metadata !DIExpression()), !dbg !82
-  store %struct.Foo* %this, %struct.Foo** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.Foo** %this.addr, metadata !83, metadata !DIExpression()), !dbg !85
-  %this1 = load %struct.Foo*, %struct.Foo** %this.addr, align 8
+  %this.addr = alloca ptr, align 8
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !81, metadata !DIExpression()), !dbg !82
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !83, metadata !DIExpression()), !dbg !85
+  %this1 = load ptr, ptr %this.addr, align 8
   ret i32 1, !dbg !86
 }
 

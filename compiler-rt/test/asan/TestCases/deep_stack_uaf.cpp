@@ -1,7 +1,7 @@
 // Check that we can store lots of stack frames if asked to.
 
 // RUN: %clangxx_asan -O0 %s -o %t 2>&1
-// RUN: %env_asan_opts=malloc_context_size=120:redzone=512 not %run %t 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=malloc_context_size=125:redzone=512 not %run %t 2>&1 | FileCheck %s
 // REQUIRES: stable-runtime
 #include <stdlib.h>
 #include <stdio.h>

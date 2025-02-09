@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,alpha.security.ArrayBoundV2,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,security.ArrayBound,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
 
@@ -184,5 +184,13 @@ void test_assume_after_access2(unsigned long x) {
   char buf[100];
   buf[x] = 1;
   clang_analyzer_eval(x <= 99); // expected-warning{{TRUE}}
+}
+
+struct incomplete;
+char test_comparison_with_extent_symbol(struct incomplete *p) {
+  // Previously this was reported as a (false positive) overflow error because
+  // the extent symbol of the area pointed by `p` was an unsigned and the '-1'
+  // was converted to its type by `evalBinOpNN`.
+  return ((char *)p)[-1]; // no-warning
 }
 

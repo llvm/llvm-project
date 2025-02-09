@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; Even though general vector types are not supported in PTX, we can still
 ; optimize loads/stores with pseudo-vector instructions of the form:
@@ -78,11 +78,11 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
   %t3 = shl nuw nsw i32 %t1, 9
   %ttile_origin.2 = and i32 %t3, 130560
   %tstart_offset_x_mul = shl nuw nsw i32 %t0, 1
-  %t4 = or i32 %ttile_origin.2, %tstart_offset_x_mul
-  %t6 = or i32 %t4, 1
-  %t8 = or i32 %t4, 128
+  %t4 = or disjoint i32 %ttile_origin.2, %tstart_offset_x_mul
+  %t6 = or disjoint i32 %t4, 1
+  %t8 = or disjoint i32 %t4, 128
   %t9 = zext i32 %t8 to i64
-  %t10 = or i32 %t4, 129
+  %t10 = or disjoint i32 %t4, 129
   %t11 = zext i32 %t10 to i64
   %t20 = zext i32 %t2 to i64
   %t27 = getelementptr inbounds [1024 x [131072 x i8]], ptr %alloc0, i64 0, i64 %t20, i64 %t9
@@ -198,3 +198,12 @@ define void @extv8f16_generic_a4(ptr noalias readonly align 16 %dst, ptr noalias
 
 
 !1 = !{i32 0, i32 64}
+
+; CHECK-LABEL: bf16_v4_align_load_store
+define dso_local void @bf16_v4_align_load_store(ptr noundef %0, ptr noundef %1) #0 {
+  ; CHECK: ld.v4.b16
+  ; CHECK: st.v4.b16
+  %3 = load <4 x bfloat>, ptr %1, align 8
+  store <4 x bfloat> %3, ptr %0, align 8
+  ret void
+}

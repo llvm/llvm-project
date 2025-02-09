@@ -25,8 +25,19 @@
 
 // These typedefs should be used only in the interceptor definitions to replace
 // the standard system types (e.g. SSIZE_T instead of ssize_t)
-typedef __sanitizer::uptr    SIZE_T;
-typedef __sanitizer::sptr    SSIZE_T;
+// On Windows the system headers (basetsd.h) provide a conflicting definition
+// of SIZE_T/SSIZE_T that do not match the real size_t/ssize_t for 32-bit
+// systems (using long instead of the expected int). Work around the typedef
+// redefinition by #defining SIZE_T instead of using a typedef.
+// TODO: We should be using __sanitizer::usize (and a new ssize) instead of
+// these new macros as long as we ensure they match the real system definitions.
+#if SANITIZER_WINDOWS
+// Ensure that (S)SIZE_T were already defined as we are about to override them.
+#  include <basetsd.h>
+#endif
+
+#define SIZE_T __sanitizer::usize
+#define SSIZE_T __sanitizer::ssize
 typedef __sanitizer::sptr    PTRDIFF_T;
 typedef __sanitizer::s64     INTMAX_T;
 typedef __sanitizer::u64     UINTMAX_T;
@@ -204,10 +215,11 @@ const interpose_substitution substitution_##func_name[]             \
        ".type  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", "                    \
          ASM_TYPE_FUNCTION_STR "\n"                                            \
        SANITIZER_STRINGIFY(TRAMPOLINE(func)) ":\n"                             \
-       SANITIZER_STRINGIFY(CFI_STARTPROC) "\n"                                 \
-       SANITIZER_STRINGIFY(ASM_TAIL_CALL) " __interceptor_"                    \
-         SANITIZER_STRINGIFY(ASM_PREEMPTIBLE_SYM(func)) "\n"                   \
-       SANITIZER_STRINGIFY(CFI_ENDPROC) "\n"                                   \
+       C_ASM_STARTPROC "\n"                                                    \
+       C_ASM_TAIL_CALL(SANITIZER_STRINGIFY(TRAMPOLINE(func)),                  \
+                       "__interceptor_"                                        \
+                         SANITIZER_STRINGIFY(ASM_PREEMPTIBLE_SYM(func))) "\n"  \
+       C_ASM_ENDPROC "\n"                                                      \
        ".size  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", "                    \
             ".-" SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"                    \
      );
@@ -337,16 +349,20 @@ const interpose_substitution substitution_##func_name[]             \
 #endif
 
 // ISO C++ forbids casting between pointer-to-function and pointer-to-object,
-// so we use casting via an integral type __interception::uptr,
-// assuming that system is POSIX-compliant. Using other hacks seem
-// challenging, as we don't even pass function type to
-// INTERCEPT_FUNCTION macro, only its name.
+// so we use casts via uintptr_t (the local __sanitizer::uptr equivalent).
 namespace __interception {
-#if defined(_WIN64)
-typedef unsigned long long uptr;
+
+#if defined(__ELF__) && !SANITIZER_FUCHSIA
+// The use of interceptors makes many sanitizers unusable for static linking.
+// Define a function, if called, will cause a linker error (undefined _DYNAMIC).
+// However, -static-pie (which is not common) cannot be detected at link time.
+extern uptr kDynamic[] asm("_DYNAMIC");
+inline void DoesNotSupportStaticLinking() {
+  [[maybe_unused]] volatile auto x = &kDynamic;
+}
 #else
-typedef unsigned long uptr;
-#endif  // _WIN64
+inline void DoesNotSupportStaticLinking() {}
+#endif
 }  // namespace __interception
 
 #define INCLUDED_FROM_INTERCEPTION_LIB

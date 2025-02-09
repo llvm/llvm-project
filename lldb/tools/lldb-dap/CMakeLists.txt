@@ -1,7 +1,3 @@
-if ( CMAKE_SYSTEM_NAME MATCHES "Windows" OR CMAKE_SYSTEM_NAME MATCHES "NetBSD" )
-  list(APPEND extra_libs lldbHost)
-endif ()
-
 if (HAVE_LIBPTHREAD)
   list(APPEND extra_libs pthread)
 endif ()
@@ -24,10 +20,13 @@ tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LLDBDAPOptionsTableGen)
 add_lldb_tool(lldb-dap
   lldb-dap.cpp
+  Breakpoint.cpp
   BreakpointBase.cpp
+  DAP.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp
   FunctionBreakpoint.cpp
+  InstructionBreakpoint.cpp
   IOStream.cpp
   JSONUtils.cpp
   LLDBUtils.cpp
@@ -35,16 +34,23 @@ add_lldb_tool(lldb-dap
   ProgressEvent.cpp
   RunInTerminal.cpp
   SourceBreakpoint.cpp
-  DAP.cpp
+  Watchpoint.cpp
 
   LINK_LIBS
     liblldb
+    lldbHost
     ${extra_libs}
 
   LINK_COMPONENTS
     Option
     Support
   )
+
+if(LLDB_DAP_WELCOME_MESSAGE)
+  target_compile_definitions(lldb-dap
+    PRIVATE
+    -DLLDB_DAP_WELCOME_MESSAGE=\"${LLDB_DAP_WELCOME_MESSAGE}\")
+endif()
 
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.

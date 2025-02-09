@@ -132,7 +132,7 @@ struct X8 {
 
 struct X9 : X8 {
   typedef X8 inherited;
-  void f() { 
+  void f() {
     inherited::f();
   }
 };
@@ -299,7 +299,7 @@ struct X9 : X8 {
 // CHECK: Identifier: "type" [77:16 - 77:20] TypeRef=X4::type:70:13
 // CHECK: Punctuation: ">" [77:20 - 77:21] MemberRefExpr=
 // CHECK: Punctuation: "::" [77:21 - 77:23] MemberRefExpr=
-// CHECK: Identifier: "g" [77:23 - 77:24] MemberRefExpr=
+// CHECK: Identifier: "g" [77:23 - 77:24] OverloadedDeclRef=
 // CHECK: Punctuation: "(" [77:24 - 77:25] CallExpr=
 // CHECK: Identifier: "t" [77:25 - 77:26] DeclRefExpr=t:74:12
 // CHECK: Punctuation: ")" [77:26 - 77:27] CallExpr=

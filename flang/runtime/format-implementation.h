@@ -25,7 +25,7 @@
 namespace Fortran::runtime::io {
 
 template <typename CONTEXT>
-FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
+RT_API_ATTRS FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
     const CharType *format, std::size_t formatLength,
     const Descriptor *formatDescriptor, int maxHeight)
     : maxHeight_{static_cast<std::uint8_t>(maxHeight)}, format_{format},
@@ -63,18 +63,9 @@ FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
 }
 
 template <typename CONTEXT>
-int FormatControl<CONTEXT>::GetIntField(
+RT_API_ATTRS int FormatControl<CONTEXT>::GetIntField(
     IoErrorHandler &handler, CharType firstCh, bool *hadError) {
   CharType ch{firstCh ? firstCh : PeekNext()};
-  if (ch != '-' && ch != '+' && (ch < '0' || ch > '9')) {
-    handler.SignalError(IostatErrorInFormat,
-        "Invalid FORMAT: integer expected at '%c'", static_cast<char>(ch));
-    if (hadError) {
-      *hadError = true;
-    }
-    return 0;
-  }
-  int result{0};
   bool negate{ch == '-'};
   if (negate || ch == '+') {
     if (firstCh) {
@@ -84,9 +75,19 @@ int FormatControl<CONTEXT>::GetIntField(
     }
     ch = PeekNext();
   }
+  if (ch < '0' || ch > '9') {
+    handler.SignalError(IostatErrorInFormat,
+        "Invalid FORMAT: integer expected at '%c'", static_cast<char>(ch));
+    if (hadError) {
+      *hadError = true;
+    }
+    return 0;
+  }
+  int result{0};
   while (ch >= '0' && ch <= '9') {
-    if (result >
-        std::numeric_limits<int>::max() / 10 - (static_cast<int>(ch) - '0')) {
+    constexpr int tenth{std::numeric_limits<int>::max() / 10};
+    if (result > tenth ||
+        ch - '0' > std::numeric_limits<int>::max() - 10 * result) {
       handler.SignalError(
           IostatErrorInFormat, "FORMAT integer field out of range");
       if (hadError) {
@@ -112,8 +113,87 @@ int FormatControl<CONTEXT>::GetIntField(
   return result;
 }
 
+// Xn, TRn, TLn
 template <typename CONTEXT>
-static void HandleControl(CONTEXT &context, char ch, char next, int n) {
+static RT_API_ATTRS bool RelativeTabbing(CONTEXT &context, int n) {
+  ConnectionState &connection{context.GetConnectionState()};
+  if constexpr (std::is_same_v<CONTEXT,
+                    ExternalFormattedIoStatementState<Direction::Input>> ||
+      std::is_same_v<CONTEXT,
+          ExternalFormattedIoStatementState<Direction::Output>>) {
+    if (n != 0 && connection.isUTF8) {
+      const char *p{};
+      if (n > 0) { // Xn or TRn
+        // Skip 'n' multi-byte characters.  If that's more than are in the
+        // current record, that's valid -- the program can position past the
+        // end and then reposition back with Tn or TLn.
+        std::size_t bytesLeft{context.ViewBytesInRecord(p, true)};
+        for (; n > 0 && bytesLeft && p; --n) {
+          std::size_t byteCount{MeasureUTF8Bytes(*p)};
+          if (byteCount > bytesLeft) {
+            break;
+          }
+          context.HandleRelativePosition(byteCount);
+          bytesLeft -= byteCount;
+          // Don't call GotChar(byteCount), these don't count towards SIZE=
+          p += byteCount;
+        }
+      } else { // n < 0: TLn
+        n = -n;
+        if (std::int64_t excess{connection.positionInRecord -
+                connection.recordLength.value_or(connection.positionInRecord)};
+            excess > 0) {
+          // Have tabbed past the end of the record
+          if (excess >= n) {
+            context.HandleRelativePosition(-n);
+            return true;
+          }
+          context.HandleRelativePosition(-excess);
+          n -= excess;
+        }
+        std::size_t bytesLeft{context.ViewBytesInRecord(p, false)};
+        // Go back 'n' multi-byte characters.
+        for (; n > 0 && bytesLeft && p; --n) {
+          std::size_t byteCount{MeasurePreviousUTF8Bytes(p, bytesLeft)};
+          context.HandleRelativePosition(-byteCount);
+          bytesLeft -= byteCount;
+          p -= byteCount;
+        }
+      }
+    }
+  }
+  if (connection.internalIoCharKind > 1) {
+    n *= connection.internalIoCharKind;
+  }
+  context.HandleRelativePosition(n);
+  return true;
+}
+
+// Tn
+template <typename CONTEXT>
+static RT_API_ATTRS bool AbsoluteTabbing(CONTEXT &context, int n) {
+  ConnectionState &connection{context.GetConnectionState()};
+  n = n > 0 ? n - 1 : 0; // convert 1-based position to 0-based offset
+  if constexpr (std::is_same_v<CONTEXT,
+                    ExternalFormattedIoStatementState<Direction::Input>> ||
+      std::is_same_v<CONTEXT,
+          ExternalFormattedIoStatementState<Direction::Output>>) {
+    if (connection.isUTF8) {
+      // Reset to the beginning of the record, then TR(n-1)
+      connection.HandleAbsolutePosition(0);
+      return RelativeTabbing(context, n);
+    }
+  }
+  if (connection.internalIoCharKind > 1) {
+    n *= connection.internalIoCharKind;
+  }
+  context.HandleAbsolutePosition(n);
+  return true;
+}
+
+template <typename CONTEXT>
+static RT_API_ATTRS void HandleControl(
+    CONTEXT &context, char ch, char next, int n) {
   MutableModes &modes{context.mutableModes()};
   switch (ch) {
   case 'B':
@@ -167,12 +247,7 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
     }
     break;
   case 'X':
-    if (!next) {
-      ConnectionState &connection{context.GetConnectionState()};
-      if (connection.internalIoCharKind > 1) {
-        n *= connection.internalIoCharKind;
-      }
-      context.HandleRelativePosition(n);
+    if (!next && RelativeTabbing(context, n)) {
       return;
     }
     break;
@@ -188,19 +263,13 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
     break;
   case 'T': {
     if (!next) { // Tn
-      --n; // convert 1-based to 0-based
-    }
-    ConnectionState &connection{context.GetConnectionState()};
-    if (connection.internalIoCharKind > 1) {
-      n *= connection.internalIoCharKind;
-    }
-    if (!next) { // Tn
-      context.HandleAbsolutePosition(n);
-      return;
-    }
-    if (next == 'L' || next == 'R') { // TLn & TRn
-      context.HandleRelativePosition(next == 'L' ? -n : n);
-      return;
+      if (AbsoluteTabbing(context, n)) {
+        return;
+      }
+    } else if (next == 'R' || next == 'L') { // TRn / TLn
+      if (RelativeTabbing(context, next == 'L' ? -n : n)) {
+        return;
+      }
     }
   } break;
   default:
@@ -220,7 +289,8 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
 // Generally assumes that the format string has survived the common
 // format validator gauntlet.
 template <typename CONTEXT>
-int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
+RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
+    Context &context, bool stop) {
   bool hitUnlimitedLoopEnd{false};
   // Do repetitions remain on an unparenthesized data edit?
   while (height_ > 1 && format_[stack_[height_ - 1].start] != '(') {
@@ -232,7 +302,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
     }
   }
   while (true) {
-    std::optional<int> repeat;
+    Fortran::common::optional<int> repeat;
     bool unlimited{false};
     auto maybeReversionPoint{offset_};
     CharType ch{GetNextChar(context)};
@@ -245,8 +315,15 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       ch = GetNextChar(context);
     }
     if (ch == '-' || ch == '+' || (ch >= '0' && ch <= '9')) {
+      bool hadSign{ch == '-' || ch == '+'};
       repeat = GetIntField(context, ch);
       ch = GetNextChar(context);
+      if (hadSign && ch != 'p' && ch != 'P') {
+        ReportBadFormat(context,
+            "Invalid FORMAT: signed integer may appear only before 'P",
+            maybeReversionPoint);
+        return 0;
+      }
     } else if (ch == '*') {
       unlimited = true;
       ch = GetNextChar(context);
@@ -296,11 +373,11 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       return 0;
     } else if (ch == ')') {
       if (height_ == 1) {
+        hitEnd_ = true;
         if (stop) {
           return 0; // end of FORMAT and no data items remain
         }
         context.AdvanceRecord(); // implied / before rightmost )
-        hitEnd_ = true;
       }
       auto restart{stack_[height_ - 1].start};
       if (format_[restart] == '(') {
@@ -366,8 +443,9 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       if (ch != 'P') { // 1PE5.2 - comma not required (C1302)
         CharType peek{Capitalize(PeekNext())};
         if (peek >= 'A' && peek <= 'Z') {
-          if (ch == 'A' /* anticipate F'202X AT editing */ || ch == 'B' ||
-              ch == 'D' || ch == 'E' || ch == 'R' || ch == 'S' || ch == 'T') {
+          if ((ch == 'A' && peek == 'T' /* anticipate F'202X AT editing */) ||
+              ch == 'B' || ch == 'D' || ch == 'E' || ch == 'R' || ch == 'S' ||
+              ch == 'T') {
             // Assume a two-letter edit descriptor
             next = peek;
             ++offset_;
@@ -411,8 +489,8 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
 
 // Returns the next data edit descriptor
 template <typename CONTEXT>
-std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
-    Context &context, int maxRepeat) {
+RT_API_ATTRS Fortran::common::optional<DataEdit>
+FormatControl<CONTEXT>::GetNextDataEdit(Context &context, int maxRepeat) {
   int repeat{CueUpNextDataEdit(context)};
   auto start{offset_};
   DataEdit edit;
@@ -443,7 +521,7 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
         }
         if (edit.ioTypeChars >= edit.maxIoTypeChars) {
           ReportBadFormat(context, "Excessive DT'iotype' in FORMAT", start);
-          return std::nullopt;
+          return Fortran::common::nullopt;
         }
         edit.ioType[edit.ioTypeChars++] = ch;
         if (ch == quote) {
@@ -452,7 +530,7 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
       }
       if (!ok) {
         ReportBadFormat(context, "Unclosed DT'iotype' in FORMAT", start);
-        return std::nullopt;
+        return Fortran::common::nullopt;
       }
     }
     if (PeekNext() == '(') {
@@ -467,7 +545,7 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
         }
         if (edit.vListEntries >= edit.maxVListEntries) {
           ReportBadFormat(context, "Excessive DT(v_list) in FORMAT", start);
-          return std::nullopt;
+          return Fortran::common::nullopt;
         }
         edit.vList[edit.vListEntries++] = n;
         auto ch{static_cast<char>(GetNextChar(context))};
@@ -478,7 +556,7 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
       }
       if (!ok) {
         ReportBadFormat(context, "Unclosed DT(v_list) in FORMAT", start);
-        return std::nullopt;
+        return Fortran::common::nullopt;
       }
     }
   } else { // not DT'iotype'
@@ -516,7 +594,7 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
 }
 
 template <typename CONTEXT>
-void FormatControl<CONTEXT>::Finish(Context &context) {
+RT_API_ATTRS void FormatControl<CONTEXT>::Finish(Context &context) {
   CueUpNextDataEdit(context, true /* stop at colon or end of FORMAT */);
   if (freeFormat_) {
     FreeMemory(const_cast<CharType *>(format_));

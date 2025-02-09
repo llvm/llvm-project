@@ -9,14 +9,14 @@
 // However, not all of them should result in the check.
 // So here, we *only* check which should and which should not result in checks.
 
-// CHECK-DAG: @[[LINE_900_SIGN_CHANGE:.*]] = {{.*}}, i32 900, i32 10 }, {{.*}}, {{.*}}, i8 3 }
-// CHECK-DAG: @[[LINE_1000_SIGN_CHANGE:.*]] = {{.*}}, i32 1000, i32 10 }, {{.*}}, {{.*}}, i8 3 }
-// CHECK-DAG: @[[LINE_1100_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 1100, i32 10 }, {{.*}}, {{.*}}, i8 2 }
-// CHECK-DAG: @[[LINE_1200_SIGN_CHANGE:.*]] = {{.*}}, i32 1200, i32 10 }, {{.*}}, {{.*}}, i8 3 }
-// CHECK-DAG: @[[LINE_1300_SIGN_CHANGE:.*]] = {{.*}}, i32 1300, i32 10 }, {{.*}}, {{.*}}, i8 3 }
-// CHECK-DAG: @[[LINE_1400_SIGN_CHANGE:.*]] = {{.*}}, i32 1400, i32 10 }, {{.*}}, {{.*}}, i8 3 }
-// CHECK-DAG: @[[LINE_1500_SIGNED_TRUNCATION_OR_SIGN_CHANGE:.*]] = {{.*}}, i32 1500, i32 10 }, {{.*}}, {{.*}}, i8 4 }
-// CHECK-DAG: @[[LINE_1600_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 1600, i32 10 }, {{.*}}, {{.*}}, i8 2 }
+// CHECK-DAG: @[[LINE_900_SIGN_CHANGE:.*]] = {{.*}}, i32 900, i32 10 }, {{.*}}, {{.*}}, i8 3, i32 0 }
+// CHECK-DAG: @[[LINE_1000_SIGN_CHANGE:.*]] = {{.*}}, i32 1000, i32 10 }, {{.*}}, {{.*}}, i8 3, i32 0 }
+// CHECK-DAG: @[[LINE_1100_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 1100, i32 10 }, {{.*}}, {{.*}}, i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_1200_SIGN_CHANGE:.*]] = {{.*}}, i32 1200, i32 10 }, {{.*}}, {{.*}}, i8 3, i32 0 }
+// CHECK-DAG: @[[LINE_1300_SIGN_CHANGE:.*]] = {{.*}}, i32 1300, i32 10 }, {{.*}}, {{.*}}, i8 3, i32 0 }
+// CHECK-DAG: @[[LINE_1400_SIGN_CHANGE:.*]] = {{.*}}, i32 1400, i32 10 }, {{.*}}, {{.*}}, i8 3, i32 0 }
+// CHECK-DAG: @[[LINE_1500_SIGNED_TRUNCATION_OR_SIGN_CHANGE:.*]] = {{.*}}, i32 1500, i32 10 }, {{.*}}, {{.*}}, i8 4, i32 0 }
+// CHECK-DAG: @[[LINE_1600_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 1600, i32 10 }, {{.*}}, {{.*}}, i8 2, i32 0 }
 
 // CHECK-LABEL: @convert_unsigned_int_to_unsigned_int
 unsigned int convert_unsigned_int_to_unsigned_int(unsigned int x) {

@@ -121,7 +121,7 @@ template <typename Scalar> struct Derived : Base<Scalar> {
     (void)&field;
     // expected-error@+1 {{call to non-static member function without an object argument}}
     (void)method;
-    // expected-error@+1 {{call to non-static member function without an object argument}}
+    // expected-error@+1 {{must explicitly qualify name of member function when taking its address}}
     (void)&method;
     // expected-error@+1 {{call to non-static member function without an object argument}}
     method();

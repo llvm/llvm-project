@@ -9,8 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // GCC has a issue for `Guaranteed copy elision for potentially-overlapping non-static data members`,
-// please refer to: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108333, but we have a workaround to
-// avoid this issue.
+// please refer to: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108333.
+// XFAIL: gcc-14
 
 // <expected>
 
@@ -197,8 +197,8 @@ constexpr void test_direct_non_list_init() {
 constexpr void test_sfinae() {
   std::expected<int, NonConst> e(2);
   auto l = [](auto&& x) { return x.non_const(); };
-  e.transform_error(l);
-  std::move(e).transform_error(l);
+  (void)e.transform_error(l);
+  (void)std::move(e).transform_error(l);
 
   std::expected<int, int> e1;
   const auto& ce1 = e1;
@@ -208,10 +208,10 @@ constexpr void test_sfinae() {
     return 0;
   };
 
-  e1.transform_error(never_called);
-  std::move(e1).transform_error(never_called);
-  ce1.transform_error(never_called);
-  std::move(ce1).transform_error(never_called);
+  (void)e1.transform_error(never_called);
+  (void)std::move(e1).transform_error(never_called);
+  (void)ce1.transform_error(never_called);
+  (void)std::move(ce1).transform_error(never_called);
 }
 
 constexpr void test_move_only_error_type() {
@@ -219,28 +219,28 @@ constexpr void test_move_only_error_type() {
   {
       std::expected<int, MoveOnlyErrorType> e;
       auto l = [](MoveOnlyErrorType&) { return 0; };
-      e.transform_error(l);
+      (void)e.transform_error(l);
   }
 
   // Test const&
   {
       const std::expected<int, MoveOnlyErrorType> e;
       auto l = [](const MoveOnlyErrorType&) { return 0; };
-      e.transform_error(l);
+      (void)e.transform_error(l);
   }
 
   // Test &&
   {
       std::expected<int, MoveOnlyErrorType> e;
       auto l = [](MoveOnlyErrorType&&) { return 0; };
-      std::move(e).transform_error(l);
+      (void)std::move(e).transform_error(l);
   }
 
   // Test const&&
   {
       const std::expected<int, MoveOnlyErrorType> e;
       auto l = [](const MoveOnlyErrorType&&) { return 0; };
-      std::move(e).transform_error(l);
+      (void)std::move(e).transform_error(l);
   }
 }
 

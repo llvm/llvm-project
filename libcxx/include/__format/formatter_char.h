@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_CHAR_H
 #define _LIBCPP___FORMAT_FORMATTER_CHAR_H
 
-#include <__availability>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/concepts.h>
@@ -78,16 +77,24 @@ public:
 template <>
 struct _LIBCPP_TEMPLATE_VIS formatter<char, char> : public __formatter_char<char> {};
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 struct _LIBCPP_TEMPLATE_VIS formatter<char, wchar_t> : public __formatter_char<wchar_t> {};
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS formatter<wchar_t, wchar_t> : public __formatter_char<wchar_t> {};
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-#  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_STD_VER >= 23
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<char> = true;
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<wchar_t> = true;
+#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
+#  endif   // _LIBCPP_STD_VER >= 23
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 
