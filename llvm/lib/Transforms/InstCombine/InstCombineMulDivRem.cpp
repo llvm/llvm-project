@@ -1707,6 +1707,13 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
     return replaceInstUsesWith(
         I, Builder.CreateLShr(Op0, Res, I.getName(), I.isExact()));
 
+  // Infer `exact` from dominating conditions.
+  if (!I.isExact() && isKnownToBeAnExactDivFromConds(Op0, Op1,
+                                                     /*isSigned=*/false, &I)) {
+    I.setIsExact();
+    return &I;
+  }
+
   return nullptr;
 }
 
@@ -1804,11 +1811,19 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
   }
 
   KnownBits KnownDividend = computeKnownBits(Op0, 0, &I);
-  if (!I.isExact() &&
-      (match(Op1, m_Power2(Op1C)) || match(Op1, m_NegatedPower2(Op1C))) &&
-      KnownDividend.countMinTrailingZeros() >= Op1C->countr_zero()) {
-    I.setIsExact();
-    return &I;
+  if (!I.isExact()) {
+
+    if ((match(Op1, m_Power2(Op1C)) || match(Op1, m_NegatedPower2(Op1C))) &&
+        KnownDividend.countMinTrailingZeros() >= Op1C->countr_zero()) {
+      I.setIsExact();
+      return &I;
+    }
+
+    // Infer `exact` from dominating conditions.
+    if (isKnownToBeAnExactDivFromConds(Op0, Op1, /*isSigned=*/true, &I)) {
+      I.setIsExact();
+      return &I;
+    }
   }
 
   if (KnownDividend.isNonNegative()) {
@@ -1846,6 +1861,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     return SelectInst::Create(Cond, ConstantInt::get(Ty, 1),
                               ConstantInt::getAllOnesValue(Ty));
   }
+
   return nullptr;
 }
 

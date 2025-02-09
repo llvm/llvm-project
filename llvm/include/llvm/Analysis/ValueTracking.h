@@ -122,6 +122,14 @@ bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
 bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
                             const SimplifyQuery &Q);
 
+/// Return true if `X / Y` is known to be `exact` from dominating
+/// conditions.
+bool isKnownToBeAnExactDivFromConds(const Value *X, const Value *Y,
+                                    bool isSigned, const SimplifyQuery &Q);
+
+/// Return true if `V` is known to be equal to `0` from assumes.
+bool isKnownToBeZeroFromAssumes(const Value *V, const SimplifyQuery &Q);
+
 bool isOnlyUsedInZeroComparison(const Instruction *CxtI);
 
 bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);

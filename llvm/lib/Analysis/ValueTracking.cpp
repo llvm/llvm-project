@@ -2555,6 +2555,71 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   }
 }
 
+bool llvm::isKnownToBeZeroFromAssumes(const Value *V, const SimplifyQuery &Q) {
+
+  if (Q.AC && Q.CxtI) {
+    for (auto &AssumeVH : Q.AC->assumptionsFor(V)) {
+      if (!AssumeVH)
+        continue;
+      CallInst *I = cast<CallInst>(AssumeVH);
+      const Value *Cond = I->getArgOperand(0);
+      if (match(Cond,
+                m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(V), m_Zero())) &&
+          isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool llvm::isKnownToBeAnExactDivFromConds(const Value *X, const Value *Y,
+                                          bool isSigned,
+                                          const SimplifyQuery &Q) {
+  if (Q.DC && Q.CxtI && Q.DT) {
+    auto MatchRem = [&](Value *DomCond, bool CondIsTrue) -> bool {
+      auto Pred = CondIsTrue ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
+      if (isSigned)
+        return match(DomCond,
+                     m_SpecificICmp(Pred, m_SRem(m_Specific(X), m_Specific(Y)),
+                                    m_Zero()));
+      return match(
+          DomCond,
+          m_SpecificICmp(Pred, m_URem(m_Specific(X), m_Specific(Y)), m_Zero()));
+    };
+
+    auto *BB = Q.CxtI->getParent();
+    if (!Q.DT->isReachableFromEntry(BB))
+      return false;
+
+    auto *Node = Q.DT->getNode(BB);
+    while (Node->getIDom()) {
+      auto *Pred = Node->getIDom();
+      Node = Pred;
+
+      if (auto *BI = dyn_cast<BranchInst>(Pred->getBlock()->getTerminator());
+          BI && BI->isConditional()) {
+        Value *Cond = BI->getCondition();
+
+        BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
+        if (MatchRem(Cond, true) &&
+            Q.DT->dominates(Edge0, Q.CxtI->getParent())) {
+          return true;
+        }
+
+        BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
+        if (MatchRem(Cond, false) &&
+            Q.DT->dominates(Edge1, Q.CxtI->getParent())) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 /// Test whether a GEP's result is known to be non-null.
 ///
 /// Uses properties inherent in a GEP to try to determine whether it is known

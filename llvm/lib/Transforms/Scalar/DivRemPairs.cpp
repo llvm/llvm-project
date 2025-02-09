@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -178,7 +179,7 @@ static DivRemWorklistTy getWorklist(Function &F) {
 /// Note: This transform could be an oddball enhancement to EarlyCSE, GVN, or
 /// SimplifyCFG, but it's split off on its own because it's different enough
 /// that it doesn't quite match the stated objectives of those passes.
-static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
+static bool optimizeDivRem(Function &F, TargetTransformInfo &TTI,
                            const DominatorTree &DT) {
   bool Changed = false;
 
@@ -195,6 +196,35 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
 
     auto &DivInst = E.DivInst;
     auto &RemInst = E.RemInst;
+
+    // Before any transformation, analyze whether
+    // RemInst is known to be zero from assumes. If so,
+    // set `exact` flag on DivInst.
+    //
+    // This kind of flag inference is usually handled by
+    // InstCombine but it will not work for this scenario
+    // because DivRemPairs is run towards the end of the
+    // optimization pipeline and removes all poison generating
+    // flags if the target does not have an unified instruction
+    // for both division and remainder.
+    //
+    // So, we do this flag inference here to ensure that flags
+    // inferred from assumes are not removed regardless of
+    // `HasDivRemOp`.
+    //
+    // Doing this in the tail end of the pipeline does not
+    // affect any follow-up optimizations because
+    // the `exact` flag is mostly used by the backend to
+    // generate better code.
+
+    const DataLayout &DL = DivInst->getDataLayout();
+    AssumptionCache AC(F, &TTI);
+    SimplifyQuery SQ(DL, &DT, &AC, DivInst);
+    bool RemInstIsZero = llvm::isKnownToBeZeroFromAssumes(RemInst, SQ);
+
+    if (RemInstIsZero) {
+      DivInst->setIsExact();
+    }
 
     const bool RemOriginallyWasInExpandedForm = E.isRemExpanded();
     (void)RemOriginallyWasInExpandedForm; // suppress unused variable warning
@@ -371,9 +401,11 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       Sub->insertAfter(Mul->getIterator());
       Sub->setDebugLoc(RemInst->getDebugLoc());
 
-      // If DivInst has the exact flag, remove it. Otherwise this optimization
-      // may replace a well-defined value 'X % Y' with poison.
-      DivInst->dropPoisonGeneratingFlags();
+      // Remove the `exact` flag from DivInst if it is not inferred from
+      // assumes. Otherwise this optimization may replace a well-defined
+      // value 'X % Y' with poison.
+      if (!RemInstIsZero)
+        DivInst->dropPoisonGeneratingFlags();
 
       // If X can be undef, X should be frozen first.
       // For example, let's assume that Y = 1 & X = undef:

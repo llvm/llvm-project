@@ -10,7 +10,7 @@ define i8 @udiv_exact_assume(i8 %x, i8 %y) {
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
 ; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze i8 [[Y]]
-; CHECK-NEXT:    [[DIV3:%.*]] = udiv i8 [[X_FROZEN]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[DIV3:%.*]] = udiv exact i8 [[X_FROZEN]], [[Y_FROZEN]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[DIV3]], [[Y_FROZEN]]
 ; CHECK-NEXT:    [[REM:%.*]] = sub i8 [[X_FROZEN]], [[TMP1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[REM]], 0

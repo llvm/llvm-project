@@ -447,6 +447,13 @@ public:
                                         SQ.getWithInstruction(CxtI));
   }
 
+  bool isKnownToBeAnExactDivFromConds(const Value *X, const Value *Y,
+                                      bool isSigned,
+                                      const Instruction *CxtI = nullptr) {
+    return llvm::isKnownToBeAnExactDivFromConds(X, Y, isSigned,
+                                                SQ.getWithInstruction(CxtI));
+  }
+
   bool MaskedValueIsZero(const Value *V, const APInt &Mask, unsigned Depth = 0,
                          const Instruction *CxtI = nullptr) const {
     return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CxtI), Depth);

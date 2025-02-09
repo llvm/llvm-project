@@ -10,7 +10,7 @@ define i8 @udiv_exact_assume(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[REM]], 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[DIV3:%.*]] = udiv i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV3:%.*]] = udiv exact i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[DIV3]]
 ;
   %rem = urem i8 %x, %y
@@ -41,7 +41,7 @@ define i8 @infer_exact_from_dom_cond(i8 %X, i8 %Y) {
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[REM]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF_THEN]]:
@@ -69,7 +69,7 @@ define i8 @infer_exact_from_dom_cond_false_path(i8 %X, i8 %Y) {
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[REM]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
