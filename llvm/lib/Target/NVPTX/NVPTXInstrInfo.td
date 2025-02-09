@@ -411,7 +411,18 @@ multiclass F3<string op_str, SDPatternOperator op_pat> {
               (ins Float32Regs:$a, f32imm:$b),
               op_str # ".f32 \t$dst, $a, $b;",
               [(set f32:$dst, (op_pat f32:$a, fpimm:$b))]>;
-
+  def f32x2rr_ftz :
+    NVPTXInst<(outs Int64Regs:$dst),
+              (ins Int64Regs:$a, Int64Regs:$b),
+              op_str # ".ftz.f32x2 \t$dst, $a, $b;",
+              [(set v2f32:$dst, (op_pat v2f32:$a, v2f32:$b))]>,
+              Requires<[doF32FTZ, hasF32x2Instructions]>;
+  def f32x2rr :
+    NVPTXInst<(outs Int64Regs:$dst),
+              (ins Int64Regs:$a, Int64Regs:$b),
+              op_str # ".f32x2 \t$dst, $a, $b;",
+              [(set v2f32:$dst, (op_pat v2f32:$a, v2f32:$b))]>,
+              Requires<[hasF32x2Instructions]>;
   def f16rr_ftz :
     NVPTXInst<(outs Int16Regs:$dst),
               (ins Int16Regs:$a, Int16Regs:$b),
@@ -443,7 +454,6 @@ multiclass F3<string op_str, SDPatternOperator op_pat> {
               op_str # ".bf16 \t$dst, $a, $b;",
               [(set bf16:$dst, (op_pat bf16:$a, bf16:$b))]>,
               Requires<[hasBF16Math]>;
-
   def bf16x2rr :
     NVPTXInst<(outs Int32Regs:$dst),
               (ins Int32Regs:$a, Int32Regs:$b),
@@ -1335,6 +1345,13 @@ multiclass FMA_BF16<string OpcStr, ValueType T, RegisterClass RC, Predicate Pred
                        Requires<[hasBF16Math, Pred]>;
 }
 
+class FMA_F32x2<string OpcStr, Predicate Pred>
+  : NVPTXInst<(outs Int64Regs:$res),
+              (ins Int64Regs:$a, Int64Regs:$b, Int64Regs:$c),
+              OpcStr # ".f32x2 \t$res, $a, $b, $c;",
+              [(set v2f32:$res, (fma v2f32:$a, v2f32:$b, v2f32:$c))]>,
+    Requires<[hasF32x2Instructions, Pred]>;
+
 defm FMA16_ftz    : FMA_F16<"fma.rn.ftz.f16", f16, Int16Regs, doF32FTZ>;
 defm FMA16        : FMA_F16<"fma.rn.f16", f16, Int16Regs, True>;
 defm FMA16x2_ftz  : FMA_F16<"fma.rn.ftz.f16x2", v2f16, Int32Regs, doF32FTZ>;
@@ -1343,6 +1360,8 @@ defm BFMA16       : FMA_BF16<"fma.rn.bf16", bf16, Int16Regs, True>;
 defm BFMA16x2     : FMA_BF16<"fma.rn.bf16x2", v2bf16, Int32Regs, True>;
 defm FMA32_ftz    : FMA<"fma.rn.ftz.f32", Float32Regs, f32imm, doF32FTZ>;
 defm FMA32        : FMA<"fma.rn.f32", Float32Regs, f32imm, True>;
+def  FMA32x2_ftz  : FMA_F32x2<"fma.rn.ftz", doF32FTZ>;
+def  FMA32x2      : FMA_F32x2<"fma.rn", True>;
 defm FMA64        : FMA<"fma.rn.f64", Float64Regs, f64imm, True>;
 
 // sin/cos

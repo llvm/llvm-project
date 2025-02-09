@@ -1113,10 +1113,14 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   // Vector Setting
   unsigned VecType = NVPTX::PTXLdStInstCode::Scalar;
   if (SimpleVT.isVector()) {
-    assert((Isv2x16VT(LoadedVT) || LoadedVT == MVT::v4i8) &&
-           "Unexpected vector type");
-    // v2f16/v2bf16/v2i16 is loaded using ld.b32
-    FromTypeWidth = 32;
+    if (Isv2x16VT(LoadedVT) || LoadedVT == MVT::v4i8)
+      // v2f16/v2bf16/v2i16 is loaded using ld.b32
+      FromTypeWidth = 32;
+    else if (LoadedVT == MVT::v2f32)
+      // v2f32 is loaded using ld.b64
+      FromTypeWidth = 64;
+    else
+      llvm_unreachable("Unexpected vector type");
   }
 
   if (PlainLoad && (PlainLoad->getExtensionType() == ISD::SEXTLOAD))
