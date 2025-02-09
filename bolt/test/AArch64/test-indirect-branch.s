@@ -3,10 +3,11 @@
 
 // clang-format off
 
-// REQUIRES: system-linux
+// REQUIRES: system-linux, asserts
+
 // RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 // RUN: %clang %cflags --target=aarch64-unknown-linux %t.o -o %t.exe -Wl,-q
-// RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg --strict\
+// RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg --strict --debug-only=mcplus \
 // RUN:  -v=1 2>&1 | FileCheck %s
 
 // Pattern 1: there is no shift amount after the 'add' instruction.
@@ -39,7 +40,7 @@ _start:
 // svc #0
 
 // Pattern 1
-// CHECK: BOLT-WARNING: Failed to match indirect branch: ShiftVAL != 2
+// CHECK: BOLT-DEBUG: failed to match indirect branch: ShiftVAL != 2
   .globl test1
   .type  test1, %function
 test1:
@@ -57,7 +58,7 @@ test1_2:
    ret
 
 // Pattern 2
-// CHECK: BOLT-WARNING: Failed to match indirect branch: nop/adr instead of adrp/add
+// CHECK: BOLT-DEBUG: failed to match indirect branch: nop/adr instead of adrp/add
   .globl test2
   .type  test2, %function
 test2:

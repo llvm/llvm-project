@@ -62,11 +62,6 @@ DictionaryAttr NamedAttrList::getDictionary(MLIRContext *context) const {
   return llvm::cast<DictionaryAttr>(dictionarySorted.getPointer());
 }
 
-/// Add an attribute with the specified name.
-void NamedAttrList::append(StringRef name, Attribute attr) {
-  append(StringAttr::get(attr.getContext(), name), attr);
-}
-
 /// Replaces the attributes with new list of attributes.
 void NamedAttrList::assign(const_iterator inStart, const_iterator inEnd) {
   DictionaryAttr::sort(ArrayRef<NamedAttribute>{inStart, inEnd}, attrs);

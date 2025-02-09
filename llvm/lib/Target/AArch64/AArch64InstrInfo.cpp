@@ -81,7 +81,7 @@ static cl::opt<unsigned>
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
     : AArch64GenInstrInfo(AArch64::ADJCALLSTACKDOWN, AArch64::ADJCALLSTACKUP,
                           AArch64::CATCHRET),
-      RI(STI.getTargetTriple()), Subtarget(STI) {}
+      RI(STI.getTargetTriple(), STI.getHwMode()), Subtarget(STI) {}
 
 /// GetInstSize - Return the number of bytes of code the specified
 /// instruction may be.  This returns the maximum number of bytes.
@@ -2438,6 +2438,8 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STZ2Gi:
   case AArch64::STZGi:
   case AArch64::TAGPstack:
+  case AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO:
+  case AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO:
     return 2;
   case AArch64::LD1B_D_IMM:
   case AArch64::LD1B_H_IMM:
@@ -4223,6 +4225,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = -256;
     MaxOffset = 254;
     break;
+  case AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO:
+  case AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO:
   case AArch64::LDR_ZXI:
   case AArch64::STR_ZXI:
     Scale = TypeSize::getScalable(16);
@@ -4830,7 +4834,7 @@ static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
   if (!SubIdx)
     return MIB.addReg(Reg, State);
 
-  if (Register::isPhysicalRegister(Reg))
+  if (Reg.isPhysical())
     return MIB.addReg(TRI->getSubReg(Reg, SubIdx), State);
   return MIB.addReg(Reg, State, SubIdx);
 }
@@ -5278,7 +5282,8 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                            Register SrcReg, bool isKill, int FI,
                                            const TargetRegisterClass *RC,
                                            const TargetRegisterInfo *TRI,
-                                           Register VReg) const {
+                                           Register VReg,
+                                           MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -5353,6 +5358,11 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_ZXI;
+      StackID = TargetStackID::ScalableVector;
+    } else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+             "Unexpected predicate store without SVE store instructions");
+      Opc = AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO;
       StackID = TargetStackID::ScalableVector;
     }
     break;
@@ -5445,12 +5455,10 @@ static void loadRegPairFromStackSlot(const TargetRegisterInfo &TRI,
       .addMemOperand(MMO);
 }
 
-void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                            MachineBasicBlock::iterator MBBI,
-                                            Register DestReg, int FI,
-                                            const TargetRegisterClass *RC,
-                                            const TargetRegisterInfo *TRI,
-                                            Register VReg) const {
+void AArch64InstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
@@ -5527,6 +5535,11 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
       Opc = AArch64::LDR_ZXI;
+      StackID = TargetStackID::ScalableVector;
+    } else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+             "Unexpected predicate load without SVE load instructions");
+      Opc = AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO;
       StackID = TargetStackID::ScalableVector;
     }
     break;
@@ -9742,9 +9755,11 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
   // AArch64::ORRWrs and AArch64::ORRXrs with WZR/XZR reg
   // and zero immediate operands used as an alias for mov instruction.
-  if (MI.getOpcode() == AArch64::ORRWrs &&
-      MI.getOperand(1).getReg() == AArch64::WZR &&
-      MI.getOperand(3).getImm() == 0x0 &&
+  if (((MI.getOpcode() == AArch64::ORRWrs &&
+        MI.getOperand(1).getReg() == AArch64::WZR &&
+        MI.getOperand(3).getImm() == 0x0) ||
+       (MI.getOpcode() == AArch64::ORRWrr &&
+        MI.getOperand(1).getReg() == AArch64::WZR)) &&
       // Check that the w->w move is not a zero-extending w->x mov.
       (!MI.getOperand(0).getReg().isVirtual() ||
        MI.getOperand(0).getSubReg() == 0) &&
@@ -9764,9 +9779,11 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
 std::optional<DestSourcePair>
 AArch64InstrInfo::isCopyLikeInstrImpl(const MachineInstr &MI) const {
-  if (MI.getOpcode() == AArch64::ORRWrs &&
-      MI.getOperand(1).getReg() == AArch64::WZR &&
-      MI.getOperand(3).getImm() == 0x0)
+  if ((MI.getOpcode() == AArch64::ORRWrs &&
+       MI.getOperand(1).getReg() == AArch64::WZR &&
+       MI.getOperand(3).getImm() == 0x0) ||
+      (MI.getOpcode() == AArch64::ORRWrr &&
+       MI.getOperand(1).getReg() == AArch64::WZR))
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   return std::nullopt;
 }
@@ -10140,7 +10157,6 @@ public:
 
   void adjustTripCount(int TripCountAdjust) override {}
 
-  void disposed() override {}
   bool isMVEExpanderSupported() override { return true; }
 };
 } // namespace

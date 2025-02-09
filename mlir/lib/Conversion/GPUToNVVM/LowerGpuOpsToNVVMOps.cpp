@@ -446,6 +446,22 @@ static void populateOpPatterns(const LLVMTypeConverter &converter,
                                            f32ApproxFunc, f16Func);
 }
 
+template <typename OpTy>
+static void populateIntOpPatterns(const LLVMTypeConverter &converter,
+                                  RewritePatternSet &patterns,
+                                  StringRef i32Func) {
+  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
+  patterns.add<OpToFuncCallLowering<OpTy>>(converter, "", "", "", "", i32Func);
+}
+
+template <typename OpTy>
+static void populateFloatIntOpPatterns(const LLVMTypeConverter &converter,
+                                       RewritePatternSet &patterns,
+                                       StringRef f32Func, StringRef f64Func) {
+  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
+  patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func, "", "");
+}
+
 void mlir::populateGpuSubgroupReduceOpLoweringPattern(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<GPUSubgroupReduceOpLowering>(converter);
@@ -509,6 +525,7 @@ void mlir::populateGpuToNVVMConversionPatterns(
 
   populateOpPatterns<arith::RemFOp>(converter, patterns, "__nv_fmodf",
                                     "__nv_fmod");
+  populateIntOpPatterns<math::AbsIOp>(converter, patterns, "__nv_abs");
   populateOpPatterns<math::AbsFOp>(converter, patterns, "__nv_fabsf",
                                    "__nv_fabs");
   populateOpPatterns<math::AcosOp>(converter, patterns, "__nv_acosf",
@@ -555,6 +572,8 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                    "__nv_log2", "__nv_fast_log2f");
   populateOpPatterns<math::PowFOp>(converter, patterns, "__nv_powf", "__nv_pow",
                                    "__nv_fast_powf");
+  populateFloatIntOpPatterns<math::FPowIOp>(converter, patterns, "__nv_powif",
+                                            "__nv_powi");
   populateOpPatterns<math::RoundOp>(converter, patterns, "__nv_roundf",
                                     "__nv_round");
   populateOpPatterns<math::RoundEvenOp>(converter, patterns, "__nv_rintf",

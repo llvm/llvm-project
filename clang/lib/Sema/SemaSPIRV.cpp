@@ -51,6 +51,24 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
     TheCall->setType(RetTy);
     break;
   }
+  case SPIRV::BI__builtin_spirv_length: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    auto *VTy = ArgTyA->getAs<VectorType>();
+    if (VTy == nullptr) {
+      SemaRef.Diag(A.get()->getBeginLoc(),
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTyA
+          << SemaRef.Context.getVectorType(ArgTyA, 2, VectorKind::Generic) << 1
+          << 0 << 0;
+      return true;
+    }
+    QualType RetTy = VTy->getElementType();
+    TheCall->setType(RetTy);
+    break;
+  }
   }
   return false;
 }

@@ -336,7 +336,7 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
               : (cast<ObjCMethodDecl>(D)->getCanonicalDecl() == Canonical)) {
         // Substitute call arguments for references to function parameters
         if (const Expr *const *FunArgs =
-                Ctx->FunArgs.dyn_cast<const Expr *const *>()) {
+                dyn_cast<const Expr *const *>(Ctx->FunArgs)) {
           assert(I < Ctx->NumArgs);
           return translate(FunArgs[I], Ctx->Prev);
         }

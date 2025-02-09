@@ -670,6 +670,8 @@ libc_support_library(
     deps = [
         ":__support_cpp_array",
         ":__support_cpp_iterator",
+        ":__support_libc_assert",
+        ":string_memory_utils",
     ],
 )
 
@@ -3650,6 +3652,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":llvm_libc_types_size_t",
         ":string_memory_utils",
+        ":types_size_t",
     ],
 )
 

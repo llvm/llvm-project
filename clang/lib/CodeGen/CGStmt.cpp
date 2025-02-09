@@ -76,6 +76,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
       // Verify that any decl statements were handled as simple, they may be in
       // scope of subsequent reachable statements.
       assert(!isa<DeclStmt>(*S) && "Unexpected DeclStmt!");
+      PGO.markStmtMaybeUsed(S);
       return;
     }
 
@@ -113,6 +114,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
+  case Stmt::SYCLKernelCallStmtClass:
     llvm_unreachable("should have emitted these statements as simple");
 
 #define STMT(Type, Base)
@@ -331,29 +333,31 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPMasterTaskLoopDirective(cast<OMPMasterTaskLoopDirective>(*S));
     break;
   case Stmt::OMPMaskedTaskLoopDirectiveClass:
-    llvm_unreachable("masked taskloop directive not supported yet.");
+    EmitOMPMaskedTaskLoopDirective(cast<OMPMaskedTaskLoopDirective>(*S));
     break;
   case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
     EmitOMPMasterTaskLoopSimdDirective(
         cast<OMPMasterTaskLoopSimdDirective>(*S));
     break;
   case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
-    llvm_unreachable("masked taskloop simd directive not supported yet.");
+    EmitOMPMaskedTaskLoopSimdDirective(
+        cast<OMPMaskedTaskLoopSimdDirective>(*S));
     break;
   case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
     EmitOMPParallelMasterTaskLoopDirective(
         cast<OMPParallelMasterTaskLoopDirective>(*S));
     break;
   case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
-    llvm_unreachable("parallel masked taskloop directive not supported yet.");
+    EmitOMPParallelMaskedTaskLoopDirective(
+        cast<OMPParallelMaskedTaskLoopDirective>(*S));
     break;
   case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
     EmitOMPParallelMasterTaskLoopSimdDirective(
         cast<OMPParallelMasterTaskLoopSimdDirective>(*S));
     break;
   case Stmt::OMPParallelMaskedTaskLoopSimdDirectiveClass:
-    llvm_unreachable(
-        "parallel masked taskloop simd directive not supported yet.");
+    EmitOMPParallelMaskedTaskLoopSimdDirective(
+        cast<OMPParallelMaskedTaskLoopSimdDirective>(*S));
     break;
   case Stmt::OMPDistributeDirectiveClass:
     EmitOMPDistributeDirective(cast<OMPDistributeDirective>(*S));
@@ -485,6 +489,8 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OpenACCUpdateConstructClass:
     EmitOpenACCUpdateConstruct(cast<OpenACCUpdateConstruct>(*S));
     break;
+  case Stmt::OpenACCAtomicConstructClass:
+    EmitOpenACCAtomicConstruct(cast<OpenACCAtomicConstruct>(*S));
   }
 }
 
@@ -524,6 +530,23 @@ bool CodeGenFunction::EmitSimpleStmt(const Stmt *S,
     break;
   case Stmt::SEHLeaveStmtClass:
     EmitSEHLeaveStmt(cast<SEHLeaveStmt>(*S));
+    break;
+  case Stmt::SYCLKernelCallStmtClass:
+    // SYCL kernel call statements are generated as wrappers around the body
+    // of functions declared with the sycl_kernel_entry_point attribute. Such
+    // functions are used to specify how a SYCL kernel (a function object) is
+    // to be invoked; the SYCL kernel call statement contains a transformed
+    // variation of the function body and is used to generate a SYCL kernel
+    // caller function; a function that serves as the device side entry point
+    // used to execute the SYCL kernel. The sycl_kernel_entry_point attributed
+    // function is invoked by host code in order to trigger emission of the
+    // device side SYCL kernel caller function and to generate metadata needed
+    // by SYCL run-time library implementations; the function is otherwise
+    // intended to have no effect. As such, the function body is not evaluated
+    // as part of the invocation during host compilation (and the function
+    // should not be called or emitted during device compilation); the SYCL
+    // kernel call statement is thus handled as a null statement for the
+    // purpose of code generation.
     break;
   }
   return true;
@@ -881,6 +904,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
         RunCleanupsScope ExecutedScope(*this);
         EmitStmt(Executed);
       }
+      PGO.markStmtMaybeUsed(Skipped);
       return;
     }
   }
@@ -2203,6 +2227,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
       for (unsigned i = 0, e = CaseStmts.size(); i != e; ++i)
         EmitStmt(CaseStmts[i]);
       incrementProfileCounter(&S);
+      PGO.markStmtMaybeUsed(S.getBody());
 
       // Now we want to restore the saved switch instance so that nested
       // switches continue to function properly
@@ -3280,18 +3305,9 @@ CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input) {
 
 llvm::ConvergenceControlInst *
 CodeGenFunction::emitConvergenceLoopToken(llvm::BasicBlock *BB) {
-  CGBuilderTy::InsertPoint IP = Builder.saveIP();
-  if (BB->empty())
-    Builder.SetInsertPoint(BB);
-  else
-    Builder.SetInsertPoint(BB->getFirstInsertionPt());
-
-  llvm::CallBase *CB = Builder.CreateIntrinsic(
-      llvm::Intrinsic::experimental_convergence_loop, {}, {});
-  Builder.restoreIP(IP);
-
-  CB = addConvergenceControlToken(CB);
-  return cast<llvm::ConvergenceControlInst>(CB);
+  llvm::ConvergenceControlInst *ParentToken = ConvergenceTokenStack.back();
+  assert(ParentToken);
+  return llvm::ConvergenceControlInst::CreateLoop(*BB, ParentToken);
 }
 
 llvm::ConvergenceControlInst *
@@ -3304,13 +3320,5 @@ CodeGenFunction::getOrEmitConvergenceEntryToken(llvm::Function *F) {
   // Adding a convergence token requires the function to be marked as
   // convergent.
   F->setConvergent();
-
-  CGBuilderTy::InsertPoint IP = Builder.saveIP();
-  Builder.SetInsertPoint(&BB->front());
-  llvm::CallBase *I = Builder.CreateIntrinsic(
-      llvm::Intrinsic::experimental_convergence_entry, {}, {});
-  assert(isa<llvm::IntrinsicInst>(I));
-  Builder.restoreIP(IP);
-
-  return cast<llvm::ConvergenceControlInst>(I);
+  return llvm::ConvergenceControlInst::CreateEntry(*BB);
 }

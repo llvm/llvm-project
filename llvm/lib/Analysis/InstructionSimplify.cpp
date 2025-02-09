@@ -27,6 +27,7 @@
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OverflowInstAnalysis.h"
@@ -870,6 +871,14 @@ static Value *simplifySubInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
 
   if (Value *V = simplifyByDomEq(Instruction::Sub, Op0, Op1, Q, MaxRecurse))
     return V;
+
+  // (sub nuw C_Mask, (xor X, C_Mask)) -> X
+  if (IsNUW) {
+    Value *X;
+    if (match(Op1, m_Xor(m_Value(X), m_Specific(Op0))) &&
+        match(Op0, m_LowBitMask()))
+      return X;
+  }
 
   return nullptr;
 }
@@ -2540,6 +2549,14 @@ static Value *simplifyXorInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (Value *V = simplifyByDomEq(Instruction::Xor, Op0, Op1, Q, MaxRecurse))
     return V;
 
+  // (xor (sub nuw C_Mask, X), C_Mask) -> X
+  {
+    Value *X;
+    if (match(Op0, m_NUWSub(m_Specific(Op1), m_Value(X))) &&
+        match(Op1, m_LowBitMask()))
+      return X;
+  }
+
   return nullptr;
 }
 
@@ -3978,7 +3995,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   // This is potentially expensive, and we have already computedKnownBits for
   // compares with 0 above here, so only try this for a non-zero compare.
   if (ICmpInst::isEquality(Pred) && !match(RHS, m_Zero()) &&
-      isKnownNonEqual(LHS, RHS, Q.DL, Q.AC, Q.CxtI, Q.DT, Q.IIQ.UseInstrInfo)) {
+      isKnownNonEqual(LHS, RHS, Q)) {
     return Pred == ICmpInst::ICMP_NE ? getTrue(ITy) : getFalse(ITy);
   }
 
@@ -4596,12 +4613,11 @@ static Value *simplifyCmpSelOfMaxMin(Value *CmpLHS, Value *CmpRHS,
   return nullptr;
 }
 
-/// An alternative way to test if a bit is set or not uses sgt/slt instead of
-/// eq/ne.
-static Value *simplifySelectWithFakeICmpEq(Value *CmpLHS, Value *CmpRHS,
-                                           CmpPredicate Pred, Value *TrueVal,
-                                           Value *FalseVal) {
-  if (auto Res = decomposeBitTestICmp(CmpLHS, CmpRHS, Pred))
+/// An alternative way to test if a bit is set or not.
+/// uses e.g. sgt/slt or trunc instead of eq/ne.
+static Value *simplifySelectWithBitTest(Value *CondVal, Value *TrueVal,
+                                        Value *FalseVal) {
+  if (auto Res = decomposeBitTest(CondVal))
     return simplifySelectBitTest(TrueVal, FalseVal, Res->X, &Res->Mask,
                                  Res->Pred == ICmpInst::ICMP_EQ);
 
@@ -4712,21 +4728,20 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
       return FalseVal;
   }
 
-  // Check for other compares that behave like bit test.
-  if (Value *V =
-          simplifySelectWithFakeICmpEq(CmpLHS, CmpRHS, Pred, TrueVal, FalseVal))
-    return V;
-
   // If we have a scalar equality comparison, then we know the value in one of
   // the arms of the select. See if substituting this value into the arm and
   // simplifying the result yields the same value as the other arm.
   if (Pred == ICmpInst::ICMP_EQ) {
-    if (Value *V = simplifySelectWithEquivalence({{CmpLHS, CmpRHS}}, TrueVal,
-                                                 FalseVal, Q, MaxRecurse))
-      return V;
-    if (Value *V = simplifySelectWithEquivalence({{CmpRHS, CmpLHS}}, TrueVal,
-                                                 FalseVal, Q, MaxRecurse))
-      return V;
+    if (CmpLHS->getType()->isIntOrIntVectorTy() ||
+        canReplacePointersIfEqual(CmpLHS, CmpRHS, Q.DL))
+      if (Value *V = simplifySelectWithEquivalence({{CmpLHS, CmpRHS}}, TrueVal,
+                                                   FalseVal, Q, MaxRecurse))
+        return V;
+    if (CmpLHS->getType()->isIntOrIntVectorTy() ||
+        canReplacePointersIfEqual(CmpRHS, CmpLHS, Q.DL))
+      if (Value *V = simplifySelectWithEquivalence({{CmpRHS, CmpLHS}}, TrueVal,
+                                                   FalseVal, Q, MaxRecurse))
+        return V;
 
     Value *X;
     Value *Y;
@@ -4966,6 +4981,9 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
 
   if (Value *V =
           simplifySelectWithICmpCond(Cond, TrueVal, FalseVal, Q, MaxRecurse))
+    return V;
+
+  if (Value *V = simplifySelectWithBitTest(Cond, TrueVal, FalseVal))
     return V;
 
   if (Value *V = simplifySelectWithFCmp(Cond, TrueVal, FalseVal, Q, MaxRecurse))

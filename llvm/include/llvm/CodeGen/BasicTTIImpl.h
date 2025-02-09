@@ -223,12 +223,11 @@ private:
     //
     // First, compute the cost of the individual memory operations.
     InstructionCost AddrExtractCost =
-        IsGatherScatter
-            ? getScalarizationOverhead(
-                  FixedVectorType::get(
-                      PointerType::get(VT->getElementType(), 0), VF),
-                  /*Insert=*/false, /*Extract=*/true, CostKind)
-            : 0;
+        IsGatherScatter ? getScalarizationOverhead(
+                              FixedVectorType::get(
+                                  PointerType::get(VT->getContext(), 0), VF),
+                              /*Insert=*/false, /*Extract=*/true, CostKind)
+                        : 0;
 
     // The cost of the scalar loads/stores.
     InstructionCost MemoryOpCost =
@@ -1469,6 +1468,15 @@ public:
                                        true, CostKind);
   }
 
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) {
+    // Treat expand load/compress store as gather/scatter operation.
+    // TODO: implement more precise cost estimation for these intrinsics.
+    return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
+                                       /*IsGatherScatter*/ true, CostKind);
+  }
+
   InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,
@@ -1777,6 +1785,21 @@ public:
       return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
                                              VarMask, Alignment, CostKind, I);
     }
+    case Intrinsic::masked_compressstore: {
+      const Value *Data = Args[0];
+      const Value *Mask = Args[2];
+      Align Alignment = I->getParamAlign(1).valueOrOne();
+      return thisT()->getExpandCompressMemoryOpCost(
+          Instruction::Store, Data->getType(), !isa<Constant>(Mask), Alignment,
+          CostKind, I);
+    }
+    case Intrinsic::masked_expandload: {
+      const Value *Mask = Args[1];
+      Align Alignment = I->getParamAlign(0).valueOrOne();
+      return thisT()->getExpandCompressMemoryOpCost(Instruction::Load, RetTy,
+                                                    !isa<Constant>(Mask),
+                                                    Alignment, CostKind, I);
+    }
     case Intrinsic::experimental_vp_strided_store: {
       const Value *Data = Args[0];
       const Value *Ptr = Args[1];
@@ -2078,6 +2101,9 @@ public:
     case Intrinsic::sincos:
       ISD = ISD::FSINCOS;
       break;
+    case Intrinsic::modf:
+      ISD = ISD::FMODF;
+      break;
     case Intrinsic::tan:
       ISD = ISD::FTAN;
       break;
@@ -2205,6 +2231,20 @@ public:
       return thisT()->getMaskedMemoryOpCost(Instruction::Load, Ty, TyAlign, 0,
                                             CostKind);
     }
+    case Intrinsic::experimental_vp_strided_store: {
+      auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);
+      Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
+      return thisT()->getStridedMemoryOpCost(
+          Instruction::Store, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
+          Alignment, CostKind, ICA.getInst());
+    }
+    case Intrinsic::experimental_vp_strided_load: {
+      auto *Ty = cast<VectorType>(ICA.getReturnType());
+      Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
+      return thisT()->getStridedMemoryOpCost(
+          Instruction::Load, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
+          Alignment, CostKind, ICA.getInst());
+    }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
     case Intrinsic::vector_reduce_and:
@@ -2258,6 +2298,12 @@ public:
     }
     case Intrinsic::abs:
       ISD = ISD::ABS;
+      break;
+    case Intrinsic::fshl:
+      ISD = ISD::FSHL;
+      break;
+    case Intrinsic::fshr:
+      ISD = ISD::FSHR;
       break;
     case Intrinsic::smax:
       ISD = ISD::SMAX;
@@ -2546,6 +2592,29 @@ public:
       Cost += thisT()->getArithmeticInstrCost(
           BinaryOperator::Sub, RetTy, CostKind,
           {TTI::OK_UniformConstantValue, TTI::OP_None});
+      return Cost;
+    }
+    case Intrinsic::fshl:
+    case Intrinsic::fshr: {
+      // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+      // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      InstructionCost Cost = 0;
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Shl, RetTy, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::LShr, RetTy,
+                                              CostKind);
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::URem, RetTy,
+                                              CostKind);
+      // Shift-by-zero handling.
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                          CmpInst::ICMP_EQ, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                          CmpInst::ICMP_EQ, CostKind);
       return Cost;
     }
     case Intrinsic::fptosi_sat:

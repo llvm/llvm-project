@@ -15,7 +15,6 @@
 #include <__type_traits/is_enum.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_unsigned.h>
-#include <__type_traits/nat.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/type_list.h>
 
@@ -28,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if __has_builtin(__make_unsigned)
 
 template <class _Tp>
-using __make_unsigned_t = __make_unsigned(_Tp);
+using __make_unsigned_t _LIBCPP_NODEBUG = __make_unsigned(_Tp);
 
 #else
 using __unsigned_types =
@@ -73,7 +72,7 @@ using __make_unsigned_t = __copy_cv_t<_Tp, typename __make_unsigned<__remove_cv_
 #endif // __has_builtin(__make_unsigned)
 
 template <class _Tp>
-struct make_unsigned {
+struct _LIBCPP_NO_SPECIALIZATIONS make_unsigned {
   using type _LIBCPP_NODEBUG = __make_unsigned_t<_Tp>;
 };
 
@@ -88,7 +87,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __make_unsigned_t<_Tp> __to_unsigned_lik
 }
 
 template <class _Tp, class _Up>
-using __copy_unsigned_t = __conditional_t<is_unsigned<_Tp>::value, __make_unsigned_t<_Up>, _Up>;
+using __copy_unsigned_t _LIBCPP_NODEBUG = __conditional_t<is_unsigned<_Tp>::value, __make_unsigned_t<_Up>, _Up>;
 
 _LIBCPP_END_NAMESPACE_STD
 

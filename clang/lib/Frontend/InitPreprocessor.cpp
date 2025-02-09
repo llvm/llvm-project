@@ -253,6 +253,8 @@ static void DefineExactWidthIntType(const LangOptions &LangOpts,
 
   StringRef ConstSuffix(TI.getTypeConstantSuffix(Ty));
   Builder.defineMacro(Prefix + Twine(TypeWidth) + "_C_SUFFIX__", ConstSuffix);
+  Builder.defineMacro(Prefix + Twine(TypeWidth) + "_C(c)",
+                      ConstSuffix.size() ? Twine("c##") + ConstSuffix : "c");
 }
 
 static void DefineExactWidthIntTypeSize(TargetInfo::IntType Ty,
@@ -727,8 +729,8 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   }
   if (LangOpts.AlignedAllocation && !LangOpts.AlignedAllocationUnavailable)
     Builder.defineMacro("__cpp_aligned_new", "201606L");
-  if (LangOpts.RelaxedTemplateTemplateArgs)
-    Builder.defineMacro("__cpp_template_template_args", "201611L");
+
+  Builder.defineMacro("__cpp_template_template_args", "201611L");
 
   // C++20 features.
   if (LangOpts.CPlusPlus20) {
@@ -1164,12 +1166,16 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
   DefineType("__INTMAX_TYPE__", TI.getIntMaxType(), Builder);
   DefineFmt(LangOpts, "__INTMAX", TI.getIntMaxType(), TI, Builder);
-  Builder.defineMacro("__INTMAX_C_SUFFIX__",
-                      TI.getTypeConstantSuffix(TI.getIntMaxType()));
+  StringRef ConstSuffix(TI.getTypeConstantSuffix(TI.getIntMaxType()));
+  Builder.defineMacro("__INTMAX_C_SUFFIX__", ConstSuffix);
+  Builder.defineMacro("__INTMAX_C(c)",
+                      ConstSuffix.size() ? Twine("c##") + ConstSuffix : "c");
   DefineType("__UINTMAX_TYPE__", TI.getUIntMaxType(), Builder);
   DefineFmt(LangOpts, "__UINTMAX", TI.getUIntMaxType(), TI, Builder);
-  Builder.defineMacro("__UINTMAX_C_SUFFIX__",
-                      TI.getTypeConstantSuffix(TI.getUIntMaxType()));
+  ConstSuffix = TI.getTypeConstantSuffix(TI.getUIntMaxType());
+  Builder.defineMacro("__UINTMAX_C_SUFFIX__", ConstSuffix);
+  Builder.defineMacro("__UINTMAX_C(c)",
+                      ConstSuffix.size() ? Twine("c##") + ConstSuffix : "c");
   DefineType("__PTRDIFF_TYPE__", TI.getPtrDiffType(LangAS::Default), Builder);
   DefineFmt(LangOpts, "__PTRDIFF", TI.getPtrDiffType(LangAS::Default), TI,
             Builder);
@@ -1460,8 +1466,14 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     case 50:
       Builder.defineMacro("_OPENMP", "201811");
       break;
+    case 51:
+      Builder.defineMacro("_OPENMP", "202011");
+      break;
     case 52:
       Builder.defineMacro("_OPENMP", "202111");
+      break;
+    case 60:
+      Builder.defineMacro("_OPENMP", "202411");
       break;
     default: // case 51:
       // Default version is OpenMP 5.1
@@ -1507,11 +1519,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // ELF targets define __ELF__
   if (TI.getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
-  else if (TI.getTriple().isAppleMachO())
-    // Apple MachO targets define __MACH__ even when not using DarwinTargetInfo.
-    // Hurd will also define this in some circumstances, but that's done in
-    // HurdTargetInfo. Windows targets don't define this.
-    Builder.defineMacro("__MACH__");
 
   // Target OS macro definitions.
   if (PPOpts.DefineTargetOSMacros) {

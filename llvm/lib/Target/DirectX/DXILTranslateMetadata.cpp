@@ -331,7 +331,6 @@ static void translateBranchMetadata(Module &M) {
       BBTerminatorInst->setMetadata("dx.controlflow.hints", MDNode);
       BBTerminatorInst->setMetadata("hlsl.controlflow.hint", nullptr);
     }
-    F.clearMetadata();
   }
 }
 

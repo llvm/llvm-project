@@ -18,6 +18,8 @@ if (SPHINX_FOUND)
     # shell.
     file(MAKE_DIRECTORY
       "${CMAKE_CURRENT_BINARY_DIR}/headers/arpa/"
+      "${CMAKE_CURRENT_BINARY_DIR}/headers/net/"
+      "${CMAKE_CURRENT_BINARY_DIR}/headers/netinet/"
       "${CMAKE_CURRENT_BINARY_DIR}/headers/sys/"
     )
 
@@ -32,14 +34,21 @@ if (SPHINX_FOUND)
     # math.h), those should be omitted and exist statically in
     # libc/docs/headers/.
     list(APPEND docgen_list
+      aio
       arpa/inet
       assert
+      cpio
       ctype
+      endian
       errno
       fenv
       float
       inttypes
       locale
+      net/if
+      netinet/in
+      # TODO: https://github.com/llvm/llvm-project/issues/123821
+      # pthread
       setjmp
       signal
       stdbit
@@ -48,8 +57,14 @@ if (SPHINX_FOUND)
       string
       strings
       sys/mman
+      sys/resource
+      sys/stat
+      sys/time
+      sys/wait
+      termios
       threads
       uchar
+      unistd
       wchar
       wctype
     )

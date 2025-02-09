@@ -73,8 +73,10 @@ static SPIRV::Requirements
 getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
                                unsigned i, const SPIRVSubtarget &ST,
                                SPIRV::RequirementHandler &Reqs) {
-  static AvoidCapabilitiesSet
-      AvoidCaps; // contains capabilities to avoid if there is another option
+  // A set of capabilities to avoid if there is another option.
+  AvoidCapabilitiesSet AvoidCaps;
+  if (ST.isOpenCLEnv())
+    AvoidCaps.S.insert(SPIRV::Capability::Shader);
 
   VersionTuple ReqMinVer = getSymbolicOperandMinVersion(Category, i);
   VersionTuple ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
@@ -1352,9 +1354,7 @@ void addInstrRequirements(const MachineInstr &MI,
     case SPIRV::GroupOperation::Reduce:
     case SPIRV::GroupOperation::InclusiveScan:
     case SPIRV::GroupOperation::ExclusiveScan:
-      Reqs.addCapability(SPIRV::Capability::Kernel);
       Reqs.addCapability(SPIRV::Capability::GroupNonUniformArithmetic);
-      Reqs.addCapability(SPIRV::Capability::GroupNonUniformBallot);
       break;
     case SPIRV::GroupOperation::ClusteredReduce:
       Reqs.addCapability(SPIRV::Capability::GroupNonUniformClustered);
@@ -1692,18 +1692,24 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpSDot:
   case SPIRV::OpUDot:
+  case SPIRV::OpSUDot:
+  case SPIRV::OpSDotAccSat:
+  case SPIRV::OpUDotAccSat:
+  case SPIRV::OpSUDotAccSat:
     AddDotProductRequirements(MI, Reqs, ST);
     break;
   case SPIRV::OpImageRead: {
     Register ImageReg = MI.getOperand(2).getReg();
-    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(ImageReg);
+    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
+        ImageReg, const_cast<MachineFunction *>(MI.getMF()));
     if (isImageTypeWithUnknownFormat(TypeDef))
       Reqs.addCapability(SPIRV::Capability::StorageImageReadWithoutFormat);
     break;
   }
   case SPIRV::OpImageWrite: {
     Register ImageReg = MI.getOperand(0).getReg();
-    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(ImageReg);
+    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
+        ImageReg, const_cast<MachineFunction *>(MI.getMF()));
     if (isImageTypeWithUnknownFormat(TypeDef))
       Reqs.addCapability(SPIRV::Capability::StorageImageWriteWithoutFormat);
     break;
@@ -1807,12 +1813,12 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           SPIRV::ExecutionMode::VecTypeHint, ST);
 
     if (F.hasOptNone()) {
-      if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_optnone)) {
-        MAI.Reqs.addExtension(SPIRV::Extension::SPV_EXT_optnone);
-        MAI.Reqs.addCapability(SPIRV::Capability::OptNoneEXT);
-      } else if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
+      if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
         MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_optnone);
         MAI.Reqs.addCapability(SPIRV::Capability::OptNoneINTEL);
+      } else if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_optnone)) {
+        MAI.Reqs.addExtension(SPIRV::Extension::SPV_EXT_optnone);
+        MAI.Reqs.addCapability(SPIRV::Capability::OptNoneEXT);
       }
     }
   }
