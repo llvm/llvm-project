@@ -437,6 +437,11 @@ void RISCVInstrInfo::copyPhysRegVector(
       MIB.addReg(RISCV::VL, RegState::Implicit);
       MIB.addReg(RISCV::VTYPE, RegState::Implicit);
     }
+    // Add an implicit read of the original source to silence the verifier
+    // in the cases where some of the smaller VRs we're copying from might be
+    // undef, caused by the fact that the original, larger source VR might not
+    // be fully initialized at the time this COPY happens.
+    MIB.addReg(SrcReg, RegState::Implicit);
 
     // If we are copying reversely, we should decrease the encoding.
     SrcEncoding += (ReversedCopy ? -NumCopied : NumCopied);
