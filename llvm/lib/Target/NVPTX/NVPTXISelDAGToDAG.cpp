@@ -450,10 +450,14 @@ bool NVPTXDAGToDAGISel::SelectSETP_BF16X2(SDNode *N) {
 bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   SDValue Vector = N->getOperand(0);
 
-  // We only care about 16x2 as it's the only real vector type we
-  // need to deal with.
+  // We only care about packed vector types: 16x2 and 32x2.
   MVT VT = Vector.getSimpleValueType();
-  if (!Isv2x16VT(VT))
+  unsigned NewOpcode = 0;
+  if (Isv2x16VT(VT))
+    NewOpcode = NVPTX::I32toV2I16;
+  else if (VT == MVT::v2f32)
+    NewOpcode = NVPTX::I64toV2F32;
+  else
     return false;
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
@@ -473,16 +477,19 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
     }
   }
 
-  // There's no point scattering f16x2 if we only ever access one
+  // There's no point scattering f16x2 or f32x2 if we only ever access one
   // element of it.
   if (E0.empty() || E1.empty())
     return false;
 
-  // Merge (f16 extractelt(V, 0), f16 extractelt(V,1))
-  // into f16,f16 SplitF16x2(V)
+  // Merge:
+  //  (f16 extractelt(V, 0), f16 extractelt(V,1))
+  //  -> f16,f16 SplitF16x2(V)
+  //  (f32 extractelt(V, 0), f32 extractelt(V,1))
+  //  -> f32,f32 SplitF32x2(V)
   MVT EltVT = VT.getVectorElementType();
   SDNode *ScatterOp =
-      CurDAG->getMachineNode(NVPTX::I32toV2I16, SDLoc(N), EltVT, EltVT, Vector);
+      CurDAG->getMachineNode(NewOpcode, SDLoc(N), EltVT, EltVT, Vector);
   for (auto *Node : E0)
     ReplaceUses(SDValue(Node, 0), SDValue(ScatterOp, 0));
   for (auto *Node : E1)
