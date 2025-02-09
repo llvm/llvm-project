@@ -565,23 +565,22 @@ define amdgpu_kernel void @srem32_invariant_denom(ptr addrspace(1) nocapture %ar
 ;
 ; GFX11-LABEL: srem32_invariant_denom:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_abs_i32 s2, s2
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_abs_i32 s2, s0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_cvt_f32_u32_e32 v0, s2
 ; GFX11-NEXT:    s_sub_i32 s3, 0, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mul_i32 s3, s3, s4
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mul_hi_u32 s5, s4, s3
 ; GFX11-NEXT:    s_mov_b32 s3, 0
 ; GFX11-NEXT:    s_add_i32 s4, s4, s5
@@ -602,6 +601,7 @@ define amdgpu_kernel void @srem32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    s_cselect_b32 s5, s6, s5
 ; GFX11-NEXT:    s_add_i32 s3, s3, 1
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s5
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_add_u32 s0, s0, 4
 ; GFX11-NEXT:    s_addc_u32 s1, s1, 0
