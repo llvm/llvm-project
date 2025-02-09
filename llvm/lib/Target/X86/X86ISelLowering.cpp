@@ -48472,6 +48472,64 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   return SDValue();
 }
 
+// Attempt to fold some (truncate (srl (add X, C1), C2)) patterns to
+// (add (truncate (srl X, C2), C1')). C1' will be smaller than C1 so we are able
+// to avoid generating code with MOVABS and large constants in certain cases.
+static SDValue combineSetCCTruncAdd(SDValue EFLAGS, X86::CondCode &CC,
+                                    SelectionDAG &DAG) {
+  if (!(CC == X86::COND_E || CC == X86::COND_NE || CC == X86::COND_AE ||
+        CC == X86::COND_B))
+    return SDValue();
+
+  EVT VT = EFLAGS.getValueType();
+  if (EFLAGS.getOpcode() == X86ISD::SUB && VT == MVT::i32) {
+    SDValue CmpLHS = EFLAGS.getOperand(0);
+    auto *CmpConstant = dyn_cast<ConstantSDNode>(EFLAGS.getOperand(1));
+
+    if (CmpLHS.getOpcode() != ISD::TRUNCATE || !CmpConstant)
+      return SDValue();
+
+    SDValue Srl = CmpLHS.getOperand(0);
+    EVT SrlVT = Srl.getValueType();
+    if (Srl.getOpcode() != ISD::SRL || SrlVT != MVT::i64)
+      return SDValue();
+
+    SDValue Add = Srl.getOperand(0);
+    // Avoid changing the ADD if it is used elsewhere.
+    if (Add.getOpcode() != ISD::ADD || !Add.hasOneUse())
+      return SDValue();
+
+    auto *AddConstant = dyn_cast<ConstantSDNode>(Add.getOperand(1));
+    auto *SrlConstant = dyn_cast<ConstantSDNode>(Srl.getOperand(1));
+    if (!AddConstant || !SrlConstant)
+      return SDValue();
+
+    APInt AddConstVal = AddConstant->getAPIntValue();
+    APInt SrlConstVal = SrlConstant->getAPIntValue();
+    if (!SrlConstVal.ugt(VT.getSizeInBits()))
+      return SDValue();
+
+    APInt CmpConstVal = CmpConstant->getAPIntValue();
+    APInt ShiftedAddConst = AddConstVal.lshr(SrlConstVal);
+    if (!CmpConstVal.ult(ShiftedAddConst.trunc(VT.getSizeInBits())) ||
+        (ShiftedAddConst.shl(SrlConstVal)) != AddConstVal)
+      return SDValue();
+
+    SDLoc DL(EFLAGS);
+    SDValue AddLHSSrl =
+        DAG.getNode(ISD::SRL, DL, SrlVT, Add.getOperand(0), Srl.getOperand(1));
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AddLHSSrl);
+
+    APInt NewAddConstVal =
+        (~((~AddConstVal).lshr(SrlConstVal))).trunc(VT.getSizeInBits());
+    SDValue NewAddConst = DAG.getConstant(NewAddConstVal, DL, VT);
+    SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
+    return DAG.getNode(X86ISD::CMP, DL, VT, NewAddNode, EFLAGS.getOperand(1));
+  }
+
+  return SDValue();
+}
+
 /// Optimize an EFLAGS definition used according to the condition code \p CC
 /// into a simpler EFLAGS value, potentially returning a new \p CC and replacing
 /// uses of chain values.
@@ -48492,6 +48550,9 @@ static SDValue combineSetCCEFLAGS(SDValue EFLAGS, X86::CondCode &CC,
     return R;
 
   if (SDValue R = combineSetCCMOVMSK(EFLAGS, CC, DAG, Subtarget))
+    return R;
+
+  if (SDValue R = combineSetCCTruncAdd(EFLAGS, CC, DAG))
     return R;
 
   return combineSetCCAtomicArith(EFLAGS, CC, DAG, Subtarget);

@@ -6,10 +6,9 @@
 define i1 @test_ult_trunc_add(i64 %x) {
 ; X64-LABEL: test_ult_trunc_add:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movabsq $3940649673949184, %rax # imm = 0xE000000000000
-; X64-NEXT:    addq %rdi, %rax
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    cmpl $3, %eax
+; X64-NEXT:    shrq $48, %rdi
+; X64-NEXT:    addl $-65522, %edi # imm = 0xFFFF000E
+; X64-NEXT:    cmpl $3, %edi
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 entry:
@@ -23,10 +22,9 @@ entry:
 define i1 @test_ult_add(i64 %x) {
 ; X64-LABEL: test_ult_add:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movabsq $3940649673949184, %rax # imm = 0xE000000000000
-; X64-NEXT:    addq %rdi, %rax
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    cmpl $3, %eax
+; X64-NEXT:    shrq $48, %rdi
+; X64-NEXT:    addl $-65522, %edi # imm = 0xFFFF000E
+; X64-NEXT:    cmpl $3, %edi
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 entry:
@@ -38,10 +36,9 @@ entry:
 define i1 @test_ugt_trunc_add(i64 %x) {
 ; X64-LABEL: test_ugt_trunc_add:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movabsq $3940649673949184, %rax # imm = 0xE000000000000
-; X64-NEXT:    addq %rdi, %rax
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    cmpl $4, %eax
+; X64-NEXT:    shrq $48, %rdi
+; X64-NEXT:    addl $-65522, %edi # imm = 0xFFFF000E
+; X64-NEXT:    cmpl $4, %edi
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
 entry:
@@ -70,10 +67,9 @@ entry:
 define i1 @test_eq_trunc_add(i64 %x) {
 ; X64-LABEL: test_eq_trunc_add:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movabsq $3940649673949184, %rax # imm = 0xE000000000000
-; X64-NEXT:    addq %rdi, %rax
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    cmpl $3, %eax
+; X64-NEXT:    shrq $48, %rdi
+; X64-NEXT:    addl $-65522, %edi # imm = 0xFFFF000E
+; X64-NEXT:    cmpl $3, %edi
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 entry:
@@ -100,10 +96,9 @@ entry:
 define i1 @test_ne_trunc_add(i64 %x) {
 ; X64-LABEL: test_ne_trunc_add:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movabsq $3940649673949184, %rax # imm = 0xE000000000000
-; X64-NEXT:    addq %rdi, %rax
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    cmpl $3, %eax
+; X64-NEXT:    shrq $48, %rdi
+; X64-NEXT:    addl $-65522, %edi # imm = 0xFFFF000E
+; X64-NEXT:    cmpl $3, %edi
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
 entry:
