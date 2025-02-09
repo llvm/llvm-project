@@ -285,6 +285,13 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode = std::nullopt;
   VPRecipeBase *BinOpR = getOperand(0)->getDefiningRecipe();
+
+  // If the partial reduction is predicated, a select will be operand 0 rather
+  // than the binary op
+  using namespace llvm::VPlanPatternMatch;
+  if (match(getOperand(0), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+    BinOpR = BinOpR->getOperand(1)->getDefiningRecipe();
+
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(BinOpR))
     Opcode = std::make_optional(WidenR->getOpcode());
 
@@ -678,20 +685,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::ResumePhi: {
-    Value *IncomingFromVPlanPred =
-        State.get(getOperand(0), /* IsScalar */ true);
-    Value *IncomingFromOtherPreds =
-        State.get(getOperand(1), /* IsScalar */ true);
     auto *NewPhi =
         Builder.CreatePHI(State.TypeAnalysis.inferScalarType(this), 2, Name);
-    BasicBlock *VPlanPred =
-        State.CFG
-            .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getPredecessors()[0])];
-    NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
-    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
-      if (OtherPred == VPlanPred)
-        continue;
-      NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
+    for (const auto &[IncVPV, PredVPBB] :
+         zip(operands(), getParent()->getPredecessors())) {
+      Value *IncV = State.get(IncVPV, /* IsScalar */ true);
+      BasicBlock *PredBB = State.CFG.VPBB2IRBB.at(cast<VPBasicBlock>(PredVPBB));
+      NewPhi->addIncoming(IncV, PredBB);
     }
     return NewPhi;
   }
@@ -713,6 +713,23 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
+  if (Instruction::isBinaryOp(getOpcode())) {
+    if (!getUnderlyingValue()) {
+      // TODO: Compute cost for VPInstructions without underlying values once
+      // the legacy cost model has been retired.
+      return 0;
+    }
+
+    assert(!doesGeneratePerAllLanes() &&
+           "Should only generate a vector value or single scalar, not scalars "
+           "for all lanes.");
+    Type *ResTy = Ctx.Types.inferScalarType(this);
+    if (!vputils::onlyFirstLaneUsed(this))
+      ResTy = toVectorTy(ResTy, VF);
+
+    return Ctx.TTI.getArithmeticInstrCost(getOpcode(), ResTy, Ctx.CostKind);
+  }
+
   switch (getOpcode()) {
   case VPInstruction::AnyOf: {
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
@@ -720,7 +737,10 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
   default:
-    // TODO: Fill out other opcodes!
+    // TODO: Compute cost other VPInstructions once the legacy cost model has
+    // been retired.
+    assert(!getUnderlyingValue() &&
+           "unexpected VPInstruction witht underlying value");
     return 0;
   }
 }

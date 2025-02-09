@@ -29,7 +29,7 @@ func.func @subview(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : in
   // CHECK-DAG: %[[STRIDE0:.*]] = llvm.mlir.constant(4 : index) : i64
   // CHECK-DAG: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] overflow<nsw> : i64
   // CHECK-DAG: %[[OFF2:.*]] = llvm.add %[[DESCSTRIDE0]], %[[ARG1]] : i64
-  // CHECK-DAG: %[[DESC:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-DAG: %[[DESC:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 
   // Base address and algined address.
   // CHECK-DAG: %[[DESC0:.*]] = llvm.insertvalue %[[BASE]], %[[DESC]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
@@ -57,7 +57,7 @@ module @named_inclusion_in_named attributes { transform.with_named_sequence } {
 
   transform.named_sequence @entry_point(
     %toplevel_module : !transform.any_op {transform.readonly}) {
-    transform.include @lower_to_llvm failures(suppress) (%toplevel_module) 
+    transform.include @lower_to_llvm failures(suppress) (%toplevel_module)
       : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }

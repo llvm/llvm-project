@@ -437,6 +437,11 @@ void RISCVInstrInfo::copyPhysRegVector(
       MIB.addReg(RISCV::VL, RegState::Implicit);
       MIB.addReg(RISCV::VTYPE, RegState::Implicit);
     }
+    // Add an implicit read of the original source to silence the verifier
+    // in the cases where some of the smaller VRs we're copying from might be
+    // undef, caused by the fact that the original, larger source VR might not
+    // be fully initialized at the time this COPY happens.
+    MIB.addReg(SrcReg, RegState::Implicit);
 
     // If we are copying reversely, we should decrease the encoding.
     SrcEncoding += (ReversedCopy ? -NumCopied : NumCopied);
@@ -1516,7 +1521,7 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
   SeenMIs.erase(DefMI);
 
   // If MI is inside a loop, and DefMI is outside the loop, then kill flags on
-  // DefMI would be invalid when tranferred inside the loop.  Checking for a
+  // DefMI would be invalid when transferred inside the loop.  Checking for a
   // loop is expensive, but at least remove kill flags if they are in different
   // BBs.
   if (DefMI->getParent() != MI.getParent())

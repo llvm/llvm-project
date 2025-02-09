@@ -16122,6 +16122,65 @@ of the argument.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+'``llvm.modf.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.modf`` on any floating-point
+or vector of floating-point type. However, not all targets support all types.
+
+::
+
+ declare { float, float }             @llvm.modf.f32(float  %Val)
+ declare { double, double }           @llvm.modf.f64(double %Val)
+ declare { x86_fp80, x86_fp80 }       @llvm.modf.f80(x86_fp80  %Val)
+ declare { fp128, fp128 }             @llvm.modf.f128(fp128 %Val)
+ declare { ppc_fp128, ppc_fp128 }     @llvm.modf.ppcf128(ppc_fp128  %Val)
+ declare { <4 x float>, <4 x float> } @llvm.modf.v4f32(<4 x float>  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.modf.*``' intrinsics return the operand's integral and fractional
+parts.
+
+Arguments:
+""""""""""
+
+The argument is a :ref:`floating-point <t_floating>` value or
+:ref:`vector <t_vector>` of floating-point values. Returns two values matching
+the argument type in a struct.
+
+Semantics:
+""""""""""
+
+Return the same values as a corresponding libm '``modf``' function without
+trapping or setting ``errno``.
+
+The first result is the fractional part of the operand and the second result is
+the integral part of the operand. Both results have the same sign as the operand.
+
+Not including exceptional inputs (listed below), ``llvm.modf.*`` is semantically
+equivalent to:
+
+::
+
+  %fp = frem <fptype> %x, 1.0  ; Fractional part
+  %ip = fsub <fptype> %x, %fp  ; Integral part
+
+(assuming no floating-point precision errors)
+
+If the argument is a zero, returns a zero with the same sign for both the
+fractional and integral parts.
+
+If the argument is an infinity, returns a fractional part of zero with the same
+sign, and infinity with the same sign as the integral part.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
 '``llvm.pow.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

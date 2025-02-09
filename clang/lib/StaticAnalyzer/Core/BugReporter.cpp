@@ -299,7 +299,8 @@ std::string timeTraceName(const BugReportEquivClass &EQ) {
   return ("Flushing EQC " + BT.getDescription()).str();
 }
 
-llvm::TimeTraceMetadata timeTraceMetadata(const BugReportEquivClass &EQ) {
+llvm::TimeTraceMetadata timeTraceMetadata(const BugReportEquivClass &EQ,
+                                          const SourceManager &SM) {
   // Must be called only when constructing non-bogus TimeTraceScope
   assert(llvm::timeTraceProfilerEnabled());
 
@@ -309,9 +310,7 @@ llvm::TimeTraceMetadata timeTraceMetadata(const BugReportEquivClass &EQ) {
   const BugReport *R = BugReports.front().get();
   const auto &BT = R->getBugType();
   auto Loc = R->getLocation().asLocation();
-  std::string File = "";
-  if (const auto *Entry = Loc.getFileEntry())
-    File = Entry->tryGetRealPathName().str();
+  std::string File = SM.getFilename(Loc).str();
   return {BT.getCheckerName().str(), std::move(File),
           static_cast<int>(Loc.getLineNumber())};
 }
@@ -3150,8 +3149,9 @@ BugReport *PathSensitiveBugReporter::findReportInEquivalenceClass(
 }
 
 void BugReporter::FlushReport(BugReportEquivClass &EQ) {
-  llvm::TimeTraceScope TCS{timeTraceName(EQ),
-                           [&EQ]() { return timeTraceMetadata(EQ); }};
+  llvm::TimeTraceScope TCS{timeTraceName(EQ), [&]() {
+                             return timeTraceMetadata(EQ, getSourceManager());
+                           }};
   SmallVector<BugReport*, 10> bugReports;
   BugReport *report = findReportInEquivalenceClass(EQ, bugReports);
   if (!report)

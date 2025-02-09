@@ -500,7 +500,8 @@ func.func @fold_eq_i32(%arg0 : tensor<10xi32>) -> (tensor<10xi1>) {
 func.func @reshape_splat() -> tensor<6x5x4xi32> {
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{value = dense<42> : tensor<6x5x4xi32>}
   %splat = "tosa.const"() {value = dense<42> : tensor<4x5x6xi32>} : () -> tensor<4x5x6xi32>
-  %reshape = tosa.reshape %splat { new_shape = array<i64: 6, 5, 4> } : (tensor<4x5x6xi32>) -> tensor<6x5x4xi32>
+  %const = tosa.const_shape {value = dense<[6, 5, 4]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %reshape = tosa.reshape %splat, %const : (tensor<4x5x6xi32>, !tosa.shape<3>) -> tensor<6x5x4xi32>
   // CHECK: return %[[SPLAT]]
   return %reshape : tensor<6x5x4xi32>
 }

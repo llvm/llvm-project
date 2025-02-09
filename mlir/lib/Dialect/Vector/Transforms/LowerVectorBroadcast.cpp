@@ -11,27 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
-#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
 
 #define DEBUG_TYPE "vector-broadcast-lowering"
 
@@ -86,8 +75,7 @@ public:
       VectorType resType = VectorType::Builder(dstType).dropDim(0);
       Value bcst =
           rewriter.create<vector::BroadcastOp>(loc, resType, op.getSource());
-      Value result = rewriter.create<arith::ConstantOp>(
-          loc, dstType, rewriter.getZeroAttr(dstType));
+      Value result = rewriter.create<ub::PoisonOp>(loc, dstType);
       for (int64_t d = 0, dim = dstType.getDimSize(0); d < dim; ++d)
         result = rewriter.create<vector::InsertOp>(loc, bcst, result, d);
       rewriter.replaceOp(op, result);
@@ -127,8 +115,7 @@ public:
     VectorType resType =
         VectorType::get(dstType.getShape().drop_front(), eltType,
                         dstType.getScalableDims().drop_front());
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, dstType, rewriter.getZeroAttr(dstType));
+    Value result = rewriter.create<ub::PoisonOp>(loc, dstType);
     if (m == 0) {
       // Stetch at start.
       Value ext = rewriter.create<vector::ExtractOp>(loc, op.getSource(), 0);

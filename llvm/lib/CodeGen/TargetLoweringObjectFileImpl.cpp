@@ -687,6 +687,11 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
       raw_svector_ostream(Name) << '.' << *Prefix;
       HasPrefix = true;
     }
+  } else if (const auto *GV = dyn_cast<GlobalVariable>(GO)) {
+    if (std::optional<StringRef> Prefix = GV->getSectionPrefix()) {
+      raw_svector_ostream(Name) << '.' << *Prefix;
+      HasPrefix = true;
+    }
   }
 
   if (UniqueSectionName) {

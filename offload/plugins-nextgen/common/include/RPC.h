@@ -80,7 +80,7 @@ private:
     std::thread Worker;
 
     /// A boolean indicating whether or not the worker thread should continue.
-    std::atomic<bool> Running;
+    std::atomic<uint32_t> Running;
 
     /// The number of currently executing kernels across all devices that need
     /// the server thread to be running.

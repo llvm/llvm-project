@@ -1066,7 +1066,7 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
   // them all?
   std::tuple<bool, const SanitizerArgs> GPUSan(
       DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                         options::OPT_fno_gpu_sanitize, true),
+                         options::OPT_fno_gpu_sanitize, false),
       getSanitizerArgs(DriverArgs));
   bool DAZ = DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
                                 options::OPT_fno_gpu_flush_denormals_to_zero,
@@ -1099,7 +1099,7 @@ bool AMDGPUToolChain::shouldSkipSanitizeOption(
     return false;
 
   if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                          options::OPT_fno_gpu_sanitize, true))
+                          options::OPT_fno_gpu_sanitize, false))
     return true;
 
   auto &Diags = TC.getDriver().getDiags();

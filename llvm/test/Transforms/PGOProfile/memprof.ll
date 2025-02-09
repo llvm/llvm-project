@@ -101,6 +101,16 @@
 ; MEMPROFMATCHINFO: MemProf cold context with id 15737101490731057601 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf cold context with id 16342802530253093571 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf cold context with id 18254812774972004394 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 748269490701775343
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 1544787832369987002
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 2061451396820446691
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 2104812325165620841
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 6281715513834610934
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 8467819354083268568
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 8690657650969109624
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 9086428284934609951
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 12481870273128938184
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 12699492813229484831
 
 ; ModuleID = 'memprof.cc'
 source_filename = "memprof.cc"

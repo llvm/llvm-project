@@ -2174,12 +2174,13 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
 
   // Step1: Find the base-registers and a 64bit constant offset.
   MachineOperand &Base = *TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
+  auto [It, Inserted] = Visited.try_emplace(&MI);
   MemAddress MAddr;
-  if (!Visited.contains(&MI)) {
+  if (Inserted) {
     processBaseWithConstOffset(Base, MAddr);
-    Visited[&MI] = MAddr;
+    It->second = MAddr;
   } else
-    MAddr = Visited[&MI];
+    MAddr = It->second;
 
   if (MAddr.Offset == 0) {
     LLVM_DEBUG(dbgs() << "  Failed to extract constant-offset or there are no"
@@ -2239,11 +2240,12 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     const MachineOperand &BaseNext =
       *TII->getNamedOperand(MINext, AMDGPU::OpName::vaddr);
     MemAddress MAddrNext;
-    if (!Visited.contains(&MINext)) {
+    auto [It, Inserted] = Visited.try_emplace(&MINext);
+    if (Inserted) {
       processBaseWithConstOffset(BaseNext, MAddrNext);
-      Visited[&MINext] = MAddrNext;
+      It->second = MAddrNext;
     } else
-      MAddrNext = Visited[&MINext];
+      MAddrNext = It->second;
 
     if (MAddrNext.Base.LoReg != MAddr.Base.LoReg ||
         MAddrNext.Base.HiReg != MAddr.Base.HiReg ||

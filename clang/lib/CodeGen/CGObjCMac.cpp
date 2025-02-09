@@ -5717,7 +5717,7 @@ ObjCCommonTypesHelper::ObjCCommonTypesHelper(CodeGen::CodeGenModule &cgm)
   IntTy = CGM.IntTy;
   LongTy = cast<llvm::IntegerType>(Types.ConvertType(Ctx.LongTy));
   Int8PtrTy = CGM.Int8PtrTy;
-  Int8PtrProgramASTy = llvm::PointerType::get(CGM.Int8Ty, ProgramAS);
+  Int8PtrProgramASTy = llvm::PointerType::get(CGM.getLLVMContext(), ProgramAS);
   Int8PtrPtrTy = CGM.Int8PtrPtrTy;
 
   // arm64 targets use "int" ivar offset variables. All others,

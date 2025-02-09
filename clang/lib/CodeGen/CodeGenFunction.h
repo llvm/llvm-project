@@ -4439,6 +4439,11 @@ public:
                                 AggValueSlot slot = AggValueSlot::ignored());
   LValue EmitPseudoObjectLValue(const PseudoObjectExpr *e);
 
+  void FlattenAccessAndType(
+      Address Addr, QualType AddrTy,
+      SmallVectorImpl<std::pair<Address, llvm::Value *>> &AccessList,
+      SmallVectorImpl<QualType> &FlatTypes);
+
   llvm::Value *EmitIvarOffset(const ObjCInterfaceDecl *Interface,
                               const ObjCIvarDecl *Ivar);
   llvm::Value *EmitIvarOffsetAsPointerDiff(const ObjCInterfaceDecl *Interface,

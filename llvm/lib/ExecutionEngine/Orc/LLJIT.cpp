@@ -1221,22 +1221,37 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
 
   if (auto *OLL = dyn_cast<ObjectLinkingLayer>(&J.getObjLinkingLayer())) {
 
-    bool CompactUnwindInfoSupported = false;
+    bool UseEHFrames = true;
 
     // Enable compact-unwind support if possible.
     if (J.getTargetTriple().isOSDarwin() ||
         J.getTargetTriple().isOSBinFormatMachO()) {
-      if (auto UIRP = UnwindInfoRegistrationPlugin::Create(
-              J.getIRCompileLayer(), PlatformJD)) {
-        CompactUnwindInfoSupported = true;
-        OLL->addPlugin(std::move(*UIRP));
-        LLVM_DEBUG(dbgs() << "Enabled compact-unwind support.\n");
-      } else
-        consumeError(UIRP.takeError());
+
+      // Check if the bootstrap map says that we should force eh-frames:
+      // Older libunwinds require this as they don't have a dynamic
+      // registration API for compact-unwind.
+      std::optional<bool> ForceEHFrames;
+      if (auto Err = J.getExecutionSession().getBootstrapMapValue<bool, bool>(
+              "darwin-use-ehframes-only", ForceEHFrames))
+        return Err;
+      if (ForceEHFrames.has_value())
+        UseEHFrames = *ForceEHFrames;
+      else
+        UseEHFrames = false;
+
+      // If UseEHFrames hasn't been set then we're good to use compact-unwind.
+      if (!UseEHFrames) {
+        if (auto UIRP = UnwindInfoRegistrationPlugin::Create(
+                J.getIRCompileLayer(), PlatformJD)) {
+          OLL->addPlugin(std::move(*UIRP));
+          LLVM_DEBUG(dbgs() << "Enabled compact-unwind support.\n");
+        } else
+          return UIRP.takeError();
+      }
     }
 
     // Otherwise fall back to standard unwind registration.
-    if (!CompactUnwindInfoSupported) {
+    if (UseEHFrames) {
       auto &ES = J.getExecutionSession();
       if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES)) {
         OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(

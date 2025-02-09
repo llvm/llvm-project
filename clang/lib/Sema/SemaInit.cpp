@@ -4862,9 +4862,13 @@ static void TryListInitialization(Sema &S,
         assert(
             S.Context.hasSameUnqualifiedType(SubInit[0]->getType(), DestType) &&
             "Deduced to other type?");
+        assert(Kind.getKind() == clang::InitializationKind::IK_DirectList &&
+               "List-initialize structured bindings but not "
+               "direct-list-initialization?");
         TryArrayCopy(S,
-                     InitializationKind::CreateCopy(Kind.getLocation(),
-                                                    InitList->getLBraceLoc()),
+                     InitializationKind::CreateDirect(Kind.getLocation(),
+                                                      InitList->getLBraceLoc(),
+                                                      InitList->getRBraceLoc()),
                      Entity, SubInit[0], DestType, Sequence,
                      TreatUnavailableAsInvalid);
         if (Sequence)

@@ -84,9 +84,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_TEMPLATE_VIS vector {
-private:
-  typedef allocator<_Tp> __default_allocator_type;
-
 public:
   //
   // Types

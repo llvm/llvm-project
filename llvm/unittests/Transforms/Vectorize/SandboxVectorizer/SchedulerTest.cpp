@@ -289,3 +289,106 @@ bb1:
     EXPECT_FALSE(Sched.trySchedule({S0, S1}));
   }
 }
+
+TEST_F(SchedulerTest, NotifyCreateInst) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
+  %ld0 = load i8, ptr %ptr
+  store i8 %ld0, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *L0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  auto *Ptr1 = F->getArg(1);
+  auto *Ptr2 = F->getArg(2);
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+  // Schedule Ret and S0. The top of schedule should be at S0.
+  EXPECT_TRUE(Sched.trySchedule({Ret}));
+  EXPECT_TRUE(Sched.trySchedule({S0}));
+  auto &DAG = sandboxir::SchedulerInternalsAttorney::getDAG(Sched);
+  DAG.extend({L0});
+  auto *L0N = DAG.getNode(L0);
+  EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 0u);
+  // We should have DAG nodes for all instructions at this point
+
+  // Now create a new instruction below S0.
+  sandboxir::StoreInst *NewS1 =
+      sandboxir::StoreInst::create(L0, Ptr1, Align(8), Ret->getIterator(),
+                                   /*IsVolatile=*/false, Ctx);
+  // Check that it is marked as "scheduled".
+  auto *NewS1N = DAG.getNode(NewS1);
+  EXPECT_TRUE(NewS1N->scheduled());
+  // Check that L0's UnscheduledSuccs are still == 0 since NewS1 is "scheduled".
+  EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 0u);
+
+  // Now create a new instruction above S0.
+  sandboxir::StoreInst *NewS2 =
+      sandboxir::StoreInst::create(L0, Ptr2, Align(8), S0->getIterator(),
+                                   /*IsVolatile=*/false, Ctx);
+  // Check that it is not marked as "scheduled".
+  auto *NewS2N = DAG.getNode(NewS2);
+  EXPECT_FALSE(NewS2N->scheduled());
+  // Check that L0's UnscheduledSuccs got updated because of NewS2.
+  EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 1u);
+
+  sandboxir::ReadyListContainer ReadyList;
+  // Check empty().
+  EXPECT_TRUE(ReadyList.empty());
+}
+
+TEST_F(SchedulerTest, ReadyList) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr) {
+  %ld0 = load i8, ptr %ptr
+  store i8 %ld0, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *L0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({&*BB->begin(), BB->getTerminator()});
+  auto *L0N = DAG.getNode(L0);
+  auto *S0N = DAG.getNode(S0);
+  auto *RetN = DAG.getNode(Ret);
+
+  sandboxir::ReadyListContainer ReadyList;
+  // Check empty().
+  EXPECT_TRUE(ReadyList.empty());
+  // Check insert(), pop().
+  ReadyList.insert(L0N);
+  EXPECT_FALSE(ReadyList.empty());
+  EXPECT_EQ(ReadyList.pop(), L0N);
+  // Check clear().
+  ReadyList.insert(L0N);
+  EXPECT_FALSE(ReadyList.empty());
+  ReadyList.clear();
+  EXPECT_TRUE(ReadyList.empty());
+  // Check remove().
+  EXPECT_TRUE(ReadyList.empty());
+  ReadyList.remove(L0N); // Removing a non-existing node should be valid.
+  ReadyList.insert(L0N);
+  ReadyList.insert(S0N);
+  ReadyList.insert(RetN);
+  ReadyList.remove(S0N);
+  DenseSet<sandboxir::DGNode *> Nodes;
+  Nodes.insert(ReadyList.pop());
+  Nodes.insert(ReadyList.pop());
+  EXPECT_TRUE(ReadyList.empty());
+  EXPECT_THAT(Nodes, testing::UnorderedElementsAre(L0N, RetN));
+}

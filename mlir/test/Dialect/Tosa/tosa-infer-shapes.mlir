@@ -376,29 +376,42 @@ func.func @test_table_dynamic(%arg0 : tensor<4x?xi16>, %arg1 : tensor<513xi16>) 
 
 // CHECK-LABEL: @test_static_reshape
 func.func @test_static_reshape(%arg0 : tensor<4x4xi32>) -> () {
-  // CHECK: tosa.reshape %arg0 {new_shape = array<i64: 16>} : (tensor<4x4xi32>) -> tensor<16xi32>
-  %0 = tosa.reshape %arg0 {new_shape = array<i64: 16>} : (tensor<4x4xi32>) -> tensor<?xi32>
+  // CHECK: %[[CONST3:.+]] = tosa.const_shape {value = dense<16> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %3 = tosa.const_shape {value = dense<16> : tensor<1xindex>} : () -> !tosa.shape<1>
+  // CHECK: tosa.reshape %arg0, %[[CONST3]] : (tensor<4x4xi32>, !tosa.shape<1>) -> tensor<16xi32>
+  %0 = tosa.reshape %arg0, %3 : (tensor<4x4xi32>, !tosa.shape<1>) -> tensor<16xi32>
 
-  // CHECK: tosa.reshape %arg0 {new_shape = array<i64: -1>} : (tensor<4x4xi32>) -> tensor<16xi32>
-  %1 = tosa.reshape %arg0 {new_shape = array<i64: -1>} : (tensor<4x4xi32>) -> tensor<?xi32>
+  // CHECK: %[[CONST4:.+]] = tosa.const_shape {value = dense<-1> : tensor<1xindex>} : () -> !tosa.shape<1>
+  // CHECK: tosa.reshape %arg0, %[[CONST4]] : (tensor<4x4xi32>, !tosa.shape<1>) -> tensor<16xi32>
+  %4 = tosa.const_shape {value = dense<-1> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %1 = tosa.reshape %arg0, %4 : (tensor<4x4xi32>, !tosa.shape<1>) -> tensor<16xi32>
 
-  // CHECK: tosa.reshape %arg0 {new_shape = array<i64: 2, -1>} : (tensor<4x4xi32>) -> tensor<2x8xi32>
-  %2 = tosa.reshape %arg0 {new_shape = array<i64: 2, -1>} : (tensor<4x4xi32>) -> tensor<?x?xi32>
+  // CHECK: %[[CONST5:.+]] = tosa.const_shape {value = dense<[2, -1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // CHECK: tosa.reshape %arg0, %[[CONST5]] : (tensor<4x4xi32>, !tosa.shape<2>) -> tensor<2x8xi32>
+  %5 = tosa.const_shape {value = dense<[2, -1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %2 = tosa.reshape %arg0, %5 : (tensor<4x4xi32>, !tosa.shape<2>) -> tensor<2x8xi32>
 
   return
 }
+
 // -----
 
 // CHECK-LABEL: @test_dynamic_reshape
 func.func @test_dynamic_reshape(%arg0 : tensor<4x?xi32>) -> () {
-  // CHECK: %0 = tosa.reshape %arg0 {new_shape = array<i64: 16>} : (tensor<4x?xi32>) -> tensor<16xi32>
-  %0 = tosa.reshape %arg0 {new_shape = array<i64: 16>} : (tensor<4x?xi32>) -> tensor<?xi32>
+  // CHECK: %0 = tosa.const_shape {value = dense<16> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %0 = tosa.const_shape {value = dense<16> : tensor<1xindex>} : () -> !tosa.shape<1>
+  // CHECK: %1 = tosa.reshape %arg0, %0 : (tensor<4x?xi32>, !tosa.shape<1>) -> tensor<16xi32>
+  %1 = tosa.reshape %arg0, %0 : (tensor<4x?xi32>, !tosa.shape<1>) -> tensor<?xi32>
 
-  // CHECK: %1 = tosa.reshape %arg0 {new_shape = array<i64: -1>} : (tensor<4x?xi32>) -> tensor<?xi32>
-  %1 = tosa.reshape %arg0 {new_shape = array<i64: -1>} : (tensor<4x?xi32>) -> tensor<?xi32>
+  // CHECK: %2 = tosa.const_shape {value = dense<-1> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %2 = tosa.const_shape {value = dense<-1> : tensor<1xindex>} : () -> !tosa.shape<1>
+  // CHECK: %3 = tosa.reshape %arg0, %2 : (tensor<4x?xi32>, !tosa.shape<1>) -> tensor<?xi32>
+  %3 = tosa.reshape %arg0, %2 : (tensor<4x?xi32>, !tosa.shape<1>) -> tensor<?xi32>
 
-  // CHECK: %2 = tosa.reshape %arg0 {new_shape = array<i64: 2, -1>} : (tensor<4x?xi32>) -> tensor<2x?xi32>
-  %2 = tosa.reshape %arg0 {new_shape = array<i64: 2, -1>} : (tensor<4x?xi32>) -> tensor<?x?xi32>
+  // CHECK: %4 = tosa.const_shape {value = dense<[2, -1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %4 = tosa.const_shape {value = dense<[2, -1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // CHECK: %5 = tosa.reshape %arg0, %4 : (tensor<4x?xi32>, !tosa.shape<2>) -> tensor<2x?xi32>
+  %5 = tosa.reshape %arg0, %4 : (tensor<4x?xi32>, !tosa.shape<2>) -> tensor<?x?xi32>
 
   return
 }

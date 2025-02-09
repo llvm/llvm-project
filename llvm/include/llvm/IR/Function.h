@@ -346,12 +346,6 @@ public:
   /// sample PGO, to enable the same inlines as the profiled optimized binary.
   DenseSet<GlobalValue::GUID> getImportGUIDs() const;
 
-  /// Set the section prefix for this function.
-  void setSectionPrefix(StringRef Prefix);
-
-  /// Get the section prefix for this function.
-  std::optional<StringRef> getSectionPrefix() const;
-
   /// hasGC/getGC/setGC/clearGC - The name of the garbage collection algorithm
   ///                             to use during code generation.
   bool hasGC() const {

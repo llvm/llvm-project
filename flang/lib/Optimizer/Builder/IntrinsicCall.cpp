@@ -680,6 +680,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"syncthreads_and", &I::genSyncThreadsAnd, {}, /*isElemental=*/false},
     {"syncthreads_count", &I::genSyncThreadsCount, {}, /*isElemental=*/false},
     {"syncthreads_or", &I::genSyncThreadsOr, {}, /*isElemental=*/false},
+    {"syncwarp", &I::genSyncWarp, {}, /*isElemental=*/false},
     {"system",
      &I::genSystem,
      {{{"command", asBox}, {"exitstat", asBox, handleDynamicOptional}}},
@@ -808,8 +809,8 @@ prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
 // Generate a call to the Fortran runtime library providing
 // support for 128-bit float math.
 // On 'HAS_LDBL128' targets the implementation
-// is provided by FortranRuntime, otherwise, it is done via
-// FortranFloat128Math library. In the latter case the compiler
+// is provided by flang_rt, otherwise, it is done via the
+// libflang_rt.quadmath library. In the latter case the compiler
 // has to be built with FLANG_RUNTIME_F128_MATH_LIB to guarantee
 // proper linking actions in the driver.
 static mlir::Value genLibF128Call(fir::FirOpBuilder &builder,
@@ -7702,6 +7703,18 @@ IntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
   return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
+}
+
+// SYNCWARP
+void IntrinsicLibrary::genSyncWarp(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  constexpr llvm::StringLiteral funcName = "llvm.nvvm.bar.warp.sync";
+  mlir::Value mask = fir::getBase(args[0]);
+  mlir::FunctionType funcType =
+      mlir::FunctionType::get(builder.getContext(), {mask.getType()}, {});
+  auto funcOp = builder.createFunction(loc, funcName, funcType);
+  llvm::SmallVector<mlir::Value> argsList{mask};
+  builder.create<fir::CallOp>(loc, funcOp, argsList);
 }
 
 // SYSTEM

@@ -8652,6 +8652,37 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
                    "coprocessor must be configured as GCP");
     break;
   }
+
+  case ARM::VTOSHH:
+  case ARM::VTOUHH:
+  case ARM::VTOSLH:
+  case ARM::VTOULH:
+  case ARM::VTOSHS:
+  case ARM::VTOUHS:
+  case ARM::VTOSLS:
+  case ARM::VTOULS:
+  case ARM::VTOSHD:
+  case ARM::VTOUHD:
+  case ARM::VTOSLD:
+  case ARM::VTOULD:
+  case ARM::VSHTOH:
+  case ARM::VUHTOH:
+  case ARM::VSLTOH:
+  case ARM::VULTOH:
+  case ARM::VSHTOS:
+  case ARM::VUHTOS:
+  case ARM::VSLTOS:
+  case ARM::VULTOS:
+  case ARM::VSHTOD:
+  case ARM::VUHTOD:
+  case ARM::VSLTOD:
+  case ARM::VULTOD: {
+    if (Operands[MnemonicOpsEndInd]->getReg() !=
+        Operands[MnemonicOpsEndInd + 1]->getReg())
+      return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
+                   "source and destination registers must be the same");
+    break;
+  }
   }
 
   return false;

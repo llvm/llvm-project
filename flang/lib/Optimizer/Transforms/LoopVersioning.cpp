@@ -40,7 +40,7 @@
 ///       could be part of the cost analysis above.
 //===----------------------------------------------------------------------===//
 
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"

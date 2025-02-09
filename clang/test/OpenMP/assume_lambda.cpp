@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -x c++ -std=c++11 -ast-print %s | FileCheck %s
 // expected-no-diagnostics
 
 extern int bar(int);
@@ -10,6 +10,12 @@ int foo(int arg)
     auto fn = [](int x) { return bar(x); };
 // CHECK: auto fn = [](int x) {
     return fn(5);
+  }
+  #pragma omp assume no_openmp_constructs
+  {
+    auto fn = [](int x) { return bar(x); };
+// CHECK: auto fn = [](int x) {
+    return fn(6);
   }
 }
 

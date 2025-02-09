@@ -1058,6 +1058,10 @@ enum NodeType {
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
 
+  /// FMODF - Decomposes the operand into integral and fractional parts, each
+  /// having the same type and sign as the operand.
+  FMODF,
+
   /// Gets the current floating-point environment. The first operand is a token
   /// chain. The results are FP environment, represented by an integer value,
   /// and a token chain.

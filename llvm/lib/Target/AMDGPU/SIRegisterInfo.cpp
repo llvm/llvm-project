@@ -3516,30 +3516,6 @@ bool SIRegisterInfo::opCanUseInlineConstant(unsigned OpType) const {
          OpType <= AMDGPU::OPERAND_SRC_LAST;
 }
 
-bool SIRegisterInfo::shouldRewriteCopySrc(
-  const TargetRegisterClass *DefRC,
-  unsigned DefSubReg,
-  const TargetRegisterClass *SrcRC,
-  unsigned SrcSubReg) const {
-  // We want to prefer the smallest register class possible, so we don't want to
-  // stop and rewrite on anything that looks like a subregister
-  // extract. Operations mostly don't care about the super register class, so we
-  // only want to stop on the most basic of copies between the same register
-  // class.
-  //
-  // e.g. if we have something like
-  // %0 = ...
-  // %1 = ...
-  // %2 = REG_SEQUENCE %0, sub0, %1, sub1, %2, sub2
-  // %3 = COPY %2, sub0
-  //
-  // We want to look through the COPY to find:
-  //  => %3 = COPY %0
-
-  // Plain copy.
-  return getCommonSubClass(DefRC, SrcRC) != nullptr;
-}
-
 bool SIRegisterInfo::opCanUseLiteralConstant(unsigned OpType) const {
   // TODO: 64-bit operands have extending behavior from 32-bit literal.
   return OpType >= AMDGPU::OPERAND_REG_IMM_FIRST &&

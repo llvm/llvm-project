@@ -75,6 +75,164 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
     }
   }
 
+  // Turn MoveParent->MoveChild into MoveSibling.
+  if (auto *MP = dyn_cast<MoveParentMatcher>(N)) {
+    if (auto *MC = dyn_cast<MoveChildMatcher>(MP->getNext())) {
+      auto *MS = new MoveSiblingMatcher(MC->getChildNo());
+      MS->setNext(MC->takeNext());
+      MatcherPtr.reset(MS);
+      return ContractNodes(MatcherPtr, CGP);
+    }
+  }
+
+  // Uncontract MoveSibling if it will help form other child operations.
+  if (auto *MS = dyn_cast<MoveSiblingMatcher>(N)) {
+    if (auto *RM = dyn_cast<RecordMatcher>(MS->getNext())) {
+      // Turn MoveSibling->Record->MoveParent into MoveParent->RecordChild.
+      if (auto *MP = dyn_cast<MoveParentMatcher>(RM->getNext())) {
+        if (MS->getSiblingNo() < 8) { // Only have RecordChild0...7
+          auto *NewMP = new MoveParentMatcher();
+          auto *NewRCM = new RecordChildMatcher(
+              MS->getSiblingNo(), RM->getWhatFor(), RM->getResultNo());
+          NewMP->setNext(NewRCM);
+          NewRCM->setNext(MP->takeNext());
+          MatcherPtr.reset(NewMP);
+          return ContractNodes(MatcherPtr, CGP);
+        }
+      }
+
+      // Turn MoveSibling->Record->CheckType->MoveParent into
+      // MoveParent->RecordChild->CheckChildType.
+      if (auto *CT = dyn_cast<CheckTypeMatcher>(RM->getNext())) {
+        if (auto *MP = dyn_cast<MoveParentMatcher>(CT->getNext())) {
+          if (MS->getSiblingNo() < 8 && // Only have CheckChildType0...7
+              CT->getResNo() == 0) {    // CheckChildType checks res #0
+            auto *NewMP = new MoveParentMatcher();
+            auto *NewRCM = new RecordChildMatcher(
+                MS->getSiblingNo(), RM->getWhatFor(), RM->getResultNo());
+            auto *NewCCT =
+                new CheckChildTypeMatcher(MS->getSiblingNo(), CT->getType());
+            NewMP->setNext(NewRCM);
+            NewRCM->setNext(NewCCT);
+            NewCCT->setNext(MP->takeNext());
+            MatcherPtr.reset(NewMP);
+            return ContractNodes(MatcherPtr, CGP);
+          }
+        }
+      }
+    }
+
+    // Turn MoveSibling->CheckType->MoveParent into MoveParent->CheckChildType.
+    if (auto *CT = dyn_cast<CheckTypeMatcher>(MS->getNext())) {
+      if (auto *MP = dyn_cast<MoveParentMatcher>(CT->getNext())) {
+        if (MS->getSiblingNo() < 8 && // Only have CheckChildType0...7
+            CT->getResNo() == 0) {    // CheckChildType checks res #0
+          auto *NewMP = new MoveParentMatcher();
+          auto *NewCCT =
+              new CheckChildTypeMatcher(MS->getSiblingNo(), CT->getType());
+          NewMP->setNext(NewCCT);
+          NewCCT->setNext(MP->takeNext());
+          MatcherPtr.reset(NewMP);
+          return ContractNodes(MatcherPtr, CGP);
+        }
+      }
+    }
+
+    // Turn MoveSibling->CheckInteger->MoveParent into
+    // MoveParent->CheckChildInteger.
+    if (auto *CI = dyn_cast<CheckIntegerMatcher>(MS->getNext())) {
+      if (auto *MP = dyn_cast<MoveParentMatcher>(CI->getNext())) {
+        if (MS->getSiblingNo() < 5) { // Only have CheckChildInteger0...4
+          auto *NewMP = new MoveParentMatcher();
+          auto *NewCCI =
+              new CheckChildIntegerMatcher(MS->getSiblingNo(), CI->getValue());
+          NewMP->setNext(NewCCI);
+          NewCCI->setNext(MP->takeNext());
+          MatcherPtr.reset(NewMP);
+          return ContractNodes(MatcherPtr, CGP);
+        }
+      }
+
+      // Turn MoveSibling->CheckInteger->CheckType->MoveParent into
+      // MoveParent->CheckChildInteger->CheckType.
+      if (auto *CT = dyn_cast<CheckTypeMatcher>(CI->getNext())) {
+        if (auto *MP = dyn_cast<MoveParentMatcher>(CT->getNext())) {
+          if (MS->getSiblingNo() < 5 && // Only have CheckChildInteger0...4
+              CT->getResNo() == 0) {    // CheckChildType checks res #0
+            auto *NewMP = new MoveParentMatcher();
+            auto *NewCCI = new CheckChildIntegerMatcher(MS->getSiblingNo(),
+                                                        CI->getValue());
+            auto *NewCCT =
+                new CheckChildTypeMatcher(MS->getSiblingNo(), CT->getType());
+            NewMP->setNext(NewCCI);
+            NewCCI->setNext(NewCCT);
+            NewCCT->setNext(MP->takeNext());
+            MatcherPtr.reset(NewMP);
+            return ContractNodes(MatcherPtr, CGP);
+          }
+        }
+      }
+    }
+
+    // Turn MoveSibling->CheckCondCode->MoveParent into
+    // MoveParent->CheckChild2CondCode.
+    if (auto *CCC = dyn_cast<CheckCondCodeMatcher>(MS->getNext())) {
+      if (auto *MP = dyn_cast<MoveParentMatcher>(CCC->getNext())) {
+        if (MS->getSiblingNo() == 2) { // Only have CheckChild2CondCode
+          auto *NewMP = new MoveParentMatcher();
+          auto *NewCCCC =
+              new CheckChild2CondCodeMatcher(CCC->getCondCodeName());
+          NewMP->setNext(NewCCCC);
+          NewCCCC->setNext(MP->takeNext());
+          MatcherPtr.reset(NewMP);
+          return ContractNodes(MatcherPtr, CGP);
+        }
+      }
+    }
+
+    // Turn MoveSibling->CheckSame->MoveParent into
+    // MoveParent->CheckChildSame.
+    if (auto *CS = dyn_cast<CheckSameMatcher>(MS->getNext())) {
+      if (auto *MP = dyn_cast<MoveParentMatcher>(CS->getNext())) {
+        if (MS->getSiblingNo() < 4) { // Only have CheckChildSame0...3
+          auto *NewMP = new MoveParentMatcher();
+          auto *NewCCS = new CheckChildSameMatcher(MS->getSiblingNo(),
+                                                   CS->getMatchNumber());
+          NewMP->setNext(NewCCS);
+          NewCCS->setNext(MP->takeNext());
+          MatcherPtr.reset(NewMP);
+          return ContractNodes(MatcherPtr, CGP);
+        }
+      }
+
+      // Turn MoveSibling->CheckSame->CheckType->MoveParent into
+      // MoveParent->CheckChildSame->CheckChildType.
+      if (auto *CT = dyn_cast<CheckTypeMatcher>(CS->getNext())) {
+        if (auto *MP = dyn_cast<MoveParentMatcher>(CT->getNext())) {
+          if (MS->getSiblingNo() < 4 && // Only have CheckChildSame0...3
+              CT->getResNo() == 0) {    // CheckChildType checks res #0
+            auto *NewMP = new MoveParentMatcher();
+            auto *NewCCS = new CheckChildSameMatcher(MS->getSiblingNo(),
+                                                     CS->getMatchNumber());
+            auto *NewCCT =
+                new CheckChildTypeMatcher(MS->getSiblingNo(), CT->getType());
+            NewMP->setNext(NewCCS);
+            NewCCS->setNext(NewCCT);
+            NewCCT->setNext(MP->takeNext());
+            MatcherPtr.reset(NewMP);
+            return ContractNodes(MatcherPtr, CGP);
+          }
+        }
+      }
+    }
+
+    // Turn MoveSibling->MoveParent into MoveParent.
+    if (isa<MoveParentMatcher>(MS->getNext())) {
+      MatcherPtr.reset(MS->takeNext());
+      return ContractNodes(MatcherPtr, CGP);
+    }
+  }
+
   // Zap movechild -> moveparent.
   if (MoveChildMatcher *MC = dyn_cast<MoveChildMatcher>(N))
     if (MoveParentMatcher *MP = dyn_cast<MoveParentMatcher>(MC->getNext())) {
@@ -153,30 +311,6 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
   }
 
   ContractNodes(N->getNextPtr(), CGP);
-
-  // If we have a MoveParent followed by a MoveChild, we convert it to
-  // MoveSibling.
-  if (auto *MP = dyn_cast<MoveParentMatcher>(N)) {
-    if (auto *MC = dyn_cast<MoveChildMatcher>(MP->getNext())) {
-      auto *MS = new MoveSiblingMatcher(MC->getChildNo());
-      MS->setNext(MC->takeNext());
-      MatcherPtr.reset(MS);
-      return ContractNodes(MatcherPtr, CGP);
-    }
-    if (auto *RC = dyn_cast<RecordChildMatcher>(MP->getNext())) {
-      if (auto *MC = dyn_cast<MoveChildMatcher>(RC->getNext())) {
-        if (RC->getChildNo() == MC->getChildNo()) {
-          auto *MS = new MoveSiblingMatcher(MC->getChildNo());
-          auto *RM = new RecordMatcher(RC->getWhatFor(), RC->getResultNo());
-          // Insert the new node.
-          RM->setNext(MC->takeNext());
-          MS->setNext(RM);
-          MatcherPtr.reset(MS);
-          return ContractNodes(MatcherPtr, CGP);
-        }
-      }
-    }
-  }
 }
 
 /// FindNodeWithKind - Scan a series of matchers looking for a matcher with a
@@ -362,13 +496,13 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
   // Check to see if all of the leading entries are now opcode checks.  If so,
   // we can convert this Scope to be a OpcodeSwitch instead.
   bool AllOpcodeChecks = true, AllTypeChecks = true;
-  for (unsigned i = 0, e = OptionsToMatch.size(); i != e; ++i) {
+  for (Matcher *Optn : OptionsToMatch) {
     // Check to see if this breaks a series of CheckOpcodeMatchers.
-    if (AllOpcodeChecks && !isa<CheckOpcodeMatcher>(OptionsToMatch[i])) {
+    if (AllOpcodeChecks && !isa<CheckOpcodeMatcher>(Optn)) {
 #if 0
       if (i > 3) {
         errs() << "FAILING OPC #" << i << "\n";
-        OptionsToMatch[i]->dump();
+        Optn->dump();
       }
 #endif
       AllOpcodeChecks = false;
@@ -377,7 +511,7 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
     // Check to see if this breaks a series of CheckTypeMatcher's.
     if (AllTypeChecks) {
       CheckTypeMatcher *CTM = cast_or_null<CheckTypeMatcher>(
-          FindNodeWithKind(OptionsToMatch[i], Matcher::CheckType));
+          FindNodeWithKind(Optn, Matcher::CheckType));
       if (!CTM ||
           // iPTR checks could alias any other case without us knowing, don't
           // bother with them.
@@ -386,12 +520,11 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
           CTM->getResNo() != 0 ||
           // If the CheckType isn't at the start of the list, see if we can move
           // it there.
-          !CTM->canMoveBefore(OptionsToMatch[i])) {
+          !CTM->canMoveBefore(Optn)) {
 #if 0
         if (i > 3 && AllTypeChecks) {
           errs() << "FAILING TYPE #" << i << "\n";
-          OptionsToMatch[i]->dump();
-        }
+          Optn->dump(); }
 #endif
         AllTypeChecks = false;
       }
@@ -402,8 +535,8 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
   if (AllOpcodeChecks) {
     StringSet<> Opcodes;
     SmallVector<std::pair<const SDNodeInfo *, Matcher *>, 8> Cases;
-    for (unsigned i = 0, e = OptionsToMatch.size(); i != e; ++i) {
-      CheckOpcodeMatcher *COM = cast<CheckOpcodeMatcher>(OptionsToMatch[i]);
+    for (Matcher *Optn : OptionsToMatch) {
+      CheckOpcodeMatcher *COM = cast<CheckOpcodeMatcher>(Optn);
       assert(Opcodes.insert(COM->getOpcode().getEnumName()).second &&
              "Duplicate opcodes not factored?");
       Cases.emplace_back(&COM->getOpcode(), COM->takeNext());
@@ -418,12 +551,12 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
   if (AllTypeChecks) {
     DenseMap<unsigned, unsigned> TypeEntry;
     SmallVector<std::pair<MVT::SimpleValueType, Matcher *>, 8> Cases;
-    for (unsigned i = 0, e = OptionsToMatch.size(); i != e; ++i) {
-      Matcher *M = FindNodeWithKind(OptionsToMatch[i], Matcher::CheckType);
+    for (Matcher *Optn : OptionsToMatch) {
+      Matcher *M = FindNodeWithKind(Optn, Matcher::CheckType);
       assert(M && isa<CheckTypeMatcher>(M) && "Unknown Matcher type");
 
       auto *CTM = cast<CheckTypeMatcher>(M);
-      Matcher *MatcherWithoutCTM = OptionsToMatch[i]->unlinkNode(CTM);
+      Matcher *MatcherWithoutCTM = Optn->unlinkNode(CTM);
       MVT::SimpleValueType CTMTy = CTM->getType();
       delete CTM;
 

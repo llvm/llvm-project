@@ -12,6 +12,7 @@
 
 #include "mlir/Conversion/VectorToSPIRV/VectorToSPIRVPass.h"
 
+#include "mlir/Conversion/UBToSPIRV/UBToSPIRV.h"
 #include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
@@ -49,6 +50,8 @@ void ConvertVectorToSPIRVPass::runOnOperation() {
 
   RewritePatternSet patterns(context);
   populateVectorToSPIRVPatterns(typeConverter, patterns);
+  // Used for folds, e.g. vector.extract[-1] -> ub.poison -> spirv.Undef.
+  ub::populateUBToSPIRVConversionPatterns(typeConverter, patterns);
 
   if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();

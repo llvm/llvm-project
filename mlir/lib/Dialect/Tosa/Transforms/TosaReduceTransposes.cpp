@@ -402,13 +402,20 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
     return std::nullopt;
 
   // Do not insert a TransposeOp, instead we fold the reshape and its attribute.
+  llvm::SmallVector<int64_t> newShape;
+  if (!tosa::getConstShapeValue(reshapeOp.getShape().getDefiningOp(),
+                                newShape)) {
+    // this mean shape is not constant
+    return std::nullopt;
+  }
+  ImplicitLocOpBuilder builder(reshapeOp.getLoc(), rewriter);
   auto foldedReshape = rewriter.create<ReshapeOp>(
       reshapeOp.getLoc(),
       RankedTensorType::get(applyTOSAPermutation(shape, hoistedPerms),
                             reshapeOutputType.getElementType()),
       reshapeOp.getInput1(),
-      rewriter.getDenseI64ArrayAttr(
-          applyTOSAPermutation(reshapeOp.getNewShape(), hoistedPerms)));
+      getTosaConstShape(builder, applyTOSAPermutation(llvm::ArrayRef(newShape),
+                                                      hoistedPerms)));
   return foldedReshape->getResult(0);
 }
 

@@ -959,7 +959,8 @@ that has the define.
    #if defined(__has_feature) && __has_feature(bounds_safety)
    #define __counted_by(T) __attribute__((__counted_by__(T)))
    // ... other bounds annotations
-   #else #define __counted_by(T) // defined as nothing
+   #else
+   #define __counted_by(T) // defined as nothing
    // ... other bounds annotations
    #endif
 
@@ -987,7 +988,7 @@ and it does not guarantee other types of memory safety properties. Consequently,
 it may not prevent some of the secondary bounds safety violations caused by
 other types of safety violations such as type confusion. For instance,
 ``-fbounds-safety`` does not perform type-safety checks on conversions between
-`__single`` pointers of different pointee types (e.g., ``char *__single`` →
+``__single`` pointers of different pointee types (e.g., ``char *__single`` →
 ``void *__single`` → ``int *__single``) beyond what the foundation languages
 (C/C++) already offer.
 

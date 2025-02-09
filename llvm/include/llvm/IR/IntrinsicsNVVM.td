@@ -5083,6 +5083,38 @@ foreach cta_group = ["cg1", "cg2"] in {
 
   def int_nvvm_tcgen05_relinq_alloc_permit_ # cta_group : Intrinsic<[], [],
     [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+  def int_nvvm_tcgen05_commit_ # cta_group : Intrinsic<[],
+    [llvm_ptr_ty],        // mbar_ptr
+    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+     NoCapture<ArgIndex<0>>]>;
+
+  def int_nvvm_tcgen05_commit_shared_ # cta_group : Intrinsic<[],
+    [llvm_shared_ptr_ty], // mbar_ptr
+    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+     NoCapture<ArgIndex<0>>]>;
+
+  def int_nvvm_tcgen05_commit_mc_ # cta_group : Intrinsic<[],
+    [llvm_ptr_ty, llvm_i16_ty], // mbar_ptr, cta_mask
+    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+     NoCapture<ArgIndex<0>>]>;
+
+  def int_nvvm_tcgen05_commit_mc_shared_ # cta_group : Intrinsic<[],
+    [llvm_shared_ptr_ty, llvm_i16_ty], // mbar_ptr, cta_mask
+    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+     NoCapture<ArgIndex<0>>]>;
 }
+
+// Tcgen05 wait_ld/st intrinsics
+def int_nvvm_tcgen05_wait_ld : Intrinsic<[], [],
+  [IntrConvergent, IntrInaccessibleMemOnly]>;
+def int_nvvm_tcgen05_wait_st : Intrinsic<[], [],
+  [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// Tcgen05 Fence intrinsics
+def int_nvvm_tcgen05_fence_before_thread_sync : Intrinsic<[], [],
+  [IntrNoMem, IntrHasSideEffects]>;
+def int_nvvm_tcgen05_fence_after_thread_sync : Intrinsic<[], [],
+  [IntrNoMem, IntrHasSideEffects]>;
 
 } // let TargetPrefix = "nvvm"
