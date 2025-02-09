@@ -560,6 +560,28 @@ def Math_ErfOp : Math_FloatUnaryOp<"erf"> {
   let hasFolder = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// ErfcOp
+//===----------------------------------------------------------------------===//
+
+def Math_ErfcOp : Math_FloatUnaryOp<"erfc"> {
+  let summary = "complementary error function of the specified value";
+  let description = [{
+    The `erfc` operation computes the complementary error function.
+    It takes one operand of floating point type (i.e., scalar, tensor or
+    vector) and returns one result of the same type.
+    It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar error function value.
+    %a = math.erfc %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
 
 //===----------------------------------------------------------------------===//
 // ExpOp

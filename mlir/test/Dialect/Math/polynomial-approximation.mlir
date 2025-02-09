@@ -81,6 +81,118 @@ func.func @erf_scalar(%arg0: f32) -> f32 {
   return %0 : f32
 }
 
+// CHECK-LABEL: func @erfc_scalar(
+// CHECK-SAME:    %[[val_arg0:.*]]: f32) -> f32 {
+// CHECK-DAG:     %[[c127_i32:.*]] = arith.constant 127 : i32
+// CHECK-DAG:     %[[c23_i32:.*]] = arith.constant 23 : i32
+// CHECK-DAG:     %[[cst:.*]] = arith.constant 1.270000e+02 : f32
+// CHECK-DAG:     %[[cst_0:.*]] = arith.constant -1.270000e+02 : f32
+// CHECK-DAG:     %[[cst_1:.*]] = arith.constant 8.880000e+01 : f32
+// CHECK-DAG:     %[[cst_2:.*]] = arith.constant -8.780000e+01 : f32
+// CHECK-DAG:     %[[cst_3:.*]] = arith.constant 0.166666657 : f32
+// CHECK-DAG:     %[[cst_4:.*]] = arith.constant 0.0416657962 : f32
+// CHECK-DAG:     %[[cst_5:.*]] = arith.constant 0.00833345205 : f32
+// CHECK-DAG:     %[[cst_6:.*]] = arith.constant 0.00139819994 : f32
+// CHECK-DAG:     %[[cst_7:.*]] = arith.constant 1.98756912E-4 : f32
+// CHECK-DAG:     %[[cst_8:.*]] = arith.constant 2.12194442E-4 : f32
+// CHECK-DAG:     %[[cst_9:.*]] = arith.constant -0.693359375 : f32
+// CHECK-DAG:     %[[cst_10:.*]] = arith.constant 1.44269502 : f32
+// CHECK-DAG:     %[[cst_11:.*]] = arith.constant 0.276978403 : f32
+// CHECK-DAG:     %[[cst_12:.*]] = arith.constant -0.0927639827 : f32
+// CHECK-DAG:     %[[cst_13:.*]] = arith.constant -0.166031361 : f32
+// CHECK-DAG:     %[[cst_14:.*]] = arith.constant 0.164055392 : f32
+// CHECK-DAG:     %[[cst_15:.*]] = arith.constant -0.0542046614 : f32
+// CHECK-DAG:     %[[cst_16:.*]] = arith.constant -8.059920e-03 : f32
+// CHECK-DAG:     %[[cst_17:.*]] = arith.constant 0.00863227434 : f32
+// CHECK-DAG:     %[[cst_18:.*]] = arith.constant 0.00131355342 : f32
+// CHECK-DAG:     %[[cst_19:.*]] = arith.constant -0.0012307521 : f32
+// CHECK-DAG:     %[[cst_20:.*]] = arith.constant -4.01139259E-4 : f32
+// CHECK-DAG:     %[[cst_true:.*]] = arith.constant true
+// CHECK-DAG:     %[[cst_21:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:     %[[cst_22:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG:     %[[cst_23:.*]] = arith.constant 5.000000e-01 : f32
+// CHECK-DAG:     %[[cst_24:.*]] = arith.constant -4.000000e+00 : f32
+// CHECK-DAG:     %[[cst_25:.*]] = arith.constant -2.000000e+00 : f32
+// CHECK-DAG:     %[[cst_26:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK-DAG:     %[[cst_27:.*]] = arith.constant 0x7F800000 : f32
+// CHECK-DAG:     %[[cst_28:.*]] = arith.constant 10.0546875 : f32
+// CHECK:         %[[val_0:.*]] = arith.cmpf olt, %[[val_arg0]], %[[cst_21]] : f32
+// CHECK:         %[[val_1:.*]] = arith.negf %[[val_arg0]] : f32
+// CHECK:         %[[val_2:.*]] = arith.select %[[val_0]], %[[val_1]], %[[val_arg0]] : f32
+// CHECK:         %[[val_3:.*]] = arith.addf %[[val_2]], %[[cst_26]] : f32
+// CHECK:         %[[val_4:.*]] = arith.divf %[[cst_22]], %[[val_3]] : f32
+// CHECK:         %[[val_5:.*]] = math.fma %[[cst_24]], %[[val_4]], %[[cst_22]] : f32
+// CHECK:         %[[val_6:.*]] = arith.addf %[[val_5]], %[[cst_22]] : f32
+// CHECK:         %[[val_7:.*]] = math.fma %[[val_6]], %[[cst_25]], %[[val_2]] : f32
+// CHECK:         %[[val_8:.*]] = arith.negf %[[val_2]] : f32
+// CHECK:         %[[val_9:.*]] = math.fma %[[val_8]], %[[val_5]], %[[val_7]] : f32
+// CHECK:         %[[val_10:.*]] = math.fma %[[val_4]], %[[val_9]], %[[val_5]] : f32
+// CHECK:         %[[val_11:.*]] = math.fma %[[cst_20]], %[[val_10]], %[[cst_19]] : f32
+// CHECK:         %[[val_12:.*]] = math.fma %[[val_11]], %[[val_10]], %[[cst_18]] : f32
+// CHECK:         %[[val_13:.*]] = math.fma %[[val_12]], %[[val_10]], %[[cst_17]] : f32
+// CHECK:         %[[val_14:.*]] = math.fma %[[val_13]], %[[val_10]], %[[cst_16]] : f32
+// CHECK:         %[[val_15:.*]] = math.fma %[[val_14]], %[[val_10]], %[[cst_15]] : f32
+// CHECK:         %[[val_16:.*]] = math.fma %[[val_15]], %[[val_10]], %[[cst_14]] : f32
+// CHECK:         %[[val_17:.*]] = math.fma %[[val_16]], %[[val_10]], %[[cst_13]] : f32
+// CHECK:         %[[val_18:.*]] = math.fma %[[val_17]], %[[val_10]], %[[cst_12]] : f32
+// CHECK:         %[[val_19:.*]] = math.fma %[[val_18]], %[[val_10]], %[[cst_11]] : f32
+// CHECK:         %[[val_20:.*]] = math.fma %[[cst_26]], %[[val_2]], %[[cst_22]] : f32
+// CHECK:         %[[val_21:.*]] = arith.divf %[[cst_22]], %[[val_20]] : f32
+// CHECK:         %[[val_22:.*]] = math.fma %[[val_19]], %[[val_21]], %[[val_21]] : f32
+// CHECK:         %[[val_23:.*]] = arith.subf %[[val_19]], %[[val_22]] : f32
+// CHECK:         %[[val_24:.*]] = arith.negf %[[val_2]] : f32
+// CHECK:         %[[val_25:.*]] = math.fma %[[val_22]], %[[val_24]], %[[cst_23]] : f32
+// CHECK:         %[[val_26:.*]] = math.fma %[[val_25]], %[[cst_26]], %[[val_23]] : f32
+// CHECK:         %[[val_27:.*]] = math.fma %[[val_26]], %[[val_21]], %[[val_22]] : f32
+// CHECK:         %[[val_28:.*]] = arith.mulf %[[val_2]], %[[val_2]] : f32
+// CHECK:         %[[val_29:.*]] = arith.negf %[[val_28]] : f32
+// CHECK:         %[[val_30:.*]] = arith.cmpf uge, %[[val_29]], %[[cst_2]] : f32
+// CHECK:         %[[val_31:.*]] = arith.select %[[val_30]], %[[val_29]], %[[cst_2]] : f32
+// CHECK:         %[[val_32:.*]] = arith.cmpf ule, %[[val_31]], %[[cst_1]] : f32
+// CHECK:         %[[val_33:.*]] = arith.select %[[val_32]], %[[val_31]], %[[cst_1]] : f32
+// CHECK:         %[[val_34:.*]] = math.fma %[[val_33]], %[[cst_10]], %[[cst_23]] : f32
+// CHECK:         %[[val_35:.*]] = math.floor %[[val_34]] : f32
+// CHECK:         %[[val_36:.*]] = arith.cmpf uge, %[[val_35]], %[[cst_0]] : f32
+// CHECK:         %[[val_37:.*]] = arith.select %[[val_36]], %[[val_35]], %[[cst_0]] : f32
+// CHECK:         %[[val_38:.*]] = arith.cmpf ule, %[[val_37]], %[[cst]] : f32
+// CHECK:         %[[val_39:.*]] = arith.select %[[val_38]], %[[val_37]], %[[cst]] : f32
+// CHECK:         %[[val_40:.*]] = math.fma %[[cst_9]], %[[val_39]], %[[val_33]] : f32
+// CHECK:         %[[val_41:.*]] = math.fma %[[cst_8]], %[[val_39]], %[[val_40]] : f32
+// CHECK:         %[[val_42:.*]] = math.fma %[[val_41]], %[[cst_7]], %[[cst_6]] : f32
+// CHECK:         %[[val_43:.*]] = math.fma %[[val_42]], %[[val_41]], %[[cst_5]] : f32
+// CHECK:         %[[val_44:.*]] = math.fma %[[val_43]], %[[val_41]], %[[cst_4]] : f32
+// CHECK:         %[[val_45:.*]] = math.fma %[[val_44]], %[[val_41]], %[[cst_3]] : f32
+// CHECK:         %[[val_46:.*]] = math.fma %[[val_45]], %[[val_41]], %[[cst_23]] : f32
+// CHECK:         %[[val_47:.*]] = arith.mulf %[[val_41]], %[[val_41]] : f32
+// CHECK:         %[[val_48:.*]] = math.fma %[[val_46]], %[[val_47]], %[[val_41]] : f32
+// CHECK:         %[[val_49:.*]] = arith.addf %[[val_48]], %[[cst_22]] : f32
+// CHECK:         %[[val_50:.*]] = arith.fptosi %[[val_39]] : f32 to i32
+// CHECK:         %[[val_51:.*]] = arith.addi %[[val_50]], %[[c127_i32]] : i32
+// CHECK:         %[[val_52:.*]] = arith.shli %[[val_51]], %[[c23_i32]] : i32
+// CHECK:         %[[val_53:.*]] = arith.bitcast %[[val_52]] : i32 to f32
+// CHECK:         %[[val_54:.*]] = arith.mulf %[[val_49]], %[[val_53]] : f32
+// CHECK:         %[[val_55:.*]] = arith.negf %[[val_2]] : f32
+// CHECK:         %[[val_56:.*]] = math.fma %[[val_55]], %[[val_2]], %[[val_28]] : f32
+// CHECK:         %[[val_57:.*]] = arith.mulf %[[val_27]], %[[val_54]] : f32
+// CHECK:         %[[val_58:.*]] = arith.mulf %[[val_57]], %[[val_56]] : f32
+// CHECK:         %[[val_59:.*]] = math.fma %[[val_27]], %[[val_54]], %[[val_58]] : f32
+// CHECK:         %[[val_60:.*]] = arith.cmpf olt, %[[val_2]], %[[cst_27]] : f32
+// CHECK:         %[[val_61:.*]] = arith.xori %[[val_60]], %[[cst_true]] : i1
+// CHECK:         %[[val_62:.*]] = arith.addf %[[val_arg0]], %[[val_arg0]] : f32
+// CHECK:         %[[val_63:.*]] = arith.select %[[val_61]], %[[val_62]], %[[val_59]] : f32
+// CHECK:         %[[val_64:.*]] = arith.cmpf ogt, %[[val_2]], %[[cst_28]] : f32
+// CHECK:         %[[val_65:.*]] = arith.select %[[val_64]], %[[cst_21]], %[[val_63]] : f32
+// CHECK:         %[[val_66:.*]] = arith.cmpf olt, %[[val_arg0]], %[[cst_21]] : f32
+// CHECK:         %[[val_67:.*]] = arith.subf %[[cst_26]], %[[val_65]] : f32
+// CHECK:         %[[val_68:.*]] = arith.select %[[val_66]], %[[val_67]], %[[val_65]] : f32
+// CHECK:         return %[[val_68]] : f32
+// CHECK:       }
+
+func.func @erfc_scalar(%arg0: f32) -> f32 {
+  %0 = math.erfc %arg0 : f32
+  return %0 : f32
+}
+
 // CHECK-LABEL:   func @erf_vector(
 // CHECK-SAME:                     %[[arg0:.*]]: vector<8xf32>) -> vector<8xf32> {
 // CHECK:           %[[zero:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
