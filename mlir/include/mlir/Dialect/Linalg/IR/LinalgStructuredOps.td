@@ -555,24 +555,6 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
 // Op definition for MatmulOp
 //===----------------------------------------------------------------------===//
 
-
-// DONOTMERGE(rolfmorel): explain why the below is necessary
-class DefaultValuedContextDependentAttr<Attr attr,
-                                        string builderCall,
-                                        string default> :
-    Attr<attr.predicate, attr.summary> {
-  let storageType = attr.storageType;
-  let returnType = attr.returnType;
-  let convertFromStorage = attr.convertFromStorage;
-  let constBuilderCall = builderCall;  // DONOTMERGE(rolfmorel): explain why this needs to be a parameter
-  let defaultValue = default;
-  let valueType = attr.valueType;
-  let isOptional = 1;
-
-  let baseAttr = attr;
-}
-
-
 def MatmulOp : LinalgStructuredBase_Op<"matmul", [
                AttrSizedOperandSegments,
                LinalgContractionOpInterface]> {
