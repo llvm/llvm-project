@@ -235,6 +235,7 @@ def F64RT    : RegTyInfo<f64, Float64Regs, f64imm, fpimm>;
 def F16RT    : RegTyInfo<f16, Int16Regs, f16imm, fpimm, supports_imm = 0>;
 def BF16RT   : RegTyInfo<bf16, Int16Regs, bf16imm, fpimm, supports_imm = 0>;
 
+def F32X2RT  : RegTyInfo<v2f32, Int64Regs, ?, ?, supports_imm = 0>;
 def F16X2RT  : RegTyInfo<v2f16, Int32Regs, ?, ?, supports_imm = 0>;
 def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
 
@@ -446,7 +447,18 @@ multiclass F3<string op_str, SDPatternOperator op_pat> {
               (ins Float32Regs:$a, f32imm:$b),
               op_str # ".f32 \t$dst, $a, $b;",
               [(set f32:$dst, (op_pat f32:$a, fpimm:$b))]>;
-
+  def f32x2rr_ftz :
+    NVPTXInst<(outs Int64Regs:$dst),
+              (ins Int64Regs:$a, Int64Regs:$b),
+              op_str # ".ftz.f32x2 \t$dst, $a, $b;",
+              [(set v2f32:$dst, (op_pat v2f32:$a, v2f32:$b))]>,
+              Requires<[doF32FTZ, hasF32x2Instructions]>;
+  def f32x2rr :
+    NVPTXInst<(outs Int64Regs:$dst),
+              (ins Int64Regs:$a, Int64Regs:$b),
+              op_str # ".f32x2 \t$dst, $a, $b;",
+              [(set v2f32:$dst, (op_pat v2f32:$a, v2f32:$b))]>,
+              Requires<[hasF32x2Instructions]>;
   def f16rr_ftz :
     NVPTXInst<(outs Int16Regs:$dst),
               (ins Int16Regs:$a, Int16Regs:$b),
@@ -478,7 +490,6 @@ multiclass F3<string op_str, SDPatternOperator op_pat> {
               op_str # ".bf16 \t$dst, $a, $b;",
               [(set bf16:$dst, (op_pat bf16:$a, bf16:$b))]>,
               Requires<[hasBF16Math]>;
-
   def bf16x2rr :
     NVPTXInst<(outs Int32Regs:$dst),
               (ins Int32Regs:$a, Int32Regs:$b),
@@ -1416,6 +1427,8 @@ defm BFMA16       : FMA<"fma.rn.bf16", BF16RT, [hasBF16Math]>;
 defm BFMA16x2     : FMA<"fma.rn.bf16x2", BF16X2RT, [hasBF16Math]>;
 defm FMA32_ftz    : FMA<"fma.rn.ftz.f32", F32RT, [doF32FTZ]>;
 defm FMA32        : FMA<"fma.rn.f32", F32RT>;
+defm FMA32x2_ftz  : FMA<"fma.rn.ftz.f32x2", F32X2RT, [doF32FTZ]>;
+defm FMA32x2      : FMA<"fma.rn.f32x2", F32X2RT>;
 defm FMA64        : FMA<"fma.rn.f64", F64RT>;
 
 // sin/cos
