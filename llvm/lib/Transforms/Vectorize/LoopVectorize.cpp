@@ -5271,7 +5271,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
       OpenIntervals.erase(ToRemove);
 
     // Ignore instructions that are never used within the loop.
-    if (!Ends.count(I))
+    if (!Ends.count(I) && !I->mayHaveSideEffects())
       continue;
 
     // Skip ignored values.
