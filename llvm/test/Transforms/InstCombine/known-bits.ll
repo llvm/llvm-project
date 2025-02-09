@@ -2161,6 +2161,158 @@ define i1 @mul_nuw_nsw_nonneg_cant_be_one_commuted(i8 %x, i8 %y) {
   ret i1 %cmp
 }
 
+define i8 @test_trunc_and_1(i8 %a) {
+; CHECK-LABEL: @test_trunc_and_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAST:%.*]] = trunc i8 [[A:%.*]] to i1
+; CHECK-NEXT:    br i1 [[CAST]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[B:%.*]] = and i8 [[A]], 1
+; CHECK-NEXT:    ret i8 [[B]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C:%.*]] = and i8 [[A]], 1
+; CHECK-NEXT:    ret i8 [[C]]
+;
+entry:
+  %cast = trunc i8 %a to i1
+  br i1 %cast, label %if.then, label %if.else
+
+if.then:
+  %b = and i8 %a, 1
+  ret i8 %b
+
+if.else:
+  %c = and i8 %a, 1
+  ret i8 %c
+}
+
+define i8 @test_not_trunc_and_1(i8 %a) {
+; CHECK-LABEL: @test_not_trunc_and_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAST:%.*]] = trunc i8 [[A:%.*]] to i1
+; CHECK-NEXT:    br i1 [[CAST]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[B:%.*]] = and i8 [[A]], 1
+; CHECK-NEXT:    ret i8 [[B]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C:%.*]] = and i8 [[A]], 1
+; CHECK-NEXT:    ret i8 [[C]]
+;
+entry:
+  %cast = trunc i8 %a to i1
+  %not = xor i1 %cast, true
+  br i1 %not, label %if.then, label %if.else
+
+if.then:
+  %b = and i8 %a, 1
+  ret i8 %b
+
+if.else:
+  %c = and i8 %a, 1
+  ret i8 %c
+}
+
+define i8 @neg_test_trunc_or_2(i8 %a) {
+; CHECK-LABEL: @neg_test_trunc_or_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAST:%.*]] = trunc i8 [[A:%.*]] to i1
+; CHECK-NEXT:    br i1 [[CAST]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[A]], 2
+; CHECK-NEXT:    ret i8 [[B]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C:%.*]] = or i8 [[A]], 2
+; CHECK-NEXT:    ret i8 [[C]]
+;
+entry:
+  %cast = trunc i8 %a to i1
+  br i1 %cast, label %if.then, label %if.else
+
+if.then:
+  %b = or i8 %a, 2
+  ret i8 %b
+
+if.else:
+  %c = or i8 %a, 2
+  ret i8 %c
+}
+
+define i8 @test_trunc_nuw_and_1(i8 %a) {
+; CHECK-LABEL: @test_trunc_nuw_and_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw i8 [[A:%.*]] to i1
+; CHECK-NEXT:    br i1 [[CAST]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[B:%.*]] = and i8 [[A]], 1
+; CHECK-NEXT:    ret i8 [[B]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C:%.*]] = and i8 [[A]], 1
+; CHECK-NEXT:    ret i8 [[C]]
+;
+entry:
+  %cast = trunc nuw i8 %a to i1
+  br i1 %cast, label %if.else, label %if.then
+
+if.then:
+  %b = and i8 %a, 1
+  ret i8 %b
+
+if.else:
+  %c = and i8 %a, 1
+  ret i8 %c
+}
+
+define i8 @test_trunc_nuw_or_2(i8 %a) {
+; CHECK-LABEL: @test_trunc_nuw_or_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw i8 [[A:%.*]] to i1
+; CHECK-NEXT:    br i1 [[CAST]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[A]], 2
+; CHECK-NEXT:    ret i8 [[B]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C:%.*]] = or i8 [[A]], 2
+; CHECK-NEXT:    ret i8 [[C]]
+;
+entry:
+  %cast = trunc nuw i8 %a to i1
+  br i1 %cast, label %if.else, label %if.then
+
+if.then:
+  %b = or i8 %a, 2
+  ret i8 %b
+
+if.else:
+  %c = or i8 %a, 2
+  ret i8 %c
+}
+
+define i8 @test_not_trunc_nuw_and_1(i8 %a) {
+; CHECK-LABEL: @test_not_trunc_nuw_and_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw i8 [[A:%.*]] to i1
+; CHECK-NEXT:    br i1 [[CAST]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[B:%.*]] = and i8 [[A]], 1
+; CHECK-NEXT:    ret i8 [[B]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C:%.*]] = and i8 [[A]], 1
+; CHECK-NEXT:    ret i8 [[C]]
+;
+entry:
+  %cast = trunc nuw i8 %a to i1
+  %not = xor i1 %cast, true
+  br i1 %not, label %if.then, label %if.else
+
+if.then:
+  %b = and i8 %a, 1
+  ret i8 %b
+
+if.else:
+  %c = and i8 %a, 1
+  ret i8 %c
+}
+
 declare void @dummy()
 declare void @use(i1)
 declare void @sink(i8)
