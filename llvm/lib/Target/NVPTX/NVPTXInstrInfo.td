@@ -887,6 +887,9 @@ def : Pat<(vt (select i1:$p, vt:$a, vt:$b)),
           (SELP_b32rr $a, $b, $p)>;
 }
 
+def : Pat<(v2f32 (select i1:$p, v2f32:$a, v2f32:$b)),
+          (SELP_b64rr $a, $b, $p)>;
+
 //-----------------------------------
 // Test Instructions
 //-----------------------------------
