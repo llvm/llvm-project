@@ -653,6 +653,13 @@ public:
   void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
 #include "clang/Basic/LangOptions.def"
 
+  unsigned getTrivialAutoVarInitMaxSize() const {
+    return TrivialAutoVarInitMaxSize;
+  }
+  void setTrivialAutoVarInitMaxSize(unsigned max_size) {
+    TrivialAutoVarInitMaxSize = max_size;
+  }
+
   /// Are we compiling a module?
   bool isCompilingModule() const {
     return getCompilingModule() != CMK_None;

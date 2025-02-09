@@ -7,12 +7,6 @@ int foo1() {
 }
 // CHECK: ret i32 0
 
-int foo2() {
-  int val[4];
-  return val[2];
-}
-// CHECK: ret i32 0
-
 struct val_t {
   int val;
 };

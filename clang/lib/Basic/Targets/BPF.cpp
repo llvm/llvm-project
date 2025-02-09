@@ -93,8 +93,12 @@ void BPFTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
   TargetInfo::adjust(Diags, Opts);
 
   if (Opts.getTrivialAutoVarInit() ==
-      LangOptions::TrivialAutoVarInitKind::Uninitialized)
+      LangOptions::TrivialAutoVarInitKind::Uninitialized) {
     Opts.setTrivialAutoVarInit(LangOptions::TrivialAutoVarInitKind::Zero);
+    // Set the maximum auto init size to be 8 to avoid potential regression
+    // e.g. for xdp programs where ip/tcp header size is more than 8.
+    Opts.setTrivialAutoVarInitMaxSize(8);
+  }
 }
 
 llvm::SmallVector<Builtin::InfosShard>
