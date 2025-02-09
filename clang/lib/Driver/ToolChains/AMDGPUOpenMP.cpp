@@ -384,8 +384,7 @@ const char *amdgpu::dlr::getLldCommandArgs(
 }
 
 AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D, const llvm::Triple &Triple,
-                             const ToolChain &HostTC, const ArgList &Args,
-                             const Action::OffloadKind OK)
+                             const ToolChain &HostTC, const ArgList &Args)
     : ROCMToolChain(D, Triple, Args), HostTC(HostTC) {
   // Lookup binaries into the driver directory, this is used to
   // discover the 'amdgpu-arch' executable.

@@ -23264,8 +23264,12 @@ public:
   void declareTargetInitializer(Decl *TD) {
     A = TD->getAttr<OMPDeclareTargetDeclAttr>();
     DeclVector.push_back(cast<VarDecl>(TD));
+    llvm::SmallDenseSet<Decl *> Visited;
     while (!DeclVector.empty()) {
       VarDecl *TargetVarDecl = DeclVector.pop_back_val();
+      if (!Visited.insert(TargetVarDecl).second)
+        continue;
+
       if (TargetVarDecl->hasAttr<OMPDeclareTargetDeclAttr>() &&
           TargetVarDecl->hasInit() && TargetVarDecl->hasGlobalStorage()) {
         if (Expr *Ex = TargetVarDecl->getInit())
@@ -24218,6 +24222,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPNullaryAssumptionClause(OpenMPClauseKind CK,
     return new (getASTContext()) OMPNoOpenMPRoutinesClause(Loc, RLoc);
   case OMPC_no_parallelism:
     return new (getASTContext()) OMPNoParallelismClause(Loc, RLoc);
+  case OMPC_no_openmp_constructs:
+    return new (getASTContext()) OMPNoOpenMPConstructsClause(Loc, RLoc);
   default:
     llvm_unreachable("Unexpected OpenMP clause");
   }

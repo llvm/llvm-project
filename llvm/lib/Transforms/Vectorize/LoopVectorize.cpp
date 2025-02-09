@@ -1454,9 +1454,10 @@ public:
     // FIXME: Investigate opportunity for fixed vector factor.
     // FIXME: support fixed-order recurrences by fixing splice of non VFxUF
     // penultimate EVL.
-    bool EVLIsLegal =
-        UserIC <= 1 && TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-        !EnableVPlanNativePath && Legal->getFixedOrderRecurrences().empty();
+    bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
+                      TTI.hasActiveVectorLength(0, nullptr, Align()) &&
+                      !EnableVPlanNativePath &&
+                      Legal->getFixedOrderRecurrences().empty();
     if (!EVLIsLegal) {
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
@@ -4109,7 +4110,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // found modulo the vectorization factor is not zero, try to fold the tail
   // by masking.
   // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
-  setTailFoldingStyles(MaxFactors.ScalableVF.isScalable(), UserIC);
+  bool ContainsScalableVF = MaxFactors.ScalableVF.isNonZero();
+  setTailFoldingStyles(ContainsScalableVF, UserIC);
   if (foldTailByMasking()) {
     if (getTailFoldingStyle() == TailFoldingStyle::DataWithEVL) {
       LLVM_DEBUG(
@@ -4120,8 +4122,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       // Tail folded loop using VP intrinsics restricts the VF to be scalable
       // for now.
       // TODO: extend it for fixed vectors, if required.
-      assert(MaxFactors.ScalableVF.isScalable() &&
-             "Expected scalable vector factor.");
+      assert(ContainsScalableVF && "Expected scalable vector factor.");
 
       MaxFactors.FixedVF = ElementCount::getFixed(1);
     }
@@ -4558,11 +4559,10 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
   InstructionCost ExpectedCost = CM.expectedCost(ElementCount::getFixed(1));
   LLVM_DEBUG(dbgs() << "LV: Scalar loop costs: " << ExpectedCost << ".\n");
   assert(ExpectedCost.isValid() && "Unexpected invalid cost for scalar loop");
-  assert(any_of(VPlans,
-                [](std::unique_ptr<VPlan> &P) {
-                  return P->hasVF(ElementCount::getFixed(1));
-                }) &&
-         "Expected Scalar VF to be a candidate");
+  assert(
+      any_of(VPlans,
+             [](std::unique_ptr<VPlan> &P) { return P->hasScalarVFOnly(); }) &&
+      "Expected Scalar VF to be a candidate");
 
   const VectorizationFactor ScalarCost(ElementCount::getFixed(1), ExpectedCost,
                                        ExpectedCost);
@@ -6284,7 +6284,6 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
 
       // Find the cost of vectorizing the call, if we can find a suitable
       // vector variant of the function.
-      bool UsesMask = false;
       VFInfo FuncInfo;
       Function *VecFunc = nullptr;
       // Search through any available variants for one we can use at this VF.
@@ -6336,7 +6335,6 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
             break;
           }
           case VFParamKind::GlobalPredicate:
-            UsesMask = true;
             break;
           default:
             ParamsOk = false;
@@ -6353,19 +6351,8 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
         break;
       }
 
-      // Add in the cost of synthesizing a mask if one wasn't required.
-      InstructionCost MaskCost = 0;
-      if (VecFunc && UsesMask && !MaskRequired)
-        MaskCost = TTI.getShuffleCost(
-            TargetTransformInfo::SK_Broadcast,
-            VectorType::get(IntegerType::getInt1Ty(
-                                VecFunc->getFunctionType()->getContext()),
-                            VF),
-            {}, CostKind);
-
       if (TLI && VecFunc && !CI->isNoBuiltin())
-        VectorCost =
-            TTI.getCallInstrCost(nullptr, RetTy, Tys, CostKind) + MaskCost;
+        VectorCost = TTI.getCallInstrCost(nullptr, RetTy, Tys, CostKind);
 
       // Find the cost of an intrinsic; some targets may have instructions that
       // perform the operation without needing an actual call.
@@ -7685,6 +7672,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
                            OrigLoop->getHeader()->getContext());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
+  VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
+  VPlanTransforms::removeDeadRecipes(BestVPlan);
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
 
   // Perform the actual loop transformation.
@@ -8757,13 +8746,6 @@ bool VPRecipeBuilder::getScaledReductions(
   if (!CM.TheLoop->contains(RdxExitInstr))
     return false;
 
-  // TODO: Allow scaling reductions when predicating. The select at
-  // the end of the loop chooses between the phi value and most recent
-  // reduction result, both of which have different VFs to the active lane
-  // mask when scaling.
-  if (CM.blockNeedsPredicationForAnyReason(RdxExitInstr->getParent()))
-    return false;
-
   auto *Update = dyn_cast<BinaryOperator>(RdxExitInstr);
   if (!Update)
     return false;
@@ -8925,8 +8907,19 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
       isa<VPPartialReductionRecipe>(BinOpRecipe))
     std::swap(BinOp, Accumulator);
 
-  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp,
-                                      Accumulator, Reduction);
+  unsigned ReductionOpcode = Reduction->getOpcode();
+  if (CM.blockNeedsPredicationForAnyReason(Reduction->getParent())) {
+    assert((ReductionOpcode == Instruction::Add ||
+            ReductionOpcode == Instruction::Sub) &&
+           "Expected an ADD or SUB operation for predicated partial "
+           "reductions (because the neutral element in the mask is zero)!");
+    VPValue *Mask = getBlockInMask(Reduction->getParent());
+    VPValue *Zero =
+        Plan.getOrAddLiveIn(ConstantInt::get(Reduction->getType(), 0));
+    BinOp = Builder.createSelect(Mask, BinOp, Zero, Reduction->getDebugLoc());
+  }
+  return new VPPartialReductionRecipe(ReductionOpcode, BinOp, Accumulator,
+                                      Reduction);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -8937,7 +8930,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(SubRange)) {
-      bool HasScalarVF = Plan->hasVF(ElementCount::getFixed(1));
+      bool HasScalarVF = Plan->hasScalarVFOnly();
       // Now optimize the initial VPlan.
       if (!HasScalarVF)
         VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
@@ -9734,7 +9727,11 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // beginning of the dedicated latch block.
     auto *OrigExitingVPV = PhiR->getBackedgeValue();
     auto *NewExitingVPV = PhiR->getBackedgeValue();
-    if (!PhiR->isInLoop() && CM.foldTailByMasking()) {
+    // Don't output selects for partial reductions because they have an output
+    // with fewer lanes than the VF. So the operands of the select would have
+    // different numbers of lanes. Partial reductions mask the input instead.
+    if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
+        !isa<VPPartialReductionRecipe>(OrigExitingVPV->getDefiningRecipe())) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(OrigLoop->getHeader());
       assert(OrigExitingVPV->getDefiningRecipe()->getParent() != LatchVPBB &&
              "reduction recipe must be defined before latch");

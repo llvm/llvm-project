@@ -3620,6 +3620,10 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
         DBuilder.createEnumerator(Enum->getName(), Enum->getInitVal()));
   }
 
+  std::optional<EnumExtensibilityAttr::Kind> EnumKind;
+  if (auto *Attr = ED->getAttr<EnumExtensibilityAttr>())
+    EnumKind = Attr->getExtensibility();
+
   // Return a CompositeType for the enum itself.
   llvm::DINodeArray EltArray = DBuilder.getOrCreateArray(Enumerators);
 
@@ -3629,7 +3633,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
   llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
   return DBuilder.createEnumerationType(
       EnumContext, ED->getName(), DefUnit, Line, Size, Align, EltArray, ClassTy,
-      /*RunTimeLang=*/0, Identifier, ED->isScoped());
+      /*RunTimeLang=*/0, Identifier, ED->isScoped(), EnumKind);
 }
 
 llvm::DIMacro *CGDebugInfo::CreateMacro(llvm::DIMacroFile *Parent,
