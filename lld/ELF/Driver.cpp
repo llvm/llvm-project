@@ -371,6 +371,9 @@ static void checkOptions(Ctx &ctx) {
       if (!ctx.arg.cmseOutputLib.empty())
         ErrAlways(ctx) << "--out-implib may not be used without --cmse-implib";
     }
+    if (ctx.arg.fixCortexA8 && !ctx.arg.isLE)
+      ErrAlways(ctx)
+          << "--fix-cortex-a8 is not supported on big endian targets";
   } else {
     if (ctx.arg.cmseImplib)
       ErrAlways(ctx) << "--cmse-implib is only supported on ARM targets";
@@ -378,29 +381,45 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "--in-implib is only supported on ARM targets";
     if (!ctx.arg.cmseOutputLib.empty())
       ErrAlways(ctx) << "--out-implib is only supported on ARM targets";
+    if (ctx.arg.fixCortexA8)
+      ErrAlways(ctx) << "--fix-cortex-a8 is only supported on ARM targets";
+    if (ctx.arg.armBe8)
+      ErrAlways(ctx) << "--be8 is only supported on ARM targets";
   }
 
-  if (ctx.arg.fixCortexA53Errata843419 && ctx.arg.emachine != EM_AARCH64)
-    ErrAlways(ctx)
-        << "--fix-cortex-a53-843419 is only supported on AArch64 targets";
+  if (ctx.arg.emachine != EM_AARCH64) {
+    if (ctx.arg.executeOnly)
+      ErrAlways(ctx) << "--execute-only is only supported on AArch64 targets";
+    if (ctx.arg.fixCortexA53Errata843419)
+      ErrAlways(ctx) << "--fix-cortex-a53-843419 is only supported on AArch64";
+    if (ctx.arg.zPacPlt)
+      ErrAlways(ctx) << "-z pac-plt only supported on AArch64";
+    if (ctx.arg.zForceBti)
+      ErrAlways(ctx) << "-z force-bti only supported on AArch64";
+    if (ctx.arg.zBtiReport != "none")
+      ErrAlways(ctx) << "-z bti-report only supported on AArch64";
+    if (ctx.arg.zPauthReport != "none")
+      ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
+    if (ctx.arg.zGcsReport != "none")
+      ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
+    if (ctx.arg.zGcs != GcsPolicy::Implicit)
+      ErrAlways(ctx) << "-z gcs only supported on AArch64";
+  }
 
-  if (ctx.arg.fixCortexA8 && ctx.arg.emachine != EM_ARM)
-    ErrAlways(ctx) << "--fix-cortex-a8 is only supported on ARM targets";
-
-  if (ctx.arg.armBe8 && ctx.arg.emachine != EM_ARM)
-    ErrAlways(ctx) << "--be8 is only supported on ARM targets";
-
-  if (ctx.arg.fixCortexA8 && !ctx.arg.isLE)
-    ErrAlways(ctx) << "--fix-cortex-a8 is not supported on big endian targets";
-
-  if (ctx.arg.tocOptimize && ctx.arg.emachine != EM_PPC64)
-    ErrAlways(ctx) << "--toc-optimize is only supported on PowerPC64 targets";
-
-  if (ctx.arg.pcRelOptimize && ctx.arg.emachine != EM_PPC64)
-    ErrAlways(ctx) << "--pcrel-optimize is only supported on PowerPC64 targets";
+  if (ctx.arg.emachine != EM_PPC64) {
+    if (ctx.arg.tocOptimize)
+      ErrAlways(ctx) << "--toc-optimize is only supported on PowerPC64 targets";
+    if (ctx.arg.pcRelOptimize)
+      ErrAlways(ctx)
+          << "--pcrel-optimize is only supported on PowerPC64 targets";
+  }
 
   if (ctx.arg.relaxGP && ctx.arg.emachine != EM_RISCV)
     ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
+
+  if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
+      ctx.arg.zCetReport != "none")
+    ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 
   if (ctx.arg.pie && ctx.arg.shared)
     ErrAlways(ctx) << "-shared and -pie may not be used together";
@@ -435,9 +454,6 @@ static void checkOptions(Ctx &ctx) {
   }
 
   if (ctx.arg.executeOnly) {
-    if (ctx.arg.emachine != EM_AARCH64)
-      ErrAlways(ctx) << "--execute-only is only supported on AArch64 targets";
-
     if (ctx.arg.singleRoRx && !ctx.script->hasSectionsCommand)
       ErrAlways(ctx)
           << "--execute-only and --no-rosegment cannot be used together";
@@ -445,25 +461,6 @@ static void checkOptions(Ctx &ctx) {
 
   if (ctx.arg.zRetpolineplt && ctx.arg.zForceIbt)
     ErrAlways(ctx) << "-z force-ibt may not be used with -z retpolineplt";
-
-  if (ctx.arg.emachine != EM_AARCH64) {
-    if (ctx.arg.zPacPlt)
-      ErrAlways(ctx) << "-z pac-plt only supported on AArch64";
-    if (ctx.arg.zForceBti)
-      ErrAlways(ctx) << "-z force-bti only supported on AArch64";
-    if (ctx.arg.zBtiReport != "none")
-      ErrAlways(ctx) << "-z bti-report only supported on AArch64";
-    if (ctx.arg.zPauthReport != "none")
-      ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
-    if (ctx.arg.zGcsReport != "none")
-      ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
-    if (ctx.arg.zGcs != GcsPolicy::Implicit)
-      ErrAlways(ctx) << "-z gcs only supported on AArch64";
-  }
-
-  if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
-      ctx.arg.zCetReport != "none")
-    ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 }
 
 static const char *getReproduceOption(opt::InputArgList &args) {
