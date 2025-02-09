@@ -39,8 +39,12 @@ DEPENDS
   CUFDialect
   FIRDialect
   FIRSupport
-  HLFIRDialect
-  ${dialect_libs})
+  HLFIRDialect)
+
+if(NOT FLANG_STANDALONE_BUILD)
+  add_dependencies(FlangOptimizerTests
+    ${dialect_libs})
+endif()
 
 target_link_libraries(FlangOptimizerTests
   PRIVATE
