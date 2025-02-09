@@ -1403,13 +1403,7 @@ start:
 define i32 @udiv_shl_pair_const_vscale() vscale_range(1, 16) {
 ; CHECK-LABEL: @udiv_shl_pair_const_vscale(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A]], 2
-; CHECK-NEXT:    [[RHS:%.*]] = shl nuw nsw i32 [[B]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 1, 33) i32 @llvm.cttz.i32(i32 [[RHS]], i1 true)
-; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[LHS]], [[TMP0]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    ret i32 2
 ;
 entry:
   %a = call i32 @llvm.vscale()

@@ -242,13 +242,7 @@ define i64 @cntd_all() {
 
 define i64 @udiv() vscale_range(1, 16) {
 ; CHECK-LABEL: @udiv(
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[B:%.*]] = shl nuw nsw i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[B1:%.*]] = shl nuw nsw i64 [[TMP3]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = call range(i64 2, 65) i64 @llvm.cttz.i64(i64 [[B1]], i1 true)
-; CHECK-NEXT:    [[C:%.*]] = lshr i64 [[B]], [[TMP4]]
-; CHECK-NEXT:    ret i64 [[C]]
+; CHECK-NEXT:    ret i64 4
 ;
   %a = call i64 @llvm.aarch64.sve.cntb(i32 31)
   %b = call i64 @llvm.aarch64.sve.cntw(i32 31)
