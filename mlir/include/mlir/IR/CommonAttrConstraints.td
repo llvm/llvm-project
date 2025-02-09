@@ -90,7 +90,7 @@ class DialectAttr<Dialect d, Pred condition, string summary = ""> :
 // Attribute modifier definition
 
 // Decorates an attribute to have an (unvalidated) default value if not present.
-class DefaultValuedAttr<Attr attr, string val> :
+class DefaultValuedAttr<Attr attr, string val, string builderCall = ""> :
     Attr<attr.predicate, attr.summary> {
   // Construct this attribute with the input attribute and change only
   // the default value.
@@ -98,7 +98,7 @@ class DefaultValuedAttr<Attr attr, string val> :
   let storageType = attr.storageType;
   let returnType = attr.returnType;
   let convertFromStorage = attr.convertFromStorage;
-  let constBuilderCall = attr.constBuilderCall;
+  let constBuilderCall = !if(!eq(builderCall, ""), attr.constBuilderCall, builderCall);
   let defaultValue = val;
   let valueType = attr.valueType;
 
@@ -107,7 +107,7 @@ class DefaultValuedAttr<Attr attr, string val> :
 
 // Decorates an optional attribute to have an (unvalidated) default value
 // return by ODS generated accessors if not present.
-class DefaultValuedOptionalAttr<Attr attr, string val> :
+class DefaultValuedOptionalAttr<Attr attr, string val, string builderCall = ""> :
     Attr<attr.predicate, attr.summary> {
   // Construct this attribute with the input attribute and change only
   // the default value.
@@ -115,7 +115,7 @@ class DefaultValuedOptionalAttr<Attr attr, string val> :
   let storageType = attr.storageType;
   let returnType = attr.returnType;
   let convertFromStorage = attr.convertFromStorage;
-  let constBuilderCall = attr.constBuilderCall;
+  let constBuilderCall = !if(!eq(builderCall, ""), attr.constBuilderCall, builderCall);
   let defaultValue = val;
   let valueType = attr.valueType;
   let isOptional = 1;

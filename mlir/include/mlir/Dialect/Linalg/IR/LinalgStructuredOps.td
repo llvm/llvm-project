@@ -624,10 +624,10 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
     let arguments = (ins
       Variadic<AnyType>:$inputs,
       Variadic<AnyShaped>:$outputs,
-      DefaultValuedContextDependentAttr<AffineMapArrayAttr,
+      DefaultValuedOptionalAttr<AffineMapArrayAttr, "SmallVector<AffineMap>()",
           builderCall = [{ $_builder.getAffineMapArrayAttr(
             $0.empty() ? MatmulOp::getDefaultIndexingMaps($_builder.getContext()) : $0
-          )}], default = "SmallVector<AffineMap>()">:$indexing_maps,
+          )}]>:$indexing_maps,
       DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
     );
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
