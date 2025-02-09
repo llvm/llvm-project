@@ -2587,6 +2587,8 @@ def: Pat<(vt (bitconvert (f32 Float32Regs:$a))),
 def: Pat<(f32 (bitconvert vt:$a)),
          (BITCONVERT_32_I2F $a)>;
 }
+def: Pat<(v2f32 (bitconvert (f64 Float64Regs:$a))),
+         (BITCONVERT_64_F2I $a)>;
 foreach vt = [f16, bf16] in {
   def: Pat<(vt (bitconvert i16:$a)),
            (vt Int16Regs:$a)>;
