@@ -2399,6 +2399,8 @@ foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
   def: Pat<(vt (ProxyReg  vt:$src)), (ProxyRegI32 $src)>;
 }
 
+def: Pat<(v2f32 (ProxyReg v2f32:$src)), (ProxyRegI64 $src)>;
+
 def: Pat<(v2f32 (bitconvert i64:$src)), (ProxyRegI64 $src)>;
 
 //
