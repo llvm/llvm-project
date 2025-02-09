@@ -557,17 +557,19 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
 
 
 // DONOTMERGE(rolfmorel): explain why the below is necessary
-def DefaultValuedMatmulIndexingMapsAttr :
-    Attr<AffineMapArrayAttr.predicate, AffineMapArrayAttr.summary> {
-  let storageType = AffineMapArrayAttr.storageType;
-  let returnType = AffineMapArrayAttr.returnType;
-  let convertFromStorage = AffineMapArrayAttr.convertFromStorage;
-  let constBuilderCall = "$_builder.getAffineMapArrayAttr($0.empty() ? MatmulOp::getDefaultIndexingMaps($_builder.getContext()) : $0)";
-  let defaultValue = "SmallVector<AffineMap>()";
-  let valueType = AffineMapArrayAttr.valueType;
+class DefaultValuedContextDependentAttr<Attr attr,
+                                        string builderCall,
+                                        string default> :
+    Attr<attr.predicate, attr.summary> {
+  let storageType = attr.storageType;
+  let returnType = attr.returnType;
+  let convertFromStorage = attr.convertFromStorage;
+  let constBuilderCall = builderCall;  // DONOTMERGE(rolfmorel): explain why this needs to be a parameter
+  let defaultValue = default;
+  let valueType = attr.valueType;
   let isOptional = 1;
 
-  let baseAttr = AffineMapArrayAttr;
+  let baseAttr = attr;
 }
 
 
@@ -622,7 +624,10 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
     let arguments = (ins
       Variadic<AnyType>:$inputs,
       Variadic<AnyShaped>:$outputs,
-      DefaultValuedMatmulIndexingMapsAttr:$indexing_maps, // DONOTMERGE(rolfmorel): explain why this is necessary
+      DefaultValuedContextDependentAttr<AffineMapArrayAttr,
+          builderCall = [{ $_builder.getAffineMapArrayAttr(
+            $0.empty() ? MatmulOp::getDefaultIndexingMaps($_builder.getContext()) : $0
+          )}], default = "SmallVector<AffineMap>()">:$indexing_maps,
       DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
     );
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
