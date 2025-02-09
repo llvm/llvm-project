@@ -25,7 +25,7 @@
 #define _UI unsigned int
 #define _UL unsigned long
 #define _INLINE_ATTR_ __attribute__((flatten, always_inline))
-#define _RF_LDS volatile __attribute__((address_space(3)))
+#define _RF_LDS volatile __gpu_local
 
 extern "C" {
 /// External cross team scan (xteams) helper functions
