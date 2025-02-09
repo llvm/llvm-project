@@ -74,8 +74,8 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ 1024, [[VEC_EPILOG_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX7:%.*]] = phi i32 [ [[TMP29]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK]] ], [ [[TMP11]], [[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX7:%.*]] = phi i32 [ [[TMP29]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP11]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -183,9 +183,9 @@ define void @dotp_small_epilogue_vf(i64 %idx.neg, i8 %a) #1 {
 ; CHECK-NEXT:    [[CMP_N15:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[CMP_N15]], label [[WHILE_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IDX_NEG]], [[ITER_CHECK:%.*]] ], [ [[IND_END6]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi i64 [ [[N_VEC5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK]] ], [ [[IV_NEXT]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX17:%.*]] = phi i64 [ [[TMP13]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK]] ], [ [[ADD]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END6]], [[WHILE_BODY]] ], [ [[IDX_NEG]], [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi i64 [ [[N_VEC5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IV_NEXT]], [[WHILE_BODY]] ], [ 0, [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX17:%.*]] = phi i64 [ [[TMP13]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[ADD]], [[WHILE_BODY]] ], [ 0, [[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY1:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[IV_NEG:%.*]] = phi i64 [ [[IV_NEG_NEXT:%.*]], [[WHILE_BODY1]] ], [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ]
