@@ -73,17 +73,11 @@ define <2 x double> @ext1_v2f64(<2 x double> %x, <2 x double> %y) {
 }
 
 define <4 x double> @ext1_v2f64v4f64(<2 x double> %x, <4 x double> %y) {
-; SSE-LABEL: @ext1_v2f64v4f64(
-; SSE-NEXT:    [[E:%.*]] = extractelement <2 x double> [[X:%.*]], i32 1
-; SSE-NEXT:    [[N:%.*]] = fneg nsz double [[E]]
-; SSE-NEXT:    [[R:%.*]] = insertelement <4 x double> [[Y:%.*]], double [[N]], i32 1
-; SSE-NEXT:    ret <4 x double> [[R]]
-;
-; AVX-LABEL: @ext1_v2f64v4f64(
-; AVX-NEXT:    [[TMP1:%.*]] = fneg nsz <2 x double> [[X:%.*]]
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
-; AVX-NEXT:    [[R:%.*]] = shufflevector <4 x double> [[Y:%.*]], <4 x double> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
-; AVX-NEXT:    ret <4 x double> [[R]]
+; CHECK-LABEL: @ext1_v2f64v4f64(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nsz <2 x double> [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x double> [[Y:%.*]], <4 x double> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
   %e = extractelement <2 x double> %x, i32 1
   %n = fneg nsz double %e
@@ -105,9 +99,9 @@ define <8 x float> @ext7_v8f32(<8 x float> %x, <8 x float> %y) {
 
 define <8 x float> @ext7_v4f32v8f32(<4 x float> %x, <8 x float> %y) {
 ; CHECK-LABEL: @ext7_v4f32v8f32(
-; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
-; CHECK-NEXT:    [[N:%.*]] = fneg float [[E]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x float> [[Y:%.*]], float [[N]], i32 7
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <4 x float> [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x float> [[Y:%.*]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 11>
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %e = extractelement <4 x float> %x, i32 3
@@ -141,12 +135,20 @@ define <8 x float> @ext7_v8f32_use1(<8 x float> %x, <8 x float> %y) {
 }
 
 define <8 x float> @ext7_v4f32v8f32_use1(<4 x float> %x, <8 x float> %y) {
-; CHECK-LABEL: @ext7_v4f32v8f32_use1(
-; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
-; CHECK-NEXT:    call void @use(float [[E]])
-; CHECK-NEXT:    [[N:%.*]] = fneg float [[E]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x float> [[Y:%.*]], float [[N]], i32 3
-; CHECK-NEXT:    ret <8 x float> [[R]]
+; SSE-LABEL: @ext7_v4f32v8f32_use1(
+; SSE-NEXT:    [[E:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
+; SSE-NEXT:    call void @use(float [[E]])
+; SSE-NEXT:    [[TMP1:%.*]] = fneg <4 x float> [[X]]
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE-NEXT:    [[R:%.*]] = shufflevector <8 x float> [[Y:%.*]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 11, i32 4, i32 5, i32 6, i32 7>
+; SSE-NEXT:    ret <8 x float> [[R]]
+;
+; AVX-LABEL: @ext7_v4f32v8f32_use1(
+; AVX-NEXT:    [[E:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
+; AVX-NEXT:    call void @use(float [[E]])
+; AVX-NEXT:    [[N:%.*]] = fneg float [[E]]
+; AVX-NEXT:    [[R:%.*]] = insertelement <8 x float> [[Y:%.*]], float [[N]], i32 3
+; AVX-NEXT:    ret <8 x float> [[R]]
 ;
   %e = extractelement <4 x float> %x, i32 3
   call void @use(float %e)
@@ -220,9 +222,8 @@ define <4 x double> @ext_index_var_v2f64v4f64(<2 x double> %x, <4 x double> %y, 
 
 define <2 x double> @ext1_v2f64_ins0(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @ext1_v2f64_ins0(
-; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x double> [[X:%.*]], i32 1
-; CHECK-NEXT:    [[N:%.*]] = fneg nsz double [[E]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x double> [[Y:%.*]], double [[N]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nsz <2 x double> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x double> [[Y:%.*]], <2 x double> [[TMP1]], <2 x i32> <i32 3, i32 1>
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %e = extractelement <2 x double> %x, i32 1
@@ -234,9 +235,9 @@ define <2 x double> @ext1_v2f64_ins0(<2 x double> %x, <2 x double> %y) {
 ; Negative test - extract from an index greater than the vector width of the destination
 define <2 x double> @ext3_v4f64v2f64(<4 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @ext3_v4f64v2f64(
-; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x double> [[X:%.*]], i32 3
-; CHECK-NEXT:    [[N:%.*]] = fneg nsz double [[E]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x double> [[Y:%.*]], double [[N]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nsz <4 x double> [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <2 x i32> <i32 poison, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x double> [[Y:%.*]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %e = extractelement <4 x double> %x, i32 3
@@ -246,11 +247,17 @@ define <2 x double> @ext3_v4f64v2f64(<4 x double> %x, <2 x double> %y) {
 }
 
 define <4 x double> @ext1_v2f64v4f64_ins0(<2 x double> %x, <4 x double> %y) {
-; CHECK-LABEL: @ext1_v2f64v4f64_ins0(
-; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x double> [[X:%.*]], i32 1
-; CHECK-NEXT:    [[N:%.*]] = fneg nsz double [[E]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x double> [[Y:%.*]], double [[N]], i32 0
-; CHECK-NEXT:    ret <4 x double> [[R]]
+; SSE-LABEL: @ext1_v2f64v4f64_ins0(
+; SSE-NEXT:    [[TMP1:%.*]] = fneg nsz <2 x double> [[X:%.*]]
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
+; SSE-NEXT:    [[R:%.*]] = shufflevector <4 x double> [[Y:%.*]], <4 x double> [[TMP2]], <4 x i32> <i32 5, i32 1, i32 2, i32 3>
+; SSE-NEXT:    ret <4 x double> [[R]]
+;
+; AVX-LABEL: @ext1_v2f64v4f64_ins0(
+; AVX-NEXT:    [[E:%.*]] = extractelement <2 x double> [[X:%.*]], i32 1
+; AVX-NEXT:    [[N:%.*]] = fneg nsz double [[E]]
+; AVX-NEXT:    [[R:%.*]] = insertelement <4 x double> [[Y:%.*]], double [[N]], i32 0
+; AVX-NEXT:    ret <4 x double> [[R]]
 ;
   %e = extractelement <2 x double> %x, i32 1
   %n = fneg nsz double %e
