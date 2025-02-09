@@ -405,6 +405,18 @@ multiclass F3_fma_component<string OpcStr, SDNode OpNode> {
                !strconcat(OpcStr, ".f32 \t$dst, $a, $b;"),
                [(set f32:$dst, (OpNode f32:$a, fpimm:$b))]>,
                Requires<[allowFMA]>;
+   def f32x2rr_ftz :
+     NVPTXInst<(outs Int64Regs:$dst),
+               (ins Int64Regs:$a, Int64Regs:$b),
+               !strconcat(OpcStr, ".ftz.f32x2 \t$dst, $a, $b;"),
+               [(set v2f32:$dst, (OpNode v2f32:$a, v2f32:$b))]>,
+               Requires<[allowFMA, doF32FTZ]>;
+   def f32x2rr :
+     NVPTXInst<(outs Int64Regs:$dst),
+               (ins Int64Regs:$a, Int64Regs:$b),
+               !strconcat(OpcStr, ".f32x2 \t$dst, $a, $b;"),
+               [(set v2f32:$dst, (OpNode v2f32:$a, v2f32:$b))]>,
+               Requires<[allowFMA]>;
 
    def f16rr_ftz :
      NVPTXInst<(outs Int16Regs:$dst),
@@ -529,6 +541,18 @@ multiclass F3_fma_component<string OpcStr, SDNode OpNode> {
                !strconcat(OpcStr, ".rn.bf16x2 \t$dst, $a, $b;"),
                [(set v2bf16:$dst, (OpNode v2bf16:$a, v2bf16:$b))]>,
                Requires<[hasBF16Math, noFMA]>;
+   def _rnf32x2rr_ftz :
+     NVPTXInst<(outs Int64Regs:$dst),
+               (ins Int64Regs:$a, Int64Regs:$b),
+               !strconcat(OpcStr, ".rn.ftz.f32x2 \t$dst, $a, $b;"),
+               [(set v2f32:$dst, (OpNode v2f32:$a, v2f32:$b))]>,
+               Requires<[hasF32x2Instructions, noFMA, doF32FTZ]>;
+   def _rnf32x2rr :
+     NVPTXInst<(outs Int64Regs:$dst),
+               (ins Int64Regs:$a, Int64Regs:$b),
+               !strconcat(OpcStr, ".rn.f32x2 \t$dst, $a, $b;"),
+               [(set v2f32:$dst, (OpNode v2f32:$a, v2f32:$b))]>,
+               Requires<[hasF32x2Instructions, noFMA]>;
 }
 
 // Template for operations which take two f32 or f64 operands.  Provides three
@@ -1432,6 +1456,13 @@ multiclass FMA_BF16<string OpcStr, ValueType T, RegisterClass RC, Predicate Pred
                        Requires<[hasBF16Math, Pred]>;
 }
 
+class FMA_F32x2<string OpcStr, Predicate Pred>
+  : NVPTXInst<(outs Int64Regs:$res),
+              (ins Int64Regs:$a, Int64Regs:$b, Int64Regs:$c),
+              OpcStr # ".f32x2 \t$res, $a, $b, $c;",
+              [(set v2f32:$res, (fma v2f32:$a, v2f32:$b, v2f32:$c))]>,
+    Requires<[hasF32x2Instructions, Pred]>;
+
 defm FMA16_ftz    : FMA_F16<"fma.rn.ftz.f16", f16, Int16Regs, doF32FTZ>;
 defm FMA16        : FMA_F16<"fma.rn.f16", f16, Int16Regs, True>;
 defm FMA16x2_ftz  : FMA_F16<"fma.rn.ftz.f16x2", v2f16, Int32Regs, doF32FTZ>;
@@ -1440,6 +1471,8 @@ defm BFMA16       : FMA_BF16<"fma.rn.bf16", bf16, Int16Regs, True>;
 defm BFMA16x2     : FMA_BF16<"fma.rn.bf16x2", v2bf16, Int32Regs, True>;
 defm FMA32_ftz    : FMA<"fma.rn.ftz.f32", Float32Regs, f32imm, doF32FTZ>;
 defm FMA32        : FMA<"fma.rn.f32", Float32Regs, f32imm, True>;
+def  FMA32x2_ftz  : FMA_F32x2<"fma.rn.ftz", doF32FTZ>;
+def  FMA32x2      : FMA_F32x2<"fma.rn", True>;
 defm FMA64        : FMA<"fma.rn.f64", Float64Regs, f64imm, True>;
 
 // sin/cos
