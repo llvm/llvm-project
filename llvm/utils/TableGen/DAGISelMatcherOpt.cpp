@@ -227,7 +227,7 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
     }
 
     // Turn MoveSibling->MoveParent into MoveParent.
-    if (auto *MP = dyn_cast<MoveParentMatcher>(MS->getNext())) {
+    if (isa<MoveParentMatcher>(MS->getNext())) {
       MatcherPtr.reset(MS->takeNext());
       return ContractNodes(MatcherPtr, CGP);
     }
