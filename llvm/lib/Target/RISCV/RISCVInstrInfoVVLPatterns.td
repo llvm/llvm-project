@@ -554,6 +554,11 @@ def riscv_fpextend_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
   return N->hasOneUse();
 }]>;
 
+def riscv_fpextend_vl_sameuser : PatFrag<(ops node:$A, node:$B, node:$C),
+                                 (riscv_fpextend_vl node:$A, node:$B, node:$C), [{
+  return !N->use_empty() && all_equal(N->users());
+}]>;
+
 def riscv_vfmadd_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
                                           node:$E),
                                      (riscv_vfmadd_vl node:$A, node:$B,
