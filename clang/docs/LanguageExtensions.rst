@@ -127,11 +127,11 @@ It can be used like this:
   #if __has_target_builtin(__builtin_trap)
     __builtin_trap();
   #else
-      abort();
+    abort();
   #endif
   #else // !CUDA
   #if __has_builtin(__builtin_trap)
-  __builtin_trap();
+    __builtin_trap();
   #else
     abort();
   #endif
