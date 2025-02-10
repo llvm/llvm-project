@@ -131,7 +131,7 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   }
 
   // Not a constant, maybe it's a strided constant with a splat added or
-  // multipled.
+  // multiplied.
   auto *BO = dyn_cast<BinaryOperator>(Start);
   if (!BO || (BO->getOpcode() != Instruction::Add &&
               BO->getOpcode() != Instruction::Or &&
