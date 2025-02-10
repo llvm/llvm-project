@@ -24,6 +24,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Linker/LinkerInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "llvm/ADT/SCCIterator.h"
@@ -3808,4 +3809,22 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
 bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
   return op->hasTrait<OpTrait::SymbolTable>() &&
          op->hasTrait<OpTrait::IsIsolatedFromAbove>();
+}
+
+//===----------------------------------------------------------------------===//
+// LinkageInterface implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+struct LLVMLinkerInterface : public LinkerInterface {
+  using LinkerInterface::LinkerInterface;
+};
+
+} // end anonymous namespace
+
+void mlir::LLVM::registerLinkerInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
+    dialect->addInterfaces<LLVMLinkerInterface>();
+  });
 }

@@ -241,6 +241,10 @@ SmallVector<IntT> convertArrayToIndices(ArrayAttr attrs) {
   return convertArrayToIndices<IntT>(attrs.getValue());
 }
 
+/// Register the `LLVMLinkerInterface` implementation of `LinkerInterface`
+/// within the LLVM dialect.
+void registerLinkerInterface(DialectRegistry &registry);
+
 } // namespace LLVM
 } // namespace mlir
 
