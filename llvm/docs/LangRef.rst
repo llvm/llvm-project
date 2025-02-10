@@ -16216,8 +16216,10 @@ trapping or setting ``errno``.
 The first result is the fractional part of the operand and the second result is
 the integral part of the operand. Both results have the same sign as the operand.
 
-Not including exceptional inputs (listed below), `llvm.modf.*` is semantically
+Not including exceptional inputs (listed below), ``llvm.modf.*`` is semantically
 equivalent to:
+
+::
 
   %fp = frem <fptype> %x, 1.0  ; Fractional part
   %ip = fsub <fptype> %x, %fp  ; Integral part
