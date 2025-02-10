@@ -747,6 +747,13 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     assert(RelaSec &&
            "Can't read a SHT_LLVM_BB_ADDR_MAP section in a relocatable "
            "object file without providing a relocation section.");
+    // We might end up with relocations in CREL here. If we do, return an
+    // error since we do not currently support them.
+    if (RelaSec->sh_type == ELF::SHT_CREL)
+      return createError("unable to read relocations for section " +
+                         describe(EF, Sec) +
+                         " as the corresponding relocation section format is "
+                         "CREL, which is not currently supported.");
     Expected<typename ELFFile<ELFT>::Elf_Rela_Range> Relas = EF.relas(*RelaSec);
     if (!Relas)
       return createError("unable to read relocations for section " +
@@ -958,7 +965,8 @@ ELFFile<ELFT>::getSectionAndRelocations(
         continue;
     }
 
-    if (Sec.sh_type != ELF::SHT_RELA && Sec.sh_type != ELF::SHT_REL)
+    if (Sec.sh_type != ELF::SHT_RELA && Sec.sh_type != ELF::SHT_REL &&
+        Sec.sh_type != ELF::SHT_CREL)
       continue;
 
     Expected<const Elf_Shdr *> RelSecOrErr = this->getSection(Sec.sh_info);
