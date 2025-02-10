@@ -747,20 +747,25 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     assert(RelaSec &&
            "Can't read a SHT_LLVM_BB_ADDR_MAP section in a relocatable "
            "object file without providing a relocation section.");
-    // We might end up with relocations in CREL here. If we do, return an
-    // error since we do not currently support them.
-    if (RelaSec->sh_type == ELF::SHT_CREL)
-      return createError("unable to read relocations for section " +
-                         describe(EF, Sec) +
-                         " as the corresponding relocation section format is "
-                         "CREL, which is not currently supported.");
-    Expected<typename ELFFile<ELFT>::Elf_Rela_Range> Relas = EF.relas(*RelaSec);
-    if (!Relas)
-      return createError("unable to read relocations for section " +
-                         describe(EF, Sec) + ": " +
-                         toString(Relas.takeError()));
-    for (typename ELFFile<ELFT>::Elf_Rela Rela : *Relas)
-      FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
+    if (RelaSec->sh_type == ELF::SHT_CREL) {
+      Expected<typename ELFFile<ELFT>::RelsOrRelas> Relas = EF.crels(*RelaSec);
+      if (!Relas)
+        return createError("unable to read CREL relocations for section " +
+                           describe(EF, Sec) + ": " +
+                           toString(Relas.takeError()));
+      for (typename ELFFile<ELFT>::Elf_Rela Rela : std::get<1>(*Relas)) {
+        FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
+      }
+    } else {
+      Expected<typename ELFFile<ELFT>::Elf_Rela_Range> Relas =
+          EF.relas(*RelaSec);
+      if (!Relas)
+        return createError("unable to read relocations for section " +
+                           describe(EF, Sec) + ": " +
+                           toString(Relas.takeError()));
+      for (typename ELFFile<ELFT>::Elf_Rela Rela : *Relas)
+        FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
+    }
   }
   auto GetAddressForRelocation =
       [&](unsigned RelocationOffsetInSection) -> Expected<unsigned> {
