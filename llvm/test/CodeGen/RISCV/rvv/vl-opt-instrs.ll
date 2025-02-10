@@ -4363,9 +4363,9 @@ define <vscale x 4 x double> @vfwmacc_vv(<vscale x 4 x double> %a, <vscale x 4 x
 ;
 ; VLOPT-LABEL: vfwmacc_vv:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfwmacc.vv v8, v12, v14
-; VLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v16
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x double> @llvm.riscv.vfwmacc(<vscale x 4 x double> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, iXLen 7, iXLen -1, iXLen 0)
@@ -4384,9 +4384,9 @@ define <vscale x 4 x double> @vfwmacc_vf(<vscale x 4 x double> %a, float %b, <vs
 ;
 ; VLOPT-LABEL: vfwmacc_vf:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfwmacc.vf v8, fa0, v12
-; VLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v16
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x double> @llvm.riscv.vfwmacc(<vscale x 4 x double> %a, float %b, <vscale x 4 x float> %c, iXLen 7, iXLen -1, iXLen 0)
@@ -4405,9 +4405,9 @@ define <vscale x 4 x double> @vfwnmacc_vv(<vscale x 4 x double> %a, <vscale x 4 
 ;
 ; VLOPT-LABEL: vfwnmacc_vv:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfwnmacc.vv v8, v12, v14
-; VLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v16
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x double> @llvm.riscv.vfwnmacc(<vscale x 4 x double> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, iXLen 7, iXLen -1, iXLen 0)
@@ -4426,9 +4426,9 @@ define <vscale x 4 x double> @vfwnmacc_vf(<vscale x 4 x double> %a, float %b, <v
 ;
 ; VLOPT-LABEL: vfwnmacc_vf:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfwnmacc.vf v8, fa0, v12
-; VLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v16
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x double> @llvm.riscv.vfwnmacc(<vscale x 4 x double> %a, float %b, <vscale x 4 x float> %c, iXLen 7, iXLen -1, iXLen 0)
@@ -4447,9 +4447,9 @@ define <vscale x 4 x double> @vfwmsac_vv(<vscale x 4 x double> %a, <vscale x 4 x
 ;
 ; VLOPT-LABEL: vfwmsac_vv:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfwmsac.vv v8, v12, v14
-; VLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v16
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x double> @llvm.riscv.vfwmsac(<vscale x 4 x double> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, iXLen 7, iXLen -1, iXLen 0)
@@ -4468,9 +4468,9 @@ define <vscale x 4 x double> @vfwmsac_vf(<vscale x 4 x double> %a, float %b, <vs
 ;
 ; VLOPT-LABEL: vfwmsac_vf:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfwmsac.vf v8, fa0, v12
-; VLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v16
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x double> @llvm.riscv.vfwmsac(<vscale x 4 x double> %a, float %b, <vscale x 4 x float> %c, iXLen 7, iXLen -1, iXLen 0)
@@ -4489,9 +4489,9 @@ define <vscale x 4 x double> @vfwnmsac_vv(<vscale x 4 x double> %a, <vscale x 4 
 ;
 ; VLOPT-LABEL: vfwnmsac_vv:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfwnmsac.vv v8, v12, v14
-; VLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v16
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x double> @llvm.riscv.vfwnmsac(<vscale x 4 x double> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, iXLen 7, iXLen -1, iXLen 0)
@@ -4510,9 +4510,9 @@ define <vscale x 4 x double> @vfwnmsac_vf(<vscale x 4 x double> %a, float %b, <v
 ;
 ; VLOPT-LABEL: vfwnmsac_vf:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfwnmsac.vf v8, fa0, v12
-; VLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v16
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x double> @llvm.riscv.vfwnmsac(<vscale x 4 x double> %a, float %b, <vscale x 4 x float> %c, iXLen 7, iXLen -1, iXLen 0)
@@ -4531,9 +4531,9 @@ define <vscale x 4 x float> @vfwmaccbf16_vv(<vscale x 4 x float> %a, <vscale x 4
 ;
 ; VLOPT-LABEL: vfwmaccbf16_vv:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e16, m1, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; VLOPT-NEXT:    vfwmaccbf16.vv v8, v10, v11
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v12
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x float> @llvm.riscv.vfwmaccbf16(<vscale x 4 x float> %a, <vscale x 4 x bfloat> %b, <vscale x 4 x bfloat> %c, iXLen 7, iXLen -1, iXLen 0)
@@ -4552,9 +4552,9 @@ define <vscale x 4 x float> @vfwmaccbf16_vf(<vscale x 4 x float> %a, bfloat %b, 
 ;
 ; VLOPT-LABEL: vfwmaccbf16_vf:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e16, m1, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; VLOPT-NEXT:    vfwmaccbf16.vf v8, fa0, v10
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v12
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x float> @llvm.riscv.vfwmaccbf16(<vscale x 4 x float> %a, bfloat %b, <vscale x 4 x bfloat> %c, iXLen 7, iXLen -1, iXLen 0)
