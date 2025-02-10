@@ -9,6 +9,9 @@ version = "0.0.1"
 requires-python = ">=3.8,<=3.13"
 [project.urls]
 Homepage = "https://github.com/llvm/llvm-project"
+Discussions = "https://discourse.llvm.org/"
+"Issue Tracker" = "https://github.com/llvm/llvm-project/issues?q=is%3Aissue%20state%3Aopen%20label%3Amlir%3Apython%20"
+"Source Code" = "https://github.com/llvm/llvm-project/tree/main/mlir/python"
 
 [build-system]
 requires = [
