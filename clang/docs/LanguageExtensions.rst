@@ -69,7 +69,8 @@ It can be used like this:
 
   When using device offloading, a builtin is considered available if it is
   available on either the host or the device targets.
-  Use ``__has_target_builtin`` to consider only the current target.
+  Use ``__has_target_builtin`` to consider only the current target for an
+  offloading target.
 
 ``__has_constexpr_builtin``
 ---------------------------
@@ -128,6 +129,8 @@ It can be used like this:
 .. note::
   ``__has_target_builtin`` should not be used to detect support for a builtin macro;
   use ``#ifdef`` instead.
+
+  ``__has_target_built`` is only defined for offloading targets.
 
 .. _langext-__has_feature-__has_extension:
 

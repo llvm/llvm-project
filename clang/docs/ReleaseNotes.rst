@@ -104,6 +104,12 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+New Compiler Builtins
+---------------------
+
+- The new ``__has_target_builtin`` macro can be used to check if a builtin is available
+  on the current offloading target.
+
 Deprecated Compiler Flags
 -------------------------
 

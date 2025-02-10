@@ -357,7 +357,12 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__has_builtin = RegisterBuiltinMacro("__has_builtin");
   Ident__has_constexpr_builtin =
       RegisterBuiltinMacro("__has_constexpr_builtin");
-  Ident__has_target_builtin = RegisterBuiltinMacro("__has_target_builtin");
+  if (getLangOpts().OpenMPIsTargetDevice || getLangOpts().CUDAIsDevice ||
+      getLangOpts().SYCLIsDevice)
+    Ident__has_target_builtin = RegisterBuiltinMacro("__has_target_builtin");
+  else
+    Ident__has_target_builtin = nullptr;
+
   Ident__has_attribute = RegisterBuiltinMacro("__has_attribute");
   if (!getLangOpts().CPlusPlus)
     Ident__has_c_attribute = RegisterBuiltinMacro("__has_c_attribute");
