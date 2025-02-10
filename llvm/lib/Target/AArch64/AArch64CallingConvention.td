@@ -28,6 +28,12 @@ class CCIfSubtarget<string F, CCAction A>
 //===----------------------------------------------------------------------===//
 
 defvar AArch64_Common = [
+  // The 'nest' parameter, if any, is passed in X15.
+  // The previous register used here (X18) is also defined to be unavailable
+  // for this purpose, while all of X9-X15 were defined to be free for LLVM to
+  // use for this, so use X15 (which LLVM often already clobbers anyways).
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32], CCBitConvertToType<v2i64>>,
@@ -117,16 +123,12 @@ defvar AArch64_Common = [
 ];
 
 let Entry = 1 in
-def CC_AArch64_AAPCS : CallingConv<!listconcat(
-  // The 'nest' parameter, if any, is passed in X18.
-  // Darwin and Windows use X18 as the platform register and hence 'nest' isn't
-  // currently supported there.
-  [CCIfNest<CCAssignToReg<[X18]>>],
-  AArch64_Common
-)>;
+def CC_AArch64_AAPCS : CallingConv<AArch64_Common>;
 
 let Entry = 1 in
 def RetCC_AArch64_AAPCS : CallingConv<[
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32], CCBitConvertToType<v2i64>>,
@@ -177,6 +179,8 @@ def CC_AArch64_Win64_VarArg : CallingConv<[
 // a stack layout compatible with the x64 calling convention.
 let Entry = 1 in
 def CC_AArch64_Arm64EC_VarArg : CallingConv<[
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   // Convert small floating-point values to integer.
   CCIfType<[f16, bf16], CCBitConvertToType<i16>>,
   CCIfType<[f32], CCBitConvertToType<i32>>,
@@ -295,6 +299,8 @@ def CC_AArch64_Arm64EC_Thunk_Native : CallingConv<[
 
 let Entry = 1 in
 def RetCC_AArch64_Arm64EC_Thunk : CallingConv<[
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   // The X86-Win64 calling convention always returns __m64 values in RAX.
   CCIfType<[x86mmx], CCBitConvertToType<i64>>,
 
@@ -353,6 +359,8 @@ def RetCC_AArch64_Arm64EC_CFGuard_Check : CallingConv<[
 //     + Stack slots are sized as needed rather than being at least 64-bit.
 let Entry = 1 in
 def CC_AArch64_DarwinPCS : CallingConv<[
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32, f128], CCBitConvertToType<v2i64>>,
@@ -427,6 +435,8 @@ def CC_AArch64_DarwinPCS : CallingConv<[
 
 let Entry = 1 in
 def CC_AArch64_DarwinPCS_VarArg : CallingConv<[
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32, f128], CCBitConvertToType<v2i64>>,
@@ -450,6 +460,8 @@ def CC_AArch64_DarwinPCS_VarArg : CallingConv<[
 // same as the normal Darwin VarArgs handling.
 let Entry = 1 in
 def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32, f128], CCBitConvertToType<v2i64>>,
 
@@ -494,6 +506,8 @@ def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
 
 let Entry = 1 in
 def CC_AArch64_GHC : CallingConv<[
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
 
   // Handle all vector types as either f64 or v2f64.
@@ -523,6 +537,7 @@ def CC_AArch64_Preserve_None : CallingConv<[
   // We can pass arguments in all general registers, except:
   // - X8, used for sret
   // - X16/X17, used by the linker as IP0/IP1
+  // - X15, the nest register and used by Windows for stack allocation
   // - X18, the platform register
   // - X19, the base pointer
   // - X29, the frame pointer
@@ -533,6 +548,7 @@ def CC_AArch64_Preserve_None : CallingConv<[
   // normal functions without saving and reloading arguments.
   // X9 is assigned last as it is used in FrameLowering as the first
   // choice for a scratch register.
+  CCIfNest<CCAssignToReg<[X15]>>,
   CCIfType<[i32], CCAssignToReg<[W20, W21, W22, W23,
                                  W24, W25, W26, W27, W28,
                                  W0, W1, W2, W3, W4, W5,
@@ -543,12 +559,6 @@ def CC_AArch64_Preserve_None : CallingConv<[
                                  X0, X1, X2, X3, X4, X5,
                                  X6, X7, X10, X11,
                                  X12, X13, X14, X9]>>,
-
-  // Windows uses X15 for stack allocation
-  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindows()",
-    CCIfType<[i32], CCAssignToReg<[W15]>>>,
-  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindows()",
-    CCIfType<[i64], CCAssignToReg<[X15]>>>,
 
   CCDelegateTo<CC_AArch64_AAPCS>
 ]>;

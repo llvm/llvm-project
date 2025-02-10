@@ -184,10 +184,11 @@ declare preserve_nonecc i64 @callee_with_many_param2(i64 %a1, i64 %a2, i64 %a3, 
 define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11, i64 %a12, i64 %a13, i64 %a14, i64 %a15, i64 %a16, i64 %a17, i64 %a18, i64 %a19, i64 %a20, i64 %a21, i64 %a22, i64 %a23, i64 %a24) {
 ; CHECK-LABEL: callee_with_many_param:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x8, x15
+; CHECK-NEXT:    ldr x8, [sp, #32]
 ; CHECK-NEXT:    mov x15, x20
 ; CHECK-NEXT:    mov x20, x21
 ; CHECK-NEXT:    mov x21, x22
@@ -212,17 +213,20 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; CHECK-NEXT:    mov x13, x14
 ; CHECK-NEXT:    mov x14, x9
 ; CHECK-NEXT:    mov x9, x8
+; CHECK-NEXT:    str x15, [sp]
 ; CHECK-NEXT:    bl callee_with_many_param2
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 ;
 ; DARWIN-LABEL: callee_with_many_param:
 ; DARWIN:       ; %bb.0:
-; DARWIN-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; DARWIN-NEXT:    .cfi_def_cfa_offset 16
+; DARWIN-NEXT:    sub sp, sp, #32
+; DARWIN-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; DARWIN-NEXT:    .cfi_def_cfa_offset 32
 ; DARWIN-NEXT:    .cfi_offset w30, -8
 ; DARWIN-NEXT:    .cfi_offset w29, -16
-; DARWIN-NEXT:    mov x8, x15
+; DARWIN-NEXT:    ldr x8, [sp, #32]
 ; DARWIN-NEXT:    mov x15, x20
 ; DARWIN-NEXT:    mov x20, x21
 ; DARWIN-NEXT:    mov x21, x22
@@ -247,8 +251,10 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; DARWIN-NEXT:    mov x13, x14
 ; DARWIN-NEXT:    mov x14, x9
 ; DARWIN-NEXT:    mov x9, x8
+; DARWIN-NEXT:    str x15, [sp]
 ; DARWIN-NEXT:    bl _callee_with_many_param2
-; DARWIN-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; DARWIN-NEXT:    add sp, sp, #32
 ; DARWIN-NEXT:    ret
 ;
 ; WIN-LABEL: callee_with_many_param:
@@ -302,17 +308,18 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 define i64 @caller3() {
 ; CHECK-LABEL: caller3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d15, d14, [sp, #-160]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
-; CHECK-NEXT:    stp x28, x27, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x26, x25, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #112] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #128] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #144] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 160
+; CHECK-NEXT:    sub sp, sp, #176
+; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x28, x27, [sp, #96] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x26, x25, [sp, #112] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #128] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #144] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #160] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 176
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -332,6 +339,7 @@ define i64 @caller3() {
 ; CHECK-NEXT:    .cfi_offset b13, -144
 ; CHECK-NEXT:    .cfi_offset b14, -152
 ; CHECK-NEXT:    .cfi_offset b15, -160
+; CHECK-NEXT:    mov w8, #24 // =0x18
 ; CHECK-NEXT:    mov w20, #1 // =0x1
 ; CHECK-NEXT:    mov w21, #2 // =0x2
 ; CHECK-NEXT:    mov w22, #3 // =0x3
@@ -355,33 +363,35 @@ define i64 @caller3() {
 ; CHECK-NEXT:    mov w13, #21 // =0x15
 ; CHECK-NEXT:    mov w14, #22 // =0x16
 ; CHECK-NEXT:    mov w9, #23 // =0x17
-; CHECK-NEXT:    mov w15, #24 // =0x18
+; CHECK-NEXT:    str x8, [sp]
 ; CHECK-NEXT:    bl callee_with_many_param
-; CHECK-NEXT:    ldp x20, x19, [sp, #144] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #128] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #112] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x26, x25, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x28, x27, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #160 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #160] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x22, x21, [sp, #144] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x24, x23, [sp, #128] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x26, x25, [sp, #112] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x28, x27, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #176
 ; CHECK-NEXT:    ret
 ;
 ; DARWIN-LABEL: caller3:
 ; DARWIN:       ; %bb.0:
-; DARWIN-NEXT:    stp d15, d14, [sp, #-160]! ; 16-byte Folded Spill
-; DARWIN-NEXT:    stp d13, d12, [sp, #16] ; 16-byte Folded Spill
-; DARWIN-NEXT:    stp d11, d10, [sp, #32] ; 16-byte Folded Spill
-; DARWIN-NEXT:    stp d9, d8, [sp, #48] ; 16-byte Folded Spill
-; DARWIN-NEXT:    stp x28, x27, [sp, #64] ; 16-byte Folded Spill
-; DARWIN-NEXT:    stp x26, x25, [sp, #80] ; 16-byte Folded Spill
-; DARWIN-NEXT:    stp x24, x23, [sp, #96] ; 16-byte Folded Spill
-; DARWIN-NEXT:    stp x22, x21, [sp, #112] ; 16-byte Folded Spill
-; DARWIN-NEXT:    stp x20, x19, [sp, #128] ; 16-byte Folded Spill
-; DARWIN-NEXT:    stp x29, x30, [sp, #144] ; 16-byte Folded Spill
-; DARWIN-NEXT:    .cfi_def_cfa_offset 160
+; DARWIN-NEXT:    sub sp, sp, #176
+; DARWIN-NEXT:    stp d15, d14, [sp, #16] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp d13, d12, [sp, #32] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp d11, d10, [sp, #48] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp d9, d8, [sp, #64] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp x28, x27, [sp, #80] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp x26, x25, [sp, #96] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp x24, x23, [sp, #112] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp x22, x21, [sp, #128] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp x20, x19, [sp, #144] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp x29, x30, [sp, #160] ; 16-byte Folded Spill
+; DARWIN-NEXT:    .cfi_def_cfa_offset 176
 ; DARWIN-NEXT:    .cfi_offset w30, -8
 ; DARWIN-NEXT:    .cfi_offset w29, -16
 ; DARWIN-NEXT:    .cfi_offset w19, -24
@@ -402,6 +412,7 @@ define i64 @caller3() {
 ; DARWIN-NEXT:    .cfi_offset b13, -144
 ; DARWIN-NEXT:    .cfi_offset b14, -152
 ; DARWIN-NEXT:    .cfi_offset b15, -160
+; DARWIN-NEXT:    mov w8, #24 ; =0x18
 ; DARWIN-NEXT:    mov w20, #1 ; =0x1
 ; DARWIN-NEXT:    mov w21, #2 ; =0x2
 ; DARWIN-NEXT:    mov w22, #3 ; =0x3
@@ -425,18 +436,19 @@ define i64 @caller3() {
 ; DARWIN-NEXT:    mov w13, #21 ; =0x15
 ; DARWIN-NEXT:    mov w14, #22 ; =0x16
 ; DARWIN-NEXT:    mov w9, #23 ; =0x17
-; DARWIN-NEXT:    mov w15, #24 ; =0x18
+; DARWIN-NEXT:    str x8, [sp]
 ; DARWIN-NEXT:    bl _callee_with_many_param
-; DARWIN-NEXT:    ldp x29, x30, [sp, #144] ; 16-byte Folded Reload
-; DARWIN-NEXT:    ldp x20, x19, [sp, #128] ; 16-byte Folded Reload
-; DARWIN-NEXT:    ldp x22, x21, [sp, #112] ; 16-byte Folded Reload
-; DARWIN-NEXT:    ldp x24, x23, [sp, #96] ; 16-byte Folded Reload
-; DARWIN-NEXT:    ldp x26, x25, [sp, #80] ; 16-byte Folded Reload
-; DARWIN-NEXT:    ldp x28, x27, [sp, #64] ; 16-byte Folded Reload
-; DARWIN-NEXT:    ldp d9, d8, [sp, #48] ; 16-byte Folded Reload
-; DARWIN-NEXT:    ldp d11, d10, [sp, #32] ; 16-byte Folded Reload
-; DARWIN-NEXT:    ldp d13, d12, [sp, #16] ; 16-byte Folded Reload
-; DARWIN-NEXT:    ldp d15, d14, [sp], #160 ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp x29, x30, [sp, #160] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp x20, x19, [sp, #144] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp x22, x21, [sp, #128] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp x24, x23, [sp, #112] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp x26, x25, [sp, #96] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp x28, x27, [sp, #80] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp d9, d8, [sp, #64] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp d11, d10, [sp, #48] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp d13, d12, [sp, #32] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp d15, d14, [sp, #16] ; 16-byte Folded Reload
+; DARWIN-NEXT:    add sp, sp, #176
 ; DARWIN-NEXT:    ret
 ;
 ; WIN-LABEL: caller3:
