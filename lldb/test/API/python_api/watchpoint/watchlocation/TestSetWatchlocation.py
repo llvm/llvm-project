@@ -6,6 +6,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class SetWatchlocationAPITestCase(TestBase):
@@ -22,7 +23,15 @@ class SetWatchlocationAPITestCase(TestBase):
         self.violating_func = "do_bad_thing_with_location"
 
     @skipIfWindows  # This test is flaky on Windows
-    def test_watch_location(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_hw_watch_location(self):
+        self.do_watch_location(WatchpointType.MODIFY, lldb.eWatchpointModeHardware)
+
+    @skip
+    def test_sw_watch_location(self):
+        self.do_watch_location(WatchpointType.MODIFY, lldb.eWatchpointModeSoftware)
+
+    def do_watch_location(self, wp_type, wp_mode):
         """Exercise SBValue.WatchPointee() API to set a watchpoint."""
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -52,7 +61,7 @@ class SetWatchlocationAPITestCase(TestBase):
         )
         # Watch for write to *g_char_ptr.
         error = lldb.SBError()
-        watchpoint = value.WatchPointee(True, False, True, error)
+        watchpoint = set_watchpoint_at_pointee(value, wp_type, wp_mode, error)
         self.assertTrue(
             value and watchpoint, "Successfully found the pointer and set a watchpoint"
         )
@@ -64,7 +73,7 @@ class SetWatchlocationAPITestCase(TestBase):
             watchpoint.GetWatchValueKind(), lldb.eWatchPointValueKindExpression
         )
         # FIXME: The spec should probably be 'g_char_ptr'
-        self.assertEqual(watchpoint.GetWatchSpec(), None)
+        self.assertEqual(watchpoint.GetWatchSpec(), "*::g_char_ptr")
         self.assertEqual(watchpoint.GetType().GetDisplayTypeName(), "char")
         self.assertFalse(watchpoint.IsWatchingReads())
         self.assertTrue(watchpoint.IsWatchingWrites())

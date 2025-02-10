@@ -6,6 +6,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class WatchpointIteratorTestCase(TestBase):
@@ -25,7 +26,16 @@ class WatchpointIteratorTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number(self.source, "// Set break point at this line.")
 
-    def test_watch_iter(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_hw_watch_iter(self):
+        self.do_watch_iter(WatchpointType.READ_WRITE, lldb.eWatchpointModeHardware)
+
+    def test_sw_watch_iter(self):
+        self.runCmd("settings append target.env-vars SW_WP_CASE=YES")
+        self.do_watch_iter(WatchpointType.MODIFY, lldb.eWatchpointModeSoftware)
+        self.runCmd("settings clear target.env-vars")
+
+    def do_watch_iter(self, wp_type, wp_mode):
         """Exercise SBTarget.watchpoint_iter() API to iterate on the available watchpoints."""
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -52,7 +62,7 @@ class WatchpointIteratorTestCase(TestBase):
         # Watch 'global' for read and write.
         value = frame0.FindValue("global", lldb.eValueTypeVariableGlobal)
         error = lldb.SBError()
-        watchpoint = value.Watch(True, False, True, error)
+        watchpoint = set_watchpoint_at_value(value, wp_type, wp_mode, error)
         self.assertTrue(
             value and watchpoint, "Successfully found the variable and set a watchpoint"
         )

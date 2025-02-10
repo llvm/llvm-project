@@ -7,6 +7,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class HelloWatchpointTestCase(TestBase):
@@ -25,7 +26,19 @@ class HelloWatchpointTestCase(TestBase):
         self.d = {"C_SOURCES": self.source, "EXE": self.exe_name}
 
     @add_test_categories(["basic_process"])
-    def test_hello_watchpoint_using_watchpoint_set(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_hello_hardware_watchpoint_using_watchpoint_set(self):
+        self.do_hello_watchpoint_using_watchpoint_set(
+            WatchpointType.WRITE, lldb.eWatchpointModeHardware
+        )
+
+    @add_test_categories(["basic_process"])
+    def test_hello_software_watchpoint_using_watchpoint_set(self):
+        self.do_hello_watchpoint_using_watchpoint_set(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+
+    def do_hello_watchpoint_using_watchpoint_set(self, wp_type, wp_mode):
         """Test a simple sequence of watchpoint creation and watchpoint hit."""
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
@@ -52,12 +65,12 @@ class HelloWatchpointTestCase(TestBase):
         # Now let's set a write-type watchpoint for 'global'.
         # There should be only one watchpoint hit (see main.c).
         self.expect(
-            "watchpoint set variable -w write global",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} global",
             WATCHPOINT_CREATED,
             substrs=[
                 "Watchpoint created",
                 "size = 4",
-                "type = w",
+                f"type = {wp_type.value[0]}",
                 "%s:%d" % (self.source, self.decl),
             ],
         )
@@ -86,5 +99,5 @@ class HelloWatchpointTestCase(TestBase):
             )
 
         # Use the '-v' option to do verbose listing of the watchpoint.
-        # The hit count should now be 1.
+        # The hitcount should now be 1.
         self.expect("watchpoint list -v", substrs=["hit_count = 1"])

@@ -1,5 +1,6 @@
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 int32_t global = 10; // Watchpoint variable declaration.
 
@@ -12,5 +13,10 @@ int main(int argc, char** argv) {
     local += argc;
     ++local;
     printf("local: %d\n", local);
-    printf("global=%d\n", global);
+
+    const char *s = getenv("SW_WP_CASE");
+    if (s == NULL)
+      printf("global=%d\n", global);
+    else
+      global = 30;
 }

@@ -5,7 +5,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
+from lldbsuite.test.lldbwatchpointutils import *
 
 class TestStepOverWatchpoint(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -19,8 +19,8 @@ class TestStepOverWatchpoint(TestBase):
         return (target, process, thread, frame, read_watchpoint)
 
     @add_test_categories(["basic_process"])
-    # kernel disables wp's over instruction step, fixed in macOS 14.4.
     @skipIf(macos_version=["<", "14.4"])
+    @expectedFailureAll(archs="^riscv.*")
     def test_step_over_read_watchpoint(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -36,7 +36,9 @@ class TestStepOverWatchpoint(TestBase):
         error = lldb.SBError()
 
         # resolve_location=True, read=True, write=False
-        read_watchpoint = read_value.Watch(True, True, False, error)
+        read_watchpoint = set_watchpoint_at_value(
+            read_value, WatchpointType.READ, lldb.eWatchpointModeHardware, error
+        )
         self.assertSuccess(error, "Error while setting watchpoint")
         self.assertTrue(read_watchpoint, "Failed to set read watchpoint.")
 
@@ -61,7 +63,21 @@ class TestStepOverWatchpoint(TestBase):
     @add_test_categories(["basic_process"])
     # kernel disables wp's over instruction step, fixed in macOS 14.4.
     @skipIf(macos_version=["<", "14.4"])
-    def test_step_over_write_watchpoint(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_step_over_write_hw_watchpoint(self):
+        self.do_step_over_write_watchpoint(
+            WatchpointType.WRITE, lldb.eWatchpointModeHardware
+        )
+
+    def test_step_over_write_sw_watchpoint(self):
+        # The software watchpoints can only be of the modify type, so in this test,
+        # we will try to use modify type watchpoints instead of the ones used in the
+        # original test (write type).
+        self.do_step_over_write_watchpoint(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+
+    def do_step_over_write_watchpoint(self, wp_type, wp_mode):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, "break here for modify watchpoints", lldb.SBFileSpec("main.c")
@@ -79,7 +95,7 @@ class TestStepOverWatchpoint(TestBase):
 
         error = lldb.SBError()
         # resolve_location=True, read=False, modify=True
-        write_watchpoint = write_value.Watch(True, False, True, error)
+        write_watchpoint = set_watchpoint_at_value(write_value, wp_type, wp_mode, error)
         self.assertTrue(write_watchpoint, "Failed to set write watchpoint.")
         self.assertSuccess(error, "Error while setting watchpoint")
 
