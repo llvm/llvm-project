@@ -6,7 +6,7 @@ namespace hlsl {
 // Lexer Definitions
 
 static bool IsNumberChar(char C) {
-  // TODO(#120472): extend for float support exponents
+  // TODO(#126565): extend for float support exponents
   return isdigit(C); // integer support
 }
 
