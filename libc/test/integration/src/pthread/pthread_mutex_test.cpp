@@ -187,7 +187,7 @@ void multiple_waiters() {
 }
 
 // Test the initializer
-[[gnu::unused]]
+[[maybe_unused]]
 static pthread_mutex_t test_initializer = PTHREAD_MUTEX_INITIALIZER;
 
 TEST_MAIN() {
