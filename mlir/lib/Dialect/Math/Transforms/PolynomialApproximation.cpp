@@ -1122,7 +1122,9 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
   return success();
 }
 
-// Approximates erfc(x) with
+// Approximates erfc(x) with p((x - 2) / (x + 2)), where p is a 9 degree
+// polynomial.This approximation is based on the following stackoverflow post:
+// https://stackoverflow.com/questions/35966695/vectorizable-implementation-of-complementary-error-function-erfcf
 LogicalResult
 ErfcPolynomialApproximation::matchAndRewrite(math::ErfcOp op,
                                              PatternRewriter &rewriter) const {
