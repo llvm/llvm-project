@@ -12,11 +12,13 @@
 
 #include <__concepts/destructible.h>
 #include <__config>
+#include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/concepts.h>
 #include <__memory/destroy.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
+#include <__ranges/dangling.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
