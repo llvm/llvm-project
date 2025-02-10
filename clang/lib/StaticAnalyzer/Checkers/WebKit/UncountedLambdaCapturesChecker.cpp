@@ -120,7 +120,7 @@ public:
               LambdasToIgnore.insert(L);
               if (!Param->hasAttr<NoEscapeAttr>() && !TreatAllArgsAsNoEscape)
                 Checker->visitLambdaExpr(L, shouldCheckThis() &&
-                                            !hasProtectedThis(L));
+                                                !hasProtectedThis(L));
             }
             ++ArgIndex;
           }
