@@ -24,9 +24,10 @@ int main(int, char**) {
   C c2;
   C::const_iterator e = c2.end();
   P v(3.5, 3);
-  TEST_LIBCPP_ASSERT_FAILURE(c.insert(e, v),
-                             "unordered container::emplace_hint(const_iterator, args...) called with an iterator not "
-                             "referring to this unordered container");
+  TEST_LIBCPP_ASSERT_FAILURE(
+      c.insert(e, v),
+      "unordered container::emplace_hint(const_iterator, args...) called with an iterator not "
+      "referring to this unordered container");
 
   return 0;
 }

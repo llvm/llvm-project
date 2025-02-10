@@ -26,9 +26,10 @@ int main(int, char**) {
   C c;
   C c2;
   C::const_iterator e = c2.end();
-  TEST_LIBCPP_ASSERT_FAILURE(c.insert(e, P(3.5, 3)),
-                             "unordered_map::insert(const_iterator, const value_type&) called with an iterator not "
-                             "referring to this unordered_map");
+  TEST_LIBCPP_ASSERT_FAILURE(
+      c.insert(e, P(3.5, 3)),
+      "unordered_map::insert(const_iterator, const value_type&) called with an iterator not "
+      "referring to this unordered_map");
 
   return 0;
 }

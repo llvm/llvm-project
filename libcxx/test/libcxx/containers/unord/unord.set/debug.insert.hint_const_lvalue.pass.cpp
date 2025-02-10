@@ -24,9 +24,10 @@ int main(int, char**) {
   C c2;
   C::const_iterator e = c2.end();
   P v(3.5);
-  TEST_LIBCPP_ASSERT_FAILURE(c.insert(e, v),
-                             "unordered_set::insert(const_iterator, const value_type&) called with an iterator not "
-                             "referring to this unordered_set");
+  TEST_LIBCPP_ASSERT_FAILURE(
+      c.insert(e, v),
+      "unordered_set::insert(const_iterator, const value_type&) called with an iterator not "
+      "referring to this unordered_set");
 
   return 0;
 }
