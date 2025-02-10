@@ -27,6 +27,8 @@
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
 
+using namespace llvm::omp::target::ompt;
+
 // Define OMPT callback functions (bound to actual callbacks later on)
 #define defineOmptCallback(Name, Type, Code)                                   \
   Name##_t llvm::omp::target::ompt::Name##_fn = nullptr;
@@ -34,7 +36,68 @@ FOREACH_OMPT_NOEMI_EVENT(defineOmptCallback)
 FOREACH_OMPT_EMI_EVENT(defineOmptCallback)
 #undef defineOmptCallback
 
-using namespace llvm::omp::target::ompt;
+int ompt_get_device_num_procs(ompt_device_t *device) { return 0; }
+
+ompt_device_time_t ompt_get_device_time(ompt_device_t *device) { return 0; }
+
+double ompt_translate_time(ompt_device_t *device, ompt_device_time_t time) {
+  return 0;
+}
+
+ompt_set_result_t ompt_set_trace_ompt(ompt_device_t *device,
+                                      unsigned int enable, unsigned int etype) {
+  return ompt_set_error;
+}
+
+ompt_set_result_t ompt_set_trace_native(ompt_device_t *device, int enable,
+                                        int flags) {
+  return ompt_set_error;
+}
+
+int ompt_start_trace(ompt_device_t *device,
+                     ompt_callback_buffer_request_t request,
+                     ompt_callback_buffer_complete_t complete) {
+  return 0;
+}
+
+int ompt_pause_trace(ompt_device_t *device, int begin_pause) { return 0; }
+
+int ompt_flush_trace(ompt_device_t *device) { return 0; }
+
+int ompt_stop_trace(ompt_device_t *device) { return 0; }
+
+int ompt_advance_buffer_cursor(ompt_device_t *device, ompt_buffer_t *buffer,
+                               size_t size, ompt_buffer_cursor_t current,
+                               ompt_buffer_cursor_t *next) {
+  return 0;
+}
+
+ompt_record_t ompt_get_record_type(ompt_buffer_t *buffer,
+                                   ompt_buffer_cursor_t current) {
+  return ompt_record_ompt;
+}
+
+void *ompt_get_record_native(ompt_buffer_t *buffer,
+                             ompt_buffer_cursor_t current,
+                             ompt_id_t *host_op_id) {
+  return NULL;
+}
+
+ompt_record_abstract_t *ompt_get_record_abstract(void *native_record) {
+  return NULL;
+}
+
+ompt_interface_fn_t
+llvm::omp::target::ompt::ompt_device_fn_lookup(const char *s) {
+#define ompt_interface_fn(fn)                                                  \
+  if (strcmp(s, #fn) == 0) {                                                   \
+    fn##_t fn##_f = fn;                                                        \
+    return (ompt_interface_fn_t)fn##_f;                                        \
+  }
+  FOREACH_OMPT_DEVICE_INQUIRY_FN(ompt_interface_fn)
+#undef ompt_interface_fn
+  return NULL;
+}
 
 /// Forward declaration
 class LibomptargetRtlFinalizer;
