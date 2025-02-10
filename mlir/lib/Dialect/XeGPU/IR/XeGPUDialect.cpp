@@ -237,8 +237,7 @@ LogicalResult TensorDescType::verify(
     // Expected tensor ranks for scattered data:
     //   - 1D tensor for fully non-contiguous elements (chunk size == 1)
     //   - 2D tensor for scattered blocks (chunk size > 1)
-    IntegerAttr chunkAttr = scatterAttr.getChunkSize();
-    unsigned chunkSize = chunkAttr ? chunkAttr.getInt() : 1;
+    unsigned chunkSize = scatterAttr.getChunkSize().getInt();
     if (rank == 1 && chunkSize != 1)
       return emitError() << "expected non-contiguous elements for 1D tensor";
     if (rank == 2 && chunkSize < 2)
@@ -273,8 +272,7 @@ LogicalResult TensorDescType::verify(
         return emitError()
                << "cannot map over non-contiguous scattered row elements";
 
-      IntegerAttr chunkAttr = scatterAttr.getChunkSize();
-      unsigned chunkSize = chunkAttr ? chunkAttr.getInt() : 1;
+      unsigned chunkSize = scatterAttr.getChunkSize().getInt();
       if (wiData[1] != chunkSize)
         return emitError() << "work item data mapping must match the number of "
                               "contiguous elements";
