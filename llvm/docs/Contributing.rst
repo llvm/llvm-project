@@ -77,7 +77,7 @@ recent commit:
   For some patches, formatting them may add changes that obscure the intent of
   the patch. For example, adding to an enum that was not previously formatted
   may result in the entire enum being reformatted. This happens because not all
-  of the LLVM Project conforms to clang-format at this time.
+  of the LLVM Project conforms to LLVM's clang-format style at this time.
 
   If you think that this might be the case for your changes, or are unsure, we
   recommend that you add the formatting changes as a **separate commit** within
@@ -90,8 +90,8 @@ recent commit:
   an easier time doing this. If they are not, that is ok too, but you will have
   to do a bit more work to separate it out.
 
-Note that ``git clang-format`` modifies the files, but doesn't commit them -- you'll likely want
-to run one of the following to add the changes to a commit:
+Note that ``git clang-format`` modifies the files, but does not commit them --
+you will likely want to run one of the following to add the changes to a commit:
 
 .. code-block:: console
 
