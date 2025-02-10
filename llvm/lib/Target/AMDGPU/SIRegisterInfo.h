@@ -34,6 +34,7 @@ private:
   const GCNSubtarget &ST;
   bool SpillSGPRToVGPR;
   bool isWave32;
+  bool WaveTransformCF;
   BitVector RegPressureIgnoredUnits;
 
   /// Sub reg indexes for getRegSplitParts.

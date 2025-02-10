@@ -332,9 +332,9 @@ struct SGPRSpillBuilder {
 
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
     : AMDGPUGenRegisterInfo(AMDGPU::PC_REG, ST.getAMDGPUDwarfFlavour(),
-                            ST.getAMDGPUDwarfFlavour(),
-                            /*PC=*/0, ST.getHwMode()),
-      ST(ST), SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()) {
+                            ST.getAMDGPUDwarfFlavour()),
+      ST(ST), SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()),
+      WaveTransformCF(AMDGPUTargetMachine::EnableWaveTransformCF) {
 
   assert(getSubRegIndexLaneMask(AMDGPU::sub0).getAsInteger() == 3 &&
          getSubRegIndexLaneMask(AMDGPU::sub31).getAsInteger() == (3ULL << 62) &&
@@ -3723,6 +3723,9 @@ MCRegister SIRegisterInfo::findUnusedRegister(
 bool SIRegisterInfo::isUniformReg(const MachineRegisterInfo &MRI,
                                   const RegisterBankInfo &RBI,
                                   Register Reg) const {
+  if (WaveTransformCF)
+    return false;
+
   auto *RB = RBI.getRegBank(Reg, MRI, *MRI.getTargetRegisterInfo());
   if (!RB)
     return false;
