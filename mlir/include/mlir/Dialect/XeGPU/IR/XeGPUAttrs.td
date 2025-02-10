@@ -90,6 +90,8 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
       CArg<"int", "1">: $chunk_size
     )>
   ];
+
+  let genVerifyDecl = 1;
  }
 
 //===----------------------------------------------------------------------===//
