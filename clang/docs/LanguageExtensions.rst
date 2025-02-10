@@ -135,6 +135,7 @@ It can be used like this:
   #else
     abort();
   #endif
+  #endif
   ...
 
 .. note::
