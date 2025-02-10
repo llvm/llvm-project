@@ -2,31 +2,6 @@
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown | FileCheck %s --check-prefixes=X64
 
-define i32 @no_combine_f32(float %x) nounwind {
-; X86-LABEL: no_combine_f32:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    calll rintf
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    cvttss2si {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    retl
-;
-; X64-LABEL: no_combine_f32:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq rintf@PLT
-; X64-NEXT:    cvttss2si %xmm0, %eax
-; X64-NEXT:    popq %rcx
-; X64-NEXT:    retq
-entry:
-  %0 = tail call float @llvm.rint.f32(float %x)
-  %1 = fptosi float %0 to i32
-  ret i32 %1
-}
-
 define i32 @combine_f32(float %x) nounwind {
 ; X86-LABEL: combine_f32:
 ; X86:       # %bb.0: # %entry
@@ -38,37 +13,8 @@ define i32 @combine_f32(float %x) nounwind {
 ; X64-NEXT:    cvtss2si %xmm0, %eax
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call nnan ninf float @llvm.rint.f32(float %x)
+  %0 = tail call float @llvm.rint.f32(float %x)
   %1 = fptosi float %0 to i32
-  ret i32 %1
-}
-
-define i32 @no_combine_f64(double %x) nounwind {
-; X86-LABEL: no_combine_f64:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movsd %xmm0, (%esp)
-; X86-NEXT:    calll rint
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    cvttsd2si {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl
-;
-; X64-LABEL: no_combine_f64:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq rint@PLT
-; X64-NEXT:    cvttsd2si %xmm0, %eax
-; X64-NEXT:    popq %rcx
-; X64-NEXT:    retq
-entry:
-  %0 = tail call double @llvm.rint.f64(double %x)
-  %1 = fptosi double %0 to i32
   ret i32 %1
 }
 
@@ -83,7 +29,7 @@ define i32 @combine_f64(double %x) nounwind {
 ; X64-NEXT:    cvtsd2si %xmm0, %eax
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call nnan ninf double @llvm.rint.f32(double %x)
+  %0 = tail call double @llvm.rint.f32(double %x)
   %1 = fptosi double %0 to i32
   ret i32 %1
 }
@@ -99,7 +45,7 @@ define <4 x i32> @combine_v4f32(<4 x float> %x) nounwind {
 ; X64-NEXT:    cvtps2dq %xmm0, %xmm0
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call nnan ninf <4 x float> @llvm.rint.v4f32(<4 x float> %x)
+  %0 = tail call <4 x float> @llvm.rint.v4f32(<4 x float> %x)
   %1 = fptosi <4 x float> %0 to <4 x i32>
   ret <4 x i32> %1
 }
