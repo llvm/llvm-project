@@ -45,6 +45,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
+  initializeBPFCheckUndefIRPass(PR);
   initializeBPFCheckAndAdjustIRPass(PR);
   initializeBPFMIPeepholePass(PR);
   initializeBPFDAGToDAGISelLegacyPass(PR);
@@ -143,6 +144,7 @@ void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 }
 
 void BPFPassConfig::addIRPasses() {
+  addPass(createBPFCheckUndefIR());
   addPass(createAtomicExpandLegacyPass());
   addPass(createBPFCheckAndAdjustIR());
 
