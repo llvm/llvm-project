@@ -234,6 +234,9 @@ endif ()
 # but some older versions of CMake don't define it for GCC itself.
 check_cxx_compiler_flag("-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 
+# Check whether -fno-lto is supported.
+check_cxx_compiler_flag(-fno-lto FLANG_RT_HAS_FNO_LTO_FLAG)
+
 
 # function checks
 find_package(Backtrace)
