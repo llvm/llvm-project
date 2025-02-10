@@ -34,6 +34,9 @@
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
+#include "llvm/CodeGen/MachineUniformityAnalysis.h"
+
 #include <unordered_set>
 #define DEBUG_TYPE "amdgpu-hot-block-remat"
 
@@ -4619,10 +4622,16 @@ bool AMDGPUHotBlockRematerialize::runOnMachineFunction(MachineFunction &MF) {
   AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   {
-    llvm::MirGPUDivergenceAnalysis DA(MF, *DT, *PDT, *MLI);
+    MachineCycleInfo CI;
+    CI.compute(MF);
+    auto TTI = MF.getTarget().getTargetTransformInfo(MF.getFunction());
+    MachineUniformityInfo MachineUniformity =
+      llvm::computeMachineUniformityInfo(MF, CI, *DT, /*HasBranchDivergence*/true);
+
+    //llvm::MirGPUDivergenceAnalysis DA(MF, *DT, *PDT, *MLI);
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : MBB) {
-        if (DA.isUniform(&MI)) {
+        if (MachineUniformity.isUniform(&MI)) {
           TotalUniformInsts.insert(&MI);
         }
       }
