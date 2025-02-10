@@ -159,8 +159,8 @@ std::optional<Object> getBaseObject(const Object &object,
       return Object{SymbolAndDesignatorExtractor::symbol_addr(comp->symbol()),
                     ea.Designate(evaluate::DataRef{
                         SymbolAndDesignatorExtractor::AsRvalueRef(*comp)})};
-    } else if (base.UnwrapSymbolRef()) {
-      return std::nullopt;
+    } else if (auto *symRef = base.UnwrapSymbolRef()) {
+      return Object{const_cast<semantics::Symbol *>(&**symRef), std::nullopt};
     }
   } else {
     assert(std::holds_alternative<evaluate::CoarrayRef>(ref.u) &&

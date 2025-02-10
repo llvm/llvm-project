@@ -467,6 +467,12 @@ class OpenMP_HasDeviceAddrClauseSkip<
     Variadic<OpenMP_PointerLikeType>:$has_device_addr_vars
   );
 
+  let extraClassDeclaration = [{
+    unsigned numHasDeviceAddrBlockArgs() {
+      return getHasDeviceAddrVars().size();
+    }
+  }];
+
   let optAssemblyFormat = [{
     `has_device_addr` `(` $has_device_addr_vars `:` type($has_device_addr_vars)
                       `)`

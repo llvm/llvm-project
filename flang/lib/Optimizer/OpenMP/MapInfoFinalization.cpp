@@ -224,10 +224,19 @@ class MapInfoFinalizationPass
   }
 
   /// Adjusts the descriptor's map type. The main alteration that is done
-  /// currently is transforming the map type to `OMP_MAP_TO` where possible.
-  /// This is because we will always need to map the descriptor to device
-  /// (or at the very least it seems to be the case currently with the
-  /// current lowered kernel IR), as without the appropriate descriptor
+  /// currently is transforming the map type to `OMP_MAP_TO` where possible,
+  /// plus adding OMP_MAP_ALWAYS flag. Descriptors will always be copied,
+  /// even if the object was listed on the `has_device_addr` clause.
+  /// This is because the descriptor can be rematerialized by the compiler,
+  /// and so the address of the descriptor for a given object at one place in
+  /// the code may differ from that address in another place. The contents
+  /// of the descriptor (the base address in paticular) will remain unchanged
+  /// though. Non-descriptor objects listed on the `has_device_addr` clause
+  /// can be passed to the kernel by just passing their address without any
+  /// remapping.
+  /// The adding the OMP_MAP_TO flag is done because we will always need to
+  /// map the descriptor to device, especially without device address clauses,
+  /// as without the appropriate descriptor
   /// information on the device there is a risk of the kernel IR
   /// requesting for various data that will not have been copied to
   /// perform things like indexing. This can cause segfaults and
@@ -247,16 +256,25 @@ class MapInfoFinalizationPass
                               mlir::omp::TargetUpdateOp>(target))
       return mapTypeFlag;
 
-    bool hasImplicitMap =
-        (llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
-         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT) ==
+    llvm::omp::OpenMPOffloadMappingFlags Implicit =
+        llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
 
     return llvm::to_underlying(
-        hasImplicitMap
-            ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-                  llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT
-            : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO | Implicit);
+  }
+
+  /// Check if the mapOp is present in the HasDeviceAddr clause on
+  /// the userOp. Only applies to TargetOp.
+  bool isHasDeviceAddr(mlir::omp::MapInfoOp mapOp, mlir::Operation *userOp) {
+    if (auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(userOp)) {
+      for (mlir::Value hda : targetOp.getHasDeviceAddrVars()) {
+        if (hda.getDefiningOp() == mapOp)
+          return true;
+      }
+    }
+    return false;
   }
 
   mlir::omp::MapInfoOp genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
@@ -268,8 +286,7 @@ class MapInfoFinalizationPass
     // TODO: map the addendum segment of the descriptor, similarly to the
     // base address/data pointer member.
     mlir::Value descriptor = getDescriptorFromBoxMap(op, builder);
-    auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
-                                   op.getMapType().value_or(0), builder);
+
     mlir::ArrayAttr newMembersAttr;
     mlir::SmallVector<mlir::Value> newMembers;
     llvm::SmallVector<llvm::SmallVector<int64_t>> memberIndices;
@@ -286,6 +303,12 @@ class MapInfoFinalizationPass
     // member information to now have one new member for the base address, or
     // we are expanding a parent that is a descriptor and we have to adjust
     // all of its members to reflect the insertion of the base address.
+    //
+    // If we're expanding a top-level descriptor for a map operation that
+    // resulted from "has_device_addr" clause, then we want the base pointer
+    // from the descriptor to be used verbatim, i.e. without additional
+    // remapping. To avoid this remapping, simply don't generate any map
+    // information for the descriptor members.
     if (!mapMemberUsers.empty()) {
       // Currently, there should only be one user per map when this pass
       // is executed. Either a parent map, holding the current map in its
@@ -296,6 +319,8 @@ class MapInfoFinalizationPass
       assert(mapMemberUsers.size() == 1 &&
              "OMPMapInfoFinalization currently only supports single users of a "
              "MapInfoOp");
+      auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
+                                     op.getMapType().value_or(0), builder);
       ParentAndPlacement mapUser = mapMemberUsers[0];
       adjustMemberIndices(memberIndices, mapUser.index);
       llvm::SmallVector<mlir::Value> newMemberOps;
@@ -307,7 +332,9 @@ class MapInfoFinalizationPass
       mapUser.parent.getMembersMutable().assign(newMemberOps);
       mapUser.parent.setMembersIndexAttr(
           builder.create2DI64ArrayAttr(memberIndices));
-    } else {
+    } else if (!isHasDeviceAddr(op, target)) {
+      auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
+                                     op.getMapType().value_or(0), builder);
       newMembers.push_back(baseAddr);
       if (!op.getMembers().empty()) {
         for (auto &indices : memberIndices)
@@ -448,6 +475,12 @@ class MapInfoFinalizationPass
       addOperands(useDevPtrMutableOpRange, target,
                   argIface.getUseDevicePtrBlockArgsStart() +
                       argIface.numUseDevicePtrBlockArgs());
+    } else if (auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(target)) {
+      mlir::MutableOperandRange hasDevAddrMutableOpRange =
+          targetOp.getHasDeviceAddrVarsMutable();
+      addOperands(hasDevAddrMutableOpRange, target,
+                  argIface.getHasDeviceAddrBlockArgsStart() +
+                      argIface.numHasDeviceAddrBlockArgs());
     }
   }
 

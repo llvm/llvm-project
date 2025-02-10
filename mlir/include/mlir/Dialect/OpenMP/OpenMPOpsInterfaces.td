@@ -76,7 +76,10 @@ class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
   >;
 }
 
-def BlockArgHostEvalClause : BlockArgOpenMPClause<"host_eval", "HostEval", ?>;
+def BlockArgHasDeviceAddrClause : BlockArgOpenMPClause<
+    "has_device_addr", "HasDeviceAddr", ?>;
+def BlockArgHostEvalClause : BlockArgOpenMPClause<
+    "host_eval", "HostEval", BlockArgHasDeviceAddrClause>;
 def BlockArgInReductionClause : BlockArgOpenMPClause<
     "in_reduction", "InReduction", BlockArgHostEvalClause>;
 def BlockArgMapClause : BlockArgOpenMPClause<
@@ -100,10 +103,10 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
 
   let cppNamespace = "::mlir::omp";
 
-  defvar clauses = [ BlockArgHostEvalClause, BlockArgInReductionClause,
-    BlockArgMapClause, BlockArgPrivateClause, BlockArgReductionClause,
-    BlockArgTaskReductionClause, BlockArgUseDeviceAddrClause,
-    BlockArgUseDevicePtrClause ];
+  defvar clauses = [ BlockArgHasDeviceAddrClause, BlockArgHostEvalClause,
+    BlockArgInReductionClause, BlockArgMapClause, BlockArgPrivateClause,
+    BlockArgReductionClause, BlockArgTaskReductionClause,
+    BlockArgUseDeviceAddrClause, BlockArgUseDevicePtrClause ];
 
   let methods = !listconcat(
     !foreach(clause, clauses, clause.numArgsMethod),

@@ -71,8 +71,9 @@ public:
   bool processFinal(lower::StatementContext &stmtCtx,
                     mlir::omp::FinalClauseOps &result) const;
   bool processHasDeviceAddr(
+      lower::StatementContext &stmtCtx,
       mlir::omp::HasDeviceAddrClauseOps &result,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceSyms) const;
   bool processHint(mlir::omp::HintClauseOps &result) const;
   bool processInclusive(mlir::Location currentLocation,
                         mlir::omp::InclusiveClauseOps &result) const;
