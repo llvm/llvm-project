@@ -136,7 +136,7 @@ namespace MultiDeclarator {
 
 namespace Template {
   int n[3];
-  // FIXME: There's no actual rule against this...
+  // Structured binding template is not allowed.
   template<typename T> auto [a, b, c] = n; // expected-error {{decomposition declaration template not supported}}
 }
 
