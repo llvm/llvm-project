@@ -164,6 +164,18 @@ namespace rdar13296133 {
   }
 } // namespace rdar13296133
 
+void* ret_cpp_static_cast(short x) {
+  return static_cast<void*>(&x); // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory}}
+}
+
+int* ret_cpp_reinterpret_cast(double x) {
+  return reinterpret_cast<int*>(&x); // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack me}}
+}
+
+int* ret_cpp_const_cast(const int x) {
+  return const_cast<int*>(&x);  // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory}}
+}
+
 void write_stack_address_to(char **q) {
   char local;
   *q = &local;
@@ -937,6 +949,39 @@ void top_malloc_no_crash_fn() {
 }
 } // namespace alloca_region_pointer
 
+// These all warn with -Wreturn-stack-address also
+namespace return_address_of_true_positives {
+int* ret_local_addrOf() {
+  int x = 1;
+  return &*&x; // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory associated with local variable 'x' returned}}
+}
+
+int* ret_local_addrOf_paren() {
+  int x = 1;
+  return (&(*(&x))); // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory associated with local variable 'x' returned}}
+}
+
+int* ret_local_addrOf_ptr_arith() {
+  int x = 1;
+  return &*(&x+1); // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory associated with local variable 'x' returned}}
+}
+
+int* ret_local_addrOf_ptr_arith2() {
+  int x = 1;
+  return &*(&x+1); // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory associated with local variable 'x' returned}}
+}
+
+int* ret_local_field() {
+  struct { int x; } a;
+  return &a.x; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}} expected-warning {{address of stack memory associated with local variable 'a' returned}}
+}
+
+int& ret_local_field_ref() {
+  struct { int x; } a;
+  return a.x; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}} expected-warning {{reference to stack memory associated with local variable 'a' returned}}
+}
+} //namespace return_address_of_true_positives
+
 namespace true_negatives_return_expressions {
 struct Container { int *x; };
 
@@ -1007,5 +1052,14 @@ bool return_symbolic_exxpression() {
   int *a = make_ptr();
   int *b = make_ptr();
   return a < b; // no-warning
+}
+
+int *return_static() {
+  static int x = 0;
+  return &x; // no-warning
+}
+
+int* return_cpp_reinterpret_cast_no_warning(long x) {
+  return reinterpret_cast<int*>(x); // no-warning
 }
 }
