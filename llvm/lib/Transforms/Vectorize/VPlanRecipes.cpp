@@ -295,9 +295,7 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
 
   // If BinOp is a negation, use the side effect of match to assign the actual
   // binary operation to BinOp
-  match(BinOp, m_Binary<Instruction::Sub>(
-                   m_SpecificInt(0),
-                   m_VPValue(BinOp)));
+  match(BinOp, m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(BinOp)));
   VPRecipeBase *BinOpR = BinOp->getDefiningRecipe();
 
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(BinOpR))
