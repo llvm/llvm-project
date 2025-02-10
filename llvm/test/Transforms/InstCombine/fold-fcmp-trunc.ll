@@ -115,7 +115,7 @@ define i1 @fcmp_trunc_with_fast(double %0) {
 define <4 x i1> @fcmp_vec_trunc(<4 x double> %0) {
 ; CHECK-LABEL: define <4 x i1> @fcmp_vec_trunc(
 ; CHECK-SAME: <4 x double> [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <4 x double> [[TMP0]], <double 0x3FEFFFFFF0000000, double 0x3FEFFFFFF0000000, double 0x3FEFFFFFF0000000, double 0x3FEFFFFFF0000000>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <4 x double> [[TMP0]], splat (double 0x3FEFFFFFF0000000)
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %vec = fptrunc <4 x double> %0 to <4 x float>
@@ -126,7 +126,7 @@ define <4 x i1> @fcmp_vec_trunc(<4 x double> %0) {
 define <1 x i1> @fcmp_vec_trunc_scalar(<1 x double> %0) {
 ; CHECK-LABEL: define <1 x i1> @fcmp_vec_trunc_scalar(
 ; CHECK-SAME: <1 x double> [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast olt <1 x double> [[TMP0]], <double 0x3FEFFFFFF0000000>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast olt <1 x double> [[TMP0]], splat (double 0x3FEFFFFFF0000000)
 ; CHECK-NEXT:    ret <1 x i1> [[CMP]]
 ;
   %vec = fptrunc <1 x double> %0 to <1 x float>
