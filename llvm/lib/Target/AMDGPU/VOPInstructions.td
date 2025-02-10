@@ -399,7 +399,7 @@ class VOP3a_BITOP3_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
   let Inst{14} = !if(p.HasOpSel, src0_modifiers{3}, 0);
 }
 
-class VOP3a_ScaleSel_gfx1250<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
+class VOP3a_ScaleSel_gfx1250_gfx13<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
   bits<3> scale_sel;
 
   let Inst{13-11} = scale_sel;
@@ -2034,7 +2034,15 @@ multiclass VOP3Only_ScaleSel_Real_gfx1250<bits<10> op> {
   defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
   def _e64_gfx1250 :
     VOP3_Real_Gen<ps, GFX1250Gen>,
-    VOP3a_ScaleSel_gfx1250<op, ps.Pfl>;
+    VOP3a_ScaleSel_gfx1250_gfx13<op, ps.Pfl>;
+}
+
+multiclass VOP3Only_ScaleSel_Real_gfx1250_gfx13<bits<10> preGFX13, bits<10> op = preGFX13>
+  : VOP3Only_ScaleSel_Real_gfx1250<preGFX13> {
+  defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
+  def _e64_gfx13 :
+    VOP3_Real_Gen<ps, GFX13Gen>,
+    VOP3a_ScaleSel_gfx1250_gfx13<op, ps.Pfl>;
 }
 
 //===----------------------------------------------------------------------===//

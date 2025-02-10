@@ -1417,6 +1417,114 @@ v_cvt_sr_bf8_f32 v10, s2, v5
 v_cvt_sr_bf8_f32 v5, -|v255|, v4
 // GFX13: encoding: [0x05,0x01,0x38,0xd7,0xff,0x09,0x02,0x20]
 
+v_cvt_scale_pk8_f16_fp8 v[10:13], v[20:21], v8
+// W32: v_cvt_scale_pk8_f16_fp8 v[10:13], v[20:21], v8 ; encoding: [0x0a,0x00,0xbe,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f16_fp8 v[10:13], v[20:21], 0xcf00
+// W32: v_cvt_scale_pk8_f16_fp8 v[10:13], v[20:21], 0xcf00 ; encoding: [0x0a,0x00,0xbe,0xd6,0x14,0xff,0x01,0x00,0x00,0xcf,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f16_fp8 v[10:13], v[20:21], v8 scale_sel:5
+// W32: v_cvt_scale_pk8_f16_fp8 v[10:13], v[20:21], v8 scale_sel:5 ; encoding: [0x0a,0x28,0xbe,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_bf16_fp8 v[10:13], v[20:21], v8
+// W32: v_cvt_scale_pk8_bf16_fp8 v[10:13], v[20:21], v8 ; encoding: [0x0a,0x00,0xbb,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_bf16_fp8 v[10:13], v[20:21], 0xcf00
+// W32: v_cvt_scale_pk8_bf16_fp8 v[10:13], v[20:21], 0xcf00 ; encoding: [0x0a,0x00,0xbb,0xd6,0x14,0xff,0x01,0x00,0x00,0xcf,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_bf16_fp8 v[10:13], v[20:21], v8 scale_sel:6
+// W32: v_cvt_scale_pk8_bf16_fp8 v[10:13], v[20:21], v8 scale_sel:6 ; encoding: [0x0a,0x30,0xbb,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f16_bf8 v[10:13], v[20:21], v8
+// W32: v_cvt_scale_pk8_f16_bf8 v[10:13], v[20:21], v8 ; encoding: [0x0a,0x00,0xbc,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f16_bf8 v[10:13], v[20:21], 0xcf00
+// W32: v_cvt_scale_pk8_f16_bf8 v[10:13], v[20:21], 0xcf00 ; encoding: [0x0a,0x00,0xbc,0xd6,0x14,0xff,0x01,0x00,0x00,0xcf,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f16_bf8 v[10:13], v[20:21], v8 scale_sel:7
+// W32: v_cvt_scale_pk8_f16_bf8 v[10:13], v[20:21], v8 scale_sel:7 ; encoding: [0x0a,0x38,0xbc,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_bf16_bf8 v[10:13], v[20:21], v8
+// W32: v_cvt_scale_pk8_bf16_bf8 v[10:13], v[20:21], v8 ; encoding: [0x0a,0x00,0xb9,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_bf16_bf8 v[10:13], v[20:21], 0xcf00
+// W32: v_cvt_scale_pk8_bf16_bf8 v[10:13], v[20:21], 0xcf00 ; encoding: [0x0a,0x00,0xb9,0xd6,0x14,0xff,0x01,0x00,0x00,0xcf,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_bf16_bf8 v[10:13], v[20:21], v8 scale_sel:1
+// W32: v_cvt_scale_pk8_bf16_bf8 v[10:13], v[20:21], v8 scale_sel:1 ; encoding: [0x0a,0x08,0xb9,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_bf16_fp4 v[10:13], v20, v8
+// W32: v_cvt_scale_pk8_bf16_fp4 v[10:13], v20, v8 ; encoding: [0x0a,0x00,0xba,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_bf16_fp4 v[10:13], v20, 0xcf00
+// W32: v_cvt_scale_pk8_bf16_fp4 v[10:13], v20, 0xcf00 ; encoding: [0x0a,0x00,0xba,0xd6,0x14,0xff,0x01,0x00,0x00,0xcf,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_bf16_fp4 v[10:13], v20, v8 scale_sel:2
+// W32: v_cvt_scale_pk8_bf16_fp4 v[10:13], v20, v8 scale_sel:2 ; encoding: [0x0a,0x10,0xba,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f16_fp4 v[10:13], v20, v8
+// W32: v_cvt_scale_pk8_f16_fp4 v[10:13], v20, v8 ; encoding: [0x0a,0x00,0xbd,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f16_fp4 v[10:13], v20, 0xcf00
+// W32: v_cvt_scale_pk8_f16_fp4 v[10:13], v20, 0xcf00 ; encoding: [0x0a,0x00,0xbd,0xd6,0x14,0xff,0x01,0x00,0x00,0xcf,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f16_fp4 v[10:13], v20, v8 scale_sel:3
+// W32: v_cvt_scale_pk8_f16_fp4 v[10:13], v20, v8 scale_sel:3 ; encoding: [0x0a,0x18,0xbd,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], v8
+// W32: v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], v8 ; encoding: [0x0a,0x00,0xc1,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], 0xcf00
+// W32: v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], 0xcf00 ; encoding: [0x0a,0x00,0xc1,0xd6,0x14,0xff,0x01,0x00,0x00,0xcf,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], v8 scale_sel:6
+// W32: v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], v8 scale_sel:6 ; encoding: [0x0a,0x30,0xc1,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f32_bf8 v[10:17], v[20:21], v8
+// W32: v_cvt_scale_pk8_f32_bf8 v[10:17], v[20:21], v8 ; encoding: [0x0a,0x00,0xbf,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f32_bf8 v[10:17], v[20:21], 0xcf00
+// W32: v_cvt_scale_pk8_f32_bf8 v[10:17], v[20:21], 0xcf00 ; encoding: [0x0a,0x00,0xbf,0xd6,0x14,0xff,0x01,0x00,0x00,0xcf,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f32_bf8 v[10:17], v[20:21], v8 scale_sel:7
+// W32: v_cvt_scale_pk8_f32_bf8 v[10:17], v[20:21], v8 scale_sel:7 ; encoding: [0x0a,0x38,0xbf,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f32_fp4 v[10:17], v20, v8
+// W32: v_cvt_scale_pk8_f32_fp4 v[10:17], v20, v8 ; encoding: [0x0a,0x00,0xc0,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f32_fp4 v[10:17], v20, 0xcf00
+// W32: v_cvt_scale_pk8_f32_fp4 v[10:17], v20, 0xcf00 ; encoding: [0x0a,0x00,0xc0,0xd6,0x14,0xff,0x01,0x00,0x00,0xcf,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_cvt_scale_pk8_f32_fp4 v[10:17], v20, v8 scale_sel:1
+// W32: v_cvt_scale_pk8_f32_fp4 v[10:17], v20, v8 scale_sel:1 ; encoding: [0x0a,0x08,0xc0,0xd6,0x14,0x11,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
 v_cvt_pk_i16_f32 v5, v1, v2
 // GFX13: encoding: [0x05,0x00,0x21,0xd7,0x01,0x05,0x02,0x00]
 
