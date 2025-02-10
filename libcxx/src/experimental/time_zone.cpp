@@ -33,8 +33,11 @@
 #include <cctype>
 #include <chrono>
 #include <expected>
+#include <format>
+#include <functional>
 #include <map>
 #include <numeric>
+#include <optional>
 #include <ranges>
 
 #include "include/tzdb/time_zone_private.h"

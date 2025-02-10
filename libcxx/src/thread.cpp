@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__system_error/throw_system_error.h>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/timed_backoff_policy.h>
 #include <exception>
 #include <future>
 #include <limits>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #if __has_include(<unistd.h>)

@@ -6,7 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <chrono>
 #include <condition_variable>
+#include <limits>
+#include <ratio>
+#include <system_error>
 #include <thread>
 
 #if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)

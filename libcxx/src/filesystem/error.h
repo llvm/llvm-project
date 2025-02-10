@@ -11,7 +11,9 @@
 
 #include <__assert>
 #include <__config>
+#include <algorithm>
 #include <cerrno>
+#include <chrono>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdint>

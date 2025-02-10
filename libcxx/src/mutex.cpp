@@ -11,6 +11,7 @@
 #include <__utility/exception_guard.h>
 #include <limits>
 #include <mutex>
+#include <system_error>
 
 #include "include/atomic_support.h"
 
