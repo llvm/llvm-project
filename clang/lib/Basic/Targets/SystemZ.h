@@ -120,8 +120,9 @@ public:
                              TargetInfo::ConstraintInfo &info) const override;
 
   std::string convertConstraint(const char *&Constraint) const override {
-    if (strncmp(Constraint, "@cc", 3) == 0) {
-      std::string Converted = "{" + std::string(Constraint, 3) + "}";
+    if (llvm::StringRef(Constraint).starts_with("@cc")) {
+      std::string Converted =
+          std::string("{") + std::string("@cc") + std::string("}");
       Constraint += 3;
       return Converted;
     }
