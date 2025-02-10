@@ -63,7 +63,7 @@ void fn() {
 void Errs() {
   TwoFloats F1 = {}; // expected-error{{too few initializers in list for type 'TwoFloats' (expected 2 but found 0)}}
   TwoFloats F2 = {1}; // expected-error{{too few initializers in list for type 'TwoFloats' (expected 2 but found 1)}}
-  TwoFloats F3 = {1,2,3}; // expected-error{{too many initializers in list for type 'TwoFloats' (expected 2 but found 2)}}
+  TwoFloats F3 = {1,2,3}; // expected-error{{too many initializers in list for type 'TwoFloats' (expected 2 but found 3)}}
 
   int2 Something = {1.xxx}; // expected-error{{too many initializers in list for type 'int2' (aka 'vector<int, 2>') (expected 2 but found 0)}}
 }
