@@ -117,6 +117,7 @@ bool RegisterContextUnwind::IsUnwindPlanValidForCurrentPC(
 void RegisterContextUnwind::InitializeZerothFrame() {
   Log *log = GetLog(LLDBLog::Unwind);
   ExecutionContext exe_ctx(m_thread.shared_from_this());
+  UnwindLogMsg("Before GetRegisterContext"); 
   RegisterContextSP reg_ctx_sp = m_thread.GetRegisterContext();
 
   if (reg_ctx_sp.get() == nullptr) {
@@ -126,7 +127,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
   }
 
   addr_t current_pc = reg_ctx_sp->GetPC();
-
+UnwindLogMsg("frame does not have a pci %p",current_pc);
   if (current_pc == LLDB_INVALID_ADDRESS) {
     m_frame_type = eNotAValidFrame;
     UnwindLogMsg("frame does not have a pc");

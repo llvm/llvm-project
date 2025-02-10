@@ -699,6 +699,7 @@ StateType Process::WaitForProcessToStop(
     Process::HandleProcessStateChangedEvent(
         event_sp, stream, select_most_relevant, pop_process_io_handler);
 
+     LLDB_LOGF(log,"Process: before switch");
     switch (state) {
     case eStateCrashed:
     case eStateDetached:
@@ -732,6 +733,10 @@ bool Process::HandleProcessStateChangedEvent(
     bool &pop_process_io_handler) {
   const bool handle_pop = pop_process_io_handler;
 
+ Log *log = GetLog(LLDBLog::Process);                                          
+  LLDB_LOGF(log, "Process::%s() ",__FUNCTION__ );
+
+
   pop_process_io_handler = false;
   ProcessSP process_sp =
       Process::ProcessEventData::GetProcessFromEvent(event_sp.get());
@@ -744,6 +749,7 @@ bool Process::HandleProcessStateChangedEvent(
   if (event_state == eStateInvalid)
     return false;
 
+  LLDB_LOGF(log, "Process::%s() event_state  %d ",__FUNCTION__,event_state );
   switch (event_state) {
   case eStateInvalid:
   case eStateUnloaded:
@@ -1154,12 +1160,14 @@ bool Process::UpdateThreadList(ThreadList &old_thread_list,
 }
 
 void Process::UpdateThreadListIfNeeded() {
+    Log *log = GetLog(LLDBLog::Process);
   const uint32_t stop_id = GetStopID();
   if (m_thread_list.GetSize(false) == 0 ||
       stop_id != m_thread_list.GetStopID()) {
     bool clear_unused_threads = true;
     const StateType state = GetPrivateState();
     if (StateIsStoppedState(state, true)) {
+    LLDB_LOGF(log," Process::UpdateThreadListIfNeeded(  %d",__LINE__);
       std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
       m_thread_list.SetStopID(stop_id);
 
@@ -1172,6 +1180,7 @@ void Process::UpdateThreadListIfNeeded() {
       // Always update the thread list with the protocol specific thread list,
       // but only update if "true" is returned
       if (UpdateThreadList(m_thread_list_real, real_thread_list)) {
+    LLDB_LOGF(log," Process::UpdateThreadListIfNeeded(  %d",__LINE__);
         // Don't call into the OperatingSystem to update the thread list if we
         // are shutting down, since that may call back into the SBAPI's,
         // requiring the API lock which is already held by whoever is shutting
@@ -1214,6 +1223,7 @@ void Process::UpdateThreadListIfNeeded() {
         } else {
           // No OS plug-in, the new thread list is the same as the real thread
           // list.
+    LLDB_LOGF(log," Process::UpdateThreadListIfNeeded(  %d",__LINE__);
           new_thread_list = real_thread_list;
         }
 
@@ -1236,6 +1246,7 @@ void Process::UpdateThreadListIfNeeded() {
       // So any remaining threads are OS Plugin threads, and those we want to
       // preserve in case they show up again.
       m_thread_plans.Update(m_thread_list, clear_unused_threads);
+    LLDB_LOGF(log," Process::UpdateThreadListIfNeeded(  %d",__LINE__);
     }
   }
 }
@@ -3712,7 +3723,8 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
       // It makes no sense to ask "ShouldStop" if we've already been
       // restarted... Asking the thread list is also not likely to go well,
       // since we are running again. So in that case just report the event.
-
+    
+      LLDB_LOGF(log, "Process:: !was_restarted %d ", was_restarted);
       if (!was_restarted)
         should_resume = !m_thread_list.ShouldStop(event_ptr);
 

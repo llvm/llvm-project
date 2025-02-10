@@ -16,7 +16,8 @@
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UUID.h"
-
+#include "lldb/Utility/LLDBLog.h"                                               
+#include "lldb/Utility/Log.h" 
 #include "llvm/Support/Chrono.h"
 
 #include <mutex>
@@ -47,6 +48,7 @@ public:
     llvm::SmallString<256> path_with_object;
     file_spec.GetPath(path_with_object);
     if (strstr(path_with_object.c_str(), "(") != nullptr) {
+        LLDB_LOGF(GetLog(LLDBLog::Object), "ModuleSpec : %d %s",__LINE__,path_with_object.c_str());
       char *part;
       char *str = (char *)path_with_object.c_str();
       part = strtok(str, "()");
@@ -57,7 +59,10 @@ public:
       m_object_name = ConstString(part);
       m_file = FileSpec(file_name);
       m_object_size = FileSystem::Instance().GetByteSize(m_file);
+        LLDB_LOGF(GetLog(LLDBLog::Object), "ModuleSpec file & obj : %d %s %s",__LINE__,file_spec.GetFilename().AsCString(),m_object_name.AsCString());
+        LLDB_LOGF(GetLog(LLDBLog::Object), "ModuleSpec FULL path : %d %s ",__LINE__,file_spec.GetPath().c_str());
     } else {
+        LLDB_LOGF(GetLog(LLDBLog::Object), "ModuleSpec : %d %s",__LINE__,file_spec.GetFilename().AsCString());
       m_file = file_spec;
       m_object_size = FileSystem::Instance().GetByteSize(file_spec);
     }

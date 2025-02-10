@@ -2285,10 +2285,11 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
 
 ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
                                    bool notify, Status *error_ptr) {
+  Log *log = GetLog(LLDBLog::Object); 
   ModuleSP module_sp;
-
+  LLDB_LOGF(log,"GetOrCreateModule %d",__LINE__);
   Status error;
-
+LLDB_LOGF(log,"module_sp dis %s",orig_module_spec.GetFileSpec().GetPath().c_str());
   // Apply any remappings specified in target.object-map:
   ModuleSpec module_spec(orig_module_spec);
   PathMappingList &obj_mapping = GetObjectPathMap();
@@ -2306,6 +2307,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
     module_sp = m_images.FindFirstModule(module_spec);
 
   if (!module_sp) {
+  LLDB_LOGF(log,"GetOrCreateModule %d",__LINE__);
     llvm::SmallVector<ModuleSP, 1>
         old_modules; // This will get filled in if we have a new version
                      // of the library
@@ -2339,6 +2341,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
     //      module_spec.
 
     if (!module_sp) {
+  LLDB_LOGF(log,"GetOrCreateModule %d",__LINE__);
       // If there are image search path entries, try to use them to acquire a
       // suitable image.
       if (m_image_search_paths.GetSize()) {
@@ -2376,6 +2379,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         // The platform is responsible for finding and caching an appropriate
         // module in the shared module cache.
         if (m_platform_sp) {
+  LLDB_LOGF(log,"GetOrCreateModule %d",__LINE__);
           error = m_platform_sp->GetSharedModule(
               module_spec, m_process_sp.get(), module_sp, &search_paths,
               &old_modules, &did_create_module);
@@ -2389,6 +2393,8 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
     // there wasn't an equivalent module in the list already, and if there was,
     // let's remove it.
     if (module_sp) {
+  LLDB_LOGF(log,"GetOrCreateModule %d",__LINE__);
+  LLDB_LOGF(log," File Name: %s",module_spec.GetFileSpec().GetFilename().AsCString());
       ObjectFile *objfile = module_sp->GetObjectFile();
       if (objfile) {
         switch (objfile->GetType()) {
@@ -2407,6 +2413,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
             *error_ptr = Status::FromErrorString(
                 "debug info files aren't valid target "
                 "modules, please specify an executable");
+  LLDB_LOGF(log,"GetOrCreateModule %d",__LINE__);
           return ModuleSP();
         case ObjectFile::eTypeStubLibrary: /// A library that can be linked
                                            /// against but not used for
@@ -2422,6 +2429,8 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
                 "unsupported file type, please specify an executable");
           return ModuleSP();
         }
+
+
         // GetSharedModule is not guaranteed to find the old shared module, for
         // instance in the common case where you pass in the UUID, it is only
         // going to find the one module matching the UUID.  In fact, it has no
@@ -2437,6 +2446,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
           ModuleSpec module_spec_copy(module_spec.GetFileSpec());
           module_spec_copy.GetUUID().Clear();
 
+  LLDB_LOGF(log,"GetOrCreateModule %d",__LINE__);
           ModuleList found_modules;
           m_images.FindModules(module_spec_copy, found_modules);
           found_modules.ForEach([&](const ModuleSP &found_module) -> bool {
@@ -2458,6 +2468,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         for (ModuleSP &old_module_sp : old_modules) {
           if (m_images.GetIndexForModule(old_module_sp.get()) !=
               LLDB_INVALID_INDEX32) {
+  LLDB_LOGF(log,"FIXME GetOrCreateModule %d",__LINE__);
             if (replaced_modules.empty())
               m_images.ReplaceModule(old_module_sp, module_sp);
             else

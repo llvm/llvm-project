@@ -14,6 +14,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/VMRange.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 #include <cinttypes>
 #include <limits>
@@ -259,9 +261,16 @@ bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr,
   }
   so_addr.SetOffset(offset);
   so_addr.SetSection(const_cast<Section *>(this)->shared_from_this());
-
-  // Ensure that there are no orphaned (i.e., moduleless) sections.
-  assert(GetModule().get());
+    Log *log = GetLog(LLDBLog::DynamicLoader);
+    //LLDB_LOGF(log,"Section::ResolveContainedAddress %s",GetModule().GetName());
+  
+    //llvm::Module *module = GetModule();
+    lldb::ModuleSP module = GetModule();
+    //LLDB_LOGF(log,"Section::ResolveContainedAddress %s",module->GetSpecificationDescription().c_str());
+    if(module.get() == NULL)
+        LLDB_LOGF(log,"Section::issue with"); 
+    // Ensure that there are no orphaned (i.e., moduleless) sections.
+  // assert(GetModule().get());
   return true;
 }
 

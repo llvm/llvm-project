@@ -21,9 +21,11 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
-
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
+
+#include "lldb/Utility/LLDBLog.h"                                               
+#include "lldb/Utility/Log.h"     
 
 #include <memory>
 
@@ -291,7 +293,7 @@ void ThreadGDBRemote::Dump(Log *log, uint32_t index) {}
 
 bool ThreadGDBRemote::ShouldStop(bool &step_more) { return true; }
 lldb::RegisterContextSP ThreadGDBRemote::GetRegisterContext() {
-  if (!m_reg_context_sp)
+  if (!m_reg_context_sp) 
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   return m_reg_context_sp;
 }

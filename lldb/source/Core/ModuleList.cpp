@@ -251,19 +251,42 @@ void ModuleList::Append(const ModuleSP &module_sp, bool notify) {
 void ModuleList::ReplaceEquivalent(
     const ModuleSP &module_sp,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules) {
+Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
+    LLDB_LOGF(log,"ReplaceEquivalent module_sp %s",module_sp->GetObjectName().AsCString());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
 
+    //llvm::SmallString<256> path_with_object;
+
+    LLDB_LOGF(log," Before ReplaceEquivalent module_sp dis %s",module_sp->GetFileSpec().GetPath().c_str());
+   
+    llvm::SmallString<128> path;  
+    module_sp->GetFileSpec().GetPath(path);
+    llvm::SmallString<128> obj_name ;
+    obj_name = module_sp->GetObjectName().AsCString();
+
+    llvm::SmallString<256> full_path;
+    full_path = llvm::Twine(path + llvm::Twine("(") + llvm::Twine(obj_name) + llvm::Twine(")")).str();
+    //std::string full_path = module_sp->GetFileSpec().GetPath().c_str() + "("
+    //    +  module_sp->GetObjectName().AsCString() + ")";
+
+    //module_sp->GetFileSpec().SetPath(full_path);
+
+
+    LLDB_LOGF(log,"After ReplaceEquivalent module_sp dis %s",module_sp->GetFileSpec().GetPath().c_str());
     // First remove any equivalent modules. Equivalent modules are modules
     // whose path, platform path and architecture match.
     ModuleSpec equivalent_module_spec(module_sp->GetFileSpec(),
                                       module_sp->GetArchitecture());
+        LLDB_LOGF(log,"ReplaceEquivalent equivalent.module_sp %s",equivalent_module_spec.GetObjectName().AsCString());
     equivalent_module_spec.GetPlatformFileSpec() =
         module_sp->GetPlatformFileSpec();
 
     size_t idx = 0;
     while (idx < m_modules.size()) {
+        LLDB_LOGF(log,"ReplaceEquivalent index : %d",idx);
       ModuleSP test_module_sp(m_modules[idx]);
+    LLDB_LOGF(log,"ReplaceEquivalent test_module_sp : %s",test_module_sp->GetObjectName().AsCString());
       if (test_module_sp->MatchesModuleSpec(equivalent_module_spec)) {
         if (old_modules)
           old_modules->push_back(test_module_sp);
@@ -795,6 +818,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
       shared_module_list.m_modules_mutex);
   char path[PATH_MAX];
 
+          Log *log = GetLog(LLDBLog::Modules);
   Status error;
 
   module_sp.reset();
@@ -810,10 +834,12 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   // function is actively working on it by doing an extra lock on the global
   // mutex list.
   if (!always_create) {
+      LLDB_LOGF(log,"GetSharedModule %d",__LINE__);
     ModuleList matching_module_list;
     shared_module_list.FindModules(module_spec, matching_module_list);
     const size_t num_matching_modules = matching_module_list.GetSize();
 
+      LLDB_LOGF(log,"GetSharedModule %d %d",__LINE__,num_matching_modules);
     if (num_matching_modules > 0) {
       for (size_t module_idx = 0; module_idx < num_matching_modules;
            ++module_idx) {
@@ -821,10 +847,9 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
 
         // Make sure the file for the module hasn't been modified
         if (module_sp->FileHasChanged()) {
-          if (old_modules)
+          if (old_modules) 
             old_modules->push_back(module_sp);
-
-          Log *log = GetLog(LLDBLog::Modules);
+          
           if (log != nullptr)
             LLDB_LOGF(
                 log, "%p '%s' module changed: removing from global module list",
@@ -850,9 +875,11 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   // valid file path with an architecture that might not be in that file. By
   // getting the object file we can guarantee that the architecture matches
   if (module_sp->GetObjectFile()) {
+      LLDB_LOGF(log,"GetSharedModule %d",__LINE__);
     // If we get in here we got the correct arch, now we just need to verify
     // the UUID if one was given
     if (uuid_ptr && *uuid_ptr != module_sp->GetUUID()) {
+      LLDB_LOGF(log,"GetSharedModule %d",__LINE__);
       module_sp.reset();
     } else {
       if (module_sp->GetObjectFile() &&
@@ -863,7 +890,10 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
         if (did_create_ptr) {
           *did_create_ptr = true;
         }
-
+      if(module_sp)
+          LLDB_LOGF(log," module File Name: %s",module_sp->GetFileSpec().GetFilename().AsCString());
+      if(old_modules)
+            LLDB_LOGF(log,"GetSharedModule %d",__LINE__);
         shared_module_list.ReplaceEquivalent(module_sp, old_modules);
         return error;
       }
@@ -901,6 +931,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
             if (did_create_ptr)
               *did_create_ptr = true;
 
+      LLDB_LOGF(log,"GetSharedModule %d",__LINE__);
             shared_module_list.ReplaceEquivalent(module_sp, old_modules);
             return Status();
           }
@@ -969,6 +1000,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
     if (!matching_module_list.IsEmpty()) {
       module_sp = matching_module_list.GetModuleAtIndex(0);
 
+      LLDB_LOGF(log,"GetSharedModule %d",__LINE__);
       // If we didn't have a UUID in mind when looking for the object file,
       // then we should make sure the modification time hasn't changed!
       if (platform_module_spec.GetUUIDPtr() == nullptr) {
@@ -976,6 +1008,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
             located_binary_modulespec.GetFileSpec());
         if (file_spec_mod_time != llvm::sys::TimePoint<>()) {
           if (file_spec_mod_time != module_sp->GetModificationTime()) {
+      LLDB_LOGF(log,"GetSharedModule %d",__LINE__);
             if (old_modules)
               old_modules->push_back(module_sp);
             shared_module_list.Remove(module_sp);
@@ -986,6 +1019,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
     }
 
     if (!module_sp) {
+      LLDB_LOGF(log,"GetSharedModule %d",__LINE__);
       module_sp = std::make_shared<Module>(platform_module_spec);
       // Make sure there are a module and an object file since we can specify a
       // valid file path with an architecture that might not be in that file.
@@ -999,6 +1033,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
           if (did_create_ptr)
             *did_create_ptr = true;
 
+      LLDB_LOGF(log,"GetSharedModule %d",__LINE__);
           shared_module_list.ReplaceEquivalent(module_sp, old_modules);
         }
       } else {

@@ -226,7 +226,7 @@ bool ThreadList::ShouldStop(Event *event_ptr) {
   // Running events should never stop, obviously...
 
   Log *log = GetLog(LLDBLog::Step);
-
+  LLDB_LOGF(log,"ThreadList::ShouldStop");
   // The ShouldStop method of the threads can do a whole lot of work, figuring
   // out whether the thread plan conditions are met.  So we don't want to keep
   // the ThreadList locked the whole time we are doing this.

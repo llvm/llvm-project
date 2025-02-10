@@ -354,7 +354,7 @@ bool ObjectFileXCOFF::SetLoadAddress(Target &target, lldb::addr_t value,
 
 bool ObjectFileXCOFF::SetLoadAddressByType(Target &target, lldb::addr_t value,
                                    bool value_is_offset, int type_id) {
-  bool changed = false;
+    bool changed = false;
   ModuleSP module_sp = GetModule();
   if (module_sp) {
     size_t num_loaded_sections = 0;
@@ -362,7 +362,6 @@ bool ObjectFileXCOFF::SetLoadAddressByType(Target &target, lldb::addr_t value,
     if (section_list) {
       const size_t num_sections = section_list->GetSize();
       size_t sect_idx = 0;
-
       for (sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
         // Iterate through the object file sections to find all of the sections
         // that have SHF_ALLOC in their flag bits.

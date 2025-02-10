@@ -1535,31 +1535,40 @@ bool Module::SetLoadAddressByType(Target &target, lldb::addr_t value,
 bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
   const UUID &uuid = module_ref.GetUUID();
 
+Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules)); 
   if (uuid.IsValid()) {
     // If the UUID matches, then nothing more needs to match...
     return (uuid == GetUUID());
   }
-
+LLDB_LOGF(log,"MatchesModuleSpec %d",__LINE__);
   const FileSpec &file_spec = module_ref.GetFileSpec();
   if (!FileSpec::Match(file_spec, m_file) &&
       !FileSpec::Match(file_spec, m_platform_file))
     return false;
 
+LLDB_LOGF(log,"MatchesModuleSpec %d",__LINE__);
   const FileSpec &platform_file_spec = module_ref.GetPlatformFileSpec();
   if (!FileSpec::Match(platform_file_spec, GetPlatformFileSpec()))
     return false;
 
+LLDB_LOGF(log,"MatchesModuleSpec %d",__LINE__);
   const ArchSpec &arch = module_ref.GetArchitecture();
   if (arch.IsValid()) {
     if (!m_arch.IsCompatibleMatch(arch))
       return false;
   }
-
+  
+LLDB_LOGF(log,"MatchesModuleSpec %d",__LINE__);
   ConstString object_name = module_ref.GetObjectName();
+    LLDB_LOGF(log,"MatchesModuleSpec object_name %s",GetObjectName().AsCString());
+    LLDB_LOGF(log,"MatchesModuleSpec module_ref %s", module_ref.GetObjectName().AsCString());
+    LLDB_LOGF(log,"MatchesModuleSpec O Get des: %d",GetObjectOffset());
+    LLDB_LOGF(log,"MatchesModuleSpec m Get des: %d", module_ref.GetObjectOffset());
   if (object_name) {
     if (object_name != GetObjectName())
       return false;
   }
+    LLDB_LOGF(log,"MatchesModuleSpec return true ");
   return true;
 }
 

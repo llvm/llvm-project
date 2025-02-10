@@ -26,6 +26,7 @@
 #include <iostream>
 #include <fstream>
 #endif
+#include "/LLDB/hemang/lldb-for-aix/lldb/source/Plugins/DynamicLoader/POSIX-DYLD/DYLDRendezvous.h"
 
 /*#include "llvm/ADT/Triple.h"
 */
@@ -89,7 +90,10 @@ void DynamicLoaderAIXDYLD::OnLoadModule(lldb::ModuleSP module_sp,
 }
 
 void DynamicLoaderAIXDYLD::OnUnloadModule(lldb::addr_t module_addr) {
-  Address resolved_addr;
+    Log *log = GetLog(LLDBLog::DynamicLoader);                                    
+  LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s()", __FUNCTION__); 
+
+    Address resolved_addr;
   if (!m_process->GetTarget().ResolveLoadAddress(module_addr, resolved_addr))
     return;
 
@@ -150,7 +154,7 @@ void DynamicLoaderAIXDYLD::ResolveExecutableModule(
   ProcessInstanceInfo process_info;
   if (!m_process->GetProcessInfo(process_info)) {
     LLDB_LOGF(log,
-              "DynamicLoaderPOSIXDYLD::%s - failed to get process info for "
+              "DynamicLoaderAIXDYLD::%s - failed to get process info for "
               "pid %" PRIu64,
               __FUNCTION__, m_process->GetID());
     return;
@@ -201,15 +205,16 @@ void DynamicLoaderAIXDYLD::ResolveExecutableModule(
           true);
  
   LLDB_LOGF(
-      log, "DynamicLoaderPOSIXDYLD::%s - got executable by pid %" PRIu64 ": %s",
+      log, "DynamicLoaderAIXDYLD::%s - got executable by pid %" PRIu64 ": %s",
       __FUNCTION__, m_process->GetID(),
       process_info.GetExecutableFile().GetPath().c_str());
 
   ModuleSpec module_spec(process_info.GetExecutableFile(),
                          process_info.GetArchitecture());
+
   if (module_sp && module_sp->MatchesModuleSpec(module_spec))
     return;
-
+ LLDB_LOGF(log,"DynamicLoaderAIXDYLD::%s",__FUNCTION__);
   const auto executable_search_paths(Target::GetDefaultExecutableSearchPaths());
   auto error = platform_sp->ResolveExecutable(
       module_spec, module_sp,
@@ -222,6 +227,7 @@ void DynamicLoaderAIXDYLD::ResolveExecutableModule(
               "DynamicLoaderPOSIXDYLD::%s - failed to resolve executable "
               "with module spec \"%s\": %s",
               __FUNCTION__, stream.GetData(), error.AsCString());
+    
     return;
   }
 
@@ -229,14 +235,26 @@ void DynamicLoaderAIXDYLD::ResolveExecutableModule(
 }
 
 void DynamicLoaderAIXDYLD::DidAttach() {
-  Log *log = GetLog(LLDBLog::DynamicLoader);
+    Log *log = GetLog(LLDBLog::DynamicLoader);
   LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s()", __FUNCTION__);
 
   ModuleSP executable = GetTargetExecutable();
   ResolveExecutableModule(executable);
 
+  Module *exe_mod = m_process->GetTarget().GetExecutableModulePointer();
+  if (exe_mod) {
+      exe_mod->GetPlatformFileSpec();
+      LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s exe module executable path set",
+              __FUNCTION__);
+  } else {
+      LLDB_LOGF(log,
+              "DynamicLoaderAIXDYLD::%s cannot cache exe module path: null "
+              "executable module pointer",
+              __FUNCTION__);
+  }
+
   if (!executable.get())
-    return;
+      return;
   LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s()", __FUNCTION__);
 
   // Try to fetch the load address of the file from the process, since there
@@ -245,6 +263,7 @@ void DynamicLoaderAIXDYLD::DidAttach() {
   if (load_addr == LLDB_INVALID_ADDRESS)
     return;
 
+  LLDB_LOGF(log,"DidAttach load_addr 0x%p",load_addr);
   // Request the process base address.
   lldb::addr_t image_base = m_process->GetImageInfoAddress();
   if (image_base == load_addr)
@@ -253,6 +272,17 @@ void DynamicLoaderAIXDYLD::DidAttach() {
   // Rebase the process's modules if there is a mismatch.
   UpdateLoadedSections(executable, LLDB_INVALID_ADDRESS, load_addr, false);
 
+/*
+  DYLDRendezvous m_rendezvous(m_process);
+  if (!m_rendezvous.Resolve()) {
+    LLDB_LOGF(log,
+              "DynamicLoaderPOSIXDYLD::%s unable to resolve POSIX DYLD "
+              "rendezvous address",
+              __FUNCTION__);
+    return;
+  } */
+
+
   ModuleList module_list;
   module_list.Append(executable);
   m_process->GetTarget().ModulesDidLoad(module_list);
@@ -260,6 +290,7 @@ void DynamicLoaderAIXDYLD::DidAttach() {
   LLDB_LOG_ERROR(log, std::move(error), "failed to load modules: {0}");
 
 #if defined(_AIX)
+   LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s() 289", __FUNCTION__);
   // Get struct ld_xinfo (FIXME)
   struct ld_xinfo ldinfo[64];
   Status status = m_process->GetLDXINFO(&(ldinfo[0]));
@@ -281,8 +312,10 @@ void DynamicLoaderAIXDYLD::DidAttach() {
       } else {
         sprintf(pathWithMember, "%s", pathName);
       }
+       LLDB_LOGF(log, "DynamicLoaderAIXDYLD1::%s(), %s", __FUNCTION__,pathWithMember);
       FileSpec file(pathWithMember);
       ModuleSpec module_spec(file, m_process->GetTarget().GetArchitecture());
+      LLDB_LOGF(log,"After dis %s",module_spec.GetFileSpec().GetPath().c_str());
       if (ModuleSP module_sp = m_process->GetTarget().GetOrCreateModule(module_spec, true /* notify */)) {
         UpdateLoadedSectionsByType(module_sp, LLDB_INVALID_ADDRESS, (lldb::addr_t)ptr->ldinfo_textorg, false, 1);
         UpdateLoadedSectionsByType(module_sp, LLDB_INVALID_ADDRESS, (lldb::addr_t)ptr->ldinfo_dataorg, false, 2);
@@ -309,6 +342,7 @@ void DynamicLoaderAIXDYLD::DidLaunch() {
     return;
 
   lldb::addr_t load_addr = GetLoadAddress(executable);
+  LLDB_LOGF(log,"DidLaunch load_addr 0x%p",load_addr);
   if (load_addr != LLDB_INVALID_ADDRESS) {
     // Update the loaded sections so that the breakpoints can be resolved.
     UpdateLoadedSections(executable, LLDB_INVALID_ADDRESS, load_addr, false);

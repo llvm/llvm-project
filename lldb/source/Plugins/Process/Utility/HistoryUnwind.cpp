@@ -17,7 +17,8 @@
 #include "lldb/Target/Thread.h"
 
 #include <memory>
-
+#include "lldb/Utility/LLDBLog.h"                                               
+#include "lldb/Utility/Log.h" 
 using namespace lldb;
 using namespace lldb_private;
 
@@ -40,7 +41,9 @@ void HistoryUnwind::DoClear() {
 lldb::RegisterContextSP
 HistoryUnwind::DoCreateRegisterContextForFrame(StackFrame *frame) {
   RegisterContextSP rctx;
+      Log *log = GetLog(LLDBLog::Unwind);
   if (frame) {
+      //LLDB_LOGF(log,"Code Address %p",frame->GetFrameCodeAddress());
     addr_t pc = frame->GetFrameCodeAddress().GetLoadAddress(
         &frame->GetThread()->GetProcess()->GetTarget());
     if (pc != LLDB_INVALID_ADDRESS) {

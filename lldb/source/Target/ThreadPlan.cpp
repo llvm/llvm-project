@@ -43,6 +43,9 @@ Thread &ThreadPlan::GetThread() {
   if (m_thread)
     return *m_thread;
 
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  LLDB_LOGF(log, ":ThreadPlan:%s()", __FUNCTION__); 
+
   ThreadSP thread_sp = m_process.GetThreadList().FindThreadByID(m_tid);
   m_thread = thread_sp.get();
   return *m_thread;

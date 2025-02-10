@@ -205,6 +205,9 @@ const Address &StackFrame::GetFrameCodeAddress() {
                 m_frame_code_addr.GetOffset(), target_sp.get(),
                 AddressClass::eCode, allow_section_end)) {
           ModuleSP module_sp(m_frame_code_addr.GetModule());
+    Log *log = GetLog(LLDBLog::Unwind);
+          //LLDB_LOGF(log,"GetObjectName %s",module_sp->GetObjectName().GetString().c_str());
+          LLDB_LOGF(log,"GetObjectName");
           if (module_sp) {
             m_sc.module_sp = module_sp;
             m_flags.Set(eSymbolContextModule);
@@ -1156,6 +1159,8 @@ DWARFExpressionList *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
 }
 
 RegisterContextSP StackFrame::GetRegisterContext() {
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOGF(log,"GetRegisterContext"); 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_reg_context_sp) {
     ThreadSP thread_sp(GetThread());

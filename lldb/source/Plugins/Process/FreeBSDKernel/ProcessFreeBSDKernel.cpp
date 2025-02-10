@@ -9,7 +9,8 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/DynamicLoader.h"
-
+#include "lldb/Utility/LLDBLog.h"                                               
+#include "lldb/Utility/Log.h"
 #include "Plugins/DynamicLoader/FreeBSD-Kernel/DynamicLoaderFreeBSDKernel.h"
 #include "ProcessFreeBSDKernel.h"
 #include "ThreadFreeBSDKernel.h"
@@ -122,6 +123,9 @@ void ProcessFreeBSDKernel::RefreshStateAfterStop() {}
 
 bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
                                               ThreadList &new_thread_list) {
+
+  Log *log = GetLog(LLDBLog::Process); 
+  LLDB_LOGF(log,"ProcessFreeBSDKernel::DoUpdateThreadList");
   if (old_thread_list.GetSize(false) == 0) {
     // Make up the thread the first time this is called so we can set our one
     // and only core thread state up.
