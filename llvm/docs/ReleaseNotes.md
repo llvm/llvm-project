@@ -61,6 +61,9 @@ Changes to the LLVM IR
 Changes to LLVM infrastructure
 ------------------------------
 
+* Removed support for target intrinsics being defined in the target directories
+  themselves (i.e., the `TargetIntrinsicInfo` class).
+
 Changes to building LLVM
 ------------------------
 
