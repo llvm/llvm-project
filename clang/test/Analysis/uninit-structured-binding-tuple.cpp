@@ -525,7 +525,7 @@ void uninit_a(void) {
 
   auto [a, b] = u;
 
-  int x = a; // expected-warning{{Assigned value is garbage or undefined}}
+  int x = a; // expected-warning{{Assigned value is undefined and not meaningful}}
 }
 
 void uninit_b(void) {
@@ -533,7 +533,7 @@ void uninit_b(void) {
 
   auto [a, b] = u;
 
-  int x = b; // expected-warning{{Assigned value is garbage or undefined}}
+  int x = b; // expected-warning{{Assigned value is undefined and not meaningful}}
 }
 
 GENERATE_TUPLE_LIKE_STRUCT(UninitCall, int);

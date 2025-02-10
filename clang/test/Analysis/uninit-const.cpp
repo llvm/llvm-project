@@ -68,11 +68,11 @@ int& f6_1_sub(int &p) {
 
 void f6_1(void) {
   int t;               // expected-note{{'t' declared without an initial value}}
-  int p = f6_1_sub(t); //expected-warning {{Assigned value is garbage or undefined}}
+  int p = f6_1_sub(t); //expected-warning {{Assigned value is undefined and not meaningful}}
                        //expected-note@-1 {{Passing value via 1st parameter 'p'}}
                        //expected-note@-2 {{Calling 'f6_1_sub'}}
                        //expected-note@-3 {{Returning from 'f6_1_sub'}}
-                       //expected-note@-4 {{Assigned value is garbage or undefined}}
+                       //expected-note@-4 {{Assigned value is undefined and not meaningful}}
   int q = p;
   doStuff6(q);
 }

@@ -12,7 +12,7 @@ void a(void) {
 
   auto [i, j] = tst;
 
-  int x = i; // expected-warning{{Assigned value is garbage or undefined}}
+  int x = i; // expected-warning{{Assigned value is undefined and not meaningful}}
 }
 
 void b(void) {
@@ -22,7 +22,7 @@ void b(void) {
   auto [i, j] = tst;
 
   clang_analyzer_eval(i == 1); // expected-warning{{TRUE}}
-  int y = j;                   // expected-warning{{Assigned value is garbage or undefined}}
+  int y = j;                   // expected-warning{{Assigned value is undefined and not meaningful}}
 }
 
 void c(void) {
@@ -30,7 +30,7 @@ void c(void) {
 
   auto &[i, j] = tst;
 
-  int x = i; // expected-warning{{Assigned value is garbage or undefined}}
+  int x = i; // expected-warning{{Assigned value is undefined and not meaningful}}
 }
 
 void d(void) {
@@ -43,7 +43,7 @@ void d(void) {
   i = 2;
   clang_analyzer_eval(tst.a == 2); // expected-warning{{TRUE}}
 
-  int y = j; // expected-warning{{Assigned value is garbage or undefined}}
+  int y = j; // expected-warning{{Assigned value is undefined and not meaningful}}
 }
 
 void e(void) {
@@ -63,7 +63,7 @@ void f(void) {
 
   auto &&[i, j] = tst;
 
-  int x = i; // expected-warning{{Assigned value is garbage or undefined}}
+  int x = i; // expected-warning{{Assigned value is undefined and not meaningful}}
 }
 
 void g(void) {
@@ -73,7 +73,7 @@ void g(void) {
   auto &&[i, j] = tst;
 
   clang_analyzer_eval(i == 1); // expected-warning{{TRUE}}
-  int y = j;                   // expected-warning{{Assigned value is garbage or undefined}}
+  int y = j;                   // expected-warning{{Assigned value is undefined and not meaningful}}
 }
 
 struct s2 {

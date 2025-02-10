@@ -23,7 +23,7 @@ using namespace ento;
 namespace {
 class UndefinedAssignmentChecker
   : public Checker<check::Bind> {
-  const BugType BT{this, "Assigned value is garbage or undefined"};
+  const BugType BT{this, "Assigned value is undefined and not meaningful"};
 
 public:
   void checkBind(SVal location, SVal val, const Stmt *S,
@@ -57,8 +57,8 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
 
   while (StoreE) {
     if (const UnaryOperator *U = dyn_cast<UnaryOperator>(StoreE)) {
-      OS << "The expression is an uninitialized value. "
-            "The computed value will also be garbage";
+      OS << "The expression is an uninitialized value, so the computed value "
+         << "is not meaningful";
 
       ex = U->getSubExpr();
       break;
@@ -68,7 +68,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
       if (B->isCompoundAssignmentOp()) {
         if (C.getSVal(B->getLHS()).isUndef()) {
           OS << "The left expression of the compound assignment is an "
-                "uninitialized value. The computed value will also be garbage";
+             << "uninitialized value, so the computed value is not meaningful";
           ex = B->getLHS();
           break;
         }
@@ -88,8 +88,9 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
       if (CD->isImplicit()) {
         for (auto *I : CD->inits()) {
           if (I->getInit()->IgnoreImpCasts() == StoreE) {
-            OS << "Value assigned to field '" << I->getMember()->getName()
-               << "' in implicit constructor is garbage or undefined";
+            OS << "Value assigned to field '"
+               << I->getMember()->getName()
+               << "' in implicit constructor is undefined and not meaningful.";
             break;
           }
         }

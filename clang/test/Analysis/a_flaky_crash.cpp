@@ -14,7 +14,7 @@ bool bar(S);
 void foo() {
   int x;
   if (true && bar(S()))
-    ++x; // expected-warning{{The expression is an uninitialized value. The computed value will also be garbage}}
+    ++x; // expected-warning{{The expression is an uninitialized value, so the computed value is not meaningful}}
 }
 
 // 256 copies of the same run-line to make it crash more often when it breaks.
