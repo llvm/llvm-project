@@ -1310,7 +1310,7 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
 
   if (isPosition() || isDebugInstr() || isTerminator() ||
       mayRaiseFPException() || hasUnmodeledSideEffects() ||
-      isJumpTableDebugInfo())
+      isJumpTableDebugInfo() || isInlineAsm())
     return false;
 
   // See if this instruction does a load.  If so, we have to guarantee that the
