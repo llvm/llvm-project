@@ -1743,6 +1743,12 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
       TemplateArgumentList::CreateCopy(ast, args));
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
+
+  // FIXME: set to fixed value for now so it's not uninitialized.
+  // One way to determine StrictPackMatch would be
+  // Sema::CheckTemplateTemplateArgument.
+  class_template_specialization_decl->setStrictPackMatch(false);
+
   SetOwningModule(class_template_specialization_decl, owning_module);
   decl_ctx->addDecl(class_template_specialization_decl);
 
