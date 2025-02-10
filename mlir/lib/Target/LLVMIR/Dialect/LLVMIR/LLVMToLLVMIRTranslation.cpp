@@ -229,9 +229,10 @@ convertParameterAndResultAttrs(CallOpInterface callOp, llvm::CallBase *call,
                                LLVM::ModuleTranslation &moduleTranslation) {
   if (ArrayAttr argAttrsArray = callOp.getArgAttrsAttr()) {
     for (auto [argIdx, argAttrsAttr] : llvm::enumerate(argAttrsArray)) {
-      if (auto argAttrs = llvm::cast<DictionaryAttr>(argAttrsAttr)) {
+      if (auto argAttrs = cast<DictionaryAttr>(argAttrsAttr);
+          !argAttrs.empty()) {
         FailureOr<llvm::AttrBuilder> attrBuilder =
-            moduleTranslation.convertParameterAttrs(argAttrs);
+            moduleTranslation.convertParameterAttrs(callOp, argAttrs);
         if (failed(attrBuilder))
           return failure();
         call->addParamAttrs(argIdx, *attrBuilder);
@@ -240,10 +241,14 @@ convertParameterAndResultAttrs(CallOpInterface callOp, llvm::CallBase *call,
   }
 
   ArrayAttr resAttrsArray = callOp.getResAttrsAttr();
-  if (resAttrsArray && resAttrsArray.size() == 1) {
-    if (auto resAttrs = llvm::cast<DictionaryAttr>(resAttrsArray[0])) {
+  if (resAttrsArray && resAttrsArray.size() > 0) {
+    if (resAttrsArray.size() != 1)
+      return mlir::emitError(callOp.getLoc(),
+                             "llvm.func cannot have multiple results");
+    if (auto resAttrs = cast<DictionaryAttr>(resAttrsArray[0]);
+        !resAttrs.empty()) {
       FailureOr<llvm::AttrBuilder> attrBuilder =
-          moduleTranslation.convertParameterAttrs(resAttrs);
+          moduleTranslation.convertParameterAttrs(callOp, resAttrs);
       if (failed(attrBuilder))
         return failure();
       call->addRetAttrs(*attrBuilder);
