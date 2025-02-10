@@ -24,6 +24,20 @@ using namespace llvm::object;
 namespace {
 
 template <typename ELFT> BuildIDRef getBuildID(const ELFFile<ELFT> &Obj) {
+  auto Sections = cantFail(Obj.sections());
+  if (!Sections.empty()) {
+    for (const auto &S : Sections) {
+      if (S.sh_type != ELF::SHT_NOTE)
+        continue;
+      Error Err = Error::success();
+      for (auto N : Obj.notes(S, Err))
+        if (N.getType() == ELF::NT_GNU_BUILD_ID &&
+            N.getName() == ELF::ELF_NOTE_GNU)
+          return N.getDesc(S.sh_addralign);
+      consumeError(std::move(Err));
+    }
+  }
+
   auto PhdrsOrErr = Obj.program_headers();
   if (!PhdrsOrErr) {
     consumeError(PhdrsOrErr.takeError());
