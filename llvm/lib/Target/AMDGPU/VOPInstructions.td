@@ -26,6 +26,7 @@ class LetDummies {
   list<Register> Defs;
   list<Predicate> OtherPredicates;
   Predicate AssemblerPredicate;
+  Predicate WaveSizePredicate;
   string DecoderNamespace;
 }
 

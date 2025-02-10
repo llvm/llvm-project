@@ -595,6 +595,17 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
     def V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOPM_Pseudo<VOPM_PERMUTE_I32_I32_I32_I32,
                                                            [(set i32:$vdst, i32:$src2, (int_amdgcn_permute_pack_tensor_2src_b64 i32:$src0, i32:$src1, timm:$aux_data))]>;
   }
+
+  // If the lane select operand is uniform, select to readlane.
+  def BPermuteUniformLane
+      : PatFrag<(ops node:$src0, node:$src1),
+                (int_amdgcn_bpermute_b32 $src0, $src1),
+                [{ return !N->getOperand(2)->isDivergent(); }]>,
+        LetDummies {
+    let GISelPredicateCode = [{ return true; }];
+  }
+  def : GCNPat<(i32(BPermuteUniformLane i32:$src0, i32:$src1)),
+               (V_READLANE_B32 $src0, $src1)>;
 } // let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus
 
 multiclass VOPM_Conv_MultiPseudos_1x1_Iter<string ProfilePrefix> {

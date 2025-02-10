@@ -4900,8 +4900,16 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_convolve_i32_iu8_3x3:
     case Intrinsic::amdgcn_pdep_b32:
     case Intrinsic::amdgcn_pext_b32:
-    case Intrinsic::amdgcn_bpermute_b32:
       return getDefaultMappingVOP(MI);
+    case Intrinsic::amdgcn_bpermute_b32:
+      if (getRegBankID(MI.getOperand(3).getReg(), MRI) != AMDGPU::SGPRRegBankID)
+        return getDefaultMappingVOP(MI);
+      // If the lane select operand is uniform then the result will be uniform
+      // and we can select to readlane.
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 32);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 32);
+      break;
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_exp2:
     case Intrinsic::amdgcn_rcp:
