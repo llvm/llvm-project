@@ -1114,13 +1114,14 @@ SwiftLanguage::GetHardcodedSynthetics() {
       TypeAndOrName type_or_name;
       Address address;
       Value::ValueType value_type;
+      llvm::ArrayRef<uint8_t> local_buffer;
       // Try to find the dynamic type of the Swift type.
       // TODO: find a way to get the dyamic value type from the
       // command.
       if (swift_runtime->GetDynamicTypeAndAddress(
               *casted_to_swift.get(),
               lldb::DynamicValueType::eDynamicCanRunTarget, type_or_name,
-              address, value_type)) {
+              address, value_type, local_buffer)) {
         if (type_or_name.HasCompilerType()) {
           swift_type = type_or_name.GetCompilerType();
           // Cast it to the more specific type.
@@ -1268,8 +1269,9 @@ SwiftLanguage::GetPossibleFormattersMatches(
   TypeAndOrName type_and_or_name;
   Address address;
   Value::ValueType value_type;
+  llvm::ArrayRef<uint8_t> local_buffer;
   if (!runtime->GetDynamicTypeAndAddress(valobj, use_dynamic, type_and_or_name,
-                                         address, value_type))
+                                         address, value_type, local_buffer))
     return result;
   if (ConstString name = type_and_or_name.GetName())
     result.push_back(
