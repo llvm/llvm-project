@@ -31,7 +31,4 @@ entry:
 }
 
 attributes #0 = { "target-cpu"="pwr7" "target-features"="+allow-unaligned-fp-access" }
-
-; We explictly disable -power8-vector to avoid emitting those instructions
-; so we should not inline them into +power8-vector
 attributes #1 = { "target-cpu"="pwr7" "target-features"="-allow-unaligned-fp-access" }
