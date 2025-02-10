@@ -1,4 +1,4 @@
-// REQUIRE: aarch64
+// REQUIRES: aarch64
 
 // RUN: llvm-mc -filetype=obj -triple=aarch64-windows %s -o %t.arm64.obj
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %s -o %t.arm64ec.obj
