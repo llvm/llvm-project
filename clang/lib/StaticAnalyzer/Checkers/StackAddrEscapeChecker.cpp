@@ -297,9 +297,9 @@ private:
 /// likely not true leaks:
 /// 1. If returning a block data region that has stack memory space
 /// 2. If returning a constructed object that has stack memory space
-static SmallVector<const MemRegion *>
-FilterReturnExpressionLeaks(const SmallVectorImpl<const MemRegion *> &MaybeEscaped,
-                            CheckerContext &C, const Expr *RetE, SVal &RetVal) {
+static SmallVector<const MemRegion *> FilterReturnExpressionLeaks(
+    const SmallVectorImpl<const MemRegion *> &MaybeEscaped, CheckerContext &C,
+    const Expr *RetE, SVal &RetVal) {
 
   SmallVector<const MemRegion *> WillEscape;
 
