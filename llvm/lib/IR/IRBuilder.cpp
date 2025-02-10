@@ -93,11 +93,14 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
   ArrayRef<OperandBundleDef> ActualBundlesRef = OpBundles;
   SmallVector<OperandBundleDef, 2> ActualBundles;
 
+  bool doesCallAccessFPEnv = false;
   if (IsFPConstrained) {
     if (const auto *Func = dyn_cast<Function>(Callee)) {
       if (Intrinsic::ID ID = Func->getIntrinsicID()) {
-        if (IntrinsicInst::canAccessFPEnvironment(ID)) {
+        if (IntrinsicInst::canAccessFPEnvironment(ID) ||
+            Intrinsic::isConstrainedFPIntrinsic(ID)) {
           bool NeedRound = true, NeedExcept = true;
+          doesCallAccessFPEnv = true;
           for (const auto &Item : OpBundles) {
             if (NeedRound && Item.getTag() == "fpe.control")
               NeedRound = false;
@@ -116,6 +119,13 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
   }
 
   CallInst *CI = CallInst::Create(FTy, Callee, Args, ActualBundlesRef);
+  if (doesCallAccessFPEnv) {
+    MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
+    if (CI->getAttributes().hasFnAttr(Attribute::Memory))
+      ME |= CI->getAttributes().getMemoryEffects();
+    auto A = Attribute::getWithMemoryEffects(getContext(), ME);
+    CI->addFnAttr(A);
+  }
   if (IsFPConstrained)
     setConstrainedFPCallAttr(CI);
   if (isa<FPMathOperator>(CI))
