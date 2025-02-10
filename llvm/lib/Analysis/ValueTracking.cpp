@@ -801,6 +801,9 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
 
   if (auto *Cmp = dyn_cast<ICmpInst>(Cond))
     computeKnownBitsFromICmpCond(V, Cmp, Known, SQ, Invert);
+
+  if (Depth < MaxAnalysisRecursionDepth && match(Cond, m_Not(m_Value(A))))
+    computeKnownBitsFromCond(V, A, Known, Depth + 1, SQ, !Invert);
 }
 
 void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
@@ -4931,6 +4934,11 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
     computeKnownFPClassFromCond(V, A, Depth + 1, CondIsTrue, CxtI,
                                 KnownFromContext);
     computeKnownFPClassFromCond(V, B, Depth + 1, CondIsTrue, CxtI,
+                                KnownFromContext);
+    return;
+  }
+  if (Depth < MaxAnalysisRecursionDepth && match(Cond, m_Not(m_Value(A)))) {
+    computeKnownFPClassFromCond(V, A, Depth + 1, !CondIsTrue, CxtI,
                                 KnownFromContext);
     return;
   }
@@ -10272,6 +10280,9 @@ void llvm::findValuesAffectedByCondition(
                                                            m_Value()))) {
       // Handle patterns that computeKnownFPClass() support.
       AddAffected(A);
+    } else if (!IsAssume && match(V, m_Not(m_Value(X)))) {
+      // Assume is checked here to avoid issues with ephemeral values
+      Worklist.push_back(X);
     }
   }
 }
