@@ -11,7 +11,7 @@ class TerminalDimensionsTest(PExpectTest):
     @skipIfAsan
     def test(self):
         """Test that the lldb driver correctly reports the (PExpect) terminal dimension."""
-        self.launch(dimensions=(40, 40), timeout=1)
+        self.launch(dimensions=(40, 40))
 
         # Tests clear all the settings so we lose the launch values. Resize the
         # window to update the settings. These new values need to be different
