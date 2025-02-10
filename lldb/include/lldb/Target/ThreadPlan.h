@@ -313,6 +313,7 @@ public:
     eKindStepThrough,
     eKindStepUntil,
     eKindSingleThreadTimeout,
+    eKindWatchpointStepInstruction
   };
 
   virtual ~ThreadPlan();

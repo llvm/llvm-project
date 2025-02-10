@@ -17,8 +17,10 @@ namespace lldb_private {
 
 class ThreadPlanStepInstruction : public ThreadPlan {
 public:
-  ThreadPlanStepInstruction(Thread &thread, bool step_over, bool stop_others,
-                            Vote report_stop_vote, Vote report_run_vote);
+  ThreadPlanStepInstruction(
+      Thread &thread, bool step_over, bool stop_others, Vote report_stop_vote,
+      Vote report_run_vote,
+      ThreadPlanKind kind = ThreadPlan::eKindStepInstruction);
 
   ~ThreadPlanStepInstruction() override;
 
@@ -35,6 +37,8 @@ protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
 
   void SetUpState();
+
+  lldb::addr_t GetInstructionAddr() const { return m_instruction_addr; };
 
 private:
   friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepSingleInstruction(
