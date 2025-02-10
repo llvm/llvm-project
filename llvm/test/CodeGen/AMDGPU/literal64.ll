@@ -69,24 +69,8 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b64 v[4:5], v[0:1], off
-; GFX1250-NEXT:    s_mov_b32 s0, 0
-; GFX1250-NEXT:  .LBB6_1: ; %atomicrmw.start
-; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_f64_e32 v[2:3], 0x4063233333333333, v[4:5]
-; GFX1250-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
-; GFX1250-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; GFX1250-NEXT:    s_cbranch_execnz .LBB6_1
-; GFX1250-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], 0x4063233333333333
+; GFX1250-NEXT:    global_atomic_add_f64 v[0:1], v[2:3], off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1300-LABEL: v_mov_b64_double:
