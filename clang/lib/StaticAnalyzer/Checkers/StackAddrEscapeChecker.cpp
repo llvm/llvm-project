@@ -249,14 +249,14 @@ void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
 /// that would leak.
 class FindStackRegionsSymbolVisitor final : public SymbolVisitor {
   CheckerContext &Ctxt;
-  const StackFrameContext *StackFrameContext;
+  const StackFrameContext *PoppedStackFrame;
   SmallVectorImpl<const MemRegion *> &EscapingStackRegions;
 
 public:
   explicit FindStackRegionsSymbolVisitor(
       CheckerContext &Ctxt,
       SmallVectorImpl<const MemRegion *> &StorageForStackRegions)
-      : Ctxt(Ctxt), StackFrameContext(Ctxt.getStackFrame()),
+      : Ctxt(Ctxt), PoppedStackFrame(Ctxt.getStackFrame()),
         EscapingStackRegions(StorageForStackRegions) {}
 
   bool VisitSymbol(SymbolRef sym) override { return true; }
@@ -274,7 +274,7 @@ private:
   void SaveIfEscapes(const MemRegion *MR) {
     const StackSpaceRegion *SSR =
         MR->getMemorySpace()->getAs<StackSpaceRegion>();
-    if (SSR && SSR->getStackFrame() == StackFrameContext)
+    if (SSR && SSR->getStackFrame() == PoppedStackFrame)
       EscapingStackRegions.push_back(MR);
   }
 
