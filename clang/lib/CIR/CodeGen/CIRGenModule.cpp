@@ -9,7 +9,6 @@
 // This is the internal per-translation-unit state used for CIR translation.
 //
 //===----------------------------------------------------------------------===//
-#include "CIRGenModule.h"
 #include "CIRGenCXXABI.h"
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
@@ -528,10 +527,9 @@ void CIRGenModule::emitGlobal(GlobalDecl GD) {
       if (langOpts.HIPStdPar)
         llvm_unreachable("NYI");
 
-      if (Global->hasAttr<CUDAGlobalAttr>())
-        llvm_unreachable("NYI");
-
-      if (!Global->hasAttr<CUDADeviceAttr>())
+      // Global functions reside on device, so it shouldn't be skipped.
+      if (!Global->hasAttr<CUDAGlobalAttr>() &&
+          !Global->hasAttr<CUDADeviceAttr>())
         return;
     } else {
       // We must skip __device__ functions when compiling for host.
@@ -2352,10 +2350,10 @@ cir::FuncOp CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD, mlir::Type Ty,
   auto F = GetOrCreateCIRFunction(MangledName, Ty, GD, ForVTable, DontDefer,
                                   /*IsThunk=*/false, IsForDefinition);
 
-  // As __global__ functions always reside on device,
-  // we need special care when accessing them from host;
-  // otherwise, CUDA functions behave as normal functions
-  if (langOpts.CUDA && !langOpts.CUDAIsDevice &&
+  // As __global__ functions (kernels) always reside on device,
+  // when we access them from host, we must refer to the kernel handle.
+  // For CUDA, it's just the device stub. For HIP, it's something different.
+  if (langOpts.CUDA && !langOpts.CUDAIsDevice && langOpts.HIP &&
       cast<FunctionDecl>(GD.getDecl())->hasAttr<CUDAGlobalAttr>()) {
     llvm_unreachable("NYI");
   }
@@ -2398,7 +2396,7 @@ static std::string getMangledNameImpl(CIRGenModule &CGM, GlobalDecl GD,
       assert(0 && "NYI");
     } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
                GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
-      assert(0 && "NYI");
+      Out << "__device_stub__";
     } else {
       Out << II->getName();
     }

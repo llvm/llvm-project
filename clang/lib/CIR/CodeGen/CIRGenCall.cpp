@@ -460,6 +460,16 @@ void CIRGenModule::constructAttributeList(
         getLangOpts().OffloadUniformBlock)
       assert(!cir::MissingFeatures::CUDA());
 
+    if (langOpts.CUDA && !langOpts.CUDAIsDevice &&
+        TargetDecl->hasAttr<CUDAGlobalAttr>()) {
+      GlobalDecl kernel(CalleeInfo.getCalleeDecl());
+      llvm::StringRef kernelName = getMangledName(
+          kernel.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
+      auto attr =
+          cir::CUDAKernelNameAttr::get(&getMLIRContext(), kernelName.str());
+      funcAttrs.set(attr.getMnemonic(), attr);
+    }
+
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       ;
   }

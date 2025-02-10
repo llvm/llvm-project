@@ -1327,5 +1327,6 @@ def CIR_TBAAAttr : CIR_Attr<"TBAA", "tbaa", []> {
 }
 
 include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
+include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 
 #endif // MLIR_CIR_DIALECT_CIR_ATTRS
