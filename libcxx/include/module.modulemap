@@ -1567,6 +1567,7 @@ module std [system] {
     module compressed_pair                    { header "__memory/compressed_pair.h" }
     module concepts                           { header "__memory/concepts.h" }
     module construct_at                       { header "__memory/construct_at.h" }
+    module destroy                            { header "__memory/destroy.h" }
     module destruct_n                         { header "__memory/destruct_n.h" }
     module fwd                                { header "__fwd/memory.h" }
     module inout_ptr                          { header "__memory/inout_ptr.h" }
@@ -1574,6 +1575,7 @@ module std [system] {
     module out_ptr                            { header "__memory/out_ptr.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }
     module ranges_construct_at                { header "__memory/ranges_construct_at.h" }
+    module ranges_destroy                     { header "__memory/ranges_destroy.h" }
     module ranges_uninitialized_algorithms {
       header "__memory/ranges_uninitialized_algorithms.h"
       export std.algorithm.in_out_result
