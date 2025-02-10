@@ -1989,8 +1989,8 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
   return fromElementsOp.getElements()[flatIndex];
 }
 
-// If the dynamic indices of `extractOp` or `insertOp` are result of
-// `constantOp`, then fold it.
+/// If the dynamic indices of `extractOp` or `insertOp` are in fact constants,
+/// then fold it.
 template <typename OpType, typename AdaptorType>
 static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
                                          SmallVectorImpl<Value> &operands) {
