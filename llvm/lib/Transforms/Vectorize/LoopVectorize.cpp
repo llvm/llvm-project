@@ -10362,6 +10362,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
+  // ==FYP== May need to be modifed for allowing early exit loops 
   if (LVL.hasUncountableEarlyExit() && !EnableEarlyExitVectorization) {
     reportVectorizationFailure("Auto-vectorization of loops with uncountable "
                                "early exit is not enabled",
@@ -10658,7 +10659,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       });
     } else {
       // If we decided that it is *legal* to vectorize the loop, then do it.
-
+      // ==FYP== Loop Vectorization Occurs here
       VPlan &BestPlan = LVP.getPlanFor(VF.Width);
       // Consider vectorizing the epilogue too if it's profitable.
       VectorizationFactor EpilogueVF =
@@ -10816,6 +10817,7 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
   BFI = nullptr;
   if (PSI && PSI->hasProfileSummary())
     BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+  // ==FYP== Run the Transformation on the function
   LoopVectorizeResult Result = runImpl(F);
   if (!Result.MadeAnyChange)
     return PreservedAnalyses::all();
