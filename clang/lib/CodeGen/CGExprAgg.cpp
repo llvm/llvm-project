@@ -500,25 +500,19 @@ static void EmitHLSLSplatCast(CodeGenFunction &CGF, Address DestVal,
   // ^^ Flattened accesses to DestVal we want to store into
   CGF.FlattenAccessAndType(DestVal, DestTy, StoreGEPList, DestTypes);
 
-  if (const VectorType *VT = SrcTy->getAs<VectorType>()) {
-    assert(VT->getNumElements() == 1 && "Invalid HLSL splat cast.");
-
-    SrcTy = VT->getElementType();
-    SrcVal = CGF.Builder.CreateExtractElement(SrcVal, (uint64_t)0, "vec.load");
-  }
   assert(SrcTy->isScalarType() && "Invalid HLSL splat cast.");
-  for (unsigned i = 0; i < StoreGEPList.size(); i++) {
+  for (unsigned I = 0, Size = StoreGEPList.size(); I < Size; I++) {
     llvm::Value *Cast =
-        CGF.EmitScalarConversion(SrcVal, SrcTy, DestTypes[i], Loc);
+        CGF.EmitScalarConversion(SrcVal, SrcTy, DestTypes[I], Loc);
 
     // store back
-    llvm::Value *Idx = StoreGEPList[i].second;
+    llvm::Value *Idx = StoreGEPList[I].second;
     if (Idx) {
       llvm::Value *V =
-          CGF.Builder.CreateLoad(StoreGEPList[i].first, "load.for.insert");
+          CGF.Builder.CreateLoad(StoreGEPList[I].first, "load.for.insert");
       Cast = CGF.Builder.CreateInsertElement(V, Cast, Idx);
     }
-    CGF.Builder.CreateStore(Cast, StoreGEPList[i].first);
+    CGF.Builder.CreateStore(Cast, StoreGEPList[I].first);
   }
 }
 
@@ -1002,12 +996,10 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     Address DestVal = Dest.getAddress();
     SourceLocation Loc = E->getExprLoc();
 
-    if (RV.isScalar()) {
-      llvm::Value *SrcVal = RV.getScalarVal();
-      EmitHLSLSplatCast(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
-      break;
-    }
-    llvm_unreachable("RHS of HLSL splat cast must be a scalar or vector.");
+    assert (RV.isScalar() && "RHS of HLSL splat cast must be a scalar.");
+    llvm::Value *SrcVal = RV.getScalarVal();
+    EmitHLSLSplatCast(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
+    break;
   }
   case CK_HLSLElementwiseCast: {
     Expr *Src = E->getSubExpr();

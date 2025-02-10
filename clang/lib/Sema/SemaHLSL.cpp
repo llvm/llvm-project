@@ -2807,7 +2807,7 @@ bool SemaHLSL::ContainsBitField(QualType BaseTy) {
 // Can perform an HLSL splat cast if the Dest is an aggregate and the
 // Src is a scalar or a vector of length 1
 // Or if Dest is a vector and Src is a vector of length 1
-bool SemaHLSL::CanPerformSplat(Expr *Src, QualType DestTy) {
+bool SemaHLSL::CanPerformSplatCast(Expr *Src, QualType DestTy) {
 
   QualType SrcTy = Src->getType();
   if (SrcTy->isScalarType() && DestTy->isVectorType())

@@ -2780,7 +2780,12 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   // This case should not trigger on regular vector splat
   QualType SrcTy = SrcExpr.get()->getType();
   if (Self.getLangOpts().HLSL &&
-      Self.HLSL().CanPerformSplat(SrcExpr.get(), DestType)) {
+      Self.HLSL().CanPerformSplatCast(SrcExpr.get(), DestType)) {
+    const VectorType *VT = SrcTy->getAs<VectorType>();
+    // change splat from vec1 case to splat from scalar
+    if (VT && VT->getNumElements() == 1)
+      SrcExpr = Self.ImpCastExprToType(SrcExpr.get(), VT->getElementType(),
+				       CK_HLSLVectorTruncation, VK_PRValue, nullptr, CCK);
     Kind = CK_HLSLSplatCast;
     return;
   }

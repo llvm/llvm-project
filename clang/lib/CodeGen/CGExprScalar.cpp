@@ -2796,19 +2796,14 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return Builder.CreateExtractElement(Vec, Zero, "cast.vtrunc");
   }
   case CK_HLSLSplatCast: {
-    // This code should only handle splatting from vectors of length 1.
+    // This cast should only handle splatting from vectors of length 1.
+    // But in Sema a cast should have been inserted to convert the vec1 to a scalar
     assert(DestTy->isVectorType() && "Destination type must be a vector.");
     auto *DestVecTy = DestTy->getAs<VectorType>();
     QualType SrcTy = E->getType();
     SourceLocation Loc = CE->getExprLoc();
     Value *V = Visit(const_cast<Expr *>(E));
-    assert(SrcTy->isVectorType() && "Invalid HLSL splat cast.");
-
-    auto *VecTy = SrcTy->getAs<VectorType>();
-    assert(VecTy->getNumElements() == 1 && "Invalid HLSL splat cast.");
-
-    V = CGF.Builder.CreateExtractElement(V, (uint64_t)0, "vec.load");
-    SrcTy = VecTy->getElementType();
+    assert(SrcTy->isBuiltinType() && "Invalid HLSL splat cast.");
 
     Value *Cast =
         EmitScalarConversion(V, SrcTy, DestVecTy->getElementType(), Loc);
