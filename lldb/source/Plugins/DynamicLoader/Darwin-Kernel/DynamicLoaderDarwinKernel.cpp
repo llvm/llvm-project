@@ -168,8 +168,9 @@ DynamicLoader *DynamicLoaderDarwinKernel::CreateInstance(Process *process,
     case llvm::Triple::IOS:
     case llvm::Triple::TvOS:
     case llvm::Triple::WatchOS:
-    case llvm::Triple::XROS:
     case llvm::Triple::BridgeOS:
+    case llvm::Triple::DriverKit:
+    case llvm::Triple::XROS:
       if (triple_ref.getVendor() != llvm::Triple::Apple) {
         return nullptr;
       }
@@ -243,6 +244,7 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints(Process *process) {
   Status read_err;
   addr_t kernel_addresses_64[] = {
       0xfffffff000002010ULL,
+      0xfffffe0000004010ULL, // newest arm64 devices, large memory support
       0xfffffff000004010ULL, // newest arm64 devices
       0xffffff8000004010ULL, // 2014-2015-ish arm64 devices
       0xffffff8000002010ULL, // oldest arm64 devices
@@ -1092,7 +1094,7 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
       static ConstString arm64_T1Sz_value("gT1Sz");
       const Symbol *symbol =
           m_kernel.GetModule()->FindFirstSymbolWithNameAndType(
-              kext_summary_symbol, eSymbolTypeData);
+              kext_summary_symbol, eSymbolTypeAny);
       if (symbol) {
         m_kext_summary_header_ptr_addr = symbol->GetAddress();
         // Update all image infos
