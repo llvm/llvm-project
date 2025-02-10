@@ -151,6 +151,9 @@ Changes to the AArch64 Backend
 
 * Added support for the FUJITSU-MONAKA CPU.
 
+* Updated feature dependency in Armv9.6 for FEAT_FAMINMAX, FEAT_LUT and
+  FEAT_FP8, now they depend only on FEAT_NEON.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
