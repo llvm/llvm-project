@@ -208,7 +208,8 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
   const bool IsTied = RISCVII::isTiedPseudo(MI.getDesc().TSFlags);
 
-  bool IsMODef = MO.getOperandNo() == 0;
+  bool IsMODef = MO.getOperandNo() == 0 ||
+                 (HasPassthru && MO.getOperandNo() == MI.getNumExplicitDefs());
 
   // All mask operands have EEW=1
   if (isMaskOperand(MI, MO, MRI))
@@ -545,6 +546,8 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFWMSAC_VV:
   case RISCV::VFWNMSAC_VF:
   case RISCV::VFWNMSAC_VV:
+  case RISCV::VFWMACCBF16_VV:
+  case RISCV::VFWMACCBF16_VF:
   // Vector Widening Floating-Point Add/Subtract Instructions
   // Dest EEW=2*SEW. Source EEW=SEW.
   case RISCV::VFWADD_VV:
@@ -976,6 +979,17 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMV_V_I:
   case RISCV::VMV_V_X:
   case RISCV::VMV_V_V:
+  // Vector Single-Width Saturating Add and Subtract
+  case RISCV::VSADDU_VV:
+  case RISCV::VSADDU_VX:
+  case RISCV::VSADDU_VI:
+  case RISCV::VSADD_VV:
+  case RISCV::VSADD_VX:
+  case RISCV::VSADD_VI:
+  case RISCV::VSSUBU_VV:
+  case RISCV::VSSUBU_VX:
+  case RISCV::VSSUB_VV:
+  case RISCV::VSSUB_VX:
   // Vector Single-Width Averaging Add and Subtract
   case RISCV::VAADDU_VV:
   case RISCV::VAADDU_VX:
@@ -985,6 +999,23 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VASUBU_VX:
   case RISCV::VASUB_VV:
   case RISCV::VASUB_VX:
+  // Vector Single-Width Fractional Multiply with Rounding and Saturation
+  case RISCV::VSMUL_VV:
+  case RISCV::VSMUL_VX:
+  // Vector Single-Width Scaling Shift Instructions
+  case RISCV::VSSRL_VV:
+  case RISCV::VSSRL_VX:
+  case RISCV::VSSRL_VI:
+  case RISCV::VSSRA_VV:
+  case RISCV::VSSRA_VX:
+  case RISCV::VSSRA_VI:
+  // Vector Narrowing Fixed-Point Clip Instructions
+  case RISCV::VNCLIPU_WV:
+  case RISCV::VNCLIPU_WX:
+  case RISCV::VNCLIPU_WI:
+  case RISCV::VNCLIP_WV:
+  case RISCV::VNCLIP_WX:
+  case RISCV::VNCLIP_WI:
 
   // Vector Crypto
   case RISCV::VWSLL_VI:
@@ -1050,6 +1081,17 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFMSUB_VF:
   case RISCV::VFNMSUB_VV:
   case RISCV::VFNMSUB_VF:
+  // Vector Widening Floating-Point Fused Multiply-Add Instructions
+  case RISCV::VFWMACC_VV:
+  case RISCV::VFWMACC_VF:
+  case RISCV::VFWNMACC_VV:
+  case RISCV::VFWNMACC_VF:
+  case RISCV::VFWMSAC_VV:
+  case RISCV::VFWMSAC_VF:
+  case RISCV::VFWNMSAC_VV:
+  case RISCV::VFWNMSAC_VF:
+  case RISCV::VFWMACCBF16_VV:
+  case RISCV::VFWMACCBF16_VF:
   // Vector Floating-Point MIN/MAX Instructions
   case RISCV::VFMIN_VF:
   case RISCV::VFMIN_VV:
@@ -1173,8 +1215,16 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
     return false;
-  if (MI.getNumDefs() != 1)
+
+  if (MI.getNumExplicitDefs() != 1)
     return false;
+
+  // Some instructions have implicit defs e.g. $vxsat. If they might be read
+  // later then we can't reduce VL.
+  if (!MI.allImplicitDefsAreDead()) {
+    LLVM_DEBUG(dbgs() << "Not a candidate because has non-dead implicit def\n");
+    return false;
+  }
 
   if (MI.mayRaiseFPException()) {
     LLVM_DEBUG(dbgs() << "Not a candidate because may raise FP exception\n");
