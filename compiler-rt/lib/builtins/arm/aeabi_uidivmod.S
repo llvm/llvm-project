@@ -47,12 +47,7 @@ LOCAL_LABEL(case_denom_larger):
         mov     r1, r3
 #endif
         bl      SYMBOL_NAME(__udivmodsi4)
-#if _YUGA_BIG_ENDIAN
-        mov     r1, r0
-        ldr     r0, [sp]
-#else
         ldr     r1, [sp]
-#endif
         add     sp, sp, #4
         pop     { pc }
 #endif

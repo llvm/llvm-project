@@ -14,8 +14,13 @@ int test__aeabi_idivmod(si_int a, si_int b,
 {
 	  si_int rem;
     du_int ret = __aeabi_idivmod(a, b);
+#  if _YUGA_BIG_ENDIAN
+    rem = ret & 0xFFFFFFFF;
+    si_int result = ret >> 32;
+#  else
     rem = ret >> 32;
     si_int result = ret & 0xFFFFFFFF;
+#  endif
     if (result != expected_result) {
         printf("error in __aeabi_idivmod: %d / %d = %d, expected %d\n",
                a, b, result, expected_result);
