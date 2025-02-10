@@ -1651,7 +1651,8 @@ static void getTrivialDefaultFunctionAttributes(
   // AFAIK, neither of them support exceptions in device code.
   if (langOpts.SYCLIsDevice)
     llvm_unreachable("NYI");
-  if (langOpts.OpenCL || (langOpts.CUDA && langOpts.CUDAIsDevice)) {
+  if (langOpts.OpenCL ||
+      ((langOpts.CUDA || langOpts.HIP) && langOpts.CUDAIsDevice)) {
     auto noThrow = cir::NoThrowAttr::get(CGM.getBuilder().getContext());
     funcAttrs.set(noThrow.getMnemonic(), noThrow);
   }

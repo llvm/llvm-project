@@ -348,7 +348,11 @@ mlir::Type CIRGenTypes::convertType(QualType T) {
 
   // For the device-side compilation, CUDA device builtin surface/texture types
   // may be represented in different types.
-  if (astContext.getLangOpts().CUDAIsDevice) {
+  // NOTE: CUDAIsDevice is true when building also HIP code.
+  //  1. There is no SurfaceType on HIP,
+  //  2. There is Texture memory on HIP but accessing the memory goes through
+  //  calls to the runtime. e.g. for a 2D: `tex2D<float>(tex, x, y);`
+  if (astContext.getLangOpts().CUDA && astContext.getLangOpts().CUDAIsDevice) {
     if (Ty->isCUDADeviceBuiltinSurfaceType() ||
         Ty->isCUDADeviceBuiltinTextureType())
       llvm_unreachable("NYI");

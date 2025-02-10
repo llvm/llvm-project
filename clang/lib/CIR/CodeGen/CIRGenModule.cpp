@@ -3112,7 +3112,7 @@ void CIRGenModule::emitDeferred(unsigned recursionLimit) {
   // Emit CUDA/HIP static device variables referenced by host code only. Note we
   // should not clear CUDADeviceVarODRUsedByHost since it is still needed for
   // further handling.
-  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
+  if ((getLangOpts().CUDA || getLangOpts().HIP) && getLangOpts().CUDAIsDevice &&
       !getASTContext().CUDADeviceVarODRUsedByHost.empty()) {
     llvm_unreachable("NYI");
   }
