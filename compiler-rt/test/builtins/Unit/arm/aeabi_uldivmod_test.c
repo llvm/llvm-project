@@ -12,6 +12,10 @@ COMPILER_RT_ABI void /* __value_in_regs */ __aeabi_uldivmod(du_int a, du_int b);
 int test_aeabi_uldivmod(du_int a, du_int b, du_int expected_q, du_int expected_r)
 {
     du_int q, r;
+    // __aeabi_uldivmod returns a struct { quotient; remainder; } using
+    // value_in_regs calling convention. Each field is a 64-bit integer, so the
+    // quotient resides in r0 and r1, while the remainder in r2 and r3. The
+    // byte order however depends on the endianness.
     __asm__(
 #  if _YUGA_BIG_ENDIAN
         "movs r1, %Q[a] \n"

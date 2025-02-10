@@ -13,6 +13,12 @@ int test__aeabi_uidivmod(su_int a, su_int b,
 						su_int expected_result, su_int expected_rem)
 {
     du_int ret = __aeabi_uidivmod(a, b);
+    // __aeabi_uidivmod actually returns a struct { quotient; remainder; }
+    // using value_in_regs calling convention. Due to the ABI rules, struct
+    // fields come in the same order regardless of endianness. However since
+    // the result is received here as a 64-bit integer, in which endianness
+    // does matter, the position of each component (quotient and remainder)
+    // varies depending on endianness.
 #  if _YUGA_BIG_ENDIAN
     su_int rem = ret & 0xFFFFFFFF;
     si_int result = ret >> 32;
