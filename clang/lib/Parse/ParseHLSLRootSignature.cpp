@@ -60,27 +60,13 @@ bool RootSignatureLexer::LexNumber(RootSignatureToken &Result) {
   return false;
 }
 
-bool RootSignatureLexer::Lex(SmallVector<RootSignatureToken> &Tokens) {
+bool RootSignatureLexer::LexToken(RootSignatureToken &Result) {
   // Discard any leading whitespace
   AdvanceBuffer(Buffer.take_while(isspace).size());
 
-  while (!Buffer.empty()) {
-    // Record where this token is in the text for usage in parser diagnostics
-    RootSignatureToken Result(SourceLoc);
-    if (LexToken(Result))
-      return true;
+  // Record where this token is in the text for usage in parser diagnostics
+  Result = RootSignatureToken(SourceLoc);
 
-    // Successfully Lexed the token so we can store it
-    Tokens.push_back(Result);
-
-    // Discard any trailing whitespace
-    AdvanceBuffer(Buffer.take_while(isspace).size());
-  }
-
-  return false;
-}
-
-bool RootSignatureLexer::LexToken(RootSignatureToken &Result) {
   char C = Buffer.front();
 
   // Punctuators
@@ -166,6 +152,41 @@ bool RootSignatureLexer::LexToken(RootSignatureToken &Result) {
   Result.Kind = Kind;
   AdvanceBuffer(TokSpelling.size());
   return false;
+}
+
+bool RootSignatureLexer::ConsumeToken() {
+  // If we previously peeked then just copy the value over
+  if (NextToken && NextToken->Kind != TokenKind::end_of_stream) {
+    CurToken = *NextToken;
+    NextToken = std::nullopt;
+    return false;
+  }
+
+  // This will be implicity be true if NextToken->Kind == end_of_stream
+  if (EndOfBuffer()) {
+    // Report unexpected end of tokens error
+    PP.getDiagnostics().Report(SourceLoc, diag::err_hlsl_rootsig_unexpected_eos);
+    return true;
+  }
+
+  return LexToken(CurToken);
+}
+
+std::optional<RootSignatureToken> RootSignatureLexer::PeekNextToken() {
+  // Already peeked from the current token
+  if (NextToken.has_value())
+    return NextToken;
+
+  if (EndOfBuffer()) {
+    // We have reached the end of the stream, but only error on consume
+    return RootSignatureToken(TokenKind::end_of_stream, SourceLoc);
+  }
+
+  RootSignatureToken Result;
+  if (LexToken(Result))
+    return std::nullopt;
+  NextToken = Result;
+  return Result;
 }
 
 } // namespace hlsl

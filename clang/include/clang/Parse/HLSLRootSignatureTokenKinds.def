@@ -51,6 +51,7 @@
 
 // General Tokens:
 TOK(invalid)
+TOK(end_of_stream)
 TOK(int_literal)
 
 // Register Tokens:

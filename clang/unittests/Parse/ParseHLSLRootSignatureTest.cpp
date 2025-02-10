@@ -91,12 +91,19 @@ protected:
     return PP;
   }
 
-  void CheckTokens(SmallVector<hlsl::RootSignatureToken> &Computed,
+  void CheckTokens(hlsl::RootSignatureLexer &Lexer,
+                   SmallVector<hlsl::RootSignatureToken> &Computed,
                    SmallVector<hlsl::TokenKind> &Expected) {
-    ASSERT_EQ(Computed.size(), Expected.size());
     for (unsigned I = 0, E = Expected.size(); I != E; ++I) {
-      ASSERT_EQ(Computed[I].Kind, Expected[I]);
+      if (Expected[I] == hlsl::TokenKind::invalid ||
+          Expected[I] == hlsl::TokenKind::end_of_stream)
+        continue;
+      ASSERT_FALSE(Lexer.ConsumeToken());
+      hlsl::RootSignatureToken Result = Lexer.GetCurToken();
+      ASSERT_EQ(Result.Kind, Expected[I]);
+      Computed.push_back(Result);
     }
+    ASSERT_TRUE(Lexer.EndOfBuffer());
   }
 
   FileSystemOptions FileMgrOpts;
@@ -128,16 +135,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexNumbersTest) {
   hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
-  ASSERT_FALSE(Lexer.Lex(Tokens));
-  ASSERT_TRUE(Consumer->IsSatisfied());
-
   SmallVector<hlsl::TokenKind> Expected = {
       hlsl::TokenKind::int_literal,
       hlsl::TokenKind::int_literal,
       hlsl::TokenKind::int_literal,
       hlsl::TokenKind::int_literal,
   };
-  CheckTokens(Tokens, Expected);
+  CheckTokens(Lexer, Tokens, Expected);
+  ASSERT_TRUE(Consumer->IsSatisfied());
 
   // Sample negative int
   hlsl::RootSignatureToken IntToken = Tokens[0];
@@ -204,22 +209,76 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
 
-  SmallVector<hlsl::RootSignatureToken> Tokens = {
-      hlsl::RootSignatureToken(
-          SourceLocation()) // invalid token for completeness
-  };
-  ASSERT_FALSE(Lexer.Lex(Tokens));
-  ASSERT_TRUE(Consumer->IsSatisfied());
-
+  SmallVector<hlsl::RootSignatureToken> Tokens;
   SmallVector<hlsl::TokenKind> Expected = {
 #define TOK(NAME) hlsl::TokenKind::NAME,
 #include "clang/Parse/HLSLRootSignatureTokenKinds.def"
   };
 
-  CheckTokens(Tokens, Expected);
+  CheckTokens(Lexer, Tokens, Expected);
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, ValidLexPeekTest) {
+  // This test will check that we can lex all defined tokens as defined in
+  // HLSLRootSignatureTokenKinds.def, plus some additional integer variations
+  const llvm::StringLiteral Source = R"cc(
+    )1
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test no diagnostics produced
+  Consumer->SetNoDiag();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+  // Test basic peek
+  auto Res = Lexer.PeekNextToken();
+  ASSERT_TRUE(Res.has_value());
+  ASSERT_EQ(Res->Kind, hlsl::TokenKind::pu_r_paren);
+
+  // Ensure it doesn't peek past one element
+  Res = Lexer.PeekNextToken();
+  ASSERT_TRUE(Res.has_value());
+  ASSERT_EQ(Res->Kind, hlsl::TokenKind::pu_r_paren);
+
+  ASSERT_FALSE(Lexer.ConsumeToken());
+
+  // Invoke after reseting the NextToken
+  Res = Lexer.PeekNextToken();
+  ASSERT_TRUE(Res.has_value());
+  ASSERT_EQ(Res->Kind, hlsl::TokenKind::int_literal);
+
+  // Ensure we can still consume the second token
+  ASSERT_FALSE(Lexer.ConsumeToken());
+
+  // Ensure no error raised when peeking past end of stream
+  Res = Lexer.PeekNextToken();
+  ASSERT_TRUE(Res.has_value());
+  ASSERT_EQ(Res->Kind, hlsl::TokenKind::end_of_stream);
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
 }
 
 // Invalid Lexing Tests
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEOSTest) {
+  const llvm::StringLiteral Source = R"cc()cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_rootsig_unexpected_eos);
+  ASSERT_TRUE(Lexer.ConsumeToken());
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
 
 TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
   // This test will check that the lexing fails due to an integer overflow
@@ -236,8 +295,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
 
-  SmallVector<hlsl::RootSignatureToken> Tokens;
-  ASSERT_TRUE(Lexer.Lex(Tokens));
+  ASSERT_TRUE(Lexer.ConsumeToken());
   ASSERT_TRUE(Consumer->IsSatisfied());
 }
 
@@ -256,8 +314,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexEmptyNumberTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
 
-  SmallVector<hlsl::RootSignatureToken> Tokens;
-  ASSERT_TRUE(Lexer.Lex(Tokens));
+  ASSERT_TRUE(Lexer.ConsumeToken());
   ASSERT_TRUE(Consumer->IsSatisfied());
 }
 
@@ -276,9 +333,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexRegNumberTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
 
-  SmallVector<hlsl::RootSignatureToken> Tokens;
-  ASSERT_TRUE(Lexer.Lex(Tokens));
-  // FIXME(#120472): This should be TRUE once we can lex a floating
+  ASSERT_TRUE(Lexer.ConsumeToken());
+  // FIXME(#126565): This should be TRUE once we can lex a float
   ASSERT_FALSE(Consumer->IsSatisfied());
 }
 
@@ -297,8 +353,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexIdentifierTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
 
-  SmallVector<hlsl::RootSignatureToken> Tokens;
-  ASSERT_TRUE(Lexer.Lex(Tokens));
+  ASSERT_TRUE(Lexer.ConsumeToken());
   ASSERT_TRUE(Consumer->IsSatisfied());
 }
 

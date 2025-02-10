@@ -39,7 +39,9 @@ struct RootSignatureToken {
   APValue NumLiteral = APValue();
 
   // Constructors
+  RootSignatureToken() : TokLoc(SourceLocation()) {}
   RootSignatureToken(clang::SourceLocation TokLoc) : TokLoc(TokLoc) {}
+  RootSignatureToken(enum Kind Kind, clang::SourceLocation TokLoc) : Kind(Kind), TokLoc(TokLoc) {}
 };
 using TokenKind = enum RootSignatureToken::Kind;
 
@@ -49,28 +51,38 @@ public:
                      clang::Preprocessor &PP)
       : Buffer(Signature), SourceLoc(SourceLoc), PP(PP) {}
 
-  // Consumes the internal buffer as a list of tokens and will emplace them
-  // onto the given tokens.
-  //
-  // It will consume until it successfully reaches the end of the buffer,
-  // or, until the first error is encountered. The return value denotes if
-  // there was a failure.
-  bool Lex(SmallVector<RootSignatureToken> &Tokens);
+  /// Updates CurToken to the next token. Either it will take the previously
+  /// lexed NextToken, or it will lex a token.
+  ///
+  /// The return value denotes if there was a failure.
+  bool ConsumeToken();
+
+  /// Returns the token that comes after CurToken or std::nullopt if an
+  /// error is encountered during lexing of the next token.
+  std::optional<RootSignatureToken> PeekNextToken();
+
+  RootSignatureToken GetCurToken() { return CurToken; }
+
+  /// Check if we have reached the end of input
+  bool EndOfBuffer() {
+    AdvanceBuffer(Buffer.take_while(isspace).size());
+    return Buffer.empty();
+  }
 
 private:
   // Internal buffer to iterate over
   StringRef Buffer;
+
+  // Current Token state
+  RootSignatureToken CurToken;
+  std::optional<RootSignatureToken> NextToken = std::nullopt;
 
   // Passed down parameters from Sema
   clang::SourceLocation SourceLoc;
   clang::Preprocessor &PP;
 
   bool LexNumber(RootSignatureToken &Result);
-
-  // Consumes the internal buffer for a single token.
-  //
-  // The return value denotes if there was a failure.
-  bool LexToken(RootSignatureToken &Token);
+  bool LexToken(RootSignatureToken &Result);
 
   // Advance the buffer by the specified number of characters. Updates the
   // SourceLocation appropriately.
