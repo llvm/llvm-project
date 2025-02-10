@@ -9,9 +9,21 @@
 # See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 #
 # ------------------------------------------------------------------------------
-import lldbsuite.test.lldbinline as lldbinline
-from lldbsuite.test.decorators import *
 
-lldbinline.MakeInlineTest(__file__, globals(),
-                          decorators=[swiftTest
-    ])
+import lldb
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
+
+
+class TestSwiftGenericExtension(TestBase):
+    @swiftTest
+    def test(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
+        self.expect(
+            "expr -d run-target --bind-generic-types false -- self",
+            substrs=["[0] = 1", "[1] = 2", "[2] = 3"],
+        )

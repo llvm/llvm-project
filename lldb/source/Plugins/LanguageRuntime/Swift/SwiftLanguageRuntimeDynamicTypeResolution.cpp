@@ -2347,6 +2347,7 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
 
   NodePointer canonical = TypeSystemSwiftTypeRef::GetStaticSelfType(
       dem, dem.demangleSymbol(mangled_name.GetStringRef()));
+  canonical = ts.DesugarNode(dem, canonical);
 
   // Build the list of type substitutions.
   swift::reflection::GenericArgumentMap substitutions;

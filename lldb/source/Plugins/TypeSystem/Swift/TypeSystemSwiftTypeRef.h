@@ -374,6 +374,11 @@ public:
   CanonicalizeSugar(swift::Demangle::Demangler &dem,
                     swift::Demangle::NodePointer node);
 
+  /// Recursively desugars sugared types (arrays, dictionaries, optionals, etc.)
+  /// in a demangle tree.
+  swift::Demangle::NodePointer DesugarNode(swift::Demangle::Demangler &dem,
+                                           swift::Demangle::NodePointer node);
+
   /// Finds the nominal type node (struct, class, enum) that contains the
   /// module and identifier nodes for that type. If \p node is not a valid
   /// type node, returns a nullptr.
