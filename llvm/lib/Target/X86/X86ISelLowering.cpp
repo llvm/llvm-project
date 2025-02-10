@@ -48472,62 +48472,53 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   return SDValue();
 }
 
-// Attempt to fold some (truncate (srl (add X, C1), C2)) patterns to
-// (add (truncate (srl X, C2), C1')). C1' will be smaller than C1 so we are able
-// to avoid generating code with MOVABS and large constants in certain cases.
+// Attempt to fold some (setcc (sub (truncate (srl (add X, C1), C2)), C3), CC)
+// patterns to (setcc (cmp (add (truncate (srl X, C2)), C1'), C3), CC). C1' will
+// be smaller than C1 so we are able to avoid generating code with MOVABS and
+// large constants in certain cases.
 static SDValue combineSetCCTruncAdd(SDValue EFLAGS, X86::CondCode &CC,
                                     SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
   if (!(CC == X86::COND_E || CC == X86::COND_NE || CC == X86::COND_AE ||
         CC == X86::COND_B))
     return SDValue();
 
+  SDValue AddLhs;
+  APInt AddConst, SrlConst, CmpConst;
+  if (!sd_match(EFLAGS,
+                m_AllOf(m_SpecificVT(MVT::i32),
+                        m_BinOp(X86ISD::SUB,
+                                m_Trunc(m_Srl(m_Add(m_Value(AddLhs),
+                                                    m_ConstInt(AddConst)),
+                                              m_ConstInt(SrlConst))),
+                                m_ConstInt(CmpConst)))))
+    return SDValue();
+
+  SDValue Srl;
+  if (!sd_match(EFLAGS.getOperand(0).getOperand(0),
+                m_AllOf(m_SpecificVT(MVT::i64), m_Value(Srl))))
+    return SDValue();
+
+  // Avoid changing the ADD if it is used elsewhere.
+  if (!Srl.getOperand(0).hasOneUse())
+    return SDValue();
+
   EVT VT = EFLAGS.getValueType();
-  if (EFLAGS.getOpcode() == X86ISD::SUB && VT == MVT::i32) {
-    SDValue CmpLHS = EFLAGS.getOperand(0);
-    auto *CmpConstant = dyn_cast<ConstantSDNode>(EFLAGS.getOperand(1));
+  APInt ShiftedAddConst = AddConst.lshr(SrlConst);
+  if (!CmpConst.ult(ShiftedAddConst.trunc(VT.getSizeInBits())) ||
+      (ShiftedAddConst.shl(SrlConst)) != AddConst)
+    return SDValue();
 
-    if (CmpLHS.getOpcode() != ISD::TRUNCATE || !CmpConstant)
-      return SDValue();
+  SDLoc DL(EFLAGS);
+  SDValue AddLHSSrl =
+      DAG.getNode(ISD::SRL, DL, MVT::i64, AddLhs, Srl.getOperand(1));
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AddLHSSrl);
 
-    SDValue Srl = CmpLHS.getOperand(0);
-    EVT SrlVT = Srl.getValueType();
-    if (Srl.getOpcode() != ISD::SRL || SrlVT != MVT::i64)
-      return SDValue();
-
-    SDValue Add = Srl.getOperand(0);
-    // Avoid changing the ADD if it is used elsewhere.
-    if (Add.getOpcode() != ISD::ADD || !Add.hasOneUse())
-      return SDValue();
-
-    auto *AddConstant = dyn_cast<ConstantSDNode>(Add.getOperand(1));
-    auto *SrlConstant = dyn_cast<ConstantSDNode>(Srl.getOperand(1));
-    if (!AddConstant || !SrlConstant)
-      return SDValue();
-
-    APInt AddConstVal = AddConstant->getAPIntValue();
-    APInt SrlConstVal = SrlConstant->getAPIntValue();
-    if (!SrlConstVal.ugt(VT.getSizeInBits()))
-      return SDValue();
-
-    APInt CmpConstVal = CmpConstant->getAPIntValue();
-    APInt ShiftedAddConst = AddConstVal.lshr(SrlConstVal);
-    if (!CmpConstVal.ult(ShiftedAddConst.trunc(VT.getSizeInBits())) ||
-        (ShiftedAddConst.shl(SrlConstVal)) != AddConstVal)
-      return SDValue();
-
-    SDLoc DL(EFLAGS);
-    SDValue AddLHSSrl =
-        DAG.getNode(ISD::SRL, DL, SrlVT, Add.getOperand(0), Srl.getOperand(1));
-    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AddLHSSrl);
-
-    APInt NewAddConstVal =
-        (~((~AddConstVal).lshr(SrlConstVal))).trunc(VT.getSizeInBits());
-    SDValue NewAddConst = DAG.getConstant(NewAddConstVal, DL, VT);
-    SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
-    return DAG.getNode(X86ISD::CMP, DL, VT, NewAddNode, EFLAGS.getOperand(1));
-  }
-
-  return SDValue();
+  APInt NewAddConstVal =
+      (~((~AddConst).lshr(SrlConst))).trunc(VT.getSizeInBits());
+  SDValue NewAddConst = DAG.getConstant(NewAddConstVal, DL, VT);
+  SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
+  return DAG.getNode(X86ISD::CMP, DL, VT, NewAddNode, EFLAGS.getOperand(1));
 }
 
 /// Optimize an EFLAGS definition used according to the condition code \p CC
