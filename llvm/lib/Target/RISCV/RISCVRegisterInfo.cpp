@@ -37,6 +37,18 @@ static cl::opt<bool>
                          cl::desc("Disable two address hints for register "
                                   "allocation"));
 
+static cl::opt<unsigned> RVVReleasePendingPressureThreshold(
+    "riscv-release-pending-queue-rvv-pressure-threshold", cl::Hidden,
+    cl::desc("Release pending queue when vector register pressure exceeds "
+             "threshold"),
+    cl::init(7));
+
+static cl::opt<int> UnitIncRVVRegPressureThreshold(
+    "riscv-release-pending-queue-unit-inc-rvv-pressure-threshold", cl::Hidden,
+    cl::desc("Release pending queue when vector register unit pressure "
+             "increase exceeds threshold"),
+    cl::init(-3));
+
 static_assert(RISCV::X1 == RISCV::X0 + 1, "Register list not consecutive");
 static_assert(RISCV::X31 == RISCV::X0 + 31, "Register list not consecutive");
 static_assert(RISCV::F1_H == RISCV::F0_H + 1, "Register list not consecutive");
@@ -967,8 +979,7 @@ bool RISCVRegisterInfo::shouldReleasePendingQueue(
     if (!StringRef(getRegPressureSetName(Idx)).starts_with("VM") &&
         !StringRef(getRegPressureSetName(Idx)).starts_with("VRM8NoV0"))
       continue;
-    const unsigned RVVRegPressureThreshold = 7;
-    if (MaxSetPressure[Idx] + RVVRegPressureThreshold >
+    if (MaxSetPressure[Idx] + RVVReleasePendingPressureThreshold >
         getRegPressureSetLimit(MF, Idx)) {
       return true;
     }
@@ -983,7 +994,6 @@ bool RISCVRegisterInfo::shouldReleaseSUFromPendingQueue(
   if (!MF.getSubtarget<RISCVSubtarget>().hasVInstructions())
     return false;
 
-  const int UnitIncRVVRegPressureThreshold = -3;
   for (unsigned Idx = 0; Idx < PSetID.size(); Idx++) {
     // Consider only the RVV Register, as RVV spilling/reloading has higher
     // potential costs than hazards.
