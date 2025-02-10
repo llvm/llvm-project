@@ -61,7 +61,7 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
   let summary = [{a composite attribute for `TensorDescType`}];
   let description = [{
     `ScatterTensorDesc` is a composite attribute defined for `TensorDescType`
-    for describing following properties of a `TensorDesc`.
+    for describing following properties of a `TensorDesc`:
 
     1. `memory_space`: It describes where the data block described by the
         TensorDesc is located, `Global` device memory or `Shared` local memory.
