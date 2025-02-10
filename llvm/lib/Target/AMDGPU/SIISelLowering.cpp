@@ -4940,26 +4940,26 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   return LoopBB;
 }
 
-static uint32_t getInitialValueForWaveReduction(unsigned Opc){
-  switch(Opc){
-      case AMDGPU::S_MIN_U32:
-        return std::numeric_limits<uint32_t>::max();
-      case AMDGPU::S_MIN_I32:
-        return std::numeric_limits<int32_t>::max();
-      case AMDGPU::S_MAX_U32:
-        return std::numeric_limits<u_int32_t>::lowest();
-      case AMDGPU::S_MAX_I32:
-        return std::numeric_limits<int32_t>::min();
-      case AMDGPU::S_ADD_I32:
-      case AMDGPU::S_SUB_I32:
-      case AMDGPU::S_OR_B32:
-      case AMDGPU::S_XOR_B32:
-        return 0x00000000;
-      case AMDGPU::S_AND_B32:
-        return 0xFFFFFFFF;
-      default:  
-        llvm_unreachable("Unexpected opcode in getInitialValueForWaveReduction");  
-    }
+static uint32_t getInitialValueForWaveReduction(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::S_MIN_U32:
+    return std::numeric_limits<uint32_t>::max();
+  case AMDGPU::S_MIN_I32:
+    return std::numeric_limits<int32_t>::max();
+  case AMDGPU::S_MAX_U32:
+    return std::numeric_limits<uint32_t>::min();
+  case AMDGPU::S_MAX_I32:
+    return std::numeric_limits<int32_t>::min();
+  case AMDGPU::S_ADD_I32:
+  case AMDGPU::S_SUB_I32:
+  case AMDGPU::S_OR_B32:
+  case AMDGPU::S_XOR_B32:
+    return std::numeric_limits<uint32_t>::min();
+  case AMDGPU::S_AND_B32:
+    return std::numeric_limits<uint32_t>::max();
+  default:
+    llvm_unreachable("Unexpected opcode in getInitialValueForWaveReduction");
+  }
 }
 
 static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
@@ -4977,72 +4977,77 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
   MachineBasicBlock *RetBB = nullptr;
   if (isSGPR) {
-    switch(Opc){
-      case AMDGPU::S_MIN_U32:
-      case AMDGPU::S_MIN_I32:
-      case AMDGPU::S_MAX_U32:
-      case AMDGPU::S_MAX_I32:
-      case AMDGPU::S_AND_B32:
-      case AMDGPU::S_OR_B32:{
-        // Idempotent operations.
-        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg).addReg(SrcReg);
-        RetBB = &BB;
-        break;
-      }
-      case AMDGPU::S_XOR_B32:
-      case AMDGPU::S_ADD_I32:
-      case AMDGPU::S_SUB_I32:{
-        const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
-        const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
-        Register ExecMask = MRI.createVirtualRegister(WaveMaskRegClass);
-        Register ActiveLanes = MRI.createVirtualRegister(DstRegClass);
+    switch (Opc) {
+    case AMDGPU::S_MIN_U32:
+    case AMDGPU::S_MIN_I32:
+    case AMDGPU::S_MAX_U32:
+    case AMDGPU::S_MAX_I32:
+    case AMDGPU::S_AND_B32:
+    case AMDGPU::S_OR_B32: {
+      // Idempotent operations.
+      BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg).addReg(SrcReg);
+      RetBB = &BB;
+      break;
+    }
+    case AMDGPU::S_XOR_B32:
+    case AMDGPU::S_ADD_I32:
+    case AMDGPU::S_SUB_I32: {
+      const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
+      const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
+      Register ExecMask = MRI.createVirtualRegister(WaveMaskRegClass);
+      Register ActiveLanes = MRI.createVirtualRegister(DstRegClass);
 
-        bool IsWave32 = ST.isWave32();
-        unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-        unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-        unsigned CountReg = IsWave32 ? AMDGPU::S_BCNT1_I32_B32 : AMDGPU::S_BCNT1_I32_B64;
+      bool IsWave32 = ST.isWave32();
+      unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+      unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+      unsigned CountReg =
+          IsWave32 ? AMDGPU::S_BCNT1_I32_B32 : AMDGPU::S_BCNT1_I32_B64;
 
-        auto Exec =
-            BuildMI(BB, MI, DL, TII->get(MovOpc), ExecMask).addReg(ExecReg);
+      auto Exec =
+          BuildMI(BB, MI, DL, TII->get(MovOpc), ExecMask).addReg(ExecReg);
 
-        auto NewAccumulator = BuildMI(BB, MI, DL, TII->get(CountReg), ActiveLanes)
-                                  .addReg(Exec->getOperand(0).getReg());
+      auto NewAccumulator = BuildMI(BB, MI, DL, TII->get(CountReg), ActiveLanes)
+                                .addReg(Exec->getOperand(0).getReg());
 
-        switch(Opc){
-          case AMDGPU::S_XOR_B32:{
-            // Performing an XOR operation on a uniform value
-            // depends on the parity of the number of active lanes.
-            // For even parity, the result will be 0, for odd 
-            // parity the result will be the same as the input value.
-            Register ParityRegister = MRI.createVirtualRegister(DstRegClass);
+      switch (Opc) {
+      case AMDGPU::S_XOR_B32: {
+        // Performing an XOR operation on a uniform value
+        // depends on the parity of the number of active lanes.
+        // For even parity, the result will be 0, for odd
+        // parity the result will be the same as the input value.
+        Register ParityRegister = MRI.createVirtualRegister(DstRegClass);
 
-            auto ParityReg = BuildMI(BB, MI, DL, TII->get(AMDGPU::S_AND_B32), ParityRegister)
+        auto ParityReg =
+            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_AND_B32), ParityRegister)
                 .addReg(NewAccumulator->getOperand(0).getReg())
                 .addImm(1);
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)  
-                .addReg(SrcReg)
-                .addReg(ParityReg->getOperand(0).getReg())  ;
-            break;
-          }
-          case AMDGPU::S_SUB_I32:{
-            Register NegatedVal = MRI.createVirtualRegister(DstRegClass);
-
-            // Take the negation of the source operand.
-            auto InvertedValReg = BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), NegatedVal).addImm(-1).addReg(SrcReg);
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
-                .addReg(InvertedValReg->getOperand(0).getReg())
-                .addReg(NewAccumulator->getOperand(0).getReg());
-            break;
-          }
-          case AMDGPU::S_ADD_I32:{
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
-                .addReg(SrcReg)
-                .addReg(NewAccumulator->getOperand(0).getReg());
-            break;
-          }
-        }
-        RetBB = &BB;
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+            .addReg(SrcReg)
+            .addReg(ParityReg->getOperand(0).getReg());
+        break;
       }
+      case AMDGPU::S_SUB_I32: {
+        Register NegatedVal = MRI.createVirtualRegister(DstRegClass);
+
+        // Take the negation of the source operand.
+        auto InvertedValReg =
+            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), NegatedVal)
+                .addImm(-1)
+                .addReg(SrcReg);
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+            .addReg(InvertedValReg->getOperand(0).getReg())
+            .addReg(NewAccumulator->getOperand(0).getReg());
+        break;
+      }
+      case AMDGPU::S_ADD_I32: {
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+            .addReg(SrcReg)
+            .addReg(NewAccumulator->getOperand(0).getReg());
+        break;
+      }
+      }
+      RetBB = &BB;
+    }
     }
   } else {
     // TODO: Implement DPP Strategy and switch based on immediate strategy

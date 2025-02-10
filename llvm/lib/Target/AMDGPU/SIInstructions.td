@@ -277,7 +277,7 @@ def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
 def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
     (V_SET_INACTIVE_B32 0, VGPR_32:$src, 0, VGPR_32:$inactive, (IMPLICIT_DEF))>;
 
- // clang-format off
+// clang-format off
 defvar int_amdgcn_wave_reduce_ = "int_amdgcn_wave_reduce_";
 multiclass
     AMDGPUWaveReducePseudoGenerator<string Op, string DataType, string Size> {
@@ -288,9 +288,9 @@ multiclass
                         [(set i32 : $sdst, (!cast<AMDGPUWaveReduce>(int_amdgcn_wave_reduce_ #Op) i32 : $src, i32 : $strategy))]> {}
   }
 }
- // clang-format on
+// clang-format on
 
-// Input list : [Operation_name, 
+// Input list : [Operation_name,
 //              type - Signed(I)/Unsigned(U)/Float(F)/Bitwise(B),
 //              Size_in_bits]
 defvar Operations = [
