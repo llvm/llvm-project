@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if __has_include(<filesystem>)
 #include <filesystem>
+#endif
 #include <optional>
 #include <utility>
 
@@ -3050,6 +3052,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           },
           nb::arg("asm"), nb::arg("context").none() = nb::none(),
           kModuleParseDocstring)
+#if __has_include(<filesystem>)
       .def_static(
           "parse",
           [](const std::filesystem::path &path,
@@ -3063,6 +3066,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           },
           nb::arg("asm"), nb::arg("context").none() = nb::none(),
           kModuleParseDocstring)
+#endif
       .def_static(
           "create",
           [](DefaultingPyLocation loc) {
