@@ -19,7 +19,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 a.s -o a.o
 # RUN: llvm-profdata merge a.proftext -o a.profdata
-# RUN: ld.lld a.o --irpgo-profile=a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all 2>&1 | FileCheck %s --check-prefix=STARTUP-FUNC-ORDER
+# RUN: ld.lld a.o --irpgo-profile=a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all --gc-sections 2>&1 | FileCheck %s --check-prefix=STARTUP-FUNC-ORDER
 
 # STARTUP-FUNC-ORDER: Ordered 3 sections using balanced partitioning
 # STARTUP-FUNC-ORDER: Total area under the page fault curve: 3.
@@ -33,7 +33,7 @@
 # ORDER-STARTUP: s2,s1,s5,s4,s3,A,F,E,D,B,C,merged1,merged2,_start,d3,d2,d4,d1,{{$}}
 
 # RUN: ld.lld -o out.cf a.o --verbose-bp-section-orderer --bp-compression-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-FUNC
-# RUN: ld.lld -o out.cf.icf a.o --verbose-bp-section-orderer --bp-compression-sort=function --icf=all 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-ICF-FUNC
+# RUN: ld.lld -o out.cf.icf a.o --verbose-bp-section-orderer --bp-compression-sort=function --icf=all --gc-sections 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-ICF-FUNC
 # RUN: llvm-nm -jn out.cf | tr '\n' , | FileCheck %s --check-prefix=CFUNC
 # CFUNC: s5,s4,s3,s2,s1,A,F,merged1,merged2,C,E,D,B,_start,d4,d3,d2,d1,{{$}}
 
@@ -118,18 +118,22 @@ int d3[] = {5,6,7,8};
 int d2[] = {7,8,9,10};
 int d1[] = {3,4,5,6};
 
+// used is to suppress compiler garbage collection in ELF; retain is to suppress linker garbage collection; used is not needed for non-internal linkage symbols
+// used is for both compiler/linker GC in Mach-O; retain is ignored for Mach-O
+#define RETAIN [[gnu::used,gnu::retain]]
+
 int C(int a);
 int B(int a);
 void A();
 
 int F(int a) { return C(a + 3); }
-int E(int a) { return C(a + 2); }
-int D(int a) { return B(a + 2); }
+RETAIN int E(int a) { return C(a + 2); }
+RETAIN int D(int a) { return B(a + 2); }
 int C(int a) { A(); return a + 2; }
 int B(int a) { A(); return a + 1; }
 void A() {}
 
-int merged1(int a) { return F(a + 101); }
+RETAIN int merged1(int a) { return F(a + 101); }
 int merged2(int a) { return F(a + 101); }
 
 int _start() { return 0; }
@@ -176,7 +180,7 @@ C:                                      // @C
 .Lfunc_end1:
 	.size	C, .Lfunc_end1-C
                                         // -- End function
-	.section	.text.E,"ax",@progbits
+	.section	.text.E,"axR",@progbits
 	.globl	E                               // -- Begin function E
 	.p2align	2
 	.type	E,@function
@@ -195,7 +199,7 @@ E:                                      // @E
 .Lfunc_end2:
 	.size	E, .Lfunc_end2-E
                                         // -- End function
-	.section	.text.D,"ax",@progbits
+	.section	.text.D,"axR",@progbits
 	.globl	D                               // -- Begin function D
 	.p2align	2
 	.type	D,@function
@@ -243,7 +247,7 @@ A:                                      // @A
 .Lfunc_end5:
 	.size	A, .Lfunc_end5-A
                                         // -- End function
-	.section	.text.merged1,"ax",@progbits
+	.section	.text.merged1,"axR",@progbits
 	.globl	merged1                         // -- Begin function merged1
 	.p2align	2
 	.type	merged1,@function
@@ -377,5 +381,8 @@ d1:
 	.addrsig
 	.addrsig_sym F
 	.addrsig_sym C
+	.addrsig_sym E
+	.addrsig_sym D
 	.addrsig_sym B
 	.addrsig_sym A
+	.addrsig_sym merged1
