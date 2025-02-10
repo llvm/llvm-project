@@ -452,6 +452,11 @@ bool DynamicDivergenceHeuristic::isLikelyDivergent(const Value *V) {
   if (!I)
     return false;
 
+  // Floating-point computations tend to be too complex to judge if they are
+  // likely divergent.
+  if (I->getType()->isFloatingPointTy())
+    return false;
+
   // ExtractValueInst and IntrinsicInst enable looking through the
   // amdgcn_if/else intrinsics inserted by SIAnnotateControlFlow.
   if (!isa<BinaryOperator>(I) && !isa<UnaryOperator>(I) && !isa<CastInst>(I) &&
