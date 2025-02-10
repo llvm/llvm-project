@@ -2113,8 +2113,32 @@ static bool generateSelectInst(const SPIRV::IncomingCall *Call,
 static bool generateConstructInst(const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
-  return buildOpFromWrapper(MIRBuilder, SPIRV::OpCompositeConstruct, Call,
-                            GR->getSPIRVTypeID(Call->ReturnType));
+  auto MIB = MIRBuilder.buildInstr(SPIRV::OpCompositeConstruct)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+
+  constexpr unsigned MaxWordCount = UINT16_MAX;
+  const size_t NumElements = Call->Arguments.size();
+  size_t MaxNumElements = MaxWordCount - 3;
+  size_t SPIRVStructNumElements = NumElements;
+
+  if (NumElements > MaxNumElements) {
+    // Do adjustments for continued instructions.
+    SPIRVStructNumElements = MaxNumElements;
+    MaxNumElements = MaxWordCount - 1;
+  }
+
+  for (size_t I = 0; I < SPIRVStructNumElements; ++I)
+    MIB.addUse(Call->Arguments[I]);
+
+  for (size_t I = SPIRVStructNumElements; I < NumElements;
+       I += MaxNumElements) {
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpCompositeConstructContinuedINTEL);
+    for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
+      MIB.addUse(Call->Arguments[J]);
+  }
+
+  return true;
 }
 
 static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
@@ -2230,8 +2254,25 @@ static bool generateSpecConstantInst(const SPIRV::IncomingCall *Call,
     auto MIB = MIRBuilder.buildInstr(Opcode)
                    .addDef(Call->ReturnRegister)
                    .addUse(GR->getSPIRVTypeID(Call->ReturnType));
-    for (unsigned i = 0; i < Call->Arguments.size(); i++)
-      MIB.addUse(Call->Arguments[i]);
+
+    constexpr unsigned MaxWordCount = UINT16_MAX;
+    const size_t NumElements = Call->Arguments.size();
+    size_t MaxNumElements = MaxWordCount - 3;
+    size_t SPIRVStructNumElements = NumElements;
+    if (NumElements > MaxNumElements) {
+      SPIRVStructNumElements = MaxNumElements;
+      MaxNumElements = MaxWordCount - 1;
+    }
+    for (size_t I = 0; I < SPIRVStructNumElements; ++I)
+      MIB.addUse(Call->Arguments[I]);
+
+    for (size_t I = SPIRVStructNumElements; I < NumElements;
+         I += MaxNumElements) {
+      auto MIB =
+          MIRBuilder.buildInstr(SPIRV::OpSpecConstantCompositeContinuedINTEL);
+      for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
+        MIB.addUse(Call->Arguments[J]);
+    }
     return true;
   }
   default:

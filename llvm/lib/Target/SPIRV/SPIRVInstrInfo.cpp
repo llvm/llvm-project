@@ -55,6 +55,7 @@ bool SPIRVInstrInfo::isSpecConstantInstr(const MachineInstr &MI) const {
   case SPIRV::OpSpecConstantFalse:
   case SPIRV::OpSpecConstant:
   case SPIRV::OpSpecConstantComposite:
+  case SPIRV::OpSpecConstantCompositeContinuedINTEL:
   case SPIRV::OpSpecConstantOp:
     return true;
   default:
