@@ -1822,6 +1822,11 @@ def fprofile_update_EQ : Joined<["-"], "fprofile-update=">,
     Values<"atomic,prefer-atomic,single">,
     MetaVarName<"<method>">, HelpText<"Set update method of profile counters">,
     MarshallingInfoFlag<CodeGenOpts<"AtomicProfileUpdate">>;
+def fprofile_continuous : Flag<["-"], "fprofile-continuous">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Enable continuous instrumentation profiling mode">,
+    MarshallingInfoFlag<CodeGenOpts<"ContinuousProfileSync">>;
+
 defm pseudo_probe_for_profiling : BoolFOption<"pseudo-probe-for-profiling",
   CodeGenOpts<"PseudoProbeForProfiling">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Emit">,
@@ -4173,6 +4178,10 @@ def ftrap_function_EQ : Joined<["-"], "ftrap-function=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Issue call to specified function rather than a trap instruction">,
   MarshallingInfoString<CodeGenOpts<"TrapFuncName">>;
+def floop_interchange : Flag<["-"], "floop-interchange">, Group<f_Group>,
+  HelpText<"Enable the loop interchange pass">, Visibility<[ClangOption, CC1Option]>;
+def fno_loop_interchange: Flag<["-"], "fno-loop-interchange">, Group<f_Group>,
+  HelpText<"Disable the loop interchange pass">, Visibility<[ClangOption, CC1Option]>;
 /* TO_UPSTREAM(BoundsSafety) ON */
 defm trap_function_returns : BoolFOption<"trap-function-returns",
   CodeGenOpts<"TrapFuncReturns">, DefaultFalse,

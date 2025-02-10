@@ -673,7 +673,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // We use 2 for the cost of the mask materialization as this is the true
     // cost for small masks and most shuffles are small.  At worst, this cost
     // should be a very small constant for the constant pool load.  As such,
-    // we may bias towards large selects slightly more than truely warranted.
+    // we may bias towards large selects slightly more than truly warranted.
     return LT.first *
            (1 + getRISCVInstructionCost({RISCV::VMV_S_X, RISCV::VMERGE_VVM},
                                         LT.second, CostKind));
@@ -2396,7 +2396,7 @@ InstructionCost RISCVTTIImpl::getPointersChainCost(
   // either GEP instructions, PHIs, bitcasts or constants. When we have same
   // base, we just calculate cost of each non-Base GEP as an ADD operation if
   // any their index is a non-const.
-  // If no known dependecies between the pointers cost is calculated as a sum
+  // If no known dependencies between the pointers cost is calculated as a sum
   // of costs of GEP instructions.
   for (auto [I, V] : enumerate(Ptrs)) {
     const auto *GEP = dyn_cast<GetElementPtrInst>(V);
@@ -2440,7 +2440,7 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   if (ST->enableDefaultUnroll())
     return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP, ORE);
 
-  // Enable Upper bound unrolling universally, not dependant upon the conditions
+  // Enable Upper bound unrolling universally, not dependent upon the conditions
   // below.
   UP.UpperBound = true;
 

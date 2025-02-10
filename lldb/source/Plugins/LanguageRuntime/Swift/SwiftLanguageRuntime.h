@@ -242,8 +242,8 @@ public:
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,
-                                Address &address,
-                                Value::ValueType &value_type) override;
+                                Address &address, Value::ValueType &value_type,
+                                llvm::ArrayRef<uint8_t> &local_buffer) override;
 
   CompilerType BindGenericTypeParameters(
       CompilerType unbound_type,
@@ -569,7 +569,8 @@ private:
                                       lldb::DynamicValueType use_dynamic,
                                       TypeAndOrName &class_type_or_name,
                                       Address &address,
-                                      Value::ValueType &value_type);
+                                      Value::ValueType &value_type,
+                                      llvm::ArrayRef<uint8_t> &local_buffer);
 #ifndef NDEBUG
   ConstString GetDynamicTypeName_ClassRemoteAST(ValueObject &in_value,
                                                 lldb::addr_t instance_ptr);
@@ -596,18 +597,18 @@ private:
                                       lldb::DynamicValueType use_dynamic,
                                       TypeAndOrName &class_type_or_name,
                                       Address &address,
-                                      Value::ValueType &value_type);
+                                      Value::ValueType &value_type,
+                                      llvm::ArrayRef<uint8_t> &local_buffer);
 
   bool GetDynamicTypeAndAddress_IndirectEnumCase(
       ValueObject &in_value, lldb::DynamicValueType use_dynamic,
       TypeAndOrName &class_type_or_name, Address &address,
-      Value::ValueType &value_type);
+      Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer);
 
-  bool GetDynamicTypeAndAddress_ClangType(ValueObject &in_value,
-                                          lldb::DynamicValueType use_dynamic,
-                                          TypeAndOrName &class_type_or_name,
-                                          Address &address,
-                                          Value::ValueType &value_type);
+  bool GetDynamicTypeAndAddress_ClangType(
+      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+      TypeAndOrName &class_type_or_name, Address &address,
+      Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer);
 
   /// Dynamic type resolution tends to want to generate scalar data -
   /// but there are caveats Per original comment here "Our address is
@@ -618,7 +619,8 @@ private:
   Value::ValueType GetValueType(ValueObject &in_value,
                                 CompilerType dynamic_type,
                                 Value::ValueType static_value_type,
-                                bool is_indirect_enum_case);
+                                bool is_indirect_enum_case,
+                                llvm::ArrayRef<uint8_t> &local_buffer);
 
   lldb::UnwindPlanSP
   GetRuntimeUnwindPlan(lldb::ProcessSP process_sp,

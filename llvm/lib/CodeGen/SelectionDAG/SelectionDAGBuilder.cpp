@@ -6990,6 +6990,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
     return;
+  case Intrinsic::modf:
   case Intrinsic::sincos:
   case Intrinsic::frexp: {
     unsigned Opcode;
@@ -6998,6 +6999,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       llvm_unreachable("unexpected intrinsic");
     case Intrinsic::sincos:
       Opcode = ISD::FSINCOS;
+      break;
+    case Intrinsic::modf:
+      Opcode = ISD::FMODF;
       break;
     case Intrinsic::frexp:
       Opcode = ISD::FFREXP;

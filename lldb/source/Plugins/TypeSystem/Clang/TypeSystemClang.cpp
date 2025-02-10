@@ -1743,6 +1743,12 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
       TemplateArgumentList::CreateCopy(ast, args));
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
+
+  // FIXME: set to fixed value for now so it's not uninitialized.
+  // One way to determine StrictPackMatch would be
+  // Sema::CheckTemplateTemplateArgument.
+  class_template_specialization_decl->setStrictPackMatch(false);
+
   SetOwningModule(class_template_specialization_decl, owning_module);
   decl_ctx->addDecl(class_template_specialization_decl);
 
@@ -2381,7 +2387,8 @@ CompilerType TypeSystemClang::GetOrCreateStructForIdentifier(
 clang::EnumDecl *TypeSystemClang::CreateEnumerationDecl(
     llvm::StringRef name, clang::DeclContext *decl_ctx,
     OptionalClangModuleID owning_module, const Declaration &decl,
-    const CompilerType &integer_clang_type, bool is_scoped) {
+    const CompilerType &integer_clang_type, bool is_scoped,
+    std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind) {
   // TODO: Do something intelligent with the Declaration object passed in
   // like maybe filling in the SourceLocation with it...
   ASTContext &ast = getASTContext();
@@ -2398,6 +2405,10 @@ clang::EnumDecl *TypeSystemClang::CreateEnumerationDecl(
   SetOwningModule(enum_decl, owning_module);
   if (decl_ctx)
     decl_ctx->addDecl(enum_decl);
+
+  if (enum_kind)
+    enum_decl->addAttr(
+        clang::EnumExtensibilityAttr::CreateImplicit(ast, *enum_kind));
 
   // TODO: check if we should be setting the promotion type too?
   enum_decl->setIntegerType(ClangUtil::GetQualType(integer_clang_type));

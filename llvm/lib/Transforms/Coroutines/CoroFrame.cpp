@@ -752,13 +752,14 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
                                   dwarf::DW_ATE_unsigned_char)});
 
   for (auto *V : FrameData.getAllDefs()) {
-    if (!DIVarCache.contains(V))
+    auto It = DIVarCache.find(V);
+    if (It == DIVarCache.end())
       continue;
 
     auto Index = FrameData.getFieldIndex(V);
 
-    NameCache.insert({Index, DIVarCache[V]->getName()});
-    TyCache.insert({Index, DIVarCache[V]->getType()});
+    NameCache.insert({Index, It->second->getName()});
+    TyCache.insert({Index, It->second->getType()});
   }
 
   // Cache from index to (Align, Offset Pair)

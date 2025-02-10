@@ -126,14 +126,24 @@ namespace clang {
 extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
 }
 
-namespace {
-
 // Default filename used for profile generation.
-std::string getDefaultProfileGenName() {
+static std::string getDefaultProfileGenName() {
   return DebugInfoCorrelate || ProfileCorrelate != InstrProfCorrelator::NONE
              ? "default_%m.proflite"
              : "default_%m.profraw";
 }
+
+// Path and name of file used for profile generation
+static std::string getProfileGenName(const CodeGenOptions &CodeGenOpts) {
+  std::string FileName = CodeGenOpts.InstrProfileOutput.empty()
+                             ? getDefaultProfileGenName()
+                             : CodeGenOpts.InstrProfileOutput;
+  if (CodeGenOpts.ContinuousProfileSync)
+    FileName = "%c" + FileName;
+  return FileName;
+}
+
+namespace {
 
 class EmitAssemblyHelper {
   CompilerInstance &CI;
@@ -567,7 +577,9 @@ getInstrProfOptions(const CodeGenOptions &CodeGenOpts,
     return std::nullopt;
   InstrProfOptions Options;
   Options.NoRedZone = CodeGenOpts.DisableRedZone;
-  Options.InstrProfileOutput = CodeGenOpts.InstrProfileOutput;
+  Options.InstrProfileOutput = CodeGenOpts.ContinuousProfileSync
+                                   ? ("%c" + CodeGenOpts.InstrProfileOutput)
+                                   : CodeGenOpts.InstrProfileOutput;
   Options.Atomic = CodeGenOpts.AtomicProfileUpdate;
   return Options;
 }
@@ -840,13 +852,12 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 
   if (CodeGenOpts.hasProfileIRInstr())
     // -fprofile-generate.
-    PGOOpt = PGOOptions(
-        CodeGenOpts.InstrProfileOutput.empty() ? getDefaultProfileGenName()
-                                               : CodeGenOpts.InstrProfileOutput,
-        "", "", CodeGenOpts.MemoryProfileUsePath, nullptr, PGOOptions::IRInstr,
-        PGOOptions::NoCSAction, ClPGOColdFuncAttr,
-        CodeGenOpts.DebugInfoForProfiling,
-        /*PseudoProbeForProfiling=*/false, CodeGenOpts.AtomicProfileUpdate);
+    PGOOpt = PGOOptions(getProfileGenName(CodeGenOpts), "", "",
+                        CodeGenOpts.MemoryProfileUsePath, nullptr,
+                        PGOOptions::IRInstr, PGOOptions::NoCSAction,
+                        ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling,
+                        /*PseudoProbeForProfiling=*/false,
+                        CodeGenOpts.AtomicProfileUpdate);
   else if (CodeGenOpts.hasProfileIRUse()) {
     // -fprofile-use.
     auto CSAction = CodeGenOpts.hasProfileCSIRUse() ? PGOOptions::CSIRUse
@@ -890,24 +901,20 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
              PGOOpt->Action != PGOOptions::SampleUse &&
              "Cannot run CSProfileGen pass with ProfileGen or SampleUse "
              " pass");
-      PGOOpt->CSProfileGenFile = CodeGenOpts.InstrProfileOutput.empty()
-                                     ? getDefaultProfileGenName()
-                                     : CodeGenOpts.InstrProfileOutput;
+      PGOOpt->CSProfileGenFile = getProfileGenName(CodeGenOpts);
       PGOOpt->CSAction = PGOOptions::CSIRInstr;
     } else
-      PGOOpt = PGOOptions("",
-                          CodeGenOpts.InstrProfileOutput.empty()
-                              ? getDefaultProfileGenName()
-                              : CodeGenOpts.InstrProfileOutput,
-                          "", /*MemoryProfile=*/"", nullptr,
-                          PGOOptions::NoAction, PGOOptions::CSIRInstr,
-                          ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling);
+      PGOOpt = PGOOptions("", getProfileGenName(CodeGenOpts), "",
+                          /*MemoryProfile=*/"", nullptr, PGOOptions::NoAction,
+                          PGOOptions::CSIRInstr, ClPGOColdFuncAttr,
+                          CodeGenOpts.DebugInfoForProfiling);
   }
   if (TM)
     TM->setPGOOption(PGOOpt);
 
   PipelineTuningOptions PTO;
   PTO.LoopUnrolling = CodeGenOpts.UnrollLoops;
+  PTO.LoopInterchange = CodeGenOpts.InterchangeLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
   // unrolling.
   PTO.LoopInterleaving = CodeGenOpts.UnrollLoops;
@@ -1344,6 +1351,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   initTargetOptions(CI, Diags, Conf.Options, CASOpts/* MCCAS */);
   Conf.SampleProfile = std::move(SampleProfile);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
+  Conf.PTO.LoopInterchange = CGOpts.InterchangeLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
   // unrolling.
   Conf.PTO.LoopInterleaving = CGOpts.UnrollLoops;

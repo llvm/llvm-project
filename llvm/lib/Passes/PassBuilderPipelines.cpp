@@ -201,9 +201,9 @@ static cl::opt<bool> ExtraVectorizerPasses(
 static cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
                                cl::desc("Run the NewGVN pass"));
 
-static cl::opt<bool> EnableLoopInterchange(
-    "enable-loopinterchange", cl::init(false), cl::Hidden,
-    cl::desc("Enable the experimental LoopInterchange Pass"));
+static cl::opt<bool>
+    EnableLoopInterchange("enable-loopinterchange", cl::init(false), cl::Hidden,
+                          cl::desc("Enable the LoopInterchange Pass"));
 
 static cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam",
                                         cl::init(false), cl::Hidden,
@@ -324,6 +324,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   LoopVectorization = true;
   SLPVectorization = false;
   LoopUnrolling = true;
+  LoopInterchange = EnableLoopInterchange;
   ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
   LicmMssaOptCap = SetLicmMssaOptCap;
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
@@ -493,7 +494,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
 
   LPM2.addPass(LoopDeletionPass());
 
-  if (EnableLoopInterchange)
+  if (PTO.LoopInterchange)
     LPM2.addPass(LoopInterchangePass());
 
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
@@ -684,7 +685,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   LPM2.addPass(LoopDeletionPass());
 
-  if (EnableLoopInterchange)
+  if (PTO.LoopInterchange)
     LPM2.addPass(LoopInterchangePass());
 
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
@@ -979,7 +980,7 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   // Try to perform OpenMP specific optimizations. This is a (quick!) no-op if
   // there are no OpenMP runtime calls present in the module.
   if (Level == OptimizationLevel::O2 || Level == OptimizationLevel::O3)
-    MainCGPipeline.addPass(OpenMPOptCGSCCPass());
+    MainCGPipeline.addPass(OpenMPOptCGSCCPass(Phase));
 
   invokeCGSCCOptimizerLateEPCallbacks(MainCGPipeline, Level);
 
@@ -1147,7 +1148,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   // Try to perform OpenMP specific optimizations on the module. This is a
   // (quick!) no-op if there are no OpenMP runtime calls present in the module.
-  MPM.addPass(OpenMPOptPass());
+  MPM.addPass(OpenMPOptPass(Phase));
 
   if (AttributorRun & AttributorRunOption::MODULE)
     MPM.addPass(AttributorPass());
