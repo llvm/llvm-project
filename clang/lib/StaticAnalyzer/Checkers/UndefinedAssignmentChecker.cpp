@@ -88,8 +88,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
       if (CD->isImplicit()) {
         for (auto *I : CD->inits()) {
           if (I->getInit()->IgnoreImpCasts() == StoreE) {
-            OS << "Value assigned to field '"
-               << I->getMember()->getName()
+            OS << "Value assigned to field '" << I->getMember()->getName()
                << "' in implicit constructor is undefined and not meaningful.";
             break;
           }
