@@ -1,11 +1,6 @@
 #ifndef __CLC_RELATIONAL_CLC_ISINF_H__
 #define __CLC_RELATIONAL_CLC_ISINF_H__
 
-#if defined(CLC_CLSPV) || defined(CLC_SPIRV)
-// clspv and spir-v targets provide their own OpenCL-compatible isinf
-#define __clc_isinf isinf
-#else
-
 #include <clc/clcfunc.h>
 #include <clc/clctypes.h>
 
@@ -36,7 +31,5 @@ _CLC_VECTOR_ISINF_DECL(short, half)
 
 #undef _CLC_ISINF_DECL
 #undef _CLC_VECTOR_ISINF_DECL
-
-#endif
 
 #endif // __CLC_RELATIONAL_CLC_ISINF_H__

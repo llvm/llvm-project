@@ -1,9 +1,10 @@
-! RUN: bbc -emit-fir %s -o - --math-runtime=fast | FileCheck --check-prefixes=ALL %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=fast %s -o - | FileCheck --check-prefixes=ALL %s
-! RUN: bbc -emit-fir %s -o - --math-runtime=relaxed | FileCheck --check-prefixes=ALL %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=relaxed %s -o - | FileCheck --check-prefixes=ALL %s
-! RUN: bbc -emit-fir %s -o - --math-runtime=precise | FileCheck --check-prefixes=ALL %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=precise %s -o - | FileCheck --check-prefixes=ALL %s
+! REQUIRES: x86_64-registered-target
+! RUN: bbc -target x86_64-unknown-linux-gnu -emit-fir %s -o - --math-runtime=fast | FileCheck --check-prefixes=ALL %s
+! RUN: %flang_fc1 -target x86_64-unknown-linux-gnu -emit-fir -mllvm -math-runtime=fast %s -o - | FileCheck --check-prefixes=ALL %s
+! RUN: bbc -target x86_64-unknown-linux-gnu -emit-fir %s -o - --math-runtime=relaxed | FileCheck --check-prefixes=ALL %s
+! RUN: %flang_fc1 -target x86_64-unknown-linux-gnu -emit-fir -mllvm -math-runtime=relaxed %s -o - | FileCheck --check-prefixes=ALL %s
+! RUN: bbc -target x86_64-unknown-linux-gnu -emit-fir %s -o - --math-runtime=precise | FileCheck --check-prefixes=ALL %s
+! RUN: %flang_fc1 -target x86_64-unknown-linux-gnu -emit-fir -mllvm -math-runtime=precise %s -o - | FileCheck --check-prefixes=ALL %s
 
 function test_real4(x)
   real :: x, test_real4

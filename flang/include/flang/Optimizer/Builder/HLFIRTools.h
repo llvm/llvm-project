@@ -150,10 +150,7 @@ public:
     return base.getDefiningOp<fir::FortranVariableOpInterface>();
   }
 
-  bool isOptional() const {
-    auto varIface = getIfVariableInterface();
-    return varIface ? varIface.isOptional() : false;
-  }
+  bool mayBeOptional() const;
 
   bool isParameter() const {
     auto varIface = getIfVariableInterface();
@@ -210,7 +207,8 @@ public:
 using CleanupFunction = std::function<void()>;
 std::pair<fir::ExtendedValue, std::optional<CleanupFunction>>
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         Entity entity, bool contiguousHint = false);
+                         Entity entity, bool contiguousHint = false,
+                         bool keepScalarOptionalBoxed = false);
 
 /// Function to translate FortranVariableOpInterface to fir::ExtendedValue.
 /// It may generates IR to unbox fir.boxchar, but has otherwise no side effects

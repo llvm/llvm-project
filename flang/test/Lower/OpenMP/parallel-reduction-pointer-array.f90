@@ -106,13 +106,12 @@ end program
 ! CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.char<{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_21:.*]] = fir.call @_FortranAPointerAllocate(%[[VAL_19]], %[[VAL_4]], %[[VAL_5]], %[[VAL_20]], %[[VAL_7]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_22:.*]] = fir.alloca i32 {bindc_name = "i", pinned, uniq_name = "_QFEi"}
-! CHECK:             %[[VAL_23:.*]]:2 = hlfir.declare %[[VAL_22]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_24:.*]] = arith.constant 0 : i32
 ! CHECK:             %[[VAL_25:.*]] = arith.constant 10 : i32
 ! CHECK:             %[[VAL_26:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop reduction(byref @add_reduction_byref_box_ptr_Uxi32 %[[VAL_3]]#0 -> %[[VAL_27:.*]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) {
+! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_22:.*]] : !fir.ref<i32>) reduction(byref @add_reduction_byref_box_ptr_Uxi32 %[[VAL_3]]#0 -> %[[VAL_27:.*]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) {
 ! CHECK:               omp.loop_nest (%[[VAL_28:.*]]) : i32 = (%[[VAL_24]]) to (%[[VAL_25]]) inclusive step (%[[VAL_26]]) {
+! CHECK:                 %[[VAL_23:.*]]:2 = hlfir.declare %[[VAL_22]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_27]] {fortran_attrs = {{.*}}<pointer>, uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:                 fir.store %[[VAL_28]] to %[[VAL_23]]#1 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_30:.*]] = fir.load %[[VAL_23]]#0 : !fir.ref<i32>
