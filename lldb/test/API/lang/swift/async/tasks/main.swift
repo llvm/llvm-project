@@ -11,7 +11,7 @@ func second() async {
         let task = Task {
             await first()
         }
-        try? await Task.sleep(for: .seconds(0.01))
+        try? await Task.sleep(for: .seconds(0.1))
         print("break here")
     }
 }
