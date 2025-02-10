@@ -38,6 +38,7 @@ class CommandInterepterPrintCallbackTest(TestBase):
         def handling_callback(return_object):
             nonlocal called
             called = True
+            self.assertEqual("help help", return_object.GetCommand())
             self.assertIn(needle, return_object.GetOutput())
             return lldb.eCommandReturnObjectPrintCallbackHandled
 
@@ -53,13 +54,14 @@ class CommandInterepterPrintCallbackTest(TestBase):
         def non_handling_callback(return_object):
             nonlocal called
             called = True
+            self.assertEqual("he help", return_object.GetCommand())
             self.assertIn(needle, return_object.GetOutput())
             return lldb.eCommandReturnObjectPrintCallbackSkipped
 
         called = False
         ci.SetPrintCallback(non_handling_callback)
         self.assertFalse(called)
-        self.run_command_interpreter_with_output_file(out_filename, "help help\n")
+        self.run_command_interpreter_with_output_file(out_filename, "he help\n")
         self.assertTrue(called)
 
         with open(out_filename, "r") as f:
