@@ -277,7 +277,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       // similar-types rule.
       const auto *RT = Ty->getAs<RecordType>();
       if (!RT)
-        return getAnyPtr();
+        return getAnyPtr(PtrDepth);
 
       // For unnamed structs or unions C's compatible types rule applies. Two
       // compatible types in different compilation units can have different
@@ -291,7 +291,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       // compatibility rule, but it doesn't matter because you can never have a
       // pointer to an anonymous struct or union.
       if (!RT->getDecl()->getDeclName())
-        return getAnyPtr();
+        return getAnyPtr(PtrDepth);
 
       // For non-builtin types use the mangled name of the canonical type.
       llvm::raw_svector_ostream TyOut(TyName);
