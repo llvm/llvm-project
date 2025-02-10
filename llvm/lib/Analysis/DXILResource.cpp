@@ -780,6 +780,7 @@ DXILBindingMap::findByUse(const Value *Key) const {
 
   switch (CI->getIntrinsicID()) {
   case Intrinsic::not_intrinsic:
+    // TODO: Walk the call tree
     return Infos.end();
   case Intrinsic::dx_resource_handlefrombinding:
     return find(CI);
@@ -847,6 +848,7 @@ bool DXILResourceBindingWrapperPass::runOnModule(Module &M) {
 }
 
 void DXILResourceBindingWrapperPass::releaseMemory() {
+  // TODO: Can't comment out this code
   /*Map.reset();*/ }
 
 void DXILResourceBindingWrapperPass::print(raw_ostream &OS,
