@@ -6,6 +6,10 @@
 define <4 x float>  @foo(float %a, float %b, float %c, float %d) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
+; CHECK-NEXT:    // kill: def $s3 killed $s3 def $q3
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-NEXT:    mov v0.s[3], v3.s[0]

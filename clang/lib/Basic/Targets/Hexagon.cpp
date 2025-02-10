@@ -78,6 +78,12 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   } else if (CPU == "hexagonv73") {
     Builder.defineMacro("__HEXAGON_V73__");
     Builder.defineMacro("__HEXAGON_ARCH__", "73");
+  } else if (CPU == "hexagonv75") {
+    Builder.defineMacro("__HEXAGON_V75__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "75");
+  } else if (CPU == "hexagonv79") {
+    Builder.defineMacro("__HEXAGON_V79__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "79");
   }
 
   if (hasFeature("hvx-length64b")) {
@@ -201,16 +207,23 @@ ArrayRef<TargetInfo::GCCRegAlias> HexagonTargetInfo::getGCCRegAliases() const {
 static constexpr int NumBuiltins =
     clang::Hexagon::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsHexagon.def"
-    , {
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsHexagon.def"
-      });
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsHexagon.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsHexagon.inc"
+#undef GET_BUILTIN_INFOS
+};
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsHexagon.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumBuiltins);
 
 bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
   std::string VS = "hvxv" + HVXVersion;
@@ -233,13 +246,14 @@ struct CPUSuffix {
 };
 
 static constexpr CPUSuffix Suffixes[] = {
-    {{"hexagonv5"},  {"5"}},  {{"hexagonv55"},  {"55"}},
-    {{"hexagonv60"}, {"60"}}, {{"hexagonv62"},  {"62"}},
-    {{"hexagonv65"}, {"65"}}, {{"hexagonv66"},  {"66"}},
+    {{"hexagonv5"}, {"5"}},   {{"hexagonv55"}, {"55"}},
+    {{"hexagonv60"}, {"60"}}, {{"hexagonv62"}, {"62"}},
+    {{"hexagonv65"}, {"65"}}, {{"hexagonv66"}, {"66"}},
     {{"hexagonv67"}, {"67"}}, {{"hexagonv67t"}, {"67t"}},
-    {{"hexagonv68"}, {"68"}}, {{"hexagonv69"},  {"69"}},
-    {{"hexagonv71"}, {"71"}}, {{"hexagonv71t"},  {"71t"}},
-    {{"hexagonv73"}, {"73"}},
+    {{"hexagonv68"}, {"68"}}, {{"hexagonv69"}, {"69"}},
+    {{"hexagonv71"}, {"71"}}, {{"hexagonv71t"}, {"71t"}},
+    {{"hexagonv73"}, {"73"}}, {{"hexagonv75"}, {"75"}},
+    {{"hexagonv79"}, {"79"}},
 };
 
 std::optional<unsigned> HexagonTargetInfo::getHexagonCPURev(StringRef Name) {
@@ -268,7 +282,8 @@ void HexagonTargetInfo::fillValidCPUList(
     Values.push_back(Suffix.Name);
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-HexagonTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+llvm::SmallVector<Builtin::InfosShard>
+HexagonTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos},
+          {&BuiltinStrings, PrefixedBuiltinInfos, "__builtin_HEXAGON_"}};
 }

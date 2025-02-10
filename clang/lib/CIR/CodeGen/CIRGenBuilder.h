@@ -21,6 +21,18 @@ class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
 public:
   CIRGenBuilderTy(mlir::MLIRContext &mlirContext, const CIRGenTypeCache &tc)
       : CIRBaseBuilderTy(mlirContext), typeCache(tc) {}
+
+  cir::LongDoubleType getLongDoubleTy(const llvm::fltSemantics &format) const {
+    if (&format == &llvm::APFloat::IEEEdouble())
+      return cir::LongDoubleType::get(getContext(), typeCache.DoubleTy);
+    if (&format == &llvm::APFloat::x87DoubleExtended())
+      return cir::LongDoubleType::get(getContext(), typeCache.FP80Ty);
+    if (&format == &llvm::APFloat::IEEEquad())
+      return cir::LongDoubleType::get(getContext(), typeCache.FP128Ty);
+    if (&format == &llvm::APFloat::PPCDoubleDouble())
+      llvm_unreachable("NYI: PPC double-double format for long double");
+    llvm_unreachable("Unsupported format for long double");
+  }
 };
 
 } // namespace clang::CIRGen

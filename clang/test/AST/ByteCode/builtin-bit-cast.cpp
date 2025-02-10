@@ -507,3 +507,11 @@ typedef bool bool9 __attribute__((ext_vector_type(9)));
 // both-error@+2 {{constexpr variable 'bad_bool9_to_short' must be initialized by a constant expression}}
 // both-note@+1 {{bit_cast involving type 'bool __attribute__((ext_vector_type(9)))' (vector of 9 'bool' values) is not allowed in a constant expression; element size 1 * element count 9 is not a multiple of the byte size 8}}
 constexpr unsigned short bad_bool9_to_short = __builtin_bit_cast(unsigned short, bool9{1,1,0,1,0,1,0,1,0});
+
+// both-warning@+2 {{returning reference to local temporary object}}
+// both-note@+1 {{temporary created here}}
+constexpr const intptr_t &returns_local() { return 0L; }
+
+// both-error@+2 {{constexpr variable 'test_nullptr_bad' must be initialized by a constant expression}}
+// both-note@+1 {{read of temporary whose lifetime has ended}}
+constexpr nullptr_t test_nullptr_bad = __builtin_bit_cast(nullptr_t, returns_local());

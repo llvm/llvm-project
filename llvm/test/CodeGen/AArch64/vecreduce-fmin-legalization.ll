@@ -44,9 +44,27 @@ define half @test_v1f16(<1 x half> %a) nounwind {
 }
 
 define float @test_v1f32(<1 x float> %a) nounwind {
-; CHECK-LABEL: test_v1f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ret
+; CHECK-NOFP-SD-LABEL: test_v1f32:
+; CHECK-NOFP-SD:       // %bb.0:
+; CHECK-NOFP-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NOFP-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NOFP-SD-NEXT:    ret
+;
+; CHECK-FP-SD-LABEL: test_v1f32:
+; CHECK-FP-SD:       // %bb.0:
+; CHECK-FP-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-FP-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-FP-SD-NEXT:    ret
+;
+; CHECK-NOFP-GI-LABEL: test_v1f32:
+; CHECK-NOFP-GI:       // %bb.0:
+; CHECK-NOFP-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
+; CHECK-NOFP-GI-NEXT:    ret
+;
+; CHECK-FP-GI-LABEL: test_v1f32:
+; CHECK-FP-GI:       // %bb.0:
+; CHECK-FP-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
+; CHECK-FP-GI-NEXT:    ret
   %b = call nnan float @llvm.vector.reduce.fmin.v1f32(<1 x float> %a)
   ret float %b
 }
@@ -70,6 +88,7 @@ define fp128 @test_v1f128(<1 x fp128> %a) nounwind {
 define half @test_v4f16(<4 x half> %a) nounwind {
 ; CHECK-NOFP-SD-LABEL: test_v4f16:
 ; CHECK-NOFP-SD:       // %bb.0:
+; CHECK-NOFP-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NOFP-SD-NEXT:    mov h1, v0.h[1]
 ; CHECK-NOFP-SD-NEXT:    fcvt s2, h0
 ; CHECK-NOFP-SD-NEXT:    fcvt s1, h1
@@ -105,6 +124,7 @@ define half @test_v4f16(<4 x half> %a) nounwind {
 define half @test_v4f16_ninf(<4 x half> %a) nounwind {
 ; CHECK-NOFP-SD-LABEL: test_v4f16_ninf:
 ; CHECK-NOFP-SD:       // %bb.0:
+; CHECK-NOFP-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NOFP-SD-NEXT:    mov h1, v0.h[1]
 ; CHECK-NOFP-SD-NEXT:    fcvt s2, h0
 ; CHECK-NOFP-SD-NEXT:    fcvt s1, h1
@@ -428,9 +448,17 @@ define half @test_v11f16(<11 x half> %a) nounwind {
 ;
 ; CHECK-FP-LABEL: test_v11f16:
 ; CHECK-FP:       // %bb.0:
+; CHECK-FP-NEXT:    // kill: def $h0 killed $h0 def $q0
+; CHECK-FP-NEXT:    // kill: def $h1 killed $h1 def $q1
+; CHECK-FP-NEXT:    // kill: def $h2 killed $h2 def $q2
+; CHECK-FP-NEXT:    // kill: def $h3 killed $h3 def $q3
+; CHECK-FP-NEXT:    // kill: def $h4 killed $h4 def $q4
+; CHECK-FP-NEXT:    // kill: def $h5 killed $h5 def $q5
+; CHECK-FP-NEXT:    mov x8, sp
+; CHECK-FP-NEXT:    // kill: def $h6 killed $h6 def $q6
+; CHECK-FP-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; CHECK-FP-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-FP-NEXT:    movi v1.8h, #124, lsl #8
-; CHECK-FP-NEXT:    mov x8, sp
 ; CHECK-FP-NEXT:    mov v0.h[2], v2.h[0]
 ; CHECK-FP-NEXT:    ld1 { v1.h }[0], [x8]
 ; CHECK-FP-NEXT:    add x8, sp, #8
@@ -499,9 +527,17 @@ define half @test_v11f16_ninf(<11 x half> %a) nounwind {
 ;
 ; CHECK-FP-LABEL: test_v11f16_ninf:
 ; CHECK-FP:       // %bb.0:
+; CHECK-FP-NEXT:    // kill: def $h0 killed $h0 def $q0
+; CHECK-FP-NEXT:    // kill: def $h1 killed $h1 def $q1
+; CHECK-FP-NEXT:    // kill: def $h2 killed $h2 def $q2
+; CHECK-FP-NEXT:    // kill: def $h3 killed $h3 def $q3
+; CHECK-FP-NEXT:    // kill: def $h4 killed $h4 def $q4
+; CHECK-FP-NEXT:    // kill: def $h5 killed $h5 def $q5
+; CHECK-FP-NEXT:    mov x8, sp
+; CHECK-FP-NEXT:    // kill: def $h6 killed $h6 def $q6
+; CHECK-FP-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; CHECK-FP-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-FP-NEXT:    mvni v1.8h, #132, lsl #8
-; CHECK-FP-NEXT:    mov x8, sp
 ; CHECK-FP-NEXT:    ld1 { v1.h }[0], [x8]
 ; CHECK-FP-NEXT:    add x8, sp, #8
 ; CHECK-FP-NEXT:    mov v0.h[2], v2.h[0]

@@ -4,6 +4,7 @@
 define <vscale x 16 x i1> @match_nxv16i8_v1i8(<vscale x 16 x i8> %op1, <1 x i8> %op2, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv16i8_v1i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    mov z1.b, b1
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    ret
@@ -14,6 +15,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v1i8(<vscale x 16 x i8> %op1, <1 x i8> 
 define <vscale x 16 x i1> @match_nxv16i8_v2i8(<vscale x 16 x i8> %op1, <2 x i8> %op2, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv16i8_v2i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov w8, v1.s[1]
 ; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    ptrue p1.b
@@ -36,6 +38,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v4i8(<vscale x 16 x i8> %op1, <4 x i8> 
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    umov w8, v1.h[1]
 ; CHECK-NEXT:    umov w9, v1.h[0]
 ; CHECK-NEXT:    umov w10, v1.h[2]
@@ -64,6 +67,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v4i8(<vscale x 16 x i8> %op1, <4 x i8> 
 define <vscale x 16 x i1> @match_nxv16i8_v8i8(<vscale x 16 x i8> %op1, <8 x i8> %op2, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv16i8_v8i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    mov z1.d, d1
 ; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    ret
@@ -74,6 +78,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v8i8(<vscale x 16 x i8> %op1, <8 x i8> 
 define <vscale x 16 x i1> @match_nxv16i8_v16i8(<vscale x 16 x i8> %op1, <16 x i8> %op2, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv16i8_v16i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z1.q, q1
 ; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    ret
@@ -84,6 +89,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v16i8(<vscale x 16 x i8> %op1, <16 x i8
 define <16 x i1> @match_v16i8_v1i8(<16 x i8> %op1, <1 x i8> %op2, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_v16i8_v1i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    dup v1.16b, v1.b[0]
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
@@ -95,6 +101,7 @@ define <16 x i1> @match_v16i8_v1i8(<16 x i8> %op1, <1 x i8> %op2, <16 x i1> %mas
 define <16 x i1> @match_v16i8_v2i8(<16 x i8> %op1, <2 x i8> %op2, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_v16i8_v2i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    dup v3.16b, v1.b[4]
 ; CHECK-NEXT:    dup v1.16b, v1.b[0]
 ; CHECK-NEXT:    cmeq v3.16b, v0.16b, v3.16b
@@ -109,6 +116,7 @@ define <16 x i1> @match_v16i8_v2i8(<16 x i8> %op1, <2 x i8> %op2, <16 x i1> %mas
 define <16 x i1> @match_v16i8_v4i8(<16 x i8> %op1, <4 x i8> %op2, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_v16i8_v4i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    dup v3.16b, v1.b[2]
 ; CHECK-NEXT:    dup v4.16b, v1.b[0]
 ; CHECK-NEXT:    dup v5.16b, v1.b[4]
@@ -131,11 +139,14 @@ define <16 x i1> @match_v16i8_v8i8(<16 x i8> %op1, <8 x i8> %op2, <16 x i1> %mas
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.16b, v2.16b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z1.d, d1
 ; CHECK-NEXT:    cmlt v2.16b, v2.16b, #0
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <8 x i8> %op2, <16 x i1> %mask)
   ret <16 x i1> %r
@@ -146,10 +157,13 @@ define <16 x i1> @match_v16i8_v16i8(<16 x i8> %op1, <16 x i8> %op2, <16 x i1> %m
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.16b, v2.16b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    cmlt v2.16b, v2.16b, #0
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <16 x i8> %op2, <16 x i1> %mask)
   ret <16 x i1> %r
@@ -160,11 +174,14 @@ define <8 x i1> @match_v8i8_v8i8(<8 x i8> %op1, <8 x i8> %op2, <8 x i1> %mask) #
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.8b, v2.8b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z1.d, d1
 ; CHECK-NEXT:    cmlt v2.8b, v2.8b, #0
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %r = tail call <8 x i1> @llvm.experimental.vector.match(<8 x i8> %op1, <8 x i8> %op2, <8 x i1> %mask)
   ret <8 x i1> %r
@@ -173,6 +190,7 @@ define <8 x i1> @match_v8i8_v8i8(<8 x i8> %op1, <8 x i8> %op2, <8 x i1> %mask) #
 define <vscale x 8 x i1> @match_nxv8i16_v8i16(<vscale x 8 x i16> %op1, <8 x i16> %op2, <vscale x 8 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv8i16_v8i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z1.q, q1
 ; CHECK-NEXT:    match p0.h, p0/z, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -185,6 +203,8 @@ define <8 x i1> @match_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) #0 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    shl v2.8h, v2.8h, #15
 ; CHECK-NEXT:    cmlt v2.8h, v2.8h, #0
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
@@ -203,10 +223,13 @@ define <8 x i1> @match_v8i8_v16i8(<8 x i8> %op1, <16 x i8> %op2, <8 x i1> %mask)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.8b, v2.8b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    cmlt v2.8b, v2.8b, #0
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %r = tail call <8 x i1> @llvm.experimental.vector.match(<8 x i8> %op1, <16 x i8> %op2, <8 x i1> %mask)
   ret <8 x i1> %r
@@ -220,8 +243,10 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z3.b, z1.b[1]
 ; CHECK-NEXT:    mov z4.b, b1
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    mov z5.b, z1.b[2]
 ; CHECK-NEXT:    cmpeq p2.b, p1/z, z0.b, z3.b
@@ -440,6 +465,7 @@ define <vscale x 4 x i1> @match_nxv4xi32_v4i32(<vscale x 4 x i32> %op1, <4 x i32
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z2.s, z1.s[1]
 ; CHECK-NEXT:    mov z3.s, s1
 ; CHECK-NEXT:    ptrue p1.s
@@ -464,9 +490,10 @@ define <vscale x 4 x i1> @match_nxv4xi32_v4i32(<vscale x 4 x i32> %op1, <4 x i32
 define <vscale x 2 x i1> @match_nxv2xi64_v2i64(<vscale x 2 x i64> %op1, <2 x i64> %op2, <vscale x 2 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv2xi64_v2i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z2.d, z1.d[1]
-; CHECK-NEXT:    mov z1.d, d1
 ; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    mov z1.d, d1
 ; CHECK-NEXT:    cmpeq p2.d, p1/z, z0.d, z2.d
 ; CHECK-NEXT:    cmpeq p1.d, p1/z, z0.d, z1.d
 ; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b

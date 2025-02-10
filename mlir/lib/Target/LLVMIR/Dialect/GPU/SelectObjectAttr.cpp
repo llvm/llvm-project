@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
@@ -124,7 +125,7 @@ LogicalResult SelectObjectAttrImpl::embedBinary(
 
   if (object.getProperties()) {
     if (auto section = mlir::dyn_cast_or_null<mlir::StringAttr>(
-            object.getProperties().get("section"))) {
+            object.getProperties().get(gpu::elfSectionName))) {
       serializedObj->setSection(section.getValue());
     }
   }

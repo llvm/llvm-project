@@ -1081,8 +1081,11 @@ define <3 x fp128> @stofp_v3i64_v3f128(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    str q2, [sp, #32] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floatditf
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
@@ -1136,8 +1139,11 @@ define <3 x fp128> @utofp_v3i64_v2f128(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    str q2, [sp, #32] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floatunditf
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
@@ -1201,10 +1207,12 @@ define <2 x double> @stofp_v2i128_v2f64(<2 x i128> %a) {
 ; CHECK-SD-NEXT:    bl __floattidf
 ; CHECK-SD-NEXT:    mov x0, x20
 ; CHECK-SD-NEXT:    mov x1, x19
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floattidf
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    add sp, sp, #48
@@ -1224,9 +1232,11 @@ define <2 x double> @stofp_v2i128_v2f64(<2 x i128> %a) {
 ; CHECK-GI-NEXT:    bl __floattidf
 ; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:    mov x1, x20
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __floattidf
 ; CHECK-GI-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
@@ -1255,10 +1265,12 @@ define <2 x double> @utofp_v2i128_v2f64(<2 x i128> %a) {
 ; CHECK-SD-NEXT:    bl __floatuntidf
 ; CHECK-SD-NEXT:    mov x0, x20
 ; CHECK-SD-NEXT:    mov x1, x19
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floatuntidf
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    add sp, sp, #48
@@ -1278,9 +1290,11 @@ define <2 x double> @utofp_v2i128_v2f64(<2 x i128> %a) {
 ; CHECK-GI-NEXT:    bl __floatuntidf
 ; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:    mov x1, x20
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __floatuntidf
 ; CHECK-GI-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
@@ -1469,18 +1483,29 @@ entry:
 define <3 x double> @stofp_v3i64_v3f64(<3 x i64> %a) {
 ; CHECK-SD-LABEL: stofp_v3i64_v3f64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    scvtf v2.2d, v2.2d
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: stofp_v3i64_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    scvtf v2.2d, v2.2d
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <3 x i64> %a to <3 x double>
@@ -1490,18 +1515,29 @@ entry:
 define <3 x double> @utofp_v3i64_v3f64(<3 x i64> %a) {
 ; CHECK-SD-LABEL: utofp_v3i64_v3f64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: utofp_v3i64_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <3 x i64> %a to <3 x double>
@@ -1739,6 +1775,7 @@ define <2 x fp128> @stofp_v2i32_v2f128(<2 x i32> %a) {
 ; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floatsitf
@@ -1760,6 +1797,7 @@ define <2 x fp128> @stofp_v2i32_v2f128(<2 x i32> %a) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    bl __floatsitf
@@ -1784,6 +1822,7 @@ define <2 x fp128> @utofp_v2i32_v2f128(<2 x i32> %a) {
 ; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floatunsitf
@@ -1805,6 +1844,7 @@ define <2 x fp128> @utofp_v2i32_v2f128(<2 x i32> %a) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    bl __floatunsitf
@@ -1961,8 +2001,10 @@ define <3 x double> @stofp_v3i32_v3f64(<3 x i32> %a) {
 ; CHECK-SD-NEXT:    sshll2 v0.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    scvtf v3.2d, v1.2d
 ; CHECK-SD-NEXT:    scvtf v2.2d, v0.2d
-; CHECK-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    fmov d0, d3
+; CHECK-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: stofp_v3i32_v3f64:
@@ -1971,6 +2013,7 @@ define <3 x double> @stofp_v3i32_v3f64(<3 x i32> %a) {
 ; CHECK-GI-NEXT:    sshll2 v0.2d, v0.4s, #0
 ; CHECK-GI-NEXT:    scvtf v3.2d, v1.2d
 ; CHECK-GI-NEXT:    scvtf v2.2d, v0.2d
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v3.d[1]
 ; CHECK-GI-NEXT:    fmov d0, d3
 ; CHECK-GI-NEXT:    ret
@@ -1986,8 +2029,10 @@ define <3 x double> @utofp_v3i32_v3f64(<3 x i32> %a) {
 ; CHECK-SD-NEXT:    ushll2 v0.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    ucvtf v3.2d, v1.2d
 ; CHECK-SD-NEXT:    ucvtf v2.2d, v0.2d
-; CHECK-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    fmov d0, d3
+; CHECK-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: utofp_v3i32_v3f64:
@@ -1996,6 +2041,7 @@ define <3 x double> @utofp_v3i32_v3f64(<3 x i32> %a) {
 ; CHECK-GI-NEXT:    ushll2 v0.2d, v0.4s, #0
 ; CHECK-GI-NEXT:    ucvtf v3.2d, v1.2d
 ; CHECK-GI-NEXT:    ucvtf v2.2d, v0.2d
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v3.d[1]
 ; CHECK-GI-NEXT:    fmov d0, d3
 ; CHECK-GI-NEXT:    ret
@@ -2387,6 +2433,7 @@ define <2 x fp128> @stofp_v2i16_v2f128(<2 x i16> %a) {
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    sxth w0, w8
@@ -2413,6 +2460,7 @@ define <2 x fp128> @utofp_v2i16_v2f128(<2 x i16> %a) {
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    and w0, w8, #0xffff
@@ -2439,6 +2487,7 @@ define <3 x fp128> @stofp_v3i16_v3f128(<3 x i16> %a) {
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w0, v0.h[0]
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __floatsitf
@@ -2467,6 +2516,7 @@ define <3 x fp128> @utofp_v3i16_v3f128(<3 x i16> %a) {
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __floatunsitf
@@ -2538,7 +2588,10 @@ define <3 x double> @stofp_v3i16_v3f64(<3 x i16> %a) {
 ; CHECK-SD-NEXT:    sshll2 v1.2d, v1.4s, #0
 ; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-SD-NEXT:    scvtf v2.2d, v1.2d
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: stofp_v3i16_v3f64:
@@ -2548,7 +2601,9 @@ define <3 x double> @stofp_v3i16_v3f64(<3 x i16> %a) {
 ; CHECK-GI-NEXT:    sshll2 v1.2d, v1.4s, #0
 ; CHECK-GI-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-GI-NEXT:    scvtf v2.2d, v1.2d
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <3 x i16> %a to <3 x double>
@@ -2563,7 +2618,10 @@ define <3 x double> @utofp_v3i16_v3f64(<3 x i16> %a) {
 ; CHECK-SD-NEXT:    ushll2 v1.2d, v1.4s, #0
 ; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-SD-NEXT:    ucvtf v2.2d, v1.2d
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: utofp_v3i16_v3f64:
@@ -2573,7 +2631,9 @@ define <3 x double> @utofp_v3i16_v3f64(<3 x i16> %a) {
 ; CHECK-GI-NEXT:    ushll2 v1.2d, v1.4s, #0
 ; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-GI-NEXT:    ucvtf v2.2d, v1.2d
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <3 x i16> %a to <3 x double>
@@ -3023,6 +3083,7 @@ define <2 x fp128> @stofp_v2i8_v2f128(<2 x i8> %a) {
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    sxtb w0, w8
@@ -3049,6 +3110,7 @@ define <2 x fp128> @utofp_v2i8_v2f128(<2 x i8> %a) {
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    and w0, w8, #0xff
@@ -3237,8 +3299,11 @@ define <3 x double> @stofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-SD-NEXT:    sshr v0.2s, v0.2s, #24
 ; CHECK-SD-NEXT:    scvtf v2.2d, v1.2d
 ; CHECK-SD-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: stofp_v3i8_v3f64:
@@ -3255,10 +3320,12 @@ define <3 x double> @stofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    smov x9, v0.h[3]
 ; CHECK-GI-NEXT:    mov v2.d[0], x8
-; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    scvtf v0.2d, v1.2d
-; CHECK-GI-NEXT:    scvtf v2.2d, v2.2d
+; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    scvtf v2.2d, v2.2d
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <3 x i8> %a to <3 x double>
@@ -3278,7 +3345,10 @@ define <3 x double> @utofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-SD-NEXT:    ucvtf v2.2d, v1.2d
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: utofp_v3i8_v3f64:
@@ -3295,10 +3365,12 @@ define <3 x double> @utofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    umov w9, v0.h[3]
 ; CHECK-GI-NEXT:    mov v2.d[0], x8
-; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    ucvtf v0.2d, v1.2d
-; CHECK-GI-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <3 x i8> %a to <3 x double>
@@ -3370,6 +3442,7 @@ entry:
 define <8 x double> @stofp_v8i8_v8f64(<8 x i8> %a) {
 ; CHECK-SD-LABEL: stofp_v8i8_v8f64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    umov w8, v0.b[0]
 ; CHECK-SD-NEXT:    umov w9, v0.b[2]
 ; CHECK-SD-NEXT:    umov w11, v0.b[4]
@@ -3426,6 +3499,7 @@ entry:
 define <8 x double> @utofp_v8i8_v8f64(<8 x i8> %a) {
 ; CHECK-SD-LABEL: utofp_v8i8_v8f64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    umov w8, v0.b[0]
 ; CHECK-SD-NEXT:    umov w9, v0.b[2]
 ; CHECK-SD-NEXT:    umov w11, v0.b[4]
@@ -4077,12 +4151,15 @@ define <2 x float> @stofp_v2i128_v2f32(<2 x i128> %a) {
 ; CHECK-SD-NEXT:    bl __floattisf
 ; CHECK-SD-NEXT:    mov x0, x20
 ; CHECK-SD-NEXT:    mov x1, x19
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floattisf
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    add sp, sp, #48
 ; CHECK-SD-NEXT:    ret
 ;
@@ -4100,9 +4177,11 @@ define <2 x float> @stofp_v2i128_v2f32(<2 x i128> %a) {
 ; CHECK-GI-NEXT:    bl __floattisf
 ; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:    mov x1, x20
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __floattisf
 ; CHECK-GI-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.s[1], v0.s[0]
@@ -4131,12 +4210,15 @@ define <2 x float> @utofp_v2i128_v2f32(<2 x i128> %a) {
 ; CHECK-SD-NEXT:    bl __floatuntisf
 ; CHECK-SD-NEXT:    mov x0, x20
 ; CHECK-SD-NEXT:    mov x1, x19
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floatuntisf
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    add sp, sp, #48
 ; CHECK-SD-NEXT:    ret
 ;
@@ -4154,9 +4236,11 @@ define <2 x float> @utofp_v2i128_v2f32(<2 x i128> %a) {
 ; CHECK-GI-NEXT:    bl __floatuntisf
 ; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:    mov x1, x20
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __floatuntisf
 ; CHECK-GI-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.s[1], v0.s[0]
@@ -4190,15 +4274,18 @@ define <3 x float> @stofp_v3i128_v3f32(<3 x i128> %a) {
 ; CHECK-SD-NEXT:    bl __floattisf
 ; CHECK-SD-NEXT:    mov x0, x22
 ; CHECK-SD-NEXT:    mov x1, x21
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floattisf
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    mov x0, x20
 ; CHECK-SD-NEXT:    mov x1, x19
 ; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floattisf
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -4226,13 +4313,16 @@ define <3 x float> @stofp_v3i128_v3f32(<3 x i128> %a) {
 ; CHECK-GI-NEXT:    bl __floattisf
 ; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:    mov x1, x20
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __floattisf
 ; CHECK-GI-NEXT:    mov x0, x21
 ; CHECK-GI-NEXT:    mov x1, x22
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __floattisf
 ; CHECK-GI-NEXT:    ldp q2, q1, [sp] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
@@ -4268,15 +4358,18 @@ define <3 x float> @utofp_v3i128_v3f32(<3 x i128> %a) {
 ; CHECK-SD-NEXT:    bl __floatuntisf
 ; CHECK-SD-NEXT:    mov x0, x22
 ; CHECK-SD-NEXT:    mov x1, x21
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floatuntisf
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    mov x0, x20
 ; CHECK-SD-NEXT:    mov x1, x19
 ; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floatuntisf
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -4304,13 +4397,16 @@ define <3 x float> @utofp_v3i128_v3f32(<3 x i128> %a) {
 ; CHECK-GI-NEXT:    bl __floatuntisf
 ; CHECK-GI-NEXT:    mov x0, x19
 ; CHECK-GI-NEXT:    mov x1, x20
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __floatuntisf
 ; CHECK-GI-NEXT:    mov x0, x21
 ; CHECK-GI-NEXT:    mov x1, x22
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __floatuntisf
 ; CHECK-GI-NEXT:    ldp q2, q1, [sp] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
@@ -4349,6 +4445,9 @@ entry:
 define <3 x float> @stofp_v3i64_v3f32(<3 x i64> %a) {
 ; CHECK-SD-LABEL: stofp_v3i64_v3f32:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    scvtf v1.2d, v2.2d
 ; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
@@ -4358,6 +4457,9 @@ define <3 x float> @stofp_v3i64_v3f32(<3 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: stofp_v3i64_v3f32:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    scvtf v2.2d, v2.2d
 ; CHECK-GI-NEXT:    scvtf v0.2d, v0.2d
@@ -4375,6 +4477,9 @@ entry:
 define <3 x float> @utofp_v3i64_v3f32(<3 x i64> %a) {
 ; CHECK-SD-LABEL: utofp_v3i64_v3f32:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    ucvtf v1.2d, v2.2d
 ; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
@@ -4384,6 +4489,9 @@ define <3 x float> @utofp_v3i64_v3f32(<3 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: utofp_v3i64_v3f32:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ucvtf v2.2d, v2.2d
 ; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
@@ -5533,6 +5641,7 @@ define <2 x half> @stofp_v2i128_v2f16(<2 x i128> %a) {
 ; CHECK-SD-NOFP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-SD-NOFP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NOFP16-NEXT:    add sp, sp, #48
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
@@ -5552,12 +5661,15 @@ define <2 x half> @stofp_v2i128_v2f16(<2 x i128> %a) {
 ; CHECK-SD-FP16-NEXT:    bl __floattihf
 ; CHECK-SD-FP16-NEXT:    mov x0, x20
 ; CHECK-SD-FP16-NEXT:    mov x1, x19
+; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-FP16-NEXT:    bl __floattihf
 ; CHECK-SD-FP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-FP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-SD-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-FP16-NEXT:    add sp, sp, #48
 ; CHECK-SD-FP16-NEXT:    ret
 ;
@@ -5583,6 +5695,7 @@ define <2 x half> @stofp_v2i128_v2f16(<2 x i128> %a) {
 ; CHECK-GI-NOFP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-NOFP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    add sp, sp, #48
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
@@ -5600,9 +5713,11 @@ define <2 x half> @stofp_v2i128_v2f16(<2 x i128> %a) {
 ; CHECK-GI-FP16-NEXT:    bl __floattihf
 ; CHECK-GI-FP16-NEXT:    mov x0, x19
 ; CHECK-GI-FP16-NEXT:    mov x1, x20
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-FP16-NEXT:    bl __floattihf
 ; CHECK-GI-FP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-FP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    mov v1.h[1], v0.h[0]
@@ -5639,6 +5754,7 @@ define <2 x half> @utofp_v2i128_v2f16(<2 x i128> %a) {
 ; CHECK-SD-NOFP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-SD-NOFP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NOFP16-NEXT:    add sp, sp, #48
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
@@ -5658,12 +5774,15 @@ define <2 x half> @utofp_v2i128_v2f16(<2 x i128> %a) {
 ; CHECK-SD-FP16-NEXT:    bl __floatuntihf
 ; CHECK-SD-FP16-NEXT:    mov x0, x20
 ; CHECK-SD-FP16-NEXT:    mov x1, x19
+; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-FP16-NEXT:    bl __floatuntihf
 ; CHECK-SD-FP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-FP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-SD-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-FP16-NEXT:    add sp, sp, #48
 ; CHECK-SD-FP16-NEXT:    ret
 ;
@@ -5689,6 +5808,7 @@ define <2 x half> @utofp_v2i128_v2f16(<2 x i128> %a) {
 ; CHECK-GI-NOFP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-NOFP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    add sp, sp, #48
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
@@ -5706,9 +5826,11 @@ define <2 x half> @utofp_v2i128_v2f16(<2 x i128> %a) {
 ; CHECK-GI-FP16-NEXT:    bl __floatuntihf
 ; CHECK-GI-FP16-NEXT:    mov x0, x19
 ; CHECK-GI-FP16-NEXT:    mov x1, x20
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-FP16-NEXT:    bl __floatuntihf
 ; CHECK-GI-FP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-FP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    mov v1.h[1], v0.h[0]
@@ -5758,6 +5880,7 @@ define <3 x half> @stofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-SD-NOFP16-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
 ; CHECK-SD-NOFP16-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NOFP16-NEXT:    add sp, sp, #64
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
@@ -5782,15 +5905,18 @@ define <3 x half> @stofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-SD-FP16-NEXT:    bl __floattihf
 ; CHECK-SD-FP16-NEXT:    mov x0, x22
 ; CHECK-SD-FP16-NEXT:    mov x1, x21
+; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-FP16-NEXT:    bl __floattihf
 ; CHECK-SD-FP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    mov x0, x20
 ; CHECK-SD-FP16-NEXT:    mov x1, x19
 ; CHECK-SD-FP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-SD-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-FP16-NEXT:    bl __floattihf
 ; CHECK-SD-FP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
 ; CHECK-SD-FP16-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-FP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -5833,7 +5959,8 @@ define <3 x half> @stofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-GI-NOFP16-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v2.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    fmov d0, d1
+; CHECK-GI-NOFP16-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    add sp, sp, #80
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
@@ -5856,19 +5983,23 @@ define <3 x half> @stofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-GI-FP16-NEXT:    bl __floattihf
 ; CHECK-GI-FP16-NEXT:    mov x0, x19
 ; CHECK-GI-FP16-NEXT:    mov x1, x20
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-FP16-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-FP16-NEXT:    bl __floattihf
 ; CHECK-GI-FP16-NEXT:    mov x0, x21
 ; CHECK-GI-FP16-NEXT:    mov x1, x22
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-FP16-NEXT:    bl __floattihf
 ; CHECK-GI-FP16-NEXT:    ldp q2, q1, [sp] // 32-byte Folded Reload
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-FP16-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    mov v1.h[1], v2.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v1.h[2], v0.h[0]
-; CHECK-GI-FP16-NEXT:    fmov d0, d1
+; CHECK-GI-FP16-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    add sp, sp, #80
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
@@ -5914,6 +6045,7 @@ define <3 x half> @utofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-SD-NOFP16-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
 ; CHECK-SD-NOFP16-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NOFP16-NEXT:    add sp, sp, #64
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
@@ -5938,15 +6070,18 @@ define <3 x half> @utofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-SD-FP16-NEXT:    bl __floatuntihf
 ; CHECK-SD-FP16-NEXT:    mov x0, x22
 ; CHECK-SD-FP16-NEXT:    mov x1, x21
+; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-FP16-NEXT:    bl __floatuntihf
 ; CHECK-SD-FP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    mov x0, x20
 ; CHECK-SD-FP16-NEXT:    mov x1, x19
 ; CHECK-SD-FP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-SD-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-FP16-NEXT:    bl __floatuntihf
 ; CHECK-SD-FP16-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-SD-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-FP16-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
 ; CHECK-SD-FP16-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-FP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -5989,7 +6124,8 @@ define <3 x half> @utofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-GI-NOFP16-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v2.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    fmov d0, d1
+; CHECK-GI-NOFP16-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    add sp, sp, #80
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
@@ -6012,19 +6148,23 @@ define <3 x half> @utofp_v3i128_v3f16(<3 x i128> %a) {
 ; CHECK-GI-FP16-NEXT:    bl __floatuntihf
 ; CHECK-GI-FP16-NEXT:    mov x0, x19
 ; CHECK-GI-FP16-NEXT:    mov x1, x20
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-FP16-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-FP16-NEXT:    bl __floatuntihf
 ; CHECK-GI-FP16-NEXT:    mov x0, x21
 ; CHECK-GI-FP16-NEXT:    mov x1, x22
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-FP16-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-FP16-NEXT:    bl __floatuntihf
 ; CHECK-GI-FP16-NEXT:    ldp q2, q1, [sp] // 32-byte Folded Reload
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-FP16-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-FP16-NEXT:    mov v1.h[1], v2.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v1.h[2], v0.h[0]
-; CHECK-GI-FP16-NEXT:    fmov d0, d1
+; CHECK-GI-FP16-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    add sp, sp, #80
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
@@ -6042,6 +6182,7 @@ define <2 x half> @stofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-SD-NOFP16-NEXT:    fcvt h2, s0
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s1
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[1], v2.h[0]
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: stofp_v2i64_v2f16:
@@ -6051,6 +6192,7 @@ define <2 x half> @stofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-SD-FP16-NEXT:    scvtf h0, x9
 ; CHECK-SD-FP16-NEXT:    scvtf h1, x8
 ; CHECK-SD-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-FP16-NEXT:    ret
 ;
 ; CHECK-GI-NOFP16-LABEL: stofp_v2i64_v2f16:
@@ -6069,6 +6211,7 @@ define <2 x half> @stofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    fcvt h0, d0
 ; CHECK-GI-FP16-NEXT:    fcvt h1, d1
 ; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = sitofp <2 x i64> %a to <2 x half>
@@ -6085,6 +6228,7 @@ define <2 x half> @utofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-SD-NOFP16-NEXT:    fcvt h2, s0
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s1
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[1], v2.h[0]
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: utofp_v2i64_v2f16:
@@ -6094,6 +6238,7 @@ define <2 x half> @utofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-SD-FP16-NEXT:    ucvtf h0, x9
 ; CHECK-SD-FP16-NEXT:    ucvtf h1, x8
 ; CHECK-SD-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-FP16-NEXT:    ret
 ;
 ; CHECK-GI-NOFP16-LABEL: utofp_v2i64_v2f16:
@@ -6112,6 +6257,7 @@ define <2 x half> @utofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    fcvt h0, d0
 ; CHECK-GI-FP16-NEXT:    fcvt h1, d1
 ; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = uitofp <2 x i64> %a to <2 x half>
@@ -6121,6 +6267,9 @@ entry:
 define <3 x half> @stofp_v3i64_v3f16(<3 x i64> %a) {
 ; CHECK-SD-LABEL: stofp_v3i64_v3f16:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    scvtf v1.2d, v2.2d
 ; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
@@ -6131,6 +6280,9 @@ define <3 x half> @stofp_v3i64_v3f16(<3 x i64> %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: stofp_v3i64_v3f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NOFP16-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NOFP16-NEXT:    scvtf v1.2d, v2.2d
 ; CHECK-GI-NOFP16-NEXT:    scvtf v0.2d, v0.2d
@@ -6141,6 +6293,9 @@ define <3 x half> @stofp_v3i64_v3f16(<3 x i64> %a) {
 ;
 ; CHECK-GI-FP16-LABEL: stofp_v3i64_v3f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-FP16-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-FP16-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-FP16-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-FP16-NEXT:    scvtf v2.2d, v2.2d
 ; CHECK-GI-FP16-NEXT:    scvtf v0.2d, v0.2d
@@ -6150,6 +6305,7 @@ define <3 x half> @stofp_v3i64_v3f16(<3 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    fcvt h1, d1
 ; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = sitofp <3 x i64> %a to <3 x half>
@@ -6159,6 +6315,9 @@ entry:
 define <3 x half> @utofp_v3i64_v3f16(<3 x i64> %a) {
 ; CHECK-SD-LABEL: utofp_v3i64_v3f16:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    ucvtf v1.2d, v2.2d
 ; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
@@ -6169,6 +6328,9 @@ define <3 x half> @utofp_v3i64_v3f16(<3 x i64> %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: utofp_v3i64_v3f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NOFP16-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NOFP16-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NOFP16-NEXT:    ucvtf v1.2d, v2.2d
 ; CHECK-GI-NOFP16-NEXT:    ucvtf v0.2d, v0.2d
@@ -6179,6 +6341,9 @@ define <3 x half> @utofp_v3i64_v3f16(<3 x i64> %a) {
 ;
 ; CHECK-GI-FP16-LABEL: utofp_v3i64_v3f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-FP16-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-FP16-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-FP16-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-FP16-NEXT:    ucvtf v2.2d, v2.2d
 ; CHECK-GI-FP16-NEXT:    ucvtf v0.2d, v0.2d
@@ -6188,6 +6353,7 @@ define <3 x half> @utofp_v3i64_v3f16(<3 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    fcvt h1, d1
 ; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = uitofp <3 x i64> %a to <3 x half>
@@ -6226,6 +6392,7 @@ define <4 x half> @stofp_v4i64_v4f16(<4 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    fcvt h2, d3
 ; CHECK-GI-FP16-NEXT:    mov v0.h[2], v1.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v0.h[3], v2.h[0]
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = sitofp <4 x i64> %a to <4 x half>
@@ -6264,6 +6431,7 @@ define <4 x half> @utofp_v4i64_v4f16(<4 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    fcvt h2, d3
 ; CHECK-GI-FP16-NEXT:    mov v0.h[2], v1.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v0.h[3], v2.h[0]
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = uitofp <4 x i64> %a to <4 x half>
@@ -7005,6 +7173,7 @@ entry:
 define <2 x half> @stofp_v2i32_v2f16(<2 x i32> %a) {
 ; CHECK-SD-LABEL: stofp_v2i32_v2f16:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
 ; CHECK-SD-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
@@ -7024,6 +7193,7 @@ entry:
 define <2 x half> @utofp_v2i32_v2f16(<2 x i32> %a) {
 ; CHECK-SD-LABEL: utofp_v2i32_v2f16:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-SD-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
@@ -7729,6 +7899,7 @@ entry:
 define <2 x half> @stofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-SD-NOFP16-LABEL: stofp_v2i8_v2f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NOFP16-NEXT:    mov w8, v0.s[1]
 ; CHECK-SD-NOFP16-NEXT:    fmov w9, s0
 ; CHECK-SD-NOFP16-NEXT:    sxtb w9, w9
@@ -7738,10 +7909,12 @@ define <2 x half> @stofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-SD-NOFP16-NEXT:    fcvt h2, s0
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s1
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[1], v2.h[0]
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: stofp_v2i8_v2f16:
 ; CHECK-SD-FP16:       // %bb.0: // %entry
+; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-FP16-NEXT:    mov w8, v0.s[1]
 ; CHECK-SD-FP16-NEXT:    fmov w9, s0
 ; CHECK-SD-FP16-NEXT:    sxtb w9, w9
@@ -7749,6 +7922,7 @@ define <2 x half> @stofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-SD-FP16-NEXT:    scvtf h0, w9
 ; CHECK-SD-FP16-NEXT:    scvtf h1, w8
 ; CHECK-SD-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-FP16-NEXT:    ret
 ;
 ; CHECK-GI-NOFP16-LABEL: stofp_v2i8_v2f16:
@@ -7776,6 +7950,7 @@ entry:
 define <2 x half> @utofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-SD-NOFP16-LABEL: utofp_v2i8_v2f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NOFP16-NEXT:    mov w8, v0.s[1]
 ; CHECK-SD-NOFP16-NEXT:    fmov w9, s0
 ; CHECK-SD-NOFP16-NEXT:    and w9, w9, #0xff
@@ -7785,10 +7960,12 @@ define <2 x half> @utofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-SD-NOFP16-NEXT:    fcvt h2, s0
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s1
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[1], v2.h[0]
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: utofp_v2i8_v2f16:
 ; CHECK-SD-FP16:       // %bb.0: // %entry
+; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-FP16-NEXT:    mov w8, v0.s[1]
 ; CHECK-SD-FP16-NEXT:    fmov w9, s0
 ; CHECK-SD-FP16-NEXT:    and w9, w9, #0xff
@@ -7796,6 +7973,7 @@ define <2 x half> @utofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-SD-FP16-NEXT:    ucvtf h0, w9
 ; CHECK-SD-FP16-NEXT:    ucvtf h1, w8
 ; CHECK-SD-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-FP16-NEXT:    ret
 ;
 ; CHECK-GI-NOFP16-LABEL: utofp_v2i8_v2f16:

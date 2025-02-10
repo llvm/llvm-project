@@ -41,7 +41,10 @@ entry:
 define <4 x half> @lane_64_64(<4 x half> %a, <4 x half> %b) #0 {
 ; CHECK-LABEL: lane_64_64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.h[1], v1.h[2]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 6, i32 2, i32 3>
@@ -54,6 +57,7 @@ entry:
 define <8 x half> @lane_128_64(<8 x half> %a, <4 x half> %b) #0 {
 ; CHECK-LABEL: lane_128_64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.h[1], v1.h[2]
 ; CHECK-NEXT:    ret
 entry:
@@ -71,7 +75,9 @@ entry:
 define <4 x half> @lane_64_128(<4 x half> %a, <8 x half> %b) #0 {
 ; CHECK-LABEL: lane_64_128:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[3], v1.h[5]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <8 x half> %b to <8 x i16>
@@ -188,6 +194,7 @@ entry:
 define <4 x half> @dup_64(half %a) #0 {
 ; CHECK-LABEL: dup_64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -202,6 +209,7 @@ entry:
 define <8 x half> @dup_128(half %a) #0 {
 ; CHECK-LABEL: dup_128:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup v0.8h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -220,6 +228,7 @@ entry:
 define <4 x half> @dup_lane_64(<4 x half> %a) #0 {
 ; CHECK-LABEL: dup_lane_64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[2]
 ; CHECK-NEXT:    ret
 entry:
@@ -231,6 +240,7 @@ entry:
 define <8 x half> @dup_lane_128(<4 x half> %a) #0 {
 ; CHECK-LABEL: dup_lane_128:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.8h, v0.h[2]
 ; CHECK-NEXT:    ret
 entry:
@@ -264,6 +274,8 @@ entry:
 define <8 x half> @vcombine(<4 x half> %a, <4 x half> %b) #0 {
 ; CHECK-LABEL: vcombine:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -276,6 +288,7 @@ define <4 x half> @get_high(<8 x half> %a) #0 {
 ; CHECK-LABEL: get_high:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x half> %a, <8 x half> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -287,6 +300,7 @@ entry:
 define <4 x half> @get_low(<8 x half> %a) #0 {
 ; CHECK-LABEL: get_low:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x half> %a, <8 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -297,8 +311,11 @@ entry:
 define <4 x half> @set_lane_64(<4 x half> %a, half %b) #0 {
 ; CHECK-LABEL: set_lane_64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[2], w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast half %b to i16
@@ -313,6 +330,7 @@ entry:
 define <8 x half> @set_lane_128(<8 x half> %a, half %b) #0 {
 ; CHECK-LABEL: set_lane_128:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    mov v0.h[2], w8
 ; CHECK-NEXT:    ret
@@ -328,8 +346,10 @@ entry:
 define half @get_lane_64(<4 x half> %a) #0 {
 ; CHECK-LABEL: get_lane_64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v0.h[2]
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <4 x half> %a to <4 x i16>
@@ -344,6 +364,7 @@ define half @get_lane_128(<8 x half> %a) #0 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    umov w8, v0.h[2]
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <8 x half> %a to <8 x i16>

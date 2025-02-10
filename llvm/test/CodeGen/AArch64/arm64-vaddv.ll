@@ -18,7 +18,9 @@ define <8 x i8> @test_vaddv_s8_used_by_laneop(<8 x i8> %a1, <8 x i8> %a2) {
 ; CHECK-LABEL: test_vaddv_s8_used_by_laneop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    addv b1, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.b[3], v1.b[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i32 @llvm.aarch64.neon.saddv.i32.v8i8(<8 x i8> %a2)
@@ -43,7 +45,9 @@ define <4 x i16> @test_vaddv_s16_used_by_laneop(<4 x i16> %a1, <4 x i16> %a2) {
 ; CHECK-LABEL: test_vaddv_s16_used_by_laneop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    addv h1, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i32 @llvm.aarch64.neon.saddv.i32.v4i16(<4 x i16> %a2)
@@ -68,7 +72,9 @@ define <2 x i32> @test_vaddv_s32_used_by_laneop(<2 x i32> %a1, <2 x i32> %a2) {
 ; CHECK-LABEL: test_vaddv_s32_used_by_laneop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    addp v1.2s, v1.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i32 @llvm.aarch64.neon.saddv.i32.v2i32(<2 x i32> %a2)
@@ -115,7 +121,9 @@ define <8 x i8> @test_vaddv_u8_used_by_laneop(<8 x i8> %a1, <8 x i8> %a2) {
 ; CHECK-LABEL: test_vaddv_u8_used_by_laneop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    addv b1, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.b[3], v1.b[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i32 @llvm.aarch64.neon.uaddv.i32.v8i8(<8 x i8> %a2)
@@ -152,7 +160,9 @@ define <4 x i16> @test_vaddv_u16_used_by_laneop(<4 x i16> %a1, <4 x i16> %a2) {
 ; CHECK-LABEL: test_vaddv_u16_used_by_laneop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    addv h1, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i32 @llvm.aarch64.neon.uaddv.i32.v4i16(<4 x i16> %a2)
@@ -189,7 +199,9 @@ define <2 x i32> @test_vaddv_u32_used_by_laneop(<2 x i32> %a1, <2 x i32> %a2) {
 ; CHECK-LABEL: test_vaddv_u32_used_by_laneop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    addp v1.2s, v1.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i32 @llvm.aarch64.neon.uaddv.i32.v2i32(<2 x i32> %a2)

@@ -12,7 +12,7 @@
 #if __cplusplus >= 201103L
 namespace std {
   using nullptr_t = decltype(nullptr);
-}
+} // namespace std
 
 void f(std::nullptr_t, ...);
 std::nullptr_t g();

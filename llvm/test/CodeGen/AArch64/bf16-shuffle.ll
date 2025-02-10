@@ -99,6 +99,7 @@ entry:
 define dso_local <4 x bfloat> @test_vmov_n_bf16(float %a.coerce) {
 ; CHECK-LABEL: test_vmov_n_bf16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -113,6 +114,7 @@ entry:
 define dso_local <8 x bfloat> @test_vmovq_n_bf16(float %a.coerce) {
 ; CHECK-LABEL: test_vmovq_n_bf16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    dup v0.8h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -127,6 +129,7 @@ entry:
 define dso_local <4 x bfloat> @test_vdup_n_bf16(float %a.coerce) {
 ; CHECK-LABEL: test_vdup_n_bf16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -141,6 +144,7 @@ entry:
 define dso_local <8 x bfloat> @test_vdupq_n_bf16(float %a.coerce) {
 ; CHECK-LABEL: test_vdupq_n_bf16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    dup v0.8h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -155,6 +159,7 @@ entry:
 define dso_local <4 x bfloat> @test_vdup_lane_bf16(<4 x bfloat> %a) {
 ; CHECK-LABEL: test_vdup_lane_bf16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[3]
 ; CHECK-NEXT:    ret
 entry:
@@ -165,6 +170,7 @@ entry:
 define dso_local <8 x bfloat> @test_vdupq_lane_bf16(<4 x bfloat> %a) {
 ; CHECK-LABEL: test_vdupq_lane_bf16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.8h, v0.h[3]
 ; CHECK-NEXT:    ret
 entry:
@@ -196,6 +202,7 @@ define dso_local <4 x bfloat> @test_vext_aligned_bf16(<8 x bfloat> %a) {
 ; CHECK-LABEL: test_vext_aligned_bf16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vext = shufflevector <8 x bfloat> %a, <8 x bfloat> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -206,6 +213,7 @@ define dso_local <4 x bfloat> @test_vext_unaligned_bf16(<8 x bfloat> %a) {
 ; CHECK-LABEL: test_vext_unaligned_bf16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #6
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vext = shufflevector <8 x bfloat> %a, <8 x bfloat> undef, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
@@ -216,11 +224,14 @@ define <8 x bfloat> @shuffle3step0_bf16(<32 x bfloat> %src) {
 ; CHECK-LABEL: shuffle3step0_bf16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, .LCPI16_0
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI16_0]
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    mov v3.16b, v2.16b
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI16_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    adrp x8, .LCPI16_1
-; CHECK-NEXT:    tbl v1.16b, { v0.16b, v1.16b }, v3.16b
+; CHECK-NEXT:    tbl v2.16b, { v0.16b, v1.16b }, v4.16b
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI16_1]
-; CHECK-NEXT:    tbl v0.16b, { v1.16b, v2.16b }, v0.16b
+; CHECK-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %s1 = shufflevector <32 x bfloat> %src, <32 x bfloat> undef, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
@@ -231,11 +242,14 @@ define <8 x bfloat> @shuffle3step1_bf16(<32 x bfloat> %src) {
 ; CHECK-LABEL: shuffle3step1_bf16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, .LCPI17_0
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI17_0]
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    mov v3.16b, v2.16b
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI17_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    adrp x8, .LCPI17_1
-; CHECK-NEXT:    tbl v1.16b, { v0.16b, v1.16b }, v3.16b
+; CHECK-NEXT:    tbl v2.16b, { v0.16b, v1.16b }, v4.16b
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI17_1]
-; CHECK-NEXT:    tbl v0.16b, { v1.16b, v2.16b }, v0.16b
+; CHECK-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %s1 = shufflevector <32 x bfloat> %src, <32 x bfloat> undef, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
@@ -246,11 +260,14 @@ define <8 x bfloat> @shuffle3step2_bf16(<32 x bfloat> %src) {
 ; CHECK-LABEL: shuffle3step2_bf16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, .LCPI18_0
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI18_0]
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    mov v3.16b, v2.16b
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI18_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    adrp x8, .LCPI18_1
-; CHECK-NEXT:    tbl v1.16b, { v0.16b, v1.16b }, v3.16b
+; CHECK-NEXT:    tbl v2.16b, { v0.16b, v1.16b }, v4.16b
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI18_1]
-; CHECK-NEXT:    tbl v0.16b, { v1.16b, v2.16b }, v0.16b
+; CHECK-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %s1 = shufflevector <32 x bfloat> %src, <32 x bfloat> undef, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
@@ -327,6 +344,7 @@ entry:
 define <8 x bfloat> @test_shufflevector8xbfloat(<4 x bfloat> %a) {
 ; CHECK-LABEL: test_shufflevector8xbfloat:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    ret
 entry:

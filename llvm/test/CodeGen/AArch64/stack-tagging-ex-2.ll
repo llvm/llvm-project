@@ -1,4 +1,4 @@
-; clang -target aarch64-eabi -O2 -march=armv8.5-a+memtag -fsanitize=memtag -S -emit-llvm test.cc
+; clang -target aarch64-eabi -O2 -fsanitize=memtag -S -emit-llvm test.cc
 ; void bar() {
 ;   throw 42;
 ; }

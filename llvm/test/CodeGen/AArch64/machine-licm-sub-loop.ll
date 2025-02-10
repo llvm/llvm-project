@@ -4,6 +4,7 @@
 define void @foo(i32 noundef %limit, ptr %out, ptr %y) {
 ; CHECK-LABEL: foo:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmp w0, #1
 ; CHECK-NEXT:    b.lt .LBB0_10
 ; CHECK-NEXT:  // %bb.1: // %for.cond1.preheader.us.preheader

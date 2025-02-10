@@ -458,6 +458,7 @@ if(APPLE)
   set(SANITIZER_COMMON_SUPPORTED_OS osx)
   set(PROFILE_SUPPORTED_OS osx)
   set(TSAN_SUPPORTED_OS osx)
+  set(TYSAN_SUPPORTED_OS osx)
   set(XRAY_SUPPORTED_OS osx)
   set(FUZZER_SUPPORTED_OS osx)
   set(ORC_SUPPORTED_OS)
@@ -593,6 +594,7 @@ if(APPLE)
           list(APPEND FUZZER_SUPPORTED_OS ${platform})
           list(APPEND ORC_SUPPORTED_OS ${platform})
           list(APPEND UBSAN_SUPPORTED_OS ${platform})
+          list(APPEND TYSAN_SUPPORTED_OS ${platform})
           list(APPEND LSAN_SUPPORTED_OS ${platform})
           list(APPEND STATS_SUPPORTED_OS ${platform})
         endif()
@@ -651,6 +653,9 @@ if(APPLE)
   list_intersect(CTX_PROFILE_SUPPORTED_ARCH
     ALL_CTX_PROFILE_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
+  list_intersect(TYSAN_SUPPORTED_ARCH
+    ALL_TYSAN_SUPPORTED_ARCH
+    SANITIZER_COMMON_SUPPORTED_ARCH)
   list_intersect(TSAN_SUPPORTED_ARCH
     ALL_TSAN_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
@@ -703,6 +708,7 @@ else()
   filter_available_targets(PROFILE_SUPPORTED_ARCH ${ALL_PROFILE_SUPPORTED_ARCH})
   filter_available_targets(CTX_PROFILE_SUPPORTED_ARCH ${ALL_CTX_PROFILE_SUPPORTED_ARCH})
   filter_available_targets(TSAN_SUPPORTED_ARCH ${ALL_TSAN_SUPPORTED_ARCH})
+  filter_available_targets(TYSAN_SUPPORTED_ARCH ${ALL_TYSAN_SUPPORTED_ARCH})
   filter_available_targets(UBSAN_SUPPORTED_ARCH ${ALL_UBSAN_SUPPORTED_ARCH})
   filter_available_targets(SAFESTACK_SUPPORTED_ARCH
     ${ALL_SAFESTACK_SUPPORTED_ARCH})
@@ -748,7 +754,7 @@ if(COMPILER_RT_SUPPORTED_ARCH)
 endif()
 message(STATUS "Compiler-RT supported architectures: ${COMPILER_RT_SUPPORTED_ARCH}")
 
-set(ALL_SANITIZERS asan;rtsan;dfsan;msan;hwasan;tsan;safestack;cfi;scudo_standalone;ubsan_minimal;gwp_asan;nsan;asan_abi)
+set(ALL_SANITIZERS asan;rtsan;dfsan;msan;hwasan;tsan;tysan;safestack;cfi;scudo_standalone;ubsan_minimal;gwp_asan;nsan;asan_abi)
 set(COMPILER_RT_SANITIZERS_TO_BUILD all CACHE STRING
     "sanitizers to build if supported on the target (all;${ALL_SANITIZERS})")
 list_replace(COMPILER_RT_SANITIZERS_TO_BUILD all "${ALL_SANITIZERS}")
@@ -841,6 +847,13 @@ if (COMPILER_RT_HAS_SANITIZER_COMMON AND CTX_PROFILE_SUPPORTED_ARCH AND
   set(COMPILER_RT_HAS_CTX_PROFILE TRUE)
 else()
   set(COMPILER_RT_HAS_CTX_PROFILE FALSE)
+endif()
+
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND TYSAN_SUPPORTED_ARCH AND
+        OS_NAME MATCHES "Linux|Darwin")
+  set(COMPILER_RT_HAS_TYSAN TRUE)
+else()
+  set(COMPILER_RT_HAS_TYSAN FALSE)
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND TSAN_SUPPORTED_ARCH)

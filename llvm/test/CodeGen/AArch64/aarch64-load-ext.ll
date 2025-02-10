@@ -6,6 +6,7 @@ define <2 x i16> @test0(ptr %i16_ptr, i64 %inc) {
 ; CHECK-LE-LABEL: test0:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ld1 { v0.h }[0], [x0]
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test0:
@@ -24,6 +25,7 @@ define <2 x i16> @test1(ptr %v2i16_ptr) {
 ; CHECK-LE-NEXT:    ld1 { v0.h }[0], [x0]
 ; CHECK-LE-NEXT:    add x8, x0, #2
 ; CHECK-LE-NEXT:    ld1 { v0.h }[2], [x8]
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test1:
@@ -43,6 +45,7 @@ define <2 x i16> @test2(ptr %i16_ptr, i64 %inc) {
 ; CHECK-LE-NEXT:    ld1 { v0.h }[0], [x0]
 ; CHECK-LE-NEXT:    add x8, x0, x1, lsl #1
 ; CHECK-LE-NEXT:    ld1 { v0.h }[2], [x8]
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test2:
@@ -66,6 +69,7 @@ define <2 x i8> @test3(ptr %v2i8_ptr) {
 ; CHECK-LE-NEXT:    ld1 { v0.b }[0], [x0]
 ; CHECK-LE-NEXT:    add x8, x0, #1
 ; CHECK-LE-NEXT:    ld1 { v0.b }[4], [x8]
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test3:
@@ -84,6 +88,7 @@ define <4 x i8> @test4(ptr %v4i8_ptr) {
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
 ; CHECK-LE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test4:
@@ -104,6 +109,7 @@ define <2 x i32> @fsext_v2i32(ptr %a) {
 ; CHECK-LE-NEXT:    ldrsb w9, [x0, #1]
 ; CHECK-LE-NEXT:    fmov s0, w8
 ; CHECK-LE-NEXT:    mov v0.s[1], w9
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: fsext_v2i32:
@@ -247,6 +253,7 @@ define <2 x i16> @fsext_v2i16(ptr %a) {
 ; CHECK-LE-NEXT:    ldrsb w9, [x0, #1]
 ; CHECK-LE-NEXT:    fmov s0, w8
 ; CHECK-LE-NEXT:    mov v0.s[1], w9
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: fsext_v2i16:
@@ -290,6 +297,7 @@ define <4 x i16> @fsext_v4i16(ptr %a) {
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
 ; CHECK-LE-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: fsext_v4i16:
@@ -351,6 +359,7 @@ define <4 x i16> @fzext_v4i16(ptr %a) {
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
 ; CHECK-LE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: fzext_v4i16:
@@ -447,6 +456,7 @@ define <4 x i8> @strict_align_aligned(ptr %v4i8_ptr) "target-features"="+strict-
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
 ; CHECK-LE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: strict_align_aligned:
@@ -470,6 +480,7 @@ define <4 x i8> @strict_align_unaligned(ptr %v4i8_ptr) "target-features"="+stric
 ; CHECK-LE-NEXT:    ld1 { v0.b }[4], [x8]
 ; CHECK-LE-NEXT:    add x8, x0, #3
 ; CHECK-LE-NEXT:    ld1 { v0.b }[6], [x8]
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: strict_align_unaligned:

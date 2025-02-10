@@ -211,8 +211,11 @@ define half @test_tailcall_flipped(half %a, half %b) #0 {
 define half @test_select(half %a, half %b, i1 zeroext %c) #0 {
 ; CHECK-CVT-SD-LABEL: test_select:
 ; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-CVT-SD-NEXT:    cmp w0, #0
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-CVT-SD-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: test_select:
@@ -223,20 +226,26 @@ define half @test_select(half %a, half %b, i1 zeroext %c) #0 {
 ;
 ; CHECK-CVT-GI-LABEL: test_select:
 ; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-CVT-GI-NEXT:    fmov w8, s0
 ; CHECK-CVT-GI-NEXT:    fmov w9, s1
 ; CHECK-CVT-GI-NEXT:    tst w0, #0x1
 ; CHECK-CVT-GI-NEXT:    csel w8, w8, w9, ne
 ; CHECK-CVT-GI-NEXT:    fmov s0, w8
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: test_select:
 ; CHECK-FP16-GI:       // %bb.0:
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-FP16-GI-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-FP16-GI-NEXT:    fmov w8, s0
 ; CHECK-FP16-GI-NEXT:    fmov w9, s1
 ; CHECK-FP16-GI-NEXT:    tst w0, #0x1
 ; CHECK-FP16-GI-NEXT:    csel w8, w8, w9, ne
 ; CHECK-FP16-GI-NEXT:    fmov s0, w8
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-FP16-GI-NEXT:    ret
   %r = select i1 %c, half %a, half %b
   ret half %r
@@ -247,8 +256,11 @@ define half @test_select_cc(half %a, half %b, half %c, half %d) #0 {
 ; CHECK-CVT-SD:       // %bb.0:
 ; CHECK-CVT-SD-NEXT:    fcvt s3, h3
 ; CHECK-CVT-SD-NEXT:    fcvt s2, h2
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-CVT-SD-NEXT:    fcmp s2, s3
 ; CHECK-CVT-SD-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: test_select_cc:
@@ -261,20 +273,26 @@ define half @test_select_cc(half %a, half %b, half %c, half %d) #0 {
 ; CHECK-CVT-GI:       // %bb.0:
 ; CHECK-CVT-GI-NEXT:    fcvt s2, h2
 ; CHECK-CVT-GI-NEXT:    fcvt s3, h3
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-CVT-GI-NEXT:    fmov w8, s0
 ; CHECK-CVT-GI-NEXT:    fmov w9, s1
 ; CHECK-CVT-GI-NEXT:    fcmp s2, s3
 ; CHECK-CVT-GI-NEXT:    csel w8, w8, w9, ne
 ; CHECK-CVT-GI-NEXT:    fmov s0, w8
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: test_select_cc:
 ; CHECK-FP16-GI:       // %bb.0:
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-FP16-GI-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-FP16-GI-NEXT:    fcmp h2, h3
 ; CHECK-FP16-GI-NEXT:    fmov w8, s0
 ; CHECK-FP16-GI-NEXT:    fmov w9, s1
 ; CHECK-FP16-GI-NEXT:    csel w8, w8, w9, ne
 ; CHECK-FP16-GI-NEXT:    fmov s0, w8
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-FP16-GI-NEXT:    ret
   %cc = fcmp une half %c, %d
   %r = select i1 %cc, half %a, half %b
@@ -312,7 +330,10 @@ define half @test_select_cc_f16_f32(half %a, half %b, float %c, float %d) #0 {
 ; CHECK-CVT-SD-LABEL: test_select_cc_f16_f32:
 ; CHECK-CVT-SD:       // %bb.0:
 ; CHECK-CVT-SD-NEXT:    fcmp s2, s3
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-CVT-SD-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-CVT-SD-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: test_select_cc_f16_f32:
@@ -323,20 +344,26 @@ define half @test_select_cc_f16_f32(half %a, half %b, float %c, float %d) #0 {
 ;
 ; CHECK-CVT-GI-LABEL: test_select_cc_f16_f32:
 ; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-CVT-GI-NEXT:    fcmp s2, s3
 ; CHECK-CVT-GI-NEXT:    fmov w8, s0
 ; CHECK-CVT-GI-NEXT:    fmov w9, s1
 ; CHECK-CVT-GI-NEXT:    csel w8, w8, w9, ne
 ; CHECK-CVT-GI-NEXT:    fmov s0, w8
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: test_select_cc_f16_f32:
 ; CHECK-FP16-GI:       // %bb.0:
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-FP16-GI-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-FP16-GI-NEXT:    fcmp s2, s3
 ; CHECK-FP16-GI-NEXT:    fmov w8, s0
 ; CHECK-FP16-GI-NEXT:    fmov w9, s1
 ; CHECK-FP16-GI-NEXT:    csel w8, w8, w9, ne
 ; CHECK-FP16-GI-NEXT:    fmov s0, w8
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-FP16-GI-NEXT:    ret
   %cc = fcmp une float %c, %d
   %r = select i1 %cc, half %a, half %b
@@ -734,6 +761,7 @@ define i1 @test_fcmp_ord(half %a, half %b) #0 {
 define void @test_fccmp(half %in, ptr %out) {
 ; CHECK-CVT-SD-LABEL: test_fccmp:
 ; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-CVT-SD-NEXT:    fcvt s1, h0
 ; CHECK-CVT-SD-NEXT:    fmov s2, #5.00000000
 ; CHECK-CVT-SD-NEXT:    adrp x8, .LCPI29_0
@@ -759,6 +787,7 @@ define void @test_fccmp(half %in, ptr %out) {
 ; CHECK-CVT-GI:       // %bb.0:
 ; CHECK-CVT-GI-NEXT:    mov w8, #17664 // =0x4500
 ; CHECK-CVT-GI-NEXT:    mov w9, #18432 // =0x4800
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-CVT-GI-NEXT:    fcvt s2, h0
 ; CHECK-CVT-GI-NEXT:    fmov s1, w8
 ; CHECK-CVT-GI-NEXT:    fmov s3, w9
@@ -774,6 +803,7 @@ define void @test_fccmp(half %in, ptr %out) {
 ; CHECK-FP16-GI-LABEL: test_fccmp:
 ; CHECK-FP16-GI:       // %bb.0:
 ; CHECK-FP16-GI-NEXT:    fmov h1, #5.00000000
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-FP16-GI-NEXT:    fmov h2, #8.00000000
 ; CHECK-FP16-GI-NEXT:    fmov w8, s0
 ; CHECK-FP16-GI-NEXT:    fcmp h0, h1
@@ -1059,6 +1089,7 @@ define double @test_fpext_double(half %a) #0 {
 define i16 @test_bitcast_halftoi16(half %a) #0 {
 ; CHECK-LABEL: test_bitcast_halftoi16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %r = bitcast half %a to i16
@@ -1069,6 +1100,7 @@ define half @test_bitcast_i16tohalf(i16 %a) #0 {
 ; CHECK-LABEL: test_bitcast_i16tohalf:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
   %r = bitcast i16 %a to half
   ret half %r
@@ -1368,9 +1400,11 @@ define half @test_fma(half %a, half %b, half %c) #0 {
 define half @test_fabs(half %a) #0 {
 ; CHECK-CVT-LABEL: test_fabs:
 ; CHECK-CVT:       // %bb.0:
+; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-CVT-NEXT:    fmov w8, s0
 ; CHECK-CVT-NEXT:    and w8, w8, #0x7fff
 ; CHECK-CVT-NEXT:    fmov s0, w8
+; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: test_fabs:
@@ -1444,19 +1478,28 @@ define half @test_copysign(half %a, half %b) #0 {
 ; CHECK-FP16-SD-LABEL: test_copysign:
 ; CHECK-FP16-SD:       // %bb.0:
 ; CHECK-FP16-SD-NEXT:    mvni v2.8h, #128, lsl #8
+; CHECK-FP16-SD-NEXT:    // kill: def $h0 killed $h0 def $q0
+; CHECK-FP16-SD-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-FP16-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-FP16-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-FP16-SD-NEXT:    ret
 ;
 ; CHECK-CVT-GI-LABEL: test_copysign:
 ; CHECK-CVT-GI:       // %bb.0:
 ; CHECK-CVT-GI-NEXT:    mvni v2.4h, #128, lsl #8
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
 ; CHECK-CVT-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: test_copysign:
 ; CHECK-FP16-GI:       // %bb.0:
 ; CHECK-FP16-GI-NEXT:    mvni v2.4h, #128, lsl #8
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-FP16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
 ; CHECK-FP16-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-FP16-GI-NEXT:    ret
   %r = call half @llvm.copysign.f16(half %a, half %b)
   ret half %r
@@ -1467,6 +1510,7 @@ define half @test_copysign_f32(half %a, float %b) #0 {
 ; CHECK-CVT-SD:       // %bb.0:
 ; CHECK-CVT-SD-NEXT:    fcvt s0, h0
 ; CHECK-CVT-SD-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-CVT-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-CVT-SD-NEXT:    fcvt h0, s0
 ; CHECK-CVT-SD-NEXT:    ret
@@ -1475,21 +1519,27 @@ define half @test_copysign_f32(half %a, float %b) #0 {
 ; CHECK-FP16-SD:       // %bb.0:
 ; CHECK-FP16-SD-NEXT:    fcvt h1, s1
 ; CHECK-FP16-SD-NEXT:    mvni v2.8h, #128, lsl #8
+; CHECK-FP16-SD-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-FP16-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-FP16-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-FP16-SD-NEXT:    ret
 ;
 ; CHECK-CVT-GI-LABEL: test_copysign_f32:
 ; CHECK-CVT-GI:       // %bb.0:
 ; CHECK-CVT-GI-NEXT:    fcvt h1, s1
 ; CHECK-CVT-GI-NEXT:    mvni v2.4h, #128, lsl #8
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-CVT-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: test_copysign_f32:
 ; CHECK-FP16-GI:       // %bb.0:
 ; CHECK-FP16-GI-NEXT:    fcvt h1, s1
 ; CHECK-FP16-GI-NEXT:    mvni v2.4h, #128, lsl #8
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-FP16-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-FP16-GI-NEXT:    ret
   %tb = fptrunc float %b to half
   %r = call half @llvm.copysign.f16(half %a, half %tb)
@@ -1510,21 +1560,27 @@ define half @test_copysign_f64(half %a, double %b) #0 {
 ; CHECK-FP16-SD:       // %bb.0:
 ; CHECK-FP16-SD-NEXT:    fcvt h1, d1
 ; CHECK-FP16-SD-NEXT:    mvni v2.8h, #128, lsl #8
+; CHECK-FP16-SD-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-FP16-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-FP16-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-FP16-SD-NEXT:    ret
 ;
 ; CHECK-CVT-GI-LABEL: test_copysign_f64:
 ; CHECK-CVT-GI:       // %bb.0:
 ; CHECK-CVT-GI-NEXT:    fcvt h1, d1
 ; CHECK-CVT-GI-NEXT:    mvni v2.4h, #128, lsl #8
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-CVT-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: test_copysign_f64:
 ; CHECK-FP16-GI:       // %bb.0:
 ; CHECK-FP16-GI-NEXT:    fcvt h1, d1
 ; CHECK-FP16-GI-NEXT:    mvni v2.4h, #128, lsl #8
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-FP16-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-FP16-GI-NEXT:    ret
   %tb = fptrunc double %b to half
   %r = call half @llvm.copysign.f16(half %a, half %tb)
@@ -1541,11 +1597,14 @@ define float @test_copysign_extended(half %a, half %b) #0 {
 ; CHECK-CVT-SD-NEXT:    fcvt s0, h0
 ; CHECK-CVT-SD-NEXT:    mvni v2.4s, #128, lsl #24
 ; CHECK-CVT-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: test_copysign_extended:
 ; CHECK-FP16-SD:       // %bb.0:
 ; CHECK-FP16-SD-NEXT:    mvni v2.8h, #128, lsl #8
+; CHECK-FP16-SD-NEXT:    // kill: def $h0 killed $h0 def $q0
+; CHECK-FP16-SD-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-FP16-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-FP16-SD-NEXT:    fcvt s0, h0
 ; CHECK-FP16-SD-NEXT:    ret
@@ -1553,6 +1612,8 @@ define float @test_copysign_extended(half %a, half %b) #0 {
 ; CHECK-CVT-GI-LABEL: test_copysign_extended:
 ; CHECK-CVT-GI:       // %bb.0:
 ; CHECK-CVT-GI-NEXT:    mvni v2.4h, #128, lsl #8
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-CVT-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
 ; CHECK-CVT-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-CVT-GI-NEXT:    fcvt s0, h0
 ; CHECK-CVT-GI-NEXT:    ret
@@ -1560,6 +1621,8 @@ define float @test_copysign_extended(half %a, half %b) #0 {
 ; CHECK-FP16-GI-LABEL: test_copysign_extended:
 ; CHECK-FP16-GI:       // %bb.0:
 ; CHECK-FP16-GI-NEXT:    mvni v2.4h, #128, lsl #8
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-FP16-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
 ; CHECK-FP16-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-FP16-GI-NEXT:    fcvt s0, h0
 ; CHECK-FP16-GI-NEXT:    ret

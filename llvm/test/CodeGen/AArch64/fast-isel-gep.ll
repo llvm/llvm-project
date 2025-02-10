@@ -53,6 +53,7 @@ define ptr @test_array4(ptr %a) {
 define ptr @test_array5(ptr %a, i32 %i) {
 ; CHECK-LABEL: test_array5:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sxtw x8, w1
 ; CHECK-NEXT:    mov x9, #4 ; =0x4
 ; CHECK-NEXT:    madd x0, x8, x9, x0

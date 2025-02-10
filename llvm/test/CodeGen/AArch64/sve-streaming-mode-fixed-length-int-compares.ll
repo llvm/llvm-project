@@ -13,8 +13,11 @@ define <8 x i8> @icmp_eq_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; CHECK-LABEL: icmp_eq_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: icmp_eq_v8i8:
@@ -74,8 +77,11 @@ define <16 x i8> @icmp_eq_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; CHECK-LABEL: icmp_eq_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: icmp_eq_v16i8:
@@ -367,8 +373,11 @@ define <4 x i16> @icmp_eq_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; CHECK-LABEL: icmp_eq_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, z1.h
 ; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: icmp_eq_v4i16:
@@ -408,8 +417,11 @@ define <8 x i16> @icmp_eq_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; CHECK-LABEL: icmp_eq_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, z1.h
 ; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: icmp_eq_v8i16:
@@ -581,8 +593,11 @@ define <2 x i32> @icmp_eq_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 ; CHECK-LABEL: icmp_eq_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: icmp_eq_v2i32:
@@ -610,8 +625,11 @@ define <4 x i32> @icmp_eq_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; CHECK-LABEL: icmp_eq_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: icmp_eq_v4i32:
@@ -711,8 +729,11 @@ define <1 x i64> @icmp_eq_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; CHECK-LABEL: icmp_eq_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    mov z0.d, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: icmp_eq_v1i64:
@@ -736,8 +757,11 @@ define <2 x i64> @icmp_eq_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 ; CHECK-LABEL: icmp_eq_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    mov z0.d, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: icmp_eq_v2i64:

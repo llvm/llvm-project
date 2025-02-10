@@ -437,10 +437,10 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     break;
   }
   default:
-    return rpc::UNHANDLED_OPCODE;
+    return rpc::RPC_UNHANDLED_OPCODE;
   }
 
-  return rpc::SUCCESS;
+  return rpc::RPC_SUCCESS;
 }
 
 namespace rpc {
@@ -455,7 +455,7 @@ rpc::Status handle_libc_opcodes(rpc::Server::Port &port, uint32_t num_lanes) {
   case 64:
     return handle_port_impl<64>(port);
   default:
-    return rpc::ERROR;
+    return rpc::RPC_ERROR;
   }
 }
 } // namespace rpc

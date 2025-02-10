@@ -129,20 +129,34 @@ entry:
 define <3 x double> @min_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-SD-LABEL: min_v3f64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    fmin v2.2d, v2.2d, v5.2d
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    fmin v0.2d, v0.2d, v3.2d
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: min_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-GI-NEXT:    fmin d2, d2, d5
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-GI-NEXT:    fmin d2, d2, d5
 ; CHECK-GI-NEXT:    fmin v0.2d, v0.2d, v3.2d
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <3 x double> @llvm.minimum.v3f64(<3 x double> %a, <3 x double> %b)
@@ -152,20 +166,34 @@ entry:
 define <3 x double> @max_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-SD-LABEL: max_v3f64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    fmax v2.2d, v2.2d, v5.2d
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    fmax v0.2d, v0.2d, v3.2d
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: max_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-GI-NEXT:    fmax d2, d2, d5
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-GI-NEXT:    fmax d2, d2, d5
 ; CHECK-GI-NEXT:    fmax v0.2d, v0.2d, v3.2d
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <3 x double> @llvm.maximum.v3f64(<3 x double> %a, <3 x double> %b)
@@ -269,56 +297,76 @@ entry:
 define <7 x float> @min_v7f32(<7 x float> %a, <7 x float> %b) {
 ; CHECK-SD-LABEL: min_v7f32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-SD-NEXT:    // kill: def $s1 killed $s1 def $q1
+; CHECK-SD-NEXT:    // kill: def $s7 killed $s7 def $q7
 ; CHECK-SD-NEXT:    mov x8, sp
-; CHECK-SD-NEXT:    ldr s1, [sp, #24]
+; CHECK-SD-NEXT:    // kill: def $s4 killed $s4 def $q4
+; CHECK-SD-NEXT:    // kill: def $s5 killed $s5 def $q5
+; CHECK-SD-NEXT:    // kill: def $s2 killed $s2 def $q2
+; CHECK-SD-NEXT:    // kill: def $s6 killed $s6 def $q6
+; CHECK-SD-NEXT:    // kill: def $s3 killed $s3 def $q3
+; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-SD-NEXT:    ld1 { v7.s }[1], [x8]
+; CHECK-SD-NEXT:    ldr s1, [sp, #24]
 ; CHECK-SD-NEXT:    add x8, sp, #8
 ; CHECK-SD-NEXT:    mov v4.s[1], v5.s[0]
-; CHECK-SD-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-SD-NEXT:    ld1 { v7.s }[2], [x8]
 ; CHECK-SD-NEXT:    add x8, sp, #32
+; CHECK-SD-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-SD-NEXT:    ld1 { v1.s }[1], [x8]
 ; CHECK-SD-NEXT:    add x8, sp, #16
 ; CHECK-SD-NEXT:    mov v4.s[2], v6.s[0]
 ; CHECK-SD-NEXT:    ld1 { v7.s }[3], [x8]
 ; CHECK-SD-NEXT:    add x8, sp, #40
-; CHECK-SD-NEXT:    mov v0.s[3], v3.s[0]
 ; CHECK-SD-NEXT:    ld1 { v1.s }[2], [x8]
+; CHECK-SD-NEXT:    mov v0.s[3], v3.s[0]
 ; CHECK-SD-NEXT:    fmin v4.4s, v4.4s, v1.4s
 ; CHECK-SD-NEXT:    fmin v0.4s, v0.4s, v7.4s
 ; CHECK-SD-NEXT:    mov s5, v4.s[1]
 ; CHECK-SD-NEXT:    mov s6, v4.s[2]
+; CHECK-SD-NEXT:    // kill: def $s4 killed $s4 killed $q4
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    mov s2, v0.s[2]
 ; CHECK-SD-NEXT:    mov s3, v0.s[3]
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: min_v7f32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr s16, [sp]
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-GI-NEXT:    // kill: def $s7 killed $s7 def $q7
+; CHECK-GI-NEXT:    // kill: def $s1 killed $s1 def $q1
+; CHECK-GI-NEXT:    ldr s17, [sp, #32]
+; CHECK-GI-NEXT:    // kill: def $s4 killed $s4 def $q4
+; CHECK-GI-NEXT:    // kill: def $s2 killed $s2 def $q2
+; CHECK-GI-NEXT:    // kill: def $s5 killed $s5 def $q5
+; CHECK-GI-NEXT:    // kill: def $s3 killed $s3 def $q3
+; CHECK-GI-NEXT:    // kill: def $s6 killed $s6 def $q6
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    ldr s1, [sp, #8]
-; CHECK-GI-NEXT:    ldr s17, [sp, #32]
 ; CHECK-GI-NEXT:    mov v4.s[1], v5.s[0]
 ; CHECK-GI-NEXT:    mov v7.s[1], v16.s[0]
 ; CHECK-GI-NEXT:    ldr s16, [sp, #24]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-GI-NEXT:    mov v16.s[1], v17.s[0]
+; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-GI-NEXT:    ldr s2, [sp, #40]
 ; CHECK-GI-NEXT:    mov v4.s[2], v6.s[0]
 ; CHECK-GI-NEXT:    mov v7.s[2], v1.s[0]
 ; CHECK-GI-NEXT:    ldr s1, [sp, #16]
-; CHECK-GI-NEXT:    mov v0.s[3], v3.s[0]
 ; CHECK-GI-NEXT:    mov v16.s[2], v2.s[0]
+; CHECK-GI-NEXT:    mov v0.s[3], v3.s[0]
 ; CHECK-GI-NEXT:    mov v7.s[3], v1.s[0]
 ; CHECK-GI-NEXT:    fmin v4.4s, v4.4s, v16.4s
 ; CHECK-GI-NEXT:    fmin v0.4s, v0.4s, v7.4s
 ; CHECK-GI-NEXT:    mov s5, v4.s[1]
 ; CHECK-GI-NEXT:    mov s6, v4.s[2]
+; CHECK-GI-NEXT:    // kill: def $s4 killed $s4 killed $q4
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    mov s2, v0.s[2]
 ; CHECK-GI-NEXT:    mov s3, v0.s[3]
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <7 x float> @llvm.minimum.v7f32(<7 x float> %a, <7 x float> %b)
@@ -328,56 +376,76 @@ entry:
 define <7 x float> @max_v7f32(<7 x float> %a, <7 x float> %b) {
 ; CHECK-SD-LABEL: max_v7f32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-SD-NEXT:    // kill: def $s1 killed $s1 def $q1
+; CHECK-SD-NEXT:    // kill: def $s7 killed $s7 def $q7
 ; CHECK-SD-NEXT:    mov x8, sp
-; CHECK-SD-NEXT:    ldr s1, [sp, #24]
+; CHECK-SD-NEXT:    // kill: def $s4 killed $s4 def $q4
+; CHECK-SD-NEXT:    // kill: def $s5 killed $s5 def $q5
+; CHECK-SD-NEXT:    // kill: def $s2 killed $s2 def $q2
+; CHECK-SD-NEXT:    // kill: def $s6 killed $s6 def $q6
+; CHECK-SD-NEXT:    // kill: def $s3 killed $s3 def $q3
+; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-SD-NEXT:    ld1 { v7.s }[1], [x8]
+; CHECK-SD-NEXT:    ldr s1, [sp, #24]
 ; CHECK-SD-NEXT:    add x8, sp, #8
 ; CHECK-SD-NEXT:    mov v4.s[1], v5.s[0]
-; CHECK-SD-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-SD-NEXT:    ld1 { v7.s }[2], [x8]
 ; CHECK-SD-NEXT:    add x8, sp, #32
+; CHECK-SD-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-SD-NEXT:    ld1 { v1.s }[1], [x8]
 ; CHECK-SD-NEXT:    add x8, sp, #16
 ; CHECK-SD-NEXT:    mov v4.s[2], v6.s[0]
 ; CHECK-SD-NEXT:    ld1 { v7.s }[3], [x8]
 ; CHECK-SD-NEXT:    add x8, sp, #40
-; CHECK-SD-NEXT:    mov v0.s[3], v3.s[0]
 ; CHECK-SD-NEXT:    ld1 { v1.s }[2], [x8]
+; CHECK-SD-NEXT:    mov v0.s[3], v3.s[0]
 ; CHECK-SD-NEXT:    fmax v4.4s, v4.4s, v1.4s
 ; CHECK-SD-NEXT:    fmax v0.4s, v0.4s, v7.4s
 ; CHECK-SD-NEXT:    mov s5, v4.s[1]
 ; CHECK-SD-NEXT:    mov s6, v4.s[2]
+; CHECK-SD-NEXT:    // kill: def $s4 killed $s4 killed $q4
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    mov s2, v0.s[2]
 ; CHECK-SD-NEXT:    mov s3, v0.s[3]
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: max_v7f32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr s16, [sp]
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-GI-NEXT:    // kill: def $s7 killed $s7 def $q7
+; CHECK-GI-NEXT:    // kill: def $s1 killed $s1 def $q1
+; CHECK-GI-NEXT:    ldr s17, [sp, #32]
+; CHECK-GI-NEXT:    // kill: def $s4 killed $s4 def $q4
+; CHECK-GI-NEXT:    // kill: def $s2 killed $s2 def $q2
+; CHECK-GI-NEXT:    // kill: def $s5 killed $s5 def $q5
+; CHECK-GI-NEXT:    // kill: def $s3 killed $s3 def $q3
+; CHECK-GI-NEXT:    // kill: def $s6 killed $s6 def $q6
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    ldr s1, [sp, #8]
-; CHECK-GI-NEXT:    ldr s17, [sp, #32]
 ; CHECK-GI-NEXT:    mov v4.s[1], v5.s[0]
 ; CHECK-GI-NEXT:    mov v7.s[1], v16.s[0]
 ; CHECK-GI-NEXT:    ldr s16, [sp, #24]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-GI-NEXT:    mov v16.s[1], v17.s[0]
+; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-GI-NEXT:    ldr s2, [sp, #40]
 ; CHECK-GI-NEXT:    mov v4.s[2], v6.s[0]
 ; CHECK-GI-NEXT:    mov v7.s[2], v1.s[0]
 ; CHECK-GI-NEXT:    ldr s1, [sp, #16]
-; CHECK-GI-NEXT:    mov v0.s[3], v3.s[0]
 ; CHECK-GI-NEXT:    mov v16.s[2], v2.s[0]
+; CHECK-GI-NEXT:    mov v0.s[3], v3.s[0]
 ; CHECK-GI-NEXT:    mov v7.s[3], v1.s[0]
 ; CHECK-GI-NEXT:    fmax v4.4s, v4.4s, v16.4s
 ; CHECK-GI-NEXT:    fmax v0.4s, v0.4s, v7.4s
 ; CHECK-GI-NEXT:    mov s5, v4.s[1]
 ; CHECK-GI-NEXT:    mov s6, v4.s[2]
+; CHECK-GI-NEXT:    // kill: def $s4 killed $s4 killed $q4
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    mov s2, v0.s[2]
 ; CHECK-GI-NEXT:    mov s3, v0.s[3]
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <7 x float> @llvm.maximum.v7f32(<7 x float> %a, <7 x float> %b)
@@ -421,6 +489,8 @@ entry:
 define <4 x half> @min_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-NOFP16-SD-LABEL: min_v4f16:
 ; CHECK-NOFP16-SD:       // %bb.0: // %entry
+; CHECK-NOFP16-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NOFP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NOFP16-SD-NEXT:    mov h2, v1.h[1]
 ; CHECK-NOFP16-SD-NEXT:    mov h3, v0.h[1]
 ; CHECK-NOFP16-SD-NEXT:    mov h4, v1.h[2]
@@ -446,6 +516,7 @@ define <4 x half> @min_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-NOFP16-SD-NEXT:    mov v0.h[2], v2.h[0]
 ; CHECK-NOFP16-SD-NEXT:    fcvt h1, s1
 ; CHECK-NOFP16-SD-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-NOFP16-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NOFP16-SD-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: min_v4f16:
@@ -473,6 +544,8 @@ entry:
 define <4 x half> @max_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-NOFP16-SD-LABEL: max_v4f16:
 ; CHECK-NOFP16-SD:       // %bb.0: // %entry
+; CHECK-NOFP16-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NOFP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NOFP16-SD-NEXT:    mov h2, v1.h[1]
 ; CHECK-NOFP16-SD-NEXT:    mov h3, v0.h[1]
 ; CHECK-NOFP16-SD-NEXT:    mov h4, v1.h[2]
@@ -498,6 +571,7 @@ define <4 x half> @max_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-NOFP16-SD-NEXT:    mov v0.h[2], v2.h[0]
 ; CHECK-NOFP16-SD-NEXT:    fcvt h1, s1
 ; CHECK-NOFP16-SD-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-NOFP16-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NOFP16-SD-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: max_v4f16:

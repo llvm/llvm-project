@@ -879,8 +879,8 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
                      .add(RVTarget)
                      .getInstr();
 
-  if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, OriginalCall);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MBB.getParent()->moveAdditionalCallInfo(&MI, OriginalCall);
 
   MI.eraseFromParent();
   finalizeBundle(MBB, OriginalCall->getIterator(),
@@ -908,8 +908,8 @@ bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
           .addImm(36)
           .getInstr();
 
-  if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, Call);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MBB.getParent()->moveAdditionalCallInfo(&MI, Call);
 
   MI.eraseFromParent();
   finalizeBundle(MBB, Call->getIterator(), std::next(BTI->getIterator()));
@@ -1149,7 +1149,7 @@ bool AArch64ExpandPseudo::expandMultiVecPseudo(
 bool AArch64ExpandPseudo::expandFormTuplePseudo(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI, unsigned Size) {
-  assert(Size == 2 || Size == 4 && "Invalid Tuple Size");
+  assert((Size == 2 || Size == 4) && "Invalid Tuple Size");
   MachineInstr &MI = *MBBI;
   Register ReturnTuple = MI.getOperand(0).getReg();
 

@@ -22,6 +22,7 @@ define <8 x i8> @extract_subvector_v16i8(<16 x i8> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: extract_subvector_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %ret = call <8 x i8> @llvm.vector.extract.v8i8.v16i8(<16 x i8> %op, i64 8)
   ret <8 x i8> %ret
@@ -102,6 +103,7 @@ define <2 x i16> @extract_subvector_v4i16(<4 x i16> %op) vscale_range(2,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %ret = call <2 x i16> @llvm.vector.extract.v2i16.v4i16(<4 x i16> %op, i64 2)
   ret <2 x i16> %ret
@@ -112,6 +114,7 @@ define <4 x i16> @extract_subvector_v8i16(<8 x i16> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: extract_subvector_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %ret = call <4 x i16> @llvm.vector.extract.v4i16.v8i16(<8 x i16> %op, i64 4)
   ret <4 x i16> %ret
@@ -190,6 +193,7 @@ define void @extract_subvector_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i32> @extract_subvector_v2i32(<2 x i32> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: extract_subvector_v2i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[1]
 ; CHECK-NEXT:    ret
   %ret = call <1 x i32> @llvm.vector.extract.v1i32.v2i32(<2 x i32> %op, i64 1)
@@ -201,6 +205,7 @@ define <2 x i32> @extract_subvector_v4i32(<4 x i32> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: extract_subvector_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %ret = call <2 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %op, i64 2)
   ret <2 x i32> %ret
@@ -280,6 +285,7 @@ define <1 x i64> @extract_subvector_v2i64(<2 x i64> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: extract_subvector_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %ret = call <1 x i64> @llvm.vector.extract.v1i64.v2i64(<2 x i64> %op, i64 1)
   ret <1 x i64> %ret
@@ -351,6 +357,7 @@ define void @extract_subvector_v32i64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 define <2 x half> @extract_subvector_v4f16(<4 x half> %op) vscale_range(16,0) #0 {
 ; CHECK-LABEL: extract_subvector_v4f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[1]
 ; CHECK-NEXT:    ret
   %ret = call <2 x half> @llvm.vector.extract.v2f16.v4f16(<4 x half> %op, i64 2)
@@ -362,6 +369,7 @@ define <4 x half> @extract_subvector_v8f16(<8 x half> %op) vscale_range(2,0) #0 
 ; CHECK-LABEL: extract_subvector_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %ret = call <4 x half> @llvm.vector.extract.v4f16.v8f16(<8 x half> %op, i64 4)
   ret <4 x half> %ret
@@ -440,6 +448,7 @@ define void @extract_subvector_v128f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x float> @extract_subvector_v2f32(<2 x float> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: extract_subvector_v2f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[1]
 ; CHECK-NEXT:    ret
   %ret = call <1 x float> @llvm.vector.extract.v1f32.v2f32(<2 x float> %op, i64 1)
@@ -451,6 +460,7 @@ define <2 x float> @extract_subvector_v4f32(<4 x float> %op) vscale_range(2,0) #
 ; CHECK-LABEL: extract_subvector_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %ret = call <2 x float> @llvm.vector.extract.v2f32.v4f32(<4 x float> %op, i64 2)
   ret <2 x float> %ret
@@ -530,6 +540,7 @@ define <1 x double> @extract_subvector_v2f64(<2 x double> %op) vscale_range(2,0)
 ; CHECK-LABEL: extract_subvector_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %ret = call <1 x double> @llvm.vector.extract.v1f64.v2f64(<2 x double> %op, i64 1)
   ret <1 x double> %ret

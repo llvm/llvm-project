@@ -10,6 +10,7 @@ define i32 @func_get_fpmode() #0 {
 ; DAG-LABEL: func_get_fpmode:
 ; DAG:       // %bb.0: // %entry
 ; DAG-NEXT:    mrs x0, FPCR
+; DAG-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; DAG-NEXT:    ret
 ;
 ; GIS-LABEL: func_get_fpmode:

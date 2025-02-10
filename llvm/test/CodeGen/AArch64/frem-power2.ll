@@ -6,12 +6,14 @@ define float @frem2(float %x) {
 ; CHECK-SD-LABEL: frem2:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov s1, #0.50000000
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    fmov s2, #-2.00000000
 ; CHECK-SD-NEXT:    fmul s1, s0, s1
 ; CHECK-SD-NEXT:    frintz s1, s1
 ; CHECK-SD-NEXT:    fmadd s1, s1, s2, s0
 ; CHECK-SD-NEXT:    mvni v2.4s, #128, lsl #24
 ; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem2:
@@ -364,20 +366,25 @@ define <4 x float> @frem2_vec(<4 x float> %x) {
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    mov s9, v0.s[2]
 ; CHECK-GI-NEXT:    mov s10, v0.s[3]
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    fmov s0, s8
-; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    fmov s0, s9
-; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s10
 ; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    fmov s0, s10
 ; CHECK-GI-NEXT:    bl fmodf
 ; CHECK-GI-NEXT:    ldp q2, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #72] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #56] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr d10, [sp, #48] // 8-byte Folded Reload
@@ -418,20 +425,25 @@ define <4 x float> @frem2_nsz_vec(<4 x float> %x) {
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    mov s9, v0.s[2]
 ; CHECK-GI-NEXT:    mov s10, v0.s[3]
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    fmov s0, s8
-; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    fmov s0, s9
-; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s10
 ; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    fmov s0, s10
 ; CHECK-GI-NEXT:    bl fmodf
 ; CHECK-GI-NEXT:    ldp q2, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #72] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #56] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr d10, [sp, #48] // 8-byte Folded Reload
@@ -479,20 +491,25 @@ define <4 x float> @frem1152921504606846976_absv(<4 x float> %x) {
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    mov s9, v0.s[2]
 ; CHECK-GI-NEXT:    mov s10, v0.s[3]
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s1, s11
 ; CHECK-GI-NEXT:    fmov s0, s8
-; CHECK-GI-NEXT:    fmov s1, s11
 ; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    fmov s1, s11
 ; CHECK-GI-NEXT:    fmov s0, s9
-; CHECK-GI-NEXT:    fmov s1, s11
 ; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s0, s10
 ; CHECK-GI-NEXT:    fmov s1, s11
+; CHECK-GI-NEXT:    fmov s0, s10
 ; CHECK-GI-NEXT:    bl fmodf
 ; CHECK-GI-NEXT:    ldp q2, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload

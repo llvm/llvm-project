@@ -63,6 +63,9 @@ enum FeatureKind : uint32_t {
 
   // Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended.
   FK_DIV32 = 1 << 13,
+
+  // sc.q is available.
+  FK_SCQ = 1 << 14,
 };
 
 struct FeatureInfo {

@@ -14,7 +14,6 @@
 #include <__algorithm/move.h>
 #include <__algorithm/move_backward.h>
 #include <__config>
-#include <__cstddef/size_t.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
@@ -24,7 +23,6 @@
 #include <__memory/compressed_pair.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
-#include <__type_traits/add_lvalue_reference.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
@@ -53,24 +51,24 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Allocator = allocator<_Tp> >
 struct __split_buffer {
 public:
-  using value_type      = _Tp;
-  using allocator_type  = _Allocator;
-  using __alloc_rr      = __libcpp_remove_reference_t<allocator_type>;
-  using __alloc_traits  = allocator_traits<__alloc_rr>;
-  using reference       = value_type&;
-  using const_reference = const value_type&;
-  using size_type       = typename __alloc_traits::size_type;
-  using difference_type = typename __alloc_traits::difference_type;
-  using pointer         = typename __alloc_traits::pointer;
-  using const_pointer   = typename __alloc_traits::const_pointer;
-  using iterator        = pointer;
-  using const_iterator  = const_pointer;
+  using value_type                     = _Tp;
+  using allocator_type                 = _Allocator;
+  using __alloc_rr _LIBCPP_NODEBUG     = __libcpp_remove_reference_t<allocator_type>;
+  using __alloc_traits _LIBCPP_NODEBUG = allocator_traits<__alloc_rr>;
+  using reference                      = value_type&;
+  using const_reference                = const value_type&;
+  using size_type                      = typename __alloc_traits::size_type;
+  using difference_type                = typename __alloc_traits::difference_type;
+  using pointer                        = typename __alloc_traits::pointer;
+  using const_pointer                  = typename __alloc_traits::const_pointer;
+  using iterator                       = pointer;
+  using const_iterator                 = const_pointer;
 
   // A __split_buffer contains the following members which may be trivially relocatable:
   // - pointer: may be trivially relocatable, so it's checked
   // - allocator_type: may be trivially relocatable, so it's checked
   // __split_buffer doesn't have any self-references, so it's trivially relocatable if its members are.
-  using __trivially_relocatable = __conditional_t<
+  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
       __libcpp_is_trivially_relocatable<pointer>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
       __split_buffer,
       void>;
@@ -435,7 +433,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::emplace_fron
       __begin_            = std::move_backward(__begin_, __end_, __end_ + __d);
       __end_ += __d;
     } else {
-      size_type __c = std::max<size_type>(2 * static_cast<size_t>(__cap_ - __first_), 1);
+      size_type __c = std::max<size_type>(2 * static_cast<size_type>(__cap_ - __first_), 1);
       __split_buffer<value_type, __alloc_rr&> __t(__c, (__c + 3) / 4, __alloc_);
       __t.__construct_at_end(move_iterator<pointer>(__begin_), move_iterator<pointer>(__end_));
       std::swap(__first_, __t.__first_);
@@ -458,7 +456,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::emplace_back
       __end_              = std::move(__begin_, __end_, __begin_ - __d);
       __begin_ -= __d;
     } else {
-      size_type __c = std::max<size_type>(2 * static_cast<size_t>(__cap_ - __first_), 1);
+      size_type __c = std::max<size_type>(2 * static_cast<size_type>(__cap_ - __first_), 1);
       __split_buffer<value_type, __alloc_rr&> __t(__c, __c / 4, __alloc_);
       __t.__construct_at_end(move_iterator<pointer>(__begin_), move_iterator<pointer>(__end_));
       std::swap(__first_, __t.__first_);

@@ -12,6 +12,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <8 x i8> @concat_v8i8(<4 x i8> %op1, <4 x i8> %op2)  {
 ; CHECK-LABEL: concat_v8i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z2.h, z1.h[3]
 ; CHECK-NEXT:    mov z3.h, z1.h[2]
 ; CHECK-NEXT:    mov z4.h, z1.h[1]
@@ -25,6 +27,7 @@ define <8 x i8> @concat_v8i8(<4 x i8> %op1, <4 x i8> %op2)  {
 ; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v8i8:
@@ -58,8 +61,11 @@ define <8 x i8> @concat_v8i8(<4 x i8> %op1, <4 x i8> %op2)  {
 define <16 x i8> @concat_v16i8(<8 x i8> %op1, <8 x i8> %op2)  {
 ; CHECK-LABEL: concat_v16i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v16i8:
@@ -134,11 +140,14 @@ define void @concat_v64i8(ptr %a, ptr %b, ptr %c) {
 define <4 x i16> @concat_v4i16(<2 x i16> %op1, <2 x i16> %op2)  {
 ; CHECK-LABEL: concat_v4i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z2.s, z1.s[1]
 ; CHECK-NEXT:    mov z3.s, z0.s[1]
 ; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v4i16:
@@ -163,8 +172,11 @@ define <4 x i16> @concat_v4i16(<2 x i16> %op1, <2 x i16> %op2)  {
 define <8 x i16> @concat_v8i16(<4 x i16> %op1, <4 x i16> %op2)  {
 ; CHECK-LABEL: concat_v8i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z0.h, p0, { z0.h, z1.h }
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v8i16:
@@ -233,7 +245,10 @@ define void @concat_v32i16(ptr %a, ptr %b, ptr %c) {
 define <2 x i32> @concat_v2i32(<1 x i32> %op1, <1 x i32> %op2)  {
 ; CHECK-LABEL: concat_v2i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v2i32:
@@ -255,8 +270,11 @@ define <2 x i32> @concat_v2i32(<1 x i32> %op1, <1 x i32> %op2)  {
 define <4 x i32> @concat_v4i32(<2 x i32> %op1, <2 x i32> %op2)  {
 ; CHECK-LABEL: concat_v4i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z0.s, p0, { z0.s, z1.s }
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v4i32:
@@ -322,8 +340,11 @@ define void @concat_v16i32(ptr %a, ptr %b, ptr %c) {
 define <2 x i64> @concat_v2i64(<1 x i64> %op1, <1 x i64> %op2)  {
 ; CHECK-LABEL: concat_v2i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z0.d, p0, { z0.d, z1.d }
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v2i64:
@@ -385,27 +406,13 @@ define void @concat_v8i64(ptr %a, ptr %b, ptr %c) {
 ;
 
 define <4 x half> @concat_v4f16(<2 x half> %op1, <2 x half> %op2)  {
-; SVE2-LABEL: concat_v4f16:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    cnth x8
-; SVE2-NEXT:    adrp x9, .LCPI15_0
-; SVE2-NEXT:    adrp x10, .LCPI15_1
-; SVE2-NEXT:    mov z2.h, w8
-; SVE2-NEXT:    ldr q3, [x9, :lo12:.LCPI15_0]
-; SVE2-NEXT:    ldr q4, [x10, :lo12:.LCPI15_1]
-; SVE2-NEXT:    ptrue p0.h, vl8
-; SVE2-NEXT:    mad z2.h, p0/m, z3.h, z4.h
-; SVE2-NEXT:    tbl z0.h, { z0.h, z1.h }, z2.h
-; SVE2-NEXT:    ret
-;
-; SME-LABEL: concat_v4f16:
-; SME:       // %bb.0:
-; SME-NEXT:    mov z2.h, z1.h[1]
-; SME-NEXT:    mov z3.h, z0.h[1]
-; SME-NEXT:    zip1 z1.h, z1.h, z2.h
-; SME-NEXT:    zip1 z0.h, z0.h, z3.h
-; SME-NEXT:    zip1 z0.s, z0.s, z1.s
-; SME-NEXT:    ret
+; CHECK-LABEL: concat_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v4f16:
 ; NONEON-NOSVE:       // %bb.0:
@@ -425,8 +432,11 @@ define <4 x half> @concat_v4f16(<2 x half> %op1, <2 x half> %op2)  {
 define <8 x half> @concat_v8f16(<4 x half> %op1, <4 x half> %op2)  {
 ; CHECK-LABEL: concat_v8f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z0.h, p0, { z0.h, z1.h }
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v8f16:
@@ -495,7 +505,10 @@ define void @concat_v32f16(ptr %a, ptr %b, ptr %c) {
 define <2 x float> @concat_v2f32(<1 x float> %op1, <1 x float> %op2)  {
 ; CHECK-LABEL: concat_v2f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v2f32:
@@ -517,8 +530,11 @@ define <2 x float> @concat_v2f32(<1 x float> %op1, <1 x float> %op2)  {
 define <4 x float> @concat_v4f32(<2 x float> %op1, <2 x float> %op2)  {
 ; CHECK-LABEL: concat_v4f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z0.s, p0, { z0.s, z1.s }
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v4f32:
@@ -584,8 +600,11 @@ define void @concat_v16f32(ptr %a, ptr %b, ptr %c) {
 define <2 x double> @concat_v2f64(<1 x double> %op1, <1 x double> %op2)  {
 ; CHECK-LABEL: concat_v2f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    splice z0.d, p0, { z0.d, z1.d }
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v2f64:

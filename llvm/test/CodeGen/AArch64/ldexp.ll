@@ -6,10 +6,13 @@
 define double @testExp(double %val, i32 %a) {
 ; SVE-LABEL: testExp:
 ; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; SVE-NEXT:    sxtw x8, w0
 ; SVE-NEXT:    ptrue p0.d
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; SVE-NEXT:    fmov d1, x8
 ; SVE-NEXT:    fscale z0.d, p0/m, z0.d, z1.d
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; WINDOWS-LABEL: testExp:
@@ -25,10 +28,13 @@ declare double @ldexp(double, i32) memory(none)
 define double @testExpIntrinsic(double %val, i32 %a) {
 ; SVE-LABEL: testExpIntrinsic:
 ; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; SVE-NEXT:    sxtw x8, w0
 ; SVE-NEXT:    ptrue p0.d
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; SVE-NEXT:    fmov d1, x8
 ; SVE-NEXT:    fscale z0.d, p0/m, z0.d, z1.d
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; WINDOWS-LABEL: testExpIntrinsic:
@@ -44,7 +50,9 @@ define float @testExpf(float %val, i32 %a) {
 ; SVELINUX:       // %bb.0: // %entry
 ; SVELINUX-NEXT:    fmov s1, w0
 ; SVELINUX-NEXT:    ptrue p0.s
+; SVELINUX-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; SVELINUX-NEXT:    fscale z0.s, p0/m, z0.s, z1.s
+; SVELINUX-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; SVELINUX-NEXT:    ret
 ;
 ; SVEWINDOWS-LABEL: testExpf:
@@ -64,7 +72,9 @@ define float @testExpfIntrinsic(float %val, i32 %a) {
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    fmov s1, w0
 ; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; SVE-NEXT:    fscale z0.s, p0/m, z0.s, z1.s
+; SVE-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; WINDOWS-LABEL: testExpfIntrinsic:

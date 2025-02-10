@@ -10,12 +10,14 @@ define i16 @testmhhs(half %x) {
 ; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    frintx s0, s0
 ; CHECK-NOFP16-NEXT:    fcvtzs x0, s0
+; CHECK-NOFP16-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: testmhhs:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    frintx h0, h0
 ; CHECK-FP16-NEXT:    fcvtzs x0, h0
+; CHECK-FP16-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-FP16-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.llrint.i64.f16(half %x)
@@ -29,12 +31,14 @@ define i32 @testmhws(half %x) {
 ; CHECK-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-NOFP16-NEXT:    frintx s0, s0
 ; CHECK-NOFP16-NEXT:    fcvtzs x0, s0
+; CHECK-NOFP16-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: testmhws:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    frintx h0, h0
 ; CHECK-FP16-NEXT:    fcvtzs x0, h0
+; CHECK-FP16-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-FP16-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.llrint.i64.f16(half %x)

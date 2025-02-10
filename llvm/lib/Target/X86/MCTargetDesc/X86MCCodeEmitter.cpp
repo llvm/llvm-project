@@ -572,15 +572,15 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex2) ||
-      FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel)) {
+      FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel) ||
+      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_evex)) {
     ImmOffset -= 4;
     // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
     // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
     // this needs to be a GOTPC32 relocation.
     if (startsWithGlobalOffsetTable(Expr) != GOT_None)
       FixupKind = MCFixupKind(X86::reloc_global_offset_table);
-  } else if (FixupKind == MCFixupKind(X86::reloc_riprel_6byte_relax))
-    ImmOffset -= 6;
+  }
 
   if (FixupKind == FK_PCRel_2)
     ImmOffset -= 2;
@@ -677,7 +677,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
       case X86::ADD64mr_ND:
       case X86::ADD64mr_NF_ND:
       case X86::ADD64rm_NF_ND:
-        return X86::reloc_riprel_6byte_relax;
+        return X86::reloc_riprel_4byte_relax_evex;
       }
     }();
 

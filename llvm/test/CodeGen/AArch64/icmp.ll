@@ -1123,33 +1123,52 @@ entry:
 define <3 x i64> @v3i64_i64(<3 x i64> %a, <3 x i64> %b, <3 x i64> %d, <3 x i64> %e) {
 ; CHECK-SD-LABEL: v3i64_i64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
+; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    ldr d16, [sp, #24]
+; CHECK-SD-NEXT:    ldr d17, [sp]
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ldr d16, [sp, #24]
-; CHECK-SD-NEXT:    ldp d1, d4, [sp, #8]
 ; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-SD-NEXT:    ldr d17, [sp]
+; CHECK-SD-NEXT:    ldp d1, d4, [sp, #8]
 ; CHECK-SD-NEXT:    mov v1.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    cmgt v0.2d, v3.2d, v0.2d
 ; CHECK-SD-NEXT:    bsl v0.16b, v6.16b, v1.16b
 ; CHECK-SD-NEXT:    cmgt v1.2d, v5.2d, v2.2d
 ; CHECK-SD-NEXT:    mov v2.16b, v1.16b
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    bsl v2.16b, v17.16b, v16.16b
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3i64_i64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    // kill: def $d6 killed $d6 def $q6
+; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-GI-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-GI-NEXT:    ldr x8, [sp]
+; CHECK-GI-NEXT:    ldr x10, [sp, #24]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-GI-NEXT:    ldr x8, [sp]
-; CHECK-GI-NEXT:    ldp d1, d4, [sp, #8]
 ; CHECK-GI-NEXT:    cmgt v2.2d, v5.2d, v2.2d
+; CHECK-GI-NEXT:    ldp d1, d4, [sp, #8]
 ; CHECK-GI-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-GI-NEXT:    ldr x10, [sp, #24]
+; CHECK-GI-NEXT:    fmov x9, d2
 ; CHECK-GI-NEXT:    mov v1.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    cmgt v0.2d, v3.2d, v0.2d
-; CHECK-GI-NEXT:    fmov x9, d2
 ; CHECK-GI-NEXT:    sbfx x9, x9, #0, #1
 ; CHECK-GI-NEXT:    bsl v0.16b, v6.16b, v1.16b
 ; CHECK-GI-NEXT:    and x8, x8, x9
@@ -1157,6 +1176,7 @@ define <3 x i64> @v3i64_i64(<3 x i64> %a, <3 x i64> %b, <3 x i64> %d, <3 x i64> 
 ; CHECK-GI-NEXT:    orr x8, x8, x9
 ; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp slt <3 x i64> %a, %b
@@ -1383,28 +1403,26 @@ define <2 x i128> @v2i128_i128(<2 x i128> %a, <2 x i128> %b, <2 x i128> %d, <2 x
 ;
 ; CHECK-GI-LABEL: v2i128_i128:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    cmp x1, x5
-; CHECK-GI-NEXT:    ldp x8, x9, [sp]
-; CHECK-GI-NEXT:    cset w10, lt
 ; CHECK-GI-NEXT:    cmp x0, x4
-; CHECK-GI-NEXT:    cset w13, lo
+; CHECK-GI-NEXT:    ldp x9, x10, [sp]
+; CHECK-GI-NEXT:    cset w8, lo
 ; CHECK-GI-NEXT:    cmp x1, x5
-; CHECK-GI-NEXT:    csel w10, w13, w10, eq
-; CHECK-GI-NEXT:    cmp x3, x7
-; CHECK-GI-NEXT:    ldp x13, x14, [sp, #32]
-; CHECK-GI-NEXT:    cset w15, lt
+; CHECK-GI-NEXT:    cset w11, lt
+; CHECK-GI-NEXT:    ldp x14, x15, [sp, #32]
+; CHECK-GI-NEXT:    csel w8, w8, w11, eq
 ; CHECK-GI-NEXT:    cmp x2, x6
-; CHECK-GI-NEXT:    ldp x11, x12, [sp, #16]
-; CHECK-GI-NEXT:    cset w16, lo
+; CHECK-GI-NEXT:    cset w11, lo
 ; CHECK-GI-NEXT:    cmp x3, x7
+; CHECK-GI-NEXT:    ldp x12, x13, [sp, #16]
+; CHECK-GI-NEXT:    cset w16, lt
 ; CHECK-GI-NEXT:    ldp x17, x18, [sp, #48]
-; CHECK-GI-NEXT:    csel w15, w16, w15, eq
-; CHECK-GI-NEXT:    tst w10, #0x1
-; CHECK-GI-NEXT:    csel x0, x8, x13, ne
-; CHECK-GI-NEXT:    csel x1, x9, x14, ne
-; CHECK-GI-NEXT:    tst w15, #0x1
-; CHECK-GI-NEXT:    csel x2, x11, x17, ne
-; CHECK-GI-NEXT:    csel x3, x12, x18, ne
+; CHECK-GI-NEXT:    csel w11, w11, w16, eq
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    csel x0, x9, x14, ne
+; CHECK-GI-NEXT:    csel x1, x10, x15, ne
+; CHECK-GI-NEXT:    tst w11, #0x1
+; CHECK-GI-NEXT:    csel x2, x12, x17, ne
+; CHECK-GI-NEXT:    csel x3, x13, x18, ne
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp slt <2 x i128> %a, %b

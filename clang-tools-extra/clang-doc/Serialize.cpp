@@ -236,10 +236,10 @@ static RecordDecl *getRecordDeclForType(const QualType &T) {
   return nullptr;
 }
 
-TypeInfo getTypeInfoForType(const QualType &T) {
+TypeInfo getTypeInfoForType(const QualType &T, const PrintingPolicy &Policy) {
   const TagDecl *TD = getTagDeclForType(T);
   if (!TD)
-    return TypeInfo(Reference(SymbolID(), T.getAsString()));
+    return TypeInfo(Reference(SymbolID(), T.getAsString(Policy)));
 
   InfoType IT;
   if (dyn_cast<EnumDecl>(TD)) {
@@ -250,7 +250,7 @@ TypeInfo getTypeInfoForType(const QualType &T) {
     IT = InfoType::IT_default;
   }
   return TypeInfo(Reference(getUSRForDecl(TD), TD->getNameAsString(), IT,
-                            T.getAsString(), getInfoRelativePath(TD)));
+                            T.getAsString(Policy), getInfoRelativePath(TD)));
 }
 
 static bool isPublic(const clang::AccessSpecifier AS,
@@ -379,10 +379,11 @@ static void parseFields(RecordInfo &I, const RecordDecl *D, bool PublicOnly,
     if (!shouldSerializeInfo(PublicOnly, /*IsInAnonymousNamespace=*/false, F))
       continue;
 
+    auto &LO = F->getLangOpts();
     // Use getAccessUnsafe so that we just get the default AS_none if it's not
     // valid, as opposed to an assert.
     MemberTypeInfo &NewMember = I.Members.emplace_back(
-        getTypeInfoForType(F->getTypeSourceInfo()->getType()),
+        getTypeInfoForType(F->getTypeSourceInfo()->getType(), LO),
         F->getNameAsString(),
         getFinalAccessSpecifier(Access, F->getAccessUnsafe()));
     populateMemberTypeInfo(NewMember, F);
@@ -412,9 +413,10 @@ static void parseEnumerators(EnumInfo &I, const EnumDecl *D) {
 }
 
 static void parseParameters(FunctionInfo &I, const FunctionDecl *D) {
+  auto &LO = D->getLangOpts();
   for (const ParmVarDecl *P : D->parameters()) {
     FieldTypeInfo &FieldInfo = I.Params.emplace_back(
-        getTypeInfoForType(P->getOriginalType()), P->getNameAsString());
+        getTypeInfoForType(P->getOriginalType(), LO), P->getNameAsString());
     FieldInfo.DefaultValue = getSourceCode(D, P->getDefaultArgRange());
   }
 }
@@ -541,7 +543,8 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
                                  bool &IsInAnonymousNamespace) {
   populateSymbolInfo(I, D, FC, LineNumber, Filename, IsFileInRootDir,
                      IsInAnonymousNamespace);
-  I.ReturnType = getTypeInfoForType(D->getReturnType());
+  auto &LO = D->getLangOpts();
+  I.ReturnType = getTypeInfoForType(D->getReturnType(), LO);
   parseParameters(I, D);
 
   PopulateTemplateParameters(I.Template, D);
@@ -693,13 +696,11 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
 
     // What this is a specialization of.
     auto SpecOf = CTSD->getSpecializedTemplateOrPartial();
-    if (SpecOf.is<ClassTemplateDecl *>()) {
-      Specialization.SpecializationOf =
-          getUSRForDecl(SpecOf.get<ClassTemplateDecl *>());
-    } else if (SpecOf.is<ClassTemplatePartialSpecializationDecl *>()) {
-      Specialization.SpecializationOf =
-          getUSRForDecl(SpecOf.get<ClassTemplatePartialSpecializationDecl *>());
-    }
+    if (auto *CTD = dyn_cast<ClassTemplateDecl *>(SpecOf))
+      Specialization.SpecializationOf = getUSRForDecl(CTD);
+    else if (auto *CTPSD =
+                 dyn_cast<ClassTemplatePartialSpecializationDecl *>(SpecOf))
+      Specialization.SpecializationOf = getUSRForDecl(CTPSD);
 
     // Parameters to the specilization. For partial specializations, get the
     // parameters "as written" from the ClassTemplatePartialSpecializationDecl
@@ -783,7 +784,8 @@ emitInfo(const TypedefDecl *D, const FullComment *FC, int LineNumber,
     return {};
 
   Info.DefLoc.emplace(LineNumber, File, IsFileInRootDir);
-  Info.Underlying = getTypeInfoForType(D->getUnderlyingType());
+  auto &LO = D->getLangOpts();
+  Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
   if (Info.Underlying.Type.Name.empty()) {
     // Typedef for an unnamed type. This is like "typedef struct { } Foo;"
     // The record serializer explicitly checks for this syntax and constructs
@@ -809,7 +811,8 @@ emitInfo(const TypeAliasDecl *D, const FullComment *FC, int LineNumber,
     return {};
 
   Info.DefLoc.emplace(LineNumber, File, IsFileInRootDir);
-  Info.Underlying = getTypeInfoForType(D->getUnderlyingType());
+  auto &LO = D->getLangOpts();
+  Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
   Info.IsUsing = true;
 
   // Info is wrapped in its parent scope so is returned in the second position.

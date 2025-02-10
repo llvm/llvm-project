@@ -153,6 +153,7 @@ define <vscale x 16 x i1> @chained_reinterpret() {
 define <vscale x 16 x i1> @reinterpret_scalar_bool_h(i1 %x){
 ; CHECK-LABEL: reinterpret_scalar_bool_h:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sbfx x8, x0, #0, #1
 ; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    ret
@@ -165,6 +166,7 @@ define <vscale x 16 x i1> @reinterpret_scalar_bool_h(i1 %x){
 define <vscale x 16 x i1> @reinterpret_scalar_bool_s(i1 %x){
 ; CHECK-LABEL: reinterpret_scalar_bool_s:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sbfx x8, x0, #0, #1
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    ret
@@ -177,6 +179,7 @@ define <vscale x 16 x i1> @reinterpret_scalar_bool_s(i1 %x){
 define <vscale x 16 x i1> @reinterpret_scalar_bool_q(i1 %x){
 ; CHECK-LABEL: reinterpret_scalar_bool_q:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sbfx x8, x0, #0, #1
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    ret

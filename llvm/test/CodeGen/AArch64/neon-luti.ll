@@ -4,6 +4,8 @@
 define <16 x i8> @test_luti2_lane_i8(<8 x i8> %vn, <8 x i8> %vm){
 ; CHECK-LABEL: test_luti2_lane_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    luti2 v0.16b, { v0.16b }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <16 x i8> @llvm.aarch64.neon.vluti2.lane.v16i8.v8i8(<8 x i8> %vn, <8 x i8> %vm, i32 0)
@@ -13,6 +15,7 @@ define <16 x i8> @test_luti2_lane_i8(<8 x i8> %vn, <8 x i8> %vm){
 define <16 x i8> @test_luti2_laneq_i8(<8 x i8> %vn, <16 x i8> %vm){
 ; CHECK-LABEL: test_luti2_laneq_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    luti2 v0.16b, { v0.16b }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <16 x i8> @llvm.aarch64.neon.vluti2.laneq.v16i8.v8i8(<8 x i8> %vn, <16 x i8> %vm, i32 0)
@@ -22,6 +25,7 @@ define <16 x i8> @test_luti2_laneq_i8(<8 x i8> %vn, <16 x i8> %vm){
 define <16 x i8> @test_luti2q_lane_i8(<16 x i8> %vn, <8 x i8> %vm){
 ; CHECK-LABEL: test_luti2q_lane_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    luti2 v0.16b, { v0.16b }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <16 x i8> @llvm.aarch64.neon.vluti2.lane.v16i8.v16i8(<16 x i8> %vn, <8 x i8> %vm, i32 0)
@@ -40,6 +44,8 @@ define <16 x i8> @test_luti2q_laneq_i8(<16 x i8> %vn, <16 x i8> %vm){
 define <8 x i16> @test_luti2_lane_i16(<4 x i16> %vn, <8 x i8> %vm){
 ; CHECK-LABEL: test_luti2_lane_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    luti2 v0.8h, { v0.8h }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x i16> @llvm.aarch64.neon.vluti2.lane.v8i16.v4i16(<4 x i16> %vn, <8 x i8> %vm, i32 0)
@@ -49,6 +55,7 @@ define <8 x i16> @test_luti2_lane_i16(<4 x i16> %vn, <8 x i8> %vm){
 define <8 x i16> @test_luti2_laneq_i16(<4 x i16> %vn, <16 x i8> %vm){
 ; CHECK-LABEL: test_luti2_laneq_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    luti2 v0.8h, { v0.8h }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x i16> @llvm.aarch64.neon.vluti2.laneq.v8i16.v4i16(<4 x i16> %vn, <16 x i8> %vm, i32 0)
@@ -58,6 +65,8 @@ define <8 x i16> @test_luti2_laneq_i16(<4 x i16> %vn, <16 x i8> %vm){
 define <8 x i16> @test_luti2q_lane_i16(<4 x i16> %vn, <8 x i8> %vm){
 ; CHECK-LABEL: test_luti2q_lane_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    luti2 v0.8h, { v0.8h }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x i16> @llvm.aarch64.neon.vluti2.lane.v8i16.v8i16(<4 x i16> %vn, <8 x i8> %vm, i32 0)
@@ -76,6 +85,8 @@ define <8 x i16> @test_luti2q_laneq_i16(<8 x i16> %vn, <16 x i8> %vm){
 define <8 x half> @test_luti2_lane_f16(<4 x half> %vn, <8 x i8> %vm){
 ; CHECK-LABEL: test_luti2_lane_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    luti2 v0.8h, { v0.8h }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x half> @llvm.aarch64.neon.vluti2.lane.v8f16.v4f16(<4 x half> %vn, <8 x i8> %vm, i32 0)
@@ -85,6 +96,7 @@ define <8 x half> @test_luti2_lane_f16(<4 x half> %vn, <8 x i8> %vm){
 define <8 x half> @test_luti2_laneq_f16(<4 x half> %vn, <16 x i8> %vm){
 ; CHECK-LABEL: test_luti2_laneq_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    luti2 v0.8h, { v0.8h }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x half> @llvm.aarch64.neon.vluti2.laneq.v8f16.v4i16(<4 x half> %vn, <16 x i8> %vm, i32 0)
@@ -94,6 +106,7 @@ define <8 x half> @test_luti2_laneq_f16(<4 x half> %vn, <16 x i8> %vm){
 define <8 x half> @test_luti2q_lane_f16(<8 x half> %vn, <8 x i8> %vm){
 ; CHECK-LABEL: test_luti2q_lane_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    luti2 v0.8h, { v0.8h }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x half> @llvm.aarch64.neon.vluti2.lane.v8f16.v8f16(<8 x half> %vn, <8 x i8> %vm, i32 0)
@@ -112,6 +125,8 @@ define <8 x half> @test_luti2q_laneq_f16(<8 x half> %vn, <16 x i8> %vm){
 define <8 x bfloat> @test_luti2_lane_bf16(<4 x bfloat> %vn, <8 x i8> %vm){
 ; CHECK-LABEL: test_luti2_lane_bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    luti2 v0.8h, { v0.8h }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x bfloat> @llvm.aarch64.neon.vluti2.lane.v8bf16.v4bf16(<4 x bfloat> %vn, <8 x i8> %vm, i32 0)
@@ -121,6 +136,7 @@ define <8 x bfloat> @test_luti2_lane_bf16(<4 x bfloat> %vn, <8 x i8> %vm){
 define <8 x bfloat> @test_luti2_laneq_bf16(<4 x bfloat> %vn, <16 x i8> %vm){
 ; CHECK-LABEL: test_luti2_laneq_bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    luti2 v0.8h, { v0.8h }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x bfloat> @llvm.aarch64.neon.vluti2.laneq.v8bf16.v4bf16(<4 x bfloat> %vn, <16 x i8> %vm, i32 0)
@@ -130,6 +146,8 @@ define <8 x bfloat> @test_luti2_laneq_bf16(<4 x bfloat> %vn, <16 x i8> %vm){
 define <8 x bfloat> @test_luti2q_lane_bf16(<4 x bfloat> %vn, <8 x i8> %vm){
 ; CHECK-LABEL: test_luti2q_lane_bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    luti2 v0.8h, { v0.8h }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x bfloat> @llvm.aarch64.neon.vluti2.lane.v8bf16.v8bf16(<4 x bfloat> %vn, <8 x i8> %vm, i32 0)
@@ -148,6 +166,7 @@ define <8 x bfloat> @test_luti2q_laneq_bf16(<8 x bfloat> %vn, <16 x i8> %vm){
 define <16 x i8> @test_luti4q_lane_i8(<16 x i8> %vn, <8 x i8> %vm){
 ; CHECK-LABEL: test_luti4q_lane_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    luti4 v0.16b, { v0.16b }, v1[0]
 ; CHECK-NEXT:    ret
    %res= tail call <16 x i8> @llvm.aarch64.neon.vluti4q.lane.v16i8(<16 x i8> %vn, <8 x i8> %vm, i32 0)
@@ -166,6 +185,9 @@ define <16 x i8> @test_luti4q_laneq_i8(<16 x i8> %vn, <16 x i8> %vm){
 define <8 x i16> @test_luti4q_lane_x2_i16(<8 x i16> %vn1, <8 x i16> %vn2, <8 x i8> %vm){
 ; CHECK-LABEL: test_luti4q_lane_x2_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    luti4 v0.8h, { v0.8h, v1.8h }, v2[1]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x i16> @llvm.aarch64.neon.vluti4q.lane.x2.v8i16(<8 x i16> %vn1, <8 x i16> %vn2, <8 x i8> %vm, i32 1)
@@ -175,6 +197,8 @@ define <8 x i16> @test_luti4q_lane_x2_i16(<8 x i16> %vn1, <8 x i16> %vn2, <8 x i
 define <8 x i16> @test_luti4q_laneq_x2_i16(<8 x i16> %vn1, <8 x i16> %vn2, <16 x i8> %vm){
 ; CHECK-LABEL: test_luti4q_laneq_x2_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    luti4 v0.8h, { v0.8h, v1.8h }, v2[1]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x i16> @llvm.aarch64.neon.vluti4q.laneq.x2.v8i16(<8 x i16> %vn1, <8 x i16> %vn2, <16 x i8> %vm, i32 1)
@@ -184,6 +208,9 @@ define <8 x i16> @test_luti4q_laneq_x2_i16(<8 x i16> %vn1, <8 x i16> %vn2, <16 x
 define <8 x half> @test_luti4q_lane_x2_f16(<8 x half>%vn1, <8 x half> %vn2, <8 x i8> %vm){
 ; CHECK-LABEL: test_luti4q_lane_x2_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    luti4 v0.8h, { v0.8h, v1.8h }, v2[1]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x half> @llvm.aarch64.neon.vluti4q.lane.x2.v8f16(<8 x half> %vn1, <8 x half> %vn2, <8 x i8> %vm, i32 1)
@@ -194,6 +221,8 @@ define <8 x half> @test_luti4q_lane_x2_f16(<8 x half>%vn1, <8 x half> %vn2, <8 x
 define <8 x half> @test_luti4q_laneq_x2_f16(<8 x half>%vn1, <8 x half> %vn2, <16 x i8> %vm){
 ; CHECK-LABEL: test_luti4q_laneq_x2_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    luti4 v0.8h, { v0.8h, v1.8h }, v2[1]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x half> @llvm.aarch64.neon.vluti4q.laneq.x2.v8f16(<8 x half> %vn1, <8 x half> %vn2, <16 x i8> %vm, i32 1)
@@ -203,6 +232,8 @@ define <8 x half> @test_luti4q_laneq_x2_f16(<8 x half>%vn1, <8 x half> %vn2, <16
 define <8 x bfloat> @test_luti4q_laneq_x2_bf16(<8 x bfloat>%vn1, <8 x bfloat> %vn2, <16 x i8> %vm){
 ; CHECK-LABEL: test_luti4q_laneq_x2_bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    luti4 v0.8h, { v0.8h, v1.8h }, v2[1]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x bfloat> @llvm.aarch64.neon.vluti4q.laneq.x2.v8bf16(<8 x bfloat> %vn1, <8 x bfloat> %vn2, <16 x i8> %vm, i32 1)
@@ -212,6 +243,9 @@ define <8 x bfloat> @test_luti4q_laneq_x2_bf16(<8 x bfloat>%vn1, <8 x bfloat> %v
 define <8 x bfloat> @test_luti4q_lane_x2_bf16(<8 x bfloat>%vn1, <8 x bfloat> %vn2, <8 x i8> %vm){
 ; CHECK-LABEL: test_luti4q_lane_x2_bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    luti4 v0.8h, { v0.8h, v1.8h }, v2[1]
 ; CHECK-NEXT:    ret
    %res= tail call <8 x bfloat> @llvm.aarch64.neon.vluti4q.lane.x2.v8bf16(<8 x bfloat> %vn1, <8 x bfloat> %vn2, <8 x i8> %vm, i32 1)

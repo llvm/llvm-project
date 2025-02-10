@@ -43,6 +43,7 @@ define <2 x i64> @masked_gather_v2i64(ptr %a, ptr %b) vscale_range(2, 2) {
 ; CHECK-NEXT:    ldr x8, [x8]
 ; CHECK-NEXT:    mov z0.d, p0/m, x8
 ; CHECK-NEXT:  .LBB0_4: // %else2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ;

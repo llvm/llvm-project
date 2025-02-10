@@ -214,6 +214,7 @@ void no_other_directives() {
 #pragma acc serial loop collapse(2)
   for(unsigned i = 0; i < 5; ++i) {
     for(unsigned j = 0; j < 5; ++j) {
+    // expected-error@+1{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
 #pragma acc data
       ;
     }
@@ -221,6 +222,7 @@ void no_other_directives() {
   // expected-note@+1{{active 'collapse' clause defined here}}
 #pragma acc kernels loop collapse(2)
   for(unsigned i = 0; i < 5; ++i) {
+    // expected-error@+2{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
     // expected-error@+1{{OpenACC 'data' construct cannot appear in intervening code of a 'kernels loop' with a 'collapse' clause}}
 #pragma acc data
     for(unsigned j = 0; j < 5; ++j) {

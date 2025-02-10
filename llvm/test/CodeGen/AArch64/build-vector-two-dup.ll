@@ -101,6 +101,7 @@ define <8 x i8> @test6(ptr nocapture noundef readonly %a, ptr nocapture noundef 
 ; CHECK-NEXT:    ld1r { v1.8b }, [x1]
 ; CHECK-NEXT:    ld1r { v0.8b }, [x0]
 ; CHECK-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
@@ -119,6 +120,7 @@ define <8 x i8> @test7(ptr nocapture noundef readonly %a, ptr nocapture noundef 
 ; CHECK-NEXT:    ld1r { v1.8b }, [x0]
 ; CHECK-NEXT:    ld1r { v0.8b }, [x1]
 ; CHECK-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
@@ -191,6 +193,7 @@ define <8 x i8> @test11(ptr nocapture noundef readonly %a, ptr nocapture noundef
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    mov v0.h[2], v2.h[0]
 ; CHECK-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1

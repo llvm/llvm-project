@@ -711,7 +711,10 @@ define <1 x i64> @mul_v1i64(<1 x i64> %op1, <1 x i64> %op2) #0 {
 ; CHECK-LABEL: mul_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = mul <1 x i64> %op1, %op2
   ret <1 x i64> %res
@@ -721,7 +724,10 @@ define <2 x i64> @mul_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
 ; CHECK-LABEL: mul_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = mul <2 x i64> %op1, %op2
   ret <2 x i64> %res

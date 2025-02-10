@@ -271,6 +271,19 @@ static bool checkRecordTypeForCapability(Sema &S, QualType Ty) {
   return checkRecordDeclForAttr<CapabilityAttr>(RT->getDecl());
 }
 
+static bool checkRecordTypeForScopedCapability(Sema &S, QualType Ty) {
+  const RecordType *RT = getRecordType(Ty);
+
+  if (!RT)
+    return false;
+
+  // Don't check for the capability if the class hasn't been defined yet.
+  if (RT->isIncompleteType())
+    return true;
+
+  return checkRecordDeclForAttr<ScopedLockableAttr>(RT->getDecl());
+}
+
 static bool checkTypedefTypeForCapability(QualType Ty) {
   const auto *TD = Ty->getAs<TypedefType>();
   if (!TD)
@@ -414,6 +427,19 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
 
     Args.push_back(ArgExp);
   }
+}
+
+static bool checkFunParamsAreScopedLockable(Sema &S,
+                                            const ParmVarDecl *ParamDecl,
+                                            const ParsedAttr &AL) {
+  QualType ParamType = ParamDecl->getType();
+  if (const auto *RefType = ParamType->getAs<ReferenceType>();
+      RefType &&
+      checkRecordTypeForScopedCapability(S, RefType->getPointeeType()))
+    return true;
+  S.Diag(AL.getLoc(), diag::warn_thread_attribute_not_on_scoped_lockable_param)
+      << AL;
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -643,6 +669,10 @@ static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleLocksExcludedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
+      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+    return;
+
   if (!AL.checkAtLeastNumArgs(S, 1))
     return;
 
@@ -849,22 +879,38 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!checkFunctionConditionAttr(S, D, AL, Cond, Msg))
     return;
 
-  StringRef DiagTypeStr;
-  if (!S.checkStringLiteralArgumentAttr(AL, 2, DiagTypeStr))
+  StringRef DefaultSevStr;
+  if (!S.checkStringLiteralArgumentAttr(AL, 2, DefaultSevStr))
     return;
 
-  DiagnoseIfAttr::DiagnosticType DiagType;
-  if (!DiagnoseIfAttr::ConvertStrToDiagnosticType(DiagTypeStr, DiagType)) {
+  DiagnoseIfAttr::DefaultSeverity DefaultSev;
+  if (!DiagnoseIfAttr::ConvertStrToDefaultSeverity(DefaultSevStr, DefaultSev)) {
     S.Diag(AL.getArgAsExpr(2)->getBeginLoc(),
            diag::err_diagnose_if_invalid_diagnostic_type);
     return;
+  }
+
+  StringRef WarningGroup;
+  SmallVector<StringRef, 2> Options;
+  if (AL.getNumArgs() > 3) {
+    if (!S.checkStringLiteralArgumentAttr(AL, 3, WarningGroup))
+      return;
+    if (WarningGroup.empty() ||
+        !S.getDiagnostics().getDiagnosticIDs()->getGroupForWarningOption(
+            WarningGroup)) {
+      S.Diag(AL.getArgAsExpr(3)->getBeginLoc(),
+             diag::err_diagnose_if_unknown_warning)
+          << WarningGroup;
+      return;
+    }
   }
 
   bool ArgDependent = false;
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     ArgDependent = ArgumentDependenceChecker(FD).referencesArgs(Cond);
   D->addAttr(::new (S.Context) DiagnoseIfAttr(
-      S.Context, AL, Cond, Msg, DiagType, ArgDependent, cast<NamedDecl>(D)));
+      S.Context, AL, Cond, Msg, DefaultSev, WarningGroup, ArgDependent,
+      cast<NamedDecl>(D)));
 }
 
 static void handleNoBuiltinAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -1838,8 +1884,8 @@ static void handleNakedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     // This form is not allowed to be written on a member function (static or
     // nonstatic) when in Microsoft compatibility mode.
     if (S.getLangOpts().MSVCCompat && isa<CXXMethodDecl>(D)) {
-      S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type_str)
-          << AL << AL.isRegularKeywordAttribute() << "non-member functions";
+      S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type)
+          << AL << AL.isRegularKeywordAttribute() << ExpectedNonMemberFunction;
       return;
     }
   }
@@ -2731,9 +2777,9 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const ParsedAttr &AL) {
     // The standard attribute cannot be applied to variable declarations such
     // as a function pointer.
     if (isa<VarDecl>(D))
-      S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
+      S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
           << AL << AL.isRegularKeywordAttribute()
-          << "functions, classes, or enumerations";
+          << ExpectedFunctionOrClassOrEnum;
 
     // If this is spelled as the standard C++17 attribute, but not in C++17,
     // warn about using it as an extension. If there are attribute arguments,
@@ -3027,7 +3073,8 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   if (ParsedAttrs.BranchProtection.empty())
     return false;
   if (!Context.getTargetInfo().validateBranchProtection(
-          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI, DiagMsg)) {
+          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI,
+          Context.getLangOpts(), DiagMsg)) {
     if (DiagMsg.empty())
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "branch-protection" << Target;
@@ -3259,7 +3306,8 @@ bool Sema::checkTargetClonesAttrString(
       } else if (Cur == "default") {
         DefaultIsDupe = HasDefault;
         HasDefault = true;
-      } else if (!Context.getTargetInfo().isValidFeatureName(Cur))
+      } else if (!Context.getTargetInfo().isValidFeatureName(Cur) ||
+                 Context.getTargetInfo().getFMVPriority(Cur) == 0)
         return Diag(CurLoc, diag::warn_unsupported_target_attribute)
                << Unsupported << None << Cur << TargetClones;
       if (llvm::is_contained(StringsBuffer, Cur) || DefaultIsDupe)
@@ -5525,8 +5573,8 @@ static void handleNullableTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   if (auto *CRD = dyn_cast<CXXRecordDecl>(D);
       !CRD || !(CRD->isClass() || CRD->isStruct())) {
-    S.Diag(AL.getRange().getBegin(), diag::err_attribute_wrong_decl_type_str)
-        << AL << AL.isRegularKeywordAttribute() << "classes";
+    S.Diag(AL.getRange().getBegin(), diag::err_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute() << ExpectedClass;
     return;
   }
 
@@ -5908,6 +5956,10 @@ static void handleAssertCapabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleAcquireCapabilityAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
+  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
+      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+    return;
+
   SmallVector<Expr*, 1> Args;
   if (!checkLockFunAttrCommon(S, D, AL, Args))
     return;
@@ -5928,6 +5980,9 @@ static void handleTryAcquireCapabilityAttr(Sema &S, Decl *D,
 
 static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
+  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
+      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+    return;
   // Check that all arguments are lockable objects.
   SmallVector<Expr *, 1> Args;
   checkAttrArgsAreCapabilityObjs(S, D, AL, Args, 0, true);
@@ -5938,6 +5993,10 @@ static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
 
 static void handleRequiresCapabilityAttr(Sema &S, Decl *D,
                                          const ParsedAttr &AL) {
+  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
+      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+    return;
+
   if (!AL.checkAtLeastNumArgs(S, 1))
     return;
 

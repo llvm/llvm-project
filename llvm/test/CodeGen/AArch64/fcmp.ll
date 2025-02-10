@@ -247,6 +247,7 @@ define half @f128_half(fp128 %a, fp128 %b, half %d, half %e) {
 ; CHECK-SD-NOFP16-NEXT:    cmp w0, #0
 ; CHECK-SD-NOFP16-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-SD-NOFP16-NEXT:    fcsel s0, s9, s8, lt
+; CHECK-SD-NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-SD-NOFP16-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
@@ -284,6 +285,7 @@ define half @f128_half(fp128 %a, fp128 %b, half %d, half %e) {
 ; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    csel w8, w8, w9, lt
 ; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -345,8 +347,11 @@ define half @f16_half(half %a, half %b, half %d, half %e) {
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
 ; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
 ; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
+; CHECK-SD-NOFP16-NEXT:    // kill: def $h3 killed $h3 def $s3
+; CHECK-SD-NOFP16-NEXT:    // kill: def $h2 killed $h2 def $s2
 ; CHECK-SD-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-SD-NOFP16-NEXT:    fcsel s0, s2, s3, mi
+; CHECK-SD-NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: f16_half:
@@ -359,20 +364,26 @@ define half @f16_half(half %a, half %b, half %d, half %e) {
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-GI-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-GI-NOFP16-NEXT:    // kill: def $h2 killed $h2 def $s2
+; CHECK-GI-NOFP16-NEXT:    // kill: def $h3 killed $h3 def $s3
 ; CHECK-GI-NOFP16-NEXT:    fmov w8, s2
 ; CHECK-GI-NOFP16-NEXT:    fmov w9, s3
 ; CHECK-GI-NOFP16-NEXT:    fcmp s0, s1
 ; CHECK-GI-NOFP16-NEXT:    csel w8, w8, w9, mi
 ; CHECK-GI-NOFP16-NEXT:    fmov s0, w8
+; CHECK-GI-NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: f16_half:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
+; CHECK-GI-FP16-NEXT:    // kill: def $h2 killed $h2 def $s2
+; CHECK-GI-FP16-NEXT:    // kill: def $h3 killed $h3 def $s3
 ; CHECK-GI-FP16-NEXT:    fcmp h0, h1
 ; CHECK-GI-FP16-NEXT:    fmov w8, s2
 ; CHECK-GI-FP16-NEXT:    fmov w9, s3
 ; CHECK-GI-FP16-NEXT:    csel w8, w8, w9, mi
 ; CHECK-GI-FP16-NEXT:    fmov s0, w8
+; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = fcmp olt half %a, %b
@@ -668,10 +679,12 @@ define <3 x double> @v3f128_double(<3 x fp128> %a, <3 x fp128> %b, <3 x double> 
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 160
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    stp q2, q5, [sp, #112] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
+; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
 ; CHECK-SD-NEXT:    ldr d5, [sp, #184]
-; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
 ; CHECK-SD-NEXT:    str q3, [sp, #64] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    ldp d3, d2, [sp, #168]
+; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    mov v1.16b, v4.16b
@@ -709,6 +722,9 @@ define <3 x double> @v3f128_double(<3 x fp128> %a, <3 x fp128> %b, <3 x double> 
 ; CHECK-SD-NEXT:    fmov d2, x8
 ; CHECK-SD-NEXT:    bsl v2.16b, v4.16b, v3.16b
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    add sp, sp, #160
 ; CHECK-SD-NEXT:    ret
 ;
@@ -730,6 +746,8 @@ define <3 x double> @v3f128_double(<3 x fp128> %a, <3 x fp128> %b, <3 x double> 
 ; CHECK-GI-NEXT:    stp q5, q2, [sp, #32] // 32-byte Folded Spill
 ; CHECK-GI-NEXT:    ldr d2, [sp, #184]
 ; CHECK-GI-NEXT:    ldr x20, [sp, #200]
+; CHECK-GI-NEXT:    // kill: def $d6 killed $d6 def $q6
+; CHECK-GI-NEXT:    // kill: def $d7 killed $d7 def $q7
 ; CHECK-GI-NEXT:    str q7, [sp, #64] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    str q2, [sp, #112] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    ldr d2, [sp, #192]
@@ -767,6 +785,7 @@ define <3 x double> @v3f128_double(<3 x fp128> %a, <3 x fp128> %b, <3 x double> 
 ; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    add sp, sp, #176
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -790,39 +809,57 @@ entry:
 define <3 x double> @v3f64_double(<3 x double> %a, <3 x double> %b, <3 x double> %d, <3 x double> %e) {
 ; CHECK-SD-LABEL: v3f64_double:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
+; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-SD-NEXT:    ldr d16, [sp, #24]
+; CHECK-SD-NEXT:    ldr d17, [sp]
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ldr d16, [sp, #24]
-; CHECK-SD-NEXT:    ldp d1, d4, [sp, #8]
 ; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
+; CHECK-SD-NEXT:    ldp d1, d4, [sp, #8]
 ; CHECK-SD-NEXT:    fcmgt v2.2d, v5.2d, v2.2d
-; CHECK-SD-NEXT:    ldr d17, [sp]
 ; CHECK-SD-NEXT:    mov v1.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    fcmgt v0.2d, v3.2d, v0.2d
 ; CHECK-SD-NEXT:    bsl v2.16b, v17.16b, v16.16b
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    bsl v0.16b, v6.16b, v1.16b
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3f64_double:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-GI-NEXT:    // kill: def $d6 killed $d6 def $q6
+; CHECK-GI-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-GI-NEXT:    fcmp d2, d5
+; CHECK-GI-NEXT:    ldr x8, [sp]
+; CHECK-GI-NEXT:    ldr x10, [sp, #24]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-GI-NEXT:    ldr x8, [sp]
-; CHECK-GI-NEXT:    ldp d1, d4, [sp, #8]
 ; CHECK-GI-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-GI-NEXT:    fcmp d2, d5
-; CHECK-GI-NEXT:    ldr x10, [sp, #24]
-; CHECK-GI-NEXT:    fcmgt v0.2d, v3.2d, v0.2d
-; CHECK-GI-NEXT:    mov v1.d[1], v4.d[0]
+; CHECK-GI-NEXT:    ldp d1, d4, [sp, #8]
 ; CHECK-GI-NEXT:    cset w9, mi
 ; CHECK-GI-NEXT:    sbfx x9, x9, #0, #1
-; CHECK-GI-NEXT:    bsl v0.16b, v6.16b, v1.16b
+; CHECK-GI-NEXT:    fcmgt v0.2d, v3.2d, v0.2d
+; CHECK-GI-NEXT:    mov v1.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    and x8, x8, x9
 ; CHECK-GI-NEXT:    bic x9, x10, x9
 ; CHECK-GI-NEXT:    orr x8, x8, x9
 ; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    bsl v0.16b, v6.16b, v1.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = fcmp olt <3 x double> %a, %b
@@ -868,6 +905,12 @@ entry:
 define <3 x i32> @v3f64_i32(<3 x double> %a, <3 x double> %b, <3 x i32> %d, <3 x i32> %e) {
 ; CHECK-SD-LABEL: v3f64_i32:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    fcmgt v1.2d, v5.2d, v2.2d
@@ -878,16 +921,20 @@ define <3 x i32> @v3f64_i32(<3 x double> %a, <3 x double> %b, <3 x i32> %d, <3 x
 ;
 ; CHECK-GI-LABEL: v3f64_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
 ; CHECK-GI-NEXT:    fcmp d2, d5
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    mov v1.s[0], w8
-; CHECK-GI-NEXT:    fcmgt v0.2d, v3.2d, v0.2d
 ; CHECK-GI-NEXT:    cset w9, mi
 ; CHECK-GI-NEXT:    mov v2.s[0], w9
-; CHECK-GI-NEXT:    mov v1.s[1], w8
 ; CHECK-GI-NEXT:    mov w9, #-1 // =0xffffffff
+; CHECK-GI-NEXT:    fcmgt v0.2d, v3.2d, v0.2d
+; CHECK-GI-NEXT:    mov v1.s[1], w8
 ; CHECK-GI-NEXT:    mov v3.s[0], w9
 ; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-GI-NEXT:    mov v1.s[2], w8

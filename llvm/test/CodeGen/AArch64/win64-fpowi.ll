@@ -62,10 +62,13 @@ define <2 x double> @powi_v2f64(<2 x double> %a, i32 %b) {
 ; CHECK-NEXT:    fmov d1, d8
 ; CHECK-NEXT:    bl pow
 ; CHECK-NEXT:    fmov d1, d8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bl pow
 ; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldr d8, [sp, #40] // 8-byte Folded Reload
@@ -95,16 +98,21 @@ define <2 x float> @powi_v2f32(<2 x float> %a, i32 %b) {
 ; CHECK-NEXT:    .seh_save_freg d8, 40
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    scvtf s8, w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    fmov s1, s8
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    fmov s1, s8
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldr d8, [sp, #40] // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_freg d8, 40

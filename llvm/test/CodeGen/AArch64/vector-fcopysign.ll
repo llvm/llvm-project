@@ -21,8 +21,9 @@ define <1 x float> @test_copysign_v1f32_v1f32(<1 x float> %a, <1 x float> %b) #0
 define <1 x float> @test_copysign_v1f32_v1f64(<1 x float> %a, <1 x double> %b) #0 {
 ; CHECK-LABEL: test_copysign_v1f32_v1f64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    fcvtn v1.2s, v1.2d
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mvni.2s v2, #128, lsl #24
+; CHECK-NEXT:    fcvtn v1.2s, v1.2d
 ; CHECK-NEXT:    bif.8b v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <1 x double> %b to <1 x float>
@@ -40,8 +41,10 @@ define <1 x double> @test_copysign_v1f64_v1f32(<1 x double> %a, <1 x float> %b) 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    movi.2d v2, #0xffffffffffffffff
 ; CHECK-NEXT:    fcvtl v1.2d, v1.2s
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fneg.2d v2, v2
 ; CHECK-NEXT:    bif.16b v0, v1, v2
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %tmp0 = fpext <1 x float> %b to <1 x double>
   %r = call <1 x double> @llvm.copysign.v1f64(<1 x double> %a, <1 x double> %tmp0)
@@ -52,8 +55,11 @@ define <1 x double> @test_copysign_v1f64_v1f64(<1 x double> %a, <1 x double> %b)
 ; CHECK-LABEL: test_copysign_v1f64_v1f64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    movi.2d v2, #0xffffffffffffffff
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fneg.2d v2, v2
 ; CHECK-NEXT:    bif.16b v0, v1, v2
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %r = call <1 x double> @llvm.copysign.v1f64(<1 x double> %a, <1 x double> %b)
   ret <1 x double> %r

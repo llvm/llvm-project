@@ -4052,6 +4052,7 @@ define i32 @atomicrmw_xchg_i32(ptr %ptr, i32 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:    stxr w9, w1, [x8]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB48_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: atomicrmw_xchg_i32:
@@ -6005,10 +6006,12 @@ define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
 ; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB67_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
 ; CHECK-NOLSE-O1-NEXT:    mov w1, #1 ; =0x1
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB67_4: ; %cmpxchg.nostore
 ; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: cmpxchg_i8:
@@ -6109,10 +6112,12 @@ define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
 ; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB68_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
 ; CHECK-NOLSE-O1-NEXT:    mov w1, #1 ; =0x1
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB68_4: ; %cmpxchg.nostore
 ; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: cmpxchg_i16:
@@ -6212,10 +6217,12 @@ define { i32, i1 } @cmpxchg_i32(ptr %ptr, i32 %desired, i32 %new) {
 ; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB69_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
 ; CHECK-NOLSE-O1-NEXT:    mov w1, #1 ; =0x1
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB69_4: ; %cmpxchg.nostore
 ; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: cmpxchg_i32:
@@ -6550,36 +6557,25 @@ define internal float @bitcast_to_float(ptr %ptr) {
 }
 
 define internal half @bitcast_to_half(ptr %ptr) {
-; CHECK-NOLSE-O1-LABEL: bitcast_to_half:
-; CHECK-NOLSE-O1:       ; %bb.0:
-; CHECK-NOLSE-O1-NEXT:    ldarh w8, [x0]
-; CHECK-NOLSE-O1-NEXT:    fmov s0, w8
-; CHECK-NOLSE-O1-NEXT:    ret
+; CHECK-NOLSE-LABEL: bitcast_to_half:
+; CHECK-NOLSE:       ; %bb.0:
+; CHECK-NOLSE-NEXT:    ldarh w8, [x0]
+; CHECK-NOLSE-NEXT:    fmov s0, w8
+; CHECK-NOLSE-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-NOLSE-NEXT:    ret
 ;
-; CHECK-OUTLINE-O1-LABEL: bitcast_to_half:
-; CHECK-OUTLINE-O1:       ; %bb.0:
-; CHECK-OUTLINE-O1-NEXT:    ldarh w8, [x0]
-; CHECK-OUTLINE-O1-NEXT:    fmov s0, w8
-; CHECK-OUTLINE-O1-NEXT:    ret
-;
-; CHECK-NOLSE-O0-LABEL: bitcast_to_half:
-; CHECK-NOLSE-O0:       ; %bb.0:
-; CHECK-NOLSE-O0-NEXT:    ldarh w8, [x0]
-; CHECK-NOLSE-O0-NEXT:    fmov s0, w8
-; CHECK-NOLSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-NOLSE-O0-NEXT:    ret
-;
-; CHECK-OUTLINE-O0-LABEL: bitcast_to_half:
-; CHECK-OUTLINE-O0:       ; %bb.0:
-; CHECK-OUTLINE-O0-NEXT:    ldarh w8, [x0]
-; CHECK-OUTLINE-O0-NEXT:    fmov s0, w8
-; CHECK-OUTLINE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-OUTLINE-O0-NEXT:    ret
+; CHECK-OUTLINE-LABEL: bitcast_to_half:
+; CHECK-OUTLINE:       ; %bb.0:
+; CHECK-OUTLINE-NEXT:    ldarh w8, [x0]
+; CHECK-OUTLINE-NEXT:    fmov s0, w8
+; CHECK-OUTLINE-NEXT:    ; kill: def $h0 killed $h0 killed $s0
+; CHECK-OUTLINE-NEXT:    ret
 ;
 ; CHECK-LSE-O1-LABEL: bitcast_to_half:
 ; CHECK-LSE-O1:       ; %bb.0:
 ; CHECK-LSE-O1-NEXT:    ldarh w8, [x0]
 ; CHECK-LSE-O1-NEXT:    fmov s0, w8
+; CHECK-LSE-O1-NEXT:    ; kill: def $h0 killed $h0 killed $s0
 ; CHECK-LSE-O1-NEXT:    ret
 ;
 ; CHECK-LSE-O0-LABEL: bitcast_to_half:

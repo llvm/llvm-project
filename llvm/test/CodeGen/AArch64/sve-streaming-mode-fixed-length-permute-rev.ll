@@ -480,6 +480,7 @@ define <16 x i8> @test_revv16i8(ptr %a) {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    revb z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: test_revv16i8:

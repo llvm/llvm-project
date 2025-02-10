@@ -158,6 +158,7 @@ define <4 x i16> @addp_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-SD-NEXT:    addp v0.8h, v0.8h, v0.8h
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addp_v8i16:
@@ -178,6 +179,7 @@ define <8 x i8> @addp_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    add v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addp_v16i8:

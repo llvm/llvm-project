@@ -61,6 +61,7 @@ define i1 @lshr_ctlz_undef_cmpeq_one_i64(i64 %in) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    clz x8, x0
 ; CHECK-SD-NEXT:    lsr x0, x8, #6
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: lshr_ctlz_undef_cmpeq_one_i64:
@@ -89,6 +90,7 @@ define i32 @PR17487(i1 %tobool) {
 ;
 ; CHECK-GI-LABEL: PR17487:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    mov v0.d[1], x0
 ; CHECK-GI-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]

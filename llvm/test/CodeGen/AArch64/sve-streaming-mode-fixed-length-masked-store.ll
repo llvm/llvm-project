@@ -12,8 +12,9 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @masked_store_v4i8(ptr %dst, <4 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl z0.h, z0.h, #15
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
@@ -67,8 +68,9 @@ define void @masked_store_v4i8(ptr %dst, <4 x i1> %mask) {
 define void @masked_store_v8i8(ptr %dst, <8 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl z0.b, z0.b, #7
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    lsl z0.b, z0.b, #7
 ; CHECK-NEXT:    asr z0.b, z0.b, #7
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    mov z0.b, #0 // =0x0
@@ -159,8 +161,9 @@ define void @masked_store_v8i8(ptr %dst, <8 x i1> %mask) {
 define void @masked_store_v16i8(ptr %dst, <16 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl z0.b, z0.b, #7
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    lsl z0.b, z0.b, #7
 ; CHECK-NEXT:    asr z0.b, z0.b, #7
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    mov z0.b, #0 // =0x0
@@ -586,6 +589,7 @@ define void @masked_store_v32i8(ptr %dst, <32 x i1> %mask) {
 define void @masked_store_v2f16(ptr %dst, <2 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v2f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fmov s1, wzr
 ; CHECK-NEXT:    mov z2.s, z0.s[1]
 ; CHECK-NEXT:    ptrue p0.h, vl4
@@ -630,8 +634,9 @@ define void @masked_store_v2f16(ptr %dst, <2 x i1> %mask) {
 define void @masked_store_v4f16(ptr %dst, <4 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl z0.h, z0.h, #15
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
@@ -689,8 +694,9 @@ define void @masked_store_v4f16(ptr %dst, <4 x i1> %mask) {
 define void @masked_store_v8f16(ptr %dst, <8 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
@@ -790,14 +796,15 @@ define void @masked_store_v8f16(ptr %dst, <8 x i1> %mask) {
 define void @masked_store_v16f16(ptr %dst, <16 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v16f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    uunpklo z1.h, z0.b
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    mov x8, #8 // =0x8
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    mov x8, #8 // =0x8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    lsl z1.h, z1.h, #15
-; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z1.h, z1.h, #15
+; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
 ; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z1.h, #0
@@ -945,8 +952,9 @@ define void @masked_store_v16f16(ptr %dst, <16 x i1> %mask) {
 define void @masked_store_v4f32(ptr %dst, <4 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    lsl z0.s, z0.s, #31
 ; CHECK-NEXT:    asr z0.s, z0.s, #31
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
@@ -1001,6 +1009,7 @@ define void @masked_store_v4f32(ptr %dst, <4 x i1> %mask) {
 define void @masked_store_v8f32(ptr %dst, <8 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v8f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z1.b, z0.b[7]
 ; CHECK-NEXT:    mov z2.b, z0.b[6]
 ; CHECK-NEXT:    mov x8, #4 // =0x4
@@ -1113,8 +1122,9 @@ define void @masked_store_v8f32(ptr %dst, <8 x i1> %mask) {
 define void @masked_store_v2f64(ptr %dst, <2 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    lsl z0.d, z0.d, #63
 ; CHECK-NEXT:    asr z0.d, z0.d, #63
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
@@ -1151,9 +1161,10 @@ define void @masked_store_v2f64(ptr %dst, <2 x i1> %mask) {
 define void @masked_store_v4f64(ptr %dst, <4 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov x8, #2 // =0x2
+; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s

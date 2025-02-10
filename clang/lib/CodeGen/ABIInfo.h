@@ -20,6 +20,7 @@ class Value;
 class LLVMContext;
 class DataLayout;
 class Type;
+class FixedVectorType;
 } // namespace llvm
 
 namespace clang {
@@ -123,6 +124,13 @@ public:
                                        raw_ostream &Out) const;
   virtual void appendAttributeMangling(StringRef AttrStr,
                                        raw_ostream &Out) const;
+
+  /// Returns the optimal vector memory type based on the given vector type. For
+  /// example, on certain targets, a vector with 3 elements might be promoted to
+  /// one with 4 elements to improve performance.
+  virtual llvm::FixedVectorType *
+  getOptimalVectorMemoryType(llvm::FixedVectorType *T,
+                             const LangOptions &Opt) const;
 };
 
 /// Target specific hooks for defining how a type should be passed or returned

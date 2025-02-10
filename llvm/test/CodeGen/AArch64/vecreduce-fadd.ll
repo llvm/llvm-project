@@ -16,6 +16,7 @@ define float @add_HalfS(<2 x float> %bin.rdx)  {
 define half @add_HalfH(<4 x half> %bin.rdx)  {
 ; CHECK-SD-NOFP16-LABEL: add_HalfH:
 ; CHECK-SD-NOFP16:       // %bb.0:
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-SD-NOFP16-NEXT:    fcvt s2, h0
 ; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
@@ -368,6 +369,7 @@ define half @fadd_reduction_v4f16_in_loop(ptr %ptr.start) {
 ; CHECK-GI-NOFP16-NEXT:    fmov w9, s0
 ; CHECK-GI-NOFP16-NEXT:    b.ne .LBB10_1
 ; CHECK-GI-NOFP16-NEXT:  // %bb.2: // %exit
+; CHECK-GI-NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fadd_reduction_v4f16_in_loop:
@@ -499,6 +501,7 @@ define half @fadd_reduction_v8f16_in_loop(ptr %ptr.start) {
 ; CHECK-GI-NOFP16-NEXT:    fmov w9, s0
 ; CHECK-GI-NOFP16-NEXT:    b.ne .LBB11_1
 ; CHECK-GI-NOFP16-NEXT:  // %bb.2: // %exit
+; CHECK-GI-NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fadd_reduction_v8f16_in_loop:

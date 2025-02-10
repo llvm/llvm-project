@@ -256,6 +256,7 @@ define <2 x bfloat> @test_vcvt_bf16_f64(<2 x double> %v) nounwind readnone ssp {
 define half @test_vcvt_f16_f32(<1 x float> %x) {
 ; GENERIC-LABEL: test_vcvt_f16_f32:
 ; GENERIC:       // %bb.0:
+; GENERIC-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GENERIC-NEXT:    fcvt h0, s0
 ; GENERIC-NEXT:    ret
 ;
@@ -282,6 +283,7 @@ define half @test_vcvt_f16_f32(<1 x float> %x) {
 define <4 x float> @test_vcvt_high_f32_f64(<2 x float> %x, <2 x double> %v) nounwind readnone ssp {
 ; GENERIC-LABEL: test_vcvt_high_f32_f64:
 ; GENERIC:       // %bb.0:
+; GENERIC-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GENERIC-NEXT:    fcvtn2 v0.4s, v1.2d
 ; GENERIC-NEXT:    ret
 ;
@@ -295,6 +297,7 @@ define <4 x float> @test_vcvt_high_f32_f64(<2 x float> %x, <2 x double> %v) noun
 ;
 ; GISEL-LABEL: test_vcvt_high_f32_f64:
 ; GISEL:       // %bb.0:
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    fcvtn2 v0.4s, v1.2d
 ; GISEL-NEXT:    ret
   %cvt = fptrunc <2 x double> %v to <2 x float>
@@ -319,6 +322,7 @@ define <2 x float> @test_vcvtx_f32_f64(<2 x double> %v) nounwind readnone ssp {
 define <4 x float> @test_vcvtx_high_f32_f64(<2 x float> %x, <2 x double> %v) nounwind readnone ssp {
 ; GENERIC-LABEL: test_vcvtx_high_f32_f64:
 ; GENERIC:       // %bb.0:
+; GENERIC-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GENERIC-NEXT:    fcvtxn2 v0.4s, v1.2d
 ; GENERIC-NEXT:    ret
 ;
@@ -332,6 +336,7 @@ define <4 x float> @test_vcvtx_high_f32_f64(<2 x float> %x, <2 x double> %v) nou
 ;
 ; GISEL-LABEL: test_vcvtx_high_f32_f64:
 ; GISEL:       // %bb.0:
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    fcvtxn2 v0.4s, v1.2d
 ; GISEL-NEXT:    ret
   %vcvtx2.i = tail call <2 x float> @llvm.aarch64.neon.fcvtxn.v2f32.v2f64(<2 x double> %v) nounwind

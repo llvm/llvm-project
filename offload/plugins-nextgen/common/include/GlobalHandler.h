@@ -1,4 +1,4 @@
-//===- GlobalHandler.h - Target independent global & enviroment handling --===//
+//===- GlobalHandler.h - Target independent global & environment handling -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -100,7 +100,7 @@ public:
 
 /// Helper class to do the heavy lifting when it comes to moving globals between
 /// host and device. Through the GenericDeviceTy we access memcpy DtoH and HtoD,
-/// which means the only things specialized by the subclass is the retrival of
+/// which means the only things specialized by the subclass is the retrieval of
 /// global metadata (size, addr) from the device.
 /// \see getGlobalMetadataFromDevice
 class GenericGlobalHandlerTy {

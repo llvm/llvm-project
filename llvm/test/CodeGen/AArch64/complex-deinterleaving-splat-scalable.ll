@@ -57,6 +57,8 @@ define <vscale x 4 x double> @complex_mul_non_const(<vscale x 4 x double> %a, <v
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov z6.d, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $d5 killed $d5 def $z5
+; CHECK-NEXT:    // kill: def $d4 killed $d4 def $z4
 ; CHECK-NEXT:    mov z5.d, d5
 ; CHECK-NEXT:    mov z4.d, d4
 ; CHECK-NEXT:    mov z24.d, z6.d

@@ -15,7 +15,11 @@ define <8 x i8> @mla8xi8(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C) {
 ; NO-FA64-LABEL: mla8xi8:
 ; NO-FA64:       // %bb.0:
 ; NO-FA64-NEXT:    ptrue p0.b, vl8
+; NO-FA64-NEXT:    // kill: def $d0 killed $d0 def $z0
+; NO-FA64-NEXT:    // kill: def $d2 killed $d2 def $z2
+; NO-FA64-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; NO-FA64-NEXT:    mad z0.b, p0/m, z1.b, z2.b
+; NO-FA64-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; NO-FA64-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: mla8xi8:

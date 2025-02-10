@@ -68,7 +68,7 @@ public:
   StringRef getNameAsRequested() const { return ME->first(); }
 
   const FileEntry &getFileEntry() const {
-    return *getBaseMapEntry().second->V.get<FileEntry *>();
+    return *cast<FileEntry *>(getBaseMapEntry().second->V);
   }
 
   // This function is used if the buffer size needs to be increased
@@ -361,7 +361,7 @@ bool FileEntryRef::isNamedPipe() const { return getFileEntry().isNamedPipe(); }
 void FileEntryRef::closeFile() const { getFileEntry().closeFile(); }
 
 void FileEntryRef::updateFileEntryBufferSize(unsigned BufferSize) {
-  getBaseMapEntry().second->V.get<FileEntry *>()->setSize(BufferSize);
+  cast<FileEntry *>(getBaseMapEntry().second->V)->setSize(BufferSize);
 }
 
 } // end namespace clang

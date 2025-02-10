@@ -8,7 +8,9 @@
 define half @fadda_f16(<vscale x 8 x i1> %pg, half %init, <vscale x 8 x half> %a) {
 ; CHECK-LABEL: fadda_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    fadda h0, p0, h0, z1.h
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call half @llvm.aarch64.sve.fadda.nxv8f16(<vscale x 8 x i1> %pg,
                                                    half %init,
@@ -19,7 +21,9 @@ define half @fadda_f16(<vscale x 8 x i1> %pg, half %init, <vscale x 8 x half> %a
 define float @fadda_f32(<vscale x 4 x i1> %pg, float %init, <vscale x 4 x float> %a) {
 ; CHECK-LABEL: fadda_f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    fadda s0, p0, s0, z1.s
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call float @llvm.aarch64.sve.fadda.nxv4f32(<vscale x 4 x i1> %pg,
                                                     float %init,
@@ -30,7 +34,9 @@ define float @fadda_f32(<vscale x 4 x i1> %pg, float %init, <vscale x 4 x float>
 define double @fadda_f64(<vscale x 2 x i1> %pg, double %init, <vscale x 2 x double> %a) {
 ; CHECK-LABEL: fadda_f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fadda d0, p0, d0, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call double @llvm.aarch64.sve.fadda.nxv2f64(<vscale x 2 x i1> %pg,
                                                      double %init,
@@ -46,6 +52,7 @@ define half @faddv_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a) {
 ; CHECK-LABEL: faddv_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    faddv h0, p0, z0.h
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call half @llvm.aarch64.sve.faddv.nxv8f16(<vscale x 8 x i1> %pg,
                                                    <vscale x 8 x half> %a)
@@ -56,6 +63,7 @@ define float @faddv_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) {
 ; CHECK-LABEL: faddv_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    faddv s0, p0, z0.s
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call float @llvm.aarch64.sve.faddv.nxv4f32(<vscale x 4 x i1> %pg,
                                                     <vscale x 4 x float> %a)
@@ -66,6 +74,7 @@ define double @faddv_f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a) {
 ; CHECK-LABEL: faddv_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    faddv d0, p0, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call double @llvm.aarch64.sve.faddv.nxv2f64(<vscale x 2 x i1> %pg,
                                                      <vscale x 2 x double> %a)
@@ -80,6 +89,7 @@ define half @fmaxnmv_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a) {
 ; CHECK-LABEL: fmaxnmv_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxnmv h0, p0, z0.h
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call half @llvm.aarch64.sve.fmaxnmv.nxv8f16(<vscale x 8 x i1> %pg,
                                                      <vscale x 8 x half> %a)
@@ -90,6 +100,7 @@ define float @fmaxnmv_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) {
 ; CHECK-LABEL: fmaxnmv_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxnmv s0, p0, z0.s
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call float @llvm.aarch64.sve.fmaxnmv.nxv4f32(<vscale x 4 x i1> %pg,
                                                       <vscale x 4 x float> %a)
@@ -100,6 +111,7 @@ define double @fmaxnmv_f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a) {
 ; CHECK-LABEL: fmaxnmv_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxnmv d0, p0, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call double @llvm.aarch64.sve.fmaxnmv.nxv2f64(<vscale x 2 x i1> %pg,
                                                        <vscale x 2 x double> %a)
@@ -114,6 +126,7 @@ define half @fmaxv_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a) {
 ; CHECK-LABEL: fmaxv_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxv h0, p0, z0.h
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call half @llvm.aarch64.sve.fmaxv.nxv8f16(<vscale x 8 x i1> %pg,
                                                    <vscale x 8 x half> %a)
@@ -124,6 +137,7 @@ define float @fmaxv_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) {
 ; CHECK-LABEL: fmaxv_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxv s0, p0, z0.s
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call float @llvm.aarch64.sve.fmaxv.nxv4f32(<vscale x 4 x i1> %pg,
                                                     <vscale x 4 x float> %a)
@@ -134,6 +148,7 @@ define double @fmaxv_f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a) {
 ; CHECK-LABEL: fmaxv_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxv d0, p0, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call double @llvm.aarch64.sve.fmaxv.nxv2f64(<vscale x 2 x i1> %pg,
                                                      <vscale x 2 x double> %a)
@@ -148,6 +163,7 @@ define half @fminnmv_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a) {
 ; CHECK-LABEL: fminnmv_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fminnmv h0, p0, z0.h
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call half @llvm.aarch64.sve.fminnmv.nxv8f16(<vscale x 8 x i1> %pg,
                                                      <vscale x 8 x half> %a)
@@ -158,6 +174,7 @@ define float @fminnmv_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) {
 ; CHECK-LABEL: fminnmv_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fminnmv s0, p0, z0.s
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call float @llvm.aarch64.sve.fminnmv.nxv4f32(<vscale x 4 x i1> %pg,
                                                       <vscale x 4 x float> %a)
@@ -168,6 +185,7 @@ define double @fminnmv_f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a) {
 ; CHECK-LABEL: fminnmv_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fminnmv d0, p0, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call double @llvm.aarch64.sve.fminnmv.nxv2f64(<vscale x 2 x i1> %pg,
                                                        <vscale x 2 x double> %a)
@@ -182,6 +200,7 @@ define half @fminv_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a) {
 ; CHECK-LABEL: fminv_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fminv h0, p0, z0.h
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call half @llvm.aarch64.sve.fminv.nxv8f16(<vscale x 8 x i1> %pg,
                                                    <vscale x 8 x half> %a)
@@ -192,6 +211,7 @@ define float @fminv_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) {
 ; CHECK-LABEL: fminv_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fminv s0, p0, z0.s
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call float @llvm.aarch64.sve.fminv.nxv4f32(<vscale x 4 x i1> %pg,
                                                     <vscale x 4 x float> %a)
@@ -202,6 +222,7 @@ define double @fminv_f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a) {
 ; CHECK-LABEL: fminv_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fminv d0, p0, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call double @llvm.aarch64.sve.fminv.nxv2f64(<vscale x 2 x i1> %pg,
                                                      <vscale x 2 x double> %a)

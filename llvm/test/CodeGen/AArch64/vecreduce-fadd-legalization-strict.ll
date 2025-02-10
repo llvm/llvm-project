@@ -36,6 +36,7 @@ define half @test_v1f16_neutral(<1 x half> %a) nounwind {
 define float @test_v1f32(<1 x float> %a, float %s) nounwind {
 ; CHECK-LABEL: test_v1f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fadd s0, s1, s0
 ; CHECK-NEXT:    ret
   %b = call float @llvm.vector.reduce.fadd.f32.v1f32(float %s, <1 x float> %a)
@@ -45,6 +46,8 @@ define float @test_v1f32(<1 x float> %a, float %s) nounwind {
 define float @test_v1f32_neutral(<1 x float> %a) nounwind {
 ; CHECK-LABEL: test_v1f32_neutral:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    ret
   %b = call float @llvm.vector.reduce.fadd.f32.v1f32(float -0.0, <1 x float> %a)
   ret float %b

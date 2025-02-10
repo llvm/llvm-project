@@ -8,8 +8,9 @@
 define <vscale x 16 x i8> @tbl2_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
 ; CHECK-LABEL: tbl2_b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z2.d
-; CHECK-NEXT:    tbl z0.b, { z0.b, z1.b }, z3.b
+; CHECK-NEXT:    // kill: def $z2 killed $z2 def $z1_z2
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    tbl z0.b, { z1.b, z2.b }, z3.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.tbl2.nxv16i8(<vscale x 16 x i8> %a,
                                                                 <vscale x 16 x i8> %b,
@@ -20,8 +21,9 @@ define <vscale x 16 x i8> @tbl2_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %unu
 define <vscale x 8 x i16> @tbl2_h(<vscale x 8 x i16> %a, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
 ; CHECK-LABEL: tbl2_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z2.d
-; CHECK-NEXT:    tbl z0.h, { z0.h, z1.h }, z3.h
+; CHECK-NEXT:    // kill: def $z2 killed $z2 def $z1_z2
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    tbl z0.h, { z1.h, z2.h }, z3.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl2.nxv8i16(<vscale x 8 x i16> %a,
                                                                 <vscale x 8 x i16> %b,
@@ -32,8 +34,9 @@ define <vscale x 8 x i16> @tbl2_h(<vscale x 8 x i16> %a, <vscale x 16 x i8> %unu
 define <vscale x 4 x i32> @tbl2_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %unused, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: tbl2_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z2.d
-; CHECK-NEXT:    tbl z0.s, { z0.s, z1.s }, z3.s
+; CHECK-NEXT:    // kill: def $z2 killed $z2 def $z1_z2
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    tbl z0.s, { z1.s, z2.s }, z3.s
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.tbl2.nxv4i32(<vscale x 4 x i32> %a,
                                                                 <vscale x 4 x i32> %b,
@@ -44,8 +47,9 @@ define <vscale x 4 x i32> @tbl2_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %unu
 define <vscale x 2 x i64> @tbl2_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %unused, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) {
 ; CHECK-LABEL: tbl2_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z2.d
-; CHECK-NEXT:    tbl z0.d, { z0.d, z1.d }, z3.d
+; CHECK-NEXT:    // kill: def $z2 killed $z2 def $z1_z2
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    tbl z0.d, { z1.d, z2.d }, z3.d
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.tbl2.nxv2i64(<vscale x 2 x i64> %a,
                                                                 <vscale x 2 x i64> %b,
@@ -56,8 +60,9 @@ define <vscale x 2 x i64> @tbl2_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %unu
 define <vscale x 8 x half> @tbl2_fh(<vscale x 8 x half> %a, <vscale x 8 x half> %unused, <vscale x 8 x half> %b, <vscale x 8 x i16> %c) {
 ; CHECK-LABEL: tbl2_fh:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z2.d
-; CHECK-NEXT:    tbl z0.h, { z0.h, z1.h }, z3.h
+; CHECK-NEXT:    // kill: def $z2 killed $z2 def $z1_z2
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    tbl z0.h, { z1.h, z2.h }, z3.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.tbl2.nxv8f16(<vscale x 8 x half> %a,
                                                                  <vscale x 8 x half> %b,
@@ -68,8 +73,9 @@ define <vscale x 8 x half> @tbl2_fh(<vscale x 8 x half> %a, <vscale x 8 x half> 
 define <vscale x 8 x bfloat> @tbl2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %unused, <vscale x 8 x bfloat> %b, <vscale x 8 x i16> %c) #0 {
 ; CHECK-LABEL: tbl2_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z2.d
-; CHECK-NEXT:    tbl z0.h, { z0.h, z1.h }, z3.h
+; CHECK-NEXT:    // kill: def $z2 killed $z2 def $z1_z2
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    tbl z0.h, { z1.h, z2.h }, z3.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.tbl2.nxv8bf16(<vscale x 8 x bfloat> %a,
                                                                     <vscale x 8 x bfloat> %b,
@@ -80,8 +86,9 @@ define <vscale x 8 x bfloat> @tbl2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x 
 define <vscale x 4 x float> @tbl2_fs(<vscale x 4 x float> %a, <vscale x 4 x float> %unused, <vscale x 4 x float> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: tbl2_fs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z2.d
-; CHECK-NEXT:    tbl z0.s, { z0.s, z1.s }, z3.s
+; CHECK-NEXT:    // kill: def $z2 killed $z2 def $z1_z2
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    tbl z0.s, { z1.s, z2.s }, z3.s
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.tbl2.nxv4f32(<vscale x 4 x float> %a,
                                                                   <vscale x 4 x float> %b,
@@ -92,8 +99,9 @@ define <vscale x 4 x float> @tbl2_fs(<vscale x 4 x float> %a, <vscale x 4 x floa
 define <vscale x 2 x double> @tbl2_fd(<vscale x 2 x double> %a, <vscale x 2 x double> %unused, <vscale x 2 x double> %b, <vscale x 2 x i64> %c) {
 ; CHECK-LABEL: tbl2_fd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z2.d
-; CHECK-NEXT:    tbl z0.d, { z0.d, z1.d }, z3.d
+; CHECK-NEXT:    // kill: def $z2 killed $z2 def $z1_z2
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    tbl z0.d, { z1.d, z2.d }, z3.d
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.tbl2.nxv2f64(<vscale x 2 x double> %a,
                                                                    <vscale x 2 x double> %b,

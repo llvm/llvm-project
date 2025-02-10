@@ -217,8 +217,8 @@ void LiveVariables::HandleVirtRegDef(Register Reg, MachineInstr &MI) {
 /// Also returns the sub-registers that're defined by the instruction.
 MachineInstr *
 LiveVariables::FindLastPartialDef(Register Reg,
-                                  SmallSet<unsigned, 4> &PartDefRegs) {
-  unsigned LastDefReg = 0;
+                                  SmallSet<Register, 4> &PartDefRegs) {
+  Register LastDefReg = 0;
   unsigned LastDefDist = 0;
   MachineInstr *LastDef = nullptr;
   for (MCPhysReg SubReg : TRI->subregs(Reg)) {
@@ -264,14 +264,14 @@ void LiveVariables::HandlePhysRegUse(Register Reg, MachineInstr &MI) {
     // ...
     //    = EAX
     // All of the sub-registers must have been defined before the use of Reg!
-    SmallSet<unsigned, 4> PartDefRegs;
+    SmallSet<Register, 4> PartDefRegs;
     MachineInstr *LastPartialDef = FindLastPartialDef(Reg, PartDefRegs);
     // If LastPartialDef is NULL, it must be using a livein register.
     if (LastPartialDef) {
       LastPartialDef->addOperand(MachineOperand::CreateReg(Reg, true/*IsDef*/,
                                                            true/*IsImp*/));
       PhysRegDef[Reg] = LastPartialDef;
-      SmallSet<unsigned, 8> Processed;
+      SmallSet<MCPhysReg, 8> Processed;
       for (MCPhysReg SubReg : TRI->subregs(Reg)) {
         if (Processed.count(SubReg))
           continue;
@@ -460,7 +460,7 @@ void LiveVariables::HandleRegMask(const MachineOperand &MO, unsigned NumRegs) {
 }
 
 void LiveVariables::HandlePhysRegDef(Register Reg, MachineInstr *MI,
-                                     SmallVectorImpl<unsigned> &Defs) {
+                                     SmallVectorImpl<Register> &Defs) {
   // What parts of the register are previously defined?
   SmallSet<unsigned, 32> Live;
   if (PhysRegDef[Reg] || PhysRegUse[Reg]) {
@@ -499,7 +499,7 @@ void LiveVariables::HandlePhysRegDef(Register Reg, MachineInstr *MI,
 }
 
 void LiveVariables::UpdatePhysRegDefs(MachineInstr &MI,
-                                      SmallVectorImpl<unsigned> &Defs) {
+                                      SmallVectorImpl<Register> &Defs) {
   while (!Defs.empty()) {
     Register Reg = Defs.pop_back_val();
     for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg)) {
@@ -510,7 +510,7 @@ void LiveVariables::UpdatePhysRegDefs(MachineInstr &MI,
 }
 
 void LiveVariables::runOnInstr(MachineInstr &MI,
-                               SmallVectorImpl<unsigned> &Defs,
+                               SmallVectorImpl<Register> &Defs,
                                unsigned NumRegs) {
   assert(!MI.isDebugOrPseudoInstr());
   // Process all of the operands of the instruction...
@@ -522,8 +522,8 @@ void LiveVariables::runOnInstr(MachineInstr &MI,
     NumOperandsToProcess = 1;
 
   // Clear kill and dead markers. LV will recompute them.
-  SmallVector<unsigned, 4> UseRegs;
-  SmallVector<unsigned, 4> DefRegs;
+  SmallVector<Register, 4> UseRegs;
+  SmallVector<Register, 4> DefRegs;
   SmallVector<unsigned, 1> RegMasks;
   for (unsigned i = 0; i != NumOperandsToProcess; ++i) {
     MachineOperand &MO = MI.getOperand(i);
@@ -531,7 +531,7 @@ void LiveVariables::runOnInstr(MachineInstr &MI,
       RegMasks.push_back(i);
       continue;
     }
-    if (!MO.isReg() || MO.getReg() == 0)
+    if (!MO.isReg() || !MO.getReg())
       continue;
     Register MOReg = MO.getReg();
     if (MO.isUse()) {
@@ -551,8 +551,8 @@ void LiveVariables::runOnInstr(MachineInstr &MI,
 
   MachineBasicBlock *MBB = MI.getParent();
   // Process all uses.
-  for (unsigned MOReg : UseRegs) {
-    if (Register::isVirtualRegister(MOReg))
+  for (Register MOReg : UseRegs) {
+    if (MOReg.isVirtual())
       HandleVirtRegUse(MOReg, MBB, MI);
     else if (!MRI->isReserved(MOReg))
       HandlePhysRegUse(MOReg, MI);
@@ -563,8 +563,8 @@ void LiveVariables::runOnInstr(MachineInstr &MI,
     HandleRegMask(MI.getOperand(Mask), NumRegs);
 
   // Process all defs.
-  for (unsigned MOReg : DefRegs) {
-    if (Register::isVirtualRegister(MOReg))
+  for (Register MOReg : DefRegs) {
+    if (MOReg.isVirtual())
       HandleVirtRegDef(MOReg, MI);
     else if (!MRI->isReserved(MOReg))
       HandlePhysRegDef(MOReg, &MI, Defs);
@@ -574,9 +574,9 @@ void LiveVariables::runOnInstr(MachineInstr &MI,
 
 void LiveVariables::runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs) {
   // Mark live-in registers as live-in.
-  SmallVector<unsigned, 4> Defs;
+  SmallVector<Register, 4> Defs;
   for (const auto &LI : MBB->liveins()) {
-    assert(Register::isPhysicalRegister(LI.PhysReg) &&
+    assert(LI.PhysReg.isPhysical() &&
            "Cannot have a live-in virtual register!");
     HandlePhysRegDef(LI.PhysReg, nullptr, Defs);
   }

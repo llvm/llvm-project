@@ -275,7 +275,7 @@ body:             |
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   dead $w1 = MOVi32imm 526, implicit-def $x1
   ; CHECK-NEXT:   dead $w2 = MOVi32imm 2, implicit-def $x2
-  ; CHECK-NEXT:   renamable $w19 = MOVi32imm 2
+  ; CHECK-NEXT:   renamable $w19 = MOVi32imm 2, implicit-def $x19
   ; CHECK-NEXT:   STATEPOINT 2882400000, 0, 4, @bar, undef $x0, $x1, $x2, undef $x3, 2, 0, 2, 4, 2, 39, 2, 0, 2, 1, 2, 0, 2, 42, 2, 2, 2, 14, 2, 0, 2, 3, 2, 400, 2, 3, 2, 400, 2, 0, 1, 8, %stack.0, 0, 2, 7, 2, 0, 2, 3, 2, 95, 2, 7, 2, 0, 2, 3, 2, -11, 2, 3, 2, -8280, 2, 3, 2, 45, 2, 3, 2, 230, 2, 7, 2, 0, 2, 4, 2, 5, 2, 7, 2, 0, 2, 3, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def $x0, implicit-def dead early-clobber $lr :: (load store (s64) on %stack.0)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   renamable $x20 = COPY $x0
@@ -305,7 +305,7 @@ body:             |
   ; CHECK-NEXT:   renamable $x20 = LDRXui undef renamable $x8, 0 :: (load unordered (s64) from `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   renamable $w21 = MOVi32imm -8280
   ; CHECK-NEXT:   renamable $w23 = MOVi32imm -6
-  ; CHECK-NEXT:   renamable $w25 = MOVi32imm 3
+  ; CHECK-NEXT:   renamable $w25 = MOVi32imm 3, implicit-def $x25
   ; CHECK-NEXT:   renamable $w24 = MOVi32imm 2143289344
   ; CHECK-NEXT:   renamable $x22 = IMPLICIT_DEF
   ; CHECK-NEXT:   dead renamable $x8 = IMPLICIT_DEF
@@ -316,21 +316,21 @@ body:             |
   ; CHECK-NEXT:   KILL killed renamable $x8
   ; CHECK-NEXT:   renamable $x8 = IMPLICIT_DEF
   ; CHECK-NEXT:   KILL killed renamable $x8
-  ; CHECK-NEXT:   renamable $w10 = MOVi32imm 2
+  ; CHECK-NEXT:   renamable $w10 = MOVi32imm 2, implicit-def $x10
   ; CHECK-NEXT:   B %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb23:
   ; CHECK-NEXT:   successors:
-  ; CHECK-NEXT:   liveins: $x19:0x0000000000000040
+  ; CHECK-NEXT:   liveins: $x19
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   renamable $w20 = MOVi32imm 95
-  ; CHECK-NEXT:   STATEPOINT 2882400000, 0, 0, @wombat, 2, 0, 2, 0, 2, 39, 2, 0, 2, 1, 2, 0, 2, 117, 2, 2, 2, 14, 2, 0, 2, 3, 2, 3, 2, 3, 2, 109, 2, 0, 1, 8, %stack.0, 0, 2, 7, 2, 0, 2, 3, killed renamable $w20, 2, 3, killed renamable $w19, 2, 3, 2, 3, 2, 3, 2, -8280, 2, 7, 2, 0, 2, 3, 2, 230, 2, 7, 2, 0, 2, 4, 2, 5, 2, 7, 2, 0, 2, 3, 2, 1, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 2, 1, 8, %stack.0, 0, 2, 4278124286, 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr :: (load store (s64) on %stack.0)
+  ; CHECK-NEXT:   STATEPOINT 2882400000, 0, 0, @wombat, 2, 0, 2, 0, 2, 39, 2, 0, 2, 1, 2, 0, 2, 117, 2, 2, 2, 14, 2, 0, 2, 3, 2, 3, 2, 3, 2, 109, 2, 0, 1, 8, %stack.0, 0, 2, 7, 2, 0, 2, 3, killed renamable $w20, 2, 3, renamable $w19, 2, 3, 2, 3, 2, 3, 2, -8280, 2, 7, 2, 0, 2, 3, 2, 230, 2, 7, 2, 0, 2, 4, 2, 5, 2, 7, 2, 0, 2, 3, 2, 1, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 2, 1, 8, %stack.0, 0, 2, 4278124286, 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr, implicit killed $x19 :: (load store (s64) on %stack.0)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb27:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000), %bb.13(0x00000000)
-  ; CHECK-NEXT:   liveins: $w21, $w23, $w24, $x10:0x0000000000000040, $x19, $x20:0x0000000000000040, $x22, $x25:0x00000000000000C0, $x26, $x27
+  ; CHECK-NEXT:   liveins: $w21, $w23, $w24, $x10, $x19, $x20, $x22, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $fp = nuw nsw ADDXri renamable $x25, 1, 0
   ; CHECK-NEXT:   CBNZW $wzr, %bb.13
@@ -338,26 +338,26 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.bb41:
   ; CHECK-NEXT:   successors: %bb.5(0x7ffff777), %bb.6(0x00000889)
-  ; CHECK-NEXT:   liveins: $fp:0x00000000000000C0, $w21, $w23, $w24, $x10:0x0000000000000040, $x19, $x20:0x0000000000000040, $x22, $x25:0x00000000000000C0, $x26, $x27
+  ; CHECK-NEXT:   liveins: $fp, $w21, $w23, $w24, $x10, $x19, $x20, $x22, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   CBZW $wzr, %bb.6
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.7(0x80000000)
-  ; CHECK-NEXT:   liveins: $fp:0x00000000000000C0, $w23, $w24, $x10:0x0000000000000040, $x19, $x20:0x0000000000000040, $x22, $x25:0x00000000000000C0, $x26, $x27
+  ; CHECK-NEXT:   liveins: $fp, $w23, $w24, $x10, $x19, $x20, $x22, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   B %bb.7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6.bb42:
   ; CHECK-NEXT:   successors: %bb.7(0x80000000)
-  ; CHECK-NEXT:   liveins: $fp:0x00000000000000C0, $w21, $w23, $w24, $x20:0x0000000000000040, $x25:0x00000000000000C0, $x27
+  ; CHECK-NEXT:   liveins: $fp, $w21, $w23, $w24, $x20, $x25, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   renamable $x19 = LDRXui %stack.0, 0 :: (load (s64) from %stack.0)
-  ; CHECK-NEXT:   renamable $w22 = MOVi32imm 2
+  ; CHECK-NEXT:   renamable $w22 = MOVi32imm 2, implicit-def $x22
   ; CHECK-NEXT:   renamable $w26 = MOVi32imm 95
-  ; CHECK-NEXT:   renamable $x27, dead renamable $x19 = STATEPOINT 2882400000, 0, 0, @wombat, 2, 0, 2, 0, 2, 35, 2, 0, 2, 1, 2, 0, 2, 125, 2, 0, 2, 14, 2, 0, 2, 0, killed renamable $x19, 2, 7, 2, 0, 2, 3, killed renamable $w26, 2, 3, killed renamable $w22, 2, 3, 2, 4278124286, 2, 3, killed renamable $w21, 2, 7, 2, 0, 2, 3, 2, 230, 2, 7, 2, 0, 2, 4, 2, 2, 2, 7, 2, 0, 2, 3, 2, 4278124286, 2, 0, 1, 8, %stack.1, 0, 2, 7, 2, 0, 2, 3, killed renamable $x27(tied-def 0), 1, 8, %stack.1, 0, renamable $x19(tied-def 1), 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr :: (load store (s64) on %stack.1)
-  ; CHECK-NEXT:   renamable $w10 = MOVi32imm 2
+  ; CHECK-NEXT:   renamable $x27, dead renamable $x19 = STATEPOINT 2882400000, 0, 0, @wombat, 2, 0, 2, 0, 2, 35, 2, 0, 2, 1, 2, 0, 2, 125, 2, 0, 2, 14, 2, 0, 2, 0, killed renamable $x19, 2, 7, 2, 0, 2, 3, killed renamable $w26, 2, 3, renamable $w22, 2, 3, 2, 4278124286, 2, 3, killed renamable $w21, 2, 7, 2, 0, 2, 3, 2, 230, 2, 7, 2, 0, 2, 4, 2, 2, 2, 7, 2, 0, 2, 3, 2, 4278124286, 2, 0, 1, 8, %stack.1, 0, 2, 7, 2, 0, 2, 3, killed renamable $x27(tied-def 0), 1, 8, %stack.1, 0, renamable $x19(tied-def 1), 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr, implicit killed $x22 :: (load store (s64) on %stack.1)
+  ; CHECK-NEXT:   renamable $w10 = MOVi32imm 2, implicit-def $x10
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   renamable $x19 = COPY $xzr
   ; CHECK-NEXT:   renamable $x8 = LDRXui %stack.1, 0 :: (load (s64) from %stack.1)
@@ -369,18 +369,18 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7.bb48:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)
-  ; CHECK-NEXT:   liveins: $fp:0x00000000000000C0, $w23, $w24, $x10:0x0000000000000040, $x19, $x20:0x0000000000000040, $x22, $x25:0x00000000000000C0, $x26, $x27
+  ; CHECK-NEXT:   liveins: $fp, $w23, $w24, $x10, $x19, $x20, $x22, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8.bb79:
   ; CHECK-NEXT:   successors: %bb.9(0x04000000), %bb.8(0x7c000000)
-  ; CHECK-NEXT:   liveins: $fp:0x00000000000000C0, $w23, $w24, $x10:0x0000000000000040, $x19, $x20:0x0000000000000040, $x22, $x25:0x00000000000000C0, $x26, $x27
+  ; CHECK-NEXT:   liveins: $fp, $w23, $w24, $x10, $x19, $x20, $x22, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   CBNZW $wzr, %bb.8
   ; CHECK-NEXT:   B %bb.9
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.9.bb81:
   ; CHECK-NEXT:   successors: %bb.11(0x78787f1d), %bb.10(0x078780e3)
-  ; CHECK-NEXT:   liveins: $fp:0x00000000000000C0, $w23, $w24, $x10:0x0000000000000040, $x19, $x20:0x0000000000000040, $x22, $x25:0x00000000000000C0, $x26, $x27
+  ; CHECK-NEXT:   liveins: $fp, $w23, $w24, $x10, $x19, $x20, $x22, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   STRXui $xzr, renamable $x22, 0 :: (store unordered (s64), addrspace 1)
   ; CHECK-NEXT:   CBNZW $wzr, %bb.11
@@ -388,28 +388,28 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.10.bb82:
   ; CHECK-NEXT:   successors: %bb.11(0x80000000)
-  ; CHECK-NEXT:   liveins: $fp:0x00000000000000C0, $w23, $w24, $x19, $x20:0x0000000000000040, $x22, $x25:0x00000000000000C0, $x26, $x27
+  ; CHECK-NEXT:   liveins: $fp, $w23, $w24, $x19, $x20, $x22, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   BL @blam.1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
-  ; CHECK-NEXT:   renamable $w10 = MOVi32imm 2
+  ; CHECK-NEXT:   renamable $w10 = MOVi32imm 2, implicit-def $x10
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.11.bb83:
   ; CHECK-NEXT:   successors: %bb.12(0x7ffff777), %bb.17(0x00000889)
-  ; CHECK-NEXT:   liveins: $fp:0x00000000000000C0, $w23, $w24, $x10:0x0000000000000040, $x19, $x20:0x0000000000000040, $x22, $x25:0x00000000000000C0, $x26, $x27
+  ; CHECK-NEXT:   liveins: $fp, $w23, $w24, $x10, $x19, $x20, $x22, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   CBZW $wzr, %bb.17
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.12:
   ; CHECK-NEXT:   successors: %bb.18(0x80000000)
-  ; CHECK-NEXT:   liveins: $fp:0x00000000000000C0, $w23, $w24, $x10:0x0000000000000040, $x19, $x20:0x0000000000000040, $x22, $x25:0x00000000000000C0, $x26, $x27
+  ; CHECK-NEXT:   liveins: $fp, $w23, $w24, $x10, $x19, $x20, $x22, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   B %bb.18
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.13.bb85:
   ; CHECK-NEXT:   successors: %bb.14(0x40000000), %bb.15(0x40000000)
-  ; CHECK-NEXT:   liveins: $fp:0x0000000000000040, $w21, $x10:0x0000000000000040
+  ; CHECK-NEXT:   liveins: $fp, $w21, $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   CBNZW $wzr, %bb.15
   ; CHECK-NEXT:   B %bb.14
@@ -424,12 +424,12 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.15.bb90:
   ; CHECK-NEXT:   successors:
-  ; CHECK-NEXT:   liveins: $fp:0x0000000000000040, $w21, $x10:0x0000000000000040
+  ; CHECK-NEXT:   liveins: $fp, $w21, $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = MOVi32imm 12
   ; CHECK-NEXT:   renamable $w8 = MOVi32imm 95
-  ; CHECK-NEXT:   STATEPOINT 2882400000, 0, 1, @blam, $w0, 2, 129, 2, 0, 2, 43, 2, 0, 2, 1, 2, 0, 2, 201, 2, 4, 2, 14, 2, 0, 2, 0, 2, 4278124286, 2, 3, killed renamable $w29, 2, 0, 2, 4278124286, 2, 3, renamable $w29, 2, 0, 1, 8, %stack.0, 0, 2, 7, 2, 0, 2, 3, killed renamable $w8, 2, 3, killed renamable $w10, 2, 3, 2, 4278124286, 2, 3, killed renamable $w21, 2, 7, 2, 0, 2, 3, 2, 230, 2, 7, 2, 0, 2, 4, 2, 2, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 1, 8, %stack.1, 0, 2, 7, 2, 0, 2, 3, 2, 4278124286, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_aarch64_allregs, implicit-def $sp, implicit-def dead early-clobber $lr :: (load store (s64) on %stack.0), (load store (s64) on %stack.1)
+  ; CHECK-NEXT:   STATEPOINT 2882400000, 0, 1, @blam, $w0, 2, 129, 2, 0, 2, 43, 2, 0, 2, 1, 2, 0, 2, 201, 2, 4, 2, 14, 2, 0, 2, 0, 2, 4278124286, 2, 3, renamable $w29, 2, 0, 2, 4278124286, 2, 3, renamable $w29, 2, 0, 1, 8, %stack.0, 0, 2, 7, 2, 0, 2, 3, killed renamable $w8, 2, 3, renamable $w10, 2, 3, 2, 4278124286, 2, 3, killed renamable $w21, 2, 7, 2, 0, 2, 3, 2, 230, 2, 7, 2, 0, 2, 4, 2, 2, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 1, 8, %stack.1, 0, 2, 7, 2, 0, 2, 3, 2, 4278124286, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_aarch64_allregs, implicit-def $sp, implicit-def dead early-clobber $lr, implicit killed $x10, implicit killed $fp :: (load store (s64) on %stack.0), (load store (s64) on %stack.1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.16.bb94:
@@ -442,14 +442,14 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.17.bb96:
   ; CHECK-NEXT:   successors: %bb.18(0x80000000)
-  ; CHECK-NEXT:   liveins: $fp:0x00000000000000C0, $w23, $w24, $x20:0x0000000000000040, $x25:0x00000000000000C0, $x27
+  ; CHECK-NEXT:   liveins: $fp, $w23, $w24, $x20, $x25, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   renamable $x19 = LDRXui %stack.0, 0 :: (load (s64) from %stack.0)
-  ; CHECK-NEXT:   renamable $w21 = MOVi32imm 2
+  ; CHECK-NEXT:   renamable $w21 = MOVi32imm 2, implicit-def $x21
   ; CHECK-NEXT:   renamable $w22 = MOVi32imm 95
-  ; CHECK-NEXT:   renamable $x27, dead renamable $x19 = STATEPOINT 2882400000, 0, 0, @wombat, 2, 0, 2, 0, 2, 35, 2, 0, 2, 1, 2, 0, 2, 250, 2, 0, 2, 14, 2, 0, 2, 0, killed renamable $x19, 2, 7, 2, 0, 2, 3, killed renamable $w22, 2, 3, killed renamable $w21, 2, 3, 2, 4278124286, 2, 3, renamable $w21, 2, 7, 2, 0, 2, 3, 2, 230, 2, 7, 2, 0, 2, 4, 2, 0, 2, 7, 2, 0, 2, 3, 2, 4278124286, 2, 0, 1, 8, %stack.1, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.2, 0, killed renamable $x27(tied-def 0), 1, 8, %stack.1, 0, renamable $x19(tied-def 1), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr :: (load store (s64) on %stack.1), (load store (s64) on %stack.2)
-  ; CHECK-NEXT:   renamable $w10 = MOVi32imm 2
+  ; CHECK-NEXT:   renamable $x27, dead renamable $x19 = STATEPOINT 2882400000, 0, 0, @wombat, 2, 0, 2, 0, 2, 35, 2, 0, 2, 1, 2, 0, 2, 250, 2, 0, 2, 14, 2, 0, 2, 0, killed renamable $x19, 2, 7, 2, 0, 2, 3, killed renamable $w22, 2, 3, renamable $w21, 2, 3, 2, 4278124286, 2, 3, renamable $w21, 2, 7, 2, 0, 2, 3, 2, 230, 2, 7, 2, 0, 2, 4, 2, 0, 2, 7, 2, 0, 2, 3, 2, 4278124286, 2, 0, 1, 8, %stack.1, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.2, 0, killed renamable $x27(tied-def 0), 1, 8, %stack.1, 0, renamable $x19(tied-def 1), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr, implicit killed $x21 :: (load store (s64) on %stack.1), (load store (s64) on %stack.2)
+  ; CHECK-NEXT:   renamable $w10 = MOVi32imm 2, implicit-def $x10
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   renamable $x8 = LDRXui %stack.1, 0 :: (load (s64) from %stack.1)
   ; CHECK-NEXT:   dead renamable $x8 = nuw ADDXri killed renamable $x8, 24, 0
@@ -460,7 +460,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.18.bb105:
   ; CHECK-NEXT:   successors: %bb.20(0x00000000), %bb.19(0x80000000)
-  ; CHECK-NEXT:   liveins: $fp:0x00000000000000C0, $w23, $w24, $x10:0x0000000000000040, $x19, $x20:0x0000000000000040, $x22, $x25:0x00000000000000C0, $x26, $x27
+  ; CHECK-NEXT:   liveins: $fp, $w23, $w24, $x10, $x19, $x20, $x22, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   STRWui renamable $w20, renamable $x19, 0 :: (store unordered (s32), addrspace 1)
   ; CHECK-NEXT:   STRWui renamable $w24, renamable $x26, 0 :: (store unordered (s32), align 8, addrspace 1)
@@ -469,7 +469,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.19.bb115:
   ; CHECK-NEXT:   successors: %bb.16(0x00000000), %bb.3(0x80000000)
-  ; CHECK-NEXT:   liveins: $fp:0x00000000000000C0, $w23, $w24, $x10:0x0000000000000040, $x19, $x20:0x0000000000000040, $x22, $x25:0x00000000000000C0, $x26, $x27
+  ; CHECK-NEXT:   liveins: $fp, $w23, $w24, $x10, $x19, $x20, $x22, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $x8 = COPY $xzr
   ; CHECK-NEXT:   renamable $w9 = LDRWui renamable $x8, 0 :: (load unordered (s32) from `ptr addrspace(1) null`, addrspace 1)
@@ -483,11 +483,11 @@ body:             |
   ; CHECK-NEXT:   B %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.20.bb120:
-  ; CHECK-NEXT:   liveins: $x10:0x0000000000000040
+  ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = MOVi32imm 10
-  ; CHECK-NEXT:   STATEPOINT 2882400000, 0, 1, @blam, $w0, 2, 129, 2, 0, 2, 39, 2, 0, 2, 1, 2, 0, 2, 272, 2, 2, 2, 14, 2, 0, 2, 0, 2, 0, 2, 3, killed renamable $w10, 2, 0, 2, 0, 2, 7, 2, 0, 2, 7, 2, 4278124286, 2, 7, 2, 4278124286, 2, 7, 2, 4278124286, 2, 7, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 4278124286, 2, 0, 2, 0, 2, 7, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 0, 0, csr_aarch64_allregs, implicit-def $sp, implicit-def dead early-clobber $lr
+  ; CHECK-NEXT:   STATEPOINT 2882400000, 0, 1, @blam, $w0, 2, 129, 2, 0, 2, 39, 2, 0, 2, 1, 2, 0, 2, 272, 2, 2, 2, 14, 2, 0, 2, 0, 2, 0, 2, 3, renamable $w10, 2, 0, 2, 0, 2, 7, 2, 0, 2, 7, 2, 4278124286, 2, 7, 2, 4278124286, 2, 7, 2, 4278124286, 2, 7, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 4278124286, 2, 0, 2, 0, 2, 7, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 0, 0, csr_aarch64_allregs, implicit-def $sp, implicit-def dead early-clobber $lr, implicit killed $x10
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   bb.0.bb:
     successors: %bb.1(0x80000000), %bb.2(0x00000000)

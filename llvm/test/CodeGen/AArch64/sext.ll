@@ -25,6 +25,7 @@ entry:
 define i64 @sext_i8_to_i64(i8 %a) {
 ; CHECK-LABEL: sext_i8_to_i64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtb x0, w0
 ; CHECK-NEXT:    ret
 entry:
@@ -55,6 +56,7 @@ entry:
 define i64 @sext_i16_to_i64(i16 %a) {
 ; CHECK-LABEL: sext_i16_to_i64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxth x0, w0
 ; CHECK-NEXT:    ret
 entry:
@@ -65,6 +67,7 @@ entry:
 define i64 @sext_i32_to_i64(i32 %a) {
 ; CHECK-LABEL: sext_i32_to_i64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x0, w0
 ; CHECK-NEXT:    ret
 entry:
@@ -95,6 +98,7 @@ entry:
 define i64 @sext_i10_to_i64(i10 %a) {
 ; CHECK-LABEL: sext_i10_to_i64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sbfx x0, x0, #0, #10
 ; CHECK-NEXT:    ret
 entry:
@@ -224,6 +228,7 @@ define <3 x i16> @sext_v3i8_v3i16(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    sbfx w8, w8, #8, #8
 ; CHECK-GI-NEXT:    mov v0.h[1], w9
 ; CHECK-GI-NEXT:    mov v0.h[2], w8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = sext <3 x i8> %a to <3 x i16>
@@ -266,12 +271,18 @@ define <3 x i64> @sext_v3i8_v3i64(<3 x i8> %a) {
 ; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-SD-NEXT:    sshr v2.2d, v2.2d, #56
 ; CHECK-SD-NEXT:    shl v0.2d, v0.2d, #56
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    sshr v0.2d, v0.2d, #56
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sext_v3i8_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-GI-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-GI-NEXT:    sxtb x8, w0
 ; CHECK-GI-NEXT:    sxtb x9, w1
 ; CHECK-GI-NEXT:    sxtb x10, w2
@@ -292,6 +303,7 @@ define <3 x i32> @sext_v3i16_v3i32(<3 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: sext_v3i16_v3i32:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    smov w8, v0.h[0]
 ; CHECK-GI-NEXT:    smov w9, v0.h[1]
 ; CHECK-GI-NEXT:    mov v1.s[0], w8
@@ -311,11 +323,15 @@ define <3 x i64> @sext_v3i16_v3i64(<3 x i16> %a) {
 ; CHECK-SD-NEXT:    sshll v2.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    sshll v0.2d, v2.2s, #0
 ; CHECK-SD-NEXT:    sshll2 v2.2d, v2.4s, #0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sext_v3i16_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    smov x8, v0.h[0]
 ; CHECK-GI-NEXT:    smov x9, v0.h[1]
 ; CHECK-GI-NEXT:    smov x10, v0.h[2]
@@ -333,8 +349,10 @@ define <3 x i64> @sext_v3i32_v3i64(<3 x i32> %a) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sshll v3.2d, v0.2s, #0
 ; CHECK-SD-NEXT:    sshll2 v2.2d, v0.4s, #0
-; CHECK-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    fmov d0, d3
+; CHECK-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sext_v3i32_v3i64:
@@ -372,6 +390,7 @@ define <3 x i16> @sext_v3i10_v3i16(<3 x i10> %a) {
 ; CHECK-GI-NEXT:    sbfx w8, w8, #6, #10
 ; CHECK-GI-NEXT:    mov v0.h[1], w9
 ; CHECK-GI-NEXT:    mov v0.h[2], w8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = sext <3 x i10> %a to <3 x i16>
@@ -414,12 +433,18 @@ define <3 x i64> @sext_v3i10_v3i64(<3 x i10> %a) {
 ; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-SD-NEXT:    sshr v2.2d, v2.2d, #54
 ; CHECK-SD-NEXT:    shl v0.2d, v0.2d, #54
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    sshr v0.2d, v0.2d, #54
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sext_v3i10_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-GI-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-GI-NEXT:    sbfx x8, x0, #0, #10
 ; CHECK-GI-NEXT:    sbfx x9, x1, #0, #10
 ; CHECK-GI-NEXT:    sbfx x10, x2, #0, #10

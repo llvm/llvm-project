@@ -159,3 +159,44 @@ LoadCommands:
         reserved2:       0x00000000
         reserved3:       0x00000000
         content:         AA
+
+## Case 4: Don't validate if size is missing.
+# RUN: not yaml2obj --docnum=4 %s -o %t1 2>&1 | FileCheck %s --check-prefix=CASE4 --implicit-check-not=error:
+# CASE4: error: missing required key 'size'
+# CASE4: error: failed to parse YAML
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      232
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         ''
+    vmaddr:          0
+    vmsize:          4
+    fileoff:         392
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x0000000000000000
+        content:         AA
+        offset:          0x00000188
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000

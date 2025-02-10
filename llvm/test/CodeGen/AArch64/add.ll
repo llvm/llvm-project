@@ -399,14 +399,19 @@ define <3 x i64> @v3i64(<3 x i64> %d, <3 x i64> %e) {
 ;
 ; CHECK-GI-LABEL: v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-GI-NEXT:    fmov x8, d2
 ; CHECK-GI-NEXT:    fmov x9, d5
-; CHECK-GI-NEXT:    add v0.2d, v0.2d, v3.2d
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    add x8, x8, x9
 ; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    add v0.2d, v0.2d, v3.2d
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = add <3 x i64> %d, %e

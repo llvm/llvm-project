@@ -29,6 +29,7 @@ define i1 @test_v1i1(<1 x i1> %a) nounwind {
 define i8 @test_v1i8(<1 x i8> %a) nounwind {
 ; CHECK-LABEL: test_v1i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.b[0]
 ; CHECK-NEXT:    ret
   %b = call i8 @llvm.vector.reduce.add.v1i8(<1 x i8> %a)
@@ -38,6 +39,7 @@ define i8 @test_v1i8(<1 x i8> %a) nounwind {
 define i16 @test_v1i16(<1 x i16> %a) nounwind {
 ; CHECK-LABEL: test_v1i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    ret
   %b = call i16 @llvm.vector.reduce.add.v1i16(<1 x i16> %a)
@@ -55,6 +57,7 @@ define i24 @test_v1i24(<1 x i24> %a) nounwind {
 define i32 @test_v1i32(<1 x i32> %a) nounwind {
 ; CHECK-LABEL: test_v1i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %b = call i32 @llvm.vector.reduce.add.v1i32(<1 x i32> %a)
@@ -64,6 +67,7 @@ define i32 @test_v1i32(<1 x i32> %a) nounwind {
 define i64 @test_v1i64(<1 x i64> %a) nounwind {
 ; CHECK-LABEL: test_v1i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %b = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a)

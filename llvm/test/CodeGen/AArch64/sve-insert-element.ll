@@ -82,6 +82,7 @@ define <vscale x 8 x bfloat> @test_lane0_8xbf16(<vscale x 8 x bfloat> %a, bfloat
 ; CHECK-LABEL: test_lane0_8xbf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl1
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $z1
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %b = insertelement <vscale x 8 x bfloat> %a, bfloat %x, i32 0
@@ -246,6 +247,7 @@ define <vscale x 16 x i8> @test_insert3_of_extract1_16xi8(<vscale x 16 x i8> %a,
 define <vscale x 8 x half> @test_insert_into_undef_nxv8f16(half %a) {
 ; CHECK-LABEL: test_insert_into_undef_nxv8f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ret
   %b = insertelement <vscale x 8 x half> undef, half %a, i32 0
   ret <vscale x 8 x half> %b
@@ -254,6 +256,7 @@ define <vscale x 8 x half> @test_insert_into_undef_nxv8f16(half %a) {
 define <vscale x 4 x half> @test_insert_into_undef_nxv4f16(half %a) {
 ; CHECK-LABEL: test_insert_into_undef_nxv4f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ret
   %b = insertelement <vscale x 4 x half> undef, half %a, i32 0
   ret <vscale x 4 x half> %b
@@ -262,6 +265,7 @@ define <vscale x 4 x half> @test_insert_into_undef_nxv4f16(half %a) {
 define <vscale x 2 x half> @test_insert_into_undef_nxv2f16(half %a) {
 ; CHECK-LABEL: test_insert_into_undef_nxv2f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ret
   %b = insertelement <vscale x 2 x half> undef, half %a, i32 0
   ret <vscale x 2 x half> %b
@@ -270,6 +274,7 @@ define <vscale x 2 x half> @test_insert_into_undef_nxv2f16(half %a) {
 define <vscale x 8 x bfloat> @test_insert_into_undef_nxv8bf16(bfloat %a) {
 ; CHECK-LABEL: test_insert_into_undef_nxv8bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ret
   %b = insertelement <vscale x 8 x bfloat> undef, bfloat %a, i32 0
   ret <vscale x 8 x bfloat> %b
@@ -278,6 +283,7 @@ define <vscale x 8 x bfloat> @test_insert_into_undef_nxv8bf16(bfloat %a) {
 define <vscale x 4 x bfloat> @test_insert_into_undef_nxv4bf16(bfloat %a) {
 ; CHECK-LABEL: test_insert_into_undef_nxv4bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ret
   %b = insertelement <vscale x 4 x bfloat> undef, bfloat %a, i32 0
   ret <vscale x 4 x bfloat> %b
@@ -286,6 +292,7 @@ define <vscale x 4 x bfloat> @test_insert_into_undef_nxv4bf16(bfloat %a) {
 define <vscale x 2 x bfloat> @test_insert_into_undef_nxv2bf16(bfloat %a) {
 ; CHECK-LABEL: test_insert_into_undef_nxv2bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ret
   %b = insertelement <vscale x 2 x bfloat> undef, bfloat %a, i32 0
   ret <vscale x 2 x bfloat> %b
@@ -294,6 +301,7 @@ define <vscale x 2 x bfloat> @test_insert_into_undef_nxv2bf16(bfloat %a) {
 define <vscale x 4 x float> @test_insert_into_undef_nxv4f32(float %a) {
 ; CHECK-LABEL: test_insert_into_undef_nxv4f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    ret
   %b = insertelement <vscale x 4 x float> undef, float %a, i32 0
   ret <vscale x 4 x float> %b
@@ -302,6 +310,7 @@ define <vscale x 4 x float> @test_insert_into_undef_nxv4f32(float %a) {
 define <vscale x 2 x float> @test_insert_into_undef_nxv2f32(float %a) {
 ; CHECK-LABEL: test_insert_into_undef_nxv2f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    ret
   %b = insertelement <vscale x 2 x float> undef, float %a, i32 0
   ret <vscale x 2 x float> %b
@@ -310,6 +319,7 @@ define <vscale x 2 x float> @test_insert_into_undef_nxv2f32(float %a) {
 define <vscale x 2 x double> @test_insert_into_undef_nxv2f64(double %a) {
 ; CHECK-LABEL: test_insert_into_undef_nxv2f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ret
   %b = insertelement <vscale x 2 x double> undef, double %a, i32 0
   ret <vscale x 2 x double> %b
@@ -439,6 +449,7 @@ define <vscale x 2 x i1> @test_predicate_insert_2xi1_immediate (<vscale x 2 x i1
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    mov z0.d, p0/m, x0
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0x1
@@ -509,6 +520,7 @@ define <vscale x 2 x i1> @test_predicate_insert_2xi1(<vscale x 2 x i1> %val, i1 
 ; CHECK-NEXT:    mov w8, w1
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmpeq p2.d, p1/z, z0.d, z1.d
 ; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
 ; CHECK-NEXT:    mov z0.d, p2/m, x0

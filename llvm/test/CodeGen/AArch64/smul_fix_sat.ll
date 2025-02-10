@@ -146,6 +146,8 @@ define i64 @func8(i64 %x, i64 %y) nounwind {
 define <2 x i32> @vec(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; CHECK-LABEL: vec:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov w9, v1.s[1]
 ; CHECK-NEXT:    mov w10, v0.s[1]
 ; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
@@ -165,6 +167,7 @@ define <2 x i32> @vec(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; CHECK-NEXT:    csel w8, w8, w9, ne
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov v0.s[1], w11
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %tmp = call <2 x i32> @llvm.smul.fix.sat.v2i32(<2 x i32> %x, <2 x i32> %y, i32 0)
   ret <2 x i32> %tmp

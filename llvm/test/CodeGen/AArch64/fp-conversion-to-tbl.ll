@@ -39,9 +39,9 @@ define void @fptoui_v8f32_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
 ; CHECK-NEXT:    ldp q2, q1, [x9]
-; CHECK-NEXT:    fcvtzu.4s v3, v1
-; CHECK-NEXT:    fcvtzu.4s v2, v2
-; CHECK-NEXT:    tbl.16b v1, { v2, v3 }, v0
+; CHECK-NEXT:    fcvtzu.4s v4, v1
+; CHECK-NEXT:    fcvtzu.4s v3, v2
+; CHECK-NEXT:    tbl.16b v1, { v3, v4 }, v0
 ; CHECK-NEXT:    str d1, [x1], #16
 ; CHECK-NEXT:    b.eq LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
@@ -252,12 +252,12 @@ define void @fptoui_v16f32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
 ; CHECK-NEXT:    ldp q2, q1, [x9, #32]
-; CHECK-NEXT:    fcvtzu.4s v5, v1
+; CHECK-NEXT:    fcvtzu.4s v7, v1
 ; CHECK-NEXT:    ldp q1, q3, [x9]
-; CHECK-NEXT:    fcvtzu.4s v4, v2
-; CHECK-NEXT:    fcvtzu.4s v3, v3
-; CHECK-NEXT:    fcvtzu.4s v2, v1
-; CHECK-NEXT:    tbl.16b v1, { v2, v3, v4, v5 }, v0
+; CHECK-NEXT:    fcvtzu.4s v6, v2
+; CHECK-NEXT:    fcvtzu.4s v5, v3
+; CHECK-NEXT:    fcvtzu.4s v4, v1
+; CHECK-NEXT:    tbl.16b v1, { v4, v5, v6, v7 }, v0
 ; CHECK-NEXT:    str q1, [x1], #32
 ; CHECK-NEXT:    b.eq LBB4_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
@@ -316,20 +316,20 @@ define void @fptoui_2x_v16f32_to_v16i8_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-NEXT:    ldp q3, q4, [x9, #32]
 ; CHECK-NEXT:    ldp q5, q6, [x10]
 ; CHECK-NEXT:    fcvtzu.4s v19, v1
-; CHECK-NEXT:    ldp q7, q1, [x9]
-; CHECK-NEXT:    fcvtzu.4s v4, v4
 ; CHECK-NEXT:    fcvtzu.4s v18, v2
-; CHECK-NEXT:    fcvtzu.4s v3, v3
+; CHECK-NEXT:    ldp q2, q1, [x9]
+; CHECK-NEXT:    fcvtzu.4s v23, v4
 ; CHECK-NEXT:    fcvtzu.4s v17, v6
-; CHECK-NEXT:    fcvtzu.4s v16, v5
 ; CHECK-NEXT:    add x9, x2, x8, lsl #5
-; CHECK-NEXT:    fcvtzu.4s v2, v1
-; CHECK-NEXT:    fcvtzu.4s v1, v7
+; CHECK-NEXT:    fcvtzu.4s v22, v3
+; CHECK-NEXT:    fcvtzu.4s v16, v5
 ; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    fcvtzu.4s v21, v1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    tbl.16b v5, { v16, v17, v18, v19 }, v0
-; CHECK-NEXT:    tbl.16b v1, { v1, v2, v3, v4 }, v0
-; CHECK-NEXT:    stp q1, q5, [x9]
+; CHECK-NEXT:    fcvtzu.4s v20, v2
+; CHECK-NEXT:    tbl.16b v1, { v16, v17, v18, v19 }, v0
+; CHECK-NEXT:    tbl.16b v2, { v20, v21, v22, v23 }, v0
+; CHECK-NEXT:    stp q2, q1, [x9]
 ; CHECK-NEXT:    b.eq LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret

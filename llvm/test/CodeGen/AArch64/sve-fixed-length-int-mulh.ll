@@ -17,7 +17,10 @@ define <8 x i8> @smulh_v8i8(<8 x i8> %op1, <8 x i8> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smulh_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %insert = insertelement <8 x i16> undef, i16 8, i64 0
   %splat = shufflevector <8 x i16> %insert, <8 x i16> undef, <8 x i32> zeroinitializer
@@ -34,7 +37,10 @@ define <16 x i8> @smulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: smulh_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <16 x i8> %op1 to <16 x i16>
   %2 = sext <16 x i8> %op2 to <16 x i16>
@@ -146,7 +152,10 @@ define <4 x i16> @smulh_v4i16(<4 x i16> %op1, <4 x i16> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: smulh_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <4 x i16> %op1 to <4 x i32>
   %2 = sext <4 x i16> %op2 to <4 x i32>
@@ -161,7 +170,10 @@ define <8 x i16> @smulh_v8i16(<8 x i16> %op1, <8 x i16> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: smulh_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <8 x i16> %op1 to <8 x i32>
   %2 = sext <8 x i16> %op2 to <8 x i32>
@@ -271,7 +283,10 @@ define <2 x i32> @smulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: smulh_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <2 x i32> %op1 to <2 x i64>
   %2 = sext <2 x i32> %op2 to <2 x i64>
@@ -286,7 +301,10 @@ define <4 x i32> @smulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: smulh_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <4 x i32> %op1 to <4 x i64>
   %2 = sext <4 x i32> %op2 to <4 x i64>
@@ -396,7 +414,10 @@ define <1 x i64> @smulh_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: smulh_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    smulh z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %insert = insertelement <1 x i128> undef, i128 64, i128 0
   %splat = shufflevector <1 x i128> %insert, <1 x i128> undef, <1 x i32> zeroinitializer
@@ -413,7 +434,10 @@ define <2 x i64> @smulh_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: smulh_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    smulh z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <2 x i64> %op1 to <2 x i128>
   %2 = sext <2 x i64> %op2 to <2 x i128>
@@ -528,7 +552,10 @@ define <8 x i8> @umulh_v8i8(<8 x i8> %op1, <8 x i8> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umulh_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <8 x i8> %op1 to <8 x i16>
   %2 = zext <8 x i8> %op2 to <8 x i16>
@@ -543,7 +570,10 @@ define <16 x i8> @umulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: umulh_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <16 x i8> %op1 to <16 x i16>
   %2 = zext <16 x i8> %op2 to <16 x i16>
@@ -656,7 +686,10 @@ define <4 x i16> @umulh_v4i16(<4 x i16> %op1, <4 x i16> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: umulh_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <4 x i16> %op1 to <4 x i32>
   %2 = zext <4 x i16> %op2 to <4 x i32>
@@ -671,7 +704,10 @@ define <8 x i16> @umulh_v8i16(<8 x i16> %op1, <8 x i16> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: umulh_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <8 x i16> %op1 to <8 x i32>
   %2 = zext <8 x i16> %op2 to <8 x i32>
@@ -781,7 +817,10 @@ define <2 x i32> @umulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: umulh_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <2 x i32> %op1 to <2 x i64>
   %2 = zext <2 x i32> %op2 to <2 x i64>
@@ -796,7 +835,10 @@ define <4 x i32> @umulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: umulh_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <4 x i32> %op1 to <4 x i64>
   %2 = zext <4 x i32> %op2 to <4 x i64>
@@ -908,7 +950,10 @@ define <1 x i64> @umulh_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: umulh_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <1 x i64> %op1 to <1 x i128>
   %2 = zext <1 x i64> %op2 to <1 x i128>
@@ -923,7 +968,10 @@ define <2 x i64> @umulh_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(2,0) 
 ; CHECK-LABEL: umulh_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <2 x i64> %op1 to <2 x i128>
   %2 = zext <2 x i64> %op2 to <2 x i128>

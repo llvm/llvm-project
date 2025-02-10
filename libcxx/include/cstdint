@@ -140,8 +140,9 @@ Types:
 }  // std
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/cstdint>
+#else
 #  include <__config>
 
 #  if __has_include(<stdint.h>)
@@ -192,6 +193,6 @@ using ::uintmax_t _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CSTDINT

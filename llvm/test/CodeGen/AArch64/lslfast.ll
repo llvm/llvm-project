@@ -60,6 +60,7 @@ entry:
 define i64 @testsext3(i32 noundef %x, i64 noundef %y, i64 noundef %z) {
 ; CHECK-LABEL: testsext3:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sbfiz x8, x0, #3, #32
 ; CHECK-NEXT:    add x9, x8, x1
 ; CHECK-NEXT:    add x8, x8, x2
@@ -77,6 +78,7 @@ entry:
 define i64 @testzext3(i32 noundef %x, i64 noundef %y, i64 noundef %z) {
 ; CHECK-LABEL: testzext3:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    ubfiz x8, x0, #3, #32
 ; CHECK-NEXT:    add x9, x8, x1
 ; CHECK-NEXT:    add x8, x8, x2

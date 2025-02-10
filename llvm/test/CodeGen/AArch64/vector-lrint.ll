@@ -2,15 +2,48 @@
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=aarch64 -mattr=+neon |\
 ; RUN:   FileCheck %s --check-prefixes=CHECK-i32
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=aarch64 -mattr=+neon |\
-; RUN:   FileCheck %s --check-prefixes=CHECK-i64
+; RUN:   FileCheck %s --check-prefixes=CHECK-i64,CHECK-i64-SD
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=aarch64 -mattr=+neon \
 ; RUN:   -global-isel -global-isel-abort=2 2>&1 |\
-; RUN:   FileCheck %s --check-prefixes=CHECK-i32
+; RUN:   FileCheck %s --check-prefixes=CHECK-i32,CHECK-i32-GI
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=aarch64 -mattr=+neon \
 ; RUN:   -global-isel -global-isel-abort=2 2>&1 |\
-; RUN:   FileCheck %s --check-prefixes=CHECK-i64
+; RUN:   FileCheck %s --check-prefixes=CHECK-i64,CHECK-i64-GI
 
+; CHECK-i32-GI:       warning: Instruction selection used fallback path for lrint_v1f16
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2f16
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f16
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f16
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f16
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f16
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v1f32
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2f32
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f32
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f32
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f32
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f32
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v1f64
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2f64
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f64
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f64
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f64
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f64
 
+; CHECK-i64-GI:       warning: Instruction selection used fallback path for lrint_v2f16
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f16
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f16
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f16
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f16
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2f32
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f32
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f32
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f32
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f32
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2f64
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f64
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f64
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f64
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f64
 
 define <1 x iXLen> @lrint_v1f16(<1 x half> %x) {
 ; CHECK-i32-LABEL: lrint_v1f16:
@@ -36,6 +69,7 @@ declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f16(<1 x half>)
 define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 ; CHECK-i32-LABEL: lrint_v2f16:
 ; CHECK-i32:       // %bb.0:
+; CHECK-i32-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-i32-NEXT:    mov h1, v0.h[1]
 ; CHECK-i32-NEXT:    fcvt s0, h0
 ; CHECK-i32-NEXT:    fcvt s1, h1
@@ -45,10 +79,12 @@ define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 ; CHECK-i32-NEXT:    fcvtzs w9, s1
 ; CHECK-i32-NEXT:    fmov s0, w8
 ; CHECK-i32-NEXT:    mov v0.s[1], w9
+; CHECK-i32-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-i32-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v2f16:
 ; CHECK-i64:       // %bb.0:
+; CHECK-i64-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-i64-NEXT:    mov h1, v0.h[1]
 ; CHECK-i64-NEXT:    fcvt s0, h0
 ; CHECK-i64-NEXT:    fcvt s1, h1
@@ -67,6 +103,7 @@ declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f16(<2 x half>)
 define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 ; CHECK-i32-LABEL: lrint_v4f16:
 ; CHECK-i32:       // %bb.0:
+; CHECK-i32-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-i32-NEXT:    mov h1, v0.h[1]
 ; CHECK-i32-NEXT:    fcvt s2, h0
 ; CHECK-i32-NEXT:    mov h3, v0.h[2]
@@ -90,6 +127,7 @@ define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 ;
 ; CHECK-i64-LABEL: lrint_v4f16:
 ; CHECK-i64:       // %bb.0:
+; CHECK-i64-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-i64-NEXT:    mov h1, v0.h[2]
 ; CHECK-i64-NEXT:    mov h2, v0.h[1]
 ; CHECK-i64-NEXT:    mov h3, v0.h[3]
@@ -717,12 +755,20 @@ define <1 x iXLen> @lrint_v1f32(<1 x float> %x) {
 ; CHECK-i32-NEXT:    fcvtzs v0.2s, v0.2s
 ; CHECK-i32-NEXT:    ret
 ;
-; CHECK-i64-LABEL: lrint_v1f32:
-; CHECK-i64:       // %bb.0:
-; CHECK-i64-NEXT:    frintx s0, s0
-; CHECK-i64-NEXT:    fcvtzs x8, s0
-; CHECK-i64-NEXT:    fmov d0, x8
-; CHECK-i64-NEXT:    ret
+; CHECK-i64-SD-LABEL: lrint_v1f32:
+; CHECK-i64-SD:       // %bb.0:
+; CHECK-i64-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-i64-SD-NEXT:    frintx s0, s0
+; CHECK-i64-SD-NEXT:    fcvtzs x8, s0
+; CHECK-i64-SD-NEXT:    fmov d0, x8
+; CHECK-i64-SD-NEXT:    ret
+;
+; CHECK-i64-GI-LABEL: lrint_v1f32:
+; CHECK-i64-GI:       // %bb.0:
+; CHECK-i64-GI-NEXT:    frintx s0, s0
+; CHECK-i64-GI-NEXT:    fcvtzs x8, s0
+; CHECK-i64-GI-NEXT:    fmov d0, x8
+; CHECK-i64-GI-NEXT:    ret
   %a = call <1 x iXLen> @llvm.lrint.v1iXLen.v1f32(<1 x float> %x)
   ret <1 x iXLen> %a
 }
@@ -969,6 +1015,7 @@ define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
 ; CHECK-i32-NEXT:    fcvtzs w9, d1
 ; CHECK-i32-NEXT:    fmov s0, w8
 ; CHECK-i32-NEXT:    mov v0.s[1], w9
+; CHECK-i32-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-i32-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v2f64:

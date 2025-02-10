@@ -88,6 +88,7 @@ define i64 @smull2(i64 %x, i32 %y) {
 ;
 ; CHECK-GI-LABEL: smull2:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    sxtw x8, w0
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    mul x0, x8, x9
@@ -108,6 +109,7 @@ define i64 @smull2_commuted(i64 %x, i32 %y) {
 ;
 ; CHECK-GI-LABEL: smull2_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    sxtw x8, w0
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    mul x0, x9, x8
@@ -123,6 +125,7 @@ entry:
 define i64 @smull_ldrsb_b(ptr %x0, i8 %x1) {
 ; CHECK-SD-LABEL: smull_ldrsb_b:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsb x8, [x0]
 ; CHECK-SD-NEXT:    sxtb x9, w1
 ; CHECK-SD-NEXT:    smull x0, w8, w9
@@ -130,6 +133,7 @@ define i64 @smull_ldrsb_b(ptr %x0, i8 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_ldrsb_b:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsb x8, [x0]
 ; CHECK-GI-NEXT:    sxtb x9, w1
 ; CHECK-GI-NEXT:    mul x0, x8, x9
@@ -145,6 +149,7 @@ entry:
 define i64 @smull_ldrsb_b_commuted(ptr %x0, i8 %x1) {
 ; CHECK-SD-LABEL: smull_ldrsb_b_commuted:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsb x8, [x0]
 ; CHECK-SD-NEXT:    sxtb x9, w1
 ; CHECK-SD-NEXT:    smull x0, w9, w8
@@ -152,6 +157,7 @@ define i64 @smull_ldrsb_b_commuted(ptr %x0, i8 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_ldrsb_b_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsb x8, [x0]
 ; CHECK-GI-NEXT:    sxtb x9, w1
 ; CHECK-GI-NEXT:    mul x0, x9, x8
@@ -167,6 +173,7 @@ entry:
 define i64 @smull_ldrsb_h(ptr %x0, i16 %x1) {
 ; CHECK-SD-LABEL: smull_ldrsb_h:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsb x8, [x0]
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smull x0, w8, w9
@@ -174,6 +181,7 @@ define i64 @smull_ldrsb_h(ptr %x0, i16 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_ldrsb_h:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsb x8, [x0]
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    mul x0, x8, x9
@@ -195,6 +203,7 @@ define i64 @smull_ldrsb_w(ptr %x0, i32 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_ldrsb_w:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsb x8, [x0]
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    mul x0, x8, x9
@@ -210,6 +219,7 @@ entry:
 define i64 @smull_ldrsh_b(ptr %x0, i8 %x1) {
 ; CHECK-SD-LABEL: smull_ldrsh_b:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsh x8, [x0]
 ; CHECK-SD-NEXT:    sxtb x9, w1
 ; CHECK-SD-NEXT:    smull x0, w8, w9
@@ -217,6 +227,7 @@ define i64 @smull_ldrsh_b(ptr %x0, i8 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_ldrsh_b:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsh x8, [x0]
 ; CHECK-GI-NEXT:    sxtb x9, w1
 ; CHECK-GI-NEXT:    mul x0, x8, x9
@@ -232,6 +243,7 @@ entry:
 define i64 @smull_ldrsh_h(ptr %x0, i16 %x1) {
 ; CHECK-SD-LABEL: smull_ldrsh_h:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsh x8, [x0]
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smull x0, w8, w9
@@ -239,6 +251,7 @@ define i64 @smull_ldrsh_h(ptr %x0, i16 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_ldrsh_h:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsh x8, [x0]
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    mul x0, x8, x9
@@ -254,6 +267,7 @@ entry:
 define i64 @smull_ldrsh_h_commuted(ptr %x0, i16 %x1) {
 ; CHECK-SD-LABEL: smull_ldrsh_h_commuted:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsh x8, [x0]
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smull x0, w9, w8
@@ -261,6 +275,7 @@ define i64 @smull_ldrsh_h_commuted(ptr %x0, i16 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_ldrsh_h_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsh x8, [x0]
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    mul x0, x9, x8
@@ -282,6 +297,7 @@ define i64 @smull_ldrsh_w(ptr %x0, i32 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_ldrsh_w:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsh x8, [x0]
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    mul x0, x8, x9
@@ -297,6 +313,7 @@ entry:
 define i64 @smull_ldrsw_b(ptr %x0, i8 %x1) {
 ; CHECK-SD-LABEL: smull_ldrsw_b:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
 ; CHECK-SD-NEXT:    sxtb x9, w1
 ; CHECK-SD-NEXT:    smull x0, w8, w9
@@ -304,6 +321,7 @@ define i64 @smull_ldrsw_b(ptr %x0, i8 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_ldrsw_b:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
 ; CHECK-GI-NEXT:    sxtb x9, w1
 ; CHECK-GI-NEXT:    mul x0, x8, x9
@@ -319,6 +337,7 @@ entry:
 define i64 @smull_ldrsw_h(ptr %x0, i16 %x1) {
 ; CHECK-SD-LABEL: smull_ldrsw_h:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smull x0, w8, w9
@@ -326,6 +345,7 @@ define i64 @smull_ldrsw_h(ptr %x0, i16 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_ldrsw_h:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    mul x0, x8, x9
@@ -347,6 +367,7 @@ define i64 @smull_ldrsw_w(ptr %x0, i32 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_ldrsw_w:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    mul x0, x8, x9
@@ -368,6 +389,7 @@ define i64 @smull_ldrsw_w_commuted(ptr %x0, i32 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_ldrsw_w_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    mul x0, x9, x8
@@ -383,6 +405,8 @@ entry:
 define i64 @smull_sext_bb(i8 %x0, i8 %x1) {
 ; CHECK-SD-LABEL: smull_sext_bb:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    sxtb x8, w0
 ; CHECK-SD-NEXT:    sxtb x9, w1
 ; CHECK-SD-NEXT:    smull x0, w8, w9
@@ -390,6 +414,8 @@ define i64 @smull_sext_bb(i8 %x0, i8 %x1) {
 ;
 ; CHECK-GI-LABEL: smull_sext_bb:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    sxtb x8, w0
 ; CHECK-GI-NEXT:    sxtb x9, w1
 ; CHECK-GI-NEXT:    mul x0, x8, x9
@@ -442,6 +468,7 @@ define i64 @smull_ldrsw_zexth(ptr %x0, i16 %x1) {
 ; CHECK-SD-LABEL: smull_ldrsw_zexth:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xffff
 ; CHECK-SD-NEXT:    smull x0, w8, w9
 ; CHECK-SD-NEXT:    ret
@@ -449,6 +476,7 @@ define i64 @smull_ldrsw_zexth(ptr %x0, i16 %x1) {
 ; CHECK-GI-LABEL: smull_ldrsw_zexth:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xffff
 ; CHECK-GI-NEXT:    mul x0, x8, x9
 ; CHECK-GI-NEXT:    ret
@@ -464,6 +492,7 @@ define i64 @smull_ldrsw_zextb(ptr %x0, i8 %x1) {
 ; CHECK-SD-LABEL: smull_ldrsw_zextb:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xff
 ; CHECK-SD-NEXT:    smull x0, w8, w9
 ; CHECK-SD-NEXT:    ret
@@ -471,6 +500,7 @@ define i64 @smull_ldrsw_zextb(ptr %x0, i8 %x1) {
 ; CHECK-GI-LABEL: smull_ldrsw_zextb:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xff
 ; CHECK-GI-NEXT:    mul x0, x8, x9
 ; CHECK-GI-NEXT:    ret
@@ -486,6 +516,7 @@ define i64 @smull_ldrsw_zextb_commuted(ptr %x0, i8 %x1) {
 ; CHECK-SD-LABEL: smull_ldrsw_zextb_commuted:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xff
 ; CHECK-SD-NEXT:    smull x0, w9, w8
 ; CHECK-SD-NEXT:    ret
@@ -493,6 +524,7 @@ define i64 @smull_ldrsw_zextb_commuted(ptr %x0, i8 %x1) {
 ; CHECK-GI-LABEL: smull_ldrsw_zextb_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xff
 ; CHECK-GI-NEXT:    mul x0, x9, x8
 ; CHECK-GI-NEXT:    ret
@@ -507,6 +539,7 @@ entry:
 define i64 @smaddl_ldrsb_h(ptr %x0, i16 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: smaddl_ldrsb_h:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsb x8, [x0]
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smaddl x0, w8, w9, x2
@@ -514,6 +547,7 @@ define i64 @smaddl_ldrsb_h(ptr %x0, i16 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smaddl_ldrsb_h:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsb x8, [x0]
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    madd x0, x8, x9, x2
@@ -530,6 +564,7 @@ entry:
 define i64 @smaddl_ldrsb_h_commuted(ptr %x0, i16 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: smaddl_ldrsb_h_commuted:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsb x8, [x0]
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smaddl x0, w9, w8, x2
@@ -537,6 +572,7 @@ define i64 @smaddl_ldrsb_h_commuted(ptr %x0, i16 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smaddl_ldrsb_h_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsb x8, [x0]
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    madd x0, x9, x8, x2
@@ -559,6 +595,7 @@ define i64 @smaddl_ldrsh_w(ptr %x0, i32 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smaddl_ldrsh_w:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsh x8, [x0]
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    madd x0, x8, x9, x2
@@ -581,6 +618,7 @@ define i64 @smaddl_ldrsh_w_commuted(ptr %x0, i32 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smaddl_ldrsh_w_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsh x8, [x0]
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    madd x0, x9, x8, x2
@@ -597,6 +635,7 @@ entry:
 define i64 @smaddl_ldrsw_b(ptr %x0, i8 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: smaddl_ldrsw_b:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
 ; CHECK-SD-NEXT:    sxtb x9, w1
 ; CHECK-SD-NEXT:    smaddl x0, w8, w9, x2
@@ -604,6 +643,7 @@ define i64 @smaddl_ldrsw_b(ptr %x0, i8 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smaddl_ldrsw_b:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
 ; CHECK-GI-NEXT:    sxtb x9, w1
 ; CHECK-GI-NEXT:    madd x0, x8, x9, x2
@@ -619,6 +659,7 @@ define i64 @smaddl_ldrsw_b(ptr %x0, i8 %x1, i64 %x2) {
 define i64 @smaddl_ldrsw_b_commuted(ptr %x0, i8 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: smaddl_ldrsw_b_commuted:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
 ; CHECK-SD-NEXT:    sxtb x9, w1
 ; CHECK-SD-NEXT:    smaddl x0, w9, w8, x2
@@ -626,6 +667,7 @@ define i64 @smaddl_ldrsw_b_commuted(ptr %x0, i8 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smaddl_ldrsw_b_commuted:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
 ; CHECK-GI-NEXT:    sxtb x9, w1
 ; CHECK-GI-NEXT:    madd x0, x9, x8, x2
@@ -665,6 +707,8 @@ entry:
 define i64 @smaddl_sext_hh(i16 %x0, i16 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: smaddl_sext_hh:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    sxth x8, w0
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smaddl x0, w8, w9, x2
@@ -672,6 +716,8 @@ define i64 @smaddl_sext_hh(i16 %x0, i16 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smaddl_sext_hh:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    sxth x8, w0
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    madd x0, x8, x9, x2
@@ -711,6 +757,7 @@ define i64 @smaddl_ldrsw_zextb(ptr %x0, i8 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: smaddl_ldrsw_zextb:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xff
 ; CHECK-SD-NEXT:    smaddl x0, w8, w9, x2
 ; CHECK-SD-NEXT:    ret
@@ -718,6 +765,7 @@ define i64 @smaddl_ldrsw_zextb(ptr %x0, i8 %x1, i64 %x2) {
 ; CHECK-GI-LABEL: smaddl_ldrsw_zextb:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xff
 ; CHECK-GI-NEXT:    madd x0, x8, x9, x2
 ; CHECK-GI-NEXT:    ret
@@ -733,6 +781,7 @@ entry:
 define i64 @smnegl_ldrsb_h(ptr %x0, i16 %x1) {
 ; CHECK-SD-LABEL: smnegl_ldrsb_h:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsb x8, [x0]
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smnegl x0, w8, w9
@@ -740,6 +789,7 @@ define i64 @smnegl_ldrsb_h(ptr %x0, i16 %x1) {
 ;
 ; CHECK-GI-LABEL: smnegl_ldrsb_h:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsb x8, [x0]
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    mneg x0, x8, x9
@@ -756,6 +806,7 @@ entry:
 define i64 @smnegl_ldrsb_h_commuted(ptr %x0, i16 %x1) {
 ; CHECK-SD-LABEL: smnegl_ldrsb_h_commuted:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsb x8, [x0]
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smnegl x0, w9, w8
@@ -763,6 +814,7 @@ define i64 @smnegl_ldrsb_h_commuted(ptr %x0, i16 %x1) {
 ;
 ; CHECK-GI-LABEL: smnegl_ldrsb_h_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsb x8, [x0]
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    mneg x0, x9, x8
@@ -785,6 +837,7 @@ define i64 @smnegl_ldrsh_w(ptr %x0, i32 %x1) {
 ;
 ; CHECK-GI-LABEL: smnegl_ldrsh_w:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsh x8, [x0]
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    mneg x0, x8, x9
@@ -807,6 +860,7 @@ define i64 @smnegl_ldrsh_w_commuted(ptr %x0, i32 %x1) {
 ;
 ; CHECK-GI-LABEL: smnegl_ldrsh_w_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsh x8, [x0]
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    mneg x0, x9, x8
@@ -823,6 +877,7 @@ entry:
 define i64 @smnegl_ldrsw_b(ptr %x0, i8 %x1) {
 ; CHECK-SD-LABEL: smnegl_ldrsw_b:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
 ; CHECK-SD-NEXT:    sxtb x9, w1
 ; CHECK-SD-NEXT:    smnegl x0, w8, w9
@@ -830,6 +885,7 @@ define i64 @smnegl_ldrsw_b(ptr %x0, i8 %x1) {
 ;
 ; CHECK-GI-LABEL: smnegl_ldrsw_b:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
 ; CHECK-GI-NEXT:    sxtb x9, w1
 ; CHECK-GI-NEXT:    mneg x0, x8, x9
@@ -845,6 +901,7 @@ define i64 @smnegl_ldrsw_b(ptr %x0, i8 %x1) {
 define i64 @smnegl_ldrsw_b_commuted(ptr %x0, i8 %x1) {
 ; CHECK-SD-LABEL: smnegl_ldrsw_b_commuted:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
 ; CHECK-SD-NEXT:    sxtb x9, w1
 ; CHECK-SD-NEXT:    smnegl x0, w9, w8
@@ -852,6 +909,7 @@ define i64 @smnegl_ldrsw_b_commuted(ptr %x0, i8 %x1) {
 ;
 ; CHECK-GI-LABEL: smnegl_ldrsw_b_commuted:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
 ; CHECK-GI-NEXT:    sxtb x9, w1
 ; CHECK-GI-NEXT:    mneg x0, x9, x8
@@ -891,6 +949,8 @@ entry:
 define i64 @smnegl_sext_hh(i16 %x0, i16 %x1) {
 ; CHECK-SD-LABEL: smnegl_sext_hh:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    sxth x8, w0
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smnegl x0, w8, w9
@@ -898,6 +958,8 @@ define i64 @smnegl_sext_hh(i16 %x0, i16 %x1) {
 ;
 ; CHECK-GI-LABEL: smnegl_sext_hh:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    sxth x8, w0
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    mneg x0, x8, x9
@@ -937,6 +999,7 @@ define i64 @smnegl_ldrsw_zextb(ptr %x0, i8 %x1) {
 ; CHECK-SD-LABEL: smnegl_ldrsw_zextb:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xff
 ; CHECK-SD-NEXT:    smnegl x0, w8, w9
 ; CHECK-SD-NEXT:    ret
@@ -944,6 +1007,7 @@ define i64 @smnegl_ldrsw_zextb(ptr %x0, i8 %x1) {
 ; CHECK-GI-LABEL: smnegl_ldrsw_zextb:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xff
 ; CHECK-GI-NEXT:    mneg x0, x8, x9
 ; CHECK-GI-NEXT:    ret
@@ -959,6 +1023,7 @@ entry:
 define i64 @smsubl_ldrsb_h(ptr %x0, i16 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: smsubl_ldrsb_h:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsb x8, [x0]
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smsubl x0, w8, w9, x2
@@ -966,6 +1031,7 @@ define i64 @smsubl_ldrsb_h(ptr %x0, i16 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smsubl_ldrsb_h:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsb x8, [x0]
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    msub x0, x8, x9, x2
@@ -982,6 +1048,7 @@ entry:
 define i64 @smsubl_ldrsb_h_commuted(ptr %x0, i16 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: smsubl_ldrsb_h_commuted:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsb x8, [x0]
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smsubl x0, w9, w8, x2
@@ -989,6 +1056,7 @@ define i64 @smsubl_ldrsb_h_commuted(ptr %x0, i16 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smsubl_ldrsb_h_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsb x8, [x0]
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    msub x0, x9, x8, x2
@@ -1011,6 +1079,7 @@ define i64 @smsubl_ldrsh_w(ptr %x0, i32 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smsubl_ldrsh_w:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsh x8, [x0]
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    msub x0, x8, x9, x2
@@ -1033,6 +1102,7 @@ define i64 @smsubl_ldrsh_w_commuted(ptr %x0, i32 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smsubl_ldrsh_w_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsh x8, [x0]
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    msub x0, x9, x8, x2
@@ -1049,6 +1119,7 @@ entry:
 define i64 @smsubl_ldrsw_b(ptr %x0, i8 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: smsubl_ldrsw_b:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
 ; CHECK-SD-NEXT:    sxtb x9, w1
 ; CHECK-SD-NEXT:    smsubl x0, w8, w9, x2
@@ -1056,6 +1127,7 @@ define i64 @smsubl_ldrsw_b(ptr %x0, i8 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smsubl_ldrsw_b:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
 ; CHECK-GI-NEXT:    sxtb x9, w1
 ; CHECK-GI-NEXT:    msub x0, x8, x9, x2
@@ -1071,6 +1143,7 @@ define i64 @smsubl_ldrsw_b(ptr %x0, i8 %x1, i64 %x2) {
 define i64 @smsubl_ldrsw_b_commuted(ptr %x0, i8 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: smsubl_ldrsw_b_commuted:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
 ; CHECK-SD-NEXT:    sxtb x9, w1
 ; CHECK-SD-NEXT:    smsubl x0, w9, w8, x2
@@ -1078,6 +1151,7 @@ define i64 @smsubl_ldrsw_b_commuted(ptr %x0, i8 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smsubl_ldrsw_b_commuted:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
 ; CHECK-GI-NEXT:    sxtb x9, w1
 ; CHECK-GI-NEXT:    msub x0, x9, x8, x2
@@ -1117,6 +1191,8 @@ entry:
 define i64 @smsubl_sext_hh(i16 %x0, i16 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: smsubl_sext_hh:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    sxth x8, w0
 ; CHECK-SD-NEXT:    sxth x9, w1
 ; CHECK-SD-NEXT:    smsubl x0, w8, w9, x2
@@ -1124,6 +1200,8 @@ define i64 @smsubl_sext_hh(i16 %x0, i16 %x1, i64 %x2) {
 ;
 ; CHECK-GI-LABEL: smsubl_sext_hh:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    sxth x8, w0
 ; CHECK-GI-NEXT:    sxth x9, w1
 ; CHECK-GI-NEXT:    msub x0, x8, x9, x2
@@ -1163,6 +1241,7 @@ define i64 @smsubl_ldrsw_zextb(ptr %x0, i8 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: smsubl_ldrsw_zextb:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrsw x8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xff
 ; CHECK-SD-NEXT:    smsubl x0, w8, w9, x2
 ; CHECK-SD-NEXT:    ret
@@ -1170,6 +1249,7 @@ define i64 @smsubl_ldrsw_zextb(ptr %x0, i8 %x1, i64 %x2) {
 ; CHECK-GI-LABEL: smsubl_ldrsw_zextb:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrsw x8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xff
 ; CHECK-GI-NEXT:    msub x0, x8, x9, x2
 ; CHECK-GI-NEXT:    ret
@@ -1185,6 +1265,7 @@ entry:
 define i64 @smull_sext_ashr31(i32 %a, i64 %b) nounwind {
 ; CHECK-LABEL: smull_sext_ashr31:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x8, w0
 ; CHECK-NEXT:    asr x9, x1, #31
 ; CHECK-NEXT:    mul x0, x8, x9
@@ -1205,6 +1286,7 @@ define i64 @smull_sext_ashr32(i32 %a, i64 %b) nounwind {
 ;
 ; CHECK-GI-LABEL: smull_sext_ashr32:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    sxtw x8, w0
 ; CHECK-GI-NEXT:    asr x9, x1, #32
 ; CHECK-GI-NEXT:    mul x0, x8, x9
@@ -1256,6 +1338,7 @@ define i64 @umull_ldrb_h(ptr %x0, i16 %x1) {
 ; CHECK-SD-LABEL: umull_ldrb_h:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrb w8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xffff
 ; CHECK-SD-NEXT:    umull x0, w8, w9
 ; CHECK-SD-NEXT:    ret
@@ -1263,6 +1346,7 @@ define i64 @umull_ldrb_h(ptr %x0, i16 %x1) {
 ; CHECK-GI-LABEL: umull_ldrb_h:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xffff
 ; CHECK-GI-NEXT:    mul x0, x8, x9
 ; CHECK-GI-NEXT:    ret
@@ -1278,6 +1362,7 @@ define i64 @umull_ldrb_h_commuted(ptr %x0, i16 %x1) {
 ; CHECK-SD-LABEL: umull_ldrb_h_commuted:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrb w8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xffff
 ; CHECK-SD-NEXT:    umull x0, w9, w8
 ; CHECK-SD-NEXT:    ret
@@ -1285,6 +1370,7 @@ define i64 @umull_ldrb_h_commuted(ptr %x0, i16 %x1) {
 ; CHECK-GI-LABEL: umull_ldrb_h_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xffff
 ; CHECK-GI-NEXT:    mul x0, x9, x8
 ; CHECK-GI-NEXT:    ret
@@ -1321,6 +1407,7 @@ define i64 @umull_ldr_b(ptr %x0, i8 %x1) {
 ; CHECK-SD-LABEL: umull_ldr_b:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr w8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xff
 ; CHECK-SD-NEXT:    umull x0, w8, w9
 ; CHECK-SD-NEXT:    ret
@@ -1328,6 +1415,7 @@ define i64 @umull_ldr_b(ptr %x0, i8 %x1) {
 ; CHECK-GI-LABEL: umull_ldr_b:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xff
 ; CHECK-GI-NEXT:    mul x0, x8, x9
 ; CHECK-GI-NEXT:    ret
@@ -1408,6 +1496,7 @@ define i64 @umaddl_ldrb_h(ptr %x0, i16 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: umaddl_ldrb_h:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrb w8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xffff
 ; CHECK-SD-NEXT:    umaddl x0, w8, w9, x2
 ; CHECK-SD-NEXT:    ret
@@ -1415,6 +1504,7 @@ define i64 @umaddl_ldrb_h(ptr %x0, i16 %x1, i64 %x2) {
 ; CHECK-GI-LABEL: umaddl_ldrb_h:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xffff
 ; CHECK-GI-NEXT:    madd x0, x8, x9, x2
 ; CHECK-GI-NEXT:    ret
@@ -1431,6 +1521,7 @@ define i64 @umaddl_ldrb_h_commuted(ptr %x0, i16 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: umaddl_ldrb_h_commuted:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrb w8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xffff
 ; CHECK-SD-NEXT:    umaddl x0, w9, w8, x2
 ; CHECK-SD-NEXT:    ret
@@ -1438,6 +1529,7 @@ define i64 @umaddl_ldrb_h_commuted(ptr %x0, i16 %x1, i64 %x2) {
 ; CHECK-GI-LABEL: umaddl_ldrb_h_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xffff
 ; CHECK-GI-NEXT:    madd x0, x9, x8, x2
 ; CHECK-GI-NEXT:    ret
@@ -1476,6 +1568,7 @@ define i64 @umaddl_ldr_b(ptr %x0, i8 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: umaddl_ldr_b:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr w8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xff
 ; CHECK-SD-NEXT:    umaddl x0, w8, w9, x2
 ; CHECK-SD-NEXT:    ret
@@ -1483,6 +1576,7 @@ define i64 @umaddl_ldr_b(ptr %x0, i8 %x1, i64 %x2) {
 ; CHECK-GI-LABEL: umaddl_ldr_b:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xff
 ; CHECK-GI-NEXT:    madd x0, x8, x9, x2
 ; CHECK-GI-NEXT:    ret
@@ -1567,6 +1661,7 @@ define i64 @umnegl_ldrb_h(ptr %x0, i16 %x1) {
 ; CHECK-SD-LABEL: umnegl_ldrb_h:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrb w8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xffff
 ; CHECK-SD-NEXT:    umnegl x0, w8, w9
 ; CHECK-SD-NEXT:    ret
@@ -1574,6 +1669,7 @@ define i64 @umnegl_ldrb_h(ptr %x0, i16 %x1) {
 ; CHECK-GI-LABEL: umnegl_ldrb_h:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xffff
 ; CHECK-GI-NEXT:    mneg x0, x8, x9
 ; CHECK-GI-NEXT:    ret
@@ -1590,6 +1686,7 @@ define i64 @umnegl_ldrb_h_commuted(ptr %x0, i16 %x1) {
 ; CHECK-SD-LABEL: umnegl_ldrb_h_commuted:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrb w8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xffff
 ; CHECK-SD-NEXT:    umnegl x0, w9, w8
 ; CHECK-SD-NEXT:    ret
@@ -1597,6 +1694,7 @@ define i64 @umnegl_ldrb_h_commuted(ptr %x0, i16 %x1) {
 ; CHECK-GI-LABEL: umnegl_ldrb_h_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xffff
 ; CHECK-GI-NEXT:    mneg x0, x9, x8
 ; CHECK-GI-NEXT:    ret
@@ -1635,6 +1733,7 @@ define i64 @umnegl_ldr_b(ptr %x0, i8 %x1) {
 ; CHECK-SD-LABEL: umnegl_ldr_b:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr w8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xff
 ; CHECK-SD-NEXT:    umnegl x0, w8, w9
 ; CHECK-SD-NEXT:    ret
@@ -1642,6 +1741,7 @@ define i64 @umnegl_ldr_b(ptr %x0, i8 %x1) {
 ; CHECK-GI-LABEL: umnegl_ldr_b:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xff
 ; CHECK-GI-NEXT:    mneg x0, x8, x9
 ; CHECK-GI-NEXT:    ret
@@ -1726,6 +1826,7 @@ define i64 @umsubl_ldrb_h(ptr %x0, i16 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: umsubl_ldrb_h:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrb w8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xffff
 ; CHECK-SD-NEXT:    umsubl x0, w8, w9, x2
 ; CHECK-SD-NEXT:    ret
@@ -1733,6 +1834,7 @@ define i64 @umsubl_ldrb_h(ptr %x0, i16 %x1, i64 %x2) {
 ; CHECK-GI-LABEL: umsubl_ldrb_h:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xffff
 ; CHECK-GI-NEXT:    msub x0, x8, x9, x2
 ; CHECK-GI-NEXT:    ret
@@ -1749,6 +1851,7 @@ define i64 @umsubl_ldrb_h_commuted(ptr %x0, i16 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: umsubl_ldrb_h_commuted:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldrb w8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xffff
 ; CHECK-SD-NEXT:    umsubl x0, w9, w8, x2
 ; CHECK-SD-NEXT:    ret
@@ -1756,6 +1859,7 @@ define i64 @umsubl_ldrb_h_commuted(ptr %x0, i16 %x1, i64 %x2) {
 ; CHECK-GI-LABEL: umsubl_ldrb_h_commuted:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xffff
 ; CHECK-GI-NEXT:    msub x0, x9, x8, x2
 ; CHECK-GI-NEXT:    ret
@@ -1794,6 +1898,7 @@ define i64 @umsubl_ldr_b(ptr %x0, i8 %x1, i64 %x2) {
 ; CHECK-SD-LABEL: umsubl_ldr_b:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr w8, [x0]
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x9, x1, #0xff
 ; CHECK-SD-NEXT:    umsubl x0, w8, w9, x2
 ; CHECK-SD-NEXT:    ret
@@ -1801,6 +1906,7 @@ define i64 @umsubl_ldr_b(ptr %x0, i8 %x1, i64 %x2) {
 ; CHECK-GI-LABEL: umsubl_ldr_b:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xff
 ; CHECK-GI-NEXT:    msub x0, x8, x9, x2
 ; CHECK-GI-NEXT:    ret
@@ -2013,13 +2119,22 @@ define i64 @umaddl_and_and(i64 %x, i64 %y, i64 %a) {
 
 ; Check which can contain multiple copies that should all be removed.
 define i32 @f(i32 %0) {
-; CHECK-LABEL: f:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:  .LBB93_1: // %B
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cbnz x8, .LBB93_1
-; CHECK-NEXT:    b .LBB93_1
+; CHECK-SD-LABEL: f:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    neg w8, w0
+; CHECK-SD-NEXT:  .LBB93_1: // %B
+; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-SD-NEXT:    cbnz x8, .LBB93_1
+; CHECK-SD-NEXT:    b .LBB93_1
+;
+; CHECK-GI-LABEL: f:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    neg w8, w0
+; CHECK-GI-NEXT:  .LBB93_1: // %B
+; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-GI-NEXT:    cbnz x8, .LBB93_1
+; CHECK-GI-NEXT:    b .LBB93_1
 entry:
   %1 = sext i32 %0 to i64
   br label %A

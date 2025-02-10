@@ -1544,6 +1544,12 @@ DenseResourceElementsAttr DenseResourceElementsAttr::get(ShapedType type,
   return get(type, manager.insert(blobName, std::move(blob)));
 }
 
+ArrayRef<char> DenseResourceElementsAttr::getData() {
+  if (AsmResourceBlob *blob = this->getRawHandle().getBlob())
+    return blob->getDataAs<char>();
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // DenseResourceElementsAttrBase
 

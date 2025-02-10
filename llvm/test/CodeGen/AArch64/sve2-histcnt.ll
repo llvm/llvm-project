@@ -54,6 +54,7 @@ define void @histogram_i32_promote(ptr %base, <vscale x 2 x i64> %indices, <vsca
 ; CHECK-LABEL: histogram_i32_promote:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    histcnt z1.d, p0/z, z0.d, z0.d
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    mov z3.d, x1
 ; CHECK-NEXT:    ld1w { z2.d }, p0/z, [x0, z0.d, lsl #2]
 ; CHECK-NEXT:    ptrue p1.d
@@ -99,6 +100,7 @@ define void @histogram_i16_2_lane(ptr %base, <vscale x 2 x i64> %indices, <vscal
 ; CHECK-LABEL: histogram_i16_2_lane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    histcnt z1.d, p0/z, z0.d, z0.d
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    mov z3.d, x1
 ; CHECK-NEXT:    ld1h { z2.d }, p0/z, [x0, z0.d, lsl #1]
 ; CHECK-NEXT:    ptrue p1.d
@@ -114,6 +116,7 @@ define void @histogram_i8_2_lane(ptr %base, <vscale x 2 x i64> %indices, <vscale
 ; CHECK-LABEL: histogram_i8_2_lane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    histcnt z1.d, p0/z, z0.d, z0.d
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    mov z3.d, x1
 ; CHECK-NEXT:    ld1b { z2.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    ptrue p1.d

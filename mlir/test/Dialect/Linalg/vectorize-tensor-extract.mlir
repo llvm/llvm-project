@@ -2,34 +2,9 @@
 // RUN: -transform-preload-library='transform-library-paths=%p/td/vectorize-with-patterns.mlir' \
 // RUN: -transform-interpreter=entry-point=vectorize_with_patterns %s | FileCheck %s
 
-#map0 = affine_map<(d0, d1, d2, d3) -> (d0, d2)>
-#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-func.func @vectorize_1d_tensor_extract(%arg0: tensor<3xf32>, %arg1: tensor<4x3xi32>, %arg2: tensor<4x7x3x2xf32>) -> tensor<4x7x3x2xf32> {
-  %1 = linalg.generic {
-    indexing_maps = [#map0, #map1],
-    iterator_types = ["parallel", "parallel", "parallel", "parallel"]
-  } ins(%arg1 : tensor<4x3xi32>) outs(%arg2 : tensor<4x7x3x2xf32>) {
-  ^bb0(%arg3: i32, %arg4: f32):
-    %2 = arith.index_cast %arg3 : i32 to index
-    %3 = tensor.extract %arg0[%2] : tensor<3xf32>
-    linalg.yield %3 : f32
-  } -> tensor<4x7x3x2xf32>
-  return %1 : tensor<4x7x3x2xf32>
-}
-// CHECK-LABEL: func.func @vectorize_1d_tensor_extract
-// CHECK-SAME:    %[[ARG0:.*]]: tensor<3xf32>
-// CHECK-SAME:    %[[ARG1:.*]]: tensor<4x3xi32>
-// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-// CHECK-DAG: %[[MASK:.*]] = arith.constant dense<true> : vector<4x7x3x2xi1>
-// CHECK-DAG: %[[PASSTHRU:.*]] = arith.constant dense<0.000000e+00> : vector<4x7x3x2xf32>
-// CHECK: %[[V0:.*]] = vector.transfer_read %[[ARG1]]
-// CHECK: %[[CAST:.*]] = arith.index_cast %[[V0]]
-// CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[CAST]]
-// CHECK: %[[INDICES:.*]] = vector.transpose %[[BROADCAST]]
-// CHECK: %[[GATHER:.*]] = vector.gather %[[ARG0]][%[[C0]]] [%[[INDICES]]], %[[MASK]], %[[PASSTHRU]]
-// CHECK: vector.transfer_write %[[GATHER]]
-
-// -----
+//===----------------------------------------------------------------------===//
+// Contiguous load
+//===----------------------------------------------------------------------===//
 
 #map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 func.func @vectorize_nd_tensor_extract_transfer_read_basic(
@@ -112,6 +87,142 @@ func.func @vectorize_nd_tensor_extract_transfer_read_complex(%6: tensor<45x80x16
 
 // -----
 
+// The vectorizer converts `affine.apply` so that the subsequent Ops can be vectorised based on the converted ops. Contiguous load.
+func.func @vectorize_nd_tensor_extract_with_affine_apply_contiguous(%6: tensor<80x16xf32>, %arg0: index, %extracted_slice : tensor<1x4xf32>) -> tensor<1x4xf32> {
+  %c79 = arith.constant 79 : index
+  %1 = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]
+  } outs(%extracted_slice : tensor<1x4xf32>) {
+  ^bb0(%out: f32):
+    %2 = linalg.index 1 : index
+    %3 = affine.apply affine_map<(d0, d1) -> (d0 + d1)>(%2, %arg0)
+    %extracted = tensor.extract %6[%c79, %3] : tensor<80x16xf32>
+    linalg.yield %extracted : f32
+  } -> tensor<1x4xf32>
+  return %1 : tensor<1x4xf32>
+}
+
+// CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_with_affine_apply_contiguous(
+// CHECK-SAME:                                                                        %[[VAL_0:.*]]: tensor<80x16xf32>,
+// CHECK-SAME:                                                                        %[[VAL_1:.*]]: index,
+// CHECK-SAME:                                                                        %[[VAL_2:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 79 : index
+// CHECK:           %[[VAL_8:.*]] = vector.broadcast %[[VAL_1]] : index to vector<4xindex>
+// CHECK:           %[[VAL_9:.*]] = arith.addi %[[VAL_8]], %[[VAL_3]] : vector<4xindex>
+// CHECK:           %[[VAL_10:.*]] = vector.extract %[[VAL_9]][0] : index from vector<4xindex>
+// CHECK:           %[[VAL_11:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_7]], %[[VAL_10]]], %[[VAL_5]] {in_bounds = [true, true]} : tensor<80x16xf32>, vector<1x4xf32>
+// CHECK:           %[[VAL_12:.*]] = vector.transfer_write %[[VAL_11]], %[[VAL_2]]{{\[}}%[[VAL_6]], %[[VAL_6]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
+// CHECK:           return %[[VAL_12]] : tensor<1x4xf32>
+// CHECK:         }
+
+// -----
+
+func.func @vectorize_nd_tensor_extract_with_tensor_extract(%input_1: tensor<1x20xi32>, %input_2: tensor<257x24xf32>, %arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index) -> tensor<1x1x4xf32> {
+  %c0 = arith.constant 0 : index
+  %c256 = arith.constant 256 : index
+  %output = tensor.empty() : tensor<1x1x4xf32>
+  %1 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} outs(%output : tensor<1x1x4xf32>) {
+  ^bb0(%out: f32):
+    %13 = linalg.index 0 : index
+    %14 = affine.apply affine_map<(d0, d1, d2) -> (d0 + d1 + d2)>(%arg0, %13, %arg2)
+    %15 = linalg.index 2 : index
+    %16 = linalg.index 1 : index
+    %17 = affine.apply affine_map<(d0, d1, d2, d3) -> (d0 + d1 * 24 + d2 + d3)>(%arg1, %16, %15, %arg3)
+    %extracted_0 = tensor.extract %input_1[%c0, %14] : tensor<1x20xi32>
+    %18 = arith.index_cast %extracted_0 : i32 to index
+    %19 = arith.maxsi %18, %c0 : index
+    %20 = arith.minsi %19, %c256 : index
+    %extracted_1 = tensor.extract %input_2[%20, %17] : tensor<257x24xf32>
+    linalg.yield %extracted_1 : f32
+  } -> tensor<1x1x4xf32>
+  return %1 : tensor<1x1x4xf32>
+}
+
+// CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_with_tensor_extract(
+// CHECK-SAME:      %[[INPUT_1:.*]]: tensor<1x20xi32>,
+// CHECK-SAME:      %[[INPUT_2:.*]]: tensor<257x24xf32>,
+// CHECK-SAME:      %[[INPUT_3:.*]]: index, %[[INPUT_4:.*]]: index, %[[INPUT_5:.*]]: index,
+// CHECK:           %[[EXTRACTED_0_IDX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[SCALAR:.*]] = arith.addi %[[INPUT_3]], %[[INPUT_5]] : index
+// First `vector.transfer_read` from the generic Op - loop invariant scalar load.
+// CHECK:           vector.transfer_read %[[INPUT_1]][%[[EXTRACTED_0_IDX_0]], %[[SCALAR]]]
+// CHECK-SAME:      tensor<1x20xi32>, vector<i32>
+// The following `tensor.extract` from the generic Op s a contiguous load (all Ops used
+// for address calculation also satisfy the required conditions).
+// CHECK:           vector.transfer_read %[[INPUT_2]][%{{.*}}, %{{.*}}, %{{.*}} {in_bounds = [true, true]} : tensor<257x24xf32>, vector<1x4xf32>
+
+// Make sure that non-linear arithmetic operations (e.g. arith.maxsi) are allowed when calculating indices for load operations. Contiguous load.
+func.func @vectorize_nd_tensor_extract_with_maxsi_contiguous(%arg0: tensor<80x16xf32>, %extracted_slice : tensor<1x4xf32>) -> tensor<1x4xf32> {
+  %c16 = arith.constant 16 : index
+  %1 = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]
+  } outs(%extracted_slice : tensor<1x4xf32>) {
+  ^bb0(%out: f32):
+    %2 = linalg.index 0 : index
+    %3 = linalg.index 1 : index
+    %4 = arith.maxsi %2, %c16 : index
+    %extracted = tensor.extract %arg0[%4, %3] : tensor<80x16xf32>
+    linalg.yield %extracted : f32
+  } -> tensor<1x4xf32>
+  return %1 : tensor<1x4xf32>
+}
+
+// CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_with_maxsi_contiguous(
+// CHECK-SAME:                                                                 %[[VAL_0:.*]]: tensor<80x16xf32>,
+// CHECK-SAME:                                                                 %[[VAL_1:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0.000000e+00 : f32
+
+// CHECK-DAG:       %[[CST_0:.+]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
+// CHECK-DAG:       %[[CST_1:.+]] = arith.constant dense<16> : vector<4x1xindex>
+// CHECK-DAG:       %[[IDX0:.+]] = vector.extract %[[CST_1]][0, 0] : index from vector<4x1xindex>
+// CHECK-DAG:       %[[IDX1:.+]] = vector.extract %[[CST_0]][0] : index from vector<4xindex>
+
+// CHECK:           %[[VAL_8:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[IDX0]], %[[IDX1]]], %[[VAL_5]] {in_bounds = [true, true]} : tensor<80x16xf32>, vector<1x4xf32>
+// CHECK:           %[[VAL_9:.*]] = vector.transfer_write %[[VAL_8]], %[[VAL_1]]{{\[}}%[[VAL_4]], %[[VAL_4]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
+// CHECK:           return %[[VAL_9]] : tensor<1x4xf32>
+// CHECK:         }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Gather load
+//===----------------------------------------------------------------------===//
+
+#map0 = affine_map<(d0, d1, d2, d3) -> (d0, d2)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+func.func @vectorize_1d_tensor_extract(%arg0: tensor<3xf32>, %arg1: tensor<4x3xi32>, %arg2: tensor<4x7x3x2xf32>) -> tensor<4x7x3x2xf32> {
+  %1 = linalg.generic {
+    indexing_maps = [#map0, #map1],
+    iterator_types = ["parallel", "parallel", "parallel", "parallel"]
+  } ins(%arg1 : tensor<4x3xi32>) outs(%arg2 : tensor<4x7x3x2xf32>) {
+  ^bb0(%arg3: i32, %arg4: f32):
+    %2 = arith.index_cast %arg3 : i32 to index
+    %3 = tensor.extract %arg0[%2] : tensor<3xf32>
+    linalg.yield %3 : f32
+  } -> tensor<4x7x3x2xf32>
+  return %1 : tensor<4x7x3x2xf32>
+}
+// CHECK-LABEL: func.func @vectorize_1d_tensor_extract
+// CHECK-SAME:    %[[ARG0:.*]]: tensor<3xf32>
+// CHECK-SAME:    %[[ARG1:.*]]: tensor<4x3xi32>
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[MASK:.*]] = arith.constant dense<true> : vector<4x7x3x2xi1>
+// CHECK-DAG: %[[PASSTHRU:.*]] = arith.constant dense<0.000000e+00> : vector<4x7x3x2xf32>
+// CHECK: %[[V0:.*]] = vector.transfer_read %[[ARG1]]
+// CHECK: %[[CAST:.*]] = arith.index_cast %[[V0]]
+// CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[CAST]]
+// CHECK: %[[INDICES:.*]] = vector.transpose %[[BROADCAST]]
+// CHECK: %[[GATHER:.*]] = vector.gather %[[ARG0]][%[[C0]]] [%[[INDICES]]], %[[MASK]], %[[PASSTHRU]]
+// CHECK: vector.transfer_write %[[GATHER]]
+
+// -----
+
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d2)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
@@ -159,7 +270,7 @@ func.func @vectorize_nd_tensor_extract_load_1d_column_vector_using_gather_load(%
   %c0 = arith.constant 0 : index
   %0 = tensor.empty() : tensor<8x1xf32>
   %1 = linalg.generic {
-    indexing_maps = [#map], 
+    indexing_maps = [#map],
     iterator_types = ["parallel", "parallel"]
   } outs(%0 : tensor<8x1xf32>) {
   ^bb0(%arg5: f32):
@@ -303,78 +414,6 @@ func.func @vectorize_nd_tensor_extract_contiguous_and_gather(%arg0: tensor<6xf32
 // CHECK:           %[[VAL_14:.*]] = vector.transfer_write %[[VAL_13]], %[[VAL_8]]{{\[}}%[[VAL_2]]] {in_bounds = [true]} : vector<5xf32>, tensor<5xf32>
 // CHECK:           return %[[VAL_14]] : tensor<5xf32>
 
-// -----
-
-// The vectorizer converts `affine.apply` so that the subsequent Ops can be vectorised based on the converted ops. Contiguous load.
-func.func @vectorize_nd_tensor_extract_with_affine_apply_contiguous(%6: tensor<80x16xf32>, %arg0: index, %extracted_slice : tensor<1x4xf32>) -> tensor<1x4xf32> {
-  %c79 = arith.constant 79 : index
-  %1 = linalg.generic {
-    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>],
-    iterator_types = ["parallel", "parallel"]
-  } outs(%extracted_slice : tensor<1x4xf32>) {
-  ^bb0(%out: f32):
-    %2 = linalg.index 1 : index
-    %3 = affine.apply affine_map<(d0, d1) -> (d0 + d1)>(%2, %arg0)
-    %extracted = tensor.extract %6[%c79, %3] : tensor<80x16xf32>
-    linalg.yield %extracted : f32
-  } -> tensor<1x4xf32>
-  return %1 : tensor<1x4xf32>
-}
-
-// CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_with_affine_apply_contiguous(
-// CHECK-SAME:                                                                        %[[VAL_0:.*]]: tensor<80x16xf32>,
-// CHECK-SAME:                                                                        %[[VAL_1:.*]]: index,
-// CHECK-SAME:                                                                        %[[VAL_2:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
-// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
-// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 79 : index
-// CHECK:           %[[VAL_8:.*]] = vector.broadcast %[[VAL_1]] : index to vector<4xindex>
-// CHECK:           %[[VAL_9:.*]] = arith.addi %[[VAL_8]], %[[VAL_3]] : vector<4xindex>
-// CHECK:           %[[VAL_10:.*]] = vector.extract %[[VAL_9]][0] : index from vector<4xindex>
-// CHECK:           %[[VAL_11:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_7]], %[[VAL_10]]], %[[VAL_5]] {in_bounds = [true, true]} : tensor<80x16xf32>, vector<1x4xf32>
-// CHECK:           %[[VAL_12:.*]] = vector.transfer_write %[[VAL_11]], %[[VAL_2]]{{\[}}%[[VAL_6]], %[[VAL_6]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
-// CHECK:           return %[[VAL_12]] : tensor<1x4xf32>
-// CHECK:         }
-
-// -----
-
-func.func @vectorize_nd_tensor_extract_with_tensor_extract(%input_1: tensor<1x20xi32>, %input_2: tensor<257x24xf32>, %arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index) -> tensor<1x1x4xf32> {
-  %c0 = arith.constant 0 : index
-  %c256 = arith.constant 256 : index
-  %output = tensor.empty() : tensor<1x1x4xf32>
-  %1 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel"]} outs(%output : tensor<1x1x4xf32>) {
-  ^bb0(%out: f32):
-    %13 = linalg.index 0 : index
-    %14 = affine.apply affine_map<(d0, d1, d2) -> (d0 + d1 + d2)>(%arg0, %13, %arg2)
-    %15 = linalg.index 2 : index
-    %16 = linalg.index 1 : index
-    %17 = affine.apply affine_map<(d0, d1, d2, d3) -> (d0 + d1 * 24 + d2 + d3)>(%arg1, %16, %15, %arg3)
-    %extracted_0 = tensor.extract %input_1[%c0, %14] : tensor<1x20xi32>
-    %18 = arith.index_cast %extracted_0 : i32 to index
-    %19 = arith.maxsi %18, %c0 : index
-    %20 = arith.minsi %19, %c256 : index
-    %extracted_1 = tensor.extract %input_2[%20, %17] : tensor<257x24xf32>
-    linalg.yield %extracted_1 : f32
-  } -> tensor<1x1x4xf32>
-  return %1 : tensor<1x1x4xf32>
-}
-
-// CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_with_tensor_extract(
-// CHECK-SAME:      %[[INPUT_1:.*]]: tensor<1x20xi32>,
-// CHECK-SAME:      %[[INPUT_2:.*]]: tensor<257x24xf32>,
-// CHECK-SAME:      %[[INPUT_3:.*]]: index, %[[INPUT_4:.*]]: index, %[[INPUT_5:.*]]: index,
-// CHECK:           %[[EXTRACTED_0_IDX_0:.*]] = arith.constant 0 : index
-// CHECK:           %[[SCALAR:.*]] = arith.addi %[[INPUT_3]], %[[INPUT_5]] : index
-// First `vector.transfer_read` from the generic Op - loop invariant scalar load.
-// CHECK:           vector.transfer_read %[[INPUT_1]][%[[EXTRACTED_0_IDX_0]], %[[SCALAR]]] 
-// CHECK-SAME:      tensor<1x20xi32>, vector<i32>
-// The following `tensor.extract` from the generic Op s a contiguous load (all Ops used
-// for address calculation also satisfy the required conditions).
-// CHECK:           vector.transfer_read %[[INPUT_2]][%{{.*}}, %{{.*}}, %{{.*}} {in_bounds = [true, true]} : tensor<257x24xf32>, vector<1x4xf32>
-
-// -----
-
 // The vectorizer converts `affine.apply` so that the subsequent Ops can be vectorised based on the converted ops. Gather load.
 func.func @vectorize_nd_tensor_extract_with_affine_apply_gather(%6: tensor<80x16xf32>, %arg0: index, %extracted_slice : tensor<1x4xf32>) -> tensor<1x4xf32> {
   %c16 = arith.constant 16 : index
@@ -410,8 +449,6 @@ func.func @vectorize_nd_tensor_extract_with_affine_apply_gather(%6: tensor<80x16
 // CHECK:           return %[[VAL_14]] : tensor<1x4xf32>
 // CHECK:         }
 
-// -----
-
 // Make sure that non-linear arithmetic operations (e.g. arith.maxsi) are allowed when calculating indices for load operations. Gather load.
 func.func @vectorize_nd_tensor_extract_with_maxsi_gather(%arg0: tensor<80x16xf32>, %extracted_slice : tensor<1x4xf32>) -> tensor<1x4xf32> {
   %c79 = arith.constant 79 : index
@@ -441,41 +478,6 @@ func.func @vectorize_nd_tensor_extract_with_maxsi_gather(%arg0: tensor<80x16xf32
 // CHECK:           %[[VAL_9:.*]] = vector.gather %[[VAL_0]]{{\[}}%[[VAL_6]], %[[VAL_6]]] {{\[}}%[[VAL_8]]], %[[VAL_4]], %[[VAL_5]] : tensor<80x16xf32>, vector<1x4xindex>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32>
 // CHECK:           %[[VAL_10:.*]] = vector.transfer_write %[[VAL_9]], %[[VAL_1]]{{\[}}%[[VAL_6]], %[[VAL_6]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
 // CHECK:           return %[[VAL_10]] : tensor<1x4xf32>
-// CHECK:         }
-
-// -----
-
-// Make sure that non-linear arithmetic operations (e.g. arith.maxsi) are allowed when calculating indices for load operations. Contiguous load.
-func.func @vectorize_nd_tensor_extract_with_maxsi_contiguous(%arg0: tensor<80x16xf32>, %extracted_slice : tensor<1x4xf32>) -> tensor<1x4xf32> {
-  %c16 = arith.constant 16 : index
-  %1 = linalg.generic {
-    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>],
-    iterator_types = ["parallel", "parallel"]
-  } outs(%extracted_slice : tensor<1x4xf32>) {
-  ^bb0(%out: f32):
-    %2 = linalg.index 0 : index
-    %3 = linalg.index 1 : index
-    %4 = arith.maxsi %2, %c16 : index
-    %extracted = tensor.extract %arg0[%4, %3] : tensor<80x16xf32>
-    linalg.yield %extracted : f32
-  } -> tensor<1x4xf32>
-  return %1 : tensor<1x4xf32>
-}
-
-// CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_with_maxsi_contiguous(
-// CHECK-SAME:                                                                 %[[VAL_0:.*]]: tensor<80x16xf32>,
-// CHECK-SAME:                                                                 %[[VAL_1:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
-// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
-// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0.000000e+00 : f32
-
-// CHECK-DAG:       %[[CST_0:.+]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-// CHECK-DAG:       %[[CST_1:.+]] = arith.constant dense<16> : vector<4x1xindex>
-// CHECK-DAG:       %[[IDX0:.+]] = vector.extract %[[CST_1]][0, 0] : index from vector<4x1xindex>
-// CHECK-DAG:       %[[IDX1:.+]] = vector.extract %[[CST_0]][0] : index from vector<4xindex>
-
-// CHECK:           %[[VAL_8:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[IDX0]], %[[IDX1]]], %[[VAL_5]] {in_bounds = [true, true]} : tensor<80x16xf32>, vector<1x4xf32>
-// CHECK:           %[[VAL_9:.*]] = vector.transfer_write %[[VAL_8]], %[[VAL_1]]{{\[}}%[[VAL_4]], %[[VAL_4]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
-// CHECK:           return %[[VAL_9]] : tensor<1x4xf32>
 // CHECK:         }
 
 // -----

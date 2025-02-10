@@ -5,6 +5,7 @@ define void @test0f(ptr nocapture %x, float %a) #0 {
 ; CHECK-LABEL: test0f:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov.s v1[0], v0[0]
 ; CHECK-NEXT:    str q1, [x0]
 ; CHECK-NEXT:    ret
@@ -18,6 +19,7 @@ define void @test1f(ptr nocapture %x, float %a) #0 {
 ; CHECK-LABEL: test1f:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmov.4s v1, #1.00000000
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov.s v1[0], v0[0]
 ; CHECK-NEXT:    str q1, [x0]
 ; CHECK-NEXT:    ret
@@ -104,6 +106,7 @@ define <16 x i8> @test_insert_v16i8_insert_2_undef_base_different_valeus(i8 %a, 
 define <8 x half> @test_insert_v8f16_insert_1(half %a) {
 ; CHECK-LABEL: test_insert_v8f16_insert_1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup.8h v0, v0[0]
 ; CHECK-NEXT:    mov.h v0[7], wzr
 ; CHECK-NEXT:    ret
@@ -122,6 +125,7 @@ define <8 x half> @test_insert_v8f16_insert_2(half %a) {
 ; CHECK-LABEL: test_insert_v8f16_insert_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    mov.h v1[1], v0[0]
 ; CHECK-NEXT:    mov.h v1[2], v0[0]
 ; CHECK-NEXT:    mov.16b v0, v1
@@ -197,6 +201,7 @@ define <2 x float> @test_insert_v2f32_undef_zero_vector(float %a) {
 ; CHECK-LABEL: test_insert_v2f32_undef_zero_vector:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov.s v1[1], v0[0]
 ; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
@@ -207,6 +212,7 @@ define <2 x float> @test_insert_v2f32_undef_zero_vector(float %a) {
 define <4 x float> @test_insert_3_f32_undef_zero_vector(float %a) {
 ; CHECK-LABEL: test_insert_3_f32_undef_zero_vector:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    dup.4s v0, v0[0]
 ; CHECK-NEXT:    mov.s v0[3], wzr
 ; CHECK-NEXT:    ret
@@ -219,6 +225,7 @@ define <4 x float> @test_insert_3_f32_undef_zero_vector(float %a) {
 define <4 x float> @test_insert_3_f32_undef(float %a) {
 ; CHECK-LABEL: test_insert_3_f32_undef:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    dup.4s v0, v0[0]
 ; CHECK-NEXT:    ret
   %v.0 = insertelement <4 x float> <float undef, float undef, float undef, float undef>, float %a, i32 0
@@ -231,6 +238,7 @@ define <4 x float> @test_insert_2_f32_undef_zero(float %a) {
 ; CHECK-LABEL: test_insert_2_f32_undef_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov.s v1[0], v0[0]
 ; CHECK-NEXT:    mov.s v1[2], v0[0]
 ; CHECK-NEXT:    mov.16b v0, v1
@@ -244,6 +252,7 @@ define <2 x double> @test_insert_v2f64_undef_insert1(double %a) {
 ; CHECK-LABEL: test_insert_v2f64_undef_insert1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov.d v1[0], v0[0]
 ; CHECK-NEXT:    mov.16b v0, v1
 ; CHECK-NEXT:    ret
@@ -254,6 +263,7 @@ define <2 x double> @test_insert_v2f64_undef_insert1(double %a) {
 define <4 x float> @test_insert_2_f32_var(float %a, <4 x float> %b) {
 ; CHECK-LABEL: test_insert_2_f32_var:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov.s v1[0], v0[0]
 ; CHECK-NEXT:    mov.s v1[2], v0[0]
 ; CHECK-NEXT:    mov.16b v0, v1
@@ -276,7 +286,9 @@ define <8 x i16> @test_insert_v8i16_i16_zero(<8 x i16> %a) {
 define <4 x half> @test_insert_v4f16_f16_zero(<4 x half> %a) {
 ; CHECK-LABEL: test_insert_v4f16_f16_zero:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov.h v0[0], wzr
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %v.0 = insertelement <4 x half> %a, half 0.000000e+00, i32 0
   ret <4 x half> %v.0
@@ -294,7 +306,9 @@ define <8 x half> @test_insert_v8f16_f16_zero(<8 x half> %a) {
 define <2 x float> @test_insert_v2f32_f32_zero(<2 x float> %a) {
 ; CHECK-LABEL: test_insert_v2f32_f32_zero:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov.s v0[0], wzr
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %v.0 = insertelement <2 x float> %a, float 0.000000e+00, i32 0
   ret <2 x float> %v.0

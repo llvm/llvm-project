@@ -106,6 +106,7 @@ define <8 x half> @h_v8_s8(<8 x i16> %u) #0 {
 define float @l0_extract_f_v2s(<2 x i32> %u) {
 ; CHECK-LABEL: l0_extract_f_v2s:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    scvtf s0, s0
 ; CHECK-NEXT:    ret
   %i = extractelement <2 x i32> %u, i64 0
@@ -117,6 +118,7 @@ define float @l0_extract_f_v2s(<2 x i32> %u) {
 define float @l0_extract_f_v2u(<2 x i32> %u) {
 ; CHECK-LABEL: l0_extract_f_v2u:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ucvtf s0, s0
 ; CHECK-NEXT:    ret
   %i = extractelement <2 x i32> %u, i64 0
@@ -245,6 +247,7 @@ define half @ln_extract_h_v8u(<8 x i16> %u, i32 %n) #0 {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    bfi x8, x0, #1, #3
 ; CHECK-NEXT:    ldrh w8, [x8]

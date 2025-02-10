@@ -67,6 +67,7 @@ define <8 x i8> @shuffle8_with_and_mask(<8 x i8> %src, <8 x i8> %mask) {
 ; CHECK-LABEL: shuffle8_with_and_mask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi.8b v2, #7
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    and.8b v1, v1, v2
 ; CHECK-NEXT:    tbl.8b v0, { v0 }, v1
 ; CHECK-NEXT:    ret
@@ -113,6 +114,7 @@ define <8 x i8> @shuffle8_with_and_mask_different_constants(<8 x i8> %src, <8 x 
 ; CHECK-LABEL: shuffle8_with_and_mask_different_constants:
 ; CHECK:        // %bb.0:
 ; CHECK-NEXT:   adrp	x8, .LCPI2_0
+; CHECK-NEXT:   // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:   ldr	d2, [x8, :lo12:.LCPI2_0]
 ; CHECK-NEXT:   and.8b	v1, v1, v2
 ; CHECK-NEXT:   tbl.8b	v0, { v0 }, v1
@@ -149,6 +151,7 @@ define <8 x i8> @shuffle8_with_and_mask_different_constants(<8 x i8> %src, <8 x 
 define <8 x i8> @shuffle8_with_mask(<8 x i8> %src, <8 x i8> %mask) {
 ; CHECK-LABEL: shuffle8_with_mask:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:  // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:  tbl.8b v0, { v0 }, v1
 ; CHECK-NEXT:  ret
 

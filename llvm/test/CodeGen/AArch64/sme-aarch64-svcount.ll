@@ -133,6 +133,7 @@ define target("aarch64.svcount") @test_sel(target("aarch64.svcount") %x, target(
 ;
 ; CHECK-O3-LABEL: test_sel:
 ; CHECK-O3:       // %bb.0:
+; CHECK-O3-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-O3-NEXT:    sbfx x8, x0, #0, #1
 ; CHECK-O3-NEXT:    whilelo p2.b, xzr, x8
 ; CHECK-O3-NEXT:    sel p0.b, p2, p0.b, p1.b

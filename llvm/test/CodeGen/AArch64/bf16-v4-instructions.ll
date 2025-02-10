@@ -444,6 +444,7 @@ define <4 x bfloat> @uitofp_i64(<4 x i64> %a) #0 {
 define void @test_insert_at_zero(bfloat %a, ptr %b) #0 {
 ; CHECK-LABEL: test_insert_at_zero:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %1 = insertelement <4 x bfloat> undef, bfloat %a, i64 0

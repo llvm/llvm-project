@@ -144,8 +144,9 @@ template <> struct hash<std::error_condition>;
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/system_error>
+#else
 #  include <__config>
 #  include <__system_error/errc.h>
 #  include <__system_error/error_category.h>
@@ -169,6 +170,6 @@ template <> struct hash<std::error_condition>;
 #    include <limits>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_SYSTEM_ERROR

@@ -182,6 +182,30 @@ void CloneFunctionAttributesInto(Function *NewFunc, const Function *OldFunc,
                                  ValueMapTypeRemapper *TypeMapper = nullptr,
                                  ValueMaterializer *Materializer = nullptr);
 
+/// Clone OldFunc's metadata into NewFunc.
+///
+/// The caller is expected to populate \p VMap beforehand and set an appropriate
+/// \p RemapFlag. Subprograms/CUs/types that were already mapped to themselves
+/// won't be duplicated.
+///
+/// NOTE: This function doesn't clone !llvm.dbg.cu when cloning into a different
+/// module. Use CloneFunctionInto for that behavior.
+void CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
+                               ValueToValueMapTy &VMap, RemapFlags RemapFlag,
+                               ValueMapTypeRemapper *TypeMapper = nullptr,
+                               ValueMaterializer *Materializer = nullptr,
+                               const MetadataSetTy *IdentityMD = nullptr);
+
+/// Clone OldFunc's body into NewFunc.
+void CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
+                           ValueToValueMapTy &VMap, RemapFlags RemapFlag,
+                           SmallVectorImpl<ReturnInst *> &Returns,
+                           const char *NameSuffix = "",
+                           ClonedCodeInfo *CodeInfo = nullptr,
+                           ValueMapTypeRemapper *TypeMapper = nullptr,
+                           ValueMaterializer *Materializer = nullptr,
+                           const MetadataSetTy *IdentityMD = nullptr);
+
 void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
                                const Instruction *StartingInst,
                                ValueToValueMapTy &VMap, bool ModuleLevelChanges,
@@ -220,13 +244,24 @@ DISubprogram *CollectDebugInfoForCloning(const Function &F,
                                          CloneFunctionChangeType Changes,
                                          DebugInfoFinder &DIFinder);
 
-/// Build a map of debug info to use during Metadata cloning.
-/// Returns true if cloning would need module level changes and false if there
-/// would only be local changes.
-bool BuildDebugInfoMDMap(DenseMap<const Metadata *, TrackingMDRef> &MD,
-                         CloneFunctionChangeType Changes,
-                         DebugInfoFinder &DIFinder,
-                         DISubprogram *SPClonedWithinModule);
+/// Based on \p Changes and \p DIFinder return debug info that needs to be
+/// identity mapped during Metadata cloning.
+///
+/// NOTE: Such \a MetadataSetTy can be used by \a CloneFunction* to directly
+/// specify metadata that should be identity mapped (and hence not cloned). The
+/// metadata will be identity mapped in \a ValueToValueMapTy on first use. There
+/// are several reasons for doing it this way rather than eagerly identity
+/// mapping metadata nodes in a \a ValueMap:
+/// 1. Mapping metadata is not cheap, particularly because of tracking.
+/// 2. When cloning a Function we identity map lots of global module-level
+///    metadata to avoid cloning it, while only a fraction of it is actually
+///    used by the function. Mapping on first use is a lot faster for modules
+///    with meaningful amount of debug info.
+/// 3. Eagerly identity mapping metadata makes it harder to cache module-level
+///    data (e.g. a set of metadata nodes in a \a DICompileUnit).
+MetadataSetTy FindDebugInfoToIdentityMap(CloneFunctionChangeType Changes,
+                                         DebugInfoFinder &DIFinder,
+                                         DISubprogram *SPClonedWithinModule);
 
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.

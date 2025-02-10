@@ -31,6 +31,7 @@ define i1 @test_v1i1(<1 x i1> %a) nounwind {
 define i8 @test_v1i8(<1 x i8> %a) nounwind {
 ; CHECK-LABEL: test_v1i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.b[0]
 ; CHECK-NEXT:    ret
   %b = call i8 @llvm.vector.reduce.umax.v1i8(<1 x i8> %a)
@@ -40,6 +41,7 @@ define i8 @test_v1i8(<1 x i8> %a) nounwind {
 define i16 @test_v1i16(<1 x i16> %a) nounwind {
 ; CHECK-LABEL: test_v1i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    ret
   %b = call i16 @llvm.vector.reduce.umax.v1i16(<1 x i16> %a)
@@ -55,19 +57,31 @@ define i24 @test_v1i24(<1 x i24> %a) nounwind {
 }
 
 define i32 @test_v1i32(<1 x i32> %a) nounwind {
-; CHECK-LABEL: test_v1i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_v1i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_v1i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
   %b = call i32 @llvm.vector.reduce.umax.v1i32(<1 x i32> %a)
   ret i32 %b
 }
 
 define i64 @test_v1i64(<1 x i64> %a) nounwind {
-; CHECK-LABEL: test_v1i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_v1i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_v1i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %b = call i64 @llvm.vector.reduce.umax.v1i64(<1 x i64> %a)
   ret i64 %b
 }
@@ -195,6 +209,7 @@ define i1 @test_v4i1(<4 x i1> %a) nounwind {
 ;
 ; CHECK-GI-LABEL: test_v4i1:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
 ; CHECK-GI-NEXT:    umov w10, v0.h[2]
@@ -265,12 +280,11 @@ define i128 @test_v2i128(<2 x i128> %a) nounwind {
 ;
 ; CHECK-GI-LABEL: test_v2i128:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    cmp x0, x2
-; CHECK-GI-NEXT:    cset w9, hi
+; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    csel w8, w9, w8, eq
+; CHECK-GI-NEXT:    cset w9, hi
+; CHECK-GI-NEXT:    csel w8, w8, w9, eq
 ; CHECK-GI-NEXT:    tst w8, #0x1
 ; CHECK-GI-NEXT:    csel x0, x0, x2, ne
 ; CHECK-GI-NEXT:    csel x1, x1, x3, ne

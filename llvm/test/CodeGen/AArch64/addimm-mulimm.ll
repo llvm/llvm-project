@@ -318,6 +318,7 @@ define i32 @addmuladd_gep2(ptr %p, i32 %a) {
 ; CHECK-LABEL: addmuladd_gep2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #3240 // =0xca8
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    smaddl x8, w1, w8, x0
 ; CHECK-NEXT:    ldr w8, [x8, #3260]
 ; CHECK-NEXT:    tbnz w8, #31, .LBB22_2

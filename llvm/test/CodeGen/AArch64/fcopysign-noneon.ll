@@ -96,7 +96,10 @@ define float @copysign32(float %a, float %b) {
 ; CHECK-LABEL: copysign32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NONEON-LABEL: copysign32:
@@ -116,8 +119,11 @@ define double @copysign64(double %a, double %b) {
 ; CHECK-LABEL: copysign64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fneg v2.2d, v2.2d
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NONEON-LABEL: copysign64:

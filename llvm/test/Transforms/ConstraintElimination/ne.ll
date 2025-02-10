@@ -71,8 +71,7 @@ define i1 @test_ne_eq_0(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[RES_13:%.*]] = xor i1 [[RES_12]], false
 ; CHECK-NEXT:    [[RES_14:%.*]] = xor i1 [[RES_13]], false
 ; CHECK-NEXT:    [[RES_15:%.*]] = xor i1 [[RES_14]], false
-; CHECK-NEXT:    [[C_12:%.*]] = icmp sgt i8 [[A]], 0
-; CHECK-NEXT:    [[RES_16:%.*]] = xor i1 [[RES_15]], [[C_12]]
+; CHECK-NEXT:    [[RES_16:%.*]] = xor i1 [[RES_15]], false
 ; CHECK-NEXT:    ret i1 [[RES_16]]
 ;
 entry:
@@ -209,8 +208,7 @@ define i1 @test_ne_eq_1(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[RES_13:%.*]] = xor i1 [[RES_12]], true
 ; CHECK-NEXT:    [[RES_14:%.*]] = xor i1 [[RES_13]], true
 ; CHECK-NEXT:    [[RES_15:%.*]] = xor i1 [[RES_14]], false
-; CHECK-NEXT:    [[C_12:%.*]] = icmp sgt i8 [[A]], 0
-; CHECK-NEXT:    [[RES_16:%.*]] = xor i1 [[RES_15]], [[C_12]]
+; CHECK-NEXT:    [[RES_16:%.*]] = xor i1 [[RES_15]], true
 ; CHECK-NEXT:    ret i1 [[RES_16]]
 ;
 entry:

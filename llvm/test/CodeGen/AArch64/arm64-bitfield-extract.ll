@@ -771,6 +771,7 @@ entry:
 define i64 @fct18(i32 %xor72) nounwind ssp {
 ; LLC-LABEL: fct18:
 ; LLC:       // %bb.0:
+; LLC-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; LLC-NEXT:    ubfx x0, x0, #9, #8
 ; LLC-NEXT:    ret
 ; OPT-LABEL: @fct18(
@@ -1031,7 +1032,7 @@ define void @sameOperandBFI(i64 %src, i64 %src2, ptr %ptr) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[SHR47:%.*]] = lshr i64 [[SRC:%.*]], 47
 ; OPT-NEXT:    [[SRC2_TRUNC:%.*]] = trunc i64 [[SRC2:%.*]] to i32
-; OPT-NEXT:    br i1 undef, label [[END:%.*]], label [[IF_ELSE:%.*]]
+; OPT-NEXT:    br i1 poison, label [[END:%.*]], label [[IF_ELSE:%.*]]
 ; OPT:       if.else:
 ; OPT-NEXT:    [[AND3:%.*]] = and i32 [[SRC2_TRUNC]], 3
 ; OPT-NEXT:    [[SHL2:%.*]] = shl nuw nsw i64 [[SHR47]], 2
@@ -1049,7 +1050,7 @@ define void @sameOperandBFI(i64 %src, i64 %src2, ptr %ptr) {
 entry:
   %shr47 = lshr i64 %src, 47
   %src2.trunc = trunc i64 %src2 to i32
-  br i1 undef, label %end, label %if.else
+  br i1 poison, label %end, label %if.else
 
 if.else:
   %and3 = and i32 %src2.trunc, 3

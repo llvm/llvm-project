@@ -14,6 +14,7 @@ entry:
 define <4 x half> @test_16x4_lane_1(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; CHECK-LABEL: test_16x4_lane_1:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fcmla v0.4h, v1.4h, v2.h[1], #0
 ; CHECK-NEXT:    ret
 entry:
@@ -37,6 +38,7 @@ entry:
 define <4 x half> @test_rot90_16x4_lane_0(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; CHECK-LABEL: test_rot90_16x4_lane_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fcmla v0.4h, v1.4h, v2.h[0], #90
 ; CHECK-NEXT:    ret
 entry:

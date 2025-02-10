@@ -46,6 +46,8 @@ define <8 x i16> @load4_v4i8_zext_add(float %tmp, ptr %a, ptr %b) {
 define i32 @large(ptr nocapture noundef readonly %p1, i32 noundef %st1, ptr nocapture noundef readonly %p2, i32 noundef %st2) {
 ; CHECK-LABEL: large:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w3 killed $w3 def $x3
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sxtw x8, w1
 ; CHECK-NEXT:    sxtw x9, w3
 ; CHECK-NEXT:    ldr d0, [x0]

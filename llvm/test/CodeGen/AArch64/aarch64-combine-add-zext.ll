@@ -4,6 +4,8 @@
 define i16 @test_add_zext_v8i16(<8 x i8> %a, <8 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_add_zext_v8i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    uaddlv h0, v0.16b
 ; CHECK-NEXT:    umov w0, v0.h[0]
@@ -18,6 +20,8 @@ define i16 @test_add_zext_v8i16(<8 x i8> %a, <8 x i8> %b) local_unnamed_addr #0 
 define i32 @test_add_zext_v4i32(<4 x i16> %a, <4 x i16> %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_add_zext_v4i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    uaddlv s0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0
@@ -32,6 +36,8 @@ define i32 @test_add_zext_v4i32(<4 x i16> %a, <4 x i16> %b) local_unnamed_addr #
 define i64 @test_add_zext_v2i64(<2 x i32> %a, <2 x i32> %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_add_zext_v2i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    uaddlv d0, v0.4s
 ; CHECK-NEXT:    fmov x0, d0

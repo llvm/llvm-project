@@ -631,6 +631,7 @@ define <2 x i64> @extract3_i8_zext_insert1_i64_zero(<16 x i8> %x) {
 define <4 x i32> @larger_bv_than_source(<4 x i16> %t0) {
 ; CHECK-LABEL: larger_bv_than_source:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v0.h[2]
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    ret

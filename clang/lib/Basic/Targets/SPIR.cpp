@@ -13,10 +13,31 @@
 #include "SPIR.h"
 #include "AMDGPU.h"
 #include "Targets.h"
+#include "clang/Basic/MacroBuilder.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "llvm/TargetParser/TargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
+
+static constexpr int NumBuiltins =
+    clang::SPIRV::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsSPIRV.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsSPIRV.inc"
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumBuiltins);
+
+llvm::SmallVector<Builtin::InfosShard>
+SPIRVTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
+}
 
 void SPIRTargetInfo::getTargetDefines(const LangOptions &Opts,
                                       MacroBuilder &Builder) const {
@@ -81,9 +102,9 @@ SPIRV64AMDGCNTargetInfo::convertConstraint(const char *&Constraint) const {
   return AMDGPUTI.convertConstraint(Constraint);
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-SPIRV64AMDGCNTargetInfo::getTargetBuiltinStorage() const {
-  return AMDGPUTI.getTargetBuiltinStorage();
+llvm::SmallVector<Builtin::InfosShard>
+SPIRV64AMDGCNTargetInfo::getTargetBuiltins() const {
+  return AMDGPUTI.getTargetBuiltins();
 }
 
 void SPIRV64AMDGCNTargetInfo::getTargetDefines(const LangOptions &Opts,

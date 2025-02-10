@@ -4788,13 +4788,26 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
       getLeafOrCompositeConstructs(ParentRegion, LeafOrComposite);
   OpenMPDirectiveKind EnclosingConstruct = ParentLOC.back();
 
-  if (SemaRef.LangOpts.OpenMP >= 51 && Stack->isParentOrderConcurrent() &&
-      CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
-      CurrentRegion != OMPD_parallel &&
-      !isOpenMPCombinedParallelADirective(CurrentRegion)) {
-    SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
-        << getOpenMPDirectiveName(CurrentRegion);
-    return true;
+  if (Stack->isParentOrderConcurrent()) {
+    bool InvalidOrderNesting = false;
+    if ((SemaRef.LangOpts.OpenMP == 51 || SemaRef.LangOpts.OpenMP == 52) &&
+        CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
+        CurrentRegion != OMPD_parallel &&
+        !isOpenMPCombinedParallelADirective(CurrentRegion)) {
+      InvalidOrderNesting = true;
+    } else if (SemaRef.LangOpts.OpenMP >= 60 &&
+               !isOpenMPOrderConcurrentNestableDirective(CurrentRegion)) {
+      // OpenMP 6.0 [12.3 order Clause, Restrictions]
+      // Only regions that correspond to order-concurrent-nestable constructs
+      // or order-concurrent-nestable routines may be strictly nested regions
+      // of regions that correspond to constructs on which the order clause is
+      // specified with concurrent as the ordering argument.
+      InvalidOrderNesting = true;
+    }
+    if (InvalidOrderNesting) {
+      SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
+          << getOpenMPDirectiveName(CurrentRegion);
+    }
   }
   if (isOpenMPSimdDirective(ParentRegion) &&
       ((SemaRef.LangOpts.OpenMP <= 45 && CurrentRegion != OMPD_ordered) ||
@@ -5320,6 +5333,8 @@ static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
       Expr *SimpleRefExpr = E;
       auto Res = getPrivateItem(S, SimpleRefExpr, ELoc, ERange);
       ValueDecl *VD = Res.first;
+      if (!VD)
+        continue;
       DSAStackTy::DSAVarData Data = Stack->getTopDSA(VD, /*FromParent=*/false);
       if (!isOpenMPPrivate(Data.CKind)) {
         S.Diag(E->getExprLoc(),
@@ -5330,10 +5345,8 @@ static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
       if (checkPreviousOMPAllocateAttribute(S, Stack, E, PrivateVD,
                                             AllocatorKind, AC->getAllocator()))
         continue;
-      // Placeholder until allocate clause supports align modifier.
-      Expr *Alignment = nullptr;
       applyOMPAllocateAttribute(S, PrivateVD, AllocatorKind, AC->getAllocator(),
-                                Alignment, E->getSourceRange());
+                                AC->getAlignment(), E->getSourceRange());
     }
   }
 }
@@ -7114,7 +7127,8 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
   if (!CalleeFnDecl)
     return Call;
 
-  if (getLangOpts().OpenMP >= 51 && CalleeFnDecl->getIdentifier() &&
+  if (getLangOpts().OpenMP >= 51 && getLangOpts().OpenMP < 60 &&
+      CalleeFnDecl->getIdentifier() &&
       CalleeFnDecl->getName().starts_with_insensitive("omp_")) {
     // checking for any calls inside an Order region
     if (Scope && Scope->isOpenMPOrderClauseScope())
@@ -7134,7 +7148,7 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
   };
   TargetOMPContext OMPCtx(Context, std::move(DiagUnknownTrait),
                           SemaRef.getCurFunctionDecl(),
-                          DSAStack->getConstructTraits());
+                          DSAStack->getConstructTraits(), getOpenMPDeviceNum());
 
   QualType CalleeFnType = CalleeFnDecl->getType();
 
@@ -15617,7 +15631,9 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
         << E->getSourceRange();
     return ExprError();
   }
-  if ((CKind == OMPC_aligned || CKind == OMPC_align) && !Result.isPowerOf2()) {
+  if ((CKind == OMPC_aligned || CKind == OMPC_align ||
+       CKind == OMPC_allocate) &&
+      !Result.isPowerOf2()) {
     Diag(E->getExprLoc(), diag::warn_omp_alignment_not_power_of_two)
         << E->getSourceRange();
     return ExprError();
@@ -15627,6 +15643,38 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
   else if (CKind == OMPC_ordered)
     DSAStack->setAssociatedLoops(Result.getExtValue());
   return ICE;
+}
+
+void SemaOpenMP::setOpenMPDeviceNum(int Num) { DeviceNum = Num; }
+
+void SemaOpenMP::setOpenMPDeviceNumID(StringRef ID) { DeviceNumID = ID; }
+
+int SemaOpenMP::getOpenMPDeviceNum() const { return DeviceNum; }
+
+void SemaOpenMP::ActOnOpenMPDeviceNum(Expr *DeviceNumExpr) {
+  llvm::APSInt Result;
+  Expr::EvalResult EvalResult;
+  // Evaluate the expression to an integer value
+  if (!DeviceNumExpr->isValueDependent() &&
+      DeviceNumExpr->EvaluateAsInt(EvalResult, SemaRef.Context)) {
+    // The device expression must evaluate to a non-negative integer value.
+    Result = EvalResult.Val.getInt();
+    if (Result.isNonNegative()) {
+      setOpenMPDeviceNum(Result.getZExtValue());
+    } else {
+      Diag(DeviceNumExpr->getExprLoc(),
+           diag::err_omp_negative_expression_in_clause)
+          << "device_num" << 0 << DeviceNumExpr->getSourceRange();
+    }
+  } else if (auto *DeclRef = dyn_cast<DeclRefExpr>(DeviceNumExpr)) {
+    // Check if the expression is an identifier
+    IdentifierInfo *IdInfo = DeclRef->getDecl()->getIdentifier();
+    if (IdInfo) {
+      setOpenMPDeviceNumID(IdInfo->getName());
+    }
+  } else {
+    Diag(DeviceNumExpr->getExprLoc(), diag::err_expected_expression);
+  }
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPSafelenClause(Expr *Len,
@@ -17153,11 +17201,26 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
   case OMPC_has_device_addr:
     Res = ActOnOpenMPHasDeviceAddrClause(VarList, Locs);
     break;
-  case OMPC_allocate:
-    Res = ActOnOpenMPAllocateClause(Data.DepModOrTailExpr,
-                                    Data.AllocClauseModifier, VarList, StartLoc,
-                                    LParenLoc, ColonLoc, EndLoc);
+  case OMPC_allocate: {
+    OpenMPAllocateClauseModifier Modifier1 = OMPC_ALLOCATE_unknown;
+    OpenMPAllocateClauseModifier Modifier2 = OMPC_ALLOCATE_unknown;
+    SourceLocation Modifier1Loc, Modifier2Loc;
+    if (!Data.AllocClauseModifiers.empty()) {
+      assert(Data.AllocClauseModifiers.size() <= 2 &&
+             "More allocate modifiers than expected");
+      Modifier1 = Data.AllocClauseModifiers[0];
+      Modifier1Loc = Data.AllocClauseModifiersLoc[0];
+      if (Data.AllocClauseModifiers.size() == 2) {
+        Modifier2 = Data.AllocClauseModifiers[1];
+        Modifier2Loc = Data.AllocClauseModifiersLoc[1];
+      }
+    }
+    Res = ActOnOpenMPAllocateClause(
+        Data.DepModOrTailExpr, Data.AllocateAlignment, Modifier1, Modifier1Loc,
+        Modifier2, Modifier2Loc, VarList, StartLoc, LParenLoc, ColonLoc,
+        EndLoc);
     break;
+  }
   case OMPC_nontemporal:
     Res = ActOnOpenMPNontemporalClause(VarList, StartLoc, LParenLoc, EndLoc);
     break;
@@ -22756,8 +22819,12 @@ public:
   void declareTargetInitializer(Decl *TD) {
     A = TD->getAttr<OMPDeclareTargetDeclAttr>();
     DeclVector.push_back(cast<VarDecl>(TD));
+    llvm::SmallDenseSet<Decl *> Visited;
     while (!DeclVector.empty()) {
       VarDecl *TargetVarDecl = DeclVector.pop_back_val();
+      if (!Visited.insert(TargetVarDecl).second)
+        continue;
+
       if (TargetVarDecl->hasAttr<OMPDeclareTargetDeclAttr>() &&
           TargetVarDecl->hasInit() && TargetVarDecl->hasGlobalStorage()) {
         if (Expr *Ex = TargetVarDecl->getInit())
@@ -23163,32 +23230,37 @@ SemaOpenMP::ActOnOpenMPHasDeviceAddrClause(ArrayRef<Expr *> VarList,
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
-    Expr *Allocator, OpenMPAllocateClauseModifier AllocClauseModifier,
-    ArrayRef<Expr *> VarList, SourceLocation StartLoc, SourceLocation LParenLoc,
-    SourceLocation ColonLoc, SourceLocation EndLoc) {
-
+    Expr *Allocator, Expr *Alignment,
+    OpenMPAllocateClauseModifier FirstAllocateModifier,
+    SourceLocation FirstAllocateModifierLoc,
+    OpenMPAllocateClauseModifier SecondAllocateModifier,
+    SourceLocation SecondAllocateModifierLoc, ArrayRef<Expr *> VarList,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation ColonLoc,
+    SourceLocation EndLoc) {
   if (Allocator) {
     // Allocator expression is dependent - skip it for now and build the
     // allocator when instantiated.
-    if (Allocator->isTypeDependent() || Allocator->isValueDependent() ||
-        Allocator->isInstantiationDependent() ||
-        Allocator->containsUnexpandedParameterPack())
-      return nullptr;
-    // OpenMP [2.11.4 allocate Clause, Description]
-    // allocator is an expression of omp_allocator_handle_t type.
-    if (!findOMPAllocatorHandleT(SemaRef, Allocator->getExprLoc(), DSAStack))
-      return nullptr;
+    bool AllocDependent =
+        (Allocator->isTypeDependent() || Allocator->isValueDependent() ||
+         Allocator->isInstantiationDependent() ||
+         Allocator->containsUnexpandedParameterPack());
+    if (!AllocDependent) {
+      // OpenMP [2.11.4 allocate Clause, Description]
+      // allocator is an expression of omp_allocator_handle_t type.
+      if (!findOMPAllocatorHandleT(SemaRef, Allocator->getExprLoc(), DSAStack))
+        return nullptr;
 
-    ExprResult AllocatorRes = SemaRef.DefaultLvalueConversion(Allocator);
-    if (AllocatorRes.isInvalid())
-      return nullptr;
-    AllocatorRes = SemaRef.PerformImplicitConversion(
-        AllocatorRes.get(), DSAStack->getOMPAllocatorHandleT(),
-        AssignmentAction::Initializing,
-        /*AllowExplicit=*/true);
-    if (AllocatorRes.isInvalid())
-      return nullptr;
-    Allocator = AllocatorRes.get();
+      ExprResult AllocatorRes = SemaRef.DefaultLvalueConversion(Allocator);
+      if (AllocatorRes.isInvalid())
+        return nullptr;
+      AllocatorRes = SemaRef.PerformImplicitConversion(
+          AllocatorRes.get(), DSAStack->getOMPAllocatorHandleT(),
+          AssignmentAction::Initializing,
+          /*AllowExplicit=*/true);
+      if (AllocatorRes.isInvalid())
+        return nullptr;
+      Allocator = AllocatorRes.isUsable() ? AllocatorRes.get() : nullptr;
+    }
   } else {
     // OpenMP 5.0, 2.11.4 allocate Clause, Restrictions.
     // allocate clauses that appear on a target construct or on constructs in a
@@ -23198,6 +23270,17 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
     if (getLangOpts().OpenMPIsTargetDevice &&
         !DSAStack->hasRequiresDeclWithClause<OMPDynamicAllocatorsClause>())
       SemaRef.targetDiag(StartLoc, diag::err_expected_allocator_expression);
+  }
+  if (Alignment) {
+    bool AlignmentDependent = Alignment->isTypeDependent() ||
+                              Alignment->isValueDependent() ||
+                              Alignment->isInstantiationDependent() ||
+                              Alignment->containsUnexpandedParameterPack();
+    if (!AlignmentDependent) {
+      ExprResult AlignResult =
+          VerifyPositiveIntegerConstantInClause(Alignment, OMPC_allocate);
+      Alignment = AlignResult.isUsable() ? AlignResult.get() : nullptr;
+    }
   }
   // Analyze and build list of variables.
   SmallVector<Expr *, 8> Vars;
@@ -23230,11 +23313,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
   if (Allocator)
     DSAStack->addInnerAllocatorExpr(Allocator);
 
-  OpenMPAllocateClauseModifier AllocatorModifier = AllocClauseModifier;
-  SourceLocation AllocatorModifierLoc;
-  return OMPAllocateClause::Create(getASTContext(), StartLoc, LParenLoc,
-                                   Allocator, ColonLoc, AllocatorModifier,
-                                   AllocatorModifierLoc, EndLoc, Vars);
+  return OMPAllocateClause::Create(
+      getASTContext(), StartLoc, LParenLoc, Allocator, Alignment, ColonLoc,
+      FirstAllocateModifier, FirstAllocateModifierLoc, SecondAllocateModifier,
+      SecondAllocateModifierLoc, EndLoc, Vars);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPNontemporalClause(ArrayRef<Expr *> VarList,
@@ -23685,6 +23767,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPNullaryAssumptionClause(OpenMPClauseKind CK,
     return new (getASTContext()) OMPNoOpenMPRoutinesClause(Loc, RLoc);
   case OMPC_no_parallelism:
     return new (getASTContext()) OMPNoParallelismClause(Loc, RLoc);
+  case OMPC_no_openmp_constructs:
+    return new (getASTContext()) OMPNoOpenMPConstructsClause(Loc, RLoc);
   default:
     llvm_unreachable("Unexpected OpenMP clause");
   }

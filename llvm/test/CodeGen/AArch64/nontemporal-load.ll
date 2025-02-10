@@ -545,6 +545,10 @@ define <5 x double> @test_ldnp_v5f64(ptr %A) {
 ; CHECK-NEXT:    ldr d4, [x0, #32]
 ; CHECK-NEXT:    ext.16b v1, v0, v0, #8
 ; CHECK-NEXT:    ext.16b v3, v2, v2, #8
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q2
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q1
+; CHECK-NEXT:    ; kill: def $d3 killed $d3 killed $q3
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_ldnp_v5f64:
@@ -553,8 +557,13 @@ define <5 x double> @test_ldnp_v5f64(ptr %A) {
 ; CHECK-BE-NEXT:    ld1 { v0.2d }, [x0]
 ; CHECK-BE-NEXT:    ldr d4, [x0, #32]
 ; CHECK-BE-NEXT:    ld1 { v2.2d }, [x8]
+; CHECK-BE-NEXT:    // kill: def $d4 killed $d4 killed $q4
 ; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BE-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-BE-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-BE-NEXT:    // kill: def $d3 killed $d3 killed $q3
 ; CHECK-BE-NEXT:    ret
   %lv = load<5 x double>, ptr %A, align 8, !nontemporal !0
   ret <5 x double> %lv

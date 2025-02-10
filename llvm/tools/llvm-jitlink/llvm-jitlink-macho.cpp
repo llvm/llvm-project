@@ -69,6 +69,8 @@ static Expected<Symbol &> getMachOStubTarget(LinkGraph &G, Block &B) {
 namespace llvm {
 
 Error registerMachOGraphInfo(Session &S, LinkGraph &G) {
+  std::lock_guard<std::mutex> Lock(S.M);
+
   auto FileName = sys::path::filename(G.getName());
   if (S.FileInfos.count(FileName)) {
     return make_error<StringError>("When -check is passed, file names must be "

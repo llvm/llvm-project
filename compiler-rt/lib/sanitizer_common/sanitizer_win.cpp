@@ -167,7 +167,7 @@ static void *ReturnNullptrOnOOMOrDie(uptr size, const char *mem_type,
 
   // Assumption: VirtualAlloc is the last system call that was invoked before
   //   this method.
-  // VirtualAlloc emits one of 2 error codes when running out of memory
+  // VirtualAlloc emits one of 3 error codes when running out of memory
   // 1. ERROR_NOT_ENOUGH_MEMORY:
   //  There's not enough memory to execute the command
   // 2. ERROR_INVALID_PARAMETER:
@@ -176,12 +176,12 @@ static void *ReturnNullptrOnOOMOrDie(uptr size, const char *mem_type,
   //  (the `lpMaximumApplicationAddress` field within the `SystemInfo` struct).
   //  This does not seem to be officially documented, but is corroborated here:
   //  https://stackoverflow.com/questions/45833674/why-does-virtualalloc-fail-for-lpaddress-greater-than-0x6ffffffffff
-
-  // Note - It's possible that 'ERROR_COMMITMENT_LIMIT' needs to be handled here
-  // as well. It is currently not handled due to the lack of a reproducer that
-  // induces the error code.
+  // 3. ERROR_COMMITMENT_LIMIT:
+  //  VirtualAlloc will return this if e.g. the pagefile is too small to commit
+  //  the requested amount of memory.
   if (last_error == ERROR_NOT_ENOUGH_MEMORY ||
-      last_error == ERROR_INVALID_PARAMETER)
+      last_error == ERROR_INVALID_PARAMETER ||
+      last_error == ERROR_COMMITMENT_LIMIT)
     return nullptr;
   ReportMmapFailureAndDie(size, mem_type, mmap_type, last_error);
 }
