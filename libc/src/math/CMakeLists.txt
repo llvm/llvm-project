@@ -47,6 +47,8 @@ add_math_entrypoint_object(acoshf)
 
 add_math_entrypoint_object(asin)
 add_math_entrypoint_object(asinf)
+add_math_entrypoint_object(asinf16)
+
 add_math_entrypoint_object(asinh)
 add_math_entrypoint_object(asinhf)
 
@@ -501,6 +503,7 @@ add_math_entrypoint_object(sqrtf128)
 
 add_math_entrypoint_object(tan)
 add_math_entrypoint_object(tanf)
+add_math_entrypoint_object(tanf16)
 
 add_math_entrypoint_object(tanh)
 add_math_entrypoint_object(tanhf)

@@ -52,7 +52,7 @@ entry:
 define i32 @load_monotonic(ptr nocapture readonly %arg) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@load_monotonic
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[I:%.*]] = load atomic i32, ptr [[ARG]] monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[I]]
 ;
@@ -70,7 +70,7 @@ define i32 @load_monotonic(ptr nocapture readonly %arg) norecurse nounwind uwtab
 define void @store_monotonic(ptr nocapture %arg) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@store_monotonic
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    store atomic i32 10, ptr [[ARG]] monotonic, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -88,7 +88,7 @@ define void @store_monotonic(ptr nocapture %arg) norecurse nounwind uwtable {
 define i32 @load_acquire(ptr nocapture readonly %arg) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@load_acquire
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[I:%.*]] = load atomic i32, ptr [[ARG]] acquire, align 4
 ; CHECK-NEXT:    ret i32 [[I]]
 ;
@@ -105,7 +105,7 @@ define i32 @load_acquire(ptr nocapture readonly %arg) norecurse nounwind uwtable
 define void @load_release(ptr nocapture %arg) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@load_release
-; CHECK-SAME: (ptr nocapture nofree noundef writeonly align 4 [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree noundef writeonly align 4 captures(none) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    store atomic volatile i32 10, ptr [[ARG]] release, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -118,7 +118,7 @@ define void @load_release(ptr nocapture %arg) norecurse nounwind uwtable {
 define void @load_volatile_release(ptr nocapture %arg) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@load_volatile_release
-; CHECK-SAME: (ptr nocapture nofree noundef writeonly align 4 [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree noundef writeonly align 4 captures(none) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    store atomic volatile i32 10, ptr [[ARG]] release, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -242,7 +242,7 @@ define void @scc2(ptr %arg) noinline nounwind uwtable {
 define void @foo1(ptr %arg, ptr %arg1) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@foo1
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ARG:%.*]], ptr nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ARG1:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[ARG:%.*]], ptr nofree noundef nonnull writeonly captures(none) dereferenceable(1) [[ARG1:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    store i32 100, ptr [[ARG]], align 4
 ; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    store atomic i8 1, ptr [[ARG1]] monotonic, align 1
@@ -257,7 +257,7 @@ define void @foo1(ptr %arg, ptr %arg1) {
 define void @bar(ptr %arg, ptr %arg1) {
 ; CHECK: Function Attrs: nofree norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: (ptr nocapture nofree readnone [[ARG:%.*]], ptr nocapture nofree nonnull readonly dereferenceable(1) [[ARG1:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[ARG:%.*]], ptr nofree nonnull readonly captures(none) dereferenceable(1) [[ARG1:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[I3:%.*]] = load atomic i8, ptr [[ARG1]] monotonic, align 1
@@ -285,7 +285,7 @@ bb6:
 define void @foo1_singlethread(ptr %arg, ptr %arg1) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@foo1_singlethread
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ARG:%.*]], ptr nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ARG1:%.*]]) #[[ATTR8:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[ARG:%.*]], ptr nofree noundef nonnull writeonly captures(none) dereferenceable(1) [[ARG1:%.*]]) #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:    store i32 100, ptr [[ARG]], align 4
 ; CHECK-NEXT:    fence syncscope("singlethread") release
 ; CHECK-NEXT:    store atomic i8 1, ptr [[ARG1]] monotonic, align 1
@@ -300,7 +300,7 @@ define void @foo1_singlethread(ptr %arg, ptr %arg1) {
 define void @bar_singlethread(ptr %arg, ptr %arg1) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind
 ; CHECK-LABEL: define {{[^@]+}}@bar_singlethread
-; CHECK-SAME: (ptr nocapture nofree readnone [[ARG:%.*]], ptr nocapture nofree nonnull readonly dereferenceable(1) [[ARG1:%.*]]) #[[ATTR9:[0-9]+]] {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[ARG:%.*]], ptr nofree nonnull readonly captures(none) dereferenceable(1) [[ARG1:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[I3:%.*]] = load atomic i8, ptr [[ARG1]] monotonic, align 1
@@ -334,8 +334,8 @@ declare void @llvm.memset.p0.i32(ptr %dest, i8 %val, i32 %len, i1 %isvolatile)
 define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@memcpy_volatile
-; CHECK-SAME: (ptr nocapture nofree writeonly [[PTR1:%.*]], ptr nocapture nofree readonly [[PTR2:%.*]]) #[[ATTR12:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nocapture nofree writeonly [[PTR1]], ptr nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR21:[0-9]+]]
+; CHECK-SAME: (ptr nofree writeonly captures(none) [[PTR1:%.*]], ptr nofree readonly captures(none) [[PTR2:%.*]]) #[[ATTR12:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nofree writeonly captures(none) [[PTR1]], ptr nofree readonly captures(none) [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR21:[0-9]+]]
 ; CHECK-NEXT:    ret i32 4
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %ptr1, ptr %ptr2, i32 8, i1 true)
@@ -349,8 +349,8 @@ define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
 define i32 @memset_non_volatile(ptr %ptr1, i8 %val) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@memset_non_volatile
-; CHECK-SAME: (ptr nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) #[[ATTR13:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR22:[0-9]+]]
+; CHECK-SAME: (ptr nofree writeonly captures(none) [[PTR1:%.*]], i8 [[VAL:%.*]]) #[[ATTR13:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr nofree writeonly captures(none) [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR22:[0-9]+]]
 ; CHECK-NEXT:    ret i32 4
 ;
   call void @llvm.memset.p0.i32(ptr %ptr1, i8 %val, i32 8, i1 false)

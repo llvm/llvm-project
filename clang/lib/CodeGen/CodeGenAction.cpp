@@ -105,16 +105,17 @@ static void reportOptRecordError(Error E, DiagnosticsEngine &Diags,
       });
 }
 
-BackendConsumer::BackendConsumer(
-    const CompilerInstance &CI, BackendAction Action,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, LLVMContext &C,
-    SmallVector<LinkModule, 4> LinkModules, StringRef InFile,
-    std::unique_ptr<raw_pwrite_stream> OS, CoverageSourceInfo *CoverageInfo,
-    llvm::Module *CurLinkModule)
-    : Diags(CI.getDiagnostics()), HeaderSearchOpts(CI.getHeaderSearchOpts()),
-      CodeGenOpts(CI.getCodeGenOpts()), TargetOpts(CI.getTargetOpts()),
-      LangOpts(CI.getLangOpts()), AsmOutStream(std::move(OS)), FS(VFS),
-      LLVMIRGeneration("irgen", "LLVM IR Generation Time"), Action(Action),
+BackendConsumer::BackendConsumer(CompilerInstance &CI, BackendAction Action,
+                                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                                 LLVMContext &C,
+                                 SmallVector<LinkModule, 4> LinkModules,
+                                 StringRef InFile,
+                                 std::unique_ptr<raw_pwrite_stream> OS,
+                                 CoverageSourceInfo *CoverageInfo,
+                                 llvm::Module *CurLinkModule)
+    : CI(CI), Diags(CI.getDiagnostics()), CodeGenOpts(CI.getCodeGenOpts()),
+      TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
+      AsmOutStream(std::move(OS)), FS(VFS), Action(Action),
       Gen(CreateLLVMCodeGen(Diags, InFile, std::move(VFS),
                             CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(),
                             CI.getCodeGenOpts(), C, CoverageInfo)),
@@ -122,6 +123,8 @@ BackendConsumer::BackendConsumer(
   TimerIsEnabled = CodeGenOpts.TimePasses;
   llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
   llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
+  if (CodeGenOpts.TimePasses)
+    LLVMIRGeneration.init("irgen", "LLVM IR generation", CI.getTimerGroup());
 }
 
 llvm::Module* BackendConsumer::getModule() const {
@@ -160,19 +163,13 @@ bool BackendConsumer::HandleTopLevelDecl(DeclGroupRef D) {
                                  "LLVM IR generation of declaration");
 
   // Recurse.
-  if (TimerIsEnabled) {
-    LLVMIRGenerationRefCount += 1;
-    if (LLVMIRGenerationRefCount == 1)
-      LLVMIRGeneration.startTimer();
-  }
+  if (TimerIsEnabled && !LLVMIRGenerationRefCount++)
+    CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 
   Gen->HandleTopLevelDecl(D);
 
-  if (TimerIsEnabled) {
-    LLVMIRGenerationRefCount -= 1;
-    if (LLVMIRGenerationRefCount == 0)
-      LLVMIRGeneration.stopTimer();
-  }
+  if (TimerIsEnabled && !--LLVMIRGenerationRefCount)
+    LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
 
   return true;
 }
@@ -182,12 +179,12 @@ void BackendConsumer::HandleInlineFunctionDefinition(FunctionDecl *D) {
                                  Context->getSourceManager(),
                                  "LLVM IR generation of inline function");
   if (TimerIsEnabled)
-    LLVMIRGeneration.startTimer();
+    CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 
   Gen->HandleInlineFunctionDefinition(D);
 
   if (TimerIsEnabled)
-    LLVMIRGeneration.stopTimer();
+    LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
 }
 
 void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
@@ -237,19 +234,13 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   {
     llvm::TimeTraceScope TimeScope("Frontend");
     PrettyStackTraceString CrashInfo("Per-file LLVM IR generation");
-    if (TimerIsEnabled) {
-      LLVMIRGenerationRefCount += 1;
-      if (LLVMIRGenerationRefCount == 1)
-        LLVMIRGeneration.startTimer();
-    }
+    if (TimerIsEnabled && !LLVMIRGenerationRefCount++)
+      CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 
     Gen->HandleTranslationUnit(C);
 
-    if (TimerIsEnabled) {
-      LLVMIRGenerationRefCount -= 1;
-      if (LLVMIRGenerationRefCount == 0)
-        LLVMIRGeneration.stopTimer();
-    }
+    if (TimerIsEnabled && !--LLVMIRGenerationRefCount)
+      LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
 
     IRGenFinished = true;
   }
@@ -321,7 +312,7 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
 
   EmbedBitcode(getModule(), CodeGenOpts, llvm::MemoryBufferRef());
 
-  EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts, LangOpts,
+  emitBackendOutput(CI, CI.getCodeGenOpts(),
                     C.getTargetInfo().getDataLayoutString(), getModule(),
                     Action, FS, std::move(AsmOutStream), this);
 
@@ -1183,10 +1174,10 @@ void CodeGenAction::ExecuteAction() {
   std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
       std::move(*OptRecordFileOrErr);
 
-  EmitBackendOutput(
-      Diagnostics, CI.getHeaderSearchOpts(), CodeGenOpts, TargetOpts,
-      CI.getLangOpts(), CI.getTarget().getDataLayoutString(), TheModule.get(),
-      BA, CI.getFileManager().getVirtualFileSystemPtr(), std::move(OS));
+  emitBackendOutput(CI, CI.getCodeGenOpts(),
+                    CI.getTarget().getDataLayoutString(), TheModule.get(), BA,
+                    CI.getFileManager().getVirtualFileSystemPtr(),
+                    std::move(OS));
   if (OptRecordFile)
     OptRecordFile->keep();
 }

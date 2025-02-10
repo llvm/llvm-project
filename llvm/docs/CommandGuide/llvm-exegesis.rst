@@ -301,7 +301,6 @@ OPTIONS
   * ``prepare-and-assemble-snippet``: Same as ``prepare-snippet``, but also dumps an excerpt of the sequence (hex encoded).
   * ``assemble-measured-code``: Same as ``prepare-and-assemble-snippet``. but also creates the full sequence that can be dumped to a file using ``--dump-object-to-disk``.
   * ``measure``: Same as ``assemble-measured-code``, but also runs the measurement.
-  * ``dry-run-measurement``: Same as measure, but does not actually execute the snippet.
 
 .. option:: --x86-lbr-sample-period=<nBranches/sample>
 

@@ -9,8 +9,8 @@ def LOAD8 : I<(outs GPR8:$dst), (ins GPR8:$src), []>;
 def LOAD32 : I<(outs GPR8:$dst), (ins GPR32:$src), []>;
 // CHECK: Label 1: @{{[0-9]+}}
 // CHECK-NEXT: GIM_Try, /*On fail goto*//*Label [[L1_ID:[0-9]+]]*/ GIMT_Encode4([[L1_AT:[0-9]+]]),
+// CHECK-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // CHECK-NEXT: GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
-// CHECK-NEXT:   GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR8RegClassID),
 // CHECK-NEXT: GIM_Try, /*On fail goto*//*Label [[L2_ID:[0-9]+]]*/ GIMT_Encode4([[L2_AT:[0-9]+]]),
 // CHECK-NEXT: // MIs[0] src
@@ -47,8 +47,8 @@ def LOAD16 : I<(outs GPR16:$dst), (ins GPR16:$src), []>;
 def LOAD16Imm : I<(outs GPR16:$dst), (ins GPR16:$src), []>;
 // CHECK: // Label 2: @{{[0-9]+}}
 // CHECK-NEXT: GIM_Try, /*On fail goto*//*Label [[L1_ID:[0-9]+]]*/ GIMT_Encode4([[L1_AT:[0-9]+]]),
-// CHECK-NEXT: GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
+// CHECK-NEXT: GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR16RegClassID),
 // CHECK-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/16,
 // CHECK-NEXT: GIM_Try, /*On fail goto*//*Label [[L2_ID:[0-9]+]]*/ GIMT_Encode4([[L2_AT:[0-9]+]]),

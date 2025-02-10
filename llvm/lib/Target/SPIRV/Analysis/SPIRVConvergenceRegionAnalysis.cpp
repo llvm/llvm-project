@@ -56,20 +56,12 @@ getConvergenceTokenInternal(BasicBlockType *BB) {
       "Output type must be an intrinsic instruction.");
 
   for (auto &I : *BB) {
-    if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-      switch (II->getIntrinsicID()) {
-      case Intrinsic::experimental_convergence_entry:
-      case Intrinsic::experimental_convergence_loop:
-        return II;
-      case Intrinsic::experimental_convergence_anchor: {
-        auto Bundle = II->getOperandBundle(LLVMContext::OB_convergencectrl);
-        assert(Bundle->Inputs.size() == 1 &&
-               Bundle->Inputs[0]->getType()->isTokenTy());
-        auto TII = dyn_cast<IntrinsicInst>(Bundle->Inputs[0].get());
-        assert(TII != nullptr);
-        return TII;
-      }
-      }
+    if (auto *CI = dyn_cast<ConvergenceControlInst>(&I)) {
+      // Make sure that the anchor or entry intrinsics did not reach here with a
+      // parent token. This should have failed the verifier.
+      assert(CI->isLoop() ||
+             !CI->getOperandBundle(LLVMContext::OB_convergencectrl));
+      return CI;
     }
 
     if (auto *CI = dyn_cast<CallInst>(&I)) {

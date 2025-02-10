@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; Make sure SPIRV operation function calls for distance are lowered correctly.
@@ -27,6 +27,17 @@ entry:
   ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext_glsl]] Distance %[[#arg0]] %[[#arg1]]
   %spv.distance = call float @llvm.spv.distance.f32(<4 x float> %a, <4 x float> %b)
   ret float %spv.distance
+}
+
+define noundef float @distance_instcombine_float4(<4 x float> noundef %a, <4 x float> noundef %b) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#float_32]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext_glsl]] Distance %[[#arg0]] %[[#arg1]]
+  %delta = fsub  <4 x float> %a, %b
+  %spv.length = call float @llvm.spv.length.f32(<4 x float> %delta)
+  ret float %spv.length
 }
 
 declare half @llvm.spv.distance.f16(<4 x half>, <4 x half>)

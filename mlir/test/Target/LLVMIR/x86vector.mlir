@@ -60,10 +60,54 @@ llvm.func @LLVM_x86_vp2intersect_q_512(%a: vector<8xi64>, %b: vector<8xi64>)
   llvm.return %0 : !llvm.struct<(vector<8 x i1>, vector<8 x i1>)>
 }
 
+// CHECK-LABEL: define <4 x float> @LLVM_x86_avx512bf16_dpbf16ps_128
+llvm.func @LLVM_x86_avx512bf16_dpbf16ps_128(
+    %arg0: vector<4xf32>, %arg1: vector<8xbf16>, %arg2: vector<8xbf16>
+  ) -> vector<4xf32>
+{
+  // CHECK: call <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128(
+  %0 = "x86vector.avx512.intr.dpbf16ps.128"(%arg0, %arg1, %arg2)
+    : (vector<4xf32>, vector<8xbf16>, vector<8xbf16>) -> vector<4xf32>
+  llvm.return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: define <8 x float> @LLVM_x86_avx512bf16_dpbf16ps_256
+llvm.func @LLVM_x86_avx512bf16_dpbf16ps_256(
+    %arg0: vector<8xf32>, %arg1: vector<16xbf16>, %arg2: vector<16xbf16>
+  ) -> vector<8xf32>
+{
+  // CHECK: call <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256(
+  %0 = "x86vector.avx512.intr.dpbf16ps.256"(%arg0, %arg1, %arg2)
+    : (vector<8xf32>, vector<16xbf16>, vector<16xbf16>) -> vector<8xf32>
+  llvm.return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: define <16 x float> @LLVM_x86_avx512bf16_dpbf16ps_512
+llvm.func @LLVM_x86_avx512bf16_dpbf16ps_512(
+    %arg0: vector<16xf32>, %arg1: vector<32xbf16>, %arg2: vector<32xbf16>
+  ) -> vector<16xf32>
+{
+  // CHECK: call <16 x float> @llvm.x86.avx512bf16.dpbf16ps.512(
+  %0 = "x86vector.avx512.intr.dpbf16ps.512"(%arg0, %arg1, %arg2)
+    : (vector<16xf32>, vector<32xbf16>, vector<32xbf16>) -> vector<16xf32>
+  llvm.return %0 : vector<16xf32>
+}
+
 // CHECK-LABEL: define <8 x float> @LLVM_x86_avx_rsqrt_ps_256
 llvm.func @LLVM_x86_avx_rsqrt_ps_256(%a: vector <8xf32>) -> vector<8xf32>
 {
   // CHECK: call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float>
   %0 = "x86vector.avx.intr.rsqrt.ps.256"(%a) : (vector<8xf32>) -> (vector<8xf32>)
   llvm.return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: define <8 x float> @LLVM_x86_avx_dp_ps_256
+llvm.func @LLVM_x86_avx_dp_ps_256(
+    %arg0: vector<8xf32>, %arg1: vector<8xf32>
+  ) -> vector<8xf32>
+{
+  // CHECK: call <8 x float> @llvm.x86.avx.dp.ps.256(
+  %0 = llvm.mlir.constant(-1 : i8) : i8
+  %1 = "x86vector.avx.intr.dp.ps.256"(%arg0, %arg1, %0) : (vector<8xf32>, vector<8xf32>, i8) -> vector<8xf32>
+  llvm.return %1 : vector<8xf32>
 }

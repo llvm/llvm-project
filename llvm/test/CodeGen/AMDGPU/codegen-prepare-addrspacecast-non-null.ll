@@ -245,14 +245,14 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; GISEL-ASM-NEXT:    v_and_b32_e32 v0, 0xffff, v1
 ; GISEL-ASM-NEXT:  ; %bb.2: ; %finallyendcf.split
 ; GISEL-ASM-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GISEL-ASM-NEXT:    s_mov_b64 s[6:7], 0
 ; GISEL-ASM-NEXT:    s_mov_b64 s[8:9], src_private_base
+; GISEL-ASM-NEXT:    s_mov_b64 s[6:7], 0
+; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, s9
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
 ; GISEL-ASM-NEXT:  .LBB7_3: ; %finally
 ; GISEL-ASM-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GISEL-ASM-NEXT:    s_and_b64 s[10:11], exec, s[4:5]
-; GISEL-ASM-NEXT:    s_or_b64 s[6:7], s[10:11], s[6:7]
-; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, s9
+; GISEL-ASM-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
+; GISEL-ASM-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
 ; GISEL-ASM-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-ASM-NEXT:    s_andn2_b64 exec, exec, s[6:7]

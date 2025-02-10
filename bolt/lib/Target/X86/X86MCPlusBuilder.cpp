@@ -1605,7 +1605,7 @@ public:
     return true;
   }
 
-  InstructionListType createIndirectPltCall(const MCInst &DirectCall,
+  InstructionListType createIndirectPLTCall(MCInst &&DirectCall,
                                             const MCSymbol *TargetLocation,
                                             MCContext *Ctx) override {
     assert((DirectCall.getOpcode() == X86::CALL64pcrel32 ||

@@ -1058,6 +1058,10 @@ enum NodeType {
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
 
+  /// FMODF - Decomposes the operand into integral and fractional parts, each
+  /// having the same type and sign as the operand.
+  FMODF,
+
   /// Gets the current floating-point environment. The first operand is a token
   /// chain. The results are FP environment, represented by an integer value,
   /// and a token chain.
@@ -1479,6 +1483,10 @@ enum NodeType {
   // Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
   // Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
+
+  // Finds the index of the last active mask element
+  // Operands: Mask
+  VECTOR_FIND_LAST_ACTIVE,
 
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address

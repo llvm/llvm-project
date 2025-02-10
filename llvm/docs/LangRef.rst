@@ -191,7 +191,7 @@ symbol table entries. Here is an example of the "hello world" module:
     @.str = private unnamed_addr constant [13 x i8] c"hello world\0A\00"
 
     ; External declaration of the puts function
-    declare i32 @puts(ptr nocapture) nounwind
+    declare i32 @puts(ptr captures(none)) nounwind
 
     ; Definition of main function
     define i32 @main() {
@@ -1170,7 +1170,7 @@ spaces. For example:
 .. code-block:: llvm
 
     ; On function declarations/definitions:
-    declare i32 @printf(ptr noalias nocapture, ...)
+    declare i32 @printf(ptr noalias captures(none), ...)
     declare i32 @atoi(i8 zeroext)
     declare signext i8 @returns_signed_char()
     define void @baz(i32 "amdgpu-flat-work-group-size"="1,256" %x)
@@ -1380,11 +1380,10 @@ Currently, only the following parameter attributes are defined:
     memory locations that are *modified*, by any means, during the execution of
     the function. If there are other accesses not based on the argument or
     return value, the behavior is undefined. The attribute on a return value
-    also has additional semantics described below. The caller shares the
-    responsibility with the callee for described below. The caller shares the
-    responsibility with the callee for ensuring that these requirements are met.
-    For further details, please see the discussion of the NoAlias response in
-    :ref:`alias analysis <Must, May,  or No>`.
+    also has additional semantics, as described below. Both the caller and the
+    callee share the responsibility of ensuring that these requirements are
+    met. For further details, please see the discussion of the NoAlias response
+    in :ref:`alias analysis <Must, May,  or No>`.
 
     Note that this definition of ``noalias`` is intentionally similar
     to the definition of ``restrict`` in C99 for function arguments.
@@ -1397,23 +1396,41 @@ Currently, only the following parameter attributes are defined:
     function, returning a pointer to allocated storage disjoint from the
     storage for any other object accessible to the caller.
 
-.. _nocapture:
+``captures(...)``
+    This attributes restrict the ways in which the callee may capture the
+    pointer. This is not a valid attribute for return values. This attribute
+    applies only to the particular copy of the pointer passed in this argument.
 
-``nocapture``
-    This indicates that the callee does not :ref:`capture <pointercapture>` the
-    pointer. This is not a valid attribute for return values.
-    This attribute applies only to the particular copy of the pointer passed in
-    this argument. A caller could pass two copies of the same pointer with one
-    being annotated nocapture and the other not, and the callee could validly
-    capture through the non annotated parameter.
+    The arguments of ``captures`` is a list of captured pointer components,
+    which may be ``none``, or a combination of:
 
-.. code-block:: llvm
+    - ``address``: The integral address of the pointer.
+    - ``address_is_null`` (subset of ``address``): Whether the address is null.
+    - ``provenance``: The ability to access the pointer for both read and write
+      after the function returns.
+    - ``read_provenance`` (subset of ``provenance``): The ability to access the
+      pointer only for reads after the function returns.
 
-    define void @f(ptr nocapture %a, ptr %b) {
-      ; (capture %b)
-    }
+    Additionally, it is possible to specify that some components are only
+    captured in certain locations. Currently only the return value (``ret``)
+    and other (default) locations are supported.
 
-    call void @f(ptr @glb, ptr @glb) ; well-defined
+    The `pointer capture section <pointercapture>` discusses these semantics
+    in more detail.
+
+    Some examples of how to use the attribute:
+
+    - ``captures(none)``: Pointer not captured.
+    - ``captures(address, provenance)``: Equivalent to omitting the attribute.
+    - ``captures(address)``: Address may be captured, but not provenance.
+    - ``captures(address_is_null)``: Only captures whether the address is null.
+    - ``captures(address, read_provenance)``: Both address and provenance
+      captured, but only for read-only access.
+    - ``captures(ret: address, provenance)``: Pointer captured through return
+      value only.
+    - ``captures(address_is_null, ret: address, provenance)``: The whole pointer
+      is captured through the return value, and additionally whether the pointer
+      is null is captured in some other way.
 
 ``nofree``
     This indicates that callee does not free the pointer argument. This is not
@@ -1689,6 +1706,10 @@ Currently, only the following parameter attributes are defined:
     overlapping or consecutive list elements. ``LoN/HiN`` are 64-bit integers,
     and negative values are allowed in case the argument points partway into
     an allocation. An empty list is not allowed.
+
+    On a ``byval`` argument, ``initializes`` refers to the given parts of the
+    callee copy being overwritten. A ``byval`` callee can never initialize the
+    original caller memory passed to the ``byval`` argument.
 
 ``dead_on_unwind``
     At a high level, this attribute indicates that the pointer argument is dead
@@ -3339,10 +3360,92 @@ Pointer Capture
 ---------------
 
 Given a function call and a pointer that is passed as an argument or stored in
-the memory before the call, a pointer is *captured* by the call if it makes a
-copy of any part of the pointer that outlives the call.
-To be precise, a pointer is captured if one or more of the following conditions
-hold:
+memory before the call, the call may capture two components of the pointer:
+
+  * The address of the pointer, which is its integral value. This also includes
+    parts of the address or any information about the address, including the
+    fact that it does not equal one specific value. We further distinguish
+    whether only the fact that the address is/isn't null is captured.
+  * The provenance of the pointer, which is the ability to perform memory
+    accesses through the pointer, in the sense of the :ref:`pointer aliasing
+    rules <pointeraliasing>`. We further distinguish whether only read acceses
+    are allowed, or both reads and writes.
+
+For example, the following function captures the address of ``%a``, because
+it is compared to a pointer, leaking information about the identitiy of the
+pointer:
+
+.. code-block:: llvm
+
+    @glb = global i8 0
+
+    define i1 @f(ptr %a) {
+      %c = icmp eq ptr %a, @glb
+      ret i1 %c
+    }
+
+The function does not capture the provenance of the pointer, because the
+``icmp`` instruction only operates on the pointer address. The following
+function captures both the address and provenance of the pointer, as both
+may be read from ``@glb`` after the function returns:
+
+.. code-block:: llvm
+
+    @glb = global ptr null
+
+    define void @f(ptr %a) {
+      store ptr %a, ptr @glb
+      ret void
+    }
+
+The following function captures *neither* the address nor the provenance of
+the pointer:
+
+.. code-block:: llvm
+
+    define i32 @f(ptr %a) {
+      %v = load i32, ptr %a
+      ret i32
+    }
+
+While address capture includes uses of the address within the body of the
+function, provenance capture refers exclusively to the ability to perform
+accesses *after* the function returns. Memory accesses within the function
+itself are not considered pointer captures.
+
+We can further say that the capture only occurs through a specific location.
+In the following example, the pointer (both address and provenance) is captured
+through the return value only:
+
+.. code-block:: llvm
+
+    define ptr @f(ptr %a) {
+      %gep = getelementptr i8, ptr %a, i64 4
+      ret ptr %gep
+    }
+
+However, we always consider direct inspection of the pointer address
+(e.g. using ``ptrtoint``) to be location-independent. The following example
+is *not* considered a return-only capture, even though the ``ptrtoint``
+ultimately only contribues to the return value:
+
+.. code-block:: llvm
+
+    @lookup = constant [4 x i8] [i8 0, i8 1, i8 2, i8 3]
+
+    define ptr @f(ptr %a) {
+      %a.addr = ptrtoint ptr %a to i64
+      %mask = and i64 %a.addr, 3
+      %gep = getelementptr i8, ptr @lookup, i64 %mask
+      ret ptr %gep
+    }
+
+This definition is chosen to allow capture analysis to continue with the return
+value in the usual fashion.
+
+The following describes possible ways to capture a pointer in more detail,
+where unqualified uses of the word "capture" refer to capturing both address
+and provenance.
 
 1. The call stores any bit of the pointer carrying information into a place,
    and the stored bits can be read from the place by the caller after this call
@@ -3381,13 +3484,14 @@ hold:
     @lock = global i1 true
 
     define void @f(ptr %a) {
-      store ptr %a, ptr* @glb
+      store ptr %a, ptr @glb
       store atomic i1 false, ptr @lock release ; %a is captured because another thread can safely read @glb
       store ptr null, ptr @glb
       ret void
     }
 
-3. The call's behavior depends on any bit of the pointer carrying information.
+3. The call's behavior depends on any bit of the pointer carrying information
+   (address capture only).
 
 .. code-block:: llvm
 
@@ -3395,7 +3499,7 @@ hold:
 
     define void @f(ptr %a) {
       %c = icmp eq ptr %a, @glb
-      br i1 %c, label %BB_EXIT, label %BB_CONTINUE ; escapes %a
+      br i1 %c, label %BB_EXIT, label %BB_CONTINUE ; captures address of %a only
     BB_EXIT:
       call void @exit()
       unreachable
@@ -3403,8 +3507,7 @@ hold:
       ret void
     }
 
-4. The pointer is used in a volatile access as its address.
-
+4. The pointer is used as the pointer operand of a volatile access.
 
 .. _volatile:
 
@@ -4658,8 +4761,8 @@ allowing the '``or``' to be folded to -1.
       %B = undef
       %C = undef
 
-This set of examples shows that undefined '``select``' (and conditional
-branch) conditions can go *either way*, but they have to come from one
+This set of examples shows that undefined '``select``'
+conditions can go *either way*, but they have to come from one
 of the two operands. In the ``%A`` example, if ``%X`` and ``%Y`` were
 both known to have a clear low bit, then ``%A`` would have to have a
 cleared low bit. However, in the ``%C`` example, the optimizer is
@@ -12780,11 +12883,11 @@ This instruction requires several arguments:
    attributes like "disable-tail-calls". The ``musttail`` marker provides these
    guarantees:
 
-   #. The call will not cause unbounded stack growth if it is part of a
+   -  The call will not cause unbounded stack growth if it is part of a
       recursive cycle in the call graph.
-   #. Arguments with the :ref:`inalloca <attr_inalloca>` or
+   -  Arguments with the :ref:`inalloca <attr_inalloca>` or
       :ref:`preallocated <attr_preallocated>` attribute are forwarded in place.
-   #. If the musttail call appears in a function with the ``"thunk"`` attribute
+   -  If the musttail call appears in a function with the ``"thunk"`` attribute
       and the caller and callee both have varargs, then any unprototyped
       arguments in register or memory are forwarded to the callee. Similarly,
       the return value of the callee is returned to the caller's caller, even
@@ -12795,7 +12898,7 @@ This instruction requires several arguments:
    argument may be passed to the callee as a byval argument, which can be
    dereferenced inside the callee. For example:
 
-.. code-block:: llvm
+   .. code-block:: llvm
 
       declare void @take_byval(ptr byval(i64))
       declare void @take_ptr(ptr)
@@ -12849,31 +12952,30 @@ This instruction requires several arguments:
         ret void
       }
 
-
    Calls marked ``musttail`` must obey the following additional rules:
 
-   - The call must immediately precede a :ref:`ret <i_ret>` instruction,
-     or a pointer bitcast followed by a ret instruction.
-   - The ret instruction must return the (possibly bitcasted) value
-     produced by the call, undef, or void.
-   - The calling conventions of the caller and callee must match.
-   - The callee must be varargs iff the caller is varargs. Bitcasting a
-     non-varargs function to the appropriate varargs type is legal so
-     long as the non-varargs prefixes obey the other rules.
-   - The return type must not undergo automatic conversion to an `sret` pointer.
+   -  The call must immediately precede a :ref:`ret <i_ret>` instruction,
+      or a pointer bitcast followed by a ret instruction.
+   -  The ret instruction must return the (possibly bitcasted) value
+      produced by the call, undef, or void.
+   -  The calling conventions of the caller and callee must match.
+   -  The callee must be varargs iff the caller is varargs. Bitcasting a
+      non-varargs function to the appropriate varargs type is legal so
+      long as the non-varargs prefixes obey the other rules.
+   -  The return type must not undergo automatic conversion to an `sret` pointer.
 
-  In addition, if the calling convention is not `swifttailcc` or `tailcc`:
+   In addition, if the calling convention is not `swifttailcc` or `tailcc`:
 
-   - All ABI-impacting function attributes, such as sret, byval, inreg,
-     returned, and inalloca, must match.
-   - The caller and callee prototypes must match. Pointer types of parameters
-     or return types may differ in pointee type, but not in address space.
+   -  All ABI-impacting function attributes, such as sret, byval, inreg,
+      returned, and inalloca, must match.
+   -  The caller and callee prototypes must match. Pointer types of parameters
+      or return types may differ in pointee type, but not in address space.
 
-  On the other hand, if the calling convention is `swifttailcc` or `tailcc`:
+   On the other hand, if the calling convention is `swifttailcc` or `tailcc`:
 
-   - Only these ABI-impacting attributes attributes are allowed: sret, byval,
-     swiftself, and swiftasync.
-   - Prototypes are not required to match.
+   -  Only these ABI-impacting attributes attributes are allowed: sret, byval,
+      swiftself, and swiftasync.
+   -  Prototypes are not required to match.
 
    Tail call optimization for calls marked ``tail`` is guaranteed to occur if
    the following conditions are met:
@@ -12881,11 +12983,10 @@ This instruction requires several arguments:
    -  Caller and callee both have the calling convention ``fastcc`` or ``tailcc``.
    -  The call is in tail position (ret immediately follows call and ret
       uses value of call or is void).
-   -  Option ``-tailcallopt`` is enabled,
-      ``llvm::GuaranteedTailCallOpt`` is ``true``, or the calling convention
-      is ``tailcc``
-   -  `Platform-specific constraints are
-      met. <CodeGenerator.html#tail-call-optimization>`_
+   -  Option ``-tailcallopt`` is enabled, ``llvm::GuaranteedTailCallOpt`` is 
+      ``true``, or the calling convention is ``tailcc``.
+   -  `Platform-specific constraints are met. 
+      <CodeGenerator.html#tail-call-optimization>`_
 
 #. The optional ``notail`` marker indicates that the optimizers should not add
    ``tail`` or ``musttail`` markers to the call. It is used to prevent tail
@@ -13808,7 +13909,7 @@ Syntax:
 
       declare <pointer type>
         @llvm.experimental.gc.get.pointer.base(
-          <pointer type> readnone nocapture %derived_ptr)
+          <pointer type> readnone captures(none) %derived_ptr)
           nounwind willreturn memory(none)
 
 Overview:
@@ -13846,7 +13947,7 @@ Syntax:
 
       declare i64
         @llvm.experimental.gc.get.pointer.offset(
-          <pointer type> readnone nocapture %derived_ptr)
+          <pointer type> readnone captures(none) %derived_ptr)
           nounwind willreturn memory(none)
 
 Overview:
@@ -16021,6 +16122,65 @@ and :ref:`llvm.cos <t_llvm_cos>` on the argument.
 
 The first result is the sine of the argument and the second result is the cosine
 of the argument.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.modf.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.modf`` on any floating-point
+or vector of floating-point type. However, not all targets support all types.
+
+::
+
+ declare { float, float }             @llvm.modf.f32(float  %Val)
+ declare { double, double }           @llvm.modf.f64(double %Val)
+ declare { x86_fp80, x86_fp80 }       @llvm.modf.f80(x86_fp80  %Val)
+ declare { fp128, fp128 }             @llvm.modf.f128(fp128 %Val)
+ declare { ppc_fp128, ppc_fp128 }     @llvm.modf.ppcf128(ppc_fp128  %Val)
+ declare { <4 x float>, <4 x float> } @llvm.modf.v4f32(<4 x float>  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.modf.*``' intrinsics return the operand's integral and fractional
+parts.
+
+Arguments:
+""""""""""
+
+The argument is a :ref:`floating-point <t_floating>` value or
+:ref:`vector <t_vector>` of floating-point values. Returns two values matching
+the argument type in a struct.
+
+Semantics:
+""""""""""
+
+Return the same values as a corresponding libm '``modf``' function without
+trapping or setting ``errno``.
+
+The first result is the fractional part of the operand and the second result is
+the integral part of the operand. Both results have the same sign as the operand.
+
+Not including exceptional inputs (listed below), ``llvm.modf.*`` is semantically
+equivalent to:
+
+::
+
+  %fp = frem <fptype> %x, 1.0  ; Fractional part
+  %ip = fsub <fptype> %x, %fp  ; Integral part
+
+(assuming no floating-point precision errors)
+
+If the argument is a zero, returns a zero with the same sign for both the
+fractional and integral parts.
+
+If the argument is an infinity, returns a fractional part of zero with the same
+sign, and infinity with the same sign as the integral part.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
@@ -26107,7 +26267,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.lifetime.start(i64 <size>, ptr nocapture <ptr>)
+      declare void @llvm.lifetime.start(i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26157,7 +26317,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.lifetime.end(i64 <size>, ptr nocapture <ptr>)
+      declare void @llvm.lifetime.end(i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26197,7 +26357,7 @@ This is an overloaded intrinsic. The memory object can belong to any address spa
 
 ::
 
-      declare ptr @llvm.invariant.start.p0(i64 <size>, ptr nocapture <ptr>)
+      declare ptr @llvm.invariant.start.p0(i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26228,7 +26388,7 @@ This is an overloaded intrinsic. The memory object can belong to any address spa
 
 ::
 
-      declare void @llvm.invariant.end.p0(ptr <start>, i64 <size>, ptr nocapture <ptr>)
+      declare void @llvm.invariant.end.p0(ptr <start>, i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""

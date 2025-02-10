@@ -536,7 +536,7 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
 /// are input.  This SUnit graph is similar to the SelectionDAG, but
 /// excludes nodes that aren't interesting to scheduling, and represents
 /// glued together nodes with a single SUnit.
-void ScheduleDAGSDNodes::BuildSchedGraph(AAResults *AA) {
+void ScheduleDAGSDNodes::BuildSchedGraph() {
   // Cluster certain nodes which should be scheduled together.
   ClusterNodes();
   // Populate the SUnits array.
@@ -888,9 +888,13 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       MI = &*std::next(Before);
     }
 
-    if (MI->isCandidateForCallSiteEntry() &&
-        DAG->getTarget().Options.EmitCallSiteInfo) {
-      MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
+    if (MI->isCandidateForAdditionalCallInfo()) {
+      if (DAG->getTarget().Options.EmitCallSiteInfo)
+        MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
+
+      if (auto CalledGlobal = DAG->getCalledGlobal(Node))
+        if (CalledGlobal->Callee)
+          MF.addCalledGlobal(MI, *CalledGlobal);
     }
 
     if (DAG->getNoMergeSiteInfo(Node)) {

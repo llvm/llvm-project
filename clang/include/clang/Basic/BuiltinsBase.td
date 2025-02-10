@@ -17,6 +17,11 @@ class IndexedAttribute<string baseMangling, int I> : Attribute<baseMangling> {
   int Index = I;
 }
 
+class MultiIndexAttribute<string baseMangling, list<int> Is>
+    : Attribute<baseMangling> {
+  list<int> Indices = Is;
+}
+
 // Standard Attributes
 // -------------------
 def NoReturn : Attribute<"r">;
@@ -77,6 +82,17 @@ def Constexpr : Attribute<"E">;
 // Builtin is immediate and must be constant evaluated. Implies Constexpr, and will only be supported in C++20 mode.
 def Consteval : Attribute<"EG">;
 
+// Callback behavior: the first index argument is called with the arguments
+// indicated by the remaining indices.
+class Callback<list<int> ArgIndices> : MultiIndexAttribute<"C", ArgIndices>;
+
+// Prefixes
+// ========
+
+class NamePrefix<string spelling> {
+  string Spelling = spelling;
+}
+
 // Builtin kinds
 // =============
 
@@ -90,10 +106,9 @@ class Builtin {
   bit RequiresUndef = 0;
   // Enables builtins to generate `long long` outside of OpenCL and `long` inside.
   bit EnableOpenCLLong = 0;
-}
-
-class CustomEntry {
-  string Entry;
+  // Requires a common prefix to be prepended. Each generated set of builtins
+  // can optionally extract one common prefix that is handled separately.
+  NamePrefix RequiredNamePrefix;
 }
 
 class AtomicBuiltin : Builtin;

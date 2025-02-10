@@ -161,13 +161,13 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB1_8
 ; CHECK-NEXT:  .LBB1_5: ; %loop-memcpy-residual.preheader
-; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:  .LBB1_6: ; %loop-memcpy-residual
-; CHECK-NEXT:    s_add_u32 s6, s6, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
+; CHECK-NEXT:    s_mov_b64 s[6:7], 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
-; CHECK-NEXT:    s_addc_u32 s7, s7, 0
-; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc, s[6:7], v[0:1]
+; CHECK-NEXT:  .LBB1_6: ; %loop-memcpy-residual
+; CHECK-NEXT:    s_add_u32 s4, s6, 1
+; CHECK-NEXT:    s_addc_u32 s5, s7, 0
+; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[0:1]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 1
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB1_6
 ; CHECK-NEXT:  ; %bb.7: ; %Flow

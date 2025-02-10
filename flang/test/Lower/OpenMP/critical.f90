@@ -38,11 +38,10 @@ subroutine predetermined_privatization()
   !CHECK: omp.parallel
   !$omp parallel do
 
-  !CHECK: %[[PRIV_I_ALLOC:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
-  !CHECK: %[[PRIV_I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I_ALLOC]]
   do i = 2, 10
-    !CHECK: omp.wsloop
+    !CHECK: omp.wsloop private(@{{.*}} %{{.*}} -> %[[PRIV_I_ALLOC:.*]] : !fir.ref<i32>)
     !CHECK: omp.loop_nest (%[[IV:[^[:space:]]+]])
+    !CHECK: %[[PRIV_I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I_ALLOC]]
     !CHECK: fir.store %[[IV]] to %[[PRIV_I_DECL]]#1
     !CHECK: omp.critical
     !$omp critical
