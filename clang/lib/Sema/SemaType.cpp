@@ -1826,7 +1826,8 @@ QualType Sema::BuildPointerType(QualType T,
   if (checkQualifiedFunction(*this, T, Loc, QFK_Pointer))
     return QualType();
 
-  assert(!T->isObjCObjectType() && "Should build ObjCObjectPointerType");
+  if (T->isObjCObjectType())
+    return Context.getObjCObjectPointerType(T);
 
   // In ARC, it is forbidden to build pointers to unqualified pointers.
   if (getLangOpts().ObjCAutoRefCount)
@@ -8321,7 +8322,8 @@ static bool isPermittedNeonBaseType(QualType &Ty, VectorKind VecKind, Sema &S) {
          BTy->getKind() == BuiltinType::ULongLong ||
          BTy->getKind() == BuiltinType::Float ||
          BTy->getKind() == BuiltinType::Half ||
-         BTy->getKind() == BuiltinType::BFloat16;
+         BTy->getKind() == BuiltinType::BFloat16 ||
+         BTy->getKind() == BuiltinType::MFloat8;
 }
 
 static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
@@ -8569,7 +8571,8 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
     return;
   }
 
-  auto VScale = S.Context.getTargetInfo().getVScaleRange(S.getLangOpts());
+  auto VScale =
+      S.Context.getTargetInfo().getVScaleRange(S.getLangOpts(), false);
   if (!VScale || !VScale->first || VScale->first != VScale->second) {
     S.Diag(Attr.getLoc(), diag::err_attribute_riscv_rvv_bits_unsupported)
         << Attr;
@@ -9480,7 +9483,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         runWithSufficientStackSpace(Loc, [&] {
           Diagnosed = InstantiateClassTemplateSpecialization(
               Loc, ClassTemplateSpec, TSK_ImplicitInstantiation,
-              /*Complain=*/Diagnoser);
+              /*Complain=*/Diagnoser, ClassTemplateSpec->hasStrictPackMatch());
         });
         Instantiated = true;
       }
@@ -9890,8 +9893,7 @@ QualType Sema::BuiltinAddPointer(QualType BaseType, SourceLocation Loc) {
 }
 
 QualType Sema::BuiltinRemovePointer(QualType BaseType, SourceLocation Loc) {
-  // We don't want block pointers or ObjectiveC's id type.
-  if (!BaseType->isAnyPointerType() || BaseType->isObjCIdType())
+  if (!BaseType->isAnyPointerType())
     return BaseType;
 
   return BaseType->getPointeeType();

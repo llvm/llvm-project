@@ -769,7 +769,7 @@ public:
   /// pool.
   DeclListNode *AllocateDeclListNode(clang::NamedDecl *ND) {
     if (DeclListNode *Alloc = ListNodeFreeList) {
-      ListNodeFreeList = Alloc->Rest.dyn_cast<DeclListNode*>();
+      ListNodeFreeList = dyn_cast_if_present<DeclListNode *>(Alloc->Rest);
       Alloc->D = ND;
       Alloc->Rest = nullptr;
       return Alloc;
@@ -1725,6 +1725,13 @@ public:
   QualType getRecordType(const RecordDecl *Decl) const;
 
   QualType getEnumType(const EnumDecl *Decl) const;
+
+  /// Compute BestType and BestPromotionType for an enum based on the highest
+  /// number of negative and positive bits of its elements.
+  /// Returns true if enum width is too large.
+  bool computeBestEnumTypes(bool IsPacked, unsigned NumNegativeBits,
+                            unsigned NumPositiveBits, QualType &BestType,
+                            QualType &BestPromotionType);
 
   QualType
   getUnresolvedUsingType(const UnresolvedUsingTypenameDecl *Decl) const;

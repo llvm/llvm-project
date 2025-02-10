@@ -296,9 +296,6 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   case Type::FixedVectorTyID:
     return *Entry = VectorType::get(ElementTypes[0],
                                     cast<VectorType>(Ty)->getElementCount());
-  case Type::PointerTyID:
-    return *Entry = PointerType::get(ElementTypes[0],
-                                     cast<PointerType>(Ty)->getAddressSpace());
   case Type::FunctionTyID:
     return *Entry = FunctionType::get(ElementTypes[0],
                                       ArrayRef(ElementTypes).slice(1),
@@ -1247,6 +1244,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
 
   // Check for module flag for updates before do anything.
   UpgradeModuleFlags(*SrcM);
+  UpgradeNVVMAnnotations(*SrcM);
 
   // If the destination module doesn't have module flags yet, then just copy
   // over the source module's flags.

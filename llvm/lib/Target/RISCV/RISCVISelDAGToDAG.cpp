@@ -119,6 +119,19 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
                                            MachineMemOperand::MOLoad);
       break;
     }
+    case ISD::FP_EXTEND: {
+      // We only have vector patterns for riscv_fpextend_vl in isel.
+      SDLoc DL(N);
+      MVT VT = N->getSimpleValueType(0);
+      if (!VT.isVector())
+        break;
+      SDValue VLMAX = CurDAG->getRegister(RISCV::X0, Subtarget->getXLenVT());
+      SDValue TrueMask = CurDAG->getNode(
+          RISCVISD::VMSET_VL, DL, VT.changeVectorElementType(MVT::i1), VLMAX);
+      Result = CurDAG->getNode(RISCVISD::FP_EXTEND_VL, DL, VT, N->getOperand(0),
+                               TrueMask, VLMAX);
+      break;
+    }
     }
 
     if (Result) {
@@ -3224,8 +3237,25 @@ bool RISCVDAGToDAGISel::selectInvLogicImm(SDValue N, SDValue &Val) {
 
   // Abandon this transform if the constant is needed elsewhere.
   for (const SDNode *U : N->users()) {
-    if (!ISD::isBitwiseLogicOp(U->getOpcode()))
+    switch (U->getOpcode()) {
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+      if (!(Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbkb()))
+        return false;
+      break;
+    case RISCVISD::VMV_V_X_VL:
+      if (!Subtarget->hasStdExtZvkb())
+        return false;
+      if (!all_of(U->users(), [](const SDNode *V) {
+            return V->getOpcode() == ISD::AND ||
+                   V->getOpcode() == RISCVISD::AND_VL;
+          }))
+        return false;
+      break;
+    default:
       return false;
+    }
   }
 
   // For 64-bit constants, the instruction sequences get complex,
@@ -3469,7 +3499,7 @@ bool RISCVDAGToDAGISel::selectSimm5Shl2(SDValue N, SDValue &Simm5,
 }
 
 // Select VL as a 5 bit immediate or a value that will become a register. This
-// allows us to choose betwen VSETIVLI or VSETVLI later.
+// allows us to choose between VSETIVLI or VSETVLI later.
 bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
   auto *C = dyn_cast<ConstantSDNode>(N);
   if (C && isUInt<5>(C->getZExtValue())) {
@@ -3521,7 +3551,8 @@ bool RISCVDAGToDAGISel::selectVSplat(SDValue N, SDValue &SplatVal) {
 static bool selectVSplatImmHelper(SDValue N, SDValue &SplatVal,
                                   SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget,
-                                  std::function<bool(int64_t)> ValidateImm) {
+                                  std::function<bool(int64_t)> ValidateImm,
+                                  bool Decrement = false) {
   SDValue Splat = findVSplat(N);
   if (!Splat || !isa<ConstantSDNode>(Splat.getOperand(1)))
     return false;
@@ -3544,6 +3575,9 @@ static bool selectVSplatImmHelper(SDValue N, SDValue &SplatVal,
   if (!ValidateImm(SplatImm))
     return false;
 
+  if (Decrement)
+    SplatImm -= 1;
+
   SplatVal =
       DAG.getSignedTargetConstant(SplatImm, SDLoc(N), Subtarget.getXLenVT());
   return true;
@@ -3557,15 +3591,18 @@ bool RISCVDAGToDAGISel::selectVSplatSimm5(SDValue N, SDValue &SplatVal) {
 bool RISCVDAGToDAGISel::selectVSplatSimm5Plus1(SDValue N, SDValue &SplatVal) {
   return selectVSplatImmHelper(
       N, SplatVal, *CurDAG, *Subtarget,
-      [](int64_t Imm) { return (isInt<5>(Imm) && Imm != -16) || Imm == 16; });
+      [](int64_t Imm) { return (isInt<5>(Imm) && Imm != -16) || Imm == 16; },
+      /*Decrement=*/true);
 }
 
 bool RISCVDAGToDAGISel::selectVSplatSimm5Plus1NonZero(SDValue N,
                                                       SDValue &SplatVal) {
   return selectVSplatImmHelper(
-      N, SplatVal, *CurDAG, *Subtarget, [](int64_t Imm) {
+      N, SplatVal, *CurDAG, *Subtarget,
+      [](int64_t Imm) {
         return Imm != 0 && ((isInt<5>(Imm) && Imm != -16) || Imm == 16);
-      });
+      },
+      /*Decrement=*/true);
 }
 
 bool RISCVDAGToDAGISel::selectVSplatUimm(SDValue N, unsigned Bits,
@@ -3791,15 +3828,6 @@ static bool isImplicitDef(SDValue V) {
   return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
-static bool hasGPROut(unsigned Opc) {
-  switch (RISCV::getRVVMCOpcode(Opc)) {
-  case RISCV::VCPOP_M:
-  case RISCV::VFIRST_M:
-    return true;
-  }
-  return false;
-}
-
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their
 // corresponding "unmasked" pseudo versions. The mask we're interested in will
 // take the form of a V0 physical register operand, with a glued
@@ -3818,19 +3846,22 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
   // everything else.  See the comment on RISCVMaskedPseudo for details.
   const unsigned Opc = I->UnmaskedPseudo;
   const MCInstrDesc &MCID = TII->get(Opc);
-  const bool UseTUPseudo = RISCVII::hasVecPolicyOp(MCID.TSFlags);
-#ifndef NDEBUG
+  const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MCID);
+
   const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
+  const bool MaskedHasPassthru = RISCVII::isFirstDefTiedToFirstUse(MaskedMCID);
+
   assert(RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ==
          RISCVII::hasVecPolicyOp(MCID.TSFlags) &&
          "Masked and unmasked pseudos are inconsistent");
-  const bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(MCID);
-  assert(UseTUPseudo == HasTiedDest && "Unexpected pseudo structure");
-#endif
+  assert(RISCVII::hasVecPolicyOp(MCID.TSFlags) == HasPassthru &&
+         "Unexpected pseudo structure");
+  assert(!(HasPassthru && !MaskedHasPassthru) &&
+         "Unmasked pseudo has passthru but masked pseudo doesn't?");
 
   SmallVector<SDValue, 8> Ops;
-  // Skip the passthru operand at index 0 if !UseTUPseudo and no GPR out.
-  bool ShouldSkip = !UseTUPseudo && !hasGPROut(Opc);
+  // Skip the passthru operand at index 0 if the unmasked don't have one.
+  bool ShouldSkip = !HasPassthru && MaskedHasPassthru;
   for (unsigned I = ShouldSkip, E = N->getNumOperands(); I != E; I++) {
     // Skip the mask, and the Glue.
     SDValue Op = N->getOperand(I);

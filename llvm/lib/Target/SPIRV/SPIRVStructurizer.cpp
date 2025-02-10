@@ -683,7 +683,7 @@ class SPIRVStructurizer : public FunctionPass {
               });
 
     for (Instruction *I : MergeInstructions) {
-      I->moveBefore(InsertionPoint);
+      I->moveBefore(InsertionPoint->getIterator());
       InsertionPoint = I;
     }
 

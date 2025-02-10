@@ -516,8 +516,8 @@ static const NEONLdStTableEntry *LookupNEONLdSt(unsigned Opcode) {
 /// corresponding to the specified register spacing.  Not all of the results
 /// are necessarily valid, e.g., a Q register only has 2 D subregisters.
 static void GetDSubRegs(unsigned Reg, NEONRegSpacing RegSpc,
-                        const TargetRegisterInfo *TRI, unsigned &D0,
-                        unsigned &D1, unsigned &D2, unsigned &D3) {
+                        const TargetRegisterInfo *TRI, MCRegister &D0,
+                        MCRegister &D1, MCRegister &D2, MCRegister &D3) {
   if (RegSpc == SingleSpc || RegSpc == SingleLowSpc) {
     D0 = TRI->getSubReg(Reg, ARM::dsub_0);
     D1 = TRI->getSubReg(Reg, ARM::dsub_1);
@@ -585,11 +585,11 @@ void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
       SubRegIndex = ARM::dsub_1;
     }
     Register SubReg = TRI->getSubReg(DstReg, SubRegIndex);
-    unsigned DstRegPair = TRI->getMatchingSuperReg(SubReg, ARM::dsub_0,
-                                                   &ARM::DPairSpcRegClass);
+    MCRegister DstRegPair =
+        TRI->getMatchingSuperReg(SubReg, ARM::dsub_0, &ARM::DPairSpcRegClass);
     MIB.addReg(DstRegPair, RegState::Define | getDeadRegState(DstIsDead));
   } else {
-    unsigned D0, D1, D2, D3;
+    MCRegister D0, D1, D2, D3;
     GetDSubRegs(DstReg, RegSpc, TRI, D0, D1, D2, D3);
     MIB.addReg(D0, RegState::Define | getDeadRegState(DstIsDead));
     if (NumRegs > 1 && TableEntry->copyAllListRegs)
@@ -715,7 +715,7 @@ void ARMExpandPseudo::ExpandVST(MachineBasicBlock::iterator &MBBI) {
   bool SrcIsKill = MI.getOperand(OpIdx).isKill();
   bool SrcIsUndef = MI.getOperand(OpIdx).isUndef();
   Register SrcReg = MI.getOperand(OpIdx++).getReg();
-  unsigned D0, D1, D2, D3;
+  MCRegister D0, D1, D2, D3;
   GetDSubRegs(SrcReg, RegSpc, TRI, D0, D1, D2, D3);
   MIB.addReg(D0, getUndefRegState(SrcIsUndef));
   if (NumRegs > 1 && TableEntry->copyAllListRegs)
@@ -769,7 +769,7 @@ void ARMExpandPseudo::ExpandLaneOp(MachineBasicBlock::iterator &MBBI) {
   }
   assert(Lane < RegElts && "out of range lane for VLD/VST-lane");
 
-  unsigned D0 = 0, D1 = 0, D2 = 0, D3 = 0;
+  MCRegister D0, D1, D2, D3;
   unsigned DstReg = 0;
   bool DstIsDead = false;
   if (TableEntry->IsLoad) {
@@ -851,7 +851,7 @@ void ARMExpandPseudo::ExpandVTBL(MachineBasicBlock::iterator &MBBI,
 
   bool SrcIsKill = MI.getOperand(OpIdx).isKill();
   Register SrcReg = MI.getOperand(OpIdx++).getReg();
-  unsigned D0, D1, D2, D3;
+  MCRegister D0, D1, D2, D3;
   GetDSubRegs(SrcReg, SingleSpc, TRI, D0, D1, D2, D3);
   MIB.addReg(D0);
 
@@ -1547,7 +1547,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
       } else {
         // For big-endian targets we need to load the two subregisters of Reg
         // manually because VLDRD would load them in wrong order
-        unsigned SReg0 = TRI->getSubReg(Reg, ARM::ssub_0);
+        MCRegister SReg0 = TRI->getSubReg(Reg, ARM::ssub_0);
         BuildMI(MBB, MBBI, DL, TII->get(ARM::VLDRS), SReg0)
             .addReg(ARM::SP)
             .addImm((Reg - ARM::D0) * 2)

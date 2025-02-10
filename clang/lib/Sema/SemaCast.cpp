@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2104,6 +2105,10 @@ void Sema::CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
     }
   }
 
+  if (SrcTy->isDependentType() || DestTy->isDependentType()) {
+    return;
+  }
+
   Diag(Range.getBegin(), DiagID) << SrcType << DestType << Range;
 }
 
@@ -2778,6 +2783,22 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
     return;
   }
 
+  CheckedConversionKind CCK = FunctionalStyle
+                                  ? CheckedConversionKind::FunctionalCast
+                                  : CheckedConversionKind::CStyleCast;
+  // This case should not trigger on regular vector splat
+  // vector cast, vector truncation, or special hlsl splat cases
+  QualType SrcTy = SrcExpr.get()->getType();
+  if (Self.getLangOpts().HLSL &&
+      Self.HLSL().CanPerformElementwiseCast(SrcExpr.get(), DestType)) {
+    if (SrcTy->isConstantArrayType())
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),
+          CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
+    Kind = CK_HLSLElementwiseCast;
+    return;
+  }
+
   if (ValueKind == VK_PRValue && !DestType->isRecordType() &&
       !isPlaceholder(BuiltinType::Overload)) {
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
@@ -2830,9 +2851,6 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   if (isValidCast(tcr))
     Kind = CK_NoOp;
 
-  CheckedConversionKind CCK = FunctionalStyle
-                                  ? CheckedConversionKind::FunctionalCast
-                                  : CheckedConversionKind::CStyleCast;
   if (tcr == TC_NotApplicable) {
     tcr = TryAddressSpaceCast(Self, SrcExpr, DestType, /*CStyle*/ true, msg,
                               Kind);

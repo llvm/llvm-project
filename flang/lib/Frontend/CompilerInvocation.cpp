@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInvocation.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/OpenMP-features.h"
-#include "flang/Common/Version.h"
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/OpenMP-features.h"
+#include "flang/Support/Version.h"
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/AllDiagnostics.h"
@@ -245,6 +245,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
+
+  opts.UnrollLoops = args.hasFlag(clang::driver::options::OPT_funroll_loops,
+                                  clang::driver::options::OPT_fno_unroll_loops,
+                                  (opts.OptimizationLevel > 1));
 
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
@@ -736,6 +740,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       args.hasFlag(clang::driver::options::OPT_fimplicit_none,
                    clang::driver::options::OPT_fno_implicit_none, false));
 
+  // -f{no-}implicit-none-ext
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::ImplicitNoneExternal,
+      args.hasFlag(clang::driver::options::OPT_fimplicit_none_ext,
+                   clang::driver::options::OPT_fno_implicit_none_ext, false));
+
   // -f{no-}backslash
   opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
                        args.hasFlag(clang::driver::options::OPT_fbackslash,
@@ -766,10 +776,11 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     opts.features.Enable(Fortran::common::LanguageFeature::DefaultSave);
   }
 
-  // -fsave-main-program
-  if (args.hasArg(clang::driver::options::OPT_fsave_main_program)) {
-    opts.features.Enable(Fortran::common::LanguageFeature::SaveMainProgram);
-  }
+  // -f{no}-save-main-program
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::SaveMainProgram,
+      args.hasFlag(clang::driver::options::OPT_fsave_main_program,
+                   clang::driver::options::OPT_fno_save_main_program, false));
 
   if (args.hasArg(
           clang::driver::options::OPT_falternative_parameter_statement)) {
@@ -1372,6 +1383,14 @@ bool CompilerInvocation::createFromArgs(
   if (args.hasArg(clang::driver::options::OPT_fno_ppc_native_vec_elem_order)) {
     invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
   }
+
+  // -f[no-]init-global-zero
+  if (args.hasFlag(clang::driver::options::OPT_finit_global_zero,
+                   clang::driver::options::OPT_fno_init_global_zero,
+                   /*default=*/true))
+    invoc.loweringOpts.setInitGlobalZero(true);
+  else
+    invoc.loweringOpts.setInitGlobalZero(false);
 
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or
   // -Rpass-analysis. This will be used later when processing and outputting the

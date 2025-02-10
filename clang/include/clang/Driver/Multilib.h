@@ -168,9 +168,18 @@ public:
   const_iterator begin() const { return Multilibs.begin(); }
   const_iterator end() const { return Multilibs.end(); }
 
+  /// Process custom flags from \p Flags and returns an expanded flags list and
+  /// a list of macro defines.
+  /// Returns a pair where:
+  ///  - first: the new flags list including custom flags after processing.
+  ///  - second: the extra macro defines to be fed to the driver.
+  std::pair<Multilib::flags_list, SmallVector<StringRef>>
+  processCustomFlags(const Driver &D, const Multilib::flags_list &Flags) const;
+
   /// Select compatible variants, \returns false if none are compatible
   bool select(const Driver &D, const Multilib::flags_list &Flags,
-              llvm::SmallVectorImpl<Multilib> &) const;
+              llvm::SmallVectorImpl<Multilib> &,
+              llvm::SmallVector<StringRef> * = nullptr) const;
 
   unsigned size() const { return Multilibs.size(); }
 

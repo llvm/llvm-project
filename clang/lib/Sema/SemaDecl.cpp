@@ -6681,7 +6681,10 @@ Sema::ActOnTypedefDeclarator(Scope* S, Declarator& D, DeclContext* DC,
   DiagnoseFunctionSpecifiers(D.getDeclSpec());
 
   if (D.getDeclSpec().isInlineSpecified())
-    Diag(D.getDeclSpec().getInlineSpecLoc(), diag::err_inline_non_function)
+    Diag(D.getDeclSpec().getInlineSpecLoc(),
+         (getLangOpts().MSVCCompat && !getLangOpts().CPlusPlus)
+             ? diag::warn_ms_inline_non_function
+             : diag::err_inline_non_function)
         << getLangOpts().CPlusPlus17;
   if (D.getDeclSpec().hasConstexprSpecifier())
     Diag(D.getDeclSpec().getConstexprSpecLoc(), diag::err_invalid_constexpr)
@@ -11380,8 +11383,11 @@ static bool CheckMultiVersionAdditionalRules(Sema &S, const FunctionDecl *OldFD,
     return true;
 
   // Only allow transition to MultiVersion if it hasn't been used.
-  if (OldFD && CausesMV && OldFD->isUsed(false))
-    return S.Diag(NewFD->getLocation(), diag::err_multiversion_after_used);
+  if (OldFD && CausesMV && OldFD->isUsed(false)) {
+    S.Diag(NewFD->getLocation(), diag::err_multiversion_after_used);
+    S.Diag(OldFD->getLocation(), diag::note_previous_declaration);
+    return true;
+  }
 
   return S.areMultiversionVariantFunctionsCompatible(
       OldFD, NewFD, S.PDiag(diag::err_multiversion_noproto),
@@ -13374,6 +13380,62 @@ void Sema::checkNonTrivialCUnion(QualType QT, SourceLocation Loc,
         .visit(QT, nullptr, false);
 }
 
+bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
+    const VarDecl *Dcl) {
+  if (!getLangOpts().CPlusPlus)
+    return false;
+
+  // We only need to warn if the definition is in a header file, so wait to
+  // diagnose until we've seen the definition.
+  if (!Dcl->isThisDeclarationADefinition())
+    return false;
+
+  // If an object is defined in a source file, its definition can't get
+  // duplicated since it will never appear in more than one TU.
+  if (Dcl->getASTContext().getSourceManager().isInMainFile(Dcl->getLocation()))
+    return false;
+
+  // If the variable we're looking at is a static local, then we actually care
+  // about the properties of the function containing it.
+  const ValueDecl *Target = Dcl;
+  // VarDecls and FunctionDecls have different functions for checking
+  // inline-ness, so we have to do it manually.
+  bool TargetIsInline = Dcl->isInline();
+
+  // Update the Target and TargetIsInline property if necessary
+  if (Dcl->isStaticLocal()) {
+    const DeclContext *Ctx = Dcl->getDeclContext();
+    if (!Ctx)
+      return false;
+
+    const FunctionDecl *FunDcl =
+        dyn_cast_if_present<FunctionDecl>(Ctx->getNonClosureAncestor());
+    if (!FunDcl)
+      return false;
+
+    Target = FunDcl;
+    // IsInlined() checks for the C++ inline property
+    TargetIsInline = FunDcl->isInlined();
+  }
+
+  // Non-inline variables can only legally appear in one TU
+  // FIXME: This also applies to templated variables, but that can rarely lead
+  // to false positives so templates are disabled for now.
+  if (!TargetIsInline)
+    return false;
+
+  // If the object isn't hidden, the dynamic linker will prevent duplication.
+  clang::LinkageInfo Lnk = Target->getLinkageAndVisibility();
+  if (Lnk.getVisibility() != HiddenVisibility)
+    return false;
+
+  // If the obj doesn't have external linkage, it's supposed to be duplicated.
+  if (!isExternalFormalLinkage(Lnk.getLinkage()))
+    return false;
+
+  return true;
+}
+
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // If there is no declaration, there was an error parsing it.  Just ignore
   // the initializer.
@@ -14780,6 +14842,51 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   if (DC->getRedeclContext()->isFileContext() && VD->isExternallyVisible())
     AddPushedVisibilityAttribute(VD);
 
+  // If this object has external linkage and hidden visibility, it might be
+  // duplicated when built into a shared library, which causes problems if it's
+  // mutable (since the copies won't be in sync) or its initialization has side
+  // effects (since it will run once per copy instead of once globally)
+  // FIXME: Windows uses dllexport/dllimport instead of visibility, and we don't
+  // handle that yet. Disable the warning on Windows for now.
+  // FIXME: Checking templates can cause false positives if the template in
+  // question is never instantiated (e.g. only specialized templates are used).
+  if (!Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
+      !VD->isTemplated() &&
+      GloballyUniqueObjectMightBeAccidentallyDuplicated(VD)) {
+    // Check mutability. For pointers, ensure that both the pointer and the
+    // pointee are (recursively) const.
+    QualType Type = VD->getType().getNonReferenceType();
+    if (!Type.isConstant(VD->getASTContext())) {
+      Diag(VD->getLocation(), diag::warn_possible_object_duplication_mutable)
+          << VD;
+    } else {
+      while (Type->isPointerType()) {
+        Type = Type->getPointeeType();
+        if (Type->isFunctionType())
+          break;
+        if (!Type.isConstant(VD->getASTContext())) {
+          Diag(VD->getLocation(),
+               diag::warn_possible_object_duplication_mutable)
+              << VD;
+          break;
+        }
+      }
+    }
+
+    // To keep false positives low, only warn if we're certain that the
+    // initializer has side effects. Don't warn on operator new, since a mutable
+    // pointer will trigger the previous warning, and an immutable pointer
+    // getting duplicated just results in a little extra memory usage.
+    const Expr *Init = VD->getAnyInitializer();
+    if (Init &&
+        Init->HasSideEffects(VD->getASTContext(),
+                             /*IncludePossibleEffects=*/false) &&
+        !isa<CXXNewExpr>(Init->IgnoreParenImpCasts())) {
+      Diag(Init->getExprLoc(), diag::warn_possible_object_duplication_init)
+          << VD;
+    }
+  }
+
   // FIXME: Warn on unused var template partial specializations.
   if (VD->isFileVarDecl() && !isa<VarTemplatePartialSpecializationDecl>(VD))
     MarkUnusedFileScopedDecl(VD);
@@ -15972,7 +16079,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       CheckCoroutineWrapper(FD);
   }
 
-  // Diagnose invalid SYCL kernel entry point function declarations.
+  // Diagnose invalid SYCL kernel entry point function declarations
+  // and build SYCLKernelCallStmts for valid ones.
   if (FD && !FD->isInvalidDecl() && FD->hasAttr<SYCLKernelEntryPointAttr>()) {
     SYCLKernelEntryPointAttr *SKEPAttr =
         FD->getAttr<SYCLKernelEntryPointAttr>();
@@ -15988,6 +16096,18 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
           << /*coroutine*/ 7;
       SKEPAttr->setInvalidAttr();
+    } else if (Body && isa<CXXTryStmt>(Body)) {
+      Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
+          << /*function defined with a function try block*/ 8;
+      SKEPAttr->setInvalidAttr();
+    }
+
+    if (Body && !FD->isTemplated() && !SKEPAttr->isInvalidAttr()) {
+      StmtResult SR =
+          SYCL().BuildSYCLKernelCallStmt(FD, cast<CompoundStmt>(Body));
+      if (SR.isInvalid())
+        return nullptr;
+      Body = SR.get();
     }
   }
 
@@ -16009,7 +16129,6 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       if (!FD->isDeletedAsWritten())
         FD->setBody(Body);
       FD->setWillHaveBody(false);
-      CheckImmediateEscalatingFunctionDefinition(FD, FSI);
 
       if (getLangOpts().CPlusPlus14) {
         if (!FD->isInvalidDecl() && Body && !FD->isDependentContext() &&
@@ -16386,6 +16505,9 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   } // Pops the ExitFunctionBodyRAII scope, which needs to happen before we pop
     // the declaration context below. Otherwise, we're unable to transform
     // 'this' expressions when transforming immediate context functions.
+
+  if (FD)
+    CheckImmediateEscalatingFunctionDefinition(FD, getCurFunction());
 
   if (!IsInstantiation)
     PopDeclContext();
@@ -17693,9 +17815,11 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
             return PrevTagDecl;
 
           QualType EnumUnderlyingTy;
-          if (TypeSourceInfo *TI = EnumUnderlying.dyn_cast<TypeSourceInfo*>())
+          if (TypeSourceInfo *TI =
+                  dyn_cast_if_present<TypeSourceInfo *>(EnumUnderlying))
             EnumUnderlyingTy = TI->getType().getUnqualifiedType();
-          else if (const Type *T = EnumUnderlying.dyn_cast<const Type*>())
+          else if (const Type *T =
+                       dyn_cast_if_present<const Type *>(EnumUnderlying))
             EnumUnderlyingTy = QualType(T, 0);
 
           // All conflicts with previous declarations are recovered by
@@ -19957,7 +20081,7 @@ static void CheckForDuplicateEnumValues(Sema &S, ArrayRef<Decl *> Elements,
       continue;
 
     DeclOrVector& Entry = Iter->second;
-    if (EnumConstantDecl *D = Entry.dyn_cast<EnumConstantDecl*>()) {
+    if (EnumConstantDecl *D = dyn_cast<EnumConstantDecl *>(Entry)) {
       // Ensure constants are different.
       if (D == ECD)
         continue;
@@ -20054,10 +20178,6 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
     return;
   }
 
-  unsigned IntWidth = Context.getTargetInfo().getIntWidth();
-  unsigned CharWidth = Context.getTargetInfo().getCharWidth();
-  unsigned ShortWidth = Context.getTargetInfo().getShortWidth();
-
   // Verify that all the values are okay, compute the size of the values, and
   // reverse the list.
   unsigned NumNegativeBits = 0;
@@ -20123,73 +20243,12 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
       BestPromotionType = BestType;
 
     BestWidth = Context.getIntWidth(BestType);
-  }
-  else if (NumNegativeBits) {
-    // If there is a negative value, figure out the smallest integer type (of
-    // int/long/longlong) that fits.
-    // If it's packed, check also if it fits a char or a short.
-    if (Packed && NumNegativeBits <= CharWidth && NumPositiveBits < CharWidth) {
-      BestType = Context.SignedCharTy;
-      BestWidth = CharWidth;
-    } else if (Packed && NumNegativeBits <= ShortWidth &&
-               NumPositiveBits < ShortWidth) {
-      BestType = Context.ShortTy;
-      BestWidth = ShortWidth;
-    } else if (NumNegativeBits <= IntWidth && NumPositiveBits < IntWidth) {
-      BestType = Context.IntTy;
-      BestWidth = IntWidth;
-    } else {
-      BestWidth = Context.getTargetInfo().getLongWidth();
-
-      if (NumNegativeBits <= BestWidth && NumPositiveBits < BestWidth) {
-        BestType = Context.LongTy;
-      } else {
-        BestWidth = Context.getTargetInfo().getLongLongWidth();
-
-        if (NumNegativeBits > BestWidth || NumPositiveBits >= BestWidth)
-          Diag(Enum->getLocation(), diag::ext_enum_too_large);
-        BestType = Context.LongLongTy;
-      }
-    }
-    BestPromotionType = (BestWidth <= IntWidth ? Context.IntTy : BestType);
   } else {
-    // If there is no negative value, figure out the smallest type that fits
-    // all of the enumerator values.
-    // If it's packed, check also if it fits a char or a short.
-    if (Packed && NumPositiveBits <= CharWidth) {
-      BestType = Context.UnsignedCharTy;
-      BestPromotionType = Context.IntTy;
-      BestWidth = CharWidth;
-    } else if (Packed && NumPositiveBits <= ShortWidth) {
-      BestType = Context.UnsignedShortTy;
-      BestPromotionType = Context.IntTy;
-      BestWidth = ShortWidth;
-    } else if (NumPositiveBits <= IntWidth) {
-      BestType = Context.UnsignedIntTy;
-      BestWidth = IntWidth;
-      BestPromotionType
-        = (NumPositiveBits == BestWidth || !getLangOpts().CPlusPlus)
-                           ? Context.UnsignedIntTy : Context.IntTy;
-    } else if (NumPositiveBits <=
-               (BestWidth = Context.getTargetInfo().getLongWidth())) {
-      BestType = Context.UnsignedLongTy;
-      BestPromotionType
-        = (NumPositiveBits == BestWidth || !getLangOpts().CPlusPlus)
-                           ? Context.UnsignedLongTy : Context.LongTy;
-    } else {
-      BestWidth = Context.getTargetInfo().getLongLongWidth();
-      if (NumPositiveBits > BestWidth) {
-        // This can happen with bit-precise integer types, but those are not
-        // allowed as the type for an enumerator per C23 6.7.2.2p4 and p12.
-        // FIXME: GCC uses __int128_t and __uint128_t for cases that fit within
-        // a 128-bit integer, we should consider doing the same.
-        Diag(Enum->getLocation(), diag::ext_enum_too_large);
-      }
-      BestType = Context.UnsignedLongLongTy;
-      BestPromotionType
-        = (NumPositiveBits == BestWidth || !getLangOpts().CPlusPlus)
-                           ? Context.UnsignedLongLongTy : Context.LongLongTy;
-    }
+    bool EnumTooLarge = Context.computeBestEnumTypes(
+        Packed, NumNegativeBits, NumPositiveBits, BestType, BestPromotionType);
+    BestWidth = Context.getIntWidth(BestType);
+    if (EnumTooLarge)
+      Diag(Enum->getLocation(), diag::ext_enum_too_large);
   }
 
   // Loop over all of the enumerator constants, changing their types to match
@@ -20221,7 +20280,7 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
       //  int; or,
       //  - the enumerated type
       NewTy = Context.IntTy;
-      NewWidth = IntWidth;
+      NewWidth = Context.getTargetInfo().getIntWidth();
       NewSign = true;
     } else if (ECD->getType() == BestType) {
       // Already the right type!

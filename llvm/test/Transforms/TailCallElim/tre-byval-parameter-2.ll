@@ -25,7 +25,7 @@
 ; Function Attrs: noinline nounwind uwtable
 define dso_local void @_Z7dostuff1AS_i(ptr nocapture byval(%struct.A) align 8 %a, ptr nocapture readonly byval(%struct.A) align 8 %b, i32 %i) local_unnamed_addr #0 {
 ; CHECK-LABEL: define {{[^@]+}}@_Z7dostuff1AS_i
-; CHECK-SAME: (ptr nocapture byval([[STRUCT_A:%.*]]) align 8 [[A:%.*]], ptr nocapture byval([[STRUCT_A]]) align 8 [[B:%.*]], i32 [[I:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr byval([[STRUCT_A:%.*]]) align 8 captures(none) [[A:%.*]], ptr byval([[STRUCT_A]]) align 8 captures(none) [[B:%.*]], i32 [[I:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP52:%.*]] = alloca [[STRUCT_A]], align 8
 ; CHECK-NEXT:    [[AGG_TMP1:%.*]] = alloca [[STRUCT_A]], align 8

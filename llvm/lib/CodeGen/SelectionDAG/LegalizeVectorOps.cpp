@@ -454,6 +454,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UMULO:
   case ISD::FCANONICALIZE:
   case ISD::FFREXP:
+  case ISD::FMODF:
   case ISD::FSINCOS:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
@@ -503,6 +504,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
@@ -1222,8 +1224,19 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     break;
   }
+  case ISD::FMODF: {
+    RTLIB::Libcall LC =
+        RTLIB::getMODF(Node->getValueType(0).getVectorElementType());
+    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results,
+                                          /*CallRetResNo=*/0))
+      return;
+    break;
+  }
   case ISD::VECTOR_COMPRESS:
     Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
+    return;
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Results.push_back(TLI.expandVectorFindLastActive(Node, DAG));
     return;
   case ISD::SCMP:
   case ISD::UCMP:

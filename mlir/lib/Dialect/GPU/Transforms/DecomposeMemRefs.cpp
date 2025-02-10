@@ -67,7 +67,7 @@ getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, source);
   }
 
-  auto &&[sourceStrides, sourceOffset] = getStridesAndOffset(sourceType);
+  auto &&[sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
 
   auto getDim = [&](int64_t dim, Value dimVal) -> OpFoldResult {
     return ShapedType::isDynamic(dim) ? getAsOpFoldResult(dimVal)

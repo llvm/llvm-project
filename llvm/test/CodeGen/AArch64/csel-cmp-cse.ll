@@ -335,6 +335,300 @@ define i32 @test_eq0_multi_use_sub_i32(i32 %x0, i32 %x1) {
   ret i32 %ret
 }
 
+define i32 @test_eq_nonconst_sub_add_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_eq_nonconst_sub_add_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, eq
+; CHECK-NEXT:    ret
+  %cmp = icmp eq i32 %x1, %x2
+  %add = add nuw i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_ne_nonconst_sub_add_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_ne_nonconst_sub_add_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, ne
+; CHECK-NEXT:    ret
+  %cmp = icmp ne i32 %x1, %x2
+  %add = add nuw i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_ult_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_ult_nonconst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, lo
+; CHECK-NEXT:    ret
+  %cmp = icmp ult i32 %x1, %x2
+  %add = add i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_ule_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_ule_nonconst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, ls
+; CHECK-NEXT:    ret
+  %cmp = icmp ule i32 %x1, %x2
+  %add = add i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_ugt_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_ugt_nonconst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, hi
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt i32 %x1, %x2
+  %add = add i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_uge_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_uge_nonconst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, hs
+; CHECK-NEXT:    ret
+  %cmp = icmp uge i32 %x1, %x2
+  %add = add i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_slt_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_slt_nonconst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, lt
+; CHECK-NEXT:    ret
+  %cmp = icmp slt i32 %x1, %x2
+  %add = add i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_sle_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_sle_nonconst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, le
+; CHECK-NEXT:    ret
+  %cmp = icmp sle i32 %x1, %x2
+  %add = add i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_sgt_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_sgt_nonconst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, gt
+; CHECK-NEXT:    ret
+  %cmp = icmp sgt i32 %x1, %x2
+  %add = add i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_sge_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_sge_nonconst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, ge
+; CHECK-NEXT:    ret
+  %cmp = icmp sge i32 %x1, %x2
+  %add = add i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i64 @test_ult_nonconst_i64(i64 %x0, i64 %x1, i64 %x2) {
+; CHECK-LABEL: test_ult_nonconst_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs x8, x1, x2
+; CHECK-NEXT:    add x8, x8, x0
+; CHECK-NEXT:    csel x0, xzr, x8, lo
+; CHECK-NEXT:    ret
+  %cmp = icmp ult i64 %x1, %x2
+  %add = add i64 %x0, %x1
+  %sub = sub i64 %add, %x2
+  %ret = select i1 %cmp, i64 0, i64 %sub
+  ret i64 %ret
+}
+
+define i32 @test_eq_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_eq_nonconst_sub_add_comm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, eq
+; CHECK-NEXT:    ret
+  %cmp = icmp eq i32 %x2, %x1
+  %add = add nuw i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_ne_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_ne_nonconst_sub_add_comm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, ne
+; CHECK-NEXT:    ret
+  %cmp = icmp ne i32 %x2, %x1
+  %add = add nuw i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_ult_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_ult_nonconst_sub_add_comm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, hi
+; CHECK-NEXT:    ret
+  %cmp = icmp ult i32 %x2, %x1
+  %add = add nuw i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_ule_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_ule_nonconst_sub_add_comm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, hs
+; CHECK-NEXT:    ret
+  %cmp = icmp ule i32 %x2, %x1
+  %add = add nuw i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_ugt_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_ugt_nonconst_sub_add_comm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, lo
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt i32 %x2, %x1
+  %add = add nuw i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_uge_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_uge_nonconst_sub_add_comm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, ls
+; CHECK-NEXT:    ret
+  %cmp = icmp uge i32 %x2, %x1
+  %add = add nuw i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_slt_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_slt_nonconst_sub_add_comm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, gt
+; CHECK-NEXT:    ret
+  %cmp = icmp slt i32 %x2, %x1
+  %add = add nuw i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_sle_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_sle_nonconst_sub_add_comm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, ge
+; CHECK-NEXT:    ret
+  %cmp = icmp sle i32 %x2, %x1
+  %add = add nuw i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_sgt_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_sgt_nonconst_sub_add_comm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, lt
+; CHECK-NEXT:    ret
+  %cmp = icmp sgt i32 %x2, %x1
+  %add = add nuw i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+define i32 @test_sge_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_sge_nonconst_sub_add_comm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, le
+; CHECK-NEXT:    ret
+  %cmp = icmp sge i32 %x2, %x1
+  %add = add nuw i32 %x0, %x1
+  %sub = sub i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
 ; Negative test
 define i32 @test_eq0_multi_use_cmp_i32(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_eq0_multi_use_cmp_i32:
@@ -417,22 +711,6 @@ define i32 @test_ugtsmax_sub_add_i32(i32 %x0, i32 %x1) {
   %cmp = icmp ugt i32 %x1, 2147483647
   %add = add i32 %x0, %x1
   %sub = sub i32 %add, 2147483648
-  %ret = select i1 %cmp, i32 0, i32 %sub
-  ret i32 %ret
-}
-
-; Negative test
-define i32 @test_ult_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
-; CHECK-LABEL: test_ult_nonconst_i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
-; CHECK-NEXT:    sub w8, w8, w2
-; CHECK-NEXT:    csel w0, wzr, w8, lo
-; CHECK-NEXT:    ret
-  %cmp = icmp ult i32 %x1, %x2
-  %add = add i32 %x0, %x1
-  %sub = sub i32 %add, %x2
   %ret = select i1 %cmp, i32 0, i32 %sub
   ret i32 %ret
 }
@@ -630,6 +908,40 @@ define i16 @test_eq0_sub_add_i16(i16 %x0, i16 %x1) {
 }
 
 ; Negative test
+define i8 @test_eq_nonconst_sub_add_i8(i8 %x0, i8 %x1, i8 %x2) {
+; CHECK-LABEL: test_eq_nonconst_sub_add_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w1, #0xff
+; CHECK-NEXT:    add w9, w0, w1
+; CHECK-NEXT:    sub w9, w9, w2
+; CHECK-NEXT:    cmp w8, w2, uxtb
+; CHECK-NEXT:    csel w0, wzr, w9, eq
+; CHECK-NEXT:    ret
+  %cmp = icmp eq i8 %x1, %x2
+  %add = add nuw i8 %x0, %x1
+  %sub = sub i8 %add, %x2
+  %ret = select i1 %cmp, i8 0, i8 %sub
+  ret i8 %ret
+}
+
+; Negative test
+define i16 @test_eq_nonconst_sub_add_i16(i16 %x0, i16 %x1, i16 %x2) {
+; CHECK-LABEL: test_eq_nonconst_sub_add_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w1, #0xffff
+; CHECK-NEXT:    add w9, w0, w1
+; CHECK-NEXT:    sub w9, w9, w2
+; CHECK-NEXT:    cmp w8, w2, uxth
+; CHECK-NEXT:    csel w0, wzr, w9, eq
+; CHECK-NEXT:    ret
+  %cmp = icmp eq i16 %x1, %x2
+  %add = add nuw i16 %x0, %x1
+  %sub = sub i16 %add, %x2
+  %ret = select i1 %cmp, i16 0, i16 %sub
+  ret i16 %ret
+}
+
+; Negative test
 define i32 @test_ule_unsigned_overflow(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_ule_unsigned_overflow:
 ; CHECK:       // %bb.0:
@@ -768,6 +1080,54 @@ define i32 @test_eq0_bitwidth_mismatch_2(i32 %x0, i64 %x1) {
   %cmp = icmp eq i64 %x1, 0
   %add = add i32 %x0, %x1t
   %sub = sub i32 %add, 1
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+; Negative test
+define i32 @test_ult_nonconst_op_mismatch_i32(i32 %x0, i32 %x1, i32 %x2) {
+; CHECK-LABEL: test_ult_nonconst_op_mismatch_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, w1
+; CHECK-NEXT:    cmp w1, w2
+; CHECK-NEXT:    add w8, w8, w2
+; CHECK-NEXT:    csel w0, wzr, w8, lo
+; CHECK-NEXT:    ret
+  %cmp = icmp ult i32 %x1, %x2
+  %add = add i32 %x0, %x1
+  %sub = add i32 %add, %x2
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+; Negative test
+define i32 @test_ult_nonconst_unrelated_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
+; CHECK-LABEL: test_ult_nonconst_unrelated_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, w1
+; CHECK-NEXT:    cmp w1, w2
+; CHECK-NEXT:    sub w8, w8, w3
+; CHECK-NEXT:    csel w0, wzr, w8, lo
+; CHECK-NEXT:    ret
+  %cmp = icmp ult i32 %x1, %x2
+  %add = add i32 %x0, %x1
+  %sub = sub i32 %add, %x3
+  %ret = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %ret
+}
+
+; Negative test
+define i32 @test_ult_nonconst_unrelated_2_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
+; CHECK-LABEL: test_ult_nonconst_unrelated_2_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, w1
+; CHECK-NEXT:    cmp w2, w1
+; CHECK-NEXT:    sub w8, w8, w3
+; CHECK-NEXT:    csel w0, wzr, w8, lo
+; CHECK-NEXT:    ret
+  %cmp = icmp ult i32 %x2, %x1
+  %add = add i32 %x0, %x1
+  %sub = sub i32 %add, %x3
   %ret = select i1 %cmp, i32 0, i32 %sub
   ret i32 %ret
 }

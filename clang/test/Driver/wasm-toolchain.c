@@ -224,6 +224,14 @@
 // RUN:   | FileCheck -check-prefix=WASM_LEGACY_EH_NO_EH %s
 // WASM_LEGACY_EH_NO_EH: invalid argument '-wasm-use-legacy-eh' not allowed with '-mno-exception-handling'
 
+// When invoking clang with multiple files in a single command line, target
+// feature flags should be equally added to the multiple clang-cc1 command lines
+// RUN: %clang -### --target=wasm32-unknown-unknown \
+// RUN:    --sysroot=/foo %s %s -mllvm -wasm-enable-sjlj 2>&1 \
+// RUN:  | FileCheck -check-prefix=WASM_SJLJ_MULTI_FILES %s
+// WASM_SJLJ_MULTI_FILES: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm"
+// WASM_SJLJ_MULTI_FILES: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm"
+
 // RUN: %clang -### %s -fsanitize=address --target=wasm32-unknown-emscripten 2>&1 | FileCheck -check-prefix=CHECK-ASAN-EMSCRIPTEN %s
 // CHECK-ASAN-EMSCRIPTEN: "-fsanitize=address"
 // CHECK-ASAN-EMSCRIPTEN: "-fsanitize-address-globals-dead-stripping"

@@ -65,6 +65,10 @@ MlirType mlirLLVMFunctionTypeGetInput(MlirType type, intptr_t pos) {
                   .getParamType(static_cast<unsigned>(pos)));
 }
 
+MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type) {
+  return wrap(llvm::cast<LLVM::LLVMFunctionType>(unwrap(type)).getReturnType());
+}
+
 bool mlirTypeIsALLVMStructType(MlirType type) {
   return isa<LLVM::LLVMStructType>(unwrap(type));
 }

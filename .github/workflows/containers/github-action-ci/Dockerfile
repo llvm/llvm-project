@@ -13,7 +13,8 @@ RUN apt-get update && \
     ninja-build \
     python3 \
     git \
-    curl
+    curl \
+    zlib1g-dev
 
 RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && tar -xf llvmorg-$LLVM_VERSION.tar.gz
 
@@ -38,7 +39,7 @@ RUN cmake -B ./build -G Ninja ./llvm \
 
 RUN ninja -C ./build stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution
 
-FROM base
+FROM base as ci-container
     
 COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 
@@ -91,4 +92,15 @@ RUN adduser gha sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 USER gha
+WORKDIR /home/gha
+
+FROM ci-container as ci-container-agent
+
+ENV GITHUB_RUNNER_VERSION=2.322.0
+
+RUN mkdir actions-runner && \
+    cd actions-runner && \
+    curl -O -L https://github.com/actions/runner/releases/download/v$GITHUB_RUNNER_VERSION/actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz && \
+    tar xzf ./actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz && \
+    rm ./actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz
 

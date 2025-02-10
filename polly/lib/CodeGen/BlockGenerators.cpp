@@ -508,7 +508,7 @@ Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
       new AllocaInst(Ty, DL.getAllocaAddrSpace(), nullptr,
                      DL.getPrefTypeAlign(Ty), ScalarBase->getName() + NameExt);
   BasicBlock *EntryBB = &Builder.GetInsertBlock()->getParent()->getEntryBlock();
-  Addr->insertBefore(&*EntryBB->getFirstInsertionPt());
+  Addr->insertBefore(EntryBB->getFirstInsertionPt());
 
   return Addr;
 }
@@ -869,7 +869,7 @@ void BlockGenerator::createScalarFinalization(Scop &S) {
     // Create the merge PHI that merges the optimized and unoptimized version.
     PHINode *MergePHI = PHINode::Create(EscapeInst->getType(), 2,
                                         EscapeInst->getName() + ".merge");
-    MergePHI->insertBefore(&*MergeBB->getFirstInsertionPt());
+    MergePHI->insertBefore(MergeBB->getFirstInsertionPt());
 
     // Add the respective values to the merge PHI.
     MergePHI->addIncoming(EscapeInstReload, OptExitBB);
@@ -950,7 +950,7 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
             cast<Instruction>(OriginalValue)->getParent() != MergeBB) &&
            "Original value must no be one we just generated.");
     auto *MergePHI = PHINode::Create(PHI->getType(), 2, Name + ".ph.merge");
-    MergePHI->insertBefore(&*MergeBB->getFirstInsertionPt());
+    MergePHI->insertBefore(MergeBB->getFirstInsertionPt());
     MergePHI->addIncoming(Reload, OptExitBB);
     MergePHI->addIncoming(OriginalValue, ExitBB);
     int Idx = PHI->getBasicBlockIndex(MergeBB);
@@ -1184,8 +1184,8 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
         PHINode::Create(Builder.getInt32Ty(), 2, "polly.subregion.iv");
     Instruction *LoopPHIInc = BinaryOperator::CreateAdd(
         LoopPHI, Builder.getInt32(1), "polly.subregion.iv.inc");
-    LoopPHI->insertBefore(&BBCopy->front());
-    LoopPHIInc->insertBefore(BBCopy->getTerminator());
+    LoopPHI->insertBefore(BBCopy->begin());
+    LoopPHIInc->insertBefore(BBCopy->getTerminator()->getIterator());
 
     for (auto *PredBB : predecessors(BB)) {
       if (!R->contains(PredBB))
@@ -1384,7 +1384,7 @@ void RegionGenerator::copyPHIInstruction(ScopStmt &Stmt, PHINode *PHI,
   unsigned NumIncoming = PHI->getNumIncomingValues();
   PHINode *PHICopy =
       Builder.CreatePHI(PHI->getType(), NumIncoming, "polly." + PHI->getName());
-  PHICopy->moveBefore(PHICopy->getParent()->getFirstNonPHI());
+  PHICopy->moveBefore(PHICopy->getParent()->getFirstNonPHIIt());
   BBMap[PHI] = PHICopy;
 
   for (BasicBlock *IncomingBB : PHI->blocks())

@@ -57,7 +57,7 @@ struct CUFAddConstructor
     auto funcTy =
         mlir::LLVM::LLVMFunctionType::get(voidTy, {}, /*isVarArg=*/false);
     std::optional<mlir::DataLayout> dl =
-        fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/false);
+        fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/false);
     if (!dl) {
       mlir::emitError(mod.getLoc(),
                       "data layout attribute is required to perform " +

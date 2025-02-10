@@ -1,0 +1,39 @@
+name: Commit Access Greeter
+
+on:
+  issues:
+    types:
+      - labeled
+
+permissions:
+  contents: read
+
+jobs:
+  commit-access-greeter:
+    permissions:
+      issues: write
+    if: >-
+      github.repository_owner == 'llvm' &&
+      github.event.label.name == 'infra:commit-access-request'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          sparse-checkout: llvm/utils/git/
+
+      - name: Setup Automation Script
+        working-directory: ./llvm/utils/git/
+        run: |
+          pip install --require-hashes -r requirements.txt
+
+      - name: Add comments to issue
+        working-directory: ./llvm/utils/git/
+        env:
+          LABEL_NAME: ${{ github.event.label.name }}
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python3 ./github-automation.py \
+            --token $GITHUB_TOKEN \
+             commit-request-greeter \
+             --issue-number $ISSUE_NUMBER

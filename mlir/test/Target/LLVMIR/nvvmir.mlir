@@ -488,18 +488,32 @@ llvm.func @nvvm_wmma_mma(%0 : i32, %1 : i32, %2 : i32, %3 : i32, %4 : i32, %5 : 
 
 // CHECK-LABEL: @cp_async
 llvm.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
-// CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
+  // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
   nvvm.cp.async.shared.global %arg0, %arg1, 4, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
-// CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
+  // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
   nvvm.cp.async.shared.global %arg0, %arg1, 8, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
-// CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
+  // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
   nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
-// CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
+  // CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
   nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  cg : !llvm.ptr<3>, !llvm.ptr<1>
-// CHECK: call void @llvm.nvvm.cp.async.commit.group()
+
+  // CHECK: call void @llvm.nvvm.cp.async.commit.group()
   nvvm.cp.async.commit.group
-// CHECK: call void @llvm.nvvm.cp.async.wait.group(i32 0)
+  // CHECK: call void @llvm.nvvm.cp.async.wait.group(i32 0)
   nvvm.cp.async.wait.group 0
+  llvm.return
+}
+
+// CHECK-LABEL: @async_cp_zfill
+llvm.func @async_cp_zfill(%dst: !llvm.ptr<3>, %src: !llvm.ptr<1>, %cpSize: i32) {
+  // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
+  nvvm.cp.async.shared.global %dst, %src, 4, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
+  nvvm.cp.async.shared.global %dst, %src, 8, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
+  nvvm.cp.async.shared.global %dst, %src, 16, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  // CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
+  nvvm.cp.async.shared.global %dst, %src, 16, cache =  cg, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
   llvm.return
 }
 
@@ -741,5 +755,31 @@ llvm.func @nvvm_wgmma_wait_group_aligned() {
   nvvm.wgmma.wait.group.sync.aligned 0
   // CHECK: call void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 20)
   nvvm.wgmma.wait.group.sync.aligned 20
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_griddepcontrol_wait
+llvm.func @nvvm_griddepcontrol_wait() {
+  // CHECK: call void @llvm.nvvm.griddepcontrol.wait()
+  nvvm.griddepcontrol.wait
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_griddepcontrol_launch_dependents
+llvm.func @nvvm_griddepcontrol_launch_dependents() {
+  // CHECK: call void @llvm.nvvm.griddepcontrol.launch.dependents()
+  nvvm.griddepcontrol.launch.dependents
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_mapa
+llvm.func @nvvm_mapa(%a: !llvm.ptr, %a_shared: !llvm.ptr<3>, %b : i32) {
+  // CHECK-LLVM: call ptr @llvm.nvvm.mapa(ptr %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr
+  // CHECK-LLVM: call ptr addrspace(3) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %{{.*}}, i32 %{{.*}})
+  %1 = nvvm.mapa %a_shared, %b: !llvm.ptr<3> -> !llvm.ptr<3>
   llvm.return
 }

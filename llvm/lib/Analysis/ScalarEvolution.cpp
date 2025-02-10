@@ -5917,20 +5917,18 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
     //   PHI(f(0), f({1,+,1})) --> f({0,+,1})
 
     // Do not allow refinement in rewriting of BEValue.
-    if (isGuaranteedNotToCauseUB(BEValue)) {
-      const SCEV *Shifted = SCEVShiftRewriter::rewrite(BEValue, L, *this);
-      const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this, false);
-      if (Shifted != getCouldNotCompute() && Start != getCouldNotCompute() &&
-          ::impliesPoison(BEValue, Start)) {
-        const SCEV *StartVal = getSCEV(StartValueV);
-        if (Start == StartVal) {
-          // Okay, for the entire analysis of this edge we assumed the PHI
-          // to be symbolic.  We now need to go back and purge all of the
-          // entries for the scalars that use the symbolic expression.
-          forgetMemoizedResults(SymbolicName);
-          insertValueToMap(PN, Shifted);
-          return Shifted;
-        }
+    const SCEV *Shifted = SCEVShiftRewriter::rewrite(BEValue, L, *this);
+    const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this, false);
+    if (Shifted != getCouldNotCompute() && Start != getCouldNotCompute() &&
+        isGuaranteedNotToCauseUB(Shifted) && ::impliesPoison(Shifted, Start)) {
+      const SCEV *StartVal = getSCEV(StartValueV);
+      if (Start == StartVal) {
+        // Okay, for the entire analysis of this edge we assumed the PHI
+        // to be symbolic.  We now need to go back and purge all of the
+        // entries for the scalars that use the symbolic expression.
+        forgetMemoizedResults(SymbolicName);
+        insertValueToMap(PN, Shifted);
+        return Shifted;
       }
     }
   }
@@ -11167,9 +11165,8 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
 }
 
 std::optional<ScalarEvolution::LoopInvariantPredicate>
-ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
-                                           const SCEV *LHS, const SCEV *RHS,
-                                           const Loop *L,
+ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
+                                           const SCEV *RHS, const Loop *L,
                                            const Instruction *CtxI) {
   // If there is a loop-invariant, force it into the RHS, otherwise bail out.
   if (!isLoopInvariant(RHS, L)) {
@@ -11177,7 +11174,7 @@ ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
       return std::nullopt;
 
     std::swap(LHS, RHS);
-    Pred = ICmpInst::getSwappedPredicate(Pred);
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
   }
 
   const SCEVAddRecExpr *ArLHS = dyn_cast<SCEVAddRecExpr>(LHS);
@@ -11205,7 +11202,7 @@ ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
   // A similar reasoning applies for a monotonically decreasing predicate, by
   // replacing true with false and false with true in the above two bullets.
   bool Increasing = *MonotonicType == ScalarEvolution::MonotonicallyIncreasing;
-  auto P = Increasing ? Pred : ICmpInst::getInversePredicate(Pred);
+  auto P = Increasing ? Pred : ICmpInst::getInverseCmpPredicate(Pred);
 
   if (isLoopBackedgeGuardedByCond(L, P, LHS, RHS))
     return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(),
@@ -11635,8 +11632,9 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
   // non-strict comparison is known from ranges and non-equality is known from
   // dominating predicates. If we are proving strict comparison, we always try
   // to prove non-equality and non-strict comparison separately.
-  auto NonStrictPredicate = ICmpInst::getNonStrictPredicate(Pred);
-  const bool ProvingStrictComparison = (Pred != NonStrictPredicate);
+  CmpPredicate NonStrictPredicate = ICmpInst::getNonStrictCmpPredicate(Pred);
+  const bool ProvingStrictComparison =
+      (Pred != static_cast<CmpInst::Predicate>(NonStrictPredicate));
   bool ProvedNonStrictComparison = false;
   bool ProvedNonEquality = false;
 
@@ -12404,6 +12402,12 @@ bool ScalarEvolution::isImpliedViaMerge(CmpPredicate Pred, const SCEV *LHS,
       // iteration of a loop.
       if (!properlyDominates(L, LBB))
         return false;
+      // Addrecs are considered to properly dominate their loop, so are missed
+      // by the previous check. Discard any values that have computable
+      // evolution in this loop.
+      if (auto *Loop = LI.getLoopFor(LBB))
+        if (hasComputableLoopEvolution(L, Loop))
+          return false;
       if (!ProvedEasily(L, RHS))
         return false;
     }
@@ -13601,7 +13605,7 @@ const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
   else
     return nullptr;
 
-  Type *ETy = getEffectiveSCEVType(PointerType::getUnqual(Ty));
+  Type *ETy = getEffectiveSCEVType(PointerType::getUnqual(Inst->getContext()));
   return getSizeOfExpr(ETy, Ty);
 }
 
@@ -15328,6 +15332,8 @@ ScalarEvolution::LoopGuards::collect(const Loop *L, ScalarEvolution &SE) {
   BasicBlock *Header = L->getHeader();
   BasicBlock *Pred = L->getLoopPredecessor();
   LoopGuards Guards(SE);
+  if (!Pred)
+    return Guards;
   SmallPtrSet<const BasicBlock *, 8> VisitedBlocks;
   collectFromBlock(SE, Guards, Header, Pred, VisitedBlocks);
   return Guards;

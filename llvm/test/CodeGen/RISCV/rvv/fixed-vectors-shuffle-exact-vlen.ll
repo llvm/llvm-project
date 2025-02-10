@@ -396,49 +396,16 @@ entry:
 }
 
 define void @shuffle_i128_ldst(ptr %p) vscale_range(2,2) {
-; RV32-LABEL: shuffle_i128_ldst:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lw a1, 48(a0)
-; RV32-NEXT:    lw a2, 52(a0)
-; RV32-NEXT:    lw a3, 56(a0)
-; RV32-NEXT:    lw a4, 60(a0)
-; RV32-NEXT:    lw a5, 0(a0)
-; RV32-NEXT:    lw a6, 4(a0)
-; RV32-NEXT:    lw a7, 8(a0)
-; RV32-NEXT:    lw t0, 12(a0)
-; RV32-NEXT:    lw t1, 32(a0)
-; RV32-NEXT:    lw t2, 36(a0)
-; RV32-NEXT:    lw t3, 40(a0)
-; RV32-NEXT:    lw t4, 44(a0)
-; RV32-NEXT:    sw t1, 48(a0)
-; RV32-NEXT:    sw t2, 52(a0)
-; RV32-NEXT:    sw t3, 56(a0)
-; RV32-NEXT:    sw t4, 60(a0)
-; RV32-NEXT:    sw a5, 16(a0)
-; RV32-NEXT:    sw a6, 20(a0)
-; RV32-NEXT:    sw a7, 24(a0)
-; RV32-NEXT:    sw t0, 28(a0)
-; RV32-NEXT:    sw a1, 32(a0)
-; RV32-NEXT:    sw a2, 36(a0)
-; RV32-NEXT:    sw a3, 40(a0)
-; RV32-NEXT:    sw a4, 44(a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: shuffle_i128_ldst:
-; RV64:       # %bb.0:
-; RV64-NEXT:    ld a1, 0(a0)
-; RV64-NEXT:    ld a2, 8(a0)
-; RV64-NEXT:    ld a3, 32(a0)
-; RV64-NEXT:    ld a4, 40(a0)
-; RV64-NEXT:    ld a5, 48(a0)
-; RV64-NEXT:    ld a6, 56(a0)
-; RV64-NEXT:    sd a3, 48(a0)
-; RV64-NEXT:    sd a4, 56(a0)
-; RV64-NEXT:    sd a1, 16(a0)
-; RV64-NEXT:    sd a2, 24(a0)
-; RV64-NEXT:    sd a5, 32(a0)
-; RV64-NEXT:    sd a6, 40(a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: shuffle_i128_ldst:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl4re64.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vmv4r.v v12, v8
+; CHECK-NEXT:    vmv1r.v v14, v11
+; CHECK-NEXT:    vmv1r.v v15, v10
+; CHECK-NEXT:    vs4r.v v12, (a0)
+; CHECK-NEXT:    ret
   %a = load <4 x i128>, ptr %p
   %res = shufflevector <4 x i128> %a, <4 x i128> poison, <4 x i32> <i32 0, i32 0, i32 3, i32 2>
   store <4 x i128> %res, ptr %p
@@ -446,131 +413,49 @@ define void @shuffle_i128_ldst(ptr %p) vscale_range(2,2) {
 }
 
 define void @shuffle_i256_ldst(ptr %p) vscale_range(2,2) {
-; RV32-LABEL: shuffle_i256_ldst:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -48
-; RV32-NEXT:    .cfi_def_cfa_offset 48
-; RV32-NEXT:    sw s0, 44(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 40(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 36(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s3, 32(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s4, 28(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s5, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s6, 20(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s7, 16(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s8, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s9, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset s0, -4
-; RV32-NEXT:    .cfi_offset s1, -8
-; RV32-NEXT:    .cfi_offset s2, -12
-; RV32-NEXT:    .cfi_offset s3, -16
-; RV32-NEXT:    .cfi_offset s4, -20
-; RV32-NEXT:    .cfi_offset s5, -24
-; RV32-NEXT:    .cfi_offset s6, -28
-; RV32-NEXT:    .cfi_offset s7, -32
-; RV32-NEXT:    .cfi_offset s8, -36
-; RV32-NEXT:    .cfi_offset s9, -40
-; RV32-NEXT:    lw a1, 0(a0)
-; RV32-NEXT:    lw a2, 4(a0)
-; RV32-NEXT:    lw a3, 8(a0)
-; RV32-NEXT:    lw a4, 12(a0)
-; RV32-NEXT:    lw a5, 16(a0)
-; RV32-NEXT:    lw a6, 20(a0)
-; RV32-NEXT:    lw a7, 24(a0)
-; RV32-NEXT:    lw t0, 28(a0)
-; RV32-NEXT:    lw t1, 96(a0)
-; RV32-NEXT:    lw t2, 100(a0)
-; RV32-NEXT:    lw t3, 104(a0)
-; RV32-NEXT:    lw t4, 108(a0)
-; RV32-NEXT:    lw t5, 112(a0)
-; RV32-NEXT:    lw t6, 116(a0)
-; RV32-NEXT:    lw s0, 120(a0)
-; RV32-NEXT:    lw s1, 124(a0)
-; RV32-NEXT:    lw s2, 64(a0)
-; RV32-NEXT:    lw s3, 68(a0)
-; RV32-NEXT:    lw s4, 72(a0)
-; RV32-NEXT:    lw s5, 76(a0)
-; RV32-NEXT:    lw s6, 80(a0)
-; RV32-NEXT:    lw s7, 84(a0)
-; RV32-NEXT:    lw s8, 88(a0)
-; RV32-NEXT:    lw s9, 92(a0)
-; RV32-NEXT:    sw s6, 112(a0)
-; RV32-NEXT:    sw s7, 116(a0)
-; RV32-NEXT:    sw s8, 120(a0)
-; RV32-NEXT:    sw s9, 124(a0)
-; RV32-NEXT:    sw s2, 96(a0)
-; RV32-NEXT:    sw s3, 100(a0)
-; RV32-NEXT:    sw s4, 104(a0)
-; RV32-NEXT:    sw s5, 108(a0)
-; RV32-NEXT:    sw t5, 80(a0)
-; RV32-NEXT:    sw t6, 84(a0)
-; RV32-NEXT:    sw s0, 88(a0)
-; RV32-NEXT:    sw s1, 92(a0)
-; RV32-NEXT:    sw t1, 64(a0)
-; RV32-NEXT:    sw t2, 68(a0)
-; RV32-NEXT:    sw t3, 72(a0)
-; RV32-NEXT:    sw t4, 76(a0)
-; RV32-NEXT:    sw a5, 48(a0)
-; RV32-NEXT:    sw a6, 52(a0)
-; RV32-NEXT:    sw a7, 56(a0)
-; RV32-NEXT:    sw t0, 60(a0)
-; RV32-NEXT:    sw a1, 32(a0)
-; RV32-NEXT:    sw a2, 36(a0)
-; RV32-NEXT:    sw a3, 40(a0)
-; RV32-NEXT:    sw a4, 44(a0)
-; RV32-NEXT:    lw s0, 44(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 40(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 36(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s3, 32(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s4, 28(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s5, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s6, 20(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s7, 16(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s8, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s9, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore s0
-; RV32-NEXT:    .cfi_restore s1
-; RV32-NEXT:    .cfi_restore s2
-; RV32-NEXT:    .cfi_restore s3
-; RV32-NEXT:    .cfi_restore s4
-; RV32-NEXT:    .cfi_restore s5
-; RV32-NEXT:    .cfi_restore s6
-; RV32-NEXT:    .cfi_restore s7
-; RV32-NEXT:    .cfi_restore s8
-; RV32-NEXT:    .cfi_restore s9
-; RV32-NEXT:    addi sp, sp, 48
-; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: shuffle_i256_ldst:
-; RV64:       # %bb.0:
-; RV64-NEXT:    ld a1, 96(a0)
-; RV64-NEXT:    ld a2, 104(a0)
-; RV64-NEXT:    ld a3, 112(a0)
-; RV64-NEXT:    ld a4, 120(a0)
-; RV64-NEXT:    ld a5, 0(a0)
-; RV64-NEXT:    ld a6, 8(a0)
-; RV64-NEXT:    ld a7, 16(a0)
-; RV64-NEXT:    ld t0, 24(a0)
-; RV64-NEXT:    ld t1, 64(a0)
-; RV64-NEXT:    ld t2, 72(a0)
-; RV64-NEXT:    ld t3, 80(a0)
-; RV64-NEXT:    ld t4, 88(a0)
-; RV64-NEXT:    sd t1, 96(a0)
-; RV64-NEXT:    sd t2, 104(a0)
-; RV64-NEXT:    sd t3, 112(a0)
-; RV64-NEXT:    sd t4, 120(a0)
-; RV64-NEXT:    sd a5, 32(a0)
-; RV64-NEXT:    sd a6, 40(a0)
-; RV64-NEXT:    sd a7, 48(a0)
-; RV64-NEXT:    sd t0, 56(a0)
-; RV64-NEXT:    sd a1, 64(a0)
-; RV64-NEXT:    sd a2, 72(a0)
-; RV64-NEXT:    sd a3, 80(a0)
-; RV64-NEXT:    sd a4, 88(a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: shuffle_i256_ldst:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl8re64.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vmv1r.v v11, v9
+; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vmv1r.v v20, v14
+; CHECK-NEXT:    vmv1r.v v21, v15
+; CHECK-NEXT:    vmv1r.v v22, v12
+; CHECK-NEXT:    vmv1r.v v23, v13
+; CHECK-NEXT:    vs8r.v v16, (a0)
+; CHECK-NEXT:    ret
   %a = load <4 x i256>, ptr %p
   %res = shufflevector <4 x i256> %a, <4 x i256> poison, <4 x i32> <i32 0, i32 0, i32 3, i32 2>
   store <4 x i256> %res, ptr %p
+  ret void
+}
+
+define void @shuffle_3_input_vectors() vscale_range(4,4) {
+; CHECK-LABEL: shuffle_3_input_vectors:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 1
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 6
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v20, v8, 1, v0.t
+; CHECK-NEXT:    vslideup.vi v20, v9, 3
+; CHECK-NEXT:    vslidedown.vi v21, v9, 1
+; CHECK-NEXT:    vmv1r.v v22, v8
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vmsgt.vi v8, v16, 0
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    sb a0, 0(zero)
+; CHECK-NEXT:    ret
+  %1 = shufflevector <32 x i64> zeroinitializer, <32 x i64> splat (i64 1), <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 poison, i32 poison, i32 33, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = icmp slt <32 x i64> zeroinitializer, %1
+  %3 = bitcast <32 x i1> %2 to i32
+  %4 = trunc i32 %3 to i8
+  store i8 %4, ptr null, align 1
   ret void
 }

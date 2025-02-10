@@ -88,11 +88,30 @@ public:
   // Does SM & PTX support memory orderings (weak and atomic: relaxed, acquire,
   // release, acq_rel, sc) ?
   bool hasMemoryOrdering() const { return SmVersion >= 70 && PTXVersion >= 60; }
+  // Does SM & PTX support .acquire and .release qualifiers for fence?
+  bool hasSplitAcquireAndReleaseFences() const {
+    return SmVersion >= 90 && PTXVersion >= 86;
+  }
   // Does SM & PTX support atomic relaxed MMIO operations ?
   bool hasRelaxedMMIO() const { return SmVersion >= 70 && PTXVersion >= 82; }
   bool hasDotInstructions() const {
     return SmVersion >= 61 && PTXVersion >= 50;
   }
+  // Tcgen05 instructions in Blackwell family
+  bool hasTcgen05Instructions() const {
+    bool HasTcgen05 = false;
+    switch (FullSmVersion) {
+    default:
+      break;
+    case 1001: // sm_100a
+    case 1011: // sm_101a
+      HasTcgen05 = true;
+      break;
+    }
+
+    return HasTcgen05 && PTXVersion >= 86;
+  }
+
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
   // terminates a basic block. Instead, it would assume that control flow
   // continued to the next instruction. The next instruction could be in the
@@ -118,6 +137,8 @@ public:
   }
   bool hasTargetName() const { return !TargetName.empty(); }
 
+  bool hasNativeBF16Support(int Opcode) const;
+
   // Get maximum value of required alignments among the supported data types.
   // From the PTX ISA doc, section 8.2.3:
   //  The memory consistency model relates operations executed on memory
@@ -126,6 +147,8 @@ public:
   //  set of equivalent memory operations with a scalar data-type, executed in
   //  an unspecified order on the elements in the vector.
   unsigned getMaxRequiredAlignment() const { return 8; }
+  // Emulated loops with 32-bit/64-bit CAS generate better SASS than 16-bit CAS
+  unsigned getMinCmpXchgSizeInBits() const { return 32; }
 
   unsigned getPTXVersion() const { return PTXVersion; }
 
