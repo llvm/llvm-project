@@ -16,6 +16,7 @@ jobs:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
       fail-fast: false
       matrix:
+        build_type: [Debug, Release, MinSizeRel]
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
@@ -95,7 +96,7 @@ jobs:
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.compiler.c_compiler }}
-        -DCMAKE_BUILD_TYPE=MinSizeRel
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
         -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
         -DCMAKE_POLICY_DEFAULT_CMP0141=NEW

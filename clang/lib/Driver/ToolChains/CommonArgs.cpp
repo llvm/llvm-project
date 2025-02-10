@@ -1321,7 +1321,7 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
 /// Add Fortran runtime libs
 void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) {
-  // Link FortranRuntime
+  // Link flang_rt.runtime
   // These are handled earlier on Windows by telling the frontend driver to
   // add the correct libraries to link against as dependents in the object
   // file.
@@ -1330,14 +1330,14 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
     F128LibName.consume_front_insensitive("lib");
     if (!F128LibName.empty()) {
       bool AsNeeded = !TC.getTriple().isOSAIX();
-      CmdArgs.push_back("-lFortranFloat128Math");
+      CmdArgs.push_back("-lflang_rt.quadmath");
       if (AsNeeded)
         addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/true);
       CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));
       if (AsNeeded)
         addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/false);
     }
-    CmdArgs.push_back("-lFortranRuntime");
+    CmdArgs.push_back("-lflang_rt.runtime");
     addArchSpecificRPath(TC, Args, CmdArgs);
 
     // needs libexecinfo for backtrace functions

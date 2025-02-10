@@ -14420,6 +14420,51 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
       "};",
       NoBinPacking);
 
+  NoBinPacking.BinPackLongBracedList = false;
+  verifyFormat("const Aaaaaa aaaaa = {aaaaa,\n"
+               "                      bbbbb,\n"
+               "                      ccccc,\n"
+               "                      ddddd,\n"
+               "                      eeeee,\n"
+               "                      ffffff,\n"
+               "                      ggggg,\n"
+               "                      hhhhhh,\n"
+               "                      iiiiii,\n"
+               "                      jjjjjj,\n"
+               "                      kkkkkk,\n"
+               "                      aaaaa,\n"
+               "                      bbbbb,\n"
+               "                      ccccc,\n"
+               "                      ddddd,\n"
+               "                      eeeee,\n"
+               "                      ffffff,\n"
+               "                      ggggg,\n"
+               "                      hhhhhh,\n"
+               "                      iiiiii};",
+               NoBinPacking);
+  verifyFormat("const Aaaaaa aaaaa = {\n"
+               "    aaaaa,\n"
+               "    bbbbb,\n"
+               "    ccccc,\n"
+               "    ddddd,\n"
+               "    eeeee,\n"
+               "    ffffff,\n"
+               "    ggggg,\n"
+               "    hhhhhh,\n"
+               "    iiiiii,\n"
+               "    jjjjjj,\n"
+               "    kkkkkk,\n"
+               "    aaaaa,\n"
+               "    bbbbb,\n"
+               "    ccccc,\n"
+               "    ddddd,\n"
+               "    eeeee,\n"
+               "    ffffff,\n"
+               "    ggggg,\n"
+               "    hhhhhh,\n"
+               "};",
+               NoBinPacking);
+
   NoBinPacking.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
   verifyFormat("static uint8 CddDp83848Reg[] = {\n"
                "    CDDDP83848_BMCR_REGISTER,\n"
