@@ -545,6 +545,8 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFWMSAC_VV:
   case RISCV::VFWNMSAC_VF:
   case RISCV::VFWNMSAC_VV:
+  case RISCV::VFWMACCBF16_VV:
+  case RISCV::VFWMACCBF16_VF:
   // Vector Widening Floating-Point Add/Subtract Instructions
   // Dest EEW=2*SEW. Source EEW=SEW.
   case RISCV::VFWADD_VV:
@@ -1050,6 +1052,17 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFMSUB_VF:
   case RISCV::VFNMSUB_VV:
   case RISCV::VFNMSUB_VF:
+  // Vector Widening Floating-Point Fused Multiply-Add Instructions
+  case RISCV::VFWMACC_VV:
+  case RISCV::VFWMACC_VF:
+  case RISCV::VFWNMACC_VV:
+  case RISCV::VFWNMACC_VF:
+  case RISCV::VFWMSAC_VV:
+  case RISCV::VFWMSAC_VF:
+  case RISCV::VFWNMSAC_VV:
+  case RISCV::VFWNMSAC_VF:
+  case RISCV::VFWMACCBF16_VV:
+  case RISCV::VFWMACCBF16_VF:
   // Vector Floating-Point MIN/MAX Instructions
   case RISCV::VFMIN_VF:
   case RISCV::VFMIN_VV:
