@@ -4900,6 +4900,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_convolve_i32_iu8_3x3:
     case Intrinsic::amdgcn_pdep_b32:
     case Intrinsic::amdgcn_pext_b32:
+    case Intrinsic::amdgcn_bpermute_b32:
       return getDefaultMappingVOP(MI);
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_exp2:
