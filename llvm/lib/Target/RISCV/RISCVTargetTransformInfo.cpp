@@ -1176,6 +1176,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::fma:
   case Intrinsic::fmuladd: {
     // TODO: handle promotion with f16/bf16 with zvfhmin/zvfbfmin
     auto LT = getTypeLegalizationCost(RetTy);
