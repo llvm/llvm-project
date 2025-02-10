@@ -1776,6 +1776,11 @@ def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
     DeclareMapperInfoOp getDeclareMapperInfo(){
       return cast<DeclareMapperInfoOp>(getRegion().getBlocks().front().getTerminator());
     }
+
+    /// Get SymVal block argument
+    BlockArgument getSymVal(){
+      return getRegion().getArgument(0);
+    }
   }];
 
   let hasRegionVerifier = 1;
