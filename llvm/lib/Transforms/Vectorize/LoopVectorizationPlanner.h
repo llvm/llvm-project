@@ -40,6 +40,7 @@ class OptimizationRemarkEmitter;
 class TargetTransformInfo;
 class TargetLibraryInfo;
 class VPRecipeBuilder;
+struct VFRange;
 
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
@@ -139,6 +140,9 @@ public:
     BB = IP->getParent();
     InsertPt = IP->getIterator();
   }
+
+  /// Insert \p R at the current insertion point.
+  void insert(VPRecipeBase *R) { BB->insert(R, InsertPt); }
 
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
@@ -243,8 +247,9 @@ public:
   }
 
   VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                       Type *ResultTy) {
-    return tryInsertInstruction(new VPScalarCastRecipe(Opcode, Op, ResultTy));
+                                       Type *ResultTy, DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPScalarCastRecipe(Opcode, Op, ResultTy, DL));
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,

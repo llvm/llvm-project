@@ -59,7 +59,7 @@ jobs:
           ./llvm/utils/release/build-docs.sh -release "${{ inputs.release-version }}" -no-doxygen
 
       - name: Create Release Notes Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
         with:
           name: release-notes
           path: docs-build/html-export/

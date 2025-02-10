@@ -395,8 +395,7 @@ void LoongArchMCCodeEmitter::expandAddTPRel(const MCInst &MI,
       MI.getLoc()));
 
   // Emit R_LARCH_RELAX for %le_add_r when the relax feature is enabled.
-  bool EnableRelax = STI.hasFeature(LoongArch::FeatureRelax);
-  if (EnableRelax) {
+  if (STI.hasFeature(LoongArch::FeatureRelax)) {
     const MCConstantExpr *Dummy = MCConstantExpr::create(0, Ctx);
     Fixups.push_back(MCFixup::create(
         0, Dummy, MCFixupKind(LoongArch::fixup_loongarch_relax), MI.getLoc()));

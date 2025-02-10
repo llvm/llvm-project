@@ -1058,6 +1058,10 @@ enum NodeType {
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
 
+  /// FMODF - Decomposes the operand into integral and fractional parts, each
+  /// having the same type and sign as the operand.
+  FMODF,
+
   /// Gets the current floating-point environment. The first operand is a token
   /// chain. The results are FP environment, represented by an integer value,
   /// and a token chain.
@@ -1480,6 +1484,10 @@ enum NodeType {
   // Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
+  // Finds the index of the last active mask element
+  // Operands: Mask
+  VECTOR_FIND_LAST_ACTIVE,
+
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address
   // Outputs: Output Chain
@@ -1494,6 +1502,10 @@ enum NodeType {
 inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
 }
+
+/// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
+/// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
+NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
 
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.

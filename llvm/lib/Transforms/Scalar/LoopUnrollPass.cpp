@@ -104,7 +104,7 @@ static cl::opt<unsigned> UnrollMaxPercentThresholdBoost(
 
 static cl::opt<unsigned> UnrollMaxIterationsCountToAnalyze(
     "unroll-max-iteration-count-to-analyze", cl::init(10), cl::Hidden,
-    cl::desc("Don't allow loop unrolling to simulate more than this number of"
+    cl::desc("Don't allow loop unrolling to simulate more than this number of "
              "iterations when checking full unroll profitability"));
 
 static cl::opt<unsigned> UnrollCount(
@@ -220,6 +220,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.UnrollAndJamInnerLoopThreshold = 60;
   UP.MaxIterationsCountToAnalyze = UnrollMaxIterationsCountToAnalyze;
   UP.SCEVExpansionBudget = SCEVCheapExpansionBudget;
+  UP.RuntimeUnrollMultiExit = false;
 
   // Override with any target specific settings
   TTI.getUnrollingPreferences(L, SE, UP, &ORE);
@@ -1352,6 +1353,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   ULO.ForgetAllSCEV = ForgetAllSCEV;
   ULO.Heart = getLoopConvergenceHeart(L);
   ULO.SCEVExpansionBudget = UP.SCEVExpansionBudget;
+  ULO.RuntimeUnrollMultiExit = UP.RuntimeUnrollMultiExit;
   LoopUnrollResult UnrollResult = UnrollLoop(
       L, ULO, LI, &SE, &DT, &AC, &TTI, &ORE, PreserveLCSSA, &RemainderLoop, AA);
   if (UnrollResult == LoopUnrollResult::Unmodified)

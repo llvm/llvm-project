@@ -14,6 +14,15 @@
 #ifndef MLIR_DIALECT_SPIRV_IR_NON_UNIFORM_OPS
 #define MLIR_DIALECT_SPIRV_IR_NON_UNIFORM_OPS
 
+class SPIRV_AttrIs<string operand, string type, string value> : PredOpTrait<
+  operand # " must be " # type # " of value " # value,
+  CPred<"::llvm::cast<::mlir::spirv::" # type # "Attr>(getProperties()." # operand # ").getValue() == ::mlir::spirv::" # type # "::" # value>
+  >;
+
+class SPIRV_ExecutionScopeAttrIs<string operand, string value> : SPIRV_AttrIs<operand, "Scope", value>;
+
+// -----
+
 class SPIRV_GroupNonUniformArithmeticOp<string mnemonic, Type type,
       list<Trait> traits = []> : SPIRV_Op<mnemonic, traits> {
 
@@ -1283,6 +1292,71 @@ def SPIRV_GroupNonUniformLogicalXorOp :
                 SPIRV_C_GroupNonUniformClustered,
                 SPIRV_C_GroupNonUniformPartitionedNV]>
   ];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformBallotBitCountOp : SPIRV_Op<"GroupNonUniformBallotBitCount", [
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">,
+]> {
+  let summary = [{
+    Result is the number of bits that are set to 1 in Value, considering
+    only the bits in Value required to represent all bits of the scope
+    restricted tangle.
+  }];
+
+  let description = [{
+    Result Type must be a scalar of integer type, whose Signedness operand
+    is 0.
+
+    Execution is the scope defining the scope restricted tangle affected by
+    this command. It must be Subgroup.
+
+    The identity I for Operation is 0.
+
+    Value must be a vector of four components of integer type scalar, whose
+    Width operand is 32 and whose Signedness operand is 0.
+
+    Value is a set of bitfields where the first invocation is represented in
+    the lowest bit of the first vector component and the last (up to the
+    size of the scope) is the higher bit number of the last bitmask needed
+    to represent all bits of the invocations in the scope restricted tangle.
+
+    An invocation will not execute a dynamic instance of this instruction
+    (X') until all invocations in its scope restricted tangle have executed
+    all dynamic instances that are program-ordered before X'.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %count = spirv.GroupNonUniformBallotBitCount <Subgroup> <Reduce> %val : vector<4xi32> -> i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformBallot]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_Vec4<SignlessOrUnsignedIntOfWidths<[32]>>:$value
+  );
+
+  let results = (outs
+    SPIRV_SignlessOrUnsignedInt:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = [{
+    $execution_scope $group_operation $value attr-dict `:` type($value) `->` type($result)
+  }];
 }
 
 // -----

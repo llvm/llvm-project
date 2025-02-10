@@ -722,8 +722,11 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
   // optimized, it cannot be relaxed any more. So MO_RELAX flag should not be
   // carried by them.
   Hi20.getOperand(1).setOffset(NewOffset);
+  Hi20.getOperand(1).setTargetFlags(
+      LoongArchII::getDirectFlags(Hi20.getOperand(1)));
   MachineOperand &ImmOp = Lo12.getOperand(2);
   ImmOp.setOffset(NewOffset);
+  ImmOp.setTargetFlags(LoongArchII::getDirectFlags(ImmOp));
   if (Lo20 && Hi12) {
     Lo20->getOperand(2).setOffset(NewOffset);
     Hi12->getOperand(2).setOffset(NewOffset);

@@ -26,7 +26,8 @@ def Polynomial_PolynomialType : Polynomial_Type<"Polynomial", "polynomial"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def PolynomialLike: TypeOrContainer<Polynomial_PolynomialType, "polynomial-like">;
+def PolynomialLike : TypeOrValueSemanticsContainer<
+    Polynomial_PolynomialType, "polynomial-like">;
 
 
 #endif // POLYNOMIAL_TYPES

@@ -1094,7 +1094,8 @@ Value *LibCallSimplifier::optimizeStrTo(CallInst *CI, IRBuilderBase &B) {
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
     // It would be readonly too, except that it still may write to errno.
-    CI->addParamAttr(0, Attribute::NoCapture);
+    CI->addParamAttr(0, Attribute::getWithCaptureInfo(CI->getContext(),
+                                                      CaptureInfo::none()));
   }
 
   return nullptr;
@@ -2005,28 +2006,21 @@ Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
         AbsOp = Real;
     }
 
-    if (AbsOp) {
-      IRBuilderBase::FastMathFlagGuard Guard(B);
-      B.setFastMathFlags(CI->getFastMathFlags());
-
+    if (AbsOp)
       return copyFlags(
-          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, nullptr, "cabs"));
-    }
+          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, CI, "cabs"));
 
     if (!CI->isFast())
       return nullptr;
   }
 
   // Propagate fast-math flags from the existing call to new instructions.
-  IRBuilderBase::FastMathFlagGuard Guard(B);
-  B.setFastMathFlags(CI->getFastMathFlags());
-
-  Value *RealReal = B.CreateFMul(Real, Real);
-  Value *ImagImag = B.CreateFMul(Imag, Imag);
-
-  return copyFlags(*CI, B.CreateUnaryIntrinsic(Intrinsic::sqrt,
-                                               B.CreateFAdd(RealReal, ImagImag),
-                                               nullptr, "cabs"));
+  Value *RealReal = B.CreateFMulFMF(Real, Real, CI);
+  Value *ImagImag = B.CreateFMulFMF(Imag, Imag, CI);
+  return copyFlags(
+      *CI, B.CreateUnaryIntrinsic(Intrinsic::sqrt,
+                                  B.CreateFAddFMF(RealReal, ImagImag, CI), CI,
+                                  "cabs"));
 }
 
 // Return a properly extended integer (DstWidth bits wide) if the operation is
@@ -2480,15 +2474,13 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
   // "Ideally, fmax would be sensitive to the sign of zero, for example
   // fmax(-0.0, +0.0) would return +0; however, implementation in software
   // might be impractical."
-  IRBuilderBase::FastMathFlagGuard Guard(B);
   FastMathFlags FMF = CI->getFastMathFlags();
   FMF.setNoSignedZeros();
-  B.setFastMathFlags(FMF);
 
   Intrinsic::ID IID = Callee->getName().starts_with("fmin") ? Intrinsic::minnum
                                                             : Intrinsic::maxnum;
   return copyFlags(*CI, B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
-                                                CI->getArgOperand(1)));
+                                                CI->getArgOperand(1), FMF));
 }
 
 Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
@@ -2783,20 +2775,18 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
   // Fast math flags for any created instructions should match the sqrt
   // and multiply.
-  IRBuilderBase::FastMathFlagGuard Guard(B);
-  B.setFastMathFlags(I->getFastMathFlags());
 
   // If we found a repeated factor, hoist it out of the square root and
   // replace it with the fabs of that factor.
   Value *FabsCall =
-      B.CreateUnaryIntrinsic(Intrinsic::fabs, RepeatOp, nullptr, "fabs");
+      B.CreateUnaryIntrinsic(Intrinsic::fabs, RepeatOp, I, "fabs");
   if (OtherOp) {
     // If we found a non-repeated factor, we still need to get its square
     // root. We then multiply that by the value that was simplified out
     // of the square root calculation.
     Value *SqrtCall =
-        B.CreateUnaryIntrinsic(Intrinsic::sqrt, OtherOp, nullptr, "sqrt");
-    return copyFlags(*CI, B.CreateFMul(FabsCall, SqrtCall));
+        B.CreateUnaryIntrinsic(Intrinsic::sqrt, OtherOp, I, "sqrt");
+    return copyFlags(*CI, B.CreateFMulFMF(FabsCall, SqrtCall, I));
   }
   return copyFlags(*CI, FabsCall);
 }
@@ -2951,26 +2941,23 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   Value *Src = CI->getArgOperand(0);
 
   if (match(Src, m_OneUse(m_FNeg(m_Value(X))))) {
-    IRBuilderBase::FastMathFlagGuard Guard(B);
-    B.setFastMathFlags(CI->getFastMathFlags());
-
-    auto *CallInst = copyFlags(*CI, B.CreateCall(CI->getCalledFunction(), {X}));
+    auto *Call = B.CreateCall(CI->getCalledFunction(), {X});
+    Call->copyFastMathFlags(CI);
+    auto *CallInst = copyFlags(*CI, Call);
     if (IsEven) {
       // Even function: f(-x) = f(x)
       return CallInst;
     }
     // Odd function: f(-x) = -f(x)
-    return B.CreateFNeg(CallInst);
+    return B.CreateFNegFMF(CallInst, CI);
   }
 
   // Even function: f(abs(x)) = f(x), f(copysign(x, y)) = f(x)
   if (IsEven && (match(Src, m_FAbs(m_Value(X))) ||
                  match(Src, m_CopySign(m_Value(X), m_Value())))) {
-    IRBuilderBase::FastMathFlagGuard Guard(B);
-    B.setFastMathFlags(CI->getFastMathFlags());
-
-    auto *CallInst = copyFlags(*CI, B.CreateCall(CI->getCalledFunction(), {X}));
-    return CallInst;
+    auto *Call = B.CreateCall(CI->getCalledFunction(), {X});
+    Call->copyFastMathFlags(CI);
+    return copyFlags(*CI, Call);
   }
 
   return nullptr;
@@ -3205,8 +3192,6 @@ Value *LibCallSimplifier::optimizeToAscii(CallInst *CI, IRBuilderBase &B) {
 
 // Fold calls to atoi, atol, and atoll.
 Value *LibCallSimplifier::optimizeAtoi(CallInst *CI, IRBuilderBase &B) {
-  CI->addParamAttr(0, Attribute::NoCapture);
-
   StringRef Str;
   if (!getConstantStringInfo(CI->getArgOperand(0), Str))
     return nullptr;
@@ -3221,7 +3206,8 @@ Value *LibCallSimplifier::optimizeStrToInt(CallInst *CI, IRBuilderBase &B,
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
     // It would be readonly too, except that it still may write to errno.
-    CI->addParamAttr(0, Attribute::NoCapture);
+    CI->addParamAttr(0, Attribute::getWithCaptureInfo(CI->getContext(),
+                                                      CaptureInfo::none()));
     EndPtr = nullptr;
   } else if (!isKnownNonZero(EndPtr, DL))
     return nullptr;

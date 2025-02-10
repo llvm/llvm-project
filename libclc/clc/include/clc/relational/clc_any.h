@@ -7,6 +7,7 @@
 #else
 
 #include <clc/clcfunc.h>
+#include <clc/clctypes.h>
 
 #define _CLC_ANY_DECL(TYPE) _CLC_OVERLOAD _CLC_DECL int __clc_any(TYPE v);
 

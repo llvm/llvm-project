@@ -212,6 +212,11 @@ ConvertRealOperandsResult ConvertRealOperands(
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertTo(ry, std::move(bx)), std::move(ry))};
           },
+          [&](BOZLiteralConstant &&,
+              BOZLiteralConstant &&) -> ConvertRealOperandsResult {
+            messages.Say("operands cannot both be BOZ"_err_en_US);
+            return std::nullopt;
+          },
           [&](auto &&, auto &&) -> ConvertRealOperandsResult { // C718
             messages.Say(
                 "operands must be INTEGER, UNSIGNED, REAL, or BOZ"_err_en_US);
@@ -906,13 +911,9 @@ bool IsAssumedRank(const ActualArgument &arg) {
   }
 }
 
-bool IsCoarray(const ActualArgument &arg) {
+int GetCorank(const ActualArgument &arg) {
   const auto *expr{arg.UnwrapExpr()};
-  return expr && IsCoarray(*expr);
-}
-
-bool IsCoarray(const Symbol &symbol) {
-  return GetAssociationRoot(symbol).Corank() > 0;
+  return GetCorank(*expr);
 }
 
 bool IsProcedureDesignator(const Expr<SomeType> &expr) {
@@ -1324,6 +1325,9 @@ template <TypeCategory TO, TypeCategory FROM>
 static std::optional<Expr<SomeType>> DataConstantConversionHelper(
     FoldingContext &context, const DynamicType &toType,
     const Expr<SomeType> &expr) {
+  if (!IsValidKindOfIntrinsicType(FROM, toType.kind())) {
+    return std::nullopt;
+  }
   DynamicType sizedType{FROM, toType.kind()};
   if (auto sized{
           Fold(context, ConvertToType(sizedType, Expr<SomeType>{expr}))}) {

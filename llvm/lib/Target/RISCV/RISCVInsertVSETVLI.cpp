@@ -627,7 +627,7 @@ public:
     return MI;
   }
 
-  void setAVL(VSETVLIInfo Info) {
+  void setAVL(const VSETVLIInfo &Info) {
     assert(Info.isValid());
     if (Info.isUnknown())
       setUnknown();
@@ -1069,7 +1069,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
     const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
     if (VLOp.isImm()) {
       int64_t Imm = VLOp.getImm();
-      // Conver the VLMax sentintel to X0 register.
+      // Convert the VLMax sentintel to X0 register.
       if (Imm == RISCV::VLMaxSentinel) {
         // If we know the exact VLEN, see if we can use the constant encoding
         // for the VLMAX instead.  This reduces register pressure slightly.
@@ -1223,7 +1223,8 @@ bool RISCVInsertVSETVLI::needVSETVLI(const DemandedFields &Used,
 // If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
 // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
 // places.
-static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
+static VSETVLIInfo adjustIncoming(const VSETVLIInfo &PrevInfo,
+                                  const VSETVLIInfo &NewInfo,
                                   DemandedFields &Demanded) {
   VSETVLIInfo Info = NewInfo;
 
@@ -1718,8 +1719,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
       ToDelete.push_back(VLOpDef);
   };
 
-  for (MachineInstr &MI :
-       make_early_inc_range(make_range(MBB.rbegin(), MBB.rend()))) {
+  for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
 
     if (!isVectorConfigInstr(MI)) {
       Used.doUnion(getDemanded(MI, ST));

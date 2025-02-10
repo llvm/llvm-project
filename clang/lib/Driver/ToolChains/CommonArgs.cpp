@@ -1209,6 +1209,10 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (ImplicitMapSyms)
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-implicit-mapsyms"));
+
+  if (Args.hasArg(options::OPT_ftime_report))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
@@ -1317,7 +1321,7 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
 /// Add Fortran runtime libs
 void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) {
-  // Link FortranRuntime and FortranDecimal
+  // Link flang_rt.runtime
   // These are handled earlier on Windows by telling the frontend driver to
   // add the correct libraries to link against as dependents in the object
   // file.
@@ -1326,16 +1330,20 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
     F128LibName.consume_front_insensitive("lib");
     if (!F128LibName.empty()) {
       bool AsNeeded = !TC.getTriple().isOSAIX();
-      CmdArgs.push_back("-lFortranFloat128Math");
+      CmdArgs.push_back("-lflang_rt.quadmath");
       if (AsNeeded)
         addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/true);
       CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));
       if (AsNeeded)
         addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/false);
     }
-    CmdArgs.push_back("-lFortranRuntime");
-    CmdArgs.push_back("-lFortranDecimal");
+    CmdArgs.push_back("-lflang_rt.runtime");
     addArchSpecificRPath(TC, Args, CmdArgs);
+
+    // needs libexecinfo for backtrace functions
+    if (TC.getTriple().isOSFreeBSD() || TC.getTriple().isOSNetBSD() ||
+        TC.getTriple().isOSOpenBSD() || TC.getTriple().isOSDragonFly())
+      CmdArgs.push_back("-lexecinfo");
   }
 
   // libomp needs libatomic for atomic operations if using libgcc
@@ -1436,13 +1444,12 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   CmdArgs.push_back("-lm");
   // There's no libdl on all OSes.
   if (!TC.getTriple().isOSFreeBSD() && !TC.getTriple().isOSNetBSD() &&
-      !TC.getTriple().isOSOpenBSD() &&
+      !TC.getTriple().isOSOpenBSD() && !TC.getTriple().isOSDragonFly() &&
       TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes
-  if (TC.getTriple().isOSFreeBSD() ||
-      TC.getTriple().isOSNetBSD() ||
-      TC.getTriple().isOSOpenBSD())
+  if (TC.getTriple().isOSFreeBSD() || TC.getTriple().isOSNetBSD() ||
+      TC.getTriple().isOSOpenBSD() || TC.getTriple().isOSDragonFly())
     CmdArgs.push_back("-lexecinfo");
   // There is no libresolv on Android, FreeBSD, OpenBSD, etc. On musl
   // libresolv.a, even if exists, is an empty archive to satisfy POSIX -lresolv
@@ -1859,18 +1866,6 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   // Android-specific defaults for PIC/PIE
   if (Triple.isAndroid()) {
     switch (Triple.getArch()) {
-    case llvm::Triple::arm:
-    case llvm::Triple::armeb:
-    case llvm::Triple::thumb:
-    case llvm::Triple::thumbeb:
-    case llvm::Triple::aarch64:
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-      PIC = true; // "-fpic"
-      break;
-
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       PIC = true; // "-fPIC"
@@ -1878,6 +1873,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
       break;
 
     default:
+      PIC = true; // "-fpic"
       break;
     }
   }
@@ -2839,10 +2835,13 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
     LibraryPaths.emplace_back(LibPath);
 
   OptSpecifier LibomptargetBCPathOpt =
-      Triple.isAMDGCN() ? options::OPT_libomptarget_amdgpu_bc_path_EQ
-                        : options::OPT_libomptarget_nvptx_bc_path_EQ;
+      Triple.isAMDGCN()  ? options::OPT_libomptarget_amdgpu_bc_path_EQ
+      : Triple.isNVPTX() ? options::OPT_libomptarget_nvptx_bc_path_EQ
+                         : options::OPT_libomptarget_spirv_bc_path_EQ;
 
-  StringRef ArchPrefix = Triple.isAMDGCN() ? "amdgpu" : "nvptx";
+  StringRef ArchPrefix = Triple.isAMDGCN()  ? "amdgpu"
+                         : Triple.isNVPTX() ? "nvptx"
+                                            : "spirv64";
   std::string LibOmpTargetName = ("libomptarget-" + ArchPrefix + ".bc").str();
 
   // First check whether user specifies bc library
@@ -3099,12 +3098,19 @@ void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
                                                ArgStringList &CmdArgs) {
   // -fno-strict-overflow implies -fwrapv if it isn't disabled, but
   // -fstrict-overflow won't turn off an explicitly enabled -fwrapv.
+  bool StrictOverflow = Args.hasFlag(options::OPT_fstrict_overflow,
+                                     options::OPT_fno_strict_overflow, true);
   if (Arg *A = Args.getLastArg(options::OPT_fwrapv, options::OPT_fno_wrapv)) {
     if (A->getOption().matches(options::OPT_fwrapv))
       CmdArgs.push_back("-fwrapv");
-  } else if (Arg *A = Args.getLastArg(options::OPT_fstrict_overflow,
-                                      options::OPT_fno_strict_overflow)) {
-    if (A->getOption().matches(options::OPT_fno_strict_overflow))
-      CmdArgs.push_back("-fwrapv");
+  } else if (!StrictOverflow) {
+    CmdArgs.push_back("-fwrapv");
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_fwrapv_pointer,
+                               options::OPT_fno_wrapv_pointer)) {
+    if (A->getOption().matches(options::OPT_fwrapv_pointer))
+      CmdArgs.push_back("-fwrapv-pointer");
+  } else if (!StrictOverflow) {
+    CmdArgs.push_back("-fwrapv-pointer");
   }
 }

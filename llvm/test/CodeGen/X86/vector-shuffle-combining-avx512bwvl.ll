@@ -190,7 +190,7 @@ define i64 @PR55050() {
 entry:
   %i275 = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> undef, <16 x i8> zeroinitializer)
   %i277 = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> undef, <16 x i8> zeroinitializer)
-  br i1 undef, label %exit, label %if
+  br i1 poison, label %exit, label %if
 
 if:
   %i298 = bitcast <2 x i64> %i275 to <4 x i32>

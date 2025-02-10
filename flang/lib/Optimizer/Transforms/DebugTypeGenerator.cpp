@@ -48,7 +48,8 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
                                        mlir::SymbolTable *symbolTable_,
                                        const mlir::DataLayout &dl)
     : module(m), symbolTable(symbolTable_), dataLayout{&dl},
-      kindMapping(getKindMapping(m)), llvmTypeConverter(m, false, false, dl) {
+      kindMapping(getKindMapping(m)), llvmTypeConverter(m, false, false, dl),
+      derivedTypeDepth(0) {
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
 
   mlir::MLIRContext *context = module.getContext();
@@ -258,74 +259,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
       dataLocation, /*rank=*/nullptr, allocated, associated);
 }
 
-// If the type is a pointer or array type then gets its underlying type.
-static mlir::LLVM::DITypeAttr getUnderlyingType(mlir::LLVM::DITypeAttr Ty) {
-  if (auto ptrTy =
-          mlir::dyn_cast_if_present<mlir::LLVM::DIDerivedTypeAttr>(Ty)) {
-    if (ptrTy.getTag() == llvm::dwarf::DW_TAG_pointer_type)
-      Ty = getUnderlyingType(ptrTy.getBaseType());
-  }
-  if (auto comTy =
-          mlir::dyn_cast_if_present<mlir::LLVM::DICompositeTypeAttr>(Ty)) {
-    if (comTy.getTag() == llvm::dwarf::DW_TAG_array_type)
-      Ty = getUnderlyingType(comTy.getBaseType());
-  }
-  return Ty;
-}
-
-// Currently, the handling of recursive debug type in mlir has some limitations.
-// Those limitations were discussed at the end of the thread for following PR.
-// https://github.com/llvm/llvm-project/pull/106571
-//
-// Problem could be explained with the following example code:
-//  type t2
-//   type(t1), pointer :: p1
-// end type
-// type t1
-//   type(t2), pointer :: p2
-// end type
-// In the description below, type_self means a temporary type that is generated
-// as a place holder while the members of that type are being processed.
-//
-// If we process t1 first then we will have the following structure after it has
-// been processed.
-// t1 -> t2 -> t1_self
-// This is because when we started processing t2, we did not have the complete
-// t1 but its place holder t1_self.
-// Now if some entity requires t2, we will already have that in cache and will
-// return it. But this t2 refers to t1_self and not to t1. In mlir handling,
-// only those types are allowed to have _self reference which are wrapped by
-// entity whose reference it is. So t1 -> t2 -> t1_self is ok because the
-// t1_self reference can be resolved by the outer t1. But standalone t2 is not
-// because there will be no way to resolve it. Until this is fixed in mlir, we
-// avoid caching such types. Please see DebugTranslation::translateRecursive for
-// details on how mlir handles recursive types.
-static bool canCacheThisType(mlir::LLVM::DICompositeTypeAttr comTy) {
-  for (auto el : comTy.getElements()) {
-    if (auto mem =
-            mlir::dyn_cast_if_present<mlir::LLVM::DIDerivedTypeAttr>(el)) {
-      mlir::LLVM::DITypeAttr memTy = getUnderlyingType(mem.getBaseType());
-      if (auto baseTy =
-              mlir::dyn_cast_if_present<mlir::LLVM::DICompositeTypeAttr>(
-                  memTy)) {
-        // We will not cache a type if one of its member meets the following
-        // conditions:
-        // 1. It is a structure type
-        // 2. It is a place holder type (getIsRecSelf() is true)
-        // 3. It is not a self reference. It is ok to have t1_self in t1.
-        if (baseTy.getTag() == llvm::dwarf::DW_TAG_structure_type &&
-            baseTy.getIsRecSelf() && (comTy.getRecId() != baseTy.getRecId()))
-          return false;
-      }
-    }
-  }
-  return true;
-}
-
 std::pair<std::uint64_t, unsigned short>
 DebugTypeGenerator::getFieldSizeAndAlign(mlir::Type fieldTy) {
   mlir::Type llvmTy;
-  if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(fieldTy))
+  if (auto boxTy = mlir::dyn_cast_if_present<fir::BaseBoxType>(fieldTy))
     llvmTy = llvmTypeConverter.convertBoxTypeAsStruct(boxTy, getBoxRank(boxTy));
   else
     llvmTy = llvmTypeConverter.convertType(fieldTy);
@@ -343,6 +280,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   if (iter != typeCache.end())
     return iter->second;
 
+  bool canCacheThisType = true;
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   mlir::MLIRContext *context = module.getContext();
   auto recId = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
@@ -371,7 +309,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
     std::optional<llvm::ArrayRef<int64_t>> lowerBounds =
         fir::getComponentLowerBoundsIfNonDefault(Ty, fieldName, module,
                                                  symbolTable);
-    auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(fieldTy);
+    auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(fieldTy);
 
     // For members of the derived types, the information about the shift in
     // lower bounds is not part of the declOp but has to be extracted from the
@@ -406,6 +344,62 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
         /*extra data=*/nullptr);
     elements.push_back(tyAttr);
     offset += llvm::alignTo(byteSize, byteAlign);
+
+    // Currently, the handling of recursive debug type in mlir has some
+    // limitations that were discussed at the end of the thread for following
+    // PR.
+    // https://github.com/llvm/llvm-project/pull/106571
+    //
+    // Problem could be explained with the following example code:
+    //  type t2
+    //   type(t1), pointer :: p1
+    // end type
+    // type t1
+    //   type(t2), pointer :: p2
+    // end type
+    // In the description below, type_self means a temporary type that is
+    // generated
+    // as a place holder while the members of that type are being processed.
+    //
+    // If we process t1 first then we will have the following structure after
+    // it has been processed.
+    // t1 -> t2 -> t1_self
+    // This is because when we started processing t2, we did not have the
+    // complete t1 but its place holder t1_self.
+    // Now if some entity requires t2, we will already have that in cache and
+    // will return it. But this t2 refers to t1_self and not to t1. In mlir
+    // handling, only those types are allowed to have _self reference which are
+    // wrapped by entity whose reference it is. So t1 -> t2 -> t1_self is ok
+    // because the t1_self reference can be resolved by the outer t1. But
+    // standalone t2 is not because there will be no way to resolve it. Until
+    // this is fixed in mlir, we avoid caching such types. Please see
+    // DebugTranslation::translateRecursive for details on how mlir handles
+    // recursive types.
+    // The code below checks for situation where it will be unsafe to cache
+    // a type to avoid this problem. We do that in 2 situations.
+    // 1. If a member is record type, then its type would have been processed
+    // before reaching here. If it is not in the cache, it means that it was
+    // found to be unsafe to cache. So any type containing it will also not
+    // be cached
+    // 2. The type of the member is found in the cache but it is a place holder.
+    // In this case, its recID should match the recID of the type we are
+    // processing. This helps us to cache the following type.
+    // type t
+    //  type(t), allocatable :: p
+    // end type
+    mlir::Type baseTy = getDerivedType(fieldTy);
+    if (auto recTy = mlir::dyn_cast<fir::RecordType>(baseTy)) {
+      auto iter = typeCache.find(recTy);
+      if (iter == typeCache.end())
+        canCacheThisType = false;
+      else {
+        if (auto tyAttr =
+                mlir::dyn_cast<mlir::LLVM::DICompositeTypeAttr>(iter->second)) {
+          if (tyAttr.getIsRecSelf() && tyAttr.getRecId() != recId)
+            canCacheThisType = false;
+        }
+      }
+    }
   }
 
   auto finalAttr = mlir::LLVM::DICompositeTypeAttr::get(
@@ -414,7 +408,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
       /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
       /*allocated=*/nullptr, /*associated=*/nullptr);
-  if (canCacheThisType(finalAttr)) {
+
+  // derivedTypeDepth == 1 means that it is a top level type which is safe to
+  // cache.
+  if (canCacheThisType || derivedTypeDepth == 1) {
     typeCache[Ty] = finalAttr;
   } else {
     auto iter = typeCache.find(Ty);
@@ -622,10 +619,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
   // Arrays and character need different treatment because DWARF have special
   // constructs for them to get the location from the descriptor. Rest of
   // types are handled like pointer to underlying type.
-  if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
+  if (auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(elTy))
     return convertBoxedSequenceType(seqTy, fileAttr, scope, declOp,
                                     genAllocated, genAssociated);
-  if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(elTy))
+  if (auto charTy = mlir::dyn_cast_if_present<fir::CharacterType>(elTy))
     return convertCharacterType(charTy, fileAttr, scope, declOp,
                                 /*hasDescriptor=*/true);
 
@@ -638,7 +635,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
 
   return mlir::LLVM::DIDerivedTypeAttr::get(
       context, llvm::dwarf::DW_TAG_pointer_type,
-      mlir::StringAttr::get(context, ""), elTyAttr, ptrSize,
+      mlir::StringAttr::get(context, ""), elTyAttr, /*sizeInBits=*/ptrSize * 8,
       /*alignInBits=*/0, /*offset=*/0,
       /*optional<address space>=*/std::nullopt, /*extra data=*/nullptr);
 }
@@ -654,23 +651,43 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
   } else if (mlir::isa<mlir::FloatType>(Ty)) {
     return genBasicType(context, mlir::StringAttr::get(context, "real"),
                         Ty.getIntOrFloatBitWidth(), llvm::dwarf::DW_ATE_float);
-  } else if (auto logTy = mlir::dyn_cast_or_null<fir::LogicalType>(Ty)) {
+  } else if (auto logTy = mlir::dyn_cast_if_present<fir::LogicalType>(Ty)) {
     return genBasicType(context,
                         mlir::StringAttr::get(context, logTy.getMnemonic()),
                         kindMapping.getLogicalBitsize(logTy.getFKind()),
                         llvm::dwarf::DW_ATE_boolean);
-  } else if (auto cplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(Ty)) {
+  } else if (auto cplxTy = mlir::dyn_cast_if_present<mlir::ComplexType>(Ty)) {
     auto floatTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
     unsigned bitWidth = floatTy.getWidth();
     return genBasicType(context, mlir::StringAttr::get(context, "complex"),
                         bitWidth * 2, llvm::dwarf::DW_ATE_complex_float);
-  } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(Ty)) {
+  } else if (auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(Ty)) {
     return convertSequenceType(seqTy, fileAttr, scope, declOp);
-  } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(Ty)) {
+  } else if (auto charTy = mlir::dyn_cast_if_present<fir::CharacterType>(Ty)) {
     return convertCharacterType(charTy, fileAttr, scope, declOp,
                                 /*hasDescriptor=*/false);
-  } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(Ty)) {
-    return convertRecordType(recTy, fileAttr, scope, declOp);
+  } else if (auto recTy = mlir::dyn_cast_if_present<fir::RecordType>(Ty)) {
+    // For nested derived types like shown below, the call sequence of the
+    // convertRecordType will look something like as follows:
+    // convertRecordType (t1)
+    //  convertRecordType (t2)
+    //    convertRecordType (t3)
+    // We need to recognize when we are processing the top level type like t1
+    // to make caching decision. The variable `derivedTypeDepth` is used for
+    // this purpose and maintains the current depth of derived type processing.
+    //  type t1
+    //   type(t2), pointer :: p1
+    // end type
+    // type t2
+    //   type(t3), pointer :: p2
+    // end type
+    // type t2
+    //   integer a
+    // end type
+    derivedTypeDepth++;
+    auto result = convertRecordType(recTy, fileAttr, scope, declOp);
+    derivedTypeDepth--;
+    return result;
   } else if (auto tupleTy = mlir::dyn_cast_if_present<mlir::TupleType>(Ty)) {
     return convertTupleType(tupleTy, fileAttr, scope, declOp);
   } else if (auto refTy = mlir::dyn_cast_if_present<fir::ReferenceType>(Ty)) {
@@ -678,22 +695,22 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return convertPointerLikeType(elTy, fileAttr, scope, declOp,
                                   /*genAllocated=*/false,
                                   /*genAssociated=*/false);
-  } else if (auto vecTy = mlir::dyn_cast_or_null<fir::VectorType>(Ty)) {
+  } else if (auto vecTy = mlir::dyn_cast_if_present<fir::VectorType>(Ty)) {
     return convertVectorType(vecTy, fileAttr, scope, declOp);
   } else if (mlir::isa<mlir::IndexType>(Ty)) {
     return genBasicType(context, mlir::StringAttr::get(context, "integer"),
                         llvmTypeConverter.getIndexTypeBitwidth(),
                         llvm::dwarf::DW_ATE_signed);
-  } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(Ty)) {
+  } else if (auto boxTy = mlir::dyn_cast_if_present<fir::BaseBoxType>(Ty)) {
     auto elTy = boxTy.getEleTy();
-    if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
+    if (auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(elTy))
       return convertBoxedSequenceType(seqTy, fileAttr, scope, declOp, false,
                                       false);
-    if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(elTy))
+    if (auto heapTy = mlir::dyn_cast_if_present<fir::HeapType>(elTy))
       return convertPointerLikeType(heapTy.getElementType(), fileAttr, scope,
                                     declOp, /*genAllocated=*/true,
                                     /*genAssociated=*/false);
-    if (auto ptrTy = mlir::dyn_cast_or_null<fir::PointerType>(elTy))
+    if (auto ptrTy = mlir::dyn_cast_if_present<fir::PointerType>(elTy))
       return convertPointerLikeType(ptrTy.getElementType(), fileAttr, scope,
                                     declOp, /*genAllocated=*/false,
                                     /*genAssociated=*/true);

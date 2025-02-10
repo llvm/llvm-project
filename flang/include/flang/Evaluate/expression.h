@@ -21,11 +21,11 @@
 #include "formatting.h"
 #include "type.h"
 #include "variable.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/template.h"
 #include "flang/Parser/char-block.h"
+#include "flang/Support/Fortran.h"
 #include <algorithm>
 #include <list>
 #include <tuple>
@@ -92,6 +92,7 @@ public:
 
   std::optional<DynamicType> GetType() const;
   int Rank() const;
+  int Corank() const;
   std::string AsFortran() const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -190,6 +191,7 @@ public:
       return rank;
     }
   }
+  static constexpr int Corank() { return 0; }
 
   bool operator==(const Operation &that) const {
     return operand_ == that.operand_;
@@ -395,6 +397,7 @@ struct ImpliedDoIndex {
   using Result = SubscriptInteger;
   bool operator==(const ImpliedDoIndex &) const;
   static constexpr int Rank() { return 0; }
+  static constexpr int Corank() { return 0; }
   parser::CharBlock name; // nested implied DOs must use distinct names
 };
 
@@ -441,6 +444,7 @@ public:
 
   bool operator==(const ArrayConstructorValues &) const;
   static constexpr int Rank() { return 1; }
+  static constexpr int Corank() { return 0; }
   template <typename A> common::NoLvalue<A> Push(A &&x) {
     values_.emplace_back(std::move(x));
   }
@@ -680,6 +684,7 @@ public:
   int Rank() const {
     return common::visit([](const auto &x) { return x.Rank(); }, u);
   }
+  static constexpr int Corank() { return 0; }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &o) const;
   common::MapTemplate<Relational, DirectlyComparableTypes> u;
 };
@@ -766,7 +771,8 @@ public:
   std::optional<Expr<SomeType>> Find(const Symbol &) const;
 
   StructureConstructor &Add(const semantics::Symbol &, Expr<SomeType> &&);
-  int Rank() const { return 0; }
+  static constexpr int Rank() { return 0; }
+  static constexpr int Corank() { return 0; }
   DynamicType GetType() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
@@ -820,7 +826,8 @@ using BOZLiteralConstant = typename LargestReal::Scalar::Word;
 // Null pointers without MOLD= arguments are typed by context.
 struct NullPointer {
   constexpr bool operator==(const NullPointer &) const { return true; }
-  constexpr int Rank() const { return 0; }
+  static constexpr int Rank() { return 0; }
+  static constexpr int Corank() { return 0; }
 };
 
 // Procedure pointer targets are treated as if they were typeless.

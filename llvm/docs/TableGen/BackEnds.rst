@@ -1071,8 +1071,6 @@ function. This class provides three fields.
 
 * ``bit EarlyOut``. See the third example in `Generic Tables`_.
 
-* ``bit ReturnRange``. See the second example in `Generic Tables`_.
-
 Here is an example of a secondary key added to the ``CTable`` above. The
 generated function looks up entries based on the ``Name`` and ``Kind`` fields.
 
