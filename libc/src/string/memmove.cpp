@@ -17,7 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, memmove,
                    (void *dst, const void *src, size_t count)) {
-  if (count > 0) {
+  if (count) {
     LIBC_CRASH_ON_NULLPTR(dst);
     LIBC_CRASH_ON_NULLPTR(src);
   }
