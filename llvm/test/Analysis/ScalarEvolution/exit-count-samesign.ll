@@ -5,9 +5,9 @@
 define i32 @exit_count_samesign(i32 %iter.count, ptr %ptr) {
 ; CHECK-LABEL: 'exit_count_samesign'
 ; CHECK-NEXT:  Determining loop execution counts for: @exit_count_samesign
-; CHECK-NEXT:  Loop %inner.loop: backedge-taken count is {(-2 + %iter.count),+,-1}<nw><%outer.loop>
+; CHECK-NEXT:  Loop %inner.loop: backedge-taken count is (-1 + (1 smax {(-1 + %iter.count)<nsw>,+,-1}<nsw><%outer.loop>))<nsw>
 ; CHECK-NEXT:  Loop %inner.loop: constant max backedge-taken count is i32 2147483646
-; CHECK-NEXT:  Loop %inner.loop: symbolic max backedge-taken count is {(-2 + %iter.count),+,-1}<nw><%outer.loop>
+; CHECK-NEXT:  Loop %inner.loop: symbolic max backedge-taken count is (-1 + (1 smax {(-1 + %iter.count)<nsw>,+,-1}<nsw><%outer.loop>))<nsw>
 ; CHECK-NEXT:  Loop %inner.loop: Trip multiple is 1
 ; CHECK-NEXT:  Loop %outer.loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %outer.loop: Unpredictable constant max backedge-taken count.
