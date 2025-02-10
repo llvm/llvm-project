@@ -22,6 +22,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTFwd.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -80,7 +81,8 @@ public:
   TypePayloadClang() = default;
   explicit TypePayloadClang(OptionalClangModuleID owning_module,
                             bool is_complete_objc_class = false);
-  explicit TypePayloadClang(uint32_t opaque_payload) : m_payload(opaque_payload) {}
+  explicit TypePayloadClang(uint32_t opaque_payload)
+      : m_payload(opaque_payload) {}
   operator Type::Payload() { return m_payload; }
 
   static constexpr unsigned ObjCClassBit = 1 << 31;
@@ -536,21 +538,22 @@ public:
                                bool is_vector);
 
   // Enumeration Types
-  clang::EnumDecl *CreateEnumerationDecl(llvm::StringRef name,
-                                         clang::DeclContext *decl_ctx,
-                                         OptionalClangModuleID owning_module,
-                                         const Declaration &decl,
-                                         const CompilerType &integer_qual_type,
-                                         bool is_scoped);
+  clang::EnumDecl *CreateEnumerationDecl(
+      llvm::StringRef name, clang::DeclContext *decl_ctx,
+      OptionalClangModuleID owning_module, const Declaration &decl,
+      const CompilerType &integer_qual_type, bool is_scoped,
+      std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind =
+          std::nullopt);
 
-  CompilerType CreateEnumerationType(llvm::StringRef name,
-                                     clang::DeclContext *decl_ctx,
-                                     OptionalClangModuleID owning_module,
-                                     const Declaration &decl,
-                                     const CompilerType &integer_qual_type,
-                                     bool is_scoped) {
-    clang::EnumDecl *enum_decl = CreateEnumerationDecl(
-        name, decl_ctx, owning_module, decl, integer_qual_type, is_scoped);
+  CompilerType CreateEnumerationType(
+      llvm::StringRef name, clang::DeclContext *decl_ctx,
+      OptionalClangModuleID owning_module, const Declaration &decl,
+      const CompilerType &integer_qual_type, bool is_scoped,
+      std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind =
+          std::nullopt) {
+    clang::EnumDecl *enum_decl =
+        CreateEnumerationDecl(name, decl_ctx, owning_module, decl,
+                              integer_qual_type, is_scoped, enum_kind);
     return GetType(getASTContext().getTagDeclType(enum_decl));
   }
 
@@ -877,9 +880,12 @@ public:
   CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type) override;
 
   /* TO_UPSTREAM(BoundsSafety) ON */
-  CompilerType AddBoundsSafetyIndexableAttribute(lldb::opaque_compiler_type_t type) override;
-  CompilerType AddBoundsSafetyBidiIndexableAttribute(lldb::opaque_compiler_type_t type) override;
-  CompilerType AddBoundsSafetyUnspecifiedAttribute(lldb::opaque_compiler_type_t type) override;
+  CompilerType
+  AddBoundsSafetyIndexableAttribute(lldb::opaque_compiler_type_t type) override;
+  CompilerType AddBoundsSafetyBidiIndexableAttribute(
+      lldb::opaque_compiler_type_t type) override;
+  CompilerType AddBoundsSafetyUnspecifiedAttribute(
+      lldb::opaque_compiler_type_t type) override;
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// Using the current type, create a new typedef to that type using
@@ -941,8 +947,7 @@ public:
 
   void ForEachEnumerator(
       lldb::opaque_compiler_type_t type,
-      std::function<bool(const CompilerType &integer_type,
-                         ConstString name,
+      std::function<bool(const CompilerType &integer_type, ConstString name,
                          const llvm::APSInt &value)> const &callback) override;
 
   uint32_t GetNumFields(lldb::opaque_compiler_type_t type,
