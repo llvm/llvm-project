@@ -8015,9 +8015,8 @@ static SDValue getMemsetStringVal(EVT VT, const SDLoc &dl, SelectionDAG &DAG,
   if (Slice.Array == nullptr) {
     if (VT.isInteger())
       return DAG.getConstant(0, dl, VT);
-    if (VT.isFloatingPoint())
-      return DAG.getConstantFP(0.0, dl, VT);
-    llvm_unreachable("Expected type!");
+    return DAG.getNode(ISD::BITCAST, dl, VT,
+                       DAG.getConstant(0, dl, VT.changeTypeToInteger()));
   }
 
   assert(!VT.isVector() && "Can't handle vector type here!");
