@@ -612,7 +612,6 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_BoundsSafetyPointerCast:
   case CK_HLSLVectorTruncation:
   case CK_HLSLArrayRValue:
-  case CK_HLSLElementwiseCast:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_FloatingRealToComplex:

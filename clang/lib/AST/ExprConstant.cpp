@@ -15464,7 +15464,6 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_NoOp:
   case CK_LValueToRValueBitCast:
   case CK_HLSLArrayRValue:
-  case CK_HLSLElementwiseCast:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
 
   case CK_MemberPointerToBoolean:
@@ -16330,7 +16329,6 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_MatrixCast:
   case CK_BoundsSafetyPointerCast:
   case CK_HLSLVectorTruncation:
-  case CK_HLSLElementwiseCast:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_LValueToRValue:
