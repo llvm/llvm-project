@@ -1184,9 +1184,10 @@ ErfcPolynomialApproximation::matchAndRewrite(math::ErfcOp op,
   Value d = builder.create<math::FmaOp>(pos2, a, one);
   r = builder.create<arith::DivFOp>(one, d);
   q = builder.create<math::FmaOp>(p, r, r);
-  e = builder.create<math::FmaOp>(
-      builder.create<math::FmaOp>(q, builder.create<arith::NegFOp>(a), onehalf),
-      pos2, builder.create<arith::SubFOp>(p, q));
+  Value negfa = builder.create<arith::NegFOp>(a);
+  Value fmaqah = builder.create<math::FmaOp>(q, negfa, onehalf);
+  Value psubq = builder.create<arith::SubFOp>(p, q);
+  e = builder.create<math::FmaOp>(fmaqah, pos2, psubq);
   r = builder.create<math::FmaOp>(e, r, q);
 
   Value s = builder.create<arith::MulFOp>(a, a);

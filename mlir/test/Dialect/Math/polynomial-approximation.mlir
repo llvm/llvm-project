@@ -139,10 +139,10 @@ func.func @erf_scalar(%arg0: f32) -> f32 {
 // CHECK-NEXT:         %[[val_20:.*]] = math.fma %[[cst_26]], %[[val_2]], %[[cst_22]] : f32
 // CHECK-NEXT:         %[[val_21:.*]] = arith.divf %[[cst_22]], %[[val_20]] : f32
 // CHECK-NEXT:         %[[val_22:.*]] = math.fma %[[val_19]], %[[val_21]], %[[val_21]] : f32
-// CHECK-NEXT:         %[[val_23:.*]] = arith.subf %[[val_19]], %[[val_22]] : f32
-// CHECK-NEXT:         %[[val_24:.*]] = arith.negf %[[val_2]] : f32
-// CHECK-NEXT:         %[[val_25:.*]] = math.fma %[[val_22]], %[[val_24]], %[[cst_23]] : f32
-// CHECK-NEXT:         %[[val_26:.*]] = math.fma %[[val_25]], %[[cst_26]], %[[val_23]] : f32
+// CHECK-NEXT:         %[[val_23:.*]] = arith.negf %[[val_2]] : f32
+// CHECK-NEXT:         %[[val_24:.*]] = math.fma %[[val_22]], %[[val_23]], %[[cst_23]] : f32
+// CHECK-NEXT:         %[[val_25:.*]] = arith.subf %[[val_19]], %[[val_22]] : f32
+// CHECK-NEXT:         %[[val_26:.*]] = math.fma %[[val_24]], %[[cst_26]], %[[val_25]] : f32
 // CHECK-NEXT:         %[[val_27:.*]] = math.fma %[[val_26]], %[[val_21]], %[[val_22]] : f32
 // CHECK-NEXT:         %[[val_28:.*]] = arith.mulf %[[val_2]], %[[val_2]] : f32
 // CHECK-NEXT:         %[[val_29:.*]] = arith.negf %[[val_28]] : f32
