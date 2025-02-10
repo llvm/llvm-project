@@ -1,4 +1,4 @@
-//===-- include/flang-rt/cuda/allocator.h -----------------------*- C++ -*-===//
+//===-- include/flang/Runtime/CUDA/allocator.h ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FLANG_RT_CUDA_ALLOCATOR_H_
-#define FLANG_RT_CUDA_ALLOCATOR_H_
+#ifndef FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_
+#define FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_
 
-#include "flang/Runtime/CUDA/common.h"
+#include "common.h"
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 
@@ -33,4 +33,4 @@ void *CUFAllocUnified(std::size_t);
 void CUFFreeUnified(void *);
 
 } // namespace Fortran::runtime::cuda
-#endif // FLANG_RT_CUDA_ALLOCATOR_H_
+#endif // FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_

@@ -8,10 +8,10 @@
 
 #include "cuda_runtime.h"
 #include "gtest/gtest.h"
-#include "flang-rt/cuda/allocator.h"
 #include "flang-rt/runtime/allocator-registry.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/terminator.h"
+#include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Support/Fortran.h"
