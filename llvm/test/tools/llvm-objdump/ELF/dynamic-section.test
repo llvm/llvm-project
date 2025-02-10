@@ -480,7 +480,7 @@ Sections:
 # WARN:  DYNAMIC off    0x00000000000000c0 vaddr 0x000000000000101d paddr 0x000000000000101d align 2**0
 # WARN:          filesz 0x0000000000000030 memsz 0x0000000000000030 flags ---
 # WARN: Dynamic Section:
-# WARN: : warning: '[[FILE]]': invalid string table offset
+# WARN: warning: '[[FILE]]': invalid string table offset
 # WARN:  NEEDED 0x0000001245657656
 # WARN:  STRTAB 0x0000000000001000
 
