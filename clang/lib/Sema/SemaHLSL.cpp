@@ -2771,7 +2771,7 @@ bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
 }
 
 // Detect if a type contains a bitfield. Will be removed when
-// bitfield support is added to HLSLElementwiseCast
+// bitfield support is added to HLSLElementwiseCast and HLSLSplatCast
 bool SemaHLSL::ContainsBitField(QualType BaseTy) {
   llvm::SmallVector<QualType, 16> WorkList;
   WorkList.push_back(BaseTy);
@@ -2822,11 +2822,16 @@ bool SemaHLSL::CanPerformSplatCast(Expr *Src, QualType DestTy) {
   if (SrcVecTy)
     SrcTy = SrcVecTy->getElementType();
 
+  if (ContainsBitField(DestTy))
+    return false;
+
   llvm::SmallVector<QualType> DestTypes;
   BuildFlattenedTypeList(DestTy, DestTypes);
 
-  for (unsigned i = 0; i < DestTypes.size(); i++) {
-    if (!CanPerformScalarCast(SrcTy, DestTypes[i]))
+  for (unsigned I = 0, Size = DestTypes.size(); I < Size; I++) {
+    if (DestTypes[I]->isUnionType())
+      return false;
+    if (!CanPerformScalarCast(SrcTy, DestTypes[I]))
       return false;
   }
   return true;
