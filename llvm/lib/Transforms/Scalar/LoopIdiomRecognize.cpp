@@ -135,13 +135,17 @@ static cl::opt<bool, true>
                       cl::location(DisableLIRP::Strlen), cl::init(false),
                       cl::ReallyHidden);
 
+/// Some target libraries have a significant call overhead for `wcslen`,
+/// which can degrade performance when the input string is not long enough
+/// to justify the cost. To avoid unnecessary performance penalties,
+/// we disable it by default.
 bool DisableLIRP::Wcslen;
 static cl::opt<bool, true>
-    DisableLIRPWcslen("disable-loop-idiom-wcslen",
-                      cl::desc("Proceed with loop idiom recognize pass, but do "
-                               "not convert loop(s) to wcslen."),
-                      cl::location(DisableLIRP::Wcslen), cl::init(false),
-                      cl::ReallyHidden);
+    EnableLIRPWcslen("enable-loop-idiom-wcslen",
+                     cl::desc("Proceed with loop idiom recognize pass, "
+                              "enable conversion of loop(s) to wcslen."),
+                     cl::location(DisableLIRP::Wcslen), cl::init(true),
+                     cl::ReallyHidden);
 
 static cl::opt<bool> UseLIRCodeSizeHeurs(
     "use-lir-code-size-heurs",
@@ -1670,8 +1674,8 @@ public:
         return false;
 
       // We only want RecAddExpr with recurrence step that is constant. This
-      // is good enough for all the idioms we want to recognize. Later we expand and materialize
-      // the recurrence as {base,+,a} -> (base + a * strlen)
+      // is good enough for all the idioms we want to recognize. Later we expand
+      // and materialize the recurrence as {base,+,a} -> (base + a * strlen)
       if (!dyn_cast<SCEVConstant>(AddRecEv->getStepRecurrence(*SE)))
         return false;
     }
@@ -1764,7 +1768,8 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   BasicBlock *LoopExitBB = CurLoop->getExitBlock();
 
   IRBuilder<> Builder(Preheader->getTerminator());
-  SCEVExpander Expander(*SE, Preheader->getModule()->getDataLayout(), "strlen_idiom");
+  SCEVExpander Expander(*SE, Preheader->getModule()->getDataLayout(),
+                        "strlen_idiom");
   Value *MaterialzedBase = Expander.expandCodeFor(
       Verifier.LoadBaseEv, Verifier.LoadBaseEv->getType(),
       Builder.GetInsertPoint());
@@ -1810,7 +1815,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 
   // All LCSSA Loop Phi are dead, the left over dead loop body can be cleaned
   // up by later passes
-  for (PHINode *PN : Cleanup) 
+  for (PHINode *PN : Cleanup)
     RecursivelyDeleteDeadPHINode(PN);
   SE->forgetLoop(CurLoop);
 
