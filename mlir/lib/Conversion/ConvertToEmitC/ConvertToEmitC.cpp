@@ -28,5 +28,5 @@ void mlir::populateConvertToEmitCPatterns(TypeConverter &typeConverter,
   populateArithToEmitCPatterns(typeConverter, patterns);
   populateFuncToEmitCPatterns(typeConverter, patterns);
   populateMemRefToEmitCConversionPatterns(patterns, typeConverter);
-  populateSCFToEmitCConversionPatterns(patterns);
+  populateSCFToEmitCConversionPatterns(patterns, typeConverter);
 }
