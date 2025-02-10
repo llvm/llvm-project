@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SYNCSTREAM
-#define _LIBCPP_SYNCSTREAM
+#ifndef _LIBCPP___CXX03_SYNCSTREAM
+#define _LIBCPP___CXX03_SYNCSTREAM
 
 /*
     syncstream synopsis
@@ -509,4 +509,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_SYNCSTREAM
+#endif // _LIBCPP___CXX03_SYNCSTREAM

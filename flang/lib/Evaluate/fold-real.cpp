@@ -78,7 +78,7 @@ public:
       auto scaled{item.Divide(scale).value};
       auto square{scaled.Multiply(scaled).value};
       if constexpr (useKahanSummation) {
-        auto next{square.Add(correction_, rounding_)};
+        auto next{square.Subtract(correction_, rounding_)};
         overflow_ |= next.flags.test(RealFlag::Overflow);
         auto sum{element.Add(next.value, rounding_)};
         overflow_ |= sum.flags.test(RealFlag::Overflow);

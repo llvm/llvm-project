@@ -22,7 +22,7 @@ struct Foo {
         S sbar_[5];
 };
 
-int test1(void) {
+void test1(void) {
         Foo a;
 }
 

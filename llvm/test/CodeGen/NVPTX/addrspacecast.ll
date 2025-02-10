@@ -1,9 +1,9 @@
-; RUN: llc -O0 < %s -march=nvptx -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,CLS32,G32
-; RUN: llc -O0 < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,NOPTRCONV,CLS64,G64
-; RUN: llc -O0 < %s -march=nvptx64 -mcpu=sm_20 --nvptx-short-ptr| FileCheck %s -check-prefixes=ALL,PTRCONV,CLS64,G64
-; RUN: %if ptxas && !ptxas-12.0 %{ llc -O0 < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc -O0 < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc -O0 < %s -march=nvptx64 -mcpu=sm_20 --nvptx-short-ptr | %ptxas-verify %}
+; RUN: llc -O0 < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,CLS32,G32
+; RUN: llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,NOPTRCONV,CLS64,G64
+; RUN: llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 --nvptx-short-ptr| FileCheck %s -check-prefixes=ALL,PTRCONV,CLS64,G64
+; RUN: %if ptxas && !ptxas-12.0 %{ llc -O0 < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 --nvptx-short-ptr | %ptxas-verify %}
 
 ; ALL-LABEL: conv1
 define i32 @conv1(ptr addrspace(1) %ptr) {

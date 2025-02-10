@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ITERATOR_WITH_DATA_H
-#define _LIBCPP___ITERATOR_ITERATOR_WITH_DATA_H
+#ifndef _LIBCPP___CXX03___ITERATOR_ITERATOR_WITH_DATA_H
+#define _LIBCPP___CXX03___ITERATOR_ITERATOR_WITH_DATA_H
 
 #include <__cxx03/__compare/compare_three_way_result.h>
 #include <__cxx03/__compare/three_way_comparable.h>
@@ -102,4 +102,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ITERATOR_ITERATOR_WITH_DATA_H
+#endif // _LIBCPP___CXX03___ITERATOR_ITERATOR_WITH_DATA_H

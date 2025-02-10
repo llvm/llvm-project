@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10-MESA %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-PAL %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-MESA %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx950 < %s | FileCheck -check-prefix=GFX950-PAL %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx950 < %s | FileCheck -check-prefix=GFX950-MESA %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX1200-PAL %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX1200-MESA %s
 
@@ -16,6 +18,11 @@
 
 ; GFX11-MESA: .long 45100
 ; GFX11-MESA-NEXT: .long 1024
+
+; GFX950-PAL: '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)': 0x200
+
+; GFX950-MESA: .long 45100
+; GFX950-MESA-NEXT: .long 512
 
 ; GFX1200-PAL: '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)': 0x400
 

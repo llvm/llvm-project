@@ -205,12 +205,12 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   if (!Preheader)
     return false;
   unsigned IVOperIdx = 0;
-  ICmpInst::Predicate Pred = ICmp->getPredicate();
+  CmpPredicate Pred = ICmp->getCmpPredicate();
   if (IVOperand != ICmp->getOperand(0)) {
     // Swapped
     assert(IVOperand == ICmp->getOperand(1) && "Can't find IVOperand");
     IVOperIdx = 1;
-    Pred = ICmpInst::getSwappedPredicate(Pred);
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
   }
 
   // Get the SCEVs for the ICmp operands (in the specific context of the
@@ -249,13 +249,13 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
 void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
                                            Instruction *IVOperand) {
   unsigned IVOperIdx = 0;
-  ICmpInst::Predicate Pred = ICmp->getPredicate();
+  CmpPredicate Pred = ICmp->getCmpPredicate();
   ICmpInst::Predicate OriginalPred = Pred;
   if (IVOperand != ICmp->getOperand(0)) {
     // Swapped
     assert(IVOperand == ICmp->getOperand(1) && "Can't find IVOperand");
     IVOperIdx = 1;
-    Pred = ICmpInst::getSwappedPredicate(Pred);
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
   }
 
   // Get the SCEVs for the ICmp operands (in the specific context of the
@@ -1614,7 +1614,8 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
   //      (A) == icmp slt i32 sext(%narrow), sext(%val)
   //          == icmp slt i32 zext(%narrow), sext(%val)
   bool IsSigned = getExtendKind(DU.NarrowDef) == ExtendKind::Sign;
-  if (!(DU.NeverNegative || IsSigned == Cmp->isSigned()))
+  bool CmpPreferredSign = Cmp->hasSameSign() ? IsSigned : Cmp->isSigned();
+  if (!DU.NeverNegative && IsSigned != CmpPreferredSign)
     return false;
 
   Value *Op = Cmp->getOperand(Cmp->getOperand(0) == DU.NarrowDef ? 1 : 0);
@@ -1627,7 +1628,7 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
 
   // Widen the other operand of the compare, if necessary.
   if (CastWidth < IVWidth) {
-    Value *ExtOp = createExtendInst(Op, WideType, Cmp->isSigned(), Cmp);
+    Value *ExtOp = createExtendInst(Op, WideType, CmpPreferredSign, Cmp);
     DU.NarrowUse->replaceUsesOfWith(Op, ExtOp);
   }
   return true;
@@ -2164,16 +2165,14 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
       !NarrowDefRHS->isNonNegative())
     return;
 
-  auto UpdateRangeFromCondition = [&] (Value *Condition,
-                                       bool TrueDest) {
-    CmpInst::Predicate Pred;
+  auto UpdateRangeFromCondition = [&](Value *Condition, bool TrueDest) {
+    CmpPredicate Pred;
     Value *CmpRHS;
     if (!match(Condition, m_ICmp(Pred, m_Specific(NarrowDefLHS),
                                  m_Value(CmpRHS))))
       return;
 
-    CmpInst::Predicate P =
-            TrueDest ? Pred : CmpInst::getInversePredicate(Pred);
+    CmpPredicate P = TrueDest ? Pred : ICmpInst::getInverseCmpPredicate(Pred);
 
     auto CmpRHSRange = SE->getSignedRange(SE->getSCEV(CmpRHS));
     auto CmpConstrainedLHSRange =

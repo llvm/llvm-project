@@ -1040,3 +1040,11 @@ bool ObjCLanguage::IsSourceFile(llvm::StringRef file_path) const {
   }
   return false;
 }
+
+std::optional<bool>
+ObjCLanguage::GetBooleanFromString(llvm::StringRef str) const {
+  return llvm::StringSwitch<std::optional<bool>>(str)
+      .Case("YES", {true})
+      .Case("NO", {false})
+      .Default({});
+}

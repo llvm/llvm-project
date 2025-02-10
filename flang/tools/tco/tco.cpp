@@ -139,6 +139,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
       return mlir::failure();
   } else {
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    config.EnableOpenMP = true;  // assume the input contains OpenMP
     config.AliasAnalysis = true; // enabled when optimizing for speed
     if (codeGenLLVM) {
       // Run only CodeGen passes.

@@ -28,7 +28,6 @@ struct SomeRAIterator {
   int operator*();
   void operator+=(int);
   bool operator!=(SomeRAIterator&);
-    // TODO
 };
 
 struct HasIteratorCollection {

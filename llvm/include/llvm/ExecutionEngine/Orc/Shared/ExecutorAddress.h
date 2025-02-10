@@ -20,6 +20,9 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
+#if __has_feature(ptrauth_calls)
+#include <ptrauth.h>
+#endif
 #include <type_traits>
 
 namespace llvm {
@@ -33,11 +36,39 @@ public:
   /// A wrap/unwrap function that leaves pointers unmodified.
   template <typename T> using rawPtr = llvm::identity<T *>;
 
+#if __has_feature(ptrauth_calls)
+  template <typename T> class PtrauthSignDefault {
+  public:
+    constexpr T *operator()(T *P) {
+      if (std::is_function_v<T>)
+        return ptrauth_sign_unauthenticated(P, ptrauth_key_function_pointer, 0);
+      else
+        return P;
+    }
+  };
+
+  template <typename T> class PtrauthStripDefault {
+  public:
+    constexpr T *operator()(T *P) {
+      return ptrauth_strip(P, ptrauth_key_function_pointer);
+    }
+  };
+
+  /// Default wrap function to use on this host.
+  template <typename T> using defaultWrap = PtrauthSignDefault<T>;
+
+  /// Default unwrap function to use on this host.
+  template <typename T> using defaultUnwrap = PtrauthStripDefault<T>;
+
+#else
+
   /// Default wrap function to use on this host.
   template <typename T> using defaultWrap = rawPtr<T>;
 
   /// Default unwrap function to use on this host.
   template <typename T> using defaultUnwrap = rawPtr<T>;
+
+#endif
 
   /// Merges a tag into the raw address value:
   ///   P' = P | (TagValue << TagOffset).

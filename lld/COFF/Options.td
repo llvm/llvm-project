@@ -79,6 +79,9 @@ def lldltocachepolicy : P<"lldltocachepolicy",
     "Pruning policy for the ThinLTO cache">;
 def lldsavetemps : F<"lldsavetemps">,
     HelpText<"Save intermediate LTO compilation results">;
+def lldsavetemps_colon : Joined<["/", "-", "/?", "-?"], "lldsavetemps:">,
+    HelpText<"Save select intermediate LTO compilation results">,
+    Values<"resolution,preopt,promote,internalize,import,opt,precodegen,prelink,combinedindex">;
 def lto_sample_profile: P<"lto-sample-profile", "Sample profile file path">;
 def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;
@@ -137,6 +140,9 @@ def incl : Joined<["/", "-", "/?", "-?"], "include:">,
 def deffile : Joined<["/", "-", "/?", "-?"], "def:">,
     HelpText<"Use module-definition file">;
 
+def defarm64native
+    : P<"defarm64native",
+        "Use a module-definition file for the native view in a hybrid image.">;
 def debug : F<"debug">, HelpText<"Embed a symbol table in the image">;
 def debug_opt : P<"debug", "Embed a symbol table in the image with option">;
 def debugtype : P<"debugtype", "Debug Info Options">;

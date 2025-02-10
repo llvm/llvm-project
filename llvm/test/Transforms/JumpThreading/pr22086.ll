@@ -3,12 +3,15 @@
 
 
 
-define void @f() {
-; CHECK-LABEL: define void @f() {
+define void @f(i1 %arg) {
+; CHECK-LABEL: define void @f(
+; CHECK-SAME: i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[LOR_RHS:.*]]
+; CHECK-NEXT:    br label %[[FOR_COND1:.*]]
+; CHECK:       [[FOR_COND1]]:
+; CHECK-NEXT:    br i1 [[ARG]], label %[[LOR_RHS:.*]], label %[[LOR_RHS]]
 ; CHECK:       [[LOR_RHS]]:
-; CHECK-NEXT:    br label %[[LOR_RHS]]
+; CHECK-NEXT:    br label %[[FOR_COND1]]
 ;
 entry:
   br label %for.cond1
@@ -23,7 +26,7 @@ if.end16:
 
 for.cond1:
   %g.1 = phi i32 [ 0, %entry ], [ 0, %lor.rhs ], [ %g.3, %if.end16 ]
-  br i1 undef, label %lor.rhs, label %if.end16
+  br i1 %arg, label %lor.rhs, label %if.end16
 
 lor.rhs:
   br label %for.cond1

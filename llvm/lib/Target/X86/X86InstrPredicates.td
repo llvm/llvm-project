@@ -45,6 +45,7 @@ def NoEGPR       : Predicate<"!Subtarget->hasEGPR()">;
 // entries, so that the NDD variant can be selected first to benefit RA.
 def HasNDD       : Predicate<"Subtarget->hasNDD()">;
 def NoNDD        : Predicate<"!Subtarget->hasNDD()">;
+def HasZU        : Predicate<"Subtarget->hasZU()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
@@ -184,6 +185,7 @@ def HasAMXBF16   : Predicate<"Subtarget->hasAMXBF16()">;
 def HasAMXINT8   : Predicate<"Subtarget->hasAMXINT8()">;
 def HasAMXCOMPLEX : Predicate<"Subtarget->hasAMXCOMPLEX()">;
 def HasAMXFP8    : Predicate<"Subtarget->hasAMXFP8()">;
+def HasAMXMOVRS  : Predicate<"Subtarget->hasAMXMOVRS()">;
 def HasAMXTRANSPOSE : Predicate<"Subtarget->hasAMXTRANSPOSE()">;
 def HasAMXAVX512 : Predicate<"Subtarget->hasAMXAVX512()">;
 def HasAMXTF32   : Predicate<"Subtarget->hasAMXTF32()">;

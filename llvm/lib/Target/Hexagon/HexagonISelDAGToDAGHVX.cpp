@@ -6,17 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Hexagon.h"
 #include "HexagonISelDAGToDAG.h"
 #include "HexagonISelLowering.h"
-#include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -266,8 +262,7 @@ bool Coloring::color() {
 
   // Explicitly assign "None" to all uncolored nodes.
   for (unsigned I = 0; I != Order.size(); ++I)
-    if (Colors.count(I) == 0)
-      Colors[I] = ColorKind::None;
+    Colors.try_emplace(I, ColorKind::None);
 
   return true;
 }
@@ -1760,7 +1755,7 @@ void HvxSelector::select(SDNode *ISelN) {
     // Don't want to select N0 if it's shared with another node, except if
     // it's shared with other ISELs.
     auto IsISelN = [](SDNode *T) { return T->getOpcode() == HexagonISD::ISEL; };
-    if (llvm::all_of(N0->uses(), IsISelN))
+    if (llvm::all_of(N0->users(), IsISelN))
       SubNodes.insert(N0);
   }
   if (SubNodes.empty()) {
@@ -1779,7 +1774,7 @@ void HvxSelector::select(SDNode *ISelN) {
       return true;
     if (T->use_empty() || NonDom.count(T))
       return false;
-    for (SDNode *U : T->uses()) {
+    for (SDNode *U : T->users()) {
       // If T is reachable from a known non-dominated node, then T itself
       // is non-dominated.
       if (!Rec(U, Rec)) {
@@ -1818,7 +1813,7 @@ void HvxSelector::select(SDNode *ISelN) {
 
   for (unsigned I = 0; I != TmpQ.size(); ++I) {
     SDNode *S = TmpQ[I];
-    for (SDNode *U : S->uses()) {
+    for (SDNode *U : S->users()) {
       if (U == ISelN)
         continue;
       auto F = OpCount.find(U);
@@ -2273,7 +2268,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   // For example, with the inputs as above, the result will be:
   //   0 8  2 A  4 C  6 E
   //   1 9  3 B  5 D  7 F
-  // Now, this result can be tranposed again, but with the group size of 2:
+  // Now, this result can be transposed again, but with the group size of 2:
   //   08 19  4C 5D
   //   2A 3B  6E 7F
   // If we then transpose that result, but with the group size of 4, we get:

@@ -26,7 +26,6 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtObjC.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/SmallVector.h"
@@ -774,7 +773,9 @@ class CGObjCGNUstep : public CGObjCGNU {
 
       // The lookup function is guaranteed not to capture the receiver pointer.
       if (auto *LookupFn2 = dyn_cast<llvm::Function>(LookupFn.getCallee()))
-        LookupFn2->addParamAttr(0, llvm::Attribute::NoCapture);
+        LookupFn2->addParamAttr(
+            0, llvm::Attribute::getWithCaptureInfo(CGF.getLLVMContext(),
+                                                   llvm::CaptureInfo::none()));
 
       llvm::Value *args[] = {
           EnforceType(Builder, ReceiverPtr.getPointer(), PtrToIdTy),

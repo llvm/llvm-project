@@ -259,6 +259,9 @@ void RunExtremumTests(const char *which,
           t.expect[i], t.expect[i] + std::strlen(t.expect[i])};
       EXPECT_EQ(expect, got) << "inputs: '" << t.x[i] << "','" << t.y[i] << "'";
     }
+
+    x->Deallocate();
+    y->Deallocate();
   }
 }
 

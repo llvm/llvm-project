@@ -119,20 +119,17 @@ struct LegalityQuery {
     MemDesc(LLT MemoryTy, uint64_t AlignInBits, AtomicOrdering Ordering)
         : MemoryTy(MemoryTy), AlignInBits(AlignInBits), Ordering(Ordering) {}
     MemDesc(const MachineMemOperand &MMO)
-        : MemoryTy(MMO.getMemoryType()),
-          AlignInBits(MMO.getAlign().value() * 8),
-          Ordering(MMO.getSuccessOrdering()) {}
+        : MemDesc(MMO.getMemoryType(), MMO.getAlign().value() * 8,
+                  MMO.getSuccessOrdering()) {}
   };
 
   /// Operations which require memory can use this to place requirements on the
   /// memory type for each MMO.
   ArrayRef<MemDesc> MMODescrs;
 
-  constexpr LegalityQuery(unsigned Opcode, const ArrayRef<LLT> Types,
-                          const ArrayRef<MemDesc> MMODescrs)
+  constexpr LegalityQuery(unsigned Opcode, ArrayRef<LLT> Types,
+                          ArrayRef<MemDesc> MMODescrs = {})
       : Opcode(Opcode), Types(Types), MMODescrs(MMODescrs) {}
-  constexpr LegalityQuery(unsigned Opcode, const ArrayRef<LLT> Types)
-      : LegalityQuery(Opcode, Types, {}) {}
 
   raw_ostream &print(raw_ostream &OS) const;
 };
@@ -292,6 +289,9 @@ LegalityPredicate isPointer(unsigned TypeIdx);
 /// True iff the specified type index is a pointer with the specified address
 /// space.
 LegalityPredicate isPointer(unsigned TypeIdx, unsigned AddrSpace);
+/// True iff the specified type index is a vector of pointers (with any address
+/// space).
+LegalityPredicate isPointerVector(unsigned TypeIdx);
 
 /// True if the type index is a vector with element type \p EltTy
 LegalityPredicate elementTypeIs(unsigned TypeIdx, LLT EltTy);
@@ -775,6 +775,11 @@ public:
   LegalizeRuleSet &libcallFor(std::initializer_list<LLT> Types) {
     return actionFor(LegalizeAction::Libcall, Types);
   }
+  LegalizeRuleSet &libcallFor(bool Pred, std::initializer_list<LLT> Types) {
+    if (!Pred)
+      return *this;
+    return actionFor(LegalizeAction::Libcall, Types);
+  }
   LegalizeRuleSet &
   libcallFor(std::initializer_list<std::pair<LLT, LLT>> Types) {
     return actionFor(LegalizeAction::Libcall, Types);
@@ -1118,7 +1123,8 @@ public:
   /// Widen the scalar to match the size of another.
   LegalizeRuleSet &minScalarSameAs(unsigned TypeIdx, unsigned LargeTypeIdx) {
     typeIdx(TypeIdx);
-    return widenScalarIf(
+    return actionIf(
+        LegalizeAction::WidenScalar,
         [=](const LegalityQuery &Query) {
           return Query.Types[LargeTypeIdx].getScalarSizeInBits() >
                  Query.Types[TypeIdx].getSizeInBits();
@@ -1129,7 +1135,8 @@ public:
   /// Narrow the scalar to match the size of another.
   LegalizeRuleSet &maxScalarSameAs(unsigned TypeIdx, unsigned NarrowTypeIdx) {
     typeIdx(TypeIdx);
-    return narrowScalarIf(
+    return actionIf(
+        LegalizeAction::NarrowScalar,
         [=](const LegalityQuery &Query) {
           return Query.Types[NarrowTypeIdx].getScalarSizeInBits() <
                  Query.Types[TypeIdx].getSizeInBits();

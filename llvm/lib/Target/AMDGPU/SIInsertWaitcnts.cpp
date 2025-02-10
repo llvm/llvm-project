@@ -34,7 +34,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/TargetParser/TargetParser.h"
 using namespace llvm;
@@ -53,6 +52,11 @@ static cl::opt<bool>
                       cl::desc("Force all waitcnt instrs to be emitted as "
                                "s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
                       cl::init(false), cl::Hidden);
+
+static cl::opt<bool> ForceEmitZeroLoadFlag(
+    "amdgpu-waitcnt-load-forcezero",
+    cl::desc("Force all waitcnt load counters to wait until 0"),
+    cl::init(false), cl::Hidden);
 
 namespace {
 // Class of object that encapsulates latest instruction counter score
@@ -1850,6 +1854,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     if (ScoreBrackets.hasPendingEvent(BVH_CNT))
       Wait.BvhCnt = 0;
   }
+
+  if (ForceEmitZeroLoadFlag && Wait.LoadCnt != ~0u)
+    Wait.LoadCnt = 0;
 
   return generateWaitcnt(Wait, MI.getIterator(), *MI.getParent(), ScoreBrackets,
                          OldWaitcntInstr);

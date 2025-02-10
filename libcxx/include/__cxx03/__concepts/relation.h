@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_RELATION_H
-#define _LIBCPP___CONCEPTS_RELATION_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_RELATION_H
+#define _LIBCPP___CXX03___CONCEPTS_RELATION_H
 
 #include <__cxx03/__concepts/predicate.h>
 #include <__cxx03/__config>
@@ -40,4 +40,4 @@ concept strict_weak_order = relation<_Rp, _Tp, _Up>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_RELATION_H
+#endif // _LIBCPP___CXX03___CONCEPTS_RELATION_H

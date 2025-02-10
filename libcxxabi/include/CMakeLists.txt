@@ -3,7 +3,20 @@ set(files
   cxxabi.h
   )
 
+foreach(f ${files})
+  set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
+  set(dst "${LIBCXXABI_GENERATED_INCLUDE_DIR}/${f}")
+  add_custom_command(OUTPUT ${dst}
+    DEPENDS ${src}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+    COMMENT "Copying CXXABI header ${f}")
+  list(APPEND _all_includes "${dst}")
+endforeach()
+
+add_custom_target(generate-cxxabi-headers ALL DEPENDS ${_all_includes})
+
 add_library(cxxabi-headers INTERFACE)
+add_dependencies(cxxabi-headers generate-cxxabi-headers)
 target_include_directories(cxxabi-headers INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 if (LIBCXXABI_INSTALL_HEADERS)

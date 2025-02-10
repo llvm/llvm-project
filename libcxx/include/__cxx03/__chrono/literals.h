@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_LITERALS_H
-#define _LIBCPP___CHRONO_LITERALS_H
+#ifndef _LIBCPP___CXX03___CHRONO_LITERALS_H
+#define _LIBCPP___CXX03___CHRONO_LITERALS_H
 
 #include <__cxx03/__chrono/day.h>
 #include <__cxx03/__chrono/year.h>
@@ -42,4 +42,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___CHRONO_LITERALS_H
+#endif // _LIBCPP___CXX03___CHRONO_LITERALS_H

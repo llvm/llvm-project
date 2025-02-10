@@ -21,7 +21,6 @@
 #include "WebAssemblyTargetTransformInfo.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -115,17 +114,17 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(
+    : CodeGenTargetMachineImpl(
           T,
           TT.isArch64Bit()
               ? (TT.isOSEmscripten() ? "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-"
-                                       "f128:64-n32:64-S128-ni:1:10:20"
+                                       "i128:128-f128:64-n32:64-S128-ni:1:10:20"
                                      : "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-"
-                                       "n32:64-S128-ni:1:10:20")
+                                       "i128:128-n32:64-S128-ni:1:10:20")
               : (TT.isOSEmscripten() ? "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-"
-                                       "f128:64-n32:64-S128-ni:1:10:20"
+                                       "i128:128-f128:64-n32:64-S128-ni:1:10:20"
                                      : "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-"
-                                       "n32:64-S128-ni:1:10:20"),
+                                       "i128:128-n32:64-S128-ni:1:10:20"),
           TT, CPU, FS, Options, getEffectiveRelocModel(RM, TT),
           getEffectiveCodeModel(CM, CodeModel::Large), OL),
       TLOF(new WebAssemblyTargetObjectFile()),
@@ -401,8 +400,8 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 using WebAssembly::WasmEnableEH;
 using WebAssembly::WasmEnableEmEH;
 using WebAssembly::WasmEnableEmSjLj;
-using WebAssembly::WasmEnableExnref;
 using WebAssembly::WasmEnableSjLj;
+using WebAssembly::WasmUseLegacyEH;
 
 static void basicCheckForEHAndSjLj(TargetMachine *TM) {
 
@@ -418,9 +417,6 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
   if (WasmEnableEmEH && WasmEnableSjLj)
     report_fatal_error(
         "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
-  if (WasmEnableExnref && !WasmEnableEH)
-    report_fatal_error(
-        "-wasm-enable-exnref should be used with -wasm-enable-eh");
 
   // Here we make sure TargetOptions.ExceptionModel is the same as
   // MCAsmInfo.ExceptionsType. Normally these have to be the same, because clang

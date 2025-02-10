@@ -281,6 +281,11 @@ struct CommonConfig {
 
   SmallVector<std::pair<NameMatcher, llvm::DebugCompressionType>, 0>
       compressSections;
+
+  // ErrorCallback is used to handle recoverable errors. An Error returned
+  // by the callback aborts the execution and is then returned to the caller.
+  // If the callback is not set, the errors are not issued.
+  std::function<Error(Error)> ErrorCallback;
 };
 
 } // namespace objcopy

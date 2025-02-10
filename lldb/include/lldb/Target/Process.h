@@ -1380,6 +1380,8 @@ public:
 
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
+  virtual lldb_private::UUID FindModuleUUID(const llvm::StringRef path);
+
   /// Get the exit status for a process.
   ///
   /// \return
@@ -1489,10 +1491,11 @@ public:
   ///     otherwise.
   virtual bool IsAlive();
 
+  /// Check if a process is a live debug session, or a corefile/post-mortem.
   virtual bool IsLiveDebugSession() const { return true; };
 
   /// Provide a way to retrieve the core dump file that is loaded for debugging.
-  /// Only available if IsLiveDebugSession() returns true.
+  /// Only available if IsLiveDebugSession() returns false.
   ///
   /// \return
   ///     File path to the core file.

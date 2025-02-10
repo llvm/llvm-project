@@ -3,9 +3,9 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1010-SDAG %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GFX1100-SDAG %s
 
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx802 -verify-machineinstrs -global-isel < %s | FileCheck -check-prefixes=GFX802-GISEL %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -verify-machineinstrs -global-isel < %s | FileCheck -check-prefixes=GFX1010-GISEL %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 -global-isel < %s | FileCheck -check-prefixes=GFX1100-GISEL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx802 -verify-machineinstrs -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX802-GISEL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -verify-machineinstrs -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1010-GISEL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1100-GISEL %s
 
 declare i32 @llvm.amdgcn.writelane(i32, i32, i32) #0
 declare i64 @llvm.amdgcn.writelane.i64(i64, i32, i64) #0
@@ -2128,10 +2128,10 @@ define void @test_writelane_bfloat(ptr addrspace(1) %out, bfloat %src, i32 %src1
 ; GFX802-GISEL:       ; %bb.0:
 ; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX802-GISEL-NEXT:    flat_load_ushort v4, v[0:1]
-; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX802-GISEL-NEXT:    v_readfirstlane_b32 m0, v3
 ; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
-; GFX802-GISEL-NEXT:    s_mov_b32 m0, s5
 ; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX802-GISEL-NEXT:    s_nop 1
 ; GFX802-GISEL-NEXT:    v_writelane_b32 v4, s4, m0
 ; GFX802-GISEL-NEXT:    flat_store_short v[0:1], v4
 ; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0)

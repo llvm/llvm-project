@@ -14,7 +14,7 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__mutex/tag_types.h>
-#include <__system_error/system_error.h>
+#include <__system_error/throw_system_error.h>
 #include <__utility/swap.h>
 #include <cerrno>
 

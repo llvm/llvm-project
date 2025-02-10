@@ -21,7 +21,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; WIDE-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[INDEX]]
 ; WIDE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x double>, ptr [[TMP4]], align 8
 ; WIDE-NEXT:    [[TMP5:%.*]] = fptrunc <vscale x 4 x double> [[WIDE_LOAD]] to <vscale x 4 x float>
-; WIDE-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x float> @foo_vector(<vscale x 4 x float> [[TMP5]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; WIDE-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x float> @foo_vector(<vscale x 4 x float> [[TMP5]], <vscale x 4 x i1> splat (i1 true))
 ; WIDE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
 ; WIDE-NEXT:    store <vscale x 4 x float> [[TMP6]], ptr [[TMP7]], align 4
 ; WIDE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP9]]

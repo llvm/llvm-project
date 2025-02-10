@@ -7,6 +7,8 @@ module mod1
     integer :: i
   end type
 
+  integer, device, dimension(11:20) :: cdev
+
 contains
   function dev1(a)
     integer, device :: a(:)
@@ -16,6 +18,7 @@ contains
 end
 
 subroutine sub1()
+  use mod1
   integer, device :: m
   integer, device :: adev(10)
   integer :: i, ahost(10), bhost(10)
@@ -34,6 +37,7 @@ subroutine sub1()
 
   adev = 10
 
+  cdev = 0
 end
 
 ! CHECK-LABEL: func.func @_QPsub1()
@@ -69,6 +73,8 @@ end
 ! CHECK: hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2 : !fir.ref<!fir.array<10xi32>>, i1
 
 ! CHECK: cuf.data_transfer %c10{{.*}} to %[[ADEV]]#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : i32, !fir.ref<!fir.array<10xi32>>
+
+! CHECK: cuf.data_transfer %c0{{.*}} to %{{.*}}#1, %{{.*}} : !fir.shapeshift<1> {transfer_kind = #cuf.cuda_transfer<host_device>} : i32, !fir.ref<!fir.array<10xi32>>
 
 subroutine sub2()
   integer, device :: m
@@ -124,7 +130,7 @@ end
 ! CHECK: %[[TMP:.*]] = fir.alloca !fir.type<_QMmod1Tt1{i:i32}> {bindc_name = ".tmp"}
 ! CHECK: %[[AHOST:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFsub3Eahost"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK: %[[BHOST:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFsub3Ebhost"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
-! CHECK: %[[T:.*]]:2 = hlfir.declare %7 {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub3Et"} : (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>) -> (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>, !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>)
+! CHECK: %[[T:.*]]:2 = hlfir.declare %{{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub3Et"} : (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>) -> (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>, !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>)
 ! CHECK: %[[TMP_DECL:.*]]:2 = hlfir.declare %0 {uniq_name = ".tmp"} : (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>) -> (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>, !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>)
 ! CHECK: cuf.data_transfer %[[T]]#1 to %[[TMP_DECL]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>, !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>
 
@@ -374,3 +380,17 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub18
 ! CHECK-NOT: cuf.data_transfer
+
+subroutine sub19()
+  integer, device :: adev(10)
+  integer :: ahost(10)
+  ! Implicit data transfer of adev and then addition on the host
+  ahost = adev + 2
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub19()
+! CHECK: %[[ADEV_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub19Eadev"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK: %[[ALLOC_TMP:.*]] = fir.allocmem !fir.array<10xi32> {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: %[[TMP:.*]]:2 = hlfir.declare %[[ALLOC_TMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
+! CHECK: cuf.data_transfer %[[ADEV_DECL]]#1 to %[[TMP]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>
+! CHECL: hlfir.assign 

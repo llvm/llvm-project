@@ -141,10 +141,10 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
 
   // Actually remove the blocks now.
   for (MachineBasicBlock *BB : DeadBlocks) {
-    // Remove any call site information for calls in the block.
+    // Remove any call information for calls in the block.
     for (auto &I : BB->instrs())
-      if (I.shouldUpdateCallSiteInfo())
-        BB->getParent()->eraseCallSiteInfo(&I);
+      if (I.shouldUpdateAdditionalCallInfo())
+        BB->getParent()->eraseAdditionalCallInfo(&I);
 
     BB->eraseFromParent();
   }

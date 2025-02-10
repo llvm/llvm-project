@@ -114,6 +114,33 @@ def ExactFlagInterface : OpInterface<"ExactFlagInterface"> {
   ];
 }
 
+def DisjointFlagInterface : OpInterface<"DisjointFlagInterface"> {
+  let description = [{
+    This interface defines an LLVM operation with a disjoint flag and
+    provides a uniform API for accessing it.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<[{
+      Get the disjoint flag for the operation.
+    }], "bool", "getIsDisjoint", (ins), [{}], [{
+      return $_op.getProperties().isDisjoint;
+    }]>,
+    InterfaceMethod<[{
+      Set the disjoint flag for the operation.
+    }], "void", "setIsDisjoint", (ins "bool":$isDisjoint), [{}], [{
+      $_op.getProperties().isDisjoint = isDisjoint;
+    }]>,
+    StaticInterfaceMethod<[{
+      Get the attribute name of the isDisjoint property.
+    }], "StringRef", "getIsDisjointName", (ins), [{}], [{
+      return "isDisjoint";
+    }]>,
+  ];
+}
+
 def NonNegFlagInterface : OpInterface<"NonNegFlagInterface"> {
   let description = [{
     This interface defines an LLVM operation with an nneg flag and

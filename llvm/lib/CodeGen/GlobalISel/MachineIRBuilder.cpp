@@ -600,12 +600,13 @@ MachineInstrBuilder MachineIRBuilder::buildCast(const DstOp &Dst,
     return buildCopy(Dst, Src);
 
   unsigned Opcode;
-  if (SrcTy.isPointer() && DstTy.isScalar())
+  if (SrcTy.isPointerOrPointerVector())
     Opcode = TargetOpcode::G_PTRTOINT;
-  else if (DstTy.isPointer() && SrcTy.isScalar())
+  else if (DstTy.isPointerOrPointerVector())
     Opcode = TargetOpcode::G_INTTOPTR;
   else {
-    assert(!SrcTy.isPointer() && !DstTy.isPointer() && "n G_ADDRCAST yet");
+    assert(!SrcTy.isPointerOrPointerVector() &&
+           !DstTy.isPointerOrPointerVector() && "no G_ADDRCAST yet");
     Opcode = TargetOpcode::G_BITCAST;
   }
 
@@ -694,6 +695,15 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(LLT Res,
                                                    const SrcOp &Op) {
   unsigned NumReg = Op.getLLTTy(*getMRI()).getSizeInBits() / Res.getSizeInBits();
   SmallVector<DstOp, 8> TmpVec(NumReg, Res);
+  return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildUnmerge(MachineRegisterInfo::VRegAttrs Attrs,
+                               const SrcOp &Op) {
+  LLT OpTy = Op.getLLTTy(*getMRI());
+  unsigned NumRegs = OpTy.getSizeInBits() / Attrs.Ty.getSizeInBits();
+  SmallVector<DstOp, 8> TmpVec(NumRegs, Attrs);
   return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
 }
 
@@ -811,8 +821,9 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
 
 MachineInstrBuilder MachineIRBuilder::buildStepVector(const DstOp &Res,
                                                       unsigned Step) {
-  ConstantInt *CI =
-      ConstantInt::get(getMF().getFunction().getContext(), APInt(64, Step));
+  unsigned Bitwidth = Res.getLLTTy(*getMRI()).getElementType().getSizeInBits();
+  ConstantInt *CI = ConstantInt::get(getMF().getFunction().getContext(),
+                                     APInt(Bitwidth, Step));
   auto StepVector = buildInstr(TargetOpcode::G_STEP_VECTOR);
   StepVector->setDebugLoc(DebugLoc());
   Res.addDefToMIB(*getMRI(), StepVector);

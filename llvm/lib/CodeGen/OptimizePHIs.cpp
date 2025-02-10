@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include <cassert>

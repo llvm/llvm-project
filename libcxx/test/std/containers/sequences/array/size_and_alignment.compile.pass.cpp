@@ -14,6 +14,8 @@
 // Make sure std::array<T, N> has the correct object size and alignment.
 // This test is mostly meant to catch subtle ABI-breaking regressions.
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // Ignore error about requesting a large alignment not being ABI compatible with older AIX systems.
 #if defined(_AIX)
 #  pragma clang diagnostic ignored "-Waix-compat"

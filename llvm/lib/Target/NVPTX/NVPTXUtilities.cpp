@@ -13,17 +13,13 @@
 #include "NVPTXUtilities.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Mutex.h"
-#include <algorithm>
 #include <cstring>
 #include <map>
 #include <mutex>
@@ -314,28 +310,21 @@ std::optional<unsigned> getMaxNReg(const Function &F) {
   return findOneNVVMAnnotation(&F, "maxnreg");
 }
 
-bool isKernelFunction(const Function &F) {
-  if (const auto X = findOneNVVMAnnotation(&F, "kernel"))
-    return (*X == 1);
-
-  // There is no NVVM metadata, check the calling convention
-  return F.getCallingConv() == CallingConv::PTX_Kernel;
-}
-
 MaybeAlign getAlign(const Function &F, unsigned Index) {
   // First check the alignstack metadata
   if (MaybeAlign StackAlign =
           F.getAttributes().getAttributes(Index).getStackAlignment())
     return StackAlign;
 
-  // If that is missing, check the legacy nvvm metadata
-  std::vector<unsigned> Vs;
-  bool retval = findAllNVVMAnnotation(&F, "align", Vs);
-  if (!retval)
-    return std::nullopt;
-  for (unsigned V : Vs)
-    if ((V >> 16) == Index)
-      return Align(V & 0xFFFF);
+  // check the legacy nvvm metadata only for the return value since llvm does
+  // not support stackalign attribute for this.
+  if (Index == 0) {
+    std::vector<unsigned> Vs;
+    if (findAllNVVMAnnotation(&F, "align", Vs))
+      for (unsigned V : Vs)
+        if ((V >> 16) == Index)
+          return Align(V & 0xFFFF);
+  }
 
   return std::nullopt;
 }

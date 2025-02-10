@@ -16,12 +16,12 @@ define signext i32 @trunc_nuw_nsw_urem(i64 %x) nounwind {
 ; CHECK-LABEL: trunc_nuw_nsw_urem:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, 210
+; CHECK-NEXT:    lui a2, 2
 ; CHECK-NEXT:    addiw a1, a1, -1167
 ; CHECK-NEXT:    slli a1, a1, 12
 ; CHECK-NEXT:    addi a1, a1, 1881
 ; CHECK-NEXT:    mul a1, a0, a1
 ; CHECK-NEXT:    srli a1, a1, 45
-; CHECK-NEXT:    lui a2, 2
 ; CHECK-NEXT:    addi a2, a2, 1808
 ; CHECK-NEXT:    mul a1, a1, a2
 ; CHECK-NEXT:    subw a0, a0, a1

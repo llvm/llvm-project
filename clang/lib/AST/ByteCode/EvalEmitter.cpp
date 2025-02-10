@@ -10,7 +10,6 @@
 #include "Context.h"
 #include "IntegralAP.h"
 #include "Interp.h"
-#include "Opcode.h"
 #include "clang/AST/DeclCXX.h"
 
 using namespace clang;
@@ -18,11 +17,7 @@ using namespace clang::interp;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
                          InterpStack &Stk)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {
-  // Create a dummy frame for the interpreter which does not have locals.
-  S.Current =
-      new InterpFrame(S, /*Func=*/nullptr, /*Caller=*/nullptr, CodePtr(), 0);
-}
+    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
 
 EvalEmitter::~EvalEmitter() {
   for (auto &[K, V] : Locals) {
@@ -175,6 +170,9 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
       return false;
     }
   } else {
+    if (!Ptr.isLive() && !Ptr.isTemporary())
+      return false;
+
     EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
   }
 

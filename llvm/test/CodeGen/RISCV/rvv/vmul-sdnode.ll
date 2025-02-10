@@ -897,8 +897,8 @@ define <vscale x 8 x i64> @vmul_xx_nxv8i64(i64 %a, i64 %b) nounwind {
 ; RV32M-NEXT:    mul a4, a0, a2
 ; RV32M-NEXT:    mul a3, a0, a3
 ; RV32M-NEXT:    mulhu a0, a0, a2
-; RV32M-NEXT:    add a0, a0, a3
 ; RV32M-NEXT:    mul a1, a1, a2
+; RV32M-NEXT:    add a0, a0, a3
 ; RV32M-NEXT:    add a0, a0, a1
 ; RV32M-NEXT:    sw a4, 8(sp)
 ; RV32M-NEXT:    sw a0, 12(sp)

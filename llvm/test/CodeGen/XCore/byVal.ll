@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 
 ; CHECK-LABEL: f0Test
 ; CHECK: entsp 1

@@ -50,7 +50,15 @@ protected:
   bool GCN3Encoding = false;
   bool Has16BitInsts = false;
   bool HasTrue16BitInsts = false;
+  bool HasFP8ConversionScaleInsts = false;
+  bool HasBF8ConversionScaleInsts = false;
+  bool HasFP4ConversionScaleInsts = false;
+  bool HasFP6BF6ConversionScaleInsts = false;
+  bool HasF16BF16ToFP6BF6ConversionScaleInsts = false;
+  bool HasCvtPkF16F32Inst = false;
+  bool HasF32ToF16BF16ConversionSRInsts = false;
   bool EnableRealTrue16Insts = false;
+  bool HasBF16ConversionInsts = false;
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -119,11 +127,21 @@ public:
   unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
                                            const Function &) const;
 
-  /// Inverse of getMaxLocalMemWithWaveCount. Return the maximum wavecount if
-  /// the given LDS memory size is the only constraint.
-  unsigned getOccupancyWithLocalMemSize(uint32_t Bytes, const Function &) const;
+  /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
+  /// be achieved when the only function running on a CU is \p F and each
+  /// workgroup running the function requires \p LDSBytes bytes of LDS space.
+  /// This notably depends on the range of allowed flat group sizes for the
+  /// function and hardware characteristics.
+  std::pair<unsigned, unsigned>
+  getOccupancyWithWorkGroupSizes(uint32_t LDSBytes, const Function &F) const;
 
-  unsigned getOccupancyWithLocalMemSize(const MachineFunction &MF) const;
+  /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
+  /// be achieved when the only function running on a CU is \p MF. This notably
+  /// depends on the range of allowed flat group sizes for the function, the
+  /// amount of per-workgroup LDS space required by the function, and hardware
+  /// characteristics.
+  std::pair<unsigned, unsigned>
+  getOccupancyWithWorkGroupSizes(const MachineFunction &MF) const;
 
   bool isAmdHsaOS() const {
     return TargetTriple.getOS() == Triple::AMDHSA;
@@ -166,8 +184,28 @@ public:
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const;
 
+  bool hasBF16ConversionInsts() const {
+    return HasBF16ConversionInsts;
+  }
+
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
+  }
+
+  bool hasFP8ConversionScaleInsts() const { return HasFP8ConversionScaleInsts; }
+
+  bool hasBF8ConversionScaleInsts() const { return HasBF8ConversionScaleInsts; }
+
+  bool hasFP4ConversionScaleInsts() const { return HasFP4ConversionScaleInsts; }
+
+  bool hasFP6BF6ConversionScaleInsts() const { return HasFP6BF6ConversionScaleInsts; }
+
+  bool hasF16BF16ToFP6BF6ConversionScaleInsts() const { return HasF16BF16ToFP6BF6ConversionScaleInsts; }
+
+  bool hasCvtPkF16F32Inst() const { return HasCvtPkF16F32Inst; }
+
+  bool hasF32ToF16BF16ConversionSRInsts() const {
+    return HasF32ToF16BF16ConversionSRInsts;
   }
 
   bool hasMadMacF32Insts() const {

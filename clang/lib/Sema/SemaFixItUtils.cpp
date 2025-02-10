@@ -24,7 +24,7 @@ bool ConversionFixItGenerator::compareTypesSimple(CanQualType From,
                                                   Sema &S,
                                                   SourceLocation Loc,
                                                   ExprValueKind FromVK) {
-  if (!To.isAtLeastAsQualifiedAs(From))
+  if (!To.isAtLeastAsQualifiedAs(From, S.getASTContext()))
     return false;
 
   From = From.getNonReferenceType();
@@ -41,8 +41,8 @@ bool ConversionFixItGenerator::compareTypesSimple(CanQualType From,
   const CanQualType FromUnq = From.getUnqualifiedType();
   const CanQualType ToUnq = To.getUnqualifiedType();
 
-  if ((FromUnq == ToUnq || (S.IsDerivedFrom(Loc, FromUnq, ToUnq)) ) &&
-      To.isAtLeastAsQualifiedAs(From))
+  if ((FromUnq == ToUnq || (S.IsDerivedFrom(Loc, FromUnq, ToUnq))) &&
+      To.isAtLeastAsQualifiedAs(From, S.getASTContext()))
     return true;
   return false;
 }

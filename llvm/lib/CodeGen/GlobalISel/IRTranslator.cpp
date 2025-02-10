@@ -296,8 +296,21 @@ void IRTranslator::addMachineCFGPred(CFGEdge Edge, MachineBasicBlock *NewPred) {
   MachinePreds[Edge].push_back(NewPred);
 }
 
+static bool containsBF16Type(const User &U) {
+  // BF16 cannot currently be represented by LLT, to avoid miscompiles we
+  // prevent any instructions using them. FIXME: This can be removed once LLT
+  // supports bfloat.
+  return U.getType()->getScalarType()->isBFloatTy() ||
+         any_of(U.operands(), [](Value *V) {
+           return V->getType()->getScalarType()->isBFloatTy();
+         });
+}
+
 bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
                                      MachineIRBuilder &MIRBuilder) {
+  if (containsBF16Type(U))
+    return false;
+
   // Get or create a virtual register for each value.
   // Unless the value is a Constant => loadimm cst?
   // or inline constant each time?
@@ -317,6 +330,9 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
 
 bool IRTranslator::translateUnaryOp(unsigned Opcode, const User &U,
                                     MachineIRBuilder &MIRBuilder) {
+  if (containsBF16Type(U))
+    return false;
+
   Register Op0 = getOrCreateVReg(*U.getOperand(0));
   Register Res = getOrCreateVReg(U);
   uint32_t Flags = 0;
@@ -334,6 +350,9 @@ bool IRTranslator::translateFNeg(const User &U, MachineIRBuilder &MIRBuilder) {
 
 bool IRTranslator::translateCompare(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
+  if (containsBF16Type(U))
+    return false;
+
   auto *CI = cast<CmpInst>(&U);
   Register Op0 = getOrCreateVReg(*U.getOperand(0));
   Register Op1 = getOrCreateVReg(*U.getOperand(1));
@@ -1553,8 +1572,7 @@ bool IRTranslator::translateBitCast(const User &U,
 
 bool IRTranslator::translateCast(unsigned Opcode, const User &U,
                                  MachineIRBuilder &MIRBuilder) {
-  if (U.getType()->getScalarType()->isBFloatTy() ||
-      U.getOperand(0)->getType()->getScalarType()->isBFloatTy())
+  if (containsBF16Type(U))
     return false;
 
   uint32_t Flags = 0;
@@ -2423,14 +2441,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::invariant_start: {
-    LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL);
-    Register Undef = MRI->createGenericVirtualRegister(PtrTy);
-    MIRBuilder.buildUndef(Undef);
+    MIRBuilder.buildUndef(getOrCreateVReg(CI));
     return true;
   }
   case Intrinsic::invariant_end:
     return true;
   case Intrinsic::expect:
+  case Intrinsic::expect_with_probability:
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:
   case Intrinsic::launder_invariant_group:
@@ -2597,6 +2614,10 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateExtractVector(CI, MIRBuilder);
   case Intrinsic::vector_insert:
     return translateInsertVector(CI, MIRBuilder);
+  case Intrinsic::stepvector: {
+    MIRBuilder.buildStepVector(getOrCreateVReg(CI), 1);
+    return true;
+  }
   case Intrinsic::prefetch: {
     Value *Addr = CI.getOperand(0);
     unsigned RW = cast<ConstantInt>(CI.getOperand(1))->getZExtValue();
@@ -2642,6 +2663,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
 bool IRTranslator::translateInlineAsm(const CallBase &CB,
                                       MachineIRBuilder &MIRBuilder) {
+  if (containsBF16Type(CB))
+    return false;
 
   const InlineAsmLowering *ALI = MF->getSubtarget().getInlineAsmLowering();
 
@@ -2731,6 +2754,9 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
 }
 
 bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
+  if (containsBF16Type(U))
+    return false;
+
   const CallInst &CI = cast<CallInst>(U);
   auto TII = MF->getTarget().getIntrinsicInfo();
   const Function *F = CI.getCalledFunction();
@@ -2861,7 +2887,7 @@ bool IRTranslator::findUnwindDestinations(
   }
 
   while (EHPadBB) {
-    const Instruction *Pad = EHPadBB->getFirstNonPHI();
+    BasicBlock::const_iterator Pad = EHPadBB->getFirstNonPHIIt();
     BasicBlock *NewEHPadBB = nullptr;
     if (isa<LandingPadInst>(Pad)) {
       // Stop on landingpads. They are not funclets.
@@ -2922,7 +2948,7 @@ bool IRTranslator::translateInvoke(const User &U,
     return false;
 
   // FIXME: support Windows exception handling.
-  if (!isa<LandingPadInst>(EHPadBB->getFirstNonPHI()))
+  if (!isa<LandingPadInst>(EHPadBB->getFirstNonPHIIt()))
     return false;
 
   // FIXME: support Windows dllimport function calls and calls through
@@ -3366,6 +3392,9 @@ bool IRTranslator::translateAtomicCmpXchg(const User &U,
 
 bool IRTranslator::translateAtomicRMW(const User &U,
                                       MachineIRBuilder &MIRBuilder) {
+  if (containsBF16Type(U))
+    return false;
+
   const AtomicRMWInst &I = cast<AtomicRMWInst>(U);
   auto Flags = TLI->getAtomicMemOperandFlags(I, *DL);
 
@@ -3547,7 +3576,6 @@ void IRTranslator::translateDbgValueRecord(Value *V, bool HasArgList,
     // pretty baked in right now.
     MIRBuilder.buildDirectDbgValue(Reg, Variable, Expression);
   }
-  return;
 }
 
 void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
@@ -4027,7 +4055,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MF->push_back(EntryBB);
   EntryBuilder->setMBB(*EntryBB);
 
-  DebugLoc DbgLoc = F.getEntryBlock().getFirstNonPHI()->getDebugLoc();
+  DebugLoc DbgLoc = F.getEntryBlock().getFirstNonPHIIt()->getDebugLoc();
   SwiftError.setFunction(CurMF);
   SwiftError.createEntriesInEntryBlock(DbgLoc);
 

@@ -1,0 +1,37 @@
+{
+  "errno": {
+    "LIBC_CONF_ERRNO_MODE": {
+      "value": "LIBC_ERRNO_MODE_SHARED"
+    }
+  },
+  "printf": {
+    "LIBC_CONF_PRINTF_DISABLE_FLOAT": {
+      "value": true
+    },
+    "LIBC_CONF_PRINTF_DISABLE_INDEX_MODE": {
+      "value": true
+    },
+    "LIBC_CONF_PRINTF_DISABLE_WRITE_INT": {
+      "value": true
+    },
+    "LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE": {
+      "value": false
+    },
+    "LIBC_CONF_PRINTF_DISABLE_STRERROR": {
+      "value": true
+    }
+  },
+  "scanf": {
+    "LIBC_CONF_SCANF_DISABLE_FLOAT": {
+      "value": true
+    },
+    "LIBC_CONF_SCANF_DISABLE_INDEX_MODE": {
+      "value": true
+    }
+  },
+  "math": {
+    "LIBC_CONF_MATH_OPTIMIZATIONS": {
+      "value": "(LIBC_MATH_SKIP_ACCURATE_PASS | LIBC_MATH_SMALL_TABLES | LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)"
+    }
+  }
+}

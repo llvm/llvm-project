@@ -23,8 +23,8 @@ define i32 @urem(i32 %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    call __umoddi3
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -452,8 +452,8 @@ define i8 @srem8(i8 %a, i8 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    srai a0, a0, 24
 ; RV32I-NEXT:    slli a1, a1, 24
+; RV32I-NEXT:    srai a0, a0, 24
 ; RV32I-NEXT:    srai a1, a1, 24
 ; RV32I-NEXT:    call __modsi3
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -463,8 +463,8 @@ define i8 @srem8(i8 %a, i8 %b) nounwind {
 ; RV32IM-LABEL: srem8:
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    slli a1, a1, 24
-; RV32IM-NEXT:    srai a1, a1, 24
 ; RV32IM-NEXT:    slli a0, a0, 24
+; RV32IM-NEXT:    srai a1, a1, 24
 ; RV32IM-NEXT:    srai a0, a0, 24
 ; RV32IM-NEXT:    rem a0, a0, a1
 ; RV32IM-NEXT:    ret
@@ -474,8 +474,8 @@ define i8 @srem8(i8 %a, i8 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    srai a0, a0, 56
 ; RV64I-NEXT:    slli a1, a1, 56
+; RV64I-NEXT:    srai a0, a0, 56
 ; RV64I-NEXT:    srai a1, a1, 56
 ; RV64I-NEXT:    call __moddi3
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -485,8 +485,8 @@ define i8 @srem8(i8 %a, i8 %b) nounwind {
 ; RV64IM-LABEL: srem8:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    slli a1, a1, 56
-; RV64IM-NEXT:    srai a1, a1, 56
 ; RV64IM-NEXT:    slli a0, a0, 56
+; RV64IM-NEXT:    srai a1, a1, 56
 ; RV64IM-NEXT:    srai a0, a0, 56
 ; RV64IM-NEXT:    remw a0, a0, a1
 ; RV64IM-NEXT:    ret
@@ -637,8 +637,8 @@ define i16 @srem16(i16 %a, i16 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    slli a1, a1, 16
+; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    srai a1, a1, 16
 ; RV32I-NEXT:    call __modsi3
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -648,8 +648,8 @@ define i16 @srem16(i16 %a, i16 %b) nounwind {
 ; RV32IM-LABEL: srem16:
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    slli a1, a1, 16
-; RV32IM-NEXT:    srai a1, a1, 16
 ; RV32IM-NEXT:    slli a0, a0, 16
+; RV32IM-NEXT:    srai a1, a1, 16
 ; RV32IM-NEXT:    srai a0, a0, 16
 ; RV32IM-NEXT:    rem a0, a0, a1
 ; RV32IM-NEXT:    ret
@@ -659,8 +659,8 @@ define i16 @srem16(i16 %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    slli a1, a1, 48
+; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    srai a1, a1, 48
 ; RV64I-NEXT:    call __moddi3
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -670,8 +670,8 @@ define i16 @srem16(i16 %a, i16 %b) nounwind {
 ; RV64IM-LABEL: srem16:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    slli a1, a1, 48
-; RV64IM-NEXT:    srai a1, a1, 48
 ; RV64IM-NEXT:    slli a0, a0, 48
+; RV64IM-NEXT:    srai a1, a1, 48
 ; RV64IM-NEXT:    srai a0, a0, 48
 ; RV64IM-NEXT:    remw a0, a0, a1
 ; RV64IM-NEXT:    ret

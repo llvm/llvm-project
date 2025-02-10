@@ -3181,12 +3181,14 @@ public:
   QualType getCallReturnType(const ASTContext &Ctx) const;
 
   /// Returns the WarnUnusedResultAttr that is either declared on the called
-  /// function, or its return type declaration.
-  const Attr *getUnusedResultAttr(const ASTContext &Ctx) const;
+  /// function, or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached onto.
+  std::pair<const NamedDecl *, const Attr *>
+  getUnusedResultAttr(const ASTContext &Ctx) const;
 
   /// Returns true if this call expression should warn on unused results.
   bool hasUnusedResultAttr(const ASTContext &Ctx) const {
-    return getUnusedResultAttr(Ctx) != nullptr;
+    return getUnusedResultAttr(Ctx).second != nullptr;
   }
 
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -5178,7 +5180,7 @@ public:
   /// than there are initializers in the list, specifies an expression to be
   /// used for value initialization of the rest of the elements.
   Expr *getArrayFiller() {
-    return ArrayFillerOrUnionFieldInit.dyn_cast<Expr *>();
+    return dyn_cast_if_present<Expr *>(ArrayFillerOrUnionFieldInit);
   }
   const Expr *getArrayFiller() const {
     return const_cast<InitListExpr *>(this)->getArrayFiller();
@@ -5203,7 +5205,7 @@ public:
   /// union. However, a designated initializer can specify the
   /// initialization of a different field within the union.
   FieldDecl *getInitializedFieldInUnion() {
-    return ArrayFillerOrUnionFieldInit.dyn_cast<FieldDecl *>();
+    return dyn_cast_if_present<FieldDecl *>(ArrayFillerOrUnionFieldInit);
   }
   const FieldDecl *getInitializedFieldInUnion() const {
     return const_cast<InitListExpr *>(this)->getInitializedFieldInUnion();
@@ -6676,7 +6678,6 @@ public:
 class AtomicExpr : public Expr {
 public:
   enum AtomicOp {
-#define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) AO ## ID,
 #include "clang/Basic/Builtins.inc"
     // Avoid trailing comma
@@ -6740,7 +6741,6 @@ public:
   AtomicOp getOp() const { return Op; }
   StringRef getOpAsString() const {
     switch (Op) {
-#define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS)                                        \
   case AO##ID:                                                                 \
     return #ID;

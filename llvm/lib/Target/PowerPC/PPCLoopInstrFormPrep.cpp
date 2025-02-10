@@ -93,7 +93,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
@@ -109,7 +108,6 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 #include <cmath>
-#include <iterator>
 #include <utility>
 
 #define DEBUG_TYPE "ppc-loop-instr-form-prep"

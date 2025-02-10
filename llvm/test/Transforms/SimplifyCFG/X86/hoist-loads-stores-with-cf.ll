@@ -276,21 +276,19 @@ if.false:                                    ; preds = %if.true, %entry
 }
 
 ;; Both of successor 0 and successor 1 have a single predecessor.
-;; TODO: Support transform for this case.
-define void @single_predecessor(ptr %p, ptr %q, i32 %a) {
+define i32 @single_predecessor(ptr %p, ptr %q, i32 %a) {
 ; CHECK-LABEL: @single_predecessor(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
-; CHECK:       common.ret:
-; CHECK-NEXT:    ret void
-; CHECK:       if.end:
-; CHECK-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Q]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[TOBOOL]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i1 [[TOBOOL]] to <1 x i1>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> splat (i32 1), ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q]], i32 4, <1 x i1> [[TMP1]], <1 x i32> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP3]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP1]])
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TOBOOL]], i32 2, i32 3
+; CHECK-NEXT:    ret i32 [[DOT]]
 ;
 entry:
   %tobool = icmp ne i32 %a, 0
@@ -298,12 +296,12 @@ entry:
 
 if.end:
   store i32 1, ptr %q
-  ret void
+  ret i32 2
 
 if.then:
   %0 = load i32, ptr %q
   store i32 %0, ptr %p
-  ret void
+  ret i32 3
 }
 
 ;; Hoist 6 stores.
@@ -757,6 +755,44 @@ if.true:
   %res1 = phi i32 [ %0, %if.false ], [ %x, %entry ]
   %res = add i32 %res0, %res1
   ret i32 %res
+}
+
+;; Not transform if either BB has multiple successors.
+define i32 @not_multi_successors(i1 %c1, i32 %c2, ptr %p) {
+; CHECK-LABEL: @not_multi_successors(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[ENTRY_IF:%.*]], label [[COMMON_RET:%.*]]
+; CHECK:       entry.if:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    switch i32 [[C2:%.*]], label [[COMMON_RET]] [
+; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW_BB]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VAL]], [[ENTRY_IF]] ], [ 0, [[SW_BB]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       sw.bb:
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  br i1 %c1, label %entry.if, label %entry.else
+
+entry.if:                                         ; preds = %entry
+  %val = load i32, ptr %p, align 4
+  switch i32 %c2, label %return [
+  i32 0, label %sw.bb
+  i32 1, label %sw.bb
+  ]
+
+entry.else:                                       ; preds = %entry
+  ret i32 0
+
+sw.bb:                                            ; preds = %entry.if, %entry.if
+  br label %return
+
+return:                                           ; preds = %sw.bb, %entry.if
+  %ret = phi i32 [ %val, %entry.if ], [ 0, %sw.bb ]
+  ret i32 %ret
 }
 
 declare i32 @read_memory_only() readonly nounwind willreturn speculatable

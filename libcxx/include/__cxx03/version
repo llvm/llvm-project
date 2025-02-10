@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_VERSIONH
-#define _LIBCPP_VERSIONH
+#ifndef _LIBCPP___CXX03_VERSIONH
+#define _LIBCPP___CXX03_VERSIONH
 
 /*
   version synopsis
@@ -563,4 +563,4 @@ __cpp_lib_void_t                                        201411L <type_traits>
 
 // clang-format on
 
-#endif // _LIBCPP_VERSIONH
+#endif // _LIBCPP___CXX03_VERSIONH

@@ -9,8 +9,8 @@
 // TODO: __builtin_popcountg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
 //  refactor this code to exclusively use __builtin_popcountg.
 
-#ifndef _LIBCPP___BIT_POPCOUNT_H
-#define _LIBCPP___BIT_POPCOUNT_H
+#ifndef _LIBCPP___CXX03___BIT_POPCOUNT_H
+#define _LIBCPP___CXX03___BIT_POPCOUNT_H
 
 #include <__cxx03/__bit/rotate.h>
 #include <__cxx03/__concepts/arithmetic.h>
@@ -68,4 +68,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___BIT_POPCOUNT_H
+#endif // _LIBCPP___CXX03___BIT_POPCOUNT_H

@@ -15,6 +15,7 @@
 #include "GISel/RISCVLegalizerInfo.h"
 #include "RISCV.h"
 #include "RISCVFrameLowering.h"
+#include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
@@ -61,6 +62,15 @@ static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
     "riscv-min-jump-table-entries", cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on RISCV"));
 
+static cl::opt<bool>
+    UseMIPSLoadStorePairsOpt("mips-riscv-load-store-pairs",
+                             cl::desc("RISCV: Optimize for load-store bonding"),
+                             cl::init(false), cl::Hidden);
+
+static cl::opt<bool>
+    UseCCMovInsn("riscv-ccmov", cl::desc("RISCV: Use 'mips.ccmov' instruction"),
+                 cl::init(true), cl::Hidden);
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -96,7 +106,15 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
       RVVVectorBitsMin(RVVVectorBitsMin), RVVVectorBitsMax(RVVVectorBitsMax),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
-      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {}
+      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
+  TSInfo = std::make_unique<RISCVSelectionDAGInfo>();
+}
+
+RISCVSubtarget::~RISCVSubtarget() = default;
+
+const SelectionDAGTargetInfo *RISCVSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
+}
 
 const CallLowering *RISCVSubtarget::getCallLowering() const {
   if (!CallLoweringInfo)
@@ -185,9 +203,8 @@ bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
 
 bool RISCVSubtarget::enableSubRegLiveness() const { return true; }
 
-void RISCVSubtarget::getPostRAMutations(
-    std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(createMacroFusionDAGMutation(getMacroFusions()));
+bool RISCVSubtarget::enableMachinePipeliner() const {
+  return getSchedModel().hasInstrSchedModel();
 }
 
   /// Enable use of alias analysis during code generation (during MI
@@ -198,4 +215,39 @@ unsigned RISCVSubtarget::getMinimumJumpTableEntries() const {
   return RISCVMinimumJumpTableEntries.getNumOccurrences() > 0
              ? RISCVMinimumJumpTableEntries
              : TuneInfo->MinimumJumpTableEntries;
+}
+
+void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
+                                         unsigned NumRegionInstrs) const {
+  // Do bidirectional scheduling since it provides a more balanced scheduling
+  // leading to better performance. This will increase compile time.
+  Policy.OnlyTopDown = false;
+  Policy.OnlyBottomUp = false;
+
+  // Disabling the latency heuristic can reduce the number of spills/reloads but
+  // will cause some regressions on some cores.
+  Policy.DisableLatencyHeuristic = DisableLatencySchedHeuristic;
+
+  // Spilling is generally expensive on all RISC-V cores, so always enable
+  // register-pressure tracking. This will increase compile time.
+  Policy.ShouldTrackPressure = true;
+}
+
+void RISCVSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                               unsigned NumRegionInstrs) const {
+  MISched::Direction PostRASchedDirection = getPostRASchedDirection();
+  if (PostRASchedDirection == MISched::TopDown) {
+    Policy.OnlyTopDown = true;
+    Policy.OnlyBottomUp = false;
+  } else if (PostRASchedDirection == MISched::BottomUp) {
+    Policy.OnlyTopDown = false;
+    Policy.OnlyBottomUp = true;
+  } else if (PostRASchedDirection == MISched::Bidirectional) {
+    Policy.OnlyTopDown = false;
+    Policy.OnlyBottomUp = false;
+  }
+}
+
+bool RISCVSubtarget::useCCMovInsn() const {
+  return UseCCMovInsn && HasVendorXMIPSCMove;
 }

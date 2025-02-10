@@ -100,7 +100,7 @@ end subroutine test_derived_explicit_shape_array
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_5:.*]] = fir.embox %[[VAL_3]]#1(%[[VAL_4]]) : (!fir.ref<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_5]] : (!fir.box<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>) -> !fir.box<none>
-! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranAInitialize(%[[VAL_8]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:           fir.call @_FortranAInitialize(%[[VAL_8]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_3]]#0(%[[VAL_2]]) : (!fir.ref<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.array<10x!fir.type<_QFtest_derived_explicit_shape_arrayTt1{a:!fir.box<!fir.heap<f32>>}>>>) -> !fir.class<!fir.array<10xnone>>
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (!fir.class<!fir.array<10xnone>>) -> !fir.class<none>

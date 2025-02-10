@@ -63,11 +63,13 @@ export int aa = 43;
   std::string BMIPath = llvm::Twine(TestDir + "/a.pcm").str();
 
   {
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(new DiagnosticOptions());
     CreateInvocationOptions CIOpts;
-    CIOpts.Diags = Diags;
     CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+        CompilerInstance::createDiagnostics(*CIOpts.VFS,
+                                            new DiagnosticOptions());
+    CIOpts.Diags = Diags;
 
     const char *Args[] = {"clang++",       "-std=c++20",
                           "--precompile",  "-working-directory",
@@ -103,11 +105,12 @@ export int aa = 43;
   }
 
   {
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(new DiagnosticOptions());
     CreateInvocationOptions CIOpts;
-    CIOpts.Diags = Diags;
     CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+        CompilerInstance::createDiagnostics(*CIOpts.VFS,
+                                            new DiagnosticOptions());
+    CIOpts.Diags = Diags;
 
     std::string BMIPath = llvm::Twine(TestDir + "/a.pcm").str();
     const char *Args[] = {

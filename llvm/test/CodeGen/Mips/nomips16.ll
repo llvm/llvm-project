@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -relocation-model=static < %s | FileCheck %s
 
 @x = global float 0.000000e+00, align 4
 @.str = private unnamed_addr constant [20 x i8] c"in main: mips16 %f\0A\00", align 1

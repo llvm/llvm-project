@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -hexagon-expand-condsets=0 < %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner -hexagon-expand-condsets=0 < %s
 ; REQUIRES: asserts
 
 ; Disable expand-condsets because it will assert on undefined registers.

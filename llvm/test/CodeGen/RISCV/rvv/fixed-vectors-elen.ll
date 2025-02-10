@@ -32,20 +32,20 @@ define void @add_v2i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    lw a5, 4(a0)
 ; RV32-NEXT:    lw a6, 8(a0)
 ; RV32-NEXT:    lw a7, 12(a0)
-; RV32-NEXT:    lw t0, 8(a1)
-; RV32-NEXT:    lw a1, 12(a1)
+; RV32-NEXT:    lw t0, 12(a1)
+; RV32-NEXT:    lw a1, 8(a1)
 ; RV32-NEXT:    add a3, a5, a3
 ; RV32-NEXT:    add a2, a4, a2
+; RV32-NEXT:    add a7, a7, t0
+; RV32-NEXT:    add a1, a6, a1
 ; RV32-NEXT:    sltu a4, a2, a4
+; RV32-NEXT:    sltu a5, a1, a6
 ; RV32-NEXT:    add a3, a3, a4
-; RV32-NEXT:    add a1, a7, a1
-; RV32-NEXT:    add t0, a6, t0
-; RV32-NEXT:    sltu a4, t0, a6
-; RV32-NEXT:    add a1, a1, a4
+; RV32-NEXT:    add a5, a7, a5
 ; RV32-NEXT:    sw a2, 0(a0)
 ; RV32-NEXT:    sw a3, 4(a0)
-; RV32-NEXT:    sw t0, 8(a0)
-; RV32-NEXT:    sw a1, 12(a0)
+; RV32-NEXT:    sw a1, 8(a0)
+; RV32-NEXT:    sw a5, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: add_v2i64:

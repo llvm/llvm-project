@@ -5129,7 +5129,8 @@ ParseStatus ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
 
     Opt = ARM_MB::RESERVED_0 + Val;
   } else
-    return ParseStatus::Failure;
+    return Error(Parser.getTok().getLoc(),
+                 "expected an immediate or barrier type");
 
   Operands.push_back(
       ARMOperand::CreateMemBarrierOpt((ARM_MB::MemBOpt)Opt, S, *this));
@@ -5193,7 +5194,8 @@ ARMAsmParser::parseInstSyncBarrierOptOperand(OperandVector &Operands) {
 
     Opt = ARM_ISB::RESERVED_0 + Val;
   } else
-    return ParseStatus::Failure;
+    return Error(Parser.getTok().getLoc(),
+                 "expected an immediate or barrier type");
 
   Operands.push_back(ARMOperand::CreateInstSyncBarrierOpt(
       (ARM_ISB::InstSyncBOpt)Opt, S, *this));
@@ -6661,9 +6663,9 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
       Mnemonic != "vshllt" && Mnemonic != "vrshrnt" && Mnemonic != "vshrnt" &&
       Mnemonic != "vqrshrunt" && Mnemonic != "vqshrunt" &&
       Mnemonic != "vqrshrnt" && Mnemonic != "vqshrnt" && Mnemonic != "vmullt" &&
-      Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" &&
-      Mnemonic != "vqmovnt" && Mnemonic != "vmovnt" && Mnemonic != "vqdmullt" &&
-      Mnemonic != "vpnot" && Mnemonic != "vcvtt" && Mnemonic != "vcvt") {
+      Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" && Mnemonic != "vmovnt" &&
+      Mnemonic != "vqdmullt" && Mnemonic != "vpnot" && Mnemonic != "vcvtt" &&
+      Mnemonic != "vcvt") {
     unsigned VCC =
         ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size() - 1));
     if (VCC != ~0U) {
@@ -8294,7 +8296,9 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     break;
   }
   case ARM::tADDi8: {
-    MCParsedAsmOperand &Op = *Operands[MnemonicOpsEndInd + 1];
+    int i = (Operands[MnemonicOpsEndInd + 1]->isImm()) ? MnemonicOpsEndInd + 1
+                                                       : MnemonicOpsEndInd + 2;
+    MCParsedAsmOperand &Op = *Operands[i];
     if (isARMMCExpr(Op) && !isThumbI8Relocation(Op))
       return Error(Op.getStartLoc(),
                    "Immediate expression for Thumb adds requires :lower0_7:,"
@@ -8302,7 +8306,7 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     break;
   }
   case ARM::tMOVi8: {
-    MCParsedAsmOperand &Op = *Operands[MnemonicOpsEndInd];
+    MCParsedAsmOperand &Op = *Operands[MnemonicOpsEndInd + 1];
     if (isARMMCExpr(Op) && !isThumbI8Relocation(Op))
       return Error(Op.getStartLoc(),
                    "Immediate expression for Thumb movs requires :lower0_7:,"
@@ -8646,6 +8650,37 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     if (ARM::isCDECoproc(Coproc, *STI))
       return Error(Operands[2]->getStartLoc(),
                    "coprocessor must be configured as GCP");
+    break;
+  }
+
+  case ARM::VTOSHH:
+  case ARM::VTOUHH:
+  case ARM::VTOSLH:
+  case ARM::VTOULH:
+  case ARM::VTOSHS:
+  case ARM::VTOUHS:
+  case ARM::VTOSLS:
+  case ARM::VTOULS:
+  case ARM::VTOSHD:
+  case ARM::VTOUHD:
+  case ARM::VTOSLD:
+  case ARM::VTOULD:
+  case ARM::VSHTOH:
+  case ARM::VUHTOH:
+  case ARM::VSLTOH:
+  case ARM::VULTOH:
+  case ARM::VSHTOS:
+  case ARM::VUHTOS:
+  case ARM::VSLTOS:
+  case ARM::VULTOS:
+  case ARM::VSHTOD:
+  case ARM::VUHTOD:
+  case ARM::VSLTOD:
+  case ARM::VULTOD: {
+    if (Operands[MnemonicOpsEndInd]->getReg() !=
+        Operands[MnemonicOpsEndInd + 1]->getReg())
+      return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
+                   "source and destination registers must be the same");
     break;
   }
   }
@@ -9051,10 +9086,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.setOpcode(Inst.getOpcode() == ARM::t2LDR_PRE_imm ? ARM::t2LDR_PRE
                                                              : ARM::t2LDR_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9064,11 +9100,12 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     MCInst TmpInst;
     TmpInst.setOpcode(Inst.getOpcode() == ARM::t2STR_PRE_imm ? ARM::t2STR_PRE
                                                              : ARM::t2STR_POST);
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9090,10 +9127,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                           ? ARM::t2LDRB_PRE
                           : ARM::t2LDRB_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9114,11 +9152,12 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.setOpcode(Inst.getOpcode() == ARM::t2STRB_PRE_imm
                           ? ARM::t2STRB_PRE
                           : ARM::t2STRB_POST);
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9140,10 +9179,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                           ? ARM::t2LDRH_PRE
                           : ARM::t2LDRH_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9164,11 +9204,12 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.setOpcode(Inst.getOpcode() == ARM::t2STRH_PRE_imm
                           ? ARM::t2STRH_PRE
                           : ARM::t2STRH_POST);
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9190,10 +9231,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                           ? ARM::t2LDRSB_PRE
                           : ARM::t2LDRSB_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -9215,10 +9257,11 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
                           ? ARM::t2LDRSH_PRE
                           : ARM::t2LDRSH_POST);
     TmpInst.addOperand(Inst.getOperand(0)); // Rt
-    TmpInst.addOperand(Inst.getOperand(4)); // Rt_wb
+    TmpInst.addOperand(Inst.getOperand(1)); // Rn_wb
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
     TmpInst.addOperand(Inst.getOperand(2)); // imm
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
+    TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
   }
@@ -10709,14 +10752,26 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     // the flags are compatible with the current IT status, use encoding T2
     // instead of T3. For compatibility with the system 'as'. Make sure the
     // wide encoding wasn't explicit.
-    if (Inst.getOperand(0).getReg() != Inst.getOperand(1).getReg() ||
-        !isARMLowRegister(Inst.getOperand(0).getReg()) ||
-        (Inst.getOperand(2).isImm() &&
-         (unsigned)Inst.getOperand(2).getImm() > 255) ||
-        Inst.getOperand(5).getReg() !=
-            (inITBlock() ? ARM::NoRegister : ARM::CPSR) ||
-        HasWideQualifier)
-      break;
+    if (HasWideQualifier)
+      break; // source code has asked for the 32-bit instruction
+    if (Inst.getOperand(0).getReg() != Inst.getOperand(1).getReg())
+      break; // tADDi8 can't take different input and output registers
+    if (!isARMLowRegister(Inst.getOperand(0).getReg()))
+      break; // high register that tADDi8 can't access
+    if (Inst.getOperand(5).getReg() !=
+        (inITBlock() ? ARM::NoRegister : ARM::CPSR))
+      break; // flag-modification would require overriding the IT state
+    if (Inst.getOperand(2).isImm()) {
+      if ((unsigned)Inst.getOperand(2).getImm() > 255)
+        break; // large immediate that tADDi8 can't contain
+    } else {
+      int i = (Operands[MnemonicOpsEndInd + 1]->isImm())
+                  ? MnemonicOpsEndInd + 1
+                  : MnemonicOpsEndInd + 2;
+      MCParsedAsmOperand &Op = *Operands[i];
+      if (isARMMCExpr(Op) && !isThumbI8Relocation(Op))
+        break; // a type of non-immediate that tADDi8 can't represent
+    }
     MCInst TmpInst;
     TmpInst.setOpcode(Inst.getOpcode() == ARM::t2ADDri ?
                       ARM::tADDi8 : ARM::tSUBi8);
@@ -11657,7 +11712,7 @@ void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
 
 void ARMAsmParser::onLabelParsed(MCSymbol *Symbol) {
   if (NextSymbolIsThumb) {
-    getParser().getStreamer().emitThumbFunc(Symbol);
+    getTargetStreamer().emitThumbFunc(Symbol);
     NextSymbolIsThumb = false;
   }
 }
@@ -11677,7 +11732,7 @@ bool ARMAsmParser::parseDirectiveThumbFunc(SMLoc L) {
         Parser.getTok().is(AsmToken::String)) {
       MCSymbol *Func = getParser().getContext().getOrCreateSymbol(
           Parser.getTok().getIdentifier());
-      getParser().getStreamer().emitThumbFunc(Func);
+      getTargetStreamer().emitThumbFunc(Func);
       Parser.Lex();
       if (parseEOL())
         return true;

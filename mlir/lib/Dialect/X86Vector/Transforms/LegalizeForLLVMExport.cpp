@@ -90,6 +90,47 @@ struct MaskCompressOpConversion
   }
 };
 
+struct DotBF16OpConversion : public ConvertOpToLLVMPattern<DotBF16Op> {
+  using ConvertOpToLLVMPattern<DotBF16Op>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(DotBF16Op op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto typeA = dyn_cast<VectorType>(op.getA().getType());
+    unsigned elemBitWidth = typeA.getElementTypeBitWidth();
+    unsigned opBitWidth = typeA.getShape()[0] * elemBitWidth;
+
+    auto opType = adaptor.getSrc().getType();
+    auto opSrc = adaptor.getSrc();
+    auto opA = adaptor.getA();
+    auto opB = adaptor.getB();
+
+    switch (opBitWidth) {
+    case 128: {
+      rewriter.replaceOpWithNewOp<DotBF16Ps128IntrOp>(op, opType, opSrc, opA,
+                                                      opB);
+      break;
+    }
+    case 256: {
+      rewriter.replaceOpWithNewOp<DotBF16Ps256IntrOp>(op, opType, opSrc, opA,
+                                                      opB);
+      break;
+    }
+    case 512: {
+      rewriter.replaceOpWithNewOp<DotBF16Ps512IntrOp>(op, opType, opSrc, opA,
+                                                      opB);
+      break;
+    }
+    default: {
+      return rewriter.notifyMatchFailure(op,
+                                         "unsupported AVX512-BF16 dot variant");
+    }
+    }
+
+    return success();
+  }
+};
+
 struct RsqrtOpConversion : public ConvertOpToLLVMPattern<RsqrtOp> {
   using ConvertOpToLLVMPattern<RsqrtOp>::ConvertOpToLLVMPattern;
 
@@ -161,8 +202,8 @@ using Registry = RegistryImpl<
 void mlir::populateX86VectorLegalizeForLLVMExportPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   Registry::registerPatterns(converter, patterns);
-  patterns.add<MaskCompressOpConversion, RsqrtOpConversion, DotOpConversion>(
-      converter);
+  patterns.add<MaskCompressOpConversion, DotBF16OpConversion, RsqrtOpConversion,
+               DotOpConversion>(converter);
 }
 
 void mlir::configureX86VectorLegalizeForExportTarget(
@@ -170,6 +211,10 @@ void mlir::configureX86VectorLegalizeForExportTarget(
   Registry::configureTarget(target);
   target.addLegalOp<MaskCompressIntrOp>();
   target.addIllegalOp<MaskCompressOp>();
+  target.addLegalOp<DotBF16Ps128IntrOp>();
+  target.addLegalOp<DotBF16Ps256IntrOp>();
+  target.addLegalOp<DotBF16Ps512IntrOp>();
+  target.addIllegalOp<DotBF16Op>();
   target.addLegalOp<RsqrtIntrOp>();
   target.addIllegalOp<RsqrtOp>();
   target.addLegalOp<DotIntrOp>();

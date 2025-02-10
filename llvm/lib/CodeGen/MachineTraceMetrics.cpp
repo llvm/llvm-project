@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -31,7 +30,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <tuple>
 #include <utility>
 
@@ -685,11 +683,10 @@ struct DataDep {
   DataDep(const MachineRegisterInfo *MRI, unsigned VirtReg, unsigned UseOp)
     : UseOp(UseOp) {
     assert(Register::isVirtualRegister(VirtReg));
-    MachineRegisterInfo::def_iterator DefI = MRI->def_begin(VirtReg);
-    assert(!DefI.atEnd() && "Register has no defs");
-    DefMI = DefI->getParent();
-    DefOp = DefI.getOperandNo();
-    assert((++DefI).atEnd() && "Register has multiple defs");
+    MachineOperand *DefMO = MRI->getOneDef(VirtReg);
+    assert(DefMO && "Register does not have unique def");
+    DefMI = DefMO->getParent();
+    DefOp = DefMO->getOperandNo();
   }
 };
 

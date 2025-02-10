@@ -1129,10 +1129,15 @@ inline bool errorToBool(Error Err) {
 /// function.
 class ErrorAsOutParameter {
 public:
+
   ErrorAsOutParameter(Error *Err) : Err(Err) {
     // Raise the checked bit if Err is success.
     if (Err)
       (void)!!*Err;
+  }
+
+  ErrorAsOutParameter(Error &Err) : Err(&Err) {
+    (void)!!Err;
   }
 
   ~ErrorAsOutParameter() {
@@ -1397,6 +1402,23 @@ inline Error createFileError(const Twine &F, std::error_code EC) {
 /// std::error_code to form an Error object.
 inline Error createFileError(const Twine &F, size_t Line, std::error_code EC) {
   return createFileError(F, Line, errorCodeToError(EC));
+}
+
+/// Create a StringError with the specified error code and prepend the file path
+/// to it.
+inline Error createFileError(const Twine &F, std::error_code EC,
+                             const Twine &S) {
+  Error E = createStringError(EC, S);
+  return createFileError(F, std::move(E));
+}
+
+/// Create a StringError with the specified error code and prepend the file path
+/// to it.
+template <typename... Ts>
+inline Error createFileError(const Twine &F, std::error_code EC,
+                             char const *Fmt, const Ts &...Vals) {
+  Error E = createStringError(EC, Fmt, Vals...);
+  return createFileError(F, std::move(E));
 }
 
 Error createFileError(const Twine &F, ErrorSuccess) = delete;

@@ -770,3 +770,9 @@
 
 # CHECK: prefetchit1 (%rip)
 0x0f,0x18,0x35,0x00,0x00,0x00,0x00
+
+# Check that we correctly ignore a REX prefix that is not immediately before
+# the opcode. REX prefixes not immediately preceding the Opcode are ignored
+# according to Section 2.2.1 of the Intel 64 Architecture Manual.
+# CHECK: orw $25659, %ax
+0x66 0x4c 0x64 0x0d 0x3b 0x64

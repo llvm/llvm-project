@@ -731,7 +731,7 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) nounwind {
 ;
 ; AVX512-LABEL: stest_f16i32:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttps2qq %ymm0, %zmm0
 ; AVX512-NEXT:    vpmovsqd %ymm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
@@ -894,7 +894,7 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) nounwind {
 ;
 ; AVX512-LABEL: utesth_f16i32:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttps2uqq %ymm0, %zmm0
 ; AVX512-NEXT:    vpmovusqd %ymm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
@@ -1031,7 +1031,7 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) nounwind {
 ;
 ; AVX512-LABEL: ustest_f16i32:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttps2qq %ymm0, %zmm0
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpmaxsq %ymm1, %ymm0, %ymm0
@@ -3343,7 +3343,7 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) nounwind {
 ;
 ; AVX512-LABEL: stest_f16i32_mm:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttps2qq %ymm0, %zmm0
 ; AVX512-NEXT:    vpmovsqd %ymm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
@@ -3504,7 +3504,7 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) nounwind {
 ;
 ; AVX512-LABEL: utesth_f16i32_mm:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttps2uqq %ymm0, %zmm0
 ; AVX512-NEXT:    vpmovusqd %ymm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
@@ -3640,7 +3640,7 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) nounwind {
 ;
 ; AVX512-LABEL: ustest_f16i32_mm:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttps2qq %ymm0, %zmm0
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpmaxsq %ymm1, %ymm0, %ymm0

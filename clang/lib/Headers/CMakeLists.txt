@@ -147,10 +147,15 @@ set(x86_files
   adxintrin.h
   ammintrin.h
   amxavx512intrin.h
+  amxbf16transposeintrin.h
   amxcomplexintrin.h
+  amxcomplextransposeintrin.h
   amxfp16intrin.h
+  amxfp16transposeintrin.h
   amxfp8intrin.h
   amxintrin.h
+  amxmovrsintrin.h
+  amxmovrstransposeintrin.h
   amxtf32intrin.h
   amxtf32transposeintrin.h
   amxtransposeintrin.h
@@ -228,6 +233,7 @@ set(x86_files
   movdirintrin.h
   movrs_avx10_2_512intrin.h
   movrs_avx10_2intrin.h
+  movrsintrin.h
   mwaitxintrin.h
   nmmintrin.h
   pconfigintrin.h
@@ -276,6 +282,12 @@ set(x86_files
   cpuid.h
   )
 
+set(gpu_files
+  gpuintrin.h
+  nvptxintrin.h
+  amdgpuintrin.h
+  )
+
 set(windows_only_files
   intrin0.h
   intrin.h
@@ -304,6 +316,7 @@ set(files
   ${systemz_files}
   ${ve_files}
   ${x86_files}
+  ${gpu_files}
   ${webassembly_files}
   ${windows_only_files}
   ${utility_files}
@@ -526,6 +539,7 @@ add_header_target("systemz-resource-headers" "${systemz_files};${zos_wrapper_fil
 add_header_target("ve-resource-headers" "${ve_files}")
 add_header_target("webassembly-resource-headers" "${webassembly_files}")
 add_header_target("x86-resource-headers" "${x86_files}")
+add_header_target("gpu-resource-headers" "${gpu_files}")
 
 # Other header groupings
 add_header_target("hlsl-resource-headers" ${hlsl_files})
@@ -711,6 +725,12 @@ install(
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT x86-resource-headers)
+
+install(
+  FILES ${gpu_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT gpu-resource-headers)
 
 if(NOT CLANG_ENABLE_HLSL)
   set(EXCLUDE_HLSL EXCLUDE_FROM_ALL)
