@@ -970,9 +970,10 @@ void ClauseProcessor::processMapObjects(
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapVars,
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-    std::string mapperIdName) const {
+    llvm::StringRef mapperIdNameRef) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::FlatSymbolRefAttr mapperId;
+  std::string mapperIdName = mapperIdNameRef.str();
 
   for (const omp::Object &object : objects) {
     llvm::SmallVector<mlir::Value> bounds;

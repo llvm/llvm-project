@@ -176,7 +176,7 @@ private:
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-      std::string mapperIdName = "") const;
+      llvm::StringRef mapperIdNameRef = "") const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
