@@ -150,13 +150,12 @@ generic = region_op(GenericOp_, terminator=YieldOp)
 
 
 def matmul(
-    inputs: Sequence[Union[Operation, OpView, Value]],
-    *,
+    *ins: Union[Operation, OpView, Value],
     outs: Sequence[Union[Operation, OpView, Value]],
     indexing_maps: Optional[Sequence[AffineMapAttr]] = None,
     cast: Optional[Union[TypeFn, Attribute]] = None,
 ):
-    inputs = [_get_op_result_or_value(input) for input in inputs]
+    ins = [_get_op_result_or_value(input) for input in ins]
     if len(outs) > 1:
         raise ValueError(f"{outs=} must have length 1.")
     init = _get_op_result_or_value(outs[0])
@@ -164,7 +163,7 @@ def matmul(
 
     op = MatmulOp(
         result_tensors=result_types,
-        inputs=inputs,
+        inputs=ins,
         outputs=[init],
         indexing_maps=indexing_maps,
         cast=cast,
@@ -174,13 +173,12 @@ def matmul(
 
 
 def contract(
-    inputs: Sequence[Union[Operation, OpView, Value]],
-    *,
+    *ins: Union[Operation, OpView, Value],
     outs: Sequence[Union[Operation, OpView, Value]],
     indexing_maps: Sequence[AffineMapAttr],
     cast: Optional[Union[TypeFn, Attribute]] = None,
 ):
-    inputs = [_get_op_result_or_value(input) for input in inputs]
+    ins = [_get_op_result_or_value(input) for input in ins]
     if len(outs) > 1:
         raise ValueError(f"{outs=} must have length 1.")
     init = _get_op_result_or_value(outs[0])
@@ -188,7 +186,7 @@ def contract(
 
     op = ContractOp(
         result_tensors=result_types,
-        inputs=inputs,
+        inputs=ins,
         outputs=[init],
         indexing_maps=indexing_maps,
         cast=cast,

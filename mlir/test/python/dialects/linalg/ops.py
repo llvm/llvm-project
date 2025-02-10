@@ -310,7 +310,7 @@ def testMatmulOp():
                 )
                 linalg.fill_builtin_region(res.operation)
                 # CHECK: linalg.matmul ins(%[[A]], %[[B]] : tensor<4x8xf32>, tensor<8x12xf32>) outs(%[[C]] : tensor<4x12xf32>)
-                res = linalg.matmul((A, B), outs=(C,))
+                res = linalg.matmul(A, B, outs=(C,))
 
                 # CHECK: linalg.matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[A]], %[[BTrans]] : tensor<4x8xf32>, tensor<12x8xf32>) outs(%[[C]] : tensor<4x12xf32>)
                 res = linalg.MatmulOp(
@@ -322,7 +322,7 @@ def testMatmulOp():
                 linalg.fill_builtin_region(res.operation)
                 # CHECK: linalg.matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[A]], %[[BTrans]] : tensor<4x8xf32>, tensor<12x8xf32>) outs(%[[C]] : tensor<4x12xf32>)
                 res = linalg.matmul(
-                    (A, Btransposed),
+                    A, Btransposed,
                     outs=(C,),
                     indexing_maps=[a_map, b_transposed_map, c_map],
                 )
@@ -337,7 +337,7 @@ def testMatmulOp():
                 )
                 linalg.fill_builtin_region(res.operation)
                 # CHECK: linalg.matmul ins(%[[Amem]], %[[Bmem]] : memref<4x8xf32>, memref<8x12xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
-                linalg.matmul((Amem, Bmem), outs=(Cmem,))
+                linalg.matmul(Amem, Bmem, outs=(Cmem,))
 
                 # CHECK: linalg.matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[Amem]], %[[BTransmem]] : memref<4x8xf32>, memref<12x8xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
                 res = linalg.MatmulOp(
@@ -349,7 +349,7 @@ def testMatmulOp():
                 linalg.fill_builtin_region(res.operation)
                 # CHECK: linalg.matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[Amem]], %[[BTransmem]] : memref<4x8xf32>, memref<12x8xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
                 linalg.matmul(
-                    (Amem, Btransposedmem),
+                    Amem, Btransposedmem,
                     outs=(Cmem,),
                     indexing_maps=[a_map, b_transposed_map, c_map],
                 )
@@ -414,7 +414,7 @@ def testContractOp():
                 linalg.fill_builtin_region(op4.operation)
                 # CHECK: linalg.contract indexing_maps = [#[[$A_MAP]], #[[$B_MAP]], #[[$C_MAP]]] ins(%[[A]], %[[B]] : tensor<4x8xf32>, tensor<8x12xf32>) outs(%[[C]] : tensor<4x12xf32>)
                 op5 = linalg.contract(
-                    (A, B), outs=(C,), indexing_maps=[a_map, b_map, c_map]
+                    A, B, outs=(C,), indexing_maps=[a_map, b_map, c_map]
                 )
 
                 # CHECK: linalg.contract indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[A]], %[[BTrans]] : tensor<4x8xf32>, tensor<12x8xf32>) outs(%[[C]] : tensor<4x12xf32>)
@@ -427,7 +427,7 @@ def testContractOp():
                 linalg.fill_builtin_region(op4.operation)
                 # CHECK: linalg.contract indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[A]], %[[BTrans]] : tensor<4x8xf32>, tensor<12x8xf32>) outs(%[[C]] : tensor<4x12xf32>)
                 op5 = linalg.contract(
-                    (A, Btransposed),
+                    A, Btransposed,
                     outs=(C,),
                     indexing_maps=[a_map, b_transposed_map, c_map],
                 )
@@ -443,7 +443,7 @@ def testContractOp():
                 linalg.fill_builtin_region(op4.operation)
                 # CHECK: linalg.contract indexing_maps = [#[[$A_MAP]], #[[$B_MAP]], #[[$C_MAP]]] ins(%[[Amem]], %[[Bmem]] : memref<4x8xf32>, memref<8x12xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
                 linalg.contract(
-                    (Amem, Bmem), outs=(Cmem,), indexing_maps=[a_map, b_map, c_map]
+                    Amem, Bmem, outs=(Cmem,), indexing_maps=[a_map, b_map, c_map]
                 )
 
                 # CHECK: linalg.contract indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[Amem]], %[[BTransmem]] : memref<4x8xf32>, memref<12x8xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
@@ -456,7 +456,7 @@ def testContractOp():
                 linalg.fill_builtin_region(op4.operation)
                 # CHECK: linalg.contract indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[Amem]], %[[BTransmem]] : memref<4x8xf32>, memref<12x8xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
                 linalg.contract(
-                    (Amem, Btransposedmem),
+                    Amem, Btransposedmem,
                     outs=(Cmem,),
                     indexing_maps=[a_map, b_transposed_map, c_map],
                 )
