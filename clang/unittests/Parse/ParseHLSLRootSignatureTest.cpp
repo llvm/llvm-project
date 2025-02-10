@@ -252,7 +252,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexEmptyNumberTest) {
   auto TokLoc = SourceLocation();
 
   // Test correct diagnostic produced
-  Consumer->SetExpected(diag::err_hlsl_invalid_number_literal);
+  Consumer->SetExpected(diag::err_hlsl_expected_number_literal);
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
 

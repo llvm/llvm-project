@@ -20,10 +20,11 @@ bool RootSignatureLexer::LexNumber(RootSignatureToken &Result) {
   // Retrieve the possible number
   StringRef NumSpelling = Buffer.take_while(IsNumberChar);
 
-  // Catch this now as the Literal Parser will accept it as valid
+  // Catch when there is a '+' or '-' specified but no literal value after.
+  // This is invalid but the NumericLiteralParser will accept this as valid.
   if (NumSpelling.empty()) {
     PP.getDiagnostics().Report(Result.TokLoc,
-                               diag::err_hlsl_invalid_number_literal);
+                               diag::err_hlsl_expected_number_literal);
     return true;
   }
 
@@ -48,7 +49,7 @@ bool RootSignatureLexer::LexNumber(RootSignatureToken &Result) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(Result.TokLoc,
                                diag::err_hlsl_number_literal_overflow)
-        << (unsigned)Signed << NumSpelling;
+        << (unsigned)!Signed << NumSpelling;
     return true;
   }
 

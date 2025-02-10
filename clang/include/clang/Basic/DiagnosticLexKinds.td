@@ -1020,10 +1020,9 @@ Error<"expected 'begin' or 'end'">;
 
 // HLSL Root Signature Lexing Errors
 let CategoryName = "Root Signature Lexical Issue" in {
-  def err_hlsl_invalid_number_literal:
-    Error<"expected number literal is not a supported number literal of unsigned integer or integer">;
+  def err_hlsl_expected_number_literal: Error<"expected numberic literal">;
   def err_hlsl_number_literal_overflow :
-    Error<"provided %select{unsigned integer|signed integer}0 literal '%1' that overflows the maximum of 32 bits">;
+    Error<"integer literal is too large to be represented in any %select{signed |}0 integer type">;
   def err_hlsl_invalid_token: Error<"unable to lex a valid Root Signature token">;
   def err_hlsl_invalid_register_literal: Error<"expected unsigned integer literal as part of register">;
 }
