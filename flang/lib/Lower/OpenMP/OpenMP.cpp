@@ -3123,7 +3123,7 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   lower::StatementContext stmtCtx;
   const auto &spec =
-      std::get<parser::OmpDeclareMapperSpecifier>(declareMapperConstruct.t);
+      std::get<parser::OmpMapperSpecifier>(declareMapperConstruct.t);
   const auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)};
   const auto &varType{std::get<parser::TypeSpec>(spec.t)};
   const auto &varName{std::get<parser::Name>(spec.t)};
