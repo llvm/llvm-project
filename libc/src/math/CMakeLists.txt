@@ -47,9 +47,10 @@ add_math_entrypoint_object(acoshf)
 
 add_math_entrypoint_object(asin)
 add_math_entrypoint_object(asinf)
+add_math_entrypoint_object(asinf16)
+
 add_math_entrypoint_object(asinh)
 add_math_entrypoint_object(asinhf)
-add_math_entrypoint_object(asinf16)
 
 add_math_entrypoint_object(atan)
 add_math_entrypoint_object(atanf)
