@@ -731,7 +731,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI list& operator=(list&& __c) noexcept(
       (__node_alloc_traits::propagate_on_container_move_assignment::value &&
        is_nothrow_move_assignable<__node_allocator>::value) ||
-      allocator_traits<allocator_type>::is_always_equal::value);
+      __node_alloc_traits::is_always_equal::value);
 
   _LIBCPP_HIDE_FROM_ABI list& operator=(initializer_list<value_type> __il) {
     assign(__il.begin(), __il.end());
@@ -1070,7 +1070,7 @@ template <class _Tp, class _Alloc>
 inline list<_Tp, _Alloc>& list<_Tp, _Alloc>::operator=(list&& __c) noexcept(
     (__node_alloc_traits::propagate_on_container_move_assignment::value &&
      is_nothrow_move_assignable<__node_allocator>::value) ||
-    allocator_traits<allocator_type>::is_always_equal::value) {
+    __node_alloc_traits::is_always_equal::value) {
   __move_assign(__c, integral_constant<bool, __node_alloc_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
