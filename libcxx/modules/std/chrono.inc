@@ -97,13 +97,13 @@ export namespace std {
 
     using std::chrono::get_leap_second_info;
 
-#    if 0
     // [time.clock.tai], class tai_clock
     using std::chrono::tai_clock;
 
     using std::chrono::tai_seconds;
     using std::chrono::tai_time;
 
+#    if 0
     // [time.clock.gps], class gps_clock
     using std::chrono::gps_clock;
 

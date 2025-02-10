@@ -379,40 +379,40 @@ __m256i test_mm256_maskz_cvts2ph_hf8(__mmask16 __U, __m256h __A, __m256h __B) {
   return _mm256_maskz_cvts2ph_hf8(__U, __A, __B);
 }
 
-__m128h test_mm_cvthf8(__m128i __A) {
-  // CHECK-LABEL: @test_mm_cvthf8(
+__m128h test_mm_cvthf8_ph(__m128i __A) {
+  // CHECK-LABEL: @test_mm_cvthf8_ph(
   // CHECK: call <8 x half> @llvm.x86.avx10.mask.vcvthf82ph128(
-  return _mm_cvthf8(__A);
+  return _mm_cvthf8_ph(__A);
 }
 
-__m128h test_mm_mask_cvthf8(__m128h __A, __mmask8 __B, __m128i __C) {
-  // CHECK-LABEL: @test_mm_mask_cvthf8(
+__m128h test_mm_mask_cvthf8_ph(__m128h __A, __mmask8 __B, __m128i __C) {
+  // CHECK-LABEL: @test_mm_mask_cvthf8_ph(
   // CHECK: call <8 x half> @llvm.x86.avx10.mask.vcvthf82ph128(
-  return _mm_mask_cvthf8(__A, __B, __C);
+  return _mm_mask_cvthf8_ph(__A, __B, __C);
 }
 
-__m128h test_mm_maskz_cvthf8(__mmask8 __A, __m128i __B) {
-  // CHECK-LABEL: @test_mm_maskz_cvthf8(
+__m128h test_mm_maskz_cvthf8_ph(__mmask8 __A, __m128i __B) {
+  // CHECK-LABEL: @test_mm_maskz_cvthf8_ph(
   // CHECK: call <8 x half> @llvm.x86.avx10.mask.vcvthf82ph128(
-  return _mm_maskz_cvthf8(__A, __B);
+  return _mm_maskz_cvthf8_ph(__A, __B);
 }
 
-__m256h test_mm256_cvthf8(__m128i __A) {
-  // CHECK-LABEL: @test_mm256_cvthf8(
+__m256h test_mm256_cvthf8_ph(__m128i __A) {
+  // CHECK-LABEL: @test_mm256_cvthf8_ph(
   // CHECK: call <16 x half> @llvm.x86.avx10.mask.vcvthf82ph256(
-  return _mm256_cvthf8(__A);
+  return _mm256_cvthf8_ph(__A);
 }
 
-__m256h test_mm256_mask_cvthf8(__m256h __A, __mmask16 __B, __m128i __C) {
-  // CHECK-LABEL: @test_mm256_mask_cvthf8(
+__m256h test_mm256_mask_cvthf8_ph(__m256h __A, __mmask16 __B, __m128i __C) {
+  // CHECK-LABEL: @test_mm256_mask_cvthf8_ph(
   // CHECK: call <16 x half> @llvm.x86.avx10.mask.vcvthf82ph256(
-  return _mm256_mask_cvthf8(__A, __B, __C);
+  return _mm256_mask_cvthf8_ph(__A, __B, __C);
 }
 
-__m256h test_mm256_maskz_cvthf8(__mmask16 __A, __m128i __B) {
-  // CHECK-LABEL: @test_mm256_maskz_cvthf8(
+__m256h test_mm256_maskz_cvthf8_ph(__mmask16 __A, __m128i __B) {
+  // CHECK-LABEL: @test_mm256_maskz_cvthf8_ph(
   // CHECK: call <16 x half> @llvm.x86.avx10.mask.vcvthf82ph256(
-  return _mm256_maskz_cvthf8(__A, __B);
+  return _mm256_maskz_cvthf8_ph(__A, __B);
 }
 
 __m128i test_mm_cvtph_bf8(__m128h __A) {

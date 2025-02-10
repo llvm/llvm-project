@@ -33,9 +33,9 @@ using namespace mlir::arith;
 static constexpr unsigned kRealPosInComplexNumberStruct = 0;
 static constexpr unsigned kImaginaryPosInComplexNumberStruct = 1;
 
-ComplexStructBuilder ComplexStructBuilder::undef(OpBuilder &builder,
-                                                 Location loc, Type type) {
-  Value val = builder.create<LLVM::UndefOp>(loc, type);
+ComplexStructBuilder ComplexStructBuilder::poison(OpBuilder &builder,
+                                                  Location loc, Type type) {
+  Value val = builder.create<LLVM::PoisonOp>(loc, type);
   return ComplexStructBuilder(val);
 }
 
@@ -109,7 +109,8 @@ struct CreateOpConversion : public ConvertOpToLLVMPattern<complex::CreateOp> {
     // Pack real and imaginary part in a complex number struct.
     auto loc = complexOp.getLoc();
     auto structType = typeConverter->convertType(complexOp.getType());
-    auto complexStruct = ComplexStructBuilder::undef(rewriter, loc, structType);
+    auto complexStruct =
+        ComplexStructBuilder::poison(rewriter, loc, structType);
     complexStruct.setReal(rewriter, loc, adaptor.getReal());
     complexStruct.setImaginary(rewriter, loc, adaptor.getImaginary());
 
@@ -183,7 +184,7 @@ struct AddOpConversion : public ConvertOpToLLVMPattern<complex::AddOp> {
 
     // Initialize complex number struct for result.
     auto structType = typeConverter->convertType(op.getType());
-    auto result = ComplexStructBuilder::undef(rewriter, loc, structType);
+    auto result = ComplexStructBuilder::poison(rewriter, loc, structType);
 
     // Emit IR to add complex numbers.
     arith::FastMathFlagsAttr complexFMFAttr = op.getFastMathFlagsAttr();
@@ -214,7 +215,7 @@ struct DivOpConversion : public ConvertOpToLLVMPattern<complex::DivOp> {
 
     // Initialize complex number struct for result.
     auto structType = typeConverter->convertType(op.getType());
-    auto result = ComplexStructBuilder::undef(rewriter, loc, structType);
+    auto result = ComplexStructBuilder::poison(rewriter, loc, structType);
 
     // Emit IR to add complex numbers.
     arith::FastMathFlagsAttr complexFMFAttr = op.getFastMathFlagsAttr();
@@ -262,7 +263,7 @@ struct MulOpConversion : public ConvertOpToLLVMPattern<complex::MulOp> {
 
     // Initialize complex number struct for result.
     auto structType = typeConverter->convertType(op.getType());
-    auto result = ComplexStructBuilder::undef(rewriter, loc, structType);
+    auto result = ComplexStructBuilder::poison(rewriter, loc, structType);
 
     // Emit IR to add complex numbers.
     arith::FastMathFlagsAttr complexFMFAttr = op.getFastMathFlagsAttr();
@@ -302,7 +303,7 @@ struct SubOpConversion : public ConvertOpToLLVMPattern<complex::SubOp> {
 
     // Initialize complex number struct for result.
     auto structType = typeConverter->convertType(op.getType());
-    auto result = ComplexStructBuilder::undef(rewriter, loc, structType);
+    auto result = ComplexStructBuilder::poison(rewriter, loc, structType);
 
     // Emit IR to substract complex numbers.
     arith::FastMathFlagsAttr complexFMFAttr = op.getFastMathFlagsAttr();

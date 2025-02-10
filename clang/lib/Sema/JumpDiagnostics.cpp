@@ -786,8 +786,7 @@ void JumpScopeChecker::VerifyIndirectJumps() {
     if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(TheLabel->getStmt())))
       continue;
     unsigned LabelScope = LabelAndGotoScopes[TheLabel->getStmt()];
-    if (!TargetScopes.contains(LabelScope))
-      TargetScopes[LabelScope] = TheLabel;
+    TargetScopes.try_emplace(LabelScope, TheLabel);
   }
 
   // For each target scope, make sure it's trivially reachable from

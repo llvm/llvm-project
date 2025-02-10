@@ -5065,6 +5065,27 @@ static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
   if (PredOut != Pred && isKnownNonZero(A, Q))
     return new ICmpInst(PredOut, Op0, Op1);
 
+  // These transform work when A is negative.
+  // X s< X^A, X s<= X^A, X u> X^A, X u>= X^A  --> X s< 0
+  // X s> X^A, X s>= X^A, X u< X^A, X u<= X^A  --> X s>= 0
+  if (match(A, m_Negative())) {
+    CmpInst::Predicate NewPred;
+    switch (ICmpInst::getStrictPredicate(Pred)) {
+    default:
+      return nullptr;
+    case ICmpInst::ICMP_SLT:
+    case ICmpInst::ICMP_UGT:
+      NewPred = ICmpInst::ICMP_SLT;
+      break;
+    case ICmpInst::ICMP_SGT:
+    case ICmpInst::ICMP_ULT:
+      NewPred = ICmpInst::ICMP_SGE;
+      break;
+    }
+    Constant *Const = Constant::getNullValue(Op0->getType());
+    return new ICmpInst(NewPred, Op0, Const);
+  }
+
   return nullptr;
 }
 

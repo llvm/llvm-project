@@ -7,7 +7,6 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangStaticAnalyzerCheckers
   AnalysisOrderChecker.cpp
   AnalyzerStatsChecker.cpp
-  ArrayBoundChecker.cpp
   ArrayBoundCheckerV2.cpp
   BasicObjCFoundationChecks.cpp
   BitwiseShiftChecker.cpp

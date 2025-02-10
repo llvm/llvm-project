@@ -2000,6 +2000,11 @@ public:
   /// Returns the \p I th incoming VPBasicBlock.
   VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
 
+  /// Set the \p I th incoming VPBasicBlock to \p IncomingBlock.
+  void setIncomingBlock(unsigned I, VPBasicBlock *IncomingBlock) {
+    IncomingBlocks[I] = IncomingBlock;
+  }
+
   /// Returns the \p I th incoming VPValue.
   VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
 };
@@ -3664,8 +3669,8 @@ public:
     VFs.insert(VF);
   }
 
-  bool hasVF(ElementCount VF) { return VFs.count(VF); }
-  bool hasScalableVF() {
+  bool hasVF(ElementCount VF) const { return VFs.count(VF); }
+  bool hasScalableVF() const {
     return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
   }
 
@@ -3675,7 +3680,12 @@ public:
     return {VFs.begin(), VFs.end()};
   }
 
-  bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
+  bool hasScalarVFOnly() const {
+    bool HasScalarVFOnly = VFs.size() == 1 && VFs[0].isScalar();
+    assert(HasScalarVFOnly == hasVF(ElementCount::getFixed(1)) &&
+           "Plan with scalar VF should only have a single VF");
+    return HasScalarVFOnly;
+  }
 
   bool hasUF(unsigned UF) const { return UFs.empty() || UFs.contains(UF); }
 

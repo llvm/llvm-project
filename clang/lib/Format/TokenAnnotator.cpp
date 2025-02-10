@@ -477,8 +477,9 @@ private:
     FormatToken *PossibleObjCForInToken = nullptr;
     while (CurrentToken) {
       const auto &Prev = *CurrentToken->Previous;
+      const auto *PrevPrev = Prev.Previous;
       if (Prev.is(TT_PointerOrReference) &&
-          Prev.Previous->isOneOf(tok::l_paren, tok::coloncolon)) {
+          PrevPrev->isOneOf(tok::l_paren, tok::coloncolon)) {
         ProbablyFunctionType = true;
       }
       if (CurrentToken->is(tok::comma))
@@ -486,8 +487,10 @@ private:
       if (Prev.is(TT_BinaryOperator))
         Contexts.back().IsExpression = true;
       if (CurrentToken->is(tok::r_paren)) {
-        if (Prev.is(TT_PointerOrReference) && Prev.Previous == &OpeningParen)
+        if (Prev.is(TT_PointerOrReference) &&
+            (PrevPrev == &OpeningParen || PrevPrev->is(tok::coloncolon))) {
           MightBeFunctionType = true;
+        }
         if (OpeningParen.isNot(TT_CppCastLParen) && MightBeFunctionType &&
             ProbablyFunctionType && CurrentToken->Next &&
             (CurrentToken->Next->is(tok::l_paren) ||

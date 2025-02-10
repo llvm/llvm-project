@@ -109,9 +109,7 @@ public:
       bool VisitCallExpr(CallExpr *CE) override {
         checkCalleeLambda(CE);
         if (auto *Callee = CE->getDirectCallee()) {
-          unsigned ArgIndex = 0;
-          if (auto *CXXCallee = dyn_cast<CXXMethodDecl>(Callee))
-            ArgIndex = CXXCallee->isInstance();
+          unsigned ArgIndex = isa<CXXOperatorCallExpr>(CE);
           bool TreatAllArgsAsNoEscape = shouldTreatAllArgAsNoEscape(Callee);
           for (auto *Param : Callee->parameters()) {
             if (ArgIndex >= CE->getNumArgs())

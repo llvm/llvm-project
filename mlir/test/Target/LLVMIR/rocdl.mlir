@@ -137,10 +137,10 @@ llvm.func @rocdl.readlane(%src0 : f32, %src1: f64, %src2: i32, %src3: vector<2 x
   llvm.return %0 : f32
 }
 
-llvm.func @rocdl.waitcnt() {
-  // CHECK-LABEL: rocdl.waitcnt
+llvm.func @rocdl.s.waitcnt() {
+  // CHECK-LABEL: rocdl.s.waitcnt
   // CHECK-NEXT: call void @llvm.amdgcn.s.waitcnt(i32 0)
-  rocdl.waitcnt 0
+  rocdl.s.waitcnt 0
   llvm.return
 }
 

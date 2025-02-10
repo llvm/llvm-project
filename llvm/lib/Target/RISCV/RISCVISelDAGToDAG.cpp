@@ -3499,7 +3499,7 @@ bool RISCVDAGToDAGISel::selectSimm5Shl2(SDValue N, SDValue &Simm5,
 }
 
 // Select VL as a 5 bit immediate or a value that will become a register. This
-// allows us to choose betwen VSETIVLI or VSETVLI later.
+// allows us to choose between VSETIVLI or VSETVLI later.
 bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
   auto *C = dyn_cast<ConstantSDNode>(N);
   if (C && isUInt<5>(C->getZExtValue())) {

@@ -748,7 +748,12 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
       auto *ImageType = cast<TargetExtType>(II->getOperand(0)->getType());
       assert(ImageType->getTargetExtName() == "spirv.Image");
-      Ty = ImageType->getTypeParameter(0);
+      (void)ImageType;
+      if (II->hasOneUse()) {
+        auto *U = *II->users().begin();
+        Ty = cast<Instruction>(U)->getAccessType();
+        assert(Ty && "Unable to get type for resource pointer.");
+      }
     } else if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());

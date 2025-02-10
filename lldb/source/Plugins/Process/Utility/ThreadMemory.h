@@ -33,7 +33,7 @@ public:
 
   const char *GetInfo() override {
     if (m_backing_thread_sp)
-      m_backing_thread_sp->GetInfo();
+      return m_backing_thread_sp->GetInfo();
     return nullptr;
   }
 
@@ -41,7 +41,7 @@ public:
     if (!m_name.empty())
       return m_name.c_str();
     if (m_backing_thread_sp)
-      m_backing_thread_sp->GetName();
+      return m_backing_thread_sp->GetName();
     return nullptr;
   }
 
@@ -49,7 +49,7 @@ public:
     if (!m_queue.empty())
       return m_queue.c_str();
     if (m_backing_thread_sp)
-      m_backing_thread_sp->GetQueueName();
+      return m_backing_thread_sp->GetQueueName();
     return nullptr;
   }
 

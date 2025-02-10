@@ -414,9 +414,10 @@ static void handleNewDebugValue(InlinedEntity Var, const MachineInstr &DV,
         dropRegDescribedVar(RegVars, I.first, Var);
 
     // Drop all entries that have ended, and mark the new entry as live.
+    auto &Entries = LiveEntries[Var];
     for (auto Index : IndicesToErase)
-      LiveEntries[Var].erase(Index);
-    LiveEntries[Var].insert(NewIndex);
+      Entries.erase(Index);
+    Entries.insert(NewIndex);
   }
 }
 

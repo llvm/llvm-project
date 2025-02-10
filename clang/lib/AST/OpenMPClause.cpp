@@ -2073,6 +2073,11 @@ void OMPClausePrinter::VisitOMPNoOpenMPRoutinesClause(
   OS << "no_openmp_routines";
 }
 
+void OMPClausePrinter::VisitOMPNoOpenMPConstructsClause(
+    OMPNoOpenMPConstructsClause *) {
+  OS << "no_openmp_constructs";
+}
+
 void OMPClausePrinter::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {
   OS << "no_parallelism";
 }

@@ -15,44 +15,49 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1
-; SSE2:  Cost of 49 for VF 2: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; SSE2:  Cost of 98 for VF 4: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; SSE2:  Cost of 201 for VF 8: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; SSE2:  Cost of 408 for VF 16: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
+; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1
+; SSE2:  LV: Found an estimated cost of 49 for VF 2 For instruction: store i8 %v5, ptr %out5, align 1
+; SSE2:  LV: Found an estimated cost of 98 for VF 4 For instruction: store i8 %v5, ptr %out5, align 1
+; SSE2:  LV: Found an estimated cost of 201 for VF 8 For instruction: store i8 %v5, ptr %out5, align 1
+; SSE2:  LV: Found an estimated cost of 408 for VF 16 For instruction: store i8 %v5, ptr %out5, align 1
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1
-; AVX1:  Cost of 27 for VF 2: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX1:  Cost of 53 for VF 4: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX1:  Cost of 100 for VF 8: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX1:  Cost of 198 for VF 16: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX1:  Cost of 402 for VF 32: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
+; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX1:  LV: Found an estimated cost of 27 for VF 2 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX1:  LV: Found an estimated cost of 53 for VF 4 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX1:  LV: Found an estimated cost of 100 for VF 8 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX1:  LV: Found an estimated cost of 198 for VF 16 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX1:  LV: Found an estimated cost of 402 for VF 32 For instruction: store i8 %v5, ptr %out5, align 1
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1
-; AVX2:  Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX2:  Cost of 12 for VF 4: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX2:  Cost of 18 for VF 8: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX2:  Cost of 30 for VF 16: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX2:  Cost of 96 for VF 32: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
+; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX2:  LV: Found an estimated cost of 10 for VF 2 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX2:  LV: Found an estimated cost of 12 for VF 4 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX2:  LV: Found an estimated cost of 18 for VF 8 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX2:  LV: Found an estimated cost of 30 for VF 16 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX2:  LV: Found an estimated cost of 96 for VF 32 For instruction: store i8 %v5, ptr %out5, align 1
 ;
 ; AVX512DQ-LABEL: 'test'
 ; AVX512DQ:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1
-; AVX512DQ:  Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512DQ:  Cost of 12 for VF 4: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512DQ:  Cost of 19 for VF 8: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512DQ:  Cost of 29 for VF 16: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512DQ:  Cost of 93 for VF 32: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512DQ:  Cost of 810 for VF 64: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
+; AVX512DQ:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512DQ:  LV: Found an estimated cost of 10 for VF 2 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512DQ:  LV: Found an estimated cost of 12 for VF 4 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512DQ:  LV: Found an estimated cost of 19 for VF 8 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512DQ:  LV: Found an estimated cost of 29 for VF 16 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512DQ:  LV: Found an estimated cost of 93 for VF 32 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512DQ:  LV: Found an estimated cost of 810 for VF 64 For instruction: store i8 %v5, ptr %out5, align 1
 ;
 ; AVX512BW-LABEL: 'test'
 ; AVX512BW:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1
-; AVX512BW:  Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512BW:  Cost of 38 for VF 4: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512BW:  Cost of 98 for VF 8: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512BW:  Cost of 197 for VF 16: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512BW:  Cost of 295 for VF 32: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
-; AVX512BW:  Cost of 591 for VF 64: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%out0>
+; AVX512BW:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512BW:  LV: Found an estimated cost of 18 for VF 2 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512BW:  LV: Found an estimated cost of 38 for VF 4 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512BW:  LV: Found an estimated cost of 98 for VF 8 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512BW:  LV: Found an estimated cost of 197 for VF 16 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512BW:  LV: Found an estimated cost of 295 for VF 32 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512BW:  LV: Found an estimated cost of 591 for VF 64 For instruction: store i8 %v5, ptr %out5, align 1
 ;
 entry:
   br label %for.body

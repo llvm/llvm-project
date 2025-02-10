@@ -18,7 +18,6 @@
 #include "Decomposer.h"
 #include "ReductionProcessor.h"
 #include "Utils.h"
-#include "flang/Common/OpenMP-utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
@@ -35,6 +34,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/OpenMP-utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -2544,7 +2544,7 @@ static void genStandaloneDo(lower::AbstractConverter &converter,
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatizationStaging, symTable);
+                           enableDelayedPrivatization, symTable);
   dsp.processStep1(&wsloopClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;

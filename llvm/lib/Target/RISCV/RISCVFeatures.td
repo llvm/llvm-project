@@ -1020,7 +1020,7 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
 // Vendor extensions
 //===----------------------------------------------------------------------===//
 
-// Ventana Extenions
+// Ventana Extensions
 
 def FeatureVendorXVentanaCondOps
     : RISCVExtension<1, 0, "Ventana Conditional Ops">;
@@ -1337,7 +1337,7 @@ def HasVendorXqcilo
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
 
-// Feature32Bit exists to mark CPUs that support RV32 to distinquish them from
+// Feature32Bit exists to mark CPUs that support RV32 to distinguish them from
 // tuning CPU names.
 def Feature32Bit
     : SubtargetFeature<"32bit", "IsRV32", "true", "Implements RV32">;

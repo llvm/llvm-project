@@ -473,13 +473,13 @@ def FeatureD128 : ExtensionWithMArch<"d128", "D128",
 //===----------------------------------------------------------------------===//
 
 def FeatureFAMINMAX: ExtensionWithMArch<"faminmax", "FAMINMAX", "FEAT_FAMINMAX",
- "Enable FAMIN and FAMAX instructions">;
+ "Enable FAMIN and FAMAX instructions", [FeatureNEON]>;
 
 def FeatureLUT: ExtensionWithMArch<"lut", "LUT", "FEAT_LUT",
- "Enable Lookup Table instructions">;
+ "Enable Lookup Table instructions", [FeatureNEON]>;
 
 def FeatureFP8 : ExtensionWithMArch<"fp8", "FP8", "FEAT_FP8",
-  "Enable FP8 instructions", [FeatureFAMINMAX, FeatureLUT, FeatureBF16]>;
+  "Enable FP8 instructions", [FeatureNEON]>;
 
 def FeatureFP8FMA : ExtensionWithMArch<"fp8fma", "FP8FMA", "FEAT_FP8FMA",
   "Enable Armv9.5-A FP8 multiply-add instructions", [FeatureFP8]>;
@@ -488,10 +488,10 @@ def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA", "FEAT_
   "Enable SVE2 FP8 multiply-add instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureFP8DOT4: ExtensionWithMArch<"fp8dot4", "FP8DOT4", "FEAT_FP8DOT4",
-  "Enable FP8 4-way dot instructions", [FeatureNEON, FeatureFP8]>;
+  "Enable FP8 4-way dot instructions", [FeatureFP8]>;
 
 def FeatureFP8DOT2: ExtensionWithMArch<"fp8dot2", "FP8DOT2", "FEAT_FP8DOT2",
-  "Enable FP8 2-way dot instructions", [FeatureNEON, FeatureFP8]>;
+  "Enable FP8 2-way dot instructions", [FeatureFP8]>;
 
 def FeatureSSVE_FP8DOT4 : ExtensionWithMArch<"ssve-fp8dot4", "SSVE_FP8DOT4", "FEAT_SSVE_FP8DOT4",
   "Enable SVE2 FP8 4-way dot product instructions", [FeatureSME2, FeatureFP8]>;

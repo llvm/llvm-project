@@ -146,11 +146,13 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       return rewriter.create<arith::NegFOp>(loc, resultTypes, args);
 
     if (isa<IntegerType>(elementTy)) {
-      auto inputZpAttr = cast<tosa::NegateOp>(op).getInput1Zp();
-      auto outputZpAttr = cast<tosa::NegateOp>(op).getOutputZp();
+      auto inputZpAttr = cast<tosa::NegateOp>(op).getInput1ZpAttr();
+      auto outputZpAttr = cast<tosa::NegateOp>(op).getOutputZpAttr();
 
-      const int64_t inZp = inputZpAttr ? *inputZpAttr : 0;
-      const int64_t outZp = outputZpAttr ? *outputZpAttr : 0;
+      const int64_t inZp =
+          inputZpAttr ? inputZpAttr.getValue().getSExtValue() : 0;
+      const int64_t outZp =
+          outputZpAttr ? outputZpAttr.getValue().getSExtValue() : 0;
 
       if (!inZp && !outZp) {
         auto constant = rewriter.create<arith::ConstantOp>(
@@ -1954,9 +1956,10 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
           nestedBuilder.create<linalg::YieldOp>(op.getLoc(), *args.begin());
         });
 
+    auto shapeValue = getTosaConstShape(
+        rewriter, loc, mlir::tosa::convertFromMlirShape(resultTy.getShape()));
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
-        op, resultTy, genericOp.getResult(0),
-        rewriter.getDenseI64ArrayAttr(resultTy.getShape()));
+        op, resultTy, genericOp.getResult(0), shapeValue);
     return success();
   }
 };

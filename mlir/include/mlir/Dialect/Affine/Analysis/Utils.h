@@ -610,6 +610,14 @@ FailureOr<AffineValueMap>
 simplifyConstrainedMinMaxOp(Operation *op,
                             FlatAffineValueConstraints constraints);
 
+/// Find the innermost common `Block` of `a` and `b` in the affine scope
+/// that `a` and `b` are part of. Return nullptr if they belong to different
+/// affine scopes. Also, return nullptr if they do not have a common `Block`
+/// ancestor (for eg., when they are part of the `then` and `else` regions
+/// of an op that itself starts an affine scope.
+mlir::Block *findInnermostCommonBlockInScope(mlir::Operation *a,
+                                             mlir::Operation *b);
+
 } // namespace affine
 } // namespace mlir
 
