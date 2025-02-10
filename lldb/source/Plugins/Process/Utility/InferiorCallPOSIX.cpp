@@ -120,12 +120,13 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
                 arch, addr, length, prot_arg, flags, fd, offset);
 #if defined(_AIX)
         lldb::ThreadPlanSP call_plan_sp(
-            new ThreadPlanCallFunction(*thread, mmap_range.GetBaseAddress(),
+            new ThreadPlanCallFunction(*thread, mmap_addr,
                                        toc_range.GetBaseAddress(),
                                        void_ptr_type, args, options));
 #else
         lldb::ThreadPlanSP call_plan_sp(new ThreadPlanCallFunction(
             *thread, mmap_addr, void_ptr_type, args, options));
+#endif
         if (call_plan_sp) {
           DiagnosticManager diagnostics;
 
