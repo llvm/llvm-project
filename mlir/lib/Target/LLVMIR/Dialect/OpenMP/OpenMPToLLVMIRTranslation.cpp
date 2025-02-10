@@ -3554,18 +3554,19 @@ emitUserDefinedMapper(Operation *declMapperOp, llvm::IRBuilderBase &builder,
                       LLVM::ModuleTranslation &moduleTranslation);
 
 static llvm::Expected<llvm::Function *>
-getOrCreateUserDefinedMapperFunc(Operation *declMapperOp,
-                                 llvm::IRBuilderBase &builder,
+getOrCreateUserDefinedMapperFunc(Operation *op, llvm::IRBuilderBase &builder,
                                  LLVM::ModuleTranslation &moduleTranslation) {
-  static llvm::DenseMap<const Operation *, llvm::Function *> userDefMapperMap;
-  auto iter = userDefMapperMap.find(declMapperOp);
-  if (iter != userDefMapperMap.end())
-    return iter->second;
+  auto declMapperOp = cast<omp::DeclareMapperOp>(op);
+  std::string mapperFuncName =
+      moduleTranslation.getOpenMPBuilder()->createPlatformSpecificName(
+          {"omp_mapper", declMapperOp.getSymName()});
+  if (auto *lookupFunc = moduleTranslation.lookupFunction(mapperFuncName))
+    return lookupFunc;
+
   llvm::Expected<llvm::Function *> mapperFunc =
       emitUserDefinedMapper(declMapperOp, builder, moduleTranslation);
   if (!mapperFunc)
     return mapperFunc.takeError();
-  userDefMapperMap.try_emplace(declMapperOp, *mapperFunc);
   return mapperFunc;
 }
 
@@ -3573,8 +3574,7 @@ static llvm::Expected<llvm::Function *>
 emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
                       LLVM::ModuleTranslation &moduleTranslation) {
   auto declMapperOp = cast<omp::DeclareMapperOp>(op);
-  auto declMapperInfoOp =
-      *declMapperOp.getOps<omp::DeclareMapperInfoOp>().begin();
+  auto declMapperInfoOp = declMapperOp.getDeclareMapperInfo();
   DataLayout dl = DataLayout(declMapperOp->getParentOfType<ModuleOp>());
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::Type *varType = moduleTranslation.convertType(declMapperOp.getType());
@@ -3590,7 +3590,7 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
       [&](InsertPointTy codeGenIP, llvm::Value *ptrPHI,
           llvm::Value *unused2) -> llvm::OpenMPIRBuilder::MapInfosOrErrorTy {
     builder.restoreIP(codeGenIP);
-    moduleTranslation.mapValue(declMapperOp.getRegion().getArgument(0), ptrPHI);
+    moduleTranslation.mapValue(declMapperOp.getSymVal(), ptrPHI);
     moduleTranslation.mapBlock(&declMapperOp.getRegion().front(),
                                builder.GetInsertBlock());
     if (failed(moduleTranslation.convertBlock(declMapperOp.getRegion().front(),
@@ -3857,10 +3857,11 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
       findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP = [&]() {
     if (isa<omp::TargetDataOp>(op))
-      return ompBuilder->createTargetData(
-          ompLoc, allocaIP, builder.saveIP(), builder.getInt64(deviceID),
-          ifCond, info, genMapInfoCB, customMapperCB, nullptr, bodyGenCB,
-          /*DeviceAddrCB=*/nullptr);
+      return ompBuilder->createTargetData(ompLoc, allocaIP, builder.saveIP(),
+                                          builder.getInt64(deviceID), ifCond,
+                                          info, genMapInfoCB, customMapperCB,
+                                          /*MapperFunc=*/nullptr, bodyGenCB,
+                                          /*DeviceAddrCB=*/nullptr);
     return ompBuilder->createTargetData(
         ompLoc, allocaIP, builder.saveIP(), builder.getInt64(deviceID), ifCond,
         info, genMapInfoCB, customMapperCB, &RTLFn);
@@ -4549,25 +4550,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::TargetDataInfo info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
-  llvm::Value *ifCond = nullptr;
-  if (Value targetIfCond = targetOp.getIfExpr())
-    ifCond = moduleTranslation.lookupValue(targetIfCond);
-
-  auto customMapperCB = [&](unsigned int i) {
-    llvm::Value *mapperFunc = nullptr;
-    if (combinedInfos.Mappers[i]) {
-      info.HasMapper = true;
-      llvm::Expected<llvm::Function *> newFn = getOrCreateUserDefinedMapperFunc(
-          combinedInfos.Mappers[i], builder, moduleTranslation);
-      assert(newFn && "Expect a valid mapper function is available");
-      mapperFunc = *newFn;
-    }
-    return mapperFunc;
-  };
-
-  llvm::OpenMPIRBuilder::TargetDataInfo info(
-      /*RequiresDevicePointerInfo=*/false,
-      /*SeparateBeginEndCalls=*/true);
 
   auto customMapperCB = [&](unsigned int i) {
     llvm::Value *mapperFunc = nullptr;
@@ -4588,8 +4570,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTarget(
           ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), info, entryInfo,
-          defaultValTeams, defaultValThreads, kernelInput, genMapInfoCB, bodyCB,
-          argAccessorCB, dds, targetOp.getNowait());
+          defaultAttrs, runtimeAttrs, ifCond, kernelInput, genMapInfoCB, bodyCB,
+          argAccessorCB, customMapperCB, dds, targetOp.getNowait());
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
