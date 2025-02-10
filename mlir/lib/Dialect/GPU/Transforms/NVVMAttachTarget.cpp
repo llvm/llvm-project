@@ -45,7 +45,7 @@ struct NVVMAttachTarget
 
 DictionaryAttr NVVMAttachTarget::getFlags(OpBuilder &builder) const {
   UnitAttr unitAttr = builder.getUnitAttr();
-  SmallVector<NamedAttribute, 2> flags;
+  SmallVector<NamedAttribute, 3> flags;
   auto addFlag = [&](StringRef flag) {
     flags.push_back(builder.getNamedAttr(flag, unitAttr));
   };
@@ -53,6 +53,19 @@ DictionaryAttr NVVMAttachTarget::getFlags(OpBuilder &builder) const {
     addFlag("fast");
   if (ftzFlag)
     addFlag("ftz");
+  if (!nvvmOptions.empty()) {
+    auto options = gpu::TargetOptions::tokenizeCmdOptions(nvvmOptions);
+    if (!options.second.empty()) {
+      llvm::SmallVector<mlir::Attribute> nvvmOptionAttrs;
+      for (const char *opt : options.second) {
+        nvvmOptionAttrs.emplace_back(
+            mlir::StringAttr::get(builder.getContext(), StringRef(opt)));
+      }
+      flags.push_back(builder.getNamedAttr(
+          "libNVVMOptions",
+          mlir::ArrayAttr::get(builder.getContext(), nvvmOptionAttrs)));
+    }
+  }
   if (!flags.empty())
     return builder.getDictionaryAttr(flags);
   return nullptr;

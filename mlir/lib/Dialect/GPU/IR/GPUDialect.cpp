@@ -2564,7 +2564,7 @@ CompilationTarget TargetOptions::getDefaultCompilationTarget() {
 }
 
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
-TargetOptions::tokenizeCmdOptions() const {
+TargetOptions::tokenizeCmdOptions(const std::string &cmdOptions) {
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options;
   llvm::StringSaver stringSaver(options.first);
   StringRef opts = cmdOptions;
@@ -2584,6 +2584,11 @@ TargetOptions::tokenizeCmdOptions() const {
                                    /*MarkEOLs=*/false);
 #endif // _WIN32
   return options;
+}
+
+std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+TargetOptions::tokenizeCmdOptions() const {
+  return tokenizeCmdOptions(cmdOptions);
 }
 
 MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::gpu::TargetOptions)

@@ -141,6 +141,9 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
     Option<"ftzFlag", "ftz", "bool",
            /*default=*/"false",
            "Enable flush to zero for denormals.">,
+    Option<"nvvmOptions", "nvvm-options", "std::string",
+           /*default=*/ [{""}],
+           "Options passed to libnvvm">,
     ListOption<"linkLibs", "l", "std::string",
            "Extra bitcode libraries paths to link to.">,
   ];
