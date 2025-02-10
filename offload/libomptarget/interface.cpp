@@ -294,7 +294,7 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
 
   // FIXME: This is a WA to "calibrate" the bad work done in the front end.
   // Delete this ugly code after the front end emits proper values.
-  auto CorrectMultiDim = [](uint32_t(&Val)[3]) {
+  auto CorrectMultiDim = [](uint32_t (&Val)[3]) {
     if (Val[1] == 0)
       Val[1] = 1;
     if (Val[2] == 0)
