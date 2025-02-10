@@ -968,7 +968,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
 }
 
 static bool isRVVPressureSetIdx(unsigned Idx) {
-  static std::vector<unsigned> RVVPressureSetIndices = {
+  const static std::vector<unsigned> RVVPressureSetIndices = {
       RISCV::RegisterPressureSets::VRM8NoV0, RISCV::RegisterPressureSets::VM};
 
   return llvm::find(RVVPressureSetIndices, Idx) != RVVPressureSetIndices.end();
