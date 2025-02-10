@@ -18,6 +18,9 @@
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/Visitors.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -190,7 +193,57 @@ DenseSet<Value> mlir::affine::getInvariantAccesses(Value iv,
   return res;
 }
 
-// TODO: check access stride.
+/// Check that x is an offset in resultExpr
+/// That is, check that the result is of the shape x + ...  
+static bool isOffset(AffineExpr resultExpr, int numDims, ArrayRef<Value> operands, Value offset) {
+  // Check if the expression is only the offset
+  if (isa<AffineDimExpr>(resultExpr))
+    return operands[cast<AffineDimExpr>(resultExpr).getPosition()] == offset;
+  if (isa<AffineSymbolExpr>(resultExpr))
+    return operands[cast<AffineSymbolExpr>(resultExpr).getPosition() + numDims] == offset;
+
+  // Otherwise, walk through the expression and check that it's of one of the shapes:
+  // - x + ...
+  // - (x + ...) mod ...
+  // The second pattern leads to piecewise contiguous accesses which can be considered contiguous
+  // for vectorization if the vectorization factor is a divisor of the modulo's left-hand-side
+  WalkResult walkRes = resultExpr.walk([&](AffineExpr expr) {
+    if (!isa<AffineBinaryOpExpr>(expr))
+      return WalkResult::skip();
+    if (expr.getKind() == AffineExprKind::Add) {
+      AffineExpr lhs = cast<AffineBinaryOpExpr>(expr).getLHS();
+      AffineExpr rhs = cast<AffineBinaryOpExpr>(expr).getRHS();
+      if (auto dimExpr = dyn_cast<AffineDimExpr>(lhs)) {
+        if (operands[dimExpr.getPosition()] == offset)
+          return WalkResult::interrupt();
+      }
+      else if (auto symExpr = dyn_cast<AffineSymbolExpr>(lhs))
+        if (operands[symExpr.getPosition() + numDims])
+          return WalkResult::interrupt();
+      if (auto dimExpr = dyn_cast<AffineDimExpr>(rhs)) {
+        if (operands[dimExpr.getPosition()] == offset)
+          return WalkResult::interrupt();
+      }
+      else if (auto symExpr = dyn_cast<AffineSymbolExpr>(rhs))
+        if (operands[symExpr.getPosition() + numDims])
+          return WalkResult::interrupt();
+      return WalkResult::advance();
+    }
+    if (expr.getKind() == AffineExprKind::Mod) {
+      AffineExpr lhs = cast<AffineBinaryOpExpr>(expr).getLHS();
+      if (auto dimExpr = dyn_cast<AffineDimExpr>(lhs)) {
+        if (operands[dimExpr.getPosition()] == offset)
+          return WalkResult::interrupt();
+      }
+      else if (auto symExpr = dyn_cast<AffineSymbolExpr>(lhs))
+        if (operands[symExpr.getPosition() + numDims])
+          return WalkResult::interrupt();
+    }
+    return WalkResult::skip();
+  });
+  return walkRes.wasInterrupted();
+}
+
 template <typename LoadOrStoreOp>
 bool mlir::affine::isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
                                       int *memRefDim) {
@@ -219,7 +272,17 @@ bool mlir::affine::isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
     });
     // Check access invariance of each operand in 'exprOperands'.
     for (Value exprOperand : exprOperands) {
-      if (!isAccessIndexInvariant(iv, exprOperand)) {
+      // Verify that the access is contiguous along the induction variable if it depends on it
+      // by checking that at most one of the op's access map's result is of the shape IV + constant
+      auto map = AffineMap::getMultiDimIdentityMap(/*numDims=*/1, iv.getContext());
+      SmallVector<Value> operands = {exprOperand};
+      AffineValueMap avm(map, operands);
+      avm.composeSimplifyAndCanonicalize();
+      if (avm.isFunctionOf(0, iv)) {
+        if (!isOffset(resultExpr, numDims, mapOperands, exprOperand) || 
+            !isOffset(avm.getResult(0), avm.getNumDims(), avm.getOperands(), iv)) {
+          return false;
+        }
         if (uniqueVaryingIndexAlongIv != -1) {
           // 2+ varying indices -> do not vectorize along iv.
           return false;
