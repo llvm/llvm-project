@@ -102,4 +102,15 @@ void test(std::chrono::time_zone tz, std::chrono::time_zone_link link, std::chro
     zt.get_sys_time();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     zt.get_info();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
+
+  { // [time.clock.tai]
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::tai_clock::now();
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::tai_clock::to_utc(std::chrono::tai_seconds{});
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::tai_clock::from_utc(std::chrono::utc_seconds{});
+  }
 }

@@ -100,6 +100,10 @@ Changes in existing checks
 - Improved :doc:`boost-use-ranges
   <clang-tidy/checks/boost/use-ranges>` check to more precisely remove comma.
 
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
+  additional C++ member functions to match.
+  
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check to more precisely remove comma.
 

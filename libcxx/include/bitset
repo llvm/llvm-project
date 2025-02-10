@@ -129,6 +129,8 @@ template <size_t N> struct hash<std::bitset<N>>;
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 #  include <__cxx03/bitset>
 #else
+#  include <__algorithm/copy.h>
+#  include <__algorithm/copy_backward.h>
 #  include <__algorithm/count.h>
 #  include <__algorithm/fill.h>
 #  include <__algorithm/fill_n.h>

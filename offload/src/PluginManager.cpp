@@ -156,6 +156,7 @@ __tgt_bin_desc *PluginManager::upgradeLegacyEntries(__tgt_bin_desc *Desc) {
     NewEntry.Data = Entry.Data;
     NewEntry.Size = Entry.Size;
     NewEntry.SymbolName = Entry.SymbolName;
+    NewEntry.Kind = object::OffloadKind::OFK_OpenMP;
   }
 
   // Create a new image struct so we can update the entries list.
@@ -186,10 +187,11 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   // Add in all the OpenMP requirements associated with this binary.
   for (llvm::offloading::EntryTy &Entry :
        llvm::make_range(Desc->HostEntriesBegin, Desc->HostEntriesEnd))
-    if (Entry.Flags == OMP_REGISTER_REQUIRES)
+    if (Entry.Kind == object::OffloadKind::OFK_OpenMP &&
+        Entry.Flags == OMP_REGISTER_REQUIRES)
       PM->addRequirements(Entry.Data);
 
-  // Extract the exectuable image and extra information if availible.
+  // Extract the executable image and extra information if available.
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
     PM->addDeviceImage(*Desc, Desc->DeviceImages[i]);
 
@@ -273,7 +275,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
 
   // Auto Zero-Copy can only be currently triggered when the system is an
   // homogeneous APU architecture without attached discrete GPUs.
-  // If all devices suggest to use it, change requirment flags to trigger
+  // If all devices suggest to use it, change requirement flags to trigger
   // zero-copy behavior when mapping memory.
   if (UseAutoZeroCopy)
     addRequirements(OMPX_REQ_AUTO_ZERO_COPY);
@@ -328,7 +330,8 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   PM->TblMapMtx.lock();
   for (llvm::offloading::EntryTy *Cur = Desc->HostEntriesBegin;
        Cur < Desc->HostEntriesEnd; ++Cur) {
-    PM->HostPtrToTableMap.erase(Cur->Address);
+    if (Cur->Kind == object::OffloadKind::OFK_OpenMP)
+      PM->HostPtrToTableMap.erase(Cur->Address);
   }
 
   // Remove translation table for this descriptor.
@@ -398,6 +401,9 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
           TransTable->TargetsEntries[DeviceId];
       for (llvm::offloading::EntryTy &Entry :
            llvm::make_range(Img->EntriesBegin, Img->EntriesEnd)) {
+        if (Entry.Kind != object::OffloadKind::OFK_OpenMP)
+          continue;
+
         __tgt_device_binary &Binary = *BinaryOrErr;
 
         llvm::offloading::EntryTy DeviceEntry = Entry;
@@ -435,22 +441,6 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
       __tgt_target_table *TargetTable = TransTable->TargetsTable[DeviceId] =
           &TransTable->DeviceTables[DeviceId];
 
-      // 4) Verify whether the two table sizes match.
-      size_t Hsize =
-          TransTable->HostTable.EntriesEnd - TransTable->HostTable.EntriesBegin;
-      size_t Tsize = TargetTable->EntriesEnd - TargetTable->EntriesBegin;
-
-      // Invalid image for these host entries!
-      if (Hsize != Tsize) {
-        REPORT(
-            "Host and Target tables mismatch for device id %d [%zx != %zx].\n",
-            DeviceId, Hsize, Tsize);
-        TransTable->TargetsImages[DeviceId] = 0;
-        TransTable->TargetsTable[DeviceId] = 0;
-        Rc = OFFLOAD_FAIL;
-        break;
-      }
-
       MappingInfoTy::HDTTMapAccessorTy HDTTMap =
           Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
 
@@ -461,7 +451,8 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
               *EntryDeviceEnd = TargetTable->EntriesEnd;
            CurrDeviceEntry != EntryDeviceEnd;
            CurrDeviceEntry++, CurrHostEntry++) {
-        if (CurrDeviceEntry->Size == 0)
+        if (CurrDeviceEntry->Size == 0 ||
+            CurrDeviceEntry->Kind != object::OffloadKind::OFK_OpenMP)
           continue;
 
         assert(CurrDeviceEntry->Size == CurrHostEntry->Size &&
