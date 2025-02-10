@@ -202,6 +202,9 @@ private:
   bool selectOverflowArith(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, unsigned Opcode) const;
 
+  bool selectOverflowArithSigned(Register ResVReg, const SPIRVType *ResType,
+                           MachineInstr &I, bool isVectorType) const;
+
   bool selectIntegerDot(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I, bool Signed) const;
 
@@ -511,7 +514,6 @@ static bool mayApplyGenericSelection(unsigned Opcode) {
   switch (Opcode) {
   case TargetOpcode::G_CONSTANT:
     return false;
-  case TargetOpcode::G_SADDO:
   case TargetOpcode::G_SSUBO:
     return true;
   }
@@ -730,6 +732,11 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
                                ResType->getOpcode() == SPIRV::OpTypeVector
                                    ? SPIRV::OpIAddCarryV
                                    : SPIRV::OpIAddCarryS);
+  case TargetOpcode::G_SADDO:
+    return selectOverflowArithSigned(ResVReg, ResType, I,
+                               ResType->getOpcode() == SPIRV::OpTypeVector
+                                   ? true
+                                   : false);
   case TargetOpcode::G_USUBO:
     return selectOverflowArith(ResVReg, ResType, I,
                                ResType->getOpcode() == SPIRV::OpTypeVector
@@ -1368,6 +1375,179 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
                        .addUse(HigherVReg)
                        .addUse(ZeroReg)
                        .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectOverflowArithSigned(Register ResVReg,
+                                                         const SPIRVType *ResType,
+                                                         MachineInstr &I,
+                                                         bool isVector) const {
+
+//Checking overflow based on the logic that if two operands are positive and the sum is 
+//less than one of the operands then an overflow occured. Likewise if two operands are
+//negative and if sum is greater than one operand then also overflow occured.
+
+  Type *ResTy = nullptr;
+  StringRef ResName;
+  MachineIRBuilder MIRBuilder(I);
+  if (!GR.findValueAttrs(&I, ResTy, ResName))
+    report_fatal_error(
+        "Not enough info to select the signed arithmetic instruction");
+  if (!ResTy || !ResTy->isStructTy())
+    report_fatal_error(
+      "Expect struct type result for the signed arithmetic instruction");
+  
+  StructType *ResStructTy = cast<StructType>(ResTy);
+  Type *ResElemTy = ResStructTy->getElementType(0);
+  Type *OverflowTy = ResStructTy->getElementType(1);
+  ResTy = StructType::get(ResElemTy, OverflowTy);
+  SPIRVType *StructType = GR.getOrCreateSPIRVType(
+    ResTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
+  if (!StructType) {
+    report_fatal_error("Failed to create SPIR-V type for struct");
+  }
+  SPIRVType *BoolType = GR.getOrCreateSPIRVBoolType(I, TII);
+  unsigned N = GR.getScalarOrVectorComponentCount(ResType);
+  if (N > 1)
+    BoolType = GR.getOrCreateSPIRVVectorType(BoolType, N, I, TII);
+  Register BoolTypeReg = GR.getSPIRVTypeID(BoolType);
+  Register ZeroReg = buildZerosVal(ResType, I);
+  Register StructVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  MRI->setRegClass(StructVReg, &SPIRV::IDRegClass);
+  
+  if (ResName.size() > 0)
+    buildOpName(StructVReg, ResName, MIRBuilder);
+  
+  MachineBasicBlock &BB = *I.getParent();
+  Register SumVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  MRI->setRegClass(SumVReg, &SPIRV::IDRegClass);
+  SPIRVType *IntType = GR.getOrCreateSPIRVType(ResElemTy, MIRBuilder);
+
+  auto SumMIB = BuildMI(BB, MIRBuilder.getInsertPt(), I.getDebugLoc(), TII.get(isVector ? SPIRV::OpIAddV : SPIRV::OpIAddS))
+                    .addDef(SumVReg)
+                    .addUse(GR.getSPIRVTypeID(IntType));
+  for (unsigned i = I.getNumDefs(); i < I.getNumOperands(); ++i)
+    SumMIB.addUse(I.getOperand(i).getReg());
+  bool Result = SumMIB.constrainAllUses(TII, TRI, RBI);
+
+  Register OverflowVReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  MRI->setRegClass(OverflowVReg, &SPIRV::IDRegClass);
+  unsigned i = I.getNumDefs();
+
+  Register posCheck1 = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  MRI->setRegClass(posCheck1, &SPIRV::IDRegClass);
+  Register posCheck2 = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  MRI->setRegClass(posCheck2, &SPIRV::IDRegClass);
+  Register posCheck3 = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  MRI->setRegClass(posCheck3, &SPIRV::IDRegClass);
+  Register posOverflow = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  MRI->setRegClass(posOverflow, &SPIRV::IDRegClass);
+  Register posOverflowCheck = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  MRI->setRegClass(posOverflowCheck, &SPIRV::IDRegClass);
+  
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSGreaterThan))
+        .addDef(posCheck1)
+        .addUse(GR.getSPIRVTypeID(BoolType))
+        .addUse(I.getOperand(i).getReg())
+        .addUse(ZeroReg);
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSGreaterThan))
+        .addDef(posCheck2)
+        .addUse(GR.getSPIRVTypeID(BoolType))
+        .addUse(I.getOperand(i+1).getReg())
+        .addUse(ZeroReg);
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSLessThan))
+        .addDef(posCheck3)
+        .addUse(GR.getSPIRVTypeID(BoolType))
+        .addUse(SumVReg)
+        .addUse(I.getOperand(i+1).getReg());
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLogicalAnd))
+        .addDef(posOverflow)
+        .addUse(GR.getSPIRVTypeID(BoolType))
+        .addUse(posCheck1)
+        .addUse(posCheck2);
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLogicalAnd))
+        .addDef(posOverflowCheck)
+        .addUse(GR.getSPIRVTypeID(BoolType))
+        .addUse(posOverflow)
+        .addUse(posCheck3);
+
+  Register negCheck1 = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  MRI->setRegClass(negCheck1, &SPIRV::IDRegClass);
+  Register negCheck2 = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  MRI->setRegClass(negCheck2, &SPIRV::IDRegClass);
+  Register negCheck3 = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  MRI->setRegClass(negCheck3, &SPIRV::IDRegClass);
+  Register negOverflow = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  MRI->setRegClass(negOverflow, &SPIRV::IDRegClass);
+  Register negOverflowCheck = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  MRI->setRegClass(negOverflowCheck, &SPIRV::IDRegClass);
+  
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSLessThan))
+        .addDef(negCheck1)
+        .addUse(GR.getSPIRVTypeID(BoolType))
+        .addUse(I.getOperand(i).getReg())
+        .addUse(ZeroReg);
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSLessThan))
+        .addDef(negCheck2)
+        .addUse(GR.getSPIRVTypeID(BoolType))
+        .addUse(I.getOperand(i+1).getReg())
+        .addUse(ZeroReg);
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSGreaterThan))
+        .addDef(negCheck3)
+        .addUse(GR.getSPIRVTypeID(BoolType))
+        .addUse(SumVReg)
+        .addUse(I.getOperand(i+1).getReg());
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLogicalAnd))
+        .addDef(negOverflow)
+        .addUse(GR.getSPIRVTypeID(BoolType))
+        .addUse(negCheck1)
+        .addUse(negCheck2);
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLogicalAnd))
+        .addDef(negOverflowCheck)
+        .addUse(GR.getSPIRVTypeID(BoolType))
+        .addUse(negOverflow)
+        .addUse(negCheck3);
+
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLogicalOr))
+        .addDef(OverflowVReg)
+        .addUse(GR.getSPIRVTypeID(BoolType))
+        .addUse(negOverflowCheck)
+        .addUse(posOverflowCheck);
+            
+  // Construct the result struct containing sum and overflow flag
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeConstruct))
+        .addDef(StructVReg)
+        .addUse(GR.getSPIRVTypeID(StructType))
+        .addUse(SumVReg)
+        .addUse(OverflowVReg);
+
+  Register HigherVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  MRI->setRegClass(HigherVReg, &SPIRV::iIDRegClass);
+  
+  for (unsigned i = 0; i < I.getNumDefs(); ++i) {
+    auto MIB =
+        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
+            .addDef(i == 1 ? HigherVReg : I.getOperand(i).getReg())
+            .addUse(i == 1 ? GR.getSPIRVTypeID(BoolType) : GR.getSPIRVTypeID(ResType))
+            .addUse(StructVReg)
+            .addImm(i);
+    Result &= MIB.constrainAllUses(TII, TRI, RBI);
+  }
+  Register FalseReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  MRI->setRegClass(FalseReg, &SPIRV::IDRegClass);
+
+  // Use OpConstantFalse to initialize it
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+      .addDef(FalseReg)
+      .addUse(GR.getSPIRVTypeID(BoolType));
+
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLogicalNotEqual))
+              .addDef(I.getOperand(1).getReg())
+              .addUse(BoolTypeReg)
+              .addUse(HigherVReg)
+              .addUse(FalseReg)
+              .constrainAllUses(TII, TRI, RBI);
+  return true;
+
 }
 
 bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register ResVReg,
