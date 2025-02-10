@@ -979,6 +979,10 @@ bool RISCVRegisterInfo::shouldReleasePendingQueue(
 bool RISCVRegisterInfo::shouldReleaseSUFromPendingQueue(
     MachineFunction &MF, ArrayRef<unsigned> PSetID,
     ArrayRef<int> UnitInc) const {
+
+  if (!MF.getSubtarget<RISCVSubtarget>().hasVInstructions())
+    return false;
+
   const int UnitIncRVVRegPressureThreshold = -3;
   for (unsigned Idx = 0; Idx < PSetID.size(); Idx++) {
     // Consider only the RVV Register, as RVV spilling/reloading has higher
