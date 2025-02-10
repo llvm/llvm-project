@@ -122,6 +122,7 @@ The compiler can parse it, but not necessarily generate code for it.
 It can be used like this:
 
 .. code-block:: c++
+
   #ifdef __CUDA__
   #if __has_target_builtin(__builtin_trap)
     __builtin_trap();
