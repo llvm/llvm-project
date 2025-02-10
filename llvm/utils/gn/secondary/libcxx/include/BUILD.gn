@@ -2148,8 +2148,8 @@ libcxx_module("std_wctype_h") {
 
 group("include") {
   deps = [ ":copy_headers($default_toolchain)" ]
-  public_configs = [
-    ":include_config",
-    ":module_config",
-  ]
+  public_configs = [ ":include_config" ]
+  if (libcxx_enable_explicit_modules) {
+    public_configs += [ ":module_config" ]
+  }
 }
