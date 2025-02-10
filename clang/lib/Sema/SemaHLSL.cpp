@@ -3060,12 +3060,13 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
 static bool CastInitializer(Sema &S, ASTContext &Ctx, Expr *E,
                             llvm::SmallVectorImpl<Expr *> &List,
                             llvm::SmallVectorImpl<QualType> &DestTypes) {
-  if (List.size() >= DestTypes.size())
-    return false;
-  InitializedEntity Entity =
-      InitializedEntity::InitializeParameter(Ctx, DestTypes[List.size()], false);
-  ExprResult Res =
-      S.PerformCopyInitialization(Entity, E->getBeginLoc(), E);
+  if (List.size() >= DestTypes.size()) {
+    List.push_back(E);
+    return true;
+  }
+  InitializedEntity Entity = InitializedEntity::InitializeParameter(
+      Ctx, DestTypes[List.size()], false);
+  ExprResult Res = S.PerformCopyInitialization(Entity, E->getBeginLoc(), E);
   if (Res.isInvalid())
     return false;
   Expr *Init = Res.get();
@@ -3074,18 +3075,16 @@ static bool CastInitializer(Sema &S, ASTContext &Ctx, Expr *E,
 }
 
 static void BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
-                                llvm::SmallVectorImpl<Expr *> &List,
-                                llvm::SmallVectorImpl<QualType> &DestTypes,
-                                bool &ExcessInits) {
-  if (List.size() >= DestTypes.size()) {
+                                 llvm::SmallVectorImpl<Expr *> &List,
+                                 llvm::SmallVectorImpl<QualType> &DestTypes,
+                                 bool &ExcessInits) {
+  if (List.size() >= DestTypes.size())
     ExcessInits = true;
-    return;
-  }
 
   // If this is an initialization list, traverse the sub initializers.
   if (auto *Init = dyn_cast<InitListExpr>(E)) {
     for (auto *SubInit : Init->inits())
-      BuildIntializerList(S, Ctx, SubInit, List, DestTypes, ExcessInits);
+      BuildInitializerList(S, Ctx, SubInit, List, DestTypes, ExcessInits);
     return;
   }
 
@@ -3099,10 +3098,8 @@ static void BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
   if (auto *ATy = Ty->getAs<VectorType>()) {
     uint64_t Size = ATy->getNumElements();
 
-    if (List.size() + Size > DestTypes.size()) {
+    if (List.size() + Size > DestTypes.size())
       ExcessInits = true;
-      return;
-    }
     QualType SizeTy = Ctx.getSizeType();
     uint64_t SizeTySize = Ctx.getTypeSize(SizeTy);
     for (uint64_t I = 0; I < Size; ++I) {
@@ -3113,8 +3110,7 @@ static void BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
           E, E->getBeginLoc(), Idx, E->getEndLoc());
       if (ElExpr.isInvalid())
         return;
-      if (!CastInitializer(S, Ctx, ElExpr.get(), List, DestTypes))
-        return;
+      CastInitializer(S, Ctx, ElExpr.get(), List, DestTypes);
     }
     return;
   }
@@ -3130,7 +3126,7 @@ static void BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
           E, E->getBeginLoc(), Idx, E->getEndLoc());
       if (ElExpr.isInvalid())
         return;
-      BuildIntializerList(S, Ctx, ElExpr.get(), List, DestTypes, ExcessInits);
+      BuildInitializerList(S, Ctx, ElExpr.get(), List, DestTypes, ExcessInits);
     }
     return;
   }
@@ -3143,7 +3139,7 @@ static void BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
           E, false, E->getBeginLoc(), CXXScopeSpec(), FD, Found, NameInfo);
       if (Res.isInvalid())
         return;
-      BuildIntializerList(S, Ctx, Res.get(), List, DestTypes, ExcessInits);
+      BuildInitializerList(S, Ctx, Res.get(), List, DestTypes, ExcessInits);
     }
   }
 }
@@ -3155,6 +3151,7 @@ static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
   }
   llvm::SmallVector<Expr *> Inits;
   assert(!isa<MatrixType>(Ty) && "Matrix types not yet supported in HLSL");
+  Ty = Ty.getDesugaredType(Ctx);
   if (Ty->isVectorType() || Ty->isConstantArrayType()) {
     QualType ElTy;
     uint64_t Size = 0;
@@ -3197,7 +3194,7 @@ bool SemaHLSL::TransformInitList(const InitializedEntity &Entity,
   llvm::SmallVector<Expr *, 16> ArgExprs;
   bool ExcessInits = false;
   for (Expr *Arg : Init->inits())
-    BuildIntializerList(SemaRef, Ctx, Arg, ArgExprs, DestTypes, ExcessInits);
+    BuildInitializerList(SemaRef, Ctx, Arg, ArgExprs, DestTypes, ExcessInits);
 
   if (DestTypes.size() != ArgExprs.size() || ExcessInits) {
     int TooManyOrFew = ExcessInits ? 1 : 0;
