@@ -240,6 +240,23 @@ func.func @loop_nest_unroll_full() {
   return
 } // UNROLL-FULL }
 
+gpu.module @unroll_full {
+  // UNROLL-FULL-LABEL: func @gpu_loop_nest_simplest() {
+  gpu.func @gpu_loop_nest_simplest() {
+    // UNROLL-FULL: affine.for %arg0 = 0 to 100 step 2 {
+    affine.for %i = 0 to 100 step 2 {
+      // UNROLL-FULL: %c1_i32 = arith.constant 1 : i32
+      // UNROLL-FULL-NEXT: %c1_i32_0 = arith.constant 1 : i32
+      // UNROLL-FULL-NEXT: %c1_i32_1 = arith.constant 1 : i32
+      // UNROLL-FULL-NEXT: %c1_i32_2 = arith.constant 1 : i32
+      affine.for %j = 0 to 4 {
+        %x = arith.constant 1 : i32
+      }
+    }       // UNROLL-FULL:  }
+    gpu.return  // UNROLL-FULL:  return
+  }
+}
+
 // SHORT-LABEL: func @loop_nest_outer_unroll() {
 func.func @loop_nest_outer_unroll() {
   // SHORT:      affine.for %arg0 = 0 to 4 {
@@ -259,6 +276,28 @@ func.func @loop_nest_outer_unroll() {
   }
   return  // SHORT:  return
 }         // SHORT }
+
+gpu.module @short {
+  // SHORT-LABEL: func @gpu_loop_nest_outer_unroll() {
+  gpu.func @gpu_loop_nest_outer_unroll() {
+    // SHORT:      affine.for %arg0 = 0 to 4 {
+    // SHORT-NEXT:   %0 = affine.apply [[$MAP0]](%arg0)
+    // SHORT-NEXT:   %1 = "addi32"(%0, %0) : (index, index) -> index
+    // SHORT-NEXT: }
+    // SHORT-NEXT: affine.for %arg0 = 0 to 4 {
+    // SHORT-NEXT:   %0 = affine.apply [[$MAP0]](%arg0)
+    // SHORT-NEXT:   %1 = "addi32"(%0, %0) : (index, index) -> index
+    // SHORT-NEXT: }
+    affine.for %i = 0 to 2 {
+      affine.for %j = 0 to 4 {
+        %x = "affine.apply" (%j) { map = affine_map<(d0) -> (d0 + 1)> } :
+          (index) -> (index)
+        %y = "addi32"(%x, %x) : (index, index) -> index
+      }
+    }
+    gpu.return  // SHORT:  gpu.return
+  }             // SHORT }
+}
 
 // We are doing a minimal FileCheck here. We just need this test case to
 // successfully run. Both %x and %y will get unrolled here as the min trip
@@ -343,6 +382,37 @@ func.func @unroll_unit_stride_no_cleanup() {
     }
   }
   return
+}
+
+gpu.module @unroll_by_4{
+  // UNROLL-BY-4-LABEL: func @gpu_unroll_unit_stride_no_cleanup() {
+  gpu.func @gpu_unroll_unit_stride_no_cleanup() {
+    // UNROLL-BY-4: affine.for %arg0 = 0 to 100 {
+    affine.for %i = 0 to 100 {
+      // UNROLL-BY-4: for [[L1:%arg[0-9]+]] = 0 to 8 step 4 {
+      // UNROLL-BY-4-NEXT: %0 = "addi32"([[L1]], [[L1]]) : (index, index) -> i32
+      // UNROLL-BY-4-NEXT: %1 = "addi32"(%0, %0) : (i32, i32) -> i32
+      // UNROLL-BY-4-NEXT: %2 = affine.apply #map{{[0-9]*}}([[L1]])
+      // UNROLL-BY-4-NEXT: %3 = "addi32"(%2, %2) : (index, index) -> i32
+      // UNROLL-BY-4-NEXT: %4 = "addi32"(%3, %3) : (i32, i32) -> i32
+      // UNROLL-BY-4-NEXT: %5 = affine.apply #map{{[0-9]*}}([[L1]])
+      // UNROLL-BY-4-NEXT: %6 = "addi32"(%5, %5) : (index, index) -> i32
+      // UNROLL-BY-4-NEXT: %7 = "addi32"(%6, %6) : (i32, i32) -> i32
+      // UNROLL-BY-4-NEXT: %8 = affine.apply #map{{[0-9]*}}([[L1]])
+      // UNROLL-BY-4-NEXT: %9 = "addi32"(%8, %8) : (index, index) -> i32
+      // UNROLL-BY-4-NEXT: %10 = "addi32"(%9, %9) : (i32, i32) -> i32
+      // UNROLL-BY-4-NEXT: }
+      affine.for %j = 0 to 8 {
+        %x = "addi32"(%j, %j) : (index, index) -> i32
+        %y = "addi32"(%x, %x) : (i32, i32) -> i32
+      }
+      // empty loop
+      // UNROLL-BY-4: affine.for %arg1 = 0 to 8 {
+      affine.for %k = 0 to 8 {
+      }
+    }
+    gpu.return
+  }
 }
 
 // UNROLL-BY-4-LABEL: func @unroll_unit_stride_cleanup() {
@@ -632,6 +702,19 @@ func.func @unroll_by_one_should_promote_single_iteration_loop() {
 // UNROLL-BY-1-NEXT: return
 }
 
+gpu.module @unroll_by_1 {
+  // UNROLL-BY-1-LABEL: func @gpu_unroll_by_one_should_promote_single_iteration_loop()
+  gpu.func @gpu_unroll_by_one_should_promote_single_iteration_loop() {
+    affine.for %i = 0 to 1 {
+      %x = "foo"(%i) : (index) -> i32
+    }
+    gpu.return
+    // UNROLL-BY-1-NEXT: %c0 = arith.constant 0 : index
+    // UNROLL-BY-1-NEXT: %0 = "foo"(%c0) : (index) -> i32
+    // UNROLL-BY-1-NEXT: gpu.return
+  }
+}
+
 // Test unrolling with affine.for iter_args.
 
 // UNROLL-BY-4-LABEL: loop_unroll_with_iter_args_and_cleanup
@@ -704,6 +787,23 @@ func.func @unroll_cleanup_loop_with_larger_unroll_factor() {
 // UNROLL-CLEANUP-LOOP-NEXT: %[[V2:.*]] = affine.apply {{.*}}
 // UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V2]]) : (index) -> i32
 // UNROLL-CLEANUP-LOOP-NEXT: return
+}
+
+gpu.module @unroll_cleanup_loop {
+  // UNROLL-CLEANUP-LOOP-LABEL: func @gpu_unroll_cleanup_loop_with_larger_unroll_factor()
+  gpu.func @gpu_unroll_cleanup_loop_with_larger_unroll_factor() {
+    affine.for %i = 0 to 3 {
+      %x = "foo"(%i) : (index) -> i32
+    }
+    gpu.return
+    // UNROLL-CLEANUP-LOOP-NEXT: %[[C0:.*]] = arith.constant 0 : index
+    // UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[C0]]) : (index) -> i32
+    // UNROLL-CLEANUP-LOOP-NEXT: %[[V1:.*]] = affine.apply {{.*}}
+    // UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V1]]) : (index) -> i32
+    // UNROLL-CLEANUP-LOOP-NEXT: %[[V2:.*]] = affine.apply {{.*}}
+    // UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V2]]) : (index) -> i32
+    // UNROLL-CLEANUP-LOOP-NEXT: gpu.return
+  }
 }
 
 // UNROLL-CLEANUP-LOOP-LABEL: func @unroll_cleanup_loop_with_smaller_unroll_factor()
