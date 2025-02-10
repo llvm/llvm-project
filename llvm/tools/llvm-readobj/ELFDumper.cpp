@@ -6838,7 +6838,7 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
     if (RelocSec->sh_type == ELF::SHT_CREL) {
       reportWarning(createError(".stack_sizes (" + describe(*StackSizesELFSec) +
                                 ") has a corresponding CREL relocation "
-                                "section, which is not currently supported."),
+                                "section, which is not currently supported"),
                     FileName);
       continue;
     }
