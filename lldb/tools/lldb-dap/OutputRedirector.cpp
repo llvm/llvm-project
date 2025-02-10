@@ -86,7 +86,7 @@ void OutputRedirector::Stop() {
     // write descriptor is duplicated (to stdout/err or to another process).
     // Write a null byte to ensure the read call returns.
     char buf[] = "\0";
-    ::write(fd, buf, sizeof(buf));
+    (void)::write(fd, buf, sizeof(buf));
     ::close(fd);
     m_forwarder.join();
   }
