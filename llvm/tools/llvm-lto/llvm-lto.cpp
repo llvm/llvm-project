@@ -109,7 +109,7 @@ enum ThinLTOModes {
   THINALL
 };
 
-cl::opt<ThinLTOModes> ThinLTOMode(
+static cl::opt<ThinLTOModes> ThinLTOMode(
     "thinlto-action", cl::desc("Perform a single ThinLTO stage:"),
     cl::values(
         clEnumValN(

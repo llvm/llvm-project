@@ -60,7 +60,7 @@ enum SuppressLevel {
   SUPPRESSION_LEVEL2
 };
 
-cl::opt<SuppressLevel> DecoderEmitterSuppressDuplicates(
+static cl::opt<SuppressLevel> DecoderEmitterSuppressDuplicates(
     "suppress-per-hwmode-duplicates",
     cl::desc("Suppress duplication of instrs into per-HwMode decoder tables"),
     cl::values(

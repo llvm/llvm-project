@@ -63,7 +63,7 @@ STATISTIC(NumPatternImportsSkipped, "Number of SelectionDAG imports skipped");
 STATISTIC(NumPatternsTested,
           "Number of patterns executed according to coverage information");
 
-cl::OptionCategory GlobalISelEmitterCat("Options for -gen-global-isel");
+static cl::OptionCategory GlobalISelEmitterCat("Options for -gen-global-isel");
 
 static cl::opt<bool> WarnOnSkippedPatterns(
     "warn-on-skipped-patterns",
