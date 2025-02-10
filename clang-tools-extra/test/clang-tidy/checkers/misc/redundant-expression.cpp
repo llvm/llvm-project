@@ -1,4 +1,5 @@
 // RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- -fno-delayed-template-parsing -Wno-array-compare-cxx26
+// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- -fno-delayed-template-parsing -Wno-array-compare-cxx26 -DTEST_MACRO
 
 typedef __INT64_TYPE__ I64;
 
@@ -89,6 +90,223 @@ int TestSimpleEquivalent(int X, int Y) {
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: operator has equivalent nested operands
 
   return 0;
+}
+
+#ifndef TEST_MACRO
+#define VAL_1 2
+#define VAL_3 3
+#else
+#define VAL_1 3
+#define VAL_3 2
+#endif
+
+#define VAL_2 2
+
+#ifndef TEST_MACRO
+#define VAL_4 2 + 1
+#define VAL_6 3 + 1
+#else
+#define VAL_4 3 + 1
+#define VAL_6 2 + 1
+#endif
+
+#define VAL_5 2 + 1
+
+struct TestStruct
+{
+  int mA;
+  int mB;
+  int mC[10];
+};
+
+int TestDefineEquivalent() {
+
+  int int_val1 = 3;
+  int int_val2 = 4;
+  int int_val = 0;
+  const int cint_val2 = 4;
+
+  // Cases which should not be reported
+  if (VAL_1 != VAL_2)  return 0;
+  if (VAL_3 != VAL_2)  return 0;
+  if (VAL_1 == VAL_2)  return 0;
+  if (VAL_3 == VAL_2)  return 0;
+  if (VAL_1 >= VAL_2)  return 0;
+  if (VAL_3 >= VAL_2)  return 0;
+  if (VAL_1 <= VAL_2)  return 0;
+  if (VAL_3 <= VAL_2)  return 0;
+  if (VAL_1 < VAL_2)  return 0;
+  if (VAL_3 < VAL_2)  return 0;
+  if (VAL_1 > VAL_2)  return 0;
+  if (VAL_3 > VAL_2)  return 0;
+
+  if (VAL_4 != VAL_5)  return 0;
+  if (VAL_6 != VAL_5)  return 0;
+  if (VAL_6 == VAL_5)  return 0;
+  if (VAL_4 >= VAL_5)  return 0;
+  if (VAL_6 >= VAL_5)  return 0;
+  if (VAL_4 <= VAL_5)  return 0;
+  if (VAL_6 <= VAL_5)  return 0;
+  if (VAL_4 > VAL_5)  return 0;
+  if (VAL_6 > VAL_5)  return 0;
+  if (VAL_4 < VAL_5)  return 0;
+  if (VAL_6 < VAL_5)  return 0;
+
+  if (VAL_1 != 2)  return 0;
+  if (VAL_3 == 3)  return 0;
+
+  if (VAL_1 >= VAL_1)  return 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: both sides of operator are equivalent
+  if (VAL_2 <= VAL_2)  return 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: both sides of operator are equivalent
+  if (VAL_3 > VAL_3)  return 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: both sides of operator are equivalent
+  if (VAL_4 < VAL_4)  return 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: both sides of operator are equivalent
+  if (VAL_6 == VAL_6) return 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: both sides of operator are equivalent
+  if (VAL_5 != VAL_5) return 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: both sides of operator are equivalent
+
+  // Test prefixes
+  if (+VAL_6 == +VAL_6) return 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: both sides of operator are equivalent
+  if (-VAL_6 == -VAL_6) return 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: both sides of operator are equivalent
+  if ((+VAL_6) == (+VAL_6)) return 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: both sides of operator are equivalent
+  if ((-VAL_6) == (-VAL_6)) return 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: both sides of operator are equivalent
+
+  if (1 >= 1)  return 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: both sides of operator are equivalent
+  if (0xFF <= 0xFF)  return 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: both sides of operator are equivalent
+  if (042 > 042)  return 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: both sides of operator are equivalent
+
+  int_val = (VAL_6 == VAL_6)?int_val1: int_val2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: both sides of operator are equivalent
+  int_val = (042 > 042)?int_val1: int_val2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: both sides of operator are equivalent
+
+
+  // Ternary operator cases which should not be reported
+  int_val = (VAL_4 == VAL_5)? int_val1: int_val2;
+  int_val = (VAL_3 != VAL_2)? int_val1: int_val2;
+  int_val = (VAL_6 != 10)? int_val1: int_val2;
+  int_val = (VAL_6 != 3)? int_val1: int_val2;
+  int_val = (VAL_6 != 4)? int_val1: int_val2;
+  int_val = (VAL_6 == 3)? int_val1: int_val2;
+  int_val = (VAL_6 == 4)? int_val1: int_val2;
+
+  TestStruct tsVar1 = {
+    .mA = 3,
+    .mB = int_val,
+    .mC[0 ... VAL_2 - 2] = int_val + 1,
+  };
+
+  TestStruct tsVar2 = {
+    .mA = 3,
+    .mB = int_val,
+    .mC[0 ... cint_val2 - 2] = int_val + 1,
+  };
+
+  TestStruct tsVar3 = {
+    .mA = 3,
+    .mB = int_val,
+    .mC[0 ... VAL_3 - VAL_3] = int_val + 1,
+    // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: both sides of operator are equivalent
+  };
+
+  TestStruct tsVar4 = {
+    .mA = 3,
+    .mB = int_val,
+    .mC[0 ... 5 - 5] = int_val + 1,
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: both sides of operator are equivalent
+  };
+
+  return 1 + int_val + sizeof(tsVar1) + sizeof(tsVar2) +
+         sizeof(tsVar3) + sizeof(tsVar4);
+}
+
+#define LOOP_DEFINE 1
+
+unsigned int testLoops(const unsigned int  arr1[LOOP_DEFINE])
+{
+  unsigned int localIndex;
+  for (localIndex = LOOP_DEFINE - 1; localIndex > 0; localIndex--)
+  {
+  }
+  for (localIndex = LOOP_DEFINE - 1; 10 > 10; localIndex--)
+  // CHECK-MESSAGES: :[[@LINE-1]]:41: warning: both sides of operator are equivalent
+  {
+  }
+
+  for (localIndex = LOOP_DEFINE - 1; LOOP_DEFINE > LOOP_DEFINE; localIndex--)
+  // CHECK-MESSAGES: :[[@LINE-1]]:50: warning: both sides of operator are equivalent
+  {
+  }
+
+  return localIndex;
+}
+
+#define getValue(a) a
+#define getValueM(a) a
+
+int TestParamDefine() {
+  int ret = 0;
+
+  // Negative cases
+  ret += getValue(VAL_6) == getValue(2);
+  ret += getValue(VAL_6) == getValue(3);
+  ret += getValue(VAL_5) == getValue(2);
+  ret += getValue(VAL_5) == getValue(3);
+  ret += getValue(1) > getValue( 2);
+  ret += getValue(VAL_1) == getValue(VAL_2);
+  ret += getValue(VAL_1) != getValue(VAL_2);
+  ret += getValue(VAL_1) == getValueM(VAL_1);
+  ret += getValue(VAL_1 + VAL_2) == getValueM(VAL_1 + VAL_2);
+  ret += getValue(1) == getValueM(1);
+  ret += getValue(false) == getValueM(false);
+  ret += -getValue(1) > +getValue( 1);
+
+  // Positive cases
+  ret += (+getValue(1)) > (+getValue( 1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: both sides of operator are equivalent
+  ret += (-getValue(1)) > (-getValue( 1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: both sides of operator are equivalent
+
+  ret += +getValue(1) > +getValue( 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: both sides of operator are equivalent
+  ret += -getValue(1) > -getValue( 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: both sides of operator are equivalent
+
+  ret += getValue(1) > getValue( 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: both sides of operator are equivalent
+  ret += getValue(1) > getValue( 1  );
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: both sides of operator are equivalent
+  ret += getValue(1) > getValue(  1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: both sides of operator are equivalent
+  ret += getValue(     1) > getValue( 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: both sides of operator are equivalent
+  ret += getValue( 1     ) > getValue( 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: both sides of operator are equivalent
+  ret += getValue( VAL_5     ) > getValue(VAL_5);
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: both sides of operator are equivalent
+  ret += getValue( VAL_5     ) > getValue( VAL_5);
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: both sides of operator are equivalent
+  ret += getValue( VAL_5     ) > getValue( VAL_5  )  ;
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: both sides of operator are equivalent
+  ret += getValue(VAL_5) > getValue( VAL_5  )  ;
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: both sides of operator are equivalent
+  ret += getValue(VAL_1+VAL_2) > getValue(VAL_1 + VAL_2)  ;
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: both sides of operator are equivalent
+  ret += getValue(VAL_1)+getValue(VAL_2) > getValue(VAL_1) + getValue( VAL_2)  ;
+  // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: both sides of operator are equivalent
+  ret += (getValue(VAL_1)+getValue(VAL_2)) > (getValue(VAL_1) + getValue( VAL_2) ) ;
+  // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: both sides of operator are equivalent
+  return ret;
 }
 
 template <int DX>
