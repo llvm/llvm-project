@@ -8599,7 +8599,7 @@ bool llvm::isKnownInversion(const Value *X, const Value *Y) {
     return false;
 
   // They must both have samesign flag or not.
-  if (cast<ICmpInst>(X)->hasSameSign() != cast<ICmpInst>(Y)->hasSameSign())
+  if (Pred1.hasSameSign() != Pred2.hasSameSign())
     return false;
 
   if (B == C)
@@ -8611,8 +8611,7 @@ bool llvm::isKnownInversion(const Value *X, const Value *Y) {
     return false;
 
   // Sign bits of two RHSCs should match.
-  if (cast<ICmpInst>(X)->hasSameSign() &&
-      RHSC1->isNonNegative() != RHSC2->isNonNegative())
+  if (Pred1.hasSameSign() && RHSC1->isNonNegative() != RHSC2->isNonNegative())
     return false;
 
   const auto CR1 = ConstantRange::makeExactICmpRegion(Pred1, *RHSC1);
