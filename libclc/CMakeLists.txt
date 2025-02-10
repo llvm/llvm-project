@@ -32,10 +32,6 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   spirv64/lib/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
-  clc/lib/clspv/SOURCES;
-  clc/lib/clspv64/SOURCES;
-  clc/lib/spirv/SOURCES;
-  clc/lib/spirv64/SOURCES;
 )
 
 set( LIBCLC_MIN_LLVM 3.9.0 )
@@ -266,15 +262,15 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   list( GET TRIPLE 1 VENDOR )
   list( GET TRIPLE 2 OS )
 
-  set( dirs )
+  set( opencl_dirs )
 
   if ( NOT ${ARCH} STREQUAL spirv AND NOT ${ARCH} STREQUAL spirv64 AND
        NOT ${ARCH} STREQUAL clspv AND NOT ${ARCH} STREQUAL clspv64)
-    LIST( APPEND dirs generic )
+    LIST( APPEND opencl_dirs generic )
   endif()
 
   if( ${ARCH} STREQUAL r600 OR ${ARCH} STREQUAL amdgcn )
-    list( APPEND dirs amdgpu )
+    list( APPEND opencl_dirs amdgpu )
   endif()
 
   # Some targets' directories alias others
@@ -291,11 +287,13 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   endif()
 
   set( clc_lib_files )
+  set( clc_dirs ${dirs} generic )
+
   libclc_configure_lib_source(
     clc_lib_files
     CLC_INTERNAL
     LIB_ROOT_DIR clc
-    DIRS ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
+    DIRS ${clc_dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
   )
 
   set( opencl_lib_files )
@@ -312,7 +310,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
   libclc_configure_lib_source(
     opencl_lib_files
-    DIRS ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
+    DIRS ${opencl_dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
   )
 
   foreach( d ${${t}_devices} )
