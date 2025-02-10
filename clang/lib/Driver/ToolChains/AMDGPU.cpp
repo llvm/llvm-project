@@ -1014,7 +1014,12 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     bool isOpenMP = false) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
 
-  auto GPUSanEnabled = [GPUSan]() { return std::get<bool>(GPUSan); };
+  // GPU Sanitizer currently only supports ASan and is enabled through host
+  // ASan.
+  auto GPUSanEnabled = [GPUSan]() {
+    return std::get<bool>(GPUSan) &&
+           std::get<const SanitizerArgs>(GPUSan).needsAsanRt();
+  };
   auto AddBCLib = [&](ToolChain::BitCodeLibraryInfo BCLib,
                       bool Internalize = true) {
     BCLib.ShouldInternalize = Internalize;
@@ -1022,9 +1027,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   };
   auto AddSanBCLibs = [&]() {
     if (GPUSanEnabled()) {
-      auto SanArgs = std::get<const SanitizerArgs>(GPUSan);
-      if (SanArgs.needsAsanRt())
-        AddBCLib(getAsanRTLPath(), false);
+      AddBCLib(getAsanRTLPath(), false);
     }
   };
 
@@ -1066,7 +1069,7 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
   // them all?
   std::tuple<bool, const SanitizerArgs> GPUSan(
       DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                         options::OPT_fno_gpu_sanitize, false),
+                         options::OPT_fno_gpu_sanitize, true),
       getSanitizerArgs(DriverArgs));
   bool DAZ = DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
                                 options::OPT_fno_gpu_flush_denormals_to_zero,
@@ -1099,7 +1102,7 @@ bool AMDGPUToolChain::shouldSkipSanitizeOption(
     return false;
 
   if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                          options::OPT_fno_gpu_sanitize, false))
+                          options::OPT_fno_gpu_sanitize, true))
     return true;
 
   auto &Diags = TC.getDriver().getDiags();

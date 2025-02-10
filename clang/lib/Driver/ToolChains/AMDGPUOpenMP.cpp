@@ -68,7 +68,7 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
     Action::OffloadKind DeviceOffloadKind) const {
   DerivedArgList *DAL =
       HostTC.TranslateArgs(Args, BoundArch, DeviceOffloadKind);
-  if (!DAL)
+  if (!DAL || Args.hasArg(options::OPT_fsanitize_EQ))
     DAL = new DerivedArgList(Args.getBaseArgs());
 
   const OptTable &Opts = getDriver().getOpts();
