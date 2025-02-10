@@ -621,63 +621,72 @@ void Thread::WillStop() {
 }
 
 bool Thread::SetupToStepOverBreakpointIfNeeded(RunDirection direction) {
-  if (GetResumeState() != eStateSuspended) {
-    // First check whether this thread is going to "actually" resume at all.
-    // For instance, if we're stepping from one level to the next of an
-    // virtual inlined call stack, we just change the inlined call stack index
-    // without actually running this thread.  In that case, for this thread we
-    // shouldn't push a step over breakpoint plan or do that work.
-    if (GetCurrentPlan()->IsVirtualStep())
-      return false;
+  if (GetResumeState() == eStateSuspended)
+    return false;
 
-    // If we're at a breakpoint push the step-over breakpoint plan.  Do this
-    // before telling the current plan it will resume, since we might change
-    // what the current plan is.
+  // First check whether this thread is going to "actually" resume at all.
+  // For instance, if we're stepping from one level to the next of an
+  // virtual inlined call stack, we just change the inlined call stack index
+  // without actually running this thread.  In that case, for this thread we
+  // shouldn't push a step over breakpoint plan or do that work.
 
-    lldb::RegisterContextSP reg_ctx_sp(GetRegisterContext());
-    ProcessSP process_sp(GetProcess());
-    if (reg_ctx_sp && process_sp && direction == eRunForward) {
-      const addr_t thread_pc = reg_ctx_sp->GetPC();
-      BreakpointSiteSP bp_site_sp =
-          process_sp->GetBreakpointSiteList().FindByAddress(thread_pc);
-      // If we're at a BreakpointSite which we have either
-      //   1. already triggered/hit, or
-      //   2. the Breakpoint was added while stopped, or the pc was moved
-      //      to this BreakpointSite
-      // Step past the breakpoint before resuming.
-      // If we stopped at a breakpoint instruction/BreakpointSite location
-      // without hitting it, and we're still at that same address on
-      // resuming, then we want to hit the BreakpointSite when we resume.
-      if (bp_site_sp && m_stopped_at_unexecuted_bp != thread_pc) {
-        // Note, don't assume there's a ThreadPlanStepOverBreakpoint, the
-        // target may not require anything special to step over a breakpoint.
+  if (GetCurrentPlan()->IsVirtualStep())
+    return false;
 
-        ThreadPlan *cur_plan = GetCurrentPlan();
+  if (direction != eRunForward)
+    return false;
 
-        bool push_step_over_bp_plan = false;
-        if (cur_plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
-          ThreadPlanStepOverBreakpoint *bp_plan =
-              (ThreadPlanStepOverBreakpoint *)cur_plan;
-          if (bp_plan->GetBreakpointLoadAddress() != thread_pc)
-            push_step_over_bp_plan = true;
-        } else
-          push_step_over_bp_plan = true;
+  ProcessSP process_sp(GetProcess());
+  if (!process_sp)
+    return false;
 
-        if (push_step_over_bp_plan) {
-          ThreadPlanSP step_bp_plan_sp(new ThreadPlanStepOverBreakpoint(*this));
-          if (step_bp_plan_sp) {
-            step_bp_plan_sp->SetPrivate(true);
+  lldb::RegisterContextSP reg_ctx_sp(GetRegisterContext());
+  if (!reg_ctx_sp)
+    return false;
 
-            if (GetCurrentPlan()->RunState() != eStateStepping) {
-              ThreadPlanStepOverBreakpoint *step_bp_plan =
-                  static_cast<ThreadPlanStepOverBreakpoint *>(
-                      step_bp_plan_sp.get());
-              step_bp_plan->SetAutoContinue(true);
-            }
-            QueueThreadPlan(step_bp_plan_sp, false);
-            return true;
-          }
+  // If we're at a breakpoint push the step-over breakpoint plan.  Do this
+  // before telling the current plan it will resume, since we might change
+  // what the current plan is.
+
+  const addr_t thread_pc = reg_ctx_sp->GetPC();
+  BreakpointSiteSP bp_site_sp =
+      process_sp->GetBreakpointSiteList().FindByAddress(thread_pc);
+  // If we're at a BreakpointSite which we have either
+  //   1. already triggered/hit, or
+  //   2. the Breakpoint was added while stopped, or the pc was moved
+  //      to this BreakpointSite
+  // Step past the breakpoint before resuming.
+  // If we stopped at a breakpoint instruction/BreakpointSite location
+  // without hitting it, and we're still at that same address on
+  // resuming, then we want to hit the BreakpointSite when we resume.
+  if (bp_site_sp && m_stopped_at_unexecuted_bp != thread_pc) {
+    // Note, don't assume there's a ThreadPlanStepOverBreakpoint, the
+    // target may not require anything special to step over a breakpoint.
+
+    ThreadPlan *cur_plan = GetCurrentPlan();
+
+    bool push_step_over_bp_plan = false;
+    if (cur_plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
+      ThreadPlanStepOverBreakpoint *bp_plan =
+          (ThreadPlanStepOverBreakpoint *)cur_plan;
+      if (bp_plan->GetBreakpointLoadAddress() != thread_pc)
+        push_step_over_bp_plan = true;
+    } else
+      push_step_over_bp_plan = true;
+
+    if (push_step_over_bp_plan) {
+      ThreadPlanSP step_bp_plan_sp(new ThreadPlanStepOverBreakpoint(*this));
+      if (step_bp_plan_sp) {
+        step_bp_plan_sp->SetPrivate(true);
+
+        if (GetCurrentPlan()->RunState() != eStateStepping) {
+          ThreadPlanStepOverBreakpoint *step_bp_plan =
+              static_cast<ThreadPlanStepOverBreakpoint *>(
+                  step_bp_plan_sp.get());
+          step_bp_plan->SetAutoContinue(true);
         }
+        QueueThreadPlan(step_bp_plan_sp, false);
+        return true;
       }
     }
   }

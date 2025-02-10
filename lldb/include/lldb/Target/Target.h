@@ -796,9 +796,11 @@ public:
                                       bool resolve_indirect_symbols);
 
   // Use this to create a watchpoint:
-  lldb::WatchpointSP CreateWatchpoint(lldb::addr_t addr, size_t size,
-                                      const CompilerType *type, uint32_t kind,
-                                      Status &error);
+  lldb::WatchpointSP CreateWatchpointByAddress(lldb::addr_t addr, size_t size,
+                                               const CompilerType *type,
+                                               uint32_t kind,
+                                               lldb::WatchpointMode mode,
+                                               Status &error);
 
   lldb::WatchpointSP GetLastCreatedWatchpoint() {
     return m_last_created_watchpoint;
