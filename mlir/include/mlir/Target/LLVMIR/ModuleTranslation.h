@@ -23,12 +23,13 @@
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include "llvm/IR/FPEnv.h"
 
 namespace llvm {
 class BasicBlock;
-class IRBuilderBase;
 class Function;
+class IRBuilderBase;
+class OpenMPIRBuilder;
 class Value;
 } // namespace llvm
 
