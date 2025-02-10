@@ -322,7 +322,8 @@ def testMatmulOp():
                 linalg.fill_builtin_region(res.operation)
                 # CHECK: linalg.matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[A]], %[[BTrans]] : tensor<4x8xf32>, tensor<12x8xf32>) outs(%[[C]] : tensor<4x12xf32>)
                 res = linalg.matmul(
-                    A, Btransposed,
+                    A,
+                    Btransposed,
                     outs=(C,),
                     indexing_maps=[a_map, b_transposed_map, c_map],
                 )
@@ -349,7 +350,8 @@ def testMatmulOp():
                 linalg.fill_builtin_region(res.operation)
                 # CHECK: linalg.matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[Amem]], %[[BTransmem]] : memref<4x8xf32>, memref<12x8xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
                 linalg.matmul(
-                    Amem, Btransposedmem,
+                    Amem,
+                    Btransposedmem,
                     outs=(Cmem,),
                     indexing_maps=[a_map, b_transposed_map, c_map],
                 )
@@ -427,7 +429,8 @@ def testContractOp():
                 linalg.fill_builtin_region(op4.operation)
                 # CHECK: linalg.contract indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[A]], %[[BTrans]] : tensor<4x8xf32>, tensor<12x8xf32>) outs(%[[C]] : tensor<4x12xf32>)
                 op5 = linalg.contract(
-                    A, Btransposed,
+                    A,
+                    Btransposed,
                     outs=(C,),
                     indexing_maps=[a_map, b_transposed_map, c_map],
                 )
@@ -456,7 +459,8 @@ def testContractOp():
                 linalg.fill_builtin_region(op4.operation)
                 # CHECK: linalg.contract indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[Amem]], %[[BTransmem]] : memref<4x8xf32>, memref<12x8xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
                 linalg.contract(
-                    Amem, Btransposedmem,
+                    Amem,
+                    Btransposedmem,
                     outs=(Cmem,),
                     indexing_maps=[a_map, b_transposed_map, c_map],
                 )
