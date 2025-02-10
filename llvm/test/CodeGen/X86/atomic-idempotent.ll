@@ -27,18 +27,16 @@ define i8 @add8(ptr %p) {
 ;
 ; X86-SLM-LABEL: add8:
 ; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SLM-NEXT:    xorl %eax, %eax
-; X86-SLM-NEXT:    lock xaddb %al, (%ecx)
-; X86-SLM-NEXT:    # kill: def $al killed $al killed $eax
+; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SLM-NEXT:    lock orl $0, (%esp)
+; X86-SLM-NEXT:    movzbl (%eax), %eax
 ; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: add8:
 ; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-ATOM-NEXT:    xorl %eax, %eax
-; X86-ATOM-NEXT:    lock xaddb %al, (%ecx)
-; X86-ATOM-NEXT:    # kill: def $al killed $al killed $eax
+; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-ATOM-NEXT:    lock orl $0, (%esp)
+; X86-ATOM-NEXT:    movzbl (%eax), %eax
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
@@ -62,26 +60,18 @@ define i16 @or16(ptr %p) {
 ;
 ; X86-SLM-LABEL: or16:
 ; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SLM-NEXT:    movzwl (%ecx), %eax
-; X86-SLM-NEXT:    .p2align 4
-; X86-SLM-NEXT:  .LBB1_1: # %atomicrmw.start
-; X86-SLM-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-SLM-NEXT:    lock cmpxchgw %ax, (%ecx)
-; X86-SLM-NEXT:    jne .LBB1_1
-; X86-SLM-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SLM-NEXT:    lock orl $0, (%esp)
+; X86-SLM-NEXT:    movzwl (%eax), %eax
 ; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: or16:
 ; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-ATOM-NEXT:    movzwl (%ecx), %eax
-; X86-ATOM-NEXT:    .p2align 4
-; X86-ATOM-NEXT:  .LBB1_1: # %atomicrmw.start
-; X86-ATOM-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-ATOM-NEXT:    lock cmpxchgw %ax, (%ecx)
-; X86-ATOM-NEXT:    jne .LBB1_1
-; X86-ATOM-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-ATOM-NEXT:    lock orl $0, (%esp)
+; X86-ATOM-NEXT:    movzwl (%eax), %eax
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
   %1 = atomicrmw or ptr %p, i16 0 acquire
   ret i16 %1
@@ -103,26 +93,18 @@ define i32 @xor32(ptr %p) {
 ;
 ; X86-SLM-LABEL: xor32:
 ; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SLM-NEXT:    movl (%ecx), %eax
-; X86-SLM-NEXT:    .p2align 4
-; X86-SLM-NEXT:  .LBB2_1: # %atomicrmw.start
-; X86-SLM-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-SLM-NEXT:    lock cmpxchgl %eax, (%ecx)
-; X86-SLM-NEXT:    jne .LBB2_1
-; X86-SLM-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SLM-NEXT:    lock orl $0, (%esp)
+; X86-SLM-NEXT:    movl (%eax), %eax
 ; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: xor32:
 ; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-ATOM-NEXT:    movl (%ecx), %eax
-; X86-ATOM-NEXT:    .p2align 4
-; X86-ATOM-NEXT:  .LBB2_1: # %atomicrmw.start
-; X86-ATOM-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-ATOM-NEXT:    lock cmpxchgl %eax, (%ecx)
-; X86-ATOM-NEXT:    jne .LBB2_1
-; X86-ATOM-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-ATOM-NEXT:    lock orl $0, (%esp)
+; X86-ATOM-NEXT:    movl (%eax), %eax
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
   %1 = atomicrmw xor ptr %p, i32 0 release
   ret i32 %1
@@ -318,26 +300,18 @@ define i32 @and32 (ptr %p) {
 ;
 ; X86-SLM-LABEL: and32:
 ; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SLM-NEXT:    movl (%ecx), %eax
-; X86-SLM-NEXT:    .p2align 4
-; X86-SLM-NEXT:  .LBB5_1: # %atomicrmw.start
-; X86-SLM-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-SLM-NEXT:    lock cmpxchgl %eax, (%ecx)
-; X86-SLM-NEXT:    jne .LBB5_1
-; X86-SLM-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SLM-NEXT:    lock orl $0, (%esp)
+; X86-SLM-NEXT:    movl (%eax), %eax
 ; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: and32:
 ; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-ATOM-NEXT:    movl (%ecx), %eax
-; X86-ATOM-NEXT:    .p2align 4
-; X86-ATOM-NEXT:  .LBB5_1: # %atomicrmw.start
-; X86-ATOM-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-ATOM-NEXT:    lock cmpxchgl %eax, (%ecx)
-; X86-ATOM-NEXT:    jne .LBB5_1
-; X86-ATOM-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-ATOM-NEXT:    lock orl $0, (%esp)
+; X86-ATOM-NEXT:    movl (%eax), %eax
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
   %1 = atomicrmw and ptr %p, i32 -1 acq_rel
   ret i32 %1
