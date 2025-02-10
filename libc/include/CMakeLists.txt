@@ -74,6 +74,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  endian
+  ../libc/include/endian.yaml
+  endian.h
+  DEPENDS
+    .llvm-libc-macros.endian_macros
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   features
   ../libc/include/features.yaml
   features.h
