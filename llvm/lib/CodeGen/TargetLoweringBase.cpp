@@ -407,6 +407,11 @@ RTLIB::Libcall RTLIB::getFSINCOS(EVT RetVT) {
                       SINCOS_PPCF128);
 }
 
+RTLIB::Libcall RTLIB::getMODF(EVT RetVT) {
+  return getFPLibCall(RetVT, MODF_F32, MODF_F64, MODF_F80, MODF_F128,
+                      MODF_PPCF128);
+}
+
 RTLIB::Libcall RTLIB::getOutlineAtomicHelper(const Libcall (&LC)[5][4],
                                              AtomicOrdering Order,
                                              uint64_t MemSize) {
@@ -775,9 +780,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::BITREVERSE, ISD::PARITY}, VT, Expand);
 
     // These library functions default to expand.
-    setOperationAction(
-        {ISD::FROUND, ISD::FPOWI, ISD::FLDEXP, ISD::FFREXP, ISD::FSINCOS}, VT,
-        Expand);
+    setOperationAction({ISD::FROUND, ISD::FPOWI, ISD::FLDEXP, ISD::FFREXP,
+                        ISD::FSINCOS, ISD::FMODF},
+                       VT, Expand);
 
     // These operations default to expand for vector types.
     if (VT.isVector())
