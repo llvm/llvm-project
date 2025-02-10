@@ -1804,25 +1804,25 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   bool IsNUW = GEP.hasNoUnsignedWrap();
   bool IsNUSW = GEP.hasNoUnsignedSignedWrap();
 
-  Type *ResTy = GEP.getType();
-  std::optional<ElementCount> ResEC;
-  if (auto *ResVT = dyn_cast<VectorType>(ResTy->getStructElementType(0)))
-    ResEC = ResVT->getElementCount();
+  StructType *ResTy = cast<StructType>(GEP.getType());
+  Type *ResRsrcTy = ResTy->getElementType(0);
+  VectorType *ResRsrcVecTy = dyn_cast<VectorType>(ResRsrcTy);
   bool HasPtrVecIn = isa<VectorType>(Off->getType());
-  bool BroadcastsPtr = ResEC.has_value() && !HasPtrVecIn;
+  bool BroadcastsPtr = ResRsrcVecTy && !HasPtrVecIn;
 
   // In order to call emitGEPOffset() and thus not have to reimplement it,
   // we need the GEP result to have ptr addrspace(7) type.
-  Type *FatPtrTy = IRB.getPtrTy(AMDGPUAS::BUFFER_FAT_POINTER);
-  if (ResEC.has_value())
-    FatPtrTy = VectorType::get(FatPtrTy, *ResEC);
+  Type *FatPtrTy =
+      ResRsrcTy->getWithNewType(IRB.getPtrTy(AMDGPUAS::BUFFER_FAT_POINTER));
   GEP.mutateType(FatPtrTy);
   Value *OffAccum = emitGEPOffset(&IRB, DL, &GEP);
   GEP.mutateType(ResTy);
 
   if (BroadcastsPtr) {
-    Rsrc = IRB.CreateVectorSplat(*ResEC, Rsrc, Rsrc->getName());
-    Off = IRB.CreateVectorSplat(*ResEC, Off, Off->getName());
+    Rsrc = IRB.CreateVectorSplat(ResRsrcVecTy->getElementCount(), Rsrc,
+                                 Rsrc->getName());
+    Off = IRB.CreateVectorSplat(ResRsrcVecTy->getElementCount(), Off,
+                                Off->getName());
   }
   if (match(OffAccum, m_Zero())) { // Constant-zero offset
     SplitUsers.insert(&GEP);
