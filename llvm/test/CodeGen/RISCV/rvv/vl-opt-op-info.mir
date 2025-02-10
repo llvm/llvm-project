@@ -97,7 +97,7 @@ name: vwop_vv_vd_passthru_use
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vd_passthru_use
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: early-clobber %y:vr = PseudoVWADD_VV_MF2 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 4 /* e16 */, 0 /* tu, mu */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
@@ -223,7 +223,7 @@ name: vwop_wv_vd_passthru_use
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vd_passthru_use
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: early-clobber %y:vr = PseudoVWADD_WV_MF2 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 4 /* e16 */, 0 /* tu, mu */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
@@ -1115,7 +1115,7 @@ name: vmop_vv_passthru_use
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_passthru_use
-    ; CHECK: %x:vrnov0 = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0 /* e8 */
+    ; CHECK: %x:vrnov0 = PseudoVMAND_MM_B8 $noreg, $noreg, 1, 0 /* e8 */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */
     ; CHECK-NEXT: %z:vr = PseudoVMAND_MM_B8 %y, $noreg, 1, 0 /* e8 */
     %x:vrnov0 = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0 /* e1 */
@@ -1127,7 +1127,7 @@ name: vmop_vv_passthru_use_incompatible_eew
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_passthru_use_incompatible_eew
-    ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */
     ; CHECK-NEXT: %z:vr = PseudoVMAND_MM_B8 %y, $noreg, 1, 0 /* e8 */
     %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
