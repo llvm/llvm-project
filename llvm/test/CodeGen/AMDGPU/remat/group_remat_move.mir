@@ -170,14 +170,15 @@ body:             |
     successors: %bb.1, %bb.2
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $vgpr0, $vgpr1
 
-    undef %0.sub0:sgpr_64 = COPY $sgpr0
-    undef %0.sub1:sgpr_64 = COPY $sgpr1
+    %0:sgpr_64 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr1, %subreg.sub1
+    ; undef %0.sub0:sgpr_64 = COPY $sgpr0
+    ; undef %0.sub1:sgpr_64 = COPY $sgpr1
 
-    undef %1.sub0:sgpr_128 = COPY $sgpr4
-    undef %1.sub1:sgpr_128 = COPY $sgpr5
-    undef %1.sub2:sgpr_128 = COPY $sgpr6
-    undef %1.sub3:sgpr_128 = COPY $sgpr7
-
+    %1:sgpr_128 = REG_SEQUENCE $sgpr4, %subreg.sub0, $sgpr5, %subreg.sub1, $sgpr6, %subreg.sub2, $sgpr7, %subreg.sub3
+    ; undef %1.sub0:sgpr_128 = COPY $sgpr4
+    ; undef %1.sub1:sgpr_128 = COPY $sgpr5
+    ; undef %1.sub2:sgpr_128 = COPY $sgpr6
+    ; undef %1.sub3:sgpr_128 = COPY $sgpr7
 
     %500:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
     %501:vgpr_32 = V_MOV_B32_e32 $vgpr1, implicit $exec
