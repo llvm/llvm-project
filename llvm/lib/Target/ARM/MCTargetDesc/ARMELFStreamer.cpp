@@ -263,8 +263,6 @@ void ARMTargetAsmStreamer::annotateTLSDescriptorSequence(
 
 void ARMTargetAsmStreamer::emitThumbFunc(MCSymbol *Symbol) {
   const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
-  // This needs to emit to a temporary string to get properly quoted
-  // MCSymbols when they have spaces in them.
   OS << "\t.thumb_func";
   // Only Mach-O hasSubsectionsViaSymbols()
   if (MAI->hasSubsectionsViaSymbols()) {
@@ -1107,9 +1105,9 @@ void ARMTargetELFStreamer::annotateTLSDescriptorSequence(
   getStreamer().EmitFixup(S, FK_Data_4);
 }
 
-void ARMTargetELFStreamer::emitThumbFunc(MCSymbol *Func) {
-  getStreamer().getAssembler().setIsThumbFunc(Func);
-  getStreamer().emitSymbolAttribute(Func, MCSA_ELF_TypeFunction);
+void ARMTargetELFStreamer::emitThumbFunc(MCSymbol *Symbol) {
+  getStreamer().getAssembler().setIsThumbFunc(Symbol);
+  getStreamer().emitSymbolAttribute(Symbol, MCSA_ELF_TypeFunction);
 }
 
 void ARMTargetELFStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {

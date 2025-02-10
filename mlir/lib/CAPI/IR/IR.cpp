@@ -22,7 +22,6 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
@@ -324,15 +323,6 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location) {
 MlirModule mlirModuleCreateParse(MlirContext context, MlirStringRef module) {
   OwningOpRef<ModuleOp> owning =
       parseSourceString<ModuleOp>(unwrap(module), unwrap(context));
-  if (!owning)
-    return MlirModule{nullptr};
-  return MlirModule{owning.release().getOperation()};
-}
-
-MlirModule mlirModuleCreateParseFromFile(MlirContext context,
-                                         MlirStringRef fileName) {
-  OwningOpRef<ModuleOp> owning =
-      parseSourceFile<ModuleOp>(unwrap(fileName), unwrap(context));
   if (!owning)
     return MlirModule{nullptr};
   return MlirModule{owning.release().getOperation()};

@@ -534,7 +534,7 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.types
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_entrypoint_object(
@@ -4596,6 +4596,25 @@ add_entrypoint_object(
     .inv_trigf_utils
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
+)
+
+add_entrypoint_object(
+  asinf16
+  SRCS
+    asinf16.cpp
+  HDRS
+    ../asinf16.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types  
 )
 
 add_entrypoint_object(
