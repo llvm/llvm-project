@@ -74,16 +74,30 @@ public:
 
   bool ShouldStop(StoppointCallbackContext *context) override;
 
-  bool WatchpointRead() const;
-  bool WatchpointWrite() const;
-  bool WatchpointModify() const;
+  bool WatchpointRead() const { return m_watch_type & LLDB_WATCH_TYPE_READ; }
+  bool WatchpointWrite() const { return m_watch_type & LLDB_WATCH_TYPE_WRITE; }
+  bool WatchpointModify() const {
+    return m_watch_type & LLDB_WATCH_TYPE_MODIFY;
+  }
+
   uint32_t GetIgnoreCount() const;
   void SetIgnoreCount(uint32_t n);
   void SetWatchpointType(uint32_t type, bool notify = true);
   void SetDeclInfo(const std::string &str);
-  std::string GetWatchSpec();
+  std::string GetWatchSpec() const;
   void SetWatchSpec(const std::string &str);
   bool WatchedValueReportable(const ExecutionContext &exe_ctx);
+
+  // This function determines whether we should report a watchpoint value
+  // change. Specifically, it checks the watchpoint condition (if present),
+  // ignore count and so on.
+  //
+  // \param[in] exe_ctx This should represent the current execution context
+  // where execution stopped. It's used only for watchpoint condition
+  // evaluation.
+  //
+  // \return Returns true if we should report a watchpoint hit.
+  bool ShouldReport(StoppointCallbackContext &context);
 
   // Snapshot management interface.
   bool IsWatchVariable() const;
@@ -124,7 +138,7 @@ public:
       void *baton, lldb_private::StoppointCallbackContext *context,
       lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
 
-  void GetDescription(Stream *s, lldb::DescriptionLevel level);
+  void GetDescription(Stream *s, lldb::DescriptionLevel level) const;
   void Dump(Stream *s) const override;
   bool DumpSnapshots(Stream *s, const char *prefix = nullptr) const;
   void DumpWithLevel(Stream *s, lldb::DescriptionLevel description_level) const;
@@ -193,6 +207,17 @@ private:
   friend class WatchpointList;
   friend class StopInfoWatchpoint; // This needs to call UndoHitCount()
 
+  lldb::ValueObjectSP CalculateWatchedValue() const;
+
+  void UpdateWatchedValue(lldb::ValueObjectSP new_value_sp) {
+    m_old_value_sp = m_new_value_sp;
+    m_new_value_sp = new_value_sp;
+  }
+
+  bool CheckWatchpointCondition(const ExecutionContext &exe_ctx) const;
+
+  bool EvaluateWatchpointCallback(StoppointCallbackContext &context);
+
   void ResetHistoricValues() {
     m_old_value_sp.reset();
     m_new_value_sp.reset();
@@ -213,15 +238,13 @@ private:
   // At the end of the ephemeral mode when the watchpoint is to be enabled
   // again, we check the count, if it is more than 1, it means the user-
   // supplied actions actually want the watchpoint to be disabled!
-  uint32_t m_watch_read : 1, // 1 if we stop when the watched data is read from
-      m_watch_write : 1,     // 1 if we stop when the watched data is written to
-      m_watch_modify : 1;    // 1 if we stop when the watched data is changed
+  uint32_t m_watch_type;
   uint32_t m_ignore_count;      // Number of times to ignore this watchpoint
+  CompilerType m_type;
   std::string m_decl_str;       // Declaration information, if any.
   std::string m_watch_spec_str; // Spec for the watchpoint.
   lldb::ValueObjectSP m_old_value_sp;
   lldb::ValueObjectSP m_new_value_sp;
-  CompilerType m_type;
   Status m_error; // An error object describing errors associated with this
                   // watchpoint.
   WatchpointOptions m_options; // Settable watchpoint options, which is a
