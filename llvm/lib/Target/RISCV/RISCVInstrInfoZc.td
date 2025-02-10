@@ -39,12 +39,15 @@ def RlistAsmOperand : AsmOperandClass {
   let Name = "Rlist";
   let ParserMethod = "parseReglist";
   let DiagnosticType = "InvalidRlist";
+  let DiagnosticString = "operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}";
 }
 
 def StackAdjAsmOperand : AsmOperandClass {
   let Name = "StackAdj";
   let ParserMethod = "parseZcmpStackAdj";
   let DiagnosticType = "InvalidStackAdj";
+  let DiagnosticString = "stack adjustment is invalid for this instruction and register list; "
+        "refer to Zc spec for a detailed range of stack adjustment";
   let PredicateMethod = "isSpimm";
   let RenderMethod = "addSpimmOperands";
 }

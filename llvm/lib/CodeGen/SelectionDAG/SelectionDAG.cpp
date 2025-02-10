@@ -7297,15 +7297,15 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // it's worth handling here.
     if (N2CV && N2CV->isZero())
       return N1;
-    if ((Opcode == ISD::ADD || Opcode == ISD::SUB) && VT.isVector() &&
-        VT.getVectorElementType() == MVT::i1)
+    if ((Opcode == ISD::ADD || Opcode == ISD::SUB) &&
+        VT.getScalarType() == MVT::i1)
       return getNode(ISD::XOR, DL, VT, N1, N2);
     break;
   case ISD::MUL:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
-    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+    if (VT.getScalarType() == MVT::i1)
       return getNode(ISD::AND, DL, VT, N1, N2);
     if (N2C && (N1.getOpcode() == ISD::VSCALE) && Flags.hasNoSignedWrap()) {
       const APInt &MulImm = N1->getConstantOperandAPInt(0);
@@ -7326,7 +7326,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
-    if (VT.isVector() && VT.getVectorElementType() == MVT::i1) {
+    if (VT.getScalarType() == MVT::i1) {
       // fold (add_sat x, y) -> (or x, y) for bool types.
       if (Opcode == ISD::SADDSAT || Opcode == ISD::UADDSAT)
         return getNode(ISD::OR, DL, VT, N1, N2);
@@ -7359,7 +7359,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
-    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+    if (VT.getScalarType() == MVT::i1)
       return getNode(ISD::XOR, DL, VT, N1, N2);
     break;
   case ISD::SMIN:
@@ -7367,7 +7367,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
-    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+    if (VT.getScalarType() == MVT::i1)
       return getNode(ISD::OR, DL, VT, N1, N2);
     break;
   case ISD::SMAX:
@@ -7375,7 +7375,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
-    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+    if (VT.getScalarType() == MVT::i1)
       return getNode(ISD::AND, DL, VT, N1, N2);
     break;
   case ISD::FADD:
@@ -10399,12 +10399,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::VP_ADD:
   case ISD::VP_SUB:
     // If it is VP_ADD/VP_SUB mask operation then turn it to VP_XOR
-    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+    if (VT.getScalarType() == MVT::i1)
       Opcode = ISD::VP_XOR;
     break;
   case ISD::VP_MUL:
     // If it is VP_MUL mask operation then turn it to VP_AND
-    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+    if (VT.getScalarType() == MVT::i1)
       Opcode = ISD::VP_AND;
     break;
   case ISD::VP_REDUCE_MUL:
@@ -10509,9 +10509,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
       return getNode(ISD::MERGE_VALUES, DL, VTList, {N1, ZeroOverFlow}, Flags);
     }
 
-    if (VTList.VTs[0].isVector() &&
-        VTList.VTs[0].getVectorElementType() == MVT::i1 &&
-        VTList.VTs[1].getVectorElementType() == MVT::i1) {
+    if (VTList.VTs[0].getScalarType() == MVT::i1 &&
+        VTList.VTs[1].getScalarType() == MVT::i1) {
       SDValue F1 = getFreeze(N1);
       SDValue F2 = getFreeze(N2);
       // {vXi1,vXi1} (u/s)addo(vXi1 x, vXi1y) -> {xor(x,y),and(x,y)}

@@ -242,6 +242,8 @@ using Mergeable = tomp::clause::MergeableT<TypeTy, IdTy, ExprTy>;
 using Message = tomp::clause::MessageT<TypeTy, IdTy, ExprTy>;
 using NoOpenmp = tomp::clause::NoOpenmpT<TypeTy, IdTy, ExprTy>;
 using NoOpenmpRoutines = tomp::clause::NoOpenmpRoutinesT<TypeTy, IdTy, ExprTy>;
+using NoOpenmpConstructs =
+    tomp::clause::NoOpenmpConstructsT<TypeTy, IdTy, ExprTy>;
 using NoParallelism = tomp::clause::NoParallelismT<TypeTy, IdTy, ExprTy>;
 using Nocontext = tomp::clause::NocontextT<TypeTy, IdTy, ExprTy>;
 using Nogroup = tomp::clause::NogroupT<TypeTy, IdTy, ExprTy>;
