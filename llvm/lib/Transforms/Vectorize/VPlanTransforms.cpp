@@ -591,7 +591,7 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
 static void legalizeAndOptimizeInductions(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
+  bool HasOnlyVectorVFs = !Plan.hasScalarVFOnly();
   VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi);
