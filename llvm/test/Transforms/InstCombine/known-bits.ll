@@ -2374,8 +2374,7 @@ define i8 @test_inv_cond_and(i8 %x, i1 %c) {
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[C:%.*]], [[NOT]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -4
-; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK-NEXT:    ret i8 -4
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
 ; CHECK-NEXT:    ret i8 [[OR2]]
