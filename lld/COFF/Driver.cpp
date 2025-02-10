@@ -2557,14 +2557,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         // it.
         if (symtab.findUnderscore("_load_config_used"))
           symtab.addGCRoot(symtab.mangle("_load_config_used"));
-      });
 
-      if (args.hasArg(OPT_include_optional)) {
-        // Handle /includeoptional
-        for (auto *arg : args.filtered(OPT_include_optional))
-          if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
-            ctx.symtab.addGCRoot(arg->getValue());
-      }
+        if (args.hasArg(OPT_include_optional)) {
+          // Handle /includeoptional
+          for (auto *arg : args.filtered(OPT_include_optional))
+            if (isa_and_nonnull<LazyArchive>(symtab.find(arg->getValue())))
+              symtab.addGCRoot(arg->getValue());
+        }
+      });
     } while (run());
   }
 
