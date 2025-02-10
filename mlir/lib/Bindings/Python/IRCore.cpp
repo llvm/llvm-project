@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <filesystem>
 #include <optional>
 #include <utility>
 
@@ -299,7 +300,7 @@ struct PyAttrBuilderMap {
     return *builder;
   }
   static void dunderSetItemNamed(const std::string &attributeKind,
-                                nb::callable func, bool replace) {
+                                 nb::callable func, bool replace) {
     PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func),
                                               replace);
   }
@@ -3043,6 +3044,19 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             PyMlirContext::ErrorCapture errors(context->getRef());
             MlirModule module = mlirModuleCreateParse(
                 context->get(), toMlirStringRef(moduleAsm));
+            if (mlirModuleIsNull(module))
+              throw MLIRError("Unable to parse module assembly", errors.take());
+            return PyModule::forModule(module).releaseObject();
+          },
+          nb::arg("asm"), nb::arg("context").none() = nb::none(),
+          kModuleParseDocstring)
+      .def_static(
+          "parse",
+          [](const std::filesystem::path &path,
+             DefaultingPyMlirContext context) {
+            PyMlirContext::ErrorCapture errors(context->getRef());
+            MlirModule module = mlirModuleCreateParseFromFile(
+                context->get(), toMlirStringRef(path.string()));
             if (mlirModuleIsNull(module))
               throw MLIRError("Unable to parse module assembly", errors.take());
             return PyModule::forModule(module).releaseObject();
