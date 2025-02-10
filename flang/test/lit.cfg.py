@@ -163,11 +163,14 @@ else:
         ToolSubst("%not_todo_abort_cmd", command=FindTool("not"), unresolved="fatal")
     )
 
+if config.flang_include_runtime:
+    config.available_features.add("flang-rt")
+
 # Define some variables to help us test that the flang runtime doesn't depend on
 # the C++ runtime libraries. For this we need a C compiler. If for some reason
 # we don't have one, we can just disable the test.
-if config.cc:
-    libruntime = os.path.join(config.flang_lib_dir, "libFortranRuntime.a")
+if config.flang_include_runtime and config.cc:
+    libruntime = os.path.join(config.flang_lib_dir, "libflang_rt.runtime.a")
     include = os.path.join(config.flang_src_dir, "include")
 
     if (
