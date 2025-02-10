@@ -284,7 +284,12 @@ private:
                      GL::GLSLExtInst GLInst) const;
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I, const ExtInstList &ExtInsts) const;
-
+  bool selectExtInstForLRound(Register ResVReg, const SPIRVType *ResType,
+                     MachineInstr &I, CL::OpenCLExtInst CLInst,
+                     GL::GLSLExtInst GLInst) const;
+  bool selectExtInstForLRound(Register ResVReg, const SPIRVType *ResType,
+                     MachineInstr &I, const ExtInstList &ExtInsts) const;
+                     
   bool selectLog10(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
 
@@ -625,6 +630,22 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_UCMP:
     return selectSUCmp(ResVReg, ResType, I, false);
 
+  case TargetOpcode::G_LROUND: 
+  case TargetOpcode::G_LLROUND:{
+      Register Result = MRI->createVirtualRegister(MRI -> getRegClass(ResVReg), "hello");
+      MRI->setRegClass(Result,&SPIRV::iIDRegClass);
+      GR.assignSPIRVTypeToVReg(GR.getSPIRVTypeForVReg(I.getOperand(1).getReg()), Result, *(I.getParent() -> getParent()));
+     bool Rounded = selectExtInstForLRound(Result, GR.getSPIRVTypeForVReg(Result), I, CL::round, GL::Round);
+     if(Rounded){
+        MachineBasicBlock &BB = *I.getParent();
+        MachineFunction &MF = *BB.getParent();
+        auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConvertFToS))
+                      .addDef(ResVReg)
+                      .addUse(GR.getSPIRVTypeID(ResType))  
+                      .addUse(Result);
+      return MIB.constrainAllUses(TII, TRI, RBI);
+     }
+  }
   case TargetOpcode::G_STRICT_FMA:
   case TargetOpcode::G_FMA:
     return selectExtInst(ResVReg, ResType, I, CL::fma, GL::Fma);
@@ -955,6 +976,47 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
   }
   return false;
 }
+
+bool SPIRVInstructionSelector::selectExtInstForLRound(Register ResVReg,
+                                             const SPIRVType *ResType,
+                                             MachineInstr &I,
+                                             CL::OpenCLExtInst CLInst,
+                                             GL::GLSLExtInst GLInst) const {
+  ExtInstList ExtInsts = {{SPIRV::InstructionSet::OpenCL_std, CLInst},
+                          {SPIRV::InstructionSet::GLSL_std_450, GLInst}};
+  return selectExtInstForLRound(ResVReg, ResType, I, ExtInsts);
+}
+
+bool SPIRVInstructionSelector::selectExtInstForLRound(Register ResVReg,
+                                             const SPIRVType *ResType,
+                                             MachineInstr &I,
+                                             const ExtInstList &Insts) const {
+
+  for (const auto &Ex : Insts) {
+    SPIRV::InstructionSet::InstructionSet Set = Ex.first;
+    uint32_t Opcode = Ex.second;
+    if (STI.canUseExtInstSet(Set)) {
+      MachineBasicBlock &BB = *I.getParent();
+      auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+                     .addDef(ResVReg)
+                     .addUse(GR.getSPIRVTypeID(ResType))
+                     .addImm(static_cast<uint32_t>(Set))
+                     .addImm(Opcode);
+      const unsigned NumOps = I.getNumOperands();
+      unsigned Index = 1;
+      if (Index < NumOps &&
+          I.getOperand(Index).getType() ==
+              MachineOperand::MachineOperandType::MO_IntrinsicID)
+        Index = 2;
+      for (; Index < NumOps; ++Index)
+        MIB.add(I.getOperand(Index));
+      MIB.constrainAllUses(TII, TRI, RBI);
+      return true;
+    }
+  }
+  return false;
+}
+
 
 bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
                                                 const SPIRVType *ResType,
