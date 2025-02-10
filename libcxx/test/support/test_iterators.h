@@ -1664,10 +1664,17 @@ using forward_iterator_list = concatenate_t<bidirectional_iterator_list<Ptr>, ty
 template <class Ptr>
 using cpp17_input_iterator_list = concatenate_t<forward_iterator_list<Ptr>, type_list<cpp17_input_iterator<Ptr> > >;
 
+template <class Ptr>
+using cpp17_output_iterator_list = concatenate_t<forward_iterator_list<Ptr>, type_list<cpp17_output_iterator<Ptr> > >;
+
 #if TEST_STD_VER >= 20
 template <class Ptr>
 using cpp20_input_iterator_list =
     concatenate_t<forward_iterator_list<Ptr>, type_list<cpp20_input_iterator<Ptr>, cpp17_input_iterator<Ptr>>>;
+
+template <class Ptr>
+using cpp20_output_iterator_list =
+    concatenate_t<forward_iterator_list<Ptr>, type_list<cpp20_output_iterator<Ptr>, cpp17_output_iterator<Ptr>>>;
 #endif
 } // namespace types
 

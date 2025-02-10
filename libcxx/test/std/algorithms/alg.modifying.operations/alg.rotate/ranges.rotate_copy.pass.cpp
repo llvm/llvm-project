@@ -26,9 +26,11 @@
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 template <class Iter, class Out = int*, class Sent = sentinel_wrapper<Iter>>
-concept HasRotateCopyIt = requires(Iter first, Sent last, Out out) { std::ranges::rotate_copy(first, first, last, out); };
+concept HasRotateCopyIt =
+    requires(Iter first, Sent last, Out out) { std::ranges::rotate_copy(first, first, last, out); };
 
 template <class Range, class Out = int*>
 concept HasRotateCopyR = requires(Range range, Out out) { std::ranges::rotate_copy(range, nullptr, out); };
@@ -54,11 +56,8 @@ template <class Iter, class OutIter, class Sent, int N>
 constexpr void test(std::array<int, N> value, std::size_t middle, std::array<int, N> expected) {
   {
     std::array<int, N> out;
-    std::same_as<std::ranges::in_out_result<Iter, OutIter>> decltype(auto) ret =
-        std::ranges::rotate_copy(Iter(value.data()),
-                                 Iter(value.data() + middle),
-                                 Sent(Iter(value.data() + value.size())),
-                                 OutIter(out.data()));
+    std::same_as<std::ranges::in_out_result<Iter, OutIter>> decltype(auto) ret = std::ranges::rotate_copy(
+        Iter(value.data()), Iter(value.data() + middle), Sent(Iter(value.data() + value.size())), OutIter(out.data()));
     assert(base(ret.in) == value.data() + value.size());
     assert(base(ret.out) == out.data() + out.size());
     assert(out == expected);
@@ -74,7 +73,7 @@ constexpr void test(std::array<int, N> value, std::size_t middle, std::array<int
   }
 }
 
-template <class Iter, class OutIter, class Sent>
+template <class Iter, class OutIter, class Sent = Iter>
 constexpr void test_iterators() {
   // simple test
   test<Iter, OutIter, Sent, 4>({1, 2, 3, 4}, 2, {3, 4, 1, 2});
@@ -101,41 +100,33 @@ constexpr void test_iterators() {
   test<Iter, OutIter, Sent, 7>({1, 2, 3, 4, 5, 6, 7}, 7, {1, 2, 3, 4, 5, 6, 7});
 }
 
-template <class Iter, class Sent = Iter>
-constexpr void test_out_iterators() {
-  test_iterators<Iter, cpp20_output_iterator<int*>, Sent>();
-  test_iterators<Iter, forward_iterator<int*>, Sent>();
-  test_iterators<Iter, bidirectional_iterator<int*>, Sent>();
-  test_iterators<Iter, random_access_iterator<int*>, Sent>();
-  test_iterators<Iter, contiguous_iterator<int*>, Sent>();
-  test_iterators<Iter, int*, Sent>();
-}
-
 constexpr bool test() {
-  test_out_iterators<forward_iterator<int*>>();
-  test_out_iterators<bidirectional_iterator<int*>>();
-  test_out_iterators<random_access_iterator<int*>>();
-  test_out_iterators<contiguous_iterator<int*>>();
-  test_out_iterators<int*>();
-  test_out_iterators<const int*>();
+  types::for_each(types::forward_iterator_list<int*>(), []<class Iter>() {
+    types::for_each(types::cpp20_output_iterator_list<int*>(), []<class OutIter>() {
+      test_iterators<Iter, OutIter>();
+    });
+  });
 
   {
     struct AssignmentCounter {
       int* counter;
 
       constexpr AssignmentCounter(int* counter_) : counter(counter_) {}
-      constexpr AssignmentCounter& operator=(const AssignmentCounter&) { ++*counter; return *this; }
+      constexpr AssignmentCounter& operator=(const AssignmentCounter&) {
+        ++*counter;
+        return *this;
+      }
     };
 
     {
-      int c = 0;
+      int c                 = 0;
       AssignmentCounter a[] = {&c, &c, &c, &c};
       AssignmentCounter b[] = {&c, &c, &c, &c};
       std::ranges::rotate_copy(a, a + 2, a + 4, b);
       assert(c == 4);
     }
     {
-      int c = 0;
+      int c                 = 0;
       AssignmentCounter a[] = {&c, &c, &c, &c};
       AssignmentCounter b[] = {&c, &c, &c, &c};
       std::ranges::rotate_copy(a, a + 2, b);
