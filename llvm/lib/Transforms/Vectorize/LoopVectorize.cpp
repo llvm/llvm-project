@@ -2937,10 +2937,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   if (EnableVPlanNativePath)
     fixNonInductionPHIs(State);
 
-  // Forget the original basic block.
-  PSE.getSE()->forgetLoop(OrigLoop);
-  PSE.getSE()->forgetBlockAndLoopDispositions();
-
   // After vectorization, the exit blocks of the original loop will have
   // additional predecessors. Invalidate SCEVs for the exit phis in case SE
   // looked through single-entry phis.
@@ -2949,6 +2945,10 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   for (BasicBlock *Exit : ExitBlocks)
     for (PHINode &PN : Exit->phis())
       PSE.getSE()->forgetLcssaPhiWithNewPredecessor(OrigLoop, &PN);
+
+  // Forget the original basic block.
+  PSE.getSE()->forgetLoop(OrigLoop);
+  PSE.getSE()->forgetBlockAndLoopDispositions();
 
   // Don't apply optimizations below when no vector region remains, as they all
   // require a vector loop at the moment.
@@ -4360,6 +4360,13 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
   SmallVector<RecipeVFPair> InvalidCosts;
   for (const auto &Plan : VPlans) {
     for (ElementCount VF : Plan->vectorFactors()) {
+      // The VPlan-based cost model is designed for computing vector cost.
+      // Querying VPlan-based cost model with a scarlar VF will cause some
+      // errors because we expect the VF is vector for most of the widen
+      // recipes.
+      if (VF.isScalar())
+        continue;
+
       VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
                             CM, CM.CostKind);
       precomputeCosts(*Plan, VF, CostCtx);
