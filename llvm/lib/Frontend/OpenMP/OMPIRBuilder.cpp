@@ -159,6 +159,8 @@ static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
   }
   if (T.isNVPTX())
     return omp::NVPTXGridValues;
+  if (T.isSPIRV())
+    return omp::SPIRVGridValues;
   llvm_unreachable("No grid value available for this architecture!");
 }
 
@@ -6472,6 +6474,8 @@ void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
       OutlinedFn->setCallingConv(CallingConv::AMDGPU_KERNEL);
     else if (T.isNVPTX())
       OutlinedFn->setCallingConv(CallingConv::PTX_Kernel);
+    else if (T.isSPIRV())
+      OutlinedFn->setCallingConv(CallingConv::SPIR_KERNEL);
   }
 }
 
