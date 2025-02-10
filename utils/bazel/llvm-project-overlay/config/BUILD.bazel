@@ -1,0 +1,174 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+"""Configurable build attributes for the overlay.
+
+To view the configurable build attributes in this file:
+
+    bazel query 'kind(".*_flag", @llvm-project//config:all)'
+"""
+
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
+
+# Common config settings mapping to platform triples.
+#
+# See also: //platform:BUILD.bazel.
+#
+# TODO(aaronmondal): Add triples for more useful configurations as per
+#                   `llvm/include/llvm/TargetParser/Triple.h`.
+
+selects.config_setting_group(
+    name = "aarch64-unknown-linux-gnu",
+    match_all = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:linux",
+    ],
+)
+
+selects.config_setting_group(
+    name = "arm64-apple-darwin",
+    match_all = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:macos",
+    ],
+)
+
+selects.config_setting_group(
+    name = "powerpc64le-unknown-linux-gnu",
+    match_all = [
+        "@platforms//cpu:ppc64le",
+        "@platforms//os:linux",
+    ],
+)
+
+selects.config_setting_group(
+    name = "systemz-unknown-linux_gnu",
+    match_all = [
+        "@platforms//cpu:s390x",
+        "@platforms//os:linux",
+    ],
+)
+
+selects.config_setting_group(
+    name = "x86_64-pc-win32",
+    match_all = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+)
+
+selects.config_setting_group(
+    name = "x86_64-unknown-darwin",
+    match_all = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:macos",
+    ],
+)
+
+selects.config_setting_group(
+    name = "x86_64-unknown-linux-gnu",
+    match_all = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+)
+
+# Useful helpers.
+
+selects.config_setting_group(
+    name = "posix",
+    match_any = [
+        "@platforms//os:linux",
+        "@platforms//os:macos",
+        "@platforms//os:freebsd",
+    ],
+)
+
+# Configurable build attributes for llvm.
+
+# These map to CMake `option` fields on a best-effort basis. The default maps to
+# CMake's `ON` or `OFF` value.
+[
+    (
+        bool_flag(
+            name = option,
+            build_setting_default = default,
+        ),
+        # Only define the opposite of the default value to reduce target count
+        # and prevent accidental default redeclarations.
+        #
+        # This also acts as a failsafe to prevent drift if a default is flipped
+        # as a changed default triggers straightfoward errors in all places
+        # where no longer existing config_settings need to be adjusted.
+        (
+            config_setting(
+                name = "{}_enabled".format(option),
+                flag_values = {":{}".format(option): "true"},
+            ) if not default else config_setting(
+                name = "{}_disabled".format(option),
+                flag_values = {":{}".format(option): "false"},
+            )
+        ),
+    )
+    for option, default in [
+        ("LLVM_ENABLE_BACKTRACES", True),
+        ("LLVM_ENABLE_CRASH_OVERRIDES", True),
+        ("LLVM_ENABLE_CRASH_DUMPS", False),
+
+        # These deviate slightly from CMake in that we use a boolean rather than
+        # ON/OFF/FORCE_ON since in Bazel ON collapses into FORCE_ON anyways.
+        ("LLVM_ENABLE_ZLIB", True),
+        ("LLVM_ENABLE_ZSTD", True),
+        ("LLVM_HAS_LOGF128", False),
+    ]
+]
+
+# This doesn't have a common default as most builds expect this to be disabled
+# by default but MinGW builds expect it enabled by default.
+bool_flag(
+    name = "LLVM_WINDOWS_PREFER_FORWARD_SLASH",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "LLVM_WINDOWS_PREFER_FORWARD_SLASH_enabled",
+    flag_values = {":LLVM_WINDOWS_PREFER_FORWARD_SLASH": "true"},
+)
+
+config_setting(
+    name = "LLVM_WINDOWS_PREFER_FORWARD_SLASH_disabled",
+    flag_values = {":LLVM_WINDOWS_PREFER_FORWARD_SLASH": "false"},
+)
+
+string_flag(
+    name = "LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING",
+    build_setting_default = "DISABLED",
+    values = [
+        "COVERAGE",
+        "DISABLED",
+    ],
+)
+
+config_setting(
+    name = "LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING_coverage",
+    flag_values = {":LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING": "COVERAGE"},
+)
+
+bool_flag(
+    name = "LLVM_ENABLE_PLUGINS",
+    # TODO(aaronmondal): This should be enabled by default, but that currently
+    #                    breaks @llvm-project//llvm/unittests:analysis_tests.
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "LLVM_ENABLE_PLUGINS_enabled",
+    flag_values = {":LLVM_ENABLE_PLUGINS": "true"},
+)
+
+config_setting(
+    name = "LLVM_ENABLE_PLUGINS_disabled",
+    flag_values = {":LLVM_ENABLE_PLUGINS": "false"},
+)

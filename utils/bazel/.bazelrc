@@ -59,14 +59,6 @@ build --experimental_cc_shared_library
 build --build_runfile_links=false
 
 ###############################################################################
-# Options to select different strategies for linking potential dependent
-# libraries. The default leaves it disabled.
-###############################################################################
-
-build:zlib_external --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=external
-build:zlib_system --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=system
-
-###############################################################################
 # Options for "generic_clang" builds: these options should generally apply to
 # builds using a Clang-based compiler, and default to the `clang` executable on
 # the `PATH`. While these are provided for convenience and may serve as a

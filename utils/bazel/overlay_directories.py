@@ -86,12 +86,15 @@ def main(args):
                 os.path.join(args.overlay, relpath), os.path.join(args.target, relpath)
             )
 
-        for src_entry in os.listdir(os.path.join(args.src, rel_root)):
-            if src_entry not in dirs:
-                relpath = os.path.join(rel_root, src_entry)
-                _symlink_abs(
-                    os.path.join(args.src, relpath), os.path.join(args.target, relpath)
-                )
+        src_path = os.path.join(args.src, rel_root)
+        if os.path.isdir(src_path):
+            for src_entry in os.listdir(src_path):
+                if src_entry not in dirs:
+                    relpath = os.path.join(rel_root, src_entry)
+                    _symlink_abs(
+                        os.path.join(args.src, relpath),
+                        os.path.join(args.target, relpath),
+                    )
 
 
 if __name__ == "__main__":
