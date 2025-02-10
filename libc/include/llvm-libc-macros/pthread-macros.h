@@ -34,8 +34,7 @@
       /* .__recursive = */ 0,                                                  \
       /* .__robust = */ 0,                                                     \
       /* .__owner = */ NULL,                                                   \
-      /* .__lock_count = */ 0,                                                 \
-      /* .__futex_word = */                                                    \
+      /* .__lock_count = */ 0, /* .__futex_word = */                           \
       {                                                                        \
           /* .__word = */ 0,                                                   \
       },                                                                       \
@@ -54,24 +53,19 @@
       /* .__is_pshared = */ 0,                                                 \
       /* .__preference = */ 0,                                                 \
       /* .__state = */ 0,                                                      \
-      /* .__write_tid = */ 0,                                                  \
-      /* .__wait_queue_mutex = */                                              \
+      /* .__write_tid = */ 0, /* .__wait_queue_mutex = */                      \
       {                                                                        \
           /* .__word = */ 0,                                                   \
-      },                                                                       \
-      /* .__pending_readers = */                                               \
+      }, /* .__pending_readers = */                                            \
       {                                                                        \
           /* .__word = */ 0,                                                   \
-      },                                                                       \
-      /* .__pending_writers = */                                               \
+      }, /* .__pending_writers = */                                            \
       {                                                                        \
           /* .__word = */ 0,                                                   \
-      },                                                                       \
-      /* .__reader_serialization = */                                          \
+      }, /* .__reader_serialization = */                                       \
       {                                                                        \
           /* .__word = */ 0,                                                   \
-      },                                                                       \
-      /* .__writer_serialization = */                                          \
+      }, /* .__writer_serialization = */                                       \
       {                                                                        \
           /* .__word = */ 0,                                                   \
       },                                                                       \
