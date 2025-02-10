@@ -13,8 +13,8 @@
 // RUN: %clang -### -S -fwrapv-pointer -fstrict-overflow -Werror %s 2>&1 | FileCheck -check-prefix=CHECK3-POINTER %s --implicit-check-not="-fwrapv"
 // CHECK3-POINTER-NOT: "-fwrapv-pointer"
 
-// RUN: %clang -### -S -fno-wrapv -fno-strict-overflow -fno-wrapv-pointer -Werror %s 2>&1 | FileCheck -check-prefix=CHECK4 %s --implicit-check-not="-fwrapv"
+// RUN: %clang -### -S -fno-wrapv -fno-strict-overflow -fno-wrapv-pointer -Werror %s 2>&1 | FileCheck -check-prefix=CHECK4 %s --implicit-check-not="-fwrapv-pointer"
 // CHECK4: "-fwrapv"
 
-// RUN: %clang -### -S -fno-wrapv-pointer -fno-strict-overflow -fno-wrapv -Werror %s 2>&1 | FileCheck -check-prefix=CHECK4-POINTER %s --implicit-check-not="-fwrapv-pointer"
+// RUN: %clang -### -S -fno-wrapv-pointer -fno-strict-overflow -fno-wrapv -Werror %s 2>&1 | FileCheck -check-prefix=CHECK4-POINTER %s --implicit-check-not="-fwrapv"
 // CHECK4-POINTER: "-fwrapv-pointer"
