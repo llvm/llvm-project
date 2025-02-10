@@ -3073,7 +3073,7 @@ static bool CastInitializer(Sema &S, ASTContext &Ctx, Expr *E,
   return true;
 }
 
-static void BuildIntializerList(Sema &S, ASTContext &Ctx, Expr *E,
+static void BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
                                 llvm::SmallVectorImpl<Expr *> &List,
                                 llvm::SmallVectorImpl<QualType> &DestTypes,
                                 bool &ExcessInits) {
