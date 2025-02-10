@@ -209,7 +209,7 @@ static Value transposeToShuffle16x16(OpBuilder &builder, Value source, int m,
   ImplicitLocOpBuilder b(source.getLoc(), builder);
   SmallVector<Value> vs;
   for (int64_t i = 0; i < m; ++i)
-    vs.push_back(b.create<vector::ExtractOp>(source, i));
+    vs.push_back(b.createOrFold<vector::ExtractOp>(source, i));
 
   // Interleave 32-bit lanes using
   //   8x _mm512_unpacklo_epi32
@@ -378,9 +378,9 @@ public:
       SmallVector<int64_t> insertIdxs(extractIdxs);
       applyPermutationToVector(insertIdxs, prunedTransp);
       Value extractOp =
-          rewriter.create<vector::ExtractOp>(loc, input, extractIdxs);
-      result =
-          rewriter.create<vector::InsertOp>(loc, extractOp, result, insertIdxs);
+          rewriter.createOrFold<vector::ExtractOp>(loc, input, extractIdxs);
+      result = rewriter.createOrFold<vector::InsertOp>(loc, extractOp, result,
+                                                       insertIdxs);
     }
 
     rewriter.replaceOp(op, result);
