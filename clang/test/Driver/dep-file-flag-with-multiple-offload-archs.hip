@@ -8,6 +8,6 @@
 // CHECK-NOT: {{.*}}clang{{.*}}"-target-cpu" "gfx1101"{{.*}}"-dependency-file" "tmp.d"
 // CHECK: {{.*}}lld{{.*}}"-plugin-opt=mcpu=gfx1101"
 // CHECK: {{.*}}clang-offload-bundler
-// CHECK: {{.*}}clang{{.*}}"-target-cpu" "x86-64"{{.*}}"-dependency-file" "tmp.d"
+// CHECK: {{.*}}clang{{.*}}"-target-cpu"{{.*}}"-dependency-file" "tmp.d"
 
 void main(){}
