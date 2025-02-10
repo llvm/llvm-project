@@ -1982,6 +1982,27 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
           : 0;
 
   if (windowsRequiresStackProbe(MF, NumBytes + RealignmentPadding)) {
+    // Find an available register to spill the value of X15 to, if X15 is being
+    // used already for nest.
+    unsigned X15Scratch = AArch64::NoRegister;
+    const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+    if (llvm::any_of(MBB.liveins(),
+                     [&STI](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
+                       return STI.getRegisterInfo()->isSuperOrSubRegisterEq(
+                           AArch64::X15, LiveIn.PhysReg);
+                     })) {
+      X15Scratch = findScratchNonCalleeSaveRegister(&MBB);
+      assert(X15Scratch != AArch64::NoRegister);
+#ifndef NDEBUG
+      LiveRegs.removeReg(AArch64::X15); // ignore X15 since we restore it
+#endif
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrr), X15Scratch)
+          .addReg(AArch64::XZR)
+          .addReg(AArch64::X15, RegState::Undef)
+          .addReg(AArch64::X15, RegState::Implicit)
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
+
     uint64_t NumWords = (NumBytes + RealignmentPadding) >> 4;
     if (NeedsWinCFI) {
       HasWinCFI = true;
@@ -2103,6 +2124,13 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       // No need for SEH instructions here; if we're realigning the stack,
       // we've set a frame pointer and already finished the SEH prologue.
       assert(!NeedsWinCFI);
+    }
+    if (X15Scratch != AArch64::NoRegister) {
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrr), AArch64::X15)
+          .addReg(AArch64::XZR)
+          .addReg(X15Scratch, RegState::Undef)
+          .addReg(X15Scratch, RegState::Implicit)
+          .setMIFlag(MachineInstr::FrameSetup);
     }
   }
 
