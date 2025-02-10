@@ -208,7 +208,8 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
   const bool IsTied = RISCVII::isTiedPseudo(MI.getDesc().TSFlags);
 
-  bool IsMODef = MO.getOperandNo() == 0;
+  bool IsMODef = MO.getOperandNo() == 0 ||
+                 (HasPassthru && MO.getOperandNo() == MI.getNumExplicitDefs());
 
   // All mask operands have EEW=1
   if (isMaskOperand(MI, MO, MRI))
