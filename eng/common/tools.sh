@@ -528,6 +528,12 @@ function GetDarc {
     "$eng_root/common/darc-init.sh" --toolpath "$darc_path" $version
 }
 
+# Returns a full path to an Arcade SDK task project file.
+function GetSdkTaskProject {
+  taskName=$1
+  echo "$(dirname $_InitializeToolset)/SdkTasks/$taskName.proj"
+}
+
 ResolvePath "${BASH_SOURCE[0]}"
 _script_dir=`dirname "$_ResolvePath"`
 
