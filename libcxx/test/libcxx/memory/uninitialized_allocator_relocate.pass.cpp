@@ -53,6 +53,16 @@ struct Fixture {
   Pointer dest;
 };
 
+struct DestroyTracker {
+  explicit DestroyTracker(bool* destroyed) : destroyed_(destroyed) {}
+  DestroyTracker(DestroyTracker&& other) : destroyed_(other.destroyed_) { other.destroyed_ = nullptr; }
+  ~DestroyTracker() {
+    if (destroyed != nullptr)
+      *destroyed_ = true;
+  }
+  bool* destroyed_;
+};
+
 template <class Alloc, class Iterator, class OutputIterator>
 constexpr void test() {
   using T       = std::allocator_traits<Alloc>::value_type;
@@ -114,6 +124,7 @@ constexpr void test() {
   {
     Alloc allocator;
     Pointer buff = allocator.allocate(10);
+    // x x x x x 5 6 7 8 9
     for (std::size_t i = 5; i != 10; ++i) {
       std::allocator_traits<Alloc>::construct(allocator, std::to_address(buff + i), T(i));
     }
@@ -132,7 +143,29 @@ constexpr void test() {
     allocator.deallocate(buff, 10);
   }
 
-  // TODO: Add exception test
+  // Test throwing an exception while we're relocating
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  {
+    // With some overlap between the input and the output
+    {
+      bool destroyed[10] = {false, false, ...};
+      DestroyTracker elements[] = {&destroyed[0], &destroyed[1], ...};
+      try {
+        std::__uninitialized_allocator_relocate(
+            allocator,
+            Iterator(std::to_address(buff + 5)),
+            Iterator(std::to_address(buff + 10)),
+            OutputIterator(std::to_address(buff)));
+      } catch (...) {
+        // TODO: ensure we destroyed everything
+      }
+    }
+
+    // Without overlap
+    {
+    }
+  }
+#endif // TEST_HAS_NO_EXCEPTIONS
 }
 
 struct NotTriviallyRelocatable {
