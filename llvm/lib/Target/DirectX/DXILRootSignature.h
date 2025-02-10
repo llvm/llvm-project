@@ -33,25 +33,9 @@ enum class RootSignatureElementKind {
 
 struct ModuleRootSignature {
   uint32_t Flags = 0;
-  ModuleRootSignature() { Ctx = nullptr; };
   static std::optional<ModuleRootSignature> analyzeModule(Module &M,
                                                           const Function *F);
-
-private:
-  LLVMContext *Ctx;
-
-  ModuleRootSignature(LLVMContext *Ctx) : Ctx(Ctx) {}
-
-  bool parse(NamedMDNode *Root, const Function *F);
-  bool parseRootSignatureElement(MDNode *Element);
-  bool parseRootFlags(MDNode *RootFlagNode);
-
-  bool validate();
-
-  bool reportError(Twine Message, DiagnosticSeverity Severity = DS_Error);
 };
-
-using OptionalRootSignature = std::optional<ModuleRootSignature>;
 
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
   friend AnalysisInfoMixin<RootSignatureAnalysis>;
@@ -60,9 +44,9 @@ class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
 public:
   RootSignatureAnalysis() = default;
 
-  using Result = OptionalRootSignature;
+  using Result = std::optional<ModuleRootSignature>;
 
-  OptionalRootSignature run(Module &M, ModuleAnalysisManager &AM);
+  std::optional<ModuleRootSignature> run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Wrapper pass for the legacy pass manager.
@@ -71,16 +55,14 @@ public:
 /// passes which run through the legacy pass manager.
 class RootSignatureAnalysisWrapper : public ModulePass {
 private:
-  OptionalRootSignature MRS;
+  std::optional<ModuleRootSignature> MRS;
 
 public:
   static char ID;
 
   RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
-  const ModuleRootSignature &getRootSignature() { return MRS.value(); }
-
-  bool hasRootSignature() { return MRS.has_value(); }
+  std::optional<ModuleRootSignature> getResult() const { return MRS; }
 
   bool runOnModule(Module &M) override;
 

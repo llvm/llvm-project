@@ -28,6 +28,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -153,11 +154,12 @@ void DXContainerGlobals::addRootSignature(Module &M,
                                           SmallVector<GlobalValue *> &Globals) {
 
   auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
+  std::optional<ModuleRootSignature> MaybeRootSignature = RSA.getResult();
 
-  if (!RSA.hasRootSignature())
+  if (!MaybeRootSignature.has_value())
     return;
 
-  ModuleRootSignature MRS = RSA.getRootSignature();
+  ModuleRootSignature MRS = MaybeRootSignature.value();
 
   SmallString<256> Data;
   raw_svector_ostream OS(Data);

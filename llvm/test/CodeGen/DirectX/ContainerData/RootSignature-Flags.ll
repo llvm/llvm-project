@@ -9,10 +9,6 @@ define void @main() #0 {
 entry:
   ret void
 }
-
-
-
-
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 
