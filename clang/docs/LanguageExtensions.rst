@@ -109,18 +109,19 @@ a builtin function, a builtin pseudo-function (taking one or more type
 arguments), or a builtin template.
 It evaluates to 1 if the builtin is supported on the current target or 0 if not.
 The behavior is different than ``__has_builtin`` when there is an auxiliary target,
-such when offloading to a target device.
+such as when offloading to a target device.
 It can be used like this:
 
 .. code-block:: c++
-
-  #ifndef __has_target_builtin         // Optional of course.
-    #define __has_target_builtin(x) 0  // Compatibility with non-clang compilers.
-  #endif
-
-  ...
+  #ifdef __CUDA__
   #if __has_target_builtin(__builtin_trap)
     __builtin_trap();
+  #else
+      abort();
+  #endif
+  #else // !CUDA
+  #if __has_builtin(__builtin_trap)
+  __builtin_trap();
   #else
     abort();
   #endif
@@ -130,7 +131,7 @@ It can be used like this:
   ``__has_target_builtin`` should not be used to detect support for a builtin macro;
   use ``#ifdef`` instead.
 
-  ``__has_target_built`` is only defined for offloading targets.
+  ``__has_target_builtin`` is only defined for offloading targets.
 
 .. _langext-__has_feature-__has_extension:
 
