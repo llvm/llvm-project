@@ -10,12 +10,14 @@
 // register in the singleton vmv0 register class instead of copying them to $v0
 // straight away, to make optimizing masks easier.
 //
-// However the register allocator struggles with singleton register classes and
-// will run into errors like "ran out of registers during register allocation in
-// function"
+// However register coalescing may end up coleascing copies into vmv0, resulting
+// in instructions with multiple uses of vmv0 that the register allocator can't
+// allocate:
 //
-// This pass runs just before register allocation and replaces any uses* of vmv0
-// with copies to $v0.
+// %x:vrnov0 = PseudoVADD_VV_M1_MASK %0:vrnov0, %1:vr, %2:vmv0, %3:vmv0, ...
+//
+// To avoid this, this pass replaces any uses* of vmv0 with copies to $v0 before
+// register coalescing and allocation:
 //
 // %x:vrnov0 = PseudoVADD_VV_M1_MASK %0:vrnov0, %1:vr, %2:vr, %3:vmv0, ...
 // ->
@@ -128,8 +130,8 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
                  Src.isVirtual() && "vmv0 use in unexpected form");
 
           // Peek through a single copy to match what isel does.
-          MachineInstr *SrcMI = MRI.getVRegDef(Src);
-          if (SrcMI->isCopy() && SrcMI->getOperand(1).getReg().isVirtual()) {
+          if (MachineInstr *SrcMI = MRI.getVRegDef(Src);
+              SrcMI->isCopy() && SrcMI->getOperand(1).getReg().isVirtual()) {
             assert(SrcMI->getOperand(1).getSubReg() == RISCV::NoSubRegister);
             Src = SrcMI->getOperand(1).getReg();
           }
@@ -161,11 +163,10 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
                  MI.isInlineAsm() ||
                  MRI.getVRegDef(MO.getReg())->isInlineAsm() &&
                      "Non-inline-asm use of vmv0 left behind");
-          MadeChange = true;
         }
       }
     }
   }
 
-  return MadeChange;
+  return true;
 }
