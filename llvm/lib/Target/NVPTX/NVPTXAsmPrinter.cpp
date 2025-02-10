@@ -761,13 +761,6 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
     emitAliasDeclaration(&GA, O);
 }
 
-static bool isEmptyXXStructor(GlobalVariable *GV) {
-  if (!GV) return true;
-  const ConstantArray *InitList = dyn_cast<ConstantArray>(GV->getInitializer());
-  if (!InitList) return true;  // Not an array; we don't know how to parse.
-  return InitList->getNumOperands() == 0;
-}
-
 void NVPTXAsmPrinter::emitStartOfAsmFile(Module &M) {
   // Construct a default subtarget off of the TargetMachine defaults. The
   // rest of NVPTX isn't friendly to change subtargets per function and
