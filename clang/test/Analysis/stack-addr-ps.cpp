@@ -1063,3 +1063,22 @@ int* return_cpp_reinterpret_cast_no_warning(long x) {
   return reinterpret_cast<int*>(x); // no-warning
 }
 }
+
+// TODO: The tail call expression tree must not hold a reference to an arg or stack local:
+// "The lifetimes of all local variables and function parameters end immediately before the 
+// [tail] call to the function. This means that it is undefined behaviour to pass a pointer or 
+// reference to a local variable to the called function, which is not the case without the 
+// attribute."
+// These only warn from -Wreturn-stack-address for now
+namespace with_attr_musttail {
+void TakesIntAndPtr(int, int *);
+void PassAddressOfLocal(int a, int *b) {
+  int c;
+  [[clang::musttail]] return TakesIntAndPtr(0, &c); // expected-warning {{address of stack memory associated with local variable 'c' pass\
+ed to musttail function}}
+}
+void PassAddressOfParam(int a, int *b) {
+  [[clang::musttail]] return TakesIntAndPtr(0, &a); // expected-warning {{address of stack memory associated with parameter 'a' passed to\
+ musttail function}}
+}
+} // namespace with_attr_musttail
