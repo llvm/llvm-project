@@ -7484,6 +7484,15 @@ void Sema::ProcessDeclAttributeList(
     }
   }
 
+  // Do not permit 'constructor' or 'destructor' attributes on __device__ code.
+  if (getLangOpts().CUDAIsDevice && D->hasAttr<CUDADeviceAttr>() &&
+      (D->hasAttr<ConstructorAttr>() || D->hasAttr<DestructorAttr>()) &&
+      !getLangOpts().GPUAllowDeviceInit) {
+    Diag(D->getLocation(), diag::err_cuda_ctor_dtor_attrs)
+        << (D->hasAttr<ConstructorAttr>() ? "constructors" : "destructors");
+    D->setInvalidDecl();
+  }
+
   // Do this check after processing D's attributes because the attribute
   // objc_method_family can change whether the given method is in the init
   // family, and it can be applied after objc_designated_initializer. This is a
