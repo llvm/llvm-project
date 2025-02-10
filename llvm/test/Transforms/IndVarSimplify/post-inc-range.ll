@@ -115,8 +115,7 @@ define void @test_range_metadata(ptr %array_length_ptr, ptr %base,
 ; CHECK-LABEL: @test_range_metadata(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[START]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[LIMIT:%.*]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
@@ -128,8 +127,7 @@ define void @test_range_metadata(ptr %array_length_ptr, ptr %base,
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], [[SMAX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -223,11 +221,10 @@ define void @test_transitive_use(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-LABEL: @test_transitive_use(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[LIMIT:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[LIMIT:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[LIMIT]] to i64
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[START]], i32 64)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[UMAX]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[START]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT]], i32 [[TMP5]])
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
@@ -239,14 +236,13 @@ define void @test_transitive_use(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-NEXT:    br i1 [[MUL_WITHIN]], label [[GUARDED:%.*]], label [[CONTINUE_2:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
-; CHECK-NEXT:    [[RESULT:%.*]] = icmp slt i64 [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp slt i64 [[TMP4]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[RESULT]], label [[CONTINUE_2]], label [[FOR_END]]
 ; CHECK:       continue.2:
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], [[SMAX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -297,16 +293,14 @@ define void @test_guard_one_bb(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-LABEL: @test_guard_one_bb(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[START]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[LIMIT:%.*]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
 ; CHECK-NEXT:    [[WITHIN_LIMITS:%.*]] = icmp ult i64 [[INDVARS_IV]], 64
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_LIMITS]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], [[SMAX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -339,8 +333,7 @@ define void @test_guard_in_the_same_bb(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-LABEL: @test_guard_in_the_same_bb(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[START]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[LIMIT:%.*]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
@@ -349,8 +342,7 @@ define void @test_guard_in_the_same_bb(ptr %base, i32 %limit, i32 %start) {
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_LIMITS]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], [[SMAX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -386,8 +378,7 @@ define void @test_guard_in_idom(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-LABEL: @test_guard_in_idom(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[START]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[LIMIT:%.*]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
@@ -396,8 +387,7 @@ define void @test_guard_in_idom(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], [[SMAX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -433,8 +423,7 @@ define void @test_guard_merge_ranges(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-LABEL: @test_guard_merge_ranges(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[START]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[LIMIT:%.*]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
@@ -443,8 +432,7 @@ define void @test_guard_merge_ranges(ptr %base, i32 %limit, i32 %start) {
 ; CHECK-NEXT:    [[WITHIN_LIMITS_2:%.*]] = icmp ult i64 [[INDVARS_IV]], 2147483647
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_LIMITS_2]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], [[SMAX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]

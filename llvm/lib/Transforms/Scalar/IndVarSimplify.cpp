@@ -1992,7 +1992,11 @@ bool IndVarSimplify::run(Loop *L) {
 
       // Avoid high cost expansions.  Note: This heuristic is questionable in
       // that our definition of "high cost" is not exactly principled.
-      if (Rewriter.isHighCostExpansion(IVLimit, L, SCEVCheapExpansionBudget,
+      // FIXME: ExitCount is not the expression actually being expanded, but we
+      // check it against high-cost expansions anyway to avoid regressions.
+      if (Rewriter.isHighCostExpansion(ExitCount, L, SCEVCheapExpansionBudget,
+                                       TTI, ExitingBB->getTerminator()) ||
+          Rewriter.isHighCostExpansion(IVLimit, L, SCEVCheapExpansionBudget,
                                        TTI, ExitingBB->getTerminator()))
         continue;
 
