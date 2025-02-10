@@ -38,6 +38,7 @@ protected:
 public:
   static bool EnableFunctionCalls;
   static bool EnableLowerModuleLDS;
+  static bool EnableWaveTransformCF;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,

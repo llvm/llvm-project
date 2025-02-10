@@ -473,6 +473,8 @@ def SI_LOOP : CFPseudoInstSI <
   let IsNeverUniform = 1;
 }
 
+def SI_WAVE_CF_EDGE : CFPseudoInstSI<(outs), (ins)>;
+
 } // End isTerminator = 1
 
 def SI_END_CF : CFPseudoInstSI <
@@ -538,6 +540,15 @@ def SI_ILLEGAL_COPY : SPseudoInstSI <
 def SI_BR_UNDEF : SPseudoInstSI <(outs), (ins SOPPBrTarget:$simm16)> {
   let isTerminator = 1;
   let usesCustomInserter = 1;
+  let isBranch = 1;
+}
+
+// Conditional thread-level branch mirroring G_BRCOND.
+// Used by new control flow on the SelectionDAG path.
+def SI_BRCOND
+    : SPseudoInstSI<(outs), (ins SReg_1:$cond, SOPPBrTarget:$target)> {
+  let isTerminator = 1;
+  // let usesCustomInserter = 1;
   let isBranch = 1;
 }
 

@@ -338,6 +338,13 @@ static cl::opt<bool> EnableAMDGPUAliasAnalysis("enable-amdgpu-aa", cl::Hidden,
   cl::desc("Enable AMDGPU Alias Analysis"),
   cl::init(true));
 
+// Option to enable wave transform control flow
+static cl::opt<bool, true> WaveTransformCF(
+    "amdgpu-wave-transform",
+    cl::desc("Enable wave transform control flow implementation"),
+    cl::location(AMDGPUTargetMachine::EnableWaveTransformCF), cl::init(false),
+    cl::Hidden);
+
 // Enable lib calls simplifications
 static cl::opt<bool> EnableLibCallSimplify(
   "amdgpu-simplify-libcall",
@@ -553,6 +560,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNRegPressurePrinterPass(*PR);
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
+  initializeGCNWaveTransformPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -716,6 +724,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
 
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
+bool AMDGPUTargetMachine::EnableWaveTransformCF = false;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
 
@@ -1404,18 +1413,22 @@ bool GCNPassConfig::addPreISel() {
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
+  // TODO: Unify should be intergrated into GCNWaveTransform
   addPass(&AMDGPUUnifyDivergentExitNodesID);
-  addPass(createFixIrreduciblePass());
-  addPass(createUnifyLoopExitsPass());
-  addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
+  if (!WaveTransformCF) {
+    addPass(createFixIrreduciblePass());
+    addPass(createUnifyLoopExitsPass());
+    addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
 
-  addPass(createAMDGPUAnnotateUniformValuesLegacy());
-  addPass(createSIAnnotateControlFlowLegacyPass());
-  // TODO: Move this right after structurizeCFG to avoid extra divergence
-  // analysis. This depends on stopping SIAnnotateControlFlow from making
-  // control flow modifications.
-  addPass(createAMDGPURewriteUndefForPHILegacyPass());
+    addPass(createAMDGPUAnnotateUniformValuesLegacy());
+    addPass(createSIAnnotateControlFlowLegacyPass());
+    // TODO: Move this right after structurizeCFG to avoid extra divergence
+    // analysis. This depends on stopping SIAnnotateControlFlow from making
+    // control flow modifications.
+    addPass(createAMDGPURewriteUndefForPHILegacyPass());
+  }
 
+  // TODO: wave transform should handle this based on cycle info
   addPass(createLCSSAPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
@@ -1458,6 +1471,8 @@ bool GCNPassConfig::addILPOpts() {
 
 bool GCNPassConfig::addInstSelector() {
   AMDGPUPassConfig::addInstSelector();
+  if (WaveTransformCF)
+    addPass(createGCNWaveTransformPass());
   addPass(&SIFixSGPRCopiesLegacyID);
   addPass(createSILowerI1CopiesLegacyPass());
   return false;
@@ -1509,6 +1524,7 @@ void GCNPassConfig::addFastRegAlloc() {
   // FIXME: We have to disable the verifier here because of PHIElimination +
   // TwoAddressInstructions disabling it.
 
+  // FIXME: wave transform should not need this
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.

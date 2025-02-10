@@ -2964,7 +2964,8 @@ SIInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
 bool SIInstrInfo::hasDivergentBranch(const MachineBasicBlock *MBB) const {
   for (const MachineInstr &MI : MBB->terminators()) {
     if (MI.getOpcode() == AMDGPU::SI_IF || MI.getOpcode() == AMDGPU::SI_ELSE ||
-        MI.getOpcode() == AMDGPU::SI_LOOP)
+        MI.getOpcode() == AMDGPU::SI_LOOP ||
+        MI.getOpcode() == AMDGPU::SI_WAVE_CF_EDGE)
       return true;
   }
   return false;
@@ -3154,10 +3155,15 @@ bool SIInstrInfo::analyzeBranchImpl(MachineBasicBlock &MBB,
   if (Pred == INVALID_BR)
     return true;
 
-  MachineBasicBlock *CondBB = I->getOperand(0).getMBB();
-  Cond.push_back(MachineOperand::CreateImm(Pred));
-  Cond.push_back(I->getOperand(1)); // Save the branch register.
-
+  MachineBasicBlock *CondBB = nullptr;
+  if (I->getOpcode() == AMDGPU::SI_BRCOND) {
+    CondBB = I->getOperand(1).getMBB();
+    Cond.push_back(I->getOperand(0));
+  } else {
+    CondBB = I->getOperand(0).getMBB();
+    Cond.push_back(MachineOperand::CreateImm(Pred));
+    Cond.push_back(I->getOperand(1)); // Save the branch register.
+  }
   ++I;
 
   if (I == MBB.end()) {
@@ -3207,6 +3213,8 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
     case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
       // FIXME: It's messy that these need to be considered here at all.
       return true;
+    case AMDGPU::SI_WAVE_CF_EDGE:
+      return true; // FIXME: wave-cf critical edges cannot be safely split
     default:
       llvm_unreachable("unexpected non-branch terminator inst");
     }

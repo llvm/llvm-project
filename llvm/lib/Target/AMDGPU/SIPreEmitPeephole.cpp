@@ -369,6 +369,17 @@ bool SIPreEmitPeephole::mustRetainExeczBranch(
       if (MI.isMetaInstruction())
         continue;
 
+      // FIXME: do we need this code?
+      // Only allow branches within the EXEC = 0 region.
+      // A branch out of the region is likely a loop backedge.
+      // If so, this EXECZ branch is a loop exit and must be retained.
+      if (MI.isUnconditionalBranch()) {
+        const MachineBasicBlock *Target = MI.getOperand(0).getMBB();
+        if (Target->getNumber() < From.getNumber() ||
+            Target->getNumber() > To.getNumber())
+          return true;
+      }
+
       if (TII->hasUnwantedEffectsWhenEXECEmpty(MI))
         return true;
 

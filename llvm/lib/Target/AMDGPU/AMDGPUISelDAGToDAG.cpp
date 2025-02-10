@@ -119,7 +119,9 @@ FunctionPass *llvm::createAMDGPUISelDag(TargetMachine &TM,
 
 AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(TargetMachine &TM,
                                        CodeGenOptLevel OptLevel)
-    : SelectionDAGISel(TM, OptLevel) {}
+    : SelectionDAGISel(TM, OptLevel) {
+  EnableWaveTransformCF = AMDGPUTargetMachine::EnableWaveTransformCF;
+}
 
 bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
@@ -2523,6 +2525,14 @@ static SDValue combineBallotPattern(SDValue VCMP, bool &Negate) {
 
 void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
   SDValue Cond = N->getOperand(1);
+
+  if (EnableWaveTransformCF) {
+    CurDAG->SelectNodeTo(N, AMDGPU::SI_BRCOND, MVT::Other,
+                         Cond,              // condition
+                         N->getOperand(2),  // true basic block
+                         N->getOperand(0)); // chain
+    return;
+  }
 
   if (Cond.isUndef()) {
     CurDAG->SelectNodeTo(N, AMDGPU::SI_BR_UNDEF, MVT::Other,
