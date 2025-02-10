@@ -178,8 +178,6 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
         continue;
       }
     }
-    parser.emitError(parser.getCurrentLocation(),
-                     "Failed to parse the attribute.\n");
     return {};
   }
 
