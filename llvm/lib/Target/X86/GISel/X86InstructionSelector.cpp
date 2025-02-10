@@ -1051,7 +1051,7 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
   assert((LhsReg.isVirtual() && RhsReg.isVirtual()) &&
          "Both arguments of FCMP need to be virtual!");
   auto *LhsBank = RBI.getRegBank(LhsReg, MRI, TRI);
-  auto *RhsBank = RBI.getRegBank(RhsReg, MRI, TRI);
+  [[maybe_unused]] auto *RhsBank = RBI.getRegBank(RhsReg, MRI, TRI);
   assert((LhsBank == RhsBank) &&
          "Both banks assigned to FCMP arguments need to be same!");
 
