@@ -8,16 +8,16 @@
 
 
 R"(
-{1}
+__NAMESPACE_OPEN__
 
-class {0} : public ::mlir::Type {{
+class __DIALECT_BASE_TYPE_NAME__ : public ::mlir::Type {
 public:
   using Type::Type;
 
   static bool classof(Type type);
 };
 
-{2}
+__NAMESPACE_CLOSE__
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID({3}::{0})
+MLIR_DECLARE_EXPLICIT_TYPE_ID(__NAMESPACE_PATH__::__DIALECT_BASE_TYPE_NAME__)
 )"

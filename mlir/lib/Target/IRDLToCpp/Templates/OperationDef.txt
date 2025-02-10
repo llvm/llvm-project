@@ -7,7 +7,7 @@ R"(
 #ifdef GET_OP_LIST
 #undef GET_OP_LIST
 
-{0}
+__OP_LIST__
 
 #endif  // GET_OP_LIST
 
@@ -15,7 +15,7 @@ R"(
 #ifdef GET_OP_CLASSES
 #undef GET_OP_CLASSES
 
-{1}
+__OP_CLASSES__
 
 #endif // GET_OP_CLASSES
 )"

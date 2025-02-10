@@ -1,19 +1,18 @@
 /*
-{0}: Type Name
-{1}: Type CppName
-{2}: Dialect Name
-{3}: Dialect BaseTypeName
-
-{4}: Namespace open 
-{5}: Namespace close 
-{6}: Namespace path
+{0}: TypeDef list
+{1}: TypeParser function
+{2}: TypePrinter function
+{3}: Dialect CppName
+{4}: TypeID Defines
+{5}: Namespace open
+{6}: Namespace close
 */
 
 R"(
 
 __NAMESPACE_OPEN__
 
-class __TYPE_CPP_NAME__ : public ::mlir::Type::TypeBase<__TYPE_CPP_NAME__, __DIALECT_BASE_TYPE_NAME__, ::mlir::TypeStorage> {
+class __TYPE_CPP_NAME__ : public ::mlir::Type::TypeBase<__TYPE_CPP_NAME__, __DIALECT_CPP_NAME__, ::mlir::TypeStorage> {
 public:
   using Base::Base;
   static constexpr ::llvm::StringLiteral name = "__DIALECT_NAME__.__TYPE_NAME__";
@@ -26,4 +25,7 @@ public:
 __NAMESPACE_CLOSE__
 
 MLIR_DECLARE_EXPLICIT_TYPE_ID(__NAMESPACE_PATH__::__TYPE_CPP_NAME__)
+
+
 )"
+

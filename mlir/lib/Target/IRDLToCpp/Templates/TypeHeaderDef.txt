@@ -7,11 +7,11 @@
 */
 
 R"(
-{2}
+__NAMESPACE_OPEN__
 
-bool {0}::classof(Type type) {{
-  return llvm::isa<{1}>(type.getDialect());
+bool __DIALECT_BASE_TYPE_NAME__::classof(Type type) {
+  return llvm::isa<__DIALECT_CPP_NAME__>(type.getDialect());
 }
 
-{3}
+__NAMESPACE_CLOSE__
 )"

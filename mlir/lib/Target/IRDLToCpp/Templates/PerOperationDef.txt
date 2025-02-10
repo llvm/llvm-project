@@ -12,31 +12,31 @@
 R"(
 
 //===----------------------------------------------------------------------===//
-// {6}::{0} definitions
+// __NAMESPACE_PATH__::__OP_CPP_NAME__ definitions
 //===----------------------------------------------------------------------===//
 
-{4}
+__NAMESPACE_OPEN__
 
-::llvm::LogicalResult {0}::verifyInvariantsImpl() {{
+::llvm::LogicalResult __OP_CPP_NAME__::verifyInvariantsImpl() {
   return ::mlir::success();
 }
 
-::llvm::LogicalResult {0}::verifyInvariants() {{
+::llvm::LogicalResult __OP_CPP_NAME__::verifyInvariants() {
   return verifyInvariantsImpl();
 }
 
-{3}
+__OP_BUILD_DEFS__
 
-void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {{
-  assert(operands.size() == {1});
-  assert(resultTypes.size() == {2});
+void __OP_CPP_NAME__::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {
+  assert(operands.size() == __OP_OPERAND_COUNT__);
+  assert(resultTypes.size() == __OP_RESULT_COUNT__);
   odsState.addOperands(operands);
   odsState.addAttributes(attributes);
   odsState.addTypes(resultTypes);
 }
 
 
-{5}
+__NAMESPACE_CLOSE__
 
-MLIR_DEFINE_EXPLICIT_TYPE_ID({6}::{0})
+MLIR_DEFINE_EXPLICIT_TYPE_ID(__NAMESPACE_PATH__::__OP_CPP_NAME__)
 )"

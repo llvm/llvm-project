@@ -1,15 +1,16 @@
 R"(
-{0}
-class {2} : public ::mlir::Dialect {
-  explicit {2}(::mlir::MLIRContext *context);
+__NAMESPACE_OPEN__
+
+class __DIALECT_CPP_NAME__ : public ::mlir::Dialect {
+  explicit __DIALECT_CPP_NAME__(::mlir::MLIRContext *context);
 
   void initialize();
   friend class ::mlir::MLIRContext;
 
 public:
-  ~{2}() override;
+  ~__DIALECT_CPP_NAME__() override;
   static constexpr ::llvm::StringLiteral getDialectNamespace() {
-    return ::llvm::StringLiteral("{4}");
+    return ::llvm::StringLiteral("__DIALECT_NAME__");
   }
 
   // /// Parse an attribute registered to this dialect.
@@ -28,8 +29,8 @@ public:
                  ::mlir::DialectAsmPrinter &os) const override;
 };
 
-{1}
+__NAMESPACE_CLOSE__
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID({3}::{2})
+MLIR_DECLARE_EXPLICIT_TYPE_ID(__NAMESPACE_PATH__::__DIALECT_CPP_NAME__)
 
 )"

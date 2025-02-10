@@ -1,33 +1,26 @@
-/*
-{0}: namespace open
-{1}: namespace close
-
-{2}: Dialect Cpp Name
-{3}: Namespace path
-
-{4}: Op list
-{5}: Type list
-*/
-
 R"(
-{0}
-{2}::{2}(::mlir::MLIRContext *context)
-    : ::mlir::Dialect(getDialectNamespace(), context, ::mlir::TypeID::get<{2}>())
-{{
+
+__NAMESPACE_OPEN__
+
+__DIALECT_CPP_NAME__::__DIALECT_CPP_NAME__(::mlir::MLIRContext *context)
+    : ::mlir::Dialect(getDialectNamespace(), context, ::mlir::TypeID::get<__DIALECT_CPP_NAME__>())
+{
   initialize();
 }
 
-{2}::~{2}() = default;
+__DIALECT_CPP_NAME__::~__DIALECT_CPP_NAME__() = default;
 
 
-void {2}::initialize() {{
+void __DIALECT_CPP_NAME__::initialize() {
     addOperations<
-      {4}
+      __OP_LIST__
     >();
     addTypes<
-      {5}
+      __TYPE_LIST__
     >();
 }
-{1}
-MLIR_DEFINE_EXPLICIT_TYPE_ID({3}::{2})
+
+__NAMESPACE_CLOSE__
+
+MLIR_DEFINE_EXPLICIT_TYPE_ID(__NAMESPACE_PATH__::__DIALECT_CPP_NAME__)
 )"
