@@ -51,28 +51,29 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   ASSERT_TRUE(M) << "Bad assembly?";
   DebugifyCustomPassManager Passes;
   Passes.add(createDXILResourceTypeWrapperPassPass());
-  DXILResourceBindingWrapperPass* RBPass = new DXILResourceBindingWrapperPass();
+  DXILResourceBindingWrapperPass *RBPass = new DXILResourceBindingWrapperPass();
   Passes.add(RBPass);
   Passes.run(*M);
 
   const DXILBindingMap &DBM = RBPass->getBindingMap();
-  for (const Function& F : M->functions()) {
+  for (const Function &F : M->functions()) {
     if (F.getName() != "a.func") {
       continue;
     }
 
     unsigned CalledResources = 0;
 
-    for (const User* U : F.users()) {
-      const CallInst* CI = dyn_cast<CallInst>(U);
+    for (const User *U : F.users()) {
+      const CallInst *CI = dyn_cast<CallInst>(U);
       ASSERT_TRUE(CI) << "All users of @a.func must be CallInst";
 
-      const Value* Handle = CI->getArgOperand(0);
+      const Value *Handle = CI->getArgOperand(0);
 
-      const auto* It = DBM.findByUse(Handle);
+      const auto *It = DBM.findByUse(Handle);
       ASSERT_TRUE(It != DBM.end()) << "Handle should resolve into resource";
 
-      const llvm::dxil::ResourceBindingInfo::ResourceBinding& Binding = It->getBinding();
+      const llvm::dxil::ResourceBindingInfo::ResourceBinding &Binding =
+          It->getBinding();
       EXPECT_EQ(0u, Binding.RecordID);
       EXPECT_EQ(1u, Binding.Space);
       EXPECT_EQ(2u, Binding.LowerBound);
@@ -81,7 +82,7 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
       CalledResources++;
     }
 
-    EXPECT_EQ(1u, CalledResources) << "Expected exactly 1 resolved call to create resource";
+    EXPECT_EQ(1u, CalledResources)
+        << "Expected exactly 1 resolved call to create resource";
   }
-
 }
