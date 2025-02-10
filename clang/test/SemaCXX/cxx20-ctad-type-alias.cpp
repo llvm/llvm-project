@@ -234,16 +234,19 @@ int i = 0;
 AFoo s{i};
 static_assert(__is_same(decltype(s.t), int));
 
-// explicit deduction guide.
-Foo(int) -> Foo<X>;
-AFoo s2{i};
-static_assert(__is_same(decltype(s2.t), X));
-
-
 template<class T>
 using BFoo = AFoo<T>;
-static_assert(__is_same(decltype(BFoo(i).t), X));
 
+// template explicit deduction guide.
+template<class T>
+Foo(T) -> Foo<float>;
+static_assert(__is_same(decltype(AFoo(i).t), float));
+static_assert(__is_same(decltype(BFoo(i).t), float));
+
+// explicit deduction guide.
+Foo(int) -> Foo<X>;
+static_assert(__is_same(decltype(AFoo(i).t), X));
+static_assert(__is_same(decltype(BFoo(i).t), X));
 
 Foo(double) -> Foo<int>;
 static_assert(__is_same(decltype(AFoo(1.0).t), int));
