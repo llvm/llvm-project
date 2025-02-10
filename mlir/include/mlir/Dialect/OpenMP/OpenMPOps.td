@@ -1770,6 +1770,15 @@ def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
   let regions = (region AnyRegion:$body);
 
   let assemblyFormat = "$sym_name `:` $type $body attr-dict";
+
+  let extraClassDeclaration = [{
+    /// Get DeclareMapperInfoOp.
+    DeclareMapperInfoOp getDeclareMapperInfo(){
+      return cast<DeclareMapperInfoOp>(getRegion().getBlocks().front().getTerminator());
+    }
+  }];
+
+  let hasRegionVerifier = 1;
 }
 
 def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info", [

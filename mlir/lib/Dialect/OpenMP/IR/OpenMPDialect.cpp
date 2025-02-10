@@ -2433,11 +2433,19 @@ LogicalResult DistributeOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
-// DeclareMapperInfoOp
+// DeclareMapperOp / DeclareMapperInfoOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult DeclareMapperInfoOp::verify() {
   return verifyMapClause(*this, getMapVars());
+}
+
+LogicalResult DeclareMapperOp::verifyRegions() {
+  if (!isa<DeclareMapperInfoOp>(
+          getRegion().getBlocks().front().getTerminator()))
+    return emitOpError() << "expected terminator to be a DeclareMapperInfoOp";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
