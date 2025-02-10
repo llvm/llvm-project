@@ -9799,6 +9799,24 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
         MaskSize == (int)ExpectedOp.getNumOperands())
       return Op.getOperand(Idx) == ExpectedOp.getOperand(ExpectedIdx);
     break;
+  case ISD::BITCAST:
+    if (Op == ExpectedOp && (int)VT.getVectorNumElements() == MaskSize) {
+      SDValue Src = peekThroughBitcasts(Op);
+      EVT SrcVT = Src.getValueType();
+      if (SrcVT.isVector() &&
+          (SrcVT.getScalarSizeInBits() % VT.getScalarSizeInBits()) == 0) {
+        unsigned Scale = SrcVT.getScalarSizeInBits() / VT.getScalarSizeInBits();
+        return (Idx % Scale) == (ExpectedIdx % Scale) &&
+               IsElementEquivalent(SrcVT.getVectorNumElements(), Src, Src,
+                                   Idx / Scale, ExpectedIdx / Scale);
+      }
+    }
+    break;
+  case ISD::VECTOR_SHUFFLE: {
+    auto *SVN = cast<ShuffleVectorSDNode>(Op);
+    return Op == ExpectedOp && (int)VT.getVectorNumElements() == MaskSize &&
+           SVN->getMaskElt(Idx) == SVN->getMaskElt(ExpectedIdx);
+  }
   case X86ISD::VBROADCAST:
   case X86ISD::VBROADCAST_LOAD:
     // TODO: Handle MaskSize != VT.getVectorNumElements()?
@@ -12779,8 +12797,13 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
 
   // Check that the mask is a broadcast.
   int BroadcastIdx = getSplatIndex(Mask);
-  if (BroadcastIdx < 0)
-    return SDValue();
+  if (BroadcastIdx < 0) {
+    // Check for hidden broadcast.
+    SmallVector<int, 16> BroadcastMask(VT.getVectorNumElements(), 0);
+    if (!isShuffleEquivalent(Mask, BroadcastMask, V1, V2))
+      return SDValue();
+    BroadcastIdx = 0;
+  }
   assert(BroadcastIdx < (int)Mask.size() && "We only expect to be called with "
                                             "a sorted mask where the broadcast "
                                             "comes from V1.");
