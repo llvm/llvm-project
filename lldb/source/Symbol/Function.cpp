@@ -320,25 +320,37 @@ void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
   }
 }
 
-void Function::GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no) {
-  line_no = 0;
-  source_file.Clear();
-
-  // The -1 is kind of cheesy, but I want to get the last line entry for the
-  // given function, not the first entry of the next.
-  Address scratch_addr(GetAddressRange().GetBaseAddress());
-  scratch_addr.SetOffset(scratch_addr.GetOffset() +
-                         GetAddressRange().GetByteSize() - 1);
-
+llvm::Expected<std::pair<SupportFileSP, Function::SourceRange>>
+Function::GetSourceInfo() {
+  SupportFileSP source_file_sp;
+  uint32_t start_line;
+  GetStartLineSourceInfo(source_file_sp, start_line);
   LineTable *line_table = m_comp_unit->GetLineTable();
-  if (line_table == nullptr)
-    return;
-
-  LineEntry line_entry;
-  if (line_table->FindLineEntryByAddress(scratch_addr, line_entry, nullptr)) {
-    line_no = line_entry.line;
-    source_file = line_entry.GetFile();
+  if (start_line == 0 || !line_table) {
+    return llvm::createStringError(llvm::formatv(
+        "Could not find line information for function \"{0}\".", GetName()));
   }
+
+  uint32_t end_line = start_line;
+  for (const AddressRange &range : GetAddressRanges()) {
+    LineEntry entry;
+    uint32_t idx;
+    if (!line_table->FindLineEntryByAddress(range.GetBaseAddress(), entry,
+                                            &idx))
+      continue;
+
+    addr_t end_addr =
+        range.GetBaseAddress().GetFileAddress() + range.GetByteSize();
+    while (line_table->GetLineEntryAtIndex(idx++, entry) &&
+           entry.range.GetBaseAddress().GetFileAddress() < end_addr) {
+      // Ignore entries belonging to inlined functions or #included files.
+      if (source_file_sp->Equal(*entry.file_sp,
+                                SupportFile::eEqualFileSpecAndChecksumIfSet))
+        end_line = std::max(end_line, entry.line);
+    }
+  }
+  return std::make_pair(std::move(source_file_sp),
+                        SourceRange(start_line, end_line - start_line));
 }
 
 llvm::ArrayRef<std::unique_ptr<CallEdge>> Function::GetCallEdges() {
