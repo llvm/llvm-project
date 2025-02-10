@@ -1,4 +1,4 @@
-//== ArrayBoundCheckerV2.cpp ------------------------------------*- C++ -*--==//
+//== ArrayBoundChecker.cpp -------------------------------------------------==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,12 +10,6 @@
 // that looks for out of bounds access of memory regions.
 //
 //===----------------------------------------------------------------------===//
-
-// NOTE: The name of this file ends with "V2" because previously
-// "ArrayBoundChecker.cpp" contained the implementation of another (older and
-// simpler) checker that was called `alpha.security.ArrayBound`.
-// TODO: Rename this file to "ArrayBoundChecker.cpp" when it won't be confused
-// with that older file.
 
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/ParentMapContext.h"
@@ -297,7 +291,8 @@ static std::pair<ProgramStateRef, ProgramStateRef>
 compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
                         SValBuilder &SVB, bool CheckEquality = false) {
   if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
-    std::tie(Value, Threshold) = getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
+    std::tie(Value, Threshold) =
+        getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
   }
 
   // We want to perform a _mathematical_ comparison between the numbers `Value`
