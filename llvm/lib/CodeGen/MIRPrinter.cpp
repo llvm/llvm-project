@@ -1007,10 +1007,9 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     unsigned TiedOperandIdx = 0;
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
       TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
-    const TargetIntrinsicInfo *TII = MI.getMF()->getTarget().getIntrinsicInfo();
     Op.print(OS, MST, TypeToPrint, OpIdx, PrintDef, /*IsStandalone=*/false,
-             ShouldPrintRegisterTies, TiedOperandIdx, TRI, TII);
-      OS << formatOperandComment(MOComment);
+             ShouldPrintRegisterTies, TiedOperandIdx, TRI);
+    OS << formatOperandComment(MOComment);
     break;
   }
   case MachineOperand::MO_FrameIndex:
