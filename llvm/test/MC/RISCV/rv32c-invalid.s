@@ -33,11 +33,11 @@ c.add  zero, zero, sp # CHECK: :[[@LINE]]:14: error: invalid operand for instruc
 
 ## GPRNoX0X2
 c.lui x0, 4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RVC Hint Instructions{{$}}
-c.lui x2, 4 # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+c.lui x2, 4 # CHECK: :[[@LINE]]:7: error: register must be a GPR excluding zero (x0) and sp (x2){{$}}
 
 ## SP
-c.addi4spn  a0, a0, 12 # CHECK: :[[@LINE]]:17: error: invalid operand for instruction
-c.addi16sp  t0, 16 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
+c.addi4spn  a0, a0, 12 # CHECK: :[[@LINE]]:17: error: register must be sp (x2)
+c.addi16sp  t0, 16 # CHECK: :[[@LINE]]:13: error: register must be sp (x2)
 
 # Out of range immediates
 
