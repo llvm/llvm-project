@@ -45,7 +45,7 @@ struct std::hash<Emplaceable> {
   typedef Emplaceable argument_type;
   typedef std::size_t result_type;
 
-  std::size_t operator()(const Emplaceable& x) const { return x.get(); }
+  std::size_t operator()(const Emplaceable& x) const { return static_cast<std::size_t>(x.get()); }
 };
 
 #endif // TEST_STD_VER >= 11
