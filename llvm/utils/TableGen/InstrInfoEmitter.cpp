@@ -94,9 +94,6 @@ private:
   void emitLogicalOperandSizeMappings(
       raw_ostream &OS, StringRef Namespace,
       ArrayRef<const CodeGenInstruction *> NumberedInstructions);
-  void emitLogicalOperandTypeMappings(
-      raw_ostream &OS, StringRef Namespace,
-      ArrayRef<const CodeGenInstruction *> NumberedInstructions);
 
   // Operand information.
   unsigned CollectOperandInfo(OperandInfoListTy &OperandInfoList,
@@ -561,93 +558,6 @@ void InstrInfoEmitter::emitLogicalOperandSizeMappings(
 
   OS << "} // end namespace llvm::" << Namespace << "\n";
   OS << "#endif // GET_INSTRINFO_LOGICAL_OPERAND_SIZE_MAP\n\n";
-}
-
-void InstrInfoEmitter::emitLogicalOperandTypeMappings(
-    raw_ostream &OS, StringRef Namespace,
-    ArrayRef<const CodeGenInstruction *> NumberedInstructions) {
-  std::map<std::vector<std::string>, unsigned> LogicalOpTypeMap;
-
-  std::map<unsigned, std::vector<std::string>> InstMap;
-
-  size_t OpTypeListSize = 0U;
-  std::vector<std::string> LogicalOpTypeList;
-  for (const auto *Inst : NumberedInstructions) {
-    if (!Inst->TheDef->getValueAsBit("UseLogicalOperandMappings"))
-      continue;
-
-    LogicalOpTypeList.clear();
-    for (const auto &Op : Inst->Operands) {
-      auto *OpR = Op.Rec;
-      if ((OpR->isSubClassOf("Operand") ||
-           OpR->isSubClassOf("RegisterOperand") ||
-           OpR->isSubClassOf("RegisterClass")) &&
-          !OpR->isAnonymous()) {
-        LogicalOpTypeList.push_back(
-            (Namespace + "::OpTypes::" + Op.Rec->getName()).str());
-      } else {
-        LogicalOpTypeList.push_back("-1");
-      }
-    }
-    OpTypeListSize = std::max(LogicalOpTypeList.size(), OpTypeListSize);
-
-    auto I =
-        LogicalOpTypeMap.insert({LogicalOpTypeList, LogicalOpTypeMap.size()})
-            .first;
-    InstMap[I->second].push_back(
-        (Namespace + "::" + Inst->TheDef->getName()).str());
-  }
-
-  OS << "#ifdef GET_INSTRINFO_LOGICAL_OPERAND_TYPE_MAP\n";
-  OS << "#undef GET_INSTRINFO_LOGICAL_OPERAND_TYPE_MAP\n";
-  OS << "namespace llvm::" << Namespace << " {\n";
-  OS << "LLVM_READONLY static int\n";
-  OS << "getLogicalOperandType(uint16_t Opcode, uint16_t LogicalOpIdx) {\n";
-  if (!InstMap.empty()) {
-    std::vector<const std::vector<std::string> *> LogicalOpTypeList(
-        LogicalOpTypeMap.size());
-    for (auto &P : LogicalOpTypeMap) {
-      LogicalOpTypeList[P.second] = &P.first;
-    }
-    OS << "  static const int TypeMap[][" << OpTypeListSize << "] = {\n";
-    for (int r = 0, rs = LogicalOpTypeList.size(); r < rs; ++r) {
-      const auto &Row = *LogicalOpTypeList[r];
-      OS << "   {";
-      int i, s = Row.size();
-      for (i = 0; i < s; ++i) {
-        if (i > 0)
-          OS << ", ";
-        OS << Row[i];
-      }
-      for (; i < static_cast<int>(OpTypeListSize); ++i) {
-        if (i > 0)
-          OS << ", ";
-        OS << "-1";
-      }
-      OS << "}";
-      if (r != rs - 1)
-        OS << ",";
-      OS << "\n";
-    }
-    OS << "  };\n";
-
-    OS << "  switch (Opcode) {\n";
-    OS << "  default: return -1;\n";
-    for (auto &P : InstMap) {
-      auto OpMapIdx = P.first;
-      const auto &Insts = P.second;
-      for (const auto &Inst : Insts) {
-        OS << "  case " << Inst << ":\n";
-      }
-      OS << "    return TypeMap[" << OpMapIdx << "][LogicalOpIdx];\n";
-    }
-    OS << "  }\n";
-  } else {
-    OS << "  return -1;\n";
-  }
-  OS << "}\n";
-  OS << "} // end namespace llvm::" << Namespace << "\n";
-  OS << "#endif // GET_INSTRINFO_LOGICAL_OPERAND_TYPE_MAP\n\n";
 }
 
 void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
@@ -1154,9 +1064,6 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     Timer.startTimer("Emit logical operand size mappings");
     emitLogicalOperandSizeMappings(OS, TargetName, NumberedInstructions);
   }
-
-  Timer.startTimer("Emit logical operand type mappings");
-  emitLogicalOperandTypeMappings(OS, TargetName, NumberedInstructions);
 
   Timer.startTimer("Emit helper methods");
   emitMCIIHelperMethods(OS, TargetName);
