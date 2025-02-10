@@ -2464,7 +2464,7 @@ static Op createComputeOp(
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
           asyncOnlyDeviceTypes);
       nocreateEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
-          dataClauseOperands.end());
+                                   dataClauseOperands.end());
     } else if (const auto *presentClause =
                    std::get_if<Fortran::parser::AccClause::Present>(
                        &clause.u)) {
@@ -2475,7 +2475,7 @@ static Op createComputeOp(
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
           asyncOnlyDeviceTypes);
       presentEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
-          dataClauseOperands.end());
+                                  dataClauseOperands.end());
     } else if (const auto *devicePtrClause =
                    std::get_if<Fortran::parser::AccClause::Deviceptr>(
                        &clause.u)) {
@@ -2763,7 +2763,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
           asyncOnlyDeviceTypes);
       nocreateEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
-          dataClauseOperands.end());
+                                   dataClauseOperands.end());
     } else if (const auto *presentClause =
                    std::get_if<Fortran::parser::AccClause::Present>(
                        &clause.u)) {
@@ -2774,7 +2774,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
           asyncOnlyDeviceTypes);
       presentEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
-          dataClauseOperands.end());
+                                  dataClauseOperands.end());
     } else if (const auto *deviceptrClause =
                    std::get_if<Fortran::parser::AccClause::Deviceptr>(
                        &clause.u)) {
