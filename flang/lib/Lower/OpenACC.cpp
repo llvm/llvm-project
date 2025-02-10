@@ -3835,7 +3835,7 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                      const Fortran::parser::AccClauseList &accClauseList) {
   llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands,
       copyinEntryOperands, createEntryOperands, copyoutEntryOperands,
-      deviceResidentEntryOperands;
+      presentEntryOperands, deviceResidentEntryOperands;
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
@@ -3866,11 +3866,14 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *presentClause =
                    std::get_if<Fortran::parser::AccClause::Present>(
                        &clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
       genDeclareDataOperandOperations<mlir::acc::PresentOp,
-                                      mlir::acc::PresentOp>(
+                                      mlir::acc::DeleteOp>(
           presentClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_present,
           /*structured=*/true, /*implicit=*/false);
+      presentEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                  dataClauseOperands.end());
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
       auto crtDataStart = dataClauseOperands.size();
@@ -3949,14 +3952,15 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
 
   openAccCtx.attachCleanup([&builder, loc, createEntryOperands,
                             copyEntryOperands, copyinEntryOperands,
-                            copyoutEntryOperands, deviceResidentEntryOperands,
-                            declareToken]() {
+                            copyoutEntryOperands, presentEntryOperands,
+                            deviceResidentEntryOperands, declareToken]() {
     llvm::SmallVector<mlir::Value> operands;
     operands.append(createEntryOperands);
     operands.append(deviceResidentEntryOperands);
     operands.append(copyEntryOperands);
     operands.append(copyinEntryOperands);
     operands.append(copyoutEntryOperands);
+    operands.append(presentEntryOperands);
 
     mlir::func::FuncOp funcOp = builder.getFunction();
     auto ops = funcOp.getOps<mlir::acc::DeclareExitOp>();
@@ -3978,6 +3982,8 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
         builder, copyinEntryOperands, /*structured=*/true);
     genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
         builder, copyoutEntryOperands, /*structured=*/true);
+    genDataExitOperations<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
+        builder, presentEntryOperands, /*structured=*/true);
   });
 }
 
