@@ -2298,6 +2298,13 @@ public:
     FunctionDeclBits.IsLateTemplateParsed = ILT;
   }
 
+  bool isInstantiatedFromMemberTemplate() const {
+    return FunctionDeclBits.IsInstantiatedFromMemberTemplate;
+  }
+  void setInstantiatedFromMemberTemplate(bool Val = true) {
+    FunctionDeclBits.IsInstantiatedFromMemberTemplate = Val;
+  }
+
   /// Whether this function is "trivial" in some specialized C++ senses.
   /// Can only be true for default constructors, copy constructors,
   /// copy assignment operators, and destructors.  Not meaningful until

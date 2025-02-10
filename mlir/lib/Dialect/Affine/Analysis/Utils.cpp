@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
+
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
@@ -2296,4 +2297,42 @@ FailureOr<AffineValueMap> mlir::affine::simplifyConstrainedMinMaxOp(
   }
   affine::canonicalizeMapAndOperands(&newMap, &newOperands);
   return AffineValueMap(newMap, newOperands);
+}
+
+Block *mlir::affine::findInnermostCommonBlockInScope(Operation *a,
+                                                     Operation *b) {
+  Region *aScope = mlir::affine::getAffineScope(a);
+  Region *bScope = mlir::affine::getAffineScope(b);
+  if (aScope != bScope)
+    return nullptr;
+
+  // Get the block ancestry of `op` while stopping at the affine scope `aScope`
+  // and store them in `ancestry`.
+  auto getBlockAncestry = [&](Operation *op,
+                              SmallVectorImpl<Block *> &ancestry) {
+    Operation *curOp = op;
+    do {
+      ancestry.push_back(curOp->getBlock());
+      if (curOp->getParentRegion() == aScope)
+        break;
+      curOp = curOp->getParentOp();
+    } while (curOp);
+    assert(curOp && "can't reach root op without passing through affine scope");
+    std::reverse(ancestry.begin(), ancestry.end());
+  };
+
+  SmallVector<Block *, 4> aAncestors, bAncestors;
+  getBlockAncestry(a, aAncestors);
+  getBlockAncestry(b, bAncestors);
+  assert(!aAncestors.empty() && !bAncestors.empty() &&
+         "at least one Block ancestor expected");
+
+  Block *innermostCommonBlock = nullptr;
+  for (unsigned a = 0, b = 0, e = aAncestors.size(), f = bAncestors.size();
+       a < e && b < f; ++a, ++b) {
+    if (aAncestors[a] != bAncestors[b])
+      break;
+    innermostCommonBlock = aAncestors[a];
+  }
+  return innermostCommonBlock;
 }

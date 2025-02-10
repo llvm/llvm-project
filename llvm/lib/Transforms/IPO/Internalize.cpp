@@ -235,7 +235,7 @@ bool InternalizePass::internalizeModule(Module &M) {
 
   // Preserve the RPC interface for GPU host callbacks when internalizing.
   if (Triple(M.getTargetTriple()).isNVPTX())
-    AlwaysPreserved.insert("__llvm_rpc_server");
+    AlwaysPreserved.insert("__llvm_rpc_client");
 
   // Mark all functions not in the api as internal.
   IsWasm = Triple(M.getTargetTriple()).isOSBinFormatWasm();
