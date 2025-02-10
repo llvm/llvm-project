@@ -108,8 +108,17 @@ This function-like macro takes a single identifier argument that is the name of
 a builtin function, a builtin pseudo-function (taking one or more type
 arguments), or a builtin template.
 It evaluates to 1 if the builtin is supported on the current target or 0 if not.
-The behavior is different than ``__has_builtin`` when there is an auxiliary target,
-such as when offloading to a target device.
+
+``__has_builtin`` and ``__has_target_builtin`` behave identically for normal C++ compilations.
+
+For heterogeneous compilations that see source code intended for more than one target:
+
+``__has_builtin`` returns true if the builtin is known to the compiler
+(i.e. it's available via one of the targets), but makes no promises whether it's available on the current target.
+The compiler can parse it, but not necessarily generate code for it.
+
+``__has_target_builtin`` returns true if the builtin can actually be generated for the current target.
+
 It can be used like this:
 
 .. code-block:: c++
