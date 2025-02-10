@@ -29,24 +29,26 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-bool ModuleRootSignature::reportError(Twine Message,
-                                      DiagnosticSeverity Severity) {
+LLVMContext *Ctx;
+
+static bool reportError(Twine Message, DiagnosticSeverity Severity = DS_Error) {
   Ctx->diagnose(DiagnosticInfoGeneric(Message, Severity));
   return true;
 }
 
-bool ModuleRootSignature::parseRootFlags(MDNode *RootFlagNode) {
+static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
 
   if (RootFlagNode->getNumOperands() != 2)
     return reportError("Invalid format for RootFlag Element");
 
   auto *Flag = mdconst::extract<ConstantInt>(RootFlagNode->getOperand(1));
-  this->Flags = Flag->getZExtValue();
+  MRS->Flags = Flag->getZExtValue();
 
   return false;
 }
 
-bool ModuleRootSignature::parseRootSignatureElement(MDNode *Element) {
+static bool parseRootSignatureElement(ModuleRootSignature *MRS,
+                                      MDNode *Element) {
   MDString *ElementText = cast<MDString>(Element->getOperand(0));
   if (ElementText == nullptr)
     return reportError("Invalid format for Root Element");
@@ -65,24 +67,21 @@ bool ModuleRootSignature::parseRootSignatureElement(MDNode *Element) {
 
   switch (ElementKind) {
 
-  case RootSignatureElementKind::RootFlags: {
-    return parseRootFlags(Element);
-    break;
-  }
-
+  case RootSignatureElementKind::RootFlags:
+    return parseRootFlags(MRS, Element);
   case RootSignatureElementKind::RootConstants:
   case RootSignatureElementKind::RootDescriptor:
   case RootSignatureElementKind::DescriptorTable:
   case RootSignatureElementKind::StaticSampler:
   case RootSignatureElementKind::None:
     return reportError("Invalid Root Element: " + ElementText->getString());
-    break;
   }
 
   return true;
 }
 
-bool ModuleRootSignature::parse(NamedMDNode *Root, const Function *EF) {
+static bool parse(ModuleRootSignature *MRS, NamedMDNode *Root,
+                  const Function *EF) {
   bool HasError = false;
 
   /** Root Signature are specified as following in the metadata:
@@ -93,7 +92,7 @@ bool ModuleRootSignature::parse(NamedMDNode *Root, const Function *EF) {
 
       So for each MDNode inside dx.rootsignatures NamedMDNode
       (the Root parameter of this function), the parsing process needs
-      to loop through each of it's operand and process the pairs function
+      to loop through each of its operands and process the function,
       signature pair.
    */
 
@@ -126,26 +125,27 @@ bool ModuleRootSignature::parse(NamedMDNode *Root, const Function *EF) {
       if (Element == nullptr)
         return reportError("Missing Root Element Metadata Node.");
 
-      HasError = HasError || parseRootSignatureElement(Element);
+      HasError = HasError || parseRootSignatureElement(MRS, Element);
     }
   }
   return HasError;
 }
 
-bool ModuleRootSignature::validate() {
-  if (dxbc::RootSignatureValidations::validateRootFlag(Flags)) {
-    return reportError("Invalid flag value for RootFlag");
+static bool validate(ModuleRootSignature *MRS) {
+  if (dxbc::RootSignatureValidations::validateRootFlag(MRS->Flags)) {
+    return reportError("Invalid Root Signature flag value");
   }
   return false;
 }
 
-OptionalRootSignature ModuleRootSignature::analyzeModule(Module &M,
-                                                         const Function *F) {
-  ModuleRootSignature MRS(&M.getContext());
+std::optional<ModuleRootSignature>
+ModuleRootSignature::analyzeModule(Module &M, const Function *F) {
+  ModuleRootSignature MRS;
+  Ctx = &M.getContext();
 
   NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
-  if (RootSignatureNode == nullptr || MRS.parse(RootSignatureNode, F) ||
-      MRS.validate())
+  if (RootSignatureNode == nullptr || parse(&MRS, RootSignatureNode, F) ||
+      validate(&MRS))
     return std::nullopt;
 
   return MRS;
@@ -153,8 +153,8 @@ OptionalRootSignature ModuleRootSignature::analyzeModule(Module &M,
 
 AnalysisKey RootSignatureAnalysis::Key;
 
-OptionalRootSignature RootSignatureAnalysis::run(Module &M,
-                                                 ModuleAnalysisManager &AM) {
+std::optional<ModuleRootSignature>
+RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   auto MMI = AM.getResult<DXILMetadataAnalysis>(M);
 
   if (MMI.ShaderProfile == Triple::Library)
