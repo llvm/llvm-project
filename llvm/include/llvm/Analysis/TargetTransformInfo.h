@@ -1473,7 +1473,7 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index = -1) const;
 
-  /// \return The expected of aggregate inserts and extracts. This is
+  /// \return The expected cost of aggregate inserts and extracts. This is
   /// used when the instruction is not available; a typical use case is to
   /// provision the cost of vectorization/scalarization in vectorizer passes.
   InstructionCost getInsertExtractValueCost(unsigned Opcode,
