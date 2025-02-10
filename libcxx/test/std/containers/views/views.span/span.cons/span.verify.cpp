@@ -44,33 +44,33 @@ void checkCV() {
     std::span< int> s2{vsp};  // expected-error {{no matching constructor for initialization of 'std::span<int>'}}
     std::span< int> s3{cvsp}; // expected-error {{no matching constructor for initialization of 'std::span<int>'}}
 
-    std::span<const int> s4{
-        vsp}; // expected-error {{no matching constructor for initialization of 'std::span<const int>'}}
-    std::span<const int> s5{
-        cvsp}; // expected-error {{no matching constructor for initialization of 'std::span<const int>'}}
+    std::span<const int> s4{vsp};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<const int>'}}
+    std::span<const int> s5{cvsp};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<const int>'}}
 
-    std::span< volatile int> s6{
-        csp}; // expected-error {{no matching constructor for initialization of 'std::span<volatile int>'}}
-    std::span< volatile int> s7{
-        cvsp}; // expected-error {{no matching constructor for initialization of 'std::span<volatile int>'}}
+    std::span< volatile int> s6{csp};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<volatile int>'}}
+    std::span< volatile int> s7{cvsp};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<volatile int>'}}
   }
 
   //  Try to remove const and/or volatile (static -> static)
   {
     std::span< int, 0> s1{csp0}; // expected-error {{no matching constructor for initialization of 'std::span<int, 0>'}}
     std::span< int, 0> s2{vsp0}; // expected-error {{no matching constructor for initialization of 'std::span<int, 0>'}}
-    std::span< int, 0> s3{
-        cvsp0}; // expected-error {{no matching constructor for initialization of 'std::span<int, 0>'}}
+    std::span< int, 0> s3{cvsp0};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<int, 0>'}}
 
-    std::span<const int, 0> s4{
-        vsp0}; // expected-error {{no matching constructor for initialization of 'std::span<const int, 0>'}}
-    std::span<const int, 0> s5{
-        cvsp0}; // expected-error {{no matching constructor for initialization of 'std::span<const int, 0>'}}
+    std::span<const int, 0> s4{vsp0};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<const int, 0>'}}
+    std::span<const int, 0> s5{cvsp0};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<const int, 0>'}}
 
-    std::span< volatile int, 0> s6{
-        csp0}; // expected-error {{no matching constructor for initialization of 'std::span<volatile int, 0>'}}
-    std::span< volatile int, 0> s7{
-        cvsp0}; // expected-error {{no matching constructor for initialization of 'std::span<volatile int, 0>'}}
+    std::span< volatile int, 0> s6{csp0};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<volatile int, 0>'}}
+    std::span< volatile int, 0> s7{cvsp0};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<volatile int, 0>'}}
   }
 
   //  Try to remove const and/or volatile (static -> dynamic)
@@ -79,15 +79,15 @@ void checkCV() {
     std::span< int> s2{vsp0};  // expected-error {{no matching constructor for initialization of 'std::span<int>'}}
     std::span< int> s3{cvsp0}; // expected-error {{no matching constructor for initialization of 'std::span<int>'}}
 
-    std::span<const int> s4{
-        vsp0}; // expected-error {{no matching constructor for initialization of 'std::span<const int>'}}
-    std::span<const int> s5{
-        cvsp0}; // expected-error {{no matching constructor for initialization of 'std::span<const int>'}}
+    std::span<const int> s4{vsp0};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<const int>'}}
+    std::span<const int> s5{cvsp0};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<const int>'}}
 
-    std::span< volatile int> s6{
-        csp0}; // expected-error {{no matching constructor for initialization of 'std::span<volatile int>'}}
-    std::span< volatile int> s7{
-        cvsp0}; // expected-error {{no matching constructor for initialization of 'std::span<volatile int>'}}
+    std::span< volatile int> s6{csp0};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<volatile int>'}}
+    std::span< volatile int> s7{cvsp0};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<volatile int>'}}
   }
 
   //  Try to remove const and/or volatile (static -> static)
@@ -96,15 +96,15 @@ void checkCV() {
     std::span< int, 0> s2{vsp};  // expected-error {{no matching constructor for initialization of 'std::span<int, 0>'}}
     std::span< int, 0> s3{cvsp}; // expected-error {{no matching constructor for initialization of 'std::span<int, 0>'}}
 
-    std::span<const int, 0> s4{
-        vsp}; // expected-error {{no matching constructor for initialization of 'std::span<const int, 0>'}}
-    std::span<const int, 0> s5{
-        cvsp}; // expected-error {{no matching constructor for initialization of 'std::span<const int, 0>'}}
+    std::span<const int, 0> s4{vsp};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<const int, 0>'}}
+    std::span<const int, 0> s5{cvsp};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<const int, 0>'}}
 
-    std::span< volatile int, 0> s6{
-        csp}; // expected-error {{no matching constructor for initialization of 'std::span<volatile int, 0>'}}
-    std::span< volatile int, 0> s7{
-        cvsp}; // expected-error {{no matching constructor for initialization of 'std::span<volatile int, 0>'}}
+    std::span< volatile int, 0> s6{csp};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<volatile int, 0>'}}
+    std::span< volatile int, 0> s7{cvsp};
+    // expected-error@-1 {{no matching constructor for initialization of 'std::span<volatile int, 0>'}}
   }
 }
 

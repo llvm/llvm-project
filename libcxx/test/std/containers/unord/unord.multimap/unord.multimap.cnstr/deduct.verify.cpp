@@ -63,13 +63,13 @@ int main(int, char**) {
   using P = std::pair<const int, int>;
   {
     // cannot deduce Key from nothing
-    std::unordered_multimap
-        m; // expected-error-re{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multimap'}}
+    std::unordered_multimap m;
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multimap'}}
   }
   {
     // cannot deduce Key from just (Size)
-    std::unordered_multimap m(
-        42); // expected-error-re{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multimap'}}
+    std::unordered_multimap m(42);
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}unordered_multimap'}}
   }
   {
     // cannot deduce Key from just (Size, Hash)

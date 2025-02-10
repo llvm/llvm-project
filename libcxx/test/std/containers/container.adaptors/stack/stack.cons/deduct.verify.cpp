@@ -25,26 +25,23 @@ int main(int, char**) {
   {
     //  stack(const Container&, const Alloc&);
     //  The '45' is not an allocator
-    std::stack stk(
-        std::list<int>({1, 2, 3}),
-        45); // expected-error-re {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}stack'}}
+    std::stack stk(std::list<int>({1, 2, 3}), 45);
+    // expected-error-re@-1 {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}stack'}}
   }
 
   {
     //  stack(const stack&, const Alloc&);
     //  The '45' is not an allocator
     std::stack<int> source;
-    std::stack stk(
-        source,
-        45); // expected-error-re {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}stack'}}
+    std::stack stk(source, 45);
+    // expected-error-re@-1 {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}stack'}}
   }
 
   //  Test the implicit deduction guides
   {
     //  stack (allocator &)
-    std::stack stk(
-        (std::allocator<
-            int>())); // expected-error-re {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}stack'}}
+    std::stack stk((std::allocator< int>()));
+    // expected-error-re@-1 {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}stack'}}
     //  Note: The extra parens are necessary, since otherwise clang decides it is a function declaration.
     //  Also, we can't use {} instead of parens, because that constructs a
     //      stack<allocator<int>, allocator<allocator<int>>>

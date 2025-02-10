@@ -41,8 +41,8 @@ using PC = std::pair<const int, long>;
 int main(int, char**) {
   {
     // cannot deduce Key and T from nothing
-    std::map
-        m; // expected-error-re {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}map'}}
+    std::map m;
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}map'}}
   }
   {
     // cannot deduce Key and T from just (Compare)
@@ -68,8 +68,8 @@ int main(int, char**) {
   {
     // cannot convert from some arbitrary unrelated type
     NotAnAllocator a;
-    std::map m(
-        a); // expected-error-re{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}map'}}
+    std::map m(a);
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}map'}}
   }
   {
     // cannot deduce that the inner braced things should be std::pair and not something else
