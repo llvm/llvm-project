@@ -19,9 +19,9 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
-#include <__memory/destroy.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/construct_at.h>
+#include <__memory/destroy.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/extent.h>
