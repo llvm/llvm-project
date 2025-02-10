@@ -3370,15 +3370,23 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
 
     PrimType SizeT = classifyPrim(Stripped->getType());
 
+    // Save evaluated array size to a variable.
+    unsigned ArrayLen = allocateLocalPrimitive(
+        Stripped, SizeT, /*IsConst=*/false, /*IsExtended=*/false);
+    if (!this->visit(Stripped))
+      return false;
+    if (!this->emitSetLocal(SizeT, ArrayLen, E))
+      return false;
+
     if (PlacementDest) {
       if (!this->visit(PlacementDest))
         return false;
-      if (!this->visit(Stripped))
+      if (!this->emitGetLocal(SizeT, ArrayLen, E))
         return false;
       if (!this->emitCheckNewTypeMismatchArray(SizeT, E, E))
         return false;
     } else {
-      if (!this->visit(Stripped))
+      if (!this->emitGetLocal(SizeT, ArrayLen, E))
         return false;
 
       if (ElemT) {
@@ -3392,10 +3400,113 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
       }
     }
 
-    if (Init && !this->visitInitializer(Init))
-      return false;
+    if (Init) {
+      QualType InitType = Init->getType();
+      size_t StaticInitElems = 0;
+      const Expr *DynamicInit = nullptr;
+      if (const ConstantArrayType *CAT =
+              Ctx.getASTContext().getAsConstantArrayType(InitType)) {
+        StaticInitElems = CAT->getZExtSize();
+        if (!this->visitInitializer(Init))
+          return false;
 
-  } else {
+        if (const auto *ILE = dyn_cast<InitListExpr>(Init);
+            ILE && ILE->hasArrayFiller())
+          DynamicInit = ILE->getArrayFiller();
+      }
+
+      // The initializer initializes a certain number of elements, S.
+      // However, the complete number of elements, N, might be larger than that.
+      // In this case, we need to get an initializer for the remaining elements.
+      // There are to cases:
+      //   1) For the form 'new Struct[n];', the initializer is a
+      //      CXXConstructExpr and its type is an IncompleteArrayType.
+      //   2) For the form 'new Struct[n]{1,2,3}', the initializer is an
+      //      InitListExpr and the initializer for the remaining elements
+      //      is the array filler.
+
+      if (DynamicInit || InitType->isIncompleteArrayType()) {
+        const Function *CtorFunc = nullptr;
+        if (const auto *CE = dyn_cast<CXXConstructExpr>(Init)) {
+          CtorFunc = getFunction(CE->getConstructor());
+          if (!CtorFunc)
+            return false;
+        }
+
+        LabelTy EndLabel = this->getLabel();
+        LabelTy StartLabel = this->getLabel();
+
+        // In the nothrow case, the alloc above might have returned nullptr.
+        // Don't call any constructors that case.
+        if (IsNoThrow) {
+          if (!this->emitDupPtr(E))
+            return false;
+          if (!this->emitNullPtr(0, nullptr, E))
+            return false;
+          if (!this->emitEQPtr(E))
+            return false;
+          if (!this->jumpTrue(EndLabel))
+            return false;
+        }
+
+        // Create loop variables.
+        unsigned Iter = allocateLocalPrimitive(
+            Stripped, SizeT, /*IsConst=*/false, /*IsExtended=*/false);
+        if (!this->emitConst(StaticInitElems, SizeT, E))
+          return false;
+        if (!this->emitSetLocal(SizeT, Iter, E))
+          return false;
+
+        this->fallthrough(StartLabel);
+        this->emitLabel(StartLabel);
+        // Condition. Iter < ArrayLen?
+        if (!this->emitGetLocal(SizeT, Iter, E))
+          return false;
+        if (!this->emitGetLocal(SizeT, ArrayLen, E))
+          return false;
+        if (!this->emitLT(SizeT, E))
+          return false;
+        if (!this->jumpFalse(EndLabel))
+          return false;
+
+        // Pointer to the allocated array is already on the stack.
+        if (!this->emitGetLocal(SizeT, Iter, E))
+          return false;
+        if (!this->emitArrayElemPtr(SizeT, E))
+          return false;
+
+        if (DynamicInit) {
+          if (std::optional<PrimType> InitT = classify(DynamicInit)) {
+            if (!this->visit(DynamicInit))
+              return false;
+            if (!this->emitStorePop(*InitT, E))
+              return false;
+          } else {
+            if (!this->visitInitializer(DynamicInit))
+              return false;
+            if (!this->emitPopPtr(E))
+              return false;
+          }
+        } else {
+          assert(CtorFunc);
+          if (!this->emitCall(CtorFunc, 0, E))
+            return false;
+        }
+
+        // ++Iter;
+        if (!this->emitGetPtrLocal(Iter, E))
+          return false;
+        if (!this->emitIncPop(SizeT, E))
+          return false;
+
+        if (!this->jump(StartLabel))
+          return false;
+
+        this->fallthrough(EndLabel);
+        this->emitLabel(EndLabel);
+      }
+    }
+  } else { // Non-array.
     if (PlacementDest) {
       if (!this->visit(PlacementDest))
         return false;
