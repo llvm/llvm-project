@@ -1075,10 +1075,10 @@ void TakesIntAndPtr(int, int *);
 void PassAddressOfLocal(int a, int *b) {
   int c;
   [[clang::musttail]] return TakesIntAndPtr(0, &c); // expected-warning {{address of stack memory associated with local variable 'c' pass\
-ed to musttail function}}
+ed to musttail function}} False-negative on CSA
 }
 void PassAddressOfParam(int a, int *b) {
   [[clang::musttail]] return TakesIntAndPtr(0, &a); // expected-warning {{address of stack memory associated with parameter 'a' passed to\
- musttail function}}
+ musttail function}} False-negative on CSA
 }
 } // namespace with_attr_musttail
