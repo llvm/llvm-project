@@ -250,12 +250,12 @@ void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
 class FindStackRegionsSymbolVisitor final : public SymbolVisitor {
   CheckerContext &Ctxt;
   const StackFrameContext *StackFrameContext;
-  SmallVector<const MemRegion *> &EscapingStackRegions;
+  SmallVectorImpl<const MemRegion *> &EscapingStackRegions;
 
 public:
   explicit FindStackRegionsSymbolVisitor(
       CheckerContext &Ctxt,
-      SmallVector<const MemRegion *> &StorageForStackRegions)
+      SmallVectorImpl<const MemRegion *> &StorageForStackRegions)
       : Ctxt(Ctxt), StackFrameContext(Ctxt.getStackFrame()),
         EscapingStackRegions(StorageForStackRegions) {}
 
@@ -298,7 +298,7 @@ private:
 /// 1. If returning a block data region that has stack memory space
 /// 2. If returning a constructed object that has stack memory space
 static SmallVector<const MemRegion *>
-FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
+FilterReturnExpressionLeaks(const SmallVectorImpl<const MemRegion *> &MaybeEscaped,
                             CheckerContext &C, const Expr *RetE, SVal &RetVal) {
 
   SmallVector<const MemRegion *> WillEscape;
