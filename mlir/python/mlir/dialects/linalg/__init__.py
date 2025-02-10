@@ -147,3 +147,49 @@ class GenericOp_(GenericOp):
 
 
 generic = region_op(GenericOp_, terminator=YieldOp)
+
+
+def matmul(
+    *ins: Union[Operation, OpView, Value],
+    outs: Sequence[Union[Operation, OpView, Value]],
+    indexing_maps: Optional[Sequence[AffineMapAttr]] = None,
+    cast: Optional[Union[TypeFn, Attribute]] = None,
+):
+    ins = [_get_op_result_or_value(input) for input in ins]
+    if len(outs) > 1:
+        raise ValueError(f"{outs=} must have length 1.")
+    init = _get_op_result_or_value(outs[0])
+    result_types = [init.type] if isinstance(init.type, RankedTensorType) else []
+
+    op = MatmulOp(
+        result_tensors=result_types,
+        inputs=ins,
+        outputs=[init],
+        indexing_maps=indexing_maps,
+        cast=cast,
+    )
+    fill_builtin_region(op.operation)
+    return op
+
+
+def contract(
+    *ins: Union[Operation, OpView, Value],
+    outs: Sequence[Union[Operation, OpView, Value]],
+    indexing_maps: Sequence[AffineMapAttr],
+    cast: Optional[Union[TypeFn, Attribute]] = None,
+):
+    ins = [_get_op_result_or_value(input) for input in ins]
+    if len(outs) > 1:
+        raise ValueError(f"{outs=} must have length 1.")
+    init = _get_op_result_or_value(outs[0])
+    result_types = [init.type] if isinstance(init.type, RankedTensorType) else []
+
+    op = ContractOp(
+        result_tensors=result_types,
+        inputs=ins,
+        outputs=[init],
+        indexing_maps=indexing_maps,
+        cast=cast,
+    )
+    fill_builtin_region(op.operation)
+    return op
