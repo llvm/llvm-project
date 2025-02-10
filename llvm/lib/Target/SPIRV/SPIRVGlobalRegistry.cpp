@@ -882,6 +882,14 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(const StructType *Ty,
                                                 MachineIRBuilder &MIRBuilder,
                                                 bool EmitIR) {
   SmallVector<Register, 4> FieldTypes;
+  constexpr unsigned MaxWordCount = UINT16_MAX;
+
+  constexpr size_t MaxNumElements = MaxWordCount - 2;
+  const size_t NumElements = Ty->getNumElements();
+  size_t SPIRVStructNumElements = NumElements;
+  if (NumElements > MaxNumElements) {
+    SPIRVStructNumElements = MaxNumElements;
+  }
   for (const auto &Elem : Ty->elements()) {
     SPIRVType *ElemTy = findSPIRVType(toTypedPointer(Elem), MIRBuilder);
     assert(ElemTy && ElemTy->getOpcode() != SPIRV::OpTypeVoid &&
@@ -889,16 +897,42 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(const StructType *Ty,
     FieldTypes.push_back(getSPIRVTypeID(ElemTy));
   }
   Register ResVReg = createTypeVReg(MIRBuilder);
-  return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+  if (Ty->hasName())
+    buildOpName(ResVReg, Ty->getName(), MIRBuilder);
+  if (Ty->isPacked())
+    buildOpDecorate(ResVReg, MIRBuilder, SPIRV::Decoration::CPacked, {});
+
+  auto SPVType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeStruct).addDef(ResVReg);
-    for (const auto &Ty : FieldTypes)
-      MIB.addUse(Ty);
-    if (Ty->hasName())
-      buildOpName(ResVReg, Ty->getName(), MIRBuilder);
-    if (Ty->isPacked())
-      buildOpDecorate(ResVReg, MIRBuilder, SPIRV::Decoration::CPacked, {});
+    for (size_t I = 0; I < SPIRVStructNumElements; ++I)
+      MIB.addUse(FieldTypes[I]);
     return MIB;
   });
+
+  if (NumElements > MaxNumElements) {
+    uint64_t NumOfContinuedInstructions = NumElements / MaxNumElements - 1;
+    for (uint64_t J = 0; J < NumOfContinuedInstructions; J++) {
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeStructContinuedINTEL);
+
+        for (size_t I = (J + 1) * MaxNumElements; I < (J + 2) * MaxNumElements;
+             ++I)
+          MIB.addUse(FieldTypes[I]);
+        return MIB;
+      });
+    }
+
+    uint64_t Remains = NumElements % MaxNumElements;
+    if (Remains) {
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeStructContinuedINTEL);
+        for (size_t I = NumElements - Remains; I < NumElements; ++I)
+          MIB.addUse(FieldTypes[I]);
+        return MIB;
+      });
+    }
+  }
+  return SPVType;
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSpecialType(
@@ -968,7 +1002,8 @@ SPIRVType *SPIRVGlobalRegistry::findSPIRVType(
 
 Register SPIRVGlobalRegistry::getSPIRVTypeID(const SPIRVType *SpirvType) const {
   assert(SpirvType && "Attempting to get type id for nullptr type.");
-  if (SpirvType->getOpcode() == SPIRV::OpTypeForwardPointer)
+  if (SpirvType->getOpcode() == SPIRV::OpTypeForwardPointer ||
+      SpirvType->getOpcode() == SPIRV::OpTypeStructContinuedINTEL)
     return SpirvType->uses().begin()->getReg();
   return SpirvType->defs().begin()->getReg();
 }
