@@ -351,6 +351,7 @@ void __init_riscv_feature_bits(void *PlatformArgs) {
     return;
 
   __riscv_feature_bits.length = RISCV_FEATURE_BITS_LENGTH;
+
 #if defined(__linux__)
   struct riscv_hwprobe Hwprobes[] = {
       {RISCV_HWPROBE_KEY_BASE_BEHAVIOR, 0}, {RISCV_HWPROBE_KEY_IMA_EXT_0, 0},
