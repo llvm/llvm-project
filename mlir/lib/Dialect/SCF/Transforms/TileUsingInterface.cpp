@@ -1949,6 +1949,60 @@ getUntiledConsumerFromSlice(RewriterBase &rewriter, Operation *sliceOp) {
   }
 }
 
+// If the producer of the operand is a loopLikeOp, then finds the last
+// insertSlice/parallelInsertSlice in the producer op that uses the block
+// argument corresponding to the operand.
+static FailureOr<Operation *>
+getSliceOpFromConsumerOperand(OpOperand &operand) {
+
+  OpResult producerResult = dyn_cast<OpResult>(operand.get());
+  if (!producerResult)
+    return failure();
+
+  LoopLikeOpInterface loopLikeOp =
+      dyn_cast<LoopLikeOpInterface>(producerResult.getOwner());
+  if (!loopLikeOp)
+    return failure();
+
+  // Obtain the BlockArgument correponding to the result.
+  BlockArgument bbArg =
+      loopLikeOp.getRegionIterArgs()[producerResult.getResultNumber()];
+
+  // Finally return the operation corresponding to the yielded value.
+  // Also check whether it's an InsertSliceOp.
+  if (dyn_cast<scf::ForOp>(producerResult.getOwner())) {
+    OpOperand *yieldVal = loopLikeOp.getTiedLoopYieldedValue(bbArg);
+    Operation *lastOp = dyn_cast<OpResult>(yieldVal->get()).getOwner();
+    auto isInsertSliceOp = isa<tensor::InsertSliceOp>(lastOp);
+    if (!isInsertSliceOp) {
+      return failure();
+    }
+    return lastOp;
+  }
+
+  auto forallOp = dyn_cast<scf::ForallOp>(producerResult.getOwner());
+  if (!forallOp)
+    return failure();
+
+  // Iterate over the terminator operation of the forallOp to find the last
+  // parallelInsertSliceOp that uses the blockArgument.
+  Operation *lastOp = nullptr;
+  forallOp.getTerminator()->walk([&](tensor::ParallelInsertSliceOp op) {
+    for (mlir::Value operand : op->getOperands()) {
+      if (auto maybeBlockArg = dyn_cast<BlockArgument>(operand)) {
+        if (maybeBlockArg == bbArg) {
+          lastOp = op;
+        }
+      }
+    }
+  });
+
+  if (!lastOp)
+    return failure();
+
+  return lastOp;
+}
+
 /// Implementation of fusing consumer of a single slice by computing the
 /// slice of the consumer in-place for scf loop.
 FailureOr<scf::SCFFuseConsumerOfSliceResult>
@@ -1977,6 +2031,26 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
   } else {
     return rewriter.notifyMatchFailure(
         consumerOp, "consumer op's operand doesn't seem to be an OpResult");
+  }
+
+  SmallVector<OpOperand *> potentialOperands = {*maybeConsumerOpOperand};
+  SmallVector<unsigned> potentialOperandResultNos = {
+      consumerOpOperand->getOperandNumber()};
+  SmallVector<Operation *> potentialSliceOps = {candidateSliceOp};
+
+  // 1b. Get all the other operands of the consumer op and their corresponding
+  // slice ops. In the case of the consumer using multiple results
+  // from the producer, we need to update every operand.
+  for (OpOperand &otherOperand : consumerOp->getOpOperands()) {
+    if (&otherOperand == *maybeConsumerOpOperand)
+      continue;
+    auto maybePotentialSlice = getSliceOpFromConsumerOperand(otherOperand);
+    if (failed(maybePotentialSlice)) {
+      continue;
+    }
+    potentialSliceOps.push_back(*maybePotentialSlice);
+    potentialOperands.push_back(&otherOperand);
+    potentialOperandResultNos.push_back(otherOperand.getOperandNumber());
   }
 
   // There are two possible cases regarding `oldLoopOp` here:
@@ -2037,18 +2111,29 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
   // tensor.insert_slice. In the scf.for case this is a clone of the
   // candidateSliceOp whereas in the scf.forall case this is created from the
   // operands of tensor.parallel_insert_slice.
-  tensor::InsertSliceOp clonedInsertSliceOp;
+
+  SmallVector<tensor::InsertSliceOp> allClonedInsertSliceOps;
+
+  scf::ForallOp newForallOp;
   if (auto sliceOp =
           dyn_cast<tensor::ParallelInsertSliceOp>(candidateSliceOp)) {
     auto newForallOp = cast<scf::ForallOp>(innerMostLoop.getOperation());
     rewriter.setInsertionPoint(newForallOp.getTerminator());
-    clonedInsertSliceOp = rewriter.create<tensor::InsertSliceOp>(
-        loc, sliceOp.getSource(), sliceOp.getDest(), sliceOp.getMixedOffsets(),
-        sliceOp.getMixedSizes(), sliceOp.getMixedStrides());
   } else {
-    rewriter.setInsertionPoint(candidateSliceOp);
-    clonedInsertSliceOp =
-        cast<tensor::InsertSliceOp>(rewriter.clone(*candidateSliceOp));
+    rewriter.setInsertionPoint(potentialSliceOps.back());
+  }
+
+  for (auto *candidateSliceOp : potentialSliceOps) {
+    if (auto sliceOp =
+            dyn_cast<tensor::ParallelInsertSliceOp>(candidateSliceOp)) {
+      allClonedInsertSliceOps.push_back(rewriter.create<tensor::InsertSliceOp>(
+          loc, sliceOp.getSource(), sliceOp.getDest(),
+          sliceOp.getMixedOffsets(), sliceOp.getMixedSizes(),
+          sliceOp.getMixedStrides()));
+    } else {
+      allClonedInsertSliceOps.push_back(
+          cast<tensor::InsertSliceOp>(rewriter.clone(*candidateSliceOp)));
+    }
   }
 
   // 5.a. Clone consumer op.
@@ -2056,24 +2141,34 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
 
   // 5.b. Replace all uses of the loop result with the result of the cloned
   // tensor.insert_slice.
-  OpOperand &operandToReplace = clonedConsumerOp->getOpOperand(operandNumber);
-  rewriter.modifyOpInPlace(clonedConsumerOp, [&]() {
-    operandToReplace.set(clonedInsertSliceOp.getResult());
-  });
+  for (const auto &it : llvm::enumerate(allClonedInsertSliceOps)) {
+    OpOperand &operandToReplace =
+        clonedConsumerOp->getOpOperand(potentialOperandResultNos[it.index()]);
+    rewriter.modifyOpInPlace(clonedConsumerOp, [&]() {
+      operandToReplace.set(it.value().getResult());
+    });
+  }
 
   // 6. Perform tiling of the cloned consumer and replace the operand at
   // `operandNumber` with the source of the cloned tensor.insert_slice op.
-  auto ossSliceOp =
-      cast<OffsetSizeAndStrideOpInterface>(clonedInsertSliceOp.getOperation());
+  auto ossSliceOp = cast<OffsetSizeAndStrideOpInterface>(
+      allClonedInsertSliceOps.front().getOperation());
   FailureOr<TilingResult> tileAndFuseResult =
       tensor::replaceInsertSliceWithTiledConsumer(
           rewriter, ossSliceOp, clonedConsumerOp->getOpOperand(operandNumber));
+
   if (failed(tileAndFuseResult)) {
     return failure();
   }
+
   auto tiledConsumerOp = cast<TilingInterface>(tileAndFuseResult->tiledOps[0]);
-  rewriter.replaceAllUsesWith(tiledConsumerOp->getOperand(operandNumber),
-                              clonedInsertSliceOp.getSource());
+
+  // 6b. Update the tiled consumer op with the new operands.
+  for (const auto &it : llvm::enumerate(allClonedInsertSliceOps)) {
+    rewriter.replaceAllUsesWith(
+        tiledConsumerOp->getOperand(potentialOperandResultNos[it.index()]),
+        it.value().getSource());
+  }
 
   // 7. Reconstruct [nested] loop with new inits.
   YieldTiledValuesFn newYieldValuesFn =
