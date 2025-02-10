@@ -385,20 +385,33 @@ static bool isSupportedMemset(MemSetInst *I, AllocaInst *AI,
          match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
 }
 
-static Value *GEPToVectorIndex(GetElementPtrInst *GEP, Type *VecElemTy,
-                               const DataLayout &DL,
-                               AllocaInst *Alloca = nullptr) {
+static Value *calculateVectorIndex(
+    Value *Ptr, const std::map<GetElementPtrInst *, WeakTrackingVH> &GEPIdx) {
+  auto *GEP = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts());
+  if (!GEP)
+    return ConstantInt::getNullValue(Type::getInt32Ty(Ptr->getContext()));
+
+  auto I = GEPIdx.find(GEP);
+  assert(I != GEPIdx.end() && "Must have entry for GEP!");
+
+  if (Value *IndexValue = I->second)
+    return IndexValue;
+
+  llvm_unreachable(
+      "Index value is not present in Cached GEPs! This indicates a "
+      "bug in the pass that populates GEPIdx.");
+}
+
+static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
+                               Type *VecElemTy, const DataLayout &DL) {
   // TODO: Extracting a "multiple of X" from a GEP might be a useful generic
   // helper.
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
   SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(BW, 0);
-
-  bool CanCollect = GEP->collectOffset(DL, BW, VarOffsets, ConstOffset);
-
-  if (Alloca)
-    if (GEP->getPointerOperand()->stripPointerCasts() != Alloca || !CanCollect)
-      return nullptr;
+  if (GEP->getPointerOperand()->stripPointerCasts() != Alloca ||
+      !GEP->collectOffset(DL, BW, VarOffsets, ConstOffset))
+    return nullptr;
 
   unsigned VecElemSize = DL.getTypeAllocSize(VecElemTy);
   if (VarOffsets.size() > 1)
@@ -422,36 +435,6 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, Type *VecElemTy,
   return ConstantInt::get(GEP->getContext(), Quot);
 }
 
-// Function to check if a Value is an operand of a GetElementPtrInst.
-static bool isValueInGEP(GetElementPtrInst *GEP, Value *ValueToCheck) {
-  if (!GEP || !ValueToCheck)
-    return false;
-
-  for (unsigned i = 0; i < GEP->getNumOperands(); ++i)
-    if (GEP->getOperand(i) == ValueToCheck)
-      return true;
-
-  return false;
-}
-
-static Value *
-calculateVectorIndex(Value *Ptr, std::map<GetElementPtrInst *, Value *> &GEPIdx,
-                     Type *VecElemTy, const DataLayout &DL) {
-  auto *GEP = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts());
-  if (!GEP)
-    return ConstantInt::getNullValue(Type::getInt32Ty(Ptr->getContext()));
-
-  // Update the cached index if the value is changed.
-  if (!isValueInGEP(GEP, GEPIdx[GEP])) {
-    Value *Index = GEPToVectorIndex(GEP, VecElemTy, DL);
-    GEPIdx[GEP] = Index;
-  }
-
-  auto I = GEPIdx.find(GEP);
-  assert(I != GEPIdx.end() && "Must have entry for GEP!");
-  return I->second;
-}
-
 /// Promotes a single user of the alloca to a vector form.
 ///
 /// \param Inst           Instruction to be promoted.
@@ -471,7 +454,7 @@ static Value *promoteAllocaUserToVector(
     Instruction *Inst, const DataLayout &DL, FixedVectorType *VectorTy,
     unsigned VecStoreSize, unsigned ElementSize,
     DenseMap<MemTransferInst *, MemTransferInfo> &TransferInfo,
-    std::map<GetElementPtrInst *, Value *> &GEPVectorIdx, Value *CurVal,
+    std::map<GetElementPtrInst *, WeakTrackingVH> &GEPVectorIdx, Value *CurVal,
     SmallVectorImpl<LoadInst *> &DeferredLoads) {
   // Note: we use InstSimplifyFolder because it can leverage the DataLayout
   // to do more folding, especially in the case of vector splats.
@@ -518,7 +501,7 @@ static Value *promoteAllocaUserToVector(
     }
 
     Value *Index = calculateVectorIndex(
-        cast<LoadInst>(Inst)->getPointerOperand(), GEPVectorIdx, VecEltTy, DL);
+        cast<LoadInst>(Inst)->getPointerOperand(), GEPVectorIdx);
 
     // We're loading the full vector.
     Type *AccessTy = Inst->getType();
@@ -574,8 +557,7 @@ static Value *promoteAllocaUserToVector(
     // to know the current value. If this is a store of a single element, we
     // need to know the value.
     StoreInst *SI = cast<StoreInst>(Inst);
-    Value *Index = calculateVectorIndex(SI->getPointerOperand(), GEPVectorIdx,
-                                        VecEltTy, DL);
+    Value *Index = calculateVectorIndex(SI->getPointerOperand(), GEPVectorIdx);
     Value *Val = SI->getValueOperand();
 
     // We're storing the full vector, we can handle this without knowing CurVal.
@@ -780,7 +762,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
     return false;
   }
 
-  std::map<GetElementPtrInst *, Value *> GEPVectorIdx;
+  std::map<GetElementPtrInst *, WeakTrackingVH> GEPVectorIdx;
   SmallVector<Instruction *> WorkList;
   SmallVector<Instruction *> UsersToRemove;
   SmallVector<Instruction *> DeferredInsts;
@@ -838,7 +820,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
     if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
       // If we can't compute a vector index from this GEP, then we can't
       // promote this alloca to vector.
-      Value *Index = GEPToVectorIndex(GEP, VecEltTy, *DL, &Alloca);
+      Value *Index = GEPToVectorIndex(GEP, &Alloca, VecEltTy, *DL);
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
 
@@ -872,8 +854,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         if (Ptr != &Alloca && !GEPVectorIdx.count(GEP))
           return nullptr;
 
-        return dyn_cast<ConstantInt>(
-            calculateVectorIndex(Ptr, GEPVectorIdx, VecEltTy, *DL));
+        return dyn_cast<ConstantInt>(calculateVectorIndex(Ptr, GEPVectorIdx));
       };
 
       unsigned OpNum = U->getOperandNo();
