@@ -109,7 +109,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP-NEXT:    store i32 0, ptr [[FLAGS]], align 4
 // STRICTFP-NEXT:    [[TMP0:%.*]] = load target("spirv.Queue"), ptr [[DEFAULT_QUEUE]], align 4
 // STRICTFP-NEXT:    [[TMP1:%.*]] = load i32, ptr [[FLAGS]], align 4
-// STRICTFP-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP]], ptr align 4 [[NDRANGE]], i32 4, i1 false) #[[ATTR5:[0-9]+]]
+// STRICTFP-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP]], ptr align 4 [[NDRANGE]], i32 4, i1 false)
 // STRICTFP-NEXT:    [[BLOCK_SIZE:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK]], i32 0, i32 0
 // STRICTFP-NEXT:    store i32 24, ptr [[BLOCK_SIZE]], align 4
 // STRICTFP-NEXT:    [[BLOCK_ALIGN:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK]], i32 0, i32 1
@@ -126,7 +126,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[B_ADDR]], align 4
 // STRICTFP-NEXT:    store ptr addrspace(1) [[TMP4]], ptr [[BLOCK_CAPTURED2]], align 4
 // STRICTFP-NEXT:    [[TMP5:%.*]] = addrspacecast ptr [[BLOCK]] to ptr addrspace(4)
-// STRICTFP-NEXT:    [[TMP6:%.*]] = call spir_func i32 @__enqueue_kernel_basic(target("spirv.Queue") [[TMP0]], i32 [[TMP1]], ptr [[TMP]], ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) [[TMP5]]) #[[ATTR5]]
+// STRICTFP-NEXT:    [[TMP6:%.*]] = call spir_func i32 @__enqueue_kernel_basic(target("spirv.Queue") [[TMP0]], i32 [[TMP1]], ptr [[TMP]], ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) [[TMP5]])
 // STRICTFP-NEXT:    ret void
 //
 //
@@ -144,7 +144,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[BLOCK_CAPTURE_ADDR1]], align 4
 // STRICTFP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP0]], i32 [[TMP1]]
 // STRICTFP-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX]], align 4
-// STRICTFP-NEXT:    [[TMP3:%.*]] = call float @llvm.experimental.constrained.fmuladd.f32(float 4.000000e+00, float [[TMP2]], float 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR5]]
+// STRICTFP-NEXT:    [[TMP3:%.*]] = call float @llvm.experimental.constrained.fmuladd.f32(float 4.000000e+00, float [[TMP2]], float 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR5:[0-9]+]]
 // STRICTFP-NEXT:    [[BLOCK_CAPTURE_ADDR2:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr addrspace(4) [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 3
 // STRICTFP-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[BLOCK_CAPTURE_ADDR2]], align 4
 // STRICTFP-NEXT:    [[BLOCK_CAPTURE_ADDR3:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr addrspace(4) [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 4
@@ -158,7 +158,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP-LABEL: define {{[^@]+}}@__device_side_enqueue_block_invoke_kernel
 // STRICTFP-SAME: (ptr addrspace(4) [[TMP0:%.*]]) #[[ATTR4:[0-9]+]] {
 // STRICTFP-NEXT:  entry:
-// STRICTFP-NEXT:    call spir_func void @__device_side_enqueue_block_invoke(ptr addrspace(4) [[TMP0]]) #[[ATTR5]]
+// STRICTFP-NEXT:    call spir_func void @__device_side_enqueue_block_invoke(ptr addrspace(4) [[TMP0]])
 // STRICTFP-NEXT:    ret void
 //
 //.

@@ -1575,8 +1575,8 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
-// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[B_REAL]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[B_IMAG]]) #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[B_REAL]])
+// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[B_IMAG]])
 // X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP0]], double [[TMP1]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR3]]
 // X86WINPRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:
@@ -2658,8 +2658,8 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
 // X86WINPRMTD_STRICT-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
-// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[B_REAL]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[B_IMAG]]) #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[B_REAL]])
+// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[B_IMAG]])
 // X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP0]], double [[TMP1]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR3]]
 // X86WINPRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:
@@ -2713,8 +2713,8 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // PRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load x86_fp80, ptr [[B_REALP]], align 16
 // PRMTD_STRICT-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[B]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    [[B_IMAG:%.*]] = load x86_fp80, ptr [[B_IMAGP]], align 16
-// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[B_REAL]]) #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[B_IMAG]]) #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[B_REAL]])
+// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[B_IMAG]])
 // PRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR4]]
 // PRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // PRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:
@@ -3961,8 +3961,8 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // X86WINPRMTD_STRICT-NEXT:    [[C_IMAG:%.*]] = load float, ptr [[C_IMAGP]], align 4
 // X86WINPRMTD_STRICT-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[C_REAL]], metadata !"fpexcept.strict") #[[ATTR3]]
 // X86WINPRMTD_STRICT-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[C_IMAG]], metadata !"fpexcept.strict") #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[CONV]]) #[[ATTR3]]
-// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[CONV1]]) #[[ATTR3]]
+// X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[CONV]])
+// X86WINPRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[CONV1]])
 // X86WINPRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP0]], double [[TMP1]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR3]]
 // X86WINPRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // X86WINPRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:
@@ -4038,8 +4038,8 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // PRMTD_STRICT-NEXT:    [[C_IMAG:%.*]] = load float, ptr [[C_IMAGP]], align 4
 // PRMTD_STRICT-NEXT:    [[CONV:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f32(float [[C_REAL]], metadata !"fpexcept.strict") #[[ATTR4]]
 // PRMTD_STRICT-NEXT:    [[CONV1:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f32(float [[C_IMAG]], metadata !"fpexcept.strict") #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[CONV]]) #[[ATTR4]]
-// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[CONV1]]) #[[ATTR4]]
+// PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[CONV]])
+// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[CONV1]])
 // PRMTD_STRICT-NEXT:    [[ABS_CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]], metadata !"ugt", metadata !"fpexcept.strict") #[[ATTR4]]
 // PRMTD_STRICT-NEXT:    br i1 [[ABS_CMP]], label [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI:%.*]], label [[ABS_RHSR_LESS_THAN_ABS_RHSI:%.*]]
 // PRMTD_STRICT:       abs_rhsr_greater_or_equal_abs_rhsi:

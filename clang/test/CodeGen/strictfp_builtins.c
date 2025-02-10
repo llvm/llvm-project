@@ -60,7 +60,7 @@ void test_fpclassify(double d) {
 // CHECK-NEXT:    [[H_ADDR:%.*]] = alloca half, align 2
 // CHECK-NEXT:    store half [[H:%.*]], ptr [[H_ADDR]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[H_ADDR]], align 2
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[TMP0]], i32 516) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[TMP0]], i32 516)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.2, i32 noundef [[TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -76,7 +76,7 @@ void test_fp16_isinf(_Float16 h) {
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store float [[F:%.*]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[TMP0]], i32 516) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[TMP0]], i32 516)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.3, i32 noundef [[TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -92,7 +92,7 @@ void test_float_isinf(float f) {
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP0]], i32 516) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP0]], i32 516)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.4, i32 noundef [[TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -108,7 +108,7 @@ void test_double_isinf(double d) {
 // CHECK-NEXT:    [[H_ADDR:%.*]] = alloca half, align 2
 // CHECK-NEXT:    store half [[H:%.*]], ptr [[H_ADDR]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[H_ADDR]], align 2
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[TMP0]], i32 504) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[TMP0]], i32 504)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.5, i32 noundef [[TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -124,7 +124,7 @@ void test_fp16_isfinite(_Float16 h) {
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store float [[F:%.*]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[TMP0]], i32 504) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[TMP0]], i32 504)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.6, i32 noundef [[TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -140,7 +140,7 @@ void test_float_isfinite(float f) {
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP0]], i32 504) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP0]], i32 504)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.7, i32 noundef [[TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -176,7 +176,7 @@ void test_isinf_sign(double d) {
 // CHECK-NEXT:    [[H_ADDR:%.*]] = alloca half, align 2
 // CHECK-NEXT:    store half [[H:%.*]], ptr [[H_ADDR]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[H_ADDR]], align 2
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[TMP0]], i32 3) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[TMP0]], i32 3)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.9, i32 noundef [[TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -192,7 +192,7 @@ void test_fp16_isnan(_Float16 h) {
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store float [[F:%.*]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[TMP0]], i32 3) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[TMP0]], i32 3)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.10, i32 noundef [[TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -208,7 +208,7 @@ void test_float_isnan(float f) {
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP0]], i32 3) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP0]], i32 3)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.11, i32 noundef [[TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
@@ -224,7 +224,7 @@ void test_double_isnan(double d) {
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP0]], i32 264) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP0]], i32 264)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.12, i32 noundef [[TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
