@@ -111,7 +111,6 @@ class RegisterCommandsTestCase(TestBase):
     # "register read fstat" always return 0xffff
     @expectedFailureAndroid(archs=["i386"])
     @skipIf(archs=no_match(["amd64", "i386", "x86_64"]))
-    @skipIfOutOfTreeDebugserver
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test_fp_special_purpose_register_read(self):
         """Test commands that read fpu special purpose registers."""

@@ -94,7 +94,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeModuloScheduleTestPass(Registry);
   initializeMachinePostDominatorTreeWrapperPassPass(Registry);
   initializeMachineRegionInfoPassPass(Registry);
-  initializeMachineSchedulerLegacyPass(Registry);
+  initializeMachineSchedulerPass(Registry);
   initializeMachineSinkingPass(Registry);
   initializeMachineUniformityAnalysisPassPass(Registry);
   initializeMachineUniformityInfoPrinterPassPass(Registry);
@@ -105,7 +105,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializePHIEliminationPass(Registry);
   initializePatchableFunctionPass(Registry);
   initializePeepholeOptimizerLegacyPass(Registry);
-  initializePostMachineSchedulerLegacyPass(Registry);
+  initializePostMachineSchedulerPass(Registry);
   initializePostRAHazardRecognizerPass(Registry);
   initializePostRAMachineSinkingPass(Registry);
   initializePostRASchedulerLegacyPass(Registry);
@@ -130,7 +130,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeStackFrameLayoutAnalysisPassPass(Registry);
   initializeStackMapLivenessPass(Registry);
   initializeStackProtectorPass(Registry);
-  initializeStackSlotColoringPass(Registry);
+  initializeStackSlotColoringLegacyPass(Registry);
   initializeStaticDataSplitterPass(Registry);
   initializeStripDebugMachineModulePass(Registry);
   initializeTailDuplicateLegacyPass(Registry);

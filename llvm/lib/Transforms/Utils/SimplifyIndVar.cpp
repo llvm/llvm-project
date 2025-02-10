@@ -1614,7 +1614,8 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
   //      (A) == icmp slt i32 sext(%narrow), sext(%val)
   //          == icmp slt i32 zext(%narrow), sext(%val)
   bool IsSigned = getExtendKind(DU.NarrowDef) == ExtendKind::Sign;
-  if (!(DU.NeverNegative || IsSigned == Cmp->isSigned()))
+  bool CmpPreferredSign = Cmp->hasSameSign() ? IsSigned : Cmp->isSigned();
+  if (!DU.NeverNegative && IsSigned != CmpPreferredSign)
     return false;
 
   Value *Op = Cmp->getOperand(Cmp->getOperand(0) == DU.NarrowDef ? 1 : 0);
@@ -1627,7 +1628,7 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
 
   // Widen the other operand of the compare, if necessary.
   if (CastWidth < IVWidth) {
-    Value *ExtOp = createExtendInst(Op, WideType, Cmp->isSigned(), Cmp);
+    Value *ExtOp = createExtendInst(Op, WideType, CmpPreferredSign, Cmp);
     DU.NarrowUse->replaceUsesOfWith(Op, ExtOp);
   }
   return true;

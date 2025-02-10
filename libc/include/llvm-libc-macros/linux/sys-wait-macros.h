@@ -9,36 +9,19 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H
 
-// Wait flags
-#define WNOHANG 1    // Do not block
-#define WUNTRACED 2  // Report is a child has stopped even if untraced
-#define WEXITED 4    // Report dead child
-#define WCONTINUED 8 // Report if a stopped child has been resumed by SIGCONT
-#define WSTOPPED WUNTRACED
+#include <linux/wait.h>
 
-// Wait status info macros
-#define __WEXITSTATUS(status) (((status)&0xff00) >> 8)
-#define __WTERMSIG(status) ((status)&0x7f)
-#define __WIFEXITED(status) (__WTERMSIG(status) == 0)
+#define WCOREDUMP(status) ((status) & WCOREFLAG)
+#define WEXITSTATUS(status) (((status) & 0xff00) >> 8)
+#define WIFCONTINUED(status) ((status) == 0xffff)
+#define WIFEXITED(status) (WTERMSIG(status) == 0)
+#define WIFSIGNALED(status) ((WTERMSIG(status) + 1) >= 2)
+#define WIFSTOPPED(status) (WTERMSIG(status) == 0x7f)
+#define WSTOPSIG(status) WEXITSTATUS(status)
+#define WTERMSIG(status) ((status) & 0x7f)
 
-// Macros for constructing status values.
-#define __W_EXITCODE(ret, sig) ((ret) << 8 | (sig))
-#define __W_STOPCODE(sig) ((sig) << 8 | 0x7f)
-#define __W_CONTINUED 0xffff
-#define __WCOREFLAG 0x80
-
-#define WEXITSTATUS(status) __WEXITSTATUS(status)
-#define WTERMSIG(status) __WTERMSIG(status)
-#define WIFEXITED(status) __WIFEXITED(status)
-
-#define WCOREFLAG __WCOREFLAG
-#define W_EXITCODE(ret, sig) __W_EXITCODE(ret, sig)
-#define W_STOPCODE(sig) __W_STOPCODE(sig)
-
-// First argument to waitid:
-#define P_ALL 0
-#define P_PID 1
-#define P_PGID 2
-#define P_PIDFD 3
+#define WCOREFLAG 0x80
+#define W_EXITCODE(ret, sig) ((ret) << 8 | (sig))
+#define W_STOPCODE(sig) ((sig) << 8 | 0x7f)
 
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H

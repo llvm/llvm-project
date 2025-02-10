@@ -5037,6 +5037,7 @@ cc_library(
         ":TransformPDLExtension",
         ":UBToLLVM",
         ":VCIXToLLVMIRTranslation",
+        ":VectorToLLVM",
         ":VectorTransformOps",
     ],
 )
@@ -5097,6 +5098,7 @@ cc_library(
         ":BufferizationInterfaces",
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
+        ":ConvertToLLVMInterface",
         ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":IR",
@@ -5222,6 +5224,7 @@ cc_library(
         ":Support",
         ":TensorDialect",
         ":TransformUtils",
+        ":UBDialect",
         ":VectorDialect",
         ":VectorEnumsIncGen",
         ":VectorInterfaces",
@@ -6201,6 +6204,7 @@ cc_library(
         ":Support",
         ":TransformUtils",
         ":UBDialect",
+        ":UBToSPIRV",
         ":VectorDialect",
         "//llvm:Support",
     ],
@@ -7755,6 +7759,7 @@ td_library(
     name = "TensorOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/Tensor/IR/TensorBase.td",
+        "include/mlir/Dialect/Tensor/IR/TensorInterfaces.td",
         "include/mlir/Dialect/Tensor/IR/TensorOps.td",
     ],
     includes = ["include"],
@@ -7804,6 +7809,23 @@ gentbl_cc_library(
     deps = [":TensorOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "TensorInterfacesIncGen",
+    tbl_outs = [
+        (
+            ["--gen-op-interface-decls"],
+            "include/mlir/Dialect/Tensor/IR/TensorInterfaces.h.inc",
+        ),
+        (
+            ["--gen-op-interface-defs"],
+            "include/mlir/Dialect/Tensor/IR/TensorInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Tensor/IR/TensorInterfaces.td",
+    deps = [":TensorOpsTdFiles"],
+)
+
 cc_library(
     name = "TensorDialect",
     srcs = [
@@ -7839,6 +7861,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":SubsetOpInterface",
         ":Support",
+        ":TensorInterfacesIncGen",
         ":TensorOpsIncGen",
         ":TilingInterface",
         ":TransformDialectInterfaces",
@@ -12012,6 +12035,7 @@ cc_library(
         ":ArmSVEDialect",
         ":ArmSVETransforms",
         ":ConversionPassIncGen",
+        ":ConvertToLLVMInterface",
         ":FuncDialect",
         ":IR",
         ":LLVMCommonConversion",

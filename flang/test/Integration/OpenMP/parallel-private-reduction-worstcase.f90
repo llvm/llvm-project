@@ -32,12 +32,35 @@ end subroutine
 ! CHECK-LABEL: define internal void @worst_case_..omp_par
 ! CHECK-NEXT:  omp.par.entry:
 !                [reduction alloc regions inlined here]
-! CHECK:         br label %omp.private.init
+! CHECK:         br label %omp.region.after_alloca
 
-! CHECK:       omp.private.init:                            ; preds = %omp.par.entry
-! CHECK-NEXT:  br label %omp.private.init7
+! CHECK:       omp.region.after_alloca:
+! CHECK-NEXT:    br label %omp.par.region
 
-! CHECK:       omp.private.init7:                               ; preds = %omp.private.init
+! CHECK:       omp.par.region:
+! CHECK-NEXT:    br label %omp.private.init
+
+! CHECK:       omp.private.init:
+! CHECK-NEXT:  br label %omp.private.init2
+
+! CHECK:       omp.private.init2:
+!                [begin private alloc for first var]
+!                [read the length from the mold argument]
+!                [if it is non-zero...]
+! CHECK:         br i1 %{{.*}}, label %omp.private.init3, label %omp.private.init4
+
+! CHECK:       omp.private.init4:                               ; preds = %omp.private.init2
+!                [finish private alloc for second var with zero extent]
+! CHECK:         br label %omp.private.init5
+
+! CHECK:       omp.private.init5:                               ; preds = %omp.private.init3, %omp.private.init4
+! CHECK-NEXT:    br label %omp.region.cont
+
+! CHECK:       omp.region.cont:                                  ; preds = %omp.private.init5
+! CHECK-NEXT:    %{{.*}} = phi ptr
+! CHECK-NEXT:    br label %omp.private.init7
+
+! CHECK:       omp.private.init7:
 !                [begin private alloc for first var]
 !                [read the length from the mold argument]
 !                [if it is non-zero...]
@@ -52,26 +75,9 @@ end subroutine
 
 ! CHECK:       omp.region.cont6:                                 ; preds = %omp.private.init10
 ! CHECK-NEXT:    %{{.*}} = phi ptr
-! CHECK-NEXT:    br label %omp.private.init1
-
-! CHECK:       omp.private.init1:                                ; preds = %omp.region.cont6
-!                [begin private alloc for first var]
-!                [read the length from the mold argument]
-!                [if it is non-zero...]
-! CHECK:         br i1 %{{.*}}, label %omp.private.init2, label %omp.private.init3
-
-! CHECK:       omp.private.init3:                               ; preds = %omp.private.init1
-!                [finish private alloc for second var with zero extent]
-! CHECK:         br label %omp.private.init4
-
-! CHECK:       omp.private.init4:                               ; preds = %omp.private.init2, %omp.private.init3
-! CHECK-NEXT:    br label %omp.region.cont
-
-! CHECK:       omp.region.cont:                                  ; preds = %omp.private.init4
-! CHECK-NEXT:    %{{.*}} = phi ptr
 ! CHECK-NEXT:    br label %omp.private.copy
 
-! CHECK:       omp.private.copy:                                 ; preds = %omp.region.cont
+! CHECK:       omp.private.copy:
 ! CHECK-NEXT:    br label %omp.private.copy12
 
 ! CHECK:       omp.private.copy12:                               ; preds = %omp.private.copy
@@ -96,15 +102,9 @@ end subroutine
 
 ! CHECK:       omp.region.cont15:                                ; preds = %omp.private.copy18
 ! CHECK-NEXT:    %{{.*}} = phi ptr
-! CHECK-NEXT:    br label %omp.region.after_alloca
-
-! CHECK:       omp.region.after_alloca:
-! CHECK-NEXT:    br label %omp.par.region
-
-! CHECK:       omp.par.region:                                   ; preds = %omp.region.after_alloca
 ! CHECK-NEXT:    br label %omp.reduction.init
 
-! CHECK:       omp.reduction.init:                               ; preds = %omp.par.region
+! CHECK:       omp.reduction.init:                               ; preds = %omp.region.cont15
 !                [deffered stores for results of reduction alloc regions]
 ! CHECK:         br label %[[VAL_96:.*]]
 
@@ -211,13 +211,13 @@ end subroutine
 !                [source length was non-zero: call assign runtime]
 ! CHECK:         br label %omp.private.copy14
 
-! CHECK:       omp.private.init2:                               ; preds = %omp.private.init1
-!                [var extent was non-zero: malloc a private array]
-! CHECK:         br label %omp.private.init4
-
 ! CHECK:       omp.private.init8:                               ; preds = %omp.private.init7
 !                [var extent was non-zero: malloc a private array]
 ! CHECK:         br label %omp.private.init10
+
+! CHECK:       omp.private.init3:                               ; preds = %omp.private.init2
+!                [var extent was non-zero: malloc a private array]
+! CHECK:         br label %omp.private.init5
 
 ! CHECK:       omp.par.outlined.exit.exitStub:                   ; preds = %omp.region.cont52
 ! CHECK-NEXT:    ret void

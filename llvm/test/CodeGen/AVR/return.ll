@@ -187,26 +187,26 @@ define i64 @return64_imm() {
 ; TINY-NEXT:    st Z+, r21
 ; TINY-NEXT:    subi r30, 8
 ; TINY-NEXT:    sbci r31, 0
-; TINY-NEXT:    ldi r24, 25
-; TINY-NEXT:    ldi r25, 22
+; TINY-NEXT:    ldi r20, 25
+; TINY-NEXT:    ldi r21, 22
 ; TINY-NEXT:    subi r30, 252
 ; TINY-NEXT:    sbci r31, 255
-; TINY-NEXT:    st Z+, r24
-; TINY-NEXT:    st Z+, r25
+; TINY-NEXT:    st Z+, r20
+; TINY-NEXT:    st Z+, r21
 ; TINY-NEXT:    subi r30, 6
 ; TINY-NEXT:    sbci r31, 0
-; TINY-NEXT:    ldi r24, 104
-; TINY-NEXT:    ldi r25, 37
+; TINY-NEXT:    ldi r20, 104
+; TINY-NEXT:    ldi r21, 37
 ; TINY-NEXT:    subi r30, 254
 ; TINY-NEXT:    sbci r31, 255
-; TINY-NEXT:    st Z+, r24
-; TINY-NEXT:    st Z+, r25
+; TINY-NEXT:    st Z+, r20
+; TINY-NEXT:    st Z+, r21
 ; TINY-NEXT:    subi r30, 4
 ; TINY-NEXT:    sbci r31, 0
-; TINY-NEXT:    ldi r24, 204
-; TINY-NEXT:    ldi r25, 204
-; TINY-NEXT:    st Z+, r24
-; TINY-NEXT:    st Z+, r25
+; TINY-NEXT:    ldi r20, 204
+; TINY-NEXT:    ldi r21, 204
+; TINY-NEXT:    st Z+, r20
+; TINY-NEXT:    st Z+, r21
 ; TINY-NEXT:    ret
     ret i64 13757395258967641292
 }
@@ -243,8 +243,8 @@ define i64 @return64_arg(i64 %x) {
 ; TINY-NEXT:    in r16, 63
 ; TINY-NEXT:    subi r28, 247
 ; TINY-NEXT:    sbci r29, 255
-; TINY-NEXT:    ld r24, Y+
-; TINY-NEXT:    ld r25, Y+
+; TINY-NEXT:    ld r20, Y+
+; TINY-NEXT:    ld r21, Y+
 ; TINY-NEXT:    subi r28, 2
 ; TINY-NEXT:    sbci r29, 0
 ; TINY-NEXT:    subi r28, 9
@@ -252,15 +252,15 @@ define i64 @return64_arg(i64 %x) {
 ; TINY-NEXT:    out 63, r16
 ; TINY-NEXT:    subi r30, 252
 ; TINY-NEXT:    sbci r31, 255
-; TINY-NEXT:    st Z+, r24
-; TINY-NEXT:    st Z+, r25
+; TINY-NEXT:    st Z+, r20
+; TINY-NEXT:    st Z+, r21
 ; TINY-NEXT:    subi r30, 6
 ; TINY-NEXT:    sbci r31, 0
 ; TINY-NEXT:    in r16, 63
 ; TINY-NEXT:    subi r28, 249
 ; TINY-NEXT:    sbci r29, 255
-; TINY-NEXT:    ld r24, Y+
-; TINY-NEXT:    ld r25, Y+
+; TINY-NEXT:    ld r20, Y+
+; TINY-NEXT:    ld r21, Y+
 ; TINY-NEXT:    subi r28, 2
 ; TINY-NEXT:    sbci r29, 0
 ; TINY-NEXT:    subi r28, 7
@@ -268,22 +268,22 @@ define i64 @return64_arg(i64 %x) {
 ; TINY-NEXT:    out 63, r16
 ; TINY-NEXT:    subi r30, 254
 ; TINY-NEXT:    sbci r31, 255
-; TINY-NEXT:    st Z+, r24
-; TINY-NEXT:    st Z+, r25
+; TINY-NEXT:    st Z+, r20
+; TINY-NEXT:    st Z+, r21
 ; TINY-NEXT:    subi r30, 4
 ; TINY-NEXT:    sbci r31, 0
 ; TINY-NEXT:    in r16, 63
 ; TINY-NEXT:    subi r28, 251
 ; TINY-NEXT:    sbci r29, 255
-; TINY-NEXT:    ld r24, Y+
-; TINY-NEXT:    ld r25, Y+
+; TINY-NEXT:    ld r20, Y+
+; TINY-NEXT:    ld r21, Y+
 ; TINY-NEXT:    subi r28, 2
 ; TINY-NEXT:    sbci r29, 0
 ; TINY-NEXT:    subi r28, 5
 ; TINY-NEXT:    sbci r29, 0
 ; TINY-NEXT:    out 63, r16
-; TINY-NEXT:    st Z+, r24
-; TINY-NEXT:    st Z+, r25
+; TINY-NEXT:    st Z+, r20
+; TINY-NEXT:    st Z+, r21
 ; TINY-NEXT:    pop r29
 ; TINY-NEXT:    pop r28
 ; TINY-NEXT:    ret
@@ -336,8 +336,8 @@ define i64 @return64_arg2(i64 %x, i64 %y, i64 %z) {
 ; TINY-NEXT:    in r16, 63
 ; TINY-NEXT:    subi r28, 231
 ; TINY-NEXT:    sbci r29, 255
-; TINY-NEXT:    ld r24, Y+
-; TINY-NEXT:    ld r25, Y+
+; TINY-NEXT:    ld r20, Y+
+; TINY-NEXT:    ld r21, Y+
 ; TINY-NEXT:    subi r28, 2
 ; TINY-NEXT:    sbci r29, 0
 ; TINY-NEXT:    subi r28, 25
@@ -345,15 +345,15 @@ define i64 @return64_arg2(i64 %x, i64 %y, i64 %z) {
 ; TINY-NEXT:    out 63, r16
 ; TINY-NEXT:    subi r30, 252
 ; TINY-NEXT:    sbci r31, 255
-; TINY-NEXT:    st Z+, r24
-; TINY-NEXT:    st Z+, r25
+; TINY-NEXT:    st Z+, r20
+; TINY-NEXT:    st Z+, r21
 ; TINY-NEXT:    subi r30, 6
 ; TINY-NEXT:    sbci r31, 0
 ; TINY-NEXT:    in r16, 63
 ; TINY-NEXT:    subi r28, 233
 ; TINY-NEXT:    sbci r29, 255
-; TINY-NEXT:    ld r24, Y+
-; TINY-NEXT:    ld r25, Y+
+; TINY-NEXT:    ld r20, Y+
+; TINY-NEXT:    ld r21, Y+
 ; TINY-NEXT:    subi r28, 2
 ; TINY-NEXT:    sbci r29, 0
 ; TINY-NEXT:    subi r28, 23
@@ -361,22 +361,22 @@ define i64 @return64_arg2(i64 %x, i64 %y, i64 %z) {
 ; TINY-NEXT:    out 63, r16
 ; TINY-NEXT:    subi r30, 254
 ; TINY-NEXT:    sbci r31, 255
-; TINY-NEXT:    st Z+, r24
-; TINY-NEXT:    st Z+, r25
+; TINY-NEXT:    st Z+, r20
+; TINY-NEXT:    st Z+, r21
 ; TINY-NEXT:    subi r30, 4
 ; TINY-NEXT:    sbci r31, 0
 ; TINY-NEXT:    in r16, 63
 ; TINY-NEXT:    subi r28, 235
 ; TINY-NEXT:    sbci r29, 255
-; TINY-NEXT:    ld r24, Y+
-; TINY-NEXT:    ld r25, Y+
+; TINY-NEXT:    ld r20, Y+
+; TINY-NEXT:    ld r21, Y+
 ; TINY-NEXT:    subi r28, 2
 ; TINY-NEXT:    sbci r29, 0
 ; TINY-NEXT:    subi r28, 21
 ; TINY-NEXT:    sbci r29, 0
 ; TINY-NEXT:    out 63, r16
-; TINY-NEXT:    st Z+, r24
-; TINY-NEXT:    st Z+, r25
+; TINY-NEXT:    st Z+, r20
+; TINY-NEXT:    st Z+, r21
 ; TINY-NEXT:    pop r29
 ; TINY-NEXT:    pop r28
 ; TINY-NEXT:    ret
