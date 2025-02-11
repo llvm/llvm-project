@@ -1,11 +1,4 @@
-
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s  \
-// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
-
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN: spirv-unknown-vulkan-compute %s \
-// RUN: -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -ast-dump | FileCheck %s
 
 // CHECK-LABEL: and
 void and() {}
