@@ -2415,14 +2415,16 @@ multiclass INT_PTX_ATOM_CAS_AS<string atomic_cmp_swap_without_as, string type, s
                        !cast<PatFrag>(atomic_cmp_swap_without_as#_shared), !cast<Operand>("i"#type#"imm"), preds>;
 }
 
-// eg. with type = 32, order = .acquire, atomic_cmp_swap_pat = atomic_cmp_swap_i32_acquire, and _GEN becomes
-// F_ATOMIC_3<i32, Int32Regs, ".acquire", ".b32", ".cas", atomic_cmp_swap_i32_acquire, i32imm>
+// eg. with type = 32, order = .acquire, addrspace = ".global",
+// atomic_cmp_swap_pat = atomic_cmp_swap_i32_acquire_global.
+// F_ATOMIC_3<i32, Int32Regs, ".acquire", ".global", ".b32",
+//            ".cas", atomic_cmp_swap_i32_acquire_global, i32imm>
 multiclass INT_PTX_ATOM_CAS<string atomic_cmp_swap_pat, string type,
-                           string order, string as, list<Predicate> preds>
+                           string order, string addrspace, list<Predicate> preds>
     : F_ATOMIC_3<!cast<ValueType>("i"#type),
                  !cast<NVPTXRegClass>("Int"#type#"Regs"),
                  order,
-                 as,
+                 addrspace,
                  ".b"#type,
                  ".cas",
                  !cast<PatFrag>(atomic_cmp_swap_pat),
@@ -2431,20 +2433,20 @@ multiclass INT_PTX_ATOM_CAS<string atomic_cmp_swap_pat, string type,
 
 // Define atom.cas for all combinations of size x memory order supported in PTX *and* on the hardware.
 foreach size = ["32", "64"] in {
-  foreach as = ["generic", "global", "shared"] in {
-    defvar cas_as_string = !if(!eq(as, "generic"), "", "."#as);
+  foreach addrspace = ["generic", "global", "shared"] in {
+    defvar cas_addrspace_string = !if(!eq(addrspace, "generic"), "", "."#addrspace);
     foreach order = ["acquire", "release", "acq_rel", "monotonic"] in {
-      defvar order_as_string = !if(!eq(order, "monotonic"), ".relaxed", "."#order);
+      defvar cas_order_string = !if(!eq(order, "monotonic"), ".relaxed", "."#order);
       // Note that AtomicExpand will convert cmpxchg seq_cst to a cmpxchg monotonic with fences around it.
       // Memory orders are only supported for SM70+, PTX63+- so we have two sets of instruction definitions-
       // for SM70+, and "old" ones which lower to "atom.cas", for earlier archs.
-      defm INT_PTX_ATOM_CAS_#size#_#order#as
-        : INT_PTX_ATOM_CAS<"atomic_cmp_swap_i"#size#_#order#_#as, size,
-                           order_as_string, cas_as_string,
+      defm INT_PTX_ATOM_CAS_#size#_#order#addrspace
+        : INT_PTX_ATOM_CAS<"atomic_cmp_swap_i"#size#_#order#_#addrspace, size,
+                           cas_order_string, cas_addrspace_string,
                            [hasSM<70>, hasPTX<63>]>;
-      defm INT_PTX_ATOM_CAS_#size#_#order#_old#as
-        : INT_PTX_ATOM_CAS<"atomic_cmp_swap_i"#size#_#order#_#as, size,
-                           "", cas_as_string, []>;
+      defm INT_PTX_ATOM_CAS_#size#_#order#_old#addrspace
+        : INT_PTX_ATOM_CAS<"atomic_cmp_swap_i"#size#_#order#_#addrspace, size,
+                           "", cas_addrspace_string, []>;
     }
   }
 }
