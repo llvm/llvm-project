@@ -31,9 +31,7 @@
 #define M_SQRT2_F       0x1.6a09e6p+0f
 #define M_SQRT1_2_F     0x1.6a09e6p-1f
 
-#ifdef __CLC_INTERNAL
-#define M_LOG210_F      0x1.a934f0p+1f
-#endif
+#define M_LOG210_F 0x1.a934f0p+1f
 
 #ifdef cl_khr_fp64
 
