@@ -185,6 +185,7 @@ max_vgprs:
 // ASM-NEXT: .amdhsa_fp16_overflow 1
 // ASM-NEXT: .amdhsa_memory_ordered 1
 // ASM-NEXT: .amdhsa_forward_progress 1
+// ASM-NEXT: .amdhsa_inst_pref_size 0
 // ASM-NEXT: .amdhsa_round_robin_scheduling 1
 // ASM-NEXT: .amdhsa_exception_fp_ieee_invalid_op 1
 // ASM-NEXT: .amdhsa_exception_fp_denorm_src 1
