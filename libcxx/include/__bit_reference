@@ -14,6 +14,7 @@
 #include <__algorithm/copy_backward.h>
 #include <__algorithm/copy_n.h>
 #include <__algorithm/min.h>
+#include <__assert>
 #include <__bit/countr.h>
 #include <__compare/ordering.h>
 #include <__config>
@@ -24,10 +25,13 @@
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_unsigned.h>
 #include <__type_traits/void_t.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
+#include <climits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -57,6 +61,26 @@ struct __size_difference_type_traits<_Cp, __void_t<typename _Cp::difference_type
   using difference_type = typename _Cp::difference_type;
   using size_type       = typename _Cp::size_type;
 };
+
+// This function is designed to operate correctly even for smaller integral types like `uint8_t`, `uint16_t`,
+// or `unsigned short`. Casting back to _StorageType is crucial to prevent undefined behavior that can arise
+// from integral promotions.
+// See https://github.com/llvm/llvm-project/pull/122410.
+template <class _StoragePointer>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__fill_masked_range(_StoragePointer __word, unsigned __clz, unsigned __ctz, bool __fill_val) {
+  static_assert(is_unsigned<typename pointer_traits<_StoragePointer>::element_type>::value,
+                "__fill_masked_range must be called with unsigned type");
+  using _StorageType = typename pointer_traits<_StoragePointer>::element_type;
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+      __ctz + __clz < sizeof(_StorageType) * CHAR_BIT, "__fill_masked_range called with invalid range");
+  _StorageType __m = static_cast<_StorageType>(static_cast<_StorageType>(~static_cast<_StorageType>(0)) >> __clz) &
+                     static_cast<_StorageType>(static_cast<_StorageType>(~static_cast<_StorageType>(0)) << __ctz);
+  if (__fill_val)
+    *__word |= __m;
+  else
+    *__word &= static_cast<_StorageType>(~__m);
+}
 
 template <class _Cp, bool = __has_storage_type<_Cp>::value>
 class __bit_reference {

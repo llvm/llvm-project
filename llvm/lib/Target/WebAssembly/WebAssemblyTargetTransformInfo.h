@@ -78,7 +78,12 @@ public:
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index, Value *Op0, Value *Op1);
-
+  InstructionCost
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
+                          TTI::PartialReductionExtendKind OpAExtend,
+                          TTI::PartialReductionExtendKind OpBExtend,
+                          std::optional<unsigned> BinOp = std::nullopt) const;
   TTI::ReductionShuffle
   getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const;
 

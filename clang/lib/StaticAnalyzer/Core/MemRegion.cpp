@@ -891,9 +891,8 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
 
     return Size;
   }
-    // FIXME: The following are being used in 'SimpleSValBuilder' and in
-    // 'ArrayBoundChecker::checkLocation' because there is no symbol to
-    // represent the regions more appropriately.
+    // FIXME: The following are being used in 'SimpleSValBuilder' because there
+    // is no symbol to represent the regions more appropriately.
   case MemRegion::BlockDataRegionKind:
   case MemRegion::BlockCodeRegionKind:
   case MemRegion::FunctionCodeRegionKind:

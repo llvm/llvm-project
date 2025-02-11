@@ -16,12 +16,12 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 
-#include "flang/Common/MathOptionsBase.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Support/MathOptionsBase.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
@@ -57,7 +57,13 @@ public:
   explicit FirOpBuilder(mlir::Operation *op, fir::KindMapping kindMap,
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder{op, /*listener=*/this}, kindMap{std::move(kindMap)},
-        symbolTable{symbolTable} {}
+        symbolTable{symbolTable} {
+    auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
+    if (fmi) {
+      // Set the builder with FastMathFlags attached to the operation.
+      setFastMathFlags(fmi.getFastMathFlagsAttr().getValue());
+    }
+  }
   explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap,
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)},

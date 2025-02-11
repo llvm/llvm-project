@@ -379,15 +379,14 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
   APSInt Value = OpAP<APSInt>()(LHS.toAPSInt(Bits), RHS.toAPSInt(Bits));
 
   // Report undefined behaviour, stopping if required.
-  const Expr *E = S.Current->getExpr(OpPC);
-  QualType Type = E->getType();
   if (S.checkingForUndefinedBehavior()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    QualType Type = E->getType();
     SmallString<32> Trunc;
     Value.trunc(Result.bitWidth())
         .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
                   /*UpperCase=*/true, /*InsertSeparators=*/true);
-    auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow)
+    S.report(E->getExprLoc(), diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
   }
 
@@ -737,16 +736,14 @@ bool Neg(InterpState &S, CodePtr OpPC) {
   S.Stk.push<T>(Result);
 
   APSInt NegatedValue = -Value.toAPSInt(Value.bitWidth() + 1);
-  const Expr *E = S.Current->getExpr(OpPC);
-  QualType Type = E->getType();
-
   if (S.checkingForUndefinedBehavior()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    QualType Type = E->getType();
     SmallString<32> Trunc;
     NegatedValue.trunc(Result.bitWidth())
         .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
                   /*UpperCase=*/true, /*InsertSeparators=*/true);
-    auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow)
+    S.report(E->getExprLoc(), diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
     return true;
   }
@@ -800,15 +797,14 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     APResult = --Value.toAPSInt(Bits);
 
   // Report undefined behaviour, stopping if required.
-  const Expr *E = S.Current->getExpr(OpPC);
-  QualType Type = E->getType();
   if (S.checkingForUndefinedBehavior()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    QualType Type = E->getType();
     SmallString<32> Trunc;
     APResult.trunc(Result.bitWidth())
         .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
                   /*UpperCase=*/true, /*InsertSeparators=*/true);
-    auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow)
+    S.report(E->getExprLoc(), diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
     return true;
   }
@@ -1258,6 +1254,12 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+static inline bool Kill(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.pop<Pointer>();
+  Ptr.endLifetime();
+  return true;
+}
+
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
 ///    given offset.
@@ -1482,7 +1484,10 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Field = S.Stk.peek<Pointer>().atField(I);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  const Pointer &Field = Ptr.atField(I);
   Field.deref<T>() = Value;
   Field.activate();
   Field.initialize();

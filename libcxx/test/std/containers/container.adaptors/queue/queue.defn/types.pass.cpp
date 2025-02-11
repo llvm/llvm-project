@@ -28,34 +28,27 @@
 
 #include "test_macros.h"
 
-struct test
-    : private std::queue<int>
-{
-    test()
-    {
-        c.push_back(1);
-    }
+struct test : private std::queue<int> {
+  test() { c.push_back(1); }
 };
 
-struct C
-{
-    typedef int value_type;
-    typedef int& reference;
-    typedef const int& const_reference;
-    typedef int size_type;
+struct C {
+  typedef int value_type;
+  typedef int& reference;
+  typedef const int& const_reference;
+  typedef int size_type;
 };
 
-int main(int, char**)
-{
-    static_assert(( std::is_same<std::queue<int>::container_type, std::deque<int> >::value), "");
-    static_assert(( std::is_same<std::queue<int, std::vector<int> >::container_type, std::vector<int> >::value), "");
-    static_assert(( std::is_same<std::queue<int, std::vector<int> >::value_type, int>::value), "");
-    static_assert(( std::is_same<std::queue<int>::reference, std::deque<int>::reference>::value), "");
-    static_assert(( std::is_same<std::queue<int>::const_reference, std::deque<int>::const_reference>::value), "");
-    static_assert(( std::is_same<std::queue<int>::size_type, std::deque<int>::size_type>::value), "");
-    static_assert(( std::uses_allocator<std::queue<int>, std::allocator<int> >::value), "");
-    static_assert((!std::uses_allocator<std::queue<int, C>, std::allocator<int> >::value), "");
-    test t;
+int main(int, char**) {
+  static_assert((std::is_same<std::queue<int>::container_type, std::deque<int> >::value), "");
+  static_assert((std::is_same<std::queue<int, std::vector<int> >::container_type, std::vector<int> >::value), "");
+  static_assert((std::is_same<std::queue<int, std::vector<int> >::value_type, int>::value), "");
+  static_assert((std::is_same<std::queue<int>::reference, std::deque<int>::reference>::value), "");
+  static_assert((std::is_same<std::queue<int>::const_reference, std::deque<int>::const_reference>::value), "");
+  static_assert((std::is_same<std::queue<int>::size_type, std::deque<int>::size_type>::value), "");
+  static_assert((std::uses_allocator<std::queue<int>, std::allocator<int> >::value), "");
+  static_assert((!std::uses_allocator<std::queue<int, C>, std::allocator<int> >::value), "");
+  test t;
 
   return 0;
 }
