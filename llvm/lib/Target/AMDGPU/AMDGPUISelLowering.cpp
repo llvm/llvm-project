@@ -4050,19 +4050,24 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
     // shl i64 X, Y -> [0, shl i32 X, (Y & 0x1F)]
     if (VT == MVT::i64) {
       KnownBits Known = DAG.computeKnownBits(RHS);
-      EVT TargetType=VT.getHalfSizedIntegerVT(*DAG.getContext());
-      EVT TargetVecPairType=EVT::getVectorVT(*DAG.getContext(), TargetType, 2);
+      EVT TargetType = VT.getHalfSizedIntegerVT(*DAG.getContext());
+      EVT TargetVecPairType =
+          EVT::getVectorVT(*DAG.getContext(), TargetType, 2);
 
       if (Known.getMinValue().getZExtValue() >= TargetType.getSizeInBits()) {
         SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
-        const SDValue ShiftMask = DAG.getConstant(TargetType.getSizeInBits() - 1, SL, TargetType);
-	// This AND instruction will be removed during later instruction selection.
+        const SDValue ShiftMask =
+            DAG.getConstant(TargetType.getSizeInBits() - 1, SL, TargetType);
+        // This AND instruction will clamp out of bounds shift values.
+        // It will also be removed during later instruction selection.
         SDValue MaskedShiftAmt =
             DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
         SDValue Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, LHS);
-        SDValue NewShift = DAG.getNode(ISD::SHL, SL, TargetType, Lo, MaskedShiftAmt, N->getFlags());
+        SDValue NewShift = DAG.getNode(ISD::SHL, SL, TargetType, Lo,
+                                       MaskedShiftAmt, N->getFlags());
         const SDValue Zero = DAG.getConstant(0, SL, TargetType);
-        SDValue Vec = DAG.getBuildVector(TargetVecPairType, SL, {Zero, NewShift});
+        SDValue Vec =
+            DAG.getBuildVector(TargetVecPairType, SL, {Zero, NewShift});
         return DAG.getNode(ISD::BITCAST, SL, VT, Vec);
       }
     }
