@@ -32,8 +32,14 @@
 #  include <sys/time.h> // for ::utimes as used in __last_write_time
 #endif
 
+// MacOS version 10.13 introduces utimensat
+#if defined(__APPLE__)
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                                                       \
+       __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101300)
+#    define _LIBCPP_USE_UTIMENSAT
+#  endif
 // We can use the presence of UTIME_OMIT to detect platforms that provide utimensat.
-#if defined(UTIME_OMIT)
+#elif defined(UTIME_OMIT)
 #  define _LIBCPP_USE_UTIMENSAT
 #endif
 
