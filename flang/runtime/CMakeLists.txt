@@ -189,6 +189,8 @@ include(AddFlangOffloadRuntime)
 
 # List of files that are buildable for all devices.
 set(supported_files
+  ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
+  ${FLANG_SOURCE_DIR}/lib/Decimal/decimal-to-binary.cpp
   ISO_Fortran_binding.cpp
   allocatable.cpp
   allocator-registry.cpp
