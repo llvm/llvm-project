@@ -571,7 +571,7 @@ FailureOr<Attribute> dlti::query(Operation *op, ArrayRef<StringRef> keys,
     return failure();
 
   MLIRContext *ctx = op->getContext();
-  SmallVector<DataLayoutEntryKey> entryKeys;
+  SmallVector<DataLayoutEntryKey> entryKeys(keys.size());
   for (StringRef key : keys)
     entryKeys.push_back(StringAttr::get(ctx, key));
 

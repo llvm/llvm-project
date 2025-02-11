@@ -29,9 +29,9 @@ namespace dlti {
 FailureOr<Attribute> query(Operation *op, ArrayRef<DataLayoutEntryKey> keys,
                            bool emitError = false);
 
-/// Perform a DLTI-query at `op` using string `keys` as DLTI entry keys,
-/// recursively querying on query interface-implementing attrs, starting from
-/// attr obtained from `op`.
+/// Perform a DLTI-query at `op` using each string in `keys` as a separate DLTI
+/// entry key, recursively querying on query interface-implementing attrs,
+/// starting from attr obtained from `op`.
 FailureOr<Attribute> query(Operation *op, ArrayRef<StringRef> keys,
                            bool emitError = false);
 } // namespace dlti
