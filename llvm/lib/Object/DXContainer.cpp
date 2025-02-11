@@ -258,8 +258,8 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  if (dxbc::RootSignatureValidations::validateVersion(VValue))
-    return make_error<GenericBinaryError>("Invalid Version");
+  if (!dxbc::RootSignatureValidations::isValidVersion(VValue))
+    return make_error<GenericBinaryError>("Invalid Root Signature Version");
   Version = VValue;
 
   NumParameters =
@@ -282,8 +282,8 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  if (dxbc::RootSignatureValidations::validateRootFlag(FValue))
-    return make_error<GenericBinaryError>("Invalid flag");
+  if (!dxbc::RootSignatureValidations::isValidRootFlag(FValue))
+    return make_error<GenericBinaryError>("Invalid Root Signature flag");
   Flags = FValue;
 
   return Error::success();
