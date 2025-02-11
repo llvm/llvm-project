@@ -1,6 +1,4 @@
 // Verify the ELF packaging of OpenMP SPIR-V device images.
-// FIXME: Re-enable when spirv-tools feature detection fixed
-// UNSUPPORTED: system-linux
 // REQUIRES: system-linux
 // REQUIRES: spirv-tools
 // RUN: mkdir -p %t_tmp
