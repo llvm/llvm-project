@@ -7,8 +7,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 ;.
 ; CHECK: @G = global i32 5
 ; CHECK: @g_50 = global [7 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1, i32 0, i32 0], align 16
-; CHECK: @.memset_pattern = private unnamed_addr constant [4 x i32] [i32 1, i32 1, i32 1, i32 1], align 16
-; CHECK: @.memset_pattern.1 = private unnamed_addr constant [2 x ptr] [ptr @G, ptr @G], align 16
+; CHECK: @.memset_pattern = private unnamed_addr constant ptr @G, align 64
 ;.
 define void @test1(ptr %Base, i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test1(
@@ -533,7 +532,7 @@ for.end13:                                        ; preds = %for.inc10
 define void @test11_pattern(ptr nocapture %P) nounwind ssp {
 ; CHECK-LABEL: @test11_pattern(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[P:%.*]], ptr @.memset_pattern, i64 40000)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr [[P:%.*]], i32 1, i64 10000, i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
@@ -596,7 +595,8 @@ for.end:                                          ; preds = %for.body
 define void @test13_pattern(ptr nocapture %P) nounwind ssp {
 ; CHECK-LABEL: @test13_pattern(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[P:%.*]], ptr @.memset_pattern.1, i64 80000)
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @.memset_pattern, align 8
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr [[P:%.*]], i64 [[TMP0]], i64 10000, i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1625,6 +1625,5 @@ define noalias ptr @_ZN8CMSPULog9beginImplEja(ptr nocapture writeonly %0) local_
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nofree nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
