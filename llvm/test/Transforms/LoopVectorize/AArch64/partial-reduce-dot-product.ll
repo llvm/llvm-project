@@ -214,8 +214,8 @@ for.exit:                        ; preds = %for.body
   ret i32 %add
 }
 
-define i64 @dotp_i8_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b) #1 {
-; CHECK-INTERLEAVE1-LABEL: define i64 @dotp_i8_to_i64_has_neon_dotprod(
+define i64 @not_dotp_i8_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b) #1 {
+; CHECK-INTERLEAVE1-LABEL: define i64 @not_dotp_i8_to_i64_has_neon_dotprod(
 ; CHECK-INTERLEAVE1-SAME: ptr readonly [[A:%.*]], ptr readonly [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-INTERLEAVE1-NEXT:  entry:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
@@ -279,7 +279,7 @@ define i64 @dotp_i8_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b) #1
 ; CHECK-INTERLEAVE1-NEXT:    [[ADD_LCSSA:%.*]] = phi i64 [ [[ADD]], [[FOR_BODY]] ], [ [[TMP17]], [[MIDDLE_BLOCK]] ]
 ; CHECK-INTERLEAVE1-NEXT:    ret i64 [[ADD_LCSSA]]
 ;
-; CHECK-INTERLEAVED-LABEL: define i64 @dotp_i8_to_i64_has_neon_dotprod(
+; CHECK-INTERLEAVED-LABEL: define i64 @not_dotp_i8_to_i64_has_neon_dotprod(
 ; CHECK-INTERLEAVED-SAME: ptr readonly [[A:%.*]], ptr readonly [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-INTERLEAVED-NEXT:  entry:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
@@ -357,7 +357,7 @@ define i64 @dotp_i8_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b) #1
 ; CHECK-INTERLEAVED-NEXT:    [[ADD_LCSSA:%.*]] = phi i64 [ [[ADD]], [[FOR_BODY]] ], [ [[TMP27]], [[MIDDLE_BLOCK]] ]
 ; CHECK-INTERLEAVED-NEXT:    ret i64 [[ADD_LCSSA]]
 ;
-; CHECK-MAXBW-LABEL: define i64 @dotp_i8_to_i64_has_neon_dotprod(
+; CHECK-MAXBW-LABEL: define i64 @not_dotp_i8_to_i64_has_neon_dotprod(
 ; CHECK-MAXBW-SAME: ptr readonly [[A:%.*]], ptr readonly [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -445,8 +445,8 @@ for.exit:                        ; preds = %for.body
   ret i64 %add
 }
 
-define i64 @dotp_i16_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b) #1 {
-; CHECK-INTERLEAVE1-LABEL: define i64 @dotp_i16_to_i64_has_neon_dotprod(
+define i64 @not_dotp_i16_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b) #1 {
+; CHECK-INTERLEAVE1-LABEL: define i64 @not_dotp_i16_to_i64_has_neon_dotprod(
 ; CHECK-INTERLEAVE1-SAME: ptr readonly [[A:%.*]], ptr readonly [[B:%.*]]) #[[ATTR1]] {
 ; CHECK-INTERLEAVE1-NEXT:  entry:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
@@ -514,7 +514,7 @@ define i64 @dotp_i16_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b) #
 ; CHECK-INTERLEAVE1-NEXT:    [[ADD_LCSSA:%.*]] = phi i64 [ [[ADD]], [[FOR_BODY]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
 ; CHECK-INTERLEAVE1-NEXT:    ret i64 [[ADD_LCSSA]]
 ;
-; CHECK-INTERLEAVED-LABEL: define i64 @dotp_i16_to_i64_has_neon_dotprod(
+; CHECK-INTERLEAVED-LABEL: define i64 @not_dotp_i16_to_i64_has_neon_dotprod(
 ; CHECK-INTERLEAVED-SAME: ptr readonly [[A:%.*]], ptr readonly [[B:%.*]]) #[[ATTR1]] {
 ; CHECK-INTERLEAVED-NEXT:  entry:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
@@ -596,7 +596,7 @@ define i64 @dotp_i16_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b) #
 ; CHECK-INTERLEAVED-NEXT:    [[ADD_LCSSA:%.*]] = phi i64 [ [[ADD]], [[FOR_BODY]] ], [ [[TMP29]], [[MIDDLE_BLOCK]] ]
 ; CHECK-INTERLEAVED-NEXT:    ret i64 [[ADD_LCSSA]]
 ;
-; CHECK-MAXBW-LABEL: define i64 @dotp_i16_to_i64_has_neon_dotprod(
+; CHECK-MAXBW-LABEL: define i64 @not_dotp_i16_to_i64_has_neon_dotprod(
 ; CHECK-MAXBW-SAME: ptr readonly [[A:%.*]], ptr readonly [[B:%.*]]) #[[ATTR1]] {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
