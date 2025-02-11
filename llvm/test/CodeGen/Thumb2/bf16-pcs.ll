@@ -89,19 +89,64 @@ define arm_aapcscc bfloat @callee_soft_bfloat_on_stack(float %r0, float %r1, flo
 ;
 ; BE-BF16-LABEL: callee_soft_bfloat_on_stack:
 ; BE-BF16:       @ %bb.0: @ %entry
-; BE-BF16-NEXT:    ldrh.w r0, [sp]
+; BE-BF16-NEXT:    ldrh.w r0, [sp, #2]
 ; BE-BF16-NEXT:    bx lr
 entry:
   ret bfloat %f
 }
 
-; Stack tests are disabled because they causes a selection failure loading a
-; bf16 when the bf16 hardware feature is not enabled.
-;define void @caller_soft_bfloat_on_stack() {
-;entry:
-;  %ret = call arm_aapcscc bfloat @callee_soft_bfloat_on_stack(float undef, float undef, float undef, float undef, bfloat 1.0)
-;  ret void
-;}
+define void @caller_soft_bfloat_on_stack() {
+; LE-LABEL: caller_soft_bfloat_on_stack:
+; LE:       @ %bb.0: @ %entry
+; LE-NEXT:    .save {r7, lr}
+; LE-NEXT:    push {r7, lr}
+; LE-NEXT:    .pad #8
+; LE-NEXT:    sub sp, #8
+; LE-NEXT:    mov.w r0, #16256
+; LE-NEXT:    str r0, [sp]
+; LE-NEXT:    bl callee_soft_bfloat_on_stack
+; LE-NEXT:    add sp, #8
+; LE-NEXT:    pop {r7, pc}
+;
+; BE-LABEL: caller_soft_bfloat_on_stack:
+; BE:       @ %bb.0: @ %entry
+; BE-NEXT:    .save {r7, lr}
+; BE-NEXT:    push {r7, lr}
+; BE-NEXT:    .pad #8
+; BE-NEXT:    sub sp, #8
+; BE-NEXT:    mov.w r0, #16256
+; BE-NEXT:    str r0, [sp]
+; BE-NEXT:    bl callee_soft_bfloat_on_stack
+; BE-NEXT:    add sp, #8
+; BE-NEXT:    pop {r7, pc}
+;
+; LE-BF16-LABEL: caller_soft_bfloat_on_stack:
+; LE-BF16:       @ %bb.0: @ %entry
+; LE-BF16-NEXT:    .save {r7, lr}
+; LE-BF16-NEXT:    push {r7, lr}
+; LE-BF16-NEXT:    .pad #8
+; LE-BF16-NEXT:    sub sp, #8
+; LE-BF16-NEXT:    mov.w r0, #16256
+; LE-BF16-NEXT:    str r0, [sp]
+; LE-BF16-NEXT:    bl callee_soft_bfloat_on_stack
+; LE-BF16-NEXT:    add sp, #8
+; LE-BF16-NEXT:    pop {r7, pc}
+;
+; BE-BF16-LABEL: caller_soft_bfloat_on_stack:
+; BE-BF16:       @ %bb.0: @ %entry
+; BE-BF16-NEXT:    .save {r7, lr}
+; BE-BF16-NEXT:    push {r7, lr}
+; BE-BF16-NEXT:    .pad #8
+; BE-BF16-NEXT:    sub sp, #8
+; BE-BF16-NEXT:    mov.w r0, #16256
+; BE-BF16-NEXT:    str r0, [sp]
+; BE-BF16-NEXT:    bl callee_soft_bfloat_on_stack
+; BE-BF16-NEXT:    add sp, #8
+; BE-BF16-NEXT:    pop {r7, pc}
+entry:
+  %ret = call arm_aapcscc bfloat @callee_soft_bfloat_on_stack(float undef, float undef, float undef, float undef, bfloat 1.0)
+  ret void
+}
 
 define arm_aapcs_vfpcc bfloat @callee_hard_bfloat_in_reg(bfloat %f) {
 ; LE-LABEL: callee_hard_bfloat_in_reg:
@@ -142,48 +187,48 @@ define void @caller_hard_bfloat_in_reg() {
 ; LE:       @ %bb.0: @ %entry
 ; LE-NEXT:    .save {r7, lr}
 ; LE-NEXT:    push {r7, lr}
-; LE-NEXT:    vldr s0, .LCPI4_0
+; LE-NEXT:    vldr s0, .LCPI5_0
 ; LE-NEXT:    bl callee_hard_bfloat_in_reg
 ; LE-NEXT:    pop {r7, pc}
 ; LE-NEXT:    .p2align 2
 ; LE-NEXT:  @ %bb.1:
-; LE-NEXT:  .LCPI4_0:
+; LE-NEXT:  .LCPI5_0:
 ; LE-NEXT:    .long 0x00003f80 @ float 2.27795078E-41
 ;
 ; BE-LABEL: caller_hard_bfloat_in_reg:
 ; BE:       @ %bb.0: @ %entry
 ; BE-NEXT:    .save {r7, lr}
 ; BE-NEXT:    push {r7, lr}
-; BE-NEXT:    vldr s0, .LCPI4_0
+; BE-NEXT:    vldr s0, .LCPI5_0
 ; BE-NEXT:    bl callee_hard_bfloat_in_reg
 ; BE-NEXT:    pop {r7, pc}
 ; BE-NEXT:    .p2align 2
 ; BE-NEXT:  @ %bb.1:
-; BE-NEXT:  .LCPI4_0:
+; BE-NEXT:  .LCPI5_0:
 ; BE-NEXT:    .long 0x00003f80 @ float 2.27795078E-41
 ;
 ; LE-BF16-LABEL: caller_hard_bfloat_in_reg:
 ; LE-BF16:       @ %bb.0: @ %entry
 ; LE-BF16-NEXT:    .save {r7, lr}
 ; LE-BF16-NEXT:    push {r7, lr}
-; LE-BF16-NEXT:    vldr s0, .LCPI4_0
+; LE-BF16-NEXT:    vldr s0, .LCPI5_0
 ; LE-BF16-NEXT:    bl callee_hard_bfloat_in_reg
 ; LE-BF16-NEXT:    pop {r7, pc}
 ; LE-BF16-NEXT:    .p2align 2
 ; LE-BF16-NEXT:  @ %bb.1:
-; LE-BF16-NEXT:  .LCPI4_0:
+; LE-BF16-NEXT:  .LCPI5_0:
 ; LE-BF16-NEXT:    .long 0x00003f80 @ float 2.27795078E-41
 ;
 ; BE-BF16-LABEL: caller_hard_bfloat_in_reg:
 ; BE-BF16:       @ %bb.0: @ %entry
 ; BE-BF16-NEXT:    .save {r7, lr}
 ; BE-BF16-NEXT:    push {r7, lr}
-; BE-BF16-NEXT:    vldr s0, .LCPI4_0
+; BE-BF16-NEXT:    vldr s0, .LCPI5_0
 ; BE-BF16-NEXT:    bl callee_hard_bfloat_in_reg
 ; BE-BF16-NEXT:    pop {r7, pc}
 ; BE-BF16-NEXT:    .p2align 2
 ; BE-BF16-NEXT:  @ %bb.1:
-; BE-BF16-NEXT:  .LCPI4_0:
+; BE-BF16-NEXT:  .LCPI5_0:
 ; BE-BF16-NEXT:    .long 0x00003f80 @ float 2.27795078E-41
 entry:
   %ret = call arm_aapcs_vfpcc bfloat @callee_hard_bfloat_in_reg(bfloat 1.0)
@@ -209,7 +254,7 @@ define arm_aapcs_vfpcc bfloat @callee_hard_bfloat_on_stack(float %s0, float %s1,
 ;
 ; BE-BF16-LABEL: callee_hard_bfloat_on_stack:
 ; BE-BF16:       @ %bb.0: @ %entry
-; BE-BF16-NEXT:    ldrh.w r0, [sp]
+; BE-BF16-NEXT:    ldrh.w r0, [sp, #2]
 ; BE-BF16-NEXT:    vmov s0, r0
 ; BE-BF16-NEXT:    bx lr
 entry:
@@ -217,8 +262,55 @@ entry:
 }
 
 
-;define void @caller_hard_bfloat_on_stack() {
-;entry:
-;  %ret = call arm_aapcs_vfpcc bfloat @callee_hard_bfloat_on_stack(float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, bfloat 1.0)
-;  ret void
-;}
+define void @caller_hard_bfloat_on_stack() {
+; LE-LABEL: caller_hard_bfloat_on_stack:
+; LE:       @ %bb.0: @ %entry
+; LE-NEXT:    .save {r7, lr}
+; LE-NEXT:    push {r7, lr}
+; LE-NEXT:    .pad #8
+; LE-NEXT:    sub sp, #8
+; LE-NEXT:    mov.w r0, #16256
+; LE-NEXT:    str r0, [sp]
+; LE-NEXT:    bl callee_hard_bfloat_on_stack
+; LE-NEXT:    add sp, #8
+; LE-NEXT:    pop {r7, pc}
+;
+; BE-LABEL: caller_hard_bfloat_on_stack:
+; BE:       @ %bb.0: @ %entry
+; BE-NEXT:    .save {r7, lr}
+; BE-NEXT:    push {r7, lr}
+; BE-NEXT:    .pad #8
+; BE-NEXT:    sub sp, #8
+; BE-NEXT:    mov.w r0, #16256
+; BE-NEXT:    str r0, [sp]
+; BE-NEXT:    bl callee_hard_bfloat_on_stack
+; BE-NEXT:    add sp, #8
+; BE-NEXT:    pop {r7, pc}
+;
+; LE-BF16-LABEL: caller_hard_bfloat_on_stack:
+; LE-BF16:       @ %bb.0: @ %entry
+; LE-BF16-NEXT:    .save {r7, lr}
+; LE-BF16-NEXT:    push {r7, lr}
+; LE-BF16-NEXT:    .pad #8
+; LE-BF16-NEXT:    sub sp, #8
+; LE-BF16-NEXT:    mov.w r0, #16256
+; LE-BF16-NEXT:    str r0, [sp]
+; LE-BF16-NEXT:    bl callee_hard_bfloat_on_stack
+; LE-BF16-NEXT:    add sp, #8
+; LE-BF16-NEXT:    pop {r7, pc}
+;
+; BE-BF16-LABEL: caller_hard_bfloat_on_stack:
+; BE-BF16:       @ %bb.0: @ %entry
+; BE-BF16-NEXT:    .save {r7, lr}
+; BE-BF16-NEXT:    push {r7, lr}
+; BE-BF16-NEXT:    .pad #8
+; BE-BF16-NEXT:    sub sp, #8
+; BE-BF16-NEXT:    mov.w r0, #16256
+; BE-BF16-NEXT:    str r0, [sp]
+; BE-BF16-NEXT:    bl callee_hard_bfloat_on_stack
+; BE-BF16-NEXT:    add sp, #8
+; BE-BF16-NEXT:    pop {r7, pc}
+entry:
+  %ret = call arm_aapcs_vfpcc bfloat @callee_hard_bfloat_on_stack(float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, bfloat 1.0)
+  ret void
+}

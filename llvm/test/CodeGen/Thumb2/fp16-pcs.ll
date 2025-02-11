@@ -78,13 +78,15 @@ define arm_aapcscc half @callee_soft_half_on_stack(float %r0, float %r1, float %
 ;
 ; LE-FP16-LABEL: callee_soft_half_on_stack:
 ; LE-FP16:       @ %bb.0: @ %entry
-; LE-FP16-NEXT:    vldr.16 s0, [sp]
+; LE-FP16-NEXT:    ldr r0, [sp]
+; LE-FP16-NEXT:    vmov.f16 s0, r0
 ; LE-FP16-NEXT:    vmov r0, s0
 ; LE-FP16-NEXT:    bx lr
 ;
 ; BE-FP16-LABEL: callee_soft_half_on_stack:
 ; BE-FP16:       @ %bb.0: @ %entry
-; BE-FP16-NEXT:    vldr.16 s0, [sp]
+; BE-FP16-NEXT:    ldr r0, [sp]
+; BE-FP16-NEXT:    vmov.f16 s0, r0
 ; BE-FP16-NEXT:    vmov r0, s0
 ; BE-FP16-NEXT:    bx lr
 entry:
@@ -122,8 +124,8 @@ define void @caller_soft_half_on_stack() {
 ; LE-FP16-NEXT:    push {r7, lr}
 ; LE-FP16-NEXT:    .pad #8
 ; LE-FP16-NEXT:    sub sp, #8
-; LE-FP16-NEXT:    vmov.f16 s0, #1.000000e+00
-; LE-FP16-NEXT:    vstr.16 s0, [sp]
+; LE-FP16-NEXT:    mov.w r0, #15360
+; LE-FP16-NEXT:    str r0, [sp]
 ; LE-FP16-NEXT:    bl callee_soft_half_on_stack
 ; LE-FP16-NEXT:    add sp, #8
 ; LE-FP16-NEXT:    pop {r7, pc}
@@ -134,8 +136,8 @@ define void @caller_soft_half_on_stack() {
 ; BE-FP16-NEXT:    push {r7, lr}
 ; BE-FP16-NEXT:    .pad #8
 ; BE-FP16-NEXT:    sub sp, #8
-; BE-FP16-NEXT:    vmov.f16 s0, #1.000000e+00
-; BE-FP16-NEXT:    vstr.16 s0, [sp]
+; BE-FP16-NEXT:    mov.w r0, #15360
+; BE-FP16-NEXT:    str r0, [sp]
 ; BE-FP16-NEXT:    bl callee_soft_half_on_stack
 ; BE-FP16-NEXT:    add sp, #8
 ; BE-FP16-NEXT:    pop {r7, pc}
@@ -222,12 +224,14 @@ define arm_aapcs_vfpcc half @callee_hard_half_on_stack(float %s0, float %s1, flo
 ;
 ; LE-FP16-LABEL: callee_hard_half_on_stack:
 ; LE-FP16:       @ %bb.0: @ %entry
-; LE-FP16-NEXT:    vldr.16 s0, [sp]
+; LE-FP16-NEXT:    ldr r0, [sp]
+; LE-FP16-NEXT:    vmov.f16 s0, r0
 ; LE-FP16-NEXT:    bx lr
 ;
 ; BE-FP16-LABEL: callee_hard_half_on_stack:
 ; BE-FP16:       @ %bb.0: @ %entry
-; BE-FP16-NEXT:    vldr.16 s0, [sp]
+; BE-FP16-NEXT:    ldr r0, [sp]
+; BE-FP16-NEXT:    vmov.f16 s0, r0
 ; BE-FP16-NEXT:    bx lr
 entry:
   ret half %f
@@ -265,8 +269,8 @@ define void @caller_hard_half_on_stack() {
 ; LE-FP16-NEXT:    push {r7, lr}
 ; LE-FP16-NEXT:    .pad #8
 ; LE-FP16-NEXT:    sub sp, #8
-; LE-FP16-NEXT:    vmov.f16 s0, #1.000000e+00
-; LE-FP16-NEXT:    vstr.16 s0, [sp]
+; LE-FP16-NEXT:    mov.w r0, #15360
+; LE-FP16-NEXT:    str r0, [sp]
 ; LE-FP16-NEXT:    bl callee_hard_half_on_stack
 ; LE-FP16-NEXT:    add sp, #8
 ; LE-FP16-NEXT:    pop {r7, pc}
@@ -277,8 +281,8 @@ define void @caller_hard_half_on_stack() {
 ; BE-FP16-NEXT:    push {r7, lr}
 ; BE-FP16-NEXT:    .pad #8
 ; BE-FP16-NEXT:    sub sp, #8
-; BE-FP16-NEXT:    vmov.f16 s0, #1.000000e+00
-; BE-FP16-NEXT:    vstr.16 s0, [sp]
+; BE-FP16-NEXT:    mov.w r0, #15360
+; BE-FP16-NEXT:    str r0, [sp]
 ; BE-FP16-NEXT:    bl callee_hard_half_on_stack
 ; BE-FP16-NEXT:    add sp, #8
 ; BE-FP16-NEXT:    pop {r7, pc}

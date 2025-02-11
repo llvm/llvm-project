@@ -4759,6 +4759,24 @@ SDValue ARMTargetLowering::LowerFormalArguments(
                 VA.getLocMemOffset(), Flags.getByValSize());
             InVals.push_back(DAG.getFrameIndex(FrameIndex, PtrVT));
             CCInfo.nextInRegsParam();
+          } else if (VA.needsCustom() && (VA.getValVT() == MVT::f16 ||
+                                          VA.getValVT() == MVT::bf16)) {
+            // f16 and bf16 values are passed in the least-significant half of
+            // a 4 byte stack slot. This is done as-if the extension was done
+            // in a 32-bit register, so the actual bytes used for the value
+            // differ between little and big endian.
+            unsigned FIOffset = VA.getLocMemOffset();
+            int FI = MFI.CreateFixedObject(VA.getLocVT().getSizeInBits()/8,
+                                           FIOffset, true);
+
+            // Create load nodes to retrieve arguments from the stack.
+            SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
+            SDValue Load = DAG.getLoad(VA.getLocVT(), dl, Chain, FIN,
+                                         MachinePointerInfo::getFixedStack(
+                                             DAG.getMachineFunction(), FI));
+            InVals.push_back(
+                MoveToHPR(dl, DAG, VA.getLocVT(), VA.getValVT(), Load));
+
           } else {
             unsigned FIOffset = VA.getLocMemOffset();
             int FI = MFI.CreateFixedObject(VA.getLocVT().getSizeInBits()/8,
