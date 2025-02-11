@@ -2824,10 +2824,7 @@ SDValue SITargetLowering::LowerFormalArguments(
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
   if (Subtarget->isAmdHsaOS() && AMDGPU::isGraphics(CallConv)) {
-    DiagnosticInfoUnsupported NoGraphicsHSA(
-        Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc());
-    DAG.getContext()->diagnose(NoGraphicsHSA);
-    return DAG.getEntryNode();
+    report_fatal_error("unsupported non-compute shaders with HSA");
   }
 
   SmallVector<ISD::InputArg, 16> Splits;
