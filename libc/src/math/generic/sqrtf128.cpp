@@ -1,7 +1,5 @@
 //===-- Implementation of sqrtf128 function -------------------------------===//
 //
-// Copyright (c) 2024 Alexei Sibidanov <sibid@uvic.ca>
-//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -16,6 +14,35 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/uint128.h"
+
+// Compute sqrtf128 with correct rounding for all rounding modes using integer
+// arithmetic by Alexei Sibidanov (sibid@uvic.ca):
+// Let the input be expressed as x = 2^e * m_x,
+// - Step 1: Range reduction
+//   Let x_reduced = 2^(e % 2) * m_x,
+//   Then sqrt(x) = 2^(e / 2) * sqrt(x_reduced), with
+//     1 <= x_reduced < 4.
+// - Step 2: Polynomial approximation
+//   Approximate 1/sqrt(x_reduced) using polynomial approximation with the
+//   result errors bounded by:
+//     |r0 - 1/sqrt(x_reduced)| < 2^-32.
+//   The computations are done in uint64_t.
+// - Step 3: First Newton iteration
+//   Let the scaled error defined by:
+//     h0 = r0^2 * x_reduced - 1.
+//   Then we compute the first Newton iteration:
+//     r1 = r0 - r0 * h0 / 2.
+//   The result is then bounded by:
+//     |r1 - 1 / sqrt(x_reduced)| < 2^-62.
+// - Step 4: Second Newton iteration
+//   We calculate the scaled error from Step 3:
+//     h1 = r1^2 * x_reduced - 1.
+//   Then the second Newton iteration is computed by:
+//     r2 = x_reduced * (r1 - r1 * h0 / 2)
+//        ~ x_reduced * (1/sqrt(x_reduced)) = sqrt(x_reduced)
+// - Step 5: Perform rounding test and correction if needed.
+//     Rounding correction is done by computing the exact rounding errors:
+//       x_reduced - r2^2.
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -35,11 +62,11 @@ inline constexpr uint64_t prod_hi<uint64_t>(uint64_t x, uint64_t y) {
 
 // Get high part of unsigned 128x64 bit multiplication.
 template <>
-inline constexpr UInt128 prod_hi<UInt128, uint64_t>(UInt128 y, uint64_t x) {
-  uint64_t y_lo = static_cast<uint64_t>(y);
-  uint64_t y_hi = static_cast<uint64_t>(y >> 64);
-  UInt128 xyl = static_cast<UInt128>(x) * static_cast<UInt128>(y_lo);
-  UInt128 xyh = static_cast<UInt128>(x) * static_cast<UInt128>(y_hi);
+inline constexpr UInt128 prod_hi<UInt128, uint64_t>(UInt128 x, uint64_t y) {
+  uint64_t x_lo = static_cast<uint64_t>(x);
+  uint64_t x_hi = static_cast<uint64_t>(x >> 64);
+  UInt128 xyl = static_cast<UInt128>(x_lo) * static_cast<UInt128>(y);
+  UInt128 xyh = static_cast<UInt128>(x_hi) * static_cast<UInt128>(y);
   return xyh + (xyl >> 64);
 }
 
@@ -178,11 +205,11 @@ LIBC_INLINE uint64_t rsqrt_approx(uint64_t m) {
   //   r1 = r0 - r0 * h / 2
   // which has error bounded by:
   //   |r1 - 1/sqrt(x)| < h^2 / 2.
-  uint64_t r2 = prod_hi<uint64_t>(r, r);
+  uint64_t r2 = prod_hi(r, r);
   // h = r0^2*x - 1.
-  int64_t h = static_cast<int64_t>(prod_hi<uint64_t>(m, r2) + r2);
+  int64_t h = static_cast<int64_t>(prod_hi(m, r2) + r2);
   // hr = r * h / 2
-  int64_t hr = prod_hi<int64_t>(h, static_cast<int64_t>(r >> 1));
+  int64_t hr = prod_hi(h, static_cast<int64_t>(r >> 1));
   r -= hr;
   // Adjust in the unlucky case x~1;
   if (LIBC_UNLIKELY(!r))
@@ -224,8 +251,10 @@ LLVM_LIBC_FUNCTION(float128, sqrtf128, (float128 x)) {
       fputil::raise_except_if_required(FE_INVALID);
       return xbits.quiet_nan().get_val();
     }
-    // x is subnormal or x=+0
-    if (x == 0)
+    // Now x is subnormal or x = +0.
+
+    // x is +0.
+    if (x_u == 0)
       return x;
 
     // Normalize subnormal inputs.
@@ -253,7 +282,7 @@ LLVM_LIBC_FUNCTION(float128, sqrtf128, (float128 x)) {
                                    0xb504f333f9de6484 /* 2^64/sqrt(2) */};
 
   // Approximate 1/sqrt(1 + x_frac)
-  // Error: |r_1 - 1/sqrt(x)| < 2^-63.
+  // Error: |r_1 - 1/sqrt(x)| < 2^-62.
   uint64_t r1 = rsqrt_approx(static_cast<uint64_t>(x_frac >> 64));
   // Adjust for the even/odd exponent.
   uint64_t r2 = prod_hi(r1, RSQRT_2[i]);
@@ -279,8 +308,9 @@ LLVM_LIBC_FUNCTION(float128, sqrtf128, (float128 x)) {
   uint32_t nrst = rm == FE_TONEAREST;
   // The result lies within (-2,5) of true square root so we now
   // test that we can correctly round the result taking into account
-  // the rounding mode
-  // check the lowest 14 bits.
+  // the rounding mode.
+  // Check the lowest 14 bits (by clearing and sign-extending the top
+  // 32 - 14 = 18 bits).
   int dd = (static_cast<int>(v) << 18) >> 18;
 
   if (LIBC_UNLIKELY(dd < 4 && dd >= -8)) { // can round correctly?
@@ -289,9 +319,8 @@ LLVM_LIBC_FUNCTION(float128, sqrtf128, (float128 x)) {
     // compare with the initial argument.
     UInt128 m = v >> 15;
     UInt128 m2 = m * m;
-    Int128 t0, t1;
     // The difference of the squared result and the argument
-    t0 = static_cast<Int128>(m2 - (x_reduced << 98));
+    Int128 t0 = static_cast<Int128>(m2 - (x_reduced << 98));
     if (t0 == 0) {
       // the square root is exact
       v = m << 15;
@@ -299,7 +328,7 @@ LLVM_LIBC_FUNCTION(float128, sqrtf128, (float128 x)) {
       // Add +-1 ulp to m depend on the sign of the difference. Here
       // we do not need to square again since (m+1)^2 = m^2 + 2*m +
       // 1 so just need to add shifted m and 1.
-      t1 = t0;
+      Int128 t1 = t0;
       Int128 sgn = t0 >> 127; // sign of the difference
       t1 -= (m << 1) ^ sgn;
       t1 += 1 + sgn;
@@ -332,20 +361,20 @@ LLVM_LIBC_FUNCTION(float128, sqrtf128, (float128 x)) {
     rnd = frac >> 14; // round to nearest tie to even
   } else if (rm == FE_UPWARD) {
     rnd = !!frac; // round up
-  } else if (rm == FE_DOWNWARD) {
-    rnd = 0; // round down
   } else {
-    rnd = 0; // round to zero
+    rnd = 0; // round down or round to zero
   }
 
   v >>= 15; // position mantissa
   v += rnd; // round
 
-  // // Set inexact flag only if square root is inexact
-  // // TODO: We will have to raise FE_INEXACT most of the time, but this
-  // // operation is very costly, especially in x86-64, since technically, it
-  // // needs to synchronize both SSE and x87 flags.  Need to investigate
-  // // further to see how we can make this performant.
+  // Set inexact flag only if square root is inexact
+  // TODO: We will have to raise FE_INEXACT most of the time, but this
+  // operation is very costly, especially in x86-64, since technically, it
+  // needs to synchronize both SSE and x87 flags.  Need to investigate
+  // further to see how we can make this performant.
+  // https://github.com/llvm/llvm-project/issues/126753
+
   // if(frac) fputil::raise_except_if_required(FE_INEXACT);
 
   v += static_cast<UInt128>(e2) << FPBits::FRACTION_LEN; // place exponent
