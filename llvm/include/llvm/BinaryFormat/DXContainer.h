@@ -548,10 +548,10 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
 
 struct RootSignatureValidations {
 
-  static bool validateRootFlag(uint32_t Flags) { return (Flags & ~0xfff) != 0; }
+  static bool isValidRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
 
-  static bool validateVersion(uint32_t Version) {
-    return !(Version == 1 || Version == 2);
+  static bool isValidVersion(uint32_t Version) {
+    return (Version == 1 || Version == 2);
   }
 };
 
