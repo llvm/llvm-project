@@ -115,13 +115,16 @@ struct LinalgOpTilingInterface
   getTiledImplementation(Operation *op, OpBuilder &b,
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
-    // Leave the `sizeBounds` value empty. That is only needed when the `sizes`
-    // specified could lead to out of bounds accesses.
     Location loc = op->getLoc();
     LinalgOp linalgOp = cast<LinalgOp>(op);
+    SmallVector<OpFoldResult> allShapeSizes =
+        linalgOp.createFlatListOfOperandDims(b, linalgOp.getLoc());
+    SmallVector<OpFoldResult> sizeBounds =
+        mlir::affine::makeComposedFoldedMultiResultAffineApply(
+            b, loc, linalgOp.getShapesToLoopsMap(), allShapeSizes);
     SmallVector<Value> valuesToTile = linalgOp->getOperands();
     SmallVector<Value> tiledOperands = makeTiledShapes(
-        b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
+        b, loc, linalgOp, valuesToTile, offsets, sizes, sizeBounds, true);
     SmallVector<Operation *> generatedSlices = llvm::map_to_vector(
         llvm::make_filter_range(
             tiledOperands,
