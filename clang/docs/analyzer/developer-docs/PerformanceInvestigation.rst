@@ -95,7 +95,7 @@ Performance analysis using ``uftrace``
 `uftrace <https://github.com/namhyung/uftrace/wiki/Tutorial#getting-started>`_ is a great tool to generate rich profile data
 that you can use to focus and drill down into the timeline of your application.
 We will use it to generate Chromium trace JSON.
-In contrast to ``perf``, this approach statically instruments every function, so it should be more precise and through than the sampling-based approaches like ``perf``.
+In contrast to ``perf``, this approach statically instruments every function, so it should be more precise and thorough than the sampling-based approaches like ``perf``.
 In contrast to using `-ftime-trace`, functions don't need to opt-in to be profiled using ``llvm::TimeTraceScope``.
 All functions are profiled due to static instrumentation.
 
