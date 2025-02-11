@@ -19,9 +19,8 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     std::list<int, test_allocator<int>> d({3, 4, 5, 6}, test_allocator<int>(3));
     assert(d.get_allocator() == test_allocator<int>(3));
     assert(d.size() == 4);
@@ -30,8 +29,8 @@ int main(int, char**)
     assert(*i++ == 4);
     assert(*i++ == 5);
     assert(*i++ == 6);
-    }
-    {
+  }
+  {
     std::list<int, min_allocator<int>> d({3, 4, 5, 6}, min_allocator<int>());
     assert(d.get_allocator() == min_allocator<int>());
     assert(d.size() == 4);
@@ -40,7 +39,7 @@ int main(int, char**)
     assert(*i++ == 4);
     assert(*i++ == 5);
     assert(*i++ == 6);
-    }
+  }
 
   return 0;
 }

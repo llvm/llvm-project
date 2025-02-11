@@ -1957,7 +1957,7 @@ Value = NewType("Value", str)  # The value of a feature test macro including the
 
 @dataclass
 class Metadata:
-    headers: list[str] = None
+    headers: List[str] = None
     test_suite_guard: str = None
     libcxx_guard: str = None
 
