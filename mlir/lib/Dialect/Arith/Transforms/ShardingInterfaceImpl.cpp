@@ -46,18 +46,20 @@ struct ConstantShardingInterface
   FailureOr<ShardingOption>
   getShardingOption(Operation *op, ArrayRef<MeshSharding> operandShardings,
                     ArrayRef<MeshSharding> resultShardings) const {
-    if (!resultShardings[0]) {
+    assert(resultShardings.size() == 1 &&
+           "Expecting exactly one result sharding for arith.constant");
+    auto resultSharding = resultShardings[0];
+    if (!resultSharding) {
       return failure();
     }
     if (auto type = dyn_cast<RankedTensorType>(op->getResult(0).getType())) {
-      ShardingArray axesArray(resultShardings[0].getSplitAxes().size());
-      for (auto [i, axes] :
-           llvm::enumerate(resultShardings[0].getSplitAxes())) {
+      ShardingArray axesArray(resultSharding.getSplitAxes().size());
+      for (auto [i, axes] : llvm::enumerate(resultSharding.getSplitAxes())) {
         axesArray[i].append(axes.asArrayRef().begin(), axes.asArrayRef().end());
       }
-      return ShardingOption(axesArray, resultShardings[0].getMeshAttr());
+      return ShardingOption(axesArray, resultSharding.getMeshAttr());
     }
-    return ShardingOption({}, resultShardings[0].getMeshAttr());
+    return ShardingOption({}, resultSharding.getMeshAttr());
   }
 
   LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
@@ -67,8 +69,7 @@ struct ConstantShardingInterface
                         SymbolTableCollection &symbolTable,
                         OpBuilder &builder) const {
     auto cOp = cast<ConstantOp>(op);
-    auto value = dyn_cast<DenseIntOrFPElementsAttr>(cOp.getValue());
-    if (value) {
+    if (auto value = dyn_cast<DenseIntOrFPElementsAttr>(cOp.getValue())) {
       if (!value.isSplat() || !resultShardings[0]) {
         // Currently non-splat constants are not supported.
         return failure();
