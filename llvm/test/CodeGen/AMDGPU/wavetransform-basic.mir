@@ -1,0 +1,320 @@
+# REQUIRES: asserts
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -amdgpu-wave-transform=1 -run-pass=gcn-wave-transform -gcn-wave-transform-print-final=1 -o - %s 2>&1 | FileCheck -check-prefixes=CFG %s
+
+---
+
+# CFG-LABEL: Wave CFG for if_then_divergent:
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) bb.2(*) [LatestPostDom: bb.2] [divergent]
+# CFG-NEXT:    bb.1 (#1) -> bb.2(*)
+# CFG-NEXT:    bb.2 (#2) [secondary]
+
+name: if_then_divergent
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0
+
+    %8:vgpr_32 = COPY $vgpr0
+    %15:sreg_32 = S_MOV_B32 0
+    %16:sreg_32 = V_CMP_EQ_U32_e64 %8, killed %15, implicit $exec
+    SI_BRCOND killed %16, %bb.2
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+---
+
+# CFG-LABEL: Wave CFG for if_then_else_divergent:
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) <flow-1>(bb.2) [LatestPostDom: <flow-1>] [divergent]
+# CFG-NEXT:    bb.1 (#1) -> <flow-1>(bb.3)
+# CFG-NEXT:    <flow-1> (#2) -> bb.2(*) bb.3(*) [LatestPostDom: bb.3] [divergent] [secondary]
+# CFG-NEXT:    bb.2 (#2) -> bb.3(*)
+# CFG-NEXT:    bb.3 (#3) [secondary]
+
+name: if_then_else_divergent
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0
+
+    %8:vgpr_32 = COPY $vgpr0
+    %15:sreg_32 = S_MOV_B32 0
+    %16:sreg_32 = V_CMP_EQ_U32_e64 %8, killed %15, implicit $exec
+    SI_BRCOND killed %16, %bb.2
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_ENDPGM 0
+...
+---
+
+# CFG-LABEL: Wave CFG for if_then_else_uniform:
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) bb.2(*)
+# CFG-NEXT:    bb.1 (#1) -> bb.3(*)
+# CFG-NEXT:    bb.2 (#2) -> bb.3(*)
+# CFG-NEXT:    bb.3 (#3)
+
+name: if_then_else_uniform
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0
+
+    %8:sgpr_32 = COPY $sgpr0
+    %15:sreg_32 = S_MOV_B32 0
+    %16:sreg_32 = V_CMP_EQ_U32_e64 %8, killed %15, implicit $exec
+    SI_BRCOND killed %16, %bb.2
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_ENDPGM 0
+...
+---
+
+#
+#       0
+#      / \
+#     /   \
+#    1     2
+#   / \   / \
+#   3 4   5 6
+#    \ \ / /
+#     ->7<-
+#
+
+# CFG-LABEL: Wave CFG for if_then_else_nested_divergent_divergent
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) <flow-2>(bb.2) [LatestPostDom: <flow-2>] [divergent]
+# CFG-NEXT:    bb.1 (#1) -> bb.3(*) <flow-1>(bb.4) [LatestPostDom: <flow-1>] [divergent]
+# CFG-NEXT:    bb.3 (#2) -> <flow-1>(bb.7)
+# CFG-NEXT:    <flow-1> (#3) -> bb.4(*) <flow-2>(bb.7) [divergent] [secondary]
+# CFG-NEXT:    bb.4 (#3) -> <flow-2>(bb.7)
+# CFG-NEXT:    <flow-2> (#4) -> bb.2(*) bb.7(*) [LatestPostDom: bb.7] [divergent] [secondary]
+# CFG-NEXT:    bb.2 (#4) -> bb.5(*) <flow-3>(bb.6) [LatestPostDom: <flow-3>] [divergent]
+# CFG-NEXT:    bb.5 (#5) -> <flow-3>(bb.7)
+# CFG-NEXT:    <flow-3> (#6) -> bb.6(*) bb.7(*) [LatestPostDom: bb.7] [divergent] [secondary]
+# CFG-NEXT:    bb.6 (#6) -> bb.7(*)
+# CFG-NEXT:    bb.7 (#7) [secondary]
+
+name: if_then_else_nested_divergent_divergent
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0, $vgpr1, $vgpr2
+
+    %8:vgpr_32 = COPY $vgpr0
+    %9:vgpr_32 = COPY $vgpr1
+    %10:vgpr_32 = COPY $vgpr2
+    %15:sreg_32 = S_MOV_B32 0
+    %16:sreg_32 = V_CMP_EQ_U32_e64 killed %8, %15, implicit $exec
+    SI_BRCOND killed %16, %bb.2
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3, %bb.4
+
+    %17:sreg_32 = V_CMP_EQ_U32_e64 killed %9, %15, implicit $exec
+    SI_BRCOND killed %17, %bb.3
+    S_BRANCH %bb.4
+
+  bb.2:
+    successors: %bb.5, %bb.6
+
+    %18:sreg_32 = V_CMP_EQ_U32_e64 killed %10, %15, implicit $exec
+    SI_BRCOND killed %18, %bb.6
+    S_BRANCH %bb.5
+
+  bb.3:
+    successors: %bb.7
+    S_BRANCH %bb.7
+
+  bb.4:
+    successors: %bb.7
+    S_BRANCH %bb.7
+
+  bb.5:
+    successors: %bb.7
+    S_BRANCH %bb.7
+
+  bb.6:
+    successors: %bb.7
+    S_BRANCH %bb.7
+
+  bb.7:
+    S_ENDPGM 0
+...
+---
+
+#
+#       0
+#      / \
+#     /   \
+#    1     2
+#   / \   / \
+#   3 4   5 6
+#    \ \ / /
+#     ->7<-
+#
+
+# CFG-LABEL: Wave CFG for  if_then_else_nested_uniform_divergent
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) bb.2(*)
+# CFG-NEXT:    bb.1 (#1) -> bb.3(*) <flow-1>(bb.4) [LatestPostDom: <flow-1>] [divergent]
+# CFG-NEXT:    bb.3 (#2) -> <flow-1>(bb.7)
+# CFG-NEXT:    <flow-1> (#3) -> bb.4(*) bb.7(*) [LatestPostDom: bb.7] [divergent] [secondary]
+# CFG-NEXT:    bb.4 (#3) -> bb.7(*)
+# CFG-NEXT:    bb.2 (#4) -> bb.5(*) <flow-2>(bb.6) [LatestPostDom: <flow-2>] [divergent]
+# CFG-NEXT:    bb.5 (#5) -> <flow-2>(bb.7)
+# CFG-NEXT:    <flow-2> (#6) -> bb.6(*) bb.7(*) [LatestPostDom: bb.7] [divergent] [secondary]
+# CFG-NEXT:    bb.6 (#6) -> bb.7(*)
+# CFG-NEXT:    bb.7 (#7) [secondary]
+
+name: if_then_else_nested_uniform_divergent
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0, $vgpr1, $vgpr2
+
+    %8:sgpr_32 = COPY $sgpr0
+    %9:vgpr_32 = COPY $vgpr1
+    %10:vgpr_32 = COPY $vgpr2
+    %15:sreg_32 = S_MOV_B32 0
+    %16:sreg_32 = V_CMP_EQ_U32_e64 killed %8, %15, implicit $exec
+    SI_BRCOND killed %16, %bb.2
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3, %bb.4
+
+    %17:sreg_32 = V_CMP_EQ_U32_e64 killed %9, %15, implicit $exec
+    SI_BRCOND killed %17, %bb.3
+    S_BRANCH %bb.4
+
+  bb.2:
+    successors: %bb.5, %bb.6
+
+    %18:sreg_32 = V_CMP_EQ_U32_e64 killed %10, %15, implicit $exec
+    SI_BRCOND killed %18, %bb.6
+    S_BRANCH %bb.5
+
+  bb.3:
+    successors: %bb.7
+    S_BRANCH %bb.7
+
+  bb.4:
+    successors: %bb.7
+    S_BRANCH %bb.7
+
+  bb.5:
+    successors: %bb.7
+    S_BRANCH %bb.7
+
+  bb.6:
+    successors: %bb.7
+    S_BRANCH %bb.7
+
+  bb.7:
+    S_ENDPGM 0
+...
+---
+
+#
+#       0
+#      / \
+#     /   \
+#    1     2
+#   / \   / \
+#   3 4   5 6
+#    \ \ / /
+#     ->7<-
+#
+
+
+# CFG-LABEL: Wave CFG for if_then_else_nested_divergent_uniform:
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) <flow-1>(bb.2) [LatestPostDom: <flow-1>] [divergent]
+# CFG-NEXT:    bb.1 (#1) -> bb.3(*) bb.4(*)
+# CFG-NEXT:    bb.3 (#2) -> <flow-1>(bb.7)
+# CFG-NEXT:    bb.4 (#3) -> <flow-1>(bb.7)
+# CFG-NEXT:   <flow-1> (#4) -> bb.2(*) bb.7(*) [LatestPostDom: bb.7] [divergent] [secondary]
+# CFG-NEXT:    bb.2 (#4) -> bb.5(*) bb.6(*)
+# CFG-NEXT:    bb.5 (#5) -> bb.7(*)
+# CFG-NEXT:    bb.6 (#6) -> bb.7(*)
+# CFG-NEXT:    bb.7 (#7) [secondary]
+
+name: if_then_else_nested_divergent_uniform
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0, $sgpr1, $sgpr2
+
+    %8:vgpr_32 = COPY $vgpr0
+    %9:sgpr_32 = COPY $sgpr1
+    %10:sgpr_32 = COPY $sgpr2
+    %15:sreg_32 = S_MOV_B32 0
+    %16:sreg_32 = V_CMP_EQ_U32_e64 killed %8, %15, implicit $exec
+    SI_BRCOND killed %16, %bb.2
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3, %bb.4
+
+    %17:sreg_32 = V_CMP_EQ_U32_e64 killed %9, %15, implicit $exec
+    SI_BRCOND killed %17, %bb.3
+    S_BRANCH %bb.4
+
+  bb.2:
+    successors: %bb.5, %bb.6
+
+    %18:sreg_32 = V_CMP_EQ_U32_e64 killed %10, %15, implicit $exec
+    SI_BRCOND killed %18, %bb.6
+    S_BRANCH %bb.5
+
+  bb.3:
+    successors: %bb.7
+    S_BRANCH %bb.7
+
+  bb.4:
+    successors: %bb.7
+    S_BRANCH %bb.7
+
+  bb.5:
+    successors: %bb.7
+    S_BRANCH %bb.7
+
+  bb.6:
+    successors: %bb.7
+    S_BRANCH %bb.7
+
+  bb.7:
+    S_ENDPGM 0
+...
