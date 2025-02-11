@@ -236,7 +236,8 @@ void InitializeFlags() {
       reinterpret_cast<uptr>(__asan_default_options), []() {
         // We call `InitializeDefaultFlags` again, instead of just parsing
         // `__asan_default_options` directly, to ensure that flags set through
-        // `ASAN_OPTS` take precedence over those set through `__asan_default_options`.
+        // `ASAN_OPTS` take precedence over those set through
+        // `__asan_default_options`.
         InitializeDefaultFlags();
         ProcessFlags();
         ApplyFlags();
