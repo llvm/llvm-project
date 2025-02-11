@@ -6372,8 +6372,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
     if (TE->State != TreeEntry::Vectorize &&
         TE->State != TreeEntry::StridedVectorize)
       NonVectorized.push_back(TE.get());
-    if (std::optional<OrdersType> CurrentOrder = getReorderingData(
-            *TE, /*TopToBottom=*/false, IgnoreReorder)) {
+    if (std::optional<OrdersType> CurrentOrder =
+            getReorderingData(*TE, /*TopToBottom=*/false, IgnoreReorder)) {
       OrderedEntries.insert(TE.get());
       if (!(TE->State == TreeEntry::Vectorize ||
             TE->State == TreeEntry::StridedVectorize) ||
@@ -13825,8 +13825,7 @@ BoUpSLP::isGatherShuffledEntry(
   if (TE->hasNonWholeRegisterOrNonPowerOf2Vec(*TTI))
     return {};
   Mask.assign(VL.size(), PoisonMaskElem);
-  assert((TE->UserTreeIndex ||
-          TE == VectorizableTree.front().get()) &&
+  assert((TE->UserTreeIndex || TE == VectorizableTree.front().get()) &&
          "Expected only single user of the gather node.");
   assert(VL.size() % NumParts == 0 &&
          "Number of scalars must be divisible by NumParts.");
