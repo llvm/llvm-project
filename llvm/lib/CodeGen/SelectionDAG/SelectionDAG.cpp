@@ -13415,10 +13415,10 @@ BuildVectorSDNode::isConstantSequence() const {
   return std::make_pair(Start, Stride);
 }
 
-bool ShuffleVectorSDNode::isSplatMask(const int *Mask, EVT VT) {
+bool ShuffleVectorSDNode::isSplatMask(ArrayRef<int> Mask) {
   // Find the first non-undef value in the shuffle mask.
   unsigned i, e;
-  for (i = 0, e = VT.getVectorNumElements(); i != e && Mask[i] < 0; ++i)
+  for (i = 0, e = Mask.size(); i != e && Mask[i] < 0; ++i)
     /* search */;
 
   // If all elements are undefined, this shuffle can be considered a splat

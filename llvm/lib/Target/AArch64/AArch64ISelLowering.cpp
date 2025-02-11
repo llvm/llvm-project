@@ -15508,7 +15508,7 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
 
   unsigned EltSize = VT.getScalarSizeInBits();
   unsigned NumElts = VT.getVectorNumElements();
-  return (ShuffleVectorSDNode::isSplatMask(&M[0], VT) ||
+  return (ShuffleVectorSDNode::isSplatMask(M) ||
           isREVMask(M, EltSize, NumElts, 64) ||
           isREVMask(M, EltSize, NumElts, 32) ||
           isREVMask(M, EltSize, NumElts, 16) ||
