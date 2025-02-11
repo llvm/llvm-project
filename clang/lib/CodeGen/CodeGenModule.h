@@ -327,6 +327,14 @@ class CodeGenModule : public CodeGenTypeCache {
   void operator=(const CodeGenModule &) = delete;
 
 public:
+  // Returns true if the nil check thunk flag is turned on and the method is
+  // thunkable. A method is thunkable if it is a direct instance method that
+  // have a fixed number of arguments.
+  bool shouldHaveNilCheckThunk(const ObjCMethodDecl *OMD) const {
+    return getCodeGenOpts().ObjCEmitNilCheckThunk &&
+           getLangOpts().ObjCRuntime.isNeXTFamily() && OMD &&
+           OMD->canHaveNilCheckThunk();
+  }
   struct Structor {
     Structor()
         : Priority(0), LexOrder(~0u), Initializer(nullptr),

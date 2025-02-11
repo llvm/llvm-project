@@ -74,6 +74,12 @@ static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
   return CGOpts.OptimizationLevel != 0;
 }
 
+CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, llvm::Function *Inner,
+                                 bool suppressNewContext)
+    : CodeGenFunction(cgm, suppressNewContext) {
+  InnerFn = Inner;
+  assert(InnerFn && "The inner function provided should not be null");
+}
 CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
     : CodeGenTypeCache(cgm), CGM(cgm), Target(cgm.getTarget()),
       Builder(cgm, cgm.getModule().getContext(), llvm::ConstantFolder(),
