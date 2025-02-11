@@ -1029,12 +1029,12 @@ private:
   ///                 preheader of the loop.
   /// \param NeedsBarrier Indicates whether a barrier must be inserted after
   ///                     the loop.
+  /// \param LoopType Type of workshare loop.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointOrErrorTy applyStaticWorkshareLoop(DebugLoc DL,
-                                                CanonicalLoopInfo *CLI,
-                                                InsertPointTy AllocaIP,
-                                                bool NeedsBarrier);
+  InsertPointOrErrorTy applyStaticWorkshareLoop(
+      DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+      omp::WorksharingLoopType LoopType, bool NeedsBarrier);
 
   /// Modifies the canonical loop a statically-scheduled workshare loop with a
   /// user-specified chunk size.

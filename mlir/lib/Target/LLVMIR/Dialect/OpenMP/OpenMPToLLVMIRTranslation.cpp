@@ -4208,9 +4208,8 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
 
     // Skip applying a workshare loop below when translating 'distribute
     // parallel do' (it's been already handled by this point while translating
-    // the nested omp.wsloop) and when not targeting a GPU.
-    if (isa_and_present<omp::WsloopOp>(distributeOp.getNestedWrapper()) ||
-        !ompBuilder->Config.isGPU())
+    // the nested omp.wsloop).
+    if (isa_and_present<omp::WsloopOp>(distributeOp.getNestedWrapper()))
       return llvm::Error::success();
 
     // TODO: Add support for clauses which are valid for DISTRIBUTE construct
@@ -4221,13 +4220,13 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
     bool isSimd = false;
     llvm::omp::WorksharingLoopType workshareLoopType =
         llvm::omp::WorksharingLoopType::DistributeStaticLoop;
-    bool loopNeedsBarier = true;
+    bool loopNeedsBarrier = false;
     llvm::Value *chunk = nullptr;
 
     llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
         ompBuilder->applyWorkshareLoop(
-            ompLoc.DL, loopInfo, allocaIP, loopNeedsBarier,
+            ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
             convertToScheduleKind(schedule), chunk, isSimd,
             scheduleMod == omp::ScheduleModifier::monotonic,
             scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
