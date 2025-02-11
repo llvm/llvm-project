@@ -88,37 +88,36 @@ public:
 
 using namespace AMDGPU::SDWA;
 
-/// Check that the SDWA selections \p ExistingSel and \p OperandSel
+/// Check that the SDWA selections \p Sel and \p OperandSel
 /// are suitable for being combined by combineSdwaSel.
-bool compatibleSelections(SdwaSel ExistingSel, SdwaSel OperandSel) {
-  return ExistingSel == SdwaSel::DWORD || OperandSel == ExistingSel ||
-         (ExistingSel != SdwaSel::WORD_1 && ExistingSel != SdwaSel::BYTE_2 &&
-          ExistingSel != SdwaSel::BYTE_3 &&
+bool compatibleSelections(SdwaSel Sel, SdwaSel OperandSel) {
+  return Sel == SdwaSel::DWORD || OperandSel == Sel ||
+         (Sel != SdwaSel::WORD_1 && Sel != SdwaSel::BYTE_2 &&
+          Sel != SdwaSel::BYTE_3 &&
           (OperandSel == SdwaSel::WORD_0 || OperandSel == SdwaSel::WORD_1));
 }
 
-/// Combine an SDWA instruction's existing SDWA selection \p
-/// ExistingSel with the SDWA selection \p OpSel of its operand. If
-/// the selections are compatible, return the combined selection,
-/// otherwise return a nullopt. For example, if we have ExistingSel
-/// = BYTE_0 Sel and FoldedSel WORD_1 Sel:
+/// Combine an SDWA instruction's existing SDWA selection \p Sel with
+/// the SDWA selection \p OpSel of its operand which must be
+/// compatible.
+/// For example, if we have Sel = BYTE_0 Sel and OperandSel = WORD_1:
 ///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
-SdwaSel combineSdwaSel(SdwaSel ExistingSel, SdwaSel OperandSel) {
-  assert(compatibleSelections(ExistingSel, OperandSel));
+SdwaSel combineSdwaSel(SdwaSel Sel, SdwaSel OperandSel) {
+  assert(compatibleSelections(Sel, OperandSel));
 
-  if (ExistingSel == SdwaSel::DWORD)
+  if (Sel == SdwaSel::DWORD)
     return OperandSel;
 
-  if (OperandSel == SdwaSel::DWORD || ExistingSel == OperandSel ||
+  if (OperandSel == SdwaSel::DWORD || Sel == OperandSel ||
       OperandSel == SdwaSel::WORD_0)
-    return ExistingSel;
+    return Sel;
 
   if (OperandSel == SdwaSel::WORD_1) {
-    if (ExistingSel == SdwaSel::BYTE_0)
+    if (Sel == SdwaSel::BYTE_0)
       return SdwaSel::BYTE_2;
-    if (ExistingSel == SdwaSel::BYTE_1)
+    if (Sel == SdwaSel::BYTE_1)
       return SdwaSel::BYTE_3;
-    if (ExistingSel == SdwaSel::WORD_0)
+    if (Sel == SdwaSel::WORD_0)
       return SdwaSel::WORD_1;
   }
 
