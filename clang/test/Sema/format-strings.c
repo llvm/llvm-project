@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs %s
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -fno-signed-char %s
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-linux-android %s
+// RUN: %clang_cc1 -std=c23 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs %s
+// RUN: %clang_cc1 -std=c23 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -fno-signed-char %s
+// RUN: %clang_cc1 -std=c23 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
+// RUN: %clang_cc1 -std=c23 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-linux-android %s
 
 #include <stdarg.h>
 #include <stddef.h>
