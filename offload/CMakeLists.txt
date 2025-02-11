@@ -438,7 +438,7 @@ add_subdirectory(hostexec)
 add_subdirectory(DeviceRTL)
 
 # Build target agnostic offloading library.
-add_subdirectory(src)
+add_subdirectory(libomptarget)
 
 # FIXME: Re-enable once OMPT design allows
 # add_subdirectory(tools/offload-tblgen)
