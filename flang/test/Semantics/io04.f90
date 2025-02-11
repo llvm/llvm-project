@@ -138,6 +138,23 @@
 
   write(*, '(X)')
 
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  write((msg), *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(KIND=1,LEN=8_8)
+  write("a string", *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  write(msg//msg, *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type LOGICAL(4)
+  write(.true., *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type REAL(4)
+  write(1.0, *)
+  write(internal_fileA, *)
+  !! Not sure why this isn't an error with this message: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  write((internal_fileA), *)
+  !ERROR: I/O unit number must be scalar
+  write([1,2,3], *)
+
+
   !ERROR: Output item must not be a procedure
   print*, procptr
   !ERROR: Output item must not be a procedure
