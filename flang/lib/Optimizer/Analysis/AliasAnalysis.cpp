@@ -51,7 +51,7 @@ static bool hasGlobalOpTargetAttr(mlir::Value v, fir::AddrOfOp op) {
       v, fir::GlobalOp::getTargetAttrName(globalOpName));
 }
 
-mlir::Value getOriginalDef(mlir::Value v) {
+static mlir::Value getOriginalDef(mlir::Value v) {
   mlir::Operation *defOp;
   bool breakFromLoop = false;
   while (!breakFromLoop && (defOp = v.getDefiningOp())) {
@@ -578,16 +578,6 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             breakFromLoop = true;
         })
         .Case<fir::LoadOp>([&](auto op) {
-          // If the load is from a leaf source, return the leaf. Do not track
-          // through indirections otherwise.
-          // TODO: Add support to fir.alloca and fir.allocmem
-          auto def = getOriginalDef(op.getMemref());
-          if (isDummyArgument(def) ||
-              def.template getDefiningOp<fir::AddrOfOp>()) {
-            v = def;
-            defOp = v.getDefiningOp();
-            return;
-          }
           // If load is inside target and it points to mapped item,
           // continue tracking.
           Operation *loadMemrefOp = op.getMemref().getDefiningOp();
@@ -600,6 +590,40 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             defOp = v.getDefiningOp();
             return;
           }
+
+          // If we are loading a box reference, but following the data,
+          // we gather the attributes of the box to populate the source
+          // and stop tracking.
+          if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty);
+              boxTy && followingData) {
+
+            if (mlir::isa<fir::PointerType>(boxTy.getEleTy()))
+              attributes.set(Attribute::Pointer);
+
+            auto def = getOriginalDef(op.getMemref());
+            if (auto addrOfOp = def.template getDefiningOp<fir::AddrOfOp>()) {
+              global = addrOfOp.getSymbol();
+
+              if (hasGlobalOpTargetAttr(def, addrOfOp))
+                attributes.set(Attribute::Target);
+
+              type = SourceKind::Global;
+            }
+
+            // TODO: Add support to fir.alloca and fir.allocmem
+            // if (auto allocOp = def.template getDefiningOp<fir::AllocaOp>()) {
+            //   ...
+            // }
+
+            if (isDummyArgument(def)) {
+              defOp = nullptr;
+              v = def;
+            }
+
+            breakFromLoop = true;
+            return;
+          }
+
           // No further tracking for addresses loaded from memory for now.
           type = SourceKind::Indirect;
           breakFromLoop = true;
