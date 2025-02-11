@@ -21,8 +21,8 @@
 #ifndef FORTRAN_LOWER_CONVERT_TYPE_H
 #define FORTRAN_LOWER_CONVERT_TYPE_H
 
-#include "flang/Common/Fortran.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinTypes.h"
 
 namespace mlir {

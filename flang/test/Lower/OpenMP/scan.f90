@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-hlfir -fopenmp %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
-! CHECK: omp.wsloop reduction(mod: inscan, @add_reduction_i32 %{{.*}} -> %[[RED_ARG_1:.*]] : {{.*}}) {
+! CHECK: omp.wsloop private({{.*}}) reduction(mod: inscan, @add_reduction_i32 %{{.*}} -> %[[RED_ARG_1:.*]] : {{.*}}) {
 ! CHECK: %[[RED_DECL_1:.*]]:2 = hlfir.declare %[[RED_ARG_1]]
 ! CHECK: omp.scan inclusive(%[[RED_DECL_1]]#1 : {{.*}})
 
@@ -19,7 +19,7 @@ subroutine inclusive_scan(a, b, n)
 end subroutine inclusive_scan
 
 
-! CHECK: omp.wsloop reduction(mod: inscan, @add_reduction_i32 %{{.*}} -> %[[RED_ARG_2:.*]] : {{.*}}) {
+! CHECK: omp.wsloop private({{.*}}) reduction(mod: inscan, @add_reduction_i32 %{{.*}} -> %[[RED_ARG_2:.*]] : {{.*}}) {
 ! CHECK: %[[RED_DECL_2:.*]]:2 = hlfir.declare %[[RED_ARG_2]]
 ! CHECK: omp.scan exclusive(%[[RED_DECL_2]]#1 : {{.*}})
 subroutine exclusive_scan(a, b, n)
