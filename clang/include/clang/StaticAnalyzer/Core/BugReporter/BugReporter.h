@@ -748,8 +748,8 @@ public:
 /// It can be valuable to produce tags with some bits of information and later
 /// reuse them for a better diagnostic.
 ///
-/// Please make sure that derived class' constuctor is private and that the user
-/// can only create objects using DataTag::Factory.  This also means that
+/// Please make sure that derived class' constructor is private and that the
+/// user can only create objects using DataTag::Factory.  This also means that
 /// DataTag::Factory should be friend for every derived class.
 class DataTag : public ProgramPointTag {
 public:

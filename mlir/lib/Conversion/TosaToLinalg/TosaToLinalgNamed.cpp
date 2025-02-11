@@ -258,7 +258,12 @@ public:
     DenseI64ArrayAttr padAttr = op.getPadAttr();
     DenseI64ArrayAttr strideTosaAttr = op.getStrideAttr();
     DenseI64ArrayAttr dilationTosaAttr = op.getDilationAttr();
-    bool isQuantized = op.getQuantizationInfo().has_value();
+
+    auto failureOrMaybeZps = extractConvZpPair(op, rewriter);
+    if (llvm::failed(failureOrMaybeZps))
+      return failure();
+
+    auto maybeZps = failureOrMaybeZps.value();
 
     if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
       return rewriter.notifyMatchFailure(
@@ -284,10 +289,7 @@ public:
 
     // Apply padding as necessary.
     TypedAttr zeroAttr = rewriter.getZeroAttr(inputETy);
-    if (isQuantized) {
-      auto quantizationInfo = *op.getQuantizationInfo();
-      int64_t iZp = quantizationInfo.getInputZp();
-
+    if (maybeZps) {
       int64_t intMin =
           APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
               .getSExtValue();
@@ -295,11 +297,11 @@ public:
           APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
               .getSExtValue();
 
-      if (iZp < intMin || iZp > intMax)
+      if (maybeZps->inputZp < intMin || maybeZps->inputZp > intMax)
         return rewriter.notifyMatchFailure(
             op, "tosa.conv op quantization has zp outside of input range");
 
-      zeroAttr = rewriter.getIntegerAttr(inputETy, iZp);
+      zeroAttr = rewriter.getIntegerAttr(inputETy, maybeZps->inputZp);
     }
 
     llvm::SmallVector<int64_t> pad;
@@ -312,8 +314,8 @@ public:
       // For 2D convolutions, we need to check if the target convolution op
       // wants a HWCF kernel layout.
       bool wantHwcf =
-          isQuantized ? std::is_same_v<LinalgConvQOp, linalg::Conv2DNhwcHwcfQOp>
-                      : std::is_same_v<LinalgConvOp, linalg::Conv2DNhwcHwcfOp>;
+          maybeZps ? std::is_same_v<LinalgConvQOp, linalg::Conv2DNhwcHwcfQOp>
+                   : std::is_same_v<LinalgConvOp, linalg::Conv2DNhwcHwcfOp>;
       if (wantHwcf) {
         // Transpose the kernel to match dimension ordering of the linalg
         // convolution operation.
@@ -374,10 +376,9 @@ public:
     Value broadcastBias =
         linalgBroadcastAndMaybeExtSI(rewriter, loc, bias, biasEmptyTensor);
 
-    if (isQuantized) {
-      auto quantizationInfo = *op.getQuantizationInfo();
-      auto iZp = rewriter.getI32IntegerAttr(quantizationInfo.getInputZp());
-      auto kZp = rewriter.getI32IntegerAttr(quantizationInfo.getWeightZp());
+    if (maybeZps) {
+      auto iZp = rewriter.getI32IntegerAttr(maybeZps->inputZp);
+      auto kZp = rewriter.getI32IntegerAttr(maybeZps->weightZp);
 
       auto iZpVal = rewriter.create<arith::ConstantOp>(loc, iZp);
       auto kZpVal = rewriter.create<arith::ConstantOp>(loc, kZp);
@@ -440,26 +441,18 @@ public:
         /*inputSizeDims=*/{1, 2},
         /*kernelSizeDims=*/{0, 1}, rewriter);
 
-    bool isQuantized = op->hasAttr("quantization_info");
-    IntegerAttr iZp;
-    IntegerAttr kZp;
-    if (isQuantized) {
-      auto quantizationInfo =
-          cast<tosa::ConvOpQuantizationAttr>(op->getAttr("quantization_info"));
-      iZp = rewriter.getI32IntegerAttr(quantizationInfo.getInputZp());
-      kZp = rewriter.getI32IntegerAttr(quantizationInfo.getWeightZp());
-    }
+    auto failureOrMaybeZps = extractConvZpPair(op, rewriter);
+    if (llvm::failed(failureOrMaybeZps))
+      return failure();
+
+    auto maybeZps = failureOrMaybeZps.value();
 
     auto weightShape = weightTy.getShape();
     auto resultShape = resultTy.getShape();
 
     // Apply padding as necessary.
     TypedAttr zeroAttr = rewriter.getZeroAttr(inputETy);
-    if (isQuantized) {
-      auto quantizationInfo =
-          cast<tosa::ConvOpQuantizationAttr>(op->getAttr("quantization_info"));
-      int64_t iZp = quantizationInfo.getInputZp();
-
+    if (maybeZps) {
       int64_t intMin =
           APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
               .getSExtValue();
@@ -467,12 +460,12 @@ public:
           APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
               .getSExtValue();
 
-      if (iZp < intMin || iZp > intMax)
+      if (maybeZps->inputZp < intMin || maybeZps->inputZp > intMax)
         return rewriter.notifyMatchFailure(
             op, "tosa.depthwise_conv op quantization has zp outside of input "
                 "range");
 
-      zeroAttr = rewriter.getIntegerAttr(inputETy, iZp);
+      zeroAttr = rewriter.getIntegerAttr(inputETy, maybeZps->inputZp);
     }
 
     llvm::SmallVector<int64_t> pad;
@@ -512,7 +505,7 @@ public:
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
 
-    if (!isQuantized) {
+    if (!maybeZps) {
       Value conv = rewriter
                        .create<linalg::DepthwiseConv2DNhwcHwcmOp>(
                            loc, linalgConvTy, ValueRange{input, weight},
@@ -539,8 +532,10 @@ public:
               .getResult(0);
       rewriter.replaceOp(op, result);
     } else {
+      IntegerAttr iZp = rewriter.getI32IntegerAttr(maybeZps->inputZp);
+      IntegerAttr wZp = rewriter.getI32IntegerAttr(maybeZps->weightZp);
       auto iZpVal = rewriter.create<arith::ConstantOp>(loc, iZp);
-      auto kZpVal = rewriter.create<arith::ConstantOp>(loc, kZp);
+      auto kZpVal = rewriter.create<arith::ConstantOp>(loc, wZp);
       Value conv =
           rewriter
               .create<linalg::DepthwiseConv2DNhwcHwcmQOp>(
@@ -595,18 +590,15 @@ public:
                            .create<linalg::FillOp>(loc, ValueRange{zero},
                                                    ValueRange{emptyTensor})
                            .result();
-    if (!op.getQuantizationInfo()) {
+    if (!op.getAZp() && !op.getBZp()) {
       rewriter.replaceOpWithNewOp<linalg::BatchMatmulOp>(
           op, TypeRange{op.getType()},
           ValueRange{adaptor.getA(), adaptor.getB()}, ValueRange{zeroTensor});
       return success();
     }
 
-    auto quantizationInfo = *op.getQuantizationInfo();
-    auto aZp = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(quantizationInfo.getAZp()));
-    auto bZp = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(quantizationInfo.getBZp()));
+    auto aZp = rewriter.create<arith::ConstantOp>(loc, op.getAZpAttr());
+    auto bZp = rewriter.create<arith::ConstantOp>(loc, op.getBZpAttr());
     rewriter.replaceOpWithNewOp<linalg::QuantizedBatchMatmulOp>(
         op, TypeRange{op.getType()},
         ValueRange{adaptor.getA(), adaptor.getB(), aZp, bZp}, zeroTensor);
@@ -666,7 +658,7 @@ public:
     Value broadcastBias =
         linalgBroadcastAndMaybeExtSI(rewriter, loc, bias, biasEmptyTensor);
 
-    if (!op.getQuantizationInfo()) {
+    if (!op.getInputZp() && !op.getWeightZp()) {
       Value matmul = rewriter
                          .create<linalg::MatmulOp>(
                              loc, TypeRange{op.getType()},
@@ -677,11 +669,9 @@ public:
       return success();
     }
 
-    auto quantizationInfo = *op.getQuantizationInfo();
-    auto inputZp = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(quantizationInfo.getInputZp()));
-    auto outputZp = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(quantizationInfo.getWeightZp()));
+    auto inputZp = rewriter.create<arith::ConstantOp>(loc, op.getInputZpAttr());
+    auto outputZp =
+        rewriter.create<arith::ConstantOp>(loc, op.getWeightZpAttr());
     Value matmul =
         rewriter
             .create<linalg::QuantizedMatmulOp>(
@@ -963,10 +953,9 @@ public:
 
             // If we have quantization information we need to apply an offset
             // for the input zp value.
-            if (op.getQuantizationInfo()) {
-              auto quantizationInfo = *op.getQuantizationInfo();
-              auto inputZp = rewriter.create<arith::ConstantOp>(
-                  loc, b.getIntegerAttr(accETy, quantizationInfo.getInputZp()));
+            if (op.getInputZp()) {
+              auto inputZp =
+                  rewriter.create<arith::ConstantOp>(loc, op.getInputZpAttr());
               Value offset =
                   rewriter.create<arith::MulIOp>(loc, accETy, count, inputZp);
               poolVal =
@@ -1018,11 +1007,9 @@ public:
 
             // If we have quantization information we need to apply output
             // zeropoint.
-            if (op.getQuantizationInfo()) {
-              auto quantizationInfo = *op.getQuantizationInfo();
-              auto outputZp = rewriter.create<arith::ConstantOp>(
-                  loc, b.getIntegerAttr(scaled.getType(),
-                                        quantizationInfo.getOutputZp()));
+            if (op.getOutputZp()) {
+              auto outputZp =
+                  rewriter.create<arith::ConstantOp>(loc, op.getOutputZpAttr());
               scaled = rewriter.create<arith::AddIOp>(loc, scaled, outputZp)
                            .getResult();
             }

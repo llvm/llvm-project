@@ -551,7 +551,13 @@ def EmitC_CallOp : EmitC_Op<"call",
     %2 = emitc.call @my_add(%0, %1) : (f32, f32) -> f32
     ```
   }];
-  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<EmitCType>:$operands);
+  let arguments = (ins 
+    FlatSymbolRefAttr:$callee,
+    Variadic<EmitCType>:$operands,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
+  );
+
   let results = (outs Variadic<EmitCType>);
 
   let builders = [

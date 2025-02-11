@@ -116,7 +116,9 @@ def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                       FeatureStdExtZba,
                                       FeatureStdExtZbb,
                                       FeatureStdExtZifencei,
-                                      FeatureStdExtZicsr],
+                                      FeatureStdExtZicsr,
+                                      FeatureVendorXMIPSCMove,
+                                      FeatureVendorXMIPSLSP],
                                      [TuneMIPSP8700]>;
 
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
@@ -327,7 +329,7 @@ defvar SiFiveP500TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneAUIPCADDIFusion,
                                  TunePostRAScheduler];
 
-def SIFIVE_P550 : RISCVProcessorModel<"sifive-p550", NoSchedModel,
+def SIFIVE_P550 : RISCVProcessorModel<"sifive-p550", SiFiveP500Model,
                                       [Feature64Bit,
                                        FeatureStdExtI,
                                        FeatureStdExtZifencei,

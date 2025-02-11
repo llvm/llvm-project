@@ -285,3 +285,63 @@ module {
     spirv.ReturnValue %3 : !spirv.array<8192 x f32>
   }
 }
+
+// -----
+
+// PRODUCER-CONSUMER-LABEL: func @same_memref_load_store
+func.func @same_memref_load_store(%producer : memref<32xf32>, %consumer: memref<16xf32>){
+  %cst = arith.constant 2.000000e+00 : f32
+  // Source isn't removed.
+  // PRODUCER-CONSUMER: affine.for %{{.*}} = 0 to 32
+  affine.for %arg3 = 0 to 32 {
+    %0 = affine.load %producer[%arg3] : memref<32xf32>
+    %2 = arith.mulf %0, %cst : f32
+    affine.store %2, %producer[%arg3] : memref<32xf32>
+  }
+  affine.for %arg3 = 0 to 16 {
+    %0 = affine.load %producer[%arg3] : memref<32xf32>
+    %2 = arith.addf %0, %cst : f32
+    affine.store %2, %consumer[%arg3] : memref<16xf32>
+  }
+  // Fused nest.
+  // PRODUCER-CONSUMER:      affine.for %{{.*}} = 0 to 16
+  // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<32xf32>
+  // PRODUCER-CONSUMER-NEXT:   arith.mulf
+  // PRODUCER-CONSUMER-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
+  // PRODUCER-CONSUMER-NEXT:   arith.addf
+  // PRODUCER-CONSUMER-NEXT:   affine.store
+  // PRODUCER-CONSUMER-NEXT: }
+  return
+}
+
+// PRODUCER-CONSUMER-LABEL: func @same_memref_load_multiple_stores
+func.func @same_memref_load_multiple_stores(%producer : memref<32xf32>, %producer_2 : memref<32xf32>, %consumer: memref<16xf32>){
+  %cst = arith.constant 2.000000e+00 : f32
+  // Source isn't removed.
+  // PRODUCER-CONSUMER: affine.for %{{.*}} = 0 to 32
+  affine.for %arg3 = 0 to 32 {
+    %0 = affine.load %producer[%arg3] : memref<32xf32>
+    %2 = arith.mulf %0, %cst : f32
+    affine.store %2, %producer[%arg3] : memref<32xf32>
+    affine.store %2, %producer_2[%arg3] : memref<32xf32>
+  }
+  affine.for %arg3 = 0 to 16 {
+    %0 = affine.load %producer[%arg3] : memref<32xf32>
+    %1 = affine.load %producer_2[%arg3] : memref<32xf32>
+    %2 = arith.addf %0, %1 : f32
+    affine.store %2, %consumer[%arg3] : memref<16xf32>
+  }
+  // Fused nest.
+  // PRODUCER-CONSUMER:      affine.for %{{.*}} = 0 to 16
+  // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<32xf32>
+  // PRODUCER-CONSUMER-NEXT:   arith.mulf
+  // PRODUCER-CONSUMER-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // PRODUCER-CONSUMER-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
+  // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
+  // PRODUCER-CONSUMER-NEXT:   arith.addf
+  // PRODUCER-CONSUMER-NEXT:   affine.store
+  // PRODUCER-CONSUMER-NEXT: }
+  return
+}

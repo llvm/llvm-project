@@ -2685,34 +2685,31 @@ func.func @parallel_op_privatizers(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   return
 }
 
-// CHECK-LABEL: omp.private {type = private} @a.privatizer : !llvm.ptr alloc {
-omp.private {type = private} @a.privatizer : !llvm.ptr alloc {
-// CHECK: ^bb0(%{{.*}}: {{.*}}):
-^bb0(%arg0: !llvm.ptr):
+// CHECK-LABEL: omp.private {type = private} @a.privatizer : !llvm.ptr init {
+omp.private {type = private} @a.privatizer : !llvm.ptr init {
+// CHECK: ^bb0(%{{.*}}: {{.*}}, %{{.*}}: {{.*}}):
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
 }
 
-// CHECK-LABEL: omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-// CHECK: ^bb0(%{{.*}}: {{.*}}):
-^bb0(%arg0: !llvm.ptr):
+// CHECK-LABEL: omp.private {type = private} @x.privatizer : !llvm.ptr init {
+omp.private {type = private} @x.privatizer : !llvm.ptr init {
+// CHECK: ^bb0(%{{.*}}: {{.*}}, %{{.*}}: {{.*}}):
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
+// CHECK: } dealloc {
 } dealloc {
 // CHECK: ^bb0(%{{.*}}: {{.*}}):
 ^bb0(%arg0: !llvm.ptr):
   omp.yield
 }
 
-// CHECK-LABEL: omp.private {type = firstprivate} @y.privatizer : !llvm.ptr alloc {
-omp.private {type = firstprivate} @y.privatizer : !llvm.ptr alloc {
-// CHECK: ^bb0(%{{.*}}: {{.*}}):
-^bb0(%arg0: !llvm.ptr):
-  omp.yield(%arg0 : !llvm.ptr)
-// CHECK: } copy {
-} copy {
+// CHECK-LABEL: omp.private {type = firstprivate} @y.privatizer : !llvm.ptr copy {
+omp.private {type = firstprivate} @y.privatizer : !llvm.ptr copy {
 // CHECK: ^bb0(%{{.*}}: {{.*}}, %{{.*}}: {{.*}}):
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
+// CHECK: } dealloc {
 } dealloc {
 // CHECK: ^bb0(%{{.*}}: {{.*}}):
 ^bb0(%arg0: !llvm.ptr):

@@ -27,11 +27,6 @@ if(UNIX OR (MSVC AND LLVM_BUILD_LLVM_DYLIB_VIS) OR (MINGW AND LLVM_LINK_LLVM_DYL
   add_clang_subdirectory(clang-shlib)
 endif()
 
-if(CLANG_ENABLE_ARCMT)
-  add_clang_subdirectory(arcmt-test)
-  add_clang_subdirectory(c-arcmt-test)
-endif()
-
 if(CLANG_ENABLE_STATIC_ANALYZER)
   add_clang_subdirectory(clang-check)
   add_clang_subdirectory(clang-extdef-mapping)

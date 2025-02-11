@@ -2210,7 +2210,9 @@ struct DSEState {
 
       Instruction *UpperInst = UpperDef->getMemoryInst();
       auto IsRedundantStore = [&]() {
-        if (DefInst->isIdenticalTo(UpperInst))
+        // We don't care about differences in call attributes here.
+        if (DefInst->isIdenticalToWhenDefined(UpperInst,
+                                              /*IntersectAttrs=*/true))
           return true;
         if (auto *MemSetI = dyn_cast<MemSetInst>(UpperInst)) {
           if (auto *SI = dyn_cast<StoreInst>(DefInst)) {
@@ -2281,7 +2283,9 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
   for (unsigned Idx = 0, Count = CB->arg_size(); Idx < Count; ++Idx) {
     ConstantRangeList Inits;
     Attribute InitializesAttr = CB->getParamAttr(Idx, Attribute::Initializes);
-    if (InitializesAttr.isValid())
+    // initializes on byval arguments refers to the callee copy, not the
+    // original memory the caller passed in.
+    if (InitializesAttr.isValid() && !CB->isByValArgument(Idx))
       Inits = InitializesAttr.getValueAsConstantRangeList();
 
     Value *CurArg = CB->getArgOperand(Idx);

@@ -208,10 +208,6 @@ void MCWinCOFFStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   }
 }
 
-void MCWinCOFFStreamer::emitThumbFunc(MCSymbol *Func) {
-  llvm_unreachable("not implemented");
-}
-
 bool MCWinCOFFStreamer::emitSymbolAttribute(MCSymbol *S,
                                             MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolCOFF>(S);

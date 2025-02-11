@@ -202,6 +202,14 @@ def Tosa_FloatAttr : Attr<CPred<"::llvm::isa<::mlir::FloatAttr>($_self)">,
   let returnType = [{ ::mlir::APFloat }];
 }
 
+def Tosa_IntegerAttr : Attr<CPred<"::llvm::isa<::mlir::IntegerAttr>($_self)">,
+                          "arbitrary integer attribute"> {
+  let storageType = [{ ::mlir::IntegerAttr }];
+  let returnType = [{ ::llvm::APInt }];
+}
+
+def Tosa_IntOrFloatAttr : AnyAttrOf<[Tosa_IntegerAttr, Tosa_FloatAttr]>;
+
 //===----------------------------------------------------------------------===//
 // Iterable attributes.
 //===----------------------------------------------------------------------===//
@@ -287,5 +295,10 @@ class TosaShapeOfRank<int rank>
 def Rank1TosaShape : TosaShapeOfRank<1>;
 def Rank2TosaShape : TosaShapeOfRank<2>;
 def Rank4TosaShape : TosaShapeOfRank<4>;
+
+// NOTE: Tosa_ScalarTensor is currently defined as rank-0. If and when this
+// becomes rank-1 it can be used in place of Tosa_ZeroPointTensor and the
+// following def can be removed.
+def Tosa_ZeroPointTensor : TosaTensorRankOf<[Tosa_AnyNumber], [1]>;
 
 #endif // TOSA_TYPES_BASE

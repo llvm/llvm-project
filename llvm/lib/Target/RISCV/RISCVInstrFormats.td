@@ -232,7 +232,7 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   bit UsesVXRM = 0;
   let TSFlags{20} =  UsesVXRM;
 
-  // Indicates whther these instructions can partially overlap between source
+  // Indicates whether these instructions can partially overlap between source
   // registers and destination registers according to the vector spec.
   // 0 -> not a vector pseudo
   // 1 -> default value for vector pseudos. not widening or narrowing.

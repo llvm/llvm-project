@@ -344,6 +344,20 @@ bool ClauseProcessor::processDistSchedule(
   return false;
 }
 
+bool ClauseProcessor::processExclusive(
+    mlir::Location currentLocation,
+    mlir::omp::ExclusiveClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Exclusive>()) {
+    for (const Object &object : clause->v) {
+      const semantics::Symbol *symbol = object.sym();
+      mlir::Value symVal = converter.getSymbolAddress(*symbol);
+      result.exclusiveVars.push_back(symVal);
+    }
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processFilter(lower::StatementContext &stmtCtx,
                                     mlir::omp::FilterClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Filter>()) {
@@ -375,6 +389,20 @@ bool ClauseProcessor::processHint(mlir::omp::HintClauseOps &result) const {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     int64_t hintValue = *evaluate::ToInt64(clause->v);
     result.hint = firOpBuilder.getI64IntegerAttr(hintValue);
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processInclusive(
+    mlir::Location currentLocation,
+    mlir::omp::InclusiveClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Inclusive>()) {
+    for (const Object &object : clause->v) {
+      const semantics::Symbol *symbol = object.sym();
+      mlir::Value symVal = converter.getSymbolAddress(*symbol);
+      result.inclusiveVars.push_back(symVal);
+    }
     return true;
   }
   return false;
@@ -1135,10 +1163,9 @@ bool ClauseProcessor::processReduction(
         llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
         llvm::SmallVector<const semantics::Symbol *> reductionSyms;
         ReductionProcessor rp;
-        rp.addDeclareReduction(currentLocation, converter, clause,
-                               reductionVars, reduceVarByRef,
-                               reductionDeclSymbols, reductionSyms);
-
+        rp.processReductionArguments(
+            currentLocation, converter, clause, reductionVars, reduceVarByRef,
+            reductionDeclSymbols, reductionSyms, result.reductionMod);
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));

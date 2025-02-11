@@ -184,13 +184,13 @@
 // RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -g %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-NEW-DRIVER-DEBUG %s
 
-// CHK-NEW-DRIVER-DEBUG: clang-linker-wrapper{{.*}} "--device-debug"
+// CHK-NEW-DRIVER-DEBUG: clang-linker-wrapper{{.*}} "--device-compiler=powerpc64le-ibm-linux-gnu=-g"
 
 /// Check arguments to the linker wrapper
 // RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu \
 // RUN:     -mllvm -abc %s 2>&1 | FileCheck -check-prefix=CHK-NEW-DRIVER-MLLVM %s
 
-// CHK-NEW-DRIVER-MLLVM: clang-linker-wrapper{{.*}} "-abc"
+// CHK-NEW-DRIVER-MLLVM: clang-linker-wrapper{{.*}} "--device-linker=powerpc64le-ibm-linux-gnu=-mllvm" "--device-linker=powerpc64le-ibm-linux-gnu=-abc"
 
 //
 // Ensure that we generate the correct bindings for '-fsyntax-only' for OpenMP.

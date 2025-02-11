@@ -22,8 +22,7 @@
 
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
-
-#include "math.h"
+#include <clc/math/math.h>
 
 _CLC_OVERLOAD _CLC_DEF float acospi(float x) {
     // Computes arccos(x).

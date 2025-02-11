@@ -206,11 +206,12 @@ uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
 
 uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
     uint64_t From, BinaryFunction *To, SmallVectorImpl<uint64_t> &Path) {
-  if (!TailCallEdgesF.count(From))
+  auto It = TailCallEdgesF.find(From);
+  if (It == TailCallEdgesF.end())
     return 0;
   Path.push_back(From);
   uint64_t NumPaths = 0;
-  for (auto Target : TailCallEdgesF[From]) {
+  for (auto Target : It->second) {
     NumPaths += computeUniqueTailCallPath(Target, To, Path);
     // Stop analyzing the remaining if we are already seeing more than one
     // reachable paths.

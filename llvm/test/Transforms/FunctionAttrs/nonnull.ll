@@ -323,8 +323,8 @@ define void @test13_helper() {
 ; ATTRIBUTOR-LABEL: define void @test13_helper() {
 ; ATTRIBUTOR-NEXT:    [[NONNULLPTR:%.*]] = tail call ptr @ret_nonnull()
 ; ATTRIBUTOR-NEXT:    [[MAYBENULLPTR:%.*]] = tail call ptr @unknown()
-; ATTRIBUTOR-NEXT:    tail call void @test13(ptr nocapture nofree nonnull readnone [[NONNULLPTR]], ptr nocapture nofree nonnull readnone [[NONNULLPTR]], ptr nocapture nofree readnone [[MAYBENULLPTR]])
-; ATTRIBUTOR-NEXT:    tail call void @test13(ptr nocapture nofree nonnull readnone [[NONNULLPTR]], ptr nocapture nofree readnone [[MAYBENULLPTR]], ptr nocapture nofree nonnull readnone [[NONNULLPTR]])
+; ATTRIBUTOR-NEXT:    tail call void @test13(ptr nofree nonnull readnone captures(none) [[NONNULLPTR]], ptr nofree nonnull readnone captures(none) [[NONNULLPTR]], ptr nofree readnone captures(none) [[MAYBENULLPTR]])
+; ATTRIBUTOR-NEXT:    tail call void @test13(ptr nofree nonnull readnone captures(none) [[NONNULLPTR]], ptr nofree readnone captures(none) [[MAYBENULLPTR]], ptr nofree nonnull readnone captures(none) [[NONNULLPTR]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   %nonnullptr = tail call ptr @ret_nonnull()
@@ -335,11 +335,11 @@ define void @test13_helper() {
 }
 define internal void @test13(ptr %a, ptr %b, ptr %c) {
 ; FNATTRS-LABEL: define internal void @test13(
-; FNATTRS-SAME: ptr nocapture readnone [[A:%.*]], ptr nocapture readnone [[B:%.*]], ptr nocapture readnone [[C:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: ptr readnone captures(none) [[A:%.*]], ptr readnone captures(none) [[B:%.*]], ptr readnone captures(none) [[C:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define internal void @test13(
-; ATTRIBUTOR-SAME: ptr nocapture nofree nonnull readnone [[A:%.*]], ptr nocapture nofree readnone [[B:%.*]], ptr nocapture nofree readnone [[C:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-SAME: ptr nofree nonnull readnone captures(none) [[A:%.*]], ptr nofree readnone captures(none) [[B:%.*]], ptr nofree readnone captures(none) [[C:%.*]]) #[[ATTR0]] {
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   ret void
@@ -903,7 +903,7 @@ declare i32 @esfp(...)
 
 define i1 @parent8(ptr %a, ptr %bogus1, ptr %b) personality ptr @esfp{
 ; FNATTRS-LABEL: define noundef i1 @parent8(
-; FNATTRS-SAME: ptr nonnull [[A:%.*]], ptr nocapture readnone [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR7]] personality ptr @esfp {
+; FNATTRS-SAME: ptr nonnull [[A:%.*]], ptr readnone captures(none) [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR7]] personality ptr @esfp {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    invoke void @use2nonnull(ptr [[A]], ptr [[B]])
 ; FNATTRS-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
@@ -916,7 +916,7 @@ define i1 @parent8(ptr %a, ptr %bogus1, ptr %b) personality ptr @esfp{
 ; FNATTRS-NEXT:    unreachable
 ;
 ; ATTRIBUTOR-LABEL: define i1 @parent8(
-; ATTRIBUTOR-SAME: ptr nonnull [[A:%.*]], ptr nocapture nofree readnone [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR7]] personality ptr @esfp {
+; ATTRIBUTOR-SAME: ptr nonnull [[A:%.*]], ptr nofree readnone captures(none) [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR7]] personality ptr @esfp {
 ; ATTRIBUTOR-NEXT:  entry:
 ; ATTRIBUTOR-NEXT:    invoke void @use2nonnull(ptr nonnull [[A]], ptr nonnull [[B]])
 ; ATTRIBUTOR-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
@@ -1032,12 +1032,12 @@ define  ptr @g1() {
 declare void @use_i32_ptr(ptr) readnone nounwind
 define internal void @called_by_weak(ptr %a) {
 ; FNATTRS-LABEL: define internal void @called_by_weak(
-; FNATTRS-SAME: ptr nocapture readnone [[A:%.*]]) #[[ATTR1]] {
+; FNATTRS-SAME: ptr readnone captures(none) [[A:%.*]]) #[[ATTR1]] {
 ; FNATTRS-NEXT:    call void @use_i32_ptr(ptr [[A]])
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define internal void @called_by_weak(
-; ATTRIBUTOR-SAME: ptr nocapture nonnull readnone [[A:%.*]]) #[[ATTR10:[0-9]+]] {
+; ATTRIBUTOR-SAME: ptr nonnull readnone captures(none) [[A:%.*]]) #[[ATTR10:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    call void @use_i32_ptr(ptr nonnull [[A]]) #[[ATTR17:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -1054,7 +1054,7 @@ define weak_odr void @weak_caller(ptr nonnull %a) {
 ;
 ; ATTRIBUTOR-LABEL: define weak_odr void @weak_caller(
 ; ATTRIBUTOR-SAME: ptr nonnull [[A:%.*]]) {
-; ATTRIBUTOR-NEXT:    call void @called_by_weak(ptr nocapture nonnull readnone [[A]])
+; ATTRIBUTOR-NEXT:    call void @called_by_weak(ptr nonnull readnone captures(none) [[A]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @called_by_weak(ptr %a)
@@ -1064,12 +1064,12 @@ define weak_odr void @weak_caller(ptr nonnull %a) {
 ; Expect nonnull
 define internal void @control(ptr dereferenceable(4) %a) {
 ; FNATTRS-LABEL: define internal void @control(
-; FNATTRS-SAME: ptr nocapture readnone dereferenceable(4) [[A:%.*]]) #[[ATTR1]] {
+; FNATTRS-SAME: ptr readnone captures(none) dereferenceable(4) [[A:%.*]]) #[[ATTR1]] {
 ; FNATTRS-NEXT:    call void @use_i32_ptr(ptr [[A]])
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define internal void @control(
-; ATTRIBUTOR-SAME: ptr nocapture nonnull readnone dereferenceable(4) [[A:%.*]]) #[[ATTR10]] {
+; ATTRIBUTOR-SAME: ptr nonnull readnone captures(none) dereferenceable(4) [[A:%.*]]) #[[ATTR10]] {
 ; ATTRIBUTOR-NEXT:    call void @use_i32_ptr(ptr [[A]]) #[[ATTR17]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -1114,7 +1114,7 @@ define void @make_live(ptr nonnull dereferenceable(8) %a) {
 ; ATTRIBUTOR-LABEL: define void @make_live(
 ; ATTRIBUTOR-SAME: ptr nonnull dereferenceable(8) [[A:%.*]]) {
 ; ATTRIBUTOR-NEXT:    call void @naked(ptr nonnull align 16 dereferenceable(8) [[A]])
-; ATTRIBUTOR-NEXT:    call void @control(ptr nocapture nonnull readnone align 16 dereferenceable(8) [[A]])
+; ATTRIBUTOR-NEXT:    call void @control(ptr nonnull readnone align 16 captures(none) dereferenceable(8) [[A]])
 ; ATTRIBUTOR-NEXT:    call void @optnone(ptr nonnull align 16 dereferenceable(8) [[A]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;

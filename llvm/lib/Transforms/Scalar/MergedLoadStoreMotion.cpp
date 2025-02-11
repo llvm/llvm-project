@@ -281,7 +281,7 @@ void MergedLoadStoreMotion::sinkStoresAndGEPs(BasicBlock *BB, StoreInst *S0,
     auto *GEP0 = cast<GetElementPtrInst>(Ptr0);
     auto *GEP1 = cast<GetElementPtrInst>(Ptr1);
     Instruction *GEPNew = GEP0->clone();
-    GEPNew->insertBefore(SNew);
+    GEPNew->insertBefore(SNew->getIterator());
     GEPNew->applyMergedLocation(GEP0->getDebugLoc(), GEP1->getDebugLoc());
     SNew->setOperand(1, GEPNew);
     GEP0->replaceAllUsesWith(GEPNew);

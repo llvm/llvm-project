@@ -327,6 +327,9 @@ def IIT_I4 : IIT_Int<4, 58>;
 def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 59>;
 def IIT_V6 : IIT_Vec<6, 60>;
 def IIT_V10 : IIT_Vec<10, 61>;
+def IIT_ONE_THIRD_VEC_ARG : IIT_Base<62>;
+def IIT_ONE_FIFTH_VEC_ARG : IIT_Base<63>;
+def IIT_ONE_SEVENTH_VEC_ARG : IIT_Base<64>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -466,6 +469,15 @@ class LLVMVectorElementType<int num> : LLVMMatchType<num, IIT_VEC_ELEMENT>;
 // vector type, but change the element count to be half as many.
 class LLVMHalfElementsVectorType<int num>
   : LLVMMatchType<num, IIT_HALF_VEC_ARG>;
+
+class LLVMOneThirdElementsVectorType<int num>
+  : LLVMMatchType<num, IIT_ONE_THIRD_VEC_ARG>;
+
+class LLVMOneFifthElementsVectorType<int num>
+  : LLVMMatchType<num, IIT_ONE_FIFTH_VEC_ARG>;
+
+class LLVMOneSeventhElementsVectorType<int num>
+  : LLVMMatchType<num, IIT_ONE_SEVENTH_VEC_ARG>;
 
 // Match the type of another intrinsic parameter that is expected to be a
 // vector type (i.e. <N x iM>) but with each element subdivided to
@@ -1062,6 +1074,10 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   def int_round : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_roundeven    : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_sincos : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
+                             [llvm_anyfloat_ty]>;
+  def int_sincospi : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
+                             [llvm_anyfloat_ty]>;
+  def int_modf : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
                              [llvm_anyfloat_ty]>;
 
   // Truncate a floating point number with a specific rounding mode
@@ -2725,6 +2741,54 @@ def int_vector_interleave2   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
 
 def int_vector_deinterleave2 : DefaultAttrsIntrinsic<[LLVMHalfElementsVectorType<0>,
                                                       LLVMHalfElementsVectorType<0>],
+                                                     [llvm_anyvector_ty],
+                                                     [IntrNoMem]>;
+
+def int_vector_interleave3   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                     [LLVMOneThirdElementsVectorType<0>,
+                                                      LLVMOneThirdElementsVectorType<0>,
+                                                      LLVMOneThirdElementsVectorType<0>],
+                                                     [IntrNoMem]>;
+
+def int_vector_deinterleave3 : DefaultAttrsIntrinsic<[LLVMOneThirdElementsVectorType<0>,
+                                                      LLVMOneThirdElementsVectorType<0>,
+                                                      LLVMOneThirdElementsVectorType<0>],
+                                                     [llvm_anyvector_ty],
+                                                     [IntrNoMem]>;
+
+def int_vector_interleave5   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                     [LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>],
+                                                     [IntrNoMem]>;
+
+def int_vector_deinterleave5 : DefaultAttrsIntrinsic<[LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>],
+                                                     [llvm_anyvector_ty],
+                                                     [IntrNoMem]>;
+
+def int_vector_interleave7   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                     [LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>],
+                                                     [IntrNoMem]>;
+
+def int_vector_deinterleave7 : DefaultAttrsIntrinsic<[LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>],
                                                      [llvm_anyvector_ty],
                                                      [IntrNoMem]>;
 

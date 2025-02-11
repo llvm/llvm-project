@@ -47,7 +47,7 @@ define <2 x float> @_Z3cosDv2_f(<2 x float> noundef %x) {
 
 define void @sincos_f32(float noundef %x, ptr addrspace(1) nocapture noundef writeonly %sin_out, ptr addrspace(1) nocapture noundef writeonly %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32
-; CHECK-SAME: (float noundef [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture noundef writeonly [[COS_OUT:%.*]]) {
+; CHECK-SAME: (float noundef [[X:%.*]], ptr addrspace(1) noundef writeonly captures(none) [[SIN_OUT:%.*]], ptr addrspace(1) noundef writeonly captures(none) [[COS_OUT:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call contract float @_Z3sinf(float noundef [[X]])
 ; CHECK-NEXT:    store float [[CALL]], ptr addrspace(1) [[SIN_OUT]], align 4
@@ -65,7 +65,7 @@ entry:
 
 define void @sincos_f32_value_is_same_constantfp(ptr addrspace(1) nocapture noundef writeonly %sin_out, ptr addrspace(1) nocapture noundef writeonly %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32_value_is_same_constantfp
-; CHECK-SAME: (ptr addrspace(1) nocapture noundef writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture noundef writeonly [[COS_OUT:%.*]]) {
+; CHECK-SAME: (ptr addrspace(1) noundef writeonly captures(none) [[SIN_OUT:%.*]], ptr addrspace(1) noundef writeonly captures(none) [[COS_OUT:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call contract float @_Z3sinf(float 4.200000e+01)
 ; CHECK-NEXT:    store float [[CALL]], ptr addrspace(1) [[SIN_OUT]], align 4
@@ -92,7 +92,7 @@ define void @sincos_v2f32(<2 x float> noundef %x, ptr addrspace(1) nocapture nou
 ; GCN-NEXT:    ret void
 ;
 ; CHECK-LABEL: define void @sincos_v2f32
-; CHECK-SAME: (<2 x float> noundef [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture noundef writeonly [[COS_OUT:%.*]]) {
+; CHECK-SAME: (<2 x float> noundef [[X:%.*]], ptr addrspace(1) noundef writeonly captures(none) [[SIN_OUT:%.*]], ptr addrspace(1) noundef writeonly captures(none) [[COS_OUT:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call contract <2 x float> @_Z3sinDv2_f(<2 x float> noundef [[X]])
 ; CHECK-NEXT:    store <2 x float> [[CALL]], ptr addrspace(1) [[SIN_OUT]], align 8

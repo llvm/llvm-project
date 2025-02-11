@@ -32,7 +32,7 @@ InputSection *Reloc::getReferentInputSection() const {
 }
 
 StringRef Reloc::getReferentString() const {
-  if (auto *isec = referent.dyn_cast<InputSection *>()) {
+  if (auto *isec = dyn_cast<InputSection *>(referent)) {
     const auto *cisec = dyn_cast<CStringInputSection>(isec);
     assert(cisec && "referent must be a CStringInputSection");
     return cisec->getStringRefAtOffset(addend);

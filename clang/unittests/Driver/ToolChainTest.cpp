@@ -21,6 +21,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -593,6 +594,22 @@ TEST(ToolChainTest, UEFICallingConventionTest) {
 
   EXPECT_EQ(compiler.getTarget().getCallingConvKind(true),
             TargetInfo::CallingConvKind::CCK_MicrosoftWin64);
+}
+
+TEST(ToolChainTest, UEFIDefaultDebugFormatTest) {
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  struct TestDiagnosticConsumer : public DiagnosticConsumer {};
+  DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  Driver CCDriver("/home/test/bin/clang", "x86_64-unknown-uefi", Diags,
+                  "clang LLVM compiler", InMemoryFileSystem);
+  CCDriver.setCheckInputsExist(false);
+  std::unique_ptr<Compilation> CC(
+      CCDriver.BuildCompilation({"/home/test/bin/clang", "foo.cpp"}));
+  EXPECT_EQ(CC->getDefaultToolChain().getDefaultDebugFormat(),
+            llvm::codegenoptions::DIF_CodeView);
 }
 
 TEST(GetDriverMode, PrefersLastDriverMode) {

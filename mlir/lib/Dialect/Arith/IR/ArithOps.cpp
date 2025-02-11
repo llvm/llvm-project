@@ -1761,6 +1761,10 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
   if (llvm::isa<ShapedType>(resType))
     return {};
 
+  /// Bitcast poison.
+  if (llvm::isa<ub::PoisonAttr>(operand))
+    return ub::PoisonAttr::get(getContext());
+
   /// Bitcast integer or float to integer or float.
   APInt bits = llvm::isa<FloatAttr>(operand)
                    ? llvm::cast<FloatAttr>(operand).getValue().bitcastToAPInt()
@@ -1865,6 +1869,18 @@ OpFoldResult arith::CmpIOp::fold(FoldAdaptor adaptor) {
           getPredicate() == arith::CmpIPredicate::ne)
         return extOp.getOperand();
     }
+
+    // arith.cmpi ne, %val, %zero : i1 -> %val
+    if (getElementTypeOrSelf(getLhs().getType()).isInteger(1) &&
+        getPredicate() == arith::CmpIPredicate::ne)
+      return getLhs();
+  }
+
+  if (matchPattern(adaptor.getRhs(), m_One())) {
+    // arith.cmpi eq, %val, %one : i1 -> %val
+    if (getElementTypeOrSelf(getLhs().getType()).isInteger(1) &&
+        getPredicate() == arith::CmpIPredicate::eq)
+      return getLhs();
   }
 
   // Move constant to the right side.

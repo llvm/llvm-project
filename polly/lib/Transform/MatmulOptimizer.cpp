@@ -1759,7 +1759,7 @@ static bool isTCPattern(isl::schedule_node Node, const Dependences *D,
   //
   // For example, this covers the matrix multiplication pattern after a full
   // run of -polly-optree and -polly-delicm, where the write access is not
-  // through the original memory access, but trough a PHI node that was
+  // through the original memory access, but through a PHI node that was
   // delicmed. Subsequently, such band nodes will be replaced by a single band
   // node.
   //

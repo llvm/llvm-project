@@ -24,6 +24,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "GCNPreRAOptimizations.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -37,7 +38,7 @@ using namespace llvm;
 
 namespace {
 
-class GCNPreRAOptimizations : public MachineFunctionPass {
+class GCNPreRAOptimizationsImpl {
 private:
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
@@ -47,10 +48,16 @@ private:
   bool processReg(Register Reg);
 
 public:
+  GCNPreRAOptimizationsImpl(LiveIntervals *LS) : LIS(LS) {}
+  bool run(MachineFunction &MF);
+};
+
+class GCNPreRAOptimizationsLegacy : public MachineFunctionPass {
+public:
   static char ID;
 
-  GCNPreRAOptimizations() : MachineFunctionPass(ID) {
-    initializeGCNPreRAOptimizationsPass(*PassRegistry::getPassRegistry());
+  GCNPreRAOptimizationsLegacy() : MachineFunctionPass(ID) {
+    initializeGCNPreRAOptimizationsLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -65,24 +72,23 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(GCNPreRAOptimizations, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(GCNPreRAOptimizationsLegacy, DEBUG_TYPE,
                       "AMDGPU Pre-RA optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(GCNPreRAOptimizations, DEBUG_TYPE, "Pre-RA optimizations",
-                    false, false)
+INITIALIZE_PASS_END(GCNPreRAOptimizationsLegacy, DEBUG_TYPE,
+                    "Pre-RA optimizations", false, false)
 
-char GCNPreRAOptimizations::ID = 0;
+char GCNPreRAOptimizationsLegacy::ID = 0;
 
-char &llvm::GCNPreRAOptimizationsID = GCNPreRAOptimizations::ID;
+char &llvm::GCNPreRAOptimizationsID = GCNPreRAOptimizationsLegacy::ID;
 
-FunctionPass *llvm::createGCNPreRAOptimizationsPass() {
-  return new GCNPreRAOptimizations();
+FunctionPass *llvm::createGCNPreRAOptimizationsLegacyPass() {
+  return new GCNPreRAOptimizationsLegacy();
 }
 
-bool GCNPreRAOptimizations::processReg(Register Reg) {
+bool GCNPreRAOptimizationsImpl::processReg(Register Reg) {
   MachineInstr *Def0 = nullptr;
   MachineInstr *Def1 = nullptr;
   uint64_t Init = 0;
@@ -212,14 +218,25 @@ bool GCNPreRAOptimizations::processReg(Register Reg) {
   return true;
 }
 
-bool GCNPreRAOptimizations::runOnMachineFunction(MachineFunction &MF) {
+bool GCNPreRAOptimizationsLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+  LiveIntervals *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  return GCNPreRAOptimizationsImpl(LIS).run(MF);
+}
 
+PreservedAnalyses
+GCNPreRAOptimizationsPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  LiveIntervals *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  GCNPreRAOptimizationsImpl(LIS).run(MF);
+  return PreservedAnalyses::all();
+}
+
+bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
-  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   TRI = ST.getRegisterInfo();
 
   bool Changed = false;

@@ -34,6 +34,13 @@ class LazyArchive;
 class SectionChunk;
 class Symbol;
 
+// This data structure is instantiated for each -wrap option.
+struct WrappedSymbol {
+  Symbol *sym;
+  Symbol *real;
+  Symbol *wrap;
+};
+
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
 // files whose archive members are not yet loaded).
@@ -157,6 +164,12 @@ public:
 
   Chunk *edataStart = nullptr;
   Chunk *edataEnd = nullptr;
+
+  Symbol *delayLoadHelper = nullptr;
+  Chunk *tailMergeUnwindInfoChunk = nullptr;
+
+  // A list of wrapped symbols.
+  std::vector<WrappedSymbol> wrapped;
 
   void fixupExports();
   void assignExportOrdinals();

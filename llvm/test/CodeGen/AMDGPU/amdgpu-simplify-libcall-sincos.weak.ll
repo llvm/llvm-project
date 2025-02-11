@@ -8,7 +8,7 @@ declare extern_weak float @_Z3cosf(float noundef)
 
 define void @sincos_f32(float noundef %x, ptr addrspace(1) nocapture noundef writeonly %sin_out, ptr addrspace(1) nocapture noundef writeonly %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32
-; CHECK-SAME: (float noundef [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture noundef writeonly [[COS_OUT:%.*]]) {
+; CHECK-SAME: (float noundef [[X:%.*]], ptr addrspace(1) noundef writeonly captures(none) [[SIN_OUT:%.*]], ptr addrspace(1) noundef writeonly captures(none) [[COS_OUT:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call contract float @_Z3sinf(float noundef [[X]])
 ; CHECK-NEXT:    store float [[CALL]], ptr addrspace(1) [[SIN_OUT]], align 4
@@ -26,7 +26,7 @@ entry:
 
 define void @sincos_f32_value_is_same_constantfp(ptr addrspace(1) nocapture noundef writeonly %sin_out, ptr addrspace(1) nocapture noundef writeonly %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32_value_is_same_constantfp
-; CHECK-SAME: (ptr addrspace(1) nocapture noundef writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture noundef writeonly [[COS_OUT:%.*]]) {
+; CHECK-SAME: (ptr addrspace(1) noundef writeonly captures(none) [[SIN_OUT:%.*]], ptr addrspace(1) noundef writeonly captures(none) [[COS_OUT:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call contract float @_Z3sinf(float 4.200000e+01)
 ; CHECK-NEXT:    store float [[CALL]], ptr addrspace(1) [[SIN_OUT]], align 4

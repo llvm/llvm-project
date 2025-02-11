@@ -84,3 +84,10 @@ float builtin_mad_int_to_float_promotion(float p0, int p1) {
   return __builtin_hlsl_mad(p0, p0, p1);
   // expected-error@-1 {{3rd argument must be a floating point type (was 'int')}}
 }
+
+int builtin_mad_mixed_enums() {
+  enum e { one, two };
+  enum f { three };
+  return __builtin_hlsl_mad(one, two, three);
+  // expected-error@-1 {{invalid arithmetic between different enumeration types ('e' and 'f')}}
+}

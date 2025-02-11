@@ -478,40 +478,38 @@ define double @test_atomicrmw_fmax_f32_seq_cst_align8(ptr %ptr, double %value) #
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fmax_f32_seq_cst_align8:
 ; SOFTFP-NOLSE:       // %bb.0:
 ; SOFTFP-NOLSE-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
-; SOFTFP-NOLSE-NEXT:    ldr x21, [x0]
 ; SOFTFP-NOLSE-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; SOFTFP-NOLSE-NEXT:    mov x19, x0
+; SOFTFP-NOLSE-NEXT:    ldr x0, [x0]
 ; SOFTFP-NOLSE-NEXT:    mov x20, x1
 ; SOFTFP-NOLSE-NEXT:    b .LBB5_2
 ; SOFTFP-NOLSE-NEXT:  .LBB5_1: // %cmpxchg.nostore
 ; SOFTFP-NOLSE-NEXT:    // in Loop: Header=BB5_2 Depth=1
-; SOFTFP-NOLSE-NEXT:    mov w9, wzr
+; SOFTFP-NOLSE-NEXT:    mov w8, wzr
 ; SOFTFP-NOLSE-NEXT:    clrex
-; SOFTFP-NOLSE-NEXT:    mov x21, x8
-; SOFTFP-NOLSE-NEXT:    cbnz w9, .LBB5_6
+; SOFTFP-NOLSE-NEXT:    cbnz w8, .LBB5_6
 ; SOFTFP-NOLSE-NEXT:  .LBB5_2: // %atomicrmw.start
 ; SOFTFP-NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; SOFTFP-NOLSE-NEXT:    // Child Loop BB5_3 Depth 2
-; SOFTFP-NOLSE-NEXT:    mov x0, x21
 ; SOFTFP-NOLSE-NEXT:    mov x1, x20
+; SOFTFP-NOLSE-NEXT:    mov x21, x0
 ; SOFTFP-NOLSE-NEXT:    bl fmax
+; SOFTFP-NOLSE-NEXT:    mov x8, x0
 ; SOFTFP-NOLSE-NEXT:  .LBB5_3: // %cmpxchg.start
 ; SOFTFP-NOLSE-NEXT:    // Parent Loop BB5_2 Depth=1
 ; SOFTFP-NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
-; SOFTFP-NOLSE-NEXT:    ldaxr x8, [x19]
-; SOFTFP-NOLSE-NEXT:    cmp x8, x21
+; SOFTFP-NOLSE-NEXT:    ldaxr x0, [x19]
+; SOFTFP-NOLSE-NEXT:    cmp x0, x21
 ; SOFTFP-NOLSE-NEXT:    b.ne .LBB5_1
 ; SOFTFP-NOLSE-NEXT:  // %bb.4: // %cmpxchg.trystore
 ; SOFTFP-NOLSE-NEXT:    // in Loop: Header=BB5_3 Depth=2
-; SOFTFP-NOLSE-NEXT:    stlxr w9, x0, [x19]
+; SOFTFP-NOLSE-NEXT:    stlxr w9, x8, [x19]
 ; SOFTFP-NOLSE-NEXT:    cbnz w9, .LBB5_3
 ; SOFTFP-NOLSE-NEXT:  // %bb.5: // in Loop: Header=BB5_2 Depth=1
-; SOFTFP-NOLSE-NEXT:    mov w9, #1 // =0x1
-; SOFTFP-NOLSE-NEXT:    mov x21, x8
-; SOFTFP-NOLSE-NEXT:    cbz w9, .LBB5_2
+; SOFTFP-NOLSE-NEXT:    mov w8, #1 // =0x1
+; SOFTFP-NOLSE-NEXT:    cbz w8, .LBB5_2
 ; SOFTFP-NOLSE-NEXT:  .LBB5_6: // %atomicrmw.end
 ; SOFTFP-NOLSE-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; SOFTFP-NOLSE-NEXT:    mov x0, x21
 ; SOFTFP-NOLSE-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ret
   %res = atomicrmw fmax ptr %ptr, double %value seq_cst, align 8

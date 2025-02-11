@@ -80,6 +80,7 @@ define amdgpu_ps i32 @s_fminimum3_f32(float inreg %a, float inreg %b, float inre
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_minimum3_f32 v0, s0, s1, v0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX940-LABEL: s_fminimum3_f32:
@@ -1307,6 +1308,7 @@ define amdgpu_ps i32 @s_fminimum3_f16(half inreg %a, half inreg %b, half inreg %
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_fminimum3_f16:
@@ -3005,6 +3007,7 @@ define amdgpu_ps <2 x i32> @s_fminimum3_f64(double inreg %a, double inreg %b, do
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_fminimum3_f64:

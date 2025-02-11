@@ -10,7 +10,7 @@
 
 #include <stddef.h> // For size_t
 
-#include "array.h"       // For array
+#include "array.h" // For array
 #include "src/__support/macros/config.h"
 #include "type_traits.h" // For remove_cv_t, enable_if_t, is_same_v, is_const_v
 
@@ -51,6 +51,8 @@ public:
   LIBC_INLINE_VAR static constexpr size_type dynamic_extent = -1;
 
   LIBC_INLINE constexpr span() : span_data(nullptr), span_size(0) {}
+
+  LIBC_INLINE constexpr span(const span &) = default;
 
   LIBC_INLINE constexpr span(pointer first, size_type count)
       : span_data(first), span_size(count) {}

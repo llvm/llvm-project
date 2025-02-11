@@ -82,6 +82,39 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: @matmul_as_contract
+// CHECK-SAME: %[[A:.*]]: tensor<24x12xf32>
+// CHECK-SAME: %[[B:.*]]: tensor<12x25xf32>
+// CHECK-SAME: %[[C:.*]]: tensor<24x25xf32>
+func.func @matmul_as_contract(%A: tensor<24x12xf32>,
+                              %B: tensor<12x25xf32>,
+                              %C: tensor<24x25xf32>) -> tensor<24x25xf32> {
+  // CHECK: %[[vA:.+]] = vector.transfer_read %[[A]]
+  // CHECK: %[[vB:.+]] = vector.transfer_read %[[B]]
+  // CHECK: %[[vC:.+]] = vector.transfer_read %[[C]]
+  // CHECK: %[[vR:.+]] = vector.contract {{.*}} %[[vA]], %[[vB]], %[[vC]]
+  // CHECK: vector.transfer_write %[[vR]], %[[C]]
+  %0 = linalg.contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (k, n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %B : tensor<24x12xf32>, tensor<12x25xf32>)
+      outs(%C : tensor<24x25xf32>) -> tensor<24x25xf32>
+  func.return %0 : tensor<24x25xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.contract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    // TODO: also tests the other available vectorization strategies
+    transform.yield
+  }
+}
+
+// -----
+
 #matmul_trait = {
   indexing_maps = [
     affine_map<(m, n, k) -> (m, k)>,

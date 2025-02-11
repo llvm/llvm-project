@@ -563,6 +563,10 @@ const unsigned StackProbeMaxLoopUnroll = 4;
 
 } // namespace AArch64
 
+namespace ARM64AS {
+enum : unsigned { PTR32_SPTR = 270, PTR32_UPTR = 271, PTR64 = 272 };
+}
+
 class AArch64Subtarget;
 
 class AArch64TargetLowering : public TargetLowering {
@@ -594,11 +598,19 @@ public:
                                            unsigned Depth) const override;
 
   MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const override {
-    // Returning i64 unconditionally here (i.e. even for ILP32) means that the
-    // *DAG* representation of pointers will always be 64-bits. They will be
-    // truncated and extended when transferred to memory, but the 64-bit DAG
-    // allows us to use AArch64's addressing modes much more easily.
-    return MVT::getIntegerVT(64);
+    if ((AS == ARM64AS::PTR32_SPTR) || (AS == ARM64AS::PTR32_UPTR)) {
+      // These are 32-bit pointers created using the `__ptr32` extension or
+      // similar. They are handled by marking them as being in a different
+      // address space, and will be extended to 64-bits when used as the target
+      // of a load or store operation, or cast to a 64-bit pointer type.
+      return MVT::i32;
+    } else {
+      // Returning i64 unconditionally here (i.e. even for ILP32) means that the
+      // *DAG* representation of pointers will always be 64-bits. They will be
+      // truncated and extended when transferred to memory, but the 64-bit DAG
+      // allows us to use AArch64's addressing modes much more easily.
+      return MVT::i64;
+    }
   }
 
   bool targetShrinkDemandedConstant(SDValue Op, const APInt &DemandedBits,

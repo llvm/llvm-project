@@ -711,7 +711,7 @@ void Writer::scanRelocations() {
 
       // Canonicalize the referent so that later accesses in Writer won't
       // have to worry about it.
-      if (auto *referentIsec = r.referent.dyn_cast<InputSection *>())
+      if (auto *referentIsec = dyn_cast_if_present<InputSection *>(r.referent))
         r.referent = referentIsec->canonical();
 
       if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
@@ -725,7 +725,7 @@ void Writer::scanRelocations() {
           it->referent = referentIsec->canonical();
         continue;
       }
-      if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
+      if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
         if (auto *undefined = dyn_cast<Undefined>(sym))
           treatUndefinedSymbol(*undefined, isec, r.offset);
         // treatUndefinedSymbol() can replace sym with a DylibSymbol; re-check.

@@ -415,7 +415,7 @@ int includeFixerMain(int argc, const char **argv) {
       llvm::errs() << llvm::toString(InsertStyle.takeError()) << "\n";
       return 1;
     }
-    auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
+    auto Buffer = llvm::MemoryBuffer::getFile(FilePath, /*IsText=*/true);
     if (!Buffer) {
       errs() << "Couldn't open file: " + FilePath.str() + ": "
              << Buffer.getError().message() + "\n";

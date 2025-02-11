@@ -385,7 +385,7 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr &I1,
   return true;
 }
 
-/// findPotentialNewifiableTFRs - Finds tranfers that feed stores that could be
+/// findPotentialNewifiableTFRs - Finds transfers that feed stores that could be
 /// newified. (A use of a 64 bit register define can not be newified)
 void
 HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {

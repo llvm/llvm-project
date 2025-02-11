@@ -1055,7 +1055,8 @@ void ASTContext::PrintStats() const {
 void ASTContext::mergeDefinitionIntoModule(NamedDecl *ND, Module *M,
                                            bool NotifyListeners) {
   if (NotifyListeners)
-    if (auto *Listener = getASTMutationListener())
+    if (auto *Listener = getASTMutationListener();
+        Listener && !ND->isUnconditionallyVisible())
       Listener->RedefinedHiddenDefinition(ND, M);
 
   MergedDefModules[cast<NamedDecl>(ND->getCanonicalDecl())].push_back(M);
@@ -2269,11 +2270,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Width = 0;                                                                 \
     Align = 16;                                                                \
     break;
-#define AARCH64_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, \
-                                   ElBits, NF)                                 \
+#define SVE_SCALAR_TYPE(Name, MangledName, Id, SingletonId, Bits)              \
   case BuiltinType::Id:                                                        \
-    Width = NumEls * ElBits * NF;                                              \
-    Align = NumEls * ElBits;                                                   \
+    Width = Bits;                                                              \
+    Align = Bits;                                                              \
     break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
@@ -3902,7 +3902,7 @@ QualType ASTContext::getArrayParameterType(QualType Ty) const {
   if (Ty->isArrayParameterType())
     return Ty;
   assert(Ty->isConstantArrayType() && "Ty must be an array type.");
-  const auto *ATy = cast<ConstantArrayType>(Ty);
+  const auto *ATy = cast<ConstantArrayType>(Ty.getDesugaredType(*this));
   llvm::FoldingSetNodeID ID;
   ATy->Profile(ID, *this, ATy->getElementType(), ATy->getZExtSize(),
                ATy->getSizeExpr(), ATy->getSizeModifier(),
@@ -4423,15 +4423,14 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
                                ElBits, NF)                                     \
   case BuiltinType::Id:                                                        \
     return {BFloat16Ty, llvm::ElementCount::getScalable(NumEls), NF};
+#define SVE_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
+                               ElBits, NF)                                     \
+  case BuiltinType::Id:                                                        \
+    return {MFloat8Ty, llvm::ElementCount::getScalable(NumEls), NF};
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   case BuiltinType::Id:                                                        \
     return {BoolTy, llvm::ElementCount::getScalable(NumEls), NF};
-#define AARCH64_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, \
-                                   ElBits, NF)                                 \
-  case BuiltinType::Id:                                                        \
-    return {getIntTypeForBitwidth(ElBits, false),                              \
-            llvm::ElementCount::getFixed(NumEls), NF};
-#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
 #define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
@@ -4493,11 +4492,16 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
       EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
     return SingletonId;                                                        \
   }
+#define SVE_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
+                               ElBits, NF)                                     \
+  if (EltTy->isMFloat8Type() && EltTySize == ElBits &&                         \
+      NumElts == (NumEls * NF) && NumFields == 1) {                            \
+    return SingletonId;                                                        \
+  }
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
     return SingletonId;
-#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
-#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
@@ -7221,6 +7225,16 @@ static bool isSameQualifier(const NestedNameSpecifier *X,
   return !PX && !PY;
 }
 
+static bool hasSameCudaAttrs(const FunctionDecl *A, const FunctionDecl *B) {
+  if (!A->getASTContext().getLangOpts().CUDA)
+    return true; // Target attributes are overloadable in CUDA compilation only.
+  if (A->hasAttr<CUDADeviceAttr>() != B->hasAttr<CUDADeviceAttr>())
+    return false;
+  if (A->hasAttr<CUDADeviceAttr>() && B->hasAttr<CUDADeviceAttr>())
+    return A->hasAttr<CUDAHostAttr>() == B->hasAttr<CUDAHostAttr>();
+  return true; // unattributed and __host__ functions are the same.
+}
+
 /// Determine whether the attributes we can overload on are identical for A and
 /// B. Will ignore any overloadable attrs represented in the type of A and B.
 static bool hasSameOverloadableAttrs(const FunctionDecl *A,
@@ -7251,7 +7265,7 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
     if (Cand1ID != Cand2ID)
       return false;
   }
-  return true;
+  return hasSameCudaAttrs(A, B);
 }
 
 bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
@@ -10360,7 +10374,8 @@ bool ASTContext::areLaxCompatibleSveTypes(QualType FirstType,
 /// getRVVTypeSize - Return RVV vector register size.
 static uint64_t getRVVTypeSize(ASTContext &Context, const BuiltinType *Ty) {
   assert(Ty->isRVVVLSBuiltinType() && "Invalid RVV Type");
-  auto VScale = Context.getTargetInfo().getVScaleRange(Context.getLangOpts());
+  auto VScale =
+      Context.getTargetInfo().getVScaleRange(Context.getLangOpts(), false);
   if (!VScale)
     return 0;
 
@@ -12382,6 +12397,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   case 'p':
     Type = Context.getProcessIDType();
     break;
+  case 'm':
+    Type = Context.MFloat8Ty;
+    break;
   }
 
   // If there are modifiers and if we're allowed to parse them, go for it.
@@ -12835,11 +12853,12 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
 
   // Likewise, variables with tuple-like bindings are required if their
   // bindings have side-effects.
-  if (const auto *DD = dyn_cast<DecompositionDecl>(VD))
-    for (const auto *BD : DD->bindings())
+  if (const auto *DD = dyn_cast<DecompositionDecl>(VD)) {
+    for (const auto *BD : DD->flat_bindings())
       if (const auto *BindingVD = BD->getHoldingVar())
         if (DeclMustBeEmitted(BindingVD))
           return true;
+  }
 
   return false;
 }

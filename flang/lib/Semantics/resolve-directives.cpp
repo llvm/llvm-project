@@ -351,6 +351,17 @@ public:
     return true;
   }
 
+  bool Pre(const parser::OmpDirectiveSpecification &x) {
+    PushContext(x.source, std::get<llvm::omp::Directive>(x.t));
+    return true;
+  }
+  void Post(const parser::OmpDirectiveSpecification &) { PopContext(); }
+  bool Pre(const parser::OmpMetadirectiveDirective &x) {
+    PushContext(x.source, llvm::omp::Directive::OMPD_metadirective);
+    return true;
+  }
+  void Post(const parser::OmpMetadirectiveDirective &) { PopContext(); }
+
   bool Pre(const parser::OpenMPBlockConstruct &);
   void Post(const parser::OpenMPBlockConstruct &);
 
@@ -2007,20 +2018,25 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPAllocatorsConstruct &x) {
 }
 
 void OmpAttributeVisitor::Post(const parser::OmpDefaultClause &x) {
-  if (!dirContext_.empty()) {
-    switch (x.v) {
-    case parser::OmpDefaultClause::DataSharingAttribute::Private:
-      SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
-      break;
-    case parser::OmpDefaultClause::DataSharingAttribute::Firstprivate:
-      SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
-      break;
-    case parser::OmpDefaultClause::DataSharingAttribute::Shared:
-      SetContextDefaultDSA(Symbol::Flag::OmpShared);
-      break;
-    case parser::OmpDefaultClause::DataSharingAttribute::None:
-      SetContextDefaultDSA(Symbol::Flag::OmpNone);
-      break;
+  // The DEFAULT clause may also be used on METADIRECTIVE. In that case
+  // there is nothing to do.
+  using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
+  if (auto *dsa{std::get_if<DataSharingAttribute>(&x.u)}) {
+    if (!dirContext_.empty()) {
+      switch (*dsa) {
+      case DataSharingAttribute::Private:
+        SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
+        break;
+      case DataSharingAttribute::Firstprivate:
+        SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
+        break;
+      case DataSharingAttribute::Shared:
+        SetContextDefaultDSA(Symbol::Flag::OmpShared);
+        break;
+      case DataSharingAttribute::None:
+        SetContextDefaultDSA(Symbol::Flag::OmpNone);
+        break;
+      }
     }
   }
 }
@@ -2105,8 +2121,11 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
 static bool IsPrivatizable(const Symbol *sym) {
   auto *misc{sym->detailsIf<MiscDetails>()};
   return IsVariableName(*sym) && !IsProcedure(*sym) && !IsNamedConstant(*sym) &&
-      !semantics::IsAssumedSizeArray(
-          *sym) && /* OpenMP 5.2, 5.1.1: Assumed-size arrays are shared*/
+      ( // OpenMP 5.2, 5.1.1: Assumed-size arrays are shared
+          !semantics::IsAssumedSizeArray(*sym) ||
+          // If CrayPointer is among the DSA list then the
+          // CrayPointee is Privatizable
+          sym->test(Symbol::Flag::CrayPointee)) &&
       !sym->owner().IsDerivedType() &&
       sym->owner().kind() != Scope::Kind::ImpliedDos &&
       sym->owner().kind() != Scope::Kind::Forall &&
@@ -2273,10 +2292,18 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
             // the scope of the parallel region, and not in this scope.
             // TODO: check whether this should be caught in IsObjectWithDSA
             !symbol->test(Symbol::Flag::OmpPrivate)) {
-          context_.Say(name.source,
-              "The DEFAULT(NONE) clause requires that '%s' must be listed in "
-              "a data-sharing attribute clause"_err_en_US,
-              symbol->name());
+          if (symbol->test(Symbol::Flag::CrayPointee)) {
+            std::string crayPtrName{
+                semantics::GetCrayPointer(*symbol).name().ToString()};
+            if (!IsObjectWithDSA(*currScope().FindSymbol(crayPtrName)))
+              context_.Say(name.source,
+                  "The DEFAULT(NONE) clause requires that the Cray Pointer '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+                  crayPtrName);
+          } else {
+            context_.Say(name.source,
+                "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+                symbol->name());
+          }
         }
       }
     }

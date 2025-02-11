@@ -191,7 +191,7 @@ symbol table entries. Here is an example of the "hello world" module:
     @.str = private unnamed_addr constant [13 x i8] c"hello world\0A\00"
 
     ; External declaration of the puts function
-    declare i32 @puts(ptr nocapture) nounwind
+    declare i32 @puts(ptr captures(none)) nounwind
 
     ; Definition of main function
     define i32 @main() {
@@ -1170,7 +1170,7 @@ spaces. For example:
 .. code-block:: llvm
 
     ; On function declarations/definitions:
-    declare i32 @printf(ptr noalias nocapture, ...)
+    declare i32 @printf(ptr noalias captures(none), ...)
     declare i32 @atoi(i8 zeroext)
     declare signext i8 @returns_signed_char()
     define void @baz(i32 "amdgpu-flat-work-group-size"="1,256" %x)
@@ -1380,11 +1380,10 @@ Currently, only the following parameter attributes are defined:
     memory locations that are *modified*, by any means, during the execution of
     the function. If there are other accesses not based on the argument or
     return value, the behavior is undefined. The attribute on a return value
-    also has additional semantics described below. The caller shares the
-    responsibility with the callee for described below. The caller shares the
-    responsibility with the callee for ensuring that these requirements are met.
-    For further details, please see the discussion of the NoAlias response in
-    :ref:`alias analysis <Must, May,  or No>`.
+    also has additional semantics, as described below. Both the caller and the
+    callee share the responsibility of ensuring that these requirements are
+    met. For further details, please see the discussion of the NoAlias response
+    in :ref:`alias analysis <Must, May,  or No>`.
 
     Note that this definition of ``noalias`` is intentionally similar
     to the definition of ``restrict`` in C99 for function arguments.
@@ -1432,24 +1431,6 @@ Currently, only the following parameter attributes are defined:
     - ``captures(address_is_null, ret: address, provenance)``: The whole pointer
       is captured through the return value, and additionally whether the pointer
       is null is captured in some other way.
-
-.. _nocapture:
-
-``nocapture``
-    This indicates that the callee does not :ref:`capture <pointercapture>` the
-    pointer. This is not a valid attribute for return values.
-    This attribute applies only to the particular copy of the pointer passed in
-    this argument. A caller could pass two copies of the same pointer with one
-    being annotated nocapture and the other not, and the callee could validly
-    capture through the non annotated parameter.
-
-.. code-block:: llvm
-
-    define void @f(ptr nocapture %a, ptr %b) {
-      ; (capture %b)
-    }
-
-    call void @f(ptr @glb, ptr @glb) ; well-defined
 
 ``nofree``
     This indicates that callee does not free the pointer argument. This is not
@@ -1725,6 +1706,10 @@ Currently, only the following parameter attributes are defined:
     overlapping or consecutive list elements. ``LoN/HiN`` are 64-bit integers,
     and negative values are allowed in case the argument points partway into
     an allocation. An empty list is not allowed.
+
+    On a ``byval`` argument, ``initializes`` refers to the given parts of the
+    callee copy being overwritten. A ``byval`` callee can never initialize the
+    original caller memory passed to the ``byval`` argument.
 
 ``dead_on_unwind``
     At a high level, this attribute indicates that the pointer argument is dead
@@ -13924,7 +13909,7 @@ Syntax:
 
       declare <pointer type>
         @llvm.experimental.gc.get.pointer.base(
-          <pointer type> readnone nocapture %derived_ptr)
+          <pointer type> readnone captures(none) %derived_ptr)
           nounwind willreturn memory(none)
 
 Overview:
@@ -13962,7 +13947,7 @@ Syntax:
 
       declare i64
         @llvm.experimental.gc.get.pointer.offset(
-          <pointer type> readnone nocapture %derived_ptr)
+          <pointer type> readnone captures(none) %derived_ptr)
           nounwind willreturn memory(none)
 
 Overview:
@@ -16137,6 +16122,111 @@ and :ref:`llvm.cos <t_llvm_cos>` on the argument.
 
 The first result is the sine of the argument and the second result is the cosine
 of the argument.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.sincospi.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sincospi`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare { float, float }          @llvm.sincospi.f32(float  %Val)
+      declare { double, double }        @llvm.sincospi.f64(double %Val)
+      declare { x86_fp80, x86_fp80 }    @llvm.sincospi.f80(x86_fp80  %Val)
+      declare { fp128, fp128 }          @llvm.sincospi.f128(fp128 %Val)
+      declare { ppc_fp128, ppc_fp128 }  @llvm.sincospi.ppcf128(ppc_fp128  %Val)
+      declare { <4 x float>, <4 x float> } @llvm.sincospi.v4f32(<4 x float>  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.sincospi.*``' intrinsics returns the sine and cosine of pi*operand.
+
+Arguments:
+""""""""""
+
+The argument is a :ref:`floating-point <t_floating>` value or
+:ref:`vector <t_vector>` of floating-point values. Returns two values matching
+the argument type in a struct.
+
+Semantics:
+""""""""""
+
+This is equivalent to the ``llvm.sincos.*`` intrinsic where the argument has been
+multiplied by pi, however, it computes the result more accurately especially
+for large input values.
+
+.. note::
+
+  Currently, the default lowering of this intrinsic relies on the ``sincospi[f|l]``
+  functions being available in the target's runtime (e.g. libc).
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.modf.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.modf`` on any floating-point
+or vector of floating-point type. However, not all targets support all types.
+
+::
+
+ declare { float, float }             @llvm.modf.f32(float  %Val)
+ declare { double, double }           @llvm.modf.f64(double %Val)
+ declare { x86_fp80, x86_fp80 }       @llvm.modf.f80(x86_fp80  %Val)
+ declare { fp128, fp128 }             @llvm.modf.f128(fp128 %Val)
+ declare { ppc_fp128, ppc_fp128 }     @llvm.modf.ppcf128(ppc_fp128  %Val)
+ declare { <4 x float>, <4 x float> } @llvm.modf.v4f32(<4 x float>  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.modf.*``' intrinsics return the operand's integral and fractional
+parts.
+
+Arguments:
+""""""""""
+
+The argument is a :ref:`floating-point <t_floating>` value or
+:ref:`vector <t_vector>` of floating-point values. Returns two values matching
+the argument type in a struct.
+
+Semantics:
+""""""""""
+
+Return the same values as a corresponding libm '``modf``' function without
+trapping or setting ``errno``.
+
+The first result is the fractional part of the operand and the second result is
+the integral part of the operand. Both results have the same sign as the operand.
+
+Not including exceptional inputs (listed below), ``llvm.modf.*`` is semantically
+equivalent to:
+
+::
+
+  %fp = frem <fptype> %x, 1.0  ; Fractional part
+  %ip = fsub <fptype> %x, %fp  ; Integral part
+
+(assuming no floating-point precision errors)
+
+If the argument is a zero, returns a zero with the same sign for both the
+fractional and integral parts.
+
+If the argument is an infinity, returns a fractional part of zero with the same
+sign, and infinity with the same sign as the integral part.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
@@ -26223,7 +26313,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.lifetime.start(i64 <size>, ptr nocapture <ptr>)
+      declare void @llvm.lifetime.start(i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26273,7 +26363,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.lifetime.end(i64 <size>, ptr nocapture <ptr>)
+      declare void @llvm.lifetime.end(i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26313,7 +26403,7 @@ This is an overloaded intrinsic. The memory object can belong to any address spa
 
 ::
 
-      declare ptr @llvm.invariant.start.p0(i64 <size>, ptr nocapture <ptr>)
+      declare ptr @llvm.invariant.start.p0(i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26344,7 +26434,7 @@ This is an overloaded intrinsic. The memory object can belong to any address spa
 
 ::
 
-      declare void @llvm.invariant.end.p0(ptr <start>, i64 <size>, ptr nocapture <ptr>)
+      declare void @llvm.invariant.end.p0(ptr <start>, i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""

@@ -78,6 +78,7 @@ static_library("Core") {
     "SourceLocationSpec.cpp",
     "SourceManager.cpp",
     "StreamAsynchronousIO.cpp",
+    "Telemetry.cpp",
     "ThreadedCommunication.cpp",
     "UserSettingsController.cpp",
     "Value.cpp",

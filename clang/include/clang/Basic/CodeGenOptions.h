@@ -95,6 +95,12 @@ public:
     Embed_Marker    // Embed a marker as a placeholder for bitcode.
   };
 
+  enum class ExtendVariableLivenessKind {
+    None,
+    This,
+    All,
+  };
+
   enum InlineAsmDialectKind {
     IAD_ATT,
     IAD_Intel,

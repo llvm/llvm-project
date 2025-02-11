@@ -73,16 +73,6 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
   else
     Diags.setExtensionHandlingBehavior(diag::Severity::Ignored);
 
-  if (!Opts.DiagnosticSuppressionMappingsFile.empty()) {
-    if (auto FileContents =
-            VFS.getBufferForFile(Opts.DiagnosticSuppressionMappingsFile)) {
-      Diags.setDiagSuppressionMapping(**FileContents);
-    } else if (ReportDiags) {
-      Diags.Report(diag::err_drv_no_such_file)
-          << Opts.DiagnosticSuppressionMappingsFile;
-    }
-  }
-
   SmallVector<diag::kind, 10> _Diags;
   const IntrusiveRefCntPtr< DiagnosticIDs > DiagIDs =
     Diags.getDiagnosticIDs();
@@ -235,6 +225,19 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
                                   IsPositive ? diag::Severity::Remark
                                              : diag::Severity::Ignored);
       }
+    }
+  }
+
+  // Process suppression mappings file after processing other warning flags
+  // (like -Wno-unknown-warning-option) as we can emit extra warnings during
+  // processing.
+  if (!Opts.DiagnosticSuppressionMappingsFile.empty()) {
+    if (auto FileContents =
+            VFS.getBufferForFile(Opts.DiagnosticSuppressionMappingsFile)) {
+      Diags.setDiagSuppressionMapping(**FileContents);
+    } else if (ReportDiags) {
+      Diags.Report(diag::err_drv_no_such_file)
+          << Opts.DiagnosticSuppressionMappingsFile;
     }
   }
 }

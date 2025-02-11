@@ -262,8 +262,10 @@ let isPseudo = 1, isMeta = 1, isNotDuplicable = 1, SchedRW = [WriteSystem] in {
 
 // Epilog instructions:
 let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
-  def SEH_Epilogue : I<0, Pseudo, (outs), (ins),
-                            "#SEH_Epilogue", []>;
+  def SEH_BeginEpilogue : I<0, Pseudo, (outs), (ins),
+                            "#SEH_BeginEpilogue", []>;
+  def SEH_EndEpilogue : I<0, Pseudo, (outs), (ins),
+                            "#SEH_EndEpilogue", []>;
 }
 
 //===----------------------------------------------------------------------===//

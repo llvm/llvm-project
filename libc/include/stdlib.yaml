@@ -8,10 +8,11 @@ types:
   - type_name: __qsortrcompare_t
   - type_name: __qsortcompare_t
   - type_name: __bsearchcompare_t
-  - type_name: size_t
-  - type_name: lldiv_t
-  - type_name: ldiv_t
   - type_name: div_t
+  - type_name: ldiv_t
+  - type_name: lldiv_t
+  - type_name: locale_t
+  - type_name: size_t
 enums: []
 objects: []
 functions:

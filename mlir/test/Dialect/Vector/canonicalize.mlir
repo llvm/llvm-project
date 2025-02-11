@@ -132,6 +132,64 @@ func.func @extract_from_create_mask_dynamic_position(%dim0: index, %index: index
 
 // -----
 
+// CHECK-LABEL: @extract_scalar_poison
+func.func @extract_scalar_poison() -> f32 {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : f32
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: return %[[UB]] : f32
+  %0 = ub.poison : vector<4x8xf32>
+  %1 = vector.extract %0[2, 4] : f32 from vector<4x8xf32>
+  return %1 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @extract_vector_poison
+func.func @extract_vector_poison() -> vector<8xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<8xf32>
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: return %[[UB]] : vector<8xf32>
+  %0 = ub.poison : vector<4x8xf32>
+  %1 = vector.extract %0[2] : vector<8xf32> from vector<4x8xf32>
+  return %1 : vector<8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @extract_scalar_poison_idx
+func.func @extract_scalar_poison_idx(%a: vector<4x5xf32>) -> f32 {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : f32
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: return %[[UB]] : f32
+  %0 = vector.extract %a[-1, 0] : f32 from vector<4x5xf32>
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @extract_vector_poison_idx
+func.func @extract_vector_poison_idx(%a: vector<4x5xf32>) -> vector<5xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<5xf32>
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: return %[[UB]] : vector<5xf32>
+  %0 = vector.extract %a[-1] : vector<5xf32> from vector<4x5xf32>
+  return %0 : vector<5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @extract_multiple_poison_idx
+func.func @extract_multiple_poison_idx(%a: vector<4x5x8xf32>)
+    -> vector<8xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<8xf32>
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: return %[[UB]] : vector<8xf32>
+  %0 = vector.extract %a[-1, -1] : vector<8xf32> from vector<4x5x8xf32>
+  return %0 : vector<8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: extract_from_create_mask_dynamic_position_all_false
 //  CHECK-SAME: %[[DIM0:.*]]: index, %[[INDEX:.*]]: index
 func.func @extract_from_create_mask_dynamic_position_all_false(%dim0: index, %index: index) -> vector<6xi1> {
@@ -1975,12 +2033,70 @@ func.func @shuffle_1d() -> vector<4xi32> {
   return %shuffle : vector<4xi32>
 }
 
+// -----
+
+// Check that poison indices pick the first element of the first non-poison
+// input vector. That is, %v[0] (i.e., 5) in this test.
+
+// CHECK-LABEL: func @shuffle_1d_poison_idx
+//       CHECK:   %[[V:.+]] = arith.constant dense<[13, 10, 15, 10]> : vector<4xi32>
+//       CHECK:   return %[[V]]
+func.func @shuffle_1d_poison_idx() -> vector<4xi32> {
+  %v0 = arith.constant dense<[10, 11, 12]> : vector<3xi32>
+  %v1 = arith.constant dense<[13, 14, 15]> : vector<3xi32>
+  %shuffle = vector.shuffle %v0, %v1 [3, -1, 5, -1] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @shuffle_1d_rhs_lhs_poison
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   %[[V:.+]] = ub.poison : vector<4xi32>
+//       CHECK:   return %[[V]]
+func.func @shuffle_1d_rhs_lhs_poison() -> vector<4xi32> {
+  %v0 = ub.poison : vector<3xi32>
+  %v1 = ub.poison : vector<3xi32>
+  %shuffle = vector.shuffle %v0, %v1 [3, 1, 5, 4] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @shuffle_1d_lhs_poison
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   %[[V:.+]] = arith.constant dense<[11, 12, 11, 11]> : vector<4xi32>
+//       CHECK:   return %[[V]]
+func.func @shuffle_1d_lhs_poison() -> vector<4xi32> {
+  %v0 = arith.constant dense<[11, 12, 13]> : vector<3xi32>
+  %v1 = ub.poison : vector<3xi32>
+  %shuffle = vector.shuffle %v0, %v1 [3, 1, 5, 4] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @shuffle_1d_rhs_poison
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   %[[V:.+]] = arith.constant dense<[11, 11, 13, 12]> : vector<4xi32>
+//       CHECK:   return %[[V]]
+func.func @shuffle_1d_rhs_poison() -> vector<4xi32> {
+  %v0 = ub.poison : vector<3xi32>
+  %v1 = arith.constant dense<[11, 12, 13]> : vector<3xi32>
+  %shuffle = vector.shuffle %v0, %v1 [3, 1, 5, 4] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @shuffle_canonicalize_0d
 func.func @shuffle_canonicalize_0d(%v0 : vector<i32>, %v1 : vector<i32>) -> vector<1xi32> {
   // CHECK: vector.broadcast %{{.*}} : vector<i32> to vector<1xi32>
   %shuffle = vector.shuffle %v0, %v1 [0] : vector<i32>, vector<i32>
   return %shuffle : vector<1xi32>
 }
+
+// -----
 
 // CHECK-LABEL: func @shuffle_fold1
 //       CHECK:   %arg0 : vector<4xi32>
@@ -1989,12 +2105,16 @@ func.func @shuffle_fold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<4xi
   return %shuffle : vector<4xi32>
 }
 
+// -----
+
 // CHECK-LABEL: func @shuffle_fold2
 //       CHECK:   %arg1 : vector<2xi32>
 func.func @shuffle_fold2(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<2xi32> {
   %shuffle = vector.shuffle %v0, %v1 [4, 5] : vector<4xi32>, vector<2xi32>
   return %shuffle : vector<2xi32>
 }
+
+// -----
 
 // CHECK-LABEL: func @shuffle_fold3
 //       CHECK:   return %arg0 : vector<4x5x6xi32>
@@ -2003,12 +2123,16 @@ func.func @shuffle_fold3(%v0 : vector<4x5x6xi32>, %v1 : vector<2x5x6xi32>) -> ve
   return %shuffle : vector<4x5x6xi32>
 }
 
+// -----
+
 // CHECK-LABEL: func @shuffle_fold4
 //       CHECK:   return %arg1 : vector<2x5x6xi32>
 func.func @shuffle_fold4(%v0 : vector<4x5x6xi32>, %v1 : vector<2x5x6xi32>) -> vector<2x5x6xi32> {
   %shuffle = vector.shuffle %v0, %v1 [4, 5] : vector<4x5x6xi32>, vector<2x5x6xi32>
   return %shuffle : vector<2x5x6xi32>
 }
+
+// -----
 
 // CHECK-LABEL: func @shuffle_nofold1
 //       CHECK:   %[[V:.+]] = vector.shuffle %arg0, %arg1 [0, 1, 2, 3, 4] : vector<4xi32>, vector<2xi32>
@@ -2778,7 +2902,6 @@ func.func @from_elements_to_splat(%a: f32, %b: f32) -> (vector<2x3xf32>, vector<
   return %0, %1, %2 : vector<2x3xf32>, vector<2x3xf32>, vector<f32>
 }
 
-
 // -----
 
 // CHECK-LABEL: func @vector_insert_const_regression(
@@ -2788,6 +2911,75 @@ func.func @vector_insert_const_regression(%arg0: i8) -> vector<4xi8> {
   %0 = llvm.mlir.undef : vector<4xi8>
   %1 = vector.insert %arg0, %0 [0] : i8 into vector<4xi8>
   return %1 : vector<4xi8>
+}
+
+// -----
+
+// Insert a poison value shouldn't be folded as the resulting vector is not
+// fully poison.
+
+// CHECK-LABEL: @insert_scalar_poison
+func.func @insert_scalar_poison(%a: vector<4x8xf32>)
+    -> vector<4x8xf32> {
+  //  CHECK-NEXT: %[[UB:.*]] = ub.poison : f32
+  //  CHECK-NEXT: %[[RES:.*]] = vector.insert %[[UB]]
+  //  CHECK-NEXT: return %[[RES]] : vector<4x8xf32>
+  %0 = ub.poison : f32
+  %1 = vector.insert %0, %a[2, 3] : f32 into vector<4x8xf32>
+  return %1 : vector<4x8xf32>
+}
+
+// -----
+
+// Insert a poison value shouldn't be folded as the resulting vector is not
+// fully poison.
+
+// CHECK-LABEL: @insert_vector_poison
+func.func @insert_vector_poison(%a: vector<4x8xf32>)
+    -> vector<4x8xf32> {
+  //  CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<8xf32>
+  //  CHECK-NEXT: %[[RES:.*]] = vector.insert %[[UB]]
+  //  CHECK-NEXT: return %[[RES]] : vector<4x8xf32>
+  %0 = ub.poison : vector<8xf32>
+  %1 = vector.insert %0, %a[2] : vector<8xf32> into vector<4x8xf32>
+  return %1 : vector<4x8xf32>
+}
+
+
+// -----
+
+// CHECK-LABEL: @insert_scalar_poison_idx
+func.func @insert_scalar_poison_idx(%a: vector<4x5xf32>, %b: f32)
+    -> vector<4x5xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<4x5xf32>
+  //  CHECK-NOT: vector.insert
+  // CHECK-NEXT: return %[[UB]] : vector<4x5xf32>
+  %0 = vector.insert %b, %a[-1, 0] : f32 into vector<4x5xf32>
+  return %0 : vector<4x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @insert_vector_poison_idx
+func.func @insert_vector_poison_idx(%a: vector<4x5xf32>, %b: vector<5xf32>)
+    -> vector<4x5xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<4x5xf32>
+  //  CHECK-NOT: vector.insert
+  // CHECK-NEXT: return %[[UB]] : vector<4x5xf32>
+  %0 = vector.insert %b, %a[-1] : vector<5xf32> into vector<4x5xf32>
+  return %0 : vector<4x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @insert_multiple_poison_idx
+func.func @insert_multiple_poison_idx(%a: vector<4x5x8xf32>, %b: vector<8xf32>)
+    -> vector<4x5x8xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<4x5x8xf32>
+  //  CHECK-NOT: vector.insert
+  // CHECK-NEXT: return %[[UB]] : vector<4x5x8xf32>
+  %0 = vector.insert %b, %a[-1, -1] : vector<8xf32> into vector<4x5x8xf32>
+  return %0 : vector<4x5x8xf32>
 }
 
 // -----
@@ -2978,4 +3170,30 @@ func.func @contiguous_scatter_step(%base: memref<?xf32>,
   vector.scatter %base[%c0][%indices], %mask, %value :
     memref<?xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32>
   return
+}
+
+// -----
+
+// CHECK-LABEL: @fold_extract_constant_indices
+//   CHECK-SAME:   %[[ARG:.*]]: vector<32x1xi32>) -> i32 {
+//        CHECK:   %[[RES:.*]] = vector.extract %[[ARG]][0, 0] : i32 from vector<32x1xi32>
+//        CHECK:   return %[[RES]] : i32
+func.func @fold_extract_constant_indices(%arg : vector<32x1xi32>) -> i32 {
+  %0 = arith.constant 0 : index
+  %1 = vector.extract %arg[%0, %0] : i32 from vector<32x1xi32>
+  return %1 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @fold_insert_constant_indices
+//  CHECK-SAME:   %[[ARG:.*]]: vector<4x1xi32>) -> vector<4x1xi32> {
+//       CHECK:   %[[VAL:.*]] = arith.constant 1 : i32
+//       CHECK:   %[[RES:.*]] = vector.insert %[[VAL]], %[[ARG]] [0, 0] : i32 into vector<4x1xi32>
+//       CHECK:   return %[[RES]] : vector<4x1xi32>
+func.func @fold_insert_constant_indices(%arg : vector<4x1xi32>) -> vector<4x1xi32> {
+  %0 = arith.constant 0 : index
+  %1 = arith.constant 1 : i32
+  %res = vector.insert %1, %arg[%0, %0] : i32 into vector<4x1xi32>
+  return %res : vector<4x1xi32>
 }

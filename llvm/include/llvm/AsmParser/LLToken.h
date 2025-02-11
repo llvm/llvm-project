@@ -202,10 +202,11 @@ enum Kind {
   kw_argmem,
   kw_inaccessiblemem,
 
-  // Legacy memory attributes:
+  // Legacy attributes:
   kw_argmemonly,
   kw_inaccessiblememonly,
   kw_inaccessiblemem_or_argmemonly,
+  kw_nocapture,
 
   // Captures attribute:
   kw_address,
@@ -497,6 +498,7 @@ enum Kind {
   DwarfMacinfo,     // DW_MACINFO_foo
   ChecksumKind,     // CSK_foo
   DbgRecordType,    // dbg_foo
+  DwarfEnumKind,    // DW_APPLE_ENUM_KIND_foo
 
   // Type valued tokens (TyVal).
   Type,

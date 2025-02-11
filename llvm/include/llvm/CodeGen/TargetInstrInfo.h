@@ -1566,7 +1566,7 @@ public:
   ///   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   /// or
   ///   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-  /// to TargetPassConfig::createMachineScheduler() to have an effect.
+  /// to TargetMachine::createMachineScheduler() to have an effect.
   ///
   /// \p BaseOps1 and \p BaseOps2 are memory operands of two memory operations.
   /// \p Offset1 and \p Offset2 are the byte offsets for the memory

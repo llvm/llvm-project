@@ -84,7 +84,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   OpenCLVersion = VersionTuple(2, 2);
 
   // The order of initialization is important.
-  initAvailableExtensions();
+  initAvailableExtensions(Extensions);
   initAvailableExtInstSets();
 
   GR = std::make_unique<SPIRVGlobalRegistry>(PointerSize);
@@ -135,9 +135,12 @@ bool SPIRVSubtarget::canDirectlyComparePointers() const {
   return !SPVTranslatorCompat && isAtLeastVer(SPIRVVersion, VersionTuple(1, 4));
 }
 
-void SPIRVSubtarget::initAvailableExtensions() {
-  AvailableExtensions.clear();
-  AvailableExtensions.insert(Extensions.begin(), Extensions.end());
+void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
+  if (canUseExtension(
+          SPIRV::Extension::SPV_AMD_shader_trinary_minmax_extension)) {
+    AvailableExtInstSets.insert(
+        SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax);
+  }
 }
 
 // TODO: use command line args for this rather than just defaults.
@@ -150,9 +153,14 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
     AvailableExtInstSets.insert(SPIRV::InstructionSet::OpenCL_std);
 
   // Handle extended instruction sets from extensions.
-  if (canUseExtension(
-          SPIRV::Extension::SPV_AMD_shader_trinary_minmax_extension)) {
-    AvailableExtInstSets.insert(
-        SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax);
-  }
+  accountForAMDShaderTrinaryMinmax();
+}
+
+// Set available extensions after SPIRVSubtarget is created.
+void SPIRVSubtarget::initAvailableExtensions(
+    const std::set<SPIRV::Extension::Extension> &AllowedExtIds) {
+  AvailableExtensions.clear();
+  AvailableExtensions.insert(AllowedExtIds.begin(), AllowedExtIds.end());
+
+  accountForAMDShaderTrinaryMinmax();
 }

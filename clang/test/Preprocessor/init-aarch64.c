@@ -125,8 +125,8 @@
 // AARCH64-NEXT: #define __FP_FAST_FMAF 1
 // AARCH64-NEXT: #define __FUNCTION_MULTI_VERSIONING_SUPPORT_LEVEL 202430
 // AARCH64-NEXT: #define __GCC_ASM_FLAG_OUTPUTS__ 1
-// AARCH64-NEXT: #define __GCC_CONSTRUCTIVE_SIZE {{.+}}
-// AARCH64-NEXT: #define __GCC_DESTRUCTIVE_SIZE {{.+}}
+// AARCH64-NEXT: #define __GCC_CONSTRUCTIVE_SIZE 64
+// AARCH64-NEXT: #define __GCC_DESTRUCTIVE_SIZE 256
 // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16 1
 // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
@@ -772,7 +772,7 @@
 // AARCH64-MSVC: #define __WINT_WIDTH__ 16
 // AARCH64-MSVC: #define __aarch64__ 1
 
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm64ec-windows-msvc < /dev/null | FileCheck -match-full-lines -check-prefix ARM64EC-MSVC %s
+// RUN: %clang_cc1 -E -dM -fms-compatibility-version=19.33 -ffreestanding -triple=arm64ec-windows-msvc < /dev/null | FileCheck -match-full-lines -check-prefix ARM64EC-MSVC %s
 
 // ARM64EC-MSVC: #define _INTEGRAL_MAX_BITS 64
 // ARM64EC-MSVC: #define _M_AMD64 100

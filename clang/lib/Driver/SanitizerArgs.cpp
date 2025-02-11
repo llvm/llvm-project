@@ -575,6 +575,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                      options::OPT_fstrict_overflow, false);
         if (Args.hasFlagNoClaim(options::OPT_fwrapv, options::OPT_fno_wrapv, S))
           Add &= ~SanitizerKind::SignedIntegerOverflow;
+        if (Args.hasFlagNoClaim(options::OPT_fwrapv_pointer,
+                                options::OPT_fno_wrapv_pointer, S))
+          Add &= ~SanitizerKind::PointerOverflow;
       }
       Add &= Supported;
 
@@ -828,6 +831,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   if (AllAddedKinds & SanitizerKind::KCFI) {
     CfiICallNormalizeIntegers =
         Args.hasArg(options::OPT_fsanitize_cfi_icall_normalize_integers);
+
+    KcfiArity = Args.hasArg(options::OPT_fsanitize_kcfi_arity);
 
     if (AllAddedKinds & SanitizerKind::CFI && DiagnoseErrors)
       D.Diag(diag::err_drv_argument_not_allowed_with)
@@ -1382,6 +1387,14 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (CfiICallNormalizeIntegers)
     CmdArgs.push_back("-fsanitize-cfi-icall-experimental-normalize-integers");
+
+  if (KcfiArity) {
+    if (!TC.getTriple().isOSLinux() || !TC.getTriple().isArch64Bit()) {
+      TC.getDriver().Diag(clang::diag::err_drv_kcfi_arity_unsupported_target)
+          << TC.getTriple().str();
+    }
+    CmdArgs.push_back("-fsanitize-kcfi-arity");
+  }
 
   if (CfiCanonicalJumpTables)
     CmdArgs.push_back("-fsanitize-cfi-canonical-jump-tables");

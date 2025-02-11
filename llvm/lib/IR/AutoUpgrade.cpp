@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -5017,6 +5018,72 @@ bool llvm::UpgradeDebugInfo(Module &M) {
     M.getContext().diagnose(DiagVersion);
   }
   return Modified;
+}
+
+bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
+                                        const Metadata *V) {
+  if (K == "kernel") {
+    if (!mdconst::extract<ConstantInt>(V)->isZero())
+      cast<Function>(GV)->setCallingConv(CallingConv::PTX_Kernel);
+    return true;
+  }
+  if (K == "align") {
+    // V is a bitfeild specifying two 16-bit values. The alignment value is
+    // specfied in low 16-bits, The index is specified in the high bits. For the
+    // index, 0 indicates the return value while higher values correspond to
+    // each parameter (idx = param + 1).
+    const uint64_t AlignIdxValuePair =
+        mdconst::extract<ConstantInt>(V)->getZExtValue();
+    const unsigned Idx = (AlignIdxValuePair >> 16);
+    const Align StackAlign = Align(AlignIdxValuePair & 0xFFFF);
+    // TODO: Skip adding the stackalign attribute for returns, for now.
+    if (!Idx)
+      return false;
+    cast<Function>(GV)->addAttributeAtIndex(
+        Idx, Attribute::getWithStackAlignment(GV->getContext(), StackAlign));
+    return true;
+  }
+
+  return false;
+}
+
+void llvm::UpgradeNVVMAnnotations(Module &M) {
+  NamedMDNode *NamedMD = M.getNamedMetadata("nvvm.annotations");
+  if (!NamedMD)
+    return;
+
+  SmallVector<MDNode *, 8> NewNodes;
+  SmallSet<const MDNode *, 8> SeenNodes;
+  for (MDNode *MD : NamedMD->operands()) {
+    if (!SeenNodes.insert(MD).second)
+      continue;
+
+    auto *GV = mdconst::dyn_extract_or_null<GlobalValue>(MD->getOperand(0));
+    if (!GV)
+      continue;
+
+    assert((MD->getNumOperands() % 2) == 1 && "Invalid number of operands");
+
+    SmallVector<Metadata *, 8> NewOperands{MD->getOperand(0)};
+    // Each nvvm.annotations metadata entry will be of the following form:
+    //   !{ ptr @gv, !"key1", value1, !"key2", value2, ... }
+    // start index = 1, to skip the global variable key
+    // increment = 2, to skip the value for each property-value pairs
+    for (unsigned j = 1, je = MD->getNumOperands(); j < je; j += 2) {
+      MDString *K = cast<MDString>(MD->getOperand(j));
+      const MDOperand &V = MD->getOperand(j + 1);
+      bool Upgraded = upgradeSingleNVVMAnnotation(GV, K->getString(), V);
+      if (!Upgraded)
+        NewOperands.append({K, V});
+    }
+
+    if (NewOperands.size() > 1)
+      NewNodes.push_back(MDNode::get(M.getContext(), NewOperands));
+  }
+
+  NamedMD->clearOperands();
+  for (MDNode *N : NewNodes)
+    NamedMD->addOperand(N);
 }
 
 /// This checks for objc retain release marker which should be upgraded. It

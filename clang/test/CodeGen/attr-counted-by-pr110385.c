@@ -26,7 +26,7 @@ struct bucket2 {
 void init(void * __attribute__((pass_dynamic_object_size(0))));
 
 // CHECK-LABEL: define dso_local void @test1(
-// CHECK-SAME: ptr nocapture noundef readonly [[FOO:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[FOO:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[GROWABLE:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO]], i64 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[GROWABLE]], align 8, !tbaa [[TBAA2:![0-9]+]]

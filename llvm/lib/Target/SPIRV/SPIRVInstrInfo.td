@@ -530,8 +530,18 @@ defm OpISubBorrow: BinOpTypedGen<"OpISubBorrow", 150, subc, 0, 1>;
 def OpUMulExtended: BinOp<"OpUMulExtended", 151>;
 def OpSMulExtended: BinOp<"OpSMulExtended", 152>;
 
-def OpSDot: BinOp<"OpSDot", 4450>;
-def OpUDot: BinOp<"OpUDot", 4451>;
+def OpSDot: Op<4450, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, variable_ops),
+                  "$res = OpSDot $type $vec1 $vec2">;
+def OpUDot: Op<4451, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, variable_ops),
+                  "$res = OpUDot $type $vec1 $vec2">;
+def OpSUDot: Op<4452, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, variable_ops),
+                  "$res = OpSUDot $type $vec1 $vec2">;
+def OpSDotAccSat: Op<4453, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, ID:$acc, variable_ops),
+                  "$res = OpSDotAccSat $type $vec1 $vec2 $acc">;
+def OpUDotAccSat: Op<4454, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, ID:$acc, variable_ops),
+                  "$res = OpUDotAccSat $type $vec1 $vec2 $acc">;
+def OpSUDotAccSat: Op<4455, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, ID:$acc, variable_ops),
+                  "$res = OpSUDotAccSat $type $vec1 $vec2 $acc">;
 
 // 3.42.14 Bit Instructions
 

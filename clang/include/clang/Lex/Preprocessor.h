@@ -933,7 +933,7 @@ private:
     }
 
     ArrayRef<ModuleMacro*> getOverriddenMacros() const {
-      if (auto *Info = State.dyn_cast<ModuleMacroInfo*>())
+      if (auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State))
         return Info->OverriddenMacros;
       return {};
     }

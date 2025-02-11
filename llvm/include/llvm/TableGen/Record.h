@@ -1523,7 +1523,7 @@ private:
   bool IsUsed = false;
 
   /// Reference locations to this record value.
-  SmallVector<SMRange> ReferenceLocs;
+  SmallVector<SMRange, 0> ReferenceLocs;
 
 public:
   RecordVal(const Init *N, const RecTy *T, FieldKind K);

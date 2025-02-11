@@ -20,15 +20,23 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsSPIRV.inc"
-};
+static constexpr int NumBuiltins =
+    clang::SPIRV::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-ArrayRef<Builtin::Info> SPIRVTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::SPIRV::LastTSBuiltin - Builtin::FirstTSBuiltin);
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsSPIRV.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsSPIRV.inc"
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumBuiltins);
+
+llvm::SmallVector<Builtin::InfosShard>
+SPIRVTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 void SPIRTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -94,7 +102,8 @@ SPIRV64AMDGCNTargetInfo::convertConstraint(const char *&Constraint) const {
   return AMDGPUTI.convertConstraint(Constraint);
 }
 
-ArrayRef<Builtin::Info> SPIRV64AMDGCNTargetInfo::getTargetBuiltins() const {
+llvm::SmallVector<Builtin::InfosShard>
+SPIRV64AMDGCNTargetInfo::getTargetBuiltins() const {
   return AMDGPUTI.getTargetBuiltins();
 }
 

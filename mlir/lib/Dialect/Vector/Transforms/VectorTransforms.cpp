@@ -1792,11 +1792,11 @@ struct DropUnitDimsFromTransposeOp final
     auto dropDimsShapeCast = rewriter.create<vector::ShapeCastOp>(
         loc, sourceTypeWithoutUnitDims, op.getVector());
     // Create the new transpose.
-    auto tranposeWithoutUnitDims =
+    auto transposeWithoutUnitDims =
         rewriter.create<vector::TransposeOp>(loc, dropDimsShapeCast, newPerm);
     // Restore the unit dims via shape cast.
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
-        op, op.getResultVectorType(), tranposeWithoutUnitDims);
+        op, op.getResultVectorType(), transposeWithoutUnitDims);
 
     return success();
   }

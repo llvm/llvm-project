@@ -147,7 +147,7 @@ linalg::isaBroadcastOpInterface(GenericOp op) {
 }
 
 //===----------------------------------------------------------------------===//
-// TranposeOpInterface implementation
+// TransposeOpInterface implementation
 //===----------------------------------------------------------------------===//
 std::optional<SmallVector<int64_t>>
 linalg::isaTransposeOpInterface(GenericOp op) {

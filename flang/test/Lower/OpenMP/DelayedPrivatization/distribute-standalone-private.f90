@@ -16,8 +16,8 @@ subroutine standalone_distribute
     !$omp end teams
 end subroutine standalone_distribute
 
-! CHECK: omp.private {type = private} @[[I_PRIVATIZER_SYM:.*]] : !fir.ref<i32>
-! CHECK: omp.private {type = private} @[[VAR_PRIVATIZER_SYM:.*]] : !fir.ref<i32>
+! CHECK: omp.private {type = private} @[[I_PRIVATIZER_SYM:.*]] : i32
+! CHECK: omp.private {type = private} @[[VAR_PRIVATIZER_SYM:.*]] : i32
 
 
 ! CHECK-LABEL: func.func @_QPstandalone_distribute() {

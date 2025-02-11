@@ -431,3 +431,31 @@ define void @shuffle_i256_ldst(ptr %p) vscale_range(2,2) {
   store <4 x i256> %res, ptr %p
   ret void
 }
+
+define void @shuffle_3_input_vectors() vscale_range(4,4) {
+; CHECK-LABEL: shuffle_3_input_vectors:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 1
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 6
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v20, v8, 1, v0.t
+; CHECK-NEXT:    vslideup.vi v20, v9, 3
+; CHECK-NEXT:    vslidedown.vi v21, v9, 1
+; CHECK-NEXT:    vmv1r.v v22, v8
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vmsgt.vi v8, v16, 0
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    sb a0, 0(zero)
+; CHECK-NEXT:    ret
+  %1 = shufflevector <32 x i64> zeroinitializer, <32 x i64> splat (i64 1), <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 poison, i32 poison, i32 33, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = icmp slt <32 x i64> zeroinitializer, %1
+  %3 = bitcast <32 x i1> %2 to i32
+  %4 = trunc i32 %3 to i8
+  store i8 %4, ptr null, align 1
+  ret void
+}

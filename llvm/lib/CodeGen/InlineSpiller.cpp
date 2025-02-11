@@ -1320,13 +1320,16 @@ void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,
   LiveInterval &OrigLI = LIS.getInterval(Original);
   // save a copy of LiveInterval in StackSlotToOrigLI because the original
   // LiveInterval may be cleared after all its references are spilled.
-  if (!StackSlotToOrigLI.contains(StackSlot)) {
+
+  auto [Place, Inserted] = StackSlotToOrigLI.try_emplace(StackSlot);
+  if (Inserted) {
     auto LI = std::make_unique<LiveInterval>(OrigLI.reg(), OrigLI.weight());
     LI->assign(OrigLI, Allocator);
-    StackSlotToOrigLI[StackSlot] = std::move(LI);
+    Place->second = std::move(LI);
   }
+
   SlotIndex Idx = LIS.getInstructionIndex(Spill);
-  VNInfo *OrigVNI = StackSlotToOrigLI[StackSlot]->getVNInfoAt(Idx.getRegSlot());
+  VNInfo *OrigVNI = Place->second->getVNInfoAt(Idx.getRegSlot());
   std::pair<int, VNInfo *> MIdx = std::make_pair(StackSlot, OrigVNI);
   MergeableSpills[MIdx].insert(&Spill);
 }
@@ -1529,10 +1532,12 @@ void HoistSpillHelper::runHoistSpills(
     MachineBasicBlock *Block = (*RIt)->getBlock();
 
     // If Block contains an original spill, simply continue.
-    if (SpillsToKeep.contains(*RIt) && !SpillsToKeep[*RIt]) {
-      SpillsInSubTreeMap[*RIt].first.insert(*RIt);
-      // SpillsInSubTreeMap[*RIt].second contains the cost of spill.
-      SpillsInSubTreeMap[*RIt].second = MBFI.getBlockFreq(Block);
+    if (auto It = SpillsToKeep.find(*RIt);
+        It != SpillsToKeep.end() && !It->second) {
+      auto &SIt = SpillsInSubTreeMap[*RIt];
+      SIt.first.insert(*RIt);
+      // Sit.second contains the cost of spill.
+      SIt.second = MBFI.getBlockFreq(Block);
       continue;
     }
 

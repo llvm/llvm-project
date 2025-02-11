@@ -69,7 +69,6 @@ define half @swap(half %a, half %b, i32 %i) {
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %ret
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffe
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: swap:
@@ -94,7 +93,6 @@ define half @swap(half %a, half %b, i32 %i) {
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %ret
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-FAKE16-NEXT:    s_wait_alu 0xfffe
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   br label %loop

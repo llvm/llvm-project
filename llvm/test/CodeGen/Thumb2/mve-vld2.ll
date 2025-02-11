@@ -514,11 +514,12 @@ define void @vld2_v2f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldr r2, [r0]
 ; CHECK-NEXT:    ldr r0, [r0, #4]
 ; CHECK-NEXT:    vmov.32 q0[0], r2
-; CHECK-NEXT:    vmov.32 q0[1], r0
+; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    vmov.32 q1[1], r0
 ; CHECK-NEXT:    vmovx.f16 s4, s0
-; CHECK-NEXT:    vmovx.f16 s2, s1
+; CHECK-NEXT:    vmovx.f16 s2, s5
 ; CHECK-NEXT:    vins.f16 s4, s2
-; CHECK-NEXT:    vins.f16 s0, s1
+; CHECK-NEXT:    vins.f16 s0, s5
 ; CHECK-NEXT:    vadd.f16 q0, q0, q1
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    str r0, [r1]

@@ -849,6 +849,9 @@ public:
       ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
       SourceLocation AppendArgsLoc, SourceRange SR);
 
+  /// Called on device_num selector in context selectors.
+  void ActOnOpenMPDeviceNum(Expr *DeviceNumExpr);
+
   OMPClause *ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
@@ -1410,6 +1413,13 @@ public:
 
   void handleOMPAssumeAttr(Decl *D, const ParsedAttr &AL);
 
+  /// Setter and getter functions for device_num.
+  void setOpenMPDeviceNum(int Num);
+
+  int getOpenMPDeviceNum() const;
+
+  void setOpenMPDeviceNumID(StringRef ID);
+
 private:
   void *VarDataSharingAttributesStack;
 
@@ -1480,6 +1490,12 @@ private:
 
   /// All `omp assumes` we encountered so far.
   SmallVector<OMPAssumeAttr *, 4> OMPAssumeGlobal;
+
+  /// Device number specified by the context selector.
+  int DeviceNum = -1;
+
+  /// Device number identifier specified by the context selector.
+  StringRef DeviceNumID;
 };
 
 } // namespace clang

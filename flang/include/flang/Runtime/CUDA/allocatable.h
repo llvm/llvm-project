@@ -18,28 +18,30 @@ extern "C" {
 
 /// Perform allocation of the descriptor.
 int RTDECL(CUFAllocatableAllocate)(Descriptor &, int64_t stream = -1,
-    bool hasStat = false, const Descriptor *errMsg = nullptr,
-    const char *sourceFile = nullptr, int sourceLine = 0);
+    bool *pinned = nullptr, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0);
 
 /// Perform allocation of the descriptor with synchronization of it when
 /// necessary.
 int RTDECL(CUFAllocatableAllocateSync)(Descriptor &, int64_t stream = -1,
-    bool hasStat = false, const Descriptor *errMsg = nullptr,
-    const char *sourceFile = nullptr, int sourceLine = 0);
+    bool *pinned = nullptr, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0);
 
 /// Perform allocation of the descriptor without synchronization. Assign data
 /// from source.
 int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
-    const Descriptor &source, int64_t stream = -1, bool hasStat = false,
-    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    const Descriptor &source, int64_t stream = -1, bool *pinned = nullptr,
+    bool hasStat = false, const Descriptor *errMsg = nullptr,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Perform allocation of the descriptor with synchronization of it when
 /// necessary. Assign data from source.
 int RTDEF(CUFAllocatableAllocateSourceSync)(Descriptor &alloc,
-    const Descriptor &source, int64_t stream = -1, bool hasStat = false,
-    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    const Descriptor &source, int64_t stream = -1, bool *pinned = nullptr,
+    bool hasStat = false, const Descriptor *errMsg = nullptr,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Perform deallocation of the descriptor with synchronization of it when
 /// necessary.

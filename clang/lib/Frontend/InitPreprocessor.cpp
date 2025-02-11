@@ -729,8 +729,8 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   }
   if (LangOpts.AlignedAllocation && !LangOpts.AlignedAllocationUnavailable)
     Builder.defineMacro("__cpp_aligned_new", "201606L");
-  if (LangOpts.RelaxedTemplateTemplateArgs)
-    Builder.defineMacro("__cpp_template_template_args", "201611L");
+
+  Builder.defineMacro("__cpp_template_template_args", "201611L");
 
   // C++20 features.
   if (LangOpts.CPlusPlus20) {
@@ -1466,8 +1466,14 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     case 50:
       Builder.defineMacro("_OPENMP", "201811");
       break;
+    case 51:
+      Builder.defineMacro("_OPENMP", "202011");
+      break;
     case 52:
       Builder.defineMacro("_OPENMP", "202111");
+      break;
+    case 60:
+      Builder.defineMacro("_OPENMP", "202411");
       break;
     default: // case 51:
       // Default version is OpenMP 5.1

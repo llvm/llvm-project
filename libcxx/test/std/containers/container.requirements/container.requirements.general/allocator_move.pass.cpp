@@ -93,16 +93,13 @@ int main(int, char**) {
 #else
     int stored_allocators = 1;
 #endif
-    test<std::unordered_set<int, std::hash<int>, std::equal_to<int>,
-                            test_allocator<int> > >(stored_allocators);
-    test<std::unordered_multiset<int, std::hash<int>, std::equal_to<int>,
-                                 test_allocator<int> > >(stored_allocators);
+    test<std::unordered_set<int, std::hash<int>, std::equal_to<int>, test_allocator<int> > >(stored_allocators);
+    test<std::unordered_multiset<int, std::hash<int>, std::equal_to<int>, test_allocator<int> > >(stored_allocators);
 
     using KV = std::pair<const int, int>;
-    test<std::unordered_map<int, int, std::hash<int>, std::equal_to<int>,
-                            test_allocator<KV> > >(stored_allocators);
-    test<std::unordered_multimap<int, int, std::hash<int>, std::equal_to<int>,
-                                 test_allocator<KV> > >(stored_allocators);
+    test<std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, test_allocator<KV> > >(stored_allocators);
+    test<std::unordered_multimap<int, int, std::hash<int>, std::equal_to<int>, test_allocator<KV> > >(
+        stored_allocators);
   }
 
   return 0;

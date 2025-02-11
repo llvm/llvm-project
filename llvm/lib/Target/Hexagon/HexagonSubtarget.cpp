@@ -686,7 +686,7 @@ bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
       restoreLatency(Src, DstBest);
   }
 
-  // Attempt to find another opprotunity for zero latency in a different
+  // Attempt to find another opportunity for zero latency in a different
   // dependence.
   if (SrcBest && DstBest)
     // If there is an edge from SrcBest to DstBst, then try to change that

@@ -57,7 +57,7 @@ function(add_flang_library name)
     set(LIBTYPE SHARED)
   elseif(ARG_STATIC)
     # If BUILD_SHARED_LIBS and ARG_STATIC are both set, llvm_add_library prioritizes STATIC.
-    # This is required behavior for libFortranFloat128Math.
+    # This is required behavior for libflang_rt.quadmath.
     set(LIBTYPE STATIC)
   else()
     # Let llvm_add_library decide, taking BUILD_SHARED_LIBS into account.

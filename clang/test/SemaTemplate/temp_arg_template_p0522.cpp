@@ -66,8 +66,9 @@ namespace DependentType {
   using ok = Pt<tT0<int, i>, tT0<int, iDi>>;
   using err1 = tT0<int, ii>; // expected-error {{too few template arguments for class template 'ii'}}
                              // expected-note@-1 {{different template parameters}}
-  using err2 = tT0<short, i>; // FIXME: should this be OK?
-  using err2a = tT0<long long, i>; // FIXME: should this be OK (if long long is larger than int)?
+  using err2 = tT0<short, i>;
+  using err2a = tT0<long long, i>; // expected-error@#tT0 {{cannot be narrowed from type 'long long' to 'int'}}
+                                   // expected-note@-1 {{different template parameters}}
   using err2b = tT0<void*, i>; // expected-error@#tT0 {{value of type 'void *' is not implicitly convertible to 'int'}}
                                // expected-note@-1 {{different template parameters}}
   using err3 = tT0<short, t0>; // expected-error@#tT0 {{template argument for template type parameter must be a type}}
