@@ -16,19 +16,19 @@ llvm::StringRef TelemetryVendor::GetPluginName() {
 
 void TelemetryVendor::Initialize() {
   // The default (upstream) impl will have telemetry disabled by default.
-  SetTelemetryConfig(
-      std::make_unique<llvm::telemetry::Config>(/*enable_telemetry*/ false));
+  SetTelemetryConfig(std::make_shared<new llvm::telemetry::Config>(
+      /*enable_telemetry*/ false));
   SetTelemetryManager(nullptr);
 }
 
-static std::unique_ptr<llvm::telemetry::Config> current_config;
-std::unique_ptr<llvm::telemetry::Config> TelemetryVendor::GetTelemetryConfig() {
-  return current_config;
+lldb::TelemetryConfigSP TelemetryVendor::GetTelemetryConfig() {
+  static lldb::TelemetryConfigSP g_config_sp;
+  return g_config_sp;
 }
 
 void TelemetryVendor::SetTelemetryConfig(
-    std::unique_ptr<llvm::telemetry::Config> config) {
-  current_config = std::move(config);
+    const lldb::TelemetryConfigSP &config) {
+  GetTelemetryCOnfig() = config;
 }
 
 lldb::TelemetryManagerSP TelemetryVendor::GetTelemetryManager() {

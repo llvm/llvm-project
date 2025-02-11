@@ -478,6 +478,11 @@ typedef std::shared_ptr<lldb_private::TypeSummaryOptions> TypeSummaryOptionsSP;
 typedef std::shared_ptr<lldb_private::ScriptedSyntheticChildren>
     ScriptedSyntheticChildrenSP;
 typedef std::shared_ptr<lldb_private::SupportFile> SupportFileSP;
+#ifdef LLDB_BUILD_TELEMETRY
+typedef std::shared_ptr<llvm::telemetry::Config> TelemetryConfigSP;
+typedef std::shared_ptr<lldb_private::telemetry::TelemetryManager>
+    TelemetryManagerSP;
+#endif // LLDB_BUILD_TELEMETRY
 typedef std::shared_ptr<lldb_private::UnixSignals> UnixSignalsSP;
 typedef std::weak_ptr<lldb_private::UnixSignals> UnixSignalsWP;
 typedef std::shared_ptr<lldb_private::UnwindAssembly> UnwindAssemblySP;

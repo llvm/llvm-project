@@ -27,11 +27,12 @@ public:
 
   static void Terminate();
 
-  static std::unique_ptr<llvm::telemetry::Config> GetTelemetryConfig();
-  static void
-  SetTelemetryConfig(std::unique_ptr<llvm::telemetry::Config> config);
+  static lldb::TelemetryConfig GetTelemetryConfig();
+
+  static void SetTelemetryConfig(const lldb::TelemetryConfigSP &config);
 
   static lldb::TelemetryManagerSP GetTelemetryManager();
+
   static void SetTelemetryManager(const lldb::TelemetryManagerSP &manager_sp);
 };
 
