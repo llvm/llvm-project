@@ -131,9 +131,7 @@ constexpr bool test() {
                     });
                   });
 
-  // TODO: Remove the `_LIBCPP_ENABLE_EXPERIMENTAL` check once we have the FTM guarded or views::join isn't
-  // experimental anymore
-#if TEST_STD_VER >= 20 && (!defined(_LIBCPP_VERSION) || defined(_LIBCPP_ENABLE_EXPERIMENTAL))
+#if TEST_STD_VER >= 20
   {
     std::vector<std::vector<int>> vec = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     auto view                         = vec | std::views::join;
