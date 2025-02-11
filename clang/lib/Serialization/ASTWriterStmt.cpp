@@ -2459,6 +2459,11 @@ void ASTStmtWriter::VisitOMPTileDirective(OMPTileDirective *D) {
   Code = serialization::STMT_OMP_TILE_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPStripeDirective(OMPStripeDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+  Code = serialization::STMP_OMP_STRIPE_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
   VisitOMPLoopTransformationDirective(D);
   Code = serialization::STMT_OMP_UNROLL_DIRECTIVE;
