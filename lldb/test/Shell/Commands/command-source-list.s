@@ -2,7 +2,9 @@
 
 # RUN: split-file %s %t
 # RUN: llvm-mc --triple=x86_64-pc-linux -filetype=obj %t/a.s -o %t/a.o
-# RUN: %lldb %t/a.o -o "settings set target.source-map . %t" -s %t/commands -o exit | FileCheck %s
+# RUN: %lldb %t/a.o -o "settings set target.source-map . %t" \
+# RUN:   -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:   -s %t/commands -o exit 2>&1 | FileCheck %s
 
 #--- commands
 # CASE 0: function at the start of the file
@@ -69,9 +71,14 @@ source list -n func3
 # CHECK-NEXT:     9    content of file0.c:9
 # CHECK-NEXT:     10   content of file0.c:10
 
-# CASE 4: discontinuous function
+# CASE 4: function has no line entry with line!=0
 source list -n func4
-# CHECK-NEXT: source list -n func4
+# CHECK-LABEL: source list -n func4
+# CHECK: error: Could not find line information for function "func4".
+
+# CASE 5: discontinuous function
+source list -n func5
+# CHECK-LABEL: source list -n func5
 # CHECK-NEXT:  File: file0.c
 # CHECK-NEXT:     1    content of file0.c:1
 # CHECK-NEXT:     2    content of file0.c:2
@@ -119,18 +126,23 @@ func3:
         nop
 .Lfunc3_end:
 
-func4.__part.1:
+func4:
+        .loc    0 0
+        nop
+.Lfunc4_end:
+
+func5.__part.1:
         .loc    0 1
         nop
-.Lfunc4.__part.1_end:
+.Lfunc5.__part.1_end:
 
 .Lpadding:
         nop
 
-func4:
+func5:
         .loc    0 5
         nop
-.Lfunc4_end:
+.Lfunc5_end:
 
 .Ltext_end:
 
@@ -188,7 +200,7 @@ func4:
         .quad   .text                           # DW_AT_low_pc
         .quad   .Ltext_end                      # DW_AT_high_pc
         .long   .Lline_table_start0             # DW_AT_stmt_list
-        .rept 4
+        .rept 5
         .byte   2                               # Abbrev DW_TAG_subprogram
         .quad   func\+                          # DW_AT_low_pc
         .quad   .Lfunc\+_end                    # DW_AT_high_pc
@@ -196,7 +208,7 @@ func4:
         .endr
         .byte   3                               # Abbrev DW_TAG_subprogram
         .long   .Ldebug_ranges0
-        .asciz  "func4"                         # DW_AT_name
+        .asciz  "func5"                         # DW_AT_name
         .byte   0                               # End Of Children Mark
 .Ldebug_info_end0:
 
@@ -211,11 +223,11 @@ func4:
         .long   .Ldebug_ranges0-.Lrnglists_table_base0
 .Ldebug_ranges0:
         .byte   6                               # DW_RLE_start_end
-        .quad   func4
-        .quad   .Lfunc4_end
+        .quad   func5
+        .quad   .Lfunc5_end
         .byte   6                               # DW_RLE_start_end
-        .quad   func4.__part.1
-        .quad   .Lfunc4.__part.1_end
+        .quad   func5.__part.1
+        .quad   .Lfunc5.__part.1_end
         .byte   0                               # DW_RLE_end_of_list
 .Ldebug_list_header_end0:
         .section        .debug_line,"",@progbits

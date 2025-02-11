@@ -785,8 +785,10 @@ protected:
       if (sc.block == nullptr) {
         // Not an inlined function
         auto expected_info = sc.function->GetSourceInfo();
-        if (!expected_info)
+        if (!expected_info) {
           result.AppendError(llvm::toString(expected_info.takeError()));
+          return 0;
+        }
         start_file = expected_info->first;
         start_line = expected_info->second.GetRangeBase();
         end_line = expected_info->second.GetRangeEnd();
