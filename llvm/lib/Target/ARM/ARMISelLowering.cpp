@@ -4766,14 +4766,14 @@ SDValue ARMTargetLowering::LowerFormalArguments(
             // in a 32-bit register, so the actual bytes used for the value
             // differ between little and big endian.
             unsigned FIOffset = VA.getLocMemOffset();
-            int FI = MFI.CreateFixedObject(VA.getLocVT().getSizeInBits()/8,
+            int FI = MFI.CreateFixedObject(VA.getLocVT().getSizeInBits() / 8,
                                            FIOffset, true);
 
             // Create load nodes to retrieve arguments from the stack.
             SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
             SDValue Load = DAG.getLoad(VA.getLocVT(), dl, Chain, FIN,
-                                         MachinePointerInfo::getFixedStack(
-                                             DAG.getMachineFunction(), FI));
+                                       MachinePointerInfo::getFixedStack(
+                                           DAG.getMachineFunction(), FI));
             InVals.push_back(
                 MoveToHPR(dl, DAG, VA.getLocVT(), VA.getValVT(), Load));
 
