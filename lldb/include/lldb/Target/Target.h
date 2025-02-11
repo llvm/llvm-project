@@ -204,6 +204,8 @@ public:
 
   AutoBool GetSwiftPCMValidation() const;
 
+  bool GetSwiftUseTasksPlugin() const;
+
   Args GetSwiftPluginServerForPath() const;
 
   bool GetSwiftAutoImportFrameworks() const;
