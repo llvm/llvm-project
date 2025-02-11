@@ -220,8 +220,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
 }
 
 TEST_F(ParseHLSLRootSignatureTest, ValidLexPeekTest) {
-  // This test will check that we can lex all defined tokens as defined in
-  // HLSLRootSignatureTokenKinds.def, plus some additional integer variations
+  // This test will check that we the peek api is correctly used
   const llvm::StringLiteral Source = R"cc(
     )1
   )cc";
