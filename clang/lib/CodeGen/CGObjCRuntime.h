@@ -117,7 +117,8 @@ public:
   virtual ~CGObjCRuntime();
 
   std::string getSymbolNameForMethod(const ObjCMethodDecl *method,
-                                     bool includeCategoryName = true);
+                                     bool includeCategoryName = true,
+                                     bool isThunk = true);
 
   /// Generate the function required to register all Objective-C components in
   /// this compilation unit with the runtime library.
@@ -223,7 +224,8 @@ public:
   // should also be generating the loads of the parameters, as the runtime
   // should have full control over how parameters are passed.
   virtual llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
-                                         const ObjCContainerDecl *CD) = 0;
+                                         const ObjCContainerDecl *CD,
+                                         bool isThunk = true) = 0;
 
   /// Generates prologue for direct Objective-C Methods.
   virtual void GenerateDirectMethodPrologue(CodeGenFunction &CGF,
@@ -231,6 +233,11 @@ public:
                                             const ObjCMethodDecl *OMD,
                                             const ObjCContainerDecl *CD) = 0;
 
+  virtual void GenerateObjCDirectNilCheck(CodeGenFunction &CGF,
+                                          const ObjCMethodDecl *OMD,
+                                          const ObjCContainerDecl *CD) = 0;
+  virtual void GenerateCmdIfNecessary(CodeGenFunction &CGF,
+                                      const ObjCMethodDecl *OMD) = 0;
   /// Return the runtime function for getting properties.
   virtual llvm::FunctionCallee GetPropertyGetFunction() = 0;
 
