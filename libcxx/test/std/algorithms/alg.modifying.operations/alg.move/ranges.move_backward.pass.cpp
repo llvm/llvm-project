@@ -208,7 +208,7 @@ constexpr bool test_vector_bool(std::size_t N) {
   { // Test move_backward with unaligned bytes
     std::vector<bool> in{v};
     std::vector<bool> out(N);
-    std::ranges::move_backward(in | std::views::take(N - 4), out.end());
+    std::ranges::move_backward(std::views::counted(in.begin(), N - 4), out.end());
     assert(std::ranges::equal(v | std::views::take(N - 4), out | std::views::drop(4)));
   }
 

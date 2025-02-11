@@ -26,7 +26,8 @@ void bm_ranges_move_vb(benchmark::State& state) {
     if constexpr (aligned) {
       benchmark::DoNotOptimize(std::ranges::move(*in, std::ranges::begin(*out)));
     } else {
-      benchmark::DoNotOptimize(std::ranges::move(*in | std::views::drop(4), std::ranges::begin(*out)));
+      benchmark::DoNotOptimize(
+          std::ranges::move(std::views::counted(in->begin() + 4, n - 4), std::ranges::begin(*out)));
     }
     std::swap(in, out);
     benchmark::DoNotOptimize(in);
