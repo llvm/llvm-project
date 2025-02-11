@@ -3132,15 +3132,16 @@ static void BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
   }
 
   if (auto *RTy = Ty->getAs<RecordType>()) {
-    llvm::SmallVector<const RecordType*> RecordTypes;
+    llvm::SmallVector<const RecordType *> RecordTypes;
     RecordTypes.push_back(RTy);
-    while(RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
+    while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
       CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
-      assert(D->getNumBases() == 1 && "HLSL doesn't support multiple inheritance");
+      assert(D->getNumBases() == 1 &&
+             "HLSL doesn't support multiple inheritance");
       RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
     }
     while (!RecordTypes.empty()) {
-      const RecordType* RT = RecordTypes.back();
+      const RecordType *RT = RecordTypes.back();
       RecordTypes.pop_back();
       for (auto *FD : RT->getDecl()->fields()) {
         DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
@@ -3178,15 +3179,16 @@ static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
       Inits.push_back(GenerateInitLists(Ctx, ElTy, It));
   }
   if (auto *RTy = Ty->getAs<RecordType>()) {
-    llvm::SmallVector<const RecordType*> RecordTypes;
+    llvm::SmallVector<const RecordType *> RecordTypes;
     RecordTypes.push_back(RTy);
-    while(RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
+    while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
       CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
-      assert(D->getNumBases() == 1 && "HLSL doesn't support multiple inheritance");
+      assert(D->getNumBases() == 1 &&
+             "HLSL doesn't support multiple inheritance");
       RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
     }
     while (!RecordTypes.empty()) {
-      const RecordType* RT = RecordTypes.back();
+      const RecordType *RT = RecordTypes.back();
       RecordTypes.pop_back();
       for (auto *FD : RT->getDecl()->fields()) {
         Inits.push_back(GenerateInitLists(Ctx, FD->getType(), It));
