@@ -83,6 +83,7 @@ ol_impl_result_t olEnqueueMemcpyDtoD_impl(ol_queue_handle_t Queue,
 
 ol_impl_result_t
 olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+                           const void *ArgumentsData, size_t ArgumentsSize,
                            const ol_kernel_launch_size_args_t *LaunchSizeArgs,
                            ol_event_handle_t *EventOut);
 
@@ -101,10 +102,3 @@ ol_impl_result_t olCreateKernel_impl(ol_program_handle_t Program,
 ol_impl_result_t olRetainKernel_impl(ol_kernel_handle_t Kernel);
 
 ol_impl_result_t olReleaseKernel_impl(ol_kernel_handle_t Kernel);
-
-ol_impl_result_t olSetKernelArgValue_impl(ol_kernel_handle_t Kernel,
-                                          uint32_t Index, size_t Size,
-                                          void *ArgData);
-
-ol_impl_result_t olSetKernelArgsData_impl(ol_kernel_handle_t Kernel,
-                                          void *ArgsData, size_t ArgsDataSize);

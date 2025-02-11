@@ -1077,6 +1077,7 @@ ol_result_t olEnqueueMemcpyDtoDWithCodeLoc(ol_queue_handle_t Queue,
 ///////////////////////////////////////////////////////////////////////////////
 ol_impl_result_t
 olEnqueueKernelLaunch_val(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+                          const void *ArgumentsData, size_t ArgumentsSize,
                           const ol_kernel_launch_size_args_t *LaunchSizeArgs,
                           ol_event_handle_t *EventOut) {
   if (true /*enableParameterValidation*/) {
@@ -1088,26 +1089,33 @@ olEnqueueKernelLaunch_val(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
       return OL_ERRC_INVALID_NULL_HANDLE;
     }
 
+    if (NULL == ArgumentsData) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+
     if (NULL == LaunchSizeArgs) {
       return OL_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return olEnqueueKernelLaunch_impl(Queue, Kernel, LaunchSizeArgs, EventOut);
+  return olEnqueueKernelLaunch_impl(Queue, Kernel, ArgumentsData, ArgumentsSize,
+                                    LaunchSizeArgs, EventOut);
 }
 OL_APIEXPORT ol_result_t OL_APICALL
 olEnqueueKernelLaunch(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+                      const void *ArgumentsData, size_t ArgumentsSize,
                       const ol_kernel_launch_size_args_t *LaunchSizeArgs,
                       ol_event_handle_t *EventOut) {
   if (offloadConfig().TracingEnabled) {
     std::cerr << "---> olEnqueueKernelLaunch";
   }
 
-  ol_result_t Result =
-      olEnqueueKernelLaunch_val(Queue, Kernel, LaunchSizeArgs, EventOut);
+  ol_result_t Result = olEnqueueKernelLaunch_val(
+      Queue, Kernel, ArgumentsData, ArgumentsSize, LaunchSizeArgs, EventOut);
 
   if (offloadConfig().TracingEnabled) {
-    ol_enqueue_kernel_launch_params_t Params = {&Queue, &Kernel,
+    ol_enqueue_kernel_launch_params_t Params = {&Queue,          &Kernel,
+                                                &ArgumentsData,  &ArgumentsSize,
                                                 &LaunchSizeArgs, &EventOut};
     std::cerr << "(" << &Params << ")";
     std::cerr << "-> " << Result << "\n";
@@ -1119,11 +1127,12 @@ olEnqueueKernelLaunch(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
 }
 ol_result_t olEnqueueKernelLaunchWithCodeLoc(
     ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+    const void *ArgumentsData, size_t ArgumentsSize,
     const ol_kernel_launch_size_args_t *LaunchSizeArgs,
     ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result =
-      olEnqueueKernelLaunch(Queue, Kernel, LaunchSizeArgs, EventOut);
+  ol_result_t Result = olEnqueueKernelLaunch(
+      Queue, Kernel, ArgumentsData, ArgumentsSize, LaunchSizeArgs, EventOut);
 
   currentCodeLocation() = nullptr;
   return Result;
@@ -1372,96 +1381,6 @@ ol_result_t olReleaseKernelWithCodeLoc(ol_kernel_handle_t Kernel,
                                        ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
   ol_result_t Result = olReleaseKernel(Kernel);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olSetKernelArgValue_val(ol_kernel_handle_t Kernel,
-                                         uint32_t Index, size_t Size,
-                                         void *ArgData) {
-  if (true /*enableParameterValidation*/) {
-    if (NULL == Kernel) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-
-    if (NULL == ArgData) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-  }
-
-  return olSetKernelArgValue_impl(Kernel, Index, Size, ArgData);
-}
-OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgValue(
-    ol_kernel_handle_t Kernel, uint32_t Index, size_t Size, void *ArgData) {
-  if (offloadConfig().TracingEnabled) {
-    std::cerr << "---> olSetKernelArgValue";
-  }
-
-  ol_result_t Result = olSetKernelArgValue_val(Kernel, Index, Size, ArgData);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_set_kernel_arg_value_params_t Params = {&Kernel, &Index, &Size,
-                                               &ArgData};
-    std::cerr << "(" << &Params << ")";
-    std::cerr << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      std::cerr << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olSetKernelArgValueWithCodeLoc(ol_kernel_handle_t Kernel,
-                                           uint32_t Index, size_t Size,
-                                           void *ArgData,
-                                           ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = olSetKernelArgValue(Kernel, Index, Size, ArgData);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olSetKernelArgsData_val(ol_kernel_handle_t Kernel,
-                                         void *ArgsData, size_t ArgsDataSize) {
-  if (true /*enableParameterValidation*/) {
-    if (NULL == Kernel) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-
-    if (NULL == ArgsData) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-  }
-
-  return olSetKernelArgsData_impl(Kernel, ArgsData, ArgsDataSize);
-}
-OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgsData(
-    ol_kernel_handle_t Kernel, void *ArgsData, size_t ArgsDataSize) {
-  if (offloadConfig().TracingEnabled) {
-    std::cerr << "---> olSetKernelArgsData";
-  }
-
-  ol_result_t Result = olSetKernelArgsData_val(Kernel, ArgsData, ArgsDataSize);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_set_kernel_args_data_params_t Params = {&Kernel, &ArgsData,
-                                               &ArgsDataSize};
-    std::cerr << "(" << &Params << ")";
-    std::cerr << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      std::cerr << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olSetKernelArgsDataWithCodeLoc(ol_kernel_handle_t Kernel,
-                                           void *ArgsData, size_t ArgsDataSize,
-                                           ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = olSetKernelArgsData(Kernel, ArgsData, ArgsDataSize);
 
   currentCodeLocation() = nullptr;
   return Result;

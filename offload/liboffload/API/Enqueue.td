@@ -97,6 +97,8 @@ def : Function {
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
         Param<"ol_kernel_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
+        Param<"const void*", "ArgumentsData", "pointer to the kernel argument struct", PARAM_IN>,
+        Param<"size_t", "ArgumentsSize", "size of the kernel argument struct", PARAM_IN>,
         Param<"const ol_kernel_launch_size_args_t*", "LaunchSizeArgs", "pointer to the struct containing launch size parameters", PARAM_IN>,
         Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
     ];

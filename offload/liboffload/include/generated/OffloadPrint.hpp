@@ -660,6 +660,12 @@ operator<<(std::ostream &os,
   os << ".Kernel = ";
   printPtr(os, *params->pKernel);
   os << ", ";
+  os << ".ArgumentsData = ";
+  printPtr(os, *params->pArgumentsData);
+  os << ", ";
+  os << ".ArgumentsSize = ";
+  os << *params->pArgumentsSize;
+  os << ", ";
   os << ".LaunchSizeArgs = ";
   printPtr(os, *params->pLaunchSizeArgs);
   os << ", ";
@@ -722,37 +728,6 @@ inline std::ostream &
 operator<<(std::ostream &os, const struct ol_release_kernel_params_t *params) {
   os << ".Kernel = ";
   printPtr(os, *params->pKernel);
-  return os;
-}
-
-inline std::ostream &
-operator<<(std::ostream &os,
-           const struct ol_set_kernel_arg_value_params_t *params) {
-  os << ".Kernel = ";
-  printPtr(os, *params->pKernel);
-  os << ", ";
-  os << ".Index = ";
-  os << *params->pIndex;
-  os << ", ";
-  os << ".Size = ";
-  os << *params->pSize;
-  os << ", ";
-  os << ".ArgData = ";
-  printPtr(os, *params->pArgData);
-  return os;
-}
-
-inline std::ostream &
-operator<<(std::ostream &os,
-           const struct ol_set_kernel_args_data_params_t *params) {
-  os << ".Kernel = ";
-  printPtr(os, *params->pKernel);
-  os << ", ";
-  os << ".ArgsData = ";
-  printPtr(os, *params->pArgsData);
-  os << ", ";
-  os << ".ArgsDataSize = ";
-  os << *params->pArgsDataSize;
   return os;
 }
 

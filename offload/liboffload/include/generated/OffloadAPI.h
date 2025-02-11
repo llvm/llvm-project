@@ -815,12 +815,17 @@ typedef struct ol_kernel_launch_size_args_t {
 ///         + `NULL == Queue`
 ///         + `NULL == Kernel`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == ArgumentsData`
 ///         + `NULL == LaunchSizeArgs`
 OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunch(
     // [in] handle of the queue
     ol_queue_handle_t Queue,
     // [in] handle of the kernel
     ol_kernel_handle_t Kernel,
+    // [in] pointer to the kernel argument struct
+    const void *ArgumentsData,
+    // [in] size of the kernel argument struct
+    size_t ArgumentsSize,
     // [in] pointer to the struct containing launch size parameters
     const ol_kernel_launch_size_args_t *LaunchSizeArgs,
     // [out][optional] optional recorded event for the enqueued operation
@@ -941,56 +946,6 @@ OL_APIEXPORT ol_result_t OL_APICALL olRetainKernel(
 OL_APIEXPORT ol_result_t OL_APICALL olReleaseKernel(
     // [in] handle of the kernel
     ol_kernel_handle_t Kernel);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Set the value of a single kernel argument at the given index
-///
-/// @details
-///    - The implementation will construct and lay out the backing storage for
-///    the kernel arguments.The effects of calls to this function on a kernel
-///    are lost if olSetKernelArgsData is called.
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == Kernel`
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == ArgData`
-OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgValue(
-    // [in] handle of the kernel
-    ol_kernel_handle_t Kernel,
-    // [in] index of the argument
-    uint32_t Index,
-    // [in] size of the argument data
-    size_t Size,
-    // [in] pointer to the argument data
-    void *ArgData);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Set the entire argument data for a kernel
-///
-/// @details
-///    - Previous calls to olSetKernelArgValue on the same kernel are
-///    invalidated by this functionThe data pointed to by ArgsData is assumed to
-///    be laid out correctly according to the requirements of the backend API
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == Kernel`
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == ArgsData`
-OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgsData(
-    // [in] handle of the kernel
-    ol_kernel_handle_t Kernel,
-    // [in] pointer to the argument data
-    void *ArgsData,
-    // [in] size of the argument data
-    size_t ArgsDataSize);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olGetPlatform
@@ -1191,6 +1146,8 @@ typedef struct ol_enqueue_memcpy_dto_d_params_t {
 typedef struct ol_enqueue_kernel_launch_params_t {
   ol_queue_handle_t *pQueue;
   ol_kernel_handle_t *pKernel;
+  const void **pArgumentsData;
+  size_t *pArgumentsSize;
   const ol_kernel_launch_size_args_t **pLaunchSizeArgs;
   ol_event_handle_t **pEventOut;
 } ol_enqueue_kernel_launch_params_t;
@@ -1241,25 +1198,6 @@ typedef struct ol_retain_kernel_params_t {
 typedef struct ol_release_kernel_params_t {
   ol_kernel_handle_t *pKernel;
 } ol_release_kernel_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olSetKernelArgValue
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_set_kernel_arg_value_params_t {
-  ol_kernel_handle_t *pKernel;
-  uint32_t *pIndex;
-  size_t *pSize;
-  void **pArgData;
-} ol_set_kernel_arg_value_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olSetKernelArgsData
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_set_kernel_args_data_params_t {
-  ol_kernel_handle_t *pKernel;
-  void **pArgsData;
-  size_t *pArgsDataSize;
-} ol_set_kernel_args_data_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olInit that also sets source code location information
@@ -1447,6 +1385,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpyDtoDWithCodeLoc(
 /// @details See also ::olEnqueueKernelLaunch
 OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunchWithCodeLoc(
     ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+    const void *ArgumentsData, size_t ArgumentsSize,
     const ol_kernel_launch_size_args_t *LaunchSizeArgs,
     ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
 
@@ -1493,22 +1432,6 @@ OL_APIEXPORT ol_result_t OL_APICALL olRetainKernelWithCodeLoc(
 /// @details See also ::olReleaseKernel
 OL_APIEXPORT ol_result_t OL_APICALL olReleaseKernelWithCodeLoc(
     ol_kernel_handle_t Kernel, ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olSetKernelArgValue that also sets source code location
-/// information
-/// @details See also ::olSetKernelArgValue
-OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgValueWithCodeLoc(
-    ol_kernel_handle_t Kernel, uint32_t Index, size_t Size, void *ArgData,
-    ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olSetKernelArgsData that also sets source code location
-/// information
-/// @details See also ::olSetKernelArgsData
-OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgsDataWithCodeLoc(
-    ol_kernel_handle_t Kernel, void *ArgsData, size_t ArgsDataSize,
-    ol_code_location_t *CodeLocation);
 
 #if defined(__cplusplus)
 } // extern "C"

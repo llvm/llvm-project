@@ -51,53 +51,14 @@ struct ol_event_impl_t {
 struct ol_program_impl_t {
   llvm::omp::target::plugin::DeviceImageTy *Image;
   std::unique_ptr<MemoryBuffer> ImageData;
+  __tgt_device_image DeviceImage;
   std::atomic_uint32_t RefCount;
-};
-
-// A helper that can be used to construct the argument buffer for a kernel.
-// Alternatively, a pre-existing buffer can be set with `setArgsData`.
-struct OffloadKernelArguments {
-  static constexpr size_t MaxParamBytes = 4096u;
-  using args_t = std::array<char, MaxParamBytes>;
-  using args_size_t = std::vector<size_t>;
-  using args_ptr_t = std::vector<void *>;
-  args_t Storage;
-  args_size_t ParamSizes;
-  args_ptr_t Pointers;
-
-  // Add an argument. If it already exists, it is replaced. Gaps are filled with
-  // empty arguments. Previous setArgsData calls are invalidated.
-  void addArg(size_t Index, size_t Size, const void *Arg) {
-    if (Index + 1 > Pointers.size()) {
-      Pointers.resize(Index + 1);
-      ParamSizes.resize(Index + 1);
-    }
-    ParamSizes[Index] = Size;
-    // calculate the insertion point on the array
-    size_t InsertPos = std::accumulate(std::begin(ParamSizes),
-                                       std::begin(ParamSizes) + Index, 0);
-    // Update the stored value for the argument
-    std::memcpy(&Storage[InsertPos], Arg, Size);
-    Pointers[Index] = &Storage[InsertPos];
-  }
-
-  // Set all argument data at once. Previous addArg calls are invalidated.
-  void setArgsData(const void *Data, size_t Size) {
-    std::memcpy(Storage.data(), Data, Size);
-    Pointers.clear();
-    ParamSizes.clear();
-  }
-
-  const args_ptr_t &getPointers() const noexcept { return Pointers; }
-
-  const char *getStorage() const noexcept { return Storage.data(); }
 };
 
 struct ol_kernel_impl_t {
   ol_program_handle_t Program;
   std::atomic_uint32_t RefCount;
   GenericKernelTy *KernelImpl;
-  OffloadKernelArguments Args;
 };
 
 using PlatformVecT = SmallVector<ol_platform_impl_t, 4>;
@@ -528,16 +489,20 @@ ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device, void *ProgData,
   // TODO: Make this copy optional.
   auto ImageData = MemoryBuffer::getMemBufferCopy(
       StringRef(reinterpret_cast<char *>(ProgData), ProgDataSize));
-  __tgt_device_image DeviceImage{
-      const_cast<char *>(ImageData->getBuffer().data()),
-      const_cast<char *>(ImageData->getBuffer().data()) + ProgDataSize - 1,
-      nullptr, nullptr};
 
   ol_program_handle_t Prog = new ol_program_impl_t();
 
-  auto Res = Device->Device->loadBinary(Device->Device->Plugin, &DeviceImage);
-  if (!Res)
+  Prog->DeviceImage = __tgt_device_image{
+      const_cast<char *>(ImageData->getBuffer().data()),
+      const_cast<char *>(ImageData->getBuffer().data()) + ProgDataSize, nullptr,
+      nullptr};
+
+  auto Res =
+      Device->Device->loadBinary(Device->Device->Plugin, &Prog->DeviceImage);
+  if (!Res) {
+    delete Prog;
     return OL_ERRC_INVALID_VALUE;
+  }
 
   Prog->Image = *Res;
   Prog->RefCount = 1;
@@ -593,16 +558,9 @@ ol_impl_result_t olReleaseKernel_impl(ol_kernel_handle_t Kernel) {
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olSetKernelArgValue_impl(ol_kernel_handle_t Kernel,
-                                          uint32_t Index, size_t Size,
-                                          void *ArgData) {
-  Kernel->Args.addArg(Index, Size, ArgData);
-
-  return OL_SUCCESS;
-}
-
 ol_impl_result_t
 olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+                           const void *ArgumentsData, size_t ArgumentsSize,
                            const ol_kernel_launch_size_args_t *LaunchSizeArgs,
                            ol_event_handle_t *EventOut) {
   auto *DeviceImpl = Queue->Device->Device;
@@ -610,7 +568,6 @@ olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, Queue->AsyncInfo);
 
   KernelArgsTy LaunchArgs{};
-  LaunchArgs.NumArgs = Kernel->Args.getPointers().size();
   LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumGroupsX;
   LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumGroupsY;
   LaunchArgs.NumTeams[2] = LaunchSizeArgs->NumGroupsZ;
@@ -618,15 +575,15 @@ olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
   LaunchArgs.ThreadLimit[1] = LaunchSizeArgs->GroupSizeY;
   LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSizeZ;
 
-  LaunchArgs.ArgPtrs =
-      reinterpret_cast<void **>(const_cast<char *>(Kernel->Args.getStorage()));
-
-  // No offsets needed, arguments are real pointers
-  auto ArgOffsets = std::vector<ptrdiff_t>(LaunchArgs.NumArgs, 0ul);
+  KernelLaunchParamsTy Params;
+  Params.Data = const_cast<void *>(ArgumentsData);
+  Params.Size = ArgumentsSize;
+  LaunchArgs.ArgPtrs = reinterpret_cast<void **>(&Params);
+  // Don't do anything with pointer indirection; use arg data as-is
+  LaunchArgs.Flags.IsCUDA = true;
 
   auto Err = Kernel->KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs,
-                                        ArgOffsets.data(), LaunchArgs,
-                                        AsyncInfoWrapper);
+                                        nullptr, LaunchArgs, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
   if (Err)
@@ -635,11 +592,5 @@ olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
   if (EventOut)
     *EventOut = makeEvent(Queue);
 
-  return OL_SUCCESS;
-}
-
-ol_impl_result_t olSetKernelArgsData_impl(ol_kernel_handle_t Kernel,
-                                          void *ArgsData, size_t ArgsDataSize) {
-  Kernel->Args.setArgsData(ArgsData, ArgsDataSize);
   return OL_SUCCESS;
 }
