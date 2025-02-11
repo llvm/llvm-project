@@ -325,23 +325,4 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexRegNumberTest) {
   ASSERT_FALSE(Consumer->IsSatisfied());
 }
 
-TEST_F(ParseHLSLRootSignatureTest, InvalidLexIdentifierTest) {
-  // This test will check that the lexing fails due to no valid token
-  const llvm::StringLiteral Source = R"cc(
-    notAToken
-  )cc";
-
-  TrivialModuleLoader ModLoader;
-  auto PP = CreatePP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
-
-  // Test correct diagnostic produced
-  Consumer->SetExpected(diag::err_hlsl_invalid_token);
-
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
-
-  ASSERT_TRUE(Lexer.ConsumeToken());
-  ASSERT_TRUE(Consumer->IsSatisfied());
-}
-
 } // anonymous namespace

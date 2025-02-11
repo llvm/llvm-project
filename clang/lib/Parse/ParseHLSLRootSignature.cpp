@@ -88,8 +88,8 @@ bool RootSignatureLexer::LexToken(RootSignatureToken &Result) {
 
   // All following tokens require at least one additional character
   if (Buffer.size() <= 1) {
-    PP.getDiagnostics().Report(Result.TokLoc, diag::err_hlsl_invalid_token);
-    return true;
+    Result = RootSignatureToken(SourceLoc);
+    return false;
   }
 
   // Peek at the next character to deteremine token type
@@ -143,13 +143,7 @@ bool RootSignatureLexer::LexToken(RootSignatureToken &Result) {
 #include "clang/Parse/HLSLRootSignatureTokenKinds.def"
 
   // Then attempt to retreive a string from it
-  auto Kind = Switch.Default(TokenKind::invalid);
-  if (Kind == TokenKind::invalid) {
-    PP.getDiagnostics().Report(Result.TokLoc, diag::err_hlsl_invalid_token);
-    return true;
-  }
-
-  Result.Kind = Kind;
+  Result.Kind = Switch.Default(TokenKind::invalid);
   AdvanceBuffer(TokSpelling.size());
   return false;
 }
