@@ -19461,31 +19461,50 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                  4)) &&
            "input vectors must have 2 or 4 elements each");
 
-    llvm::Value *Result = PoisonValue::get(OpA->getType());
     uint64_t NumElements =
         E->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
-    for (uint64_t i = 0; i < NumElements / 2; ++i) {
 
-      // Obtain low and high words of inputs A and B
-      llvm::Value *LowA = Builder.CreateExtractElement(OpA, 2 * i + 0);
-      llvm::Value *HighA = Builder.CreateExtractElement(OpA, 2 * i + 1);
-      llvm::Value *LowB = Builder.CreateExtractElement(OpB, 2 * i + 0);
-      llvm::Value *HighB = Builder.CreateExtractElement(OpB, 2 * i + 1);
+    llvm::Value *Result = PoisonValue::get(OpA->getType());
+    llvm::Value *LowA;
+    llvm::Value *HighA;
+    llvm::Value *LowB;
+    llvm::Value *HighB;
 
-      // Use an uadd_with_overflow to compute the sum of low words and obtain a
-      // carry value
-      llvm::Value *Carry;
-      llvm::Value *LowSum = EmitOverflowIntrinsic(
-          *this, llvm::Intrinsic::uadd_with_overflow, LowA, LowB, Carry);
-      llvm::Value *ZExtCarry = Builder.CreateZExt(Carry, HighA->getType());
+    // Obtain low and high words of inputs A and B
+    if (NumElements == 2) {
+      LowA = Builder.CreateExtractElement(OpA, (uint64_t)0, "LowA");
+      HighA = Builder.CreateExtractElement(OpA, (uint64_t)1, "HighA");
+      LowB = Builder.CreateExtractElement(OpB, (uint64_t)0, "LowB");
+      HighB = Builder.CreateExtractElement(OpB, (uint64_t)1, "HighB");
+    } else {
+      LowA = Builder.CreateShuffleVector(OpA, ArrayRef<int>{0, 2}, "LowA");
+      HighA = Builder.CreateShuffleVector(OpA, ArrayRef<int>{1, 3}, "HighA");
+      LowB = Builder.CreateShuffleVector(OpB, ArrayRef<int>{0, 2}, "LowB");
+      HighB = Builder.CreateShuffleVector(OpB, ArrayRef<int>{1, 3}, "HighB");
+    }
 
-      // Sum the high words and the carry
-      llvm::Value *HighSum = Builder.CreateAdd(HighA, HighB);
-      llvm::Value *HighSumPlusCarry = Builder.CreateAdd(HighSum, ZExtCarry);
+    // Use an uadd_with_overflow to compute the sum of low words and obtain a
+    // carry value
+    llvm::Value *Carry;
+    llvm::Value *LowSum = EmitOverflowIntrinsic(
+        *this, llvm::Intrinsic::uadd_with_overflow, LowA, LowB, Carry);
+    llvm::Value *ZExtCarry =
+        Builder.CreateZExt(Carry, HighA->getType(), "CarryZExt");
 
-      // Insert the low and high word sums into the result vector
-      Result = Builder.CreateInsertElement(Result, LowSum, 2 * i + 0);
-      Result = Builder.CreateInsertElement(Result, HighSumPlusCarry, 2 * i + 1,
+    // Sum the high words and the carry
+    llvm::Value *HighSum = Builder.CreateAdd(HighA, HighB, "HighSum");
+    llvm::Value *HighSumPlusCarry =
+        Builder.CreateAdd(HighSum, ZExtCarry, "HighSumPlusCarry");
+
+    // Insert the low and high word sums into the result vector
+    if (NumElements == 2) {
+      Result = Builder.CreateInsertElement(Result, LowSum, (uint64_t)0,
+                                           "hlsl.AddUint64.upto0");
+      Result = Builder.CreateInsertElement(Result, HighSumPlusCarry,
+                                           (uint64_t)1, "hlsl.AddUint64");
+    } else { /* NumElements == 4 */
+      Result = Builder.CreateShuffleVector(LowSum, HighSumPlusCarry,
+                                           ArrayRef<int>{0, 2, 1, 3},
                                            "hlsl.AddUint64");
     }
     return Result;

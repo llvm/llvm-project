@@ -11,20 +11,20 @@
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x i32>, align 8
 // CHECK-NEXT:    store <2 x i32> [[A]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    store <2 x i32> [[B]], ptr [[B_ADDR]], align 8
-// CHECK-NEXT:    [[A_LOAD:%.*]] = load <2 x i32>, ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    [[B_LOAD:%.*]] = load <2 x i32>, ptr [[B_ADDR]], align 8
-// CHECK-NEXT:    [[LowA:%.*]] = extractelement <2 x i32> [[A_LOAD]], i64 0
-// CHECK-NEXT:    [[HighA:%.*]] = extractelement <2 x i32> [[A_LOAD]], i64 1
-// CHECK-NEXT:    [[LowB:%.*]] = extractelement <2 x i32> [[B_LOAD]], i64 0
-// CHECK-NEXT:    [[HighB:%.*]] = extractelement <2 x i32> [[B_LOAD]], i64 1
-// CHECK-NEXT:    [[UAddc:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[LowA]], i32 [[LowB]])
-// CHECK-NEXT:    [[Carry:%.*]] = extractvalue { i32, i1 } [[UAddc]], 1
-// CHECK-NEXT:    [[LowSum:%.*]] = extractvalue { i32, i1 } [[UAddc]], 0
-// CHECK-NEXT:    [[CarryZExt:%.*]] = zext i1 [[Carry]] to i32
-// CHECK-NEXT:    [[HighSum:%.*]] = add i32 [[HighA]], [[HighB]]
-// CHECK-NEXT:    [[HighSumPlusCarry:%.*]] = add i32 [[HighSum]], [[CarryZExt]]
-// CHECK-NEXT:    [[HLSL_ADDUINT64_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[LowSum]], i64 0
-// CHECK-NEXT:    [[HLSL_ADDUINT64:%.*]] = insertelement <2 x i32> [[HLSL_ADDUINT64_UPTO0]], i32 [[HighSumPlusCarry]], i64 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[B_ADDR]], align 8
+// CHECK-NEXT:    [[LOWA:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
+// CHECK-NEXT:    [[HIGHA:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
+// CHECK-NEXT:    [[LOWB:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+// CHECK-NEXT:    [[HIGHB:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+// CHECK-NEXT:    [[TMP2:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[LOWA]], i32 [[LOWB]])
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0
+// CHECK-NEXT:    [[CARRYZEXT:%.*]] = zext i1 [[TMP3]] to i32
+// CHECK-NEXT:    [[HIGHSUM:%.*]] = add i32 [[HIGHA]], [[HIGHB]]
+// CHECK-NEXT:    [[HIGHSUMPLUSCARRY:%.*]] = add i32 [[HIGHSUM]], [[CARRYZEXT]]
+// CHECK-NEXT:    [[HLSL_ADDUINT64_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[TMP4]], i64 0
+// CHECK-NEXT:    [[HLSL_ADDUINT64:%.*]] = insertelement <2 x i32> [[HLSL_ADDUINT64_UPTO0]], i32 [[HIGHSUMPLUSCARRY]], i64 1
 // CHECK-NEXT:    ret <2 x i32> [[HLSL_ADDUINT64]]
 //
 uint2 test_AddUint64_uint2(uint2 a, uint2 b) {
@@ -38,32 +38,19 @@ uint2 test_AddUint64_uint2(uint2 a, uint2 b) {
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x i32>, align 16
 // CHECK-NEXT:    store <4 x i32> [[A]], ptr [[A_ADDR]], align 16
 // CHECK-NEXT:    store <4 x i32> [[B]], ptr [[B_ADDR]], align 16
-// CHECK-NEXT:    [[A_LOAD:%.*]] = load <4 x i32>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[B_LOAD:%.*]] = load <4 x i32>, ptr [[B_ADDR]], align 16
-// CHECK-NEXT:    [[LowA:%.*]] = extractelement <4 x i32> [[A_LOAD]], i64 0
-// CHECK-NEXT:    [[HighA:%.*]] = extractelement <4 x i32> [[A_LOAD]], i64 1
-// CHECK-NEXT:    [[LowB:%.*]] = extractelement <4 x i32> [[B_LOAD]], i64 0
-// CHECK-NEXT:    [[HighB:%.*]] = extractelement <4 x i32> [[B_LOAD]], i64 1
-// CHECK-NEXT:    [[UAddc:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[LowA]], i32 [[LowB]])
-// CHECK-NEXT:    [[Carry:%.*]] = extractvalue { i32, i1 } [[UAddc]], 1
-// CHECK-NEXT:    [[LowSum:%.*]] = extractvalue { i32, i1 } [[UAddc]], 0
-// CHECK-NEXT:    [[CarryZExt:%.*]] = zext i1 [[Carry]] to i32
-// CHECK-NEXT:    [[HighSum:%.*]] = add i32 [[HighA]], [[HighB]]
-// CHECK-NEXT:    [[HighSumPlusCarry:%.*]] = add i32 [[HighSum]], [[CarryZExt]]
-// CHECK-NEXT:    [[HLSL_ADDUINT64_UPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[LowSum]], i64 0
-// CHECK-NEXT:    [[HLSL_ADDUINT64_UPTO1:%.*]] = insertelement <4 x i32> [[HLSL_ADDUINT64_UPTO0]], i32 [[HighSumPlusCarry]], i64 1
-// CHECK-NEXT:    [[LowA1:%.*]] = extractelement <4 x i32> [[A_LOAD]], i64 2
-// CHECK-NEXT:    [[HighA1:%.*]] = extractelement <4 x i32> [[A_LOAD]], i64 3
-// CHECK-NEXT:    [[LowB1:%.*]] = extractelement <4 x i32> [[B_LOAD]], i64 2
-// CHECK-NEXT:    [[HighB1:%.*]] = extractelement <4 x i32> [[B_LOAD]], i64 3
-// CHECK-NEXT:    [[UAddc1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[LowA1]], i32 [[LowB1]])
-// CHECK-NEXT:    [[Carry1:%.*]] = extractvalue { i32, i1 } [[UAddc1]], 1
-// CHECK-NEXT:    [[LowSum1:%.*]] = extractvalue { i32, i1 } [[UAddc1]], 0
-// CHECK-NEXT:    [[CarryZExt1:%.*]] = zext i1 [[Carry1]] to i32
-// CHECK-NEXT:    [[HighSum1:%.*]] = add i32 [[HighA1]], [[HighB1]]
-// CHECK-NEXT:    [[HighSumPlusCarry1:%.*]] = add i32 [[HighSum1]], [[CarryZExt1]]
-// CHECK-NEXT:    [[HLSL_ADDUINT64_UPTO2:%.*]] = insertelement <4 x i32> [[HLSL_ADDUINT64_UPTO1]], i32 [[LowSum1]], i64 2
-// CHECK-NEXT:    [[HLSL_ADDUINT64:%.*]] = insertelement <4 x i32> [[HLSL_ADDUINT64_UPTO2]], i32 [[HighSumPlusCarry1]], i64 3
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[LOWA:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+// CHECK-NEXT:    [[HIGHA:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+// CHECK-NEXT:    [[LOWB:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+// CHECK-NEXT:    [[HIGHB:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+// CHECK-NEXT:    [[TMP2:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> [[LOWA]], <2 x i32> [[LOWB]])
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <2 x i32>, <2 x i1> } [[TMP2]], 1
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <2 x i32>, <2 x i1> } [[TMP2]], 0
+// CHECK-NEXT:    [[CARRYZEXT:%.*]] = zext <2 x i1> [[TMP3]] to <2 x i32>
+// CHECK-NEXT:    [[HIGHSUM:%.*]] = add <2 x i32> [[HIGHA]], [[HIGHB]]
+// CHECK-NEXT:    [[HIGHSUMPLUSCARRY:%.*]] = add <2 x i32> [[HIGHSUM]], [[CARRYZEXT]]
+// CHECK-NEXT:    [[HLSL_ADDUINT64:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> [[HIGHSUMPLUSCARRY]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 // CHECK-NEXT:    ret <4 x i32> [[HLSL_ADDUINT64]]
 //
 uint4 test_AddUint64_uint4(uint4 a, uint4 b) {
