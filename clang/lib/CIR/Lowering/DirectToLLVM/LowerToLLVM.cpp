@@ -3202,6 +3202,7 @@ mlir::LogicalResult CIRToLLVMAtomicCmpXchgLowering::matchAndRewrite(
       op.getLoc(), adaptor.getPtr(), expected, desired,
       getLLVMAtomicOrder(adaptor.getSuccOrder()),
       getLLVMAtomicOrder(adaptor.getFailOrder()));
+  cmpxchg.setAlignment(adaptor.getAlignment());
   cmpxchg.setWeak(adaptor.getWeak());
   cmpxchg.setVolatile_(adaptor.getIsVolatile());
 

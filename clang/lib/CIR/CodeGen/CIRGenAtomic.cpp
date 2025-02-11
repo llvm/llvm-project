@@ -423,7 +423,9 @@ static void emitAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
   auto boolTy = builder.getBoolTy();
   auto cmpxchg = builder.create<cir::AtomicCmpXchg>(
       loc, Expected.getType(), boolTy, Ptr.getPointer(), Expected, Desired,
-      SuccessOrder, FailureOrder);
+      cir::MemOrderAttr::get(&CGF.getMLIRContext(), SuccessOrder),
+      cir::MemOrderAttr::get(&CGF.getMLIRContext(), FailureOrder),
+      builder.getI64IntegerAttr(Ptr.getAlignment().getAsAlign().value()));
   cmpxchg.setIsVolatile(E->isVolatile());
   cmpxchg.setWeak(IsWeak);
 

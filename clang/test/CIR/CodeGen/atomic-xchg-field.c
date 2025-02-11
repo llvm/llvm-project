@@ -47,7 +47,7 @@ void structAtomicExchange(unsigned referenceCount, wPtr item) {
 }
 
 // CHECK-LABEL: @structAtomicExchange
-// CHECK: %old, %cmp = cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!u32i>, {{.*}} : !u32i, {{.*}} : !u32i, success = seq_cst, failure = seq_cst) weak : (!u32i, !cir.bool)
+// CHECK: %old, %cmp = cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!u32i>, {{.*}} : !u32i, {{.*}} : !u32i, success = seq_cst, failure = seq_cst) align(8) weak : (!u32i, !cir.bool)
 
 // LLVM-LABEL: @structAtomicExchange
 // LLVM:   load i32
@@ -55,7 +55,7 @@ void structAtomicExchange(unsigned referenceCount, wPtr item) {
 // LLVM:   store i32
 // LLVM:   %[[EXP:.*]] = load i32
 // LLVM:   %[[DES:.*]] = load i32
-// LLVM:   %[[RES:.*]] = cmpxchg weak ptr %9, i32 %[[EXP]], i32 %[[DES]] seq_cst seq_cst
+// LLVM:   %[[RES:.*]] = cmpxchg weak ptr %9, i32 %[[EXP]], i32 %[[DES]] seq_cst seq_cst, align 8
 // LLVM:   %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
 // LLVM:   %[[CMP:.*]] = extractvalue { i32, i1 } %[[RES]], 1
 // LLVM:   %[[FAIL:.*]] = xor i1 %[[CMP]], true
