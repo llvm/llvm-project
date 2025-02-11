@@ -293,6 +293,8 @@ def icf_all: F<"icf=all">, HelpText<"Enable identical code folding">;
 
 def icf_safe: F<"icf=safe">, HelpText<"Enable safe identical code folding">;
 
+def icf_safe_thunks: F<"icf=safe_thunks">, HelpText<"Enable safe identical code folding with thunks">;
+
 def icf_none: F<"icf=none">, HelpText<"Disable identical code folding (default)">;
 
 def ignore_function_address_equality: FF<"ignore-function-address-equality">,

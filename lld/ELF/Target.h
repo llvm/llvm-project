@@ -16,6 +16,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
 
@@ -101,6 +102,13 @@ public:
 
   virtual void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                                  JumpModType val) const {}
+
+  // Initialize the body of the safe thunk in ICF for the target.
+  virtual void initICFSafeThunkBody(InputSection *thunk, Symbol *target) const {
+    llvm_unreachable("target does not support ICF safe thunks");
+  }
+  // Returns the size of the safe thunk in ICF for the target.
+  virtual uint32_t getICFSafeThunkSize() const { return 0; }
 
   virtual ~TargetInfo();
 

@@ -9,8 +9,10 @@
 #ifndef LLD_ELF_ICF_H
 #define LLD_ELF_ICF_H
 
+#include "Target.h"
 namespace lld::elf {
 struct Ctx;
+class TargetInfo;
 
 template <class ELFT> void doIcf(Ctx &);
 }

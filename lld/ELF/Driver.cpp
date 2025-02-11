@@ -808,11 +808,14 @@ static int getMemtagMode(Ctx &ctx, opt::InputArgList &args) {
 }
 
 static ICFLevel getICF(opt::InputArgList &args) {
-  auto *arg = args.getLastArg(OPT_icf_none, OPT_icf_safe, OPT_icf_all);
+  auto *arg = args.getLastArg(OPT_icf_none, OPT_icf_safe, OPT_icf_safe_thunks,
+                              OPT_icf_all);
   if (!arg || arg->getOption().getID() == OPT_icf_none)
     return ICFLevel::None;
   if (arg->getOption().getID() == OPT_icf_safe)
     return ICFLevel::Safe;
+  if (arg->getOption().getID() == OPT_icf_safe_thunks)
+    return ICFLevel::SafeThunks;
   return ICFLevel::All;
 }
 
@@ -2474,7 +2477,8 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
 
   // Symbols in the dynsym could be address-significant in other executables
   // or DSOs, so we conservatively mark them as address-significant.
-  bool icfSafe = ctx.arg.icf == ICFLevel::Safe;
+  bool icfSafe =
+      (ctx.arg.icf == ICFLevel::Safe || ctx.arg.icf == ICFLevel::SafeThunks);
   for (Symbol *sym : ctx.symtab->getSymbols())
     if (sym->isExported)
       markAddrsig(icfSafe, sym);

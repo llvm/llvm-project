@@ -83,6 +83,8 @@ public:
                 uint64_t val) const override;
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
   void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  void initICFSafeThunkBody(InputSection *thunk, Symbol *target) const override;
+  uint32_t getICFSafeThunkSize() const override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -924,6 +926,18 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
 // and thus need the full 64-bit GOT entry. Do not relax such symbols.
 static bool needsGotForMemtag(const Relocation &rel) {
   return rel.sym->isTagged() && needsGot(rel.expr);
+}
+
+static constexpr uint8_t icfSafeThunkCode[] = {0x00, 0x00, 0x00, 0x14};
+
+void AArch64::initICFSafeThunkBody(InputSection *thunk, Symbol *target) const {
+  thunk->content_ = icfSafeThunkCode;
+  thunk->size = sizeof(icfSafeThunkCode);
+  thunk->relocations.push_back({R_PC, R_AARCH64_JUMP26, 0, 0, target});
+}
+
+uint32_t AArch64::getICFSafeThunkSize() const {
+  return sizeof(icfSafeThunkCode);
 }
 
 void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {

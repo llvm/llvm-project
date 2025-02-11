@@ -77,9 +77,11 @@
 #include "InputFiles.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
+#include "Relocations.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Parallel.h"
@@ -121,6 +123,8 @@ private:
 
   void forEachClass(llvm::function_ref<void(size_t, size_t)> fn);
 
+  void applySafeThunksToRange(size_t begin, size_t end);
+
   Ctx &ctx;
   SmallVector<InputSection *, 0> sections;
 
@@ -160,9 +164,13 @@ private:
 }
 
 // Returns true if section S is subject of ICF.
-static bool isEligible(InputSection *s) {
-  if (!s->isLive() || s->keepUnique || !(s->flags & SHF_ALLOC))
+static bool isEligible(InputSection *s, bool safeThunksMode) {
+  if (!s->isLive() || (s->keepUnique && !safeThunksMode) ||
+      !(s->flags & SHF_ALLOC))
     return false;
+
+  if (s->keepUnique)
+    return safeThunksMode && (s->flags & ELF::SHF_EXECINSTR);
 
   // Don't merge writable sections. .data.rel.ro sections are marked as writable
   // but are semantically read-only.
@@ -459,6 +467,58 @@ static void combineRelocHashes(unsigned cnt, InputSection *isec,
   isec->eqClass[(cnt + 1) % 2] = hash | (1U << 31);
 }
 
+// Given a range of identical icfInputs, replace address significant functions
+// with a thunk that is just a direct branch to the first function in the
+// series. This way we keep only one main body of the function but we still
+// retain the address uniqueness of relevant functions by having them be a
+// direct branch thunk rather than containing a full copy of the actual function
+// body.
+template <class ELFT>
+void ICF<ELFT>::applySafeThunksToRange(size_t begin, size_t end) {
+  InputSection *masterIsec = sections[begin];
+
+  uint32_t thunkSize = ctx.target->getICFSafeThunkSize();
+  // If the functions we're dealing with are smaller than the thunk size, then
+  // just leave them all as-is - creating thunks would be a net loss.
+  if (masterIsec->getSize() <= thunkSize)
+    return;
+
+  // Find the symbol to create the thunk for.
+  Symbol *masterSym = nullptr;
+  for (Symbol *sym : masterIsec->file->getSymbols()) {
+    if (auto *d = dyn_cast<Defined>(sym)) {
+      if (d->section == masterIsec) {
+        masterSym = sym;
+        break;
+      }
+    }
+  }
+
+  if (!masterSym)
+    return;
+
+  for (size_t i = begin + 1; i < end; ++i) {
+    InputSection *isec = sections[i];
+    if (!isec->keepUnique)
+      break;
+
+    auto *thunk = make<InputSection>(*isec);
+    ctx.target->initICFSafeThunkBody(thunk, masterSym);
+    thunk->markLive();
+    auto *osec = isec->getParent();
+    auto *isd = cast<InputSectionDescription>(osec->commands.back());
+    isd->sections.push_back(thunk);
+    osec->commitSection(thunk);
+    isec->repl = thunk;
+    isec->markDead();
+
+    for (Symbol *sym : thunk->file->getSymbols())
+      if (auto *d = dyn_cast<Defined>(sym))
+        if (d->section == isec)
+          d->size = thunkSize;
+  }
+}
+
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
   // Two text sections may have identical content and relocations but different
@@ -475,10 +535,11 @@ template <class ELFT> void ICF<ELFT>::run() {
         [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = ++uniqueId; });
 
   // Collect sections to merge.
+  bool safeThunksMode = ctx.arg.icf == ICFLevel::SafeThunks;
   for (InputSectionBase *sec : ctx.inputSections) {
     auto *s = dyn_cast<InputSection>(sec);
     if (s && s->eqClass[0] == 0) {
-      if (isEligible(s))
+      if (isEligible(s, safeThunksMode))
         sections.push_back(s);
       else
         // Ineligible sections are assigned unique IDs, i.e. each section
@@ -510,9 +571,13 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // From now on, sections in Sections vector are ordered so that sections
   // in the same equivalence class are consecutive in the vector.
-  llvm::stable_sort(sections, [](const InputSection *a, const InputSection *b) {
-    return a->eqClass[0] < b->eqClass[0];
-  });
+  llvm::stable_sort(
+      sections, [safeThunksMode](const InputSection *a, const InputSection *b) {
+        if (safeThunksMode)
+          if (a->eqClass[0] == b->eqClass[0])
+            return a->keepUnique > b->keepUnique;
+        return a->eqClass[0] < b->eqClass[0];
+      });
 
   // Compare static contents and assign unique equivalence class IDs for each
   // static content. Use a base offset for these IDs to ensure no overlap with
@@ -535,12 +600,19 @@ template <class ELFT> void ICF<ELFT>::run() {
   auto print = [&ctx = ctx]() -> ELFSyncStream {
     return {ctx, ctx.arg.printIcfSections ? DiagLevel::Msg : DiagLevel::None};
   };
+  if (safeThunksMode)
+    forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
+      applySafeThunksToRange(begin, end);
+    });
+
   // Merge sections by the equivalence class.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
     if (end - begin == 1)
       return;
     print() << "selected section " << sections[begin];
     for (size_t i = begin + 1; i < end; ++i) {
+      if (safeThunksMode && sections[i]->keepUnique)
+        continue;
       print() << "  removing identical section " << sections[i];
       sections[begin]->replace(sections[i]);
 

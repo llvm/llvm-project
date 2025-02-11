@@ -97,7 +97,7 @@ enum class CGProfileSortKind { None, Hfsort, Cdsort };
 enum class DiscardPolicy { Default, All, Locals, None };
 
 // For --icf={none,safe,all}.
-enum class ICFLevel { None, Safe, All };
+enum class ICFLevel { None, Safe, SafeThunks, All };
 
 // For --strip-{all,debug}.
 enum class StripPolicy { None, All, Debug };
