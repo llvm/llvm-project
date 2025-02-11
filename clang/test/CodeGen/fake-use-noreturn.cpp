@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -fextend-variable-liveness -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -fextend-variable-liveness -o - | FileCheck %s
 //
 // Check we can correctly produce fake uses for function-level variables even
 // when we have a return in a nested conditional and there is no code at the end

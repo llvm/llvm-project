@@ -287,10 +287,10 @@ bool R600VectorRegMerger::tryMergeUsingFreeSlot(RegSeqInfo &RSI,
     RegSeqInfo &CompatibleRSI,
     std::vector<std::pair<unsigned, unsigned>> &RemapChan) {
   unsigned NeededUndefs = 4 - RSI.UndefReg.size();
-  if (PreviousRegSeqByUndefCount[NeededUndefs].empty())
-    return false;
   std::vector<MachineInstr *> &MIs =
       PreviousRegSeqByUndefCount[NeededUndefs];
+  if (MIs.empty())
+    return false;
   CompatibleRSI = PreviousRegSeq[MIs.back()];
   tryMergeVector(&CompatibleRSI, &RSI, RemapChan);
   return true;

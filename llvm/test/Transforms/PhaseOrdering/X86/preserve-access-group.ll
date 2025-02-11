@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; End-to-end test for https://github.com/llvm/llvm-project/issues/115595.
 define void @test(i32 noundef %nface, i32 noundef %ncell, ptr noalias noundef %face_cell, ptr noalias noundef %x, ptr noalias noundef %y) #0 {
 ; CHECK-LABEL: define void @test(
-; CHECK-SAME: i32 noundef [[NFACE:%.*]], i32 noundef [[NCELL:%.*]], ptr noalias nocapture noundef readonly [[FACE_CELL:%.*]], ptr noalias nocapture noundef readonly [[X:%.*]], ptr noalias nocapture noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 noundef [[NFACE:%.*]], i32 noundef [[NCELL:%.*]], ptr noalias noundef readonly captures(none) [[FACE_CELL:%.*]], ptr noalias noundef readonly captures(none) [[X:%.*]], ptr noalias noundef captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[NFACE]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]

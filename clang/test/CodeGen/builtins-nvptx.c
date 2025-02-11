@@ -28,6 +28,11 @@
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_89 -target-feature +ptx81 \
 // RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX81_SM89 %s
+// ###  The last run to check with the highest SM and PTX version available
+// ###  to make sure target builtins are still accepted.
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_100a -target-feature +ptx87 \
+// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX81_SM89 %s
 
 #define __device__ __attribute__((device))
 #define __global__ __attribute__((global))

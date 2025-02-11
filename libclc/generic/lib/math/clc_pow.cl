@@ -24,10 +24,9 @@
 #include <clc/clcmacro.h>
 #include <clc/math/clc_fabs.h>
 #include <clc/math/clc_mad.h>
-
-#include "config.h"
-#include "math.h"
-#include "tables.h"
+#include <clc/math/clc_subnormal_config.h>
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
 
 /*
  compute pow using log and exp

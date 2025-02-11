@@ -3462,19 +3462,21 @@ VarDecl *ValueDecl::getPotentiallyDecomposedVarDecl() {
   if (auto *Var = llvm::dyn_cast<VarDecl>(this))
     return Var;
   if (auto *BD = llvm::dyn_cast<BindingDecl>(this))
-    return llvm::dyn_cast<VarDecl>(BD->getDecomposedDecl());
+    return llvm::dyn_cast_if_present<VarDecl>(BD->getDecomposedDecl());
   return nullptr;
 }
 
 void BindingDecl::anchor() {}
 
 BindingDecl *BindingDecl::Create(ASTContext &C, DeclContext *DC,
-                                 SourceLocation IdLoc, IdentifierInfo *Id) {
-  return new (C, DC) BindingDecl(DC, IdLoc, Id);
+                                 SourceLocation IdLoc, IdentifierInfo *Id,
+                                 QualType T) {
+  return new (C, DC) BindingDecl(DC, IdLoc, Id, T);
 }
 
 BindingDecl *BindingDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  return new (C, ID) BindingDecl(nullptr, SourceLocation(), nullptr);
+  return new (C, ID)
+      BindingDecl(nullptr, SourceLocation(), nullptr, QualType());
 }
 
 VarDecl *BindingDecl::getHoldingVar() const {
@@ -3488,6 +3490,12 @@ VarDecl *BindingDecl::getHoldingVar() const {
   auto *VD = cast<VarDecl>(DRE->getDecl());
   assert(VD->isImplicit() && "holding var for binding decl not implicit");
   return VD;
+}
+
+llvm::ArrayRef<Expr *> BindingDecl::getBindingPackExprs() const {
+  assert(Binding && "expecting a pack expr");
+  auto *RP = cast<ResolvedUnexpandedPackExpr>(Binding);
+  return RP->getExprs();
 }
 
 void DecompositionDecl::anchor() {}

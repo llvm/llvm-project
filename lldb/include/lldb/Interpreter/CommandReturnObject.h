@@ -31,10 +31,16 @@ public:
 
   ~CommandReturnObject() = default;
 
-  /// Format any inline diagnostics with an indentation of \c indent.
-  std::string GetInlineDiagnosticString(unsigned indent);
+  /// Get the command as the user typed it. Empty string if commands were run on
+  /// behalf of lldb.
+  const std::string &GetCommand() const { return m_command; }
 
-  llvm::StringRef GetOutputString() {
+  void SetCommand(std::string command) { m_command = std::move(command); }
+
+  /// Format any inline diagnostics with an indentation of \c indent.
+  std::string GetInlineDiagnosticString(unsigned indent) const;
+
+  llvm::StringRef GetOutputString() const {
     lldb::StreamSP stream_sp(m_out_stream.GetStreamAtIndex(eStreamStringIndex));
     if (stream_sp)
       return std::static_pointer_cast<StreamString>(stream_sp)->GetString();
@@ -46,7 +52,7 @@ public:
   /// If \c with_diagnostics is true, all diagnostics are also
   /// rendered into the string. Otherwise the expectation is that they
   /// are fetched with \ref GetInlineDiagnosticString().
-  std::string GetErrorString(bool with_diagnostics = true);
+  std::string GetErrorString(bool with_diagnostics = true) const;
   StructuredData::ObjectSP GetErrorData();
 
   Stream &GetOutputStream() {
@@ -95,11 +101,11 @@ public:
     m_err_stream.SetStreamAtIndex(eImmediateStreamIndex, stream_sp);
   }
 
-  lldb::StreamSP GetImmediateOutputStream() {
+  lldb::StreamSP GetImmediateOutputStream() const {
     return m_out_stream.GetStreamAtIndex(eImmediateStreamIndex);
   }
 
-  lldb::StreamSP GetImmediateErrorStream() {
+  lldb::StreamSP GetImmediateErrorStream() const {
     return m_err_stream.GetStreamAtIndex(eImmediateStreamIndex);
   }
 
@@ -181,6 +187,8 @@ public:
 
 private:
   enum { eStreamStringIndex = 0, eImmediateStreamIndex = 1 };
+
+  std::string m_command;
 
   StreamTee m_out_stream;
   StreamTee m_err_stream;

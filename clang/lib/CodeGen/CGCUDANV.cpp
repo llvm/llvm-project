@@ -40,8 +40,6 @@ class CGNVCUDARuntime : public CGCUDARuntime {
 
   /// The prefix used for function calls and section names (CUDA, HIP, LLVM)
   StringRef Prefix;
-  /// TODO: We should transition the OpenMP section to LLVM/Offload
-  StringRef SectionPrefix;
 
 private:
   llvm::IntegerType *IntTy, *SizeTy;
@@ -234,13 +232,12 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   VoidTy = CGM.VoidTy;
   PtrTy = CGM.UnqualPtrTy;
 
-  if (CGM.getLangOpts().OffloadViaLLVM) {
+  if (CGM.getLangOpts().OffloadViaLLVM)
     Prefix = "llvm";
-    SectionPrefix = "omp";
-  } else if (CGM.getLangOpts().HIP)
-    SectionPrefix = Prefix = "hip";
+  else if (CGM.getLangOpts().HIP)
+    Prefix = "hip";
   else
-    SectionPrefix = Prefix = "cuda";
+    Prefix = "cuda";
 }
 
 llvm::FunctionCallee CGNVCUDARuntime::getSetupArgumentFn() const {
@@ -1198,14 +1195,19 @@ void CGNVCUDARuntime::transformManagedVars() {
 // register the symbols with the linked device image.
 void CGNVCUDARuntime::createOffloadingEntries() {
   SmallVector<char, 32> Out;
-  StringRef Section = (SectionPrefix + "_offloading_entries").toStringRef(Out);
+  llvm::object::OffloadKind Kind = CGM.getLangOpts().HIP
+                                       ? llvm::object::OffloadKind::OFK_HIP
+                                       : llvm::object::OffloadKind::OFK_Cuda;
+  // For now, just spoof this as OpenMP because that's the runtime it uses.
+  if (CGM.getLangOpts().OffloadViaLLVM)
+    Kind = llvm::object::OffloadKind::OFK_OpenMP;
 
   llvm::Module &M = CGM.getModule();
   for (KernelInfo &I : EmittedKernels)
     llvm::offloading::emitOffloadingEntry(
-        M, KernelHandles[I.Kernel->getName()],
+        M, Kind, KernelHandles[I.Kernel->getName()],
         getDeviceSideName(cast<NamedDecl>(I.D)), /*Flags=*/0, /*Data=*/0,
-        llvm::offloading::OffloadGlobalEntry, Section);
+        llvm::offloading::OffloadGlobalEntry);
 
   for (VarInfo &I : DeviceVars) {
     uint64_t VarSize =
@@ -1221,44 +1223,32 @@ void CGNVCUDARuntime::createOffloadingEntries() {
              ? static_cast<int32_t>(llvm::offloading::OffloadGlobalNormalized)
              : 0);
     if (I.Flags.getKind() == DeviceVarFlags::Variable) {
-      // TODO: Update the offloading entries struct to avoid this indirection.
       if (I.Flags.isManaged()) {
         assert(I.Var->getName().ends_with(".managed") &&
                "HIP managed variables not transformed");
 
-        // Create a struct to contain the two variables.
         auto *ManagedVar = M.getNamedGlobal(
             I.Var->getName().drop_back(StringRef(".managed").size()));
-        llvm::Constant *StructData[] = {ManagedVar, I.Var};
-        llvm::Constant *Initializer = llvm::ConstantStruct::get(
-            llvm::offloading::getManagedTy(M), StructData);
-        auto *Struct = new llvm::GlobalVariable(
-            M, llvm::offloading::getManagedTy(M),
-            /*IsConstant=*/true, llvm::GlobalValue::PrivateLinkage, Initializer,
-            I.Var->getName(), /*InsertBefore=*/nullptr,
-            llvm::GlobalVariable::NotThreadLocal,
-            M.getDataLayout().getDefaultGlobalsAddressSpace());
-
         llvm::offloading::emitOffloadingEntry(
-            M, Struct, getDeviceSideName(I.D), VarSize,
+            M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
             llvm::offloading::OffloadGlobalManagedEntry | Flags,
-            /*Data=*/static_cast<uint32_t>(I.Var->getAlignment()), Section);
+            /*Data=*/I.Var->getAlignment(), ManagedVar);
       } else {
         llvm::offloading::emitOffloadingEntry(
-            M, I.Var, getDeviceSideName(I.D), VarSize,
+            M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
             llvm::offloading::OffloadGlobalEntry | Flags,
-            /*Data=*/0, Section);
+            /*Data=*/0);
       }
     } else if (I.Flags.getKind() == DeviceVarFlags::Surface) {
       llvm::offloading::emitOffloadingEntry(
-          M, I.Var, getDeviceSideName(I.D), VarSize,
+          M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
           llvm::offloading::OffloadGlobalSurfaceEntry | Flags,
-          I.Flags.getSurfTexType(), Section);
+          I.Flags.getSurfTexType());
     } else if (I.Flags.getKind() == DeviceVarFlags::Texture) {
       llvm::offloading::emitOffloadingEntry(
-          M, I.Var, getDeviceSideName(I.D), VarSize,
+          M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
           llvm::offloading::OffloadGlobalTextureEntry | Flags,
-          I.Flags.getSurfTexType(), Section);
+          I.Flags.getSurfTexType());
     }
   }
 }

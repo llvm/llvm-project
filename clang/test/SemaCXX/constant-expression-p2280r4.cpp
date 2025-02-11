@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++23 -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify %s -fexperimental-new-constant-interpreter
 
 using size_t = decltype(sizeof(0));
 
@@ -47,11 +48,10 @@ void splash(Swim& swam) {
 }
 
 extern Swim dc;
-extern Swim& trident; // expected-note {{declared here}}
+extern Swim& trident;
 
 constexpr auto& sandeno   = typeid(dc);         // ok: can only be typeid(Swim)
 constexpr auto& gallagher = typeid(trident);    // expected-error {{constexpr variable 'gallagher' must be initialized by a constant expression}}
-                                                // expected-note@-1 {{initializer of 'trident' is not a constant expression}}
 
 namespace explicitThis {
 struct C {

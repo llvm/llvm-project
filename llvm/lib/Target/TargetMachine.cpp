@@ -26,6 +26,11 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
 
+cl::opt<bool> NoKernelInfoEndLTO(
+    "no-kernel-info-end-lto",
+    cl::desc("remove the kernel-info pass at the end of the full LTO pipeline"),
+    cl::init(false), cl::Hidden);
+
 //---------------------------------------------------------------------------
 // TargetMachine Class
 //

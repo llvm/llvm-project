@@ -954,20 +954,31 @@ std::string LinkerDriver::getImportName(bool asLib) {
 
 void LinkerDriver::createImportLibrary(bool asLib) {
   llvm::TimeTraceScope timeScope("Create import library");
-  std::vector<COFFShortExport> exports;
-  for (Export &e1 : ctx.symtab.exports) {
-    COFFShortExport e2;
-    e2.Name = std::string(e1.name);
-    e2.SymbolName = std::string(e1.symbolName);
-    e2.ExtName = std::string(e1.extName);
-    e2.ExportAs = std::string(e1.exportAs);
-    e2.ImportName = std::string(e1.importName);
-    e2.Ordinal = e1.ordinal;
-    e2.Noname = e1.noname;
-    e2.Data = e1.data;
-    e2.Private = e1.isPrivate;
-    e2.Constant = e1.constant;
-    exports.push_back(e2);
+  std::vector<COFFShortExport> exports, nativeExports;
+
+  auto getExports = [](SymbolTable &symtab,
+                       std::vector<COFFShortExport> &exports) {
+    for (Export &e1 : symtab.exports) {
+      COFFShortExport e2;
+      e2.Name = std::string(e1.name);
+      e2.SymbolName = std::string(e1.symbolName);
+      e2.ExtName = std::string(e1.extName);
+      e2.ExportAs = std::string(e1.exportAs);
+      e2.ImportName = std::string(e1.importName);
+      e2.Ordinal = e1.ordinal;
+      e2.Noname = e1.noname;
+      e2.Data = e1.data;
+      e2.Private = e1.isPrivate;
+      e2.Constant = e1.constant;
+      exports.push_back(e2);
+    }
+  };
+
+  if (ctx.hybridSymtab) {
+    getExports(ctx.symtab, nativeExports);
+    getExports(*ctx.hybridSymtab, exports);
+  } else {
+    getExports(ctx.symtab, exports);
   }
 
   std::string libName = getImportName(asLib);
@@ -975,7 +986,7 @@ void LinkerDriver::createImportLibrary(bool asLib) {
 
   if (!ctx.config.incremental) {
     checkError(writeImportLibrary(libName, path, exports, ctx.config.machine,
-                                  ctx.config.mingw));
+                                  ctx.config.mingw, nativeExports));
     return;
   }
 
@@ -985,7 +996,7 @@ void LinkerDriver::createImportLibrary(bool asLib) {
       path, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   if (!oldBuf) {
     checkError(writeImportLibrary(libName, path, exports, ctx.config.machine,
-                                  ctx.config.mingw));
+                                  ctx.config.mingw, nativeExports));
     return;
   }
 
@@ -995,8 +1006,9 @@ void LinkerDriver::createImportLibrary(bool asLib) {
     Fatal(ctx) << "cannot create temporary file for import library " << path
                << ": " << ec.message();
 
-  if (Error e = writeImportLibrary(libName, tmpName, exports,
-                                   ctx.config.machine, ctx.config.mingw)) {
+  if (Error e =
+          writeImportLibrary(libName, tmpName, exports, ctx.config.machine,
+                             ctx.config.mingw, nativeExports)) {
     checkError(std::move(e));
     return;
   }
@@ -1370,43 +1382,46 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
     if (!ctx.config.dll)
       return;
 
-    if (!ctx.symtab.exports.empty())
+    if (ctx.symtab.hadExplicitExports ||
+        (ctx.hybridSymtab && ctx.hybridSymtab->hadExplicitExports))
       return;
     if (args.hasArg(OPT_exclude_all_symbols))
       return;
   }
 
-  AutoExporter exporter(ctx, excludedSymbols);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    AutoExporter exporter(symtab, excludedSymbols);
 
-  for (auto *arg : args.filtered(OPT_wholearchive_file))
-    if (std::optional<StringRef> path = findFile(arg->getValue()))
-      exporter.addWholeArchive(*path);
+    for (auto *arg : args.filtered(OPT_wholearchive_file))
+      if (std::optional<StringRef> path = findFile(arg->getValue()))
+        exporter.addWholeArchive(*path);
 
-  for (auto *arg : args.filtered(OPT_exclude_symbols)) {
-    SmallVector<StringRef, 2> vec;
-    StringRef(arg->getValue()).split(vec, ',');
-    for (StringRef sym : vec)
-      exporter.addExcludedSymbol(ctx.symtab.mangle(sym));
-  }
-
-  ctx.symtab.forEachSymbol([&](Symbol *s) {
-    auto *def = dyn_cast<Defined>(s);
-    if (!exporter.shouldExport(def))
-      return;
-
-    if (!def->isGCRoot) {
-      def->isGCRoot = true;
-      ctx.config.gcroot.push_back(def);
+    for (auto *arg : args.filtered(OPT_exclude_symbols)) {
+      SmallVector<StringRef, 2> vec;
+      StringRef(arg->getValue()).split(vec, ',');
+      for (StringRef sym : vec)
+        exporter.addExcludedSymbol(symtab.mangle(sym));
     }
 
-    Export e;
-    e.name = def->getName();
-    e.sym = def;
-    if (Chunk *c = def->getChunk())
-      if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
-        e.data = true;
-    s->isUsedInRegularObj = true;
-    ctx.symtab.exports.push_back(e);
+    symtab.forEachSymbol([&](Symbol *s) {
+      auto *def = dyn_cast<Defined>(s);
+      if (!exporter.shouldExport(def))
+        return;
+
+      if (!def->isGCRoot) {
+        def->isGCRoot = true;
+        ctx.config.gcroot.push_back(def);
+      }
+
+      Export e;
+      e.name = def->getName();
+      e.sym = def;
+      if (Chunk *c = def->getChunk())
+        if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
+          e.data = true;
+      s->isUsedInRegularObj = true;
+      symtab.exports.push_back(e);
+    });
   });
 }
 
@@ -2542,14 +2557,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         // it.
         if (symtab.findUnderscore("_load_config_used"))
           symtab.addGCRoot(symtab.mangle("_load_config_used"));
-      });
 
-      if (args.hasArg(OPT_include_optional)) {
-        // Handle /includeoptional
-        for (auto *arg : args.filtered(OPT_include_optional))
-          if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
-            ctx.symtab.addGCRoot(arg->getValue());
-      }
+        if (args.hasArg(OPT_include_optional)) {
+          // Handle /includeoptional
+          for (auto *arg : args.filtered(OPT_include_optional))
+            if (isa_and_nonnull<LazyArchive>(symtab.find(arg->getValue())))
+              symtab.addGCRoot(arg->getValue());
+        }
+      });
     } while (run());
   }
 
@@ -2558,11 +2573,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.symtab.addUndefinedGlob(pat);
 
   // Create wrapped symbols for -wrap option.
-  std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);
-  // Load more object files that might be needed for wrapped symbols.
-  if (!wrapped.empty())
-    while (run())
-      ;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    addWrappedSymbols(symtab, args);
+    // Load more object files that might be needed for wrapped symbols.
+    if (!symtab.wrapped.empty())
+      while (run())
+        ;
+  });
 
   if (config->autoImport || config->stdcallFixup) {
     // MinGW specific.
@@ -2632,8 +2649,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   run();
 
   // Apply symbol renames for -wrap.
-  if (!wrapped.empty())
-    wrapSymbols(ctx, wrapped);
+  ctx.forEachSymtab([](SymbolTable &symtab) {
+    if (!symtab.wrapped.empty())
+      wrapSymbols(symtab);
+  });
 
   if (isArm64EC(config->machine))
     createECExportThunks();
@@ -2668,7 +2687,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Windows specific -- when we are creating a .dll file, we also
   // need to create a .lib file. In MinGW mode, we only do that when the
   // -implib option is given explicitly, for compatibility with GNU ld.
-  if (!ctx.symtab.exports.empty() || config->dll) {
+  if (config->dll || !ctx.symtab.exports.empty() ||
+      (ctx.hybridSymtab && !ctx.hybridSymtab->exports.empty())) {
     llvm::TimeTraceScope timeScope("Create .lib exports");
     ctx.forEachSymtab([](SymbolTable &symtab) { symtab.fixupExports(); });
     if (!config->noimplib && (!config->mingw || !config->implib.empty()))
@@ -2679,7 +2699,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /output-def (MinGW specific).
   if (auto *arg = args.getLastArg(OPT_output_def))
-    writeDefFile(ctx, arg->getValue(), ctx.symtab.exports);
+    writeDefFile(ctx, arg->getValue(), mainSymtab.exports);
 
   // Set extra alignment for .comm symbols
   for (auto pair : config->alignComm) {

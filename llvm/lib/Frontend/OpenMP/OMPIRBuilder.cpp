@@ -38,6 +38,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -159,6 +161,8 @@ static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
   }
   if (T.isNVPTX())
     return omp::NVPTXGridValues;
+  if (T.isSPIRV())
+    return omp::SPIRVGridValues;
   llvm_unreachable("No grid value available for this architecture!");
 }
 
@@ -313,7 +317,7 @@ static void redirectTo(BasicBlock *Source, BasicBlock *Target, DebugLoc DL) {
 }
 
 void llvm::spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
-                    bool CreateBranch) {
+                    bool CreateBranch, DebugLoc DL) {
   assert(New->getFirstInsertionPt() == New->begin() &&
          "Target BB must not have PHI nodes");
 
@@ -321,15 +325,17 @@ void llvm::spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
   BasicBlock *Old = IP.getBlock();
   New->splice(New->begin(), Old, IP.getPoint(), Old->end());
 
-  if (CreateBranch)
-    BranchInst::Create(New, Old);
+  if (CreateBranch) {
+    auto *NewBr = BranchInst::Create(New, Old);
+    NewBr->setDebugLoc(DL);
+  }
 }
 
 void llvm::spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
   BasicBlock *Old = Builder.GetInsertBlock();
 
-  spliceBB(Builder.saveIP(), New, CreateBranch);
+  spliceBB(Builder.saveIP(), New, CreateBranch, DebugLoc);
   if (CreateBranch)
     Builder.SetInsertPoint(Old->getTerminator());
   else
@@ -341,12 +347,12 @@ void llvm::spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch) {
 }
 
 BasicBlock *llvm::splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
-                          llvm::Twine Name) {
+                          DebugLoc DL, llvm::Twine Name) {
   BasicBlock *Old = IP.getBlock();
   BasicBlock *New = BasicBlock::Create(
       Old->getContext(), Name.isTriviallyEmpty() ? Old->getName() : Name,
       Old->getParent(), Old->getNextNode());
-  spliceBB(IP, New, CreateBranch);
+  spliceBB(IP, New, CreateBranch, DL);
   New->replaceSuccessorsPhiUsesWith(Old, New);
   return New;
 }
@@ -354,7 +360,7 @@ BasicBlock *llvm::splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
 BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
                           llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
-  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, Name);
+  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, DebugLoc, Name);
   if (CreateBranch)
     Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
   else
@@ -368,7 +374,7 @@ BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
 BasicBlock *llvm::splitBB(IRBuilder<> &Builder, bool CreateBranch,
                           llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
-  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, Name);
+  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, DebugLoc, Name);
   if (CreateBranch)
     Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
   else
@@ -5303,7 +5309,7 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
       Builder.CreateCondBr(IfCond, ThenBlock, /*ifFalse*/ ElseBlock);
   InsertPointTy IP{BrInstr->getParent(), ++BrInstr->getIterator()};
   // Then block contains branch to omp loop which needs to be vectorized
-  spliceBB(IP, ThenBlock, false);
+  spliceBB(IP, ThenBlock, false, Builder.getCurrentDebugLocation());
   ThenBlock->replaceSuccessorsPhiUsesWith(Head, ThenBlock);
 
   Builder.SetInsertPoint(ElseBlock);
@@ -6470,6 +6476,8 @@ void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
       OutlinedFn->setCallingConv(CallingConv::AMDGPU_KERNEL);
     else if (T.isNVPTX())
       OutlinedFn->setCallingConv(CallingConv::PTX_Kernel);
+    else if (T.isSPIRV())
+      OutlinedFn->setCallingConv(CallingConv::SPIR_KERNEL);
   }
 }
 
@@ -6804,6 +6812,72 @@ FunctionCallee OpenMPIRBuilder::createDispatchDeinitFunction() {
   return getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_dispatch_deinit);
 }
 
+static void FixupDebugInfoForOutlinedFunction(
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, Function *Func,
+    DenseMap<Value *, std::tuple<Value *, unsigned>> &ValueReplacementMap) {
+
+  DISubprogram *NewSP = Func->getSubprogram();
+  if (!NewSP)
+    return;
+
+  DenseMap<const MDNode *, MDNode *> Cache;
+  SmallDenseMap<DILocalVariable *, DILocalVariable *> RemappedVariables;
+
+  auto GetUpdatedDIVariable = [&](DILocalVariable *OldVar, unsigned arg) {
+    auto NewSP = Func->getSubprogram();
+    DILocalVariable *&NewVar = RemappedVariables[OldVar];
+    // Only use cached variable if the arg number matches. This is important
+    // so that DIVariable created for privatized variables are not discarded.
+    if (NewVar && (arg == NewVar->getArg()))
+      return NewVar;
+
+    DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
+        *OldVar->getScope(), *NewSP, Builder.getContext(), Cache);
+    NewVar = llvm::DILocalVariable::get(
+        Builder.getContext(), NewScope, OldVar->getName(), OldVar->getFile(),
+        OldVar->getLine(), OldVar->getType(), arg, OldVar->getFlags(),
+        OldVar->getAlignInBits(), OldVar->getAnnotations());
+    return NewVar;
+  };
+
+  auto UpdateDebugRecord = [&](auto *DR) {
+    DILocalVariable *OldVar = DR->getVariable();
+    unsigned ArgNo = 0;
+    for (auto Loc : DR->location_ops()) {
+      auto Iter = ValueReplacementMap.find(Loc);
+      if (Iter != ValueReplacementMap.end()) {
+        DR->replaceVariableLocationOp(Loc, std::get<0>(Iter->second));
+        ArgNo = std::get<1>(Iter->second) + 1;
+      }
+    }
+    DR->setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
+  };
+
+  // The location and scope of variable intrinsics and records still point to
+  // the parent function of the target region. Update them.
+  for (Instruction &I : instructions(Func)) {
+    if (auto *DDI = dyn_cast<llvm::DbgVariableIntrinsic>(&I))
+      UpdateDebugRecord(DDI);
+
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+      UpdateDebugRecord(&DVR);
+  }
+  // An extra argument is passed to the device. Create the debug data for it.
+  if (OMPBuilder.Config.isTargetDevice()) {
+    DICompileUnit *CU = NewSP->getUnit();
+    Module *M = Func->getParent();
+    DIBuilder DB(*M, true, CU);
+    DIType *VoidPtrTy =
+        DB.createQualifiedType(dwarf::DW_TAG_pointer_type, nullptr);
+    DILocalVariable *Var = DB.createParameterVariable(
+        NewSP, "dyn_ptr", /*ArgNo*/ 1, NewSP->getFile(), /*LineNo=*/0,
+        VoidPtrTy, /*AlwaysPreserve=*/false, DINode::DIFlags::FlagArtificial);
+    auto Loc = DILocation::get(Func->getContext(), 0, 0, NewSP, 0);
+    DB.insertDeclare(&(*Func->arg_begin()), Var, DB.createExpression(), Loc,
+                     &(*Func->begin()));
+  }
+}
+
 static Expected<Function *> createOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
     const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
@@ -6929,6 +7003,8 @@ static Expected<Function *> createOutlinedFunction(
           ? make_range(Func->arg_begin() + 1, Func->arg_end())
           : Func->args();
 
+  DenseMap<Value *, std::tuple<Value *, unsigned>> ValueReplacementMap;
+
   auto ReplaceValue = [](Value *Input, Value *InputCopy, Function *Func) {
     // Things like GEP's can come in the form of Constants. Constants and
     // ConstantExpr's do not have access to the knowledge of what they're
@@ -6970,6 +7046,7 @@ static Expected<Function *> createOutlinedFunction(
     if (!AfterIP)
       return AfterIP.takeError();
     Builder.restoreIP(*AfterIP);
+    ValueReplacementMap[Input] = std::make_tuple(InputCopy, Arg.getArgNo());
 
     // In certain cases a Global may be set up for replacement, however, this
     // Global may be used in multiple arguments to the kernel, just segmented
@@ -7001,6 +7078,8 @@ static Expected<Function *> createOutlinedFunction(
   for (auto Deferred : DeferredReplacement)
     ReplaceValue(std::get<0>(Deferred), std::get<1>(Deferred), Func);
 
+  FixupDebugInfoForOutlinedFunction(OMPBuilder, Builder, Func,
+                                    ValueReplacementMap);
   return Func;
 }
 
@@ -7438,10 +7517,15 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
       // '@.omp_target_task_proxy_func' in the pseudo code above)
       // "@.omp_target_task_proxy_func' is generated by
       // emitTargetTaskProxyFunction.
-      if (OutlinedFnID)
+      if (OutlinedFnID && DeviceID)
         return OMPBuilder.emitKernelLaunch(Builder, OutlinedFnID,
                                            EmitTargetCallFallbackCB, KArgs,
                                            DeviceID, RTLoc, TargetTaskAllocaIP);
+
+      // We only need to do the outlining if `DeviceID` is set to avoid calling
+      // `emitKernelLaunch` if we want to code-gen for the host; e.g. if we are
+      // generating the `else` branch of an `if` clause.
+      //
       // When OutlinedFnID is set to nullptr, then it's not an offloading call.
       // In this case, we execute the host implementation directly.
       return EmitTargetCallFallbackCB(OMPBuilder.Builder.saveIP());
@@ -9219,8 +9303,8 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          StringRef Name) {
   if (!Config.isGPU()) {
     llvm::offloading::emitOffloadingEntry(
-        M, ID, Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0,
-        "omp_offloading_entries");
+        M, object::OffloadKind::OFK_OpenMP, ID,
+        Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0);
     return;
   }
   // TODO: Add support for global variables on the device after declare target
@@ -9394,10 +9478,11 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
   //       entries should be redesigned to better suit this use-case.
   if (Config.hasRequiresFlags() && !Config.isTargetDevice())
     offloading::emitOffloadingEntry(
-        M, Constant::getNullValue(PointerType::getUnqual(M.getContext())),
-        /*Name=*/"",
-        /*Size=*/0, OffloadEntriesInfoManager::OMPTargetGlobalRegisterRequires,
-        Config.getRequiresFlags(), "omp_offloading_entries");
+        M, object::OffloadKind::OFK_OpenMP,
+        Constant::getNullValue(PointerType::getUnqual(M.getContext())),
+        ".requires", /*Size=*/0,
+        OffloadEntriesInfoManager::OMPTargetGlobalRegisterRequires,
+        Config.getRequiresFlags());
 }
 
 void TargetRegionEntryInfo::getTargetRegionEntryFnName(

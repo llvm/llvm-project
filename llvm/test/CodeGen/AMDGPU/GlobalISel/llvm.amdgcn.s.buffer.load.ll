@@ -6846,6 +6846,75 @@ define amdgpu_ps float @s_buffer_load_f32_offset_add_imm_vgpr_sgpr(<4 x i32> inr
   ret float %val
 }
 
+define amdgpu_ps float @s_buffer_load_f32_offset_or_vgpr_imm(<4 x i32> inreg %rsrc, i32 inreg %offset.s) {
+  ; GFX6-LABEL: name: s_buffer_load_f32_offset_or_vgpr_imm
+  ; GFX6: bb.1 (%ir-block.0):
+  ; GFX6-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6
+  ; GFX6-NEXT: {{  $}}
+  ; GFX6-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX6-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX6-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; GFX6-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; GFX6-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; GFX6-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; GFX6-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
+  ; GFX6-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY4]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; GFX6-NEXT:   [[S_BUFFER_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[REG_SEQUENCE]], [[S_OR_B32_]], 0 :: (dereferenceable invariant load (s32))
+  ; GFX6-NEXT:   $vgpr0 = COPY [[S_BUFFER_LOAD_DWORD_SGPR]]
+  ; GFX6-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ;
+  ; GFX7-LABEL: name: s_buffer_load_f32_offset_or_vgpr_imm
+  ; GFX7: bb.1 (%ir-block.0):
+  ; GFX7-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6
+  ; GFX7-NEXT: {{  $}}
+  ; GFX7-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX7-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX7-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; GFX7-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; GFX7-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; GFX7-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
+  ; GFX7-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY4]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; GFX7-NEXT:   [[S_BUFFER_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[REG_SEQUENCE]], [[S_OR_B32_]], 0 :: (dereferenceable invariant load (s32))
+  ; GFX7-NEXT:   $vgpr0 = COPY [[S_BUFFER_LOAD_DWORD_SGPR]]
+  ; GFX7-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ;
+  ; GFX8-LABEL: name: s_buffer_load_f32_offset_or_vgpr_imm
+  ; GFX8: bb.1 (%ir-block.0):
+  ; GFX8-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6
+  ; GFX8-NEXT: {{  $}}
+  ; GFX8-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX8-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX8-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; GFX8-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; GFX8-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; GFX8-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
+  ; GFX8-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY4]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; GFX8-NEXT:   [[S_BUFFER_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[REG_SEQUENCE]], [[S_OR_B32_]], 0 :: (dereferenceable invariant load (s32))
+  ; GFX8-NEXT:   $vgpr0 = COPY [[S_BUFFER_LOAD_DWORD_SGPR]]
+  ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ;
+  ; GFX12-LABEL: name: s_buffer_load_f32_offset_or_vgpr_imm
+  ; GFX12: bb.1 (%ir-block.0):
+  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6
+  ; GFX12-NEXT: {{  $}}
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
+  ; GFX12-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY4]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; GFX12-NEXT:   [[S_BUFFER_LOAD_DWORD_SGPR_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR_IMM [[REG_SEQUENCE]], [[S_OR_B32_]], 0, 0 :: (dereferenceable invariant load (s32))
+  ; GFX12-NEXT:   $vgpr0 = COPY [[S_BUFFER_LOAD_DWORD_SGPR_IMM]]
+  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  %offset = or i32 %offset.s, -2147483648
+  %val = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 %offset, i32 0)
+  ret float %val
+}
+
 declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
 declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32 immarg)
 declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg)

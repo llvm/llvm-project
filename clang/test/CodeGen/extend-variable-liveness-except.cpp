@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -fextend-variable-liveness -fcxx-exceptions -fexceptions -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple %itanium_abi_triple -emit-llvm -fextend-variable-liveness -fcxx-exceptions -fexceptions -o - | FileCheck %s
 // This test checks that the fake uses can be generated in exception handling
 // blocks and that we can emit fake uses for the __int128 data type.
 

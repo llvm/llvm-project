@@ -483,9 +483,9 @@ static Value *getTrueOrFalseValue(
     BasicBlock *B) {
   Value *V = isTrue ? SI.getTrueValue() : SI.getFalseValue();
   if (V) {
-    auto *IV = dyn_cast<Instruction>(V);
-    if (IV && OptSelects.count(IV))
-      return isTrue ? OptSelects[IV].first : OptSelects[IV].second;
+    if (auto *IV = dyn_cast<Instruction>(V))
+      if (auto It = OptSelects.find(IV); It != OptSelects.end())
+        return isTrue ? It->second.first : It->second.second;
     return V;
   }
 
@@ -508,9 +508,8 @@ static Value *getTrueOrFalseValue(
 
   unsigned OtherIdx = 1 - CondIdx;
   if (auto *IV = dyn_cast<Instruction>(CBO->getOperand(OtherIdx))) {
-    if (OptSelects.count(IV))
-      CBO->setOperand(OtherIdx,
-                      isTrue ? OptSelects[IV].first : OptSelects[IV].second);
+    if (auto It = OptSelects.find(IV); It != OptSelects.end())
+      CBO->setOperand(OtherIdx, isTrue ? It->second.first : It->second.second);
   }
   CBO->insertBefore(B->getTerminator()->getIterator());
   return CBO;
@@ -1305,9 +1304,9 @@ bool SelectOptimizeImpl::computeLoopCosts(
           auto UI = dyn_cast<Instruction>(U.get());
           if (!UI)
             continue;
-          if (InstCostMap.count(UI)) {
-            IPredCost = std::max(IPredCost, InstCostMap[UI].PredCost);
-            INonPredCost = std::max(INonPredCost, InstCostMap[UI].NonPredCost);
+          if (auto It = InstCostMap.find(UI); It != InstCostMap.end()) {
+            IPredCost = std::max(IPredCost, It->second.PredCost);
+            INonPredCost = std::max(INonPredCost, It->second.NonPredCost);
           }
         }
         auto ILatency = computeInstCost(&I);
@@ -1338,8 +1337,8 @@ bool SelectOptimizeImpl::computeLoopCosts(
 
           Scaled64 CondCost = Scaled64::getZero();
           if (auto *CI = dyn_cast<Instruction>(SG->Condition))
-            if (InstCostMap.count(CI))
-              CondCost = InstCostMap[CI].NonPredCost;
+            if (auto It = InstCostMap.find(CI); It != InstCostMap.end())
+              CondCost = It->second.NonPredCost;
           Scaled64 MispredictCost = getMispredictionCost(SI, CondCost);
 
           INonPredCost = PredictedPathCost + MispredictCost;
