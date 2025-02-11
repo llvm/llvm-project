@@ -833,7 +833,7 @@ DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(SDNode *N,
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FSINCOS(SDNode *N) {
   return SoftenFloatRes_UnaryWithTwoFPResults(
-      N, RTLIB::getFSINCOS(N->getValueType(0)));
+      N, RTLIB::getSINCOS(N->getValueType(0)));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FREM(SDNode *N) {
