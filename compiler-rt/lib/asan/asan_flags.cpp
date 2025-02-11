@@ -234,13 +234,10 @@ void InitializeFlags() {
   // __sanitizer_register_weak_function.
   AddRegisterWeakFunctionCallback(
       reinterpret_cast<uptr>(__asan_default_options), []() {
-        FlagParser asan_parser;
-
-        RegisterAsanFlags(&asan_parser, flags());
-        RegisterCommonFlags(&asan_parser);
-        asan_parser.ParseString(__asan_default_options());
-
-        DisplayHelpMessages(&asan_parser);
+        // We call `InitializeDefaultFlags` again, instead of just parsing
+        // `__asan_default_options` directly, to ensure that flags set through
+        // `ASAN_OPTS` take precedence over those set through `__asan_default_options`.
+        InitializeDefaultFlags();
         ProcessFlags();
         ApplyFlags();
       });
