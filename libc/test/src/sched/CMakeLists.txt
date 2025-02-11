@@ -8,6 +8,8 @@ add_libc_unittest(
     affinity_test.cpp
   DEPENDS
     libc.include.sched
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.pid_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -82,6 +84,8 @@ add_libc_unittest(
     cpu_count_test.cpp
   DEPENDS
     libc.include.sched
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.pid_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno

@@ -13,6 +13,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 
 #include "hdr/types/cpu_set_t.h"
+#include "hdr/types/pid_t.h"
+
 #include <sys/syscall.h>
 
 TEST(LlvmLibcSchedAffinityTest, SmokeTest) {
