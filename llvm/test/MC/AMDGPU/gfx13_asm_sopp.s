@@ -204,6 +204,9 @@ s_delay_alu instid0(VALU_DEP_4)
 s_delay_alu instid1(SALU_CYCLE_3)
 // GFX13: encoding: [0x80,0x05,0xae,0xbf]
 
+s_delay_alu instid0(XDL_DEP_1)
+// GFX13: encoding: [0x0c,0x00,0xae,0xbf]
+
 s_wait_event 0
 // GFX13: encoding: [0x00,0x00,0xaf,0xbf]
 

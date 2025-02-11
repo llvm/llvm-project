@@ -1286,7 +1286,7 @@ defm AV_96 : AVRegClass_STAGING<3, VReg_96.RegTypes, (add VGPR_96), (add AGPR_96
 defm AV_128 : AVRegClass_STAGING<4, VReg_128.RegTypes, (add VGPR_128), (add AGPR_128)>;
 defm AV_160 : AVRegClass_STAGING<5, VReg_160.RegTypes, (add VGPR_160), (add AGPR_160)>;
 defm AV_192 : AVRegClass_STAGING<6, VReg_192.RegTypes, (add VGPR_192), (add AGPR_192)>;
-defm AV_224 : AVRegClass<7, VReg_224.RegTypes, (add VGPR_224), (add AGPR_224)>;
+defm AV_224 : AVRegClass_STAGING<7, VReg_224.RegTypes, (add VGPR_224), (add AGPR_224)>;
 defm AV_256 : AVRegClass_STAGING<8, VReg_256.RegTypes, (add VGPR_256), (add AGPR_256)>;
 defm AV_288 : AVRegClass_STAGING<9, VReg_288.RegTypes, (add VGPR_288), (add AGPR_288)>;
 defm AV_320 : AVRegClass<10, VReg_320.RegTypes, (add VGPR_320), (add AGPR_320)>;
@@ -1671,6 +1671,7 @@ def AVLdSt_96 : AVLdStOperand<AV_96_STAGING, "OPW96">;
 def AVLdSt_128 : AVLdStOperand<AV_128_STAGING, "OPW128">;
 def AVLdSt_160 : AVLdStOperand<AV_160_STAGING, "OPW160">;
 def AVLdSt_192 : AVLdStOperand<AV_192_STAGING, "OPW192">;
+def AVLdSt_224 : AVLdStOperand<AV_224_STAGING, "OPW224">;
 def AVLdSt_256 : AVLdStOperand<AV_256_STAGING, "OPW256">;
 def AVLdSt_288 : AVLdStOperand<AV_288_STAGING, "OPW288">;
 def AVLdSt_512 : AVLdStOperand<AV_512_STAGING, "OPW512">;

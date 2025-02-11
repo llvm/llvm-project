@@ -276,6 +276,13 @@ multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit Ha
   }
 }
 
+multiclass FLAT_DDS_Load_Pseudo<string opName, RegisterClass regClass> {
+  def "" : FLAT_Load_Pseudo<opName, regClass, 0, 1, 0, 1, SReg_64_XEXEC_XNULL, VGPR_32>,
+    GlobalSaddrTable<0, opName>;
+  def _SADDR : FLAT_Load_Pseudo<opName, regClass, 0, 1, 1, 1, SReg_64_XEXEC_XNULL, VGPR_32>,
+    GlobalSaddrTable<1, opName>;
+}
+
 class FLAT_Global_Load_AddTid_Pseudo <string opName, RegisterClass regClass,
   bit HasTiedOutput = 0, bit EnableSaddr = 0> : FLAT_Pseudo<
   opName,
@@ -312,20 +319,11 @@ multiclass FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> {
   }
 }
 
-// Async loads, introduced in gfx1250, will store directly
-// to a DS address in vdst (they will not use M0 for DS addess).
-class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsync = 0> : FLAT_Pseudo<
-  opName,
-  (outs ),
-  !con(
-       !if(IsAsync, (ins VGPR_32:$vdst), (ins)),
-       !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)),
-       (ins flat_offset:$offset, CPol_0:$cpol)),
-  !if(IsAsync, " $vdst,", "")#" $vaddr"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
+class FLAT_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsync = 0> :
+  FLAT_Pseudo<opName, (outs), (ins), !if(IsAsync, " $vdst,", "")#" $vaddr"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
   let LGKM_CNT = !not(IsAsync);
   let VM_CNT = !not(IsAsync);
   let ASYNC_CNT = IsAsync;
-  let is_flat_global = 1;
   let lds = 1;
   let has_data = 0;
   let has_vdst = IsAsync; // vdst for ds address with IsAsync
@@ -340,10 +338,34 @@ class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsy
   let SchedRW = [WriteVMEM, WriteLDS];
 }
 
+// Async loads, introduced in gfx1250, will store directly
+// to a DS address in vdst (they will not use M0 for DS addess).
+class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsync = 0>
+  : FLAT_Load_LDS_Pseudo<opName, EnableSaddr, IsAsync> {
+  let InOperandList = !con(!if(IsAsync, (ins VGPR_32:$vdst), (ins)),
+                           !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)),
+                           (ins flat_offset:$offset, CPol_0:$cpol));
+  let is_flat_global = 1;
+}
+
+class FLAT_DDS_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsync = 0>
+  : FLAT_Load_LDS_Pseudo<opName, EnableSaddr, IsAsync> {
+  let InOperandList = !con(!if(IsAsync, (ins VGPR_32:$vdst), (ins)),
+                           !if(EnableSaddr, (ins SReg_64:$saddr), (ins)), (ins VGPR_32:$vaddr),
+                           (ins flat_offset:$offset, CPol_0:$cpol));
+}
+
 multiclass FLAT_Global_Load_LDS_Pseudo<string opName, bit IsAsync = 0> {
   def ""     : FLAT_Global_Load_LDS_Pseudo<opName, 0, IsAsync>,
     GlobalSaddrTable<0, opName>;
   def _SADDR : FLAT_Global_Load_LDS_Pseudo<opName, 1, IsAsync>,
+    GlobalSaddrTable<1, opName>;
+}
+
+multiclass FLAT_DDS_Load_LDS_Pseudo<string opName> {
+  def ""     : FLAT_DDS_Load_LDS_Pseudo<opName, 0, 1>,
+    GlobalSaddrTable<0, opName>;
+  def _SADDR : FLAT_DDS_Load_LDS_Pseudo<opName, 1, 1>,
     GlobalSaddrTable<1, opName>;
 }
 
@@ -883,6 +905,25 @@ multiclass FLAT_Global_Discard_Pseudo<string opName> {
 }
 
 //===----------------------------------------------------------------------===//
+// DDS Instructions
+//===----------------------------------------------------------------------===//
+
+let SubtargetPredicate = isGFX13Plus in {
+defm DDS_LOAD_B32                      : FLAT_DDS_Load_Pseudo<"dds_load_b32", VGPR_32>;
+defm DDS_LOAD_B64                      : FLAT_DDS_Load_Pseudo<"dds_load_b64", VReg_64>;
+defm DDS_LOAD_B128                     : FLAT_DDS_Load_Pseudo<"dds_load_b128", VReg_128>;
+defm DDS_LOAD_ASYNC_TO_LDS_B32         : FLAT_DDS_Load_LDS_Pseudo<"dds_load_async_to_lds_b32">;
+defm DDS_LOAD_ASYNC_TO_LDS_B64         : FLAT_DDS_Load_LDS_Pseudo<"dds_load_async_to_lds_b64">;
+defm DDS_LOAD_ASYNC_TO_LDS_B128        : FLAT_DDS_Load_LDS_Pseudo<"dds_load_async_to_lds_b128">;
+defm DDS_LOAD_ASYNC_MCAST_TO_LDS_B32   : FLAT_DDS_Load_LDS_Pseudo<"dds_load_async_mcast_to_lds_b32">;
+defm DDS_LOAD_ASYNC_MCAST_TO_LDS_B64   : FLAT_DDS_Load_LDS_Pseudo<"dds_load_async_mcast_to_lds_b64">;
+defm DDS_LOAD_ASYNC_MCAST_TO_LDS_B128  : FLAT_DDS_Load_LDS_Pseudo<"dds_load_async_mcast_to_lds_b128">;
+defm DDS_LOAD_MCAST_B32                : FLAT_DDS_Load_Pseudo<"dds_load_mcast_b32", VGPR_32>;
+defm DDS_LOAD_MCAST_B64                : FLAT_DDS_Load_Pseudo<"dds_load_mcast_b64", VReg_64>;
+defm DDS_LOAD_MCAST_B128               : FLAT_DDS_Load_Pseudo<"dds_load_mcast_b128", VReg_128>;
+}
+
+//===----------------------------------------------------------------------===//
 // Flat Instructions
 //===----------------------------------------------------------------------===//
 
@@ -1202,12 +1243,12 @@ let SubtargetPredicate = isGFX12Plus in {
 
 let SubtargetPredicate = isGFX1250Plus in {
 
-let Uses = [M0, EXEC, ASYNCcnt] in {
+let Uses = [M0, EXEC, ASYNCcnt], WaveSizePredicate = isWave32 in {
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B8      :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b8",   1>;
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B32     :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b32",  1>;
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B64     :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b64",  1>;
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B128    :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b128", 1>;
-} // End Uses = [M0, EXEC, ASYNCcnt]
+} // End Uses = [M0, EXEC, ASYNCcnt], WaveSizePredicate = isWave32
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B8       :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b8",    1>;
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B32      :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b32",   1>;
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B64      :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b64",   1>;
@@ -1287,13 +1328,13 @@ defm GLOBAL_LOAD_MONITOR_B64  : FLAT_Global_Load_Pseudo <"global_load_monitor_b6
 defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b128", VReg_128>;
 } // End SubtargetPredicate = isGFX125xOnly
 
-let SubtargetPredicate = isGFX1250Plus in {
+let SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32 in {
 let Uses = [M0, EXEC] in { // Use M0 for broadcast workgroup mask.
 defm CLUSTER_LOAD_B32         : FLAT_Global_Load_Pseudo <"cluster_load_b32",  VGPR_32>;
 defm CLUSTER_LOAD_B64         : FLAT_Global_Load_Pseudo <"cluster_load_b64",  VReg_64>;
 defm CLUSTER_LOAD_B128        : FLAT_Global_Load_Pseudo <"cluster_load_b128", VReg_128>;
 } // End Uses = [M0, EXEC]
-} // End SubtargetPredicate = isGFX1250Plus.
+} // End SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32
 
 let SubtargetPredicate = isGFX12Plus in {
   let Uses = [EXEC, M0] in {
@@ -1384,6 +1425,26 @@ let SubtargetPredicate = isGFX13Plus in {
   def SWC_SET_EXCHANGE_STATE  : FLAT_SWC<"swc_set_exchange_state", 0, 1>;
   def SWC_ABORT_EXCHANGE      : FLAT_SWC<"swc_abort_exchange", 0, 0>;
   }
+
+  let WaveSizePredicate = isWave32 in {
+  defm GLOBAL_TILED_LOAD_HALF_B64        : FLAT_Global_Load_Pseudo<"global_tiled_load_half_b64", VGPR_32>;
+  defm GLOBAL_TILED_LOAD_B64             : FLAT_Global_Load_Pseudo<"global_tiled_load_b64", VReg_64>;
+  defm GLOBAL_TILED_LOAD_VST2_B64        : FLAT_Global_Load_Pseudo<"global_tiled_load_vst2_b64", VReg_96>;
+  defm GLOBAL_TILED_LOAD_QTR_B128        : FLAT_Global_Load_Pseudo<"global_tiled_load_qtr_b128", VGPR_32>;
+  defm GLOBAL_TILED_LOAD_HALF_B128       : FLAT_Global_Load_Pseudo<"global_tiled_load_half_b128", VReg_64>;
+  defm GLOBAL_TILED_LOAD_HALF_VST2_B128  : FLAT_Global_Load_Pseudo<"global_tiled_load_half_vst2_b128", VReg_96>;
+  defm GLOBAL_TILED_LOAD_B128            : FLAT_Global_Load_Pseudo<"global_tiled_load_b128", VReg_128>;
+  defm GLOBAL_TILED_LOAD_VST2_B128       : FLAT_Global_Load_Pseudo<"global_tiled_load_vst2_b128", VReg_224>;
+
+  defm GLOBAL_TILED_STORE_HALF_B64       : FLAT_Global_Store_Pseudo<"global_tiled_store_half_b64", VGPR_32>;
+  defm GLOBAL_TILED_STORE_B64            : FLAT_Global_Store_Pseudo<"global_tiled_store_b64", VReg_64>;
+  defm GLOBAL_TILED_STORE_VST2_B64       : FLAT_Global_Store_Pseudo<"global_tiled_store_vst2_b64", VReg_96>;
+  defm GLOBAL_TILED_STORE_QTR_B128       : FLAT_Global_Store_Pseudo<"global_tiled_store_qtr_b128", VGPR_32>;
+  defm GLOBAL_TILED_STORE_HALF_B128      : FLAT_Global_Store_Pseudo<"global_tiled_store_half_b128", VReg_64>;
+  defm GLOBAL_TILED_STORE_HALF_VST2_B128 : FLAT_Global_Store_Pseudo<"global_tiled_store_half_vst2_b128", VReg_96>;
+  defm GLOBAL_TILED_STORE_B128           : FLAT_Global_Store_Pseudo<"global_tiled_store_b128", VReg_128>;
+  defm GLOBAL_TILED_STORE_VST2_B128      : FLAT_Global_Store_Pseudo<"global_tiled_store_vst2_b128", VReg_224>;
+  } // end let WaveSizePredicate = isWave32
 }
 
 //===----------------------------------------------------------------------===//
@@ -3609,16 +3670,27 @@ defm GLOBAL_ATOMIC_MAX_F64            : VFLAT_Real_Atomics_gfx1250<0x05c, "globa
 // GFX13
 //===----------------------------------------------------------------------===//
 
+class VFLAT_Real_Base_gfx13 <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic>
+ : VFLAT_Real <op, ps, opName>,
+   SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX13> {
+  let AssemblerPredicate = isGFX13Only;
+  let DecoderNamespace = "GFX13";
+
+  let Inst{9-8} = cpol{8-7};
+  let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
+}
+
 multiclass VFLAT_Real_gfx13 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
-  def _gfx13 : VFLAT_Real <op, ps, name>,
-               SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX13> {
-    let AssemblerPredicate = isGFX13Only;
-    let DecoderNamespace = "GFX13";
-
-    let Inst{9-8} = cpol{8-7};
+  def _gfx13 : VFLAT_Real_Base_gfx13 <op, ps, name> {
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
-    let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
+  }
+}
+
+multiclass VDDS_Real_gfx13 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> {
+  defvar ps = !cast<FLAT_Pseudo>(NAME);
+  def _gfx13 : VFLAT_Real_Base_gfx13 <op, ps, name> {
+    let Inst{25-24} = 0b11;
   }
 }
 
@@ -3674,6 +3746,25 @@ multiclass VSCRATCH_Real_AllAddr_gfx13<bits<8> op,
   defm _ST : VFLAT_Real_gfx13<op, name>;
   defm _SVS : VFLAT_Real_gfx13<op, name>;
 }
+
+multiclass VDDS_Real_AllAddr_gfx13<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> {
+  defm "" : VDDS_Real_gfx13<op, name>;
+  defm _SADDR : VDDS_Real_gfx13<op, name>;
+}
+
+// ENC_VDDS
+defm DDS_LOAD_B32                     : VDDS_Real_AllAddr_gfx13<0x0c>;
+defm DDS_LOAD_B64                     : VDDS_Real_AllAddr_gfx13<0x0d>;
+defm DDS_LOAD_B128                    : VDDS_Real_AllAddr_gfx13<0x0e>;
+defm DDS_LOAD_ASYNC_TO_LDS_B32        : VDDS_Real_AllAddr_gfx13<0x62>;
+defm DDS_LOAD_ASYNC_TO_LDS_B64        : VDDS_Real_AllAddr_gfx13<0x63>;
+defm DDS_LOAD_ASYNC_TO_LDS_B128       : VDDS_Real_AllAddr_gfx13<0x64>;
+defm DDS_LOAD_MCAST_B32               : VDDS_Real_AllAddr_gfx13<0x69>;
+defm DDS_LOAD_MCAST_B64               : VDDS_Real_AllAddr_gfx13<0x6a>;
+defm DDS_LOAD_MCAST_B128              : VDDS_Real_AllAddr_gfx13<0x6b>;
+defm DDS_LOAD_ASYNC_MCAST_TO_LDS_B32  : VDDS_Real_AllAddr_gfx13<0x6d>;
+defm DDS_LOAD_ASYNC_MCAST_TO_LDS_B64  : VDDS_Real_AllAddr_gfx13<0x6e>;
+defm DDS_LOAD_ASYNC_MCAST_TO_LDS_B128 : VDDS_Real_AllAddr_gfx13<0x6f>;
 
 // ENC_VFLAT.
 defm FLAT_LOAD_UBYTE                  : VFLAT_Real_AllAddr_gfx13<0x08, "flat_load_u8">;
@@ -3853,6 +3944,25 @@ defm SWC_SET_EXCHANGE_STATE           : VFLAT_Real_Base_gfx13<0xa6>;
 defm SWC_ABORT_EXCHANGE               : VFLAT_Real_Base_gfx13<0xa7>;
 // TODO-GFX13:
 // GLOBAL_WAVE_KILL
+
+defm GLOBAL_TILED_LOAD_HALF_B64        : VFLAT_Real_AllAddr_gfx13<0x0ac>;
+defm GLOBAL_TILED_LOAD_B64             : VFLAT_Real_AllAddr_gfx13<0x0ad>;
+defm GLOBAL_TILED_LOAD_VST2_B64        : VFLAT_Real_AllAddr_gfx13<0x0ae>;
+defm GLOBAL_TILED_LOAD_QTR_B128        : VFLAT_Real_AllAddr_gfx13<0x0af>;
+defm GLOBAL_TILED_LOAD_HALF_B128       : VFLAT_Real_AllAddr_gfx13<0x0b0>;
+defm GLOBAL_TILED_LOAD_HALF_VST2_B128  : VFLAT_Real_AllAddr_gfx13<0x0b1>;
+defm GLOBAL_TILED_LOAD_B128            : VFLAT_Real_AllAddr_gfx13<0x0b2>;
+defm GLOBAL_TILED_LOAD_VST2_B128       : VFLAT_Real_AllAddr_gfx13<0x0b3>;
+
+defm GLOBAL_TILED_STORE_HALF_B64       : VFLAT_Real_AllAddr_gfx13<0x0b4>;
+defm GLOBAL_TILED_STORE_B64            : VFLAT_Real_AllAddr_gfx13<0x0b5>;
+defm GLOBAL_TILED_STORE_VST2_B64       : VFLAT_Real_AllAddr_gfx13<0x0b6>;
+defm GLOBAL_TILED_STORE_QTR_B128       : VFLAT_Real_AllAddr_gfx13<0x0b7>;
+defm GLOBAL_TILED_STORE_HALF_B128      : VFLAT_Real_AllAddr_gfx13<0x0b8>;
+defm GLOBAL_TILED_STORE_HALF_VST2_B128 : VFLAT_Real_AllAddr_gfx13<0x0b9>;
+defm GLOBAL_TILED_STORE_B128           : VFLAT_Real_AllAddr_gfx13<0x0ba>;
+defm GLOBAL_TILED_STORE_VST2_B128      : VFLAT_Real_AllAddr_gfx13<0x0bb>;
+
 
 // ENC_VSCRATCH.
 defm SCRATCH_LOAD_UBYTE               : VSCRATCH_Real_AllAddr_gfx13<0x08, "scratch_load_u8">;

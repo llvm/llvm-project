@@ -50,7 +50,6 @@ define amdgpu_ps float @global_load_b32_idxprom_wrong_stride(ptr addrspace(1) al
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-SDAG-LABEL: global_load_b32_idxprom_wrong_stride:

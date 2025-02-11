@@ -5518,14 +5518,16 @@ CUDAClusterDimsAttr *Sema::createClusterDimsAttr(const AttributeCommonInfo &CI,
   }
 
   int FlatDim = ValX * ValY * ValZ;
-  auto TT = Context.getTargetInfo().getTriple();
+  auto TT = (!Context.getLangOpts().CUDAIsDevice && Context.getAuxTargetInfo())
+                ? Context.getAuxTargetInfo()->getTriple()
+                : Context.getTargetInfo().getTriple();
   int MaxDim = 1;
   if (TT.isNVPTX())
     MaxDim = 8;
   else if (TT.isAMDGPU())
     MaxDim = 16;
   else
-    llvm_unreachable("unknown target that supports __cluster_dims__");
+    return nullptr;
 
   // A maximum of 8 thread blocks in a cluster is supported as a portable
   // cluster size in CUDA. The number is 16 for AMDGPU.
@@ -7611,6 +7613,15 @@ void Sema::ProcessDeclAttributeList(
           << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
       D->setInvalidDecl();
     }
+  }
+
+  // Do not permit 'constructor' or 'destructor' attributes on __device__ code.
+  if (getLangOpts().CUDAIsDevice && D->hasAttr<CUDADeviceAttr>() &&
+      (D->hasAttr<ConstructorAttr>() || D->hasAttr<DestructorAttr>()) &&
+      !getLangOpts().GPUAllowDeviceInit) {
+    Diag(D->getLocation(), diag::err_cuda_ctor_dtor_attrs)
+        << (D->hasAttr<ConstructorAttr>() ? "constructors" : "destructors");
+    D->setInvalidDecl();
   }
 
   // Do this check after processing D's attributes because the attribute
