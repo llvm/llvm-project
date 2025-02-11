@@ -167,12 +167,6 @@ public:
   }
 };
 
-enum class DiagnosticPredicateTy {
-  Match,
-  NearMatch,
-  NoMatch,
-};
-
 // When an operand is parsed, the assembler will try to iterate through a set of
 // possible operand classes that the operand might match and call the
 // corresponding PredicateMethod to determine that.
@@ -199,20 +193,35 @@ enum class DiagnosticPredicateTy {
 // below which collects *all* possible diagnostics. This alternative
 // is optional and fully backward compatible with existing
 // PredicateMethods that return a 'bool' (match or no match).
-struct DiagnosticPredicate {
-  DiagnosticPredicateTy Type;
+class DiagnosticPredicate {
+  enum class PredicateTy {
+    Match,     // Matches
+    NearMatch, // Close Match: use Specific Diagnostic
+    NoMatch,   // No Match: use `InvalidOperand`
+  } Predicate;
 
-  explicit DiagnosticPredicate(bool Match)
-      : Type(Match ? DiagnosticPredicateTy::Match
-                   : DiagnosticPredicateTy::NearMatch) {}
-  DiagnosticPredicate(DiagnosticPredicateTy T) : Type(T) {}
-  DiagnosticPredicate(const DiagnosticPredicate &) = default;
+public:
+#if __cplusplus >= 202002L
+  using enum PredicateTy;
+#else
+  static constexpr PredicateTy Match = PredicateTy::Match;
+  static constexpr PredicateTy NearMatch = PredicateTy::NearMatch;
+  static constexpr PredicateTy NoMatch = PredicateTy::NoMatch;
+#endif
+
+  constexpr DiagnosticPredicate(PredicateTy T) : Predicate(T) {}
+
   DiagnosticPredicate& operator=(const DiagnosticPredicate &) = default;
+  DiagnosticPredicate(const DiagnosticPredicate &) = default;
 
-  operator bool() const { return Type == DiagnosticPredicateTy::Match; }
-  bool isMatch() const { return Type == DiagnosticPredicateTy::Match; }
-  bool isNearMatch() const { return Type == DiagnosticPredicateTy::NearMatch; }
-  bool isNoMatch() const { return Type == DiagnosticPredicateTy::NoMatch; }
+  explicit constexpr DiagnosticPredicate(bool Matches)
+      : Predicate(Matches ? Match : NearMatch) {}
+
+  operator bool() const { return Predicate == Match; }
+
+  constexpr bool isMatch() const { return Predicate == Match; }
+  constexpr bool isNearMatch() const { return Predicate == NearMatch; }
+  constexpr bool isNoMatch() const { return Predicate == NoMatch; }
 };
 
 // When matching of an assembly instruction fails, there may be multiple
