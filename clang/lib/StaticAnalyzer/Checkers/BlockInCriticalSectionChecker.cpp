@@ -145,6 +145,92 @@ using MutexDescriptor =
     std::variant<FirstArgMutexDescriptor, MemberMutexDescriptor,
                  RAIIMutexDescriptor>;
 
+class NonBlockOpenVisitor : public BugReporterVisitor {
+private:
+  const VarRegion *VR;
+  const CallExpr *OpenCallExpr;
+  int O_NONBLOCKV;
+  bool Satisfied;
+  CallDescription OpenFunction{CDM::CLibrary, {"open"}, 2};
+
+public:
+  NonBlockOpenVisitor(const VarRegion *VR, int O_NONBLOCKV)
+      : VR(VR), OpenCallExpr(nullptr), O_NONBLOCKV(O_NONBLOCKV),
+        Satisfied(false) {}
+
+  static void *getTag() {
+    static int Tag = 0;
+    return static_cast<void *>(&Tag);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    ID.AddPointer(getTag());
+    ID.AddPointer(VR);
+  }
+
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   PathSensitiveBugReport &BR) override {
+    if (Satisfied)
+      return nullptr;
+
+    // check for open call's 2th argument
+    if (std::optional<StmtPoint> P = N->getLocationAs<StmtPoint>()) {
+      if (OpenCallExpr && OpenCallExpr == P->getStmtAs<CallExpr>()) {
+        Satisfied = true;
+        const auto *openFlagExpr = OpenCallExpr->getArg(1);
+        SVal flagSV = N->getSVal(openFlagExpr);
+        const llvm::APSInt *flagV = flagSV.getAsInteger();
+        if (!flagV)
+          return nullptr;
+
+        if ((*flagV & O_NONBLOCKV) != 0)
+          BR.markInvalid(getTag(), nullptr);
+
+        return nullptr;
+      }
+    }
+
+    const ExplodedNode *Pred = N->getFirstPred();
+    SVal presv = Pred->getState()->getSVal(VR);
+    SVal sv = N->getState()->getSVal(VR);
+
+    // check if file descirptor's SVal changed between nodes
+    if (sv == presv)
+      return nullptr;
+
+    std::optional<PostStore> P = N->getLocationAs<PostStore>();
+    if (!P)
+      return nullptr;
+
+    if (const auto *DS = P->getStmtAs<DeclStmt>()) {
+      // variable initialization
+      // int fd = open(...)
+      const VarDecl *VD = VR->getDecl();
+      if (DS->getSingleDecl() == VR->getDecl()) {
+        const auto *InitCall = dyn_cast_if_present<CallExpr>(VD->getInit());
+        if (!InitCall || !OpenFunction.matchesAsWritten(*InitCall))
+          return nullptr;
+
+        OpenCallExpr = InitCall;
+      }
+    } else if (const auto *BO = P->getStmtAs<BinaryOperator>()) {
+      // assignment
+      // fd = open(...)
+      const auto *DRE = dyn_cast<DeclRefExpr>(BO->getLHS());
+      if (DRE && DRE->getDecl() == VR->getDecl()) {
+        const auto *InitCall = dyn_cast<CallExpr>(BO->getRHS());
+        if (!InitCall || !OpenFunction.matchesAsWritten(*InitCall))
+          return nullptr;
+
+        OpenCallExpr = InitCall;
+      }
+    }
+
+    return nullptr;
+  }
+};
+
 class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 private:
   const std::array<MutexDescriptor, 8> MutexDescriptors{
@@ -339,6 +425,36 @@ void BlockInCriticalSectionChecker::reportBlockInCritSection(
                                                     os.str(), ErrNode);
   R->addRange(Call.getSourceRange());
   R->markInteresting(Call.getReturnValue());
+  // for 'read' call, check whether it's file descriptor(first argument) is
+  // created by 'open' API with O_NONBLOCK flag and don't report for this
+  // situation.
+  if (Call.getCalleeIdentifier()->getName() == "read") {
+    do {
+      const auto *arg = Call.getArgExpr(0);
+      if (!arg)
+        break;
+
+      const auto *DRE = dyn_cast<DeclRefExpr>(arg->IgnoreImpCasts());
+      if (!DRE)
+        break;
+
+      const auto *VD = dyn_cast_if_present<VarDecl>(DRE->getDecl());
+      if (!VD)
+        break;
+
+      const VarRegion *VR = C.getState()->getRegion(VD, C.getLocationContext());
+      if (!VR)
+        break;
+
+      std::optional<int> O_NONBLOCKV = tryExpandAsInteger(
+          "O_NONBLOCK", C.getBugReporter().getPreprocessor());
+      if (!O_NONBLOCKV)
+        break;
+
+      R->addVisitor(
+          std::make_unique<NonBlockOpenVisitor>(VR, O_NONBLOCKV.value()));
+    } while (false);
+  }
   C.emitReport(std::move(R));
 }
 
