@@ -211,7 +211,29 @@ struct TestIntegerPromotions {
   }
 };
 
-TEST_CONSTEXPR_CXX20 void test_bit_iterator_with_custom_sized_types() {
+TEST_CONSTEXPR_CXX20 bool test() {
+  types::for_each(types::integer_types(), TestTypes<char>());
+  types::for_each(types::integer_types(), TestTypes<int>());
+  types::for_each(types::integer_types(), TestTypes<long long>());
+#if TEST_STD_VER >= 20
+  Test<TriviallyComparable<char>, TriviallyComparable<char>>().operator()<TriviallyComparable<char>*>();
+  Test<TriviallyComparable<wchar_t>, TriviallyComparable<wchar_t>>().operator()<TriviallyComparable<wchar_t>*>();
+#endif
+
+  // TODO: Remove the `_LIBCPP_ENABLE_EXPERIMENTAL` check once we have the FTM guarded or views::join isn't
+  // experimental anymore
+#if TEST_STD_VER >= 20 && (!defined(_LIBCPP_VERSION) || defined(_LIBCPP_ENABLE_EXPERIMENTAL))
+  {
+    std::vector<std::vector<int>> vec = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    auto view                         = vec | std::views::join;
+    assert(std::find(view.begin(), view.end(), 4) == std::next(view.begin(), 3));
+  }
+#endif
+
+  types::for_each(types::integral_types(), TestIntegerPromotions());
+
+  // Verify that the std::vector<bool>::iterator optimization works properly for allocators with custom size types
+  // See https://github.com/llvm/llvm-project/issues/122528
   {
     using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
     std::vector<bool, Alloc> in(100, false, Alloc(1));
@@ -236,27 +258,6 @@ TEST_CONSTEXPR_CXX20 void test_bit_iterator_with_custom_sized_types() {
     in[in.size() - 2] = true;
     assert(std::find(in.begin(), in.end(), true) == in.end() - 2);
   }
-}
-
-TEST_CONSTEXPR_CXX20 bool test() {
-  types::for_each(types::integer_types(), TestTypes<char>());
-  types::for_each(types::integer_types(), TestTypes<int>());
-  types::for_each(types::integer_types(), TestTypes<long long>());
-#if TEST_STD_VER >= 20
-  Test<TriviallyComparable<char>, TriviallyComparable<char>>().operator()<TriviallyComparable<char>*>();
-  Test<TriviallyComparable<wchar_t>, TriviallyComparable<wchar_t>>().operator()<TriviallyComparable<wchar_t>*>();
-#endif
-
-#if TEST_STD_VER >= 20
-  {
-    std::vector<std::vector<int>> vec = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-    auto view                         = vec | std::views::join;
-    assert(std::find(view.begin(), view.end(), 4) == std::next(view.begin(), 3));
-  }
-#endif
-
-  types::for_each(types::integral_types(), TestIntegerPromotions());
-  test_bit_iterator_with_custom_sized_types();
 
   { // Test vector<bool>::iterator optimization
     std::vector<bool> vec(256 + 8);

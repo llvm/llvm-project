@@ -12,10 +12,10 @@
 #ifndef _LIBCPP___BIT_COUNTR_H
 #define _LIBCPP___BIT_COUNTR_H
 
+#include <__assert>
 #include <__bit/rotate.h>
 #include <__concepts/arithmetic.h>
 #include <__config>
-#include <__type_traits/enable_if.h>
 #include <__type_traits/is_unsigned.h>
 #include <limits>
 
@@ -40,26 +40,26 @@ _LIBCPP_BEGIN_NAMESPACE_STD
   return __builtin_ctzll(__x);
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-// constexpr implementation for C++11 and later
-
+// A constexpr implementation for C++11 and later (using clang extensions for constexpr support)
 // Precondition: __t != 0 (the caller __countr_zero handles __t == 0 as a special case)
 template <class _Tp>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr int __countr_zero_impl(_Tp __t) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __countr_zero_impl(_Tp __t) _NOEXCEPT {
+  _LIBCPP_ASSERT_INTERNAL(__t != 0, "__countr_zero_impl called with zero value");
   static_assert(is_unsigned<_Tp>::value, "__countr_zero_impl only works with unsigned types");
-  if constexpr (sizeof(_Tp) <= sizeof(unsigned int)) {
+  // Use constexpr if as a C++17 extension for clang
+  if _LIBCPP_CONSTEXPR (sizeof(_Tp) <= sizeof(unsigned int)) {
     return std::__libcpp_ctz(static_cast<unsigned int>(__t));
-  } else if constexpr (sizeof(_Tp) <= sizeof(unsigned long)) {
+  } else if _LIBCPP_CONSTEXPR (sizeof(_Tp) <= sizeof(unsigned long)) {
     return std::__libcpp_ctz(static_cast<unsigned long>(__t));
-  } else if constexpr (sizeof(_Tp) <= sizeof(unsigned long long)) {
+  } else if _LIBCPP_CONSTEXPR (sizeof(_Tp) <= sizeof(unsigned long long)) {
     return std::__libcpp_ctz(static_cast<unsigned long long>(__t));
   } else {
-#  if _LIBCPP_STD_VER == 11
-    // A recursive constexpr implementation for C++11
+#if _LIBCPP_STD_VER == 11
+    // A constexpr implementation for C++11 using variable declaration as a C++14 extension for clang
     unsigned long long __ull       = static_cast<unsigned long long>(__t);
     const unsigned int __ulldigits = numeric_limits<unsigned long long>::digits;
     return __ull == 0ull ? __ulldigits + std::__countr_zero_impl<_Tp>(__t >> __ulldigits) : std::__libcpp_ctz(__ull);
-#  else
+#else
     int __ret                      = 0;
     const unsigned int __ulldigits = numeric_limits<unsigned long long>::digits;
     while (static_cast<unsigned long long>(__t) == 0uLL) {
@@ -67,46 +67,9 @@ template <class _Tp>
       __t >>= __ulldigits;
     }
     return __ret + std::__libcpp_ctz(static_cast<unsigned long long>(__t));
-#  endif
+#endif
   }
 }
-
-#else
-// implementation for C++03
-
-template < class _Tp, __enable_if_t<is_unsigned<_Tp>::value && sizeof(_Tp) <= sizeof(unsigned int), int> = 0>
-_LIBCPP_HIDE_FROM_ABI int __countr_zero_impl(_Tp __t) {
-  return std::__libcpp_ctz(static_cast<unsigned int>(__t));
-}
-
-template < class _Tp,
-           __enable_if_t<is_unsigned<_Tp>::value && (sizeof(_Tp) > sizeof(unsigned int)) &&
-                             sizeof(_Tp) <= sizeof(unsigned long),
-                         int> = 0 >
-_LIBCPP_HIDE_FROM_ABI int __countr_zero_impl(_Tp __t) {
-  return std::__libcpp_ctz(static_cast<unsigned long>(__t));
-}
-
-template < class _Tp,
-           __enable_if_t<is_unsigned<_Tp>::value && (sizeof(_Tp) > sizeof(unsigned long)) &&
-                             sizeof(_Tp) <= sizeof(unsigned long long),
-                         int> = 0 >
-_LIBCPP_HIDE_FROM_ABI int __countr_zero_impl(_Tp __t) {
-  return std::__libcpp_ctz(static_cast<unsigned long long>(__t));
-}
-
-template < class _Tp, __enable_if_t<is_unsigned<_Tp>::value && (sizeof(_Tp) > sizeof(unsigned long long)), int> = 0 >
-_LIBCPP_HIDE_FROM_ABI int __countr_zero_impl(_Tp __t) {
-  int __ret                      = 0;
-  const unsigned int __ulldigits = numeric_limits<unsigned long long>::digits;
-  while (static_cast<unsigned long long>(__t) == 0uLL) {
-    __ret += __ulldigits;
-    __t >>= __ulldigits;
-  }
-  return __ret + std::__libcpp_ctz(static_cast<unsigned long long>(__t));
-}
-
-#endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __countr_zero(_Tp __t) _NOEXCEPT {

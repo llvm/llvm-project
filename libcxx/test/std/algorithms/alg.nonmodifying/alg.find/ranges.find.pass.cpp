@@ -124,33 +124,6 @@ public:
   bool operator==(const TriviallyComparable&) const = default;
 };
 
-constexpr void test_bit_iterator_with_custom_sized_types() {
-  {
-    using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
-    std::vector<bool, Alloc> in(100, false, Alloc(1));
-    in[in.size() - 2] = true;
-    assert(std::ranges::find(in, true) == in.end() - 2);
-  }
-  {
-    using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
-    std::vector<bool, Alloc> in(199, false, Alloc(1));
-    in[in.size() - 2] = true;
-    assert(std::ranges::find(in, true) == in.end() - 2);
-  }
-  {
-    using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
-    std::vector<bool, Alloc> in(200, false, Alloc(1));
-    in[in.size() - 2] = true;
-    assert(std::ranges::find(in, true) == in.end() - 2);
-  }
-  {
-    using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
-    std::vector<bool, Alloc> in(257, false, Alloc(1));
-    in[in.size() - 2] = true;
-    assert(std::ranges::find(in, true) == in.end() - 2);
-  }
-}
-
 constexpr bool test() {
   types::for_each(types::type_list<char, wchar_t, int, long, TriviallyComparable<char>, TriviallyComparable<wchar_t>>{},
                   []<class T> {
@@ -245,7 +218,32 @@ constexpr bool test() {
     }
   }
 
-  test_bititer_with_custom_sized_types();
+  // Verify that the std::vector<bool>::iterator optimization works properly for allocators with custom size types
+  // See https://github.com/llvm/llvm-project/issues/122528
+  {
+    using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+    std::vector<bool, Alloc> in(100, false, Alloc(1));
+    in[in.size() - 2] = true;
+    assert(std::ranges::find(in, true) == in.end() - 2);
+  }
+  {
+    using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+    std::vector<bool, Alloc> in(199, false, Alloc(1));
+    in[in.size() - 2] = true;
+    assert(std::ranges::find(in, true) == in.end() - 2);
+  }
+  {
+    using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
+    std::vector<bool, Alloc> in(200, false, Alloc(1));
+    in[in.size() - 2] = true;
+    assert(std::ranges::find(in, true) == in.end() - 2);
+  }
+  {
+    using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
+    std::vector<bool, Alloc> in(257, false, Alloc(1));
+    in[in.size() - 2] = true;
+    assert(std::ranges::find(in, true) == in.end() - 2);
+  }
 
   return true;
 }
