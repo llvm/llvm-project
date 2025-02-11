@@ -333,7 +333,9 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
       else
         k = ConversionSpecifier::bArg;
       break;
-    case 'B': k = ConversionSpecifier::BArg; break;
+    case 'B':
+      k = ConversionSpecifier::BArg;
+      break;
     // POSIX specific.
     case 'C': k = ConversionSpecifier::CArg; break;
     case 'S': k = ConversionSpecifier::SArg; break;
