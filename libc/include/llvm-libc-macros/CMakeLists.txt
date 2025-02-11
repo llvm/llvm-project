@@ -321,3 +321,10 @@ add_macro_header(
   HDR
     pthread-macros.h
 )
+
+add_macro_header(
+  sysexits_macros
+  HDR
+    sysexits-macros.h
+)
+

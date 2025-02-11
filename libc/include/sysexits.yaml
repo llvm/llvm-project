@@ -1,0 +1,9 @@
+header: sysexits.h
+header_template: sysexits.h.def
+standards:
+  - POSIX
+macros: []
+types: []
+enums: []
+objects: []
+functions: []

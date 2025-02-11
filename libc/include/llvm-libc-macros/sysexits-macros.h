@@ -1,7 +1,6 @@
-#ifndef SYSEXITS_H
-#define SYSEXITS_H
+#ifndef SYSEXITS_MACROS_H
+#define SYSEXITS_MACROS_H
 
-// BSD Exit Codes (18 total) — These are the commonly used exit codes without POSIX dependencies
 #define EX_OK         0    // Successful termination
 #define EX_USAGE      64   // Command line usage error
 #define EX_DATAERR    65   // Data format error
@@ -21,4 +20,4 @@
 #define EX_INTERNAL   80   // Internal error
 #define EX_INVALIDARG 81   // Invalid argument
 
-#endif // SYSEXITS_H
+#endif // SYSEXITS_MACROS_H
