@@ -327,9 +327,8 @@ void SPIRVInstPrinter::printUnknownType(const MCInst *MI, raw_ostream &O) {
   // Encode the instruction enumerant and word count into the opcode
   const auto OpCode = (0xFF & NumOps) << 16 | (0xFF & Enumerant);
 
-  // Print the opcode using the spirv-as arbitrary integer syntax
-  // https://github.com/KhronosGroup/SPIRV-Tools/blob/main/docs/syntax.md#arbitrary-integers
-  O << "!0x" << Twine::utohexstr(OpCode) << " ";
+  // Print the opcode using the spirv-as unknown opcode syntax
+  O << "OpUnknown(" << Enumerant << ", " << NumOps << ") ";
 
   // The result ID must be printed after the opcode when using this syntax
   printOperand(MI, 0, O);

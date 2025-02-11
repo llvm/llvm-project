@@ -13,12 +13,12 @@
 ; CHECK: [[uint32_4:%[0-9]+]] = OpConstant [[uint32_t]] 4
 %integral_constant_4 = type target("spirv.IntegralConstant", i32, 4)
 
-; CHECK: !0x4001c [[array_t:%[0-9]+]] [[image_t]] [[uint32_4]]
+; CHECK: OpUnknown(28, 4) [[array_t:%[0-9]+]] [[image_t]] [[uint32_4]]
 %ArrayTex2D = type target("spirv.Type", %type_2d_image, %integral_constant_4, 28, 0, 0)
 
 ; CHECK: [[getTexArray_t:%[0-9]+]] = OpTypeFunction [[array_t]]
 
-; CHECK: !0x40015 [[int_t:%[0-9]+]] 32 1
+; CHECK: OpUnknown(21, 4) [[int_t:%[0-9]+]] 32 1
 %int_t = type target("spirv.Type", %literal_32, %literal_true, 21, 0, 0)
 
 ; CHECK: [[getInt_t:%[0-9]+]] = OpTypeFunction [[int_t]]
