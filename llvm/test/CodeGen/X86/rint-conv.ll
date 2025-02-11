@@ -69,33 +69,17 @@ entry:
 define <2 x i32> @combine_v2f64(<2 x double> %x) nounwind {
 ; X86-LABEL: combine_v2f64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    cvtsd2si %xmm0, %eax
-; X86-NEXT:    movd %eax, %xmm1
-; X86-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; X86-NEXT:    cvtsd2si %xmm0, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-NEXT:    movdqa %xmm1, %xmm0
+; X86-NEXT:    cvtpd2dq %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_v2f64:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    cvtsd2si %xmm0, %eax
-; X64-NEXT:    movd %eax, %xmm1
-; X64-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; X64-NEXT:    cvtsd2si %xmm0, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X64-NEXT:    movdqa %xmm1, %xmm0
+; X64-NEXT:    cvtpd2dq %xmm0, %xmm0
 ; X64-NEXT:    retq
 ;
 ; AVX-LABEL: combine_v2f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-NEXT:    vcvtsd2si %xmm1, %eax
-; AVX-NEXT:    vcvtsd2si %xmm0, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm0
-; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtpd2dq %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %0 = tail call <2 x double> @llvm.rint.v2f64(<2 x double> %x)
@@ -106,38 +90,16 @@ entry:
 define <4 x i32> @combine_v4f64(<4 x double> %x) nounwind {
 ; X86-LABEL: combine_v4f64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    cvtsd2si %xmm1, %eax
-; X86-NEXT:    movd %eax, %xmm2
-; X86-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
-; X86-NEXT:    cvtsd2si %xmm1, %eax
-; X86-NEXT:    movd %eax, %xmm1
-; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X86-NEXT:    cvtsd2si %xmm0, %eax
-; X86-NEXT:    movd %eax, %xmm1
-; X86-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; X86-NEXT:    cvtsd2si %xmm0, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; X86-NEXT:    movdqa %xmm1, %xmm0
+; X86-NEXT:    cvtpd2dq %xmm1, %xmm1
+; X86-NEXT:    cvtpd2dq %xmm0, %xmm0
+; X86-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_v4f64:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    cvtsd2si %xmm1, %eax
-; X64-NEXT:    movd %eax, %xmm2
-; X64-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
-; X64-NEXT:    cvtsd2si %xmm1, %eax
-; X64-NEXT:    movd %eax, %xmm1
-; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X64-NEXT:    cvtsd2si %xmm0, %eax
-; X64-NEXT:    movd %eax, %xmm1
-; X64-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; X64-NEXT:    cvtsd2si %xmm0, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; X64-NEXT:    movdqa %xmm1, %xmm0
+; X64-NEXT:    cvtpd2dq %xmm1, %xmm1
+; X64-NEXT:    cvtpd2dq %xmm0, %xmm0
+; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    retq
 ;
 ; AVX-LABEL: combine_v4f64:

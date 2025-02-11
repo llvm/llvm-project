@@ -5,5 +5,5 @@ add_llvm_example(external-hello-world
 
 target_link_libraries(external-hello-world
   PRIVATE
-  FortranRuntime
+  flang_rt.runtime
   )
