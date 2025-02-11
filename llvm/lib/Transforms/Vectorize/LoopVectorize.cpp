@@ -5260,6 +5260,8 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
     return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
   };
 
+  collectInLoopReductions();
+
   for (unsigned int Idx = 0, Sz = IdxToInstr.size(); Idx < Sz; ++Idx) {
     Instruction *I = IdxToInstr[Idx];
 
@@ -5275,8 +5277,6 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
     // Skip ignored values.
     if (ValuesToIgnore.count(I))
       continue;
-
-    collectInLoopReductions();
 
     // For each VF find the maximum usage of registers.
     for (unsigned J = 0, E = VFs.size(); J < E; ++J) {
@@ -7008,6 +7008,10 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 }
 
 void LoopVectorizationCostModel::collectInLoopReductions() {
+  // Avoid duplicating work finding in-loop reductions.
+  if (!InLoopReductions.empty())
+    return;
+
   for (const auto &Reduction : Legal->getReductionVars()) {
     PHINode *Phi = Reduction.first;
     const RecurrenceDescriptor &RdxDesc = Reduction.second;
