@@ -101,7 +101,6 @@ public:
                                            VersionTuple SDKVersion) override;
   void EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
                              bool PtrAuthKernelABIVersion) override;
-  void emitThumbFunc(MCSymbol *Func) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -275,13 +274,6 @@ void MCMachOStreamer::EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
                                             bool PtrAuthKernelABIVersion) {
   getWriter().setPtrAuthABIVersion(PtrAuthABIVersion);
   getWriter().setPtrAuthKernelABIVersion(PtrAuthKernelABIVersion);
-}
-
-void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {
-  // Remember that the function is a thumb function. Fixup and relocation
-  // values will need adjusted.
-  getAssembler().setIsThumbFunc(Symbol);
-  cast<MCSymbolMachO>(Symbol)->setThumbFunc();
 }
 
 bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,

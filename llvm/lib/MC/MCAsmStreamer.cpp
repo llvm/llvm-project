@@ -193,7 +193,6 @@ public:
                                            VersionTuple SDKVersion) override;
   void EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
                              bool PtrAuthKernelABIVersion) override;
-  void emitThumbFunc(MCSymbol *Func) override;
 
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitConditionalAssignment(MCSymbol *Symbol,
@@ -706,18 +705,6 @@ void MCAsmStreamer::EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
   else
     OS << "\t.ptrauth_abi_version ";
   OS << PtrAuthABIVersion;
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitThumbFunc(MCSymbol *Func) {
-  // This needs to emit to a temporary string to get properly quoted
-  // MCSymbols when they have spaces in them.
-  OS << "\t.thumb_func";
-  // Only Mach-O hasSubsectionsViaSymbols()
-  if (MAI->hasSubsectionsViaSymbols()) {
-    OS << '\t';
-    Func->print(OS, MAI);
-  }
   EmitEOL();
 }
 

@@ -168,6 +168,8 @@ public:
 
   virtual void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE);
 
+  // Note in the output that the specified \p Symbol is a Thumb mode function.
+  virtual void emitThumbFunc(MCSymbol *Symbol);
   virtual void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value);
 
   void emitConstantPools() override;
@@ -513,10 +515,6 @@ public:
 
   /// Specify Mach-O ptrauth ABI version.
   virtual void EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion, bool PtrAuthKernelABIVersion) {}
-
-  /// Note in the output that the specified \p Func is a Thumb mode
-  /// function (ARM target only).
-  virtual void emitThumbFunc(MCSymbol *Func);
 
   /// Emit an assignment of \p Value to \p Symbol.
   ///
