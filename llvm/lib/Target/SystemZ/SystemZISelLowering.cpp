@@ -8012,6 +8012,10 @@ static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
           NewCCMask = NewCCMask1;
         else if (isSRL_IPM_CCSequence(AndOp2.getNode()) && IsOp2)
           NewCCMask = NewCCMask2;
+        else {
+          CCValid = RestoreCCValid;
+          return false;
+        }
         // Bit 29 set => CC == 2 || CC == 3.
         if ((NewCCMask & 0x3) == 2)
           NewCCMask = SystemZ::CCMASK_2 | SystemZ::CCMASK_3;

@@ -121,9 +121,10 @@ public:
 
   std::string convertConstraint(const char *&Constraint) const override {
     if (llvm::StringRef(Constraint).starts_with("@cc")) {
+      auto Len = llvm::StringRef("@cc").size();
       std::string Converted =
-          std::string("{") + std::string("@cc") + std::string("}");
-      Constraint += 3;
+          std::string("{") + std::string(Constraint, Len) + std::string("}");
+      Constraint += Len - 1;
       return Converted;
     }
     switch (Constraint[0]) {
