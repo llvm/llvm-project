@@ -28453,12 +28453,12 @@ TEST_F(FormatTest, ShortNamespacesOption) {
                "{ // comment\n"
                "class baz;\n"
                "}\n"
-               "}\n",
+               "}",
                Style);
   verifyFormat("namespace foo // comment\n"
                "{\n"
                "class baz;\n"
-               "}\n",
+               "}",
                Style);
 }
 

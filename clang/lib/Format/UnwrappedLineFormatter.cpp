@@ -366,13 +366,8 @@ private:
     // instead of TheLine->First.
 
     if (Style.AllowShortNamespacesOnASingleLine &&
-        TheLine->First->is(tok::kw_namespace) &&
-        ((Style.BraceWrapping.AfterNamespace &&
-          NextLine.First->is(tok::l_brace)) ||
-         (!Style.BraceWrapping.AfterNamespace &&
-          TheLine->Last->is(tok::l_brace)))) {
-      const auto result =
-          tryMergeNamespace(I, E, Limit, Style.BraceWrapping.AfterNamespace);
+        TheLine->First->is(tok::kw_namespace)) {
+      const auto result = tryMergeNamespace(I, E, Limit);
       if (result > 0)
         return result;
     }
@@ -632,14 +627,18 @@ private:
 
   unsigned tryMergeNamespace(ArrayRef<AnnotatedLine *>::const_iterator I,
                              ArrayRef<AnnotatedLine *>::const_iterator E,
-                             unsigned Limit, bool OpenBraceWrapped) {
+                             unsigned Limit) {
     if (Limit == 0)
       return 0;
 
     // The merging code is relative to the opening namespace brace, which could
     // be either on the first or second line due to the brace wrapping rules.
-    const auto OpeningBraceLineOffset = OpenBraceWrapped ? 1 : 0;
-    const auto BraceOpenLine = I + OpeningBraceLineOffset;
+    const bool OpenBraceWrapped = Style.BraceWrapping.AfterNamespace;
+    const auto BraceOpenLine = I + OpenBraceWrapped;
+
+    assert(*BraceOpenLine);
+    if ((*BraceOpenLine)->Last->isNot(tok::l_brace))
+      return 0;
 
     if (std::distance(BraceOpenLine, E) <= 2)
       return 0;
@@ -661,7 +660,8 @@ private:
 
     Limit = limitConsideringMacros(I + 1, E, Limit);
 
-    if (!nextNLinesFitInto(I, I + OpeningBraceLineOffset + 2, Limit))
+    const auto LinesToBeMerged = OpenBraceWrapped + 2;
+    if (!nextNLinesFitInto(I, I + LinesToBeMerged, Limit))
       return 0;
 
     // Check if it's a namespace inside a namespace, and call recursively if so.
@@ -673,10 +673,10 @@ private:
       assert(Limit >= L1.Last->TotalLength + 3);
       const auto InnerLimit = Limit - L1.Last->TotalLength - 3;
       const auto MergedLines =
-          tryMergeNamespace(BraceOpenLine + 1, E, InnerLimit, OpenBraceWrapped);
+          tryMergeNamespace(BraceOpenLine + 1, E, InnerLimit);
       if (MergedLines == 0)
         return 0;
-      const auto N = MergedLines + 2 + OpeningBraceLineOffset;
+      const auto N = MergedLines + LinesToBeMerged;
       // Check if there is even a line after the inner result.
       if (std::distance(I, E) <= N)
         return 0;
@@ -702,7 +702,7 @@ private:
       return 0;
 
     // If so, merge all lines.
-    return 2 + OpeningBraceLineOffset;
+    return LinesToBeMerged;
   }
 
   unsigned
