@@ -441,15 +441,27 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
 }
 
 static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
-  SmallVector<const Value *, 16> WorkSet(1, I);
-  SmallPtrSet<const Value *, 32> Visited;
-  SmallPtrSet<const Value *, 16> EphValues;
 
   // The instruction defining an assumption's condition itself is always
   // considered ephemeral to that assumption (even if it has other
   // non-ephemeral users). See r246696's test case for an example.
   if (is_contained(I->operands(), E))
     return true;
+
+  SmallPtrSet<const Value *, 32> Visited{I};
+  SmallPtrSet<const Value *, 16> EphValues{I};
+
+  Value *X;
+  if (match(I, m_Intrinsic<Intrinsic::assume>(m_Not(m_Value(X))))) {
+    if (X == E)
+      return true;
+    auto *Not = cast<Instruction>(I->getOperand(0));
+    Visited.insert(Not);
+    EphValues.insert(Not);
+    I = Not;
+  }
+
+  SmallVector<const Value *, 16> WorkSet(I->operands());
 
   while (!WorkSet.empty()) {
     const Value *V = WorkSet.pop_back_val();
@@ -463,13 +475,11 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
       if (V == E)
         return true;
 
-      if (V == I || (isa<Instruction>(V) &&
-                     !cast<Instruction>(V)->mayHaveSideEffects() &&
-                     !cast<Instruction>(V)->isTerminator())) {
-       EphValues.insert(V);
-       if (const User *U = dyn_cast<User>(V))
-         append_range(WorkSet, U->operands());
-      }
+      if (const auto *II = dyn_cast<Instruction>(V))
+        if (!II->mayHaveSideEffects() && !II->isTerminator()) {
+          EphValues.insert(V);
+          append_range(WorkSet, II->operands());
+        }
     }
   }
 
@@ -10258,11 +10268,8 @@ void llvm::findValuesAffectedByCondition(
     CmpPredicate Pred;
     Value *A, *B, *X;
 
-    if (IsAssume) {
+    if (IsAssume)
       AddAffected(V);
-      if (match(V, m_Not(m_Value(X))))
-        AddAffected(X);
-    }
 
     if (match(V, m_LogicalOp(m_Value(A), m_Value(B)))) {
       // assume(A && B) is split to -> assume(A); assume(B);
@@ -10347,8 +10354,7 @@ void llvm::findValuesAffectedByCondition(
       // Assume is checked here as X is already added above for assumes in
       // addValueAffectedByCondition
       AddAffected(X);
-    } else if (!IsAssume && match(V, m_Not(m_Value(X)))) {
-      // Assume is checked here to avoid issues with ephemeral values
+    } else if (match(V, m_Not(m_Value(X)))) {
       Worklist.push_back(X);
     }
   }

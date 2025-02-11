@@ -983,8 +983,7 @@ define i1 @not_cond_use(i8 %x) {
 ; CHECK-NEXT:    tail call void @use(i1 [[CMP]])
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NOT]])
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    ret i1 [[RVAL]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp eq i8 %x, 0
   tail call void @use(i1 %cmp)
