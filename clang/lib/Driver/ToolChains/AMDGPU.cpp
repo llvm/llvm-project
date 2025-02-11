@@ -1025,9 +1025,8 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     BCLibs.emplace_back(BCLib);
   };
   auto AddSanBCLibs = [&]() {
-    if (GPUSanEnabled) {
+    if (GPUSanEnabled)
       AddBCLib(getAsanRTLPath(), false);
-    }
   };
 
   AddSanBCLibs();
@@ -1097,6 +1096,7 @@ bool AMDGPUToolChain::shouldSkipSanitizeOption(
   if (TargetID.empty())
     return false;
   Option O = A->getOption();
+
   if (!O.matches(options::OPT_fsanitize_EQ))
     return false;
 
