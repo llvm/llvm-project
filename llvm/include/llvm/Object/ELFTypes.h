@@ -660,7 +660,7 @@ public:
 
   /// Get the note's descriptor.
   ArrayRef<uint8_t> getDesc(size_t Align) const {
-    if (!Nhdr.n_descsz)
+    if (!Nhdr.n_descsz || !Align)
       return ArrayRef<uint8_t>();
     return ArrayRef<uint8_t>(
         reinterpret_cast<const uint8_t *>(&Nhdr) +
