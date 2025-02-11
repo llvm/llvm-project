@@ -1616,9 +1616,15 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
       EltTy = T;
     }
 
+    Loc = DS ? DS->getRestrictSpecLoc() : Loc;
     if (DiagID) {
-      Diag(DS ? DS->getRestrictSpecLoc() : Loc, DiagID) << EltTy;
+      Diag(Loc, DiagID) << EltTy;
       Qs.removeRestrict();
+    } else {
+      if (!getLangOpts().C23 && (T->isArrayType() || EltTy->isArrayType())) {
+        Diag(Loc, diag::ext_restrict_pointers_to_array_c23);
+        Diag(Loc, diag::warn_c23_compat_restrict_pointers_to_array);
+      }
     }
   }
 
