@@ -2612,8 +2612,13 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 }
 
-bool AArch64FrameLowering::enableCFIFixup(MachineFunction &MF) const {
+bool AArch64FrameLowering::enableCFIFixup(const MachineFunction &MF) const {
   return TargetFrameLowering::enableCFIFixup(MF) &&
+         MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF);
+}
+
+bool AArch64FrameLowering::enableFullCFIFixup(const MachineFunction &MF) const {
+  return enableCFIFixup(MF) &&
          MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo(MF);
 }
 
