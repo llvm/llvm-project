@@ -1249,6 +1249,9 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
 
   MachineInstr *SDWAInst;
   if (TII->isSDWA(MI.getOpcode())) {
+    // Clone the instruction to allow revoking changes
+    // made to MI during the processing of the operands
+    // if the conversion fails.
     SDWAInst = MI.getParent()->getParent()->CloneMachineInstr(&MI);
     MI.getParent()->insert(MI.getIterator(), SDWAInst);
   } else {
