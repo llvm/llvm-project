@@ -1,0 +1,167 @@
+#ifndef _MAP_
+#define _MAP_
+
+#include <functional> // std::less
+#include <memory>     // std::allocator
+#include <utility>    // std::pair
+
+namespace std {
+
+using size_t = decltype(sizeof(0));
+using ptrdiff_t = decltype(static_cast<int*>(nullptr) - static_cast<int*>(nullptr));
+
+template<
+  class Key,
+  class T,
+  class Compare = std::less<Key>,
+  class Allocator = std::allocator<std::pair<const Key, T>>
+> class map {
+public:
+  using key_type = Key;
+  using mapped_type = T;
+  using value_type = std::pair<const Key, T>;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using key_compare = Compare;
+  using allocator_type = Allocator;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+
+  map();
+  explicit map(const Allocator&);
+  template <class InputIt>
+  map(InputIt, InputIt, const Compare& = Compare(), const Allocator& = Allocator());
+  template <class InputIt> map(InputIt, InputIt, const Allocator&);
+  map(const map&, const Allocator&);
+  map(map&&, const Allocator&);
+  // missing: init-list ctors
+  // missing: from_range ctors
+
+  ~map();
+
+  map& operator=(const map&);
+  map& operator=(map&&);
+
+  T& at(const Key&);
+  const T& at(const Key&) const;
+  template <class K> T& at(const K&); // C++26
+  template <class K> const T& at(const K&) const; // C++26
+
+  T& operator[](const Key&);
+  T& operator[](Key&&);
+  template <class K> T& operator[](K&&); // C++26
+
+  struct iterator {};
+  struct const_iterator {};
+
+  iterator begin();
+  const_iterator begin() const;
+  const_iterator cbegin() const noexcept;
+
+  iterator end();
+  const_iterator end() const;
+  const_iterator cend() const noexcept;
+
+  iterator rbegin();
+  const_iterator rbegin() const;
+  const_iterator crbegin() const noexcept;
+
+  iterator rend();
+  const_iterator rend() const;
+  const_iterator crend() const noexcept;
+
+  bool empty() const;
+  size_type size() const;
+  size_type max_size() const;
+  void clear();
+
+  std::pair<iterator, bool> insert(const value_type&);
+  template <class P> std::pair<iterator, bool> insert(P&&);
+  std::pair<iterator, bool> insert(value_type&&);
+  iterator insert(const_iterator, const value_type&);
+  iterator insert(const_iterator, value_type&&);
+  template <class InputIt> void insert(InputIt, InputIt);
+  // void insert(std::initializer_list<value_type>);
+  // insert_return_type insert(node_type&&);
+  // iterator insert(const_iterator, node_type&&);
+
+  template <class R> void insert_range(R&&); // C++23
+
+  template <class M> std::pair<iterator, bool> insert_or_assign(const Key&, M&&);
+  template <class M> std::pair<iterator, bool> insert_or_assign(Key&&, M&&);
+  template <class K, class M> std::pair<iterator, bool> insert_or_assign(K&&, M&&); // C++26
+  template <class M> iterator insert_or_assign(const_iterator, const Key&, M&&);
+  template <class M> iterator insert_or_assign(const_iterator, Key&&, M&&);
+  template <class K, class M> iterator insert_or_assign(const_iterator, K&&, M&&); // C++26
+
+  template <class... Args> std::pair<iterator, bool> emplace(Args&&...);
+  template <class... Args> iterator emplace_hint(const_iterator, Args&&...);
+
+  template <class... Args> std::pair<iterator, bool> try_emplace(const Key&, Args&&...);
+  template <class... Args> std::pair<iterator, bool> try_emplace(Key&&, Args&&...);
+  template <class K, class... Args> std::pair<iterator, bool> try_emplace(K&&, Args&&...); // C++26
+  template <class... Args> iterator try_emplace(const_iterator, const Key&, Args&&...);
+  template <class... Args> iterator try_emplace(const_iterator, Key&&, Args&&...);
+  template <class K, class... Args> iterator try_emplace(const_iterator, K&&, Args&&...); // C++26
+
+  iterator erase(iterator);
+  iterator erase(const_iterator);
+  iterator erase(const_iterator, const_iterator);
+  size_type erase(const Key&);
+  template <class K> size_type erase(K&&);
+
+  void swap(map&);
+
+  // extract
+  // merge
+
+  size_type count(const Key&) const;
+  template <class K> size_type count(const K&) const;
+
+  iterator find(const Key&);
+  const_iterator find(const Key&) const;
+  template <class K> iterator find(const K&);
+  template <class K> const_iterator find(const K&) const;
+
+  bool contains(const Key&) const;
+  template <class K> bool contains(const K&) const;
+
+  std::pair<iterator, iterator> equal_range(const Key&);
+  std::pair<const_iterator, const_iterator> equal_range(const Key&) const;
+  template <class K> std::pair<iterator, iterator> equal_range(const K&);
+  template <class K> std::pair<const_iterator, const_iterator> equal_range(const K&) const;
+
+  iterator lower_bound(const Key&);
+  const_iterator lower_bound(const Key&) const;
+  template <class K> iterator lower_bound(const K&);
+  template <class K> const_iterator lower_bound(const K&) const;
+
+  iterator upper_bound(const Key&);
+  const_iterator upper_bound(const Key&) const;
+  template <class K> iterator upper_bound(const K&);
+  template <class K> const_iterator upper_bound(const K&) const;
+
+  template <class Key2, class T2, class Compare2, class Alloc2>
+  friend bool operator==(const std::map<Key2, T2, Compare2, Alloc2>&,
+                         const std::map<Key2, T2, Compare2, Alloc2>&);
+  template <class Key2, class T2, class Compare2, class Alloc2>
+  friend bool operator!=(const std::map<Key2, T2, Compare2, Alloc2>&,
+                         const std::map<Key2, T2, Compare2, Alloc2>&);
+  template <class Key2, class T2, class Compare2, class Alloc2>
+  friend bool operator<(const std::map<Key2, T2, Compare2, Alloc2>&,
+                       const std::map<Key2, T2, Compare2, Alloc2>&);
+  template <class Key2, class T2, class Compare2, class Alloc2>
+  friend bool operator<=(const std::map<Key2, T2, Compare2, Alloc2>&,
+                         const std::map<Key2, T2, Compare2, Alloc2>&);
+  template <class Key2, class T2, class Compare2, class Alloc2>
+  friend bool operator>(const std::map<Key2, T2, Compare2, Alloc2>&,
+                       const std::map<Key2, T2, Compare2, Alloc2>&);
+  template <class Key2, class T2, class Compare2, class Alloc2>
+  friend bool operator>=(const std::map<Key2, T2, Compare2, Alloc2>&,
+                         const std::map<Key2, T2, Compare2, Alloc2>&);
+  // operator<=>
+};
+
+} // namespace std
+
+#endif // _MAP_

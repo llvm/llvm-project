@@ -24,6 +24,7 @@
 #include "NoexceptDestructorCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
 #include "NoexceptSwapCheck.h"
+#include "RedundantLookupCheck.h"
 #include "TriviallyDestructibleCheck.h"
 #include "TypePromotionInMathFnCheck.h"
 #include "UnnecessaryCopyInitialization.h"
@@ -62,6 +63,8 @@ public:
         "performance-noexcept-move-constructor");
     CheckFactories.registerCheck<NoexceptSwapCheck>(
         "performance-noexcept-swap");
+    CheckFactories.registerCheck<RedundantLookupCheck>(
+        "performance-redundant-lookup");
     CheckFactories.registerCheck<TriviallyDestructibleCheck>(
         "performance-trivially-destructible");
     CheckFactories.registerCheck<TypePromotionInMathFnCheck>(

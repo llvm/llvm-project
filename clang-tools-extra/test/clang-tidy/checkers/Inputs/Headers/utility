@@ -1,0 +1,13 @@
+#ifndef _UTILITY_
+#define _UTILITY_
+
+namespace std {
+
+template <class T1, class T2> struct pair {
+  T1 first;
+  T1 second;
+};
+
+} // namespace std
+
+#endif // _UTILITY_
