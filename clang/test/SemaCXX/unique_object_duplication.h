@@ -192,32 +192,32 @@ template int maybeAllowedTemplate<int*>; // hidden-note {{in instantiation of}}
 
 
 // Should work the same for static class members
-template <class T>
+template <typename T>
 struct S {
   static int staticMember;
 };
 
-template <class T>
+template <typename T>
 int S<T>::staticMember = 0; // Never instantiated
 
 // T* specialization
-template <class T>
+template <typename T>
 struct S<T*> {
   static int staticMember;
 };
 
-template <class T>
+template <typename T>
 int S<T*>::staticMember = 1; // hidden-warning {{'staticMember' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
 
 template class S<int*>; // hidden-note {{in instantiation of}}
 
 // T& specialization, implicitly instantiated
-template <class T>
+template <typename T>
 struct S<T&> {
   static int staticMember;
 };
 
-template <class T>
+template <typename T>
 int S<T&>::staticMember = 2; // hidden-warning {{'staticMember' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
 
 int implicit_instantiate2() {
@@ -226,7 +226,7 @@ int implicit_instantiate2() {
 
 
 // Should work for static locals as well
-template <class T>
+template <typename T>
 int* wrapper() {
   static int staticLocal; // hidden-warning {{'staticLocal' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
   return &staticLocal;
