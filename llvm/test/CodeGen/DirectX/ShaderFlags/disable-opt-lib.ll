@@ -1,0 +1,53 @@
+; RUN: opt -S --passes="print-dx-shader-flags" 2>&1 %s | FileCheck %s
+
+
+; CHECK: ; Combined Shader Flags for Module
+; CHECK-NEXT: ; Shader Flags Value: 0x00000001
+
+; CHECK: ; Note: extra DXIL module flags:
+; CHECK-NEXT: ;       D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION
+
+; CHECK: ; Shader Flags for Module Functions
+; CHECK: ; Function main : 0x00000000
+; The test source in this file generated from the following command:
+; clang -cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -O0 -o - <<EOF
+
+; [numthreads(1,1,1)]
+; [shader("compute")]
+; void main() {}
+
+; int foo() {return 0;}
+; EOF
+
+; ModuleID = '-'
+source_filename = "-"
+target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
+target triple = "dxilv1.3-pc-shadermodel6.3-library"
+
+; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+define internal void @_Z4mainv() #0 {
+entry:
+  ret void
+}
+
+; Function Attrs: convergent noinline norecurse optnone
+define void @main() #1 {
+entry:
+  call void @_Z4mainv()
+  ret void
+}
+
+; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+define noundef i32 @_Z3foov() #0 {
+entry:
+  ret i32 0
+}
+
+attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "approx-func-fp-math"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #1 = { convergent noinline norecurse optnone "approx-func-fp-math"="true" "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+
+!llvm.module.flags = !{!0}
+!dx.valver = !{!1}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{i32 1, i32 8}

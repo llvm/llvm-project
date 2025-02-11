@@ -23,8 +23,8 @@
 ; CHECK-NEXT:     Scalarize vector operations
 ; CHECK-NEXT:   DXIL Resource Binding Analysis
 ; CHECK-NEXT:   DXIL resource Information
-; CHECK-NEXT:   DXIL Shader Flag Analysis
 ; CHECK-NEXT:   DXIL Module Metadata analysis
+; CHECK-NEXT:   DXIL Shader Flag Analysis
 ; CHECK-NEXT:   DXIL Translate Metadata
 ; CHECK-NEXT:   DXIL Op Lowering
 ; CHECK-NEXT:   DXIL Prepare Module
