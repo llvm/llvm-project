@@ -761,6 +761,7 @@ public:
         : skip(_skip), scan(_scan) {}
   };
 
+  // clang-format off
   /// opcode for captured block variables layout 'instructions'.
   /// In the following descriptions, 'I' is the value of the immediate field.
   /// (field following the opcode).
@@ -772,33 +773,33 @@ public:
     ///           a non-pointer.  Note that this instruction is equal
     ///           to '\0'.
     ///   I != 0: Currently unused.
-    BLOCK_LAYOUT_OPERATOR = 0,
+    BLOCK_LAYOUT_OPERATOR            = 0,
 
     /// The next I+1 bytes do not contain a value of object pointer type.
     /// Note that this can leave the stream unaligned, meaning that
     /// subsequent word-size instructions do not begin at a multiple of
     /// the pointer size.
-    BLOCK_LAYOUT_NON_OBJECT_BYTES = 1,
+    BLOCK_LAYOUT_NON_OBJECT_BYTES    = 1,
 
     /// The next I+1 words do not contain a value of object pointer type.
     /// This is simply an optimized version of BLOCK_LAYOUT_BYTES for
     /// when the required skip quantity is a multiple of the pointer size.
-    BLOCK_LAYOUT_NON_OBJECT_WORDS = 2,
+    BLOCK_LAYOUT_NON_OBJECT_WORDS    = 2,
 
     /// The next I+1 words are __strong pointers to Objective-C
     /// objects or blocks.
-    BLOCK_LAYOUT_STRONG = 3,
+    BLOCK_LAYOUT_STRONG              = 3,
 
     /// The next I+1 words are pointers to __block variables.
-    BLOCK_LAYOUT_BYREF = 4,
+    BLOCK_LAYOUT_BYREF               = 4,
 
     /// The next I+1 words are __weak pointers to Objective-C
     /// objects or blocks.
-    BLOCK_LAYOUT_WEAK = 5,
+    BLOCK_LAYOUT_WEAK                = 5,
 
     /// The next I+1 words are __unsafe_unretained pointers to
     /// Objective-C objects or blocks.
-    BLOCK_LAYOUT_UNRETAINED = 6
+    BLOCK_LAYOUT_UNRETAINED          = 6
 
     /// The next I+1 words are block or object pointers with some
     /// as-yet-unspecified ownership semantics.  If we add more
@@ -812,6 +813,7 @@ public:
     /// All other opcodes are reserved.  Halt interpretation and
     /// treat everything else as opaque.
   };
+  // clang-format on
 
   class RUN_SKIP {
   public:
@@ -3307,56 +3309,58 @@ void CGObjCMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   MethodDefinitions.clear();
 }
 
+// clang-format off
 enum FragileClassFlags {
   /// Apparently: is not a meta-class.
-  FragileABI_Class_Factory = 0x00001,
+  FragileABI_Class_Factory                 = 0x00001,
 
   /// Is a meta-class.
-  FragileABI_Class_Meta = 0x00002,
+  FragileABI_Class_Meta                    = 0x00002,
 
   /// Has a non-trivial constructor or destructor.
-  FragileABI_Class_HasCXXStructors = 0x02000,
+  FragileABI_Class_HasCXXStructors         = 0x02000,
 
   /// Has hidden visibility.
-  FragileABI_Class_Hidden = 0x20000,
+  FragileABI_Class_Hidden                  = 0x20000,
 
   /// Class implementation was compiled under ARC.
-  FragileABI_Class_CompiledByARC = 0x04000000,
+  FragileABI_Class_CompiledByARC           = 0x04000000,
 
   /// Class implementation was compiled under MRC and has MRC weak ivars.
   /// Exclusive with CompiledByARC.
-  FragileABI_Class_HasMRCWeakIvars = 0x08000000,
+  FragileABI_Class_HasMRCWeakIvars         = 0x08000000,
 };
 
 enum NonFragileClassFlags {
   /// Is a meta-class.
-  NonFragileABI_Class_Meta = 0x00001,
+  NonFragileABI_Class_Meta                 = 0x00001,
 
   /// Is a root class.
-  NonFragileABI_Class_Root = 0x00002,
+  NonFragileABI_Class_Root                 = 0x00002,
 
   /// Has a non-trivial constructor or destructor.
-  NonFragileABI_Class_HasCXXStructors = 0x00004,
+  NonFragileABI_Class_HasCXXStructors      = 0x00004,
 
   /// Has hidden visibility.
-  NonFragileABI_Class_Hidden = 0x00010,
+  NonFragileABI_Class_Hidden               = 0x00010,
 
   /// Has the exception attribute.
-  NonFragileABI_Class_Exception = 0x00020,
+  NonFragileABI_Class_Exception            = 0x00020,
 
   /// (Obsolete) ARC-specific: this class has a .release_ivars method
-  NonFragileABI_Class_HasIvarReleaser = 0x00040,
+  NonFragileABI_Class_HasIvarReleaser      = 0x00040,
 
   /// Class implementation was compiled under ARC.
-  NonFragileABI_Class_CompiledByARC = 0x00080,
+  NonFragileABI_Class_CompiledByARC        = 0x00080,
 
   /// Class has non-trivial destructors, but zero-initialization is okay.
   NonFragileABI_Class_HasCXXDestructorOnly = 0x00100,
 
   /// Class implementation was compiled under MRC and has MRC weak ivars.
   /// Exclusive with CompiledByARC.
-  NonFragileABI_Class_HasMRCWeakIvars = 0x00200,
+  NonFragileABI_Class_HasMRCWeakIvars      = 0x00200,
 };
+// clang-format on
 
 static bool hasWeakMember(QualType type) {
   if (type.getObjCLifetime() == Qualifiers::OCL_Weak) {
@@ -4586,9 +4590,9 @@ void CGObjCMac::EmitTryOrSynchronizedStmt(CodeGen::CodeGenFunction &CGF,
     // Tell the cleanup not to re-pop the exit.
     CGF.Builder.CreateStore(CGF.Builder.getFalse(), CallTryExitVar);
     CGF.EmitBranchThroughCleanup(FinallyRethrow);
-
-    // Otherwise, we have to match against the caught exceptions.
-  } else {
+  }
+  // Otherwise, we have to match against the caught exceptions.
+  else {
     // Retrieve the exception object.  We may emit multiple blocks but
     // nothing can cross this so the value is already in SSA form.
     llvm::CallInst *Caught = CGF.EmitNounwindRuntimeCall(
@@ -4772,9 +4776,9 @@ void CGObjCMac::EmitTryOrSynchronizedStmt(CodeGen::CodeGenFunction &CGF,
     llvm::Value *PropagatingExn;
     if (PropagatingExnVar.isValid()) {
       PropagatingExn = CGF.Builder.CreateLoad(PropagatingExnVar);
-
-      // Otherwise, just look in the buffer for the exception to throw.
-    } else {
+    }
+    // Otherwise, just look in the buffer for the exception to throw.
+    else {
       llvm::CallInst *Caught = CGF.EmitNounwindRuntimeCall(
           ObjCTypes.getExceptionExtractFn(), ExceptionData.emitRawPointer(CGF));
       PropagatingExn = Caught;
@@ -4975,6 +4979,7 @@ std::string CGObjCCommonMac::GetSectionName(StringRef Section,
   llvm_unreachable("Unhandled llvm::Triple::ObjectFormatType enum");
 }
 
+// clang-format off
 /// EmitImageInfo - Emit the image info marker used to encode some module
 /// level information.
 ///
@@ -4984,20 +4989,19 @@ std::string CGObjCCommonMac::GetSectionName(StringRef Section,
 ///   unsigned flags;
 /// };
 enum ImageInfoFlags {
-  eImageInfo_FixAndContinue = (1 << 0), // This flag is no longer set by clang.
-  eImageInfo_GarbageCollected = (1 << 1),
-  eImageInfo_GCOnly = (1 << 2),
-  eImageInfo_OptimizedByDyld =
-      (1 << 3), // This flag is set by the dyld shared cache.
+  eImageInfo_FixAndContinue      = (1 << 0), // This flag is no longer set by clang.
+  eImageInfo_GarbageCollected    = (1 << 1),
+  eImageInfo_GCOnly              = (1 << 2),
+  eImageInfo_OptimizedByDyld     = (1 << 3), // This flag is set by the dyld shared cache.
 
   // A flag indicating that the module has no instances of a @synthesize of a
   // superclass variable. This flag used to be consumed by the runtime to work
   // around miscompile by gcc.
-  eImageInfo_CorrectedSynthesize =
-      (1 << 4), // This flag is no longer set by clang.
-  eImageInfo_ImageIsSimulated = (1 << 5),
-  eImageInfo_ClassProperties = (1 << 6)
+  eImageInfo_CorrectedSynthesize = (1 << 4), // This flag is no longer set by clang.
+  eImageInfo_ImageIsSimulated    = (1 << 5),
+  eImageInfo_ClassProperties     = (1 << 6)
 };
+// clang-format on
 
 void CGObjCCommonMac::EmitImageInfo() {
   unsigned version = 0; // Version is unused?
@@ -5392,9 +5396,9 @@ IvarLayoutBuilder::buildBitmap(CGObjCCommonMac &CGObjC,
     // skip forward.
     if (beginOfScanInWords > endOfLastScanInWords) {
       skip(beginOfScanInWords - endOfLastScanInWords);
-
-      // Otherwise, start scanning where the last left off.
-    } else {
+    }
+    // Otherwise, start scanning where the last left off.
+    else {
       beginOfScanInWords = endOfLastScanInWords;
 
       // If that leaves us with nothing to scan, ignore this request.

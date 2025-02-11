@@ -102,12 +102,18 @@ class TargetCodeGenInfo;
 struct OMPTaskDataTy;
 struct CGCoroData;
 
+// clang-format off
 /// The kind of evaluation to perform on values of a particular
 /// type.  Basically, is the code in CGExprScalar, CGExprComplex, or
 /// CGExprAgg?
 ///
 /// TODO: should vectors maybe be split out into their own thing?
-enum TypeEvaluationKind { TEK_Scalar, TEK_Complex, TEK_Aggregate };
+enum TypeEvaluationKind {
+  TEK_Scalar,
+  TEK_Complex,
+  TEK_Aggregate
+};
+// clang-format on
 
 #define LIST_SANITIZER_CHECKS                                                  \
   SANITIZER_CHECK(AddOverflow, add_overflow, 0)                                \
