@@ -2297,12 +2297,14 @@ GFX940_SMFMA_N_PassWritesVGPROverlappedSrcABWaitStates(int NumPasses) {
   return NumPasses + 2;
 }
 
-static int GFX940_XDL_N_PassWritesVGPROverlappedSrcABWaitStates(int NumPasses) {
-  // 2 pass -> 5
-  // 4 pass -> 7
-  // 8 pass -> 11
-  // 16 pass -> 19
-  return NumPasses + 3;
+static int GFX940_XDL_N_PassWritesVGPROverlappedSrcABWaitStates(int NumPasses,
+                                                                bool IsGFX950) {
+  // xdl def cycles | gfx940 | gfx950
+  // 2 pass         |  5        5
+  // 4 pass         |  7        8
+  // 8 pass         |  11       12
+  // 16 pass        |  19       20
+  return NumPasses + 3 + (NumPasses != 2 && IsGFX950);
 }
 
 int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
@@ -2471,7 +2473,7 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
           NeedWaitStates =
               isXDL(ST, *MI1)
                   ? GFX940_XDL_N_PassWritesVGPROverlappedSrcABWaitStates(
-                        NumPasses)
+                        NumPasses, ST.hasGFX950Insts())
                   : GFX940_SMFMA_N_PassWritesVGPROverlappedSrcABWaitStates(
                         NumPasses);
           break;
