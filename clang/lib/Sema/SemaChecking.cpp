@@ -11678,8 +11678,9 @@ static void AnalyzeImplicitConversions(
 
   // Propagate whether we are in a C++ list initialization expression.
   // If so, we do not issue warnings for implicit int-float conversion
-  // precision loss, because C++11 narrowing already handles it. HLSL's
-  // initialization lists are special, so they shouldn't observe the C++
+  // precision loss, because C++11 narrowing already handles it.
+  //
+  // HLSL's initialization lists are special, so they shouldn't observe the C++
   // behavior here.
   bool IsListInit =
       Item.IsListInit || (isa<InitListExpr>(OrigE) &&
