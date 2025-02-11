@@ -192,7 +192,7 @@ public:
 // This is a light-weight alternative to the 'NearMissInfo' approach
 // below which collects *all* possible diagnostics. This alternative
 // is optional and fully backward compatible with existing
-// PredicateMethods that return a 'bool' (match or no match).
+// PredicateMethods that return a 'bool' (match or near match).
 class DiagnosticPredicate {
   enum class PredicateTy {
     Match,     // Matches
