@@ -121,7 +121,7 @@ public:
       : MachineFunctionPass(ID), customPassID(cPassID) {
     initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
-    initializeLiveStacksPass(*PassRegistry::getPassRegistry());
+    initializeLiveStacksWrapperLegacyPass(*PassRegistry::getPassRegistry());
     initializeVirtRegMapWrapperLegacyPass(*PassRegistry::getPassRegistry());
   }
 
@@ -550,8 +550,8 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   //au.addRequiredID(SplitCriticalEdgesID);
   if (customPassID)
     au.addRequiredID(*customPassID);
-  au.addRequired<LiveStacks>();
-  au.addPreserved<LiveStacks>();
+  au.addRequired<LiveStacksWrapperLegacy>();
+  au.addPreserved<LiveStacksWrapperLegacy>();
   au.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   au.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   au.addRequired<MachineLoopInfoWrapperPass>();
@@ -794,6 +794,9 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   MachineBlockFrequencyInfo &MBFI =
       getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
+  auto &LiveStks = getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+
   VirtRegMap &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
 
   PBQPVirtRegAuxInfo VRAI(
@@ -807,7 +810,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   VirtRegAuxInfo DefaultVRAI(
       MF, LIS, VRM, getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI);
   std::unique_ptr<Spiller> VRegSpiller(
-      createInlineSpiller(*this, MF, VRM, DefaultVRAI));
+      createInlineSpiller({LIS, LiveStks, MDT, MBFI}, MF, VRM, DefaultVRAI));
 
   MF.getRegInfo().freezeReservedRegs();
 

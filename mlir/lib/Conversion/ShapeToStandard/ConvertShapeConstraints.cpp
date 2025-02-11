@@ -62,7 +62,7 @@ class ConvertShapeConstraints
     RewritePatternSet patterns(context);
     populateConvertShapeConstraintsConversionPatterns(patterns);
 
-    if (failed(applyPatternsAndFoldGreedily(func, std::move(patterns))))
+    if (failed(applyPatternsGreedily(func, std::move(patterns))))
       return signalPassFailure();
   }
 };

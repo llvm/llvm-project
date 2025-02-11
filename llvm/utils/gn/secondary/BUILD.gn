@@ -1,4 +1,3 @@
-import("//clang/lib/ARCMigrate/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
@@ -15,8 +14,7 @@ group("default") {
     "//lldb/test",
     "//llvm/test",
   ]
-  # FIXME: Reenable once libc hand-in-hand is figured out.
-  if (false && current_os == "linux") {
+  if (current_os == "linux") {
     deps += [
       "//libcxx",
       "//libcxxabi",

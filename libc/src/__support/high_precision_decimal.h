@@ -178,9 +178,11 @@ private:
       if (digit_index >= this->num_digits) {
         return new_digits - 1;
       }
-      if (this->digits[digit_index] != power_of_five[digit_index] - '0') {
+      if (this->digits[digit_index] !=
+          internal::b36_char_to_int(power_of_five[digit_index])) {
         return new_digits -
-               ((this->digits[digit_index] < power_of_five[digit_index] - '0')
+               ((this->digits[digit_index] <
+                 internal::b36_char_to_int(power_of_five[digit_index]))
                     ? 1
                     : 0);
       }
@@ -337,8 +339,8 @@ public:
         }
         ++total_digits;
         if (this->num_digits < MAX_NUM_DIGITS) {
-          this->digits[this->num_digits] =
-              static_cast<uint8_t>(num_string[num_cur] - '0');
+          this->digits[this->num_digits] = static_cast<uint8_t>(
+              internal::b36_char_to_int(num_string[num_cur]));
           ++this->num_digits;
         } else if (num_string[num_cur] != '0') {
           this->truncated = true;

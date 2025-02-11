@@ -219,6 +219,9 @@ void ErrorHandler::reportDiagnostic(StringRef location, Colors c,
   }
   os << msg << '\n';
   errs() << buf;
+  // If msg contains a newline, ensure that the next diagnostic is preceded by
+  // a blank line separator.
+  sep = getSeparator(msg);
 }
 
 void ErrorHandler::log(const Twine &msg) {
@@ -247,7 +250,6 @@ void ErrorHandler::warn(const Twine &msg) {
 
   std::lock_guard<std::mutex> lock(mu);
   reportDiagnostic(getLocation(msg), Colors::MAGENTA, "warning", msg);
-  sep = getSeparator(msg);
 }
 
 void ErrorHandler::error(const Twine &msg) {
@@ -278,7 +280,6 @@ void ErrorHandler::error(const Twine &msg) {
       exit = exitEarly;
     }
 
-    sep = getSeparator(msg);
     ++errorCount;
   }
 
@@ -288,7 +289,7 @@ void ErrorHandler::error(const Twine &msg) {
 
 void ErrorHandler::error(const Twine &msg, ErrorTag tag,
                          ArrayRef<StringRef> args) {
-  if (errorHandlingScript.empty()) {
+  if (errorHandlingScript.empty() || disableOutput) {
     error(msg);
     return;
   }
@@ -337,8 +338,9 @@ void ErrorHandler::fatal(const Twine &msg) {
 }
 
 SyncStream::~SyncStream() {
-  os.flush();
   switch (level) {
+  case DiagLevel::None:
+    break;
   case DiagLevel::Log:
     e.log(buf);
     break;

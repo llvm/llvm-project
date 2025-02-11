@@ -81,12 +81,8 @@ genAllocateClause(lower::AbstractConverter &converter,
   // Check if allocate clause has allocator specified. If so, add it
   // to list of allocators, otherwise, add default allocator to
   // list of allocators.
-  using SimpleModifier = Allocate::AllocatorSimpleModifier;
   using ComplexModifier = Allocate::AllocatorComplexModifier;
-  if (auto &mod = std::get<std::optional<SimpleModifier>>(clause.t)) {
-    mlir::Value operand = fir::getBase(converter.genExprValue(*mod, stmtCtx));
-    allocatorOperands.append(objects.size(), operand);
-  } else if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
+  if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
     mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
     allocatorOperands.append(objects.size(), operand);
   } else {
@@ -157,10 +153,13 @@ genDependKindAttr(lower::AbstractConverter &converter,
     pbKind = mlir::omp::ClauseTaskDepend::taskdependinout;
     break;
   case omp::clause::DependenceType::Mutexinoutset:
+    pbKind = mlir::omp::ClauseTaskDepend::taskdependmutexinoutset;
+    break;
   case omp::clause::DependenceType::Inoutset:
+    pbKind = mlir::omp::ClauseTaskDepend::taskdependinoutset;
+    break;
   case omp::clause::DependenceType::Depobj:
-    TODO(currentLocation,
-         "INOUTSET, MUTEXINOUTSET and DEPOBJ dependence-types");
+    TODO(currentLocation, "DEPOBJ dependence-type");
     break;
   case omp::clause::DependenceType::Sink:
   case omp::clause::DependenceType::Source:
@@ -223,6 +222,10 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 //===----------------------------------------------------------------------===//
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
+
+bool ClauseProcessor::processBare(mlir::omp::BareClauseOps &result) const {
+  return markClauseOccurrence<omp::clause::OmpxBare>(result.bare);
+}
 
 bool ClauseProcessor::processBind(mlir::omp::BindClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Bind>()) {
@@ -341,6 +344,20 @@ bool ClauseProcessor::processDistSchedule(
   return false;
 }
 
+bool ClauseProcessor::processExclusive(
+    mlir::Location currentLocation,
+    mlir::omp::ExclusiveClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Exclusive>()) {
+    for (const Object &object : clause->v) {
+      const semantics::Symbol *symbol = object.sym();
+      mlir::Value symVal = converter.getSymbolAddress(*symbol);
+      result.exclusiveVars.push_back(symVal);
+    }
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processFilter(lower::StatementContext &stmtCtx,
                                     mlir::omp::FilterClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Filter>()) {
@@ -372,6 +389,20 @@ bool ClauseProcessor::processHint(mlir::omp::HintClauseOps &result) const {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     int64_t hintValue = *evaluate::ToInt64(clause->v);
     result.hint = firOpBuilder.getI64IntegerAttr(hintValue);
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processInclusive(
+    mlir::Location currentLocation,
+    mlir::omp::InclusiveClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Inclusive>()) {
+    for (const Object &object : clause->v) {
+      const semantics::Symbol *symbol = object.sym();
+      mlir::Value symVal = converter.getSymbolAddress(*symbol);
+      result.inclusiveVars.push_back(symVal);
+    }
     return true;
   }
   return false;
@@ -457,6 +488,16 @@ bool ClauseProcessor::processPriority(
     mlir::omp::PriorityClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Priority>()) {
     result.priority = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processDetach(mlir::omp::DetachClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Detach>()) {
+    semantics::Symbol *sym = clause->v.sym();
+    mlir::Value symVal = converter.getSymbolAddress(*sym);
+    result.eventHandle = symVal;
     return true;
   }
   return false;
@@ -600,6 +641,8 @@ addAlignedClause(lower::AbstractConverter &converter,
   // Do not generate alignment assumption if alignment is less than or equal to
   // 0.
   if (alignment > 0) {
+    // alignment value must be power of 2
+    assert((alignment & (alignment - 1)) == 0 && "alignment is not power of 2");
     auto &objects = std::get<omp::ObjectList>(clause.t);
     if (!objects.empty())
       genObjectList(objects, converter, alignedVars);
@@ -744,6 +787,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   mlir::func::FuncOp funcOp =
       modBuilder.create<mlir::func::FuncOp>(loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
   builder.setInsertionPointToStart(&funcOp.getRegion().back());
@@ -933,7 +977,7 @@ void ClauseProcessor::processMapObjects(
     std::stringstream asFortran;
     std::optional<omp::Object> parentObj;
 
-    lower::AddrAndBoundsInfo info =
+    fir::factory::AddrAndBoundsInfo info =
         lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
                                               mlir::omp::MapBoundsType>(
             converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),
@@ -1000,7 +1044,7 @@ bool ClauseProcessor::processMap(
                      const parser::CharBlock &source) {
     using Map = omp::clause::Map;
     mlir::Location clauseLocation = converter.genLocation(source);
-    const auto &mapType = std::get<std::optional<Map::MapType>>(clause.t);
+    const auto &[mapType, typeMods, mappers, iterator, objects] = clause.t;
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
     // If the map type is specified, then process it else Tofrom is the
@@ -1029,13 +1073,11 @@ bool ClauseProcessor::processMap(
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
     }
 
-    auto &modTypeMods =
-        std::get<std::optional<Map::MapTypeModifiers>>(clause.t);
-    if (modTypeMods) {
-      if (llvm::is_contained(*modTypeMods, Map::MapTypeModifier::Always))
+    if (typeMods) {
+      if (llvm::is_contained(*typeMods, Map::MapTypeModifier::Always))
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
       // Diagnose unimplemented map-type-modifiers.
-      if (llvm::any_of(*modTypeMods, [](Map::MapTypeModifier m) {
+      if (llvm::any_of(*typeMods, [](Map::MapTypeModifier m) {
             return m != Map::MapTypeModifier::Always;
           })) {
         TODO(currentLocation, "Map type modifiers (other than 'ALWAYS')"
@@ -1043,9 +1085,13 @@ bool ClauseProcessor::processMap(
       }
     }
 
-    if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
+    if (iterator) {
       TODO(currentLocation,
            "Support for iterator modifiers is not implemented yet");
+    }
+    if (mappers) {
+      TODO(currentLocation,
+           "Support for mapper modifiers is not implemented yet");
     }
 
     processMapObjects(stmtCtx, clauseLocation,
@@ -1117,10 +1163,9 @@ bool ClauseProcessor::processReduction(
         llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
         llvm::SmallVector<const semantics::Symbol *> reductionSyms;
         ReductionProcessor rp;
-        rp.addDeclareReduction(currentLocation, converter, clause,
-                               reductionVars, reduceVarByRef,
-                               reductionDeclSymbols, reductionSyms);
-
+        rp.processReductionArguments(
+            currentLocation, converter, clause, reductionVars, reduceVarByRef,
+            reductionDeclSymbols, reductionSyms, result.reductionMod);
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));

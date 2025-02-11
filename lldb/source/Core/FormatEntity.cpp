@@ -162,7 +162,9 @@ constexpr Definition g_thread_child_entries[] = {
     Definition("completed-expression", EntryType::ThreadCompletedExpression)};
 
 constexpr Definition g_target_child_entries[] = {
-    Definition("arch", EntryType::TargetArch)};
+    Definition("arch", EntryType::TargetArch),
+    Entry::DefinitionWithChildren("file", EntryType::TargetFile,
+                                  g_file_child_entries)};
 
 #define _TO_STR2(_val) #_val
 #define _TO_STR(_val) _TO_STR2(_val)
@@ -322,6 +324,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(ScriptThread);
     ENUM_TO_CSTR(ThreadInfo);
     ENUM_TO_CSTR(TargetArch);
+    ENUM_TO_CSTR(TargetFile);
     ENUM_TO_CSTR(ScriptTarget);
     ENUM_TO_CSTR(ModuleFile);
     ENUM_TO_CSTR(File);
@@ -410,31 +413,31 @@ static bool DumpAddressAndContent(Stream &s, const SymbolContext *sc,
                                   const Address &addr,
                                   bool print_file_addr_or_load_addr) {
   Target *target = Target::GetTargetFromContexts(exe_ctx, sc);
+
   addr_t vaddr = LLDB_INVALID_ADDRESS;
-  if (exe_ctx && !target->GetSectionLoadList().IsEmpty())
+  if (target && target->HasLoadedSections())
     vaddr = addr.GetLoadAddress(target);
   if (vaddr == LLDB_INVALID_ADDRESS)
     vaddr = addr.GetFileAddress();
+  if (vaddr == LLDB_INVALID_ADDRESS)
+    return false;
 
-  if (vaddr != LLDB_INVALID_ADDRESS) {
-    int addr_width = 0;
-    if (exe_ctx && target) {
-      addr_width = target->GetArchitecture().GetAddressByteSize() * 2;
-    }
-    if (addr_width == 0)
-      addr_width = 16;
-    if (print_file_addr_or_load_addr) {
-      ExecutionContextScope *exe_scope = nullptr;
-      if (exe_ctx)
-        exe_scope = exe_ctx->GetBestExecutionContextScope();
-      addr.Dump(&s, exe_scope, Address::DumpStyleLoadAddress,
-                Address::DumpStyleModuleWithFileAddress, 0);
-    } else {
-      s.Printf("0x%*.*" PRIx64, addr_width, addr_width, vaddr);
-    }
-    return true;
+  int addr_width = 0;
+  if (target)
+    addr_width = target->GetArchitecture().GetAddressByteSize() * 2;
+  if (addr_width == 0)
+    addr_width = 16;
+
+  if (print_file_addr_or_load_addr) {
+    ExecutionContextScope *exe_scope =
+        exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+    addr.Dump(&s, exe_scope, Address::DumpStyleLoadAddress,
+              Address::DumpStyleModuleWithFileAddress, 0);
+  } else {
+    s.Printf("0x%*.*" PRIx64, addr_width, addr_width, vaddr);
   }
-  return false;
+
+  return true;
 }
 
 static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
@@ -447,7 +450,7 @@ static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
 
     if (sc) {
       if (sc->function) {
-        func_addr = sc->function->GetAddressRange().GetBaseAddress();
+        func_addr = sc->function->GetAddress();
         if (sc->block && !concrete_only) {
           // Check to make sure we aren't in an inline function. If we are, use
           // the inline block range that contains "format_addr" since blocks
@@ -465,7 +468,7 @@ static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
     if (func_addr.IsValid()) {
       const char *addr_offset_padding = no_padding ? "" : " ";
 
-      if (func_addr.GetSection() == format_addr.GetSection()) {
+      if (func_addr.GetModule() == format_addr.GetModule()) {
         addr_t func_file_addr = func_addr.GetFileAddress();
         addr_t addr_file_addr = format_addr.GetFileAddress();
         if (addr_file_addr > func_file_addr ||
@@ -1464,6 +1467,17 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
         if (arch.IsValid()) {
           s.PutCString(arch.GetArchitectureName());
           return true;
+        }
+      }
+    }
+    return false;
+
+  case Entry::Type::TargetFile:
+    if (exe_ctx) {
+      if (Target *target = exe_ctx->GetTargetPtr()) {
+        if (Module *exe_module = target->GetExecutableModulePointer()) {
+          if (DumpFile(s, exe_module->GetFileSpec(), (FileKind)entry.number))
+            return true;
         }
       }
     }

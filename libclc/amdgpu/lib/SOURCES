@@ -10,5 +10,4 @@ math/half_log2.cl
 math/half_recip.cl
 math/half_rsqrt.cl
 math/half_sqrt.cl
-math/nextafter.cl
 math/sqrt.cl

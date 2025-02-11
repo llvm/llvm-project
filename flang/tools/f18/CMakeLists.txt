@@ -5,7 +5,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 # Define the list of Fortran module files that need to be compiled
-# to produce an object file for inclusion into the FortranRuntime
+# to produce an object file for inclusion into the flang_rt.runtime
 # library.
 set(MODULES_WITH_IMPLEMENTATION
   "iso_fortran_env_impl"
@@ -21,6 +21,7 @@ set(MODULES_WITHOUT_IMPLEMENTATION
   "__ppc_intrinsics"
   "mma"
   "__cuda_builtins"
+  "__cuda_device"
   "cudadevice"
   "ieee_arithmetic"
   "ieee_exceptions"
@@ -67,9 +68,12 @@ if (NOT CMAKE_CROSSCOMPILING)
     elseif(${filename} STREQUAL "__ppc_intrinsics" OR
            ${filename} STREQUAL "mma")
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__ppc_types.mod)
-    elseif(${filename} STREQUAL "cudadevice")
+    elseif(${filename} STREQUAL "__cuda_device")
       set(opts -fc1 -xcuda)
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_builtins.mod)
+    elseif(${filename} STREQUAL "cudadevice")
+      set(opts -fc1 -xcuda)
+      set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_device.mod)
     else()
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
       if(${filename} STREQUAL "iso_fortran_env")
@@ -101,11 +105,11 @@ if (NOT CMAKE_CROSSCOMPILING)
     endif()
 
     # Some modules have an implementation part that needs to be added to the
-    # FortranRuntime library.
+    # flang_rt.runtime library.
     set(compile_with "-fsyntax-only")
     set(object_output "")
     set(include_in_link FALSE)
-    if(${filename} IN_LIST MODULES_WITH_IMPLEMENTATION)
+    if(${filename} IN_LIST MODULES_WITH_IMPLEMENTATION AND FLANG_INCLUDE_RUNTIME)
       set(object_output "${CMAKE_CURRENT_BINARY_DIR}/${filename}${CMAKE_CXX_OUTPUT_EXTENSION}")
       set(compile_with -c -o ${object_output})
       set(include_in_link TRUE)
@@ -123,14 +127,14 @@ if (NOT CMAKE_CROSSCOMPILING)
     install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
 
     # If a module has been compiled into an object file, add the file to
-    # the link line for the FortranRuntime library.
+    # the link line for the flang_rt.runtime library.
     if(include_in_link)
       list(APPEND module_objects ${object_output})
     endif()
   endforeach()
 
   # Set a CACHE variable that is visible to the CMakeLists.txt in runtime/, so that
-  # the compiled Fortran modules can be added to the link line of the FortranRuntime
+  # the compiled Fortran modules can be added to the link line of the flang_rt.runtime
   # library.
   set(FORTRAN_MODULE_OBJECTS ${module_objects} CACHE INTERNAL "" FORCE)
 

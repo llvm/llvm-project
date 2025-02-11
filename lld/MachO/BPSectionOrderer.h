@@ -1,4 +1,4 @@
-//===- BPSectionOrderer.h ---------------------------------------*- C++ -*-===//
+//===- BPSectionOrderer.h -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,6 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace lld::macho {
-
 class InputSection;
 
 /// Run Balanced Partitioning to find the optimal function and data order to
@@ -26,9 +25,8 @@ class InputSection;
 ///
 /// It is important that .subsections_via_symbols is used to ensure functions
 /// and data are in their own sections and thus can be reordered.
-llvm::DenseMap<const lld::macho::InputSection *, size_t>
-runBalancedPartitioning(size_t &highestAvailablePriority,
-                        llvm::StringRef profilePath,
+llvm::DenseMap<const InputSection *, int>
+runBalancedPartitioning(llvm::StringRef profilePath,
                         bool forFunctionCompression, bool forDataCompression,
                         bool compressionSortStartupFunctions, bool verbose);
 

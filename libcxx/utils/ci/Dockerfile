@@ -7,18 +7,17 @@
 # ===----------------------------------------------------------------------===##
 #
 # This file defines the buildkite and github actions builder images.
-# You can build both images using:
+# This images are tagged with <tag>. You can build both images using:
 #
-#   docker compose build
+#   TAG=<tag> docker compose build
 #
 # Or you can select a single image to build
 #
-#  docker compose build buildkite-builder
+#  TAG=test docker compose build actions-builder
 #
 # The final images can be found at
 #
-#  ghcr.io/libcxx/buildkite-builder
-#  ghcr.io/libcxx/actions-builder
+#  ghcr.io/libcxx/libcxx-linux-builder
 #  ghcr.io/libcxx/android-buildkite-builder
 #
 # Members of the github.com/libcxx/ organizations can push new images to the CI.
@@ -160,7 +159,7 @@ EOF
 RUN <<EOF
     # Install a recent CMake
     set -e
-    wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-x86_64.sh -O /tmp/install-cmake.sh
+    wget https://github.com/Kitware/CMake/releases/download/v3.24.4/cmake-3.24.4-linux-x86_64.sh -O /tmp/install-cmake.sh
     sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
     rm /tmp/install-cmake.sh
 EOF

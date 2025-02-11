@@ -1417,15 +1417,17 @@ void MachProcess::RefineWatchpointStopInfo(
       continue;
     for (uint32_t reg = 0; reg < reg_sets[set].num_registers; ++reg) {
       if (strcmp(reg_sets[set].registers[reg].name, "esr") == 0) {
-        DNBRegisterValue reg_value;
-        if (GetRegisterValue(tid, set, reg, &reg_value)) {
-          esr = reg_value.value.uint64;
+        std::unique_ptr<DNBRegisterValue> reg_value =
+            std::make_unique<DNBRegisterValue>();
+        if (GetRegisterValue(tid, set, reg, reg_value.get())) {
+          esr = reg_value->value.uint64;
         }
       }
       if (strcmp(reg_sets[set].registers[reg].name, "far") == 0) {
-        DNBRegisterValue reg_value;
-        if (GetRegisterValue(tid, set, reg, &reg_value)) {
-          far = reg_value.value.uint64;
+        std::unique_ptr<DNBRegisterValue> reg_value =
+            std::make_unique<DNBRegisterValue>();
+        if (GetRegisterValue(tid, set, reg, reg_value.get())) {
+          far = reg_value->value.uint64;
         }
       }
     }

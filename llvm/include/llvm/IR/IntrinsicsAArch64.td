@@ -538,17 +538,6 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_bfmlalb : AdvSIMD_BF16FML_Intrinsic;
   def int_aarch64_neon_bfmlalt : AdvSIMD_BF16FML_Intrinsic;
 
-
-  // v8.6-A Bfloat Intrinsics
-  def int_aarch64_neon_bfcvt
-    : DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_aarch64_neon_bfcvtn
-    : DefaultAttrsIntrinsic<[llvm_v8bf16_ty], [llvm_v4f32_ty], [IntrNoMem]>;
-  def int_aarch64_neon_bfcvtn2
-    : DefaultAttrsIntrinsic<[llvm_v8bf16_ty],
-                [llvm_v8bf16_ty, llvm_v4f32_ty],
-                [IntrNoMem]>;
-
   // v8.2-A FP16 Fused Multiply-Add Long
   def int_aarch64_neon_fmlal : AdvSIMD_FP16FML_Intrinsic;
   def int_aarch64_neon_fmlsl : AdvSIMD_FP16FML_Intrinsic;
@@ -1004,6 +993,82 @@ def int_aarch64_st64b: Intrinsic<[], !listconcat([llvm_ptr_ty], data512)>;
 def int_aarch64_st64bv: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], data512)>;
 def int_aarch64_st64bv0: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], data512)>;
 
+  //
+  // Neon FP8 intrinsics
+  //
+
+  // Conversions
+  class AdvSIMD_FP8_1VectorArg_Long_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty], [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  def int_aarch64_neon_fp8_cvtl1   : AdvSIMD_FP8_1VectorArg_Long_Intrinsic;
+  def int_aarch64_neon_fp8_cvtl2   : AdvSIMD_FP8_1VectorArg_Long_Intrinsic;
+
+  def int_aarch64_neon_fp8_fcvtn
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [llvm_anyvector_ty,
+                             LLVMMatchType<1>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+  def int_aarch64_neon_fp8_fcvtn2
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_anyvector_ty,
+                             LLVMMatchType<1>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  // Dot-product
+  class AdvSIMD_FP8_DOT_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_anyvector_ty,
+                             LLVMMatchType<1>],
+                             [IntrReadMem, IntrInaccessibleMemOnly]>;
+  class AdvSIMD_FP8_DOT_LANE_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_anyvector_ty,
+                             llvm_v16i8_ty,
+                             llvm_i32_ty],
+                             [IntrReadMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<3>>]>;
+
+  def int_aarch64_neon_fp8_fdot2 : AdvSIMD_FP8_DOT_Intrinsic;
+  def int_aarch64_neon_fp8_fdot2_lane : AdvSIMD_FP8_DOT_LANE_Intrinsic;
+
+  def int_aarch64_neon_fp8_fdot4 : AdvSIMD_FP8_DOT_Intrinsic;
+  def int_aarch64_neon_fp8_fdot4_lane : AdvSIMD_FP8_DOT_LANE_Intrinsic;
+
+
+// Fused multiply-add
+  class AdvSIMD_FP8_FMLA_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_v16i8_ty,
+                             llvm_v16i8_ty],
+                             [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  class AdvSIMD_FP8_FMLA_LANE_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_v16i8_ty,
+                             llvm_v16i8_ty,
+                             llvm_i32_ty],
+                             [IntrReadMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<3>>]>;
+
+  def int_aarch64_neon_fp8_fmlalb : AdvSIMD_FP8_FMLA_Intrinsic;
+  def int_aarch64_neon_fp8_fmlalt : AdvSIMD_FP8_FMLA_Intrinsic;
+
+  def int_aarch64_neon_fp8_fmlallbb : AdvSIMD_FP8_FMLA_Intrinsic;
+  def int_aarch64_neon_fp8_fmlallbt : AdvSIMD_FP8_FMLA_Intrinsic;
+  def int_aarch64_neon_fp8_fmlalltb : AdvSIMD_FP8_FMLA_Intrinsic;
+  def int_aarch64_neon_fp8_fmlalltt : AdvSIMD_FP8_FMLA_Intrinsic;
+
+  def int_aarch64_neon_fp8_fmlalb_lane : AdvSIMD_FP8_FMLA_LANE_Intrinsic;
+  def int_aarch64_neon_fp8_fmlalt_lane : AdvSIMD_FP8_FMLA_LANE_Intrinsic;
+
+  def int_aarch64_neon_fp8_fmlallbb_lane : AdvSIMD_FP8_FMLA_LANE_Intrinsic;
+  def int_aarch64_neon_fp8_fmlallbt_lane : AdvSIMD_FP8_FMLA_LANE_Intrinsic;
+  def int_aarch64_neon_fp8_fmlalltb_lane : AdvSIMD_FP8_FMLA_LANE_Intrinsic;
+  def int_aarch64_neon_fp8_fmlalltt_lane : AdvSIMD_FP8_FMLA_LANE_Intrinsic;
 }
 
 def llvm_nxv1i1_ty  : LLVMType<nxv1i1>;
@@ -2974,6 +3039,7 @@ let TargetPrefix = "aarch64" in {
 
 
   def int_aarch64_sme_zero : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
+  def int_aarch64_sme_in_streaming_mode : DefaultAttrsIntrinsic<[llvm_i1_ty], [], [IntrNoMem]>, ClangBuiltin<"__builtin_arm_in_streaming_mode">;
 
   class SME_OuterProduct_Intrinsic
       : DefaultAttrsIntrinsic<[],
@@ -3855,3 +3921,216 @@ def int_aarch64_sve_famin_u : AdvSIMD_Pred2VectorArg_Intrinsic;
 // Neon absolute maximum and minimum
 def int_aarch64_neon_famax :  AdvSIMD_2VectorArg_Intrinsic;
 def int_aarch64_neon_famin :  AdvSIMD_2VectorArg_Intrinsic;
+
+//
+// FP8 Intrinsics
+//
+let TargetPrefix = "aarch64" in {
+
+  // SVE Widening Conversions
+  class SVE2_FP8_Cvt
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [llvm_nxv16i8_ty],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  def int_aarch64_sve_fp8_cvt1   : SVE2_FP8_Cvt;
+  def int_aarch64_sve_fp8_cvt2   : SVE2_FP8_Cvt;
+  def int_aarch64_sve_fp8_cvtlt1 : SVE2_FP8_Cvt;
+  def int_aarch64_sve_fp8_cvtlt2 : SVE2_FP8_Cvt;
+
+  // SVE Narrowing Conversions
+  class SVE2_FP8_Narrow_Cvt
+    : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
+                            [llvm_anyvector_ty, LLVMMatchType<0>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+  
+  def int_aarch64_sve_fp8_cvtn  : SVE2_FP8_Narrow_Cvt;
+  def int_aarch64_sve_fp8_cvtnb : SVE2_FP8_Narrow_Cvt;
+  
+  def int_aarch64_sve_fp8_cvtnt
+    : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
+                            [llvm_nxv16i8_ty, llvm_anyvector_ty, LLVMMatchType<0>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  // Dot product
+  class SVE2_FP8_FMLA_FDOT
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+  
+  class SVE2_FP8_FMLA_FDOT_Lane
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_i32_ty],
+                            [IntrReadMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<3>>]>;
+  
+  def int_aarch64_sve_fp8_fdot      : SVE2_FP8_FMLA_FDOT;
+  def int_aarch64_sve_fp8_fdot_lane : SVE2_FP8_FMLA_FDOT_Lane;
+
+  // Fused multiply-add
+  def int_aarch64_sve_fp8_fmlalb      : SVE2_FP8_FMLA_FDOT;
+  def int_aarch64_sve_fp8_fmlalb_lane : SVE2_FP8_FMLA_FDOT_Lane;
+  
+  def int_aarch64_sve_fp8_fmlalt      : SVE2_FP8_FMLA_FDOT;
+  def int_aarch64_sve_fp8_fmlalt_lane : SVE2_FP8_FMLA_FDOT_Lane;
+  
+  def int_aarch64_sve_fp8_fmlallbb      : SVE2_FP8_FMLA_FDOT;
+  def int_aarch64_sve_fp8_fmlallbb_lane : SVE2_FP8_FMLA_FDOT_Lane;
+  
+  def int_aarch64_sve_fp8_fmlallbt      : SVE2_FP8_FMLA_FDOT;
+  def int_aarch64_sve_fp8_fmlallbt_lane : SVE2_FP8_FMLA_FDOT_Lane;
+  
+  def int_aarch64_sve_fp8_fmlalltb      : SVE2_FP8_FMLA_FDOT;
+  def int_aarch64_sve_fp8_fmlalltb_lane : SVE2_FP8_FMLA_FDOT_Lane;
+  
+  def int_aarch64_sve_fp8_fmlalltt      : SVE2_FP8_FMLA_FDOT;
+  def int_aarch64_sve_fp8_fmlalltt_lane : SVE2_FP8_FMLA_FDOT_Lane;
+
+  class SME2_FP8_CVT_X2_Single_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                            [llvm_nxv16i8_ty],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  class SME2_FP8_CVT_Single_X4_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
+                            [llvm_nxv4f32_ty, llvm_nxv4f32_ty, llvm_nxv4f32_ty, llvm_nxv4f32_ty],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  class SME_FP8_OuterProduct_Intrinsic
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
+          llvm_nxv16i1_ty, llvm_nxv16i1_ty,
+          llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+          [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+  class SME_FP8_ZA_LANE_VGx1_Intrinsic
+   : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                               llvm_nxv16i8_ty,
+                               llvm_nxv16i8_ty,
+                               llvm_i32_ty],
+                          [IntrInaccessibleMemOnly, IntrHasSideEffects, ImmArg<ArgIndex<3>>]>;
+
+  class SME_FP8_ZA_LANE_VGx2_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                                llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                                llvm_nxv16i8_ty,
+                                llvm_i32_ty],
+                            [IntrInaccessibleMemOnly, IntrHasSideEffects, ImmArg<ArgIndex<4>>]>;
+
+  class SME_FP8_ZA_LANE_VGx4_Intrinsic
+   : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                                llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                                llvm_nxv16i8_ty,
+                                llvm_i32_ty],
+                            [IntrInaccessibleMemOnly, IntrHasSideEffects, ImmArg<ArgIndex<6>>]>;
+  class SME_FP8_ZA_SINGLE_VGx1_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                                llvm_nxv16i8_ty,
+                                llvm_nxv16i8_ty],
+                            [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+  class SME_FP8_ZA_SINGLE_VGx2_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                                llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                                llvm_nxv16i8_ty],
+                            [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+  class SME_FP8_ZA_SINGLE_VGx4_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                                llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                                llvm_nxv16i8_ty],
+                              [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+  class SME_FP8_ZA_MULTI_VGx2_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+                            [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+  class SME_FP8_ZA_MULTI_VGx4_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+                            [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+  //
+  // CVT from FP8 to half-precision/BFloat16 multi-vector
+  //
+  def int_aarch64_sve_fp8_cvt1_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
+  def int_aarch64_sve_fp8_cvt2_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
+
+  //
+  // CVT from FP8 to deinterleaved half-precision/BFloat16 multi-vector
+  //
+  def int_aarch64_sve_fp8_cvtl1_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
+  def int_aarch64_sve_fp8_cvtl2_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
+
+  //
+  // CVT to FP8 from half-precision/BFloat16/single-precision multi-vector
+  //
+  def int_aarch64_sve_fp8_cvt_x2
+    : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
+                            [llvm_anyvector_ty, LLVMMatchType<0>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  def int_aarch64_sve_fp8_cvt_x4  : SME2_FP8_CVT_Single_X4_Intrinsic;
+  def int_aarch64_sve_fp8_cvtn_x4 : SME2_FP8_CVT_Single_X4_Intrinsic;
+
+  // FP8 outer product
+  def int_aarch64_sme_fp8_fmopa_za16 : SME_FP8_OuterProduct_Intrinsic;
+  def int_aarch64_sme_fp8_fmopa_za32 : SME_FP8_OuterProduct_Intrinsic;
+
+  //
+  // ZA multiply-add
+  //
+  // Double-vector groups (F8F16)
+  def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x1 : SME_FP8_ZA_LANE_VGx1_Intrinsic;
+  def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x2 : SME_FP8_ZA_LANE_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x4 : SME_FP8_ZA_LANE_VGx4_Intrinsic;
+  // Single
+  def int_aarch64_sme_fp8_fmlal_single_za16_vg2x1 : SME_FP8_ZA_SINGLE_VGx1_Intrinsic;
+  def int_aarch64_sme_fp8_fmlal_single_za16_vg2x2 : SME_FP8_ZA_SINGLE_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fmlal_single_za16_vg2x4 : SME_FP8_ZA_SINGLE_VGx4_Intrinsic;
+  // Multi
+  def int_aarch64_sme_fp8_fmlal_multi_za16_vg2x2 : SME_FP8_ZA_MULTI_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fmlal_multi_za16_vg2x4 : SME_FP8_ZA_MULTI_VGx4_Intrinsic;
+
+  // Quad-vector groups (F8F32)
+  def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x1 : SME_FP8_ZA_LANE_VGx1_Intrinsic;
+  def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x2 : SME_FP8_ZA_LANE_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x4 : SME_FP8_ZA_LANE_VGx4_Intrinsic;
+  // Single
+  def int_aarch64_sme_fp8_fmlall_single_za32_vg4x1 : SME_FP8_ZA_SINGLE_VGx1_Intrinsic;
+  def int_aarch64_sme_fp8_fmlall_single_za32_vg4x2 : SME_FP8_ZA_SINGLE_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fmlall_single_za32_vg4x4 : SME_FP8_ZA_SINGLE_VGx4_Intrinsic;
+  // Multi
+  def int_aarch64_sme_fp8_fmlall_multi_za32_vg4x2 : SME_FP8_ZA_MULTI_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fmlall_multi_za32_vg4x4 : SME_FP8_ZA_MULTI_VGx4_Intrinsic;
+
+  //
+  // FP8 FDOT intrinsics
+  //
+  // (indexed)
+  def int_aarch64_sme_fp8_fdot_lane_za16_vg1x2 : SME_FP8_ZA_LANE_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fdot_lane_za32_vg1x2 : SME_FP8_ZA_LANE_VGx2_Intrinsic;
+
+  def int_aarch64_sme_fp8_fdot_lane_za16_vg1x4 : SME_FP8_ZA_LANE_VGx4_Intrinsic;
+  def int_aarch64_sme_fp8_fdot_lane_za32_vg1x4 : SME_FP8_ZA_LANE_VGx4_Intrinsic;
+  // Single
+  def int_aarch64_sme_fp8_fdot_single_za16_vg1x2 : SME_FP8_ZA_SINGLE_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fdot_single_za32_vg1x2 : SME_FP8_ZA_SINGLE_VGx2_Intrinsic;
+
+  def int_aarch64_sme_fp8_fdot_single_za16_vg1x4 : SME_FP8_ZA_SINGLE_VGx4_Intrinsic;
+  def int_aarch64_sme_fp8_fdot_single_za32_vg1x4 : SME_FP8_ZA_SINGLE_VGx4_Intrinsic;
+  // Multi
+  def int_aarch64_sme_fp8_fdot_multi_za16_vg1x2 : SME_FP8_ZA_MULTI_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fdot_multi_za32_vg1x2 : SME_FP8_ZA_MULTI_VGx2_Intrinsic;
+
+  def int_aarch64_sme_fp8_fdot_multi_za16_vg1x4 : SME_FP8_ZA_MULTI_VGx4_Intrinsic;
+  def int_aarch64_sme_fp8_fdot_multi_za32_vg1x4 : SME_FP8_ZA_MULTI_VGx4_Intrinsic;
+
+  // FVDOT
+  def int_aarch64_sme_fp8_fvdot_lane_za16_vg1x2  : SME_FP8_ZA_LANE_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fvdotb_lane_za32_vg1x4 : SME_FP8_ZA_LANE_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fvdott_lane_za32_vg1x4 : SME_FP8_ZA_LANE_VGx2_Intrinsic;
+}

@@ -408,7 +408,7 @@ define void @test_ldst_v3f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: test_ldst_v3f16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1616,11 +1616,11 @@ define <2 x double> @test_fpext_2xdouble(<2 x half> %a) #0 {
 define <2 x i16> @test_bitcast_2xhalf_to_2xi16(<2 x half> %a) #0 {
 ; CHECK-LABEL: test_bitcast_2xhalf_to_2xi16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r2, [test_bitcast_2xhalf_to_2xi16_param_0];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.param.u32 %r1, [test_bitcast_2xhalf_to_2xi16_param_0];
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %r = bitcast <2 x half> %a to <2 x i16>
   ret <2 x i16> %r
@@ -1629,11 +1629,11 @@ define <2 x i16> @test_bitcast_2xhalf_to_2xi16(<2 x half> %a) #0 {
 define <2 x half> @test_bitcast_2xi16_to_2xhalf(<2 x i16> %a) #0 {
 ; CHECK-LABEL: test_bitcast_2xi16_to_2xhalf(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r2, [test_bitcast_2xi16_to_2xhalf_param_0];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.param.u32 %r1, [test_bitcast_2xi16_to_2xhalf_param_0];
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %r = bitcast <2 x i16> %a to <2 x half>
   ret <2 x half> %r
@@ -1657,12 +1657,12 @@ define <2 x half> @test_bitcast_float_to_2xhalf(float %a) #0 {
 define float @test_bitcast_2xhalf_to_float(<2 x half> %a) #0 {
 ; CHECK-LABEL: test_bitcast_2xhalf_to_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .f32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r2, [test_bitcast_2xhalf_to_float_param_0];
-; CHECK-NEXT:    mov.b32 %f1, %r2;
+; CHECK-NEXT:    ld.param.u32 %r1, [test_bitcast_2xhalf_to_float_param_0];
+; CHECK-NEXT:    mov.b32 %f1, %r1;
 ; CHECK-NEXT:    st.param.f32 [func_retval0], %f1;
 ; CHECK-NEXT:    ret;
   %r = bitcast <2 x half> %a to float
@@ -1858,12 +1858,12 @@ define <2 x half> @test_fma(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
 define <2 x half> @test_fabs(<2 x half> %a) #0 {
 ; CHECK-F16-LABEL: test_fabs(
 ; CHECK-F16:       {
-; CHECK-F16-NEXT:    .reg .b32 %r<5>;
+; CHECK-F16-NEXT:    .reg .b32 %r<3>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
 ; CHECK-F16-NEXT:    ld.param.b32 %r1, [test_fabs_param_0];
-; CHECK-F16-NEXT:    and.b32 %r3, %r1, 2147450879;
-; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-F16-NEXT:    and.b32 %r2, %r1, 2147450879;
+; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-F16-NEXT:    ret;
 ;
 ; CHECK-NOF16-LABEL: test_fabs(
@@ -1945,34 +1945,34 @@ define <2 x half> @test_maxnum(<2 x half> %a, <2 x half> %b) #0 {
 define <2 x half> @test_copysign(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-F16-LABEL: test_copysign(
 ; CHECK-F16:       {
-; CHECK-F16-NEXT:    .reg .b32 %r<9>;
+; CHECK-F16-NEXT:    .reg .b32 %r<6>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
 ; CHECK-F16-NEXT:    ld.param.b32 %r2, [test_copysign_param_1];
 ; CHECK-F16-NEXT:    ld.param.b32 %r1, [test_copysign_param_0];
-; CHECK-F16-NEXT:    and.b32 %r4, %r2, -2147450880;
-; CHECK-F16-NEXT:    and.b32 %r6, %r1, 2147450879;
-; CHECK-F16-NEXT:    or.b32 %r7, %r6, %r4;
-; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r7;
+; CHECK-F16-NEXT:    and.b32 %r3, %r2, -2147450880;
+; CHECK-F16-NEXT:    and.b32 %r4, %r1, 2147450879;
+; CHECK-F16-NEXT:    or.b32 %r5, %r4, %r3;
+; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-F16-NEXT:    ret;
 ;
 ; CHECK-NOF16-LABEL: test_copysign(
 ; CHECK-NOF16:       {
-; CHECK-NOF16-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NOF16-NEXT:    .reg .b16 %rs<11>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r2, [test_copysign_param_1];
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [test_copysign_param_0];
 ; CHECK-NOF16-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; CHECK-NOF16-NEXT:    and.b16 %rs4, %rs2, -32768;
-; CHECK-NOF16-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
-; CHECK-NOF16-NEXT:    and.b16 %rs8, %rs6, 32767;
-; CHECK-NOF16-NEXT:    or.b16 %rs9, %rs8, %rs4;
-; CHECK-NOF16-NEXT:    and.b16 %rs12, %rs1, -32768;
-; CHECK-NOF16-NEXT:    and.b16 %rs14, %rs5, 32767;
-; CHECK-NOF16-NEXT:    or.b16 %rs15, %rs14, %rs12;
-; CHECK-NOF16-NEXT:    mov.b32 %r3, {%rs15, %rs9};
+; CHECK-NOF16-NEXT:    and.b16 %rs3, %rs2, -32768;
+; CHECK-NOF16-NEXT:    mov.b32 {%rs4, %rs5}, %r1;
+; CHECK-NOF16-NEXT:    and.b16 %rs6, %rs5, 32767;
+; CHECK-NOF16-NEXT:    or.b16 %rs7, %rs6, %rs3;
+; CHECK-NOF16-NEXT:    and.b16 %rs8, %rs1, -32768;
+; CHECK-NOF16-NEXT:    and.b16 %rs9, %rs4, 32767;
+; CHECK-NOF16-NEXT:    or.b16 %rs10, %rs9, %rs8;
+; CHECK-NOF16-NEXT:    mov.b32 %r3, {%rs10, %rs7};
 ; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NOF16-NEXT:    ret;
   %r = call <2 x half> @llvm.copysign.f16(<2 x half> %a, <2 x half> %b)
@@ -1983,7 +1983,7 @@ define <2 x half> @test_copysign_f32(<2 x half> %a, <2 x float> %b) #0 {
 ; CHECK-F16-LABEL: test_copysign_f32(
 ; CHECK-F16:       {
 ; CHECK-F16-NEXT:    .reg .b16 %rs<3>;
-; CHECK-F16-NEXT:    .reg .b32 %r<9>;
+; CHECK-F16-NEXT:    .reg .b32 %r<6>;
 ; CHECK-F16-NEXT:    .reg .f32 %f<3>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
@@ -1992,33 +1992,33 @@ define <2 x half> @test_copysign_f32(<2 x half> %a, <2 x float> %b) #0 {
 ; CHECK-F16-NEXT:    cvt.rn.f16.f32 %rs1, %f2;
 ; CHECK-F16-NEXT:    cvt.rn.f16.f32 %rs2, %f1;
 ; CHECK-F16-NEXT:    mov.b32 %r2, {%rs2, %rs1};
-; CHECK-F16-NEXT:    and.b32 %r4, %r2, -2147450880;
-; CHECK-F16-NEXT:    and.b32 %r6, %r1, 2147450879;
-; CHECK-F16-NEXT:    or.b32 %r7, %r6, %r4;
-; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r7;
+; CHECK-F16-NEXT:    and.b32 %r3, %r2, -2147450880;
+; CHECK-F16-NEXT:    and.b32 %r4, %r1, 2147450879;
+; CHECK-F16-NEXT:    or.b32 %r5, %r4, %r3;
+; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-F16-NEXT:    ret;
 ;
 ; CHECK-NOF16-LABEL: test_copysign_f32(
 ; CHECK-NOF16:       {
-; CHECK-NOF16-NEXT:    .reg .b16 %rs<13>;
+; CHECK-NOF16-NEXT:    .reg .b16 %rs<9>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOF16-NEXT:    .reg .f32 %f<3>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.v2.f32 {%f1, %f2}, [test_copysign_f32_param_1];
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [test_copysign_f32_param_0];
+; CHECK-NOF16-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NOF16-NEXT:    and.b16 %rs3, %rs2, 32767;
 ; CHECK-NOF16-NEXT:    mov.b32 %r2, %f2;
 ; CHECK-NOF16-NEXT:    and.b32 %r3, %r2, -2147483648;
-; CHECK-NOF16-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r3; }
-; CHECK-NOF16-NEXT:    mov.b32 {%rs2, %rs3}, %r1;
-; CHECK-NOF16-NEXT:    and.b16 %rs5, %rs3, 32767;
-; CHECK-NOF16-NEXT:    or.b16 %rs6, %rs5, %rs1;
+; CHECK-NOF16-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs4}, %r3; }
+; CHECK-NOF16-NEXT:    or.b16 %rs5, %rs3, %rs4;
+; CHECK-NOF16-NEXT:    and.b16 %rs6, %rs1, 32767;
 ; CHECK-NOF16-NEXT:    mov.b32 %r4, %f1;
 ; CHECK-NOF16-NEXT:    and.b32 %r5, %r4, -2147483648;
-; CHECK-NOF16-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs8}, %r5; }
-; CHECK-NOF16-NEXT:    and.b16 %rs10, %rs2, 32767;
-; CHECK-NOF16-NEXT:    or.b16 %rs11, %rs10, %rs8;
-; CHECK-NOF16-NEXT:    mov.b32 %r6, {%rs11, %rs6};
+; CHECK-NOF16-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs7}, %r5; }
+; CHECK-NOF16-NEXT:    or.b16 %rs8, %rs6, %rs7;
+; CHECK-NOF16-NEXT:    mov.b32 %r6, {%rs8, %rs5};
 ; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NOF16-NEXT:    ret;
   %tb = fptrunc <2 x float> %b to <2 x half>
@@ -2030,7 +2030,7 @@ define <2 x half> @test_copysign_f64(<2 x half> %a, <2 x double> %b) #0 {
 ; CHECK-F16-LABEL: test_copysign_f64(
 ; CHECK-F16:       {
 ; CHECK-F16-NEXT:    .reg .b16 %rs<3>;
-; CHECK-F16-NEXT:    .reg .b32 %r<9>;
+; CHECK-F16-NEXT:    .reg .b32 %r<6>;
 ; CHECK-F16-NEXT:    .reg .f64 %fd<3>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
@@ -2039,15 +2039,15 @@ define <2 x half> @test_copysign_f64(<2 x half> %a, <2 x double> %b) #0 {
 ; CHECK-F16-NEXT:    cvt.rn.f16.f64 %rs1, %fd2;
 ; CHECK-F16-NEXT:    cvt.rn.f16.f64 %rs2, %fd1;
 ; CHECK-F16-NEXT:    mov.b32 %r2, {%rs2, %rs1};
-; CHECK-F16-NEXT:    and.b32 %r4, %r2, -2147450880;
-; CHECK-F16-NEXT:    and.b32 %r6, %r1, 2147450879;
-; CHECK-F16-NEXT:    or.b32 %r7, %r6, %r4;
-; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r7;
+; CHECK-F16-NEXT:    and.b32 %r3, %r2, -2147450880;
+; CHECK-F16-NEXT:    and.b32 %r4, %r1, 2147450879;
+; CHECK-F16-NEXT:    or.b32 %r5, %r4, %r3;
+; CHECK-F16-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-F16-NEXT:    ret;
 ;
 ; CHECK-NOF16-LABEL: test_copysign_f64(
 ; CHECK-NOF16:       {
-; CHECK-NOF16-NEXT:    .reg .b16 %rs<13>;
+; CHECK-NOF16-NEXT:    .reg .b16 %rs<9>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NOF16-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-NOF16-NEXT:    .reg .f64 %fd<3>;
@@ -2056,19 +2056,19 @@ define <2 x half> @test_copysign_f64(<2 x half> %a, <2 x double> %b) #0 {
 ; CHECK-NOF16-NEXT:    ld.param.v2.f64 {%fd1, %fd2}, [test_copysign_f64_param_1];
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [test_copysign_f64_param_0];
 ; CHECK-NOF16-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; CHECK-NOF16-NEXT:    and.b16 %rs4, %rs2, 32767;
+; CHECK-NOF16-NEXT:    and.b16 %rs3, %rs2, 32767;
 ; CHECK-NOF16-NEXT:    mov.b64 %rd1, %fd2;
 ; CHECK-NOF16-NEXT:    and.b64 %rd2, %rd1, -9223372036854775808;
 ; CHECK-NOF16-NEXT:    shr.u64 %rd3, %rd2, 48;
-; CHECK-NOF16-NEXT:    cvt.u16.u64 %rs5, %rd3;
-; CHECK-NOF16-NEXT:    or.b16 %rs6, %rs4, %rs5;
-; CHECK-NOF16-NEXT:    and.b16 %rs9, %rs1, 32767;
+; CHECK-NOF16-NEXT:    cvt.u16.u64 %rs4, %rd3;
+; CHECK-NOF16-NEXT:    or.b16 %rs5, %rs3, %rs4;
+; CHECK-NOF16-NEXT:    and.b16 %rs6, %rs1, 32767;
 ; CHECK-NOF16-NEXT:    mov.b64 %rd4, %fd1;
 ; CHECK-NOF16-NEXT:    and.b64 %rd5, %rd4, -9223372036854775808;
 ; CHECK-NOF16-NEXT:    shr.u64 %rd6, %rd5, 48;
-; CHECK-NOF16-NEXT:    cvt.u16.u64 %rs10, %rd6;
-; CHECK-NOF16-NEXT:    or.b16 %rs11, %rs9, %rs10;
-; CHECK-NOF16-NEXT:    mov.b32 %r2, {%rs11, %rs6};
+; CHECK-NOF16-NEXT:    cvt.u16.u64 %rs7, %rd6;
+; CHECK-NOF16-NEXT:    or.b16 %rs8, %rs6, %rs7;
+; CHECK-NOF16-NEXT:    mov.b32 %r2, {%rs8, %rs5};
 ; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NOF16-NEXT:    ret;
   %tb = fptrunc <2 x double> %b to <2 x half>
@@ -2080,16 +2080,16 @@ define <2 x float> @test_copysign_extended(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-F16-LABEL: test_copysign_extended(
 ; CHECK-F16:       {
 ; CHECK-F16-NEXT:    .reg .b16 %rs<3>;
-; CHECK-F16-NEXT:    .reg .b32 %r<9>;
+; CHECK-F16-NEXT:    .reg .b32 %r<6>;
 ; CHECK-F16-NEXT:    .reg .f32 %f<3>;
 ; CHECK-F16-EMPTY:
 ; CHECK-F16-NEXT:  // %bb.0:
 ; CHECK-F16-NEXT:    ld.param.b32 %r2, [test_copysign_extended_param_1];
 ; CHECK-F16-NEXT:    ld.param.b32 %r1, [test_copysign_extended_param_0];
-; CHECK-F16-NEXT:    and.b32 %r4, %r2, -2147450880;
-; CHECK-F16-NEXT:    and.b32 %r6, %r1, 2147450879;
-; CHECK-F16-NEXT:    or.b32 %r7, %r6, %r4;
-; CHECK-F16-NEXT:    mov.b32 {%rs1, %rs2}, %r7;
+; CHECK-F16-NEXT:    and.b32 %r3, %r2, -2147450880;
+; CHECK-F16-NEXT:    and.b32 %r4, %r1, 2147450879;
+; CHECK-F16-NEXT:    or.b32 %r5, %r4, %r3;
+; CHECK-F16-NEXT:    mov.b32 {%rs1, %rs2}, %r5;
 ; CHECK-F16-NEXT:    cvt.f32.f16 %f1, %rs2;
 ; CHECK-F16-NEXT:    cvt.f32.f16 %f2, %rs1;
 ; CHECK-F16-NEXT:    st.param.v2.f32 [func_retval0], {%f2, %f1};
@@ -2097,7 +2097,7 @@ define <2 x float> @test_copysign_extended(<2 x half> %a, <2 x half> %b) #0 {
 ;
 ; CHECK-NOF16-LABEL: test_copysign_extended(
 ; CHECK-NOF16:       {
-; CHECK-NOF16-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NOF16-NEXT:    .reg .b16 %rs<11>;
 ; CHECK-NOF16-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NOF16-NEXT:    .reg .f32 %f<3>;
 ; CHECK-NOF16-EMPTY:
@@ -2105,15 +2105,15 @@ define <2 x float> @test_copysign_extended(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r2, [test_copysign_extended_param_1];
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [test_copysign_extended_param_0];
 ; CHECK-NOF16-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; CHECK-NOF16-NEXT:    and.b16 %rs4, %rs1, -32768;
-; CHECK-NOF16-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
-; CHECK-NOF16-NEXT:    and.b16 %rs8, %rs5, 32767;
-; CHECK-NOF16-NEXT:    or.b16 %rs9, %rs8, %rs4;
-; CHECK-NOF16-NEXT:    and.b16 %rs12, %rs2, -32768;
-; CHECK-NOF16-NEXT:    and.b16 %rs14, %rs6, 32767;
-; CHECK-NOF16-NEXT:    or.b16 %rs15, %rs14, %rs12;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %f1, %rs15;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %f2, %rs9;
+; CHECK-NOF16-NEXT:    and.b16 %rs3, %rs1, -32768;
+; CHECK-NOF16-NEXT:    mov.b32 {%rs4, %rs5}, %r1;
+; CHECK-NOF16-NEXT:    and.b16 %rs6, %rs4, 32767;
+; CHECK-NOF16-NEXT:    or.b16 %rs7, %rs6, %rs3;
+; CHECK-NOF16-NEXT:    and.b16 %rs8, %rs2, -32768;
+; CHECK-NOF16-NEXT:    and.b16 %rs9, %rs5, 32767;
+; CHECK-NOF16-NEXT:    or.b16 %rs10, %rs9, %rs8;
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %f1, %rs10;
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %f2, %rs7;
 ; CHECK-NOF16-NEXT:    st.param.v2.f32 [func_retval0], {%f2, %f1};
 ; CHECK-NOF16-NEXT:    ret;
   %r = call <2 x half> @llvm.copysign.f16(<2 x half> %a, <2 x half> %b)

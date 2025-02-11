@@ -120,7 +120,8 @@ public:
               toTargetAddressSpace(A) == llvm::AMDGPUAS::FLAT_ADDRESS)) &&
             isTargetAddressSpace(B) &&
             toTargetAddressSpace(B) >= llvm::AMDGPUAS::FLAT_ADDRESS &&
-            toTargetAddressSpace(B) <= llvm::AMDGPUAS::PRIVATE_ADDRESS);
+            toTargetAddressSpace(B) <= llvm::AMDGPUAS::PRIVATE_ADDRESS &&
+            toTargetAddressSpace(B) != llvm::AMDGPUAS::REGION_ADDRESS);
   }
 
   uint64_t getMaxPointerWidth() const override {
@@ -256,7 +257,7 @@ public:
                  StringRef CPU,
                  const std::vector<std::string> &FeatureVec) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool useFP16ConversionIntrinsics() const override { return false; }
 

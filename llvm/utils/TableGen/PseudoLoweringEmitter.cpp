@@ -79,8 +79,9 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
       // "zero_reg" definition.
       if (DI->getDef()->isSubClassOf("Register") ||
           DI->getDef()->getName() == "zero_reg") {
-        OperandMap[BaseIdx + i].Kind = OpData::Reg;
-        OperandMap[BaseIdx + i].Data.Reg = DI->getDef();
+        auto &Entry = OperandMap[BaseIdx + i];
+        Entry.Kind = OpData::Reg;
+        Entry.Data.Reg = DI->getDef();
         ++OpsAdded;
         continue;
       }
@@ -105,12 +106,14 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
         OperandMap[BaseIdx + i + I].Kind = OpData::Operand;
       OpsAdded += Insn.Operands[i].MINumOperands;
     } else if (const IntInit *II = dyn_cast<IntInit>(Dag->getArg(i))) {
-      OperandMap[BaseIdx + i].Kind = OpData::Imm;
-      OperandMap[BaseIdx + i].Data.Imm = II->getValue();
+      auto &Entry = OperandMap[BaseIdx + i];
+      Entry.Kind = OpData::Imm;
+      Entry.Data.Imm = II->getValue();
       ++OpsAdded;
     } else if (const auto *BI = dyn_cast<BitsInit>(Dag->getArg(i))) {
-      OperandMap[BaseIdx + i].Kind = OpData::Imm;
-      OperandMap[BaseIdx + i].Data.Imm = *BI->convertInitializerToInt();
+      auto &Entry = OperandMap[BaseIdx + i];
+      Entry.Kind = OpData::Imm;
+      Entry.Data.Imm = *BI->convertInitializerToInt();
       ++OpsAdded;
     } else if (const DagInit *SubDag = dyn_cast<DagInit>(Dag->getArg(i))) {
       // Just add the operands recursively. This is almost certainly

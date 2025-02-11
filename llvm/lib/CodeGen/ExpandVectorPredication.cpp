@@ -136,17 +136,6 @@ namespace {
 struct CachingVPExpander {
   const TargetTransformInfo &TTI;
 
-  /// \returns A (fixed length) vector with ascending integer indices
-  /// (<0, 1, ..., NumElems-1>).
-  /// \p Builder
-  ///    Used for instruction creation.
-  /// \p LaneTy
-  ///    Integer element type of the result vector.
-  /// \p NumElems
-  ///    Number of vector elements.
-  Value *createStepVector(IRBuilder<> &Builder, Type *LaneTy,
-                          unsigned NumElems);
-
   /// \returns A bitmask that is true where the lane position is less-than \p
   /// EVLParam
   ///
@@ -175,8 +164,7 @@ struct CachingVPExpander {
                                            VPIntrinsic &PI);
 
   /// Lower this VP int call to a unpredicated int call.
-  Value *expandPredicationToIntCall(IRBuilder<> &Builder, VPIntrinsic &PI,
-                                    unsigned UnpredicatedIntrinsicID);
+  Value *expandPredicationToIntCall(IRBuilder<> &Builder, VPIntrinsic &PI);
 
   /// Lower this VP fp call to a unpredicated fp call.
   Value *expandPredicationToFPCall(IRBuilder<> &Builder, VPIntrinsic &PI,
@@ -217,17 +205,6 @@ public:
 
 //// CachingVPExpander {
 
-Value *CachingVPExpander::createStepVector(IRBuilder<> &Builder, Type *LaneTy,
-                                           unsigned NumElems) {
-  // TODO add caching
-  SmallVector<Constant *, 16> ConstElems;
-
-  for (unsigned Idx = 0; Idx < NumElems; ++Idx)
-    ConstElems.push_back(ConstantInt::get(LaneTy, Idx, false));
-
-  return ConstantVector::get(ConstElems);
-}
-
 Value *CachingVPExpander::convertEVLToMask(IRBuilder<> &Builder,
                                            Value *EVLParam,
                                            ElementCount ElemCount) {
@@ -246,7 +223,7 @@ Value *CachingVPExpander::convertEVLToMask(IRBuilder<> &Builder,
   Type *LaneTy = EVLParam->getType();
   unsigned NumElems = ElemCount.getFixedValue();
   Value *VLSplat = Builder.CreateVectorSplat(NumElems, EVLParam);
-  Value *IdxVec = createStepVector(Builder, LaneTy, NumElems);
+  Value *IdxVec = Builder.CreateStepVector(VectorType::get(LaneTy, ElemCount));
   return Builder.CreateICmp(CmpInst::ICMP_ULT, IdxVec, VLSplat);
 }
 
@@ -287,33 +264,19 @@ CachingVPExpander::expandPredicationInBinaryOperator(IRBuilder<> &Builder,
   return NewBinOp;
 }
 
-Value *CachingVPExpander::expandPredicationToIntCall(
-    IRBuilder<> &Builder, VPIntrinsic &VPI, unsigned UnpredicatedIntrinsicID) {
-  switch (UnpredicatedIntrinsicID) {
-  case Intrinsic::abs:
-  case Intrinsic::smax:
-  case Intrinsic::smin:
-  case Intrinsic::umax:
-  case Intrinsic::umin: {
-    Value *Op0 = VPI.getOperand(0);
-    Value *Op1 = VPI.getOperand(1);
-    Value *NewOp = Builder.CreateIntrinsic(
-        UnpredicatedIntrinsicID, {VPI.getType()}, {Op0, Op1},
-        /*FMFSource=*/nullptr, VPI.getName());
-    replaceOperation(*NewOp, VPI);
-    return NewOp;
+Value *CachingVPExpander::expandPredicationToIntCall(IRBuilder<> &Builder,
+                                                     VPIntrinsic &VPI) {
+  std::optional<unsigned> FID = VPI.getFunctionalIntrinsicID();
+  if (!FID)
+    return nullptr;
+  SmallVector<Value *, 2> Argument;
+  for (unsigned i = 0; i < VPI.getNumOperands() - 3; i++) {
+    Argument.push_back(VPI.getOperand(i));
   }
-  case Intrinsic::bswap:
-  case Intrinsic::bitreverse: {
-    Value *Op = VPI.getOperand(0);
-    Value *NewOp =
-        Builder.CreateIntrinsic(UnpredicatedIntrinsicID, {VPI.getType()}, {Op},
-                                /*FMFSource=*/nullptr, VPI.getName());
-    replaceOperation(*NewOp, VPI);
-    return NewOp;
-  }
-  }
-  return nullptr;
+  Value *NewOp = Builder.CreateIntrinsic(FID.value(), {VPI.getType()}, Argument,
+                                         /*FMFSource=*/nullptr, VPI.getName());
+  replaceOperation(*NewOp, VPI);
+  return NewOp;
 }
 
 Value *CachingVPExpander::expandPredicationToFPCall(
@@ -323,20 +286,15 @@ Value *CachingVPExpander::expandPredicationToFPCall(
 
   switch (UnpredicatedIntrinsicID) {
   case Intrinsic::fabs:
-  case Intrinsic::sqrt: {
-    Value *Op0 = VPI.getOperand(0);
-    Value *NewOp =
-        Builder.CreateIntrinsic(UnpredicatedIntrinsicID, {VPI.getType()}, {Op0},
-                                /*FMFSource=*/nullptr, VPI.getName());
-    replaceOperation(*NewOp, VPI);
-    return NewOp;
-  }
+  case Intrinsic::sqrt:
   case Intrinsic::maxnum:
   case Intrinsic::minnum: {
-    Value *Op0 = VPI.getOperand(0);
-    Value *Op1 = VPI.getOperand(1);
+    SmallVector<Value *, 2> Argument;
+    for (unsigned i = 0; i < VPI.getNumOperands() - 3; i++) {
+      Argument.push_back(VPI.getOperand(i));
+    }
     Value *NewOp = Builder.CreateIntrinsic(
-        UnpredicatedIntrinsicID, {VPI.getType()}, {Op0, Op1},
+        UnpredicatedIntrinsicID, {VPI.getType()}, Argument,
         /*FMFSource=*/nullptr, VPI.getName());
     replaceOperation(*NewOp, VPI);
     return NewOp;
@@ -438,56 +396,13 @@ CachingVPExpander::expandPredicationInReduction(IRBuilder<> &Builder,
 
 Value *CachingVPExpander::expandPredicationToCastIntrinsic(IRBuilder<> &Builder,
                                                            VPIntrinsic &VPI) {
-  Value *CastOp = nullptr;
-  switch (VPI.getIntrinsicID()) {
-  default:
-    llvm_unreachable("Not a VP cast intrinsic");
-  case Intrinsic::vp_sext:
-    CastOp =
-        Builder.CreateSExt(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    break;
-  case Intrinsic::vp_zext:
-    CastOp =
-        Builder.CreateZExt(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    break;
-  case Intrinsic::vp_trunc:
-    CastOp =
-        Builder.CreateTrunc(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    break;
-  case Intrinsic::vp_inttoptr:
-    CastOp =
-        Builder.CreateIntToPtr(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    break;
-  case Intrinsic::vp_ptrtoint:
-    CastOp =
-        Builder.CreatePtrToInt(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    break;
-  case Intrinsic::vp_fptosi:
-    CastOp =
-        Builder.CreateFPToSI(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    break;
+  Intrinsic::ID VPID = VPI.getIntrinsicID();
+  unsigned CastOpcode = VPIntrinsic::getFunctionalOpcodeForVP(VPID).value();
+  assert(Instruction::isCast(CastOpcode));
+  Value *CastOp =
+      Builder.CreateCast(Instruction::CastOps(CastOpcode), VPI.getOperand(0),
+                         VPI.getType(), VPI.getName());
 
-  case Intrinsic::vp_fptoui:
-    CastOp =
-        Builder.CreateFPToUI(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    break;
-  case Intrinsic::vp_sitofp:
-    CastOp =
-        Builder.CreateSIToFP(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    break;
-  case Intrinsic::vp_uitofp:
-    CastOp =
-        Builder.CreateUIToFP(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    break;
-  case Intrinsic::vp_fptrunc:
-    CastOp =
-        Builder.CreateFPTrunc(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    break;
-  case Intrinsic::vp_fpext:
-    CastOp =
-        Builder.CreateFPExt(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    break;
-  }
   replaceOperation(*CastOp, VPI);
   return CastOp;
 }
@@ -672,8 +587,16 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_umin:
   case Intrinsic::vp_bswap:
   case Intrinsic::vp_bitreverse:
-    return expandPredicationToIntCall(Builder, VPI,
-                                      VPI.getFunctionalIntrinsicID().value());
+  case Intrinsic::vp_ctpop:
+  case Intrinsic::vp_ctlz:
+  case Intrinsic::vp_cttz:
+  case Intrinsic::vp_sadd_sat:
+  case Intrinsic::vp_uadd_sat:
+  case Intrinsic::vp_ssub_sat:
+  case Intrinsic::vp_usub_sat:
+  case Intrinsic::vp_fshl:
+  case Intrinsic::vp_fshr:
+    return expandPredicationToIntCall(Builder, VPI);
   case Intrinsic::vp_fabs:
   case Intrinsic::vp_sqrt:
   case Intrinsic::vp_maxnum:

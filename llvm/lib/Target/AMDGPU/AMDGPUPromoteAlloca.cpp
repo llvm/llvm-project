@@ -839,10 +839,9 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         return RejectUser(Inst, "mem transfer inst length is non-constant or "
                                 "not a multiple of the vector element size");
 
-      if (!TransferInfo.count(TransferInst)) {
+      if (TransferInfo.try_emplace(TransferInst).second) {
         DeferredInsts.push_back(Inst);
         WorkList.push_back(Inst);
-        TransferInfo[TransferInst] = MemTransferInfo();
       }
 
       auto getPointerIndexOfAlloca = [&](Value *Ptr) -> ConstantInt * {
@@ -1344,7 +1343,7 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   }
 
   unsigned MaxOccupancy =
-      ST.getOccupancyWithLocalMemSize(CurrentLocalMemUsage, F);
+      ST.getOccupancyWithWorkGroupSizes(CurrentLocalMemUsage, F).second;
 
   // Restrict local memory usage so that we don't drastically reduce occupancy,
   // unless it is already significantly reduced.
@@ -1556,12 +1555,24 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
     case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
+    case Intrinsic::strip_invariant_group: {
+      SmallVector<Value *> Args;
+      if (Intr->getIntrinsicID() == Intrinsic::invariant_start) {
+        Args.emplace_back(Intr->getArgOperand(0));
+      } else if (Intr->getIntrinsicID() == Intrinsic::invariant_end) {
+        Args.emplace_back(Intr->getArgOperand(0));
+        Args.emplace_back(Intr->getArgOperand(1));
+      }
+      Args.emplace_back(Offset);
+      Function *F = Intrinsic::getOrInsertDeclaration(
+          Intr->getModule(), Intr->getIntrinsicID(), Offset->getType());
+      CallInst *NewIntr =
+          CallInst::Create(F, Args, Intr->getName(), Intr->getIterator());
+      Intr->mutateType(NewIntr->getType());
+      Intr->replaceAllUsesWith(NewIntr);
       Intr->eraseFromParent();
-      // FIXME: I think the invariant marker should still theoretically apply,
-      // but the intrinsics need to be changed to accept pointers with any
-      // address space.
       continue;
+    }
     case Intrinsic::objectsize: {
       Value *Src = Intr->getOperand(0);
 

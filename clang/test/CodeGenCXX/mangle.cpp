@@ -645,7 +645,7 @@ namespace test24 {
     foo();
   }
 
-  static char bar() {}
+  static char bar() { return 0; }
   void test1() {
     // CHECK: call noundef signext i8 @_ZN6test24L3barEv()
     bar();
@@ -839,7 +839,7 @@ namespace test36 {
   template<unsigned> struct A { };
 
   template<typename ...Types>
-  auto f1(Types... values) -> A<sizeof...(values)> { }
+  auto f1(Types... values) -> A<sizeof...(values)> { return {}; }
 
   // CHECK: define weak_odr {{.*}} @_ZN6test362f1IJifEEENS_1AIXsZfp_EEEDpT_
   template A<2> f1(int, float);

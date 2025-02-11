@@ -154,6 +154,8 @@ namespace options {
   static std::string extra_library_path;
   static std::string triple;
   static std::string mcpu;
+  // Tells plugin to use unified lto
+  static bool unifiedlto = false;
   // When the thinlto plugin option is specified, only read the function
   // the information from intermediate files and write a combined
   // global index for the ThinLTO backends.
@@ -222,6 +224,9 @@ namespace options {
   static std::string cs_profile_path;
   static bool cs_pgo_gen = false;
 
+  // When true, MergeFunctions pass is used in LTO link pipeline.
+  static bool merge_functions = false;
+
   // Time trace options.
   static std::string time_trace_file;
   static unsigned time_trace_granularity = 500;
@@ -248,6 +253,8 @@ namespace options {
       TheOutputType = OT_DISABLE;
     } else if (opt == "emit-asm") {
       TheOutputType = OT_ASM_ONLY;
+    } else if (opt == "unifiedlto") {
+      unifiedlto = true;
     } else if (opt == "thinlto") {
       thinlto = true;
     } else if (opt == "thinlto-index-only") {
@@ -288,6 +295,8 @@ namespace options {
       sample_profile = std::string(opt);
     } else if (opt == "cs-profile-generate") {
       cs_pgo_gen = true;
+    } else if (opt == "merge-functions") {
+      merge_functions = true;
     } else if (opt.consume_front("cs-profile-path=")) {
       cs_profile_path = std::string(opt);
     } else if (opt == "new-pass-manager") {
@@ -893,6 +902,8 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.OptLevel = options::OptLevel;
   Conf.PTO.LoopVectorization = options::OptLevel > 1;
   Conf.PTO.SLPVectorization = options::OptLevel > 1;
+  Conf.PTO.MergeFunctions = options::merge_functions;
+  Conf.PTO.UnifiedLTO = options::unifiedlto;
   Conf.AlwaysEmitRegularLTOObj = !options::obj_path.empty();
 
   if (options::thinlto_index_only) {
@@ -972,8 +983,13 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.TimeTraceEnabled = !options::time_trace_file.empty();
   Conf.TimeTraceGranularity = options::time_trace_granularity;
 
+  LTO::LTOKind ltoKind = LTO::LTOK_Default;
+  if (options::unifiedlto)
+    ltoKind =
+        options::thinlto ? LTO::LTOK_UnifiedThin : LTO::LTOK_UnifiedRegular;
   return std::make_unique<LTO>(std::move(Conf), Backend,
-                                options::ParallelCodeGenParallelismLevel);
+                               options::ParallelCodeGenParallelismLevel,
+                               ltoKind);
 }
 
 // Write empty files that may be expected by a distributed build

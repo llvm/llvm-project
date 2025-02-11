@@ -164,9 +164,9 @@ static cl::opt<bool>
     OptimizeMemorySSA("dse-optimize-memoryssa", cl::init(true), cl::Hidden,
                       cl::desc("Allow DSE to optimize memory accesses."));
 
-// TODO: turn on and remove this flag.
+// TODO: remove this flag.
 static cl::opt<bool> EnableInitializesImprovement(
-    "enable-dse-initializes-attr-improvement", cl::init(false), cl::Hidden,
+    "enable-dse-initializes-attr-improvement", cl::init(true), cl::Hidden,
     cl::desc("Enable the initializes attr improvement in DSE"));
 
 //===----------------------------------------------------------------------===//
@@ -553,7 +553,7 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
 
     // Fragments overlap: insert a new dbg.assign for this dead part.
     auto *NewAssign = static_cast<decltype(Assign)>(Assign->clone());
-    NewAssign->insertAfter(Assign);
+    NewAssign->insertAfter(Assign->getIterator());
     NewAssign->setAssignId(GetDeadLink());
     if (NewFragment)
       SetDeadFragExpr(NewAssign, *NewFragment);
@@ -2054,7 +2054,7 @@ struct DSEState {
       return false;
 
     Instruction *ICmpL;
-    ICmpInst::Predicate Pred;
+    CmpPredicate Pred;
     if (!match(BI->getCondition(),
                m_c_ICmp(Pred,
                         m_CombineAnd(m_Load(m_Specific(StorePtr)),
@@ -2210,7 +2210,9 @@ struct DSEState {
 
       Instruction *UpperInst = UpperDef->getMemoryInst();
       auto IsRedundantStore = [&]() {
-        if (DefInst->isIdenticalTo(UpperInst))
+        // We don't care about differences in call attributes here.
+        if (DefInst->isIdenticalToWhenDefined(UpperInst,
+                                              /*IntersectAttrs=*/true))
           return true;
         if (auto *MemSetI = dyn_cast<MemSetInst>(UpperInst)) {
           if (auto *SI = dyn_cast<StoreInst>(DefInst)) {
@@ -2262,6 +2264,14 @@ struct DSEState {
   bool eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper);
 };
 
+// Return true if "Arg" is function local and isn't captured before "CB".
+bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
+                               EarliestEscapeAnalysis &EA) {
+  const Value *UnderlyingObj = getUnderlyingObject(Arg);
+  return isIdentifiedFunctionLocal(UnderlyingObj) &&
+         EA.isNotCapturedBefore(UnderlyingObj, CB, /*OrAt*/ true);
+}
+
 SmallVector<MemoryLocation, 1>
 DSEState::getInitializesArgMemLoc(const Instruction *I) {
   const CallBase *CB = dyn_cast<CallBase>(I);
@@ -2273,10 +2283,19 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
   for (unsigned Idx = 0, Count = CB->arg_size(); Idx < Count; ++Idx) {
     ConstantRangeList Inits;
     Attribute InitializesAttr = CB->getParamAttr(Idx, Attribute::Initializes);
-    if (InitializesAttr.isValid())
+    // initializes on byval arguments refers to the callee copy, not the
+    // original memory the caller passed in.
+    if (InitializesAttr.isValid() && !CB->isByValArgument(Idx))
       Inits = InitializesAttr.getValueAsConstantRangeList();
 
     Value *CurArg = CB->getArgOperand(Idx);
+    // Check whether "CurArg" could alias with global variables. We require
+    // either it's function local and isn't captured before or the "CB" only
+    // accesses arg or inaccessible mem.
+    if (!Inits.empty() && !CB->onlyAccessesInaccessibleMemOrArgMem() &&
+        !isFuncLocalAndNotCaptured(CurArg, CB, EA))
+      Inits = ConstantRangeList();
+
     // We don't perform incorrect DSE on unwind edges in the current function,
     // and use the "initializes" attribute to kill dead stores if:
     // - The call does not throw exceptions, "CB->doesNotThrow()".

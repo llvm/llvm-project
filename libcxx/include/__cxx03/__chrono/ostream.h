@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_OSTREAM_H
-#define _LIBCPP___CHRONO_OSTREAM_H
+#ifndef _LIBCPP___CXX03___CHRONO_OSTREAM_H
+#define _LIBCPP___CXX03___CHRONO_OSTREAM_H
 
 #include <__cxx03/__chrono/calendar.h>
 #include <__cxx03/__chrono/day.h>
@@ -319,4 +319,4 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const zoned_time<_Duration, _Ti
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CHRONO_OSTREAM_H
+#endif // _LIBCPP___CXX03___CHRONO_OSTREAM_H

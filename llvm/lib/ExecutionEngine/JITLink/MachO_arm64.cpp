@@ -13,7 +13,9 @@
 #include "llvm/ExecutionEngine/JITLink/MachO_arm64.h"
 #include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
 
+#include "CompactUnwindSupport.h"
 #include "DefineExternalSectionStartAndEndSymbols.h"
 #include "MachOLinkGraphBuilder.h"
 
@@ -27,9 +29,10 @@ namespace {
 class MachOLinkGraphBuilder_arm64 : public MachOLinkGraphBuilder {
 public:
   MachOLinkGraphBuilder_arm64(const object::MachOObjectFile &Obj,
+                              std::shared_ptr<orc::SymbolStringPool> SSP,
                               SubtargetFeatures Features)
-      : MachOLinkGraphBuilder(Obj, getObjectTriple(Obj), std::move(Features),
-                              aarch64::getEdgeKindName),
+      : MachOLinkGraphBuilder(Obj, std::move(SSP), getObjectTriple(Obj),
+                              std::move(Features), aarch64::getEdgeKindName),
         NumSymbols(Obj.getSymtabLoadCommand().nsyms) {}
 
 private:
@@ -557,8 +560,8 @@ namespace jitlink {
 Error buildTables_MachO_arm64(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
-  aarch64::GOTTableManager GOT;
-  aarch64::PLTTableManager PLT(GOT);
+  aarch64::GOTTableManager GOT(G);
+  aarch64::PLTTableManager PLT(G, GOT);
   visitExistingEdges(G, GOT, PLT);
   return Error::success();
 }
@@ -580,8 +583,8 @@ private:
   uint64_t NullValue = 0;
 };
 
-Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromMachOObject_arm64(MemoryBufferRef ObjectBuffer) {
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromMachOObject_arm64(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   auto MachOObj = object::ObjectFile::createMachOObjectFile(ObjectBuffer);
   if (!MachOObj)
     return MachOObj.takeError();
@@ -590,9 +593,61 @@ createLinkGraphFromMachOObject_arm64(MemoryBufferRef ObjectBuffer) {
   if (!Features)
     return Features.takeError();
 
-  return MachOLinkGraphBuilder_arm64(**MachOObj, std::move(*Features))
+  return MachOLinkGraphBuilder_arm64(**MachOObj, std::move(SSP),
+                                     std::move(*Features))
       .buildGraph();
 }
+
+static Error applyPACSigningToModInitPointers(LinkGraph &G) {
+  assert(G.getTargetTriple().getSubArch() == Triple::AArch64SubArch_arm64e &&
+         "PAC signing only valid for arm64e");
+
+  if (auto *ModInitSec = G.findSectionByName("__DATA,__mod_init_func")) {
+    for (auto *B : ModInitSec->blocks()) {
+      for (auto &E : B->edges()) {
+        if (E.getKind() == aarch64::Pointer64) {
+
+          // Check that we have room to encode pointer signing bits.
+          if (E.getAddend() >> 32)
+            return make_error<JITLinkError>(
+                "In " + G.getName() + ", __mod_init_func pointer at " +
+                formatv("{0:x}", B->getFixupAddress(E).getValue()) +
+                " has data in high bits of addend (addend >= 2^32)");
+
+          // Change edge to Pointer64Authenticated, encode signing:
+          // key = asia, discriminator = 0, diversity = 0.
+          Edge::AddendT SigningBits = 0x1ULL << 63;
+          E.setKind(aarch64::Pointer64Authenticated);
+          E.setAddend(E.getAddend() | SigningBits);
+        }
+      }
+    }
+  }
+
+  return Error::success();
+}
+
+struct CompactUnwindTraits_MachO_arm64
+    : public CompactUnwindTraits<CompactUnwindTraits_MachO_arm64,
+                                 /* PointerSize = */ 8> {
+  // FIXME: Reinstate once we no longer need the MSVC workaround. See
+  //        FIXME for CompactUnwindTraits in CompactUnwindSupport.h.
+  // constexpr static size_t PointerSize = 8;
+
+  constexpr static endianness Endianness = endianness::little;
+
+  constexpr static uint32_t EncodingModeMask = 0x0f000000;
+  constexpr static uint32_t DWARFSectionOffsetMask = 0x00ffffff;
+
+  using GOTManager = aarch64::GOTTableManager;
+
+  static bool encodingSpecifiesDWARF(uint32_t Encoding) {
+    constexpr uint32_t DWARFMode = 0x03000000;
+    return (Encoding & EncodingModeMask) == DWARFMode;
+  }
+
+  static bool encodingCannotBeMerged(uint32_t Encoding) { return false; }
+};
 
 void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
                       std::unique_ptr<JITLinkContext> Ctx) {
@@ -606,15 +661,20 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
-    // Add compact unwind splitter pass.
-    Config.PrePrunePasses.push_back(
-        CompactUnwindSplitter("__LD,__compact_unwind"));
-
     // Add eh-frame passes.
-    // FIXME: Prune eh-frames for which compact-unwind is available once
-    // we support compact-unwind registration with libunwind.
     Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_arm64());
     Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_arm64());
+
+    // Create a compact-unwind manager for use in passes below.
+    auto CompactUnwindMgr =
+        std::make_shared<CompactUnwindManager<CompactUnwindTraits_MachO_arm64>>(
+            orc::MachOCompactUnwindSectionName, orc::MachOUnwindInfoSectionName,
+            orc::MachOEHFrameSectionName);
+
+    // Add compact unwind prepare pass.
+    Config.PrePrunePasses.push_back([CompactUnwindMgr](LinkGraph &G) {
+      return CompactUnwindMgr->prepareForPrune(G);
+    });
 
     // Resolve any external section start / end symbols.
     Config.PostAllocationPasses.push_back(
@@ -626,11 +686,22 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
 
     // If this is an arm64e graph then add pointer signing passes.
     if (G->getTargetTriple().isArm64e()) {
+      Config.PostPrunePasses.push_back(applyPACSigningToModInitPointers);
       Config.PostPrunePasses.push_back(
           aarch64::createEmptyPointerSigningFunction);
       Config.PreFixupPasses.push_back(
           aarch64::lowerPointer64AuthEdgesToSigningFunction);
     }
+
+    // Reserve unwind-info space.
+    Config.PostPrunePasses.push_back([CompactUnwindMgr](LinkGraph &G) {
+      return CompactUnwindMgr->processAndReserveUnwindInfo(G);
+    });
+
+    // Translate compact-unwind to unwind-info.
+    Config.PreFixupPasses.push_back([CompactUnwindMgr](LinkGraph &G) {
+      return CompactUnwindMgr->writeUnwindInfo(G);
+    });
   }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
@@ -641,11 +712,11 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
 }
 
 LinkGraphPassFunction createEHFrameSplitterPass_MachO_arm64() {
-  return DWARFRecordSectionSplitter("__TEXT,__eh_frame");
+  return DWARFRecordSectionSplitter(orc::MachOEHFrameSectionName);
 }
 
 LinkGraphPassFunction createEHFrameEdgeFixerPass_MachO_arm64() {
-  return EHFrameEdgeFixer("__TEXT,__eh_frame", aarch64::PointerSize,
+  return EHFrameEdgeFixer(orc::MachOEHFrameSectionName, aarch64::PointerSize,
                           aarch64::Pointer32, aarch64::Pointer64,
                           aarch64::Delta32, aarch64::Delta64,
                           aarch64::NegDelta32);

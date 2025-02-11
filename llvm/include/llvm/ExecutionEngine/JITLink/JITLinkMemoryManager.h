@@ -19,11 +19,13 @@
 #include "llvm/ExecutionEngine/Orc/Shared/AllocationActions.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/RecyclingAllocator.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <cassert>
 #include <cstdint>
@@ -320,12 +322,15 @@ public:
   using OnFinalizedFunction =
       JITLinkMemoryManager::InFlightAlloc::OnFinalizedFunction;
 
-  static void Create(JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
-                     SegmentMap Segments, OnCreatedFunction OnCreated);
+  static void Create(JITLinkMemoryManager &MemMgr,
+                     std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
+                     const JITLinkDylib *JD, SegmentMap Segments,
+                     OnCreatedFunction OnCreated);
 
-  static Expected<SimpleSegmentAlloc> Create(JITLinkMemoryManager &MemMgr,
-                                             const JITLinkDylib *JD,
-                                             SegmentMap Segments);
+  static Expected<SimpleSegmentAlloc>
+  Create(JITLinkMemoryManager &MemMgr,
+         std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
+         const JITLinkDylib *JD, SegmentMap Segments);
 
   SimpleSegmentAlloc(SimpleSegmentAlloc &&);
   SimpleSegmentAlloc &operator=(SimpleSegmentAlloc &&);

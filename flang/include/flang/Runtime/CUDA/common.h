@@ -9,7 +9,7 @@
 #ifndef FORTRAN_RUNTIME_CUDA_COMMON_H_
 #define FORTRAN_RUNTIME_CUDA_COMMON_H_
 
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 
 /// Type of memory for allocation/deallocation

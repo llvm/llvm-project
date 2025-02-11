@@ -53,6 +53,19 @@ enum FeatureKind : uint32_t {
   // Atomic memory swap and add instructions for byte and half word are
   // available.
   FK_LAM_BH = 1 << 10,
+
+  // Atomic memory compare and swap instructions for byte, half word, word and
+  // double word are available.
+  FK_LAMCAS = 1 << 11,
+
+  // Do not generate load-load barrier instructions (dbar 0x700).
+  FK_LD_SEQ_SA = 1 << 12,
+
+  // Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended.
+  FK_DIV32 = 1 << 13,
+
+  // sc.q is available.
+  FK_SCQ = 1 << 14,
 };
 
 struct FeatureInfo {

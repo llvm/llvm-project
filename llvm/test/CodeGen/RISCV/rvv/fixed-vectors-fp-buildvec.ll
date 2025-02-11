@@ -40,16 +40,16 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
 ; CHECK-LABEL: hang_when_merging_stores_after_legalization:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    vmv.v.i v12, -14
+; CHECK-NEXT:    vid.v v14
 ; CHECK-NEXT:    li a0, 7
+; CHECK-NEXT:    vmadd.vx v14, a0, v12
+; CHECK-NEXT:    li a0, 129
+; CHECK-NEXT:    vmv.s.x v15, a0
 ; CHECK-NEXT:    vmv.v.i v0, 12
-; CHECK-NEXT:    vmul.vx v14, v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v14
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vadd.vi v8, v14, -14
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
-; CHECK-NEXT:    vrgatherei16.vv v12, v10, v8, v0.t
+; CHECK-NEXT:    vcompress.vm v12, v8, v15
+; CHECK-NEXT:    vrgatherei16.vv v12, v10, v14, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v12
 ; CHECK-NEXT:    ret
   %z = shufflevector <8 x float> %x, <8 x float> %y, <4 x i32> <i32 0, i32 7, i32 8, i32 15>

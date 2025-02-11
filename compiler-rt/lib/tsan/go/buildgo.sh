@@ -18,6 +18,8 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 		else
 			HOST_GOARCH="mips64"
 		fi
+  	elif [ "`uname -a | grep riscv64`" != "" ]; then
+		HOST_GOARCH="riscv64"
 	elif [ "`uname -a | grep s390x`" != "" ]; then
 		HOST_GOARCH="s390x"
 	fi

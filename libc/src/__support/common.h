@@ -21,14 +21,15 @@
 #define LLVM_LIBC_FUNCTION_ATTR
 #endif
 
+// clang-format off
 // Allow each function `func` to have extra attributes specified by defining:
 // `LLVM_LIBC_FUNCTION_ATTR_func` macro, which should always start with
 // "LLVM_LIBC_EMPTY, "
 //
 // For examples:
 // #define LLVM_LIBC_FUNCTION_ATTR_memcpy LLVM_LIBC_EMPTY, [[gnu::weak]]
-// #define LLVM_LIBC_FUNCTION_ATTR_memchr LLVM_LIBC_EMPTY, [[gnu::weak]]       \
-//                                        [[gnu::visibility("default")]]
+// #define LLVM_LIBC_FUNCTION_ATTR_memchr LLVM_LIBC_EMPTY, [[gnu::weak]] [[gnu::visibility("default")]]
+// clang-format on
 #define LLVM_LIBC_EMPTY
 
 #define GET_SECOND(first, second, ...) second

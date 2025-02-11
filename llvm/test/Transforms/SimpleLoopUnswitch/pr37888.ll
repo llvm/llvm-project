@@ -29,7 +29,7 @@ if.end:
   br label %for.inc
 
 for.inc:
-  br i1 undef, label %for.body, label %for.end
+  br i1 false, label %for.body, label %for.end
 
 for.end:
   ret void

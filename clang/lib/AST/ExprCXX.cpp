@@ -162,7 +162,7 @@ QualType CXXTypeidExpr::getTypeOperand(const ASTContext &Context) const {
   assert(isTypeOperand() && "Cannot call getTypeOperand for typeid(expr)");
   Qualifiers Quals;
   return Context.getUnqualifiedArrayType(
-      Operand.get<TypeSourceInfo *>()->getType().getNonReferenceType(), Quals);
+      cast<TypeSourceInfo *>(Operand)->getType().getNonReferenceType(), Quals);
 }
 
 static bool isGLValueFromPointerDeref(const Expr *E) {
@@ -216,7 +216,7 @@ QualType CXXUuidofExpr::getTypeOperand(ASTContext &Context) const {
   assert(isTypeOperand() && "Cannot call getTypeOperand for __uuidof(expr)");
   Qualifiers Quals;
   return Context.getUnqualifiedArrayType(
-      Operand.get<TypeSourceInfo *>()->getType().getNonReferenceType(), Quals);
+      cast<TypeSourceInfo *>(Operand)->getType().getNonReferenceType(), Quals);
 }
 
 // CXXScalarValueInitExpr
@@ -1717,18 +1717,18 @@ NonTypeTemplateParmDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
 PackIndexingExpr *PackIndexingExpr::Create(
     ASTContext &Context, SourceLocation EllipsisLoc, SourceLocation RSquareLoc,
     Expr *PackIdExpr, Expr *IndexExpr, std::optional<int64_t> Index,
-    ArrayRef<Expr *> SubstitutedExprs, bool ExpandedToEmptyPack) {
+    ArrayRef<Expr *> SubstitutedExprs, bool FullySubstituted) {
   QualType Type;
-  if (Index && !SubstitutedExprs.empty())
+  if (Index && FullySubstituted && !SubstitutedExprs.empty())
     Type = SubstitutedExprs[*Index]->getType();
   else
-    Type = Context.DependentTy;
+    Type = PackIdExpr->getType();
 
   void *Storage =
       Context.Allocate(totalSizeToAlloc<Expr *>(SubstitutedExprs.size()));
   return new (Storage)
       PackIndexingExpr(Type, EllipsisLoc, RSquareLoc, PackIdExpr, IndexExpr,
-                       SubstitutedExprs, ExpandedToEmptyPack);
+                       SubstitutedExprs, FullySubstituted);
 }
 
 NamedDecl *PackIndexingExpr::getPackDecl() const {
@@ -1829,11 +1829,11 @@ void MaterializeTemporaryExpr::setExtendingDecl(ValueDecl *ExtendedBy,
 
   // We may need to allocate extra storage for the mangling number and the
   // extended-by ValueDecl.
-  if (!State.is<LifetimeExtendedTemporaryDecl *>())
+  if (!isa<LifetimeExtendedTemporaryDecl *>(State))
     State = LifetimeExtendedTemporaryDecl::Create(
-        cast<Expr>(State.get<Stmt *>()), ExtendedBy, ManglingNumber);
+        cast<Expr>(cast<Stmt *>(State)), ExtendedBy, ManglingNumber);
 
-  auto ES = State.get<LifetimeExtendedTemporaryDecl *>();
+  auto ES = cast<LifetimeExtendedTemporaryDecl *>(State);
   ES->ExtendingDecl = ExtendedBy;
   ES->ManglingNumber = ManglingNumber;
 }
@@ -1964,4 +1964,53 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
   SubExprs[SubExpr::LHS] = LHS;
   SubExprs[SubExpr::RHS] = RHS;
   setDependence(computeDependence(this));
+}
+
+ResolvedUnexpandedPackExpr::ResolvedUnexpandedPackExpr(SourceLocation BL,
+                                                       QualType QT,
+                                                       unsigned NumExprs)
+    : Expr(ResolvedUnexpandedPackExprClass, QT, VK_PRValue, OK_Ordinary),
+      BeginLoc(BL), NumExprs(NumExprs) {
+  // C++ [temp.dep.expr]p3
+  // An id-expression is type-dependent if it is
+  //    - associated by name lookup with a pack
+  setDependence(ExprDependence::TypeValueInstantiation |
+                ExprDependence::UnexpandedPack);
+}
+
+ResolvedUnexpandedPackExpr *
+ResolvedUnexpandedPackExpr::CreateDeserialized(ASTContext &Ctx,
+                                               unsigned NumExprs) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumExprs),
+                           alignof(ResolvedUnexpandedPackExpr));
+  return new (Mem)
+      ResolvedUnexpandedPackExpr(SourceLocation(), QualType(), NumExprs);
+}
+
+ResolvedUnexpandedPackExpr *
+ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
+                                   QualType T, unsigned NumExprs) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumExprs),
+                           alignof(ResolvedUnexpandedPackExpr));
+  ResolvedUnexpandedPackExpr *New =
+      new (Mem) ResolvedUnexpandedPackExpr(BL, T, NumExprs);
+
+  auto Exprs = New->getExprs();
+  std::uninitialized_fill(Exprs.begin(), Exprs.end(), nullptr);
+
+  return New;
+}
+
+ResolvedUnexpandedPackExpr *
+ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
+                                   QualType T, ArrayRef<Expr *> Exprs) {
+  auto *New = Create(Ctx, BL, T, Exprs.size());
+  std::uninitialized_copy(Exprs.begin(), Exprs.end(), New->getExprs().begin());
+  return New;
+}
+
+ResolvedUnexpandedPackExpr *ResolvedUnexpandedPackExpr::getFromDecl(Decl *D) {
+  if (auto *BD = dyn_cast<BindingDecl>(D))
+    return dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BD->getBinding());
+  return nullptr;
 }

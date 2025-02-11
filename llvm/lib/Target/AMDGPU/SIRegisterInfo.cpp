@@ -45,6 +45,12 @@ std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 static const std::array<unsigned, 17> SubRegFromChannelTableWidthMap = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 9};
 
+static void emitUnsupportedError(const Function &Fn, const MachineInstr &MI,
+                                 const Twine &ErrMsg) {
+  Fn.getContext().diagnose(
+      DiagnosticInfoUnsupported(Fn, ErrMsg, MI.getDebugLoc()));
+}
+
 namespace llvm {
 
 // A temporary struct to spill SGPRs.
@@ -219,7 +225,8 @@ struct SGPRSpillBuilder {
       // and restore. FIXME: We probably would need to reserve a register for
       // this.
       if (RS->isRegUsed(AMDGPU::SCC))
-        MI->emitError("unhandled SGPR spill to memory");
+        emitUnsupportedError(MF.getFunction(), *MI,
+                             "unhandled SGPR spill to memory");
 
       // Spill active lanes
       if (TmpVGPRLive)
@@ -294,7 +301,8 @@ struct SGPRSpillBuilder {
       // and restore. FIXME: We probably would need to reserve a register for
       // this.
       if (RS->isRegUsed(AMDGPU::SCC))
-        MI->emitError("unhandled SGPR spill to memory");
+        emitUnsupportedError(MF.getFunction(), *MI,
+                             "unhandled SGPR spill to memory");
 
       // Spill active lanes
       TRI.buildVGPRSpillLoadStore(*this, Index, Offset, IsLoad,
@@ -319,7 +327,8 @@ struct SGPRSpillBuilder {
 
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
     : AMDGPUGenRegisterInfo(AMDGPU::PC_REG, ST.getAMDGPUDwarfFlavour(),
-                            ST.getAMDGPUDwarfFlavour()),
+                            ST.getAMDGPUDwarfFlavour(),
+                            /*PC=*/0, ST.getHwMode()),
       ST(ST), SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()) {
 
   assert(getSubRegIndexLaneMask(AMDGPU::sub0).getAsInteger() == 3 &&
@@ -516,8 +525,7 @@ Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 bool SIRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // When we need stack realignment, we can't reference off of the
   // stack pointer, so we reserve a base pointer.
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MFI.getNumFixedObjects() && shouldRealignStack(MF);
+  return shouldRealignStack(MF);
 }
 
 Register SIRegisterInfo::getBaseRegister() const { return AMDGPU::SGPR34; }
@@ -1808,6 +1816,8 @@ void SIRegisterInfo::buildSpillLoadStore(
                            .addReg(SubReg, getKillRegState(IsKill));
         if (NeedSuperRegDef)
           AccRead.addReg(ValueReg, RegState::ImplicitDefine);
+        if (NeedSuperRegImpOperand && (IsFirstSubReg || IsLastSubReg))
+          AccRead.addReg(ValueReg, RegState::Implicit);
         AccRead->setAsmPrinterFlag(MachineInstr::ReloadReuse);
       }
       SubReg = TmpIntermediateVGPR;
@@ -1945,6 +1955,9 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
                                RegScavenger *RS, SlotIndexes *Indexes,
                                LiveIntervals *LIS, bool OnlyToVGPR,
                                bool SpillToPhysVGPRLane) const {
+  assert(!MI->getOperand(0).isUndef() &&
+         "undef spill should have been deleted earlier");
+
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
   ArrayRef<SpilledReg> VGPRSpills =
@@ -2366,6 +2379,11 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_WWM_AV32_SAVE: {
       const MachineOperand *VData = TII->getNamedOperand(*MI,
                                                          AMDGPU::OpName::vdata);
+      if (VData->isUndef()) {
+        MI->eraseFromParent();
+        return true;
+      }
+
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
              MFI->getStackPtrOffsetReg());
 
@@ -3498,30 +3516,6 @@ bool SIRegisterInfo::opCanUseInlineConstant(unsigned OpType) const {
          OpType <= AMDGPU::OPERAND_SRC_LAST;
 }
 
-bool SIRegisterInfo::shouldRewriteCopySrc(
-  const TargetRegisterClass *DefRC,
-  unsigned DefSubReg,
-  const TargetRegisterClass *SrcRC,
-  unsigned SrcSubReg) const {
-  // We want to prefer the smallest register class possible, so we don't want to
-  // stop and rewrite on anything that looks like a subregister
-  // extract. Operations mostly don't care about the super register class, so we
-  // only want to stop on the most basic of copies between the same register
-  // class.
-  //
-  // e.g. if we have something like
-  // %0 = ...
-  // %1 = ...
-  // %2 = REG_SEQUENCE %0, sub0, %1, sub1, %2, sub2
-  // %3 = COPY %2, sub0
-  //
-  // We want to look through the COPY to find:
-  //  => %3 = COPY %0
-
-  // Plain copy.
-  return getCommonSubClass(DefRC, SrcRC) != nullptr;
-}
-
 bool SIRegisterInfo::opCanUseLiteralConstant(unsigned OpType) const {
   // TODO: 64-bit operands have extending behavior from 32-bit literal.
   return OpType >= AMDGPU::OPERAND_REG_IMM_FIRST &&
@@ -3623,18 +3617,15 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
 
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                              MachineFunction &MF) const {
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-
-  unsigned Occupancy = ST.getOccupancyWithLocalMemSize(MFI->getLDSSize(),
-                                                       MF.getFunction());
+  unsigned MinOcc = ST.getOccupancyWithWorkGroupSizes(MF).first;
   switch (RC->getID()) {
   default:
     return AMDGPUGenRegisterInfo::getRegPressureLimit(RC, MF);
   case AMDGPU::VGPR_32RegClassID:
-    return std::min(ST.getMaxNumVGPRs(Occupancy), ST.getMaxNumVGPRs(MF));
+    return std::min(ST.getMaxNumVGPRs(MinOcc), ST.getMaxNumVGPRs(MF));
   case AMDGPU::SGPR_32RegClassID:
   case AMDGPU::SGPR_LO16RegClassID:
-    return std::min(ST.getMaxNumSGPRs(Occupancy, true), ST.getMaxNumSGPRs(MF));
+    return std::min(ST.getMaxNumSGPRs(MinOcc, true), ST.getMaxNumSGPRs(MF));
   }
 }
 

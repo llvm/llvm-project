@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -19,7 +20,6 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
-#include "flang/Optimizer/Transforms/CUFCommon.h"
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -57,7 +57,7 @@ struct CUFAddConstructor
     auto funcTy =
         mlir::LLVM::LLVMFunctionType::get(voidTy, {}, /*isVarArg=*/false);
     std::optional<mlir::DataLayout> dl =
-        fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/false);
+        fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/false);
     if (!dl) {
       mlir::emitError(mod.getLoc(),
                       "data layout attribute is required to perform " +
@@ -145,8 +145,6 @@ struct CUFAddConstructor
         default:
           break;
         }
-        if (!func)
-          continue;
       }
     }
     builder.create<mlir::LLVM::ReturnOp>(loc, mlir::ValueRange{});

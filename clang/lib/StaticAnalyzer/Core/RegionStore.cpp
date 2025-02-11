@@ -29,6 +29,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <utility>
@@ -112,6 +113,13 @@ public:
 
   LLVM_DUMP_METHOD void dump() const;
 };
+
+std::string locDescr(Loc L) {
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+  L.dumpToStream(OS);
+  return OS.str();
+}
 } // end anonymous namespace
 
 BindingKey BindingKey::Make(const MemRegion *R, Kind k) {
@@ -608,6 +616,8 @@ public: // Part of public interface to class.
     return getBinding(getRegionBindings(S), L, T);
   }
 
+  std::optional<SVal> getUniqueDefaultBinding(RegionBindingsConstRef B,
+                                              const TypedValueRegion *R) const;
   std::optional<SVal>
   getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const;
 
@@ -929,7 +939,7 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
     Length = ExtentInt.getLimitedValue() * SVB.getContext().getCharWidth();
   } else if (const FieldRegion *FR = dyn_cast<FieldRegion>(Top)) {
     if (FR->getDecl()->isBitField())
-      Length = FR->getDecl()->getBitWidthValue(SVB.getContext());
+      Length = FR->getDecl()->getBitWidthValue();
   }
 
   for (const auto &StoreEntry : Cluster) {
@@ -2349,6 +2359,11 @@ SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
   // behavior doesn't depend on the struct layout.
   // This way even an empty struct can carry taint, no matter if creduce drops
   // the last field member or not.
+
+  // Try to avoid creating a LCV if it would anyways just refer to a single
+  // default binding.
+  if (std::optional<SVal> Val = getUniqueDefaultBinding(B, R))
+    return *Val;
   return createLazyBinding(B, R);
 }
 
@@ -2401,6 +2416,8 @@ StoreRef RegionStoreManager::killBinding(Store ST, Loc L) {
 
 RegionBindingsRef
 RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bind",
+                                 [&L]() { return locDescr(L); });
   // We only care about region locations.
   auto MemRegVal = L.getAs<loc::MemRegionVal>();
   if (!MemRegVal)
@@ -2507,6 +2524,8 @@ RegionBindingsRef
 RegionStoreManager::bindArray(RegionBindingsConstRef B,
                               const TypedValueRegion* R,
                               SVal Init) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bindArray",
+                                 [R]() { return R->getDescriptiveName(); });
 
   const ArrayType *AT =cast<ArrayType>(Ctx.getCanonicalType(R->getValueType()));
   QualType ElementTy = AT->getElementType();
@@ -2571,6 +2590,8 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
 RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
                                                  const TypedValueRegion* R,
                                                  SVal V) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bindVector",
+                                 [R]() { return R->getDescriptiveName(); });
   QualType T = R->getValueType();
   const VectorType *VT = T->castAs<VectorType>(); // Use castAs for typedefs.
 
@@ -2609,19 +2630,23 @@ RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
 }
 
 std::optional<SVal>
-RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
-  const MemRegion *BaseR = LCV.getRegion();
-
-  // We only handle base regions.
-  if (BaseR != BaseR->getBaseRegion())
+RegionStoreManager::getUniqueDefaultBinding(RegionBindingsConstRef B,
+                                            const TypedValueRegion *R) const {
+  if (R != R->getBaseRegion())
     return std::nullopt;
 
-  const auto *Cluster = getRegionBindings(LCV.getStore()).lookup(BaseR);
+  const auto *Cluster = B.lookup(R);
   if (!Cluster || !llvm::hasSingleElement(*Cluster))
     return std::nullopt;
 
   const auto [Key, Value] = *Cluster->begin();
   return Key.isDirect() ? std::optional<SVal>{} : Value;
+}
+
+std::optional<SVal>
+RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
+  RegionBindingsConstRef B = getRegionBindings(LCV.getStore());
+  return getUniqueDefaultBinding(B, LCV.getRegion());
 }
 
 std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
@@ -2689,6 +2714,8 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
 RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
                                                  const TypedValueRegion *R,
                                                  SVal V) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bindStruct",
+                                 [R]() { return R->getDescriptiveName(); });
   QualType T = R->getValueType();
   assert(T->isStructureOrClassType());
 
@@ -2807,6 +2834,8 @@ RegionBindingsRef
 RegionStoreManager::bindAggregate(RegionBindingsConstRef B,
                                   const TypedRegion *R,
                                   SVal Val) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bindAggregate",
+                                 [R]() { return R->getDescriptiveName(); });
   // Remove the old bindings, using 'R' as the root of all regions
   // we will invalidate. Then add the new binding.
   return removeSubRegionBindings(B, R).addBinding(R, BindingKey::Default, Val);

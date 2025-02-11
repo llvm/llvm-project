@@ -1014,6 +1014,7 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_x87DoubleExtended: Out << 'X'; break;
   case APFloat::S_IEEEquad: Out << 'Y'; break;
   case APFloat::S_PPCDoubleDouble: Out << 'Z'; break;
+  case APFloat::S_PPCDoubleDoubleLegacy:
   case APFloat::S_Float8E5M2:
   case APFloat::S_Float8E4M3:
   case APFloat::S_Float8E4M3FN:
@@ -2791,6 +2792,10 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificialTagType(TagTypeKind::Struct, "__bf16", {"__clang"});
     break;
 
+  case BuiltinType::MFloat8:
+    mangleArtificialTagType(TagTypeKind::Struct, "__mfp8", {"__clang"});
+    break;
+
 #define WASM_REF_TYPE(InternalName, MangledName, Id, SingletonId, AS)          \
   case BuiltinType::Id:                                                        \
     mangleArtificialTagType(TagTypeKind::Struct, MangledName);                 \
@@ -2805,47 +2810,12 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
-#define SVE_TYPE(Name, Id, SingletonId) \
-  case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
-#define PPC_VECTOR_TYPE(Name, Id, Size) \
-  case BuiltinType::Id:
-#include "clang/Basic/PPCTypes.def"
-#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/RISCVVTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
-#include "clang/Basic/AMDGPUTypes.def"
-  case BuiltinType::ShortAccum:
-  case BuiltinType::Accum:
-  case BuiltinType::LongAccum:
-  case BuiltinType::UShortAccum:
-  case BuiltinType::UAccum:
-  case BuiltinType::ULongAccum:
-  case BuiltinType::ShortFract:
-  case BuiltinType::Fract:
-  case BuiltinType::LongFract:
-  case BuiltinType::UShortFract:
-  case BuiltinType::UFract:
-  case BuiltinType::ULongFract:
-  case BuiltinType::SatShortAccum:
-  case BuiltinType::SatAccum:
-  case BuiltinType::SatLongAccum:
-  case BuiltinType::SatUShortAccum:
-  case BuiltinType::SatUAccum:
-  case BuiltinType::SatULongAccum:
-  case BuiltinType::SatShortFract:
-  case BuiltinType::SatFract:
-  case BuiltinType::SatLongFract:
-  case BuiltinType::SatUShortFract:
-  case BuiltinType::SatUFract:
-  case BuiltinType::SatULongFract:
-  case BuiltinType::Ibm128:
-  case BuiltinType::Float128: {
+    // Issue an error for any type not explicitly handled.
+  default:
     Error(Range.getBegin(), "built-in type: ",
           T->getName(Context.getASTContext().getPrintingPolicy()))
         << Range;
     break;
-  }
   }
 }
 
@@ -3372,7 +3342,15 @@ void MicrosoftCXXNameMangler::mangleType(const MemberPointerType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const TemplateTypeParmType *T,
                                          Qualifiers, SourceRange Range) {
-  Error(Range.getBegin(), "template type parameter type") << Range;
+  Out << '?';
+
+  llvm::SmallString<64> Name;
+  Name += "<TTPT_";
+  Name += llvm::utostr(T->getDepth());
+  Name += "_";
+  Name += llvm::utostr(T->getIndex());
+  Name += ">";
+  mangleSourceName(Name);
 }
 
 void MicrosoftCXXNameMangler::mangleType(const SubstTemplateTypeParmPackType *T,

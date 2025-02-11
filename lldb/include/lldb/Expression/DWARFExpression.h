@@ -16,6 +16,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
+#include "llvm/Support/Error.h"
 #include <functional>
 
 namespace lldb_private {
@@ -61,15 +62,11 @@ public:
   ///     The dwarf unit this expression belongs to. Only required to resolve
   ///     DW_OP{addrx, GNU_addr_index}.
   ///
-  /// \param[out] error
-  ///     If the location stream contains unknown DW_OP opcodes or the
-  ///     data is missing, \a error will be set to \b true.
-  ///
   /// \return
   ///     The address specified by the operation, if the operation exists, or
-  ///     LLDB_INVALID_ADDRESS otherwise.
-  lldb::addr_t GetLocation_DW_OP_addr(const plugin::dwarf::DWARFUnit *dwarf_cu,
-                                      bool &error) const;
+  ///     an llvm::Error otherwise.
+  llvm::Expected<lldb::addr_t>
+  GetLocation_DW_OP_addr(const plugin::dwarf::DWARFUnit *dwarf_cu) const;
 
   bool Update_DW_OP_addr(const plugin::dwarf::DWARFUnit *dwarf_cu,
                          lldb::addr_t file_addr);

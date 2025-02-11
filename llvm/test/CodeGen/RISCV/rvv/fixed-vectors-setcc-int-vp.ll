@@ -598,6 +598,7 @@ define <256 x i1> @icmp_eq_vv_v256i8(<256 x i8> %va, <256 x i8> %vb, <256 x i1> 
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
@@ -648,6 +649,7 @@ define <256 x i1> @icmp_eq_vv_v256i8(<256 x i8> %va, <256 x i8> %vb, <256 x i1> 
 define <256 x i1> @icmp_eq_vx_v256i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vx_v256i8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
@@ -677,6 +679,7 @@ define <256 x i1> @icmp_eq_vx_v256i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 z
 define <256 x i1> @icmp_eq_vx_swap_v256i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vx_swap_v256i8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma

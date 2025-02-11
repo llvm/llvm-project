@@ -4,7 +4,7 @@
 // DEFINE:   --sparsifier="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
 // DEFINE: %{run} = \
 // DEFINE:   env TENSOR0="%mlir_src_dir/test/Integration/data/test.mtx" \
-// DEFINE:   mlir-cpu-runner \
+// DEFINE:   mlir-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
 // DEFINE:   --e main --entry-point-result=void \

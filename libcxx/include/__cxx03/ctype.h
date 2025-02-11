@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CTYPE_H
-#define _LIBCPP_CTYPE_H
+#ifndef _LIBCPP___CXX03_CTYPE_H
+#define _LIBCPP___CXX03_CTYPE_H
 
 /*
     ctype.h synopsis
@@ -58,4 +58,4 @@ int toupper(int c);
 
 #endif
 
-#endif // _LIBCPP_CTYPE_H
+#endif // _LIBCPP___CXX03_CTYPE_H

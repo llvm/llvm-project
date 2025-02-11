@@ -10,6 +10,7 @@
 #define FORTRAN_SEMANTICS_OPENMP_MODIFIERS_H_
 
 #include "flang/Common/enum-set.h"
+#include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
 #include "llvm/ADT/STLExtras.h"
@@ -18,6 +19,7 @@
 
 #include <cassert>
 #include <map>
+#include <memory>
 #include <optional>
 #include <variant>
 
@@ -51,6 +53,7 @@ struct OmpModifierDescriptor {
   // Modifier name for use in diagnostic messages.
   const OmpProperties &props(unsigned version) const;
   const OmpClauses &clauses(unsigned version) const;
+  unsigned since(llvm::omp::Clause id) const;
 
   const llvm::StringRef name;
   // Version-dependent properties of the modifier.
@@ -61,16 +64,36 @@ struct OmpModifierDescriptor {
 
 template <typename SpecificTy> const OmpModifierDescriptor &OmpGetDescriptor();
 
-template <>
-const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>();
-template <>
-const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpIterator>();
-template <>
-const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearModifier>();
-template <>
-const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpReductionIdentifier>();
-template <>
-const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>();
+#define DECLARE_DESCRIPTOR(name) \
+  template <> const OmpModifierDescriptor &OmpGetDescriptor<name>()
+
+DECLARE_DESCRIPTOR(parser::OmpAlignment);
+DECLARE_DESCRIPTOR(parser::OmpAlignModifier);
+DECLARE_DESCRIPTOR(parser::OmpAllocatorComplexModifier);
+DECLARE_DESCRIPTOR(parser::OmpAllocatorSimpleModifier);
+DECLARE_DESCRIPTOR(parser::OmpChunkModifier);
+DECLARE_DESCRIPTOR(parser::OmpContextSelector);
+DECLARE_DESCRIPTOR(parser::OmpDependenceType);
+DECLARE_DESCRIPTOR(parser::OmpDeviceModifier);
+DECLARE_DESCRIPTOR(parser::OmpDirectiveNameModifier);
+DECLARE_DESCRIPTOR(parser::OmpExpectation);
+DECLARE_DESCRIPTOR(parser::OmpIterator);
+DECLARE_DESCRIPTOR(parser::OmpLastprivateModifier);
+DECLARE_DESCRIPTOR(parser::OmpLinearModifier);
+DECLARE_DESCRIPTOR(parser::OmpMapper);
+DECLARE_DESCRIPTOR(parser::OmpMapType);
+DECLARE_DESCRIPTOR(parser::OmpMapTypeModifier);
+DECLARE_DESCRIPTOR(parser::OmpOrderModifier);
+DECLARE_DESCRIPTOR(parser::OmpOrderingModifier);
+DECLARE_DESCRIPTOR(parser::OmpPrescriptiveness);
+DECLARE_DESCRIPTOR(parser::OmpReductionIdentifier);
+DECLARE_DESCRIPTOR(parser::OmpReductionModifier);
+DECLARE_DESCRIPTOR(parser::OmpStepComplexModifier);
+DECLARE_DESCRIPTOR(parser::OmpStepSimpleModifier);
+DECLARE_DESCRIPTOR(parser::OmpTaskDependenceType);
+DECLARE_DESCRIPTOR(parser::OmpVariableCategory);
+
+#undef DECLARE_DESCRIPTOR
 
 // Explanation of terminology:
 //
@@ -84,7 +107,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>();
 //     std::tuple<std::optional<std::list<Modifier>>, ...> t;
 //   };
 //
-// The Speficic1, etc. refer to parser classes that represent modifiers,
+// The Specific1, etc. refer to parser classes that represent modifiers,
 // e.g. OmpIterator or OmpTaskDependenceType. The Variant type contains
 // all modifiers that are allowed for a given clause. The Modifier class
 // is there to wrap the variant into the form that the parse tree visitor
@@ -138,37 +161,124 @@ typename std::list<UnionTy>::const_iterator findInRange(
 }
 } // namespace detail
 
-/// Finds the entry in the list that holds the `SpecificTy` alternative,
+/// Finds the first entry in the list that holds the `SpecificTy` alternative,
 /// and returns the pointer to that alternative. If such an entry does not
 /// exist, it returns nullptr.
-/// The list is assumed to contain at most one such item, with a check
-/// whether the condition is met.
-/// This function should only be called after the verification of modifier
-/// properties has been performed, since it will assert if multiple items
-/// are found.
 template <typename SpecificTy, typename UnionTy>
 const SpecificTy *OmpGetUniqueModifier(
     const std::optional<std::list<UnionTy>> &modifiers) {
   const SpecificTy *found{nullptr};
   if (modifiers) {
     auto end{modifiers->cend()};
-    // typename std::list<UnionTy>::iterator end{modifiers->end()};
     auto at{detail::findInRange<SpecificTy, UnionTy>(modifiers->cbegin(), end)};
     if (at != end) {
       found = &std::get<SpecificTy>(at->u);
-#ifndef NDEBUG
-      auto another{
-          detail::findInRange<SpecificTy, UnionTy>(std::next(at), end)};
-      assert(another == end && "repeated modifier");
-#endif
     }
   }
   return found;
 }
 
+template <typename SpecificTy> struct OmpSpecificModifierIterator {
+  using VectorTy = std::vector<const SpecificTy *>;
+  OmpSpecificModifierIterator(
+      std::shared_ptr<VectorTy> list, typename VectorTy::const_iterator where)
+      : specificList(list), at(where) {}
+
+  OmpSpecificModifierIterator &operator++() {
+    ++at;
+    return *this;
+  }
+  // OmpSpecificModifierIterator &operator++(int);
+  OmpSpecificModifierIterator &operator--() {
+    --at;
+    return *this;
+  }
+  // OmpSpecificModifierIterator &operator--(int);
+
+  const SpecificTy *operator*() const { return *at; }
+  bool operator==(const OmpSpecificModifierIterator &other) const {
+    assert(specificList.get() == other.specificList.get() &&
+        "comparing unrelated iterators");
+    return at == other.at;
+  }
+  bool operator!=(const OmpSpecificModifierIterator &other) const {
+    return !(*this == other);
+  }
+
+private:
+  std::shared_ptr<VectorTy> specificList;
+  typename VectorTy::const_iterator at;
+};
+
+template <typename SpecificTy, typename UnionTy>
+llvm::iterator_range<OmpSpecificModifierIterator<SpecificTy>>
+OmpGetRepeatableModifier(const std::optional<std::list<UnionTy>> &modifiers) {
+  using VectorTy = std::vector<const SpecificTy *>;
+  std::shared_ptr<VectorTy> items(new VectorTy);
+  if (modifiers) {
+    for (auto &m : *modifiers) {
+      if (auto *s = std::get_if<SpecificTy>(&m.u)) {
+        items->push_back(s);
+      }
+    }
+  }
+  return llvm::iterator_range(
+      OmpSpecificModifierIterator(items, items->begin()),
+      OmpSpecificModifierIterator(items, items->end()));
+}
+
+// Attempt to prevent creating a range based on an expiring modifier list.
+template <typename SpecificTy, typename UnionTy>
+llvm::iterator_range<OmpSpecificModifierIterator<SpecificTy>>
+OmpGetRepeatableModifier(std::optional<std::list<UnionTy>> &&) = delete;
+
+template <typename SpecificTy, typename UnionTy>
+Fortran::parser::CharBlock OmpGetModifierSource(
+    const std::optional<std::list<UnionTy>> &modifiers,
+    const SpecificTy *specific) {
+  if (!modifiers || !specific) {
+    return Fortran::parser::CharBlock{};
+  }
+  for (auto &m : *modifiers) {
+    if (std::get_if<SpecificTy>(&m.u) == specific) {
+      return m.source;
+    }
+  }
+  llvm_unreachable("`specific` must be a member of `modifiers`");
+}
+
 namespace detail {
 template <typename T> constexpr const T *make_nullptr() {
   return static_cast<const T *>(nullptr);
+}
+
+/// Verify that all modifiers are allowed in the given OpenMP version.
+template <typename UnionTy>
+bool verifyVersions(const std::optional<std::list<UnionTy>> &modifiers,
+    llvm::omp::Clause id, parser::CharBlock clauseSource,
+    SemanticsContext &semaCtx) {
+  if (!modifiers) {
+    return true;
+  }
+  unsigned version{semaCtx.langOptions().OpenMPVersion};
+  bool result{true};
+  for (auto &m : *modifiers) {
+    const OmpModifierDescriptor &desc{OmpGetDescriptor(m)};
+    unsigned since{desc.since(id)};
+    if (since == ~0u) {
+      // This shouldn't really happen, but have it just in case.
+      semaCtx.Say(m.source,
+          "'%s' modifier is not supported on %s clause"_err_en_US,
+          desc.name.str(),
+          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
+    } else if (version < since) {
+      semaCtx.Say(m.source,
+          "'%s' modifier is not supported in OpenMP v%d.%d, try -fopenmp-version=%d"_warn_en_US,
+          desc.name.str(), version / 10, version % 10, since);
+      result = false;
+    }
+  }
+  return result;
 }
 
 /// Helper function for verifying the Required property:
@@ -191,7 +301,7 @@ bool verifyIfRequired(const SpecificTy *,
   });
   if (!present) {
     semaCtx.Say(
-        clauseSource, "A %s modifier is required"_err_en_US, desc.name.str());
+        clauseSource, "'%s' modifier is required"_err_en_US, desc.name.str());
   }
   return present;
 }
@@ -214,7 +324,8 @@ bool verifyRequiredPack(const std::optional<std::list<UnionTy>> &modifiers,
 /// list is valid, or false otherwise.
 template <typename UnionTy>
 bool verifyRequired(const std::optional<std::list<UnionTy>> &modifiers,
-    parser::CharBlock clauseSource, SemanticsContext &semaCtx) {
+    llvm::omp::Clause id, parser::CharBlock clauseSource,
+    SemanticsContext &semaCtx) {
   using VariantTy = typename UnionTy::Variant;
   return verifyRequiredPack(modifiers, clauseSource, semaCtx,
       std::make_index_sequence<std::variant_size_v<VariantTy>>{});
@@ -243,7 +354,8 @@ bool verifyIfUnique(const SpecificTy *,
     auto next{
         detail::findInRange<SpecificTy, UnionTy>(std::next(specific), end)};
     if (next != end) {
-      semaCtx.Say(next->source, "A %s cannot occur multiple times"_err_en_US,
+      semaCtx.Say(next->source,
+          "'%s' modifier cannot occur multiple times"_err_en_US,
           desc.name.str());
     }
   }
@@ -254,7 +366,8 @@ bool verifyIfUnique(const SpecificTy *,
 /// list is valid, or false otherwise.
 template <typename UnionTy>
 bool verifyUnique(const std::optional<std::list<UnionTy>> &modifiers,
-    parser::CharBlock clauseSource, SemanticsContext &semaCtx) {
+    llvm::omp::Clause id, parser::CharBlock clauseSource,
+    SemanticsContext &semaCtx) {
   if (!modifiers) {
     return true;
   }
@@ -274,7 +387,8 @@ bool verifyUnique(const std::optional<std::list<UnionTy>> &modifiers,
 /// list is valid, or false otherwise.
 template <typename UnionTy>
 bool verifyUltimate(const std::optional<std::list<UnionTy>> &modifiers,
-    parser::CharBlock clauseSource, SemanticsContext &semaCtx) {
+    llvm::omp::Clause id, parser::CharBlock clauseSource,
+    SemanticsContext &semaCtx) {
   if (!modifiers || modifiers->size() <= 1) {
     return true;
   }
@@ -304,8 +418,8 @@ bool verifyUltimate(const std::optional<std::list<UnionTy>> &modifiers,
                 }
                 llvm::StringRef where{isPre ? "last" : "first"};
                 semaCtx.Say(it->source,
-                    "The %s should be the %s modifier"_err_en_US,
-                    desc.name.str(), where.str());
+                    "'%s' should be the %s modifier"_err_en_US, desc.name.str(),
+                    where.str());
                 return false;
               }
               return true;
@@ -320,7 +434,8 @@ bool verifyUltimate(const std::optional<std::list<UnionTy>> &modifiers,
 /// list is valid, or false otherwise.
 template <typename UnionTy>
 bool verifyExclusive(const std::optional<std::list<UnionTy>> &modifiers,
-    parser::CharBlock clauseSource, SemanticsContext &semaCtx) {
+    llvm::omp::Clause id, parser::CharBlock clauseSource,
+    SemanticsContext &semaCtx) {
   if (!modifiers || modifiers->size() <= 1) {
     return true;
   }
@@ -335,11 +450,11 @@ bool verifyExclusive(const std::optional<std::list<UnionTy>> &modifiers,
     const OmpModifierDescriptor &descExcl{OmpGetDescriptor(excl)};
     const OmpModifierDescriptor &descOther{OmpGetDescriptor(other)};
     parser::MessageFormattedText txt(
-        "An exclusive %s cannot be specified together with a modifier of a different type"_err_en_US,
+        "An exclusive '%s' modifier cannot be specified together with a modifier of a different type"_err_en_US,
         descExcl.name.str());
     parser::Message message(excl.source, txt);
     message.Attach(
-        other.source, "%s provided here"_en_US, descOther.name.str());
+        other.source, "'%s' provided here"_en_US, descOther.name.str());
     semaCtx.Say(std::move(message));
   }};
 
@@ -377,14 +492,16 @@ bool verifyExclusive(const std::optional<std::list<UnionTy>> &modifiers,
 } // namespace detail
 
 template <typename ClauseTy>
-bool OmpVerifyModifiers(const ClauseTy &clause, parser::CharBlock clauseSource,
-    SemanticsContext &semaCtx) {
+bool OmpVerifyModifiers(const ClauseTy &clause, llvm::omp::Clause id,
+    parser::CharBlock clauseSource, SemanticsContext &semaCtx) {
   auto &modifiers{OmpGetModifiers(clause)};
-  bool result{detail::verifyRequired(modifiers, clauseSource, semaCtx)};
-  result = detail::verifyUnique(modifiers, clauseSource, semaCtx) && result;
-  result = detail::verifyUltimate(modifiers, clauseSource, semaCtx) && result;
-  result = detail::verifyExclusive(modifiers, clauseSource, semaCtx) && result;
-  return result;
+  bool results[]{//
+      detail::verifyVersions(modifiers, id, clauseSource, semaCtx),
+      detail::verifyRequired(modifiers, id, clauseSource, semaCtx),
+      detail::verifyUnique(modifiers, id, clauseSource, semaCtx),
+      detail::verifyUltimate(modifiers, id, clauseSource, semaCtx),
+      detail::verifyExclusive(modifiers, id, clauseSource, semaCtx)};
+  return llvm::all_of(results, [](bool x) { return x; });
 }
 } // namespace Fortran::semantics
 

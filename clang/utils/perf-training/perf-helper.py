@@ -16,6 +16,8 @@ import time
 import bisect
 import shlex
 import tempfile
+import re
+import shutil
 
 test_env = {"PATH": os.environ["PATH"]}
 
@@ -36,7 +38,7 @@ def clean(args):
             + "\tRemoves all files with extension from <path>."
         )
         return 1
-    for path in args[1:-1]:
+    for path in args[0:-1]:
         for filename in findFilesWithExtension(path, args[-1]):
             os.remove(filename)
     return 0
@@ -558,7 +560,103 @@ def genOrderFile(args):
     return 0
 
 
+def bolt_optimize(args):
+    parser = argparse.ArgumentParser("%prog  [options] ")
+    parser.add_argument("--method", choices=["INSTRUMENT", "PERF", "LBR"])
+    parser.add_argument("--input")
+    parser.add_argument("--instrumented-output")
+    parser.add_argument("--fdata")
+    parser.add_argument("--perf-training-binary-dir")
+    parser.add_argument("--readelf")
+    parser.add_argument("--bolt")
+    parser.add_argument("--lit")
+    parser.add_argument("--merge-fdata")
+
+    opts = parser.parse_args(args)
+
+    output = subprocess.check_output(
+        [opts.readelf, "-WS", opts.input], universal_newlines=True
+    )
+
+    # This binary has already been bolt-optimized, so skip further processing.
+    if re.search("\\.bolt\\.org\\.text", output, re.MULTILINE):
+        return 0
+
+    if opts.method == "INSTRUMENT":
+        process = subprocess.run(
+            [
+                opts.bolt,
+                opts.input,
+                "-o",
+                opts.instrumented_output,
+                "-instrument",
+                "--instrumentation-file-append-pid",
+                f"--instrumentation-file={opts.fdata}",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+
+        print(process.args)
+        for line in process.stdout:
+            sys.stdout.write(line)
+        process.check_returncode()
+
+    process = subprocess.run(
+        [
+            sys.executable,
+            opts.lit,
+            os.path.join(opts.perf_training_binary_dir, "bolt-fdata"),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+
+    print(process.args)
+    for line in process.stdout:
+        sys.stdout.write(line)
+    process.check_returncode()
+
+    if opts.method in ["PERF", "LBR"]:
+        perf2bolt([opts.bolt, opts.perf_training_binary_dir, opts.input])
+
+    merge_fdata([opts.merge_fdata, opts.fdata, opts.perf_training_binary_dir])
+
+    shutil.copy(opts.input, f"{opts.input}-prebolt")
+
+    process = subprocess.run(
+        [
+            opts.bolt,
+            f"{opts.input}-prebolt",
+            "-o",
+            opts.input,
+            "-data",
+            opts.fdata,
+            "-reorder-blocks=ext-tsp",
+            "-reorder-functions=cdsort",
+            "-split-functions",
+            "-split-all-cold",
+            "-split-eh",
+            "-dyno-stats",
+            "-use-gnu-stack",
+            "-update-debug-sections",
+            "-nl" if opts.method == "PERF" else "",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+
+    print(process.args)
+    for line in process.stdout:
+        sys.stdout.write(line)
+    process.check_returncode()
+
+
 commands = {
+    "bolt-optimize": bolt_optimize,
     "clean": clean,
     "merge": merge,
     "dtrace": dtrace,

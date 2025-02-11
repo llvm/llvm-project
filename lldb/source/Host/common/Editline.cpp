@@ -14,6 +14,7 @@
 #include "lldb/Host/Editline.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -85,7 +86,8 @@ bool IsOnlySpaces(const EditLineStringType &content) {
 }
 
 static size_t ColumnWidth(llvm::StringRef str) {
-  return llvm::sys::locale::columnWidth(str);
+  std::string stripped = ansi::StripAnsiTerminalCodes(str);
+  return llvm::sys::locale::columnWidth(stripped);
 }
 
 static int GetOperation(HistoryOperation op) {
@@ -610,7 +612,7 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
 }
 
 const char *Editline::Prompt() {
-  if (!m_prompt_ansi_prefix.empty() || !m_prompt_ansi_suffix.empty())
+  if (m_color)
     m_needs_prompt_repaint = true;
   return m_current_prompt.c_str();
 }
@@ -924,10 +926,11 @@ unsigned char Editline::BufferEndCommand(int ch) {
 
 /// Prints completions and their descriptions to the given file. Only the
 /// completions in the interval [start, end) are printed.
-static void
+static size_t
 PrintCompletion(FILE *output_file,
                 llvm::ArrayRef<CompletionResult::Completion> results,
-                size_t max_completion_length, size_t max_length) {
+                size_t max_completion_length, size_t max_length,
+                std::optional<size_t> max_height = std::nullopt) {
   constexpr size_t ellipsis_length = 3;
   constexpr size_t padding_length = 8;
   constexpr size_t separator_length = 4;
@@ -935,7 +938,14 @@ PrintCompletion(FILE *output_file,
   const size_t description_col =
       std::min(max_completion_length + padding_length, max_length);
 
+  size_t lines_printed = 0;
+  size_t results_printed = 0;
   for (const CompletionResult::Completion &c : results) {
+    if (max_height && lines_printed >= *max_height)
+      break;
+
+    results_printed++;
+
     if (c.GetCompletion().empty())
       continue;
 
@@ -956,6 +966,7 @@ PrintCompletion(FILE *output_file,
       fprintf(output_file, "%.*s...\n",
               static_cast<int>(max_length - padding_length - ellipsis_length),
               c.GetCompletion().c_str());
+      lines_printed++;
       continue;
     }
 
@@ -964,6 +975,7 @@ PrintCompletion(FILE *output_file,
     if (c.GetDescription().empty() ||
         description_col + separator_length + ellipsis_length >= max_length) {
       fprintf(output_file, "\n");
+      lines_printed++;
       continue;
     }
 
@@ -990,6 +1002,8 @@ PrintCompletion(FILE *output_file,
     for (llvm::StringRef line : llvm::split(c.GetDescription(), '\n')) {
       if (line.empty())
         break;
+      if (max_height && lines_printed >= *max_height)
+        break;
       if (!first)
         fprintf(output_file, "%*s",
                 static_cast<int>(description_col + separator_length), "");
@@ -1000,14 +1014,17 @@ PrintCompletion(FILE *output_file,
       if (position + description_length < max_length) {
         fprintf(output_file, "%.*s\n", static_cast<int>(description_length),
                 line.data());
+        lines_printed++;
       } else {
         fprintf(output_file, "%.*s...\n",
                 static_cast<int>(max_length - position - ellipsis_length),
                 line.data());
+        lines_printed++;
         continue;
       }
     }
   }
+  return results_printed;
 }
 
 void Editline::DisplayCompletions(
@@ -1016,7 +1033,11 @@ void Editline::DisplayCompletions(
 
   fprintf(editline.m_output_file,
           "\n" ANSI_CLEAR_BELOW "Available completions:\n");
-  const size_t page_size = 40;
+
+  /// Account for the current line, the line showing "Available completions"
+  /// before and the line saying "More" after.
+  const size_t page_size = editline.GetTerminalHeight() - 3;
+
   bool all = false;
 
   auto longest =
@@ -1026,21 +1047,12 @@ void Editline::DisplayCompletions(
 
   const size_t max_len = longest->GetCompletion().size();
 
-  if (results.size() < page_size) {
-    PrintCompletion(editline.m_output_file, results, max_len,
-                    editline.GetTerminalWidth());
-    return;
-  }
-
   size_t cur_pos = 0;
   while (cur_pos < results.size()) {
-    size_t remaining = results.size() - cur_pos;
-    size_t next_size = all ? remaining : std::min(page_size, remaining);
-
-    PrintCompletion(editline.m_output_file, results.slice(cur_pos, next_size),
-                    max_len, editline.GetTerminalWidth());
-
-    cur_pos += next_size;
+    cur_pos +=
+        PrintCompletion(editline.m_output_file, results.slice(cur_pos), max_len,
+                        editline.GetTerminalWidth(),
+                        all ? std::nullopt : std::optional<size_t>(page_size));
 
     if (cur_pos >= results.size())
       break;
@@ -1461,11 +1473,11 @@ Editline *Editline::InstanceFor(EditLine *editline) {
 }
 
 Editline::Editline(const char *editline_name, FILE *input_file,
-                   FILE *output_file, FILE *error_file,
+                   FILE *output_file, FILE *error_file, bool color,
                    std::recursive_mutex &output_mutex)
     : m_editor_status(EditorStatus::Complete), m_input_file(input_file),
       m_output_file(output_file), m_error_file(error_file),
-      m_input_connection(fileno(input_file), false),
+      m_input_connection(fileno(input_file), false), m_color(color),
       m_output_mutex(output_mutex) {
   // Get a shared history instance
   m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;
@@ -1524,6 +1536,13 @@ void Editline::ApplyTerminalSizeChange() {
   } else {
     m_terminal_width = INT_MAX;
     m_current_line_rows = 1;
+  }
+
+  int rows;
+  if (el_get(m_editline, EL_GETTC, "li", &rows, nullptr) == 0) {
+    m_terminal_height = rows;
+  } else {
+    m_terminal_height = INT_MAX;
   }
 }
 

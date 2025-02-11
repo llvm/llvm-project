@@ -27,9 +27,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/AArch64ImmCheck.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include <array>
 #include <cctype>
 #include <set>
@@ -50,20 +52,32 @@ using TypeSpec = std::string;
 
 namespace {
 class SVEType {
-  bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat, MFloat;
-  bool DefaultType, IsScalable, Predicate, PredicatePattern, PrefetchOp,
-      Svcount;
+
+  enum TypeKind {
+    Invalid,
+    Void,
+    Float,
+    SInt,
+    UInt,
+    BFloat16,
+    MFloat8,
+    Svcount,
+    PrefetchOp,
+    PredicatePattern,
+    Predicate,
+    Fpm
+  };
+  TypeKind Kind;
+  bool Immediate, Constant, Pointer, DefaultType, IsScalable;
   unsigned Bitwidth, ElementBitwidth, NumVectors;
 
 public:
   SVEType() : SVEType("", 'v') {}
 
   SVEType(StringRef TS, char CharMod, unsigned NumVectors = 1)
-      : Float(false), Signed(true), Immediate(false), Void(false),
-        Constant(false), Pointer(false), BFloat(false), MFloat(false),
-        DefaultType(false), IsScalable(true), Predicate(false),
-        PredicatePattern(false), PrefetchOp(false), Svcount(false),
-        Bitwidth(128), ElementBitwidth(~0U), NumVectors(NumVectors) {
+      : Kind(Invalid), Immediate(false), Constant(false), Pointer(false),
+        DefaultType(false), IsScalable(true), Bitwidth(128),
+        ElementBitwidth(~0U), NumVectors(NumVectors) {
     if (!TS.empty())
       applyTypespec(TS);
     applyModifier(CharMod);
@@ -74,39 +88,39 @@ public:
   }
 
   bool isPointer() const { return Pointer; }
-  bool isVoidPointer() const { return Pointer && Void; }
-  bool isSigned() const { return Signed; }
+  bool isConstant() const { return Constant; }
   bool isImmediate() const { return Immediate; }
   bool isScalar() const { return NumVectors == 0; }
   bool isVector() const { return NumVectors > 0; }
   bool isScalableVector() const { return isVector() && IsScalable; }
   bool isFixedLengthVector() const { return isVector() && !IsScalable; }
-  bool isChar() const { return ElementBitwidth == 8 && !MFloat; }
-  bool isVoid() const { return Void && !Pointer; }
+  bool isChar() const { return ElementBitwidth == 8 && isInteger(); }
+  bool isVoid() const { return Kind == Void; }
   bool isDefault() const { return DefaultType; }
-  bool isFloat() const { return Float && !BFloat && !MFloat; }
-  bool isBFloat() const { return BFloat && !Float && !MFloat; }
-  bool isMFloat() const {
-    return MFloat && !BFloat && !Float;
+  bool isFloat() const { return Kind == Float; }
+  bool isBFloat() const { return Kind == BFloat16; }
+  bool isMFloat() const { return Kind == MFloat8; }
+  bool isFloatingPoint() const {
+    return Kind == Float || Kind == BFloat16 || Kind == MFloat8;
   }
-  bool isFloatingPoint() const { return Float || BFloat; }
-  bool isInteger() const {
-    return !isFloatingPoint() && !Predicate && !Svcount;
-  }
+  bool isInteger() const { return Kind == SInt || Kind == UInt; }
+  bool isSignedInteger() const { return Kind == SInt; }
+  bool isUnsignedInteger() const { return Kind == UInt; }
   bool isScalarPredicate() const {
-    return !isFloatingPoint() && Predicate && NumVectors == 0;
+    return Kind == Predicate && NumVectors == 0;
   }
-  bool isPredicateVector() const { return Predicate; }
-  bool isPredicatePattern() const { return PredicatePattern; }
-  bool isPrefetchOp() const { return PrefetchOp; }
-  bool isSvcount() const { return Svcount; }
-  bool isConstant() const { return Constant; }
+  bool isPredicate() const { return Kind == Predicate; }
+  bool isPredicatePattern() const { return Kind == PredicatePattern; }
+  bool isPrefetchOp() const { return Kind == PrefetchOp; }
+  bool isSvcount() const { return Kind == Svcount; }
+  bool isFpm() const { return Kind == Fpm; }
+  bool isInvalid() const { return Kind == Invalid; }
   unsigned getElementSizeInBits() const { return ElementBitwidth; }
   unsigned getNumVectors() const { return NumVectors; }
 
   unsigned getNumElements() const {
     assert(ElementBitwidth != ~0U);
-    return Bitwidth / ElementBitwidth;
+    return isPredicate() ? 16 : (Bitwidth / ElementBitwidth);
   }
   unsigned getSizeInBits() const {
     return Bitwidth;
@@ -126,6 +140,9 @@ private:
 
   /// Applies a prototype modifier to the type.
   void applyModifier(char Mod);
+
+  /// Get the builtin base for this SVEType, e.g. 'Wi' for svint64_t.
+  std::string builtinBaseType() const;
 };
 
 class SVEEmitter;
@@ -166,6 +183,8 @@ class Intrinsic {
 
   SmallVector<ImmCheck, 2> ImmChecks;
 
+  bool SetsFPMR;
+
 public:
   Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
             StringRef MergeSuffix, uint64_t MemoryElementTy, StringRef LLVMName,
@@ -183,7 +202,9 @@ public:
 
   StringRef getSVEGuard() const { return SVEGuard; }
   StringRef getSMEGuard() const { return SMEGuard; }
-  void printGuard(raw_ostream &OS) const {
+  std::string getGuard() const {
+    std::string Guard;
+    llvm::raw_string_ostream OS(Guard);
     if (!SVEGuard.empty() && SMEGuard.empty())
       OS << SVEGuard;
     else if (SVEGuard.empty() && !SMEGuard.empty())
@@ -201,6 +222,7 @@ public:
       else
         OS << SMEGuard;
     }
+    return Guard;
   }
   ClassKind getClassKind() const { return Class; }
 
@@ -238,7 +260,7 @@ public:
   /// Return true if the intrinsic takes a splat operand.
   bool hasSplat() const {
     // These prototype modifiers are described in arm_sve.td.
-    return Proto.find_first_of("ajfrKLR@") != std::string::npos;
+    return Proto.find_first_of("ajfrKLR@!") != std::string::npos;
   }
 
   /// Return the parameter index of the splat operand.
@@ -247,7 +269,7 @@ public:
     for (; I < Proto.size(); ++I, ++Param) {
       if (Proto[I] == 'a' || Proto[I] == 'j' || Proto[I] == 'f' ||
           Proto[I] == 'r' || Proto[I] == 'K' || Proto[I] == 'L' ||
-          Proto[I] == 'R' || Proto[I] == '@')
+          Proto[I] == 'R' || Proto[I] == '@' || Proto[I] == '!')
         break;
 
       // Multivector modifier can be skipped
@@ -263,6 +285,7 @@ public:
 
 private:
   std::string getMergeSuffix() const { return MergeSuffix; }
+  StringRef getFPMSuffix() const { return SetsFPMR ? "_fpm" : ""; }
   std::string mangleName(ClassKind LocalCK) const;
   std::string mangleLLVMName() const;
   std::string replaceTemplatedArgs(std::string Name, TypeSpec TS,
@@ -280,7 +303,7 @@ private:
     const char *Suffix;
   };
 
-  static const std::array<ReinterpretTypeInfo, 12> Reinterprets;
+  static const std::array<ReinterpretTypeInfo, 13> Reinterprets;
 
   const RecordKeeper &Records;
   StringMap<uint64_t> EltTypes;
@@ -403,9 +426,10 @@ public:
                        SmallVectorImpl<std::unique_ptr<Intrinsic>> &Out);
 };
 
-const std::array<SVEEmitter::ReinterpretTypeInfo, 12> SVEEmitter::Reinterprets =
+const std::array<SVEEmitter::ReinterpretTypeInfo, 13> SVEEmitter::Reinterprets =
     {{{SVEType("c", 'd'), "s8"},
       {SVEType("Uc", 'd'), "u8"},
+      {SVEType("m", 'd'), "mf8"},
       {SVEType("s", 'd'), "s16"},
       {SVEType("Us", 'd'), "u16"},
       {SVEType("i", 'd'), "s32"},
@@ -423,170 +447,201 @@ const std::array<SVEEmitter::ReinterpretTypeInfo, 12> SVEEmitter::Reinterprets =
 // Type implementation
 //===----------------------------------------------------------------------===//
 
-std::string SVEType::builtin_str() const {
-  std::string S;
-  if (isVoid())
+std::string SVEType::builtinBaseType() const {
+  switch (Kind) {
+  case TypeKind::Void:
     return "v";
-
-  if (isScalarPredicate())
-    return "b";
-
-  if (isSvcount())
+  case TypeKind::Svcount:
     return "Qa";
-
-  if (isVoidPointer())
-    S += "v";
-  else if (!isFloatingPoint())
+  case TypeKind::PrefetchOp:
+  case TypeKind::PredicatePattern:
+    return "i";
+  case TypeKind::Fpm:
+    return "UWi";
+  case TypeKind::Predicate:
+    return "b";
+  case TypeKind::BFloat16:
+    assert(ElementBitwidth == 16 && "Invalid BFloat16!");
+    return "y";
+  case TypeKind::MFloat8:
+    assert(ElementBitwidth == 8 && "Invalid MFloat8!");
+    return "m";
+  case TypeKind::Float:
     switch (ElementBitwidth) {
-    case 1: S += "b"; break;
-    case 8: S += "c"; break;
-    case 16: S += "s"; break;
-    case 32: S += "i"; break;
-    case 64: S += "Wi"; break;
-    case 128: S += "LLLi"; break;
-    default: llvm_unreachable("Unhandled case!");
+    case 16:
+      return "h";
+    case 32:
+      return "f";
+    case 64:
+      return "d";
+    default:
+      llvm_unreachable("Unhandled float width!");
     }
-  else if (isFloat())
+  case TypeKind::SInt:
+  case TypeKind::UInt:
     switch (ElementBitwidth) {
-    case 16: S += "h"; break;
-    case 32: S += "f"; break;
-    case 64: S += "d"; break;
-    default: llvm_unreachable("Unhandled case!");
+    case 1:
+      return "b";
+    case 8:
+      return "c";
+    case 16:
+      return "s";
+    case 32:
+      return "i";
+    case 64:
+      return "Wi";
+    case 128:
+      return "LLLi";
+    default:
+      llvm_unreachable("Unhandled bitwidth!");
     }
-  else if (isBFloat()) {
-    assert(ElementBitwidth == 16 && "Not a valid BFloat.");
-    S += "y";
-  } else if (isMFloat()) {
-    assert(ElementBitwidth == 8 && "Not a valid MFloat.");
-    S += "m";
+  case TypeKind::Invalid:
+    llvm_unreachable("Attempting to resolve builtin string from Invalid type!");
+  }
+  llvm_unreachable("Unhandled TypeKind!");
+}
+
+std::string SVEType::builtin_str() const {
+  std::string Prefix;
+
+  if (isScalableVector())
+    Prefix = "q" + llvm::utostr(getNumElements() * NumVectors);
+  else if (isFixedLengthVector())
+    Prefix = "V" + llvm::utostr(getNumElements() * NumVectors);
+  else if (isImmediate()) {
+    assert(!isFloatingPoint() && "fp immediates are not supported");
+    Prefix = "I";
   }
 
-  if (!isFloatingPoint()) {
-    if ((isChar() || isPointer()) && !isVoidPointer()) {
-      // Make chars and typed pointers explicitly signed.
-      if (Signed)
-        S = "S" + S;
-      else if (!Signed)
-        S = "U" + S;
-    } else if (!isVoidPointer() && !Signed) {
-      S = "U" + S;
-    }
-  }
+  // Make chars and integer pointers explicitly signed.
+  if ((ElementBitwidth == 8 || isPointer()) && isSignedInteger())
+    Prefix += "S";
+  else if (isUnsignedInteger())
+    Prefix += "U";
 
-  // Constant indices are "int", but have the "constant expression" modifier.
-  if (isImmediate()) {
-    assert(!isFloat() && "fp immediates are not supported");
-    S = "I" + S;
-  }
+  std::string BuiltinStr = Prefix + builtinBaseType();
+  if (isConstant())
+    BuiltinStr += "C";
+  if (isPointer())
+    BuiltinStr += "*";
 
-  if (isScalar()) {
-    if (Constant) S += "C";
-    if (Pointer) S += "*";
-    return S;
-  }
-
-  if (isFixedLengthVector())
-    return "V" + utostr(getNumElements() * NumVectors) + S;
-  return "q" + utostr(getNumElements() * NumVectors) + S;
+  return BuiltinStr;
 }
 
 std::string SVEType::str() const {
-  if (isPredicatePattern())
-    return "enum svpattern";
+  std::string TypeStr;
 
-  if (isPrefetchOp())
+  switch (Kind) {
+  case TypeKind::PrefetchOp:
     return "enum svprfop";
-
-  std::string S;
-  if (Void)
-    S += "void";
-  else {
-    if (isScalableVector() || isSvcount())
-      S += "sv";
-    if (!Signed && !isFloatingPoint())
-      S += "u";
-
-    if (Float)
-      S += "float";
-    else if (isSvcount())
-      S += "count";
-    else if (isScalarPredicate() || isPredicateVector())
-      S += "bool";
-    else if (isBFloat())
-      S += "bfloat";
-    else if (isMFloat())
-      S += "mfloat";
-    else
-      S += "int";
-
-    if (!isScalarPredicate() && !isPredicateVector() && !isSvcount())
-      S += utostr(ElementBitwidth);
-    if (isFixedLengthVector())
-      S += "x" + utostr(getNumElements());
-    if (NumVectors > 1)
-      S += "x" + utostr(NumVectors);
-    if (!isScalarPredicate())
-      S += "_t";
+  case TypeKind::PredicatePattern:
+    return "enum svpattern";
+  case TypeKind::Fpm:
+    TypeStr += "fpm";
+    break;
+  case TypeKind::Void:
+    TypeStr += "void";
+    break;
+  case TypeKind::Float:
+    TypeStr += "float" + llvm::utostr(ElementBitwidth);
+    break;
+  case TypeKind::Svcount:
+    TypeStr += "svcount";
+    break;
+  case TypeKind::Predicate:
+    TypeStr += "bool";
+    break;
+  case TypeKind::BFloat16:
+    TypeStr += "bfloat16";
+    break;
+  case TypeKind::MFloat8:
+    TypeStr += "mfloat8";
+    break;
+  case TypeKind::SInt:
+    TypeStr += "int" + llvm::utostr(ElementBitwidth);
+    break;
+  case TypeKind::UInt:
+    TypeStr += "uint" + llvm::utostr(ElementBitwidth);
+    break;
+  case TypeKind::Invalid:
+    llvm_unreachable("Attempting to resolve type name from Invalid type!");
   }
 
-  if (Constant)
-    S += " const";
-  if (Pointer)
-    S += " *";
+  if (isFixedLengthVector())
+    TypeStr += "x" + llvm::utostr(getNumElements());
+  else if (isScalableVector())
+    TypeStr = "sv" + TypeStr;
 
-  return S;
+  if (NumVectors > 1)
+    TypeStr += "x" + llvm::utostr(NumVectors);
+  if (!isScalarPredicate() && !isVoid())
+    TypeStr += "_t";
+  if (isConstant())
+    TypeStr += " const";
+  if (isPointer())
+    TypeStr += " *";
+
+  return TypeStr;
 }
 
 void SVEType::applyTypespec(StringRef TS) {
   for (char I : TS) {
     switch (I) {
     case 'Q':
-      Svcount = true;
+      assert(isInvalid() && "Unexpected use of typespec modifier");
+      Kind = Svcount;
       break;
     case 'P':
-      Predicate = true;
+      assert(isInvalid() && "Unexpected use of typespec modifier");
+      Kind = Predicate;
       break;
     case 'U':
-      Signed = false;
+      assert(isInvalid() && "Unexpected use of typespec modifier");
+      Kind = UInt;
       break;
     case 'c':
+      Kind = isInvalid() ? SInt : Kind;
       ElementBitwidth = 8;
       break;
     case 's':
+      Kind = isInvalid() ? SInt : Kind;
       ElementBitwidth = 16;
       break;
     case 'i':
+      Kind = isInvalid() ? SInt : Kind;
       ElementBitwidth = 32;
       break;
     case 'l':
+      Kind = isInvalid() ? SInt : Kind;
       ElementBitwidth = 64;
       break;
     case 'q':
+      Kind = isInvalid() ? SInt : Kind;
       ElementBitwidth = 128;
       break;
     case 'h':
-      Float = true;
+      assert(isInvalid() && "Unexpected use of typespec modifier");
+      Kind = Float;
       ElementBitwidth = 16;
       break;
     case 'f':
-      Float = true;
+      assert(isInvalid() && "Unexpected use of typespec modifier");
+      Kind = Float;
       ElementBitwidth = 32;
       break;
     case 'd':
-      Float = true;
+      assert(isInvalid() && "Unexpected use of typespec modifier");
+      Kind = Float;
       ElementBitwidth = 64;
       break;
     case 'b':
-      BFloat = true;
-      Float = false;
-      MFloat = false;
+      assert(isInvalid() && "Unexpected use of typespec modifier");
+      Kind = BFloat16;
       ElementBitwidth = 16;
       break;
     case 'm':
-      Signed = false;
-      MFloat = true;
-      Float = false;
-      BFloat = false;
+      assert(isInvalid() && "Unexpected use of typespec modifier");
+      Kind = MFloat8;
       ElementBitwidth = 8;
       break;
     default:
@@ -599,7 +654,8 @@ void SVEType::applyTypespec(StringRef TS) {
 void SVEType::applyModifier(char Mod) {
   switch (Mod) {
   case 'v':
-    Void = true;
+    Kind = Void;
+    NumVectors = 0;
     break;
   case 'd':
     DefaultType = true;
@@ -613,7 +669,7 @@ void SVEType::applyModifier(char Mod) {
     NumVectors = 0;
     break;
   case 'e':
-    Signed = false;
+    Kind = UInt;
     ElementBitwidth /= 2;
     break;
   case 'h':
@@ -623,20 +679,14 @@ void SVEType::applyModifier(char Mod) {
     ElementBitwidth /= 4;
     break;
   case 'b':
-    Signed = false;
-    Float = false;
-    BFloat = false;
+    Kind = UInt;
     ElementBitwidth /= 4;
     break;
   case 'o':
     ElementBitwidth *= 4;
     break;
   case 'P':
-    Signed = true;
-    Float = false;
-    BFloat = false;
-    Predicate = true;
-    Svcount = false;
+    Kind = Predicate;
     Bitwidth = 16;
     ElementBitwidth = 1;
     break;
@@ -659,105 +709,66 @@ void SVEType::applyModifier(char Mod) {
     NumVectors = 0;
     break;
   case '@':
-    Signed = false;
-    Float = false;
-    BFloat = false;
+    Kind = UInt;
     ElementBitwidth /= 4;
     NumVectors = 0;
     break;
   case 'K':
-    Signed = true;
-    Float = false;
-    BFloat = false;
+    Kind = SInt;
     Bitwidth = ElementBitwidth;
     NumVectors = 0;
     break;
   case 'L':
-    Signed = false;
-    Float = false;
-    BFloat = false;
+    Kind = UInt;
     Bitwidth = ElementBitwidth;
     NumVectors = 0;
     break;
   case 'u':
-    Predicate = false;
-    Svcount = false;
-    Signed = false;
-    Float = false;
-    BFloat = false;
+    Kind = UInt;
     break;
   case 'x':
-    Predicate = false;
-    Svcount = false;
-    Signed = true;
-    Float = false;
-    BFloat = false;
+    Kind = SInt;
     break;
   case 'i':
-    Predicate = false;
-    Svcount = false;
-    Float = false;
-    BFloat = false;
+    Kind = UInt;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
-    Signed = false;
     Immediate = true;
     break;
   case 'I':
-    Predicate = false;
-    Svcount = false;
-    Float = false;
-    BFloat = false;
+    Kind = PredicatePattern;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
-    Signed = true;
     Immediate = true;
-    PredicatePattern = true;
     break;
   case 'J':
-    Predicate = false;
-    Svcount = false;
-    Float = false;
-    BFloat = false;
+    Kind = PrefetchOp;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
-    Signed = true;
     Immediate = true;
-    PrefetchOp = true;
     break;
   case 'k':
-    Predicate = false;
-    Svcount = false;
-    Signed = true;
-    Float = false;
-    BFloat = false;
+    Kind = SInt;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     break;
   case 'l':
-    Predicate = false;
-    Svcount = false;
-    Signed = true;
-    Float = false;
-    BFloat = false;
+    Kind = SInt;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     break;
   case 'm':
-    Predicate = false;
-    Svcount = false;
-    Signed = false;
-    Float = false;
-    BFloat = false;
+    Kind = UInt;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     break;
+  case '>':
+    Kind = Fpm;
+    ElementBitwidth = Bitwidth = 64;
+    NumVectors = 0;
+    break;
   case 'n':
-    Predicate = false;
-    Svcount = false;
-    Signed = false;
-    Float = false;
-    BFloat = false;
+    Kind = UInt;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     break;
@@ -769,162 +780,153 @@ void SVEType::applyModifier(char Mod) {
     NumVectors = 0;
     break;
   case 'f':
-    Signed = false;
+    Kind = UInt;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     break;
   case 'g':
-    Signed = false;
-    Float = false;
-    BFloat = false;
+    Kind = UInt;
+    ElementBitwidth = 64;
+    break;
+  case '#':
+    Kind = SInt;
     ElementBitwidth = 64;
     break;
   case '[':
-    Signed = false;
-    Float = false;
-    BFloat = false;
+    Kind = UInt;
     ElementBitwidth = 8;
     break;
   case 't':
-    Signed = true;
-    Float = false;
-    BFloat = false;
+    Kind = SInt;
     ElementBitwidth = 32;
     break;
   case 'z':
-    Signed = false;
-    Float = false;
-    BFloat = false;
+    Kind = UInt;
     ElementBitwidth = 32;
     break;
   case 'O':
-    Predicate = false;
-    Svcount = false;
-    Float = true;
+    Kind = Float;
     ElementBitwidth = 16;
     break;
   case 'M':
-    Predicate = false;
-    Svcount = false;
-    Float = true;
-    BFloat = false;
+    Kind = Float;
     ElementBitwidth = 32;
     break;
   case 'N':
-    Predicate = false;
-    Svcount = false;
-    Float = true;
+    Kind = Float;
     ElementBitwidth = 64;
     break;
   case 'Q':
+    Kind = Void;
     Constant = true;
     Pointer = true;
-    Void = true;
     NumVectors = 0;
     break;
   case 'S':
+    Kind = SInt;
     Constant = true;
     Pointer = true;
     ElementBitwidth = Bitwidth = 8;
     NumVectors = 0;
-    Signed = true;
     break;
   case 'W':
+    Kind = UInt;
     Constant = true;
     Pointer = true;
     ElementBitwidth = Bitwidth = 8;
     NumVectors = 0;
-    Signed = false;
     break;
   case 'T':
+    Kind = SInt;
     Constant = true;
     Pointer = true;
     ElementBitwidth = Bitwidth = 16;
     NumVectors = 0;
-    Signed = true;
     break;
   case 'X':
+    Kind = UInt;
     Constant = true;
     Pointer = true;
     ElementBitwidth = Bitwidth = 16;
     NumVectors = 0;
-    Signed = false;
     break;
   case 'Y':
+    Kind = UInt;
     Constant = true;
     Pointer = true;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
-    Signed = false;
     break;
   case 'U':
+    Kind = SInt;
     Constant = true;
     Pointer = true;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
-    Signed = true;
     break;
   case '%':
+    Kind = Void;
     Pointer = true;
-    Void = true;
     NumVectors = 0;
     break;
   case 'A':
+    Kind = SInt;
     Pointer = true;
     ElementBitwidth = Bitwidth = 8;
     NumVectors = 0;
-    Signed = true;
     break;
   case 'B':
+    Kind = SInt;
     Pointer = true;
     ElementBitwidth = Bitwidth = 16;
     NumVectors = 0;
-    Signed = true;
     break;
   case 'C':
+    Kind = SInt;
     Pointer = true;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
-    Signed = true;
     break;
   case 'D':
+    Kind = SInt;
     Pointer = true;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
-    Signed = true;
     break;
   case 'E':
+    Kind = UInt;
     Pointer = true;
     ElementBitwidth = Bitwidth = 8;
     NumVectors = 0;
-    Signed = false;
     break;
   case 'F':
+    Kind = UInt;
     Pointer = true;
     ElementBitwidth = Bitwidth = 16;
     NumVectors = 0;
-    Signed = false;
     break;
   case 'G':
+    Kind = UInt;
     Pointer = true;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
-    Signed = false;
     break;
   case '$':
-    Predicate = false;
-    Svcount = false;
-    Float = false;
-    BFloat = true;
+    Kind = BFloat16;
     ElementBitwidth = 16;
     break;
   case '}':
-    Predicate = false;
-    Signed = true;
-    Svcount = true;
+    Kind = Svcount;
     NumVectors = 0;
-    Float = false;
-    BFloat = false;
+    break;
+  case '~':
+    Kind = MFloat8;
+    ElementBitwidth = 8;
+    break;
+  case '!':
+    Kind = MFloat8;
+    Bitwidth = ElementBitwidth = 8;
+    NumVectors = 0;
     break;
   case '.':
     llvm_unreachable(". is never a type in itself");
@@ -989,6 +991,7 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
     std::tie(Mod, NumVectors) = getProtoModifier(Proto, I);
     SVEType T(BaseTypeSpec, Mod, NumVectors);
     Types.push_back(T);
+    SetsFPMR = T.isFpm();
 
     // Add range checks for immediates
     if (I > 0) {
@@ -1007,6 +1010,8 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
   this->Flags |= Emitter.encodeMergeType(MergeTy);
   if (hasSplat())
     this->Flags |= Emitter.encodeSplatOperand(getSplatIdx());
+  if (SetsFPMR)
+    this->Flags |= Emitter.getEnumValueForFlag("SetsFPMR");
 }
 
 std::string Intrinsic::getBuiltinTypeStr() {
@@ -1044,16 +1049,19 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
 
     // Replace templated arg with the right suffix (e.g. u32)
     std::string TypeCode;
-    if (T.isInteger())
-      TypeCode = T.isSigned() ? 's' : 'u';
+
+    if (T.isSignedInteger())
+      TypeCode = 's';
+    else if (T.isUnsignedInteger())
+      TypeCode = 'u';
     else if (T.isSvcount())
       TypeCode = 'c';
-    else if (T.isPredicateVector())
+    else if (T.isPredicate())
       TypeCode = 'b';
     else if (T.isBFloat())
       TypeCode = "bf";
     else if (T.isMFloat())
-      TypeCode = "mfp";
+      TypeCode = "mf";
     else
       TypeCode = 'f';
     Ret.replace(Pos, NumChars, TypeCode + utostr(T.getElementSizeInBits()));
@@ -1092,8 +1100,9 @@ std::string Intrinsic::mangleName(ClassKind LocalCK) const {
   }
 
   // Replace all {d} like expressions with e.g. 'u32'
-  return replaceTemplatedArgs(S, getBaseTypeSpec(), getProto()) +
-         getMergeSuffix();
+  return replaceTemplatedArgs(S, getBaseTypeSpec(), getProto())
+      .append(getMergeSuffix())
+      .append(getFPMSuffix());
 }
 
 void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter,
@@ -1152,7 +1161,7 @@ uint64_t SVEEmitter::encodeTypeFlags(const SVEType &T) {
     return encodeEltType("EltTyMFloat8");
   }
 
-  if (T.isPredicateVector() || T.isSvcount()) {
+  if (T.isPredicate() || T.isSvcount()) {
     switch (T.getElementSizeInBits()) {
     case 8:
       return encodeEltType("EltTyBool8");
@@ -1475,19 +1484,19 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
     return A->getMangledName() < B->getMangledName();
   });
 
-  OS << "#ifdef GET_SVE_BUILTINS\n";
-  for (auto &Def : Defs) {
-    // Only create BUILTINs for non-overloaded intrinsics, as overloaded
-    // declarations only live in the header file.
-    if (Def->getClassKind() != ClassG) {
-      OS << "TARGET_BUILTIN(__builtin_sve_" << Def->getMangledName() << ", \""
-         << Def->getBuiltinTypeStr() << "\", \"n\", \"";
-      Def->printGuard(OS);
-      OS << "\")\n";
-    }
-  }
+  llvm::StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("");
+  Table.GetOrAddStringOffset("n");
 
-  // Add reinterpret functions.
+  for (const auto &Def : Defs)
+    if (Def->getClassKind() != ClassG) {
+      Table.GetOrAddStringOffset(Def->getMangledName());
+      Table.GetOrAddStringOffset(Def->getBuiltinTypeStr());
+      Table.GetOrAddStringOffset(Def->getGuard());
+    }
+
+  Table.GetOrAddStringOffset("sme|sve");
+  SmallVector<std::pair<std::string, std::string>> ReinterpretBuiltins;
   for (auto [N, Suffix] :
        std::initializer_list<std::pair<unsigned, const char *>>{
            {1, ""}, {2, "_x2"}, {3, "_x3"}, {4, "_x4"}}) {
@@ -1495,14 +1504,54 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
       SVEType ToV(To.BaseType, N);
       for (const ReinterpretTypeInfo &From : Reinterprets) {
         SVEType FromV(From.BaseType, N);
-        OS << "TARGET_BUILTIN(__builtin_sve_reinterpret_" << To.Suffix << "_"
-           << From.Suffix << Suffix << +", \"" << ToV.builtin_str()
-           << FromV.builtin_str() << "\", \"n\", \"sme|sve\")\n";
+        std::string Name =
+            (Twine("reinterpret_") + To.Suffix + "_" + From.Suffix + Suffix)
+                .str();
+        std::string Type = ToV.builtin_str() + FromV.builtin_str();
+        Table.GetOrAddStringOffset(Name);
+        Table.GetOrAddStringOffset(Type);
+        ReinterpretBuiltins.push_back({Name, Type});
       }
     }
   }
 
-  OS << "#endif\n\n";
+  OS << "#ifdef GET_SVE_BUILTIN_ENUMERATORS\n";
+  for (const auto &Def : Defs)
+    if (Def->getClassKind() != ClassG)
+      OS << "  BI__builtin_sve_" << Def->getMangledName() << ",\n";
+  for (const auto &[Name, _] : ReinterpretBuiltins)
+    OS << "  BI__builtin_sve_" << Name << ",\n";
+  OS << "#endif // GET_SVE_BUILTIN_ENUMERATORS\n\n";
+
+  OS << "#ifdef GET_SVE_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_SVE_BUILTIN_STR_TABLE\n\n";
+
+  OS << "#ifdef GET_SVE_BUILTIN_INFOS\n";
+  for (const auto &Def : Defs) {
+    // Only create BUILTINs for non-overloaded intrinsics, as overloaded
+    // declarations only live in the header file.
+    if (Def->getClassKind() != ClassG) {
+      OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+         << Table.GetStringOffset(Def->getMangledName()) << " /* "
+         << Def->getMangledName() << " */, ";
+      OS << Table.GetStringOffset(Def->getBuiltinTypeStr()) << " /* "
+         << Def->getBuiltinTypeStr() << " */, ";
+      OS << Table.GetStringOffset("n") << " /* n */, ";
+      OS << Table.GetStringOffset(Def->getGuard()) << " /* " << Def->getGuard()
+         << " */}, ";
+      OS << "HeaderDesc::NO_HEADER, ALL_LANGUAGES},\n";
+    }
+  }
+  for (const auto &[Name, Type] : ReinterpretBuiltins) {
+    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+       << Table.GetStringOffset(Name) << " /* " << Name << " */, ";
+    OS << Table.GetStringOffset(Type) << " /* " << Type << " */, ";
+    OS << Table.GetStringOffset("n") << " /* n */, ";
+    OS << Table.GetStringOffset("sme|sve") << " /* sme|sve */}, ";
+    OS << "HeaderDesc::NO_HEADER, ALL_LANGUAGES},\n";
+  }
+  OS << "#endif // GET_SVE_BUILTIN_INFOS\n\n";
 }
 
 void SVEEmitter::createCodeGenMap(raw_ostream &OS) {
@@ -1644,13 +1693,6 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "  return x0 & (1ULL << 63);\n";
   OS << "}\n\n";
 
-  OS << "__ai bool __arm_in_streaming_mode(void) __arm_streaming_compatible "
-        "{\n";
-  OS << "  uint64_t x0, x1;\n";
-  OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
-  OS << "  return x0 & 1;\n";
-  OS << "}\n\n";
-
   OS << "void *__arm_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
   OS << "void *__arm_sc_memmove(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
   OS << "void *__arm_sc_memset(void *s, int c, size_t n) __arm_streaming_compatible;\n";
@@ -1682,19 +1724,44 @@ void SVEEmitter::createSMEBuiltins(raw_ostream &OS) {
     return A->getMangledName() < B->getMangledName();
   });
 
-  OS << "#ifdef GET_SME_BUILTINS\n";
-  for (auto &Def : Defs) {
+  llvm::StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("");
+  Table.GetOrAddStringOffset("n");
+
+  for (const auto &Def : Defs)
+    if (Def->getClassKind() != ClassG) {
+      Table.GetOrAddStringOffset(Def->getMangledName());
+      Table.GetOrAddStringOffset(Def->getBuiltinTypeStr());
+      Table.GetOrAddStringOffset(Def->getGuard());
+    }
+
+  OS << "#ifdef GET_SME_BUILTIN_ENUMERATORS\n";
+  for (const auto &Def : Defs)
+    if (Def->getClassKind() != ClassG)
+      OS << "  BI__builtin_sme_" << Def->getMangledName() << ",\n";
+  OS << "#endif // GET_SME_BUILTIN_ENUMERATORS\n\n";
+
+  OS << "#ifdef GET_SME_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_SME_BUILTIN_STR_TABLE\n\n";
+
+  OS << "#ifdef GET_SME_BUILTIN_INFOS\n";
+  for (const auto &Def : Defs) {
     // Only create BUILTINs for non-overloaded intrinsics, as overloaded
     // declarations only live in the header file.
     if (Def->getClassKind() != ClassG) {
-      OS << "TARGET_BUILTIN(__builtin_sme_" << Def->getMangledName() << ", \""
-         << Def->getBuiltinTypeStr() << "\", \"n\", \"";
-      Def->printGuard(OS);
-      OS << "\")\n";
+      OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+         << Table.GetStringOffset(Def->getMangledName()) << " /* "
+         << Def->getMangledName() << " */, ";
+      OS << Table.GetStringOffset(Def->getBuiltinTypeStr()) << " /* "
+         << Def->getBuiltinTypeStr() << " */, ";
+      OS << Table.GetStringOffset("n") << " /* n */, ";
+      OS << Table.GetStringOffset(Def->getGuard()) << " /* " << Def->getGuard()
+         << " */}, ";
+      OS << "HeaderDesc::NO_HEADER, ALL_LANGUAGES},\n";
     }
   }
-
-  OS << "#endif\n\n";
+  OS << "#endif // GET_SME_BUILTIN_INFOS\n\n";
 }
 
 void SVEEmitter::createSMECodeGenMap(raw_ostream &OS) {

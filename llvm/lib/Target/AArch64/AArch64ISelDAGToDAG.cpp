@@ -228,6 +228,8 @@ public:
     return false;
   }
 
+  bool SelectAny(SDValue) { return true; }
+
   bool SelectDupZero(SDValue N) {
     switch(N->getOpcode()) {
     case AArch64ISD::DUP:
@@ -383,6 +385,7 @@ public:
   void SelectPExtPair(SDNode *N, unsigned Opc);
   void SelectWhilePair(SDNode *N, unsigned Opc);
   void SelectCVTIntrinsic(SDNode *N, unsigned NumVecs, unsigned Opcode);
+  void SelectCVTIntrinsicFP8(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectClamp(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectUnaryMultiIntrinsic(SDNode *N, unsigned NumOutVecs,
                                  bool IsTupleInput, unsigned Opc);
@@ -662,6 +665,10 @@ static AArch64_AM::ShiftExtendType getShiftTypeForNode(SDValue N) {
   }
 }
 
+static bool isMemOpOrPrefetch(SDNode *N) {
+  return isa<MemSDNode>(*N) || N->getOpcode() == AArch64ISD::PREFETCH;
+}
+
 /// Determine whether it is worth it to fold SHL into the addressing
 /// mode.
 static bool isWorthFoldingSHL(SDValue V) {
@@ -678,10 +685,10 @@ static bool isWorthFoldingSHL(SDValue V) {
   // operation.  If yes, do not try to fold this node into the address
   // computation, since the computation will be kept.
   const SDNode *Node = V.getNode();
-  for (SDNode *UI : Node->uses())
-    if (!isa<MemSDNode>(*UI))
-      for (SDNode *UII : UI->uses())
-        if (!isa<MemSDNode>(*UII))
+  for (SDNode *UI : Node->users())
+    if (!isMemOpOrPrefetch(UI))
+      for (SDNode *UII : UI->users())
+        if (!isMemOpOrPrefetch(UII))
           return false;
   return true;
 }
@@ -1011,15 +1018,15 @@ bool AArch64DAGToDAGISel::SelectArithUXTXRegister(SDValue N, SDValue &Reg,
 /// a single pseudo-instruction for an ADRP/ADD pair so over-aggressive folding
 /// leads to duplicated ADRP instructions.
 static bool isWorthFoldingADDlow(SDValue N) {
-  for (auto *Use : N->uses()) {
-    if (Use->getOpcode() != ISD::LOAD && Use->getOpcode() != ISD::STORE &&
-        Use->getOpcode() != ISD::ATOMIC_LOAD &&
-        Use->getOpcode() != ISD::ATOMIC_STORE)
+  for (auto *User : N->users()) {
+    if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE &&
+        User->getOpcode() != ISD::ATOMIC_LOAD &&
+        User->getOpcode() != ISD::ATOMIC_STORE)
       return false;
 
     // ldar and stlr have much more restrictive addressing modes (just a
     // register).
-    if (isStrongerThanMonotonic(cast<MemSDNode>(Use)->getSuccessOrdering()))
+    if (isStrongerThanMonotonic(cast<MemSDNode>(User)->getSuccessOrdering()))
       return false;
   }
 
@@ -1244,8 +1251,8 @@ bool AArch64DAGToDAGISel::SelectAddrModeWRO(SDValue N, unsigned Size,
   // operation.  If yes, do not try to fold this node into the address
   // computation, since the computation will be kept.
   const SDNode *Node = N.getNode();
-  for (SDNode *UI : Node->uses()) {
-    if (!isa<MemSDNode>(*UI))
+  for (SDNode *UI : Node->users()) {
+    if (!isMemOpOrPrefetch(UI))
       return false;
   }
 
@@ -1328,8 +1335,8 @@ bool AArch64DAGToDAGISel::SelectAddrModeXRO(SDValue N, unsigned Size,
   // operation.  If yes, do not try to fold this node into the address
   // computation, since the computation will be kept.
   const SDNode *Node = N.getNode();
-  for (SDNode *UI : Node->uses()) {
-    if (!isa<MemSDNode>(*UI))
+  for (SDNode *UI : Node->users()) {
+    if (!isMemOpOrPrefetch(UI))
       return false;
   }
 
@@ -1863,6 +1870,27 @@ void AArch64DAGToDAGISel::SelectCVTIntrinsic(SDNode *N, unsigned NumVecs,
     ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
                                    AArch64::zsub0 + i, DL, VT, SuperReg));
 
+  CurDAG->RemoveDeadNode(N);
+}
+
+void AArch64DAGToDAGISel::SelectCVTIntrinsicFP8(SDNode *N, unsigned NumVecs,
+                                                unsigned Opcode) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SmallVector<SDValue, 4> Ops(N->op_begin() + 2, N->op_end());
+  Ops.push_back(/*Chain*/ N->getOperand(0));
+
+  SDNode *Instruction =
+      CurDAG->getMachineNode(Opcode, DL, {MVT::Untyped, MVT::Other}, Ops);
+  SDValue SuperReg = SDValue(Instruction, 0);
+
+  for (unsigned i = 0; i < NumVecs; ++i)
+    ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
+                                   AArch64::zsub0 + i, DL, VT, SuperReg));
+
+  // Copy chain
+  unsigned ChainIdx = NumVecs;
+  ReplaceUses(SDValue(N, ChainIdx), SDValue(Instruction, 1));
   CurDAG->RemoveDeadNode(N);
 }
 
@@ -3009,7 +3037,7 @@ static void getUsefulBits(SDValue Op, APInt &UsefulBits, unsigned Depth) {
   }
   APInt UsersUsefulBits(UsefulBits.getBitWidth(), 0);
 
-  for (SDNode *Node : Op.getNode()->uses()) {
+  for (SDNode *Node : Op.getNode()->users()) {
     // A use cannot produce useful bits
     APInt UsefulBitsForUse = APInt(UsefulBits);
     getUsefulBitsForUse(Node, UsefulBitsForUse, Op, Depth);
@@ -5547,6 +5575,30 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectMultiVectorLuti(Node, 4, AArch64::LUTI4_4ZZT2Z);
       return;
     }
+    case Intrinsic::aarch64_sve_fp8_cvtl1_x2:
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BF1CVTL_2ZZ_BtoH, AArch64::F1CVTL_2ZZ_BtoH}))
+        SelectCVTIntrinsicFP8(Node, 2, Opc);
+      return;
+    case Intrinsic::aarch64_sve_fp8_cvtl2_x2:
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BF2CVTL_2ZZ_BtoH, AArch64::F2CVTL_2ZZ_BtoH}))
+        SelectCVTIntrinsicFP8(Node, 2, Opc);
+      return;
+    case Intrinsic::aarch64_sve_fp8_cvt1_x2:
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BF1CVT_2ZZ_BtoH, AArch64::F1CVT_2ZZ_BtoH}))
+        SelectCVTIntrinsicFP8(Node, 2, Opc);
+      return;
+    case Intrinsic::aarch64_sve_fp8_cvt2_x2:
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BF2CVT_2ZZ_BtoH, AArch64::F2CVT_2ZZ_BtoH}))
+        SelectCVTIntrinsicFP8(Node, 2, Opc);
+      return;
     }
   } break;
   case ISD::INTRINSIC_WO_CHAIN: {

@@ -69,7 +69,6 @@ static const char *const CoroIntrinsics[] = {
     "llvm.coro.async.context.dealloc",
     "llvm.coro.async.resume",
     "llvm.coro.async.size.replace",
-    "llvm.coro.async.store_resume",
     "llvm.coro.await.suspend.bool",
     "llvm.coro.await.suspend.handle",
     "llvm.coro.await.suspend.void",

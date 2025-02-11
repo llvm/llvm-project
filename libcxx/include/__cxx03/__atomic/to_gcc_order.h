@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_TO_GCC_ORDER_H
-#define _LIBCPP___ATOMIC_TO_GCC_ORDER_H
+#ifndef _LIBCPP___CXX03___ATOMIC_TO_GCC_ORDER_H
+#define _LIBCPP___CXX03___ATOMIC_TO_GCC_ORDER_H
 
 #include <__cxx03/__atomic/memory_order.h>
 #include <__cxx03/__config>
@@ -51,4 +51,4 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR int __to_gcc_failure_order(memory
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_TO_GCC_ORDER_H
+#endif // _LIBCPP___CXX03___ATOMIC_TO_GCC_ORDER_H

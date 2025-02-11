@@ -2090,20 +2090,19 @@ bool LowerTypeTestsModule::lower() {
   };
   MapVector<StringRef, ExportedFunctionInfo> ExportedFunctions;
   if (ExportSummary) {
-    // A set of all functions that are address taken by a live global object.
-    DenseSet<GlobalValue::GUID> AddressTaken;
-    for (auto &I : *ExportSummary)
-      for (auto &GVS : I.second.SummaryList)
-        if (GVS->isLive())
-          for (const auto &Ref : GVS->refs()) {
-            AddressTaken.insert(Ref.getGUID());
-            for (auto &RefGVS : Ref.getSummaryList())
-              if (auto Alias = dyn_cast<AliasSummary>(RefGVS.get()))
-                AddressTaken.insert(Alias->getAliaseeGUID());
-          }
-
     NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
     if (CfiFunctionsMD) {
+      // A set of all functions that are address taken by a live global object.
+      DenseSet<GlobalValue::GUID> AddressTaken;
+      for (auto &I : *ExportSummary)
+        for (auto &GVS : I.second.SummaryList)
+          if (GVS->isLive())
+            for (const auto &Ref : GVS->refs()) {
+              AddressTaken.insert(Ref.getGUID());
+              for (auto &RefGVS : Ref.getSummaryList())
+                if (auto Alias = dyn_cast<AliasSummary>(RefGVS.get()))
+                  AddressTaken.insert(Alias->getAliaseeGUID());
+            }
       for (auto *FuncMD : CfiFunctionsMD->operands()) {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =

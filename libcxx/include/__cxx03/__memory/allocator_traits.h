@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
-#define _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
+#ifndef _LIBCPP___CXX03___MEMORY_ALLOCATOR_TRAITS_H
+#define _LIBCPP___CXX03___MEMORY_ALLOCATOR_TRAITS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/construct_at.h>
@@ -421,4 +421,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
+#endif // _LIBCPP___CXX03___MEMORY_ALLOCATOR_TRAITS_H

@@ -125,9 +125,8 @@ bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
   assert(F);
   const std::string &FunctionName = safeGetName(F);
 
-  return isRefType(FunctionName) || FunctionName == "makeRef" ||
-         FunctionName == "makeRefPtr" || FunctionName == "UniqueRef" ||
-         FunctionName == "makeUniqueRef" ||
+  return isRefType(FunctionName) || FunctionName == "adoptRef" ||
+         FunctionName == "UniqueRef" || FunctionName == "makeUniqueRef" ||
          FunctionName == "makeUniqueRefWithoutFastMallocCheck"
 
          || FunctionName == "String" || FunctionName == "AtomString" ||
@@ -634,6 +633,11 @@ public:
 
   bool VisitConstantExpr(const ConstantExpr *CE) {
     // Constant expressions are trivial.
+    return true;
+  }
+
+  bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *IVIE) {
+    // An implicit value initialization is trvial.
     return true;
   }
 

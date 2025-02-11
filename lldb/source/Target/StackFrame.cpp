@@ -670,8 +670,8 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
         }
       }
 
-      // If we have a non pointer type with a sythetic value then lets check if
-      // we have an sythetic dereference specified.
+      // If we have a non-pointer type with a synthetic value then lets check if
+      // we have a synthetic dereference specified.
       if (!valobj_sp->IsPointerType() && valobj_sp->HasSyntheticValue()) {
         Status deref_error;
         if (valobj_sp->GetCompilerType().IsReferenceType()) {
@@ -686,13 +686,13 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
         valobj_sp = valobj_sp->Dereference(deref_error);
         if (!valobj_sp || deref_error.Fail()) {
           error = Status::FromErrorStringWithFormatv(
-              "Failed to dereference sythetic value: {0}", deref_error);
+              "Failed to dereference synthetic value: {0}", deref_error);
           return ValueObjectSP();
         }
         // Some synthetic plug-ins fail to set the error in Dereference
         if (!valobj_sp) {
           error =
-              Status::FromErrorString("Failed to dereference sythetic value");
+              Status::FromErrorString("Failed to dereference synthetic value");
           return ValueObjectSP();
         }
         expr_is_ptr = false;
@@ -1121,8 +1121,7 @@ llvm::Error StackFrame::GetFrameBaseValue(Scalar &frame_base) {
       addr_t loclist_base_addr = LLDB_INVALID_ADDRESS;
       if (!m_sc.function->GetFrameBaseExpression().IsAlwaysValidSingleExpr())
         loclist_base_addr =
-            m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
-                exe_ctx.GetTargetPtr());
+            m_sc.function->GetAddress().GetLoadAddress(exe_ctx.GetTargetPtr());
 
       llvm::Expected<Value> expr_value =
           m_sc.function->GetFrameBaseExpression().Evaluate(

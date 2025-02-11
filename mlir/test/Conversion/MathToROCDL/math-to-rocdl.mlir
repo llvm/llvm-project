@@ -484,6 +484,24 @@ module @test_module {
 
 // -----
 
+module @test_module {
+  // CHECK: llvm.func @__ocml_pown_f16(f16, i32) -> f16
+  // CHECK: llvm.func @__ocml_pown_f32(f32, i32) -> f32
+  // CHECK: llvm.func @__ocml_pown_f64(f64, i32) -> f64
+  // CHECK-LABEL: func @math_fpowi
+  func.func @math_fpowi(%arg0: f16, %arg1: f32, %arg2: f64, %arg3: i32) -> (f16, f32, f64) {
+    // CHECK: llvm.call @__ocml_pown_f16(%{{.*}}) : (f16, i32) -> f16
+    %0 = math.fpowi %arg0, %arg3 : f16, i32
+    // CHECK: llvm.call @__ocml_pown_f32(%{{.*}}) : (f32, i32) -> f32
+    %1 = math.fpowi %arg1, %arg3 : f32, i32
+    // CHECK: llvm.call @__ocml_pown_f64(%{{.*}}) : (f64, i32) -> f64
+    %2 = math.fpowi %arg2, %arg3 : f64, i32
+    return %0, %1, %2 : f16, f32, f64
+  }
+}
+
+// -----
+
 // Math operation not inside function
 // Ensure it not crash
 

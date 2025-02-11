@@ -199,7 +199,7 @@ static uint32_t findMaskR6(Ctx &ctx, uint32_t insn) {
       return i.relocMask;
 
   Err(ctx) << "unrecognized instruction for 6_X relocation: 0x"
-           << utohexstr(insn);
+           << utohexstr(insn, true);
   return 0;
 }
 
