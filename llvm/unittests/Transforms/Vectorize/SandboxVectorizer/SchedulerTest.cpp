@@ -253,6 +253,7 @@ bb0:
   %add0 = add i8 %v0, 0
   %add1 = add i8 %v1, 1
   br label %bb1
+
 bb1:
   store i8 %add0, ptr %ptr0
   store i8 %add1, ptr %ptr1
@@ -391,4 +392,78 @@ define void @foo(ptr %ptr) {
   Nodes.insert(ReadyList.pop());
   EXPECT_TRUE(ReadyList.empty());
   EXPECT_THAT(Nodes, testing::UnorderedElementsAre(L0N, RetN));
+}
+
+TEST_F(SchedulerTest, ReadyListPriorities) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr) {
+bb0:
+  br label %bb1
+
+bb1:
+  %phi0 = phi i8 [0, %bb0], [1, %bb1]
+  %phi1 = phi i8 [0, %bb0], [1, %bb1]
+  %ld0 = load i8, ptr %ptr
+  store i8 %ld0, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB1 = getBasicBlockByName(F, "bb1");
+  auto It = BB1->begin();
+  auto *Phi0 = cast<sandboxir::PHINode>(&*It++);
+  auto *Phi1 = cast<sandboxir::PHINode>(&*It++);
+  auto *L0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({&*BB1->begin(), BB1->getTerminator()});
+  auto *Phi0N = DAG.getNode(Phi0);
+  auto *Phi1N = DAG.getNode(Phi1);
+  auto *L0N = DAG.getNode(L0);
+  auto *S0N = DAG.getNode(S0);
+  auto *RetN = DAG.getNode(Ret);
+
+  sandboxir::ReadyListContainer ReadyList;
+  // Check PHI vs non-PHI.
+  ReadyList.insert(S0N);
+  ReadyList.insert(Phi0N);
+  EXPECT_EQ(ReadyList.pop(), Phi0N);
+  EXPECT_EQ(ReadyList.pop(), S0N);
+  ReadyList.insert(Phi0N);
+  ReadyList.insert(S0N);
+  EXPECT_EQ(ReadyList.pop(), Phi0N);
+  EXPECT_EQ(ReadyList.pop(), S0N);
+  // Check PHI vs terminator.
+  ReadyList.insert(RetN);
+  ReadyList.insert(Phi1N);
+  EXPECT_EQ(ReadyList.pop(), Phi1N);
+  EXPECT_EQ(ReadyList.pop(), RetN);
+  ReadyList.insert(Phi1N);
+  ReadyList.insert(RetN);
+  EXPECT_EQ(ReadyList.pop(), Phi1N);
+  EXPECT_EQ(ReadyList.pop(), RetN);
+  // Check terminator vs non-terminator.
+  ReadyList.insert(RetN);
+  ReadyList.insert(L0N);
+  EXPECT_EQ(ReadyList.pop(), L0N);
+  EXPECT_EQ(ReadyList.pop(), RetN);
+  ReadyList.insert(L0N);
+  ReadyList.insert(RetN);
+  EXPECT_EQ(ReadyList.pop(), L0N);
+  EXPECT_EQ(ReadyList.pop(), RetN);
+  // Check all, program order.
+  ReadyList.insert(RetN);
+  ReadyList.insert(L0N);
+  ReadyList.insert(Phi1N);
+  ReadyList.insert(S0N);
+  ReadyList.insert(Phi0N);
+  EXPECT_EQ(ReadyList.pop(), Phi0N);
+  EXPECT_EQ(ReadyList.pop(), Phi1N);
+  EXPECT_EQ(ReadyList.pop(), L0N);
+  EXPECT_EQ(ReadyList.pop(), S0N);
+  EXPECT_EQ(ReadyList.pop(), RetN);
 }
