@@ -126,7 +126,7 @@ thus it needs to be of a limited size.
 If you do not apply filters on recording, you will collect a large trace and every dump operation
 would need to sieve through the much larger recording which may be annoying if done repeatedly.
 
-If the trace JSON is still too large to load, have a look at the dump and look for frequent entries that refer to non-interesting parts.
+If the trace JSON is still too large to load, have a look at the dump as plain text and look for frequent entries that refer to non-interesting parts.
 Once you have some of those, add them as ``--hide`` flags to the ``uftrace dump`` call.
 To see what functions appear frequently in the trace, use this command:
 
