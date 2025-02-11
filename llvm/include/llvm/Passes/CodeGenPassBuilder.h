@@ -1063,7 +1063,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineSSAOptimization(
 ///
 /// A target that uses the standard regalloc pass order for fast or optimized
 /// allocation may still override this for per-target regalloc
-/// selection. But -regalloc=... always takes precedence.
+/// selection. But -regalloc-npm=... always takes precedence.
+/// If a target does not want to allow users to set -regalloc-npm=... at all,
+/// check if Opt.RegAlloc == RegAllocType::Unset.
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addTargetRegisterAllocator(
     AddMachinePass &addPass, bool Optimized) const {
@@ -1076,10 +1078,29 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addTargetRegisterAllocator(
 /// Find and instantiate the register allocation pass requested by this target
 /// at the current optimization level.  Different register allocators are
 /// defined as separate passes because they may require different analysis.
+///
+/// This helper ensures that the -regalloc-npm= option is always available,
+/// even for targets that override the default allocator.
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
     AddMachinePass &addPass, bool Optimized) const {
-  // TODO: Parse Opt.RegAlloc to add register allocator.
+  // Use the specified -regalloc-npm={basic|greedy|fast|pbqp}
+  if (Opt.RegAlloc > RegAllocType::Default) {
+    switch (Opt.RegAlloc) {
+    case RegAllocType::Fast:
+      addPass(RegAllocFastPass());
+      break;
+    case RegAllocType::Greedy:
+      addPass(RAGreedyPass());
+      break;
+    default:
+      report_fatal_error("register allocator not supported yet.", false);
+    }
+    return;
+  }
+  // -regalloc=default or unspecified, so pick based on the optimization level
+  // or ask the target for the regalloc pass.
+  derived().addTargetRegisterAllocator(addPass, Optimized);
 }
 
 template <typename Derived, typename TargetMachineT>
@@ -1150,20 +1171,22 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   // PreRA instruction scheduling.
   addPass(MachineSchedulerPass(&TM));
 
-  if (derived().addRegAssignmentOptimized(addPass)) {
-    // Allow targets to expand pseudo instructions depending on the choice of
-    // registers before MachineCopyPropagation.
-    derived().addPostRewrite(addPass);
-
-    // Copy propagate to forward register uses and try to eliminate COPYs that
-    // were not coalesced.
-    addPass(MachineCopyPropagationPass());
-
-    // Run post-ra machine LICM to hoist reloads / remats.
-    //
-    // FIXME: can this move into MachineLateOptimization?
-    addPass(MachineLICMPass());
+  if (auto E = derived().addRegAssignmentOptimized(addPass)) {
+    // addRegAssignmentOptimized did not add a reg alloc pass, so do nothing.
+    return;
   }
+  // Allow targets to expand pseudo instructions depending on the choice of
+  // registers before MachineCopyPropagation.
+  derived().addPostRewrite(addPass);
+
+  // Copy propagate to forward register uses and try to eliminate COPYs that
+  // were not coalesced.
+  addPass(MachineCopyPropagationPass());
+
+  // Run post-ra machine LICM to hoist reloads / remats.
+  //
+  // FIXME: can this move into MachineLateOptimization?
+  addPass(MachineLICMPass());
 }
 
 //===---------------------------------------------------------------------===//
