@@ -62,16 +62,12 @@ struct CIRGenTypeCache {
   cir::PointerType UInt8PtrTy;
 
   /// void** in address space 0
-  union {
-    cir::PointerType VoidPtrPtrTy;
-    cir::PointerType UInt8PtrPtrTy;
-  };
+  cir::PointerType VoidPtrPtrTy;
+  cir::PointerType UInt8PtrPtrTy;
 
   /// void* in alloca address space
-  union {
-    cir::PointerType AllocaVoidPtrTy;
-    cir::PointerType AllocaInt8PtrTy;
-  };
+  cir::PointerType AllocaVoidPtrTy;
+  cir::PointerType AllocaInt8PtrTy;
 
   /// void* in default globals address space
   //   union {

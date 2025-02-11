@@ -128,6 +128,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
   // Initialize CIR pointer types cache.
   VoidPtrTy = cir::PointerType::get(&getMLIRContext(), VoidTy);
+  VoidPtrPtrTy = cir::PointerType::get(&getMLIRContext(), VoidPtrTy);
 
   FP16Ty = cir::FP16Type::get(&getMLIRContext());
   BFloat16Ty = cir::BF16Type::get(&getMLIRContext());
@@ -159,6 +160,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   UInt8PtrTy = builder.getPointerTo(UInt8Ty);
   UInt8PtrPtrTy = builder.getPointerTo(UInt8PtrTy);
   AllocaInt8PtrTy = UInt8PtrTy;
+  AllocaVoidPtrTy = VoidPtrTy;
   // TODO: GlobalsInt8PtrTy
   // TODO: ConstGlobalsPtrTy
   CIRAllocaAddressSpace = getTargetCIRGenInfo().getCIRAllocaAddressSpace();
