@@ -145,6 +145,24 @@ func.func @test_transpose_conv2d(%arg0: tensor<1x32x32x8xi8>, %arg1: tensor<16x1
 }
 
 // -----
+// CHECK-LABEL: conv2d_quant_any_acc
+func.func @test_conv2d_quant_any_acc(%arg0: tensor<1x4x4x4x!quant.any<i8<-8:7>>>, %arg1: tensor<8x1x1x4x!quant.any<i8<-8:7>>>, %arg2: tensor<8x!quant.any<i8<-8:7>>>) -> tensor<1x4x4x8x!quant.any<i8<-8:7>>> {
+  %zp = "tosa.const" () { value = dense<0> : tensor<1xi8> } : () -> tensor<1xi8>
+  // expected-error@+1 {{'tosa.conv2d' op accumulator type for i8 tensor is not i32}}
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %zp, %zp {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x4x4x4x!quant.any<i8<-8:7>>>, tensor<8x1x1x4x!quant.any<i8<-8:7>>>, tensor<8x!quant.any<i8<-8:7>>>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x4x4x8x!quant.any<i8<-8:7>>>
+  return %0 : tensor<1x4x4x8x!quant.any<i8<-8:7>>>
+}
+
+// -----
+// CHECK-LABEL: conv2d_quant_any_result
+func.func @test_conv2d_quant_any_result(%arg0: tensor<1x4x4x4x!quant.any<i8<-8:7>>>, %arg1: tensor<8x1x1x4x!quant.any<i8<-8:7>>>, %arg2: tensor<8x!quant.any<i8<-8:7>>>) -> tensor<1x4x4x8x!quant.any<i8<-8:7>>> {
+  %zp = "tosa.const" () { value = dense<0> : tensor<1xi8> } : () -> tensor<1xi8>
+  // expected-error@+1 {{'tosa.conv2d' op input/output element types are incompatible}}
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %zp, %zp {acc_type = i32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x4x4x4x!quant.any<i8<-8:7>>>, tensor<8x1x1x4x!quant.any<i8<-8:7>>>, tensor<8x!quant.any<i8<-8:7>>>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x4x4x8x!quant.any<i8<-8:7>>>
+  return %0 : tensor<1x4x4x8x!quant.any<i8<-8:7>>>
+}
+
+// -----
 
 func.func @test_concat(%arg0 : tensor<2x1xf32>, %arg1 : tensor<2x2xf32>) -> tensor<?x?xf32> {
   // expected-error@+2 {{failed to infer returned types}}
@@ -788,7 +806,7 @@ func.func @test_unsupported_int64_data_type(%arg0: tensor<1x13x13x5xf32>) -> ten
 // CHECK-LABEL: test_mismatch_in_out_data_type_clamp
 func.func @test_mismatch_in_out_data_type_clamp(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
   // expected-error@+1 {{'tosa.clamp' op requires the same element type for all operands and results}}
-  %0 = tosa.clamp %arg0 {min_fp = 0.0 : f32, max_fp = 1.0: f32, min_int = 0 : i64, max_int = 1 : i64} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  %0 = tosa.clamp %arg0 {min_val = 0.0 : f32, max_val = 1.0: f32} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
   return %0 : tensor<13x21x3xf16>
 }
 
@@ -797,7 +815,7 @@ func.func @test_mismatch_in_out_data_type_clamp(%arg0: tensor<13x21x3xf32>) -> t
 // CHECK-LABEL: test_mismatch_in_out_shape_clamp
 func.func @test_mismatch_in_out_shape_clamp(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
   // expected-error@+1 {{'tosa.clamp' op requires the same shape for all operands and results}}
-  %0 = tosa.clamp %arg0 {min_fp = 0.0 : f32, max_fp = 1.0: f32, min_int = 0 : i64, max_int = 1 : i64} : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  %0 = tosa.clamp %arg0 {min_val = 0.0 : f32, max_val = 1.0: f32} : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
   return %0 : tensor<13x21x1xf32>
 }
 

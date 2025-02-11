@@ -797,10 +797,31 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
     else
       Known2 = Known2.intersectWith(Known3);
     Known = Known.unionWith(Known2);
+    return;
   }
 
-  if (auto *Cmp = dyn_cast<ICmpInst>(Cond))
+  if (auto *Cmp = dyn_cast<ICmpInst>(Cond)) {
     computeKnownBitsFromICmpCond(V, Cmp, Known, SQ, Invert);
+    return;
+  }
+
+  if (match(Cond, m_Trunc(m_Specific(V)))) {
+    KnownBits DstKnown(1);
+    if (Invert) {
+      DstKnown.setAllZero();
+    } else {
+      DstKnown.setAllOnes();
+    }
+    if (cast<TruncInst>(Cond)->hasNoUnsignedWrap()) {
+      Known = Known.unionWith(DstKnown.zext(Known.getBitWidth()));
+      return;
+    }
+    Known = Known.unionWith(DstKnown.anyext(Known.getBitWidth()));
+    return;
+  }
+
+  if (Depth < MaxAnalysisRecursionDepth && match(Cond, m_Not(m_Value(A))))
+    computeKnownBitsFromCond(V, A, Known, Depth + 1, SQ, !Invert);
 }
 
 void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
@@ -4931,6 +4952,11 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
     computeKnownFPClassFromCond(V, A, Depth + 1, CondIsTrue, CxtI,
                                 KnownFromContext);
     computeKnownFPClassFromCond(V, B, Depth + 1, CondIsTrue, CxtI,
+                                KnownFromContext);
+    return;
+  }
+  if (Depth < MaxAnalysisRecursionDepth && match(Cond, m_Not(m_Value(A)))) {
+    computeKnownFPClassFromCond(V, A, Depth + 1, !CondIsTrue, CxtI,
                                 KnownFromContext);
     return;
   }
@@ -10272,6 +10298,13 @@ void llvm::findValuesAffectedByCondition(
                                                            m_Value()))) {
       // Handle patterns that computeKnownFPClass() support.
       AddAffected(A);
+    } else if (!IsAssume && match(V, m_Trunc(m_Value(X)))) {
+      // Assume is checked here as X is already added above for assumes in
+      // addValueAffectedByCondition
+      AddAffected(X);
+    } else if (!IsAssume && match(V, m_Not(m_Value(X)))) {
+      // Assume is checked here to avoid issues with ephemeral values
+      Worklist.push_back(X);
     }
   }
 }
