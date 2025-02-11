@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mcpu=ppc -verify-machineinstrs < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

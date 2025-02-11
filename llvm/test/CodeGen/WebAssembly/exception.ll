@@ -1,7 +1,8 @@
-; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s
-; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref -verify-machineinstrs -O0
-; RUN: llc < %s -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref
-; RUN: llc < %s -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref -filetype=obj
+; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s
+; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs -O0
+; RUN: llc < %s -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling
+; RUN: llc < %s -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -filetype=obj
+; RUN: llc < %s -mtriple=wasm64-unknown-unknown -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s --check-prefix=WASM64
 
 target triple = "wasm32-unknown-unknown"
 
@@ -30,14 +31,17 @@ define void @throw(ptr %p) {
 ; }
 
 ; CHECK-LABEL: catch:
+; WASM64-LABEL: catch:
 ; CHECK: global.get  __stack_pointer
 ; CHECK: local.set  0
 ; CHECK: block
 ; CHECK:   block     () -> (i32, exnref)
 ; CHECK:     try_table    (catch_ref __cpp_exception 0)
+; WASM64:  block     () -> (i64, exnref)
 ; CHECK:       call  foo
 ; CHECK:       br        2
 ; CHECK:     end_try_table
+; CHECK:     unreachable
 ; CHECK:   end_block
 ; CHECK:   local.set  2
 ; CHECK:   local.get  0
@@ -137,8 +141,10 @@ ehcleanup:                                        ; preds = %entry
 ; }
 
 ; CHECK-LABEL: terminatepad
+; WASM64-LABEL: terminatepad
 ; CHECK: block
 ; CHECK:   block     i32
+; WASM64:  block     i64
 ; CHECK:     try_table    (catch __cpp_exception 0)
 ; CHECK:       call  foo
 ; CHECK:       br        2
@@ -445,6 +451,121 @@ unreachable:                                      ; preds = %rethrow
   unreachable
 }
 
+; The bitcode below is generated when the code below is compiled and
+; Temp::~Temp() is inlined into inlined_cleanupret():
+;
+; void inlined_cleanupret() {
+; try {
+;   Temp t;
+;   throw 2;
+; } catch (...)
+; }
+;
+; Temp::~Temp() {
+;   try {
+;     throw 1;
+;   } catch (...) {
+;   }
+; }
+;
+; ~Temp() generates cleanupret, which is lowered to a 'throw_ref' later. That
+; throw_ref's argument should correctly target the top-level cleanuppad
+; (catch_all_ref). This is a regression test for the bug where we did not
+; compute throw_ref's argument correctly.
+
+; CHECK-LABEL: inlined_cleanupret:
+; CHECK: block     exnref
+; CHECK:   block
+; CHECK:     block     exnref
+; CHECK:       try_table    (catch_all_ref 0)
+; CHECK:         call  __cxa_throw
+; CHECK:       end_try_table
+; CHECK:     end_block
+; try_table (catch_all_ref 0)'s caught exception is stored in local 2
+; CHECK:     local.set  2
+; CHECK:     block
+; CHECK:       try_table    (catch_all 0)
+; CHECK:         block
+; CHECK:           block     i32
+; CHECK:             try_table    (catch __cpp_exception 0)
+; CHECK:               call  __cxa_throw
+; CHECK:             end_try_table
+; CHECK:           end_block
+; CHECK:           call  __cxa_end_catch
+; CHECK:           block     i32
+; CHECK:             try_table    (catch_all_ref 5)
+; CHECK:               try_table    (catch __cpp_exception 1)
+; Note that the throw_ref below targets the top-level catch_all_ref (local 2)
+; CHECK:                 local.get  2
+; CHECK:                 throw_ref
+; CHECK:               end_try_table
+; CHECK:             end_try_table
+; CHECK:           end_block
+; CHECK:           try_table    (catch_all_ref 4)
+; CHECK:             call  __cxa_end_catch
+; CHECK:           end_try_table
+; CHECK:           return
+; CHECK:         end_block
+; CHECK:       end_try_table
+; CHECK:     end_block
+; CHECK:     call  _ZSt9terminatev
+; CHECK:   end_block
+; CHECK: end_block
+; CHECK: throw_ref
+define void @inlined_cleanupret() personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  %exception = tail call ptr @__cxa_allocate_exception(i32 4)
+  store i32 2, ptr %exception, align 16
+  invoke void @__cxa_throw(ptr nonnull %exception, ptr nonnull @_ZTIi, ptr null)
+          to label %unreachable unwind label %ehcleanup
+
+ehcleanup:                                        ; preds = %entry
+  %0 = cleanuppad within none []
+  %exception.i = call ptr @__cxa_allocate_exception(i32 4) [ "funclet"(token %0) ]
+  store i32 1, ptr %exception.i, align 16
+  invoke void @__cxa_throw(ptr nonnull %exception.i, ptr nonnull @_ZTIi, ptr null) [ "funclet"(token %0) ]
+          to label %unreachable unwind label %catch.dispatch.i
+
+catch.dispatch.i:                                 ; preds = %ehcleanup
+  %1 = catchswitch within %0 [label %catch.start.i] unwind label %terminate.i
+
+catch.start.i:                                    ; preds = %catch.dispatch.i
+  %2 = catchpad within %1 [ptr null]
+  %3 = tail call ptr @llvm.wasm.get.exception(token %2)
+  %4 = tail call i32 @llvm.wasm.get.ehselector(token %2)
+  %5 = call ptr @__cxa_begin_catch(ptr %3) [ "funclet"(token %2) ]
+  invoke void @__cxa_end_catch() [ "funclet"(token %2) ]
+          to label %invoke.cont.i unwind label %terminate.i
+
+invoke.cont.i:                                    ; preds = %catch.start.i
+  catchret from %2 to label %_ZN4TempD2Ev.exit
+
+terminate.i:                                      ; preds = %catch.start.i, %catch.dispatch.i
+  %6 = cleanuppad within %0 []
+  call void @_ZSt9terminatev() [ "funclet"(token %6) ]
+  unreachable
+
+_ZN4TempD2Ev.exit:                                ; preds = %invoke.cont.i
+  cleanupret from %0 unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %_ZN4TempD2Ev.exit
+  %7 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %8 = catchpad within %7 [ptr null]
+  %9 = tail call ptr @llvm.wasm.get.exception(token %8)
+  %10 = tail call i32 @llvm.wasm.get.ehselector(token %8)
+  %11 = call ptr @__cxa_begin_catch(ptr %9) #8 [ "funclet"(token %8) ]
+  call void @__cxa_end_catch() [ "funclet"(token %8) ]
+  catchret from %8 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start
+  ret void
+
+unreachable:                                      ; preds = %entry
+  unreachable
+}
+
 
 declare void @foo()
 declare void @bar(ptr)
@@ -460,8 +581,12 @@ declare i32 @llvm.wasm.get.ehselector(token) #0
 declare void @llvm.wasm.rethrow() #1
 ; Function Attrs: nounwind
 declare i32 @llvm.eh.typeid.for(ptr) #0
+; Function Attrs: nounwind
+declare ptr @__cxa_allocate_exception(i32) #0
 declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
+; Function Attrs: noreturn
+declare void @__cxa_throw(ptr, ptr, ptr) #1
 declare void @_ZSt9terminatev()
 declare ptr @_ZN4TempD2Ev(ptr returned)
 

@@ -673,7 +673,8 @@ void CheckUnwind() {
   thr->ignore_reads_and_writes++;
   atomic_store_relaxed(&thr->in_signal_handler, 0);
 #endif
-  PrintCurrentStackSlow(StackTrace::GetCurrentPc());
+  PrintCurrentStack(StackTrace::GetCurrentPc(),
+                    common_flags()->fast_unwind_on_fatal);
 }
 
 bool is_initialized;

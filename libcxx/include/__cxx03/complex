@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_COMPLEX
-#define _LIBCPP_COMPLEX
+#ifndef _LIBCPP___CXX03_COMPLEX
+#define _LIBCPP___CXX03_COMPLEX
 
 /*
     complex synopsis
@@ -256,18 +256,18 @@ template<class T> complex<T> tanh (const complex<T>&);
 
 */
 
-#include <__config>
-#include <__fwd/complex.h>
-#include <__fwd/tuple.h>
-#include <__tuple/tuple_element.h>
-#include <__tuple/tuple_size.h>
-#include <__type_traits/conditional.h>
-#include <__utility/move.h>
-#include <cmath>
-#include <version>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/complex.h>
+#include <__cxx03/__fwd/tuple.h>
+#include <__cxx03/__tuple/tuple_element.h>
+#include <__cxx03/__tuple/tuple_size.h>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/cmath>
+#include <__cxx03/version>
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-#  include <sstream> // for std::basic_ostringstream
+#  include <__cxx03/sstream> // for std::basic_ostringstream
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -275,7 +275,7 @@ template<class T> complex<T> tanh (const complex<T>&);
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -1472,9 +1472,9 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <iosfwd>
-#  include <stdexcept>
-#  include <type_traits>
+#  include <__cxx03/iosfwd>
+#  include <__cxx03/stdexcept>
+#  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_COMPLEX
+#endif // _LIBCPP___CXX03_COMPLEX

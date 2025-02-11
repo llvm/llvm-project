@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_FENCE_H
-#define _LIBCPP___ATOMIC_FENCE_H
+#ifndef _LIBCPP___CXX03___ATOMIC_FENCE_H
+#define _LIBCPP___CXX03___ATOMIC_FENCE_H
 
-#include <__atomic/cxx_atomic_impl.h>
-#include <__atomic/memory_order.h>
-#include <__config>
+#include <__cxx03/__atomic/cxx_atomic_impl.h>
+#include <__cxx03/__atomic/memory_order.h>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -25,4 +25,4 @@ inline _LIBCPP_HIDE_FROM_ABI void atomic_signal_fence(memory_order __m) _NOEXCEP
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_FENCE_H
+#endif // _LIBCPP___CXX03___ATOMIC_FENCE_H

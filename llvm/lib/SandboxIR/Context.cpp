@@ -35,17 +35,20 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
   assert(VPtr->getSubclassID() != Value::ClassID::User &&
          "Can't register a user!");
 
-  // Track creation of instructions.
-  // Please note that we don't allow the creation of detached instructions,
-  // meaning that the instructions need to be inserted into a block upon
-  // creation. This is why the tracker class combines creation and insertion.
-  if (auto *I = dyn_cast<Instruction>(VPtr.get()))
-    getTracker().emplaceIfTracking<CreateAndInsertInst>(I);
-
   Value *V = VPtr.get();
   [[maybe_unused]] auto Pair =
       LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
   assert(Pair.second && "Already exists!");
+
+  // Track creation of instructions.
+  // Please note that we don't allow the creation of detached instructions,
+  // meaning that the instructions need to be inserted into a block upon
+  // creation. This is why the tracker class combines creation and insertion.
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    getTracker().emplaceIfTracking<CreateAndInsertInst>(I);
+    runCreateInstrCallbacks(I);
+  }
+
   return V;
 }
 
@@ -608,6 +611,12 @@ Context::Context(LLVMContext &LLVMCtx)
 
 Context::~Context() {}
 
+void Context::clear() {
+  // TODO: Ideally we should clear only function-scope objects, and keep global
+  // objects, like Constants to avoid recreating them.
+  LLVMValueToValueMap.clear();
+}
+
 Module *Context::getModule(llvm::Module *LLVMM) const {
   auto It = LLVMModuleToModuleMap.find(LLVMM);
   if (It != LLVMModuleToModuleMap.end())
@@ -625,11 +634,14 @@ Module *Context::getOrCreateModule(llvm::Module *LLVMM) {
 }
 
 Function *Context::createFunction(llvm::Function *F) {
-  assert(getValue(F) == nullptr && "Already exists!");
   // Create the module if needed before we create the new sandboxir::Function.
   // Note: this won't fully populate the module. The only globals that will be
   // available will be the ones being used within the function.
   getOrCreateModule(F->getParent());
+
+  // There may be a function declaration already defined. Regardless destroy it.
+  if (Function *ExistingF = cast_or_null<Function>(getValue(F)))
+    detach(ExistingF);
 
   auto NewFPtr = std::unique_ptr<Function>(new Function(F, *this));
   auto *SBF = cast<Function>(registerValue(std::move(NewFPtr)));
@@ -658,6 +670,66 @@ Module *Context::createModule(llvm::Module *LLVMM) {
     getOrCreateValue(&IFunc);
 
   return M;
+}
+
+void Context::runEraseInstrCallbacks(Instruction *I) {
+  for (const auto &CBEntry : EraseInstrCallbacks)
+    CBEntry.second(I);
+}
+
+void Context::runCreateInstrCallbacks(Instruction *I) {
+  for (auto &CBEntry : CreateInstrCallbacks)
+    CBEntry.second(I);
+}
+
+void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
+  for (auto &CBEntry : MoveInstrCallbacks)
+    CBEntry.second(I, WhereIt);
+}
+
+// An arbitrary limit, to check for accidental misuse. We expect a small number
+// of callbacks to be registered at a time, but we can increase this number if
+// we discover we needed more.
+[[maybe_unused]] static constexpr int MaxRegisteredCallbacks = 16;
+
+Context::CallbackID Context::registerEraseInstrCallback(EraseInstrCallback CB) {
+  assert(EraseInstrCallbacks.size() <= MaxRegisteredCallbacks &&
+         "EraseInstrCallbacks size limit exceeded");
+  CallbackID ID{NextCallbackID++};
+  EraseInstrCallbacks[ID] = CB;
+  return ID;
+}
+void Context::unregisterEraseInstrCallback(CallbackID ID) {
+  [[maybe_unused]] bool Erased = EraseInstrCallbacks.erase(ID);
+  assert(Erased &&
+         "Callback ID not found in EraseInstrCallbacks during deregistration");
+}
+
+Context::CallbackID
+Context::registerCreateInstrCallback(CreateInstrCallback CB) {
+  assert(CreateInstrCallbacks.size() <= MaxRegisteredCallbacks &&
+         "CreateInstrCallbacks size limit exceeded");
+  CallbackID ID{NextCallbackID++};
+  CreateInstrCallbacks[ID] = CB;
+  return ID;
+}
+void Context::unregisterCreateInstrCallback(CallbackID ID) {
+  [[maybe_unused]] bool Erased = CreateInstrCallbacks.erase(ID);
+  assert(Erased &&
+         "Callback ID not found in CreateInstrCallbacks during deregistration");
+}
+
+Context::CallbackID Context::registerMoveInstrCallback(MoveInstrCallback CB) {
+  assert(MoveInstrCallbacks.size() <= MaxRegisteredCallbacks &&
+         "MoveInstrCallbacks size limit exceeded");
+  CallbackID ID{NextCallbackID++};
+  MoveInstrCallbacks[ID] = CB;
+  return ID;
+}
+void Context::unregisterMoveInstrCallback(CallbackID ID) {
+  [[maybe_unused]] bool Erased = MoveInstrCallbacks.erase(ID);
+  assert(Erased &&
+         "Callback ID not found in MoveInstrCallbacks during deregistration");
 }
 
 } // namespace llvm::sandboxir

@@ -31,9 +31,10 @@ static cl::opt<std::string> UserDefinedPassPipeline(
 
 SandboxVectorizerPass::SandboxVectorizerPass() : FPM("fpm") {
   if (UserDefinedPassPipeline == DefaultPipelineMagicStr) {
-    // TODO: Add region passes to the default pipeline.
+    // TODO: Add passes to the default pipeline. It currently contains:
+    //       - the bottom-up-vectorizer pass
     FPM.setPassPipeline(
-        "bottom-up-vec<>",
+        "bottom-up-vec<tr-accept-or-revert>",
         sandboxir::SandboxVectorizerPassBuilder::createFunctionPass);
   } else {
     // Create the user-defined pipeline.
@@ -51,6 +52,7 @@ SandboxVectorizerPass::~SandboxVectorizerPass() = default;
 PreservedAnalyses SandboxVectorizerPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   TTI = &AM.getResult<TargetIRAnalysis>(F);
+  AA = &AM.getResult<AAManager>(F);
   SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
 
   bool Changed = runImpl(F);
@@ -63,6 +65,9 @@ PreservedAnalyses SandboxVectorizerPass::run(Function &F,
 }
 
 bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
+  if (Ctx == nullptr)
+    Ctx = std::make_unique<sandboxir::Context>(LLVMF.getContext());
+
   if (PrintPassPipeline) {
     FPM.printPipeline(outs());
     return false;
@@ -81,8 +86,13 @@ bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
   }
 
   // Create SandboxIR for LLVMF and run BottomUpVec on it.
-  sandboxir::Context Ctx(LLVMF.getContext());
-  sandboxir::Function &F = *Ctx.createFunction(&LLVMF);
-  sandboxir::Analyses A(*SE);
-  return FPM.runOnFunction(F, A);
+  sandboxir::Function &F = *Ctx->createFunction(&LLVMF);
+  sandboxir::Analyses A(*AA, *SE, *TTI);
+  bool Change = FPM.runOnFunction(F, A);
+  // Given that sandboxir::Context `Ctx` is defined at a pass-level scope, the
+  // maps from LLVM IR to Sandbox IR may go stale as later passes remove LLVM IR
+  // objects. To avoid issues caused by this clear the context's state.
+  // NOTE: The alternative would be to define Ctx and FPM within runOnFunction()
+  Ctx->clear();
+  return Change;
 }

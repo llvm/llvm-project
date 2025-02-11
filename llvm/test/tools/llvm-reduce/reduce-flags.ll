@@ -272,3 +272,19 @@ define i32 @trunc_nsw_keep(i64 %a) {
   %op = trunc nsw i64 %a to i32
   ret i32 %op
 }
+
+; CHECK-LABEL: @icmp_samesign_drop(
+; INTERESTING: = icmp
+; RESULT: icmp ult i32
+define i1 @icmp_samesign_drop(i32 %a) {
+  %op = icmp samesign ult i32 %a, 10
+  ret i1 %op
+}
+
+; CHECK-LABEL: @icmp_samesign_keep(
+; INTERESTING: = icmp samesign
+; RESULT: icmp samesign ult i32
+define i1 @icmp_samesign_keep(i32 %a) {
+  %op = icmp samesign ult i32 %a, 10
+  ret i1 %op
+}

@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_MOVE_SENTINEL_H
-#define _LIBCPP___ITERATOR_MOVE_SENTINEL_H
+#ifndef _LIBCPP___CXX03___ITERATOR_MOVE_SENTINEL_H
+#define _LIBCPP___CXX03___ITERATOR_MOVE_SENTINEL_H
 
-#include <__concepts/assignable.h>
-#include <__concepts/convertible_to.h>
-#include <__concepts/semiregular.h>
-#include <__config>
-#include <__utility/move.h>
+#include <__cxx03/__concepts/assignable.h>
+#include <__cxx03/__concepts/convertible_to.h>
+#include <__cxx03/__concepts/semiregular.h>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -58,4 +58,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ITERATOR_MOVE_SENTINEL_H
+#endif // _LIBCPP___CXX03___ITERATOR_MOVE_SENTINEL_H

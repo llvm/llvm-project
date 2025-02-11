@@ -12,8 +12,8 @@ define double @constraint_f_double(double %a) nounwind {
 ; RV32F-NEXT:    addi sp, sp, -16
 ; RV32F-NEXT:    sw a0, 8(sp)
 ; RV32F-NEXT:    sw a1, 12(sp)
-; RV32F-NEXT:    fld fa5, 8(sp)
 ; RV32F-NEXT:    lui a0, %hi(gd)
+; RV32F-NEXT:    fld fa5, 8(sp)
 ; RV32F-NEXT:    fld fa4, %lo(gd)(a0)
 ; RV32F-NEXT:    #APP
 ; RV32F-NEXT:    fadd.d fa5, fa5, fa4
@@ -45,8 +45,8 @@ define double @constraint_cf_double(double %a) nounwind {
 ; RV32F-NEXT:    addi sp, sp, -16
 ; RV32F-NEXT:    sw a0, 8(sp)
 ; RV32F-NEXT:    sw a1, 12(sp)
-; RV32F-NEXT:    fld fa5, 8(sp)
 ; RV32F-NEXT:    lui a0, %hi(gd)
+; RV32F-NEXT:    fld fa5, 8(sp)
 ; RV32F-NEXT:    fld fa4, %lo(gd)(a0)
 ; RV32F-NEXT:    #APP
 ; RV32F-NEXT:    fadd.d fa5, fa5, fa4
@@ -78,8 +78,8 @@ define double @constraint_f_double_abi_name(double %a) nounwind {
 ; RV32F-NEXT:    addi sp, sp, -16
 ; RV32F-NEXT:    sw a0, 8(sp)
 ; RV32F-NEXT:    sw a1, 12(sp)
-; RV32F-NEXT:    fld fa1, 8(sp)
 ; RV32F-NEXT:    lui a0, %hi(gd)
+; RV32F-NEXT:    fld fa1, 8(sp)
 ; RV32F-NEXT:    fld fs0, %lo(gd)(a0)
 ; RV32F-NEXT:    #APP
 ; RV32F-NEXT:    fadd.d ft0, fa1, fs0
@@ -108,7 +108,6 @@ define double @constraint_f_double_abi_name(double %a) nounwind {
 define double @constraint_gpr(double %x) {
 ; RV32F-LABEL: constraint_gpr:
 ; RV32F:       # %bb.0:
-; RV32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32F-NEXT:    #APP
 ; RV32F-NEXT:    mv a0, a0
 ; RV32F-NEXT:    #NO_APP
@@ -116,7 +115,6 @@ define double @constraint_gpr(double %x) {
 ;
 ; RV64F-LABEL: constraint_gpr:
 ; RV64F:       # %bb.0:
-; RV64F-NEXT:    .cfi_def_cfa_offset 0
 ; RV64F-NEXT:    #APP
 ; RV64F-NEXT:    mv a0, a0
 ; RV64F-NEXT:    #NO_APP

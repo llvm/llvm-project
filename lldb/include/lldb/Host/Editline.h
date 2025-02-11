@@ -30,9 +30,6 @@
 
 #include "lldb/Host/Config.h"
 
-#if LLDB_EDITLINE_USE_WCHAR
-#include <codecvt>
-#endif
 #include <locale>
 #include <sstream>
 #include <vector>
@@ -56,23 +53,6 @@
 #include "lldb/Utility/StringList.h"
 
 #include "llvm/ADT/FunctionExtras.h"
-
-#if defined(__clang__) && defined(__has_warning)
-#if __has_warning("-Wdeprecated-declarations")
-#define LLDB_DEPRECATED_WARNING_DISABLE                                        \
-  _Pragma("clang diagnostic push")                                             \
-      _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
-#define LLDB_DEPRECATED_WARNING_RESTORE _Pragma("clang diagnostic pop")
-#endif
-#elif defined(__GNUC__) && __GNUC__ > 6
-#define LLDB_DEPRECATED_WARNING_DISABLE                                        \
-  _Pragma("GCC diagnostic push")                                               \
-      _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-#define LLDB_DEPRECATED_WARNING_RESTORE _Pragma("GCC diagnostic pop")
-#else
-#define LLDB_DEPRECATED_WARNING_DISABLE
-#define LLDB_DEPRECATED_WARNING_RESTORE
-#endif
 
 namespace lldb_private {
 namespace line_editor {
@@ -172,7 +152,7 @@ using namespace line_editor;
 class Editline {
 public:
   Editline(const char *editor_name, FILE *input_file, FILE *output_file,
-           FILE *error_file, std::recursive_mutex &output_mutex);
+           FILE *error_file, bool color, std::recursive_mutex &output_mutex);
 
   ~Editline();
 
@@ -232,19 +212,23 @@ public:
   }
 
   void SetPromptAnsiPrefix(std::string prefix) {
-    m_prompt_ansi_prefix = std::move(prefix);
+    if (m_color)
+      m_prompt_ansi_prefix = std::move(prefix);
   }
 
   void SetPromptAnsiSuffix(std::string suffix) {
-    m_prompt_ansi_suffix = std::move(suffix);
+    if (m_color)
+      m_prompt_ansi_suffix = std::move(suffix);
   }
 
   void SetSuggestionAnsiPrefix(std::string prefix) {
-    m_suggestion_ansi_prefix = std::move(prefix);
+    if (m_color)
+      m_suggestion_ansi_prefix = std::move(prefix);
   }
 
   void SetSuggestionAnsiSuffix(std::string suffix) {
-    m_suggestion_ansi_suffix = std::move(suffix);
+    if (m_color)
+      m_suggestion_ansi_suffix = std::move(suffix);
   }
 
   /// Prompts for and reads a single line of user input.
@@ -257,6 +241,10 @@ public:
 
   /// Convert the current input lines into a UTF8 StringList
   StringList GetInputAsStringList(int line_count = UINT32_MAX);
+
+  size_t GetTerminalWidth() { return m_terminal_width; }
+
+  size_t GetTerminalHeight() { return m_terminal_height; }
 
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of
@@ -383,11 +371,6 @@ private:
   void SetEditLinePromptCallback(EditlinePromptCallbackType callbackFn);
   void SetGetCharacterFunction(EditlineGetCharCallbackType callbackFn);
 
-#if LLDB_EDITLINE_USE_WCHAR
-  LLDB_DEPRECATED_WARNING_DISABLE
-  std::wstring_convert<std::codecvt_utf8<wchar_t>> m_utf8conv;
-  LLDB_DEPRECATED_WARNING_RESTORE
-#endif
   ::EditLine *m_editline = nullptr;
   EditlineHistorySP m_history_sp;
   bool m_in_history = false;
@@ -396,6 +379,7 @@ private:
   std::vector<EditLineStringType> m_input_lines;
   EditorStatus m_editor_status;
   int m_terminal_width = 0;
+  int m_terminal_height = 0;
   int m_base_line_number = 0;
   unsigned m_current_line_index = 0;
   int m_current_line_rows = -1;
@@ -420,6 +404,7 @@ private:
   CompleteCallbackType m_completion_callback;
   SuggestionCallbackType m_suggestion_callback;
 
+  bool m_color;
   std::string m_prompt_ansi_prefix;
   std::string m_prompt_ansi_suffix;
   std::string m_suggestion_ansi_prefix;

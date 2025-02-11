@@ -41,8 +41,8 @@
 ; CHECK: @gep2 = global <2 x ptr> undef
 ; CHECK: @gep3 = global <2 x ptr> zeroinitializer
 ; CHECK: @gep4 = global <2 x ptr> zeroinitializer
-; CHECK: @bitcast1 = global <2 x i32> <i32 -1, i32 -1>
-; CHECK: @bitcast2 = global <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK: @bitcast1 = global <2 x i32> splat (i32 -1)
+; CHECK: @bitcast2 = global <4 x i16> splat (i16 -1)
 ;.
 define void @dummy() {
 ; CHECK-LABEL: @dummy(

@@ -372,14 +372,14 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; VF-TWO-CHECK-NEXT:    [[REVERSE13:%.*]] = shufflevector <4 x float> [[WIDE_LOAD12]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x float>, ptr [[TMP71]], align 4
 ; VF-TWO-CHECK-NEXT:    [[REVERSE15:%.*]] = shufflevector <4 x float> [[WIDE_LOAD14]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-TWO-CHECK-NEXT:    [[TMP72:%.*]] = fadd fast <4 x float> [[REVERSE]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-TWO-CHECK-NEXT:    [[TMP73:%.*]] = fadd fast <4 x float> [[REVERSE3]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-TWO-CHECK-NEXT:    [[TMP74:%.*]] = fadd fast <4 x float> [[REVERSE5]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-TWO-CHECK-NEXT:    [[TMP75:%.*]] = fadd fast <4 x float> [[REVERSE7]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-TWO-CHECK-NEXT:    [[TMP76:%.*]] = fadd fast <4 x float> [[REVERSE9]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-TWO-CHECK-NEXT:    [[TMP77:%.*]] = fadd fast <4 x float> [[REVERSE11]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-TWO-CHECK-NEXT:    [[TMP78:%.*]] = fadd fast <4 x float> [[REVERSE13]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-TWO-CHECK-NEXT:    [[TMP79:%.*]] = fadd fast <4 x float> [[REVERSE15]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; VF-TWO-CHECK-NEXT:    [[TMP72:%.*]] = fadd fast <4 x float> [[REVERSE]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP73:%.*]] = fadd fast <4 x float> [[REVERSE3]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP74:%.*]] = fadd fast <4 x float> [[REVERSE5]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP75:%.*]] = fadd fast <4 x float> [[REVERSE7]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP76:%.*]] = fadd fast <4 x float> [[REVERSE9]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP77:%.*]] = fadd fast <4 x float> [[REVERSE11]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP78:%.*]] = fadd fast <4 x float> [[REVERSE13]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP79:%.*]] = fadd fast <4 x float> [[REVERSE15]], splat (float 1.000000e+00)
 ; VF-TWO-CHECK-NEXT:    [[TMP80:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP8]]
 ; VF-TWO-CHECK-NEXT:    [[TMP88:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i32 0
 ; VF-TWO-CHECK-NEXT:    [[TMP89:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i32 4
@@ -427,7 +427,7 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; VF-TWO-CHECK-NEXT:    [[TMP104:%.*]] = getelementptr inbounds float, ptr [[TMP103]], i32 -1
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD23:%.*]] = load <2 x float>, ptr [[TMP104]], align 4
 ; VF-TWO-CHECK-NEXT:    [[REVERSE24:%.*]] = shufflevector <2 x float> [[WIDE_LOAD23]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; VF-TWO-CHECK-NEXT:    [[TMP105:%.*]] = fadd fast <2 x float> [[REVERSE24]], <float 1.000000e+00, float 1.000000e+00>
+; VF-TWO-CHECK-NEXT:    [[TMP105:%.*]] = fadd fast <2 x float> [[REVERSE24]], splat (float 1.000000e+00)
 ; VF-TWO-CHECK-NEXT:    [[TMP106:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP97]]
 ; VF-TWO-CHECK-NEXT:    [[TMP107:%.*]] = getelementptr inbounds float, ptr [[TMP106]], i32 0
 ; VF-TWO-CHECK-NEXT:    store <2 x float> [[TMP105]], ptr [[TMP107]], align 4
@@ -531,14 +531,14 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; VF-FOUR-CHECK-NEXT:    [[REVERSE13:%.*]] = shufflevector <4 x float> [[WIDE_LOAD12]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x float>, ptr [[TMP71]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[REVERSE15:%.*]] = shufflevector <4 x float> [[WIDE_LOAD14]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-FOUR-CHECK-NEXT:    [[TMP72:%.*]] = fadd fast <4 x float> [[REVERSE]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-FOUR-CHECK-NEXT:    [[TMP73:%.*]] = fadd fast <4 x float> [[REVERSE3]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-FOUR-CHECK-NEXT:    [[TMP74:%.*]] = fadd fast <4 x float> [[REVERSE5]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-FOUR-CHECK-NEXT:    [[TMP75:%.*]] = fadd fast <4 x float> [[REVERSE7]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-FOUR-CHECK-NEXT:    [[TMP76:%.*]] = fadd fast <4 x float> [[REVERSE9]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-FOUR-CHECK-NEXT:    [[TMP77:%.*]] = fadd fast <4 x float> [[REVERSE11]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-FOUR-CHECK-NEXT:    [[TMP78:%.*]] = fadd fast <4 x float> [[REVERSE13]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; VF-FOUR-CHECK-NEXT:    [[TMP79:%.*]] = fadd fast <4 x float> [[REVERSE15]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; VF-FOUR-CHECK-NEXT:    [[TMP72:%.*]] = fadd fast <4 x float> [[REVERSE]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP73:%.*]] = fadd fast <4 x float> [[REVERSE3]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP74:%.*]] = fadd fast <4 x float> [[REVERSE5]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP75:%.*]] = fadd fast <4 x float> [[REVERSE7]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP76:%.*]] = fadd fast <4 x float> [[REVERSE9]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP77:%.*]] = fadd fast <4 x float> [[REVERSE11]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP78:%.*]] = fadd fast <4 x float> [[REVERSE13]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP79:%.*]] = fadd fast <4 x float> [[REVERSE15]], splat (float 1.000000e+00)
 ; VF-FOUR-CHECK-NEXT:    [[TMP80:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP8]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP88:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i32 0
 ; VF-FOUR-CHECK-NEXT:    [[TMP89:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i32 4
@@ -586,7 +586,7 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; VF-FOUR-CHECK-NEXT:    [[TMP104:%.*]] = getelementptr inbounds float, ptr [[TMP103]], i32 -3
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD23:%.*]] = load <4 x float>, ptr [[TMP104]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[REVERSE24:%.*]] = shufflevector <4 x float> [[WIDE_LOAD23]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-FOUR-CHECK-NEXT:    [[TMP105:%.*]] = fadd fast <4 x float> [[REVERSE24]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; VF-FOUR-CHECK-NEXT:    [[TMP105:%.*]] = fadd fast <4 x float> [[REVERSE24]], splat (float 1.000000e+00)
 ; VF-FOUR-CHECK-NEXT:    [[TMP106:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP97]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP107:%.*]] = getelementptr inbounds float, ptr [[TMP106]], i32 0
 ; VF-FOUR-CHECK-NEXT:    store <4 x float> [[TMP105]], ptr [[TMP107]], align 4

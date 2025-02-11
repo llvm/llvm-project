@@ -29,6 +29,7 @@ int __attribute__((target("arch=lunarlake"))) foo(void) {return 23;}
 int __attribute__((target("arch=gracemont"))) foo(void) {return 24;}
 int __attribute__((target("arch=pantherlake"))) foo(void) {return 25;}
 int __attribute__((target("arch=clearwaterforest"))) foo(void) {return 26;}
+int __attribute__((target("arch=diamondrapids"))) foo(void) {return 27;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar(void) {

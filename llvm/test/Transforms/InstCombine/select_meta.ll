@@ -371,7 +371,7 @@ define double @select_fmul(i1 %cond, double %x, double %y) {
 
 define <2 x float> @select_fdiv(i1 %cond, <2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @select_fdiv(
-; CHECK-NEXT:    [[OP:%.*]] = select nnan i1 [[COND:%.*]], <2 x float> [[Y:%.*]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, !prof [[PROF0]], !unpredictable [[META2]]
+; CHECK-NEXT:    [[OP:%.*]] = select nnan i1 [[COND:%.*]], <2 x float> [[Y:%.*]], <2 x float> splat (float 1.000000e+00), !prof [[PROF0]], !unpredictable [[META2]]
 ; CHECK-NEXT:    [[RET:%.*]] = fdiv <2 x float> [[X:%.*]], [[OP]]
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;

@@ -13,8 +13,9 @@
 // template <class T, class ...Args>
 // constexpr T* construct_at(T* location, Args&& ...args);
 
-#include <memory>
 #include <cassert>
+#include <cstddef>
+#include <memory>
 #include <utility>
 
 #include "test_iterators.h"

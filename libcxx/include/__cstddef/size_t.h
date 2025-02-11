@@ -10,7 +10,6 @@
 #define _LIBCPP___CSTDDEF_SIZE_T_H
 
 #include <__config>
-#include <stddef.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -18,7 +17,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-using ::size_t _LIBCPP_USING_IF_EXISTS;
+using size_t = decltype(sizeof(int));
 
 _LIBCPP_END_NAMESPACE_STD
 

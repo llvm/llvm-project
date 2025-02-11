@@ -483,9 +483,9 @@ define i32 @select_not_cond(i1 %cond, i32 %t, i32 %f) {
 
 define <2 x double> @select_not_cond_commute_vec(<2 x i1> %cond, <2 x double> %t, <2 x double> %f) {
 ; CHECK-LABEL: @select_not_cond_commute_vec(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[COND:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[COND:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[M1:%.*]] = select <2 x i1> [[COND]], <2 x double> [[T:%.*]], <2 x double> [[F:%.*]]
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %not = xor <2 x i1> %cond, <i1 -1, i1 -1>
   %m1 = select <2 x i1> %cond, <2 x double> %t, <2 x double> %f
@@ -833,7 +833,7 @@ define float @maxnum(float %a, float %b) {
 define <2 x float> @minnum(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: @minnum(
 ; CHECK-NEXT:    [[X:%.*]] = call fast <2 x float> @llvm.minnum.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]])
-; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> splat (float 1.000000e+00)
 ;
   %x = call fast <2 x float> @llvm.minnum.v2f32(<2 x float> %a, <2 x float> %b)
   %y = call fast <2 x float> @llvm.minnum.v2f32(<2 x float> %b, <2 x float> %a)
@@ -844,7 +844,7 @@ define <2 x float> @minnum(<2 x float> %a, <2 x float> %b) {
 define <2 x double> @maximum(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @maximum(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.maximum.v2f64(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]])
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %x = call fast <2 x double> @llvm.maximum.v2f64(<2 x double> %a, <2 x double> %b)
   %y = call <2 x double> @llvm.maximum.v2f64(<2 x double> %b, <2 x double> %a)
@@ -1109,7 +1109,7 @@ define float @fma_different_add_ops(float %a, float %b, float %c, float %d) {
 define <2 x double> @fmuladd(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fmuladd(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]])
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %x = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
   %y = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %b, <2 x double> %a, <2 x double> %c)

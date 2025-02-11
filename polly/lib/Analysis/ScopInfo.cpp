@@ -215,7 +215,7 @@ static const ScopArrayInfo *identifyBasePtrOriginSAI(Scop *S, Value *BasePtr) {
 
   ScalarEvolution &SE = *S->getSE();
 
-  auto *OriginBaseSCEV =
+  const SCEV *OriginBaseSCEV =
       SE.getPointerBase(SE.getSCEV(BasePtrLI->getPointerOperand()));
   if (!OriginBaseSCEV)
     return nullptr;
@@ -713,11 +713,11 @@ void MemoryAccess::computeBoundsOnAccessRelation(unsigned ElementSize) {
   if (!Ptr || !SE->isSCEVable(Ptr->getType()))
     return;
 
-  auto *PtrSCEV = SE->getSCEV(Ptr);
+  const SCEV *PtrSCEV = SE->getSCEV(Ptr);
   if (isa<SCEVCouldNotCompute>(PtrSCEV))
     return;
 
-  auto *BasePtrSCEV = SE->getPointerBase(PtrSCEV);
+  const SCEV *BasePtrSCEV = SE->getPointerBase(PtrSCEV);
   if (BasePtrSCEV && !isa<SCEVCouldNotCompute>(BasePtrSCEV))
     PtrSCEV = SE->getMinusSCEV(PtrSCEV, BasePtrSCEV);
 
@@ -1384,10 +1384,10 @@ public:
   }
 
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *E) {
-    auto *Start = visit(E->getStart());
-    auto *AddRec = SE.getAddRecExpr(SE.getConstant(E->getType(), 0),
-                                    visit(E->getStepRecurrence(SE)),
-                                    E->getLoop(), SCEV::FlagAnyWrap);
+    const SCEV *Start = visit(E->getStart());
+    const SCEV *AddRec = SE.getAddRecExpr(SE.getConstant(E->getType(), 0),
+                                          visit(E->getStepRecurrence(SE)),
+                                          E->getLoop(), SCEV::FlagAnyWrap);
     return SE.getAddExpr(Start, AddRec);
   }
 

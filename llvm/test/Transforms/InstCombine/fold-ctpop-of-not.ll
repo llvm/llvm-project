@@ -144,7 +144,7 @@ define <2 x i1> @fold_cmp_ne_ctpop_c(<2 x i8> %x) {
 
 define <2 x i1> @fold_cmp_ne_ctpop_var_fail(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @fold_cmp_ne_ctpop_var_fail(
-; CHECK-NEXT:    [[NX:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[NX:%.*]] = xor <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[CNT:%.*]] = call range(i8 0, 9) <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[NX]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[CNT]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -214,7 +214,7 @@ define <2 x i1> @fold_cmp_ugt_ctpop_c(<2 x i8> %x) {
 
 define <2 x i1> @fold_cmp_ugt_ctpop_c_out_of_range_fail(<2 x i8> %x) {
 ; CHECK-LABEL: @fold_cmp_ugt_ctpop_c_out_of_range_fail(
-; CHECK-NEXT:    [[NX:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[NX:%.*]] = xor <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[CNT:%.*]] = call range(i8 0, 9) <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[NX]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt <2 x i8> [[CNT]], <i8 2, i8 10>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]

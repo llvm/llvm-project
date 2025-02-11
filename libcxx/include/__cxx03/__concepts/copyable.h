@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_COPYABLE_H
-#define _LIBCPP___CONCEPTS_COPYABLE_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_COPYABLE_H
+#define _LIBCPP___CXX03___CONCEPTS_COPYABLE_H
 
-#include <__concepts/assignable.h>
-#include <__concepts/constructible.h>
-#include <__concepts/movable.h>
-#include <__config>
+#include <__cxx03/__concepts/assignable.h>
+#include <__cxx03/__concepts/constructible.h>
+#include <__cxx03/__concepts/movable.h>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -38,4 +38,4 @@ concept copyable =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_COPYABLE_H
+#endif // _LIBCPP___CXX03___CONCEPTS_COPYABLE_H

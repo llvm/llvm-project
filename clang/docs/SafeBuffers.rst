@@ -58,7 +58,7 @@ A relatively fresh version of C++ is recommended. In particular, the very useful
 standard view class ``std::span`` requires C++20.
 
 Other implementations of the C++ standard library may provide different
-flags to enable such hardening hardening.
+flags to enable such hardening.
 
 If you're using custom containers and views, they will need to be hardened
 this way as well, but you don't necessarily need to do this ahead of time.

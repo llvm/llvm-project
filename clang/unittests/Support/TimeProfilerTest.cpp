@@ -45,8 +45,6 @@ std::string teardownProfiler() {
 // We only parse AST here. This is enough for constexpr evaluation.
 bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
                        llvm::StringMap<std::string> Headers = {}) {
-  CompilerInstance Compiler;
-  Compiler.createDiagnostics();
 
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS(
       new llvm::vfs::InMemoryFileSystem());
@@ -57,6 +55,8 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
   }
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), FS));
+  CompilerInstance Compiler;
+  Compiler.createDiagnostics(Files->getVirtualFileSystem());
   Compiler.setFileManager(Files.get());
 
   auto Invocation = std::make_shared<CompilerInvocation>();

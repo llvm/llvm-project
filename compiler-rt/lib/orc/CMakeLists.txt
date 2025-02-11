@@ -3,10 +3,11 @@
 # ORC runtime library common implementation files.
 set(ORC_COMMON_SOURCES
   debug.cpp
+  dlfcn_wrapper.cpp
   extensible_rtti.cpp
   log_error_to_stderr.cpp
   run_program_wrapper.cpp
-  dlfcn_wrapper.cpp
+  resolve.cpp
   )
 
 # Common implementation headers will go here.
@@ -51,6 +52,8 @@ if (APPLE)
   set(ORC_ASM_SOURCES
     macho_tlv.x86-64.S
     macho_tlv.arm64.S
+    sysv_reenter.arm64.S
+    sysv_reenter.x86-64.S
     )
 
   set(ORC_IMPL_HEADERS
@@ -116,6 +119,8 @@ else() # not Apple
       elfnix_tls.x86-64.S
       elfnix_tls.aarch64.S
       elfnix_tls.ppc64.S
+      sysv_reenter.arm64.S
+      sysv_reenter.x86-64.S
       )
   endif()
 

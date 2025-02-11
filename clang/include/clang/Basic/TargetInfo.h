@@ -16,6 +16,7 @@
 
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/BitmaskEnum.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/CFProtectionOptions.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
@@ -32,6 +33,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/DataTypes.h"
@@ -358,7 +360,14 @@ public:
     //    void *__saved_reg_area_end_pointer;
     //    void *__overflow_area_pointer;
     //} va_list;
-    HexagonBuiltinVaList
+    HexagonBuiltinVaList,
+
+    // typedef struct __va_list_tag {
+    //    int* __va_stk;
+    //    int* __va_reg;
+    //    int __va_ndx;
+    //} va_list;
+    XtensaABIBuiltinVaList
   };
 
 protected:
@@ -485,6 +494,13 @@ public:
   /// Get integer value for null pointer.
   /// \param AddrSpace address space of pointee in source language.
   virtual uint64_t getNullPointerValue(LangAS AddrSpace) const { return 0; }
+
+  /// Returns true if an address space can be safely converted to another.
+  /// \param A address space of target in source language.
+  /// \param B address space of source in source language.
+  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const {
+    return A == B;
+  }
 
   /// Return the size of '_Bool' and C++ 'bool' for this target, in bits.
   unsigned getBoolWidth() const { return BoolWidth; }
@@ -1002,15 +1018,15 @@ public:
   virtual void getTargetDefines(const LangOptions &Opts,
                                 MacroBuilder &Builder) const = 0;
 
-
-  /// Return information about target-specific builtins for
-  /// the current primary target, and info about which builtins are non-portable
-  /// across the current set of primary and secondary targets.
-  virtual ArrayRef<Builtin::Info> getTargetBuiltins() const = 0;
+  /// Return information about target-specific builtins for the current primary
+  /// target, and info about which builtins are non-portable across the current
+  /// set of primary and secondary targets.
+  virtual llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const = 0;
 
   /// Returns target-specific min and max values VScale_Range.
   virtual std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts) const {
+  getVScaleRange(const LangOptions &LangOpts,
+                 bool IsArmStreamingFunction) const {
     return std::nullopt;
   }
   /// The __builtin_clz* and __builtin_ctz* built-in
@@ -1455,6 +1471,7 @@ public:
   /// specification
   virtual bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                         BranchProtectionInfo &BPI,
+                                        const LangOptions &LO,
                                         StringRef &Err) const {
     Err = "";
     return false;
@@ -1497,6 +1514,10 @@ public:
   bool supportsIFunc() const {
     if (getTriple().isOSBinFormatMachO())
       return true;
+    if (getTriple().isOSWindows() && getTriple().isAArch64())
+      return true;
+    if (getTriple().getArch() == llvm::Triple::ArchType::avr)
+      return true;
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());
@@ -1514,13 +1535,9 @@ public:
 
   // Return the target-specific priority for features/cpus/vendors so
   // that they can be properly sorted for checking.
-  virtual unsigned multiVersionSortPriority(StringRef Name) const {
+  virtual uint64_t getFMVPriority(ArrayRef<StringRef> Features) const {
     return 0;
   }
-
-  // Return the target-specific cost for feature
-  // that taken into account in priority sorting.
-  virtual unsigned multiVersionFeatureCost() const { return 0; }
 
   // Validate the contents of the __builtin_cpu_is(const char*)
   // argument.
@@ -1645,7 +1662,7 @@ public:
   // access target-specific GPU grid values that must be consistent between
   // host RTL (plugin), deviceRTL and clang.
   virtual const llvm::omp::GV &getGridValue() const {
-    llvm_unreachable("getGridValue not implemented on this target");
+    return llvm::omp::SPIRVGridValues;
   }
 
   /// Retrieve the name of the platform as it is used in the
@@ -1859,6 +1876,11 @@ private:
   // type follow the restrictions given in clause 6.2.6.3 of N1169.
   void CheckFixedPointBits() const;
 };
+
+namespace targets {
+std::unique_ptr<clang::TargetInfo>
+AllocateTarget(const llvm::Triple &Triple, const clang::TargetOptions &Opts);
+} // namespace targets
 
 }  // end namespace clang
 

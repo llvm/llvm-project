@@ -60,7 +60,7 @@ define i32 @or_and_not_constant_commute3(i32 %a, i32 %b) {
 
 define <2 x i7> @or_and_not_constant_commute0_splat(<2 x i7> %a, <2 x i7> %b) {
 ; CHECK-LABEL: @or_and_not_constant_commute0_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i7> [[A:%.*]], <i7 42, i7 42>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i7> [[A:%.*]], splat (i7 42)
 ; CHECK-NEXT:    [[T3:%.*]] = or <2 x i7> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i7> [[T3]]
 ;
@@ -118,13 +118,13 @@ define i8 @or_and_or_commute1(i8 %x) {
 
 define <2 x i8> @or_and_or_commute1_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @or_and_or_commute1_splat(
-; CHECK-NEXT:    [[XN:%.*]] = or <2 x i8> [[X:%.*]], <i8 16, i8 16>
+; CHECK-NEXT:    [[XN:%.*]] = or <2 x i8> [[X:%.*]], splat (i8 16)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[XN]])
-; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[XN]], <i8 59, i8 59>
+; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[XN]], splat (i8 59)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X1]])
-; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[X]], <i8 64, i8 64>
+; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[X]], splat (i8 64)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X2]])
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[XN]], <i8 123, i8 123>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[XN]], splat (i8 123)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %xn = or <2 x i8> %x, <i8 16, i8 16>
@@ -162,14 +162,14 @@ define i8 @or_and_or_commute2(i8 %x, i8 %y) {
 
 define <2 x i8> @or_and_or_commute2_splat(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @or_and_or_commute2_splat(
-; CHECK-NEXT:    [[N:%.*]] = lshr <2 x i8> [[Y:%.*]], <i8 6, i8 6>
+; CHECK-NEXT:    [[N:%.*]] = lshr <2 x i8> [[Y:%.*]], splat (i8 6)
 ; CHECK-NEXT:    [[XN:%.*]] = or <2 x i8> [[N]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[XN]])
-; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[XN]], <i8 -69, i8 -69>
+; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[XN]], splat (i8 -69)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X1]])
-; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[X]], <i8 64, i8 64>
+; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[X]], splat (i8 64)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X2]])
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[XN]], <i8 -5, i8 -5>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[XN]], splat (i8 -5)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %n = lshr <2 x i8> %y, <i8 6, i8 6>
@@ -234,16 +234,16 @@ define i8 @or_and2_or2(i8 %x) {
 
 define <2 x i8> @or_and2_or2_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @or_and2_or2_splat(
-; CHECK-NEXT:    [[O1:%.*]] = or <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[O1:%.*]] = or <2 x i8> [[X:%.*]], splat (i8 1)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[O1]])
-; CHECK-NEXT:    [[O2:%.*]] = or <2 x i8> [[X]], <i8 2, i8 2>
+; CHECK-NEXT:    [[O2:%.*]] = or <2 x i8> [[X]], splat (i8 2)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[O2]])
-; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[O1]], <i8 -71, i8 -71>
+; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[O1]], splat (i8 -71)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X1]])
-; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[O2]], <i8 66, i8 66>
+; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[O2]], splat (i8 66)
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X2]])
-; CHECK-NEXT:    [[BITFIELD:%.*]] = and <2 x i8> [[X]], <i8 -8, i8 -8>
-; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i8> [[BITFIELD]], <i8 3, i8 3>
+; CHECK-NEXT:    [[BITFIELD:%.*]] = and <2 x i8> [[X]], splat (i8 -8)
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i8> [[BITFIELD]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %o1 = or <2 x i8> %x, <i8 1, i8 1>
@@ -277,8 +277,8 @@ define i8 @and_or_hoist_mask(i8 %a, i8 %b) {
 
 define <2 x i8> @and_xor_hoist_mask_vec_splat(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @and_xor_hoist_mask_vec_splat(
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[A:%.*]], <i8 6, i8 6>
-; CHECK-NEXT:    [[B_MASKED:%.*]] = and <2 x i8> [[B:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[A:%.*]], splat (i8 6)
+; CHECK-NEXT:    [[B_MASKED:%.*]] = and <2 x i8> [[B:%.*]], splat (i8 3)
 ; CHECK-NEXT:    [[AND:%.*]] = xor <2 x i8> [[SH]], [[B_MASKED]]
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
@@ -305,9 +305,9 @@ define i8 @and_xor_hoist_mask_commute(i8 %a, i8 %b) {
 
 define <2 x i8> @and_or_hoist_mask_commute_vec_splat(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @and_or_hoist_mask_commute_vec_splat(
-; CHECK-NEXT:    [[C:%.*]] = mul <2 x i8> [[B:%.*]], <i8 3, i8 3>
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[A:%.*]], <i8 6, i8 6>
-; CHECK-NEXT:    [[C_MASKED:%.*]] = and <2 x i8> [[C]], <i8 3, i8 3>
+; CHECK-NEXT:    [[C:%.*]] = mul <2 x i8> [[B:%.*]], splat (i8 3)
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[A:%.*]], splat (i8 6)
+; CHECK-NEXT:    [[C_MASKED:%.*]] = and <2 x i8> [[C]], splat (i8 3)
 ; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[C_MASKED]], [[SH]]
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;

@@ -28,17 +28,19 @@
 ; CHECK-NEXT: argumentInfo:
 ; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 ; CHECK-NEXT: dispatchPtr: { reg: '$sgpr4_sgpr5' }
-; CHECK-NEXT: kernargSegmentPtr: { reg: '$sgpr6_sgpr7' }
-; CHECK-NEXT: dispatchID: { reg: '$sgpr8_sgpr9' }
-; CHECK-NEXT: workGroupIDX: { reg: '$sgpr10' }
-; CHECK-NEXT: workGroupIDY: { reg: '$sgpr11' }
-; CHECK-NEXT: workGroupIDZ: { reg: '$sgpr12' }
-; CHECK-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr13' }
+; CHECK-NEXT: queuePtr: { reg: '$sgpr6_sgpr7' }
+; CHECK-NEXT: kernargSegmentPtr: { reg: '$sgpr8_sgpr9' }
+; CHECK-NEXT: dispatchID: { reg: '$sgpr10_sgpr11' }
+; CHECK-NEXT: workGroupIDX: { reg: '$sgpr12' }
+; CHECK-NEXT: workGroupIDY: { reg: '$sgpr13' }
+; CHECK-NEXT: workGroupIDZ: { reg: '$sgpr14' }
+; CHECK-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr15' }
 ; CHECK-NEXT: workItemIDX: { reg: '$vgpr0' }
 ; CHECK-NEXT: workItemIDY: { reg: '$vgpr1' }
 ; CHECK-NEXT: workItemIDZ: { reg: '$vgpr2' }
 ; CHECK-NEXT: psInputAddr: 0
 ; CHECK-NEXT: psInputEnable: 0
+; CHECK-NEXT: maxMemoryClusterDWords: 8
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: true
 ; CHECK-NEXT: dx10-clamp: true
@@ -85,6 +87,7 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: implicitBufferPtr: { reg: '$sgpr0_sgpr1' }
 ; CHECK-NEXT: psInputAddr: 1
 ; CHECK-NEXT: psInputEnable: 1
+; CHECK-NEXT: maxMemoryClusterDWords: 8
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: false
 ; CHECK-NEXT: dx10-clamp: true
@@ -155,6 +158,7 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 ; CHECK-NEXT: psInputAddr: 0
 ; CHECK-NEXT: psInputEnable: 0
+; CHECK-NEXT: maxMemoryClusterDWords: 8
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: true
 ; CHECK-NEXT: dx10-clamp: true
@@ -163,7 +167,7 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: fp64-fp16-input-denormals: true
 ; CHECK-NEXT: fp64-fp16-output-denormals: true
 ; CHECK-NEXT: highBitsOf32BitAddress: 0
-; CHECK-NEXT: occupancy: 8
+; CHECK-NEXT: occupancy: 10
 ; CHECK-NEXT: vgprForAGPRCopy: ''
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: ''
@@ -207,6 +211,7 @@ define void @function() {
 ; CHECK-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 ; CHECK-NEXT: psInputAddr: 0
 ; CHECK-NEXT: psInputEnable: 0
+; CHECK-NEXT: maxMemoryClusterDWords: 8
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: true
 ; CHECK-NEXT: dx10-clamp: true
@@ -215,7 +220,7 @@ define void @function() {
 ; CHECK-NEXT: fp64-fp16-input-denormals: true
 ; CHECK-NEXT: fp64-fp16-output-denormals: true
 ; CHECK-NEXT: highBitsOf32BitAddress: 0
-; CHECK-NEXT: occupancy: 8
+; CHECK-NEXT: occupancy: 10
 ; CHECK-NEXT: vgprForAGPRCopy: ''
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: ''

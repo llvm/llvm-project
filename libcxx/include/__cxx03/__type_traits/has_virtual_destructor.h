@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_HAS_VIRTUAL_DESTRUCTOR_H
-#define _LIBCPP___TYPE_TRAITS_HAS_VIRTUAL_DESTRUCTOR_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_HAS_VIRTUAL_DESTRUCTOR_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_HAS_VIRTUAL_DESTRUCTOR_H
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,4 +28,4 @@ inline constexpr bool has_virtual_destructor_v = __has_virtual_destructor(_Tp);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_HAS_VIRTUAL_DESTRUCTOR_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_HAS_VIRTUAL_DESTRUCTOR_H

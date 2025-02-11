@@ -14,12 +14,12 @@
 define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ; GFX7CHECK-LABEL: sgpr_isnan_bf16:
 ; GFX7CHECK:       ; %bb.0:
-; GFX7CHECK-NEXT:    s_load_dword s4, s[2:3], 0xb
-; GFX7CHECK-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
+; GFX7CHECK-NEXT:    s_load_dword s6, s[4:5], 0xb
+; GFX7CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GFX7CHECK-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7CHECK-NEXT:    s_mov_b32 s2, -1
 ; GFX7CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7CHECK-NEXT:    s_and_b32 s4, s4, 0x7fff
+; GFX7CHECK-NEXT:    s_and_b32 s4, s6, 0x7fff
 ; GFX7CHECK-NEXT:    s_cmpk_gt_i32 s4, 0x7f80
 ; GFX7CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[4:5]
@@ -28,10 +28,10 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ;
 ; GFX8CHECK-LABEL: sgpr_isnan_bf16:
 ; GFX8CHECK:       ; %bb.0:
-; GFX8CHECK-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; GFX8CHECK-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8CHECK-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX8CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8CHECK-NEXT:    s_and_b32 s2, s4, 0x7fff
+; GFX8CHECK-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX8CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX8CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GFX8CHECK-NEXT:    v_mov_b32_e32 v0, s0
@@ -42,11 +42,11 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ;
 ; GFX9CHECK-LABEL: sgpr_isnan_bf16:
 ; GFX9CHECK:       ; %bb.0:
-; GFX9CHECK-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; GFX9CHECK-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX9CHECK-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX9CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9CHECK-NEXT:    s_and_b32 s2, s4, 0x7fff
+; GFX9CHECK-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX9CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX9CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[2:3]
@@ -56,11 +56,11 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ; GFX10CHECK-LABEL: sgpr_isnan_bf16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_clause 0x1
-; GFX10CHECK-NEXT:    s_load_dword s4, s[2:3], 0x2c
-; GFX10CHECK-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX10CHECK-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10CHECK-NEXT:    s_and_b32 s2, s4, 0x7fff
+; GFX10CHECK-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX10CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX10CHECK-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
@@ -70,11 +70,11 @@ define amdgpu_kernel void @sgpr_isnan_bf16(ptr addrspace(1) %out, bfloat %x) {
 ; GFX11CHECK-LABEL: sgpr_isnan_bf16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_clause 0x1
-; GFX11CHECK-NEXT:    s_load_b32 s4, s[2:3], 0x2c
-; GFX11CHECK-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11CHECK-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11CHECK-NEXT:    s_and_b32 s2, s4, 0x7fff
+; GFX11CHECK-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX11CHECK-NEXT:    s_cmpk_gt_i32 s2, 0x7f80
 ; GFX11CHECK-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
@@ -397,7 +397,7 @@ define i1 @posnormal_bf16(bfloat %x) nounwind {
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, -1, v0
-; GFX10CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
+; GFX10CHECK-NEXT:    v_add_nc_u16 v1, 0xff80, v1
 ; GFX10CHECK-NEXT:    v_cmp_gt_u16_e64 s4, 0x7f00, v1
 ; GFX10CHECK-NEXT:    s_and_b32 s4, s4, vcc_lo
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
@@ -408,7 +408,7 @@ define i1 @posnormal_bf16(bfloat %x) nounwind {
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, -1, v0
-; GFX11CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
+; GFX11CHECK-NEXT:    v_add_nc_u16 v1, 0xff80, v1
 ; GFX11CHECK-NEXT:    v_cmp_gt_u16_e64 s0, 0x7f00, v1
 ; GFX11CHECK-NEXT:    s_and_b32 s0, s0, vcc_lo
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
@@ -462,7 +462,7 @@ define i1 @negnormal_bf16(bfloat %x) nounwind {
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
-; GFX10CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
+; GFX10CHECK-NEXT:    v_add_nc_u16 v1, 0xff80, v1
 ; GFX10CHECK-NEXT:    v_cmp_gt_u16_e64 s4, 0x7f00, v1
 ; GFX10CHECK-NEXT:    s_and_b32 s4, s4, vcc_lo
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
@@ -473,7 +473,7 @@ define i1 @negnormal_bf16(bfloat %x) nounwind {
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
-; GFX11CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
+; GFX11CHECK-NEXT:    v_add_nc_u16 v1, 0xff80, v1
 ; GFX11CHECK-NEXT:    v_cmp_gt_u16_e64 s0, 0x7f00, v1
 ; GFX11CHECK-NEXT:    s_and_b32 s0, s0, vcc_lo
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
@@ -1348,7 +1348,7 @@ define i1 @isnormal_bf16(bfloat %x) {
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX10CHECK-NEXT:    v_add_nc_u16 v0, v0, 0xff80
+; GFX10CHECK-NEXT:    v_add_nc_u16 v0, 0xff80, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f00, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1357,7 +1357,7 @@ define i1 @isnormal_bf16(bfloat %x) {
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX11CHECK-NEXT:    v_add_nc_u16 v0, v0, 0xff80
+; GFX11CHECK-NEXT:    v_add_nc_u16 v0, 0xff80, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f00, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1402,7 +1402,7 @@ define i1 @not_isnormal_bf16(bfloat %x) {
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX10CHECK-NEXT:    v_add_nc_u16 v0, v0, 0xff80
+; GFX10CHECK-NEXT:    v_add_nc_u16 v0, 0xff80, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_u16_e32 vcc_lo, 0x7eff, v0
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1411,7 +1411,7 @@ define i1 @not_isnormal_bf16(bfloat %x) {
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX11CHECK-NEXT:    v_add_nc_u16 v0, v0, 0xff80
+; GFX11CHECK-NEXT:    v_add_nc_u16 v0, 0xff80, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_u16_e32 vcc_lo, 0x7eff, v0
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1464,7 +1464,7 @@ define i1 @not_is_plus_normal_bf16(bfloat %x) {
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
-; GFX10CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
+; GFX10CHECK-NEXT:    v_add_nc_u16 v1, 0xff80, v1
 ; GFX10CHECK-NEXT:    v_cmp_lt_u16_e64 s4, 0x7eff, v1
 ; GFX10CHECK-NEXT:    s_or_b32 s4, s4, vcc_lo
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
@@ -1475,7 +1475,7 @@ define i1 @not_is_plus_normal_bf16(bfloat %x) {
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0, v0
-; GFX11CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
+; GFX11CHECK-NEXT:    v_add_nc_u16 v1, 0xff80, v1
 ; GFX11CHECK-NEXT:    v_cmp_lt_u16_e64 s0, 0x7eff, v1
 ; GFX11CHECK-NEXT:    s_or_b32 s0, s0, vcc_lo
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
@@ -1529,7 +1529,7 @@ define i1 @not_is_neg_normal_bf16(bfloat %x) {
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, -1, v0
-; GFX10CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
+; GFX10CHECK-NEXT:    v_add_nc_u16 v1, 0xff80, v1
 ; GFX10CHECK-NEXT:    v_cmp_lt_u16_e64 s4, 0x7eff, v1
 ; GFX10CHECK-NEXT:    s_or_b32 s4, s4, vcc_lo
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
@@ -1540,7 +1540,7 @@ define i1 @not_is_neg_normal_bf16(bfloat %x) {
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, -1, v0
-; GFX11CHECK-NEXT:    v_add_nc_u16 v1, v1, 0xff80
+; GFX11CHECK-NEXT:    v_add_nc_u16 v1, 0xff80, v1
 ; GFX11CHECK-NEXT:    v_cmp_lt_u16_e64 s0, 0x7eff, v1
 ; GFX11CHECK-NEXT:    s_or_b32 s0, s0, vcc_lo
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
@@ -2569,7 +2569,7 @@ define i1 @not_iszero_or_qnan_bf16(bfloat %x) {
 ; GFX10CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7fc0, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e64 s4, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e64 s5, 0x7f80, v0
-; GFX10CHECK-NEXT:    v_add_nc_u16 v0, v0, 0xff80
+; GFX10CHECK-NEXT:    v_add_nc_u16 v0, 0xff80, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_u16_e64 s6, 0x7f, v1
 ; GFX10CHECK-NEXT:    s_and_b32 s4, s4, vcc_lo
 ; GFX10CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f00, v0
@@ -2587,7 +2587,7 @@ define i1 @not_iszero_or_qnan_bf16(bfloat %x) {
 ; GFX11CHECK-NEXT:    v_cmp_gt_i16_e32 vcc_lo, 0x7fc0, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e64 s0, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e64 s1, 0x7f80, v0
-; GFX11CHECK-NEXT:    v_add_nc_u16 v0, v0, 0xff80
+; GFX11CHECK-NEXT:    v_add_nc_u16 v0, 0xff80, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_u16_e64 s2, 0x7f, v1
 ; GFX11CHECK-NEXT:    s_and_b32 s0, s0, vcc_lo
 ; GFX11CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x7f00, v0
@@ -2669,7 +2669,7 @@ define i1 @not_iszero_or_snan_bf16(bfloat %x) {
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX10CHECK-NEXT:    v_add_nc_u16 v1, v0, -1
-; GFX10CHECK-NEXT:    v_add_nc_u16 v2, v0, 0xff80
+; GFX10CHECK-NEXT:    v_add_nc_u16 v2, 0xff80, v0
 ; GFX10CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x7f80, v0
 ; GFX10CHECK-NEXT:    v_cmp_lt_i16_e64 s5, 0x7fbf, v0
 ; GFX10CHECK-NEXT:    v_cmp_gt_u16_e64 s4, 0x7f, v1
@@ -2685,7 +2685,7 @@ define i1 @not_iszero_or_snan_bf16(bfloat %x) {
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11CHECK-NEXT:    v_add_nc_u16 v1, v0, -1
-; GFX11CHECK-NEXT:    v_add_nc_u16 v2, v0, 0xff80
+; GFX11CHECK-NEXT:    v_add_nc_u16 v2, 0xff80, v0
 ; GFX11CHECK-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x7f80, v0
 ; GFX11CHECK-NEXT:    v_cmp_lt_i16_e64 s1, 0x7fbf, v0
 ; GFX11CHECK-NEXT:    v_cmp_gt_u16_e64 s0, 0x7f, v1

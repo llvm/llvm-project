@@ -14,7 +14,6 @@
 #include "HexagonTargetMachine.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
-#include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -50,7 +49,7 @@ static cl::opt<uint32_t> TinyLoopBndlAlignLimit(
 
 static cl::opt<uint32_t>
     LoopEdgeThreshold("hexagon-loop-edge-threshold", cl::Hidden, cl::init(7500),
-                      cl::desc("Set hexagon loop align edge theshold"));
+                      cl::desc("Set hexagon loop align edge threshold"));
 
 namespace llvm {
 FunctionPass *createHexagonLoopAlign();

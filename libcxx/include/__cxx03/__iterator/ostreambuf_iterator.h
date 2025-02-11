@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_OSTREAMBUF_ITERATOR_H
-#define _LIBCPP___ITERATOR_OSTREAMBUF_ITERATOR_H
+#ifndef _LIBCPP___CXX03___ITERATOR_OSTREAMBUF_ITERATOR_H
+#define _LIBCPP___CXX03___ITERATOR_OSTREAMBUF_ITERATOR_H
 
-#include <__config>
-#include <__iterator/iterator.h>
-#include <__iterator/iterator_traits.h>
-#include <cstddef>
-#include <iosfwd> // for forward declaration of basic_streambuf
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/iterator.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/iosfwd> // for forward declaration of basic_streambuf
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -69,4 +69,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_OSTREAMBUF_ITERATOR_H
+#endif // _LIBCPP___CXX03___ITERATOR_OSTREAMBUF_ITERATOR_H

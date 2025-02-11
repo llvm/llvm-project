@@ -206,7 +206,7 @@ public:
       SmallVectorImpl<std::pair<void *, bool>> &OpDecls,
       SmallVectorImpl<std::string> &Constraints,
       SmallVectorImpl<std::string> &Clobbers, const MCInstrInfo *MII,
-      const MCInstPrinter *IP, MCAsmParserSemaCallback &SI) = 0;
+      MCInstPrinter *IP, MCAsmParserSemaCallback &SI) = 0;
 
   /// Emit a note at the location \p L, with the message \p Msg.
   virtual void Note(SMLoc L, const Twine &Msg,

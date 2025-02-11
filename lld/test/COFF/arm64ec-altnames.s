@@ -17,7 +17,7 @@ DISASM-NEXT: 180001004: d65f03c0     ret
 DISASM-NOT: .thnk
 
 RUN: llvm-readobj --hex-dump=.test out1.dll | FileCheck --check-prefix=TESTSEC %s
-TESTSEC: 0x180004000 00100000 00100000
+TESTSEC: 0x180005000 00100000 00100000
 
 # Ensure -alternatename can change a demangled function symbol aliasing an anti-dependency symbol.
 
@@ -32,12 +32,12 @@ DISASM2-NEXT: 180001004: d65f03c0     ret
 DISASM2-EMPTY:
 DISASM2-NEXT: Disassembly of section .thnk:
 DISASM2-EMPTY:
-DISASM2-NEXT: 0000000180005000 <.thnk>:
-DISASM2-NEXT: 180005000: 52800040     mov     w0, #0x2                // =2
-DISASM2-NEXT: 180005004: d65f03c0     ret
+DISASM2-NEXT: 0000000180006000 <.thnk>:
+DISASM2-NEXT: 180006000: 52800040     mov     w0, #0x2                // =2
+DISASM2-NEXT: 180006004: d65f03c0     ret
 
 RUN: llvm-readobj --hex-dump=.test out2.dll | FileCheck --check-prefix=TESTSEC2 %s
-TESTSEC2: 0x180004000 00100000 00500000
+TESTSEC2: 0x180005000 00100000 00600000
 
 # Ensure -alternatename cannot modify a demangled function symbol aliasing a defined symbol.
 

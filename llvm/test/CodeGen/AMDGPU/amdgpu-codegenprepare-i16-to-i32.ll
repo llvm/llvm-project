@@ -2144,7 +2144,7 @@ define amdgpu_kernel void @bitreverse_3xi15(<3 x i15> %a) {
 ; VI-LABEL: @bitreverse_3xi15(
 ; VI-NEXT:    [[TMP1:%.*]] = zext <3 x i15> [[A:%.*]] to <3 x i32>
 ; VI-NEXT:    [[TMP2:%.*]] = call <3 x i32> @llvm.bitreverse.v3i32(<3 x i32> [[TMP1]])
-; VI-NEXT:    [[TMP3:%.*]] = lshr <3 x i32> [[TMP2]], <i32 17, i32 17, i32 17>
+; VI-NEXT:    [[TMP3:%.*]] = lshr <3 x i32> [[TMP2]], splat (i32 17)
 ; VI-NEXT:    [[TMP4:%.*]] = trunc <3 x i32> [[TMP3]] to <3 x i15>
 ; VI-NEXT:    store volatile <3 x i15> [[TMP4]], ptr addrspace(1) undef, align 8
 ; VI-NEXT:    ret void
@@ -2842,7 +2842,7 @@ define amdgpu_kernel void @bitreverse_3xi16(<3 x i16> %a) {
 ; VI-LABEL: @bitreverse_3xi16(
 ; VI-NEXT:    [[TMP1:%.*]] = zext <3 x i16> [[A:%.*]] to <3 x i32>
 ; VI-NEXT:    [[TMP2:%.*]] = call <3 x i32> @llvm.bitreverse.v3i32(<3 x i32> [[TMP1]])
-; VI-NEXT:    [[TMP3:%.*]] = lshr <3 x i32> [[TMP2]], <i32 16, i32 16, i32 16>
+; VI-NEXT:    [[TMP3:%.*]] = lshr <3 x i32> [[TMP2]], splat (i32 16)
 ; VI-NEXT:    [[TMP4:%.*]] = trunc <3 x i32> [[TMP3]] to <3 x i16>
 ; VI-NEXT:    store volatile <3 x i16> [[TMP4]], ptr addrspace(1) undef, align 8
 ; VI-NEXT:    ret void

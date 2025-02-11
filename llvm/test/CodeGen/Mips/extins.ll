@@ -1,5 +1,5 @@
-; RUN: llc  < %s -march=mips -mcpu=mips32r2 | FileCheck %s -check-prefix=32R2
-; RUN: llc  < %s -march=mips -mattr=mips16 | FileCheck %s -check-prefix=16
+; RUN: llc  < %s -mtriple=mips -mcpu=mips32r2 | FileCheck %s -check-prefix=32R2
+; RUN: llc  < %s -mtriple=mips -mattr=mips16 | FileCheck %s -check-prefix=16
 
 define i32 @ext0_5_9(i32 %s, i32 %pos, i32 %sz) nounwind readnone {
 entry:

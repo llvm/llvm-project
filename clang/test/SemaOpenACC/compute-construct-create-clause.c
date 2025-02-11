@@ -69,11 +69,11 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 
   // expected-error@+1{{OpenACC 'create' clause is not valid on 'loop' directive}}
 #pragma acc loop create(LocalInt)
-  for(;;);
+  for(int i = 5; i < 10;++i);
   // expected-error@+1{{OpenACC 'pcreate' clause is not valid on 'loop' directive}}
 #pragma acc loop pcreate(LocalInt)
-  for(;;);
+  for(int i = 5; i < 10;++i);
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_create(LocalInt)
-  for(;;);
+  for(int i = 5; i < 10;++i);
 }

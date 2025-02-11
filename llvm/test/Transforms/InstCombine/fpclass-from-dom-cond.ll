@@ -46,6 +46,31 @@ if.end:
   ret i1 %cmp.i
 }
 
+define i1 @test2_or(double %x, i1 %cond) {
+; CHECK-LABEL: define i1 @test2_or(
+; CHECK-SAME: double [[X:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[X]], 0x3EB0C6F7A0000000
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[COND]]
+; CHECK-NEXT:    br i1 [[OR]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp = fcmp olt double %x, 0x3EB0C6F7A0000000
+  %or = or i1 %cmp, %cond
+  br i1 %or, label %if.then, label %if.end
+
+if.then:
+  ret i1 false
+
+if.end:
+  %cmp.i = fcmp oeq double %x, 0.000000e+00
+  ret i1 %cmp.i
+}
+
 define i1 @test3(float %x) {
 ; CHECK-LABEL: define i1 @test3(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -240,7 +265,6 @@ if.else:
   ret i1 false
 }
 
-; TODO: handle and/or conditions
 define i1 @test11_and(float %x, i1 %cond2) {
 ; CHECK-LABEL: define i1 @test11_and(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND2:%.*]]) {
@@ -248,8 +272,7 @@ define i1 @test11_and(float %x, i1 %cond2) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND]], [[COND2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[RET1:%.*]] = fcmp oeq float [[X]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -264,7 +287,6 @@ if.else:
   ret i1 false
 }
 
-; TODO: handle and/or conditions
 define i1 @test12_or(float %x, i1 %cond2) {
 ; CHECK-LABEL: define i1 @test12_or(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND2:%.*]]) {
@@ -275,7 +297,7 @@ define i1 @test12_or(float %x, i1 %cond2) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 783)
+; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 780)
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
@@ -434,3 +456,93 @@ if.end:
   %ret = call <2 x float> @llvm.fabs.v2f32(<2 x float> %value)
   ret <2 x float> %ret
 }
+
+define i1 @pr118257(half %v0, half %v1) {
+; CHECK-LABEL: define i1 @pr118257(
+; CHECK-SAME: half [[V0:%.*]], half [[V1:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp une half [[V1]], 0xH0000
+; CHECK-NEXT:    [[CAST0:%.*]] = bitcast half [[V0]] to i16
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i16 [[CAST0]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[CAST1:%.*]] = bitcast half [[V1]] to i16
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i16 [[CAST1]], 0
+; CHECK-NEXT:    ret i1 [[CMP3]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp1 = fcmp une half %v1, 0.000000e+00
+  %cast0 = bitcast half %v0 to i16
+  %cmp2 = icmp slt i16 %cast0, 0
+  %or.cond = or i1 %cmp1, %cmp2
+  br i1 %or.cond, label %if.end, label %if.else
+
+if.else:
+  %cast1 = bitcast half %v1 to i16
+  %cmp3 = icmp slt i16 %cast1, 0
+  ret i1 %cmp3
+
+if.end:
+  ret i1 false
+}
+
+define i1 @pr118257_is_fpclass(half %v0, half %v1) {
+; CHECK-LABEL: define i1 @pr118257_is_fpclass(
+; CHECK-SAME: half [[V0:%.*]], half [[V1:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp une half [[V1]], 0xH0000
+; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.is.fpclass.f16(half [[V0]], i32 35)
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[CAST1:%.*]] = bitcast half [[V1]] to i16
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i16 [[CAST1]], 0
+; CHECK-NEXT:    ret i1 [[CMP3]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp1 = fcmp une half %v1, 0.000000e+00
+  %cmp2 = call i1 @llvm.is.fpclass.half(half %v0, i32 35)
+  %or.cond = or i1 %cmp1, %cmp2
+  br i1 %or.cond, label %if.end, label %if.else
+
+if.else:
+  %cast1 = bitcast half %v1 to i16
+  %cmp3 = icmp slt i16 %cast1, 0
+  ret i1 %cmp3
+
+if.end:
+  ret i1 false
+}
+
+define i1 @test_inv_and(float %x, i1 %cond2) {
+; CHECK-LABEL: define i1 @test_inv_and(
+; CHECK-SAME: float [[X:%.*]], i1 [[COND2:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = fcmp oge float [[X]], -1.000000e+00
+; CHECK-NEXT:    call void @use(i1 [[COND]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND2]], [[NOT]]
+; CHECK-NEXT:    br i1 [[AND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cond = fcmp oge float %x, -1.0
+  %neg = fneg float %x
+  call void @use(i1 %cond)
+  %not = xor i1 %cond, true
+  %and = and i1 %not, %cond2
+  br i1 %and, label %if.then, label %if.else
+if.then:
+  %ret1 = fcmp oeq float %neg, 0xFFF0000000000000
+  ret i1 %ret1
+if.else:
+  ret i1 false
+}
+
+declare void @use(i1)

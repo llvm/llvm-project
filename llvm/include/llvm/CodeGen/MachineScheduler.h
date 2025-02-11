@@ -17,7 +17,7 @@
 // scheduled. Targets can override the DAG builder and scheduler without
 // replacing the pass as follows:
 //
-// ScheduleDAGInstrs *<Target>PassConfig::
+// ScheduleDAGInstrs *<Target>TargetMachine::
 // createMachineScheduler(MachineSchedContext *C) {
 //   return new CustomMachineScheduler(C);
 // }
@@ -29,7 +29,7 @@
 // plugin an alternate MachineSchedStrategy. The strategy is responsible for
 // selecting the highest priority node from the list:
 //
-// ScheduleDAGInstrs *<Target>PassConfig::
+// ScheduleDAGInstrs *<Target>TargetMachine::
 // createMachineScheduler(MachineSchedContext *C) {
 //   return new ScheduleDAGMILive(C, CustomStrategy(C));
 // }
@@ -39,7 +39,7 @@
 // can adjust dependencies based on target-specific knowledge or add weak edges
 // to aid heuristics:
 //
-// ScheduleDAGInstrs *<Target>PassConfig::
+// ScheduleDAGInstrs *<Target>TargetMachine::
 // createMachineScheduler(MachineSchedContext *C) {
 //   ScheduleDAGMI *DAG = createGenericSchedLive(C);
 //   DAG->addMutation(new CustomDAGMutation(...));
@@ -99,8 +99,16 @@
 
 namespace llvm {
 
-extern cl::opt<bool> ForceTopDown;
-extern cl::opt<bool> ForceBottomUp;
+namespace MISched {
+enum Direction {
+  Unspecified,
+  TopDown,
+  BottomUp,
+  Bidirectional,
+};
+} // namespace MISched
+
+extern cl::opt<MISched::Direction> PreRADirection;
 extern cl::opt<bool> VerifyScheduling;
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;
@@ -129,7 +137,7 @@ struct MachineSchedContext {
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
   const MachineDominatorTree *MDT = nullptr;
-  const TargetPassConfig *PassConfig = nullptr;
+  const TargetMachine *TM = nullptr;
   AAResults *AA = nullptr;
   LiveIntervals *LIS = nullptr;
 
@@ -219,6 +227,7 @@ public:
                           MachineBasicBlock::iterator End,
                           unsigned NumRegionInstrs) {}
 
+  virtual MachineSchedPolicy getPolicy() const { return {}; }
   virtual void dumpPolicy() const {}
 
   /// Check if pressure tracking is needed before building the DAG and
@@ -516,7 +525,7 @@ protected:
 
   void initRegPressure();
 
-  void updatePressureDiffs(ArrayRef<RegisterMaskPair> LiveUses);
+  void updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses);
 
   void updateScheduledPressure(const SUnit *SU,
                                const std::vector<unsigned> &NewMaxPressure);
@@ -1167,12 +1176,16 @@ protected:
   const TargetSchedModel *SchedModel = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
 
+  MachineSchedPolicy RegionPolicy;
+
   SchedRemainder Rem;
 
   GenericSchedulerBase(const MachineSchedContext *C) : Context(C) {}
 
   void setPolicy(CandPolicy &Policy, bool IsPostRA, SchedBoundary &CurrZone,
                  SchedBoundary *OtherZone);
+
+  MachineSchedPolicy getPolicy() const override { return RegionPolicy; }
 
 #ifndef NDEBUG
   void traceCandidate(const SchedCandidate &Cand);
@@ -1254,8 +1267,6 @@ public:
 protected:
   ScheduleDAGMILive *DAG = nullptr;
 
-  MachineSchedPolicy RegionPolicy;
-
   // State of the top and bottom scheduled instruction boundaries.
   SchedBoundary Top;
   SchedBoundary Bot;
@@ -1294,7 +1305,6 @@ protected:
   ScheduleDAGMI *DAG = nullptr;
   SchedBoundary Top;
   SchedBoundary Bot;
-  MachineSchedPolicy RegionPolicy;
 
   /// Candidate last picked from Top boundary.
   SchedCandidate TopCand;

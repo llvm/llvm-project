@@ -489,6 +489,9 @@ MachineInstr *TwoAddressInstructionImpl::findOnlyInterestingUse(
     bool &IsDstPhys) const {
   MachineOperand *UseOp = nullptr;
   for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
+    if (MO.isUndef())
+      continue;
+
     MachineInstr *MI = MO.getParent();
     if (MI->getParent() != MBB)
       return nullptr;

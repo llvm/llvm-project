@@ -60,6 +60,28 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// CommSizeOp
+//===----------------------------------------------------------------------===//
+
+def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
+  let summary = "Get the size of the group associated to the communicator, "
+                "equivalent to `MPI_Comm_size(MPI_COMM_WORLD, &size)`";
+  let description = [{
+    Communicators other than `MPI_COMM_WORLD` are not supported for now.
+
+    This operation can optionally return an `!mpi.retval` value that can be used
+    to check for errors.
+  }];
+
+  let results = (
+    outs Optional<MPI_Retval> : $retval,
+    I32 : $size
+  );
+
+  let assemblyFormat = "attr-dict `:` type(results)";
+}
+
+//===----------------------------------------------------------------------===//
 // SendOp
 //===----------------------------------------------------------------------===//
 
@@ -71,19 +93,60 @@ def MPI_SendOp : MPI_Op<"send", []> {
     `dest`. The `tag` value and communicator enables the library to determine 
     the matching of multiple sends and receives between the same ranks.
 
-    Communicators other than `MPI_COMM_WORLD` are not supprted for now.
+    Communicators other than `MPI_COMM_WORLD` are not supported for now.
 
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
   }];
 
-  let arguments = (ins AnyMemRef : $ref, I32 : $tag, I32 : $rank);
+  let arguments = (
+    ins AnyMemRef : $ref,
+    I32 : $tag,
+    I32 : $rank
+  );
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
   let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:` "
                        "type($ref) `,` type($tag) `,` type($rank)"
                        "(`->` type($retval)^)?";
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ISendOp
+//===----------------------------------------------------------------------===//
+
+def MPI_ISendOp : MPI_Op<"isend", []> {
+  let summary =
+      "Equivalent to `MPI_Isend(ptr, size, dtype, dest, tag, MPI_COMM_WORLD)`";
+  let description = [{
+    MPI_Isend begins a non-blocking send of `size` elements of type `dtype` to
+    rank `dest`. The `tag` value and communicator enables the library to
+    determine the matching of multiple sends and receives between the same
+    ranks.
+
+    Communicators other than `MPI_COMM_WORLD` are not supported for now.
+
+    This operation can optionally return an `!mpi.retval` value that can be used
+    to check for errors.
+  }];
+
+  let arguments = (
+    ins AnyMemRef : $ref,
+    I32 : $tag,
+    I32 : $rank
+  );
+
+  let results = (
+    outs Optional<MPI_Retval>:$retval,
+    MPI_Request : $req
+  );
+
+  let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict "
+                       "`:` type($ref) `,` type($tag) `,` type($rank) "
+                       "`->` type(results)";
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -99,7 +162,7 @@ def MPI_RecvOp : MPI_Op<"recv", []> {
     determine the matching of multiple sends and receives between the same 
     ranks.
 
-    Communicators other than `MPI_COMM_WORLD` are not supprted for now.
+    Communicators other than `MPI_COMM_WORLD` are not supported for now.
     The MPI_Status is set to `MPI_STATUS_IGNORE`, as the status object 
     is not yet ported to MLIR.
 
@@ -107,15 +170,134 @@ def MPI_RecvOp : MPI_Op<"recv", []> {
     to check for errors.
   }];
 
-  let arguments = (ins AnyMemRef : $ref, I32 : $tag, I32 : $rank);
+  let arguments = (
+    ins AnyMemRef : $ref,
+    I32 : $tag, I32 : $rank
+  );
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
-  let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:` "
+  let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:`"
                        "type($ref) `,` type($tag) `,` type($rank)"
+                       "(`->` type($retval)^)?";
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// IRecvOp
+//===----------------------------------------------------------------------===//
+
+def MPI_IRecvOp : MPI_Op<"irecv", []> {
+  let summary = "Equivalent to `MPI_Irecv(ptr, size, dtype, dest, tag, "
+                "MPI_COMM_WORLD, &req)`";
+  let description = [{
+    MPI_Irecv begins a non-blocking receive of `size` elements of type `dtype` 
+    from rank `dest`. The `tag` value and communicator enables the library to 
+    determine the matching of multiple sends and receives between the same 
+    ranks.
+
+    Communicators other than `MPI_COMM_WORLD` are not supported for now.
+
+    This operation can optionally return an `!mpi.retval` value that can be used
+    to check for errors.
+  }];
+
+  let arguments = (
+    ins AnyMemRef : $ref,
+    I32 : $tag,
+    I32 : $rank
+  );
+
+  let results = (
+    outs Optional<MPI_Retval>:$retval,
+    MPI_Request : $req
+  );
+
+  let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:`"
+                       "type($ref) `,` type($tag) `,` type($rank) `->`"
+                       "type(results)";
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AllReduceOp
+//===----------------------------------------------------------------------===//
+
+def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
+  let summary = "Equivalent to `MPI_Allreduce(sendbuf, recvbuf, op, "
+                "MPI_COMM_WORLD)`";
+  let description = [{
+    MPI_Allreduce performs a reduction operation on the values in the sendbuf
+    array and stores the result in the recvbuf array. The operation is 
+    performed across all processes in the communicator.
+
+    The `op` attribute specifies the reduction operation to be performed.
+    Currently only the `MPI_Op` predefined in the standard (e.g. `MPI_SUM`) are
+    supported.
+
+    Communicators other than `MPI_COMM_WORLD` are not supported for now.
+
+    This operation can optionally return an `!mpi.retval` value that can be used
+    to check for errors.
+  }];
+
+  let arguments = (
+    ins AnyMemRef : $sendbuf,
+    AnyMemRef : $recvbuf,
+    MPI_OpClassAttr : $op
+  );
+
+  let results = (outs Optional<MPI_Retval>:$retval);
+
+  let assemblyFormat = "`(` $sendbuf `,` $recvbuf `,` $op `)` attr-dict `:`"
+                       "type($sendbuf) `,` type($recvbuf)"
                        "(`->` type($retval)^)?";
 }
 
+//===----------------------------------------------------------------------===//
+// BarrierOp
+//===----------------------------------------------------------------------===//
+
+def MPI_Barrier : MPI_Op<"barrier", []> {
+  let summary = "Equivalent to `MPI_Barrier(MPI_COMM_WORLD)`";
+  let description = [{
+    MPI_Barrier blocks execution until all processes in the communicator have
+    reached this routine.
+
+    Communicators other than `MPI_COMM_WORLD` are not supported for now.
+
+    This operation can optionally return an `!mpi.retval` value that can be used
+    to check for errors.
+  }];
+
+  let results = (outs Optional<MPI_Retval>:$retval);
+
+  let assemblyFormat = "attr-dict (`:` type($retval) ^)?";
+}
+
+//===----------------------------------------------------------------------===//
+// WaitOp
+//===----------------------------------------------------------------------===//
+
+def MPI_Wait : MPI_Op<"wait", []> {
+  let summary = "Equivalent to `MPI_Wait(req, MPI_STATUS_IGNORE)`";
+  let description = [{
+    MPI_Wait blocks execution until the request has completed.
+
+    The MPI_Status is set to `MPI_STATUS_IGNORE`, as the status object 
+    is not yet ported to MLIR.
+
+    This operation can optionally return an `!mpi.retval` value that can be used
+    to check for errors.
+  }];
+
+  let arguments = (ins MPI_Request : $req);
+
+  let results = (outs Optional<MPI_Retval>:$retval);
+
+  let assemblyFormat = "`(` $req `)` attr-dict `:` type($req) "
+                       "(`->` type($retval) ^)?";
+}
 
 //===----------------------------------------------------------------------===//
 // FinalizeOp
@@ -136,7 +318,6 @@ def MPI_FinalizeOp : MPI_Op<"finalize", []> {
 
   let assemblyFormat = "attr-dict (`:` type($retval)^)?";
 }
-
 
 //===----------------------------------------------------------------------===//
 // RetvalCheckOp
@@ -161,10 +342,8 @@ def MPI_RetvalCheckOp : MPI_Op<"retval_check", []> {
   let assemblyFormat = "$val `=` $errclass attr-dict `:` type($res)";
 }
 
-
-
 //===----------------------------------------------------------------------===//
-// RetvalCheckOp
+// ErrorClassOp
 //===----------------------------------------------------------------------===//
 
 def MPI_ErrorClassOp : MPI_Op<"error_class", []> {

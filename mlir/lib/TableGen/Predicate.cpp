@@ -235,6 +235,16 @@ propagateGroundTruth(PredNode *node,
     return node;
   }
 
+  if (node->kind == PredCombinerKind::And && node->children.empty()) {
+    node->kind = PredCombinerKind::True;
+    return node;
+  }
+
+  if (node->kind == PredCombinerKind::Or && node->children.empty()) {
+    node->kind = PredCombinerKind::False;
+    return node;
+  }
+
   // Otherwise, look at child nodes.
 
   // Move child nodes into some local variable so that they can be optimized

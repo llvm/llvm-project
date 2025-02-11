@@ -416,10 +416,29 @@ func.func @non_type_in_type_array_attr_fail() {
 // Test StringAttr with custom type
 //===----------------------------------------------------------------------===//
 
-// CHECK-LABEL: func @string_attr_custom_type
-func.func @string_attr_custom_type() {
-  // CHECK: "string_data" : !foo.string
-  test.string_attr_with_type "string_data" : !foo.string
+// CHECK-LABEL: func @string_attr_custom_type_valid
+func.func @string_attr_custom_type_valid() {
+  // CHECK: "string_data" : i64
+  test.string_attr_with_type "string_data" : i64
+  return
+}
+
+// -----
+
+func.func @string_attr_custom_type_invalid() {
+  // expected-error @+1 {{'attr' failed to satisfy constraint: string attribute of integer}}
+  test.string_attr_with_type "string_data" : f32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @string_attr_custom_mixed_type
+func.func @string_attr_custom_mixed_type() {
+  // CHECK: "string_data" : i64
+  test.string_attr_with_mixed_type "string_data" : i64
+  // CHECK: 42 : i64
+  test.string_attr_with_mixed_type 42 : i64
   return
 }
 
@@ -561,6 +580,14 @@ func.func @correct_type_pass() {
 
 // -----
 
+func.func @tf32_elements_attr() {
+  // CHECK: "foo"() {attr = dense<4.000000e+00> : tensor<tf32>} : () -> ()
+  "foo"() {attr = dense<4.0> : tensor<tf32>} : () -> ()
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // Test StringElementsAttr
 //===----------------------------------------------------------------------===//
@@ -670,6 +697,14 @@ func.func @dense_array_attr() attributes {
     x7_f16 = array<f16: 1., 3.>
   }: () -> ()
 
+  return
+}
+
+// -----
+
+func.func @test_invalid_bitwidth_type() {
+  // expected-error @below{{element type bitwidth must be a multiple of 8}}
+  "foo"() {tf32attr = array<tf32: 1024.0>} : () -> ()
   return
 }
 

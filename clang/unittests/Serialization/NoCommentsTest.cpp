@@ -83,11 +83,11 @@ export module Comments;
 void foo() {}
   )cpp");
 
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
   CreateInvocationOptions CIOpts;
-  CIOpts.Diags = Diags;
   CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(*CIOpts.VFS, new DiagnosticOptions());
+  CIOpts.Diags = Diags;
 
   std::string CacheBMIPath = llvm::Twine(TestDir + "/Comments.pcm").str();
   const char *Args[] = {"clang++",       "-std=c++20",

@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___EXCEPTION_EXCEPTION_H
-#define _LIBCPP___EXCEPTION_EXCEPTION_H
+#ifndef _LIBCPP___CXX03___EXCEPTION_EXCEPTION_H
+#define _LIBCPP___CXX03___EXCEPTION_EXCEPTION_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 // <vcruntime_exception.h> defines its own std::exception and std::bad_exception types,
 // which we use in order to be ABI-compatible with other STLs on Windows.
 #if defined(_LIBCPP_ABI_VCRUNTIME)
-#  include <vcruntime_exception.h>
+#  include <__cxx03/vcruntime_exception.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -91,4 +91,4 @@ public:
 
 } // namespace std
 
-#endif // _LIBCPP___EXCEPTION_EXCEPTION_H
+#endif // _LIBCPP___CXX03___EXCEPTION_EXCEPTION_H

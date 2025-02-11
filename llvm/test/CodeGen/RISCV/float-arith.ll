@@ -195,8 +195,8 @@ define float @fsgnj_s(float %a, float %b) nounwind {
 ; RV32I-LABEL: fsgnj_s:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    slli a0, a0, 1
+; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
@@ -204,8 +204,8 @@ define float @fsgnj_s(float %a, float %b) nounwind {
 ; RV64I-LABEL: fsgnj_s:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 524288
-; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    slli a0, a0, 33
+; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    srli a0, a0, 33
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -284,8 +284,8 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
 ; RV32I-NEXT:    call __addsf3
 ; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    lui a1, 524288
-; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    slli s0, s0, 1
+; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    srli s0, s0, 1
 ; RV32I-NEXT:    or a0, s0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -302,8 +302,8 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
 ; RV64I-NEXT:    call __addsf3
 ; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    lui a1, 524288
-; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    slli s0, s0, 33
+; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    srli s0, s0, 33
 ; RV64I-NEXT:    or a0, s0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload

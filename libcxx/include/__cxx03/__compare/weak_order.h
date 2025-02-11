@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_WEAK_ORDER
-#define _LIBCPP___COMPARE_WEAK_ORDER
+#ifndef _LIBCPP___CXX03___COMPARE_WEAK_ORDER
+#define _LIBCPP___CXX03___COMPARE_WEAK_ORDER
 
-#include <__compare/compare_three_way.h>
-#include <__compare/ordering.h>
-#include <__compare/strong_order.h>
-#include <__config>
-#include <__math/traits.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/is_floating_point.h>
-#include <__type_traits/is_same.h>
-#include <__utility/forward.h>
-#include <__utility/priority_tag.h>
+#include <__cxx03/__compare/compare_three_way.h>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__compare/strong_order.h>
+#include <__cxx03/__config>
+#include <__cxx03/__math/traits.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/is_floating_point.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/priority_tag.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
@@ -102,4 +102,4 @@ inline constexpr auto weak_order = __weak_order::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_WEAK_ORDER
+#endif // _LIBCPP___CXX03___COMPARE_WEAK_ORDER

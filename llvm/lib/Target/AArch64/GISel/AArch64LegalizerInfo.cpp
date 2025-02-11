@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64LegalizerInfo.h"
-#include "AArch64RegisterBankInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -24,7 +23,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -105,17 +103,20 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
-      .clampNumElements(0, v2s64, v2s64);
+      .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, p0, 2)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, s16, s32, s64})
       .legalFor(PackedVectorAllTypeList)
       .widenScalarToNextPow2(0)
+      .moreElementsToNextPow2(0)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .clampScalar(0, s16, s64)
-      // Maximum: sN * k = 128
-      .clampMaxNumElements(0, s8, 16)
-      .clampMaxNumElements(0, s16, 8)
-      .clampMaxNumElements(0, s32, 4)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
       .clampMaxNumElements(0, s64, 2)
       .clampMaxNumElements(0, p0, 2);
 
@@ -453,6 +454,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           {nxv2s64, p0, nxv2s64, 8},
       })
       .clampScalar(0, s8, s64)
+      .minScalarOrElt(0, s8)
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isScalar() &&
                Query.Types[0] != Query.MMODescrs[0].MemoryTy;
@@ -465,14 +467,19 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, p0, 2)
       .lowerIfMemSizeNotPow2()
       // TODO: Use BITCAST for v2i8, v2i16 after G_TRUNC gets sorted out
-      .bitcastIf(typeInSet(0, {v4s8}),
+      .bitcastIf(all(typeInSet(0, {v4s8}),
+                     LegalityPredicate([=](const LegalityQuery &Query) {
+                       return Query.Types[0].getSizeInBits() ==
+                              Query.MMODescrs[0].MemoryTy.getSizeInBits();
+                     })),
                  [=](const LegalityQuery &Query) {
                    const LLT VecTy = Query.Types[0];
                    return std::pair(0, LLT::scalar(VecTy.getSizeInBits()));
                  })
       .customIf(IsPtrVecPred)
       .scalarizeIf(typeInSet(0, {v2s16, v2s8}), 0)
-      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
+      .lower();
 
   getActionDefinitionsBuilder(G_INDEXED_STORE)
       // Idx 0 == Ptr, Idx 1 == Val
@@ -562,13 +569,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) { return Query.Types[1] == v2s16; },
           1, s32)
       .minScalarOrEltIf(
-          [=](const LegalityQuery &Query) { return Query.Types[1] == v2p0; }, 0,
-          s64)
+          [=](const LegalityQuery &Query) {
+            return Query.Types[1].isPointerVector();
+          },
+          0, s64)
       .moreElementsToNextPow2(1)
       .clampNumElements(1, v8s8, v16s8)
       .clampNumElements(1, v4s16, v8s16)
       .clampNumElements(1, v2s32, v4s32)
       .clampNumElements(1, v2s64, v2s64)
+      .clampNumElements(1, v2p0, v2p0)
       .customIf(isVector(0));
 
   getActionDefinitionsBuilder(G_FCMP)
@@ -840,13 +850,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{s64, p0}, {v2s64, v2p0}})
       .widenScalarToNextPow2(0, 64)
-      .clampScalar(0, s64, s64);
+      .clampScalar(0, s64, s64)
+      .clampMaxNumElements(0, s64, 2);
 
   getActionDefinitionsBuilder(G_INTTOPTR)
       .unsupportedIf([&](const LegalityQuery &Query) {
         return Query.Types[0].getSizeInBits() != Query.Types[1].getSizeInBits();
       })
-      .legalFor({{p0, s64}, {v2p0, v2s64}});
+      .legalFor({{p0, s64}, {v2p0, v2s64}})
+      .clampMaxNumElements(1, s64, 2);
 
   // Casts for 32 and 64-bit width type are just copies.
   // Same for 128-bit width type, except they are on the FPR bank.
@@ -855,6 +867,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalForCartesianProduct({s32, v2s16, v4s8})
       .legalForCartesianProduct({s64, v8s8, v4s16, v2s32})
       .legalForCartesianProduct({s128, v16s8, v8s16, v4s32, v2s64, v2p0})
+      .customIf([=](const LegalityQuery &Query) {
+        // Handle casts from i1 vectors to scalars.
+        LLT DstTy = Query.Types[0];
+        LLT SrcTy = Query.Types[1];
+        return DstTy.isScalar() && SrcTy.isVector() &&
+               SrcTy.getScalarSizeInBits() == 1;
+      })
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isVector() != Query.Types[1].isVector();
       })
@@ -933,9 +952,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         });
   }
 
+  // TODO : nxv4s16, nxv2s16, nxv2s32
   getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
+      .legalFor(HasSVE, {{s16, nxv16s8, s64},
+                         {s16, nxv8s16, s64},
+                         {s32, nxv4s32, s64},
+                         {s64, nxv2s64, s64}})
       .unsupportedIf([=](const LegalityQuery &Query) {
         const LLT &EltTy = Query.Types[1].getElementType();
+        if (Query.Types[1].isScalableVector())
+          return false;
         return Query.Types[0] != EltTy;
       })
       .minScalar(2, s64)
@@ -949,22 +975,26 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) {
             // We want to promote to <M x s1> to <M x s64> if that wouldn't
             // cause the total vec size to be > 128b.
-            return Query.Types[1].getNumElements() <= 2;
+            return Query.Types[1].isFixedVector() &&
+                   Query.Types[1].getNumElements() <= 2;
           },
           0, s64)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[1].getNumElements() <= 4;
+            return Query.Types[1].isFixedVector() &&
+                   Query.Types[1].getNumElements() <= 4;
           },
           0, s32)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[1].getNumElements() <= 8;
+            return Query.Types[1].isFixedVector() &&
+                   Query.Types[1].getNumElements() <= 8;
           },
           0, s16)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[1].getNumElements() <= 16;
+            return Query.Types[1].isFixedVector() &&
+                   Query.Types[1].getNumElements() <= 16;
           },
           0, s8)
       .minScalarOrElt(0, s8) // Worst case, we need at least s8.
@@ -978,6 +1008,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
       .legalIf(
           typeInSet(0, {v16s8, v8s8, v8s16, v4s16, v4s32, v2s32, v2s64, v2p0}))
+      .legalFor(HasSVE, {{nxv16s8, s32, s64},
+                         {nxv8s16, s32, s64},
+                         {nxv4s32, s32, s64},
+                         {nxv2s64, s64, s64}})
       .moreElementsToNextPow2(0)
       .widenVectorEltsToVectorMinSize(0, 64)
       .clampNumElements(0, v8s8, v16s8)
@@ -1017,7 +1051,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_BITREVERSE)
       .legalFor({s32, s64, v8s8, v16s8})
       .widenScalarToNextPow2(0, /*Min = */ 32)
-      .clampScalar(0, s32, s64);
+      .clampScalar(0, s32, s64)
+      .lower();
 
   getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
 
@@ -1038,12 +1073,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         if (DstTy != SrcTy)
           return false;
         return llvm::is_contained(
-            {v2s64, v2p0, v2s32, v4s32, v4s16, v16s8, v8s8, v8s16}, DstTy);
+            {v2s64, v2s32, v4s32, v4s16, v16s8, v8s8, v8s16}, DstTy);
       })
-      // G_SHUFFLE_VECTOR can have scalar sources (from 1 x s vectors), we
-      // just want those lowered into G_BUILD_VECTOR
+      // G_SHUFFLE_VECTOR can have scalar sources (from 1 x s vectors) or scalar
+      // destinations, we just want those lowered into G_BUILD_VECTOR or
+      // G_EXTRACT_ELEMENT.
       .lowerIf([=](const LegalityQuery &Query) {
-        return !Query.Types[1].isVector();
+        return !Query.Types[0].isVector() || !Query.Types[1].isVector();
       })
       .moreElementsIf(
           [](const LegalityQuery &Query) {
@@ -1064,7 +1100,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v4s32, v4s32)
-      .clampNumElements(0, v2s64, v2s64);
+      .clampNumElements(0, v2s64, v2s64)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
+      .bitcastIf(isPointerVector(0), [=](const LegalityQuery &Query) {
+        // Bitcast pointers vector to i64.
+        const LLT DstTy = Query.Types[0];
+        return std::pair(0, LLT::vector(DstTy.getElementCount(), 64));
+      });
 
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
       .legalFor({{v4s32, v2s32}, {v8s16, v4s16}, {v16s8, v8s8}})
@@ -1173,11 +1215,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {s32, v4s32},
                  {s32, v2s32},
                  {s64, v2s64}})
+      .moreElementsToNextPow2(1)
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
       .clampMaxNumElements(1, s8, 16)
-      .lower();
+      .widenVectorEltsToVectorMinSize(1, 64)
+      .scalarize(1);
 
   getActionDefinitionsBuilder({G_VECREDUCE_FMIN, G_VECREDUCE_FMAX,
                                G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM})
@@ -1276,10 +1320,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
       .legalFor({v2s64, v2s32, v4s32, v4s16, v8s16, v8s8, v16s8})
+      .legalFor(HasSVE, {nxv2s64, nxv4s32, nxv8s16, nxv16s8})
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampMaxNumElements(0, s64, 2)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(0)
       .lower();
 
@@ -1315,6 +1361,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{v8s8, v16s8}, {v4s16, v8s16}, {v2s32, v4s32}})
       .widenScalarOrEltToNextPow2(0)
       .immIdx(0); // Inform verifier imm idx 0 is handled.
+
+  // TODO: {nxv16s8, s8}, {nxv8s16, s16}
+  getActionDefinitionsBuilder(G_SPLAT_VECTOR)
+      .legalFor(HasSVE, {{nxv4s32, s32}, {nxv2s64, s64}});
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
@@ -1370,9 +1420,26 @@ bool AArch64LegalizerInfo::legalizeCustom(
     return Helper.lowerAbsToCNeg(MI);
   case TargetOpcode::G_ICMP:
     return legalizeICMP(MI, MRI, MIRBuilder);
+  case TargetOpcode::G_BITCAST:
+    return legalizeBitcast(MI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
+}
+
+bool AArch64LegalizerInfo::legalizeBitcast(MachineInstr &MI,
+                                           LegalizerHelper &Helper) const {
+  assert(MI.getOpcode() == TargetOpcode::G_BITCAST && "Unexpected opcode");
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  // We're trying to handle casts from i1 vectors to scalars but reloading from
+  // stack.
+  if (!DstTy.isScalar() || !SrcTy.isVector() ||
+      SrcTy.getElementType() != LLT::scalar(1))
+    return false;
+
+  Helper.createStackStoreLoad(DstReg, SrcReg);
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AArch64LegalizerInfo::legalizeFunnelShift(MachineInstr &MI,
@@ -1699,9 +1766,17 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_fminnm:
     return LowerBinOp(TargetOpcode::G_FMINNUM);
   case Intrinsic::aarch64_neon_smull:
-    return LowerBinOp(AArch64::G_UMULL);
-  case Intrinsic::aarch64_neon_umull:
     return LowerBinOp(AArch64::G_SMULL);
+  case Intrinsic::aarch64_neon_umull:
+    return LowerBinOp(AArch64::G_UMULL);
+  case Intrinsic::aarch64_neon_abs: {
+    // Lower the intrinsic to G_ABS.
+    MachineIRBuilder MIB(MI);
+    MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});
+    MI.eraseFromParent();
+    return true;
+  }
+
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse
     return false;
@@ -2161,10 +2236,13 @@ bool AArch64LegalizerInfo::legalizeMemOps(MachineInstr &MI,
 
 bool AArch64LegalizerInfo::legalizeExtractVectorElt(
     MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
-  assert(MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT);
+  const GExtractVectorElement *Element = cast<GExtractVectorElement>(&MI);
   auto VRegAndVal =
-      getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(Element->getIndexReg(), MRI);
   if (VRegAndVal)
+    return true;
+  LLT VecTy = MRI.getType(Element->getVectorReg());
+  if (VecTy.isScalableVector())
     return true;
   return Helper.lowerExtractInsertVectorElt(MI) !=
          LegalizerHelper::LegalizeResult::UnableToLegalize;

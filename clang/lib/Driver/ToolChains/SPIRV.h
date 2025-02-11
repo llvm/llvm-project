@@ -22,6 +22,11 @@ void constructTranslateCommand(Compilation &C, const Tool &T,
                                const InputInfo &Input,
                                const llvm::opt::ArgStringList &Args);
 
+void constructAssembleCommand(Compilation &C, const Tool &T,
+                              const JobAction &JA, const InputInfo &Output,
+                              const InputInfo &Input,
+                              const llvm::opt::ArgStringList &Args);
+
 class LLVM_LIBRARY_VISIBILITY Translator : public Tool {
 public:
   Translator(const ToolChain &TC)
@@ -38,7 +43,7 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
-  Linker(const ToolChain &TC) : Tool("SPIRV::Linker", "spirv-link", TC) {}
+  Linker(const ToolChain &TC) : Tool("SPIR-V::Linker", "spirv-link", TC) {}
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
   void ConstructJob(Compilation &C, const JobAction &JA,
@@ -47,18 +52,29 @@ public:
                     const char *LinkingOutput) const override;
 };
 
+class LLVM_LIBRARY_VISIBILITY Assembler final : public Tool {
+public:
+  Assembler(const ToolChain &TC) : Tool("SPIR-V::Assembler", "spirv-as", TC) {}
+  bool hasIntegratedAssembler() const override { return false; }
+  bool hasIntegratedCPP() const override { return false; }
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *AssembleOutput) const override;
+};
+
 } // namespace SPIRV
 } // namespace tools
 
 namespace toolchains {
 
-class LLVM_LIBRARY_VISIBILITY SPIRVToolChain final : public ToolChain {
+class LLVM_LIBRARY_VISIBILITY SPIRVToolChain : public ToolChain {
   mutable std::unique_ptr<Tool> Translator;
+  mutable std::unique_ptr<Tool> Assembler;
 
 public:
   SPIRVToolChain(const Driver &D, const llvm::Triple &Triple,
-                 const llvm::opt::ArgList &Args)
-      : ToolChain(D, Triple, Args) {}
+                 const llvm::opt::ArgList &Args);
 
   bool useIntegratedAs() const override { return true; }
 
@@ -72,6 +88,7 @@ public:
   }
   bool isPICDefaultForced() const override { return false; }
   bool SupportsProfiling() const override { return false; }
+  bool HasNativeLLVMSupport() const override;
 
   clang::driver::Tool *SelectTool(const JobAction &JA) const override;
 
@@ -81,6 +98,9 @@ protected:
 
 private:
   clang::driver::Tool *getTranslator() const;
+  clang::driver::Tool *getAssembler() const;
+
+  bool NativeLLVMSupport;
 };
 
 } // namespace toolchains

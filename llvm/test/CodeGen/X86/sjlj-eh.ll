@@ -48,14 +48,13 @@ try.cont:
 ; CHECK: movl %esp, -24(%ebp)
 ;     UFC.__jbuf[1] = $EIP
 ; CHECK: movl $[[RESUME:LBB[0-9]+_[0-9]+]], -28(%ebp)
-;     UFC.__callsite = 1
-; CHECK: movl $1, -60(%ebp)
 ;     _Unwind_SjLj_Register(&UFC);
 ; CHECK: leal -64(%ebp), %eax
 ; CHECK: pushl %eax
 ; CHECK: calll __Unwind_SjLj_Register
 ; CHECK: addl $4, %esp
 ;     function_that_throws();
+; CHECK: movl $1, -60(%ebp)
 ; CHECK: calll __Z20function_that_throwsv
 ;     _Unwind_SjLj_Unregister(&UFC);
 ; CHECK: leal -64(%ebp), %eax
@@ -99,12 +98,11 @@ try.cont:
 ;     UFC.__jbuf[1] = $RIP
 ; CHECK-X64: leaq .[[RESUME:LBB[0-9]+_[0-9]+]](%rip), %rax
 ; CHECK-X64: movq %rax, -256(%rbp)
-;     UFC.__callsite = 1
-; CHECK-X64: movl $1, -304(%rbp)
 ;     _Unwind_SjLj_Register(&UFC);
 ; CHECK-X64: leaq -312(%rbp), %rcx
 ; CHECK-X64: callq _Unwind_SjLj_Register
 ;     function_that_throws();
+; CHECK-X64: movl $1, -304(%rbp)
 ; CHECK-X64: callq _Z20function_that_throwsv
 ;     _Unwind_SjLj_Unregister(&UFC);
 ; CHECK-X64: leaq -312(%rbp), %rcx

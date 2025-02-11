@@ -2309,21 +2309,21 @@ body: |
   ; CHECK: $xmm0 = VINSERTPSrri                $xmm0, $xmm0, 1
   $xmm0 = VINSERTPSZrri                        $xmm0, $xmm0, 1
   ; CHECK: $xmm0 = VROUNDSDmi                  $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  $xmm0 = VRNDSCALESDZm                        $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  $xmm0 = VRNDSCALESDZrmi                      $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   ; CHECK: $xmm0 = VROUNDSDri                  $xmm0, $xmm1, 15, implicit $mxcsr
-  $xmm0 = VRNDSCALESDZr                        $xmm0, $xmm1, 15, implicit $mxcsr
+  $xmm0 = VRNDSCALESDZrri                      $xmm0, $xmm1, 15, implicit $mxcsr
   ; CHECK: $xmm0 = VROUNDSSmi                  $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  $xmm0 = VRNDSCALESSZm                        $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  $xmm0 = VRNDSCALESSZrmi                      $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   ; CHECK: $xmm0 = VROUNDSSri                  $xmm0, $xmm1, 15, implicit $mxcsr
-  $xmm0 = VRNDSCALESSZr                        $xmm0, $xmm1, 15, implicit $mxcsr
+  $xmm0 = VRNDSCALESSZrri                      $xmm0, $xmm1, 15, implicit $mxcsr
   ; CHECK: $xmm0 = VROUNDSDmi_Int              $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  $xmm0 = VRNDSCALESDZm_Int                    $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  $xmm0 = VRNDSCALESDZrmi_Int                  $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   ; CHECK: $xmm0 = VROUNDSDri_Int              $xmm0, $xmm1, 15, implicit $mxcsr
-  $xmm0 = VRNDSCALESDZr_Int                    $xmm0, $xmm1, 15, implicit $mxcsr
+  $xmm0 = VRNDSCALESDZrri_Int                  $xmm0, $xmm1, 15, implicit $mxcsr
   ; CHECK: $xmm0 = VROUNDSSmi_Int              $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  $xmm0 = VRNDSCALESSZm_Int                    $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  $xmm0 = VRNDSCALESSZrmi_Int                  $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   ; CHECK: $xmm0 = VROUNDSSri_Int              $xmm0, $xmm1, 15, implicit $mxcsr
-  $xmm0 = VRNDSCALESSZr_Int                    $xmm0, $xmm1, 15, implicit $mxcsr
+  $xmm0 = VRNDSCALESSZrri_Int                  $xmm0, $xmm1, 15, implicit $mxcsr
 
   RET64
 ...
@@ -4636,38 +4636,38 @@ body: |
   VUCOMISSZrm                                  $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
   ; CHECK: VUCOMISSZrr                         $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
   VUCOMISSZrr                                  $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
-  ; CHECK: $xmm16 = VRNDSCALESDZm              $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  $xmm16 = VRNDSCALESDZm                       $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  ; CHECK: $xmm16 = VRNDSCALESDZr              $xmm16, $xmm1, 15, implicit $mxcsr
-  $xmm16 = VRNDSCALESDZr                       $xmm16, $xmm1, 15, implicit $mxcsr
-  ; CHECK: $xmm16 = VRNDSCALESSZm              $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  $xmm16 = VRNDSCALESSZm                       $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  ; CHECK: $xmm16 = VRNDSCALESSZr              $xmm16, $xmm1, 15, implicit $mxcsr
-  $xmm16 = VRNDSCALESSZr                       $xmm16, $xmm1, 15, implicit $mxcsr
-  ; CHECK: $xmm16 = VRNDSCALESDZm_Int          $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  $xmm16 = VRNDSCALESDZm_Int                   $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  ; CHECK: $xmm16 = VRNDSCALESDZr_Int          $xmm16, $xmm1, 15, implicit $mxcsr
-  $xmm16 = VRNDSCALESDZr_Int                   $xmm16, $xmm1, 15, implicit $mxcsr
-  ; CHECK: $xmm16 = VRNDSCALESSZm_Int          $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  $xmm16 = VRNDSCALESSZm_Int                   $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  ; CHECK: $xmm16 = VRNDSCALESSZr_Int          $xmm16, $xmm1, 15, implicit $mxcsr
-  $xmm16 = VRNDSCALESSZr_Int                   $xmm16, $xmm1, 15, implicit $mxcsr
-  ; CHECK: $xmm0 = VRNDSCALESDZm               $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
-  $xmm0 = VRNDSCALESDZm                        $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
-  ; CHECK: $xmm0 = VRNDSCALESDZr               $xmm0, $xmm1, 31, implicit $mxcsr
-  $xmm0 = VRNDSCALESDZr                        $xmm0, $xmm1, 31, implicit $mxcsr
-  ; CHECK: $xmm0 = VRNDSCALESSZm               $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
-  $xmm0 = VRNDSCALESSZm                        $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
-  ; CHECK: $xmm0 = VRNDSCALESSZr               $xmm0, $xmm1, 31, implicit $mxcsr
-  $xmm0 = VRNDSCALESSZr                        $xmm0, $xmm1, 31, implicit $mxcsr
-  ; CHECK: $xmm0 = VRNDSCALESDZm_Int           $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
-  $xmm0 = VRNDSCALESDZm_Int                    $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
-  ; CHECK: $xmm0 = VRNDSCALESDZr_Int           $xmm0, $xmm1, 31, implicit $mxcsr
-  $xmm0 = VRNDSCALESDZr_Int                    $xmm0, $xmm1, 31, implicit $mxcsr
-  ; CHECK: $xmm0 = VRNDSCALESSZm_Int           $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
-  $xmm0 = VRNDSCALESSZm_Int                    $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
-  ; CHECK: $xmm0 = VRNDSCALESSZr_Int           $xmm0, $xmm1, 31, implicit $mxcsr
-  $xmm0 = VRNDSCALESSZr_Int                    $xmm0, $xmm1, 31, implicit $mxcsr
+  ; CHECK: $xmm16 = VRNDSCALESDZrmi            $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  $xmm16 = VRNDSCALESDZrmi                     $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  ; CHECK: $xmm16 = VRNDSCALESDZrri            $xmm16, $xmm1, 15, implicit $mxcsr
+  $xmm16 = VRNDSCALESDZrri                     $xmm16, $xmm1, 15, implicit $mxcsr
+  ; CHECK: $xmm16 = VRNDSCALESSZrmi            $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  $xmm16 = VRNDSCALESSZrmi                     $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  ; CHECK: $xmm16 = VRNDSCALESSZrri            $xmm16, $xmm1, 15, implicit $mxcsr
+  $xmm16 = VRNDSCALESSZrri                     $xmm16, $xmm1, 15, implicit $mxcsr
+  ; CHECK: $xmm16 = VRNDSCALESDZrmi_Int        $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  $xmm16 = VRNDSCALESDZrmi_Int                 $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  ; CHECK: $xmm16 = VRNDSCALESDZrri_Int        $xmm16, $xmm1, 15, implicit $mxcsr
+  $xmm16 = VRNDSCALESDZrri_Int                 $xmm16, $xmm1, 15, implicit $mxcsr
+  ; CHECK: $xmm16 = VRNDSCALESSZrmi_Int        $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  $xmm16 = VRNDSCALESSZrmi_Int                 $xmm16, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  ; CHECK: $xmm16 = VRNDSCALESSZrri_Int        $xmm16, $xmm1, 15, implicit $mxcsr
+  $xmm16 = VRNDSCALESSZrri_Int                 $xmm16, $xmm1, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VRNDSCALESDZrmi             $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
+  $xmm0 = VRNDSCALESDZrmi                      $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
+  ; CHECK: $xmm0 = VRNDSCALESDZrri             $xmm0, $xmm1, 31, implicit $mxcsr
+  $xmm0 = VRNDSCALESDZrri                      $xmm0, $xmm1, 31, implicit $mxcsr
+  ; CHECK: $xmm0 = VRNDSCALESSZrmi             $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
+  $xmm0 = VRNDSCALESSZrmi                      $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
+  ; CHECK: $xmm0 = VRNDSCALESSZrri             $xmm0, $xmm1, 31, implicit $mxcsr
+  $xmm0 = VRNDSCALESSZrri                      $xmm0, $xmm1, 31, implicit $mxcsr
+  ; CHECK: $xmm0 = VRNDSCALESDZrmi_Int         $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
+  $xmm0 = VRNDSCALESDZrmi_Int                  $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
+  ; CHECK: $xmm0 = VRNDSCALESDZrri_Int         $xmm0, $xmm1, 31, implicit $mxcsr
+  $xmm0 = VRNDSCALESDZrri_Int                  $xmm0, $xmm1, 31, implicit $mxcsr
+  ; CHECK: $xmm0 = VRNDSCALESSZrmi_Int         $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
+  $xmm0 = VRNDSCALESSZrmi_Int                  $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
+  ; CHECK: $xmm0 = VRNDSCALESSZrri_Int         $xmm0, $xmm1, 31, implicit $mxcsr
+  $xmm0 = VRNDSCALESSZrri_Int                  $xmm0, $xmm1, 31, implicit $mxcsr
 
   RET64
 ...

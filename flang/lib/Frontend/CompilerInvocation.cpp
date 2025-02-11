@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInvocation.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/OpenMP-features.h"
-#include "flang/Common/Version.h"
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/OpenMP-features.h"
+#include "flang/Support/Version.h"
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/AllDiagnostics.h"
@@ -246,6 +246,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
 
+  opts.UnrollLoops = args.hasFlag(clang::driver::options::OPT_funroll_loops,
+                                  clang::driver::options::OPT_fno_unroll_loops,
+                                  (opts.OptimizationLevel > 1));
+
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
   // -mframe-pointer=none/non-leaf/all option.
@@ -457,6 +461,16 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
 
   if (args.hasArg(clang::driver::options::OPT_fdisable_integer_16))
     opts.disabledIntegerKinds.push_back(16);
+
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
+    llvm::StringRef V = a->getValue();
+    if (V == "vec-extabi") {
+      opts.EnableAIXExtendedAltivecABI = true;
+    } else if (V == "vec-default") {
+      opts.EnableAIXExtendedAltivecABI = false;
+    }
+  }
 }
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
@@ -624,6 +638,8 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   opts.outputFile = args.getLastArgValue(clang::driver::options::OPT_o);
   opts.showHelp = args.hasArg(clang::driver::options::OPT_help);
   opts.showVersion = args.hasArg(clang::driver::options::OPT_version);
+  opts.printSupportedCPUs =
+      args.hasArg(clang::driver::options::OPT_print_supported_cpus);
 
   // Get the input kind (from the value passed via `-x`)
   InputKind dashX(Language::Unknown);
@@ -724,6 +740,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       args.hasFlag(clang::driver::options::OPT_fimplicit_none,
                    clang::driver::options::OPT_fno_implicit_none, false));
 
+  // -f{no-}implicit-none-ext
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::ImplicitNoneExternal,
+      args.hasFlag(clang::driver::options::OPT_fimplicit_none_ext,
+                   clang::driver::options::OPT_fno_implicit_none_ext, false));
+
   // -f{no-}backslash
   opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
                        args.hasFlag(clang::driver::options::OPT_fbackslash,
@@ -737,6 +759,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                    clang::driver::options::OPT_fno_logical_abbreviations,
                    false));
 
+  // -f{no-}unsigned
+  opts.features.Enable(Fortran::common::LanguageFeature::Unsigned,
+                       args.hasFlag(clang::driver::options::OPT_funsigned,
+                                    clang::driver::options::OPT_fno_unsigned,
+                                    false));
+
   // -f{no-}xor-operator
   opts.features.Enable(
       Fortran::common::LanguageFeature::XOROperator,
@@ -747,6 +775,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   if (args.hasArg(clang::driver::options::OPT_fno_automatic)) {
     opts.features.Enable(Fortran::common::LanguageFeature::DefaultSave);
   }
+
+  // -f{no}-save-main-program
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::SaveMainProgram,
+      args.hasFlag(clang::driver::options::OPT_fsave_main_program,
+                   clang::driver::options::OPT_fno_save_main_program, false));
 
   if (args.hasArg(
           clang::driver::options::OPT_falternative_parameter_statement)) {
@@ -1350,11 +1384,13 @@ bool CompilerInvocation::createFromArgs(
     invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
   }
 
-  // -flang-experimental-integer-overflow
-  if (args.hasArg(
-          clang::driver::options::OPT_flang_experimental_integer_overflow)) {
-    invoc.loweringOpts.setNSWOnLoopVarInc(true);
-  }
+  // -f[no-]init-global-zero
+  if (args.hasFlag(clang::driver::options::OPT_finit_global_zero,
+                   clang::driver::options::OPT_fno_init_global_zero,
+                   /*default=*/true))
+    invoc.loweringOpts.setInitGlobalZero(true);
+  else
+    invoc.loweringOpts.setInitGlobalZero(false);
 
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or
   // -Rpass-analysis. This will be used later when processing and outputting the
@@ -1371,6 +1407,11 @@ bool CompilerInvocation::createFromArgs(
       // the string "pass".
       invoc.getDiagnosticOpts().Remarks.push_back(a->getValue());
   }
+
+  // -frealloc-lhs is the default.
+  if (!args.hasFlag(clang::driver::options::OPT_frealloc_lhs,
+                    clang::driver::options::OPT_fno_realloc_lhs, true))
+    invoc.loweringOpts.setReallocateLHS(false);
 
   success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
   parseTargetArgs(invoc.getTargetOpts(), args);
@@ -1413,6 +1454,10 @@ bool CompilerInvocation::createFromArgs(
       os << ' ' << *it;
     }
   }
+
+  // Process the timing-related options.
+  if (args.hasArg(clang::driver::options::OPT_ftime_report))
+    invoc.enableTimers = true;
 
   invoc.setArgv0(argv0);
 

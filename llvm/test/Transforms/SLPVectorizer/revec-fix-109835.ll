@@ -18,10 +18,10 @@ define void @e() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <16 x i32> [[DOTSPLAT]], <i32 -4, i32 5, i32 14, i32 23, i32 32, i32 41, i32 50, i32 59, i32 68, i32 77, i32 86, i32 95, i32 104, i32 113, i32 122, i32 131>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <16 x i32> [[DOTSPLAT]], <i32 -2, i32 7, i32 16, i32 25, i32 34, i32 43, i32 52, i32 61, i32 70, i32 79, i32 88, i32 97, i32 106, i32 115, i32 124, i32 133>
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <16 x i32> [[DOTSPLAT]], <i32 0, i32 9, i32 18, i32 27, i32 36, i32 45, i32 54, i32 63, i32 72, i32 81, i32 90, i32 99, i32 108, i32 117, i32 126, i32 135>
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <16 x i32> [[TMP1]], <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i32> [[TMP2]], <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult <16 x i32> [[TMP3]], <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <16 x i32> [[INDUCTION]], <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <16 x i32> [[TMP1]], splat (i32 2)
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i32> [[TMP2]], splat (i32 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult <16 x i32> [[TMP3]], splat (i32 2)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <16 x i32> [[INDUCTION]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <16 x i32> [[DOTSPLAT]], <i32 -1, i32 -10, i32 -19, i32 -28, i32 -37, i32 -46, i32 -55, i32 -64, i32 -73, i32 -82, i32 -91, i32 -100, i32 -109, i32 -118, i32 -127, i32 -136>
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <16 x i1> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <16 x i1> [[TMP9]], [[TMP6]]

@@ -30,9 +30,9 @@ entry:
   ret float %conv
 }
 
-define void @PR17495() {
+define void @PR17495(i1 %arg) {
 entry:
-  br i1 undef, label %while.end, label %while.body
+  br i1 %arg, label %while.end, label %while.body
 
 while.body:                                       ; preds = %while.body, %entry
   %x.1.copyload = load i24, ptr undef, align 1

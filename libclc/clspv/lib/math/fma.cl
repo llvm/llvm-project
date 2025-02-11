@@ -25,8 +25,8 @@
 // been updated as appropriate.
 
 #include <clc/clc.h>
-#include "../../../generic/lib/clcmacro.h"
-#include "../../../generic/lib/math/math.h"
+#include <clc/clcmacro.h>
+#include <clc/math/math.h>
 
 struct fp {
   uint2 mantissa;

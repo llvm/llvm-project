@@ -54,7 +54,7 @@ ScriptLexer::Buffer::Buffer(Ctx &ctx, MemoryBufferRef mb)
 }
 
 ScriptLexer::ScriptLexer(Ctx &ctx, MemoryBufferRef mb)
-    : curBuf(ctx, mb), mbs(1, mb) {
+    : ctx(ctx), curBuf(ctx, mb), mbs(1, mb) {
   activeFilenames.insert(mb.getBufferIdentifier());
 }
 
@@ -80,14 +80,14 @@ std::string ScriptLexer::getCurrentLocation() {
 
 // We don't want to record cascading errors. Keep only the first one.
 void ScriptLexer::setError(const Twine &msg) {
-  if (errorCount())
+  if (errCount(ctx))
     return;
 
   std::string s = (getCurrentLocation() + ": " + msg).str();
   if (prevTok.size())
     s += "\n>>> " + getLine().str() + "\n>>> " +
          std::string(getColumnNumber(), ' ') + "^";
-  error(s);
+  ErrAlways(ctx) << s;
 }
 
 void ScriptLexer::lex() {
@@ -105,7 +105,7 @@ void ScriptLexer::lex() {
       curBuf = buffers.pop_back_val();
       continue;
     }
-    curTokState = inExpr;
+    curTokState = lexState;
 
     // Quoted token. Note that double-quote characters are parts of a token
     // because, in a glob match context, only unquoted tokens are interpreted
@@ -116,7 +116,8 @@ void ScriptLexer::lex() {
       if (e == StringRef::npos) {
         size_t lineno =
             StringRef(curBuf.begin, s.data() - curBuf.begin).count('\n');
-        error(curBuf.filename + ":" + Twine(lineno + 1) + ": unclosed quote");
+        ErrAlways(ctx) << curBuf.filename << ":" << (lineno + 1)
+                       << ": unclosed quote";
         return;
       }
 
@@ -141,7 +142,13 @@ void ScriptLexer::lex() {
     // C-like languages, so that you can write "file-name.cpp" as one bare
     // token.
     size_t pos;
-    if (inExpr) {
+    switch (lexState) {
+    case State::Script:
+      pos = s.find_first_not_of(
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+          "0123456789_.$/\\~=+[]*?-!^:");
+      break;
+    case State::Expr:
       pos = s.find_first_not_of(
           "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
           "0123456789_.$");
@@ -149,10 +156,7 @@ void ScriptLexer::lex() {
           ((s[0] == s[1] && strchr("<>&|", s[0])) ||
            is_contained({"==", "!=", "<=", ">=", "<<", ">>"}, s.substr(0, 2))))
         pos = 2;
-    } else {
-      pos = s.find_first_not_of(
-          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-          "0123456789_.$/\\~=+[]*?-!^:");
+      break;
     }
 
     if (pos == 0)
@@ -195,7 +199,7 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
 }
 
 // Used to determine whether to stop parsing. Treat errors like EOF.
-bool ScriptLexer::atEOF() { return eof || errorCount(); }
+bool ScriptLexer::atEOF() { return eof || errCount(ctx); }
 
 StringRef ScriptLexer::next() {
   prevTok = peek();
@@ -207,8 +211,8 @@ StringRef ScriptLexer::next() {
 }
 
 StringRef ScriptLexer::peek() {
-  // curTok is invalid if curTokState and inExpr mismatch.
-  if (curTok.size() && curTokState != inExpr) {
+  // curTok is invalid if curTokState and lexState mismatch.
+  if (curTok.size() && curTokState != lexState) {
     curBuf.s = StringRef(curTok.data(), curBuf.s.end() - curTok.data());
     curTok = {};
   }
@@ -227,7 +231,7 @@ bool ScriptLexer::consume(StringRef tok) {
 void ScriptLexer::skip() { (void)next(); }
 
 void ScriptLexer::expect(StringRef expect) {
-  if (errorCount())
+  if (errCount(ctx))
     return;
   StringRef tok = next();
   if (tok != expect) {

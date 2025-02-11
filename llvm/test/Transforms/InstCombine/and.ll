@@ -322,7 +322,7 @@ define i1 @test18(i32 %A) {
 
 define <2 x i1> @test18_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test18_vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i32> [[A:%.*]], <i32 127, i32 127>
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i32> [[A:%.*]], splat (i32 127)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = and <2 x i32> %A, <i32 -128, i32 -128>
@@ -342,7 +342,7 @@ define i1 @test18a(i8 %A) {
 
 define <2 x i1> @test18a_vec(<2 x i8> %A) {
 ; CHECK-LABEL: @test18a_vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i8> [[A:%.*]], <i8 2, i8 2>
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i8> [[A:%.*]], splat (i8 2)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = and <2 x i8> %A, <i8 -2, i8 -2>
@@ -396,7 +396,7 @@ define i1 @test23_logical(i32 %A) {
 
 define <2 x i1> @test23vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test23vec(
-; CHECK-NEXT:    [[D:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[D:%.*]] = icmp eq <2 x i32> [[A:%.*]], splat (i32 2)
 ; CHECK-NEXT:    ret <2 x i1> [[D]]
 ;
   %B = icmp sgt <2 x i32> %A, <i32 1, i32 1>
@@ -455,8 +455,8 @@ define i1 @test25_logical(i32 %A) {
 
 define <2 x i1> @test25vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test25vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], <i32 -50, i32 -50>
-; CHECK-NEXT:    [[D:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 50, i32 50>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], splat (i32 -50)
+; CHECK-NEXT:    [[D:%.*]] = icmp ult <2 x i32> [[TMP1]], splat (i32 50)
 ; CHECK-NEXT:    ret <2 x i1> [[D]]
 ;
   %B = icmp sge <2 x i32> %A, <i32 50, i32 50>
@@ -504,9 +504,9 @@ define i32 @ashr_lowmask_use(i32 %x) {
 
 define <2 x i8> @ashr_lowmask_use_splat(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @ashr_lowmask_use_splat(
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 7, i8 7>
+; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], splat (i8 7)
 ; CHECK-NEXT:    store <2 x i8> [[A]], ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[X]], <i8 7, i8 7>
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[X]], splat (i8 7)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = ashr <2 x i8> %x, <i8 7, i8 7>
@@ -596,7 +596,7 @@ define i32 @test31(i1 %X) {
 
 define <2 x i32> @and_demanded_bits_splat_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @and_demanded_bits_splat_vec(
-; CHECK-NEXT:    [[Z:%.*]] = and <2 x i32> [[X:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[Z:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 7)
 ; CHECK-NEXT:    ret <2 x i32> [[Z]]
 ;
   %y = add <2 x i32> %x, <i32 8, i32 8>
@@ -658,7 +658,7 @@ define i32 @test33b(i32 %b) {
 
 define <2 x i32> @test33vec(<2 x i32> %b) {
 ; CHECK-LABEL: @test33vec(
-; CHECK-NEXT:    [[T13:%.*]] = xor <2 x i32> [[B:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[T13:%.*]] = xor <2 x i32> [[B:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[T13]]
 ;
   %t4.mask = and <2 x i32> %b, <i32 1, i32 1>
@@ -670,7 +670,7 @@ define <2 x i32> @test33vec(<2 x i32> %b) {
 
 define <2 x i32> @test33vecb(<2 x i32> %b) {
 ; CHECK-LABEL: @test33vecb(
-; CHECK-NEXT:    [[T13:%.*]] = xor <2 x i32> [[B:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[T13:%.*]] = xor <2 x i32> [[B:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[T13]]
 ;
   %t4.mask = and <2 x i32> %b, <i32 1, i32 1>
@@ -716,7 +716,7 @@ define i64 @test35(i32 %X) {
 define <2 x i64> @test35_uniform(<2 x i32> %X) {
 ; CHECK-LABEL: @test35_uniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 240, i32 240>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], splat (i32 240)
 ; CHECK-NEXT:    [[RES:%.*]] = zext nneg <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
@@ -741,8 +741,8 @@ define i64 @test36(i32 %X) {
 
 define <2 x i64> @test36_uniform(<2 x i32> %X) {
 ; CHECK-LABEL: @test36_uniform(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 7, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 240, i32 240>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], splat (i32 7)
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], splat (i32 240)
 ; CHECK-NEXT:    [[RES:%.*]] = zext nneg <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
@@ -780,8 +780,8 @@ define i64 @test37(i32 %X) {
 
 define <2 x i64> @test37_uniform(<2 x i32> %X) {
 ; CHECK-LABEL: @test37_uniform(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i32> [[X:%.*]], <i32 7, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 240, i32 240>
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i32> [[X:%.*]], splat (i32 7)
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], splat (i32 240)
 ; CHECK-NEXT:    [[RES:%.*]] = zext nneg <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
@@ -988,7 +988,7 @@ define i32 @test40(i1 %C) {
 
 define <2 x i32> @test40vec(i1 %C) {
 ; CHECK-LABEL: @test40vec(
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 104, i32 104>, <2 x i32> <i32 10, i32 10>
+; CHECK-NEXT:    [[A:%.*]] = select i1 [[C:%.*]], <2 x i32> splat (i32 104), <2 x i32> splat (i32 10)
 ; CHECK-NEXT:    ret <2 x i32> [[A]]
 ;
   %A = select i1 %C, <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
@@ -1035,7 +1035,7 @@ define <2 x i32> @test41vec(i1 %which) {
 ; CHECK:       delay:
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ <i32 104, i32 104>, [[ENTRY:%.*]] ], [ <i32 10, i32 10>, [[DELAY]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ splat (i32 104), [[ENTRY:%.*]] ], [ splat (i32 10), [[DELAY]] ]
 ; CHECK-NEXT:    ret <2 x i32> [[A]]
 ;
 entry:
@@ -1448,7 +1448,7 @@ define i32 @lowbitmask_casted_shift_use2(i8 %x) {
 define <2 x i59> @lowbitmask_casted_shift_vec_splat(<2 x i47> %x) {
 ; CHECK-LABEL: @lowbitmask_casted_shift_vec_splat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i47> [[X:%.*]] to <2 x i59>
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i59> [[TMP1]], <i59 5, i59 5>
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i59> [[TMP1]], splat (i59 5)
 ; CHECK-NEXT:    ret <2 x i59> [[R]]
 ;
   %a = ashr <2 x i47> %x, <i47 5, i47 5>
@@ -1525,10 +1525,10 @@ define i32 @not_lowmask_sext_in_reg2(i32 %x) {
 
 define <2 x i32> @lowmask_sext_in_reg_splat(<2 x i32> %x, ptr %p) {
 ; CHECK-LABEL: @lowmask_sext_in_reg_splat(
-; CHECK-NEXT:    [[L:%.*]] = shl <2 x i32> [[X:%.*]], <i32 20, i32 20>
-; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i32> [[L]], <i32 20, i32 20>
+; CHECK-NEXT:    [[L:%.*]] = shl <2 x i32> [[X:%.*]], splat (i32 20)
+; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i32> [[L]], splat (i32 20)
 ; CHECK-NEXT:    store <2 x i32> [[R]], ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X]], <i32 4095, i32 4095>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X]], splat (i32 4095)
 ; CHECK-NEXT:    ret <2 x i32> [[AND]]
 ;
   %l = shl <2 x i32> %x, <i32 20, i32 20>
@@ -1576,9 +1576,9 @@ define i8 @lowmask_add_2_uses(i8 %x) {
 
 define <2 x i8> @lowmask_add_2_splat(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @lowmask_add_2_splat(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 -64)
 ; CHECK-NEXT:    store <2 x i8> [[A]], ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X]], <i8 63, i8 63>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X]], splat (i8 63)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -64, i8 -64> ; 0xc0
@@ -1619,9 +1619,9 @@ define i8 @not_lowmask_add2(i8 %x) {
 
 define <2 x i8> @lowmask_add_splat(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @lowmask_add_splat(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 -64)
 ; CHECK-NEXT:    store <2 x i8> [[A]], ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X]], <i8 32, i8 32>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X]], splat (i8 32)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -64, i8 -64> ; 0xc0
@@ -1670,8 +1670,8 @@ define i8 @flip_masked_bit(i8 %A) {
 
 define <2 x i8> @flip_masked_bit_uniform(<2 x i8> %A) {
 ; CHECK-LABEL: @flip_masked_bit_uniform(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[A:%.*]], <i8 16, i8 16>
-; CHECK-NEXT:    [[C:%.*]] = xor <2 x i8> [[TMP1]], <i8 16, i8 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[A:%.*]], splat (i8 16)
+; CHECK-NEXT:    [[C:%.*]] = xor <2 x i8> [[TMP1]], splat (i8 16)
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %B = add <2 x i8> %A, <i8 16, i8 16>
@@ -1681,7 +1681,7 @@ define <2 x i8> @flip_masked_bit_uniform(<2 x i8> %A) {
 
 define <2 x i8> @flip_masked_bit_poison(<2 x i8> %A) {
 ; CHECK-LABEL: @flip_masked_bit_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[A:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[TMP1]], <i8 16, i8 poison>
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
@@ -1692,7 +1692,7 @@ define <2 x i8> @flip_masked_bit_poison(<2 x i8> %A) {
 
 define <2 x i8> @flip_masked_bit_nonuniform(<2 x i8> %A) {
 ; CHECK-LABEL: @flip_masked_bit_nonuniform(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[A:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[TMP1]], <i8 16, i8 4>
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
@@ -2084,8 +2084,8 @@ define i16 @shl_ashr_pow2_const_case1(i16 %x) {
 
 define <3 x i16> @shl_lshr_pow2_const_case1_uniform_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_const_case1_uniform_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 7, i16 7, i16 7>
-; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 8, i16 8, i16 8>, <3 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], splat (i16 7)
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> splat (i16 8), <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %shl = shl <3 x i16> <i16 4, i16 4, i16 4>, %x
@@ -2123,7 +2123,7 @@ define <3 x i16> @shl_lshr_pow2_const_case1_non_uniform_vec_negative(<3 x i16> %
 define <3 x i16> @shl_lshr_pow2_const_case1_poison1_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_const_case1_poison1_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 8, i16 4, i16 4>
-; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 8, i16 8, i16 8>, <3 x i16> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> splat (i16 8), <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %shl = shl <3 x i16> <i16 poison, i16 16, i16 16>, %x
@@ -2135,7 +2135,7 @@ define <3 x i16> @shl_lshr_pow2_const_case1_poison1_vec(<3 x i16> %x) {
 define <3 x i16> @shl_lshr_pow2_const_case1_poison2_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_const_case1_poison2_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 poison, i16 4, i16 4>
-; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 8, i16 8, i16 8>, <3 x i16> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> splat (i16 8), <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %shl = shl <3 x i16> <i16 16, i16 16, i16 16>, %x
@@ -2146,8 +2146,8 @@ define <3 x i16> @shl_lshr_pow2_const_case1_poison2_vec(<3 x i16> %x) {
 
 define <3 x i16> @shl_lshr_pow2_const_case1_poison3_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_const_case1_poison3_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> <i16 16, i16 16, i16 16>, [[X:%.*]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> [[SHL]], <i16 5, i16 5, i16 5>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> splat (i16 16), [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> [[SHL]], splat (i16 5)
 ; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[LSHR]], <i16 poison, i16 8, i16 8>
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
@@ -2380,8 +2380,8 @@ define i16 @lshr_shl_pow2_const_negative_oneuse(i16 %x) {
 
 define <3 x i16> @lshr_shl_pow2_const_case1_uniform_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @lshr_shl_pow2_const_case1_uniform_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 12, i16 12, i16 12>
-; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 128, i16 128, i16 128>, <3 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], splat (i16 12)
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> splat (i16 128), <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %lshr = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, %x
@@ -2419,7 +2419,7 @@ define <3 x i16> @lshr_shl_pow2_const_case1_non_uniform_vec_negative(<3 x i16> %
 define <3 x i16> @lshr_shl_pow2_const_case1_poison1_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @lshr_shl_pow2_const_case1_poison1_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 -1, i16 12, i16 12>
-; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 128, i16 128, i16 128>, <3 x i16> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> splat (i16 128), <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %lshr = lshr <3 x i16> <i16 poison, i16 8192, i16 8192>, %x
@@ -2430,9 +2430,9 @@ define <3 x i16> @lshr_shl_pow2_const_case1_poison1_vec(<3 x i16> %x) {
 
 define <3 x i16> @lshr_shl_pow2_const_case1_poison2_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @lshr_shl_pow2_const_case1_poison2_vec(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> splat (i16 8192), [[X:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 poison, i16 6, i16 6>
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 128, i16 128, i16 128>
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], splat (i16 128)
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %lshr = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, %x
@@ -2443,8 +2443,8 @@ define <3 x i16> @lshr_shl_pow2_const_case1_poison2_vec(<3 x i16> %x) {
 
 define <3 x i16> @lshr_shl_pow2_const_case1_poison3_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @lshr_shl_pow2_const_case1_poison3_vec(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 6, i16 6, i16 6>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> splat (i16 8192), [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], splat (i16 6)
 ; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 poison, i16 128, i16 128>
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
@@ -2564,7 +2564,7 @@ define i32 @and_zext_multiuse(i32 %a, i1 %b) {
 
 define <2 x i32> @and_zext_vec(<2 x i32> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @and_zext_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[B:%.*]], <2 x i32> [[TMP1]], <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -2811,8 +2811,8 @@ define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_pass(i32 %x) {
 
 define <2 x i16> @add_constant_equal_with_the_top_bit_of_demandedbits_pass_vector(<2 x i16> %x) {
 ; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_pass_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], <i16 24, i16 24>
-; CHECK-NEXT:    [[AND:%.*]] = xor <2 x i16> [[TMP1]], <i16 16, i16 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], splat (i16 24)
+; CHECK-NEXT:    [[AND:%.*]] = xor <2 x i16> [[TMP1]], splat (i16 16)
 ; CHECK-NEXT:    ret <2 x i16> [[AND]]
 ;
   %add = add <2 x i16> %x, <i16 16, i16 16>

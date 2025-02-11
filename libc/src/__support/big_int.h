@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_UINT_H
-#define LLVM_LIBC_SRC___SUPPORT_UINT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_BIG_INT_H
+#define LLVM_LIBC_SRC___SUPPORT_BIG_INT_H
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/bit.h" // countl_zero
@@ -469,7 +469,7 @@ public:
                                                     !cpp::is_same_v<T, bool>>>
   LIBC_INLINE constexpr BigInt(T v) {
     constexpr size_t T_SIZE = sizeof(T) * CHAR_BIT;
-    const bool is_neg = Signed && (v < 0);
+    const bool is_neg = v < 0;
     for (size_t i = 0; i < WORD_COUNT; ++i) {
       if (v == 0) {
         extend(i, is_neg);
@@ -503,6 +503,12 @@ public:
 
   // TODO: Reuse the Sign type.
   LIBC_INLINE constexpr bool is_neg() const { return SIGNED && get_msb(); }
+
+  template <size_t OtherBits, bool OtherSigned, typename OtherWordType>
+  LIBC_INLINE constexpr explicit
+  operator BigInt<OtherBits, OtherSigned, OtherWordType>() const {
+    return BigInt<OtherBits, OtherSigned, OtherWordType>(this);
+  }
 
   template <typename T> LIBC_INLINE constexpr explicit operator T() const {
     return to<T>();
@@ -930,6 +936,18 @@ public:
   // Return the i-th word of the number.
   LIBC_INLINE constexpr WordType &operator[](size_t i) { return val[i]; }
 
+  // Return the i-th bit of the number.
+  LIBC_INLINE constexpr bool get_bit(size_t i) const {
+    const size_t word_index = i / WORD_SIZE;
+    return 1 & (val[word_index] >> (i % WORD_SIZE));
+  }
+
+  // Set the i-th bit of the number.
+  LIBC_INLINE constexpr void set_bit(size_t i) {
+    const size_t word_index = i / WORD_SIZE;
+    val[word_index] |= WordType(1) << (i % WORD_SIZE);
+  }
+
 private:
   LIBC_INLINE friend constexpr int cmp(const BigInt &lhs, const BigInt &rhs) {
     constexpr auto compare = [](WordType a, WordType b) {
@@ -962,7 +980,7 @@ private:
   }
 
   LIBC_INLINE constexpr void decrement() {
-    multiword::add_with_carry(val, cpp::array<WordType, 1>{1});
+    multiword::sub_with_borrow(val, cpp::array<WordType, 1>{1});
   }
 
   LIBC_INLINE constexpr void extend(size_t index, bool is_neg) {
@@ -983,12 +1001,6 @@ private:
   LIBC_INLINE constexpr void clear_msb() {
     val.back() &= mask_trailing_ones<WordType, WORD_SIZE - 1>();
   }
-
-  LIBC_INLINE constexpr void set_bit(size_t i) {
-    const size_t word_index = i / WORD_SIZE;
-    val[word_index] |= WordType(1) << (i % WORD_SIZE);
-  }
-
   LIBC_INLINE constexpr static Division divide_unsigned(const BigInt &dividend,
                                                         const BigInt &divider) {
     BigInt remainder = dividend;
@@ -1058,6 +1070,8 @@ struct WordTypeSelector : cpp::type_identity<
 // Except if we request 16 or 32 bits explicitly.
 template <> struct WordTypeSelector<16> : cpp::type_identity<uint16_t> {};
 template <> struct WordTypeSelector<32> : cpp::type_identity<uint32_t> {};
+template <> struct WordTypeSelector<96> : cpp::type_identity<uint32_t> {};
+
 template <size_t Bits>
 using WordTypeSelectorT = typename WordTypeSelector<Bits>::type;
 } // namespace internal
@@ -1373,4 +1387,4 @@ first_trailing_one(T value) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_UINT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_BIG_INT_H

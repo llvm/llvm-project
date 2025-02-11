@@ -10,6 +10,7 @@
 #define _LIBCPP___FUNCTIONAL_HASH_H
 
 #include <__config>
+#include <__cstddef/nullptr_t.h>
 #include <__functional/unary_function.h>
 #include <__fwd/functional.h>
 #include <__type_traits/conjunction.h>
@@ -20,7 +21,6 @@
 #include <__type_traits/underlying_type.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -373,12 +373,12 @@ struct _LIBCPP_TEMPLATE_VIS hash<char32_t> : public __unary_function<char32_t, s
   _LIBCPP_HIDE_FROM_ABI size_t operator()(char32_t __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<wchar_t> : public __unary_function<wchar_t, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(wchar_t __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<short> : public __unary_function<short, size_t> {
@@ -407,7 +407,11 @@ struct _LIBCPP_TEMPLATE_VIS hash<long> : public __unary_function<long, size_t> {
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<unsigned long> : public __unary_function<unsigned long, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(unsigned long __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(unsigned long __v) const _NOEXCEPT {
+    static_assert(sizeof(size_t) >= sizeof(unsigned long),
+                  "This would be a terrible hash function on a platform where size_t is smaller than unsigned long");
+    return static_cast<size_t>(__v);
+  }
 };
 
 template <>
@@ -518,7 +522,7 @@ template <class _Key, class _Hash>
 using __check_hash_requirements _LIBCPP_NODEBUG =
     integral_constant<bool,
                       is_copy_constructible<_Hash>::value && is_move_constructible<_Hash>::value &&
-                          __invokable_r<size_t, _Hash, _Key const&>::value >;
+                          __is_invocable_r_v<size_t, _Hash, _Key const&> >;
 
 template <class _Key, class _Hash = hash<_Key> >
 using __has_enabled_hash _LIBCPP_NODEBUG =

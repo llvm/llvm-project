@@ -6,34 +6,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_UNIQUE_COPY_H
-#define _LIBCPP___ALGORITHM_RANGES_UNIQUE_COPY_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_UNIQUE_COPY_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_UNIQUE_COPY_H
 
-#include <__algorithm/in_out_result.h>
-#include <__algorithm/iterator_operations.h>
-#include <__algorithm/make_projected.h>
-#include <__algorithm/unique_copy.h>
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__functional/identity.h>
-#include <__functional/invoke.h>
-#include <__functional/ranges_operations.h>
-#include <__iterator/concepts.h>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/projected.h>
-#include <__ranges/access.h>
-#include <__ranges/concepts.h>
-#include <__ranges/dangling.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <__utility/pair.h>
+#include <__cxx03/__algorithm/in_out_result.h>
+#include <__cxx03/__algorithm/iterator_operations.h>
+#include <__cxx03/__algorithm/make_projected.h>
+#include <__cxx03/__algorithm/unique_copy.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/identity.h>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__functional/ranges_operations.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__iterator/projected.h>
+#include <__cxx03/__ranges/access.h>
+#include <__cxx03/__ranges/concepts.h>
+#include <__cxx03/__ranges/dangling.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 20
 
@@ -117,4 +117,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_UNIQUE_COPY_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_UNIQUE_COPY_H

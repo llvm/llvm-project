@@ -14,7 +14,6 @@
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
 #include <__vector/vector.h>
-#include <cstddef>
 #include <initializer_list>
 #include <iosfwd>
 #include <numeric>

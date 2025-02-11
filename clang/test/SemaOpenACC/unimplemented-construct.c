@@ -4,8 +4,8 @@
 #pragma acc routine
 
 struct S {
-// expected-warning@+1{{OpenACC construct 'wait' not yet implemented, pragma ignored}}
-#pragma acc wait
+// expected-warning@+1{{OpenACC construct 'declare' not yet implemented, pragma ignored}}
+#pragma acc declare 
 int foo;
 };
 

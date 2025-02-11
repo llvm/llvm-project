@@ -1,4 +1,4 @@
-! RUN: bbc -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false -fwrapv %s -o - | FileCheck %s
 
 module components_test
   type t1
@@ -115,7 +115,7 @@ subroutine issue772(a, x)
   ! CHECK: fir.call @_QPibar()
   ! CHECK-NOT: fir.call @_QPibar()
   print *, a(20)%b(1:ibar():1)
-  ! CHECK return
+  ! CHECK: return
 end subroutine
 
 ! -----------------------------------------------------------------------------

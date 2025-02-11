@@ -30,6 +30,7 @@ public:
   const SPIRVRegisterInfo &getRegisterInfo() const { return RI; }
   bool isHeaderInstr(const MachineInstr &MI) const;
   bool isConstantInstr(const MachineInstr &MI) const;
+  bool isSpecConstantInstr(const MachineInstr &MI) const;
   bool isInlineAsmDefInstr(const MachineInstr &MI) const;
   bool isTypeDeclInstr(const MachineInstr &MI) const;
   bool isDecorationInstr(const MachineInstr &MI) const;

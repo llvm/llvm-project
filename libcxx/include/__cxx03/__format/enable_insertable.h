@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_ENABLE_INSERTABLE_H
-#define _LIBCPP___FORMAT_ENABLE_INSERTABLE_H
+#ifndef _LIBCPP___CXX03___FORMAT_ENABLE_INSERTABLE_H
+#define _LIBCPP___CXX03___FORMAT_ENABLE_INSERTABLE_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -32,4 +32,4 @@ inline constexpr bool __enable_insertable = false;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_ENABLE_INSERTABLE_H
+#endif // _LIBCPP___CXX03___FORMAT_ENABLE_INSERTABLE_H

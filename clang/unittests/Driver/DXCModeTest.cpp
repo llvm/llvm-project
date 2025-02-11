@@ -219,7 +219,8 @@ TEST(DxcModeTest, DefaultEntry) {
   const char *Args[] = {"clang", "--driver-mode=dxc", "-Tcs_6_7", "foo.hlsl"};
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*InMemoryFileSystem,
+                                          new DiagnosticOptions());
 
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;

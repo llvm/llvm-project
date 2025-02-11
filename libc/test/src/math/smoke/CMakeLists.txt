@@ -13,6 +13,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cosf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cosf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.cosf16
+)
+
+add_fp_unittest(
   cospif_test
   SUITE
     libc-math-smoke-tests
@@ -26,6 +37,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cospif16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cospif16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.cospif16
+    libc.src.__support.FPUtil.cast
+)
+
+add_fp_unittest(
   sinf_test
   SUITE
     libc-math-smoke-tests
@@ -36,6 +59,18 @@ add_fp_unittest(
     libc.src.math.sinf
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  sinf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sinf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.sinf16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
@@ -86,6 +121,28 @@ add_fp_unittest(
     libc.src.math.tanf
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  tanf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tanf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.tanf16
+)
+
+add_fp_unittest(
+  tanpif16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tanpif16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.tanpif16
 )
 
 add_fp_unittest(
@@ -1196,6 +1253,7 @@ add_fp_unittest(
     libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.exp2m1f16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
@@ -1246,6 +1304,17 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.math.exp10m1f16
     libc.src.__support.FPUtil.cast
+)
+
+add_fp_unittest(
+  exp10m1f_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    exp10m1f_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.exp10m1f
 )
 
 add_fp_unittest(
@@ -2924,7 +2993,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -2938,7 +3007,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -2952,7 +3021,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -2969,7 +3038,7 @@ add_fp_unittest(
     libc.src.math.sqrtf128
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -3491,8 +3560,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fmaf
     libc.src.__support.macros.properties.types
-  FLAGS
-    FMA_OPT__ONLY
 )
 
 add_fp_unittest(
@@ -3888,6 +3955,17 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.math.asinf
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  asinf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.asinf16  
 )
 
 add_fp_unittest(

@@ -764,9 +764,10 @@ class stddeque_SynthProvider:
                     map_.GetChildMemberWithName("__end_cap_")
                 )
             else:
-                map_endcap = map_.GetChildMemberWithName(
-                    "__end_cap_"
-                ).GetValueAsUnsigned(0)
+                map_endcap = map_.GetChildMemberWithName("__cap_")
+                if not map_endcap.IsValid():
+                    map_endcap = map_.GetChildMemberWithName("__end_cap_")
+                map_endcap = map_endcap.GetValueAsUnsigned(0)
 
             # check consistency
             if not map_first <= map_begin <= map_end <= map_endcap:

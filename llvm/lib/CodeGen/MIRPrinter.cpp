@@ -133,6 +133,9 @@ public:
   void convertMachineMetadataNodes(yaml::MachineFunction &YMF,
                                    const MachineFunction &MF,
                                    MachineModuleSlotTracker &MST);
+  void convertCalledGlobals(yaml::MachineFunction &YMF,
+                            const MachineFunction &MF,
+                            MachineModuleSlotTracker &MST);
 
 private:
   void initRegisterMaskIds(const MachineFunction &MF);
@@ -269,6 +272,8 @@ void MIRPrinter::print(const MachineFunction &MF) {
   // function.
   convertMachineMetadataNodes(YamlMF, MF, MST);
 
+  convertCalledGlobals(YamlMF, MF, MST);
+
   yaml::Output Out(OS);
   if (!SimplifyMIR)
       Out.setWriteDefaultValues(true);
@@ -345,7 +350,7 @@ void MIRPrinter::convert(yaml::MachineFunction &YamlMF,
     if (PreferredReg)
       printRegMIR(PreferredReg, VReg.PreferredRegister, TRI);
     printRegFlags(Reg, VReg.RegisterFlags, MF, TRI);
-    YamlMF.VirtualRegisters.push_back(VReg);
+    YamlMF.VirtualRegisters.push_back(std::move(VReg));
   }
 
   // Print the live ins.
@@ -354,7 +359,7 @@ void MIRPrinter::convert(yaml::MachineFunction &YamlMF,
     printRegMIR(LI.first, LiveIn.Register, TRI);
     if (LI.second)
       printRegMIR(LI.second, LiveIn.VirtualRegister, TRI);
-    YamlMF.LiveIns.push_back(LiveIn);
+    YamlMF.LiveIns.push_back(std::move(LiveIn));
   }
 
   // Prints the callee saved registers.
@@ -364,9 +369,9 @@ void MIRPrinter::convert(yaml::MachineFunction &YamlMF,
     for (const MCPhysReg *I = CalleeSavedRegs; *I; ++I) {
       yaml::FlowStringValue Reg;
       printRegMIR(*I, Reg, TRI);
-      CalleeSavedRegisters.push_back(Reg);
+      CalleeSavedRegisters.push_back(std::move(Reg));
     }
-    YamlMF.CalleeSavedRegisters = CalleeSavedRegisters;
+    YamlMF.CalleeSavedRegisters = std::move(CalleeSavedRegisters);
   }
 }
 
@@ -447,7 +452,7 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
     YamlObject.IsAliased = MFI.isAliasedObjectIndex(I);
     // Save the ID' position in FixedStackObjects storage vector.
     FixedStackObjectsIdx[ID] = YMF.FixedStackObjects.size();
-    YMF.FixedStackObjects.push_back(YamlObject);
+    YMF.FixedStackObjects.push_back(std::move(YamlObject));
     StackObjectOperandMapping.insert(
         std::make_pair(I, FrameIndexOperand::createFixed(ID)));
   }
@@ -501,11 +506,11 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
         auto &Object =
             YMF.FixedStackObjects
                 [FixedStackObjectsIdx[FrameIdx + MFI.getNumFixedObjects()]];
-        Object.CalleeSavedRegister = Reg;
+        Object.CalleeSavedRegister = std::move(Reg);
         Object.CalleeSavedRestored = CSInfo.isRestored();
       } else {
         auto &Object = YMF.StackObjects[StackObjectsIdx[FrameIdx]];
-        Object.CalleeSavedRegister = Reg;
+        Object.CalleeSavedRegister = std::move(Reg);
         Object.CalleeSavedRestored = CSInfo.isRestored();
       }
     }
@@ -555,7 +560,7 @@ void MIRPrinter::convertCallSiteObjects(yaml::MachineFunction &YMF,
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
   for (auto CSInfo : MF.getCallSitesInfo()) {
     yaml::CallSiteInfo YmlCS;
-    yaml::CallSiteInfo::MachineInstrLoc CallLocation;
+    yaml::MachineInstrLoc CallLocation;
 
     // Prepare instruction position.
     MachineBasicBlock::const_instr_iterator CallI = CSInfo.first->getIterator();
@@ -571,7 +576,7 @@ void MIRPrinter::convertCallSiteObjects(yaml::MachineFunction &YMF,
       printRegMIR(ArgReg.Reg, YmlArgReg.Reg, TRI);
       YmlCS.ArgForwardingRegs.emplace_back(YmlArgReg);
     }
-    YMF.CallSitesInfo.push_back(YmlCS);
+    YMF.CallSitesInfo.push_back(std::move(YmlCS));
   }
 
   // Sort call info by position of call instructions.
@@ -592,8 +597,31 @@ void MIRPrinter::convertMachineMetadataNodes(yaml::MachineFunction &YMF,
     std::string NS;
     raw_string_ostream StrOS(NS);
     MD.second->print(StrOS, MST, MF.getFunction().getParent());
-    YMF.MachineMetadataNodes.push_back(NS);
+    YMF.MachineMetadataNodes.push_back(std::move(NS));
   }
+}
+
+void MIRPrinter::convertCalledGlobals(yaml::MachineFunction &YMF,
+                                      const MachineFunction &MF,
+                                      MachineModuleSlotTracker &MST) {
+  for (const auto &[CallInst, CG] : MF.getCalledGlobals()) {
+    yaml::MachineInstrLoc CallSite;
+    CallSite.BlockNum = CallInst->getParent()->getNumber();
+    CallSite.Offset = std::distance(CallInst->getParent()->instr_begin(),
+                                    CallInst->getIterator());
+
+    yaml::CalledGlobal YamlCG{CallSite, CG.Callee->getName().str(),
+                              CG.TargetFlags};
+    YMF.CalledGlobals.push_back(std::move(YamlCG));
+  }
+
+  // Sort by position of call instructions.
+  llvm::sort(YMF.CalledGlobals.begin(), YMF.CalledGlobals.end(),
+             [](yaml::CalledGlobal A, yaml::CalledGlobal B) {
+               if (A.CallSite.BlockNum == B.CallSite.BlockNum)
+                 return A.CallSite.Offset < B.CallSite.Offset;
+               return A.CallSite.BlockNum < B.CallSite.BlockNum;
+             });
 }
 
 void MIRPrinter::convert(yaml::MachineFunction &MF,
@@ -610,11 +638,11 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
 
     yaml::MachineConstantPoolValue YamlConstant;
     YamlConstant.ID = ID++;
-    YamlConstant.Value = Str;
+    YamlConstant.Value = std::move(Str);
     YamlConstant.Alignment = Constant.getAlign();
     YamlConstant.IsTargetSpecific = Constant.isMachineConstantPoolEntry();
 
-    MF.Constants.push_back(YamlConstant);
+    MF.Constants.push_back(std::move(YamlConstant));
   }
 }
 
@@ -633,7 +661,7 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
       Entry.Blocks.push_back(Str);
       Str.clear();
     }
-    YamlJTI.Entries.push_back(Entry);
+    YamlJTI.Entries.push_back(std::move(Entry));
   }
 }
 
@@ -837,6 +865,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "disjoint ";
   if (MI.getFlag(MachineInstr::NoUSWrap))
     OS << "nusw ";
+  if (MI.getFlag(MachineInstr::SameSign))
+    OS << "samesign ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)
@@ -977,10 +1007,9 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     unsigned TiedOperandIdx = 0;
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
       TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
-    const TargetIntrinsicInfo *TII = MI.getMF()->getTarget().getIntrinsicInfo();
     Op.print(OS, MST, TypeToPrint, OpIdx, PrintDef, /*IsStandalone=*/false,
-             ShouldPrintRegisterTies, TiedOperandIdx, TRI, TII);
-      OS << formatOperandComment(MOComment);
+             ShouldPrintRegisterTies, TiedOperandIdx, TRI);
+    OS << formatOperandComment(MOComment);
     break;
   }
   case MachineOperand::MO_FrameIndex:

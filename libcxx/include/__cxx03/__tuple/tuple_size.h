@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_TUPLE_SIZE_H
-#define _LIBCPP___TUPLE_TUPLE_SIZE_H
+#ifndef _LIBCPP___CXX03___TUPLE_TUPLE_SIZE_H
+#define _LIBCPP___CXX03___TUPLE_TUPLE_SIZE_H
 
-#include <__config>
-#include <__fwd/tuple.h>
-#include <__tuple/tuple_types.h>
-#include <__type_traits/is_const.h>
-#include <__type_traits/is_volatile.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/tuple.h>
+#include <__cxx03/__tuple/tuple_types.h>
+#include <__cxx03/__type_traits/is_const.h>
+#include <__cxx03/__type_traits/is_volatile.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -72,4 +72,4 @@ inline constexpr size_t tuple_size_v = tuple_size<_Tp>::value;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TUPLE_TUPLE_SIZE_H
+#endif // _LIBCPP___CXX03___TUPLE_TUPLE_SIZE_H

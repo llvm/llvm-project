@@ -914,10 +914,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     if (!VI.Var || !VI.inStackSlot())
       continue;
     int Slot = VI.getStackSlot();
-    if (SlotRemap.count(Slot)) {
+    if (auto It = SlotRemap.find(Slot); It != SlotRemap.end()) {
       LLVM_DEBUG(dbgs() << "Remapping debug info for ["
                         << cast<DILocalVariable>(VI.Var)->getName() << "].\n");
-      VI.updateStackSlot(SlotRemap[Slot]);
+      VI.updateStackSlot(It->second);
       FixedDbg++;
     }
   }
@@ -937,7 +937,8 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     // If From is before wo, its possible that there is a use of From between
     // them.
     if (From->comesBefore(To))
-      const_cast<AllocaInst*>(To)->moveBefore(const_cast<AllocaInst*>(From));
+      const_cast<AllocaInst *>(To)->moveBefore(
+          const_cast<AllocaInst *>(From)->getIterator());
 
     // AA might be used later for instruction scheduling, and we need it to be
     // able to deduce the correct aliasing releationships between pointers
@@ -948,7 +949,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     Instruction *Inst = const_cast<AllocaInst *>(To);
     if (From->getType() != To->getType()) {
       BitCastInst *Cast = new BitCastInst(Inst, From->getType());
-      Cast->insertAfter(Inst);
+      Cast->insertAfter(Inst->getIterator());
       Inst = Cast;
     }
 
@@ -1003,10 +1004,11 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         if (!AI)
           continue;
 
-        if (!Allocas.count(AI))
+        auto It = Allocas.find(AI);
+        if (It == Allocas.end())
           continue;
 
-        MMO->setValue(Allocas[AI]);
+        MMO->setValue(It->second);
         FixedMemOp++;
       }
 
@@ -1113,9 +1115,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   if (WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo())
     for (WinEHTryBlockMapEntry &TBME : EHInfo->TryBlockMap)
       for (WinEHHandlerType &H : TBME.HandlerArray)
-        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max() &&
-            SlotRemap.count(H.CatchObj.FrameIndex))
-          H.CatchObj.FrameIndex = SlotRemap[H.CatchObj.FrameIndex];
+        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max())
+          if (auto It = SlotRemap.find(H.CatchObj.FrameIndex);
+              It != SlotRemap.end())
+            H.CatchObj.FrameIndex = It->second;
 
   LLVM_DEBUG(dbgs() << "Fixed " << FixedMemOp << " machine memory operands.\n");
   LLVM_DEBUG(dbgs() << "Fixed " << FixedDbg << " debug locations.\n");
@@ -1172,8 +1175,8 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
   // Expunge slot remap map.
   for (unsigned i=0; i < NumSlots; ++i) {
     // If we are remapping i
-    if (SlotRemap.count(i)) {
-      int Target = SlotRemap[i];
+    if (auto It = SlotRemap.find(i); It != SlotRemap.end()) {
+      int Target = It->second;
       // As long as our target is mapped to something else, follow it.
       while (SlotRemap.count(Target)) {
         Target = SlotRemap[Target];
@@ -1193,9 +1196,6 @@ bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
 
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
   StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
   if (SC.run(MF))
     return PreservedAnalyses::none();

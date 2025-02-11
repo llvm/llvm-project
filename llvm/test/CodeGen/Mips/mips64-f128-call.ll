@@ -1,4 +1,4 @@
-; RUN: llc -march=mips64el -mcpu=mips64r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 < %s | FileCheck %s
 
 @gld0 = external global fp128
 @gld1 = external global fp128

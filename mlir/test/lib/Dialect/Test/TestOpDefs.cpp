@@ -507,6 +507,38 @@ void CustomResultsNameOp::getAsmResultNames(
 }
 
 //===----------------------------------------------------------------------===//
+// ResultNameFromTypeOp
+//===----------------------------------------------------------------------===//
+
+void ResultNameFromTypeOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  auto result = getResult();
+  auto setResultNameFn = [&](::llvm::StringRef name) {
+    setNameFn(result, name);
+  };
+  auto opAsmTypeInterface =
+      ::mlir::cast<::mlir::OpAsmTypeInterface>(result.getType());
+  opAsmTypeInterface.getAsmName(setResultNameFn);
+}
+
+//===----------------------------------------------------------------------===//
+// BlockArgumentNameFromTypeOp
+//===----------------------------------------------------------------------===//
+
+void BlockArgumentNameFromTypeOp::getAsmBlockArgumentNames(
+    ::mlir::Region &region, ::mlir::OpAsmSetValueNameFn setNameFn) {
+  for (auto &block : region) {
+    for (auto arg : block.getArguments()) {
+      if (auto opAsmTypeInterface =
+              ::mlir::dyn_cast<::mlir::OpAsmTypeInterface>(arg.getType())) {
+        auto setArgNameFn = [&](StringRef name) { setNameFn(arg, name); };
+        opAsmTypeInterface.getAsmName(setArgNameFn);
+      }
+    }
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // ResultTypeWithTraitOp
 //===----------------------------------------------------------------------===//
 
@@ -760,12 +792,13 @@ void TestReflectBoundsOp::inferResultRanges(
   Type sIntTy, uIntTy;
   // For plain `IntegerType`s, we can derive the appropriate signed and unsigned
   // Types for the Attributes.
-  if (auto intTy = llvm::dyn_cast<IntegerType>(getType())) {
+  Type type = getElementTypeOrSelf(getType());
+  if (auto intTy = llvm::dyn_cast<IntegerType>(type)) {
     unsigned bitwidth = intTy.getWidth();
     sIntTy = b.getIntegerType(bitwidth, /*isSigned=*/true);
     uIntTy = b.getIntegerType(bitwidth, /*isSigned=*/false);
   } else
-    sIntTy = uIntTy = getType();
+    sIntTy = uIntTy = type;
 
   setUminAttr(b.getIntegerAttr(uIntTy, range.umin()));
   setUmaxAttr(b.getIntegerAttr(uIntTy, range.umax()));
@@ -1097,7 +1130,7 @@ CallInterfaceCallable TestCallAndStoreOp::getCallableForCallee() {
 }
 
 void TestCallAndStoreOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  setCalleeAttr(callee.get<SymbolRefAttr>());
+  setCalleeAttr(cast<SymbolRefAttr>(callee));
 }
 
 Operation::operand_range TestCallAndStoreOp::getArgOperands() {
@@ -1116,7 +1149,7 @@ CallInterfaceCallable TestCallOnDeviceOp::getCallableForCallee() {
 }
 
 void TestCallOnDeviceOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  setCalleeAttr(callee.get<SymbolRefAttr>());
+  setCalleeAttr(cast<SymbolRefAttr>(callee));
 }
 
 Operation::operand_range TestCallOnDeviceOp::getArgOperands() {

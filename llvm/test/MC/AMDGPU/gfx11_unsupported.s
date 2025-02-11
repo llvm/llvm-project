@@ -2064,3 +2064,9 @@ ds_subrev_u64 v1, v[2:3]
 
 ds_subrev_rtn_u64 v[5:6], v1, v[2:3]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2c_f32_bf16 v5, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_bpermute_fi_b32 v5, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

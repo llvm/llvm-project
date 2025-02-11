@@ -14,7 +14,7 @@
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
 namespace mlir {
 namespace arith {
@@ -157,11 +157,7 @@ struct ArithUnsignedWhenEquivalentPass
     RewritePatternSet patterns(ctx);
     populateUnsignedWhenEquivalentPatterns(patterns, solver);
 
-    GreedyRewriteConfig config;
-    config.listener = &listener;
-
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
-      signalPassFailure();
+    walkAndApplyPatterns(op, std::move(patterns), &listener);
   }
 };
 } // end anonymous namespace

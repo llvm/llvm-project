@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_EMPTY_VIEW_H
-#define _LIBCPP___RANGES_EMPTY_VIEW_H
+#ifndef _LIBCPP___CXX03___RANGES_EMPTY_VIEW_H
+#define _LIBCPP___CXX03___RANGES_EMPTY_VIEW_H
 
-#include <__config>
-#include <__ranges/enable_borrowed_range.h>
-#include <__ranges/view_interface.h>
-#include <__type_traits/is_object.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__ranges/enable_borrowed_range.h>
+#include <__cxx03/__ranges/view_interface.h>
+#include <__cxx03/__type_traits/is_object.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -51,4 +51,4 @@ inline constexpr empty_view<_Tp> empty{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_EMPTY_VIEW_H
+#endif // _LIBCPP___CXX03___RANGES_EMPTY_VIEW_H

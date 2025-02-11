@@ -19,7 +19,6 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
@@ -1020,15 +1019,19 @@ OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
   return new (C) OMPPartialClause();
 }
 
-OMPAllocateClause *
-OMPAllocateClause::Create(const ASTContext &C, SourceLocation StartLoc,
-                          SourceLocation LParenLoc, Expr *Allocator,
-                          SourceLocation ColonLoc, SourceLocation EndLoc,
-                          ArrayRef<Expr *> VL) {
+OMPAllocateClause *OMPAllocateClause::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+    Expr *Allocator, Expr *Alignment, SourceLocation ColonLoc,
+    OpenMPAllocateClauseModifier Modifier1, SourceLocation Modifier1Loc,
+    OpenMPAllocateClauseModifier Modifier2, SourceLocation Modifier2Loc,
+    SourceLocation EndLoc, ArrayRef<Expr *> VL) {
+
   // Allocate space for private variables and initializer expressions.
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
-  auto *Clause = new (Mem) OMPAllocateClause(StartLoc, LParenLoc, Allocator,
-                                             ColonLoc, EndLoc, VL.size());
+  auto *Clause = new (Mem) OMPAllocateClause(
+      StartLoc, LParenLoc, Allocator, Alignment, ColonLoc, Modifier1,
+      Modifier1Loc, Modifier2, Modifier2Loc, EndLoc, VL.size());
+
   Clause->setVarRefs(VL);
   return Clause;
 }
@@ -2070,6 +2073,11 @@ void OMPClausePrinter::VisitOMPNoOpenMPRoutinesClause(
   OS << "no_openmp_routines";
 }
 
+void OMPClausePrinter::VisitOMPNoOpenMPConstructsClause(
+    OMPNoOpenMPConstructsClause *) {
+  OS << "no_openmp_constructs";
+}
+
 void OMPClausePrinter::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {
   OS << "no_parallelism";
 }
@@ -2241,13 +2249,48 @@ void OMPClausePrinter::VisitOMPClauseList(T *Node, char StartSym) {
 void OMPClausePrinter::VisitOMPAllocateClause(OMPAllocateClause *Node) {
   if (Node->varlist_empty())
     return;
+
+  Expr *FirstModifier = nullptr;
+  Expr *SecondModifier = nullptr;
+  auto FirstAllocMod = Node->getFirstAllocateModifier();
+  auto SecondAllocMod = Node->getSecondAllocateModifier();
+  bool FirstUnknown = FirstAllocMod == OMPC_ALLOCATE_unknown;
+  bool SecondUnknown = SecondAllocMod == OMPC_ALLOCATE_unknown;
+  if (FirstAllocMod == OMPC_ALLOCATE_allocator ||
+      (FirstAllocMod == OMPC_ALLOCATE_unknown && Node->getAllocator())) {
+    FirstModifier = Node->getAllocator();
+    SecondModifier = Node->getAlignment();
+  } else {
+    FirstModifier = Node->getAlignment();
+    SecondModifier = Node->getAllocator();
+  }
+
   OS << "allocate";
-  if (Expr *Allocator = Node->getAllocator()) {
+  // If we have any explicit modifiers.
+  if (FirstModifier) {
     OS << "(";
-    Allocator->printPretty(OS, nullptr, Policy, 0);
+    if (!FirstUnknown) {
+      OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(), FirstAllocMod);
+      OS << "(";
+    }
+    FirstModifier->printPretty(OS, nullptr, Policy, 0);
+    if (!FirstUnknown)
+      OS << ")";
+    if (SecondModifier) {
+      OS << ", ";
+      if (!SecondUnknown) {
+        OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
+                                            SecondAllocMod);
+        OS << "(";
+      }
+      SecondModifier->printPretty(OS, nullptr, Policy, 0);
+      if (!SecondUnknown)
+        OS << ")";
+    }
     OS << ":";
     VisitOMPClauseList(Node, ' ');
   } else {
+    // No modifiers. Just print the variable list.
     VisitOMPClauseList(Node, '(');
   }
   OS << ")";
@@ -2889,9 +2932,13 @@ llvm::raw_ostream &clang::operator<<(llvm::raw_ostream &OS,
 TargetOMPContext::TargetOMPContext(
     ASTContext &ASTCtx, std::function<void(StringRef)> &&DiagUnknownTrait,
     const FunctionDecl *CurrentFunctionDecl,
-    ArrayRef<llvm::omp::TraitProperty> ConstructTraits)
+    ArrayRef<llvm::omp::TraitProperty> ConstructTraits, int DeviceNum)
     : OMPContext(ASTCtx.getLangOpts().OpenMPIsTargetDevice,
-                 ASTCtx.getTargetInfo().getTriple()),
+                 ASTCtx.getTargetInfo().getTriple(),
+                 ASTCtx.getLangOpts().OMPTargetTriples.empty()
+                     ? llvm::Triple()
+                     : ASTCtx.getLangOpts().OMPTargetTriples[0],
+                 DeviceNum),
       FeatureValidityCheck([&](StringRef FeatureName) {
         return ASTCtx.getTargetInfo().isValidFeatureName(FeatureName);
       }),

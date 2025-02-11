@@ -29,7 +29,7 @@ define <4 x i32> @constantMulARM64() nounwind readnone ssp {
 ; CHECK-LABEL: define <4 x i32> @constantMulARM64(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <4 x i32> <i32 6, i32 6, i32 6, i32 6>
+; CHECK-NEXT:    ret <4 x i32> splat (i32 6)
 ;
 entry:
   %a = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> <i16 3, i16 3, i16 3, i16 3>, <4 x i16> <i16 2, i16 2, i16 2, i16 2>) nounwind
@@ -40,7 +40,7 @@ define <4 x i32> @constantMulSARM64() nounwind readnone ssp {
 ; CHECK-LABEL: define <4 x i32> @constantMulSARM64(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    ret <4 x i32> splat (i32 -1)
 ;
 entry:
   %b = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>, <4 x i16> <i16 1, i16 1, i16 1, i16 1>) nounwind
@@ -51,7 +51,7 @@ define <4 x i32> @constantMulUARM64() nounwind readnone ssp {
 ; CHECK-LABEL: define <4 x i32> @constantMulUARM64(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <4 x i32> <i32 65535, i32 65535, i32 65535, i32 65535>
+; CHECK-NEXT:    ret <4 x i32> splat (i32 65535)
 ;
 entry:
   %b = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>, <4 x i16> <i16 1, i16 1, i16 1, i16 1>) nounwind
@@ -62,7 +62,7 @@ define <4 x i32> @complex1ARM64(<4 x i16> %x) nounwind readnone ssp {
 ; CHECK-LABEL: define <4 x i32> @complex1ARM64(
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> <i16 2, i16 2, i16 2, i16 2>, <4 x i16> [[X]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> splat (i16 2), <4 x i16> [[X]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret <4 x i32> [[A]]
 ;
 entry:
@@ -75,7 +75,7 @@ define <4 x i32> @complex2ARM64(<4 x i32> %x) nounwind readnone ssp {
 ; CHECK-LABEL: define <4 x i32> @complex2ARM64(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B:%.*]] = add <4 x i32> [[X]], <i32 6, i32 6, i32 6, i32 6>
+; CHECK-NEXT:    [[B:%.*]] = add <4 x i32> [[X]], splat (i32 6)
 ; CHECK-NEXT:    ret <4 x i32> [[B]]
 ;
 entry:

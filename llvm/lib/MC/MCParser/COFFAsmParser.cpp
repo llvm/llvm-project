@@ -16,7 +16,6 @@
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/SectionKind.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -71,6 +70,8 @@ class COFFAsmParser : public MCAsmParserExtension {
     addDirectiveHandler<&COFFAsmParser::parseDirectiveSymbolAttribute>(
         ".weak_anti_dep");
     addDirectiveHandler<&COFFAsmParser::parseDirectiveCGProfile>(".cg_profile");
+    addDirectiveHandler<&COFFAsmParser::parseDirectiveSecNum>(".secnum");
+    addDirectiveHandler<&COFFAsmParser::parseDirectiveSecOffset>(".secoffset");
 
     // Win64 EH directives.
     addDirectiveHandler<&COFFAsmParser::parseSEHDirectiveStartProc>(
@@ -91,6 +92,10 @@ class COFFAsmParser : public MCAsmParserExtension {
         ".seh_stackalloc");
     addDirectiveHandler<&COFFAsmParser::parseSEHDirectiveEndProlog>(
         ".seh_endprologue");
+    addDirectiveHandler<&COFFAsmParser::ParseSEHDirectiveBeginEpilog>(
+        ".seh_startepilogue");
+    addDirectiveHandler<&COFFAsmParser::ParseSEHDirectiveEndEpilog>(
+        ".seh_endepilogue");
   }
 
   bool parseSectionDirectiveText(StringRef, SMLoc) {
@@ -127,6 +132,8 @@ class COFFAsmParser : public MCAsmParserExtension {
   bool parseDirectiveLinkOnce(StringRef, SMLoc);
   bool parseDirectiveRVA(StringRef, SMLoc);
   bool parseDirectiveCGProfile(StringRef, SMLoc);
+  bool parseDirectiveSecNum(StringRef, SMLoc);
+  bool parseDirectiveSecOffset(StringRef, SMLoc);
 
   // Win64 EH directives.
   bool parseSEHDirectiveStartProc(StringRef, SMLoc);
@@ -138,6 +145,8 @@ class COFFAsmParser : public MCAsmParserExtension {
   bool parseSEHDirectiveHandlerData(StringRef, SMLoc);
   bool parseSEHDirectiveAllocStack(StringRef, SMLoc);
   bool parseSEHDirectiveEndProlog(StringRef, SMLoc);
+  bool ParseSEHDirectiveBeginEpilog(StringRef, SMLoc);
+  bool ParseSEHDirectiveEndEpilog(StringRef, SMLoc);
 
   bool parseAtUnwindOrAtExcept(bool &unwind, bool &except);
   bool parseDirectiveSymbolAttribute(StringRef Directive, SMLoc);
@@ -578,6 +587,36 @@ bool COFFAsmParser::parseDirectiveSymIdx(StringRef, SMLoc) {
   return false;
 }
 
+bool COFFAsmParser::parseDirectiveSecNum(StringRef, SMLoc) {
+  StringRef SymbolID;
+  if (getParser().parseIdentifier(SymbolID))
+    return TokError("expected identifier in directive");
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in directive");
+
+  MCSymbol *Symbol = getContext().getOrCreateSymbol(SymbolID);
+
+  Lex();
+  getStreamer().emitCOFFSecNumber(Symbol);
+  return false;
+}
+
+bool COFFAsmParser::parseDirectiveSecOffset(StringRef, SMLoc) {
+  StringRef SymbolID;
+  if (getParser().parseIdentifier(SymbolID))
+    return TokError("expected identifier in directive");
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in directive");
+
+  MCSymbol *Symbol = getContext().getOrCreateSymbol(SymbolID);
+
+  Lex();
+  getStreamer().emitCOFFSecOffset(Symbol);
+  return false;
+}
+
 /// ::= [ identifier ]
 bool COFFAsmParser::parseCOMDATType(COFF::COMDATType &Type) {
   StringRef TypeId = getTok().getIdentifier();
@@ -713,6 +752,18 @@ bool COFFAsmParser::parseSEHDirectiveAllocStack(StringRef, SMLoc Loc) {
 bool COFFAsmParser::parseSEHDirectiveEndProlog(StringRef, SMLoc Loc) {
   Lex();
   getStreamer().emitWinCFIEndProlog(Loc);
+  return false;
+}
+
+bool COFFAsmParser::ParseSEHDirectiveBeginEpilog(StringRef, SMLoc Loc) {
+  Lex();
+  getStreamer().emitWinCFIBeginEpilogue(Loc);
+  return false;
+}
+
+bool COFFAsmParser::ParseSEHDirectiveEndEpilog(StringRef, SMLoc Loc) {
+  Lex();
+  getStreamer().emitWinCFIEndEpilogue(Loc);
   return false;
 }
 

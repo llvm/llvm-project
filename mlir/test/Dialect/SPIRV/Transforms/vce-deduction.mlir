@@ -101,7 +101,7 @@ spirv.module Logical GLSL450 attributes {
     #spirv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>, #spirv.resource_limits<>>
 } {
   spirv.func @group_non_uniform_iadd(%val : i32) -> i32 "None" {
-    %0 = spirv.GroupNonUniformIAdd "Subgroup" "Reduce" %val : i32
+    %0 = spirv.GroupNonUniformIAdd <Subgroup> <Reduce> %val : i32 -> i32
     spirv.ReturnValue %0: i32
   }
 }
@@ -112,7 +112,7 @@ spirv.module Logical GLSL450 attributes {
     #spirv.vce<v1.3, [Shader, GroupNonUniformClustered, GroupNonUniformBallot], []>, #spirv.resource_limits<>>
 } {
   spirv.func @group_non_uniform_iadd(%val : i32) -> i32 "None" {
-    %0 = spirv.GroupNonUniformIAdd "Subgroup" "Reduce" %val : i32
+    %0 = spirv.GroupNonUniformIAdd <Subgroup> <Reduce> %val : i32 -> i32
     spirv.ReturnValue %0: i32
   }
 }

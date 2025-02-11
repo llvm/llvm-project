@@ -10,7 +10,6 @@
 #include "MachOObject.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/MachO.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
 #include <memory>
 
@@ -184,6 +183,10 @@ Error MachOReader::readLoadCommands(Object &O) const {
       break;
     case MachO::LC_DYLD_CHAINED_FIXUPS:
       O.ChainedFixupsCommandIndex = O.LoadCommands.size();
+      break;
+    case MachO::LC_ENCRYPTION_INFO:
+    case MachO::LC_ENCRYPTION_INFO_64:
+      O.EncryptionInfoCommandIndex = O.LoadCommands.size();
       break;
     }
 #define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \

@@ -8,6 +8,7 @@
 
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -1148,11 +1149,11 @@ Sections:
 
   BBAddrMap E1 = {
       {{0x11111, {{1, 0x0, 0x1, {false, true, false, false, false}}}}}};
-  PGOAnalysisMap P1 = {892, {}, {true, false, false, false}};
+  PGOAnalysisMap P1 = {892, {}, {true, false, false, false, false}};
   BBAddrMap E2 = {
       {{0x22222, {{2, 0x0, 0x2, {false, false, true, false, false}}}}}};
   PGOAnalysisMap P2 = {
-      {}, {{BlockFrequency(343), {}}}, {false, true, false, false}};
+      {}, {{BlockFrequency(343), {}}}, {false, true, false, false, false}};
   BBAddrMap E3 = {{{0x33333,
                     {{0, 0x0, 0x3, {false, true, true, false, false}},
                      {1, 0x3, 0x3, {false, false, true, false, false}},
@@ -1163,7 +1164,7 @@ Sections:
                           {2, BranchProbability::getRaw(0xeeee'eeee)}}},
                         {{}, {{2, BranchProbability::getRaw(0xffff'ffff)}}},
                         {{}, {}}},
-                       {false, false, true, false}};
+                       {false, false, true, false, false}};
   BBAddrMap E4 = {{{0x44444,
                     {{0, 0x0, 0x4, {false, false, false, true, true}},
                      {1, 0x4, 0x4, {false, false, false, false, false}},
@@ -1180,10 +1181,10 @@ Sections:
          {3, BranchProbability::getRaw(0xeeee'eeee)}}},
        {BlockFrequency(18), {{3, BranchProbability::getRaw(0xffff'ffff)}}},
        {BlockFrequency(1000), {}}},
-      {true, true, true, false}};
+      {true, true, true, false, false}};
   BBAddrMap E5 = {
       {{0x55555, {{2, 0x0, 0x2, {false, false, true, false, false}}}}}};
-  PGOAnalysisMap P5 = {{}, {}, {false, false, false, false}};
+  PGOAnalysisMap P5 = {{}, {}, {false, false, false, false, false}};
   BBAddrMap E6 = {
       {{0x66666,
         {{0, 0x0, 0x6, {false, true, true, false, false}},
@@ -1195,7 +1196,7 @@ Sections:
                           {2, BranchProbability::getRaw(0xcccc'cccc)}}},
                         {{}, {{2, BranchProbability::getRaw(0x8888'8888)}}},
                         {{}, {}}},
-                       {false, false, true, true}};
+                       {false, false, true, true, false}};
 
   std::vector<BBAddrMap> Section0BBAddrMaps = {E4, E5, E6};
   std::vector<BBAddrMap> Section1BBAddrMaps = {E3};
@@ -1433,7 +1434,8 @@ FileHeader:
     // Basic verification to make sure we have the correct section types.
     for (auto const &[Sec, RelaSec] : *SecToRelocMapOrErr) {
       ASSERT_EQ(Sec->sh_type, ELF::SHT_PROGBITS);
-      ASSERT_EQ(RelaSec->sh_type, ELF::SHT_RELA);
+      ASSERT_TRUE(RelaSec->sh_type == ELF::SHT_RELA ||
+                  RelaSec->sh_type == ELF::SHT_CREL);
     }
   };
 
@@ -1503,6 +1505,19 @@ Sections:
   DoCheckFails(MissingRelocatableContent, DefaultMatcher,
                "SHT_RELA section with index 1: failed to get a "
                "relocated section: invalid section index: 255");
+
+  StringRef OneTextSectionCREL = R"(
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name: .crel.tex
+    Type: SHT_CREL
+    Flags: [ SHF_INFO_LINK ]
+    Info: .text
+)";
+
+  DoCheckSucceeds(OneTextSectionCREL, DefaultMatcher);
 }
 
 TEST(ELFObjectFileTest, ELFSymbolRefLess) {

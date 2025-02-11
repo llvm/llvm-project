@@ -6,23 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_UNWRAP_ITER_H
-#define _LIBCPP___ALGORITHM_UNWRAP_ITER_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_UNWRAP_ITER_H
+#define _LIBCPP___CXX03___ALGORITHM_UNWRAP_ITER_H
 
-#include <__config>
-#include <__iterator/iterator_traits.h>
-#include <__memory/pointer_traits.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_constructible.h>
-#include <__utility/declval.h>
-#include <__utility/move.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -82,4 +82,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_UNWRAP_ITER_H
+#endif // _LIBCPP___CXX03___ALGORITHM_UNWRAP_ITER_H

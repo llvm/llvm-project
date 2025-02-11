@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_BINDER1ST_H
-#define _LIBCPP___FUNCTIONAL_BINDER1ST_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_BINDER1ST_H
+#define _LIBCPP___CXX03___FUNCTIONAL_BINDER1ST_H
 
-#include <__config>
-#include <__functional/unary_function.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/unary_function.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -51,4 +51,4 @@ bind1st(const _Operation& __op, const _Tp& __x) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_BINDER1ST_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_BINDER1ST_H

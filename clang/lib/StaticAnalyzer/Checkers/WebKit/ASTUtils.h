@@ -64,6 +64,19 @@ bool tryToFindPtrOrigin(
 /// \returns Whether \p E is a safe call arugment.
 bool isASafeCallArg(const clang::Expr *E);
 
+/// \returns true if E is a MemberExpr accessing a const smart pointer type.
+bool isConstOwnerPtrMemberExpr(const clang::Expr *E);
+
+/// \returns true if E is a CXXMemberCallExpr which returns a const smart
+/// pointer type.
+class EnsureFunctionAnalysis {
+  using CacheTy = llvm::DenseMap<const FunctionDecl *, bool>;
+  mutable CacheTy Cache{};
+
+public:
+  bool isACallToEnsureFn(const Expr *E) const;
+};
+
 /// \returns name of AST node or empty string.
 template <typename T> std::string safeGetName(const T *ASTNode) {
   const auto *const ND = llvm::dyn_cast_or_null<clang::NamedDecl>(ASTNode);

@@ -20,9 +20,9 @@
  * THE SOFTWARE.
  */
 
+#include <clc/math/tables.h>
 #include <clc/clc.h>
-#include "../clcmacro.h"
-#include "tables.h"
+#include <clc/clcmacro.h>
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable

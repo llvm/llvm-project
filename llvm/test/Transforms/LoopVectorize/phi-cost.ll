@@ -102,11 +102,11 @@ define void @phi_three_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], <i32 20, i32 20>
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD2]], <i32 4, i32 4>
-; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP7]], <2 x i32> <i32 4, i32 4>, <2 x i32> <i32 5, i32 5>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> [[TMP8]], <2 x i32> <i32 3, i32 3>
-; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> [[PREDPHI]], <2 x i32> <i32 9, i32 9>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], splat (i32 20)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD2]], splat (i32 4)
+; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP7]], <2 x i32> splat (i32 4), <2 x i32> splat (i32 5)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> [[TMP8]], <2 x i32> splat (i32 3)
+; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> [[PREDPHI]], <2 x i32> splat (i32 9)
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI3]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -171,4 +171,45 @@ if.end:
 
 for.end:
   ret void
+}
+
+; Test case for https://github.com/llvm/llvm-project/issues/113794.
+define i32 @red_phi_0(i32 %start, ptr %src) {
+; CHECK-LABEL: define i32 @red_phi_0(
+; CHECK-SAME: i32 [[START:%.*]], ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[START]], i64 0
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP0]])
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br i1 poison, label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ poison, %[[LOOP]] ], [ [[TMP2]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %red = phi i32 [ %start, %entry ], [ %red.next, %loop ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red.next = add i32 0, %red
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 100
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  %res = phi i32 [ %red.next, %loop ]
+  ret i32 %res
 }

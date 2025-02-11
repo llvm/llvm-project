@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_PROJECTED_H
-#define _LIBCPP___ITERATOR_PROJECTED_H
+#ifndef _LIBCPP___CXX03___ITERATOR_PROJECTED_H
+#define _LIBCPP___CXX03___ITERATOR_PROJECTED_H
 
-#include <__config>
-#include <__iterator/concepts.h>
-#include <__iterator/incrementable_traits.h> // iter_difference_t
-#include <__type_traits/remove_cvref.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/incrementable_traits.h> // iter_difference_t
+#include <__cxx03/__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -50,4 +50,4 @@ using projected = typename __projected_impl<_It, _Proj>::__type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_PROJECTED_H
+#endif // _LIBCPP___CXX03___ITERATOR_PROJECTED_H

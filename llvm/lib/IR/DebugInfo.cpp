@@ -798,7 +798,11 @@ private:
 
       return getReplacementMDNode(N);
     };
-    Replacements[N] = doRemap(N);
+    // Seperate recursive doRemap and operator [] into 2 lines to avoid
+    // out-of-order evaluations since both of them can access the same memory
+    // location in map Replacements.
+    auto Value = doRemap(N);
+    Replacements[N] = Value;
   }
 
   /// Do the remapping traversal.
@@ -1432,10 +1436,11 @@ LLVMDIBuilderCreateObjCProperty(LLVMDIBuilderRef Builder,
                   PropertyAttributes, unwrapDI<DIType>(Ty)));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
-                                     LLVMMetadataRef Type) {
-  return wrap(unwrap(Builder)->createObjectPointerType(unwrapDI<DIType>(Type)));
+LLVMMetadataRef LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
+                                                     LLVMMetadataRef Type,
+                                                     LLVMBool Implicit) {
+  return wrap(unwrap(Builder)->createObjectPointerType(unwrapDI<DIType>(Type),
+                                                       Implicit));
 }
 
 LLVMMetadataRef
@@ -2099,10 +2104,10 @@ static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
                                     AddrExpr, VarRec.DL);
   (void)Assign;
   LLVM_DEBUG(if (!Assign.isNull()) {
-    if (Assign.is<DbgRecord *>())
-      errs() << " > INSERT: " << *Assign.get<DbgRecord *>() << "\n";
+    if (const auto *Record = dyn_cast<DbgRecord *>(Assign))
+      errs() << " > INSERT: " << *Record << "\n";
     else
-      errs() << " > INSERT: " << *Assign.get<Instruction *>() << "\n";
+      errs() << " > INSERT: " << *cast<Instruction *>(Assign) << "\n";
   });
 }
 

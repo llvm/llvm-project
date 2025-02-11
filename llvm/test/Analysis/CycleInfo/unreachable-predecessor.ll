@@ -1,7 +1,7 @@
 ; RUN: opt < %s -disable-output -passes='verify<cycles>,print<cycles>' 2>&1 | FileCheck %s
 ; CHECK-LABEL: CycleInfo for function: unreachable
 ; CHECK:    depth=1: entries(loop.body) loop.latch inner.block
-define void @unreachable(i32 %n) {
+define void @unreachable(i32 %n, i1 %arg) {
 entry:
   br label %loop.body
 
@@ -13,7 +13,7 @@ unreachable.block:
   br label %inner.block
 
 inner.block:
-  br i1 undef, label %loop.exit, label %loop.latch
+  br i1 %arg, label %loop.exit, label %loop.latch
 
 loop.latch:
   br label %loop.body

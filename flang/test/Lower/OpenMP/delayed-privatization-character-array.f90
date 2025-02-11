@@ -23,19 +23,14 @@ subroutine delayed_privatization_character_array_static_len(var1)
 end subroutine
 
 ! STATIC_LEN-LABEL: omp.private {type = firstprivate}
-! STATIC_LEN-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.ref<!fir.array<5x!fir.char<1,10>>>]] alloc {
+! STATIC_LEN-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.box<!fir.array<5x!fir.char<1,10>>>]] init {
 
-! STATIC_LEN-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
-! STATIC_LEN-DAG:    %[[C5:.*]] = arith.constant 5 : index
-! STATIC_LEN-DAG:    %[[C10:.*]] = arith.constant 10 : index
-! STATIC_LEN-NEXT:   %[[PRIV_ALLOC:.*]] = fir.alloca !fir.array<5x!fir.char<1,10>>
-! STATIC_LEN-NEXT:   %[[ARRAY_SHAPE:.*]] = fir.shape %[[C5]]
-! STATIC_LEN-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]](%[[ARRAY_SHAPE]]) typeparams %[[C10]]
-! STATIC_LEN-NEXT:   omp.yield(%[[PRIV_DECL]]#0
-
-! STATIC_LEN-NEXT: } copy {
-! STATIC_LEN-NEXT: ^bb0(%[[PRIV_ORIG_ARG:.*]]: [[TYPE]], %[[PRIV_PRIV_ARG:.*]]: [[TYPE]]):
-! STATIC_LEN-NEXT:   hlfir.assign %[[PRIV_ORIG_ARG]] to %[[PRIV_PRIV_ARG]]
+! STATIC_LEN-NEXT: ^bb0(%[[MOLD_REF:.*]]: !fir.ref<[[TYPE]]>, %[[ALLOC:.*]]: !fir.ref<[[TYPE]]>):
+!                    [init region]
+! STATIC_LEN:      } copy {
+! STATIC_LEN-NEXT: ^bb0(%[[PRIV_ORIG_ARG:.*]]: !fir.ref<[[TYPE]]>, %[[PRIV_PRIV_ARG:.*]]: !fir.ref<[[TYPE]]>):
+! STATIC_LEN-NEXT:   %[[ORIG:.*]] = fir.load %[[PRIV_ORIG_ARG]] : !fir.ref<[[TYPE]]>
+! STATIC_LEN-NEXT:   hlfir.assign %[[ORIG]] to %[[PRIV_PRIV_ARG]]
 
 ! STATIC_LEN-NEXT:   omp.yield(%[[PRIV_PRIV_ARG]]
 ! STATIC_LEN-NEXT: }
@@ -53,15 +48,5 @@ subroutine delayed_privatization_character_array_dynamic_len(var1, char_len, arr
 end subroutine
 
 ! DYN_LEN-LABEL: omp.private {type = private}
-! DYN_LEN-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.box<!fir.array<\?x!fir.char<1,\?>>>]] alloc {
-
-! DYN_LEN-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
-
-! DYN_LEN:        %[[C0:.*]] = arith.constant 0 : index
-! DYN_LEN-NEXT:   %[[BOX_DIM:.*]]:3 = fir.box_dims %[[PRIV_ARG]], %[[C0]]
-! DYN_LEN:        %[[CHAR_LEN:.*]] = fir.box_elesize %[[PRIV_ARG]]
-! DYN_LEN-NEXT:   %[[PRIV_ALLOC:.*]] = fir.alloca !fir.array<?x!fir.char<1,?>>(%[[CHAR_LEN]] : index)
-! DYN_LEN-NEXT:   %[[ARRAY_SHAPE:.*]] = fir.shape
-! DYN_LEN-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]](%[[ARRAY_SHAPE]]) typeparams %[[CHAR_LEN]]
-
-! DYN_LEN-NEXT:   omp.yield(%[[PRIV_DECL]]#0
+! DYN_LEN-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.box<!fir.array<\?x!fir.char<1,\?>>>]] init {
+! DYN_LEN-NEXT: ^bb0(%[[MOLD_ARG:.*]]: !fir.ref<!fir.box<!fir.array<?x!fir.char<1,?>>>>, %[[ALLOC_ARG:.*]]: !fir.ref<!fir.box<!fir.array<?x!fir.char<1,?>>>>)

@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___EXCEPTION_TERMINATE_H
-#define _LIBCPP___EXCEPTION_TERMINATE_H
+#ifndef _LIBCPP___CXX03___EXCEPTION_TERMINATE_H
+#define _LIBCPP___CXX03___EXCEPTION_TERMINATE_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -19,4 +19,4 @@ namespace std { // purposefully not using versioning namespace
 _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void terminate() _NOEXCEPT;
 } // namespace std
 
-#endif // _LIBCPP___EXCEPTION_TERMINATE_H
+#endif // _LIBCPP___CXX03___EXCEPTION_TERMINATE_H

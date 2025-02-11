@@ -19,7 +19,7 @@ using namespace llvm;
 
 void SystemZGNUInstPrinter::printFormattedRegName(const MCAsmInfo *MAI,
                                                   MCRegister Reg,
-                                                  raw_ostream &O) const {
+                                                  raw_ostream &O) {
   const char *RegName = getRegisterName(Reg);
   markup(O, Markup::Register) << '%' << RegName;
 }

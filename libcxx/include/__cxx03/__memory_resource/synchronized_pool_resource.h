@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_RESOURCE_SYNCHRONIZED_POOL_RESOURCE_H
-#define _LIBCPP___MEMORY_RESOURCE_SYNCHRONIZED_POOL_RESOURCE_H
+#ifndef _LIBCPP___CXX03___MEMORY_RESOURCE_SYNCHRONIZED_POOL_RESOURCE_H
+#define _LIBCPP___CXX03___MEMORY_RESOURCE_SYNCHRONIZED_POOL_RESOURCE_H
 
-#include <__config>
-#include <__memory_resource/memory_resource.h>
-#include <__memory_resource/pool_options.h>
-#include <__memory_resource/unsynchronized_pool_resource.h>
-#include <cstddef>
-#include <mutex>
+#include <__cxx03/__config>
+#include <__cxx03/__memory_resource/memory_resource.h>
+#include <__cxx03/__memory_resource/pool_options.h>
+#include <__cxx03/__memory_resource/unsynchronized_pool_resource.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/mutex>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -89,4 +89,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___MEMORY_RESOURCE_SYNCHRONIZED_POOL_RESOURCE_H
+#endif // _LIBCPP___CXX03___MEMORY_RESOURCE_SYNCHRONIZED_POOL_RESOURCE_H

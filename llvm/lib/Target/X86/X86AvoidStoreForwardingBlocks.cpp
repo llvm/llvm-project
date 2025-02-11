@@ -44,7 +44,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
@@ -626,13 +625,10 @@ static bool isBlockingStore(int64_t LoadDispImm, unsigned LoadSize,
 static void
 updateBlockingStoresDispSizeMap(DisplacementSizeMap &BlockingStoresDispSizeMap,
                                 int64_t DispImm, unsigned Size) {
-  if (BlockingStoresDispSizeMap.count(DispImm)) {
-    // Choose the smallest blocking store starting at this displacement.
-    if (BlockingStoresDispSizeMap[DispImm] > Size)
-      BlockingStoresDispSizeMap[DispImm] = Size;
-
-  } else
-    BlockingStoresDispSizeMap[DispImm] = Size;
+  auto [It, Inserted] = BlockingStoresDispSizeMap.try_emplace(DispImm, Size);
+  // Choose the smallest blocking store starting at this displacement.
+  if (!Inserted && It->second > Size)
+    It->second = Size;
 }
 
 // Remove blocking stores contained in each other.

@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_INNER_PRODUCT_H
-#define _LIBCPP___NUMERIC_INNER_PRODUCT_H
+#ifndef _LIBCPP___CXX03___NUMERIC_INNER_PRODUCT_H
+#define _LIBCPP___CXX03___NUMERIC_INNER_PRODUCT_H
 
-#include <__config>
-#include <__utility/move.h>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -55,4 +55,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NUMERIC_INNER_PRODUCT_H
+#endif // _LIBCPP___CXX03___NUMERIC_INNER_PRODUCT_H

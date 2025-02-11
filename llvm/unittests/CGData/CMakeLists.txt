@@ -9,6 +9,8 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(CGDataTests
   OutlinedHashTreeRecordTest.cpp
   OutlinedHashTreeTest.cpp
+  StableFunctionMapRecordTest.cpp
+  StableFunctionMapTest.cpp
   )
 
 target_link_libraries(CGDataTests PRIVATE LLVMTestingSupport)

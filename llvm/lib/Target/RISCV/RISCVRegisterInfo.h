@@ -39,7 +39,7 @@ enum {
 
 /// \returns the IsVRegClass for the register class.
 static inline bool isVRegClass(uint64_t TSFlags) {
-  return TSFlags & IsVRegClassShiftMask >> IsVRegClassShift;
+  return (TSFlags & IsVRegClassShiftMask) >> IsVRegClassShift;
 }
 
 /// \returns the LMUL for the register class.
@@ -61,6 +61,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                                        CallingConv::ID) const override;
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
+
+  const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,

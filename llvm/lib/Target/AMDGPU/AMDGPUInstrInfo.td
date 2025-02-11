@@ -100,8 +100,8 @@ def AMDGPUtc_return_chain: SDNode<"AMDGPUISD::TC_RETURN_CHAIN",
 >;
 
 def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",
-  SDTypeProfile<0, -1, [SDTCisVT<0, i16>]>,
-    [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPInGlue]
+  SDTypeProfile<0, 1, [SDTCisVT<0, i16>]>,
+    [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPOptInGlue]
 >;
 
 def AMDGPUconstdata_ptr : SDNode<

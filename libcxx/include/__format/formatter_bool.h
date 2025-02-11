@@ -20,7 +20,7 @@
 #include <__format/parser_std_format_spec.h>
 #include <__utility/unreachable.h>
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <__locale>
 #endif
 

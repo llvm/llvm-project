@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=msp430 | FileCheck %s
+; RUN: llc < %s -mtriple=msp430 | FileCheck %s
 target datalayout = "e-p:16:16:16-i8:8:8-i16:16:16-i32:16:16"
 target triple = "msp430-generic-generic"
 

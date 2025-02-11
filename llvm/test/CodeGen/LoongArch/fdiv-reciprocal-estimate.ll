@@ -66,14 +66,13 @@ define double @fdiv_d(double %x, double %y) {
 ;
 ; LA64D-FRECIPE-LABEL: fdiv_d:
 ; LA64D-FRECIPE:       # %bb.0:
-; LA64D-FRECIPE-NEXT:    pcalau12i	$a0, %pc_hi20(.LCPI1_0)
-; LA64D-FRECIPE-NEXT:    fld.d	$fa2, $a0, %pc_lo12(.LCPI1_0)
-; LA64D-FRECIPE-NEXT:    frecipe.d	$fa3, $fa1
-; LA64D-FRECIPE-NEXT:    fmadd.d	$fa2, $fa1, $fa3, $fa2
-; LA64D-FRECIPE-NEXT:    fnmsub.d	$fa2, $fa2, $fa3, $fa3
-; LA64D-FRECIPE-NEXT:    fmul.d	$fa3, $fa0, $fa2
-; LA64D-FRECIPE-NEXT:    fnmsub.d	$fa0, $fa1, $fa3, $fa0
-; LA64D-FRECIPE-NEXT:    fmadd.d	$fa0, $fa2, $fa0, $fa3
+; LA64D-FRECIPE-NEXT:    frecipe.d $fa2, $fa1
+; LA64D-FRECIPE-NEXT:    vldi $vr3, -784
+; LA64D-FRECIPE-NEXT:    fmadd.d $fa3, $fa1, $fa2, $fa3
+; LA64D-FRECIPE-NEXT:    fnmsub.d $fa2, $fa3, $fa2, $fa2
+; LA64D-FRECIPE-NEXT:    fmul.d $fa3, $fa0, $fa2
+; LA64D-FRECIPE-NEXT:    fnmsub.d $fa0, $fa1, $fa3, $fa0
+; LA64D-FRECIPE-NEXT:    fmadd.d $fa0, $fa2, $fa0, $fa3
 ; LA64D-FRECIPE-NEXT:    ret
   %div = fdiv fast double %x, %y
   ret double %div

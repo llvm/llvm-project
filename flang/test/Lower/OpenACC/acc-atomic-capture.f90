@@ -11,7 +11,7 @@ program acc_atomic_capture_test
 !CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %2 {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[temp:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
 !CHECK: acc.atomic.capture {
-!CHECK: acc.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1 : !fir.ref<i32>
+!CHECK: acc.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1 : !fir.ref<i32>, !fir.ref<i32>, i32
 !CHECK: acc.atomic.update %[[Y_DECL]]#1 : !fir.ref<i32> {
 !CHECK: ^bb0(%[[ARG:.*]]: i32):
 !CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[ARG]] : i32
@@ -32,7 +32,7 @@ program acc_atomic_capture_test
 !CHECK: %[[result:.*]] = arith.muli %[[temp]], %[[ARG]] : i32
 !CHECK: acc.yield %[[result]] : i32
 !CHECK: }
-!CHECK: acc.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1 : !fir.ref<i32>
+!CHECK: acc.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1 : !fir.ref<i32>, !fir.ref<i32>, i32
 !CHECK: }
 
     !$acc atomic capture
@@ -47,7 +47,7 @@ program acc_atomic_capture_test
 !CHECK: %[[result_noreassoc:.*]] = hlfir.no_reassoc %[[result]] : i32
 !CHECK: %[[result:.*]] = arith.addi %[[constant_20]], %[[result_noreassoc]] : i32
 !CHECK: acc.atomic.capture {
-!CHECK: acc.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1 : !fir.ref<i32>
+!CHECK: acc.atomic.read %[[X_DECL]]#1 = %[[Y_DECL]]#1 : !fir.ref<i32>, !fir.ref<i32>, i32
 !CHECK: acc.atomic.write %[[Y_DECL]]#1 = %[[result]] : !fir.ref<i32>, i32
 !CHECK: }
 
@@ -82,7 +82,7 @@ subroutine pointers_in_atomic_capture()
 !CHECK: %[[result:.*]] = arith.addi %[[ARG]], %[[loaded_value]] : i32
 !CHECK: acc.yield %[[result]] : i32
 !CHECK: }
-!CHECK: acc.atomic.read %[[loaded_B_addr]] = %[[loaded_A_addr]] : !fir.ptr<i32>, i32
+!CHECK: acc.atomic.read %[[loaded_B_addr]] = %[[loaded_A_addr]] : !fir.ptr<i32>, !fir.ptr<i32>, i32
 !CHECK: }
     integer, pointer :: a, b
     integer, target :: c, d
@@ -118,8 +118,97 @@ end subroutine
 ! CHECK: %[[MUL:.*]] = arith.mulf %{{.*}}, %[[CST]] fastmath<contract> : f32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[MUL]] : (f32) -> i32
 ! CHECK: acc.atomic.capture {
-! CHECK:   acc.atomic.read %[[V_DECL]]#1 = %[[K_DECL]]#1 : !fir.ref<i32>, i32
+! CHECK:   acc.atomic.read %[[V_DECL]]#1 = %[[K_DECL]]#1 : !fir.ref<i32>, !fir.ref<i32>, i32
 ! CHECK:   acc.atomic.write %[[K_DECL]]#1 = %[[CONV]] : !fir.ref<i32>, i32
+! CHECK: }
+
+subroutine capture_with_convert_i32_to_f64()
+  real(8) :: x
+  integer :: v
+  x = 1.0
+  v = 0
+  !$acc atomic capture
+  v = x
+  x = v
+  !$acc end atomic
+end subroutine capture_with_convert_i32_to_f64
+
+! CHECK-LABEL: func.func @_QPcapture_with_convert_i32_to_f64()
+! CHECK: %[[V:.*]] = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFcapture_with_convert_i32_to_f64Ev"}
+! CHECK: %[[V_DECL:.*]]:2 = hlfir.declare %[[V]] {uniq_name = "_QFcapture_with_convert_i32_to_f64Ev"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[X:.*]] = fir.alloca f64 {bindc_name = "x", uniq_name = "_QFcapture_with_convert_i32_to_f64Ex"}
+! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFcapture_with_convert_i32_to_f64Ex"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+! CHECK: %[[CST:.*]] = arith.constant 1.000000e+00 : f64
+! CHECK: hlfir.assign %[[CST]] to %[[X_DECL]]#0 : f64, !fir.ref<f64>
+! CHECK: %c0_i32 = arith.constant 0 : i32
+! CHECK: hlfir.assign %c0_i32 to %[[V_DECL]]#0 : i32, !fir.ref<i32>
+! CHECK: %[[LOAD:.*]] = fir.load %[[V_DECL]]#0 : !fir.ref<i32>
+! CHECK: %[[CONV:.*]] = fir.convert %[[LOAD]] : (i32) -> f64
+! CHECK: acc.atomic.capture {
+! CHECK:   acc.atomic.read %[[V_DECL]]#1 = %[[X_DECL]]#1 : !fir.ref<i32>, !fir.ref<f64>, f64
+! CHECK:   acc.atomic.write %[[X_DECL]]#1 = %[[CONV]] : !fir.ref<f64>, f64
+! CHECK: }
+
+subroutine capture_with_convert_f64_to_i32()
+  integer :: x
+  real(8) :: v
+  x = 1
+  v = 0
+  !$acc atomic capture
+  x = v * v
+  v = x
+  !$acc end atomic
+end subroutine capture_with_convert_f64_to_i32
+
+! CHECK-LABEL: func.func @_QPcapture_with_convert_f64_to_i32()
+! CHECK: %[[V:.*]] = fir.alloca f64 {bindc_name = "v", uniq_name = "_QFcapture_with_convert_f64_to_i32Ev"}
+! CHECK: %[[V_DECL:.*]]:2 = hlfir.declare %[[V]] {uniq_name = "_QFcapture_with_convert_f64_to_i32Ev"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+! CHECK: %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFcapture_with_convert_f64_to_i32Ex"}
+! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFcapture_with_convert_f64_to_i32Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %c1_i32 = arith.constant 1 : i32
+! CHECK: hlfir.assign %c1_i32 to %[[X_DECL]]#0 : i32, !fir.ref<i32>
+! CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f64
+! CHECK: hlfir.assign %[[CST]] to %[[V_DECL]]#0 : f64, !fir.ref<f64>
+! CHECK: %[[LOAD:.*]] = fir.load %[[V_DECL]]#0 : !fir.ref<f64>
+! CHECK: acc.atomic.capture {
+! CHECK:   acc.atomic.update %[[X_DECL]]#1 : !fir.ref<i32> {
+! CHECK:   ^bb0(%arg0: i32):
+! CHECK:     %[[MUL:.*]] = arith.mulf %[[LOAD]], %[[LOAD]] fastmath<contract> : f64
+! CHECK:     %[[CONV:.*]] = fir.convert %[[MUL]] : (f64) -> i32
+! CHECK:     acc.yield %[[CONV]] : i32
+! CHECK:   }
+! CHECK:   acc.atomic.read %[[V_DECL]]#1 = %[[X_DECL]]#1 : !fir.ref<f64>, !fir.ref<i32>, i32
+! CHECK: }
+
+subroutine capture_with_convert_i32_to_f32()
+  real(4) :: x
+  integer :: v
+  x = 1.0
+  v = 0
+  !$acc atomic capture
+  v = x
+  x = x + v
+  !$acc end atomic
+end subroutine capture_with_convert_i32_to_f32
+
+! CHECK-LABEL: func.func @_QPcapture_with_convert_i32_to_f32()
+! CHECK: %[[V:.*]] = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFcapture_with_convert_i32_to_f32Ev"}
+! CHECK: %[[V_DECL:.*]]:2 = hlfir.declare %[[V]] {uniq_name = "_QFcapture_with_convert_i32_to_f32Ev"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[X:.*]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFcapture_with_convert_i32_to_f32Ex"}
+! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFcapture_with_convert_i32_to_f32Ex"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+! CHECK: hlfir.assign %[[CST]] to %[[X_DECL]]#0 : f32, !fir.ref<f32>
+! CHECK: %c0_i32 = arith.constant 0 : i32
+! CHECK: hlfir.assign %c0_i32 to %[[V_DECL]]#0 : i32, !fir.ref<i32>
+! CHECK: %[[LOAD:.*]] = fir.load %[[V_DECL]]#0 : !fir.ref<i32>
+! CHECK: acc.atomic.capture {
+! CHECK:   acc.atomic.read %[[V_DECL]]#1 = %[[X_DECL]]#1 : !fir.ref<i32>, !fir.ref<f32>, f32
+! CHECK:   acc.atomic.update %[[X_DECL]]#1 : !fir.ref<f32> {
+! CHECK:   ^bb0(%arg0: f32):
+! CHECK:     %[[CONV:.*]] = fir.convert %[[LOAD]] : (i32) -> f32
+! CHECK:     %[[ADD:.*]] = arith.addf %arg0, %[[CONV]] fastmath<contract> : f32
+! CHECK:     acc.yield %[[ADD]] : f32
+! CHECK:   }
 ! CHECK: }
 
 subroutine array_ref_in_atomic_capture1
@@ -136,7 +225,7 @@ end subroutine array_ref_in_atomic_capture1
 ! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]](%{{.*}}) {uniq_name = "_QFarray_ref_in_atomic_capture1Ex"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[X_REF:.*]] = hlfir.designate %[[X_DECL]]#0 (%{{.*}})  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK:           acc.atomic.capture {
-! CHECK:             acc.atomic.read %[[V_DECL]]#1 = %[[X_REF]] : !fir.ref<i32>, i32
+! CHECK:             acc.atomic.read %[[V_DECL]]#1 = %[[X_REF]] : !fir.ref<i32>, !fir.ref<i32>, i32
 ! CHECK:             acc.atomic.update %[[X_REF]] : !fir.ref<i32> {
 ! CHECK:             ^bb0(%[[VAL_7:.*]]: i32):
 ! CHECK:               %[[VAL_8:.*]] = arith.addi %[[VAL_7]], %{{.*}} : i32
@@ -163,7 +252,7 @@ end subroutine array_ref_in_atomic_capture2
 ! CHECK:               %[[VAL_8:.*]] = arith.addi %[[VAL_7]], %{{.*}} : i32
 ! CHECK:               acc.yield %[[VAL_8]] : i32
 ! CHECK:             }
-! CHECK:             acc.atomic.read %[[V_DECL]]#1 = %[[X_REF]] : !fir.ref<i32>, i32
+! CHECK:             acc.atomic.read %[[V_DECL]]#1 = %[[X_REF]] : !fir.ref<i32>, !fir.ref<i32>, i32
 ! CHECK:           }
 
 subroutine comp_ref_in_atomic_capture1
@@ -184,7 +273,7 @@ end subroutine comp_ref_in_atomic_capture1
 ! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFcomp_ref_in_atomic_capture1Ex"} : (!fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture1Tt1{c:i32}>>) -> (!fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture1Tt1{c:i32}>>, !fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture1Tt1{c:i32}>>)
 ! CHECK:           %[[C:.*]] = hlfir.designate %[[X_DECL]]#0{"c"}   : (!fir.ref<!fir.type<_QFcomp_ref_in_atomic_capture1Tt1{c:i32}>>) -> !fir.ref<i32>
 ! CHECK:           acc.atomic.capture {
-! CHECK:             acc.atomic.read %[[V_DECL]]#1 = %[[C]] : !fir.ref<i32>, i32
+! CHECK:             acc.atomic.read %[[V_DECL]]#1 = %[[C]] : !fir.ref<i32>, !fir.ref<i32>, i32
 ! CHECK:             acc.atomic.update %[[C]] : !fir.ref<i32> {
 ! CHECK:             ^bb0(%[[VAL_5:.*]]: i32):
 ! CHECK:               %[[VAL_6:.*]] = arith.addi %[[VAL_5]], %{{.*}} : i32
@@ -215,5 +304,5 @@ end subroutine comp_ref_in_atomic_capture2
 ! CHECK:               %[[VAL_6:.*]] = arith.addi %[[VAL_5]], %{{.*}} : i32
 ! CHECK:               acc.yield %[[VAL_6]] : i32
 ! CHECK:             }
-! CHECK:             acc.atomic.read %[[V_DECL]]#1 = %[[C]] : !fir.ref<i32>, i32
+! CHECK:             acc.atomic.read %[[V_DECL]]#1 = %[[C]] : !fir.ref<i32>, !fir.ref<i32>, i32
 ! CHECK:           }

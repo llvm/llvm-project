@@ -7,49 +7,49 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_TAKE_VIEW_H
-#define _LIBCPP___RANGES_TAKE_VIEW_H
+#ifndef _LIBCPP___CXX03___RANGES_TAKE_VIEW_H
+#define _LIBCPP___CXX03___RANGES_TAKE_VIEW_H
 
-#include <__algorithm/min.h>
-#include <__algorithm/ranges_min.h>
-#include <__assert>
-#include <__concepts/constructible.h>
-#include <__concepts/convertible_to.h>
-#include <__config>
-#include <__functional/bind_back.h>
-#include <__fwd/span.h>
-#include <__fwd/string_view.h>
-#include <__iterator/concepts.h>
-#include <__iterator/counted_iterator.h>
-#include <__iterator/default_sentinel.h>
-#include <__iterator/distance.h>
-#include <__iterator/iterator_traits.h>
-#include <__ranges/access.h>
-#include <__ranges/all.h>
-#include <__ranges/concepts.h>
-#include <__ranges/empty_view.h>
-#include <__ranges/enable_borrowed_range.h>
-#include <__ranges/iota_view.h>
-#include <__ranges/range_adaptor.h>
-#include <__ranges/repeat_view.h>
-#include <__ranges/size.h>
-#include <__ranges/subrange.h>
-#include <__ranges/view_interface.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/maybe_const.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/auto_cast.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <cstddef>
+#include <__cxx03/__algorithm/min.h>
+#include <__cxx03/__algorithm/ranges_min.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__concepts/constructible.h>
+#include <__cxx03/__concepts/convertible_to.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/bind_back.h>
+#include <__cxx03/__fwd/span.h>
+#include <__cxx03/__fwd/string_view.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/counted_iterator.h>
+#include <__cxx03/__iterator/default_sentinel.h>
+#include <__cxx03/__iterator/distance.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__ranges/access.h>
+#include <__cxx03/__ranges/all.h>
+#include <__cxx03/__ranges/concepts.h>
+#include <__cxx03/__ranges/empty_view.h>
+#include <__cxx03/__ranges/enable_borrowed_range.h>
+#include <__cxx03/__ranges/iota_view.h>
+#include <__cxx03/__ranges/range_adaptor.h>
+#include <__cxx03/__ranges/repeat_view.h>
+#include <__cxx03/__ranges/size.h>
+#include <__cxx03/__ranges/subrange.h>
+#include <__cxx03/__ranges/view_interface.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/maybe_const.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/__utility/auto_cast.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -366,4 +366,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANGES_TAKE_VIEW_H
+#endif // _LIBCPP___CXX03___RANGES_TAKE_VIEW_H
