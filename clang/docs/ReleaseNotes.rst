@@ -42,6 +42,10 @@ C/C++ Language Potentially Breaking Changes
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
+- The type trait builtin ``__is_referenceable`` has been removed, since it has
+  very few users and all the type traits that could benefit from it in the
+  standard library already have their own bespoke builtins.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -113,6 +117,7 @@ Attribute Changes in Clang
 --------------------------
 
 - The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
+- Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -123,6 +128,7 @@ Improvements to Clang's diagnostics
 - The ``-Wunique-object-duplication`` warning has been added to warn about objects
   which are supposed to only exist once per program, but may get duplicated when
   built into a shared library.
+- Fixed a bug where Clang's Analysis did not correctly model the destructor behavior of ``union`` members (#GH119415).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -146,6 +152,8 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
+- The initialization kind of elements of structured bindings
+  direct-list-initialized from an array is corrected to direct-initialization.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -231,6 +239,10 @@ AST Matchers
 clang-format
 ------------
 
+- Adds ``BreakBeforeTemplateCloser`` option.
+- Adds ``BinPackLongBracedList`` option to override bin packing options in
+  long (20 item or more) braced list initializer lists.
+
 libclang
 --------
 
@@ -257,6 +269,11 @@ Improvements
 Moved checkers
 ^^^^^^^^^^^^^^
 
+- After lots of improvements, the checker ``alpha.security.ArrayBoundV2`` is
+  renamed to ``security.ArrayBound``. As this checker is stable now, the old
+  checker ``alpha.security.ArrayBound`` (which was searching for the same kind
+  of bugs with an different, simpler and less accurate algorithm) is removed.
+
 .. _release-notes-sanitizers:
 
 Sanitizers
@@ -267,6 +284,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support 'no_openmp_constructs' assumption clause.
 
 Improvements
 ^^^^^^^^^^^^
