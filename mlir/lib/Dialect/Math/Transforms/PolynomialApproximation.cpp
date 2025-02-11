@@ -1220,7 +1220,9 @@ ErfcPolynomialApproximation::matchAndRewrite(math::ErfcOp op,
 //----------------------------------------------------------------------------//
 // Exp approximation.
 //----------------------------------------------------------------------------//
+
 namespace {
+
 Value clampWithNormals(ImplicitLocOpBuilder &builder,
                        const std::optional<VectorShape> shape, Value value,
                        float lowerBound, float upperBound) {
@@ -1859,7 +1861,7 @@ void mlir::populateMathPolynomialApproximationPatterns(
 }
 
 void mlir::populateMathPolynomialApproximationPatterns(
-    RewritePatternSet & patterns,
+    RewritePatternSet &patterns,
     const MathPolynomialApproximationOptions &options) {
   mlir::populateMathF32ExpansionPatterns(patterns, [](StringRef name) -> bool {
     return llvm::is_contained(
