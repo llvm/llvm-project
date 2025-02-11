@@ -474,8 +474,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-  if (Arch.empty())
-    Arch = "native";
   // Create a new file to write the linked device image to. Assume that the
   // input filename already has the device and architecture.
   auto TempFileOrErr =
@@ -492,10 +490,13 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
       "-o",
       *TempFileOrErr,
       Args.MakeArgString("--target=" + Triple.getTriple()),
-      Triple.isAMDGPU() ? Args.MakeArgString("-mcpu=" + Arch)
-                        : Args.MakeArgString("-march=" + Arch),
-      Args.MakeArgString("-" + OptLevel),
   };
+
+  if (!Arch.empty())
+    Triple.isAMDGPU() ? CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch))
+                      : CmdArgs.push_back(Args.MakeArgString("-march=" + Arch));
+
+  CmdArgs.push_back(Args.MakeArgString("-" + OptLevel));
 
   // Forward all of the `--offload-opt` and similar options to the device.
   CmdArgs.push_back("-flto");
@@ -605,6 +606,15 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   }
 }
 
+Error containerizeRawImage(std::unique_ptr<MemoryBuffer> &Img, OffloadKind Kind,
+                           const ArgList &Args) {
+  llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
+  if (Kind != OFK_OpenMP || !Triple.isSPIRV() ||
+      Triple.getVendor() != llvm::Triple::Intel)
+    return Error::success();
+  return offloading::intel::containerizeOpenMPSPIRVImage(Img);
+}
+
 Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
   const OffloadBinary &Binary = *File.getBinary();
 
@@ -691,22 +701,19 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
   switch (Kind) {
   case OFK_OpenMP:
     if (Error Err = offloading::wrapOpenMPBinaries(
-            M, BuffersToWrap,
-            offloading::getOffloadEntryArray(M, "omp_offloading_entries"),
+            M, BuffersToWrap, offloading::getOffloadEntryArray(M),
             /*Suffix=*/"", /*Relocatable=*/Args.hasArg(OPT_relocatable)))
       return std::move(Err);
     break;
   case OFK_Cuda:
     if (Error Err = offloading::wrapCudaBinary(
-            M, BuffersToWrap.front(),
-            offloading::getOffloadEntryArray(M, "cuda_offloading_entries"),
+            M, BuffersToWrap.front(), offloading::getOffloadEntryArray(M),
             /*Suffix=*/"", /*EmitSurfacesAndTextures=*/false))
       return std::move(Err);
     break;
   case OFK_HIP:
     if (Error Err = offloading::wrapHIPBinary(
-            M, BuffersToWrap.front(),
-            offloading::getOffloadEntryArray(M, "hip_offloading_entries")))
+            M, BuffersToWrap.front(), offloading::getOffloadEntryArray(M)))
       return std::move(Err);
     break;
   default:
@@ -820,8 +827,9 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
 
   // Set the subarchitecture and target triple for this compilation.
   const OptTable &Tbl = getOptTable();
+  StringRef Arch = Args.MakeArgString(Input.front().getBinary()->getArch());
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_arch_EQ),
-                   Args.MakeArgString(Input.front().getBinary()->getArch()));
+                   Arch == "generic" ? "" : Arch);
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_triple_EQ),
                    Args.MakeArgString(Input.front().getBinary()->getTriple()));
 
@@ -959,6 +967,10 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
         else
           return createFileError(*OutputOrErr, EC);
       }
+
+      // Manually containerize offloading images not in ELF format.
+      if (Error E = containerizeRawImage(*FileOrErr, Kind, LinkerArgs))
+        return E;
 
       std::scoped_lock<decltype(ImageMtx)> Guard(ImageMtx);
       OffloadingImage TheImage{};

@@ -65,17 +65,17 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
                                      const ValueDecl *VD);
 static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
                                 const ValueDecl *D) {
-  const SourceInfo &E = S.Current->getSource(OpPC);
 
   if (isa<ParmVarDecl>(D)) {
     if (D->getType()->isReferenceType())
       return false;
 
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
     if (S.getLangOpts().CPlusPlus11) {
-      S.FFDiag(E, diag::note_constexpr_function_param_value_unknown) << D;
+      S.FFDiag(Loc, diag::note_constexpr_function_param_value_unknown) << D;
       S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
     } else {
-      S.FFDiag(E);
+      S.FFDiag(Loc);
     }
     return false;
   }
@@ -561,6 +561,18 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
+static bool CheckLifetime(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                          AccessKinds AK) {
+  if (Ptr.getLifetime() == Lifetime::Started)
+    return true;
+
+  if (!S.checkingPotentialConstantExpression()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
+        << AK << /*uninitialized=*/false << S.Current->getRange(OpPC);
+  }
+  return false;
+}
+
 bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (Ptr.isInitialized())
     return true;
@@ -605,6 +617,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckActive(S, OpPC, Ptr, AK))
     return false;
+  if (!CheckLifetime(S, OpPC, Ptr, AK))
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK))
@@ -634,6 +648,8 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckActive(S, OpPC, Ptr, AK_Read))
     return false;
+  if (!CheckLifetime(S, OpPC, Ptr, AK_Read))
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
@@ -649,6 +665,8 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Assign))
     return false;
   if (!CheckDummy(S, OpPC, Ptr, AK_Assign))
+    return false;
+  if (!CheckLifetime(S, OpPC, Ptr, AK_Assign))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
@@ -1546,34 +1564,38 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
   assert(E);
 
-  if (S.getLangOpts().CPlusPlus26)
-    return true;
-
-  const auto &Loc = S.Current->getSource(OpPC);
-
   if (const auto *NewExpr = dyn_cast<CXXNewExpr>(E)) {
     const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
 
-    if (!S.getLangOpts().CPlusPlus26 && NewExpr->getNumPlacementArgs() > 0) {
+    if (NewExpr->getNumPlacementArgs() > 0) {
       // This is allowed pre-C++26, but only an std function.
-      if (S.Current->isStdFunction())
+      if (S.getLangOpts().CPlusPlus26 || S.Current->isStdFunction())
         return true;
-      S.FFDiag(Loc, diag::note_constexpr_new_placement)
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_placement)
           << /*C++26 feature*/ 1 << E->getSourceRange();
-    } else if (NewExpr->getNumPlacementArgs() == 1 &&
-               !OperatorNew->isReservedGlobalPlacementOperator()) {
-      S.FFDiag(Loc, diag::note_constexpr_new_placement)
-          << /*Unsupported*/ 0 << E->getSourceRange();
     } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
-      S.FFDiag(Loc, diag::note_constexpr_new_non_replaceable)
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_new_non_replaceable)
           << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
+      return false;
+    } else if (!S.getLangOpts().CPlusPlus26 &&
+               NewExpr->getNumPlacementArgs() == 1 &&
+               !OperatorNew->isReservedGlobalPlacementOperator()) {
+      if (!S.getLangOpts().CPlusPlus26) {
+        S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_placement)
+            << /*Unsupported*/ 0 << E->getSourceRange();
+        return false;
+      }
+      return true;
     }
   } else {
     const auto *DeleteExpr = cast<CXXDeleteExpr>(E);
     const FunctionDecl *OperatorDelete = DeleteExpr->getOperatorDelete();
     if (!OperatorDelete->isReplaceableGlobalAllocationFunction()) {
-      S.FFDiag(Loc, diag::note_constexpr_new_non_replaceable)
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_new_non_replaceable)
           << isa<CXXMethodDecl>(OperatorDelete) << OperatorDelete;
+      return false;
     }
   }
 

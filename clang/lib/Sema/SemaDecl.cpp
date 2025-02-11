@@ -13380,6 +13380,62 @@ void Sema::checkNonTrivialCUnion(QualType QT, SourceLocation Loc,
         .visit(QT, nullptr, false);
 }
 
+bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
+    const VarDecl *Dcl) {
+  if (!getLangOpts().CPlusPlus)
+    return false;
+
+  // We only need to warn if the definition is in a header file, so wait to
+  // diagnose until we've seen the definition.
+  if (!Dcl->isThisDeclarationADefinition())
+    return false;
+
+  // If an object is defined in a source file, its definition can't get
+  // duplicated since it will never appear in more than one TU.
+  if (Dcl->getASTContext().getSourceManager().isInMainFile(Dcl->getLocation()))
+    return false;
+
+  // If the variable we're looking at is a static local, then we actually care
+  // about the properties of the function containing it.
+  const ValueDecl *Target = Dcl;
+  // VarDecls and FunctionDecls have different functions for checking
+  // inline-ness, so we have to do it manually.
+  bool TargetIsInline = Dcl->isInline();
+
+  // Update the Target and TargetIsInline property if necessary
+  if (Dcl->isStaticLocal()) {
+    const DeclContext *Ctx = Dcl->getDeclContext();
+    if (!Ctx)
+      return false;
+
+    const FunctionDecl *FunDcl =
+        dyn_cast_if_present<FunctionDecl>(Ctx->getNonClosureAncestor());
+    if (!FunDcl)
+      return false;
+
+    Target = FunDcl;
+    // IsInlined() checks for the C++ inline property
+    TargetIsInline = FunDcl->isInlined();
+  }
+
+  // Non-inline variables can only legally appear in one TU
+  // FIXME: This also applies to templated variables, but that can rarely lead
+  // to false positives so templates are disabled for now.
+  if (!TargetIsInline)
+    return false;
+
+  // If the object isn't hidden, the dynamic linker will prevent duplication.
+  clang::LinkageInfo Lnk = Target->getLinkageAndVisibility();
+  if (Lnk.getVisibility() != HiddenVisibility)
+    return false;
+
+  // If the obj doesn't have external linkage, it's supposed to be duplicated.
+  if (!isExternalFormalLinkage(Lnk.getLinkage()))
+    return false;
+
+  return true;
+}
+
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // If there is no declaration, there was an error parsing it.  Just ignore
   // the initializer.
@@ -14785,6 +14841,51 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   // member, set the visibility of this variable.
   if (DC->getRedeclContext()->isFileContext() && VD->isExternallyVisible())
     AddPushedVisibilityAttribute(VD);
+
+  // If this object has external linkage and hidden visibility, it might be
+  // duplicated when built into a shared library, which causes problems if it's
+  // mutable (since the copies won't be in sync) or its initialization has side
+  // effects (since it will run once per copy instead of once globally)
+  // FIXME: Windows uses dllexport/dllimport instead of visibility, and we don't
+  // handle that yet. Disable the warning on Windows for now.
+  // FIXME: Checking templates can cause false positives if the template in
+  // question is never instantiated (e.g. only specialized templates are used).
+  if (!Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
+      !VD->isTemplated() &&
+      GloballyUniqueObjectMightBeAccidentallyDuplicated(VD)) {
+    // Check mutability. For pointers, ensure that both the pointer and the
+    // pointee are (recursively) const.
+    QualType Type = VD->getType().getNonReferenceType();
+    if (!Type.isConstant(VD->getASTContext())) {
+      Diag(VD->getLocation(), diag::warn_possible_object_duplication_mutable)
+          << VD;
+    } else {
+      while (Type->isPointerType()) {
+        Type = Type->getPointeeType();
+        if (Type->isFunctionType())
+          break;
+        if (!Type.isConstant(VD->getASTContext())) {
+          Diag(VD->getLocation(),
+               diag::warn_possible_object_duplication_mutable)
+              << VD;
+          break;
+        }
+      }
+    }
+
+    // To keep false positives low, only warn if we're certain that the
+    // initializer has side effects. Don't warn on operator new, since a mutable
+    // pointer will trigger the previous warning, and an immutable pointer
+    // getting duplicated just results in a little extra memory usage.
+    const Expr *Init = VD->getAnyInitializer();
+    if (Init &&
+        Init->HasSideEffects(VD->getASTContext(),
+                             /*IncludePossibleEffects=*/false) &&
+        !isa<CXXNewExpr>(Init->IgnoreParenImpCasts())) {
+      Diag(Init->getExprLoc(), diag::warn_possible_object_duplication_init)
+          << VD;
+    }
+  }
 
   // FIXME: Warn on unused var template partial specializations.
   if (VD->isFileVarDecl() && !isa<VarTemplatePartialSpecializationDecl>(VD))
@@ -19532,23 +19633,6 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
   ProcessAPINotes(Record);
 }
 
-/// Determine whether the given integral value is representable within
-/// the given type T.
-static bool isRepresentableIntegerValue(ASTContext &Context,
-                                        llvm::APSInt &Value,
-                                        QualType T) {
-  assert((T->isIntegralType(Context) || T->isEnumeralType()) &&
-         "Integral type required!");
-  unsigned BitWidth = Context.getIntWidth(T);
-
-  if (Value.isUnsigned() || Value.isNonNegative()) {
-    if (T->isSignedIntegerOrEnumerationType())
-      --BitWidth;
-    return Value.getActiveBits() <= BitWidth;
-  }
-  return Value.getSignificantBits() <= BitWidth;
-}
-
 // Given an integral type, return the next larger integral type
 // (or a NULL type of no such type exists).
 static QualType getNextLargerIntegralType(ASTContext &Context, QualType T) {
@@ -19622,7 +19706,7 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
           // representable in the underlying type of the enumeration. In C++11,
           // we perform a non-narrowing conversion as part of converted constant
           // expression checking.
-          if (!isRepresentableIntegerValue(Context, EnumVal, EltTy)) {
+          if (!Context.isRepresentableIntegerValue(EnumVal, EltTy)) {
             if (Context.getTargetInfo()
                     .getTriple()
                     .isWindowsMSVCEnvironment()) {
@@ -19651,7 +19735,7 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
           //   representable as an int.
 
           // Complain if the value is not representable in an int.
-          if (!isRepresentableIntegerValue(Context, EnumVal, Context.IntTy)) {
+          if (!Context.isRepresentableIntegerValue(EnumVal, Context.IntTy)) {
             Diag(IdLoc, getLangOpts().C23
                             ? diag::warn_c17_compat_enum_value_not_int
                             : diag::ext_c23_enum_value_not_int)
@@ -19743,7 +19827,7 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
                           : diag::ext_c23_enum_value_not_int)
               << 1 << toString(EnumVal, 10) << 1;
       } else if (!getLangOpts().CPlusPlus && !EltTy->isDependentType() &&
-                 !isRepresentableIntegerValue(Context, EnumVal, EltTy)) {
+                 !Context.isRepresentableIntegerValue(EnumVal, EltTy)) {
         // Enforce C99 6.7.2.2p2 even when we compute the next value.
         Diag(IdLoc, getLangOpts().C23 ? diag::warn_c17_compat_enum_value_not_int
                                       : diag::ext_c23_enum_value_not_int)
@@ -20070,35 +20154,8 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
   // reverse the list.
   unsigned NumNegativeBits = 0;
   unsigned NumPositiveBits = 0;
-  bool MembersRepresentableByInt = true;
-
-  for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
-    EnumConstantDecl *ECD =
-      cast_or_null<EnumConstantDecl>(Elements[i]);
-    if (!ECD) continue;  // Already issued a diagnostic.
-
-    llvm::APSInt InitVal = ECD->getInitVal();
-
-    // Keep track of the size of positive and negative values.
-    if (InitVal.isUnsigned() || InitVal.isNonNegative()) {
-      // If the enumerator is zero that should still be counted as a positive
-      // bit since we need a bit to store the value zero.
-      unsigned ActiveBits = InitVal.getActiveBits();
-      NumPositiveBits = std::max({NumPositiveBits, ActiveBits, 1u});
-    } else {
-      NumNegativeBits =
-          std::max(NumNegativeBits, (unsigned)InitVal.getSignificantBits());
-    }
-    MembersRepresentableByInt &=
-        isRepresentableIntegerValue(Context, InitVal, Context.IntTy);
-  }
-
-  // If we have an empty set of enumerators we still need one bit.
-  // From [dcl.enum]p8
-  // If the enumerator-list is empty, the values of the enumeration are as if
-  // the enumeration had a single enumerator with value 0
-  if (!NumPositiveBits && !NumNegativeBits)
-    NumPositiveBits = 1;
+  bool MembersRepresentableByInt =
+      Context.computeEnumBits(Elements, NumNegativeBits, NumPositiveBits);
 
   // Figure out the type that should be used for this enum.
   QualType BestType;

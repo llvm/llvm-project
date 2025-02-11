@@ -1382,43 +1382,46 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
     if (!ctx.config.dll)
       return;
 
-    if (!ctx.symtab.exports.empty())
+    if (ctx.symtab.hadExplicitExports ||
+        (ctx.hybridSymtab && ctx.hybridSymtab->hadExplicitExports))
       return;
     if (args.hasArg(OPT_exclude_all_symbols))
       return;
   }
 
-  AutoExporter exporter(ctx, excludedSymbols);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    AutoExporter exporter(symtab, excludedSymbols);
 
-  for (auto *arg : args.filtered(OPT_wholearchive_file))
-    if (std::optional<StringRef> path = findFile(arg->getValue()))
-      exporter.addWholeArchive(*path);
+    for (auto *arg : args.filtered(OPT_wholearchive_file))
+      if (std::optional<StringRef> path = findFile(arg->getValue()))
+        exporter.addWholeArchive(*path);
 
-  for (auto *arg : args.filtered(OPT_exclude_symbols)) {
-    SmallVector<StringRef, 2> vec;
-    StringRef(arg->getValue()).split(vec, ',');
-    for (StringRef sym : vec)
-      exporter.addExcludedSymbol(ctx.symtab.mangle(sym));
-  }
-
-  ctx.symtab.forEachSymbol([&](Symbol *s) {
-    auto *def = dyn_cast<Defined>(s);
-    if (!exporter.shouldExport(def))
-      return;
-
-    if (!def->isGCRoot) {
-      def->isGCRoot = true;
-      ctx.config.gcroot.push_back(def);
+    for (auto *arg : args.filtered(OPT_exclude_symbols)) {
+      SmallVector<StringRef, 2> vec;
+      StringRef(arg->getValue()).split(vec, ',');
+      for (StringRef sym : vec)
+        exporter.addExcludedSymbol(symtab.mangle(sym));
     }
 
-    Export e;
-    e.name = def->getName();
-    e.sym = def;
-    if (Chunk *c = def->getChunk())
-      if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
-        e.data = true;
-    s->isUsedInRegularObj = true;
-    ctx.symtab.exports.push_back(e);
+    symtab.forEachSymbol([&](Symbol *s) {
+      auto *def = dyn_cast<Defined>(s);
+      if (!exporter.shouldExport(def))
+        return;
+
+      if (!def->isGCRoot) {
+        def->isGCRoot = true;
+        ctx.config.gcroot.push_back(def);
+      }
+
+      Export e;
+      e.name = def->getName();
+      e.sym = def;
+      if (Chunk *c = def->getChunk())
+        if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
+          e.data = true;
+      s->isUsedInRegularObj = true;
+      symtab.exports.push_back(e);
+    });
   });
 }
 
@@ -2554,14 +2557,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         // it.
         if (symtab.findUnderscore("_load_config_used"))
           symtab.addGCRoot(symtab.mangle("_load_config_used"));
-      });
 
-      if (args.hasArg(OPT_include_optional)) {
-        // Handle /includeoptional
-        for (auto *arg : args.filtered(OPT_include_optional))
-          if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
-            ctx.symtab.addGCRoot(arg->getValue());
-      }
+        if (args.hasArg(OPT_include_optional)) {
+          // Handle /includeoptional
+          for (auto *arg : args.filtered(OPT_include_optional))
+            if (isa_and_nonnull<LazyArchive>(symtab.find(arg->getValue())))
+              symtab.addGCRoot(arg->getValue());
+        }
+      });
     } while (run());
   }
 
@@ -2570,11 +2573,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.symtab.addUndefinedGlob(pat);
 
   // Create wrapped symbols for -wrap option.
-  std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);
-  // Load more object files that might be needed for wrapped symbols.
-  if (!wrapped.empty())
-    while (run())
-      ;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    addWrappedSymbols(symtab, args);
+    // Load more object files that might be needed for wrapped symbols.
+    if (!symtab.wrapped.empty())
+      while (run())
+        ;
+  });
 
   if (config->autoImport || config->stdcallFixup) {
     // MinGW specific.
@@ -2644,8 +2649,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   run();
 
   // Apply symbol renames for -wrap.
-  if (!wrapped.empty())
-    wrapSymbols(ctx, wrapped);
+  ctx.forEachSymtab([](SymbolTable &symtab) {
+    if (!symtab.wrapped.empty())
+      wrapSymbols(symtab);
+  });
 
   if (isArm64EC(config->machine))
     createECExportThunks();
@@ -2692,7 +2699,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /output-def (MinGW specific).
   if (auto *arg = args.getLastArg(OPT_output_def))
-    writeDefFile(ctx, arg->getValue(), ctx.symtab.exports);
+    writeDefFile(ctx, arg->getValue(), mainSymtab.exports);
 
   // Set extra alignment for .comm symbols
   for (auto pair : config->alignComm) {
