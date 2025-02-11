@@ -127,6 +127,7 @@ Improvements to Clang's diagnostics
 - The ``-Wunique-object-duplication`` warning has been added to warn about objects
   which are supposed to only exist once per program, but may get duplicated when
   built into a shared library.
+- Fixed a bug where Clang's Analysis did not correctly model the destructor behavior of ``union`` members (#GH119415).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -150,6 +151,8 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
+- The initialization kind of elements of structured bindings
+  direct-list-initialized from an array is corrected to direct-initialization.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -236,6 +239,8 @@ clang-format
 ------------
 
 - Adds ``BreakBeforeTemplateCloser`` option.
+- Adds ``BinPackLongBracedList`` option to override bin packing options in
+  long (20 item or more) braced list initializer lists.
 
 libclang
 --------
