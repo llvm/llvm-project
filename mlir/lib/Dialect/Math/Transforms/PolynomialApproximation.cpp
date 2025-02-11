@@ -1767,7 +1767,7 @@ void mlir::populatePolynomialApproximateErfPattern(
 void mlir::populatePolynomialApproximateErfcPattern(
     RewritePatternSet &patterns) {
   patterns.add<ErfcPolynomialApproximation>(patterns.getContext());
-
+}
 
 template <typename OpType>
 static void
@@ -1881,7 +1881,7 @@ void mlir::populateMathPolynomialApproximationPatterns(
              math::TanhOp::getOperationName(), math::LogOp::getOperationName(),
              math::Log2Op::getOperationName(),
              math::Log1pOp::getOperationName(), math::ErfOp::getOperationName(),
-             math::ErcfOp::getOperationName(), math::AsinOp::getOperationName(),
+             math::ErfcOp::getOperationName(), math::AsinOp::getOperationName(),
              math::AcosOp::getOperationName(), math::ExpOp::getOperationName(),
              math::ExpM1Op::getOperationName(),
              math::CbrtOp::getOperationName(), math::SinOp::getOperationName(),
