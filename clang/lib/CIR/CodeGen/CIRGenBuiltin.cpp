@@ -1078,8 +1078,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       bool LoseInfo = false;
       Probability.convert(llvm::APFloat::IEEEdouble(),
                           llvm::RoundingMode::Dynamic, &LoseInfo);
-      ProbAttr = mlir::FloatAttr::get(
-          mlir::Float64Type::get(&getMLIRContext()), Probability);
+      ProbAttr = mlir::FloatAttr::get(mlir::Float64Type::get(&getMLIRContext()),
+                                      Probability);
     }
 
     auto result = builder.create<cir::ExpectOp>(getLoc(E->getSourceRange()),
@@ -1766,21 +1766,24 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__sync_and_and_fetch_4:
   case Builtin::BI__sync_and_and_fetch_8:
   case Builtin::BI__sync_and_and_fetch_16:
-    llvm_unreachable("BI__sync_and_and_fetch like NYI");
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::And, E,
+                                cir::BinOpKind::And);
 
   case Builtin::BI__sync_or_and_fetch_1:
   case Builtin::BI__sync_or_and_fetch_2:
   case Builtin::BI__sync_or_and_fetch_4:
   case Builtin::BI__sync_or_and_fetch_8:
   case Builtin::BI__sync_or_and_fetch_16:
-    llvm_unreachable("BI__sync_or_and_fetch like NYI");
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Or, E,
+                                cir::BinOpKind::Or);
 
   case Builtin::BI__sync_xor_and_fetch_1:
   case Builtin::BI__sync_xor_and_fetch_2:
   case Builtin::BI__sync_xor_and_fetch_4:
   case Builtin::BI__sync_xor_and_fetch_8:
   case Builtin::BI__sync_xor_and_fetch_16:
-    llvm_unreachable("BI__sync_xor_and_fetch like NYI");
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Xor, E,
+                                cir::BinOpKind::Xor);
 
   case Builtin::BI__sync_nand_and_fetch_1:
   case Builtin::BI__sync_nand_and_fetch_2:

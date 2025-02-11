@@ -816,4 +816,236 @@ extern "C" void test_op_and_fetch (void)
   // LLVM:  [[RET7:%.*]] = sub i64 [[RES7]], [[CONV7]]
   // LLVM:  store i64 [[RET7]], ptr @ull, align 8
   ull = __sync_sub_and_fetch (&ull, uc);
+
+  // CHECK: [[VAL0:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !s8i
+  // CHECK: [[RES0:%.*]] = cir.atomic.fetch(and, {{%.*}} : !cir.ptr<!s8i>, [[VAL0]] : !s8i, seq_cst) fetch_first : !s8i
+  // CHECK: [[RET0:%.*]] = cir.binop(and, [[RES0]], [[VAL0]]) : !s8i
+  // LLVM:  [[VAL0:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[RES0:%.*]] = atomicrmw and ptr @sc, i8 [[VAL0]] seq_cst, align 1
+  // LLVM:  [[RET0:%.*]] = and i8 [[RES0]], [[VAL0]]
+  // LLVM:  store i8 [[RET0]], ptr @sc, align 1
+  sc = __sync_and_and_fetch (&sc, uc); 
+
+  // CHECK: [[RES1:%.*]] = cir.atomic.fetch(and, {{%.*}} : !cir.ptr<!u8i>, [[VAL1:%.*]] : !u8i, seq_cst) fetch_first : !u8i
+  // CHECK: [[RET1:%.*]] = cir.binop(and, [[RES1]], [[VAL1]]) : !u8i
+  // LLVM:  [[VAL1:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[RES1:%.*]] = atomicrmw and ptr @uc, i8 [[VAL1]] seq_cst, align 1
+  // LLVM:  [[RET1:%.*]] = and i8 [[RES1]], [[VAL1]]
+  // LLVM:  store i8 [[RET1]], ptr @uc, align 1
+  uc = __sync_and_and_fetch (&uc, uc); 
+  
+  // CHECK: [[VAL2:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !s16i
+  // CHECK: [[RES2:%.*]] = cir.atomic.fetch(and, {{%.*}} : !cir.ptr<!s16i>, [[VAL2]] : !s16i, seq_cst) fetch_first : !s16i
+  // CHECK: [[RET2:%.*]] = cir.binop(and, [[RES2]], [[VAL2]]) : !s16i
+  // LLVM:  [[VAL2:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV2:%.*]] = zext i8 [[VAL2]] to i16
+  // LLVM:  [[RES2:%.*]] = atomicrmw and ptr @ss, i16 [[CONV2]] seq_cst, align 2
+  // LLVM:  [[RET2:%.*]] = and i16 [[RES2]], [[CONV2]]
+  // LLVM:  store i16 [[RET2]], ptr @ss, align 2
+  ss = __sync_and_and_fetch (&ss, uc); 
+
+  // CHECK: [[VAL3:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !u16i
+  // CHECK: [[RES3:%.*]] = cir.atomic.fetch(and, {{%.*}} : !cir.ptr<!u16i>, [[VAL3]] : !u16i, seq_cst) fetch_first : !u16i
+  // CHECK: [[RET3:%.*]] = cir.binop(and, [[RES3]], [[VAL3]]) : !u16i
+  // LLVM:  [[VAL3:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV3:%.*]] = zext i8 [[VAL3]] to i16
+  // LLVM:  [[RES3:%.*]] = atomicrmw and ptr @us, i16 [[CONV3]] seq_cst, align 2
+  // LLVM:  [[RET3:%.*]] = and i16 [[RES3]], [[CONV3]]
+  // LLVM:  store i16 [[RET3]], ptr @us
+  us = __sync_and_and_fetch (&us, uc); 
+
+  // CHECK: [[VAL4:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !s32i
+  // CHECK: [[RES4:%.*]] = cir.atomic.fetch(and, {{%.*}} : !cir.ptr<!s32i>, [[VAL4]] : !s32i, seq_cst) fetch_first : !s32i
+  // CHECK: [[RET4:%.*]] = cir.binop(and, [[RES4]], [[VAL4]]) : !s32i
+  // LLVM:  [[VAL4:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV4:%.*]] = zext i8 [[VAL4]] to i32
+  // LLVM:  [[RES4:%.*]] = atomicrmw and ptr @si, i32 [[CONV4]] seq_cst, align 4
+  // LLVM:  [[RET4:%.*]] = and i32 [[RES4]], [[CONV4]]
+  // LLVM:  store i32 [[RET4]], ptr @si, align 4
+  si = __sync_and_and_fetch (&si, uc); 
+
+  // CHECK: [[VAL5:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !u32i
+  // CHECK: [[RES5:%.*]] = cir.atomic.fetch(and, {{%.*}} : !cir.ptr<!u32i>, [[VAL5]] : !u32i, seq_cst) fetch_first : !u32i
+  // CHECK: [[RET5:%.*]] = cir.binop(and, [[RES5]], [[VAL5]]) : !u32i
+  // LLVM:  [[VAL5:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV5:%.*]] = zext i8 [[VAL5]] to i32
+  // LLVM:  [[RES5:%.*]] = atomicrmw and ptr @ui, i32 [[CONV5]] seq_cst, align 4
+  // LLVM:  [[RET5:%.*]] = and i32 [[RES5]], [[CONV5]]
+  // LLVM:  store i32 [[RET5]], ptr @ui, align 4
+  ui = __sync_and_and_fetch (&ui, uc); 
+
+  // CHECK: [[VAL6:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !s64i
+  // CHECK: [[RES6:%.*]] = cir.atomic.fetch(and, {{%.*}} : !cir.ptr<!s64i>, [[VAL6]] : !s64i, seq_cst) fetch_first : !s64i
+  // CHECK: [[RET6:%.*]] = cir.binop(and, [[RES6]], [[VAL6]]) : !s64i
+  // LLVM:  [[VAL6:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV6:%.*]] = zext i8 [[VAL6]] to i64
+  // LLVM:  [[RES6:%.*]] = atomicrmw and ptr @sll, i64 [[CONV6]] seq_cst, align 8
+  // LLVM:  [[RET6:%.*]] = and i64 [[RES6]], [[CONV6]]
+  // LLVM:  store i64 [[RET6]], ptr @sll, align 8
+  sll = __sync_and_and_fetch (&sll, uc); 
+
+  // CHECK: [[VAL7:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !u64i
+  // CHECK: [[RES7:%.*]] = cir.atomic.fetch(and, {{%.*}} : !cir.ptr<!u64i>, [[VAL7]] : !u64i, seq_cst) fetch_first : !u64i
+  // CHECK: [[RET7:%.*]] = cir.binop(and, [[RES7]], [[VAL7]]) : !u64i
+  // LLVM:  [[VAL7:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV7:%.*]] = zext i8 [[VAL7]] to i64
+  // LLVM:  [[RES7:%.*]] = atomicrmw and ptr @ull, i64 [[CONV7]] seq_cst, align 8
+  // LLVM:  [[RET7:%.*]] = and i64 [[RES7]], [[CONV7]]
+  // LLVM:  store i64 [[RET7]], ptr @ull, align 8
+  ull = __sync_and_and_fetch (&ull, uc);
+
+  // CHECK: [[VAL0:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !s8i
+  // CHECK: [[RES0:%.*]] = cir.atomic.fetch(or, {{%.*}} : !cir.ptr<!s8i>, [[VAL0]] : !s8i, seq_cst) fetch_first : !s8i
+  // CHECK: [[RET0:%.*]] = cir.binop(or, [[RES0]], [[VAL0]]) : !s8i
+  // LLVM:  [[VAL0:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[RES0:%.*]] = atomicrmw or ptr @sc, i8 [[VAL0]] seq_cst, align 1
+  // LLVM:  [[RET0:%.*]] = or i8 [[RES0]], [[VAL0]]
+  // LLVM:  store i8 [[RET0]], ptr @sc, align 1
+  sc = __sync_or_and_fetch (&sc, uc); 
+
+  // CHECK: [[RES1:%.*]] = cir.atomic.fetch(or, {{%.*}} : !cir.ptr<!u8i>, [[VAL1:%.*]] : !u8i, seq_cst) fetch_first : !u8i
+  // CHECK: [[RET1:%.*]] = cir.binop(or, [[RES1]], [[VAL1]]) : !u8i
+  // LLVM:  [[VAL1:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[RES1:%.*]] = atomicrmw or ptr @uc, i8 [[VAL1]] seq_cst, align 1
+  // LLVM:  [[RET1:%.*]] = or i8 [[RES1]], [[VAL1]]
+  // LLVM:  store i8 [[RET1]], ptr @uc, align 1
+  uc = __sync_or_and_fetch (&uc, uc); 
+  
+  // CHECK: [[VAL2:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !s16i
+  // CHECK: [[RES2:%.*]] = cir.atomic.fetch(or, {{%.*}} : !cir.ptr<!s16i>, [[VAL2]] : !s16i, seq_cst) fetch_first : !s16i
+  // CHECK: [[RET2:%.*]] = cir.binop(or, [[RES2]], [[VAL2]]) : !s16i
+  // LLVM:  [[VAL2:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV2:%.*]] = zext i8 [[VAL2]] to i16
+  // LLVM:  [[RES2:%.*]] = atomicrmw or ptr @ss, i16 [[CONV2]] seq_cst, align 2
+  // LLVM:  [[RET2:%.*]] = or i16 [[RES2]], [[CONV2]]
+  // LLVM:  store i16 [[RET2]], ptr @ss, align 2
+  ss = __sync_or_and_fetch (&ss, uc); 
+
+  // CHECK: [[VAL3:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !u16i
+  // CHECK: [[RES3:%.*]] = cir.atomic.fetch(or, {{%.*}} : !cir.ptr<!u16i>, [[VAL3]] : !u16i, seq_cst) fetch_first : !u16i
+  // CHECK: [[RET3:%.*]] = cir.binop(or, [[RES3]], [[VAL3]]) : !u16i
+  // LLVM:  [[VAL3:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV3:%.*]] = zext i8 [[VAL3]] to i16
+  // LLVM:  [[RES3:%.*]] = atomicrmw or ptr @us, i16 [[CONV3]] seq_cst, align 2
+  // LLVM:  [[RET3:%.*]] = or i16 [[RES3]], [[CONV3]]
+  // LLVM:  store i16 [[RET3]], ptr @us
+  us = __sync_or_and_fetch (&us, uc); 
+
+  // CHECK: [[VAL4:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !s32i
+  // CHECK: [[RES4:%.*]] = cir.atomic.fetch(or, {{%.*}} : !cir.ptr<!s32i>, [[VAL4]] : !s32i, seq_cst) fetch_first : !s32i
+  // CHECK: [[RET4:%.*]] = cir.binop(or, [[RES4]], [[VAL4]]) : !s32i
+  // LLVM:  [[VAL4:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV4:%.*]] = zext i8 [[VAL4]] to i32
+  // LLVM:  [[RES4:%.*]] = atomicrmw or ptr @si, i32 [[CONV4]] seq_cst, align 4
+  // LLVM:  [[RET4:%.*]] = or i32 [[RES4]], [[CONV4]]
+  // LLVM:  store i32 [[RET4]], ptr @si, align 4
+  si = __sync_or_and_fetch (&si, uc); 
+
+  // CHECK: [[VAL5:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !u32i
+  // CHECK: [[RES5:%.*]] = cir.atomic.fetch(or, {{%.*}} : !cir.ptr<!u32i>, [[VAL5]] : !u32i, seq_cst) fetch_first : !u32i
+  // CHECK: [[RET5:%.*]] = cir.binop(or, [[RES5]], [[VAL5]]) : !u32i
+  // LLVM:  [[VAL5:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV5:%.*]] = zext i8 [[VAL5]] to i32
+  // LLVM:  [[RES5:%.*]] = atomicrmw or ptr @ui, i32 [[CONV5]] seq_cst, align 4
+  // LLVM:  [[RET5:%.*]] = or i32 [[RES5]], [[CONV5]]
+  // LLVM:  store i32 [[RET5]], ptr @ui, align 4
+  ui = __sync_or_and_fetch (&ui, uc); 
+
+  // CHECK: [[VAL6:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !s64i
+  // CHECK: [[RES6:%.*]] = cir.atomic.fetch(or, {{%.*}} : !cir.ptr<!s64i>, [[VAL6]] : !s64i, seq_cst) fetch_first : !s64i
+  // CHECK: [[RET6:%.*]] = cir.binop(or, [[RES6]], [[VAL6]]) : !s64i
+  // LLVM:  [[VAL6:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV6:%.*]] = zext i8 [[VAL6]] to i64
+  // LLVM:  [[RES6:%.*]] = atomicrmw or ptr @sll, i64 [[CONV6]] seq_cst, align 8
+  // LLVM:  [[RET6:%.*]] = or i64 [[RES6]], [[CONV6]]
+  // LLVM:  store i64 [[RET6]], ptr @sll, align 8
+  sll = __sync_or_and_fetch (&sll, uc); 
+
+  // CHECK: [[VAL7:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !u64i
+  // CHECK: [[RES7:%.*]] = cir.atomic.fetch(or, {{%.*}} : !cir.ptr<!u64i>, [[VAL7]] : !u64i, seq_cst) fetch_first : !u64i
+  // CHECK: [[RET7:%.*]] = cir.binop(or, [[RES7]], [[VAL7]]) : !u64i
+  // LLVM:  [[VAL7:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV7:%.*]] = zext i8 [[VAL7]] to i64
+  // LLVM:  [[RES7:%.*]] = atomicrmw or ptr @ull, i64 [[CONV7]] seq_cst, align 8
+  // LLVM:  [[RET7:%.*]] = or i64 [[RES7]], [[CONV7]]
+  // LLVM:  store i64 [[RET7]], ptr @ull, align 8
+  ull = __sync_or_and_fetch (&ull, uc);
+
+  // CHECK: [[VAL0:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !s8i
+  // CHECK: [[RES0:%.*]] = cir.atomic.fetch(xor, {{%.*}} : !cir.ptr<!s8i>, [[VAL0]] : !s8i, seq_cst) fetch_first : !s8i
+  // CHECK: [[RET0:%.*]] = cir.binop(xor, [[RES0]], [[VAL0]]) : !s8i
+  // LLVM:  [[VAL0:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[RES0:%.*]] = atomicrmw xor ptr @sc, i8 [[VAL0]] seq_cst, align 1
+  // LLVM:  [[RET0:%.*]] = xor i8 [[RES0]], [[VAL0]]
+  // LLVM:  store i8 [[RET0]], ptr @sc, align 1
+  sc = __sync_xor_and_fetch (&sc, uc); 
+
+  // CHECK: [[RES1:%.*]] = cir.atomic.fetch(xor, {{%.*}} : !cir.ptr<!u8i>, [[VAL1:%.*]] : !u8i, seq_cst) fetch_first : !u8i
+  // CHECK: [[RET1:%.*]] = cir.binop(xor, [[RES1]], [[VAL1]]) : !u8i
+  // LLVM:  [[VAL1:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[RES1:%.*]] = atomicrmw xor ptr @uc, i8 [[VAL1]] seq_cst, align 1
+  // LLVM:  [[RET1:%.*]] = xor i8 [[RES1]], [[VAL1]]
+  // LLVM:  store i8 [[RET1]], ptr @uc, align 1
+  uc = __sync_xor_and_fetch (&uc, uc); 
+  
+  // CHECK: [[VAL2:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !s16i
+  // CHECK: [[RES2:%.*]] = cir.atomic.fetch(xor, {{%.*}} : !cir.ptr<!s16i>, [[VAL2]] : !s16i, seq_cst) fetch_first : !s16i
+  // CHECK: [[RET2:%.*]] = cir.binop(xor, [[RES2]], [[VAL2]]) : !s16i
+  // LLVM:  [[VAL2:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV2:%.*]] = zext i8 [[VAL2]] to i16
+  // LLVM:  [[RES2:%.*]] = atomicrmw xor ptr @ss, i16 [[CONV2]] seq_cst, align 2
+  // LLVM:  [[RET2:%.*]] = xor i16 [[RES2]], [[CONV2]]
+  // LLVM:  store i16 [[RET2]], ptr @ss, align 2
+  ss = __sync_xor_and_fetch (&ss, uc); 
+
+  // CHECK: [[VAL3:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !u16i
+  // CHECK: [[RES3:%.*]] = cir.atomic.fetch(xor, {{%.*}} : !cir.ptr<!u16i>, [[VAL3]] : !u16i, seq_cst) fetch_first : !u16i
+  // CHECK: [[RET3:%.*]] = cir.binop(xor, [[RES3]], [[VAL3]]) : !u16i
+  // LLVM:  [[VAL3:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV3:%.*]] = zext i8 [[VAL3]] to i16
+  // LLVM:  [[RES3:%.*]] = atomicrmw xor ptr @us, i16 [[CONV3]] seq_cst, align 2
+  // LLVM:  [[RET3:%.*]] = xor i16 [[RES3]], [[CONV3]]
+  // LLVM:  store i16 [[RET3]], ptr @us
+  us = __sync_xor_and_fetch (&us, uc); 
+
+  // CHECK: [[VAL4:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !s32i
+  // CHECK: [[RES4:%.*]] = cir.atomic.fetch(xor, {{%.*}} : !cir.ptr<!s32i>, [[VAL4]] : !s32i, seq_cst) fetch_first : !s32i
+  // CHECK: [[RET4:%.*]] = cir.binop(xor, [[RES4]], [[VAL4]]) : !s32i
+  // LLVM:  [[VAL4:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV4:%.*]] = zext i8 [[VAL4]] to i32
+  // LLVM:  [[RES4:%.*]] = atomicrmw xor ptr @si, i32 [[CONV4]] seq_cst, align 4
+  // LLVM:  [[RET4:%.*]] = xor i32 [[RES4]], [[CONV4]]
+  // LLVM:  store i32 [[RET4]], ptr @si, align 4
+  si = __sync_xor_and_fetch (&si, uc); 
+
+  // CHECK: [[VAL5:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !u32i
+  // CHECK: [[RES5:%.*]] = cir.atomic.fetch(xor, {{%.*}} : !cir.ptr<!u32i>, [[VAL5]] : !u32i, seq_cst) fetch_first : !u32i
+  // CHECK: [[RET5:%.*]] = cir.binop(xor, [[RES5]], [[VAL5]]) : !u32i
+  // LLVM:  [[VAL5:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV5:%.*]] = zext i8 [[VAL5]] to i32
+  // LLVM:  [[RES5:%.*]] = atomicrmw xor ptr @ui, i32 [[CONV5]] seq_cst, align 4
+  // LLVM:  [[RET5:%.*]] = xor i32 [[RES5]], [[CONV5]]
+  // LLVM:  store i32 [[RET5]], ptr @ui, align 4
+  ui = __sync_xor_and_fetch (&ui, uc); 
+
+  // CHECK: [[VAL6:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !s64i
+  // CHECK: [[RES6:%.*]] = cir.atomic.fetch(xor, {{%.*}} : !cir.ptr<!s64i>, [[VAL6]] : !s64i, seq_cst) fetch_first : !s64i
+  // CHECK: [[RET6:%.*]] = cir.binop(xor, [[RES6]], [[VAL6]]) : !s64i
+  // LLVM:  [[VAL6:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV6:%.*]] = zext i8 [[VAL6]] to i64
+  // LLVM:  [[RES6:%.*]] = atomicrmw xor ptr @sll, i64 [[CONV6]] seq_cst, align 8
+  // LLVM:  [[RET6:%.*]] = xor i64 [[RES6]], [[CONV6]]
+  // LLVM:  store i64 [[RET6]], ptr @sll, align 8
+  sll = __sync_xor_and_fetch (&sll, uc); 
+
+  // CHECK: [[VAL7:%.*]] = cir.cast(integral, {{%.*}} : !u8i), !u64i
+  // CHECK: [[RES7:%.*]] = cir.atomic.fetch(xor, {{%.*}} : !cir.ptr<!u64i>, [[VAL7]] : !u64i, seq_cst) fetch_first : !u64i
+  // CHECK: [[RET7:%.*]] = cir.binop(xor, [[RES7]], [[VAL7]]) : !u64i
+  // LLVM:  [[VAL7:%.*]] = load i8, ptr @uc, align 1
+  // LLVM:  [[CONV7:%.*]] = zext i8 [[VAL7]] to i64
+  // LLVM:  [[RES7:%.*]] = atomicrmw xor ptr @ull, i64 [[CONV7]] seq_cst, align 8
+  // LLVM:  [[RET7:%.*]] = xor i64 [[RES7]], [[CONV7]]
+  // LLVM:  store i64 [[RET7]], ptr @ull, align 8
+  ull = __sync_xor_and_fetch (&ull, uc);
+
 }
