@@ -5,6 +5,9 @@ Performance Investigation
 Multiple factors contribute to the time it takes to analyze a file with Clang Static Analyzer.
 A translation unit contains multiple entry points, each of which take multiple steps to analyze.
 
+Performance analysis using ``-ftime-trace``
+===========================================
+
 You can add the ``-ftime-trace=file.json`` option to break down the analysis time into individual entry points and steps within each entry point.
 You can explore the generated JSON file in a Chromium browser using the ``chrome://tracing`` URL,
 or using `speedscope <https://speedscope.app>`_.
@@ -45,3 +48,91 @@ Note: Both Chrome-tracing and speedscope tools might struggle with time traces a
 Luckily, in most cases the default max-steps boundary of 225 000 produces the traces of approximately that size
 for a single entry point.
 You can use ``-analyze-function=get_global_options`` together with ``-ftime-trace`` to narrow down analysis to a specific entry point.
+
+
+Performance analysis using ``perf``
+===================================
+
+`Perf <https://perfwiki.github.io/main/>`_ is an excellent tool for sampling-based profiling of an application.
+It's easy to start profiling, you only have 2 prerequisites.
+Build with ``-fno-omit-frame-pointer`` and debug info (``-g``).
+You can use release builds, but probably the easiest is to set the ``CMAKE_BUILD_TYPE=RelWithDebInfo``
+along with ``CMAKE_CXX_FLAGS="-fno-omit-frame-pointer"`` when configuring ``llvm``.
+Here is how to `get started <https://llvm.org/docs/CMake.html#quick-start>`_ if you are in trouble.
+
+.. code-block:: bash
+   :caption: Running the Clang Static Analyzer through ``perf`` to gather samples of the execution.
+
+   # -F: Sampling frequency, use `-F max` for maximal frequency
+   # -g: Enable call-graph recording for both kernel and user space
+   perf record -F 99 -g --  clang -cc1 -nostdsysteminc -analyze -analyzer-constraints=range \
+         -setup-static-analyzer -analyzer-checker=core,unix,alpha.unix.cstring,debug.ExprInspection \
+         -verify ./clang/test/Analysis/string.c
+
+Once you have the profile data, you can use it to produce a Flame graph.
+A Flame graph is a visual representation of the stack frames of the samples.
+Common stack frame prefixes are squashed together, making up a wider bar.
+The wider the bar, the more time was spent under that particular stack frame,
+giving a sense of how the overall execution time was spent.
+
+Clone the `FlameGraph <https://github.com/brendangregg/FlameGraph>`_ git repository,
+as we will use some scripts from there to convert the ``perf`` samples into a Flame graph.
+It's also useful to check out Brendan Gregg's (the author of FlameGraph)
+`homepage <https://www.brendangregg.com/FlameGraphs/cpuflamegraphs.html>`_.
+
+
+.. code-block:: bash
+   :caption: Converting the ``perf`` profile into a Flamegraph, then opening it in Firefox.
+
+   perf script | /path/to/FlameGraph/stackcollapse-perf.pl > perf.folded
+   /path/to/FlameGraph/flamegraph.pl perf.folded  > perf.svg
+   firefox perf.svg
+
+.. image:: ../images/flamegraph.svg
+
+
+Performance analysis using ``uftrace``
+======================================
+
+`uftrace <https://github.com/namhyung/uftrace/wiki/Tutorial#getting-started>`_ is a great tool to generate rich profile data
+that you could use to focus and drill down into the timeline of your application.
+We will use it to generate Chromium trace JSON.
+In contrast to ``perf``, this approach statically instruments every function, so it should be more precise and through than the sampling-based approaches like ``perf``.
+In contrast to using `-ftime-trace`, functions don't need to opt-in to be profiled using ``llvm::TimeTraceScope``.
+All functions are profiled due to static instrumentation.
+
+There is only one prerequisite to use this tool.
+You need to build the binary you are about to instrument using ``-pg`` or ``-finstrument-functions``.
+This will make it run substantially slower but allows rich instrumentation.
+
+.. code-block:: bash
+   :caption: Recording with ``uftrace``, then dumping the result as a Chrome trace JSON.
+
+   uftrace record clang -cc1 -nostdsysteminc -analyze -analyzer-constraints=range \
+         -setup-static-analyzer -analyzer-checker=core,unix,alpha.unix.cstring,debug.ExprInspection \
+         -verify ./clang/test/Analysis/string.c
+   uftrace dump --filter=".*::AnalysisConsumer::HandleTranslationUnit" --time-filter=300 --chrome > trace.json
+
+.. image:: ../images/uftrace_detailed.png
+
+In this picture, you can see the functions below the Static Analyzer's entry point, which takes at least 300 nanoseconds to run, visualized by Chrome's ``about:tracing`` page
+You can also see how deep function calls we may have due to AST visitors.
+
+Using different filters can reduce the number of functions to record.
+For the `common options <https://github.com/namhyung/uftrace/blob/master/doc/uftrace-record.md#common-options>`_, refer to the ``uftrace`` documentation.
+
+Similar filters could be applied for dumping too. That way you can reuse the same (detailed)
+recording to selectively focus on some special part using a refinement of the filter flags.
+Remember, the trace JSON needs to fit into Chrome's ``about:tracing`` or `speedscope <https://speedscope.app>`_,
+thus it needs to be of a limited size.
+In that case though, every dump operation would need to sieve through the whole recording if called repeatedly.
+
+If the trace JSON is still too large to load, have a look at the dump and look for frequent entries that refer to non-interesting parts.
+Once you have some of those, add them as ``--hide`` flags to the ``uftrace dump`` call.
+To see what functions appear frequently in the trace, use this command:
+
+.. code-block:: bash
+
+   cat trace.json | grep -Po '"name":"(.+)"' | sort | uniq -c | sort -nr | head -n 50
+
+``uftrace`` can also dump the report as a Flame graph using ``uftrace dump --framegraph``.
