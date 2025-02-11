@@ -88,6 +88,43 @@ public:
 
 using namespace AMDGPU::SDWA;
 
+/// Check that the SDWA selections \p ExistingSel and \p OperandSel
+/// are suitable for being combined by combineSdwaSel.
+bool compatibleSelections(SdwaSel ExistingSel, SdwaSel OperandSel) {
+  return ExistingSel == SdwaSel::DWORD || OperandSel == ExistingSel ||
+         (ExistingSel != SdwaSel::WORD_1 && ExistingSel != SdwaSel::BYTE_2 &&
+          ExistingSel != SdwaSel::BYTE_3 &&
+          (OperandSel == SdwaSel::WORD_0 || OperandSel == SdwaSel::WORD_1));
+}
+
+/// Combine an SDWA instruction's existing SDWA selection \p
+/// ExistingSel with the SDWA selection \p OpSel of its operand. If
+/// the selections are compatible, return the combined selection,
+/// otherwise return a nullopt. For example, if we have ExistingSel
+/// = BYTE_0 Sel and FoldedSel WORD_1 Sel:
+///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
+SdwaSel combineSdwaSel(SdwaSel ExistingSel, SdwaSel OperandSel) {
+  assert(compatibleSelections(ExistingSel, OperandSel));
+
+  if (ExistingSel == SdwaSel::DWORD)
+    return OperandSel;
+
+  if (OperandSel == SdwaSel::DWORD || ExistingSel == OperandSel ||
+      OperandSel == SdwaSel::WORD_0)
+    return ExistingSel;
+
+  if (OperandSel == SdwaSel::WORD_1) {
+    if (ExistingSel == SdwaSel::BYTE_0)
+      return SdwaSel::BYTE_2;
+    if (ExistingSel == SdwaSel::BYTE_1)
+      return SdwaSel::BYTE_3;
+    if (ExistingSel == SdwaSel::WORD_0)
+      return SdwaSel::WORD_1;
+  }
+
+  llvm_unreachable("Unexpected selections");
+}
+
 class SDWAOperand {
 private:
   MachineOperand *Target; // Operand that would be used in converted instruction
@@ -111,42 +148,6 @@ public:
   MachineOperand *getReplacedOperand() const { return Replaced; }
   MachineInstr *getParentInst() const { return Target->getParent(); }
 
-  /// Combine an SDWA instruction's existing SDWA selection \p
-  /// ExistingSel with the SDWA selection \p OpSel of its operand. If
-  /// the selections are compatible, return the combined selection,
-  /// otherwise return a nullopt. For example, if we have ExistingSel
-  /// = BYTE_0 Sel and FoldedSel WORD_1 Sel:
-  ///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
-  std::optional<SdwaSel> combineSdwaSel(SdwaSel ExistingSel,
-                                        SdwaSel OperandSel) {
-    if (ExistingSel == SdwaSel::DWORD)
-      return OperandSel;
-
-    if (OperandSel == SdwaSel::DWORD)
-      return ExistingSel;
-
-    if (ExistingSel == SdwaSel::WORD_1 || ExistingSel == SdwaSel::BYTE_2 ||
-        ExistingSel == SdwaSel::BYTE_3)
-      return {};
-
-    if (ExistingSel == OperandSel)
-      return ExistingSel;
-
-    if (OperandSel == SdwaSel::WORD_0)
-      return ExistingSel;
-
-    if (OperandSel == SdwaSel::WORD_1) {
-      if (ExistingSel == SdwaSel::BYTE_0)
-        return SdwaSel::BYTE_2;
-      if (ExistingSel == SdwaSel::BYTE_1)
-        return SdwaSel::BYTE_3;
-      if (ExistingSel == SdwaSel::WORD_0)
-        return SdwaSel::WORD_1;
-    }
-
-    return {};
-  }
-
   MachineRegisterInfo *getMRI() const {
     return &getParentInst()->getParent()->getParent()->getRegInfo();
   }
@@ -164,12 +165,34 @@ private:
   bool Neg;
   bool Sext;
 
-public:
+protected:
   SDWASrcOperand(MachineOperand *TargetOp, MachineOperand *ReplacedOp,
                  SdwaSel SrcSel_ = DWORD, bool Abs_ = false, bool Neg_ = false,
                  bool Sext_ = false)
-      : SDWAOperand(TargetOp, ReplacedOp),
-        SrcSel(SrcSel_), Abs(Abs_), Neg(Neg_), Sext(Sext_) {}
+      : SDWAOperand(TargetOp, ReplacedOp), SrcSel(SrcSel_), Abs(Abs_),
+        Neg(Neg_), Sext(Sext_) {}
+public:
+  /// Create an SDWASrcOperand as an operand for \p MI from the given arguments
+  /// if \p SrcSel_ and the src_sel0 and src_sel1 operands of \p MI are
+  /// compatible.
+  static std::unique_ptr<SDWAOperand>
+  create(const SIInstrInfo *TII, const MachineInstr &MI,
+         MachineOperand *TargetOp, MachineOperand *ReplacedOp,
+         SdwaSel SrcSel_ = DWORD, bool Abs_ = false, bool Neg_ = false,
+         bool Sext_ = false) {
+    if (TII->isSDWA(MI.getOpcode())) {
+      for (auto SelOpName :
+           {AMDGPU::OpName::src0_sel, AMDGPU::OpName::src1_sel}) {
+        const MachineOperand *NamedOp = TII->getNamedOperand(MI, SelOpName);
+        if (NamedOp && !compatibleSelections(
+                           static_cast<SdwaSel>(NamedOp->getImm()), SrcSel_))
+          return std::unique_ptr<SDWAOperand>(nullptr);
+      }
+    }
+
+    return std::unique_ptr<SDWAOperand>(new SDWASrcOperand(
+        TargetOp, ReplacedOp, SrcSel_, Abs_, Neg_, Sext_));
+  };
 
   MachineInstr *potentialToConvert(const SIInstrInfo *TII,
                                    const GCNSubtarget &ST,
@@ -194,11 +217,29 @@ private:
   SdwaSel DstSel;
   DstUnused DstUn;
 
-public:
-
+protected:
   SDWADstOperand(MachineOperand *TargetOp, MachineOperand *ReplacedOp,
                  SdwaSel DstSel_ = DWORD, DstUnused DstUn_ = UNUSED_PAD)
-    : SDWAOperand(TargetOp, ReplacedOp), DstSel(DstSel_), DstUn(DstUn_) {}
+      : SDWAOperand(TargetOp, ReplacedOp), DstSel(DstSel_), DstUn(DstUn_) {}
+
+public:
+  /// Create an SDWASrcOperand as an operand for \p MI from the given arguments
+  /// if \p SrcSel_ and the dst_sel operand of \p MI are
+  /// compatible.
+  static std::unique_ptr<SDWAOperand>
+  create(const SIInstrInfo *TII, const MachineInstr &MI,
+         MachineOperand *TargetOp, MachineOperand *ReplacedOp, SdwaSel DstSel_,
+         DstUnused DstUn_) {
+    if (TII->isSDWA(MI.getOpcode())) {
+      SdwaSel InstSel = static_cast<SdwaSel>(
+          TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel)->getImm());
+      if (!compatibleSelections(InstSel, DstSel_))
+        return nullptr;
+    }
+
+    return std::unique_ptr<SDWAOperand>(
+        new SDWADstOperand(TargetOp, ReplacedOp, DstSel_, DstUn_));
+  };
 
   MachineInstr *potentialToConvert(const SIInstrInfo *TII,
                                    const GCNSubtarget &ST,
@@ -489,11 +530,7 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   copyRegOperand(*Src, *getTargetOperand());
   if (!IsPreserveSrc) {
     SdwaSel ExistingSel = static_cast<SdwaSel>(SrcSel->getImm());
-    std::optional<SdwaSel> NewSel = combineSdwaSel(ExistingSel, getSrcSel());
-    if (!NewSel.has_value())
-      return false;
-    SrcSel->setImm(NewSel.value());
-
+    SrcSel->setImm(combineSdwaSel(ExistingSel, getSrcSel()));
     SrcMods->setImm(getSrcMods(TII, Src));
   }
   getTargetOperand()->setIsKill(false);
@@ -542,10 +579,7 @@ bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   assert(DstSel);
 
   SdwaSel ExistingSel = static_cast<SdwaSel>(DstSel->getImm());
-  std::optional<SdwaSel> NewSel = combineSdwaSel(ExistingSel, getDstSel());
-  if (!NewSel.has_value())
-    return false;
-  DstSel->setImm(NewSel.value());
+  DstSel->setImm(combineSdwaSel(ExistingSel, getDstSel()));
 
   MachineOperand *DstUnused= TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
   assert(DstUnused);
@@ -648,13 +682,13 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
 
     if (Opcode == AMDGPU::V_LSHLREV_B32_e32 ||
         Opcode == AMDGPU::V_LSHLREV_B32_e64) {
-      return std::make_unique<SDWADstOperand>(
-          Dst, Src1, *Imm == 16 ? WORD_1 : BYTE_3, UNUSED_PAD);
+      return SDWADstOperand::create(TII, MI, Dst, Src1,
+                                    *Imm == 16 ? WORD_1 : BYTE_3, UNUSED_PAD);
     }
-    return std::make_unique<SDWASrcOperand>(
-        Src1, Dst, *Imm == 16 ? WORD_1 : BYTE_3, false, false,
-        Opcode != AMDGPU::V_LSHRREV_B32_e32 &&
-            Opcode != AMDGPU::V_LSHRREV_B32_e64);
+    return SDWASrcOperand::create(TII, MI, Src1, Dst,
+                                  *Imm == 16 ? WORD_1 : BYTE_3, false, false,
+                                  Opcode != AMDGPU::V_LSHRREV_B32_e32 &&
+                                      Opcode != AMDGPU::V_LSHRREV_B32_e64);
     break;
   }
 
@@ -686,11 +720,10 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
 
     if (Opcode == AMDGPU::V_LSHLREV_B16_e32 ||
         Opcode == AMDGPU::V_LSHLREV_B16_e64)
-      return std::make_unique<SDWADstOperand>(Dst, Src1, BYTE_1, UNUSED_PAD);
-    return std::make_unique<SDWASrcOperand>(
-        Src1, Dst, BYTE_1, false, false,
-        Opcode != AMDGPU::V_LSHRREV_B16_e32 &&
-            Opcode != AMDGPU::V_LSHRREV_B16_e64);
+      return SDWADstOperand::create(TII, MI, Dst, Src1, BYTE_1, UNUSED_PAD);
+    return SDWASrcOperand::create(TII, MI, Src1, Dst, BYTE_1, false, false,
+                                  Opcode != AMDGPU::V_LSHRREV_B16_e32 &&
+                                      Opcode != AMDGPU::V_LSHRREV_B16_e64);
     break;
   }
 
@@ -746,8 +779,8 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
         Dst->getReg().isPhysical())
       break;
 
-    return std::make_unique<SDWASrcOperand>(
-          Src0, Dst, SrcSel, false, false, Opcode != AMDGPU::V_BFE_U32_e64);
+    return SDWASrcOperand::create(TII, MI, Src0, Dst, SrcSel, false, false,
+                                  Opcode != AMDGPU::V_BFE_U32_e64);
   }
 
   case AMDGPU::V_AND_B32_e32:
@@ -774,9 +807,8 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
     if (!ValSrc->isReg() || ValSrc->getReg().isPhysical() ||
         Dst->getReg().isPhysical())
       break;
-
-    return std::make_unique<SDWASrcOperand>(
-        ValSrc, Dst, *Imm == 0x0000ffff ? WORD_0 : BYTE_0);
+    return SDWASrcOperand::create(TII, MI, ValSrc, Dst,
+                                  *Imm == 0x0000ffff ? WORD_0 : BYTE_0);
   }
 
   case AMDGPU::V_OR_B32_e32:
@@ -912,7 +944,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
   }
   }
 
-  return std::unique_ptr<SDWAOperand>(nullptr);
+  return nullptr;
 }
 
 #if !defined(NDEBUG)
