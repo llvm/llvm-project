@@ -530,22 +530,22 @@ func.func @extract_scalar_from_vec_0d_index(%arg0: vector<index>) -> index {
 
 // -----
 
-func.func @extract_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const(%arg : vector<32x1xi32>) -> i32 {
+func.func @extract_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const(%arg : vector<32x1xf32>) -> f32 {
   %0 = arith.constant 0 : index
-  %1 = vector.extract %arg[%0, %0] : i32 from vector<32x1xi32>
-  return %1 : i32
+  %1 = vector.extract %arg[%0, %0] : f32 from vector<32x1xf32>
+  return %1 : f32
 }
 
 // At compile time, since the indices of extractOp are constants,
 // they will be collapsed and folded away; therefore, the lowering works.
 
 // CHECK-LABEL: @extract_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const
-//  CHECK-SAME:   %[[ARG:.*]]: vector<32x1xi32>) -> i32 {
-//       CHECK:   %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : vector<32x1xi32> to !llvm.array<32 x vector<1xi32>>
-//       CHECK:   %[[VEC_0:.*]] = llvm.extractvalue %[[CAST]][0] : !llvm.array<32 x vector<1xi32>>
+//  CHECK-SAME:   %[[ARG:.*]]: vector<32x1xf32>) -> f32 {
+//       CHECK:   %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : vector<32x1xf32> to !llvm.array<32 x vector<1xf32>>
+//       CHECK:   %[[VEC_0:.*]] = llvm.extractvalue %[[CAST]][0] : !llvm.array<32 x vector<1xf32>>
 //       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
-//       CHECK:   %[[RES:.*]] = llvm.extractelement %[[VEC_0]]{{\[}}%[[C0]] : i64] : vector<1xi32>
-//       CHECK:   return %[[RES]] : i32
+//       CHECK:   %[[RES:.*]] = llvm.extractelement %[[VEC_0]]{{\[}}%[[C0]] : i64] : vector<1xf32>
+//       CHECK:   return %[[RES]] : f32
 
 // -----
 
@@ -800,26 +800,26 @@ func.func @insert_scalar_into_vec_2d_f32_dynamic_idx_scalable(%arg0: vector<1x[1
 
 // -----
 
-func.func @insert_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const(%arg : vector<4x1xi32>) -> vector<4x1xi32> {
+func.func @insert_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const(%arg : vector<4x1xf32>) -> vector<4x1xf32> {
   %0 = arith.constant 0 : index
-  %1 = arith.constant 1 : i32
-  %res = vector.insert %1, %arg[%0, %0] : i32 into vector<4x1xi32>
-  return %res : vector<4x1xi32>
+  %1 = arith.constant 1.0 : f32
+  %res = vector.insert %1, %arg[%0, %0] : f32 into vector<4x1xf32>
+  return %res : vector<4x1xf32>
 }
 
 // At compile time, since the indices of insertOp are constants,
 // they will be collapsed and folded away; therefore, the lowering works.
 
 // CHECK-LABEL: @insert_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const
-//  CHECK-SAME:   %[[ARG:.*]]: vector<4x1xi32>) -> vector<4x1xi32> {
-//       CHECK:   %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : vector<4x1xi32> to !llvm.array<4 x vector<1xi32>>
-//       CHECK:   %[[C1:.*]] = arith.constant 1 : i32
-//       CHECK:   %[[VEC_0:.*]] = llvm.extractvalue %[[CAST]][0] : !llvm.array<4 x vector<1xi32>>
+//  CHECK-SAME:   %[[ARG:.*]]: vector<4x1xf32>) -> vector<4x1xf32> {
+//       CHECK:   %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : vector<4x1xf32> to !llvm.array<4 x vector<1xf32>>
+//       CHECK:   %[[C1:.*]] = arith.constant 1.000000e+00 : f32
+//       CHECK:   %[[VEC_0:.*]] = llvm.extractvalue %[[CAST]][0] : !llvm.array<4 x vector<1xf32>>
 //       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
-//       CHECK:   %[[VEC_1:.*]] = llvm.insertelement %[[C1]], %[[VEC_0]]{{\[}}%[[C0]] : i64] : vector<1xi32>
-//       CHECK:   %[[VEC_2:.*]] = llvm.insertvalue %[[VEC_1]], %[[CAST]][0] : !llvm.array<4 x vector<1xi32>>
-//       CHECK:   %[[RES:.*]] = builtin.unrealized_conversion_cast %[[VEC_2]] : !llvm.array<4 x vector<1xi32>> to vector<4x1xi32>
-//       CHECK:   return %[[RES]] : vector<4x1xi32>
+//       CHECK:   %[[VEC_1:.*]] = llvm.insertelement %[[C1]], %[[VEC_0]]{{\[}}%[[C0]] : i64] : vector<1xf32>
+//       CHECK:   %[[VEC_2:.*]] = llvm.insertvalue %[[VEC_1]], %[[CAST]][0] : !llvm.array<4 x vector<1xf32>>
+//       CHECK:   %[[RES:.*]] = builtin.unrealized_conversion_cast %[[VEC_2]] : !llvm.array<4 x vector<1xf32>> to vector<4x1xf32>
+//       CHECK:   return %[[RES]] : vector<4x1xf32>
 
 // -----
 
