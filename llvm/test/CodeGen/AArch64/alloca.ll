@@ -82,21 +82,22 @@ define void @test_variadic_alloca(i64 %n, ...) {
 ; [...]
 ; CHECK-DAG: stp     q0, q1, [x29, #-192]
 
-; CHECK-DAG: stp     x5, x6, [x29, #-24]
+; CHECK-DAG: stp     x5, x6, [x29, #-32]
 ; [...]
-; CHECK-DAG: stp     x1, x2, [x29, #-56]
+; CHECK-DAG: stp     x1, x2, [x29, #-64]
 
 ; CHECK-NOFP-ARM64: stp     x29, x30, [sp, #-16]!
 ; CHECK-NOFP-ARM64: mov     x29, sp
 ; CHECK-NOFP-ARM64: sub     sp, sp, #64
-; CHECK-NOFP-ARM64-DAG: stp     x5, x6, [x29, #-24]
+; CHECK-NOFP-ARM64-DAG: stp     x5, x6, [x29, #-32]
 ; [...]
-; CHECK-NOFP-ARM64-DAG: stp     x3, x4, [x29, #-40]
+; CHECK-NOFP-ARM64-DAG: stp     x3, x4, [x29, #-48]
 ; [...]
-; CHECK-NOFP-ARM64-DAG: stp     x1, x2, [x29, #-56]
+; CHECK-NOFP-ARM64-DAG: stp     x1, x2, [x29, #-64]
 ; [...]
 ; CHECK-NOFP-ARM64: mov     x8, sp
-
+  %valist = alloca i8
+  call void @llvm.va_start(ptr %valist)
   %addr = alloca i8, i64 %n
 
   call void @use_addr(ptr %addr)

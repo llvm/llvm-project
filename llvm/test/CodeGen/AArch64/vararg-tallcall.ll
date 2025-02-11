@@ -14,6 +14,8 @@ $"??_9B@@$BA@AA" = comdat any
 ; Function Attrs: noinline optnone
 define linkonce_odr void @"??_9B@@$BA@AA"(ptr %this, ...) #1 comdat align 2  {
 entry:
+  %valist = alloca i8
+  call void @llvm.va_start.p0(ptr %valist)
   %this.addr = alloca ptr, align 8
   store ptr %this, ptr %this.addr, align 8
   %this1 = load ptr, ptr %this.addr, align 8
@@ -37,6 +39,6 @@ attributes #1 = { noinline optnone "thunk" }
 ; CHECK-EC: ldr     x9, [x0]
 ; CHECK-EC: ldr     x11, [x9]
 ; CHECK-EC: mov     v0.16b, v7.16b
-; CHECK-EC: add     x4, sp, #64
-; CHECK-EC: add     sp, sp, #64
+; CHECK-EC: add     x4, sp, #80
+; CHECK-EC: add     sp, sp, #80
 ; CHECK-EC: br      x11

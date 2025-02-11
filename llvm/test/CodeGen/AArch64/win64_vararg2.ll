@@ -7,17 +7,14 @@ define i1 @va_func(i32 %a, i8 %b, i8 %c, ...) {
 ; CHECK-LABEL: va_func:
 ; CHECK:       .seh_proc va_func
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    .seh_stackalloc 80
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .seh_stackalloc 32
 ; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg x19, 16
 ; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg x30, 24
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    mov w19, w0
-; CHECK-NEXT:    stp x3, x4, [sp, #40]
-; CHECK-NEXT:    stp x5, x6, [sp, #56]
-; CHECK-NEXT:    str x7, [sp, #72]
 ; CHECK-NEXT:    str w0, [sp, #12]
 ; CHECK-NEXT:    strb w1, [sp, #11]
 ; CHECK-NEXT:    strb w2, [sp, #10]
@@ -29,8 +26,8 @@ define i1 @va_func(i32 %a, i8 %b, i8 %c, ...) {
 ; CHECK-NEXT:    .seh_save_reg x30, 24
 ; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_reg x19, 16
-; CHECK-NEXT:    add sp, sp, #80
-; CHECK-NEXT:    .seh_stackalloc 80
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    .seh_stackalloc 32
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .seh_endfunclet
