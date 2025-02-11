@@ -2402,19 +2402,6 @@ foreach size = ["i16", "i32", "i64"] in {
   }
 }
 
-multiclass INT_PTX_ATOM_CAS_AS<string atomic_cmp_swap_without_as, string type, string order, list<Predicate> preds> {
-  // eg. with type = 32, order = .acquire, atomic_cmp_swap_without_as = atomic_cmp_swap_i32_acquire, and _GEN becomes
-  // F_ATOMIC_3<i32, Int32Regs, ".acquire", ".b32", ".cas", atomic_cmp_swap_i32_acquire, i32imm>
-  defm _generic: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), order, "", ".b"#type, ".cas",
-                       !cast<PatFrag>(atomic_cmp_swap_without_as#_generic), !cast<Operand>("i"#type#"imm"), preds>;
-
-  defm _global: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), order, ".global", ".b"#type, ".cas",
-                       !cast<PatFrag>(atomic_cmp_swap_without_as#_global), !cast<Operand>("i"#type#"imm"), preds>;
-
-  defm _shared: F_ATOMIC_3<!cast<ValueType>("i"#type), !cast<NVPTXRegClass>("Int"#type#"Regs"), order, ".shared", ".b"#type, ".cas",
-                       !cast<PatFrag>(atomic_cmp_swap_without_as#_shared), !cast<Operand>("i"#type#"imm"), preds>;
-}
-
 // eg. with type = 32, order = ".acquire", addrspace = ".global",
 // atomic_cmp_swap_pat = atomic_cmp_swap_i32_acquire_global.
 // preds = [hasSM<70>, hasPTX<63>]
