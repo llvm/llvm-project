@@ -2634,16 +2634,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       OddMask.push_back(X + 1);
     }
 
+    Value *FirstArgShadow = getShadow(&I, 0);
     Value *EvenShadow;
     Value *OddShadow;
     if (I.arg_size() == 2) {
+      Value *SecondArgShadow = getShadow(&I, 1);
       EvenShadow =
-          IRB.CreateShuffleVector(getShadow(&I, 0), getShadow(&I, 1), EvenMask);
+          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, EvenMask);
       OddShadow =
-          IRB.CreateShuffleVector(getShadow(&I, 0), getShadow(&I, 1), OddMask);
+          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, OddMask);
     } else {
-      EvenShadow = IRB.CreateShuffleVector(getShadow(&I, 0), EvenMask);
-      OddShadow = IRB.CreateShuffleVector(getShadow(&I, 0), OddMask);
+      EvenShadow = IRB.CreateShuffleVector(FirstArgShadow, EvenMask);
+      OddShadow = IRB.CreateShuffleVector(FirstArgShadow, OddMask);
     }
 
     Value *OrShadow = IRB.CreateOr(EvenShadow, OddShadow);
