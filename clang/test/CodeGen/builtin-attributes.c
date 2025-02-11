@@ -1,5 +1,5 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -triple arm-unknown-linux-gnueabi -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm-unknown-linux-gnueabi -fmath-errno -emit-llvm -o - %s | FileCheck %s
 
 int printf(const char *, ...);
 void exit(int);

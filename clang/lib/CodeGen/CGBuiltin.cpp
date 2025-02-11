@@ -859,6 +859,24 @@ static void emitSincosBuiltin(CodeGenFunction &CGF, const CallExpr *E,
   StoreCos->setMetadata(LLVMContext::MD_noalias, AliasScopeList);
 }
 
+static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
+                                    llvm::Intrinsic::ID IntrinsicID) {
+  llvm::Value *Val = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *IntPartDest = CGF.EmitScalarExpr(E->getArg(1));
+
+  llvm::Function *F = CGF.CGM.getIntrinsic(IntrinsicID, {Val->getType()});
+  llvm::Value *Call = CGF.Builder.CreateCall(F, Val);
+
+  llvm::Value *FractionalResult = CGF.Builder.CreateExtractValue(Call, 0);
+  llvm::Value *IntegralResult = CGF.Builder.CreateExtractValue(Call, 1);
+
+  QualType DestPtrType = E->getArg(1)->getType()->getPointeeType();
+  LValue IntegralLV = CGF.MakeNaturalAlignAddrLValue(IntPartDest, DestPtrType);
+  CGF.Builder.CreateStore(IntegralResult, IntegralLV.getAddress());
+
+  return FractionalResult;
+}
+
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
   Function *F = CGF.CGM.getIntrinsic(Intrinsic::fabs, V->getType());
@@ -3258,6 +3276,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Value *Arg2 = EmitScalarExpr(E->getArg(1));
       return RValue::get(Builder.CreateFRem(Arg1, Arg2, "fmod"));
     }
+
+    case Builtin::BImodf:
+    case Builtin::BImodff:
+    case Builtin::BImodfl:
+    case Builtin::BI__builtin_modf:
+    case Builtin::BI__builtin_modff:
+    case Builtin::BI__builtin_modfl:
+      return RValue::get(emitModfBuiltin(*this, E, Intrinsic::modf));
 
     case Builtin::BIlog:
     case Builtin::BIlogf:
