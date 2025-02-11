@@ -2690,11 +2690,10 @@ public:
     BeginOpenMP();
     Word("!$OMP DECLARE REDUCTION ");
     Put("(");
-    Walk(std::get<OmpReductionIdentifier>(x.t)), Put(" : ");
-    Walk(std::get<std::list<DeclarationTypeSpec>>(x.t), ","), Put(" : ");
-    Walk(std::get<OmpReductionCombiner>(x.t));
+    Walk(std::get<common::Indirection<OmpReductionSpecifier>>(x.t));
     Put(")");
     Walk(std::get<std::optional<OmpReductionInitializerClause>>(x.t));
+    Put("\n");
     EndOpenMP();
   }
 

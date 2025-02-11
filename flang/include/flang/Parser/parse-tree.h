@@ -4553,8 +4553,8 @@ WRAPPER_CLASS(OmpReductionInitializerClause, Expr);
 struct OpenMPDeclareReductionConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDeclareReductionConstruct);
   CharBlock source;
-  std::tuple<Verbatim, OmpReductionIdentifier, std::list<DeclarationTypeSpec>,
-      OmpReductionCombiner, std::optional<OmpReductionInitializerClause>>
+  std::tuple<Verbatim, common::Indirection<OmpReductionSpecifier>,
+      std::optional<OmpReductionInitializerClause>>
       t;
 };
 
