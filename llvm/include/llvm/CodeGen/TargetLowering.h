@@ -1675,40 +1675,56 @@ public:
   /// operations except for the pointer size.  If AllowUnknown is true, this
   /// will return MVT::Other for types with no EVT counterpart (e.g. structs),
   /// otherwise it will assert.
-  virtual EVT getValueType(const DataLayout &DL, Type *Ty,
-                           bool AllowUnknown = false) const {
+  EVT getValueType(const DataLayout &DL, Type *Ty,
+                   bool AllowUnknown = false) const {
     // Lower scalar pointers to native pointer types.
     if (auto *PTy = dyn_cast<PointerType>(Ty))
       return getPointerTy(DL, PTy->getAddressSpace());
 
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       Type *EltTy = VTy->getElementType();
+      ElementCount EC = VTy->getElementCount();
       // Lower vectors of pointers to native pointer types.
       if (auto *PTy = dyn_cast<PointerType>(EltTy)) {
         EVT PointerTy(getPointerTy(DL, PTy->getAddressSpace()));
+        // Kludge around AMDGPU's fat pointers which, while not lowered to
+        // codegen, still needed an MVT, and could only use vectors because
+        // there weren't big enough scalars. Therefore, flatten the nominal
+        // vector-of-vectors.
+        if (PointerTy.isVector()) {
+          EC = EC * PointerTy.getVectorNumElements();
+          PointerTy = PointerTy.getVectorElementType();
+        }
         EltTy = PointerTy.getTypeForEVT(Ty->getContext());
       }
-      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false),
-                              VTy->getElementCount());
+      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false), EC);
     }
 
     return EVT::getEVT(Ty, AllowUnknown);
   }
 
-  virtual EVT getMemValueType(const DataLayout &DL, Type *Ty,
-                              bool AllowUnknown = false) const {
+  EVT getMemValueType(const DataLayout &DL, Type *Ty,
+                      bool AllowUnknown = false) const {
     // Lower scalar pointers to native pointer types.
     if (auto *PTy = dyn_cast<PointerType>(Ty))
       return getPointerMemTy(DL, PTy->getAddressSpace());
 
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       Type *EltTy = VTy->getElementType();
+      ElementCount EC = VTy->getElementCount();
       if (auto *PTy = dyn_cast<PointerType>(EltTy)) {
         EVT PointerTy(getPointerMemTy(DL, PTy->getAddressSpace()));
+        // Kludge around AMDGPU's fat pointers which, while not lowered to
+        // codegen, still needed an MVT, and could only use vectors because
+        // there weren't big enough scalars. Therefore, flatten the nominal
+        // vector-of-vectors.
+        if (PointerTy.isVector()) {
+          EC = EC * PointerTy.getVectorNumElements();
+          PointerTy = PointerTy.getVectorElementType();
+        }
         EltTy = PointerTy.getTypeForEVT(Ty->getContext());
       }
-      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false),
-                              VTy->getElementCount());
+      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false), EC);
     }
 
     return getValueType(DL, Ty, AllowUnknown);

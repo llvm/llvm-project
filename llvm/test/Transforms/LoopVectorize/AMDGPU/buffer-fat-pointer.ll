@@ -4,7 +4,7 @@
 ; Reduced from a crash, variables added to make things more realistic.
 ; This is a roundabout test for TargetLowering::getValueType() returning
 ; a reasonable value for <N x p7> instead of asserting.
-define amdgpu_kernel void @_dynamic_pack_simple_dispatch_0_pack_i32(ptr addrspace(1) %.ptr, i64 %0) {
+define amdgpu_kernel void @_dynamic_pack_simple_dispatch_0_pack_i32(ptr addrspace(1) %.ptr, i64 %v) {
 ; CHECK-LABEL: define amdgpu_kernel void @_dynamic_pack_simple_dispatch_0_pack_i32(
 ; CHECK-SAME: ptr addrspace(1) [[DOTPTR:%.*]], i64 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[_LR_PH5:.*:]]
@@ -20,19 +20,19 @@ define amdgpu_kernel void @_dynamic_pack_simple_dispatch_0_pack_i32(ptr addrspac
 ; CHECK:       [[__CRIT_EDGE_LOOPEXIT:.*:]]
 ; CHECK-NEXT:    ret void
 ;
-.lr.ph5:
-  %.rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) %.ptr, i16 0, i32 2147483648, i32 159744)
-  %1 = addrspacecast ptr addrspace(8) %.rsrc to ptr addrspace(7)
-  br label %2
+entry:
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) %.ptr, i16 0, i32 2147483648, i32 159744)
+  %fat = addrspacecast ptr addrspace(8) %rsrc to ptr addrspace(7)
+  br label %loop
 
-2:                                                ; preds = %2, %.lr.ph5
-  %3 = phi i64 [ 0, %.lr.ph5 ], [ %5, %2 ]
-  %4 = getelementptr i32, ptr addrspace(7) %1, i32 0
-  %5 = add i64 %3, 1
-  %exitcond.not = icmp eq i64 %3, %0
-  br i1 %exitcond.not, label %._crit_edge.loopexit, label %2
+loop:                                                ; preds = %loop, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %ptr = getelementptr i32, ptr addrspace(7) %fat, i32 0
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv, %v
+  br i1 %exitcond.not, label %exit, label %loop
 
-._crit_edge.loopexit:                             ; preds = %2
+exit:                             ; preds = %exit
   ret void
 }
 
