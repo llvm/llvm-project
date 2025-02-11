@@ -92,22 +92,27 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   // tosa::MulOp
   if (isa<tosa::MulOp>(op)) {
     auto shift_val = cast<tosa::MulOp>(op).getShift();
+    ElementsAttr shift_elem;
+    if (!shift_val.getImpl() ||
+        !matchPattern(shift_val, m_Constant(&shift_elem))) {
+      (void)rewriter.notifyMatchFailure(op, "shift value of mul not found");
+    }
+
+    int32_t shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
 
     if (isa<FloatType>(elementTy)) {
+      if (shift != 0) {
+        (void)rewriter.notifyMatchFailure(op,
+                                          "Cannot have shift value for float");
+        return nullptr;
+      }
       return rewriter.create<arith::MulFOp>(loc, resultTypes, args[0], args[1]);
     }
 
     if (isa<IntegerType>(elementTy)) {
-      int32_t shift = 0;
-      ElementsAttr shift_elem;
-      if (shift_val.getImpl() &&
-          matchPattern(shift_val, m_Constant(&shift_elem))) {
-        // Explicit shift is set.
-        shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
-      }
-
       Value a = args[0];
       Value b = args[1];
+
       if (shift > 0) {
         auto shiftConst =
             rewriter.create<arith::ConstantIntOp>(loc, shift, /*bitwidth=*/8);
@@ -146,11 +151,13 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       return rewriter.create<arith::NegFOp>(loc, resultTypes, args);
 
     if (isa<IntegerType>(elementTy)) {
-      auto inputZpAttr = cast<tosa::NegateOp>(op).getInput1Zp();
-      auto outputZpAttr = cast<tosa::NegateOp>(op).getOutputZp();
+      auto inputZpAttr = cast<tosa::NegateOp>(op).getInput1ZpAttr();
+      auto outputZpAttr = cast<tosa::NegateOp>(op).getOutputZpAttr();
 
-      const int64_t inZp = inputZpAttr ? *inputZpAttr : 0;
-      const int64_t outZp = outputZpAttr ? *outputZpAttr : 0;
+      const int64_t inZp =
+          inputZpAttr ? inputZpAttr.getValue().getSExtValue() : 0;
+      const int64_t outZp =
+          outputZpAttr ? outputZpAttr.getValue().getSExtValue() : 0;
 
       if (!inZp && !outZp) {
         auto constant = rewriter.create<arith::ConstantOp>(
@@ -387,8 +394,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   // tosa::ClampOp
   if (isa<tosa::ClampOp>(op) && isa<FloatType>(elementTy)) {
     bool losesInfo = false;
-    APFloat minApf = cast<FloatAttr>(op->getAttr("min_fp")).getValue();
-    APFloat maxApf = cast<FloatAttr>(op->getAttr("max_fp")).getValue();
+    APFloat minApf = cast<FloatAttr>(op->getAttr("min_val")).getValue();
+    APFloat maxApf = cast<FloatAttr>(op->getAttr("max_val")).getValue();
     minApf.convert(cast<FloatType>(elementTy).getFloatSemantics(),
                    APFloat::rmNearestTiesToEven, &losesInfo);
     maxApf.convert(cast<FloatType>(elementTy).getFloatSemantics(),
@@ -403,9 +410,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::ClampOp>(op) && isa<IntegerType>(elementTy)) {
     auto intTy = cast<IntegerType>(elementTy);
     int64_t min =
-        cast<IntegerAttr>(op->getAttr("min_int")).getValue().getSExtValue();
+        cast<IntegerAttr>(op->getAttr("min_val")).getValue().getSExtValue();
     int64_t max =
-        cast<IntegerAttr>(op->getAttr("max_int")).getValue().getSExtValue();
+        cast<IntegerAttr>(op->getAttr("max_val")).getValue().getSExtValue();
 
     int64_t minRepresentable = std::numeric_limits<int64_t>::min();
     int64_t maxRepresentable = std::numeric_limits<int64_t>::max();
@@ -1954,9 +1961,10 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
           nestedBuilder.create<linalg::YieldOp>(op.getLoc(), *args.begin());
         });
 
+    auto shapeValue = getTosaConstShape(
+        rewriter, loc, mlir::tosa::convertFromMlirShape(resultTy.getShape()));
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
-        op, resultTy, genericOp.getResult(0),
-        rewriter.getDenseI64ArrayAttr(resultTy.getShape()));
+        op, resultTy, genericOp.getResult(0), shapeValue);
     return success();
   }
 };

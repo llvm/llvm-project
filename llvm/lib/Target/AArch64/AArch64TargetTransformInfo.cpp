@@ -4282,7 +4282,7 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // If mcpu is omitted, getProcFamily() returns AArch64Subtarget::Others, so by
   // checking for that case, we can ensure that the default behaviour is
   // unchanged
-  if (ST->getProcFamily() != AArch64Subtarget::Others &&
+  if (ST->getProcFamily() != AArch64Subtarget::Generic &&
       !ST->getSchedModel().isOutOfOrder()) {
     UP.Runtime = true;
     UP.Partial = true;
@@ -4705,7 +4705,8 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     if (VFMinValue == Scale)
       return Invalid;
   }
-  if (VF.isFixed() && (!ST->isNeonAvailable() || !ST->hasDotProd()))
+  if (VF.isFixed() &&
+      (!ST->isNeonAvailable() || !ST->hasDotProd() || AccumEVT == MVT::i64))
     return Invalid;
 
   if (InputEVT == MVT::i8) {

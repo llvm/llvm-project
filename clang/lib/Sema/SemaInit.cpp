@@ -4576,7 +4576,9 @@ static void TryConstructorInitialization(Sema &S,
     if (!IsListInit &&
         (Kind.getKind() == InitializationKind::IK_Default ||
          Kind.getKind() == InitializationKind::IK_Direct) &&
-        DestRecordDecl != nullptr && DestRecordDecl->isAggregate() &&
+        DestRecordDecl != nullptr &&
+        !(CtorDecl->isCopyOrMoveConstructor() && CtorDecl->isImplicit()) &&
+        DestRecordDecl->isAggregate() &&
         DestRecordDecl->hasUninitializedExplicitInitFields()) {
       S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
           << /* Var-in-Record */ 1 << DestRecordDecl;
@@ -4862,9 +4864,13 @@ static void TryListInitialization(Sema &S,
         assert(
             S.Context.hasSameUnqualifiedType(SubInit[0]->getType(), DestType) &&
             "Deduced to other type?");
+        assert(Kind.getKind() == clang::InitializationKind::IK_DirectList &&
+               "List-initialize structured bindings but not "
+               "direct-list-initialization?");
         TryArrayCopy(S,
-                     InitializationKind::CreateCopy(Kind.getLocation(),
-                                                    InitList->getLBraceLoc()),
+                     InitializationKind::CreateDirect(Kind.getLocation(),
+                                                      InitList->getLBraceLoc(),
+                                                      InitList->getRBraceLoc()),
                      Entity, SubInit[0], DestType, Sequence,
                      TreatUnavailableAsInvalid);
         if (Sequence)

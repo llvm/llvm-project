@@ -962,6 +962,8 @@ public:
   void applyChanges(FPOptionsOverride FPO);
 
   // We can define most of the accessors automatically:
+  // TODO: consider enforcing the assertion that value fits within bits
+  // statically.
 #define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
   TYPE get##NAME() const {                                                     \
     return static_cast<TYPE>((Value & NAME##Mask) >> NAME##Shift);             \

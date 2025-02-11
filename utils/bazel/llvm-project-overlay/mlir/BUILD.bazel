@@ -5224,6 +5224,7 @@ cc_library(
         ":Support",
         ":TensorDialect",
         ":TransformUtils",
+        ":UBDialect",
         ":VectorDialect",
         ":VectorEnumsIncGen",
         ":VectorInterfaces",
