@@ -86,6 +86,20 @@ llvm::MDNode *CodeGenTBAA::getAnyPtr(unsigned PtrDepth) {
   // Populate at least PtrDepth elements in AnyPtrs. These are the type nodes
   // for "any" pointers of increasing pointer depth, and are organized in the
   // hierarchy: any pointer <- any p2 pointer <- any p3 pointer <- ...
+  //
+  // Note that AnyPtrs[Idx] is actually the node for pointer depth (Idx+1),
+  // since there is no node for pointer depth 0.
+  //
+  // These "any" pointer type nodes are used in pointer TBAA. The type node of
+  // a concrete pointer type has the "any" pointer type node of appropriate
+  // pointer depth as its parent. The "any" pointer type nodes are also used
+  // directly for accesses to void pointers, or to specific pointers that we
+  // conservatively do not distinguish in pointer TBAA (e.g. pointers to
+  // members). Essentially, this establishes that e.g. void** can alias with
+  // any type that can unify with T**, ignoring things like qualifiers. Here, T
+  // is a variable that represents an arbitrary type, including pointer types.
+  // As such, each depth is naturally a subtype of the previous depth, and thus
+  // transitively of all previous depths.
   if (AnyPtrs.size() < PtrDepth) {
     AnyPtrs.reserve(PtrDepth);
     auto Size = Module.getDataLayout().getPointerSize();
