@@ -129,6 +129,8 @@ Improvements to Clang's diagnostics
   which are supposed to only exist once per program, but may get duplicated when
   built into a shared library.
 - Fixed a bug where Clang's Analysis did not correctly model the destructor behavior of ``union`` members (#GH119415).
+- A statement attribute applied to a ``case`` label no longer suppresses
+  'bypassing variable initialization' diagnostics (#84072).
 
 Improvements to Clang's time-trace
 ----------------------------------
