@@ -3630,10 +3630,10 @@ def int_amdgcn_cvt_f16_bf8 : ClangBuiltin<"__builtin_amdgcn_cvt_f16_bf8">,
             [llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
-def int_amdgcn_cvt_sat_pk_i4_i8 : ClangBuiltin<"__builtin_amdgcn_cvt_sat_pk_i4_i8">,
+def int_amdgcn_sat_pk4_i4_i8 : ClangBuiltin<"__builtin_amdgcn_sat_pk4_i4_i8">,
   DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
-def int_amdgcn_cvt_sat_pk_u4_u8 : ClangBuiltin<"__builtin_amdgcn_cvt_sat_pk_u4_u8">,
+def int_amdgcn_sat_pk4_u4_u8 : ClangBuiltin<"__builtin_amdgcn_sat_pk4_u4_u8">,
   DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
 // llvm.amdgcn.permlane.bcast <src0> <src1> <src2>

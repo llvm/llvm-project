@@ -812,8 +812,8 @@ let SubtargetPredicate = isGFX1250Plus in {
   def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_fp8, V_CVT_F16_FP8_fake16_e64>;
   def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_bf8, V_CVT_F16_BF8_fake16_e64>;
 
-  defm V_SAT_PK_I4_I8 : VOP1Inst_t16<"v_sat_pk_i4_i8", VOP1_I16_I32, int_amdgcn_cvt_sat_pk_i4_i8>;
-  defm V_SAT_PK_U4_U8 : VOP1Inst_t16<"v_sat_pk_u4_u8", VOP1_I16_I32, int_amdgcn_cvt_sat_pk_u4_u8>;
+  defm V_SAT_PK4_I4_I8 : VOP1Inst_t16<"v_sat_pk4_i4_i8", VOP1_I16_I32, int_amdgcn_sat_pk4_i4_i8>;
+  defm V_SAT_PK4_U4_U8 : VOP1Inst_t16<"v_sat_pk4_u4_u8", VOP1_I16_I32, int_amdgcn_sat_pk4_u4_u8>;
 } // End SubtargetPredicate = isGFX1250Plus
 
 let SubtargetPredicate = isGFX10Plus in {
@@ -1168,8 +1168,8 @@ defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1250<0x049>;
 defm V_TANH_BF16_fake16      : VOP1_Real_FULL_t16_gfx1250<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL<GFX1250Gen, 0x04b>;
 defm V_CVT_F32_BF16_fake16   : VOP1_Real_FULL_t16_gfx1250<0x072>;
-defm V_SAT_PK_I4_I8_fake16   : VOP1_Real_FULL_t16_gfx1250<0x073>;
-defm V_SAT_PK_U4_U8_fake16   : VOP1_Real_FULL_t16_gfx1250<0x074>;
+defm V_SAT_PK4_I4_I8_fake16  : VOP1_Real_FULL_t16_gfx1250<0x073>;
+defm V_SAT_PK4_U4_U8_fake16  : VOP1_Real_FULL_t16_gfx1250<0x074>;
 defm V_CVT_PK_F16_FP8_fake16 : VOP1_Real_NO_DPP_OP_SEL<GFX1250Gen, 0x075>;
 defm V_CVT_PK_F16_BF8_fake16 : VOP1_Real_NO_DPP_OP_SEL<GFX1250Gen, 0x076>;
 defm V_CVT_F16_FP8_fake16    : VOP1_Real_FULL_with_name<GFX1250Gen, 0x077, "V_CVT_F16_FP8_fake16", "v_cvt_f16_fp8">;

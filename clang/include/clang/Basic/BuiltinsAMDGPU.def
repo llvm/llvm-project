@@ -754,8 +754,8 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk16_bf6_f32, "V3UiV16fUif", "nc
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_bf16, "V3UiV16yUif", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_f16, "V3UiV16hUif", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_f32, "V3UiV16fUif", "nc", "gfx1250-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_sat_pk_i4_i8, "UsUi", "nc", "gfx1250-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_sat_pk_u4_u8, "UsUi", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sat_pk4_i4_i8, "UsUi", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sat_pk4_u4_u8, "UsUi", "nc", "gfx1250-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_permlane_bcast, "iiii", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_permlane_up, "iiii", "nc", "gfx1250-insts,wavefrontsize32")
