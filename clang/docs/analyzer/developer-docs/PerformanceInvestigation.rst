@@ -22,9 +22,8 @@ Here is an example of a time trace produced with
 .. code-block:: bash
    :caption: Clang Static Analyzer invocation to generate a time trace of string.c analysis.
 
-   clang -cc1 -nostdsysteminc -analyze -analyzer-constraints=range \
-         -setup-static-analyzer -analyzer-checker=core,unix,alpha.unix.cstring,debug.ExprInspection \
-         -verify ./clang/test/Analysis/string.c \
+   clang -cc1 -analyze -verify clang/test/Analysis/string.c \
+         -analyzer-checker=core,unix,alpha.unix.cstring,debug.ExprInspection \
          -ftime-trace=trace.json -ftime-trace-granularity=1
 
 .. image:: ../images/speedscope.png
@@ -65,9 +64,8 @@ Here is how to `get started <https://llvm.org/docs/CMake.html#quick-start>`_ if 
 
    # -F: Sampling frequency, use `-F max` for maximal frequency
    # -g: Enable call-graph recording for both kernel and user space
-   perf record -F 99 -g --  clang -cc1 -nostdsysteminc -analyze -analyzer-constraints=range \
-         -setup-static-analyzer -analyzer-checker=core,unix,alpha.unix.cstring,debug.ExprInspection \
-         -verify ./clang/test/Analysis/string.c
+   perf record -F 99 -g --  clang -cc1 -analyze -verify clang/test/Analysis/string.c \
+         -analyzer-checker=core,unix,alpha.unix.cstring,debug.ExprInspection
 
 Once you have the profile data, you can use it to produce a Flame graph.
 A Flame graph is a visual representation of the stack frames of the samples.
@@ -108,9 +106,8 @@ This will make it run substantially slower but allows rich instrumentation.
 .. code-block:: bash
    :caption: Recording with ``uftrace``, then dumping the result as a Chrome trace JSON.
 
-   uftrace record clang -cc1 -nostdsysteminc -analyze -analyzer-constraints=range \
-         -setup-static-analyzer -analyzer-checker=core,unix,alpha.unix.cstring,debug.ExprInspection \
-         -verify ./clang/test/Analysis/string.c
+   uftrace record  clang -cc1 -analyze -verify clang/test/Analysis/string.c \
+         -analyzer-checker=core,unix,alpha.unix.cstring,debug.ExprInspection
    uftrace dump --filter=".*::AnalysisConsumer::HandleTranslationUnit" --time-filter=300 --chrome > trace.json
 
 .. image:: ../images/uftrace_detailed.png
