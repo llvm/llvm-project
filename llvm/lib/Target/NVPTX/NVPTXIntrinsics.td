@@ -740,6 +740,33 @@ foreach dim = [1, 2, 3, 4, 5] in {
   }
 }
 
+//Prefetch and Prefetchu 
+class Join<string sep, list<string> lst> {
+  string ret = !foldl("", lst, a, b, !if(!eq(a, ""), b, !if(!eq(b,""), a, !strconcat(a, sep, b))));
+}
+
+class PREFETCH_INTRS<string InstName> :
+          NVPTXInst<(outs), (ins Int64Regs:$addr),
+          InstName # " [$addr];",
+          [(!cast<Intrinsic>(!strconcat("int_nvvm_",
+          !subst(".", "_", InstName))) i64:$addr)]>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+   
+
+// Only global supports evictlast and evictnormal.
+// Other variants (local and default) only support evictnormal
+foreach level = ["L1", "L2"] in {
+  foreach addr = ["global", "local", ""] in {
+    foreach evict = !if(!eq(addr, "global"), ["evictlast", "evictnormal"], ["evictnormal"]) in {
+      defvar suffix = Join<"_", [addr, level, evict]>.ret;
+      defvar inst_name = "prefetch." # !subst("_", ".", suffix);
+      def PREFETCH_# suffix : PREFETCH_INTRS<inst_name>;
+    }
+  }
+}
+
+def PREFETCHU_L1_EVICTNORMAL : PREFETCH_INTRS<"prefetchu.L1.evictnormal">;
+
 //-----------------------------------
 // MBarrier Functions
 //-----------------------------------
@@ -7547,7 +7574,7 @@ multiclass SET_MAXNREG<string Action, Intrinsic Intr> {
   def : NVPTXInst<(outs), (ins i32imm:$reg_count),
           "setmaxnreg." # Action # ".sync.aligned.u32 $reg_count;",
           [(Intr timm:$reg_count)]>,
-    Requires<[hasSM90a, hasPTX<80>]>;
+    Requires<[hasAcceleratedFeatures, hasSM<90>, hasPTX<80>]>;
 }
 
 defm INT_SET_MAXNREG_INC : SET_MAXNREG<"inc", int_nvvm_setmaxnreg_inc_sync_aligned_u32>;
@@ -7582,3 +7609,91 @@ def GRIDDEPCONTROL_WAIT :
                 Requires<[hasSM<90>, hasPTX<78>]>;
 
 def INT_EXIT : NVPTXInst<(outs), (ins), "exit;", [(int_nvvm_exit)]>;
+
+// Tcgen05 intrinsics
+let isConvergent = true in {
+
+multiclass TCGEN05_ALLOC_INTR<NVPTXRegClass rc, string AS, string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs),
+             (ins rc:$dst, Int32Regs:$ncols),
+             !strconcat("tcgen05.alloc.cta_group::", num, ".sync.aligned", AS, ".b32 [$dst], $ncols;"),
+             [(Intr rc:$dst, Int32Regs:$ncols)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+
+defm TCGEN05_ALLOC_CG1 : TCGEN05_ALLOC_INTR<Int64Regs, "", "1", int_nvvm_tcgen05_alloc_cg1>;
+defm TCGEN05_ALLOC_CG2 : TCGEN05_ALLOC_INTR<Int64Regs, "", "2", int_nvvm_tcgen05_alloc_cg2>;
+
+defm TCGEN05_ALLOC_S64_CG1 : TCGEN05_ALLOC_INTR<Int64Regs, ".shared::cta", "1", int_nvvm_tcgen05_alloc_shared_cg1>;
+defm TCGEN05_ALLOC_S64_CG2 : TCGEN05_ALLOC_INTR<Int64Regs, ".shared::cta", "2", int_nvvm_tcgen05_alloc_shared_cg2>;
+
+defm TCGEN05_ALLOC_S32_CG1 : TCGEN05_ALLOC_INTR<Int32Regs, ".shared::cta", "1", int_nvvm_tcgen05_alloc_shared_cg1>;
+defm TCGEN05_ALLOC_S32_CG2 : TCGEN05_ALLOC_INTR<Int32Regs, ".shared::cta", "2", int_nvvm_tcgen05_alloc_shared_cg2>;
+
+multiclass TCGEN05_DEALLOC_INTR<string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs),
+             (ins Int32Regs:$tmem_addr, Int32Regs:$ncols),
+             !strconcat("tcgen05.dealloc.cta_group::", num, ".sync.aligned.b32 $tmem_addr, $ncols;"),
+             [(Intr Int32Regs:$tmem_addr, Int32Regs:$ncols)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+defm TCGEN05_DEALLOC_CG1: TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1>;
+defm TCGEN05_DEALLOC_CG2: TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
+
+multiclass TCGEN05_RELINQ_PERMIT_INTR<string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs), (ins),
+             !strconcat("tcgen05.relinquish_alloc_permit.cta_group::", num, ".sync.aligned;"),
+             [(Intr)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+defm TCGEN05_RELINQ_CG1: TCGEN05_RELINQ_PERMIT_INTR<"1", int_nvvm_tcgen05_relinq_alloc_permit_cg1>;
+defm TCGEN05_RELINQ_CG2: TCGEN05_RELINQ_PERMIT_INTR<"2", int_nvvm_tcgen05_relinq_alloc_permit_cg2>;
+
+def tcgen05_wait_ld: NVPTXInst<(outs), (ins), "tcgen05.wait::ld.sync.aligned;",
+  [(int_nvvm_tcgen05_wait_ld)]>,
+  Requires<[hasTcgen05Instructions]>;
+
+def tcgen05_wait_st: NVPTXInst<(outs), (ins), "tcgen05.wait::st.sync.aligned;",
+  [(int_nvvm_tcgen05_wait_st)]>,
+  Requires<[hasTcgen05Instructions]>;
+
+multiclass TCGEN05_COMMIT_INTR<NVPTXRegClass rc, string AS, string num> {
+  defvar prefix = "tcgen05.commit.cta_group::" # num;
+  defvar suffix = ".mbarrier::arrive::one.shared::cluster";
+
+  defvar intr_suffix = !if(!eq(AS, "shared"), "_shared", "") # "_cg" # num;
+  defvar Intr = !cast<Intrinsic>("int_nvvm_tcgen05_commit" # intr_suffix);
+  defvar IntrMC = !cast<Intrinsic>("int_nvvm_tcgen05_commit_mc" # intr_suffix);
+
+  def NAME : NVPTXInst<(outs), (ins rc:$mbar),
+             !strconcat(prefix, suffix, ".b64 [$mbar];"),
+             [(Intr rc:$mbar)]>,
+             Requires<[hasTcgen05Instructions]>;
+  def NAME # _MC : NVPTXInst<(outs), (ins rc:$mbar, Int16Regs:$mc),
+                   !strconcat(prefix, suffix, ".multicast::cluster.b64 [$mbar], $mc;"),
+                   [(IntrMC rc:$mbar, Int16Regs:$mc)]>,
+                   Requires<[hasTcgen05Instructions]>;
+}
+
+defm TCGEN05_COMMIT_CG1 : TCGEN05_COMMIT_INTR<Int64Regs, "", "1">;
+defm TCGEN05_COMMIT_CG2 : TCGEN05_COMMIT_INTR<Int64Regs, "", "2">;
+defm TCGEN05_COMMIT_S64_CG1 : TCGEN05_COMMIT_INTR<Int64Regs, "shared", "1">;
+defm TCGEN05_COMMIT_S64_CG2 : TCGEN05_COMMIT_INTR<Int64Regs, "shared", "2">;
+defm TCGEN05_COMMIT_S32_CG1 : TCGEN05_COMMIT_INTR<Int32Regs, "shared", "1">;
+defm TCGEN05_COMMIT_S32_CG2 : TCGEN05_COMMIT_INTR<Int32Regs, "shared", "2">;
+
+} // isConvergent
+
+let hasSideEffects = 1 in {
+
+def tcgen05_fence_before_thread_sync: NVPTXInst<(outs), (ins),
+  "tcgen05.fence::before_thread_sync;",
+  [(int_nvvm_tcgen05_fence_before_thread_sync)]>,
+  Requires<[hasTcgen05Instructions]>;
+
+def tcgen05_fence_after_thread_sync: NVPTXInst<(outs), (ins),
+  "tcgen05.fence::after_thread_sync;",
+  [(int_nvvm_tcgen05_fence_after_thread_sync)]>,
+  Requires<[hasTcgen05Instructions]>;
+
+} // hasSideEffects

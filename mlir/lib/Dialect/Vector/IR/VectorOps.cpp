@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -26,7 +27,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
@@ -42,7 +42,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/ADT/bit.h"
 
 #include <cassert>
 #include <cstdint>
@@ -430,6 +429,7 @@ void VectorDialect::initialize() {
                             TransferWriteOp>();
   declarePromisedInterface<SubsetExtractionOpInterface, TransferReadOp>();
   declarePromisedInterface<SubsetInsertionOpInterface, TransferWriteOp>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, VectorDialect>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
@@ -437,6 +437,9 @@ void VectorDialect::initialize() {
 Operation *VectorDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
+  if (isa<ub::PoisonAttrInterface>(value))
+    return value.getDialect().materializeConstant(builder, value, type, loc);
+
   return arith::ConstantOp::materialize(builder, value, type, loc);
 }
 
@@ -1986,15 +1989,62 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
   return fromElementsOp.getElements()[flatIndex];
 }
 
+/// If the dynamic indices of `extractOp` or `insertOp` are in fact constants,
+/// then fold it.
+template <typename OpType, typename AdaptorType>
+static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
+                                         SmallVectorImpl<Value> &operands) {
+  std::vector<int64_t> staticPosition = op.getStaticPosition().vec();
+  OperandRange dynamicPosition = op.getDynamicPosition();
+  ArrayRef<Attribute> dynamicPositionAttr = adaptor.getDynamicPosition();
+
+  // If the dynamic operands is empty, it is returned directly.
+  if (!dynamicPosition.size())
+    return {};
+
+  // `index` is used to iterate over the `dynamicPosition`.
+  unsigned index = 0;
+
+  // `opChange` is a flag. If it is true, it means to update `op` in place.
+  bool opChange = false;
+  for (unsigned i = 0, e = staticPosition.size(); i < e; ++i) {
+    if (!ShapedType::isDynamic(staticPosition[i]))
+      continue;
+    Attribute positionAttr = dynamicPositionAttr[index];
+    Value position = dynamicPosition[index++];
+    if (auto attr = mlir::dyn_cast_if_present<IntegerAttr>(positionAttr)) {
+      staticPosition[i] = attr.getInt();
+      opChange = true;
+      continue;
+    }
+    operands.push_back(position);
+  }
+
+  if (opChange) {
+    op.setStaticPosition(staticPosition);
+    op.getOperation()->setOperands(operands);
+    return op.getResult();
+  }
+  return {};
+}
+
 /// Fold an insert or extract operation into an poison value when a poison index
 /// is found at any dimension of the static position.
-static ub::PoisonAttr
-foldPoisonIndexInsertExtractOp(MLIRContext *context,
-                               ArrayRef<int64_t> staticPos, int64_t poisonVal) {
+static Attribute foldPoisonIndexInsertExtractOp(MLIRContext *context,
+                                                ArrayRef<int64_t> staticPos,
+                                                int64_t poisonVal) {
   if (!llvm::is_contained(staticPos, poisonVal))
-    return ub::PoisonAttr();
+    return {};
 
   return ub::PoisonAttr::get(context);
+}
+
+/// Fold a vector extract from is a poison source.
+static Attribute foldPoisonSrcExtractOp(Attribute srcAttr) {
+  if (llvm::isa_and_nonnull<ub::PoisonAttr>(srcAttr))
+    return srcAttr;
+
+  return {};
 }
 
 OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
@@ -2005,6 +2055,8 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
     return getVector();
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
+    return res;
+  if (auto res = foldPoisonSrcExtractOp(adaptor.getVector()))
     return res;
   if (succeeded(foldExtractOpFromExtractChain(*this)))
     return getResult();
@@ -2021,6 +2073,9 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   if (auto val = foldExtractStridedOpFromInsertChain(*this))
     return val;
   if (auto val = foldScalarExtractFromFromElements(*this))
+    return val;
+  SmallVector<Value> operands = {getVector()};
+  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
     return val;
   return OpFoldResult();
 }
@@ -2273,20 +2328,6 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
   return success();
 }
 
-/// Fold an insert or extract operation into an poison value when a poison index
-/// is found at any dimension of the static position.
-template <typename OpTy>
-LogicalResult
-canonicalizePoisonIndexInsertExtractOp(OpTy op, PatternRewriter &rewriter) {
-  if (auto poisonAttr = foldPoisonIndexInsertExtractOp(
-          op.getContext(), op.getStaticPosition(), OpTy::kPoisonIndex)) {
-    rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getType(), poisonAttr);
-    return success();
-  }
-
-  return failure();
-}
-
 } // namespace
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -2295,7 +2336,6 @@ void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
               ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
-  results.add(canonicalizePoisonIndexInsertExtractOp<ExtractOp>);
 }
 
 static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
@@ -2696,25 +2736,45 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
   if (!v1Attr || !v2Attr)
     return {};
 
+  // Fold shuffle poison, poison -> poison.
+  bool isV1Poison = isa<ub::PoisonAttr>(v1Attr);
+  bool isV2Poison = isa<ub::PoisonAttr>(v2Attr);
+  if (isV1Poison && isV2Poison)
+    return ub::PoisonAttr::get(getContext());
+
   // Only support 1-D for now to avoid complicated n-D DenseElementsAttr
   // manipulation.
   if (v1Type.getRank() != 1)
     return {};
 
-  int64_t v1Size = v1Type.getDimSize(0);
+  // Poison input attributes need special handling as they are not
+  // DenseElementsAttr. If an index is poison, we select the first element of
+  // the first non-poison input.
+  SmallVector<Attribute> v1Elements, v2Elements;
+  Attribute poisonElement;
+  if (!isV2Poison) {
+    v2Elements =
+        to_vector(cast<DenseElementsAttr>(v2Attr).getValues<Attribute>());
+    poisonElement = v2Elements[0];
+  }
+  if (!isV1Poison) {
+    v1Elements =
+        to_vector(cast<DenseElementsAttr>(v1Attr).getValues<Attribute>());
+    poisonElement = v1Elements[0];
+  }
 
   SmallVector<Attribute> results;
-  auto v1Elements = cast<DenseElementsAttr>(v1Attr).getValues<Attribute>();
-  auto v2Elements = cast<DenseElementsAttr>(v2Attr).getValues<Attribute>();
+  int64_t v1Size = v1Type.getDimSize(0);
   for (int64_t maskIdx : mask) {
     Attribute indexedElm;
-    // Select v1[0] for poison indices.
     // TODO: Return a partial poison vector when supported by the UB dialect.
     if (maskIdx == ShuffleOp::kPoisonIndex) {
-      indexedElm = v1Elements[0];
+      indexedElm = poisonElement;
     } else {
-      indexedElm =
-          maskIdx < v1Size ? v1Elements[maskIdx] : v2Elements[maskIdx - v1Size];
+      if (maskIdx < v1Size)
+        indexedElm = isV1Poison ? poisonElement : v1Elements[maskIdx];
+      else
+        indexedElm = isV2Poison ? poisonElement : v2Elements[maskIdx - v1Size];
     }
 
     results.push_back(indexedElm);
@@ -3068,7 +3128,6 @@ void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
               InsertOpConstantFolder>(context);
-  results.add(canonicalizePoisonIndexInsertExtractOp<InsertOp>);
 }
 
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
@@ -3077,6 +3136,9 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   // (type mismatch).
   if (getNumIndices() == 0 && getSourceType() == getType())
     return getSource();
+  SmallVector<Value> operands = {getSource(), getDest()};
+  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
+    return val;
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
     return res;
@@ -3332,11 +3394,13 @@ public:
         !destVector.hasOneUse())
       return failure();
 
-    auto denseDest = llvm::cast<DenseElementsAttr>(vectorDestCst);
-
     TypedValue<VectorType> sourceValue = op.getSource();
     Attribute sourceCst;
     if (!matchPattern(sourceValue, m_Constant(&sourceCst)))
+      return failure();
+
+    // TODO: Support poison.
+    if (isa<ub::PoisonAttr>(vectorDestCst) || isa<ub::PoisonAttr>(sourceCst))
       return failure();
 
     // TODO: Handle non-unit strides when they become available.
@@ -3355,6 +3419,7 @@ public:
     // increasing linearized position indices.
     // Because the destination may have higher dimensionality then the slice,
     // we keep track of two overlapping sets of positions and offsets.
+    auto denseDest = llvm::cast<DenseElementsAttr>(vectorDestCst);
     auto denseSlice = llvm::cast<DenseElementsAttr>(sourceCst);
     auto sliceValuesIt = denseSlice.value_begin<Attribute>();
     auto newValues = llvm::to_vector(denseDest.getValues<Attribute>());

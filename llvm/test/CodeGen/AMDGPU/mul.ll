@@ -1459,8 +1459,8 @@ define amdgpu_kernel void @s_mul_i1(ptr addrspace(1) %out, [8 x i32], i1 %a, [8 
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mul_i32 s6, s6, s7
-; SI-NEXT:    s_and_b32 s4, s6, 1
+; SI-NEXT:    s_and_b32 s4, s6, s7
+; SI-NEXT:    s_and_b32 s4, s4, 1
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -1473,8 +1473,8 @@ define amdgpu_kernel void @s_mul_i1(ptr addrspace(1) %out, [8 x i32], i1 %a, [8 
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_mul_i32 s6, s6, s7
-; VI-NEXT:    s_and_b32 s4, s6, 1
+; VI-NEXT:    s_and_b32 s4, s6, s7
+; VI-NEXT:    s_and_b32 s4, s4, 1
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
@@ -1487,8 +1487,8 @@ define amdgpu_kernel void @s_mul_i1(ptr addrspace(1) %out, [8 x i32], i1 %a, [8 
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_mul_i32 s6, s6, s7
-; GFX9-NEXT:    s_and_b32 s4, s6, 1
+; GFX9-NEXT:    s_and_b32 s4, s6, s7
+; GFX9-NEXT:    s_and_b32 s4, s4, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
@@ -1500,7 +1500,7 @@ define amdgpu_kernel void @s_mul_i1(ptr addrspace(1) %out, [8 x i32], i1 %a, [8 
 ; GFX10-NEXT:    s_load_dword s3, s[4:5], 0x70
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_mul_i32 s2, s2, s3
+; GFX10-NEXT:    s_and_b32 s2, s2, s3
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_and_b32 s2, s2, 1
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
@@ -1515,7 +1515,7 @@ define amdgpu_kernel void @s_mul_i1(ptr addrspace(1) %out, [8 x i32], i1 %a, [8 
 ; GFX11-NEXT:    s_load_b32 s3, s[4:5], 0x70
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_mul_i32 s2, s2, s3
+; GFX11-NEXT:    s_and_b32 s2, s2, s3
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_and_b32 s2, s2, 1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -1531,7 +1531,7 @@ define amdgpu_kernel void @s_mul_i1(ptr addrspace(1) %out, [8 x i32], i1 %a, [8 
 ; GFX12-NEXT:    s_load_b32 s3, s[4:5], 0x70
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mul_i32 s2, s2, s3
+; GFX12-NEXT:    s_and_b32 s2, s2, s3
 ; GFX12-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX12-NEXT:    s_and_b32 s2, s2, 1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -1555,7 +1555,7 @@ define amdgpu_kernel void @s_mul_i1(ptr addrspace(1) %out, [8 x i32], i1 %a, [8 
 ; EG-NEXT:     MOV * T0.X, 0.0,
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     AND_INT T0.W, KC0[2].Y, literal.x,
-; EG-NEXT:     MULLO_INT * T0.X, T1.X, T0.X,
+; EG-NEXT:     AND_INT * T1.W, T1.X, T0.X,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT T1.W, PS, 1,
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
@@ -1589,7 +1589,7 @@ define amdgpu_kernel void @v_mul_i1(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mul_lo_u32 v0, v0, v1
+; SI-NEXT:    v_and_b32_e32 v0, v0, v1
 ; SI-NEXT:    v_and_b32_e32 v0, 1, v0
 ; SI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -1609,7 +1609,7 @@ define amdgpu_kernel void @v_mul_i1(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mul_lo_u32 v0, v0, v1
+; VI-NEXT:    v_and_b32_e32 v0, v0, v1
 ; VI-NEXT:    v_and_b32_e32 v0, 1, v0
 ; VI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
@@ -1629,7 +1629,7 @@ define amdgpu_kernel void @v_mul_i1(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; GFX9-NEXT:    s_mov_b32 s4, s0
 ; GFX9-NEXT:    s_mov_b32 s5, s1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX9-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX9-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; GFX9-NEXT:    s_endpgm
@@ -1650,7 +1650,7 @@ define amdgpu_kernel void @v_mul_i1(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; GFX10-NEXT:    s_mov_b32 s4, s0
 ; GFX10-NEXT:    s_mov_b32 s5, s1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX10-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX10-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; GFX10-NEXT:    s_endpgm
@@ -1671,7 +1671,7 @@ define amdgpu_kernel void @v_mul_i1(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; GFX11-NEXT:    s_mov_b32 s4, s0
 ; GFX11-NEXT:    s_mov_b32 s5, s1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX11-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    buffer_store_b8 v0, off, s[4:7], 0
@@ -1693,7 +1693,7 @@ define amdgpu_kernel void @v_mul_i1(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; GFX12-NEXT:    s_mov_b32 s4, s0
 ; GFX12-NEXT:    s_mov_b32 s5, s1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX12-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX12-NEXT:    buffer_store_b8 v0, off, s[4:7], null
@@ -1714,7 +1714,7 @@ define amdgpu_kernel void @v_mul_i1(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     AND_INT T0.W, KC0[2].Y, literal.x,
-; EG-NEXT:     MULLO_INT * T0.X, T0.X, T1.X,
+; EG-NEXT:     AND_INT * T1.W, T0.X, T1.X,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT T1.W, PS, 1,
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,

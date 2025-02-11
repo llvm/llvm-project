@@ -1055,7 +1055,8 @@ void ASTContext::PrintStats() const {
 void ASTContext::mergeDefinitionIntoModule(NamedDecl *ND, Module *M,
                                            bool NotifyListeners) {
   if (NotifyListeners)
-    if (auto *Listener = getASTMutationListener())
+    if (auto *Listener = getASTMutationListener();
+        Listener && !ND->isUnconditionallyVisible())
       Listener->RedefinedHiddenDefinition(ND, M);
 
   MergedDefModules[cast<NamedDecl>(ND->getCanonicalDecl())].push_back(M);
@@ -3901,7 +3902,7 @@ QualType ASTContext::getArrayParameterType(QualType Ty) const {
   if (Ty->isArrayParameterType())
     return Ty;
   assert(Ty->isConstantArrayType() && "Ty must be an array type.");
-  const auto *ATy = cast<ConstantArrayType>(Ty);
+  const auto *ATy = cast<ConstantArrayType>(Ty.getDesugaredType(*this));
   llvm::FoldingSetNodeID ID;
   ATy->Profile(ID, *this, ATy->getElementType(), ATy->getZExtSize(),
                ATy->getSizeExpr(), ATy->getSizeModifier(),
@@ -7224,6 +7225,16 @@ static bool isSameQualifier(const NestedNameSpecifier *X,
   return !PX && !PY;
 }
 
+static bool hasSameCudaAttrs(const FunctionDecl *A, const FunctionDecl *B) {
+  if (!A->getASTContext().getLangOpts().CUDA)
+    return true; // Target attributes are overloadable in CUDA compilation only.
+  if (A->hasAttr<CUDADeviceAttr>() != B->hasAttr<CUDADeviceAttr>())
+    return false;
+  if (A->hasAttr<CUDADeviceAttr>() && B->hasAttr<CUDADeviceAttr>())
+    return A->hasAttr<CUDAHostAttr>() == B->hasAttr<CUDAHostAttr>();
+  return true; // unattributed and __host__ functions are the same.
+}
+
 /// Determine whether the attributes we can overload on are identical for A and
 /// B. Will ignore any overloadable attrs represented in the type of A and B.
 static bool hasSameOverloadableAttrs(const FunctionDecl *A,
@@ -7254,7 +7265,7 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
     if (Cand1ID != Cand2ID)
       return false;
   }
-  return true;
+  return hasSameCudaAttrs(A, B);
 }
 
 bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
