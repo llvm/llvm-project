@@ -1,4 +1,4 @@
-//===-- Proxy for struct_sched_param --------------------------------------===//
+//===-- Proxy for struct sched_param --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

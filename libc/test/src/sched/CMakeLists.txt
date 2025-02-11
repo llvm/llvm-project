@@ -91,6 +91,7 @@ add_libc_unittest(
     libc.include.sched
     libc.hdr.types.cpu_set_t
     libc.hdr.types.pid_t
+    libc.hdr.sched_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno

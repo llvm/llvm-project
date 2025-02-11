@@ -16,8 +16,8 @@
 #include "src/unistd/getuid.h"
 #include "test/UnitTest/Test.h"
 
-#include "hdr/types/struct_sched_param.h"
 #include "hdr/sched_macros.h"
+#include "hdr/types/struct_sched_param.h"
 
 // We Test:
 // SCHED_OTHER, SCHED_FIFO, SCHED_RR
