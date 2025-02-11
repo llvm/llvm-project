@@ -123,7 +123,8 @@ Similar filters can be applied for dumping too. That way you can reuse the same 
 recording to selectively focus on some special part using a refinement of the filter flags.
 Remember, the trace JSON needs to fit into Chrome's ``about:tracing`` or `speedscope <https://speedscope.app>`_,
 thus it needs to be of a limited size.
-In that case though, every dump operation would need to sieve through the whole recording if called repeatedly.
+If you do not apply filters on recording, you will collect a large trace and every dump operation
+would need to sieve through the much larger recording which may be annoying if done repeatedly.
 
 If the trace JSON is still too large to load, have a look at the dump and look for frequent entries that refer to non-interesting parts.
 Once you have some of those, add them as ``--hide`` flags to the ``uftrace dump`` call.
