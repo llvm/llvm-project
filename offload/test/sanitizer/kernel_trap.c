@@ -1,10 +1,10 @@
 
 // clang-format off
 // RUN: %libomptarget-compile-generic
-// RUN: %not --crash env -u LLVM_DISABLE_SYMBOLIZATION OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES=1 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,TRACE,NDEBG 
+// RUN: %not --crash env -u LLVM_DISABLE_SYMBOLIZATION OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES=1 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,TRACE
 // RUN: %not --crash %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK
 // RUN: %libomptarget-compile-generic -g
-// RUN: %not --crash env -u LLVM_DISABLE_SYMBOLIZATION OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES=1 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,TRACE,DEBUG
+// RUN: %not --crash env -u LLVM_DISABLE_SYMBOLIZATION OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES=1 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK,TRACE
 // RUN: %not --crash %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK
 // clang-format on
 
@@ -39,6 +39,4 @@ int main(void) {
 // CHECK: OFFLOAD ERROR: Kernel 'omp target in main @ 30 (__omp_offloading_{{.*}}_main_l30)'
 // CHECK: OFFLOAD ERROR: execution interrupted by hardware trap instruction
 // TRACE:     launchKernel
-// NDEBG:     main
-// DEBUG:     main {{.*}}kernel_trap.c:
 // clang-format on

@@ -92,6 +92,7 @@ enum class ResultReason {
   DiffMathFlags,
   DiffWrapFlags,
   DiffBBs,
+  RepeatedInstrs,
   NotConsecutive,
   CantSchedule,
   Unimplemented,
@@ -130,6 +131,8 @@ struct ToStr {
       return "DiffWrapFlags";
     case ResultReason::DiffBBs:
       return "DiffBBs";
+    case ResultReason::RepeatedInstrs:
+      return "RepeatedInstrs";
     case ResultReason::NotConsecutive:
       return "NotConsecutive";
     case ResultReason::CantSchedule:

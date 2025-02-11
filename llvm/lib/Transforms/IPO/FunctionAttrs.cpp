@@ -1296,16 +1296,6 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       continue;
     }
 
-    bool SCCCaptured = false;
-    for (ArgumentGraphNode *Node : ArgumentSCC) {
-      if (Node->Uses.empty() && !Node->Definition->hasNoCaptureAttr()) {
-        SCCCaptured = true;
-        break;
-      }
-    }
-    if (SCCCaptured)
-      continue;
-
     SmallPtrSet<Argument *, 8> ArgumentSCCNodes;
     // Fill ArgumentSCCNodes with the elements of the ArgumentSCC.  Used for
     // quickly looking up whether a given Argument is in this ArgumentSCC.
@@ -1313,6 +1303,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       ArgumentSCCNodes.insert(I->Definition);
     }
 
+    bool SCCCaptured = false;
     for (ArgumentGraphNode *N : ArgumentSCC) {
       for (ArgumentGraphNode *Use : N->Uses) {
         Argument *A = Use->Definition;

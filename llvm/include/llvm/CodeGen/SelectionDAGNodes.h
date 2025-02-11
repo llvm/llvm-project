@@ -1645,7 +1645,7 @@ public:
     return Mask[Idx];
   }
 
-  bool isSplat() const { return isSplatMask(Mask, getValueType(0)); }
+  bool isSplat() const { return isSplatMask(getMask()); }
 
   int getSplatIndex() const {
     assert(isSplat() && "Cannot get splat index for non-splat!");
@@ -1659,7 +1659,7 @@ public:
     return 0;
   }
 
-  static bool isSplatMask(const int *Mask, EVT VT);
+  static bool isSplatMask(ArrayRef<int> Mask);
 
   /// Change values in a shuffle permute mask assuming
   /// the two vector operands have swapped position.
@@ -3261,13 +3261,16 @@ namespace ISD {
   template <typename ConstNodeType>
   bool matchUnaryPredicateImpl(SDValue Op,
                                std::function<bool(ConstNodeType *)> Match,
-                               bool AllowUndefs = false);
+                               bool AllowUndefs = false,
+                               bool AllowTruncation = false);
 
   /// Hook for matching ConstantSDNode predicate
   inline bool matchUnaryPredicate(SDValue Op,
                                   std::function<bool(ConstantSDNode *)> Match,
-                                  bool AllowUndefs = false) {
-    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs);
+                                  bool AllowUndefs = false,
+                                  bool AllowTruncation = false) {
+    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs,
+                                                   AllowTruncation);
   }
 
   /// Hook for matching ConstantFPSDNode predicate

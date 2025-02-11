@@ -30,7 +30,7 @@
   !0 = !{i24 0, i24 1048575}
   !1 = !{!"omnipotent char", !2}
   !2 = !{!"Simple C/C++ TBAA"}
-  !3 = !{i32 0, i32 1048575}
+  !3 = !{i24 0, i24 1048575}
 ...
 
 # Make sure range metadata is not preserved when widening loads, but

@@ -1242,6 +1242,16 @@ void StmtPrinter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
   OS << '\n';
 }
 
+void StmtPrinter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
+  Indent() << "#pragma acc atomic";
+
+  if (S->getAtomicKind() != OpenACCAtomicKind::None)
+    OS << " " << S->getAtomicKind();
+
+  OS << '\n';
+  PrintStmt(S->getAssociatedStmt());
+}
+
 //===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
@@ -1293,8 +1303,14 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
          << PD->getFunctionScopeIndex();
       break;
     }
+    case Decl::Decomposition:
+      OS << "decomposition";
+      for (const auto &I : cast<DecompositionDecl>(VD)->bindings())
+        OS << '-' << I->getName();
+      break;
     default:
-      llvm_unreachable("Unhandled anonymous declaration kind");
+      OS << "unhandled-anonymous-" << VD->getDeclKindName();
+      break;
     }
   }
   if (Node->hasExplicitTemplateArgs()) {
@@ -1961,7 +1977,6 @@ void StmtPrinter::VisitPseudoObjectExpr(PseudoObjectExpr *Node) {
 void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
   const char *Name = nullptr;
   switch (Node->getOp()) {
-#define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) \
   case AtomicExpr::AO ## ID: \
     Name = #ID "("; \

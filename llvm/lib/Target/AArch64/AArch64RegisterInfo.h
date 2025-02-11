@@ -27,7 +27,7 @@ class AArch64RegisterInfo final : public AArch64GenRegisterInfo {
   const Triple &TT;
 
 public:
-  AArch64RegisterInfo(const Triple &TT);
+  AArch64RegisterInfo(const Triple &TT, unsigned HwMode);
 
   // FIXME: This should be tablegen'd like getDwarfRegNum is
   int getSEHRegNum(unsigned i) const {

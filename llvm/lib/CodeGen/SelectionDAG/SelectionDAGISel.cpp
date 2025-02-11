@@ -98,7 +98,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -698,7 +697,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
         Def->getParent()->insert(std::next(InsertPos), MI);
       } else
         LLVM_DEBUG(dbgs() << "Dropping debug info for dead vreg"
-                          << Register::virtReg2Index(Reg) << "\n");
+                          << printReg(Reg) << '\n');
     }
 
     // Don't try and extend through copies in instruction referencing mode.
@@ -4424,8 +4423,6 @@ void SelectionDAGISel::CannotYetSelect(SDNode *N) {
     unsigned iid = N->getConstantOperandVal(HasInputChain);
     if (iid < Intrinsic::num_intrinsics)
       Msg << "intrinsic %" << Intrinsic::getBaseName((Intrinsic::ID)iid);
-    else if (const TargetIntrinsicInfo *TII = TM.getIntrinsicInfo())
-      Msg << "target intrinsic %" << TII->getName(iid);
     else
       Msg << "unknown intrinsic #" << iid;
   }

@@ -68,13 +68,13 @@
 // RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp \
 // RUN:     -fopenmp-targets=nvptx64-nvidia-cuda --nvptx-arch-tool=%t/nvptx_arch_empty %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NVPTX
-// NVPTX: error: cannot determine nvptx64 architecture: No NVIDIA GPU detected in the system; consider passing it via '-march'
+// NVPTX: error: cannot determine nvptx64 architecture: No NVIDIA GPU detected in the system; consider passing it via '--offload-arch'
 
 // case when 'amdgpu-arch' returns nothing using `-fopenmp-targets=`.
 // RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp \
 // RUN:     -fopenmp-targets=amdgcn-amd-amdhsa --amdgpu-arch-tool=%t/amdgpu_arch_empty %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=AMDGPU
-// AMDGPU: error: cannot determine amdgcn architecture: No AMD GPU detected in the system; consider passing it via '-march'
+// AMDGPU: error: cannot determine amdgcn architecture: No AMD GPU detected in the system; consider passing it via '--offload-arch'
 
 // case when CLANG_TOOLCHAIN_PROGRAM_TIMEOUT is malformed for nvptx-arch.
 // RUN: env CLANG_TOOLCHAIN_PROGRAM_TIMEOUT=foo \
@@ -82,7 +82,7 @@
 // RUN:     -fopenmp-targets=nvptx64-nvidia-cuda -nogpulib \
 // RUN:     --nvptx-arch-tool=%t/nvptx_arch_sm_70 %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=BAD-TIMEOUT-NVPTX
-// BAD-TIMEOUT-NVPTX: clang: error: cannot determine nvptx64 architecture: CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected an integer, got 'foo'; consider passing it via '-march'; environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool timeout (integer secs, <=0 is infinite)
+// BAD-TIMEOUT-NVPTX: clang: error: cannot determine nvptx64 architecture: CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected an integer, got 'foo'; consider passing it via '--offload-arch'; environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool timeout (integer secs, <=0 is infinite)
 
 // case when CLANG_TOOLCHAIN_PROGRAM_TIMEOUT is malformed for amdgpu-arch.
 // RUN: env CLANG_TOOLCHAIN_PROGRAM_TIMEOUT= \
@@ -90,4 +90,4 @@
 // RUN:     -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib \
 // RUN:     --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=BAD-TIMEOUT-AMDGPU
-// BAD-TIMEOUT-AMDGPU: clang: error: cannot determine amdgcn architecture: CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected an integer, got ''; consider passing it via '-march'; environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool timeout (integer secs, <=0 is infinite)
+// BAD-TIMEOUT-AMDGPU: clang: error: cannot determine amdgcn architecture: CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected an integer, got ''; consider passing it via '--offload-arch'; environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool timeout (integer secs, <=0 is infinite)

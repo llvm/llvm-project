@@ -983,6 +983,12 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opcode = SystemZ::VLR;
   else if (SystemZ::AR32BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::CPYA;
+  else if (SystemZ::GR64BitRegClass.contains(DestReg) &&
+           SystemZ::FP64BitRegClass.contains(SrcReg))
+    Opcode = SystemZ::LGDR;
+  else if (SystemZ::FP64BitRegClass.contains(DestReg) &&
+           SystemZ::GR64BitRegClass.contains(SrcReg))
+    Opcode = SystemZ::LDGR;
   else
     llvm_unreachable("Impossible reg-to-reg copy");
 

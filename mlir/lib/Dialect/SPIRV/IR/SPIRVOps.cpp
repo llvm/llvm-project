@@ -917,7 +917,7 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse the function signature.
   bool isVariadic = false;
-  if (function_interface_impl::parseFunctionSignature(
+  if (function_interface_impl::parseFunctionSignatureWithArguments(
           parser, /*allowVariadic=*/false, entryArgs, isVariadic, resultTypes,
           resultAttrs))
     return failure();
@@ -940,7 +940,7 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Add the attributes to the function arguments.
   assert(resultAttrs.size() == resultTypes.size());
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, result, entryArgs, resultAttrs, getArgAttrsAttrName(result.name),
       getResAttrsAttrName(result.name));
 
@@ -2040,6 +2040,45 @@ LogicalResult spirv::ImageDrefGatherOp::verify() {
   auto operandArguments = getOperandArguments();
 
   return verifyImageOperands(*this, attr, operandArguments);
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.ImageWriteOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::ImageWriteOp::verify() {
+  ImageType imageType = cast<ImageType>(getImage().getType());
+  Type sampledType = imageType.getElementType();
+  ImageSamplerUseInfo samplerInfo = imageType.getSamplerUseInfo();
+
+  if (!llvm::is_contained({spirv::ImageSamplerUseInfo::SamplerUnknown,
+                           spirv::ImageSamplerUseInfo::NoSampler},
+                          samplerInfo)) {
+    return emitOpError(
+        "the sampled operand of the underlying image must be 0 or 2");
+  }
+
+  // TODO: Do we need check for: "If the Arrayed operand is 1, then additional
+  // capabilities may be required; e.g., ImageCubeArray, or ImageMSArray."?
+
+  if (imageType.getDim() == spirv::Dim::SubpassData) {
+    return emitOpError(
+        "the Dim operand of the underlying image must not be SubpassData");
+  }
+
+  Type texelType = getElementTypeOrSelf(getTexel());
+  if (!isa<NoneType>(sampledType) && texelType != sampledType) {
+    return emitOpError(
+        "the texel component type must match the image sampled type");
+  }
+
+  // TODO: Ideally it should be somewhere verified that "The Image Format must
+  // not be Unknown, unless the StorageImageWriteWithoutFormat Capability was
+  // declared." This function however may not be the suitable place for such
+  // verification.
+
+  return verifyImageOperands(*this, getImageOperandsAttr(),
+                             getOperandArguments());
 }
 
 //===----------------------------------------------------------------------===//
