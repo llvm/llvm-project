@@ -268,7 +268,7 @@ Examples:
 
 If ``-fthinlto-distributor=`` is specified Clang supplies the path to a
 distributable optimization and code generation tool to LLD. Currently this tool
-is Clang itself specified.
+is Clang itself.
 
 See `DTLTO <https://lld.llvm.org/dtlto.html>`_ for more information.
 
