@@ -34,7 +34,7 @@ func.func @test_unary_f32(%arg0 : tensor<4xf32>) -> () {
   %1 = tosa.ceil %arg0 : (tensor<4xf32>) -> tensor<*xf32>
 
   // CHECK: tosa.clamp %arg0 {{.+}} : (tensor<4xf32>) -> tensor<4xf32>
-  %2 = tosa.clamp %arg0 { max_int = 10 : i64, min_int = 0 : i64, min_fp = 0.0 : f32, max_fp = 10.0 : f32 } : (tensor<4xf32>) -> tensor<*xf32>
+  %2 = tosa.clamp %arg0 { min_val = 0.0 : f32, max_val = 10.0 : f32 } : (tensor<4xf32>) -> tensor<*xf32>
 
   // CHECK: tosa.exp %arg0 : (tensor<4xf32>) -> tensor<4xf32>
   %3 = tosa.exp %arg0 : (tensor<4xf32>) -> tensor<*xf32>
@@ -82,7 +82,7 @@ func.func @test_unary_i32(%arg0 : tensor<4xi32>) -> () {
   %1 = tosa.bitwise_not %arg0 : (tensor<4xi32>) -> tensor<*xi32>
 
   // CHECK: tosa.clamp %arg0 {{.+}} : (tensor<4xi32>) -> tensor<4xi32>
-  %2 = tosa.clamp %arg0 { max_int = 10 : i64, min_int = 0 : i64, min_fp = 0.0 : f32, max_fp = 10.0 : f32 } : (tensor<4xi32>) -> tensor<*xi32>
+  %2 = tosa.clamp %arg0 { max_val = 10 : i32, min_val = 0 : i32} : (tensor<4xi32>) -> tensor<*xi32>
 
   // CHECK: tosa.clz %arg0 : (tensor<4xi32>) -> tensor<4xi32>
   %3 = tosa.clz %arg0 : (tensor<4xi32>) -> tensor<*xi32>
