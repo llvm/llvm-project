@@ -165,7 +165,8 @@ bool RootSignatureLexer::ConsumeToken() {
   // This will be implicity be true if NextToken->Kind == end_of_stream
   if (EndOfBuffer()) {
     // Report unexpected end of tokens error
-    PP.getDiagnostics().Report(SourceLoc, diag::err_hlsl_rootsig_unexpected_eos);
+    PP.getDiagnostics().Report(SourceLoc,
+                               diag::err_hlsl_rootsig_unexpected_eos);
     return true;
   }
 

@@ -41,7 +41,8 @@ struct RootSignatureToken {
   // Constructors
   RootSignatureToken() : TokLoc(SourceLocation()) {}
   RootSignatureToken(clang::SourceLocation TokLoc) : TokLoc(TokLoc) {}
-  RootSignatureToken(enum Kind Kind, clang::SourceLocation TokLoc) : Kind(Kind), TokLoc(TokLoc) {}
+  RootSignatureToken(enum Kind Kind, clang::SourceLocation TokLoc)
+      : Kind(Kind), TokLoc(TokLoc) {}
 };
 using TokenKind = enum RootSignatureToken::Kind;
 
