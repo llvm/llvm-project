@@ -258,7 +258,11 @@ QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
     }
     return T;
   };
-  while (!Current.Type.isNull()) {
+  // As an additional protection against infinite loops, bound the number of
+  // simplification steps.
+  size_t StepCount = 0;
+  const size_t MaxSteps = 64;
+  while (!Current.Type.isNull() && StepCount++ < MaxSteps) {
     TypeExprPair New = SimplifyOneStep(Current);
     if (New.Type == Current.Type)
       break;
