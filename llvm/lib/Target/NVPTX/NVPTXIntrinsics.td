@@ -2415,10 +2415,12 @@ multiclass INT_PTX_ATOM_CAS_AS<string atomic_cmp_swap_without_as, string type, s
                        !cast<PatFrag>(atomic_cmp_swap_without_as#_shared), !cast<Operand>("i"#type#"imm"), preds>;
 }
 
-// eg. with type = 32, order = .acquire, addrspace = ".global",
+// eg. with type = 32, order = ".acquire", addrspace = ".global",
 // atomic_cmp_swap_pat = atomic_cmp_swap_i32_acquire_global.
+// preds = [hasSM<70>, hasPTX<63>]
 // F_ATOMIC_3<i32, Int32Regs, ".acquire", ".global", ".b32",
-//            ".cas", atomic_cmp_swap_i32_acquire_global, i32imm>
+//            ".cas", atomic_cmp_swap_i32_acquire_global, i32imm,
+//            [hasSM<70>, hasPTX<63>]>
 multiclass INT_PTX_ATOM_CAS<string atomic_cmp_swap_pat, string type,
                            string order, string addrspace, list<Predicate> preds>
     : F_ATOMIC_3<!cast<ValueType>("i"#type),
@@ -2431,7 +2433,8 @@ multiclass INT_PTX_ATOM_CAS<string atomic_cmp_swap_pat, string type,
                  !cast<Operand>("i"#type#"imm"),
                  preds>;
 
-// Define atom.cas for all combinations of size x memory order supported in PTX *and* on the hardware.
+// Define atom.cas for all combinations of size x addrspace x memory order
+// supported in PTX *and* on the hardware.
 foreach size = ["32", "64"] in {
   foreach addrspace = ["generic", "global", "shared"] in {
     defvar cas_addrspace_string = !if(!eq(addrspace, "generic"), "", "."#addrspace);
@@ -2451,7 +2454,7 @@ foreach size = ["32", "64"] in {
   }
 }
 
-// Note that 16-bit CAS support in PTX is *emulated*. (TODO: public?)
+// Note that 16-bit CAS support in PTX is emulated.
 defm INT_PTX_ATOM_CAS_G_16 : F_ATOMIC_3<i16, Int16Regs, "", ".global", ".b16", ".cas",
   atomic_cmp_swap_i16_global, i16imm, [hasSM<70>, hasPTX<63>]>;
 defm INT_PTX_ATOM_CAS_S_16 : F_ATOMIC_3<i16, Int16Regs, "", ".shared", ".b16", ".cas",
