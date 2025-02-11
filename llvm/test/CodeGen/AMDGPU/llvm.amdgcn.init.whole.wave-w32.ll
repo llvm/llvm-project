@@ -1149,7 +1149,6 @@ define amdgpu_cs_chain void @with_inactive_vgprs(ptr inreg %callee, i32 inreg %e
 ; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s2
-; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_setpc_b64 s[4:5]
 ;
 ; DAGISEL12-LABEL: with_inactive_vgprs:
