@@ -188,7 +188,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       if (Info.AI->hasName())
         TagPCall->setName(Info.AI->getName() + ".tag");
       Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
-        return !memtag::isLifetimeIntrinsic(U.getUser());
+        return !isa<LifetimeIntrinsic>(U.getUser());
       });
       TagPCall->setOperand(1, Info.AI);
       IntrinsicInst *Start = Info.LifetimeStart[0];
