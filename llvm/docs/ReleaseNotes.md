@@ -460,7 +460,7 @@ Changes to the LLVM tools
   `--localize-symbol`, `--localize-symbols`,
   `--skip-symbol`, `--skip-symbols`.
 
-* llvm-objcopy now prints the correct file path in the error message when the output file specified by --dump-section cannot be opened.
+* llvm-objcopy now prints the correct file path in the error message when the output file specified by `--dump-section` cannot be opened.
 
 Changes to LLDB
 ---------------------------------
