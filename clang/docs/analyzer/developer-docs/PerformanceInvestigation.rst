@@ -86,7 +86,7 @@ It's also useful to check out Brendan Gregg's (the author of FlameGraph)
    /path/to/FlameGraph/flamegraph.pl perf.folded  > perf.svg
    firefox perf.svg
 
-.. image:: ../images/flamegraph.svg
+.. image:: ../images/flamegraph.png
 
 
 Performance analysis using ``uftrace``
