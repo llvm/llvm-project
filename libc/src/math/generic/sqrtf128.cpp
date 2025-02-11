@@ -17,6 +17,8 @@
 
 // Compute sqrtf128 with correct rounding for all rounding modes using integer
 // arithmetic by Alexei Sibidanov (sibid@uvic.ca):
+//   https://github.com/sibidanov/llvm-project/tree/as_sqrt_v2
+//   https://github.com/sibidanov/llvm-project/tree/as_sqrt_v3
 // Let the input be expressed as x = 2^e * m_x,
 // - Step 1: Range reduction
 //   Let x_reduced = 2^(e % 2) * m_x,

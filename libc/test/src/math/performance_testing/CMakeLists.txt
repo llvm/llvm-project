@@ -508,6 +508,4 @@ add_perf_binary(
   DEPENDS
     .single_input_single_output_diff
     libc.src.math.sqrtf128
-  COMPILE_OPTIONS
-  -fno-builtin
 )
