@@ -101,6 +101,65 @@ inline constexpr Int128 prod_hi<Int128, UInt128>(Int128 x, UInt128 y) {
   return static_cast<Int128>(prod - negative_part);
 }
 
+// Newton-Raphson first order step to improve accuracy of the result.
+// For the initial approximation r0 ~ 1/sqrt(x), let
+//   h = r0^2 * x - 1
+// be its scaled error.  Then the first-order Newton-Raphson iteration is:
+//   r1 = r0 - r0 * h / 2
+// which has error bounded by:
+//   |r1 - 1/sqrt(x)| < h^2 / 2.
+LIBC_INLINE uint64_t rsqrt_newton_raphson(uint64_t m, uint64_t r) {
+  uint64_t r2 = prod_hi(r, r);
+  // h = r0^2*x - 1.
+  int64_t h = static_cast<int64_t>(prod_hi(m, r2) + r2);
+  // hr = r * h / 2
+  int64_t hr = prod_hi(h, static_cast<int64_t>(r >> 1));
+  return r - hr;
+}
+
+#ifdef LIBC_MATH_HAS_SMALL_TABLES
+// Degree-12 minimax polynomials for 1/sqrt(x) on [1, 2].
+constexpr uint32_t RSQRT_COEFFS[12] = {
+    0xb5947a4a, 0x2d651e32, 0x9ad50532, 0x2d28d093, 0x0d8be653, 0x04239014,
+    0x01492449, 0x0066ff7d, 0x001e74a1, 0x000984cc, 0x00049abc, 0x00018340,
+};
+
+LIBC_INLINE uint64_t rsqrt_approx(uint64_t m) {
+  int64_t x = static_cast<uint64_t>(m) ^ (uint64_t(1) << 63);
+  int64_t x_26 = x >> 2;
+  int64_t z = x >> 31;
+
+  if (LIBC_UNLIKELY(z <= -4294967296))
+    return ~(m >> 1);
+
+  uint64_t x2 = static_cast<uint64_t>(z) * static_cast<uint64_t>(z);
+  uint64_t x2_26 = x2 >> 5;
+  x2 >>= 32;
+  // Calculate the odd part of the polynomial using Horner's method.
+  uint64_t c0 = RSQRT_COEFFS[8] + ((x2 * RSQRT_COEFFS[10]) >> 32);
+  uint64_t c1 = RSQRT_COEFFS[6] + ((x2 * c0) >> 32);
+  uint64_t c2 = RSQRT_COEFFS[4] + ((x2 * c1) >> 32);
+  uint64_t c3 = RSQRT_COEFFS[2] + ((x2 * c2) >> 32);
+  uint64_t c4 = RSQRT_COEFFS[0] + ((x2 * c3) >> 32);
+  uint64_t odd =
+      static_cast<uint64_t>((x >> 34) * static_cast<int64_t>(c4 >> 3)) + x_26;
+  // Calculate the even part of the polynomial using Horner's method.
+  uint64_t d0 = RSQRT_COEFFS[9] + ((x2 * RSQRT_COEFFS[11]) >> 32);
+  uint64_t d1 = RSQRT_COEFFS[7] + ((x2 * d0) >> 32);
+  uint64_t d2 = RSQRT_COEFFS[5] + ((x2 * d1) >> 32);
+  uint64_t d3 = RSQRT_COEFFS[3] + ((x2 * d2) >> 32);
+  uint64_t d4 = RSQRT_COEFFS[1] + ((x2 * d3) >> 32);
+  uint64_t even = 0xd105eb806655d608ul + ((x2 * d4) >> 6) + x2_26;
+
+  uint64_t r = even - odd; // error < 1.5e-10
+  // Newton-Raphson first order step to improve accuracy of the result to almost
+  // 64 bits.
+  return rsqrt_newton_raphson(m, r);
+}
+
+#else
+// Cubic minimax polynomials for 1/sqrt(x) on [1 + k/64, 1 + (k + 1)/64]
+// for k = 0..63.
 constexpr uint32_t RSQRT_COEFFS[64][4] = {
     {0xffffffff, 0xfffff780, 0xbff55815, 0x9bb5b6e7},
     {0xfc0bd889, 0xfa1d6e7d, 0xb8a95a89, 0x938bf8f0},
@@ -196,26 +255,15 @@ LIBC_INLINE uint64_t rsqrt_approx(uint64_t m) {
   uint64_t ro = d * ((c1 + ((d2 * c3) >> 19)) >> 26) >>
                 6;      // odd part of the polynomial (negative)
   uint64_t r = re - ro; // maximal error < 1.55e-10 and it is less than 2^-32
-
   // Newton-Raphson first order step to improve accuracy of the result to almost
-  // 64 bits:
-  // For the initial approximation r0 ~ 1/sqrt(x), let
-  //   h = r0^2 * x - 1
-  // be its scaled error.  Then the first-order Newton-Raphson iteration is:
-  //   r1 = r0 - r0 * h / 2
-  // which has error bounded by:
-  //   |r1 - 1/sqrt(x)| < h^2 / 2.
-  uint64_t r2 = prod_hi(r, r);
-  // h = r0^2*x - 1.
-  int64_t h = static_cast<int64_t>(prod_hi(m, r2) + r2);
-  // hr = r * h / 2
-  int64_t hr = prod_hi(h, static_cast<int64_t>(r >> 1));
-  r -= hr;
+  // 64 bits.
+  r = rsqrt_newton_raphson(m, r);
   // Adjust in the unlucky case x~1;
   if (LIBC_UNLIKELY(!r))
     --r;
   return r;
 }
+#endif // LIBC_MATH_HAS_SMALL_TABLES
 
 } // anonymous namespace
 
@@ -254,7 +302,7 @@ LLVM_LIBC_FUNCTION(float128, sqrtf128, (float128 x)) {
     // Now x is subnormal or x = +0.
 
     // x is +0.
-    if (x_u == 0)
+    if (x_frac == 0)
       return x;
 
     // Normalize subnormal inputs.
