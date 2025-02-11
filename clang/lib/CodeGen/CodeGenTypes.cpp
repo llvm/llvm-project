@@ -107,6 +107,9 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
                                 MT->getNumRows() * MT->getNumColumns());
   }
 
+  if (T->isMFloat8Type())
+    return llvm::Type::getIntNTy(getLLVMContext(), 8);
+
   llvm::Type *R = ConvertType(T);
 
   // Check for the boolean vector case.
