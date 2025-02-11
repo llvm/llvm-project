@@ -134,10 +134,10 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, half %
 ; CHECKPTX62-NEXT:    @%p4 bra $L__BB0_7;
 ; CHECKPTX62-NEXT:  // %bb.8: // %atomicrmw.end
 ; CHECKPTX62-NEXT:    ret;
-  %r1 = atomicrmw fadd ptr %dp0, half %val seq_cst
-  %r2 = atomicrmw fadd ptr %dp0, half 1.0 seq_cst
-  %r3 = atomicrmw fadd ptr addrspace(1) %dp1, half %val seq_cst
-  %r4 = atomicrmw fadd ptr addrspace(3) %dp3, half %val seq_cst
+  %r1 = atomicrmw fadd ptr %dp0, half %val monotonic
+  %r2 = atomicrmw fadd ptr %dp0, half 1.0 monotonic
+  %r3 = atomicrmw fadd ptr addrspace(1) %dp1, half %val monotonic
+  %r4 = atomicrmw fadd ptr addrspace(3) %dp3, half %val monotonic
   ret void
 }
 

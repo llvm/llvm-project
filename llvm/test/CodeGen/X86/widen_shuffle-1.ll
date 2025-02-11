@@ -105,14 +105,13 @@ define void @shuf5(ptr %p) nounwind {
 ; X86-LABEL: shuf5:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movsd {{.*#+}} xmm0 = [33,33,33,33,33,33,33,33,0,0,0,0,0,0,0,0]
+; X86-NEXT:    movsd {{.*#+}} xmm0 = [33,33,u,u,u,u,u,u,0,0,u,u,u,u,u,u]
 ; X86-NEXT:    movsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shuf5:
 ; X64:       # %bb.0:
-; X64-NEXT:    movabsq $2387225703656530209, %rax # imm = 0x2121212121212121
-; X64-NEXT:    movq %rax, (%rdi)
+; X64-NEXT:    movq $8481, (%rdi) # imm = 0x2121
 ; X64-NEXT:    retq
   %v = shufflevector <2 x i8> <i8 4, i8 33>, <2 x i8> poison, <8 x i32> <i32 1, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   store <8 x i8> %v, ptr %p, align 8

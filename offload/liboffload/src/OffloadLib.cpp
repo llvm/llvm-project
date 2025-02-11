@@ -36,7 +36,7 @@ OffloadConfig &offloadConfig() {
   return Config;
 }
 
-// Pull in the declarations for the implementation funtions. The actual entry
+// Pull in the declarations for the implementation functions. The actual entry
 // points in this file wrap these.
 #include "OffloadImplFuncDecls.inc"
 

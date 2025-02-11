@@ -765,30 +765,14 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
   NewPN->addIncoming(InVal, PN.getIncomingBlock(0));
   LoadInst *NewLI =
       new LoadInst(FirstLI->getType(), NewPN, "", IsVolatile, LoadAlignment);
-
-  unsigned KnownIDs[] = {
-    LLVMContext::MD_tbaa,
-    LLVMContext::MD_range,
-    LLVMContext::MD_invariant_load,
-    LLVMContext::MD_alias_scope,
-    LLVMContext::MD_noalias,
-    LLVMContext::MD_nonnull,
-    LLVMContext::MD_align,
-    LLVMContext::MD_dereferenceable,
-    LLVMContext::MD_dereferenceable_or_null,
-    LLVMContext::MD_access_group,
-    LLVMContext::MD_noundef,
-  };
-
-  for (unsigned ID : KnownIDs)
-    NewLI->setMetadata(ID, FirstLI->getMetadata(ID));
+  NewLI->copyMetadata(*FirstLI);
 
   // Add all operands to the new PHI and combine TBAA metadata.
   for (auto Incoming : drop_begin(zip(PN.blocks(), PN.incoming_values()))) {
     BasicBlock *BB = std::get<0>(Incoming);
     Value *V = std::get<1>(Incoming);
     LoadInst *LI = cast<LoadInst>(V);
-    combineMetadata(NewLI, LI, KnownIDs, true);
+    combineMetadataForCSE(NewLI, LI, true);
     Value *NewInVal = LI->getOperand(0);
     if (NewInVal != InVal)
       InVal = nullptr;

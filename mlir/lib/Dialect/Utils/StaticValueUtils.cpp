@@ -191,7 +191,8 @@ bool isEqualConstantIntOrValueArray(ArrayRef<OpFoldResult> ofrs1,
 /// elements for which ShapedType::isDynamic is true, will be replaced by
 /// dynamicValues.
 SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
-                                         ValueRange dynamicValues, Builder &b) {
+                                         ValueRange dynamicValues,
+                                         MLIRContext *context) {
   SmallVector<OpFoldResult> res;
   res.reserve(staticValues.size());
   unsigned numDynamic = 0;
@@ -200,9 +201,14 @@ SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
     int64_t value = staticValues[idx];
     res.push_back(ShapedType::isDynamic(value)
                       ? OpFoldResult{dynamicValues[numDynamic++]}
-                      : OpFoldResult{b.getI64IntegerAttr(staticValues[idx])});
+                      : OpFoldResult{IntegerAttr::get(
+                            IntegerType::get(context, 64), staticValues[idx])});
   }
   return res;
+}
+SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
+                                         ValueRange dynamicValues, Builder &b) {
+  return getMixedValues(staticValues, dynamicValues, b.getContext());
 }
 
 /// Decompose a vector of mixed static or dynamic values into the corresponding

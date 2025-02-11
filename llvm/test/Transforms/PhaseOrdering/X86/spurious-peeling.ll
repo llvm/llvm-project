@@ -14,7 +14,7 @@ $_ZN12FloatVecPair6vecIncEv = comdat any
 
 define dso_local void @_Z13vecIncFromPtrP12FloatVecPair(ptr %FVP) {
 ; O1-LABEL: define {{[^@]+}}@_Z13vecIncFromPtrP12FloatVecPair
-; O1-SAME: (ptr nocapture readonly [[FVP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O1-SAME: (ptr readonly captures(none) [[FVP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O1-NEXT:  entry:
 ; O1-NEXT:    [[VSRC23_I:%.*]] = getelementptr inbounds nuw i8, ptr [[FVP]], i64 16
 ; O1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VSRC23_I]], align 8, !tbaa [[TBAA0:![0-9]+]]
@@ -44,7 +44,7 @@ define dso_local void @_Z13vecIncFromPtrP12FloatVecPair(ptr %FVP) {
 ; O1-NEXT:    ret void
 ;
 ; O23-LABEL: define {{[^@]+}}@_Z13vecIncFromPtrP12FloatVecPair
-; O23-SAME: (ptr nocapture readonly [[FVP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O23-SAME: (ptr readonly captures(none) [[FVP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O23-NEXT:  entry:
 ; O23-NEXT:    [[VSRC23_I:%.*]] = getelementptr inbounds nuw i8, ptr [[FVP]], i64 16
 ; O23-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VSRC23_I]], align 8, !tbaa [[TBAA0:![0-9]+]]

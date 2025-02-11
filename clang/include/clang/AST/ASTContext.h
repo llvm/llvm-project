@@ -769,7 +769,7 @@ public:
   /// pool.
   DeclListNode *AllocateDeclListNode(clang::NamedDecl *ND) {
     if (DeclListNode *Alloc = ListNodeFreeList) {
-      ListNodeFreeList = Alloc->Rest.dyn_cast<DeclListNode*>();
+      ListNodeFreeList = dyn_cast_if_present<DeclListNode *>(Alloc->Rest);
       Alloc->D = ND;
       Alloc->Rest = nullptr;
       return Alloc;
@@ -1725,6 +1725,54 @@ public:
   QualType getRecordType(const RecordDecl *Decl) const;
 
   QualType getEnumType(const EnumDecl *Decl) const;
+
+  /// Compute BestType and BestPromotionType for an enum based on the highest
+  /// number of negative and positive bits of its elements.
+  /// Returns true if enum width is too large.
+  bool computeBestEnumTypes(bool IsPacked, unsigned NumNegativeBits,
+                            unsigned NumPositiveBits, QualType &BestType,
+                            QualType &BestPromotionType);
+
+  /// Determine whether the given integral value is representable within
+  /// the given type T.
+  bool isRepresentableIntegerValue(llvm::APSInt &Value, QualType T);
+
+  /// Compute NumNegativeBits and NumPositiveBits for an enum based on
+  /// the constant values of its enumerators.
+  template <typename RangeT>
+  bool computeEnumBits(RangeT EnumConstants, unsigned &NumNegativeBits,
+                       unsigned &NumPositiveBits) {
+    NumNegativeBits = 0;
+    NumPositiveBits = 0;
+    bool MembersRepresentableByInt = true;
+    for (auto *Elem : EnumConstants) {
+      EnumConstantDecl *ECD = cast_or_null<EnumConstantDecl>(Elem);
+      if (!ECD)
+        continue; // Already issued a diagnostic.
+
+      llvm::APSInt InitVal = ECD->getInitVal();
+      if (InitVal.isUnsigned() || InitVal.isNonNegative()) {
+        // If the enumerator is zero that should still be counted as a positive
+        // bit since we need a bit to store the value zero.
+        unsigned ActiveBits = InitVal.getActiveBits();
+        NumPositiveBits = std::max({NumPositiveBits, ActiveBits, 1u});
+      } else {
+        NumNegativeBits =
+            std::max(NumNegativeBits, (unsigned)InitVal.getSignificantBits());
+      }
+
+      MembersRepresentableByInt &= isRepresentableIntegerValue(InitVal, IntTy);
+    }
+
+    // If we have an empty set of enumerators we still need one bit.
+    // From [dcl.enum]p8
+    // If the enumerator-list is empty, the values of the enumeration are as if
+    // the enumeration had a single enumerator with value 0
+    if (!NumPositiveBits && !NumNegativeBits)
+      NumPositiveBits = 1;
+
+    return MembersRepresentableByInt;
+  }
 
   QualType
   getUnresolvedUsingType(const UnresolvedUsingTypenameDecl *Decl) const;
@@ -3359,6 +3407,16 @@ public:
   /// conflicting SYCL kernel names and issue a diagnostic prior to calling
   /// this function.
   void registerSYCLEntryPointFunction(FunctionDecl *FD);
+
+  /// Given a type used as a SYCL kernel name, returns a reference to the
+  /// metadata generated from the corresponding SYCL kernel entry point.
+  /// Aborts if the provided type is not a registered SYCL kernel name.
+  const SYCLKernelInfo &getSYCLKernelInfo(QualType T) const;
+
+  /// Returns a pointer to the metadata generated from the corresponding
+  /// SYCLkernel entry point if the provided type corresponds to a registered
+  /// SYCL kernel name. Returns a null pointer otherwise.
+  const SYCLKernelInfo *findSYCLKernelInfo(QualType T) const;
 
   //===--------------------------------------------------------------------===//
   //                    Statistics

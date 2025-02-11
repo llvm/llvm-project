@@ -21,11 +21,11 @@ void foo() {
 }
 //.
 //.
-// CHECK: [[META0:![0-9]+]] = !{ptr @_Z6kernel1Sii, !"kernel", i32 1, !"grid_constant", [[META1:![0-9]+]]}
+// CHECK: [[META0:![0-9]+]] = !{ptr @_Z6kernel1Sii, !"grid_constant", [[META1:![0-9]+]]}
 // CHECK: [[META1]] = !{i32 1, i32 3}
-// CHECK: [[META2:![0-9]+]] = !{ptr @_Z13tkernel_constIK1SEvT_, !"kernel", i32 1, !"grid_constant", [[META3:![0-9]+]]}
+// CHECK: [[META2:![0-9]+]] = !{ptr @_Z13tkernel_constIK1SEvT_, !"grid_constant", [[META3:![0-9]+]]}
 // CHECK: [[META3]] = !{i32 1}
-// CHECK: [[META4:![0-9]+]] = !{ptr @_Z13tkernel_constI1SEvT_, !"kernel", i32 1, !"grid_constant", [[META3]]}
-// CHECK: [[META5:![0-9]+]] = !{ptr @_Z7tkernelIK1SEviT_, !"kernel", i32 1, !"grid_constant", [[META6:![0-9]+]]}
+// CHECK: [[META4:![0-9]+]] = !{ptr @_Z13tkernel_constI1SEvT_, !"grid_constant", [[META3]]}
+// CHECK: [[META5:![0-9]+]] = !{ptr @_Z7tkernelIK1SEviT_, !"grid_constant", [[META6:![0-9]+]]}
 // CHECK: [[META6]] = !{i32 2}
 //.

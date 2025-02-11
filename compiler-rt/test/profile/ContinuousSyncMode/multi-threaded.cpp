@@ -1,4 +1,4 @@
-// REQUIRES: target={{.*(darwin|aix).*}}
+// REQUIRES: continuous-mode
 
 // RUN: rm -f %t.profraw
 // RUN: %clangxx_pgogen_cont -lpthread %s -o %t.exe -mllvm -disable-vp -fprofile-update=atomic

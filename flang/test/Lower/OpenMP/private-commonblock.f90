@@ -17,6 +17,8 @@ subroutine private_common
   !$omp end parallel
 end subroutine
 
+!CHECK:    %[[D_BOX_ADDR:.*]] = fir.alloca !fir.box<!fir.array<5x!fir.char<1,5>>>
+!CHECK:    %[[B_BOX_ADDR:.*]] = fir.alloca !fir.box<!fir.array<10xf32>>
 !CHECK:    %[[BLK_ADDR:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<74xi8>>
 !CHECK:    %[[I8_ARR:.*]] = fir.convert %[[BLK_ADDR]] : (!fir.ref<!fir.array<74xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK:    %[[C0:.*]] = arith.constant 0 : index
@@ -48,17 +50,24 @@ end subroutine
 !CHECK:    %[[D_REF:.*]] = fir.convert %[[D_DECL]]#1 : (!fir.ref<!fir.array<5x!fir.char<1,5>>>) -> !fir.ref<!fir.char<1,5>>
 !CHECK:    %[[D_BOX:.*]] = fir.emboxchar %[[D_REF]], %[[TP5]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 !CHECK:    fir.call @_QPsub1(%[[A_DECL]]#1, %[[B_DECL]]#1, %[[C_BOX]], %[[D_BOX]]) fastmath<contract> : (!fir.ref<i32>, !fir.ref<!fir.array<10xf32>>, !fir.boxchar<1>, !fir.boxchar<1>) -> ()
-!CHECK:    omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[A_PVT_REF:.*]], @{{.*}} %{{.*}}#0 -> %[[B_PVT_REF:.*]], @{{.*}} %{{.*}}#0 -> %[[C_PVT_REF:.*]], @{{.*}} %{{.*}}#0 -> %[[D_PVT_REF:.*]] : {{.*}}) {
+!CHECK:    %[[B_BOX:.*]] = fir.embox %[[B_DECL]]#0(%[[SH10]])
+!CHECK:    fir.store %[[B_BOX]] to %[[B_BOX_ADDR]]
+!CHECK:    %[[D_BOX:.*]] = fir.embox %[[D_DECL]]#0(%[[SH5]])
+!CHECK:    fir.store %[[D_BOX]] to %[[D_BOX_ADDR]]
+!CHECK:    omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[A_PVT_REF:.*]], @{{.*}} %[[B_BOX_ADDR]] -> %[[B_PVT_REF:.*]], @{{.*}} %{{.*}}#0 -> %[[C_PVT_REF:.*]], @{{.*}} %[[D_BOX_ADDR]] -> %[[D_PVT_REF:.*]] : {{.*}}) {
 !CHECK:      %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFprivate_clause_commonblockEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:      %[[SH10:.*]] = fir.shape %c10{{.*}} : (index) -> !fir.shape<1>
-!CHECK:      %[[B_PVT_DECL:.*]]:2 = hlfir.declare %[[B_PVT_REF]](%[[SH10]]) {uniq_name = "_QFprivate_clause_commonblockEb"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+!CHECK:      %[[B_PVT_DECL:.*]]:2 = hlfir.declare %[[B_PVT_REF]] {uniq_name = "_QFprivate_clause_commonblockEb"} :
 !CHECK:      %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT_REF]] typeparams %{{.*}} {uniq_name = "_QFprivate_clause_commonblockEc"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
-!CHECK:      %[[SH5:.*]] = fir.shape %c5{{.*}} : (index) -> !fir.shape<1>
-!CHECK:      %[[D_PVT_DECL:.*]]:2 = hlfir.declare %[[D_PVT_REF]](%[[SH5]]) typeparams %c5{{.*}} {uniq_name = "_QFprivate_clause_commonblockEd"} : (!fir.ref<!fir.array<5x!fir.char<1,5>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<5x!fir.char<1,5>>>, !fir.ref<!fir.array<5x!fir.char<1,5>>>)
+!CHECK:      %[[D_PVT_DECL:.*]]:2 = hlfir.declare %[[D_PVT_REF]]
+!CHECK:      %[[B_LOADED:.*]] = fir.load %[[B_PVT_DECL]]#0
+!CHECK:      %[[B_ADDR:.*]] = fir.box_addr %[[B_LOADED]]
 !CHECK:      %[[C_PVT_BOX:.*]] = fir.emboxchar %[[C_PVT_DECL]]#1, %{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
-!CHECK:      %[[D_PVT_REF:.*]] = fir.convert %[[D_PVT_DECL]]#1 : (!fir.ref<!fir.array<5x!fir.char<1,5>>>) -> !fir.ref<!fir.char<1,5>>
+
+!CHECK:      %[[D_LOADED:.*]] = fir.load %[[D_PVT_DECL]]#0
+!CHECK:      %[[D_ADDR:.*]] = fir.box_addr %[[D_LOADED]]
+!CHECK:      %[[D_PVT_REF:.*]] = fir.convert %[[D_ADDR]] : (!fir.ref<!fir.array<5x!fir.char<1,5>>>) -> !fir.ref<!fir.char<1,5>>
 !CHECK:      %[[D_PVT_BOX:.*]] = fir.emboxchar %[[D_PVT_REF]], %{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
-!CHECK:      fir.call @_QPsub2(%[[A_PVT_DECL]]#1, %[[B_PVT_DECL]]#1, %[[C_PVT_BOX]], %[[D_PVT_BOX]]) fastmath<contract> : (!fir.ref<i32>, !fir.ref<!fir.array<10xf32>>, !fir.boxchar<1>, !fir.boxchar<1>) -> ()
+!CHECK:      fir.call @_QPsub2(%[[A_PVT_DECL]]#1, %[[B_ADDR]], %[[C_PVT_BOX]], %[[D_PVT_BOX]]) fastmath<contract> : (!fir.ref<i32>, !fir.ref<!fir.array<10xf32>>, !fir.boxchar<1>, !fir.boxchar<1>) -> ()
 !CHECK:      omp.terminator
 !CHECK:    }
 !CHECK:    %[[C_BOX:.*]] = fir.emboxchar %[[C_DECL]]#1, %{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>

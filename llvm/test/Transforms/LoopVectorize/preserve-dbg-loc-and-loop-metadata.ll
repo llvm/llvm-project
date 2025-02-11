@@ -91,7 +91,7 @@ define void @scalar_cast_dbg(ptr nocapture %a, i32 %start, i64 %k) {
 ; DEBUGLOC:   = trunc i64 %index to i32, !dbg [[CASTLOC:![0-9]+]]
 ;
 ; DEBUGLOC: loop:
-; DEBUGLOC-NOT:   %trunc.iv = trunc i64 %iv to i32, !dbg [[CASTLOC]]
+; DEBUGLOC:   %trunc.iv = trunc i64 %iv to i32, !dbg [[CASTLOC]]
 ;
 entry:
   br label %loop

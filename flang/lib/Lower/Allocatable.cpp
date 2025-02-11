@@ -22,12 +22,14 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Parser/parse-tree.h"
@@ -452,6 +454,19 @@ private:
                                                    alloc.getSymbol());
   }
 
+  void setPinnedToFalse() {
+    if (!pinnedExpr)
+      return;
+    Fortran::lower::StatementContext stmtCtx;
+    mlir::Value pinned =
+        fir::getBase(converter.genExprAddr(loc, *pinnedExpr, stmtCtx));
+    mlir::Location loc = pinned.getLoc();
+    mlir::Value falseValue = builder.createBool(loc, false);
+    mlir::Value falseConv = builder.createConvert(
+        loc, fir::unwrapRefType(pinned.getType()), falseValue);
+    builder.create<fir::StoreOp>(loc, falseConv, pinned);
+  }
+
   void genSimpleAllocation(const Allocation &alloc,
                            const fir::MutableBoxValue &box) {
     bool isCudaSymbol = Fortran::semantics::HasCUDAAttr(alloc.getSymbol());
@@ -467,6 +482,7 @@ private:
       // can be validated.
       genInlinedAllocation(alloc, box);
       postAllocationAction(alloc);
+      setPinnedToFalse();
       return;
     }
 
@@ -480,11 +496,13 @@ private:
     genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (!isCudaSymbol)
+    if (!isCudaSymbol) {
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
-    else
+      setPinnedToFalse();
+    } else {
       stat =
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
+    }
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
     postAllocationAction(alloc);
     errorManager.assignStat(builder, loc, stat);
@@ -614,13 +632,16 @@ private:
       genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()))
+    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol())) {
       stat =
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
-    else if (isSource)
-      stat = genRuntimeAllocateSource(builder, loc, box, exv, errorManager);
-    else
-      stat = genRuntimeAllocate(builder, loc, box, errorManager);
+    } else {
+      if (isSource)
+        stat = genRuntimeAllocateSource(builder, loc, box, exv, errorManager);
+      else
+        stat = genRuntimeAllocate(builder, loc, box, errorManager);
+      setPinnedToFalse();
+    }
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
     postAllocationAction(alloc);
     errorManager.assignStat(builder, loc, stat);
@@ -1093,11 +1114,13 @@ void Fortran::lower::associateMutableBox(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(source)) {
     fir::factory::disassociateMutableBox(builder, loc, box);
+    cuf::genPointerSync(box.getAddr(), builder);
     return;
   }
   if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
     fir::ExtendedValue rhs = converter.genExprAddr(loc, source, stmtCtx);
     fir::factory::associateMutableBox(builder, loc, box, rhs, lbounds);
+    cuf::genPointerSync(box.getAddr(), builder);
     return;
   }
   // The right hand side is not be evaluated into a temp. Array sections can

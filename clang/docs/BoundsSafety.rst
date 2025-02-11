@@ -777,13 +777,13 @@ the transformed pseudo code of function ``alloc_buf()`` in the example below.
       size_t count;
    } sized_buf_t;
 
-   void alloc_buf(sized_buf_t *sbuf, sized_t nelems) {
+   void alloc_buf(sized_buf_t *sbuf, size_t nelems) {
       sbuf->buf = (int *)malloc(sizeof(int) * nelems);
       sbuf->count = nelems;
    }
 
    // Transformed pseudo code:
-   void alloc_buf(sized_buf_t *sbuf, sized_t nelems) {
+   void alloc_buf(sized_buf_t *sbuf, size_t nelems) {
       // Materialize RHS values:
       int *tmp_ptr = (int *)malloc(sizeof(int) * nelems);
       int tmp_count = nelems;
@@ -959,7 +959,8 @@ that has the define.
    #if defined(__has_feature) && __has_feature(bounds_safety)
    #define __counted_by(T) __attribute__((__counted_by__(T)))
    // ... other bounds annotations
-   #else #define __counted_by(T) // defined as nothing
+   #else
+   #define __counted_by(T) // defined as nothing
    // ... other bounds annotations
    #endif
 
@@ -987,7 +988,7 @@ and it does not guarantee other types of memory safety properties. Consequently,
 it may not prevent some of the secondary bounds safety violations caused by
 other types of safety violations such as type confusion. For instance,
 ``-fbounds-safety`` does not perform type-safety checks on conversions between
-`__single`` pointers of different pointee types (e.g., ``char *__single`` →
+``__single`` pointers of different pointee types (e.g., ``char *__single`` →
 ``void *__single`` → ``int *__single``) beyond what the foundation languages
 (C/C++) already offer.
 
@@ -997,3 +998,10 @@ overhead in unoptimized builds and leaving some of the adoption mistakes to be
 caught only at run time. This is not a fundamental limitation, however, because
 incrementally adding necessary static analysis will allow us to catch issues
 early on and remove unnecessary bounds checks in unoptimized builds.
+
+Try it out
+==========
+
+Your feedback on the programming model is valuable. You may want to follow the
+instruction in :doc:`BoundsSafetyAdoptionGuide` to play with ``-fbounds-safety``
+and please send your feedback to `Yeoul Na <mailto:yeoul_na@apple.com>`_.

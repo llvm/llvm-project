@@ -11,15 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInstance.h"
-#include "flang/Common/Fortran-features.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Timing.h"
+#include "mlir/Support/RawOstreamExtras.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -147,12 +150,9 @@ void CompilerInstance::clearOutputFiles(bool eraseFiles) {
 }
 
 bool CompilerInstance::executeAction(FrontendAction &act) {
-  auto &invoc = this->getInvocation();
+  CompilerInvocation &invoc = this->getInvocation();
 
   llvm::Triple targetTriple{llvm::Triple(invoc.getTargetOpts().triple)};
-  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
-    invoc.getDefaultKinds().set_quadPrecisionKind(10);
-  }
 
   // Set some sane defaults for the frontend.
   invoc.setDefaultFortranOpts();
@@ -167,6 +167,25 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
   // Set options controlling lowering to FIR.
   invoc.setLoweringOptions();
 
+  if (invoc.getEnableTimers()) {
+    llvm::TimePassesIsEnabled = true;
+
+    timingStreamMLIR = std::make_unique<Fortran::support::string_ostream>();
+    timingStreamLLVM = std::make_unique<Fortran::support::string_ostream>();
+    timingStreamCodeGen = std::make_unique<Fortran::support::string_ostream>();
+
+    timingMgr.setEnabled(true);
+    timingMgr.setDisplayMode(mlir::DefaultTimingManager::DisplayMode::Tree);
+    timingMgr.setOutput(
+        Fortran::support::createTimingFormatterText(*timingStreamMLIR));
+
+    // Creating a new TimingScope will automatically start the timer. Since this
+    // is the top-level timer, this is ok because it will end up capturing the
+    // time for all the bookkeeping and other tasks that take place between
+    // parsing, lowering etc. for which finer-grained timers will be created.
+    timingScopeRoot = timingMgr.getRootScope();
+  }
+
   // Run the frontend action `act` for every input file.
   for (const FrontendInputFile &fif : getFrontendOpts().inputs) {
     if (act.beginSourceFile(*this, fif)) {
@@ -176,6 +195,34 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
       act.endSourceFile();
     }
   }
+
+  if (timingMgr.isEnabled()) {
+    timingScopeRoot.stop();
+
+    // Write the timings to the associated output stream and clear all timers.
+    // We need to provide another stream because the TimingManager will attempt
+    // to print in its destructor even if it has been cleared. By the time that
+    // destructor runs, the output streams will have been destroyed, so give it
+    // a null stream.
+    timingMgr.print();
+    timingMgr.setOutput(
+        Fortran::support::createTimingFormatterText(mlir::thread_safe_nulls()));
+
+    // This prints the timings in "reverse" order, starting from code
+    // generation, followed by LLVM-IR optimizations, then MLIR optimizations
+    // and transformations and the frontend. If any of the steps are disabled,
+    // for instance because code generation was not performed, the strings
+    // will be empty.
+    if (!timingStreamCodeGen->str().empty())
+      llvm::errs() << timingStreamCodeGen->str() << "\n";
+
+    if (!timingStreamLLVM->str().empty())
+      llvm::errs() << timingStreamLLVM->str() << "\n";
+
+    if (!timingStreamMLIR->str().empty())
+      llvm::errs() << timingStreamMLIR->str() << "\n";
+  }
+
   return !getDiagnostics().getClient()->getNumErrors();
 }
 

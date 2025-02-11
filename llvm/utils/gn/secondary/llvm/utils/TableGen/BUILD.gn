@@ -1,29 +1,13 @@
-source_set("llvm-min-tblgen-sources") {
-  sources = [
-    "ARMTargetDefEmitter.cpp",
-    "Attributes.cpp",
-    "DirectiveEmitter.cpp",
-    "IntrinsicEmitter.cpp",
-    "RISCVTargetDefEmitter.cpp",
-    "TableGen.cpp",
-    "VTEmitter.cpp",
-  ]
+executable("llvm-min-tblgen") {
+  sources = [ "llvm-min-tblgen.cpp" ]
   deps = [
     "Basic",
     "//llvm/lib/Support",
   ]
 }
 
-executable("llvm-min-tblgen") {
-  deps = [
-    ":llvm-min-tblgen-sources",
-    "Basic",
-  ]
-}
-
 executable("llvm-tblgen") {
   deps = [
-    ":llvm-min-tblgen-sources",
     "Basic",
     "Common",
     "//llvm/include/llvm/Config:llvm-config",
@@ -55,12 +39,14 @@ executable("llvm-tblgen") {
     "GlobalISelEmitter.cpp",
     "InstrDocsEmitter.cpp",
     "InstrInfoEmitter.cpp",
+    "llvm-tblgen.cpp",
     "MacroFusionPredicatorEmitter.cpp",
     "OptionParserEmitter.cpp",
     "OptionRSTEmitter.cpp",
     "PseudoLoweringEmitter.cpp",
     "RegisterBankEmitter.cpp",
     "RegisterInfoEmitter.cpp",
+    "SDNodeInfoEmitter.cpp",
     "SearchableTableEmitter.cpp",
     "SubtargetEmitter.cpp",
     "WebAssemblyDisassemblerEmitter.cpp",

@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if __has_builtin(__add_rvalue_reference)
 
 template <class _Tp>
-using __add_rvalue_reference_t = __add_rvalue_reference(_Tp);
+using __add_rvalue_reference_t _LIBCPP_NODEBUG = __add_rvalue_reference(_Tp);
 
 #else
 
@@ -40,7 +40,7 @@ using __add_rvalue_reference_t = typename __add_rvalue_reference_impl<_Tp>::type
 #endif // __has_builtin(__add_rvalue_reference)
 
 template <class _Tp>
-struct add_rvalue_reference {
+struct _LIBCPP_NO_SPECIALIZATIONS add_rvalue_reference {
   using type = __add_rvalue_reference_t<_Tp>;
 };
 

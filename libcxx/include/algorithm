@@ -1530,11 +1530,11 @@ template <class RandomAccessIterator, class Compare>
     sort(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
 
 template <class RandomAccessIterator>
-    void
+    constexpr void               // constexpr in C++26
     stable_sort(RandomAccessIterator first, RandomAccessIterator last);
 
 template <class RandomAccessIterator, class Compare>
-    void
+    constexpr void               // constexpr in C++26
     stable_sort(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
 
 template <class RandomAccessIterator>

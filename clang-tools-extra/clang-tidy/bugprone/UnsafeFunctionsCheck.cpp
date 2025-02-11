@@ -256,13 +256,32 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
                                           .bind(CustomFunctionNamesId)))
                            .bind(DeclRefId),
                        this);
+    // C++ member calls do not contain a DeclRefExpr to the function decl.
+    // Instead, they contain a MemberExpr that refers to the decl.
+    Finder->addMatcher(memberExpr(member(functionDecl(CustomFunctionsMatcher)
+                                             .bind(CustomFunctionNamesId)))
+                           .bind(DeclRefId),
+                       this);
   }
 }
 
 void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *DeclRef = Result.Nodes.getNodeAs<DeclRefExpr>(DeclRefId);
-  const auto *FuncDecl = cast<FunctionDecl>(DeclRef->getDecl());
-  assert(DeclRef && FuncDecl && "No valid matched node in check()");
+  const Expr *SourceExpr;
+  const FunctionDecl *FuncDecl;
+
+  if (const auto *DeclRef = Result.Nodes.getNodeAs<DeclRefExpr>(DeclRefId)) {
+    SourceExpr = DeclRef;
+    FuncDecl = cast<FunctionDecl>(DeclRef->getDecl());
+  } else if (const auto *Member =
+                 Result.Nodes.getNodeAs<MemberExpr>(DeclRefId)) {
+    SourceExpr = Member;
+    FuncDecl = cast<FunctionDecl>(Member->getMemberDecl());
+  } else {
+    llvm_unreachable("No valid matched node in check()");
+    return;
+  }
+
+  assert(SourceExpr && FuncDecl && "No valid matched node in check()");
 
   // Only one of these are matched at a time.
   const auto *AnnexK = Result.Nodes.getNodeAs<FunctionDecl>(
@@ -286,14 +305,15 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
             Entry.Reason.empty() ? "is marked as unsafe" : Entry.Reason.c_str();
 
         if (Entry.Replacement.empty()) {
-          diag(DeclRef->getExprLoc(), "function %0 %1; it should not be used")
+          diag(SourceExpr->getExprLoc(),
+               "function %0 %1; it should not be used")
               << FuncDecl << Reason << Entry.Replacement
-              << DeclRef->getSourceRange();
+              << SourceExpr->getSourceRange();
         } else {
-          diag(DeclRef->getExprLoc(),
+          diag(SourceExpr->getExprLoc(),
                "function %0 %1; '%2' should be used instead")
               << FuncDecl << Reason << Entry.Replacement
-              << DeclRef->getSourceRange();
+              << SourceExpr->getSourceRange();
         }
 
         return;
@@ -323,9 +343,9 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
   if (!ReplacementFunctionName)
     return;
 
-  diag(DeclRef->getExprLoc(), "function %0 %1; '%2' should be used instead")
+  diag(SourceExpr->getExprLoc(), "function %0 %1; '%2' should be used instead")
       << FuncDecl << getRationaleFor(FunctionName)
-      << ReplacementFunctionName.value() << DeclRef->getSourceRange();
+      << ReplacementFunctionName.value() << SourceExpr->getSourceRange();
 }
 
 void UnsafeFunctionsCheck::registerPPCallbacks(

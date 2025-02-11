@@ -475,7 +475,7 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
-      auto *E = DetailRecord.dyn_cast<Expr *>();
+      auto *E = dyn_cast<Expr *>(DetailRecord);
       Record.push_back(/* IsDiagnostic */ E == nullptr);
       if (E)
         Record.AddStmt(E);
@@ -607,6 +607,14 @@ void ASTStmtWriter::VisitCapturedStmt(CapturedStmt *S) {
   }
 
   Code = serialization::STMT_CAPTURED;
+}
+
+void ASTStmtWriter::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
+  VisitStmt(S);
+  Record.AddStmt(S->getOriginalStmt());
+  Record.AddDeclRef(S->getOutlinedFunctionDecl());
+
+  Code = serialization::STMT_SYCLKERNELCALL;
 }
 
 void ASTStmtWriter::VisitExpr(Expr *E) {
@@ -2202,6 +2210,16 @@ void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   Code = serialization::EXPR_PACK_INDEXING;
 }
 
+void ASTStmtWriter::VisitResolvedUnexpandedPackExpr(
+    ResolvedUnexpandedPackExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumExprs());
+  Record.AddSourceLocation(E->getBeginLoc());
+  for (Expr *Sub : E->getExprs())
+    Record.AddStmt(Sub);
+  Code = serialization::EXPR_RESOLVED_UNEXPANDED_PACK;
+}
+
 void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
@@ -2957,6 +2975,18 @@ void ASTStmtWriter::VisitOpenACCShutdownConstruct(OpenACCShutdownConstruct *S) {
   Code = serialization::STMT_OPENACC_SHUTDOWN_CONSTRUCT;
 }
 
+void ASTStmtWriter::VisitOpenACCSetConstruct(OpenACCSetConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
+  Code = serialization::STMT_OPENACC_SET_CONSTRUCT;
+}
+
+void ASTStmtWriter::VisitOpenACCUpdateConstruct(OpenACCUpdateConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
+  Code = serialization::STMT_OPENACC_UPDATE_CONSTRUCT;
+}
+
 void ASTStmtWriter::VisitOpenACCHostDataConstruct(OpenACCHostDataConstruct *S) {
   VisitStmt(S);
   VisitOpenACCAssociatedStmtConstruct(S);
@@ -2975,6 +3005,17 @@ void ASTStmtWriter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
     Record.AddStmt(E);
 
   Code = serialization::STMT_OPENACC_WAIT_CONSTRUCT;
+}
+
+void ASTStmtWriter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
+  VisitStmt(S);
+  Record.writeEnum(S->Kind);
+  Record.AddSourceRange(S->Range);
+  Record.AddSourceLocation(S->DirectiveLoc);
+  Record.writeEnum(S->getAtomicKind());
+  Record.AddStmt(S->getAssociatedStmt());
+
+  Code = serialization::STMT_OPENACC_ATOMIC_CONSTRUCT;
 }
 
 //===----------------------------------------------------------------------===//

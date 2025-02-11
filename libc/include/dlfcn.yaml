@@ -1,0 +1,40 @@
+header: dlfcn.h
+header_template: dlfcn.h.def
+macros:
+  - macro_name: RTLD_LAZY
+    macro_value: null
+  - macro_name: RTLD_NOW
+    macro_value: null
+  - macro_name: RTLD_GLOBAL
+    macro_value: null
+  - macro_name: RTLD_LOCAL
+    macro_value: null
+types: []
+enums: []
+objects: []
+functions:
+  - name: dlclose
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: void *
+  - name: dlerror
+    standards:
+      - POSIX
+    return_type: char *
+    arguments: []
+  - name: dlopen
+    standards:
+      - POSIX
+    return_type: void *
+    arguments:
+      - type: const char *
+      - type: int
+  - name: dlsym
+    standards:
+      - POSIX
+    return_type: void *
+    arguments:
+      - type: void *__restrict
+      - type: const char *__restrict

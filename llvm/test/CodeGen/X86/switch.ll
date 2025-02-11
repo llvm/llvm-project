@@ -2563,7 +2563,7 @@ define i32 @pr27135(i32 %i) {
 ; NOOPT-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; NOOPT-NEXT:    retq
 entry:
-  br i1 undef, label %sw, label %end
+  br i1 poison, label %sw, label %end
 sw:
   switch i32 %i, label %end [
     i32 99,  label %sw.bb
