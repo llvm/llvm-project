@@ -11,9 +11,9 @@
 #include <vector>
 
 class FooAllocator {
- public:
+public:
   using value_type = int;
-  FooAllocator() = default;
+  FooAllocator()   = default;
 
   int* allocate(int num_objects);
 
@@ -24,5 +24,6 @@ class FooAllocator {
 };
 
 void func() {
-  std::vector<int, FooAllocator> v; //expected-error-re@*:* {{static assertion failed {{.*}}This allocator has to implement rebind}}
+  std::vector<int, FooAllocator>
+      v; //expected-error-re@*:* {{static assertion failed {{.*}}This allocator has to implement rebind}}
 }
