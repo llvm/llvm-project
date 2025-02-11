@@ -63,9 +63,11 @@ void ARMAsmPrinter::emitFunctionBodyEnd() {
 }
 
 void ARMAsmPrinter::emitFunctionEntryLabel() {
+  auto &TS =
+      static_cast<ARMTargetStreamer &>(*OutStreamer->getTargetStreamer());
   if (AFI->isThumbFunction()) {
     OutStreamer->emitAssemblerFlag(MCAF_Code16);
-    OutStreamer->emitThumbFunc(CurrentFnSym);
+    TS.emitThumbFunc(CurrentFnSym);
   } else {
     OutStreamer->emitAssemblerFlag(MCAF_Code32);
   }

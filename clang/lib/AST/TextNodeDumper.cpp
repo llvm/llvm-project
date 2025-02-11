@@ -2527,7 +2527,7 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
   }
   if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
     dumpTemplateSpecializationKind(CTSD->getSpecializationKind());
-    if (CTSD->hasMatchedPackOnParmToNonPackOnArg())
+    if (CTSD->hasStrictPackMatch())
       OS << " strict-pack-match";
   }
 

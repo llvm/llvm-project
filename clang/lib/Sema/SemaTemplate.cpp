@@ -3651,7 +3651,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
           ClassTemplate->getDeclContext(),
           ClassTemplate->getTemplatedDecl()->getBeginLoc(),
           ClassTemplate->getLocation(), ClassTemplate, CTAI.CanonicalConverted,
-          CTAI.MatchedPackOnParmToNonPackOnArg, nullptr);
+          CTAI.StrictPackMatch, nullptr);
       ClassTemplate->AddSpecialization(Decl, InsertPos);
       if (ClassTemplate->isOutOfLine())
         Decl->setLexicalDeclContext(ClassTemplate->getLexicalDeclContext());
@@ -5436,7 +5436,7 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
   case TemplateArgument::TemplateExpansion:
     if (CheckTemplateTemplateArgument(TempParm, Params, ArgLoc,
                                       CTAI.PartialOrdering,
-                                      &CTAI.MatchedPackOnParmToNonPackOnArg))
+                                      &CTAI.StrictPackMatch))
       return true;
 
     CTAI.SugaredConverted.push_back(Arg);
@@ -5762,7 +5762,7 @@ bool Sema::CheckTemplateArgumentList(
 
     SaveAndRestore _1(CTAI.PartialOrdering, false);
     SaveAndRestore _2(CTAI.MatchingTTP, false);
-    SaveAndRestore _3(CTAI.MatchedPackOnParmToNonPackOnArg, {});
+    SaveAndRestore _3(CTAI.StrictPackMatch, {});
     // Check the default template argument.
     if (CheckTemplateArgument(*Param, Arg, Template, TemplateLoc, RAngleLoc, 0,
                               CTAI, CTAK_Specified))
@@ -7361,10 +7361,11 @@ static void DiagnoseTemplateParameterListArityMismatch(
     Sema &S, TemplateParameterList *New, TemplateParameterList *Old,
     Sema::TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc);
 
-bool Sema::CheckTemplateTemplateArgument(
-    TemplateTemplateParmDecl *Param, TemplateParameterList *Params,
-    TemplateArgumentLoc &Arg, bool PartialOrdering,
-    bool *MatchedPackOnParmToNonPackOnArg) {
+bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
+                                         TemplateParameterList *Params,
+                                         TemplateArgumentLoc &Arg,
+                                         bool PartialOrdering,
+                                         bool *StrictPackMatch) {
   TemplateName Name = Arg.getArgument().getAsTemplateOrTemplatePattern();
   auto [Template, DefaultArgs] = Name.getTemplateDeclAndDefaultArgs();
   if (!Template) {
@@ -7404,7 +7405,7 @@ bool Sema::CheckTemplateTemplateArgument(
   //   is at least as specialized as the template-argument A.
   if (!isTemplateTemplateParameterAtLeastAsSpecializedAs(
           Params, Param, Template, DefaultArgs, Arg.getLocation(),
-          PartialOrdering, MatchedPackOnParmToNonPackOnArg))
+          PartialOrdering, StrictPackMatch))
     return true;
   // P2113
   // C++20[temp.func.order]p2
@@ -8526,8 +8527,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
     // this explicit specialization or friend declaration.
     Specialization = ClassTemplateSpecializationDecl::Create(
         Context, Kind, DC, KWLoc, TemplateNameLoc, ClassTemplate,
-        CTAI.CanonicalConverted, CTAI.MatchedPackOnParmToNonPackOnArg,
-        PrevDecl);
+        CTAI.CanonicalConverted, CTAI.StrictPackMatch, PrevDecl);
     Specialization->setTemplateArgsAsWritten(TemplateArgs);
     SetNestedNameSpecifier(*this, Specialization, SS);
     if (TemplateParameterLists.size() > 0) {
@@ -9870,8 +9870,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
     // this explicit specialization.
     Specialization = ClassTemplateSpecializationDecl::Create(
         Context, Kind, ClassTemplate->getDeclContext(), KWLoc, TemplateNameLoc,
-        ClassTemplate, CTAI.CanonicalConverted,
-        CTAI.MatchedPackOnParmToNonPackOnArg, PrevDecl);
+        ClassTemplate, CTAI.CanonicalConverted, CTAI.StrictPackMatch, PrevDecl);
     SetNestedNameSpecifier(*this, Specialization, SS);
 
     // A MSInheritanceAttr attached to the previous declaration must be
@@ -9926,9 +9925,9 @@ DeclResult Sema::ActOnExplicitInstantiation(
     = cast_or_null<ClassTemplateSpecializationDecl>(
                                               Specialization->getDefinition());
   if (!Def)
-    InstantiateClassTemplateSpecialization(
-        TemplateNameLoc, Specialization, TSK,
-        /*Complain=*/true, CTAI.MatchedPackOnParmToNonPackOnArg);
+    InstantiateClassTemplateSpecialization(TemplateNameLoc, Specialization, TSK,
+                                           /*Complain=*/true,
+                                           CTAI.StrictPackMatch);
   else if (TSK == TSK_ExplicitInstantiationDefinition) {
     MarkVTableUsed(TemplateNameLoc, Specialization, true);
     Specialization->setPointOfInstantiation(Def->getPointOfInstantiation());
