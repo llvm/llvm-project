@@ -102,6 +102,7 @@ All functions are profiled due to static instrumentation.
 There is only one prerequisite to use this tool.
 You need to build the binary you are about to instrument using ``-pg`` or ``-finstrument-functions``.
 This will make it run substantially slower but allows rich instrumentation.
+It will also consume many gigabites of storage for a single trace unless filter flags are used during recording.
 
 .. code-block:: bash
    :caption: Recording with ``uftrace``, then dumping the result as a Chrome trace JSON.
