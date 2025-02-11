@@ -130,7 +130,7 @@ void initPlugins() {
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    Platforms().emplace_back(ol_platform_impl_t{                            \
+    Platforms().emplace_back(ol_platform_impl_t{                               \
         std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), {}});         \
   } while (false);
 #include "Shared/Targets.def"
