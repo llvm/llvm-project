@@ -15,12 +15,7 @@ subroutine target_simple
 end subroutine target_simple
 
 ! CHECK-LABEL: omp.private {type = private}
-! CHECK-SAME:              @[[VAR_PRIVATIZER_SYM:.*]] : !fir.ref<i32> alloc {
-! CHECK:  ^bb0(%[[PRIV_ARG:.*]]: !fir.ref<i32>):
-! CHECK:    %[[PRIV_ALLOC:.*]] = fir.alloca i32 {bindc_name = "simple_var", {{.*}}}
-! CHECK:    %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]]
-! CHECK:    omp.yield(%[[PRIV_DECL]]#0 : !fir.ref<i32>)
-! CHECK: }
+! CHECK-SAME:              @[[VAR_PRIVATIZER_SYM:.*]] : i32
 
 ! CHECK-LABEL: func.func @_QPtarget_simple() {
 ! CHECK:  %[[VAR_ALLOC:.*]] = fir.alloca i32 {bindc_name = "simple_var", {{.*}}}

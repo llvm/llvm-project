@@ -67,7 +67,7 @@ static sandboxir::BasicBlock *getBasicBlockByName(sandboxir::Function *F,
 
 TEST_F(LegalityTest, LegalitySkipSchedule) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float %farg0, float %farg1, i64 %v0, i64 %v1, i32 %v2) {
+define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float %farg0, float %farg1, i64 %v0, i64 %v1, i32 %v2, i1 %c0, i1 %c1) {
 entry:
   %gep0 = getelementptr float, ptr %ptr, i32 0
   %gep1 = getelementptr float, ptr %ptr, i32 1
@@ -93,6 +93,8 @@ bb:
   %trunc32to8 = trunc i32 %v2 to i8
   %cmpSLT = icmp slt i64 %v0, %v1
   %cmpSGT = icmp sgt i64 %v0, %v1
+  %sel0 = select i1 %c0, <2 x float> %vec2, <2 x float> %vec2
+  %sel1 = select i1 %c1, <2 x float> %vec2, <2 x float> %vec2
   ret void
 }
 )IR");
@@ -128,6 +130,8 @@ bb:
   auto *Trunc32to8 = cast<sandboxir::TruncInst>(&*It++);
   auto *CmpSLT = cast<sandboxir::CmpInst>(&*It++);
   auto *CmpSGT = cast<sandboxir::CmpInst>(&*It++);
+  auto *Sel0 = cast<sandboxir::SelectInst>(&*It++);
+  auto *Sel1 = cast<sandboxir::SelectInst>(&*It++);
 
   llvm::sandboxir::InstrMaps IMaps(Ctx);
   sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
@@ -240,6 +244,15 @@ bb:
     EXPECT_TRUE(isa<sandboxir::Pack>(Result));
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::RepeatedInstrs);
+  }
+  {
+    // For now don't vectorize Selects when the number of elements of conditions
+    // doesn't match the operands.
+    const auto &Result =
+        Legality.canVectorize({Sel0, Sel1}, /*SkipScheduling=*/true);
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::Unimplemented);
   }
 }
 

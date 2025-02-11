@@ -485,3 +485,12 @@ void instantiate() {
   bar<NontrivialInitializer><<<1, 1>>>();
 // expected-note@-1 {{in instantiation of function template specialization 'bar<NontrivialInitializer>' requested here}}
 }
+
+__device__ void *ptr1 = nullptr;
+__device__ void *ptr2 = ptr1;
+// expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+
+__device__ [[gnu::constructor(101)]] void ctor() {}
+// expected-error@-1 {{CUDA does not support global constructors for __device__ functions}}
+__device__ [[gnu::destructor(101)]] void dtor() {}
+// expected-error@-1 {{CUDA does not support global destructors for __device__ functions}}

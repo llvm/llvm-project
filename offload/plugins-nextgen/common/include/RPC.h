@@ -34,7 +34,7 @@ class DeviceImageTy;
 } // namespace plugin
 
 /// A generic class implementing the interface between the RPC server provided
-/// by the 'libc' project and 'libomptarget'. If the RPC server is not availible
+/// by the 'libc' project and 'libomptarget'. If the RPC server is not available
 /// these routines will perform no action.
 struct RPCServerTy {
 public:
@@ -48,7 +48,7 @@ public:
   llvm::Error startThread();
 
   /// Check if this device image is using an RPC server. This checks for the
-  /// precense of an externally visible symbol in the device image that will
+  /// presence of an externally visible symbol in the device image that will
   /// be present whenever RPC code is called.
   llvm::Expected<bool> isDeviceUsingRPC(plugin::GenericDeviceTy &Device,
                                         plugin::GenericGlobalHandlerTy &Handler,
@@ -80,7 +80,7 @@ private:
     std::thread Worker;
 
     /// A boolean indicating whether or not the worker thread should continue.
-    std::atomic<bool> Running;
+    std::atomic<uint32_t> Running;
 
     /// The number of currently executing kernels across all devices that need
     /// the server thread to be running.

@@ -111,8 +111,8 @@ struct ConsolidateTransposeOptimization
     auto permsTy =
         RankedTensorType::get(transposePerms.size(), rewriter.getI32Type());
     auto permsAttr = DenseIntElementsAttr::get(permsTy, perms);
-    Value permsValue =
-        rewriter.create<arith::ConstantOp>(transposeOp.getLoc(), permsAttr);
+    Value permsValue = rewriter.create<tosa::ConstOp>(transposeOp.getLoc(),
+                                                      permsTy, permsAttr);
 
     rewriter.replaceOpWithNewOp<tosa::TransposeOp>(
         transposeOp, transposeOp.getResult().getType(),
@@ -180,7 +180,7 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
 
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
         op, op.getType(), op.getInput1(),
-        rewriter.getDenseI64ArrayAttr(newShape));
+        getTosaConstShape(rewriter, op.getLoc(), newShape));
     return success();
   }
 };
@@ -207,10 +207,10 @@ struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
     Attribute constantAttr;
     if (llvm::isa<FloatType>(elementTy)) {
       constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-    } else if (llvm::isa<IntegerType>(elementTy) && !op.getQuantizationInfo()) {
+    } else if (llvm::isa<IntegerType>(elementTy) && !op.getInputZpAttr()) {
       constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-    } else if (llvm::isa<IntegerType>(elementTy) && op.getQuantizationInfo()) {
-      auto value = op.getQuantizationInfo()->getInputZp();
+    } else if (llvm::isa<IntegerType>(elementTy) && op.getInputZpAttr()) {
+      int64_t value = op.getInputZpAttr().getInt();
       constantAttr = rewriter.getIntegerAttr(elementTy, value);
     }
 
@@ -948,8 +948,12 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
     if (!getInput1().hasOneUse())
       return {};
 
+    llvm::SmallVector<int64_t> shapeVec;
+    if (!tosa::getConstShapeValue(getShape().getDefiningOp(), shapeVec))
+      return {};
+
     return operand.reshape(
-        llvm::cast<ShapedType>(operand.getType()).clone(getNewShape()));
+        llvm::cast<ShapedType>(operand.getType()).clone(shapeVec));
   }
 
   return {};

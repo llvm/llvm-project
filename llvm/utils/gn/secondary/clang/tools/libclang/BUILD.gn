@@ -1,4 +1,3 @@
-import("//clang/lib/ARCMigrate/enable.gni")
 import("//llvm/utils/gn/build/symbol_exports.gni")
 import("//llvm/version.gni")
 
@@ -48,9 +47,6 @@ shared_library("libclang") {
     ldflags =
         [ "-Wl,--version-script," + rebase_path(inputs[0], root_build_dir) ]
   }
-  if (clang_enable_arcmt) {
-    deps += [ "//clang/lib/ARCMigrate" ]
-  }
 
   defines = []
 
@@ -60,7 +56,6 @@ shared_library("libclang") {
 
   sources = [
     "../../include/clang-c/Index.h",
-    "ARCMigrate.cpp",
     "BuildSystem.cpp",
     "CIndex.cpp",
     "CIndexCXX.cpp",
