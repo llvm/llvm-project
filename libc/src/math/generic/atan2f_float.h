@@ -190,8 +190,7 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
         den *= 0x1.0p32f;
     } else if (scale_down) {
       den *= 0x1.0p-32f;
-      if (!scale_up)
-        num *= 0x1.0p-32f;
+      num *= 0x1.0p-32f;
     }
 
     min_abs = FPBits(num).uintval();
