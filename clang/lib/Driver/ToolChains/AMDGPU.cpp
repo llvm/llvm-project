@@ -1016,17 +1016,16 @@ RocmInstallationDetector::getCommonBitcodeLibs(
 
   // GPU Sanitizer currently only supports ASan and is enabled through host
   // ASan.
-  auto GPUSanEnabled = [GPUSan]() {
-    return std::get<bool>(GPUSan) &&
-           std::get<const SanitizerArgs>(GPUSan).needsAsanRt();
-  };
+  bool GPUSanEnabled = std::get<bool>(GPUSan) &&
+                       std::get<const SanitizerArgs>(GPUSan).needsAsanRt();
+
   auto AddBCLib = [&](ToolChain::BitCodeLibraryInfo BCLib,
                       bool Internalize = true) {
     BCLib.ShouldInternalize = Internalize;
     BCLibs.emplace_back(BCLib);
   };
   auto AddSanBCLibs = [&]() {
-    if (GPUSanEnabled()) {
+    if (GPUSanEnabled) {
       AddBCLib(getAsanRTLPath(), false);
     }
   };
@@ -1035,7 +1034,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   AddBCLib(getOCMLPath());
   if (!isOpenMP)
     AddBCLib(getOCKLPath());
-  else if (GPUSanEnabled() && isOpenMP)
+  else if (GPUSanEnabled && isOpenMP)
     AddBCLib(getOCKLPath(), false);
   AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
