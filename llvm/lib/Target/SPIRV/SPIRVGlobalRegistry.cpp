@@ -909,28 +909,14 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(const StructType *Ty,
     return MIB;
   });
 
-  if (NumElements > MaxNumElements) {
-    uint64_t NumOfContinuedInstructions = NumElements / MaxNumElements - 1;
-    for (uint64_t J = 0; J < NumOfContinuedInstructions; J++) {
-      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeStructContinuedINTEL);
-
-        for (size_t I = (J + 1) * MaxNumElements; I < (J + 2) * MaxNumElements;
-             ++I)
-          MIB.addUse(FieldTypes[I]);
-        return MIB;
-      });
-    }
-
-    uint64_t Remains = NumElements % MaxNumElements;
-    if (Remains) {
-      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeStructContinuedINTEL);
-        for (size_t I = NumElements - Remains; I < NumElements; ++I)
-          MIB.addUse(FieldTypes[I]);
-        return MIB;
-      });
-    }
+  for (size_t I = SPIRVStructNumElements; I < NumElements;
+       I += (MaxWordCount - 1)) {
+    createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+      auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeStructContinuedINTEL);
+      for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
+        MIB.addUse(FieldTypes[I]);
+      return MIB;
+    });
   }
   return SPVType;
 }
