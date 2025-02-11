@@ -402,7 +402,7 @@ RTLIB::Libcall RTLIB::getFREXP(EVT RetVT) {
                       FREXP_PPCF128);
 }
 
-RTLIB::Libcall RTLIB::getFSINCOS(EVT RetVT) {
+RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
   return getFPLibCall(RetVT, SINCOS_F32, SINCOS_F64, SINCOS_F80, SINCOS_F128,
                       SINCOS_PPCF128);
 }
