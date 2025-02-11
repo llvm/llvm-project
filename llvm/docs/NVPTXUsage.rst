@@ -581,6 +581,46 @@ prefetched in terms of bytes and it must be a multiple of 16.
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`_.
 
+'``llvm.nvvm.prefetch.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void  @llvm.nvvm.prefetch.local.L1.evictnormal(ptr addrspace(5) %local_ptr)
+  declare void  @llvm.nvvm.prefetch.local.L2.evictnormal(ptr addrspace(5) %local_ptr)
+  
+  declare void  @llvm.nvvm.prefetch.global.L1.evictnormal(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L2.evictnormal(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L1.evictlast(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L2.evictlast(ptr addrspace(1) %global_ptr)
+  
+  declare void  @llvm.nvvm.prefetch.L1.evictnormal(ptr %ptr)
+  declare void  @llvm.nvvm.prefetch.L2.evictnormal(ptr %ptr)
+  
+  declare void  @llvm.nvvm.prefetchu.L1.evictnormal(ptr %ptr)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.prefetch.*``' and '``@llvm.nvvm.prefetchu.*``' intrinsic
+correspond to the '``prefetch.*``;' and '``prefetchu.*``' family of PTX instructions. 
+The '``prefetch.*``' instructions bring the cache line containing the
+specified address in global or local memory address space into the 
+specified cache level (L1 or L2). The '`prefetchu.*``' instruction brings the cache line 
+containing the specified generic address into the specified uniform cache level.
+If no address space is specified, it is assumed to be generic address. The intrinsic 
+uses and eviction priority which can be accessed by the '``.level::eviction_priority``' modifier.
+
+* A prefetch to a shared memory location performs no operation.
+* A prefetch into the uniform cache requires a generic address, 
+  and no operation occurs if the address maps to a const, local, or shared memory location.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu>`_.
+
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
