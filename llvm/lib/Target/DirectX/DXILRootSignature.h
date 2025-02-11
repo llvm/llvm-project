@@ -62,7 +62,7 @@ public:
 
   RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
-  std::optional<ModuleRootSignature> getResult() const { return MRS; }
+  const std::optional<ModuleRootSignature> &getResult() const { return MRS; }
 
   bool runOnModule(Module &M) override;
 
