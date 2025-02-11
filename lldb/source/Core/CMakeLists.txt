@@ -18,7 +18,7 @@ endif()
 
 if (LLVM_BUILD_TELEMETRY)
    set(TELEMETRY_DEPS Telemetry)
-   add_definitions(-DLLVM_BUILD_TELEMETRY)
+   add_definitions(-DLLDB_BUILD_TELEMETRY)
 endif()
 
 # TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbCore
