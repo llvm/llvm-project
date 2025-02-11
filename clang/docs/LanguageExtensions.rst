@@ -67,6 +67,10 @@ It can be used like this:
   ``__has_builtin`` should not be used to detect support for a builtin macro;
   use ``#ifdef`` instead.
 
+  When using device offloading, a builtin is considered available if it is
+  available on either the host or the device targets.
+  Use ``__has_target_builtin`` to consider only the current target.
+
 ``__has_constexpr_builtin``
 ---------------------------
 
@@ -95,6 +99,47 @@ For example, ``__has_constexpr_builtin`` is used in libcxx's implementation of
 the ``<cmath>`` header file to conditionally make a function constexpr whenever
 the constant evaluation of the corresponding builtin (for example,
 ``std::fmax`` calls ``__builtin_fmax``) is supported in Clang.
+
+``__has_target_builtin``
+------------------------
+
+This function-like macro takes a single identifier argument that is the name of
+a builtin function, a builtin pseudo-function (taking one or more type
+arguments), or a builtin template.
+It evaluates to 1 if the builtin is supported on the current target or 0 if not.
+
+``__has_builtin`` and ``__has_target_builtin`` behave identically for normal C++ compilations.
+
+For heterogeneous compilations that see source code intended for more than one target:
+
+``__has_builtin`` returns true if the builtin is known to the compiler
+(i.e. it's available via one of the targets), but makes no promises whether it's available on the current target.
+The compiler can parse it, but not necessarily generate code for it.
+
+``__has_target_builtin`` returns true if the builtin can actually be generated for the current target.
+
+It can be used like this:
+
+.. code-block:: c++
+
+  #ifdef __CUDA__
+  #if __has_target_builtin(__builtin_trap)
+    __builtin_trap();
+  #else
+    abort();
+  #endif
+  #else // !CUDA
+  #if __has_builtin(__builtin_trap)
+    __builtin_trap();
+  #else
+    abort();
+  #endif
+  #endif
+  ...
+
+.. note::
+  ``__has_target_builtin`` should not be used to detect support for a builtin macro;
+  use ``#ifdef`` instead.
 
 .. _langext-__has_feature-__has_extension:
 

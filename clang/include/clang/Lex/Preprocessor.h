@@ -174,6 +174,7 @@ class Preprocessor {
   IdentifierInfo *Ident__has_extension;            // __has_extension
   IdentifierInfo *Ident__has_builtin;              // __has_builtin
   IdentifierInfo *Ident__has_constexpr_builtin;    // __has_constexpr_builtin
+  IdentifierInfo *Ident__has_target_builtin;       // __has_target_builtin
   IdentifierInfo *Ident__has_attribute;            // __has_attribute
   IdentifierInfo *Ident__has_embed;                // __has_embed
   IdentifierInfo *Ident__has_include;              // __has_include
