@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple nvptx-nvidia-cuda -fcuda-is-device -ast-print -x hip -verify=NS,all %s
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1250 -fcuda-is-device -ast-print -x hip -verify=amd,common,all %s | FileCheck -check-prefixes=CHECK %s
 // RUN: %clang_cc1 -triple nvptx-nvidia-cuda -target-cpu sm_90 -fcuda-is-device -ast-print -x hip -verify=cuda,common,all %s | FileCheck -check-prefixes=CHECK %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -aux-triple amdgcn-amd-amdhsa -ast-print -x hip -verify=amd,common,all %s | FileCheck -check-prefixes=CHECK %s
 
 #include "Inputs/cuda.h"
 

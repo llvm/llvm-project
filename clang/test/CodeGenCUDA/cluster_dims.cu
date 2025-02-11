@@ -1,8 +1,11 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1250 -fcuda-is-device -emit-llvm -x hip -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -aux-triple amdgcn-amd-amdhsa -emit-llvm -x hip -o - %s | FileCheck --check-prefix=HOST %s
 
 #include "Inputs/cuda.h"
 
 const int constint = 4;
+
+// HOST-NOT: "amdgpu-cluster-dims"
 
 // CHECK: "amdgpu-cluster-dims"="2,2,2"
 __global__ void __cluster_dims__(2, 2, 2) test_literal_3d() {}
