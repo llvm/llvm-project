@@ -51,7 +51,7 @@ llvm_orc_rt_alt_UnwindInfoManager_deregister(const char *Data, uint64_t Size) {
 namespace llvm::orc {
 
 static const char *AddFnName = "__unw_add_find_dynamic_unwind_sections";
-static const char *RemoveFnName = "__unw_remove_find_dynamic_unwind_sections";
+[[maybe_unused]] static const char *RemoveFnName = "__unw_remove_find_dynamic_unwind_sections";
 static std::unique_ptr<UnwindInfoManager> Instance;
 static int (*RemoveFindDynamicUnwindSections)(void *) = nullptr;
 
