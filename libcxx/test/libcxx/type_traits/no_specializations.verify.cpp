@@ -36,15 +36,22 @@ SPECIALIZE_TRAIT(make_unsigned);        // expected-error {{cannot be specialize
 SPECIALIZE_TRAIT(remove_all_extents);   // expected-error {{cannot be specialized}}
 SPECIALIZE_TRAIT(remove_const);         // expected-error {{cannot be specialized}}
 SPECIALIZE_TRAIT(remove_cv);            // expected-error {{cannot be specialized}}
-SPECIALIZE_TRAIT(remove_cvref);         // expected-error {{cannot be specialized}}
 SPECIALIZE_TRAIT(remove_extent);        // expected-error {{cannot be specialized}}
 SPECIALIZE_TRAIT(remove_pointer);       // expected-error {{cannot be specialized}}
 SPECIALIZE_TRAIT(remove_reference);     // expected-error {{cannot be specialized}}
 SPECIALIZE_TRAIT(remove_volatile);      // expected-error {{cannot be specialized}}
-SPECIALIZE_TRAIT(type_identity);        // expected-error {{cannot be specialized}}
 SPECIALIZE_TRAIT(underlying_type);      // expected-error {{cannot be specialized}}
-SPECIALIZE_TRAIT(unwrap_reference);     // expected-error {{cannot be specialized}}
-SPECIALIZE_TRAIT(unwrap_ref_decay);     // expected-error {{cannot be specialized}}
+
+#  if TEST_STD_VER <= 17
+SPECIALIZE_TRAIT(result_of); // expected-error {{cannot be specialized}}
+#  endif
+
+#  if TEST_STD_VER >= 20
+SPECIALIZE_TRAIT(remove_cvref);     // expected-error {{cannot be specialized}}
+SPECIALIZE_TRAIT(type_identity);    // expected-error {{cannot be specialized}}
+SPECIALIZE_TRAIT(unwrap_reference); // expected-error {{cannot be specialized}}
+SPECIALIZE_TRAIT(unwrap_ref_decay); // expected-error {{cannot be specialized}}
+#  endif
 
 #  undef SPECIALIZE_TRAIT
 #  define SPECIALIZE_UTT(Trait)                                                                                        \
@@ -96,7 +103,6 @@ SPECIALIZE_UTT(is_move_assignable);                 // expected-error 2 {{cannot
 SPECIALIZE_UTT(is_move_constructible);              // expected-error 2 {{cannot be specialized}}
 SPECIALIZE_BTT(is_nothrow_assignable);              // expected-error 2 {{cannot be specialized}}
 SPECIALIZE_UTT(is_nothrow_constructible);           // expected-error 2 {{cannot be specialized}}
-SPECIALIZE_BTT(is_nothrow_convertible);             // expected-error 2 {{cannot be specialized}}
 SPECIALIZE_UTT(is_nothrow_copy_assignable);         // expected-error 2 {{cannot be specialized}}
 SPECIALIZE_UTT(is_nothrow_copy_constructible);      // expected-error 2 {{cannot be specialized}}
 SPECIALIZE_UTT(is_nothrow_default_constructible);   // expected-error 2 {{cannot be specialized}}
@@ -130,7 +136,6 @@ SPECIALIZE_UTT(is_trivially_default_constructible); // expected-error 2 {{cannot
 SPECIALIZE_UTT(is_trivially_destructible);          // expected-error 2 {{cannot be specialized}}
 SPECIALIZE_UTT(is_trivially_move_assignable);       // expected-error 2 {{cannot be specialized}}
 SPECIALIZE_UTT(is_trivially_move_constructible);    // expected-error 2 {{cannot be specialized}}
-SPECIALIZE_UTT(is_unbounded_array);                 // expected-error 2 {{cannot be specialized}}
 SPECIALIZE_UTT(is_union);                           // expected-error 2 {{cannot be specialized}}
 SPECIALIZE_UTT(is_unsigned);                        // expected-error 2 {{cannot be specialized}}
 SPECIALIZE_UTT(is_void);                            // expected-error 2 {{cannot be specialized}}
@@ -140,11 +145,12 @@ SPECIALIZE_UTT(rank);                               // expected-error 2 {{cannot
 
 #  if TEST_STD_VER <= 17
 SPECIALIZE_UTT(is_literal_type); // expected-error 2 {{cannot be specialized}}
-SPECIALIZE_UTT(result_of);       // expected-error 2 {{cannot be specialized}}
 #  endif
 
 #  if TEST_STD_VER >= 20
-SPECIALIZE_UTT(is_bounded_array); // expected-error 2 {{cannot be specialized}}
+SPECIALIZE_UTT(is_bounded_array);       // expected-error 2 {{cannot be specialized}}
+SPECIALIZE_BTT(is_nothrow_convertible); // expected-error 2 {{cannot be specialized}}
+SPECIALIZE_UTT(is_unbounded_array);     // expected-error 2 {{cannot be specialized}}
 #  endif
 
 #  if TEST_STD_VER >= 23
@@ -171,6 +177,8 @@ struct std::conditional<true, S, S>; // expected-error {{cannot be specialized}}
 template <>
 struct std::enable_if<true, S>; // expected-error {{cannot be specialized}}
 
+#if TEST_STD_VER >= 20
 template <>
 struct std::integral_constant<S, {}>; // expected-error {{cannot be specialized}}
+#endif
 #endif

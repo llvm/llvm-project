@@ -12,6 +12,7 @@
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
+#include "llvm/SandboxIR/Region.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
@@ -26,6 +27,13 @@ static cl::opt<unsigned>
 static cl::opt<bool>
     AllowNonPow2("sbvec-allow-non-pow2", cl::init(false), cl::Hidden,
                  cl::desc("Allow non-power-of-2 vectorization."));
+
+#ifndef NDEBUG
+static cl::opt<bool>
+    AlwaysVerify("sbvec-always-verify", cl::init(false), cl::Hidden,
+                 cl::desc("Helps find bugs by verifying the IR whenever we "
+                          "emit new instructions (*very* expensive)."));
+#endif // NDEBUG
 
 namespace sandboxir {
 
@@ -47,7 +55,7 @@ static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
 /// of BB if no instruction found in \p Vals.
 static BasicBlock::iterator getInsertPointAfterInstrs(ArrayRef<Value *> Vals,
                                                       BasicBlock *BB) {
-  auto *BotI = VecUtils::getLastPHIOrSelf(VecUtils::getLowest(Vals));
+  auto *BotI = VecUtils::getLastPHIOrSelf(VecUtils::getLowest(Vals, BB));
   if (BotI == nullptr)
     // We are using BB->begin() (or after PHIs) as the fallback insert point.
     return BB->empty()
@@ -365,6 +373,17 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
     break;
   }
   }
+#ifndef NDEBUG
+  if (AlwaysVerify) {
+    // This helps find broken IR by constantly verifying the function. Note that
+    // this is very expensive and should only be used for debugging.
+    Instruction *I0 = isa<Instruction>(Bndl[0])
+                          ? cast<Instruction>(Bndl[0])
+                          : cast<Instruction>(UserBndl[0]);
+    assert(!Utils::verifyFunction(I0->getParent()->getParent(), dbgs()) &&
+           "Broken function!");
+  }
+#endif
   return NewVec;
 }
 
@@ -430,13 +449,24 @@ bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
 
           assert(SeedSlice.size() >= 2 && "Should have been rejected!");
 
-          // TODO: If vectorization succeeds, run the RegionPassManager on the
-          // resulting region.
-
           // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
           SmallVector<Value *> SeedSliceVals(SeedSlice.begin(),
                                              SeedSlice.end());
-          Change |= tryVectorize(SeedSliceVals);
+          // Create an empty region. Instructions get added to the region
+          // automatically by the callbacks.
+          auto &Ctx = F.getContext();
+          Region Rgn(Ctx, A.getTTI());
+          // Save the state of the IR before we make any changes. The
+          // transaction gets accepted/reverted by the tr-accept-or-revert pass.
+          Ctx.save();
+          // Try to vectorize starting from the seed slice. The returned value
+          // is true if we found vectorizable code and generated some vector
+          // code for it. It does not mean that the code is profitable.
+          bool VecSuccess = tryVectorize(SeedSliceVals);
+          if (VecSuccess)
+            // WARNING: All passes should return false, except those that
+            // accept/revert the state.
+            Change |= RPM.runOnRegion(Rgn, A);
         }
       }
     }

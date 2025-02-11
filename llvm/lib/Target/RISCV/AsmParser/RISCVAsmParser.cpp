@@ -130,7 +130,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   void emitToStreamer(MCStreamer &S, const MCInst &Inst);
 
   // Helper to emit a combination of LUI, ADDI(W), and SLLI instructions that
-  // synthesize the desired immedate value into the destination register.
+  // synthesize the desired immediate value into the destination register.
   void emitLoadImm(MCRegister DestReg, int64_t Value, MCStreamer &Out);
 
   // Helper to emit a combination of AUIPC and SecondOpcode. Used to implement
@@ -280,7 +280,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   std::unique_ptr<RISCVOperand> defaultFRMArgLegacyOp() const;
 
 public:
-  enum RISCVMatchResultTy {
+  enum RISCVMatchResultTy : unsigned {
     Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "RISCVGenAsmMatcher.inc"
@@ -877,6 +877,16 @@ public:
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
+  bool isUImm7Lsb000() const {
+    if (!isImm())
+      return false;
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isShiftedUInt<4, 3>(Imm) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
   bool isUImm8Lsb00() const {
     if (!isImm())
       return false;
@@ -1106,18 +1116,21 @@ public:
 
     switch (Kind) {
     case KindTy::Immediate:
-      OS << *getImm();
+      OS << "<imm: " << *Imm.Val << " " << (Imm.IsRV64 ? "rv64" : "rv32")
+         << ">";
       break;
     case KindTy::FPImmediate:
+      OS << "<fpimm: " << FPImm.Val << ">";
       break;
     case KindTy::Register:
-      OS << "<register " << RegName(getReg()) << ">";
+      OS << "<reg: " << RegName(Reg.RegNum) << " (" << Reg.RegNum
+         << (Reg.IsGPRAsFPR ? ") GPRasFPR>" : ")>");
       break;
     case KindTy::Token:
       OS << "'" << getToken() << "'";
       break;
     case KindTy::SystemRegister:
-      OS << "<sysreg: " << getSysReg() << '>';
+      OS << "<sysreg: " << getSysReg() << " (" << SysReg.Encoding << ")>";
       break;
     case KindTy::VType:
       OS << "<vtype: ";
@@ -1514,10 +1527,6 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         std::numeric_limits<uint32_t>::max(),
         "operand either must be a bare symbol name or an immediate integer in "
         "the range");
-  case Match_InvalidImmZero: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc, "immediate must be zero");
-  }
   case Match_InvalidUImmLog2XLen:
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
@@ -1644,42 +1653,9 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                       "operand must be a valid system register "
                                       "name or an integer in the range");
   }
-  case Match_InvalidLoadFPImm: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc, "operand must be a valid floating-point constant");
-  }
-  case Match_InvalidBareSymbol: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc, "operand must be a bare symbol name");
-  }
-  case Match_InvalidPseudoJumpSymbol: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc, "operand must be a valid jump target");
-  }
-  case Match_InvalidCallSymbol: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc, "operand must be a bare symbol name");
-  }
-  case Match_InvalidTPRelAddSymbol: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc, "operand must be a symbol with %tprel_add modifier");
-  }
-  case Match_InvalidTLSDESCCallSymbol: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc,
-                 "operand must be a symbol with %tlsdesc_call modifier");
-  }
-  case Match_InvalidRTZArg: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc, "operand must be 'rtz' floating-point rounding mode");
-  }
   case Match_InvalidVTypeI: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return generateVTypeError(ErrorLoc);
-  }
-  case Match_InvalidVMaskRegister: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc, "operand must be v0.t");
   }
   case Match_InvalidSImm5Plus1: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 4) + 1,
@@ -1689,26 +1665,14 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm26:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 25),
                                       (1 << 25) - 1);
-  case Match_InvalidRlist: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(
-        ErrorLoc,
-        "operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}");
-  }
-  case Match_InvalidStackAdj: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(
-        ErrorLoc,
-        "stack adjustment is invalid for this instruction and register list; "
-        "refer to Zc spec for a detailed range of stack adjustment");
-  }
   case Match_InvalidRnumArg: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
   }
-  case Match_InvalidRegReg: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc, "operands must be register and register");
   }
+
+  if (const char *MatchDiag = getMatchKindDiag((RISCVMatchResultTy)Result)) {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, MatchDiag);
   }
 
   llvm_unreachable("Unknown match type detected!");
@@ -2612,7 +2576,7 @@ ParseStatus RISCVAsmParser::parseZeroOffsetMemOp(OperandVector &Operands) {
   std::unique_ptr<RISCVOperand> OptionalImmOp;
 
   if (getLexer().isNot(AsmToken::LParen)) {
-    // Parse an Integer token. We do not accept arbritrary constant expressions
+    // Parse an Integer token. We do not accept arbitrary constant expressions
     // in the offset field (because they may include parens, which complicates
     // parsing a lot).
     int64_t ImmVal;

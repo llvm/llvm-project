@@ -720,7 +720,7 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
     }
   }
 
-  // First, create the two invididual conditional transfers, and add each
+  // First, create the two individual conditional transfers, and add each
   // of them to the live intervals information. Do that first and then remove
   // the old instruction from live intervals.
   MachineInstr *TfrT =

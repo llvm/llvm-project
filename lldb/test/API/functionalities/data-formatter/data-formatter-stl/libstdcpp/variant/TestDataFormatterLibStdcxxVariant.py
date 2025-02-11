@@ -30,7 +30,7 @@ class LibStdcxxVariantDataFormatterTestCase(TestBase):
         for name in ["v1_ref", "v1_typedef_ref"]:
             self.expect(
                 "frame variable " + name,
-                substrs=[name + " =  Active Type = int : {", "Value = 12", "}"],
+                patterns=[name + " = 0x.*  Active Type = int : {", "Value = 12", "}"],
             )
 
         self.expect(

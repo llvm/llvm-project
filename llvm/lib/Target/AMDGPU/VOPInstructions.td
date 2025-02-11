@@ -1947,9 +1947,6 @@ multiclass VOP3Only_Realtriple_gfx12<bits<10> op, bit isSingle = 0> :
 multiclass VOP3Only_Real_Base_gfx12<bits<10> op> :
   VOP3_Real_Base<GFX12Gen, op, NAME, 1/*IsSingle*/>;
 
-multiclass VOP3Only_Realtriple_t16_gfx12<bits<10> op> :
-  VOP3Only_Realtriple<GFX12Gen, op>;
-
 multiclass VOP3_Realtriple_t16_gfx12<bits<10> op, string asmName, string opName = NAME,
                                      string pseudo_mnemonic = "", bit isSingle = 0> :
   VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
@@ -1958,6 +1955,16 @@ multiclass VOP3_Realtriple_t16_and_fake16_gfx12<bits<10> op, string asmName, str
                                                 string pseudo_mnemonic = "", bit isSingle = 0> {
   defm _t16:VOP3_Realtriple_t16_gfx12<op, asmName, opName#"_t16", pseudo_mnemonic, isSingle>;
   defm _fake16:VOP3_Realtriple_t16_gfx12<op, asmName, opName#"_fake16", pseudo_mnemonic, isSingle>;
+}
+
+multiclass VOP3Only_Realtriple_t16_gfx12<bits<10> op, string asmName,
+                                     string opName = NAME, string pseudo_mnemonic = "">
+  : VOP3_Realtriple_t16_gfx12<op, asmName, opName, pseudo_mnemonic, 1>;
+
+multiclass VOP3Only_Realtriple_t16_and_fake16_gfx12<bits<10> op, string asmName,
+                                     string opName = NAME, string pseudo_mnemonic = ""> {
+  defm _t16 : VOP3Only_Realtriple_t16_gfx12<op, asmName, opName#"_t16", pseudo_mnemonic>;
+  defm _fake16 : VOP3Only_Realtriple_t16_gfx12<op, asmName, opName#"_fake16", pseudo_mnemonic>;
 }
 
 multiclass VOP3be_Real_with_name_gfx12<bits<10> op, string opName,
@@ -2010,6 +2017,10 @@ class ClassPat_t16<Instruction inst, ValueType vt> : GCNPat <
 def : ClassPat<V_CMP_CLASS_F16_e64, f16> {
   let OtherPredicates = [Has16BitInsts];
   let True16Predicate = NotHasTrue16BitInsts;
+}
+
+def : ClassPat_t16<V_CMP_CLASS_F16_t16_e64, f16> {
+  let True16Predicate = UseRealTrue16Insts;
 }
 
 def : ClassPat_t16<V_CMP_CLASS_F16_fake16_e64, f16> {

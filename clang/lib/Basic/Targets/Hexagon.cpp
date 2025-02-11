@@ -204,15 +204,26 @@ ArrayRef<TargetInfo::GCCRegAlias> HexagonTargetInfo::getGCCRegAliases() const {
   return llvm::ArrayRef(GCCRegAliases);
 }
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsHexagon.def"
+static constexpr int NumBuiltins =
+    clang::Hexagon::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsHexagon.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsHexagon.inc"
+#undef GET_BUILTIN_INFOS
 };
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsHexagon.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumBuiltins);
 
 bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
   std::string VS = "hvxv" + HVXVersion;
@@ -271,7 +282,8 @@ void HexagonTargetInfo::fillValidCPUList(
     Values.push_back(Suffix.Name);
 }
 
-ArrayRef<Builtin::Info> HexagonTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo, clang::Hexagon::LastTSBuiltin -
-                                         Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+HexagonTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos},
+          {&BuiltinStrings, PrefixedBuiltinInfos, "__builtin_HEXAGON_"}};
 }

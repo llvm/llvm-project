@@ -740,6 +740,28 @@ bool hasDeclaredDeductionGuides(DeclarationName Name, DeclContext *DC) {
   return false;
 }
 
+// Returns all source deduction guides associated with the declared
+// deduction guides that have the specified deduction guide name.
+llvm::DenseSet<const NamedDecl *> getSourceDeductionGuides(DeclarationName Name,
+                                                           DeclContext *DC) {
+  assert(Name.getNameKind() ==
+             DeclarationName::NameKind::CXXDeductionGuideName &&
+         "name must be a deduction guide name");
+  llvm::DenseSet<const NamedDecl *> Result;
+  for (auto *D : DC->lookup(Name)) {
+    if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+      D = FTD->getTemplatedDecl();
+
+    if (const auto *GD = dyn_cast<CXXDeductionGuideDecl>(D)) {
+      assert(GD->getSourceDeductionGuide() &&
+             "deduction guide for alias template must have a source deduction "
+             "guide");
+      Result.insert(GD->getSourceDeductionGuide());
+    }
+  }
+  return Result;
+}
+
 // Build the associated constraints for the alias deduction guides.
 // C++ [over.match.class.deduct]p3.3:
 //   The associated constraints ([temp.constr.decl]) are the conjunction of the
@@ -1175,8 +1197,12 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
         GG->getTypeSourceInfo(), AliasTemplate->getBeginLoc(),
         AliasTemplate->getLocation(), AliasTemplate->getEndLoc(),
         F->isImplicit()));
-    cast<CXXDeductionGuideDecl>(Result->getTemplatedDecl())
-        ->setDeductionCandidateKind(GG->getDeductionCandidateKind());
+    auto *DGuide = cast<CXXDeductionGuideDecl>(Result->getTemplatedDecl());
+    DGuide->setDeductionCandidateKind(GG->getDeductionCandidateKind());
+    DGuide->setSourceDeductionGuide(
+        cast<CXXDeductionGuideDecl>(F->getTemplatedDecl()));
+    DGuide->setSourceDeductionGuideKind(
+        CXXDeductionGuideDecl::SourceDeductionGuideKind::Alias);
     return Result;
   }
   return nullptr;
@@ -1187,17 +1213,14 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
   if (AliasTemplate->isInvalidDecl())
     return;
   auto &Context = SemaRef.Context;
-  // FIXME: if there is an explicit deduction guide after the first use of the
-  // type alias usage, we will not cover this explicit deduction guide. fix this
-  // case.
-  if (hasDeclaredDeductionGuides(
-          Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate),
-          AliasTemplate->getDeclContext()))
-    return;
   auto [Template, AliasRhsTemplateArgs] =
       getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate);
   if (!Template)
     return;
+  auto SourceDeductionGuides = getSourceDeductionGuides(
+      Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate),
+      AliasTemplate->getDeclContext());
+
   DeclarationNameInfo NameInfo(
       Context.DeclarationNames.getCXXDeductionGuideName(Template), Loc);
   LookupResult Guides(SemaRef, NameInfo, clang::Sema::LookupOrdinaryName);
@@ -1206,6 +1229,8 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
 
   for (auto *G : Guides) {
     if (auto *DG = dyn_cast<CXXDeductionGuideDecl>(G)) {
+      if (SourceDeductionGuides.contains(DG))
+        continue;
       // The deduction guide is a non-template function decl, we just clone it.
       auto *FunctionType =
           SemaRef.Context.getTrivialTypeSourceInfo(DG->getType());
@@ -1223,11 +1248,14 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
         NewParam->setScopeInfo(0, I);
         FPTL.setParam(I, NewParam);
       }
-      auto *Transformed = cast<FunctionDecl>(buildDeductionGuide(
+      auto *Transformed = cast<CXXDeductionGuideDecl>(buildDeductionGuide(
           SemaRef, AliasTemplate, /*TemplateParams=*/nullptr,
           /*Constructor=*/nullptr, DG->getExplicitSpecifier(), FunctionType,
           AliasTemplate->getBeginLoc(), AliasTemplate->getLocation(),
           AliasTemplate->getEndLoc(), DG->isImplicit()));
+      Transformed->setSourceDeductionGuide(DG);
+      Transformed->setSourceDeductionGuideKind(
+          CXXDeductionGuideDecl::SourceDeductionGuideKind::Alias);
 
       // FIXME: Here the synthesized deduction guide is not a templated
       // function. Per [dcl.decl]p4, the requires-clause shall be present only
@@ -1242,9 +1270,10 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
           Constraint = Conjunction.getAs<Expr>();
       }
       Transformed->setTrailingRequiresClause(Constraint);
+      continue;
     }
     FunctionTemplateDecl *F = dyn_cast<FunctionTemplateDecl>(G);
-    if (!F)
+    if (!F || SourceDeductionGuides.contains(F->getTemplatedDecl()))
       continue;
     // The **aggregate** deduction guides are handled in a different code path
     // (DeclareAggregateDeductionGuideFromInitList), which involves the tricky

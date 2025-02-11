@@ -430,12 +430,6 @@ size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
 
 bool lldb_private::formatters::LibcxxContainerSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  if (valobj.IsPointerType()) {
-    uint64_t value = valobj.GetValueAsUnsigned(0);
-    if (!value)
-      return false;
-    stream.Printf("0x%016" PRIx64 " ", value);
-  }
   return FormatEntity::FormatStringRef("size=${svar%#}", stream, nullptr,
                                        nullptr, nullptr, &valobj, false, false);
 }

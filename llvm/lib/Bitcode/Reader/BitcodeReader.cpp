@@ -1865,7 +1865,7 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
   case Attribute::StackProtect:    return 1 << 14;
   case Attribute::StackProtectReq: return 1 << 15;
   case Attribute::Alignment:       return 31 << 16;
-  case Attribute::NoCapture:       return 1 << 21;
+  // 1ULL << 21 is NoCapture, which is upgraded separately.
   case Attribute::NoRedZone:       return 1 << 22;
   case Attribute::NoImplicitFloat: return 1 << 23;
   case Attribute::Naked:           return 1 << 24;
@@ -1986,6 +1986,12 @@ static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
       B.addMemoryAttr(ME);
   }
 
+  // Upgrade nocapture to captures(none).
+  if (Attrs & (1ULL << 21)) {
+    Attrs &= ~(1ULL << 21);
+    B.addCapturesAttr(CaptureInfo::none());
+  }
+
   addRawAttributeValue(B, Attrs);
 }
 
@@ -2098,8 +2104,6 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoBuiltin;
   case bitc::ATTR_KIND_NO_CALLBACK:
     return Attribute::NoCallback;
-  case bitc::ATTR_KIND_NO_CAPTURE:
-    return Attribute::NoCapture;
   case bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE:
     return Attribute::NoDivergenceSource;
   case bitc::ATTR_KIND_NO_DUPLICATE:
@@ -2348,6 +2352,11 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           if (Idx == AttributeList::FunctionIndex &&
               upgradeOldMemoryAttribute(ME, EncodedKind))
             continue;
+
+          if (EncodedKind == bitc::ATTR_KIND_NO_CAPTURE) {
+            B.addCapturesAttr(CaptureInfo::none());
+            continue;
+          }
 
           if (Error Err = parseAttrKind(EncodedKind, &Kind))
             return Err;
@@ -7147,6 +7156,8 @@ Error BitcodeReader::materializeModule() {
   UpgradeDebugInfo(*TheModule);
 
   UpgradeModuleFlags(*TheModule);
+
+  UpgradeNVVMAnnotations(*TheModule);
 
   UpgradeARCRuntime(*TheModule);
 

@@ -151,6 +151,8 @@ void ArchiveFile::addMember(const Archive::Symbol &sym) {
                                  toCOFFString(symtab.ctx, sym));
 
   // Return an empty buffer if we have already returned the same buffer.
+  // FIXME: Remove this once we resolve all defineds before all undefineds in
+  //        ObjFile::initializeSymbols().
   if (!seen.insert(c.getChildOffset()).second)
     return;
 
@@ -1127,13 +1129,19 @@ void ObjFile::enqueuePdbFile(StringRef path, ObjFile *fromFile) {
 }
 
 ImportFile::ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-    : InputFile(ctx.symtab, ImportKind, m), live(!ctx.config.doGC) {}
+    : InputFile(ctx.getSymtab(getMachineType(m)), ImportKind, m),
+      live(!ctx.config.doGC) {}
 
-MachineTypes ImportFile::getMachineType() const {
+MachineTypes ImportFile::getMachineType(MemoryBufferRef m) {
   uint16_t machine =
-      reinterpret_cast<const coff_import_header *>(mb.getBufferStart())
-          ->Machine;
+      reinterpret_cast<const coff_import_header *>(m.getBufferStart())->Machine;
   return MachineTypes(machine);
+}
+
+bool ImportFile::isSameImport(const ImportFile *other) const {
+  if (!externalName.empty())
+    return other->externalName == externalName;
+  return hdr->OrdinalHint == other->hdr->OrdinalHint;
 }
 
 ImportThunkChunk *ImportFile::makeImportThunk() {

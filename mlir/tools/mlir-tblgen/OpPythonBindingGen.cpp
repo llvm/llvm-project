@@ -37,7 +37,6 @@ from ._ods_common import (
     equally_sized_accessor as _ods_equally_sized_accessor,
     get_default_loc_context as _ods_get_default_loc_context,
     get_op_result_or_op_results as _get_op_result_or_op_results,
-    get_op_result_or_value as _get_op_result_or_value,
     get_op_results_or_values as _get_op_results_or_values,
     segmented_accessor as _ods_segmented_accessor,
 )
@@ -501,17 +500,15 @@ constexpr const char *initTemplate = R"Py(
 
 /// Template for appending a single element to the operand/result list.
 ///   {0} is the field name.
-constexpr const char *singleOperandAppendTemplate =
-    "operands.append(_get_op_result_or_value({0}))";
+constexpr const char *singleOperandAppendTemplate = "operands.append({0})";
 constexpr const char *singleResultAppendTemplate = "results.append({0})";
 
 /// Template for appending an optional element to the operand/result list.
 ///   {0} is the field name.
 constexpr const char *optionalAppendOperandTemplate =
-    "if {0} is not None: operands.append(_get_op_result_or_value({0}))";
+    "if {0} is not None: operands.append({0})";
 constexpr const char *optionalAppendAttrSizedOperandsTemplate =
-    "operands.append(_get_op_result_or_value({0}) if {0} is not None else "
-    "None)";
+    "operands.append({0})";
 constexpr const char *optionalAppendResultTemplate =
     "if {0} is not None: results.append({0})";
 

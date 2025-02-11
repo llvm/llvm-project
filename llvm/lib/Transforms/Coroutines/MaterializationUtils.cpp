@@ -70,11 +70,12 @@ struct RematGraph {
                std::deque<std::unique_ptr<RematNode>> &WorkList,
                User *FirstUse) {
     RematNode *N = NUPtr.get();
-    if (Remats.count(N->Node))
+    auto [It, Inserted] = Remats.try_emplace(N->Node);
+    if (!Inserted)
       return;
 
     // We haven't see this node yet - add to the list
-    Remats[N->Node] = std::move(NUPtr);
+    It->second = std::move(NUPtr);
     for (auto &Def : N->Node->operands()) {
       Instruction *D = dyn_cast<Instruction>(Def.get());
       if (!D || !MaterializableCallback(*D) ||

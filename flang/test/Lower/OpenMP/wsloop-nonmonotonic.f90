@@ -12,13 +12,12 @@ program wsloop_dynamic
 !CHECK:  omp.parallel {
 
 !$OMP DO SCHEDULE(nonmonotonic:dynamic)
-!CHECK:     %[[I_REF:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
-!CHECK:     %[[ALLOCA_IV:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:     %[[WS_LB:.*]] = arith.constant 1 : i32
 !CHECK:     %[[WS_UB:.*]] = arith.constant 9 : i32
 !CHECK:     %[[WS_STEP:.*]] = arith.constant 1 : i32
-!CHECK:     omp.wsloop nowait schedule(dynamic, nonmonotonic) {
+!CHECK:     omp.wsloop nowait schedule(dynamic, nonmonotonic) private(@{{.*}} %{{.*}}#0 -> %[[I_REF:.*]] : !fir.ref<i32>) {
 !CHECK-NEXT:  omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
+!CHECK:         %[[ALLOCA_IV:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:         fir.store %[[I]] to %[[ALLOCA_IV]]#1 : !fir.ref<i32>
 
   do i=1, 9
