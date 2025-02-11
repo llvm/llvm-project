@@ -18,14 +18,12 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-#define DEFAULT_DOUBLE_SPLIT 27
-
 template <typename T> struct DefaultSplit;
 template <> struct DefaultSplit<float> {
   static constexpr size_t VALUE = 12;
 };
 template <> struct DefaultSplit<double> {
-  static constexpr size_t VALUE = DEFAULT_DOUBLE_SPLIT;
+  static constexpr size_t VALUE = 27;
 };
 
 using DoubleDouble = NumberPair<double>;
