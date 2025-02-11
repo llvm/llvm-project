@@ -8,10 +8,10 @@
 
 include_directories(${CUDAToolkit_INCLUDE_DIRS})
 
-# libCufRuntime depends on a certain version of CUDA. To be able to have
+# libflang_rt.cuda depends on a certain version of CUDA. To be able to have
 # multiple build of this library with different CUDA version, the version is
 # added to the library name.
-set(CUFRT_LIBNAME CufRuntime_cuda_${CUDAToolkit_VERSION_MAJOR})
+set(CUFRT_LIBNAME flang_rt.cuda_${CUDAToolkit_VERSION_MAJOR})
 
 add_flang_library(${CUFRT_LIBNAME}
   allocator.cpp
@@ -33,6 +33,6 @@ endif()
 
 target_link_libraries(${CUFRT_LIBNAME}
   PRIVATE
-  FortranRuntime
+  flang_rt.runtime
   ${CUDA_RT_TARGET}
 )

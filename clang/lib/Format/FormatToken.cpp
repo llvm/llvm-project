@@ -175,7 +175,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // have many items (20 or more) or we allow bin-packing of function call
   // arguments.
   if (Style.Cpp11BracedListStyle && !Style.BinPackArguments &&
-      Commas.size() < 19) {
+      (Commas.size() < 19 || !Style.BinPackLongBracedList)) {
     return;
   }
 

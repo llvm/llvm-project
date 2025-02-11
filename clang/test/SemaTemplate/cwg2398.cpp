@@ -585,6 +585,23 @@ namespace regression2 {
   template <typename, int> struct Matrix;
   template struct D<Matrix<double, 3>>;
 } // namespace regression2
+namespace regression3 {
+  struct None {};
+  template<class T> struct Node { using type = T; };
+
+  template <template<class> class TT, class T>
+  struct A {
+    static_assert(!__is_same(T, None));
+    using type2 = typename A<TT, typename T::type>::type2;
+  };
+
+  template <template<class> class TT> struct A<TT, None> {
+    using type2 = void;
+  };
+
+  template <class...> class B {};
+  template struct A<B, Node<None>>;
+} // namespace regression3
 
 namespace nttp_auto {
   namespace t1 {
