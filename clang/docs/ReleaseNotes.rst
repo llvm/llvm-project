@@ -104,6 +104,10 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+- New option ``-fprofile-continuous`` added to enable continuous profile syncing to file (#GH124353, `docs <https://clang.llvm.org/docs/UsersManual.html#cmdoption-fprofile-continuous>`_).
+  The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
+  for a while and this is just a user facing option.
+
 Deprecated Compiler Flags
 -------------------------
 
