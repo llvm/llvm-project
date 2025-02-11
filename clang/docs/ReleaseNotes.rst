@@ -117,6 +117,7 @@ Attribute Changes in Clang
 --------------------------
 
 - The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
+- Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
 
 Improvements to Clang's diagnostics
 -----------------------------------
