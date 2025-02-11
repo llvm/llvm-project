@@ -333,12 +333,12 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   auto &Builder = State.Builder;
 
+  assert(getOpcode() == Instruction::Add &&
+         "Unhandled partial reduction opcode");
+
   Value *BinOpVal = State.get(getOperand(0));
   Value *PhiVal = State.get(getOperand(1));
   assert(PhiVal && BinOpVal && "Phi and Mul must be set");
-
-  assert(getOpcode() == Instruction::Add &&
-         "Unhandled partial reduction opcode");
 
   Type *RetTy = PhiVal->getType();
 
