@@ -4060,7 +4060,7 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
         SDValue MaskedShiftAmt =
             DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
         SDValue Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, LHS);
-        SDValue NewShift = DAG.getNode(ISD::SHL, SL, TargetType, Lo, MaskedShiftAmt);
+        SDValue NewShift = DAG.getNode(ISD::SHL, SL, TargetType, Lo, MaskedShiftAmt, N->getFlags());
         const SDValue Zero = DAG.getConstant(0, SL, TargetType);
         SDValue Vec = DAG.getBuildVector(TargetVecPairType, SL, {Zero, NewShift});
         return DAG.getNode(ISD::BITCAST, SL, VT, Vec);
