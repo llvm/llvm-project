@@ -551,7 +551,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     } else if (Bytes.size() >= 16 &&
                STI.hasFeature(AMDGPU::FeatureGFX950Insts)) {
       DecoderUInt128 DecW = eat16Bytes(Bytes);
-      if (tryDecodeInst(DecoderTableGFX940128, MI, DecW, Address, CS))
+      if (tryDecodeInst(DecoderTableGFX942128, MI, DecW, Address, CS))
         break;
 
       // Reinitialize Bytes
@@ -580,8 +580,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX9_DL64, MI, QW, Address, CS))
         break;
 
-      if (STI.hasFeature(AMDGPU::FeatureGFX940Insts) &&
-          tryDecodeInst(DecoderTableGFX94064, MI, QW, Address, CS))
+      if (STI.hasFeature(AMDGPU::FeatureGFX942Insts) &&
+          tryDecodeInst(DecoderTableGFX94264, MI, QW, Address, CS))
         break;
 
       if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts) &&

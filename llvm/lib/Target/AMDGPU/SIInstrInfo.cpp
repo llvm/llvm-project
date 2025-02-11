@@ -9475,8 +9475,8 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
 
   if (ST.hasGFX90AInsts()) {
     uint16_t NMCOp = (uint16_t)-1;
-    if (ST.hasGFX940Insts())
-      NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX940);
+    if (ST.hasGFX942Insts())
+      NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX942);
     if (NMCOp == (uint16_t)-1)
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX90A);
     if (NMCOp == (uint16_t)-1)

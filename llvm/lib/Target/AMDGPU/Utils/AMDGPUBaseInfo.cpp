@@ -543,9 +543,9 @@ bool getMAIIsDGEMM(unsigned Opc) {
   return Info ? Info->is_dgemm : false;
 }
 
-bool getMAIIsGFX940XDL(unsigned Opc) {
+bool getMAIIsGFX942XDL(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
-  return Info ? Info->is_gfx940_xdl : false;
+  return Info ? Info->is_gfx942_xdl : false;
 }
 
 uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
@@ -2284,8 +2284,8 @@ bool isGFX90A(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX90AInsts);
 }
 
-bool isGFX940(const MCSubtargetInfo &STI) {
-  return STI.hasFeature(AMDGPU::FeatureGFX940Insts);
+bool isGFX942(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureGFX942Insts);
 }
 
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI) {

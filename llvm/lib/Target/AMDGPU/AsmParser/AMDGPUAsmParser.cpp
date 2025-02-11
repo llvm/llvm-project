@@ -1492,14 +1492,12 @@ public:
     return AMDGPU::isGFX9(getSTI());
   }
 
-  // TODO: isGFX90A is also true for GFX940. We need to clean it.
+  // TODO: isGFX90A is also true for GFX942. We need to clean it.
   bool isGFX90A() const {
     return AMDGPU::isGFX90A(getSTI());
   }
 
-  bool isGFX940() const {
-    return AMDGPU::isGFX940(getSTI());
-  }
+  bool isGFX942() const { return AMDGPU::isGFX942(getSTI()); }
 
   bool isGFX9Plus() const {
     return AMDGPU::isGFX9Plus(getSTI());
@@ -4633,7 +4631,7 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
 
   uint64_t TSFlags = MII.get(Opc).TSFlags;
 
-  if (isGFX940() && (TSFlags & SIInstrFlags::IsDOT)) {
+  if (isGFX942() && (TSFlags & SIInstrFlags::IsDOT)) {
     int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
     if (OpSelIdx != -1) {
       if (Inst.getOperand(OpSelIdx).getImm() != 0)
@@ -4942,12 +4940,12 @@ bool AMDGPUAsmParser::validateBLGP(const MCInst &Inst,
   bool IsNeg = StringRef(BLGPLoc.getPointer()).starts_with("neg:");
   auto FB = getFeatureBits();
   bool UsesNeg = false;
-  if (FB[AMDGPU::FeatureGFX940Insts]) {
+  if (FB[AMDGPU::FeatureGFX942Insts]) {
     switch (Opc) {
-    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx940_acd:
-    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx940_vcd:
-    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx940_acd:
-    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx940_vcd:
+    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx942_acd:
+    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx942_vcd:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx942_acd:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx942_vcd:
       UsesNeg = true;
     }
   }
@@ -5062,7 +5060,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
     }
   }
 
-  if (isGFX90A() && !isGFX940() && (CPol & CPol::SCC)) {
+  if (isGFX90A() && !isGFX942() && (CPol & CPol::SCC)) {
     const uint64_t AllowSCCModifier = SIInstrFlags::MUBUF |
                                       SIInstrFlags::MTBUF | SIInstrFlags::MIMG |
                                       SIInstrFlags::FLAT;
@@ -5081,7 +5079,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
 
   if (TSFlags & SIInstrFlags::IsAtomicRet) {
     if (!(TSFlags & SIInstrFlags::MIMG) && !(CPol & CPol::GLC)) {
-      Error(IDLoc, isGFX940() ? "instruction must use sc0"
+      Error(IDLoc, isGFX942() ? "instruction must use sc0"
                               : "instruction must use glc");
       return false;
     }
@@ -5090,8 +5088,8 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
       S = SMLoc::getFromPointer(
-          &CStr.data()[CStr.find(isGFX940() ? "sc0" : "glc")]);
-      Error(S, isGFX940() ? "instruction must not use sc0"
+          &CStr.data()[CStr.find(isGFX942() ? "sc0" : "glc")]);
+      Error(S, isGFX942() ? "instruction must not use sc0"
                           : "instruction must not use glc");
       return false;
     }
@@ -6657,7 +6655,7 @@ unsigned AMDGPUAsmParser::getCPolKind(StringRef Id, StringRef Mnemo,
                                       bool &Disabling) const {
   Disabling = Id.consume_front("no");
 
-  if (isGFX940() && !Mnemo.starts_with("s_")) {
+  if (isGFX942() && !Mnemo.starts_with("s_")) {
     return StringSwitch<unsigned>(Id)
         .Case("nt", AMDGPU::CPol::NT)
         .Case("sc0", AMDGPU::CPol::SC0)

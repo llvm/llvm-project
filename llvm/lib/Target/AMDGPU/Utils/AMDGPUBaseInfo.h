@@ -99,7 +99,7 @@ struct GcnBufferFormatInfo {
 struct MAIInstInfo {
   uint16_t Opcode;
   bool is_dgemm;
-  bool is_gfx940_xdl;
+  bool is_gfx942_xdl;
 };
 
 struct MFMA_F8F6F4_Info {
@@ -591,7 +591,7 @@ LLVM_READONLY
 bool getMAIIsDGEMM(unsigned Opc);
 
 LLVM_READONLY
-bool getMAIIsGFX940XDL(unsigned Opc);
+bool getMAIIsGFX942XDL(unsigned Opc);
 
 struct CanBeVOPD {
   bool X;
@@ -1370,7 +1370,7 @@ bool isGFX10_BEncoding(const MCSubtargetInfo &STI);
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI);
 bool isGFX10_3_GFX11(const MCSubtargetInfo &STI);
 bool isGFX90A(const MCSubtargetInfo &STI);
-bool isGFX940(const MCSubtargetInfo &STI);
+bool isGFX942(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);

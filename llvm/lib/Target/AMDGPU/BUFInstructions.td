@@ -1146,7 +1146,7 @@ let OtherPredicates = [HasGFX10_BEncoding] in {
   >;
 }
 
-let SubtargetPredicate = isGFX8GFX9NotGFX940 in {
+let SubtargetPredicate = isGFX8GFX9NotGFX942 in {
 def BUFFER_STORE_LDS_DWORD : MUBUF_Pseudo_Store_Lds <"buffer_store_lds_dword">;
 }
 
@@ -1228,7 +1228,7 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 
 } // End HasD16LoadStore
 
-let SubtargetPredicate = isNotGFX940Plus in
+let SubtargetPredicate = isNotGFX942Plus in
 def BUFFER_WBINVL1 : MUBUF_Invalidate <
   "buffer_wbinvl1", int_amdgcn_buffer_wbinvl1
 >;
@@ -1311,7 +1311,7 @@ let SubtargetPredicate = isGFX7Plus in {
 // Instruction definitions for CI and newer.
 //===----------------------------------------------------------------------===//
 
-let SubtargetPredicate = isNotGFX940Plus in
+let SubtargetPredicate = isNotGFX942Plus in
 def BUFFER_WBINVL1_VOL : MUBUF_Invalidate <"buffer_wbinvl1_vol",
                                            int_amdgcn_buffer_wbinvl1_vol>;
 
@@ -1341,7 +1341,7 @@ let SubtargetPredicate = HasAtomicFMinFMaxF64GlobalInsts in {
 }
 
 def BUFFER_INV : MUBUF_Invalidate<"buffer_inv"> {
-  let SubtargetPredicate = isGFX940Plus;
+  let SubtargetPredicate = isGFX942Plus;
   let has_glc = 1;
   let has_sccb = 1;
   let InOperandList = (ins CPol_0:$cpol);
@@ -3095,9 +3095,9 @@ multiclass MUBUF_Real_gfx90a <bits<7> op,
   }
 }
 
-class MUBUF_Real_gfx940 <bits<7> op, MUBUF_Pseudo ps> :
-  MUBUF_Real_Base_vi<op, ps, SIEncodingFamily.GFX940> {
-  let AssemblerPredicate = isGFX940Plus;
+class MUBUF_Real_gfx942 <bits<7> op, MUBUF_Pseudo ps> :
+  MUBUF_Real_Base_vi<op, ps, SIEncodingFamily.GFX942> {
+  let AssemblerPredicate = isGFX942Plus;
   let DecoderNamespace = "GFX9";
   let AsmString = ps.Mnemonic # ps.AsmOperands;
 
@@ -3116,7 +3116,7 @@ multiclass MUBUF_Real_vi_gfx90a<bits<7> op, bit isTFE = 0> : MUBUF_Real_vi<op> {
     let AssemblerPredicate = isGFX90AOnly in
       defm NAME : MUBUF_Real_gfx90a<op, 0>;
 
-    def _gfx940 : MUBUF_Real_gfx940<op, ps>;
+    def _gfx942 : MUBUF_Real_gfx942<op, ps>;
   }
 }
 
@@ -3314,9 +3314,9 @@ let AsmString = BUFFER_WBL2.Mnemonic, // drop flags
 defm BUFFER_WBL2  : MUBUF_Real_gfx90a<0x28>;
 defm BUFFER_INVL2 : MUBUF_Real_gfx90a<0x29>;
 
-let SubtargetPredicate = isGFX940Plus in {
-def BUFFER_WBL2_gfx940  : MUBUF_Real_gfx940<0x28, BUFFER_WBL2>;
-def BUFFER_INV_gfx940   : MUBUF_Real_gfx940<0x29, BUFFER_INV>;
+let SubtargetPredicate = isGFX942Plus in {
+def BUFFER_WBL2_gfx942  : MUBUF_Real_gfx942<0x28, BUFFER_WBL2>;
+def BUFFER_INV_gfx942   : MUBUF_Real_gfx942<0x29, BUFFER_INV>;
 }
 
 class MTBUF_Real_Base_vi <bits<4> op, MTBUF_Pseudo ps, int Enc> :

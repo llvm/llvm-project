@@ -107,7 +107,7 @@ protected:
   bool GFX8Insts = false;
   bool GFX9Insts = false;
   bool GFX90AInsts = false;
-  bool GFX940Insts = false;
+  bool GFX942Insts = false;
   bool GFX950Insts = false;
   bool GFX10Insts = false;
   bool GFX11Insts = false;
@@ -246,7 +246,6 @@ protected:
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
-  bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
   bool HasAshrPkInsts = false;
@@ -654,10 +653,10 @@ public:
   // The ST addressing mode means no registers are used, either VGPR or SGPR,
   // but only immediate offset is swizzled and added to the FLAT scratch base.
   bool hasFlatScratchSTMode() const {
-    return hasFlatScratchInsts() && (hasGFX10_3Insts() || hasGFX940Insts());
+    return hasFlatScratchInsts() && (hasGFX10_3Insts() || hasGFX942Insts());
   }
 
-  bool hasFlatScratchSVSMode() const { return GFX940Insts || GFX11Insts; }
+  bool hasFlatScratchSVSMode() const { return GFX942Insts || GFX11Insts; }
 
   bool hasScalarFlatScratchInsts() const {
     return ScalarFlatScratchInsts;
@@ -676,9 +675,7 @@ public:
     return GFX10_BEncoding;
   }
 
-  bool hasExportInsts() const {
-    return !hasGFX940Insts();
-  }
+  bool hasExportInsts() const { return !hasGFX942Insts(); }
 
   bool hasVINTERPEncoding() const {
     return GFX11Insts;
@@ -1073,7 +1070,7 @@ public:
   }
 
   bool hasFmaakFmamkF32Insts() const {
-    return getGeneration() >= GFX10 || hasGFX940Insts();
+    return getGeneration() >= GFX10 || hasGFX942Insts();
   }
 
   bool hasImageInsts() const {
@@ -1130,9 +1127,9 @@ public:
 
   bool hasMadF16() const;
 
-  bool hasMovB64() const { return GFX940Insts; }
+  bool hasMovB64() const { return GFX942Insts; }
 
-  bool hasLshlAddB64() const { return GFX940Insts; }
+  bool hasLshlAddB64() const { return GFX942Insts; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
@@ -1216,25 +1213,21 @@ public:
 
   // Shift amount of a 64 bit shift cannot be a highest allocated register
   // if also at the end of the allocation block.
-  bool hasShift64HighRegBug() const {
-    return GFX90AInsts && !GFX940Insts;
-  }
+  bool hasShift64HighRegBug() const { return GFX90AInsts && !GFX942Insts; }
 
   // Has one cycle hazard on transcendental instruction feeding a
   // non transcendental VALU.
-  bool hasTransForwardingHazard() const { return GFX940Insts; }
+  bool hasTransForwardingHazard() const { return GFX942Insts; }
 
   // Has one cycle hazard on a VALU instruction partially writing dst with
   // a shift of result bits feeding another VALU instruction.
-  bool hasDstSelForwardingHazard() const { return GFX940Insts; }
+  bool hasDstSelForwardingHazard() const { return GFX942Insts; }
 
   // Cannot use op_sel with v_dot instructions.
-  bool hasDOTOpSelHazard() const { return GFX940Insts || GFX11Insts; }
+  bool hasDOTOpSelHazard() const { return GFX942Insts || GFX11Insts; }
 
   // Does not have HW interlocs for VALU writing and then reading SGPRs.
-  bool hasVDecCoExecHazard() const {
-    return GFX940Insts;
-  }
+  bool hasVDecCoExecHazard() const { return GFX942Insts; }
 
   bool hasNSAtoVMEMBug() const {
     return HasNSAtoVMEMBug;
@@ -1263,8 +1256,6 @@ public:
   bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
 
   bool hasCvtScaleForwardingHazard() const { return GFX950Insts; }
-
-  bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
@@ -1297,12 +1288,12 @@ public:
 
   bool hasPackedTID() const { return HasPackedTID; }
 
-  // GFX940 is a derivation to GFX90A. hasGFX940Insts() being true implies that
+  // GFX942 is a derivation to GFX90A. hasGFX942Insts() being true implies that
   // hasGFX90AInsts is also true.
-  bool hasGFX940Insts() const { return GFX940Insts; }
+  bool hasGFX942Insts() const { return GFX942Insts; }
 
-  // GFX950 is a derivation to GFX940. hasGFX950Insts() implies that
-  // hasGFX940Insts and hasGFX90AInsts are also true.
+  // GFX950 is a derivation to GFX942. hasGFX950Insts() implies that
+  // hasGFX942Insts and hasGFX90AInsts are also true.
   bool hasGFX950Insts() const { return GFX950Insts; }
 
   /// Returns true if the target supports
