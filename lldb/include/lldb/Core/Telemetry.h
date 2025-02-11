@@ -56,7 +56,7 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
 
-/// The base Telemetry manager instance in LLDB
+/// The base Telemetry manager instance in LLDB.
 /// This class declares additional instrumentation points
 /// applicable to LLDB.
 class TelemetryManager : public llvm::telemetry::Manager {
