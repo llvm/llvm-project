@@ -25,10 +25,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "shadow_stack_unwind.h"
 #include "config.h"
 #include "libunwind.h"
 #include "libunwind_ext.h"
+#include "shadow_stack_unwind.h"
 #include "unwind.h"
 
 #if !defined(_LIBUNWIND_ARM_EHABI) && !defined(__USING_SJLJ_EXCEPTIONS__) &&   \
@@ -62,7 +62,7 @@
     void *ssJumpAddress = __libunwind_ss_get_jump_target();                    \
     __asm__ volatile("push %%edi\n\t"                                          \
                      "sub $4, %%esp\n\t"                                       \
-                     "jmp *%%edx\n\t" :: "D"(ssRegContext),                    \
+                     "jmp *%%edx\n\t" ::"D"(ssRegContext),                     \
                      "d"(ssJumpAddress));                                      \
   } while (0)
 #elif defined(_LIBUNWIND_TARGET_X86_64)
@@ -72,7 +72,7 @@
     _LIBUNWIND_POP_SS_SSP((fn));                                               \
     void *ssRegContext = __libunwind_ss_get_registers((cursor));               \
     void *ssJumpAddress = __libunwind_ss_get_jump_target();                    \
-    __asm__ volatile("jmpq *%%rdx\n\t" :: "D"(ssRegContext),                   \
+    __asm__ volatile("jmpq *%%rdx\n\t" ::"D"(ssRegContext),                    \
                      "d"(ssJumpAddress));                                      \
   } while (0)
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
@@ -266,8 +266,9 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
     if (shadowStackTop != 0) {
       unw_word_t retInNormalStack;
       __unw_get_reg(cursor, UNW_REG_IP, &retInNormalStack);
-      unsigned long retInShadowStack = *(unsigned long *)
-          (shadowStackTop + __shadow_stack_step_size * framesWalked);
+      unsigned long retInShadowStack =
+          *(unsigned long *)(shadowStackTop +
+                             __shadow_stack_step_size * framesWalked);
       if (retInNormalStack != retInShadowStack)
         return _URC_FATAL_PHASE2_ERROR;
     }

@@ -15,9 +15,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "shadow_stack_unwind.h"
 #include "config.h"
 #include "libunwind.h"
+#include "shadow_stack_unwind.h"
 
 namespace libunwind {
 
