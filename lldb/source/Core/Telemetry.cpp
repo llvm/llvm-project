@@ -5,6 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+#ifdef LLDB_BUILD_TELEMETRY
+
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -41,7 +44,7 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
     serializer.write("end_time", ToNanosec(end_time.value()));
 }
 
-static std::string MakeUUID(lldb_private::Debugger *debugger) {
+[[maybe_unused]] static std::string MakeUUID(lldb_private::Debugger *debugger) {
   uint8_t random_bytes[16];
   if (auto ec = llvm::getRandomBytes(random_bytes, 16)) {
     LLDB_LOG(GetLog(LLDBLog::Object),
@@ -67,3 +70,5 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
 
 } // namespace telemetry
 } // namespace lldb_private
+
+#endif // LLDB_BUILD_TELEMETRY
