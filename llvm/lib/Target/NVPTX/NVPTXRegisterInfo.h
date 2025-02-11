@@ -69,13 +69,13 @@ public:
   // here, because the proper encoding for debug registers is available only
   // temporarily during ASM emission.
   void addToDebugRegisterMap(uint64_t preEncodedVirtualRegister,
-                             std::string registerName) const;
+                             StringRef RegisterName) const;
   void clearDebugRegisterMap() const;
   int64_t getDwarfRegNum(MCRegister RegNum, bool isEH) const override;
 };
 
-std::string getNVPTXRegClassName(const TargetRegisterClass *RC);
-std::string getNVPTXRegClassStr(const TargetRegisterClass *RC);
+StringRef getNVPTXRegClassName(const TargetRegisterClass *RC);
+StringRef getNVPTXRegClassStr(const TargetRegisterClass *RC);
 
 } // end namespace llvm
 
