@@ -1,5 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{mode=producer}))' -split-input-file | FileCheck %s --check-prefix=PRODUCER-CONSUMER
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{fusion-maximal mode=sibling}))' -split-input-file | FileCheck %s --check-prefix=SIBLING-MAXIMAL
+// All fusion: producer-consumer and sibling.
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion))' -split-input-file | FileCheck %s --check-prefix=ALL
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(spirv.func(affine-loop-fusion{mode=producer}))' -split-input-file | FileCheck %s --check-prefix=SPIRV
 
 // Part I of fusion tests in  mlir/test/Transforms/loop-fusion.mlir.
@@ -108,6 +110,7 @@ func.func @check_src_dst_step(%m : memref<100xf32>,
 func.func @reduce_add_non_maximal_f32_f32(%arg0: memref<64x64xf32, 1>, %arg1 : memref<1x64xf32, 1>, %arg2 : memref<1x64xf32, 1>) {
     %cst_0 = arith.constant 0.000000e+00 : f32
     %cst_1 = arith.constant 1.000000e+00 : f32
+    // This nest writes to %arg1 but can be eliminated post sibling fusion.
     affine.for %arg3 = 0 to 1 {
       affine.for %arg4 = 0 to 64 {
         %accum = affine.for %arg5 = 0 to 64 iter_args (%prevAccum = %cst_0) -> f32 {
@@ -137,11 +140,11 @@ func.func @reduce_add_non_maximal_f32_f32(%arg0: memref<64x64xf32, 1>, %arg1 : m
 // since the destination loop and source loop trip counts do not
 // match.
 // SIBLING-MAXIMAL:        %[[cst_0:.*]] = arith.constant 0.000000e+00 : f32
-// SIBLING-MAXIMAL-NEXT:        %[[cst_1:.*]] = arith.constant 1.000000e+00 : f32
-// SIBLING-MAXIMAL-NEXT:           affine.for %[[idx_0:.*]]= 0 to 1 {
-// SIBLING-MAXIMAL-NEXT:             affine.for %[[idx_1:.*]] = 0 to 64 {
-// SIBLING-MAXIMAL-NEXT:               %[[result_1:.*]] = affine.for %[[idx_2:.*]] = 0 to 32 iter_args(%[[iter_0:.*]] = %[[cst_1]]) -> (f32) {
-// SIBLING-MAXIMAL-NEXT:                 %[[result_0:.*]] = affine.for %[[idx_3:.*]] = 0 to 64 iter_args(%[[iter_1:.*]] = %[[cst_0]]) -> (f32) {
+// SIBLING-MAXIMAL-NEXT:   %[[cst_1:.*]] = arith.constant 1.000000e+00 : f32
+// SIBLING-MAXIMAL-NEXT:   affine.for %{{.*}} = 0 to 1 {
+// SIBLING-MAXIMAL-NEXT:     affine.for %{{.*}} = 0 to 64 {
+// SIBLING-MAXIMAL-NEXT:       affine.for %{{.*}} = 0 to 32 iter_args(%{{.*}} = %[[cst_1]]) -> (f32) {
+// SIBLING-MAXIMAL-NEXT:       affine.for %{{.*}} = 0 to 64 iter_args(%{{.*}} = %[[cst_0]]) -> (f32) {
 
 // -----
 
@@ -315,11 +318,16 @@ func.func @same_memref_load_store(%producer : memref<32xf32>, %consumer: memref<
   return
 }
 
+// -----
+
 // PRODUCER-CONSUMER-LABEL: func @same_memref_load_multiple_stores
+// ALL-LABEL: func @same_memref_load_multiple_stores
 func.func @same_memref_load_multiple_stores(%producer : memref<32xf32>, %producer_2 : memref<32xf32>, %consumer: memref<16xf32>){
   %cst = arith.constant 2.000000e+00 : f32
-  // Source isn't removed.
+  // Ensure that source isn't removed during both producer-consumer fusion and
+  // sibling fusion.
   // PRODUCER-CONSUMER: affine.for %{{.*}} = 0 to 32
+  // ALL: affine.for %{{.*}} = 0 to 32
   affine.for %arg3 = 0 to 32 {
     %0 = affine.load %producer[%arg3] : memref<32xf32>
     %2 = arith.mulf %0, %cst : f32
@@ -343,5 +351,8 @@ func.func @same_memref_load_multiple_stores(%producer : memref<32xf32>, %produce
   // PRODUCER-CONSUMER-NEXT:   arith.addf
   // PRODUCER-CONSUMER-NEXT:   affine.store
   // PRODUCER-CONSUMER-NEXT: }
+  // ALL:     affine.for %{{.*}} = 0 to 16
+  // ALL:       mulf
+  // ALL:       addf
   return
 }
