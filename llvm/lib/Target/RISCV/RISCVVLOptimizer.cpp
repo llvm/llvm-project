@@ -979,6 +979,17 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMV_V_I:
   case RISCV::VMV_V_X:
   case RISCV::VMV_V_V:
+  // Vector Single-Width Saturating Add and Subtract
+  case RISCV::VSADDU_VV:
+  case RISCV::VSADDU_VX:
+  case RISCV::VSADDU_VI:
+  case RISCV::VSADD_VV:
+  case RISCV::VSADD_VX:
+  case RISCV::VSADD_VI:
+  case RISCV::VSSUBU_VV:
+  case RISCV::VSSUBU_VX:
+  case RISCV::VSSUB_VV:
+  case RISCV::VSSUB_VX:
   // Vector Single-Width Averaging Add and Subtract
   case RISCV::VAADDU_VV:
   case RISCV::VAADDU_VX:
@@ -988,6 +999,23 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VASUBU_VX:
   case RISCV::VASUB_VV:
   case RISCV::VASUB_VX:
+  // Vector Single-Width Fractional Multiply with Rounding and Saturation
+  case RISCV::VSMUL_VV:
+  case RISCV::VSMUL_VX:
+  // Vector Single-Width Scaling Shift Instructions
+  case RISCV::VSSRL_VV:
+  case RISCV::VSSRL_VX:
+  case RISCV::VSSRL_VI:
+  case RISCV::VSSRA_VV:
+  case RISCV::VSSRA_VX:
+  case RISCV::VSSRA_VI:
+  // Vector Narrowing Fixed-Point Clip Instructions
+  case RISCV::VNCLIPU_WV:
+  case RISCV::VNCLIPU_WX:
+  case RISCV::VNCLIPU_WI:
+  case RISCV::VNCLIP_WV:
+  case RISCV::VNCLIP_WX:
+  case RISCV::VNCLIP_WI:
 
   // Vector Crypto
   case RISCV::VWSLL_VI:
@@ -1187,8 +1215,16 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
     return false;
-  if (MI.getNumDefs() != 1)
+
+  if (MI.getNumExplicitDefs() != 1)
     return false;
+
+  // Some instructions have implicit defs e.g. $vxsat. If they might be read
+  // later then we can't reduce VL.
+  if (!MI.allImplicitDefsAreDead()) {
+    LLVM_DEBUG(dbgs() << "Not a candidate because has non-dead implicit def\n");
+    return false;
+  }
 
   if (MI.mayRaiseFPException()) {
     LLVM_DEBUG(dbgs() << "Not a candidate because may raise FP exception\n");

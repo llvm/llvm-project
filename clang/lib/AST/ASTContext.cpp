@@ -3902,7 +3902,7 @@ QualType ASTContext::getArrayParameterType(QualType Ty) const {
   if (Ty->isArrayParameterType())
     return Ty;
   assert(Ty->isConstantArrayType() && "Ty must be an array type.");
-  const auto *ATy = cast<ConstantArrayType>(Ty);
+  const auto *ATy = cast<ConstantArrayType>(Ty.getDesugaredType(*this));
   llvm::FoldingSetNodeID ID;
   ATy->Profile(ID, *this, ATy->getElementType(), ATy->getZExtSize(),
                ATy->getSizeExpr(), ATy->getSizeModifier(),

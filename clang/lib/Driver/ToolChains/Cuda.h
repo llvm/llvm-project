@@ -123,12 +123,8 @@ class LLVM_LIBRARY_VISIBILITY NVPTXToolChain : public ToolChain {
 public:
   NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                  const llvm::Triple &HostTriple,
-                 const llvm::opt::ArgList &Args,
-                 bool Freestanding);
-  NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
-                 const llvm::Triple &HostTriple,
-                 const llvm::opt::ArgList &Args,
-                 const std::string TargetID);
+                 const llvm::opt::ArgList &Args);
+
   NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                  const llvm::opt::ArgList &Args);
   llvm::opt::DerivedArgList *
@@ -168,9 +164,6 @@ public:
 protected:
   Tool *buildAssembler() const override; // ptxas.
   Tool *buildLinker() const override;    // nvlink.
-
-private:
-  bool Freestanding = false;
 };
 
 class LLVM_LIBRARY_VISIBILITY CudaToolChain : public NVPTXToolChain {
