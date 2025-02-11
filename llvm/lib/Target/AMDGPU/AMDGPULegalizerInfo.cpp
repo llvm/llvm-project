@@ -788,7 +788,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .legalFor(AddrSpaces32)
       .legalFor(AddrSpaces128)
       .legalIf(isPointer(0))
+      .clampScalarBitcast(0, I16, I256)
       .clampScalar(0, I16, I256)
+      .widenScalarToNextPow2Bitcast(0, 32)
       .widenScalarToNextPow2(0, 32)
       .clampMaxNumElements(0, I32, 16)
       .clampMaxNumElements(0, F32, 16)
@@ -961,7 +963,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor({F32, F64, F16, BF16})
-      .clampScalar(0, F16, F64);
+      .clampScalarBitcast(0, I16, I64)
+      .clampScalar(0, I16, I64);
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
       .legalIf(isRegisterClassType(ST, 0))
@@ -971,7 +974,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .clampNumElements(0, V16I32, V32I32)
       .clampNumElements(0, V16F32, V32F32)
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+      .clampScalarOrEltBitcast(0, I32, MaxScalar)
       .clampScalarOrElt(0, I32, MaxScalar)
+      .widenScalarToNextPow2Bitcast(0, 32)
       .widenScalarToNextPow2(0, 32)
       .clampMaxNumElements(0, I32, 16)
       .clampMaxNumElements(0, F32, 16);
@@ -1590,6 +1595,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     // FIXME: load/store narrowing should be moved to lower action
     Actions
+        .bitcastIf(
+            [=](const LegalityQuery &Query) -> bool {
+              return !Query.Types[0].isVector() && Query.Types[0].isFloat() &&
+                     needToSplitMemOp(Query, Op == G_LOAD);
+            },
+            changeToInteger(0))
         .narrowScalarIf(
             [=](const LegalityQuery &Query) -> bool {
               return !Query.Types[0].isVector() &&
@@ -1676,8 +1687,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               // May need relegalization for the scalars.
               return std::pair(0, EltTy);
             })
+        .minScalarBitcast(0, I32)
         .minScalar(0, I32)
+        .bitcastIf(all(predNot(isIntegerOrIntegerVector(0)),
+                       isWideScalarExtLoadTruncStore(0)),
+                   changeToInteger(0))
         .narrowScalarIf(isWideScalarExtLoadTruncStore(0), changeTo(0, I32))
+        .widenScalarToNextPow2Bitcast(0)
         .widenScalarToNextPow2(0)
         .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0))
         .lower();
@@ -1810,6 +1826,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                  LLT::fixed_vector(2, LocalPtr),
                                  LLT::fixed_vector(2, PrivatePtr)},
                                 {I1, I32})
+      .clampScalarBitcast(0, I16, I64)
       .clampScalar(0, I16, I64)
       .scalarize(1)
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
@@ -1819,6 +1836,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .clampMaxNumElements(0, LocalPtr, 2)
       .clampMaxNumElements(0, PrivatePtr, 2)
       .scalarize(0)
+      .widenScalarToNextPow2Bitcast(0)
       .widenScalarToNextPow2(0)
       .legalIf(all(isPointer(0), typeInSet(1, {I1, I32})));
 
@@ -1914,7 +1932,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                LLT::fixed_vector(VecSize / TargetEltSize,
                                                  LLT::integer(TargetEltSize)));
             })
+        .clampScalarBitcast(EltTypeIdx, I32, I64)
         .clampScalar(EltTypeIdx, I32, I64)
+        .clampScalarBitcast(VecTypeIdx, I32, I64)
         .clampScalar(VecTypeIdx, I32, I64)
         .clampScalar(IdxTypeIdx, I32, I32)
         .clampMaxNumElements(VecTypeIdx, I32, 32)
@@ -1940,13 +1960,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // FIXME: Doesn't handle extract of illegal sizes.
     getActionDefinitionsBuilder(Op)
         .lowerIf(all(typeIs(LitTyIdx, I16), sizeIs(BigTyIdx, 32)))
-        .lowerIf([=](const LegalityQuery &Query) {
-          // Sub-vector(or single element) insert and extract.
-          // TODO: verify immediate offset here since lower only works with
-          // whole elements.
-          const LLT BigTy = Query.Types[BigTyIdx];
-          return BigTy.isVector();
-        })
+        .lowerIf(isVector(BigTyIdx))
         // FIXME: Multiples of 16 should not be legal.
         .legalIf([=](const LegalityQuery &Query) {
           const LLT BigTy = Query.Types[BigTyIdx];
@@ -1954,19 +1968,20 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           return (BigTy.getSizeInBits() % 32 == 0) &&
                  (LitTy.getSizeInBits() % 16 == 0);
         })
+        .bitcastIf(all(predNot(isIntegerOrIntegerVector(BigTyIdx)),
+                       scalarOrEltNarrowerThan(BigTyIdx, 16)),
+                   changeToInteger(BigTyIdx))
         .widenScalarIf(
-            [=](const LegalityQuery &Query) {
-              const LLT BigTy = Query.Types[BigTyIdx];
-              return (BigTy.getScalarSizeInBits() < 16);
-            },
+            scalarOrEltNarrowerThan(BigTyIdx, 16),
             LegalizeMutations::widenScalarOrEltToNextPow2(BigTyIdx, 16))
+        .bitcastIf(all(predNot(isIntegerOrIntegerVector(LitTyIdx)),
+                       scalarOrEltNarrowerThan(LitTyIdx, 16)),
+                   changeToInteger(LitTyIdx))
         .widenScalarIf(
-            [=](const LegalityQuery &Query) {
-              const LLT LitTy = Query.Types[LitTyIdx];
-              return (LitTy.getScalarSizeInBits() < 16);
-            },
+            scalarOrEltNarrowerThan(LitTyIdx, 16),
             LegalizeMutations::widenScalarOrEltToNextPow2(LitTyIdx, 16))
         .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx))
+        .widenScalarToNextPow2Bitcast(BigTyIdx, 32)
         .widenScalarToNextPow2(BigTyIdx, 32);
   }
 
@@ -1986,7 +2001,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasScalarPackInsts()) {
     BuildVector
         // FIXME: Should probably widen s1 vectors straight to s32
+        .minScalarOrEltBitcast(0, I16)
         .minScalarOrElt(0, I16)
+        .minScalarBitcast(1, I16)
         .minScalar(1, I16);
 
     getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC)
@@ -1996,6 +2013,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     BuildVector.customFor({V2I16, I16});
     BuildVector.customFor({V2F16, F16});
     BuildVector.customFor({V2BF16, BF16});
+    BuildVector.minScalarOrEltBitcast(0, I32);
     BuildVector.minScalarOrElt(0, I32);
 
     getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC)
@@ -2042,13 +2060,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
             .lowerFor({{I16, V2I16}})
             .lowerFor({{F16, V2F16}})
             .lowerFor({{BF16, V2BF16}})
-            .lowerIf([=](const LegalityQuery &Query) {
-              const LLT BigTy = Query.Types[BigTyIdx];
-              return BigTy.getSizeInBits() == 32;
-            })
+            .lowerIf(sizeIs(BigTyIdx, 32))
             // Try to widen to s16 first for small types.
             // TODO: Only do this on targets with legal s16 shifts
-            .minScalarOrEltIf(scalarNarrowerThan(LitTyIdx, 16), LitTyIdx, I16)
+            .minScalarBitcast(LitTyIdx, I16)
+            .minScalar(LitTyIdx, I16)
+            .widenScalarToNextPow2Bitcast(LitTyIdx, /*Min*/ 16)
             .widenScalarToNextPow2(LitTyIdx, /*Min*/ 16)
             .moreElementsIf(isSmallOddVector(BigTyIdx),
                             oneMoreElement(BigTyIdx))
@@ -2064,7 +2081,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
             // Clamp the little scalar to s8-s256 and make it a power of 2. It's
             // not worth considering the multiples of 64 since 2*192 and 2*384
             // are not valid.
+            .clampScalarBitcast(LitTyIdx, I32, I512)
             .clampScalar(LitTyIdx, I32, I512)
+            .widenScalarToNextPow2Bitcast(LitTyIdx, /*Min*/ 32)
             .widenScalarToNextPow2(LitTyIdx, /*Min*/ 32)
             // Break up vectors with weird elements into scalars
             .fewerElementsIf(
@@ -2077,16 +2096,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                   return notValidElt(Query, BigTyIdx);
                 },
                 scalarize(1))
+            .clampScalarBitcast(BigTyIdx, I32, MaxScalar)
             .clampScalar(BigTyIdx, I32, MaxScalar);
 
     if (Op == G_MERGE_VALUES) {
-      Builder.widenScalarIf(
-          // TODO: Use 16-bit shifts if legal for 8-bit values?
-          [=](const LegalityQuery &Query) {
-            const LLT Ty = Query.Types[LitTyIdx];
-            return Ty.getSizeInBits() < 32;
-          },
-          changeTo(LitTyIdx, I32));
+      Builder.minScalarBitcast(LitTyIdx, I32).minScalar(LitTyIdx, I32);
     }
 
     Builder.widenScalarIf(
@@ -2104,7 +2118,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           if (RoundedTo < NewSizeInBits)
             NewSizeInBits = RoundedTo;
         }
-        return std::pair(BigTyIdx, LLT::scalar(NewSizeInBits));
+        return std::pair(BigTyIdx, LLT::integer(NewSizeInBits));
       })
       // Any vectors left are the wrong size. Scalarize them.
       .scalarize(0)
