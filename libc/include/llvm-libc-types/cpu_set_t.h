@@ -12,7 +12,7 @@
 typedef struct {
   // If a processor with more than 1024 CPUs is to be supported in future,
   // we need to adjust the size of this array.
-  unsigned long __mask[128 / sizeof(unsigned long)];
+  unsigned long __bits[128 / sizeof(unsigned long)];
 } cpu_set_t;
 
 #endif // LLVM_LIBC_TYPES_CPU_SET_T_H
