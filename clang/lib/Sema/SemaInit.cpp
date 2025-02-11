@@ -16,10 +16,8 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/TypeLoc.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
@@ -28,13 +26,11 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -266,6 +262,13 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
   //   char x[1] = "foo";
   // then this will set the string literal's type to char[1].
   updateStringLiteralType(Str, DeclT);
+}
+
+void emitUninitializedExplicitInitFields(Sema &S, const RecordDecl *R) {
+  for (const FieldDecl *Field : R->fields()) {
+    if (Field->hasAttr<ExplicitInitAttr>())
+      S.Diag(Field->getLocation(), diag::note_entity_declared_at) << Field;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -742,6 +745,14 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         ILE->updateInit(SemaRef.Context, Init, Filler);
       return;
     }
+
+    if (!VerifyOnly && Field->hasAttr<ExplicitInitAttr>()) {
+      SemaRef.Diag(ILE->getExprLoc(), diag::warn_field_requires_explicit_init)
+          << /* Var-in-Record */ 0 << Field;
+      SemaRef.Diag(Field->getLocation(), diag::note_entity_declared_at)
+          << Field;
+    }
+
     // C++1y [dcl.init.aggr]p7:
     //   If there are fewer initializer-clauses in the list than there are
     //   members in the aggregate, then each member not explicitly initialized
@@ -749,6 +760,7 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
     if (Field->hasInClassInitializer()) {
       if (VerifyOnly)
         return;
+
       ExprResult DIE;
       {
         // Enter a default initializer rebuild context, then we can support
@@ -2033,13 +2045,8 @@ canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
 
   if (InitType->isArrayType()) {
     const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
-    QualType InitElementTy = InitArrayType->getElementType();
-    QualType EmbedExprElementTy = EE->getDataStringLiteral()->getType();
-    const bool TypesMatch =
-        Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
-        (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());
-    if (TypesMatch)
-      return true;
+    StringLiteral *SL = EE->getDataStringLiteral();
+    return IsStringInit(SL, InitArrayType, Context) == SIF_None;
   }
   return false;
 }
@@ -4566,6 +4573,16 @@ static void TryConstructorInitialization(Sema &S,
 
   CXXConstructorDecl *CtorDecl = cast<CXXConstructorDecl>(Best->Function);
   if (Result != OR_Deleted) {
+    if (!IsListInit &&
+        (Kind.getKind() == InitializationKind::IK_Default ||
+         Kind.getKind() == InitializationKind::IK_Direct) &&
+        DestRecordDecl != nullptr && DestRecordDecl->isAggregate() &&
+        DestRecordDecl->hasUninitializedExplicitInitFields()) {
+      S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
+          << /* Var-in-Record */ 1 << DestRecordDecl;
+      emitUninitializedExplicitInitFields(S, DestRecordDecl);
+    }
+
     // C++11 [dcl.init]p6:
     //   If a program calls for the default initialization of an object
     //   of a const-qualified type T, T shall be a class type with a
@@ -4718,7 +4735,7 @@ static void TryReferenceListInitialization(Sema &S,
   if (T1Quals.hasAddressSpace()) {
     Qualifiers T2Quals;
     (void)S.Context.getUnqualifiedArrayType(InitList->getType(), T2Quals);
-    if (!T1Quals.isAddressSpaceSupersetOf(T2Quals)) {
+    if (!T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext())) {
       Sequence.SetFailed(
           InitializationSequence::FK_ReferenceInitDropsQualifiers);
       return;
@@ -4845,9 +4862,13 @@ static void TryListInitialization(Sema &S,
         assert(
             S.Context.hasSameUnqualifiedType(SubInit[0]->getType(), DestType) &&
             "Deduced to other type?");
+        assert(Kind.getKind() == clang::InitializationKind::IK_DirectList &&
+               "List-initialize structured bindings but not "
+               "direct-list-initialization?");
         TryArrayCopy(S,
-                     InitializationKind::CreateCopy(Kind.getLocation(),
-                                                    InitList->getLBraceLoc()),
+                     InitializationKind::CreateDirect(Kind.getLocation(),
+                                                      InitList->getLBraceLoc(),
+                                                      InitList->getRBraceLoc()),
                      Entity, SubInit[0], DestType, Sequence,
                      TreatUnavailableAsInvalid);
         if (Sequence)
@@ -5324,8 +5345,9 @@ static void TryReferenceInitializationCore(Sema &S,
   //       shall be an rvalue reference.
   //       For address spaces, we interpret this to mean that an addr space
   //       of a reference "cv1 T1" is a superset of addr space of "cv2 T2".
-  if (isLValueRef && !(T1Quals.hasConst() && !T1Quals.hasVolatile() &&
-                       T1Quals.isAddressSpaceSupersetOf(T2Quals))) {
+  if (isLValueRef &&
+      !(T1Quals.hasConst() && !T1Quals.hasVolatile() &&
+        T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext()))) {
     if (S.Context.getCanonicalType(T2) == S.Context.OverloadTy)
       Sequence.SetFailed(InitializationSequence::FK_AddressOfOverloadFailed);
     else if (ConvOvlResult && !Sequence.getFailedCandidateSet().empty())
@@ -5334,7 +5356,7 @@ static void TryReferenceInitializationCore(Sema &S,
                                   ConvOvlResult);
     else if (!InitCategory.isLValue())
       Sequence.SetFailed(
-          T1Quals.isAddressSpaceSupersetOf(T2Quals)
+          T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext())
               ? InitializationSequence::
                     FK_NonConstLValueReferenceBindingToTemporary
               : InitializationSequence::FK_ReferenceInitDropsQualifiers);
@@ -5519,7 +5541,7 @@ static void TryReferenceInitializationCore(Sema &S,
   unsigned T2CVRQuals = T2Quals.getCVRQualifiers();
   if (RefRelationship == Sema::Ref_Related &&
       ((T1CVRQuals | T2CVRQuals) != T1CVRQuals ||
-       !T1Quals.isAddressSpaceSupersetOf(T2Quals))) {
+       !T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext()))) {
     Sequence.SetFailed(InitializationSequence::FK_ReferenceInitDropsQualifiers);
     return;
   }
@@ -5536,8 +5558,8 @@ static void TryReferenceInitializationCore(Sema &S,
   Sequence.AddReferenceBindingStep(cv1T1IgnoreAS, /*BindingTemporary=*/true);
 
   if (T1Quals.hasAddressSpace()) {
-    if (!Qualifiers::isAddressSpaceSupersetOf(T1Quals.getAddressSpace(),
-                                              LangAS::Default)) {
+    if (!Qualifiers::isAddressSpaceSupersetOf(
+            T1Quals.getAddressSpace(), LangAS::Default, S.getASTContext())) {
       Sequence.SetFailed(
           InitializationSequence::FK_ReferenceAddrspaceMismatchTemporary);
       return;
@@ -5859,6 +5881,12 @@ static void TryOrBuildParenListInitialization(
       } else {
         // We've processed all of the args, but there are still members that
         // have to be initialized.
+        if (!VerifyOnly && FD->hasAttr<ExplicitInitAttr>()) {
+          S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
+              << /* Var-in-Record */ 0 << FD;
+          S.Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;
+        }
+
         if (FD->hasInClassInitializer()) {
           if (!VerifyOnly) {
             // C++ [dcl.init]p16.6.2.2
@@ -6461,6 +6489,19 @@ void InitializationSequence::InitializeFrom(Sema &S,
       TryListInitialization(S, Entity, Kind, InitList, *this,
                             TreatUnavailableAsInvalid);
       return;
+    }
+  }
+
+  if (!S.getLangOpts().CPlusPlus &&
+      Kind.getKind() == InitializationKind::IK_Default) {
+    RecordDecl *Rec = DestType->getAsRecordDecl();
+    if (Rec && Rec->hasUninitializedExplicitInitFields()) {
+      VarDecl *Var = dyn_cast_or_null<VarDecl>(Entity.getDecl());
+      if (Var && !Initializer) {
+        S.Diag(Var->getLocation(), diag::warn_field_requires_explicit_init)
+            << /* Var-in-Record */ 1 << Rec;
+        emitUninitializedExplicitInitFields(S, Rec);
+      }
     }
   }
 
@@ -7317,6 +7358,22 @@ PerformConstructorInitialization(Sema &S,
     if (S.DiagnoseUseOfDecl(Step.Function.FoundDecl, Loc))
       return ExprError();
 
+    if (Kind.getKind() == InitializationKind::IK_Value &&
+        Constructor->isImplicit()) {
+      auto *RD = Step.Type.getCanonicalType()->getAsCXXRecordDecl();
+      if (RD && RD->isAggregate() && RD->hasUninitializedExplicitInitFields()) {
+        unsigned I = 0;
+        for (const FieldDecl *FD : RD->fields()) {
+          if (I >= ConstructorArgs.size() && FD->hasAttr<ExplicitInitAttr>()) {
+            S.Diag(Loc, diag::warn_field_requires_explicit_init)
+                << /* Var-in-Record */ 0 << FD;
+            S.Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;
+          }
+          ++I;
+        }
+      }
+    }
+
     TypeSourceInfo *TSInfo = Entity.getTypeSourceInfo();
     if (!TSInfo)
       TSInfo = S.Context.getTrivialTypeSourceInfo(Entity.getType(), Loc);
@@ -7404,7 +7461,7 @@ PerformConstructorInitialization(Sema &S,
 
 void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
                                     Expr *Init) {
-  return sema::checkExprLifetime(*this, Entity, Init);
+  return sema::checkInitLifetime(*this, Entity, Init);
 }
 
 static void DiagnoseNarrowingInInitList(Sema &S,
@@ -8629,7 +8686,7 @@ static void emitBadConversionNotes(Sema &S, const InitializedEntity &entity,
       !fromDecl->isInvalidDecl() && !destDecl->isInvalidDecl() &&
       !fromDecl->hasDefinition() &&
       destPointeeType.getQualifiers().compatiblyIncludes(
-          fromPointeeType.getQualifiers()))
+          fromPointeeType.getQualifiers(), S.getASTContext()))
     S.Diag(fromDecl->getLocation(), diag::note_forward_class_conversion)
         << S.getASTContext().getTagDeclType(fromDecl)
         << S.getASTContext().getTagDeclType(destDecl);
@@ -8907,7 +8964,7 @@ bool InitializationSequence::Diagnose(Sema &S,
         SourceType.getQualifiers() - NonRefType.getQualifiers();
 
     if (!NonRefType.getQualifiers().isAddressSpaceSupersetOf(
-            SourceType.getQualifiers()))
+            SourceType.getQualifiers(), S.getASTContext()))
       S.Diag(Kind.getLocation(), diag::err_reference_bind_drops_quals)
           << NonRefType << SourceType << 1 /*addr space*/
           << Args[0]->getSourceRange();
@@ -9095,6 +9152,17 @@ bool InitializationSequence::Diagnose(Sema &S,
               << (Msg ? Msg->getString() : StringRef()) << ArgsRange;
         }
 
+        // If it's a default constructed member, but it's not in the
+        // constructor's initializer list, explicitly note where the member is
+        // declared so the user can see which member is erroneously initialized
+        // with a deleted default constructor.
+        if (Kind.getKind() == InitializationKind::IK_Default &&
+            (Entity.getKind() == InitializedEntity::EK_Member ||
+             Entity.getKind() == InitializedEntity::EK_ParenAggInitMember)) {
+          S.Diag(Entity.getDecl()->getLocation(),
+                 diag::note_default_constructed_field)
+              << Entity.getDecl();
+        }
         S.NoteDeletedFunction(Best->Function);
         break;
       }

@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <time.h>
-
+#include "hdr/types/struct_timespec.h"
 #include "src/errno/libc_errno.h"
 #include "src/time/nanosleep.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"

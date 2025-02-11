@@ -186,27 +186,41 @@ entry:
   ret i32 %c
 }
 
-; FIXME: Should preserve metadata on loads, except !noundef and !invariant.load.
+; Preserve none-UB metadata on loads.
 define ptr @preserve_load_metadata_after_select_transform1(i1 %c, ptr dereferenceable(8) %a, ptr dereferenceable(8) %b) {
 ; CHECK-LABEL: @preserve_load_metadata_after_select_transform1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B_VAL:%.*]] = load ptr, ptr [[B:%.*]], align 1
-; CHECK-NEXT:    [[A_VAL:%.*]] = load ptr, ptr [[A:%.*]], align 1
+; CHECK-NEXT:    [[B_VAL:%.*]] = load ptr, ptr [[B:%.*]], align 1, !nonnull [[META6]], !align [[META8]]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load ptr, ptr [[A:%.*]], align 1, !nonnull [[META6]], !align [[META8]]
 ; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[C:%.*]], ptr [[B_VAL]], ptr [[A_VAL]]
 ; CHECK-NEXT:    ret ptr [[L_SEL]]
 ;
 entry:
   %ptr.sel = select i1 %c, ptr %b, ptr %a
-  %l.sel = load ptr, ptr %ptr.sel, align 1, !tbaa !0, !llvm.access.group !7, !dereferenceable !9, !noundef !{}, !invariant.load !7
+  %l.sel = load ptr, ptr %ptr.sel, align 1, !tbaa !0, !llvm.access.group !7, !dereferenceable !9, !noundef !{}, !invariant.load !7, !align !9, !nonnull !{}
   ret ptr %l.sel
 }
 
-; FIXME: Should preserve metadata on loads.
+; Preserve none-UB metadata on loads.
+define i32 @preserve_load_metadata_after_select_transform_range(i1 %c, ptr dereferenceable(8) %a, ptr dereferenceable(8) %b) {
+; CHECK-LABEL: @preserve_load_metadata_after_select_transform_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B_VAL:%.*]] = load i32, ptr [[B:%.*]], align 1, !range [[RNG10:![0-9]+]]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A:%.*]], align 1, !range [[RNG10]]
+; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[C:%.*]], i32 [[B_VAL]], i32 [[A_VAL]]
+; CHECK-NEXT:    ret i32 [[L_SEL]]
+;
+entry:
+  %ptr.sel = select i1 %c, ptr %b, ptr %a
+  %l.sel = load i32, ptr %ptr.sel, align 1, !tbaa !0, !llvm.access.group !7, !invariant.load !7, !noundef !{}, !range !6
+  ret i32 %l.sel
+}
+
 define double @preserve_load_metadata_after_select_transform2(ptr %a, ptr %b) {
 ; CHECK-LABEL: @preserve_load_metadata_after_select_transform2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8, !tbaa [[TBAA0]], !llvm.access.group [[META6]]
+; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8, !tbaa [[TBAA0]], !llvm.access.group [[META6]]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast olt double [[L_A]], [[L_B]]
 ; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[CMP_I]], double [[L_B]], double [[L_A]]
 ; CHECK-NEXT:    ret double [[L_SEL]]
@@ -220,12 +234,11 @@ entry:
   ret double %l.sel
 }
 
-; FIXME: Should preserve metadata on loads.
 define double @preserve_load_metadata_after_select_transform_metadata_missing_1(ptr %a, ptr %b) {
 ; CHECK-LABEL: @preserve_load_metadata_after_select_transform_metadata_missing_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8, !llvm.access.group [[META6]]
+; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8, !tbaa [[TBAA0]], !llvm.access.group [[META6]]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast olt double [[L_A]], [[L_B]]
 ; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[CMP_I]], double [[L_B]], double [[L_A]]
 ; CHECK-NEXT:    ret double [[L_SEL]]
@@ -242,8 +255,8 @@ entry:
 define double @preserve_load_metadata_after_select_transform_metadata_missing_2(ptr %a, ptr %b) {
 ; CHECK-LABEL: @preserve_load_metadata_after_select_transform_metadata_missing_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8, !llvm.access.group [[META6]]
+; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8, !llvm.access.group [[META6]]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast olt double [[L_A]], [[L_B]]
 ; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[CMP_I]], double [[L_B]], double [[L_A]]
 ; CHECK-NEXT:    ret double [[L_SEL]]
@@ -257,12 +270,11 @@ entry:
   ret double %l.sel
 }
 
-; FIXME: Should preserve metadata on loads.
 define double @preserve_load_metadata_after_select_transform_metadata_missing_3(ptr %a, ptr %b) {
 ; CHECK-LABEL: @preserve_load_metadata_after_select_transform_metadata_missing_3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8, !tbaa [[TBAA0]], !llvm.access.group [[META6]]
+; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8, !tbaa [[TBAA0]], !llvm.access.group [[META6]]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast olt double [[L_A]], [[L_B]]
 ; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[CMP_I]], double [[L_B]], double [[L_A]]
 ; CHECK-NEXT:    ret double [[L_SEL]]
@@ -272,7 +284,27 @@ entry:
   %l.b = load double, ptr %b, align 8, !tbaa !0, !llvm.access.group !7
   %cmp.i = fcmp fast olt double %l.a, %l.b
   %ptr.sel = select i1 %cmp.i, ptr %b, ptr %a
-  %l.sel = load double, ptr %ptr.sel, align 8, !tbaa !0, !llvm.access.group !12
+  %l.sel = load double, ptr %ptr.sel, align 8, !tbaa !0, !llvm.access.group !13
+  ret double %l.sel
+}
+
+; Like preserve_load_metadata_after_select_transform_metadata_missing_3, but
+; with different access groups on all loads.
+define double @preserve_load_metadata_after_select_transform_metadata_missing_4(ptr %a, ptr %b) {
+; CHECK-LABEL: @preserve_load_metadata_after_select_transform_metadata_missing_4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8, !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META3]], !llvm.access.group [[META6]]
+; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8, !tbaa [[TBAA0]], !alias.scope [[META11:![0-9]+]], !noalias [[META11]], !llvm.access.group [[ACC_GRP14:![0-9]+]]
+; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast olt double [[L_A]], [[L_B]]
+; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[CMP_I]], double [[L_B]], double [[L_A]]
+; CHECK-NEXT:    ret double [[L_SEL]]
+;
+entry:
+  %l.a = load double, ptr %a, align 8, !tbaa !0, !llvm.access.group !7, !alias.scope !3, !noalias !3
+  %l.b = load double, ptr %b, align 8, !tbaa !0, !llvm.access.group !12, !alias.scope !14, !noalias !14
+  %cmp.i = fcmp fast olt double %l.a, %l.b
+  %ptr.sel = select i1 %cmp.i, ptr %b, ptr %a
+  %l.sel = load double, ptr %ptr.sel, align 8, !tbaa !0, !llvm.access.group !13
   ret double %l.sel
 }
 
@@ -288,7 +320,12 @@ entry:
 !9 = !{i64 8}
 !10 = distinct !{}
 !11 = !{i32 5, i32 6}
-!12 = !{}
+!12 = distinct !{}
+!13 = distinct !{}
+!14 = !{!15}
+!15 = distinct !{!15, !16}
+!16 = distinct !{!16}
+
 ;.
 ; CHECK: [[TBAA0]] = !{[[LOOP1]], [[LOOP1]], i64 0}
 ; CHECK: [[LOOP1]] = !{!"scalar type", [[META2:![0-9]+]]}
@@ -300,4 +337,9 @@ entry:
 ; CHECK: [[META7]] = !{i32 1}
 ; CHECK: [[META8]] = !{i64 8}
 ; CHECK: [[ACC_GRP9]] = distinct !{}
+; CHECK: [[RNG10]] = !{i32 0, i32 42}
+; CHECK: [[META11]] = !{[[META12:![0-9]+]]}
+; CHECK: [[META12]] = distinct !{[[META12]], [[META13:![0-9]+]]}
+; CHECK: [[META13]] = distinct !{[[META13]]}
+; CHECK: [[ACC_GRP14]] = distinct !{}
 ;.

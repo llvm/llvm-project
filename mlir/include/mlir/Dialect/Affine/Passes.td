@@ -370,7 +370,6 @@ def AffineVectorize : Pass<"affine-super-vectorize", "func::FuncOp"> {
 
 def AffineParallelize : Pass<"affine-parallelize", "func::FuncOp"> {
   let summary = "Convert affine.for ops into 1-D affine.parallel";
-  let constructor = "mlir::affine::createAffineParallelizePass()";
   let options = [
     Option<"maxNested", "max-nested", "unsigned", /*default=*/"-1u",
            "Maximum number of nested parallel loops to produce. "
@@ -406,6 +405,11 @@ def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"
 def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {
   let summary = "Lower affine operations operating on indices into more fundamental operations";
   let constructor = "mlir::affine::createAffineExpandIndexOpsPass()";
+}
+
+def AffineExpandIndexOpsAsAffine : Pass<"affine-expand-index-ops-as-affine"> {
+  let summary = "Lower affine operations operating on indices into affine.apply operations";
+  let constructor = "mlir::affine::createAffineExpandIndexOpsAsAffinePass()";
 }
 
 #endif // MLIR_DIALECT_AFFINE_PASSES

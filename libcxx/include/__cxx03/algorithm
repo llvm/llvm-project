@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_ALGORITHM
-#define _LIBCPP_ALGORITHM
+#ifndef _LIBCPP___CXX03_ALGORITHM
+#define _LIBCPP___CXX03_ALGORITHM
 
 /*
     algorithm synopsis
@@ -2046,4 +2046,4 @@ template <class BidirectionalIterator, class Compare>
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP_ALGORITHM
+#endif // _LIBCPP___CXX03_ALGORITHM

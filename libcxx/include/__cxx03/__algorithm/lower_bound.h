@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_LOWER_BOUND_H
-#define _LIBCPP___ALGORITHM_LOWER_BOUND_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_LOWER_BOUND_H
+#define _LIBCPP___CXX03___ALGORITHM_LOWER_BOUND_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/half_positive.h>
@@ -106,4 +106,4 @@ lower_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __valu
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_LOWER_BOUND_H
+#endif // _LIBCPP___CXX03___ALGORITHM_LOWER_BOUND_H

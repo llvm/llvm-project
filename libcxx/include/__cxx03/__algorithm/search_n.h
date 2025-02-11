@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SEARCH_N_H
-#define _LIBCPP___ALGORITHM_SEARCH_N_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_SEARCH_N_H
+#define _LIBCPP___CXX03___ALGORITHM_SEARCH_N_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/iterator_operations.h>
@@ -152,4 +152,4 @@ search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_SEARCH_N_H
+#endif // _LIBCPP___CXX03___ALGORITHM_SEARCH_N_H

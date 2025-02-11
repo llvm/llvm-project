@@ -512,9 +512,7 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   typedef std::vector<lldb::addr_t> AddressVector;
   AddressVector addrs;
   for (const SymbolContext &context : target_symbols) {
-    AddressRange range;
-    context.GetAddressRange(eSymbolContextEverything, 0, false, range);
-    lldb::addr_t addr = range.GetBaseAddress().GetLoadAddress(&target);
+    addr_t addr = context.GetFunctionOrSymbolAddress().GetLoadAddress(&target);
     if (addr != LLDB_INVALID_ADDRESS)
       addrs.push_back(addr);
   }
@@ -856,8 +854,7 @@ bool DynamicLoaderPOSIXDYLD::AlwaysRelyOnEHUnwindInfo(
   if (sym_ctx.symbol)
     module_sp = sym_ctx.symbol->GetAddressRef().GetModule();
   if (!module_sp && sym_ctx.function)
-    module_sp =
-        sym_ctx.function->GetAddressRange().GetBaseAddress().GetModule();
+    module_sp = sym_ctx.function->GetAddress().GetModule();
   if (!module_sp)
     return false;
 

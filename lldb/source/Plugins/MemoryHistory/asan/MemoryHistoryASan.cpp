@@ -162,7 +162,6 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   ExecutionContext exe_ctx(frame_sp);
   ValueObjectSP return_value_sp;
   StreamString expr;
-  Status eval_error;
   expr.Printf(memory_history_asan_command_format, address, address);
 
   EvaluateExpressionOptions options;
@@ -176,11 +175,12 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
   ExpressionResults expr_result = UserExpression::Evaluate(
-      exe_ctx, options, expr.GetString(), "", return_value_sp, eval_error);
+      exe_ctx, options, expr.GetString(), "", return_value_sp);
   if (expr_result != eExpressionCompleted) {
     StreamString ss;
     ss << "cannot evaluate AddressSanitizer expression:\n";
-    ss << eval_error.AsCString();
+    if (return_value_sp)
+      ss << return_value_sp->GetError().AsCString();
     Debugger::ReportWarning(ss.GetString().str(),
                             process_sp->GetTarget().GetDebugger().GetID());
     return result;

@@ -27,7 +27,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 class MCContext;
@@ -197,7 +196,7 @@ void MCWasmStreamer::emitInstToData(const MCInst &Inst,
     DF->getFixups().push_back(Fixups[I]);
   }
   DF->setHasInstructions(STI);
-  DF->getContents().append(Code.begin(), Code.end());
+  DF->appendContents(Code);
 }
 
 void MCWasmStreamer::finishImpl() {
@@ -237,10 +236,6 @@ void MCWasmStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
     fixSymbolsInTLSFixups(cast<MCUnaryExpr>(expr)->getSubExpr());
     break;
   }
-}
-
-void MCWasmStreamer::emitThumbFunc(MCSymbol *Func) {
-  llvm_unreachable("Generic Wasm doesn't support this directive");
 }
 
 void MCWasmStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {

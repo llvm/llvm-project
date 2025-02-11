@@ -1,0 +1,106 @@
+header: time.h
+header_template: time.h.def
+macros: []
+types:
+  - type_name: struct_timeval
+  - type_name: clockid_t
+  - type_name: struct_timespec
+  - type_name: struct_tm
+  - type_name: time_t
+  - type_name: clock_t
+  - type_name: size_t
+enums: []
+objects: []
+functions:
+  - name: asctime
+    standard:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const struct tm *
+  - name: asctime_r
+    standard:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: struct tm *
+      - type: char *
+  - name: ctime
+    standard:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const time_t *
+  - name: ctime_r
+    standard:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const time_t *
+      - type: char *
+  - name: clock
+    standard:
+      - stdc
+    return_type: clock_t
+    arguments:
+      - type: void
+  - name: clock_gettime
+    standard:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: clockid_t
+      - type: struct timespec *
+  - name: difftime
+    standard:
+      - stdc
+    return_type: double
+    arguments:
+      - type: time_t
+      - type: time_t
+  - name: gettimeofday
+    standard:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: struct timeval *
+      - type: void *
+  - name: gmtime
+    standard:
+      - stdc
+    return_type: struct tm *
+    arguments:
+      - type: time_t *
+  - name: gmtime_r
+    standard:
+      - stdc
+    return_type: struct tm *
+    arguments:
+      - type: time_t *
+      - type: struct tm *
+  - name: mktime
+    standard:
+      - stdc
+    return_type: time_t
+    arguments:
+      - type: struct tm *
+  - name: nanosleep
+    standard:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: const struct timespec *
+      - type: struct timespec *
+  - name: time
+    standard:
+      - stdc
+    return_type: time_t
+    arguments:
+      - type: time_t *
+  - name: timespec_get
+    standard:
+      - stdc
+    return_type: int
+    arguments:
+      - type: struct timespec *
+      - type: int

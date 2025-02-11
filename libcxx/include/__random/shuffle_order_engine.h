@@ -66,7 +66,7 @@ private:
 
 public:
   // engine characteristics
-  static _LIBCPP_CONSTEXPR const size_t table_size = __k;
+  static inline _LIBCPP_CONSTEXPR const size_t table_size = __k;
 
 #ifdef _LIBCPP_CXX03_LANG
   static const result_type _Min = _Engine::_Min;
@@ -172,9 +172,6 @@ private:
     return __y_;
   }
 };
-
-template <class _Engine, size_t __k>
-_LIBCPP_CONSTEXPR const size_t shuffle_order_engine<_Engine, __k>::table_size;
 
 template <class _Eng, size_t _Kp>
 _LIBCPP_HIDE_FROM_ABI bool

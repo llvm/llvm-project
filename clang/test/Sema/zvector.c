@@ -18,6 +18,10 @@ vector signed long long sl, sl2;
 vector unsigned long long ul, ul2;
 vector bool long long bl, bl2;
 
+vector signed __int128 slll, slll2;
+vector unsigned __int128 ulll, ulll2;
+vector bool __int128 blll, blll2;
+
 vector double fd, fd2;
 
 vector long ll; // expected-error {{cannot use 'long' with '__vector'}}
@@ -39,6 +43,9 @@ unsigned int ui_scalar;
 signed long sl_scalar;
 unsigned long ul_scalar;
 
+signed __int128 slll_scalar;
+unsigned __int128 ulll_scalar;
+
 double fd_scalar;
 
 // Verify that __vector is also recognized
@@ -54,6 +61,9 @@ __vector bool int bi3;
 __vector signed long long sl3;
 __vector unsigned long long ul3;
 __vector bool long long bl3;
+__vector signed __int128 slll3;
+__vector unsigned __int128 ulll3;
+__vector bool __int128 blll3;
 __vector double fd3;
 __vector long ll3; // expected-error {{cannot use 'long' with '__vector'}}
 __vector float ff3; // expected-error {{cannot use 'float' with '__vector'}}
@@ -85,6 +95,9 @@ int res_bi[vec_step(bi) == 4 ? 1 : -1];
 int res_sl[vec_step(sl) == 2 ? 1 : -1];
 int res_ul[vec_step(ul) == 2 ? 1 : -1];
 int res_bl[vec_step(bl) == 2 ? 1 : -1];
+int res_slll[vec_step(slll) == 1 ? 1 : -1];
+int res_ulll[vec_step(ulll) == 1 ? 1 : -1];
+int res_blll[vec_step(blll) == 1 ? 1 : -1];
 int res_fd[vec_step(fd) == 2 ? 1 : -1];
 
 
@@ -111,6 +124,10 @@ void foo(void)
   bl = bl2;
   fd = fd2;
 
+  slll = slll2;
+  ulll = ulll2;
+  blll = blll2;
+
   sc = uc2; // expected-error {{incompatible type}}
   sc = bc2; // expected-error {{incompatible type}}
   uc = sc2; // expected-error {{incompatible type}}
@@ -129,31 +146,37 @@ void foo(void)
   sc = si2; // expected-error {{incompatible type}}
   sc = sl2; // expected-error {{incompatible type}}
   sc = fd2; // expected-error {{incompatible type}}
+  sc = slll2; // expected-error {{incompatible type}}
 
   ss = sc2; // expected-error {{incompatible type}}
   si = sc2; // expected-error {{incompatible type}}
   sl = sc2; // expected-error {{incompatible type}}
   fd = sc2; // expected-error {{incompatible type}}
+  slll = sc2; // expected-error {{incompatible type}}
 
   uc = us2; // expected-error {{incompatible type}}
   uc = ui2; // expected-error {{incompatible type}}
   uc = ul2; // expected-error {{incompatible type}}
   uc = fd2; // expected-error {{incompatible type}}
+  uc = ulll2; // expected-error {{incompatible type}}
 
   us = uc2; // expected-error {{incompatible type}}
   ui = uc2; // expected-error {{incompatible type}}
   ul = uc2; // expected-error {{incompatible type}}
   fd = uc2; // expected-error {{incompatible type}}
+  ulll = uc2; // expected-error {{incompatible type}}
 
   bc = us2; // expected-error {{incompatible type}}
   bc = ui2; // expected-error {{incompatible type}}
   bc = ul2; // expected-error {{incompatible type}}
   bc = fd2; // expected-error {{incompatible type}}
+  bc = ulll2; // expected-error {{incompatible type}}
 
   bs = bc2; // expected-error {{incompatible type}}
   bi = bc2; // expected-error {{incompatible type}}
   bl = bc2; // expected-error {{incompatible type}}
   fd = bc2; // expected-error {{incompatible type}}
+  blll = bc2; // expected-error {{incompatible type}}
 
   // -------------------------------------------------------------------------
   // Test casts to same element width.
@@ -176,6 +199,10 @@ void foo(void)
   ul = (vector unsigned long long)fd2;
   fd = (vector double)sl2;
 
+  slll = (vector signed __int128)blll2;
+  blll = (vector bool __int128)ulll2;
+  ulll = (vector unsigned __int128)slll2;
+
   // -------------------------------------------------------------------------
   // Test casts to different element width.
   // -------------------------------------------------------------------------
@@ -197,6 +224,10 @@ void foo(void)
   ul = (vector unsigned long long)sc2;
   fd = (vector double)sc2;
 
+  slll = (vector signed __int128)bi2;
+  blll = (vector bool __int128)ui2;
+  ulll = (vector unsigned __int128)si2;
+
   // -------------------------------------------------------------------------
   // Test ++.
   // -------------------------------------------------------------------------
@@ -217,6 +248,10 @@ void foo(void)
   ++ul2;
   ++bl2; // expected-error {{cannot increment}}
 
+  ++slll2;
+  ++ulll2;
+  ++blll2; // expected-error {{cannot increment}}
+
   ++fd2;
 
   sc++;
@@ -234,6 +269,10 @@ void foo(void)
   sl++;
   ul++;
   bl++; // expected-error {{cannot increment}}
+
+  slll++;
+  ulll++;
+  blll++; // expected-error {{cannot increment}}
 
   fd++;
 
@@ -257,6 +296,10 @@ void foo(void)
   --ul2;
   --bl2; // expected-error {{cannot decrement}}
 
+  --slll2;
+  --ulll2;
+  --blll2; // expected-error {{cannot decrement}}
+
   --fd2;
 
   sc--;
@@ -274,6 +317,10 @@ void foo(void)
   sl--;
   ul--;
   bl--; // expected-error {{cannot decrement}}
+
+  slll--;
+  ulll--;
+  blll--; // expected-error {{cannot decrement}}
 
   fd--;
 
@@ -296,6 +343,10 @@ void foo(void)
   sl = +sl2;
   ul = +ul2;
   bl = +bl2; // expected-error {{invalid argument type}}
+
+  slll = +slll2;
+  ulll = +ulll2;
+  blll = +blll2; // expected-error {{invalid argument type}}
 
   fd = +fd2;
 
@@ -323,6 +374,10 @@ void foo(void)
   ul = -ul2;
   bl = -bl2; // expected-error {{invalid argument type}}
 
+  slll = -slll2;
+  ulll = -ulll2;
+  blll = -blll2; // expected-error {{invalid argument type}}
+
   fd = -fd2;
 
   sc = -si2; // expected-error {{assigning to}}
@@ -348,6 +403,10 @@ void foo(void)
   sl = ~sl2;
   ul = ~ul2;
   bl = ~bl2;
+
+  slll = ~slll2;
+  ulll = ~ulll2;
+  blll = ~blll2;
 
   fd = ~fd2; // expected-error {{invalid argument}}
 
@@ -398,6 +457,10 @@ void foo(void)
   ul = ul + ul2;
   bl = bl + bl2; // expected-error {{invalid operands}}
 
+  slll = slll + slll2;
+  ulll = ulll + ulll2;
+  blll = blll + blll2; // expected-error {{invalid operands}}
+
   fd = fd + fd2;
   fd = fd + ul2; // expected-error {{cannot convert}}
   fd = sl + fd2; // expected-error {{cannot convert}}
@@ -418,6 +481,7 @@ void foo(void)
   sc += si2; // expected-error {{cannot convert}}
   sc += sl2; // expected-error {{cannot convert}}
   sc += fd2; // expected-error {{cannot convert}}
+  sc += slll2; // expected-error {{cannot convert}}
 
   sc += sc_scalar;
   sc += uc_scalar; // expected-error {{cannot convert between scalar type 'unsigned char' and vector type '__vector signed char' (vector of 16 'signed char' values) as implicit conversion would cause truncation}}
@@ -435,6 +499,10 @@ void foo(void)
   sl += sl2;
   ul += ul2;
   bl += bl2; // expected-error {{invalid operands}}
+
+  slll += slll2;
+  ulll += ulll2;
+  blll += blll2; // expected-error {{invalid operands}}
 
   fd += fd2;
 
@@ -469,6 +537,10 @@ void foo(void)
   sl -= sl2;
   ul -= ul2;
   bl -= bl2; // expected-error {{invalid operands}}
+
+  slll -= slll2;
+  ulll -= ulll2;
+  blll -= blll2; // expected-error {{invalid operands}}
 
   fd -= fd2;
 
@@ -505,6 +577,11 @@ void foo(void)
   ul *= ul2;
   bl *= bl2; // expected-error {{invalid operands}}
 
+  slll *= slll2;
+  ulll *= ulll2;
+  blll *= blll2; // expected-error {{invalid operands}}
+
+
   fd *= fd2;
 
   // -------------------------------------------------------------------------
@@ -539,6 +616,10 @@ void foo(void)
   ul /= ul2;
   bl /= bl2; // expected-error {{invalid operands}}
 
+  slll /= slll2;
+  ulll /= ulll2;
+  blll /= blll2; // expected-error {{invalid operands}}
+
   fd /= fd2;
 
   // -------------------------------------------------------------------------
@@ -572,6 +653,10 @@ void foo(void)
   sl %= sl2;
   ul %= ul2;
   bl %= bl2; // expected-error {{invalid operands}}
+
+  slll %= slll2;
+  ulll %= ulll2;
+  blll %= blll2; // expected-error {{invalid operands}}
 
   fd %= fd2; // expected-error {{invalid operands}}
 
@@ -637,6 +722,10 @@ void foo(void)
   ul &= ul2;
   bl &= bl2;
 
+  slll &= slll2;
+  ulll &= ulll2;
+  blll &= blll2;
+
   // -------------------------------------------------------------------------
   // Test that & rules apply to | too.
   // -------------------------------------------------------------------------
@@ -667,6 +756,10 @@ void foo(void)
   sl |= sl2;
   ul |= ul2;
   bl |= bl2;
+
+  slll |= slll2;
+  ulll |= ulll2;
+  blll |= blll2;
 
   fd |= bl2; // expected-error {{invalid operands}}
   fd |= fd2; // expected-error {{invalid operands}}
@@ -701,6 +794,10 @@ void foo(void)
   sl ^= sl2;
   ul ^= ul2;
   bl ^= bl2;
+
+  slll ^= slll2;
+  ulll ^= ulll2;
+  blll ^= blll2;
 
   fd ^= bl2; // expected-error {{invalid operands}}
   fd ^= fd2; // expected-error {{invalid operands}}
@@ -762,6 +859,12 @@ void foo(void)
   ul = ul << ul_scalar;
   bl = bl << bl2; // expected-error {{invalid operands}}
 
+  slll = slll << slll2;
+  slll = slll << slll_scalar;
+  ulll = ulll << ulll2;
+  ulll = ulll << ulll_scalar;
+  blll = blll << blll2; // expected-error {{invalid operands}}
+
   fd = fd << fd2; // expected-error {{integer is required}}
   fd = fd << ul2; // expected-error {{integer is required}}
   fd = sl << fd2; // expected-error {{integer is required}}
@@ -802,6 +905,12 @@ void foo(void)
   ul <<= ul2;
   ul <<= ul_scalar;
   bl <<= bl2; // expected-error {{invalid operands}}
+
+  slll <<= slll2;
+  slll <<= slll_scalar;
+  ulll <<= ulll2;
+  ulll <<= ulll_scalar;
+  blll <<= blll2; // expected-error {{invalid operands}}
 
   fd <<= fd2; // expected-error {{integer is required}}
 
@@ -862,6 +971,12 @@ void foo(void)
   ul = ul >> ul_scalar;
   bl = bl >> bl2; // expected-error {{invalid operands}}
 
+  slll = slll >> slll2;
+  slll = slll >> slll_scalar;
+  ulll = ulll >> ulll2;
+  ulll = ulll >> ulll_scalar;
+  blll = blll >> blll2; // expected-error {{invalid operands}}
+
   fd = fd >> fd2; // expected-error {{integer is required}}
   fd = fd >> ul2; // expected-error {{integer is required}}
   fd = sl >> fd2; // expected-error {{integer is required}}
@@ -903,6 +1018,12 @@ void foo(void)
   ul >>= ul_scalar;
   bl >>= bl2; // expected-error {{invalid operands}}
 
+  slll >>= slll2;
+  slll >>= slll_scalar;
+  ulll >>= ulll2;
+  ulll >>= ulll_scalar;
+  blll >>= blll2; // expected-error {{invalid operands}}
+
   fd >>= fd2; // expected-error {{integer is required}}
 
   // -------------------------------------------------------------------------
@@ -935,6 +1056,10 @@ void foo(void)
   (void)(bl == bl2);
   (void)(fd == fd2);
 
+  (void)(slll == slll2);
+  (void)(ulll == ulll2);
+  (void)(blll == blll2);
+
   (void)(fd == ul); // expected-error {{cannot convert}}
   (void)(ul == fd); // expected-error {{cannot convert}}
 
@@ -962,6 +1087,10 @@ void foo(void)
   (void)(bl != bl2);
   (void)(fd != fd2);
 
+  (void)(slll != slll2);
+  (void)(ulll != ulll2);
+  (void)(blll != blll2);
+
   // -------------------------------------------------------------------------
   // Test that == rules apply to <= too.
   // -------------------------------------------------------------------------
@@ -985,6 +1114,10 @@ void foo(void)
   (void)(ul <= ul2);
   (void)(bl <= bl2);
   (void)(fd <= fd2);
+
+  (void)(slll <= slll2);
+  (void)(ulll <= ulll2);
+  (void)(blll <= blll2);
 
   // -------------------------------------------------------------------------
   // Test that == rules apply to >= too.
@@ -1010,6 +1143,10 @@ void foo(void)
   (void)(bl >= bl2);
   (void)(fd >= fd2);
 
+  (void)(slll >= slll2);
+  (void)(ulll >= ulll2);
+  (void)(blll >= blll2);
+
   // -------------------------------------------------------------------------
   // Test that == rules apply to < too.
   // -------------------------------------------------------------------------
@@ -1034,6 +1171,10 @@ void foo(void)
   (void)(bl < bl2);
   (void)(fd < fd2);
 
+  (void)(slll < slll2);
+  (void)(ulll < ulll2);
+  (void)(blll < blll2);
+
   // -------------------------------------------------------------------------
   // Test that == rules apply to > too.
   // -------------------------------------------------------------------------
@@ -1057,4 +1198,8 @@ void foo(void)
   (void)(ul > ul2);
   (void)(bl > bl2);
   (void)(fd > fd2);
+
+  (void)(slll > slll2);
+  (void)(ulll > ulll2);
+  (void)(blll > blll2);
 }

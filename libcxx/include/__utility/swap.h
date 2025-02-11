@@ -31,10 +31,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Tp>
-using __swap_result_t = __enable_if_t<is_move_constructible<_Tp>::value && is_move_assignable<_Tp>::value>;
+using __swap_result_t _LIBCPP_NODEBUG =
+    __enable_if_t<is_move_constructible<_Tp>::value && is_move_assignable<_Tp>::value>;
 #else
 template <class>
-using __swap_result_t = void;
+using __swap_result_t _LIBCPP_NODEBUG = void;
 #endif
 
 template <class _Tp>

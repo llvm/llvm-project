@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VERBOSE_ABORT
-#define _LIBCPP___VERBOSE_ABORT
+#ifndef _LIBCPP___CXX03___VERBOSE_ABORT
+#define _LIBCPP___CXX03___VERBOSE_ABORT
 
 #include <__cxx03/__config>
 
@@ -49,4 +49,4 @@ void __use(const char*, ...);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___VERBOSE_ABORT
+#endif // _LIBCPP___CXX03___VERBOSE_ABORT

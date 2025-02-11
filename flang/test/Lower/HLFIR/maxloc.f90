@@ -86,7 +86,7 @@ end subroutine
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<2xi32>, !fir.ref<!fir.array<2xi32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]] : !hlfir.expr<2xi32>
 ! CHECK-NEXT:    return
-! CHECK-nEXT:  }
+! CHECK-NEXT:  }
 
 ! back argument as .true.
 subroutine maxloc_back(a, s)
@@ -341,8 +341,8 @@ end subroutine test_unknown_char_len_result
 ! CHECK-DAG:       %[[C1_7:.*]] = arith.constant 1 : index
 ! CHECK-DAG:       %[[C3_8:.*]] = arith.constant 3 : index
 ! CHECK-DAG:       %[[C3_9:.*]] = arith.constant 3 : index
-! CHECK-DAG:       %[[ARRAY_BOX:.*]] = hlfir.designate %[[ARRAY]]#0 (%[[C1]]:%[[C3_0]]:%[[C1_3]], %[[C1]]:%[[C3_1]]:%[[C1_5]]) substr %[[C1_7]], %[[C3_8]]  shape %[[SHAPE]] typeparams %[[C3_9]]
-! CHECK:           %[[EXPR:.*]] = hlfir.maxloc %[[ARRAY_BOX]] {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<3x3x!fir.char<1,3>>>) -> !hlfir.expr<2xi32>
+! CHECK-DAG:       %[[ARRAY_REF:.*]] = hlfir.designate %[[ARRAY]]#0 (%[[C1]]:%[[C3_0]]:%[[C1_3]], %[[C1]]:%[[C3_1]]:%[[C1_5]]) substr %[[C1_7]], %[[C3_8]]  shape %[[SHAPE]] typeparams %[[C3_9]] : (!fir.ref<!fir.array<3x3x!fir.char<1,3>>>, index, index, index, index, index, index, index, index, !fir.shape<2>, index) -> !fir.ref<!fir.array<3x3x!fir.char<1,3>>>
+! CHECK:           %[[EXPR:.*]] = hlfir.maxloc %[[ARRAY_REF]] {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<3x3x!fir.char<1,3>>>) -> !hlfir.expr<2xi32>
 ! CHECK-NEXT:      hlfir.assign %[[EXPR]] to %[[RES]]#0 : !hlfir.expr<2xi32>, !fir.ref<!fir.array<2xi32>>
 ! CHECK-NEXT:      hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:      return

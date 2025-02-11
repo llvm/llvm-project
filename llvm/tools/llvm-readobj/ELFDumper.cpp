@@ -1619,6 +1619,7 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX940, "gfx940"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX941, "gfx941"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX950, "gfx950"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1011, "gfx1011"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1012, "gfx1012"),                          \
@@ -1641,6 +1642,7 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic"),            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic"),          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic"),              \
@@ -5331,7 +5333,8 @@ static bool printAArch64PAuthABICoreInfo(raw_ostream &OS, uint32_t DataSize,
 
 template <typename ELFT>
 static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
-                                  ArrayRef<uint8_t> Data) {
+                                  ArrayRef<uint8_t> Data,
+                                  typename ELFT::Half EMachine) {
   std::string str;
   raw_string_ostream OS(str);
   uint32_t PrData;
@@ -5364,8 +5367,25 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     return str;
   case GNU_PROPERTY_AARCH64_FEATURE_1_AND:
   case GNU_PROPERTY_X86_FEATURE_1_AND:
-    OS << ((Type == GNU_PROPERTY_AARCH64_FEATURE_1_AND) ? "aarch64 feature: "
-                                                        : "x86 feature: ");
+    static_assert(GNU_PROPERTY_AARCH64_FEATURE_1_AND ==
+                      GNU_PROPERTY_RISCV_FEATURE_1_AND,
+                  "GNU_PROPERTY_RISCV_FEATURE_1_AND should equal "
+                  "GNU_PROPERTY_AARCH64_FEATURE_1_AND, otherwise "
+                  "GNU_PROPERTY_RISCV_FEATURE_1_AND would be skipped!");
+
+    if (EMachine == EM_AARCH64 && Type == GNU_PROPERTY_AARCH64_FEATURE_1_AND) {
+      OS << "aarch64 feature: ";
+    } else if (EMachine == EM_RISCV &&
+               Type == GNU_PROPERTY_RISCV_FEATURE_1_AND) {
+      OS << "RISC-V feature: ";
+    } else if ((EMachine == EM_386 || EMachine == EM_X86_64) &&
+               Type == GNU_PROPERTY_X86_FEATURE_1_AND) {
+      OS << "x86 feature: ";
+    } else {
+      OS << format("<application-specific type 0x%x>", Type);
+      return str;
+    }
+
     if (DataSize != 4) {
       OS << format("<corrupt length: 0x%x>", DataSize);
       return str;
@@ -5375,10 +5395,16 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << "<None>";
       return str;
     }
-    if (Type == GNU_PROPERTY_AARCH64_FEATURE_1_AND) {
+
+    if (EMachine == EM_AARCH64) {
       DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_BTI, "BTI");
       DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_PAC, "PAC");
       DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_GCS, "GCS");
+    } else if (EMachine == EM_RISCV) {
+      DumpBit(GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED,
+              "ZICFILP-unlabeled");
+      DumpBit(GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS, "ZICFISS");
+      DumpBit(GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG, "ZICFILP-func-sig");
     } else {
       DumpBit(GNU_PROPERTY_X86_FEATURE_1_IBT, "IBT");
       DumpBit(GNU_PROPERTY_X86_FEATURE_1_SHSTK, "SHSTK");
@@ -5439,7 +5465,8 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
 }
 
 template <typename ELFT>
-static SmallVector<std::string, 4> getGNUPropertyList(ArrayRef<uint8_t> Arr) {
+static SmallVector<std::string, 4>
+getGNUPropertyList(ArrayRef<uint8_t> Arr, typename ELFT::Half EMachine) {
   using Elf_Word = typename ELFT::Word;
 
   SmallVector<std::string, 4> Properties;
@@ -5457,8 +5484,8 @@ static SmallVector<std::string, 4> getGNUPropertyList(ArrayRef<uint8_t> Arr) {
       Properties.push_back(str);
       break;
     }
-    Properties.push_back(
-        getGNUProperty<ELFT>(Type, DataSize, Arr.take_front(PaddedSize)));
+    Properties.push_back(getGNUProperty<ELFT>(
+        Type, DataSize, Arr.take_front(PaddedSize), EMachine));
     Arr = Arr.drop_front(PaddedSize);
   }
 
@@ -5510,7 +5537,7 @@ static StringRef getDescAsStringRef(ArrayRef<uint8_t> Desc) {
 
 template <typename ELFT>
 static bool printGNUNote(raw_ostream &OS, uint32_t NoteType,
-                         ArrayRef<uint8_t> Desc) {
+                         ArrayRef<uint8_t> Desc, typename ELFT::Half EMachine) {
   // Return true if we were able to pretty-print the note, false otherwise.
   switch (NoteType) {
   default:
@@ -5532,7 +5559,7 @@ static bool printGNUNote(raw_ostream &OS, uint32_t NoteType,
     break;
   case ELF::NT_GNU_PROPERTY_TYPE_0:
     OS << "    Properties:";
-    for (const std::string &Property : getGNUPropertyList<ELFT>(Desc))
+    for (const std::string &Property : getGNUPropertyList<ELFT>(Desc, EMachine))
       OS << "    " << Property << "\n";
     break;
   }
@@ -6055,6 +6082,7 @@ const NoteType CoreNoteTypes[] = {
     {ELF::NT_ARM_ZA, "NT_ARM_ZA (AArch64 SME ZA registers)"},
     {ELF::NT_ARM_ZT, "NT_ARM_ZT (AArch64 SME ZT registers)"},
     {ELF::NT_ARM_FPMR, "NT_ARM_FPMR (AArch64 Floating Point Mode Register)"},
+    {ELF::NT_ARM_GCS, "NT_ARM_GCS (AArch64 Guarded Control Stack state)"},
 
     {ELF::NT_FILE, "NT_FILE (mapped files)"},
     {ELF::NT_PRXFPREG, "NT_PRXFPREG (user_xfpregs structure)"},
@@ -6220,10 +6248,12 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
     else
       OS << "Unknown note type: (" << format_hex(Type, 10) << ")\n";
 
+    const typename ELFT::Half EMachine = this->Obj.getHeader().e_machine;
+
     // Print the description, or fallback to printing raw bytes for unknown
     // owners/if we fail to pretty-print the contents.
     if (Name == "GNU") {
-      if (printGNUNote<ELFT>(OS, Type, Descriptor))
+      if (printGNUNote<ELFT>(OS, Type, Descriptor, EMachine))
         return Error::success();
     } else if (Name == "FreeBSD") {
       if (std::optional<FreeBSDNote> N =
@@ -6799,6 +6829,16 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
       reportWarning(createError(".stack_sizes (" + describe(*StackSizesELFSec) +
                                 ") does not have a corresponding "
                                 "relocation section"),
+                    FileName);
+      continue;
+    }
+
+    // We might end up with relocations in CREL here. If we do, report a
+    // warning since we do not currently support them.
+    if (RelocSec->sh_type == ELF::SHT_CREL) {
+      reportWarning(createError(".stack_sizes (" + describe(*StackSizesELFSec) +
+                                ") has a corresponding CREL relocation "
+                                "section, which is not currently supported"),
                     FileName);
       continue;
     }
@@ -7910,7 +7950,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printAddrsig() {
 
 template <typename ELFT>
 static bool printGNUNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
-                                  ScopedPrinter &W) {
+                                  ScopedPrinter &W,
+                                  typename ELFT::Half EMachine) {
   // Return true if we were able to pretty-print the note, false otherwise.
   switch (NoteType) {
   default:
@@ -7935,7 +7976,7 @@ static bool printGNUNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
     break;
   case ELF::NT_GNU_PROPERTY_TYPE_0:
     ListScope D(W, "Property");
-    for (const std::string &Property : getGNUPropertyList<ELFT>(Desc))
+    for (const std::string &Property : getGNUPropertyList<ELFT>(Desc, EMachine))
       W.printString(Property);
     break;
   }
@@ -8054,10 +8095,11 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
       W.printString("Type",
                     "Unknown (" + to_string(format_hex(Type, 10)) + ")");
 
+    const typename ELFT::Half EMachine = this->Obj.getHeader().e_machine;
     // Print the description, or fallback to printing raw bytes for unknown
     // owners/if we fail to pretty-print the contents.
     if (Name == "GNU") {
-      if (printGNUNoteLLVMStyle<ELFT>(Type, Descriptor, W))
+      if (printGNUNoteLLVMStyle<ELFT>(Type, Descriptor, W, EMachine))
         return Error::success();
     } else if (Name == "FreeBSD") {
       if (std::optional<FreeBSDNote> N =

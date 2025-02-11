@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_SUPPORT_EXTERNAL_H
-#define _LIBCPP___THREAD_SUPPORT_EXTERNAL_H
+#ifndef _LIBCPP___CXX03___THREAD_SUPPORT_EXTERNAL_H
+#define _LIBCPP___CXX03___THREAD_SUPPORT_EXTERNAL_H
 
 #include <__cxx03/__config>
 
@@ -18,4 +18,4 @@
 
 #include <__cxx03/__external_threading>
 
-#endif // _LIBCPP___THREAD_SUPPORT_EXTERNAL_H
+#endif // _LIBCPP___CXX03___THREAD_SUPPORT_EXTERNAL_H

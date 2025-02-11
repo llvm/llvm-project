@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
-#define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
+#ifndef _LIBCPP___CXX03_EXPERIMENTAL___SIMD_SIMD_H
+#define _LIBCPP___CXX03_EXPERIMENTAL___SIMD_SIMD_H
 
 #include <__cxx03/__type_traits/is_same.h>
 #include <__cxx03/__type_traits/remove_cvref.h>
@@ -99,4 +99,4 @@ using fixed_size_simd = simd<_Tp, simd_abi::fixed_size<_Np>>;
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 #endif // _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
-#endif // _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
+#endif // _LIBCPP___CXX03_EXPERIMENTAL___SIMD_SIMD_H

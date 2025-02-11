@@ -150,9 +150,12 @@ public:
 
   unsigned getIntegerBitCount() const {
     DCHECK(isIntegerTy());
-    if (isSignedBitIntTy())
-      return *reinterpret_cast<const u32 *>(getBitIntBitCountPointer());
-    else
+    if (isSignedBitIntTy()) {
+      u32 BitCountValue;
+      internal_memcpy(&BitCountValue, getBitIntBitCountPointer(),
+                      sizeof(BitCountValue));
+      return BitCountValue;
+    } else
       return getIntegerBitWidth();
   }
 

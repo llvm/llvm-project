@@ -117,7 +117,7 @@ function defdByNamelist()
 end
 
 character(4) function defdByWrite()
-  write(defdByWrite) 'abcd'
+  write(defdByWrite,*) 'abcd'
 end
 
 integer function defdBySize()

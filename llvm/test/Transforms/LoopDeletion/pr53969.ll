@@ -66,7 +66,7 @@ bb1:                                              ; preds = %bb31, %bb
   br i1 %tmp10, label %bb33, label %bb34
 
 bb11:                                             ; preds = %bb34
-  br i1 undef, label %bb33, label %bb34
+  br i1 true, label %bb33, label %bb34
 
 bb12:                                             ; preds = %bb34
   %tmp13 = icmp eq ptr addrspace(1) undef, null
@@ -113,7 +113,7 @@ bb34:                                             ; preds = %bb11, %bb1
   %tmp39 = add i32 %tmp38, undef
   %tmp40 = sext i32 %tmp39 to i64
   %tmp41 = add i64 undef, %tmp40
-  br i1 undef, label %bb11, label %bb12
+  br i1 false, label %bb11, label %bb12
 
 bb42:                                             ; preds = %bb22
   store atomic i64 %tmp18, ptr addrspace(1) undef unordered, align 8

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SCOPED_ALLOCATOR
-#define _LIBCPP_SCOPED_ALLOCATOR
+#ifndef _LIBCPP___CXX03_SCOPED_ALLOCATOR
+#define _LIBCPP___CXX03_SCOPED_ALLOCATOR
 
 /*
     scoped_allocator synopsis
@@ -570,4 +570,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/variant>
 #endif
 
-#endif // _LIBCPP_SCOPED_ALLOCATOR
+#endif // _LIBCPP___CXX03_SCOPED_ALLOCATOR

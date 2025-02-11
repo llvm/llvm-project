@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=sparc
+; RUN: llc < %s -mtriple=sparc
 
 define void @execute_list() {
         %tmp.33.i = fdiv float 0.000000e+00, 0.000000e+00               ; <float> [#uses=1]

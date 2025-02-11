@@ -8,19 +8,13 @@ define fastcc void @rephase(ptr %phases_in, ptr %157, i64 %158) {
 ; CHECK-NEXT:    [[IND_END11:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[IMAG_247:%.*]] = getelementptr i8, ptr [[IND_END11]], i64 408
-; CHECK-NEXT:    [[MUL35_248:%.*]] = fmul double [[TMP2]], 0.000000e+00
-; CHECK-NEXT:    store double [[MUL35_248]], ptr [[IMAG_247]], align 8
-; CHECK-NEXT:    [[ARRAYIDX23_1_249:%.*]] = getelementptr i8, ptr [[IND_END11]], i64 416
-; CHECK-NEXT:    [[MUL_1_250:%.*]] = fmul double [[TMP2]], 0.000000e+00
-; CHECK-NEXT:    store double [[MUL_1_250]], ptr [[ARRAYIDX23_1_249]], align 8
 ; CHECK-NEXT:    [[IMAG_1_251:%.*]] = getelementptr i8, ptr [[IND_END11]], i64 424
-; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[IMAG_1_251]], align 8
-; CHECK-NEXT:    [[MUL35_1_252:%.*]] = fmul double [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    store double [[MUL35_1_252]], ptr [[IMAG_1_251]], align 8
-; CHECK-NEXT:    [[ARRAYIDX23_2_253:%.*]] = getelementptr i8, ptr [[IND_END11]], i64 432
-; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[ARRAYIDX23_2_253]], align 8
-; CHECK-NEXT:    [[MUL_2_254:%.*]] = fmul double [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    store double [[MUL_2_254]], ptr [[ARRAYIDX23_2_253]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[IMAG_1_251]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> poison, double [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x double> @llvm.vector.insert.v4f64.v2f64(<4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double poison>, <2 x double> [[TMP3]], i64 2)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x double> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    store <4 x double> [[TMP7]], ptr [[IMAG_247]], align 8
 ; CHECK-NEXT:    store double [[TMP2]], ptr [[PHASES_IN]], align 8
 ; CHECK-NEXT:    ret void
 ;

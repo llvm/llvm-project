@@ -355,11 +355,14 @@ function(add_libclc_builtin_set)
   install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
   foreach( a ${ARG_ALIASES} )
     set( alias_suffix "${a}-${ARG_TRIPLE}.bc" )
-    add_custom_target( ${alias_suffix} ALL
+    add_custom_command(
+      OUTPUT ${alias_suffix}
       COMMAND ${CMAKE_COMMAND} -E create_symlink ${obj_suffix} ${alias_suffix}
       DEPENDS prepare-${obj_suffix} )
-    set_target_properties( "${alias_suffix}" PROPERTIES FOLDER "libclc/Device IR/Aliases" )
-    install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
+    add_custom_target( alias-${alias_suffix} ALL DEPENDS ${alias_suffix} )
+    set_target_properties( alias-${alias_suffix} PROPERTIES FOLDER "libclc/Device IR/Aliases" )
+    install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix}
+             DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
   endforeach( a )
 endfunction(add_libclc_builtin_set)
 

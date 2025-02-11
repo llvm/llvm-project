@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCELFStreamer.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -34,7 +33,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
 
@@ -618,10 +616,6 @@ void MCELFStreamer::finishImpl() {
   this->MCObjectStreamer::finishImpl();
 }
 
-void MCELFStreamer::emitThumbFunc(MCSymbol *Func) {
-  llvm_unreachable("Generic ELF doesn't support this directive");
-}
-
 void MCELFStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   llvm_unreachable("ELF doesn't support this directive");
 }
@@ -698,8 +692,8 @@ MCELFStreamer::getAttributeItem(unsigned Attribute) {
   return nullptr;
 }
 
-size_t
-MCELFStreamer::calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec) {
+size_t MCELFStreamer::calculateContentSize(
+    SmallVector<AttributeItem, 64> &AttrsVec) const {
   size_t Result = 0;
   for (const AttributeItem &Item : AttrsVec) {
     switch (Item.Type) {
@@ -783,6 +777,67 @@ void MCELFStreamer::createAttributesSection(
   }
 
   AttrsVec.clear();
+}
+
+void MCELFStreamer::createAttributesWithSubsection(
+    MCSection *&AttributeSection, const Twine &Section, unsigned Type,
+    SmallVector<AttributeSubSection, 64> &SubSectionVec) {
+  // <format-version: 'A'>
+  // [ <uint32: subsection-length> NTBS: vendor-name
+  //   <bytes: vendor-data>
+  // ]*
+  // vendor-data expends to:
+  // <uint8: optional> <uint8: parameter type> <attribute>*
+  if (0 == SubSectionVec.size()) {
+    return;
+  }
+
+  // Switch section to AttributeSection or get/create the section.
+  if (AttributeSection) {
+    switchSection(AttributeSection);
+  } else {
+    AttributeSection = getContext().getELFSection(Section, Type, 0);
+    switchSection(AttributeSection);
+
+    // Format version
+    emitInt8(0x41);
+  }
+
+  for (AttributeSubSection &SubSection : SubSectionVec) {
+    // subsection-length + vendor-name + '\0'
+    const size_t VendorHeaderSize = 4 + SubSection.VendorName.size() + 1;
+    // optional + parameter-type
+    const size_t VendorParameters = 1 + 1;
+    const size_t ContentsSize = calculateContentSize(SubSection.Content);
+
+    emitInt32(VendorHeaderSize + VendorParameters + ContentsSize);
+    emitBytes(SubSection.VendorName);
+    emitInt8(0); // '\0'
+    emitInt8(SubSection.IsOptional);
+    emitInt8(SubSection.ParameterType);
+
+    for (AttributeItem &Item : SubSection.Content) {
+      emitULEB128IntValue(Item.Tag);
+      switch (Item.Type) {
+      default:
+        assert(0 && "Invalid attribute type");
+        break;
+      case AttributeItem::NumericAttribute:
+        emitULEB128IntValue(Item.IntValue);
+        break;
+      case AttributeItem::TextAttribute:
+        emitBytes(Item.StringValue);
+        emitInt8(0); // '\0'
+        break;
+      case AttributeItem::NumericAndTextAttributes:
+        emitULEB128IntValue(Item.IntValue);
+        emitBytes(Item.StringValue);
+        emitInt8(0); // '\0'
+        break;
+      }
+    }
+  }
+  SubSectionVec.clear();
 }
 
 MCStreamer *llvm::createELFStreamer(MCContext &Context,

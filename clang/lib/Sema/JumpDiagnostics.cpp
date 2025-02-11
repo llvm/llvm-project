@@ -179,9 +179,9 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
       }
     }
 
-    const Expr *Init = VD->getInit();
-    if (S.Context.getLangOpts().CPlusPlus && VD->hasLocalStorage() && Init &&
-        !Init->containsErrors()) {
+    if (const Expr *Init = VD->getInit(); S.Context.getLangOpts().CPlusPlus &&
+                                          VD->hasLocalStorage() && Init &&
+                                          !Init->containsErrors()) {
       // C++11 [stmt.dcl]p3:
       //   A program that jumps from a point where a variable with automatic
       //   storage duration is not in scope to a point where it is in scope
@@ -561,12 +561,12 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     // implementable but a lot of work which we haven't felt up to doing.
     ExprWithCleanups *EWC = cast<ExprWithCleanups>(S);
     for (unsigned i = 0, e = EWC->getNumObjects(); i != e; ++i) {
-      if (auto *BDecl = EWC->getObject(i).dyn_cast<BlockDecl *>())
+      if (auto *BDecl = dyn_cast<BlockDecl *>(EWC->getObject(i)))
         for (const auto &CI : BDecl->captures()) {
           VarDecl *variable = CI.getVariable();
           BuildScopeInformation(variable, BDecl, origParentScope);
         }
-      else if (auto *CLE = EWC->getObject(i).dyn_cast<CompoundLiteralExpr *>())
+      else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(EWC->getObject(i)))
         BuildScopeInformation(CLE, origParentScope);
       else
         llvm_unreachable("unexpected cleanup object type");
@@ -613,6 +613,16 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
         ParentScope, diag::note_acc_branch_into_compute_construct,
         diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
     BuildScopeInformation(CC->getStructuredBlock(), NewParentScope);
+    return;
+  }
+
+  case Stmt::OpenACCCombinedConstructClass: {
+    unsigned NewParentScope = Scopes.size();
+    OpenACCCombinedConstruct *CC = cast<OpenACCCombinedConstruct>(S);
+    Scopes.push_back(GotoScope(
+        ParentScope, diag::note_acc_branch_into_compute_construct,
+        diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
+    BuildScopeInformation(CC->getLoop(), NewParentScope);
     return;
   }
 
@@ -776,8 +786,7 @@ void JumpScopeChecker::VerifyIndirectJumps() {
     if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(TheLabel->getStmt())))
       continue;
     unsigned LabelScope = LabelAndGotoScopes[TheLabel->getStmt()];
-    if (!TargetScopes.contains(LabelScope))
-      TargetScopes[LabelScope] = TheLabel;
+    TargetScopes.try_emplace(LabelScope, TheLabel);
   }
 
   // For each target scope, make sure it's trivially reachable from

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ;
 ; Bug 6714. Use sign-extend to promote the arguments for compare
 ; equal/not-equal for 8- and 16-bit types with negative constants.

@@ -61,6 +61,11 @@ struct alignas(void *) GlobalInlineDescriptor {
 };
 static_assert(sizeof(GlobalInlineDescriptor) == sizeof(void *), "");
 
+enum class Lifetime : uint8_t {
+  Started,
+  Ended,
+};
+
 /// Inline descriptor embedded in structures and arrays.
 ///
 /// Such descriptors precede all composite array elements and structure fields.
@@ -100,12 +105,14 @@ struct InlineDescriptor {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsArrayElement : 1;
 
+  Lifetime LifeState;
+
   const Descriptor *Desc;
 
   InlineDescriptor(const Descriptor *D)
       : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
         IsBase(false), IsActive(false), IsFieldMutable(false),
-        IsArrayElement(false), Desc(D) {}
+        IsArrayElement(false), LifeState(Lifetime::Started), Desc(D) {}
 
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
@@ -201,8 +208,8 @@ public:
   SourceLocation getLocation() const;
   SourceInfo getLoc() const;
 
-  const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
-  const Expr *asExpr() const { return Source.dyn_cast<const Expr *>(); }
+  const Decl *asDecl() const { return dyn_cast<const Decl *>(Source); }
+  const Expr *asExpr() const { return dyn_cast<const Expr *>(Source); }
   const DeclTy &getSource() const { return Source; }
 
   const ValueDecl *asValueDecl() const {

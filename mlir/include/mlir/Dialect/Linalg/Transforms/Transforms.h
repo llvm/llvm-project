@@ -699,11 +699,11 @@ FailureOr<GenericOp> interchangeGenericOp(RewriterBase &rewriter,
                                           GenericOp genericOp,
                                           ArrayRef<unsigned> interchangeVector);
 
-/// Create a GenericOp from the given named operation `namedOp` and replace
-/// namedOp.
-/// Return failure if `namedOp` is a GenericOp or misses a region builder.
+/// Create a GenericOp from the given named operation `linalgOp` and replace
+/// the given `linalgOp`.
+/// Return failure if `linalgOp` is a GenericOp or misses a region builder.
 FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
-                                       LinalgOp namedOp);
+                                       LinalgOp linalgOp);
 
 /// Create a namedOp from the given GenericOp and replace the GenericOp.
 /// Currently we can specialize only trivial linalg copy operations.
@@ -1121,7 +1121,8 @@ struct LowerPackResult {
 
 /// Rewrite pack as pad + reshape + transpose.
 FailureOr<LowerPackResult> lowerPack(RewriterBase &rewriter,
-                                     tensor::PackOp packOp);
+                                     tensor::PackOp packOp,
+                                     bool lowerPadLikeWithInsertSlice = true);
 
 struct LowerUnPackOpResult {
   tensor::EmptyOp emptyOp;
@@ -1131,8 +1132,9 @@ struct LowerUnPackOpResult {
 };
 
 /// Rewrite pack as empty + transpose + reshape + extract_slice.
-FailureOr<LowerUnPackOpResult> lowerUnPack(RewriterBase &rewriter,
-                                           tensor::UnPackOp unPackOp);
+FailureOr<LowerUnPackOpResult>
+lowerUnPack(RewriterBase &rewriter, tensor::UnPackOp unPackOp,
+            bool lowerUnpadLikeWithExtractSlice = true);
 
 /// Struct to hold the result of a `pack` call.
 struct PackResult {
@@ -1393,6 +1395,14 @@ FailureOr<Operation *>
 decomposeWinogradOutputTransformOp(RewriterBase &rewriter,
                                    linalg::WinogradOutputTransformOp op);
 
+/// Method to deduplicate operands and remove dead results of `linalg.generic`
+/// operations. This is effectively DCE for a linalg.generic op. If there is
+/// deduplication of operands orremoval of results, replaces the `genericOp`
+/// with a new op and returns it. Returns the same operation if there is no
+/// deduplication/removal.
+FailureOr<linalg::GenericOp> deduplicateOperandsAndRemoveDeadResults(
+    RewriterBase &rewriter, linalg::GenericOp genericOp, bool removeOutputs);
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.
 // TODO: every single such pattern should be a close to noop wrapper around a
@@ -1503,8 +1513,8 @@ using OptimizeCopyFn =
 
 /// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
-struct GeneralizePadOpPattern : public OpRewritePattern<tensor::PadOp> {
-  GeneralizePadOpPattern(MLIRContext *context, PatternBenefit benefit = 1)
+struct DecomposePadOpPattern : public OpRewritePattern<tensor::PadOp> {
+  DecomposePadOpPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : OpRewritePattern<tensor::PadOp>(context, benefit) {}
   LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override;
@@ -1516,10 +1526,10 @@ protected:
 };
 
 /// Rewrites a tensor::PackOp into a sequence of:
-///   * tensor::PadOp + linalg::TransposeOp + tensor::ExtractSliceOp +
-///     tensor::EmptyOp + tensor::InsertSliceOp ops.
+///   * tensor::PadOp + linalg::TransposeOp + tensor::EmptyOp +
+///     tensor::InsertSliceOp ops.
 ///
-/// Required that all the outer dims of the input tensor::PackOp are 1.
+/// Requires that all the outer dims of the input tensor::PackOp are 1.
 ///
 /// Before:
 /// ```
@@ -1537,10 +1547,6 @@ protected:
 ///     ^bb0(...):
 ///       tensor.yield %arg2 : f32
 ///   } : tensor<5x1xf32> to tensor<?x2xf32>
-///   // ExtractSliceOp
-///   %extracted_slice = tensor.extract_slice %padded[0, 0] [%tile_dim_1, 2] [1,
-///   1]
-///     : tensor<?x2xf32> to tensor<?x2xf32>
 ///   // EmptyOp + TransposeOp
 ///   %empty = tensor.empty(%arg3) : tensor<2x?xf32>
 ///   %transposed = linalg.transpose
@@ -1552,17 +1558,41 @@ protected:
 ///     into %arg1[0, 0, 0, 0] [1, 1, 2, %tile_dim_1] [1, 1, 1, 1]
 ///     : tensor<2x?xf32> into tensor<1x1x2x?xf32>
 /// ```
-struct GeneralizeOuterUnitDimsPackOpPattern
+struct DecomposeOuterUnitDimsPackOpPattern
     : public OpRewritePattern<tensor::PackOp> {
   using OpRewritePattern<tensor::PackOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(tensor::PackOp packOp,
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Rewrites a tensor::UnPackOp into a sequence of rank-reduced extract_slice op
-/// + transpose op + insert_slice op, where the tensor::UnPackOp has outer dims
-/// being all 1s.
-struct GeneralizeOuterUnitDimsUnPackOpPattern
+/// Rewrites a tensor::UnPackOp into a sequence of rank-reduced
+///   * tensor::ExtractSliceOp + linalg::TransposeOp + tensor::InsertSliceOp
+///
+/// Requires that all the outer dims of the input tensor::PackOp are 1.
+///
+/// Before:
+/// ```
+/// %packed = tensor.unpack %input
+///   inner_dims_pos = [1, 0]
+///   inner_tiles = [2, 8]
+///   into %output : tensor<1x1x2x8xf32> -> tensor<5x1xf32>
+/// ```
+///
+/// After:
+/// ```
+///   // Rank-reduced extract to obtain the tile
+///   %slice = tensor.extract_slice %arg0[0, 0, 0, 0] [1, 1, 2, 8] [1, 1, 1, 1]
+///     : tensor<1x1x2x8xf32> to tensor<2x8xf32>
+///   // EmptyOp + TransposeOp
+///   %init = tensor.empty() : tensor<8x2xf32>
+///   %transposed = linalg.transpose
+///     ins(%extracted_slice : tensor<2x8xf32>)
+///     outs(%0 : tensor<8x2xf32>) permutation = [1, 0]
+///   // Extract a slice matching the specified output size
+///   %result = tensor.extract_slice %transposed[0, 0] [5, 1] [1, 1]
+///     : tensor<8x2xf32> to tensor<5x1xf32>
+/// ```
+struct DecomposeOuterUnitDimsUnPackOpPattern
     : public OpRewritePattern<tensor::UnPackOp> {
   using OpRewritePattern<tensor::UnPackOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(tensor::UnPackOp unpackOp,
@@ -1687,15 +1717,19 @@ void populateLinalgGenericOpsSpecializationPatterns(
 void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
                                           PatternBenefit benefit = 1);
 
+/// Populates patterns to decompose tensor.pack and tensor.unpack Ops into e.g.
+/// tensor.pad, linalg.transpose, tensor.{insert|extract}_slice. Require all
+/// outer dims to be unit.
+void populateDecomposePackUnpackPatterns(RewritePatternSet &patterns);
+
+/// Populates patterns to decompose tensor.pad into e.g.
+/// tensor.empty, linalg.fill, tensor.insert_slice.
+void populateDecomposePadPatterns(RewritePatternSet &patterns);
+
 /// Populates patterns to transform linalg.conv_2d_xxx operations into
 /// linalg.generic (for img2col packing) and linalg.matmul.
 /// \see rewriteInIm2Col for more details.
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
-
-/// Populates `patterns` with vectorisation patterns for tensor.insert_slice.
-/// TODO: Avoid having a dedicated `populate{}` for one pattern. Instead, either
-/// expand or merge with other `populate{}`.
-void populateInsertSliceVectorizationPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that vectorize tensor.pad.
 /// These patterns are meant to apply in a complementary fashion. Benefits
@@ -1755,7 +1789,7 @@ void populateDataLayoutPropagationPatterns(
     const ControlPropagationFn &controlPackUnPackPropagation);
 
 /// Pattern to remove dead operands and results of `linalg.generic` operations.
-/// This is effectively DCE for a linalg op.
+/// This is a pattern wrapper for `deduplicateOperandsAndRemoveDeadResults`.
 void populateEraseUnusedOperandsAndResultsPatterns(RewritePatternSet &patterns);
 
 /// Patterns to promote inputs to outputs and remove unused inputs of

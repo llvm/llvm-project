@@ -219,6 +219,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FCOS:                       return "fcos";
   case ISD::STRICT_FCOS:                return "strict_fcos";
   case ISD::FSINCOS:                    return "fsincos";
+  case ISD::FMODF:                      return "fmodf";
   case ISD::FTAN:                       return "ftan";
   case ISD::STRICT_FTAN:                return "strict_ftan";
   case ISD::FASIN:                      return "fasin";
@@ -566,6 +567,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return "histogram";
+
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    return "find_last_active";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \

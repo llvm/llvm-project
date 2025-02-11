@@ -162,6 +162,7 @@ struct Method {
   bool DesignatedInit = false;
   bool Required = false;
   StringRef ResultType;
+  StringRef SwiftReturnOwnership;
 };
 
 typedef std::vector<Method> MethodsSeq;
@@ -196,6 +197,8 @@ template <> struct MappingTraits<Method> {
     IO.mapOptional("DesignatedInit", M.DesignatedInit, false);
     IO.mapOptional("Required", M.Required, false);
     IO.mapOptional("ResultType", M.ResultType, StringRef(""));
+    IO.mapOptional("SwiftReturnOwnership", M.SwiftReturnOwnership,
+                   StringRef(""));
   }
 };
 } // namespace yaml
@@ -291,6 +294,7 @@ struct Function {
   StringRef SwiftName;
   StringRef Type;
   StringRef ResultType;
+  StringRef SwiftReturnOwnership;
 };
 
 typedef std::vector<Function> FunctionsSeq;
@@ -313,6 +317,8 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("SwiftPrivate", F.SwiftPrivate);
     IO.mapOptional("SwiftName", F.SwiftName, StringRef(""));
     IO.mapOptional("ResultType", F.ResultType, StringRef(""));
+    IO.mapOptional("SwiftReturnOwnership", F.SwiftReturnOwnership,
+                   StringRef(""));
   }
 };
 } // namespace yaml
@@ -459,6 +465,7 @@ struct Tag {
   std::optional<bool> FlagEnum;
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
   std::optional<bool> SwiftCopyable;
+  std::optional<bool> SwiftEscapable;
   FunctionsSeq Methods;
   FieldsSeq Fields;
 
@@ -498,6 +505,7 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("FlagEnum", T.FlagEnum);
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
     IO.mapOptional("SwiftCopyable", T.SwiftCopyable);
+    IO.mapOptional("SwiftEscapable", T.SwiftEscapable);
     IO.mapOptional("Methods", T.Methods);
     IO.mapOptional("Fields", T.Fields);
     IO.mapOptional("Tags", T.Tags);
@@ -823,6 +831,7 @@ public:
       emitError("'FactoryAsInit' is no longer valid; use 'SwiftName' instead");
 
     MI.ResultType = std::string(M.ResultType);
+    MI.SwiftReturnOwnership = std::string(M.SwiftReturnOwnership);
 
     // Translate parameter information.
     convertParams(M.Params, MI, MI.Self);
@@ -948,6 +957,7 @@ public:
     convertNullability(Function.Nullability, Function.NullabilityOfRet, FI,
                        Function.Name);
     FI.ResultType = std::string(Function.ResultType);
+    FI.SwiftReturnOwnership = std::string(Function.SwiftReturnOwnership);
     FI.setRetainCountConvention(Function.RetainCountConvention);
   }
 
@@ -983,6 +993,8 @@ public:
 
     if (T.SwiftCopyable)
       TI.setSwiftCopyable(T.SwiftCopyable);
+    if (T.SwiftEscapable)
+      TI.setSwiftEscapable(T.SwiftEscapable);
 
     if (T.EnumConvenienceKind) {
       if (T.EnumExtensibility) {

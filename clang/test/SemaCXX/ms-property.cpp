@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -ast-print -verify -triple=x86_64-pc-win32 -fms-compatibility %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fms-compatibility -emit-pch -o %t %s
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fms-compatibility -include-pch %t -verify %s -ast-print -o - | FileCheck %s
-// expected-no-diagnostics
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fms-compatibility -emit-pch -o %t -verify %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fms-compatibility -include-pch %t %s -ast-print -o - | FileCheck %s
+// RUN: %clang_cc1 -fdeclspec -fsyntax-only -verify %s -std=c++23
 
 #ifndef HEADER
 #define HEADER
@@ -85,4 +85,40 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: return Test1::GetTest1()->X;
   return Test1::GetTest1()->X;
 }
+
+struct X {
+  int implicit_object_member_function() { return 0; }
+  static int static_member_function() { return 0; }
+
+  __declspec(property(get=implicit_object_member_function)) int imp;
+  __declspec(property(get=static_member_function)) int st;
+
+#if __cplusplus >= 202302L
+  int explicit_object_member_function(this X self) { return 0; }
+  __declspec(property(get=explicit_object_member_function)) int exp;
+#endif
+};
+
+[[nodiscard]] X get_x();
+void f() {
+  (void) get_x().imp;
+  (void) get_x().st;
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+#if __cplusplus >= 202302L
+  (void) get_x().exp;
+#endif
+}
+
+#if __cplusplus >= 202302L
+struct Y {
+  Y() = default;
+  Y(const Y&) = delete;
+  int explicit_object_member_function(this Y) { return 0; }
+  __declspec(property(get = explicit_object_member_function)) int prop;
+};
+void g() {
+  (void) Y().prop;
+}
+#endif
+
 #endif // HEADER

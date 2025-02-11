@@ -1,7 +1,7 @@
-// REQUIRES: darwin
+// REQUIRES: continuous-mode
 
 // RUN: rm -rf %t.dir && mkdir -p %t.dir
-// RUN: %clang_pgogen -o %t.exe %s
+// RUN: %clang_pgogen_cont -o %t.exe %s
 //
 // Note: %%p is needed here, not %p, because of lit's path substitution.
 // RUN: env LLVM_PROFILE_FILE="%t.dir/%c-%%p" %run %t.exe

@@ -99,7 +99,7 @@ def G_PHI : GenericInstruction {
 }
 
 def G_FRAME_INDEX : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
+  let OutOperandList = (outs ptype0:$dst);
   let InOperandList = (ins unknown:$src2);
   let hasSideEffects = false;
 }
@@ -384,6 +384,22 @@ def G_ASHR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type1:$src2);
   let hasSideEffects = false;
+}
+
+// Generic absolute difference signed.
+def G_ABDS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
+// Generic absolute difference unsigned.
+def G_ABDU : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
 }
 
 /// Funnel 'double' shifts take 3 operands, 2 inputs and the shift amount.

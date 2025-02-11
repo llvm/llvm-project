@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL_SIMD
-#define _LIBCPP_EXPERIMENTAL_SIMD
+#ifndef _LIBCPP___CXX03_EXPERIMENTAL_SIMD
+#define _LIBCPP___CXX03_EXPERIMENTAL_SIMD
 
 /*
     experimental/simd synopsis
@@ -85,4 +85,4 @@ inline namespace parallelism_v2 {
 #include <__cxx03/experimental/__simd/traits.h>
 #include <__cxx03/experimental/__simd/vec_ext.h>
 
-#endif /* _LIBCPP_EXPERIMENTAL_SIMD */
+#endif /* _LIBCPP___CXX03_EXPERIMENTAL_SIMD */

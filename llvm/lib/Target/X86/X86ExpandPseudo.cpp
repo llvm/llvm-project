@@ -230,8 +230,8 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
                      .addReg(TargetReg, RegState::Define)
                      .addReg(X86::RAX)
                      .getInstr();
-  if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, Marker);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MBB.getParent()->moveAdditionalCallInfo(&MI, Marker);
 
   // Emit call to ObjC runtime.
   const uint32_t *RegMask =
@@ -284,7 +284,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     // Adjust stack pointer.
     int StackAdj = StackAdjust.getImm();
     int MaxTCDelta = X86FI->getTCReturnAddrDelta();
-    int Offset = 0;
+    int64_t Offset = 0;
     assert(MaxTCDelta <= 0 && "MaxTCDelta should never be positive");
 
     // Incoporate the retaddr area.
@@ -297,7 +297,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
 
     if (Offset) {
       // Check for possible merge with preceding ADD instruction.
-      Offset += X86FL->mergeSPUpdates(MBB, MBBI, true);
+      Offset = X86FL->mergeSPAdd(MBB, MBBI, Offset, true);
       X86FL->emitSPUpdate(MBB, MBBI, DL, Offset, /*InEpilogue=*/true);
     }
 
@@ -360,9 +360,9 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     NewMI.copyImplicitOps(*MBBI->getParent()->getParent(), *MBBI);
     NewMI.setCFIType(*MBB.getParent(), MI.getCFIType());
 
-    // Update the call site info.
-    if (MBBI->isCandidateForCallSiteEntry())
-      MBB.getParent()->moveCallSiteInfo(&*MBBI, &NewMI);
+    // Update the call info.
+    if (MBBI->isCandidateForAdditionalCallInfo())
+      MBB.getParent()->moveAdditionalCallInfo(&*MBBI, &NewMI);
 
     // Delete the pseudo instruction TCRETURN.
     MBB.erase(MBBI);
@@ -559,12 +559,14 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   }
   case X86::PTILELOADDV:
   case X86::PTILELOADDT1V:
+  case X86::PTILELOADDRSV:
+  case X86::PTILELOADDRST1V:
   case X86::PTCVTROWD2PSrreV:
   case X86::PTCVTROWD2PSrriV:
-  case X86::PTCVTROWPS2PBF16HrreV:
-  case X86::PTCVTROWPS2PBF16HrriV:
-  case X86::PTCVTROWPS2PBF16LrreV:
-  case X86::PTCVTROWPS2PBF16LrriV:
+  case X86::PTCVTROWPS2BF16HrreV:
+  case X86::PTCVTROWPS2BF16HrriV:
+  case X86::PTCVTROWPS2BF16LrreV:
+  case X86::PTCVTROWPS2BF16LrriV:
   case X86::PTCVTROWPS2PHHrreV:
   case X86::PTCVTROWPS2PHHrriV:
   case X86::PTCVTROWPS2PHLrreV:
@@ -575,6 +577,12 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
+    case X86::PTILELOADDRSV:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDRS);
+      break;
+    case X86::PTILELOADDRST1V:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDRST1);
+      break;
     case X86::PTILELOADDV:
       Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
       break;
@@ -587,17 +595,17 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTCVTROWD2PSrriV:
       Opc = X86::TCVTROWD2PSrri;
       break;
-    case X86::PTCVTROWPS2PBF16HrreV:
-      Opc = X86::TCVTROWPS2PBF16Hrre;
+    case X86::PTCVTROWPS2BF16HrreV:
+      Opc = X86::TCVTROWPS2BF16Hrre;
       break;
-    case X86::PTCVTROWPS2PBF16HrriV:
-      Opc = X86::TCVTROWPS2PBF16Hrri;
+    case X86::PTCVTROWPS2BF16HrriV:
+      Opc = X86::TCVTROWPS2BF16Hrri;
       break;
-    case X86::PTCVTROWPS2PBF16LrreV:
-      Opc = X86::TCVTROWPS2PBF16Lrre;
+    case X86::PTCVTROWPS2BF16LrreV:
+      Opc = X86::TCVTROWPS2BF16Lrre;
       break;
-    case X86::PTCVTROWPS2PBF16LrriV:
-      Opc = X86::TCVTROWPS2PBF16Lrri;
+    case X86::PTCVTROWPS2BF16LrriV:
+      Opc = X86::TCVTROWPS2BF16Lrri;
       break;
     case X86::PTCVTROWPS2PHHrreV:
       Opc = X86::TCVTROWPS2PHHrre;
@@ -719,22 +727,38 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PT2RPNTLVWZ0V:
   case X86::PT2RPNTLVWZ0T1V:
   case X86::PT2RPNTLVWZ1V:
-  case X86::PT2RPNTLVWZ1T1V: {
+  case X86::PT2RPNTLVWZ1T1V:
+  case X86::PT2RPNTLVWZ0RSV:
+  case X86::PT2RPNTLVWZ0RST1V:
+  case X86::PT2RPNTLVWZ1RSV:
+  case X86::PT2RPNTLVWZ1RST1V: {
     for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
     case X86::PT2RPNTLVWZ0V:
-      Opc = X86::T2RPNTLVWZ0;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0);
       break;
     case X86::PT2RPNTLVWZ0T1V:
-      Opc = X86::T2RPNTLVWZ0T1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0T1);
       break;
     case X86::PT2RPNTLVWZ1V:
-      Opc = X86::T2RPNTLVWZ1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1);
       break;
     case X86::PT2RPNTLVWZ1T1V:
-      Opc = X86::T2RPNTLVWZ1T1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1T1);
+      break;
+    case X86::PT2RPNTLVWZ0RSV:
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0RS);
+      break;
+    case X86::PT2RPNTLVWZ0RST1V:
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0RST1);
+      break;
+    case X86::PT2RPNTLVWZ1RSV:
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1RS);
+      break;
+    case X86::PT2RPNTLVWZ1RST1V:
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1RST1);
       break;
     default:
       llvm_unreachable("Impossible Opcode!");
@@ -742,10 +766,12 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     MI.setDesc(TII->get(Opc));
     return true;
   }
-  case X86::PTTRANSPOSEDV: {
+  case X86::PTTRANSPOSEDV:
+  case X86::PTCONJTFP16V: {
     for (int i = 2; i > 0; --i)
       MI.removeOperand(i);
-    MI.setDesc(TII->get(X86::TTRANSPOSED));
+    MI.setDesc(TII->get(Opcode == X86::PTTRANSPOSEDV ? X86::TTRANSPOSED
+                                                     : X86::TCONJTFP16));
     return true;
   }
   case X86::PTCMMIMFP16PSV:
@@ -756,8 +782,17 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PTDPBUUDV:
   case X86::PTDPBF16PSV:
   case X86::PTDPFP16PSV:
+  case X86::PTTDPBF16PSV:
+  case X86::PTTDPFP16PSV:
+  case X86::PTTCMMIMFP16PSV:
+  case X86::PTTCMMRLFP16PSV:
+  case X86::PTCONJTCMMIMFP16PSV:
   case X86::PTMMULTF32PSV:
-  case X86::PTTMMULTF32PSV: {
+  case X86::PTTMMULTF32PSV:
+  case X86::PTDPBF8PSV:
+  case X86::PTDPBHF8PSV:
+  case X86::PTDPHBF8PSV:
+  case X86::PTDPHF8PSV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
@@ -771,11 +806,38 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
+    case X86::PTTDPBF16PSV:
+      Opc = X86::TTDPBF16PS;
+      break;
+    case X86::PTTDPFP16PSV:
+      Opc = X86::TTDPFP16PS;
+      break;
+    case X86::PTTCMMIMFP16PSV:
+      Opc = X86::TTCMMIMFP16PS;
+      break;
+    case X86::PTTCMMRLFP16PSV:
+      Opc = X86::TTCMMRLFP16PS;
+      break;
+    case X86::PTCONJTCMMIMFP16PSV:
+      Opc = X86::TCONJTCMMIMFP16PS;
+      break;
     case X86::PTMMULTF32PSV:
       Opc = X86::TMMULTF32PS;
       break;
     case X86::PTTMMULTF32PSV:
       Opc = X86::TTMMULTF32PS;
+      break;
+    case X86::PTDPBF8PSV:
+      Opc = X86::TDPBF8PS;
+      break;
+    case X86::PTDPBHF8PSV:
+      Opc = X86::TDPBHF8PS;
+      break;
+    case X86::PTDPHBF8PSV:
+      Opc = X86::TDPHBF8PS;
+      break;
+    case X86::PTDPHF8PSV:
+      Opc = X86::TDPHF8PS;
       break;
 
     default:

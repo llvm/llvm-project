@@ -1187,6 +1187,9 @@ public:
 
 private:
   CompilerType m_type;
+  /// This is used both to control whether this result entity can (and should)
+  /// track the value in inferior memory, as well as to control whether LLDB
+  /// needs to allocate memory for the variable during materialization.
   bool m_is_program_reference;
   bool m_keep_in_memory;
 

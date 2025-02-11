@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
 
 ; Test that unaligned load is enabled for 128B
 ; CHECK-NOT: r{{[0-9]+}} = memw

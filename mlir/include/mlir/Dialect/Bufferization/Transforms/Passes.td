@@ -250,8 +250,8 @@ def OptimizeAllocationLiveness
   let summary = "This pass optimizes the liveness of temp allocations in the "
                 "input function";
   let description =
-       [{This pass will find all operations that have a memory allocation effect. 
-       It will search for the corresponding deallocation and move it right after 
+       [{This pass will find all operations that have a memory allocation effect.
+       It will search for the corresponding deallocation and move it right after
        the last user of the allocation.
        This will optimize the liveness of the allocations.
 
@@ -341,22 +341,6 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
   ];
   let constructor = "mlir::bufferization::createBufferResultsToOutParamsPass()";
   let dependentDialects = ["memref::MemRefDialect"];
-}
-
-def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
-  let summary = "Finalize a partial bufferization";
-  let description = [{
-    A bufferize pass that finalizes a partial bufferization by removing
-    remaining `bufferization.to_tensor` and `bufferization.to_buffer` operations.
-
-    The removal of those operations is only possible if the operations only
-    exist in pairs, i.e., all uses of `bufferization.to_tensor` operations are
-    `bufferization.to_buffer` operations.
-
-    This pass will fail if not all operations can be removed or if any operation
-    with tensor typed operands remains.
-  }];
-  let constructor = "mlir::bufferization::createFinalizingBufferizePass()";
 }
 
 def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "ModuleOp">  {
@@ -526,6 +510,10 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
            /*default=*/"false",
            "The memory space of an memref types must always be inferred. If "
            "unset, a default memory space of 0 is used otherwise.">,
+    Option<"useEncodingForMemorySpace", "use-encoding-for-memory-space", "bool",
+            /*default=*/"false",
+            "Use the Tensor encoding attribute for the memory space. Exclusive to"
+            " the 'must-infer-memory-space' option">,
     Option<"testAnalysisOnly", "test-analysis-only", "bool",
             /*default=*/"false",
            "Test only: Only run inplaceability analysis and annotate IR">,

@@ -240,10 +240,10 @@ static unsigned getNumUsedSlots(const UnwindCode &UnwindCode) {
   case UOP_AllocSmall:
   case UOP_SetFPReg:
   case UOP_PushMachFrame:
+  case UOP_Epilog:
     return 1;
   case UOP_SaveNonVol:
   case UOP_SaveXMM128:
-  case UOP_Epilog:
     return 2;
   case UOP_SaveNonVolBig:
   case UOP_SaveXMM128Big:
@@ -257,7 +257,7 @@ static unsigned getNumUsedSlots(const UnwindCode &UnwindCode) {
 // Prints one unwind code. Because an unwind code can occupy up to 3 slots in
 // the unwind codes array, this function requires that the correct number of
 // slots is provided.
-static void printUnwindCode(ArrayRef<UnwindCode> UCs) {
+static void printUnwindCode(ArrayRef<UnwindCode> UCs, bool &SeenFirstEpilog) {
   assert(UCs.size() >= getNumUsedSlots(UCs[0]));
   outs() <<  format("      0x%02x: ", unsigned(UCs[0].u.CodeOffset))
          << getUnwindCodeTypeName(UCs[0].getUnwindOp());
@@ -301,11 +301,29 @@ static void printUnwindCode(ArrayRef<UnwindCode> UCs) {
     outs() << " " << (UCs[0].getOpInfo() ? "w/o" : "w")
            << " error code";
     break;
+
+  case UOP_Epilog:
+    if (SeenFirstEpilog) {
+      uint32_t Offset = UCs[0].getEpilogOffset();
+      if (Offset == 0) {
+        outs() << " padding";
+      } else {
+        outs() << " offset=" << format("0x%X", Offset);
+      }
+    } else {
+      SeenFirstEpilog = true;
+      bool AtEnd = (UCs[0].getOpInfo() & 0x1) != 0;
+      uint32_t Length = UCs[0].u.CodeOffset;
+      outs() << " atend=" << (AtEnd ? "yes" : "no")
+             << ", length=" << format("0x%X", Length);
+    }
+    break;
   }
   outs() << "\n";
 }
 
 static void printAllUnwindCodes(ArrayRef<UnwindCode> UCs) {
+  bool SeenFirstEpilog = false;
   for (const UnwindCode *I = UCs.begin(), *E = UCs.end(); I < E; ) {
     unsigned UsedSlots = getNumUsedSlots(*I);
     if (UsedSlots > UCs.size()) {
@@ -316,7 +334,7 @@ static void printAllUnwindCodes(ArrayRef<UnwindCode> UCs) {
              << " remaining in buffer";
       return ;
     }
-    printUnwindCode(ArrayRef(I, E));
+    printUnwindCode(ArrayRef(I, E), SeenFirstEpilog);
     I += UsedSlots;
   }
 }

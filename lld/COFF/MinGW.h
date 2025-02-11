@@ -25,7 +25,7 @@ class COFFLinkerContext;
 // symbols for MinGW.
 class AutoExporter {
 public:
-  AutoExporter(COFFLinkerContext &ctx,
+  AutoExporter(SymbolTable &symtab,
                const llvm::DenseSet<StringRef> &manualExcludeSymbols);
 
   void addWholeArchive(StringRef path);
@@ -42,10 +42,11 @@ public:
   bool shouldExport(Defined *sym) const;
 
 private:
-  COFFLinkerContext &ctx;
+  SymbolTable &symtab;
 };
 
-void writeDefFile(StringRef name, const std::vector<Export> &exports);
+void writeDefFile(COFFLinkerContext &, StringRef name,
+                  const std::vector<Export> &exports);
 
 // The -wrap option is a feature to rename symbols so that you can write
 // wrappers for existing functions. If you pass `-wrap:foo`, all

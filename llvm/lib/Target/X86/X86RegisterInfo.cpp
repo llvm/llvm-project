@@ -123,7 +123,8 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
 
   const TargetRegisterClass *Super = RC;
-  TargetRegisterClass::sc_iterator I = RC->getSuperClasses();
+  auto I = RC->superclasses().begin();
+  auto E = RC->superclasses().end();
   do {
     switch (Super->getID()) {
     case X86::FR32RegClassID:
@@ -172,7 +173,12 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
       if (getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
     }
-    Super = *I++;
+    if (I != E) {
+      Super = getRegClass(*I);
+      ++I;
+    } else {
+      Super = nullptr;
+    }
   } while (Super);
   return RC;
 }
@@ -216,21 +222,6 @@ X86RegisterInfo::getPointerRegClass(const MachineFunction &MF,
   case 4: // Available for tailcall (not callee-saved GPRs).
     return getGPRsForTailCall(MF);
   }
-}
-
-bool X86RegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                                           unsigned DefSubReg,
-                                           const TargetRegisterClass *SrcRC,
-                                           unsigned SrcSubReg) const {
-  // Prevent rewriting a copy where the destination size is larger than the
-  // input size. See PR41619.
-  // FIXME: Should this be factored into the base implementation somehow.
-  if (DefRC->hasSuperClassEq(&X86::GR64RegClass) && DefSubReg == 0 &&
-      SrcRC->hasSuperClassEq(&X86::GR64RegClass) && SrcSubReg == X86::sub_32bit)
-    return false;
-
-  return TargetRegisterInfo::shouldRewriteCopySrc(DefRC, DefSubReg,
-                                                  SrcRC, SrcSubReg);
 }
 
 const TargetRegisterClass *
@@ -1077,8 +1068,20 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PTCMMIMFP16PSV:
   case X86::PTCMMRLFP16PSV:
   case X86::PTTRANSPOSEDV:
+  case X86::PTTDPBF16PSV:
+  case X86::PTTDPFP16PSV:
+  case X86::PTTCMMIMFP16PSV:
+  case X86::PTTCMMRLFP16PSV:
+  case X86::PTCONJTCMMIMFP16PSV:
+  case X86::PTCONJTFP16V:
+  case X86::PTILELOADDRSV:
+  case X86::PTILELOADDRST1V:
   case X86::PTMMULTF32PSV:
-  case X86::PTTMMULTF32PSV: {
+  case X86::PTTMMULTF32PSV:
+  case X86::PTDPBF8PSV:
+  case X86::PTDPBHF8PSV:
+  case X86::PTDPHBF8PSV:
+  case X86::PTDPHF8PSV: {
     MachineOperand &MO1 = MI->getOperand(1);
     MachineOperand &MO2 = MI->getOperand(2);
     ShapeT Shape(&MO1, &MO2, MRI);
@@ -1088,7 +1091,11 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PT2RPNTLVWZ0V:
   case X86::PT2RPNTLVWZ0T1V:
   case X86::PT2RPNTLVWZ1V:
-  case X86::PT2RPNTLVWZ1T1V: {
+  case X86::PT2RPNTLVWZ1T1V:
+  case X86::PT2RPNTLVWZ0RSV:
+  case X86::PT2RPNTLVWZ0RST1V:
+  case X86::PT2RPNTLVWZ1RSV:
+  case X86::PT2RPNTLVWZ1RST1V: {
     MachineOperand &MO1 = MI->getOperand(1);
     MachineOperand &MO2 = MI->getOperand(2);
     MachineOperand &MO3 = MI->getOperand(3);
@@ -1161,8 +1168,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 
     auto TryAddNDDHint = [&](const MachineOperand &MO) {
       Register Reg = MO.getReg();
-      Register PhysReg =
-          Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
+      Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
       if (PhysReg && !MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
         TwoAddrHints.insert(PhysReg);
     };
