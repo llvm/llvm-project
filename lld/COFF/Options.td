@@ -270,6 +270,10 @@ def thinlto_object_suffix_replace : P<
 def thinlto_prefix_replace: P<
     "thinlto-prefix-replace",
     "'old;new' replace old prefix with new prefix in ThinLTO outputs">;
+def thinlto_distributor_eq: Joined<["--"], "thinlto-distributor=">,
+  HelpText<"Distributor to use for ThinLTO backend compilations">;
+def thinlto_remote_opt_tool_eq: Joined<["--"], "thinlto-remote-opt-tool=">,
+  HelpText<"Optimization tool to be invoked by the ThinLTO distributor">;
 def lto_obj_path : P<
     "lto-obj-path",
     "output native object for merged LTO unit to this path">;

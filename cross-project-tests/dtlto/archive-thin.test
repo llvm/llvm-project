@@ -1,0 +1,72 @@
+## Simple test that a DTLTO link succeeds and outputs the expected set of files
+## correctly when thin archives are present.
+
+# RUN: rm -rf %t.dir && split-file %s %t.dir && cd %t.dir
+# RUN: %clang -target x86_64-linux-gnu -c foo.c -o foo.o
+# RUN: %clang -target x86_64-linux-gnu -c -flto=thin bar.c -o bar.o
+# RUN: %clang -target x86_64-linux-gnu -c -flto=thin dog.c -o dog.o
+# RUN: %clang -target x86_64-linux-gnu -c -flto=thin cat.c -o cat.o
+# RUN: %clang -target x86_64-linux-gnu -c -flto=thin _start.c -o _start.o
+
+# RUN: llvm-ar rcs foo.a foo.o --thin
+## Create this bitcode thin archive in a sub-directory to test the expansion of
+## the path to a bitcode file which is referenced using "..", e.g. in this case
+## "../bar.o". The ".." should be collapsed in any expansion to avoid
+## referencing an unknown directory on the remote side.
+# RUN: mkdir lib
+# RUN: llvm-ar rcs lib/bar.a bar.o --thin
+## Create this bitcode thin archive with an absolute path entry containing "..".
+# RUN: llvm-ar rcs dog.a %t.dir/lib/../dog.o --thin
+# RUN: llvm-ar rcs cat.a cat.o --thin
+# RUN: llvm-ar rcs _start.a _start.o --thin
+
+# RUN: mkdir %t.dir/out && cd %t.dir/out
+
+# RUN: %clang -target x86_64-linux-gnu \
+# RUN:   %t.dir/foo.a %t.dir/lib/bar.a ../_start.a %t.dir/cat.a -Wl,--whole-archive,../dog.a \
+# RUN:   -flto=thin \
+# RUN:   -fthinlto-distributor=%python \
+# RUN:   -Xdist %llvm_src_root/utils/dtlto/local.py \
+# RUN:   --save-temps \
+# RUN:   -fuse-ld=lld \
+# RUN:   -nostdlib \
+# RUN:   -nostartfiles \
+# RUN:   -Wl,--save-temps \
+# RUN:   -Wl,-mllvm,--thinlto-remote-opt-tool-arg=-save-temps=cwd \
+# RUN:   -Werror
+
+## Check that the required output files have been created.
+# RUN: ls | FileCheck %s --check-prefix=OUTPUTS \
+# RUN:     --implicit-check-not=cat --implicit-check-not=foo
+
+## The DTLTO backend emits the JSON jobs description and summary shards.
+# OUTPUTS-DAG: a.{{[0-9]+}}.dist-file.json
+# OUTPUTS-DAG: bar.{{[0-9]+}}.{{[0-9]+}}.native.o.thinlto.bc{{$}}
+# OUTPUTS-DAG: dog.{{[0-9]+}}.{{[0-9]+}}.native.o.thinlto.bc{{$}}
+# OUTPUTS-DAG: _start.{{[0-9]+}}.{{[0-9]+}}.native.o.thinlto.bc{{$}}
+## Native output object files.
+# OUTPUTS-DAG: bar.{{[0-9]+}}.{{[0-9]+}}.native.o{{$}}
+# OUTPUTS-DAG: dog.{{[0-9]+}}.{{[0-9]+}}.native.o{{$}}
+# OUTPUTS-DAG: _start.{{[0-9]+}}.{{[0-9]+}}.native.o{{$}}
+
+## Check that bar.o and dog.o are not referenced using "..".
+# RUN: not grep '\.\.\(/\|\\\\\)\(bar\|dog\)\.o' a.*.dist-file.json
+
+#--- foo.c
+__attribute__((retain)) void foo() {}
+
+#--- bar.c
+extern void foo();
+__attribute__((retain)) void bar() { foo(); }
+
+#--- dog.c
+__attribute__((retain)) void dog() {}
+
+#--- cat.c
+__attribute__((retain)) void cat() {}
+
+#--- _start.c
+extern void bar();
+__attribute__((retain)) void _start() {
+  bar();
+}

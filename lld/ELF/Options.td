@@ -1,3 +1,4 @@
+
 include "llvm/Option/OptParser.td"
 
 // Convenience classes for long options which only accept two dashes. For lld
@@ -700,7 +701,10 @@ def thinlto_object_suffix_replace_eq: JJ<"thinlto-object-suffix-replace=">;
 def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 def thinlto_single_module_eq: JJ<"thinlto-single-module=">,
   HelpText<"Specify a single module to compile in ThinLTO mode, for debugging only">;
-
+def thinlto_distributor_eq: JJ<"thinlto-distributor=">,
+  HelpText<"Distributor to use for ThinLTO backend compilations">;
+def thinlto_remote_opt_tool_eq : JJ<"thinlto-remote-opt-tool=">,
+  HelpText<"Optimization tool to be invoked by the ThinLTO distributor">;
 defm fat_lto_objects: BB<"fat-lto-objects",
     "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",
     "Ignore the .llvm.lto section in relocatable object files (default).">;

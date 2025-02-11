@@ -1,0 +1,69 @@
+# REQUIRES: x86
+
+## Check that DTLTO handles imports files correctly.
+
+# RUN: rm -rf %t.dir && split-file %s %t.dir && cd %t.dir
+
+## Compile bitcode.
+# RUN: opt -module-summary 0.ll -o 0.o -O2
+# RUN: opt -module-summary 1.ll -o 1.o -O2
+
+## Common command line arguments. Note that the use of validate.py will cause
+## the link to fail.
+# RUN: echo "0.o 1.o \
+# RUN:       --thinlto-distributor=%python \
+# RUN:       -mllvm -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
+# RUN:       --thinlto-remote-opt-tool=dummy.exe" > l.rsp
+
+## We expect an import from 0.o into 1.o but no imports into 0.o. Check that the
+## expected input files have been added to the JSON.
+# RUN: not ld.lld @l.rsp >out.log 2>&1
+# RUN: FileCheck --input-file=out.log %s --check-prefixes=INPUTS,ERR
+
+# INPUTS:      "primary_input": [
+# INPUTS-NEXT:   "0.o"
+# INPUTS-NEXT: ]
+# INPUTS:      "imports": []
+# INPUTS:      "primary_input": [
+# INPUTS-NEXT:   "1.o"
+# INPUTS-NEXT: ]
+# INPUTS:      "imports": [
+# INPUTS-NEXT:   "0.o"
+# INPUTS-NEXT: ]
+
+## This check ensures that we have failed for the expected reason.
+# ERR: ld.lld: error: DTLTO backend compilation: cannot open native object file:
+
+
+## Check that imports files have not been created.
+# RUN: ls | FileCheck %s --check-prefix=NOINDEXFILES
+# NOINDEXFILES-NOT: imports
+
+
+## Check that imports files are created with --thinlto-emit-imports-files.
+# RUN: not ld.lld @l.rsp --thinlto-emit-imports-files 2>&1 \ 
+# RUN:   | FileCheck %s --check-prefixes=ERR
+# RUN: ls | FileCheck %s --check-prefix=INDEXFILES
+# INDEXFILES: 0.o.imports
+# INDEXFILES: 1.o.imports
+
+;--- 0.ll
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @g() {
+entry:
+  ret void
+}
+
+;--- 1.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+declare void @g(...)
+
+define void @f() {
+entry:
+  call void (...) @g()
+  ret void
+}

@@ -191,12 +191,13 @@ std::vector<StringRef> BitcodeCompiler::compile() {
   // to cache native object files for ThinLTO incremental builds. If a path was
   // specified, configure LTO to use it as the cache directory.
   FileCache cache;
+  AddBufferFn Addbuffer = [&](size_t task, const Twine &moduleName,
+                              std::unique_ptr<MemoryBuffer> mb) {
+    files[task] = std::move(mb);
+  };
   if (!ctx.arg.thinLTOCacheDir.empty())
-    cache = check(localCache("ThinLTO", "Thin", ctx.arg.thinLTOCacheDir,
-                             [&](size_t task, const Twine &moduleName,
-                                 std::unique_ptr<MemoryBuffer> mb) {
-                               files[task] = std::move(mb);
-                             }));
+    cache = check(
+        localCache("ThinLTO", "Thin", ctx.arg.thinLTOCacheDir, Addbuffer));
 
   checkError(ltoObj->run(
       [&](size_t task, const Twine &moduleName) {
@@ -204,7 +205,7 @@ std::vector<StringRef> BitcodeCompiler::compile() {
         return std::make_unique<CachedFileStream>(
             std::make_unique<raw_svector_ostream>(buf[task].second));
       },
-      cache));
+      Addbuffer, cache));
 
   // Emit empty index files for non-indexed files but not in single-module mode.
   for (StringRef s : thinIndices) {

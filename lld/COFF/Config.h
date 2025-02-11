@@ -192,6 +192,11 @@ struct Configuration {
   // Used for /lldltocachepolicy=policy
   llvm::CachePruningPolicy ltoCachePolicy;
 
+  // Used for --thinlto-distributor=
+  StringRef DTLTODistributor;
+  // Used for --thinlto-remote-opt-tool=
+  StringRef DTLTORemoteOptTool;
+
   // Used for /opt:[no]ltodebugpassmanager
   bool ltoDebugPassManager = false;
 

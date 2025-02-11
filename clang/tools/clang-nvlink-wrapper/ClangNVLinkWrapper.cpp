@@ -645,7 +645,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
           std::make_unique<raw_fd_ostream>(FD, true));
     };
 
-    if (Error Err = LTOBackend.run(AddStream))
+    if (Error Err = LTOBackend.run(AddStream, /*AddBuffer=*/nullptr))
       return Err;
 
     if (Args.hasArg(OPT_lto_emit_llvm) || Args.hasArg(OPT_lto_emit_asm))

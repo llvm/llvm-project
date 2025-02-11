@@ -1,0 +1,53 @@
+# REQUIRES: x86
+
+## Test that generated JSON file for DTLTO is valid and contains the expected
+## options based on the LTO configuration.
+
+# RUN: rm -rf %t.dir && split-file %s %t.dir && cd %t.dir
+
+## Compile bitcode.
+# RUN: opt -thinlto-bc foo.ll -o foo.o
+
+## Common command line arguments. Note that the use of validate.py will cause
+## the link to fail.
+# RUN: echo "foo.o \
+# RUN:       --thinlto-distributor=%python \
+# RUN:       -mllvm -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
+# RUN:       --thinlto-remote-opt-tool=my_clang.exe" > l.rsp
+
+## Command line arguments that should affect codegen.
+# RUN: echo "--lto-O3 \
+# RUN:       --lto-CGO2 \
+# RUN:       --no-lto-pgo-warn-mismatch \
+# RUN:       --lto-sample-profile=foo.ll \
+# RUN:       -mllvm -thinlto-distributor-arg=bibbity=10 \
+# RUN:       -mllvm -thinlto-remote-opt-tool-arg=bobbity=20" > o.rsp
+
+## Show that command line arguments have the desired effect when specified and
+## that the effect is not present otherwise.
+# RUN: not ld.lld @l.rsp @o.rsp 2>&1 | FileCheck %s --check-prefixes=ERR,OPT,BOTH
+# RUN: not ld.lld @l.rsp        2>&1 | FileCheck %s --check-prefixes=ERR,NONE,BOTH \
+# RUN:   --implicit-check-not=bibbity --implicit-check-not=bobbity \
+# RUN:   --implicit-check-not=-fprofile-instrument --implicit-check-not=foo.ll
+
+# OPT:  distributor_args=['bibbity=10']
+# NONE: distributor_args=[]
+
+# OPT:       "linker_output": "a.out"
+# OPT:       "linker_version": "LLD 1.0"
+# BOTH:      "my_clang.exe"
+# OPT:       "-O3"
+# NONE:      "-O2"
+# OPT:       "-fprofile-sample-use=foo.ll"
+# OPT:       "bobbity=20"
+
+# ERR: ld.lld: error: DTLTO backend compilation: cannot open native object file:
+
+#--- foo.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @foo() {
+entry:
+  ret void
+}

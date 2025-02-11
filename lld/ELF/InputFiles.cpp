@@ -21,6 +21,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
@@ -1702,6 +1703,38 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
+namespace dtlto {
+// Check if an archive file is a thin archive.
+bool isThinArchive(Ctx &ctx, StringRef archiveFilePath) {
+  const size_t thinArchiveMagicLen = sizeof(ThinArchiveMagic) - 1;
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> memBufferOrError =
+      MemoryBuffer::getFileSlice(archiveFilePath, thinArchiveMagicLen, 0);
+  if (std::error_code ec = memBufferOrError.getError()) {
+    ErrAlways(ctx) << "cannot open " << archiveFilePath << ": " << ec.message();
+    return false;
+  }
+
+  MemoryBufferRef memBufRef = *memBufferOrError.get();
+  return memBufRef.getBuffer().starts_with(ThinArchiveMagic);
+}
+
+// Compute a thin archive member full file path.
+std::string computeFullThinArchiveMemberPath(const StringRef modulePath,
+                                             const StringRef archiveName) {
+  assert(!archiveName.empty());
+  SmallString<64> archiveMemberPath;
+  if (path::is_relative(modulePath)) {
+    archiveMemberPath = path::parent_path(archiveName);
+    path::append(archiveMemberPath, modulePath);
+  } else
+    archiveMemberPath = modulePath;
+
+  path::remove_dots(archiveMemberPath, /*remove_dot_dot=*/true);
+  return archiveMemberPath.c_str();
+}
+} // namespace dtlto
+
 BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive, bool lazy)
     : InputFile(ctx, BitcodeKind, mb) {
@@ -1712,6 +1745,13 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   if (ctx.arg.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(ctx, mb.getBufferIdentifier());
 
+  // For DTLTO the name needs to be a valid path to a bitcode file.
+  bool dtltoThinArchiveHandling = !ctx.arg.DTLTODistributor.empty() &&
+                                  !archiveName.empty() &&
+                                  dtlto::isThinArchive(ctx, archiveName);
+  if (dtltoThinArchiveHandling)
+    path = dtlto::computeFullThinArchiveMemberPath(path, archiveName);
+
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two archives define two members with the same name, this
   // causes a collision which result in only one of the objects being taken
@@ -1719,13 +1759,29 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
   StringSaver &ss = ctx.saver;
-  StringRef name = archiveName.empty()
+  StringRef name = (archiveName.empty() || dtltoThinArchiveHandling)
                        ? ss.save(path)
                        : ss.save(archiveName + "(" + path::filename(path) +
                                  " at " + utostr(offsetInArchive) + ")");
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK2(lto::InputFile::create(mbref), this);
+
+  // A thin archive member file path potentially can be relative to a thin
+  // archive. This will result in an invalid file path name passed in
+  // 'mb->Identifier', (because from the linker's perspective, relative -
+  // means relative to the linker process' current directory).
+  // For non-archive bitcodes and referenced archive members, a correctly
+  // generated 'name' is used to identify the memory buffer associated with
+  // these bitcode files. However, for a non-referenced archive member,
+  // incorrect 'mb->Identifer' will be used as a path for generating an empty
+  // summary index file later, leading to a crash. We have to fix this problem
+  // by replacing the value of 'mb->Identifier' with 'name'.
+  // Since the MemoryBufferRef class does not allow an individual access to
+  // its data members, we will use the class copy constructor for updating the
+  // 'Indentifier' data member value.
+  if (dtltoThinArchiveHandling)
+    this->mb = mbref;
 
   Triple t(obj->getTargetTriple());
   ekind = getBitcodeELFKind(t);

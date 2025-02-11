@@ -1,0 +1,65 @@
+# REQUIRES: x86
+
+## Test that DTLTO writes the files it generates to the expected locations.
+
+# RUN: rm -rf %t.dir && split-file %s %t.dir && cd %t.dir
+
+# RUN: mkdir other && cd other
+
+## Compile bitcode.
+# RUN: opt -module-summary ../0.ll -o ../0.o
+# RUN: opt -module-summary ../1.ll -o ../1.o
+
+## Common command line arguments. Note that the use of validate.py will cause
+## the link to fail.
+# RUN: echo "--thinlto-distributor=%python \
+# RUN:   -mllvm -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
+# RUN:   --thinlto-remote-opt-tool=dummy.exe" > l.rsp
+
+## Check that the expected set of filenames have been generated.
+# RUN: not ld.lld @l.rsp ../0.o ../1.o -o ../up.elf --thinlto-emit-index-files \
+# RUN:   --thinlto-emit-imports-files >out.log 2>&1
+# RUN: FileCheck --input-file=out.log %s --check-prefixes=INPUTS,ERR
+
+# INPUTS:      "primary_input": [
+# INPUTS-NEXT:   "../0.o"
+# INPUTS-NEXT: ]
+# INPUTS:      "summary_index": [
+# INPUTS-NEXT:   "..{{(/|\\\\)}}0.{{[0-9]+}}.{{[0-9]+}}.native.o.thinlto.bc"
+# INPUTS-NEXT: ]
+# INPUTS:      "primary_input": [
+# INPUTS-NEXT:   "../1.o"
+# INPUTS-NEXT: ]
+# INPUTS:      "summary_index": [
+# INPUTS-NEXT:   "..{{(/|\\\\)}}1.{{[0-9]+}}.{{[0-9]+}}.native.o.thinlto.bc"
+# INPUTS-NEXT: ]
+
+# ERR: DTLTO backend compilation: cannot open native object file:
+
+## Check that imports and index files are created when requested.
+# RUN: ls .. | FileCheck %s --check-prefix=FILES
+# FILES: 0.{{[0-9]+}}.{{[0-9]+}}.native.o.thinlto.bc
+# FILES: 0.o.imports
+# FILES: 1.{{[0-9]+}}.{{[0-9]+}}.native.o.thinlto.bc
+# FILES: 1.o.imports
+
+;--- 0.ll
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @g() {
+entry:
+  ret void
+}
+
+;--- 1.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+declare void @g(...)
+
+define void @f() {
+entry:
+  call void (...) @g()
+  ret void
+}

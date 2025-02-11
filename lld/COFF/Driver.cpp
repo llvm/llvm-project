@@ -1518,6 +1518,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     v.push_back(arg->getValue());
     config->mllvmOpts.emplace_back(arg->getValue());
   }
+
+  if (!ctx.config.DTLTODistributor.empty())
+    for (auto o : {"-thinlto-remote-opt-tool-arg=-fdiagnostics-format",
+                   "-thinlto-remote-opt-tool-arg=msvc"}) {
+      v.push_back(o);
+      config->mllvmOpts.emplace_back(o);
+    }
+
   {
     llvm::TimeTraceScope timeScope2("Parse cl::opt");
     cl::ResetAllOptionOccurrences();
@@ -2080,6 +2088,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       config->manifest != Configuration::Embed) {
     Fatal(ctx) << "/manifestinput: requires /manifest:embed";
   }
+
+  // Handle DTLTO options.
+  config->DTLTODistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
+  config->DTLTORemoteOptTool =
+      args.getLastArgValue(OPT_thinlto_remote_opt_tool_eq);
 
   // Handle /dwodir
   config->dwoDir = args.getLastArgValue(OPT_dwodir);
