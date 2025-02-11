@@ -529,7 +529,7 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   // CHECK: linalg.generic
   // CHECK: arith.minimumf
   // CHECK: arith.maximumf
-  %18 = tosa.clamp %0 {min_int = 1 : i64, max_int = 5 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xf32>) -> tensor<1xf32>
+  %18 = tosa.clamp %0 {min_val = 1.0 : f32, max_val = 5.0 : f32} : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
   // CHECK: arith.negf
@@ -729,35 +729,14 @@ func.func @test_simple_i32(%arg0: tensor<1xi32>, %unsigned: tensor<1xui32>, %uns
   // CHECK: linalg.generic
   // CHECK-DAG: arith.maxsi
   // CHECK-DAG: arith.minsi
-  %19 = tosa.clamp %0 {min_int = 1 : i64, max_int = 5 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xi32>) -> tensor<1xi32>
+  %19 = tosa.clamp %0 {min_val = 1 : i32, max_val = 5 : i32} : (tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK-DAG: %[[LB:.*]] = arith.constant 4 : i32
   // CHECK-DAG: %[[UB:.*]] = arith.constant 32 : i32
   // CHECK-DAG: arith.maxui %[[LB]],
   // CHECK-DAG: arith.minui %[[UB]],
-  %u0 = tosa.clamp %unsigned {min_int = 4 : i64, max_int = 32 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xui32>) -> tensor<1xui32>
-
-  // CHECK: linalg.generic
-  // CHECK-DAG: %[[LB:.*]] = arith.constant -1 : i32
-  // CHECK-DAG: %[[UB:.*]] = arith.constant -1 : i32
-  // CHECK-DAG: arith.maxui %[[LB]],
-  // CHECK-DAG: arith.minui %[[UB]],
-  %u1 = tosa.clamp %unsigned {min_int = 9223372036854775807 : i64, max_int = 9223372036854775807 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xui32>) -> tensor<1xui32>
-
-  // CHECK: linalg.generic
-  // CHECK-DAG: %[[LB:.*]] = arith.constant 0 : i32
-  // CHECK-DAG: %[[UB:.*]] = arith.constant 0 : i32
-  // CHECK-DAG: arith.maxui %[[LB]],
-  // CHECK-DAG: arith.minui %[[UB]],
-  %u2 = tosa.clamp %unsigned {min_int = -3 : i64, max_int = -2 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xui32>) -> tensor<1xui32>
-
-  // CHECK: linalg.generic
-  // CHECK-DAG: %[[LB:.*]] = arith.constant 0 : i64
-  // CHECK-DAG: %[[UB:.*]] = arith.constant 9223372036854775807 : i64
-  // CHECK-DAG: arith.maxui %[[LB]],
-  // CHECK-DAG: arith.minui %[[UB]],
-  %u3 = tosa.clamp %unsigned64 {min_int = -3 : i64, max_int = 9223372036854775807 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xui64>) -> tensor<1xui64>
+  %u0 = tosa.clamp %unsigned {min_val = 4 : ui32, max_val = 32 : ui32} : (tensor<1xui32>) -> tensor<1xui32>
 
   // CHECK: linalg.generic
   // CHECK: arith.trunci
@@ -807,15 +786,7 @@ func.func @test_i8(%arg0: tensor<1xi8>) -> () {
   // CHECK-DAG: %[[C126:.+]] = arith.constant 126
   // CHECK-DAG: %[[LOWER:.+]] = arith.maxsi %[[C127]], %[[ARG1]]
   // CHECK-DAG: %[[CLAMPED:.+]] = arith.minsi %[[C126]], %[[LOWER]]
-  %0 = tosa.clamp %arg0 {min_int = -127 : i64, max_int = 126 : i64, min_fp = 0.0 : f32, max_fp = 0.0 : f32} : (tensor<1xi8>) -> tensor<1xi8>
-
-  // CHECK: linalg.generic
-  // CHECK: ^bb0(%[[ARG1:.+]]: i8,
-  // CHECK-DAG: %[[C128:.+]] = arith.constant -128
-  // CHECK-DAG: %[[C127:.+]] = arith.constant 127
-  // CHECK-DAG: %[[LOWER:.+]] = arith.maxsi %[[C128]], %[[ARG1]]
-  // CHECK-DAG: %[[CLAMPED:.+]] = arith.minsi %[[C127]], %[[LOWER]]
-  %1 = tosa.clamp %arg0 {min_int = -130 : i64, max_int = 130 : i64, min_fp = 0.0 : f32, max_fp = 0.0 : f32} : (tensor<1xi8>) -> tensor<1xi8>
+  %0 = tosa.clamp %arg0 {min_val = -127 : i8, max_val = 126 : i8} : (tensor<1xi8>) -> tensor<1xi8>
 
   return
 }
@@ -830,7 +801,7 @@ func.func @test_i64(%arg0: tensor<1xi64>) -> () {
   // CHECK-DAG: %[[C126:.+]] = arith.constant 9223372036854775807
   // CHECK-DAG: %[[LOWER:.+]] = arith.maxsi %[[C127]], %[[ARG1]]
   // CHECK-DAG: %[[CLAMPED:.+]] = arith.minsi %[[C126]], %[[LOWER]]
-  %0 = tosa.clamp %arg0 {min_int = -9223372036854775808 : i64, max_int = 9223372036854775807 : i64, min_fp = 0.0 : f32, max_fp = 0.0 : f32} : (tensor<1xi64>) -> tensor<1xi64>
+  %0 = tosa.clamp %arg0 {min_val = -9223372036854775808 : i64, max_val = 9223372036854775807 : i64} : (tensor<1xi64>) -> tensor<1xi64>
 
   return
 }
@@ -845,7 +816,7 @@ func.func @test_clamp_f16(%arg0: tensor<1xf16>) -> () {
   // CHECK-DAG: %[[C6:.+]] = arith.constant 6.0
   // CHECK-DAG: %[[MIN:.+]] = arith.minimumf %[[ARG1]], %[[C6]]
   // CHECK-DAG: %[[MAX:.+]] = arith.maximumf %[[MIN]], %[[C0]]
-  %0 = tosa.clamp %arg0 {min_int = 0 : i64, max_int = 0 : i64, min_fp = 0.0 : f32, max_fp = 6.0 : f32} : (tensor<1xf16>) -> tensor<1xf16>
+  %0 = tosa.clamp %arg0 {min_val = 0.0 : f16, max_val = 6.0 : f16} : (tensor<1xf16>) -> tensor<1xf16>
 
   return
 }
