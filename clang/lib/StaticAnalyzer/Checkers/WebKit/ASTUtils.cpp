@@ -168,8 +168,6 @@ bool isConstOwnerPtrMemberExpr(const clang::Expr *E) {
     D = ME->getMemberDecl();
   else if (auto *IVR = dyn_cast<ObjCIvarRefExpr>(E))
     D = IVR->getDecl();
-  else
-    return false;
   if (!D)
     return false;
   auto T = D->getType();
