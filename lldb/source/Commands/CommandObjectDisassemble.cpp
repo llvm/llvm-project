@@ -261,7 +261,7 @@ CommandObjectDisassemble::CheckRangeSize(std::vector<AddressRange> ranges,
 llvm::Expected<std::vector<AddressRange>>
 CommandObjectDisassemble::GetContainingAddressRanges() {
   std::vector<AddressRange> ranges;
-  const auto &get_range = [&](Address addr) {
+  const auto &get_ranges = [&](Address addr) {
     ModuleSP module_sp(addr.GetModule());
     SymbolContext sc;
     bool resolve_tail_call_address = true;
@@ -282,14 +282,14 @@ CommandObjectDisassemble::GetContainingAddressRanges() {
     Address symbol_containing_address;
     if (target.ResolveLoadAddress(m_options.symbol_containing_addr,
                                   symbol_containing_address)) {
-      get_range(symbol_containing_address);
+      get_ranges(symbol_containing_address);
     }
   } else {
     for (lldb::ModuleSP module_sp : target.GetImages().Modules()) {
       Address file_address;
       if (module_sp->ResolveFileAddress(m_options.symbol_containing_addr,
                                         file_address)) {
-        get_range(file_address);
+        get_ranges(file_address);
       }
     }
   }
