@@ -141,6 +141,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   UseLeadingZeroLengthBitfield = true;
   UseExplicitBitFieldAlignment = true;
   ZeroLengthBitfieldBoundary = 0;
+  LargestOverSizedBitfieldContainer = 64;
   MaxAlignedAttribute = 0;
   HalfFormat = &llvm::APFloat::IEEEhalf();
   FloatFormat = &llvm::APFloat::IEEEsingle();

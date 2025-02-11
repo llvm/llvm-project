@@ -8,9 +8,9 @@ extern "C" {
 // CHECK: @sizeof_OverSizedBitfield ={{.*}} global i32 8
 // CHECK: @alignof_OverSizedBitfield ={{.*}} global i32 8
 // CHECK: @sizeof_VeryOverSizedBitfield ={{.*}} global i32 16
-// CHECK: @alignof_VeryOverSizedBitfield ={{.*}} global i32 8
+// CHECK: @alignof_VeryOverSizedBitfield ={{.*}} global i32 16
 // CHECK: @sizeof_RidiculouslyOverSizedBitfield ={{.*}} global i32 32
-// CHECK: @alignof_RidiculouslyOverSizedBitfield ={{.*}} global i32 8
+// CHECK: @alignof_RidiculouslyOverSizedBitfield ={{.*}} global i32 16
 
 // Base case, nothing interesting.
 struct S {
