@@ -3755,6 +3755,13 @@ void ASTDeclReader::checkMultipleDefinitionInNamedModules(ASTReader &Reader,
   if (D->getFriendObjectKind() || Previous->getFriendObjectKind())
     return;
 
+  // Skip diagnosing in-class declarations.
+  if (!Previous->getLexicalDeclContext()
+           ->getNonTransparentContext()
+           ->isFileContext() ||
+      !D->getLexicalDeclContext()->getNonTransparentContext()->isFileContext())
+    return;
+
   Module *M = Previous->getOwningModule();
   if (!M)
     return;
