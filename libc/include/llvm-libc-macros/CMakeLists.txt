@@ -320,6 +320,8 @@ add_macro_header(
   pthread_macros
   HDR
     pthread-macros.h
+  DEPENDS
+    .null_macro
 )
 
 add_macro_header(
