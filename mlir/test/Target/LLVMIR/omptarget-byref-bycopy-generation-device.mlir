@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-module attributes {omp.is_target_device = true} {
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   llvm.func @_QQmain() attributes {fir.bindc_name = "main"} {
     %0 = llvm.mlir.addressof @_QFEi : !llvm.ptr
     %1 = llvm.mlir.addressof @_QFEsp : !llvm.ptr
@@ -23,7 +23,7 @@ module attributes {omp.is_target_device = true} {
   }
 }
 
-// CHECK: define {{.*}} void @__omp_offloading_{{.*}}_{{.*}}__QQmain_l{{.*}}(ptr %[[DYN_PTR:.*]], ptr %[[ARG_BYREF:.*]], ptr %[[ARG_BYCOPY:.*]]) {
+// CHECK: define {{.*}} void @__omp_offloading_{{.*}}_{{.*}}__QQmain_l{{.*}}(ptr %[[DYN_PTR:.*]], ptr %[[ARG_BYREF:.*]], ptr %[[ARG_BYCOPY:.*]]) #{{[0-9]+}} {
 
 // CHECK: entry:
 // CHECK: %[[ALLOCA_BYREF:.*]] = alloca ptr, align 8

@@ -152,10 +152,10 @@ bool HexagonOptAddrMode::hasRepForm(MachineInstr &MI, unsigned TfrDefR) {
   }
 
   if (HII->getAddrMode(MI) == HexagonII::BaseRegOffset)
-    // Tranform to Absolute plus register offset.
+    // Transform to Absolute plus register offset.
     return (HII->changeAddrMode_rr_ur(MI) >= 0);
   else if (HII->getAddrMode(MI) == HexagonII::BaseImmOffset)
-    // Tranform to absolute addressing mode.
+    // Transform to absolute addressing mode.
     return (HII->changeAddrMode_io_abs(MI) >= 0);
 
   return false;
@@ -163,7 +163,7 @@ bool HexagonOptAddrMode::hasRepForm(MachineInstr &MI, unsigned TfrDefR) {
 
 // Check if addasl instruction can be removed. This is possible only
 // if it's feeding to only load/store instructions with base + register
-// offset as these instruction can be tranformed to use 'absolute plus
+// offset as these instruction can be transformed to use 'absolute plus
 // shifted register offset'.
 // ex:
 // Rs = ##foo
@@ -551,7 +551,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
     return Changed;
   ProcessedAddiInsts.insert(AddMI);
 
-  // Get the base register that would be shared by other Addi Intructions
+  // Get the base register that would be shared by other Addi Instructions
   Register BaseReg = AddMI->getOperand(1).getReg();
 
   // Store a list of all Addi instructions that share the above common base
@@ -638,7 +638,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
 
     NewOffset = CurrentMIImmOp.getImm() - FirstReachedMIImmOp.getImm();
 
-    // This is the first occuring Addi, so skip modifying this
+    // This is the first occurring Addi, so skip modifying this
     if (CurrentMI == FirstReachedMI) {
       continue;
     }
@@ -1084,7 +1084,7 @@ bool HexagonOptAddrMode::processBlock(NodeAddr<BlockNode *> BA) {
 
     // Analyze all uses of 'add'. If the output of 'add' is used as an address
     // in the base+immediate addressing mode load/store instructions, see if
-    // they can be updated to use the immediate value as an offet. Thus,
+    // they can be updated to use the immediate value as an offset. Thus,
     // providing us the opportunity to eliminate 'add'.
     // Ex: Rx= add(Rt,#12)
     //     memw(Rx+#0) = Rs

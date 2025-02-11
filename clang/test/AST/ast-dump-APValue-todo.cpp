@@ -16,10 +16,6 @@ struct S {
 };
 
 void Test() {
-  constexpr int *pi = &i;
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pi 'int *const' constexpr cinit
-  // CHECK-NEXT:  |   |-value: LValue <todo>
-
   constexpr int(S::*pmi) = &S::i;
   // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pmi 'int (S::*const)' constexpr cinit
   // CHECK-NEXT:      |-value: MemberPointer <todo>

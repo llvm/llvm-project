@@ -20,15 +20,18 @@ using VPVerifierTest = VPlanTestBase;
 namespace {
 TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPlan &Plan = getPlan();
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {});
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
   VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI});
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBB1->appendRecipe(UseI);
   VPBB1->appendRecipe(DefI);
 
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBB2->appendRecipe(CanIV);
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
@@ -44,21 +47,22 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 
 TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPlan &Plan = getPlan();
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {});
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
   VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(UseI, {});
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
 
   VPBB1->appendRecipe(UseI);
   VPBB2->appendRecipe(CanIV);
   VPBB2->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
@@ -73,23 +77,22 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
 }
 
 TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
+  VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   auto *Phi = PHINode::Create(Int32, 1);
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 0));
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(I1, {});
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
   auto *Blend = new VPBlendRecipe(Phi, {DefI});
 
-  VPlan &Plan = getPlan();
   VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
-  VPBasicBlock *VPBB3 = new VPBasicBlock();
-  VPBasicBlock *VPBB4 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
 
-  VPBB1->appendRecipe(I1);
   VPBB2->appendRecipe(CanIV);
   VPBB3->appendRecipe(Blend);
   VPBB4->appendRecipe(DefI);
@@ -97,7 +100,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB3, VPBB4);
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB4, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB4, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
@@ -116,23 +119,24 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 }
 
 TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(I1, {});
+  VPlan &Plan = getPlan();
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero});
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
   VPInstruction *BranchOnCond2 =
       new VPInstruction(VPInstruction::BranchOnCond, {I1});
 
-  VPlan &Plan = getPlan();
   VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
 
   VPBB1->appendRecipe(I1);
   VPBB1->appendRecipe(BranchOnCond2);
   VPBB2->appendRecipe(CanIV);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
@@ -149,17 +153,18 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
 }
 
 TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(I1, {});
+  VPlan &Plan = getPlan();
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero});
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
   VPInstruction *BranchOnCond2 =
       new VPInstruction(VPInstruction::BranchOnCond, {I1});
 
-  VPlan &Plan = getPlan();
   VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
-  VPBasicBlock *VPBB3 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
 
   VPBB1->appendRecipe(I1);
   VPBB2->appendRecipe(CanIV);
@@ -168,7 +173,7 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
 
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB3, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB3, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
@@ -186,17 +191,22 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
 
 TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   VPlan &Plan = getPlan();
-  VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = new VPBasicBlock();
 
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {});
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
+  VPBB2->appendRecipe(CanIV);
+
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {DefI});
 
   VPBB1->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());

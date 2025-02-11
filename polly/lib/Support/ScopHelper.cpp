@@ -321,7 +321,7 @@ private:
     }
 
     InstClone->setName(Name + Inst->getName());
-    InstClone->insertBefore(IP);
+    InstClone->insertBefore(IP->getIterator());
     return GenSE.getSCEV(InstClone);
   }
 
@@ -456,7 +456,7 @@ private:
 
     // FIXME: This emits a SCEV for GenSE (since GenLRepl will refer to the
     // induction variable of a generated loop), so we should not use SCEVVisitor
-    // with it. Howver, it still contains references to the SCoP region.
+    // with it. However, it still contains references to the SCoP region.
     return visit(Evaluated);
   }
   ///}
@@ -604,7 +604,8 @@ bool polly::isHoistableLoad(LoadInst *LInst, Region &R, LoopInfo &LI,
 
   for (auto *User : Ptr->users()) {
     auto *UserI = dyn_cast<Instruction>(User);
-    if (!UserI || !R.contains(UserI))
+    if (!UserI || UserI->getFunction() != LInst->getFunction() ||
+        !R.contains(UserI))
       continue;
     if (!UserI->mayWriteToMemory())
       continue;

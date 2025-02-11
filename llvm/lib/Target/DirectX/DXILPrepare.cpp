@@ -53,7 +53,6 @@ constexpr bool isValidForDXIL(Attribute::AttrKind Attr) {
                        Attribute::Nest,
                        Attribute::NoAlias,
                        Attribute::NoBuiltin,
-                       Attribute::NoCapture,
                        Attribute::NoDuplicate,
                        Attribute::NoImplicitFloat,
                        Attribute::NoInline,

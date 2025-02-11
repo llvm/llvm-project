@@ -45,6 +45,16 @@ MLIR_CAPI_EXPORTED MlirType
 mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
                         MlirType const *argumentTypes, bool isVarArg);
 
+/// Returns the number of input types.
+MLIR_CAPI_EXPORTED intptr_t mlirLLVMFunctionTypeGetNumInputs(MlirType type);
+
+/// Returns the pos-th input type.
+MLIR_CAPI_EXPORTED MlirType mlirLLVMFunctionTypeGetInput(MlirType type,
+                                                         intptr_t pos);
+
+/// Returns the return type of the function type.
+MLIR_CAPI_EXPORTED MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type);
+
 /// Returns `true` if the type is an LLVM dialect struct type.
 MLIR_CAPI_EXPORTED bool mlirTypeIsALLVMStructType(MlirType type);
 

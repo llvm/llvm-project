@@ -175,3 +175,15 @@ define <vscale x 8 x double> @vfwmul_vf_nxv8f64_2(<vscale x 8 x float> %va, floa
   %ve = fmul <vscale x 8 x double> %vc, %splat
   ret <vscale x 8 x double> %ve
 }
+
+define <vscale x 1 x double> @vfwmul_vv_nxv1f64_same_op(<vscale x 1 x float> %va) {
+; CHECK-LABEL: vfwmul_vv_nxv1f64_same_op:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vfwmul.vv v9, v8, v8
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %vb = fpext <vscale x 1 x float> %va to <vscale x 1 x double>
+  %vc = fmul <vscale x 1 x double> %vb, %vb
+  ret <vscale x 1 x double> %vc
+}

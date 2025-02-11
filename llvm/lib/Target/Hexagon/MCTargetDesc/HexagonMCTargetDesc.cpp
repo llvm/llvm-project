@@ -614,7 +614,7 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   }
 
   // Add qfloat subtarget feature by default to v68 and above
-  // unless explicitely disabled
+  // unless explicitly disabled
   if (checkFeature(X, Hexagon::ExtensionHVXV68) &&
       !ArchFS.contains("-hvx-qfloat")) {
     llvm::FeatureBitset Features = X->getFeatureBits();
@@ -734,8 +734,42 @@ public:
     Target = Value;
     return true;
   }
+
+  uint32_t getValueFromMask(uint32_t Instruction, uint32_t Mask) const {
+    uint32_t Result = 0;
+    uint32_t Offset = 0;
+    while (Mask) {
+      if (Instruction & (Mask & -Mask))
+        Result |= (1 << Offset);
+      Mask &= (Mask - 1);
+      ++Offset;
+    }
+    return Result;
+  }
+
+  std::vector<std::pair<uint64_t, uint64_t>>
+  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                 const Triple &TargetTriple) const override {
+    // Do a lightweight parsing of PLT entries.
+    std::vector<std::pair<uint64_t, uint64_t>> Result;
+    for (uint64_t Byte = 0x0, End = PltContents.size(); Byte < End; Byte += 4) {
+      // Recognize immext(##gotpltn)
+      uint32_t ImmExt = support::endian::read32le(PltContents.data() + Byte);
+      if ((ImmExt & 0x00004000) != 0x00004000)
+        continue;
+      uint32_t LoadGotPlt =
+          support::endian::read32le(PltContents.data() + Byte + 4);
+      if ((LoadGotPlt & 0x6a49c00c) != 0x6a49c00c)
+        continue;
+      uint32_t Address = (getValueFromMask(ImmExt, 0xfff3fff) << 6) +
+                         getValueFromMask(LoadGotPlt, 0x1f80) + PltSectionVA +
+                         Byte;
+      Result.emplace_back(PltSectionVA + Byte, Address);
+    }
+    return Result;
+  }
 };
-}
+} // namespace
 
 static MCInstrAnalysis *createHexagonMCInstrAnalysis(const MCInstrInfo *Info) {
   return new HexagonMCInstrAnalysis(Info);

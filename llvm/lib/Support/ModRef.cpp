@@ -12,6 +12,7 @@
 
 #include "llvm/Support/ModRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace llvm;
 
@@ -48,5 +49,38 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
     }
     OS << ME.getModRef(Loc);
   });
+  return OS;
+}
+
+raw_ostream &llvm::operator<<(raw_ostream &OS, CaptureComponents CC) {
+  if (capturesNothing(CC)) {
+    OS << "none";
+    return OS;
+  }
+
+  ListSeparator LS;
+  if (capturesAddressIsNullOnly(CC))
+    OS << LS << "address_is_null";
+  else if (capturesAddress(CC))
+    OS << LS << "address";
+  if (capturesReadProvenanceOnly(CC))
+    OS << LS << "read_provenance";
+  if (capturesFullProvenance(CC))
+    OS << LS << "provenance";
+
+  return OS;
+}
+
+raw_ostream &llvm::operator<<(raw_ostream &OS, CaptureInfo CI) {
+  ListSeparator LS;
+  CaptureComponents Other = CI.getOtherComponents();
+  CaptureComponents Ret = CI.getRetComponents();
+
+  OS << "captures(";
+  if (!capturesNothing(Other) || Other == Ret)
+    OS << LS << Other;
+  if (Other != Ret)
+    OS << LS << "ret: " << Ret;
+  OS << ")";
   return OS;
 }

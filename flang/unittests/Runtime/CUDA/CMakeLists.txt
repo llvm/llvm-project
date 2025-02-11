@@ -15,8 +15,8 @@ endif()
 target_link_libraries(FlangCufRuntimeTests
   PRIVATE
   ${CUDA_RT_TARGET}
-  CufRuntime_cuda_${CUDAToolkit_VERSION_MAJOR}
-  FortranRuntime
+  flang_rt.cuda_${CUDAToolkit_VERSION_MAJOR}
+  flang_rt.runtime
 )
 
 target_include_directories(FlangCufRuntimeTests PRIVATE ${CUDAToolkit_INCLUDE_DIRS})

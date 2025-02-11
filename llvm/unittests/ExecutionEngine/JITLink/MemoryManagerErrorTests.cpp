@@ -20,7 +20,7 @@ TEST(MemoryManagerErrorTest, ErrorOnFirstAllocate) {
   // Check that we can get addresses for blocks, symbols, and edges.
   auto G = std::make_unique<LinkGraph>(
       "foo", std::make_shared<orc::SymbolStringPool>(),
-      Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+      Triple("x86_64-apple-darwin"), SubtargetFeatures(),
       getGenericEdgeKindName);
 
   ArrayRef<char> Content = "hello, world!";

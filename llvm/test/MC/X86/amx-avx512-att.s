@@ -16,37 +16,37 @@
 // CHECK: encoding: [0x62,0xe3,0x7e,0x48,0x07,0xf2,0x7b]
           tcvtrowd2ps $123, %tmm2, %zmm22
 
-// CHECK: tcvtrowps2pbf16h %ecx, %tmm5, %zmm22
+// CHECK: tcvtrowps2bf16h %ecx, %tmm5, %zmm22
 // CHECK: encoding: [0x62,0xe2,0x77,0x48,0x6d,0xf5]
-          tcvtrowps2pbf16h %ecx, %tmm5, %zmm22
+          tcvtrowps2bf16h %ecx, %tmm5, %zmm22
 
-// CHECK: tcvtrowps2pbf16h %ecx, %tmm2, %zmm22
+// CHECK: tcvtrowps2bf16h %ecx, %tmm2, %zmm22
 // CHECK: encoding: [0x62,0xe2,0x77,0x48,0x6d,0xf2]
-          tcvtrowps2pbf16h %ecx, %tmm2, %zmm22
+          tcvtrowps2bf16h %ecx, %tmm2, %zmm22
 
-// CHECK: tcvtrowps2pbf16h $123, %tmm5, %zmm22
+// CHECK: tcvtrowps2bf16h $123, %tmm5, %zmm22
 // CHECK: encoding: [0x62,0xe3,0x7f,0x48,0x07,0xf5,0x7b]
-          tcvtrowps2pbf16h $123, %tmm5, %zmm22
+          tcvtrowps2bf16h $123, %tmm5, %zmm22
 
-// CHECK: tcvtrowps2pbf16h $123, %tmm2, %zmm22
+// CHECK: tcvtrowps2bf16h $123, %tmm2, %zmm22
 // CHECK: encoding: [0x62,0xe3,0x7f,0x48,0x07,0xf2,0x7b]
-          tcvtrowps2pbf16h $123, %tmm2, %zmm22
+          tcvtrowps2bf16h $123, %tmm2, %zmm22
 
-// CHECK: tcvtrowps2pbf16l %ecx, %tmm5, %zmm22
+// CHECK: tcvtrowps2bf16l %ecx, %tmm5, %zmm22
 // CHECK: encoding: [0x62,0xe2,0x76,0x48,0x6d,0xf5]
-          tcvtrowps2pbf16l %ecx, %tmm5, %zmm22
+          tcvtrowps2bf16l %ecx, %tmm5, %zmm22
 
-// CHECK: tcvtrowps2pbf16l %ecx, %tmm2, %zmm22
+// CHECK: tcvtrowps2bf16l %ecx, %tmm2, %zmm22
 // CHECK: encoding: [0x62,0xe2,0x76,0x48,0x6d,0xf2]
-          tcvtrowps2pbf16l %ecx, %tmm2, %zmm22
+          tcvtrowps2bf16l %ecx, %tmm2, %zmm22
 
-// CHECK: tcvtrowps2pbf16l $123, %tmm5, %zmm22
+// CHECK: tcvtrowps2bf16l $123, %tmm5, %zmm22
 // CHECK: encoding: [0x62,0xe3,0x7e,0x48,0x77,0xf5,0x7b]
-          tcvtrowps2pbf16l $123, %tmm5, %zmm22
+          tcvtrowps2bf16l $123, %tmm5, %zmm22
 
-// CHECK: tcvtrowps2pbf16l $123, %tmm2, %zmm22
+// CHECK: tcvtrowps2bf16l $123, %tmm2, %zmm22
 // CHECK: encoding: [0x62,0xe3,0x7e,0x48,0x77,0xf2,0x7b]
-          tcvtrowps2pbf16l $123, %tmm2, %zmm22
+          tcvtrowps2bf16l $123, %tmm2, %zmm22
 
 // CHECK: tcvtrowps2phh %ecx, %tmm5, %zmm22
 // CHECK: encoding: [0x62,0xe2,0x74,0x48,0x6d,0xf5]

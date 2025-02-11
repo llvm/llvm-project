@@ -632,7 +632,8 @@ namespace llvm {
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t SizeInBits, uint32_t AlignInBits, DINodeArray Elements,
         DIType *UnderlyingType, unsigned RunTimeLang = 0,
-        StringRef UniqueIdentifier = "", bool IsScoped = false);
+        StringRef UniqueIdentifier = "", bool IsScoped = false,
+        std::optional<uint32_t> EnumKind = std::nullopt);
     /// Create debugging information entry for a set.
     /// \param Scope          Scope in which this set is defined.
     /// \param Name           Set name.
@@ -662,24 +663,25 @@ namespace llvm {
     /// Create a uniqued clone of \p Ty with FlagArtificial set.
     static DIType *createArtificialType(DIType *Ty);
 
-    /// Create a uniqued clone of \p Ty with FlagObjectPointer and
-    /// FlagArtificial set.
-    static DIType *createObjectPointerType(DIType *Ty);
+    /// Create a uniqued clone of \p Ty with FlagObjectPointer set.
+    /// If \p Implicit is true, also set FlagArtificial.
+    static DIType *createObjectPointerType(DIType *Ty, bool Implicit);
 
     /// Create a permanent forward-declared type.
-    DICompositeType *createForwardDecl(unsigned Tag, StringRef Name,
-                                       DIScope *Scope, DIFile *F, unsigned Line,
-                                       unsigned RuntimeLang = 0,
-                                       uint64_t SizeInBits = 0,
-                                       uint32_t AlignInBits = 0,
-                                       StringRef UniqueIdentifier = "");
+    DICompositeType *
+    createForwardDecl(unsigned Tag, StringRef Name, DIScope *Scope, DIFile *F,
+                      unsigned Line, unsigned RuntimeLang = 0,
+                      uint64_t SizeInBits = 0, uint32_t AlignInBits = 0,
+                      StringRef UniqueIdentifier = "",
+                      std::optional<uint32_t> EnumKind = std::nullopt);
 
     /// Create a temporary forward-declared type.
     DICompositeType *createReplaceableCompositeType(
         unsigned Tag, StringRef Name, DIScope *Scope, DIFile *F, unsigned Line,
         unsigned RuntimeLang = 0, uint64_t SizeInBits = 0,
         uint32_t AlignInBits = 0, DINode::DIFlags Flags = DINode::FlagFwdDecl,
-        StringRef UniqueIdentifier = "", DINodeArray Annotations = nullptr);
+        StringRef UniqueIdentifier = "", DINodeArray Annotations = nullptr,
+        std::optional<uint32_t> EnumKind = std::nullopt);
 
     /// Retain DIScope* in a module even if it is not referenced
     /// through debug info anchors.

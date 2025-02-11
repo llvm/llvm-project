@@ -286,6 +286,7 @@ TARGET_BUILTIN(__builtin_s390_vstrszf, "V16UcV4UiV4UiV16Uci*", "nc", "vector-enh
 TARGET_BUILTIN(__builtin_s390_vlbrh, "V8UsV8Us", "nc", "vector")
 TARGET_BUILTIN(__builtin_s390_vlbrf, "V4UiV4Ui", "nc", "vector")
 TARGET_BUILTIN(__builtin_s390_vlbrg, "V2ULLiV2ULLi", "nc", "vector")
+TARGET_BUILTIN(__builtin_s390_vlbrq, "ULLLiULLLi", "nc", "vector")
 
 // NNP-assist facility intrinsics.
 TARGET_BUILTIN(__builtin_s390_vclfnhs, "V4fV8UsIi", "nc", "nnp-assist")
@@ -293,6 +294,45 @@ TARGET_BUILTIN(__builtin_s390_vclfnls, "V4fV8UsIi", "nc", "nnp-assist")
 TARGET_BUILTIN(__builtin_s390_vcrnfs, "V8UsV4fV4fIi", "nc", "nnp-assist")
 TARGET_BUILTIN(__builtin_s390_vcfn, "V8UsV8UsIi", "nc", "nnp-assist")
 TARGET_BUILTIN(__builtin_s390_vcnf, "V8UsV8UsIi", "nc", "nnp-assist")
+
+// Miscellaneous instruction extensions facility 4 intrinsics.
+TARGET_BUILTIN(__builtin_s390_bdepg, "ULiULiULi", "nc", "miscellaneous-extensions-4")
+TARGET_BUILTIN(__builtin_s390_bextg, "ULiULiULi", "nc", "miscellaneous-extensions-4")
+
+// Vector-enhancements facility 3 intrinsics.
+TARGET_BUILTIN(__builtin_s390_vgemb, "V16UcV8Us", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vgemh, "V8UsV16Uc", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vgemf, "V4UiV16Uc", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vgemg, "V2ULLiV16Uc", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vgemq, "ULLLiV16Uc", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vuplg, "SLLLiV2SLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vupllg, "ULLLiV2ULLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vuphg, "SLLLiV2SLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vuplhg, "ULLLiV2ULLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vavgq, "SLLLiSLLLiSLLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vavglq, "ULLLiULLLiULLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_veval, "V16UcV16UcV16UcV16UcIi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmahg, "V2SLLiV2SLLiV2SLLiV2SLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmahq, "SLLLiSLLLiSLLLiSLLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmalhg, "V2ULLiV2ULLiV2ULLiV2ULLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmalhq, "ULLLiULLLiULLLiULLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmaeg, "SLLLiV2SLLiV2SLLiSLLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmaleg, "ULLLiV2ULLiV2ULLiULLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmaog, "SLLLiV2SLLiV2SLLiSLLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmalog, "ULLLiV2ULLiV2ULLiULLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmhg, "V2SLLiV2SLLiV2SLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmhq, "SLLLiSLLLiSLLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmlhg, "V2ULLiV2ULLiV2ULLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmlhq, "ULLLiULLLiULLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmeg, "SLLLiV2SLLiV2SLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmleg, "ULLLiV2ULLiV2ULLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmog, "SLLLiV2SLLiV2SLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vmlog, "ULLLiV2ULLiV2ULLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vceqqs, "SLLLiULLLiULLLii*", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vchqs, "SLLLiSLLLiSLLLii*", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vchlqs, "SLLLiULLLiULLLii*", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vclzq, "ULLLiULLLi", "nc", "vector-enhancements-3")
+TARGET_BUILTIN(__builtin_s390_vctzq, "ULLLiULLLi", "nc", "vector-enhancements-3")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN
