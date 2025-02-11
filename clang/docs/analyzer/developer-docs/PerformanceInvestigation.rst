@@ -52,7 +52,7 @@ You can use ``-analyze-function=get_global_options`` together with ``-ftime-trac
 Performance analysis using ``perf``
 ===================================
 
-`Perf <https://perfwiki.github.io/main/>`_ is an excellent tool for sampling-based profiling of an application.
+`Perf <https://perfwiki.github.io/main/>`_ is a tool for conducting sampling-based profiling.
 It's easy to start profiling, you only have 2 prerequisites.
 Build with ``-fno-omit-frame-pointer`` and debug info (``-g``).
 You can use release builds, but probably the easiest is to set the ``CMAKE_BUILD_TYPE=RelWithDebInfo``
