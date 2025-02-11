@@ -3171,3 +3171,29 @@ func.func @contiguous_scatter_step(%base: memref<?xf32>,
     memref<?xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: @fold_extract_constant_indices
+//   CHECK-SAME:   %[[ARG:.*]]: vector<32x1xi32>) -> i32 {
+//        CHECK:   %[[RES:.*]] = vector.extract %[[ARG]][0, 0] : i32 from vector<32x1xi32>
+//        CHECK:   return %[[RES]] : i32
+func.func @fold_extract_constant_indices(%arg : vector<32x1xi32>) -> i32 {
+  %0 = arith.constant 0 : index
+  %1 = vector.extract %arg[%0, %0] : i32 from vector<32x1xi32>
+  return %1 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @fold_insert_constant_indices
+//  CHECK-SAME:   %[[ARG:.*]]: vector<4x1xi32>) -> vector<4x1xi32> {
+//       CHECK:   %[[VAL:.*]] = arith.constant 1 : i32
+//       CHECK:   %[[RES:.*]] = vector.insert %[[VAL]], %[[ARG]] [0, 0] : i32 into vector<4x1xi32>
+//       CHECK:   return %[[RES]] : vector<4x1xi32>
+func.func @fold_insert_constant_indices(%arg : vector<4x1xi32>) -> vector<4x1xi32> {
+  %0 = arith.constant 0 : index
+  %1 = arith.constant 1 : i32
+  %res = vector.insert %1, %arg[%0, %0] : i32 into vector<4x1xi32>
+  return %res : vector<4x1xi32>
+}
