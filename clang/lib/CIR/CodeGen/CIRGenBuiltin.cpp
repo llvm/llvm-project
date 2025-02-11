@@ -1424,6 +1424,23 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_matrix_column_major_store:
     llvm_unreachable("BI__builtin_matrix_column_major_store NYI");
 
+  case Builtin::BI__builtin_isinf_sign: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, E);
+    mlir::Location Loc = getLoc(E->getBeginLoc());
+    mlir::Value Arg = emitScalarExpr(E->getArg(0));
+    mlir::Value AbsArg = builder.create<cir::FAbsOp>(Loc, Arg.getType(), Arg);
+    mlir::Value IsInf =
+        builder.createIsFPClass(Loc, AbsArg, FPClassTest::fcInf);
+    mlir::Value IsNeg = emitSignBit(Loc, *this, Arg);
+    auto IntTy = convertType(E->getType());
+    auto Zero = builder.getNullValue(IntTy, Loc);
+    auto One = builder.getConstant(Loc, cir::IntAttr::get(IntTy, 1));
+    auto NegativeOne = builder.getConstant(Loc, cir::IntAttr::get(IntTy, -1));
+    auto SignResult = builder.createSelect(Loc, IsNeg, NegativeOne, One);
+    auto Result = builder.createSelect(Loc, IsInf, SignResult, Zero);
+    return RValue::get(Result);
+  }
+
   case Builtin::BI__builtin_flt_rounds:
     llvm_unreachable("BI__builtin_flt_rounds NYI");
 

@@ -4067,9 +4067,7 @@ mlir::LogicalResult CIRToLLVMSignBitOpLowering::matchAndRewrite(
   auto zero = rewriter.create<mlir::LLVM::ConstantOp>(op->getLoc(), intTy, 0);
   auto cmpResult = rewriter.create<mlir::LLVM::ICmpOp>(
       op.getLoc(), mlir::LLVM::ICmpPredicate::slt, bitcast.getResult(), zero);
-  auto converted = rewriter.create<mlir::LLVM::ZExtOp>(
-      op.getLoc(), getTypeConverter()->convertType(op.getType()), cmpResult);
-  rewriter.replaceOp(op, converted);
+  rewriter.replaceOp(op, cmpResult);
   return mlir::success();
 }
 
