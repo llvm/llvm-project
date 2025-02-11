@@ -4052,8 +4052,10 @@ add_entrypoint_object(
     atan2f.cpp
   HDRS
     ../atan2f.h
+    atan2f_float.h
   DEPENDS
     .inv_trigf_utils
+    libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
