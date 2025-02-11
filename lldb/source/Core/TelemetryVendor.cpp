@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#ifdef LLDB_BUILD_TELEMETRY
 
 #include "lldb/Core/TelemetryVendor.h"
 
@@ -41,3 +42,5 @@ void SetTelemetryManager(const lldb::TelemetryManagerSP &manager_sp) {
 }
 
 } // namespace lldb_private
+
+#ifdef LLDB_BUILD_TELEMETRY

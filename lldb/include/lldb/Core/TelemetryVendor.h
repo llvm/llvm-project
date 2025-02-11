@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#ifdef LLDB_BUILD_TELEMETRY
 
 #ifndef LLDB_CORE_TELEMETRYVENDOR_H
 #define LLDB_CORE_TELEMETRYVENDOR_H
@@ -38,3 +39,5 @@ public:
 
 } // namespace lldb_private
 #endif // LLDB_CORE_TELEMETRYVENDOR_H
+
+#endif // LLDB_BUILD_TELEMETRY
