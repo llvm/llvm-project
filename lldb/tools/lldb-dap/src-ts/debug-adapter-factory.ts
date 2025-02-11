@@ -67,12 +67,17 @@ async function findDAPExecutable(): Promise<string | undefined> {
 async function getDAPExecutable(
   session: vscode.DebugSession,
 ): Promise<string | undefined> {
+  // Check if the executable was provided in the launch configuration.
+  const launchConfigPath = session.configuration["debugAdapterExecutable"];
+  if (typeof launchConfigPath === "string" && launchConfigPath.length !== 0) {
+    return launchConfigPath;
+  }
+
+  // Check if the executable was provided in the extension's configuration.
   const config = vscode.workspace.getConfiguration(
     "lldb-dap",
     session.workspaceFolder,
   );
-
-  // Prefer the explicitly specified path in the extension's configuration.
   const configPath = config.get<string>("executable-path");
   if (configPath && configPath.length !== 0) {
     return configPath;

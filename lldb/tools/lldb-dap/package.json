@@ -86,7 +86,7 @@
           "default": {},
           "description": "The environment of the lldb-dap process.",
           "additionalProperties": {
-             "type": "string"
+            "type": "string"
           }
         }
       }
@@ -152,6 +152,10 @@
               "program"
             ],
             "properties": {
+              "debugAdapterExecutable": {
+                "type": "string",
+                "markdownDescription": "The LLDB debug adapter executable to use. Either an absolute path or the name of a debug adapter executable available on the `PATH`."
+              },
               "program": {
                 "type": "string",
                 "description": "Path to the program to debug."
@@ -338,6 +342,10 @@
           },
           "attach": {
             "properties": {
+              "debugAdapterExecutable": {
+                "type": "string",
+                "markdownDescription": "The LLDB debug adapter executable to use. Either an absolute path or the name of a debug adapter executable available on the `PATH`."
+              },
               "program": {
                 "type": "string",
                 "description": "Path to the program to attach to."
