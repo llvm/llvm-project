@@ -3794,6 +3794,11 @@ void Verifier::visitCallBase(CallBase &Call) {
     } else if (Tag == LLVMContext::OB_callee_type) {
       Check(!FoundCalleeTypeBundle, "Multiple \"callee_type\" operand bundles",
             Call);
+      auto *OBVal = BU.Inputs.front().get();
+      auto *TypeIdMD = cast<MetadataAsValue>(OBVal)->getMetadata();
+      auto *TypeIdStr = cast<MDString>(TypeIdMD);
+      Check(TypeIdStr->getString().ends_with(".generalized"),
+            "Invalid \"callee_type\" type identifier", Call);
       FoundCalleeTypeBundle = true;
     }
   }
