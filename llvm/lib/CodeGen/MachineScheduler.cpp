@@ -216,85 +216,67 @@ MachineSchedContext::~MachineSchedContext() {
 
 namespace {
 
-/// Base class for the machine scheduler classes.
-class MachineSchedulerBase : public MachineSchedContext {
+/// Base class for a machine scheduler class that can run at any point.
+class MachineSchedulerBase : public MachineSchedContext,
+                             public MachineFunctionPass {
+public:
+  MachineSchedulerBase(char &ID) : MachineFunctionPass(ID) {}
+
 protected:
   void scheduleRegions(ScheduleDAGInstrs &Scheduler, bool FixKillFlags);
 };
 
-/// Impl class for MachineScheduler.
-class MachineSchedulerImpl : public MachineSchedulerBase {
-  MachineFunctionPass *P = nullptr;
-  MachineFunctionAnalysisManager *MFAM = nullptr;
-
+/// MachineScheduler runs after coalescing and before register allocation.
+class MachineScheduler : public MachineSchedulerBase {
 public:
-  MachineSchedulerImpl(MachineFunction &Func, MachineFunctionPass *P);
-  MachineSchedulerImpl(MachineFunction &Func,
-                       MachineFunctionAnalysisManager &MFAM,
-                       const TargetMachine *TargetM);
-  bool run();
+  MachineScheduler();
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  bool runOnMachineFunction(MachineFunction&) override;
+
+  static char ID; // Class identification, replacement for typeinfo
 
 protected:
   ScheduleDAGInstrs *createMachineScheduler();
 };
 
-/// Impl class for PostMachineScheduler.
-class PostMachineSchedulerImpl : public MachineSchedulerBase {
-  MachineFunctionPass *P = nullptr;
-  MachineFunctionAnalysisManager *MFAM = nullptr;
-
+/// PostMachineScheduler runs after shortly before code emission.
+class PostMachineScheduler : public MachineSchedulerBase {
 public:
-  PostMachineSchedulerImpl(MachineFunction &Func, MachineFunctionPass *P);
-  PostMachineSchedulerImpl(MachineFunction &Func,
-                           MachineFunctionAnalysisManager &MFAM,
-                           const TargetMachine *TargetM);
-  bool run();
+  PostMachineScheduler();
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  bool runOnMachineFunction(MachineFunction&) override;
+
+  static char ID; // Class identification, replacement for typeinfo
 
 protected:
   ScheduleDAGInstrs *createPostMachineScheduler();
 };
 
-/// MachineScheduler runs after coalescing and before register allocation.
-class MachineSchedulerLegacy : public MachineFunctionPass {
-public:
-  MachineSchedulerLegacy();
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnMachineFunction(MachineFunction&) override;
-
-  static char ID; // Class identification, replacement for typeinfo
-};
-
-/// PostMachineScheduler runs after shortly before code emission.
-class PostMachineSchedulerLegacy : public MachineFunctionPass {
-public:
-  PostMachineSchedulerLegacy();
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnMachineFunction(MachineFunction&) override;
-
-  static char ID; // Class identification, replacement for typeinfo
-};
-
 } // end anonymous namespace
 
-char MachineSchedulerLegacy::ID = 0;
+char MachineScheduler::ID = 0;
 
-char &llvm::MachineSchedulerID = MachineSchedulerLegacy::ID;
+char &llvm::MachineSchedulerID = MachineScheduler::ID;
 
-INITIALIZE_PASS_BEGIN(MachineSchedulerLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(MachineScheduler, DEBUG_TYPE,
                       "Machine Instruction Scheduler", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(MachineSchedulerLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_END(MachineScheduler, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
 
-MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {
-  initializeMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
+MachineScheduler::MachineScheduler() : MachineSchedulerBase(ID) {
+  initializeMachineSchedulerPass(*PassRegistry::getPassRegistry());
 }
 
-void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+void MachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -307,24 +289,23 @@ void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-char PostMachineSchedulerLegacy::ID = 0;
+char PostMachineScheduler::ID = 0;
 
-char &llvm::PostMachineSchedulerID = PostMachineSchedulerLegacy::ID;
+char &llvm::PostMachineSchedulerID = PostMachineScheduler::ID;
 
-INITIALIZE_PASS_BEGIN(PostMachineSchedulerLegacy, "postmisched",
+INITIALIZE_PASS_BEGIN(PostMachineScheduler, "postmisched",
                       "PostRA Machine Instruction Scheduler", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(PostMachineSchedulerLegacy, "postmisched",
+INITIALIZE_PASS_END(PostMachineScheduler, "postmisched",
                     "PostRA Machine Instruction Scheduler", false, false)
 
-PostMachineSchedulerLegacy::PostMachineSchedulerLegacy()
-    : MachineFunctionPass(ID) {
-  initializePostMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
+PostMachineScheduler::PostMachineScheduler() : MachineSchedulerBase(ID) {
+  initializePostMachineSchedulerPass(*PassRegistry::getPassRegistry());
 }
 
-void PostMachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+void PostMachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -403,40 +384,18 @@ nextIfDebug(MachineBasicBlock::iterator I,
       .getNonConstIterator();
 }
 
-MachineSchedulerImpl::MachineSchedulerImpl(MachineFunction &Func,
-                                           MachineFunctionPass *P)
-    : P(P) {
-  MF = &Func;
-  MLI = &P->getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  MDT = &P->getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  TM = &P->getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-  AA = &P->getAnalysis<AAResultsWrapperPass>().getAAResults();
-  LIS = &P->getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-}
-
-MachineSchedulerImpl::MachineSchedulerImpl(MachineFunction &Func,
-                                           MachineFunctionAnalysisManager &MFAM,
-                                           const TargetMachine *TargetM)
-    : MFAM(&MFAM) {
-  MF = &Func;
-  TM = TargetM;
-  MLI = &MFAM.getResult<MachineLoopAnalysis>(Func);
-  MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(Func);
-  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(Func)
-                  .getManager();
-  AA = &FAM.getResult<AAManager>(Func.getFunction());
-  LIS = &MFAM.getResult<LiveIntervalsAnalysis>(Func);
-}
-
 /// Instantiate a ScheduleDAGInstrs that will be owned by the caller.
-ScheduleDAGInstrs *MachineSchedulerImpl::createMachineScheduler() {
+ScheduleDAGInstrs *MachineScheduler::createMachineScheduler() {
   // Select the scheduler, or set the default.
   MachineSchedRegistry::ScheduleDAGCtor Ctor = MachineSchedOpt;
   if (Ctor != useDefaultMachineSched)
     return Ctor(this);
 
+  const TargetMachine &TM =
+      getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+
   // Get the default scheduler set by the target for this function.
-  ScheduleDAGInstrs *Scheduler = TM->createMachineScheduler(this);
+  ScheduleDAGInstrs *Scheduler = TM.createMachineScheduler(this);
   if (Scheduler)
     return Scheduler;
 
@@ -444,89 +403,19 @@ ScheduleDAGInstrs *MachineSchedulerImpl::createMachineScheduler() {
   return createGenericSchedLive(this);
 }
 
-bool MachineSchedulerImpl::run() {
-  if (VerifyScheduling) {
-    LLVM_DEBUG(LIS->dump());
-    const char *MSchedBanner = "Before machine scheduling.";
-    if (P)
-      MF->verify(P, MSchedBanner, &errs());
-    else
-      MF->verify(*MFAM, MSchedBanner, &errs());
-  }
-  RegClassInfo->runOnMachineFunction(*MF);
-
-  // Instantiate the selected scheduler for this target, function, and
-  // optimization level.
-  std::unique_ptr<ScheduleDAGInstrs> Scheduler(createMachineScheduler());
-  scheduleRegions(*Scheduler, false);
-
-  LLVM_DEBUG(LIS->dump());
-  if (VerifyScheduling) {
-    const char *MSchedBanner = "After machine scheduling.";
-    if (P)
-      MF->verify(P, MSchedBanner, &errs());
-    else
-      MF->verify(*MFAM, MSchedBanner, &errs());
-  }
-  return true;
-}
-
-PostMachineSchedulerImpl::PostMachineSchedulerImpl(MachineFunction &Func,
-                                                   MachineFunctionPass *P)
-    : P(P) {
-  MF = &Func;
-  MLI = &P->getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  TM = &P->getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-  AA = &P->getAnalysis<AAResultsWrapperPass>().getAAResults();
-}
-
-PostMachineSchedulerImpl::PostMachineSchedulerImpl(
-    MachineFunction &Func, MachineFunctionAnalysisManager &MFAM,
-    const TargetMachine *TargetM)
-    : MFAM(&MFAM) {
-  MF = &Func;
-  TM = TargetM;
-  MLI = &MFAM.getResult<MachineLoopAnalysis>(Func);
-  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(Func)
-                  .getManager();
-  AA = &FAM.getResult<AAManager>(Func.getFunction());
-}
-
 /// Instantiate a ScheduleDAGInstrs for PostRA scheduling that will be owned by
 /// the caller. We don't have a command line option to override the postRA
 /// scheduler. The Target must configure it.
-ScheduleDAGInstrs *PostMachineSchedulerImpl::createPostMachineScheduler() {
+ScheduleDAGInstrs *PostMachineScheduler::createPostMachineScheduler() {
+  const TargetMachine &TM =
+      getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   // Get the postRA scheduler set by the target for this function.
-  ScheduleDAGInstrs *Scheduler = TM->createPostMachineScheduler(this);
+  ScheduleDAGInstrs *Scheduler = TM.createPostMachineScheduler(this);
   if (Scheduler)
     return Scheduler;
 
   // Default to GenericScheduler.
   return createGenericSchedPostRA(this);
-}
-
-bool PostMachineSchedulerImpl::run() {
-  if (VerifyScheduling) {
-    const char *PostMSchedBanner = "Before post machine scheduling.";
-    if (P)
-      MF->verify(P, PostMSchedBanner, &errs());
-    else
-      MF->verify(*MFAM, PostMSchedBanner, &errs());
-  }
-
-  // Instantiate the selected scheduler for this target, function, and
-  // optimization level.
-  std::unique_ptr<ScheduleDAGInstrs> Scheduler(createPostMachineScheduler());
-  scheduleRegions(*Scheduler, true);
-
-  if (VerifyScheduling) {
-    const char *PostMSchedBanner = "After post machine scheduling.";
-    if (P)
-      MF->verify(P, PostMSchedBanner, &errs());
-    else
-      MF->verify(*MFAM, PostMSchedBanner, &errs());
-  }
-  return true;
 }
 
 /// Top-level MachineScheduler pass driver.
@@ -545,84 +434,72 @@ bool PostMachineSchedulerImpl::run() {
 /// ScheduleDAGInstrs whenever adding or removing instructions. A much simpler
 /// design would be to split blocks at scheduling boundaries, but LLVM has a
 /// general bias against block splitting purely for implementation simplicity.
-bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
+bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
+  if (skipFunction(mf.getFunction()))
     return false;
 
   if (EnableMachineSched.getNumOccurrences()) {
     if (!EnableMachineSched)
       return false;
-  } else if (!MF.getSubtarget().enableMachineScheduler()) {
+  } else if (!mf.getSubtarget().enableMachineScheduler())
     return false;
+
+  LLVM_DEBUG(dbgs() << "Before MISched:\n"; mf.print(dbgs()));
+
+  // Initialize the context of the pass.
+  MF = &mf;
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+
+  if (VerifyScheduling) {
+    LLVM_DEBUG(LIS->dump());
+    MF->verify(this, "Before machine scheduling.", &errs());
   }
+  RegClassInfo->runOnMachineFunction(*MF);
 
-  LLVM_DEBUG(dbgs() << "Before MISched:\n"; MF.print(dbgs()));
+  // Instantiate the selected scheduler for this target, function, and
+  // optimization level.
+  std::unique_ptr<ScheduleDAGInstrs> Scheduler(createMachineScheduler());
+  scheduleRegions(*Scheduler, false);
 
-  MachineSchedulerImpl Impl(MF, this);
-  return Impl.run();
+  LLVM_DEBUG(LIS->dump());
+  if (VerifyScheduling)
+    MF->verify(this, "After machine scheduling.", &errs());
+  return true;
 }
 
-PreservedAnalyses
-MachineSchedulerPass::run(MachineFunction &MF,
-                          MachineFunctionAnalysisManager &MFAM) {
-  if (EnableMachineSched.getNumOccurrences()) {
-    if (!EnableMachineSched)
-      return PreservedAnalyses::all();
-  } else if (!MF.getSubtarget().enableMachineScheduler()) {
-    return PreservedAnalyses::all();
-  }
-
-  LLVM_DEBUG(dbgs() << "Before MISched:\n"; MF.print(dbgs()));
-
-  MachineSchedulerImpl Impl(MF, MFAM, TM);
-  bool Changed = Impl.run();
-  if (!Changed)
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  PA.preserve<SlotIndexesAnalysis>();
-  PA.preserve<LiveIntervalsAnalysis>();
-  return PA;
-}
-
-bool PostMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
+bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
+  if (skipFunction(mf.getFunction()))
     return false;
 
   if (EnablePostRAMachineSched.getNumOccurrences()) {
     if (!EnablePostRAMachineSched)
       return false;
-  } else if (!MF.getSubtarget().enablePostRAMachineScheduler()) {
+  } else if (!mf.getSubtarget().enablePostRAMachineScheduler()) {
     LLVM_DEBUG(dbgs() << "Subtarget disables post-MI-sched.\n");
     return false;
   }
-  LLVM_DEBUG(dbgs() << "Before post-MI-sched:\n"; MF.print(dbgs()));
+  LLVM_DEBUG(dbgs() << "Before post-MI-sched:\n"; mf.print(dbgs()));
 
-  PostMachineSchedulerImpl Impl(MF, this);
-  return Impl.run();
-}
+  // Initialize the context of the pass.
+  MF = &mf;
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
-PreservedAnalyses
-PostMachineSchedulerPass::run(MachineFunction &MF,
-                              MachineFunctionAnalysisManager &MFAM) {
-  if (EnablePostRAMachineSched.getNumOccurrences()) {
-    if (!EnablePostRAMachineSched)
-      return PreservedAnalyses::all();
-  } else if (!MF.getSubtarget().enablePostRAMachineScheduler()) {
-    LLVM_DEBUG(dbgs() << "Subtarget disables post-MI-sched.\n");
-    return PreservedAnalyses::all();
-  }
-  LLVM_DEBUG(dbgs() << "Before post-MI-sched:\n"; MF.print(dbgs()));
+  if (VerifyScheduling)
+    MF->verify(this, "Before post machine scheduling.", &errs());
 
-  PostMachineSchedulerImpl Impl(MF, MFAM, TM);
-  bool Changed = Impl.run();
-  if (!Changed)
-    return PreservedAnalyses::all();
+  // Instantiate the selected scheduler for this target, function, and
+  // optimization level.
+  std::unique_ptr<ScheduleDAGInstrs> Scheduler(createPostMachineScheduler());
+  scheduleRegions(*Scheduler, true);
 
-  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  if (VerifyScheduling)
+    MF->verify(this, "After post machine scheduling.", &errs());
+  return true;
 }
 
 /// Return true of the given instruction should not be included in a scheduling

@@ -238,10 +238,6 @@ void MCWasmStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
   }
 }
 
-void MCWasmStreamer::emitThumbFunc(MCSymbol *Func) {
-  llvm_unreachable("Generic Wasm doesn't support this directive");
-}
-
 void MCWasmStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   llvm_unreachable("Wasm doesn't support this directive");
 }
