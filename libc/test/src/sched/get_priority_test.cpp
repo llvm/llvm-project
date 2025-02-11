@@ -11,7 +11,7 @@
 #include "src/sched/sched_get_priority_min.h"
 #include "test/UnitTest/Test.h"
 
-#include "hdr/types/cpu_set_t.h"
+#include "hdr/sched_macros.h"
 
 TEST(LlvmLibcSchedGetPriorityTest, HandleBadPolicyTest) {
 

@@ -37,6 +37,7 @@ add_libc_unittest(
     get_priority_test.cpp
   DEPENDS
     libc.include.sched
+    libc.hdr.sched_macros
     libc.src.errno.errno
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_get_priority_max
@@ -50,6 +51,8 @@ add_libc_unittest(
     param_and_scheduler_test.cpp
   DEPENDS
     libc.include.sched
+    libc.hdr.types.struct_sched_param
+    libc.hdr.sched_macros
     libc.src.errno.errno
     libc.src.sched.sched_getscheduler
     libc.src.sched.sched_setscheduler
@@ -68,6 +71,8 @@ add_libc_unittest(
     sched_rr_get_interval_test.cpp
   DEPENDS
     libc.include.sched
+    libc.hdr.types.struct_sched_param
+    libc.hdr.sched_macros
     libc.src.errno.errno
     libc.src.sched.sched_getscheduler
     libc.src.sched.sched_setscheduler
