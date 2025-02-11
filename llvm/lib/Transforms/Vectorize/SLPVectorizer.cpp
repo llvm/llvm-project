@@ -5596,6 +5596,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         ::getNumberOfParts(*TTI, getWidenedType(TE.Scalars.front()->getType(),
                                                 2 * TE.getVectorFactor())) == 1)
       return std::nullopt;
+    if (TE.ReuseShuffleIndices.size() % Sz != 0)
+      return std::nullopt;
     if (!ShuffleVectorInst::isOneUseSingleSourceMask(TE.ReuseShuffleIndices,
                                                      Sz)) {
       SmallVector<int> ReorderMask(Sz, PoisonMaskElem);
@@ -5626,7 +5628,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         UsedVals.set(Val);
         for (unsigned K = 0; K < NumParts; ++K) {
           unsigned Idx = Val + Sz * K;
-          if (Idx < VF)
+          if (Idx < VF && I + K < VF)
             ResOrder[Idx] = I + K;
         }
       }
