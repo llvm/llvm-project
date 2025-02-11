@@ -11,22 +11,8 @@ static bool IsNumberChar(char C) {
 }
 
 bool RootSignatureLexer::LexNumber(RootSignatureToken &Result) {
-  // NumericLiteralParser does not handle the sign so we will manually apply it
-  bool Negative = Buffer.front() == '-';
-  bool Signed = Negative || Buffer.front() == '+';
-  if (Signed)
-    AdvanceBuffer();
-
   // Retrieve the possible number
   StringRef NumSpelling = Buffer.take_while(IsNumberChar);
-
-  // Catch when there is a '+' or '-' specified but no literal value after.
-  // This is invalid but the NumericLiteralParser will accept this as valid.
-  if (NumSpelling.empty()) {
-    PP.getDiagnostics().Report(Result.TokLoc,
-                               diag::err_hlsl_expected_number_literal);
-    return true;
-  }
 
   // Parse the numeric value and do semantic checks on its specification
   clang::NumericLiteralParser Literal(NumSpelling, SourceLoc,
@@ -40,20 +26,17 @@ bool RootSignatureLexer::LexNumber(RootSignatureToken &Result) {
   assert(Literal.isIntegerLiteral() && "IsNumberChar will only support digits");
 
   // Retrieve the number value to store into the token
-  Result.Kind = TokenKind::int_literal;
 
-  // NOTE: for compabibility with DXC, we will treat any integer with '+' as an
-  // unsigned integer
-  llvm::APSInt X = llvm::APSInt(32, !Negative);
+  llvm::APSInt X = llvm::APSInt(32, true);
   if (Literal.GetIntegerValue(X)) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(Result.TokLoc,
                                diag::err_hlsl_number_literal_overflow)
-        << (unsigned)!Signed << NumSpelling;
+        << NumSpelling;
     return true;
   }
 
-  X = Negative ? -X : X;
+  Result.Kind = TokenKind::int_literal;
   Result.NumLiteral = APValue(X);
 
   AdvanceBuffer(NumSpelling.size());
@@ -83,7 +66,7 @@ bool RootSignatureLexer::LexToken(RootSignatureToken &Result) {
   }
 
   // Numeric constant
-  if (isdigit(C) || C == '-' || C == '+')
+  if (isdigit(C))
     return LexNumber(Result);
 
   // All following tokens require at least one additional character

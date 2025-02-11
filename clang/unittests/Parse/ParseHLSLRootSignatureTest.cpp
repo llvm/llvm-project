@@ -136,32 +136,32 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexNumbersTest) {
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
   SmallVector<hlsl::TokenKind> Expected = {
-      hlsl::TokenKind::int_literal,
-      hlsl::TokenKind::int_literal,
-      hlsl::TokenKind::int_literal,
+      hlsl::TokenKind::pu_minus,    hlsl::TokenKind::int_literal,
+      hlsl::TokenKind::int_literal, hlsl::TokenKind::pu_plus,
+      hlsl::TokenKind::int_literal, hlsl::TokenKind::pu_plus,
       hlsl::TokenKind::int_literal,
   };
   CheckTokens(Lexer, Tokens, Expected);
   ASSERT_TRUE(Consumer->IsSatisfied());
 
-  // Sample negative int
-  hlsl::RootSignatureToken IntToken = Tokens[0];
-  ASSERT_TRUE(IntToken.NumLiteral.getInt().isSigned());
-  ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), -42);
-
-  // Sample unsigned int
-  IntToken = Tokens[1];
+  // // Sample negative: int component
+  hlsl::RootSignatureToken IntToken = Tokens[1];
   ASSERT_FALSE(IntToken.NumLiteral.getInt().isSigned());
   ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), 42);
 
-  // Sample positive int that is treated as unsigned
+  // Sample unsigned int
   IntToken = Tokens[2];
+  ASSERT_FALSE(IntToken.NumLiteral.getInt().isSigned());
+  ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), 42);
+
+  // Sample positive: int component
+  IntToken = Tokens[4];
   ASSERT_FALSE(IntToken.NumLiteral.getInt().isSigned());
   ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), 42);
 
   // Sample positive int that would overflow the signed representation but
   // is treated as an unsigned integer instead
-  IntToken = Tokens[3];
+  IntToken = Tokens[6];
   ASSERT_FALSE(IntToken.NumLiteral.getInt().isSigned());
   ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), 2147483648);
 }
@@ -174,7 +174,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
     b0 t43 u987 s234
 
-    (),|=
+    (),|=+-
 
     DescriptorTable
 
@@ -279,25 +279,6 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
 
   // Test correct diagnostic produced
   Consumer->SetExpected(diag::err_hlsl_number_literal_overflow);
-
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
-
-  ASSERT_TRUE(Lexer.ConsumeToken());
-  ASSERT_TRUE(Consumer->IsSatisfied());
-}
-
-TEST_F(ParseHLSLRootSignatureTest, InvalidLexEmptyNumberTest) {
-  // This test will check that the lexing fails due to no integer being provided
-  const llvm::StringLiteral Source = R"cc(
-    -
-  )cc";
-
-  TrivialModuleLoader ModLoader;
-  auto PP = CreatePP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
-
-  // Test correct diagnostic produced
-  Consumer->SetExpected(diag::err_hlsl_expected_number_literal);
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
 
