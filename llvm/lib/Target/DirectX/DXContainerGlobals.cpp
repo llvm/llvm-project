@@ -154,14 +154,16 @@ void DXContainerGlobals::addRootSignature(Module &M,
                                           SmallVector<GlobalValue *> &Globals) {
 
   auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
+
   if (!RSA.getResult())
     return;
 
+  const ModuleRootSignature &MRS = RSA.getResult().value();
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
 
   RootSignatureHeader RSH;
-  RSH.Flags = RSA.getResult()->Flags;
+  RSH.Flags = MRS.Flags;
 
   RSH.write(OS);
 
