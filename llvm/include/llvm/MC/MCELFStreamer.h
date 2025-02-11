@@ -105,7 +105,7 @@ public:
     unsigned IntValue;
     std::string StringValue;
     AttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV)
-        : Type(Ty), Tag(Tg), IntValue(IV), StringValue(SV) {}
+        : Type(Ty), Tag(Tg), IntValue(IV), StringValue(std::move(SV)) {}
   };
 
   /// ELF object attributes subsection support
