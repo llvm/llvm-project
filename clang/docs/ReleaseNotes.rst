@@ -104,6 +104,10 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+- New option ``-fprofile-continuous`` added to enable continuous profile syncing to file (#GH124353, `docs <https://clang.llvm.org/docs/UsersManual.html#cmdoption-fprofile-continuous>`_).
+  The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
+  for a while and this is just a user facing option.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -129,6 +133,8 @@ Improvements to Clang's diagnostics
   which are supposed to only exist once per program, but may get duplicated when
   built into a shared library.
 - Fixed a bug where Clang's Analysis did not correctly model the destructor behavior of ``union`` members (#GH119415).
+- A statement attribute applied to a ``case`` label no longer suppresses
+  'bypassing variable initialization' diagnostics (#84072).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -285,6 +291,7 @@ Python Binding Changes
 OpenMP Support
 --------------
 - Added support 'no_openmp_constructs' assumption clause.
+- Added support for 'omp stripe' directive.
 
 Improvements
 ^^^^^^^^^^^^
