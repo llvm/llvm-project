@@ -82,8 +82,6 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       CountlsTest.h
     SRCS
       countls${suffix}_test.cpp
-    COMPILE_OPTIONS
-      ${libc_opt_high_flag}
     DEPENDS
       libc.src.stdfix.countls${suffix}
       libc.src.__support.fixed_point.fx_rep
