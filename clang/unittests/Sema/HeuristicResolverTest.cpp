@@ -394,6 +394,22 @@ TEST(HeuristicResolver, MemberExpr_DeducedNonTypeTemplateParameter) {
       fieldDecl(hasName("found")).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_HangIssue126536) {
+  std::string Code = R"cpp(
+    template <class T>
+    void foo() {
+      T bar;
+      auto baz = (bar, bar);
+      baz.foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "baz.foo()".
+  // Here, we are testing that we do not get into an infinite loop.
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"));
+}
+
 TEST(HeuristicResolver, DeclRefExpr_StaticMethod) {
   std::string Code = R"cpp(
     template <typename T>
