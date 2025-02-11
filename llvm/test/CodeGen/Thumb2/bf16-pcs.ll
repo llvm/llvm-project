@@ -144,7 +144,7 @@ define void @caller_soft_bfloat_on_stack() {
 ; BE-BF16-NEXT:    add sp, #8
 ; BE-BF16-NEXT:    pop {r7, pc}
 entry:
-  %ret = call arm_aapcscc bfloat @callee_soft_bfloat_on_stack(float undef, float undef, float undef, float undef, bfloat 1.0)
+  %ret = call arm_aapcscc bfloat @callee_soft_bfloat_on_stack(float poison, float poison, float poison, float poison, bfloat 1.0)
   ret void
 }
 
@@ -311,6 +311,6 @@ define void @caller_hard_bfloat_on_stack() {
 ; BE-BF16-NEXT:    add sp, #8
 ; BE-BF16-NEXT:    pop {r7, pc}
 entry:
-  %ret = call arm_aapcs_vfpcc bfloat @callee_hard_bfloat_on_stack(float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, bfloat 1.0)
+  %ret = call arm_aapcs_vfpcc bfloat @callee_hard_bfloat_on_stack(float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, bfloat 1.0)
   ret void
 }

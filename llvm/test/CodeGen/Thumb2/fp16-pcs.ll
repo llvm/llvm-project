@@ -140,7 +140,7 @@ define void @caller_soft_half_on_stack() {
 ; BE-FP16-NEXT:    add sp, #8
 ; BE-FP16-NEXT:    pop {r7, pc}
 entry:
-  %ret = call arm_aapcscc half @callee_soft_half_on_stack(float undef, float undef, float undef, float undef, half 1.0)
+  %ret = call arm_aapcscc half @callee_soft_half_on_stack(float poison, float poison, float poison, float poison, half 1.0)
   ret void
 }
 
@@ -283,6 +283,6 @@ define void @caller_hard_half_on_stack() {
 ; BE-FP16-NEXT:    add sp, #8
 ; BE-FP16-NEXT:    pop {r7, pc}
 entry:
-  %ret = call arm_aapcs_vfpcc half @callee_hard_half_on_stack(float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, half 1.0)
+  %ret = call arm_aapcs_vfpcc half @callee_hard_half_on_stack(float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, half 1.0)
   ret void
 }
