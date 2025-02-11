@@ -1222,7 +1222,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::FSINCOSPI: {
     EVT VT = Node->getValueType(0).getVectorElementType();
     RTLIB::Libcall LC = Node->getOpcode() == ISD::FSINCOS
-                            ? RTLIB::getFSINCOS(VT)
+                            ? RTLIB::getSINCOS(VT)
                             : RTLIB::getSINCOSPI(VT);
     if (DAG.expandMultipleResultFPLibCall(LC, Node, Results))
       return;
