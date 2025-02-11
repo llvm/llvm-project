@@ -153,6 +153,9 @@ Changes to Sanitizers
 Other Changes
 -------------
 
+* The -mcmodel=tiny option for the x86 architecture now triggers a frontend diagnostic.
+
+
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================
 
