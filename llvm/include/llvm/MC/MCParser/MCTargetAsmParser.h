@@ -125,9 +125,9 @@ struct ParseInstructionInfo {
 /// Ternary parse status returned by various parse* methods.
 class ParseStatus {
   enum class StatusTy {
-    Success, // operand matched successfully
-    Failure, // operand matched but had errors
-    NoMatch  // operand did not match
+    Success, // Parsing Succeeded
+    Failure, // Parsing Failed after consuming some tokens
+    NoMatch, // Parsing Failed without consuming any tokens
   } Status;
 
 public:
