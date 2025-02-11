@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Transforms/CUFOpConversion.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
@@ -22,6 +21,7 @@
 #include "flang/Runtime/CUDA/memory.h"
 #include "flang/Runtime/CUDA/pointer.h"
 #include "flang/Runtime/allocatable.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Matchers.h"
@@ -103,7 +103,7 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
   mlir::Value sourceLine;
   if constexpr (std::is_same_v<OpTy, cuf::AllocateOp>)
     sourceLine = fir::factory::locationToLineNo(
-        builder, loc, op.getSource() ? fTy.getInput(6) : fTy.getInput(5));
+        builder, loc, op.getSource() ? fTy.getInput(7) : fTy.getInput(6));
   else
     sourceLine = fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
 
@@ -119,22 +119,28 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
   }
   llvm::SmallVector<mlir::Value> args;
   if constexpr (std::is_same_v<OpTy, cuf::AllocateOp>) {
+    mlir::Value pinned =
+        op.getPinned()
+            ? op.getPinned()
+            : builder.createNullConstant(
+                  loc, fir::ReferenceType::get(
+                           mlir::IntegerType::get(op.getContext(), 1)));
     if (op.getSource()) {
       mlir::Value stream =
           op.getStream()
               ? op.getStream()
               : builder.createIntegerConstant(loc, fTy.getInput(2), -1);
-      args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
-                                           op.getSource(), stream, hasStat,
-                                           errmsg, sourceFile, sourceLine);
+      args = fir::runtime::createArguments(
+          builder, loc, fTy, op.getBox(), op.getSource(), stream, pinned,
+          hasStat, errmsg, sourceFile, sourceLine);
     } else {
       mlir::Value stream =
           op.getStream()
               ? op.getStream()
               : builder.createIntegerConstant(loc, fTy.getInput(1), -1);
       args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
-                                           stream, hasStat, errmsg, sourceFile,
-                                           sourceLine);
+                                           stream, pinned, hasStat, errmsg,
+                                           sourceFile, sourceLine);
     }
   } else {
     args =
@@ -153,11 +159,6 @@ struct CUFAllocateOpConversion
   mlir::LogicalResult
   matchAndRewrite(cuf::AllocateOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    // TODO: Pinned is a reference to a logical value that can be set to true
-    // when pinned allocation succeed. This will require a new entry point.
-    if (op.getPinned())
-      return mlir::failure();
-
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
@@ -294,19 +295,22 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
   matchAndRewrite(cuf::AllocOp op,
                   mlir::PatternRewriter &rewriter) const override {
 
+    mlir::Location loc = op.getLoc();
+
     if (inDeviceContext(op.getOperation())) {
       // In device context just replace the cuf.alloc operation with a fir.alloc
       // the cuf.free will be removed.
-      rewriter.replaceOpWithNewOp<fir::AllocaOp>(
-          op, op.getInType(), op.getUniqName() ? *op.getUniqName() : "",
+      auto allocaOp = rewriter.create<fir::AllocaOp>(
+          loc, op.getInType(), op.getUniqName() ? *op.getUniqName() : "",
           op.getBindcName() ? *op.getBindcName() : "", op.getTypeparams(),
           op.getShape());
+      allocaOp->setAttr(cuf::getDataAttrName(), op.getDataAttrAttr());
+      rewriter.replaceOp(op, allocaOp);
       return mlir::success();
     }
 
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
     mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
 
     if (!mlir::dyn_cast_or_null<fir::BaseBoxType>(op.getInType())) {
@@ -359,6 +363,7 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
       llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
           builder, loc, fTy, bytes, memTy, sourceFile, sourceLine)};
       auto callOp = builder.create<fir::CallOp>(loc, func, args);
+      callOp->setAttr(cuf::getDataAttrName(), op.getDataAttrAttr());
       auto convOp = builder.createConvert(loc, op.getResult().getType(),
                                           callOp.getResult(0));
       rewriter.replaceOp(op, convOp);
@@ -381,6 +386,7 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
     llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
         builder, loc, fTy, sizeInBytes, sourceFile, sourceLine)};
     auto callOp = builder.create<fir::CallOp>(loc, func, args);
+    callOp->setAttr(cuf::getDataAttrName(), op.getDataAttrAttr());
     auto convOp = builder.createConvert(loc, op.getResult().getType(),
                                         callOp.getResult(0));
     rewriter.replaceOp(op, convOp);
@@ -508,7 +514,8 @@ struct CUFFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
         fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
     llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
         builder, loc, fTy, op.getDevptr(), sourceFile, sourceLine)};
-    builder.create<fir::CallOp>(loc, func, args);
+    auto callOp = builder.create<fir::CallOp>(loc, func, args);
+    callOp->setAttr(cuf::getDataAttrName(), op.getDataAttrAttr());
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -913,8 +920,8 @@ public:
       return signalPassFailure();
     mlir::SymbolTable symtab(module);
 
-    std::optional<mlir::DataLayout> dl =
-        fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
+    std::optional<mlir::DataLayout> dl = fir::support::getOrSetMLIRDataLayout(
+        module, /*allowDefaultLayout=*/false);
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,

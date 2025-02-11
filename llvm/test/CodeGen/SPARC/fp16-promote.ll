@@ -89,10 +89,10 @@ define void @test_fpextend_fp128(ptr %p, ptr %out) nounwind {
 ; V8-OPT-NEXT:    call _Q_stoq
 ; V8-OPT-NEXT:    ld [%fp+-20], %o0
 ; V8-OPT-NEXT:    unimp 16
-; V8-OPT-NEXT:    ldd [%fp+-16], %f0
-; V8-OPT-NEXT:    ldd [%fp+-8], %f2
-; V8-OPT-NEXT:    std %f2, [%i1+8]
-; V8-OPT-NEXT:    std %f0, [%i1]
+; V8-OPT-NEXT:    ldd [%fp+-8], %f0
+; V8-OPT-NEXT:    ldd [%fp+-16], %f4
+; V8-OPT-NEXT:    std %f0, [%i1+8]
+; V8-OPT-NEXT:    std %f4, [%i1]
 ; V8-OPT-NEXT:    ret
 ; V8-OPT-NEXT:    restore
 ;
@@ -133,10 +133,10 @@ define void @test_fpextend_fp128(ptr %p, ptr %out) nounwind {
 ; V9-NEXT:    call _Q_stoq
 ; V9-NEXT:    ld [%fp+-20], %o0
 ; V9-NEXT:    unimp 16
-; V9-NEXT:    ldd [%fp+-16], %f0
-; V9-NEXT:    ldd [%fp+-8], %f2
-; V9-NEXT:    std %f2, [%i1+8]
-; V9-NEXT:    std %f0, [%i1]
+; V9-NEXT:    ldd [%fp+-8], %f0
+; V9-NEXT:    ldd [%fp+-16], %f4
+; V9-NEXT:    std %f0, [%i1+8]
+; V9-NEXT:    std %f4, [%i1]
 ; V9-NEXT:    ret
 ; V9-NEXT:    restore
 ;
@@ -149,10 +149,10 @@ define void @test_fpextend_fp128(ptr %p, ptr %out) nounwind {
 ; SPARC64-NEXT:    fmovs %f0, %f3
 ; SPARC64-NEXT:    call _Qp_stoq
 ; SPARC64-NEXT:    nop
-; SPARC64-NEXT:    ldd [%fp+2031], %f0
-; SPARC64-NEXT:    ldd [%fp+2039], %f2
-; SPARC64-NEXT:    std %f2, [%i1+8]
-; SPARC64-NEXT:    std %f0, [%i1]
+; SPARC64-NEXT:    ldd [%fp+2039], %f0
+; SPARC64-NEXT:    ldd [%fp+2031], %f4
+; SPARC64-NEXT:    std %f0, [%i1+8]
+; SPARC64-NEXT:    std %f4, [%i1]
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
   %a = load half, ptr %p
@@ -270,8 +270,8 @@ define void @test_fptrunc_fp128(ptr %dp, ptr %p) nounwind {
 ; V8-OPT:       ! %bb.0:
 ; V8-OPT-NEXT:    save %sp, -104, %sp
 ; V8-OPT-NEXT:    ldd [%i0], %f0
-; V8-OPT-NEXT:    ldd [%i0+8], %f2
-; V8-OPT-NEXT:    std %f2, [%sp+100]
+; V8-OPT-NEXT:    ldd [%i0+8], %f4
+; V8-OPT-NEXT:    std %f4, [%sp+100]
 ; V8-OPT-NEXT:    call __trunctfhf2
 ; V8-OPT-NEXT:    std %f0, [%sp+92]
 ; V8-OPT-NEXT:    sth %o0, [%i1]
@@ -302,8 +302,8 @@ define void @test_fptrunc_fp128(ptr %dp, ptr %p) nounwind {
 ; V9:       ! %bb.0:
 ; V9-NEXT:    save %sp, -104, %sp
 ; V9-NEXT:    ldd [%i0], %f0
-; V9-NEXT:    ldd [%i0+8], %f2
-; V9-NEXT:    std %f2, [%sp+100]
+; V9-NEXT:    ldd [%i0+8], %f4
+; V9-NEXT:    std %f4, [%sp+100]
 ; V9-NEXT:    call __trunctfhf2
 ; V9-NEXT:    std %f0, [%sp+92]
 ; V9-NEXT:    sth %o0, [%i1]

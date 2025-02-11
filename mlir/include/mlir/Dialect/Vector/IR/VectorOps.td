@@ -373,8 +373,9 @@ def Vector_BroadcastOp :
 
     The source operand is duplicated over all the missing leading dimensions
     and stretched over the trailing dimensions where the source has a non-equal
-    dimension of 1. These rules imply that any scalar broadcast (k=0) to any
-    shaped vector with the same element type is always legal.
+    dimension of 1 (stretching a trailing dimension is also referred to as
+    "dim-1" broadcasting). These rules imply that any scalar broadcast (k=0) to
+    any shaped vector with the same element type is always legal.
 
     Example:
 
@@ -396,7 +397,7 @@ def Vector_BroadcastOp :
 
     /// Broadcast `value` to a vector of `dstShape`, knowing that exactly the
     /// `broadcastedDims` dimensions in the dstShape are broadcasted.
-    /// This requires (and asserts) that the broadcast is free of dim-1
+    /// This requires (and asserts) that the broadcast is free of "dim-1"
     /// broadcasting.
     /// Since vector.broadcast only allows expanding leading dimensions, an extra
     /// vector.transpose may be inserted to make the broadcast possible.
@@ -2779,7 +2780,7 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [Pure,
     "`:` `(` type($lhs) `,` type($rhs) `)` `->` type($res)";
 }
 
-/// Vector dialect matrix tranposition op that operates on flattened 1-D
+/// Vector dialect matrix transposition op that operates on flattened 1-D
 /// MLIR vectors. This is the counterpart of llvm.matrix.transpose in MLIR.
 /// This may seem redundant with vector.transpose but it serves the purposes of
 /// more progressive lowering and localized type conversion on the path:
@@ -2799,7 +2800,7 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
   let description = [{
     This is the counterpart of llvm.matrix.transpose in MLIR. It serves
     the purposes of more progressive lowering and localized type conversion.
-    Higher levels typically lower matrix tranpositions into 'vector.transpose'
+    Higher levels typically lower matrix transpositions into 'vector.transpose'
     operations. Subsequent rewriting rule progressively lower these operations
     into 'vector.flat_transpose' operations to bring the operations closer
     to the hardware ISA.

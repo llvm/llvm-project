@@ -424,7 +424,7 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
     if (E.getTarget().hasName()) {
       ErrStream << "\"" << E.getTarget().getName() << "\"";
     } else
-      ErrStream << E.getTarget().getBlock().getSection().getName() << " + "
+      ErrStream << E.getTarget().getSection().getName() << " + "
                 << formatv("{0:x}", E.getOffset());
     ErrStream << " at address " << formatv("{0:x}", E.getTarget().getAddress())
               << " is out of range of " << G.getEdgeKindName(E.getKind())

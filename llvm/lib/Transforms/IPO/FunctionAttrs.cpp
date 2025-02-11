@@ -1208,7 +1208,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         F->getReturnType()->isVoidTy()) {
       for (Argument &A : F->args()) {
         if (A.getType()->isPointerTy() && !A.hasNoCaptureAttr()) {
-          A.addAttr(Attribute::NoCapture);
+          A.addAttr(Attribute::getWithCaptureInfo(A.getContext(),
+                                                  CaptureInfo::none()));
           ++NumNoCapture;
           Changed.insert(F);
         }
@@ -1226,7 +1227,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         if (!Tracker.Captured) {
           if (Tracker.Uses.empty()) {
             // If it's trivially not captured, mark it nocapture now.
-            A.addAttr(Attribute::NoCapture);
+            A.addAttr(Attribute::getWithCaptureInfo(A.getContext(),
+                                                    CaptureInfo::none()));
             ++NumNoCapture;
             Changed.insert(F);
           } else {
@@ -1279,7 +1281,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       if (ArgumentSCC[0]->Uses.size() == 1 &&
           ArgumentSCC[0]->Uses[0] == ArgumentSCC[0]) {
         Argument *A = ArgumentSCC[0]->Definition;
-        A->addAttr(Attribute::NoCapture);
+        A->addAttr(Attribute::getWithCaptureInfo(A->getContext(),
+                                                 CaptureInfo::none()));
         ++NumNoCapture;
         Changed.insert(A->getParent());
 
@@ -1293,16 +1296,6 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       continue;
     }
 
-    bool SCCCaptured = false;
-    for (ArgumentGraphNode *Node : ArgumentSCC) {
-      if (Node->Uses.empty() && !Node->Definition->hasNoCaptureAttr()) {
-        SCCCaptured = true;
-        break;
-      }
-    }
-    if (SCCCaptured)
-      continue;
-
     SmallPtrSet<Argument *, 8> ArgumentSCCNodes;
     // Fill ArgumentSCCNodes with the elements of the ArgumentSCC.  Used for
     // quickly looking up whether a given Argument is in this ArgumentSCC.
@@ -1310,6 +1303,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       ArgumentSCCNodes.insert(I->Definition);
     }
 
+    bool SCCCaptured = false;
     for (ArgumentGraphNode *N : ArgumentSCC) {
       for (ArgumentGraphNode *Use : N->Uses) {
         Argument *A = Use->Definition;
@@ -1326,7 +1320,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
 
     for (ArgumentGraphNode *N : ArgumentSCC) {
       Argument *A = N->Definition;
-      A->addAttr(Attribute::NoCapture);
+      A->addAttr(
+          Attribute::getWithCaptureInfo(A->getContext(), CaptureInfo::none()));
       ++NumNoCapture;
       Changed.insert(A->getParent());
     }

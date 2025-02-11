@@ -387,8 +387,8 @@ define amdgpu_ps void @and_i1_scc(i32 inreg %a, i32 inreg %b, ptr addrspace(1) %
 define amdgpu_ps void @divergent_phi_with_uniform_inputs(i32 %a, ptr addrspace(1) %out) {
 ; OLD_RBS-LABEL: divergent_phi_with_uniform_inputs:
 ; OLD_RBS:       ; %bb.0: ; %A
-; OLD_RBS-NEXT:    s_mov_b32 s0, 0
 ; OLD_RBS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; OLD_RBS-NEXT:    s_mov_b32 s0, 0
 ; OLD_RBS-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; OLD_RBS-NEXT:  ; %bb.1: ; %B
 ; OLD_RBS-NEXT:    s_mov_b32 s0, 1

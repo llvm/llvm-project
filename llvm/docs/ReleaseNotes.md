@@ -56,8 +56,13 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* The `nocapture` attribute has been replaced by `captures(none)`.
+
 Changes to LLVM infrastructure
 ------------------------------
+
+* Removed support for target intrinsics being defined in the target directories
+  themselves (i.e., the `TargetIntrinsicInfo` class).
 
 Changes to building LLVM
 ------------------------
@@ -133,6 +138,14 @@ Changes to LLDB
 
 * When building LLDB with Python support, the minimum version of Python is now
   3.8.
+* LLDB now supports hardware watchpoints for AArch64 Windows targets. Windows
+  does not provide API to query the number of supported hardware watchpoints.
+  Therefore current implementation allows only 1 watchpoint, as tested with
+  Windows 11 on the Microsoft SQ2 and Snapdragon Elite X platforms.
+
+### Changes to lldb-dap
+
+* Breakpoints can now be set for specific columns within a line.
 
 Changes to BOLT
 ---------------------------------

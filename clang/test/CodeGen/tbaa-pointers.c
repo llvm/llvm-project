@@ -208,12 +208,9 @@ int void_ptrs(void **ptr) {
 // COMMON-LABEL: define i32 @void_ptrs(
 // COMMON-SAME: ptr noundef [[PTRA:%.+]])
 // COMMON:        [[PTR_ADDR:%.+]]  = alloca ptr, align 8
-// DISABLE-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
-// DISABLE-NEXT:  [[L0:%.+]] = load ptr, ptr  [[PTR_ADDR]], align 8, !tbaa  [[ANYPTR]]
-// DISABLE-NEXT:  [[L1:%.+]] = load ptr, ptr [[L0]], align 8, !tbaa  [[ANYPTR]]
-// DEFAULT-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[P2VOID:!.+]]
-// DEFAULT-NEXT:  [[L0:%.+]] = load ptr, ptr  [[PTR_ADDR]], align 8, !tbaa  [[P2VOID]]
-// DEFAULT-NEXT:  [[L1:%.+]] = load ptr, ptr [[L0]], align 8, !tbaa  [[P1VOID:!.+]]
+// COMMON-NEXT:   store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
+// COMMON-NEXT:   [[L0:%.+]] = load ptr, ptr  [[PTR_ADDR]], align 8, !tbaa  [[ANYPTR]]
+// COMMON-NEXT:   [[L1:%.+]] = load ptr, ptr [[L0]], align 8, !tbaa  [[ANYPTR]]
 // COMMON-NEXT:   [[BOOL:%.+]] = icmp ne ptr [[L1]], null
 // COMMON-NEXT:   [[BOOL_EXT:%.+]] = zext i1 [[BOOL]] to i64
 // COMMON-NEXT:   [[COND:%.+]] = select i1 [[BOOL]], i32 0, i32 1
@@ -254,7 +251,3 @@ int void_ptrs(void **ptr) {
 // COMMON:  [[INT_TAG]] = !{[[INT_TY:!.+]], [[INT_TY]], i64 0}
 // COMMON:  [[INT_TY]] = !{!"int", [[CHAR]], i64 0}
 // DEFAULT: [[ANYPTR]] = !{[[ANY_POINTER]],  [[ANY_POINTER]], i64 0}
-// DEFAULT: [[P2VOID]] = !{[[P2VOID_TY:!.+]], [[P2VOID_TY]], i64 0}
-// DEFAULT: [[P2VOID_TY]] = !{!"p2 void", [[ANY_POINTER]], i64 0}
-// DEFAULT: [[P1VOID]] = !{[[P1VOID_TY:!.+]], [[P1VOID_TY]], i64 0}
-// DEFAULT: [[P1VOID_TY]] = !{!"p1 void", [[ANY_POINTER]], i64 0}
