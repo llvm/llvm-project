@@ -1025,7 +1025,6 @@ let CategoryName = "Root Signature Lexical Issue" in {
     Error<"integer literal '%0' is too large to be represented in a 32-bit integer type">;
   def err_hlsl_invalid_token: Error<"unable to lex a valid Root Signature token">;
   def err_hlsl_invalid_register_literal: Error<"expected unsigned integer literal as part of register">;
-  def err_hlsl_rootsig_unexpected_eos : Error<"unexpected end to token stream">;
 }
 
 }

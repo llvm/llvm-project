@@ -258,26 +258,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexPeekTest) {
   ASSERT_TRUE(Res.has_value());
   ASSERT_EQ(Res->Kind, hlsl::TokenKind::end_of_stream);
 
+  // Ensure no error raised when consuming past end of stream
+  ASSERT_FALSE(Lexer.ConsumeToken());
+  ASSERT_EQ(Lexer.GetCurToken().Kind, hlsl::TokenKind::end_of_stream);
+
   ASSERT_TRUE(Consumer->IsSatisfied());
 }
 
 // Invalid Lexing Tests
-
-TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEOSTest) {
-  const llvm::StringLiteral Source = R"cc()cc";
-
-  TrivialModuleLoader ModLoader;
-  auto PP = CreatePP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
-
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
-
-  // Test correct diagnostic produced
-  Consumer->SetExpected(diag::err_hlsl_rootsig_unexpected_eos);
-  ASSERT_TRUE(Lexer.ConsumeToken());
-
-  ASSERT_TRUE(Consumer->IsSatisfied());
-}
 
 TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
   // This test will check that the lexing fails due to an integer overflow

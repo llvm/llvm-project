@@ -164,10 +164,8 @@ bool RootSignatureLexer::ConsumeToken() {
 
   // This will be implicity be true if NextToken->Kind == end_of_stream
   if (EndOfBuffer()) {
-    // Report unexpected end of tokens error
-    PP.getDiagnostics().Report(SourceLoc,
-                               diag::err_hlsl_rootsig_unexpected_eos);
-    return true;
+    CurToken = RootSignatureToken(TokenKind::end_of_stream, SourceLoc);
+    return false;
   }
 
   return LexToken(CurToken);
@@ -178,14 +176,11 @@ std::optional<RootSignatureToken> RootSignatureLexer::PeekNextToken() {
   if (NextToken.has_value())
     return NextToken;
 
-  if (EndOfBuffer()) {
-    // We have reached the end of the stream, but only error on consume
-    return RootSignatureToken(TokenKind::end_of_stream, SourceLoc);
-  }
-
   RootSignatureToken Result;
-  if (LexToken(Result))
-    return std::nullopt;
+  if (EndOfBuffer()) {
+    Result = RootSignatureToken(TokenKind::end_of_stream, SourceLoc);
+  } else if (LexToken(Result))
+    return std::nullopt; // propogate lex error up
   NextToken = Result;
   return Result;
 }
