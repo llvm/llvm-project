@@ -1532,10 +1532,12 @@ void HoistSpillHelper::runHoistSpills(
     MachineBasicBlock *Block = (*RIt)->getBlock();
 
     // If Block contains an original spill, simply continue.
-    if (SpillsToKeep.contains(*RIt) && !SpillsToKeep[*RIt]) {
-      SpillsInSubTreeMap[*RIt].first.insert(*RIt);
-      // SpillsInSubTreeMap[*RIt].second contains the cost of spill.
-      SpillsInSubTreeMap[*RIt].second = MBFI.getBlockFreq(Block);
+    if (auto It = SpillsToKeep.find(*RIt);
+        It != SpillsToKeep.end() && !It->second) {
+      auto &SIt = SpillsInSubTreeMap[*RIt];
+      SIt.first.insert(*RIt);
+      // Sit.second contains the cost of spill.
+      SIt.second = MBFI.getBlockFreq(Block);
       continue;
     }
 

@@ -231,3 +231,17 @@ define i1 @nonnull17_unknown(i8 %x) {
   %q = icmp ne i8 %x, 0
   ret i1 %q
 }
+
+define i1 @nonnull_trunc_true(i8 %x) {
+; CHECK-LABEL: @nonnull_trunc_true(
+; CHECK-NEXT:    [[A:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
+; CHECK-NEXT:    [[Q:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[Q]]
+;
+  %a = trunc i8 %x to i1
+  call void @llvm.assume(i1 %a)
+  %q = icmp ne i8 %x, 0
+  ret i1 %q
+}
+
