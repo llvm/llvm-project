@@ -7022,6 +7022,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::modf:
   case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::frexp: {
     unsigned Opcode;
     switch (Intrinsic) {
@@ -7029,6 +7030,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       llvm_unreachable("unexpected intrinsic");
     case Intrinsic::sincos:
       Opcode = ISD::FSINCOS;
+      break;
+    case Intrinsic::sincospi:
+      Opcode = ISD::FSINCOSPI;
       break;
     case Intrinsic::modf:
       Opcode = ISD::FMODF;
