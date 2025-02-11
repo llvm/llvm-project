@@ -46,8 +46,6 @@ public:
   std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
-  uint32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) override;
-
   bool CanDebugProcess() override;
 
   void CalculateTrapHandlerSymbolNames() override;
