@@ -86,6 +86,7 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void lowerToMemCpy(StoreOp op);
   void lowerArrayDtor(ArrayDtor op);
   void lowerArrayCtor(ArrayCtor op);
+  void lowerThrowOp(ThrowOp op);
 
   /// Collect annotations of global values in the module
   void addGlobalAnnotations(mlir::Operation *op, mlir::ArrayAttr annotations);
@@ -1133,6 +1134,25 @@ void LoweringPreparePass::lowerIterEndOp(IterEndOp op) {
   op.erase();
 }
 
+void LoweringPreparePass::lowerThrowOp(ThrowOp op) {
+  CIRBaseBuilderTy builder(getContext());
+
+  if (op.rethrows()) {
+    auto voidTy = cir::VoidType::get(builder.getContext());
+    auto fnType = cir::FuncType::get({}, voidTy);
+    auto fnName = "__cxa_rethrow";
+
+    builder.setInsertionPointToStart(&theModule.getBodyRegion().front());
+    FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType);
+
+    builder.setInsertionPointAfter(op.getOperation());
+    auto call = builder.createTryCallOp(op.getLoc(), f, {});
+
+    op->replaceAllUsesWith(call);
+    op->erase();
+  }
+}
+
 void LoweringPreparePass::addGlobalAnnotations(mlir::Operation *op,
                                                mlir::ArrayAttr annotations) {
   auto globalValue = cast<mlir::SymbolOpInterface>(op);
@@ -1195,6 +1215,8 @@ void LoweringPreparePass::runOnOp(Operation *op) {
     }
     if (std::optional<mlir::ArrayAttr> annotations = fnOp.getAnnotations())
       addGlobalAnnotations(fnOp, annotations.value());
+  } else if (auto throwOp = dyn_cast<cir::ThrowOp>(op)) {
+    lowerThrowOp(throwOp);
   }
 }
 
@@ -1211,7 +1233,7 @@ void LoweringPreparePass::runOnOperation() {
   op->walk([&](Operation *op) {
     if (isa<UnaryOp, BinOp, CastOp, ComplexBinOp, CmpThreeWayOp, VAArgOp,
             GlobalOp, DynamicCastOp, StdFindOp, IterEndOp, IterBeginOp,
-            ArrayCtor, ArrayDtor, cir::FuncOp, StoreOp>(op))
+            ArrayCtor, ArrayDtor, cir::FuncOp, StoreOp, ThrowOp>(op))
       opsToTransform.push_back(op);
   });
 

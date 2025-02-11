@@ -2261,7 +2261,17 @@ mlir::Value CIRGenItaniumCXXABI::getCXXDestructorImplicitParam(
 
 void CIRGenItaniumCXXABI::emitRethrow(CIRGenFunction &CGF, bool isNoReturn) {
   // void __cxa_rethrow();
-  llvm_unreachable("NYI");
+
+  if (isNoReturn) {
+    auto &builder = CGF.getBuilder();
+    assert(CGF.currSrcLoc && "expected source location");
+    auto loc = *CGF.currSrcLoc;
+    builder.create<cir::ThrowOp>(loc, mlir::Value{}, mlir::FlatSymbolRefAttr{},
+                                 mlir::FlatSymbolRefAttr{});
+    builder.create<cir::UnreachableOp>(loc);
+  } else {
+    llvm_unreachable("NYI");
+  }
 }
 
 void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &CGF,

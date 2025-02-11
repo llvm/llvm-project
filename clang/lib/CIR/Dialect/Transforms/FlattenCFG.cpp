@@ -426,11 +426,14 @@ public:
                      SmallVectorImpl<mlir::Block *> &landingPads) const {
     // Replace the tryOp return with a branch that jumps out of the body.
     rewriter.setInsertionPointToEnd(afterBody);
-    auto tryBodyYield = cast<cir::YieldOp>(afterBody->getTerminator());
 
     mlir::Block *beforeCatch = rewriter.getInsertionBlock();
     rewriter.setInsertionPointToEnd(beforeCatch);
-    rewriter.replaceOpWithNewOp<cir::BrOp>(tryBodyYield, afterTry);
+
+    // Check if the terminator is a YieldOp because there could be another
+    // terminator, e.g. unreachable
+    if (auto tryBodyYield = dyn_cast<cir::YieldOp>(afterBody->getTerminator()))
+      rewriter.replaceOpWithNewOp<cir::BrOp>(tryBodyYield, afterTry);
 
     // Start the landing pad by getting the inflight exception information.
     mlir::Block *nextDispatcher =
