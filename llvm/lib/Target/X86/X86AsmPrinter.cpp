@@ -195,8 +195,15 @@ void processInstructions(
     }
 
     // Any other assignments to tracked registers removes their mapping.
-    for (const MachineOperand MO : Instr.defs()) {
+    //
+    // Note that it's important to use `all_defs()` here so that you capture
+    // implicit definitions (those not mentioned by operands, e.g. a call's
+    // return value in RAX).
+    for (const MachineOperand MO : Instr.all_defs()) {
       assert(MO.isReg() && "Is register.");
+      if (MO.getReg() == X86::SSP) {
+        continue;
+      }
       auto DwReg = getDwarfRegNum(MO.getReg(), TRI);
       killRegister(DwReg, SpillMap);
     }
