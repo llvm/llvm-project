@@ -3,16 +3,15 @@
 // RUN: %clang_cc1 -std=c17 -fsyntax-only -Wpre-c2x-compat -verify=pre-c2x-compat %s
 
 typedef int (*T1)[2];
-restrict T1 t1;         // pedantic-warning {{'restrict' qualifier on pointers to arrays is a C23 extension}} \
-                        // pre-c2x-compat-warning {{'restrict' qualifier on pointers to arrays is incompatible with C17 and earlier}}
+restrict T1 t1;
 
 typedef int *T2[2];
-restrict T2 t2;         // pedantic-warning {{'restrict' qualifier on pointers to arrays is a C23 extension}} \
-                        // pre-c2x-compat-warning {{'restrict' qualifier on pointers to arrays is incompatible with C17 and earlier}}
+restrict T2 t2;         // pedantic-warning {{'restrict' qualifier on an array of pointers is a C23 extension}} \
+                        // pre-c2x-compat-warning {{'restrict' qualifier on an array of pointers is incompatible with C standards before C23}}
 
 typedef int *T3[2][2];
-restrict T3 t3;         // pedantic-warning {{'restrict' qualifier on pointers to arrays is a C23 extension}} \
-                        // pre-c2x-compat-warning {{'restrict' qualifier on pointers to arrays is incompatible with C17 and earlier}}
+restrict T3 t3;         // pedantic-warning {{'restrict' qualifier on an array of pointers is a C23 extension}} \
+                        // pre-c2x-compat-warning {{'restrict' qualifier on an array of pointers is incompatible with C standards before C23}}
 
 typedef int (*t4)();    // pedantic-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 typedef t4 t5[2];

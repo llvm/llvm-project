@@ -6,10 +6,10 @@
 // RUN: %clang_cc1 %s -fblocks -pedantic -verify -triple=powerpc64-ibm-aix-xcoff
 
 typedef int (*T)[2];
-restrict T x; // expected-warning {{'restrict' qualifier on pointers to arrays is a C23 extension}}
+restrict T x;
 
 typedef int *S[2];
-restrict S y; // expected-warning {{'restrict' qualifier on pointers to arrays is a C23 extension}}
+restrict S y; // expected-warning {{'restrict' qualifier on an array of pointers is a C23 extension}}
 
 // int128_t is available.
 int a(void) {
