@@ -2240,7 +2240,7 @@ defm V_CVT_SCALEF32_SR_PK16_BF6_BF16 : VOP3Only_Real_Base_gfx1250<0x2d8>;
 defm V_CVT_PK_BF16_F32               : VOP3Only_Realtriple_gfx1250_gfx13<0x36d, 0x36e>;
 defm V_CVT_SR_PK_BF16_F32            : VOP3Only_Realtriple_gfx1250<0x36e>;
 defm V_CVT_PK_F16_F32                : VOP3Only_Realtriple_gfx1250<0x36f>;
-defm V_CVT_SR_PK_F16_F32             : VOP3Only_Realtriple_gfx1250<0x370>;
+defm V_CVT_SR_PK_F16_F32             : VOP3Only_Realtriple_gfx1250_gfx13<0x370, 0x2c3>;
 defm V_CVT_PK_FP8_F16                : VOP3Only_Realtriple_gfx1250_gfx13<0x372, 0x34c>;
 defm V_CVT_PK_BF8_F16                : VOP3Only_Realtriple_gfx1250_gfx13<0x373, 0x34d>;
 defm V_CVT_SR_FP8_F16                : VOP3Only_Realtriple_t16_gfx1250_gfx13<0x374, 0x335>;
