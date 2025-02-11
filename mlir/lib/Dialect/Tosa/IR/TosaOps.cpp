@@ -240,16 +240,13 @@ static LogicalResult verifyConvOp(T op) {
   bool biasIsFloat = llvm::isa<FloatType>(biasEType);
   bool resultIsFloat = llvm::isa<FloatType>(resultEType);
 
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputEType))
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
     inputEType = quantType.getStorageType();
 
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(biasEType))
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(biasEType))
     biasEType = quantType.getStorageType();
 
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(resultEType))
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(resultEType))
     resultEType = quantType.getStorageType();
 
   if (biasIsFloat && resultIsFloat && (biasEType != resultEType)) {
@@ -346,8 +343,7 @@ static LogicalResult verifyConvOpModes(T op) {
   auto inputEType =
       llvm::cast<ShapedType>(op.getInput().getType()).getElementType();
 
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputEType))
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
     inputEType = quantType.getStorageType();
 
   auto accType = op.getAccType();
@@ -369,7 +365,23 @@ static LogicalResult verifyConvOpModes(T op) {
   if (inputEType.isF32() && !accType.isF32())
     return op.emitOpError("accumulator type for f32 tensor is not f32");
 
-  return success();
+  auto resultEType =
+      llvm::cast<ShapedType>(op.getResult().getType()).getElementType();
+
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(resultEType))
+    resultEType = quantType.getStorageType();
+
+  // check allowed input/result element types combinations
+  if ((inputEType.isInteger(8) && resultEType.isInteger(32)) ||
+      (inputEType.isInteger(16) && resultEType.isInteger(48)) ||
+      (isa<Float8E5M2Type>(inputEType) && resultEType.isF16()) ||
+      (isa<Float8E4M3FNType>(inputEType) && resultEType.isF16()) ||
+      (inputEType.isF16() && resultEType.isF16()) ||
+      (inputEType.isBF16() && resultEType.isBF16()) ||
+      (inputEType.isF32() && resultEType.isF32()))
+    return success();
+
+  return op.emitOpError("input/output element types are incompatible.");
 }
 
 // verify that inType and outType have same element types
