@@ -185,9 +185,10 @@ countls(T f) {
   using BitType = typename FXRep::StorageType;
   using FXBits = FXBits<T>;
 
-  if constexpr (FXRep::SIGN_LEN > 0)
+  if constexpr (FXRep::SIGN_LEN > 0) {
     if (f < 0)
       f = bit_not(f);
+  }
 
   BitType value_bits = FXBits(f).get_bits();
   return cpp::countl_zero(value_bits) - FXRep::SIGN_LEN;

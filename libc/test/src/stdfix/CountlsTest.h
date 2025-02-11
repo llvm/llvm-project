@@ -36,21 +36,18 @@ public:
     // bits according to ISO/IEC TR 18037.
     EXPECT_EQ(is_signed ? 0 : FXRep::VALUE_LEN, func(min));
 
-    if (10 <= static_cast<int>(max)) {
+    if (10 <= static_cast<int>(max))
       EXPECT_EQ(FXRep::INTEGRAL_LEN - 4, func(10));
-    }
 
-    if (static_cast<int>(min) <= -10) {
+    if (static_cast<int>(min) <= -10)
       EXPECT_EQ(FXRep::INTEGRAL_LEN - 4, func(-10));
-    }
 
     if constexpr (is_signed) {
       EXPECT_EQ(FXRep::VALUE_LEN, func(-zero));
       EXPECT_EQ(FXRep::VALUE_LEN, func(-eps));
       EXPECT_EQ(FXRep::INTEGRAL_LEN + 1, func(-one_half));
-      if (FXRep::FRACTION_LEN >= 2) {
+      if (FXRep::FRACTION_LEN >= 2)
         EXPECT_EQ(FXRep::INTEGRAL_LEN + 2, func(-one_fourth));
-      }
     }
   }
 };
