@@ -451,14 +451,23 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     return;
   }
 
-  // Allocating on the heap in case the whole reduction/privatization is nested
+  // TODO: Allocate on the heap if the whole reduction/privatization is nested
   // inside of a loop
-  auto [temp, needsDealloc] = createTempFromMold(loc, builder, source);
+  mlir::Value tempValue;
+  std::optional<int64_t> cstNeedsDealloc;
+  if (isAllocatableOrPointer) {
+    auto [heapTemp, needsDealloc] = createTempFromMold(loc, builder, source);
+    tempValue = heapTemp;
+    cstNeedsDealloc = fir::getIntIfConstant(needsDealloc);
+  } else {
+    tempValue = hlfir::createStackTempFromMold(loc, builder, source);
+    cstNeedsDealloc = false;
+  }
+  hlfir::Entity temp{tempValue};
+
   // if needsDealloc isn't statically false, add cleanup region. Always
   // do this for allocatable boxes because they might have been re-allocated
   // in the body of the loop/parallel region
-
-  std::optional<int64_t> cstNeedsDealloc = fir::getIntIfConstant(needsDealloc);
   assert(cstNeedsDealloc.has_value() &&
          "createTempFromMold decides this statically");
   if (cstNeedsDealloc.has_value() && *cstNeedsDealloc != false) {
