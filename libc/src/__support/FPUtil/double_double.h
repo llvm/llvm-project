@@ -25,7 +25,7 @@ template <> struct DefaultSplit<float> {
   static constexpr size_t VALUE = 12;
 };
 template <> struct DefaultSplit<double> {
-  static constexpr size_t VALUE = 27;
+  static constexpr size_t VALUE = DEFAULT_DOUBLE_SPLIT;
 };
 
 using DoubleDouble = NumberPair<double>;

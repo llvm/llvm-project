@@ -148,8 +148,8 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
   bool recip = x_abs < y_abs;
   uint32_t min_abs = recip ? x_abs : y_abs;
   uint32_t max_abs = !recip ? x_abs : y_abs;
-  unsigned min_exp = static_cast<unsigned>(min_abs >> FPBits::FRACTION_LEN);
-  unsigned max_exp = static_cast<unsigned>(max_abs >> FPBits::FRACTION_LEN);
+  auto min_exp = static_cast<unsigned>(min_abs >> FPBits::FRACTION_LEN);
+  auto max_exp = static_cast<unsigned>(max_abs >> FPBits::FRACTION_LEN);
 
   float num = FPBits(min_abs).get_val();
   float den = FPBits(max_abs).get_val();
@@ -205,10 +205,9 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
   unsigned exp_diff = max_exp - min_exp;
   // We have the following bound for normalized n and d:
   //   2^(-exp_diff - 1) < n/d < 2^(-exp_diff + 1).
-  if (LIBC_UNLIKELY(exp_diff > 25)) {
+  if (LIBC_UNLIKELY(exp_diff > 25))
     return fputil::multiply_add(final_sign, const_term.hi,
                                 final_sign * (const_term.lo + num / den));
-  }
 
   float k = fputil::nearest_integer(16.0f * num / den);
   unsigned idx = static_cast<unsigned>(k);
