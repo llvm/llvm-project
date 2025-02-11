@@ -1807,8 +1807,7 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   StructType *ResTy = cast<StructType>(GEP.getType());
   Type *ResRsrcTy = ResTy->getElementType(0);
   VectorType *ResRsrcVecTy = dyn_cast<VectorType>(ResRsrcTy);
-  bool HasPtrVecIn = isa<VectorType>(Off->getType());
-  bool BroadcastsPtr = ResRsrcVecTy && !HasPtrVecIn;
+  bool BroadcastsPtr = ResRsrcVecTy && !isa<VectorType>(Off->getType());
 
   // In order to call emitGEPOffset() and thus not have to reimplement it,
   // we need the GEP result to have ptr addrspace(7) type.
