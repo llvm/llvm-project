@@ -596,7 +596,7 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
     if (mlir::ArrayAttr argAttrs = call.getArgAttrsAttr())
       llvmCall.setArgAttrsAttr(argAttrs);
     if (mlir::ArrayAttr resAttrs = call.getResAttrsAttr())
-      llvmCall.setArgAttrsAttr(resAttrs);
+      llvmCall.setResAttrsAttr(resAttrs);
     return mlir::success();
   }
 };
