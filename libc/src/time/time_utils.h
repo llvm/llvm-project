@@ -26,11 +26,11 @@ namespace time_utils {
 
 // calculates the seconds from the epoch for tm_in. Does not update the struct,
 // you must call update_from_seconds for that.
-int64_t mktime_internal(const struct tm *tm_out);
+int64_t mktime_internal(const tm *tm_out);
 
 // Update the "tm" structure's year, month, etc. members from seconds.
 // "total_seconds" is the number of seconds since January 1st, 1970.
-extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
+extern int64_t update_from_seconds(int64_t total_seconds, tm *tm);
 
 // TODO(michaelrj): move these functions to use ErrorOr instead of setting
 // errno. They always accompany a specific return value so we only need the one
@@ -49,7 +49,7 @@ LIBC_INLINE time_t out_of_range() {
 
 LIBC_INLINE void invalid_value() { libc_errno = EINVAL; }
 
-LIBC_INLINE char *asctime(const struct tm *timeptr, char *buffer,
+LIBC_INLINE char *asctime(const tm *timeptr, char *buffer,
                           size_t bufferLength) {
   if (timeptr == nullptr || buffer == nullptr) {
     invalid_value();
@@ -83,7 +83,7 @@ LIBC_INLINE char *asctime(const struct tm *timeptr, char *buffer,
   return buffer;
 }
 
-LIBC_INLINE struct tm *gmtime_internal(const time_t *timer, struct tm *result) {
+LIBC_INLINE tm *gmtime_internal(const time_t *timer, tm *result) {
   int64_t seconds = *timer;
   // Update the tm structure's year, month, day, etc. from seconds.
   if (update_from_seconds(seconds, result) < 0) {
@@ -96,8 +96,8 @@ LIBC_INLINE struct tm *gmtime_internal(const time_t *timer, struct tm *result) {
 
 // TODO: localtime is not yet implemented and a temporary solution is to
 //       use gmtime, https://github.com/llvm/llvm-project/issues/107597
-LIBC_INLINE struct tm *localtime(const time_t *t_ptr) {
-  static struct tm result;
+LIBC_INLINE tm *localtime(const time_t *t_ptr) {
+  static tm result;
   return time_utils::gmtime_internal(t_ptr, &result);
 }
 
@@ -124,44 +124,38 @@ LIBC_INLINE constexpr int get_days_in_year(const int year) {
 class TMReader final {
   const tm *timeptr;
 
+  template <size_t N>
+  LIBC_INLINE constexpr cpp::optional<cpp::string_view>
+  bounds_check(const cpp::array<cpp::string_view, N> &arr, int index) const {
+    if (index >= 0 && index < static_cast<int>(arr.size()))
+      return arr[index];
+    return cpp::nullopt;
+  }
+
 public:
-  LIBC_INLINE constexpr TMReader(const tm *tmptr) : timeptr(tmptr) { ; }
+  LIBC_INLINE constexpr explicit TMReader(const tm *tmptr) : timeptr(tmptr) {
+    ;
+  }
 
   // Strings
   LIBC_INLINE constexpr cpp::optional<cpp::string_view>
   get_weekday_short_name() const {
-    if (timeptr->tm_wday >= 0 &&
-        timeptr->tm_wday < time_constants::DAYS_PER_WEEK)
-      return time_constants::WEEK_DAY_NAMES[timeptr->tm_wday];
-
-    return cpp::nullopt;
+    return bounds_check(time_constants::WEEK_DAY_NAMES, timeptr->tm_wday);
   }
 
   LIBC_INLINE constexpr cpp::optional<cpp::string_view>
   get_weekday_full_name() const {
-    if (timeptr->tm_wday >= 0 &&
-        timeptr->tm_wday < time_constants::DAYS_PER_WEEK)
-      return time_constants::WEEK_DAY_FULL_NAMES[timeptr->tm_wday];
-
-    return cpp::nullopt;
+    return bounds_check(time_constants::WEEK_DAY_FULL_NAMES, timeptr->tm_wday);
   }
 
   LIBC_INLINE constexpr cpp::optional<cpp::string_view>
   get_month_short_name() const {
-    if (timeptr->tm_mon >= 0 &&
-        timeptr->tm_mon < time_constants::MONTHS_PER_YEAR)
-      return time_constants::MONTH_NAMES[timeptr->tm_mon];
-
-    return cpp::nullopt;
+    return bounds_check(time_constants::MONTH_NAMES, timeptr->tm_mon);
   }
 
   LIBC_INLINE constexpr cpp::optional<cpp::string_view>
   get_month_full_name() const {
-    if (timeptr->tm_mon >= 0 &&
-        timeptr->tm_mon < time_constants::MONTHS_PER_YEAR)
-      return time_constants::MONTH_FULL_NAMES[timeptr->tm_mon];
-
-    return cpp::nullopt;
+    return bounds_check(time_constants::MONTH_FULL_NAMES, timeptr->tm_mon);
   }
 
   LIBC_INLINE constexpr cpp::string_view get_am_pm() const {
@@ -197,41 +191,49 @@ public:
   }
 
   LIBC_INLINE constexpr int get_iso_wday() const {
+    using time_constants::DAYS_PER_WEEK;
+    using time_constants::MONDAY;
     // ISO uses a week that starts on Monday, but struct tm starts its week on
     // Sunday. This function normalizes the weekday so that it always returns a
     // value 0-6
-    const int NORMALIZED_WDAY =
-        timeptr->tm_wday % time_constants::DAYS_PER_WEEK;
-    return (NORMALIZED_WDAY + (time_constants::DAYS_PER_WEEK - 1)) % 7;
+    const int NORMALIZED_WDAY = timeptr->tm_wday % DAYS_PER_WEEK;
+    return (NORMALIZED_WDAY + (DAYS_PER_WEEK - MONDAY)) % DAYS_PER_WEEK;
   }
 
   // returns the week of the current year, with weeks starting on start_day.
   LIBC_INLINE constexpr int get_week(time_constants::WeekDay start_day) const {
+    using time_constants::DAYS_PER_WEEK;
     // The most recent start_day. The rest of the days into the current week
     // don't count, so ignore them.
     // Also add 7 to handle start_day > tm_wday
     const int start_of_cur_week =
         timeptr->tm_yday -
-        ((timeptr->tm_wday + time_constants::DAYS_PER_WEEK - start_day) %
-         time_constants::DAYS_PER_WEEK);
+        ((timeptr->tm_wday + DAYS_PER_WEEK - start_day) % DAYS_PER_WEEK);
 
-    // Add 1 since the first week may start with day 0
+    // The original formula is ceil((start_of_cur_week + 1) / DAYS_PER_WEEK)
+    // That becomes (start_of_cur_week + 1 + DAYS_PER_WEEK - 1) / DAYS_PER_WEEK)
+    // Which simplifies to (start_of_cur_week + DAYS_PER_WEEK) / DAYS_PER_WEEK
     const int ceil_weeks_since_start =
-        ((start_of_cur_week + 1) + (time_constants::DAYS_PER_WEEK - 1)) /
-        time_constants::DAYS_PER_WEEK;
+        (start_of_cur_week + DAYS_PER_WEEK) / DAYS_PER_WEEK;
+
     return ceil_weeks_since_start;
   }
 
   LIBC_INLINE constexpr int get_iso_week() const {
-    const time_constants::WeekDay start_day = time_constants::MONDAY;
+    using time_constants::DAYS_PER_WEEK;
+    using time_constants::ISO_FIRST_DAY_OF_YEAR;
+    using time_constants::MONDAY;
+    using time_constants::WeekDay;
+    using time_constants::WEEKS_PER_YEAR;
+
+    constexpr WeekDay START_DAY = MONDAY;
 
     // The most recent start_day. The rest of the days into the current week
     // don't count, so ignore them.
     // Also add 7 to handle start_day > tm_wday
     const int start_of_cur_week =
         timeptr->tm_yday -
-        ((timeptr->tm_wday + time_constants::DAYS_PER_WEEK - start_day) %
-         time_constants::DAYS_PER_WEEK);
+        ((timeptr->tm_wday + DAYS_PER_WEEK - START_DAY) % DAYS_PER_WEEK);
 
     // if the week starts in the previous year, and also if the 4th of this year
     // is not in this week.
@@ -243,10 +245,8 @@ public:
       // in the next year. We know get_year() - 1 must extend into get_year(),
       // so here we check if it also extended into get_year() - 2 and add 1 week
       // if it does.
-      return 52 + ((days_into_prev_year % time_constants::DAYS_PER_WEEK) >
-                           time_constants::ISO_FIRST_DAY_OF_YEAR
-                       ? 1
-                       : 0);
+      return WEEKS_PER_YEAR +
+             ((days_into_prev_year % DAYS_PER_WEEK) > ISO_FIRST_DAY_OF_YEAR);
     }
 
     // subtract 1 to account for yday being 0 indexed
@@ -261,16 +261,13 @@ public:
 
     // else just calculate the current week like normal.
     const int ceil_weeks_since_start =
-        ((start_of_cur_week + 1) + (time_constants::DAYS_PER_WEEK - 1)) /
-        time_constants::DAYS_PER_WEEK;
+        (start_of_cur_week + DAYS_PER_WEEK) / DAYS_PER_WEEK;
 
     // add 1 if this year's first week starts in the previous year.
-    return ceil_weeks_since_start +
-           (((start_of_cur_week + time_constants::DAYS_PER_WEEK) %
-             time_constants::DAYS_PER_WEEK) >
-                    time_constants::ISO_FIRST_DAY_OF_YEAR
-                ? 1
-                : 0);
+    const int WEEK_STARTS_IN_PREV_YEAR =
+        ((start_of_cur_week + time_constants::DAYS_PER_WEEK) %
+         time_constants::DAYS_PER_WEEK) > time_constants::ISO_FIRST_DAY_OF_YEAR;
+    return ceil_weeks_since_start + WEEK_STARTS_IN_PREV_YEAR;
   }
 
   LIBC_INLINE constexpr int get_iso_year() const {
@@ -303,11 +300,10 @@ public:
 
        wday - yday < 7 - 4
       */
-      return (ISO_WDAY - timeptr->tm_yday <
-              time_constants::DAYS_PER_WEEK -
-                  time_constants::ISO_FIRST_DAY_OF_YEAR)
-                 ? BASE_YEAR
-                 : BASE_YEAR - 1;
+      const int IS_CUR_YEAR = (ISO_WDAY - timeptr->tm_yday <
+                               time_constants::DAYS_PER_WEEK -
+                                   time_constants::ISO_FIRST_DAY_OF_YEAR);
+      return BASE_YEAR - !IS_CUR_YEAR;
     }
 
     // last week
@@ -328,12 +324,10 @@ public:
 
     wday + remaining days < 7 - 4
     */
-
-    return (ISO_WDAY + DAYS_LEFT_IN_YEAR <
-            time_constants::DAYS_PER_WEEK -
-                time_constants::ISO_FIRST_DAY_OF_YEAR)
-               ? BASE_YEAR + 1
-               : BASE_YEAR;
+    const int IS_NEXT_YEAR =
+        (ISO_WDAY + DAYS_LEFT_IN_YEAR <
+         time_constants::DAYS_PER_WEEK - time_constants::ISO_FIRST_DAY_OF_YEAR);
+    return BASE_YEAR + IS_NEXT_YEAR;
   }
 
   LIBC_INLINE constexpr time_t get_epoch() const {

@@ -12,11 +12,13 @@
 #include "src/__support/macros/config.h"
 #include "src/time/time_constants.h"
 
+#include <stdint.h>
+
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
 // TODO: clean this up in a followup patch
-int64_t mktime_internal(const struct tm *tm_out) {
+int64_t mktime_internal(const tm *tm_out) {
   // Unlike most C Library functions, mktime doesn't just die on bad input.
   // TODO(rtenneti); Handle leap seconds.
   int64_t tm_year_from_base = tm_out->tm_year + time_constants::TIME_YEAR_BASE;
@@ -134,7 +136,7 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
 //
 // Compute the number of months from the remaining days. Finally, adjust years
 // to be 1900 and months to be from January.
-int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
+int64_t update_from_seconds(int64_t total_seconds, tm *tm) {
   // Days in month starting from March in the year 2000.
   static const char daysInMonth[] = {31 /* Mar */, 30, 31, 30, 31, 31,
                                      30,           31, 30, 31, 31, 29};
