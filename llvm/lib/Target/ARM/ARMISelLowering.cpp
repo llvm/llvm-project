@@ -15275,10 +15275,19 @@ static SDValue PerformVMOVhrCombine(SDNode *N,
   // fold (VMOVhr (load x)) -> (load (f16*)x)
   if (LoadSDNode *LN0 = dyn_cast<LoadSDNode>(Op0)) {
     if (LN0->hasOneUse() && LN0->isUnindexed() &&
-        LN0->getMemoryVT() == MVT::i16) {
-      SDValue Load =
-          DCI.DAG.getLoad(N->getValueType(0), SDLoc(N), LN0->getChain(),
-                          LN0->getBasePtr(), LN0->getMemOperand());
+        (LN0->getMemoryVT() == MVT::i16 || LN0->getMemoryVT() == MVT::i32)) {
+      SDValue Addr = LN0->getBasePtr();
+      unsigned PtrOffset = 0;
+      if (DCI.DAG.getDataLayout().isBigEndian() &&
+          LN0->getMemoryVT() == MVT::i32) {
+        PtrOffset = 2;
+        Addr = DCI.DAG.getObjectPtrOffset(SDLoc(N), Addr,
+                                          TypeSize::getFixed(PtrOffset));
+      }
+      SDValue Load = DCI.DAG.getLoad(
+          N->getValueType(0), SDLoc(N), LN0->getChain(), Addr,
+          LN0->getPointerInfo().getWithOffset(PtrOffset), LN0->getAlign(),
+          LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
       DCI.DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Load.getValue(0));
       DCI.DAG.ReplaceAllUsesOfValueWith(Op0.getValue(1), Load.getValue(1));
       return Load;
