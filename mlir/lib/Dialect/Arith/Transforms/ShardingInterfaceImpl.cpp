@@ -20,6 +20,11 @@ using namespace mlir::mesh;
 namespace {
 
 // Sharding of arith.constant
+// RankedTensor constants can be sharded like any other tensor.
+//   %cst = arith.constant dense<0.000000e+00> : tensor<1024x1024xf32>
+//   %sharding = mesh.sharding @mesh4x4 split_axes = [[0]] : !mesh.sharding
+// Scalar constants are always replicated and need no sharding annotation.
+
 struct ConstantShardingInterface
     : public ShardingInterface::ExternalModel<ConstantShardingInterface,
                                               ConstantOp> {
