@@ -176,6 +176,8 @@ void processInstructions(
         clearOffset(DwReg, Offset, SpillMap);
         SpillMap[DwReg].insert(Offset);
       }
+      // YKOPT: we can also remove killed registers, if any.
+      // Check other places that have a `continue` too.
       continue;
     }
 
@@ -211,6 +213,8 @@ void processInstructions(
     // Delete registers that are "killed" (no longer live) after this
     // intsruction. This prevents us deopting values at runtime that will never
     // be used.
+    //
+    // YKOPT: use `all_uses()` to kill implicit uses too?
     for (const MachineOperand MO : Instr.uses()) {
       if (MO.isReg() && (MO.isKill() || MO.isDef())) {
         int DwReg = MRI->getDwarfRegNum(MO.getReg(), false);
