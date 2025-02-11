@@ -48,6 +48,7 @@
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;  // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;  // (shared)ptr
+def llvm_local_ptr_ty   : LLVMQualPointerType<5>;  // (local)ptr
 def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;  // (tensor memory)ptr
 
 //
@@ -4998,6 +4999,26 @@ foreach dim = [1, 2, 3, 4, 5] in {
     }
   }
 }
+
+// Intrinsics for Prefetch and Prefetchu
+foreach level = ["L1", "L2"] in {
+   foreach addr = ["global", "local", ""] in {
+     foreach evict = !if(!eq(addr, "global"), ["evictlast", "evictnormal"], ["evictnormal"]) in {
+      defvar suffix = "" # !if(!eq(addr, ""), "", addr # "_") # level # "_" # evict;             
+      def int_nvvm_prefetch_ # suffix : Intrinsic<[], 
+                                        !cond(
+                                        !eq(addr, "global") : [llvm_global_ptr_ty],
+                                        !eq(addr, "local") : [llvm_local_ptr_ty],
+                                        !eq(addr, "") : [llvm_ptr_ty]),
+                                        [IntrArgMemOnly, ReadOnly<ArgIndex<0>>,
+                                        NoCapture<ArgIndex<0>>]>;   
+    }
+  }
+}
+
+def int_nvvm_prefetchu_L1_evictnormal : Intrinsic<[], [llvm_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+
 
 // Intrinsics for Bulk Copy using TMA (non-tensor)
 // From Global to Shared Cluster
