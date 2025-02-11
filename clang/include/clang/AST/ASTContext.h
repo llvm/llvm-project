@@ -1733,6 +1733,47 @@ public:
                             unsigned NumPositiveBits, QualType &BestType,
                             QualType &BestPromotionType);
 
+  /// Determine whether the given integral value is representable within
+  /// the given type T.
+  bool isRepresentableIntegerValue(llvm::APSInt &Value, QualType T);
+
+  /// Compute NumNegativeBits and NumPositiveBits for an enum based on
+  /// the constant values of its enumerators.
+  template <typename RangeT>
+  bool computeEnumBits(RangeT EnumConstants, unsigned &NumNegativeBits,
+                       unsigned &NumPositiveBits) {
+    NumNegativeBits = 0;
+    NumPositiveBits = 0;
+    bool MembersRepresentableByInt = true;
+    for (auto *Elem : EnumConstants) {
+      EnumConstantDecl *ECD = cast_or_null<EnumConstantDecl>(Elem);
+      if (!ECD)
+        continue; // Already issued a diagnostic.
+
+      llvm::APSInt InitVal = ECD->getInitVal();
+      if (InitVal.isUnsigned() || InitVal.isNonNegative()) {
+        // If the enumerator is zero that should still be counted as a positive
+        // bit since we need a bit to store the value zero.
+        unsigned ActiveBits = InitVal.getActiveBits();
+        NumPositiveBits = std::max({NumPositiveBits, ActiveBits, 1u});
+      } else {
+        NumNegativeBits =
+            std::max(NumNegativeBits, (unsigned)InitVal.getSignificantBits());
+      }
+
+      MembersRepresentableByInt &= isRepresentableIntegerValue(InitVal, IntTy);
+    }
+
+    // If we have an empty set of enumerators we still need one bit.
+    // From [dcl.enum]p8
+    // If the enumerator-list is empty, the values of the enumeration are as if
+    // the enumeration had a single enumerator with value 0
+    if (!NumPositiveBits && !NumNegativeBits)
+      NumPositiveBits = 1;
+
+    return MembersRepresentableByInt;
+  }
+
   QualType
   getUnresolvedUsingType(const UnresolvedUsingTypenameDecl *Decl) const;
 
