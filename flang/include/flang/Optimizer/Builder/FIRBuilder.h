@@ -813,6 +813,18 @@ uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
 llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
                                                     mlir::ValueRange extents2);
 
+/// Given array extents generate code that sets them all to zeroes,
+/// if the array is empty, e.g.:
+///   %false = arith.constant false
+///   %c0 = arith.constant 0 : index
+///   %p1 = arith.cmpi eq, %e0, %c0 : index
+///   %p2 = arith.ori %false, %p1 : i1
+///   %p3 = arith.cmpi eq, %e1, %c0 : index
+///   %p4 = arith.ori %p1, %p2 : i1
+///   %result0 = arith.select %p4, %c0, %e0 : index
+///   %result1 = arith.select %p4, %c0, %e1 : index
+llvm::SmallVector<mlir::Value> updateRuntimeExtentsForEmptyArrays(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::ValueRange extents);
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

@@ -226,6 +226,14 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       PtrDepth++;
       Ty = Ty->getPointeeType()->getBaseElementTypeUnsafe();
     } while (Ty->isPointerType());
+
+    // While there are no special rules in the standards regarding void pointers
+    // and strict aliasing, emitting distinct tags for void pointers break some
+    // common idioms and there is no good alternative to re-write the code
+    // without strict-aliasing violations.
+    if (Ty->isVoidType())
+      return AnyPtr;
+
     assert(!isa<VariableArrayType>(Ty));
     // When the underlying type is a builtin type, we compute the pointee type
     // string recursively, which is implicitly more forgiving than the standards

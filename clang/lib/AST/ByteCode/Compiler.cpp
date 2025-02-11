@@ -562,8 +562,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // We're creating a complex value here, so we need to
     // allocate storage for it.
     if (!Initializing) {
-      unsigned LocalIndex = allocateTemporary(CE);
-      if (!this->emitGetPtrLocal(LocalIndex, CE))
+      std::optional<unsigned> LocalIndex = allocateTemporary(CE);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
         return false;
     }
 
@@ -679,8 +681,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     assert(CE->getType()->isVectorType());
 
     if (!Initializing) {
-      unsigned LocalIndex = allocateTemporary(CE);
-      if (!this->emitGetPtrLocal(LocalIndex, CE))
+      std::optional<unsigned> LocalIndex = allocateTemporary(CE);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
         return false;
     }
     unsigned ToSize = CE->getType()->getAs<VectorType>()->getNumElements();
@@ -759,8 +763,10 @@ bool Compiler<Emitter>::VisitImaginaryLiteral(const ImaginaryLiteral *E) {
     return true;
 
   if (!Initializing) {
-    unsigned LocalIndex = allocateTemporary(E);
-    if (!this->emitGetPtrLocal(LocalIndex, E))
+    std::optional<unsigned> LocalIndex = allocateTemporary(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
   }
 
@@ -1118,8 +1124,10 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
   // Prepare storage for result.
   if (!Initializing) {
-    unsigned LocalIndex = allocateTemporary(E);
-    if (!this->emitGetPtrLocal(LocalIndex, E))
+    std::optional<unsigned> LocalIndex = allocateTemporary(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
   }
 
@@ -1175,7 +1183,10 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
     if (!LHSIsComplex) {
       // This is using the RHS type for the fake-complex LHS.
-      LHSOffset = allocateTemporary(RHS);
+      std::optional<unsigned> LocalIndex = allocateTemporary(RHS);
+      if (!LocalIndex)
+        return false;
+      LHSOffset = *LocalIndex;
 
       if (!this->emitGetPtrLocal(LHSOffset, E))
         return false;
@@ -1347,8 +1358,10 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
 
   // Prepare storage for result.
   if (!Initializing && !E->isCompoundAssignmentOp()) {
-    unsigned LocalIndex = allocateTemporary(E);
-    if (!this->emitGetPtrLocal(LocalIndex, E))
+    std::optional<unsigned> LocalIndex = allocateTemporary(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
   }
 
@@ -4170,14 +4183,16 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
 }
 
 template <class Emitter>
-unsigned Compiler<Emitter>::allocateTemporary(const Expr *E) {
+std::optional<unsigned> Compiler<Emitter>::allocateTemporary(const Expr *E) {
   QualType Ty = E->getType();
   assert(!Ty->isRecordType());
 
   Descriptor *D = P.createDescriptor(
       E, Ty.getTypePtr(), Descriptor::InlineDescMD, Ty.isConstQualified(),
       /*IsTemporary=*/true, /*IsMutable=*/false, /*Init=*/nullptr);
-  assert(D);
+
+  if (!D)
+    return std::nullopt;
 
   Scope::Local Local = this->createLocal(D);
   VariableScope<Emitter> *S = VarScope;
@@ -4661,7 +4676,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       OCE && OCE->isAssignmentOp()) {
     // Just like with regular assignments, we need to special-case assignment
     // operators here and evaluate the RHS (the second arg) before the LHS (the
-    // first arg. We fix this by using a Flip op later.
+    // first arg). We fix this by using a Flip op later.
     assert(Args.size() == 2);
     IsAssignmentOperatorCall = true;
     std::reverse(Args.begin(), Args.end());
@@ -4700,6 +4715,14 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     } else if (!this->visit(MC->getImplicitObjectArgument())) {
       return false;
     }
+  } else if (const auto *PD =
+                 dyn_cast<CXXPseudoDestructorExpr>(E->getCallee())) {
+    const Expr *Base = PD->getBase();
+    if (!Base->isGLValue())
+      return this->discard(Base);
+    if (!this->visit(Base))
+      return false;
+    return this->emitKill(E);
   } else if (!FuncDecl) {
     const Expr *Callee = E->getCallee();
     CalleeOffset = this->allocateLocalPrimitive(Callee, PT_FnPtr, true, false);
@@ -4976,8 +4999,8 @@ bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
   for (const auto *D : DS->decls()) {
-    if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, UsingEnumDecl,
-            FunctionDecl>(D))
+    if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, BaseUsingDecl,
+            FunctionDecl, NamespaceAliasDecl>(D))
       continue;
 
     const auto *VD = dyn_cast<VarDecl>(D);
@@ -5650,6 +5673,21 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::compileUnionAssignmentOperator(
+    const CXXMethodDecl *MD) {
+  if (!this->emitThis(MD))
+    return false;
+
+  auto PVD = MD->getParamDecl(0);
+  ParamOffset PO = this->Params[PVD]; // Must exist.
+
+  if (!this->emitGetParam(PT_Ptr, PO.Offset, MD))
+    return false;
+
+  return this->emitMemcpy(MD) && this->emitRet(PT_Ptr, MD);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
@@ -5660,9 +5698,16 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
     return this->compileDestructor(Dtor);
 
   // Emit custom code if this is a lambda static invoker.
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(F);
-      MD && MD->isLambdaStaticInvoker())
-    return this->emitLambdaStaticInvokerBody(MD);
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
+    const RecordDecl *RD = MD->getParent();
+
+    if (RD->isUnion() &&
+        (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()))
+      return this->compileUnionAssignmentOperator(MD);
+
+    if (MD->isLambdaStaticInvoker())
+      return this->emitLambdaStaticInvokerBody(MD);
+  }
 
   // Regular functions.
   if (const auto *Body = F->getBody())
@@ -6175,7 +6220,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
 
     if (D->getType()->isReferenceType())
-      return false; // FIXME: Do we need to emit InvalidDeclRef?
+      return this->emitDummyPtr(D, E);
   }
 
   // In case we need to re-visit a declaration.

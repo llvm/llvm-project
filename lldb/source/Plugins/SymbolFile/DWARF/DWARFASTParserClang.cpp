@@ -1019,16 +1019,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
     // Declaration DIE is inserted into the type map in ParseTypeFromDWARF
   }
 
-
-  if (TypeSystemClang::StartTagDeclarationDefinition(clang_type)) {
-    if (def_die.HasChildren()) {
-      bool is_signed = false;
-      enumerator_clang_type.IsIntegerType(is_signed);
-      ParseChildEnumerators(clang_type, is_signed,
-                            type_sp->GetByteSize(nullptr).value_or(0), def_die);
-    }
-    TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
-  } else {
+  if (!CompleteEnumType(def_die, type_sp.get(), clang_type)) {
     dwarf->GetObjectFile()->GetModule()->ReportError(
         "DWARF DIE at {0:x16} named \"{1}\" was not able to start its "
         "definition.\nPlease file a bug and attach the file at the "
@@ -2221,13 +2212,14 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
 bool DWARFASTParserClang::CompleteEnumType(const DWARFDIE &die,
                                            lldb_private::Type *type,
                                            const CompilerType &clang_type) {
+  assert(clang_type.IsEnumerationType());
+
   if (TypeSystemClang::StartTagDeclarationDefinition(clang_type)) {
-    if (die.HasChildren()) {
-      bool is_signed = false;
-      clang_type.IsIntegerType(is_signed);
-      ParseChildEnumerators(clang_type, is_signed,
+    if (die.HasChildren())
+      ParseChildEnumerators(clang_type,
+                            clang_type.IsEnumerationIntegerTypeSigned(),
                             type->GetByteSize(nullptr).value_or(0), die);
-    }
+
     TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
   }
   return (bool)clang_type;
@@ -2329,8 +2321,7 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
       continue;
 
     const char *name = nullptr;
-    bool got_value = false;
-    int64_t enum_value = 0;
+    std::optional<uint64_t> enum_value;
     Declaration decl;
 
     for (size_t i = 0; i < attributes.Size(); ++i) {
@@ -2339,7 +2330,6 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
       if (attributes.ExtractFormValueAtIndex(i, form_value)) {
         switch (attr) {
         case DW_AT_const_value:
-          got_value = true;
           if (is_signed)
             enum_value = form_value.Signed();
           else
@@ -2368,9 +2358,9 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
       }
     }
 
-    if (name && name[0] && got_value) {
+    if (name && name[0] && enum_value) {
       m_ast.AddEnumerationValueToEnumerationType(
-          clang_type, decl, name, enum_value, enumerator_byte_size * 8);
+          clang_type, decl, name, *enum_value, enumerator_byte_size * 8);
       ++enumerators_added;
     }
   }

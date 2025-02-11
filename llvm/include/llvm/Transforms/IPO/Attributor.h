@@ -1954,8 +1954,12 @@ struct Attributor {
 private:
   /// Helper to check \p Attrs for \p AK, if not found, check if \p
   /// AAType::isImpliedByIR is true, and if not, create AAType for \p IRP.
+  /// If \p SkipHasAttrCheck is true, don't check whether the attribute is set
+  /// first. This should be used if only some values of a complex IR attribute
+  /// imply the AAType.
   template <Attribute::AttrKind AK, typename AAType>
-  void checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs);
+  void checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
+                           bool SkipHasAttrCheck = false);
 
   /// Helper to apply \p CB on all attributes of type \p AttrDescs of \p IRP.
   template <typename DescTy>
@@ -4355,7 +4359,7 @@ struct AAInstanceInfo : public StateWrapper<BooleanState, AbstractAttribute> {
 /// An abstract interface for all nocapture attributes.
 struct AANoCapture
     : public IRAttribute<
-          Attribute::NoCapture,
+          Attribute::Captures,
           StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>,
           AANoCapture> {
   AANoCapture(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
@@ -6513,7 +6517,7 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
     CASE(NoUnwind, AANoUnwind, );
     CASE(WillReturn, AAWillReturn, );
     CASE(NoFree, AANoFree, );
-    CASE(NoCapture, AANoCapture, );
+    CASE(Captures, AANoCapture, );
     CASE(NoRecurse, AANoRecurse, );
     CASE(NoReturn, AANoReturn, );
     CASE(NoSync, AANoSync, );

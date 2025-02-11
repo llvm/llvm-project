@@ -23,7 +23,7 @@ __attribute__((noinline, not_tail_called)) void escape(const volatile void *p) {
 
 // CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none)
 // CHECK-LABEL: define dso_local i32 @normal_function
-// CHECK-SAME: (ptr noundef [[X:%.*]], ptr nocapture noundef readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !pcsections [[META4:![0-9]+]] {
+// CHECK-SAME: (ptr noundef [[X:%.*]], ptr noundef readonly captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !pcsections [[META4:![0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8, !tbaa [[TBAA6:![0-9]+]]
@@ -40,7 +40,7 @@ int normal_function(int *x, int *y) {
 
 // CHECK: Function Attrs: disable_sanitizer_instrumentation mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none)
 // CHECK-LABEL: define dso_local i32 @test_disable_sanitize_instrumentation
-// CHECK-SAME: (ptr noundef [[X:%.*]], ptr nocapture noundef readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: (ptr noundef [[X:%.*]], ptr noundef readonly captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8, !tbaa [[TBAA6]]
@@ -57,7 +57,7 @@ __attribute__((disable_sanitizer_instrumentation)) int test_disable_sanitize_ins
 
 // CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none)
 // CHECK-LABEL: define dso_local i32 @test_no_sanitize_thread
-// CHECK-SAME: (ptr noundef [[X:%.*]], ptr nocapture noundef readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] !pcsections [[META14:![0-9]+]] {
+// CHECK-SAME: (ptr noundef [[X:%.*]], ptr noundef readonly captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] !pcsections [[META14:![0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8, !tbaa [[TBAA6]]
@@ -74,7 +74,7 @@ __attribute__((no_sanitize("thread"))) int test_no_sanitize_thread(int *x, int *
 
 // CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none)
 // CHECK-LABEL: define dso_local i32 @test_no_sanitize_all
-// CHECK-SAME: (ptr noundef [[X:%.*]], ptr nocapture noundef readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR3]] !pcsections [[META14]] {
+// CHECK-SAME: (ptr noundef [[X:%.*]], ptr noundef readonly captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR3]] !pcsections [[META14]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8, !tbaa [[TBAA6]]

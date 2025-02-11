@@ -27,31 +27,23 @@ StructType *offloading::getEntryTy(Module &M) {
       StructType::getTypeByName(C, "struct.__tgt_offload_entry");
   if (!EntryTy)
     EntryTy = StructType::create(
-        "struct.__tgt_offload_entry", PointerType::getUnqual(C),
-        PointerType::getUnqual(C), M.getDataLayout().getIntPtrType(C),
-        Type::getInt32Ty(C), Type::getInt32Ty(C));
+        "struct.__tgt_offload_entry", Type::getInt64Ty(C), Type::getInt16Ty(C),
+        Type::getInt16Ty(C), Type::getInt32Ty(C), PointerType::getUnqual(C),
+        PointerType::getUnqual(C), Type::getInt64Ty(C), Type::getInt64Ty(C),
+        PointerType::getUnqual(C));
   return EntryTy;
 }
 
-StructType *offloading::getManagedTy(Module &M) {
-  LLVMContext &C = M.getContext();
-  StructType *StructTy = StructType::getTypeByName(C, "struct.__managed_var");
-  if (!StructTy)
-    StructTy = llvm::StructType::create("struct.__managed_var",
-                                        PointerType::getUnqual(M.getContext()),
-                                        PointerType::getUnqual(M.getContext()));
-  return StructTy;
-}
-
-// TODO: Rework this interface to be more generic.
 std::pair<Constant *, GlobalVariable *>
-offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,
-                                          StringRef Name, uint64_t Size,
-                                          int32_t Flags, int32_t Data) {
+offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
+                                          Constant *Addr, StringRef Name,
+                                          uint64_t Size, uint32_t Flags,
+                                          uint64_t Data, Constant *AuxAddr) {
   llvm::Triple Triple(M.getTargetTriple());
-  Type *Int8PtrTy = PointerType::getUnqual(M.getContext());
+  Type *PtrTy = PointerType::getUnqual(M.getContext());
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
-  Type *SizeTy = M.getDataLayout().getIntPtrType(M.getContext());
+  Type *Int16Ty = Type::getInt16Ty(M.getContext());
 
   Constant *AddrName = ConstantDataArray::getString(M.getContext(), Name);
 
@@ -74,23 +66,29 @@ offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,
 
   // Construct the offloading entry.
   Constant *EntryData[] = {
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Addr, Int8PtrTy),
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Str, Int8PtrTy),
-      ConstantInt::get(SizeTy, Size),
+      ConstantExpr::getNullValue(Int64Ty),
+      ConstantInt::get(Int16Ty, 1),
+      ConstantInt::get(Int16Ty, Kind),
       ConstantInt::get(Int32Ty, Flags),
-      ConstantInt::get(Int32Ty, Data),
-  };
+      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Addr, PtrTy),
+      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Str, PtrTy),
+      ConstantInt::get(Int64Ty, Size),
+      ConstantInt::get(Int64Ty, Data),
+      AuxAddr ? ConstantExpr::getPointerBitCastOrAddrSpaceCast(AuxAddr, PtrTy)
+              : ConstantExpr::getNullValue(PtrTy)};
   Constant *EntryInitializer = ConstantStruct::get(getEntryTy(M), EntryData);
   return {EntryInitializer, Str};
 }
 
-void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
-                                     uint64_t Size, int32_t Flags, int32_t Data,
-                                     StringRef SectionName) {
+void offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
+                                     Constant *Addr, StringRef Name,
+                                     uint64_t Size, uint32_t Flags,
+                                     uint64_t Data, StringRef SectionName,
+                                     Constant *AuxAddr) {
   llvm::Triple Triple(M.getTargetTriple());
 
-  auto [EntryInitializer, NameGV] =
-      getOffloadingEntryInitializer(M, Addr, Name, Size, Flags, Data);
+  auto [EntryInitializer, NameGV] = getOffloadingEntryInitializer(
+      M, Kind, Addr, Name, Size, Flags, Data, AuxAddr);
 
   StringRef Prefix =
       Triple.isNVPTX() ? "$offloading$entry$" : ".offloading.entry.";

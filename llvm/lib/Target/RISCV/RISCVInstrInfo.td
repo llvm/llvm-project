@@ -399,6 +399,10 @@ def ixlenimm_li_restricted : Operand<XLenVT> {
 
 // Standalone (codegen-only) immleaf patterns.
 
+// A 12-bit signed immediate plus one where the imm range will be -2047~2048.
+def simm12_plus1 : ImmLeaf<XLenVT,
+  [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
+
 // A 6-bit constant greater than 32.
 def uimm6gt32 : ImmLeaf<XLenVT, [{
   return isUInt<6>(Imm) && Imm > 32;
@@ -2133,6 +2137,7 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
+include "RISCVInstrInfoXMips.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

@@ -416,6 +416,9 @@ extractOmpDirective(const parser::OpenMPConstruct &ompConstruct) {
                     [](const parser::OpenMPCancellationPointConstruct &c) {
                       return llvm::omp::OMPD_cancellation_point;
                     },
+                    [](const parser::OmpMetadirectiveDirective &c) {
+                      return llvm::omp::OMPD_metadirective;
+                    },
                     [](const parser::OpenMPDepobjConstruct &c) {
                       return llvm::omp::OMPD_depobj;
                     }},
@@ -1581,6 +1584,15 @@ static void genParallelClauses(
   cp.processReduction(loc, clauseOps, reductionSyms);
 }
 
+static void genScanClauses(lower::AbstractConverter &converter,
+                           semantics::SemanticsContext &semaCtx,
+                           const List<Clause> &clauses, mlir::Location loc,
+                           mlir::omp::ScanOperands &clauseOps) {
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processInclusive(loc, clauseOps);
+  cp.processExclusive(loc, clauseOps);
+}
+
 static void genSectionsClauses(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     const List<Clause> &clauses, mlir::Location loc,
@@ -1978,6 +1990,16 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   return parallelOp;
 }
 
+static mlir::omp::ScanOp
+genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
+          semantics::SemanticsContext &semaCtx, mlir::Location loc,
+          const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+  mlir::omp::ScanOperands clauseOps;
+  genScanClauses(converter, semaCtx, item->clauses, loc, clauseOps);
+  return converter.getFirOpBuilder().create<mlir::omp::ScanOp>(
+      converter.getCurrentLocation(), clauseOps);
+}
+
 /// This breaks the normal prototype of the gen*Op functions: adding the
 /// sectionBlocks argument so that the enclosed section constructs can be
 /// lowered here with correct reduction symbol remapping.
@@ -2086,7 +2108,13 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       const auto &objList = std::get<ObjectList>(lastp->t);
       for (const Object &object : objList) {
         semantics::Symbol *sym = object.sym();
-        converter.copyHostAssociateVar(*sym, &insp, /*hostIsSource=*/false);
+        if (const auto *common =
+                sym->detailsIf<semantics::CommonBlockDetails>()) {
+          for (const auto &obj : common->objects())
+            converter.copyHostAssociateVar(*obj, &insp, /*hostIsSource=*/false);
+        } else {
+          converter.copyHostAssociateVar(*sym, &insp, /*hostIsSource=*/false);
+        }
       }
     }
   }
@@ -2981,7 +3009,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     genStandaloneParallel(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_scan:
-    TODO(loc, "Unhandled directive " + llvm::omp::getOpenMPDirectiveName(dir));
+    genScanOp(converter, symTable, semaCtx, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_section:
     llvm_unreachable("genOMPDispatch: OMPD_section");
@@ -3137,6 +3165,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    const parser::OpenMPThreadprivate &threadprivate) {
   // The directive is lowered when instantiating the variable to
   // support the case of threadprivate variable declared in module.
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OmpMetadirectiveDirective &meta) {
+  TODO(converter.getCurrentLocation(), "METADIRECTIVE");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

@@ -7040,6 +7040,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
   SDValue SubVec = N->getOperand(1);
   SDValue InVec = N->getOperand(0);
 
+  EVT OrigVT = SubVec.getValueType();
   if (getTypeAction(SubVec.getValueType()) == TargetLowering::TypeWidenVector)
     SubVec = GetWidenedVector(SubVec);
 
@@ -7064,14 +7065,34 @@ SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
     }
   }
 
+  SDLoc DL(N);
+
   // We need to make sure that the indices are still valid, otherwise we might
   // widen what was previously well-defined to something undefined.
   if (IndicesValid && InVec.isUndef() && N->getConstantOperandVal(2) == 0)
-    return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), VT, InVec, SubVec,
+    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, InVec, SubVec,
                        N->getOperand(2));
 
-  report_fatal_error("Don't know how to widen the operands for "
-                     "INSERT_SUBVECTOR");
+  if (!IndicesValid || OrigVT.isScalableVector())
+    report_fatal_error(
+        "Don't know how to widen the operands for INSERT_SUBVECTOR");
+
+  // If the operands can't be widened legally, just replace the INSERT_SUBVECTOR
+  // with a series of INSERT_VECTOR_ELT
+  unsigned Idx = N->getConstantOperandVal(2);
+
+  SDValue InsertElt = InVec;
+  EVT VectorIdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
+  for (unsigned I = 0, E = OrigVT.getVectorNumElements(); I != E; ++I) {
+    SDValue ExtractElt =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT.getVectorElementType(),
+                    SubVec, DAG.getConstant(I, DL, VectorIdxTy));
+    InsertElt =
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, InsertElt, ExtractElt,
+                    DAG.getConstant(I + Idx, DL, VectorIdxTy));
+  }
+
+  return InsertElt;
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_EXTRACT_SUBVECTOR(SDNode *N) {

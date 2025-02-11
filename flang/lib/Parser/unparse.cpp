@@ -1847,6 +1847,10 @@ public:
             [&](const std::list<CompilerDirective::NameValue> &names) {
               Walk("!DIR$ ", names, " ");
             },
+            [&](const CompilerDirective::Unroll &unroll) {
+              Word("!DIR$ UNROLL");
+              Walk(" ", unroll.v);
+            },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());
@@ -2067,18 +2071,44 @@ public:
   }
 
   // OpenMP Clauses & Directives
+  void Unparse(const OmpTypeNameList &x) { //
+    Walk(x.v, ",");
+  }
+  void Unparse(const OmpMapperSpecifier &x) {
+    Walk(std::get<std::optional<Name>>(x.t), ":");
+    Walk(std::get<TypeSpec>(x.t));
+    Put("::");
+    Walk(std::get<Name>(x.t));
+  }
+  void Unparse(const OmpReductionSpecifier &x) {
+    Walk(std::get<OmpReductionIdentifier>(x.t));
+    Put(":");
+    Walk(std::get<OmpTypeNameList>(x.t));
+    Walk(":", std::get<std::optional<OmpReductionCombiner>>(x.t));
+  }
   void Unparse(const llvm::omp::Directive &x) {
     Word(llvm::omp::getOpenMPDirectiveName(x).str());
+  }
+  void Unparse(const OmpDirectiveSpecification &x) {
+    using ArgList = std::list<parser::OmpArgument>;
+    Walk(std::get<llvm::omp::Directive>(x.t));
+    if (auto &args{std::get<std::optional<ArgList>>(x.t)}) {
+      Put("(");
+      Walk(*args);
+      Put(")");
+    }
+    Walk(std::get<std::optional<OmpClauseList>>(x.t));
   }
   void Unparse(const OmpTraitScore &x) {
     Word("SCORE(");
     Walk(x.v);
     Put(")");
   }
-  void Unparse(const OmpTraitPropertyExtension &x) {
+  void Unparse(const OmpTraitPropertyExtension::Complex &x) {
+    using PropList = std::list<common::Indirection<OmpTraitPropertyExtension>>;
     Walk(std::get<OmpTraitPropertyName>(x.t));
     Put("(");
-    Walk(std::get<OmpTraitPropertyExtension::ExtensionList>(x.t), ",");
+    Walk(std::get<PropList>(x.t), ",");
     Put(")");
   }
   void Unparse(const OmpTraitSelector &x) {
@@ -2289,6 +2319,12 @@ public:
     using Modifier = OmpToClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
+  }
+  void Unparse(const OmpWhenClause &x) {
+    using Modifier = OmpWhenClause::Modifier;
+    using Directive = common::Indirection<OmpDirectiveSpecification>;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
+    Walk(std::get<std::optional<Directive>>(x.t));
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
 #include "llvm/Frontend/OpenMP/OMP.inc"
@@ -2650,18 +2686,6 @@ public:
     Walk(x.v);
     Put(")");
   }
-  void Unparse(const OmpReductionCombiner::FunctionCombiner &x) {
-    const auto &pd = std::get<ProcedureDesignator>(x.v.t);
-    const auto &args = std::get<std::list<ActualArgSpec>>(x.v.t);
-    Walk(pd);
-    if (args.empty()) {
-      if (std::holds_alternative<ProcComponentRef>(pd.u)) {
-        Put("()");
-      }
-    } else {
-      Walk("(", args, ", ", ")");
-    }
-  }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
     Word("!$OMP DECLARE REDUCTION ");
@@ -2677,7 +2701,7 @@ public:
   void Unparse(const OpenMPDeclareMapperConstruct &z) {
     BeginOpenMP();
     Word("!$OMP DECLARE MAPPER (");
-    const auto &spec{std::get<OmpDeclareMapperSpecifier>(z.t)};
+    const auto &spec{std::get<OmpMapperSpecifier>(z.t)};
     if (auto mapname{std::get<std::optional<Name>>(spec.t)}) {
       Walk(mapname);
       Put(":");
@@ -2807,6 +2831,13 @@ public:
                       [&](const OmpClause &z) { Walk(z); },
                   },
         x.u);
+  }
+  void Unparse(const OmpMetadirectiveDirective &x) {
+    BeginOpenMP();
+    Word("!$OMP METADIRECTIVE ");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
   }
   void Unparse(const OpenMPDepobjConstruct &x) {
     BeginOpenMP();

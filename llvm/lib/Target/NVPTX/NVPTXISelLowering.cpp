@@ -286,7 +286,7 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     if (VT.isVector()) {
       unsigned NumElts = VT.getVectorNumElements();
       EVT EltVT = VT.getVectorElementType();
-      // We require power-of-2 sized vectors becuase
+      // We require power-of-2 sized vectors because
       // TargetLoweringBase::getVectorTypeBreakdown() which is invoked in
       // ComputePTXValueVTs() cannot currently break down non-power-of-2 sized
       // vectors.

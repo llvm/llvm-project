@@ -121,14 +121,11 @@ using RegionBuilderFn = llvm::function_ref<void(ImplicitLocOpBuilder &, Block &,
 /// `regionBuilder`. The method is used by both named structured ops created by
 /// ods-gen and by manually defined C++ ops. It is called by both builders and
 /// parsers and creates a block with arguments corresponding to the elemental
-/// types of `inputTypes` and `outputTypes`. All output types are asserted to be
-/// ShapedType.
+/// types of `inputTypes` and `outputTypes`.
 static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
                                    TypeRange inputTypes, TypeRange outputTypes,
                                    ArrayRef<NamedAttribute> attrs,
                                    RegionBuilderFn regionBuilder) {
-  assert(llvm::all_of(outputTypes, llvm::IsaPred<ShapedType>));
-
   SmallVector<Type, 8> argTypes;
   SmallVector<Location, 8> argLocs;
   for (auto containers : {inputTypes, outputTypes}) {
@@ -3063,8 +3060,11 @@ LogicalResult WinogradInputTransformOp::verify() {
   int m = getM();
   int r = getR();
   int64_t tileSize = m + r - 1;
-  bool leftTransform = inputH != 1;
-  bool rightTransform = inputW != 1;
+
+  auto outputType = cast<ShapedType>(getOutput().getType());
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  bool leftTransform = outputShape[getOutputAlphaHDim()] != 1;
+  bool rightTransform = outputShape[getOutputAlphaWDim()] != 1;
 
   SmallVector<int64_t> expectedOutputShape(6, inputH);
   if (ShapedType::isDynamic(inputH)) {
@@ -3073,7 +3073,7 @@ LogicalResult WinogradInputTransformOp::verify() {
   } else {
     expectedOutputShape[getOutputAlphaHDim()] = leftTransform ? tileSize : 1;
     expectedOutputShape[getOutputTileHDim()] =
-        leftTransform ? (inputH - (r - 1)) / m : 1;
+        leftTransform ? (inputH - (r - 1)) / m : inputH;
   }
   if (ShapedType::isDynamic(inputW)) {
     expectedOutputShape[getOutputAlphaWDim()] = tileSize;
@@ -3081,13 +3081,11 @@ LogicalResult WinogradInputTransformOp::verify() {
   } else {
     expectedOutputShape[getOutputAlphaWDim()] = rightTransform ? tileSize : 1;
     expectedOutputShape[getOutputTileWDim()] =
-        rightTransform ? (inputW - (r - 1)) / m : 1;
+        rightTransform ? (inputW - (r - 1)) / m : inputW;
   }
   expectedOutputShape[getOutputNDim()] = inputShape[getInputNDim()];
   expectedOutputShape[getOutputCDim()] = inputShape[getInputCDim()];
 
-  auto outputType = cast<ShapedType>(getOutput().getType());
-  ArrayRef<int64_t> outputShape = outputType.getShape();
   if (failed(verifyCompatibleShape(expectedOutputShape, outputShape))) {
     return emitOpError("the output shape is not expected");
   }
@@ -3124,15 +3122,17 @@ LogicalResult WinogradInputTransformOp::getResultTilePosition(
     ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
     SmallVector<OpFoldResult> &resultSizes) {
   IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
-  ShapedType inputType = getInputOperandType();
-  ArrayRef<int64_t> inputShape = inputType.getShape();
-  int64_t inputH = inputShape[getInputHDim()];
-  int64_t inputW = inputShape[getInputWDim()];
+  ShapedType outputType = getOutputOperandType();
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  int64_t outputAlphaH = outputShape[getOutputAlphaHDim()];
+  int64_t outputAlphaW = outputShape[getOutputAlphaWDim()];
+
   int64_t m = getM();
   int64_t r = getR();
   int64_t alpha = m + r - 1;
-  int64_t alphaH = inputH != 1 ? alpha : 1;
-  int64_t alphaW = inputW != 1 ? alpha : 1;
+  int64_t alphaH = outputAlphaH != 1 ? alpha : 1;
+  int64_t alphaW = outputAlphaW != 1 ? alpha : 1;
+
   IntegerAttr alphaHAttr = builder.getI64IntegerAttr(alphaH);
   IntegerAttr alphaWAttr = builder.getI64IntegerAttr(alphaW);
 
@@ -3157,22 +3157,26 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
                                                  ArrayRef<OpFoldResult> offsets,
                                                  ArrayRef<OpFoldResult> sizes) {
   IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
-  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
-  ShapedType inputType = getInputOperandType();
-  ArrayRef<int64_t> inputShape = inputType.getShape();
-  int64_t inputH = inputShape[getInputHDim()];
-  int64_t inputW = inputShape[getInputWDim()];
   int64_t m = getM();
   int64_t r = getR();
 
+  ShapedType outputType = getOutputOperandType();
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  int64_t alphaH = outputShape[getOutputAlphaHDim()];
+  int64_t alphaW = outputShape[getOutputAlphaWDim()];
+
   Location loc = getLoc();
   MLIRContext *context = builder.getContext();
+  auto identityAffineMap =
+      AffineMap::get(1, 0, {builder.getAffineDimExpr(0)}, context);
   auto offsetAffineMap =
       AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
   Value mappedOffsetH = affine::makeComposedAffineApply(
-      builder, loc, offsetAffineMap, offsets[getOutputTileHDim()]);
+      builder, loc, (alphaH != 1 ? offsetAffineMap : identityAffineMap),
+      offsets[getOutputTileHDim()]);
   Value mappedOffsetW = affine::makeComposedAffineApply(
-      builder, loc, offsetAffineMap, offsets[getOutputTileWDim()]);
+      builder, loc, (alphaW != 1 ? offsetAffineMap : identityAffineMap),
+      offsets[getOutputTileWDim()]);
   auto sizeAffineMap = AffineMap::get(
       1, 0, {builder.getAffineDimExpr(0) * m + (r - 1)}, context);
   Value mappedSizeH = affine::makeComposedAffineApply(
@@ -3183,16 +3187,14 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
   SmallVector<Value> tiledOperands;
   SmallVector<OpFoldResult> sliceOffsets, sliceSizes;
 
-  OpFoldResult offsetH =
-      inputH != 1 ? OpFoldResult(mappedOffsetH) : OpFoldResult(zeroAttr);
-  OpFoldResult offsetW =
-      inputW != 1 ? OpFoldResult(mappedOffsetW) : OpFoldResult(zeroAttr);
+  OpFoldResult offsetH = OpFoldResult(mappedOffsetH);
+  OpFoldResult offsetW = OpFoldResult(mappedOffsetW);
   sliceOffsets.append(
       {offsets[getOutputNDim()], offsetH, offsetW, offsets[getOutputCDim()]});
   OpFoldResult sizeH =
-      inputH != 1 ? OpFoldResult(mappedSizeH) : OpFoldResult(oneAttr);
+      alphaH != 1 ? OpFoldResult(mappedSizeH) : OpFoldResult(oneAttr);
   OpFoldResult sizeW =
-      inputW != 1 ? OpFoldResult(mappedSizeW) : OpFoldResult(oneAttr);
+      alphaW != 1 ? OpFoldResult(mappedSizeW) : OpFoldResult(oneAttr);
   sliceSizes.append(
       {sizes[getOutputNDim()], sizeH, sizeW, sizes[getOutputCDim()]});
   int64_t inputRank = getInputOperandRank();
@@ -3300,28 +3302,29 @@ LogicalResult WinogradOutputTransformOp::getResultTilePosition(
 
   Location loc = getLoc();
   MLIRContext *context = builder.getContext();
+  auto identityAffineMap =
+      AffineMap::get(1, 0, {builder.getAffineDimExpr(0)}, context);
   auto affineMap =
       AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
-
-  Value mappedOffsetH = affine::makeComposedAffineApply(
-      builder, loc, affineMap, offsets[getValueTileHDim()]);
-  Value mappedOffsetW = affine::makeComposedAffineApply(
-      builder, loc, affineMap, offsets[getValueTileWDim()]);
-  Value mappedSizeH = affine::makeComposedAffineApply(
-      builder, loc, affineMap, sizes[getValueTileHDim()]);
-  Value mappedSizeW = affine::makeComposedAffineApply(
-      builder, loc, affineMap, sizes[getValueTileWDim()]);
 
   ShapedType valueType = getValueOperandType();
   ArrayRef<int64_t> valueShape = valueType.getShape();
   int64_t valueH = valueShape[0];
   int64_t valueW = valueShape[1];
+  Value mappedOffsetH = affine::makeComposedAffineApply(
+      builder, loc, (valueH != 1 ? affineMap : identityAffineMap),
+      offsets[getValueTileHDim()]);
+  Value mappedOffsetW = affine::makeComposedAffineApply(
+      builder, loc, (valueW != 1 ? affineMap : identityAffineMap),
+      offsets[getValueTileWDim()]);
+  Value mappedSizeH = affine::makeComposedAffineApply(
+      builder, loc, affineMap, sizes[getValueTileHDim()]);
+  Value mappedSizeW = affine::makeComposedAffineApply(
+      builder, loc, affineMap, sizes[getValueTileWDim()]);
+
   IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
-  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
-  OpFoldResult offsetH =
-      valueH != 1 ? OpFoldResult(mappedOffsetH) : OpFoldResult(zeroAttr);
-  OpFoldResult offsetW =
-      valueW != 1 ? OpFoldResult(mappedOffsetW) : OpFoldResult(zeroAttr);
+  OpFoldResult offsetH = OpFoldResult(mappedOffsetH);
+  OpFoldResult offsetW = OpFoldResult(mappedOffsetW);
   OpFoldResult sizeH =
       valueH != 1 ? OpFoldResult(mappedSizeH) : OpFoldResult(oneAttr);
   OpFoldResult sizeW =
@@ -3528,44 +3531,40 @@ bool MatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap) {
   return exp.isFunctionOfDim(bcastMap.getNumDims() - 1);
 }
 
+FailureOr<ArrayAttr> parseIndexingMapsAttr(OpAsmParser &parser) {
+  if (parser.parseOptionalKeyword("indexing_maps"))
+    return ArrayAttr{
+        nullptr}; // Success in case indexing_maps was not provided.
+
+  ArrayAttr arrayAttr;
+  if (parser.parseEqual() || parser.parseAttribute(arrayAttr))
+    return failure();
+
+  if (llvm::any_of(arrayAttr,
+                   [](auto elt) { return !dyn_cast<AffineMapAttr>(elt); }))
+    return parser.emitError(parser.getCurrentLocation())
+           << "element of indexing_maps array is not an affine_map";
+
+  return arrayAttr;
+}
+
 ParseResult MatmulOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<Attribute, 3> indexingMapsAttr;
-  Attribute mapAttr;
-  if (succeeded(parser.parseOptionalKeyword("indexing_maps"))) {
-    if (parser.parseEqual())
-      return failure();
+  FailureOr<ArrayAttr> indexingMapsAttr = parseIndexingMapsAttr(parser);
+  if (failed(indexingMapsAttr))
+    return failure();
 
-    if (parser.parseLSquare())
-      return failure();
-
-    do {
-      if (parser.parseAttribute(mapAttr))
-        return failure();
-      if (!isa<AffineMapAttr>(mapAttr)) {
-        return parser.emitError(parser.getCurrentLocation(),
-                                "expected affine map attribute");
-      }
-      indexingMapsAttr.push_back(mapAttr);
-
-      if (parser.parseOptionalComma())
-        break;
-    } while (true);
-
-    if (parser.parseRSquare())
-      return failure();
-  }
-  // Initialize indexingMaps, if not supplied explicitly.
-  if (indexingMapsAttr.empty()) {
-    indexingMapsAttr = llvm::map_to_vector(
+  if (*indexingMapsAttr == nullptr) {
+    auto indexingMapAttrs = llvm::map_to_vector(
         MatmulOp::getDefaultIndexingMaps(parser.getContext()),
         [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+    indexingMapsAttr = parser.getBuilder().getArrayAttr(indexingMapAttrs);
   }
-  result.addAttribute("indexing_maps",
-                      parser.getBuilder().getArrayAttr(indexingMapsAttr));
 
+  result.addAttribute("indexing_maps", *indexingMapsAttr);
   return parseNamedStructuredOp(parser, result, MatmulOp::getNumRegionArgs(),
                                 MatmulOp::getRegionBuilder());
 }
+
 void MatmulOp::print(OpAsmPrinter &p) {
   SmallVector<StringRef, 3> elidedAttrs = {
       "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
@@ -3599,6 +3598,7 @@ LogicalResult MatmulOp::verify() {
 LogicalResult MatmulOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
   return memref::foldMemRefCast(*this);
 }
+
 void MatmulOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
@@ -3608,6 +3608,193 @@ void MatmulOp::getEffects(
 }
 
 Speculation::Speculatability MatmulOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
+//===----------------------------------------------------------------------===//
+// ContractOp
+//===----------------------------------------------------------------------===//
+
+SmallVector<utils::IteratorType> ContractOp::getIteratorTypesArray() {
+  AffineMap outAffineMap = getIndexingMapsArray().pop_back_val();
+  // On well-formed IR, indexing_maps is non-empty, contained affine_maps'
+  // domains are all the same, and each implements a projected permutation.
+  // Each iteration space dim must occur for at least one operand and either
+  // takes part in a contraction/reduction or else has parallel iteration type.
+  // We have that a dim is a contraction/reduction dim if and only if the dim
+  // occurs for the output operand. We use this fact for fast inference:
+  // NB: In case we allow dims to occur solely for one input, the above still
+  //     holds: per the einsum semantics, these are reduction dims as well.
+  SmallVector<bool> dimsInOutput(outAffineMap.getNumDims(), false);
+  for (auto result : outAffineMap.getResults()) {
+    auto dimExpr = dyn_cast<AffineDimExpr>(result);
+    assert(dimExpr && "affine_map is a projected permutation");
+    dimsInOutput[dimExpr.getPosition()] = true;
+  }
+
+  SmallVector<utils::IteratorType> iteratorTypes;
+  for (auto dimOccursInOutput : dimsInOutput)
+    iteratorTypes.push_back(dimOccursInOutput ? utils::IteratorType::parallel
+                                              : utils::IteratorType::reduction);
+
+  return iteratorTypes;
+}
+
+unsigned ContractOp::getNumRegionArgs() { return 3; }
+
+/// Implement block region builder, which is called by 'fillStructuredOpRegion'.
+void ContractOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                               ArrayRef<NamedAttribute> attrs) {
+  assert(block.getNumArguments() == 3 &&
+         "ContractOp regionBuilder expects 3 args");
+  RegionBuilderHelper helper(b, block);
+
+  TypeFn castSignedness = TypeFn::cast_signed;
+  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
+    return attr.getName() == "cast";
+  });
+  if (castIter != attrs.end()) {
+    if (auto attr = llvm::dyn_cast<TypeFnAttr>(castIter->getValue()))
+      castSignedness = attr.getValue();
+  }
+
+  // TODO: Support fields with operators besides mult & add.
+  Type outType = block.getArgument(2).getType();
+  Value lhsAtOutType =
+      helper.buildTypeFn(castSignedness, outType, block.getArgument(0));
+  Value rhsAtOutType =
+      helper.buildTypeFn(castSignedness, outType, block.getArgument(1));
+  Value productAtOutType =
+      helper.buildBinaryFn(BinaryFn::mul, lhsAtOutType, rhsAtOutType);
+  Value result = helper.buildBinaryFn(BinaryFn::add, block.getArgument(2),
+                                      productAtOutType);
+  helper.yieldOutputs({result});
+}
+
+ParseResult ContractOp::parse(OpAsmParser &parser, OperationState &result) {
+  FailureOr<ArrayAttr> indexingMapsAttr = parseIndexingMapsAttr(parser);
+  if (failed(indexingMapsAttr) || *indexingMapsAttr == nullptr)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected 'indexing_maps' attribute");
+  result.addAttribute("indexing_maps", *indexingMapsAttr);
+
+  return parseNamedStructuredOp(parser, result, getNumRegionArgs(),
+                                regionBuilder);
+}
+
+void ContractOp::print(OpAsmPrinter &p) {
+  p << " indexing_maps = [";
+  llvm::interleaveComma(getIndexingMaps(), p,
+                        [&](Attribute attr) { p.printAttribute(attr); });
+  p << "]";
+  printNamedStructuredOp(
+      p, getOperation(), getInputs(), getOutputs(),
+      /*elidedAttrs=*/{"indexing_maps", "operandSegmentSizes"});
+}
+
+LogicalResult ContractOp::verify() {
+  int iterationSpaceDims = -1;
+  // Map iter space dims to #occurrences in inputs' and output's affine_maps:
+  // e.g., inOccurrences[0] will hold #times that dim (with index) 0 is used to
+  // access an input operand (so occurrence count can be at most 2) and
+  // outOccurrences[1] will indicate whether dim 1 occurred in the output, etc.
+  SmallVector<size_t> inOccurrences;
+  SmallVector<size_t> outOccurrences;
+
+  // A helper so that for each operand's affine_map and type we check that ...
+  auto checkAffineMapAndType = [&](AffineMap affineMap, Type operandType,
+                                   bool isInput) -> LogicalResult {
+    // ... the affine_map is a projected permutation;
+    if (!affineMap.isProjectedPermutation())
+      return emitError("provided affine_map is not a projected permutation");
+
+    // ... the rank of the affine_map's results and corresponding type match;
+    if (auto shapedType = dyn_cast<ShapedType>(operandType)) {
+      if (affineMap.getNumResults() != shapedType.getRank())
+        return emitError("ranks of shaped operand and results of corresponding "
+                         "affine_map differ");
+    } else if (affineMap.getNumResults() != 0) {
+      return emitError("affine_map specifies shaped access while operand has "
+                       "non-shaped type");
+    }
+
+    // ... the rank of the affine_map's domain is the same as those seen prior;
+    if (iterationSpaceDims == -1) {
+      iterationSpaceDims = affineMap.getNumDims();
+      inOccurrences = SmallVector<size_t>(iterationSpaceDims, 0);
+      outOccurrences = SmallVector<size_t>(iterationSpaceDims, 0);
+    } else if (iterationSpaceDims != (int)affineMap.getNumDims()) {
+      return emitError("iteration spaces of provided affine_maps differ");
+    }
+
+    // ... update counts of dims used to access either an input or the output.
+    for (AffineExpr affineExpr : affineMap.getResults()) {
+      auto affineDimExpr = dyn_cast<AffineDimExpr>(affineExpr);
+      if (!affineDimExpr)
+        llvm_unreachable("affine_map is a projected permutation");
+
+      if (isInput)
+        inOccurrences[affineDimExpr.getPosition()] += 1;
+      else
+        outOccurrences[affineDimExpr.getPosition()] += 1;
+    }
+
+    return success();
+  };
+
+  for (auto &&[affineMap, operandType, isInput] :
+       llvm::zip(getIndexingMapsArray(), getOperandTypes(),
+                 SmallVector<bool>{true, true, false})) {
+    if (failed(checkAffineMapAndType(affineMap, operandType, isInput)))
+      return failure(); // NB: checkAffineMapAndType will emit relevant error.
+  }
+
+  bool hasContractingDim = false;
+  for (size_t dimIndex = 0; dimIndex < (size_t)iterationSpaceDims; dimIndex++) {
+    size_t inOccCount = inOccurrences[dimIndex];
+    size_t outOccCount = outOccurrences[dimIndex];
+
+    // We have a contracting dim if and only if ...
+    hasContractingDim |= inOccCount == 2 && outOccCount == 0;
+
+    if (inOccCount == 0 && outOccCount == 0)
+      return emitError() << "iteration space dim at index " << dimIndex
+                         << " not used to access any operand";
+
+    // NB: We disallow a dim which occurs for only one input operand and not
+    //     for the output. In terms of einsum semantics such dims have a
+    //     sensible meaning - namely an additional reduction per each such dim.
+    //     By contrast, the ContractionOpInterface does not know about this
+    //     iter type - cf. inferContractionDims' supported dim kinds. Similarly,
+    //     while vector.contract's verifier accepts dims of this kind many of
+    //     its lowerings give up on encountering these dims.
+    // TODO: Remove following once we have comprehensive support for input-only
+    //       reduction dims, at both the linalg- and vector-dialect levels.
+    if (inOccCount == 1 && outOccCount != 1)
+      return emitError()
+             << "iteration space dim at index " << dimIndex
+             << " is neither a contracting dim nor of parallel iteration type";
+  }
+
+  if (!hasContractingDim)
+    return emitError("'indexing_maps' do not specify a contracting dimension");
+
+  return success();
+}
+
+LogicalResult ContractOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
+  return memref::foldMemRefCast(*this);
+}
+
+void ContractOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (hasPureTensorSemantics())
+    return;
+  getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+
+Speculation::Speculatability ContractOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 

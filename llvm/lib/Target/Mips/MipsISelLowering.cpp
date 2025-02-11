@@ -1138,13 +1138,21 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
+  // When loading from a jump table, push the Lo node to the position that
+  // allows folding it into a load immediate.
   // (add v0, (add v1, abs_lo(tjt))) => (add (add v0, v1), abs_lo(tjt))
-  SDValue Add = N->getOperand(1);
-
-  if (Add.getOpcode() != ISD::ADD)
+  // (add (add abs_lo(tjt), v1), v0) => (add (add v0, v1), abs_lo(tjt))
+  SDValue InnerAdd = N->getOperand(1);
+  SDValue Index = N->getOperand(0);
+  if (InnerAdd.getOpcode() != ISD::ADD)
+    std::swap(InnerAdd, Index);
+  if (InnerAdd.getOpcode() != ISD::ADD)
     return SDValue();
 
-  SDValue Lo = Add.getOperand(1);
+  SDValue Lo = InnerAdd.getOperand(0);
+  SDValue Other = InnerAdd.getOperand(1);
+  if (Lo.getOpcode() != MipsISD::Lo)
+    std::swap(Lo, Other);
 
   if ((Lo.getOpcode() != MipsISD::Lo) ||
       (Lo.getOperand(0).getOpcode() != ISD::TargetJumpTable))
@@ -1153,8 +1161,7 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
   EVT ValTy = N->getValueType(0);
   SDLoc DL(N);
 
-  SDValue Add1 = DAG.getNode(ISD::ADD, DL, ValTy, N->getOperand(0),
-                             Add.getOperand(0));
+  SDValue Add1 = DAG.getNode(ISD::ADD, DL, ValTy, Index, Other);
   return DAG.getNode(ISD::ADD, DL, ValTy, Add1, Lo);
 }
 

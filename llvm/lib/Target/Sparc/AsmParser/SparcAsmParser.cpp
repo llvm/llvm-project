@@ -744,7 +744,7 @@ bool SparcAsmParser::expandSETSW(MCInst &Inst, SMLoc IDLoc,
   assert(MCRegOp.isReg());
   assert(MCValOp.isImm() || MCValOp.isExpr());
 
-  // the imm operand can be either an expression or an immediate.
+  // The imm operand can be either an expression or an immediate.
   bool IsImm = Inst.getOperand(1).isImm();
   int64_t ImmValue = IsImm ? MCValOp.getImm() : 0;
   const MCExpr *ValExpr = IsImm ? MCConstantExpr::create(ImmValue, getContext())
@@ -777,7 +777,7 @@ bool SparcAsmParser::expandSETSW(MCInst &Inst, SMLoc IDLoc,
         IsSmallImm ? ValExpr
                    : adjustPICRelocation(SparcMCExpr::VK_Sparc_LO, ValExpr);
 
-    // or    rd, %lo(val), rd
+    // or rd, %lo(val), rd
     Instructions.push_back(MCInstBuilder(SP::ORri)
                                .addReg(MCRegOp.getReg())
                                .addReg(PrevReg.getReg())
@@ -790,7 +790,7 @@ bool SparcAsmParser::expandSETSW(MCInst &Inst, SMLoc IDLoc,
 
   // Large negative or non-immediate expressions would need an sra.
   if (!IsImm || ImmValue < 0) {
-    // sra    rd, %g0, rd
+    // sra rd, %g0, rd
     Instructions.push_back(MCInstBuilder(SP::SRArr)
                                .addReg(MCRegOp.getReg())
                                .addReg(MCRegOp.getReg())

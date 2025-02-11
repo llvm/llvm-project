@@ -1000,6 +1000,16 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
                    IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>,
                    IntrinArgI8<SignedOpKind_Unsigned>
                  ]>,
+    IntrinSelect<int_dx_wave_reduce_max,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Max>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_reduce_umax,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Max>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
+                 ]>,
   ];
 
   let arguments = [OverloadTy, Int8Ty, Int8Ty];
@@ -1008,7 +1018,7 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
     Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
   ];
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let attributes = [Attributes<DXIL1_0, []>];
 }
 
 def WaveAllBitCount : DXILOp<135, waveAllOp> {

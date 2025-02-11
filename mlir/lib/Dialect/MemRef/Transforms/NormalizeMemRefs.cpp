@@ -151,11 +151,11 @@ void NormalizeMemRefs::setCalleesAndCallersNonNormalizable(
   });
 }
 
-/// Check whether all the uses of AllocOps, CallOps and function arguments of a
-/// function are either of dereferencing type or are uses in: DeallocOp, CallOp
-/// or ReturnOp. Only if these constraints are satisfied will the function
-/// become a candidate for normalization. When the uses of a memref are
-/// non-normalizable and the memref map layout is trivial (identity), we can
+/// Check whether all the uses of AllocOps, AllocaOps, CallOps and function
+/// arguments of a function are either of dereferencing type or are uses in:
+/// DeallocOp, CallOp or ReturnOp. Only if these constraints are satisfied will
+/// the function become a candidate for normalization. When the uses of a memref
+/// are non-normalizable and the memref map layout is trivial (identity), we can
 /// still label the entire function as normalizable. We assume external
 /// functions to be normalizable.
 bool NormalizeMemRefs::areMemRefsNormalizable(func::FuncOp funcOp) {
@@ -167,6 +167,17 @@ bool NormalizeMemRefs::areMemRefsNormalizable(func::FuncOp funcOp) {
           .walk([&](memref::AllocOp allocOp) -> WalkResult {
             Value oldMemRef = allocOp.getResult();
             if (!allocOp.getType().getLayout().isIdentity() &&
+                !isMemRefNormalizable(oldMemRef.getUsers()))
+              return WalkResult::interrupt();
+            return WalkResult::advance();
+          })
+          .wasInterrupted())
+    return false;
+
+  if (funcOp
+          .walk([&](memref::AllocaOp allocaOp) -> WalkResult {
+            Value oldMemRef = allocaOp.getResult();
+            if (!allocaOp.getType().getLayout().isIdentity() &&
                 !isMemRefNormalizable(oldMemRef.getUsers()))
               return WalkResult::interrupt();
             return WalkResult::advance();
@@ -335,17 +346,22 @@ void NormalizeMemRefs::updateFunctionSignature(func::FuncOp funcOp,
 }
 
 /// Normalizes the memrefs within a function which includes those arising as a
-/// result of AllocOps, CallOps and function's argument. The ModuleOp argument
-/// is used to help update function's signature after normalization.
+/// result of AllocOps, AllocaOps, CallOps and function's argument. The ModuleOp
+/// argument is used to help update function's signature after normalization.
 void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
                                               ModuleOp moduleOp) {
   // Turn memrefs' non-identity layouts maps into ones with identity. Collect
-  // alloc ops first and then process since normalizeMemRef replaces/erases ops
-  // during memref rewriting.
+  // alloc/alloca ops first and then process since normalizeMemRef
+  // replaces/erases ops during memref rewriting.
   SmallVector<memref::AllocOp, 4> allocOps;
   funcOp.walk([&](memref::AllocOp op) { allocOps.push_back(op); });
   for (memref::AllocOp allocOp : allocOps)
     (void)normalizeMemRef(&allocOp);
+
+  SmallVector<memref::AllocaOp> allocaOps;
+  funcOp.walk([&](memref::AllocaOp op) { allocaOps.push_back(op); });
+  for (memref::AllocaOp allocaOp : allocaOps)
+    (void)normalizeMemRef(&allocaOp);
 
   // We use this OpBuilder to create new memref layout later.
   OpBuilder b(funcOp);

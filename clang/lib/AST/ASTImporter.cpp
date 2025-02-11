@@ -2553,7 +2553,7 @@ ExpectedDecl ASTNodeImporter::VisitBindingDecl(BindingDecl *D) {
 
   BindingDecl *ToD;
   if (GetImportedOrCreateDecl(ToD, D, Importer.getToContext(), DC, Loc,
-                              Name.getAsIdentifierInfo()))
+                              Name.getAsIdentifierInfo(), D->getType()))
     return ToD;
 
   Error Err = Error::success();
@@ -6321,9 +6321,9 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     updateLookupTableForTemplateParameters(*ToTPList);
   } else { // Not a partial specialization.
     if (GetImportedOrCreateDecl(
-            D2, D, Importer.getToContext(), D->getTagKind(), DC,
-            *BeginLocOrErr, *IdLocOrErr, ClassTemplate, TemplateArgs,
-            PrevDecl))
+            D2, D, Importer.getToContext(), D->getTagKind(), DC, *BeginLocOrErr,
+            *IdLocOrErr, ClassTemplate, TemplateArgs,
+            D->hasMatchedPackOnParmToNonPackOnArg(), PrevDecl))
       return D2;
 
     // Update InsertPos, because preceding import calls may have invalidated
@@ -6758,6 +6758,14 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   if (GetImportedOrCreateDecl(ToFunc, D, Importer.getToContext(), DC, Loc, Name,
                               Params, TemplatedFD))
     return ToFunc;
+
+  // Fail if TemplatedFD is already part of a template.
+  // The template should have been found by structural equivalence check before,
+  // or ToFunc should be already imported.
+  // If not, there is AST incompatibility that can be caused by previous import
+  // errors. (NameConflict is not exact here.)
+  if (TemplatedFD->getDescribedTemplate())
+    return make_error<ASTImportError>(ASTImportError::NameConflict);
 
   TemplatedFD->setDescribedFunctionTemplate(ToFunc);
 

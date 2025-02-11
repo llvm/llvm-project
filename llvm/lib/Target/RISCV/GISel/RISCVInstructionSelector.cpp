@@ -128,8 +128,6 @@ private:
                           int OpIdx) const;
   void renderImmPlus1(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx) const;
-  void renderImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                 int OpIdx) const;
   void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;
 
@@ -835,15 +833,6 @@ void RISCVInstructionSelector::renderImmPlus1(MachineInstrBuilder &MIB,
          "Expected G_CONSTANT");
   int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
   MIB.addImm(CstVal + 1);
-}
-
-void RISCVInstructionSelector::renderImm(MachineInstrBuilder &MIB,
-                                         const MachineInstr &MI,
-                                         int OpIdx) const {
-  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
-         "Expected G_CONSTANT");
-  int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
-  MIB.addImm(CstVal);
 }
 
 void RISCVInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
