@@ -282,6 +282,10 @@ LegalityPredicate typePairAndMemDescInSet(
     std::initializer_list<TypePairAndMemDesc> TypesAndMemDescInit);
 /// True iff the specified type index is a scalar.
 LegalityPredicate isScalar(unsigned TypeIdx);
+/// True iff the specified type index is a integer.
+LegalityPredicate isInteger(unsigned TypeIdx);
+/// True iff the specified type index is a float.
+LegalityPredicate isFloat(unsigned TypeIdx);
 /// True iff the specified type index is a vector.
 LegalityPredicate isVector(unsigned TypeIdx);
 /// True iff the specified type index is a pointer (with any address space).
@@ -292,6 +296,14 @@ LegalityPredicate isPointer(unsigned TypeIdx, unsigned AddrSpace);
 /// True iff the specified type index is a vector of pointers (with any address
 /// space).
 LegalityPredicate isPointerVector(unsigned TypeIdx);
+/// True iff the specified type index is a vector of integer
+LegalityPredicate isIntegerVector(unsigned TypeIdx);
+/// True iff the specified type index is a vector of floats.
+LegalityPredicate isFloatVector(unsigned TypeIdx);
+
+LegalityPredicate isFloatOrFloatVector(unsigned TypeIdx);
+
+LegalityPredicate isIntegerOrIntegerVector(unsigned TypeIdx);
 
 /// True if the type index is a vector with element type \p EltTy
 LegalityPredicate elementTypeIs(unsigned TypeIdx, LLT EltTy);
@@ -329,6 +341,10 @@ LegalityPredicate sizeIs(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type indices are both the same bit size.
 LegalityPredicate sameSize(unsigned TypeIdx0, unsigned TypeIdx1);
+
+LegalityPredicate sameScalarKind(unsigned TypeIdx, LLT Ty);
+
+LegalityPredicate sameKind(unsigned TypeIdx, LLT Ty);
 
 /// True iff the first type index has a larger total bit size than second type
 /// index.
@@ -380,6 +396,8 @@ LegalizeMutation changeElementCountTo(unsigned TypeIdx, ElementCount EC);
 /// index \p FromIndex. Unlike changeElementTo, this discards pointer types and
 /// only changes the size.
 LegalizeMutation changeElementSizeTo(unsigned TypeIdx, unsigned FromTypeIdx);
+
+LegalizeMutation changeToInteger(unsigned TypeIdx);
 
 /// Widen the scalar type or vector element type for the given type index to the
 /// next power of 2.
@@ -942,6 +960,16 @@ public:
         LegalizeMutations::widenScalarOrEltToNextPow2(TypeIdx, MinSize));
   }
 
+  LegalizeRuleSet &widenScalarToNextPow2Bitcast(unsigned TypeIdx,
+                                                unsigned MinSize = 0) {
+    using namespace LegalityPredicates;
+    using namespace LegalizeMutations;
+    return actionIf(
+        LegalizeAction::Bitcast,
+        all(isFloatOrFloatVector(TypeIdx), sizeNotPow2(typeIdx(TypeIdx))),
+        changeToInteger(TypeIdx));
+  }
+
   /// Widen the scalar to the next multiple of Size. No effect if the
   /// type is not a scalar or is a multiple of Size.
   LegalizeRuleSet &widenScalarToNextMultipleOf(unsigned TypeIdx,
@@ -997,9 +1025,20 @@ public:
   LegalizeRuleSet &minScalarOrElt(unsigned TypeIdx, const LLT Ty) {
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
-    return actionIf(LegalizeAction::WidenScalar,
-                    scalarOrEltNarrowerThan(TypeIdx, Ty.getScalarSizeInBits()),
-                    changeElementTo(typeIdx(TypeIdx), Ty));
+    return actionIf(
+        LegalizeAction::WidenScalar,
+        all(sameScalarKind(TypeIdx, Ty),
+            scalarOrEltNarrowerThan(TypeIdx, Ty.getScalarSizeInBits())),
+        changeElementTo(typeIdx(TypeIdx), Ty));
+  }
+  LegalizeRuleSet &minScalarOrEltBitcast(unsigned TypeIdx, const LLT Ty) {
+    using namespace LegalityPredicates;
+    using namespace LegalizeMutations;
+    return actionIf(
+        LegalizeAction::Bitcast,
+        all(isFloatOrFloatVector(TypeIdx),
+            scalarOrEltNarrowerThan(TypeIdx, Ty.getScalarSizeInBits())),
+        changeToInteger(typeIdx(TypeIdx)));
   }
 
   /// Ensure the scalar or element is at least as wide as Ty.
@@ -1007,10 +1046,11 @@ public:
                                     unsigned TypeIdx, const LLT Ty) {
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
-    return actionIf(LegalizeAction::WidenScalar,
-                    all(Predicate, scalarOrEltNarrowerThan(
-                                       TypeIdx, Ty.getScalarSizeInBits())),
-                    changeElementTo(typeIdx(TypeIdx), Ty));
+    return actionIf(
+        LegalizeAction::WidenScalar,
+        all(Predicate, sameScalarKind(TypeIdx, Ty),
+            scalarOrEltNarrowerThan(TypeIdx, Ty.getScalarSizeInBits())),
+        changeElementTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Ensure the vector size is at least as wide as VectorSize by promoting the
@@ -1039,13 +1079,22 @@ public:
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::WidenScalar,
-                    scalarNarrowerThan(TypeIdx, Ty.getSizeInBits()),
+                    all(sameKind(TypeIdx, Ty),
+                        scalarNarrowerThan(TypeIdx, Ty.getSizeInBits())),
                     changeTo(typeIdx(TypeIdx), Ty));
   }
   LegalizeRuleSet &minScalar(bool Pred, unsigned TypeIdx, const LLT Ty) {
     if (!Pred)
       return *this;
     return minScalar(TypeIdx, Ty);
+  }
+  LegalizeRuleSet &minScalarBitcast(unsigned TypeIdx, const LLT Ty) {
+    using namespace LegalityPredicates;
+    using namespace LegalizeMutations;
+    return actionIf(LegalizeAction::Bitcast,
+                    all(isFloatOrFloatVector(TypeIdx),
+                        scalarNarrowerThan(TypeIdx, Ty.getSizeInBits())),
+                    changeToInteger(typeIdx(TypeIdx)));
   }
 
   /// Ensure the scalar is at least as wide as Ty if condition is met.
@@ -1068,9 +1117,20 @@ public:
   LegalizeRuleSet &maxScalarOrElt(unsigned TypeIdx, const LLT Ty) {
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
-    return actionIf(LegalizeAction::NarrowScalar,
-                    scalarOrEltWiderThan(TypeIdx, Ty.getScalarSizeInBits()),
-                    changeElementTo(typeIdx(TypeIdx), Ty));
+    return actionIf(
+        LegalizeAction::NarrowScalar,
+        all(sameScalarKind(TypeIdx, Ty),
+            scalarOrEltWiderThan(TypeIdx, Ty.getScalarSizeInBits())),
+        changeElementTo(typeIdx(TypeIdx), Ty));
+  }
+  LegalizeRuleSet &maxScalarOrEltBitcast(unsigned TypeIdx, const LLT Ty) {
+    using namespace LegalityPredicates;
+    using namespace LegalizeMutations;
+    return actionIf(
+        LegalizeAction::NarrowScalar,
+        all(isFloatOrFloatVector(TypeIdx),
+            scalarOrEltWiderThan(TypeIdx, Ty.getScalarSizeInBits())),
+        changeToInteger(typeIdx(TypeIdx)));
   }
 
   /// Ensure the scalar is at most as wide as Ty.
@@ -1078,8 +1138,17 @@ public:
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::NarrowScalar,
-                    scalarWiderThan(TypeIdx, Ty.getSizeInBits()),
+                    all(sameKind(TypeIdx, Ty),
+                        scalarWiderThan(TypeIdx, Ty.getSizeInBits())),
                     changeTo(typeIdx(TypeIdx), Ty));
+  }
+  LegalizeRuleSet &maxScalarBitcast(unsigned TypeIdx, const LLT Ty) {
+    using namespace LegalityPredicates;
+    using namespace LegalizeMutations;
+    return actionIf(LegalizeAction::NarrowScalar,
+                    all(isFloatOrFloatVector(TypeIdx),
+                        scalarWiderThan(TypeIdx, Ty.getSizeInBits())),
+                    changeToInteger(typeIdx(TypeIdx)));
   }
 
   /// Conditionally limit the maximum size of the scalar.
@@ -1103,8 +1172,18 @@ public:
   /// Limit the range of scalar sizes to MinTy and MaxTy.
   LegalizeRuleSet &clampScalar(unsigned TypeIdx, const LLT MinTy,
                                const LLT MaxTy) {
+    assert(MinTy.getKind() == MaxTy.getKind() &&
+           "Expected LLT of the same kind");
     assert(MinTy.isScalar() && MaxTy.isScalar() && "Expected scalar types");
     return minScalar(TypeIdx, MinTy).maxScalar(TypeIdx, MaxTy);
+  }
+
+  LegalizeRuleSet &clampScalarBitcast(unsigned TypeIdx, const LLT MinTy,
+                                      const LLT MaxTy) {
+    assert(MinTy.getKind() == MaxTy.getKind() &&
+           "Expected LLT of the same kind");
+    assert(MinTy.isScalar() && MaxTy.isScalar() && "Expected scalar types");
+    return minScalarBitcast(TypeIdx, MinTy).maxScalarBitcast(TypeIdx, MaxTy);
   }
 
   LegalizeRuleSet &clampScalar(bool Pred, unsigned TypeIdx, const LLT MinTy,
@@ -1118,6 +1197,12 @@ public:
   LegalizeRuleSet &clampScalarOrElt(unsigned TypeIdx, const LLT MinTy,
                                     const LLT MaxTy) {
     return minScalarOrElt(TypeIdx, MinTy).maxScalarOrElt(TypeIdx, MaxTy);
+  }
+
+  LegalizeRuleSet &clampScalarOrEltBitcast(unsigned TypeIdx, const LLT MinTy,
+                                           const LLT MaxTy) {
+    return minScalarOrEltBitcast(TypeIdx, MinTy)
+        .maxScalarOrEltBitcast(TypeIdx, MaxTy);
   }
 
   /// Widen the scalar to match the size of another.
