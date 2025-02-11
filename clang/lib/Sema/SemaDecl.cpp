@@ -13440,7 +13440,7 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
   return true;
 }
 
-void Sema::DiagnoseDangerousUniqueObjectDuplication(const VarDecl *VD) {
+void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
   // If this object has external linkage and hidden visibility, it might be
   // duplicated when built into a shared library, which causes problems if it's
   // mutable (since the copies won't be in sync) or its initialization has side
@@ -14708,7 +14708,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     return;
   }
 
-  DiagnoseDangerousUniqueObjectDuplication(var);
+  DiagnoseUniqueObjectDuplication(var);
 
   // Require the destructor.
   if (!type->isDependentType())
