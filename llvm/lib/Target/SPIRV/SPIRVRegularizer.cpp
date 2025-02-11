@@ -83,7 +83,7 @@ void SPIRVRegularizer::runLowerConstExpr(Function &F) {
       LLVM_DEBUG(dbgs() << "[lowerConstantExpressions] " << *CE);
       auto ReplInst = CE->getAsInstruction();
       auto InsPoint = II->getParent() == &*FBegin ? II : &FBegin->back();
-      ReplInst->insertBefore(InsPoint);
+      ReplInst->insertBefore(InsPoint->getIterator());
       LLVM_DEBUG(dbgs() << " -> " << *ReplInst << '\n');
       std::vector<Instruction *> Users;
       // Do not replace use during iteration of use. Do it in another loop.
@@ -97,7 +97,7 @@ void SPIRVRegularizer::runLowerConstExpr(Function &F) {
       for (auto &User : Users) {
         if (ReplInst->getParent() == User->getParent() &&
             User->comesBefore(ReplInst))
-          ReplInst->moveBefore(User);
+          ReplInst->moveBefore(User->getIterator());
         User->replaceUsesOfWith(CE, ReplInst);
       }
       return ReplInst;

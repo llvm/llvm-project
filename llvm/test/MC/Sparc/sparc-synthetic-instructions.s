@@ -54,42 +54,6 @@
         ! CHECK:                                 !   fixup A - offset: 0, value: %lo(2147483647), kind: fixup_sparc_lo10
         set 2147483647, %o1
 
-        !! setuw is a mnemonic alias for set.
-        ! CHECK: sethi %hi(32768), %g1            ! encoding: [0x03,0b00AAAAAA,A,A]
-        ! CHECK:                                  !   fixup A - offset: 0, value: %hi(32768), kind: fixup_sparc_hi22
-        setuw 32768, %g1
-        ! CHECK: mov 1, %g1 ! encoding: [0x82,0x10,0x20,0x01]
-        setuw 1, %g1
-
-        ! CHECK: sethi %hi(32768), %g1           ! encoding: [0x03,0b00AAAAAA,A,A]
-        ! CHECK:                                 !   fixup A - offset: 0, value: %hi(32768), kind: fixup_sparc_hi22
-        setsw 32768, %g1
-        ! CHECK: mov 1, %g1                      ! encoding: [0x82,0x10,0x20,0x01]
-        setsw 1, %g1
-        ! CHECK: mov -1, %g1                     ! encoding: [0x82,0x10,0x3f,0xff]
-        setsw -1, %g1
-        ! CHECK: sethi %hi(-32768), %g1          ! encoding: [0x03,0b00AAAAAA,A,A]
-        ! CHECK:                                 !   fixup A - offset: 0, value: %hi(-32768), kind: fixup_sparc_hi22
-        ! CHECK: sra %g1, %g0, %g1               ! encoding: [0x83,0x38,0x40,0x00]
-        setsw -32768, %g1
-        ! CHECK: sethi %hi(2147483647), %o1      ! encoding: [0x13,0b00AAAAAA,A,A]
-        ! CHECK:                                 !   fixup A - offset: 0, value: %hi(2147483647), kind: fixup_sparc_hi22
-        ! CHECK: or %o1, %lo(2147483647), %o1    ! encoding: [0x92,0x12,0b011000AA,A]
-        ! CHECK:                                 !   fixup A - offset: 0, value: %lo(2147483647), kind: fixup_sparc_lo10
-        setsw 2147483647, %o1
-        ! CHECK: sethi %hi(-2147483647), %o1     ! encoding: [0x13,0b00AAAAAA,A,A]
-        ! CHECK:                                 !   fixup A - offset: 0, value: %hi(-2147483647), kind: fixup_sparc_hi22
-        ! CHECK: or %o1, %lo(-2147483647), %o1   ! encoding: [0x92,0x12,0b011000AA,A]
-        ! CHECK:                                 !   fixup A - offset: 0, value: %lo(-2147483647), kind: fixup_sparc_lo10
-        ! CHECK: sra %o1, %g0, %o1               ! encoding: [0x93,0x3a,0x40,0x00]
-        setsw -2147483647, %o1
-        ! CHECK: sethi %hi(.Ltmp0), %o1          ! encoding: [0x13,0b00AAAAAA,A,A]
-        ! CHECK:                                 !   fixup A - offset: 0, value: %hi(.Ltmp0), kind: fixup_sparc_hi22
-        ! CHECK: or %o1, %lo(.Ltmp0), %o1        ! encoding: [0x92,0x12,0b011000AA,A]
-        ! CHECK:                                 !   fixup A - offset: 0, value: %lo(.Ltmp0), kind: fixup_sparc_lo10
-        ! CHECK: sra %o1, %g0, %o1               ! encoding: [0x93,0x3a,0x40,0x00]
-        setsw ., %o1
-
         ! CHECK: xnor %g1, %g0, %g2               ! encoding: [0x84,0x38,0x40,0x00]
         not %g1, %g2
         ! CHECK: xnor %g1, %g0, %g1               ! encoding: [0x82,0x38,0x40,0x00]

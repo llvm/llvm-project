@@ -6,7 +6,7 @@ target triple = "aarch64"
 
 define nofpclass(nan inf) double @monte_simple(i32 noundef %nblocks, i32 noundef %RAND_BLOCK_LENGTH, ptr noundef %samples, double noundef nofpclass(nan inf) %Y, double noundef nofpclass(nan inf) %Z) {
 ; CHECK-LABEL: define nofpclass(nan inf) double @monte_simple(
-; CHECK-SAME: i32 noundef [[NBLOCKS:%.*]], i32 noundef [[RAND_BLOCK_LENGTH:%.*]], ptr nocapture noundef readonly [[SAMPLES:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 noundef [[NBLOCKS:%.*]], i32 noundef [[RAND_BLOCK_LENGTH:%.*]], ptr noundef readonly captures(none) [[SAMPLES:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[RAND_BLOCK_LENGTH]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]

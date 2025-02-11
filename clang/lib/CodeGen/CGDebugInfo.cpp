@@ -2815,7 +2815,7 @@ static bool shouldOmitDefinition(llvm::codegenoptions::DebugInfoKind DebugKind,
   // without any dllimport methods can be used in one DLL and constructed in
   // another, but it is the current behavior of LimitedDebugInfo.
   if (CXXDecl->hasDefinition() && CXXDecl->isDynamicClass() &&
-      !isClassOrMethodDLLImport(CXXDecl))
+      !isClassOrMethodDLLImport(CXXDecl) && !CXXDecl->hasAttr<MSNoVTableAttr>())
     return true;
 
   TemplateSpecializationKind Spec = TSK_Undeclared;
@@ -5083,10 +5083,9 @@ CGDebugInfo::EmitDeclareOfAutoVariable(const VarDecl *VD, llvm::Value *Storage,
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
 
   if (auto *DD = dyn_cast<DecompositionDecl>(VD)) {
-    for (auto *B : DD->bindings()) {
+    for (BindingDecl *B : DD->flat_bindings())
       EmitDeclare(B, Storage, std::nullopt, Builder,
                   VD->getType()->isReferenceType());
-    }
     // Don't emit an llvm.dbg.declare for the composite storage as it doesn't
     // correspond to a user variable.
     return nullptr;

@@ -71,6 +71,7 @@ add_clang_library(clangSema
   SemaObjC.cpp
   SemaObjCProperty.cpp
   SemaOpenACC.cpp
+  SemaOpenACCAtomic.cpp
   SemaOpenACCClause.cpp
   SemaOpenCL.cpp
   SemaOpenMP.cpp

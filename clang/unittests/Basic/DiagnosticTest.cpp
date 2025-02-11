@@ -62,7 +62,7 @@ TEST(DiagnosticTest, suppressAndTrap) {
 
     // Diag that would set FatalErrorOccurred
     // (via non-note following a fatal error).
-    Diags.Report(diag::warn_mt_message) << "warning";
+    Diags.Report(diag::warn_apinotes_message) << "warning";
 
     EXPECT_TRUE(trap.hasErrorOccurred());
     EXPECT_TRUE(trap.hasUnrecoverableErrorOccurred());
@@ -87,7 +87,7 @@ TEST(DiagnosticTest, fatalsAsError) {
 
     // Diag that would set FatalErrorOccurred
     // (via non-note following a fatal error).
-    Diags.Report(diag::warn_mt_message) << "warning";
+    Diags.Report(diag::warn_apinotes_message) << "warning";
 
     EXPECT_TRUE(Diags.hasErrorOccurred());
     EXPECT_EQ(Diags.hasFatalErrorOccurred(), FatalsAsError ? 0u : 1u);

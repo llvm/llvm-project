@@ -723,6 +723,20 @@ public:
     }
   };
 
+  // We are using objects of this 'cleanup' class to emit fake.use calls
+  // for -fextend-variable-liveness. They are placed at the end of a variable's
+  // scope analogous to lifetime markers.
+  class FakeUse final : public EHScopeStack::Cleanup {
+    Address Addr;
+
+  public:
+    FakeUse(Address addr) : Addr(addr) {}
+
+    void Emit(CodeGenFunction &CGF, Flags flags) override {
+      CGF.EmitFakeUse(Addr);
+    }
+  };
+
   /// Header for data within LifetimeExtendedCleanupStack.
   struct LifetimeExtendedCleanupHeader {
     /// The size of the following cleanup object.
@@ -3310,20 +3324,11 @@ public:
                            llvm::Value *Index, QualType IndexType,
                            QualType IndexedType, bool Accessed);
 
-  // Find a struct's flexible array member and get its offset. It may be
-  // embedded inside multiple sub-structs, but must still be the last field.
-  const FieldDecl *
-  FindFlexibleArrayMemberFieldAndOffset(ASTContext &Ctx, const RecordDecl *RD,
-                                        const FieldDecl *FAMDecl,
-                                        uint64_t &Offset);
-
-  llvm::Value *GetCountedByFieldExprGEP(const Expr *Base,
-                                        const FieldDecl *FAMDecl,
+  llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
 
   /// Build an expression accessing the "counted_by" field.
-  llvm::Value *EmitLoadOfCountedByField(const Expr *Base,
-                                        const FieldDecl *FAMDecl,
+  llvm::Value *EmitLoadOfCountedByField(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
@@ -4160,6 +4165,13 @@ public:
   void EmitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &S) {
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // but in the future we will implement some sort of IR.
+  }
+
+  void EmitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // simply emitting its associated stmt, but in the future we will implement
+    // some sort of IR.
+    EmitStmt(S.getAssociatedStmt());
   }
 
   //===--------------------------------------------------------------------===//
@@ -5075,6 +5087,8 @@ public:
 
   RValue EmitAtomicExpr(AtomicExpr *E);
 
+  void EmitFakeUse(Address Addr);
+
   //===--------------------------------------------------------------------===//
   //                         Annotations Emission
   //===--------------------------------------------------------------------===//
@@ -5353,8 +5367,9 @@ private:
                                      llvm::Value *EmittedE,
                                      bool IsDynamic);
 
-  llvm::Value *emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
-                                           llvm::IntegerType *ResType);
+  llvm::Value *emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
+                                       unsigned Type,
+                                       llvm::IntegerType *ResType);
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);

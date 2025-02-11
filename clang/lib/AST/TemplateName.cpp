@@ -144,7 +144,7 @@ TemplateName::TemplateName(DeducedTemplateStorage *Deduced)
 bool TemplateName::isNull() const { return Storage.isNull(); }
 
 TemplateName::NameKind TemplateName::getKind() const {
-  if (auto *ND = Storage.dyn_cast<Decl *>()) {
+  if (auto *ND = dyn_cast<Decl *>(Storage)) {
     if (isa<UsingShadowDecl>(ND))
       return UsingTemplate;
     assert(isa<TemplateDecl>(ND));

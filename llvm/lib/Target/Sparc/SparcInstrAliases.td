@@ -452,7 +452,7 @@ def SET : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "set $val, $rd">;
 
 // setsw value, rd
 // (turns into a sequence of sethi+or+sra, depending on the value)
-def SETSW : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "setsw $val, $rd">;
+def SETSW : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "setsw $val, $rd">, Requires<[HasV9]>;
 
 // setx value, tmp, rd
 // (turns into a sequence of sethi+or+shift, depending on the value)
@@ -609,7 +609,7 @@ def : InstAlias<"unimp", (UNIMP 0), 0>;
 // interchangeable with `unimp` all the time.
 def : MnemonicAlias<"illtrap", "unimp">;
 
-def : MnemonicAlias<"setuw", "set">;
+def : MnemonicAlias<"setuw", "set">, Requires<[HasV9]>;
 
 def : MnemonicAlias<"iflush", "flush">;
 

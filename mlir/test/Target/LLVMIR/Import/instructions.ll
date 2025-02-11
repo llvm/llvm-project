@@ -702,3 +702,21 @@ define void @fence() {
   fence syncscope("") seq_cst
   ret void
 }
+
+; // -----
+
+; CHECK-LABEL: @f
+define void @f() personality ptr @__gxx_personality_v0 {
+entry:
+; CHECK: llvm.invoke @g() to ^bb1 unwind ^bb2 vararg(!llvm.func<void (...)>) : () -> ()
+  invoke void @g() to label %bb1 unwind label %bb2
+bb1:
+  ret void
+bb2:
+  %0 = landingpad i32 cleanup
+  unreachable
+}
+
+declare void @g(...)
+
+declare i32 @__gxx_personality_v0(...)

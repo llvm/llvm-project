@@ -117,22 +117,6 @@ llvm.func @convert_float_to_tf32_rna_relu(%src : f32) -> i32 {
 
 // -----
 
-llvm.func @convert_float_to_tf32_rn_sf(%src : f32) -> i32 {
-  // expected-error @below {{Saturation mode not supported with rn/rz rounding modes.}}
-  %res = nvvm.cvt.float.to.tf32 %src {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<satfinite>}
-  llvm.return %res : i32
-}
-
-// -----
-
-llvm.func @convert_float_to_tf32_rz_sf(%src : f32) -> i32 {
-  // expected-error @below {{Saturation mode not supported with rn/rz rounding modes.}}
-  %res = nvvm.cvt.float.to.tf32 %src {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<satfinite>}
-  llvm.return %res : i32
-}
-
-// -----
-
 llvm.func @convert_float_to_tf32_no_rnd_mode(%src : f32) -> i32 {
   // expected-error @below {{Only {rn,rz,rna} rounding modes supported for CvtFloatToTF32Op.}}
   %res = nvvm.cvt.float.to.tf32 %src
