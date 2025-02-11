@@ -4576,7 +4576,9 @@ static void TryConstructorInitialization(Sema &S,
     if (!IsListInit &&
         (Kind.getKind() == InitializationKind::IK_Default ||
          Kind.getKind() == InitializationKind::IK_Direct) &&
-        DestRecordDecl != nullptr && DestRecordDecl->isAggregate() &&
+        DestRecordDecl != nullptr &&
+        !(CtorDecl->isCopyOrMoveConstructor() && CtorDecl->isImplicit()) &&
+        DestRecordDecl->isAggregate() &&
         DestRecordDecl->hasUninitializedExplicitInitFields()) {
       S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
           << /* Var-in-Record */ 1 << DestRecordDecl;
