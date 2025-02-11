@@ -23,7 +23,7 @@ using namespace sampleprof;
 #define DEBUG_TYPE "sample-profile-matcher"
 
 static cl::opt<unsigned> FuncProfileSimilarityThreshold(
-    "func-profile-similarity-threshold", cl::Hidden, cl::init(80),
+    "func-profile-similarity-threshold", cl::Hidden, cl::init(70),
     cl::desc("Consider a profile matches a function if the similarity of their "
              "callee sequences is above the specified percentile."));
 
@@ -790,9 +790,8 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
       longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList,
                             false /* Match unused functions */);
 
-  Similarity =
-      static_cast<float>(MatchedAnchors.size()) * 2 /
-      (FilteredIRAnchorsList.size() + FilteredProfileAnchorList.size());
+  Similarity = static_cast<float>(MatchedAnchors.size()) /
+               FilteredProfileAnchorList.size();
 
   LLVM_DEBUG(dbgs() << "The similarity between " << IRFunc.getName()
                     << "(IR) and " << ProfFunc << "(profile) is "

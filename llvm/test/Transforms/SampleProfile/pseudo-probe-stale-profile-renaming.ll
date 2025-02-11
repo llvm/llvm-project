@@ -8,7 +8,7 @@
 ; CHECK: Function new_foo is not in profile or profile symbol list.
 
 ; CHECK: Run stale profile matching for main
-; CHECK: The similarity between new_foo(IR) and foo(profile) is 0.86
+; CHECK: The similarity between new_foo(IR) and foo(profile) is 0.75
 ; CHECK: Function:new_foo matches profile:foo
 ; CHECK: Run stale profile matching for cold_func
 ; CHECK: The checksums for new_block_only(IR) and block_only(Profile) match.
