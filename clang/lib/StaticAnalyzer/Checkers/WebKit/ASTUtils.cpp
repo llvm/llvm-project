@@ -154,10 +154,10 @@ bool isConstOwnerPtrMemberExpr(const clang::Expr *E) {
   if (auto *MCE = dyn_cast<CXXMemberCallExpr>(E)) {
     if (auto *Callee = MCE->getDirectCallee()) {
       auto Name = safeGetName(Callee);
-      if (Name == "get" || Name == "ptr") {
-        auto *ThisArg = MCE->getImplicitObjectArgument();
-        E = ThisArg;
-      }
+      if (Name == "get" || Name == "ptr")
+        E = MCE->getImplicitObjectArgument();
+      if (auto *CD = dyn_cast<CXXConversionDecl>(Callee))
+        E = MCE->getImplicitObjectArgument();
     }
   } else if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
     if (OCE->getOperator() == OO_Star && OCE->getNumArgs() == 1)
