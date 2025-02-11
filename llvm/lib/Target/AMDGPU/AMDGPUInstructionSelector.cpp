@@ -1121,6 +1121,28 @@ bool AMDGPUInstructionSelector::selectDivScale(MachineInstr &MI) const {
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
+#if LLPC_BUILD_NPI
+bool AMDGPUInstructionSelector::selectBPermute(MachineInstr &MI) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
+
+  if (DstRB->getID() != AMDGPU::SGPRRegBankID)
+    return selectImpl(MI, *CoverageInfo);
+
+  // The lane select operand is uniform. Select to readlane.
+
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock *MBB = MI.getParent();
+
+  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::V_READLANE_B32), DstReg)
+                 .add(MI.getOperand(2))
+                 .add(MI.getOperand(3));
+
+  MI.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
   switch (IntrinsicID) {
@@ -1205,6 +1227,10 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_permlane16_swap:
   case Intrinsic::amdgcn_permlane32_swap:
     return selectPermlaneSwapIntrin(I, IntrinsicID);
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_bpermute_b32:
+    return selectBPermute(I);
+#endif /* LLPC_BUILD_NPI */
   default:
     return selectImpl(I, *CoverageInfo);
   }

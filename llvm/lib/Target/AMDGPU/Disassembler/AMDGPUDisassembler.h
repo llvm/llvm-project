@@ -221,6 +221,9 @@ public:
     OPW128,
     OPW160,
     OPW192,
+#if LLPC_BUILD_NPI
+    OPW224,
+#endif /* LLPC_BUILD_NPI */
     OPW256,
     OPW288,
     OPW320,

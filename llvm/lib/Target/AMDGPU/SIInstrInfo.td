@@ -2879,6 +2879,7 @@ class getLdStRegisterOperand<RegisterClass RC> {
           !eq(RC.Size, 160)  : AVLdSt_160,
 #ifdef LLPC_BUILD_NPI
           !eq(RC.Size, 192)  : AVLdSt_192,
+          !eq(RC.Size, 224)  : AVLdSt_224,
           !eq(RC.Size, 256)  : AVLdSt_256,
           !eq(RC.Size, 288)  : AVLdSt_288,
           !eq(RC.Size, 512)  : AVLdSt_512,

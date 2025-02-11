@@ -1949,11 +1949,20 @@ void AMDGPUInstPrinter::printSDelayALU(const MCInst *MI, unsigned OpNo,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
   const char *BadInstId = "/* invalid instid value */";
+#if LLPC_BUILD_NPI
+  static const std::array<const char *, 14> InstIds = {
+#else /* LLPC_BUILD_NPI */
   static const std::array<const char *, 12> InstIds = {
+#endif /* LLPC_BUILD_NPI */
       "NO_DEP",        "VALU_DEP_1",    "VALU_DEP_2",
       "VALU_DEP_3",    "VALU_DEP_4",    "TRANS32_DEP_1",
       "TRANS32_DEP_2", "TRANS32_DEP_3", "FMA_ACCUM_CYCLE_1",
+#if LLPC_BUILD_NPI
+      "SALU_CYCLE_1",  "SALU_CYCLE_2",  "SALU_CYCLE_3",
+      "XDL_DEP_1",     "XDL_DEP_2"};
+#else /* LLPC_BUILD_NPI */
       "SALU_CYCLE_1",  "SALU_CYCLE_2",  "SALU_CYCLE_3"};
+#endif /* LLPC_BUILD_NPI */
 
   const char *BadInstSkip = "/* invalid instskip value */";
   static const std::array<const char *, 6> InstSkips = {
@@ -1962,9 +1971,18 @@ void AMDGPUInstPrinter::printSDelayALU(const MCInst *MI, unsigned OpNo,
   unsigned SImm16 = MI->getOperand(OpNo).getImm();
   const char *Prefix = "";
 
+#if LLPC_BUILD_NPI
+  // XDL_DEP_1 and XDL_DEP_2 are only valid for GFX13, thus max Value should
+  // be 2 less than the actual size.
+  size_t InstIdSize = AMDGPU::isGFX13Plus(STI) ? InstIds.size() : InstIds.size() - 2;
+#endif /* LLPC_BUILD_NPI */
   unsigned Value = SImm16 & 0xF;
   if (Value) {
+#if LLPC_BUILD_NPI
+    const char *Name = Value < InstIdSize ? InstIds[Value] : BadInstId;
+#else /* LLPC_BUILD_NPI */
     const char *Name = Value < InstIds.size() ? InstIds[Value] : BadInstId;
+#endif /* LLPC_BUILD_NPI */
     O << Prefix << "instid0(" << Name << ')';
     Prefix = " | ";
   }
@@ -1979,7 +1997,11 @@ void AMDGPUInstPrinter::printSDelayALU(const MCInst *MI, unsigned OpNo,
 
   Value = (SImm16 >> 7) & 0xF;
   if (Value) {
+#if LLPC_BUILD_NPI
+    const char *Name = Value < InstIdSize ? InstIds[Value] : BadInstId;
+#else /* LLPC_BUILD_NPI */
     const char *Name = Value < InstIds.size() ? InstIds[Value] : BadInstId;
+#endif /* LLPC_BUILD_NPI */
     O << Prefix << "instid1(" << Name << ')';
     Prefix = " | ";
   }

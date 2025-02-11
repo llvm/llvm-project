@@ -193,6 +193,9 @@ protected:
   bool HasFlatBufferGlobalAtomicFaddF64Inst = false;
   bool HasDefaultComponentZero = false;
   bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
+#if LLPC_BUILD_NPI
+  bool HasEmulatedSystemScopeAtomics = false;
+#endif /* LLPC_BUILD_NPI */
   bool HasDefaultComponentBroadcast = false;
   bool HasXF32Insts = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
@@ -1010,6 +1013,14 @@ public:
     return HasAgentScopeFineGrainedRemoteMemoryAtomics;
   }
 
+#if LLPC_BUILD_NPI
+  /// \return true is HW emulates system scope atomics unsupported by the PCI-e
+  /// via CAS loop.
+  bool hasEmulatedSystemScopeAtomics() const {
+    return HasEmulatedSystemScopeAtomics;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
 
   bool hasDefaultComponentBroadcast() const {
@@ -1161,8 +1172,6 @@ public:
 #if LLPC_BUILD_NPI
   bool hasPermlaneUp() const { return getGeneration() >= GFX13; }
 
-  bool hasPermlaneBcast() const { return getGeneration() >= GFX13; }
-
 #endif /* LLPC_BUILD_NPI */
   bool hasDPP() const {
     return HasDPP;
@@ -1264,13 +1273,13 @@ public:
 
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return GFX1250Insts; }
-
-  bool hasFlatGVSMode() const { return FlatGVSMode; }
 #else /* LLPC_BUILD_NPI */
   bool hasMovB64() const { return GFX940Insts; }
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
+  bool hasFlatGVSMode() const { return FlatGVSMode; }
+
   // FLAT GLOBAL VOffset is signed
   bool hasSignedGVSOffset() const { return GFX1250Insts; }
 #else /* LLPC_BUILD_NPI */
@@ -1421,14 +1430,16 @@ public:
 #endif /* LLPC_BUILD_NPI */
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
-  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
-
 #if LLPC_BUILD_NPI
+  bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
+
   bool hasForceVALUThrottle() const { return HasForceVALUThrottle; }
 
   bool hasMLMathInsts() const { return HasMLMathInsts; }
-
+#else /* LLPC_BUILD_NPI */
+  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
 #endif /* LLPC_BUILD_NPI */
+
   /// Return if operations acting on VGPR tuples require even alignment.
 #if LLPC_BUILD_NPI
   bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }

@@ -112,6 +112,9 @@ private:
   bool selectInterpP1F16(MachineInstr &MI) const;
   bool selectWritelane(MachineInstr &MI) const;
   bool selectDivScale(MachineInstr &MI) const;
+#if LLPC_BUILD_NPI
+  bool selectBPermute(MachineInstr &MI) const;
+#endif /* LLPC_BUILD_NPI */
   bool selectIntrinsicCmp(MachineInstr &MI) const;
   bool selectBallot(MachineInstr &I) const;
   bool selectRelocConstant(MachineInstr &I) const;

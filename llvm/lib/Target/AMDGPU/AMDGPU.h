@@ -71,7 +71,7 @@ FunctionPass *createAMDGPUMarkPromotablePrivateLegacyPass();
 #endif /* LLPC_BUILD_NPI */
 ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
-FunctionPass *createGCNPreRAOptimizationsPass();
+FunctionPass *createGCNPreRAOptimizationsLegacyPass();
 FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
 #if LLPC_BUILD_NPI
 FunctionPass *createAMDGPUIdxRegAllocPass();
@@ -516,7 +516,7 @@ extern char &GCNNSAReassignID;
 void initializeGCNPreRALongBranchRegLegacyPass(PassRegistry &);
 extern char &GCNPreRALongBranchRegID;
 
-void initializeGCNPreRAOptimizationsPass(PassRegistry &);
+void initializeGCNPreRAOptimizationsLegacyPass(PassRegistry &);
 extern char &GCNPreRAOptimizationsID;
 
 FunctionPass *createAMDGPUSetWavePriorityPass();
