@@ -99,7 +99,6 @@
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -9377,13 +9376,8 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
 
   if (Function *F = I.getCalledFunction()) {
     if (F->isDeclaration()) {
-      // Is this an LLVM intrinsic or a target-specific intrinsic?
-      unsigned IID = F->getIntrinsicID();
-      if (!IID)
-        if (const TargetIntrinsicInfo *II = TM.getIntrinsicInfo())
-          IID = II->getIntrinsicID(F);
-
-      if (IID) {
+      // Is this an LLVM intrinsic?
+      if (unsigned IID = F->getIntrinsicID()) {
         visitIntrinsicCall(I, IID);
         return;
       }
