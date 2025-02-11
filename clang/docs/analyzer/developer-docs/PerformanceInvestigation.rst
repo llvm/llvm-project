@@ -117,7 +117,7 @@ In this picture, you can see the functions below the Static Analyzer's entry poi
 You can also see how deep function calls we may have due to AST visitors.
 
 Using different filters can reduce the number of functions to record.
-For the `common options <https://github.com/namhyung/uftrace/blob/master/doc/uftrace-record.md#common-options>`_, refer to the ``uftrace`` documentation.
+For the common options, refer to the ``uftrace`` `documentation <https://github.com/namhyung/uftrace/blob/master/doc/uftrace-record.md#common-options>`_.
 
 Similar filters can be applied for dumping too. That way you can reuse the same (detailed)
 recording to selectively focus on some special part using a refinement of the filter flags.
