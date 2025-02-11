@@ -497,13 +497,8 @@ void collectMemAccessInfo(
       if (CallInst *CI = dyn_cast<CallInst>(&Inst))
         maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
 
-      if (isa<MemIntrinsic>(Inst)) {
+      if (isa<MemIntrinsic, LifetimeIntrinsic>(Inst))
         MemTypeResetInsts.push_back(&Inst);
-      } else if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-            II->getIntrinsicID() == Intrinsic::lifetime_end)
-          MemTypeResetInsts.push_back(&Inst);
-      }
     } else if (isa<AllocaInst>(Inst)) {
       MemTypeResetInsts.push_back(&Inst);
     }
@@ -819,11 +814,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
           NeedsMemMove = isa<MemMoveInst>(MTI);
         }
       }
-    } else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-      if (II->getIntrinsicID() != Intrinsic::lifetime_start &&
-          II->getIntrinsicID() != Intrinsic::lifetime_end)
-        return false;
-
+    } else if (auto *II = dyn_cast<LifetimeIntrinsic>(I)) {
       Size = II->getArgOperand(0);
       Dest = II->getArgOperand(1);
     } else if (auto *AI = dyn_cast<AllocaInst>(I)) {

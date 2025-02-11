@@ -29,6 +29,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -177,6 +178,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
+
+    // Combine partial.reduce.add before legalization gets confused.
+    setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
+
     // Combine vector mask reductions into alltrue/anytrue
     setTargetDAGCombine(ISD::SETCC);
 
@@ -404,6 +409,35 @@ MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
   if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
     return MVT::funcref;
   return TargetLowering::getPointerMemTy(DL, AS);
+}
+
+bool WebAssemblyTargetLowering::shouldExpandPartialReductionIntrinsic(
+    const IntrinsicInst *I) const {
+  if (I->getIntrinsicID() != Intrinsic::experimental_vector_partial_reduce_add)
+    return true;
+
+  EVT VT = EVT::getEVT(I->getType());
+  auto Op1 = I->getOperand(1);
+
+  if (auto *InputInst = dyn_cast<Instruction>(Op1)) {
+    if (InstructionOpcodeToISD(InputInst->getOpcode()) != ISD::MUL)
+      return true;
+
+    if (isa<Instruction>(InputInst->getOperand(0)) &&
+        isa<Instruction>(InputInst->getOperand(1))) {
+      // dot only supports signed inputs but also support lowering unsigned.
+      if (cast<Instruction>(InputInst->getOperand(0))->getOpcode() !=
+          cast<Instruction>(InputInst->getOperand(1))->getOpcode())
+        return true;
+
+      EVT Op1VT = EVT::getEVT(Op1->getType());
+      if (Op1VT.getVectorElementType() == VT.getVectorElementType() &&
+          ((VT.getVectorElementCount() * 2 == Op1VT.getVectorElementCount()) ||
+           (VT.getVectorElementCount() * 4 == Op1VT.getVectorElementCount())))
+        return false;
+    }
+  }
+  return true;
 }
 
 TargetLowering::AtomicExpansionKind
@@ -2030,6 +2064,94 @@ SDValue WebAssemblyTargetLowering::LowerVASTART(SDValue Op,
                       MachinePointerInfo(SV));
 }
 
+// Try to lower partial.reduce.add to a dot or fallback to a sequence with
+// extmul and adds.
+SDValue performLowerPartialReduction(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN);
+  if (N->getConstantOperandVal(0) !=
+      Intrinsic::experimental_vector_partial_reduce_add)
+    return SDValue();
+
+  assert(N->getValueType(0) == MVT::v4i32 && "can only support v4i32");
+  SDLoc DL(N);
+  SDValue Mul = N->getOperand(2);
+  assert(Mul->getOpcode() == ISD::MUL && "expected mul input");
+
+  SDValue ExtendLHS = Mul->getOperand(0);
+  SDValue ExtendRHS = Mul->getOperand(1);
+  assert((ISD::isExtOpcode(ExtendLHS.getOpcode()) &&
+          ISD::isExtOpcode(ExtendRHS.getOpcode())) &&
+         "expected widening mul");
+  assert(ExtendLHS.getOpcode() == ExtendRHS.getOpcode() &&
+         "expected mul to use the same extend for both operands");
+
+  SDValue ExtendInLHS = ExtendLHS->getOperand(0);
+  SDValue ExtendInRHS = ExtendRHS->getOperand(0);
+  bool IsSigned = ExtendLHS->getOpcode() == ISD::SIGN_EXTEND;
+
+  if (ExtendInLHS->getValueType(0) == MVT::v8i16) {
+    if (IsSigned) {
+      // i32x4.dot_i16x8_s
+      SDValue Dot = DAG.getNode(WebAssemblyISD::DOT, DL, MVT::v4i32,
+                                ExtendInLHS, ExtendInRHS);
+      return DAG.getNode(ISD::ADD, DL, MVT::v4i32, N->getOperand(1), Dot);
+    }
+
+    unsigned LowOpc = WebAssemblyISD::EXTEND_LOW_U;
+    unsigned HighOpc = WebAssemblyISD::EXTEND_HIGH_U;
+
+    // (add (add (extmul_low_sx lhs, rhs), (extmul_high_sx lhs, rhs)))
+    SDValue LowLHS = DAG.getNode(LowOpc, DL, MVT::v4i32, ExtendInLHS);
+    SDValue LowRHS = DAG.getNode(LowOpc, DL, MVT::v4i32, ExtendInRHS);
+    SDValue HighLHS = DAG.getNode(HighOpc, DL, MVT::v4i32, ExtendInLHS);
+    SDValue HighRHS = DAG.getNode(HighOpc, DL, MVT::v4i32, ExtendInRHS);
+
+    SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v4i32, LowLHS, LowRHS);
+    SDValue MulHigh = DAG.getNode(ISD::MUL, DL, MVT::v4i32, HighLHS, HighRHS);
+    SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::v4i32, MulLow, MulHigh);
+    return DAG.getNode(ISD::ADD, DL, MVT::v4i32, N->getOperand(1), Add);
+  } else {
+    assert(ExtendInLHS->getValueType(0) == MVT::v16i8 &&
+           "expected v16i8 input types");
+    // Lower to a wider tree, using twice the operations compared to above.
+    if (IsSigned) {
+      // Use two dots
+      unsigned LowOpc = WebAssemblyISD::EXTEND_LOW_S;
+      unsigned HighOpc = WebAssemblyISD::EXTEND_HIGH_S;
+      SDValue LowLHS = DAG.getNode(LowOpc, DL, MVT::v8i16, ExtendInLHS);
+      SDValue LowRHS = DAG.getNode(LowOpc, DL, MVT::v8i16, ExtendInRHS);
+      SDValue HighLHS = DAG.getNode(HighOpc, DL, MVT::v8i16, ExtendInLHS);
+      SDValue HighRHS = DAG.getNode(HighOpc, DL, MVT::v8i16, ExtendInRHS);
+      SDValue DotLHS =
+          DAG.getNode(WebAssemblyISD::DOT, DL, MVT::v4i32, LowLHS, LowRHS);
+      SDValue DotRHS =
+          DAG.getNode(WebAssemblyISD::DOT, DL, MVT::v4i32, HighLHS, HighRHS);
+      SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::v4i32, DotLHS, DotRHS);
+      return DAG.getNode(ISD::ADD, DL, MVT::v4i32, N->getOperand(1), Add);
+    }
+
+    unsigned LowOpc = WebAssemblyISD::EXTEND_LOW_U;
+    unsigned HighOpc = WebAssemblyISD::EXTEND_HIGH_U;
+    SDValue LowLHS = DAG.getNode(LowOpc, DL, MVT::v8i16, ExtendInLHS);
+    SDValue LowRHS = DAG.getNode(LowOpc, DL, MVT::v8i16, ExtendInRHS);
+    SDValue HighLHS = DAG.getNode(HighOpc, DL, MVT::v8i16, ExtendInLHS);
+    SDValue HighRHS = DAG.getNode(HighOpc, DL, MVT::v8i16, ExtendInRHS);
+
+    SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
+    SDValue MulHigh = DAG.getNode(ISD::MUL, DL, MVT::v8i16, HighLHS, HighRHS);
+
+    SDValue LowLow = DAG.getNode(LowOpc, DL, MVT::v4i32, MulLow);
+    SDValue LowHigh = DAG.getNode(LowOpc, DL, MVT::v4i32, MulHigh);
+    SDValue HighLow = DAG.getNode(HighOpc, DL, MVT::v4i32, MulLow);
+    SDValue HighHigh = DAG.getNode(HighOpc, DL, MVT::v4i32, MulHigh);
+
+    SDValue AddLow = DAG.getNode(ISD::ADD, DL, MVT::v4i32, LowLow, HighLow);
+    SDValue AddHigh = DAG.getNode(ISD::ADD, DL, MVT::v4i32, LowHigh, HighHigh);
+    SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::v4i32, AddLow, AddHigh);
+    return DAG.getNode(ISD::ADD, DL, MVT::v4i32, N->getOperand(1), Add);
+  }
+}
+
 SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
                                                   SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -3126,5 +3248,7 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performVectorTruncZeroCombine(N, DCI);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DCI);
+  case ISD::INTRINSIC_WO_CHAIN:
+    return performLowerPartialReduction(N, DCI.DAG);
   }
 }

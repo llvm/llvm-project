@@ -2082,6 +2082,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << "\n#ifdef GET_SUBTARGETINFO_TARGET_DESC\n";
   OS << "#undef GET_SUBTARGETINFO_TARGET_DESC\n\n";
 
+  OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
   OS << "#include \"llvm/Support/Debug.h\"\n";
   OS << "#include \"llvm/Support/raw_ostream.h\"\n\n";
   if (Target == "AArch64")
@@ -2113,7 +2114,26 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << " unsigned CPUID) const override;\n"
      << "  DFAPacketizer *createDFAPacketizer(const InstrItineraryData *IID)"
      << " const;\n";
-  if (TGT.getHwModes().getNumModeIds() > 1) {
+
+  const CodeGenHwModes &CGH = TGT.getHwModes();
+  if (CGH.getNumModeIds() > 1) {
+    OS << "  enum class " << Target << "HwModeBits : unsigned {\n";
+    for (unsigned M = 0, NumModes = CGH.getNumModeIds(); M != NumModes; ++M) {
+      StringRef ModeName = CGH.getModeName(M, /*IncludeDefault=*/true);
+      OS << "    " << ModeName << " = ";
+      if (M == 0)
+        OS << "0";
+      else
+        OS << "(1 << " << (M - 1) << ")";
+      OS << ",\n";
+      if (M == NumModes - 1) {
+        OS << "\n";
+        OS << "    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/" << ModeName
+           << "),\n";
+      }
+    }
+    OS << "  };\n";
+
     OS << "  unsigned getHwModeSet() const override;\n";
     OS << "  unsigned getHwMode(enum HwModeType type = HwMode_Default) const "
           "override;\n";

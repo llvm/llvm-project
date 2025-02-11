@@ -452,7 +452,7 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
     YamlObject.IsAliased = MFI.isAliasedObjectIndex(I);
     // Save the ID' position in FixedStackObjects storage vector.
     FixedStackObjectsIdx[ID] = YMF.FixedStackObjects.size();
-    YMF.FixedStackObjects.push_back(YamlObject);
+    YMF.FixedStackObjects.push_back(std::move(YamlObject));
     StackObjectOperandMapping.insert(
         std::make_pair(I, FrameIndexOperand::createFixed(ID)));
   }
@@ -506,11 +506,11 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
         auto &Object =
             YMF.FixedStackObjects
                 [FixedStackObjectsIdx[FrameIdx + MFI.getNumFixedObjects()]];
-        Object.CalleeSavedRegister = Reg;
+        Object.CalleeSavedRegister = std::move(Reg);
         Object.CalleeSavedRestored = CSInfo.isRestored();
       } else {
         auto &Object = YMF.StackObjects[StackObjectsIdx[FrameIdx]];
-        Object.CalleeSavedRegister = Reg;
+        Object.CalleeSavedRegister = std::move(Reg);
         Object.CalleeSavedRestored = CSInfo.isRestored();
       }
     }
@@ -579,7 +579,7 @@ void MIRPrinter::convertCallSiteObjects(yaml::MachineFunction &YMF,
     // Get type id.
     if (CSInfo.second.TypeId)
       YmlCS.TypeId = CSInfo.second.TypeId->getZExtValue();
-    YMF.CallSitesInfo.push_back(YmlCS);
+    YMF.CallSitesInfo.push_back(std::move(YmlCS));
   }
 
   // Sort call info by position of call instructions.
@@ -600,7 +600,7 @@ void MIRPrinter::convertMachineMetadataNodes(yaml::MachineFunction &YMF,
     std::string NS;
     raw_string_ostream StrOS(NS);
     MD.second->print(StrOS, MST, MF.getFunction().getParent());
-    YMF.MachineMetadataNodes.push_back(NS);
+    YMF.MachineMetadataNodes.push_back(std::move(NS));
   }
 }
 
@@ -615,7 +615,7 @@ void MIRPrinter::convertCalledGlobals(yaml::MachineFunction &YMF,
 
     yaml::CalledGlobal YamlCG{CallSite, CG.Callee->getName().str(),
                               CG.TargetFlags};
-    YMF.CalledGlobals.push_back(YamlCG);
+    YMF.CalledGlobals.push_back(std::move(YamlCG));
   }
 
   // Sort by position of call instructions.
@@ -641,11 +641,11 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
 
     yaml::MachineConstantPoolValue YamlConstant;
     YamlConstant.ID = ID++;
-    YamlConstant.Value = Str;
+    YamlConstant.Value = std::move(Str);
     YamlConstant.Alignment = Constant.getAlign();
     YamlConstant.IsTargetSpecific = Constant.isMachineConstantPoolEntry();
 
-    MF.Constants.push_back(YamlConstant);
+    MF.Constants.push_back(std::move(YamlConstant));
   }
 }
 
@@ -664,7 +664,7 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
       Entry.Blocks.push_back(Str);
       Str.clear();
     }
-    YamlJTI.Entries.push_back(Entry);
+    YamlJTI.Entries.push_back(std::move(Entry));
   }
 }
 
@@ -1010,10 +1010,9 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     unsigned TiedOperandIdx = 0;
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
       TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
-    const TargetIntrinsicInfo *TII = MI.getMF()->getTarget().getIntrinsicInfo();
     Op.print(OS, MST, TypeToPrint, OpIdx, PrintDef, /*IsStandalone=*/false,
-             ShouldPrintRegisterTies, TiedOperandIdx, TRI, TII);
-      OS << formatOperandComment(MOComment);
+             ShouldPrintRegisterTies, TiedOperandIdx, TRI);
+    OS << formatOperandComment(MOComment);
     break;
   }
   case MachineOperand::MO_FrameIndex:
