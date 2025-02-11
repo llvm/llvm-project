@@ -146,7 +146,9 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   // count easily.
   // A tail call isn't considered a call for MachineFrameInfo's purposes.
   if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
-    Info.NumVGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass);
+    Info.NumVGPR = MFI->MaxPerWaveVGPR.has_value()
+                       ? MFI->MaxPerWaveVGPR.value() + 1
+                       : TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass);
     Info.NumExplicitSGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::SGPR_32RegClass);
     if (ST.hasMAIInsts())
       Info.NumAGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass);
@@ -486,7 +488,9 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   }
 
   Info.NumExplicitSGPR = MaxSGPR + 1;
-  Info.NumVGPR = MaxVGPR + 1;
+  Info.NumVGPR = MFI->MaxPerWaveVGPR.has_value()
+                     ? MFI->MaxPerWaveVGPR.value() + 1
+                     : MaxVGPR + 1;
   Info.NumAGPR = MaxAGPR + 1;
 
   return Info;

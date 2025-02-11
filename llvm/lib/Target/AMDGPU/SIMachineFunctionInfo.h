@@ -1210,6 +1210,11 @@ public:
   unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
+
+  /// This number is computed in LowerVGPREncoding pass, and gets used by
+  /// ResourceAnalsysis because it is difficult to derive this number from
+  /// MIR after LowerVGPREncoding.
+  std::optional<int> MaxPerWaveVGPR;
 };
 
 } // end namespace llvm
