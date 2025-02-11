@@ -538,12 +538,13 @@ define amdgpu_ps void @non_cst_non_compare_input(ptr addrspace(1) %out, i32 %tid
 ; GFX10-NEXT:    s_and_b32 s0, vcc_lo, exec_lo
 ; GFX10-NEXT:  ; %bb.2: ; %Flow
 ; GFX10-NEXT:    s_andn2_saveexec_b32 s1, s1
+; GFX10-NEXT:    s_cbranch_execz .LBB24_4
 ; GFX10-NEXT:  ; %bb.3: ; %A
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v2
 ; GFX10-NEXT:    s_andn2_b32 s0, s0, exec_lo
 ; GFX10-NEXT:    s_and_b32 s2, vcc_lo, exec_lo
 ; GFX10-NEXT:    s_or_b32 s0, s0, s2
-; GFX10-NEXT:  ; %bb.4: ; %exit
+; GFX10-NEXT:  .LBB24_4: ; %exit
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; GFX10-NEXT:    v_cmp_ne_u32_e64 s0, 0, v2
@@ -563,12 +564,13 @@ define amdgpu_ps void @non_cst_non_compare_input(ptr addrspace(1) %out, i32 %tid
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, exec_lo
 ; GFX11-NEXT:  ; %bb.2: ; %Flow
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s1, s1
+; GFX11-NEXT:    s_cbranch_execz .LBB24_4
 ; GFX11-NEXT:  ; %bb.3: ; %A
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v2
 ; GFX11-NEXT:    s_and_not1_b32 s0, s0, exec_lo
 ; GFX11-NEXT:    s_and_b32 s2, vcc_lo, exec_lo
 ; GFX11-NEXT:    s_or_b32 s0, s0, s2
-; GFX11-NEXT:  ; %bb.4: ; %exit
+; GFX11-NEXT:  .LBB24_4: ; %exit
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; GFX11-NEXT:    v_cmp_ne_u32_e64 s0, 0, v2

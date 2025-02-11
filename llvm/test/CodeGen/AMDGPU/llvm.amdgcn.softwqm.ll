@@ -178,10 +178,9 @@ define amdgpu_ps float @test_control_flow_0(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; CHECK-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_execz .LBB6_2
 ; CHECK-NEXT:  ; %bb.1: ; %ELSE
 ; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 idxen
-; CHECK-NEXT:  .LBB6_2: ; %Flow
+; CHECK-NEXT:  ; %bb.2: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; CHECK-NEXT:    s_cbranch_execz .LBB6_4
 ; CHECK-NEXT:  ; %bb.3: ; %IF

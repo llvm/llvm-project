@@ -116,10 +116,9 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
 ; GFX9-NEXT:    flat_load_dword v4, v[2:3] offset:28
-; GFX9-NEXT:  .LBB0_2: ; %endif
+; GFX9-NEXT:  ; %bb.2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x3d0000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -273,10 +272,9 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
 ; GFX9-NEXT:    global_load_dword v4, v[2:3], off offset:28
-; GFX9-NEXT:  .LBB1_2: ; %endif
+; GFX9-NEXT:  ; %bb.2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x3d0000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -386,10 +384,9 @@ define void @test_sink_noop_addrspacecast_flat_to_constant_i32(ptr %out, ptr %in
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
 ; GFX9-NEXT:    global_load_dword v4, v[2:3], off offset:28
-; GFX9-NEXT:  .LBB2_2: ; %endif
+; GFX9-NEXT:  ; %bb.2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x3d0000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -555,10 +552,9 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
 ; GFX9-NEXT:    flat_load_sbyte v4, v[2:3] offset:4095
-; GFX9-NEXT:  .LBB3_2: ; %endif
+; GFX9-NEXT:  ; %bb.2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x1000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc

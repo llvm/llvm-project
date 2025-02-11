@@ -639,11 +639,10 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
 ; GCN-NEXT:    buffer_store_dword v3, v[1:2], s[0:3], 0 addr64 offset:4
 ; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GCN-NEXT:    s_cbranch_execz .LBB3_7
 ; GCN-NEXT:  ; %bb.6: ; %bb.inner.then
 ; GCN-NEXT:    v_mov_b32_e32 v0, 2
 ; GCN-NEXT:    buffer_store_dword v0, v[1:2], s[0:3], 0 addr64 offset:8
-; GCN-NEXT:  .LBB3_7: ; %Flow1
+; GCN-NEXT:  ; %bb.7: ; %Flow1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN-NEXT:  .LBB3_8: ; %bb.outer.end
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]

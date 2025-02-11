@@ -43,6 +43,7 @@ define bfloat @sitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 25, v6
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
+; GCN-NEXT:    s_cbranch_execz .LBB0_3
 ; GCN-NEXT:  ; %bb.2: ; %itofp-if-else
 ; GCN-NEXT:    v_add_u32_e32 v4, 0xffffff98, v7
 ; GCN-NEXT:    v_lshlrev_b64 v[0:1], v4, v[0:1]
@@ -52,7 +53,7 @@ define bfloat @sitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN-NEXT:    ; implicit-def: $vgpr7
 ; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN-NEXT:  ; %bb.3: ; %Flow3
+; GCN-NEXT:  .LBB0_3: ; %Flow3
 ; GCN-NEXT:    s_andn2_saveexec_b64 s[8:9], s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB0_13
 ; GCN-NEXT:  ; %bb.4: ; %NodeBlock
@@ -172,6 +173,7 @@ define bfloat @uitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    ; implicit-def: $vgpr7
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
+; GCN-NEXT:    s_cbranch_execz .LBB1_3
 ; GCN-NEXT:  ; %bb.2: ; %itofp-if-else
 ; GCN-NEXT:    v_add_u32_e32 v2, 0xffffff98, v6
 ; GCN-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
@@ -181,7 +183,7 @@ define bfloat @uitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN-NEXT:    ; implicit-def: $vgpr6
 ; GCN-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GCN-NEXT:  ; %bb.3: ; %Flow3
+; GCN-NEXT:  .LBB1_3: ; %Flow3
 ; GCN-NEXT:    s_andn2_saveexec_b64 s[8:9], s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB1_13
 ; GCN-NEXT:  ; %bb.4: ; %NodeBlock

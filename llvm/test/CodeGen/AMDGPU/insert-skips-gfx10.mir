@@ -156,9 +156,7 @@ name: skip_bvh
 body: |
   ; CHECK-LABEL: name: skip_bvh
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
