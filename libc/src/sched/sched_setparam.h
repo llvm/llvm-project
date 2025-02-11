@@ -9,8 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SCHED_SCHED_SETPARAM_H
 #define LLVM_LIBC_SRC_SCHED_SCHED_SETPARAM_H
 
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
 #include "hdr/types/cpu_set_t.h"
+#include "hdr/types/pid_t.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
