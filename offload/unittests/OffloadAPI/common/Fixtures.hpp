@@ -27,6 +27,14 @@
   } while (0)
 #endif
 
+#ifndef ASSERT_ANY_ERROR
+#define ASSERT_ANY_ERROR(ACTUAL)                                               \
+  do {                                                                         \
+    ol_result_t Res = ACTUAL;                                                  \
+    ASSERT_TRUE(Res);                                                          \
+  } while (0)
+#endif
+
 #define RETURN_ON_FATAL_FAILURE(...)                                           \
   __VA_ARGS__;                                                                 \
   if (this->HasFatalFailure() || this->IsSkipped()) {                          \
@@ -61,6 +69,44 @@ struct offloadDeviceTest : offloadPlatformTest {
   }
 
   ol_device_handle_t Device = nullptr;
+};
+
+// Fixture for a generic program test. If you want a different program, use
+// offloadQueueTest and create your own program handle with the binary you want.
+struct offloadProgramTest : offloadDeviceTest {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(offloadDeviceTest::SetUp());
+    ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Platform, DeviceBin));
+    ASSERT_GE(DeviceBin->size(), 0lu);
+    ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->data(), DeviceBin->size(),
+                                   &Program));
+  }
+
+  void TearDown() override {
+    if (Program) {
+      olReleaseProgram(Program);
+    }
+    RETURN_ON_FATAL_FAILURE(offloadDeviceTest::TearDown());
+  }
+
+  ol_program_handle_t Program = nullptr;
+  std::shared_ptr<std::vector<char>> DeviceBin;
+};
+
+struct offloadKernelTest : offloadProgramTest {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(offloadProgramTest::SetUp());
+    ASSERT_SUCCESS(olCreateKernel(Program, "foo", &Kernel));
+  }
+
+  void TearDown() override {
+    if (Kernel) {
+      olReleaseKernel(Kernel);
+    }
+    RETURN_ON_FATAL_FAILURE(offloadProgramTest::TearDown());
+  }
+
+  ol_kernel_handle_t Kernel = nullptr;
 };
 
 struct offloadQueueTest : offloadDeviceTest {

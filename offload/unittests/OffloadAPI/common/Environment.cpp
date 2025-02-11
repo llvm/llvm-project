@@ -10,6 +10,7 @@
 #include "Fixtures.hpp"
 #include "llvm/Support/CommandLine.h"
 #include <OffloadAPI.h>
+#include <fstream>
 
 using namespace llvm;
 
@@ -93,4 +94,54 @@ ol_platform_handle_t TestEnvironment::getPlatform() {
   }
 
   return Platform;
+}
+
+// TODO: Define via cmake, also override via cmd line arg
+const std::string DeviceBinsDirectory = DEVICE_CODE_PATH;
+
+bool TestEnvironment::loadDeviceBinary(
+    const std::string &BinaryName, ol_platform_handle_t Platform,
+    std::shared_ptr<std::vector<char>> &BinaryOut) {
+
+  // Get the platform type
+  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
+  olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
+                    &Backend);
+  std::string FileExtension;
+  if (Backend == OL_PLATFORM_BACKEND_AMDGPU) {
+    FileExtension = ".amdgpu.bin";
+  } else if (Backend == OL_PLATFORM_BACKEND_CUDA) {
+    FileExtension = ".nvptx64.bin";
+  } else {
+    errs() << "Unsupported platform type for a device binary test.\n";
+    return false;
+  }
+
+  std::string SourcePath =
+      DeviceBinsDirectory + "/" + BinaryName + FileExtension;
+
+  std::ifstream SourceFile;
+  SourceFile.open(SourcePath, std::ios::binary | std::ios::in | std::ios::ate);
+
+  if (!SourceFile.is_open()) {
+    errs() << "failed opening device binary path: " + SourcePath;
+    return false;
+  }
+
+  size_t SourceSize = static_cast<size_t>(SourceFile.tellg());
+  SourceFile.seekg(0, std::ios::beg);
+
+  std::vector<char> DeviceBinary(SourceSize);
+  SourceFile.read(DeviceBinary.data(), SourceSize);
+  if (!SourceFile) {
+    SourceFile.close();
+    errs() << "failed reading device binary data from file: " + SourcePath;
+    return false;
+  }
+  SourceFile.close();
+
+  auto BinaryPtr = std::make_shared<std::vector<char>>(std::move(DeviceBinary));
+
+  BinaryOut = BinaryPtr;
+  return true;
 }

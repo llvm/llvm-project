@@ -14,4 +14,7 @@
 namespace TestEnvironment {
 const std::vector<ol_platform_handle_t> &getPlatforms();
 ol_platform_handle_t getPlatform();
+bool loadDeviceBinary(const std::string &BinaryName,
+                      ol_platform_handle_t Platform,
+                      std::shared_ptr<std::vector<char>> &BinaryOut);
 } // namespace TestEnvironment
