@@ -9,7 +9,6 @@
 // This file implements expansion of various math operations.
 //
 //===----------------------------------------------------------------------===//
-
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
@@ -316,13 +315,14 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
   return success();
 }
 
-// Convert Powf(float a, float b) for some special cases
-// where b == 1.0, b == 0.0, b == 0.5, b == -0.5, b == -1.0, and b % 2 == 0
+// Convert Powf(float a, float b) for special cases when b is constant:
+// when b == 0, or |b| == 0.5, 1.0, or 2.0.
 static LogicalResult convertSpecialPowfOp(math::PowFOp op,
                                           PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operandA = op.getOperand(0);
   Value operandB = op.getOperand(1);
+  auto opType = operandA.getType();
   auto baseType = operandB.getType();
 
   auto &sem = dyn_cast<mlir::FloatType>(getElementTypeOrSelf(baseType))
@@ -334,95 +334,64 @@ static LogicalResult convertSpecialPowfOp(math::PowFOp op,
     return failure();
   }
   float floatValueB = valueB.convertToFloat();
-
+  if (floatValueB == 0.0f) {
+    // a^0 -> 1
+    Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
+    rewriter.replaceOp(op, one);
+    return success();
+  }
   if (floatValueB == 1.0f) {
     // a^1 -> a
     rewriter.replaceOp(op, operandA);
     return success();
   }
-
-  if (floatValueB == 0.0) {
-    // a^0 -> 1
-    Value one =
-        createFloatConst(op->getLoc(), operandA.getType(), 1.0, rewriter);
-    rewriter.replaceOp(op, one);
+  if (floatValueB == -1.0f) {
+    // a^(-1) -> 1 / a
+    Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
+    Value div = b.create<arith::DivFOp>(one, operandA);
+    rewriter.replaceOp(op, div);
     return success();
   }
-
   if (floatValueB == 0.5f) {
     // a^(1/2) -> sqrt(a)
     Value sqrt = b.create<math::SqrtOp>(operandA);
     rewriter.replaceOp(op, sqrt);
     return success();
   }
-
   if (floatValueB == -0.5f) {
     // a^(-1/2) -> 1 / sqrt(a)
     Value rsqrt = b.create<math::RsqrtOp>(operandA);
     rewriter.replaceOp(op, rsqrt);
     return success();
   }
-
-  if (floatValueB == -1.0f) {
-    // a^(-1) -> 1 / a
+  if (floatValueB == 2.0f) {
+    // a^2 -> a * a
+    Value mul = b.create<arith::MulFOp>(operandA, operandA);
+    rewriter.replaceOp(op, mul);
+    return success();
+  }
+  if (floatValueB == -2.0f) {
+    // a^(-2) -> 1 / (a * a)
+    Value mul = b.create<arith::MulFOp>(operandA, operandA);
     Value one =
         createFloatConst(op->getLoc(), operandA.getType(), 1.0, rewriter);
-    Value div = b.create<arith::DivFOp>(one, operandA);
+    Value div = b.create<arith::DivFOp>(one, mul);
     rewriter.replaceOp(op, div);
     return success();
   }
 
-  // Check if the power is an integer
-  if (floatValueB != std::floor(floatValueB)) {
-    // We don't handle non-integer powers here, return failure
-    return failure();
-  }
-
-  auto sign = std::signbit(floatValueB) ? -1 : 1;
-  auto absIntValueB = std::abs(static_cast<int>(floatValueB));
-
-  auto cstOne =
-      createFloatConst(op->getLoc(), operandA.getType(), 1.0, rewriter);
-  auto base = operandA;
-  if (sign == -1) {
-    base = b.create<arith::DivFOp>(cstOne, base);
-  }
-  auto current = base;
-  auto result = cstOne;
-  while (absIntValueB > 0) {
-    if (absIntValueB & 1) {
-      result = b.create<arith::MulFOp>(result, current);
-    }
-    current = b.create<arith::MulFOp>(current, current);
-    absIntValueB >>= 1;
-  }
-  rewriter.replaceOp(op, result);
-  return success();
+  return failure();
 }
 
 // Converts Powf(float a, float b) (meaning a^b) to exp^(b * ln(a))
-// Restricting a >= 0
 static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operandA = op.getOperand(0);
   Value operandB = op.getOperand(1);
-  Type opType = operandA.getType();
-  Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
-  Value one = createFloatConst(op->getLoc(), opType, 1.00, rewriter);
-
-  Value logA = b.create<math::LogOp>(opType, operandA);
-  Value mult = b.create<arith::MulFOp>(opType, operandB, logA);
-  Value expResult = b.create<math::ExpOp>(opType, mult);
-
-  // First, we select between the exp value and the adjusted value for odd
-  // powers of negatives. Then, we ensure that one is produced if `b` is zero.
-  // This corresponds to `libm` behavior, even for `0^0`. Without this check,
-  // `exp(0 * ln(0)) = exp(0 *-inf) = exp(-nan) = -nan`.
-  Value zeroCheck =
-      b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, operandB, zero);
-  Value finalResult =
-      b.create<arith::SelectOp>(op->getLoc(), zeroCheck, one, expResult);
-  rewriter.replaceOp(op, finalResult);
+  Value logA = b.create<math::LogOp>(operandA);
+  Value mult = b.create<arith::MulFOp>(operandB, logA);
+  Value expResult = b.create<math::ExpOp>(mult);
+  rewriter.replaceOp(op, expResult);
   return success();
 }
 
