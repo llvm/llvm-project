@@ -197,8 +197,8 @@ unsigned sizeof_VeryOverSizedBitfield = sizeof(VeryOverSizedBitfield);
 unsigned alignof_VeryOverSizedBitfield = alignof(VeryOverSizedBitfield);
 
 // CHECK: define{{.*}} void @g8
-// CHECK: call void @f8(i32 noundef 1, [2 x i64] [i64 42, i64 0])
-// CHECK: declare void @f8(i32 noundef, [2 x i64])
+// CHECK: call void @f8(i32 noundef 1, i128 42)
+// CHECK: declare void @f8(i32 noundef, i128)
 void f8(int a, VeryOverSizedBitfield b);
 void g8() {
   VeryOverSizedBitfield s = {42};

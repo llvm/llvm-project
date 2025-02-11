@@ -154,8 +154,8 @@ unsigned sizeof_OverSizedBitfield = sizeof(OverSizedBitfield);
 unsigned alignof_OverSizedBitfield = alignof(OverSizedBitfield);
 
 // CHECK: define{{.*}} void @g7
-// CHECK: call void @f7(i32 noundef 1, [2 x i32] [i32 42, i32 0])
-// CHECK: declare void @f7(i32 noundef, [2 x i32])
+// CHECK: call void @f7(i32 noundef 1, [1 x i64] [i64 42])
+// CHECK: declare void @f7(i32 noundef, [1 x i64])
 void f7(int a, OverSizedBitfield b);
 void g7() {
   OverSizedBitfield s = {42};
@@ -173,8 +173,8 @@ unsigned sizeof_VeryOverSizedBitfield = sizeof(VeryOverSizedBitfield);
 unsigned alignof_VeryOverSizedBitfield = alignof(VeryOverSizedBitfield);
 
 // CHECK: define{{.*}} void @g8
-// CHECK: call void @f8(i32 noundef 1, [4 x i32] [i32 42, i32 0, i32 0, i32 0])
-// CHECK: declare void @f8(i32 noundef, [4 x i32])
+// CHECK: call void @f8(i32 noundef 1, [2 x i64] [i64 42, i64 0])
+// CHECK: declare void @f8(i32 noundef, [2 x i64])
 void f8(int a, VeryOverSizedBitfield b);
 void g8() {
   VeryOverSizedBitfield s = {42};

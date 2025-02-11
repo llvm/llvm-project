@@ -1523,6 +1523,7 @@ void ItaniumRecordLayoutBuilder::LayoutWideBitField(uint64_t FieldSize,
   setSize(std::max(getSizeInBits(), getDataSizeInBits()));
 
   // Remember max struct/class alignment.
+  UnadjustedAlignment = std::max(UnadjustedAlignment, TypeAlign);
   UpdateAlignment(TypeAlign);
 }
 
