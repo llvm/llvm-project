@@ -66,6 +66,10 @@ Libcall getFREXP(EVT RetVT);
 /// UNKNOWN_LIBCALL if there is none.
 Libcall getFSINCOS(EVT RetVT);
 
+/// getSINCOSPI - Return the SINCOSPI_* value for the given types, or
+/// UNKNOWN_LIBCALL if there is none.
+Libcall getSINCOSPI(EVT RetVT);
+
 /// getMODF - Return the MODF_* value for the given types, or
 /// UNKNOWN_LIBCALL if there is none.
 Libcall getMODF(EVT RetVT);
