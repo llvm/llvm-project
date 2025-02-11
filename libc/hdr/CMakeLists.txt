@@ -205,5 +205,13 @@ add_proxy_header_library(
     libc.include.wchar
 )
 
+add_proxy_header_library(
+  sched_macros
+  HDRS
+    sched_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sched_macros
+)
+
 add_subdirectory(types)
 add_subdirectory(func)
