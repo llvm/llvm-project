@@ -185,7 +185,7 @@ lldb::SBError SBDebugger::InitializeWithErrorHandling() {
     llvm::sys::DynamicLibrary dynlib =
         llvm::sys::DynamicLibrary::getPermanentLibrary(spec.GetPath().c_str());
     if (dynlib.isValid()) {
-      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger & debugger);
+      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger debugger);
 
       lldb::SBDebugger debugger_sb(debugger_sp);
       // This calls the bool lldb::PluginInitialize(lldb::SBDebugger debugger)
