@@ -90,10 +90,6 @@ using SPSRunAsIntFunctionSignature = int32_t(shared::SPSExecutorAddr, int32_t);
 } // end namespace rt
 
 namespace rt_alt {
-extern const char *UnwindInfoManagerInstanceName;
-extern const char *UnwindInfoManagerFindSectionsHelperName;
-extern const char *UnwindInfoManagerEnableWrapperName;
-extern const char *UnwindInfoManagerDisableWrapperName;
 extern const char *UnwindInfoManagerRegisterActionName;
 extern const char *UnwindInfoManagerDeregisterActionName;
 } // end namespace rt_alt

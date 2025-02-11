@@ -9,7 +9,10 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/UnwindInfoManager.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
-#include "llvm/Support/DynamicLibrary.h"
+
+#ifdef __APPLE__
+#include <dlfcn.h>
+#endif // __APPLE__
 
 #define DEBUG_TYPE "orc"
 
@@ -18,39 +21,16 @@ using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
 static orc::shared::CWrapperFunctionResult
-llvm_orc_rt_alt_UnwindInfoManager_enable(const char *Data, uint64_t Size) {
-  return WrapperFunction<SPSError(SPSExecutorAddr, SPSExecutorAddr)>::handle(
-             Data, Size,
-             [](ExecutorAddr Instance, ExecutorAddr FindFn) {
-               return Instance.toPtr<UnwindInfoManager *>()->enable(
-                   FindFn.toPtr<void *>());
-             })
-      .release();
-}
-
-static orc::shared::CWrapperFunctionResult
-llvm_orc_rt_alt_UnwindInfoManager_disable(const char *Data, uint64_t Size) {
-  return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
-             Data, Size,
-             [](ExecutorAddr Instance) {
-               return Instance.toPtr<UnwindInfoManager *>()->disable();
-             })
-      .release();
-}
-
-static orc::shared::CWrapperFunctionResult
 llvm_orc_rt_alt_UnwindInfoManager_register(const char *Data, uint64_t Size) {
-  using SPSSig =
-      SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddrRange>,
-               SPSExecutorAddr, SPSExecutorAddrRange, SPSExecutorAddrRange);
+  using SPSSig = SPSError(SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr,
+                          SPSExecutorAddrRange, SPSExecutorAddrRange);
 
   return WrapperFunction<SPSSig>::handle(
              Data, Size,
-             [](ExecutorAddr Instance,
-                std::vector<ExecutorAddrRange> CodeRanges, ExecutorAddr DSOBase,
+             [](std::vector<ExecutorAddrRange> CodeRanges, ExecutorAddr DSOBase,
                 ExecutorAddrRange DWARFRange,
                 ExecutorAddrRange CompactUnwindRange) {
-               return Instance.toPtr<UnwindInfoManager *>()->registerSections(
+               return UnwindInfoManager::registerSections(
                    CodeRanges, DSOBase, DWARFRange, CompactUnwindRange);
              })
       .release();
@@ -58,89 +38,100 @@ llvm_orc_rt_alt_UnwindInfoManager_register(const char *Data, uint64_t Size) {
 
 static orc::shared::CWrapperFunctionResult
 llvm_orc_rt_alt_UnwindInfoManager_deregister(const char *Data, uint64_t Size) {
-  using SPSSig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddrRange>);
+  using SPSSig = SPSError(SPSSequence<SPSExecutorAddrRange>);
 
   return WrapperFunction<SPSSig>::handle(
              Data, Size,
-             [](ExecutorAddr Instance,
-                std::vector<ExecutorAddrRange> CodeRanges) {
-               return Instance.toPtr<UnwindInfoManager *>()->deregisterSections(
-                   CodeRanges);
+             [](std::vector<ExecutorAddrRange> CodeRanges) {
+               return UnwindInfoManager::deregisterSections(CodeRanges);
              })
       .release();
 }
 
 namespace llvm::orc {
 
-const char *UnwindInfoManager::AddFnName =
-    "__unw_add_find_dynamic_unwind_sections";
-const char *UnwindInfoManager::RemoveFnName =
-    "__unw_remove_find_dynamic_unwind_sections";
+static const char *AddFnName = "__unw_add_find_dynamic_unwind_sections";
+static const char *RemoveFnName = "__unw_remove_find_dynamic_unwind_sections";
+static std::unique_ptr<UnwindInfoManager> Instance;
+static int (*RemoveFindDynamicUnwindSections)(void *) = nullptr;
 
-std::unique_ptr<UnwindInfoManager> UnwindInfoManager::TryCreate() {
-  std::string ErrMsg;
-  auto DL = sys::DynamicLibrary::getPermanentLibrary(nullptr, &ErrMsg);
-  if (!DL.isValid())
-    return nullptr;
-
-  auto AddFindDynamicUnwindSections =
-      (int (*)(void *))DL.getAddressOfSymbol(AddFnName);
-  if (!AddFindDynamicUnwindSections)
-    return nullptr;
-
-  auto RemoveFindDynamicUnwindSections =
-      (int (*)(void *))DL.getAddressOfSymbol(RemoveFnName);
-  if (!RemoveFindDynamicUnwindSections)
-    return nullptr;
-
-  return std::unique_ptr<UnwindInfoManager>(new UnwindInfoManager(
-      AddFindDynamicUnwindSections, RemoveFindDynamicUnwindSections));
+UnwindInfoManager::~UnwindInfoManager() {
+  if (int Err = RemoveFindDynamicUnwindSections((void *)&findSections)) {
+    LLVM_DEBUG({
+      dbgs() << "Failed call to " << RemoveFnName << ": error = " << Err
+             << "\n";
+    });
+  }
 }
 
-Error UnwindInfoManager::shutdown() { return Error::success(); }
+bool UnwindInfoManager::TryEnable() {
+#ifdef __APPLE__
+  static std::mutex M;
+  std::lock_guard<std::mutex> Lock(M);
+
+  if (Instance)
+    return true;
+
+  auto AddFn = (int (*)(void *))dlsym(RTLD_DEFAULT, AddFnName);
+  if (!AddFn)
+    return false;
+
+  auto RemoveFn = (int (*)(void *))dlsym(RTLD_DEFAULT, RemoveFnName);
+  if (!RemoveFn)
+    return false;
+
+  Instance.reset(new UnwindInfoManager());
+
+  if (auto Err = AddFn((void *)&findSections)) {
+    LLVM_DEBUG({
+      dbgs() << "Failed call to " << AddFnName << ": error = " << Err << "\n";
+    });
+    Instance = nullptr;
+    return false;
+  }
+
+  RemoveFindDynamicUnwindSections = RemoveFn;
+  return true;
+
+#else
+  return false;
+#endif // __APPLE__
+}
 
 void UnwindInfoManager::addBootstrapSymbols(StringMap<ExecutorAddr> &M) {
-  M[rt_alt::UnwindInfoManagerInstanceName] = ExecutorAddr::fromPtr(this);
-  M[rt_alt::UnwindInfoManagerFindSectionsHelperName] =
-      ExecutorAddr::fromPtr(&findSectionsHelper);
-  M[rt_alt::UnwindInfoManagerEnableWrapperName] =
-      ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_enable);
-  M[rt_alt::UnwindInfoManagerDisableWrapperName] =
-      ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_disable);
   M[rt_alt::UnwindInfoManagerRegisterActionName] =
       ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_register);
   M[rt_alt::UnwindInfoManagerDeregisterActionName] =
       ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_deregister);
 }
 
-Error UnwindInfoManager::enable(void *FindDynamicUnwindSections) {
-  LLVM_DEBUG(dbgs() << "Enabling UnwindInfoManager.\n");
-
-  if (auto Err = AddFindDynamicUnwindSections(FindDynamicUnwindSections))
-    return make_error<StringError>(Twine("Could not register function via ") +
-                                       AddFnName +
-                                       ", error code = " + Twine(Err),
-                                   inconvertibleErrorCode());
-
-  this->FindDynamicUnwindSections = FindDynamicUnwindSections;
-  return Error::success();
-}
-
-Error UnwindInfoManager::disable(void) {
-  LLVM_DEBUG(dbgs() << "Disabling UnwindInfoManager.\n");
-
-  if (FindDynamicUnwindSections)
-    if (auto Err = RemoveFindDynamicUnwindSections(FindDynamicUnwindSections))
-      return make_error<StringError>(
-          Twine("Could not deregister function via ") + RemoveFnName +
-              "error code = " + Twine(Err),
-          inconvertibleErrorCode());
-
-  FindDynamicUnwindSections = nullptr;
-  return Error::success();
-}
-
 Error UnwindInfoManager::registerSections(
+    ArrayRef<orc::ExecutorAddrRange> CodeRanges, orc::ExecutorAddr DSOBase,
+    orc::ExecutorAddrRange DWARFEHFrame, orc::ExecutorAddrRange CompactUnwind) {
+  return Instance->registerSectionsImpl(CodeRanges, DSOBase, DWARFEHFrame,
+                                        CompactUnwind);
+}
+
+Error UnwindInfoManager::deregisterSections(
+    ArrayRef<orc::ExecutorAddrRange> CodeRanges) {
+  return Instance->deregisterSectionsImpl(CodeRanges);
+}
+
+int UnwindInfoManager::findSectionsImpl(uintptr_t Addr, UnwindSections *Info) {
+  std::lock_guard<std::mutex> Lock(M);
+  auto I = UWSecs.upper_bound(Addr);
+  if (I == UWSecs.begin())
+    return 0;
+  --I;
+  *Info = I->second;
+  return 1;
+}
+
+int UnwindInfoManager::findSections(uintptr_t Addr, UnwindSections *Info) {
+  return Instance->findSectionsImpl(Addr, Info);
+}
+
+Error UnwindInfoManager::registerSectionsImpl(
     ArrayRef<ExecutorAddrRange> CodeRanges, ExecutorAddr DSOBase,
     ExecutorAddrRange DWARFEHFrame, ExecutorAddrRange CompactUnwind) {
   std::lock_guard<std::mutex> Lock(M);
@@ -154,7 +145,7 @@ Error UnwindInfoManager::registerSections(
   return Error::success();
 }
 
-Error UnwindInfoManager::deregisterSections(
+Error UnwindInfoManager::deregisterSectionsImpl(
     ArrayRef<ExecutorAddrRange> CodeRanges) {
   std::lock_guard<std::mutex> Lock(M);
   for (auto &R : CodeRanges) {
@@ -167,22 +158,6 @@ Error UnwindInfoManager::deregisterSections(
     UWSecs.erase(I);
   }
   return Error::success();
-}
-
-int UnwindInfoManager::findSections(uintptr_t Addr, UnwindSections *Info) {
-  std::lock_guard<std::mutex> Lock(M);
-  auto I = UWSecs.upper_bound(Addr);
-  if (I == UWSecs.begin())
-    return 0;
-  --I;
-  *Info = I->second;
-  return 1;
-}
-
-int UnwindInfoManager::findSectionsHelper(UnwindInfoManager *Instance,
-                                          uintptr_t Addr,
-                                          UnwindSections *Info) {
-  return Instance->findSections(Addr, Info);
 }
 
 } // namespace llvm::orc
