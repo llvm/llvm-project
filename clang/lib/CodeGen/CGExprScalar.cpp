@@ -2797,7 +2797,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
   case CK_HLSLSplatCast: {
     // This cast should only handle splatting from vectors of length 1.
-    // But in Sema a cast should have been inserted to convert the vec1 to a scalar
+    // But in Sema a cast should have been inserted to convert the vec1 to a
+    // scalar
     assert(DestTy->isVectorType() && "Destination type must be a vector.");
     auto *DestVecTy = DestTy->getAs<VectorType>();
     QualType SrcTy = E->getType();

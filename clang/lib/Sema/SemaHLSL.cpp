@@ -2812,7 +2812,8 @@ bool SemaHLSL::CanPerformSplatCast(Expr *Src, QualType DestTy) {
   QualType SrcTy = Src->getType();
   // Not a valid HLSL Splat cast if Dest is a scalar or if this is going to
   // be a vector splat from a scalar.
-  if ((SrcTy->isScalarType() && DestTy->isVectorType()) || DestTy->isScalarType())
+  if ((SrcTy->isScalarType() && DestTy->isVectorType()) ||
+      DestTy->isScalarType())
     return false;
 
   const VectorType *SrcVecTy = SrcTy->getAs<VectorType>();

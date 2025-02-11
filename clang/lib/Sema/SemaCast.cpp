@@ -2797,9 +2797,9 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
     const VectorType *VT = SrcTy->getAs<VectorType>();
     // change splat from vec1 case to splat from scalar
     if (VT && VT->getNumElements() == 1)
-      SrcExpr = Self.ImpCastExprToType(SrcExpr.get(), VT->getElementType(),
-				       CK_HLSLVectorTruncation,
-				       SrcExpr.get()->getValueKind(), nullptr, CCK);
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), VT->getElementType(), CK_HLSLVectorTruncation,
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
     Kind = CK_HLSLSplatCast;
     return;
   }

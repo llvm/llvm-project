@@ -996,7 +996,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     Address DestVal = Dest.getAddress();
     SourceLocation Loc = E->getExprLoc();
 
-    assert (RV.isScalar() && "RHS of HLSL splat cast must be a scalar.");
+    assert(RV.isScalar() && "RHS of HLSL splat cast must be a scalar.");
     llvm::Value *SrcVal = RV.getScalarVal();
     EmitHLSLSplatCast(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
     break;
