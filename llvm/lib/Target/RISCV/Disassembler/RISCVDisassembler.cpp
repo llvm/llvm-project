@@ -789,6 +789,7 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                ArrayRef<uint8_t> Bytes,
                                                uint64_t Address,
                                                raw_ostream &CS) const {
+  CommentStream = &CS;
   // It's a 16 bit instruction if bit 0 and 1 are not 0b11.
   if ((Bytes[0] & 0b11) != 0b11)
     return getInstruction16(MI, Size, Bytes, Address, CS);
