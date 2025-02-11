@@ -14,12 +14,18 @@
 #ifndef LLVM_CODEGEN_DROPPEDVARIABLESTATS_H
 #define LLVM_CODEGEN_DROPPEDVARIABLESTATS_H
 
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/PassInstrumentation.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include <tuple>
 
 namespace llvm {
+
+class DIScope;
+class DILocalVariable;
+class Function;
+class DILocation;
+class DebugLoc;
+class StringRef;
 
 /// A unique key that represents a debug variable.
 /// First const DIScope *: Represents the scope of the debug variable.
@@ -33,13 +39,7 @@ using VarID =
 /// statistics.
 class DroppedVariableStats {
 public:
-  DroppedVariableStats(bool DroppedVarStatsEnabled)
-      : DroppedVariableStatsEnabled(DroppedVarStatsEnabled) {
-    if (DroppedVarStatsEnabled)
-      llvm::outs()
-          << "Pass Level, Pass Name, Num of Dropped Variables, Func or "
-             "Module Name\n";
-  };
+  DroppedVariableStats(bool DroppedVarStatsEnabled);
 
   virtual ~DroppedVariableStats() {}
 
@@ -50,20 +50,9 @@ public:
   bool getPassDroppedVariables() { return PassDroppedVariables; }
 
 protected:
-  void setup() {
-    DebugVariablesStack.push_back(
-        {DenseMap<const Function *, DebugVariables>()});
-    InlinedAts.push_back(
-        {DenseMap<StringRef, DenseMap<VarID, DILocation *>>()});
-  }
+  void setup();
 
-  void cleanup() {
-    assert(!DebugVariablesStack.empty() &&
-           "DebugVariablesStack shouldn't be empty!");
-    assert(!InlinedAts.empty() && "InlinedAts shouldn't be empty!");
-    DebugVariablesStack.pop_back();
-    InlinedAts.pop_back();
-  }
+  void cleanup();
 
   bool DroppedVariableStatsEnabled = false;
   struct DebugVariables {
@@ -73,7 +62,6 @@ protected:
     DenseSet<VarID> DebugVariablesAfter;
   };
 
-protected:
   /// A stack of a DenseMap, that maps DebugVariables for every pass to an
   /// llvm::Function. A stack is used because an optimization pass can call
   /// other passes.
@@ -90,78 +78,27 @@ protected:
   void calculateDroppedStatsAndPrint(DebugVariables &DbgVariables,
                                      StringRef FuncName, StringRef PassID,
                                      StringRef FuncOrModName,
-                                     StringRef PassLevel,
-                                     const Function *Func) {
-    unsigned DroppedCount = 0;
-    DenseSet<VarID> &DebugVariablesBeforeSet =
-        DbgVariables.DebugVariablesBefore;
-    DenseSet<VarID> &DebugVariablesAfterSet = DbgVariables.DebugVariablesAfter;
-    auto It = InlinedAts.back().find(FuncName);
-    if (It == InlinedAts.back().end())
-      return;
-    DenseMap<VarID, DILocation *> &InlinedAtsMap = It->second;
-    // Find an Instruction that shares the same scope as the dropped #dbg_value
-    // or has a scope that is the child of the scope of the #dbg_value, and has
-    // an inlinedAt equal to the inlinedAt of the #dbg_value or it's inlinedAt
-    // chain contains the inlinedAt of the #dbg_value, if such an Instruction is
-    // found, debug information is dropped.
-    for (VarID Var : DebugVariablesBeforeSet) {
-      if (DebugVariablesAfterSet.contains(Var))
-        continue;
-      visitEveryInstruction(DroppedCount, InlinedAtsMap, Var);
-      removeVarFromAllSets(Var, Func);
-    }
-    if (DroppedCount > 0) {
-      llvm::outs() << PassLevel << ", " << PassID << ", " << DroppedCount
-                   << ", " << FuncOrModName << "\n";
-      PassDroppedVariables = true;
-    } else
-      PassDroppedVariables = false;
-  }
+                                     StringRef PassLevel, const Function *Func);
 
   /// Check if a \p Var has been dropped or is a false positive. Also update the
   /// \p DroppedCount if a debug variable is dropped.
   bool updateDroppedCount(DILocation *DbgLoc, const DIScope *Scope,
                           const DIScope *DbgValScope,
                           DenseMap<VarID, DILocation *> &InlinedAtsMap,
-                          VarID Var, unsigned &DroppedCount) {
-    // If the Scope is a child of, or equal to the DbgValScope and is inlined at
-    // the Var's InlinedAt location, return true to signify that the Var has
-    // been dropped.
-    if (isScopeChildOfOrEqualTo(Scope, DbgValScope))
-      if (isInlinedAtChildOfOrEqualTo(DbgLoc->getInlinedAt(),
-                                      InlinedAtsMap[Var])) {
-        // Found another instruction in the variable's scope, so there exists a
-        // break point at which the variable could be observed. Count it as
-        // dropped.
-        DroppedCount++;
-        return true;
-      }
-    return false;
-  }
+                          VarID Var, unsigned &DroppedCount);
+
   /// Run code to populate relevant data structures over an llvm::Function or
   /// llvm::MachineFunction.
-  void run(DebugVariables &DbgVariables, StringRef FuncName, bool Before) {
-    auto &VarIDSet = (Before ? DbgVariables.DebugVariablesBefore
-                             : DbgVariables.DebugVariablesAfter);
-    auto &InlinedAtsMap = InlinedAts.back();
-    if (Before)
-      InlinedAtsMap.try_emplace(FuncName, DenseMap<VarID, DILocation *>());
-    VarIDSet = DenseSet<VarID>();
-    visitEveryDebugRecord(VarIDSet, InlinedAtsMap, FuncName, Before);
-  }
+  void run(DebugVariables &DbgVariables, StringRef FuncName, bool Before);
+
   /// Populate the VarIDSet and InlinedAtMap with the relevant information
   /// needed for before and after pass analysis to determine dropped variable
   /// status.
   void populateVarIDSetAndInlinedMap(
       const DILocalVariable *DbgVar, DebugLoc DbgLoc, DenseSet<VarID> &VarIDSet,
       DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
-      StringRef FuncName, bool Before) {
-    VarID Key{DbgVar->getScope(), DbgLoc->getInlinedAtScope(), DbgVar};
-    VarIDSet.insert(Key);
-    if (Before)
-      InlinedAtsMap[FuncName].try_emplace(Key, DbgLoc.getInlinedAt());
-  }
+      StringRef FuncName, bool Before);
+
   /// Visit every llvm::Instruction or llvm::MachineInstruction and check if the
   /// debug variable denoted by its ID \p Var may have been dropped by an
   /// optimization pass.
@@ -179,47 +116,18 @@ protected:
 private:
   /// Remove a dropped debug variable's VarID from all Sets in the
   /// DroppedVariablesBefore stack.
-  void removeVarFromAllSets(VarID Var, const Function *F) {
-    // Do not remove Var from the last element, it will be popped from the
-    // stack.
-    for (auto &DebugVariablesMap : llvm::drop_end(DebugVariablesStack))
-      DebugVariablesMap[F].DebugVariablesBefore.erase(Var);
-  }
+  void removeVarFromAllSets(VarID Var, const Function *F);
+
   /// Return true if \p Scope is the same as \p DbgValScope or a child scope of
   /// \p DbgValScope, return false otherwise.
   bool isScopeChildOfOrEqualTo(const DIScope *Scope,
-                               const DIScope *DbgValScope) {
-    while (Scope != nullptr) {
-      if (VisitedScope.find(Scope) == VisitedScope.end()) {
-        VisitedScope.insert(Scope);
-        if (Scope == DbgValScope) {
-          VisitedScope.clear();
-          return true;
-        }
-        Scope = Scope->getScope();
-      } else {
-        VisitedScope.clear();
-        return false;
-      }
-    }
-    return false;
-  }
+                               const DIScope *DbgValScope);
+
   /// Return true if \p InlinedAt is the same as \p DbgValInlinedAt or part of
   /// the InlinedAt chain, return false otherwise.
   bool isInlinedAtChildOfOrEqualTo(const DILocation *InlinedAt,
-                                   const DILocation *DbgValInlinedAt) {
-    if (DbgValInlinedAt == InlinedAt)
-      return true;
-    if (!DbgValInlinedAt)
-      return false;
-    auto *IA = InlinedAt;
-    while (IA) {
-      if (IA == DbgValInlinedAt)
-        return true;
-      IA = IA->getInlinedAt();
-    }
-    return false;
-  }
+                                   const DILocation *DbgValInlinedAt);
+
   bool PassDroppedVariables = false;
 };
 

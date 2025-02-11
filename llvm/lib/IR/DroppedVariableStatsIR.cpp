@@ -11,9 +11,47 @@
 ///
 ///===---------------------------------------------------------------------===//
 
-#include "llvm/Passes/DroppedVariableStatsIR.h"
+#include "llvm/IR/DroppedVariableStatsIR.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassInstrumentation.h"
 
 using namespace llvm;
+
+template <typename IRUnitT>
+const IRUnitT *DroppedVariableStatsIR::unwrapIR(Any IR) {
+  const IRUnitT **IRPtr = llvm::any_cast<const IRUnitT *>(&IR);
+  return IRPtr ? *IRPtr : nullptr;
+}
+
+void DroppedVariableStatsIR::runBeforePass(StringRef P, Any IR) {
+  setup();
+  if (const auto *M = unwrapIR<Module>(IR))
+    return this->runOnModule(P, M, true);
+  if (const auto *F = unwrapIR<Function>(IR))
+    return this->runOnFunction(P, F, true);
+}
+
+void DroppedVariableStatsIR::runAfterPass(StringRef P, Any IR) {
+  if (const auto *M = unwrapIR<Module>(IR))
+    runAfterPassModule(P, M);
+  else if (const auto *F = unwrapIR<Function>(IR))
+    runAfterPassFunction(P, F);
+  cleanup();
+}
+
+void DroppedVariableStatsIR::runAfterPassFunction(StringRef PassID,
+                                                  const Function *F) {
+  runOnFunction(PassID, F, false);
+  calculateDroppedVarStatsOnFunction(F, PassID, F->getName().str(), "Function");
+}
+
+void DroppedVariableStatsIR::runAfterPassModule(StringRef PassID,
+                                                const Module *M) {
+  runOnModule(PassID, M, false);
+  calculateDroppedVarStatsOnModule(M, PassID, M->getName().str(), "Module");
+}
 
 void DroppedVariableStatsIR::runOnFunction(StringRef PassID, const Function *F,
                                            bool Before) {
