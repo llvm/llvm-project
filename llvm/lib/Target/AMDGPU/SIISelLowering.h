@@ -306,6 +306,10 @@ public:
   // so, to work around the lack of i160, map it to v5i32.
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
+  EVT getValueType(const DataLayout &DL, Type *Ty,
+                   bool AllowUnknown = false) const override;
+  EVT getMemValueType(const DataLayout &DL, Type *Ty,
+                      bool AllowUnknown = false) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
                           MachineFunction &MF,

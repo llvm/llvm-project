@@ -1675,8 +1675,8 @@ public:
   /// operations except for the pointer size.  If AllowUnknown is true, this
   /// will return MVT::Other for types with no EVT counterpart (e.g. structs),
   /// otherwise it will assert.
-  EVT getValueType(const DataLayout &DL, Type *Ty,
-                   bool AllowUnknown = false) const {
+  virtual EVT getValueType(const DataLayout &DL, Type *Ty,
+                           bool AllowUnknown = false) const {
     // Lower scalar pointers to native pointer types.
     if (auto *PTy = dyn_cast<PointerType>(Ty))
       return getPointerTy(DL, PTy->getAddressSpace());
@@ -1695,8 +1695,8 @@ public:
     return EVT::getEVT(Ty, AllowUnknown);
   }
 
-  EVT getMemValueType(const DataLayout &DL, Type *Ty,
-                      bool AllowUnknown = false) const {
+  virtual EVT getMemValueType(const DataLayout &DL, Type *Ty,
+                              bool AllowUnknown = false) const {
     // Lower scalar pointers to native pointer types.
     if (auto *PTy = dyn_cast<PointerType>(Ty))
       return getPointerMemTy(DL, PTy->getAddressSpace());
@@ -1713,7 +1713,6 @@ public:
 
     return getValueType(DL, Ty, AllowUnknown);
   }
-
 
   /// Return the MVT corresponding to this LLVM type. See getValueType.
   MVT getSimpleValueType(const DataLayout &DL, Type *Ty,

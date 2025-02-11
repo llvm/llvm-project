@@ -1203,6 +1203,41 @@ MVT SITargetLowering::getPointerMemTy(const DataLayout &DL, unsigned AS) const {
   return AMDGPUTargetLowering::getPointerMemTy(DL, AS);
 }
 
+/// Passes like the loop vectorizer will, for example, try to query the size in
+/// registers of buffer fat pointer. They don't exist by the time we reach
+/// codegen, but these queries can still come in. Unfortunately, something like
+/// <2 x ptr addrspace(7)> will get lowered to <2 x v5i32> by the workarounds
+/// above, which causes a crash. Handle this case here.
+EVT SITargetLowering::getValueType(const DataLayout &DL, Type *Ty,
+                                   bool AllowUnknown) const {
+  if (auto *VT = dyn_cast<VectorType>(Ty)) {
+    if (auto *PT = dyn_cast<PointerType>(VT->getElementType())) {
+      MVT MET = getPointerTy(DL, PT->getAddressSpace());
+      if (MET.isVector() && MET.getVectorElementType() == MVT::i32) {
+        return EVT::getVectorVT(
+            Ty->getContext(), EVT(MET.getVectorElementType()),
+            VT->getElementCount() * MET.getVectorNumElements());
+      }
+    }
+  }
+  return AMDGPUTargetLowering::getValueType(DL, Ty, AllowUnknown);
+}
+
+EVT SITargetLowering::getMemValueType(const DataLayout &DL, Type *Ty,
+                                      bool AllowUnknown) const {
+  if (auto *VT = dyn_cast<VectorType>(Ty)) {
+    if (auto *PT = dyn_cast<PointerType>(VT->getElementType())) {
+      MVT ScalarTy = getPointerMemTy(DL, PT->getAddressSpace());
+      if (ScalarTy.isVector() && ScalarTy.getVectorElementType() == MVT::i32) {
+        return EVT::getVectorVT(
+            Ty->getContext(), EVT(ScalarTy.getVectorElementType()),
+            VT->getElementCount() * ScalarTy.getVectorNumElements());
+      }
+    }
+  }
+  return AMDGPUTargetLowering::getValueType(DL, Ty, AllowUnknown);
+}
+
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           const CallInst &CI,
                                           MachineFunction &MF,
