@@ -96,36 +96,14 @@ macro(enable_omp_offload_compilation files)
     if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND
         "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
 
-      set(all_amdgpu_architectures
-        "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
-        "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
-        "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
-        "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151"
-        "gfx1152;gfx1153"
-        )
-      set(all_nvptx_architectures
-        "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
-        "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90"
-        )
-      set(all_gpu_architectures
-        "${all_amdgpu_architectures};${all_nvptx_architectures}"
-        )
-      # TODO: support auto detection on the build system.
-      if (FLANG_OMP_DEVICE_ARCHITECTURES STREQUAL "all")
-        set(FLANG_OMP_DEVICE_ARCHITECTURES ${all_gpu_architectures})
-      endif()
-      list(REMOVE_DUPLICATES FLANG_OMP_DEVICE_ARCHITECTURES)
-
-      string(REPLACE ";" "," compile_for_architectures
-        "${FLANG_OMP_DEVICE_ARCHITECTURES}"
-        )
-
       set(OMP_COMPILE_OPTIONS
         -fopenmp
         -fvisibility=hidden
         -fopenmp-cuda-mode
-        --offload-arch=${compile_for_architectures}
-        # Force LTO for the device part.
+        -fopenmp-targets=amdgcn-amd-amdhsa,nvptx64-nvidia-cuda
+        -Xopenmp-target=amdgcn-amd-amdhsa -march=''
+        -Xopenmp-target=nvptx64-nvidia-cuda -march=''
+        -nogpulib
         -foffload-lto
         )
       set_source_files_properties(${files} PROPERTIES COMPILE_OPTIONS
