@@ -740,6 +740,33 @@ foreach dim = [1, 2, 3, 4, 5] in {
   }
 }
 
+//Prefetch and Prefetchu 
+class Join<string sep, list<string> lst> {
+  string ret = !foldl("", lst, a, b, !if(!eq(a, ""), b, !if(!eq(b,""), a, !strconcat(a, sep, b))));
+}
+
+class PREFETCH_INTRS<string InstName> :
+          NVPTXInst<(outs), (ins Int64Regs:$addr),
+          InstName # " [$addr];",
+          [(!cast<Intrinsic>(!strconcat("int_nvvm_",
+          !subst(".", "_", InstName))) i64:$addr)]>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+   
+
+// Only global supports evictlast and evictnormal.
+// Other variants (local and default) only support evictnormal
+foreach level = ["L1", "L2"] in {
+  foreach addr = ["global", "local", ""] in {
+    foreach evict = !if(!eq(addr, "global"), ["evictlast", "evictnormal"], ["evictnormal"]) in {
+      defvar suffix = Join<"_", [addr, level, evict]>.ret;
+      defvar inst_name = "prefetch." # !subst("_", ".", suffix);
+      def PREFETCH_# suffix : PREFETCH_INTRS<inst_name>;
+    }
+  }
+}
+
+def PREFETCHU_L1_EVICTNORMAL : PREFETCH_INTRS<"prefetchu.L1.evictnormal">;
+
 //-----------------------------------
 // MBarrier Functions
 //-----------------------------------
