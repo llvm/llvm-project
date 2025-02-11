@@ -30,7 +30,7 @@ int64_t mktime_internal(const tm *tm_out);
 
 // Update the "tm" structure's year, month, etc. members from seconds.
 // "total_seconds" is the number of seconds since January 1st, 1970.
-extern int64_t update_from_seconds(int64_t total_seconds, tm *tm);
+int64_t update_from_seconds(int64_t total_seconds, tm *tm);
 
 // TODO(michaelrj): move these functions to use ErrorOr instead of setting
 // errno. They always accompany a specific return value so we only need the one
@@ -133,9 +133,7 @@ class TMReader final {
   }
 
 public:
-  LIBC_INLINE constexpr explicit TMReader(const tm *tmptr) : timeptr(tmptr) {
-    ;
-  }
+  LIBC_INLINE constexpr explicit TMReader(const tm *tmptr) : timeptr(tmptr) {}
 
   // Strings
   LIBC_INLINE constexpr cpp::optional<cpp::string_view>
