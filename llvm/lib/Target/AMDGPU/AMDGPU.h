@@ -63,7 +63,7 @@ ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
 ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
-FunctionPass *createGCNPreRAOptimizationsPass();
+FunctionPass *createGCNPreRAOptimizationsLegacyPass();
 FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
@@ -454,7 +454,7 @@ extern char &GCNNSAReassignID;
 void initializeGCNPreRALongBranchRegLegacyPass(PassRegistry &);
 extern char &GCNPreRALongBranchRegID;
 
-void initializeGCNPreRAOptimizationsPass(PassRegistry &);
+void initializeGCNPreRAOptimizationsLegacyPass(PassRegistry &);
 extern char &GCNPreRAOptimizationsID;
 
 FunctionPass *createAMDGPUSetWavePriorityPass();
