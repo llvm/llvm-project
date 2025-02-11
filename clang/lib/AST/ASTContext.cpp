@@ -5320,6 +5320,19 @@ bool ASTContext::computeBestEnumTypes(bool IsPacked, unsigned NumNegativeBits,
   return EnumTooLarge;
 }
 
+bool ASTContext::isRepresentableIntegerValue(llvm::APSInt &Value, QualType T) {
+  assert((T->isIntegralType(*this) || T->isEnumeralType()) &&
+         "Integral type required!");
+  unsigned BitWidth = getIntWidth(T);
+
+  if (Value.isUnsigned() || Value.isNonNegative()) {
+    if (T->isSignedIntegerOrEnumerationType())
+      --BitWidth;
+    return Value.getActiveBits() <= BitWidth;
+  }
+  return Value.getSignificantBits() <= BitWidth;
+}
+
 QualType ASTContext::getUnresolvedUsingType(
     const UnresolvedUsingTypenameDecl *Decl) const {
   if (Decl->TypeForDecl)
