@@ -122,16 +122,18 @@ TEST_F(LlvmLibcSqrtTest, HardToRound) {
 
   // Check exact cases starting from small numbers
   for (unsigned k = 1; k < 100 * 100; ++k) {
-    unsigned kx = k * k;
-    float128 x = kx, y = k;
+    unsigned k2 = k * k;
+    float128 x = static_cast<float128>(k2);
+    float128 y = static_cast<float128>(k);
     EXPECT_FP_EQ_ALL_ROUNDING(y, LIBC_NAMESPACE::sqrtf128(x));
   };
 
   // Then from the largest number.
   uint64_t k0 = 101904826760412362ULL;
   for (uint64_t k = k0; k > k0 - 10000; --k) {
-    UInt128 kx = static_cast<UInt128>(k) * static_cast<UInt128>(k);
-    float128 x = kx, y = k;
+    UInt128 k2 = static_cast<UInt128>(k) * static_cast<UInt128>(k);
+    float128 x = static_cast<float128>(k2);
+    float128 y = static_cast<float128>(k);
     EXPECT_FP_EQ_ALL_ROUNDING(y, LIBC_NAMESPACE::sqrtf128(x));
   }
 }
