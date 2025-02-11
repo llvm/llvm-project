@@ -237,8 +237,9 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
 
     newOp.getRegion().takeBody(op->getRegion(0));
     rewriter.replaceOp(op, newOp->getResults());
+    return success();
   }
-  return success();
+  return failure();
 }
 
 } // namespace
