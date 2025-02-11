@@ -12547,14 +12547,12 @@ static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
   auto &Base = LVal.getLValueBase();
   if (auto *ME = dyn_cast_or_null<MemberExpr>(Base.dyn_cast<const Expr *>())) {
     if (auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-      if (!IsLastOrInvalidFieldDecl(FD)) {
+      if (!IsLastOrInvalidFieldDecl(FD))
         return false;
-      }
     } else if (auto *IFD = dyn_cast<IndirectFieldDecl>(ME->getMemberDecl())) {
       for (auto *FD : IFD->chain()) {
-        if (!IsLastOrInvalidFieldDecl(cast<FieldDecl>(FD))) {
+        if (!IsLastOrInvalidFieldDecl(cast<FieldDecl>(FD)))
           return false;
-        }
       }
     }
   }
@@ -12590,9 +12588,8 @@ static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
         return false;
       BaseType = CT->getElementType();
     } else if (auto *FD = getAsField(Entry)) {
-      if (!IsLastOrInvalidFieldDecl(FD)) {
+      if (!IsLastOrInvalidFieldDecl(FD))
         return false;
-      }
       BaseType = FD->getType();
     } else {
       assert(getAsBaseClass(Entry) && "Expecting cast to a base class");
