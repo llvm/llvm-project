@@ -5352,8 +5352,8 @@ static bool isLocalRepeatingShuffle(ArrayRef<int> Mask, int Span) {
 
 /// Is this mask only using elements from the first span of the input?
 static bool isLowSourceShuffle(ArrayRef<int> Mask, int Span) {
-  return !any_of(Mask,
-                 [&](const auto &Idx) { return Idx != -1 && Idx >= Span; });
+  return all_of(Mask,
+                [&](const auto &Idx) { return Idx == -1 || Idx < Span; });
 }
 
 /// Try to widen element type to get a new mask value for a better permutation
