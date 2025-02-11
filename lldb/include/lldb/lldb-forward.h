@@ -11,6 +11,11 @@
 
 #include <memory>
 
+#ifdef LLVM_BUILD_TELEMETRY
+#include "llvm/Telemetry/Telemetry.h"
+#include "lldb/Core/Telemetry.h"
+#endif
+
 // lldb forward declarations
 namespace lldb_private {
 
