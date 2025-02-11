@@ -5,7 +5,7 @@
 
 define i64 @test() {
 ; CHECK-LABEL: define i64 @test() {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @malloc(i64 mul (i64 ptrtoint (ptr getelementptr (i64, ptr null, i64 1) to i64), i64 4))
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @malloc(i64 mul (i64 4, i64 ptrtoint (ptr getelementptr (i64, ptr null, i64 1) to i64)))
 ; CHECK-NEXT:    store i8 42, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[Y:%.*]] = load i64, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret i64 [[Y]]
