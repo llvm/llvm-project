@@ -1058,6 +1058,10 @@ enum NodeType {
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
 
+  /// FSINCOSPI - Compute both the sine and cosine times pi more accurately
+  /// than FSINCOS(pi*x), especially for large x.
+  FSINCOSPI,
+
   /// FMODF - Decomposes the operand into integral and fractional parts, each
   /// having the same type and sign as the operand.
   FMODF,
