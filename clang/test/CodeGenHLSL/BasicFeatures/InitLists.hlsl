@@ -155,7 +155,7 @@ TwoInts case6(TwoFloats TF4) {
   return TI2;
 }
 
-// Case 7: Initialization of a complex structue, with bogus braces and element
+// Case 7: Initialization of a complex structure, with bogus braces and element
 // conversions from a collection of scalar values, and structures.
 // CHECK-LABEL: define void @_Z5case77TwoIntsS_i9TwoFloatsS0_S0_S0_(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_DOGGO:%.*]]) align 16 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_TWOINTS:%.*]]) align 4 [[TI1:%.*]], ptr noundef byval([[STRUCT_TWOINTS]]) align 4 [[TI2:%.*]], i32 noundef [[VAL:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS:%.*]]) align 4 [[TF1:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS]]) align 4 [[TF2:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS]]) align 4 [[TF3:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS]]) align 4 [[TF4:%.*]]) #[[ATTR0]] {
