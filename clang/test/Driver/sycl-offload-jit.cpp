@@ -27,7 +27,7 @@
 // CHK-DEVICE-TRIPLE-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHK-DEVICE-TRIPLE-SAME: "-fsycl-is-device"
 // CHK-DEVICE-TRIPLE-SAME: "-O2"
-// CHK-DEVICE-TRIPLE: clang-offload-packager{{.*}} "--image=file={{.*}}.bc,triple=spirv64-unknown-unknown,arch=,kind=sycl"
+// CHK-DEVICE-TRIPLE: clang-offload-packager{{.*}} "--image=file={{.*}}.bc,triple=spirv64-unknown-unknown,arch=generic,kind=sycl"
 
 /// Check -fsycl-is-device is passed when compiling for the device.
 /// Check -fsycl-is-host is passed when compiling for host.

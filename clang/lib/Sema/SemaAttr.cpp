@@ -537,7 +537,6 @@ bool Sema::ConstantFoldAttrArgs(const AttributeCommonInfo &CI,
         Diag(Note.first, Note.second);
       return false;
     }
-    assert(Eval.Val.hasValue());
     E = ConstantExpr::Create(Context, E, Eval.Val);
   }
 
@@ -1190,6 +1189,11 @@ void Sema::ActOnPragmaAttributePop(SourceLocation PragmaLoc,
 void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
   if (PragmaAttributeStack.empty())
     return;
+
+  if (const auto *P = dyn_cast<ParmVarDecl>(D))
+    if (P->getType()->isVoidType())
+      return;
+
   for (auto &Group : PragmaAttributeStack) {
     for (auto &Entry : Group.Entries) {
       ParsedAttr *Attribute = Entry.Attribute;

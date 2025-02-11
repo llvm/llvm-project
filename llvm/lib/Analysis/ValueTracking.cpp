@@ -683,33 +683,30 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
 
   Value *Y;
   const APInt *Mask, *C;
+  if (!match(RHS, m_APInt(C)))
+    return;
+
   uint64_t ShAmt;
   switch (Pred) {
   case ICmpInst::ICMP_EQ:
     // assume(V = C)
-    if (match(LHS, m_V) && match(RHS, m_APInt(C))) {
+    if (match(LHS, m_V)) {
       Known = Known.unionWith(KnownBits::makeConstant(*C));
       // assume(V & Mask = C)
-    } else if (match(LHS, m_c_And(m_V, m_Value(Y))) &&
-               match(RHS, m_APInt(C))) {
+    } else if (match(LHS, m_c_And(m_V, m_Value(Y)))) {
       // For one bits in Mask, we can propagate bits from C to V.
       Known.One |= *C;
       if (match(Y, m_APInt(Mask)))
         Known.Zero |= ~*C & *Mask;
       // assume(V | Mask = C)
-    } else if (match(LHS, m_c_Or(m_V, m_Value(Y))) && match(RHS, m_APInt(C))) {
+    } else if (match(LHS, m_c_Or(m_V, m_Value(Y)))) {
       // For zero bits in Mask, we can propagate bits from C to V.
       Known.Zero |= ~*C;
       if (match(Y, m_APInt(Mask)))
         Known.One |= *C & ~*Mask;
-      // assume(V ^ Mask = C)
-    } else if (match(LHS, m_Xor(m_V, m_APInt(Mask))) &&
-               match(RHS, m_APInt(C))) {
-      // Equivalent to assume(V == Mask ^ C)
-      Known = Known.unionWith(KnownBits::makeConstant(*C ^ *Mask));
       // assume(V << ShAmt = C)
     } else if (match(LHS, m_Shl(m_V, m_ConstantInt(ShAmt))) &&
-               match(RHS, m_APInt(C)) && ShAmt < BitWidth) {
+               ShAmt < BitWidth) {
       // For those bits in C that are known, we can propagate them to known
       // bits in V shifted to the right by ShAmt.
       KnownBits RHSKnown = KnownBits::makeConstant(*C);
@@ -718,7 +715,7 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
       Known = Known.unionWith(RHSKnown);
       // assume(V >> ShAmt = C)
     } else if (match(LHS, m_Shr(m_V, m_ConstantInt(ShAmt))) &&
-               match(RHS, m_APInt(C)) && ShAmt < BitWidth) {
+               ShAmt < BitWidth) {
       KnownBits RHSKnown = KnownBits::makeConstant(*C);
       // For those bits in RHS that are known, we can propagate them to known
       // bits in V shifted to the right by C.
@@ -729,38 +726,36 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
   case ICmpInst::ICMP_NE: {
     // assume (V & B != 0) where B is a power of 2
     const APInt *BPow2;
-    if (match(LHS, m_And(m_V, m_Power2(BPow2))) && match(RHS, m_Zero()))
+    if (C->isZero() && match(LHS, m_And(m_V, m_Power2(BPow2))))
       Known.One |= *BPow2;
     break;
   }
-  default:
-    if (match(RHS, m_APInt(C))) {
-      const APInt *Offset = nullptr;
-      if (match(LHS, m_CombineOr(m_V, m_AddLike(m_V, m_APInt(Offset))))) {
-        ConstantRange LHSRange = ConstantRange::makeAllowedICmpRegion(Pred, *C);
-        if (Offset)
-          LHSRange = LHSRange.sub(*Offset);
-        Known = Known.unionWith(LHSRange.toKnownBits());
-      }
-      if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
-        // X & Y u> C     -> X u> C && Y u> C
-        // X nuw- Y u> C  -> X u> C
-        if (match(LHS, m_c_And(m_V, m_Value())) ||
-            match(LHS, m_NUWSub(m_V, m_Value())))
-          Known.One.setHighBits(
-              (*C + (Pred == ICmpInst::ICMP_UGT)).countLeadingOnes());
-      }
-      if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE) {
-        // X | Y u< C    -> X u< C && Y u< C
-        // X nuw+ Y u< C -> X u< C && Y u< C
-        if (match(LHS, m_c_Or(m_V, m_Value())) ||
-            match(LHS, m_c_NUWAdd(m_V, m_Value()))) {
-          Known.Zero.setHighBits(
-              (*C - (Pred == ICmpInst::ICMP_ULT)).countLeadingZeros());
-        }
+  default: {
+    const APInt *Offset = nullptr;
+    if (match(LHS, m_CombineOr(m_V, m_AddLike(m_V, m_APInt(Offset))))) {
+      ConstantRange LHSRange = ConstantRange::makeAllowedICmpRegion(Pred, *C);
+      if (Offset)
+        LHSRange = LHSRange.sub(*Offset);
+      Known = Known.unionWith(LHSRange.toKnownBits());
+    }
+    if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
+      // X & Y u> C     -> X u> C && Y u> C
+      // X nuw- Y u> C  -> X u> C
+      if (match(LHS, m_c_And(m_V, m_Value())) ||
+          match(LHS, m_NUWSub(m_V, m_Value())))
+        Known.One.setHighBits(
+            (*C + (Pred == ICmpInst::ICMP_UGT)).countLeadingOnes());
+    }
+    if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE) {
+      // X | Y u< C    -> X u< C && Y u< C
+      // X nuw+ Y u< C -> X u< C && Y u< C
+      if (match(LHS, m_c_Or(m_V, m_Value())) ||
+          match(LHS, m_c_NUWAdd(m_V, m_Value()))) {
+        Known.Zero.setHighBits(
+            (*C - (Pred == ICmpInst::ICMP_ULT)).countLeadingZeros());
       }
     }
-    break;
+  } break;
   }
 }
 
@@ -776,7 +771,10 @@ static void computeKnownBitsFromICmpCond(const Value *V, ICmpInst *Cmp,
   if (match(LHS, m_Trunc(m_Specific(V)))) {
     KnownBits DstKnown(LHS->getType()->getScalarSizeInBits());
     computeKnownBitsFromCmp(LHS, Pred, LHS, RHS, DstKnown, SQ);
-    Known = Known.unionWith(DstKnown.anyext(Known.getBitWidth()));
+    if (cast<TruncInst>(LHS)->hasNoUnsignedWrap())
+      Known = Known.unionWith(DstKnown.zext(Known.getBitWidth()));
+    else
+      Known = Known.unionWith(DstKnown.anyext(Known.getBitWidth()));
     return;
   }
 
@@ -799,10 +797,31 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
     else
       Known2 = Known2.intersectWith(Known3);
     Known = Known.unionWith(Known2);
+    return;
   }
 
-  if (auto *Cmp = dyn_cast<ICmpInst>(Cond))
+  if (auto *Cmp = dyn_cast<ICmpInst>(Cond)) {
     computeKnownBitsFromICmpCond(V, Cmp, Known, SQ, Invert);
+    return;
+  }
+
+  if (match(Cond, m_Trunc(m_Specific(V)))) {
+    KnownBits DstKnown(1);
+    if (Invert) {
+      DstKnown.setAllZero();
+    } else {
+      DstKnown.setAllOnes();
+    }
+    if (cast<TruncInst>(Cond)->hasNoUnsignedWrap()) {
+      Known = Known.unionWith(DstKnown.zext(Known.getBitWidth()));
+      return;
+    }
+    Known = Known.unionWith(DstKnown.anyext(Known.getBitWidth()));
+    return;
+  }
+
+  if (Depth < MaxAnalysisRecursionDepth && match(Cond, m_Not(m_Value(A))))
+    computeKnownBitsFromCond(V, A, Known, Depth + 1, SQ, !Invert);
 }
 
 void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
@@ -1423,7 +1442,22 @@ static void computeKnownBitsFromOperator(const Operator *I,
     computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
     // Accumulate the constant indices in a separate variable
     // to minimize the number of calls to computeForAddSub.
-    APInt AccConstIndices(BitWidth, 0, /*IsSigned*/ true);
+    unsigned IndexWidth = Q.DL.getIndexTypeSizeInBits(I->getType());
+    APInt AccConstIndices(IndexWidth, 0);
+
+    auto AddIndexToKnown = [&](KnownBits IndexBits) {
+      if (IndexWidth == BitWidth) {
+        // Note that inbounds does *not* guarantee nsw for the addition, as only
+        // the offset is signed, while the base address is unsigned.
+        Known = KnownBits::add(Known, IndexBits);
+      } else {
+        // If the index width is smaller than the pointer width, only add the
+        // value to the low bits.
+        assert(IndexWidth < BitWidth &&
+               "Index width can't be larger than pointer width");
+        Known.insertBits(KnownBits::add(Known.trunc(IndexWidth), IndexBits), 0);
+      }
+    };
 
     gep_type_iterator GTI = gep_type_begin(I);
     for (unsigned i = 1, e = I->getNumOperands(); i != e; ++i, ++GTI) {
@@ -1461,43 +1495,34 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       }
 
-      unsigned IndexBitWidth = Index->getType()->getScalarSizeInBits();
-      KnownBits IndexBits(IndexBitWidth);
-      computeKnownBits(Index, IndexBits, Depth + 1, Q);
-      TypeSize IndexTypeSize = GTI.getSequentialElementStride(Q.DL);
-      uint64_t TypeSizeInBytes = IndexTypeSize.getKnownMinValue();
-      KnownBits ScalingFactor(IndexBitWidth);
+      TypeSize Stride = GTI.getSequentialElementStride(Q.DL);
+      uint64_t StrideInBytes = Stride.getKnownMinValue();
+      if (!Stride.isScalable()) {
+        // Fast path for constant offset.
+        if (auto *CI = dyn_cast<ConstantInt>(Index)) {
+          AccConstIndices +=
+              CI->getValue().sextOrTrunc(IndexWidth) * StrideInBytes;
+          continue;
+        }
+      }
+
+      KnownBits IndexBits =
+          computeKnownBits(Index, Depth + 1, Q).sextOrTrunc(IndexWidth);
+      KnownBits ScalingFactor(IndexWidth);
       // Multiply by current sizeof type.
       // &A[i] == A + i * sizeof(*A[i]).
-      if (IndexTypeSize.isScalable()) {
+      if (Stride.isScalable()) {
         // For scalable types the only thing we know about sizeof is
         // that this is a multiple of the minimum size.
-        ScalingFactor.Zero.setLowBits(llvm::countr_zero(TypeSizeInBytes));
-      } else if (IndexBits.isConstant()) {
-        APInt IndexConst = IndexBits.getConstant();
-        APInt ScalingFactor(IndexBitWidth, TypeSizeInBytes);
-        IndexConst *= ScalingFactor;
-        AccConstIndices += IndexConst.sextOrTrunc(BitWidth);
-        continue;
+        ScalingFactor.Zero.setLowBits(llvm::countr_zero(StrideInBytes));
       } else {
         ScalingFactor =
-            KnownBits::makeConstant(APInt(IndexBitWidth, TypeSizeInBytes));
+            KnownBits::makeConstant(APInt(IndexWidth, StrideInBytes));
       }
-      IndexBits = KnownBits::mul(IndexBits, ScalingFactor);
-
-      // If the offsets have a different width from the pointer, according
-      // to the language reference we need to sign-extend or truncate them
-      // to the width of the pointer.
-      IndexBits = IndexBits.sextOrTrunc(BitWidth);
-
-      // Note that inbounds does *not* guarantee nsw for the addition, as only
-      // the offset is signed, while the base address is unsigned.
-      Known = KnownBits::add(Known, IndexBits);
+      AddIndexToKnown(KnownBits::mul(IndexBits, ScalingFactor));
     }
-    if (!Known.isUnknown() && !AccConstIndices.isZero()) {
-      KnownBits Index = KnownBits::makeConstant(AccConstIndices);
-      Known = KnownBits::add(Known, Index);
-    }
+    if (!Known.isUnknown() && !AccConstIndices.isZero())
+      AddIndexToKnown(KnownBits::makeConstant(AccConstIndices));
     break;
   }
   case Instruction::PHI: {
@@ -4927,6 +4952,11 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
     computeKnownFPClassFromCond(V, A, Depth + 1, CondIsTrue, CxtI,
                                 KnownFromContext);
     computeKnownFPClassFromCond(V, B, Depth + 1, CondIsTrue, CxtI,
+                                KnownFromContext);
+    return;
+  }
+  if (Depth < MaxAnalysisRecursionDepth && match(Cond, m_Not(m_Value(A)))) {
+    computeKnownFPClassFromCond(V, A, Depth + 1, !CondIsTrue, CxtI,
                                 KnownFromContext);
     return;
   }
@@ -8595,7 +8625,7 @@ bool llvm::isKnownInversion(const Value *X, const Value *Y) {
     return false;
 
   // They must both have samesign flag or not.
-  if (cast<ICmpInst>(X)->hasSameSign() != cast<ICmpInst>(Y)->hasSameSign())
+  if (Pred1.hasSameSign() != Pred2.hasSameSign())
     return false;
 
   if (B == C)
@@ -8607,8 +8637,7 @@ bool llvm::isKnownInversion(const Value *X, const Value *Y) {
     return false;
 
   // Sign bits of two RHSCs should match.
-  if (cast<ICmpInst>(X)->hasSameSign() &&
-      RHSC1->isNonNegative() != RHSC2->isNonNegative())
+  if (Pred1.hasSameSign() && RHSC1->isNonNegative() != RHSC2->isNonNegative())
     return false;
 
   const auto CR1 = ConstantRange::makeExactICmpRegion(Pred1, *RHSC1);
@@ -10208,10 +10237,9 @@ void llvm::findValuesAffectedByCondition(
       if (ICmpInst::isEquality(Pred)) {
         if (HasRHSC) {
           Value *Y;
-          // (X & C) or (X | C) or (X ^ C).
+          // (X & C) or (X | C).
           // (X << C) or (X >>_s C) or (X >>_u C).
-          if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
-              match(A, m_Shift(m_Value(X), m_ConstantInt())))
+          if (match(A, m_Shift(m_Value(X), m_ConstantInt())))
             AddAffected(X);
           else if (match(A, m_And(m_Value(X), m_Value(Y))) ||
                    match(A, m_Or(m_Value(X), m_Value(Y)))) {
@@ -10270,6 +10298,13 @@ void llvm::findValuesAffectedByCondition(
                                                            m_Value()))) {
       // Handle patterns that computeKnownFPClass() support.
       AddAffected(A);
+    } else if (!IsAssume && match(V, m_Trunc(m_Value(X)))) {
+      // Assume is checked here as X is already added above for assumes in
+      // addValueAffectedByCondition
+      AddAffected(X);
+    } else if (!IsAssume && match(V, m_Not(m_Value(X)))) {
+      // Assume is checked here to avoid issues with ephemeral values
+      Worklist.push_back(X);
     }
   }
 }

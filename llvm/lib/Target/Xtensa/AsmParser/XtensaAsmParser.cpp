@@ -73,6 +73,7 @@ class XtensaAsmParser : public MCTargetAsmParser {
                                SMLoc &EndLoc) override {
     return ParseStatus::NoMatch;
   }
+
   ParseStatus parsePCRelTarget(OperandVector &Operands);
   bool parseLiteralDirective(SMLoc L);
 
@@ -89,6 +90,10 @@ public:
       : MCTargetAsmParser(Options, STI, MII) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
+
+  bool hasWindowed() const {
+    return getSTI().getFeatureBits()[Xtensa::FeatureWindowed];
+  };
 };
 
 // Return true if Expr is in the range [MinValue, MaxValue].
@@ -181,6 +186,11 @@ public:
            ((cast<MCConstantExpr>(getImm())->getValue() & 0x3) == 0);
   }
 
+  bool isentry_imm12() const {
+    return isImm(0, 32760) &&
+           ((cast<MCConstantExpr>(getImm())->getValue() % 8) == 0);
+  }
+
   bool isUimm4() const { return isImm(0, 15); }
 
   bool isUimm5() const { return isImm(0, 31); }
@@ -197,6 +207,11 @@ public:
   bool isImm1n_15() const { return isImm(1, 15) || isImm(-1, -1); }
 
   bool isImm32n_95() const { return isImm(-32, 95); }
+
+  bool isImm64n_4n() const {
+    return isImm(-64, -4) &&
+           ((cast<MCConstantExpr>(getImm())->getValue() & 0x3) == 0);
+  }
 
   bool isB4const() const {
     if (Kind != Immediate)
@@ -491,6 +506,12 @@ bool XtensaAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm32n_95:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [-32, 95]");
+  case Match_InvalidImm64n_4n:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [-64, -4]");
+  case Match_InvalidImm8n_7:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [-8, 7]");
   case Match_InvalidShimm1_31:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [1, 31]");
@@ -514,6 +535,10 @@ bool XtensaAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidOffset4m32:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [0, 60], first 2 bits "
+                 "should be zero");
+  case Match_Invalidentry_imm12:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [0, 32760], first 3 bits "
                  "should be zero");
   }
 
@@ -601,6 +626,10 @@ ParseStatus XtensaAsmParser::parseRegister(OperandVector &Operands,
       getLexer().UnLex(Buf[0]);
     return ParseStatus::NoMatch;
   }
+
+  if (!Xtensa::checkRegister(RegNo, getSTI().getFeatureBits()))
+    return ParseStatus::NoMatch;
+
   if (HadParens)
     Operands.push_back(XtensaOperand::createToken("(", FirstS));
   SMLoc S = getLoc();
@@ -702,7 +731,7 @@ bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
     if (RegNo == 0)
       RegNo = MatchRegisterAltName(RegName);
 
-    if (RegNo == 0)
+    if (!Xtensa::checkRegister(RegNo, getSTI().getFeatureBits()))
       return Error(NameLoc, "invalid register name");
 
     // Parse operand

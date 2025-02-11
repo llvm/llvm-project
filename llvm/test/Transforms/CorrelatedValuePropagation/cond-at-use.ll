@@ -557,9 +557,8 @@ define i16 @and_elide(i16 noundef %x) {
 
 define i16 @and_elide_trunc_cond(i16 noundef %x) {
 ; CHECK-LABEL: @and_elide_trunc_cond(
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = trunc nuw i16 [[X]] to i1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[AND]], i16 24
+; CHECK-NEXT:    [[CMP:%.*]] = trunc nuw i16 [[X:%.*]] to i1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[X]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %and = and i16 %x, 1
@@ -570,9 +569,8 @@ define i16 @and_elide_trunc_cond(i16 noundef %x) {
 
 define <2 x i8> @and_elide_trunc_cond_vec(<2 x i8> noundef %x) {
 ; CHECK-LABEL: @and_elide_trunc_cond_vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 1)
-; CHECK-NEXT:    [[CMP:%.*]] = trunc nuw <2 x i8> [[X]] to <2 x i1>
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[AND]], <2 x i8> splat (i8 24)
+; CHECK-NEXT:    [[CMP:%.*]] = trunc nuw <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[X]], <2 x i8> splat (i8 24)
 ; CHECK-NEXT:    ret <2 x i8> [[SEL]]
 ;
   %and = and <2 x i8> %x, splat (i8 1)

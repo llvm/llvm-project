@@ -2188,13 +2188,6 @@ void AsmPrinter::Impl::printLocation(LocationAttr loc, bool allowAlias) {
   os << ')';
 }
 
-void AsmPrinter::Impl::printResourceHandle(
-    const AsmDialectResourceHandle &resource) {
-  auto *interface = cast<OpAsmDialectInterface>(resource.getDialect());
-  os << interface->getResourceKey(resource);
-  state.getDialectResources()[resource.getDialect()].insert(resource);
-}
-
 /// Returns true if the given dialect symbol data is simple enough to print in
 /// the pretty form. This is essentially when the symbol takes the form:
 ///   identifier (`<` body `>`)?
@@ -2277,6 +2270,13 @@ static void printSymbolReference(StringRef symbolRef, raw_ostream &os) {
 // content to hopefully alert readers to the fact that this has been elided.
 static void printElidedElementsAttr(raw_ostream &os) {
   os << R"(dense_resource<__elided__>)";
+}
+
+void AsmPrinter::Impl::printResourceHandle(
+    const AsmDialectResourceHandle &resource) {
+  auto *interface = cast<OpAsmDialectInterface>(resource.getDialect());
+  ::printKeywordOrString(interface->getResourceKey(resource), os);
+  state.getDialectResources()[resource.getDialect()].insert(resource);
 }
 
 LogicalResult AsmPrinter::Impl::printAlias(Attribute attr) {
@@ -3373,41 +3373,41 @@ void OperationPrinter::printResourceFileMetadata(
     auto printFn = [&](StringRef key, ResourceBuilder::ValueFn valueFn) {
       checkAddMetadataDict();
 
-      auto printFormatting = [&]() {
-        // Emit the top-level resource entry if we haven't yet.
-        if (!std::exchange(hadResource, true)) {
-          if (needResourceComma)
-            os << "," << newLine;
-          os << "  " << dictName << "_resources: {" << newLine;
-        }
-        // Emit the parent resource entry if we haven't yet.
-        if (!std::exchange(hadEntry, true)) {
-          if (needEntryComma)
-            os << "," << newLine;
-          os << "    " << name << ": {" << newLine;
-        } else {
-          os << "," << newLine;
-        }
-      };
-
+      std::string resourceStr;
+      auto printResourceStr = [&](raw_ostream &os) { os << resourceStr; };
       std::optional<uint64_t> charLimit =
           printerFlags.getLargeResourceStringLimit();
       if (charLimit.has_value()) {
-        std::string resourceStr;
         llvm::raw_string_ostream ss(resourceStr);
         valueFn(ss);
 
-        // Only print entry if it's string is small enough
+        // Only print entry if its string is small enough.
         if (resourceStr.size() > charLimit.value())
           return;
 
-        printFormatting();
-        os << "      " << key << ": " << resourceStr;
-      } else {
-        printFormatting();
-        os << "      " << key << ": ";
-        valueFn(os);
+        // Don't recompute resourceStr when valueFn is called below.
+        valueFn = printResourceStr;
       }
+
+      // Emit the top-level resource entry if we haven't yet.
+      if (!std::exchange(hadResource, true)) {
+        if (needResourceComma)
+          os << "," << newLine;
+        os << "  " << dictName << "_resources: {" << newLine;
+      }
+      // Emit the parent resource entry if we haven't yet.
+      if (!std::exchange(hadEntry, true)) {
+        if (needEntryComma)
+          os << "," << newLine;
+        os << "    " << name << ": {" << newLine;
+      } else {
+        os << "," << newLine;
+      }
+      os << "      ";
+      ::printKeywordOrString(key, os);
+      os << ": ";
+      // Call printResourceStr or original valueFn, depending on charLimit.
+      valueFn(os);
     };
     ResourceBuilder entryBuilder(printFn);
     provider.buildResources(op, providerArgs..., entryBuilder);

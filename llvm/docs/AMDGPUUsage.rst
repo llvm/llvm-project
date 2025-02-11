@@ -583,11 +583,11 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                   - ``v_dot2_f32_f16``
 
 
-     ``gfx9-4-generic``   ``amdgcn``     - ``gfx940``      - xnack            - Absolute flat   FP8 and BF8 instructions,
-                                         - ``gfx941``      - sramecc            scratch         FP8 and BF8 conversion instructions,
-                                         - ``gfx942``                                           as well as instructions with XF32 format support
-                                         - ``gfx950``                                           are not available.
-
+     ``gfx9-4-generic``   ``amdgcn``     - ``gfx940``      - sramecc          - Architected     FP8 and BF8 instructions,
+                                         - ``gfx941``      - tgsplit            flat scratch    FP8 and BF8 conversion
+                                         - ``gfx942``      - xnack            - Packed          instructions, as well as
+                                         - ``gfx950``      - kernarg preload    work-item       instructions with XF32 format
+                                                                                IDs             support are not available.
 
      ``gfx10-1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
                                          - ``gfx1011``     - wavefrontsize64    scratch           not available on ``gfx1011``
@@ -18213,6 +18213,9 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX11  Controls SHARED_VGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
+     ``.amdhsa_inst_pref_size``                               0                   GFX11-GFX12  Controls INST_PREF_SIZE in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table` or
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`
      ``.amdhsa_exception_fp_ieee_invalid_op``                 0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
      ``.amdhsa_exception_fp_denorm_src``                      0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in
