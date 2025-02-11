@@ -94,16 +94,12 @@ Region::createRegionsFromMD(Function &F, TargetTransformInfo &TTI) {
   for (BasicBlock &BB : F) {
     for (Instruction &Inst : BB) {
       if (auto *MDN = cast<llvm::Instruction>(Inst.Val)->getMetadata(MDKind)) {
-        Region *R = nullptr;
-        auto It = MDNToRegion.find(MDN);
-        if (It == MDNToRegion.end()) {
+        auto [It, Inserted] = MDNToRegion.try_emplace(MDN);
+        if (Inserted) {
           Regions.push_back(std::make_unique<Region>(Ctx, TTI));
-          R = Regions.back().get();
-          MDNToRegion[MDN] = R;
-        } else {
-          R = It->second;
+          It->second = Regions.back().get();
         }
-        R->add(&Inst);
+        It->second->add(&Inst);
       }
     }
   }

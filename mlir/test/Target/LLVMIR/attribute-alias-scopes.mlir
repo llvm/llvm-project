@@ -34,8 +34,8 @@ llvm.func @alias_scopes(%arg1 : !llvm.ptr) {
 
 // Check the intrinsic declarations.
 // CHECK-DAG: declare void @llvm.experimental.noalias.scope.decl(metadata)
-// CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
-// CHECK-DAG: declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
+// CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i32, i1 immarg)
+// CHECK-DAG: declare void @llvm.memset.p0.i32(ptr writeonly captures(none), i8, i32, i1 immarg)
 
 // Check the translated metadata.
 // CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], !"The domain"}
@@ -141,8 +141,8 @@ llvm.func @alias_scopes(%arg1 : !llvm.ptr) {
 
 // Check the intrinsic declarations.
 // CHECK-DAG: declare void @llvm.experimental.noalias.scope.decl(metadata)
-// CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
-// CHECK-DAG: declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
+// CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i32, i1 immarg)
+// CHECK-DAG: declare void @llvm.memset.p0.i32(ptr writeonly captures(none), i8, i32, i1 immarg)
 
 // Check the translated metadata.
 // CHECK-DAG: ![[DOMAIN:[0-9]+]] = !{!"domain1", !"The domain"}

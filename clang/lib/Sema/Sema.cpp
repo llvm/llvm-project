@@ -478,8 +478,8 @@ void Sema::Initialize() {
   if (Context.getTargetInfo().hasAArch64SVETypes() ||
       (Context.getAuxTargetInfo() &&
        Context.getAuxTargetInfo()->hasAArch64SVETypes())) {
-#define SVE_TYPE(Name, Id, SingletonId) \
-    addImplicitTypedef(Name, Context.SingletonId);
+#define SVE_TYPE(Name, Id, SingletonId)                                        \
+  addImplicitTypedef(#Name, Context.SingletonId);
 #include "clang/Basic/AArch64SVEACLETypes.def"
   }
 

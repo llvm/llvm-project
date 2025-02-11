@@ -17,7 +17,7 @@
 #define HWCAP_ASIMDHP (1ULL << 10)
 #define HWCAP_DIT (1ULL << 24)
 #define HWCAP_SSBS (1ULL << 28)
-#define HWCAP_GCS (1UL << 32)
+#define HWCAP_GCS (1ULL << 32)
 
 #define HWCAP2_BTI (1ULL << 17)
 #define HWCAP2_MTE (1ULL << 18)

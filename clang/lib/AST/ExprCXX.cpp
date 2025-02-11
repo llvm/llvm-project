@@ -1965,3 +1965,52 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
   SubExprs[SubExpr::RHS] = RHS;
   setDependence(computeDependence(this));
 }
+
+ResolvedUnexpandedPackExpr::ResolvedUnexpandedPackExpr(SourceLocation BL,
+                                                       QualType QT,
+                                                       unsigned NumExprs)
+    : Expr(ResolvedUnexpandedPackExprClass, QT, VK_PRValue, OK_Ordinary),
+      BeginLoc(BL), NumExprs(NumExprs) {
+  // C++ [temp.dep.expr]p3
+  // An id-expression is type-dependent if it is
+  //    - associated by name lookup with a pack
+  setDependence(ExprDependence::TypeValueInstantiation |
+                ExprDependence::UnexpandedPack);
+}
+
+ResolvedUnexpandedPackExpr *
+ResolvedUnexpandedPackExpr::CreateDeserialized(ASTContext &Ctx,
+                                               unsigned NumExprs) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumExprs),
+                           alignof(ResolvedUnexpandedPackExpr));
+  return new (Mem)
+      ResolvedUnexpandedPackExpr(SourceLocation(), QualType(), NumExprs);
+}
+
+ResolvedUnexpandedPackExpr *
+ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
+                                   QualType T, unsigned NumExprs) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumExprs),
+                           alignof(ResolvedUnexpandedPackExpr));
+  ResolvedUnexpandedPackExpr *New =
+      new (Mem) ResolvedUnexpandedPackExpr(BL, T, NumExprs);
+
+  auto Exprs = New->getExprs();
+  std::uninitialized_fill(Exprs.begin(), Exprs.end(), nullptr);
+
+  return New;
+}
+
+ResolvedUnexpandedPackExpr *
+ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
+                                   QualType T, ArrayRef<Expr *> Exprs) {
+  auto *New = Create(Ctx, BL, T, Exprs.size());
+  std::uninitialized_copy(Exprs.begin(), Exprs.end(), New->getExprs().begin());
+  return New;
+}
+
+ResolvedUnexpandedPackExpr *ResolvedUnexpandedPackExpr::getFromDecl(Decl *D) {
+  if (auto *BD = dyn_cast<BindingDecl>(D))
+    return dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BD->getBinding());
+  return nullptr;
+}

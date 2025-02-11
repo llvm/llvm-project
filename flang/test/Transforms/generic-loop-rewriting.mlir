@@ -1,9 +1,6 @@
 // RUN: fir-opt --omp-generic-loop-conversion %s | FileCheck %s
 
-omp.private {type = private} @_QFteams_loopEi_private_ref_i32 : !fir.ref<i32> alloc {
-^bb0(%arg0: !fir.ref<i32>):
-  omp.yield(%arg0 : !fir.ref<i32>)
-}
+omp.private {type = private} @_QFteams_loopEi_private_i32 : i32
 
 func.func @_QPteams_loop() {
   %i = fir.alloca i32
@@ -11,7 +8,7 @@ func.func @_QPteams_loop() {
     %c0 = arith.constant 0 : i32
     %c10 = arith.constant 10 : i32
     %c1 = arith.constant 1 : i32
-    omp.loop private(@_QFteams_loopEi_private_ref_i32 %i -> %arg2 : !fir.ref<i32>) {
+    omp.loop private(@_QFteams_loopEi_private_i32 %i -> %arg2 : !fir.ref<i32>) {
       omp.loop_nest (%arg3) : i32 = (%c0) to (%c10) inclusive step (%c1) {
         fir.store %arg3 to %arg2 : !fir.ref<i32>
         omp.yield

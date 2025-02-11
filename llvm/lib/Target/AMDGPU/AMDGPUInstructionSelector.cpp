@@ -1207,9 +1207,8 @@ static int getV_CMPOpcode(CmpInst::Predicate P, unsigned Size,
                           unsigned FakeS16Opc, unsigned S32Opc,
                           unsigned S64Opc) {
     if (Size == 16)
-      // FIXME-TRUE16 use TrueS16Opc when realtrue16 is supported for CMP code
       return ST.hasTrue16BitInsts()
-                 ? ST.useRealTrue16Insts() ? FakeS16Opc : FakeS16Opc
+                 ? ST.useRealTrue16Insts() ? TrueS16Opc : FakeS16Opc
                  : S16Opc;
     if (Size == 32)
       return S32Opc;
