@@ -3132,14 +3132,25 @@ static void BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
   }
 
   if (auto *RTy = Ty->getAs<RecordType>()) {
-    for (auto *FD : RTy->getDecl()->fields()) {
-      DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
-      DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
-      ExprResult Res = S.BuildFieldReferenceExpr(
-          E, false, E->getBeginLoc(), CXXScopeSpec(), FD, Found, NameInfo);
-      if (Res.isInvalid())
-        return;
-      BuildInitializerList(S, Ctx, Res.get(), List, DestTypes, ExcessInits);
+    llvm::SmallVector<const RecordType*> RecordTypes;
+    RecordTypes.push_back(RTy);
+    while(RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
+      CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
+      assert(D->getNumBases() == 1 && "HLSL doesn't support multiple inheritance");
+      RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
+    }
+    while (!RecordTypes.empty()) {
+      const RecordType* RT = RecordTypes.back();
+      RecordTypes.pop_back();
+      for (auto *FD : RT->getDecl()->fields()) {
+        DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
+        DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
+        ExprResult Res = S.BuildFieldReferenceExpr(
+            E, false, E->getBeginLoc(), CXXScopeSpec(), FD, Found, NameInfo);
+        if (Res.isInvalid())
+          return;
+        BuildInitializerList(S, Ctx, Res.get(), List, DestTypes, ExcessInits);
+      }
     }
   }
 }
@@ -3166,9 +3177,20 @@ static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
     for (uint64_t I = 0; I < Size; ++I)
       Inits.push_back(GenerateInitLists(Ctx, ElTy, It));
   }
-  if (const RecordDecl *RD = Ty->getAsRecordDecl()) {
-    for (auto *FD : RD->fields()) {
-      Inits.push_back(GenerateInitLists(Ctx, FD->getType(), It));
+  if (auto *RTy = Ty->getAs<RecordType>()) {
+    llvm::SmallVector<const RecordType*> RecordTypes;
+    RecordTypes.push_back(RTy);
+    while(RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
+      CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
+      assert(D->getNumBases() == 1 && "HLSL doesn't support multiple inheritance");
+      RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
+    }
+    while (!RecordTypes.empty()) {
+      const RecordType* RT = RecordTypes.back();
+      RecordTypes.pop_back();
+      for (auto *FD : RT->getDecl()->fields()) {
+        Inits.push_back(GenerateInitLists(Ctx, FD->getType(), It));
+      }
     }
   }
   auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),

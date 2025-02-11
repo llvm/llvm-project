@@ -1462,6 +1462,14 @@ void CXXRecordDecl::addedMember(Decl *D) {
     if (Using->getDeclName().getCXXOverloadedOperator() == OO_Equal)
       data().HasInheritedAssignment = true;
   }
+
+  // HLSL: All user-defined data types are aggregates and use aggregate
+  // initialization. This _needs_ to change in the future. There are two
+  // relevant HLSL feature proposals that will depend on this changing:
+  // * 0005-strict-initializer-lists.md
+  // * https://github.com/microsoft/hlsl-specs/pull/325
+  if (getLangOpts().HLSL && !isImplicit())
+    data().Aggregate = true;
 }
 
 bool CXXRecordDecl::isLiteral() const {

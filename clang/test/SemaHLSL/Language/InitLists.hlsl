@@ -35,6 +35,15 @@ struct Zoo {
   Kitteh Cats[4];
 };
 
+struct FourFloats : TwoFloats {
+  float Z, W;
+};
+
+struct SlicyBits {
+  int Z : 8;
+  int W : 8;
+};
+
 void fn() {
   TwoFloats TF1 = {{{1.0, 2}}};
   TwoFloats TF2 = {1,2};
@@ -58,6 +67,17 @@ void fn() {
   // expected-warning@#insanity{{implicit conversion changes signedness: 'uint' (aka 'unsigned int') to 'int'}}
   // expected-warning@#insanity{{implicit conversion from 'int64_t' (aka 'long') to 'float' may lose precision}}
   // expected-warning@#insanity{{implicit conversion changes signedness: 'uint' (aka 'unsigned int') to 'int'}}
+}
+
+void fn2() {
+  TwoFloats TF2 = {1,2};
+  FourFloats FF1 = {TF2, TF2};
+  FourFloats FF2 = {1,2,3,4};
+  FourFloats FF3 = {1.xxx, 2};
+
+  SlicyBits SB1 = {1,2};
+  TwoInts TI1 = {SB1};
+  SlicyBits SB2 = {TI1};
 }
 
 void Errs() {

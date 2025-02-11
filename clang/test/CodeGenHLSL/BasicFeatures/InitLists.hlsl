@@ -36,6 +36,15 @@ struct Zoo {
   Kitteh Cats[4];
 };
 
+struct FourFloats : TwoFloats {
+  float Z, W;
+};
+
+struct SlicyBits {
+  int Z : 8;
+  int W : 8;
+};
+
 // Case 1: Extraneous braces get ignored in literal instantiation.
 // CHECK-LABEL: define void @_Z5case1v(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 4 [[AGG_RESULT:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -711,4 +720,184 @@ AnimalBits case8(Doggo D1) {
 Zoo case9(Doggo D1, AnimalBits A1) {
   Zoo Z1 = {D1, A1, D1, A1, D1, A1};
   return Z1;
+}
+
+// Case 10: Initialize an object with a base class from two objects.
+// CHECK-LABEL: define void @_Z6case109TwoFloatsS_(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOURFLOATS:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS:%.*]]) align 4 [[TF1:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS]]) align 4 [[TF2:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
+// CHECK-NEXT:    [[X1:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[TF1]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[X1]], align 4
+// CHECK-NEXT:    store float [[TMP0]], ptr [[X]], align 4
+// CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
+// CHECK-NEXT:    [[Y2:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[TF1]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[Y2]], align 4
+// CHECK-NEXT:    store float [[TMP1]], ptr [[Y]], align 4
+// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_FOURFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
+// CHECK-NEXT:    [[X3:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[TF2]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[X3]], align 4
+// CHECK-NEXT:    store float [[TMP2]], ptr [[Z]], align 4
+// CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_FOURFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 2
+// CHECK-NEXT:    [[Y4:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[TF2]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[Y4]], align 4
+// CHECK-NEXT:    store float [[TMP3]], ptr [[W]], align 4
+// CHECK-NEXT:    ret void
+//
+FourFloats case10(TwoFloats TF1, TwoFloats TF2) {
+  FourFloats FF1 = {TF1, TF2};
+  return FF1;
+}
+
+// Case 11: Initialize an object with a base class from a vector splat.
+// CHECK-LABEL: define void @_Z6case11f(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOURFLOATS:%.*]]) align 4 [[AGG_RESULT:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    [[REF_TMP:%.*]] = alloca <4 x float>, align 16
+// CHECK-NEXT:    [[REF_TMP1:%.*]] = alloca <4 x float>, align 16
+// CHECK-NEXT:    [[REF_TMP4:%.*]] = alloca <4 x float>, align 16
+// CHECK-NEXT:    [[REF_TMP7:%.*]] = alloca <4 x float>, align 16
+// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS:%.*]], ptr [[AGG_RESULT]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[CAST_SPLAT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x float> [[CAST_SPLAT]], <1 x float> poison, <4 x i32> zeroinitializer
+// CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[REF_TMP]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[REF_TMP]], align 16
+// CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
+// CHECK-NEXT:    store float [[VECEXT]], ptr [[X]], align 4
+// CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[CAST_SPLAT2:%.*]] = insertelement <1 x float> poison, float [[TMP3]], i64 0
+// CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <1 x float> [[CAST_SPLAT2]], <1 x float> poison, <4 x i32> zeroinitializer
+// CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[REF_TMP1]], align 16
+// CHECK-NEXT:    [[TMP5:%.*]] = load <4 x float>, ptr [[REF_TMP1]], align 16
+// CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x float> [[TMP5]], i64 1
+// CHECK-NEXT:    store float [[VECEXT3]], ptr [[Y]], align 4
+// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_FOURFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[CAST_SPLAT5:%.*]] = insertelement <1 x float> poison, float [[TMP6]], i64 0
+// CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <1 x float> [[CAST_SPLAT5]], <1 x float> poison, <4 x i32> zeroinitializer
+// CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[REF_TMP4]], align 16
+// CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[REF_TMP4]], align 16
+// CHECK-NEXT:    [[VECEXT6:%.*]] = extractelement <4 x float> [[TMP8]], i64 2
+// CHECK-NEXT:    store float [[VECEXT6]], ptr [[Z]], align 4
+// CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_FOURFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[CAST_SPLAT8:%.*]] = insertelement <1 x float> poison, float [[TMP9]], i64 0
+// CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <1 x float> [[CAST_SPLAT8]], <1 x float> poison, <4 x i32> zeroinitializer
+// CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[REF_TMP7]], align 16
+// CHECK-NEXT:    [[TMP11:%.*]] = load <4 x float>, ptr [[REF_TMP7]], align 16
+// CHECK-NEXT:    [[VECEXT9:%.*]] = extractelement <4 x float> [[TMP11]], i64 3
+// CHECK-NEXT:    store float [[VECEXT9]], ptr [[W]], align 4
+// CHECK-NEXT:    ret void
+//
+FourFloats case11(float F) {
+  FourFloats FF1 = {F.xxxx};
+  return FF1;
+}
+
+// Case 12: Initialize bitfield from two integers.
+// CHECK-LABEL: define void @_Z6case12ii(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_SLICYBITS:%.*]]) align 4 [[AGG_RESULT:%.*]], i32 noundef [[I:%.*]], i32 noundef [[J:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[J_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[J]], ptr [[J_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i16
+// CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[AGG_RESULT]], align 4
+// CHECK-NEXT:    [[BF_VALUE:%.*]] = and i16 [[TMP1]], 255
+// CHECK-NEXT:    [[BF_CLEAR:%.*]] = and i16 [[BF_LOAD]], -256
+// CHECK-NEXT:    [[BF_SET:%.*]] = or i16 [[BF_CLEAR]], [[BF_VALUE]]
+// CHECK-NEXT:    store i16 [[BF_SET]], ptr [[AGG_RESULT]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[J_ADDR]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
+// CHECK-NEXT:    [[BF_LOAD1:%.*]] = load i16, ptr [[AGG_RESULT]], align 4
+// CHECK-NEXT:    [[BF_VALUE2:%.*]] = and i16 [[TMP3]], 255
+// CHECK-NEXT:    [[BF_SHL:%.*]] = shl i16 [[BF_VALUE2]], 8
+// CHECK-NEXT:    [[BF_CLEAR3:%.*]] = and i16 [[BF_LOAD1]], 255
+// CHECK-NEXT:    [[BF_SET4:%.*]] = or i16 [[BF_CLEAR3]], [[BF_SHL]]
+// CHECK-NEXT:    store i16 [[BF_SET4]], ptr [[AGG_RESULT]], align 4
+// CHECK-NEXT:    ret void
+//
+SlicyBits case12(int I, int J) {
+  SlicyBits SB = {I, J};
+  return SB;
+}
+
+// Case 13: Initialize bitfield from a struct of two ints.
+// CHECK-LABEL: define void @_Z6case137TwoInts(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_SLICYBITS:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_TWOINTS:%.*]]) align 4 [[TI:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Z]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i16
+// CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[AGG_RESULT]], align 4
+// CHECK-NEXT:    [[BF_VALUE:%.*]] = and i16 [[TMP1]], 255
+// CHECK-NEXT:    [[BF_CLEAR:%.*]] = and i16 [[BF_LOAD]], -256
+// CHECK-NEXT:    [[BF_SET:%.*]] = or i16 [[BF_CLEAR]], [[BF_VALUE]]
+// CHECK-NEXT:    store i16 [[BF_SET]], ptr [[AGG_RESULT]], align 4
+// CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[W]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
+// CHECK-NEXT:    [[BF_LOAD1:%.*]] = load i16, ptr [[AGG_RESULT]], align 4
+// CHECK-NEXT:    [[BF_VALUE2:%.*]] = and i16 [[TMP3]], 255
+// CHECK-NEXT:    [[BF_SHL:%.*]] = shl i16 [[BF_VALUE2]], 8
+// CHECK-NEXT:    [[BF_CLEAR3:%.*]] = and i16 [[BF_LOAD1]], 255
+// CHECK-NEXT:    [[BF_SET4:%.*]] = or i16 [[BF_CLEAR3]], [[BF_SHL]]
+// CHECK-NEXT:    store i16 [[BF_SET4]], ptr [[AGG_RESULT]], align 4
+// CHECK-NEXT:    ret void
+//
+SlicyBits case13(TwoInts TI) {
+  SlicyBits SB = {TI};
+  return SB;
+}
+
+// Case 14: Initialize struct of ints from struct with bitfields.
+// CHECK-LABEL: define void @_Z6case149SlicyBits(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOINTS:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_SLICYBITS:%.*]]) align 4 [[SB:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[AGG_RESULT]], i32 0, i32 0
+// CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[SB]], align 4
+// CHECK-NEXT:    [[BF_SHL:%.*]] = shl i16 [[BF_LOAD]], 8
+// CHECK-NEXT:    [[BF_ASHR:%.*]] = ashr i16 [[BF_SHL]], 8
+// CHECK-NEXT:    [[BF_CAST:%.*]] = sext i16 [[BF_ASHR]] to i32
+// CHECK-NEXT:    store i32 [[BF_CAST]], ptr [[Z]], align 4
+// CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[AGG_RESULT]], i32 0, i32 1
+// CHECK-NEXT:    [[BF_LOAD1:%.*]] = load i16, ptr [[SB]], align 4
+// CHECK-NEXT:    [[BF_ASHR2:%.*]] = ashr i16 [[BF_LOAD1]], 8
+// CHECK-NEXT:    [[BF_CAST3:%.*]] = sext i16 [[BF_ASHR2]] to i32
+// CHECK-NEXT:    store i32 [[BF_CAST3]], ptr [[W]], align 4
+// CHECK-NEXT:    ret void
+//
+TwoInts case14(SlicyBits SB) {
+  TwoInts TI = {SB};
+  return TI;
+}
+
+// Case 15: Initialize struct of floats from struct with bitfields.
+// CHECK-LABEL: define void @_Z6case159SlicyBits(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_SLICYBITS:%.*]]) align 4 [[SB:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
+// CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[SB]], align 4
+// CHECK-NEXT:    [[BF_SHL:%.*]] = shl i16 [[BF_LOAD]], 8
+// CHECK-NEXT:    [[BF_ASHR:%.*]] = ashr i16 [[BF_SHL]], 8
+// CHECK-NEXT:    [[BF_CAST:%.*]] = sext i16 [[BF_ASHR]] to i32
+// CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[BF_CAST]] to float
+// CHECK-NEXT:    store float [[CONV]], ptr [[X]], align 4
+// CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
+// CHECK-NEXT:    [[BF_LOAD1:%.*]] = load i16, ptr [[SB]], align 4
+// CHECK-NEXT:    [[BF_ASHR2:%.*]] = ashr i16 [[BF_LOAD1]], 8
+// CHECK-NEXT:    [[BF_CAST3:%.*]] = sext i16 [[BF_ASHR2]] to i32
+// CHECK-NEXT:    [[CONV4:%.*]] = sitofp i32 [[BF_CAST3]] to float
+// CHECK-NEXT:    store float [[CONV4]], ptr [[Y]], align 4
+// CHECK-NEXT:    ret void
+//
+TwoFloats case15(SlicyBits SB) {
+  TwoFloats TI = {SB};
+  return TI;
 }
