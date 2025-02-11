@@ -4594,7 +4594,27 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vzip_v:
   case NEON::BI__builtin_neon_vzipq_v: {
-    llvm_unreachable("NEON::BI__builtin_neon_vzipq_v NYI");
+    Ops[1] = builder.createBitcast(Ops[1], ty);
+    Ops[2] = builder.createBitcast(Ops[2], ty);
+    // Adding a bitcast here as Ops[0] might be a void pointer.
+    mlir::Value baseAddr =
+        builder.createBitcast(Ops[0], builder.getPointerTo(ty));
+    mlir::Value sv;
+    mlir::Location loc = getLoc(E->getExprLoc());
+
+    for (unsigned vi = 0; vi != 2; ++vi) {
+      llvm::SmallVector<int64_t, 16> indices;
+      for (unsigned i = 0, e = vTy.getSize(); i != e; i += 2) {
+        indices.push_back((i + vi * e) >> 1);
+        indices.push_back(((i + vi * e) >> 1) + e);
+      }
+      cir::ConstantOp idx = builder.getConstInt(loc, SInt32Ty, vi);
+      mlir::Value addr = builder.create<cir::PtrStrideOp>(
+          loc, baseAddr.getType(), baseAddr, idx);
+      sv = builder.createVecShuffle(loc, Ops[1], Ops[2], indices);
+      (void)builder.CIRBaseBuilderTy::createStore(loc, sv, addr);
+    }
+    return sv;
   }
   case NEON::BI__builtin_neon_vqtbl1q_v: {
     llvm_unreachable("NEON::BI__builtin_neon_vqtbl1q_v NYI");
