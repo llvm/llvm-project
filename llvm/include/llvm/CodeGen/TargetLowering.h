@@ -5659,6 +5659,13 @@ public:
                                        LoadSDNode *OriginalLoad,
                                        SelectionDAG &DAG) const;
 
+  /// Return the value of nullptr. In most cases, nullptr is a zero-value
+  /// constant with the corresponding pointer type. However, this is not always
+  /// the case. For certain address spaces on some targets, it could be a value
+  /// like ~0U.
+  virtual SDValue getNullPtrValue(unsigned AS, const SDLoc &DL,
+                                  SelectionDAG &DAG) const;
+
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                            const SDLoc &DL, DAGCombinerInfo &DCI) const;

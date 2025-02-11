@@ -12,7 +12,7 @@ define void @machinesink_loop_variable_out_of_divergent_loop(i32 %arg, i1 %cmp49
 ; CHECK-NEXT:    v_and_b32_e32 v3, 1, v3
 ; CHECK-NEXT:    s_mov_b32 s5, 0
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s4, 1, v1
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, -1
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v3
 ; CHECK-NEXT:    s_xor_b32 s6, s4, -1
 ; CHECK-NEXT:    s_inst_prefetch 0x1

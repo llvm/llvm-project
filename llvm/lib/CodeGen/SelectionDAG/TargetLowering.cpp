@@ -12188,3 +12188,8 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
 
   return Load;
 }
+
+SDValue TargetLowering::getNullPtrValue(unsigned AS, const SDLoc &DL,
+                                        SelectionDAG &DAG) const {
+  return DAG.getConstant(0, DL, getPointerTy(DAG.getDataLayout(), AS));
+}

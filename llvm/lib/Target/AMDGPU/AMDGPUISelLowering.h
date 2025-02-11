@@ -387,6 +387,9 @@ public:
   MVT getFenceOperandTy(const DataLayout &DL) const override {
     return MVT::i32;
   }
+
+  SDValue getNullPtrValue(unsigned AS, const SDLoc &DL,
+                          SelectionDAG &DAG) const override;
 };
 
 namespace AMDGPUISD {

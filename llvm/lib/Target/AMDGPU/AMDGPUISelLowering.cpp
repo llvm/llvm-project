@@ -6050,3 +6050,12 @@ bool AMDGPUTargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
                                                Register N0, Register N1) const {
   return MRI.hasOneNonDBGUse(N0); // FIXME: handle regbanks
 }
+
+SDValue AMDGPUTargetLowering::getNullPtrValue(unsigned AS, const SDLoc &DL,
+                                              SelectionDAG &DAG) const {
+  if (AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::LOCAL_ADDRESS) {
+    return DAG.getConstant(0xffffffff, DL,
+                           getPointerTy(DAG.getDataLayout(), AS));
+  }
+  return TargetLowering::getNullPtrValue(AS, DL, DAG);
+}

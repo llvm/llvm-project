@@ -1807,8 +1807,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
     if (isa<ConstantPointerNull>(C)) {
       unsigned AS = V->getType()->getPointerAddressSpace();
-      return DAG.getConstant(0, getCurSDLoc(),
-                             TLI.getPointerTy(DAG.getDataLayout(), AS));
+      return TLI.getNullPtrValue(AS, getCurSDLoc(), DAG);
     }
 
     if (match(C, m_VScale()))
