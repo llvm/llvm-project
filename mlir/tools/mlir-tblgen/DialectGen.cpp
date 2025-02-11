@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SharedCL.h"
 #include "DialectGenUtilities.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
@@ -37,12 +38,6 @@ static llvm::cl::OptionCategory dialectGenCat("Options for -gen-dialect-*");
 llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
-
-static llvm::cl::opt<bool> clUseFallbackTypeIDs(
-    "gen-dialect-use-fallback-type-ids",
-    llvm::cl::desc(
-        "Don't generate static TypeID decls; fall back to string comparison."),
-    llvm::cl::init(false), llvm::cl::cat(dialectGenCat));
 
 /// Utility iterator used for filtering records for a specific dialect.
 namespace {

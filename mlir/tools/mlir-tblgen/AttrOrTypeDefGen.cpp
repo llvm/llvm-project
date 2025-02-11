@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AttrOrTypeFormatGen.h"
+#include "SharedCL.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
@@ -24,18 +25,6 @@ using namespace mlir;
 using namespace mlir::tblgen;
 using llvm::Record;
 using llvm::RecordKeeper;
-
-//===----------------------------------------------------------------------===//
-// CL Options
-//===----------------------------------------------------------------------===//
-
-static llvm::cl::OptionCategory clAttrOrTypeDefs("Options for -gen-*def-*");
-
-static llvm::cl::opt<bool> clUseFallbackTypeIDs(
-    "gen-attr-or-type-use-fallback-type-ids",
-    llvm::cl::desc(
-        "Don't generate static TypeID decls; fall back to string comparison."),
-    llvm::cl::init(false), llvm::cl::cat(clAttrOrTypeDefs));
 
 //===----------------------------------------------------------------------===//
 // Utility Functions
