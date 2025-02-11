@@ -176,6 +176,8 @@ void processInstructions(
         clearOffset(DwReg, Offset, SpillMap);
         SpillMap[DwReg].insert(Offset);
       }
+      // YKOPT: we can also remove killed registers, if any.
+      // Check other places that have a `continue` too.
       continue;
     }
 
@@ -195,8 +197,15 @@ void processInstructions(
     }
 
     // Any other assignments to tracked registers removes their mapping.
-    for (const MachineOperand MO : Instr.defs()) {
+    //
+    // Note that it's important to use `all_defs()` here so that you capture
+    // implicit definitions (those not mentioned by operands, e.g. a call's
+    // return value in RAX).
+    for (const MachineOperand MO : Instr.all_defs()) {
       assert(MO.isReg() && "Is register.");
+      if (MO.getReg() == X86::SSP) {
+        continue;
+      }
       auto DwReg = getDwarfRegNum(MO.getReg(), TRI);
       killRegister(DwReg, SpillMap);
     }
@@ -204,6 +213,8 @@ void processInstructions(
     // Delete registers that are "killed" (no longer live) after this
     // intsruction. This prevents us deopting values at runtime that will never
     // be used.
+    //
+    // YKOPT: use `all_uses()` to kill implicit uses too?
     for (const MachineOperand MO : Instr.uses()) {
       if (MO.isReg() && (MO.isKill() || MO.isDef())) {
         int DwReg = MRI->getDwarfRegNum(MO.getReg(), false);
