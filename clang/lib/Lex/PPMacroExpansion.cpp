@@ -357,12 +357,7 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__has_builtin = RegisterBuiltinMacro("__has_builtin");
   Ident__has_constexpr_builtin =
       RegisterBuiltinMacro("__has_constexpr_builtin");
-  if (getLangOpts().OpenMPIsTargetDevice || getLangOpts().CUDAIsDevice ||
-      getLangOpts().SYCLIsDevice)
-    Ident__has_target_builtin = RegisterBuiltinMacro("__has_target_builtin");
-  else
-    Ident__has_target_builtin = nullptr;
-
+  Ident__has_target_builtin = RegisterBuiltinMacro("__has_target_builtin");
   Ident__has_attribute = RegisterBuiltinMacro("__has_attribute");
   if (!getLangOpts().CPlusPlus)
     Ident__has_c_attribute = RegisterBuiltinMacro("__has_c_attribute");
@@ -1812,7 +1807,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               Tok, *this, diag::err_feature_check_malformed);
           if (!II)
             return false;
-          auto BuiltinID = II->getBuiltinID();
+          unsigned BuiltinID = II->getBuiltinID();
           if (BuiltinID != 0) {
             switch (BuiltinID) {
             case Builtin::BI__builtin_cpu_is:
