@@ -24,8 +24,9 @@ include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 // CIR Attrs
 //===----------------------------------------------------------------------===//
 
-class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
-    : AttrDef<CIR_Dialect, name, traits> {
+class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = [],
+               string baseCppClass = "::mlir::Attribute">
+    : AttrDef<CIR_Dialect, name, traits, baseCppClass> {
   let mnemonic = attrMnemonic;
 }
 
@@ -1323,8 +1324,7 @@ def GlobalAnnotationValuesAttr : CIR_Attr<"GlobalAnnotationValues",
   let genVerifyDecl = 1;
 }
 
-def CIR_TBAAAttr : CIR_Attr<"TBAA", "tbaa", []> {
-}
+include "clang/CIR/Dialect/IR/CIRTBAAAttrs.td"
 
 include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"

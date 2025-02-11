@@ -1145,6 +1145,9 @@ public:
   matchAndRewrite(cir::SignBitOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override;
 };
+mlir::ArrayAttr lowerCIRTBAAAttr(mlir::Attribute tbaa,
+                                 mlir::ConversionPatternRewriter &rewriter,
+                                 cir::LowerModule *lowerMod);
 
 #define GET_BUILTIN_LOWERING_CLASSES_DECLARE
 #include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"

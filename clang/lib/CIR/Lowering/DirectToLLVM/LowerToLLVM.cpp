@@ -1644,6 +1644,9 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   mlir::Value result =
       emitFromMemory(rewriter, dataLayout, op, newLoad.getResult());
   rewriter.replaceOp(op, result);
+  if (auto tbaa = op.getTbaaAttr()) {
+    newLoad.setTBAATags(lowerCIRTBAAAttr(tbaa, rewriter, lowerMod));
+  }
   return mlir::LogicalResult::success();
 }
 
@@ -1678,9 +1681,13 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   mlir::Value value = emitToMemory(rewriter, dataLayout,
                                    op.getValue().getType(), adaptor.getValue());
   // TODO: nontemporal, syncscope.
-  rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(
-      op, value, adaptor.getAddr(), alignment, op.getIsVolatile(),
+  auto storeOp = rewriter.create<mlir::LLVM::StoreOp>(
+      op->getLoc(), value, adaptor.getAddr(), alignment, op.getIsVolatile(),
       /* nontemporal */ false, /* invariantGroup */ invariant, ordering);
+  rewriter.replaceOp(op, storeOp);
+  if (auto tbaa = op.getTbaaAttr()) {
+    storeOp.setTBAATags(lowerCIRTBAAAttr(tbaa, rewriter, lowerMod));
+  }
   return mlir::LogicalResult::success();
 }
 

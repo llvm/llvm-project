@@ -576,7 +576,7 @@ public:
   /// type is not suitable for use in TBAA access tags.
   cir::TBAAAttr getTBAABaseTypeInfo(QualType QTy);
 
-  mlir::ArrayAttr getTBAAAccessTagInfo(TBAAAccessInfo tbaaInfo);
+  cir::TBAAAttr getTBAAAccessTagInfo(TBAAAccessInfo tbaaInfo);
 
   /// Get merged TBAA information for the purposes of type casts.
   TBAAAccessInfo mergeTBAAInfoForCast(TBAAAccessInfo SourceInfo,

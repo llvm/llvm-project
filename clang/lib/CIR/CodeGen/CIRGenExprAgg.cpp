@@ -1722,7 +1722,7 @@ void CIRGenFunction::emitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case
   // the optimizer wishes to expand it in to scalar memory operations.
-  assert(!cir::MissingFeatures::tbaa_struct() && "tbaa.struct NYI");
+  assert(!cir::MissingFeatures::tbaaStruct() && "tbaa.struct NYI");
   if (CGM.getCodeGenOpts().NewStructPathTBAA) {
     TBAAAccessInfo TBAAInfo = CGM.mergeTBAAInfoForMemoryTransfer(
         Dest.getTBAAInfo(), Src.getTBAAInfo());

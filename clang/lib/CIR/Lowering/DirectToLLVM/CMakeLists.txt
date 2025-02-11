@@ -8,6 +8,7 @@ get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 add_clang_library(clangCIRLoweringDirectToLLVM
   LowerToLLVMIR.cpp
   LowerToLLVM.cpp
+  LowerTBAAToLLVM.cpp
 
   DEPENDS
   MLIRCIREnumsGen

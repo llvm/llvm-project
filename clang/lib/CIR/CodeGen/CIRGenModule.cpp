@@ -4096,7 +4096,7 @@ cir::TBAAAttr CIRGenModule::getTBAABaseTypeInfo(QualType QTy) {
   return tbaa->getBaseTypeInfo(QTy);
 }
 
-mlir::ArrayAttr CIRGenModule::getTBAAAccessTagInfo(TBAAAccessInfo tbaaInfo) {
+cir::TBAAAttr CIRGenModule::getTBAAAccessTagInfo(TBAAAccessInfo tbaaInfo) {
   if (!tbaa) {
     return nullptr;
   }

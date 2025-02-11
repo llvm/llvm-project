@@ -868,7 +868,7 @@ public:
     return create<cir::LoadOp>(
         loc, addr.getElementType(), addr.getPointer(), /*isDeref=*/false,
         /*is_volatile=*/isVolatile, /*alignment=*/mlir::IntegerAttr{},
-        /*mem_order=*/cir::MemOrderAttr{}, /*tbaa=*/mlir::ArrayAttr{});
+        /*mem_order=*/cir::MemOrderAttr{}, /*tbaa=*/cir::TBAAAttr{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,

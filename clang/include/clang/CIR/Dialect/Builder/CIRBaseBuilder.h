@@ -170,7 +170,7 @@ public:
                                /*alignment=*/intAttr,
                                /*mem_order=*/
                                cir::MemOrderAttr{},
-                               /*tbaa=*/mlir::ArrayAttr{});
+                               /*tbaa=*/cir::TBAAAttr{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
@@ -357,7 +357,7 @@ public:
         val.getType())
       dst = createPtrBitcast(dst, val.getType());
     return create<cir::StoreOp>(loc, val, dst, _volatile, align, order,
-                                /*tbaa=*/mlir::ArrayAttr{});
+                                /*tbaa=*/cir::TBAAAttr{});
   }
 
   mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
@@ -405,7 +405,7 @@ public:
   cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
                          bool isVolatile = false) {
     return create<cir::CopyOp>(dst.getLoc(), dst, src, isVolatile,
-                               /*tbaa=*/mlir::ArrayAttr{});
+                               /*tbaa=*/cir::TBAAAttr{});
   }
 
   cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,

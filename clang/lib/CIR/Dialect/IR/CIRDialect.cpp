@@ -17,6 +17,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
 #include <optional>
@@ -106,12 +107,13 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << dynCastInfoAttr.getAlias();
       return AliasResult::FinalAlias;
     }
-    if (auto tbaaAttr = mlir::dyn_cast<cir::TBAAAttr>(attr)) {
-      os << tbaaAttr.getMnemonic();
-      return AliasResult::OverridableAlias;
-    }
-
-    return AliasResult::NoAlias;
+    return TypeSwitch<Attribute, AliasResult>(attr)
+        .Case<cir::TBAAAttr, cir::TBAAOmnipotentCharAttr, cir::TBAAScalarAttr,
+              cir::TBAATagAttr>([&](auto attr) {
+          os << decltype(attr)::getMnemonic();
+          return AliasResult::OverridableAlias;
+        })
+        .Default([](Attribute) { return AliasResult::NoAlias; });
   }
 };
 } // namespace
