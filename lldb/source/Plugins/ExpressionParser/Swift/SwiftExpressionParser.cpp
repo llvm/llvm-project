@@ -448,7 +448,7 @@ static CompilerType GetSwiftTypeForVariableValueObject(
   CompilerType result = valobj_sp->GetCompilerType();
   if (!result)
     return {};
-  if (bind_generic_types != lldb::eDontBind)
+  if (SwiftASTManipulator::ShouldBindGenericTypes(bind_generic_types))
     result = runtime->BindGenericTypeParameters(*stack_frame_sp, result);
   if (!result)
     return {};
@@ -489,7 +489,8 @@ CompilerType SwiftExpressionParser::ResolveVariable(
   // though, as we don't bind the generic parameters in that case.
   if (swift_type_system->IsMeaninglessWithoutDynamicResolution(
           var_type.GetOpaqueQualType()) &&
-      bind_generic_types != lldb::eDontBind && use_dynamic_value) {
+      SwiftASTManipulator::ShouldBindGenericTypes(bind_generic_types) &&
+      use_dynamic_value) {
     var_type = GetSwiftTypeForVariableValueObject(
         valobj_sp->GetDynamicValue(use_dynamic), stack_frame_sp, runtime,
         bind_generic_types);
@@ -583,7 +584,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
         "self type from an import isn't valid.");
 
   auto *stack_frame = stack_frame_sp.get();
-  if (bind_generic_types != lldb::eDontBind) {
+  if (SwiftASTManipulator::ShouldBindGenericTypes(bind_generic_types)) {
     imported_self_type = swift_runtime->BindGenericTypeParameters(
         *stack_frame, imported_self_type);
     if (!imported_self_type)
@@ -1710,6 +1711,11 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   auto expr_diagnostics = m_swift_ast_ctx.getScopedDiagnosticConsumer();
   m_swift_ast_ctx.GetDiagnosticEngine().resetHadAnyError();
 
+  // The result in case parsing the expression fails. If the option is auto
+  // expression evaluation should retry by binding the generic types.
+  auto parse_result_failure = m_options.GetBindGenericTypes() == lldb::eBindAuto
+                                  ? ParseResult::retry_bind_generic_params
+                                  : ParseResult::unrecoverable_error;
   // Helper function to diagnose errors in m_swift_scratch_context.
   unsigned buffer_id = UINT32_MAX;
   auto DiagnoseSwiftASTContextError = [&]() {
@@ -1726,7 +1732,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   const bool playground = m_options.GetPlaygroundTransformEnabled();
 
   if (!m_exe_scope)
-    return ParseResult::unrecoverable_error;
+    return parse_result_failure;
 
   // Parse the expression and import all nececssary swift modules.
   auto parsed_expr = ParseAndImport(*expr_diagnostics, variable_map, buffer_id,
@@ -1767,7 +1773,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
       return ParseResult::retry_fresh_context;
 
     // Unrecoverable error.
-    return ParseResult::unrecoverable_error;
+    return parse_result_failure;
   }
 
   // If any generics are present, this expression is not parseable.
@@ -1809,11 +1815,11 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
           "Missing type debug information for variable \"%s\": %s",
           var.GetName().str().str().c_str(),
           llvm::toString(std::move(error)).c_str());
-      return ParseResult::unrecoverable_error;
+      return parse_result_failure;
     }
     // Otherwise print the diagnostics from the Swift compiler.
     DiagnoseSwiftASTContextError();
-    return ParseResult::unrecoverable_error;
+    return parse_result_failure;
   }
 
   if (repl)
@@ -1826,7 +1832,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     if (error) {
       diagnostic_manager.PutString(eSeverityError,
                                    llvm::toString(std::move(error)));
-      return ParseResult::unrecoverable_error;
+      return parse_result_failure;
     }
   } else {
     swift::performPlaygroundTransform(
@@ -1842,7 +1848,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     diagnostic_manager.PutString(
         eSeverityError,
         "Cannot evaluate an expression that results in a ~Copyable type");
-    return ParseResult::unrecoverable_error;
+    return parse_result_failure;
   }
 
   // FIXME: We now should have to do the name binding and type
@@ -1965,10 +1971,9 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         if (!var_info) {
           auto error_string = llvm::toString(var_info.takeError());
           LLDB_LOG(log, "Variable info failzed to materialize with error: {0}",
-              error_string);
-                    
+                   error_string);
 
-          return ParseResult::unrecoverable_error;
+          return parse_result_failure;
         }
 
         const char *name = ConstString(variable.GetName().get()).GetCString();
@@ -2001,7 +2006,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   if (expr_diagnostics->HasErrors()) {
     DiagnoseSwiftASTContextError();
-    return ParseResult::unrecoverable_error;
+    return parse_result_failure;
   }
 
   if (log) {
@@ -2025,7 +2030,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   if (expr_diagnostics->HasErrors()) {
     DiagnoseSwiftASTContextError();
-    return ParseResult::unrecoverable_error;
+    return parse_result_failure;
   }
 
   {
@@ -2063,14 +2068,14 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     diagnostic_manager.PutString(
         eSeverityInfo, "couldn't IRGen expression: Clang importer error");
     DiagnoseSwiftASTContextError();
-    return ParseResult::unrecoverable_error;
+    return parse_result_failure;
   }
 
   if (error_kind == ErrorKind::swift) {
     diagnostic_manager.PutString(eSeverityInfo,
                                  "couldn't IRGen expression: Swift error");
     DiagnoseSwiftASTContextError();
-    return ParseResult::unrecoverable_error;
+    return parse_result_failure;
   }
 
   if (!m_module) {
@@ -2079,7 +2084,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         "couldn't IRGen expression. Please enable the expression log by "
         "running \"log enable lldb expr\", then run the failing expression "
         "again, and file a bug report with the log output.");
-    return ParseResult::unrecoverable_error;
+    return parse_result_failure;
   }
 
   if (log) {
@@ -2091,7 +2096,8 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   }
 
   if (ThreadSafeASTContext ast_ctx = m_swift_ast_ctx.GetASTContext()) {
-    if (m_options.GetBindGenericTypes() == lldb::eDontBind &&
+    if (!SwiftASTManipulator::ShouldBindGenericTypes(
+            m_options.GetBindGenericTypes()) &&
         !RedirectCallFromSinkToTrampolineFunction(
             *m_module.get(), *parsed_expr->code_manipulator.get(), **ast_ctx)) {
       diagnostic_manager.Printf(
@@ -2100,7 +2106,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
           "expression log by running \"log enable lldb "
           "expr\", then run the failing expression again, and file a "
           "bugreport with the log output.");
-      return ParseResult::unrecoverable_error;
+      return parse_result_failure;
     }
   }
 
@@ -2120,14 +2126,14 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                                        LLVMReturnStatusAction, nullptr);
     if (has_errors) {
       diagnostic_manager.PutString(eSeverityInfo, "LLVM verification error");
-      return ParseResult::unrecoverable_error;
+      return parse_result_failure;
     }
   }
 
   if (expr_diagnostics->HasErrors()) {
     diagnostic_manager.PutString(eSeverityInfo, "post-IRGen error");
     DiagnoseSwiftASTContextError();
-    return ParseResult::unrecoverable_error;
+    return parse_result_failure;
   }
 
   // The Parse succeeded!  Now put this module into the context's list

@@ -322,8 +322,10 @@ static llvm::Error AddVariableInfo(
     return llvm::Error::success();
 
   CompilerType target_type;
+  bool should_not_bind_generic_types =
+      !SwiftASTManipulator::ShouldBindGenericTypes(bind_generic_types);
   bool is_unbound_pack =
-      bind_generic_types == lldb::eDontBind &&
+      should_not_bind_generic_types &&
       (variable_sp->GetType()->GetForwardCompilerType().GetTypeInfo() &
        lldb::eTypeIsPack);
 
@@ -331,7 +333,7 @@ static llvm::Error AddVariableInfo(
   // opaque pointer type. This is necessary because we don't bind the generic
   // parameters, and we can't have a type with unbound generics in a non-generic
   // function.
-  if (bind_generic_types == lldb::eDontBind && is_self)
+  if (should_not_bind_generic_types && is_self)
     target_type = ast_context.GetBuiltinRawPointerType();
   else if (is_unbound_pack)
     target_type = variable_sp->GetType()->GetForwardCompilerType();
@@ -623,7 +625,7 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
         lldb::eSeverityError,
         "Couldn't realize Swift AST type of self. Hint: using `v` to "
         "directly inspect variables and fields may still work.");
-    return ParseResult::retry_no_bind_generic_params;
+    return ParseResult::retry_bind_generic_params;
   }
 
   auto ts = m_swift_ast_ctx->GetTypeSystemSwiftTypeRef();
@@ -636,14 +638,15 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
         func_name.GetStringRef(), *ts);
   }
 
-  if (m_options.GetBindGenericTypes() == lldb::eDontBind &&
+  if (!SwiftASTManipulator::ShouldBindGenericTypes(
+          m_options.GetBindGenericTypes()) &&
       !CanEvaluateExpressionWithoutBindingGenericParams(
           local_variables, m_generic_signature, *m_swift_ast_ctx, sc.block,
           *stack_frame.get())) {
     diagnostic_manager.PutString(
         lldb::eSeverityError,
         "Could not evaluate the expression without binding generic types.");
-    return ParseResult::unrecoverable_error;
+    return ParseResult::retry_bind_generic_params_not_supported;
   }
 
   uint32_t first_body_line = 0;
@@ -807,44 +810,56 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   DiagnosticManager second_try_diagnostic_manager;
 
   bool retry = false;
+  bool first_expression_not_supported = false;
   while (true) {
     SwiftExpressionParser::ParseResult parse_result;
     if (!retry) {
       parse_result = GetTextAndSetExpressionParser(
           first_try_diagnostic_manager, source_code, exe_ctx, exe_scope);
-      if (parse_result != SwiftExpressionParser::ParseResult::
-                              retry_no_bind_generic_params ||
+      if ((parse_result !=
+               SwiftExpressionParser::ParseResult::retry_bind_generic_params &&
+           parse_result != SwiftExpressionParser::ParseResult::
+                               retry_bind_generic_params_not_supported) ||
           m_options.GetBindGenericTypes() != lldb::eBindAuto)
         // If we're not retrying, just copy the diagnostics over.
         diagnostic_manager.Consume(std::move(first_try_diagnostic_manager));
     } else {
       parse_result = GetTextAndSetExpressionParser(
           second_try_diagnostic_manager, source_code, exe_ctx, exe_scope);
-      if (parse_result == SwiftExpressionParser::ParseResult::success)
-        // If we succeeded the second time around, copy any diagnostics we
-        // produced in the success case over, and ignore the first attempt's
-        // failures.
+
         diagnostic_manager.Consume(std::move(second_try_diagnostic_manager));
-      else
-        // If we failed though, copy the diagnostics of the first attempt, and
-        // silently ignore any errors produced by the retry, as the retry was
-        // not what the user asked, and any diagnostics produced by it will
-        // most likely confuse the user.
-        diagnostic_manager.Consume(std::move(first_try_diagnostic_manager));
+        if (parse_result == SwiftExpressionParser::ParseResult::success ||
+            first_expression_not_supported)
+          // If we succeeded the second time around, copy any diagnostics we
+          // produced in the success case over, and ignore the first attempt's
+          // failures.
+          // If the generic expression evaluator failed because it doesn't
+          // support the expression the error message won't be very useful, so
+          // print the regular expression evaluator's error instead.
+          diagnostic_manager.Consume(std::move(second_try_diagnostic_manager));
+        else
+          // If we failed though, copy the diagnostics of the first attempt, and
+          // silently ignore any errors produced by the retry, as the retry was
+          // not what the user asked, and any diagnostics produced by it will
+          // most likely confuse the user.
+          diagnostic_manager.Consume(std::move(first_try_diagnostic_manager));
     }
 
     if (parse_result == SwiftExpressionParser::ParseResult::success)
       break;
 
     switch (parse_result) {
-    case ParseResult::retry_no_bind_generic_params:
+    case ParseResult::retry_bind_generic_params_not_supported:
+      first_expression_not_supported = true;
+      LLVM_FALLTHROUGH;
+    case ParseResult::retry_bind_generic_params:
       // Retry running the expression without binding the generic types if
       // BindGenericTypes was in the auto setting, give up otherwise.
       if (m_options.GetBindGenericTypes() != lldb::eBindAuto) 
         return false;
-      // Retry without binding generic parameters, this is the only
+      // Retry binding generic parameters, this is the only
       // case that will loop.
-      m_options.SetBindGenericTypes(lldb::eDontBind);
+      m_options.SetBindGenericTypes(lldb::eBind);
       retry = true;
       break;
     
