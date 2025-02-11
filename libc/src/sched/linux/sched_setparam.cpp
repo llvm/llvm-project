@@ -14,6 +14,7 @@
 #include "src/errno/libc_errno.h"
 
 #include "hdr/types/pid_t.h"
+#include "hdr/types/struct_sched_param.h"
 
 #include <sys/syscall.h> // For syscall numbers.
 

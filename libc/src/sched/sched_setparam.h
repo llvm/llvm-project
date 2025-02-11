@@ -11,6 +11,7 @@
 
 #include "hdr/types/cpu_set_t.h"
 #include "hdr/types/pid_t.h"
+#include "hdr/types/struct_sched_param.h"
 #include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {

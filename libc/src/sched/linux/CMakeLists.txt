@@ -63,6 +63,7 @@ add_entrypoint_object(
     libc.include.time
     libc.include.sched
     libc.hdr.types.pid_t
+    libc.hdr.types.struct_sched_param
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -78,6 +79,7 @@ add_entrypoint_object(
     libc.include.time
     libc.include.sched
     libc.hdr.types.pid_t
+    libc.hdr.types.struct_sched_param
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -93,6 +95,7 @@ add_entrypoint_object(
     libc.include.time
     libc.include.sched
     libc.hdr.types.pid_t
+    libc.hdr.types.struct_sched_param
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
