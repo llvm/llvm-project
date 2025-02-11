@@ -76,7 +76,7 @@ int StringRef::compare_numeric(StringRef RHS) const {
           break;
       }
       // The two number sequences have the same length (J-I), just memcmp them.
-      if (int Res = compareMemory(data() + I, RHS.data() + I, J - I))
+      if (int Res = ::memcmp(data() + I, RHS.data() + I, J - I))
         return Res < 0 ? -1 : 1;
       // Identical number sequences, continue search after the numbers.
       I = J - 1;

@@ -66,13 +66,6 @@ namespace llvm {
     /// The length of the string.
     size_t Length = 0;
 
-    // Workaround memcmp issue with null pointers (undefined behavior)
-    // by providing a specialized version
-    static int compareMemory(const char *Lhs, const char *Rhs, size_t Length) {
-      if (Length == 0) { return 0; }
-      return ::memcmp(Lhs,Rhs,Length);
-    }
-
   public:
     /// @name Constructors
     /// @{
@@ -182,8 +175,7 @@ namespace llvm {
     /// the \p RHS.
     [[nodiscard]] int compare(StringRef RHS) const {
       // Check the prefix for a mismatch.
-      if (int Res =
-              compareMemory(data(), RHS.data(), std::min(size(), RHS.size())))
+      if (int Res = ::memcmp(data(), RHS.data(), std::min(size(), RHS.size())))
         return Res < 0 ? -1 : 1;
 
       // Otherwise the prefixes match, so we only need to check the lengths.
@@ -264,7 +256,7 @@ namespace llvm {
     /// Check if this string starts with the given \p Prefix.
     [[nodiscard]] bool starts_with(StringRef Prefix) const {
       return size() >= Prefix.size() &&
-             compareMemory(data(), Prefix.data(), Prefix.size()) == 0;
+             ::memcmp(data(), Prefix.data(), Prefix.size()) == 0;
     }
     [[nodiscard]] bool starts_with(char Prefix) const {
       return !empty() && front() == Prefix;
@@ -276,8 +268,7 @@ namespace llvm {
     /// Check if this string ends with the given \p Suffix.
     [[nodiscard]] bool ends_with(StringRef Suffix) const {
       return size() >= Suffix.size() &&
-             compareMemory(end() - Suffix.size(), Suffix.data(),
-                           Suffix.size()) == 0;
+             ::memcmp(end() - Suffix.size(), Suffix.data(), Suffix.size()) == 0;
     }
     [[nodiscard]] bool ends_with(char Suffix) const {
       return !empty() && back() == Suffix;
