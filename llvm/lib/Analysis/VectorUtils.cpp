@@ -125,6 +125,7 @@ bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
   // https://github.com/llvm/llvm-project/issues/112408
   switch (ID) {
   case Intrinsic::frexp:
+  case Intrinsic::uadd_with_overflow:
     return true;
   }
   return false;
