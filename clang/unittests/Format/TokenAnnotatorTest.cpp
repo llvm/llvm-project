@@ -874,6 +874,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[14], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[15], tok::amp, TT_UnaryOperator);
 
+  Tokens = annotate("return (Foo (Bar::*)())&Bar::foo;");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_FunctionTypeLParen);
+  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_UnaryOperator);
+
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");
   Tokens = annotate("#define FOO(bar) foo((Foo)&bar)", Style);
@@ -3405,6 +3411,13 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_ClassHeadName);
   EXPECT_BRACE_KIND(Tokens[7], BK_Block);
   EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+
+  Tokens = annotate("struct Foo<int> : Base::Bar {};");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_ClassHeadName);
+  EXPECT_TOKEN(Tokens[8], tok::identifier, TT_Unknown); // Not TT_ClassHeadName.
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[10], BK_Block);
 
   Tokens = annotate("struct Foo final {};");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;

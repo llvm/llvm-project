@@ -90,152 +90,168 @@
 #include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
 
-using P = std::pair<int, long>;
+using P  = std::pair<int, long>;
 using PC = std::pair<const int, long>;
 
-int main(int, char**)
-{
-    const PC expected_m[] = { {1,1}, {2,2}, {3,1}, {INT_MAX,1} };
+int main(int, char**) {
+  const PC expected_m[] = {{1, 1}, {2, 2}, {3, 1}, {INT_MAX, 1}};
 
-    {
-    const P arr[] = { {1,1}, {2,2}, {1,1}, {INT_MAX,1}, {3,1} };
+  {
+    const P arr[] = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 1}, {3, 1}};
     std::unordered_map m(std::begin(arr), std::end(arr));
     ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
-    }
+  }
 
-    {
-    const P arr[] = { {1,1}, {2,2}, {1,1}, {INT_MAX,1}, {3,1} };
+  {
+    const P arr[] = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 1}, {3, 1}};
     std::unordered_map m(std::begin(arr), std::end(arr), 42);
     ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
-    }
+  }
 
-    {
-    const P arr[] = { {1,1}, {2,2}, {1,1}, {INT_MAX,1}, {3,1} };
+  {
+    const P arr[] = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 1}, {3, 1}};
     std::unordered_map m(std::begin(arr), std::end(arr), 42, std::hash<long long>());
     ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, std::hash<long long>, std::equal_to<int>>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
-    }
+  }
 
-    {
-    const P arr[] = { {1,1}, {2,2}, {1,1}, {INT_MAX,1}, {3,1} };
+  {
+    const P arr[] = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 1}, {3, 1}};
     std::unordered_map m(std::begin(arr), std::end(arr), 42, std::hash<long long>(), std::equal_to<>());
     ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, std::hash<long long>, std::equal_to<>>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
-    }
+  }
 
-    {
-    const P arr[] = { {1,1}, {2,2}, {1,1}, {INT_MAX,1}, {3,1} };
-    std::unordered_map m(std::begin(arr), std::end(arr), 42, std::hash<long long>(), std::equal_to<>(), test_allocator<PC>(0, 41));
-    ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, std::hash<long long>, std::equal_to<>, test_allocator<PC>>);
+  {
+    const P arr[] = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 1}, {3, 1}};
+    std::unordered_map m(
+        std::begin(arr), std::end(arr), 42, std::hash<long long>(), std::equal_to<>(), test_allocator<PC>(0, 41));
+    ASSERT_SAME_TYPE(
+        decltype(m), std::unordered_map<int, long, std::hash<long long>, std::equal_to<>, test_allocator<PC>>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 41);
-    }
+  }
 
-    {
+  {
     std::unordered_map<int, long> source;
     std::unordered_map m(source);
     ASSERT_SAME_TYPE(decltype(m), decltype(source));
     assert(m.size() == 0);
-    }
+  }
 
-    {
+  {
     std::unordered_map<int, long> source;
-    std::unordered_map m{source};  // braces instead of parens
+    std::unordered_map m{source}; // braces instead of parens
     ASSERT_SAME_TYPE(decltype(m), decltype(source));
     assert(m.size() == 0);
-    }
+  }
 
-    {
+  {
     std::unordered_map<int, long, std::hash<long long>, std::equal_to<>, test_allocator<PC>> source;
     test_allocator<PC> a(0, 42);
     std::unordered_map m(source, a);
     ASSERT_SAME_TYPE(decltype(m), decltype(source));
     assert(m.get_allocator().get_id() == 42);
     assert(m.size() == 0);
-    }
+  }
 
-    {
+  {
     std::unordered_map<int, long, std::hash<long long>, std::equal_to<>, test_allocator<PC>> source;
     test_allocator<PC> a(0, 43);
-    std::unordered_map m{source, a};  // braces instead of parens
+    std::unordered_map m{source, a}; // braces instead of parens
     ASSERT_SAME_TYPE(decltype(m), decltype(source));
     assert(m.get_allocator().get_id() == 43);
     assert(m.size() == 0);
-    }
+  }
 
-    {
-    std::unordered_map m { P{1,1L}, P{2,2L}, P{1,1L}, P{INT_MAX,1L}, P{3,1L} };
+  {
+    std::unordered_map m{P{1, 1L}, P{2, 2L}, P{1, 1L}, P{INT_MAX, 1L}, P{3, 1L}};
     ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
-    }
+  }
 
-    {
-    std::unordered_map m({ P{1,1L}, P{2,2L}, P{1,1L}, P{INT_MAX,1L}, P{3,1L} }, 42);
+  {
+    std::unordered_map m({P{1, 1L}, P{2, 2L}, P{1, 1L}, P{INT_MAX, 1L}, P{3, 1L}}, 42);
     ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
-    }
+  }
 
-    {
-    std::unordered_map m({ P{1,1L}, P{2,2L}, P{1,1L}, P{INT_MAX,1L}, P{3,1L} }, 42, std::hash<long long>());
+  {
+    std::unordered_map m({P{1, 1L}, P{2, 2L}, P{1, 1L}, P{INT_MAX, 1L}, P{3, 1L}}, 42, std::hash<long long>());
     ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, std::hash<long long>>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
-    }
+  }
 
-    {
-    std::unordered_map m({ P{1,1L}, P{2,2L}, P{1,1L}, P{INT_MAX,1L}, P{3,1L} }, 42, std::hash<long long>(), std::equal_to<>());
+  {
+    std::unordered_map m(
+        {P{1, 1L}, P{2, 2L}, P{1, 1L}, P{INT_MAX, 1L}, P{3, 1L}}, 42, std::hash<long long>(), std::equal_to<>());
     ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, std::hash<long long>, std::equal_to<>>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
-    }
+  }
 
-    {
-    std::unordered_map m({ P{1,1L}, P{2,2L}, P{1,1L}, P{INT_MAX,1L}, P{3,1L} }, 42, std::hash<long long>(), std::equal_to<>(), test_allocator<PC>(0, 44));
-    ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, std::hash<long long>, std::equal_to<>, test_allocator<PC>>);
+  {
+    std::unordered_map m(
+        {P{1, 1L}, P{2, 2L}, P{1, 1L}, P{INT_MAX, 1L}, P{3, 1L}},
+        42,
+        std::hash<long long>(),
+        std::equal_to<>(),
+        test_allocator<PC>(0, 44));
+    ASSERT_SAME_TYPE(
+        decltype(m), std::unordered_map<int, long, std::hash<long long>, std::equal_to<>, test_allocator<PC>>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 44);
-    }
+  }
 
-    {
-    const P arr[] = { {1,1}, {2,2}, {1,1}, {INT_MAX,1}, {3,1} };
+  {
+    const P arr[] = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 1}, {3, 1}};
     std::unordered_map m(std::begin(arr), std::end(arr), 42, test_allocator<PC>(0, 45));
-    ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, std::hash<int>, std::equal_to<int>, test_allocator<PC>>);
+    ASSERT_SAME_TYPE(
+        decltype(m), std::unordered_map<int, long, std::hash<int>, std::equal_to<int>, test_allocator<PC>>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 45);
-    }
+  }
 
-    {
-    const P arr[] = { {1,1}, {2,2}, {1,1}, {INT_MAX,1}, {3,1} };
+  {
+    const P arr[] = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 1}, {3, 1}};
     std::unordered_map m(std::begin(arr), std::end(arr), 42, std::hash<long long>(), test_allocator<PC>(0, 46));
-    ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, std::hash<long long>, std::equal_to<int>, test_allocator<PC>>);
+    ASSERT_SAME_TYPE(
+        decltype(m), std::unordered_map<int, long, std::hash<long long>, std::equal_to<int>, test_allocator<PC>>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 46);
-    }
+  }
 
-    {
-    std::unordered_map m({ P{1,1L}, P{2,2L}, P{1,1L}, P{INT_MAX,1L}, P{3,1L} }, 42, test_allocator<PC>(0, 47));
-    ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, std::hash<int>, std::equal_to<int>, test_allocator<PC>>);
+  {
+    std::unordered_map m({P{1, 1L}, P{2, 2L}, P{1, 1L}, P{INT_MAX, 1L}, P{3, 1L}}, 42, test_allocator<PC>(0, 47));
+    ASSERT_SAME_TYPE(
+        decltype(m), std::unordered_map<int, long, std::hash<int>, std::equal_to<int>, test_allocator<PC>>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 47);
-    }
+  }
 
-    {
-    std::unordered_map m({ P{1,1L}, P{2,2L}, P{1,1L}, P{INT_MAX,1L}, P{3,1L} }, 42, std::hash<long long>(), test_allocator<PC>(0, 48));
-    ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, std::hash<long long>, std::equal_to<int>, test_allocator<PC>>);
+  {
+    std::unordered_map m(
+        {P{1, 1L}, P{2, 2L}, P{1, 1L}, P{INT_MAX, 1L}, P{3, 1L}},
+        42,
+        std::hash<long long>(),
+        test_allocator<PC>(0, 48));
+    ASSERT_SAME_TYPE(
+        decltype(m), std::unordered_map<int, long, std::hash<long long>, std::equal_to<int>, test_allocator<PC>>);
     assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 48);
-    }
+  }
 
-    {
+  {
     // Examples from LWG3025
     std::unordered_map m{std::pair{1, 1}, {2, 2}, {3, 3}};
     ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, int>);
 
     std::unordered_map m2{m.begin(), m.end()};
     ASSERT_SAME_TYPE(decltype(m2), std::unordered_map<int, int>);
-    }
+  }
 
-    {
+  {
     // Examples from LWG3531
     std::unordered_map m1{{std::pair{1, 2}, {3, 4}}, 0};
     ASSERT_SAME_TYPE(decltype(m1), std::unordered_map<int, int>);
@@ -243,61 +259,61 @@ int main(int, char**)
     using value_type = std::pair<const int, int>;
     std::unordered_map m2{{value_type{1, 2}, {3, 4}}, 0};
     ASSERT_SAME_TYPE(decltype(m2), std::unordered_map<int, int>);
-    }
+  }
 
 #if TEST_STD_VER >= 23
-    {
-      using Range = std::array<P, 0>;
-      using Pred = test_equal_to<int>;
-      using DefaultPred = std::equal_to<int>;
-      using Hash = test_hash<int>;
-      using DefaultHash = std::hash<int>;
-      using Alloc = test_allocator<PC>;
+  {
+    using Range       = std::array<P, 0>;
+    using Pred        = test_equal_to<int>;
+    using DefaultPred = std::equal_to<int>;
+    using Hash        = test_hash<int>;
+    using DefaultHash = std::hash<int>;
+    using Alloc       = test_allocator<PC>;
 
-      { // (from_range, range)
-        std::unordered_map c(std::from_range, Range());
-        static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long>>);
-      }
-
-      { // (from_range, range, n)
-        std::unordered_map c(std::from_range, Range(), std::size_t());
-        static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long>>);
-      }
-
-      { // (from_range, range, n, hash)
-        std::unordered_map c(std::from_range, Range(), std::size_t(), Hash());
-        static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, Hash>>);
-      }
-
-      { // (from_range, range, n, hash, pred)
-        std::unordered_map c(std::from_range, Range(), std::size_t(), Hash(), Pred());
-        static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, Hash, Pred>>);
-      }
-
-      { // (from_range, range, n, hash, pred, alloc)
-        std::unordered_map c(std::from_range, Range(), std::size_t(), Hash(), Pred(), Alloc());
-        static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, Hash, Pred, Alloc>>);
-      }
-
-      { // (from_range, range, n, alloc)
-        std::unordered_map c(std::from_range, Range(), std::size_t(), Alloc());
-        static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, DefaultHash, DefaultPred, Alloc>>);
-      }
-
-      // TODO(LWG 2713): uncomment this test once the constructor is added.
-      { // (from_range, range, alloc)
-        //std::unordered_map c(std::from_range, Range(), Alloc());
-        //static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, DefaultHash, DefaultPred, Alloc>>);
-      }
-
-      { // (from_range, range, n, hash, alloc)
-        std::unordered_map c(std::from_range, Range(), std::size_t(), Hash(), Alloc());
-        static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, Hash, DefaultPred, Alloc>>);
-      }
+    { // (from_range, range)
+      std::unordered_map c(std::from_range, Range());
+      static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long>>);
     }
+
+    { // (from_range, range, n)
+      std::unordered_map c(std::from_range, Range(), std::size_t());
+      static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long>>);
+    }
+
+    { // (from_range, range, n, hash)
+      std::unordered_map c(std::from_range, Range(), std::size_t(), Hash());
+      static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, Hash>>);
+    }
+
+    { // (from_range, range, n, hash, pred)
+      std::unordered_map c(std::from_range, Range(), std::size_t(), Hash(), Pred());
+      static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, Hash, Pred>>);
+    }
+
+    { // (from_range, range, n, hash, pred, alloc)
+      std::unordered_map c(std::from_range, Range(), std::size_t(), Hash(), Pred(), Alloc());
+      static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, Hash, Pred, Alloc>>);
+    }
+
+    { // (from_range, range, n, alloc)
+      std::unordered_map c(std::from_range, Range(), std::size_t(), Alloc());
+      static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, DefaultHash, DefaultPred, Alloc>>);
+    }
+
+    // TODO(LWG 2713): uncomment this test once the constructor is added.
+    { // (from_range, range, alloc)
+      //std::unordered_map c(std::from_range, Range(), Alloc());
+      //static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, DefaultHash, DefaultPred, Alloc>>);
+    }
+
+    { // (from_range, range, n, hash, alloc)
+      std::unordered_map c(std::from_range, Range(), std::size_t(), Hash(), Alloc());
+      static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, Hash, DefaultPred, Alloc>>);
+    }
+  }
 #endif
 
-    UnorderedContainerDeductionGuidesSfinaeAway<std::unordered_map, std::unordered_map<int, long>>();
+  UnorderedContainerDeductionGuidesSfinaeAway<std::unordered_map, std::unordered_map<int, long>>();
 
-    return 0;
+  return 0;
 }
