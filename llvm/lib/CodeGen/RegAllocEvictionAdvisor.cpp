@@ -130,7 +130,6 @@ void RegAllocEvictionAdvisorAnalysis::initializeProvider(
     Provider.reset(
         new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/true, Ctx));
 #endif
-    assert(Provider && "EvictionAdvisorProvider cannot be null");
     return;
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
     Provider.reset(createReleaseModeAdvisorProvider(Ctx));
@@ -151,20 +150,22 @@ Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysisLegacy>() {
   Pass *Ret = nullptr;
   switch (Mode) {
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
-    return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested*/ false);
+    return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/false);
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
     Ret = createReleaseModeAdvisorAnalysisLegacy();
+    // release mode advisor may not be supported
+    if (!Ret)
+      Ret = new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/true);
     break;
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
 #if defined(LLVM_HAVE_TFLITE)
     Ret = createDevelopmentModeAdvisorAnalysisLegacy();
+#else
+    Ret = new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/true);
 #endif
     break;
   }
 
-  // release or development mode advisor may not be supported
-  if (!Ret)
-    Ret = new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested*/ true);
   return Ret;
 }
 
