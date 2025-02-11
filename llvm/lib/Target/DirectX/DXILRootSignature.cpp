@@ -57,24 +57,13 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
   RootSignatureElementKind ElementKind =
       StringSwitch<RootSignatureElementKind>(ElementText->getString())
           .Case("RootFlags", RootSignatureElementKind::RootFlags)
-          .Case("RootConstants", RootSignatureElementKind::RootConstants)
-          .Case("RootCBV", RootSignatureElementKind::RootDescriptor)
-          .Case("RootSRV", RootSignatureElementKind::RootDescriptor)
-          .Case("RootUAV", RootSignatureElementKind::RootDescriptor)
-          .Case("Sampler", RootSignatureElementKind::RootDescriptor)
-          .Case("DescriptorTable", RootSignatureElementKind::DescriptorTable)
-          .Case("StaticSampler", RootSignatureElementKind::StaticSampler)
           .Default(RootSignatureElementKind::None);
 
   switch (ElementKind) {
 
   case RootSignatureElementKind::RootFlags:
     return parseRootFlags(Ctx, MRS, Element);
-  case RootSignatureElementKind::RootConstants:
-  case RootSignatureElementKind::RootDescriptor:
-  case RootSignatureElementKind::DescriptorTable:
-  case RootSignatureElementKind::StaticSampler:
-  case RootSignatureElementKind::None:
+  default:
     return reportError(Ctx,
                        "Invalid Root Element: " + ElementText->getString());
   }
@@ -83,7 +72,7 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
 }
 
 static bool parse(LLVMContext *Ctx, ModuleRootSignature *MRS, NamedMDNode *Root,
-                  const Function *EF) {
+                  const Function *EntryFunction) {
   bool HasError = false;
 
   /** Root Signature are specified as following in the metadata:
@@ -121,7 +110,7 @@ static bool parse(LLVMContext *Ctx, ModuleRootSignature *MRS, NamedMDNode *Root,
       continue;
     }
 
-    if (F != EF)
+    if (F != EntryFunction)
       continue;
 
     // Get the Root Signature Description from the function signature pair.
@@ -133,8 +122,8 @@ static bool parse(LLVMContext *Ctx, ModuleRootSignature *MRS, NamedMDNode *Root,
     }
 
     // Loop through the Root Elements of the root signature.
-    for (unsigned int Eid = 0; Eid < RS->getNumOperands(); Eid++) {
-      MDNode *Element = dyn_cast<MDNode>(RS->getOperand(Eid));
+    for (const auto &Operand : RS->operands()) {
+      MDNode *Element = dyn_cast<MDNode>(Operand);
       if (Element == nullptr)
         return reportError(Ctx, "Missing Root Element Metadata Node.");
 
@@ -145,20 +134,30 @@ static bool parse(LLVMContext *Ctx, ModuleRootSignature *MRS, NamedMDNode *Root,
 }
 
 static bool validate(LLVMContext *Ctx, ModuleRootSignature *MRS) {
-  if (dxbc::RootSignatureValidations::validateRootFlag(MRS->Flags)) {
+  if (!dxbc::RootSignatureValidations::isValidRootFlag(MRS->Flags)) {
     return reportError(Ctx, "Invalid Root Signature flag value");
   }
   return false;
 }
 
 std::optional<ModuleRootSignature>
-ModuleRootSignature::analyzeModule(Module &M, const Function *F) {
-  ModuleRootSignature MRS;
+ModuleRootSignature::analyzeModule(Module &M, ModuleMetadataInfo MMI) {
+  if (MMI.ShaderProfile == Triple::Library)
+    return std::nullopt;
+
   LLVMContext *Ctx = &M.getContext();
 
+  if (MMI.EntryPropertyVec.size() != 1) {
+    reportError(Ctx, "More than one entry function defined.");
+    return std::nullopt;
+  }
+
+  ModuleRootSignature MRS;
+  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
+
   NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
-  if (RootSignatureNode == nullptr || parse(Ctx, &MRS, RootSignatureNode, F) ||
-      validate(Ctx, &MRS))
+  if (RootSignatureNode == nullptr ||
+      parse(Ctx, &MRS, RootSignatureNode, EntryFunction) || validate(Ctx, &MRS))
     return std::nullopt;
 
   return MRS;
@@ -168,20 +167,8 @@ AnalysisKey RootSignatureAnalysis::Key;
 
 std::optional<ModuleRootSignature>
 RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  auto MMI = AM.getResult<DXILMetadataAnalysis>(M);
-
-  if (MMI.ShaderProfile == Triple::Library)
-    return std::nullopt;
-
-  LLVMContext *Ctx = &M.getContext();
-
-  if (MMI.EntryPropertyVec.size() != 1) {
-    reportError(Ctx, "More than one entry function defined.");
-    return std::nullopt;
-  }
-
-  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
-  return ModuleRootSignature::analyzeModule(M, EntryFunction);
+  ModuleMetadataInfo MMI = AM.getResult<DXILMetadataAnalysis>(M);
+  return ModuleRootSignature::analyzeModule(M, MMI);
 }
 
 //===----------------------------------------------------------------------===//
@@ -189,18 +176,7 @@ bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
 
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
-
-  if (MMI.ShaderProfile == Triple::Library)
-    return false;
-
-  LLVMContext *Ctx = &M.getContext();
-  if (MMI.EntryPropertyVec.size() != 1) {
-    reportError(Ctx, "More than one entry function defined.");
-    return false;
-  }
-
-  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
-  MRS = ModuleRootSignature::analyzeModule(M, EntryFunction);
+  MRS = ModuleRootSignature::analyzeModule(M, MMI);
   return false;
 }
 

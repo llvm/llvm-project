@@ -1,5 +1,4 @@
-//===- DXILRootSignature.h - DXIL Root Signature helper objects
-//---------------===//
+//===- DXILRootSignature.h - DXIL Root Signature helper objects -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -22,19 +22,12 @@
 namespace llvm {
 namespace dxil {
 
-enum class RootSignatureElementKind {
-  None = 0,
-  RootFlags = 1,
-  RootConstants = 2,
-  RootDescriptor = 3,
-  DescriptorTable = 4,
-  StaticSampler = 5
-};
+enum class RootSignatureElementKind { None = 0, RootFlags = 1 };
 
 struct ModuleRootSignature {
   uint32_t Flags = 0;
-  static std::optional<ModuleRootSignature> analyzeModule(Module &M,
-                                                          const Function *F);
+  static std::optional<ModuleRootSignature>
+  analyzeModule(Module &M, ModuleMetadataInfo MMI);
 };
 
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
