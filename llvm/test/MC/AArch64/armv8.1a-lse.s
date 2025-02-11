@@ -8,7 +8,7 @@
 // RUN: FileCheck -check-prefix=CHECK-ERROR < %t %s
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8r -show-encoding < %s 2> %t | FileCheck %s
 // RUN: FileCheck -check-prefix=CHECK-ERROR < %t %s
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.1a,+lse,+lsui -show-encoding < %s 2> %t | FileCheck %s -check-prefix=CHECK-FEAT-LSUI
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.1a,+lse,+lsui -show-encoding < %s 2> %t | FileCheck %s
 // RUN: FileCheck -check-prefix=CHECK-ERROR < %t %s
   .text
 
@@ -80,15 +80,6 @@
   // CHECK: casal x0, x1, [x2]    // encoding: [0x41,0xfc,0xe0,0xc8]
   // CHECK: casal x2, x3, [sp]    // encoding: [0xe3,0xff,0xe2,0xc8]
 
-  // CHECK-FEAT-LSUI: cast x0, x1, [x2]      // encoding: [0x41,0x7c,0xa0,0xc8]
-  // CHECK-FEAT-LSUI: cast x2, x3, [sp]      // encoding: [0xe3,0x7f,0xa2,0xc8]
-  // CHECK-FEAT-LSUI: casat x0, x1, [x2]     // encoding: [0x41,0x7c,0xe0,0xc8]
-  // CHECK-FEAT-LSUI: casat x2, x3, [sp]     // encoding: [0xe3,0x7f,0xe2,0xc8]
-  // CHECK-FEAT-LSUI: caslt x0, x1, [x2]     // encoding: [0x41,0xfc,0xa0,0xc8]
-  // CHECK-FEAT-LSUI: caslt x2, x3, [sp]     // encoding: [0xe3,0xff,0xa2,0xc8]
-  // CHECK-FEAT-LSUI: casalt x0, x1, [x2]    // encoding: [0x41,0xfc,0xe0,0xc8]
-  // CHECK-FEAT-LSUI: casalt x2, x3, [sp]    // encoding: [0xe3,0xff,0xe2,0xc8]
-
   swp w0, w1, [x2]
   swp w2, w3, [sp]
   swpa w0, w1, [x2]
@@ -106,15 +97,6 @@
   // CHECK: swpal w0, w1, [x2]    // encoding: [0x41,0x80,0xe0,0xb8]
   // CHECK: swpal w2, w3, [sp]    // encoding: [0xe3,0x83,0xe2,0xb8]
 
-  // CHECK-FEAT-LSUI: swpt w0, w1, [x2]      // encoding: [0x41,0x84,0x20,0x19]
-  // CHECK-FEAT-LSUI: swpt w2, w3, [sp]      // encoding: [0xe3,0x87,0x22,0x19]
-  // CHECK-FEAT-LSUI: swpta w0, w1, [x2]     // encoding: [0x41,0x84,0xa0,0x19]
-  // CHECK-FEAT-LSUI: swpta w2, w3, [sp]     // encoding: [0xe3,0x87,0xa2,0x19]
-  // CHECK-FEAT-LSUI: swptl w0, w1, [x2]     // encoding: [0x41,0x84,0x60,0x19]
-  // CHECK-FEAT-LSUI: swptl w2, w3, [sp]     // encoding: [0xe3,0x87,0x62,0x19]
-  // CHECK-FEAT-LSUI: swptal w0, w1, [x2]    // encoding: [0x41,0x84,0xe0,0x19]
-  // CHECK-FEAT-LSUI: swptal w2, w3, [sp]    // encoding: [0xe3,0x87,0xe2,0x19]
-
   swpb w0, w1, [x2]
   swpb w2, w3, [sp]
   swph w0, w1, [x2]
@@ -131,15 +113,6 @@
   // CHECK: swpab w2, w3, [sp]    // encoding: [0xe3,0x83,0xa2,0x38]
   // CHECK: swplb w0, w1, [x2]    // encoding: [0x41,0x80,0x60,0x38]
   // CHECK: swplb w2, w3, [sp]    // encoding: [0xe3,0x83,0x62,0x38]
-
-  // CHECK-FEAT-LSUI: swpt x0, x1, [x2]      // encoding: [0x41,0x84,0x20,0x59]
-  // CHECK-FEAT-LSUI: swpt x2, x3, [sp]      // encoding: [0xe3,0x87,0x22,0x59]
-  // CHECK-FEAT-LSUI: swpta x0, x1, [x2]     // encoding: [0x41,0x84,0xa0,0x59]
-  // CHECK-FEAT-LSUI: swpta x2, x3, [sp]     // encoding: [0xe3,0x87,0xa2,0x59]
-  // CHECK-FEAT-LSUI: swptl x0, x1, [x2]     // encoding: [0x41,0x84,0x60,0x59]
-  // CHECK-FEAT-LSUI: swptl x2, x3, [sp]     // encoding: [0xe3,0x87,0x62,0x59]
-  // CHECK-FEAT-LSUI: swptal x0, x1, [x2]    // encoding: [0x41,0x84,0xe0,0x59]
-  // CHECK-FEAT-LSUI: swptal x2, x3, [sp]    // encoding: [0xe3,0x87,0xe2,0x59]
 
   swpalb w0, w1, [x2]
   swpalb w2, w3, [sp]
@@ -192,15 +165,6 @@
   // CHECK: caspa x0, x1, x2, x3, [x2]    // encoding: [0x42,0x7c,0x60,0x48]
   // CHECK: caspa x4, x5, x6, x7, [sp]    // encoding: [0xe6,0x7f,0x64,0x48]
 
-  // CHECK-FEAT-LSUI: casp w0, w1, w2, w3, [x5]     // encoding: [0xa2,0x7c,0x20,0x08]
-  // CHECK-FEAT-LSUI: casp w4, w5, w6, w7, [sp]     // encoding: [0xe6,0x7f,0x24,0x08]
-  // CHECK-FEAT-LSUI: caspt x0, x1, x2, x3, [x2]    // encoding: [0x42,0x7c,0x20,0x48]
-  // CHECK-FEAT-LSUI: caspt x4, x5, x6, x7, [sp]    // encoding: [0xe6,0x7f,0x24,0x48]
-  // CHECK-FEAT-LSUI: caspa w0, w1, w2, w3, [x5]    // encoding: [0xa2,0x7c,0x60,0x08]
-  // CHECK-FEAT-LSUI: caspa w4, w5, w6, w7, [sp]    // encoding: [0xe6,0x7f,0x64,0x08]
-  // CHECK-FEAT-LSUI: caspat x0, x1, x2, x3, [x2]   // encoding: [0x42,0x7c,0x60,0x48]
-  // CHECK-FEAT-LSUI: caspat x4, x5, x6, x7, [sp]   // encoding: [0xe6,0x7f,0x64,0x48]
-
   caspl w0, w1, w2, w3, [x5]
   caspl w4, w5, w6, w7, [sp]
   caspl x0, x1, x2, x3, [x2]
@@ -217,15 +181,6 @@
   // CHECK: caspal w4, w5, w6, w7, [sp]   // encoding: [0xe6,0xff,0x64,0x08]
   // CHECK: caspal x0, x1, x2, x3, [x2]   // encoding: [0x42,0xfc,0x60,0x48]
   // CHECK: caspal x4, x5, x6, x7, [sp]   // encoding: [0xe6,0xff,0x64,0x48]
-
-  // CHECK-FEAT-LSUI: caspl w0, w1, w2, w3, [x5]     // encoding: [0xa2,0xfc,0x20,0x08]
-  // CHECK-FEAT-LSUI: caspl w4, w5, w6, w7, [sp]     // encoding: [0xe6,0xff,0x24,0x08]
-  // CHECK-FEAT-LSUI: casplt x0, x1, x2, x3, [x2]    // encoding: [0x42,0xfc,0x20,0x48]
-  // CHECK-FEAT-LSUI: casplt x4, x5, x6, x7, [sp]    // encoding: [0xe6,0xff,0x24,0x48]
-  // CHECK-FEAT-LSUI: caspal w0, w1, w2, w3, [x5]    // encoding: [0xa2,0xfc,0x60,0x08]
-  // CHECK-FEAT-LSUI: caspal w4, w5, w6, w7, [sp]    // encoding: [0xe6,0xff,0x64,0x08]
-  // CHECK-FEAT-LSUI: caspalt x0, x1, x2, x3, [x2]   // encoding: [0x42,0xfc,0x60,0x48]
-  // CHECK-FEAT-LSUI: caspalt x4, x5, x6, x7, [sp]   // encoding: [0xe6,0xff,0x64,0x48]
 
   ldadd w0, w1, [x2]
   ldadd w2, w3, [sp]
