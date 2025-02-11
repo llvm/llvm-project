@@ -5342,12 +5342,10 @@ static bool isLocalRepeatingShuffle(ArrayRef<int> Mask, int Span) {
   for (auto [I, M] : enumerate(Mask)) {
     if (M == -1)
       continue;
-    int SpanIdx = I % Span;
-    int ChunkLo = I - SpanIdx;
-    int ChunkHi = ChunkLo + Span;
-    if (M < ChunkLo || M >= ChunkHi)
+    if ((M / Span) != (int)(I / Span))
       return false;
-    int Expected = M - ChunkLo;
+    int SpanIdx = I % Span;
+    int Expected = M % Span;
     if (LowSpan[SpanIdx] == -1)
       LowSpan[SpanIdx] = Expected;
     if (LowSpan[SpanIdx] != Expected)
