@@ -3324,7 +3324,7 @@ void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   }
 
   const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
-  SCEVExpander Exp(SE, DL, "induction");
+  SCEVExpander Exp(SE, DL, "induction", /*PreserveLCSSA=*/true);
 
   Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),
                                  &*State.Builder.GetInsertPoint());
