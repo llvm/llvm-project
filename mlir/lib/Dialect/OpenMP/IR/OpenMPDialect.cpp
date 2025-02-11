@@ -32,6 +32,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
+#include "llvm/Support/Casting.h"
 #include <cstddef>
 #include <iterator>
 #include <optional>
@@ -2441,7 +2442,7 @@ LogicalResult DeclareMapperInfoOp::verify() {
 }
 
 LogicalResult DeclareMapperOp::verifyRegions() {
-  if (!isa<DeclareMapperInfoOp>(
+  if (!llvm::isa_and_present<DeclareMapperInfoOp>(
           getRegion().getBlocks().front().getTerminator()))
     return emitOpError() << "expected terminator to be a DeclareMapperInfoOp";
 
