@@ -864,8 +864,8 @@ static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
   llvm::Value *Val = CGF.EmitScalarExpr(E->getArg(0));
   llvm::Value *IntPartDest = CGF.EmitScalarExpr(E->getArg(1));
 
-  llvm::Function *F = CGF.CGM.getIntrinsic(IntrinsicID, {Val->getType()});
-  llvm::Value *Call = CGF.Builder.CreateCall(F, Val);
+  llvm::Value *Call =
+      CGF.Builder.CreateIntrinsic(IntrinsicID, {Val->getType()}, Val);
 
   llvm::Value *FractionalResult = CGF.Builder.CreateExtractValue(Call, 0);
   llvm::Value *IntegralResult = CGF.Builder.CreateExtractValue(Call, 1);
