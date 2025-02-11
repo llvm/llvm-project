@@ -17,7 +17,5 @@
 #define EX_PROTOCOL   76   // Remote protocol error
 #define EX_NOPERM     77   // Permission denied
 #define EX_CONFIG     78   // Configuration error
-#define EX_INTERNAL   80   // Internal error
-#define EX_INVALIDARG 81   // Invalid argument
 
 #endif // SYSEXITS_MACROS_H

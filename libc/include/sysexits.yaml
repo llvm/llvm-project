@@ -1,7 +1,8 @@
 header: sysexits.h
 header_template: sysexits.h.def
 standards:
-  - POSIX
+  - BSDExtensions
+  - GNUExtensions
 macros: []
 types: []
 enums: []
