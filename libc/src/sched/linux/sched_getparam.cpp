@@ -9,8 +9,8 @@
 #include "src/sched/sched_getparam.h"
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
-#include "src/__support/common.h" // LLVM_LIBC_FUNCTION
-#include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
+#include "src/__support/common.h"         // LLVM_LIBC_FUNCTION
+#include "src/__support/macros/config.h"  // LIBC_NAMESPACE_DECL
 #include "src/errno/libc_errno.h"
 
 #include "hdr/types/pid_t.h"

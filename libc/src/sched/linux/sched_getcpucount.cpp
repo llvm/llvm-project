@@ -8,7 +8,7 @@
 
 #include "src/sched/sched_getcpucount.h"
 
-#include "src/__support/common.h" // LLVM_LIBC_FUNCTION
+#include "src/__support/common.h"        // LLVM_LIBC_FUNCTION
 #include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
 
 #include "hdr/types/cpu_set_t.h"
