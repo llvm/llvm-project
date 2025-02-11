@@ -1,6 +1,5 @@
 // RUN: mlir-tblgen -gen-attrdef-decls -I %S/../../include %s | FileCheck %s --check-prefix=DECL
 // RUN: mlir-tblgen -gen-attrdef-defs -I %S/../../include %s | FileCheck %s --check-prefix=DEF
-// RUN: mlir-tblgen -gen-attrdef-list -I %S/../../include %s | FileCheck %s --check-prefix=LIST
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
@@ -19,13 +18,6 @@ include "mlir/IR/OpBase.td"
 // DEF: ::test::SimpleAAttr,
 // DEF: ::test::CompoundAAttr,
 // DEF: ::test::SingleParameterAttr
-
-// LIST: ATTRDEF(IndexAttr)
-// LIST: ATTRDEF(SimpleAAttr)
-// LIST: ATTRDEF(CompoundAAttr)
-// LIST: ATTRDEF(SingleParameterAttr)
-
-// LIST: #undef ATTRDEF
 
 // DEF-LABEL: ::mlir::OptionalParseResult generatedAttributeParser(
 // DEF-SAME: ::mlir::AsmParser &parser,

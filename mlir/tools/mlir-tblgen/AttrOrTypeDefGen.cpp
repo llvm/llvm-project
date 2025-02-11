@@ -1026,23 +1026,6 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
   return false;
 }
 
-bool DefGenerator::emitList(StringRef selectedDialect) {
-  emitSourceFileHeader(("List of " + defType + "Def Definitions").str(), os);
-
-  SmallVector<AttrOrTypeDef, 16> defs;
-  collectAllDefs(selectedDialect, defRecords, defs);
-  if (defs.empty())
-    return false;
-
-  auto interleaveFn = [&](const AttrOrTypeDef &def) {
-    os << defType.upper() << "DEF(" << def.getCppClassName() << ")";
-  };
-  llvm::interleave(defs, os, interleaveFn, "\n");
-  os << "\n\n";
-  os << "#undef " << defType.upper() << "DEF" << "\n";
-  return false;
-}
-
 //===----------------------------------------------------------------------===//
 // Type Constraints
 //===----------------------------------------------------------------------===//
@@ -1117,12 +1100,6 @@ static mlir::GenRegistration
                    AttrDefGenerator generator(records, os);
                    return generator.emitDecls(attrDialect);
                  });
-static mlir::GenRegistration
-    genAttrList("gen-attrdef-list", "Generate an AttrDef list",
-                [](const RecordKeeper &records, raw_ostream &os) {
-                  AttrDefGenerator generator(records, os);
-                  return generator.emitList(attrDialect);
-                });
 
 //===----------------------------------------------------------------------===//
 // TypeDef

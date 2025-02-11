@@ -26,7 +26,6 @@ mlir_tablegen(CIROpsStructs.h.inc -gen-attrdef-decls)
 mlir_tablegen(CIROpsStructs.cpp.inc -gen-attrdef-defs)
 mlir_tablegen(CIROpsAttributes.h.inc -gen-attrdef-decls)
 mlir_tablegen(CIROpsAttributes.cpp.inc -gen-attrdef-defs)
-mlir_tablegen(CIRAttrDefsList.inc -gen-attrdef-list)
 add_public_tablegen_target(MLIRCIREnumsGen)
 
 clang_tablegen(CIRBuiltinsLowering.inc -gen-cir-builtins-lowering
