@@ -3968,8 +3968,8 @@ public:
     // Avoid generating slices that have leading unit dimensions. The shape_cast
     // op that we create below would take bad generic fallback patterns
     // (ShapeCastOpRewritePattern).
-    while (sizes[numOffsets] == 1 &&
-           numOffsets < static_cast<int>(sizes.size()) - 1) {
+    while (numOffsets < static_cast<int>(sizes.size()) - 1 &&
+           sizes[numOffsets] == 1) {
       ++numOffsets;
     }
 
