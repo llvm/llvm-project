@@ -98,6 +98,10 @@
 #include <vector>
 
 namespace llvm {
+namespace impl_detail {
+class MachineSchedulerImpl;
+class PostMachineSchedulerImpl;
+} // namespace impl_detail
 
 namespace MISched {
 enum Direction {
@@ -1386,20 +1390,26 @@ createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
                                const TargetRegisterInfo *TRI);
 
 class MachineSchedulerPass : public PassInfoMixin<MachineSchedulerPass> {
+  std::unique_ptr<impl_detail::MachineSchedulerImpl> Impl;
   const TargetMachine *TM;
 
 public:
-  MachineSchedulerPass(const TargetMachine *TM) : TM(TM) {}
+  MachineSchedulerPass(const TargetMachine *TM);
+  MachineSchedulerPass(MachineSchedulerPass &&Other);
+  ~MachineSchedulerPass();
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
 
 class PostMachineSchedulerPass
     : public PassInfoMixin<PostMachineSchedulerPass> {
+  std::unique_ptr<impl_detail::PostMachineSchedulerImpl> Impl;
   const TargetMachine *TM;
 
 public:
-  PostMachineSchedulerPass(const TargetMachine *TM) : TM(TM) {}
+  PostMachineSchedulerPass(const TargetMachine *TM);
+  PostMachineSchedulerPass(PostMachineSchedulerPass &&Other);
+  ~PostMachineSchedulerPass();
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
