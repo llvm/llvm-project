@@ -80,11 +80,7 @@ tools = [
         extra_args=isysroot_flag,
         unresolved="fatal",
     ),
-    ToolSubst("%cc",
-        command=config.cc,
-        extra_args=isysroot_flag,
-        unresolved="fatal"
-    ),
+    ToolSubst("%cc", command=config.cc, extra_args=isysroot_flag, unresolved="fatal"),
 ]
 llvm_config.add_tool_substitutions(tools)
 
@@ -92,7 +88,9 @@ llvm_config.add_tool_substitutions(tools)
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 
 # Include path for C headers that define Flang's Fortran ABI.
-config.substitutions.append(("%include", os.path.join(config.flang_source_dir, "include")))
+config.substitutions.append(
+    ("%include", os.path.join(config.flang_source_dir, "include"))
+)
 
 # Library path of libflang_rt.runtime.a (for lib search path when using non-Flang driver for linking)
 config.substitutions.append(("%libdir", config.flang_rt_output_resource_lib_dir))
