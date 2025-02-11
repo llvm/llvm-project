@@ -27,7 +27,7 @@
 namespace lldb_private {
 namespace telemetry {
 
-namespace llvm::telemetry;
+using namespace llvm::telemetry;
 
 static uint64_t ToNanosec(const SteadyTimePoint Point) {
   return std::chrono::nanoseconds(Point.time_since_epoch()).count();
