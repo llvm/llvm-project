@@ -8288,7 +8288,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     auto *GEP = dyn_cast<GetElementPtrInst>(
         Ptr->getUnderlyingValue()->stripPointerCasts());
     VPSingleDefRecipe *VectorPtr;
-    if (Reverse) {
+    if (Reverse && !CM.foldTailWithEVL()) {
       // When folding the tail, we may compute an address that we don't in the
       // original scalar loop and it may not be inbounds. Drop Inbounds in that
       // case.
