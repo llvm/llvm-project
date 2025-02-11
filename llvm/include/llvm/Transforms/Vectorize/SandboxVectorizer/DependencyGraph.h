@@ -121,6 +121,7 @@ public:
     assert(UnscheduledSuccs > 0 && "Counting error!");
     --UnscheduledSuccs;
   }
+  void incrUnscheduledSuccs() { ++UnscheduledSuccs; }
   /// \Returns true if all dependent successors have been scheduled.
   bool ready() const { return UnscheduledSuccs == 0; }
   /// \Returns true if this node has been scheduled.
@@ -263,6 +264,7 @@ public:
   void addMemPred(MemDGNode *PredN) {
     [[maybe_unused]] auto Inserted = MemPreds.insert(PredN).second;
     assert(Inserted && "PredN already exists!");
+    assert(PredN != this && "Trying to add a dependency to self!");
     if (!Scheduled) {
       ++PredN->UnscheduledSuccs;
     }

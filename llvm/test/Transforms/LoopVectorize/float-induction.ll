@@ -842,14 +842,16 @@ define void @fp_iv_loop3(float %init, ptr noalias nocapture %A, ptr noalias noca
 ; VEC4_INTERL2-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP0]], [[DOTCAST2]]
 ; VEC4_INTERL2-NEXT:    [[IND_END3:%.*]] = fadd fast float [[INIT:%.*]], [[TMP3]]
 ; VEC4_INTERL2-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
-; VEC4_INTERL2-NEXT:    [[BROADCAST:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT2]], <4 x float> poison, <4 x i32> zeroinitializer
-; VEC4_INTERL2-NEXT:    [[DOTSPLAT5:%.*]] = fmul fast <4 x float> [[BROADCAST]], splat (float 4.000000e+00)
+; VEC4_INTERL2-NEXT:    [[TMP19:%.*]] = fmul fast <4 x float> [[DOTSPLATINSERT2]], <float 4.000000e+00, float poison, float poison, float poison>
+; VEC4_INTERL2-NEXT:    [[DOTSPLAT5:%.*]] = shufflevector <4 x float> [[TMP19]], <4 x float> poison, <4 x i32> zeroinitializer
 ; VEC4_INTERL2-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[INIT]], i64 0
 ; VEC4_INTERL2-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; VEC4_INTERL2-NEXT:    [[DOTSPLATINSERT6:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
 ; VEC4_INTERL2-NEXT:    [[DOTSPLAT7:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT6]], <4 x float> poison, <4 x i32> zeroinitializer
 ; VEC4_INTERL2-NEXT:    [[TMP4:%.*]] = fmul fast <4 x float> [[DOTSPLAT7]], <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
 ; VEC4_INTERL2-NEXT:    [[INDUCTION:%.*]] = fadd fast <4 x float> [[DOTSPLAT]], [[TMP4]]
+; VEC4_INTERL2-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
+; VEC4_INTERL2-NEXT:    [[BROADCAST:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT7]], <4 x float> poison, <4 x i32> zeroinitializer
 ; VEC4_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC4_INTERL2:       vector.body:
 ; VEC4_INTERL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
