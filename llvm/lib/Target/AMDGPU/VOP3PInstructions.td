@@ -2303,6 +2303,9 @@ defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple_gfx1250_gfx13<0x3f>;
 defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_gfx1250<0x35>;
 defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_gfx1250<0x3a>;
 
+let AssemblerPredicate = isGFX1250Plus in
+def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;
+
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12, GFX13
 //===----------------------------------------------------------------------===//
