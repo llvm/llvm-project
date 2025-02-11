@@ -22,11 +22,11 @@ TEST_F(olEnqueueDataCopyTest, Success) {
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &AllocA));
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &AllocB));
   ASSERT_SUCCESS(
-      olEnqueueDataWrite(Queue, Input.data(), AllocA, Size, nullptr));
+      olEnqueueDataWrite(Queue, AllocA, Input.data(), Size, nullptr));
   ASSERT_SUCCESS(
-      olEnqueueDataCopy(Queue, AllocA, AllocB, Device, Size, nullptr));
+      olEnqueueDataCopy(Queue, Device, AllocB, AllocA, Size, nullptr));
   ASSERT_SUCCESS(
-      olEnqueueDataRead(Queue, AllocB, Output.data(), Size, nullptr));
+      olEnqueueDataRead(Queue, Output.data(), AllocB, Size, nullptr));
   ASSERT_SUCCESS(olFinishQueue(Queue));
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);

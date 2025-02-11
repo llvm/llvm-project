@@ -425,8 +425,8 @@ ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
   return EventImpl.release();
 }
 
-ol_impl_result_t olEnqueueDataWrite_impl(ol_queue_handle_t Queue, void *SrcPtr,
-                                         void *DstPtr, size_t Size,
+ol_impl_result_t olEnqueueDataWrite_impl(ol_queue_handle_t Queue, void *DstPtr,
+                                         void *SrcPtr, size_t Size,
                                          ol_event_handle_t *EventOut) {
   auto &DeviceImpl = Queue->Device->Device;
 
@@ -441,8 +441,8 @@ ol_impl_result_t olEnqueueDataWrite_impl(ol_queue_handle_t Queue, void *SrcPtr,
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olEnqueueDataRead_impl(ol_queue_handle_t Queue, void *SrcPtr,
-                                        void *DstPtr, size_t Size,
+ol_impl_result_t olEnqueueDataRead_impl(ol_queue_handle_t Queue, void *DstPtr,
+                                        void *SrcPtr, size_t Size,
                                         ol_event_handle_t *EventOut) {
   auto &DeviceImpl = Queue->Device->Device;
 
@@ -457,10 +457,9 @@ ol_impl_result_t olEnqueueDataRead_impl(ol_queue_handle_t Queue, void *SrcPtr,
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olEnqueueDataCopy_impl(ol_queue_handle_t Queue, void *SrcPtr,
-                                        void *DstPtr,
+ol_impl_result_t olEnqueueDataCopy_impl(ol_queue_handle_t Queue,
                                         ol_device_handle_t DstDevice,
-                                        size_t Size,
+                                        void *DstPtr, void *SrcPtr, size_t Size,
                                         ol_event_handle_t *EventOut) {
   auto &DeviceImpl = Queue->Device->Device;
 

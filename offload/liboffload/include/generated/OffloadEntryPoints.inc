@@ -15,16 +15,16 @@ ol_impl_result_t olInit_val() {
 }
 OL_APIEXPORT ol_result_t OL_APICALL olInit() {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olInit";
+    std::cerr << "---> olInit";
   }
 
   ol_result_t Result = olInit_val();
 
   if (offloadConfig().TracingEnabled) {
-    std::cout << "()";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "()";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -46,16 +46,16 @@ ol_impl_result_t olShutDown_val() {
 }
 OL_APIEXPORT ol_result_t OL_APICALL olShutDown() {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olShutDown";
+    std::cerr << "---> olShutDown";
   }
 
   ol_result_t Result = olShutDown_val();
 
   if (offloadConfig().TracingEnabled) {
-    std::cout << "()";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "()";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -86,17 +86,17 @@ ol_impl_result_t olGetPlatform_val(uint32_t NumEntries,
 OL_APIEXPORT ol_result_t OL_APICALL
 olGetPlatform(uint32_t NumEntries, ol_platform_handle_t *Platforms) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olGetPlatform";
+    std::cerr << "---> olGetPlatform";
   }
 
   ol_result_t Result = olGetPlatform_val(NumEntries, Platforms);
 
   if (offloadConfig().TracingEnabled) {
     ol_get_platform_params_t Params = {&NumEntries, &Platforms};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -123,17 +123,17 @@ ol_impl_result_t olGetPlatformCount_val(uint32_t *NumPlatforms) {
 }
 OL_APIEXPORT ol_result_t OL_APICALL olGetPlatformCount(uint32_t *NumPlatforms) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olGetPlatformCount";
+    std::cerr << "---> olGetPlatformCount";
   }
 
   ol_result_t Result = olGetPlatformCount_val(NumPlatforms);
 
   if (offloadConfig().TracingEnabled) {
     ol_get_platform_count_params_t Params = {&NumPlatforms};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -171,7 +171,7 @@ OL_APIEXPORT ol_result_t OL_APICALL
 olGetPlatformInfo(ol_platform_handle_t Platform, ol_platform_info_t PropName,
                   size_t PropSize, void *PropValue) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olGetPlatformInfo";
+    std::cerr << "---> olGetPlatformInfo";
   }
 
   ol_result_t Result =
@@ -180,10 +180,10 @@ olGetPlatformInfo(ol_platform_handle_t Platform, ol_platform_info_t PropName,
   if (offloadConfig().TracingEnabled) {
     ol_get_platform_info_params_t Params = {&Platform, &PropName, &PropSize,
                                             &PropValue};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -220,7 +220,7 @@ OL_APIEXPORT ol_result_t OL_APICALL
 olGetPlatformInfoSize(ol_platform_handle_t Platform,
                       ol_platform_info_t PropName, size_t *PropSizeRet) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olGetPlatformInfoSize";
+    std::cerr << "---> olGetPlatformInfoSize";
   }
 
   ol_result_t Result =
@@ -229,10 +229,10 @@ olGetPlatformInfoSize(ol_platform_handle_t Platform,
   if (offloadConfig().TracingEnabled) {
     ol_get_platform_info_size_params_t Params = {&Platform, &PropName,
                                                  &PropSizeRet};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -266,17 +266,17 @@ ol_impl_result_t olGetDeviceCount_val(ol_platform_handle_t Platform,
 OL_APIEXPORT ol_result_t OL_APICALL
 olGetDeviceCount(ol_platform_handle_t Platform, uint32_t *NumDevices) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olGetDeviceCount";
+    std::cerr << "---> olGetDeviceCount";
   }
 
   ol_result_t Result = olGetDeviceCount_val(Platform, NumDevices);
 
   if (offloadConfig().TracingEnabled) {
     ol_get_device_count_params_t Params = {&Platform, &NumDevices};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -315,17 +315,17 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDevice(ol_platform_handle_t Platform,
                                                 uint32_t NumEntries,
                                                 ol_device_handle_t *Devices) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olGetDevice";
+    std::cerr << "---> olGetDevice";
   }
 
   ol_result_t Result = olGetDevice_val(Platform, NumEntries, Devices);
 
   if (offloadConfig().TracingEnabled) {
     ol_get_device_params_t Params = {&Platform, &NumEntries, &Devices};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -366,7 +366,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfo(ol_device_handle_t Device,
                                                     size_t PropSize,
                                                     void *PropValue) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olGetDeviceInfo";
+    std::cerr << "---> olGetDeviceInfo";
   }
 
   ol_result_t Result =
@@ -375,10 +375,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfo(ol_device_handle_t Device,
   if (offloadConfig().TracingEnabled) {
     ol_get_device_info_params_t Params = {&Device, &PropName, &PropSize,
                                           &PropValue};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -413,7 +413,7 @@ ol_impl_result_t olGetDeviceInfoSize_val(ol_device_handle_t Device,
 OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoSize(
     ol_device_handle_t Device, ol_device_info_t PropName, size_t *PropSizeRet) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olGetDeviceInfoSize";
+    std::cerr << "---> olGetDeviceInfoSize";
   }
 
   ol_result_t Result = olGetDeviceInfoSize_val(Device, PropName, PropSizeRet);
@@ -421,10 +421,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoSize(
   if (offloadConfig().TracingEnabled) {
     ol_get_device_info_size_params_t Params = {&Device, &PropName,
                                                &PropSizeRet};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -464,17 +464,17 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemAlloc(ol_device_handle_t Device,
                                                size_t Size,
                                                void **AllocationOut) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olMemAlloc";
+    std::cerr << "---> olMemAlloc";
   }
 
   ol_result_t Result = olMemAlloc_val(Device, Type, Size, AllocationOut);
 
   if (offloadConfig().TracingEnabled) {
     ol_mem_alloc_params_t Params = {&Device, &Type, &Size, &AllocationOut};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -509,17 +509,17 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemFree(ol_device_handle_t Device,
                                               ol_alloc_type_t Type,
                                               void *Address) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olMemFree";
+    std::cerr << "---> olMemFree";
   }
 
   ol_result_t Result = olMemFree_val(Device, Type, Address);
 
   if (offloadConfig().TracingEnabled) {
     ol_mem_free_params_t Params = {&Device, &Type, &Address};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -552,17 +552,17 @@ ol_impl_result_t olCreateQueue_val(ol_device_handle_t Device,
 OL_APIEXPORT ol_result_t OL_APICALL olCreateQueue(ol_device_handle_t Device,
                                                   ol_queue_handle_t *Queue) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olCreateQueue";
+    std::cerr << "---> olCreateQueue";
   }
 
   ol_result_t Result = olCreateQueue_val(Device, Queue);
 
   if (offloadConfig().TracingEnabled) {
     ol_create_queue_params_t Params = {&Device, &Queue};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -589,17 +589,17 @@ ol_impl_result_t olRetainQueue_val(ol_queue_handle_t Queue) {
 }
 OL_APIEXPORT ol_result_t OL_APICALL olRetainQueue(ol_queue_handle_t Queue) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olRetainQueue";
+    std::cerr << "---> olRetainQueue";
   }
 
   ol_result_t Result = olRetainQueue_val(Queue);
 
   if (offloadConfig().TracingEnabled) {
     ol_retain_queue_params_t Params = {&Queue};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -625,17 +625,17 @@ ol_impl_result_t olReleaseQueue_val(ol_queue_handle_t Queue) {
 }
 OL_APIEXPORT ol_result_t OL_APICALL olReleaseQueue(ol_queue_handle_t Queue) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olReleaseQueue";
+    std::cerr << "---> olReleaseQueue";
   }
 
   ol_result_t Result = olReleaseQueue_val(Queue);
 
   if (offloadConfig().TracingEnabled) {
     ol_release_queue_params_t Params = {&Queue};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -661,17 +661,17 @@ ol_impl_result_t olFinishQueue_val(ol_queue_handle_t Queue) {
 }
 OL_APIEXPORT ol_result_t OL_APICALL olFinishQueue(ol_queue_handle_t Queue) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olFinishQueue";
+    std::cerr << "---> olFinishQueue";
   }
 
   ol_result_t Result = olFinishQueue_val(Queue);
 
   if (offloadConfig().TracingEnabled) {
     ol_finish_queue_params_t Params = {&Queue};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -697,17 +697,17 @@ ol_impl_result_t olRetainEvent_val(ol_event_handle_t Event) {
 }
 OL_APIEXPORT ol_result_t OL_APICALL olRetainEvent(ol_event_handle_t Event) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olRetainEvent";
+    std::cerr << "---> olRetainEvent";
   }
 
   ol_result_t Result = olRetainEvent_val(Event);
 
   if (offloadConfig().TracingEnabled) {
     ol_retain_event_params_t Params = {&Event};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -733,17 +733,17 @@ ol_impl_result_t olReleaseEvent_val(ol_event_handle_t Event) {
 }
 OL_APIEXPORT ol_result_t OL_APICALL olReleaseEvent(ol_event_handle_t Event) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olReleaseEvent";
+    std::cerr << "---> olReleaseEvent";
   }
 
   ol_result_t Result = olReleaseEvent_val(Event);
 
   if (offloadConfig().TracingEnabled) {
     ol_release_event_params_t Params = {&Event};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -769,17 +769,17 @@ ol_impl_result_t olWaitEvent_val(ol_event_handle_t Event) {
 }
 OL_APIEXPORT ol_result_t OL_APICALL olWaitEvent(ol_event_handle_t Event) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olWaitEvent";
+    std::cerr << "---> olWaitEvent";
   }
 
   ol_result_t Result = olWaitEvent_val(Event);
 
   if (offloadConfig().TracingEnabled) {
     ol_wait_event_params_t Params = {&Event};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -794,8 +794,8 @@ ol_result_t olWaitEventWithCodeLoc(ol_event_handle_t Event,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olEnqueueDataWrite_val(ol_queue_handle_t Queue, void *SrcPtr,
-                                        void *DstPtr, size_t Size,
+ol_impl_result_t olEnqueueDataWrite_val(ol_queue_handle_t Queue, void *DstPtr,
+                                        void *SrcPtr, size_t Size,
                                         ol_event_handle_t *EventOut) {
   if (true /*enableParameterValidation*/) {
     if (Size == 0) {
@@ -806,107 +806,106 @@ ol_impl_result_t olEnqueueDataWrite_val(ol_queue_handle_t Queue, void *SrcPtr,
       return OL_ERRC_INVALID_NULL_HANDLE;
     }
 
-    if (NULL == SrcPtr) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-
     if (NULL == DstPtr) {
       return OL_ERRC_INVALID_NULL_POINTER;
     }
+
+    if (NULL == SrcPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
   }
 
-  return olEnqueueDataWrite_impl(Queue, SrcPtr, DstPtr, Size, EventOut);
+  return olEnqueueDataWrite_impl(Queue, DstPtr, SrcPtr, Size, EventOut);
 }
 OL_APIEXPORT ol_result_t OL_APICALL
-olEnqueueDataWrite(ol_queue_handle_t Queue, void *SrcPtr, void *DstPtr,
+olEnqueueDataWrite(ol_queue_handle_t Queue, void *DstPtr, void *SrcPtr,
                    size_t Size, ol_event_handle_t *EventOut) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olEnqueueDataWrite";
+    std::cerr << "---> olEnqueueDataWrite";
   }
 
   ol_result_t Result =
-      olEnqueueDataWrite_val(Queue, SrcPtr, DstPtr, Size, EventOut);
+      olEnqueueDataWrite_val(Queue, DstPtr, SrcPtr, Size, EventOut);
 
   if (offloadConfig().TracingEnabled) {
-    ol_enqueue_data_write_params_t Params = {&Queue, &SrcPtr, &DstPtr, &Size,
+    ol_enqueue_data_write_params_t Params = {&Queue, &DstPtr, &SrcPtr, &Size,
                                              &EventOut};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
 }
-ol_result_t olEnqueueDataWriteWithCodeLoc(ol_queue_handle_t Queue, void *SrcPtr,
-                                          void *DstPtr, size_t Size,
+ol_result_t olEnqueueDataWriteWithCodeLoc(ol_queue_handle_t Queue, void *DstPtr,
+                                          void *SrcPtr, size_t Size,
                                           ol_event_handle_t *EventOut,
                                           ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
   ol_result_t Result =
-      olEnqueueDataWrite(Queue, SrcPtr, DstPtr, Size, EventOut);
+      olEnqueueDataWrite(Queue, DstPtr, SrcPtr, Size, EventOut);
 
   currentCodeLocation() = nullptr;
   return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olEnqueueDataRead_val(ol_queue_handle_t Queue, void *SrcPtr,
-                                       void *DstPtr, size_t Size,
+ol_impl_result_t olEnqueueDataRead_val(ol_queue_handle_t Queue, void *DstPtr,
+                                       void *SrcPtr, size_t Size,
                                        ol_event_handle_t *EventOut) {
   if (true /*enableParameterValidation*/) {
     if (NULL == Queue) {
       return OL_ERRC_INVALID_NULL_HANDLE;
     }
 
-    if (NULL == SrcPtr) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-
     if (NULL == DstPtr) {
       return OL_ERRC_INVALID_NULL_POINTER;
     }
+
+    if (NULL == SrcPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
   }
 
-  return olEnqueueDataRead_impl(Queue, SrcPtr, DstPtr, Size, EventOut);
+  return olEnqueueDataRead_impl(Queue, DstPtr, SrcPtr, Size, EventOut);
 }
 OL_APIEXPORT ol_result_t OL_APICALL
-olEnqueueDataRead(ol_queue_handle_t Queue, void *SrcPtr, void *DstPtr,
+olEnqueueDataRead(ol_queue_handle_t Queue, void *DstPtr, void *SrcPtr,
                   size_t Size, ol_event_handle_t *EventOut) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olEnqueueDataRead";
+    std::cerr << "---> olEnqueueDataRead";
   }
 
   ol_result_t Result =
-      olEnqueueDataRead_val(Queue, SrcPtr, DstPtr, Size, EventOut);
+      olEnqueueDataRead_val(Queue, DstPtr, SrcPtr, Size, EventOut);
 
   if (offloadConfig().TracingEnabled) {
-    ol_enqueue_data_read_params_t Params = {&Queue, &SrcPtr, &DstPtr, &Size,
+    ol_enqueue_data_read_params_t Params = {&Queue, &DstPtr, &SrcPtr, &Size,
                                             &EventOut};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
 }
-ol_result_t olEnqueueDataReadWithCodeLoc(ol_queue_handle_t Queue, void *SrcPtr,
-                                         void *DstPtr, size_t Size,
+ol_result_t olEnqueueDataReadWithCodeLoc(ol_queue_handle_t Queue, void *DstPtr,
+                                         void *SrcPtr, size_t Size,
                                          ol_event_handle_t *EventOut,
                                          ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = olEnqueueDataRead(Queue, SrcPtr, DstPtr, Size, EventOut);
+  ol_result_t Result = olEnqueueDataRead(Queue, DstPtr, SrcPtr, Size, EventOut);
 
   currentCodeLocation() = nullptr;
   return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olEnqueueDataCopy_val(ol_queue_handle_t Queue, void *SrcPtr,
-                                       void *DstPtr,
+ol_impl_result_t olEnqueueDataCopy_val(ol_queue_handle_t Queue,
                                        ol_device_handle_t DstDevice,
-                                       size_t Size,
+                                       void *DstPtr, void *SrcPtr, size_t Size,
                                        ol_event_handle_t *EventOut) {
   if (true /*enableParameterValidation*/) {
     if (NULL == Queue) {
@@ -917,48 +916,48 @@ ol_impl_result_t olEnqueueDataCopy_val(ol_queue_handle_t Queue, void *SrcPtr,
       return OL_ERRC_INVALID_NULL_HANDLE;
     }
 
-    if (NULL == SrcPtr) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-
     if (NULL == DstPtr) {
       return OL_ERRC_INVALID_NULL_POINTER;
     }
+
+    if (NULL == SrcPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
   }
 
-  return olEnqueueDataCopy_impl(Queue, SrcPtr, DstPtr, DstDevice, Size,
+  return olEnqueueDataCopy_impl(Queue, DstDevice, DstPtr, SrcPtr, Size,
                                 EventOut);
 }
 OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopy(
-    ol_queue_handle_t Queue, void *SrcPtr, void *DstPtr,
-    ol_device_handle_t DstDevice, size_t Size, ol_event_handle_t *EventOut) {
+    ol_queue_handle_t Queue, ol_device_handle_t DstDevice, void *DstPtr,
+    void *SrcPtr, size_t Size, ol_event_handle_t *EventOut) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olEnqueueDataCopy";
+    std::cerr << "---> olEnqueueDataCopy";
   }
 
   ol_result_t Result =
-      olEnqueueDataCopy_val(Queue, SrcPtr, DstPtr, DstDevice, Size, EventOut);
+      olEnqueueDataCopy_val(Queue, DstDevice, DstPtr, SrcPtr, Size, EventOut);
 
   if (offloadConfig().TracingEnabled) {
-    ol_enqueue_data_copy_params_t Params = {&Queue,     &SrcPtr, &DstPtr,
-                                            &DstDevice, &Size,   &EventOut};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    ol_enqueue_data_copy_params_t Params = {&Queue,  &DstDevice, &DstPtr,
+                                            &SrcPtr, &Size,      &EventOut};
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
 }
-ol_result_t olEnqueueDataCopyWithCodeLoc(ol_queue_handle_t Queue, void *SrcPtr,
-                                         void *DstPtr,
+ol_result_t olEnqueueDataCopyWithCodeLoc(ol_queue_handle_t Queue,
                                          ol_device_handle_t DstDevice,
+                                         void *DstPtr, void *SrcPtr,
                                          size_t Size,
                                          ol_event_handle_t *EventOut,
                                          ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
   ol_result_t Result =
-      olEnqueueDataCopy(Queue, SrcPtr, DstPtr, DstDevice, Size, EventOut);
+      olEnqueueDataCopy(Queue, DstDevice, DstPtr, SrcPtr, Size, EventOut);
 
   currentCodeLocation() = nullptr;
   return Result;
@@ -990,7 +989,7 @@ olEnqueueKernelLaunch(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
                       const ol_kernel_launch_size_args_t *LaunchSizeArgs,
                       ol_event_handle_t *EventOut) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olEnqueueKernelLaunch";
+    std::cerr << "---> olEnqueueKernelLaunch";
   }
 
   ol_result_t Result =
@@ -999,10 +998,10 @@ olEnqueueKernelLaunch(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
   if (offloadConfig().TracingEnabled) {
     ol_enqueue_kernel_launch_params_t Params = {&Queue, &Kernel,
                                                 &LaunchSizeArgs, &EventOut};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -1022,7 +1021,7 @@ ol_result_t olEnqueueKernelLaunchWithCodeLoc(
 ///////////////////////////////////////////////////////////////////////////////
 ol_impl_result_t olCreateProgram_val(ol_device_handle_t Device, void *ProgData,
                                      size_t ProgDataSize,
-                                     ol_program_handle_t *Queue) {
+                                     ol_program_handle_t *Program) {
   if (true /*enableParameterValidation*/) {
     if (NULL == Device) {
       return OL_ERRC_INVALID_NULL_HANDLE;
@@ -1032,40 +1031,40 @@ ol_impl_result_t olCreateProgram_val(ol_device_handle_t Device, void *ProgData,
       return OL_ERRC_INVALID_NULL_POINTER;
     }
 
-    if (NULL == Queue) {
+    if (NULL == Program) {
       return OL_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return olCreateProgram_impl(Device, ProgData, ProgDataSize, Queue);
+  return olCreateProgram_impl(Device, ProgData, ProgDataSize, Program);
 }
 OL_APIEXPORT ol_result_t OL_APICALL
 olCreateProgram(ol_device_handle_t Device, void *ProgData, size_t ProgDataSize,
-                ol_program_handle_t *Queue) {
+                ol_program_handle_t *Program) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olCreateProgram";
+    std::cerr << "---> olCreateProgram";
   }
 
   ol_result_t Result =
-      olCreateProgram_val(Device, ProgData, ProgDataSize, Queue);
+      olCreateProgram_val(Device, ProgData, ProgDataSize, Program);
 
   if (offloadConfig().TracingEnabled) {
     ol_create_program_params_t Params = {&Device, &ProgData, &ProgDataSize,
-                                         &Queue};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+                                         &Program};
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
 }
 ol_result_t olCreateProgramWithCodeLoc(ol_device_handle_t Device,
                                        void *ProgData, size_t ProgDataSize,
-                                       ol_program_handle_t *Queue,
+                                       ol_program_handle_t *Program,
                                        ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = olCreateProgram(Device, ProgData, ProgDataSize, Queue);
+  ol_result_t Result = olCreateProgram(Device, ProgData, ProgDataSize, Program);
 
   currentCodeLocation() = nullptr;
   return Result;
@@ -1084,17 +1083,17 @@ ol_impl_result_t olRetainProgram_val(ol_program_handle_t Program) {
 OL_APIEXPORT ol_result_t OL_APICALL
 olRetainProgram(ol_program_handle_t Program) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olRetainProgram";
+    std::cerr << "---> olRetainProgram";
   }
 
   ol_result_t Result = olRetainProgram_val(Program);
 
   if (offloadConfig().TracingEnabled) {
     ol_retain_program_params_t Params = {&Program};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -1121,17 +1120,17 @@ ol_impl_result_t olReleaseProgram_val(ol_program_handle_t Program) {
 OL_APIEXPORT ol_result_t OL_APICALL
 olReleaseProgram(ol_program_handle_t Program) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olReleaseProgram";
+    std::cerr << "---> olReleaseProgram";
   }
 
   ol_result_t Result = olReleaseProgram_val(Program);
 
   if (offloadConfig().TracingEnabled) {
     ol_release_program_params_t Params = {&Program};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -1169,17 +1168,17 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateKernel(ol_program_handle_t Program,
                                                    const char *KernelName,
                                                    ol_kernel_handle_t *Kernel) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olCreateKernel";
+    std::cerr << "---> olCreateKernel";
   }
 
   ol_result_t Result = olCreateKernel_val(Program, KernelName, Kernel);
 
   if (offloadConfig().TracingEnabled) {
     ol_create_kernel_params_t Params = {&Program, &KernelName, &Kernel};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -1207,17 +1206,17 @@ ol_impl_result_t olRetainKernel_val(ol_kernel_handle_t Kernel) {
 }
 OL_APIEXPORT ol_result_t OL_APICALL olRetainKernel(ol_kernel_handle_t Kernel) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olRetainKernel";
+    std::cerr << "---> olRetainKernel";
   }
 
   ol_result_t Result = olRetainKernel_val(Kernel);
 
   if (offloadConfig().TracingEnabled) {
     ol_retain_kernel_params_t Params = {&Kernel};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -1243,17 +1242,17 @@ ol_impl_result_t olReleaseKernel_val(ol_kernel_handle_t Kernel) {
 }
 OL_APIEXPORT ol_result_t OL_APICALL olReleaseKernel(ol_kernel_handle_t Kernel) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olReleaseKernel";
+    std::cerr << "---> olReleaseKernel";
   }
 
   ol_result_t Result = olReleaseKernel_val(Kernel);
 
   if (offloadConfig().TracingEnabled) {
     ol_release_kernel_params_t Params = {&Kernel};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -1286,7 +1285,7 @@ ol_impl_result_t olSetKernelArgValue_val(ol_kernel_handle_t Kernel,
 OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgValue(
     ol_kernel_handle_t Kernel, uint32_t Index, size_t Size, void *ArgData) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olSetKernelArgValue";
+    std::cerr << "---> olSetKernelArgValue";
   }
 
   ol_result_t Result = olSetKernelArgValue_val(Kernel, Index, Size, ArgData);
@@ -1294,10 +1293,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgValue(
   if (offloadConfig().TracingEnabled) {
     ol_set_kernel_arg_value_params_t Params = {&Kernel, &Index, &Size,
                                                &ArgData};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;
@@ -1331,7 +1330,7 @@ ol_impl_result_t olSetKernelArgsData_val(ol_kernel_handle_t Kernel,
 OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgsData(
     ol_kernel_handle_t Kernel, void *ArgsData, size_t ArgsDataSize) {
   if (offloadConfig().TracingEnabled) {
-    std::cout << "---> olSetKernelArgsData";
+    std::cerr << "---> olSetKernelArgsData";
   }
 
   ol_result_t Result = olSetKernelArgsData_val(Kernel, ArgsData, ArgsDataSize);
@@ -1339,10 +1338,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgsData(
   if (offloadConfig().TracingEnabled) {
     ol_set_kernel_args_data_params_t Params = {&Kernel, &ArgsData,
                                                &ArgsDataSize};
-    std::cout << "(" << &Params << ")";
-    std::cout << "-> " << Result << "\n";
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
-      std::cout << "     *Error Details* " << Result->Details << " \n";
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
     }
   }
   return Result;

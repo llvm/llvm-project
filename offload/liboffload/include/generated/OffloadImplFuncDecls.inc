@@ -59,18 +59,17 @@ ol_impl_result_t olReleaseEvent_impl(ol_event_handle_t Event);
 
 ol_impl_result_t olWaitEvent_impl(ol_event_handle_t Event);
 
-ol_impl_result_t olEnqueueDataWrite_impl(ol_queue_handle_t Queue, void *SrcPtr,
-                                         void *DstPtr, size_t Size,
+ol_impl_result_t olEnqueueDataWrite_impl(ol_queue_handle_t Queue, void *DstPtr,
+                                         void *SrcPtr, size_t Size,
                                          ol_event_handle_t *EventOut);
 
-ol_impl_result_t olEnqueueDataRead_impl(ol_queue_handle_t Queue, void *SrcPtr,
-                                        void *DstPtr, size_t Size,
+ol_impl_result_t olEnqueueDataRead_impl(ol_queue_handle_t Queue, void *DstPtr,
+                                        void *SrcPtr, size_t Size,
                                         ol_event_handle_t *EventOut);
 
-ol_impl_result_t olEnqueueDataCopy_impl(ol_queue_handle_t Queue, void *SrcPtr,
-                                        void *DstPtr,
+ol_impl_result_t olEnqueueDataCopy_impl(ol_queue_handle_t Queue,
                                         ol_device_handle_t DstDevice,
-                                        size_t Size,
+                                        void *DstPtr, void *SrcPtr, size_t Size,
                                         ol_event_handle_t *EventOut);
 
 ol_impl_result_t
@@ -80,7 +79,7 @@ olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
 
 ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device, void *ProgData,
                                       size_t ProgDataSize,
-                                      ol_program_handle_t *Queue);
+                                      ol_program_handle_t *Program);
 
 ol_impl_result_t olRetainProgram_impl(ol_program_handle_t Program);
 

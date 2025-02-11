@@ -562,11 +562,11 @@ operator<<(std::ostream &os,
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
   os << ", ";
-  os << ".SrcPtr = ";
-  printPtr(os, *params->pSrcPtr);
-  os << ", ";
   os << ".DstPtr = ";
   printPtr(os, *params->pDstPtr);
+  os << ", ";
+  os << ".SrcPtr = ";
+  printPtr(os, *params->pSrcPtr);
   os << ", ";
   os << ".Size = ";
   os << *params->pSize;
@@ -582,11 +582,11 @@ operator<<(std::ostream &os,
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
   os << ", ";
-  os << ".SrcPtr = ";
-  printPtr(os, *params->pSrcPtr);
-  os << ", ";
   os << ".DstPtr = ";
   printPtr(os, *params->pDstPtr);
+  os << ", ";
+  os << ".SrcPtr = ";
+  printPtr(os, *params->pSrcPtr);
   os << ", ";
   os << ".Size = ";
   os << *params->pSize;
@@ -602,14 +602,14 @@ operator<<(std::ostream &os,
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
   os << ", ";
-  os << ".SrcPtr = ";
-  printPtr(os, *params->pSrcPtr);
+  os << ".DstDevice = ";
+  printPtr(os, *params->pDstDevice);
   os << ", ";
   os << ".DstPtr = ";
   printPtr(os, *params->pDstPtr);
   os << ", ";
-  os << ".DstDevice = ";
-  printPtr(os, *params->pDstDevice);
+  os << ".SrcPtr = ";
+  printPtr(os, *params->pSrcPtr);
   os << ", ";
   os << ".Size = ";
   os << *params->pSize;
@@ -647,8 +647,8 @@ operator<<(std::ostream &os, const struct ol_create_program_params_t *params) {
   os << ".ProgDataSize = ";
   os << *params->pProgDataSize;
   os << ", ";
-  os << ".Queue = ";
-  printPtr(os, *params->pQueue);
+  os << ".Program = ";
+  printPtr(os, *params->pProgram);
   return os;
 }
 

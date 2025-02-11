@@ -20,7 +20,7 @@ def : Function {
         Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
         Param<"void*", "ProgData", "pointer to the program binary data", PARAM_IN>,
         Param<"size_t", "ProgDataSize", "size of the program binary in bytes", PARAM_IN>,
-        Param<"ol_program_handle_t*", "Queue", "output pointer for the created program", PARAM_OUT>
+        Param<"ol_program_handle_t*", "Program", "output pointer for the created program", PARAM_OUT>
     ];
     let returns = [];
 }

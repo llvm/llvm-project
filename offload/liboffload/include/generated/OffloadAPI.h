@@ -667,15 +667,15 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitEvent(
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
 ///         + `NULL == Queue`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == SrcPtr`
 ///         + `NULL == DstPtr`
+///         + `NULL == SrcPtr`
 OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataWrite(
     // [in] handle of the queue
     ol_queue_handle_t Queue,
-    // [in] host pointer to copy from
-    void *SrcPtr,
     // [in] device pointer to copy to
     void *DstPtr,
+    // [in] host pointer to copy from
+    void *SrcPtr,
     // [in] size in bytes of data to copy
     size_t Size,
     // [out][optional] optional recorded event for the enqueued operation
@@ -693,15 +693,15 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataWrite(
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
 ///         + `NULL == Queue`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == SrcPtr`
 ///         + `NULL == DstPtr`
+///         + `NULL == SrcPtr`
 OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataRead(
     // [in] handle of the queue
     ol_queue_handle_t Queue,
-    // [in] device pointer to copy from
-    void *SrcPtr,
     // [in] host pointer to copy to
     void *DstPtr,
+    // [in] device pointer to copy from
+    void *SrcPtr,
     // [in] size in bytes of data to copy
     size_t Size,
     // [out][optional] optional recorded event for the enqueued operation
@@ -720,17 +720,17 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataRead(
 ///         + `NULL == Queue`
 ///         + `NULL == DstDevice`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == SrcPtr`
 ///         + `NULL == DstPtr`
+///         + `NULL == SrcPtr`
 OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopy(
     // [in] handle of the queue
     ol_queue_handle_t Queue,
-    // [in] device pointer to copy from
-    void *SrcPtr,
-    // [in] device pointer to copy to
-    void *DstPtr,
     // [in] device that the destination pointer is resident on
     ol_device_handle_t DstDevice,
+    // [in] device pointer to copy to
+    void *DstPtr,
+    // [in] device pointer to copy from
+    void *SrcPtr,
     // [in] size in bytes of data to copy
     size_t Size,
     // [out][optional] optional recorded event for the enqueued operation
@@ -787,7 +787,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunch(
 ///         + `NULL == Device`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == ProgData`
-///         + `NULL == Queue`
+///         + `NULL == Program`
 OL_APIEXPORT ol_result_t OL_APICALL olCreateProgram(
     // [in] handle of the device
     ol_device_handle_t Device,
@@ -796,7 +796,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateProgram(
     // [in] size of the program binary in bytes
     size_t ProgDataSize,
     // [out] output pointer for the created program
-    ol_program_handle_t *Queue);
+    ol_program_handle_t *Program);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Increment the program's reference count
@@ -1082,8 +1082,8 @@ typedef struct ol_wait_event_params_t {
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct ol_enqueue_data_write_params_t {
   ol_queue_handle_t *pQueue;
-  void **pSrcPtr;
   void **pDstPtr;
+  void **pSrcPtr;
   size_t *pSize;
   ol_event_handle_t **pEventOut;
 } ol_enqueue_data_write_params_t;
@@ -1093,8 +1093,8 @@ typedef struct ol_enqueue_data_write_params_t {
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct ol_enqueue_data_read_params_t {
   ol_queue_handle_t *pQueue;
-  void **pSrcPtr;
   void **pDstPtr;
+  void **pSrcPtr;
   size_t *pSize;
   ol_event_handle_t **pEventOut;
 } ol_enqueue_data_read_params_t;
@@ -1104,9 +1104,9 @@ typedef struct ol_enqueue_data_read_params_t {
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct ol_enqueue_data_copy_params_t {
   ol_queue_handle_t *pQueue;
-  void **pSrcPtr;
-  void **pDstPtr;
   ol_device_handle_t *pDstDevice;
+  void **pDstPtr;
+  void **pSrcPtr;
   size_t *pSize;
   ol_event_handle_t **pEventOut;
 } ol_enqueue_data_copy_params_t;
@@ -1128,7 +1128,7 @@ typedef struct ol_create_program_params_t {
   ol_device_handle_t *pDevice;
   void **pProgData;
   size_t *pProgDataSize;
-  ol_program_handle_t **pQueue;
+  ol_program_handle_t **pProgram;
 } ol_create_program_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1331,7 +1331,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitEventWithCodeLoc(
 /// information
 /// @details See also ::olEnqueueDataWrite
 OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataWriteWithCodeLoc(
-    ol_queue_handle_t Queue, void *SrcPtr, void *DstPtr, size_t Size,
+    ol_queue_handle_t Queue, void *DstPtr, void *SrcPtr, size_t Size,
     ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1339,7 +1339,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataWriteWithCodeLoc(
 /// information
 /// @details See also ::olEnqueueDataRead
 OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataReadWithCodeLoc(
-    ol_queue_handle_t Queue, void *SrcPtr, void *DstPtr, size_t Size,
+    ol_queue_handle_t Queue, void *DstPtr, void *SrcPtr, size_t Size,
     ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1347,8 +1347,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataReadWithCodeLoc(
 /// information
 /// @details See also ::olEnqueueDataCopy
 OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopyWithCodeLoc(
-    ol_queue_handle_t Queue, void *SrcPtr, void *DstPtr,
-    ol_device_handle_t DstDevice, size_t Size, ol_event_handle_t *EventOut,
+    ol_queue_handle_t Queue, ol_device_handle_t DstDevice, void *DstPtr,
+    void *SrcPtr, size_t Size, ol_event_handle_t *EventOut,
     ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1366,7 +1366,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunchWithCodeLoc(
 /// @details See also ::olCreateProgram
 OL_APIEXPORT ol_result_t OL_APICALL olCreateProgramWithCodeLoc(
     ol_device_handle_t Device, void *ProgData, size_t ProgDataSize,
-    ol_program_handle_t *Queue, ol_code_location_t *CodeLocation);
+    ol_program_handle_t *Program, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olRetainProgram that also sets source code location

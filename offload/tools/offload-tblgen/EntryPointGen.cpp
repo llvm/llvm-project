@@ -72,7 +72,7 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
 
   // Emit pre-call prints
   OS << TAB_1 "if (offloadConfig().TracingEnabled) {\n";
-  OS << formatv(TAB_2 "std::cout << \"---> {0}\";\n", F.getName());
+  OS << formatv(TAB_2 "std::cerr << \"---> {0}\";\n", F.getName());
   OS << TAB_1 "}\n\n";
 
   // Perform actual function call to the validation wrapper
@@ -91,13 +91,13 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
       }
     }
     OS << formatv("};\n");
-    OS << TAB_2 "std::cout << \"(\" << &Params << \")\";\n";
+    OS << TAB_2 "std::cerr << \"(\" << &Params << \")\";\n";
   } else {
-    OS << TAB_2 "std::cout << \"()\";\n";
+    OS << TAB_2 "std::cerr << \"()\";\n";
   }
-  OS << TAB_2 "std::cout << \"-> \" << Result << \"\\n\";\n";
+  OS << TAB_2 "std::cerr << \"-> \" << Result << \"\\n\";\n";
   OS << TAB_2 "if (Result && Result->Details) {\n";
-  OS << TAB_3 "std::cout << \"     *Error Details* \" << Result->Details "
+  OS << TAB_3 "std::cerr << \"     *Error Details* \" << Result->Details "
               "<< \" \\n\";\n";
   OS << TAB_2 "}\n";
   OS << TAB_1 "}\n";

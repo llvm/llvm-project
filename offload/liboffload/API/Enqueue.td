@@ -16,8 +16,8 @@ def : Function {
     let details = [];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
-        Param<"void*", "SrcPtr", "host pointer to copy from", PARAM_IN>,
         Param<"void*", "DstPtr", "device pointer to copy to", PARAM_IN>,
+        Param<"void*", "SrcPtr", "host pointer to copy from", PARAM_IN>,
         Param<"size_t", "Size", "size in bytes of data to copy", PARAM_IN>,
         Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
     ];
@@ -32,8 +32,8 @@ def : Function {
     let details = [];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
-        Param<"void*", "SrcPtr", "device pointer to copy from", PARAM_IN>,
         Param<"void*", "DstPtr", "host pointer to copy to", PARAM_IN>,
+        Param<"void*", "SrcPtr", "device pointer to copy from", PARAM_IN>,
         Param<"size_t", "Size", "size in bytes of data to copy", PARAM_IN>,
         Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
     ];
@@ -46,9 +46,9 @@ def : Function {
     let details = [];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
-        Param<"void*", "SrcPtr", "device pointer to copy from", PARAM_IN>,
-        Param<"void*", "DstPtr", "device pointer to copy to", PARAM_IN>,
         Param<"ol_device_handle_t", "DstDevice", "device that the destination pointer is resident on", PARAM_IN>,
+        Param<"void*", "DstPtr", "device pointer to copy to", PARAM_IN>,
+        Param<"void*", "SrcPtr", "device pointer to copy from", PARAM_IN>,
         Param<"size_t", "Size", "size in bytes of data to copy", PARAM_IN>,
         Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
     ];

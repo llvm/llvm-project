@@ -19,8 +19,8 @@ TEST_F(olEnqueueDataReadTest, Success) {
   std::vector<uint8_t> Output(Size, 0);
 
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
-  ASSERT_SUCCESS(olEnqueueDataWrite(Queue, Input.data(), Alloc, Size, nullptr));
-  ASSERT_SUCCESS(olEnqueueDataRead(Queue, Alloc, Output.data(), Size, nullptr));
+  ASSERT_SUCCESS(olEnqueueDataWrite(Queue, Alloc, Input.data(), Size, nullptr));
+  ASSERT_SUCCESS(olEnqueueDataRead(Queue, Output.data(), Alloc, Size, nullptr));
   ASSERT_SUCCESS(olFinishQueue(Queue));
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
