@@ -2600,11 +2600,9 @@ void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
   default:
     llvm_unreachable("This is not a CB pseudo instruction");
   case AArch64::CBWPrr:
-    IsImm = false;
     Is32Bit = true;
     break;
   case AArch64::CBXPrr:
-    IsImm = false;
     Is32Bit = false;
     break;
   case AArch64::CBWPri:
@@ -2613,7 +2611,6 @@ void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
     break;
   case AArch64::CBXPri:
     IsImm = true;
-    Is32Bit = false;
     break;
   }
 
@@ -2632,78 +2629,52 @@ void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
   case AArch64CC::EQ:
     MCOpC = IsImm ? (Is32Bit ? AArch64::CBEQWri : AArch64::CBEQXri)
                   : (Is32Bit ? AArch64::CBEQWrr : AArch64::CBEQXrr);
-    NeedsRegSwap = false;
-    NeedsImmDec = false;
-    NeedsImmInc = false;
     break;
   case AArch64CC::NE:
     MCOpC = IsImm ? (Is32Bit ? AArch64::CBNEWri : AArch64::CBNEXri)
                   : (Is32Bit ? AArch64::CBNEWrr : AArch64::CBNEXrr);
-    NeedsRegSwap = false;
-    NeedsImmDec = false;
-    NeedsImmInc = false;
     break;
   case AArch64CC::HS:
     MCOpC = IsImm ? (Is32Bit ? AArch64::CBHIWri : AArch64::CBHIXri)
                   : (Is32Bit ? AArch64::CBHSWrr : AArch64::CBHSXrr);
-    NeedsRegSwap = false;
     NeedsImmDec = IsImm;
-    NeedsImmInc = false;
     break;
   case AArch64CC::LO:
     MCOpC = IsImm ? (Is32Bit ? AArch64::CBLOWri : AArch64::CBLOXri)
                   : (Is32Bit ? AArch64::CBHIWrr : AArch64::CBHIXrr);
     NeedsRegSwap = !IsImm;
-    NeedsImmDec = false;
-    NeedsImmInc = false;
     break;
   case AArch64CC::HI:
     MCOpC = IsImm ? (Is32Bit ? AArch64::CBHIWri : AArch64::CBHIXri)
                   : (Is32Bit ? AArch64::CBHIWrr : AArch64::CBHIXrr);
-    NeedsRegSwap = false;
-    NeedsImmDec = false;
-    NeedsImmInc = false;
     break;
   case AArch64CC::LS:
     MCOpC = IsImm ? (Is32Bit ? AArch64::CBLOWri : AArch64::CBLOXri)
                   : (Is32Bit ? AArch64::CBHSWrr : AArch64::CBHSXrr);
     NeedsRegSwap = !IsImm;
-    NeedsImmDec = false;
     NeedsImmInc = IsImm;
     break;
   case AArch64CC::GE:
     MCOpC = IsImm ? (Is32Bit ? AArch64::CBGTWri : AArch64::CBGTXri)
                   : (Is32Bit ? AArch64::CBGEWrr : AArch64::CBGEXrr);
-    NeedsRegSwap = false;
     NeedsImmDec = IsImm;
-    NeedsImmInc = false;
     break;
   case AArch64CC::LT:
     MCOpC = IsImm ? (Is32Bit ? AArch64::CBLTWri : AArch64::CBLTXri)
                   : (Is32Bit ? AArch64::CBGTWrr : AArch64::CBGTXrr);
     NeedsRegSwap = !IsImm;
-    NeedsImmDec = false;
-    NeedsImmInc = false;
     break;
   case AArch64CC::GT:
     MCOpC = IsImm ? (Is32Bit ? AArch64::CBGTWri : AArch64::CBGTXri)
                   : (Is32Bit ? AArch64::CBGTWrr : AArch64::CBGTXrr);
-    NeedsRegSwap = false;
-    NeedsImmDec = false;
-    NeedsImmInc = false;
     break;
   case AArch64CC::LE:
     MCOpC = IsImm ? (Is32Bit ? AArch64::CBLTWri : AArch64::CBLTXri)
                   : (Is32Bit ? AArch64::CBGEWrr : AArch64::CBGEXrr);
     NeedsRegSwap = !IsImm;
-    NeedsImmDec = false;
     NeedsImmInc = IsImm;
     break;
   }
-
-  assert(!(NeedsImmDec && NeedsImmInc) &&
-         "Cannot require increment and decrement of CB immediate operand at "
-         "the same time");
 
   MCInst Inst;
   Inst.setOpcode(MCOpC);
@@ -2715,22 +2686,15 @@ void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
 
   // Now swap, increment or decrement
   if (NeedsRegSwap) {
-    assert(
-        !IsImm &&
-        "Unexpected register swap for CB instruction with immediate operand");
     assert(Lhs.isReg() && "Expected register operand for CB");
     assert(Rhs.isReg() && "Expected register operand for CB");
     Inst.addOperand(Rhs);
     Inst.addOperand(Lhs);
   } else if (NeedsImmDec) {
-    assert(IsImm && "Unexpected immediate decrement for CB instruction with "
-                    "reg-reg operands");
     Rhs.setImm(Rhs.getImm() - 1);
     Inst.addOperand(Lhs);
     Inst.addOperand(Rhs);
   } else if (NeedsImmInc) {
-    assert(IsImm && "Unexpected immediate increment for CB instruction with "
-                    "reg-reg operands");
     Rhs.setImm(Rhs.getImm() + 1);
     Inst.addOperand(Lhs);
     Inst.addOperand(Rhs);

@@ -416,8 +416,7 @@ if.end:
 define void @sge_63(i32 %a)  {
 ; CHECK-CMPBR-LABEL: sge_63:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    mov w8, #64 ; =0x40
-; CHECK-CMPBR-NEXT:    cbge w0, w8, LBB14_2
+; CHECK-CMPBR-NEXT:    cbgt w0, #62, LBB14_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
 ; CHECK-CMPBR-NEXT:  LBB14_2: ; %if.then
@@ -425,14 +424,14 @@ define void @sge_63(i32 %a)  {
 ;
 ; CHECK-NO-CMPBR-LABEL: sge_63:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
-; CHECK-NO-CMPBR-NEXT:    cmp w0, #64
+; CHECK-NO-CMPBR-NEXT:    cmp w0, #63
 ; CHECK-NO-CMPBR-NEXT:    b.ge LBB14_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
 ; CHECK-NO-CMPBR-NEXT:  LBB14_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
-  %cmp = icmp sgt i32 %a, 63
+  %cmp = icmp sge i32 %a, 63
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
@@ -446,7 +445,7 @@ if.end:
 define void @sge_64(i32 %a)  {
 ; CHECK-CMPBR-LABEL: sge_64:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    mov w8, #65 ; =0x41
+; CHECK-CMPBR-NEXT:    mov w8, #64 ; =0x40
 ; CHECK-CMPBR-NEXT:    cbge w0, w8, LBB15_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
@@ -455,14 +454,14 @@ define void @sge_64(i32 %a)  {
 ;
 ; CHECK-NO-CMPBR-LABEL: sge_64:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
-; CHECK-NO-CMPBR-NEXT:    cmp w0, #65
+; CHECK-NO-CMPBR-NEXT:    cmp w0, #64
 ; CHECK-NO-CMPBR-NEXT:    b.ge LBB15_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
 ; CHECK-NO-CMPBR-NEXT:  LBB15_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
-  %cmp = icmp sgt i32 %a, 64
+  %cmp = icmp sge i32 %a, 64
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
@@ -1049,6 +1048,97 @@ define void @ne_64(i32 %a)  {
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp ne i32 %a, 64
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbge_out_of_upper_bound(i32 %a)  {
+; CHECK-CMPBR-LABEL: cbge_out_of_upper_bound:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    mov w8, #71 ; =0x47
+; CHECK-CMPBR-NEXT:    cbge w0, w8, LBB36_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB36_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbge_out_of_upper_bound:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    cmp w0, #71
+; CHECK-NO-CMPBR-NEXT:    b.ge LBB36_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB36_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp sgt i32 %a, 70
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbge_out_of_lower_bound(i32 %a)  {
+; CHECK-CMPBR-LABEL: cbge_out_of_lower_bound:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    mov w8, #-10 ; =0xfffffff6
+; CHECK-CMPBR-NEXT:    cbge w0, w8, LBB37_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB37_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbge_out_of_lower_bound:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    cmn w0, #10
+; CHECK-NO-CMPBR-NEXT:    b.ge LBB37_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB37_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp sge i32 %a, -10
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+; This should trigger a register swap.
+define void @cble_out_of_lower_bound(i32 %a)  {
+; CHECK-CMPBR-LABEL: cble_out_of_lower_bound:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    mov w8, #-10 ; =0xfffffff6
+; CHECK-CMPBR-NEXT:    cbhs w8, w0, LBB38_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB38_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cble_out_of_lower_bound:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    cmn w0, #10
+; CHECK-NO-CMPBR-NEXT:    b.ls LBB38_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB38_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp ule i32 %a, -10
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
