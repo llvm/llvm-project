@@ -170,6 +170,7 @@ protected:
                  bool Sext_ = false)
       : SDWAOperand(TargetOp, ReplacedOp), SrcSel(SrcSel_), Abs(Abs_),
         Neg(Neg_), Sext(Sext_) {}
+
 public:
   /// Create an SDWASrcOperand as an operand for \p MI from the given arguments
   /// if \p SrcSel_ and the src_sel0 and src_sel1 operands of \p MI are
@@ -189,8 +190,8 @@ public:
       }
     }
 
-    return std::unique_ptr<SDWAOperand>(new SDWASrcOperand(
-        TargetOp, ReplacedOp, SrcSel_, Abs_, Neg_, Sext_));
+    return std::unique_ptr<SDWAOperand>(
+        new SDWASrcOperand(TargetOp, ReplacedOp, SrcSel_, Abs_, Neg_, Sext_));
   };
 
   MachineInstr *potentialToConvert(const SIInstrInfo *TII,
