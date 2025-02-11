@@ -2342,16 +2342,19 @@ SDValue SITargetLowering::getPreloadedValue(
   if (Subtarget->hasArchitectedSGPRs() &&
       (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
     switch (PVID) {
+    case AMDGPUFunctionArgInfo::CLUSTER_ID_X:
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Reg = &WorkGroupIDX;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
+    case AMDGPUFunctionArgInfo::CLUSTER_ID_Y:
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
       Reg = &WorkGroupIDY;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
+    case AMDGPUFunctionArgInfo::CLUSTER_ID_Z:
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
       Reg = &WorkGroupIDZ;
       RC = &AMDGPU::SReg_32RegClass;
@@ -9153,6 +9156,21 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_workgroup_id_z:
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_cluster_id_x:
+    return Subtarget->hasGFX1250Insts()
+               ? getPreloadedValue(DAG, *MFI, VT,
+                                   AMDGPUFunctionArgInfo::CLUSTER_ID_X)
+               : DAG.getUNDEF(VT);
+  case Intrinsic::amdgcn_cluster_id_y:
+    return Subtarget->hasGFX1250Insts()
+               ? getPreloadedValue(DAG, *MFI, VT,
+                                   AMDGPUFunctionArgInfo::CLUSTER_ID_Y)
+               : DAG.getUNDEF(VT);
+  case Intrinsic::amdgcn_cluster_id_z:
+    return Subtarget->hasGFX1250Insts()
+               ? getPreloadedValue(DAG, *MFI, VT,
+                                   AMDGPUFunctionArgInfo::CLUSTER_ID_Z)
+               : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_workgroup_id_x:
     return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(
