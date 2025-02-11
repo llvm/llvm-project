@@ -81,24 +81,28 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
 //   each dimension.
 static bool isArgShapesValid(ArrayRef<int64_t> descShape,
                              ArrayRef<int64_t> valShape, SGMapAttr sgMap) {
-  if (descShape == valShape) {
-    if (!sgMap)
-      return true;
+  // Equal shapes with no distribution - no further verification needed.
+  if (descShape == valShape && !sgMap)
+    return true;
 
-    // this can be relaxed if necessary by supporting non-2d shapes distribution
-    // until the constraints are defined this lives here instead of the tensor
-    // descriptor type.
-    return valShape.size() == sgMap.getWiLayout().size();
-  }
-
+  // Unknown distribution - cannot perform operation on partial shape.
   if (!sgMap)
     return false;
 
-  if (valShape.size() != descShape.size())
+  // Invalid rank or mixed rank usage.
+  size_t descRank = descShape.size();
+  if (descRank > 2 || valShape.size() != descRank)
     return false;
 
+  // For 1D, SG map is guaranteed to be unit size in the outer dimension.
+  // Only take the distribution over the innermost dimension for validation.
+  ArrayRef<uint32_t> wiLayout = sgMap.getWiLayout();
+  SmallVector<uint32_t> mapLayout(wiLayout.begin(), wiLayout.end());
+  if (descRank == 1)
+    mapLayout = {wiLayout.back()};
+
   for (const auto &[factor, dim, expected] :
-       llvm::zip_equal(sgMap.getWiLayout(), valShape, descShape)) {
+       llvm::zip_equal(mapLayout, valShape, descShape)) {
     if (factor * dim != expected)
       return false;
   }
@@ -226,10 +230,6 @@ LogicalResult CreateNdDescOp::verify() {
 
   if (getType().isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
-
-  if (getType().getRank() == 2 &&
-      tdescMemorySpace == static_cast<unsigned>(MemorySpace::SLM))
-    return emitOpError("SLM is not supported for 2D Block TensorDesc.\n");
 
   return success();
 }
@@ -419,16 +419,8 @@ LogicalResult CreateDescOp::verify() {
            << " Source: " << srcMemorySpace
            << ", TensorDesc: " << tdescMemorySpace;
 
-  auto chunkSize = tdescTy.getChunkSize();
-
-  // check chunk_size
-  llvm::SmallVector<int64_t> supportedChunkSizes = {1,  2,  3,  4,   8,
-                                                    16, 32, 64, 128, 256};
-  if (!llvm::is_contained(supportedChunkSizes, chunkSize))
-    return emitOpError("Invalid chunk_size. Supported values are 1, 2, 3, 4, "
-                       "8, 16, 32, 64, 128, or 256.");
-
   // check total size
+  auto chunkSize = tdescTy.getChunkSize();
   auto elemBits = tdescTy.getElementType().getIntOrFloatBitWidth();
   auto bitsPerLane = elemBits * chunkSize;
   if (chunkSize > 1 && bitsPerLane % 32) {
@@ -454,22 +446,7 @@ LogicalResult CreateDescOp::verify() {
   if (shape != tdescShape)
     return emitOpError("Incorrect TensorDesc shape. ")
            << "Expected is " << makeString(shape) << "\n";
-  if (auto sgMap = tdescTy.getSGMapAttr()) {
-    // A work-item's slice of the TensorDesc with shape [sg_size] or
-    // [sg_size, chunk_size] will be [1] or [1, chunks_size] respectively,
-    // the mapping should reflect that.
-    if (sgMap.getWiData()[0] > 1)
-      return emitOpError("TensorDesc's SG map only supports multiple elements "
-                         "contiguous along rows.");
-    if (chunkSize != static_cast<int>(sgMap.getWiData()[1]))
-      return emitOpError(
-          "TensorDesc's chunkSize must match WI's data mapping.");
-    if (int rank = tdescTy.getRank();
-        (sgMap.getWiLayout()[2 - rank] != tdescShape[0]))
-      return emitOpError("Detected a conflict between SG map's work-item "
-                         "layout and TensorDesc shape. Check the index of "
-                         "`subgroup_size` in WI layout map.");
-  }
+
   return success();
 }
 

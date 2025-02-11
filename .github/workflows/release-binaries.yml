@@ -58,7 +58,6 @@ jobs:
       target-cmake-flags: ${{ steps.vars.outputs.target-cmake-flags }}
       ccache: ${{ steps.vars.outputs.ccache }}
       build-flang: ${{ steps.vars.outputs.build-flang }}
-      enable-pgo: ${{ steps.vars.outputs.enable-pgo }}
       release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
       build-runs-on: ${{ steps.vars.outputs.build-runs-on }}
@@ -130,9 +129,6 @@ jobs:
           echo ccache=sccache >> $GITHUB_OUTPUT
         fi
 
-        # Detect necessary CMake flags
-        echo "enable-pgo=false" >> $GITHUB_OUTPUT
-        target_cmake_flags="-DLLVM_RELEASE_ENABLE_PGO=OFF"
         # The macOS builds try to cross compile some libraries so we need to
         # add extra CMake args to disable them.
         # See https://github.com/llvm/llvm-project/issues/99767
@@ -238,13 +234,14 @@ jobs:
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
-            -DBOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
+            -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
     - name: Build
       shell: bash
       run: |
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
-        mv ${{ steps.setup-stage.outputs.build-prefix  }}/build/tools/clang/stage2-bins/${{ needs.prepare.outputs.release-binary-filename }} .
+        release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
+        mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
     
     - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
@@ -259,7 +256,7 @@ jobs:
       shell: bash
       run: |
         find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname ${{ needs.prepare.outputs.release-binary-filename }} -delete
-        rm -Rf ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/_CPack_Packages
+        find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname _CPack_Packages -prune -exec rm -r {} +
     
     - name: Save Stage
       uses: ./workflows-main/.github/workflows/release-binaries-save-stage

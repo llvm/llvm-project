@@ -91,7 +91,6 @@ private:
 
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
 void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
-bool isLifetimeIntrinsic(Value *V);
 
 Value *readRegister(IRBuilder<> &IRB, StringRef Name);
 Value *getFP(IRBuilder<> &IRB);
