@@ -3049,6 +3049,8 @@ def fthin_link_bitcode_EQ : Joined<["-"], "fthin-link-bitcode=">,
   Visibility<[ClangOption, CLOption, CC1Option]>, Group<f_Group>,
   HelpText<"Write minimized bitcode to <file> for the ThinLTO thin link only">,
   MarshallingInfoString<CodeGenOpts<"ThinLinkBitcodeFile">>;
+def fobjc_emit_nil_check_thunk:
+  Flag<["-"], "fobjc-emit-nil-check-thunk">, Visibility<[ClangOption, CC1Option]>, Group<f_Group>;
 defm fat_lto_objects : BoolFOption<"fat-lto-objects",
   CodeGenOpts<"FatLTO">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,

@@ -482,6 +482,12 @@ public:
   /// True if the method is tagged as objc_direct
   bool isDirectMethod() const;
 
+  // Only direct instance method that have a fixed number of arguments can have
+  // nil check thunk functions.
+  bool canHaveNilCheckThunk() const {
+    return isDirectMethod() && isInstanceMethod() && !isVariadic();
+  }
+
   /// True if the method has a parameter that's destroyed in the callee.
   bool hasParamDestroyedInCallee() const;
 

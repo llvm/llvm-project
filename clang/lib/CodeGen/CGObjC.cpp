@@ -756,12 +756,13 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
   if (OMD->hasAttr<NoDebugAttr>())
     DebugInfo = nullptr; // disable debug info indefinitely for this function
 
-  llvm::Function *Fn = CGM.getObjCRuntime().GenerateMethod(OMD, CD);
+  bool isInner = CGM.shouldHaveNilCheckThunk(OMD) && !InnerFn;
+  llvm::Function *Fn = CGM.getObjCRuntime().GenerateMethod(OMD, CD, !isInner);
 
   const CGFunctionInfo &FI = CGM.getTypes().arrangeObjCMethodDeclaration(OMD);
   if (OMD->isDirectMethod()) {
     Fn->setVisibility(llvm::Function::HiddenVisibility);
-    CGM.SetLLVMFunctionAttributes(OMD, FI, Fn, /*IsThunk=*/false);
+    CGM.SetLLVMFunctionAttributes(OMD, FI, Fn, /*IsThunk=*/InnerFn);
     CGM.SetLLVMFunctionAttributesForDefinition(OMD, Fn);
   } else {
     CGM.SetInternalFunctionAttributes(OMD, Fn, FI);
@@ -780,11 +781,21 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
                 OMD->getLocation(), StartLoc);
 
   if (OMD->isDirectMethod()) {
-    // This function is a direct call, it has to implement a nil check
-    // on entry.
-    //
-    // TODO: possibly have several entry points to elide the check
-    CGM.getObjCRuntime().GenerateDirectMethodPrologue(*this, Fn, OMD, CD);
+    if (CGM.getLangOpts().ObjCRuntime.isNeXTFamily()) {
+      // Having `InnerFn` indicates that we are generating a nil check thunk.
+      // In that case our job is done here.
+      if (InnerFn)
+        return;
+      if (CGM.shouldHaveNilCheckThunk(OMD))
+        // Go generate  a nil check thunk around `Fn`
+        CodeGenFunction(CGM, /*InnerFn=*/Fn).GenerateObjCDirectThunk(OMD, CD);
+      else
+        CGM.getObjCRuntime().GenerateObjCDirectNilCheck(*this, OMD, CD);
+      CGM.getObjCRuntime().GenerateCmdIfNecessary(*this, OMD);
+    } else {
+      // For GNU family, since GNU Step2 also supports direct methods now.
+      CGM.getObjCRuntime().GenerateDirectMethodPrologue(*this, Fn, OMD, CD);
+    }
   }
 
   // In ARC, certain methods get an extra cleanup.
@@ -1637,6 +1648,44 @@ void CodeGenFunction::GenerateObjCSetter(ObjCImplementationDecl *IMP,
   FinishFunction(OMD->getEndLoc());
 }
 
+void CodeGenFunction::GenerateObjCDirectThunk(const ObjCMethodDecl *OMD,
+                                              const ObjCContainerDecl *CD) {
+  assert(InnerFn && CGM.shouldHaveNilCheckThunk(OMD) &&
+         "Should only generate wrapper when the flag is set.");
+  StartObjCMethod(OMD, CD);
+
+  // Manually pop all the clean up that doesn't need to happen in the outer
+  // function. InnerFn will do this for us.
+  while (EHStack.stable_begin() != PrologueCleanupDepth)
+    EHStack.popCleanup();
+
+  // Generate a nil check.
+  CGM.getObjCRuntime().GenerateObjCDirectNilCheck(*this, OMD, CD);
+  // Call the InnerFn and pass the return value
+  SmallVector<llvm::Value *> Args(CurFn->arg_size());
+  std::transform(CurFn->arg_begin(), CurFn->arg_end(), Args.begin(),
+                 [](llvm::Argument &arg) { return &arg; });
+
+  // This will be optimized into a tail call.
+  auto *CallInst = EmitCallOrInvoke(InnerFn, Args);
+  // Preserve the inner function's attributes to the call instruction.
+  CallInst->setAttributes(InnerFn->getAttributes());
+  llvm::Value *RetVal = CallInst;
+
+  // If `AutoreleaseResult` is set, the return value is not void.
+  if (AutoreleaseResult)
+    RetVal = EmitARCRetainAutoreleasedReturnValue(RetVal);
+
+  // This excessive store is totally unnecessary.
+  // But `FinishFunction` really wants us to store the result so it can
+  // clean up the function properly.
+  // The unnecessary store-load of the ret value will be optimized out anyway.
+  if (!CurFn->getReturnType()->isVoidTy())
+    Builder.CreateStore(RetVal, ReturnValue);
+
+  // Nil check's end location is the function's start location.
+  FinishFunction(OMD->getBeginLoc());
+}
 namespace {
   struct DestroyIvar final : EHScopeStack::Cleanup {
   private:

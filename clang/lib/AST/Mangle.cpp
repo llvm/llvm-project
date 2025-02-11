@@ -32,7 +32,7 @@ using namespace clang;
 void clang::mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
                                  bool isInstanceMethod, StringRef ClassName,
                                  std::optional<StringRef> CategoryName,
-                                 StringRef MethodName) {
+                                 StringRef MethodName, bool isThunk) {
   // \01+[ContainerName(CategoryName) SelectorName]
   if (includePrefixByte)
     OS << "\01";
@@ -40,12 +40,13 @@ void clang::mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
   OS << '[';
   OS << ClassName;
   if (CategoryName)
-    OS << "(" << *CategoryName << ")";
+    OS << "(" << CategoryName.value() << ")";
   OS << " ";
   OS << MethodName;
   OS << ']';
+  if (!isThunk)
+    OS << "_inner";
 }
-
 // FIXME: For blocks we currently mimic GCC's mangling scheme, which leaves
 // much to be desired. Come up with a better mangling scheme.
 
@@ -345,7 +346,8 @@ void MangleContext::mangleBlock(const DeclContext *DC, const BlockDecl *BD,
 void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
                                          raw_ostream &OS,
                                          bool includePrefixByte,
-                                         bool includeCategoryNamespace) const {
+                                         bool includeCategoryNamespace,
+                                         bool isThunk) const {
   if (getASTContext().getLangOpts().ObjCRuntime.isGNUFamily()) {
     // This is the mangling we've always used on the GNU runtimes, but it
     // has obvious collisions in the face of underscores within class
@@ -398,7 +400,7 @@ void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
   llvm::raw_string_ostream MethodNameOS(MethodName);
   MD->getSelector().print(MethodNameOS);
   clang::mangleObjCMethodName(OS, includePrefixByte, MD->isInstanceMethod(),
-                              ClassName, CategoryName, MethodName);
+                              ClassName, CategoryName, MethodName, isThunk);
 }
 
 void MangleContext::mangleObjCMethodNameAsSourceName(const ObjCMethodDecl *MD,
