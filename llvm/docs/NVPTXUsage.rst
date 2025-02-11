@@ -581,6 +581,46 @@ prefetched in terms of bytes and it must be a multiple of 16.
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`_.
 
+'``llvm.nvvm.prefetch.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void  @llvm.nvvm.prefetch.local.L1.evictnormal(ptr addrspace(5) %local_ptr)
+  declare void  @llvm.nvvm.prefetch.local.L2.evictnormal(ptr addrspace(5) %local_ptr)
+  
+  declare void  @llvm.nvvm.prefetch.global.L1.evictnormal(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L2.evictnormal(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L1.evictlast(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L2.evictlast(ptr addrspace(1) %global_ptr)
+  
+  declare void  @llvm.nvvm.prefetch.L1.evictnormal(ptr %ptr)
+  declare void  @llvm.nvvm.prefetch.L2.evictnormal(ptr %ptr)
+  
+  declare void  @llvm.nvvm.prefetchu.L1.evictnormal(ptr %ptr)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.prefetch.*``' and '``@llvm.nvvm.prefetchu.*``' intrinsic
+correspond to the '``prefetch.*``;' and '``prefetchu.*``' family of PTX instructions. 
+The '``prefetch.*``' instructions bring the cache line containing the
+specified address in global or local memory address space into the 
+specified cache level (L1 or L2). The '`prefetchu.*``' instruction brings the cache line 
+containing the specified generic address into the specified uniform cache level.
+If no address space is specified, it is assumed to be generic address. The intrinsic 
+uses and eviction priority which can be accessed by the '``.level::eviction_priority``' modifier.
+
+* A prefetch to a shared memory location performs no operation.
+* A prefetch into the uniform cache requires a generic address, 
+  and no operation occurs if the address maps to a const, local, or shared memory location.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu>`_.
+
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1059,6 +1099,81 @@ flavors of the instruction respectively.
 
 For more information, refer to the PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+
+'``llvm.nvvm.tcgen05.commit``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.commit.{cg1,cg2}(ptr %mbar)
+  declare void @llvm.nvvm.tcgen05.commit.shared.{cg1,cg2}(ptr addrspace(3) %mbar)
+  declare void @llvm.nvvm.tcgen05.commit.mc.{cg1,cg2}(ptr %mbar, i16 %mc)
+  declare void @llvm.nvvm.tcgen05.commit.mc.shared.{cg1,cg2}(ptr addrspace(3) %mbar, i16 %mc)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.commit.*``' intrinsics correspond to the
+``tcgen05.commit.{cg1/cg2}.mbarrier::arrive::one.*`` set of PTX instructions.
+The ``tcgen05.commit`` is an asynchronous instruction which makes the mbarrier
+object (``%mbar``) track the completion of all prior asynchronous tcgen05 operations.
+The ``.mc`` variants allow signaling on the mbarrier objects of multiple CTAs
+(specified by ``%mc``) in the cluster. The ``.cg1`` and ``.cg2`` variants generate
+``cta_group::1`` and ``cta_group::2`` flavors of the instruction respectively.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit>`_.
+
+'``llvm.nvvm.tcgen05.wait``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.wait.ld()
+  declare void @llvm.nvvm.tcgen05.wait.st()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.wait.ld/st``' intrinsics correspond to
+the ``tcgen05.wait::{ld/st}.sync.aligned`` pair of PTX instructions.
+The ``tcgen05.wait::ld`` causes the executing thread to block until
+all prior ``tcgen05.ld`` operations issued by the executing thread
+have completed. The ``tcgen05.wait::st`` causes the executing thread
+to block until all prior ``tcgen05.st`` operations issued by the
+executing thread have completed.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait>`_.
+
+'``llvm.nvvm.tcgen05.fence``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.fence.before.thread.sync()
+  declare void @llvm.nvvm.tcgen05.fence.after.thread.sync()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.fence.*``' intrinsics correspond to
+the ``tcgen05.fence::{before/after}_thread_sync`` pair of PTX instructions.
+These instructions act as code motion fences for asynchronous tcgen05
+operations.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence>`_.
+
 
 Other Intrinsics
 ----------------
