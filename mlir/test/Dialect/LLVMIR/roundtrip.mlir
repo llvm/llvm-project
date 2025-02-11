@@ -941,3 +941,48 @@ llvm.func @test_assume_intr_with_opbundles(%arg0 : !llvm.ptr) {
   llvm.intr.assume %0 ["tag1"(%1, %2 : i32, i32), "tag2"(%3 : i32)] : i1
   llvm.return
 }
+
+llvm.func @somefunc(i32, !llvm.ptr)
+
+// CHECK-LABEL: llvm.func @test_call_arg_attrs_direct(
+// CHECK-SAME:    %[[VAL_0:.*]]: i32,
+// CHECK-SAME:    %[[VAL_1:.*]]: !llvm.ptr)
+llvm.func @test_call_arg_attrs_direct(%arg0: i32, %arg1: !llvm.ptr) {
+  // CHECK: llvm.call @somefunc(%[[VAL_0]], %[[VAL_1]]) : (i32, !llvm.ptr {llvm.byval = i64}) -> ()
+  llvm.call @somefunc(%arg0, %arg1) : (i32, !llvm.ptr {llvm.byval = i64}) -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_call_arg_attrs_indirect(
+// CHECK-SAME:    %[[VAL_0:.*]]: i16,
+// CHECK-SAME:    %[[VAL_1:.*]]: !llvm.ptr
+llvm.func @test_call_arg_attrs_indirect(%arg0: i16, %arg1: !llvm.ptr) -> i16 {
+  // CHECK: llvm.call tail %[[VAL_1]](%[[VAL_0]]) : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  %0 = llvm.call tail %arg1(%arg0) : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  llvm.return %0 : i16
+}
+
+// CHECK-LABEL:   llvm.func @test_invoke_arg_attrs(
+// CHECK-SAME:      %[[VAL_0:.*]]: i16) attributes {personality = @__gxx_personality_v0} {
+llvm.func @test_invoke_arg_attrs(%arg0: i16) attributes { personality = @__gxx_personality_v0 } {
+  // CHECK:  llvm.invoke @somefunc(%[[VAL_0]]) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> ()
+  llvm.invoke @somefunc(%arg0) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> ()
+^bb1:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// CHECK-LABEL:   llvm.func @test_invoke_arg_attrs_indirect(
+// CHECK-SAME:      %[[VAL_0:.*]]: i16,
+// CHECK-SAME:      %[[VAL_1:.*]]: !llvm.ptr) -> i16 attributes {personality = @__gxx_personality_v0} {
+llvm.func @test_invoke_arg_attrs_indirect(%arg0: i16, %arg1: !llvm.ptr) -> i16 attributes { personality = @__gxx_personality_v0 } {
+  // CHECK: llvm.invoke %[[VAL_1]](%[[VAL_0]]) to ^bb2 unwind ^bb1 : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  %0 = llvm.invoke %arg1(%arg0) to ^bb2 unwind ^bb1 : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+^bb1:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return %0 : i16
+^bb2:
+  llvm.return %0 : i16
+}

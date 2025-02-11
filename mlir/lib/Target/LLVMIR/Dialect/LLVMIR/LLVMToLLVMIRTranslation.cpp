@@ -225,6 +225,39 @@ static void convertLinkerOptionsOp(ArrayAttr options,
 }
 
 static LogicalResult
+convertParameterAndResultAttrs(CallOpInterface callOp, llvm::CallBase *call,
+                               LLVM::ModuleTranslation &moduleTranslation) {
+  if (ArrayAttr argAttrsArray = callOp.getArgAttrsAttr()) {
+    for (auto [argIdx, argAttrsAttr] : llvm::enumerate(argAttrsArray)) {
+      if (auto argAttrs = cast<DictionaryAttr>(argAttrsAttr);
+          !argAttrs.empty()) {
+        FailureOr<llvm::AttrBuilder> attrBuilder =
+            moduleTranslation.convertParameterAttrs(callOp, argAttrs);
+        if (failed(attrBuilder))
+          return failure();
+        call->addParamAttrs(argIdx, *attrBuilder);
+      }
+    }
+  }
+
+  ArrayAttr resAttrsArray = callOp.getResAttrsAttr();
+  if (resAttrsArray && resAttrsArray.size() > 0) {
+    if (resAttrsArray.size() != 1)
+      return mlir::emitError(callOp.getLoc(),
+                             "llvm.func cannot have multiple results");
+    if (auto resAttrs = cast<DictionaryAttr>(resAttrsArray[0]);
+        !resAttrs.empty()) {
+      FailureOr<llvm::AttrBuilder> attrBuilder =
+          moduleTranslation.convertParameterAttrs(callOp, resAttrs);
+      if (failed(attrBuilder))
+        return failure();
+      call->addRetAttrs(*attrBuilder);
+    }
+  }
+  return success();
+}
+
+static LogicalResult
 convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
 
@@ -264,6 +297,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::NoUnwind);
     if (callOp.getWillReturnAttr())
       call->addFnAttr(llvm::Attribute::WillReturn);
+
+    if (failed(convertParameterAndResultAttrs(callOp, call, moduleTranslation)))
+      return failure();
 
     if (MemoryEffectsAttr memAttr = callOp.getMemoryEffectsAttr()) {
       llvm::MemoryEffects memEffects =
@@ -372,6 +408,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           operandsRef.drop_front(), opBundles);
     }
     result->setCallingConv(convertCConvToLLVM(invOp.getCConv()));
+    if (failed(
+            convertParameterAndResultAttrs(invOp, result, moduleTranslation)))
+      return failure();
     moduleTranslation.mapBranch(invOp, result);
     // InvokeOp can only have 0 or 1 result
     if (invOp->getNumResults() != 0) {
