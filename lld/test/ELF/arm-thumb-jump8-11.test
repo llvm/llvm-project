@@ -1,0 +1,108 @@
+# RUN: split-file %s %t
+# RUN: clang -x c -E -P -DLITTLEENDIAN %t/a.yaml -o %t/a.yaml
+# RUN: clang -x c -E -P -DLITTLEENDIAN %t/b.yaml -o %t/b.yaml
+# RUN: yaml2obj %t/a.yaml -o %t/a.o
+# RUN: yaml2obj %t/b.yaml -o %t/b.o
+# RUN: ld.lld %t/a.o %t/b.o -o %t/linked.o
+# RUN: llvm-objdump -d %t/linked.o | FileCheck %s --check-prefixes=CHECK,CHECK-LE
+
+# RUN: split-file %s %t
+# RUN: clang -x c -E -P -DBIGENDIAN %t/a.yaml -o %t/a.yaml
+# RUN: clang -x c -E -P -DBIGENDIAN %t/b.yaml -o %t/b.yaml
+# RUN: yaml2obj %t/a.yaml -o %t/a.o
+# RUN: yaml2obj %t/b.yaml -o %t/b.o
+# RUN: ld.lld %t/a.o %t/b.o -o %t/linked.o
+# RUN: llvm-objdump -d %t/linked.o | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+
+# CHECK-LE:    linked.o:	file format elf32-littlearm
+# CHECK-BE:    linked.o:	file format elf32-bigarm
+# CHECK-EMPTY:
+# CHECK-NEXT:  Disassembly of section .text:
+# CHECK-EMPTY:
+# CHECK-NEXT:  [[#%x,_START:]] <_start>:
+# CHECK-NEXT:      [[#_START]]: e000         	b	0x[[FOO:[0-9a-f]+]] <foo>      @ imm = #0x0
+# CHECK-NEXT:    [[#_START+2]]: d0ff         	beq	0x[[FOO]] <foo>         @ imm = #-0x2
+# CHECK-EMPTY:
+# CHECK-NEXT:    [[#_START+4]] <foo>:
+# CHECK-NEXT:    [[#_START+4]]: 4770         	bx	lr
+
+#--- a.yaml
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+#if defined BIGENDIAN
+  Data:            ELFDATA2MSB
+#elif defined LITTLEENDIAN
+  Data:            ELFDATA2LSB
+#endif
+  Type:            ET_REL
+  Machine:         EM_ARM
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+#if defined BIGENDIAN
+    Content:         E7FED0FE
+#elif defined LITTLEENDIAN
+    Content:         FEE7FED0
+#endif
+  - Name:            .rel.text
+    Type:            SHT_REL
+    Info:            .text
+    Relocations:
+      - Symbol:          foo
+        Type:            R_ARM_THM_JUMP11
+      - Offset:          0x2
+        Symbol:          foo
+        Type:            R_ARM_THM_JUMP8
+Symbols:
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            '$t'
+    Section:         .text
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1
+    Size:            0x4
+  - Name:            foo
+    Binding:         STB_GLOBAL
+...
+
+#--- b.yaml
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+#if defined BIGENDIAN
+  Data:            ELFDATA2MSB
+#elif defined LITTLEENDIAN
+  Data:            ELFDATA2LSB
+#endif
+  Type:            ET_REL
+  Machine:         EM_ARM
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+#ifdef BIGENDIAN
+    Content:         '4770'
+#elif defined LITTLEENDIAN
+    Content:         '7047'
+#endif
+Symbols:
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            '$t'
+    Section:         .text
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1
+    Size:            0x2
+...
