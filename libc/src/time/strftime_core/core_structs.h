@@ -12,7 +12,7 @@
 #include "hdr/types/struct_tm.h"
 #include "src/__support/CPP/string_view.h"
 
-#include <inttypes.h>
+#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace strftime_core {
@@ -28,12 +28,12 @@ enum FormatFlags : uint8_t {
 };
 
 struct FormatSection {
-  bool has_conv;
-  cpp::string_view raw_string;
+  bool has_conv = false;
+  cpp::string_view raw_string = {};
 
   FormatFlags flags = FormatFlags(0);
-  ConvModifier modifier;
-  char conv_name;
+  ConvModifier modifier = ConvModifier::none;
+  char conv_name = '\0';
   int min_width = 0;
 };
 

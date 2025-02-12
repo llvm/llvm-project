@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_PARSER_H
 
 #include "core_structs.h"
+#include "hdr/types/struct_tm.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"

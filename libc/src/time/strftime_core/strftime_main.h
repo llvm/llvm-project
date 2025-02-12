@@ -9,16 +9,15 @@
 #ifndef LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_STRFTIME_MAIN_H
 #define LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_STRFTIME_MAIN_H
 
+#include "hdr/types/struct_tm.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/writer.h"
-
-#include "hdr/types/struct_tm.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace strftime_core {
 
 int strftime_main(printf_core::Writer *writer, const char *__restrict str,
-                  const struct tm *timeptr);
+                  const tm *timeptr);
 
 } // namespace strftime_core
 } // namespace LIBC_NAMESPACE_DECL

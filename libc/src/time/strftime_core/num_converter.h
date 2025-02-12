@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_NUM_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_NUM_CONVERTER_H
 
+#include "hdr/types/struct_tm.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/config.h"
@@ -23,9 +24,9 @@ namespace strftime_core {
 using DecFmt = IntegerToString<uintmax_t>;
 
 struct IntFormatSection {
-  uintmax_t num;
-  char sign_char;
-  size_t pad_to_len;
+  uintmax_t num = 0;
+  char sign_char = '\0';
+  size_t pad_to_len = 0;
   char padding_char = '0';
 };
 

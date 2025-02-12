@@ -9,10 +9,9 @@
 #ifndef LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_CONVERTER_H
 
+#include "hdr/types/struct_tm.h"
 #include "src/stdio/printf_core/writer.h"
 #include "src/time/strftime_core/core_structs.h"
-
-#include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace strftime_core {

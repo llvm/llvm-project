@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_STR_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_STR_CONVERTER_H
 
+#include "hdr/types/struct_tm.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/writer.h"
@@ -23,10 +24,7 @@ static constexpr cpp::string_view OUT_OF_BOUNDS_STR = "?";
 
 LIBC_INLINE cpp::string_view
 unwrap_opt(cpp::optional<cpp::string_view> str_opt) {
-  if (str_opt.has_value())
-    return *str_opt;
-  else
-    return OUT_OF_BOUNDS_STR;
+  return str_opt.has_value() ? *str_opt : OUT_OF_BOUNDS_STR;
 }
 
 LIBC_INLINE int convert_str(printf_core::Writer *writer,

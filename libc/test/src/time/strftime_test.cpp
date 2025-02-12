@@ -61,7 +61,7 @@ public:
     size_t i = 0;
     for (; static_cast<int>(i) < leading_zeroes; ++i)
       buff[i] = padding_char;
-    for (size_t str_cur = 0; str_cur < str.size(); ++i, ++str_cur)
+    for (size_t str_cur = 0, e = str.size(); str_cur < e; ++i, ++str_cur)
       buff[i] = str[str_cur];
     cur_len = i;
     return buff;
@@ -282,6 +282,7 @@ TEST(LlvmLibcStrftimeTest, CenturyTests) {
 }
 
 TEST(LlvmLibcStrftimeTest, TwoDigitDayOfMonth) {
+  using LIBC_NAMESPACE::time_constants::MAX_DAYS_PER_MONTH;
   // this tests %d, which reads: [tm_mday]
   struct tm time;
   char buffer[100];
@@ -289,7 +290,7 @@ TEST(LlvmLibcStrftimeTest, TwoDigitDayOfMonth) {
   SimplePaddedNum spn;
 
   // Tests on all the well defined values
-  for (size_t i = 1; i < 32; ++i) {
+  for (size_t i = 1; i <= MAX_DAYS_PER_MONTH; ++i) {
     time.tm_mday = i;
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%d", &time);
     char *result = spn.get_padded_num(i, 2);

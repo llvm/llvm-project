@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 size_t strftime(char *__restrict, size_t max, const char *__restrict format,
-                const struct tm *timeptr);
+                const tm *timeptr);
 
 } // namespace LIBC_NAMESPACE_DECL
 
