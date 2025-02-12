@@ -2408,6 +2408,11 @@ public:
   using EmitFallbackCallbackTy =
       function_ref<InsertPointOrErrorTy(InsertPointTy)>;
 
+  // Callback function type for emitting and fetching user defined custom
+  // mappers.
+  using CustomMapperCallbackTy =
+      function_ref<Expected<Function *>(unsigned int)>;
+
   /// Generate a target region entry call and host fallback call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
@@ -2474,9 +2479,9 @@ public:
   /// return nullptr by reference. Accepts a reference to a MapInfosTy object
   /// that contains information generated for mappable clauses,
   /// including base pointers, pointers, sizes, map types, user-defined mappers.
-  void emitOffloadingArrays(
+  Error emitOffloadingArrays(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
-      TargetDataInfo &Info, function_ref<Value *(unsigned int)> CustomMapperCB,
+      TargetDataInfo &Info, CustomMapperCallbackTy CustomMapperCB,
       bool IsNonContiguous = false,
       function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr);
 
@@ -2486,11 +2491,11 @@ public:
   /// library. In essence, this function is a combination of
   /// emitOffloadingArrays and emitOffloadingArraysArgument and should arguably
   /// be preferred by clients of OpenMPIRBuilder.
-  void emitOffloadingArraysAndArgs(
+  Error emitOffloadingArraysAndArgs(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, TargetDataInfo &Info,
       TargetDataRTArgs &RTArgs, MapInfosTy &CombinedInfo,
-      function_ref<Value *(unsigned int)> CustomMapperCB,
-      bool IsNonContiguous = false, bool ForEndCall = false,
+      CustomMapperCallbackTy CustomMapperCB, bool IsNonContiguous = false,
+      bool ForEndCall = false,
       function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr);
 
   /// Creates offloading entry for the provided entry ID \a ID, address \a
@@ -2956,7 +2961,7 @@ public:
           InsertPointTy CodeGenIP, llvm::Value *PtrPHI, llvm::Value *BeginArg)>
           PrivAndGenMapInfoCB,
       llvm::Type *ElemTy, StringRef FuncName,
-      function_ref<bool(unsigned int, Function **)> CustomMapperCB);
+      CustomMapperCallbackTy CustomMapperCB);
 
   /// Generator for '#omp target data'
   ///
@@ -2979,7 +2984,7 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, Value *DeviceID, Value *IfCond,
       TargetDataInfo &Info, GenMapInfoCallbackTy GenMapInfoCB,
-      function_ref<Value *(unsigned int)> CustomMapperCB,
+      CustomMapperCallbackTy CustomMapperCB,
       omp::RuntimeFunction *MapperFunc = nullptr,
       function_ref<InsertPointOrErrorTy(InsertPointTy CodeGenIP,
                                         BodyGenTy BodyGenType)>
@@ -3028,7 +3033,7 @@ public:
       SmallVectorImpl<Value *> &Inputs, GenMapInfoCallbackTy GenMapInfoCB,
       TargetBodyGenCallbackTy BodyGenCB,
       TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
-      function_ref<Value *(unsigned int)> CustomMapperCB,
+      CustomMapperCallbackTy CustomMapperCB,
       SmallVector<DependData> Dependencies = {}, bool HasNowait = false);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified

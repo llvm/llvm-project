@@ -3608,16 +3608,17 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
     return combinedInfo;
   };
 
-  auto customMapperCB = [&](unsigned i, llvm::Function **mapperFunc) {
+  auto customMapperCB = [&](unsigned i) -> llvm::Expected<llvm::Function *> {
+    llvm::Function *mapperFunc = nullptr;
     if (combinedInfo.Mappers[i]) {
       // Call the corresponding mapper function.
       llvm::Expected<llvm::Function *> newFn = getOrCreateUserDefinedMapperFunc(
           combinedInfo.Mappers[i], builder, moduleTranslation);
-      assert(newFn && "Expect a valid mapper function is available");
-      *mapperFunc = *newFn;
-      return true;
+      if (!newFn)
+        return newFn.takeError();
+      mapperFunc = *newFn;
     }
-    return false;
+    return mapperFunc;
   };
 
   llvm::Expected<llvm::Function *> newFn = ompBuilder->emitUserDefinedMapper(
@@ -3840,13 +3841,15 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
     return builder.saveIP();
   };
 
-  auto customMapperCB = [&](unsigned int i) {
+  auto customMapperCB =
+      [&](unsigned int i) -> llvm::Expected<llvm::Function *> {
     llvm::Function *mapperFunc = nullptr;
     if (combinedInfo.Mappers[i]) {
       info.HasMapper = true;
       llvm::Expected<llvm::Function *> newFn = getOrCreateUserDefinedMapperFunc(
           combinedInfo.Mappers[i], builder, moduleTranslation);
-      assert(newFn && "Expect a valid mapper function is available");
+      if (!newFn)
+        return newFn.takeError();
       mapperFunc = *newFn;
     }
     return mapperFunc;
@@ -4551,13 +4554,15 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
 
-  auto customMapperCB = [&](unsigned int i) {
-    llvm::Value *mapperFunc = nullptr;
+  auto customMapperCB =
+      [&](unsigned int i) -> llvm::Expected<llvm::Function *> {
+    llvm::Function *mapperFunc = nullptr;
     if (combinedInfos.Mappers[i]) {
       info.HasMapper = true;
       llvm::Expected<llvm::Function *> newFn = getOrCreateUserDefinedMapperFunc(
           combinedInfos.Mappers[i], builder, moduleTranslation);
-      assert(newFn && "Expect a valid mapper function is available");
+      if (!newFn)
+        return newFn.takeError();
       mapperFunc = *newFn;
     }
     return mapperFunc;

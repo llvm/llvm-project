@@ -8879,7 +8879,7 @@ static void emitOffloadingArraysAndArgs(
   };
 
   auto CustomMapperCB = [&](unsigned int I) {
-    llvm::Value *MFunc = nullptr;
+    llvm::Function *MFunc = nullptr;
     if (CombinedInfo.Mappers[I]) {
       Info.HasMapper = true;
       MFunc = CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
@@ -8887,9 +8887,9 @@ static void emitOffloadingArraysAndArgs(
     }
     return MFunc;
   };
-  OMPBuilder.emitOffloadingArraysAndArgs(
+  cantFail(OMPBuilder.emitOffloadingArraysAndArgs(
       AllocaIP, CodeGenIP, Info, Info.RTArgs, CombinedInfo, CustomMapperCB,
-      IsNonContiguous, ForEndCall, DeviceAddrCB);
+      IsNonContiguous, ForEndCall, DeviceAddrCB));
 }
 
 /// Check for inner distribute directive.
@@ -9082,15 +9082,15 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
     return CombinedInfo;
   };
 
-  auto CustomMapperCB = [&](unsigned I, llvm::Function **MapperFunc) {
+  auto CustomMapperCB = [&](unsigned I) {
+    llvm::Function *MapperFunc = nullptr;
     if (CombinedInfo.Mappers[I]) {
       // Call the corresponding mapper function.
-      *MapperFunc = getOrCreateUserDefinedMapperFunc(
+      MapperFunc = getOrCreateUserDefinedMapperFunc(
           cast<OMPDeclareMapperDecl>(CombinedInfo.Mappers[I]));
-      assert(*MapperFunc && "Expect a valid mapper function is available.");
-      return true;
+      assert(MapperFunc && "Expect a valid mapper function is available.");
     }
-    return false;
+    return MapperFunc;
   };
 
   SmallString<64> TyStr;
@@ -9098,10 +9098,9 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   CGM.getCXXABI().getMangleContext().mangleCanonicalTypeName(Ty, Out);
   std::string Name = getName({"omp_mapper", TyStr, D->getName()});
 
-  llvm::Expected<llvm::Function *> NewFn = OMPBuilder.emitUserDefinedMapper(
-      PrivatizeAndGenMapInfoCB, ElemTy, Name, CustomMapperCB);
-  assert(NewFn && "Unexpected error in emitUserDefinedMapper");
-  UDMMap.try_emplace(D, *NewFn);
+  llvm::Function *NewFn = cantFail(OMPBuilder.emitUserDefinedMapper(
+      PrivatizeAndGenMapInfoCB, ElemTy, Name, CustomMapperCB));
+  UDMMap.try_emplace(D, NewFn);
   if (CGF)
     FunctionUDMMap[CGF->CurFn].push_back(D);
 }
@@ -10074,7 +10073,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
   };
 
   auto CustomMapperCB = [&](unsigned int I) {
-    llvm::Value *MFunc = nullptr;
+    llvm::Function *MFunc = nullptr;
     if (CombinedInfo.Mappers[I]) {
       Info.HasMapper = true;
       MFunc = CGF.CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
