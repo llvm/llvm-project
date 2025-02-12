@@ -5,47 +5,38 @@
 # in SILowerSGPRSpills, the SubReg spill gets marked KILLED even though its SuperReg is in the function Live-ins. This causes machine
 # verifier to now fail at direct usage of that SubReg, which intially should not be any problem before adding spill.
 
-# VERIFIER: *** Bad machine code: Using an undefined physical register ***
+# VERIFIER: After SI lower SGPR spill instructions
 
+# VERIFIER: *** Bad machine code: Using an undefined physical register ***
+# VERIFIER: - instruction: S_NOP 0, implicit $sgpr50
+# VERIFIER-NEXT: - operand 1:   implicit $sgpr50
+
+# VERIFIER: *** Bad machine code: Using an undefined physical register ***
+# VERIFIER: - instruction: S_NOP 0, implicit $sgpr52
+# VERIFIER-NEXT: - operand 1:   implicit $sgpr52
+
+# VERIFIER: *** Bad machine code: Using an undefined physical register ***
+# VERIFIER: - instruction: S_NOP 0, implicit $sgpr55
+# VERIFIER-NEXT: - operand 1:   implicit $sgpr55
+
+# VERIFIER: LLVM ERROR: Found 3 machine code errors. 
 ---
-name: spill_partial_live_csr_sgpr_argument_test_1
+name: spill_partial_live_csr_sgpr_test
 tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr50_sgpr51' }
+  - { reg: '$sgpr52_sgpr53' }
+  - { reg: '$sgpr54_sgpr55' }
 body:             |
   bb.0:
-    liveins: $sgpr50_sgpr51
+    liveins: $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55
 
     S_NOP 0, implicit $sgpr50
     $sgpr50 = S_MOV_B32 0
-
-...
-
----
-name: spill_partial_live_csr_sgpr_argument_test_2
-tracksRegLiveness: true
-liveins:
-  - { reg: '$sgpr50_sgpr51' }
-body:             |
-  bb.0:
-    liveins: $sgpr50_sgpr51
-
-    S_NOP 0, implicit $sgpr50
-    $sgpr50_sgpr51 = S_MOV_B64 0
-
-...
-
----
-name: spill_partial_live_csr_sgpr_argument_test_3
-tracksRegLiveness: true
-liveins:
-  - { reg: '$sgpr52_sgpr53' }
-body:             |
-  bb.0:
-    liveins: $sgpr52_sgpr53
-
-    S_NOP 0, implicit $sgpr53
+    S_NOP 0, implicit $sgpr52
     $sgpr52_sgpr53 = S_MOV_B64 0
-    $sgpr54 = S_MOV_B32 0
-
+    S_NOP 0, implicit $sgpr55
+    $sgpr54_sgpr55 = S_MOV_B64 0
+    $sgpr56 = S_MOV_B32 0
 ...
+
