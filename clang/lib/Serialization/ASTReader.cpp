@@ -9953,7 +9953,10 @@ DeclarationNameInfo ASTRecordReader::readDeclarationNameInfo() {
 }
 
 TypeCoupledDeclRefInfo ASTRecordReader::readTypeCoupledDeclRefInfo() {
-  return TypeCoupledDeclRefInfo(readDeclAs<ValueDecl>(), readBool());
+  ValueDecl *D = readDeclAs<ValueDecl>();
+  bool IsDeref = readBool();
+  bool IsMember = readBool();
+  return TypeCoupledDeclRefInfo(D, IsDeref, IsMember);
 }
 
 void ASTRecordReader::readQualifierInfo(QualifierInfo &Info) {

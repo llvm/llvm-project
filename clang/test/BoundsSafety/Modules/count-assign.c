@@ -1,4 +1,3 @@
-// REQUIRES: system-darwin
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fbounds-safety -fmodules -fno-implicit-modules -x c -I%S/Inputs/count-assign -emit-module %S/Inputs/count-assign/module.modulemap -fmodule-name=ca -o %t/count-assign.pcm
 // RUN: %clang_cc1 -fbounds-safety  -fmodules -fno-implicit-modules -x c -I%S/Inputs/count-assign -ast-dump-all -o - %s -fmodule-file=%t/count-assign.pcm | FileCheck %s

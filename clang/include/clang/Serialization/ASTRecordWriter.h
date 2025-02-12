@@ -149,6 +149,7 @@ public:
   void writeTypeCoupledDeclRefInfo(TypeCoupledDeclRefInfo Info) {
     writeDeclRef(Info.getDecl());
     writeBool(Info.isDeref());
+    writeBool(Info.isMember());
   }
 
   /// Emit a source range.
