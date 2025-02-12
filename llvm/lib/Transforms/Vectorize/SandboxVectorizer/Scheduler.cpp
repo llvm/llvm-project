@@ -230,11 +230,13 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // top-most part of the schedule that includes the instrs in the bundle and
     // re-schedule.
     trimSchedule(Instrs);
+    ScheduleTopItOpt = std::nullopt;
     [[fallthrough]];
   case BndlSchedState::NoneScheduled: {
     // TODO: Set the window of the DAG that we are interested in.
-    // We start scheduling at the bottom instr of Instrs.
-    ScheduleTopItOpt = std::next(VecUtils::getLowest(Instrs)->getIterator());
+    if (!ScheduleTopItOpt)
+      // We start scheduling at the bottom instr of Instrs.
+      ScheduleTopItOpt = std::next(VecUtils::getLowest(Instrs)->getIterator());
 
     // TODO: For now don't cross BBs.
     if (!DAG.getInterval().empty()) {
@@ -262,6 +264,12 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
 void Scheduler::dump(raw_ostream &OS) const {
   OS << "ReadyList:\n";
   ReadyList.dump(OS);
+  OS << "Top of schedule: ";
+  if (ScheduleTopItOpt)
+    OS << **ScheduleTopItOpt;
+  else
+    OS << "Empty";
+  OS << "\n";
 }
 void Scheduler::dump() const { dump(dbgs()); }
 #endif // NDEBUG
