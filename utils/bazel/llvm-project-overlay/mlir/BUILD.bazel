@@ -9298,6 +9298,7 @@ cc_library(
         ":OpenMPDialect",
         ":Support",
         ":TransformUtils",
+        "//llvm:Analysis",
         "//llvm:Core",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
