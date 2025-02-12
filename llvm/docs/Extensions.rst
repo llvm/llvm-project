@@ -550,6 +550,7 @@ following format:
 Example:
 
 .. code-block:: gas
+
   .section  ".llvm_func_map","",@llvm_func_map
   .byte     1                             # version number
   .quad     .Lfunc_begin1                 # function address
