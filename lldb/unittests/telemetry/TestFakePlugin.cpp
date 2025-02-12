@@ -17,9 +17,14 @@
 
 #include <memory>
 
-TEST(SmokeTest, Test) {
-
+TEST(TelemetryTest, PluginTest) {
   auto ins = lldb_private::telemetry::TelemetryManager::getInstance();
 
   ASSERT_NE(ins, nullptr);
+  lldb_private::FakeTelemetryInfo entry;
+  entry.msg = "";
+
+  auto stat = ins->preDispatch(&entry);
+  ASSERT_FALSE(stat);
+  ASSERT_EQ("In FakePlugin", entry.msg);
 }
