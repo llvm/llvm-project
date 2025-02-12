@@ -215,7 +215,7 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
         LLT EltTy = DstTy.getElementType();
         B128 = LLT::fixed_vector(128 / EltTy.getSizeInBits(), EltTy);
       } else {
-        B128 = LLT::scalar(128);
+        B128 = LLT::integer(128);
       }
       if (Size / 128 == 2)
         splitLoad(MI, {B128, B128});
