@@ -337,13 +337,6 @@ public:
   /// Create CaptureInfo that may capture all components of the pointer.
   static CaptureInfo all() { return CaptureInfo(CaptureComponents::All); }
 
-  /// Create CaptureInfo that may only capture through means other than the
-  /// return value.
-  static CaptureInfo
-  otherOnly(CaptureComponents OtherComponents = CaptureComponents::All) {
-    return CaptureInfo(OtherComponents, CaptureComponents::None);
-  }
-
   /// Create CaptureInfo that may only capture via the return value.
   static CaptureInfo
   retOnly(CaptureComponents RetComponents = CaptureComponents::All) {
