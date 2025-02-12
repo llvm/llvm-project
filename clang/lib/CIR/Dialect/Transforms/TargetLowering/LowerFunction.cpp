@@ -1166,7 +1166,13 @@ mlir::Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
       if (::cir::MissingFeatures::undef())
         cir_cconv_unreachable("NYI");
 
-      IRCallArgs[FirstIRArg] = alloca;
+      // TODO(cir): add check for cases where we don't need the memcpy
+      auto tmpAlloca = createTmpAlloca(
+          *this, alloca.getLoc(),
+          mlir::cast<PointerType>(alloca.getType()).getPointee());
+      auto tySize = LM.getDataLayout().getTypeAllocSize(I->getType());
+      createMemCpy(*this, tmpAlloca, alloca, tySize.getFixedValue());
+      IRCallArgs[FirstIRArg] = tmpAlloca;
 
       // NOTE(cir): Skipping Emissions, lifetime markers.
 

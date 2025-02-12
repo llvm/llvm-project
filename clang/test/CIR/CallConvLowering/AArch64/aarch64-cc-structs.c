@@ -171,20 +171,24 @@ GT_128 get_gt_128(GT_128 s) {
 }
 
 // CHECK: cir.func no_proto @call_and_get_gt_128(%arg0: !cir.ptr<!ty_GT_128_>
-// CHECK: %[[#V0:]] = cir.alloca !ty_GT_128_, !cir.ptr<!ty_GT_128_>, {{.*}} {alignment = 8 : i64}
-// CHECK: %[[#V1:]] = cir.alloca !ty_GT_128_, !cir.ptr<!ty_GT_128_>, {{.*}} {alignment = 8 : i64}
-// CHECK: cir.call @get_gt_128(%[[#V1]], %arg0) : (!cir.ptr<!ty_GT_128_>, !cir.ptr<!ty_GT_128_>) -> ()
-// CHECK: %[[#V2:]] = cir.load %[[#V1]] : !cir.ptr<!ty_GT_128_>, !ty_GT_128_
-// CHECK: cir.store %[[#V2]], %[[#V0]] : !ty_GT_128_, !cir.ptr<!ty_GT_128_>
+// CHECK: %[[#V0:]] = cir.alloca !ty_GT_128_, !cir.ptr<!ty_GT_128_>, ["tmp"] {alignment = 8 : i64}
+// CHECK: %[[#V1:]] = cir.load %arg0 : !cir.ptr<!ty_GT_128_>, !ty_GT_128_
+// CHECK: %[[#V2:]] = cir.alloca !ty_GT_128_, !cir.ptr<!ty_GT_128_>, [""] {alignment = 8 : i64}
+// CHECK: %[[#V3:]] = cir.alloca !ty_GT_128_, !cir.ptr<!ty_GT_128_>, ["tmp"] {alignment = 8 : i64}
+// CHECK: %[[#V4:]] = cir.cast(bitcast, %arg0 : !cir.ptr<!ty_GT_128_>), !cir.ptr<!void>
+// CHECK: %[[#V5:]] = cir.cast(bitcast, %[[#V3]] : !cir.ptr<!ty_GT_128_>), !cir.ptr<!void>
+// CHECK: %[[#V6:]] = cir.const #cir.int<24> : !u64i
+// CHECK: cir.libc.memcpy %[[#V6]] bytes from %[[#V4]] to %[[#V5]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+// CHECK: cir.call @get_gt_128(%[[#V2]], %[[#V3]]) : (!cir.ptr<!ty_GT_128_>, !cir.ptr<!ty_GT_128_>) -> ()
 // CHECK: cir.return
 
 // LLVM: void @call_and_get_gt_128(ptr %[[#V0:]])
 // LLVM: %[[#V2:]] = alloca %struct.GT_128, i64 1, align 8
-// LLVM: %[[#V3:]] = alloca %struct.GT_128, i64 1, align 8
-// LLVM: call void @get_gt_128(ptr %[[#V3]], ptr %[[#V0]])
-// LLVM: %[[#V4:]] = load %struct.GT_128, ptr %[[#V3]], align 8
-// LLVM: store %struct.GT_128 %[[#V4]], ptr %[[#V2]], align 8
-// LLVM: ret void
+// LLVM: %[[#V3:]] = load %struct.GT_128, ptr %[[#V0]], align 8
+// LLVM: %[[#V4:]] = alloca %struct.GT_128, i64 1, align 8
+// LLVM: %[[#V5:]] = alloca %struct.GT_128, i64 1, align 8
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[#V5]], ptr %[[#V0]], i64 24, i1 false)
+// LLVM: call void @get_gt_128(ptr %[[#V4]], ptr %[[#V5]])
 GT_128 call_and_get_gt_128() {
   GT_128 s;
   s = get_gt_128(s);
