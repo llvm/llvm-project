@@ -154,12 +154,23 @@ void DXContainerGlobals::addSignature(Module &M,
 void DXContainerGlobals::addRootSignature(Module &M,
                                           SmallVector<GlobalValue *> &Globals) {
 
-  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
+  dxil::ModuleMetadataInfo &MMI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-  if (!RSA.getResult())
+  // Root Signature in Library shaders are different,
+  // since they don't use DXContainer to share it.
+  if (MMI.ShaderProfile == llvm::Triple::Library)
     return;
 
-  const ModuleRootSignature &MRS = RSA.getResult().value();
+  assert(MMI.EntryPropertyVec.size() == 1);
+
+  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
+  const Function *&EntryFunction = MMI.EntryPropertyVec[0].Entry;
+
+  if (!RSA.hasForFunction(EntryFunction))
+    return;
+
+  const ModuleRootSignature &MRS = RSA.getForFunction(EntryFunction);
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
 

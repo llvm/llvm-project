@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Metadata.h"
@@ -25,9 +26,8 @@ namespace dxil {
 enum class RootSignatureElementKind { None = 0, RootFlags = 1 };
 
 struct ModuleRootSignature {
+  ModuleRootSignature() = default;
   uint32_t Flags = 0;
-  static std::optional<ModuleRootSignature> analyzeModule(Module &M,
-                                                          const Function *F);
 };
 
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
@@ -37,9 +37,10 @@ class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
 public:
   RootSignatureAnalysis() = default;
 
-  using Result = std::optional<ModuleRootSignature>;
+  using Result = SmallDenseMap<const Function *, ModuleRootSignature>;
 
-  std::optional<ModuleRootSignature> run(Module &M, ModuleAnalysisManager &AM);
+  SmallDenseMap<const Function *, ModuleRootSignature>
+  run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Wrapper pass for the legacy pass manager.
@@ -48,18 +49,33 @@ public:
 /// passes which run through the legacy pass manager.
 class RootSignatureAnalysisWrapper : public ModulePass {
 private:
-  std::optional<ModuleRootSignature> MRS;
+  SmallDenseMap<const Function *, ModuleRootSignature> MRS;
 
 public:
   static char ID;
 
   RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
-  const std::optional<ModuleRootSignature> &getResult() const { return MRS; }
+  bool hasForFunction(const Function *F) { return MRS.find(F) != MRS.end(); }
+
+  ModuleRootSignature getForFunction(const Function *F) {
+    assert(hasForFunction(F));
+    return MRS[F];
+  }
 
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
+
+/// Printer pass for RootSignatureAnalysis results.
+class RootSignatureAnalysisPrinter
+    : public PassInfoMixin<RootSignatureAnalysisPrinter> {
+  raw_ostream &OS;
+
+public:
+  explicit RootSignatureAnalysisPrinter(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // namespace dxil
