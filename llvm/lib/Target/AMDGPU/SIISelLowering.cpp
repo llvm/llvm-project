@@ -2937,7 +2937,8 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   for (unsigned i = 0, e = Ins.size(), ArgIdx = 0; i != e; ++i) {
     const ISD::InputArg &Arg = Ins[i];
-    if ((Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) || IsUnsupportedHsa) {
+    if ((Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) ||
+        IsUnsupportedHsa) {
       InVals.push_back(DAG.getUNDEF(Arg.VT));
       continue;
     }
