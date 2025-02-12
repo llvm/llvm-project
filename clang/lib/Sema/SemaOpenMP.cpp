@@ -4788,13 +4788,26 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
       getLeafOrCompositeConstructs(ParentRegion, LeafOrComposite);
   OpenMPDirectiveKind EnclosingConstruct = ParentLOC.back();
 
-  if (SemaRef.LangOpts.OpenMP >= 51 && Stack->isParentOrderConcurrent() &&
-      CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
-      CurrentRegion != OMPD_parallel &&
-      !isOpenMPCombinedParallelADirective(CurrentRegion)) {
-    SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
-        << getOpenMPDirectiveName(CurrentRegion);
-    return true;
+  if (Stack->isParentOrderConcurrent()) {
+    bool InvalidOrderNesting = false;
+    if ((SemaRef.LangOpts.OpenMP == 51 || SemaRef.LangOpts.OpenMP == 52) &&
+        CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
+        CurrentRegion != OMPD_parallel &&
+        !isOpenMPCombinedParallelADirective(CurrentRegion)) {
+      InvalidOrderNesting = true;
+    } else if (SemaRef.LangOpts.OpenMP >= 60 &&
+               !isOpenMPOrderConcurrentNestableDirective(CurrentRegion)) {
+      // OpenMP 6.0 [12.3 order Clause, Restrictions]
+      // Only regions that correspond to order-concurrent-nestable constructs
+      // or order-concurrent-nestable routines may be strictly nested regions
+      // of regions that correspond to constructs on which the order clause is
+      // specified with concurrent as the ordering argument.
+      InvalidOrderNesting = true;
+    }
+    if (InvalidOrderNesting) {
+      SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
+          << getOpenMPDirectiveName(CurrentRegion);
+    }
   }
   if (isOpenMPSimdDirective(ParentRegion) &&
       ((SemaRef.LangOpts.OpenMP <= 45 && CurrentRegion != OMPD_ordered) ||
@@ -7114,7 +7127,8 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
   if (!CalleeFnDecl)
     return Call;
 
-  if (getLangOpts().OpenMP >= 51 && CalleeFnDecl->getIdentifier() &&
+  if (getLangOpts().OpenMP >= 51 && getLangOpts().OpenMP < 60 &&
+      CalleeFnDecl->getIdentifier() &&
       CalleeFnDecl->getName().starts_with_insensitive("omp_")) {
     // checking for any calls inside an Order region
     if (Scope && Scope->isOpenMPOrderClauseScope())
@@ -7134,7 +7148,7 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
   };
   TargetOMPContext OMPCtx(Context, std::move(DiagUnknownTrait),
                           SemaRef.getCurFunctionDecl(),
-                          DSAStack->getConstructTraits());
+                          DSAStack->getConstructTraits(), getOpenMPDeviceNum());
 
   QualType CalleeFnType = CalleeFnDecl->getType();
 
@@ -15631,6 +15645,38 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
   return ICE;
 }
 
+void SemaOpenMP::setOpenMPDeviceNum(int Num) { DeviceNum = Num; }
+
+void SemaOpenMP::setOpenMPDeviceNumID(StringRef ID) { DeviceNumID = ID; }
+
+int SemaOpenMP::getOpenMPDeviceNum() const { return DeviceNum; }
+
+void SemaOpenMP::ActOnOpenMPDeviceNum(Expr *DeviceNumExpr) {
+  llvm::APSInt Result;
+  Expr::EvalResult EvalResult;
+  // Evaluate the expression to an integer value
+  if (!DeviceNumExpr->isValueDependent() &&
+      DeviceNumExpr->EvaluateAsInt(EvalResult, SemaRef.Context)) {
+    // The device expression must evaluate to a non-negative integer value.
+    Result = EvalResult.Val.getInt();
+    if (Result.isNonNegative()) {
+      setOpenMPDeviceNum(Result.getZExtValue());
+    } else {
+      Diag(DeviceNumExpr->getExprLoc(),
+           diag::err_omp_negative_expression_in_clause)
+          << "device_num" << 0 << DeviceNumExpr->getSourceRange();
+    }
+  } else if (auto *DeclRef = dyn_cast<DeclRefExpr>(DeviceNumExpr)) {
+    // Check if the expression is an identifier
+    IdentifierInfo *IdInfo = DeclRef->getDecl()->getIdentifier();
+    if (IdInfo) {
+      setOpenMPDeviceNumID(IdInfo->getName());
+    }
+  } else {
+    Diag(DeviceNumExpr->getExprLoc(), diag::err_expected_expression);
+  }
+}
+
 OMPClause *SemaOpenMP::ActOnOpenMPSafelenClause(Expr *Len,
                                                 SourceLocation StartLoc,
                                                 SourceLocation LParenLoc,
@@ -23717,6 +23763,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPNullaryAssumptionClause(OpenMPClauseKind CK,
     return new (getASTContext()) OMPNoOpenMPRoutinesClause(Loc, RLoc);
   case OMPC_no_parallelism:
     return new (getASTContext()) OMPNoParallelismClause(Loc, RLoc);
+  case OMPC_no_openmp_constructs:
+    return new (getASTContext()) OMPNoOpenMPConstructsClause(Loc, RLoc);
   default:
     llvm_unreachable("Unexpected OpenMP clause");
   }

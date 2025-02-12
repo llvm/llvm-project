@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -fsyntax-only -Wall -Wc++20-compat -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++1z -verify %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -fsyntax-only -Wall -Wc++20-compat -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++20 -verify %s
 
+void* operator new(__SIZE_TYPE__, void*);
+
 // definitions for std::move
 namespace std {
 inline namespace foo {
@@ -1539,6 +1541,48 @@ void aggregate() {
       D2 e4 [[clang::require_explicit_initialization]];
     };
   };
+
+  struct Embed {
+    int embed1;  // #FIELD_EMBED1
+    int embed2 [[clang::require_explicit_initialization]];  // #FIELD_EMBED2
+  };
+  struct EmbedDerived : Embed {};
+  struct F {
+    Embed f1;
+    // expected-warning@+1 {{field in 'Embed' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[1]) : f1() {
+      // expected-warning@+1 {{field in 'Embed' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      ::new(static_cast<void*>(&f1)) decltype(f1);
+      // expected-warning@+1 {{field in 'Embed' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      ::new(static_cast<void*>(&f1)) decltype(f1)();
+#if __cplusplus >= 202002L
+      // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      ::new(static_cast<void*>(&f1)) decltype(f1)(1);
+#endif
+      // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      ::new(static_cast<void*>(&f1)) decltype(f1){1};
+    }
+#if __cplusplus >= 202002L
+    // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[2]) : f1(1) {}
+#else
+    explicit F(const char(&)[2]) : f1{1, 2} { }
+#endif
+    // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[3]) : f1{} {}
+    // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[4]) : f1{1} {}
+    // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[5]) : f1{.embed1 = 1} {}
+  };
+  F ctors[] = {
+      F(""),
+      F("_"),
+      F("__"),
+      F("___"),
+      F("____")
+  };
+  (void)ctors;
 
   S::foo(S{1, 2, 3, 4});
   S::foo(S{.s1 = 100, .s4 = 100});

@@ -167,9 +167,7 @@ std::vector<unsigned> SDNodeInfoEmitter::emitNodeNames(raw_ostream &OS) const {
     NameOffsets.push_back(NameTable.GetOrAddStringOffset(DebugName));
   }
 
-  NameTable.EmitStringLiteralDef(
-      OS, "static const char " + Target.getName() + "SDNodeNames[]",
-      /*Indent=*/"");
+  NameTable.EmitStringTableDef(OS, Target.getName() + "SDNodeNames");
   OS << '\n';
 
   return NameOffsets;

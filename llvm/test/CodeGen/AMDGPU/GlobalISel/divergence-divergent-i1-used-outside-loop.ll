@@ -191,9 +191,9 @@ define void @divergent_i1_xor_used_outside_loop_larger_loop_body(i32 %num.elts, 
 ; GFX10-LABEL: divergent_i1_xor_used_outside_loop_larger_loop_body:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-NEXT:    s_mov_b32 s5, 0
 ; GFX10-NEXT:    s_mov_b32 s6, -1
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GFX10-NEXT:    s_cbranch_execz .LBB3_6
 ; GFX10-NEXT:  ; %bb.1: ; %loop.start.preheader

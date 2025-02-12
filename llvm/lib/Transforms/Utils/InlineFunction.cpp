@@ -184,14 +184,14 @@ namespace {
 } // end anonymous namespace
 
 static IntrinsicInst *getConvergenceEntry(BasicBlock &BB) {
-  auto *I = BB.getFirstNonPHI();
-  while (I) {
-    if (auto *IntrinsicCall = dyn_cast<ConvergenceControlInst>(I)) {
+  BasicBlock::iterator It = BB.getFirstNonPHIIt();
+  while (It != BB.end()) {
+    if (auto *IntrinsicCall = dyn_cast<ConvergenceControlInst>(It)) {
       if (IntrinsicCall->isEntry()) {
         return IntrinsicCall;
       }
     }
-    I = I->getNextNode();
+    It = std::next(It);
   }
   return nullptr;
 }
@@ -1777,9 +1777,8 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
 // Check whether this Value is used by a lifetime intrinsic.
 static bool isUsedByLifetimeMarker(Value *V) {
   for (User *U : V->users())
-    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U))
-      if (II->isLifetimeStartOrEnd())
-        return true;
+    if (isa<LifetimeIntrinsic>(U))
+      return true;
   return false;
 }
 

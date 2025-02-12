@@ -264,4 +264,11 @@ class Tosa_InferShapedTypeOp<string mnemonic, list<Trait> traits = []>
       "operands attr-dict `:` functional-type(operands, results)";
 }
 
+// The "SameVariadicOperandSize" trait allows us to pass optional arguments
+// for multiple zero points in convolution ops.
+class Tosa_ConvOp<string mnemonic, list<Trait> traits = []>
+    : Tosa_InferShapedTypeOp<mnemonic, !listconcat(traits,
+      [SameVariadicOperandSize])> {
+}
+
 #endif // TOSA_OP_BASE

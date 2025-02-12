@@ -1063,9 +1063,27 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
           std::bind(&NativeRegisterContextLinux_arm64::WriteFPMR, this));
       break;
     case RegisterSetType::GCS:
+      // It is not permitted to enable GCS via ptrace. We can disable it, but
+      // to keep things simple we will not revert any change to the
+      // PR_SHADOW_STACK_ENABLE bit. Instead patch in the current enable bit
+      // into the registers we are about to restore.
+      m_gcs_is_valid = false;
+      error = ReadGCS();
+      if (error.Fail())
+        return error;
+
+      uint64_t enable_bit = m_gcs_regs.features_enabled & 1UL;
+      gcs_regs new_gcs_regs = *reinterpret_cast<const gcs_regs *>(src);
+      new_gcs_regs.features_enabled =
+          (new_gcs_regs.features_enabled & ~1UL) | enable_bit;
+
+      const uint8_t *new_gcs_src =
+          reinterpret_cast<const uint8_t *>(&new_gcs_regs);
       error = RestoreRegisters(
-          GetGCSBuffer(), &src, GetGCSBufferSize(), m_gcs_is_valid,
+          GetGCSBuffer(), &new_gcs_src, GetGCSBufferSize(), m_gcs_is_valid,
           std::bind(&NativeRegisterContextLinux_arm64::WriteGCS, this));
+      src += GetGCSBufferSize();
+
       break;
     }
 
