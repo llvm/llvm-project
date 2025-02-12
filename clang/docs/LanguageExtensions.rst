@@ -118,24 +118,32 @@ The compiler can parse it, but not necessarily generate code for it.
 
 ``__has_target_builtin`` returns true if the builtin can actually be generated for the current target.
 
-It can be used like this:
+As a motivating example, let's try to guard a builtin call using ``__has_builtin`` in a heterogeneous compilation,
+such as OpenMP Offloading, with the host being x86-64 and the offloading device being AMDGPU.
 
 .. code-block:: c++
 
-  #ifdef __CUDA__
-  #if __has_target_builtin(__builtin_trap)
-    __builtin_trap();
+  #if __has_builtin(__builtin_ia32_pause)
+     __builtin_ia32_pause();
   #else
     abort();
   #endif
-  #else // !CUDA
-  #if __has_builtin(__builtin_trap)
-    __builtin_trap();
+
+Compilation of this code results in a compiler error because ``__builtin_ia32_pause`` is known to the compiler because
+it is a builtin supported by the host x86-64 compilation so ``__has_builtin`` returns true. However, code cannot
+be generated for ``__builtin_ia32_pause`` during the offload AMDGPU compilation as it is not supported on that target.
+
+To guard uses of builtins in heterogeneous compilations such as this,
+``__has_target_builtin`` can be used as per the below example to verify code can be generated
+for the referenced builtin on the current target being compiled.
+
+.. code-block:: c++
+
+  #if __has_target_builtin(__builtin_ia32_pause)
+     __builtin_ia32_pause();
   #else
     abort();
   #endif
-  #endif
-  ...
 
 .. note::
   ``__has_target_builtin`` should not be used to detect support for a builtin macro;
