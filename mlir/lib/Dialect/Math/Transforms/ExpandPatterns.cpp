@@ -329,7 +329,7 @@ static LogicalResult convertSpecialPowfOp(math::PowFOp op,
     // Not a constant, return failure
     return failure();
   }
-  if (valueB.compare(APFloat::getZero(sem)) == APFloat::cmpEqual) {
+  if (valueB.isZero()) {
     // a^0 -> 1
     Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
     rewriter.replaceOp(op, one);
