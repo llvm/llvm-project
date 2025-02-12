@@ -387,7 +387,7 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
         llvm::sys::path::append(Path, BCName);
         FullName = Path;
         if (llvm::sys::fs::exists(FullName)) {
-          BCLibs.push_back(FullName);
+          BCLibs.emplace_back(FullName);
           return;
         }
       }
@@ -402,22 +402,11 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
 
     // If --hip-device-lib is not set, add the default bitcode libraries.
-    if (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                           options::OPT_fno_gpu_sanitize, true) &&
-        getSanitizerArgs(DriverArgs).needsAsanRt()) {
-      auto AsanRTL = RocmInstallation->getAsanRTLPath();
-      if (AsanRTL.empty()) {
-        getDriver().Diag(diag::err_drv_no_asan_rt_lib);
-        return {};
-      } else
-        BCLibs.emplace_back(AsanRTL, /*ShouldInternalize=*/false);
-    }
-
     // Add the HIP specific bitcode library.
-    BCLibs.push_back(RocmInstallation->getHIPPath());
+    BCLibs.emplace_back(RocmInstallation->getHIPPath());
 
     // Add common device libraries like ocml etc.
-    for (StringRef N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
+    for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
       BCLibs.emplace_back(N);
 
     // Add instrument lib.
