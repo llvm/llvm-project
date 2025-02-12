@@ -24,20 +24,27 @@ using namespace llvm::object;
 namespace {
 
 template <typename ELFT> BuildIDRef getBuildID(const ELFFile<ELFT> &Obj) {
+  auto findBuildID = [&Obj](const auto &ShdrOrPhdr,
+                            uint64_t Alignment) -> std::optional<BuildIDRef> {
+    Error Err = Error::success();
+    for (auto N : Obj.notes(ShdrOrPhdr, Err))
+      if (N.getType() == ELF::NT_GNU_BUILD_ID &&
+          N.getName() == ELF::ELF_NOTE_GNU)
+        return N.getDesc(Alignment);
+    consumeError(std::move(Err));
+    return std::nullopt;
+  };
+
   auto Sections = cantFail(Obj.sections());
   if (!Sections.empty()) {
     for (const auto &S : Sections) {
       if (S.sh_type != ELF::SHT_NOTE)
         continue;
-      Error Err = Error::success();
-      for (auto N : Obj.notes(S, Err))
-        if (N.getType() == ELF::NT_GNU_BUILD_ID &&
-            N.getName() == ELF::ELF_NOTE_GNU)
-          return N.getDesc(S.sh_addralign);
-      consumeError(std::move(Err));
+      auto ShdrRes = findBuildID(S, S.sh_addralign);
+      if (ShdrRes)
+        return ShdrRes.value();
     }
   }
-
   auto PhdrsOrErr = Obj.program_headers();
   if (!PhdrsOrErr) {
     consumeError(PhdrsOrErr.takeError());
@@ -46,12 +53,9 @@ template <typename ELFT> BuildIDRef getBuildID(const ELFFile<ELFT> &Obj) {
   for (const auto &P : *PhdrsOrErr) {
     if (P.p_type != ELF::PT_NOTE)
       continue;
-    Error Err = Error::success();
-    for (auto N : Obj.notes(P, Err))
-      if (N.getType() == ELF::NT_GNU_BUILD_ID &&
-          N.getName() == ELF::ELF_NOTE_GNU)
-        return N.getDesc(P.p_align);
-    consumeError(std::move(Err));
+    auto PhdrRes = findBuildID(P, P.p_align);
+    if (PhdrRes)
+      return PhdrRes.value();
   }
   return {};
 }
