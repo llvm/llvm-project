@@ -14,10 +14,6 @@
 
 namespace lldb_private {
 
-llvm::StringRef TelemetryVendor::GetPluginName() {
-  return "UpstreamTelemetryVendor";
-}
-
 void TelemetryVendor::Initialize() {
   // The default (upstream) impl will have telemetry disabled by default.
   SetTelemetryConfig(std::make_shared<new llvm::telemetry::Config>(

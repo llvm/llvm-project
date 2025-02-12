@@ -22,9 +22,6 @@ namespace lldb_private {
 
 class TelemetryVendor : public PluginInterface {
 public:
-  TelemetryVendor() = default;
-
-  llvm::StringRef GetPluginName() override;
   static void Initialize();
   static void Terminate();
   static llvm::telemetry::Config *GetTelemetryConfig();
