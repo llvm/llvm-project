@@ -22,7 +22,7 @@
 namespace llvm {
 namespace dxil {
 
-enum class RootSignatureElementKind { RootFlags = 1 };
+enum class RootSignatureElementKind { None = 0, RootFlags = 1 };
 
 struct ModuleRootSignature {
   uint32_t Flags = 0;

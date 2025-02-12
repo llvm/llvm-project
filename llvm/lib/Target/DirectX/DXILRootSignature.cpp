@@ -57,12 +57,16 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
 
   RootSignatureElementKind ElementKind =
       StringSwitch<RootSignatureElementKind>(ElementText->getString())
-          .Case("RootFlags", RootSignatureElementKind::RootFlags);
+          .Case("RootFlags", RootSignatureElementKind::RootFlags)
+          .Default(RootSignatureElementKind::None);
 
   switch (ElementKind) {
 
   case RootSignatureElementKind::RootFlags:
     return parseRootFlags(Ctx, MRS, Element);
+  case RootSignatureElementKind::None:
+    return reportError(Ctx,
+                       "Invalid Root Element: " + ElementText->getString());
   }
 
   return true;
