@@ -159,6 +159,20 @@ enum class RootElementFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
+#define ROOT_PARAMETER(Val, Enum) Enum = Val,
+enum class RootParameterType : uint8_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+
+#define SHADER_VISIBILITY(Val, Enum) Enum = Val,
+enum class ShaderVisibilityFlag : uint8_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ShaderVisibilityFlag>> getShaderVisibilityFlags();
+
 PartType parsePartType(StringRef S);
 
 struct VertexPSVInfo {
