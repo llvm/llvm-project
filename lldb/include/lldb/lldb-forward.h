@@ -11,6 +11,7 @@
 
 #include <memory>
 
+#include "llvm/Config/llvm-config.h"
 #ifdef LLVM_BUILD_TELEMETRY
 #include "llvm/Telemetry/Telemetry.h"
 #include "lldb/Core/Telemetry.h"
@@ -483,11 +484,11 @@ typedef std::shared_ptr<lldb_private::TypeSummaryOptions> TypeSummaryOptionsSP;
 typedef std::shared_ptr<lldb_private::ScriptedSyntheticChildren>
     ScriptedSyntheticChildrenSP;
 typedef std::shared_ptr<lldb_private::SupportFile> SupportFileSP;
-#ifdef LLDB_BUILD_TELEMETRY
-typedef std::shared_ptr<llvm::telemetry::Config> TelemetryConfigSP;
-typedef std::shared_ptr<lldb_private::telemetry::TelemetryManager>
-    TelemetryManagerSP;
-#endif // LLDB_BUILD_TELEMETRY
+#ifdef LLVM_BUILD_TELEMETRY
+typedef std::unique_ptr<llvm::telemetry::Config> TelemetryConfigUP;
+typedef std::unique_ptr<lldb_private::telemetry::TelemetryManager>
+    TelemetryManagerUP;
+#endif // LLVM_BUILD_TELEMETRY
 typedef std::shared_ptr<lldb_private::UnixSignals> UnixSignalsSP;
 typedef std::weak_ptr<lldb_private::UnixSignals> UnixSignalsWP;
 typedef std::shared_ptr<lldb_private::UnwindAssembly> UnwindAssemblySP;

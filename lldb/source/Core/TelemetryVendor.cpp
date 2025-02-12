@@ -5,7 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifdef LLDB_BUILD_TELEMETRY
+
+#include "llvm/Config/llvm-config.h"
+
+#ifdef LLVM_BUILD_TELEMETRY
 
 #include "lldb/Core/TelemetryVendor.h"
 
@@ -22,25 +25,25 @@ void TelemetryVendor::Initialize() {
   SetTelemetryManager(nullptr);
 }
 
-lldb::TelemetryConfigSP TelemetryVendor::GetTelemetryConfig() {
-  static lldb::TelemetryConfigSP g_config_sp;
-  return g_config_sp;
+static lldb::TelemetryConfigUP g_config_up =
+    std::make_unique<llvm::telemetry::Config>(/*enable_telemetry*/ false);
+lldb::TelemetryConfig *TelemetryVendor::GetTelemetryConfig() {
+  return g_config_up.get();
 }
 
-void TelemetryVendor::SetTelemetryConfig(
-    const lldb::TelemetryConfigSP &config) {
-  GetTelemetryCOnfig() = config;
-}
-
+static lldb::TelemteryManagerUP g_telemetry_manager_up = nullptr;
 lldb::TelemetryManagerSP TelemetryVendor::GetTelemetryManager() {
-  static TelemteryManagerSP g_telemetry_manager_sp;
-  return g_telemetry_manager_sp;
+  return g_telemetry_manager_sp.get();
 }
 
-void SetTelemetryManager(const lldb::TelemetryManagerSP &manager_sp) {
-  GetTelemetryManager() = manager_sp;
+void TelemetryVendor::SetTelemetryConfig(lldb::TelemetryConfigUP config) {
+  g_config_up = std::move(config);
+}
+
+void SetTelemetryManager(lldb::TelemetryManagerUP &manager) {
+  g_telemetry_manger_up = std::move(manager);
 }
 
 } // namespace lldb_private
 
-#ifdef LLDB_BUILD_TELEMETRY
+#endif LLVM_BUILD_TELEMETRY

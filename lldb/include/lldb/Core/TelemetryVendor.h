@@ -27,13 +27,12 @@ public:
   llvm::StringRef GetPluginName() override;
   static void Initialize();
   static void Terminate();
-  static lldb::TelemetryConfig GetTelemetryConfig();
-  static lldb::TelemetryManagerSP GetTelemetryManager();
-
+  static llvm::telemetry::Config *GetTelemetryConfig();
+  static telemetry::TelemetryManager *GetTelemetryManager();
 
 protected:
-  static void SetTelemetryConfig(const lldb::TelemetryConfigSP &config);
-  static void SetTelemetryManager(const lldb::TelemetryManagerSP &manager_sp);
+  static void SetTelemetryConfig(const lldb::TelemetryConfigUP &config);
+  static void SetTelemetryManager(const lldb::TelemetryManagerUP &manager_sp);
 };
 
 } // namespace lldb_private
