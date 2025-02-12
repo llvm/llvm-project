@@ -299,7 +299,7 @@ struct PyAttrBuilderMap {
     return *builder;
   }
   static void dunderSetItemNamed(const std::string &attributeKind,
-                                nb::callable func, bool replace) {
+                                 nb::callable func, bool replace) {
     PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func),
                                               replace);
   }
@@ -3048,6 +3048,18 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return PyModule::forModule(module).releaseObject();
           },
           nb::arg("asm"), nb::arg("context").none() = nb::none(),
+          kModuleParseDocstring)
+      .def_static(
+          "parseFile",
+          [](const std::string &path, DefaultingPyMlirContext context) {
+            PyMlirContext::ErrorCapture errors(context->getRef());
+            MlirModule module = mlirModuleCreateParseFromFile(
+                context->get(), toMlirStringRef(path));
+            if (mlirModuleIsNull(module))
+              throw MLIRError("Unable to parse module assembly", errors.take());
+            return PyModule::forModule(module).releaseObject();
+          },
+          nb::arg("path"), nb::arg("context").none() = nb::none(),
           kModuleParseDocstring)
       .def_static(
           "create",
