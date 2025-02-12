@@ -581,6 +581,12 @@ static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
   // themselves when possible.
   for (GlobalValue *GV : DeadGVs) {
     GV->removeDeadConstantUsers();
+
+    // The RTTI data consists of both type information and the type name string.
+    // Although they are considered dead, there are still users that reference them.
+    // For example, the type information might be used by a vtable, and the type name
+    // string might be used by the type info.
+    // Therefore, we need to replace these uses to null pointer before erasing them.
     if (ABI && (ABI->isTypeInfo(GV->getName()) ||
                             ABI->isTypeName(GV->getName()))) {
       GV->replaceAllUsesWith(
