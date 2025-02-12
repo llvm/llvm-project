@@ -48472,55 +48472,6 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   return SDValue();
 }
 
-// Attempt to fold some (setcc (sub (truncate (srl (add X, C1), C2)), C3), CC)
-// patterns to (setcc (cmp (add (truncate (srl X, C2)), C1'), C3), CC). C1' will
-// be smaller than C1 so we are able to avoid generating code with MOVABS and
-// large constants in certain cases.
-static SDValue combineSetCCTruncAdd(SDValue EFLAGS, X86::CondCode &CC,
-                                    SelectionDAG &DAG) {
-  using namespace llvm::SDPatternMatch;
-  if (!(CC == X86::COND_E || CC == X86::COND_NE || CC == X86::COND_AE ||
-        CC == X86::COND_B))
-    return SDValue();
-
-  SDValue AddLhs;
-  APInt AddConst, SrlConst, CmpConst;
-  if (!sd_match(EFLAGS,
-                m_AllOf(m_SpecificVT(MVT::i32),
-                        m_BinOp(X86ISD::SUB,
-                                m_Trunc(m_Srl(m_Add(m_Value(AddLhs),
-                                                    m_ConstInt(AddConst)),
-                                              m_ConstInt(SrlConst))),
-                                m_ConstInt(CmpConst)))))
-    return SDValue();
-
-  SDValue Srl;
-  if (!sd_match(EFLAGS.getOperand(0).getOperand(0),
-                m_AllOf(m_SpecificVT(MVT::i64), m_Value(Srl))))
-    return SDValue();
-
-  // Avoid changing the ADD if it is used elsewhere.
-  if (!Srl.getOperand(0).hasOneUse())
-    return SDValue();
-
-  EVT VT = EFLAGS.getValueType();
-  APInt ShiftedAddConst = AddConst.lshr(SrlConst);
-  if (!CmpConst.ult(ShiftedAddConst.trunc(VT.getSizeInBits())) ||
-      (ShiftedAddConst.shl(SrlConst)) != AddConst)
-    return SDValue();
-
-  SDLoc DL(EFLAGS);
-  SDValue AddLHSSrl =
-      DAG.getNode(ISD::SRL, DL, MVT::i64, AddLhs, Srl.getOperand(1));
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AddLHSSrl);
-
-  APInt NewAddConstVal =
-      (~((~AddConst).lshr(SrlConst))).trunc(VT.getSizeInBits());
-  SDValue NewAddConst = DAG.getConstant(NewAddConstVal, DL, VT);
-  SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
-  return DAG.getNode(X86ISD::CMP, DL, VT, NewAddNode, EFLAGS.getOperand(1));
-}
-
 /// Optimize an EFLAGS definition used according to the condition code \p CC
 /// into a simpler EFLAGS value, potentially returning a new \p CC and replacing
 /// uses of chain values.
@@ -48541,9 +48492,6 @@ static SDValue combineSetCCEFLAGS(SDValue EFLAGS, X86::CondCode &CC,
     return R;
 
   if (SDValue R = combineSetCCMOVMSK(EFLAGS, CC, DAG, Subtarget))
-    return R;
-
-  if (SDValue R = combineSetCCTruncAdd(EFLAGS, CC, DAG))
     return R;
 
   return combineSetCCAtomicArith(EFLAGS, CC, DAG, Subtarget);
@@ -53652,6 +53600,40 @@ static SDValue combineLRINT_LLRINT(SDNode *N, SelectionDAG &DAG,
                                  DAG.getUNDEF(SrcVT)));
 }
 
+// Attempt to fold some (truncate (srl (add X, C1), C2)) patterns to
+// (add (truncate (srl X, C2)), C1'). C1' will be smaller than C1 so we are able
+// to avoid generating code with MOVABS and large constants in certain cases.
+static SDValue combinei64TruncSrlAdd(SDValue N, EVT VT, SelectionDAG &DAG,
+                                     const SDLoc &DL) {
+  using namespace llvm::SDPatternMatch;
+
+  SDValue AddLhs;
+  APInt AddConst, SrlConst;
+  if (VT != MVT::i32 ||
+      !sd_match(N, m_AllOf(m_SpecificVT(MVT::i64),
+                           m_Srl(m_OneUse(m_Add(m_Value(AddLhs),
+                                                m_ConstInt(AddConst))),
+                                 m_ConstInt(SrlConst)))))
+    return SDValue();
+
+  if (!SrlConst.ugt(31) || AddConst.lshr(SrlConst).shl(SrlConst) != AddConst)
+    return SDValue();
+
+  SDValue AddLHSSrl =
+      DAG.getNode(ISD::SRL, DL, MVT::i64, AddLhs, N.getOperand(1));
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AddLHSSrl);
+
+  APInt NewAddConstVal =
+      (~((~AddConst).lshr(SrlConst))).trunc(VT.getSizeInBits());
+  SDValue NewAddConst = DAG.getConstant(NewAddConstVal, DL, VT);
+  SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
+
+  APInt CleanupSizeConstVal = (SrlConst - 32).zextOrTrunc(VT.getSizeInBits());
+  SDValue CleanupSizeConst = DAG.getConstant(CleanupSizeConstVal, DL, VT);
+  SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, NewAddNode, CleanupSizeConst);
+  return DAG.getNode(ISD::SRL, DL, VT, Shl, CleanupSizeConst);
+}
+
 /// Attempt to pre-truncate inputs to arithmetic ops if it will simplify
 /// the codegen.
 /// e.g. TRUNC( BINOP( X, Y ) ) --> BINOP( TRUNC( X ), TRUNC( Y ) )
@@ -53696,6 +53678,9 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   // Don't combine if the operation has other uses.
   if (!Src.hasOneUse())
     return SDValue();
+
+  if (SDValue R = combinei64TruncSrlAdd(Src, VT, DAG, DL))
+    return R;
 
   // Only support vector truncation for now.
   // TODO: i64 scalar math would benefit as well.
