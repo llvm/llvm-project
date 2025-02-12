@@ -14,17 +14,17 @@
 # RUN: ld.lld %t/a.o %t/b.o -o %t/linked.o
 # RUN: llvm-objdump -d %t/linked.o | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 
-# CHECK-LE:    linked.o:	file format elf32-littlearm
-# CHECK-BE:    linked.o:	file format elf32-bigarm
+# CHECK-LE:    linked.o:  file format elf32-littlearm
+# CHECK-BE:    linked.o:  file format elf32-bigarm
 # CHECK-EMPTY:
 # CHECK-NEXT:  Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT:  [[#%x,_START:]] <_start>:
-# CHECK-NEXT:      [[#_START]]: e000         	b	0x[[FOO:[0-9a-f]+]] <foo>      @ imm = #0x0
-# CHECK-NEXT:    [[#_START+2]]: d0ff         	beq	0x[[FOO]] <foo>         @ imm = #-0x2
+# CHECK-NEXT:      [[#_START]]: e000        b  0x[[FOO:[0-9a-f]+]] <foo>  @ imm = #0x0
+# CHECK-NEXT:    [[#_START+2]]: d0ff        beq  0x[[FOO]] <foo>          @ imm = #-0x2
 # CHECK-EMPTY:
 # CHECK-NEXT:    [[#_START+4]] <foo>:
-# CHECK-NEXT:    [[#_START+4]]: 4770         	bx	lr
+# CHECK-NEXT:    [[#_START+4]]: 4770        bx  lr
 
 #--- a.yaml
 
