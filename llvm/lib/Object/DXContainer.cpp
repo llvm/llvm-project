@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/DXContainer.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
