@@ -1855,7 +1855,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
       if (isa<ArrayType>(CDS->getType()))
         return DAG.getMergeValues(Ops, getCurSDLoc());
-      return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
+      return DAG.getBuildVector(VT, getCurSDLoc(), Ops);
     }
 
     if (C->getType()->isStructTy() || C->getType()->isArrayTy()) {
@@ -1898,7 +1898,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
     if (VT.isRISCVVectorTuple()) {
       assert(C->isNullValue() && "Can only zero this target type!");
-      return NodeMap[V] = DAG.getNode(
+      return DAG.getNode(
                  ISD::BITCAST, getCurSDLoc(), VT,
                  DAG.getNode(
                      ISD::SPLAT_VECTOR, getCurSDLoc(),
@@ -1918,7 +1918,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       for (unsigned i = 0; i != NumElements; ++i)
         Ops.push_back(getValue(CV->getOperand(i)));
 
-      return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
+      return DAG.getBuildVector(VT, getCurSDLoc(), Ops);
     }
 
     if (isa<ConstantAggregateZero>(C)) {
@@ -1931,7 +1931,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       else
         Op = DAG.getConstant(0, getCurSDLoc(), EltVT);
 
-      return NodeMap[V] = DAG.getSplat(VT, getCurSDLoc(), Op);
+      return DAG.getSplat(VT, getCurSDLoc(), Op);
     }
 
     llvm_unreachable("Unknown vector constant");
