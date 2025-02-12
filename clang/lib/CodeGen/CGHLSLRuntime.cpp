@@ -20,6 +20,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
@@ -70,11 +71,14 @@ void addDisableOptimizations(llvm::Module &M) {
 
 } // namespace
 
-llvm::Type *CGHLSLRuntime::convertHLSLSpecificType(const Type *T) {
+llvm::Type *
+CGHLSLRuntime::convertHLSLSpecificType(const Type *T,
+                                       SmallVector<unsigned> *Packoffsets) {
   assert(T->isHLSLSpecificType() && "Not an HLSL specific type!");
 
   // Check if the target has a specific translation for this type first.
-  if (llvm::Type *TargetTy = CGM.getTargetCodeGenInfo().getHLSLType(CGM, T))
+  if (llvm::Type *TargetTy =
+          CGM.getTargetCodeGenInfo().getHLSLType(CGM, T, Packoffsets))
     return TargetTy;
 
   llvm_unreachable("Generic handling of HLSL types is not supported.");
@@ -96,153 +100,28 @@ static bool isResourceRecordTypeOrArrayOf(const clang::Type *Ty) {
   return isResourceRecordType(Ty);
 }
 
-static ConstantAsMetadata *getConstIntMetadata(LLVMContext &Ctx, uint32_t value,
-                                               bool isSigned = false) {
-  return ConstantAsMetadata::get(
-      ConstantInt::get(Ctx, llvm::APInt(32, value, isSigned)));
-}
-
-static unsigned getScalarOrVectorSize(llvm::Type *Ty) {
-  assert(Ty->isVectorTy() || Ty->isIntegerTy() || Ty->isFloatingPointTy());
-  if (Ty->isVectorTy()) {
-    llvm::FixedVectorType *FVT = cast<llvm::FixedVectorType>(Ty);
-    return FVT->getNumElements() *
-           (FVT->getElementType()->getScalarSizeInBits() / 8);
-  }
-  return Ty->getScalarSizeInBits() / 8;
-}
-
-// Returns size of a struct in constant buffer layout. The sizes are cached
-// in StructSizesForBuffer map. The map is also an indicator if a layout
-// metadata for this struct has been added to the module.
-// If the struct type is not in the map, this method will calculate the struct
-// layout, add a metadata node describing it to the module, and add the struct
-// size to the map.
-size_t
-CGHLSLRuntime::getOrCalculateStructSizeForBuffer(llvm::StructType *StructTy) {
-  // check if we already have a side for this struct
-  auto SizeIt = StructSizesForBuffer.find(StructTy);
-  if (SizeIt != StructSizesForBuffer.end())
-    return SizeIt->getSecond();
-
-  // if not, calculate the struct layout and create a metadata node
-  LLVMContext &Ctx = CGM.getLLVMContext();
-  SmallVector<llvm::Metadata *> LayoutItems;
-
-  // start metadata list with a struct name and reserve one slot for its size
-  LayoutItems.push_back(MDString::get(Ctx, StructTy->getName()));
-  LayoutItems.push_back(nullptr);
-
-  // add element offsets
-  size_t StructSize = 0;
-  for (llvm::Type *ElTy : StructTy->elements()) {
-    size_t Offset = calculateBufferElementOffset(ElTy, &StructSize);
-    LayoutItems.push_back(getConstIntMetadata(CGM.getLLVMContext(), Offset));
-  }
-  // set the size of the buffer to the reserved slot
-  LayoutItems[1] = getConstIntMetadata(Ctx, StructSize);
-
-  // add the struct layout to metadata
-  CGM.getModule()
-      .getOrInsertNamedMetadata("hlsl.cblayouts")
-      ->addOperand(MDNode::get(CGM.getLLVMContext(), LayoutItems));
-
-  // add struct size to list and return it
-  StructSizesForBuffer[StructTy] = StructSize;
-  return StructSize;
-}
-
-// Calculates offset of a single element in constant buffer layout.
-// The provided LayoutEndOffset marks the end of the layout so far (end offset
-// of the buffer or struct). After the element offset calculations are done it
-// will be updated the new end of layout value.
-// If the PackoffsetAttrs is not nullptr the offset will be based on the
-// packoffset annotation.
-size_t CGHLSLRuntime::calculateBufferElementOffset(
-    llvm::Type *LayoutTy, size_t *LayoutEndOffset,
-    HLSLPackOffsetAttr *PackoffsetAttr) {
-
-  size_t ElemOffset = 0;
-  size_t ElemSize = 0;
-  size_t ArrayCount = 1;
-  size_t ArrayStride = 0;
-  size_t EndOffset = *LayoutEndOffset;
-  size_t NextRowOffset = llvm::alignTo(EndOffset, 16U);
-
-  if (LayoutTy->isArrayTy()) {
-    llvm::Type *Ty = LayoutTy;
-    while (Ty->isArrayTy()) {
-      ArrayCount *= Ty->getArrayNumElements();
-      Ty = Ty->getArrayElementType();
-    }
-    ElemSize =
-        Ty->isStructTy()
-            ? getOrCalculateStructSizeForBuffer(cast<llvm::StructType>(Ty))
-            : getScalarOrVectorSize(Ty);
-    ArrayStride = llvm::alignTo(ElemSize, 16U);
-    ElemOffset =
-        PackoffsetAttr ? PackoffsetAttr->getOffsetInBytes() : NextRowOffset;
-
-  } else if (LayoutTy->isStructTy()) {
-    ElemOffset =
-        PackoffsetAttr ? PackoffsetAttr->getOffsetInBytes() : NextRowOffset;
-    ElemSize =
-        getOrCalculateStructSizeForBuffer(cast<llvm::StructType>(LayoutTy));
-
-  } else {
-    size_t Align = 0;
-    if (LayoutTy->isVectorTy()) {
-      llvm::FixedVectorType *FVT = cast<llvm::FixedVectorType>(LayoutTy);
-      size_t SubElemSize = FVT->getElementType()->getScalarSizeInBits() / 8;
-      ElemSize = FVT->getNumElements() * SubElemSize;
-      Align = SubElemSize;
-    } else {
-      assert(LayoutTy->isIntegerTy() || LayoutTy->isFloatingPointTy());
-      ElemSize = LayoutTy->getScalarSizeInBits() / 8;
-      Align = ElemSize;
-    }
-    if (PackoffsetAttr) {
-      ElemOffset = PackoffsetAttr->getOffsetInBytes();
-    } else {
-      ElemOffset = llvm::alignTo(EndOffset, Align);
-      // if the element does not fit, move it to the next row
-      if (ElemOffset + ElemSize > NextRowOffset)
-        ElemOffset = NextRowOffset;
-    }
-  }
-
-  // Update end offset of the buffer/struct layout; do not update it if
-  // the provided EndOffset is already bigger than the new one value
-  // (which may happen with packoffset annotations)
-  unsigned NewEndOffset =
-      ElemOffset + (ArrayCount - 1) * ArrayStride + ElemSize;
-  *LayoutEndOffset = std::max<size_t>(EndOffset, NewEndOffset);
-
-  return ElemOffset;
-}
-
-// Emits constant global variables for buffer declarations, creates metadata
-// linking the constant globals with the buffer. Also calculates the buffer
-// layout and creates metadata node describing it.
+// Emits constant global variables for buffer constants declarations
+// and creates metadata linking the constant globals with the buffer global.
 void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
                                                  llvm::GlobalVariable *BufGV) {
   LLVMContext &Ctx = CGM.getLLVMContext();
+
+  // get the layout struct from constant buffer target type
+  llvm::Type *BufType = BufGV->getValueType();
+  assert(isa<llvm::TargetExtType>(BufType) &&
+         "expected target type for HLSL buffer resource");
+  llvm::Type *BufLayoutType =
+      cast<llvm::TargetExtType>(BufType)->getTypeParameter(0);
+  assert(isa<llvm::TargetExtType>(BufLayoutType) &&
+         "expected target type for buffer layout struct");
   llvm::StructType *LayoutStruct = cast<llvm::StructType>(
-      cast<llvm::TargetExtType>(BufGV->getValueType())->getTypeParameter(0));
+      cast<llvm::TargetExtType>(BufLayoutType)->getTypeParameter(0));
 
   // Start metadata list associating the buffer global variable with its
   // constatns
   SmallVector<llvm::Metadata *> BufGlobals;
   BufGlobals.push_back(ValueAsMetadata::get(BufGV));
 
-  // Start layout metadata list with a struct name and reserve one slot for
-  // the buffer size
-  SmallVector<llvm::Metadata *> LayoutItems;
-  LayoutItems.push_back(MDString::get(Ctx, LayoutStruct->getName()));
-  LayoutItems.push_back(nullptr);
-
-  size_t BufferSize = 0;
-  bool UsePackoffset = BufDecl->hasPackoffset();
   const auto *ElemIt = LayoutStruct->element_begin();
   for (Decl *D : BufDecl->decls()) {
     if (isa<CXXRecordDecl, EmptyDecl>(D))
@@ -275,17 +154,6 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
            "number of elements in layout struct does not match");
     llvm::Type *LayoutType = *ElemIt++;
 
-    // Make sure the type of the VarDecl type matches the type of the layout
-    // struct element, or that it is a layout struct with the same name
-    assert((CGM.getTypes().ConvertTypeForMem(VDTy) == LayoutType ||
-            (LayoutType->isStructTy() &&
-             cast<llvm::StructType>(LayoutType)
-                 ->getName()
-                 .starts_with(("struct.__cblayout_" +
-                               VDTy->getAsCXXRecordDecl()->getName())
-                                  .str()))) &&
-           "layout type does not match the converted element type");
-
     // there might be resources inside the used defined structs
     if (VDTy->isStructureType() && VDTy->isHLSLIntangibleType())
       // FIXME: handle resources in cbuffer structs
@@ -295,29 +163,15 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
     GlobalVariable *ElemGV =
         cast<GlobalVariable>(CGM.GetAddrOfGlobalVar(VD, LayoutType));
     BufGlobals.push_back(ValueAsMetadata::get(ElemGV));
-
-    // get offset of the global and and to metadata list
-    assert(((UsePackoffset && VD->hasAttr<HLSLPackOffsetAttr>()) ||
-            !UsePackoffset) &&
-           "expected packoffset attribute on every declaration");
-    size_t Offset = calculateBufferElementOffset(
-        LayoutType, &BufferSize,
-        UsePackoffset ? VD->getAttr<HLSLPackOffsetAttr>() : nullptr);
-    LayoutItems.push_back(getConstIntMetadata(Ctx, Offset));
   }
   assert(ElemIt == LayoutStruct->element_end() &&
          "number of elements in layout struct does not match");
   // set the size of the buffer
-  LayoutItems[1] = getConstIntMetadata(Ctx, BufferSize);
 
   // add buffer metadata to the module
   CGM.getModule()
       .getOrInsertNamedMetadata("hlsl.cbs")
       ->addOperand(MDNode::get(Ctx, BufGlobals));
-
-  CGM.getModule()
-      .getOrInsertNamedMetadata("hlsl.cblayouts")
-      ->addOperand(MDNode::get(Ctx, LayoutItems));
 }
 
 // Creates resource handle type for the HLSL buffer declaration
@@ -329,6 +183,25 @@ createBufferHandleType(const HLSLBufferDecl *BufDecl) {
       QualType(BufDecl->getLayoutStruct()->getTypeForDecl(), 0),
       HLSLAttributedResourceType::Attributes(ResourceClass::CBuffer));
   return cast<HLSLAttributedResourceType>(QT.getTypePtr());
+}
+
+static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
+                                 SmallVector<unsigned> &Layout) {
+  assert(Layout.empty() && "expected empty vector for layout");
+  assert(BufDecl->hasValidPackoffset());
+
+  for (Decl *D : BufDecl->decls()) {
+    if (isa<CXXRecordDecl, EmptyDecl>(D) || isa<FunctionDecl>(D)) {
+      continue;
+    }
+    VarDecl *VD = dyn_cast<VarDecl>(D);
+    if (!VD || VD->getType().getAddressSpace() != LangAS::hlsl_constant)
+      continue;
+    assert(VD->hasAttr<HLSLPackOffsetAttr>() &&
+           "expected packoffset attribute on every declaration");
+    size_t Offset = VD->getAttr<HLSLPackOffsetAttr>()->getOffsetInBytes();
+    Layout.push_back(Offset);
+  }
 }
 
 // Codegen for HLSLBufferDecl
@@ -345,16 +218,20 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
     return;
 
   // create global variable for the constant buffer
-  llvm::Module &M = CGM.getModule();
+  SmallVector<unsigned> Layout;
+  if (BufDecl->hasValidPackoffset())
+    fillPackoffsetLayout(BufDecl, Layout);
+
   llvm::TargetExtType *TargetTy =
-      cast<llvm::TargetExtType>(convertHLSLSpecificType(ResHandleTy));
+      cast<llvm::TargetExtType>(convertHLSLSpecificType(
+          ResHandleTy, BufDecl->hasValidPackoffset() ? &Layout : nullptr));
   llvm::GlobalVariable *BufGV =
       new GlobalVariable(TargetTy, /*isConstant*/ true,
                          GlobalValue::LinkageTypes::ExternalLinkage, nullptr,
                          llvm::formatv("{0}{1}", BufDecl->getName(),
                                        BufDecl->isCBuffer() ? ".cb" : ".tb"),
                          GlobalValue::NotThreadLocal);
-  M.insertGlobalVariable(BufGV);
+  CGM.getModule().insertGlobalVariable(BufGV);
 
   // Add globals for constant buffer elements and create metadata nodes
   emitBufferGlobalsAndMetadata(BufDecl, BufGV);
@@ -366,6 +243,21 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   if (RBA)
     createResourceInitFn(CGM, BufGV, RBA->getSlotNumber(),
                          RBA->getSpaceNumber());
+}
+
+llvm::Type *
+CGHLSLRuntime::getHLSLBufferLayoutType(const RecordType *StructType) {
+  const auto Entry = LayoutTypes.find(StructType);
+  if (Entry != LayoutTypes.end())
+    return Entry->getSecond();
+  return nullptr;
+}
+
+void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
+                                            llvm::Type *LayoutTy) {
+  assert(getHLSLBufferLayoutType(StructType) == nullptr &&
+         "layout type for this struct already exist");
+  LayoutTypes[StructType] = LayoutTy;
 }
 
 void CGHLSLRuntime::finishCodeGen() {

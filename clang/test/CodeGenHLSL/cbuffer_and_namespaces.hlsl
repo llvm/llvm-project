@@ -4,20 +4,20 @@
 
 // Make sure cbuffer inside namespace works.
 
-// CHECK: %"struct.n0::n1::__cblayout_A" = type { float }
-// CHECK: %"struct.n0::__cblayout_B" = type { float }
-// CHECK: %"struct.n0::n2::__cblayout_C" = type { float, %"struct.n0::Foo" }
-// CHECK: %"struct.n0::Foo" = type { float }
+// CHECK: %"n0::n1::__cblayout_A" = type <{ float }>
+// CHECK: %"n0::__cblayout_B" = type <{ float }>
+// CHECK: %"n0::n2::__cblayout_C" = type <{ float, target("dx.Layout", %"n0::Foo", 4, 0) }>
+// CHECK: %"n0::Foo" = type <{ float }>
 
-// CHECK: @A.cb = external constant target("dx.CBuffer", %"struct.n0::n1::__cblayout_A")
+// CHECK: @A.cb = external constant target("dx.CBuffer", target("dx.Layout", %"n0::n1::__cblayout_A", 4, 0))
 // CHECK: @_ZN2n02n11aE = external addrspace(2) global float, align 4
 
-// CHECK: @B.cb = external constant target("dx.CBuffer", %"struct.n0::__cblayout_B")
+// CHECK: @B.cb = external constant target("dx.CBuffer", target("dx.Layout", %"n0::__cblayout_B", 4, 0))
 // CHECK: @_ZN2n01aE = external addrspace(2) global float, align 4
 
-// CHECK: @C.cb = external constant target("dx.CBuffer", %"struct.n0::n2::__cblayout_C")
+// CHECK: @C.cb = external constant target("dx.CBuffer", target("dx.Layout", %"n0::n2::__cblayout_C", 20, 0, 16))
 // CHECK: @_ZN2n02n21aE = external addrspace(2) global float, align 4
-// CHECK: @_ZN2n02n21bE = external addrspace(2) global %"struct.n0::Foo", align 4
+// CHECK: external addrspace(2) global target("dx.Layout", %"n0::Foo", 4, 0), align 4
 
 namespace n0 {
   struct Foo {
@@ -51,13 +51,6 @@ float foo() {
 void main() {}
 
 // CHECK: !hlsl.cbs = !{![[A:[0-9]+]], ![[B:[0-9]+]], ![[C:[0-9]+]]}
-// CHECK: !hlsl.cblayouts = !{![[A_LAYOUT:[0-9]+]], ![[B_LAYOUT:[0-9]+]], ![[FOO_LAYOUT:[0-9]+]], ![[C_LAYOUT:[0-9]+]]}
-
 // CHECK: [[A]] = !{ptr @A.cb, ptr addrspace(2) @_ZN2n02n11aE}
 // CHECK: [[B]] = !{ptr @B.cb, ptr addrspace(2) @_ZN2n01aE}
 // CHECK: [[C]] = !{ptr @C.cb, ptr addrspace(2) @_ZN2n02n21aE, ptr addrspace(2) @_ZN2n02n21bE}
-
-// CHECK: ![[A_LAYOUT]] = !{!"struct.n0::n1::__cblayout_A", i32 4, i32 0}
-// CHECK: ![[B_LAYOUT]] = !{!"struct.n0::__cblayout_B", i32 4, i32 0}
-// CHECK: ![[FOO_LAYOUT]] = !{!"struct.n0::Foo", i32 4, i32 0}
-// CHECK: ![[C_LAYOUT]] = !{!"struct.n0::n2::__cblayout_C", i32 20, i32 0, i32 16}

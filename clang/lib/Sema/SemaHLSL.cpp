@@ -261,7 +261,7 @@ static void validatePackoffset(Sema &S, HLSLBufferDecl *BufDecl) {
       IsValid = false;
     }
   }
-  BufDecl->setHasPackoffset(IsValid);
+  BufDecl->setHasValidPackoffset(IsValid);
 }
 
 // Returns true if the array has a zero size = if any of the dimensions is 0

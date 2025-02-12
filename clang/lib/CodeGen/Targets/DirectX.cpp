@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "ABIInfoImpl.h"
+#include "CodeGenModule.h"
+#include "HLSLTargetInfo.h"
 #include "TargetInfo.h"
+#include "clang/AST/Type.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Type.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -19,16 +24,30 @@ using namespace clang::CodeGen;
 
 namespace {
 
-class DirectXTargetCodeGenInfo : public TargetCodeGenInfo {
+class DirectXTargetCodeGenInfo : public CommonHLSLTargetCodeGenInfo {
 public:
   DirectXTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
-      : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
+      : CommonHLSLTargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
-  llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const override;
+  llvm::Type *getHLSLType(
+      CodeGenModule &CGM, const Type *T,
+      const SmallVector<unsigned> *Packoffsets = nullptr) const override;
+
+  llvm::Type *getHLSLLayoutType(CodeGenModule &CGM,
+                                llvm::StructType *LayoutStructTy,
+                                SmallVector<unsigned> Layout) const override;
 };
 
-llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
-                                                  const Type *Ty) const {
+llvm::Type *DirectXTargetCodeGenInfo::getHLSLLayoutType(
+    CodeGenModule &CGM, llvm::StructType *LayoutStructTy,
+    SmallVector<unsigned> Layout) const {
+  return llvm::TargetExtType::get(CGM.getLLVMContext(), "dx.Layout",
+                                  {LayoutStructTy}, Layout);
+}
+
+llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
+    CodeGenModule &CGM, const Type *Ty,
+    const SmallVector<unsigned> *Packoffsets) const {
   auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
   if (!ResType)
     return nullptr;
@@ -57,11 +76,16 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
     return llvm::TargetExtType::get(Ctx, TypeName, {ElemType}, Ints);
   }
   case llvm::dxil::ResourceClass::CBuffer: {
-    QualType StructTy = ResType->getContainedType();
-    if (StructTy.isNull())
+    QualType ContainedTy = ResType->getContainedType();
+    if (ContainedTy.isNull() || !ContainedTy->isStructureType())
       return nullptr;
-    llvm::Type *Ty = CGM.getTypes().ConvertType(StructTy);
-    return llvm::TargetExtType::get(Ctx, "dx.CBuffer", {Ty});
+
+    llvm::Type *BufferLayoutTy = this->createHLSLBufferLayoutType(
+        CGM, ContainedTy->getAsStructureType(), Packoffsets);
+    if (!BufferLayoutTy)
+      return nullptr;
+
+    return llvm::TargetExtType::get(Ctx, "dx.CBuffer", {BufferLayoutTy});
   }
   case llvm::dxil::ResourceClass::Sampler:
     llvm_unreachable("dx.Sampler handles are not implemented yet");

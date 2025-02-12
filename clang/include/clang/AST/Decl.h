@@ -5034,7 +5034,7 @@ class HLSLBufferDecl final : public NamedDecl, public DeclContext {
   bool IsCBuffer;
   /// HasValidPackoffset - Whether the buffer has valid packoffset annotations
   //                       on all declarations
-  bool HasPackoffset;
+  bool HasValidPackoffset;
   // LayoutStruct - Layout struct for the buffer
   CXXRecordDecl *LayoutStruct;
 
@@ -5057,8 +5057,8 @@ public:
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }
   bool isCBuffer() const { return IsCBuffer; }
-  void setHasPackoffset(bool PO) { HasPackoffset = PO; }
-  bool hasPackoffset() const { return HasPackoffset; }
+  void setHasValidPackoffset(bool PO) { HasValidPackoffset = PO; }
+  bool hasValidPackoffset() const { return HasValidPackoffset; }
   const CXXRecordDecl *getLayoutStruct() const { return LayoutStruct; }
   void addLayoutStruct(CXXRecordDecl *LS);
 

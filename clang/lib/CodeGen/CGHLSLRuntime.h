@@ -63,6 +63,7 @@ class ParmVarDecl;
 class HLSLBufferDecl;
 class HLSLResourceBindingAttr;
 class Type;
+class RecordType;
 class DeclContext;
 class HLSLPackOffsetAttr;
 
@@ -141,7 +142,9 @@ public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
   virtual ~CGHLSLRuntime() {}
 
-  llvm::Type *convertHLSLSpecificType(const Type *T);
+  llvm::Type *
+  convertHLSLSpecificType(const Type *T,
+                          SmallVector<unsigned> *Packoffsets = nullptr);
 
   void annotateHLSLResource(const VarDecl *D, llvm::GlobalVariable *GV);
   void generateGlobalCtorDtorCalls();
@@ -157,6 +160,10 @@ public:
 
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 
+  llvm::Type *getHLSLBufferLayoutType(const RecordType *LayoutStructTy);
+  void addHLSLBufferLayoutType(const RecordType *LayoutStructTy,
+                               llvm::Type *LayoutTy);
+
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,
                                    llvm::hlsl::ResourceClass RC,
@@ -165,18 +172,9 @@ private:
                                    BufferResBinding &Binding);
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
                                     llvm::GlobalVariable *BufGV);
-
-  size_t
-  calculateBufferElementOffset(llvm::Type *LayoutTy, size_t *LayoutEndOffset,
-                               HLSLPackOffsetAttr *PackoffsetAttr = nullptr);
-
-  size_t getOrCalculateStructSizeForBuffer(llvm::StructType *StructTy);
-
   llvm::Triple::ArchType getArch();
 
-  // Sizes of structs in constant buffer layout. Structs in the map
-  // had their layout calculated and added to the module as metadata.
-  llvm::DenseMap<llvm::StructType *, size_t> StructSizesForBuffer;
+  llvm::DenseMap<const clang::RecordType *, llvm::Type *> LayoutTypes;
 };
 
 } // namespace CodeGen

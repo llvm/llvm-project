@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ABIInfoImpl.h"
+#include "HLSLTargetInfo.h"
 #include "TargetInfo.h"
 
 using namespace clang;
@@ -38,12 +39,12 @@ private:
 };
 } // end anonymous namespace
 namespace {
-class CommonSPIRTargetCodeGenInfo : public TargetCodeGenInfo {
+class CommonSPIRTargetCodeGenInfo : public CommonHLSLTargetCodeGenInfo {
 public:
   CommonSPIRTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
-      : TargetCodeGenInfo(std::make_unique<CommonSPIRABIInfo>(CGT)) {}
+      : CommonHLSLTargetCodeGenInfo(std::make_unique<CommonSPIRABIInfo>(CGT)) {}
   CommonSPIRTargetCodeGenInfo(std::unique_ptr<ABIInfo> ABIInfo)
-      : TargetCodeGenInfo(std::move(ABIInfo)) {}
+      : CommonHLSLTargetCodeGenInfo(std::move(ABIInfo)) {}
 
   LangAS getASTAllocaAddressSpace() const override {
     return getLangASFromTargetAS(
@@ -52,7 +53,9 @@ public:
 
   unsigned getOpenCLKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
-  llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *Ty) const override;
+  llvm::Type *getHLSLType(
+      CodeGenModule &CGM, const Type *Ty,
+      const SmallVector<unsigned> *Packoffsets = nullptr) const override;
   llvm::Type *getSPIRVImageTypeFromHLSLResource(
       const HLSLAttributedResourceType::Attributes &attributes,
       llvm::Type *ElementType, llvm::LLVMContext &Ctx) const;
@@ -364,8 +367,9 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getOpenCLType(CodeGenModule &CGM,
   return nullptr;
 }
 
-llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
-                                                     const Type *Ty) const {
+llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
+    CodeGenModule &CGM, const Type *Ty,
+    const SmallVector<unsigned> *Packoffsets) const {
   auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
   if (!ResType)
     return nullptr;
