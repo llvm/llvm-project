@@ -5791,21 +5791,22 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       Gather = DAG.getUNDEF(ContainerVT);
       SDValue SlideAmt =
           DAG.getElementCount(DL, XLenVT, M1VT.getVectorElementCount());
+      SDValue SubV1 =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, V1,
+                      DAG.getVectorIdxConstant(0, DL));
       for (int i = 0; i < N; i++) {
         if (i != 0)
           LHSIndices = getVSlidedown(DAG, Subtarget, DL, IndexContainerVT,
                                      DAG.getUNDEF(IndexContainerVT), LHSIndices,
                                      SlideAmt, TrueMask, VL);
-        SDValue SubIdx =
-            DAG.getVectorIdxConstant(M1VT.getVectorMinNumElements() * i, DL);
-        SDValue SubV1 =
-            DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, V1, SubIdx);
         SDValue SubIndex =
             DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubIndexVT, LHSIndices,
                         DAG.getVectorIdxConstant(0, DL));
         SDValue SubVec =
             DAG.getNode(GatherVVOpc, DL, M1VT, SubV1, SubIndex,
                         DAG.getUNDEF(M1VT), InnerTrueMask, InnerVL);
+        SDValue SubIdx =
+            DAG.getVectorIdxConstant(M1VT.getVectorMinNumElements() * i, DL);
         Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
                              SubVec, SubIdx);
       }
