@@ -3289,7 +3289,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // The number of already examined instructions. Debug instructions don't
   // count!
   unsigned SpeculatedInstructions = 0;
-  // By default the number of instructions that may be speculatevly executed is
+  // By default the number of instructions that may be speculatively executed is
   // one. Whenever a pattern is found in the basic block, that is cheap for sure
   // we increase this number to the size of the pattern (how many instructions
   // are there in that pattern).
