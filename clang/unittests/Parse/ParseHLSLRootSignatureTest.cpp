@@ -95,7 +95,8 @@ protected:
                    SmallVector<hlsl::RootSignatureToken> &Computed,
                    SmallVector<hlsl::TokenKind> &Expected) {
     for (unsigned I = 0, E = Expected.size(); I != E; ++I) {
-      if (Expected[I] == hlsl::TokenKind::invalid ||
+      if (Expected[I] == hlsl::TokenKind::error ||
+          Expected[I] == hlsl::TokenKind::invalid ||
           Expected[I] == hlsl::TokenKind::end_of_stream)
         continue;
       ASSERT_FALSE(Lexer.ConsumeToken());
@@ -282,6 +283,11 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
 
+  // We will also test that the error can be produced during peek and the Lexer
+  // will correctly just return true on the next ConsumeToken without
+  // reporting another error
+  auto Result = Lexer.PeekNextToken();
+  ASSERT_EQ(std::nullopt, Result);
   ASSERT_TRUE(Lexer.ConsumeToken());
   ASSERT_TRUE(Consumer->IsSatisfied());
 }
