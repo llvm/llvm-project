@@ -692,7 +692,7 @@ lldb::SBValue SBType::GetTemplateArgumentValue(lldb::SBTarget target,
   LLDB_INSTRUMENT_VA(this, target, idx);
 
   if (!IsValid())
-    return SBValue();
+    return {};
 
   std::optional<CompilerType::IntegralTemplateArgument> arg;
   const bool expand_pack = true;
@@ -716,9 +716,8 @@ lldb::SBValue SBType::GetTemplateArgumentValue(lldb::SBTarget target,
   DataExtractor data;
   value.GetData(data);
 
-  auto value_obj_sp = ValueObjectConstResult::Create(
-      target.GetSP().get(), arg->type, ConstString("value"), data);
-  return SBValue(std::move(value_obj_sp));
+  return SBValue(ValueObjectConstResult::Create(target.GetSP().get(), arg->type,
+                                                ConstString("value"), data));
 }
 
 SBType SBType::FindDirectNestedType(const char *name) {

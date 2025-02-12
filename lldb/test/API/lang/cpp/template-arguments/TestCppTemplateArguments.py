@@ -55,7 +55,7 @@ class TestCase(TestBase):
         template_param_value = value.GetType().GetTemplateArgumentValue(target, 1)
         self.assertTrue(template_param_value)
         self.assertEqual(template_param_value.GetTypeName(), "char")
-        self.assertEqual(chr(template_param_value.GetValueAsSigned()), 'v')
+        self.assertEqual(chr(template_param_value.GetValueAsSigned()), "v")
 
         # FIXME: type should be Foo<float, 2.0f>
         # FIXME: double/float NTTP parameter values currently not supported.
