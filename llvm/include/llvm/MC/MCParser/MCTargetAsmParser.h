@@ -194,20 +194,12 @@ public:
 // is optional and fully backward compatible with existing
 // PredicateMethods that return a 'bool' (match or near match).
 class DiagnosticPredicate {
-  enum class PredicateTy {
+public:
+  enum PredicateTy {
     Match,     // Matches
     NearMatch, // Close Match: use Specific Diagnostic
     NoMatch,   // No Match: use `InvalidOperand`
   } Predicate;
-
-public:
-#if __cplusplus >= 202002L
-  using enum PredicateTy;
-#else
-  static constexpr PredicateTy Match = PredicateTy::Match;
-  static constexpr PredicateTy NearMatch = PredicateTy::NearMatch;
-  static constexpr PredicateTy NoMatch = PredicateTy::NoMatch;
-#endif
 
   constexpr DiagnosticPredicate(PredicateTy T) : Predicate(T) {}
 
