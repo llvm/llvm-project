@@ -328,6 +328,8 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
     const ShuffleMask &Mask =
         cast<DiamondReuseWithShuffle>(LegalityRes).getMask();
     NewVec = createShuffle(VecOp, Mask, UserBB);
+    assert(NewVec->getType() == VecOp->getType() &&
+           "Expected same type! Bad mask ?");
     break;
   }
   case LegalityResultID::DiamondReuseMultiInput: {
