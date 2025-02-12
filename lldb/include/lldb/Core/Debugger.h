@@ -143,10 +143,6 @@ public:
 
   File &GetErrorFile() { return m_error_stream_sp->GetFile(); }
 
-  StreamFile &GetOutputStream() { return *m_output_stream_sp; }
-
-  StreamFile &GetErrorStream() { return *m_error_stream_sp; }
-
   repro::DataRecorder *GetInputRecorder();
 
   Status SetInputString(const char *data);
