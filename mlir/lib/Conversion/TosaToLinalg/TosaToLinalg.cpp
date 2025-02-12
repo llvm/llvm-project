@@ -1387,7 +1387,10 @@ public:
       return success();
     }
 
-    ArrayRef<int64_t> scale = op.getScale();
+    SmallVector<int64_t> scale;
+    if (!tosa::getConstShapeValue(op.getScale().getDefiningOp(), scale)) {
+      return failure();
+    }
 
     // Collapse the unit width and height away.
     SmallVector<ReassociationExprs, 4> reassociationMap(2);
@@ -1488,8 +1491,9 @@ public:
     resizeShape.push_back(channels);
 
     auto resizeTy = resultTy.clone(resizeShape);
-    auto resize =
-        builder.create<tosa::ResizeOp>(resizeTy, input, op->getAttrs());
+    auto resize = builder.create<tosa::ResizeOp>(resizeTy, input, op.getScale(),
+                                                 op.getOffset(), op.getBorder(),
+                                                 op.getMode());
 
     // Collapse an unit result dims.
     SmallVector<ReassociationExprs, 4> reassociationMap(2);
@@ -1604,9 +1608,14 @@ public:
       Value inY = b.create<arith::IndexCastOp>(b.getI32Type(), y);
       Value inX = b.create<arith::IndexCastOp>(b.getI32Type(), x);
 
-      ArrayRef<int64_t> offset = op.getOffset();
-      ArrayRef<int64_t> border = op.getBorder();
-      ArrayRef<int64_t> scale = op.getScale();
+      SmallVector<int64_t> scale, offset, border;
+      if (!tosa::getConstShapeValue(op.getScale().getDefiningOp(), scale) ||
+          !tosa::getConstShapeValue(op.getOffset().getDefiningOp(), offset) ||
+          !tosa::getConstShapeValue(op.getBorder().getDefiningOp(), border)) {
+        return rewriter.notifyMatchFailure(
+            op, "tosa.resize scale/offset/border should have compile time "
+                "constant values.");
+      }
 
       Value yScaleN, yScaleD, xScaleN, xScaleD;
       yScaleN = b.create<arith::ConstantOp>(b.getI32IntegerAttr(scale[0]));

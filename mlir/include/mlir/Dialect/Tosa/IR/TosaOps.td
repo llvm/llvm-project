@@ -1822,9 +1822,9 @@ def Tosa_ResizeOp : Tosa_InferShapedTypeOp<"resize"> {
 
   let arguments = (ins
     Tosa_Tensor4D:$input,
-    Tosa_IntArrayAttr4:$scale,
-    Tosa_IntArrayAttr2:$offset,
-    Tosa_IntArrayAttr2:$border,
+    Rank4TosaShape:$scale,
+    Rank2TosaShape:$offset,
+    Rank2TosaShape:$border,
     Tosa_ResizeTypeAttr:$mode
   );
 
@@ -1833,6 +1833,7 @@ def Tosa_ResizeOp : Tosa_InferShapedTypeOp<"resize"> {
   );
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
