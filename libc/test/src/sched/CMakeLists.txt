@@ -67,6 +67,7 @@ add_libc_unittest(
     sched_rr_get_interval_test.cpp
   DEPENDS
     libc.hdr.types.struct_sched_param
+    libc.hdr.types.struct_timespec
     libc.hdr.sched_macros
     libc.src.errno.errno
     libc.src.sched.sched_getscheduler
