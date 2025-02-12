@@ -1117,7 +1117,7 @@ bool AMDGPUToolChain::shouldSkipSanitizeOption(
     return false;
 
   if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                          options::OPT_fno_gpu_sanitize, true))
+                          options::OPT_fno_gpu_sanitize, false))
     return true;
 
   auto &Diags = TC.getDriver().getDiags();

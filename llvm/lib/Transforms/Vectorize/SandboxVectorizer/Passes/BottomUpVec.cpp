@@ -12,6 +12,7 @@
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
+#include "llvm/SandboxIR/Region.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
@@ -448,13 +449,24 @@ bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
 
           assert(SeedSlice.size() >= 2 && "Should have been rejected!");
 
-          // TODO: If vectorization succeeds, run the RegionPassManager on the
-          // resulting region.
-
           // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
           SmallVector<Value *> SeedSliceVals(SeedSlice.begin(),
                                              SeedSlice.end());
-          Change |= tryVectorize(SeedSliceVals);
+          // Create an empty region. Instructions get added to the region
+          // automatically by the callbacks.
+          auto &Ctx = F.getContext();
+          Region Rgn(Ctx, A.getTTI());
+          // Save the state of the IR before we make any changes. The
+          // transaction gets accepted/reverted by the tr-accept-or-revert pass.
+          Ctx.save();
+          // Try to vectorize starting from the seed slice. The returned value
+          // is true if we found vectorizable code and generated some vector
+          // code for it. It does not mean that the code is profitable.
+          bool VecSuccess = tryVectorize(SeedSliceVals);
+          if (VecSuccess)
+            // WARNING: All passes should return false, except those that
+            // accept/revert the state.
+            Change |= RPM.runOnRegion(Rgn, A);
         }
       }
     }

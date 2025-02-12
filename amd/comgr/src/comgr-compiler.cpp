@@ -80,8 +80,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
 
 #ifndef COMGR_DISABLE_SPIRV
@@ -992,8 +992,9 @@ AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
   } else {
     // Triple and CPU
     Args.push_back("-target");
-    Args.push_back(Saver.save(Twine(Ident.Arch) + "-" + Ident.Vendor + "-" +
-                              Ident.OS).data());
+    Args.push_back(
+        Saver.save(Twine(Ident.Arch) + "-" + Ident.Vendor + "-" + Ident.OS)
+            .data());
     Args.push_back(Saver.save(Twine("-mcpu=") + GPUArch).data());
   }
 
@@ -1001,10 +1002,6 @@ AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
 }
 
 amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
-  HIPIncludePath = (Twine(env::getHIPPath()) + "/include").str();
-  // HIP headers depend on hsa.h which is in ROCM_DIR/include.
-  ROCMIncludePath = (Twine(env::getROCMPath()) + "/include").str();
-
   // Default to O3 for all contexts
   Args.push_back("-O3");
 
@@ -1027,10 +1024,6 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
   case AMD_COMGR_LANGUAGE_HIP:
     Args.push_back("hip");
     Args.push_back("--offload-device-only");
-    Args.push_back("-isystem");
-    Args.push_back(ROCMIncludePath.c_str());
-    Args.push_back("-isystem");
-    Args.push_back(HIPIncludePath.c_str());
     break;
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
@@ -1874,8 +1867,8 @@ amd_comgr_status_t AMDGPUCompiler::linkToExecutable() {
 amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
 #ifdef COMGR_DISABLE_SPIRV
   LogS << "Calling AMDGPUCompiler::translateSpirvToBitcode() not supported "
-    << "Comgr is built with -DCOMGR_DISABLE_SPIRV. Re-build LLVM and Comgr "
-    << "with LLVM-SPIRV-Translator support to continue.\n";
+       << "Comgr is built with -DCOMGR_DISABLE_SPIRV. Re-build LLVM and Comgr "
+       << "with LLVM-SPIRV-Translator support to continue.\n";
   return AMD_COMGR_STATUS_ERROR;
 #else
   if (auto Status = createTmpDirs()) {
@@ -1938,8 +1931,8 @@ amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
     }
 
     LogS << "SPIR-V Translation: amd-llvm-spirv -r --spirv-target-env=CL2.0 "
-      << getFilePath(Input, InputDir) << " "
-      << getFilePath(Output, OutputDir) << " (command line equivalent)\n";
+         << getFilePath(Input, InputDir) << " "
+         << getFilePath(Output, OutputDir) << " (command line equivalent)\n";
 
     if (env::shouldSaveTemps()) {
       if (auto Status = outputToFile(Output, getFilePath(Output, OutputDir))) {

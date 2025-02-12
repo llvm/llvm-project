@@ -96,7 +96,14 @@ namespace __xray {
 inline bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT { return true; }
 
 ALWAYS_INLINE uint64_t readTSC(uint8_t &CPU) XRAY_NEVER_INSTRUMENT {
+  CPU = 0;
+#if __has_builtin(__builtin_readcyclecounter)
   return __builtin_readcyclecounter();
+#else
+  uint64_t Cycles;
+  asm volatile("stckf %0" : : "Q"(Cycles) : "cc");
+  return Cycles;
+#endif
 }
 
 inline uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {

@@ -151,8 +151,8 @@ define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_2_un
 define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_2_binary(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_0_target_subvec_mask_2_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[2]
+; CHECK-NEXT:    vbroadcastsd %xmm1, %ymm1
+; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
   ret <4 x double> %r

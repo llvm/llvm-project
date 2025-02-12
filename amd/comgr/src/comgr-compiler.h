@@ -52,12 +52,6 @@ class AMDGPUCompiler {
   DataAction *ActionInfo;
   DataSet *InSet;
   amd_comgr_data_set_t OutSetT;
-  /// ROCM include Path
-  std::string ROCMIncludePath;
-  /// HIP and Clang Include Paths
-  std::string HIPIncludePath;
-  std::string ClangIncludePath;
-  std::string ClangIncludePath2;
   /// Precompiled header file paths.
   llvm::SmallVector<llvm::SmallString<128>, 2> PrecompiledHeaders;
   /// Arguments common to all driver invocations in the current action.

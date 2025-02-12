@@ -29,20 +29,19 @@ endprogram
 ! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>)
 ! CHECK-LABEL:   } init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x3xf64>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.array<3x3xf64>>>):
+! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<3x3xf64> {bindc_name = ".tmp"}
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0.000000e+00 : f64
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_4]], %[[VAL_5]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[VAL_7:.*]] = fir.allocmem !fir.array<3x3xf64> {bindc_name = ".tmp", uniq_name = ""}
-! CHECK:           %[[VAL_8:.*]] = arith.constant true
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_6]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<3x3xf64>>, !fir.shape<2>) -> (!fir.heap<!fir.array<3x3xf64>>, !fir.heap<!fir.array<3x3xf64>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_6]]) {uniq_name = ".tmp"} : (!fir.ref<!fir.array<3x3xf64>>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x3xf64>>, !fir.ref<!fir.array<3x3xf64>>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_10]] : (!fir.box<!fir.array<3x3xf64>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_13:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_12]] : (!fir.box<!fir.array<3x3xf64>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_14:.*]] = fir.shape_shift %[[VAL_11]]#0, %[[VAL_11]]#1, %[[VAL_13]]#0, %[[VAL_13]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
-! CHECK:           %[[VAL_15:.*]] = fir.embox %[[VAL_9]]#0(%[[VAL_14]]) : (!fir.heap<!fir.array<3x3xf64>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<3x3xf64>>
+! CHECK:           %[[VAL_15:.*]] = fir.embox %[[VAL_9]]#0(%[[VAL_14]]) : (!fir.ref<!fir.array<3x3xf64>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<3x3xf64>>
 ! CHECK:           hlfir.assign %[[VAL_1]] to %[[VAL_15]] : f64, !fir.box<!fir.array<3x3xf64>>
 ! CHECK:           fir.store %[[VAL_15]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>
 ! CHECK:           omp.yield(%[[ALLOC]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>)
@@ -68,19 +67,6 @@ endprogram
 ! CHECK:             }
 ! CHECK:           }
 ! CHECK:           omp.yield(%[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>)
-
-! CHECK-LABEL:   }  cleanup {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x3xf64>>>):
-! CHECK:           %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>
-! CHECK:           %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.array<3x3xf64>>) -> !fir.ref<!fir.array<3x3xf64>>
-! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<3x3xf64>>) -> i64
-! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i64
-! CHECK:           %[[VAL_5:.*]] = arith.cmpi ne, %[[VAL_3]], %[[VAL_4]] : i64
-! CHECK:           fir.if %[[VAL_5]] {
-! CHECK:             %[[VAL_6:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<3x3xf64>>) -> !fir.heap<!fir.array<3x3xf64>>
-! CHECK:             fir.freemem %[[VAL_6]] : !fir.heap<!fir.array<3x3xf64>>
-! CHECK:           }
-! CHECK:           omp.yield
 ! CHECK:         }
 
 ! CHECK-LABEL:   omp.declare_reduction @add_reduction_f64 : f64 init {
@@ -112,13 +98,12 @@ endprogram
 ! CHECK:             %[[VAL_11:.*]] = fir.embox %[[VAL_4]]#0(%[[VAL_3]]) : (!fir.ref<!fir.array<3x3xf64>>, !fir.shape<2>) -> !fir.box<!fir.array<3x3xf64>>
 ! CHECK:             %[[VAL_12:.*]] = fir.alloca !fir.box<!fir.array<3x3xf64>>
 ! CHECK:             fir.store %[[VAL_11]] to %[[VAL_12]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>
-! CHECK:             %[[VAL_13:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
-! CHECK:             %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_15:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_16:.*]] = arith.constant 10 : i32
 ! CHECK:             %[[VAL_17:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop reduction(@add_reduction_f64 %[[VAL_8]]#0 -> %[[VAL_18:.*]], byref @add_reduction_byref_box_3x3xf64 %[[VAL_12]] -> %[[VAL_19:.*]] : !fir.ref<f64>, !fir.ref<!fir.box<!fir.array<3x3xf64>>>) {
+! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_13:.*]] : !fir.ref<i32>) reduction(@add_reduction_f64 %[[VAL_8]]#0 -> %[[VAL_18:.*]], byref @add_reduction_byref_box_3x3xf64 %[[VAL_12]] -> %[[VAL_19:.*]] : !fir.ref<f64>, !fir.ref<!fir.box<!fir.array<3x3xf64>>>) {
 ! CHECK:               omp.loop_nest (%[[VAL_20:.*]]) : i32 = (%[[VAL_15]]) to (%[[VAL_16]]) inclusive step (%[[VAL_17]]) {
+! CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFEscalar"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:                 %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFEarray"} : (!fir.ref<!fir.box<!fir.array<3x3xf64>>>) -> (!fir.ref<!fir.box<!fir.array<3x3xf64>>>, !fir.ref<!fir.box<!fir.array<3x3xf64>>>)
 ! CHECK:                 fir.store %[[VAL_20]] to %[[VAL_14]]#1 : !fir.ref<i32>

@@ -12,7 +12,6 @@
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O3 %s
 
 ; REQUIRES: asserts
-; REQUIRES: some-fixes
 
 ; GCN-O0:Target Library Information
 ; GCN-O0-NEXT:Target Pass Configuration
@@ -25,6 +24,7 @@
 ; GCN-O0-NEXT:Register Usage Information Storage
 ; GCN-O0-NEXT:Machine Branch Probability Analysis
 ; GCN-O0-NEXT:  ModulePass Manager
+; GCN-O0-NEXT:    Verify Heterogeneous Debug Preconditions
 ; GCN-O0-NEXT:    Pre-ISel Intrinsic Lowering
 ; GCN-O0-NEXT:    FunctionPass Manager
 ; GCN-O0-NEXT:      Expand large div/rem
@@ -32,6 +32,7 @@
 ; GCN-O0-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O0-NEXT:    AMDGPU Printf lowering
 ; GCN-O0-NEXT:    Lower ctors and dtors for AMDGPU
+; GCN-O0-NEXT:    AMDGPU Lower Kernel Calls
 ; GCN-O0-NEXT:    Expand variadic functions
 ; GCN-O0-NEXT:    AMDGPU Inline All Functions
 ; GCN-O0-NEXT:    Inliner for always_inline functions
@@ -175,6 +176,7 @@
 ; GCN-O1-NEXT:Default Regalloc Eviction Advisor
 ; GCN-O1-NEXT:Default Regalloc Priority Advisor
 ; GCN-O1-NEXT:  ModulePass Manager
+; GCN-O1-NEXT:    Verify Heterogeneous Debug Preconditions
 ; GCN-O1-NEXT:    Pre-ISel Intrinsic Lowering
 ; GCN-O1-NEXT:    FunctionPass Manager
 ; GCN-O1-NEXT:      Expand large div/rem
@@ -182,6 +184,7 @@
 ; GCN-O1-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O1-NEXT:    AMDGPU Printf lowering
 ; GCN-O1-NEXT:    Lower ctors and dtors for AMDGPU
+; GCN-O1-NEXT:    AMDGPU Lower Kernel Calls
 ; GCN-O1-NEXT:    Expand variadic functions
 ; GCN-O1-NEXT:    AMDGPU Inline All Functions
 ; GCN-O1-NEXT:    Inliner for always_inline functions
@@ -439,17 +442,17 @@
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-NEXT:        Stack Frame Layout Analysis
-<<<<<<< HEAD
-; GCN-O1-NEXT:    Function register usage analysis
-; GCN-O1-NEXT:    CallGraph Construction
-; GCN-O1-NEXT:    Call Graph SCC Pass Manager
-; GCN-O1-NEXT:      DummyCGSCCPass
-; GCN-O1-NEXT:      FunctionPass Manager
-; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
-; GCN-O1-NEXT:        Machine Optimization Remark Emitter
-=======
 ; GCN-O1-NEXT:        Function register usage analysis
+; GCN-O1-NEXT:        AMDGPU Assembly Printer
+; GCN-O1-NEXT:        Free MachineFunction
+
+; GCN-O1-OPTS:Target Library Information
+; GCN-O1-OPTS-NEXT:Target Pass Configuration
+; GCN-O1-OPTS-NEXT:Machine Module Information
+; GCN-O1-OPTS-NEXT:Target Transform Information
+; GCN-O1-OPTS-NEXT:Assumption Cache Tracker
 ; GCN-O1-OPTS-NEXT:Profile summary info
+; GCN-O1-OPTS-NEXT:AMDGPU Address space based Alias Analysis
 ; GCN-O1-OPTS-NEXT:External Alias Analysis
 ; GCN-O1-OPTS-NEXT:Type-Based Alias Analysis
 ; GCN-O1-OPTS-NEXT:Scoped NoAlias Alias Analysis
@@ -460,6 +463,7 @@
 ; GCN-O1-OPTS-NEXT:Default Regalloc Eviction Advisor
 ; GCN-O1-OPTS-NEXT:Default Regalloc Priority Advisor
 ; GCN-O1-OPTS-NEXT:  ModulePass Manager
+; GCN-O1-OPTS-NEXT:    Verify Heterogeneous Debug Preconditions
 ; GCN-O1-OPTS-NEXT:    Pre-ISel Intrinsic Lowering
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:      Expand large div/rem
@@ -467,6 +471,7 @@
 ; GCN-O1-OPTS-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O1-OPTS-NEXT:    AMDGPU Printf lowering
 ; GCN-O1-OPTS-NEXT:    Lower ctors and dtors for AMDGPU
+; GCN-O1-OPTS-NEXT:    AMDGPU Lower Kernel Calls
 ; GCN-O1-OPTS-NEXT:    Expand variadic functions
 ; GCN-O1-OPTS-NEXT:    AMDGPU Inline All Functions
 ; GCN-O1-OPTS-NEXT:    Inliner for always_inline functions
@@ -752,17 +757,7 @@
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:        Stack Frame Layout Analysis
-<<<<<<< HEAD
-; GCN-O1-OPTS-NEXT:    Function register usage analysis
-; GCN-O1-OPTS-NEXT:    CallGraph Construction
-; GCN-O1-OPTS-NEXT:    Call Graph SCC Pass Manager
-; GCN-O1-OPTS-NEXT:      DummyCGSCCPass
-; GCN-O1-OPTS-NEXT:      FunctionPass Manager
-; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
-; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
-=======
 ; GCN-O1-OPTS-NEXT:        Function register usage analysis
->>>>>>> c897c13dde3b ([AMDGPU] Convert AMDGPUResourceUsageAnalysis pass from Module to MF pass (#102913))
 ; GCN-O1-OPTS-NEXT:        AMDGPU Assembly Printer
 ; GCN-O1-OPTS-NEXT:        Free MachineFunction
 
@@ -783,6 +778,7 @@
 ; GCN-O2-NEXT:Default Regalloc Eviction Advisor
 ; GCN-O2-NEXT:Default Regalloc Priority Advisor
 ; GCN-O2-NEXT:  ModulePass Manager
+; GCN-O2-NEXT:    Verify Heterogeneous Debug Preconditions
 ; GCN-O2-NEXT:    Pre-ISel Intrinsic Lowering
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      Expand large div/rem
@@ -790,6 +786,7 @@
 ; GCN-O2-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O2-NEXT:    AMDGPU Printf lowering
 ; GCN-O2-NEXT:    Lower ctors and dtors for AMDGPU
+; GCN-O2-NEXT:    AMDGPU Lower Kernel Calls
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      AMDGPU Image Intrinsic Optimizer
 ; GCN-O2-NEXT:    Expand variadic functions
@@ -1081,17 +1078,7 @@
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O2-NEXT:        Stack Frame Layout Analysis
-<<<<<<< HEAD
-; GCN-O2-NEXT:    Function register usage analysis
-; GCN-O2-NEXT:    CallGraph Construction
-; GCN-O2-NEXT:    Call Graph SCC Pass Manager
-; GCN-O2-NEXT:      DummyCGSCCPass
-; GCN-O2-NEXT:      FunctionPass Manager
-; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
-; GCN-O2-NEXT:        Machine Optimization Remark Emitter
-=======
 ; GCN-O2-NEXT:        Function register usage analysis
->>>>>>> c897c13dde3b ([AMDGPU] Convert AMDGPUResourceUsageAnalysis pass from Module to MF pass (#102913))
 ; GCN-O2-NEXT:        AMDGPU Assembly Printer
 ; GCN-O2-NEXT:        Free MachineFunction
 
@@ -1112,6 +1099,7 @@
 ; GCN-O3-NEXT:Default Regalloc Eviction Advisor
 ; GCN-O3-NEXT:Default Regalloc Priority Advisor
 ; GCN-O3-NEXT:  ModulePass Manager
+; GCN-O3-NEXT:    Verify Heterogeneous Debug Preconditions
 ; GCN-O3-NEXT:    Pre-ISel Intrinsic Lowering
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      Expand large div/rem
@@ -1119,6 +1107,7 @@
 ; GCN-O3-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O3-NEXT:    AMDGPU Printf lowering
 ; GCN-O3-NEXT:    Lower ctors and dtors for AMDGPU
+; GCN-O3-NEXT:    AMDGPU Lower Kernel Calls
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      AMDGPU Image Intrinsic Optimizer
 ; GCN-O3-NEXT:    Expand variadic functions
@@ -1423,17 +1412,7 @@
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:        Stack Frame Layout Analysis
-<<<<<<< HEAD
-; GCN-O3-NEXT:    Function register usage analysis
-; GCN-O3-NEXT:    CallGraph Construction
-; GCN-O3-NEXT:    Call Graph SCC Pass Manager
-; GCN-O3-NEXT:      DummyCGSCCPass
-; GCN-O3-NEXT:      FunctionPass Manager
-; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
-; GCN-O3-NEXT:        Machine Optimization Remark Emitter
-=======
 ; GCN-O3-NEXT:        Function register usage analysis
->>>>>>> c897c13dde3b ([AMDGPU] Convert AMDGPUResourceUsageAnalysis pass from Module to MF pass (#102913))
 ; GCN-O3-NEXT:        AMDGPU Assembly Printer
 ; GCN-O3-NEXT:        Free MachineFunction
 

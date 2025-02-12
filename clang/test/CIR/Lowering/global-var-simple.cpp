@@ -79,3 +79,24 @@ long double ld;
 
 __float128 f128;
 // CHECK: @f128 = external dso_local global fp128
+
+void *vp;
+// CHECK: @vp = external dso_local global ptr{{$}}
+
+int *ip = 0;
+// CHECK: @ip = dso_local global ptr null
+
+double *dp;
+// CHECK: @dp = external dso_local global ptr{{$}}
+
+char **cpp;
+// CHECK: @cpp = external dso_local global ptr{{$}}
+
+void (*fp)();
+// CHECK: @fp = external dso_local global ptr{{$}}
+
+int (*fpii)(int) = 0;
+// CHECK: @fpii = dso_local global ptr null
+
+void (*fpvar)(int, ...);
+// CHECK: @fpvar = external dso_local global ptr{{$}}

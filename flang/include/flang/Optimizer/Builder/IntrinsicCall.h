@@ -406,6 +406,7 @@ struct IntrinsicLibrary {
   mlir::Value genSyncThreadsAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSyncThreadsCount(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSyncThreadsOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genSyncWarp(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSystem(std::optional<mlir::Type>,
                                mlir::ArrayRef<fir::ExtendedValue> args);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);

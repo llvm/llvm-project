@@ -240,9 +240,7 @@ template <class G> void AbstractDependenceGraphBuilder<G>::createDefUseEdges() {
         Instruction *UI = dyn_cast<Instruction>(U);
         if (!UI)
           continue;
-        NodeType *DstNode = nullptr;
-        if (IMap.find(UI) != IMap.end())
-          DstNode = IMap.find(UI)->second;
+        NodeType *DstNode = IMap.lookup(UI);
 
         // In the case of loops, the scope of the subgraph is all the
         // basic blocks (and instructions within them) belonging to the loop. We

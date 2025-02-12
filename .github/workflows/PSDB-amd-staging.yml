@@ -65,7 +65,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           COMMIT_HASH: ${{ github.event.after }}
         run: |
-          docker exec -e JENKINS_JOB_NAME=${{secrets.CI_JENKINS_JOB_NAME}}  -e PR_NUMBER=${{ github.event.pull_request.number }}  -e COMMIT_HASH=${{ github.event.after }} -e JENKINS_URL=${{secrets.CI_JENKINS_URL}} -e JENKINS_USER=${{secrets.CI_JENKINS_USER}} -e JENKINS_API_TOKEN=${{secrets.CI_JENKINS_TOKEN}}  "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 cancel_previous_build.py"
+          docker exec -e JENKINS_JOB_NAME=${{secrets.CI_JENKINS_JOB_NAME}}  -e PR_NUMBER=${{ github.event.pull_request.number }}  -e COMMIT_HASH=${{ github.event.after }} -e JENKINS_URL=${{secrets.CI_JENKINS_URL}} -e JENKINS_USER=${{secrets.CI_JENKINS_USER}} -e JENKINS_API_TOKEN=${{secrets.CI_JENKINS_TOKEN}}  "${{env.CONTAINER_NAME}}" /bin/bash -c "PYTHONHTTPSVERIFY=0 python3 cancel_previous_build.py"
 
         
       # Runs a set of commands using the runners shell
@@ -96,7 +96,7 @@ jobs:
           echo "--Running jenkins_api.py with input sha - $input_sha for pull request - $input_pr_url" 
           docker exec -e GITHUB_REPOSITORY="$GITHUB_REPOSITORY" -e svc_acc_org_secret="$svc_acc_org_secret" -e input_sha="$input_sha" -e input_pr_url="$input_pr_url" -e pipeline_name="$pipeline_name" \
                      -e input_pr_num="$input_pr_num" -e PR_TITLE="$PR_TITLE" -e JENKINS_URL="$JENKINS_URL" -e GITHUB_PAT="$svc_acc_org_secret" "${{env.CONTAINER_NAME}}"  \
-                     /bin/bash -c 'echo \"PR NUM: "$input_pr_num"\" && python3 jenkins_api.py -s \"${JENKINS_URL}\" -jn "$pipeline_name" -ghr "$GITHUB_REPOSITORY" -ghsha "$input_sha" -ghprn "$input_pr_num" -ghpru "$input_pr_url" -ghprt "$PR_TITLE" -ghpat="$svc_acc_org_secret"'
+                     /bin/bash -c 'echo \"PR NUM: "$input_pr_num"\" && PYTHONHTTPSVERIFY=0 python3 jenkins_api.py -s \"${JENKINS_URL}\" -jn "$pipeline_name" -ghr "$GITHUB_REPOSITORY" -ghsha "$input_sha" -ghprn "$input_pr_num" -ghpru "$input_pr_url" -ghprt "$PR_TITLE" -ghpat="$svc_acc_org_secret"'
           
       - name: Stop and remove container
         if: always()

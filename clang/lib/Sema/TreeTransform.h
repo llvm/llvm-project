@@ -9547,6 +9547,17 @@ TreeTransform<Derived>::TransformOMPTileDirective(OMPTileDirective *D) {
 
 template <typename Derived>
 StmtResult
+TreeTransform<Derived>::TransformOMPStripeDirective(OMPStripeDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
 TreeTransform<Derived>::TransformOMPUnrollDirective(OMPUnrollDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
@@ -10624,6 +10635,11 @@ TreeTransform<Derived>::TransformOMPNoOpenMPClause(OMPNoOpenMPClause *C) {
 template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPNoOpenMPRoutinesClause(
     OMPNoOpenMPRoutinesClause *C) {
+  return C;
+}
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPNoOpenMPConstructsClause(
+    OMPNoOpenMPConstructsClause *C) {
   return C;
 }
 template <typename Derived>
