@@ -22,6 +22,8 @@ add_object_library(
   DEPENDS
     libc.include.time
     libc.src.__support.CPP.limits
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.optional
     libc.src.errno.errno
     .time_constants
     libc.hdr.types.time_t

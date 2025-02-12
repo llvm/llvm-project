@@ -6833,6 +6833,16 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
       continue;
     }
 
+    // We might end up with relocations in CREL here. If we do, report a
+    // warning since we do not currently support them.
+    if (RelocSec->sh_type == ELF::SHT_CREL) {
+      reportWarning(createError(".stack_sizes (" + describe(*StackSizesELFSec) +
+                                ") has a corresponding CREL relocation "
+                                "section, which is not currently supported"),
+                    FileName);
+      continue;
+    }
+
     // A .stack_sizes section header's sh_link field is supposed to point
     // to the section that contains the functions whose stack sizes are
     // described in it.

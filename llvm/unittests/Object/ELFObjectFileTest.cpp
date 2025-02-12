@@ -8,6 +8,7 @@
 
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -1433,7 +1434,8 @@ FileHeader:
     // Basic verification to make sure we have the correct section types.
     for (auto const &[Sec, RelaSec] : *SecToRelocMapOrErr) {
       ASSERT_EQ(Sec->sh_type, ELF::SHT_PROGBITS);
-      ASSERT_EQ(RelaSec->sh_type, ELF::SHT_RELA);
+      ASSERT_TRUE(RelaSec->sh_type == ELF::SHT_RELA ||
+                  RelaSec->sh_type == ELF::SHT_CREL);
     }
   };
 
@@ -1503,6 +1505,19 @@ Sections:
   DoCheckFails(MissingRelocatableContent, DefaultMatcher,
                "SHT_RELA section with index 1: failed to get a "
                "relocated section: invalid section index: 255");
+
+  StringRef OneTextSectionCREL = R"(
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name: .crel.tex
+    Type: SHT_CREL
+    Flags: [ SHF_INFO_LINK ]
+    Info: .text
+)";
+
+  DoCheckSucceeds(OneTextSectionCREL, DefaultMatcher);
 }
 
 TEST(ELFObjectFileTest, ELFSymbolRefLess) {

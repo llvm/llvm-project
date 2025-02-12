@@ -91,11 +91,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    LowerCtorDtor("nvptx-lower-global-ctor-dtor",
-                  cl::desc("Lower GPU ctor / dtors to globals on the device."),
-                  cl::init(false), cl::Hidden);
-
 #define DEPOTNAME "__local_depot"
 
 /// DiscoverDependentGlobals - Return a set of GlobalVariables on which \p V
@@ -766,13 +761,6 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
     emitAliasDeclaration(&GA, O);
 }
 
-static bool isEmptyXXStructor(GlobalVariable *GV) {
-  if (!GV) return true;
-  const ConstantArray *InitList = dyn_cast<ConstantArray>(GV->getInitializer());
-  if (!InitList) return true;  // Not an array; we don't know how to parse.
-  return InitList->getNumOperands() == 0;
-}
-
 void NVPTXAsmPrinter::emitStartOfAsmFile(Module &M) {
   // Construct a default subtarget off of the TargetMachine defaults. The
   // rest of NVPTX isn't friendly to change subtargets per function and
@@ -793,22 +781,6 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
       *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
   if (M.alias_size() && (STI.getPTXVersion() < 63 || STI.getSmVersion() < 30))
     report_fatal_error(".alias requires PTX version >= 6.3 and sm_30");
-
-  // OpenMP supports NVPTX global constructors and destructors.
-  bool IsOpenMP = M.getModuleFlag("openmp") != nullptr;
-
-  if (!isEmptyXXStructor(M.getNamedGlobal("llvm.global_ctors")) &&
-      !LowerCtorDtor && !IsOpenMP) {
-    report_fatal_error(
-        "Module has a nontrivial global ctor, which NVPTX does not support.");
-    return true;  // error
-  }
-  if (!isEmptyXXStructor(M.getNamedGlobal("llvm.global_dtors")) &&
-      !LowerCtorDtor && !IsOpenMP) {
-    report_fatal_error(
-        "Module has a nontrivial global dtor, which NVPTX does not support.");
-    return true;  // error
-  }
 
   // We need to call the parent's one explicitly.
   bool Result = AsmPrinter::doInitialization(M);

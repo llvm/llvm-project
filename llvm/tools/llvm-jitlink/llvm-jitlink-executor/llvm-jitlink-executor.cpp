@@ -18,6 +18,7 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/UnwindInfoManager.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -190,6 +191,10 @@ int main(int argc, char *argv[]) {
                 SimpleRemoteEPCServer::defaultBootstrapSymbols();
             addDefaultBootstrapValuesForHostProcess(S.bootstrapMap(),
                                                     S.bootstrapSymbols());
+#ifdef __APPLE__
+            if (UnwindInfoManager::TryEnable())
+              UnwindInfoManager::addBootstrapSymbols(S.bootstrapSymbols());
+#endif // __APPLE__
             S.services().push_back(
                 std::make_unique<rt_bootstrap::SimpleExecutorMemoryManager>());
             S.services().push_back(

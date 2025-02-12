@@ -4,6 +4,20 @@
 
 mesh.mesh @mesh_1d(shape = 2)
 
+// CHECK-LABEL: func @return_sharding
+func.func @return_sharding(
+  // CHECK-SAME: [[ARG:%.*]]: tensor<1xf32>
+  %arg0: tensor<2xf32>
+// CHECK-SAME: ) -> (tensor<1xf32>, !mesh.sharding) {
+) -> (tensor<2xf32>, !mesh.sharding) {
+  %ssharding_annotated = mesh.sharding @mesh_1d split_axes = [[0]] : !mesh.sharding
+  %sharding_annotated = mesh.shard %arg0 to %ssharding_annotated  : tensor<2xf32>
+  // CHECK-NEXT: [[vsharding:%.*]] = mesh.sharding @mesh_1d split_axes = {{\[\[}}0]] : !mesh.sharding
+  %r = mesh.get_sharding %sharding_annotated : tensor<2xf32> -> !mesh.sharding
+  // CHECK-NEXT: return [[ARG]], [[vsharding]] : tensor<1xf32>, !mesh.sharding
+  return %sharding_annotated, %r : tensor<2xf32>, !mesh.sharding
+}
+
 // CHECK-LABEL: func @full_replication
 func.func @full_replication(
   // CHECK-SAME: %[[ARG:.*]]: tensor<2xi8>

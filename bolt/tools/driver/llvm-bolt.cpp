@@ -173,16 +173,6 @@ void boltMode(int argc, char **argv) {
   }
 }
 
-static std::string GetExecutablePath(const char *Argv0) {
-  SmallString<256> ExecutablePath(Argv0);
-  // Do a PATH lookup if Argv0 isn't a valid path.
-  if (!llvm::sys::fs::exists(ExecutablePath))
-    if (llvm::ErrorOr<std::string> P =
-            llvm::sys::findProgramByName(ExecutablePath))
-      ExecutablePath = *P;
-  return std::string(ExecutablePath);
-}
-
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
   sys::PrintStackTraceOnErrorSignal(argv[0]);
@@ -190,7 +180,7 @@ int main(int argc, char **argv) {
 
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
-  std::string ToolPath = GetExecutablePath(argv[0]);
+  std::string ToolPath = llvm::sys::fs::getMainExecutable(argv[0], nullptr);
 
   // Initialize targets and assembly printers/parsers.
   llvm::InitializeAllTargetInfos();

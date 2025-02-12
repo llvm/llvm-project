@@ -31,7 +31,6 @@ public:
   void emitWindowsUnwindTables() override;
   void emitWindowsUnwindTables(WinEH::FrameInfo *Frame) override;
 
-  void emitThumbFunc(MCSymbol *Symbol) override;
   void finishImpl() override;
 };
 
@@ -52,10 +51,6 @@ void ARMWinCOFFStreamer::emitWindowsUnwindTables() {
   if (!getNumWinFrameInfos())
     return;
   EHStreamer.Emit(*this);
-}
-
-void ARMWinCOFFStreamer::emitThumbFunc(MCSymbol *Symbol) {
-  getAssembler().setIsThumbFunc(Symbol);
 }
 
 void ARMWinCOFFStreamer::finishImpl() {
@@ -80,6 +75,11 @@ class ARMTargetWinCOFFStreamer : public llvm::ARMTargetStreamer {
 public:
   ARMTargetWinCOFFStreamer(llvm::MCStreamer &S) : ARMTargetStreamer(S) {}
 
+  ARMWinCOFFStreamer &getStreamer() {
+    return static_cast<ARMWinCOFFStreamer &>(Streamer);
+  }
+  void emitThumbFunc(MCSymbol *Symbol) override;
+
   // The unwind codes on ARM Windows are documented at
   // https://docs.microsoft.com/en-us/cpp/build/arm-exception-handling
   void emitARMWinCFIAllocStack(unsigned Size, bool Wide) override;
@@ -96,6 +96,10 @@ public:
 private:
   void emitARMWinUnwindCode(unsigned UnwindCode, int Reg, int Offset);
 };
+
+void ARMTargetWinCOFFStreamer::emitThumbFunc(MCSymbol *Symbol) {
+  getStreamer().getAssembler().setIsThumbFunc(Symbol);
+}
 
 // Helper function to common out unwind code setup for those codes that can
 // belong to both prolog and epilog.

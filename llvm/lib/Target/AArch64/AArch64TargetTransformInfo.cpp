@@ -4705,7 +4705,8 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     if (VFMinValue == Scale)
       return Invalid;
   }
-  if (VF.isFixed() && (!ST->isNeonAvailable() || !ST->hasDotProd()))
+  if (VF.isFixed() &&
+      (!ST->isNeonAvailable() || !ST->hasDotProd() || AccumEVT == MVT::i64))
     return Invalid;
 
   if (InputEVT == MVT::i8) {

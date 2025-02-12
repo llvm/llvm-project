@@ -2928,9 +2928,10 @@ void ModuleMapParser::parseInferredModuleDecl(bool Framework, bool Explicit) {
     ActiveModule->InferExplicitSubmodules = Explicit;
   } else {
     // We'll be inferring framework modules for this directory.
-    Map.InferredDirectories[Directory].InferModules = true;
-    Map.InferredDirectories[Directory].Attrs = Attrs;
-    Map.InferredDirectories[Directory].ModuleMapFID = ModuleMapFID;
+    auto &InfDir = Map.InferredDirectories[Directory];
+    InfDir.InferModules = true;
+    InfDir.Attrs = Attrs;
+    InfDir.ModuleMapFID = ModuleMapFID;
     // FIXME: Handle the 'framework' keyword.
   }
 

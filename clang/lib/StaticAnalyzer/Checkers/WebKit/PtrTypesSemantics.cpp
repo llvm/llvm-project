@@ -636,6 +636,11 @@ public:
     return true;
   }
 
+  bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *IVIE) {
+    // An implicit value initialization is trvial.
+    return true;
+  }
+
 private:
   CacheTy &Cache;
   CacheTy RecursiveFn;
