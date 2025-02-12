@@ -1,10 +1,13 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -passes='amdgpu-attributor,function(amdgpu-lower-kernel-arguments)' -amdgpu-kernarg-preload-count=16 -S < %s 2>&1 \
-; RUN: | FileCheck -implicit-check-not='declare {{.*}} !dbg' %s
+; RUN: | FileCheck --match-full-lines --implicit-check-not='declare' %s
 
-; The real test is via the -implicit-check-not, which confirms we do not
-; leave behind a declaration which references the same DISubprogram metadata.
+; Confirms we do not leave behind a declaration which references the same
+; DISubprogram metadata.
 
-; CHECK: define amdgpu_kernel void @preload_block_count_x{{.*}} !dbg ![[#]]
+; CHECK: define amdgpu_kernel void @preload_block_count_x{{.*}} !dbg ![[#]] !max_work_group_size ![[#]] {
+; CHECK: declare void @0{{.*}} #[[#]]
+; CHECK: declare noundef align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #[[#]]
+; CHECK: declare noundef align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #[[#]]
 
 define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) %out) !dbg !4 !max_work_group_size !7 {
   %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
