@@ -78,15 +78,13 @@ define arm_aapcscc half @callee_soft_half_on_stack(float %r0, float %r1, float %
 ;
 ; LE-FP16-LABEL: callee_soft_half_on_stack:
 ; LE-FP16:       @ %bb.0: @ %entry
-; LE-FP16-NEXT:    ldr r0, [sp]
-; LE-FP16-NEXT:    vmov.f16 s0, r0
+; LE-FP16-NEXT:    vldr.16 s0, [sp]
 ; LE-FP16-NEXT:    vmov r0, s0
 ; LE-FP16-NEXT:    bx lr
 ;
 ; BE-FP16-LABEL: callee_soft_half_on_stack:
 ; BE-FP16:       @ %bb.0: @ %entry
-; BE-FP16-NEXT:    ldr r0, [sp]
-; BE-FP16-NEXT:    vmov.f16 s0, r0
+; BE-FP16-NEXT:    vldr.16 s0, [sp, #2]
 ; BE-FP16-NEXT:    vmov r0, s0
 ; BE-FP16-NEXT:    bx lr
 entry:
@@ -224,14 +222,12 @@ define arm_aapcs_vfpcc half @callee_hard_half_on_stack(float %s0, float %s1, flo
 ;
 ; LE-FP16-LABEL: callee_hard_half_on_stack:
 ; LE-FP16:       @ %bb.0: @ %entry
-; LE-FP16-NEXT:    ldr r0, [sp]
-; LE-FP16-NEXT:    vmov.f16 s0, r0
+; LE-FP16-NEXT:    vldr.16 s0, [sp]
 ; LE-FP16-NEXT:    bx lr
 ;
 ; BE-FP16-LABEL: callee_hard_half_on_stack:
 ; BE-FP16:       @ %bb.0: @ %entry
-; BE-FP16-NEXT:    ldr r0, [sp]
-; BE-FP16-NEXT:    vmov.f16 s0, r0
+; BE-FP16-NEXT:    vldr.16 s0, [sp, #2]
 ; BE-FP16-NEXT:    bx lr
 entry:
   ret half %f
