@@ -108,7 +108,9 @@ public:
     llvm_unreachable("target does not support ICF safe thunks");
   }
   // Returns the size of the safe thunk in ICF for the target.
-  virtual uint32_t getICFSafeThunkSize() const { return 0; }
+  virtual uint32_t getICFSafeThunkSize() const {
+    llvm_unreachable("target does not support ICF safe thunks");
+  }
 
   virtual ~TargetInfo();
 

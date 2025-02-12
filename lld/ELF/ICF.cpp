@@ -81,6 +81,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
+#include "Target.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
@@ -484,16 +485,7 @@ void ICF<ELFT>::applySafeThunksToRange(size_t begin, size_t end) {
     return;
 
   // Find the symbol to create the thunk for.
-  Symbol *masterSym = nullptr;
-  for (Symbol *sym : masterIsec->file->getSymbols()) {
-    if (auto *d = dyn_cast<Defined>(sym)) {
-      if (d->section == masterIsec) {
-        masterSym = sym;
-        break;
-      }
-    }
-  }
-
+  Symbol *masterSym = masterIsec->getEnclosingSymbol(0);
   if (!masterSym)
     return;
 
@@ -514,8 +506,11 @@ void ICF<ELFT>::applySafeThunksToRange(size_t begin, size_t end) {
 
     for (Symbol *sym : thunk->file->getSymbols())
       if (auto *d = dyn_cast<Defined>(sym))
-        if (d->section == isec)
-          d->size = thunkSize;
+        if (d->section == isec) {
+          d->value = 0;
+          if (d->size != 0)
+            d->size = thunkSize;
+        }
   }
 }
 
