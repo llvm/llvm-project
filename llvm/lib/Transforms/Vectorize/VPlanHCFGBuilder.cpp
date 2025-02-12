@@ -145,13 +145,13 @@ void PlainCFGBuilder::fixPhiNodes() {
     }
 
     // Add operands for VPPhi in the order matching its predecessors in VPlan.
-    DenseMap<const VPBasicBlock *, VPValue *> IncomingValues;
+    DenseMap<const VPBasicBlock *, VPValue *> VPPredToIncomingValue;
     for (unsigned I = 0; I != Phi->getNumOperands(); ++I) {
-      IncomingValues[BB2VPBB[Phi->getIncomingBlock(I)]] =
+      VPPredToIncomingValue[BB2VPBB[Phi->getIncomingBlock(I)]] =
           getOrCreateVPOperand(Phi->getIncomingValue(I));
     }
     for (VPBlockBase *Pred : VPPhi->getParent()->getPredecessors())
-      VPPhi->addOperand(IncomingValues.lookup(Pred->getExitingBasicBlock()));
+      VPPhi->addOperand(VPPredToIncomingValue.lookup(Pred->getExitingBasicBlock()));
   }
 }
 
