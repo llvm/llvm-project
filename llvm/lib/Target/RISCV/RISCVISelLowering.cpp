@@ -5338,13 +5338,17 @@ static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
 /// Is this mask local (i.e. elements only move within their local span), and
 /// repeating (that is, the same rearrangement is being done within each span)?
 static bool isLocalRepeatingShuffle(ArrayRef<int> Mask, int Span) {
-  // TODO: Could improve the case where undef elements exist in the first span.
+  SmallVector<int> LowSpan(Span, -1);
   for (auto [I, M] : enumerate(Mask)) {
     if (M == -1)
       continue;
-    int ChunkLo = I - (I % Span);
-    int ChunkHi = ChunkLo + Span;
-    if (M < ChunkLo || M >= ChunkHi || M - ChunkLo != Mask[I % Span])
+    if ((M / Span) != (int)(I / Span))
+      return false;
+    int SpanIdx = I % Span;
+    int Expected = M % Span;
+    if (LowSpan[SpanIdx] == -1)
+      LowSpan[SpanIdx] = Expected;
+    if (LowSpan[SpanIdx] != Expected)
       return false;
   }
   return true;
@@ -5745,12 +5749,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         convertToScalableVector(IndexContainerVT, LHSIndices, DAG, Subtarget);
 
     SDValue Gather;
-    // If we have a locally repeating mask, then we can reuse the first register
-    // in the index register group for all registers within the source register
-    // group.  TODO: This generalizes to m2, and m4.
-    const MVT M1VT = getLMUL1VT(ContainerVT);
-    auto VLMAX = RISCVTargetLowering::computeVLMAXBounds(M1VT, Subtarget).first;
-    if (ContainerVT.bitsGT(M1VT) && isLocalRepeatingShuffle(Mask, VLMAX)) {
+    if (NumElts > MinVLMAX && isLocalRepeatingShuffle(Mask, MinVLMAX)) {
+      // If we have a locally repeating mask, then we can reuse the first
+      // register in the index register group for all registers within the
+      // source register group.  TODO: This generalizes to m2, and m4.
+      const MVT M1VT = getLMUL1VT(ContainerVT);
       EVT SubIndexVT = M1VT.changeVectorElementType(IndexVT.getScalarType());
       SDValue SubIndex =
           DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubIndexVT, LHSIndices,
@@ -5772,12 +5775,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
                              SubVec, SubIdx);
       }
-    } else if (ContainerVT.bitsGT(M1VT) && isLowSourceShuffle(Mask, VLMAX)) {
+    } else if (NumElts > MinVLMAX && isLowSourceShuffle(Mask, MinVLMAX)) {
       // If we have a shuffle which only uses the first register in our
       // source register group, we can do a linear number of m1 vrgathers
       // reusing the same source register (but with different indices)
       // TODO: This can be generalized for m2 or m4, or for any shuffle
       // for which we can do a vslidedown followed by this expansion.
+      const MVT M1VT = getLMUL1VT(ContainerVT);
       EVT SubIndexVT = M1VT.changeVectorElementType(IndexVT.getScalarType());
       auto [InnerTrueMask, InnerVL] =
           getDefaultScalableVLOps(M1VT, DL, DAG, Subtarget);
@@ -5787,21 +5791,22 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       Gather = DAG.getUNDEF(ContainerVT);
       SDValue SlideAmt =
           DAG.getElementCount(DL, XLenVT, M1VT.getVectorElementCount());
+      SDValue SubV1 =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, V1,
+                      DAG.getVectorIdxConstant(0, DL));
       for (int i = 0; i < N; i++) {
         if (i != 0)
           LHSIndices = getVSlidedown(DAG, Subtarget, DL, IndexContainerVT,
                                      DAG.getUNDEF(IndexContainerVT), LHSIndices,
                                      SlideAmt, TrueMask, VL);
-        SDValue SubIdx =
-            DAG.getVectorIdxConstant(M1VT.getVectorMinNumElements() * i, DL);
-        SDValue SubV1 =
-            DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, V1, SubIdx);
         SDValue SubIndex =
             DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubIndexVT, LHSIndices,
                         DAG.getVectorIdxConstant(0, DL));
         SDValue SubVec =
             DAG.getNode(GatherVVOpc, DL, M1VT, SubV1, SubIndex,
                         DAG.getUNDEF(M1VT), InnerTrueMask, InnerVL);
+        SDValue SubIdx =
+            DAG.getVectorIdxConstant(M1VT.getVectorMinNumElements() * i, DL);
         Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
                              SubVec, SubIdx);
       }

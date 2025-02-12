@@ -399,6 +399,18 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
   if (!genericOp->getResult(0).hasOneUse())
     return failure();
 
+  // TODO: Add an option for allowing padding values. It could introduce
+  // undefined behavior if we unconditionally propagate pack op through all
+  // the ops. E.g., if the padding value is zero and there are division ops in
+  // a generic op. Some values of padding area could be NaN (0/0).
+  if (packOp.getPaddingValue())
+    return failure();
+
+  OpOperand *opOperand = genericOp.getDpsInitOperand(0);
+  auto packInfo = getPackingInfoFromOperand(opOperand, genericOp, packOp);
+  if (failed(packInfo))
+    return failure();
+
   // We want to move the pack not the generic.
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(genericOp);
@@ -421,18 +433,6 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
     if (!dom.properlyDominates(packOpDest, genericOp))
       return failure();
   }
-
-  // TODO: Add an option for allowing padding values. It could introduce
-  // undefined behavior if we unconditionally propagate pack op through all
-  // the ops. E.g., if the padding value is zero and there are division ops in
-  // a generic op. Some values of padding area could be NaN (0/0).
-  if (packOp.getPaddingValue())
-    return failure();
-
-  OpOperand *opOperand = genericOp.getDpsInitOperand(0);
-  auto packInfo = getPackingInfoFromOperand(opOperand, genericOp, packOp);
-  if (failed(packInfo))
-    return failure();
 
   // Rebuild the indexing map for the corresponding init operand.
   auto [packedOutOperand, packedOutIndexingMap] =
