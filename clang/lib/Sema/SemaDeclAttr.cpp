@@ -2963,7 +2963,7 @@ static bool isValidCodeModelAttr(llvm::Triple &Triple, StringRef Str) {
 static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
   SourceLocation LiteralLoc;
-  auto IsTripleSupported = [](const llvm::Triple Triple) {
+  auto IsTripleSupported = [](llvm::Triple &Triple) {
     return Triple.getArch() == llvm::Triple::ArchType::x86_64 ||
            Triple.isLoongArch();
   };
