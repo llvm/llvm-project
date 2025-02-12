@@ -1803,6 +1803,7 @@ static void privatizeIv(Fortran::lower::AbstractConverter &converter,
       builder, recipeName, loc, ivValue.getType());
 
   std::stringstream asFortran;
+  asFortran << Fortran::lower::mangle::demangleName(toStringRef(sym.name()));
   auto op = createDataEntryOp<mlir::acc::PrivateOp>(
       builder, loc, ivValue, asFortran, {}, true, /*implicit=*/true,
       mlir::acc::DataClause::acc_private, ivValue.getType(),
