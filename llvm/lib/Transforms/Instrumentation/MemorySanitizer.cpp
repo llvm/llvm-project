@@ -3171,6 +3171,30 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  /// Handle Arm NEON vector convert intrinsics.
+  ///
+  /// e.g., <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float>)
+  ///      i32 @llvm.aarch64.neon.fcvtms.i32.f64(double)
+  ///
+  /// For x86 SSE vector convert intrinsics, see
+  /// handleSSEVectorConvertIntrinsic().
+  void handleNEONVectorConvertIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 1);
+
+    IRBuilder<> IRB(&I);
+    Value *S0 = getShadow(&I, 0);
+
+    /// For scalars:
+    /// Since they are converting from floating-point to integer, the output is
+    /// - fully uninitialized if *any* bit of the input is uninitialized
+    /// - fully ininitialized if all bits of the input are ininitialized
+    /// We apply the same principle on a per-field basis for vectors.
+    Value *OutShadow = IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)),
+                                      getShadowTy(&I));
+    setShadow(&I, OutShadow);
+    setOriginForNaryOp(I);
+  }
+
   // Instrument x86 SSE vector convert intrinsic.
   //
   // This function instruments intrinsics like cvtsi2ss:
@@ -4210,30 +4234,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     return handleIntrinsicByApplyingToShadow(I, shadowIntrinsicID,
                                              /*trailingVerbatimArgs*/ 0);
-  }
-
-  /// Handle Arm NEON vector convert intrinsics.
-  ///
-  /// e.g., <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float>)
-  ///      i32 @llvm.aarch64.neon.fcvtms.i32.f64(double)
-  ///
-  /// For x86 SSE vector convert intrinsics, see
-  /// handleSSEVectorConvertIntrinsic().
-  void handleNEONVectorConvertIntrinsic(IntrinsicInst &I) {
-    assert(I.arg_size() == 1);
-
-    IRBuilder<> IRB(&I);
-    Value *S0 = getShadow(&I, 0);
-
-    /// For scalars:
-    /// Since they are converting from floating-point to integer, the output is
-    /// - fully uninitialized if *any* bit of the input is uninitialized
-    /// - fully ininitialized if all bits of the input are ininitialized
-    /// We apply the same principle on a per-field basis for vectors.
-    Value *OutShadow = IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)),
-                                      getShadowTy(&I));
-    setShadow(&I, OutShadow);
-    setOriginForNaryOp(I);
   }
 
   /// Handle Arm NEON vector store intrinsics (vst{2,3,4}, vst1x_{2,3,4},
