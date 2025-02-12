@@ -279,7 +279,8 @@ private:
       return;
 
     const StackFrameContext *CapturedSFC = SSR->getStackFrame();
-    if (CapturedSFC == PoppedStackFrame || PoppedStackFrame->isParentOf(CapturedSFC))
+    if (CapturedSFC == PoppedStackFrame ||
+        PoppedStackFrame->isParentOf(CapturedSFC))
       EscapingStackRegions.push_back(MR);
   }
 
