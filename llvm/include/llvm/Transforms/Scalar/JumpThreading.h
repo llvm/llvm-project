@@ -94,6 +94,10 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   SmallPtrSet<const BasicBlock *, 16> LoopHeaders;
 #endif
 
+  // JumpThreading must not processes blocks unreachable from entry. It's a
+  // waste of compute time and can potentially lead to hangs.
+  SmallPtrSet<BasicBlock *, 16> Unreachable;
+
   unsigned BBDupThreshold;
   unsigned DefaultBBDupThreshold;
 
