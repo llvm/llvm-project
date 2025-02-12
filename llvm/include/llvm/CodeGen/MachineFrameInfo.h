@@ -332,10 +332,10 @@ private:
   /// stack objects like arguments so we can't treat them as immutable.
   bool HasTailCall = false;
 
-  /// Not null, if shrink-wrapping found a better place for the prologue.
-  MachineBasicBlock *Save = nullptr;
-  /// Not null, if shrink-wrapping found a better place for the epilogue.
-  MachineBasicBlock *Restore = nullptr;
+  /// Not empty, if shrink-wrapping found a better place for the prologue.
+  std::vector<MachineBasicBlock *> SavePoints;
+  /// Not empty, if shrink-wrapping found a better place for the epilogue.
+  std::vector<MachineBasicBlock *> RestorePoints;
 
   /// Size of the UnsafeStack Frame
   uint64_t UnsafeStackSize = 0;
@@ -825,10 +825,21 @@ public:
 
   void setCalleeSavedInfoValid(bool v) { CSIValid = v; }
 
-  MachineBasicBlock *getSavePoint() const { return Save; }
-  void setSavePoint(MachineBasicBlock *NewSave) { Save = NewSave; }
-  MachineBasicBlock *getRestorePoint() const { return Restore; }
-  void setRestorePoint(MachineBasicBlock *NewRestore) { Restore = NewRestore; }
+  const std::vector<MachineBasicBlock *> &getSavePoints() const {
+    return SavePoints;
+  }
+  void setSavePoints(std::vector<MachineBasicBlock *> NewSavePoints) {
+    SavePoints = std::move(NewSavePoints);
+  }
+  const std::vector<MachineBasicBlock *> getRestorePoints() const {
+    return RestorePoints;
+  }
+  void setRestorePoints(std::vector<MachineBasicBlock *> NewRestorePoints) {
+    RestorePoints = std::move(NewRestorePoints);
+  }
+
+  void clearSavePoints() { SavePoints.clear(); }
+  void clearRestorePoints() { RestorePoints.clear(); }
 
   uint64_t getUnsafeStackSize() const { return UnsafeStackSize; }
   void setUnsafeStackSize(uint64_t Size) { UnsafeStackSize = Size; }
