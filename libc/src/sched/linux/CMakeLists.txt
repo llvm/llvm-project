@@ -5,7 +5,6 @@ add_entrypoint_object(
   HDRS
     ../sched_getaffinity.h
   DEPENDS
-    libc.include.sched
     libc.hdr.types.cpu_set_t
     libc.hdr.types.pid_t
     libc.hdr.types.size_t
@@ -20,7 +19,6 @@ add_entrypoint_object(
   HDRS
     ../sched_setaffinity.h
   DEPENDS
-    libc.include.sched
     libc.hdr.types.cpu_set_t
     libc.hdr.types.pid_t
     libc.hdr.types.size_t
@@ -37,7 +35,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.cpu_set_t
     libc.hdr.types.size_t
-    libc.include.sched
   )
 
 add_entrypoint_object(
@@ -47,7 +44,6 @@ add_entrypoint_object(
   HDRS
     ../sched_yield.h
   DEPENDS
-    libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -59,9 +55,6 @@ add_entrypoint_object(
   HDRS
     ../sched_setparam.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.include.time
-    libc.include.sched
     libc.hdr.types.pid_t
     libc.hdr.types.struct_sched_param
     libc.src.__support.OSUtil.osutil
@@ -75,9 +68,6 @@ add_entrypoint_object(
   HDRS
     ../sched_getparam.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.include.time
-    libc.include.sched
     libc.hdr.types.pid_t
     libc.hdr.types.struct_sched_param
     libc.src.__support.OSUtil.osutil
@@ -91,9 +81,6 @@ add_entrypoint_object(
   HDRS
     ../sched_setscheduler.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.include.time
-    libc.include.sched
     libc.hdr.types.pid_t
     libc.hdr.types.struct_sched_param
     libc.src.__support.OSUtil.osutil
@@ -107,9 +94,7 @@ add_entrypoint_object(
   HDRS
     ../sched_getscheduler.h
   DEPENDS
-    libc.include.sched
     libc.hdr.types.pid_t
-    libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -121,7 +106,6 @@ add_entrypoint_object(
   HDRS
     ../sched_get_priority_min.h
   DEPENDS
-    libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -133,7 +117,6 @@ add_entrypoint_object(
   HDRS
     ../sched_get_priority_max.h
   DEPENDS
-    libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -145,8 +128,6 @@ add_entrypoint_object(
   HDRS
     ../sched_rr_get_interval.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.include.sched
     libc.hdr.types.pid_t
     libc.hdr.types.struct_timespec
     libc.src.__support.OSUtil.osutil
