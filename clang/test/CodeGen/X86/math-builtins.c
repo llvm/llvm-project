@@ -161,9 +161,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // NO__ERRNO: declare { float, float } @llvm.modf.f32(float) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare { x86_fp80, x86_fp80 } @llvm.modf.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare fp128 @modff128(fp128 noundef, ptr noundef) [[NOT_READNONE:#[0-9]+]]
-// HAS_ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare { double, double } @llvm.modf.f64(double) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare { float, float } @llvm.modf.f32(float) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare { x86_fp80, x86_fp80 } @llvm.modf.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare fp128 @modff128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
 
   __builtin_nan(c);        __builtin_nanf(c);       __builtin_nanl(c); __builtin_nanf128(c);

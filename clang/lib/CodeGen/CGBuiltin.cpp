@@ -872,7 +872,7 @@ static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
 
   QualType DestPtrType = E->getArg(1)->getType()->getPointeeType();
   LValue IntegralLV = CGF.MakeNaturalAlignAddrLValue(IntPartDest, DestPtrType);
-  CGF.Builder.CreateStore(IntegralResult, IntegralLV.getAddress());
+  CGF.EmitStoreOfScalar(IntegralResult, IntegralLV);
 
   return FractionalResult;
 }
@@ -3277,14 +3277,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(Builder.CreateFRem(Arg1, Arg2, "fmod"));
     }
 
-    case Builtin::BImodf:
-    case Builtin::BImodff:
-    case Builtin::BImodfl:
-    case Builtin::BI__builtin_modf:
-    case Builtin::BI__builtin_modff:
-    case Builtin::BI__builtin_modfl:
-      return RValue::get(emitModfBuiltin(*this, E, Intrinsic::modf));
-
     case Builtin::BIlog:
     case Builtin::BIlogf:
     case Builtin::BIlogl:
@@ -4122,6 +4114,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_frexpf128:
   case Builtin::BI__builtin_frexpf16:
     return RValue::get(emitFrexpBuiltin(*this, E, Intrinsic::frexp));
+  case Builtin::BImodf:
+  case Builtin::BImodff:
+  case Builtin::BImodfl:
+  case Builtin::BI__builtin_modf:
+  case Builtin::BI__builtin_modff:
+  case Builtin::BI__builtin_modfl:
+    return RValue::get(emitModfBuiltin(*this, E, Intrinsic::modf));
   case Builtin::BI__builtin_isgreater:
   case Builtin::BI__builtin_isgreaterequal:
   case Builtin::BI__builtin_isless:
