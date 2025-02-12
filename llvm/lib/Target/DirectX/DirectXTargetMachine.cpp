@@ -19,6 +19,7 @@
 #include "DXILPrettyPrinter.h"
 #include "DXILResourceAccess.h"
 #include "DXILResourceAnalysis.h"
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DXILTranslateMetadata.h"
 #include "DXILWriter/DXILWriterPass.h"
