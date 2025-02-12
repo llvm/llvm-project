@@ -362,8 +362,7 @@ public:
     case RecurKind::FMin:
     case RecurKind::FMax:
     case RecurKind::FMulAdd:
-    case RecurKind::IAnyOf:
-    case RecurKind::FAnyOf:
+    case RecurKind::AnyOf:
       return true;
     default:
       return false;
