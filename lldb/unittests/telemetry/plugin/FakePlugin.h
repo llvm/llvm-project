@@ -15,16 +15,18 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Telemetry/Telemetry.h"
 
+namespace lldb_private {
+
 struct FakeTelemetryInfo : public llvm::telemetry::TelemetryInfo {
   std::string msg;
 };
 
-class FakePlugin : public lldb_private::TelemetryManager {
+class FakePlugin : public telemetry::TelemetryManager {
 public:
-  FakePlugin() = default;
+  FakePlugin();
 
   // TelemetryManager interface
-  llvm::Error preDistpatch(TelemetryInfo *entry) override;
+  llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
 
   // Plugin interface
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
@@ -35,5 +37,7 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "FakeTelemetryPlugin"; }
 };
+
+} // namespace lldb_private
 
 #endif

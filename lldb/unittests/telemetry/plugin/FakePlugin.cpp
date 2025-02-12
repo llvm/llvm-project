@@ -6,30 +6,40 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "FakePlugin.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Telemetry.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Telemetry/Telemetry.h"
-
-#include "FakePlugin.h"
 
 #include <memory>
 
 LLDB_PLUGIN_DEFINE(FakePlugin)
 
-llvm::Error FakePlugin::preDispatch(TelemetryInfo *entry) {
-  dynamic_cast<FakeTelemetryInfo>(entry)->msg = "In FakePlugin";
-  return Error::success();
+namespace lldb_private {
+
+FakePlugin::FakePlugin()
+    : telemetry::TelemetryManager(
+          std::make_unique<llvm::telemetry::Config>(true)) {}
+
+llvm::Error FakePlugin::preDispatch(llvm::telemetry::TelemetryInfo *entry) {
+  if (auto *fake_entry = llvm::dyn_cast<FakeTelemetryInfo>(entry)) {
+    fake_entry->msg = "In FakePlugin";
+  }
+
+  return llvm::Error::success();
 }
 
 void FakePlugin::Initialize() {
-  lldb_private::telemetry::TelemetryManager::setInstance(
-      std::make_unique<FakePlugin>());
+  telemetry::TelemetryManager::setInstance(std::make_unique<FakePlugin>());
   // TODO: do we need all the PluginManagerL::RegisterPlugin()  stuff???
 }
 
 void FakePlugin::Terminate() {
   // nothing to do?
 }
+
+} // namespace lldb_private

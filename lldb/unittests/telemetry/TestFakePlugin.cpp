@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FakePlugin.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Telemetry.h"
+#include "plugin/FakePlugin.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Telemetry/Telemetry.h"
@@ -17,7 +17,7 @@
 
 #include <memory>
 
-TEST(SmokeTest) {
+TEST(SmokeTest, Test) {
 
   auto ins = lldb_private::telemetry::TelemetryManager::getInstance();
 
