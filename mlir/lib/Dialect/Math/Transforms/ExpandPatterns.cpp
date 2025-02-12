@@ -19,6 +19,7 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/APFloat.h"
 
 using namespace mlir;
 
@@ -318,55 +319,54 @@ static LogicalResult convertSpecialPowfOp(math::PowFOp op,
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operandA = op.getOperand(0);
   Value operandB = op.getOperand(1);
-  auto opType = operandA.getType();
-  auto baseType = operandB.getType();
+  auto typeA = operandA.getType();
+  auto typeB = operandB.getType();
 
-  auto &sem = dyn_cast<mlir::FloatType>(getElementTypeOrSelf(baseType))
-                  .getFloatSemantics();
-
+  auto &sem =
+      cast<mlir::FloatType>(getElementTypeOrSelf(typeB)).getFloatSemantics();
   auto valueB = APFloat(sem);
   if (!matchPattern(operandB, m_ConstantFloat(&valueB))) {
     // Not a constant, return failure
     return failure();
   }
-  float floatValueB = valueB.convertToFloat();
-  if (floatValueB == 0.0f) {
+
+  if (valueB.compare(APFloat(0.0f)) == APFloat::cmpEqual) {
     // a^0 -> 1
-    Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
+    Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
     rewriter.replaceOp(op, one);
     return success();
   }
-  if (floatValueB == 1.0f) {
+  if (valueB.compare(APFloat(1.0f)) == APFloat::cmpEqual) {
     // a^1 -> a
     rewriter.replaceOp(op, operandA);
     return success();
   }
-  if (floatValueB == -1.0f) {
+  if (valueB.compare(APFloat(-1.0f)) == APFloat::cmpEqual) {
     // a^(-1) -> 1 / a
-    Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
+    Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
     Value div = b.create<arith::DivFOp>(one, operandA);
     rewriter.replaceOp(op, div);
     return success();
   }
-  if (floatValueB == 0.5f) {
+  if (valueB.compare(APFloat(0.5f)) == APFloat::cmpEqual) {
     // a^(1/2) -> sqrt(a)
     Value sqrt = b.create<math::SqrtOp>(operandA);
     rewriter.replaceOp(op, sqrt);
     return success();
   }
-  if (floatValueB == -0.5f) {
+  if (valueB.compare(APFloat(-0.5f)) == APFloat::cmpEqual) {
     // a^(-1/2) -> 1 / sqrt(a)
     Value rsqrt = b.create<math::RsqrtOp>(operandA);
     rewriter.replaceOp(op, rsqrt);
     return success();
   }
-  if (floatValueB == 2.0f) {
+  if (valueB.compare(APFloat(2.0f)) == APFloat::cmpEqual) {
     // a^2 -> a * a
     Value mul = b.create<arith::MulFOp>(operandA, operandA);
     rewriter.replaceOp(op, mul);
     return success();
   }
-  if (floatValueB == -2.0f) {
+  if (valueB.compare(APFloat(-2.0f)) == APFloat::cmpEqual) {
     // a^(-2) -> 1 / (a * a)
     Value mul = b.create<arith::MulFOp>(operandA, operandA);
     Value one =
