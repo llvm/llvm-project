@@ -295,7 +295,8 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
       TM.getSubtargetImpl(*Callee)->getFeatureBits();
   // Adjust the feature bitsets by inverting some of the bits. This is needed
   // for target features that represent restrictions rather than capabilities,
-  // for example "+execute-only".
+  // for example a "+execute-only" callee can be inlined into a caller without
+  // "+execute-only", but not vice versa.
   FeatureBitset EffectiveCallerBits = CallerBits ^ InlineInverseFeatures;
   FeatureBitset EffectiveCalleeBits = CalleeBits ^ InlineInverseFeatures;
 

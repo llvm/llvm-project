@@ -559,11 +559,12 @@ static unsigned getELFSectionFlags(SectionKind K, const Triple &T) {
   if (K.isText())
     Flags |= ELF::SHF_EXECINSTR;
 
-  if ((T.isARM() || T.isThumb()) && K.isExecuteOnly())
-    Flags |= ELF::SHF_ARM_PURECODE;
-
-  if (T.isAArch64() && K.isExecuteOnly())
-    Flags |= ELF::SHF_AARCH64_PURECODE;
+  if (K.isExecuteOnly()) {
+    if (T.isAArch64())
+      Flags |= ELF::SHF_AARCH64_PURECODE;
+    else if (T.isARM() || T.isThumb())
+      Flags |= ELF::SHF_ARM_PURECODE;
+  }
 
   if (K.isWriteable())
     Flags |= ELF::SHF_WRITE;
