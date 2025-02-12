@@ -48,69 +48,6 @@ namespace time_utils {
 // you must call update_from_seconds for that.
 cpp::optional<time_t> mktime_internal(const tm *tm_out);
 
-enum Month : int {
-  JANUARY,
-  FEBRUARY,
-  MARCH,
-  APRIL,
-  MAY,
-  JUNE,
-  JULY,
-  AUGUST,
-  SEPTEMBER,
-  OCTOBER,
-  NOVEMBER,
-  DECEMBER
-};
-
-struct TimeConstants {
-  static constexpr int SECONDS_PER_MIN = 60;
-  static constexpr int MINUTES_PER_HOUR = 60;
-  static constexpr int HOURS_PER_DAY = 24;
-  static constexpr int DAYS_PER_WEEK = 7;
-  static constexpr int MONTHS_PER_YEAR = 12;
-  static constexpr int DAYS_PER_NON_LEAP_YEAR = 365;
-  static constexpr int DAYS_PER_LEAP_YEAR = 366;
-
-  static constexpr int SECONDS_PER_HOUR = SECONDS_PER_MIN * MINUTES_PER_HOUR;
-  static constexpr int SECONDS_PER_DAY = SECONDS_PER_HOUR * HOURS_PER_DAY;
-  static constexpr int NUMBER_OF_SECONDS_IN_LEAP_YEAR =
-      DAYS_PER_LEAP_YEAR * SECONDS_PER_DAY;
-
-  static constexpr int TIME_YEAR_BASE = 1900;
-  static constexpr int EPOCH_YEAR = 1970;
-  static constexpr int EPOCH_WEEK_DAY = 4;
-
-  // For asctime the behavior is undefined if struct tm's tm_wday or tm_mon are
-  // not within the normal ranges as defined in <time.h>, or if struct tm's
-  // tm_year exceeds {INT_MAX}-1990, or if the below asctime_internal algorithm
-  // would attempt to generate more than 26 bytes of output (including the
-  // terminating null).
-  static constexpr int ASCTIME_BUFFER_SIZE = 256;
-  static constexpr int ASCTIME_MAX_BYTES = 26;
-
-  /* 2000-03-01 (mod 400 year, immediately after feb29 */
-  static constexpr int64_t SECONDS_UNTIL2000_MARCH_FIRST =
-      (946684800LL + SECONDS_PER_DAY * (31 + 29));
-  static constexpr int WEEK_DAY_OF2000_MARCH_FIRST = 3;
-
-  static constexpr int DAYS_PER400_YEARS =
-      (DAYS_PER_NON_LEAP_YEAR * 400) + (400 / 4) - 3;
-  static constexpr int DAYS_PER100_YEARS =
-      (DAYS_PER_NON_LEAP_YEAR * 100) + (100 / 4) - 1;
-  static constexpr int DAYS_PER4_YEARS = (DAYS_PER_NON_LEAP_YEAR * 4) + 1;
-
-  // The latest time that can be represented in this form is 03:14:07 UTC on
-  // Tuesday, 19 January 2038 (corresponding to 2,147,483,647 seconds since the
-  // start of the epoch). This means that systems using a 32-bit time_t type are
-  // susceptible to the Year 2038 problem.
-  static constexpr int END_OF32_BIT_EPOCH_YEAR = 2038;
-
-  static constexpr time_t OUT_OF_RANGE_RETURN_VALUE = -1;
-
-  static constexpr size_t TIMEZONE_SIZE = 128;
-};
-
 LIBC_INLINE volatile int file_usage;
 
 // Update the "tm" structure's year, month, etc. members from seconds.
@@ -119,6 +56,7 @@ extern int calculate_dst(struct tm *tm);
 extern void set_dst(struct tm *tm);
 extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm, bool local);
 extern timezone::tzset *get_localtime(struct tm *tm);
+extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
 extern ErrorOr<File *> acquire_file(char *filename);
 extern void release_file(ErrorOr<File *> error_or_file);
 extern unsigned char is_dst(struct tm *tm);
