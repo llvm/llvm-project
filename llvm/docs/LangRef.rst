@@ -20903,7 +20903,12 @@ sufficiently aligned block of memory; this memory is written to by the
 intrinsic. Note that the size and the alignment are target-specific -
 LLVM currently provides no portable way of determining them, so a
 front-end that generates this intrinsic needs to have some
-target-specific knowledge. The ``func`` argument must hold a function.
+target-specific knowledge.
+
+The ``func`` argument must be a constant (potentially bitcasted) pointer to a
+function declaration or definition, since the calling convention may affect the
+content of the trampoline that is created.
+
 
 Semantics:
 """"""""""

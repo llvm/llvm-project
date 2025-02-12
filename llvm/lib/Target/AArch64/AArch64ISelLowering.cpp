@@ -7302,28 +7302,42 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
 
   const Value *TrmpAddr = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
 
-  // ldr x15, .+16
+  // ldr NestReg, .+16
   // ldr x17, .+20
   // br x17
-  // 0
+  // .word 0
   // .nest: .qword nest
   // .fptr: .qword fptr
   SDValue OutChains[5];
 
-  const char X15 = 0x0f;
-  const char X17 = 0x11;
+  const Function *Func =
+    cast<Function>(cast<SrcValueSDNode>(Op.getOperand(5))->getValue());
+  CallingConv::ID CC = Func->getCallingConv();
+  unsigned NestReg;
+
+  switch (CC) {
+  default:
+    NestReg = 0x0f; // X15
+  case CallingConv::ARM64EC_Thunk_Native:
+  case CallingConv::ARM64EC_Thunk_X64:
+    // Must be kept in sync with AArch64CallingConv.td
+    NestReg = 0x04; // X4
+    break;
+  }
+
+  const char FptrReg = 0x11; // X17
 
   SDValue Addr = Trmp;
 
   SDLoc dl(Op);
   OutChains[0] =
-      DAG.getStore(Chain, dl, DAG.getConstant(0x58000080u | X15, dl, MVT::i32), Addr,
+      DAG.getStore(Chain, dl, DAG.getConstant(0x58000080u | NestReg, dl, MVT::i32), Addr,
                    MachinePointerInfo(TrmpAddr));
 
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(4, dl, MVT::i64));
   OutChains[1] =
-      DAG.getStore(Chain, dl, DAG.getConstant(0x580000b0u | X17, dl, MVT::i32), Addr,
+      DAG.getStore(Chain, dl, DAG.getConstant(0x580000b0u | FptrReg, dl, MVT::i32), Addr,
                    MachinePointerInfo(TrmpAddr, 4));
 
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
