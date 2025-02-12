@@ -365,7 +365,7 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
 
   if (!done) {
     StopInfoSP stop_info_sp = GetPrivateStopInfo();
-    if (stop_info && stop_info_sp->GetStopReason() == eStopReasonBreakpoint) {
+    if (stop_info_sp && stop_info_sp->GetStopReason() == eStopReasonBreakpoint) {
       StackID frame_zero_id = GetThread().GetStackFrameAtIndex(0)->GetStackID();
       done = !(frame_zero_id < m_step_out_to_id);
     }
