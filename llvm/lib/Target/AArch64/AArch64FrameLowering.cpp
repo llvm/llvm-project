@@ -2047,12 +2047,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     // Find an available register to store value of VG to.
     unsigned X15Scratch = AArch64::NoRegister;
     const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
-    if (llvm::any_of(
-                MBB.liveins(),
-                [&STI](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
-                  return STI.getRegisterInfo()->isSuperOrSubRegisterEq(
-                      AArch64::X15, LiveIn.PhysReg);
-                })) {
+    if (llvm::any_of(MBB.liveins(),
+                     [&STI](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
+                       return STI.getRegisterInfo()->isSuperOrSubRegisterEq(
+                           AArch64::X15, LiveIn.PhysReg);
+                     })) {
       X15Scratch = findScratchNonCalleeSaveRegister(&MBB);
       assert(X15Scratch != AArch64::NoRegister);
 #ifndef NDEBUG

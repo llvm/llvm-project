@@ -277,9 +277,9 @@ public:
             // For PPC32 and PPC64, the thunk is populated by a call to
             // __trampoline_setup, which is defined in
             // compiler-rt/lib/builtins/trampoline_setup.c and requires the
-            // thunk size greater than 32 bytes.  For AArch64, RISCV and x86_64, the
-            // thunk setup doesn't go through __trampoline_setup and fits in 32
-            // bytes.
+            // thunk size greater than 32 bytes.  For AArch64, RISCV and x86_64,
+            // the thunk setup doesn't go through __trampoline_setup and fits in
+            // 32 bytes.
             fir::SequenceType::Extent thunkSize = triple.getTrampolineSize();
             mlir::Type buffTy = SequenceType::get({thunkSize}, i8Ty);
             auto buffer = builder.create<AllocaOp>(loc, buffTy);

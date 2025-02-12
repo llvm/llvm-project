@@ -7296,7 +7296,7 @@ SDValue AArch64TargetLowering::LowerADJUST_TRAMPOLINE(SDValue Op,
 SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
                                                     SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  SDValue Trmp = Op.getOperand(1); // trampoline, 36 bytes
+  SDValue Trmp = Op.getOperand(1); // trampoline, >=32 bytes
   SDValue FPtr = Op.getOperand(2); // nested function
   SDValue Nest = Op.getOperand(3); // 'nest' parameter value
 
@@ -7311,7 +7311,7 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   SDValue OutChains[5];
 
   const Function *Func =
-    cast<Function>(cast<SrcValueSDNode>(Op.getOperand(5))->getValue());
+      cast<Function>(cast<SrcValueSDNode>(Op.getOperand(5))->getValue());
   CallingConv::ID CC = Func->getCallingConv();
   unsigned NestReg;
 
@@ -7330,15 +7330,15 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   SDValue Addr = Trmp;
 
   SDLoc dl(Op);
-  OutChains[0] =
-      DAG.getStore(Chain, dl, DAG.getConstant(0x58000080u | NestReg, dl, MVT::i32), Addr,
-                   MachinePointerInfo(TrmpAddr));
+  OutChains[0] = DAG.getStore(
+      Chain, dl, DAG.getConstant(0x58000080u | NestReg, dl, MVT::i32), Addr,
+      MachinePointerInfo(TrmpAddr));
 
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(4, dl, MVT::i64));
-  OutChains[1] =
-      DAG.getStore(Chain, dl, DAG.getConstant(0x580000b0u | FptrReg, dl, MVT::i32), Addr,
-                   MachinePointerInfo(TrmpAddr, 4));
+  OutChains[1] = DAG.getStore(
+      Chain, dl, DAG.getConstant(0x580000b0u | FptrReg, dl, MVT::i32), Addr,
+      MachinePointerInfo(TrmpAddr, 4));
 
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(8, dl, MVT::i64));
@@ -7359,11 +7359,11 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   SDValue StoreToken = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 
   SDValue EndOfTrmp = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
-                     DAG.getConstant(12, dl, MVT::i64));
+                                  DAG.getConstant(12, dl, MVT::i64));
 
   // Call clear cache on the trampoline instructions.
-  return DAG.getNode(ISD::CLEAR_CACHE, dl, MVT::Other, StoreToken,
-                              Trmp, EndOfTrmp);
+  return DAG.getNode(ISD::CLEAR_CACHE, dl, MVT::Other, StoreToken, Trmp,
+                     EndOfTrmp);
 }
 
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
