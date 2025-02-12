@@ -589,8 +589,9 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 
 private:
-  void setupRegionInitializedLLVMGlobalOp(
-      cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
+  void createRegionInitializedLLVMGlobalOp(
+      cir::GlobalOp op, mlir::Attribute attr,
+      mlir::ConversionPatternRewriter &rewriter) const;
 
   mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
   static void addComdat(mlir::LLVM::GlobalOp &op,

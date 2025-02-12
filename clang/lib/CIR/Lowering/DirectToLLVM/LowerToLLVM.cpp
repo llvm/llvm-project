@@ -2307,8 +2307,9 @@ mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
 
 /// Replace CIR global with a region initialized LLVM global and update
 /// insertion point to the end of the initializer block.
-void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
-    cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const {
+void CIRToLLVMGlobalOpLowering::createRegionInitializedLLVMGlobalOp(
+    cir::GlobalOp op, mlir::Attribute attr,
+    mlir::ConversionPatternRewriter &rewriter) const {
   const auto llvmType =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getSymType());
   SmallVector<mlir::NamedAttribute> attributes;
@@ -2321,6 +2322,10 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
       /*comdat*/ mlir::SymbolRefAttr(), attributes);
   newGlobalOp.getRegion().push_back(new mlir::Block());
   rewriter.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
+
+  rewriter.create<mlir::LLVM::ReturnOp>(
+      op->getLoc(),
+      lowerCirAttrAsValue(op, attr, rewriter, typeConverter, dataLayout));
 }
 
 mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
@@ -2350,109 +2355,82 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
 
   attributes.push_back(rewriter.getNamedAttr("visibility_", visibility));
 
-  // Check for missing funcionalities.
-  if (!init.has_value()) {
-    rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
-        op, llvmType, isConst, linkage, symbol, mlir::Attribute(),
-        /*alignment*/ 0,
-        /*addrSpace*/ getGlobalOpTargetAddrSpace(rewriter, typeConverter, op),
-        /*dsoLocal*/ isDsoLocal, /*threadLocal*/ (bool)op.getTlsModelAttr(),
-        /*comdat*/ mlir::SymbolRefAttr(), attributes);
-    return mlir::success();
-  }
-
-  // Initializer is a constant array: convert it to a compatible llvm init.
-  if (auto constArr = mlir::dyn_cast<cir::ConstArrayAttr>(init.value())) {
-    if (auto attr = mlir::dyn_cast<mlir::StringAttr>(constArr.getElts())) {
-      llvm::SmallString<256> literal(attr.getValue());
-      if (constArr.getTrailingZerosNum())
-        literal.append(constArr.getTrailingZerosNum(), '\0');
-      init = rewriter.getStringAttr(literal);
-    } else if (auto attr =
-                   mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts())) {
-      // Failed to use a compact attribute as an initializer:
-      // initialize elements individually.
-      if (!(init = lowerConstArrayAttr(constArr, getTypeConverter()))) {
-        setupRegionInitializedLLVMGlobalOp(op, rewriter);
-        rewriter.create<mlir::LLVM::ReturnOp>(
-            op->getLoc(), lowerCirAttrAsValue(op, constArr, rewriter,
-                                              typeConverter, dataLayout));
-        return mlir::success();
+  if (init.has_value()) {
+    if (mlir::isa<cir::FPAttr, cir::IntAttr, cir::BoolAttr>(init.value())) {
+      // If a directly equivalent attribute is available, use it.
+      init =
+          llvm::TypeSwitch<mlir::Attribute, mlir::Attribute>(init.value())
+              .Case<cir::FPAttr>([&](cir::FPAttr attr) {
+                return rewriter.getFloatAttr(llvmType, attr.getValue());
+              })
+              .Case<cir::IntAttr>([&](cir::IntAttr attr) {
+                return rewriter.getIntegerAttr(llvmType, attr.getValue());
+              })
+              .Case<cir::BoolAttr>([&](cir::BoolAttr attr) {
+                return rewriter.getBoolAttr(attr.getValue());
+              })
+              .Default([&](mlir::Attribute attr) { return mlir::Attribute(); });
+      // If initRewriter returned a null attribute, init will have a value but
+      // the value will be null. If that happens, initRewriter didn't handle the
+      // attribute type. It probably needs to be added to
+      // GlobalInitAttrRewriter.
+      if (!init.value()) {
+        op.emitError() << "unsupported initializer '" << init.value() << "'";
+        return mlir::failure();
       }
+    } else if (mlir::isa<cir::ZeroAttr, cir::ConstPtrAttr, cir::UndefAttr,
+                         cir::ConstStructAttr, cir::GlobalViewAttr,
+                         cir::VTableAttr, cir::TypeInfoAttr>(init.value())) {
+      // TODO(cir): once LLVM's dialect has proper equivalent attributes this
+      // should be updated. For now, we use a custom op to initialize globals
+      // to the appropriate value.
+      createRegionInitializedLLVMGlobalOp(op, init.value(), rewriter);
+      return mlir::success();
+    } else if (auto constArr =
+                   mlir::dyn_cast<cir::ConstArrayAttr>(init.value())) {
+      // Initializer is a constant array: convert it to a compatible llvm init.
+      if (auto attr = mlir::dyn_cast<mlir::StringAttr>(constArr.getElts())) {
+        llvm::SmallString<256> literal(attr.getValue());
+        if (constArr.getTrailingZerosNum())
+          literal.append(constArr.getTrailingZerosNum(), '\0');
+        init = rewriter.getStringAttr(literal);
+      } else if (auto attr =
+                     mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts())) {
+        // Failed to use a compact attribute as an initializer:
+        // initialize elements individually.
+        if (!(init = lowerConstArrayAttr(constArr, getTypeConverter()))) {
+          createRegionInitializedLLVMGlobalOp(op, constArr, rewriter);
+          return mlir::success();
+        }
+      } else {
+        op.emitError()
+            << "unsupported lowering for #cir.const_array with value "
+            << constArr.getElts();
+        return mlir::failure();
+      }
+    } else if (auto dataMemberAttr =
+                   mlir::dyn_cast<cir::DataMemberAttr>(init.value())) {
+      assert(lowerMod && "lower module is not available");
+      mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+      mlir::TypedAttr abiValue = lowerMod->getCXXABI().lowerDataMemberConstant(
+          dataMemberAttr, layout, *typeConverter);
+      auto abiOp = mlir::cast<GlobalOp>(rewriter.clone(*op.getOperation()));
+      abiOp.setInitialValueAttr(abiValue);
+      abiOp.setSymType(abiValue.getType());
+      rewriter.replaceOp(op, abiOp);
+      return mlir::success();
     } else {
-      op.emitError() << "unsupported lowering for #cir.const_array with value "
-                     << constArr.getElts();
+      op.emitError() << "unsupported initializer '" << init.value() << "'";
       return mlir::failure();
     }
-  } else if (auto fltAttr = mlir::dyn_cast<cir::FPAttr>(init.value())) {
-    // Initializer is a constant floating-point number: convert to MLIR
-    // builtin constant.
-    init = rewriter.getFloatAttr(llvmType, fltAttr.getValue());
-  }
-  // Initializer is a constant integer: convert to MLIR builtin constant.
-  else if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(init.value())) {
-    init = rewriter.getIntegerAttr(llvmType, intAttr.getValue());
-  } else if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(init.value())) {
-    init = rewriter.getBoolAttr(boolAttr.getValue());
-  } else if (isa<cir::ZeroAttr, cir::ConstPtrAttr, cir::UndefAttr>(
-                 init.value())) {
-    // TODO(cir): once LLVM's dialect has proper equivalent attributes this
-    // should be updated. For now, we use a custom op to initialize globals
-    // to the appropriate value.
-    setupRegionInitializedLLVMGlobalOp(op, rewriter);
-    auto value = lowerCirAttrAsValue(op, init.value(), rewriter, typeConverter,
-                                     dataLayout);
-    rewriter.create<mlir::LLVM::ReturnOp>(loc, value);
-    return mlir::success();
-  } else if (auto dataMemberAttr =
-                 mlir::dyn_cast<cir::DataMemberAttr>(init.value())) {
-    assert(lowerMod && "lower module is not available");
-    mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
-    mlir::TypedAttr abiValue = lowerMod->getCXXABI().lowerDataMemberConstant(
-        dataMemberAttr, layout, *typeConverter);
-    auto abiOp = mlir::cast<GlobalOp>(rewriter.clone(*op.getOperation()));
-    abiOp.setInitialValueAttr(abiValue);
-    abiOp.setSymType(abiValue.getType());
-    rewriter.replaceOp(op, abiOp);
-    return mlir::success();
-  } else if (const auto structAttr =
-                 mlir::dyn_cast<cir::ConstStructAttr>(init.value())) {
-    setupRegionInitializedLLVMGlobalOp(op, rewriter);
-    rewriter.create<mlir::LLVM::ReturnOp>(
-        op->getLoc(), lowerCirAttrAsValue(op, structAttr, rewriter,
-                                          typeConverter, dataLayout));
-    return mlir::success();
-  } else if (auto attr = mlir::dyn_cast<cir::GlobalViewAttr>(init.value())) {
-    setupRegionInitializedLLVMGlobalOp(op, rewriter);
-    rewriter.create<mlir::LLVM::ReturnOp>(
-        loc,
-        lowerCirAttrAsValue(op, attr, rewriter, typeConverter, dataLayout));
-    return mlir::success();
-  } else if (const auto vtableAttr =
-                 mlir::dyn_cast<cir::VTableAttr>(init.value())) {
-    setupRegionInitializedLLVMGlobalOp(op, rewriter);
-    rewriter.create<mlir::LLVM::ReturnOp>(
-        op->getLoc(), lowerCirAttrAsValue(op, vtableAttr, rewriter,
-                                          typeConverter, dataLayout));
-    return mlir::success();
-  } else if (const auto typeinfoAttr =
-                 mlir::dyn_cast<cir::TypeInfoAttr>(init.value())) {
-    setupRegionInitializedLLVMGlobalOp(op, rewriter);
-    rewriter.create<mlir::LLVM::ReturnOp>(
-        op->getLoc(), lowerCirAttrAsValue(op, typeinfoAttr, rewriter,
-                                          typeConverter, dataLayout));
-    return mlir::success();
-  } else {
-    op.emitError() << "unsupported initializer '" << init.value() << "'";
-    return mlir::failure();
   }
 
   // Rewrite op.
   auto llvmGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
-      op, llvmType, isConst, linkage, symbol, init.value(),
+      op, llvmType, isConst, linkage, symbol, init.value_or(mlir::Attribute()),
       /*alignment*/ op.getAlignment().value_or(0),
       /*addrSpace*/ getGlobalOpTargetAddrSpace(rewriter, typeConverter, op),
-      /*dsoLocal*/ false, /*threadLocal*/ (bool)op.getTlsModelAttr(),
+      /*dsoLocal*/ isDsoLocal, /*threadLocal*/ (bool)op.getTlsModelAttr(),
       /*comdat*/ mlir::SymbolRefAttr(), attributes);
 
   auto mod = op->getParentOfType<mlir::ModuleOp>();
