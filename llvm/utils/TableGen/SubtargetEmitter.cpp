@@ -1317,13 +1317,13 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
                         "same number of elements of ValidWrites.\n");
       CycleTunables.resize(ValidWrites.size(), 0);
       if (ValidWrites.empty())
-        WriteIDs.push_back(std::make_pair(0, 0));
+        WriteIDs.emplace_back(0, 0);
       else {
         for (const auto [VW, CT] : zip_equal(ValidWrites, CycleTunables)) {
           unsigned WriteID = SchedModels.getSchedRWIdx(VW, /*IsRead=*/false);
           assert(WriteID != 0 &&
                  "Expected a valid SchedRW in the list of ValidWrites");
-          WriteIDs.push_back(std::make_pair(WriteID, CT));
+          WriteIDs.emplace_back(WriteID, CT);
         }
       }
       llvm::sort(WriteIDs);
