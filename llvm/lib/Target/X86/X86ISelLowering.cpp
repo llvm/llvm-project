@@ -12480,7 +12480,7 @@ static SDValue getScalarValueForVectorElement(SDValue V, int Idx,
 /// This is particularly important because the set of instructions varies
 /// significantly based on whether the operand is a load or not.
 static bool isShuffleFoldableLoad(SDValue V) {
-  return V->hasOneUse() &&
+  return V.hasOneUse() &&
          ISD::isNON_EXTLoad(peekThroughOneUseBitcasts(V).getNode());
 }
 

@@ -1665,10 +1665,9 @@ define void @vec256_i32_widen_to_i128_factor4_broadcast_to_v2i128_factor2(ptr %i
 ;
 ; AVX512F-FAST-LABEL: vec256_i32_widen_to_i128_factor4_broadcast_to_v2i128_factor2:
 ; AVX512F-FAST:       # %bb.0:
-; AVX512F-FAST-NEXT:    vmovdqa 32(%rdi), %ymm0
-; AVX512F-FAST-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [8,1,2,3,8,5,6,7]
-; AVX512F-FAST-NEXT:    vpermi2d (%rdi), %ymm0, %ymm1
-; AVX512F-FAST-NEXT:    vpaddb (%rsi), %ymm1, %ymm0
+; AVX512F-FAST-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [0,9,10,11,0,13,14,15]
+; AVX512F-FAST-NEXT:    vpermd (%rdi), %zmm0, %zmm0
+; AVX512F-FAST-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
 ; AVX512F-FAST-NEXT:    vmovdqa %ymm0, (%rdx)
 ; AVX512F-FAST-NEXT:    vzeroupper
 ; AVX512F-FAST-NEXT:    retq
@@ -1684,10 +1683,9 @@ define void @vec256_i32_widen_to_i128_factor4_broadcast_to_v2i128_factor2(ptr %i
 ;
 ; AVX512DQ-FAST-LABEL: vec256_i32_widen_to_i128_factor4_broadcast_to_v2i128_factor2:
 ; AVX512DQ-FAST:       # %bb.0:
-; AVX512DQ-FAST-NEXT:    vmovdqa 32(%rdi), %ymm0
-; AVX512DQ-FAST-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [8,1,2,3,8,5,6,7]
-; AVX512DQ-FAST-NEXT:    vpermi2d (%rdi), %ymm0, %ymm1
-; AVX512DQ-FAST-NEXT:    vpaddb (%rsi), %ymm1, %ymm0
+; AVX512DQ-FAST-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [0,9,10,11,0,13,14,15]
+; AVX512DQ-FAST-NEXT:    vpermd (%rdi), %zmm0, %zmm0
+; AVX512DQ-FAST-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
 ; AVX512DQ-FAST-NEXT:    vmovdqa %ymm0, (%rdx)
 ; AVX512DQ-FAST-NEXT:    vzeroupper
 ; AVX512DQ-FAST-NEXT:    retq
@@ -1703,10 +1701,9 @@ define void @vec256_i32_widen_to_i128_factor4_broadcast_to_v2i128_factor2(ptr %i
 ;
 ; AVX512BW-FAST-LABEL: vec256_i32_widen_to_i128_factor4_broadcast_to_v2i128_factor2:
 ; AVX512BW-FAST:       # %bb.0:
-; AVX512BW-FAST-NEXT:    vmovdqa 32(%rdi), %ymm0
-; AVX512BW-FAST-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [8,1,2,3,8,5,6,7]
-; AVX512BW-FAST-NEXT:    vpermi2d (%rdi), %ymm0, %ymm1
-; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %zmm1, %zmm0
+; AVX512BW-FAST-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [0,9,10,11,0,13,14,15]
+; AVX512BW-FAST-NEXT:    vpermd (%rdi), %zmm0, %zmm0
+; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %zmm0, %zmm0
 ; AVX512BW-FAST-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512BW-FAST-NEXT:    vzeroupper
 ; AVX512BW-FAST-NEXT:    retq
