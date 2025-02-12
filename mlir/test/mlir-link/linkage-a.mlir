@@ -1,10 +1,12 @@
 // RUN: mlir-link -split-input-file %s | FileCheck %s
 
-// CHECK: llvm.mlir.global external @X() {addr_space = 0 : i32} : i32
+// CHECK: llvm.func @foo() -> i32
 
 // CHECK: llvm.func @bar()
 
-// CHECK: llvm.func @foo() -> i32
+// CHECK: llvm.mlir.global external @X() {addr_space = 0 : i32} : i32
+
+
 
 llvm.mlir.global linkonce @X(5 : i32) {addr_space = 0 : i32} : i32
 llvm.func linkonce @foo() -> i32 {
