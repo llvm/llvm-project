@@ -5767,6 +5767,60 @@ void CodeGenFunction::EmitOMPScanDirective(const OMPScanDirective &S) {
   EmitBlock(OMPAfterScanBlock);
 }
 
+void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
+
+  const CapturedStmt *CS = S.getCapturedStmt(OMPD_dispatch);
+  const Expr *E = dyn_cast<Expr>(CS->IgnoreContainers(true));
+  OMPLexicalScope Scope(*this, S, OMPD_dispatch);
+
+  Expr *NocontextCond = nullptr;
+
+  for (const auto *C : S.getClausesOfKind<OMPNocontextClause>()) {
+    NocontextCond = C->getCondition();
+  }
+
+  Expr *NovariantsCond = nullptr;
+
+  for (const auto *C : S.getClausesOfKind<OMPNovariantsClause>()) {
+    NovariantsCond = C->getCondition();
+  }
+
+  auto &&VarThenGen = [&S, &CS](CodeGenFunction &CGF, PrePostActionTy &) {
+    CGF.EmitStmt(CS);
+  };
+
+  auto &&VarElseGen = [&S, &CS, NocontextCond](CodeGenFunction &CGF,
+                                               PrePostActionTy &) {
+    auto &&ThenGen = [&S, &CS](CodeGenFunction &CGF, PrePostActionTy &) {
+      if (Stmt *Call = S.getCallNocontext()) {
+        CGF.EmitStmt(Call);
+      }
+    };
+
+    auto &&ElseGen = [&S, &CS](CodeGenFunction &CGF, PrePostActionTy &) {
+      if (Stmt *Call = S.getCallInContext()) {
+        CGF.EmitStmt(Call);
+      }
+    };
+
+    if (NocontextCond) {
+      CGF.CGM.getOpenMPRuntime().emitIfClause(CGF, NocontextCond, ThenGen,
+                                              ElseGen);
+    } else {
+      RegionCodeGenTy ElseRCG(ElseGen);
+      ElseRCG(CGF);
+    }
+  };
+
+  if (NovariantsCond) {
+    CGM.getOpenMPRuntime().emitIfClause(*this, NovariantsCond, VarThenGen,
+                                        VarElseGen);
+  } else {
+    RegionCodeGenTy VarElseRCG(VarElseGen);
+    VarElseRCG(*this);
+  }
+}
+
 void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
                                             const CodeGenLoopTy &CodeGenLoop,
                                             Expr *IncExpr) {

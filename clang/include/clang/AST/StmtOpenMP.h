@@ -5984,6 +5984,7 @@ public:
   static OMPDispatchDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
+         Stmt *CallNoContext, Stmt *CallInContext,
          SourceLocation TargetCallLoc);
 
   /// Creates an empty directive with the place for \a NumClauses
@@ -5997,6 +5998,22 @@ public:
 
   /// Return location of target-call.
   SourceLocation getTargetCallLoc() const { return TargetCallLoc; }
+
+  void setCallNocontext(Stmt *S) {
+    Data->getChildren()[0] = S;
+  }
+
+  Stmt* getCallNocontext() const {
+    return cast_or_null<Stmt>(Data->getChildren()[0]);
+  }
+
+  void setCallInContext(Stmt *S) {
+    Data->getChildren()[1] = S;
+  }
+
+  Stmt* getCallInContext() const {
+    return cast_or_null<Stmt>(Data->getChildren()[1]);
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPDispatchDirectiveClass;

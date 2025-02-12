@@ -421,7 +421,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPInteropDirective(cast<OMPInteropDirective>(*S));
     break;
   case Stmt::OMPDispatchDirectiveClass:
-    CGM.ErrorUnsupported(S, "OpenMP dispatch directive");
+    EmitOMPDispatchDirective(cast<OMPDispatchDirective>(*S));
     break;
   case Stmt::OMPScopeDirectiveClass:
     EmitOMPScopeDirective(cast<OMPScopeDirective>(*S));

@@ -6468,7 +6468,10 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         << ULE->getName();
   }
 
-  if (LangOpts.OpenMP)
+  // Process function calls for OpenMP, except when we're in an OpenMP dispatch
+  // directive, in which case we need to defer processing of the call until
+  // we've processed the directive too.
+  if (LangOpts.OpenMP && (!Scope || !Scope->isOpenMPDispatchDirectiveScope()))
     Call = OpenMP().ActOnOpenMPCall(Call, Scope, LParenLoc, ArgExprs, RParenLoc,
                                     ExecConfig);
   if (LangOpts.CPlusPlus) {

@@ -123,7 +123,9 @@ public:
   /// original \p Call.
   ExprResult ActOnOpenMPCall(ExprResult Call, Scope *Scope,
                              SourceLocation LParenLoc, MultiExprArg ArgExprs,
-                             SourceLocation RParenLoc, Expr *ExecConfig);
+                             SourceLocation RParenLoc, Expr *ExecConfig,
+                             ArrayRef<OMPClause *> DispatchClauses =
+                               ArrayRef<OMPClause *>());
 
   /// Handle a `omp begin declare variant`.
   void ActOnOpenMPBeginDeclareVariant(SourceLocation Loc, OMPTraitInfo &TI);
@@ -397,7 +399,7 @@ public:
   /// \returns Statement for finished OpenMP region.
   StmtResult ActOnOpenMPRegionEnd(StmtResult S, ArrayRef<OMPClause *> Clauses);
   StmtResult ActOnOpenMPExecutableDirective(
-      OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
+      OpenMPDirectiveKind Kind, Scope *Scope, const DeclarationNameInfo &DirName,
       OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
       Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc);
   /// Process an OpenMP informational directive.
@@ -780,7 +782,8 @@ public:
                                          SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp dispatch' after parsing of the
   // /associated statement.
-  StmtResult ActOnOpenMPDispatchDirective(ArrayRef<OMPClause *> Clauses,
+  StmtResult ActOnOpenMPDispatchDirective(Scope *Scope,
+                                          ArrayRef<OMPClause *> Clauses,
                                           Stmt *AStmt, SourceLocation StartLoc,
                                           SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp masked' after parsing of the

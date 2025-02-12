@@ -308,6 +308,12 @@ bool isOpenMPTeamsDirective(OpenMPDirectiveKind DKind);
 /// otherwise - false.
 bool isOpenMPSimdDirective(OpenMPDirectiveKind DKind);
 
+/// Checks if the specified directive is a dispatch directive.
+/// \param DKind Specified directive.
+/// \return true - the directive is a dispatch directive like 'omp dispatch',
+/// otherwise - false.
+bool isOpenMPDispatchDirective(OpenMPDirectiveKind DKind);
+
 /// Checks if the specified directive is a distribute directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a distribute-directive like 'omp

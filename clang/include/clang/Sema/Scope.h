@@ -163,6 +163,9 @@ public:
 
     /// This is a scope of friend declaration.
     FriendScope = 0x40000000,
+
+    /// This is an OpenMP dispatch construct scope.
+    OpenMPDispatchDirectiveScope = 0x80000000,
   };
 
 private:
@@ -530,6 +533,10 @@ public:
   /// order clause which specifies concurrent scope.
   bool isOpenMPOrderClauseScope() const {
     return getFlags() & Scope::OpenMPOrderClauseScope;
+  }
+
+  bool isOpenMPDispatchDirectiveScope() const {
+    return getFlags() & Scope::OpenMPDispatchDirectiveScope;
   }
 
   /// Determine whether this scope is the statement associated with an OpenACC

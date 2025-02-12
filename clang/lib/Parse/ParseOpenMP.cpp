@@ -2480,6 +2480,8 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     ScopeFlags |= Scope::OpenMPLoopDirectiveScope;
   if (isOpenMPSimdDirective(DKind))
     ScopeFlags |= Scope::OpenMPSimdDirectiveScope;
+  if (DKind == OMPD_dispatch)
+    ScopeFlags |= Scope::OpenMPDispatchDirectiveScope;
   ParseScope OMPDirectiveScope(this, ScopeFlags);
   Actions.OpenMP().StartOpenMPDSABlock(DKind, DirName, Actions.getCurScope(),
                                        Loc);
@@ -2583,7 +2585,8 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
   }
 
   StmtResult Directive = Actions.OpenMP().ActOnOpenMPExecutableDirective(
-      DKind, DirName, CancelRegion, Clauses, AssociatedStmt.get(), Loc, EndLoc);
+      DKind, getCurScope(), DirName, CancelRegion, Clauses,
+      AssociatedStmt.get(), Loc, EndLoc);
 
   // Exit scope.
   Actions.OpenMP().EndOpenMPDSABlock(Directive.get());

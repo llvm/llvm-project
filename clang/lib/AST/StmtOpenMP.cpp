@@ -2348,11 +2348,13 @@ OMPInteropDirective *OMPInteropDirective::CreateEmpty(const ASTContext &C,
 
 OMPDispatchDirective *OMPDispatchDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
-    SourceLocation TargetCallLoc) {
+    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt, Stmt *CalleeNoCtx,
+    Stmt *CalleeInCtx, SourceLocation TargetCallLoc) {
   auto *Dir = createDirective<OMPDispatchDirective>(
-      C, Clauses, AssociatedStmt, /*NumChildren=*/0, StartLoc, EndLoc);
+      C, Clauses, AssociatedStmt, /*NumChildren=*/2, StartLoc, EndLoc);
   Dir->setTargetCallLoc(TargetCallLoc);
+  Dir->setCallNocontext(CalleeNoCtx);
+  Dir->setCallInContext(CalleeInCtx);
   return Dir;
 }
 
