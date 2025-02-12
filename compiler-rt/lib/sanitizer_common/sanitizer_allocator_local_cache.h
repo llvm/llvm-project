@@ -169,7 +169,8 @@ struct SizeClassAllocator32LocalCache {
     // By not doing pointer arithmetic, we avoid the OOB if c->count = 0.
     // We just prefetch the previous member of the PerClass struct, which
     // doesn't do harm.
-    PREFETCH(reinterpret_cast<uptr>(c->batch) + sizeof(c->batch[0])* (c->count - 1));
+    PREFETCH(reinterpret_cast<uptr>(c->batch) +
+             sizeof(c->batch[0]) * (c->count - 1));
     stats_.Add(AllocatorStatAllocated, c->class_size);
     return res;
   }
