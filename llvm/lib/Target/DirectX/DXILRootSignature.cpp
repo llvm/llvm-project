@@ -25,6 +25,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 using namespace llvm;
@@ -152,6 +153,8 @@ static const Function *getEntryFunction(Module &M, ModuleMetadataInfo MMI) {
   LLVMContext *Ctx = &M.getContext();
   if (MMI.EntryPropertyVec.size() != 1) {
     reportError(Ctx, "More than one entry function defined.");
+    // needed to stop compilation
+    report_fatal_error("Invalid Root Signature Definition", false);
     return nullptr;
   }
   return MMI.EntryPropertyVec[0].Entry;
@@ -165,9 +168,14 @@ ModuleRootSignature::analyzeModule(Module &M, const Function *F) {
   ModuleRootSignature MRS;
 
   NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
-  if (RootSignatureNode == nullptr || parse(Ctx, &MRS, RootSignatureNode, F) ||
-      validate(Ctx, &MRS))
+  if (RootSignatureNode == nullptr)
     return std::nullopt;
+
+  if (parse(Ctx, &MRS, RootSignatureNode, F) || validate(Ctx, &MRS)) {
+    // needed to stop compilation
+    report_fatal_error("Invalid Root Signature Definition", false);
+    return std::nullopt;
+  }
 
   return MRS;
 }
