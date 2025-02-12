@@ -3777,14 +3777,12 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
     return nullptr;
   }
 
-  if (EnableReleasePendingQ && !RegionPolicy.OnlyBottomUp &&
-      TRI->shouldReleasePendingQueue(
-          DAG->MF, DAG->getTopRPTracker().getPressure().MaxSetPressure))
-    bumpCycleUntilReleaseSUFromPending(/*IsTop=*/true);
-  if (EnableReleasePendingQ && !RegionPolicy.OnlyTopDown &&
-      TRI->shouldReleasePendingQueue(
-          DAG->MF, DAG->getBotRPTracker().getPressure().MaxSetPressure))
-    bumpCycleUntilReleaseSUFromPending(/*IsTop=*/false);
+  if(EnableReleasePendingQ) {
+    if (!RegionPolicy.OnlyBottomUp && TRI->shouldReleasePendingQueue(DAG->MF, DAG->getTopRPTracker().getPressure().MaxSetPressure))
+      bumpCycleUntilReleaseSUFromPending(/*IsTop=*/true);
+    if (!RegionPolicy.OnlyTopDown && TRI->shouldReleasePendingQueue(DAG->MF, DAG->getBotRPTracker().getPressure().MaxSetPressure))
+      bumpCycleUntilReleaseSUFromPending(/*IsTop=*/false);
+  }
 
   SUnit *SU;
   do {
