@@ -32,10 +32,19 @@ namespace {
 /// Wrapper around extendRegister to ensure we extend to a full 32-bit register.
 static Register extendRegisterMin32(CallLowering::ValueHandler &Handler,
                                     Register ValVReg, const CCValAssign &VA) {
-  if (VA.getLocVT().getSizeInBits() < 32) {
+  LLT SrcTy = LLT(VA.getLocVT());
+
+  if (SrcTy.getSizeInBits() < 32) {
+    LLT I32 = LLT::integer(32);
+    LLT DstTy = LLT::integer(SrcTy.getSizeInBits());
+
+    Register SrcReg = ValVReg;
+    if (SrcTy.isFloat())
+      SrcReg = Handler.MIRBuilder.buildBitcast(DstTy, ValVReg).getReg(0);
+
     // 16-bit types are reported as legal for 32-bit registers. We need to
     // extend and do a 32-bit copy to avoid the verifier complaining about it.
-    return Handler.MIRBuilder.buildAnyExt(LLT::scalar(32), ValVReg).getReg(0);
+    return Handler.MIRBuilder.buildAnyExt(I32, SrcReg).getReg(0);
   }
 
   return Handler.extendRegister(ValVReg, VA);
@@ -119,16 +128,30 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
     markPhysRegUsed(PhysReg);
+    LLT LocTy = LLT(VA.getLocVT());
 
-    if (VA.getLocVT().getSizeInBits() < 32) {
+    if (LocTy.getSizeInBits() < 32) {
       // 16-bit types are reported as legal for 32-bit registers. We need to do
       // a 32-bit copy, and truncate to avoid the verifier complaining about it.
-      auto Copy = MIRBuilder.buildCopy(LLT::scalar(32), PhysReg);
+      Register CopyReg =
+          MIRBuilder.buildCopy(LLT::scalar(32), PhysReg).getReg(0);
+
+      if (LocTy.getScalarType().isFloat()) {
+        LLT TruncTy =
+            LocTy.isVector()
+                ? LLT::vector(LocTy.getElementCount(),
+                              LLT::integer(LocTy.getScalarSizeInBits()))
+                : LLT::integer(LocTy.getScalarSizeInBits());
+
+        auto Extended = buildExtensionHint(VA, CopyReg, TruncTy);
+        auto Trunc = MIRBuilder.buildTrunc(TruncTy, Extended);
+        MIRBuilder.buildBitcast(ValVReg, Trunc.getReg(0));
+        return;
+      }
 
       // If we have signext/zeroext, it applies to the whole 32-bit register
       // before truncation.
-      auto Extended =
-          buildExtensionHint(VA, Copy.getReg(0), LLT(VA.getLocVT()));
+      auto Extended = buildExtensionHint(VA, CopyReg, LocTy);
       MIRBuilder.buildTrunc(ValVReg, Extended);
       return;
     }
