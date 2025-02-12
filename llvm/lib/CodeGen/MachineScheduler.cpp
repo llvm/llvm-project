@@ -3663,7 +3663,7 @@ void GenericScheduler::pickNodeFromQueue(SchedBoundary &Zone,
 void GenericScheduler::bumpCycleUntilReleaseSUFromPending(bool IsTop) {
   if (!DAG->isTrackingPressure())
     return;
-  auto releasePending = [&](ReadyQueue &Q, const RegPressureTracker &RegP,
+  auto ReleasePending = [&](ReadyQueue &Q, const RegPressureTracker &RegP,
                             ArrayRef<unsigned> MaxSetP, SchedBoundary &SchedB) {
     for (SUnit *SU : Q) {
       RegPressureTracker &TempTracker = const_cast<RegPressureTracker &>(RegP);
@@ -3684,10 +3684,10 @@ void GenericScheduler::bumpCycleUntilReleaseSUFromPending(bool IsTop) {
     }
   };
   if (IsTop)
-    releasePending(Top.Pending, DAG->getTopRPTracker(),
+    ReleasePending(Top.Pending, DAG->getTopRPTracker(),
                    DAG->getTopRPTracker().getPressure().MaxSetPressure, Top);
   else
-    releasePending(Bot.Pending, DAG->getBotRPTracker(),
+    ReleasePending(Bot.Pending, DAG->getBotRPTracker(),
                    DAG->getBotRPTracker().getPressure().MaxSetPressure, Bot);
 }
 
