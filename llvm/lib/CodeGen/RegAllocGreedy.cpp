@@ -203,7 +203,7 @@ RAGreedy::RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F)
 
 void RAGreedyPass::printPipeline(raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) const {
   StringRef FilterName = Opts.FilterName.empty() ? "all" : Opts.FilterName;
-  OS << "regalloc-greedy<" << FilterName << '>';
+  OS << "greedy<" << FilterName << '>';
 }
 
 PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
