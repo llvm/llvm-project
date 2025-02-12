@@ -421,8 +421,8 @@ TEST_F(IRBuilderTest, StrictFPCall) {
       {Type::getDoubleTy(Ctx)});
   Value *V = Builder.CreateConstrainedFPCall(Fn, {FnArg});
   auto *I = cast<IntrinsicInst>(V);
-  EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fpe_except).has_value());
-  EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fpe_control).has_value());
+  EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
+  EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
   EXPECT_EQ(Intrinsic::experimental_constrained_roundeven, I->getIntrinsicID());
   EXPECT_EQ(fp::ebStrict, I->getExceptionBehavior());
   MemoryEffects ME = I->getMemoryEffects();
@@ -434,8 +434,8 @@ TEST_F(IRBuilderTest, StrictFPCall) {
                                          {Type::getDoubleTy(Ctx)});
   V = Builder.CreateCall(Fn, {FnArg});
   I = cast<IntrinsicInst>(V);
-  EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fpe_except).has_value());
-  EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fpe_control).has_value());
+  EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
+  EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
   ME = I->getMemoryEffects();
   EXPECT_FALSE(ME.doesAccessInaccessibleMem());
 }

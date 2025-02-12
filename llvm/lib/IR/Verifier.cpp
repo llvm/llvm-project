@@ -3796,32 +3796,31 @@ void Verifier::visitCallBase(CallBase &Call) {
             "Multiple \"clang.arc.attachedcall\" operand bundles", Call);
       FoundAttachedCallBundle = true;
       verifyAttachedCallBundle(Call, BU);
-    } else if (Tag == LLVMContext::OB_fpe_control) {
-      Check(!FoundFpeControlBundle, "Multiple fpe.control operand bundles",
+    } else if (Tag == LLVMContext::OB_fp_control) {
+      Check(!FoundFpeControlBundle, "Multiple fp.control operand bundles",
             Call);
       Check(BU.Inputs.size() == 1,
-            "Expected exactly one fpe.control bundle operand", Call);
+            "Expected exactly one fp.control bundle operand", Call);
       auto *V = dyn_cast<MetadataAsValue>(BU.Inputs.front());
-      Check(V, "Value of fpe.control bundle operand must be a metadata", Call);
+      Check(V, "Value of fp.control bundle operand must be a metadata", Call);
       auto *MDS = dyn_cast<MDString>(V->getMetadata());
-      Check(MDS, "Value of fpe.control bundle operand must be a string", Call);
+      Check(MDS, "Value of fp.control bundle operand must be a string", Call);
       auto RM = convertStrToRoundingMode(MDS->getString(), true);
-      Check(
-          RM.has_value(),
-          "Value of fpe.control bundle operand is not a correct rounding mode",
-          Call);
+      Check(RM.has_value(),
+            "Value of fp.control bundle operand is not a correct rounding mode",
+            Call);
       FoundFpeControlBundle = true;
-    } else if (Tag == LLVMContext::OB_fpe_except) {
-      Check(!FoundFpeExceptBundle, "Multiple fpe.except operand bundles", Call);
+    } else if (Tag == LLVMContext::OB_fp_except) {
+      Check(!FoundFpeExceptBundle, "Multiple fp.except operand bundles", Call);
       Check(BU.Inputs.size() == 1,
-            "Expected exactly one fpe.except bundle operand", Call);
+            "Expected exactly one fp.except bundle operand", Call);
       auto *V = dyn_cast<MetadataAsValue>(BU.Inputs.front());
-      Check(V, "Value of fpe.except bundle operand must be a metadata", Call);
+      Check(V, "Value of fp.except bundle operand must be a metadata", Call);
       auto *MDS = dyn_cast<MDString>(V->getMetadata());
-      Check(MDS, "Value of fpe.except bundle operand must be a string", Call);
+      Check(MDS, "Value of fp.except bundle operand must be a string", Call);
       auto EB = convertStrToExceptionBehavior(MDS->getString(), true);
       Check(EB.has_value(),
-            "Value of fpe.except bundle operand is not a correct exception "
+            "Value of fp.except bundle operand is not a correct exception "
             "behavior",
             Call);
       FoundFpeExceptBundle = true;
@@ -3867,7 +3866,7 @@ void Verifier::verifyConstrainedInstrinsicCall(const CallBase &CB) {
   // operand bundles.
   if (std::optional<RoundingMode> RM = getRoundingModeArg(CB)) {
     RoundingMode Rounding = *RM;
-    auto RoundingBundle = CB.getOperandBundle(LLVMContext::OB_fpe_control);
+    auto RoundingBundle = CB.getOperandBundle(LLVMContext::OB_fp_control);
     Check(RoundingBundle,
           "Constrained intrinsic has a rounding argument but the call does not",
           CB);
@@ -3885,7 +3884,7 @@ void Verifier::verifyConstrainedInstrinsicCall(const CallBase &CB) {
 
   if (std::optional<fp::ExceptionBehavior> EB = getExceptionBehaviorArg(CB)) {
     fp::ExceptionBehavior Excepts = *EB;
-    auto ExceptionBundle = CB.getOperandBundle(LLVMContext::OB_fpe_except);
+    auto ExceptionBundle = CB.getOperandBundle(LLVMContext::OB_fp_except);
     Check(ExceptionBundle,
           "Constrained intrinsic has an exception handling argument but the "
           "call does not",

@@ -256,7 +256,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
                LLVMContext::OB_kcfi,
                // A call with FP operand bundles should be treated in the same
                // way as a call without them.
-               LLVMContext::OB_fpe_control, LLVMContext::OB_fpe_except});
+               LLVMContext::OB_fp_control, LLVMContext::OB_fp_except});
 
       if (!IsNoTail && CI->doesNotAccessMemory()) {
         // A call to a readnone function whose arguments are all things computed

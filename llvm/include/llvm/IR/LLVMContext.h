@@ -96,8 +96,8 @@ public:
     OB_ptrauth = 7,                // "ptrauth"
     OB_kcfi = 8,                   // "kcfi"
     OB_convergencectrl = 9,        // "convergencectrl"
-    OB_fpe_control = 10,           // "fpe.control"
-    OB_fpe_except = 11,            // "fpe.except"
+    OB_fp_control = 10,            // "fp.control"
+    OB_fp_except = 11,             // "fp.except"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.

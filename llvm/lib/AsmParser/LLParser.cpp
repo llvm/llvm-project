@@ -6430,7 +6430,7 @@ void LLParser::updateConstrainedIntrinsic(
     return;
 
   for (auto &B : Bundles) {
-    if (B.getTag().starts_with("fpe."))
+    if (B.getTag().starts_with("fp."))
       return;
   }
 

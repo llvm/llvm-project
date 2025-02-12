@@ -622,7 +622,7 @@ bool CallBase::hasClobberingOperandBundles() const {
 }
 
 std::optional<RoundingMode> CallBase::getRoundingMode() const {
-  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fpe_control)) {
+  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fp_control)) {
     Value *V = RoundingBundle->Inputs.front();
     Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
     return convertStrToRoundingMode(cast<MDString>(MD)->getString(), true);
@@ -631,7 +631,7 @@ std::optional<RoundingMode> CallBase::getRoundingMode() const {
 }
 
 std::optional<fp::ExceptionBehavior> CallBase::getExceptionBehavior() const {
-  if (auto ExceptionBundle = getOperandBundle(LLVMContext::OB_fpe_except)) {
+  if (auto ExceptionBundle = getOperandBundle(LLVMContext::OB_fp_except)) {
     Value *V = ExceptionBundle->Inputs.front();
     Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
     return convertStrToExceptionBehavior(cast<MDString>(MD)->getString(), true);
@@ -640,8 +640,8 @@ std::optional<fp::ExceptionBehavior> CallBase::getExceptionBehavior() const {
 }
 
 bool CallBase::hasFloatingPointBundles() const {
-  return getOperandBundle(LLVMContext::OB_fpe_control) ||
-         getOperandBundle(LLVMContext::OB_fpe_except);
+  return getOperandBundle(LLVMContext::OB_fp_control) ||
+         getOperandBundle(LLVMContext::OB_fp_except);
 }
 
 MemoryEffects CallBase::getFloatingPointMemoryEffects() const {
@@ -767,7 +767,7 @@ void llvm::addFPRoundingBundle(LLVMContext &Ctx,
   assert(RndStr && "Garbage rounding mode!");
   auto *RoundingMDS = MDString::get(Ctx, *RndStr);
   auto *RM = MetadataAsValue::get(Ctx, RoundingMDS);
-  Bundles.emplace_back("fpe.control", RM);
+  Bundles.emplace_back("fp.control", RM);
 }
 
 void llvm::addFPExceptionBundle(LLVMContext &Ctx,
@@ -777,7 +777,7 @@ void llvm::addFPExceptionBundle(LLVMContext &Ctx,
   assert(ExcStr && "Garbage exception behavior!");
   auto *ExceptMDS = MDString::get(Ctx, *ExcStr);
   auto *EB = MetadataAsValue::get(Ctx, ExceptMDS);
-  Bundles.emplace_back("fpe.except", EB);
+  Bundles.emplace_back("fp.except", EB);
 }
 
 //===----------------------------------------------------------------------===//
