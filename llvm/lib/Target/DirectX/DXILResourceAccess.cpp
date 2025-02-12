@@ -224,6 +224,10 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
       createLoadIntrinsic(II, LI, Current.Offset, RTI);
       DeadInsts.push_back(LI);
 
+    } else if (auto ASC = dyn_cast<AddrSpaceCastInst>(Current.Access)) {
+      for (User *U : ASC->users())
+        Worklist.push_back({U, Current.Offset});
+      DeadInsts.push_back(ASC);
     } else
       llvm_unreachable("Unhandled instruction - pointer escaped?");
   }

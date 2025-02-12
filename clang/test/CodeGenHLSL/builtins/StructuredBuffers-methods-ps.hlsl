@@ -29,9 +29,9 @@ export float TestLoad() {
 }
 
 // CHECK: define noundef nofpclass(nan inf) float @_Z8TestLoadv()
-// CHECK: %[[PTR1:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %{{[0-9]+}}, i32 %{{[0-9]+}})
-// CHECK: %[[VALUE1:.*]] = load float, ptr %[[PTR1]]
+// CHECK: %[[PTR1:.*]] = call ptr addrspace(1) @llvm.dx.resource.getpointer.p1.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %{{[0-9]+}}, i32 %{{[0-9]+}})
+// CHECK: %[[VALUE1:.*]] = load float, ptr addrspace(1) %[[PTR1]]
 
 // CHECK: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i8) #3
 // CHECK: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1), i8) #3
-// CHECK: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1), i32) #4
+// CHECK: declare ptr addrspace(1) @llvm.dx.resource.getpointer.p1.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1), i32) #4
