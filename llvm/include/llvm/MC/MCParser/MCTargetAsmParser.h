@@ -213,6 +213,7 @@ public:
 
   explicit constexpr DiagnosticPredicate(bool Matches)
       : Predicate(Matches ? Match : NearMatch) {}
+
   explicit operator bool() const { return Predicate == Match; }
 
   constexpr bool isMatch() const { return Predicate == Match; }
