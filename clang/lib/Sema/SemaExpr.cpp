@@ -2358,7 +2358,7 @@ static bool diagnoseFunctionLikeMacro(Sema &SemaRef, DeclarationName Name,
       if (MI && MI->isFunctionLike()) {
         SemaRef.Diag(TypoLoc,
                      diag::err_undeclared_var_use_suggest_func_like_macro)
-            << II;
+            << II ->getName();
         SemaRef.Diag(MI->getDefinitionLoc(),
                      diag::note_function_like_macro_requires_parens)
             << II->getName();

@@ -10858,7 +10858,7 @@ def err_undeclared_use_suggest : Error<
 def err_undeclared_var_use_suggest : Error<
   "use of undeclared identifier %0; did you mean %1?">;
 def err_undeclared_var_use_suggest_func_like_macro : Error<
-  "%0 is defined as an object-like macro; did you mean '%0(...)'?">;
+  "'%0' is defined as an object-like macro; did you mean '%0(...)'?">;
 def err_no_template : Error<"no template named %0">;
 def err_no_template_suggest : Error<"no template named %0; did you mean %1?">;
 def err_no_member_template : Error<"no template named %0 in %1">;

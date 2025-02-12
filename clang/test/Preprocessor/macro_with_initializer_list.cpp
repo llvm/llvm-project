@@ -150,13 +150,13 @@ void test() {
   // Can't be fixed by parentheses.
   INIT(e, {1, 2, 3});
   // expected-error@-1 {{too many arguments provided}}
-  // expected-error@-2 {{use of undeclared identifier}}
+  // expected-error@-2 {{'INIT' is defined as an object-like macro; did you mean 'INIT(...)'?}}
   // expected-note@-3 {{cannot use initializer list at the beginning of a macro argument}}
 
   // Can't be fixed by parentheses.
   INIT(e, {1, 2, 3} + {1, 2, 3});
   // expected-error@-1 {{too many arguments provided}}
-  // expected-error@-2 {{use of undeclared identifier}}
+  // expected-error@-2 {{'INIT' is defined as an object-like macro; did you mean 'INIT(...)'?}}
   // expected-note@-3 {{cannot use initializer list at the beginning of a macro argument}}
 }
 
@@ -179,6 +179,6 @@ void test2() {
   M(F3, {1,2,3}, {1,2,3}, {1,2,3}, {1,2,3}, {1,2,3}, {1,2,3},
         {1,2,3}, {1,2,3}, {1,2,3}, {1,2,3}, {1,2,3}, {1,2,3});
   // expected-error@-2 {{too many arguments provided}}
-  // expected-error@-3 {{use of undeclared identifier}}
+  // expected-error@-3 {{'M' is defined as an object-like macro; did you mean 'M(...)'?}}
   // expected-note@-4 {{cannot use initializer list at the beginning of a macro argument}}
 }
