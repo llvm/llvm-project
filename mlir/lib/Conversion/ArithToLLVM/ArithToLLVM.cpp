@@ -54,25 +54,6 @@ struct ConstrainedVectorConvertToLLVMPattern
   }
 };
 
-/// No-op bitcast. Propagate type input arg if converted source and dest types
-/// are the same.
-struct IdentityBitcastLowering final
-    : public OpConversionPattern<arith::BitcastOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(arith::BitcastOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    Value src = adaptor.getIn();
-    Type resultType = getTypeConverter()->convertType(op.getType());
-    if (src.getType() != resultType)
-      return rewriter.notifyMatchFailure(op, "Types are different");
-
-    rewriter.replaceOp(op, src);
-    return success();
-  }
-};
-
 //===----------------------------------------------------------------------===//
 // Straightforward Op Lowerings
 //===----------------------------------------------------------------------===//
@@ -543,9 +524,6 @@ void mlir::arith::registerConvertArithToLLVMInterface(
 
 void mlir::arith::populateArithToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-
-  patterns.add<IdentityBitcastLowering>(converter, patterns.getContext());
-
   // clang-format off
   patterns.add<
     AddFOpLowering,
