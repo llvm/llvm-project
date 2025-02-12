@@ -1,5 +1,5 @@
-; RUN: not --crash llc %s --filetype=obj -o - 2>&1 | FileCheck %s
-; CHECK: error: More than one entry function defined
+; RUN: not --crash llc %s --filetype=obj -o -
+; expected-error@-1: More than one entry function defined
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
