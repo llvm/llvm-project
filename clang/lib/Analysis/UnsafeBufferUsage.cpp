@@ -408,48 +408,23 @@ getDependentValuesFromCall(const CountAttributedType *CAT,
   return {std::move(Values)};
 }
 
-// Checks if Self and Other are the same member bases. This supports only very
-// simple forms of member bases.
-bool isSameMemberBase(const Expr *Self, const Expr *Other) {
-  for (;;) {
-    if (Self == Other)
-      return true;
-
-    const auto *SelfICE = dyn_cast<ImplicitCastExpr>(Self);
-    const auto *OtherICE = dyn_cast<ImplicitCastExpr>(Other);
-    if (SelfICE && OtherICE &&
-        SelfICE->getCastKind() == OtherICE->getCastKind() &&
-        (SelfICE->getCastKind() == CK_LValueToRValue ||
-         SelfICE->getCastKind() == CK_UncheckedDerivedToBase)) {
-      Self = SelfICE->getSubExpr();
-      Other = OtherICE->getSubExpr();
-    }
-
-    const auto *SelfDRE = dyn_cast<DeclRefExpr>(Self);
-    const auto *OtherDRE = dyn_cast<DeclRefExpr>(Other);
-    if (SelfDRE && OtherDRE)
-      return SelfDRE->getDecl() == OtherDRE->getDecl();
-
-    if (isa<CXXThisExpr>(Self) && isa<CXXThisExpr>(Other)) {
-      // `Self` and `Other` should be evaluated at the same state so `this` must
-      // mean the same thing for both:
-      return true;
-    }
-
-    const auto *SelfME = dyn_cast<MemberExpr>(Self);
-    const auto *OtherME = dyn_cast<MemberExpr>(Other);
-    if (!SelfME || !OtherME ||
-        SelfME->getMemberDecl() != OtherME->getMemberDecl()) {
-      return false;
-    }
-
-    Self = SelfME->getBase();
-    Other = OtherME->getBase();
-  }
-}
-
 // Impl of `isCompatibleWithCountExpr`.  See `isCompatibleWithCountExpr` for
-// document.
+// high-level document.
+//
+// This visitor compares two expressions in a tiny subset of the language,
+// including DRE of VarDecls, constants, binary operators, subscripts,
+// dereferences, member accesses, and member function calls.
+//
+// - For constants, they are literal constants and expressions have
+//   compile-time constant values.
+// - For a supported dereference expression, it can be either of the forms '*e'
+//   or '*&e', where 'e' is a supported expression.
+// - For a subscript expression, it can be either an array subscript or
+//   overloaded subscript operator.
+// - For a member function call, it must be a call to a 'const' (non-static)
+//   member function with zero argument.  This is to ensure side-effect free.
+//   Other kinds of function calls are not supported, so an expression of the
+//   form `f(...)` is not supported.
 struct CompatibleCountExprVisitor
     : public ConstStmtVisitor<CompatibleCountExprVisitor, bool, const Expr *> {
   using BaseVisitor =
@@ -523,6 +498,10 @@ struct CompatibleCountExprVisitor
     return false;
   }
 
+  bool VisitCXXThisExpr(const CXXThisExpr *SelfThis, const Expr *Other) {
+    return isa<CXXThisExpr>(Other->IgnoreParenImpCasts());
+  }
+
   bool VisitDeclRefExpr(const DeclRefExpr *SelfDRE, const Expr *Other) {
     const ValueDecl *SelfVD = SelfDRE->getDecl();
 
@@ -544,7 +523,7 @@ struct CompatibleCountExprVisitor
     const auto *OtherME = dyn_cast<MemberExpr>(O);
     if (MemberBase && OtherME) {
       return OtherME->getMemberDecl() == SelfVD &&
-             isSameMemberBase(OtherME->getBase(), MemberBase);
+             Visit(OtherME->getBase(), MemberBase);
     }
 
     return false;
@@ -557,7 +536,12 @@ struct CompatibleCountExprVisitor
       return true;
     if (const auto *DRE = dyn_cast<DeclRefExpr>(Other->IgnoreParenImpCasts()))
       return MemberBase && Self->getMemberDecl() == DRE->getDecl() &&
-             isSameMemberBase(Self->getBase(), MemberBase);
+             Visit(Self->getBase(), MemberBase);
+    if (const auto *OtherME =
+            dyn_cast<MemberExpr>(Other->IgnoreParenImpCasts())) {
+      return Self->getMemberDecl() == OtherME->getMemberDecl() &&
+             Visit(Self->getBase(), OtherME->getBase());
+    }
     return false;
   }
 
@@ -585,6 +569,54 @@ struct CompatibleCountExprVisitor
              Visit(SelfBO->getRHS(), OtherBO->getRHS());
     }
 
+    return false;
+  }
+
+  // Support any overloaded operator[] so long as it is a const method.
+  bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *SelfOpCall,
+                                const Expr *Other) {
+    if (SelfOpCall->getOperator() != OverloadedOperatorKind::OO_Subscript)
+      return false;
+
+    const auto *MD = dyn_cast<CXXMethodDecl>(SelfOpCall->getCalleeDecl());
+
+    if (!MD || !MD->isConst())
+      return false;
+    if (const auto *OtherOpCall =
+            dyn_cast<CXXOperatorCallExpr>(Other->IgnoreParenImpCasts()))
+      if (SelfOpCall->getOperator() == OtherOpCall->getOperator()) {
+        return Visit(SelfOpCall->getArg(0), OtherOpCall->getArg(0)) &&
+               Visit(SelfOpCall->getArg(1), OtherOpCall->getArg(1));
+      }
+    return false;
+  }
+
+  // Support array/pointer subscript. Even though these operators are generally
+  // considered unsafe, they can be safely used on constant arrays with
+  // known-safe literal indexes.
+  bool VisitArraySubscriptExpr(const ArraySubscriptExpr *SelfAS,
+                               const Expr *Other) {
+    if (const auto *OtherAS =
+            dyn_cast<ArraySubscriptExpr>(Other->IgnoreParenImpCasts()))
+      return Visit(SelfAS->getLHS(), OtherAS->getLHS()) &&
+             Visit(SelfAS->getRHS(), OtherAS->getRHS());
+    return false;
+  }
+
+  // Support non-static member call:
+  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *SelfCall,
+                              const Expr *Other) {
+    const CXXMethodDecl *MD = SelfCall->getMethodDecl();
+
+    // The callee member function must be a const function with no parameter:
+    if (MD->isConst() && MD->param_empty()) {
+      if (auto *OtherCall =
+              dyn_cast<CXXMemberCallExpr>(Other->IgnoreParenImpCasts())) {
+        return OtherCall->getMethodDecl() == MD &&
+               Visit(SelfCall->getImplicitObjectArgument(),
+                     OtherCall->getImplicitObjectArgument());
+      }
+    }
     return false;
   }
 };
