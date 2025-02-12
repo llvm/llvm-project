@@ -49,7 +49,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUResourceUsageAnalysis.h"
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -162,11 +161,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    // Preserving the resource usage analysis is required here, and in all
-    // following passes, because the VGPR usage cannot be computed properly
-    // after lowering dynamic indexing offsets to VGPRs (without a costly change
-    // to the analysis).
-    AU.addPreserved<AMDGPUResourceUsageAnalysis>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -176,7 +170,7 @@ private:
   const GCNSubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
-  const SIMachineFunctionInfo *MFI;
+  SIMachineFunctionInfo *MFI;
 
   /// Most recent s_set_* instruction.
   MachineInstr *MostRecentModeSet;
@@ -246,6 +240,10 @@ private:
   /// iterator to insert mode change. It may also modify the S_CLAUSE
   /// instruction to extend it or drop the clause if it cannot be adjusted.
   MachineInstr *handleClause(MachineInstr *I);
+
+  /// Precompute the maximum number of VGPRs used per wave before
+  /// we remove v_load/store_idx instructions.
+  void preComputeMaxPerWaveVGPR(MachineFunction &MF);
 };
 
 bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, MachineInstr *I) {
@@ -622,6 +620,71 @@ MachineInstr *AMDGPULowerVGPREncoding::handleClause(MachineInstr *I) {
   return I;
 }
 
+void AMDGPULowerVGPREncoding::preComputeMaxPerWaveVGPR(MachineFunction &MF) {
+  // If there are no calls, MachineRegisterInfo can tell us the used register
+  // count easily.
+  // A tail call isn't considered a call for MachineFrameInfo's purposes.
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
+    MFI->MaxPerWaveVGPR =
+        TRI->getNumUsedPhysRegs(MF.getRegInfo(), AMDGPU::VGPR_32RegClass) - 1;
+    return;
+  }
+
+  int MaxVGPR = -1;
+  for (auto &MBB : MF) {
+    for (MachineInstr &MI : MBB.instrs()) {
+      // iterate over all operands
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg())
+          continue;
+
+        unsigned Width = 0;
+        Register Reg = MO.getReg();
+        if (AMDGPU::VGPR_32RegClass.contains(Reg) ||
+            AMDGPU::VGPR_16RegClass.contains(Reg))
+          Width = 1;
+        else if (AMDGPU::VReg_64RegClass.contains(Reg))
+          Width = 2;
+        else if (AMDGPU::VReg_96RegClass.contains(Reg))
+          Width = 3;
+        else if (AMDGPU::VReg_128RegClass.contains(Reg))
+          Width = 4;
+        else if (AMDGPU::VReg_160RegClass.contains(Reg))
+          Width = 5;
+        else if (AMDGPU::VReg_192RegClass.contains(Reg))
+          Width = 6;
+        else if (AMDGPU::VReg_224RegClass.contains(Reg))
+          Width = 7;
+        else if (AMDGPU::VReg_256RegClass.contains(Reg))
+          Width = 8;
+        else if (AMDGPU::VReg_288RegClass.contains(Reg))
+          Width = 9;
+        else if (AMDGPU::VReg_320RegClass.contains(Reg))
+          Width = 10;
+        else if (AMDGPU::VReg_352RegClass.contains(Reg))
+          Width = 11;
+        else if (AMDGPU::VReg_384RegClass.contains(Reg))
+          Width = 12;
+        else if (AMDGPU::VReg_512RegClass.contains(Reg))
+          Width = 16;
+        else if (AMDGPU::VReg_576RegClass.contains(Reg))
+          Width = 18;
+        else if (AMDGPU::VReg_1024RegClass.contains(Reg))
+          Width = 32;
+
+        if (Width) {
+          unsigned HWReg = TRI->getHWRegIndex(Reg);
+          int MaxUsed = HWReg + Width - 1;
+          MaxVGPR = MaxUsed > MaxVGPR ? MaxUsed : MaxVGPR;
+        }
+      }
+    }
+  }
+
+  MFI->MaxPerWaveVGPR = MaxVGPR;
+}
+
 bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   if (!ST->has1024AddressableVGPRs())
@@ -630,6 +693,9 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
   TII = ST->getInstrInfo();
   TRI = ST->getRegisterInfo();
   MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  if (ST->hasVGPRIndexingRegisters())
+    preComputeMaxPerWaveVGPR(MF);
 
   bool Changed = false;
   ClauseLen = ClauseRemaining = 0;
