@@ -1068,7 +1068,7 @@ static constexpr MathOperation mathOperations[] = {
      genLibCall},
     {"acosh", RTNAME_STRING(CAcoshF128), FuncTypeComplex16Complex16,
      genLibF128Call},
-    // TruncOp
+    // llvm.trunc behaves the same way as libm's trunc.
     {"aint", "llvm.trunc.f32", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genLibCall},
     {"aint", "llvm.trunc.f64", genFuncType<Ty::Real<8>, Ty::Real<8>>,
