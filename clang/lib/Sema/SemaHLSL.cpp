@@ -659,13 +659,9 @@ void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
   SourceLocation Loc = AL.getArgAsExpr(0)->getExprLoc();
   // FIXME: pass down below to lexer when fp is supported
   // llvm::RoundingMode RM = SemaRef.CurFPFeatures.getRoundingMode();
-  SmallVector<hlsl::RootSignatureToken> Tokens;
   hlsl::RootSignatureLexer Lexer(Signature, Loc, SemaRef.getPreprocessor());
-  if (Lexer.Lex(Tokens))
-    return;
-
   SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
-  hlsl::RootSignatureParser Parser(Elements, Tokens,
+  hlsl::RootSignatureParser Parser(Elements, Lexer,
                                    SemaRef.getPreprocessor().getDiagnostics());
   if (Parser.Parse())
     return;
