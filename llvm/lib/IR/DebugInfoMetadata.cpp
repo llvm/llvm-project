@@ -243,8 +243,8 @@ static DIScope *GetNearestCommonScope(DILocation *L1, DILocation *L2) {
   return nullptr;
 }
 
-/// Walk up the chain of parent local scopes until the file has changed
-/// or DISubprogram reached.
+/// Returns next parent scope having different file within DISubprogram
+/// or nullptr.
 static DILocalScope *NextScopeWithDifferentFile(MDNode *LocOrScope) {
   assert((isa<DILocation>(LocOrScope) || isa<DILocalScope>(LocOrScope)) &&
          "DILocation or DILocalScope expected");
