@@ -4976,7 +4976,7 @@ struct FoldTensorCastProducerOp
 
     // Reject tensor::PackOp - there's dedicated pattern for that instead.
     if (!foldTensorCastPrecondition(op) ||
-        isa<tensor::PackOp, tensor::UnPackOp>(*op))
+        isa<tensor::RelayoutOpInterface>(*op))
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());

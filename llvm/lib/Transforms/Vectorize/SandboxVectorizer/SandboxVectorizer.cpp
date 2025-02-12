@@ -31,9 +31,10 @@ static cl::opt<std::string> UserDefinedPassPipeline(
 
 SandboxVectorizerPass::SandboxVectorizerPass() : FPM("fpm") {
   if (UserDefinedPassPipeline == DefaultPipelineMagicStr) {
-    // TODO: Add region passes to the default pipeline.
+    // TODO: Add passes to the default pipeline. It currently contains:
+    //       - the bottom-up-vectorizer pass
     FPM.setPassPipeline(
-        "bottom-up-vec<>",
+        "bottom-up-vec<tr-accept-or-revert>",
         sandboxir::SandboxVectorizerPassBuilder::createFunctionPass);
   } else {
     // Create the user-defined pipeline.

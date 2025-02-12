@@ -3664,6 +3664,12 @@ public:
                              NonTrivialCUnionContext UseContext,
                              unsigned NonTrivialKind);
 
+  /// Certain globally-unique variables might be accidentally duplicated if
+  /// built into multiple shared libraries with hidden visibility. This can
+  /// cause problems if the variable is mutable, its initialization is
+  /// effectful, or its address is taken.
+  bool GloballyUniqueObjectMightBeAccidentallyDuplicated(const VarDecl *Dcl);
+
   /// AddInitializerToDecl - Adds the initializer Init to the
   /// declaration dcl. If DirectInit is true, this is C++ direct
   /// initialization rather than copy initialization.
@@ -10174,18 +10180,15 @@ public:
   /// \param PartialOverloading true if we are performing "partial" overloading
   /// based on an incomplete set of function arguments. This feature is used by
   /// code completion.
-  void AddOverloadCandidate(FunctionDecl *Function, DeclAccessPair FoundDecl,
-                            ArrayRef<Expr *> Args,
-                            OverloadCandidateSet &CandidateSet,
-                            bool SuppressUserConversions = false,
-                            bool PartialOverloading = false,
-                            bool AllowExplicit = true,
-                            bool AllowExplicitConversion = false,
-                            ADLCallKind IsADLCandidate = ADLCallKind::NotADL,
-                            ConversionSequenceList EarlyConversions = {},
-                            OverloadCandidateParamOrder PO = {},
-                            bool AggregateCandidateDeduction = false,
-                            bool HasMatchedPackOnParmToNonPackOnArg = false);
+  void AddOverloadCandidate(
+      FunctionDecl *Function, DeclAccessPair FoundDecl, ArrayRef<Expr *> Args,
+      OverloadCandidateSet &CandidateSet, bool SuppressUserConversions = false,
+      bool PartialOverloading = false, bool AllowExplicit = true,
+      bool AllowExplicitConversion = false,
+      ADLCallKind IsADLCandidate = ADLCallKind::NotADL,
+      ConversionSequenceList EarlyConversions = {},
+      OverloadCandidateParamOrder PO = {},
+      bool AggregateCandidateDeduction = false, bool StrictPackMatch = false);
 
   /// Add all of the function declarations in the given function set to
   /// the overload candidate set.
@@ -10221,7 +10224,7 @@ public:
                           bool PartialOverloading = false,
                           ConversionSequenceList EarlyConversions = {},
                           OverloadCandidateParamOrder PO = {},
-                          bool HasMatchedPackOnParmToNonPackOnArg = false);
+                          bool StrictPackMatch = false);
 
   /// Add a C++ member function template as a candidate to the candidate
   /// set, using template argument deduction to produce an appropriate member
@@ -10268,7 +10271,7 @@ public:
       CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
       OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
       bool AllowExplicit, bool AllowResultConversion = true,
-      bool HasMatchedPackOnParmToNonPackOnArg = false);
+      bool StrictPackMatch = false);
 
   /// Adds a conversion function template specialization
   /// candidate to the overload set, using template argument deduction
@@ -11688,7 +11691,7 @@ public:
 
     /// Is set to true when, in the context of TTP matching, a pack parameter
     /// matches non-pack arguments.
-    bool MatchedPackOnParmToNonPackOnArg = false;
+    bool StrictPackMatch = false;
   };
 
   /// Check that the given template argument corresponds to the given
@@ -11797,7 +11800,7 @@ public:
                                      TemplateParameterList *Params,
                                      TemplateArgumentLoc &Arg,
                                      bool PartialOrdering,
-                                     bool *MatchedPackOnParmToNonPackOnArg);
+                                     bool *StrictPackMatch);
 
   void NoteTemplateLocation(const NamedDecl &Decl,
                             std::optional<SourceRange> ParamRange = {});
@@ -12491,7 +12494,7 @@ public:
   bool isTemplateTemplateParameterAtLeastAsSpecializedAs(
       TemplateParameterList *PParam, TemplateDecl *PArg, TemplateDecl *AArg,
       const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
-      bool PartialOrdering, bool *MatchedPackOnParmToNonPackOnArg);
+      bool PartialOrdering, bool *StrictPackMatch);
 
   /// Mark which template parameters are used in a given expression.
   ///
@@ -13493,8 +13496,8 @@ public:
   bool InstantiateClassTemplateSpecialization(
       SourceLocation PointOfInstantiation,
       ClassTemplateSpecializationDecl *ClassTemplateSpec,
-      TemplateSpecializationKind TSK, bool Complain = true,
-      bool PrimaryHasMatchedPackOnParmToNonPackOnArg = false);
+      TemplateSpecializationKind TSK, bool Complain,
+      bool PrimaryStrictPackMatch);
 
   /// Instantiates the definitions of all of the member
   /// of the given class, which is an instantiation of a class template

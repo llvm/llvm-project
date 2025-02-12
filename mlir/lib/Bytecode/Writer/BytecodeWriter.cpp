@@ -66,6 +66,9 @@ BytecodeWriterConfig::BytecodeWriterConfig(FallbackAsmResourceMap &map,
     : BytecodeWriterConfig(producer) {
   attachFallbackResourcePrinter(map);
 }
+BytecodeWriterConfig::BytecodeWriterConfig(BytecodeWriterConfig &&config)
+    : impl(std::move(config.impl)) {}
+
 BytecodeWriterConfig::~BytecodeWriterConfig() = default;
 
 ArrayRef<std::unique_ptr<AttrTypeBytecodeWriter<Attribute>>>

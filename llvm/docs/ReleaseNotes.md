@@ -61,6 +61,9 @@ Changes to the LLVM IR
 Changes to LLVM infrastructure
 ------------------------------
 
+* Removed support for target intrinsics being defined in the target directories
+  themselves (i.e., the `TargetIntrinsicInfo` class).
+
 Changes to building LLVM
 ------------------------
 
@@ -139,6 +142,10 @@ Changes to LLDB
   does not provide API to query the number of supported hardware watchpoints.
   Therefore current implementation allows only 1 watchpoint, as tested with
   Windows 11 on the Microsoft SQ2 and Snapdragon Elite X platforms.
+
+### Changes to lldb-dap
+
+* Breakpoints can now be set for specific columns within a line.
 
 Changes to BOLT
 ---------------------------------

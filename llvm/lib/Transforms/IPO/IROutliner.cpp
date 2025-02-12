@@ -1184,21 +1184,21 @@ static std::optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
   for (unsigned Idx = 0, EIdx = PN->getNumIncomingValues(); Idx < EIdx; Idx++) {
     Incoming = PN->getIncomingValue(Idx);
     IncomingBlock = PN->getIncomingBlock(Idx);
+    // If the incoming block isn't in the region, we don't have to worry about
+    // this incoming value.
+    if (!Blocks.contains(IncomingBlock))
+      continue;
+
     // If we cannot find a GVN, and the incoming block is included in the region
     // this means that the input to the PHINode is not included in the region we
     // are trying to analyze, meaning, that if it was outlined, we would be
     // adding an extra input.  We ignore this case for now, and so ignore the
     // region.
     std::optional<unsigned> OGVN = Cand.getGVN(Incoming);
-    if (!OGVN && Blocks.contains(IncomingBlock)) {
+    if (!OGVN) {
       Region.IgnoreRegion = true;
       return std::nullopt;
     }
-
-    // If the incoming block isn't in the region, we don't have to worry about
-    // this incoming value.
-    if (!Blocks.contains(IncomingBlock))
-      continue;
 
     // Collect the canonical numbers of the values in the PHINode.
     unsigned GVN = *OGVN;

@@ -3432,7 +3432,7 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
 static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
                                         const APInt *Cond1, Value *CtlzOp,
                                         unsigned BitWidth,
-                                        bool &ShouldDropNUW) {
+                                        bool &ShouldDropNoWrap) {
   // The challenge in recognizing std::bit_ceil(X) is that the operand is used
   // for the CTLZ proper and select condition, each possibly with some
   // operation like add and sub.
@@ -3455,7 +3455,7 @@ static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
   ConstantRange CR = ConstantRange::makeExactICmpRegion(
       CmpInst::getInversePredicate(Pred), *Cond1);
 
-  ShouldDropNUW = false;
+  ShouldDropNoWrap = false;
 
   // Match the operation that's used to compute CtlzOp from CommonAncestor.  If
   // CtlzOp == CommonAncestor, return true as no operation is needed.  If a
@@ -3466,11 +3466,12 @@ static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
     if (CtlzOp == CommonAncestor)
       return true;
     if (match(CtlzOp, m_Add(m_Specific(CommonAncestor), m_APInt(C)))) {
+      ShouldDropNoWrap = true;
       CR = CR.add(*C);
       return true;
     }
     if (match(CtlzOp, m_Sub(m_APInt(C), m_Specific(CommonAncestor)))) {
-      ShouldDropNUW = true;
+      ShouldDropNoWrap = true;
       CR = ConstantRange(*C).sub(CR);
       return true;
     }
@@ -3541,19 +3542,21 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
     Pred = CmpInst::getInversePredicate(Pred);
   }
 
-  bool ShouldDropNUW;
+  bool ShouldDropNoWrap;
 
   if (!match(FalseVal, m_One()) ||
       !match(TrueVal,
              m_OneUse(m_Shl(m_One(), m_OneUse(m_Sub(m_SpecificInt(BitWidth),
                                                     m_Value(Ctlz)))))) ||
-      !match(Ctlz, m_Intrinsic<Intrinsic::ctlz>(m_Value(CtlzOp), m_Zero())) ||
+      !match(Ctlz, m_Intrinsic<Intrinsic::ctlz>(m_Value(CtlzOp), m_Value())) ||
       !isSafeToRemoveBitCeilSelect(Pred, Cond0, Cond1, CtlzOp, BitWidth,
-                                   ShouldDropNUW))
+                                   ShouldDropNoWrap))
     return nullptr;
 
-  if (ShouldDropNUW)
+  if (ShouldDropNoWrap) {
     cast<Instruction>(CtlzOp)->setHasNoUnsignedWrap(false);
+    cast<Instruction>(CtlzOp)->setHasNoSignedWrap(false);
+  }
 
   // Build 1 << (-CTLZ & (BitWidth-1)).  The negation likely corresponds to a
   // single hardware instruction as opposed to BitWidth - CTLZ, where BitWidth
@@ -3562,6 +3565,8 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
 
   // Drop range attributes and re-infer them in the next iteration.
   cast<Instruction>(Ctlz)->dropPoisonGeneratingAnnotations();
+  // Set is_zero_poison to false and re-infer them in the next iteration.
+  cast<Instruction>(Ctlz)->setOperand(1, Builder.getFalse());
   IC.addToWorklist(cast<Instruction>(Ctlz));
   Value *Neg = Builder.CreateNeg(Ctlz);
   Value *Masked =

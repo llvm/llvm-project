@@ -299,6 +299,9 @@ def OMPC_NoOpenMP : Clause<"no_openmp"> {
 def OMPC_NoOpenMPRoutines : Clause<"no_openmp_routines"> {
   let clangClass = "OMPNoOpenMPRoutinesClause";
 }
+def OMPC_NoOpenMPConstructs : Clause<"no_openmp_constructs"> {
+  let clangClass = "OMPNoOpenMPConstructsClause";
+}
 def OMPC_NoParallelism : Clause<"no_parallelism"> {
   let clangClass = "OMPNoParallelismClause";
 }
@@ -574,6 +577,7 @@ def OMP_Assume : Directive<"assume"> {
     VersionedClause<OMPC_NoOpenMP, 51>,
     VersionedClause<OMPC_NoOpenMPRoutines, 51>,
     VersionedClause<OMPC_NoParallelism, 51>,
+    VersionedClause<OMPC_NoOpenMPConstructs, 60>,
   ];
 }
 def OMP_Atomic : Directive<"atomic"> {
