@@ -1,11 +1,16 @@
-// RUN: %libomptarget-compile-generic -fprofile-instr-generate \
-// RUN:     -Xclang "-fprofile-instrument=clang"
-// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic \
-// RUN:     --check-prefix="CLANG-PGO"
 // RUN: %libomptarget-compile-generic -fprofile-generate \
 // RUN:     -Xclang "-fprofile-instrument=llvm"
-// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic \
+// RUN: env LLVM_PROFILE_FILE=llvm.profraw %libomptarget-run-generic 2>&1
+// RUN: %profdata show --all-functions --counts \
+// RUN:     %target_triple.llvm.profraw | %fcheck-generic \
 // RUN:     --check-prefix="LLVM-PGO"
+
+// RUN: %libomptarget-compile-generic -fprofile-instr-generate \
+// RUN:     -Xclang "-fprofile-instrument=clang"
+// RUN: env LLVM_PROFILE_FILE=clang.profraw %libomptarget-run-generic 2>&1
+// RUN: %profdata show --all-functions --counts \
+// RUN:     %target_triple.clang.profraw | %fcheck-generic \
+// RUN:     --check-prefix="CLANG-PGO"
 
 // REQUIRES: gpu
 // REQUIRES: pgo
