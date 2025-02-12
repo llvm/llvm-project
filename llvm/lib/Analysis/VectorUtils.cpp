@@ -23,6 +23,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
@@ -126,6 +127,11 @@ bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
   switch (ID) {
   case Intrinsic::frexp:
   case Intrinsic::uadd_with_overflow:
+  case Intrinsic::sadd_with_overflow:
+  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::usub_with_overflow:
+  case Intrinsic::umul_with_overflow:
+  case Intrinsic::smul_with_overflow:
     return true;
   }
   return false;
