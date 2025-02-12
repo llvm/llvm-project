@@ -101,13 +101,15 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
     // SymbolsBeforeStripping[i].
     SmallVector<const Value *, 4> SymbolsBeforeStripping;
     unsigned curpos;
-    const NVPTXAsmPrinter &AP;
-    const bool EmitGeneric;
+    NVPTXAsmPrinter &AP;
+    bool EmitGeneric;
 
   public:
-    AggBuffer(unsigned size, const NVPTXAsmPrinter &AP)
-        : size(size), buffer(size), curpos(0), AP(AP),
-          EmitGeneric(AP.EmitGeneric) {}
+    AggBuffer(unsigned size, NVPTXAsmPrinter &AP)
+        : size(size), buffer(size), AP(AP) {
+      curpos = 0;
+      EmitGeneric = AP.EmitGeneric;
+    }
 
     // Copy Num bytes from Ptr.
     // if Bytes > Num, zero fill up to Bytes.
@@ -153,6 +155,7 @@ private:
   StringRef getPassName() const override { return "NVPTX Assembly Printer"; }
 
   const Function *F;
+  std::string CurrentFnName;
 
   void emitStartOfAsmFile(Module &M) override;
   void emitBasicBlockStart(const MachineBasicBlock &MBB) override;
@@ -187,9 +190,8 @@ private:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &) override;
 
-  const MCExpr *lowerConstantForGV(const Constant *CV,
-                                   bool ProcessingGeneric) const;
-  void printMCExpr(const MCExpr &Expr, raw_ostream &OS) const;
+  const MCExpr *lowerConstantForGV(const Constant *CV, bool ProcessingGeneric);
+  void printMCExpr(const MCExpr &Expr, raw_ostream &OS);
 
 protected:
   bool doInitialization(Module &M) override;
@@ -215,7 +217,7 @@ private:
   void emitPTXAddressSpace(unsigned int AddressSpace, raw_ostream &O) const;
   std::string getPTXFundamentalTypeStr(Type *Ty, bool = true) const;
   void printScalarConstant(const Constant *CPV, raw_ostream &O);
-  void printFPConstant(const ConstantFP *Fp, raw_ostream &O) const;
+  void printFPConstant(const ConstantFP *Fp, raw_ostream &O);
   void bufferLEByte(const Constant *CPV, int Bytes, AggBuffer *aggBuffer);
   void bufferAggregateConstant(const Constant *CV, AggBuffer *aggBuffer);
 
@@ -243,7 +245,7 @@ private:
   // Since the address value should always be generic in CUDA C and always
   // be specific in OpenCL, we use this simple control here.
   //
-  const bool EmitGeneric;
+  bool EmitGeneric;
 
 public:
   NVPTXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
