@@ -38,18 +38,14 @@ module @TestDialectResources attributes {
 #-}
 )";
 
-struct AllocatingOstream final : public raw_ostream {
+struct MockOstream final : public raw_ostream {
   std::unique_ptr<std::byte[]> buffer;
   size_t size = 0;
 
-  void reserveExtraSpace(uint64_t extraSpace) override {
-    ASSERT_TRUE(buffer == nullptr);
-    buffer = std::make_unique<std::byte[]>(extraSpace);
-    size = extraSpace;
-  }
+  MOCK_METHOD(void, reserveExtraSpace, (uint64_t extraSpace), (override));
 
-  AllocatingOstream() : raw_ostream(true) {}
-  uint64_t current_pos() const override { return size; }
+  MockOstream() : raw_ostream(true) {}
+  uint64_t current_pos() const override { return pos; }
 
 private:
   size_t pos = 0;
@@ -73,8 +69,12 @@ TEST(Bytecode, MultiModuleWithResource) {
       parseSourceString<Operation *>(irWithResources, parseConfig);
   ASSERT_TRUE(module);
 
-  // Write the module to bytecode
-  AllocatingOstream ostream;
+  // Write the module to bytecode.
+  MockOstream ostream;
+  EXPECT_CALL(ostream, reserveExtraSpace).WillOnce([&](uint64_t space) {
+    ostream.buffer = std::make_unique<std::byte[]>(space);
+    ostream.size = space;
+  });
   ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
 
   // Create copy of buffer which is aligned to requested resource alignment.
