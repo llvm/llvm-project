@@ -3997,23 +3997,29 @@ private:
       return Sum;
     }
 
-    void dump(raw_ostream &os) const {
-      if (!isSchedulingEntity()) {
-        os << "/ " << *Inst;
-      } else if (NextInBundle) {
-        os << '[' << *Inst;
+    void dump(raw_ostream &OS) const {
+      if (isPartOfBundle()) {
+        if (!isSchedulingEntity()) {
+          OS << "/ " << *Inst << ", part of ";
+          FirstInBundle->dump(OS);
+          return;
+        }
+        OS << '[' << *Inst;
         ScheduleData *SD = NextInBundle;
         while (SD) {
-          os << ';' << *SD->Inst;
+          OS << ';' << *SD->Inst;
           SD = SD->NextInBundle;
         }
-        os << ']';
+        OS << ']';
       } else {
-        os << *Inst;
+        OS << *Inst;
       }
     }
 
-    LLVM_DUMP_METHOD void dump() const { dump(dbgs()); }
+    LLVM_DUMP_METHOD void dump() const {
+      dump(dbgs());
+      dbgs() << '\n';
+    }
 
     Instruction *Inst = nullptr;
 
