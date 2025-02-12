@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_TELEMETRY_H
 #define LLDB_CORE_TELEMETRY_H
 
+#include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/StructuredData.h"
@@ -59,7 +60,8 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
 /// The base Telemetry manager instance in LLDB
 /// This class declares additional instrumentation points
 /// applicable to LLDB.
-class TelemetryManager : public llvm::telemetry::Manager {
+class TelemetryManager : public llvm::telemetry::Manager,
+                         public PluginInterface {
 public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
 
