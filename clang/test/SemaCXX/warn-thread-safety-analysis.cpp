@@ -1,9 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -Wthread-safety-addressof -fcxx-exceptions -DUSE_CAPABILITY=1 -DCHECK_ADDRESSOF %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -Wthread-safety-addressof -fcxx-exceptions -DUSE_CAPABILITY=1 -DCHECK_ADDRESSOF %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-beta -Wthread-safety-addressof -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-beta -Wthread-safety-addressof -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-beta -Wthread-safety-addressof -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-beta -Wthread-safety-addressof -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
 
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 -Wc++98-compat %s
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
@@ -4952,13 +4950,8 @@ public:
     data_++;              // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
     --data_;              // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
     data_--;              // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
-#ifdef CHECK_ADDRESSOF
     (void)&data_;         // expected-warning {{taking address of variable 'data_' requires holding mutex 'mu_'}}
     (void)&datap1_;       // expected-warning {{taking address of variable 'datap1_' requires holding mutex 'mu_'}}
-#else
-    (void)&data_;         // no warning
-    (void)&datap1_;       // no warning
-#endif
     (void)(&*datap1_);    // expected-warning {{reading variable 'datap1_' requires holding mutex 'mu_'}}
 
     data_[0] = 0;         // expected-warning {{reading variable 'data_' requires holding mutex 'mu_'}}
@@ -5902,11 +5895,7 @@ class Foo {
   }
 
   void ptr_test() {
-#ifdef CHECK_ADDRESSOF
     int *b = &a;           // expected-warning {{taking address of variable 'a' requires holding mutex 'mu'}}
-#else
-    int *b = &a;           // no warning
-#endif
     *b = 0;                // no expected warning yet
   }
 
@@ -6125,11 +6114,7 @@ class Return {
   }
   
   Foo *returns_ptr() {
-#ifdef CHECK_ADDRESSOF
     return &foo;              // expected-warning {{taking address of variable 'foo' requires holding mutex 'mu'}}
-#else
-    return &foo;              // no warning
-#endif
   }
 
   Foo &returns_ref2() {

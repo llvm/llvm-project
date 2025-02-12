@@ -1995,7 +1995,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
       DiagID = diag::warn_addressof_requires_any_lock;
       break;
     default:
-      assert(false && "Only works for variables");
+      llvm_unreachable("Only works for variables");
       break;
     }
     PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID)

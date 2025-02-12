@@ -517,17 +517,6 @@ Warning flags
        This warning can be disabled for code which has a lot of aliases.
   + ``-Wthread-safety-reference``: Checks when guarded variables are passed by reference.
 
-* ``-Wthread-safety-addressof``: Warn when the address of guarded variables is
-  taken (``&var``). Since taking the address of a variable does *not
-  necessarily imply a read or write*, the warning is off by default to avoid
-  false positives. In codebases that prefer passing pointers rather than
-  references (for C++ codebases), or passing pointers is ubiquitous (for C
-  codebases), enabling this warning will result in fewer false negatives; for
-  example, where the manipulation of common data structures is done via
-  functions that take pointers to instances of the data structure. Note,
-  however, that the analysis does not track pointers, and false positives *and*
-  negatives are still possible.
-
 :ref:`negative` are an experimental feature, which are enabled with:
 
 * ``-Wthread-safety-negative``:  Negative capabilities.  Off by default.
@@ -538,6 +527,16 @@ for a period of time, after which they are migrated into the standard analysis.
 
 * ``-Wthread-safety-beta``:  New features.  Off by default.
 
+  + ``-Wthread-safety-addressof``: Warn when the address of guarded variables
+    is taken (``&var``). Since taking the address of a variable does *not
+    necessarily imply a read or write*, the warning is off by default to avoid
+    false positives. In codebases that prefer passing pointers rather than
+    references (for C++ codebases), or passing pointers is ubiquitous (for C
+    codebases), enabling this warning will result in fewer false negatives; for
+    example, where the manipulation of common data structures is done via
+    functions that take pointers to instances of the data structure. Note,
+    however, that the analysis does not track pointers, and false positives
+    *and* negatives are still possible.
 
 .. _negative:
 
