@@ -127,7 +127,7 @@ bool llvm::applyDebugifyMetadata(
     // Helper that inserts a dbg.value before \p InsertBefore, copying the
     // location (and possibly the type, if it's non-void) from \p TemplateInst.
     auto insertDbgVal = [&](Instruction &TemplateInst,
-                            BasicBlock::iterator InsertPt) {
+                            Instruction *InsertBefore) {
       std::string Name = utostr(NextVar++);
       Value *V = &TemplateInst;
       if (TemplateInst.getType()->isVoidTy())
@@ -137,7 +137,7 @@ bool llvm::applyDebugifyMetadata(
                                              getCachedDIType(V->getType()),
                                              /*AlwaysPreserve=*/true);
       DIB.insertDbgValueIntrinsic(V, LocalVar, DIB.createExpression(), Loc,
-                                  InsertPt);
+                                  InsertBefore);
     };
 
     for (BasicBlock &BB : F) {
@@ -161,9 +161,7 @@ bool llvm::applyDebugifyMetadata(
       // are made.
       BasicBlock::iterator InsertPt = BB.getFirstInsertionPt();
       assert(InsertPt != BB.end() && "Expected to find an insertion point");
-
-      // Insert after existing debug values to preserve order.
-      InsertPt.setHeadBit(false);
+      Instruction *InsertBefore = &*InsertPt;
 
       // Attach debug values.
       for (Instruction *I = &*BB.begin(); I != LastInst; I = I->getNextNode()) {
@@ -174,9 +172,9 @@ bool llvm::applyDebugifyMetadata(
         // Phis and EH pads must be grouped at the beginning of the block.
         // Only advance the insertion point when we finish visiting these.
         if (!isa<PHINode>(I) && !I->isEHPad())
-          InsertPt = std::next(I->getIterator());
+          InsertBefore = I->getNextNode();
 
-        insertDbgVal(*I, InsertPt);
+        insertDbgVal(*I, InsertBefore);
         InsertedDbgVal = true;
       }
     }
@@ -187,7 +185,7 @@ bool llvm::applyDebugifyMetadata(
     // those tests, and this helps with that.)
     if (DebugifyLevel == Level::LocationsAndVariables && !InsertedDbgVal) {
       auto *Term = findTerminatingInstruction(F.getEntryBlock());
-      insertDbgVal(*Term, Term->getIterator());
+      insertDbgVal(*Term, Term);
     }
     if (ApplyToMF)
       ApplyToMF(DIB, F);

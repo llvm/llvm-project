@@ -119,8 +119,7 @@ static void createDebugValue(DIBuilder &DIB, Value *NewValue,
                              DILocalVariable *Variable,
                              DIExpression *Expression, const DILocation *DI,
                              Instruction *InsertBefore) {
-  DIB.insertDbgValueIntrinsic(NewValue, Variable, Expression, DI,
-                              InsertBefore->getIterator());
+  DIB.insertDbgValueIntrinsic(NewValue, Variable, Expression, DI, InsertBefore);
 }
 
 /// Helper for updating assignment tracking debug info when promoting allocas.

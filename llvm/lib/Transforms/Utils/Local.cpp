@@ -1693,7 +1693,9 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
                                               const DebugLoc &NewLoc,
                                               BasicBlock::iterator Instr) {
   if (!UseNewDbgInfoFormat) {
-    Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc, Instr);
+    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
+                                                  (Instruction *)nullptr);
+    cast<Instruction *>(DbgVal)->insertBefore(Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DbgVariableRecord directly instead of a dbg.value intrinsic.
@@ -1706,10 +1708,19 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
 
 static void insertDbgValueOrDbgVariableRecordAfter(
     DIBuilder &Builder, Value *DV, DILocalVariable *DIVar, DIExpression *DIExpr,
-    const DebugLoc &NewLoc, Instruction *Instr) {
-  BasicBlock::iterator NextIt = std::next(Instr->getIterator());
-  NextIt.setHeadBit(true);
-  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc, NextIt);
+    const DebugLoc &NewLoc, BasicBlock::iterator Instr) {
+  if (!UseNewDbgInfoFormat) {
+    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
+                                                  (Instruction *)nullptr);
+    cast<Instruction *>(DbgVal)->insertAfter(Instr);
+  } else {
+    // RemoveDIs: if we're using the new debug-info format, allocate a
+    // DbgVariableRecord directly instead of a dbg.value intrinsic.
+    ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
+    DbgVariableRecord *DV =
+        new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
+    Instr->getParent()->insertDbgRecordAfter(DV, &*Instr);
+  }
 }
 
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
@@ -1801,7 +1812,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   // preferable to keep tracking both the loaded value and the original
   // address in case the alloca can not be elided.
   insertDbgValueOrDbgVariableRecordAfter(Builder, LI, DIVar, DIExpr, NewLoc,
-                                         LI);
+                                         LI->getIterator());
 }
 
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
