@@ -147,26 +147,25 @@ RegAllocEvictionAdvisorAnalysis::run(MachineFunction &MF,
 
 template <>
 Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysisLegacy>() {
-  Pass *Ret = nullptr;
   switch (Mode) {
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
     return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/false);
-  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
-    Ret = createReleaseModeAdvisorAnalysisLegacy();
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release: {
+    Pass *Ret = createReleaseModeAdvisorAnalysisLegacy();
     // release mode advisor may not be supported
-    if (!Ret)
-      Ret = new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/true);
-    break;
+    if (Ret)
+      return Ret;
+    return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/true);
+  }
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
 #if defined(LLVM_HAVE_TFLITE)
-    Ret = createDevelopmentModeAdvisorAnalysisLegacy();
+    return createDevelopmentModeAdvisorAnalysisLegacy();
 #else
-    Ret = new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/true);
+    return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/true);
 #endif
-    break;
   }
-
-  return Ret;
+  llvm_unreachable("unexpected advisor mode");
+  return nullptr;
 }
 
 StringRef RegAllocEvictionAdvisorAnalysisLegacy::getPassName() const {
