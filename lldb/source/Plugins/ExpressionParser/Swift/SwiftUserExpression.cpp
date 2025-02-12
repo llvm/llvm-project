@@ -224,26 +224,34 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
   LLDB_LOG(log, "  [SUE::SC] Compilation unit is swift");
 
-  Block *function_block = sym_ctx.GetFunctionBlock();
-  if (!function_block) {
-    LLDB_LOG(log, "  [SUE::SC] No function block");
+  Block *innermost_block = sym_ctx.block;
+  if (!innermost_block) {
+    LLDB_LOG(log, "  [SUE::SC] No block");
     return;
   }
 
-  lldb::VariableListSP variable_list_sp(
-      function_block->GetBlockVariableList(true));
-  if (!variable_list_sp) {
-    LLDB_LOG(log, "  [SUE::SC] No block variable list");
+  VariableList variable_list;
+  innermost_block->AppendVariables(/*can_create*/
+                                   true,
+                                   /*get_parent_variables*/ true,
+                                   /*stop_if_block_is_inlined_function*/ false,
+                                   /*filter*/
+                                   [&](Variable *var) {
+                                     if (!variable_list.Empty())
+                                       return false;
+                                     return SwiftLanguageRuntime::IsSelf(*var);
+                                   },
+                                   &variable_list);
+
+  if (variable_list.Empty()) {
+    LLDB_LOG(log, "  [SUE::SC] No self variable");
     return;
   }
 
-  lldb::VariableSP self_var_sp(
-      variable_list_sp->FindVariable(ConstString("self")));
-  if (!self_var_sp || !SwiftLanguageRuntime::IsSelf(*self_var_sp)) {
-    LLDB_LOG(log, "  [SUE::SC] No valid `self` variable");
-    return;
-  }
+  assert(variable_list.GetSize() == 1 && variable_list.GetVariableAtIndex(0) &&
+         "Unexpected variable list state");
 
+  lldb::VariableSP self_var_sp = variable_list.GetVariableAtIndex(0);
   // If we have a self variable, but it has no location at the current PC, then
   // we can't use it.  Set the self var back to empty and we'll just pretend we
   // are in a regular frame, which is really the best we can do.

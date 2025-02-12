@@ -19,11 +19,10 @@ class ClosureMaker {
 
   func getClosure() -> (() -> Int) {
     return { [weak self] () -> Int in
-             if let _self = self {
-               return _self.a //% self.expect("expr self", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["ClosureMaker?)", "5"])
-                              //% self.expect("expr self!", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["ClosureMaker)", "5"])
+             if let self = self {
+               return self.a // break here for if let success
              } else {
-               return 0 //% self.expect("expr self", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["nil"])
+               return 0 // break here for if let else
             }
           }
   }
@@ -31,10 +30,9 @@ class ClosureMaker {
   func getGuardClosure() -> (() -> Int) {
     return { [weak self] () -> Int in
              guard let self = self else {
-               return 0  //% self.expect("expr self", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["nil"])
+               return 0 // break here for guard let else
              }
-             return self.a //% self.expect("expr self", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["ClosureMaker?)", "5"])
-                          //% self.expect("expr self!", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["ClosureMaker)", "5"])
+             return self.a // break here for guard let success
           }
   }
 }
