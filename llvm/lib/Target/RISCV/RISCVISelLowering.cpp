@@ -5790,8 +5790,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   // as a vselect + a single source vrgather.vv. Don't do this if we think the
   // operands may end up being lowered to something cheaper than a vrgather.vv.
   if (!DAG.isSplatValue(V2) && !DAG.isSplatValue(V1) &&
-      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskLHS.data(), VT) &&
-      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskRHS.data(), VT) &&
+      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskLHS) &&
+      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskRHS) &&
       !ShuffleVectorInst::isIdentityMask(ShuffleMaskLHS, NumElts) &&
       !ShuffleVectorInst::isIdentityMask(ShuffleMaskRHS, NumElts))
     if (SDValue V = lowerDisjointIndicesShuffle(SVN, DAG, Subtarget))
@@ -5834,7 +5834,7 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
     return false;
 
   // Support splats for any type. These should type legalize well.
-  if (ShuffleVectorSDNode::isSplatMask(M.data(), VT))
+  if (ShuffleVectorSDNode::isSplatMask(M))
     return true;
 
   const unsigned NumElts = M.size();
