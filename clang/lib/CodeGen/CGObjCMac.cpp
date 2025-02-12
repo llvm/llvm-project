@@ -5396,7 +5396,7 @@ IvarLayoutBuilder::buildBitmap(CGObjCCommonMac &CGObjC,
     // skip forward.
     if (beginOfScanInWords > endOfLastScanInWords) {
       skip(beginOfScanInWords - endOfLastScanInWords);
-    
+
     // Otherwise, start scanning where the last left off.
     } else {
       beginOfScanInWords = endOfLastScanInWords;
