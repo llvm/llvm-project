@@ -2548,9 +2548,10 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   return E;
 }
 
-// Check whether a similar function-like macro exists and suggest it
-static bool isFunctionLikeMacro(const DeclarationName &Name, Sema &SemaRef,
-                                const SourceLocation &TypoLoc) {
+// Diagnose when a macro cannot be expanded because it's a function-like macro
+// being used as an object-like macro. Returns true if a diagnostic is emitted.
+static bool diagnoseFunctionLikeMacro(Sema &SemaRef, DeclarationName Name,
+                                      SourceLocation TypoLoc) {
 
   if (IdentifierInfo *II = Name.getAsIdentifierInfo()) {
     if (II->hasMacroDefinition()) {
@@ -2558,7 +2559,7 @@ static bool isFunctionLikeMacro(const DeclarationName &Name, Sema &SemaRef,
       if (MI && MI->isFunctionLike()) {
         SemaRef.Diag(TypoLoc,
                      diag::err_undeclared_var_use_suggest_func_like_macro)
-            << II->getName();
+            << II;
         SemaRef.Diag(MI->getDefinitionLoc(),
                      diag::note_function_like_macro_requires_parens)
             << II->getName();
@@ -2604,11 +2605,10 @@ static void emitEmptyLookupTypoDiagnostic(
     if (Ctx)
       SemaRef.Diag(TypoLoc, diag::err_no_member) << Typo << Ctx
                                                  << SS.getRange();
-    else {
-      if (isFunctionLikeMacro(Typo, SemaRef, TypoLoc))
-        return;
+    else if (diagnoseFunctionLikeMacro(SemaRef, Typo, TypoLoc))
+      return;
+    else
       SemaRef.Diag(TypoLoc, DiagnosticID) << Typo;
-    }
     return;
   }
 
@@ -2841,7 +2841,7 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
   }
   R.clear();
 
-  if (isFunctionLikeMacro(Name, SemaRef, R.getNameLoc()))
+  if (diagnoseFunctionLikeMacro(SemaRef, Name, R.getNameLoc()))
     return true;
 
   // Emit a special diagnostic for failed member lookups.
