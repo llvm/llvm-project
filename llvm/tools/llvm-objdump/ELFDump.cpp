@@ -14,11 +14,8 @@
 #include "ELFDump.h"
 
 #include "llvm-objdump.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ELFTypes.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -224,11 +221,19 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
   std::string TagFmt = "  %-" + std::to_string(MaxLen) + "s ";
 
   outs() << "\nDynamic Section:\n";
-  auto StringTableSize = (typename ELFT::Xword)0;
-  for (const auto &Sec : cantFail(Elf.sections())) {
-    if (Sec.sh_type == ELF::SHT_STRTAB)
-      StringTableSize =
-          StringTableSize < Sec.sh_size ? Sec.sh_size : StringTableSize;
+  typename ELFT::Xword StringTableSize{0};
+  for (const typename ELFT::Shdr &Sec : cantFail(Elf.sections())) {
+    if (Sec.sh_type == ELF::SHT_DYNSYM) {
+      Expected<const typename ELFT::Shdr *> StringTableSecOrError =
+          getSection<ELFT>(cantFail(Elf.sections()), Sec.sh_link);
+      if (!StringTableSecOrError) {
+        consumeError(StringTableSecOrError.takeError());
+        break;
+      }
+      StringTableSize = StringTableSize < (*StringTableSecOrError)->sh_size
+                            ? (*StringTableSecOrError)->sh_size
+                            : StringTableSize;
+    }
   }
   for (const typename ELFT::Dyn &Dyn : DynamicEntries) {
     if (Dyn.d_tag == ELF::DT_STRSZ) {
