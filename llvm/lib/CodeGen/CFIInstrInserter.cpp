@@ -217,7 +217,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
         CSRReg = CFI.getRegister2();
         break;
       case MCCFIInstruction::OpRelOffset:
-        CSROffset = CFI.getOffset() - SetOffset;
+        CSROffset = CFI.getOffset() + SetOffset;
         break;
       case MCCFIInstruction::OpRestore:
         CSRRestored.set(CFI.getRegister());
