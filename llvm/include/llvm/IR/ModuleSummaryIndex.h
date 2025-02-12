@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -1379,7 +1380,7 @@ private:
       TypeIdCompatibleVtableMap;
 
   /// Type identifiers that may be accessed at run time.
-  SmallVector<StringRef, 0> TypeIdMayBeAccessed;
+  SetVector<StringRef> TypeIdMayBeAccessed;
 
   /// Mapping from original ID to GUID. If original ID can map to multiple
   /// GUIDs, it will be mapped to 0.
@@ -1892,7 +1893,7 @@ public:
   }
 
   void addTypeIdAccessed(StringRef TypeId) {
-    TypeIdMayBeAccessed.push_back(TypeId);
+    TypeIdMayBeAccessed.insert(TypeId);
   }
 
   const auto &getTypeIdAccessed() const { return TypeIdMayBeAccessed; }
