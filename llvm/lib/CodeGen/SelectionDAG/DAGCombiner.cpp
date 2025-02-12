@@ -9691,7 +9691,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   }
 
   // fold (not (add X, -1)) -> (neg X)
-  if (isAllOnesConstant(N1) && N0.getOpcode() == ISD::ADD &&
+  if (N0.getOpcode() == ISD::ADD && N0.hasOneUse() && isAllOnesConstant(N1) &&
       isAllOnesOrAllOnesSplat(N0.getOperand(1))) {
     return DAG.getNegative(N0.getOperand(0), DL, VT);
   }
