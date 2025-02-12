@@ -150,7 +150,7 @@ bool llvm::hasTypeIdLoadForTypeTest(const CallInst *CI) {
     return false;
   SmallVector<CallInst *, 1> Assumes;
 
-  const Module *M = CI->getParent()->getParent()->getParent();
+  const Module *M = CI->getModule();
 
   // Find llvm.assume intrinsics for this llvm.type.test call.
   for (const Use &CIU : CI->uses())
