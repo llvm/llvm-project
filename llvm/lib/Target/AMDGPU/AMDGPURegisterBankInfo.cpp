@@ -1969,7 +1969,7 @@ bool AMDGPURegisterBankInfo::foldExtractEltToCmpSelect(
                                                   IsDivergentIdx, &Subtarget))
     return false;
 
-  LLT S32 = LLT::scalar(32);
+  LLT I32 = LLT::integer(32);
 
   const RegisterBank &DstBank =
     *OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
@@ -1981,10 +1981,10 @@ bool AMDGPURegisterBankInfo::foldExtractEltToCmpSelect(
      SrcBank == AMDGPU::SGPRRegBank &&
      IdxBank == AMDGPU::SGPRRegBank) ? AMDGPU::SGPRRegBank
                                      : AMDGPU::VCCRegBank;
-  LLT CCTy = (CCBank == AMDGPU::SGPRRegBank) ? S32 : LLT::scalar(1);
+  LLT CCTy = (CCBank == AMDGPU::SGPRRegBank) ? I32 : LLT::integer(1);
 
   if (CCBank == AMDGPU::VCCRegBank && IdxBank == AMDGPU::SGPRRegBank) {
-    Idx = B.buildCopy(S32, Idx)->getOperand(0).getReg();
+    Idx = B.buildCopy(I32, Idx)->getOperand(0).getReg();
     MRI.setRegBank(Idx, AMDGPU::VGPRRegBank);
   }
 
@@ -1996,13 +1996,19 @@ bool AMDGPURegisterBankInfo::foldExtractEltToCmpSelect(
   else
     EltTy = MRI.getType(DstRegs[0]);
 
+  if (VecTy.isFloatVector()) {
+    auto ClassOrBank = MRI.getRegClassOrRegBank(VecReg);
+    VecReg = B.buildBitcast({ClassOrBank, VecTy.changeToInteger()}, VecReg).getReg(0);
+  }
+
   auto UnmergeToEltTy = B.buildUnmerge(EltTy, VecReg);
   SmallVector<Register, 2> Res(NumLanes);
-  for (unsigned L = 0; L < NumLanes; ++L)
+  for (unsigned L = 0; L < NumLanes; ++L) {
     Res[L] = UnmergeToEltTy.getReg(L);
+  }
 
   for (unsigned I = 1; I < NumElem; ++I) {
-    auto IC = B.buildConstant(S32, I);
+    auto IC = B.buildConstant(I32, I);
     MRI.setRegBank(IC->getOperand(0).getReg(), AMDGPU::SGPRRegBank);
     auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, CCTy, Idx, IC);
     MRI.setRegBank(Cmp->getOperand(0).getReg(), CCBank);
@@ -2067,7 +2073,7 @@ bool AMDGPURegisterBankInfo::foldInsertEltToCmpSelect(
                                                   IsDivergentIdx, &Subtarget))
     return false;
 
-  LLT S32 = LLT::scalar(32);
+  LLT I32 = LLT::integer(32);
 
   const RegisterBank &DstBank =
     *OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
@@ -2082,10 +2088,10 @@ bool AMDGPURegisterBankInfo::foldInsertEltToCmpSelect(
      InsBank == AMDGPU::SGPRRegBank &&
      IdxBank == AMDGPU::SGPRRegBank) ? AMDGPU::SGPRRegBank
                                      : AMDGPU::VCCRegBank;
-  LLT CCTy = (CCBank == AMDGPU::SGPRRegBank) ? S32 : LLT::scalar(1);
+  LLT CCTy = (CCBank == AMDGPU::SGPRRegBank) ? I32 : LLT::integer(1);
 
   if (CCBank == AMDGPU::VCCRegBank && IdxBank == AMDGPU::SGPRRegBank) {
-    Idx = B.buildCopy(S32, Idx)->getOperand(0).getReg();
+    Idx = B.buildCopy(I32, Idx)->getOperand(0).getReg();
     MRI.setRegBank(Idx, AMDGPU::VGPRRegBank);
   }
 
@@ -2099,11 +2105,17 @@ bool AMDGPURegisterBankInfo::foldInsertEltToCmpSelect(
     EltTy = MRI.getType(InsRegs[0]);
   }
 
+  if (VecTy.getScalarType().isFloat() && !EltTy.isFloat()) {
+    auto RegBankOrClass = MRI.getRegClassOrRegBank(VecReg);
+    auto CastTy = VecTy.changeToInteger();
+    VecReg = B.buildBitcast({RegBankOrClass, CastTy}, VecReg).getReg(0);
+  }
+
   auto UnmergeToEltTy = B.buildUnmerge(EltTy, VecReg);
   SmallVector<Register, 16> Ops(NumElem * NumLanes);
 
   for (unsigned I = 0; I < NumElem; ++I) {
-    auto IC = B.buildConstant(S32, I);
+    auto IC = B.buildConstant(I32, I);
     MRI.setRegBank(IC->getOperand(0).getReg(), AMDGPU::SGPRRegBank);
     auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, CCTy, Idx, IC);
     MRI.setRegBank(Cmp->getOperand(0).getReg(), CCBank);
@@ -2156,7 +2168,7 @@ void AMDGPURegisterBankInfo::applyMappingSMULU64(
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
   MachineInstr &MI = OpdMapper.getMI();
   Register DstReg = MI.getOperand(0).getReg();
-  LLT HalfTy = LLT::scalar(32);
+  LLT HalfTy = LLT::integer(32);
 
   // Depending on where the source registers came from, the generic code may
   // have decided to split the inputs already or not. If not, we still need to
@@ -2828,7 +2840,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
 
-    const LLT S32 = LLT::scalar(32);
+    const LLT I32 = LLT::integer(32);
     LLT DstTy = MRI.getType(DstReg);
     LLT SrcTy = MRI.getType(SrcReg);
 
@@ -2891,10 +2903,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     assert(DstTy.getSizeInBits() == 64);
 
-    LLT Vec32 = LLT::fixed_vector(2 * SrcTy.getNumElements(), 32);
+    LLT Vec32 = LLT::fixed_vector(2 * SrcTy.getNumElements(), I32);
 
     auto CastSrc = B.buildBitcast(Vec32, SrcReg);
-    auto One = B.buildConstant(S32, 1);
+    auto One = B.buildConstant(I32, 1);
 
     MachineBasicBlock::iterator MII = MI.getIterator();
 
@@ -2905,8 +2917,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     MachineInstrSpan Span(MII, &B.getMBB());
 
     // Compute 32-bit element indices, (2 * OrigIdx, 2 * OrigIdx + 1).
-    auto IdxLo = B.buildShl(S32, BaseIdxReg, One);
-    auto IdxHi = B.buildAdd(S32, IdxLo, One);
+    auto IdxLo = B.buildShl(I32, BaseIdxReg, One);
+    auto IdxHi = B.buildAdd(I32, IdxLo, One);
 
     auto Extract0 = B.buildExtractVectorElement(DstRegs[0], CastSrc, IdxLo);
     auto Extract1 = B.buildExtractVectorElement(DstRegs[1], CastSrc, IdxHi);
@@ -2932,8 +2944,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     if (NeedCopyToVGPR) {
       MachineBasicBlock *LoopBB = Extract1->getParent();
-      Register TmpReg0 = MRI.createGenericVirtualRegister(S32);
-      Register TmpReg1 = MRI.createGenericVirtualRegister(S32);
+      Register TmpReg0 = MRI.createGenericVirtualRegister(I32);
+      Register TmpReg1 = MRI.createGenericVirtualRegister(I32);
       MRI.setRegBank(TmpReg0, AMDGPU::SGPRRegBank);
       MRI.setRegBank(TmpReg1, AMDGPU::SGPRRegBank);
 
