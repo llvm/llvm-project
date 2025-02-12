@@ -3567,6 +3567,7 @@ getOrCreateUserDefinedMapperFunc(Operation *op, llvm::IRBuilderBase &builder,
       emitUserDefinedMapper(declMapperOp, builder, moduleTranslation);
   if (!mapperFunc)
     return mapperFunc.takeError();
+  moduleTranslation.mapFunction(mapperFuncName, *mapperFunc);
   return mapperFunc;
 }
 
