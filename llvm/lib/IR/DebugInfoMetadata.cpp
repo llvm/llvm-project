@@ -226,6 +226,17 @@ static DIScope *GetNearestCommonScope(DILocation *L1, DILocation *L2) {
     }
   }
 
+  // Try matching DILexicalBlocks enclosing L1, L2.
+  if (auto *LB1 = dyn_cast<DILexicalBlock>(S1)) {
+    if (auto *LB2 = dyn_cast<DILexicalBlock>(S2)) {
+      if (LB1->getFile() && LB1->getFile() == LB2->getFile() &&
+          LB1->getLine() == LB2->getLine() &&
+          LB1->getColumn() == LB2->getColumn()) {
+        return LB1;
+      }
+    }
+  }
+
   SmallPtrSet<DIScope *, 8> Scopes;
   for (; S1; S1 = S1->getScope()) {
     Scopes.insert(S1);
