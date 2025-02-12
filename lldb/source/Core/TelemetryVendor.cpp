@@ -14,13 +14,6 @@
 
 namespace lldb_private {
 
-void TelemetryVendor::Initialize() {
-  // The default (upstream) impl will have telemetry disabled by default.
-  SetTelemetryConfig(std::make_shared<new llvm::telemetry::Config>(
-      /*enable_telemetry*/ false));
-  SetTelemetryManager(nullptr);
-}
-
 static lldb::TelemetryConfigUP g_config_up =
     std::make_unique<llvm::telemetry::Config>(/*enable_telemetry*/ false);
 lldb::TelemetryConfig *TelemetryVendor::GetTelemetryConfig() {
