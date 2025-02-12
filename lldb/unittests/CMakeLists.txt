@@ -79,3 +79,7 @@ add_subdirectory(ValueObject)
 if(LLDB_CAN_USE_DEBUGSERVER AND LLDB_TOOL_DEBUGSERVER_BUILD AND NOT LLDB_USE_SYSTEM_DEBUGSERVER)
   add_subdirectory(debugserver)
 endif()
+
+if(LLVM_BUILD_TELEMETRY)
+  add_subdirectory(telemetry_plugin)
+endif()
