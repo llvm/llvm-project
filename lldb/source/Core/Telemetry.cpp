@@ -51,7 +51,7 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
         "{0}_{1}", std::chrono::steady_clock::now().time_since_epoch().count(),
         debugger->GetID());
   }
-  return MakeUUID(random_bytes).GetAsString();
+  return UUID(random_bytes).GetAsString();
 }
 
 TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
