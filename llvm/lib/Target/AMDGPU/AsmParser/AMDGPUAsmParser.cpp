@@ -5876,6 +5876,18 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3,
                        COMPUTE_PGM_RSRC3_GFX10_GFX11_SHARED_VGPR_COUNT, ExprVal,
                        ValRange);
+    } else if (ID == ".amdhsa_inst_pref_size") {
+      if (IVersion.Major < 11)
+        return Error(IDRange.Start, "directive requires gfx11+", IDRange);
+      if (IVersion.Major == 11) {
+        PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3,
+                         COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE, ExprVal,
+                         ValRange);
+      } else {
+        PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3,
+                         COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE, ExprVal,
+                         ValRange);
+      }
     } else if (ID == ".amdhsa_exception_fp_ieee_invalid_op") {
       PARSE_BITS_ENTRY(
           KD.compute_pgm_rsrc2,
