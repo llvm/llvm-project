@@ -223,12 +223,13 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
   outs() << "\nDynamic Section:\n";
   typename ELFT::Xword StringTableSize{0};
   for (const typename ELFT::Shdr &Sec : cantFail(Elf.sections())) {
-    if (Sec.sh_type == ELF::SHT_DYNSYM) {
+    if (Sec.sh_type == ELF::SHT_DYNAMIC || Sec.sh_type == ELF::SHT_DYNSYM) {
       Expected<const typename ELFT::Shdr *> StringTableSecOrError =
           getSection<ELFT>(cantFail(Elf.sections()), Sec.sh_link);
       if (!StringTableSecOrError) {
-        consumeError(StringTableSecOrError.takeError());
-        break;
+        reportWarning(toString(StringTableSecOrError.takeError()),
+                      Obj.getFileName());
+        continue;
       }
       StringTableSize = StringTableSize < (*StringTableSecOrError)->sh_size
                             ? (*StringTableSecOrError)->sh_size
@@ -258,7 +259,9 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
       if (StrTabOrErr) {
         const char *Data = StrTabOrErr->data();
         if (Dyn.getVal() >= StringTableSize) {
-          reportWarning("invalid string table offset", Obj.getFileName());
+          reportWarning("invalid string table offset, string table size: 0x" +
+                            Twine::utohexstr(StringTableSize),
+                        Obj.getFileName());
           outs() << format(TagFmt.c_str(), Str.c_str())
                  << format(Fmt, (uint64_t)Dyn.getVal());
           continue;

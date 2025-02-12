@@ -475,14 +475,15 @@ Sections:
 # RUN: llvm-objdump -p %t5 2>&1 | FileCheck %s --strict-whitespace -DFILE=%t5 --check-prefix=WARN
 
 # WARN: Program Header:
-# WARN:     LOAD off    0x00000000000000b0 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
-# WARN:          filesz 0x0000000000000040 memsz 0x0000000000000040 flags ---
-# WARN:  DYNAMIC off    0x00000000000000c0 vaddr 0x000000000000101d paddr 0x000000000000101d align 2**0
-# WARN:          filesz 0x0000000000000030 memsz 0x0000000000000030 flags ---
+# WARN:    LOAD off    0x00000000000000b0 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# WARN:         filesz 0x0000000000000050 memsz 0x0000000000000050 flags ---
+# WARN: DYNAMIC off    0x00000000000000c0 vaddr 0x000000000000101d paddr 0x000000000000101d align 2**0
+# WARN:         filesz 0x0000000000000040 memsz 0x0000000000000040 flags ---
 # WARN: Dynamic Section:
 # WARN: warning: '[[FILE]]': invalid string table offset
-# WARN:  NEEDED 0x0000001245657656
+# WARN:  NEEDED 0x0000000000000011
 # WARN:  STRTAB 0x0000000000001000
+# WARN:  STRSZ  0x0000000000000010
 
 --- !ELF
 FileHeader:
@@ -500,9 +501,11 @@ Sections:
     Type: SHT_DYNAMIC
     Entries:
      - Tag:   DT_NEEDED
-       Value: 0x1245657656
+       Value: 0x11
      - Tag:   DT_STRTAB
        Value: 0x1000
+     - Tag:   DT_STRSZ
+       Value: 0x10
      - Tag:   DT_NULL
        Value: 0x0
 ProgramHeaders:
