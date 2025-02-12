@@ -15,7 +15,7 @@ declare void  @llvm.nvvm.prefetch.L2(ptr %ptr)
 declare void  @llvm.nvvm.prefetch.global.L2.evictnormal(ptr addrspace(1) %global_ptr)
 declare void  @llvm.nvvm.prefetch.global.L2.evictlast(ptr addrspace(1) %global_ptr)
 
-declare void  @llvm.nvvm.prefetchu.L1.evictnormal(ptr %ptr)
+declare void  @llvm.nvvm.prefetchu.L1(ptr %ptr)
 
 define void @prefetch_local(ptr addrspace(5) %local_ptr) {
 ; CHECK-PTX64-LABEL: prefetch_local(
@@ -74,8 +74,8 @@ define void @prefetchu_l1(ptr %ptr) {
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
 ; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [prefetchu_l1_param_0];
-; CHECK-PTX64-NEXT:    prefetchu.L1.evictnormal [%rd1];
+; CHECK-PTX64-NEXT:    prefetchu.L1 [%rd1];
 ; CHECK-PTX64-NEXT:    ret;
-  tail call void @llvm.nvvm.prefetchu.L1.evictnormal(ptr %ptr)
+  tail call void @llvm.nvvm.prefetchu.L1(ptr %ptr)
   ret void
 }

@@ -768,7 +768,7 @@ def PREFETCH_GLOBAL_L2_EVICT_LAST   : NVPTXInst<(outs), (ins Int64Regs:$addr),
                                       Requires<[hasPTX<80>, hasSM<90>]>;
 
 
-def PREFETCHU_L1_EVICTNORMAL : PREFETCH_INTRS<"prefetchu.L1.evictnormal">;
+def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1">;
 
 //-----------------------------------
 // MBarrier Functions
