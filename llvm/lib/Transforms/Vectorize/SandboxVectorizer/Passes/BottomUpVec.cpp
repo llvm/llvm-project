@@ -335,7 +335,7 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
   case LegalityResultID::DiamondReuseMultiInput: {
     const auto &Descr =
         cast<DiamondReuseMultiInput>(LegalityRes).getCollectDescr();
-    Type *ResTy = FixedVectorType::get(Bndl[0]->getType(), Bndl.size());
+    Type *ResTy = VecUtils::getWideType(Bndl[0]->getType(), Bndl.size());
 
     // TODO: Try to get WhereIt without creating a vector.
     SmallVector<Value *, 4> DescrInstrs;
@@ -347,7 +347,8 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
         getInsertPointAfterInstrs(DescrInstrs, UserBB);
 
     Value *LastV = PoisonValue::get(ResTy);
-    for (auto [Lane, ElmDescr] : enumerate(Descr.getDescrs())) {
+    unsigned Lane = 0;
+    for (const auto &ElmDescr : Descr.getDescrs()) {
       Value *VecOp = ElmDescr.getValue();
       Context &Ctx = VecOp->getContext();
       Value *ValueToInsert;
@@ -359,10 +360,32 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
       } else {
         ValueToInsert = VecOp;
       }
-      ConstantInt *LaneC = ConstantInt::get(Type::getInt32Ty(Ctx), Lane);
-      Value *Ins = InsertElementInst::create(LastV, ValueToInsert, LaneC,
-                                             WhereIt, Ctx, "VIns");
-      LastV = Ins;
+      auto NumLanesToInsert = VecUtils::getNumLanes(ValueToInsert);
+      if (NumLanesToInsert == 1) {
+        // If we are inserting a scalar element then we need a single insert.
+        //   %VIns = insert %DstVec,  %SrcScalar, Lane
+        ConstantInt *LaneC = ConstantInt::get(Type::getInt32Ty(Ctx), Lane);
+        LastV = InsertElementInst::create(LastV, ValueToInsert, LaneC, WhereIt,
+                                          Ctx, "VIns");
+      } else {
+        // If we are inserting a vector element then we need to extract and
+        // insert each vector element one by one with a chain of extracts and
+        // inserts, for example:
+        //   %VExt0 = extract %SrcVec, 0
+        //   %VIns0 = insert  %DstVec, %Vect0, Lane + 0
+        //   %VExt1 = extract %SrcVec, 1
+        //   %VIns1 = insert  %VIns0,  %Vect0, Lane + 1
+        for (unsigned LnCnt = 0; LnCnt != NumLanesToInsert; ++LnCnt) {
+          auto *ExtrIdxC = ConstantInt::get(Type::getInt32Ty(Ctx), LnCnt);
+          auto *ExtrI = ExtractElementInst::create(ValueToInsert, ExtrIdxC,
+                                                   WhereIt, Ctx, "VExt");
+          unsigned InsLane = Lane + LnCnt;
+          auto *InsLaneC = ConstantInt::get(Type::getInt32Ty(Ctx), InsLane);
+          LastV = InsertElementInst::create(LastV, ExtrI, InsLaneC, WhereIt,
+                                            Ctx, "VIns");
+        }
+      }
+      Lane += NumLanesToInsert;
     }
     NewVec = LastV;
     break;
