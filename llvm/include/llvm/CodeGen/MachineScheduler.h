@@ -1069,6 +1069,7 @@ public:
   void dumpReservedCycles() const;
   void dumpScheduledState() const;
 
+  /// Bump the cycle until the given SU is released from the pending queue.
   void bumpCycleUntilReleaseSUFromPending(SUnit *SU, unsigned ReadyListLimit) {
     while (Available.size() < ReadyListLimit &&
            llvm::find(Pending, SU) != Pending.end()) {
