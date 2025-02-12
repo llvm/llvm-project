@@ -3,6 +3,11 @@
 // This file mirrors the diagnostics testing in ParseHLSLRootSignatureTest.cpp
 // to verify that the correct diagnostics strings are output
 
+// Attr test
+
+[RootSignature()] // expected-error {{'RootSignature' attribute takes one argument}}
+void bad_root_signature_0() {}
+
 // Lexer related tests
 
 #define InvalidToken \

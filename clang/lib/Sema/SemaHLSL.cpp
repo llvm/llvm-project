@@ -649,8 +649,10 @@ void SemaHLSL::emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS,
 }
 
 void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
-  if (AL.getNumArgs() != 1)
+  if (AL.getNumArgs() != 1) {
+    Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
     return;
+  }
 
   StringRef Signature;
   if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Signature))
