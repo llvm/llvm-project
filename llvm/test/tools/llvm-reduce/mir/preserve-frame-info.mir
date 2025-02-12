@@ -20,8 +20,10 @@
 # RESULT-NEXT: hasVAStart:      true
 # RESULT-NEXT: hasMustTailInVarArgFunc: true
 # RESULT-NEXT: hasTailCall:     true
-# RESULT-NEXT: savePoint:       '%bb.1'
-# RESULT-NEXT: restorePoint:    '%bb.2'
+# RESULT-NEXT: savePoint:
+# RESULT-NEXT:   - point:           '%bb.1'
+# RESULT-NEXT: restorePoint:
+# RESULT-NEXT:   - point:           '%bb.1'
 
 # RESULT-NEXT: fixedStack:
 # RESULT-NEXT:  - { id: 0, offset: 56, size: 4, alignment: 8, callee-saved-register: '$sgpr44',
@@ -117,7 +119,7 @@ frameInfo:
   hasTailCall:     true
   localFrameSize:  0
   savePoint:       '%bb.1'
-  restorePoint:    '%bb.2'
+  restorePoint:    '%bb.1'
 
 fixedStack:
   - { id: 0, offset: 0, size: 8, alignment: 4, isImmutable: true, isAliased: false }

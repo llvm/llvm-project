@@ -119,8 +119,10 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  # CHECK: savePoint:       '%bb.1'
-  # CHECK: restorePoint:    '%bb.3'
+  # CHECK:      savePoint:
+  # CHECK-NEXT:   - point:           '%bb.1'
+  # CHECK:      restorePoint:
+  # CHECK-NEXT:   - point:           '%bb.3'
   savePoint:       ''
   restorePoint:    ''
 fixedStack:      
