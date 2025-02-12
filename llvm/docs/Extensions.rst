@@ -554,7 +554,7 @@ Example:
   .section  ".llvm_func_map","",@llvm_func_map
   .byte     1                             # version number
   .quad     .Lfunc_begin1                 # function address
-  .uleb128  1000                          # dynamic instruction count
+  .quad     1000                          # dynamic instruction count
 
 ``SHT_LLVM_OFFLOADING`` Section (offloading data)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
