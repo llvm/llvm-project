@@ -2103,6 +2103,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineCycleInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineUniformityAnalysisPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -2111,7 +2112,7 @@ private:
   MachineDominatorTree *DomTree = nullptr;
   // MachineConvergenceInfo ConvergenceInfo;
   MachineCycleInfo *CycleInfo;
-  MachineUniformityInfo UniformInfo;
+  MachineUniformityInfo *UniformInfo = nullptr;
   GCNLaneMaskUtils LMU;
   const SIInstrInfo *TII;
 };
@@ -2122,6 +2123,7 @@ INITIALIZE_PASS_BEGIN(GCNWaveTransform, DEBUG_TYPE, "GCN Wave Transform", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
 INITIALIZE_PASS_END(GCNWaveTransform, DEBUG_TYPE, "GCN Wave Transform", false,
                     false)
 
@@ -2144,12 +2146,13 @@ bool GCNWaveTransform::runOnMachineFunction(MachineFunction &MF) {
 
   // ConvergenceInfo = computeMachineConvergenceInfo(MF, *DomTree);
   CycleInfo = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
-  UniformInfo = computeMachineUniformityInfo(MF, *CycleInfo, *DomTree, true);
+  UniformInfo =
+      &getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
 
-  LLVM_DEBUG(UniformInfo.print(dbgs()));
+  LLVM_DEBUG(UniformInfo->print(dbgs()));
 
   // Step 1: Compute reconverging Wave CFG
-  ReconvergeCFGHelper ReconvergeHelper(*CycleInfo, UniformInfo, *DomTree);
+  ReconvergeCFGHelper ReconvergeHelper(*CycleInfo, *UniformInfo, *DomTree);
   ReconvergeHelper.run();
 
   ControlFlowRewriter CFRewriter(MF, ReconvergeHelper);
