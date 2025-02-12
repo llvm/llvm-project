@@ -1,10 +1,8 @@
-; REQUIRES: riscv
-;
 ; Check that we don't crash on DataLayout incompatibility issue.
 ;
 ; RUN: llvm-as %s -o %t.o
-; RUN: ld.lld %t.o -o %t.elf
-; RUN: llvm-readobj -h %t.elf | FileCheck %s --check-prefixes=CHECK
+; RUN: llvm-lto2 run -r %t.o,_start %t.o -o %t.elf
+; RUN: llvm-readobj -h %t.elf.0 | FileCheck %s --check-prefixes=CHECK
 ;
 ; CHECK:  Machine: EM_RISCV (0xF3)
 ; CHECK:  EF_RISCV_RVE (0x8)
