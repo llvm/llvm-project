@@ -862,7 +862,7 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   // This value may be smaller or larger than the target's pointer type, and
   // therefore require extension or truncating.
   auto *PtrIRTy = PointerType::getUnqual(SValue.getContext());
-  const LLT PtrScalarTy = LLT::scalar(DL->getTypeSizeInBits(PtrIRTy));
+  const LLT PtrScalarTy = LLT::integer(DL->getTypeSizeInBits(PtrIRTy));
   Sub = MIB.buildZExtOrTrunc(PtrScalarTy, Sub);
 
   JT.Reg = Sub.getReg(0);
@@ -879,7 +879,8 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   auto Cst = getOrCreateVReg(
       *ConstantInt::get(SValue.getType(), JTH.Last - JTH.First));
   Cst = MIB.buildZExtOrTrunc(PtrScalarTy, Cst).getReg(0);
-  auto Cmp = MIB.buildICmp(CmpInst::ICMP_UGT, LLT::scalar(1), Sub, Cst);
+  LLT CmpTy = LLT::integer(1);
+  auto Cmp = MIB.buildICmp(CmpInst::ICMP_UGT, CmpTy, Sub, Cst);
 
   auto BrCond = MIB.buildBrCond(Cmp.getReg(0), *JT.Default);
 
@@ -910,7 +911,7 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
     return;
   }
 
-  const LLT i1Ty = LLT::scalar(1);
+  const LLT i1Ty = LLT::integer(1);
   // Build the compare.
   if (!CB.CmpMHS) {
     const auto *CI = dyn_cast<ConstantInt>(CB.CmpRHS);
@@ -1092,14 +1093,14 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
   LLT MaskTy = SwitchOpTy;
   if (MaskTy.getSizeInBits() > PtrTy.getSizeInBits() ||
       !llvm::has_single_bit<uint32_t>(MaskTy.getSizeInBits()))
-    MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+    MaskTy = LLT::integer(PtrTy.getSizeInBits());
   else {
     // Ensure that the type will fit the mask value.
     for (unsigned I = 0, E = B.Cases.size(); I != E; ++I) {
       if (!isUIntN(SwitchOpTy.getSizeInBits(), B.Cases[I].Mask)) {
         // Switch table case range are encoded into series of masks.
         // Just use pointer type, it's guaranteed to fit.
-        MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+        MaskTy = LLT::integer(PtrTy.getSizeInBits());
         break;
       }
     }
@@ -1122,8 +1123,9 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
   if (!B.FallthroughUnreachable) {
     // Conditional branch to the default block.
     auto RangeCst = MIB.buildConstant(SwitchOpTy, B.Range);
-    auto RangeCmp = MIB.buildICmp(CmpInst::Predicate::ICMP_UGT, LLT::scalar(1),
-                                  RangeSub, RangeCst);
+    LLT CmpTy = LLT::integer(1);
+    auto RangeCmp =
+        MIB.buildICmp(CmpInst::Predicate::ICMP_UGT, CmpTy, RangeSub, RangeCst);
     MIB.buildBrCond(RangeCmp, *B.Default);
   }
 
@@ -1141,6 +1143,7 @@ void IRTranslator::emitBitTestCase(SwitchCG::BitTestBlock &BB,
   MIB.setMBB(*SwitchBB);
 
   LLT SwitchTy = getLLTForMVT(BB.RegVT);
+  LLT I1 = LLT::integer(1);
   Register Cmp;
   unsigned PopCount = llvm::popcount(B.Mask);
   if (PopCount == 1) {
@@ -1149,14 +1152,12 @@ void IRTranslator::emitBitTestCase(SwitchCG::BitTestBlock &BB,
     auto MaskTrailingZeros =
         MIB.buildConstant(SwitchTy, llvm::countr_zero(B.Mask));
     Cmp =
-        MIB.buildICmp(ICmpInst::ICMP_EQ, LLT::scalar(1), Reg, MaskTrailingZeros)
-            .getReg(0);
+        MIB.buildICmp(ICmpInst::ICMP_EQ, I1, Reg, MaskTrailingZeros).getReg(0);
   } else if (PopCount == BB.Range) {
     // There is only one zero bit in the range, test for it directly.
     auto MaskTrailingOnes =
         MIB.buildConstant(SwitchTy, llvm::countr_one(B.Mask));
-    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Reg, MaskTrailingOnes)
-              .getReg(0);
+    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, I1, Reg, MaskTrailingOnes).getReg(0);
   } else {
     // Make desired shift.
     auto CstOne = MIB.buildConstant(SwitchTy, 1);
@@ -1166,8 +1167,7 @@ void IRTranslator::emitBitTestCase(SwitchCG::BitTestBlock &BB,
     auto CstMask = MIB.buildConstant(SwitchTy, B.Mask);
     auto AndOp = MIB.buildAnd(SwitchTy, SwitchVal, CstMask);
     auto CstZero = MIB.buildConstant(SwitchTy, 0);
-    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), AndOp, CstZero)
-              .getReg(0);
+    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, I1, AndOp, CstZero).getReg(0);
   }
 
   // The branch probability from SwitchBB to B.TargetBB is B.ExtraProb.
@@ -1691,7 +1691,7 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
     SrcRegs.push_back(SrcReg);
   }
 
-  LLT SizeTy = LLT::scalar(MinPtrSize);
+  LLT SizeTy = LLT::integer(MinPtrSize);
 
   // The size operand should be the minimum of the pointer sizes.
   Register &SizeOpReg = SrcRegs[SrcRegs.size() - 1];
@@ -2812,7 +2812,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
         DL->getABITypeAlign(Info.memVT.getTypeForEVT(F->getContext())));
     LLT MemTy = Info.memVT.isSimple()
                     ? getLLTForMVT(Info.memVT.getSimpleVT())
-                    : LLT::scalar(Info.memVT.getStoreSizeInBits());
+                    : LLT::integer(Info.memVT.getStoreSizeInBits());
 
     // TODO: We currently just fallback to address space 0 if getTgtMemIntrinsic
     //       didn't yield anything useful.
@@ -3158,7 +3158,7 @@ bool IRTranslator::translateInsertElement(const User &U,
   if (!Idx)
     Idx = getOrCreateVReg(*U.getOperand(2));
   if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
-    const LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+    const LLT VecIdxTy = LLT::integer(PreferredVecIdxWidth);
     Idx = MIRBuilder.buildZExtOrTrunc(VecIdxTy, Idx).getReg(0);
   }
   MIRBuilder.buildInsertVectorElement(Res, Val, Elt, Idx);
@@ -3201,7 +3201,7 @@ bool IRTranslator::translateInsertVector(const User &U,
     if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
       // We are inserting an illegal fixed vector into a scalable
       // vector, use a scalar element insert.
-      LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+      LLT VecIdxTy = LLT::integer(PreferredVecIdxWidth);
       Register Idx = getOrCreateVReg(*CI);
       auto ScaledIndex = MIRBuilder.buildMul(
           VecIdxTy, MIRBuilder.buildVScale(VecIdxTy, 1), Idx);
@@ -3239,7 +3239,7 @@ bool IRTranslator::translateExtractElement(const User &U,
   if (!Idx)
     Idx = getOrCreateVReg(*U.getOperand(1));
   if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
-    const LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+    const LLT VecIdxTy = LLT::integer(PreferredVecIdxWidth);
     Idx = MIRBuilder.buildZExtOrTrunc(VecIdxTy, Idx).getReg(0);
   }
   MIRBuilder.buildExtractVectorElement(Res, Val, Idx);
@@ -3279,7 +3279,7 @@ bool IRTranslator::translateExtractVector(const User &U,
     if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
       // We are extracting an illegal fixed vector from a scalable
       // vector, use a scalar element extract.
-      LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+      LLT VecIdxTy = LLT::integer(PreferredVecIdxWidth);
       Register Idx = getOrCreateVReg(*CI);
       auto ScaledIndex = MIRBuilder.buildMul(
           VecIdxTy, MIRBuilder.buildVScale(VecIdxTy, 1), Idx);
@@ -3868,8 +3868,8 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
   if (TLI->useLoadStackGuardNode(*ParentBB->getBasicBlock()->getModule())) {
-    Guard =
-        MRI->createGenericVirtualRegister(LLT::scalar(PtrTy.getSizeInBits()));
+    LLT RegTy = LLT::integer(PtrTy.getSizeInBits());
+    Guard = MRI->createGenericVirtualRegister(RegTy);
     getStackGuard(Guard, *CurBuilder);
   } else {
     // TODO: test using android subtarget when we support @llvm.thread.pointer.
@@ -3885,8 +3885,8 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   }
 
   // Perform the comparison.
-  auto Cmp =
-      CurBuilder->buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Guard, GuardVal);
+  LLT I1 = LLT::integer(1);
+  auto Cmp = CurBuilder->buildICmp(CmpInst::ICMP_NE, I1, Guard, GuardVal);
   // If the guard/stackslot do not equal, branch to failure MBB.
   CurBuilder->buildBrCond(Cmp, *SPD.getFailureMBB());
   // Otherwise branch to success MBB.

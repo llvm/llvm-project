@@ -569,6 +569,29 @@ MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
   return buildInstr(Opcode, Res, Op);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildTruncLike(const DstOp &Res, const SrcOp &Op) {
+  LLT DstTy = Res.getLLTTy(*getMRI());
+  LLT SrcTy = Op.getLLTTy(*getMRI());
+
+  bool DstIsFloat = DstTy.getScalarType().isFloat();
+  bool SrcIsFloat = SrcTy.getScalarType().isFloat();
+
+  assert(DstTy.isVector() == SrcTy.isVector());
+
+  if (DstIsFloat && !SrcIsFloat) {
+    auto Trunc = buildTrunc(DstTy.changeToInteger(), Op);
+    return buildBitcast(Res, Trunc);
+  } 
+  
+  if (!DstIsFloat && SrcIsFloat) {
+    auto Bitcast = buildBitcast(SrcTy.changeToInteger(), Op);
+    return buildTrunc(Res, Bitcast);
+  }
+
+  unsigned Opcode = DstIsFloat ? TargetOpcode::G_FPTRUNC : TargetOpcode::G_TRUNC;
+  return buildInstr(Opcode, Res, Op);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildSExtOrTrunc(const DstOp &Res,
                                                        const SrcOp &Op) {
   return buildExtOrTrunc(TargetOpcode::G_SEXT, Res, Op);
