@@ -8938,8 +8938,7 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
   unsigned ReductionOpcode = Reduction->getOpcode();
   if (ReductionOpcode == Instruction::Sub) {
     VPBasicBlock *ParentBlock = Builder.getInsertBlock();
-    if (!ParentBlock)
-      return nullptr;
+    assert(ParentBlock && "Builder must have an insert block.");
 
     auto *const Zero = ConstantInt::get(Reduction->getType(), 0);
     SmallVector<VPValue *, 2> Ops;
