@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if __has_include(<filesystem>)
-#include <filesystem>
-#endif
 #include <optional>
 #include <utility>
 
@@ -3052,21 +3049,18 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           },
           nb::arg("asm"), nb::arg("context").none() = nb::none(),
           kModuleParseDocstring)
-#if __has_include(<filesystem>)
       .def_static(
-          "parse",
-          [](const std::filesystem::path &path,
-             DefaultingPyMlirContext context) {
+          "parseFile",
+          [](const std::string &path, DefaultingPyMlirContext context) {
             PyMlirContext::ErrorCapture errors(context->getRef());
             MlirModule module = mlirModuleCreateParseFromFile(
-                context->get(), toMlirStringRef(path.string()));
+                context->get(), toMlirStringRef(path));
             if (mlirModuleIsNull(module))
               throw MLIRError("Unable to parse module assembly", errors.take());
             return PyModule::forModule(module).releaseObject();
           },
-          nb::arg("asm"), nb::arg("context").none() = nb::none(),
+          nb::arg("path"), nb::arg("context").none() = nb::none(),
           kModuleParseDocstring)
-#endif
       .def_static(
           "create",
           [](DefaultingPyLocation loc) {
