@@ -28,7 +28,7 @@ class Mesh_Op<string mnemonic, list<Trait> traits = []> :
     Op<Mesh_Dialect, mnemonic, traits> {
 }
 
-def Mesh_MeshOp : Mesh_Op<"mesh", [Symbol]> {
+def Mesh_MeshOp : Mesh_Op<"mesh", [Symbol, Pure]> {
   let summary = "Description of a device/process mesh.";
   let description = [{
     The mesh.mesh operation is a symbol operation that identifies a specific
@@ -305,23 +305,38 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
     (`sharded_dims_offsets` `=` custom<DynamicIndexList>($dynamic_sharded_dims_offsets, $static_sharded_dims_offsets)^)?
     attr-dict `:` type($result)
   }];
-  let builders = [
-    OpBuilder<(ins "FlatSymbolRefAttr":$mesh,
-                   "ArrayRef<MeshAxesAttr>":$split_axes,
-                   "ArrayRef<MeshAxis>":$partial_axes,
-                   "mesh::ReductionKind":$partial_type,
-                   CArg<"ArrayRef<int64_t>", "{}">:$static_halo_sizes,
-                   CArg<"ArrayRef<int64_t>", "{}">:$static_sharded_dims_offsets)>,
-    OpBuilder<(ins "FlatSymbolRefAttr":$mesh,
-                   "ArrayRef<MeshAxesAttr>":$split_axes)>,
-    OpBuilder<(ins "FlatSymbolRefAttr":$mesh,
-                   "ArrayRef<MeshAxesAttr>":$split_axes,
-                   "::mlir::ArrayRef<::mlir::OpFoldResult>":$halo_sizes,
-                   "::mlir::ArrayRef<::mlir::OpFoldResult>":$sharded_dims_offsets)>,
-    OpBuilder<(ins "mlir::mesh::MeshSharding":$from)>
-  ];
+  let builders =
+      [OpBuilder<(ins "FlatSymbolRefAttr":$mesh,
+           "ArrayRef<MeshAxesAttr>":$split_axes,
+           "ArrayRef<MeshAxis>":$partial_axes,
+           "mesh::ReductionKind":$partial_type,
+           CArg<"ArrayRef<int64_t>", "{}">:$static_halo_sizes,
+           CArg<"ArrayRef<int64_t>", "{}">:$static_sharded_dims_offsets)>,
+       OpBuilder<(ins "FlatSymbolRefAttr":$mesh,
+           "ArrayRef<MeshAxesAttr>":$split_axes)>,
+       OpBuilder<(ins "FlatSymbolRefAttr":$mesh,
+           "ArrayRef<MeshAxesAttr>":$split_axes,
+           "::mlir::ArrayRef<::mlir::OpFoldResult>":$halo_sizes,
+           "::mlir::ArrayRef<::mlir::OpFoldResult>":$sharded_dims_offsets)>,
+       OpBuilder<(ins "llvm::StringRef":$mesh,
+           "ArrayRef<MeshAxesAttr>":$split_axes,
+           CArg<"ArrayRef<int64_t>", "{}">:$static_halo_sizes,
+           CArg<"ArrayRef<int64_t>", "{}">:$static_sharded_dims_offsets)>,
+       OpBuilder<(ins "mlir::mesh::MeshSharding":$from)>];
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
+}
+
+def Mesh_GetShardingOp : Mesh_Op<"get_sharding", [Pure]> {
+  let summary = "Get the sharding of the given tensor.";
+  let description = [{
+    This operation returns the sharding of the given tensor as a MeshSharding.
+  }];
+  let arguments = (ins AnyRankedTensor:$source);
+  let results = (outs Mesh_Sharding:$result);
+  let assemblyFormat = [{
+    $source attr-dict `:` type($source) `->` type($result)
+  }];
 }
 
 def Mesh_ShardShapeOp : Mesh_Op<"shard_shape", [Pure]> {
@@ -460,6 +475,7 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
       (`annotate_for_users` $annotate_for_users^)?
       attr-dict `:` type($result)
   }];
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

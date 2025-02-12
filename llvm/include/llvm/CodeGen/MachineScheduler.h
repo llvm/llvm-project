@@ -98,6 +98,12 @@
 #include <vector>
 
 namespace llvm {
+namespace impl_detail {
+// FIXME: Remove these declarations once RegisterClassInfo is queryable as an
+// analysis.
+class MachineSchedulerImpl;
+class PostMachineSchedulerImpl;
+} // namespace impl_detail
 
 namespace MISched {
 enum Direction {
@@ -1385,6 +1391,34 @@ std::unique_ptr<ScheduleDAGMutation>
 createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
                                const TargetRegisterInfo *TRI);
 
+class MachineSchedulerPass : public PassInfoMixin<MachineSchedulerPass> {
+  // FIXME: Remove this member once RegisterClassInfo is queryable as an
+  // analysis.
+  std::unique_ptr<impl_detail::MachineSchedulerImpl> Impl;
+  const TargetMachine *TM;
+
+public:
+  MachineSchedulerPass(const TargetMachine *TM);
+  MachineSchedulerPass(MachineSchedulerPass &&Other);
+  ~MachineSchedulerPass();
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class PostMachineSchedulerPass
+    : public PassInfoMixin<PostMachineSchedulerPass> {
+  // FIXME: Remove this member once RegisterClassInfo is queryable as an
+  // analysis.
+  std::unique_ptr<impl_detail::PostMachineSchedulerImpl> Impl;
+  const TargetMachine *TM;
+
+public:
+  PostMachineSchedulerPass(const TargetMachine *TM);
+  PostMachineSchedulerPass(PostMachineSchedulerPass &&Other);
+  ~PostMachineSchedulerPass();
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_MACHINESCHEDULER_H

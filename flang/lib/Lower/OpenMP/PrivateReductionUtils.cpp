@@ -197,12 +197,11 @@ static void getLengthParameters(fir::FirOpBuilder &builder, mlir::Location loc,
   // The verifier for EmboxOp doesn't allow length parameters when the the
   // character already has static LEN. genLengthParameters may still return them
   // in this case.
-  mlir::Type unwrappedType =
-      fir::unwrapRefType(fir::unwrapSeqOrBoxedSeqType(moldArg.getType()));
-  if (auto strTy = mlir::dyn_cast<fir::CharacterType>(unwrappedType)) {
-    if (strTy.hasConstantLen())
-      lenParams.resize(0);
-  }
+  auto strTy = mlir::dyn_cast<fir::CharacterType>(
+      fir::getFortranElementType(moldArg.getType()));
+
+  if (strTy && strTy.hasConstantLen())
+    lenParams.resize(0);
 }
 
 static bool
