@@ -28,8 +28,8 @@ public:
   static telemetry::TelemetryManager *GetTelemetryManager();
 
 protected:
-  static void SetTelemetryConfig(const lldb::TelemetryConfigUP &config);
-  static void SetTelemetryManager(const lldb::TelemetryManagerUP &manager_sp);
+  static void SetTelemetryConfig(const TelemetryConfigUP &config);
+  static void SetTelemetryManager(const TelemetryManagerUP &manager_sp);
 };
 
 } // namespace lldb_private

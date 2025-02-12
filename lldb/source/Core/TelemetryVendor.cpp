@@ -14,22 +14,22 @@
 
 namespace lldb_private {
 
-static lldb::TelemetryConfigUP g_config_up =
+static TelemetryConfigUP g_config_up =
     std::make_unique<llvm::telemetry::Config>(/*enable_telemetry*/ false);
 lldb::TelemetryConfig *TelemetryVendor::GetTelemetryConfig() {
   return g_config_up.get();
 }
 
-static lldb::TelemteryManagerUP g_telemetry_manager_up = nullptr;
+static TelemteryManagerUP g_telemetry_manager_up = nullptr;
 lldb::TelemetryManagerSP TelemetryVendor::GetTelemetryManager() {
   return g_telemetry_manager_sp.get();
 }
 
-void TelemetryVendor::SetTelemetryConfig(lldb::TelemetryConfigUP config) {
+void TelemetryVendor::SetTelemetryConfig(TelemetryConfigUP config) {
   g_config_up = std::move(config);
 }
 
-void SetTelemetryManager(lldb::TelemetryManagerUP &manager) {
+void SetTelemetryManager(TelemetryManagerUP &manager) {
   g_telemetry_manger_up = std::move(manager);
 }
 
