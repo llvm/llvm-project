@@ -814,7 +814,9 @@ public:
     return (Val >= 0 && Val < 64);
   }
 
-  template <int Width> bool isSImm() const { return bool(isSImmScaled<Width, 1>()); }
+  template <int Width> bool isSImm() const {
+    return bool(isSImmScaled<Width, 1>());
+  }
 
   template <int Bits, int Scale> DiagnosticPredicate isSImmScaled() const {
     return isImmScaled<Bits, Scale>(true);
