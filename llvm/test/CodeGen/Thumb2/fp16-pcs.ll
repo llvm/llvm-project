@@ -4,6 +4,13 @@
 ; RUN: llc -mtriple=armv8m.main-none-eabi   < %s -frame-pointer=none -mattr=+fp-armv8d16,+fullfp16 | FileCheck %s --check-prefix=LE-FP16
 ; RUN: llc -mtriple=armebv8m.main-none-eabi < %s -frame-pointer=none -mattr=+fp-armv8d16,+fullfp16 | FileCheck %s --check-prefix=BE-FP16
 
+;; Global ISel successfully generates code for some functions for little-endian
+;; without +fullfp16, and falls back to SelectionDAG in all others.
+; RUN: llc -mtriple=armv8m.main-none-eabi   < %s -frame-pointer=none -mattr=+fp-armv8d16 -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefix=LE-GISEL
+; RUN: llc -mtriple=armebv8m.main-none-eabi < %s -frame-pointer=none -mattr=+fp-armv8d16 -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefix=BE
+; RUN: llc -mtriple=armv8m.main-none-eabi   < %s -frame-pointer=none -mattr=+fp-armv8d16,+fullfp16 -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefix=LE-FP16
+; RUN: llc -mtriple=armebv8m.main-none-eabi < %s -frame-pointer=none -mattr=+fp-armv8d16,+fullfp16 -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefix=BE-FP16
+
 define arm_aapcscc half @callee_soft_half_in_reg(half %f) {
 ; LE-LABEL: callee_soft_half_in_reg:
 ; LE:       @ %bb.0: @ %entry
@@ -24,6 +31,10 @@ define arm_aapcscc half @callee_soft_half_in_reg(half %f) {
 ; BE-FP16-NEXT:    vmov.f16 s0, r0
 ; BE-FP16-NEXT:    vmov r0, s0
 ; BE-FP16-NEXT:    bx lr
+;
+; LE-GISEL-LABEL: callee_soft_half_in_reg:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    bx lr
 entry:
   ret half %f
 }
@@ -60,6 +71,14 @@ define void @caller_soft_half_in_reg() {
 ; BE-FP16-NEXT:    mov.w r0, #15360
 ; BE-FP16-NEXT:    bl callee_soft_half_in_reg
 ; BE-FP16-NEXT:    pop {r7, pc}
+;
+; LE-GISEL-LABEL: caller_soft_half_in_reg:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    .save {r7, lr}
+; LE-GISEL-NEXT:    push {r7, lr}
+; LE-GISEL-NEXT:    mov.w r0, #15360
+; LE-GISEL-NEXT:    bl callee_soft_half_in_reg
+; LE-GISEL-NEXT:    pop {r7, pc}
 entry:
   %ret = call arm_aapcscc half @callee_soft_half_in_reg(half 1.0)
   ret void
@@ -87,6 +106,12 @@ define arm_aapcscc half @callee_soft_half_on_stack(float %r0, float %r1, float %
 ; BE-FP16-NEXT:    vldr.16 s0, [sp, #2]
 ; BE-FP16-NEXT:    vmov r0, s0
 ; BE-FP16-NEXT:    bx lr
+;
+; LE-GISEL-LABEL: callee_soft_half_on_stack:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    mov r0, sp
+; LE-GISEL-NEXT:    ldr r0, [r0]
+; LE-GISEL-NEXT:    bx lr
 entry:
   ret half %f
 }
@@ -139,6 +164,18 @@ define void @caller_soft_half_on_stack() {
 ; BE-FP16-NEXT:    bl callee_soft_half_on_stack
 ; BE-FP16-NEXT:    add sp, #8
 ; BE-FP16-NEXT:    pop {r7, pc}
+;
+; LE-GISEL-LABEL: caller_soft_half_on_stack:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    .save {r7, lr}
+; LE-GISEL-NEXT:    push {r7, lr}
+; LE-GISEL-NEXT:    .pad #8
+; LE-GISEL-NEXT:    sub sp, #8
+; LE-GISEL-NEXT:    mov.w r0, #15360
+; LE-GISEL-NEXT:    str r0, [sp]
+; LE-GISEL-NEXT:    bl callee_soft_half_on_stack
+; LE-GISEL-NEXT:    add sp, #8
+; LE-GISEL-NEXT:    pop {r7, pc}
 entry:
   %ret = call arm_aapcscc half @callee_soft_half_on_stack(float poison, float poison, float poison, float poison, half 1.0)
   ret void
@@ -160,6 +197,10 @@ define arm_aapcs_vfpcc half @callee_hard_half_in_reg(half %f) {
 ; BE-FP16-LABEL: callee_hard_half_in_reg:
 ; BE-FP16:       @ %bb.0: @ %entry
 ; BE-FP16-NEXT:    bx lr
+;
+; LE-GISEL-LABEL: callee_hard_half_in_reg:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    bx lr
 entry:
   ret half %f
 }
@@ -204,6 +245,18 @@ define void @caller_hard_half_in_reg() {
 ; BE-FP16-NEXT:    vmov.f16 s0, #1.000000e+00
 ; BE-FP16-NEXT:    bl callee_hard_half_in_reg
 ; BE-FP16-NEXT:    pop {r7, pc}
+;
+; LE-GISEL-LABEL: caller_hard_half_in_reg:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    .save {r7, lr}
+; LE-GISEL-NEXT:    push {r7, lr}
+; LE-GISEL-NEXT:    vldr s0, .LCPI5_0
+; LE-GISEL-NEXT:    bl callee_hard_half_in_reg
+; LE-GISEL-NEXT:    pop {r7, pc}
+; LE-GISEL-NEXT:    .p2align 2
+; LE-GISEL-NEXT:  @ %bb.1:
+; LE-GISEL-NEXT:  .LCPI5_0:
+; LE-GISEL-NEXT:    .long 0x00003c00 @ float 2.15239444E-41
 entry:
   %ret = call arm_aapcs_vfpcc half @callee_hard_half_in_reg(half 1.0)
   ret void
@@ -229,6 +282,13 @@ define arm_aapcs_vfpcc half @callee_hard_half_on_stack(float %s0, float %s1, flo
 ; BE-FP16:       @ %bb.0: @ %entry
 ; BE-FP16-NEXT:    vldr.16 s0, [sp, #2]
 ; BE-FP16-NEXT:    bx lr
+;
+; LE-GISEL-LABEL: callee_hard_half_on_stack:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    mov r0, sp
+; LE-GISEL-NEXT:    ldr r0, [r0]
+; LE-GISEL-NEXT:    vmov s0, r0
+; LE-GISEL-NEXT:    bx lr
 entry:
   ret half %f
 }
@@ -282,6 +342,18 @@ define void @caller_hard_half_on_stack() {
 ; BE-FP16-NEXT:    bl callee_hard_half_on_stack
 ; BE-FP16-NEXT:    add sp, #8
 ; BE-FP16-NEXT:    pop {r7, pc}
+;
+; LE-GISEL-LABEL: caller_hard_half_on_stack:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    .save {r7, lr}
+; LE-GISEL-NEXT:    push {r7, lr}
+; LE-GISEL-NEXT:    .pad #8
+; LE-GISEL-NEXT:    sub sp, #8
+; LE-GISEL-NEXT:    mov.w r0, #15360
+; LE-GISEL-NEXT:    str r0, [sp]
+; LE-GISEL-NEXT:    bl callee_hard_half_on_stack
+; LE-GISEL-NEXT:    add sp, #8
+; LE-GISEL-NEXT:    pop {r7, pc}
 entry:
   %ret = call arm_aapcs_vfpcc half @callee_hard_half_on_stack(float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, half 1.0)
   ret void

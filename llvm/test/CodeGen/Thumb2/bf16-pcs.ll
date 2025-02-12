@@ -4,6 +4,13 @@
 ; RUN: llc -mtriple=armv8m.main-none-eabi   < %s -frame-pointer=none -mattr=+fp-armv8d16,+bf16 | FileCheck %s --check-prefix=LE-BF16
 ; RUN: llc -mtriple=armebv8m.main-none-eabi < %s -frame-pointer=none -mattr=+fp-armv8d16,+bf16 | FileCheck %s --check-prefix=BE-BF16
 
+;; Global ISel successfully generates code for some functions for little-endian
+;; without +bf16, and falls back to SelectionDAG in all others.
+; RUN: llc -mtriple=armv8m.main-none-eabi   < %s -frame-pointer=none -mattr=+fp-armv8d16 -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefix=LE-GISEL
+; RUN: llc -mtriple=armebv8m.main-none-eabi < %s -frame-pointer=none -mattr=+fp-armv8d16 -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefix=BE
+; RUN: llc -mtriple=armv8m.main-none-eabi   < %s -frame-pointer=none -mattr=+fp-armv8d16,+bf16 -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefix=LE-BF16
+; RUN: llc -mtriple=armebv8m.main-none-eabi < %s -frame-pointer=none -mattr=+fp-armv8d16,+bf16 -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefix=BE-BF16
+
 define arm_aapcscc bfloat @callee_soft_bfloat_in_reg(bfloat %f) {
 ; LE-LABEL: callee_soft_bfloat_in_reg:
 ; LE:       @ %bb.0: @ %entry
@@ -30,6 +37,10 @@ define arm_aapcscc bfloat @callee_soft_bfloat_in_reg(bfloat %f) {
 ; BE-BF16-NEXT:    ldrh.w r0, [sp, #2]
 ; BE-BF16-NEXT:    add sp, #4
 ; BE-BF16-NEXT:    bx lr
+;
+; LE-GISEL-LABEL: callee_soft_bfloat_in_reg:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    bx lr
 entry:
   ret bfloat %f
 }
@@ -66,6 +77,14 @@ define void @caller_soft_bfloat_in_reg() {
 ; BE-BF16-NEXT:    mov.w r0, #16256
 ; BE-BF16-NEXT:    bl callee_soft_bfloat_in_reg
 ; BE-BF16-NEXT:    pop {r7, pc}
+;
+; LE-GISEL-LABEL: caller_soft_bfloat_in_reg:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    .save {r7, lr}
+; LE-GISEL-NEXT:    push {r7, lr}
+; LE-GISEL-NEXT:    mov.w r0, #16256
+; LE-GISEL-NEXT:    bl callee_soft_bfloat_in_reg
+; LE-GISEL-NEXT:    pop {r7, pc}
 entry:
   %ret = call arm_aapcscc bfloat @callee_soft_bfloat_in_reg(bfloat 1.0)
   ret void
@@ -91,6 +110,12 @@ define arm_aapcscc bfloat @callee_soft_bfloat_on_stack(float %r0, float %r1, flo
 ; BE-BF16:       @ %bb.0: @ %entry
 ; BE-BF16-NEXT:    ldrh.w r0, [sp, #2]
 ; BE-BF16-NEXT:    bx lr
+;
+; LE-GISEL-LABEL: callee_soft_bfloat_on_stack:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    mov r0, sp
+; LE-GISEL-NEXT:    ldr r0, [r0]
+; LE-GISEL-NEXT:    bx lr
 entry:
   ret bfloat %f
 }
@@ -143,6 +168,18 @@ define void @caller_soft_bfloat_on_stack() {
 ; BE-BF16-NEXT:    bl callee_soft_bfloat_on_stack
 ; BE-BF16-NEXT:    add sp, #8
 ; BE-BF16-NEXT:    pop {r7, pc}
+;
+; LE-GISEL-LABEL: caller_soft_bfloat_on_stack:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    .save {r7, lr}
+; LE-GISEL-NEXT:    push {r7, lr}
+; LE-GISEL-NEXT:    .pad #8
+; LE-GISEL-NEXT:    sub sp, #8
+; LE-GISEL-NEXT:    mov.w r0, #16256
+; LE-GISEL-NEXT:    str r0, [sp]
+; LE-GISEL-NEXT:    bl callee_soft_bfloat_on_stack
+; LE-GISEL-NEXT:    add sp, #8
+; LE-GISEL-NEXT:    pop {r7, pc}
 entry:
   %ret = call arm_aapcscc bfloat @callee_soft_bfloat_on_stack(float poison, float poison, float poison, float poison, bfloat 1.0)
   ret void
@@ -178,6 +215,10 @@ define arm_aapcs_vfpcc bfloat @callee_hard_bfloat_in_reg(bfloat %f) {
 ; BE-BF16-NEXT:    vmov s0, r0
 ; BE-BF16-NEXT:    add sp, #4
 ; BE-BF16-NEXT:    bx lr
+;
+; LE-GISEL-LABEL: callee_hard_bfloat_in_reg:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    bx lr
 entry:
   ret bfloat %f
 }
@@ -230,6 +271,18 @@ define void @caller_hard_bfloat_in_reg() {
 ; BE-BF16-NEXT:  @ %bb.1:
 ; BE-BF16-NEXT:  .LCPI5_0:
 ; BE-BF16-NEXT:    .long 0x00003f80 @ float 2.27795078E-41
+;
+; LE-GISEL-LABEL: caller_hard_bfloat_in_reg:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    .save {r7, lr}
+; LE-GISEL-NEXT:    push {r7, lr}
+; LE-GISEL-NEXT:    vldr s0, .LCPI5_0
+; LE-GISEL-NEXT:    bl callee_hard_bfloat_in_reg
+; LE-GISEL-NEXT:    pop {r7, pc}
+; LE-GISEL-NEXT:    .p2align 2
+; LE-GISEL-NEXT:  @ %bb.1:
+; LE-GISEL-NEXT:  .LCPI5_0:
+; LE-GISEL-NEXT:    .long 0x00003f80 @ float 2.27795078E-41
 entry:
   %ret = call arm_aapcs_vfpcc bfloat @callee_hard_bfloat_in_reg(bfloat 1.0)
   ret void
@@ -257,6 +310,13 @@ define arm_aapcs_vfpcc bfloat @callee_hard_bfloat_on_stack(float %s0, float %s1,
 ; BE-BF16-NEXT:    ldrh.w r0, [sp, #2]
 ; BE-BF16-NEXT:    vmov s0, r0
 ; BE-BF16-NEXT:    bx lr
+;
+; LE-GISEL-LABEL: callee_hard_bfloat_on_stack:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    mov r0, sp
+; LE-GISEL-NEXT:    ldr r0, [r0]
+; LE-GISEL-NEXT:    vmov s0, r0
+; LE-GISEL-NEXT:    bx lr
 entry:
   ret bfloat %f
 }
@@ -310,6 +370,18 @@ define void @caller_hard_bfloat_on_stack() {
 ; BE-BF16-NEXT:    bl callee_hard_bfloat_on_stack
 ; BE-BF16-NEXT:    add sp, #8
 ; BE-BF16-NEXT:    pop {r7, pc}
+;
+; LE-GISEL-LABEL: caller_hard_bfloat_on_stack:
+; LE-GISEL:       @ %bb.0: @ %entry
+; LE-GISEL-NEXT:    .save {r7, lr}
+; LE-GISEL-NEXT:    push {r7, lr}
+; LE-GISEL-NEXT:    .pad #8
+; LE-GISEL-NEXT:    sub sp, #8
+; LE-GISEL-NEXT:    mov.w r0, #16256
+; LE-GISEL-NEXT:    str r0, [sp]
+; LE-GISEL-NEXT:    bl callee_hard_bfloat_on_stack
+; LE-GISEL-NEXT:    add sp, #8
+; LE-GISEL-NEXT:    pop {r7, pc}
 entry:
   %ret = call arm_aapcs_vfpcc bfloat @callee_hard_bfloat_on_stack(float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, bfloat 1.0)
   ret void
