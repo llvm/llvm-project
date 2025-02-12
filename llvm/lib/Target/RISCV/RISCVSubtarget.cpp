@@ -67,10 +67,10 @@ static cl::opt<bool> UseMIPSLoadStorePairsOpt(
     cl::desc("RISCV: Enable the load/store pair optimization pass"),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    UseMIPSLoadStoreBondingOpt("mips-riscv-load-store-bonding",
-                             cl::desc("RISCV: Optimize for load-store bonding"),
-                             cl::init(true), cl::Hidden);
+static cl::opt<bool> UseMIPSLoadStoreBondingOpt(
+    "mips-riscv-load-store-bonding",
+    cl::desc("RISCV: Optimize for load-store bonding"), cl::init(true),
+    cl::Hidden);
 
 static cl::opt<bool>
     UseCCMovInsn("riscv-ccmov", cl::desc("RISCV: Use 'mips.ccmov' instruction"),

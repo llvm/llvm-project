@@ -40,6 +40,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscv-load-store-opt"
 #define RISCV_LOAD_STORE_OPT_NAME "RISC-V Load / Store Optimizer"
+
+// The LdStLimit limits number of basic blocks how far we search for load/store
+// pairs.
+static cl::opt<unsigned> LdStLimit("riscv-load-store-scan-limit", cl::init(128),
+                                   cl::Hidden);
+
 namespace {
 
 struct RISCVLoadStoreOpt : public MachineFunctionPass {
@@ -239,7 +245,7 @@ RISCVLoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   // Remember any instructions that read/write memory between FirstMI and MI.
   SmallVector<MachineInstr *, 4> MemInsns;
 
-  for (unsigned Count = 0; MBBI != E && Count < 128;
+  for (unsigned Count = 0; MBBI != E && Count < LdStLimit;
        MBBI = next_nodbg(MBBI, E)) {
     MachineInstr &MI = *MBBI;
 
