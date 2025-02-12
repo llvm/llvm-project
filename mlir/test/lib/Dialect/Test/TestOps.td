@@ -2947,50 +2947,6 @@ def RecursivelySpeculatableOp : TEST_Op<"recursively_speculatable_op", [
   let regions = (region SizedRegion<1>:$body);
 }
 
-def SpeculatableOpWithReadSideEffect : TEST_Op<"speculatable_op_with_memread",
-    [ConditionallySpeculatable, MemoryEffects<[MemRead]>]> {
-  let description = [{
-    Op used to test LICM conditional speculation.  This op can always be
-    speculatively executed and has only memory read effect.
-  }];
-
-  let arguments = (ins Variadic<AnyType>:$inputs);
-  let results = (outs Variadic<AnyType>:$outputs);
-
-  let extraClassDeclaration = [{
-    ::mlir::Speculation::Speculatability getSpeculatability();
-  }];
-
-  let extraClassDefinition = [{
-    ::mlir::Speculation::Speculatability
-    SpeculatableOpWithReadSideEffect::getSpeculatability() {
-      return ::mlir::Speculation::Speculatable;
-    }
-  }];
-}
-
-def SpeculatableOpWithWriteSideEffect : TEST_Op<"speculatable_op_with_memwrite",
-    [ConditionallySpeculatable, MemoryEffects<[MemWrite]>]> {
-  let description = [{
-    Op used to test LICM conditional speculation.  This op can always be
-    speculatively executed and has only memory read effect.
-  }];
-
-  let arguments = (ins Variadic<AnyType>:$inputs);
-  let results = (outs Variadic<AnyType>:$outputs);
-
-  let extraClassDeclaration = [{
-    ::mlir::Speculation::Speculatability getSpeculatability();
-  }];
-
-  let extraClassDefinition = [{
-    ::mlir::Speculation::Speculatability
-    SpeculatableOpWithWriteSideEffect::getSpeculatability() {
-      return ::mlir::Speculation::Speculatable;
-    }
-  }];
-}
-
 //===---------------------------------------------------------------------===//
 // Test CSE
 //===---------------------------------------------------------------------===//
