@@ -2357,8 +2357,9 @@ cir::FuncOp CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD, mlir::Type Ty,
   // As __global__ functions (kernels) always reside on device,
   // when we access them from host, we must refer to the kernel handle.
   // For CUDA, it's just the device stub. For HIP, it's something different.
-  if (langOpts.CUDA && !langOpts.CUDAIsDevice && langOpts.HIP &&
-      cast<FunctionDecl>(GD.getDecl())->hasAttr<CUDAGlobalAttr>()) {
+  if ((langOpts.CUDA || langOpts.HIP) && !langOpts.CUDAIsDevice &&
+      cast<FunctionDecl>(GD.getDecl())->hasAttr<CUDAGlobalAttr>() &&
+      cast<FunctionDecl>(GD.getDecl())->isThisDeclarationADefinition()) {
     llvm_unreachable("NYI");
   }
 
