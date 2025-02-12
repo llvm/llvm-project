@@ -5624,7 +5624,7 @@ public:
 
 /// This represents the '#pragma omp stripe' loop transformation directive.
 class OMPStripeDirective final : public OMPLoopTransformationDirective {
-friend class ASTStmtReader;
+  friend class ASTStmtReader;
   friend class OMPExecutableDirective;
 
   /// Default list of offsets.
@@ -5648,6 +5648,7 @@ friend class ASTStmtReader;
   void setTransformedStmt(Stmt *S) {
     Data->getChildren()[TransformedStmtOffset] = S;
   }
+
 public:
   /// Create a new AST node representation for '#pragma omp stripe'.
   ///

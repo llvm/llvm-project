@@ -2548,7 +2548,7 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     }
   }
 
-   if ((DKind == OMPD_tile || DKind == OMPD_stripe) &&
+  if ((DKind == OMPD_tile || DKind == OMPD_stripe) &&
       !SeenClauses[unsigned(OMPC_sizes)]) {
     Diag(Loc, diag::err_omp_required_clause)
         << getOpenMPDirectiveName(DKind) << "sizes";
