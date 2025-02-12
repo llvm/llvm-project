@@ -4590,9 +4590,9 @@ void CGObjCMac::EmitTryOrSynchronizedStmt(CodeGen::CodeGenFunction &CGF,
     // Tell the cleanup not to re-pop the exit.
     CGF.Builder.CreateStore(CGF.Builder.getFalse(), CallTryExitVar);
     CGF.EmitBranchThroughCleanup(FinallyRethrow);
-  }
+
   // Otherwise, we have to match against the caught exceptions.
-  else {
+  } else {
     // Retrieve the exception object.  We may emit multiple blocks but
     // nothing can cross this so the value is already in SSA form.
     llvm::CallInst *Caught = CGF.EmitNounwindRuntimeCall(
@@ -4776,9 +4776,9 @@ void CGObjCMac::EmitTryOrSynchronizedStmt(CodeGen::CodeGenFunction &CGF,
     llvm::Value *PropagatingExn;
     if (PropagatingExnVar.isValid()) {
       PropagatingExn = CGF.Builder.CreateLoad(PropagatingExnVar);
-    }
+
     // Otherwise, just look in the buffer for the exception to throw.
-    else {
+    } else {
       llvm::CallInst *Caught = CGF.EmitNounwindRuntimeCall(
           ObjCTypes.getExceptionExtractFn(), ExceptionData.emitRawPointer(CGF));
       PropagatingExn = Caught;
@@ -5396,9 +5396,9 @@ IvarLayoutBuilder::buildBitmap(CGObjCCommonMac &CGObjC,
     // skip forward.
     if (beginOfScanInWords > endOfLastScanInWords) {
       skip(beginOfScanInWords - endOfLastScanInWords);
-    }
+    
     // Otherwise, start scanning where the last left off.
-    else {
+    } else {
       beginOfScanInWords = endOfLastScanInWords;
 
       // If that leaves us with nothing to scan, ignore this request.
