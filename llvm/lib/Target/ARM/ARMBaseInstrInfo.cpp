@@ -151,6 +151,11 @@ ScheduleHazardRecognizer *ARMBaseInstrInfo::CreateTargetMIHazardRecognizer(
     MHR->AddHazardRecognizer(
         std::make_unique<ARMBankConflictHazardRecognizer>(DAG, 0x4, true));
 
+  if (Subtarget.isCortexM4() && !DAG->hasVRegLiveness())
+    MHR->AddHazardRecognizer(
+        std::make_unique<ARMCortexM4AlignmentHazardRecognizer>(
+            DAG->MF.getSubtarget()));
+
   // Not inserting ARMHazardRecognizerFPMLx because that would change
   // legacy behavior
 
@@ -168,10 +173,23 @@ CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
   if (Subtarget.isThumb2() || Subtarget.hasVFP2Base())
     MHR->AddHazardRecognizer(std::make_unique<ARMHazardRecognizerFPMLx>());
 
+  if (Subtarget.isCortexM4())
+    MHR->AddHazardRecognizer(
+        std::make_unique<ARMCortexM4AlignmentHazardRecognizer>(
+            DAG->MF.getSubtarget()));
+
   auto BHR = TargetInstrInfo::CreateTargetPostRAHazardRecognizer(II, DAG);
   if (BHR)
     MHR->AddHazardRecognizer(std::unique_ptr<ScheduleHazardRecognizer>(BHR));
   return MHR;
+}
+
+ScheduleHazardRecognizer *ARMBaseInstrInfo::CreateTargetPostRAHazardRecognizer(
+    const MachineFunction &MF) const {
+  if (!Subtarget.isCortexM4())
+    return TargetInstrInfo::CreateTargetPostRAHazardRecognizer(MF);
+
+  return new ARMCortexM4AlignmentHazardRecognizer(MF.getSubtarget());
 }
 
 MachineInstr *
@@ -5453,6 +5471,21 @@ void ARMBaseInstrInfo::breakPartialRegDependency(
 
 bool ARMBaseInstrInfo::hasNOP() const {
   return Subtarget.hasFeature(ARM::HasV6KOps);
+}
+
+void ARMBaseInstrInfo::insertNoop(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MI) const {
+  DebugLoc DL;
+  if (hasNOP()) {
+    BuildMI(MBB, MI, DL, get(ARM::HINT)).addImm(0).addImm(ARMCC::AL).addImm(0);
+  } else {
+    BuildMI(MBB, MI, DL, get(ARM::MOVr))
+        .addReg(ARM::R0)
+        .addReg(ARM::R0)
+        .addImm(ARMCC::AL)
+        .addReg(0)
+        .addReg(0);
+  }
 }
 
 bool ARMBaseInstrInfo::isSwiftFastImmShift(const MachineInstr *MI) const {

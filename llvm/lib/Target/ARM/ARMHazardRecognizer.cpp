@@ -8,13 +8,18 @@
 
 #include "ARMHazardRecognizer.h"
 #include "ARMBaseInstrInfo.h"
+#include "ARMBaseRegisterInfo.h"
+#include "ARMInstrInfo.h"
 #include "ARMSubtarget.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
+#include <algorithm>
 
 using namespace llvm;
 
@@ -266,3 +271,159 @@ void ARMBankConflictHazardRecognizer::EmitInstruction(SUnit *SU) {
 void ARMBankConflictHazardRecognizer::AdvanceCycle() { Accesses.clear(); }
 
 void ARMBankConflictHazardRecognizer::RecedeCycle() { Accesses.clear(); }
+
+#define DEBUG_TYPE "cortex-m4-alignment-hazard-rec"
+
+STATISTIC(NumNoops, "Number of noops inserted");
+
+static cl::opt<bool> LoopsOnly(DEBUG_TYPE "-loops-only", cl::Hidden,
+                               cl::init(true),
+                               cl::desc("Emit nops only in loops"));
+
+static cl::opt<bool>
+    InnermostLoopsOnly(DEBUG_TYPE "-innermost-loops-only", cl::Hidden,
+                       cl::init(true),
+                       cl::desc("Emit noops only in innermost loops"));
+
+void ARMCortexM4AlignmentHazardRecognizer::Reset() { Offset = 0; }
+
+ARMCortexM4AlignmentHazardRecognizer::ARMCortexM4AlignmentHazardRecognizer(
+    const MCSubtargetInfo &STI)
+    : STI(STI), MBB(nullptr), MF(nullptr), Offset(0), Advanced(false),
+      EmittingNoop(false) {
+  MaxLookAhead = 1;
+}
+
+void ARMCortexM4AlignmentHazardRecognizer::EmitInstruction(SUnit *SU) {
+  if (!SU->isInstr())
+    return;
+
+  MachineInstr *MI = SU->getInstr();
+  assert(MI);
+  return EmitInstruction(MI);
+}
+
+void ARMCortexM4AlignmentHazardRecognizer::EmitInstruction(MachineInstr *MI) {
+  if (MI->isDebugInstr())
+    return;
+
+  unsigned Size = MI->getDesc().getSize();
+  Offset += Size;
+
+  // If the previous instruction had a hazard, then we're inserting a nop. Mark
+  // it with an AsmPrinter comment.
+  if (EmittingNoop)
+    if (MachineInstr *Prev = MI->getPrevNode())
+      Prev->setAsmPrinterFlag(ARM::M4F_ALIGNMENT_HAZARD);
+
+  EmittingNoop = false;
+}
+
+ScheduleHazardRecognizer::HazardType
+ARMCortexM4AlignmentHazardRecognizer::getHazardType(SUnit *SU,
+                                                    int /*Ignored*/) {
+  if (!SU->isInstr())
+    return HazardType::NoHazard;
+
+  MachineInstr *MI = SU->getInstr();
+  assert(MI);
+  return getHazardTypeAssumingOffset(MI, Offset);
+}
+
+ScheduleHazardRecognizer::HazardType
+ARMCortexM4AlignmentHazardRecognizer::getHazardTypeAssumingOffset(
+    MachineInstr *MI, size_t AssumedOffset) {
+  if (Advanced) {
+    Advanced = false;
+    return HazardType::NoHazard;
+  }
+
+  if (AssumedOffset % 4 == 0)
+    return HazardType::NoHazard;
+
+  const MCSchedModel &SCModel = STI.getSchedModel();
+  const MachineFunction *MF = MI->getParent()->getParent();
+  const ARMBaseInstrInfo &TII =
+      *static_cast<const ARMBaseInstrInfo *>(MF->getSubtarget().getInstrInfo());
+  int Latency = SCModel.computeInstrLatency<MCSubtargetInfo, MCInstrInfo,
+                                            InstrItineraryData, MachineInstr>(
+      STI, TII, *MI);
+  if (!Latency)
+    return HazardType::NoHazard;
+
+  const MCInstrDesc &MCID = MI->getDesc();
+  unsigned Domain = MCID.TSFlags & ARMII::DomainMask;
+
+  bool SingleCycleFP =
+      Latency == 1 && (Domain & (ARMII::DomainNEON | ARMII::DomainVFP));
+  if (SingleCycleFP)
+    return HazardType::NoopHazard;
+
+  if (MCID.getSize() == 4 && (MI->mayLoad() || MI->mayStore()))
+    return HazardType::NoopHazard;
+
+  return HazardType::NoHazard;
+}
+
+void ARMCortexM4AlignmentHazardRecognizer::AdvanceCycle() { Advanced = true; }
+void ARMCortexM4AlignmentHazardRecognizer::RecedeCycle() {}
+
+void ARMCortexM4AlignmentHazardRecognizer::EmitNoop() { Offset += 2; }
+
+unsigned ARMCortexM4AlignmentHazardRecognizer::PreEmitNoops(SUnit *SU) {
+  if (!SU->isInstr())
+    return 0;
+
+  MachineInstr *MI = SU->getInstr();
+  assert(MI);
+  return PreEmitNoops(MI);
+}
+
+unsigned ARMCortexM4AlignmentHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
+  const MachineBasicBlock *Parent = MI->getParent();
+  if (Parent != MBB) {
+    Offset = 0;
+    MBB = Parent;
+  }
+
+  LLVM_DEBUG(MI->dump());
+
+  if (LoopsOnly) {
+    // This optimization is likely only critical in loops. Try to save code size
+    // elsewhere by avoiding it when we're not in an innermost loop.
+    if (const MachineLoop *Loop = getLoopFor(MI)) {
+      if (InnermostLoopsOnly && !Loop->isInnermost()) {
+        LLVM_DEBUG(dbgs() << "\toffset=0x" << utohexstr(Offset)
+                          << "\n\tnot in an innermost loop\n");
+        return 0;
+      }
+    } else if (LoopsOnly) {
+      LLVM_DEBUG(dbgs() << "\toffset=0x" << utohexstr(Offset)
+                        << "\n\tnot in a loop\n");
+      return 0;
+    }
+  }
+
+  if (HazardType::NoopHazard == getHazardTypeAssumingOffset(MI, Offset)) {
+    EmittingNoop = true;
+    NumNoops++;
+    LLVM_DEBUG(dbgs() << "\toffset=0x" << utohexstr(Offset)
+                      << "\n\thas an alignment hazard, and requires a noop\n");
+    return 1;
+  }
+
+  return 0;
+}
+
+const MachineLoop *
+ARMCortexM4AlignmentHazardRecognizer::getLoopFor(MachineInstr *MI) {
+  // Calculate and cache the MachineLoopInfo.
+  MachineFunction *ParentMF = MI->getParent()->getParent();
+  if (MF != ParentMF) {
+    MF = ParentMF;
+    MDT = MachineDominatorTree(*MF);
+    MLI.~MachineLoopInfo();
+    new (&MLI) MachineLoopInfo(MDT);
+  }
+  return MLI.getLoopFor(MI->getParent());
+}

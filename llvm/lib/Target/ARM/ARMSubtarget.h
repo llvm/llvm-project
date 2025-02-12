@@ -292,6 +292,7 @@ public:
   bool isSwift()    const { return ARMProcFamily == Swift; }
   bool isCortexM3() const { return ARMProcFamily == CortexM3; }
   bool isCortexM55() const { return ARMProcFamily == CortexM55; }
+  bool isCortexM4() const { return ARMProcFamily == CortexM4; }
   bool isCortexM7() const { return ARMProcFamily == CortexM7; }
   bool isCortexM85() const { return ARMProcFamily == CortexM85; }
   bool isLikeA9() const { return isCortexA9() || isCortexA15() || isKrait(); }

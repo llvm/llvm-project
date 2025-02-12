@@ -41,6 +41,11 @@ private:
   void expandLoadStackGuard(MachineBasicBlock::iterator MI) const override;
 };
 
+namespace ARM {
+enum AsmComments {
+  M4F_ALIGNMENT_HAZARD = MachineInstr::TAsmComments,
+};
+} // namespace ARM
 }
 
 #endif

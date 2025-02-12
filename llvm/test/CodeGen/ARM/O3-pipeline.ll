@@ -213,6 +213,7 @@
 ; CHECK-NEXT:      Machine Natural Loop Construction
 ; CHECK-NEXT:      ReachingDefAnalysis
 ; CHECK-NEXT:      ARM Low Overhead Loops pass
+; CHECK-NEXT:      Post RA hazard recognizer
 ; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Optimization Remark Emitter
 ; CHECK-NEXT:      ARM Assembly Printer

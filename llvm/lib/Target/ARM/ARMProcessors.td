@@ -99,6 +99,8 @@ def ProcM3      : SubtargetFeature<"m3", "ARMProcFamily", "CortexM3",
                                    "Cortex-M3 ARM processors", []>;
 def ProcM55      : SubtargetFeature<"m55", "ARMProcFamily", "CortexM55",
                                    "Cortex-M55 ARM processors", []>;
+def ProcM4      : SubtargetFeature<"m4", "ARMProcFamily", "CortexM4",
+                                   "Cortex-M4 ARM processors", []>;
 def ProcM7      : SubtargetFeature<"m7", "ARMProcFamily", "CortexM7",
                                    "Cortex-M7 ARM processors", []>;
 def ProcM85      : SubtargetFeature<"m85", "ARMProcFamily", "CortexM85",
@@ -340,6 +342,7 @@ def : ProcessorModel<"sc300",       CortexM4Model,      [ARMv7m,
                                                          FeatureHasNoBranchPredictor]>;
 
 def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
+                                                         ProcM4,
                                                          FeatureVFP4_D16_SP,
                                                          FeaturePreferBranchAlign32,
                                                          FeatureHasSlowFPVMLx,
