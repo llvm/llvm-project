@@ -759,12 +759,12 @@ def PREFETCH_LOCAL_L2 : PREFETCH_INTRS<"prefetch.local.L2">;
 
 def PREFETCH_GLOBAL_L2_EVICT_NORMAL : NVPTXInst<(outs), (ins Int64Regs:$addr),
                                       "prefetch.global.L2::evict_normal" # " [$addr];",
-                                      [(!cast<Intrinsic>("int_nvvm_prefetch_global_L2_evictnormal") i64:$addr)]>,
+                                      [(!cast<Intrinsic>("int_nvvm_prefetch_global_L2_evict_normal") i64:$addr)]>,
                                       Requires<[hasPTX<80>, hasSM<90>]>;
 
 def PREFETCH_GLOBAL_L2_EVICT_LAST   : NVPTXInst<(outs), (ins Int64Regs:$addr),
                                       "prefetch.global.L2::evict_last" # " [$addr];",
-                                      [(!cast<Intrinsic>("int_nvvm_prefetch_global_L2_evictlast") i64:$addr)]>,
+                                      [(!cast<Intrinsic>("int_nvvm_prefetch_global_L2_evict_last") i64:$addr)]>,
                                       Requires<[hasPTX<80>, hasSM<90>]>;
 
 
