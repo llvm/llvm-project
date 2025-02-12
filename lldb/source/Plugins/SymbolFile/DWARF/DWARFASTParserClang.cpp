@@ -2315,8 +2315,6 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
     return 0;
 
   size_t enumerators_added = 0;
-  unsigned NumNegativeBits = 0;
-  unsigned NumPositiveBits = 0;
 
   for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
@@ -2371,21 +2369,6 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
       ++enumerators_added;
     }
   }
-
-  clang::EnumDecl *enum_decl =
-      ClangUtil::GetQualType(clang_type)->getAs<clang::EnumType>()->getDecl();
-  m_ast.getASTContext().computeEnumBits(enum_decl->enumerators(),
-                                        NumNegativeBits, NumPositiveBits);
-  enum_decl->setNumPositiveBits(NumPositiveBits);
-  enum_decl->setNumNegativeBits(NumNegativeBits);
-
-  clang::QualType BestPromotionType;
-  clang::QualType BestType;
-  m_ast.getASTContext().computeBestEnumTypes(
-      /*IsPacked=*/false, NumNegativeBits, NumPositiveBits, BestType,
-      BestPromotionType);
-  enum_decl->setPromotionType(BestPromotionType);
-
   return enumerators_added;
 }
 

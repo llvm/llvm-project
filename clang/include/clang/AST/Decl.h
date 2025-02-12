@@ -3910,7 +3910,6 @@ class EnumDecl : public TagDecl {
   void setInstantiationOfMemberEnum(ASTContext &C, EnumDecl *ED,
                                     TemplateSpecializationKind TSK);
 
-public:
   /// Sets the width in bits required to store all the
   /// non-negative enumerators of this enum.
   void setNumPositiveBits(unsigned Num) {
@@ -3922,6 +3921,7 @@ public:
   /// negative enumerators of this enum. (see getNumNegativeBits)
   void setNumNegativeBits(unsigned Num) { EnumDeclBits.NumNegativeBits = Num; }
 
+public:
   /// True if this tag declaration is a scoped enumeration. Only
   /// possible in C++11 mode.
   void setScoped(bool Scoped = true) { EnumDeclBits.IsScoped = Scoped; }

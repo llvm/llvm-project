@@ -8474,11 +8474,23 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
   if (enum_decl->isCompleteDefinition())
     return true;
 
+  clang::ASTContext &ast = lldb_ast->getASTContext();
+
+  unsigned NumNegativeBits = 0;
+  unsigned NumPositiveBits = 0;
+  ast.computeEnumBits(enum_decl->enumerators(), NumNegativeBits,
+                      NumPositiveBits);
+
+  clang::QualType BestPromotionType;
+  clang::QualType BestType;
+  ast.computeBestEnumTypes(/*IsPacked=*/false, NumNegativeBits, NumPositiveBits,
+                           BestType, BestPromotionType);
+
   QualType integer_type(enum_decl->getIntegerType());
   if (!integer_type.isNull()) {
-    enum_decl->completeDefinition(
-        enum_decl->getIntegerType(), enum_decl->getPromotionType(),
-        enum_decl->getNumPositiveBits(), enum_decl->getNumNegativeBits());
+    enum_decl->completeDefinition(enum_decl->getIntegerType(),
+                                  BestPromotionType, NumPositiveBits,
+                                  NumNegativeBits);
   }
   return true;
 }
