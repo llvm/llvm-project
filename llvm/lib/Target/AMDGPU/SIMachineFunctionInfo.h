@@ -1212,15 +1212,15 @@ public:
   const AMDGPUGWSResourcePseudoSourceValue *
   getGWSPSV(const AMDGPUTargetMachine &TM) {
     return &GWSResourcePSV;
-#if LLPC_BUILD_NPI
   }
 
+#if LLPC_BUILD_NPI
   const AMDGPUGlobalRegisterPseudoSourceValue *
   getGlobalRegisterPSV(const AMDGPUTargetMachine &TM) {
     return &GlobalRegisterPSV;
-#endif /* LLPC_BUILD_NPI */
   }
 
+#endif /* LLPC_BUILD_NPI */
   unsigned getOccupancy() const {
     return Occupancy;
   }
@@ -1269,6 +1269,13 @@ public:
   unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
+#if LLPC_BUILD_NPI
+
+  /// This number is computed in LowerVGPREncoding pass, and gets used by
+  /// ResourceAnalsysis because it is difficult to derive this number from
+  /// MIR after LowerVGPREncoding.
+  std::optional<int> MaxPerWaveVGPR;
+#endif /* LLPC_BUILD_NPI */
 };
 
 } // end namespace llvm

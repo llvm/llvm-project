@@ -145,7 +145,13 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   // count easily.
   // A tail call isn't considered a call for MachineFrameInfo's purposes.
   if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
+#if LLPC_BUILD_NPI
+    Info.NumVGPR = MFI->MaxPerWaveVGPR.has_value()
+                       ? MFI->MaxPerWaveVGPR.value() + 1
+                       : TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass);
+#else /* LLPC_BUILD_NPI */
     Info.NumVGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass);
+#endif /* LLPC_BUILD_NPI */
     Info.NumExplicitSGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::SGPR_32RegClass);
     if (ST.hasMAIInsts())
       Info.NumAGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass);
@@ -491,7 +497,13 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   }
 
   Info.NumExplicitSGPR = MaxSGPR + 1;
+#if LLPC_BUILD_NPI
+  Info.NumVGPR = MFI->MaxPerWaveVGPR.has_value()
+                     ? MFI->MaxPerWaveVGPR.value() + 1
+                     : MaxVGPR + 1;
+#else /* LLPC_BUILD_NPI */
   Info.NumVGPR = MaxVGPR + 1;
+#endif /* LLPC_BUILD_NPI */
   Info.NumAGPR = MaxAGPR + 1;
 
   return Info;
