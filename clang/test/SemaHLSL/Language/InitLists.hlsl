@@ -44,6 +44,16 @@ struct SlicyBits {
   int W : 8;
 };
 
+struct ContainsResource { // #ContainsResource
+  int X;
+  RWBuffer<float4> B;
+};
+
+struct ContainsResourceInverted {
+  RWBuffer<float4> B;
+  int X;
+};
+
 void fn() {
   TwoFloats TF1 = {{{1.0, 2}}};
   TwoFloats TF2 = {1,2};
@@ -87,3 +97,17 @@ void Errs() {
 
   int2 Something = {1.xxx}; // expected-error{{too many initializers in list for type 'int2' (aka 'vector<int, 2>') (expected 2 but found 3)}}
 }
+
+void Err2(RWBuffer<float4> B) {
+  ContainsResource RS1 = {1, B};
+  ContainsResource RS2 = (1.xx); // expected-error{{no viable conversion from 'vector<int, 2>' (vector of 2 'int' values) to 'ContainsResource'}}
+  ContainsResource RS3 = {B, 1}; // expected-error{{no viable conversion from 'RWBuffer<float4>' (aka 'RWBuffer<vector<float, 4>>') to 'int'}}
+  ContainsResourceInverted IR = {RS1}; // expected-error{{no viable conversion from 'int' to 'hlsl::RWBuffer<vector<float, 4>>'}}
+}
+
+// expected-note@#ContainsResource{{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'vector<int, 2>' (vector of 2 'int' values) to 'const ContainsResource &' for 1st argument}}
+// expected-note@#ContainsResource{{candidate constructor (the implicit move constructor) not viable: no known conversion from 'vector<int, 2>' (vector of 2 'int' values) to 'ContainsResource &&' for 1st argument}}
+
+// These notes refer to the RWBuffer constructors that do not have source locations
+// expected-note@*{{candidate constructor (the implicit copy constructor) not viable}}
+// expected-note@*{{candidate constructor (the implicit move constructor) not viable}}

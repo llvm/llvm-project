@@ -2589,17 +2589,20 @@ static void BuildFlattenedTypeList(QualType BaseTy,
       continue;
     }
     if (const auto *RT = dyn_cast<RecordType>(T)) {
-      const RecordDecl *RD = RT->getDecl();
-      if (RD->isUnion()) {
+      const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
+      assert(RD && "HLSL record types should all be CXXRecordDecls!");
+
+      if (RD->isStandardLayout())
+        RD = RD->getStandardLayoutBaseWithFields();
+
+      // For types that we shouldn't decompose (unios and non-aggregates), just
+      // add the type itself to the list.
+      if (RD->isUnion() || !RD->isAggregate()) {
         List.push_back(T);
         continue;
       }
-      const CXXRecordDecl *CXXD = dyn_cast<CXXRecordDecl>(RD);
 
       llvm::SmallVector<QualType, 16> FieldTypes;
-      if (CXXD && CXXD->isStandardLayout())
-        RD = CXXD->getStandardLayoutBaseWithFields();
-
       for (const auto *FD : RD->fields())
         FieldTypes.push_back(FD->getType());
       // Reverse the newly added sub-range.
@@ -2608,9 +2611,9 @@ static void BuildFlattenedTypeList(QualType BaseTy,
 
       // If this wasn't a standard layout type we may also have some base
       // classes to deal with.
-      if (CXXD && !CXXD->isStandardLayout()) {
+      if (!RD->isStandardLayout()) {
         FieldTypes.clear();
-        for (const auto &Base : CXXD->bases())
+        for (const auto &Base : RD->bases())
           FieldTypes.push_back(Base.getType());
         std::reverse(FieldTypes.begin(), FieldTypes.end());
         WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
@@ -3062,6 +3065,8 @@ static bool CastInitializer(Sema &S, ASTContext &Ctx, Expr *E,
                             llvm::SmallVectorImpl<QualType> &DestTypes) {
   if (List.size() >= DestTypes.size()) {
     List.push_back(E);
+    // This is odd, but it isn't technically a failure due to conversion, we
+    // handle mismatched counts of arguments differently.
     return true;
   }
   InitializedEntity Entity = InitializedEntity::InitializeParameter(
@@ -3074,32 +3079,26 @@ static bool CastInitializer(Sema &S, ASTContext &Ctx, Expr *E,
   return true;
 }
 
-static void BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
+static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
                                  llvm::SmallVectorImpl<Expr *> &List,
-                                 llvm::SmallVectorImpl<QualType> &DestTypes,
-                                 bool &ExcessInits) {
-  if (List.size() >= DestTypes.size())
-    ExcessInits = true;
-
+                                 llvm::SmallVectorImpl<QualType> &DestTypes) {
   // If this is an initialization list, traverse the sub initializers.
   if (auto *Init = dyn_cast<InitListExpr>(E)) {
     for (auto *SubInit : Init->inits())
-      BuildInitializerList(S, Ctx, SubInit, List, DestTypes, ExcessInits);
-    return;
+      if (!BuildInitializerList(S, Ctx, SubInit, List, DestTypes))
+        return false;
+    return true;
   }
 
   // If this is a scalar type, just enqueue the expression.
   QualType Ty = E->getType();
-  if (Ty->isScalarType()) {
-    (void)CastInitializer(S, Ctx, E, List, DestTypes);
-    return;
-  }
+
+  if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
+    return CastInitializer(S, Ctx, E, List, DestTypes);
 
   if (auto *ATy = Ty->getAs<VectorType>()) {
     uint64_t Size = ATy->getNumElements();
 
-    if (List.size() + Size > DestTypes.size())
-      ExcessInits = true;
     QualType SizeTy = Ctx.getSizeType();
     uint64_t SizeTySize = Ctx.getTypeSize(SizeTy);
     for (uint64_t I = 0; I < Size; ++I) {
@@ -3109,10 +3108,11 @@ static void BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
       ExprResult ElExpr = S.CreateBuiltinArraySubscriptExpr(
           E, E->getBeginLoc(), Idx, E->getEndLoc());
       if (ElExpr.isInvalid())
-        return;
-      CastInitializer(S, Ctx, ElExpr.get(), List, DestTypes);
+        return false;
+      if (!CastInitializer(S, Ctx, ElExpr.get(), List, DestTypes))
+        return false;
     }
-    return;
+    return true;
   }
 
   if (auto *VTy = dyn_cast<ConstantArrayType>(Ty.getTypePtr())) {
@@ -3125,10 +3125,11 @@ static void BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
       ExprResult ElExpr = S.CreateBuiltinArraySubscriptExpr(
           E, E->getBeginLoc(), Idx, E->getEndLoc());
       if (ElExpr.isInvalid())
-        return;
-      BuildInitializerList(S, Ctx, ElExpr.get(), List, DestTypes, ExcessInits);
+        return false;
+      if (!BuildInitializerList(S, Ctx, ElExpr.get(), List, DestTypes))
+        return false;
     }
-    return;
+    return true;
   }
 
   if (auto *RTy = Ty->getAs<RecordType>()) {
@@ -3149,16 +3150,18 @@ static void BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
         ExprResult Res = S.BuildFieldReferenceExpr(
             E, false, E->getBeginLoc(), CXXScopeSpec(), FD, Found, NameInfo);
         if (Res.isInvalid())
-          return;
-        BuildInitializerList(S, Ctx, Res.get(), List, DestTypes, ExcessInits);
+          return false;
+        if (!BuildInitializerList(S, Ctx, Res.get(), List, DestTypes))
+          return false;
       }
     }
   }
+  return true;
 }
 
 static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
                                llvm::SmallVectorImpl<Expr *>::iterator &It) {
-  if (Ty->isScalarType()) {
+  if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType())) {
     return *(It++);
   }
   llvm::SmallVector<Expr *> Inits;
@@ -3216,12 +3219,12 @@ bool SemaHLSL::TransformInitList(const InitializedEntity &Entity,
   BuildFlattenedTypeList(InitTy, DestTypes);
 
   llvm::SmallVector<Expr *, 16> ArgExprs;
-  bool ExcessInits = false;
   for (Expr *Arg : Init->inits())
-    BuildInitializerList(SemaRef, Ctx, Arg, ArgExprs, DestTypes, ExcessInits);
+    if (!BuildInitializerList(SemaRef, Ctx, Arg, ArgExprs, DestTypes))
+      return false;
 
-  if (DestTypes.size() != ArgExprs.size() || ExcessInits) {
-    int TooManyOrFew = ExcessInits ? 1 : 0;
+  if (DestTypes.size() != ArgExprs.size()) {
+    int TooManyOrFew = ArgExprs.size() > DestTypes.size() ? 1 : 0;
     SemaRef.Diag(Init->getBeginLoc(), diag::err_hlsl_incorrect_num_initializers)
         << TooManyOrFew << InitTy << DestTypes.size() << ArgExprs.size();
     return false;
