@@ -12,8 +12,8 @@ declare void  @llvm.nvvm.prefetch.local.L2(ptr addrspace(5) %local_ptr)
 declare void  @llvm.nvvm.prefetch.L1(ptr %ptr)
 declare void  @llvm.nvvm.prefetch.L2(ptr %ptr)
 
-declare void  @llvm.nvvm.prefetch.global.L2.evict_normal(ptr addrspace(1) %global_ptr)
-declare void  @llvm.nvvm.prefetch.global.L2.evict_last(ptr addrspace(1) %global_ptr)
+declare void  @llvm.nvvm.prefetch.global.L2.evict.normal(ptr addrspace(1) %global_ptr)
+declare void  @llvm.nvvm.prefetch.global.L2.evict.last(ptr addrspace(1) %global_ptr)
 
 declare void  @llvm.nvvm.prefetchu.L1(ptr %ptr)
 
@@ -46,8 +46,8 @@ define void @prefetch_global(ptr addrspace(1) %global_ptr) {
 ; CHECK-PTX64-NEXT:    ret;
   tail call void @llvm.nvvm.prefetch.global.L1(ptr addrspace(1) %global_ptr)
   tail call void @llvm.nvvm.prefetch.global.L2(ptr addrspace(1) %global_ptr)
-  tail call void @llvm.nvvm.prefetch.global.L2.evict_normal(ptr addrspace(1) %global_ptr)
-  tail call void @llvm.nvvm.prefetch.global.L2.evict_last(ptr addrspace(1) %global_ptr)
+  tail call void @llvm.nvvm.prefetch.global.L2.evict.normal(ptr addrspace(1) %global_ptr)
+  tail call void @llvm.nvvm.prefetch.global.L2.evict.last(ptr addrspace(1) %global_ptr)
   ret void
 }
 
