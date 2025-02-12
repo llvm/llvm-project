@@ -9,7 +9,7 @@ void clang_analyzer_value(int);
 
 // Simple case: memory area with a static extent.
 
-int FiveInts[5] = {1, 2, 3, 4, 5};
+extern int FiveInts[5];
 
 void int_plus_one(int len) {
   (void)FiveInts[len + 1]; // no-warning
