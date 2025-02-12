@@ -365,17 +365,18 @@ bool RootSignatureParser::ParseParam(ParamType Ref) {
     return true;
 
   bool Error;
-  std::visit(OverloadedMethods{[&](uint32_t *X) { Error = ParseUInt(X); },
-                               [&](DescriptorRangeOffset *X) {
-                                 Error = ParseDescriptorRangeOffset(X);
-                               },
-                               [&](DescriptorRangeFlags *Flags) {
-                                 Error = ParseDescriptorRangeFlags(Flags);
-                               },
-                               [&](ShaderVisibility *Enum) {
-                                 Error = ParseShaderVisibility(Enum);
-                               },
-  }, Ref);
+  std::visit(
+      OverloadedMethods{
+          [&](uint32_t *X) { Error = ParseUInt(X); },
+          [&](DescriptorRangeOffset *X) {
+            Error = ParseDescriptorRangeOffset(X);
+          },
+          [&](DescriptorRangeFlags *Flags) {
+            Error = ParseDescriptorRangeFlags(Flags);
+          },
+          [&](ShaderVisibility *Enum) { Error = ParseShaderVisibility(Enum); },
+      },
+      Ref);
 
   return Error;
 }
