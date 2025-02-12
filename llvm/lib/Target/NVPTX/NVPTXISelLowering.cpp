@@ -851,8 +851,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
     if (getOperationAction(Op, MVT::bf16) == Promote)
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
-    if (STI.hasF32x2Instructions())
-      setOperationAction(Op, MVT::v2f32, Legal);
+    setOperationAction(Op, MVT::v2f32,
+                       STI.hasF32x2Instructions() ? Legal : Expand);
   }
 
   // On SM80, we select add/mul/sub as fma to avoid promotion to float
