@@ -150,6 +150,8 @@ static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
                         const MachineJumpTableInfo &JTI);
 static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
                        const MachineFrameInfo &MFI);
+static void convertSRPoints(ModuleSlotTracker &MST, yaml::SaveRestorePoints &YamlSRPoints,
+                            MachineBasicBlock *SaveRestorePoint);
 static void convertStackObjects(yaml::MachineFunction &YMF,
                                 const MachineFunction &MF,
                                 ModuleSlotTracker &MST, MFPrintState &State);
@@ -355,14 +357,10 @@ static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
   YamlMFI.HasTailCall = MFI.hasTailCall();
   YamlMFI.IsCalleeSavedInfoValid = MFI.isCalleeSavedInfoValid();
   YamlMFI.LocalFrameSize = MFI.getLocalFrameSize();
-  if (MFI.getSavePoint()) {
-    raw_string_ostream StrOS(YamlMFI.SavePoint.Value);
-    StrOS << printMBBReference(*MFI.getSavePoint());
-  }
-  if (MFI.getRestorePoint()) {
-    raw_string_ostream StrOS(YamlMFI.RestorePoint.Value);
-    StrOS << printMBBReference(*MFI.getRestorePoint());
-  }
+  if (MFI.getSavePoint())
+    convertSRPoints(MST, YamlMFI.SavePoints, MFI.getSavePoint());
+  if (MFI.getRestorePoint())
+    convertSRPoints(MST, YamlMFI.RestorePoints, MFI.getRestorePoint());
 }
 
 static void convertEntryValueObjects(yaml::MachineFunction &YMF,
@@ -614,6 +612,19 @@ static void convertMCP(yaml::MachineFunction &MF,
 
     MF.Constants.push_back(std::move(YamlConstant));
   }
+}
+
+static void convertSRPoints(ModuleSlotTracker &MST,
+                            yaml::SaveRestorePoints &YamlSRPoints,
+                            MachineBasicBlock *SRPoint) {
+  SmallString<16> Str;
+  yaml::SaveRestorePointEntry Entry;
+  raw_svector_ostream StrOS(Str);
+  StrOS << printMBBReference(*SRPoint);
+  Entry.Point = StrOS.str().str();
+  auto &Points =
+      std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
+  Points.push_back(Entry);
 }
 
 static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
