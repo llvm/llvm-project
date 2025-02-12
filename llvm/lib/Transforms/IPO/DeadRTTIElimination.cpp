@@ -14,6 +14,9 @@ void DeadRTTIElimIndex::run() {
   if (!ABI)
     return;
 
+  if (ExportSummary.typeIdCompatibleVtableMap().empty())
+    return;
+
   DenseSet<StringRef> TypeIdSlotMayLiveVTables;
 
   const auto &UsedTypeIds = ExportSummary.getTypeIdAccessed();
