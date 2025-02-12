@@ -32,13 +32,13 @@ end program
 ! CHECK: Visiting: {{.*}} acc.copyin {{.*}} {name = "arrayalloc", structured = false}
 ! CHECK: Pointer-like: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: Type category: array
-! CHECK: Visiting: %38 = acc.copyin varPtr(%17#0 : !fir.ref<complex<f32>>) -> !fir.ref<complex<f32>> {name = "complexvar", structured = false}
+! CHECK: Visiting: {{.*}} acc.copyin {{.*}} {name = "complexvar", structured = false}
 ! CHECK: Pointer-like: !fir.ref<complex<f32>>
 ! CHECK: Type category: scalar
 ! CHECK: Visiting: {{.*}} acc.copyin {{.*}} {name = "charvar", structured = false}
 ! CHECK: Pointer-like: !fir.ref<!fir.char<1>>
 ! CHECK: Type category: nonscalar
-! CHECK: Visiting: %41 = acc.copyin varPtr(%40 : !fir.ref<f32>) -> !fir.ref<f32> {name = "ttvar%field", structured = false}
+! CHECK: Visiting: {{.*}} acc.copyin {{.*}} {name = "ttvar%field", structured = false}
 ! CHECK: Pointer-like: !fir.ref<f32>
 ! CHECK: Type category: composite
 ! CHECK: Visiting: {{.*}} acc.copyin {{.*}} {name = "ttvar%fieldarray", structured = false}
