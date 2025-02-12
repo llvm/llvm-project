@@ -120,7 +120,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[I:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -145,7 +144,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 0, ptr [[I]], align 4
 // NORM-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -265,7 +263,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[I:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -290,7 +287,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 0, ptr [[I]], align 4
 // NORM-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -410,7 +406,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[I:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -435,7 +430,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 0, ptr [[I]], align 4
 // NORM-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -555,7 +549,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[I:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -580,7 +573,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 0, ptr [[I]], align 4
 // NORM-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -700,7 +692,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[I:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -725,7 +716,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 0, ptr [[I]], align 4
 // NORM-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -845,7 +835,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[I:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -870,7 +859,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 0, ptr [[I]], align 4
 // NORM-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -990,7 +978,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[I:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1015,7 +1002,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 0, ptr [[I]], align 4
 // NORM-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1135,7 +1121,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[I:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1160,7 +1145,6 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 0, ptr [[I]], align 4
 // NORM-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1323,7 +1307,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1346,7 +1329,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 0, ptr [[I]], align 4
 // COMP-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1459,7 +1441,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1482,7 +1463,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 0, ptr [[I]], align 4
 // COMP-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1595,7 +1575,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1618,7 +1597,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 0, ptr [[I]], align 4
 // COMP-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1731,7 +1709,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1754,7 +1731,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 0, ptr [[I]], align 4
 // COMP-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1867,7 +1843,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1890,7 +1865,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 0, ptr [[I]], align 4
 // COMP-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2003,7 +1977,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2026,7 +1999,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 0, ptr [[I]], align 4
 // COMP-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2139,7 +2111,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2164,7 +2135,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 0, ptr [[I]], align 4
 // COMP-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2284,7 +2254,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2309,7 +2278,6 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 0, ptr [[I]], align 4
 // COMP-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]

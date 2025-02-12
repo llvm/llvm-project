@@ -65,7 +65,6 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-AMD-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4, addrspace(5)
@@ -81,7 +80,6 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TMP]] to ptr
 // CHECK-AMD-NEXT:    [[DOTCAPTURE_EXPR__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_]] to ptr
 // CHECK-AMD-NEXT:    [[DOTCAPTURE_EXPR_1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_1]] to ptr
-// CHECK-AMD-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
 // CHECK-AMD-NEXT:    [[DOTOMP_COMB_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_COMB_LB]] to ptr
 // CHECK-AMD-NEXT:    [[DOTOMP_COMB_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_COMB_UB]] to ptr
 // CHECK-AMD-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
@@ -100,7 +98,6 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK-AMD-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK-AMD-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1_ASCAST]], align 4
-// CHECK-AMD-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
 // CHECK-AMD-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // CHECK-AMD-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP2]]
 // CHECK-AMD-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -177,13 +174,13 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[TMP36:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1_ASCAST]], align 4
 // CHECK-AMD-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[TMP35]], [[TMP36]]
 // CHECK-AMD-NEXT:    br i1 [[CMP9]], label [[COND_TRUE10:%.*]], label [[COND_FALSE11:%.*]]
-// CHECK-AMD:       cond.true10:
+// CHECK-AMD:       cond.true
 // CHECK-AMD-NEXT:    [[TMP37:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1_ASCAST]], align 4
 // CHECK-AMD-NEXT:    br label [[COND_END12:%.*]]
-// CHECK-AMD:       cond.false11:
+// CHECK-AMD:       cond.false
 // CHECK-AMD-NEXT:    [[TMP38:%.*]] = load i32, ptr [[DOTOMP_COMB_UB_ASCAST]], align 4
 // CHECK-AMD-NEXT:    br label [[COND_END12]]
-// CHECK-AMD:       cond.end12:
+// CHECK-AMD:       cond.end
 // CHECK-AMD-NEXT:    [[COND13:%.*]] = phi i32 [ [[TMP37]], [[COND_TRUE10]] ], [ [[TMP38]], [[COND_FALSE11]] ]
 // CHECK-AMD-NEXT:    store i32 [[COND13]], ptr [[DOTOMP_COMB_UB_ASCAST]], align 4
 // CHECK-AMD-NEXT:    [[TMP39:%.*]] = load i32, ptr [[DOTOMP_COMB_LB_ASCAST]], align 4
@@ -213,7 +210,6 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-AMD-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4, addrspace(5)
@@ -229,7 +225,6 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TMP]] to ptr
 // CHECK-AMD-NEXT:    [[DOTCAPTURE_EXPR__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_]] to ptr
 // CHECK-AMD-NEXT:    [[DOTCAPTURE_EXPR_1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_1]] to ptr
-// CHECK-AMD-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
 // CHECK-AMD-NEXT:    [[DOTOMP_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_LB]] to ptr
 // CHECK-AMD-NEXT:    [[DOTOMP_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_UB]] to ptr
 // CHECK-AMD-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
@@ -248,7 +243,6 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK-AMD-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK-AMD-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1_ASCAST]], align 4
-// CHECK-AMD-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
 // CHECK-AMD-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // CHECK-AMD-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP2]]
 // CHECK-AMD-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]

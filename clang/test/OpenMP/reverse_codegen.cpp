@@ -630,9 +630,6 @@ extern "C" void foo7() {
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_6:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_8:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_10:%.*]] = alloca i64, align 8
-// CHECK1-NEXT:    [[K:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[DOTFORWARD_IV___BEGIN3:%.*]] = alloca i64, align 8
-// CHECK1-NEXT:    [[J:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -678,9 +675,6 @@ extern "C" void foo7() {
 // CHECK1-NEXT:    [[MUL13:%.*]] = mul nsw i64 [[MUL]], 4
 // CHECK1-NEXT:    [[SUB14:%.*]] = sub nsw i64 [[MUL13]], 1
 // CHECK1-NEXT:    store i64 [[SUB14]], ptr [[DOTCAPTURE_EXPR_10]], align 8
-// CHECK1-NEXT:    store i32 7, ptr [[K]], align 4
-// CHECK1-NEXT:    store i64 0, ptr [[DOTFORWARD_IV___BEGIN3]], align 8
-// CHECK1-NEXT:    store i32 7, ptr [[J]], align 4
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_8]], align 8
 // CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i64 0, [[TMP9]]
 // CHECK1-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1294,9 +1288,6 @@ extern "C" void foo7() {
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_6:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_8:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_10:%.*]] = alloca i64, align 8
-// CHECK2-NEXT:    [[K:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    [[DOTFORWARD_IV___BEGIN3:%.*]] = alloca i64, align 8
-// CHECK2-NEXT:    [[J:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -1342,9 +1333,6 @@ extern "C" void foo7() {
 // CHECK2-NEXT:    [[MUL13:%.*]] = mul nsw i64 [[MUL]], 4
 // CHECK2-NEXT:    [[SUB14:%.*]] = sub nsw i64 [[MUL13]], 1
 // CHECK2-NEXT:    store i64 [[SUB14]], ptr [[DOTCAPTURE_EXPR_10]], align 8
-// CHECK2-NEXT:    store i32 7, ptr [[K]], align 4
-// CHECK2-NEXT:    store i64 0, ptr [[DOTFORWARD_IV___BEGIN3]], align 8
-// CHECK2-NEXT:    store i32 7, ptr [[J]], align 4
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_8]], align 8
 // CHECK2-NEXT:    [[CMP:%.*]] = icmp slt i64 0, [[TMP9]]
 // CHECK2-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]

@@ -2364,15 +2364,8 @@ static void emitPreCond(CodeGenFunction &CGF, const OMPLoopDirective &S,
                         llvm::BasicBlock *FalseBlock, uint64_t TrueCount) {
   if (!CGF.HaveInsertPoint())
     return;
-  {
-    CodeGenFunction::OMPPrivateScope PreCondScope(CGF);
-    CGF.EmitOMPPrivateLoopCounters(S, PreCondScope);
-    (void)PreCondScope.Privatize();
-    // Get initial values of real counters.
-    for (const Expr *I : S.inits()) {
-      CGF.EmitIgnoredExpr(I);
-    }
-  }
+  // The Private counters are not needed to be emitted here as these
+  // are emitted later.
   // Create temp loop control variables with their init values to support
   // non-rectangular loops.
   CodeGenFunction::OMPMapVars PreCondVars;
