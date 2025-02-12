@@ -864,7 +864,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
                        ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
-                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::FP_ROUND});
+                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::FP_ROUND,
+                       ISD::TRUNCATE});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -5858,6 +5859,49 @@ static SDValue PerformFP_ROUNDCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue PerformTRUNCATECombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  SDLoc DL(N);
+  SDValue Op = N->getOperand(0);
+  EVT FromVT = Op.getValueType();
+  EVT ResultVT = N->getValueType(0);
+
+  if (FromVT == MVT::i64 && ResultVT == MVT::i32) {
+    // i32 = truncate (i64 = bitcast (v2f32 = BUILD_VECTOR (f32 A, f32 B)))
+    // -> i32 = bitcast (f32 A)
+    if (Op.getOpcode() == ISD::BITCAST) {
+      SDValue BV = Op.getOperand(0);
+      if (BV.getOpcode() == ISD::BUILD_VECTOR &&
+          BV.getValueType() == MVT::v2f32) {
+        // get lower
+        return DCI.DAG.getNode(ISD::BITCAST, DL, ResultVT, BV.getOperand(0));
+      }
+    }
+
+    // i32 = truncate (i64 = srl
+    //                      (i64 = bitcast
+    //                             (v2f32 = BUILD_VECTOR (f32 A, f32 B))), 32)
+    // -> i32 = bitcast (f32 B)
+    if (Op.getOpcode() == ISD::SRL) {
+      if (auto *ShAmt = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+          ShAmt && ShAmt->getAsAPIntVal() == 32) {
+        SDValue Cast = Op.getOperand(0);
+        if (Cast.getOpcode() == ISD::BITCAST) {
+          SDValue BV = Cast.getOperand(0);
+          if (BV.getOpcode() == ISD::BUILD_VECTOR &&
+              BV.getValueType() == MVT::v2f32) {
+            // get upper
+            return DCI.DAG.getNode(ISD::BITCAST, DL, ResultVT,
+                                   BV.getOperand(1));
+          }
+        }
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5896,6 +5940,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return combineADDRSPACECAST(N, DCI);
     case ISD::FP_ROUND:
       return PerformFP_ROUNDCombine(N, DCI);
+    case ISD::TRUNCATE:
+      return PerformTRUNCATECombine(N, DCI);
   }
   return SDValue();
 }
