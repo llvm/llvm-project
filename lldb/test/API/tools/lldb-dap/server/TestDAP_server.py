@@ -23,6 +23,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
 
         def cleanup():
             process.terminate()
+            dap_server.dump_dap_log(log_file_path)
 
         self.addTearDownHook(cleanup)
 
@@ -47,6 +48,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         output = self.get_stdout()
         self.assertEqual(output, f"Hello {name}!\r\n")
         self.dap_server.request_disconnect()
+        self.dap_server.terminate()
 
     def test_server_port(self):
         """

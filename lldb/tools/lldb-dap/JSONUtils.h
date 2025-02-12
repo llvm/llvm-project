@@ -10,6 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
 #include "DAPForward.h"
+#include "Protocol.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFormat.h"
@@ -353,15 +354,7 @@ llvm::json::Value CreateSource(const lldb::SBLineEntry &line_entry);
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateSource(llvm::StringRef source_path);
 
-/// Create a "StackFrame" object for a LLDB frame object.
-///
-/// This function will fill in the following keys in the returned
-/// object:
-///   "id" - the stack frame ID as an integer
-///   "name" - the function name as a string
-///   "source" - source file information as a "Source" DAP object
-///   "line" - the source file line number as an integer
-///   "column" - the source file column number as an integer
+/// Returns a DAP protocol StackFrame from the given lldb frame and format.
 ///
 /// \param[in] frame
 ///     The LLDB stack frame to use when populating out the "StackFrame"
@@ -374,8 +367,7 @@ llvm::json::Value CreateSource(llvm::StringRef source_path);
 /// \return
 ///     A "StackFrame" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
-                                   lldb::SBFormat &format);
+protocol::StackFrame toStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format);
 
 /// Create a "StackFrame" label object for a LLDB thread.
 ///
@@ -497,7 +489,7 @@ struct VariableDescription {
   llvm::json::Object GetVariableExtensionsJSON();
 
   /// Returns a description of the value appropriate for the specified context.
-  std::string GetResult(llvm::StringRef context);
+  std::string GetResult(bool multiline);
 };
 
 /// Does the given variable have an associated value location?

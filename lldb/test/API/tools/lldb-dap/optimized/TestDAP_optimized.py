@@ -24,11 +24,11 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
         )
         self.continue_to_breakpoints(breakpoint_ids)
         leaf_frame = self.dap_server.get_stackFrame(frameIndex=0)
-        self.assertTrue(leaf_frame["name"].endswith(" [opt]"))
+        self.assertRegex(leaf_frame["name"], r"\[.*opt.*\]")
         parent_frame = self.dap_server.get_stackFrame(frameIndex=1)
-        self.assertTrue(parent_frame["name"].endswith(" [opt]"))
+        self.assertRegex(parent_frame["name"], r"\[.*opt.*\]")
 
-    @skipIfAsan # On ASAN builds this test intermittently fails https://github.com/llvm/llvm-project/issues/111061
+    @skipIfAsan  # On ASAN builds this test intermittently fails https://github.com/llvm/llvm-project/issues/111061
     @skipIfWindows
     def test_optimized_variable(self):
         """Test optimized variable value contains error."""

@@ -144,9 +144,17 @@ class DebugCommunication(object):
     @classmethod
     def validate_response(cls, command, response):
         if command["command"] != response["command"]:
-            raise ValueError("command mismatch in response")
+            raise ValueError(
+                "command mismatch in response, got '{}', expected '{}', response: {}".format(
+                    command["command"], response["command"], response
+                )
+            )
         if command["seq"] != response["request_seq"]:
-            raise ValueError("seq mismatch in response")
+            raise ValueError(
+                "seq mismatch in response, got '{}', expected {}, response: {}".format(
+                    command["seq"], response["request_seq"], response
+                )
+            )
 
     def get_modules(self):
         module_list = self.request_modules()["body"]["modules"]

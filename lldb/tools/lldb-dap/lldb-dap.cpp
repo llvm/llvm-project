@@ -10,6 +10,7 @@
 #include "FifoFiles.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "Protocol.h"
 #include "RunInTerminal.h"
 #include "Watchpoint.h"
 #include "lldb/API/SBDeclaration.h"
@@ -21,6 +22,7 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/Socket.h"
@@ -41,6 +43,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
@@ -101,6 +104,7 @@ using namespace lldb_dap;
 using lldb_private::NativeSocket;
 using lldb_private::Socket;
 using lldb_private::Status;
+using namespace lldb_dap::protocol;
 
 namespace {
 using namespace llvm::opt;
@@ -170,15 +174,6 @@ std::vector<const char *> MakeArgv(const llvm::ArrayRef<std::string> &strs) {
     argv.push_back(s.c_str());
   argv.push_back(nullptr);
   return argv;
-}
-
-// Send a "exited" event to indicate the process has exited.
-void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
-  llvm::json::Object event(CreateEventObject("exited"));
-  llvm::json::Object body;
-  body.try_emplace("exitCode", (int64_t)process.GetExitStatus());
-  event.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
 void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {
@@ -484,7 +479,9 @@ void EventThreadFunction(DAP &dap) {
               // Run any exit LLDB commands the user specified in the
               // launch.json
               dap.RunExitCommands();
-              SendProcessExitedEvent(dap, process);
+              protocol::ExitedEventBody body;
+              body.exitCode = process.GetExitStatus();
+              dap.onExited(std::move(body));
               dap.SendTerminatedEvent();
               done = true;
             }
@@ -675,7 +672,7 @@ bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
       break;
     }
 
-    stack_frames.emplace_back(CreateStackFrame(frame, dap.frame_format));
+    stack_frames.emplace_back(toStackFrame(frame, dap.frame_format));
   }
 
   if (dap.display_extended_backtrace && reached_end_of_stack) {
@@ -1238,7 +1235,7 @@ void request_disconnect(DAP &dap, const llvm::json::Object &request) {
   if (error.Fail())
     EmplaceSafeString(response, "error", error.GetCString());
 
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+  dap.SendJSON(std::move(response));
 }
 
 // "ExceptionInfoRequest": {
@@ -1727,18 +1724,17 @@ void request_completions(DAP &dap, const llvm::json::Object &request) {
 //      "required": [ "body" ]
 //    }]
 //  }
-void request_evaluate(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body;
-  const auto *arguments = request.getObject("arguments");
-  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
-  std::string expression = GetString(arguments, "expression").str();
-  llvm::StringRef context = GetString(arguments, "context");
+llvm::Expected<EvaluateResponseBody>
+request_evaluate(DAP &dap, const EvaluateArguments &arguments) {
+  EvaluateResponseBody body;
+  lldb::SBFrame frame;
+  if (arguments.frameId)
+    frame = dap.GetLLDBFrame(*arguments.frameId);
+  std::string expression = arguments.expression;
   bool repeat_last_command =
       expression.empty() && dap.last_nonempty_var_expression.empty();
 
-  if (context == "repl" &&
+  if (arguments.context == EvaluateArguments::Context::repl &&
       (repeat_last_command ||
        (!expression.empty() &&
         dap.DetectReplMode(frame, expression, false) == ReplMode::Command))) {
@@ -1752,10 +1748,9 @@ void request_evaluate(DAP &dap, const llvm::json::Object &request) {
     }
     auto result = RunLLDBCommandsVerbatim(dap.debugger, llvm::StringRef(),
                                           {std::string(expression)});
-    EmplaceSafeString(body, "result", result);
-    body.try_emplace("variablesReference", (int64_t)0);
+    body.result = result;
   } else {
-    if (context == "repl") {
+    if (arguments.context == EvaluateArguments::Context::repl) {
       // If the expression is empty and the last expression was for a
       // variable, set the expression to the previous expression (repeat the
       // evaluation); otherwise save the current non-empty expression for the
@@ -1775,43 +1770,45 @@ void request_evaluate(DAP &dap, const llvm::json::Object &request) {
         expression.data(), lldb::eDynamicDontRunTarget);
 
     // Freeze dry the value in case users expand it later in the debug console
-    if (value.GetError().Success() && context == "repl")
+    if (value.GetError().Success() &&
+        arguments.context == EvaluateArguments::Context::repl)
       value = value.Persist();
 
-    if (value.GetError().Fail() && context != "hover")
+    if (value.GetError().Fail() &&
+        arguments.context != EvaluateArguments::Context::hover)
       value = frame.EvaluateExpression(expression.data());
 
     if (value.GetError().Fail()) {
-      response["success"] = llvm::json::Value(false);
       // This error object must live until we're done with the pointer returned
       // by GetCString().
       lldb::SBError error = value.GetError();
       const char *error_cstr = error.GetCString();
       if (error_cstr && error_cstr[0])
-        EmplaceSafeString(response, "message", std::string(error_cstr));
-      else
-        EmplaceSafeString(response, "message", "evaluate failed");
-    } else {
-      VariableDescription desc(value, dap.enable_auto_variable_summaries);
-      EmplaceSafeString(body, "result", desc.GetResult(context));
-      EmplaceSafeString(body, "type", desc.display_type_name);
-      int64_t var_ref = 0;
-      if (value.MightHaveChildren() || ValuePointsToCode(value))
-        var_ref = dap.variables.InsertVariable(
-            value, /*is_permanent=*/context == "repl");
-      if (value.MightHaveChildren())
-        body.try_emplace("variablesReference", var_ref);
-      else
-        body.try_emplace("variablesReference", (int64_t)0);
-      if (lldb::addr_t addr = value.GetLoadAddress();
-          addr != LLDB_INVALID_ADDRESS)
-        body.try_emplace("memoryReference", EncodeMemoryReference(addr));
-      if (ValuePointsToCode(value))
-        body.try_emplace("valueLocationReference", var_ref);
+        return llvm::make_error<DAPError>(std::string(error_cstr));
+      return llvm::make_error<DAPError>("evaluate failed");
     }
+
+    VariableDescription desc(value, dap.enable_auto_variable_summaries);
+    body.result =
+        desc.GetResult(arguments.context == EvaluateArguments::Context::repl);
+    body.type = desc.display_type_name;
+    int64_t var_ref = 0;
+    if (value.MightHaveChildren() || ValuePointsToCode(value))
+      var_ref = dap.variables.InsertVariable(
+          value, /*is_permanent=*/arguments.context ==
+                     EvaluateArguments::Context::repl);
+    if (value.MightHaveChildren())
+      body.variablesReference = var_ref;
+    else
+      body.variablesReference = 0;
+    if (lldb::addr_t addr = value.GetLoadAddress();
+        addr != LLDB_INVALID_ADDRESS)
+      body.memoryReference = EncodeMemoryReference(addr);
+    if (ValuePointsToCode(value))
+      body.valueLocationReference = var_ref;
   }
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+
+  return std::move(body);
 }
 
 // "compileUnitsRequest": {
@@ -2152,6 +2149,8 @@ void request_initialize(DAP &dap, const llvm::json::Object &request) {
   body.try_emplace("supportsDataBreakpoints", true);
   // The debug adapter supports the `readMemory` request.
   body.try_emplace("supportsReadMemoryRequest", true);
+  // The debug adapter supports the `cancel` request.
+  body.try_emplace("supportsCancelRequest", true);
 
   // Put in non-DAP specification lldb specific information.
   llvm::json::Object lldb_json;
@@ -3427,12 +3426,20 @@ void request_setDataBreakpoints(DAP &dap, const llvm::json::Object &request) {
 //     "required": [ "body" ]
 //   }]
 // }
-void request_source(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body{{"content", ""}};
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+llvm::Expected<SourceResponseBody> request_source(DAP &dap,
+                                                  const SourceArguments &args) {
+  const int64_t srcRefId =
+      args.source ? *args.source->sourceReference : args.sourceReference;
+
+  lldb::SBFrame frame = dap.GetLLDBFrame(srcRefId);
+  if (!frame.IsValid()) {
+    return llvm::make_error<DAPError>("source not found");
+  }
+
+  SourceResponseBody body;
+  body.content = frame.Disassemble();
+  body.mimeType = "text/x-lldb.disassembly";
+  return std::move(body);
 }
 
 // "StackTraceRequest": {
@@ -4940,6 +4947,13 @@ void request_setInstructionBreakpoints(DAP &dap,
   dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
+llvm::Expected<CancelResponseBody> request_cancel(DAP &dap,
+                                                  const CancelArguments &args) {
+  // Ack the cancel request, cancellation is handled within the DAP protocol
+  // message queue.
+  return nullptr;
+}
+
 void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequestCallback("attach", request_attach);
   dap.RegisterRequestCallback("breakpointLocations",
@@ -4948,7 +4962,8 @@ void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequestCallback("continue", request_continue);
   dap.RegisterRequestCallback("configurationDone", request_configurationDone);
   dap.RegisterRequestCallback("disconnect", request_disconnect);
-  dap.RegisterRequestCallback("evaluate", request_evaluate);
+  dap.RegisterRequest<EvaluateArguments, EvaluateResponseBody>(
+      "evaluate", request_evaluate);
   dap.RegisterRequestCallback("exceptionInfo", request_exceptionInfo);
   dap.RegisterRequestCallback("initialize", request_initialize);
   dap.RegisterRequestCallback("launch", request_launch);
@@ -4964,7 +4979,6 @@ void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequestCallback("dataBreakpointInfo", request_dataBreakpointInfo);
   dap.RegisterRequestCallback("setDataBreakpoints", request_setDataBreakpoints);
   dap.RegisterRequestCallback("setVariable", request_setVariable);
-  dap.RegisterRequestCallback("source", request_source);
   dap.RegisterRequestCallback("stackTrace", request_stackTrace);
   dap.RegisterRequestCallback("stepIn", request_stepIn);
   dap.RegisterRequestCallback("stepInTargets", request_stepInTargets);
@@ -4976,12 +4990,20 @@ void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequestCallback("readMemory", request_readMemory);
   dap.RegisterRequestCallback("setInstructionBreakpoints",
                               request_setInstructionBreakpoints);
+  dap.RegisterRequest<SourceArguments, SourceResponseBody>("source",
+                                                           request_source);
+  dap.RegisterRequest<CancelArguments, CancelResponseBody>("cancel",
+                                                           request_cancel);
+
   // Custom requests
   dap.RegisterRequestCallback("compileUnits", request_compileUnits);
   dap.RegisterRequestCallback("modules", request_modules);
   // Testing requests
   dap.RegisterRequestCallback("_testGetTargetBreakpoints",
                               request__testGetTargetBreakpoints);
+
+  // Event handlers
+  dap.onExited = dap.RegisterEvent<protocol::ExitedEventBody>("exited");
 }
 
 } // anonymous namespace
@@ -5145,12 +5167,12 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
   });
   std::condition_variable dap_sessions_condition;
   std::mutex dap_sessions_mutex;
-  std::map<Socket *, DAP *> dap_sessions;
+  std::map<lldb_private::IOObject *, DAP *> dap_sessions;
   unsigned int clientCount = 0;
   auto handle = listener->Accept(g_loop, [=, &dap_sessions_condition,
                                           &dap_sessions_mutex, &dap_sessions,
                                           &clientCount](
-                                             std::unique_ptr<Socket> sock) {
+                                             std::unique_ptr<Socket> S) {
     std::string name = llvm::formatv("client_{0}", clientCount++).str();
     if (log) {
       auto now = std::chrono::duration<double>(
@@ -5158,19 +5180,16 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
       *log << llvm::formatv("{0:f9}", now.count()).str()
            << " client connected: " << name << "\n";
     }
+    lldb::IOObjectSP sock = std::move(S);
 
     // Move the client into a background thread to unblock accepting the next
     // client.
     std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
-                        &dap_sessions, sock = std::move(sock)]() {
+                        &dap_sessions]() {
       llvm::set_thread_name(name + ".runloop");
-      StreamDescriptor input =
-          StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
       // Close the output last for the best chance at error reporting.
-      StreamDescriptor output =
-          StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
-      DAP dap = DAP(name, program_path, log, std::move(input),
-                    std::move(output), default_repl_mode, pre_init_commands);
+      DAP dap = DAP(name, program_path, log, sock, sock, default_repl_mode,
+                    pre_init_commands);
 
       if (auto Err = dap.ConfigureIO()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -5185,7 +5204,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
         dap_sessions[sock.get()] = &dap;
       }
 
-      if (auto Err = dap.Loop()) {
+      if (auto Err = dap.Run()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                     "DAP session error: ");
       }
@@ -5390,8 +5409,10 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  StreamDescriptor input = StreamDescriptor::from_file(fileno(stdin), false);
-  StreamDescriptor output = StreamDescriptor::from_file(stdout_fd, false);
+  lldb::IOObjectSP input = std::make_shared<lldb_private::NativeFile>(
+      fileno(stdin), lldb_private::File::eOpenOptionReadOnly, true);
+  lldb::IOObjectSP output = std::make_shared<lldb_private::NativeFile>(
+      stdout_fd, lldb_private::NativeFile::eOpenOptionWriteOnly, false);
 
   DAP dap = DAP("stdin/stdout", program_path, log.get(), std::move(input),
                 std::move(output), default_repl_mode, pre_init_commands);
@@ -5409,7 +5430,7 @@ int main(int argc, char *argv[]) {
   if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
     redirection_test();
 
-  if (auto Err = dap.Loop()) {
+  if (auto Err = dap.Run()) {
     llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                 "DAP session error: ");
     return EXIT_FAILURE;

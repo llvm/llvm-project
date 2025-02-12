@@ -16,6 +16,7 @@
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
+#include "Protocol.h"
 #include "SourceBreakpoint.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
@@ -24,6 +25,7 @@
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBSymbol.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
@@ -34,11 +36,17 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
+#include <atomic>
+#include <condition_variable>
+#include <cstdint>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <thread>
 #include <vector>
 
@@ -66,17 +74,51 @@ enum DAPBroadcasterBits {
   eBroadcastBitStopProgressThread = 1u << 1
 };
 
-typedef void (*RequestCallback)(DAP &dap, const llvm::json::Object &command);
-typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
+using RequestCallback = std::function<void(DAP &, const llvm::json::Object &)>;
+using ResponseCallback = std::function<void(llvm::Expected<llvm::json::Value>)>;
 
-enum class PacketStatus {
-  Success = 0,
-  EndOfFile,
-  JSONMalformed,
-  JSONNotObject
-};
+template <typename Args, typename Body>
+using RequestHandler = std::function<llvm::Expected<Body>(DAP &, const Args &)>;
+template <typename Body>
+using ResponseHandler = std::function<void(llvm::Expected<Body>)>;
+
+/// A debug adapter initiated event.
+template <typename T> using OutgoingEvent = std::function<void(const T &)>;
+
+enum class PacketStatus { Success = 0, EndOfFile, JSONMalformed };
 
 enum class ReplMode { Variable = 0, Command, Auto };
+
+class DAPError : public llvm::ErrorInfo<DAPError> {
+public:
+  std::string Message;
+  std::optional<protocol::Message> UserMessage;
+  static char ID;
+
+  explicit DAPError(std::string Message)
+      : Message(std::move(Message)), UserMessage(std::nullopt) {}
+  DAPError(std::string Message, protocol::Message UserMessage)
+      : Message(std::move(Message)), UserMessage(std::move(UserMessage)) {}
+
+  void log(llvm::raw_ostream &OS) const override {
+    OS << "DAPError: " << Message;
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class CancelledError : public llvm::ErrorInfo<CancelledError> {
+public:
+  static char ID;
+
+  void log(llvm::raw_ostream &OS) const override { OS << "Cancalled"; }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
 
 struct Variables {
   /// Variable_reference start index of permanent expandable variable.
@@ -120,21 +162,21 @@ struct Variables {
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit StartDebuggingRequestHandler(DAP &d) : dap(d) {};
+  explicit StartDebuggingRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit ReplModeRequestHandler(DAP &d) : dap(d) {};
+  explicit ReplModeRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit SendEventRequestHandler(DAP &d) : dap(d) {};
+  explicit SendEventRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
@@ -172,7 +214,7 @@ struct DAP {
   // arguments if we get a RestartRequest.
   std::optional<llvm::json::Object> last_launch_or_attach_request;
   lldb::tid_t focus_tid;
-  bool disconnecting = false;
+  std::atomic<bool> disconnecting = false;
   llvm::once_flag terminated_event_flag;
   bool stop_at_entry;
   bool is_attach;
@@ -184,7 +226,11 @@ struct DAP {
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
-  std::map<std::string, RequestCallback, std::less<>> request_handlers;
+
+  using RequestWrapper =
+      std::function<void(DAP &dap, const protocol::Request &)>;
+  llvm::StringMap<RequestWrapper> request_handlers;
+
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -204,9 +250,15 @@ struct DAP {
   // empty; if the previous expression was a variable expression, this string
   // will contain that expression.
   std::string last_nonempty_var_expression;
+  std::set<lldb::SBSymbol> source_references;
+
+  /// MARK: Event Handlers
+
+  /// onExited indicates that the debuggee has exited and returns its exit code.
+  OutgoingEvent<protocol::ExitedEventBody> onExited;
 
   DAP(std::string name, llvm::StringRef path, std::ofstream *log,
-      StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+      lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
       std::vector<std::string> pre_init_commands);
   ~DAP();
   DAP(const DAP &rhs) = delete;
@@ -245,6 +297,8 @@ struct DAP {
   lldb::SBThread GetLLDBThread(const llvm::json::Object &arguments);
 
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
+
+  lldb::SBFrame GetLLDBFrame(const uint64_t frame_id);
 
   llvm::json::Value CreateTopLevelScopes();
 
@@ -302,10 +356,14 @@ struct DAP {
   /// listeing for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
-  const std::map<std::string, RequestCallback> &GetRequestHandlers();
+  /// Get the next protocol message from the client. The value may represent a
+  /// request, response or event.
+  ///
+  /// If the connection is closed then nullopt is returned.
+  std::optional<protocol::ProtocolMessage> GetNextProtocolMessage();
 
-  PacketStatus GetNextObject(llvm::json::Object &object);
-  bool HandleObject(const llvm::json::Object &object);
+  /// Handle the next protocol message.
+  bool HandleObject(const protocol::ProtocolMessage &);
 
   /// Disconnect the DAP session.
   lldb::SBError Disconnect();
@@ -316,7 +374,9 @@ struct DAP {
   /// Send a "terminated" event to indicate the process is done being debugged.
   void SendTerminatedEvent();
 
-  llvm::Error Loop();
+  /// Runs the debug session until either disconnected or an unrecoverable error
+  /// is encountered.
+  llvm::Error Run();
 
   /// Send a Debug Adapter Protocol reverse request to the IDE.
   ///
@@ -333,14 +393,32 @@ struct DAP {
 
   /// Registers a callback handler for a Debug Adapter Protocol request
   ///
-  /// \param[in] request
+  /// \param[in] command
   ///     The name of the request following the Debug Adapter Protocol
   ///     specification.
   ///
   /// \param[in] callback
   ///     The callback to execute when the given request is triggered by the
   ///     IDE.
-  void RegisterRequestCallback(std::string request, RequestCallback callback);
+  void RegisterRequestCallback(llvm::StringLiteral command,
+                               RequestCallback callback);
+
+  /// Register a request handler for a Debug Adapter Protocol request.
+  ///
+  /// \param[in] command
+  ///     The name of the request following the Debug Adapter Protocol
+  ///     specification.
+  ///
+  /// \param[in] callback
+  ///     The callback to execute when the given request is triggered by the
+  ///     IDE.
+  template <typename Args, typename Body>
+  void RegisterRequest(llvm::StringLiteral command,
+                       RequestHandler<Args, Body> handler);
+
+  /// Registeres an event handler for sending Debug Adapter Protocol events.
+  template <typename Body>
+  OutgoingEvent<Body> RegisterEvent(llvm::StringLiteral Event);
 
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }
@@ -375,11 +453,130 @@ struct DAP {
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
 
 private:
+  std::condition_variable messages_cv;
+  std::mutex messages_mutex;
+  std::atomic<int64_t> active_request_seq;
+  std::deque<protocol::ProtocolMessage> messages;
+
   // Send the JSON in "json_str" to the "out" stream. Correctly send the
   // "Content-Length:" field followed by the length, followed by the raw
   // JSON bytes.
   void SendJSON(const std::string &json_str);
+
+  template <typename T>
+  static llvm::Expected<T> parse(const llvm::json::Value &Raw,
+                                 llvm::StringRef PayloadName);
+
+  class ReplyOnce {
+    std::atomic<bool> replied = false;
+    int seq;
+    std::string command;
+    DAP *dap;
+
+  public:
+    ReplyOnce(int seq, std::string command, DAP *dap)
+        : seq(seq), command(command), dap(dap) {}
+    ReplyOnce(ReplyOnce &&other)
+        : replied(other.replied.load()), seq(other.seq), command(other.command),
+          dap(other.dap) {
+      other.dap = nullptr;
+    }
+    ReplyOnce &operator=(ReplyOnce &&) = delete;
+    ReplyOnce(const ReplyOnce &) = delete;
+    ReplyOnce &operator=(const ReplyOnce &) = delete;
+    ~ReplyOnce() {
+      if (dap && !dap->disconnecting && !replied) {
+        assert(false && "must reply to all requests");
+        (*this)(llvm::make_error<DAPError>("server failed to reply"));
+      }
+    }
+
+    void operator()(llvm::Expected<llvm::json::Value> maybeResponseBody) {
+      if (replied.exchange(true)) {
+        assert(false && "must reply to each call only once!");
+        return;
+      }
+
+      protocol::Response Resp;
+      Resp.request_seq = seq;
+      Resp.command = command;
+
+      if (auto Err = maybeResponseBody.takeError()) {
+        Resp.success = false;
+
+        auto newErr = handleErrors(
+            std::move(Err),
+            [&](const DAPError &dapErr) {
+              if (dapErr.UserMessage) {
+                protocol::ErrorResponseBody ERB;
+                ERB.error = *dapErr.UserMessage;
+                Resp.rawBody = std::move(ERB);
+              }
+              Resp.message = dapErr.Message;
+            },
+            [&](const CancelledError &cancelledErr) {
+              Resp.success = false;
+              Resp.message = "cancelled";
+            });
+        if (newErr)
+          Resp.message = llvm::toString(std::move(newErr));
+      } else {
+        // Check if the request was interrupted and mark the response as
+        // cancelled.
+        if (dap->debugger.InterruptRequested()) {
+          Resp.success = false;
+          Resp.message = "cancelled";
+        } else
+          Resp.success = true;
+        // Skip encoding a null body.
+        if (*maybeResponseBody != llvm::json::Value(nullptr))
+          Resp.rawBody = *maybeResponseBody;
+      }
+
+      dap->SendJSON(Resp);
+    }
+  };
 };
+
+template <typename T>
+llvm::Expected<T> DAP::parse(const llvm::json::Value &Raw,
+                             llvm::StringRef PayloadName) {
+  T Result;
+  llvm::json::Path::Root Root;
+  if (!fromJSON(Raw, Result, Root)) {
+    std::string Context;
+    llvm::raw_string_ostream OS(Context);
+    Root.printErrorContext(Raw, OS);
+    return llvm::make_error<DAPError>(
+        llvm::formatv("failed to decode {0}: {1}", PayloadName,
+                      llvm::fmt_consume(Root.getError())));
+  }
+  return std::move(Result);
+}
+
+template <typename Args, typename Body>
+void DAP::RegisterRequest(llvm::StringLiteral command,
+                          RequestHandler<Args, Body> handler) {
+  request_handlers[command] = [command, handler](DAP &dap,
+                                                 const protocol::Request &req) {
+    ReplyOnce reply(req.seq, req.command, &dap);
+    auto parsedArgs = DAP::parse<Args>(req.rawArguments, command);
+    if (!parsedArgs)
+      return reply(parsedArgs.takeError());
+    llvm::Expected<Body> response = handler(dap, *parsedArgs);
+    reply(std::move(response));
+  };
+}
+
+template <typename Body>
+OutgoingEvent<Body> DAP::RegisterEvent(llvm::StringLiteral Event) {
+  return [&, Event](const Body &B) {
+    protocol::Event Evt;
+    Evt.event = Event;
+    Evt.rawBody = B;
+    SendJSON(std::move(Evt));
+  };
+}
 
 } // namespace lldb_dap
 

@@ -9,45 +9,17 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_IOSTREAM_H
 #define LLDB_TOOLS_LLDB_DAP_IOSTREAM_H
 
-#if defined(_WIN32)
-#include "lldb/Host/windows/windows.h"
-#include <winsock2.h>
-#else
-typedef int SOCKET;
-#endif
-
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
-
 #include <fstream>
 #include <string>
 
-// Windows requires different system calls for dealing with sockets and other
-// types of files, so we can't simply have one code path that just uses read
-// and write everywhere.  So we need an abstraction in order to allow us to
-// treat them identically.
 namespace lldb_dap {
-struct StreamDescriptor {
-  StreamDescriptor();
-  ~StreamDescriptor();
-  StreamDescriptor(StreamDescriptor &&other);
-
-  StreamDescriptor &operator=(StreamDescriptor &&other);
-
-  static StreamDescriptor from_socket(SOCKET s, bool close);
-  static StreamDescriptor from_file(int fd, bool close);
-
-  bool m_is_socket = false;
-  bool m_close = false;
-  union {
-    int m_fd;
-    SOCKET m_socket;
-  };
-};
 
 struct InputStream {
-  StreamDescriptor descriptor;
+  lldb::IOObjectSP descriptor;
 
-  explicit InputStream(StreamDescriptor descriptor)
+  explicit InputStream(lldb::IOObjectSP descriptor)
       : descriptor(std::move(descriptor)) {}
 
   bool read_full(std::ofstream *log, size_t length, std::string &text);
@@ -58,9 +30,9 @@ struct InputStream {
 };
 
 struct OutputStream {
-  StreamDescriptor descriptor;
+  lldb::IOObjectSP descriptor;
 
-  explicit OutputStream(StreamDescriptor descriptor)
+  explicit OutputStream(lldb::IOObjectSP descriptor)
       : descriptor(std::move(descriptor)) {}
 
   bool write_full(llvm::StringRef str);

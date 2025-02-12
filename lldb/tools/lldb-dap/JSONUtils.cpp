@@ -12,14 +12,18 @@
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
+#include "Protocol.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBFormat.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBFunction.h"
+#include "lldb/API/SBInstruction.h"
+#include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBQueue.h"
@@ -45,7 +49,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
-#include <climits>
 #include <cstddef>
 #include <iomanip>
 #include <optional>
@@ -698,134 +701,114 @@ llvm::json::Value CreateSource(llvm::StringRef source_path) {
   return llvm::json::Value(std::move(source));
 }
 
-static std::optional<llvm::json::Value> CreateSource(lldb::SBFrame &frame) {
-  auto line_entry = frame.GetLineEntry();
-  // A line entry of 0 indicates the line is compiler generated i.e. no source
-  // file is associated with the frame.
-  if (line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0)
-    return CreateSource(line_entry);
-
-  return {};
-}
-
-// "StackFrame": {
-//   "type": "object",
-//   "description": "A Stackframe contains the source location.",
-//   "properties": {
-//     "id": {
-//       "type": "integer",
-//       "description": "An identifier for the stack frame. It must be unique
-//                       across all threads. This id can be used to retrieve
-//                       the scopes of the frame with the 'scopesRequest' or
-//                       to restart the execution of a stackframe."
-//     },
-//     "name": {
-//       "type": "string",
-//       "description": "The name of the stack frame, typically a method name."
-//     },
-//     "source": {
-//       "$ref": "#/definitions/Source",
-//       "description": "The optional source of the frame."
-//     },
-//     "line": {
-//       "type": "integer",
-//       "description": "The line within the file of the frame. If source is
-//                       null or doesn't exist, line is 0 and must be ignored."
-//     },
-//     "column": {
-//       "type": "integer",
-//       "description": "The column within the line. If source is null or
-//                       doesn't exist, column is 0 and must be ignored."
-//     },
-//     "endLine": {
-//       "type": "integer",
-//       "description": "An optional end line of the range covered by the
-//                       stack frame."
-//     },
-//     "endColumn": {
-//       "type": "integer",
-//       "description": "An optional end column of the range covered by the
-//                       stack frame."
-//     },
-//     "instructionPointerReference": {
-// 	     "type": "string",
-// 	     "description": "A memory reference for the current instruction
-//                         pointer in this frame."
-//     },
-//     "moduleId": {
-//       "type": ["integer", "string"],
-//       "description": "The module associated with this frame, if any."
-//     },
-//     "presentationHint": {
-//       "type": "string",
-//       "enum": [ "normal", "label", "subtle" ],
-//       "description": "An optional hint for how to present this frame in
-//                       the UI. A value of 'label' can be used to indicate
-//                       that the frame is an artificial frame that is used
-//                       as a visual label or separator. A value of 'subtle'
-//                       can be used to change the appearance of a frame in
-//                       a 'subtle' way."
-//     }
-//   },
-//   "required": [ "id", "name", "line", "column" ]
-// }
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
-                                   lldb::SBFormat &format) {
-  llvm::json::Object object;
-  int64_t frame_id = MakeDAPFrameID(frame);
-  object.try_emplace("id", frame_id);
-
-  std::string frame_name;
+static std::string GetFormattedFrameName(lldb::SBFrame &frame,
+                                         lldb::SBFormat &format) {
   lldb::SBStream stream;
   if (format && frame.GetDescriptionWithFormat(format, stream).Success()) {
-    frame_name = stream.GetData();
-
-    // `function_name` can be a nullptr, which throws an error when assigned to
-    // an `std::string`.
-  } else if (const char *name = frame.GetDisplayFunctionName()) {
-    frame_name = name;
+    return stream.GetData();
   }
 
-  if (frame_name.empty()) {
-    // If the function name is unavailable, display the pc address as a 16-digit
-    // hex string, e.g. "0x0000000000012345"
-    llvm::raw_string_ostream os(frame_name);
-    os << llvm::format_hex(frame.GetPC(), 18);
+  std::string name;
+  // `function_name` can be a nullptr, which throws an error when assigned to
+  // an `std::string`.
+  const char *display_name = frame.GetDisplayFunctionName();
+  if (display_name)
+    name = display_name;
+  const char *function_name = frame.GetFunctionName();
+  if (name.empty() && function_name)
+    name = function_name;
+  if (name.empty() && frame.GetLineEntry().IsValid() &&
+      frame.GetLineEntry().GetLine() == 0)
+    name = "<compiler-generated>";
+  if (name.empty())
+    // If the function name is unavailable, display the pc address as a 16 -
+    // digit hex string, e.g. "0x0000000000012345"
+    name = "0x" + llvm::utohexstr(frame.GetPC(), false, 15);
+
+  std::vector<std::string> tags;
+  // Inlined functions may have their local variables merged with their
+  // caller.
+  if (frame.IsInlined())
+    tags.push_back("inlined");
+  // Artififical frames may be synthesized by the compiler and may not have
+  // local variables.
+  if (frame.IsArtificial())
+    tags.push_back("artificial");
+  // Optimized frames may not have full debug information for all local
+  // variables since some may have been removed by the optimizer.
+  if (frame.GetFunction().GetIsOptimized())
+    tags.push_back("opt");
+
+  // Add any tags to help the user understand more information about the
+  // frame.
+  if (!tags.empty())
+    name += " [" + llvm::join(tags, ",") + "]";
+
+  return name;
+}
+
+static lldb_dap::protocol::Source toSource(lldb::SBFrame &frame,
+                                           lldb::SBFormat &format) {
+  lldb_dap::protocol::Source source;
+  auto line_entry = frame.GetLineEntry();
+  auto file = line_entry.GetFileSpec();
+  // A line entry of 0 indicates the line is compiler generated i.e. no source
+  // file is associated with the frame.
+  if (file.IsValid() && line_entry.GetLine() != 0) {
+    char path[PATH_MAX];
+    file.GetPath(path, sizeof(path));
+    source.path = path;
+    source.name = llvm::sys::path::filename(path);
+  } else {
+    source.name = GetFormattedFrameName(frame, format);
+
+    // If we don't have a source file then this frame is probably from a
+    // system library. Lets deemphasize the stack frame in the UI so the user
+    // can more easily find the stack frames from their code.
+    source.presentationHint = protocol::Source::PresentationHint::deemphasize;
+    source.sourceReference = MakeDAPFrameID(frame);
   }
 
-  // We only include `[opt]` if a custom frame format is not specified.
-  if (!format && frame.GetFunction().GetIsOptimized())
-    frame_name += " [opt]";
+  return source;
+}
 
-  EmplaceSafeString(object, "name", frame_name);
+protocol::StackFrame toStackFrame(lldb::SBFrame &frame,
+                                  lldb::SBFormat &format) {
+  lldb_dap::protocol::StackFrame sf;
+  sf.id = MakeDAPFrameID(frame);
+  sf.name = GetFormattedFrameName(frame, format);
+  sf.source = toSource(frame, format);
 
-  auto source = CreateSource(frame);
-
-  if (source) {
-    object.try_emplace("source", *source);
-    auto line_entry = frame.GetLineEntry();
+  auto line_entry = frame.GetLineEntry();
+  if (line_entry.IsValid() && line_entry.GetLine() != 0) {
     auto line = line_entry.GetLine();
     if (line && line != LLDB_INVALID_LINE_NUMBER)
-      object.try_emplace("line", line);
-    else
-      object.try_emplace("line", 0);
+      sf.line = line;
     auto column = line_entry.GetColumn();
-    object.try_emplace("column", column);
+    if (column != LLDB_INVALID_COLUMN_NUMBER)
+      sf.column = column;
   } else {
-    object.try_emplace("line", 0);
-    object.try_emplace("column", 0);
+    lldb::SBInstructionList insts = frame.GetSymbol().GetInstructions(
+        frame.GetThread().GetProcess().GetTarget());
+    for (size_t idx = 0; idx <= insts.GetSize(); idx++) {
+      lldb::SBInstruction inst = insts.GetInstructionAtIndex(idx);
+      if (inst.GetAddress() == frame.GetPCAddress()) {
+        // lines are base-1 indexed and the first line of the disassembly is
+        // the symbol name.
+        sf.line = idx + 2;
+        break;
+      }
+    }
   }
 
   const auto pc = frame.GetPC();
-  if (pc != LLDB_INVALID_ADDRESS) {
-    std::string formatted_addr = "0x" + llvm::utohexstr(pc);
-    object.try_emplace("instructionPointerReference", formatted_addr);
-  }
+  if (pc != LLDB_INVALID_ADDRESS)
+    sf.instructionPointerReference = EncodeMemoryReference(pc);
 
   if (frame.IsArtificial() || frame.IsHidden())
-    object.try_emplace("presentationHint", "subtle");
+    sf.presentationHint = protocol::StackFrame::PresentationHint::subtle;
 
-  return llvm::json::Value(std::move(object));
+  return sf;
 }
 
 llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
@@ -905,10 +888,10 @@ llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
 //   "allOf": [ { "$ref": "#/definitions/Event" }, {
 //     "type": "object",
 //     "description": "Event message for 'stopped' event type. The event
-//                     indicates that the execution of the debuggee has stopped
-//                     due to some condition. This can be caused by a break
-//                     point previously set, a stepping action has completed,
-//                     by executing a debugger statement etc.",
+//                     indicates that the execution of the debuggee has
+//                     stopped due to some condition. This can be caused by a
+//                     break point previously set, a stepping action has
+//                     completed, by executing a debugger statement etc.",
 //     "properties": {
 //       "event": {
 //         "type": "string",
@@ -923,7 +906,8 @@ llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
 //                             compatibility this string is shown in the UI if
 //                             the 'description' attribute is missing (but it
 //                             must not be translated).",
-//             "_enum": [ "step", "breakpoint", "exception", "pause", "entry" ]
+//             "_enum": [ "step", "breakpoint", "exception", "pause", "entry"
+//             ]
 //           },
 //           "description": {
 //             "type": "string",
@@ -1025,8 +1009,8 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
   const lldb::tid_t tid = thread.GetThreadID();
   body.try_emplace("threadId", (int64_t)tid);
   // If no description has been set, then set it to the default thread stopped
-  // description. If we have breakpoints that get hit and shouldn't be reported
-  // as breakpoints, then they will set the description above.
+  // description. If we have breakpoints that get hit and shouldn't be
+  // reported as breakpoints, then they will set the description above.
   if (!ObjectContainsKey(body, "description")) {
     char description[1024];
     if (thread.GetStopDescription(description, sizeof(description))) {
@@ -1159,10 +1143,10 @@ llvm::json::Object VariableDescription::GetVariableExtensionsJSON() {
   return extensions;
 }
 
-std::string VariableDescription::GetResult(llvm::StringRef context) {
+std::string VariableDescription::GetResult(bool multiline) {
   // In repl context, the results can be displayed as multiple lines so more
   // detailed descriptions can be returned.
-  if (context != "repl")
+  if (!multiline)
     return display_value;
 
   if (!v.IsValid())
@@ -1227,7 +1211,8 @@ std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
 //     },
 //     "presentationHint": {
 //       "$ref": "#/definitions/VariablePresentationHint",
-//       "description": "Properties of a variable that can be used to determine
+//       "description": "Properties of a variable that can be used to
+//       determine
 //                       how to render the variable in the UI."
 //     },
 //     "evaluateName": {
@@ -1259,20 +1244,21 @@ std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
 //        "description": "A memory reference associated with this variable.
 //                        For pointer type variables, this is generally a
 //                        reference to the memory address contained in the
-//                        pointer. For executable data, this reference may later
-//                        be used in a `disassemble` request. This attribute may
-//                        be returned by a debug adapter if corresponding
-//                        capability `supportsMemoryReferences` is true."
+//                        pointer. For executable data, this reference may
+//                        later be used in a `disassemble` request. This
+//                        attribute may be returned by a debug adapter if
+//                        corresponding capability `supportsMemoryReferences`
+//                        is true."
 //     },
 //     "declarationLocationReference": {
 //       "type": "integer",
 //       "description": "A reference that allows the client to request the
-//                       location where the variable is declared. This should be
-//                       present only if the adapter is likely to be able to
-//                       resolve the location.\n\nThis reference shares the same
-//                       lifetime as the `variablesReference`. See 'Lifetime of
-//                       Object References' in the Overview section for
-//                       details."
+//                       location where the variable is declared. This should
+//                       be present only if the adapter is likely to be able
+//                       to resolve the location.\n\nThis reference shares the
+//                       same lifetime as the `variablesReference`. See
+//                       'Lifetime of Object References' in the Overview
+//                       section for details."
 //     },
 //     "valueLocationReference": {
 //       "type": "integer",
@@ -1309,7 +1295,8 @@ std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
 //             },
 //             "column": {
 //               "type": "number",
-//               "description": "The 1-indexed source column where the variable
+//               "description": "The 1-indexed source column where the
+//               variable
 //                               was declared."
 //             }
 //           }
@@ -1317,10 +1304,10 @@ std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
 //         "value": {
 //           "type": "string",
 //           "description": "The internal value of the variable as returned by
-//                            This is effectively SBValue.GetValue(). The other
-//                            `value` entry in the top-level variable response
-//                            is, on the other hand, just a display string for
-//                            the variable."
+//                            This is effectively SBValue.GetValue(). The
+//                            other `value` entry in the top-level variable
+//                            response is, on the other hand, just a display
+//                            string for the variable."
 //         },
 //         "summary": {
 //           "type": "string",
@@ -1334,7 +1321,8 @@ std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
 //         },
 //         "error": {
 //           "type": "string",
-//           "description": "An error message generated if LLDB couldn't inspect
+//           "description": "An error message generated if LLDB couldn't
+//           inspect
 //                           the variable."
 //         }
 //       }
@@ -1361,10 +1349,10 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t var_ref,
   // request can be broken up in grabbing only a few children at a time. We
   // want to be careful and only call "v.GetNumChildren()" if we have an array
   // type or if we have a synthetic child provider producing indexed children.
-  // We don't want to call "v.GetNumChildren()" on all objects as class, struct
-  // and union types don't need to be completed if they are never expanded. So
-  // we want to avoid calling this to only cases where we it makes sense to keep
-  // performance high during normal debugging.
+  // We don't want to call "v.GetNumChildren()" on all objects as class,
+  // struct and union types don't need to be completed if they are never
+  // expanded. So we want to avoid calling this to only cases where we it
+  // makes sense to keep performance high during normal debugging.
 
   // If we have an array type, say that it is indexed and provide the number
   // of children in case we have a huge array. If we don't do this, then we
@@ -1373,9 +1361,9 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t var_ref,
   if (desc.type_obj.IsArrayType()) {
     object.try_emplace("indexedVariables", v.GetNumChildren());
   } else if (v.IsSynthetic()) {
-    // For a type with a synthetic child provider, the SBType of "v" won't tell
-    // us anything about what might be displayed. Instead, we check if the first
-    // child's name is "[0]" and then say it is indexed. We call
+    // For a type with a synthetic child provider, the SBType of "v" won't
+    // tell us anything about what might be displayed. Instead, we check if
+    // the first child's name is "[0]" and then say it is indexed. We call
     // GetNumChildren() only if the child name matches to avoid a potentially
     // expensive operation.
     if (lldb::SBValue first_child = v.GetChildAtIndex(0)) {
@@ -1392,8 +1380,8 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t var_ref,
   }
   EmplaceSafeString(object, "type", desc.display_type_name);
 
-  // A unique variable identifier to help in properly identifying variables with
-  // the same name. This is an extension to the VS protocol.
+  // A unique variable identifier to help in properly identifying variables
+  // with the same name. This is an extension to the VS protocol.
   object.try_emplace("id", var_ref);
 
   if (v.MightHaveChildren())

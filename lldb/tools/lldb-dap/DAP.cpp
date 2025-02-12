@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "IOStream.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
+#include "Protocol.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
@@ -17,24 +19,31 @@
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <condition_variable>
 #include <cstdarg>
 #include <cstdio>
+#include <deque>
 #include <fstream>
 #include <mutex>
+#include <optional>
 #include <utility>
 
 #if defined(_WIN32)
@@ -47,19 +56,21 @@
 #endif
 
 using namespace lldb_dap;
+using namespace lldb_dap::protocol;
 
-namespace {
 #ifdef _WIN32
-const char DEV_NULL[] = "nul";
+static const char DEV_NULL[] = "nul";
 #else
-const char DEV_NULL[] = "/dev/null";
+static const char DEV_NULL[] = "/dev/null";
 #endif
-} // namespace
 
 namespace lldb_dap {
 
+char DAPError::ID;
+char CancelledError::ID;
+
 DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
-         StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+         lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
          std::vector<std::string> pre_init_commands)
     : name(std::move(name)), debug_adaptor_path(path), log(log),
       input(std::move(input)), output(std::move(output)),
@@ -224,6 +235,8 @@ llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
 }
 
 void DAP::StopIO() {
+  if (input.descriptor)
+    input.descriptor->Close();
   out.Stop();
   err.Stop();
 
@@ -288,13 +301,6 @@ std::string DAP::ReadJSON() {
   if (!input.read_full(log, length, json_str))
     return json_str;
 
-  if (log) {
-    auto now = std::chrono::duration<double>(
-        std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} {1} --> ", now.count(), name).str()
-         << std::endl
-         << "Content-Length: " << length << "\r\n\r\n";
-  }
   return json_str;
 }
 
@@ -532,6 +538,10 @@ lldb::SBThread DAP::GetLLDBThread(const llvm::json::Object &arguments) {
 
 lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
   const uint64_t frame_id = GetUnsigned(arguments, "frameId", UINT64_MAX);
+  return GetLLDBFrame(frame_id);
+}
+
+lldb::SBFrame DAP::GetLLDBFrame(const uint64_t frame_id) {
   lldb::SBProcess process = target.GetProcess();
   // Upper 32 bits is the thread index ID
   lldb::SBThread thread =
@@ -720,64 +730,78 @@ void DAP::SetTarget(const lldb::SBTarget target) {
   }
 }
 
-PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
+std::optional<protocol::ProtocolMessage> DAP::GetNextProtocolMessage() {
   std::string json = ReadJSON();
   if (json.empty())
-    return PacketStatus::EndOfFile;
+    return std::nullopt;
 
-  llvm::StringRef json_sref(json);
-  llvm::Expected<llvm::json::Value> json_value = llvm::json::parse(json_sref);
-  if (!json_value) {
-    auto error = json_value.takeError();
+  llvm::Expected<llvm::json::Value> value = llvm::json::parse(json);
+  if (!value) {
     if (log) {
-      std::string error_str;
-      llvm::raw_string_ostream strm(error_str);
-      strm << error;
-      *log << "error: failed to parse JSON: " << error_str << std::endl
-           << json << std::endl;
+      auto now = std::chrono::duration<double>(
+          std::chrono::system_clock::now().time_since_epoch());
+      *log << llvm::formatv("{0:f9} {1} -->", now.count(), name).str()
+           << "\nContent-Length: " << json.length() << "\r\n\r\n"
+           << json
+           << "\nfailed to parse json: " << llvm::toString(value.takeError())
+           << "\n";
+    } else {
+      llvm::consumeError(value.takeError());
     }
-    return PacketStatus::JSONMalformed;
+    return std::nullopt;
   }
 
   if (log) {
-    *log << llvm::formatv("{0:2}", *json_value).str() << std::endl;
+    auto now = std::chrono::duration<double>(
+        std::chrono::system_clock::now().time_since_epoch());
+    *log << llvm::formatv("{0:f9} {1} -->", now.count(), name).str()
+         << "\nContent-Length: " << json.length() << "\r\n\r\n"
+         << llvm::formatv("{0:2}", *value).str() << "\n";
   }
 
-  llvm::json::Object *object_ptr = json_value->getAsObject();
-  if (!object_ptr) {
-    if (log)
-      *log << "error: json packet isn't a object" << std::endl;
-    return PacketStatus::JSONNotObject;
+  protocol::ProtocolMessage message;
+  llvm::json::Path::Root root;
+  if (fromJSON(*value, message, root))
+    return std::move(message);
+
+  if (log) {
+    std::string error;
+    llvm::raw_string_ostream ss(error);
+    root.printErrorContext(*value, ss);
+    *log << "Failed to parse protocol message: " << error << "\n";
   }
-  object = *object_ptr;
-  return PacketStatus::Success;
+
+  return std::nullopt;
 }
 
-bool DAP::HandleObject(const llvm::json::Object &object) {
-  const auto packet_type = GetString(object, "type");
-  if (packet_type == "request") {
-    const auto command = GetString(object, "command");
-    auto handler_pos = request_handlers.find(command);
+bool DAP::HandleObject(const protocol::ProtocolMessage &message) {
+  if (const protocol::Request *req = std::get_if<protocol::Request>(&message)) {
+    auto handler_pos = request_handlers.find(req->command);
     if (handler_pos == request_handlers.end()) {
       if (log)
-        *log << "error: unhandled command \"" << command.data() << "\""
-             << std::endl;
+        *log << "error: unhandled command \"" << req->command << "\""
+             << "\n";
       return false; // Fail
     }
 
-    handler_pos->second(*this, object);
+    handler_pos->second(*this, *req);
+
+    // Clear cancellation marker.
+    if (debugger.InterruptRequested())
+      debugger.CancelInterruptRequest();
+
     return true; // Success
   }
 
-  if (packet_type == "response") {
-    auto id = GetSigned(object, "request_seq", 0);
+  if (const protocol::Response *resp =
+          std::get_if<protocol::Response>(&message)) {
     ResponseCallback response_handler = [](llvm::Expected<llvm::json::Value>) {
       llvm::errs() << "Unhandled response\n";
     };
 
     {
-      std::lock_guard<std::mutex> locker(call_mutex);
-      auto inflight = inflight_reverse_requests.find(id);
+      std::lock_guard locker(call_mutex);
+      auto inflight = inflight_reverse_requests.find(resp->request_seq);
       if (inflight != inflight_reverse_requests.end()) {
         response_handler = std::move(inflight->second);
         inflight_reverse_requests.erase(inflight);
@@ -785,17 +809,11 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
     }
 
     // Result should be given, use null if not.
-    if (GetBoolean(object, "success", false)) {
-      llvm::json::Value Result = nullptr;
-      if (auto *B = object.get("body")) {
-        Result = std::move(*B);
-      }
-      response_handler(Result);
+    if (resp->success) {
+      response_handler(resp->rawBody);
     } else {
-      llvm::StringRef message = GetString(object, "message");
-      if (message.empty()) {
-        message = "Unknown error, response failed";
-      }
+      std::string message =
+          resp->message.value_or("Unknown error, response failed");
       response_handler(llvm::createStringError(
           std::error_code(-1, std::generic_category()), message));
     }
@@ -812,7 +830,7 @@ void DAP::SendTerminatedEvent() {
     RunTerminateCommands();
     // Send a "terminated" event
     llvm::json::Object event(CreateTerminatedEventObject(target));
-    SendJSON(llvm::json::Value(std::move(event)));
+    SendJSON(std::move(event));
   });
 }
 
@@ -845,30 +863,106 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
   SendTerminatedEvent();
 
   disconnecting = true;
+  messages_cv.notify_one();
 
   return error;
 }
 
-llvm::Error DAP::Loop() {
-  auto stop_io = llvm::make_scope_exit([this]() { StopIO(); });
-  while (!disconnecting) {
-    llvm::json::Object object;
-    lldb_dap::PacketStatus status = GetNextObject(object);
+template <typename T>
+static std::optional<T>
+getArgumentsIfRequest(const protocol::ProtocolMessage &pm,
+                      llvm::StringLiteral command) {
+  auto *const req = std::get_if<protocol::Request>(&pm);
+  if (!req || req->command != command)
+    return std::nullopt;
 
-    if (status == lldb_dap::PacketStatus::EndOfFile) {
-      break;
-    }
-
-    if (status != lldb_dap::PacketStatus::Success) {
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "failed to send packet");
-    }
-
-    if (!HandleObject(object)) {
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "unhandled packet");
-    }
+  T args;
+  llvm::json::Path::Root root;
+  if (!fromJSON(req->rawArguments, args, root)) {
+    return std::nullopt;
   }
+
+  return std::move(args);
+}
+
+llvm::Error DAP::Run() {
+  std::thread reader([&]() {
+    while (!disconnecting) {
+      auto next = GetNextProtocolMessage();
+      if (!next) {
+        // Set disconnecting in case we got an EOF without getting a disconnect
+        // request otherwise the message_cv may block forever.
+        disconnecting = true;
+        break;
+      }
+
+      {
+        std::lock_guard<std::mutex> lock(messages_mutex);
+
+        // If the next protocol message is a cancel request for the active
+        // request, attempt a best effort interrupt.
+        if (const auto args = getArgumentsIfRequest<protocol::CancelArguments>(
+                *next, "cancel");
+            args && active_request_seq == args->requestId)
+          debugger.RequestInterrupt();
+
+        messages.push_back(std::move(*next));
+      }
+      messages_cv.notify_one();
+    }
+
+    std::unique_lock<std::mutex> lock(messages_mutex);
+    std::notify_all_at_thread_exit(messages_cv, std::move(lock));
+  });
+
+  while (!disconnecting) {
+    protocol::ProtocolMessage next;
+    {
+      std::unique_lock<std::mutex> lock(messages_mutex);
+      messages_cv.wait(lock,
+                       [&] { return disconnecting || !messages.empty(); });
+
+      if (messages.empty())
+        break;
+
+      next = messages.front();
+      messages.pop_front();
+
+      if (protocol::Request *req = std::get_if<protocol::Request>(&next)) {
+        active_request_seq = req->seq;
+        
+        // If we have a request check if we should preemptively cancel it.
+        bool cancelled = false;
+        for (const auto &message : messages) {
+          if (const auto args =
+                  getArgumentsIfRequest<protocol::CancelArguments>(message,
+                                                                   "cancel");
+              args && args->requestId == req->seq) {
+            cancelled = true;
+            break;
+          }
+        }
+
+        if (cancelled) {
+          ReplyOnce Reply(req->seq, req->command, this);
+          Reply(llvm::make_error<CancelledError>());
+          continue;
+        }
+      } else
+        active_request_seq = 0;
+    }
+
+    if (!HandleObject(next))
+      return llvm::make_error<llvm::StringError>(
+          llvm::formatv("Unsupported protocol message: {0:2}", toJSON(next))
+              .str(),
+          llvm::inconvertibleErrorCode());
+  }
+
+  StopIO();
+
+  if (reader.joinable())
+    reader.join();
 
   return llvm::Error::success();
 }
@@ -891,9 +985,12 @@ void DAP::SendReverseRequest(llvm::StringRef command,
   });
 }
 
-void DAP::RegisterRequestCallback(std::string request,
+void DAP::RegisterRequestCallback(llvm::StringLiteral command,
                                   RequestCallback callback) {
-  request_handlers[request] = callback;
+  request_handlers[command] = [callback](DAP &dap, const Request &request) {
+    llvm::json::Value rawRequest = toJSON(request);
+    callback(dap, *rawRequest.getAsObject());
+  };
 }
 
 lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {

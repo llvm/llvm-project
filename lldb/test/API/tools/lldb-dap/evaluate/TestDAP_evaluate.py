@@ -3,6 +3,7 @@ Test lldb-dap completions request
 """
 
 import re
+import json
 
 import lldbdap_testcase
 import dap_server
@@ -13,17 +14,21 @@ from lldbsuite.test.lldbtest import *
 
 class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
     def assertEvaluate(self, expression, regex):
-        self.assertRegex(
-            self.dap_server.request_evaluate(expression, context=self.context)["body"][
-                "result"
-            ],
-            regex,
+        resp = self.dap_server.request_evaluate(expression, context=self.context)
+        self.assertEqual(
+            resp["success"],
+            True,
+            "evaluate with expression = '{}' context = '{}' failed unexpectedly: {}".format(
+                expression, self.context, json.dumps(resp)
+            ),
         )
+        self.assertRegex(resp["body"]["result"], regex)
 
     def assertEvaluateFailure(self, expression):
-        self.assertNotIn(
-            "result",
-            self.dap_server.request_evaluate(expression, context=self.context)["body"],
+        self.assertFalse(
+            self.dap_server.request_evaluate(expression, context=self.context)[
+                "success"
+            ],
         )
 
     def isResultExpandedDescription(self):
@@ -231,5 +236,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfWindows
     def test_variable_evaluate_expressions(self):
-        # Tests expression evaluations that are triggered in the variable explorer
-        self.run_test_evaluate_expressions("variable", enableAutoVariableSummaries=True)
+        # Tests expression evaluations that are triggered in the variables explorer
+        self.run_test_evaluate_expressions(
+            "variables", enableAutoVariableSummaries=True
+        )

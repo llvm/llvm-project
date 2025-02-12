@@ -1,13 +1,10 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap launch request
 """
 
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 import lldbdap_testcase
-import time
 import os
 import re
 
@@ -41,7 +38,9 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_disconnect()
 
         # Wait until the underlying lldb-dap process dies.
-        self.dap_server.process.wait(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        self.dap_server.process.wait(
+            timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval
+        )
 
         # Check the return code
         self.assertEqual(self.dap_server.process.poll(), 0)
