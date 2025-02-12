@@ -883,13 +883,16 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(const StructType *Ty,
                                                 bool EmitIR) {
   SmallVector<Register, 4> FieldTypes;
   constexpr unsigned MaxWordCount = UINT16_MAX;
-
-  constexpr size_t MaxNumElements = MaxWordCount - 2;
   const size_t NumElements = Ty->getNumElements();
+
+  size_t MaxNumElements = MaxWordCount - 2;
   size_t SPIRVStructNumElements = NumElements;
   if (NumElements > MaxNumElements) {
+    // Do adjustments for continued instructions.
     SPIRVStructNumElements = MaxNumElements;
+    MaxNumElements = MaxWordCount - 1;
   }
+
   for (const auto &Elem : Ty->elements()) {
     SPIRVType *ElemTy = findSPIRVType(toTypedPointer(Elem), MIRBuilder);
     assert(ElemTy && ElemTy->getOpcode() != SPIRV::OpTypeVoid &&
@@ -910,7 +913,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(const StructType *Ty,
   });
 
   for (size_t I = SPIRVStructNumElements; I < NumElements;
-       I += (MaxWordCount - 1)) {
+       I += MaxNumElements) {
     createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
       auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeStructContinuedINTEL);
       for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
