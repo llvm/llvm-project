@@ -10,6 +10,7 @@
 #include "DAP.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <cstring>
 #include <system_error>
 #if defined(_WIN32)
 #include <fcntl.h>
@@ -24,6 +25,10 @@ using llvm::Error;
 using llvm::Expected;
 using llvm::inconvertibleErrorCode;
 using llvm::StringRef;
+
+namespace {
+char kCloseSentinel[] = "\0";
+} // namespace
 
 namespace lldb_dap {
 
@@ -59,7 +64,10 @@ Error OutputRedirector::RedirectTo(std::function<void(StringRef)> callback) {
     while (!m_stopped) {
       ssize_t bytes_count = ::read(read_fd, &buffer, sizeof(buffer));
       // EOF detected.
-      if (bytes_count == 0)
+      if (bytes_count == 0 ||
+          (bytes_count == sizeof(kCloseSentinel) &&
+           std::memcmp(buffer, kCloseSentinel, sizeof(kCloseSentinel)) == 0 &&
+           m_fd == kInvalidDescriptor))
         break;
       if (bytes_count == -1) {
         // Skip non-fatal errors.
@@ -85,8 +93,7 @@ void OutputRedirector::Stop() {
     // Closing the pipe may not be sufficient to wake up the thread in case the
     // write descriptor is duplicated (to stdout/err or to another process).
     // Write a null byte to ensure the read call returns.
-    char buf[] = "\0";
-    (void)::write(fd, buf, sizeof(buf));
+    (void)::write(fd, kCloseSentinel, sizeof(kCloseSentinel));
     ::close(fd);
     m_forwarder.join();
   }
