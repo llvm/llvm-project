@@ -203,17 +203,100 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Demonstation of nested lookup by walking ancestors and co-commitant shadowing.
+
+// expected-remark @below {{associated CPU attr at module 42 : i32}}
+// expected-remark @below {{associated GPU attr at module 43 : i32}}
 module attributes { test.dlti = #dlti.target_system_spec<"CPU" = #dlti.target_device_spec<"test.id" = 42 : i32>,
                                                          "GPU" = #dlti.target_device_spec<"test.id" = 43 : i32>> } {
-  // expected-remark @below {{associated attr 24 : i32}}
+  // expected-remark @below {{associated CPU attr at func 24 : i32}}
+  // expected-remark @below {{associated GPU attr at func 43 : i32}}
   func.func private @f() attributes { test.dlti = #dlti.target_system_spec<"CPU" = #dlti.target_device_spec<"test.id" = 24 : i32>> }
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg: !transform.any_op) {
     %func = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
-    %param = transform.dlti.query ["CPU","test.id"] at %func : (!transform.any_op) -> !transform.any_param
+    %module = transform.get_parent_op %func : (!transform.any_op) -> !transform.any_op
+    // First the CPU attributes
+    %cpu_func_param = transform.dlti.query ["CPU","test.id"] at %func : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %cpu_func_param, "associated CPU attr at func" at %func : !transform.any_param, !transform.any_op
+    %cpu_module_param = transform.dlti.query ["CPU","test.id"] at %module : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %cpu_module_param, "associated CPU attr at module" at %module : !transform.any_param, !transform.any_op
+    // Now the GPU attribute
+    %gpu_func_param = transform.dlti.query ["GPU","test.id"] at %func : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %gpu_func_param, "associated GPU attr at func" at %func : !transform.any_param, !transform.any_op
+    %gpu_module_param = transform.dlti.query ["GPU","test.id"] at %func : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %gpu_module_param , "associated GPU attr at module" at %module : !transform.any_param, !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { test.dlti = #dlti.target_system_spec<"CPU" = #dlti.target_device_spec<"test.id" = 42 : i32>,
+                                                         "GPU" = #dlti.target_device_spec<"test.id" = 43 : i32>> } {
+  // expected-remark @below {{associated attr 43 : i32}}
+  func.func private @f() attributes { test.dlti = #dlti.target_system_spec<"CPU" = #dlti.target_device_spec<"test.id" = 24 : i32>> }
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %func = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    %param = transform.dlti.query ["GPU","test.id"] at %func : (!transform.any_op) -> !transform.any_param
     transform.debug.emit_param_as_remark %param, "associated attr" at %func : !transform.any_param, !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Demonstation of nested lookup by walking ancestors and co-commitant shadowing.
+
+// expected-remark @below {{associated CPU attr at module 42 : i32}}
+// expected-remark @below {{associated GPU attr at module 43 : i32}}
+module attributes { test.dlti = #dlti.map<"CPU" = #dlti.map<"test.id" = 42 : i32>,
+                                          "GPU" = #dlti.map<"test.id" = 43 : i32>> } {
+  // expected-remark @below {{associated CPU attr at func 42 : i32}}
+  // expected-remark @below {{associated GPU attr at func 43 : i32}}
+  func.func @f(%A: tensor<128x128xf32>) {
+    // expected-remark @below {{associated CPU attr at matmul 24 : i32}}
+    // expected-remark @below {{associated GPU attr at matmul 43 : i32}}
+    %0 = linalg.matmul { test.dlti = #dlti.target_system_spec<"CPU" = #dlti.target_device_spec<"test.id" = 24 : i32>> } ins(%A, %A : tensor<128x128xf32>, tensor<128x128xf32>)
+                        outs(%A : tensor<128x128xf32>) -> tensor<128x128xf32>
+    // expected-remark @below {{associated CPU attr at constant 42 : i32}}
+    // expected-remark @below {{associated GPU attr at constant 43 : i32}}
+    arith.constant 0 : i32
+    return
+  }
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %constant = transform.structured.match ops{["arith.constant"]} in %arg : (!transform.any_op) -> !transform.any_op
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg : (!transform.any_op) -> !transform.any_op
+    %func = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
+    %module = transform.get_parent_op %func : (!transform.any_op) -> !transform.any_op
+    // First query at the matmul
+    %cpu_matmul_param = transform.dlti.query ["CPU","test.id"] at %matmul : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %cpu_matmul_param, "associated CPU attr at matmul" at %matmul : !transform.any_param, !transform.any_op
+    %gpu_matmul_param = transform.dlti.query ["GPU","test.id"] at %matmul : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %gpu_matmul_param, "associated GPU attr at matmul" at %matmul : !transform.any_param, !transform.any_op
+    // Now query at the constant
+    %cpu_constant_param = transform.dlti.query ["CPU","test.id"] at %constant : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %cpu_constant_param, "associated CPU attr at constant" at %constant : !transform.any_param, !transform.any_op
+    %gpu_constant_param = transform.dlti.query ["GPU","test.id"] at %constant : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %gpu_constant_param, "associated GPU attr at constant" at %constant : !transform.any_param, !transform.any_op
+    // Now query at the func
+    %cpu_func_param = transform.dlti.query ["CPU","test.id"] at %func : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %cpu_func_param, "associated CPU attr at func" at %func : !transform.any_param, !transform.any_op
+    %gpu_func_param = transform.dlti.query ["GPU","test.id"] at %func : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %gpu_func_param, "associated GPU attr at func" at %func : !transform.any_param, !transform.any_op
+    // Now query at the module
+    %cpu_module_param = transform.dlti.query ["CPU","test.id"] at %module : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %cpu_module_param, "associated CPU attr at module" at %module : !transform.any_param, !transform.any_op
+    %gpu_module_param = transform.dlti.query ["GPU","test.id"] at %module : (!transform.any_op) -> !transform.any_param
+    transform.debug.emit_param_as_remark %gpu_module_param, "associated GPU attr at module" at %module : !transform.any_param, !transform.any_op
     transform.yield
   }
 }
@@ -298,7 +381,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// expected-note @below {{key "NPU" has no DLTI-mapping per attr: #dlti.target_system_spec}}
+// expected-note @below {{key not present - failed at keys: ["NPU"]}}
 module attributes { test.dlti = #dlti.target_system_spec<
     "CPU" = #dlti.target_device_spec<"test.id" = 42 : i32>,
     "GPU" = #dlti.target_device_spec<"test.id" = 43 : i32>> } {
@@ -317,7 +400,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// expected-note @below {{key "unspecified" has no DLTI-mapping per attr: #dlti.target_device_spec}}
+// expected-note @below {{key not present - failed at keys: ["CPU","unspecified"]}}
 module attributes { test.dlti = #dlti.target_system_spec<
     "CPU" = #dlti.target_device_spec<"test.id" = 42 : i32>,
     "GPU" = #dlti.target_device_spec<"test.id" = 43 : i32>> } {
@@ -336,7 +419,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// expected-note @below {{key "test.id" has no DLTI-mapping per attr: #dlti.target_system_spec}}
+// expected-note @below {{key not present - failed at keys: ["test.id"]}}
 module attributes { test.dlti = #dlti.target_system_spec<
   "CPU" = #dlti.target_device_spec<"test.id" = 42 : i32>,
   "GPU" = #dlti.target_device_spec<"test.id" = 43 : i32>> } {
@@ -355,7 +438,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// expected-note @below {{key "CPU" has no DLTI-mapping per attr: #dlti.dl_spec}}
+// expected-note @below {{key not present - failed at keys: ["CPU"]}}
 module attributes { test.dlti = #dlti.dl_spec<"test.id" = 42 : i32> } {
   // expected-error @below {{target op of failed DLTI query}}
   func.func private @f()
@@ -372,7 +455,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// expected-note @below {{got non-DLTI-queryable attribute upon looking up keys ["CPU"]}}
+// expected-note @below {{attribute at keys ["CPU"] is not queryable}}
 module attributes { test.dlti = #dlti.dl_spec<"CPU" = 42 : i32> } {
   // expected-error @below {{target op of failed DLTI query}}
   func.func private @f()
@@ -389,7 +472,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// expected-note @below {{got non-DLTI-queryable attribute upon looking up keys [i32]}}
+// expected-note @below {{attribute at keys [i32] is not queryable}}
 module attributes { test.dlti = #dlti.dl_spec<i32 = 32 : i32> } {
   // expected-error @below {{target op of failed DLTI query}}
   func.func private @f()
@@ -423,7 +506,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// expected-note @below {{key i64 has no DLTI-mapping per attr: #dlti.map<i32 = 32 : i64>}}
+// expected-note @below {{key not present - failed at keys: ["width_in_bits",i64]}}
 module attributes { test.dlti = #dlti.map<"width_in_bits" = #dlti.map<i32 = 32>>} {
   // expected-error @below {{target op of failed DLTI query}}
   func.func private @f()
@@ -481,6 +564,32 @@ module attributes {transform.with_named_sequence} {
     %funcs = transform.structured.match ops{["func.func"]} in %arg : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{expected the type of the parameter attribute ('i32') to match the parameter type ('i64')}}
     %param = transform.dlti.query ["test.id"] at %funcs : (!transform.any_op) -> !transform.param<i64>
+    transform.yield
+  }
+}
+
+// -----
+
+// expected-note @below {{attribute at keys ["CPU","test"] is not queryable}}
+module attributes { test.dlti = #dlti.map<"CPU" = #dlti.map<"test" = {"id" = 0}>> } {
+  // expected-note @below {{key not present - failed at keys: ["CPU","test","id"]}}
+  func.func @f(%A: tensor<128x128xf32>) attributes { test.dlti = #dlti.map<"CPU" = #dlti.map<"test" = #dlti.map<"ego" = 0>>> } {
+    scf.execute_region { // NB: No notes/errors on this unannotated ancestor
+      // expected-note @below {{key not present - failed at keys: ["CPU","test"]}}
+      // expected-error @below {{target op of failed DLTI query}}
+      %0 = linalg.matmul { test.dlti = #dlti.target_system_spec<"CPU" = #dlti.target_device_spec<"test.id" = 24 : i32>> } ins(%A, %A : tensor<128x128xf32>, tensor<128x128xf32>)
+                          outs(%A : tensor<128x128xf32>) -> tensor<128x128xf32>
+      scf.yield
+    }
+    return
+  }
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{'transform.dlti.query' op failed to apply}}
+    %cpu_matmul_param = transform.dlti.query ["CPU","test","id"] at %matmul : (!transform.any_op) -> !transform.any_param
     transform.yield
   }
 }

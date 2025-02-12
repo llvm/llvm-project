@@ -24,24 +24,39 @@ def QueryOp : Op<Transform_Dialect, "dlti.query", [
     This op queries data layout and target information associated to payload
     IR by way of the DLTI dialect.
 
-    A lookup is performed for the given `keys` at `target` op - or its closest
-    interface-implementing ancestor - by way of the `DLTIQueryInterface`, which
-    returns an attribute for a key. Each key should be either a (quoted) string
-    or a type. If more than one key is provided, the lookup continues
-    recursively, now on the returned attributes, with the condition that these
-    implement the above interface. For example if the payload IR is
+    A lookup is performed with respect to `keys`, first at the `target` op and
+    subsequently at its ancestors. At each op `DLTIQueryInterface`-implementing
+    attributes are recursively queried, one key per query. Each key should be
+    either a (quoted) string or a type. If more than one key is provided, the
+    lookup continues recursively, now on the returned attributes, with the
+    condition that these implement the above interface.
+
+    For example if the payload IR is
 
     ```
-    module attributes {#dlti.map = #dlti.map<#dlti.dl_entry<"A",
-                                     #dlti.map<#dlti.dl_entry<"B", 42: int>>>} {
+    module attributes {#dlti.map = #dlti.map<"A" = #dlti.map<"B" = 42>>} {
       func.func private @f()
     }
     ```
-    and we have that `%func` is a Tranform handle to op `@f`, then
+    and we have that `%func` is a Tranform handle to func `@f`, then
     `transform.dlti.query ["A", "B"] at %func` returns 42 as a param and
     `transform.dlti.query ["A"] at %func` returns the `#dlti.map` attribute
     containing just the key "B" and its value. Using `["B"]` or `["A","C"]` as
     `keys` will yield an error.
+
+    In the below example we have that querying `["A", "B"]` at `%func` - or any
+    op that it contains - returns 0, while these same keys yield 42 if the
+    containing module would be the `target` of the query.     ```
+    ```
+    module attributes {#dlti.map = #dlti.map<"A" = #dlti.map<"B" = 42,
+                                                             "C" = 1>>} {
+      func.func private @f() attributes {#dlti.map = #dlti.map<"A" =
+                                                       #dlti.map<"B" = 0>>} {
+        ...
+      }
+    }
+    ```
+    Querying `["A","C"]` on the module, the func, or any contained op yields 1.
 
     #### Return modes
 
