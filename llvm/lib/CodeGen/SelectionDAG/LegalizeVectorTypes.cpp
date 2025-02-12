@@ -136,6 +136,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMODF:
   case ISD::FFREXP:
   case ISD::FSINCOS:
+  case ISD::FSINCOSPI:
     R = ScalarizeVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;
   case ISD::ADD:
@@ -774,6 +775,10 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::LLRINT:
     Res = ScalarizeVecOp_UnaryOp(N);
     break;
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    Res = ScalarizeVecOp_UnaryOpWithExtraInput(N);
+    break;
   case ISD::STRICT_SINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
   case ISD::STRICT_FP_TO_SINT:
@@ -876,6 +881,20 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_UnaryOp(SDNode *N) {
   SDValue Elt = GetScalarizedVector(N->getOperand(0));
   SDValue Op = DAG.getNode(N->getOpcode(), SDLoc(N),
                            N->getValueType(0).getScalarType(), Elt);
+  // Revectorize the result so the types line up with what the uses of this
+  // expression expect.
+  return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Op);
+}
+
+/// Same as ScalarizeVecOp_UnaryOp with an extra operand (for example a
+/// typesize).
+SDValue DAGTypeLegalizer::ScalarizeVecOp_UnaryOpWithExtraInput(SDNode *N) {
+  assert(N->getValueType(0).getVectorNumElements() == 1 &&
+         "Unexpected vector type!");
+  SDValue Elt = GetScalarizedVector(N->getOperand(0));
+  SDValue Op =
+      DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0).getScalarType(),
+                  Elt, N->getOperand(1));
   // Revectorize the result so the types line up with what the uses of this
   // expression expect.
   return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Op);
@@ -1265,6 +1284,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMODF:
   case ISD::FFREXP:
   case ISD::FSINCOS:
+  case ISD::FSINCOSPI:
     SplitVecRes_UnaryOpWithTwoResults(N, ResNo, Lo, Hi);
     break;
 
@@ -4815,7 +4835,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::FMODF:
   case ISD::FFREXP:
-  case ISD::FSINCOS: {
+  case ISD::FSINCOS:
+  case ISD::FSINCOSPI: {
     if (!unrollExpandedOp())
       Res = WidenVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;
