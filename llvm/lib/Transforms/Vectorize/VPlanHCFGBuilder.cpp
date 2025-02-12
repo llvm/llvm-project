@@ -151,7 +151,8 @@ void PlainCFGBuilder::fixPhiNodes() {
           getOrCreateVPOperand(Phi->getIncomingValue(I));
     }
     for (VPBlockBase *Pred : VPPhi->getParent()->getPredecessors())
-      VPPhi->addOperand(VPPredToIncomingValue.lookup(Pred->getExitingBasicBlock()));
+      VPPhi->addOperand(
+          VPPredToIncomingValue.lookup(Pred->getExitingBasicBlock()));
   }
 }
 

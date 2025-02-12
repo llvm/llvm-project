@@ -3614,10 +3614,14 @@ VPBasicBlock *VPWidenPHIRecipe::getIncomingBlock(unsigned I) {
   VPBlockBase *Pred = nullptr;
   if (Parent->getNumPredecessors() == 0) {
     auto *Region = Parent->getParent();
-    assert(Region && !Region->isReplicator() && Region->getEntry() == Parent && "must be in the entry block of a non-replicate region");
-    assert(I < 2 && getNumOperands() == 2 && "when placed in an entry block, only 2 incoming blocks are available");
+    assert(Region && !Region->isReplicator() && Region->getEntry() == Parent &&
+           "must be in the entry block of a non-replicate region");
+    assert(
+        I < 2 && getNumOperands() == 2 &&
+        "when placed in an entry block, only 2 incoming blocks are available");
 
-    // I ==  0 selects the predecessor of the region, I == 1 selects the region itself whose exiting block feeds the phi across the backedge.
+    // I ==  0 selects the predecessor of the region, I == 1 selects the region
+    // itself whose exiting block feeds the phi across the backedge.
     Pred = I == 0 ? Region->getSinglePredecessor() : Region;
   } else {
     Pred = Parent->getPredecessors()[I];
