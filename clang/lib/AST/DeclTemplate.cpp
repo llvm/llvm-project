@@ -786,7 +786,7 @@ NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
     QualType T, bool ParameterPack, TypeSourceInfo *TInfo) {
   AutoType *AT =
       C.getLangOpts().CPlusPlus20 ? T->getContainedAutoType() : nullptr;
-  bool const HasConstraint = AT && AT->isConstrained();
+  const bool HasConstraint = AT && AT->isConstrained();
   auto *NTTP =
       new (C, DC,
            additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>, Expr *>(
