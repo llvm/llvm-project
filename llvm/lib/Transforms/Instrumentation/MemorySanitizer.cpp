@@ -4898,6 +4898,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_sqxtn:
     case Intrinsic::aarch64_neon_sqxtun:
     case Intrinsic::aarch64_neon_uqxtn:
+      // These only have one argument, but we (ab)use handleShadowOr because it
+      // does work on single argument intrinsics and will typecast the shadow
+      // (and update the origin).
       handleShadowOr(I);
       break;
 
