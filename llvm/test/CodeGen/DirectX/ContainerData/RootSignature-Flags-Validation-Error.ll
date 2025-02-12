@@ -1,6 +1,8 @@
-; RUN: not llc %s --filetype=obj -o - 
+; RUN: not llc %s --filetype=obj -o - 2>&1 | FileCheck %s
+
+; CHECK: error: Invalid Root Signature flag value
+
 target triple = "dxil-unknown-shadermodel6.0-compute"
-; expected-error@-1: Invalid flag value for RootFlag
 
 
 define void @main() #0 {
