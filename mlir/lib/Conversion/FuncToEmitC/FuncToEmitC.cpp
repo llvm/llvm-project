@@ -13,11 +13,39 @@
 
 #include "mlir/Conversion/FuncToEmitC/FuncToEmitC.h"
 
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+
+namespace {
+
+/// Implement the interface to convert Func to EmitC.
+struct FuncToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<emitc::EmitCDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateFuncToEmitCPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertFuncToEmitCInterface(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, func::FuncDialect *dialect) {
+    dialect->addInterfaces<FuncToEmitCDialectInterface>();
+  });
+}
+
 
 //===----------------------------------------------------------------------===//
 // Conversion Patterns

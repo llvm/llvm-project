@@ -9,6 +9,8 @@
 #ifndef MLIR_CONVERSION_CONVERTTOEMITC_CONVERTTOEMITCPASS_H
 #define MLIR_CONVERSION_CONVERTTOEMITC_CONVERTTOEMITCPASS_H
 
+#include "llvm/ADT/SmallVector.h"
+
 #include <memory>
 
 namespace mlir {
