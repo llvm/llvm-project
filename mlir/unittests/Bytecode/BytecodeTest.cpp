@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -37,6 +38,33 @@ module @TestDialectResources attributes {
 #-}
 )";
 
+struct AllocatingOstream final : public raw_ostream {
+  std::unique_ptr<std::byte[]> buffer;
+  size_t size = 0;
+
+  void reserveExtraSpace(uint64_t extraSpace) override {
+    ASSERT_TRUE(buffer == nullptr);
+    buffer = std::make_unique<std::byte[]>(extraSpace);
+    size = extraSpace;
+  }
+
+  AllocatingOstream() : raw_ostream(true) {}
+  uint64_t current_pos() const override { return size; }
+
+private:
+  size_t pos = 0;
+
+  void write_impl(const char *ptr, size_t length) override {
+    if (pos + length <= size) {
+      memcpy((void *)(buffer.get() + pos), ptr, length);
+      pos += length;
+    } else {
+      report_fatal_error(
+          "Attempted to write past the end of the fixed size buffer.");
+    }
+  }
+};
+
 TEST(Bytecode, MultiModuleWithResource) {
   MLIRContext context;
   Builder builder(&context);
@@ -46,11 +74,12 @@ TEST(Bytecode, MultiModuleWithResource) {
   ASSERT_TRUE(module);
 
   // Write the module to bytecode
-  std::string buffer;
-  llvm::raw_string_ostream ostream(buffer);
+  AllocatingOstream ostream;
   ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
 
   // Create copy of buffer which is aligned to requested resource alignment.
+  std::string buffer((char *)ostream.buffer.get(),
+                     (char *)ostream.buffer.get() + ostream.size);
   constexpr size_t kAlignment = 0x20;
   size_t bufferSize = buffer.size();
   buffer.reserve(bufferSize + kAlignment - 1);
