@@ -47,14 +47,13 @@
 ; CHECK-THINLTO-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-THINLTO-NEXT: Running pass: GlobalDCEPass
 ; CHECK-LTO: Running pass: CrossDSOCFIPass on [module]
-; CHECK-LTO-NEXT: CoroEarlyPass
 ; CHECK-LTO-NEXT: Running pass: WholeProgramDevirtPass
 ; CHECK-LTO-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
+; CHECK-LTO-NEXT: CoroConditionalWrapper
 ; CHECK-CORO-NEXT: Running pass: AnnotationRemarksPass
 ; CHECK-CORO-NEXT: Running analysis: TargetLibraryAnalysis
-; CHECK-LTO-NEXT: CoroCleanupPass
 ; CHECK-LTO-NEXT: Running pass: AnnotationRemarksPass
 ; CHECK-LTO-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-NEXT: Running pass: PrintModulePass

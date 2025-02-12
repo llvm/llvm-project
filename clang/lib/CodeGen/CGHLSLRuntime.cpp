@@ -345,6 +345,13 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
                 WaveSizeAttr->getPreferred());
     Fn->addFnAttr(WaveSizeKindStr, WaveSizeStr);
   }
+  // HLSL entry functions are materialized for module functions with
+  // HLSLShaderAttr attribute. SetLLVMFunctionAttributesForDefinition called
+  // later in the compiler-flow for such module functions is not aware of and
+  // hence not able to set attributes of the newly materialized entry functions.
+  // So, set attributes of entry function here, as appropriate.
+  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+    Fn->addFnAttr(llvm::Attribute::OptimizeNone);
   Fn->addFnAttr(llvm::Attribute::NoInline);
 }
 

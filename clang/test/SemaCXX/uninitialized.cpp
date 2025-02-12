@@ -1542,9 +1542,15 @@ void aggregate() {
     };
   };
 
+  struct CopyAndMove {
+    CopyAndMove() = default;
+    CopyAndMove(const CopyAndMove &) {}
+    CopyAndMove(CopyAndMove &&) {}
+  };
   struct Embed {
     int embed1;  // #FIELD_EMBED1
     int embed2 [[clang::require_explicit_initialization]];  // #FIELD_EMBED2
+    CopyAndMove force_separate_move_ctor;
   };
   struct EmbedDerived : Embed {};
   struct F {
@@ -1582,7 +1588,33 @@ void aggregate() {
       F("___"),
       F("____")
   };
-  (void)ctors;
+
+  struct MoveOrCopy {
+    Embed e;
+    EmbedDerived ed;
+    F f;
+    // no-error
+    MoveOrCopy(const MoveOrCopy &c) : e(c.e), ed(c.ed), f(c.f) {}
+    // no-error
+    MoveOrCopy(MoveOrCopy &&c)
+        : e(std::move(c.e)), ed(std::move(c.ed)), f(std::move(c.f)) {}
+  };
+  F copy1(ctors[0]); // no-error
+  (void)copy1;
+  F move1(std::move(ctors[0])); // no-error
+  (void)move1;
+  F copy2{ctors[0]}; // no-error
+  (void)copy2;
+  F move2{std::move(ctors[0])}; // no-error
+  (void)move2;
+  F copy3 = ctors[0]; // no-error
+  (void)copy3;
+  F move3 = std::move(ctors[0]); // no-error
+  (void)move3;
+  F copy4 = {ctors[0]}; // no-error
+  (void)copy4;
+  F move4 = {std::move(ctors[0])}; // no-error
+  (void)move4;
 
   S::foo(S{1, 2, 3, 4});
   S::foo(S{.s1 = 100, .s4 = 100});

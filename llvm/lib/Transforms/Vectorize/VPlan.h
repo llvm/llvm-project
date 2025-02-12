@@ -3669,8 +3669,8 @@ public:
     VFs.insert(VF);
   }
 
-  bool hasVF(ElementCount VF) { return VFs.count(VF); }
-  bool hasScalableVF() {
+  bool hasVF(ElementCount VF) const { return VFs.count(VF); }
+  bool hasScalableVF() const {
     return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
   }
 
@@ -3680,7 +3680,12 @@ public:
     return {VFs.begin(), VFs.end()};
   }
 
-  bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
+  bool hasScalarVFOnly() const {
+    bool HasScalarVFOnly = VFs.size() == 1 && VFs[0].isScalar();
+    assert(HasScalarVFOnly == hasVF(ElementCount::getFixed(1)) &&
+           "Plan with scalar VF should only have a single VF");
+    return HasScalarVFOnly;
+  }
 
   bool hasUF(unsigned UF) const { return UFs.empty() || UFs.contains(UF); }
 
@@ -3704,18 +3709,16 @@ public:
   ///  yet) for \p V.
   VPValue *getOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPValue of a null Value");
-    if (!Value2VPValue.count(V)) {
+    auto [It, Inserted] = Value2VPValue.try_emplace(V);
+    if (Inserted) {
       VPValue *VPV = new VPValue(V);
       VPLiveInsToFree.push_back(VPV);
       assert(VPV->isLiveIn() && "VPV must be a live-in.");
-      assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
-      Value2VPValue[V] = VPV;
+      It->second = VPV;
     }
 
-    assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
-    assert(Value2VPValue[V]->isLiveIn() &&
-           "Only live-ins should be in mapping");
-    return Value2VPValue[V];
+    assert(It->second->isLiveIn() && "Only live-ins should be in mapping");
+    return It->second;
   }
 
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
