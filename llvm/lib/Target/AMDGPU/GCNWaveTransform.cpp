@@ -79,7 +79,6 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
@@ -336,7 +335,7 @@ public:
     llvm::append_range(BlockStack, successors(EntryBlock));
 
     do {
-      auto Block = BlockStack.back();
+      MachineBasicBlock *Block = BlockStack.back();
       unsigned DoneBack = DoneIdxStack.back();
 
       if (BlockStack.size() == (DoneBack >> 1)) {
@@ -563,10 +562,10 @@ void ReconvergeCFGHelper::run() {
 
       int PredClass = -1;
       for (WaveNode *reachableNode : TmpSet) {
-        auto it = llvm::find(RerouteCandidates, reachableNode);
+        auto It = llvm::find(RerouteCandidates, reachableNode);
         int NodeClass;
-        if (it != RerouteCandidates.end()) {
-          NodeClass = std::distance(RerouteCandidates.begin(), it);
+        if (It != RerouteCandidates.end()) {
+          NodeClass = std::distance(RerouteCandidates.begin(), It);
         } else {
           NodeClass = RerouteCandidates.size();
           RerouteCandidates.push_back(reachableNode);
@@ -626,8 +625,8 @@ void ReconvergeCFGHelper::run() {
 
       // The current node is going to be the flow node's primary successor,
       // so rotate it to the front.
-      auto selfIt = llvm::find(FlowNode->Successors, Node);
-      std::rotate(FlowNode->Successors.begin(), selfIt, selfIt + 1);
+      auto SelfIt = llvm::find(FlowNode->Successors, Node);
+      std::rotate(FlowNode->Successors.begin(), SelfIt, SelfIt + 1);
 
       // Compile-time optimization: record flow node as latest post-dominator
       // of all original predecessors for which we did rerouting.
