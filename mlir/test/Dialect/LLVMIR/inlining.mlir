@@ -676,3 +676,19 @@ llvm.func @caller(%x : i32) -> i32 {
   %z = llvm.call @private_func(%x) : (i32) -> (i32)
   llvm.return %z : i32
 }
+
+// -----
+
+llvm.func @unreachable_func(%a : i32) -> i32 {
+  "llvm.intr.trap"() : () -> ()
+  llvm.unreachable
+}
+
+// CHECK-LABEL: func @caller
+llvm.func @caller(%x : i32) -> i32 {
+  // CHECK-NOT: llvm.call @unreachable_func
+  // CHECK: llvm.intr.trap
+  // CHECK: llvm.unreachable
+  %z = llvm.call @unreachable_func(%x) : (i32) -> (i32)
+  llvm.return %z : i32
+}

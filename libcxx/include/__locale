@@ -60,8 +60,9 @@ public:
 
   static const category // values assigned here are for exposition only
       none    = 0,
-      collate = LC_COLLATE_MASK, ctype = LC_CTYPE_MASK, monetary = LC_MONETARY_MASK, numeric = LC_NUMERIC_MASK,
-      time = LC_TIME_MASK, messages = LC_MESSAGES_MASK, all = collate | ctype | monetary | numeric | time | messages;
+      collate = _LIBCPP_COLLATE_MASK, ctype = _LIBCPP_CTYPE_MASK, monetary = _LIBCPP_MONETARY_MASK,
+      numeric = _LIBCPP_NUMERIC_MASK, time = _LIBCPP_TIME_MASK, messages = _LIBCPP_MESSAGES_MASK,
+      all = collate | ctype | monetary | numeric | time | messages;
 
   // construct/copy/destroy:
   locale() _NOEXCEPT;
@@ -348,7 +349,7 @@ public:
 #  define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_ALPHA
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #  ifdef __APPLE__
-  typedef __uint32_t mask;
+  typedef uint32_t mask;
 #  elif defined(__FreeBSD__)
   typedef unsigned long mask;
 #  elif defined(__NetBSD__)

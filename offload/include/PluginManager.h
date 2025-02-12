@@ -77,11 +77,12 @@ struct PluginManager {
   /// Iterate over all device images registered with this plugin.
   auto deviceImages() { return llvm::make_pointee_range(DeviceImages); }
 
-  /// Translation table retreived from the binary
+  /// Translation table retrieved from the binary
   HostEntriesBeginToTransTableTy HostEntriesBeginToTransTable;
   std::mutex TrlTblMtx; ///< For Translation Table
   /// Host offload entries in order of image registration
-  llvm::SmallVector<__tgt_offload_entry *> HostEntriesBeginRegistrationOrder;
+  llvm::SmallVector<llvm::offloading::EntryTy *>
+      HostEntriesBeginRegistrationOrder;
 
   /// Map from ptrs on the host to an entry in the Translation Table
   HostPtrToTableMapTy HostPtrToTableMap;
@@ -169,6 +170,12 @@ private:
 
   /// Devices associated with plugins, accesses to the container are exclusive.
   ProtectedObj<DeviceContainerTy> Devices;
+
+  /// References to upgraded legacy offloading entries.
+  std::list<llvm::SmallVector<llvm::offloading::EntryTy, 0>> LegacyEntries;
+  std::list<llvm::SmallVector<__tgt_device_image, 0>> LegacyImages;
+  llvm::DenseMap<__tgt_bin_desc *, __tgt_bin_desc> UpgradedDescriptors;
+  __tgt_bin_desc *upgradeLegacyEntries(__tgt_bin_desc *Desc);
 };
 
 /// Initialize the plugin manager and OpenMP runtime.

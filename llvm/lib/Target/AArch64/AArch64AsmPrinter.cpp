@@ -78,11 +78,6 @@ static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
     cl::desc("Check pointer authentication auth/resign failures"),
     cl::init(Default));
 
-static cl::opt<bool> EnableImportCallOptimization(
-    "aarch64-win-import-call-optimization", cl::Hidden,
-    cl::desc("Enable import call optimization for AArch64 Windows"),
-    cl::init(false));
-
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
@@ -95,6 +90,7 @@ class AArch64AsmPrinter : public AsmPrinter {
 #ifndef NDEBUG
   unsigned InstsEmitted;
 #endif
+  bool EnableImportCallOptimization = false;
   DenseMap<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
       SectionToImportedFunctionCalls;
 
@@ -207,6 +203,10 @@ public:
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
   bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
+
+  // Emit Build Attributes
+  void emitAttributes(unsigned Flags, uint64_t PAuthABIPlatform,
+                      uint64_t PAuthABIVersion, AArch64TargetStreamer *TS);
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
@@ -340,41 +340,61 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     OutStreamer->emitSymbolAttribute(S, MCSA_Global);
     OutStreamer->emitAssignment(
         S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
+
+    if (M.getModuleFlag("import-call-optimization"))
+      EnableImportCallOptimization = true;
   }
 
   if (!TT.isOSBinFormatELF())
     return;
 
-  // Assemble feature flags that may require creation of a note section.
-  unsigned Flags = 0;
+  // For emitting build attributes and .note.gnu.property section
+  auto *TS =
+      static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
+  // Assemble feature flags that may require creation of build attributes and a
+  // note section.
+  unsigned BAFlags = 0;
+  unsigned GNUFlags = 0;
   if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("branch-target-enforcement")))
-    if (!BTE->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+          M.getModuleFlag("branch-target-enforcement"))) {
+    if (!BTE->isZero()) {
+      BAFlags |= AArch64BuildAttrs::FeatureAndBitsFlag::Feature_BTI_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+    }
+  }
 
   if (const auto *GCS = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("guarded-control-stack")))
-    if (!GCS->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+          M.getModuleFlag("guarded-control-stack"))) {
+    if (!GCS->isZero()) {
+      BAFlags |= AArch64BuildAttrs::FeatureAndBitsFlag::Feature_GCS_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+    }
+  }
 
   if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("sign-return-address")))
-    if (!Sign->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+          M.getModuleFlag("sign-return-address"))) {
+    if (!Sign->isZero()) {
+      BAFlags |= AArch64BuildAttrs::FeatureAndBitsFlag::Feature_PAC_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+    }
+  }
 
   uint64_t PAuthABIPlatform = -1;
   if (const auto *PAP = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("aarch64-elf-pauthabi-platform")))
+          M.getModuleFlag("aarch64-elf-pauthabi-platform"))) {
     PAuthABIPlatform = PAP->getZExtValue();
+  }
+
   uint64_t PAuthABIVersion = -1;
   if (const auto *PAV = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("aarch64-elf-pauthabi-version")))
+          M.getModuleFlag("aarch64-elf-pauthabi-version"))) {
     PAuthABIVersion = PAV->getZExtValue();
+  }
 
+  // Emit AArch64 Build Attributes
+  emitAttributes(BAFlags, PAuthABIPlatform, PAuthABIVersion, TS);
   // Emit a .note.gnu.property section with the flags.
-  auto *TS =
-      static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
-  TS->emitNoteSection(Flags, PAuthABIPlatform, PAuthABIVersion);
+  TS->emitNoteSection(GNUFlags, PAuthABIPlatform, PAuthABIVersion);
 }
 
 void AArch64AsmPrinter::emitFunctionHeaderComment() {
@@ -445,6 +465,48 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
 
   OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, Kind, 2);
+}
+
+void AArch64AsmPrinter::emitAttributes(unsigned Flags,
+                                       uint64_t PAuthABIPlatform,
+                                       uint64_t PAuthABIVersion,
+                                       AArch64TargetStreamer *TS) {
+
+  PAuthABIPlatform = (uint64_t(-1) == PAuthABIPlatform) ? 0 : PAuthABIPlatform;
+  PAuthABIVersion = (uint64_t(-1) == PAuthABIVersion) ? 0 : PAuthABIVersion;
+
+  if (PAuthABIPlatform || PAuthABIVersion) {
+    TS->emitAtributesSubsection(
+        AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
+        AArch64BuildAttrs::SubsectionOptional::REQUIRED,
+        AArch64BuildAttrs::SubsectionType::ULEB128);
+    TS->emitAttribute(
+        AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
+        AArch64BuildAttrs::TAG_PAUTH_PLATFORM, PAuthABIPlatform, "", false);
+    TS->emitAttribute(
+        AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
+        AArch64BuildAttrs::TAG_PAUTH_SCHEMA, PAuthABIVersion, "", false);
+  }
+
+  unsigned BTIValue = (Flags & AArch64BuildAttrs::Feature_BTI_Flag) ? 1 : 0;
+  unsigned PACValue = (Flags & AArch64BuildAttrs::Feature_PAC_Flag) ? 1 : 0;
+  unsigned GCSValue = (Flags & AArch64BuildAttrs::Feature_GCS_Flag) ? 1 : 0;
+
+  if (BTIValue || PACValue || GCSValue) {
+    TS->emitAtributesSubsection(AArch64BuildAttrs::getVendorName(
+                                    AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
+                                AArch64BuildAttrs::SubsectionOptional::OPTIONAL,
+                                AArch64BuildAttrs::SubsectionType::ULEB128);
+    TS->emitAttribute(AArch64BuildAttrs::getVendorName(
+                          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttrs::TAG_FEATURE_BTI, BTIValue, "", false);
+    TS->emitAttribute(AArch64BuildAttrs::getVendorName(
+                          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttrs::TAG_FEATURE_PAC, PACValue, "", false);
+    TS->emitAttribute(AArch64BuildAttrs::getVendorName(
+                          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttrs::TAG_FEATURE_GCS, GCSValue, "", false);
+  }
 }
 
 // Emit the following code for Intrinsic::{xray_customevent,xray_typedevent}
@@ -3109,8 +3171,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 void AArch64AsmPrinter::recordIfImportCall(
     const llvm::MachineInstr *BranchInst) {
-  if (!EnableImportCallOptimization ||
-      !TM.getTargetTriple().isOSBinFormatCOFF())
+  if (!EnableImportCallOptimization)
     return;
 
   auto [GV, OpFlags] = BranchInst->getMF()->tryGetCalledGlobal(BranchInst);

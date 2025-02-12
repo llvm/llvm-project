@@ -9,7 +9,9 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/IR/SymbolTable.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include <utility>
 
 using namespace mlir;
 
@@ -41,10 +43,18 @@ bool mlir::isOpTriviallyDead(Operation *op) {
 /// allows for marking region operations as trivially dead without always being
 /// conservative of terminators.
 static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
-  // The set of operations to consider when checking for side effects.
-  SmallVector<Operation *, 1> effectingOps(1, rootOp);
+  // The set of operation intervals (end-exclusive) to consider when checking
+  // for side effects.
+  SmallVector<std::pair<Block::iterator, Block::iterator>, 1> effectingOps = {
+      std::make_pair(Block::iterator(rootOp), ++Block::iterator(rootOp))};
   while (!effectingOps.empty()) {
-    Operation *op = effectingOps.pop_back_val();
+    Block::iterator &it = effectingOps.back().first;
+    Block::iterator end = effectingOps.back().second;
+    if (it == end) {
+      effectingOps.pop_back();
+      continue;
+    }
+    mlir::Operation *op = &*(it++);
 
     // If the operation has recursive effects, push all of the nested operations
     // on to the stack to consider.
@@ -53,8 +63,7 @@ static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
     if (hasRecursiveEffects) {
       for (Region &region : op->getRegions()) {
         for (auto &block : region) {
-          for (auto &nestedOp : block)
-            effectingOps.push_back(&nestedOp);
+          effectingOps.push_back(std::make_pair(block.begin(), block.end()));
         }
       }
     }
@@ -86,10 +95,9 @@ static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
         return false;
       }
       continue;
-
-      // Otherwise, if the op has recursive side effects we can treat the
-      // operation itself as having no effects.
     }
+    // Otherwise, if the op only has recursive side effects we can treat the
+    // operation itself as having no effects. We will visit its children next.
     if (hasRecursiveEffects)
       continue;
 
@@ -361,6 +369,17 @@ mlir::getEffectsRecursively(Operation *rootOp) {
     }
   }
   return effects;
+}
+
+bool mlir::isMemoryEffectFreeOrOnlyRead(Operation *op) {
+  std::optional<SmallVector<MemoryEffects::EffectInstance>> effects =
+      getEffectsRecursively(op);
+  if (!effects)
+    return false;
+  return llvm::all_of(*effects,
+                      [&](const MemoryEffects::EffectInstance &effect) {
+                        return isa<MemoryEffects::Read>(effect.getEffect());
+                      });
 }
 
 bool mlir::isSpeculatable(Operation *op) {

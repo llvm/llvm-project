@@ -131,6 +131,17 @@ static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
           break;
       }
 
+      // This offset can't be negative. Therefore we must be accessing something
+      // before the current type (not legal) or partially inside the last type.
+      // In the latter case, we adjust Idx.
+      if (TDA->Struct.Members[Idx].Offset > OffsetA) {
+        // Trying to access something before the current type.
+        if (!Idx)
+          return false;
+
+        Idx -= 1;
+      }
+
       OffsetA -= TDA->Struct.Members[Idx].Offset;
       TDA = TDA->Struct.Members[Idx].Type;
     } else {

@@ -193,8 +193,15 @@ def TypeArrayAttrWithDefaultOp : TEST_Op<"type_array_attr_with_default"> {
   let arguments = (ins DefaultValuedAttr<TypeArrayAttr, "{}">:$attr);
 }
 
-def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
-  let arguments = (ins TypedStrAttr<AnyType>:$attr);
+def TypedStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
+  let arguments = (ins TypedStrAttr<AnyInteger>:$attr);
+  let assemblyFormat = "$attr attr-dict";
+}
+
+def TypedStringAttrWithMixedTypeOp : TEST_Op<"string_attr_with_mixed_type"> {
+  let arguments = (ins
+    AnyAttrOf<[TypedStrAttr<AnyInteger>, I64Attr]>:$attr
+  );
   let assemblyFormat = "$attr attr-dict";
 }
 
@@ -550,7 +557,12 @@ def TestCallOp : TEST_Op<"call", [DeclareOpInterfaceMethods<SymbolUserOpInterfac
 
 def ConversionCallOp : TEST_Op<"conversion_call_op",
     [CallOpInterface]> {
-  let arguments = (ins Variadic<AnyType>:$arg_operands, SymbolRefAttr:$callee);
+  let arguments = (ins
+    Variadic<AnyType>:$arg_operands,
+    SymbolRefAttr:$callee,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
+  );
   let results = (outs Variadic<AnyType>);
 
   let extraClassDeclaration = [{
@@ -611,6 +623,10 @@ def ConversionFuncOp : TEST_Op<"conversion_func_op", [FunctionOpInterface]> {
 def FunctionalRegionOp : TEST_Op<"functional_region_op",
     [CallableOpInterface]> {
   let regions = (region AnyRegion:$body);
+  let arguments = (ins
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
+  );
   let results = (outs FunctionType);
 
   let extraClassDeclaration = [{
@@ -922,6 +938,21 @@ def CustomResultsNameOp
     StrArrayAttr:$names
   );
   let results = (outs Variadic<AnyInteger>:$r);
+}
+
+// This is used to test OpAsmTypeInterface::getAsmName for op result name,
+def ResultNameFromTypeOp
+ : TEST_Op<"result_name_from_type",
+           [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
+  let results = (outs AnyType:$r);
+}
+
+// This is used to test OpAsmTypeInterface::getAsmName for block argument,
+def BlockArgumentNameFromTypeOp
+  : TEST_Op<"block_argument_name_from_type",
+      [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>]> {
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat = "regions attr-dict-with-keyword";
 }
 
 // This is used to test the OpAsmOpInterface::getDefaultDialect() feature:
@@ -2916,6 +2947,50 @@ def RecursivelySpeculatableOp : TEST_Op<"recursively_speculatable_op", [
   let regions = (region SizedRegion<1>:$body);
 }
 
+def SpeculatableOpWithReadSideEffect : TEST_Op<"speculatable_op_with_memread",
+    [ConditionallySpeculatable, MemoryEffects<[MemRead]>]> {
+  let description = [{
+    Op used to test LICM conditional speculation.  This op can always be
+    speculatively executed and has only memory read effect.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$outputs);
+
+  let extraClassDeclaration = [{
+    ::mlir::Speculation::Speculatability getSpeculatability();
+  }];
+
+  let extraClassDefinition = [{
+    ::mlir::Speculation::Speculatability
+    SpeculatableOpWithReadSideEffect::getSpeculatability() {
+      return ::mlir::Speculation::Speculatable;
+    }
+  }];
+}
+
+def SpeculatableOpWithWriteSideEffect : TEST_Op<"speculatable_op_with_memwrite",
+    [ConditionallySpeculatable, MemoryEffects<[MemWrite]>]> {
+  let description = [{
+    Op used to test LICM conditional speculation.  This op can always be
+    speculatively executed and has only memory read effect.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$outputs);
+
+  let extraClassDeclaration = [{
+    ::mlir::Speculation::Speculatability getSpeculatability();
+  }];
+
+  let extraClassDefinition = [{
+    ::mlir::Speculation::Speculatability
+    SpeculatableOpWithWriteSideEffect::getSpeculatability() {
+      return ::mlir::Speculation::Speculatable;
+    }
+  }];
+}
+
 //===---------------------------------------------------------------------===//
 // Test CSE
 //===---------------------------------------------------------------------===//
@@ -3287,7 +3362,9 @@ def TestCallAndStoreOp : TEST_Op<"call_and_store",
     SymbolRefAttr:$callee,
     Arg<AnyMemRef, "", [MemWrite]>:$address,
     Variadic<AnyType>:$callee_operands,
-    BoolAttr:$store_before_call
+    BoolAttr:$store_before_call,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
   let results = (outs
     Variadic<AnyType>:$results
@@ -3302,7 +3379,9 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
   let arguments = (ins
     SymbolRefAttr:$callee,
     Variadic<AnyType>:$forwarded_operands,
-    AnyType:$non_forwarded_device_operand
+    AnyType:$non_forwarded_device_operand,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
   let results = (outs
     Variadic<AnyType>:$results

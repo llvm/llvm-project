@@ -6,6 +6,7 @@ Test handlign of hybrid .pdata section on ARM64EC target.
 RUN: llvm-mc -filetype=obj -triple=arm64-windows arm64-func-sym.s -o arm64-func-sym.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-func-sym.s -o arm64ec-func-sym.obj
 RUN: llvm-mc -filetype=obj -triple=x86_64-windows x86_64-func-sym.s -o x86_64-func-sym.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %p/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
 
 Only arm64ec code:
@@ -55,11 +56,21 @@ DATA3: 180005000 00100000 11000001 00200000 0e200000
 Mixed arm64x code:
 
 RUN: lld-link -out:test4.dll -machine:arm64x arm64-func-sym.obj arm64ec-func-sym.obj \
-RUN:          x86_64-func-sym.obj loadconfig-arm64ec.obj -dll -noentry
+RUN:          x86_64-func-sym.obj loadconfig-arm64.obj loadconfig-arm64ec.obj -dll -noentry
 
 RUN: llvm-readobj --headers test4.dll | FileCheck -check-prefix=DIR3 %s
-DIR3:      ExceptionTableRVA: 0x6000
-DIR3-NEXT: ExceptionTableSize: 0x10
+DIR3:      ImageOptionalHeader {
+DIR3:        DataDirectory {
+DIR3:          ExceptionTableRVA: 0x6000
+DIR3-NEXT:     ExceptionTableSize: 0x10
+DIR3:        }
+DIR3:      }
+DIR3:      HybridObject {
+DIR3:        ImageOptionalHeader {
+DIR3:          ExceptionTableRVA: 0x6010
+DIR3-NEXT:     ExceptionTableSize: 0xC
+DIR3:        }
+DIR3:      }
 
 RUN: llvm-objdump -s --section=.pdata test4.dll | FileCheck -check-prefix=DATA4 %s
 DATA4: 180006000 00100000 11000001 00200000 11000001  ......... ......
@@ -74,12 +85,12 @@ RUN: llvm-readobj --headers test5.dll | FileCheck -check-prefix=DIR2 %s
 RUN: llvm-objdump -s --section=.pdata test5.dll | FileCheck -check-prefix=DATA3 %s
 
 RUN: lld-link -out:test6.dll -machine:arm64x arm64ec-func-sym.obj x86_64-func-sym.obj \
-RUN:          arm64-func-sym.obj loadconfig-arm64ec.obj -dll -noentry
+RUN:          arm64-func-sym.obj loadconfig-arm64.obj loadconfig-arm64ec.obj -dll -noentry
 RUN: llvm-readobj --headers test6.dll | FileCheck -check-prefix=DIR3 %s
 RUN: llvm-objdump -s --section=.pdata test6.dll | FileCheck -check-prefix=DATA4 %s
 
 RUN: lld-link -out:test7.dll -machine:arm64x x86_64-func-sym.obj arm64ec-func-sym.obj \
-RUN:          arm64-func-sym.obj loadconfig-arm64ec.obj -dll -noentry
+RUN:          arm64-func-sym.obj loadconfig-arm64.obj loadconfig-arm64ec.obj -dll -noentry
 RUN: llvm-readobj --headers test7.dll | FileCheck -check-prefix=DIR3 %s
 RUN: llvm-objdump -s --section=.pdata test7.dll | FileCheck -check-prefix=DATA4 %s
 

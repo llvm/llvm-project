@@ -14,7 +14,6 @@
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/ProfileData/CtxInstrContextNode.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -89,6 +88,15 @@ void PGOCtxProfileWriter::write(const ContextNode &RootNode) {
 }
 
 namespace {
+
+/// Representation of the context node suitable for yaml serialization /
+/// deserialization.
+struct SerializableCtxRepresentation {
+  ctx_profile::GUID Guid = 0;
+  std::vector<uint64_t> Counters;
+  std::vector<std::vector<SerializableCtxRepresentation>> Callsites;
+};
+
 ctx_profile::ContextNode *
 createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
            const std::vector<SerializableCtxRepresentation> &DCList);

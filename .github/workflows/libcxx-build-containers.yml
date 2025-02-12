@@ -9,7 +9,6 @@ name: Build Docker images for libc++ CI
 
 permissions:
   contents: read
-  packages: write
 
 on:
   push:

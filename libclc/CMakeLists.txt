@@ -32,10 +32,6 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   spirv64/lib/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
-  clc/lib/clspv/SOURCES;
-  clc/lib/clspv64/SOURCES;
-  clc/lib/spirv/SOURCES;
-  clc/lib/spirv64/SOURCES;
 )
 
 set( LIBCLC_MIN_LLVM 3.9.0 )
@@ -114,7 +110,7 @@ endforeach()
 if( TARGET llvm-spirv )
   get_host_tool_path( llvm-spirv LLVM_SPIRV llvm-spirv_exe llvm-spirv_target )
 else()
-  find_program( LLVM_SPIRV llvm-spirv PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+  find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
   set( llvm-spirv_exe "${LLVM_SPIRV}" )
   set( llvm-spirv_target )
 endif()
@@ -266,30 +262,38 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   list( GET TRIPLE 1 VENDOR )
   list( GET TRIPLE 2 OS )
 
-  set( dirs )
+  set( opencl_dirs )
 
   if ( NOT ${ARCH} STREQUAL spirv AND NOT ${ARCH} STREQUAL spirv64 AND
        NOT ${ARCH} STREQUAL clspv AND NOT ${ARCH} STREQUAL clspv64)
-    LIST( APPEND dirs generic )
+    LIST( APPEND opencl_dirs generic )
   endif()
 
   if( ${ARCH} STREQUAL r600 OR ${ARCH} STREQUAL amdgcn )
-    list( APPEND dirs amdgpu )
+    list( APPEND opencl_dirs amdgpu )
   endif()
 
-  # nvptx is special
+  # Some targets' directories alias others
   if( ${ARCH} STREQUAL nvptx OR ${ARCH} STREQUAL nvptx64 )
     set( DARCH ptx )
+  elseif( ${ARCH} STREQUAL clspv OR ${ARCH} STREQUAL clspv64 )
+    set( DARCH clspv )
+  elseif( ${ARCH} STREQUAL spirv OR ${ARCH} STREQUAL spirv64 )
+    set( DARCH spirv )
+  elseif( ${ARCH} STREQUAL amdgcn-mesa3d )
+    set( DARCH amdgcn-amdhsa )
   else()
     set( DARCH ${ARCH} )
   endif()
 
   set( clc_lib_files )
+  set( clc_dirs ${dirs} generic )
+
   libclc_configure_lib_source(
     clc_lib_files
     CLC_INTERNAL
     LIB_ROOT_DIR clc
-    DIRS ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
+    DIRS ${clc_dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
   )
 
   set( opencl_lib_files )
@@ -306,7 +310,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
   libclc_configure_lib_source(
     opencl_lib_files
-    DIRS ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
+    DIRS ${opencl_dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
   )
 
   foreach( d ${${t}_devices} )
@@ -347,7 +351,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     string( TOUPPER "CLC_${MACRO_ARCH}" CLC_TARGET_DEFINE )
 
     list( APPEND build_flags
-      -D__CLC_INTERNAL
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
@@ -359,12 +362,14 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       list( APPEND build_flags -mcpu=${cpu} )
     endif()
 
+    set( clc_build_flags ${build_flags} -DCLC_INTERNAL )
+
     add_libclc_builtin_set(
       CLC_INTERNAL
       ARCH ${ARCH}
       ARCH_SUFFIX clc-${arch_suffix}
       TRIPLE ${clang_triple}
-      COMPILE_FLAGS ${build_flags}
+      COMPILE_FLAGS ${clc_build_flags}
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${clc_lib_files}
     )

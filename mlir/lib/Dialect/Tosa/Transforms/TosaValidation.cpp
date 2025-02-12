@@ -357,7 +357,7 @@ private:
   bool levelCheckTransposeConv2d(Operation *op) {
     if (auto transpose = dyn_cast<tosa::TransposeConv2DOp>(op)) {
       if (ShapedType filterType =
-              dyn_cast<ShapedType>(transpose.getFilter().getType())) {
+              dyn_cast<ShapedType>(transpose.getWeight().getType())) {
         auto shape = filterType.getShape();
         assert(shape.size() == 4);
         // level check kernel sizes for kH and KW
@@ -536,6 +536,8 @@ bool TosaValidation::isValidElementType(Type type) {
         return true;
       }
     }
+  } else if (mlir::isa<tosa::shapeType>(type)) {
+    return true;
   }
   return false;
 }

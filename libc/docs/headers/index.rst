@@ -8,7 +8,9 @@ Implementation Status
    arpa/inet
    assert
    complex
+   cpio
    ctype
+   endian
    errno
    fenv
    float
@@ -26,8 +28,18 @@ Implementation Status
    string
    strings
    sys/mman
+   sys/resource
+   sys/stat
+   sys/statvfs
+   sys/time
+   sys/wait
+   termios
    threads
    time
    uchar
+   unistd
    wchar
    wctype
+..
+   TODO: https://github.com/llvm/llvm-project/issues/123821
+   pthread

@@ -1932,6 +1932,7 @@ multiclass VPseudoUSStore {
         def "E" # eew # "_V_" # LInfo : VPseudoUSStoreNoMask<vreg, eew>,
                                         VSESched<LInfo>;
         def "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoUSStoreMask<vreg, eew>,
+                                                  RISCVMaskedPseudo<MaskIdx=2>,
                                                   VSESched<LInfo>;
       }
     }
@@ -1958,6 +1959,7 @@ multiclass VPseudoSStore {
         def "E" # eew # "_V_" # LInfo : VPseudoSStoreNoMask<vreg, eew>,
                                         VSSSched<eew, LInfo>;
         def "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoSStoreMask<vreg, eew>,
+                                                  RISCVMaskedPseudo<MaskIdx=3>,
                                                   VSSSched<eew, LInfo>;
       }
     }
@@ -1984,6 +1986,7 @@ multiclass VPseudoIStore<bit Ordered> {
               VSXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
               VPseudoIStoreMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered>,
+              RISCVMaskedPseudo<MaskIdx=3>,
               VSXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
           }
         }
@@ -2132,23 +2135,6 @@ multiclass VPseudoBinaryRoundingMode<VReg RetClass,
   }
 }
 
-
-multiclass VPseudoBinaryM<VReg RetClass,
-                          VReg Op1Class,
-                          DAGOperand Op2Class,
-                          LMULInfo MInfo,
-                          string Constraint = "",
-                          bits<2> TargetConstraintType = 1,
-                          bit Commutable = 0> {
-  let VLMul = MInfo.value, isCommutable = Commutable in {
-    def "_" # MInfo.MX : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
-                                             Constraint, TargetConstraintType>;
-    let ForceTailAgnostic = true in
-    def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMOutMask<RetClass, Op1Class,
-                                                         Op2Class, Constraint, TargetConstraintType>,
-                                   RISCVMaskedPseudo<MaskIdx=3>;
-  }
-}
 
 multiclass VPseudoBinaryEmul<VReg RetClass,
                              VReg Op1Class,
@@ -2630,28 +2616,35 @@ multiclass PseudoVEXT_VF8 {
 //  lowest-numbered part of the source register group".
 // With LMUL<=1 the source and dest occupy a single register so any overlap
 // is in the lowest-numbered part.
-multiclass VPseudoBinaryM_VV<LMULInfo m, bits<2> TargetConstraintType = 1,
-                             bit Commutable = 0> {
-  defm _VV : VPseudoBinaryM<VR, m.vrclass, m.vrclass, m,
+multiclass VPseudoBinaryM<DAGOperand Op2Class, LMULInfo m, bit Commutable = 0> {
+  let VLMul = m.value, isCommutable = Commutable in {
+    def "_" # m.MX :
+      VPseudoBinaryNoMask<VR, m.vrclass, Op2Class,
+                          !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""),
+                          TargetConstraintType = 2>;
+    let ForceTailAgnostic = true in
+    def "_" # m.MX # "_MASK" :
+      VPseudoBinaryMOutMask<VR, m.vrclass, Op2Class,
                             !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""),
-                            TargetConstraintType, Commutable=Commutable>;
+                            TargetConstraintType = 2>,
+      RISCVMaskedPseudo<MaskIdx=3>;
+  }
 }
 
-multiclass VPseudoBinaryM_VX<LMULInfo m, bits<2> TargetConstraintType = 1> {
-  defm "_VX" :
-    VPseudoBinaryM<VR, m.vrclass, GPR, m,
-                   !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""), TargetConstraintType>;
+multiclass VPseudoBinaryM_VV<LMULInfo m, bit Commutable = 0> {
+  defm _VV : VPseudoBinaryM<m.vrclass, m, Commutable=Commutable>;
 }
 
-multiclass VPseudoBinaryM_VF<LMULInfo m, FPR_Info f, bits<2> TargetConstraintType = 1> {
-  defm "_V" # f.FX :
-    VPseudoBinaryM<VR, m.vrclass, f.fprclass, m,
-                   !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""), TargetConstraintType>;
+multiclass VPseudoBinaryM_VX<LMULInfo m> {
+  defm _VX : VPseudoBinaryM<GPR, m>;
 }
 
-multiclass VPseudoBinaryM_VI<LMULInfo m, bits<2> TargetConstraintType = 1> {
-  defm _VI : VPseudoBinaryM<VR, m.vrclass, simm5, m,
-                            !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""), TargetConstraintType>;
+multiclass VPseudoBinaryM_VF<LMULInfo m, FPR_Info f> {
+  defm "_V" # f.FX : VPseudoBinaryM<f.fprclass, m>;
+}
+
+multiclass VPseudoBinaryM_VI<LMULInfo m> {
+  defm _VI : VPseudoBinaryM<simm5, m>;
 }
 
 multiclass VPseudoVGTR_VV_VX_VI {
@@ -3394,11 +3387,11 @@ multiclass VPseudoVWMAC_VV_VF_BF_RM {
 multiclass VPseudoVCMPM_VV_VX_VI<bit Commutable = 0> {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defm "" : VPseudoBinaryM_VV<m, TargetConstraintType=2, Commutable=Commutable>,
+    defm "" : VPseudoBinaryM_VV<m, Commutable=Commutable>,
               SchedBinary<"WriteVICmpV", "ReadVICmpV", "ReadVICmpV", mx>;
-    defm "" : VPseudoBinaryM_VX<m, TargetConstraintType=2>,
+    defm "" : VPseudoBinaryM_VX<m>,
               SchedBinary<"WriteVICmpX", "ReadVICmpV", "ReadVICmpX", mx>;
-    defm "" : VPseudoBinaryM_VI<m, TargetConstraintType=2>,
+    defm "" : VPseudoBinaryM_VI<m>,
               SchedUnary<"WriteVICmpI", "ReadVICmpV", mx>;
   }
 }
@@ -3406,22 +3399,32 @@ multiclass VPseudoVCMPM_VV_VX_VI<bit Commutable = 0> {
 multiclass VPseudoVCMPM_VV_VX {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defm "" : VPseudoBinaryM_VV<m, TargetConstraintType=2>,
+    defm "" : VPseudoBinaryM_VV<m>,
               SchedBinary<"WriteVICmpV", "ReadVICmpV", "ReadVICmpV", mx>;
-    defm "" : VPseudoBinaryM_VX<m, TargetConstraintType=2>,
+    defm "" : VPseudoBinaryM_VX<m>,
               SchedBinary<"WriteVICmpX", "ReadVICmpV", "ReadVICmpX", mx>;
+  }
+}
+
+multiclass VPseudoVCMPM_VX_VI {
+  foreach m = MxList in {
+    defvar mx = m.MX;
+    defm "" : VPseudoBinaryM_VX<m>,
+              SchedBinary<"WriteVICmpX", "ReadVICmpV", "ReadVICmpX", mx>;
+    defm "" : VPseudoBinaryM_VI<m>,
+              SchedUnary<"WriteVICmpI", "ReadVICmpV", mx>;
   }
 }
 
 multiclass VPseudoVCMPM_VV_VF {
   foreach m = MxListF in {
-    defm "" : VPseudoBinaryM_VV<m, TargetConstraintType=2>,
+    defm "" : VPseudoBinaryM_VV<m>,
               SchedBinary<"WriteVFCmpV", "ReadVFCmpV", "ReadVFCmpV", m.MX>;
   }
 
   foreach f = FPList in {
     foreach m = f.MxList in {
-      defm "" : VPseudoBinaryM_VF<m, f, TargetConstraintType=2>,
+      defm "" : VPseudoBinaryM_VF<m, f>,
                 SchedBinary<"WriteVFCmpF", "ReadVFCmpV", "ReadVFCmpF", m.MX>;
     }
   }
@@ -3430,19 +3433,9 @@ multiclass VPseudoVCMPM_VV_VF {
 multiclass VPseudoVCMPM_VF {
   foreach f = FPList in {
     foreach m = f.MxList in {
-      defm "" : VPseudoBinaryM_VF<m, f, TargetConstraintType=2>,
+      defm "" : VPseudoBinaryM_VF<m, f>,
                 SchedBinary<"WriteVFCmpF", "ReadVFCmpV", "ReadVFCmpF", m.MX>;
     }
-  }
-}
-
-multiclass VPseudoVCMPM_VX_VI {
-  foreach m = MxList in {
-    defvar mx = m.MX;
-    defm "" : VPseudoBinaryM_VX<m, TargetConstraintType=2>,
-              SchedBinary<"WriteVICmpX", "ReadVICmpV", "ReadVICmpX", mx>;
-    defm "" : VPseudoBinaryM_VI<m, TargetConstraintType=2>,
-              SchedUnary<"WriteVICmpI", "ReadVICmpV", mx>;
   }
 }
 
@@ -3709,7 +3702,8 @@ multiclass VPseudoUSSegLoad {
           def nf # "E" # eew # "_V_" # LInfo :
             VPseudoUSSegLoadNoMask<vreg, eew, nf>, VLSEGSched<nf, eew, LInfo>;
           def nf # "E" # eew # "_V_" # LInfo # "_MASK" :
-            VPseudoUSSegLoadMask<vreg, eew, nf>, VLSEGSched<nf, eew, LInfo>;
+            VPseudoUSSegLoadMask<vreg, eew, nf>, RISCVMaskedPseudo<MaskIdx=2>,
+            VLSEGSched<nf, eew, LInfo>;
         }
       }
     }
@@ -3726,7 +3720,8 @@ multiclass VPseudoUSSegLoadFF {
           def nf # "E" # eew # "FF_V_" # LInfo :
             VPseudoUSSegLoadFFNoMask<vreg, eew, nf>, VLSEGFFSched<nf, eew, LInfo>;
           def nf # "E" # eew # "FF_V_" # LInfo # "_MASK" :
-            VPseudoUSSegLoadFFMask<vreg, eew, nf>, VLSEGFFSched<nf, eew, LInfo>;
+            VPseudoUSSegLoadFFMask<vreg, eew, nf>, RISCVMaskedPseudo<MaskIdx=2>,
+            VLSEGFFSched<nf, eew, LInfo>;
         }
       }
     }
@@ -3743,6 +3738,7 @@ multiclass VPseudoSSegLoad {
           def nf # "E" # eew # "_V_" # LInfo : VPseudoSSegLoadNoMask<vreg, eew, nf>,
                                                VLSSEGSched<nf, eew, LInfo>;
           def nf # "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoSSegLoadMask<vreg, eew, nf>,
+                                                         RISCVMaskedPseudo<MaskIdx=3>,
                                                          VLSSEGSched<nf, eew, LInfo>;
         }
       }
@@ -3773,6 +3769,7 @@ multiclass VPseudoISegLoad<bit Ordered> {
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
                 VPseudoISegLoadMask<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                     nf, Ordered>,
+                RISCVMaskedPseudo<MaskIdx=3>,
                 VLXSEGSched<nf, dataEEW, Ordered, DataLInfo>;
             }
           }
@@ -3792,6 +3789,7 @@ multiclass VPseudoUSSegStore {
           def nf # "E" # eew # "_V_" # LInfo : VPseudoUSSegStoreNoMask<vreg, eew, nf>,
                                                VSSEGSched<nf, eew, LInfo>;
           def nf # "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoUSSegStoreMask<vreg, eew, nf>,
+                                                         RISCVMaskedPseudo<MaskIdx=2>,
                                                          VSSEGSched<nf, eew, LInfo>;
         }
       }
@@ -3809,6 +3807,7 @@ multiclass VPseudoSSegStore {
           def nf # "E" # eew # "_V_" # LInfo : VPseudoSSegStoreNoMask<vreg, eew, nf>,
                                                VSSSEGSched<nf, eew, LInfo>;
           def nf # "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoSSegStoreMask<vreg, eew, nf>,
+                                                         RISCVMaskedPseudo<MaskIdx=3>,
                                                          VSSSEGSched<nf, eew, LInfo>;
         }
       }
@@ -3839,6 +3838,7 @@ multiclass VPseudoISegStore<bit Ordered> {
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
                 VPseudoISegStoreMask<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                      nf, Ordered>,
+                RISCVMaskedPseudo<MaskIdx=3>,
                 VSXSEGSched<nf, idxEEW, Ordered, DataLInfo>;
             }
           }

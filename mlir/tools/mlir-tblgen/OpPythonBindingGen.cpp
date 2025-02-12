@@ -37,7 +37,6 @@ from ._ods_common import (
     equally_sized_accessor as _ods_equally_sized_accessor,
     get_default_loc_context as _ods_get_default_loc_context,
     get_op_result_or_op_results as _get_op_result_or_op_results,
-    get_op_result_or_value as _get_op_result_or_value,
     get_op_results_or_values as _get_op_results_or_values,
     segmented_accessor as _ods_segmented_accessor,
 )
@@ -496,22 +495,20 @@ constexpr const char *initTemplate = R"Py(
     attributes = {{}
     regions = None
     {1}
-    super().__init__(self.build_generic({2}))
+    super().__init__({2})
 )Py";
 
 /// Template for appending a single element to the operand/result list.
 ///   {0} is the field name.
-constexpr const char *singleOperandAppendTemplate =
-    "operands.append(_get_op_result_or_value({0}))";
+constexpr const char *singleOperandAppendTemplate = "operands.append({0})";
 constexpr const char *singleResultAppendTemplate = "results.append({0})";
 
 /// Template for appending an optional element to the operand/result list.
 ///   {0} is the field name.
 constexpr const char *optionalAppendOperandTemplate =
-    "if {0} is not None: operands.append(_get_op_result_or_value({0}))";
+    "if {0} is not None: operands.append({0})";
 constexpr const char *optionalAppendAttrSizedOperandsTemplate =
-    "operands.append(_get_op_result_or_value({0}) if {0} is not None else "
-    "None)";
+    "operands.append({0})";
 constexpr const char *optionalAppendResultTemplate =
     "if {0} is not None: results.append({0})";
 
@@ -915,6 +912,10 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
   functionArgs.push_back("ip=None");
 
   SmallVector<std::string> initArgs;
+  initArgs.push_back("self.OPERATION_NAME");
+  initArgs.push_back("self._ODS_REGIONS");
+  initArgs.push_back("self._ODS_OPERAND_SEGMENTS");
+  initArgs.push_back("self._ODS_RESULT_SEGMENTS");
   initArgs.push_back("attributes=attributes");
   if (!hasInferTypeInterface(op))
     initArgs.push_back("results=results");

@@ -160,6 +160,8 @@ class PluginPythonOSPlugin(TestBase):
         )
         self.assertTrue(process, PROCESS_IS_VALID)
 
+        core_thread_zero = process.GetThreadAtIndex(0)
+
         # Make sure there are no OS plug-in created thread when we first stop
         # at our breakpoint in main
         thread = process.GetThreadByID(0x111111111)
@@ -183,6 +185,10 @@ class PluginPythonOSPlugin(TestBase):
             thread.IsValid(),
             "Make sure there is a thread 0x111111111 after we load the python OS plug-in",
         )
+        # This OS plugin does not set thread names / queue names, so it should
+        # inherit the core thread's name.
+        self.assertEqual(core_thread_zero.GetName(), thread.GetName())
+        self.assertEqual(core_thread_zero.GetQueueName(), thread.GetQueueName())
 
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(
@@ -219,3 +225,12 @@ class PluginPythonOSPlugin(TestBase):
             6,
             "Make sure we stepped from line 5 to line 6 in main.c",
         )
+
+        thread_bp_number = lldbutil.run_break_set_by_source_regexp(
+            self, "Set tid-specific breakpoint here", num_expected_locations=1
+        )
+        breakpoint = target.FindBreakpointByID(thread_bp_number)
+        # This breakpoint should not be hit.
+        breakpoint.SetThreadID(123)
+        process.Continue()
+        self.assertState(process.GetState(), lldb.eStateExited)

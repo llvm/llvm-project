@@ -51,15 +51,20 @@ define <4 x i32> @interleave_v2i32(<2 x i32> %x, <2 x i32> %y) {
 define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V128-LABEL: interleave_v2i64:
 ; V128:       # %bb.0:
+; V128-NEXT:    csrr a0, vlenb
 ; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; V128-NEXT:    vmv1r.v v12, v9
-; V128-NEXT:    vid.v v9
+; V128-NEXT:    vid.v v10
+; V128-NEXT:    srli a0, a0, 3
+; V128-NEXT:    vsrl.vi v10, v10, 1
+; V128-NEXT:    vslidedown.vx v12, v10, a0
+; V128-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; V128-NEXT:    vrgatherei16.vv v13, v11, v12
+; V128-NEXT:    vrgatherei16.vv v12, v9, v10
 ; V128-NEXT:    vmv.v.i v0, 10
-; V128-NEXT:    vsrl.vi v14, v9, 1
-; V128-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
-; V128-NEXT:    vrgatherei16.vv v10, v8, v14
-; V128-NEXT:    vrgatherei16.vv v10, v12, v14, v0.t
-; V128-NEXT:    vmv.v.v v8, v10
+; V128-NEXT:    vrgatherei16.vv v14, v8, v10
+; V128-NEXT:    vmv.v.v v15, v13
+; V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; V128-NEXT:    vmerge.vvm v8, v14, v12, v0
 ; V128-NEXT:    ret
 ;
 ; RV32-V512-LABEL: interleave_v2i64:

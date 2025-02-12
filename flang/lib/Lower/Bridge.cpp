@@ -12,7 +12,6 @@
 
 #include "flang/Lower/Bridge.h"
 
-#include "flang/Common/Version.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
@@ -62,7 +61,9 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Version.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser/Parser.h"
@@ -459,7 +460,9 @@ public:
     if (hasMainProgram)
       createGlobalOutsideOfFunctionLowering([&]() {
         fir::runtime::genMain(*builder, toLocation(),
-                              bridge.getEnvironmentDefaults());
+                              bridge.getEnvironmentDefaults(),
+                              getFoldingContext().languageFeatures().IsEnabled(
+                                  Fortran::common::LanguageFeature::CUDA));
       });
 
     finalizeOpenACCLowering();
@@ -891,9 +894,10 @@ public:
                  isPointer, Fortran::semantics::Symbol::Flags());
   }
 
-  void copyHostAssociateVar(
-      const Fortran::semantics::Symbol &sym,
-      mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) override final {
+  void
+  copyHostAssociateVar(const Fortran::semantics::Symbol &sym,
+                       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr,
+                       bool hostIsSource = true) override final {
     // 1) Fetch the original copy of the variable.
     assert(sym.has<Fortran::semantics::HostAssocDetails>() &&
            "No host-association found");
@@ -908,16 +912,14 @@ public:
            "Host and associated symbol boxes are the same");
 
     // 3) Perform the assignment.
-    mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+    mlir::OpBuilder::InsertionGuard guard(*builder);
     if (copyAssignIP && copyAssignIP->isSet())
       builder->restoreInsertionPoint(*copyAssignIP);
     else
       builder->setInsertionPointAfter(sb.getAddr().getDefiningOp());
 
     Fortran::lower::SymbolBox *lhs_sb, *rhs_sb;
-    if (copyAssignIP && copyAssignIP->isSet() &&
-        sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
-      // lastprivate case
+    if (!hostIsSource) {
       lhs_sb = &hsb;
       rhs_sb = &sb;
     } else {
@@ -926,11 +928,6 @@ public:
     }
 
     copyVar(sym, *lhs_sb, *rhs_sb, sym.flags());
-
-    if (copyAssignIP && copyAssignIP->isSet() &&
-        sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
-      builder->restoreInsertionPoint(insPt);
-    }
   }
 
   void genEval(Fortran::lower::pft::Evaluation &eval,
@@ -1296,9 +1293,30 @@ private:
       auto loadVal = builder->create<fir::LoadOp>(loc, rhs);
       builder->create<fir::StoreOp>(loc, loadVal, lhs);
     } else if (isAllocatable &&
-               (flags.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate) ||
-                flags.test(Fortran::semantics::Symbol::Flag::OmpCopyIn))) {
-      // For firstprivate and copyin allocatable variables, RHS must be copied
+               flags.test(Fortran::semantics::Symbol::Flag::OmpCopyIn)) {
+      // For copyin allocatable variables, RHS must be copied to lhs
+      // only when rhs is allocated.
+      hlfir::Entity temp =
+          hlfir::derefPointersAndAllocatables(loc, *builder, rhs);
+      mlir::Value addr = hlfir::genVariableRawAddress(loc, *builder, temp);
+      mlir::Value isAllocated = builder->genIsNotNullAddr(loc, addr);
+      builder->genIfThenElse(loc, isAllocated)
+          .genThen([&]() { copyData(lhs, rhs); })
+          .genElse([&]() {
+            fir::ExtendedValue hexv = symBoxToExtendedValue(dst);
+            hexv.match(
+                [&](const fir::MutableBoxValue &new_box) -> void {
+                  // if the allocation status of original list item is
+                  // unallocated, unallocate the copy if it is allocated, else
+                  // do nothing.
+                  Fortran::lower::genDeallocateIfAllocated(*this, new_box, loc);
+                },
+                [&](const auto &) -> void {});
+          })
+          .end();
+    } else if (isAllocatable &&
+               flags.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
+      // For firstprivate allocatable variables, RHS must be copied
       // only when LHS is allocated.
       hlfir::Entity temp =
           hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
@@ -2153,14 +2171,64 @@ private:
     return builder->createIntegerConstant(loc, controlType, 1); // step
   }
 
-  void addLoopAnnotationAttr(IncrementLoopInfo &info) {
-    mlir::BoolAttr f = mlir::BoolAttr::get(builder->getContext(), false);
-    mlir::LLVM::LoopVectorizeAttr va = mlir::LLVM::LoopVectorizeAttr::get(
-        builder->getContext(), /*disable=*/f, {}, {}, {}, {}, {}, {});
+  // For unroll directives without a value, force full unrolling.
+  // For unroll directives with a value, if the value is greater than 1,
+  // force unrolling with the given factor. Otherwise, disable unrolling.
+  mlir::LLVM::LoopUnrollAttr
+  genLoopUnrollAttr(std::optional<std::uint64_t> directiveArg) {
+    mlir::BoolAttr falseAttr =
+        mlir::BoolAttr::get(builder->getContext(), false);
+    mlir::BoolAttr trueAttr = mlir::BoolAttr::get(builder->getContext(), true);
+    mlir::IntegerAttr countAttr;
+    mlir::BoolAttr fullUnrollAttr;
+    bool shouldUnroll = true;
+    if (directiveArg.has_value()) {
+      auto unrollingFactor = directiveArg.value();
+      if (unrollingFactor == 0 || unrollingFactor == 1) {
+        shouldUnroll = false;
+      } else {
+        countAttr =
+            builder->getIntegerAttr(builder->getI64Type(), unrollingFactor);
+      }
+    } else {
+      fullUnrollAttr = trueAttr;
+    }
+
+    mlir::BoolAttr disableAttr = shouldUnroll ? falseAttr : trueAttr;
+    return mlir::LLVM::LoopUnrollAttr::get(
+        builder->getContext(), /*disable=*/disableAttr, /*count=*/countAttr, {},
+        /*full=*/fullUnrollAttr, {}, {}, {});
+  }
+
+  void addLoopAnnotationAttr(
+      IncrementLoopInfo &info,
+      llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
+    mlir::LLVM::LoopVectorizeAttr va;
+    mlir::LLVM::LoopUnrollAttr ua;
+    bool has_attrs = false;
+    for (const auto *dir : dirs) {
+      Fortran::common::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
+                mlir::BoolAttr falseAttr =
+                    mlir::BoolAttr::get(builder->getContext(), false);
+                va = mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
+                                                        /*disable=*/falseAttr,
+                                                        {}, {}, {}, {}, {}, {});
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::Unroll &u) {
+                ua = genLoopUnrollAttr(u.v);
+                has_attrs = true;
+              },
+              [&](const auto &) {}},
+          dir->u);
+    }
     mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
-        builder->getContext(), {}, /*vectorize=*/va, {}, {}, {}, {}, {}, {}, {},
-        {}, {}, {}, {}, {}, {});
-    info.doLoop.setLoopAnnotationAttr(la);
+        builder->getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ ua, {}, {},
+        {}, {}, {}, {}, {}, {}, {}, {}, {});
+    if (has_attrs)
+      info.doLoop.setLoopAnnotationAttr(la);
   }
 
   /// Generate FIR to begin a structured or unstructured increment loop nest.
@@ -2259,14 +2327,7 @@ private:
         if (info.hasLocalitySpecs())
           handleLocalitySpecs(info);
 
-        for (const auto *dir : dirs) {
-          Fortran::common::visit(
-              Fortran::common::visitors{
-                  [&](const Fortran::parser::CompilerDirective::VectorAlways
-                          &d) { addLoopAnnotationAttr(info); },
-                  [&](const auto &) {}},
-              dir->u);
-        }
+        addLoopAnnotationAttr(info, dirs);
         continue;
       }
 
@@ -2816,6 +2877,9 @@ private:
     Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::Unroll &) {
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},

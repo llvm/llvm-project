@@ -52,6 +52,17 @@ func.func @memref_dim(%m: memref<?xf32>) -> index {
 
 // -----
 
+// CHECK-LABEL: func @memref_dim_all_positive(
+func.func @memref_dim_all_positive(%m: memref<?xf32>, %x: index) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.dim %m, %x : memref<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %c0) {cmp = "GE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_get_global(
 //       CHECK:   %[[c4:.*]] = arith.constant 4 : index
 //       CHECK:   return %[[c4]]

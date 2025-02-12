@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/SandboxIR/Constant.h"
@@ -23,10 +24,13 @@ struct PassTest : public testing::Test {
   llvm::LLVMContext LLVMCtx;
   std::unique_ptr<llvm::Module> LLVMM;
   std::unique_ptr<Context> Ctx;
+  std::unique_ptr<llvm::TargetTransformInfo> TTI;
 
   Function *parseFunction(const char *IR, const char *FuncName) {
     llvm::SMDiagnostic Err;
     LLVMM = parseAssemblyString(IR, Err, LLVMCtx);
+    TTI = std::make_unique<llvm::TargetTransformInfo>(LLVMM->getDataLayout());
+
     if (!LLVMM)
       Err.print("PassTest", llvm::errs());
     Ctx = std::make_unique<Context>(LLVMCtx);
@@ -119,7 +123,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   EXPECT_EQ(TPass.getName(), "test-pass");
   // Check runOnRegion();
   llvm::SmallVector<std::unique_ptr<Region>> Regions =
-      Region::createRegionsFromMD(*F);
+      Region::createRegionsFromMD(*F, *TTI);
   ASSERT_EQ(Regions.size(), 1u);
   TPass.runOnRegion(*Regions[0], Analyses::emptyForTesting());
   EXPECT_EQ(InstCount, 2u);
@@ -242,7 +246,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   RPM.addPass(std::make_unique<TestPass2>(InstCount2));
   // Check runOnRegion().
   llvm::SmallVector<std::unique_ptr<Region>> Regions =
-      Region::createRegionsFromMD(*F);
+      Region::createRegionsFromMD(*F, *TTI);
   ASSERT_EQ(Regions.size(), 1u);
   RPM.runOnRegion(*Regions[0], Analyses::emptyForTesting());
   EXPECT_EQ(InstCount1, 2u);

@@ -171,7 +171,7 @@ void NVPTXRegisterInfo::addToDebugRegisterMap(
 }
 
 int64_t NVPTXRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
-  if (Register::isPhysicalRegister(RegNum)) {
+  if (RegNum.isPhysical()) {
     std::string name = NVPTXInstPrinter::getRegisterName(RegNum.id());
     // In NVPTXFrameLowering.cpp, we do arrange for %Depot to be accessible from
     // %SP. Using the %Depot register doesn't provide any debug info in

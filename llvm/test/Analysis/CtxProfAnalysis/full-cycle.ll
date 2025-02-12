@@ -88,54 +88,20 @@ Function Info:
 10507721908651011566 : entrypoint. MaxCounterID: 1. MaxCallsiteID: 2
 
 Current Profile:
-[
-  {
-    "Callsites": [
-      [
-        {
-          "Callsites": [
-            [
-              {
-                "Counters": [
-                  10,
-                  7
-                ],
-                "Guid": 3087265239403591524
-              }
-            ]
-          ],
-          "Counters": [
-            7
-          ],
-          "Guid": 2072045998141807037
-        }
-      ],
-      [
-        {
-          "Callsites": [
-            [
-              {
-                "Counters": [
-                  1,
-                  2
-                ],
-                "Guid": 3087265239403591524
-              }
-            ]
-          ],
-          "Counters": [
-            2
-          ],
-          "Guid": 4197650231481825559
-        }
-      ]
-    ],
-    "Counters": [
-      1
-    ],
-    "Guid": 10507721908651011566
-  }
-]
+
+- Guid:            10507721908651011566
+  Counters:        [ 1 ]
+  Callsites:
+    - - Guid:            2072045998141807037
+        Counters:        [ 7 ]
+        Callsites:
+          - - Guid:            3087265239403591524
+              Counters:        [ 10, 7 ]
+    - - Guid:            4197650231481825559
+        Counters:        [ 2 ]
+        Callsites:
+          - - Guid:            3087265239403591524
+              Counters:        [ 1, 2 ]
 
 Flat Profile:
 2072045998141807037 : 7 

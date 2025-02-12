@@ -182,7 +182,7 @@ bool
 HexagonTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
-    LLVMContext &Context) const {
+    LLVMContext &Context, const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 
@@ -814,7 +814,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
   // stack where the return value will be stored. For Hexagon, the location on
   // caller's stack is passed only when the struct size is smaller than (and
   // equal to) 8 bytes. If not, no address will be passed into callee and
-  // callee return the result direclty through R0/R1.
+  // callee return the result directly through R0/R1.
   auto NextSingleReg = [] (const TargetRegisterClass &RC, unsigned Reg) {
     switch (RC.getID()) {
     case Hexagon::IntRegsRegClassID:
@@ -979,7 +979,7 @@ HexagonTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   // If first Vararg register is odd, add 4 bytes to start of
   // saved register area to point to the first register location.
   // This is because the saved register area has to be 8 byte aligned.
-  // Incase of an odd start register, there will be 4 bytes of padding in
+  // In case of an odd start register, there will be 4 bytes of padding in
   // the beginning of saved register area. If all registers area used up,
   // the following condition will handle it correctly.
   SDValue SavedRegAreaStartFrameIndex =
@@ -1321,7 +1321,7 @@ HexagonTargetLowering::GetDynamicTLSAddr(SelectionDAG &DAG, SDValue Chain,
 }
 
 //
-// Lower using the intial executable model for TLS addresses
+// Lower using the initial executable model for TLS addresses
 //
 SDValue
 HexagonTargetLowering::LowerToTLSInitialExecModel(GlobalAddressSDNode *GA,
@@ -1860,13 +1860,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setLibcallName(RTLIB::SREM_I64, "__hexagon_moddi3");
   setLibcallName(RTLIB::UREM_I32, "__hexagon_umodsi3");
   setLibcallName(RTLIB::UREM_I64, "__hexagon_umoddi3");
-
-  setLibcallName(RTLIB::SINTTOFP_I128_F64, "__hexagon_floattidf");
-  setLibcallName(RTLIB::SINTTOFP_I128_F32, "__hexagon_floattisf");
-  setLibcallName(RTLIB::FPTOUINT_F32_I128, "__hexagon_fixunssfti");
-  setLibcallName(RTLIB::FPTOUINT_F64_I128, "__hexagon_fixunsdfti");
-  setLibcallName(RTLIB::FPTOSINT_F32_I128, "__hexagon_fixsfti");
-  setLibcallName(RTLIB::FPTOSINT_F64_I128, "__hexagon_fixdfti");
 
   // This is the only fast library function for sqrtd.
   if (FastMath)
@@ -3327,7 +3320,7 @@ HexagonTargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
   Chain = DAG.getStore(Chain, dl, Handler, StoreAddr, MachinePointerInfo());
   Chain = DAG.getCopyToReg(Chain, dl, OffsetReg, Offset);
 
-  // Not needed we already use it as explict input to EH_RETURN.
+  // Not needed we already use it as explicit input to EH_RETURN.
   // MF.getRegInfo().addLiveOut(OffsetReg);
 
   return DAG.getNode(HexagonISD::EH_RETURN, dl, MVT::Other, Chain);

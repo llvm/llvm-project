@@ -270,7 +270,8 @@ void processShuffleMasks(
     ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
-    function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction);
+    function_ref<void(ArrayRef<int>, unsigned, unsigned, bool)>
+        ManyInputsAction);
 
 /// Compute the demanded elements mask of horizontal binary operations. A
 /// horizontal operation combines two adjacent elements in a vector operand.
@@ -747,12 +748,11 @@ private:
   /// \returns the newly created interleave group.
   InterleaveGroup<Instruction> *
   createInterleaveGroup(Instruction *Instr, int Stride, Align Alignment) {
-    assert(!InterleaveGroupMap.count(Instr) &&
-           "Already in an interleaved access group");
-    InterleaveGroupMap[Instr] =
-        new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
-    InterleaveGroups.insert(InterleaveGroupMap[Instr]);
-    return InterleaveGroupMap[Instr];
+    auto [It, Inserted] = InterleaveGroupMap.try_emplace(Instr);
+    assert(Inserted && "Already in an interleaved access group");
+    It->second = new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
+    InterleaveGroups.insert(It->second);
+    return It->second;
   }
 
   /// Release the group and remove all the relationships.

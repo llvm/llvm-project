@@ -80,6 +80,18 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*defaultImplementation=*/"op->moveBefore($_op);"
     >,
     InterfaceMethod<[{
+        Moves the given loop-invariant operation out of the loop with a
+        trip-count guard.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"moveOutOfLoopWithGuard",
+      /*args=*/(ins "::mlir::Operation *":$op),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return;
+      }]
+    >,
+    InterfaceMethod<[{
         Promotes the loop body to its containing block if the loop is known to
         have a single iteration. Returns "success" if the promotion was
         successful.

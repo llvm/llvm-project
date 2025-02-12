@@ -6663,9 +6663,9 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
       Mnemonic != "vshllt" && Mnemonic != "vrshrnt" && Mnemonic != "vshrnt" &&
       Mnemonic != "vqrshrunt" && Mnemonic != "vqshrunt" &&
       Mnemonic != "vqrshrnt" && Mnemonic != "vqshrnt" && Mnemonic != "vmullt" &&
-      Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" &&
-      Mnemonic != "vqmovnt" && Mnemonic != "vmovnt" && Mnemonic != "vqdmullt" &&
-      Mnemonic != "vpnot" && Mnemonic != "vcvtt" && Mnemonic != "vcvt") {
+      Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" && Mnemonic != "vmovnt" &&
+      Mnemonic != "vqdmullt" && Mnemonic != "vpnot" && Mnemonic != "vcvtt" &&
+      Mnemonic != "vcvt") {
     unsigned VCC =
         ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size() - 1));
     if (VCC != ~0U) {
@@ -8650,6 +8650,37 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     if (ARM::isCDECoproc(Coproc, *STI))
       return Error(Operands[2]->getStartLoc(),
                    "coprocessor must be configured as GCP");
+    break;
+  }
+
+  case ARM::VTOSHH:
+  case ARM::VTOUHH:
+  case ARM::VTOSLH:
+  case ARM::VTOULH:
+  case ARM::VTOSHS:
+  case ARM::VTOUHS:
+  case ARM::VTOSLS:
+  case ARM::VTOULS:
+  case ARM::VTOSHD:
+  case ARM::VTOUHD:
+  case ARM::VTOSLD:
+  case ARM::VTOULD:
+  case ARM::VSHTOH:
+  case ARM::VUHTOH:
+  case ARM::VSLTOH:
+  case ARM::VULTOH:
+  case ARM::VSHTOS:
+  case ARM::VUHTOS:
+  case ARM::VSLTOS:
+  case ARM::VULTOS:
+  case ARM::VSHTOD:
+  case ARM::VUHTOD:
+  case ARM::VSLTOD:
+  case ARM::VULTOD: {
+    if (Operands[MnemonicOpsEndInd]->getReg() !=
+        Operands[MnemonicOpsEndInd + 1]->getReg())
+      return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
+                   "source and destination registers must be the same");
     break;
   }
   }
@@ -11681,7 +11712,7 @@ void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
 
 void ARMAsmParser::onLabelParsed(MCSymbol *Symbol) {
   if (NextSymbolIsThumb) {
-    getParser().getStreamer().emitThumbFunc(Symbol);
+    getTargetStreamer().emitThumbFunc(Symbol);
     NextSymbolIsThumb = false;
   }
 }
@@ -11701,7 +11732,7 @@ bool ARMAsmParser::parseDirectiveThumbFunc(SMLoc L) {
         Parser.getTok().is(AsmToken::String)) {
       MCSymbol *Func = getParser().getContext().getOrCreateSymbol(
           Parser.getTok().getIdentifier());
-      getParser().getStreamer().emitThumbFunc(Func);
+      getTargetStreamer().emitThumbFunc(Func);
       Parser.Lex();
       if (parseEOL())
         return true;
