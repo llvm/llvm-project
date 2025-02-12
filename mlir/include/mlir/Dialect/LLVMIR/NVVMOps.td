@@ -2617,6 +2617,30 @@ def Tcgen05GroupKindAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
+def Tcgen05FenceBefore : I32EnumAttrCase<"BEFORE_THREAD_SYNC", 0, "before">;
+def Tcgen05FenceAfter  : I32EnumAttrCase<"AFTER_THREAD_SYNC",  1, "after">;
+def Tcgen05FenceKind : I32EnumAttr<"Tcgen05FenceKind", "NVVM Tcgen05 fence kind",
+  [Tcgen05FenceBefore, Tcgen05FenceAfter]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def Tcgen05FenceKindAttr :
+  EnumAttr<NVVM_Dialect, Tcgen05FenceKind, "tcgen05_fence"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def Tcgen05WaitLoad  : I32EnumAttrCase<"LOAD",  0, "load">;
+def Tcgen05WaitStore : I32EnumAttrCase<"STORE", 1, "store">;
+def Tcgen05WaitKind : I32EnumAttr<"Tcgen05WaitKind", "NVVM Tcgen05 wait kind",
+  [Tcgen05WaitLoad, Tcgen05WaitStore]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def Tcgen05WaitKindAttr :
+  EnumAttr<NVVM_Dialect, Tcgen05WaitKind, "tcgen05_wait"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc"> {
   let summary = "Tcgen05 alloc operation";
   let description = [{
@@ -2698,6 +2722,91 @@ def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_perm
       llvm::Intrinsic::nvvm_tcgen05_relinq_alloc_permit_cg1 :
       llvm::Intrinsic::nvvm_tcgen05_relinq_alloc_permit_cg2;
     createIntrinsicCall(builder, id);
+  }];
+}
+
+def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence"> {
+  let summary = "Tcgen05 fence operations";
+  let description = [{
+    The `tcgen05.fence<before>` orders all prior async tcgen05 operations
+    with respect to the subsequent tcgen05 and execution ordering operations.
+    The `tcgen05.fence<after>` orders all subsequent async tcgen05 operations
+    with respect to the prior tcgen05 and execution ordering operations.
+
+    [For more information refer to the PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence)
+  }];
+
+  let arguments = (ins Tcgen05FenceKindAttr:$kind);
+  let assemblyFormat = "$kind attr-dict";
+
+  string llvmBuilder = [{
+    auto id = ($kind == NVVM::Tcgen05FenceKind::BEFORE_THREAD_SYNC)
+      ? llvm::Intrinsic::nvvm_tcgen05_fence_before_thread_sync
+      : llvm::Intrinsic::nvvm_tcgen05_fence_after_thread_sync;
+    createIntrinsicCall(builder, id);
+  }];
+}
+
+def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait"> {
+  let summary = "Tcgen05 wait operations";
+  let description = [{
+    The `tcgen05.wait<load>` causes the executing thread to block until
+    all prior `tcgen05.ld` operations issued by the executing thread
+    have completed. Similarly, the `tcgen05.wait<store>` causes the executing
+    thread to block until all prior `tcgen05.st` operations issued by the
+    executing thread have completed.
+    [For more information refer PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait)
+  }];
+
+  let arguments = (ins Tcgen05WaitKindAttr:$kind);
+  let assemblyFormat = "$kind attr-dict";
+
+  string llvmBuilder = [{
+    auto id = ($kind == NVVM::Tcgen05WaitKind::LOAD)
+      ? llvm::Intrinsic::nvvm_tcgen05_wait_ld
+      : llvm::Intrinsic::nvvm_tcgen05_wait_st;
+    createIntrinsicCall(builder, id);
+  }];
+}
+
+def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit"> {
+  let summary = "Tcgen05 commit operations";
+  let description = [{
+    The `tcgen05.commit` makes the mbarrier object, specified by
+    the operand `addr`, track the completion of all the prior
+    async-tcgen05 operations initiated by the executing thread.
+    The multicast variants allow signaling on the mbarrier objects
+    of multiple CTAs within the cluster. Operand `multicastMask`,
+    when present, specifies the destination CTAs in the cluster such
+    that each bit position in the 16-bit `multicastMask` operand
+    corresponds to the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.
+    [For more information refer PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit)
+  }];
+
+  let arguments = (ins
+    AnyTypeOf<[LLVM_AnyPointer, LLVM_PointerShared]>:$addr,
+    Optional<I16>:$multicastMask,
+    DefaultValuedAttr<Tcgen05GroupKindAttr, "Tcgen05GroupKind::CTA_1">:$group);
+
+  let assemblyFormat = [{
+    $addr (`,` `multicast_mask` `=` $multicastMask^)?
+    attr-dict `:` type(operands)
+  }];
+
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID
+      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::SmallVector<llvm::Value *> &args);
+  }];
+
+  string llvmBuilder = [{
+    llvm::SmallVector<llvm::Value *> args;
+    auto id = NVVM::Tcgen05CommitOp::getIntrinsicIDAndArgs(
+      *op, moduleTranslation, args);
+    createIntrinsicCall(builder, id, args);
   }];
 }
 

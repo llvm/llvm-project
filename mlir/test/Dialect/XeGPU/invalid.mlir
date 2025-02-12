@@ -190,11 +190,20 @@ func.func @test_create_tdesc_vc_2(%src: ui64) {
 }
 
 // -----
-func.func @test_create_tdesc_vc_1(%src: memref<?xf32>) {
+func.func @test_create_tdesc_vc_3(%src: memref<?xf32>) {
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   // expected-error@+1 {{Memory space mismatch}}
   %1 = xegpu.create_tdesc %src, %0 : memref<?xf32>, vector<4xindex>
           -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<memory_space = slm, chunk_size = 2>>
+  return
+}
+
+// -----
+func.func @test_create_tdesc_vc_4(%src: memref<?xf32>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = xegpu.create_tdesc %src, %0 : memref<?xf32>, vector<4xindex>
+  // expected-error@+1 {{invalid chunk size}}
+          -> !xegpu.tensor_desc<4x5xf32, #xegpu.scatter_tdesc_attr<chunk_size = 5>>
   return
 }
 

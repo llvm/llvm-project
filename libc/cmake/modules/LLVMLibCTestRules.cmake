@@ -223,6 +223,8 @@ function(create_libc_unittest fq_target_name)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
                                    "${LIBC_UNITTEST_FLAGS}")
+  # TODO: Ideally we would have a separate function for link options.
+  set(link_options ${compile_options})
   list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
 
   if(SHOW_INTERMEDIATE_OBJECTS)
@@ -277,7 +279,7 @@ function(create_libc_unittest fq_target_name)
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
-  target_link_options(${fq_build_target_name} PRIVATE ${compile_options})
+  target_link_options(${fq_build_target_name} PRIVATE ${link_options})
 
   if(NOT LIBC_UNITTEST_CXX_STANDARD)
     set(LIBC_UNITTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -558,14 +560,12 @@ function(add_integration_test test_name)
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
-      -Wno-multi-gpu -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-      "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
+      -Wno-multi-gpu -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
       "-Wl,--suppress-stack-size-warning" -Wno-multi-gpu
-      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
       "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")

@@ -80,7 +80,7 @@
 
 using namespace llvm;
 
-static void SignalHandler(int Sig);     // defined below.
+static void SignalHandler(int Sig, siginfo_t *Info, void *);
 static void InfoSignalHandler(int Sig); // defined below.
 
 using SignalHandlerFunctionType = void (*)();
@@ -313,8 +313,8 @@ static void RegisterHandlers() { // Not signal-safe.
 
     switch (Kind) {
     case SignalKind::IsKill:
-      NewHandler.sa_handler = SignalHandler;
-      NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK;
+      NewHandler.sa_sigaction = SignalHandler;
+      NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK | SA_SIGINFO;
       break;
     case SignalKind::IsInfo:
       NewHandler.sa_handler = InfoSignalHandler;
@@ -370,7 +370,7 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 }
 
 // The signal handler that runs.
-static void SignalHandler(int Sig) {
+static void SignalHandler(int Sig, siginfo_t *Info, void *) {
   // Restore the signal behavior to default, so that the program actually
   // crashes when we return and the signal reissues.  This also ensures that if
   // we crash in our signal handler that the program will terminate immediately
@@ -412,6 +412,11 @@ static void SignalHandler(int Sig) {
   if (Sig == SIGILL || Sig == SIGFPE || Sig == SIGTRAP)
     raise(Sig);
 #endif
+
+  // Signal sent from another process, do not assume that continuing the
+  // execution would re-raise it.
+  if (Info->si_pid != getpid())
+    raise(Sig);
 }
 
 static void InfoSignalHandler(int Sig) {

@@ -492,6 +492,10 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
     case DW_AT_reference:
       ref_qual = clang::RQ_LValue;
       break;
+    case DW_AT_APPLE_enum_kind:
+      enum_kind = static_cast<clang::EnumExtensibilityAttr::Kind>(
+          form_value.Unsigned());
+      break;
     }
   }
 }
@@ -1001,9 +1005,10 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
   }
 
   CompilerType clang_type = m_ast.CreateEnumerationType(
-      attrs.name.GetStringRef(), GetClangDeclContextContainingDIE(def_die, nullptr),
+      attrs.name.GetStringRef(),
+      GetClangDeclContextContainingDIE(def_die, nullptr),
       GetOwningClangModule(def_die), attrs.decl, enumerator_clang_type,
-      attrs.is_scoped_enum);
+      attrs.is_scoped_enum, attrs.enum_kind);
   TypeSP type_sp =
       dwarf->MakeType(def_die.GetID(), attrs.name, attrs.byte_size, nullptr,
                       attrs.type.Reference().GetID(), Type::eEncodingIsUID,
