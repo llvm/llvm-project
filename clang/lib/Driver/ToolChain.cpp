@@ -196,6 +196,15 @@ bool ToolChain::defaultToIEEELongDouble() const {
   return PPC_LINUX_DEFAULT_IEEELONGDOUBLE && getTriple().isOSLinux();
 }
 
+static void processMultilibCustomFlags(Multilib::flags_list &List,
+                                       const llvm::opt::ArgList &Args) {
+  for (const Arg *MultilibFlagArg :
+       Args.filtered(options::OPT_fmultilib_flag)) {
+    List.push_back(MultilibFlagArg->getAsString(Args));
+    MultilibFlagArg->claim();
+  }
+}
+
 static void getAArch64MultilibFlags(const Driver &D,
                                           const llvm::Triple &Triple,
                                           const llvm::opt::ArgList &Args,
@@ -246,6 +255,8 @@ static void getAArch64MultilibFlags(const Driver &D,
   if (ABIArg) {
     Result.push_back(ABIArg->getAsString(Args));
   }
+
+  processMultilibCustomFlags(Result, Args);
 }
 
 static void getARMMultilibFlags(const Driver &D,
@@ -313,6 +324,7 @@ static void getARMMultilibFlags(const Driver &D,
     if (Endian->getOption().matches(options::OPT_mbig_endian))
       Result.push_back(Endian->getAsString(Args));
   }
+  processMultilibCustomFlags(Result, Args);
 }
 
 static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
@@ -634,7 +646,6 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::PreprocessJobClass:
   case Action::ExtractAPIJobClass:
   case Action::AnalyzeJobClass:
-  case Action::MigrateJobClass:
   case Action::VerifyPCHJobClass:
   case Action::BackendJobClass:
     return getClang();
@@ -1637,9 +1648,11 @@ void ToolChain::TranslateXarchArgs(
       A->getOption().matches(options::OPT_Xarch_host))
     ValuePos = 0;
 
-  unsigned Index = Args.getBaseArgs().MakeIndex(A->getValue(ValuePos));
+  const InputArgList &BaseArgs = Args.getBaseArgs();
+  unsigned Index = BaseArgs.MakeIndex(A->getValue(ValuePos));
   unsigned Prev = Index;
-  std::unique_ptr<llvm::opt::Arg> XarchArg(Opts.ParseOneArg(Args, Index));
+  std::unique_ptr<llvm::opt::Arg> XarchArg(Opts.ParseOneArg(
+      Args, Index, llvm::opt::Visibility(clang::driver::options::ClangOption)));
 
   // If the argument parsing failed or more than one argument was
   // consumed, the -Xarch_ argument's parameter tried to consume
@@ -1661,8 +1674,31 @@ void ToolChain::TranslateXarchArgs(
     Diags.Report(DiagID) << A->getAsString(Args);
     return;
   }
+
   XarchArg->setBaseArg(A);
   A = XarchArg.release();
+
+  // Linker input arguments require custom handling. The problem is that we
+  // have already constructed the phase actions, so we can not treat them as
+  // "input arguments".
+  if (A->getOption().hasFlag(options::LinkerInput)) {
+    // Convert the argument into individual Zlinker_input_args. Need to do this
+    // manually to avoid memory leaks with the allocated arguments.
+    for (const char *Value : A->getValues()) {
+      auto Opt = Opts.getOption(options::OPT_Zlinker_input);
+      unsigned Index = BaseArgs.MakeIndex(Opt.getName(), Value);
+      auto NewArg =
+          new Arg(Opt, BaseArgs.MakeArgString(Opt.getPrefix() + Opt.getName()),
+                  Index, BaseArgs.getArgString(Index + 1), A);
+
+      DAL->append(NewArg);
+      if (!AllocatedArgs)
+        DAL->AddSynthesizedArg(NewArg);
+      else
+        AllocatedArgs->push_back(NewArg);
+    }
+  }
+
   if (!AllocatedArgs)
     DAL->AddSynthesizedArg(A);
   else
@@ -1686,19 +1722,17 @@ llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
     } else if (A->getOption().matches(options::OPT_Xarch_host)) {
       NeedTrans = !IsDevice;
       Skip = IsDevice;
-    } else if (A->getOption().matches(options::OPT_Xarch__) && IsDevice) {
-      // Do not translate -Xarch_ options for non CUDA/HIP toolchain since
-      // they may need special translation.
-      // Skip this argument unless the architecture matches BoundArch
-      if (BoundArch.empty() || A->getValue(0) != BoundArch)
-        Skip = true;
-      else
-        NeedTrans = true;
+    } else if (A->getOption().matches(options::OPT_Xarch__)) {
+      NeedTrans = A->getValue() == getArchName() ||
+                  (!BoundArch.empty() && A->getValue() == BoundArch);
+      Skip = !NeedTrans;
     }
     if (NeedTrans || Skip)
       Modified = true;
-    if (NeedTrans)
+    if (NeedTrans) {
+      A->claim();
       TranslateXarchArgs(Args, A, DAL, AllocatedArgs);
+    }
     if (!Skip)
       DAL->append(A);
   }

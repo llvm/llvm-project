@@ -77,7 +77,6 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Cross, cross)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Degrees, degrees)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Length, length)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
@@ -100,6 +99,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitUHigh, firstbituhigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitSHigh, firstbitshigh)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitLow, firstbitlow)
   GENERATE_HLSL_INTRINSIC_FUNCTION(NClamp, nclamp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(SClamp, sclamp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(UClamp, uclamp)
@@ -159,8 +159,6 @@ public:
   void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
   void handleGlobalVarDefinition(const VarDecl *VD, llvm::GlobalVariable *Var);
 
-  bool needsResourceBindingInitFn();
-  llvm::Function *createResourceBindingInitFn();
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 
 private:
@@ -173,9 +171,6 @@ private:
   void addBufferDecls(const DeclContext *DC, Buffer &CB);
   llvm::Triple::ArchType getArch();
   llvm::SmallVector<Buffer> Buffers;
-
-  llvm::SmallVector<std::pair<const VarDecl *, llvm::GlobalVariable *>>
-      ResourcesToBind;
 };
 
 } // namespace CodeGen

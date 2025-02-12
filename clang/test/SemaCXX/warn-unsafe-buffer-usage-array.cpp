@@ -92,3 +92,70 @@ char access_strings() {
   c = array_string[5];
   return c;
 }
+
+struct T {
+  int array[10];
+};
+
+const int index = 1;
+
+constexpr int get_const(int x) {
+  if(x < 3)
+    return ++x;
+  else
+    return x + 5;
+};
+
+void array_indexed_const_expr(unsigned idx) {
+  // expected-note@+2 {{change type of 'arr' to 'std::array' to label it for hardening}}
+  // expected-warning@+1{{'arr' is an unsafe buffer that does not perform bounds checks}}
+  int arr[10];
+  arr[sizeof(int)] = 5;
+
+  int array[sizeof(T)];
+  array[sizeof(int)] = 5;
+  array[sizeof(T) -1 ] = 3;
+
+  int k = arr[6 & 5];
+  k = arr[2 << index];
+  k = arr[8 << index]; // expected-note {{used in buffer access here}}
+  k = arr[16 >> 1];
+  k = arr[get_const(index)];
+  k = arr[get_const(5)]; // expected-note {{used in buffer access here}}
+  k = arr[get_const(4)];
+}
+
+template<unsigned length>
+consteval bool isNullTerminated(const char (&literal)[length])
+{
+  return literal[length - 1] == '\0';
+}
+
+template <typename T, unsigned M, unsigned N>
+T access2DArray(const T (&arr)[M][N]) {
+  return arr[M-1][N-1];
+}
+
+template<unsigned idx>
+constexpr int access_elements() {
+  int arr[idx + 20];
+  return arr[idx + 1];
+}
+
+// Test array accesses where const sized arrays are accessed safely with indices
+// that evaluate to a const values and depend on template arguments.
+void test_template_methods()
+{
+  constexpr char arr[] = "Good Morning!"; // = {'a', 'b', 'c', 'd', 'e'};
+  isNullTerminated(arr);
+  isNullTerminated("");
+  auto _ = isNullTerminated("hello world\n");
+  access_elements<5>();
+
+  int arr1[3][4] = {
+        {1, 2, 3, 4},
+        {5, 6, 7, 8},
+        {9, 10, 11, 12}
+    };
+  access2DArray(arr1);
+}

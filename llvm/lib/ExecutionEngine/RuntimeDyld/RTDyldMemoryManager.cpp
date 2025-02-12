@@ -20,11 +20,9 @@
 #ifdef __linux__
   // These includes used by RTDyldMemoryManager::getPointerToNamedFunction()
   // for Glibc trickery. See comments in this function for more information.
-  #ifdef HAVE_SYS_STAT_H
-    #include <sys/stat.h>
-  #endif
-  #include <fcntl.h>
-  #include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 namespace llvm {

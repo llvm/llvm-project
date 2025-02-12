@@ -99,6 +99,9 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   SPIRV::ModuleAnalysisInfo *MAI;
+
+protected:
+  void cleanUp(Module &M);
 };
 } // namespace
 
@@ -125,6 +128,19 @@ void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (MCAssembler *Asm = OutStreamer->getAssemblerPtr())
     static_cast<SPIRVObjectWriter &>(Asm->getWriter())
         .setBuildVersion(Major, Minor, Bound);
+
+  cleanUp(M);
+}
+
+// Any cleanup actions with the Module after we don't care about its content
+// anymore.
+void SPIRVAsmPrinter::cleanUp(Module &M) {
+  // Verifier disallows uses of intrinsic global variables.
+  for (StringRef GVName : {"llvm.global_ctors", "llvm.global_dtors",
+                           "llvm.used", "llvm.compiler.used"}) {
+    if (GlobalVariable *GV = M.getNamedGlobal(GVName))
+      GV->setName("");
+  }
 }
 
 void SPIRVAsmPrinter::emitFunctionHeader() {

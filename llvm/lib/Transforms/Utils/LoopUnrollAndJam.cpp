@@ -165,7 +165,7 @@ static bool processHeaderPhiOperands(BasicBlock *Header, BasicBlock *Latch,
 // Move the phi operands of Header from Latch out of AftBlocks to InsertLoc.
 static void moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header,
                                               BasicBlock *Latch,
-                                              Instruction *InsertLoc,
+                                              BasicBlock::iterator InsertLoc,
                                               BasicBlockSet &AftBlocks) {
   // We need to ensure we move the instructions in the correct order,
   // starting with the earliest required instruction and moving forward.
@@ -329,7 +329,8 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // Move any instructions from fore phi operands from AftBlocks into Fore.
   moveHeaderPhiOperandsToForeBlocks(
-      Header, LatchBlock, ForeBlocksLast[0]->getTerminator(), AftBlocks);
+      Header, LatchBlock, ForeBlocksLast[0]->getTerminator()->getIterator(),
+      AftBlocks);
 
   // The current on-the-fly SSA update requires blocks to be processed in
   // reverse postorder so that LastValueMap contains the correct value at each
@@ -708,7 +709,7 @@ static bool checkDependency(Instruction *Src, Instruction *Dst,
   //   (0,0,>=,*,*)
   // Now, the dependency is not necessarily non-negative anymore, i.e.
   // unroll-and-jam may violate correctness.
-  std::unique_ptr<Dependence> D = DI.depends(Src, Dst, true);
+  std::unique_ptr<Dependence> D = DI.depends(Src, Dst);
   if (!D)
     return true;
   assert(D->isOrdered() && "Expected an output, flow or anti dep.");

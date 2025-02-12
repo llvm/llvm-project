@@ -12,7 +12,7 @@ struct abc foo1(void);
 // CHECK-DAG: declare {{.*}} @foo1(ptr dead_on_unwind writable sret(%struct.abc)
 struct abc foo2();
 // CHECK-DAG: declare {{.*}} @foo2(ptr dead_on_unwind writable sret(%struct.abc)
-struct abc foo3(void){}
+struct abc foo3(void) { return (struct abc){0}; }
 // CHECK-DAG: define {{.*}} @foo3(ptr dead_on_unwind noalias writable sret(%struct.abc)
 
 void bar(void) {

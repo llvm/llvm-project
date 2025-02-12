@@ -321,3 +321,26 @@ namespace GH121242 {
         (void)z<X{}>;
     }
 } // namespace GH121242
+
+namespace GH123033 {
+  template <class... Types>
+  requires __is_same_as(Types...[0], int)
+  void print(double d);
+
+  template <class... Types>
+  requires  __is_same_as(Types...[0], int)
+  void print(double d);
+
+  template <class... Types>
+  Types...[0] convert(double d);
+
+  template <class... Types>
+  Types...[0] convert(double d) {
+      return static_cast<Types...[0]>(d);
+  }
+
+  void f() {
+      print<int, int>(12.34);
+      convert<int, int>(12.34);
+  }
+}

@@ -48,14 +48,6 @@ mlir::reifyResultShapes(OpBuilder &b, Operation *op,
     assert(shapedType.getRank() ==
                static_cast<int64_t>(reifiedReturnShapes[resultIdx].size()) &&
            "incorrect implementation of ReifyRankedShapedTypeOpInterface");
-    for (int64_t dim = 0; dim < shapedType.getRank(); ++dim) {
-      // reifyResultShapes must return:
-      // * Attribute for static dimensions
-      // * Value for dynamic dimensions
-      assert(shapedType.isDynamicDim(dim) ==
-                 isa<Value>(reifiedReturnShapes[resultIdx][dim]) &&
-             "incorrect implementation of ReifyRankedShapedTypeOpInterface");
-    }
     ++resultIdx;
   }
   // Assert that every shaped value result was reified.

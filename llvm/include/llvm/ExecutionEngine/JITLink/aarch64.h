@@ -786,6 +786,11 @@ class GOTTableManager : public TableManager<GOTTableManager> {
 public:
   static StringRef getSectionName() { return "$__GOT"; }
 
+  GOTTableManager(LinkGraph &G) {
+    if ((GOTSection = G.findSectionByName(getSectionName())))
+      registerExistingEntries();
+  }
+
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     Edge::Kind KindToSet = Edge::Invalid;
     const char *BlockWorkingMem = B->getContent().data();
@@ -848,15 +853,20 @@ private:
     return *GOTSection;
   }
 
+  void registerExistingEntries();
+
   Section *GOTSection = nullptr;
 };
 
 /// Procedure Linkage Table Builder.
 class PLTTableManager : public TableManager<PLTTableManager> {
 public:
-  PLTTableManager(GOTTableManager &GOT) : GOT(GOT) {}
-
   static StringRef getSectionName() { return "$__STUBS"; }
+
+  PLTTableManager(LinkGraph &G, GOTTableManager &GOT) : GOT(GOT) {
+    if ((StubsSection = G.findSectionByName(getSectionName())))
+      registerExistingEntries();
+  }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     if (E.getKind() == aarch64::Branch26PCRel && !E.getTarget().isDefined()) {
@@ -883,6 +893,8 @@ public:
                                       orc::MemProt::Read | orc::MemProt::Exec);
     return *StubsSection;
   }
+
+  void registerExistingEntries();
 
   GOTTableManager &GOT;
   Section *StubsSection = nullptr;

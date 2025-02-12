@@ -84,7 +84,7 @@ llvm.mlir.global external @explicit_undef() : i32 {
   llvm.return %0 : i32
 }
 
-// CHECK: @int_gep = internal constant ptr getelementptr (i32, ptr @i32_global, i32 2)
+// CHECK: @int_gep = internal constant ptr getelementptr (i8, ptr @i32_global, i64 8)
 llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   %addr = llvm.mlir.addressof @i32_global : !llvm.ptr
   %_c0 = llvm.mlir.constant(2: i32) : i32
@@ -1195,7 +1195,7 @@ llvm.func @dereferenceableornullattr_decl(!llvm.ptr {llvm.dereferenceable_or_nul
 // CHECK-LABEL: declare void @inregattr_decl(ptr inreg)
 llvm.func @inregattr_decl(!llvm.ptr {llvm.inreg})
 
-// CHECK-LABEL: declare void @nocaptureattr_decl(ptr nocapture)
+// CHECK-LABEL: declare void @nocaptureattr_decl(ptr captures(none))
 llvm.func @nocaptureattr_decl(!llvm.ptr {llvm.nocapture})
 
 // CHECK-LABEL: declare void @nofreeattr_decl(ptr nofree)
