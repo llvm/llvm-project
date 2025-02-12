@@ -154,7 +154,7 @@
             "properties": {
               "debugAdapterExecutable": {
                 "type": "string",
-                "markdownDescription": "The LLDB debug adapter executable to use. Either an absolute path or the name of a debug adapter executable available on the `PATH`."
+                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use."
               },
               "program": {
                 "type": "string",
@@ -344,7 +344,7 @@
             "properties": {
               "debugAdapterExecutable": {
                 "type": "string",
-                "markdownDescription": "The LLDB debug adapter executable to use. Either an absolute path or the name of a debug adapter executable available on the `PATH`."
+                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use."
               },
               "program": {
                 "type": "string",
