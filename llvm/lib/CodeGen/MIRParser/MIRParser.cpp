@@ -1126,8 +1126,8 @@ bool MIRParserImpl::initializeSaveRestorePoints(
   return false;
 }
 
-bool MIRParserImpl::initializeJumpTableInfo(
-    PerFunctionMIParsingState &PFS, const yaml::MachineJumpTable &YamlJTI) {
+bool MIRParserImpl::initializeJumpTableInfo(PerFunctionMIParsingState &PFS,
+    const yaml::MachineJumpTable &YamlJTI) {
   MachineJumpTableInfo *JTI = PFS.MF.getOrCreateJumpTableInfo(YamlJTI.Kind);
   for (const auto &Entry : YamlJTI.Entries) {
     std::vector<MachineBasicBlock *> Blocks;
