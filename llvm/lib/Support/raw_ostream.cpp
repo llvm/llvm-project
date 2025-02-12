@@ -1009,6 +1009,19 @@ void buffer_ostream::anchor() {}
 
 void buffer_unique_ostream::anchor() {}
 
+void fixed_buffer_ostream::write_impl(const char *Ptr, size_t Size) {
+  if (Pos + Size <= Buffer.size()) {
+    memcpy((void *)(Buffer.data() + Pos), Ptr, Size);
+    Pos += Size;
+  } else {
+    report_fatal_error(
+        "Attempted to write past the end of the fixed size buffer.");
+  }
+}
+
+fixed_buffer_ostream::fixed_buffer_ostream(MutableArrayRef<std::byte> Buffer)
+    : raw_ostream(true), Buffer{Buffer} {}
+
 Error llvm::writeToOutput(StringRef OutputFileName,
                           std::function<Error(raw_ostream &)> Write) {
   if (OutputFileName == "-")

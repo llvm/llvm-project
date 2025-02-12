@@ -192,6 +192,12 @@ private:
 LogicalResult writeBytecodeToFile(Operation *op, raw_ostream &os,
                                   const BytecodeWriterConfig &config = {});
 
+/// Writes the bytecode for the given operation to a memory-mapped buffer.
+/// It only ever fails if setDesiredByteCodeVersion can't be honored.
+/// Returns nullptr on failure.
+std::shared_ptr<ArrayRef<std::byte>>
+writeBytecode(Operation *op, const BytecodeWriterConfig &config = {});
+
 } // namespace mlir
 
 #endif // MLIR_BYTECODE_BYTECODEWRITER_H

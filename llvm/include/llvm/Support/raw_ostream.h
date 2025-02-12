@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_RAW_OSTREAM_H
 #define LLVM_SUPPORT_RAW_OSTREAM_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
@@ -767,6 +768,18 @@ public:
     this->OS->SetUnbuffered();
   }
   ~buffer_unique_ostream() override { *OS << str(); }
+};
+
+// Creates an output stream with a fixed size buffer.
+class fixed_buffer_ostream : public raw_ostream {
+  MutableArrayRef<std::byte> Buffer;
+  size_t Pos = 0;
+
+  void write_impl(const char *Ptr, size_t Size) final;
+  uint64_t current_pos() const final { return Pos; }
+
+public:
+  fixed_buffer_ostream(MutableArrayRef<std::byte> Buffer);
 };
 
 // Helper struct to add indentation to raw_ostream. Instead of
