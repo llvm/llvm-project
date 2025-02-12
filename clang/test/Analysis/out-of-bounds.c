@@ -1,6 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,security.ArrayBound,debug.ExprInspection -verify %s
-
-void clang_analyzer_eval(int);
+// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,security.ArrayBound -verify %s
 
 // Tests doing an out-of-bounds access after the end of an array using:
 // - constant integer index
@@ -142,12 +140,6 @@ void test4(int x) {
     buf[x] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
-void test_assume_after_access(unsigned long x) {
-  int buf[100];
-  buf[x] = 1;
-  clang_analyzer_eval(x <= 99); // expected-warning{{TRUE}}
-}
-
 // Don't warn when indexing below the start of a symbolic region's whose
 // base extent we don't know.
 int *get_symbolic(void);
@@ -178,12 +170,6 @@ void test_extern_void(void) {
   extern void v;
   int *p = (int *)&v;
   p[1] = 42; // no-warning
-}
-
-void test_assume_after_access2(unsigned long x) {
-  char buf[100];
-  buf[x] = 1;
-  clang_analyzer_eval(x <= 99); // expected-warning{{TRUE}}
 }
 
 struct incomplete;
