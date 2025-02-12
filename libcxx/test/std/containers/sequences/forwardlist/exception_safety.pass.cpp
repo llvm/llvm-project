@@ -55,23 +55,23 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 23
-#include <ranges>
+#  include <ranges>
 #endif
 
 int main(int, char**) {
   {
     constexpr int ThrowOn = 1;
-    constexpr int Size = 1;
-    using T = ThrowingCopy<ThrowOn>;
+    constexpr int Size    = 1;
+    using T               = ThrowingCopy<ThrowOn>;
 
     // void push_front(const value_type& v);
-    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T*){
+    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T*) {
       std::forward_list<T> c;
       c.push_front(*from);
     });
 
     // iterator insert_after(const_iterator p, const value_type& v);
-    test_exception_safety_throwing_copy</*ThrowOn=*/1, Size>([](T* from, T*){
+    test_exception_safety_throwing_copy</*ThrowOn=*/1, Size>([](T* from, T*) {
       std::forward_list<T> c;
       c.insert_after(c.before_begin(), *from);
     });
@@ -79,26 +79,26 @@ int main(int, char**) {
 
   {
     constexpr int ThrowOn = 3;
-    constexpr int Size = 5;
-    using T = ThrowingCopy<ThrowOn>;
-    using C = std::forward_list<T>;
-    using Alloc = std::allocator<T>;
+    constexpr int Size    = 5;
+    using T               = ThrowingCopy<ThrowOn>;
+    using C               = std::forward_list<T>;
+    using Alloc           = std::allocator<T>;
 
     // forward_list(size_type n, const value_type& v);
-    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T*){
+    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T*) {
       std::forward_list<T> c(Size, *from);
       (void)c;
     });
 
     // forward_list(size_type n, const value_type& v, const allocator_type& a);
-    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T*){
+    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T*) {
       std::forward_list<T> c(Size, *from, Alloc());
       (void)c;
     });
 
     // template <class InputIterator>
     //     forward_list(InputIterator first, InputIterator last);
-    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T* to){
+    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T* to) {
       std::forward_list<T> c(from, to);
       (void)c;
     });
@@ -106,7 +106,7 @@ int main(int, char**) {
 #if TEST_STD_VER >= 23
     // template<container-compatible-range<T> R>
     //     forward_list(from_range_t, R&& rg, const Allocator& = Allocator()); // C++23
-    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T* to){
+    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T* to) {
       {
         std::forward_list<T> c(std::from_range, std::ranges::subrange(from, to));
         (void)c;
@@ -121,7 +121,7 @@ int main(int, char**) {
 
     // template <class InputIterator>
     //     forward_list(InputIterator first, InputIterator last, const allocator_type& a);
-    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T* to){
+    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T* to) {
       std::forward_list<T> c(from, to, Alloc());
       (void)c;
     });

@@ -1,4 +1,5 @@
 ! UNSUPPORTED: system-windows
+! REQUIRES: flang-rt
 ! RUN: split-file %s %t
 ! RUN: chmod +x %t/runtest.sh
 ! RUN: %t/runtest.sh %t %t/ffile.f90 %t/cfile.c %flang | FileCheck %s

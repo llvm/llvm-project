@@ -1759,7 +1759,11 @@ void BinaryContext::preprocessDebugInfo() {
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
         auto Iter = DWOCUs.find(*DWOID);
-        assert(Iter != DWOCUs.end() && "DWO CU was not found.");
+        if (Iter == DWOCUs.end()) {
+          this->errs() << "BOLT-ERROR: DWO CU was not found for " << Name
+                       << '\n';
+          exit(1);
+        }
         Name = dwarf::toString(
             Iter->second->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       }

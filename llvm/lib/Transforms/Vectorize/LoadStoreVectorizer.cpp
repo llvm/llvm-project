@@ -1335,8 +1335,9 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
     const auto &Key = EC.first;
     EqClassReducedKey RedKey{std::get<1>(Key), std::get<2>(Key),
                              std::get<3>(Key)};
-    RedKeyToUOMap[RedKey].insert(std::get<0>(Key));
-    if (RedKeyToUOMap[RedKey].size() > 1)
+    auto &UOMap = RedKeyToUOMap[RedKey];
+    UOMap.insert(std::get<0>(Key));
+    if (UOMap.size() > 1)
       FoundPotentiallyOptimizableEC = true;
   }
   if (!FoundPotentiallyOptimizableEC)

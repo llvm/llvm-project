@@ -11,26 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
 
 #define DEBUG_TYPE "lower-vector-transpose"
 
@@ -209,7 +202,7 @@ static Value transposeToShuffle16x16(OpBuilder &builder, Value source, int m,
   ImplicitLocOpBuilder b(source.getLoc(), builder);
   SmallVector<Value> vs;
   for (int64_t i = 0; i < m; ++i)
-    vs.push_back(b.create<vector::ExtractOp>(source, i));
+    vs.push_back(b.createOrFold<vector::ExtractOp>(source, i));
 
   // Interleave 32-bit lanes using
   //   8x _mm512_unpacklo_epi32
@@ -291,8 +284,7 @@ static Value transposeToShuffle16x16(OpBuilder &builder, Value source, int m,
 
   auto reshInputType = VectorType::get(
       {m, n}, cast<VectorType>(source.getType()).getElementType());
-  Value res =
-      b.create<arith::ConstantOp>(reshInputType, b.getZeroAttr(reshInputType));
+  Value res = b.create<ub::PoisonOp>(reshInputType);
   for (int64_t i = 0; i < m; ++i)
     res = b.create<vector::InsertOp>(vs[i], res, i);
   return res;
@@ -368,8 +360,7 @@ public:
     // of the leftmost transposed dimensions. We traverse every transpose
     // element using a linearized index that we delinearize to generate the
     // appropriate indices for the extract/insert operations.
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, resType, rewriter.getZeroAttr(resType));
+    Value result = rewriter.create<ub::PoisonOp>(loc, resType);
     int64_t numTransposedElements = ShapedType::getNumElements(prunedInShape);
 
     for (int64_t linearIdx = 0; linearIdx < numTransposedElements;
@@ -378,9 +369,9 @@ public:
       SmallVector<int64_t> insertIdxs(extractIdxs);
       applyPermutationToVector(insertIdxs, prunedTransp);
       Value extractOp =
-          rewriter.create<vector::ExtractOp>(loc, input, extractIdxs);
-      result =
-          rewriter.create<vector::InsertOp>(loc, extractOp, result, insertIdxs);
+          rewriter.createOrFold<vector::ExtractOp>(loc, input, extractIdxs);
+      result = rewriter.createOrFold<vector::InsertOp>(loc, extractOp, result,
+                                                       insertIdxs);
     }
 
     rewriter.replaceOp(op, result);

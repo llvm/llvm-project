@@ -1182,7 +1182,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (getLibCallID(MF, CSI) != -1) {
     // tail __riscv_restore_[0-12] instruction is considered as a terminator,
-    // therefor it is unnecessary to place any CFI instructions after it. Just
+    // therefore it is unnecessary to place any CFI instructions after it. Just
     // deallocate stack if needed and return.
     if (StackSize != 0)
       deallocateStack(MF, MBB, MBBI, DL, StackSize,
@@ -1847,11 +1847,16 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
       MFI.setStackID(FrameIdx, TargetStackID::ScalableVector);
   }
 
-  // Allocate a fixed object that covers the full push or libcall size.
   if (RVFI->isPushable(MF)) {
-    if (int64_t PushSize = RVFI->getRVPushStackSize())
-      MFI.CreateFixedSpillStackObject(PushSize, -PushSize);
+    // Allocate a fixed object that covers all the registers that are pushed.
+    if (unsigned PushedRegs = RVFI->getRVPushRegs()) {
+      int64_t PushedRegsBytes =
+          static_cast<int64_t>(PushedRegs) * (STI.getXLen() / 8);
+      MFI.CreateFixedSpillStackObject(PushedRegsBytes, -PushedRegsBytes);
+    }
   } else if (int LibCallRegs = getLibCallID(MF, CSI) + 1) {
+    // Allocate a fixed object that covers all of the stack allocated by the
+    // libcall.
     int64_t LibCallFrameSize =
         alignTo((STI.getXLen() / 8) * LibCallRegs, getStackAlign());
     MFI.CreateFixedSpillStackObject(LibCallFrameSize, -LibCallFrameSize);

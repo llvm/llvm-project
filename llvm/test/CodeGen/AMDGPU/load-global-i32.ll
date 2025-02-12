@@ -2373,21 +2373,21 @@ define amdgpu_kernel void @global_sextload_v16i32_to_v16i64(ptr addrspace(1) %ou
 ; GCNX3-HSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
-; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[12:15], v[0:1]
 ; GCNX3-HSA-NEXT:    s_add_u32 s4, s2, 48
-; GCNX3-HSA-NEXT:    s_addc_u32 s5, s3, 0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s4
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s5
-; GCNX3-HSA-NEXT:    s_add_u32 s4, s2, 32
 ; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[8:11], v[0:1]
 ; GCNX3-HSA-NEXT:    s_addc_u32 s5, s3, 0
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s4
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s5
+; GCNX3-HSA-NEXT:    s_add_u32 s4, s2, 32
+; GCNX3-HSA-NEXT:    s_addc_u32 s5, s3, 0
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s2, 16
-; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s3, 0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, s2
+; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[12:15], v[0:1]
+; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s4
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s5
 ; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 16
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
@@ -2406,10 +2406,10 @@ define amdgpu_kernel void @global_sextload_v16i32_to_v16i64(ptr addrspace(1) %ou
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v20, s0
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
 ; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(3)
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v19, 31, v13
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v17, 31, v12
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v12
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v13
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v19, 31, v9
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v17, 31, v8
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v8
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v9
 ; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[20:21], v[16:19]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v21, s3
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v20, s2
@@ -2418,51 +2418,50 @@ define amdgpu_kernel void @global_sextload_v16i32_to_v16i64(ptr addrspace(1) %ou
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v29, s3
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v28, s2
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 32
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v19, 31, v15
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v17, 31, v14
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v14
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v15
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v19, 31, v11
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v17, 31, v10
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v10
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v11
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
 ; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[22:23], v[16:19]
 ; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(4)
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v11
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v10
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v19, 31, v9
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v17, 31, v8
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v8
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v9
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v12, v10
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v14, v11
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v11, 31, v15
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v9, 31, v14
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v19, 31, v13
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v17, 31, v12
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v12
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v13
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, v14
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v10, v15
 ; GCNX3-HSA-NEXT:    s_add_u32 s0, s0, 48
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v23, s3
 ; GCNX3-HSA-NEXT:    s_addc_u32 s1, s1, 0
 ; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[24:25], v[16:19]
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[26:27], v[12:15]
-; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(5)
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v11, 31, v7
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v9, 31, v6
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v5
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v4
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v12, v4
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v14, v5
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, v6
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v10, v7
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[26:27], v[8:11]
+; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(4)
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v1
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v11, 31, v3
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v9, 31, v2
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v0
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v12, v0
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v14, v1
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, v2
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v10, v3
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v22, s2
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v31, s1
 ; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[20:21], v[12:15]
 ; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[28:29], v[8:11]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v30, s0
-; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(6)
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v11, 31, v1
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v9, 31, v0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, v0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v10, v1
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v3
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v2
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, v2
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v6, v3
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v11, 31, v5
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v9, 31, v4
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, v4
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v10, v5
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v7
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v6
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, v6
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, v7
 ; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[22:23], v[8:11]
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[30:31], v[4:7]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[30:31], v[0:3]
 ; GCNX3-HSA-NEXT:    s_endpgm
 ;
 ; GCNX3-NOHSA-LABEL: global_sextload_v16i32_to_v16i64:
