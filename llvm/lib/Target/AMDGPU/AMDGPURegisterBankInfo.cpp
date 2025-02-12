@@ -1996,7 +1996,7 @@ bool AMDGPURegisterBankInfo::foldExtractEltToCmpSelect(
   else
     EltTy = MRI.getType(DstRegs[0]);
 
-  if (VecTy.isFloatVector()) {
+  if (VecTy.isFloatVector() && !EltTy.isFloat()) {
     auto ClassOrBank = MRI.getRegClassOrRegBank(VecReg);
     VecReg = B.buildBitcast({ClassOrBank, VecTy.changeToInteger()}, VecReg).getReg(0);
   }
