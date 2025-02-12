@@ -589,7 +589,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  eclare void  @llvm.nvvm.prefetch.global.L1(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L1(ptr addrspace(1) %global_ptr)
   declare void  @llvm.nvvm.prefetch.global.L2(ptr addrspace(1) %global_ptr)
   declare void  @llvm.nvvm.prefetch.local.L1(ptr addrspace(5) %local_ptr)
   declare void  @llvm.nvvm.prefetch.local.L2(ptr addrspace(5) %local_ptr)
@@ -597,6 +597,9 @@ Syntax:
   declare void  @llvm.nvvm.prefetch.L1(ptr %ptr)
   declare void  @llvm.nvvm.prefetch.L2(ptr %ptr)
   
+  declare void  @llvm.nvvm.prefetch.global.L2.evictnormal(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L2.evictlast(ptr addrspace(1) %global_ptr)
+
   declare void  @llvm.nvvm.prefetchu.L1.evictnormal(ptr %ptr)
 
 Overview:
