@@ -1139,7 +1139,7 @@ FunctionPass *llvm::createSIInsertWaitcntsPass() {
   return new SIInsertWaitcnts();
 }
 
-static bool updateOperandIfDifferent(MachineInstr &MI, uint16_t OpName,
+static bool updateOperandIfDifferent(MachineInstr &MI, AMDGPU::OpName OpName,
                                      unsigned NewEnc) {
   int OpIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OpName);
   assert(OpIdx >= 0);
