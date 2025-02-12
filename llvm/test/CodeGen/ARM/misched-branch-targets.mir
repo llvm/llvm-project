@@ -1,5 +1,7 @@
 # RUN: llc -o - -run-pass=machine-scheduler -misched=shuffle %s | FileCheck %s
+# RUN: llc -o - -passes=machine-scheduler -misched=shuffle %s | FileCheck %s
 # RUN: llc -o - -run-pass=postmisched %s | FileCheck %s
+# RUN: llc -o - -passes=postmisched %s | FileCheck %s
 
 # REQUIRES: asserts
 # -misched=shuffle is only available with assertions enabled

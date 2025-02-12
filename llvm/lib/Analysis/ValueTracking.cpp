@@ -3857,6 +3857,50 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
       match(V2, m_PtrToIntSameSize(Q.DL, m_Value(B))))
     return isKnownNonEqual(A, B, DemandedElts, Depth + 1, Q);
 
+  if (!Q.CxtI)
+    return false;
+
+  // Try to infer NonEqual based on information from dominating conditions.
+  if (Q.DC && Q.DT) {
+    for (BranchInst *BI : Q.DC->conditionsFor(V1)) {
+      Value *Cond = BI->getCondition();
+      BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
+      if (Q.DT->dominates(Edge0, Q.CxtI->getParent()) &&
+          isImpliedCondition(Cond, ICmpInst::ICMP_NE, V1, V2, Q.DL,
+                             /*LHSIsTrue=*/true, Depth)
+              .value_or(false))
+        return true;
+
+      BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
+      if (Q.DT->dominates(Edge1, Q.CxtI->getParent()) &&
+          isImpliedCondition(Cond, ICmpInst::ICMP_NE, V1, V2, Q.DL,
+                             /*LHSIsTrue=*/false, Depth)
+              .value_or(false))
+        return true;
+    }
+  }
+
+  if (!Q.AC)
+    return false;
+
+  // Try to infer NonEqual based on information from assumptions.
+  for (auto &AssumeVH : Q.AC->assumptionsFor(V1)) {
+    if (!AssumeVH)
+      continue;
+    CallInst *I = cast<CallInst>(AssumeVH);
+
+    assert(I->getFunction() == Q.CxtI->getFunction() &&
+           "Got assumption for the wrong function!");
+    assert(I->getIntrinsicID() == Intrinsic::assume &&
+           "must be an assume intrinsic");
+
+    if (isImpliedCondition(I->getArgOperand(0), ICmpInst::ICMP_NE, V1, V2, Q.DL,
+                           /*LHSIsTrue=*/true, Depth)
+            .value_or(false) &&
+        isValidAssumeForContext(I, Q.CxtI, Q.DT))
+      return true;
+  }
+
   return false;
 }
 
@@ -10231,10 +10275,10 @@ void llvm::findValuesAffectedByCondition(
         Worklist.push_back(B);
       }
     } else if (match(V, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
-      AddCmpOperands(A, B);
-
       bool HasRHSC = match(B, m_ConstantInt());
       if (ICmpInst::isEquality(Pred)) {
+        AddAffected(A);
+        AddAffected(B);
         if (HasRHSC) {
           Value *Y;
           // (X & C) or (X | C).
@@ -10248,6 +10292,7 @@ void llvm::findValuesAffectedByCondition(
           }
         }
       } else {
+        AddCmpOperands(A, B);
         if (HasRHSC) {
           // Handle (A + C1) u< C2, which is the canonical form of
           // A > C3 && A < C4.
