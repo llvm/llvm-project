@@ -1,143 +1,273 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs %s -o - -run-pass=amdgpu-hot-block-remat -amdgpu-remat-enable-sub-exp-remat -amdgpu-remat-enable-sub-exp-remat-aggressive | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs %s -o - -run-pass=amdgpu-hot-block-remat -amdgpu-remat-enable-sub-exp-remat -amdgpu-remat-enable-in-blk-remat | FileCheck %s
 
-# Check that the whole expression gets CLONED to uses in bb.2.
+# Check that pacifist insts are moved to their users within the block.
 # CHECK: bb.0:
 # CHECK: %[[#r500:]]:vgpr_32 = V_MOV_B32_e32 $vgpr0
 # CHECK: %[[#r501:]]:vgpr_32 = V_MOV_B32_e32 $vgpr1
-# CHECK: bb.1:
-# CHECK: bb.2:
 # CHECK: %[[#r502:]]:vgpr_32 = V_MUL_F32_e32 %[[#r500]], %[[#r500]]
+# CHECK: EXP 0, %[[#r502]]
 # CHECK: %[[#r503:]]:vgpr_32 = V_MUL_F32_e32 %[[#r500]], %[[#r501]]
+# CHECK: EXP 0, %[[#r503]]
 # CHECK: %[[#r504:]]:vgpr_32 = V_MUL_F32_e32 %[[#r501]], %[[#r501]]
+# CHECK: EXP 0, %[[#r504]]
 # CHECK: %[[#r505:]]:vgpr_32 = V_MUL_F32_e32 %[[#r502]], %[[#r502]]
+# CHECK: EXP 0, %[[#r505]]
 # CHECK: %[[#r506:]]:vgpr_32 = V_MUL_F32_e32 %[[#r502]], %[[#r503]]
+# CHECK: EXP 0, %[[#r506]]
 # CHECK: %[[#r507:]]:vgpr_32 = V_MUL_F32_e32 %[[#r503]], %[[#r503]]
+# CHECK: EXP 0, %[[#r507]]
 # CHECK: %[[#r508:]]:vgpr_32 = V_MUL_F32_e32 %[[#r503]], %[[#r504]]
+# CHECK: EXP 0, %[[#r508]]
 # CHECK: %[[#r509:]]:vgpr_32 = V_MUL_F32_e32 %[[#r504]], %[[#r504]]
+# CHECK: EXP 0, %[[#r509]]
 # CHECK: %[[#r5010:]]:vgpr_32 = V_MUL_F32_e32 %[[#r505]], %[[#r505]]
+# CHECK: EXP 0, %[[#r5010]]
 # CHECK: %[[#r5011:]]:vgpr_32 = V_MUL_F32_e32 %[[#r505]], %[[#r506]]
+# CHECK: EXP 0, %[[#r5011]]
 # CHECK: %[[#r5012:]]:vgpr_32 = V_MUL_F32_e32 %[[#r506]], %[[#r506]]
+# CHECK: EXP 0, %[[#r5012]]
 # CHECK: %[[#r5013:]]:vgpr_32 = V_MUL_F32_e32 %[[#r506]], %[[#r507]]
+# CHECK: EXP 0, %[[#r5013]]
 # CHECK: %[[#r5014:]]:vgpr_32 = V_MUL_F32_e32 %[[#r507]], %[[#r507]]
+# CHECK: EXP 0, %[[#r5014]]
 # CHECK: %[[#r5015:]]:vgpr_32 = V_MUL_F32_e32 %[[#r507]], %[[#r508]]
+# CHECK: EXP 0, %[[#r5015]]
 # CHECK: %[[#r5016:]]:vgpr_32 = V_MUL_F32_e32 %[[#r508]], %[[#r508]]
+# CHECK: EXP 0, %[[#r5016]]
 # CHECK: %[[#r5017:]]:vgpr_32 = V_MUL_F32_e32 %[[#r508]], %[[#r509]]
+# CHECK: EXP 0, %[[#r5017]]
 # CHECK: %[[#r5018:]]:vgpr_32 = V_MUL_F32_e32 %[[#r509]], %[[#r509]]
+# CHECK: EXP 0, %[[#r5018]]
 # CHECK: %[[#r5019:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5010]], %[[#r5010]]
+# CHECK: EXP 0, %[[#r5019]]
 # CHECK: %[[#r5020:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5010]], %[[#r5011]]
+# CHECK: EXP 0, %[[#r5020]]
 # CHECK: %[[#r5021:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5011]], %[[#r5011]]
+# CHECK: EXP 0, %[[#r5021]]
 # CHECK: %[[#r5022:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5011]], %[[#r5012]]
+# CHECK: EXP 0, %[[#r5022]]
 # CHECK: %[[#r5023:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5012]], %[[#r5012]]
+# CHECK: EXP 0, %[[#r5023]]
 # CHECK: %[[#r5024:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5012]], %[[#r5013]]
+# CHECK: EXP 0, %[[#r5024]]
 # CHECK: %[[#r5025:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5013]], %[[#r5013]]
+# CHECK: EXP 0, %[[#r5025]]
 # CHECK: %[[#r5026:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5013]], %[[#r5014]]
+# CHECK: EXP 0, %[[#r5026]]
 # CHECK: %[[#r5027:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5014]], %[[#r5014]]
+# CHECK: EXP 0, %[[#r5027]]
 # CHECK: %[[#r5028:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5014]], %[[#r5015]]
+# CHECK: EXP 0, %[[#r5028]]
 # CHECK: %[[#r5029:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5015]], %[[#r5015]]
+# CHECK: EXP 0, %[[#r5029]]
 # CHECK: %[[#r5030:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5015]], %[[#r5016]]
+# CHECK: EXP 0, %[[#r5030]]
 # CHECK: %[[#r5031:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5016]], %[[#r5016]]
+# CHECK: EXP 0, %[[#r5031]]
 # CHECK: %[[#r5032:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5016]], %[[#r5017]]
+# CHECK: EXP 0, %[[#r5032]]
 # CHECK: %[[#r5033:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5017]], %[[#r5017]]
+# CHECK: EXP 0, %[[#r5033]]
 # CHECK: %[[#r5034:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5017]], %[[#r5018]]
+# CHECK: EXP 0, %[[#r5034]]
 # CHECK: %[[#r5035:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5018]], %[[#r5018]]
+# CHECK: EXP 0, %[[#r5035]]
 # CHECK: %[[#r5036:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5019]], %[[#r5019]]
+# CHECK: EXP 0, %[[#r5036]]
 # CHECK: %[[#r5037:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5019]], %[[#r5020]]
+# CHECK: EXP 0, %[[#r5037]]
 # CHECK: %[[#r5038:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5020]], %[[#r5020]]
+# CHECK: EXP 0, %[[#r5038]]
 # CHECK: %[[#r5039:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5020]], %[[#r5021]]
+# CHECK: EXP 0, %[[#r5039]]
 # CHECK: %[[#r5040:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5021]], %[[#r5021]]
+# CHECK: EXP 0, %[[#r5040]]
 # CHECK: %[[#r5041:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5021]], %[[#r5022]]
+# CHECK: EXP 0, %[[#r5041]]
 # CHECK: %[[#r5042:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5022]], %[[#r5022]]
+# CHECK: EXP 0, %[[#r5042]]
 # CHECK: %[[#r5043:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5022]], %[[#r5023]]
+# CHECK: EXP 0, %[[#r5043]]
 # CHECK: %[[#r5044:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5023]], %[[#r5023]]
+# CHECK: EXP 0, %[[#r5044]]
 # CHECK: %[[#r5045:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5023]], %[[#r5024]]
+# CHECK: EXP 0, %[[#r5045]]
 # CHECK: %[[#r5046:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5024]], %[[#r5024]]
+# CHECK: EXP 0, %[[#r5046]]
 # CHECK: %[[#r5047:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5024]], %[[#r5025]]
+# CHECK: EXP 0, %[[#r5047]]
 # CHECK: %[[#r5048:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5025]], %[[#r5025]]
+# CHECK: EXP 0, %[[#r5048]]
 # CHECK: %[[#r5049:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5025]], %[[#r5026]]
+# CHECK: EXP 0, %[[#r5049]]
 # CHECK: %[[#r5050:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5026]], %[[#r5026]]
+# CHECK: EXP 0, %[[#r5050]]
 # CHECK: %[[#r5051:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5026]], %[[#r5027]]
+# CHECK: EXP 0, %[[#r5051]]
 # CHECK: %[[#r5052:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5027]], %[[#r5027]]
+# CHECK: EXP 0, %[[#r5052]]
 # CHECK: %[[#r5053:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5027]], %[[#r5028]]
+# CHECK: EXP 0, %[[#r5053]]
 # CHECK: %[[#r5054:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5028]], %[[#r5028]]
+# CHECK: EXP 0, %[[#r5054]]
 # CHECK: %[[#r5055:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5028]], %[[#r5029]]
+# CHECK: EXP 0, %[[#r5055]]
 # CHECK: %[[#r5056:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5029]], %[[#r5029]]
+# CHECK: EXP 0, %[[#r5056]]
 # CHECK: %[[#r5057:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5029]], %[[#r5030]]
+# CHECK: EXP 0, %[[#r5057]]
 # CHECK: %[[#r5058:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5030]], %[[#r5030]]
+# CHECK: EXP 0, %[[#r5058]]
 # CHECK: %[[#r5059:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5030]], %[[#r5031]]
+# CHECK: EXP 0, %[[#r5059]]
 # CHECK: %[[#r5060:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5031]], %[[#r5031]]
+# CHECK: EXP 0, %[[#r5060]]
 # CHECK: %[[#r5061:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5031]], %[[#r5032]]
+# CHECK: EXP 0, %[[#r5061]]
 # CHECK: %[[#r5062:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5032]], %[[#r5032]]
+# CHECK: EXP 0, %[[#r5062]]
 # CHECK: %[[#r5063:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5032]], %[[#r5033]]
+# CHECK: EXP 0, %[[#r5063]]
 # CHECK: %[[#r5064:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5033]], %[[#r5033]]
+# CHECK: EXP 0, %[[#r5064]]
 # CHECK: %[[#r5065:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5033]], %[[#r5034]]
+# CHECK: EXP 0, %[[#r5065]]
 # CHECK: %[[#r5066:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5034]], %[[#r5034]]
+# CHECK: EXP 0, %[[#r5066]]
 # CHECK: %[[#r5067:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5034]], %[[#r5035]]
+# CHECK: EXP 0, %[[#r5067]]
 # CHECK: %[[#r5068:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5035]], %[[#r5035]]
+# CHECK: EXP 0, %[[#r5068]]
 # CHECK: %[[#r5069:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5036]], %[[#r5036]]
+# CHECK: EXP 0, %[[#r5069]]
 # CHECK: %[[#r5070:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5036]], %[[#r5037]]
+# CHECK: EXP 0, %[[#r5070]]
 # CHECK: %[[#r5071:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5037]], %[[#r5037]]
+# CHECK: EXP 0, %[[#r5071]]
 # CHECK: %[[#r5072:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5037]], %[[#r5038]]
+# CHECK: EXP 0, %[[#r5072]]
 # CHECK: %[[#r5073:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5038]], %[[#r5038]]
+# CHECK: EXP 0, %[[#r5073]]
 # CHECK: %[[#r5074:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5038]], %[[#r5039]]
+# CHECK: EXP 0, %[[#r5074]]
 # CHECK: %[[#r5075:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5039]], %[[#r5039]]
+# CHECK: EXP 0, %[[#r5075]]
 # CHECK: %[[#r5076:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5039]], %[[#r5040]]
+# CHECK: EXP 0, %[[#r5076]]
 # CHECK: %[[#r5077:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5040]], %[[#r5040]]
+# CHECK: EXP 0, %[[#r5077]]
 # CHECK: %[[#r5078:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5040]], %[[#r5041]]
+# CHECK: EXP 0, %[[#r5078]]
 # CHECK: %[[#r5079:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5041]], %[[#r5041]]
+# CHECK: EXP 0, %[[#r5079]]
 # CHECK: %[[#r5080:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5041]], %[[#r5042]]
+# CHECK: EXP 0, %[[#r5080]]
 # CHECK: %[[#r5081:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5042]], %[[#r5042]]
+# CHECK: EXP 0, %[[#r5081]]
 # CHECK: %[[#r5082:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5042]], %[[#r5043]]
+# CHECK: EXP 0, %[[#r5082]]
 # CHECK: %[[#r5083:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5043]], %[[#r5043]]
+# CHECK: EXP 0, %[[#r5083]]
 # CHECK: %[[#r5084:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5043]], %[[#r5044]]
+# CHECK: EXP 0, %[[#r5084]]
 # CHECK: %[[#r5085:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5044]], %[[#r5044]]
+# CHECK: EXP 0, %[[#r5085]]
 # CHECK: %[[#r5086:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5044]], %[[#r5045]]
+# CHECK: EXP 0, %[[#r5086]]
 # CHECK: %[[#r5087:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5045]], %[[#r5045]]
+# CHECK: EXP 0, %[[#r5087]]
 # CHECK: %[[#r5088:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5045]], %[[#r5046]]
+# CHECK: EXP 0, %[[#r5088]]
 # CHECK: %[[#r5089:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5046]], %[[#r5046]]
+# CHECK: EXP 0, %[[#r5089]]
 # CHECK: %[[#r5090:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5046]], %[[#r5047]]
+# CHECK: EXP 0, %[[#r5090]]
 # CHECK: %[[#r5091:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5047]], %[[#r5047]]
+# CHECK: EXP 0, %[[#r5091]]
 # CHECK: %[[#r5092:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5047]], %[[#r5048]]
+# CHECK: EXP 0, %[[#r5092]]
 # CHECK: %[[#r5093:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5048]], %[[#r5048]]
+# CHECK: EXP 0, %[[#r5093]]
 # CHECK: %[[#r5094:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5048]], %[[#r5049]]
+# CHECK: EXP 0, %[[#r5094]]
 # CHECK: %[[#r5095:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5049]], %[[#r5049]]
+# CHECK: EXP 0, %[[#r5095]]
 # CHECK: %[[#r5096:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5049]], %[[#r5050]]
+# CHECK: EXP 0, %[[#r5096]]
 # CHECK: %[[#r5097:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5050]], %[[#r5050]]
+# CHECK: EXP 0, %[[#r5097]]
 # CHECK: %[[#r5098:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5050]], %[[#r5051]]
+# CHECK: EXP 0, %[[#r5098]]
 # CHECK: %[[#r5099:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5051]], %[[#r5051]]
+# CHECK: EXP 0, %[[#r5099]]
 # CHECK: %[[#r50100:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5051]], %[[#r5052]]
+# CHECK: EXP 0, %[[#r50100]]
 # CHECK: %[[#r50101:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5052]], %[[#r5052]]
+# CHECK: EXP 0, %[[#r50101]]
 # CHECK: %[[#r50102:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5052]], %[[#r5053]]
+# CHECK: EXP 0, %[[#r50102]]
 # CHECK: %[[#r50103:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5053]], %[[#r5053]]
+# CHECK: EXP 0, %[[#r50103]]
 # CHECK: %[[#r50104:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5053]], %[[#r5054]]
+# CHECK: EXP 0, %[[#r50104]]
 # CHECK: %[[#r50105:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5054]], %[[#r5054]]
+# CHECK: EXP 0, %[[#r50105]]
 # CHECK: %[[#r50106:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5054]], %[[#r5055]]
+# CHECK: EXP 0, %[[#r50106]]
 # CHECK: %[[#r50107:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5055]], %[[#r5055]]
+# CHECK: EXP 0, %[[#r50107]]
 # CHECK: %[[#r50108:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5055]], %[[#r5056]]
+# CHECK: EXP 0, %[[#r50108]]
 # CHECK: %[[#r50109:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5056]], %[[#r5056]]
+# CHECK: EXP 0, %[[#r50109]]
 # CHECK: %[[#r50110:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5056]], %[[#r5057]]
+# CHECK: EXP 0, %[[#r50110]]
 # CHECK: %[[#r50111:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5057]], %[[#r5057]]
+# CHECK: EXP 0, %[[#r50111]]
 # CHECK: %[[#r50112:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5057]], %[[#r5058]]
+# CHECK: EXP 0, %[[#r50112]]
 # CHECK: %[[#r50113:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5058]], %[[#r5058]]
+# CHECK: EXP 0, %[[#r50113]]
 # CHECK: %[[#r50114:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5058]], %[[#r5059]]
+# CHECK: EXP 0, %[[#r50114]]
 # CHECK: %[[#r50115:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5059]], %[[#r5059]]
+# CHECK: EXP 0, %[[#r50115]]
 # CHECK: %[[#r50116:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5059]], %[[#r5060]]
+# CHECK: EXP 0, %[[#r50116]]
 # CHECK: %[[#r50117:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5060]], %[[#r5060]]
+# CHECK: EXP 0, %[[#r50117]]
 # CHECK: %[[#r50118:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5060]], %[[#r5061]]
+# CHECK: EXP 0, %[[#r50118]]
 # CHECK: %[[#r50119:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5061]], %[[#r5061]]
+# CHECK: EXP 0, %[[#r50119]]
 # CHECK: %[[#r50120:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5061]], %[[#r5062]]
+# CHECK: EXP 0, %[[#r50120]]
 # CHECK: %[[#r50121:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5062]], %[[#r5062]]
+# CHECK: EXP 0, %[[#r50121]]
 # CHECK: %[[#r50122:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5062]], %[[#r5063]]
+# CHECK: EXP 0, %[[#r50122]]
 # CHECK: %[[#r50123:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5063]], %[[#r5063]]
+# CHECK: EXP 0, %[[#r50123]]
 # CHECK: %[[#r50124:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5063]], %[[#r5064]]
+# CHECK: EXP 0, %[[#r50124]]
 # CHECK: %[[#r50125:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5064]], %[[#r5064]]
+# CHECK: EXP 0, %[[#r50125]]
 # CHECK: %[[#r50126:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5064]], %[[#r5065]]
+# CHECK: EXP 0, %[[#r50126]]
 # CHECK: %[[#r50127:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5065]], %[[#r5065]]
+# CHECK: EXP 0, %[[#r50127]]
 # CHECK: %[[#r50128:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5065]], %[[#r5066]]
+# CHECK: EXP 0, %[[#r50128]]
 # CHECK: %[[#r50129:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5066]], %[[#r5066]]
+# CHECK: EXP 0, %[[#r50129]]
 # CHECK: %[[#r50130:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5066]], %[[#r5067]]
+# CHECK: EXP 0, %[[#r50130]]
 # CHECK: %[[#r50131:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5067]], %[[#r5067]]
+# CHECK: EXP 0, %[[#r50131]]
 # CHECK: %[[#r50132:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5067]], %[[#r5068]]
+# CHECK: EXP 0, %[[#r50132]]
 # CHECK: %[[#r50133:]]:vgpr_32 = V_MUL_F32_e32 %[[#r5068]], %[[#r5068]]
+# CHECK: EXP 0, %[[#r50133]]
 
 
 --- |
@@ -167,18 +297,13 @@ liveins:
   - { reg: '$vgpr1' }
 body:             |
   bb.0:
-    successors: %bb.1, %bb.2
+    successors: %bb.1
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $vgpr0, $vgpr1
 
     %0:sgpr_64 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr1, %subreg.sub1
-    ; undef %0.sub0:sgpr_64 = COPY $sgpr0
-    ; undef %0.sub1:sgpr_64 = COPY $sgpr1
-
     %1:sgpr_128 = REG_SEQUENCE $sgpr4, %subreg.sub0, $sgpr5, %subreg.sub1, $sgpr6, %subreg.sub2, $sgpr7, %subreg.sub3
-    ; undef %1.sub0:sgpr_128 = COPY $sgpr4
-    ; undef %1.sub1:sgpr_128 = COPY $sgpr5
-    ; undef %1.sub2:sgpr_128 = COPY $sgpr6
-    ; undef %1.sub3:sgpr_128 = COPY $sgpr7
+
+    %3:vgpr_32 = IMPLICIT_DEF
 
 
     %500:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -315,327 +440,319 @@ body:             |
     %50131:vgpr_32 = V_MUL_F32_e32 %5067, %5067, implicit $exec, implicit $mode
     %50132:vgpr_32 = V_MUL_F32_e32 %5067, %5068, implicit $exec, implicit $mode
     %50133:vgpr_32 = V_MUL_F32_e32 %5068, %5068, implicit $exec, implicit $mode
-    EXP 0, %500, %500, %500, %500, -1, -1, 15, implicit $exec
-    EXP 0, %501, %501, %501, %501, -1, -1, 15, implicit $exec
-    EXP 0, %502, %502, %502, %502, -1, -1, 15, implicit $exec
-    EXP 0, %503, %503, %503, %503, -1, -1, 15, implicit $exec
-    EXP 0, %504, %504, %504, %504, -1, -1, 15, implicit $exec
-    EXP 0, %505, %505, %505, %505, -1, -1, 15, implicit $exec
-    EXP 0, %506, %506, %506, %506, -1, -1, 15, implicit $exec
-    EXP 0, %507, %507, %507, %507, -1, -1, 15, implicit $exec
-    EXP 0, %508, %508, %508, %508, -1, -1, 15, implicit $exec
-    EXP 0, %509, %509, %509, %509, -1, -1, 15, implicit $exec
-    EXP 0, %5010, %5010, %5010, %5010, -1, -1, 15, implicit $exec
-    EXP 0, %5011, %5011, %5011, %5011, -1, -1, 15, implicit $exec
-    EXP 0, %5012, %5012, %5012, %5012, -1, -1, 15, implicit $exec
-    EXP 0, %5013, %5013, %5013, %5013, -1, -1, 15, implicit $exec
-    EXP 0, %5014, %5014, %5014, %5014, -1, -1, 15, implicit $exec
-    EXP 0, %5015, %5015, %5015, %5015, -1, -1, 15, implicit $exec
-    EXP 0, %5016, %5016, %5016, %5016, -1, -1, 15, implicit $exec
-    EXP 0, %5017, %5017, %5017, %5017, -1, -1, 15, implicit $exec
-    EXP 0, %5018, %5018, %5018, %5018, -1, -1, 15, implicit $exec
-    EXP 0, %5019, %5019, %5019, %5019, -1, -1, 15, implicit $exec
-    EXP 0, %5020, %5020, %5020, %5020, -1, -1, 15, implicit $exec
-    EXP 0, %5021, %5021, %5021, %5021, -1, -1, 15, implicit $exec
-    EXP 0, %5022, %5022, %5022, %5022, -1, -1, 15, implicit $exec
-    EXP 0, %5023, %5023, %5023, %5023, -1, -1, 15, implicit $exec
-    EXP 0, %5024, %5024, %5024, %5024, -1, -1, 15, implicit $exec
-    EXP 0, %5025, %5025, %5025, %5025, -1, -1, 15, implicit $exec
-    EXP 0, %5026, %5026, %5026, %5026, -1, -1, 15, implicit $exec
-    EXP 0, %5027, %5027, %5027, %5027, -1, -1, 15, implicit $exec
-    EXP 0, %5028, %5028, %5028, %5028, -1, -1, 15, implicit $exec
-    EXP 0, %5029, %5029, %5029, %5029, -1, -1, 15, implicit $exec
-    EXP 0, %5030, %5030, %5030, %5030, -1, -1, 15, implicit $exec
-    EXP 0, %5031, %5031, %5031, %5031, -1, -1, 15, implicit $exec
-    EXP 0, %5032, %5032, %5032, %5032, -1, -1, 15, implicit $exec
-    EXP 0, %5033, %5033, %5033, %5033, -1, -1, 15, implicit $exec
-    EXP 0, %5034, %5034, %5034, %5034, -1, -1, 15, implicit $exec
-    EXP 0, %5035, %5035, %5035, %5035, -1, -1, 15, implicit $exec
-    EXP 0, %5036, %5036, %5036, %5036, -1, -1, 15, implicit $exec
-    EXP 0, %5037, %5037, %5037, %5037, -1, -1, 15, implicit $exec
-    EXP 0, %5038, %5038, %5038, %5038, -1, -1, 15, implicit $exec
-    EXP 0, %5039, %5039, %5039, %5039, -1, -1, 15, implicit $exec
-    EXP 0, %5040, %5040, %5040, %5040, -1, -1, 15, implicit $exec
-    EXP 0, %5041, %5041, %5041, %5041, -1, -1, 15, implicit $exec
-    EXP 0, %5042, %5042, %5042, %5042, -1, -1, 15, implicit $exec
-    EXP 0, %5043, %5043, %5043, %5043, -1, -1, 15, implicit $exec
-    EXP 0, %5044, %5044, %5044, %5044, -1, -1, 15, implicit $exec
-    EXP 0, %5045, %5045, %5045, %5045, -1, -1, 15, implicit $exec
-    EXP 0, %5046, %5046, %5046, %5046, -1, -1, 15, implicit $exec
-    EXP 0, %5047, %5047, %5047, %5047, -1, -1, 15, implicit $exec
-    EXP 0, %5048, %5048, %5048, %5048, -1, -1, 15, implicit $exec
-    EXP 0, %5049, %5049, %5049, %5049, -1, -1, 15, implicit $exec
-    EXP 0, %5050, %5050, %5050, %5050, -1, -1, 15, implicit $exec
-    EXP 0, %5051, %5051, %5051, %5051, -1, -1, 15, implicit $exec
-    EXP 0, %5052, %5052, %5052, %5052, -1, -1, 15, implicit $exec
-    EXP 0, %5053, %5053, %5053, %5053, -1, -1, 15, implicit $exec
-    EXP 0, %5054, %5054, %5054, %5054, -1, -1, 15, implicit $exec
-    EXP 0, %5055, %5055, %5055, %5055, -1, -1, 15, implicit $exec
-    EXP 0, %5056, %5056, %5056, %5056, -1, -1, 15, implicit $exec
-    EXP 0, %5057, %5057, %5057, %5057, -1, -1, 15, implicit $exec
-    EXP 0, %5058, %5058, %5058, %5058, -1, -1, 15, implicit $exec
-    EXP 0, %5059, %5059, %5059, %5059, -1, -1, 15, implicit $exec
-    EXP 0, %5060, %5060, %5060, %5060, -1, -1, 15, implicit $exec
-    EXP 0, %5061, %5061, %5061, %5061, -1, -1, 15, implicit $exec
-    EXP 0, %5062, %5062, %5062, %5062, -1, -1, 15, implicit $exec
-    EXP 0, %5063, %5063, %5063, %5063, -1, -1, 15, implicit $exec
-    EXP 0, %5064, %5064, %5064, %5064, -1, -1, 15, implicit $exec
-    EXP 0, %5065, %5065, %5065, %5065, -1, -1, 15, implicit $exec
-    EXP 0, %5066, %5066, %5066, %5066, -1, -1, 15, implicit $exec
-    EXP 0, %5067, %5067, %5067, %5067, -1, -1, 15, implicit $exec
-    EXP 0, %5068, %5068, %5068, %5068, -1, -1, 15, implicit $exec
-    EXP 0, %5069, %5069, %5069, %5069, -1, -1, 15, implicit $exec
-    EXP 0, %5070, %5070, %5070, %5070, -1, -1, 15, implicit $exec
-    EXP 0, %5071, %5071, %5071, %5071, -1, -1, 15, implicit $exec
-    EXP 0, %5072, %5072, %5072, %5072, -1, -1, 15, implicit $exec
-    EXP 0, %5073, %5073, %5073, %5073, -1, -1, 15, implicit $exec
-    EXP 0, %5074, %5074, %5074, %5074, -1, -1, 15, implicit $exec
-    EXP 0, %5075, %5075, %5075, %5075, -1, -1, 15, implicit $exec
-    EXP 0, %5076, %5076, %5076, %5076, -1, -1, 15, implicit $exec
-    EXP 0, %5077, %5077, %5077, %5077, -1, -1, 15, implicit $exec
-    EXP 0, %5078, %5078, %5078, %5078, -1, -1, 15, implicit $exec
-    EXP 0, %5079, %5079, %5079, %5079, -1, -1, 15, implicit $exec
-    EXP 0, %5080, %5080, %5080, %5080, -1, -1, 15, implicit $exec
-    EXP 0, %5081, %5081, %5081, %5081, -1, -1, 15, implicit $exec
-    EXP 0, %5082, %5082, %5082, %5082, -1, -1, 15, implicit $exec
-    EXP 0, %5083, %5083, %5083, %5083, -1, -1, 15, implicit $exec
-    EXP 0, %5084, %5084, %5084, %5084, -1, -1, 15, implicit $exec
-    EXP 0, %5085, %5085, %5085, %5085, -1, -1, 15, implicit $exec
-    EXP 0, %5086, %5086, %5086, %5086, -1, -1, 15, implicit $exec
-    EXP 0, %5087, %5087, %5087, %5087, -1, -1, 15, implicit $exec
-    EXP 0, %5088, %5088, %5088, %5088, -1, -1, 15, implicit $exec
-    EXP 0, %5089, %5089, %5089, %5089, -1, -1, 15, implicit $exec
-    EXP 0, %5090, %5090, %5090, %5090, -1, -1, 15, implicit $exec
-    EXP 0, %5091, %5091, %5091, %5091, -1, -1, 15, implicit $exec
-    EXP 0, %5092, %5092, %5092, %5092, -1, -1, 15, implicit $exec
-    EXP 0, %5093, %5093, %5093, %5093, -1, -1, 15, implicit $exec
-    EXP 0, %5094, %5094, %5094, %5094, -1, -1, 15, implicit $exec
-    EXP 0, %5095, %5095, %5095, %5095, -1, -1, 15, implicit $exec
-    EXP 0, %5096, %5096, %5096, %5096, -1, -1, 15, implicit $exec
-    EXP 0, %5097, %5097, %5097, %5097, -1, -1, 15, implicit $exec
-    EXP 0, %5098, %5098, %5098, %5098, -1, -1, 15, implicit $exec
-    EXP 0, %5099, %5099, %5099, %5099, -1, -1, 15, implicit $exec
-    EXP 0, %50100, %50100, %50100, %50100, -1, -1, 15, implicit $exec
-    EXP 0, %50101, %50101, %50101, %50101, -1, -1, 15, implicit $exec
-    EXP 0, %50102, %50102, %50102, %50102, -1, -1, 15, implicit $exec
-    EXP 0, %50103, %50103, %50103, %50103, -1, -1, 15, implicit $exec
-    EXP 0, %50104, %50104, %50104, %50104, -1, -1, 15, implicit $exec
-    EXP 0, %50105, %50105, %50105, %50105, -1, -1, 15, implicit $exec
-    EXP 0, %50106, %50106, %50106, %50106, -1, -1, 15, implicit $exec
-    EXP 0, %50107, %50107, %50107, %50107, -1, -1, 15, implicit $exec
-    EXP 0, %50108, %50108, %50108, %50108, -1, -1, 15, implicit $exec
-    EXP 0, %50109, %50109, %50109, %50109, -1, -1, 15, implicit $exec
-    EXP 0, %50110, %50110, %50110, %50110, -1, -1, 15, implicit $exec
-    EXP 0, %50111, %50111, %50111, %50111, -1, -1, 15, implicit $exec
-    EXP 0, %50112, %50112, %50112, %50112, -1, -1, 15, implicit $exec
-    EXP 0, %50113, %50113, %50113, %50113, -1, -1, 15, implicit $exec
-    EXP 0, %50114, %50114, %50114, %50114, -1, -1, 15, implicit $exec
-    EXP 0, %50115, %50115, %50115, %50115, -1, -1, 15, implicit $exec
-    EXP 0, %50116, %50116, %50116, %50116, -1, -1, 15, implicit $exec
-    EXP 0, %50117, %50117, %50117, %50117, -1, -1, 15, implicit $exec
-    EXP 0, %50118, %50118, %50118, %50118, -1, -1, 15, implicit $exec
-    EXP 0, %50119, %50119, %50119, %50119, -1, -1, 15, implicit $exec
-    EXP 0, %50120, %50120, %50120, %50120, -1, -1, 15, implicit $exec
-    EXP 0, %50121, %50121, %50121, %50121, -1, -1, 15, implicit $exec
-    EXP 0, %50122, %50122, %50122, %50122, -1, -1, 15, implicit $exec
-    EXP 0, %50123, %50123, %50123, %50123, -1, -1, 15, implicit $exec
-    EXP 0, %50124, %50124, %50124, %50124, -1, -1, 15, implicit $exec
-    EXP 0, %50125, %50125, %50125, %50125, -1, -1, 15, implicit $exec
-    EXP 0, %50126, %50126, %50126, %50126, -1, -1, 15, implicit $exec
-    EXP 0, %50127, %50127, %50127, %50127, -1, -1, 15, implicit $exec
-    EXP 0, %50128, %50128, %50128, %50128, -1, -1, 15, implicit $exec
-    EXP 0, %50129, %50129, %50129, %50129, -1, -1, 15, implicit $exec
-    EXP 0, %50130, %50130, %50130, %50130, -1, -1, 15, implicit $exec
-    EXP 0, %50131, %50131, %50131, %50131, -1, -1, 15, implicit $exec
-    EXP 0, %50132, %50132, %50132, %50132, -1, -1, 15, implicit $exec
-    EXP 0, %50133, %50133, %50133, %50133, -1, -1, 15, implicit $exec
 
 
-    %8000:vgpr_32 = IMPLICIT_DEF
-    %116:sreg_32_xm0 = nnan ninf nsz arcp contract afn reassoc V_CMP_GT_F32_e64 0, 0, 0, %8000, 0, implicit $exec, implicit $mode
-    $exec_lo = S_MOV_B32_term %116:sreg_32_xm0
-    S_CBRANCH_EXECZ %bb.2, implicit $exec
+
+    EXP 0, %500, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %501, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %502, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %503, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %504, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %505, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %506, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %507, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %508, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %509, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5010, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5011, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5012, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5013, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5014, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5015, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5016, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5017, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5018, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5019, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5020, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5021, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5022, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5023, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5024, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5025, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5026, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5027, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5028, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5029, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5030, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5031, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5032, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5033, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5034, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5035, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5036, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5037, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5038, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5039, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5040, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5041, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5042, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5043, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5044, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5045, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5046, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5047, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5048, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5049, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5050, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5051, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5052, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5053, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5054, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5055, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5056, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5057, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5058, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5059, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5060, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5061, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5062, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5063, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5064, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5065, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5066, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5067, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5068, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5069, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5070, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5071, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5072, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5073, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5074, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5075, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5076, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5077, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5078, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5079, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5080, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5081, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5082, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5083, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5084, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5085, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5086, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5087, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5088, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5089, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5090, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5091, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5092, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5093, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5094, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5095, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5096, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5097, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5098, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5099, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50100, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50101, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50102, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50103, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50104, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50105, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50106, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50107, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50108, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50109, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50110, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50111, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50112, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50113, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50114, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50115, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50116, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50117, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50118, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50119, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50120, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50121, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50122, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50123, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50124, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50125, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50126, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50127, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50128, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50129, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50130, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50131, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50132, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50133, %3, %3, %3, -1, -1, 15, implicit $exec
+
+
     S_BRANCH %bb.1
 
-  bb.1:  
-    successors: %bb.2
+    ; %8001:vgpr_32 = COPY %8000
+    ; %8002:vgpr_32 = COPY %8000
+    ; %8003:vgpr_32 = COPY %8000
+    ; %8004:vgpr_32 = COPY %8000
+    ; %8005:vgpr_32 = COPY %8000
+    ; %8006:vgpr_32 = COPY %8000
+    ; %8007:vgpr_32 = COPY %8000
+    ; %8008:vgpr_32 = COPY %8000
+    ; %8009:vgpr_32 = COPY %8000
+    ; %8010:vgpr_32 = COPY %8000
+    ; %8011:vgpr_32 = COPY %8000
+    ; %8012:vgpr_32 = COPY %8000
+    ; %8013:vgpr_32 = COPY %8000
+    ; %8014:vgpr_32 = COPY %8000
+    ; %8015:vgpr_32 = COPY %8000
+    ; %8016:vgpr_32 = COPY %8000
+    ; %8017:vgpr_32 = COPY %8000
 
-    %8001:vgpr_32 = COPY %8000
-    %8002:vgpr_32 = COPY %8000
-    %8003:vgpr_32 = COPY %8000
-    %8004:vgpr_32 = COPY %8000
-    %8005:vgpr_32 = COPY %8000
-    %8006:vgpr_32 = COPY %8000
-    %8007:vgpr_32 = COPY %8000
-    %8008:vgpr_32 = COPY %8000
-    %8009:vgpr_32 = COPY %8000
-    %8010:vgpr_32 = COPY %8000
-    %8011:vgpr_32 = COPY %8000
-    %8012:vgpr_32 = COPY %8000
-    %8013:vgpr_32 = COPY %8000
-    %8014:vgpr_32 = COPY %8000
-    %8015:vgpr_32 = COPY %8000
-    %8016:vgpr_32 = COPY %8000
-    %8017:vgpr_32 = COPY %8000
+    ; %9001:vgpr_32 = COPY %8001
+    ; %9002:vgpr_32 = COPY %8002
+    ; %9003:vgpr_32 = COPY %8003
+    ; %9004:vgpr_32 = COPY %8004
+    ; %9005:vgpr_32 = COPY %8005
+    ; %9006:vgpr_32 = COPY %8006
+    ; %9007:vgpr_32 = COPY %8007
+    ; %9008:vgpr_32 = COPY %8008
+    ; %9009:vgpr_32 = COPY %8009
+    ; %9010:vgpr_32 = COPY %8010
+    ; %9011:vgpr_32 = COPY %8011
+    ; %9012:vgpr_32 = COPY %8012
+    ; %9013:vgpr_32 = COPY %8013
+    ; %9014:vgpr_32 = COPY %8014
+    ; %9015:vgpr_32 = COPY %8015
+    ; %9016:vgpr_32 = COPY %8016
+    ; %9017:vgpr_32 = COPY %8017
 
-    %9001:vgpr_32 = COPY %8001
-    %9002:vgpr_32 = COPY %8002
-    %9003:vgpr_32 = COPY %8003
-    %9004:vgpr_32 = COPY %8004
-    %9005:vgpr_32 = COPY %8005
-    %9006:vgpr_32 = COPY %8006
-    %9007:vgpr_32 = COPY %8007
-    %9008:vgpr_32 = COPY %8008
-    %9009:vgpr_32 = COPY %8009
-    %9010:vgpr_32 = COPY %8010
-    %9011:vgpr_32 = COPY %8011
-    %9012:vgpr_32 = COPY %8012
-    %9013:vgpr_32 = COPY %8013
-    %9014:vgpr_32 = COPY %8014
-    %9015:vgpr_32 = COPY %8015
-    %9016:vgpr_32 = COPY %8016
-    %9017:vgpr_32 = COPY %8017
+  bb.1:
 
-    S_BRANCH %bb.2
-
-  bb.2:
-
-    %3:vgpr_32 = IMPLICIT_DEF
-
-    EXP 0, killed %500, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %501, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %502, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %503, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %504, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %505, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %506, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %507, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %508, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %509, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5010, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5011, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5012, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5013, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5014, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5015, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5016, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5017, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5018, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5019, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5020, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5021, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5022, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5023, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5024, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5025, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5026, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5027, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5028, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5029, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5030, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5031, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5032, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5033, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5034, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5035, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5036, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5037, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5038, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5039, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5040, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5041, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5042, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5043, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5044, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5045, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5046, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5047, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5048, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5049, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5050, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5051, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5052, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5053, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5054, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5055, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5056, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5057, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5058, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5059, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5060, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5061, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5062, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5063, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5064, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5065, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5066, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5067, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5068, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5069, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5070, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5071, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5072, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5073, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5074, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5075, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5076, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5077, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5078, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5079, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5080, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5081, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5082, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5083, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5084, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5085, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5086, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5087, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5088, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5089, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5090, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5091, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5092, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5093, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5094, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5095, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5096, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5097, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5098, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %5099, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50100, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50101, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50102, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50103, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50104, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50105, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50106, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50107, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50108, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50109, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50110, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50111, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50112, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50113, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50114, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50115, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50116, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50117, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50118, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50119, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50120, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50121, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50122, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50123, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50124, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50125, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50126, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50127, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50128, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50129, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50130, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50131, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50132, %3, %3, %3, -1, -1, 15, implicit $exec
-    EXP 0, killed %50133, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %500, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %501, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %502, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %503, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %504, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %505, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %506, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %507, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %508, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %509, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5010, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5011, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5012, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5013, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5014, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5015, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5016, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5017, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5018, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5019, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5020, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5021, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5022, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5023, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5024, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5025, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5026, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5027, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5028, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5029, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5030, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5031, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5032, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5033, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5034, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5035, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5036, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5037, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5038, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5039, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5040, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5041, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5042, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5043, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5044, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5045, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5046, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5047, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5048, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5049, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5050, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5051, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5052, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5053, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5054, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5055, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5056, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5057, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5058, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5059, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5060, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5061, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5062, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5063, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5064, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5065, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5066, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5067, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5068, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5069, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5070, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5071, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5072, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5073, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5074, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5075, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5076, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5077, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5078, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5079, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5080, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5081, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5082, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5083, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5084, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5085, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5086, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5087, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5088, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5089, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5090, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5091, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5092, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5093, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5094, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5095, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5096, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5097, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5098, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %5099, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50100, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50101, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50102, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50103, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50104, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50105, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50106, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50107, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50108, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50109, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50110, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50111, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50112, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50113, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50114, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50115, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50116, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50117, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50118, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50119, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50120, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50121, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50122, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50123, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50124, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50125, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50126, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50127, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50128, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50129, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50130, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50131, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50132, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %50133, %3, %3, %3, -1, -1, 15, implicit $exec
 
 
     S_ENDPGM 0
