@@ -2533,6 +2533,9 @@ foreach ta = [v2f16, v2bf16, v2i16, v4i8, i32] in {
   }
 }
 
+def: Pat<(i64 (bitconvert v2f32:$a)),
+         (i64 Int64Regs:$a)>;
+
 // NOTE: pred->fp are currently sub-optimal due to an issue in TableGen where
 // we cannot specify floating-point literals in isel patterns.  Therefore, we
 // use an integer selp to select either 1 (or -1 in case of signed) or 0
