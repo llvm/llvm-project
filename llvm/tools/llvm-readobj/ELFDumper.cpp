@@ -1338,7 +1338,7 @@ const EnumEntry<unsigned> ElfXCoreSectionFlags[] = {
 };
 
 const EnumEntry<unsigned> ElfAArch64SectionFlags[] = {
-    ENUM_ENT(SHF_AARCH64_PURECODE, "y"),
+  ENUM_ENT(SHF_AARCH64_PURECODE, "y")
 };
 
 const EnumEntry<unsigned> ElfARMSectionFlags[] = {
