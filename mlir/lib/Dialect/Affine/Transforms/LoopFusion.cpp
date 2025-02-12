@@ -759,6 +759,9 @@ public:
                               const DenseSet<Value> &srcEscapingMemRefs,
                               unsigned producerId, unsigned consumerId,
                               bool removeSrcNode) {
+    // We can't generate private memrefs if their size can't be computed.
+    if (!getMemRefIntOrFloatEltSizeInBytes(cast<MemRefType>(memref.getType())))
+      return false;
     const Node *consumerNode = mdg->getNode(consumerId);
     // If `memref` is an escaping one, do not create a private memref
     // for the below scenarios, since doing so will leave the escaping
