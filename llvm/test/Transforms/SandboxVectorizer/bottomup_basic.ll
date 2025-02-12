@@ -292,6 +292,39 @@ define void @diamondMultiInput(ptr %ptr, ptr %ptrX) {
   ret void
 }
 
+; Same but vectorizing <2 x float> vectors instead of scalars.
+define void @diamondMultiInputVector(ptr %ptr, ptr %ptrX) {
+; CHECK-LABEL: define void @diamondMultiInputVector(
+; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTRX:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[LDX:%.*]] = load <2 x float>, ptr [[PTRX]], align 8
+; CHECK-NEXT:    [[VECL:%.*]] = load <4 x float>, ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[VEXT:%.*]] = extractelement <2 x float> [[LDX]], i32 0
+; CHECK-NEXT:    [[INSI:%.*]] = insertelement <4 x float> poison, float [[VEXT]], i32 0
+; CHECK-NEXT:    [[VEXT1:%.*]] = extractelement <2 x float> [[LDX]], i32 1
+; CHECK-NEXT:    [[INSI2:%.*]] = insertelement <4 x float> [[INSI]], float [[VEXT1]], i32 1
+; CHECK-NEXT:    [[VEXT3:%.*]] = extractelement <4 x float> [[VECL]], i32 0
+; CHECK-NEXT:    [[VINS4:%.*]] = insertelement <4 x float> [[INSI2]], float [[VEXT3]], i32 2
+; CHECK-NEXT:    [[VEXT4:%.*]] = extractelement <4 x float> [[VECL]], i32 1
+; CHECK-NEXT:    [[VINS5:%.*]] = insertelement <4 x float> [[VINS4]], float [[VEXT4]], i32 3
+; CHECK-NEXT:    [[VEC:%.*]] = fsub <4 x float> [[VECL]], [[VINS5]]
+; CHECK-NEXT:    store <4 x float> [[VEC]], ptr [[PTR0]], align 8
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr <2 x float>, ptr %ptr, i32 0
+  %ptr1 = getelementptr <2 x float>, ptr %ptr, i32 1
+  %ld0 = load <2 x float>, ptr %ptr0
+  %ld1 = load <2 x float>, ptr %ptr1
+
+  %ldX = load <2 x float>, ptr %ptrX
+
+  %sub0 = fsub <2 x float> %ld0, %ldX
+  %sub1 = fsub <2 x float> %ld1, %ld0
+  store <2 x float> %sub0, ptr %ptr0
+  store <2 x float> %sub1, ptr %ptr1
+  ret void
+}
+
 define void @diamondWithConstantVector(ptr %ptr) {
 ; CHECK-LABEL: define void @diamondWithConstantVector(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
