@@ -2950,7 +2950,7 @@ static void handleSectionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 }
 
-static bool isValidCodeModelAttr(llvm::Triple Triple, StringRef Str) {
+static bool isValidCodeModelAttr(llvm::Triple &Triple, StringRef Str) {
   if (Triple.isLoongArch()) {
     return Str == "normal" || Str == "medium" || Str == "extreme";
   } else {
