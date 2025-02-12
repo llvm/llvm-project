@@ -3397,7 +3397,7 @@ def fno_objc_weak : Flag<["-"], "fno-objc-weak">, Group<f_Group>,
 def fno_omit_frame_pointer : Flag<["-"], "fno-omit-frame-pointer">, Group<f_Group>,
   Visibility<[ClangOption, FlangOption]>;
 defm operator_names : BoolFOption<"operator-names",
-  LangOpts<"CXXOperatorNames">, Default<cplusplus.KeyPath>,
+  LangOpts<"CXXOperatorNames">, Default<!strconcat(cplusplus.KeyPath, " && !",hlsl.KeyPath)>,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Do not treat C++ operator name keywords as synonyms for operators">,
   PosFlag<SetTrue>>;
