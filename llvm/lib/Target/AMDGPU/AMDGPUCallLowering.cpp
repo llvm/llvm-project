@@ -72,7 +72,7 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     if (TRI->isSGPRReg(MRI, PhysReg)) {
       LLT Ty = MRI.getType(ExtReg);
       LLT S32 = LLT::scalar(32);
-      if (Ty != S32) {
+      if (!Ty.isScalar(32)) {
         // FIXME: We should probably support readfirstlane intrinsics with all
         // legal 32-bit types.
         assert(Ty.getSizeInBits() == 32);

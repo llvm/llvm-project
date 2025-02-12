@@ -2105,7 +2105,7 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
       const unsigned Offset = (I - 1) * PartSize;
 
       Register SrcReg = MI.getOperand(I).getReg();
-      assert(MRI.getType(SrcReg) == LLT::scalar(PartSize));
+      assert(MRI.getType(SrcReg).isScalar(PartSize));
 
       auto ZextInput = MIRBuilder.buildZExt(WideTy, SrcReg);
 
@@ -6611,7 +6611,7 @@ LegalizerHelper::narrowScalarFPTOI(MachineInstr &MI, unsigned TypeIdx,
   // If all finite floats fit into the narrowed integer type, we can just swap
   // out the result type. This is practically only useful for conversions from
   // half to at least 16-bits, so just handle the one case.
-  if (SrcTy.getScalarType() != LLT::scalar(16) ||
+  if (!SrcTy.getScalarType().isScalar(16) ||
       NarrowTy.getScalarSizeInBits() < (IsSigned ? 17u : 16u))
     return UnableToLegalize;
 
@@ -7610,7 +7610,7 @@ LegalizerHelper::lowerU64ToF64BitFloatOps(MachineInstr &MI) {
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerUITOFP(MachineInstr &MI) {
   auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
 
-  if (SrcTy == LLT::scalar(1)) {
+  if (SrcTy.isScalar(1)) {
     auto True = MIRBuilder.buildFConstant(DstTy, 1.0);
     auto False = MIRBuilder.buildFConstant(DstTy, 0.0);
     MIRBuilder.buildSelect(Dst, Src, True, False);
@@ -9278,7 +9278,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
 
     // The condition was potentially zero extended before, but we want a sign
     // extended boolean.
-    if (MaskTy != LLT::scalar(1))
+    if (!MaskTy.isScalar(1))
       MaskElt = MIRBuilder.buildSExtInReg(MaskTy, MaskElt, 1).getReg(0);
 
     // Continue the sign extension (or truncate) to match the data type.

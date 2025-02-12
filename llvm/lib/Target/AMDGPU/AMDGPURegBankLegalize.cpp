@@ -125,7 +125,7 @@ public:
       return true;
 
     const TargetRegisterClass *RC = MRI.getRegClassOrNull(Reg);
-    return RC && TRI.isSGPRClass(RC) && MRI.getType(Reg) == LLT::scalar(1);
+    return RC && TRI.isSGPRClass(RC) && MRI.getType(Reg).isScalar(1);
   }
 
   void cleanUpAfterCombine(MachineInstr &MI, MachineInstr *Optional0) {
@@ -235,10 +235,9 @@ public:
 
 // Search through MRI for virtual registers with sgpr register bank and S1 LLT.
 [[maybe_unused]] static Register getAnySgprS1(const MachineRegisterInfo &MRI) {
-  const LLT S1 = LLT::scalar(1);
   for (unsigned i = 0; i < MRI.getNumVirtRegs(); ++i) {
     Register Reg = Register::index2VirtReg(i);
-    if (MRI.def_empty(Reg) || MRI.getType(Reg) != S1)
+    if (MRI.def_empty(Reg) || !MRI.getType(Reg).isScalar(1))
       continue;
 
     const RegisterBank *RB = MRI.getRegBankOrNull(Reg);
@@ -316,7 +315,7 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
          Opc == AMDGPU::G_IMPLICIT_DEF)) {
       Register Dst = MI->getOperand(0).getReg();
       // Non S1 types are trivially accepted.
-      if (MRI.getType(Dst) != LLT::scalar(1)) {
+      if (!MRI.getType(Dst).isScalar(1)) {
         assert(MRI.getRegBank(Dst)->getID() == AMDGPU::SGPRRegBankID);
         continue;
       }
