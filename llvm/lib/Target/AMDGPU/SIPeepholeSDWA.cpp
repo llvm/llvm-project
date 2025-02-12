@@ -175,7 +175,7 @@ public:
   /// Create an SDWASrcOperand as an operand for \p MI from the given arguments
   /// if \p SrcSel_ and the src_sel0 and src_sel1 operands of \p MI are
   /// compatible.
-  static std::unique_ptr<SDWAOperand>
+  static std::unique_ptr<SDWASrcOperand>
   create(const SIInstrInfo *TII, const MachineInstr &MI,
          MachineOperand *TargetOp, MachineOperand *ReplacedOp,
          SdwaSel SrcSel_ = DWORD, bool Abs_ = false, bool Neg_ = false,
@@ -186,12 +186,11 @@ public:
         const MachineOperand *NamedOp = TII->getNamedOperand(MI, SelOpName);
         if (NamedOp && !compatibleSelections(
                            static_cast<SdwaSel>(NamedOp->getImm()), SrcSel_))
-          return std::unique_ptr<SDWAOperand>(nullptr);
+          return nullptr;
       }
     }
 
-    return std::unique_ptr<SDWAOperand>(
-        new SDWASrcOperand(TargetOp, ReplacedOp, SrcSel_, Abs_, Neg_, Sext_));
+    return std::unique_ptr<SDWASrcOperand>(new SDWASrcOperand(TargetOp, ReplacedOp, SrcSel_, Abs_, Neg_, Sext_));
   };
 
   MachineInstr *potentialToConvert(const SIInstrInfo *TII,
@@ -223,10 +222,10 @@ protected:
       : SDWAOperand(TargetOp, ReplacedOp), DstSel(DstSel_), DstUn(DstUn_) {}
 
 public:
-  /// Create an SDWASrcOperand as an operand for \p MI from the given arguments
+  /// Create an SDWADstOperand as an operand for \p MI from the given arguments
   /// if \p SrcSel_ and the dst_sel operand of \p MI are
   /// compatible.
-  static std::unique_ptr<SDWAOperand>
+  static std::unique_ptr<SDWADstOperand>
   create(const SIInstrInfo *TII, const MachineInstr &MI,
          MachineOperand *TargetOp, MachineOperand *ReplacedOp, SdwaSel DstSel_,
          DstUnused DstUn_) {
@@ -237,7 +236,7 @@ public:
         return nullptr;
     }
 
-    return std::unique_ptr<SDWAOperand>(
+    return std::unique_ptr<SDWADstOperand>(
         new SDWADstOperand(TargetOp, ReplacedOp, DstSel_, DstUn_));
   };
 
