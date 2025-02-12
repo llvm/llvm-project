@@ -2822,9 +2822,13 @@ SDValue SITargetLowering::LowerFormalArguments(
   const Function &Fn = MF.getFunction();
   FunctionType *FType = MF.getFunction().getFunctionType();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  bool IsUnsupportedHsa = false;
 
   if (Subtarget->isAmdHsaOS() && AMDGPU::isGraphics(CallConv)) {
-    report_fatal_error("unsupported non-compute shaders with HSA");
+    DiagnosticInfoUnsupported NoGraphicsHSA(
+        Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc());
+    DAG.getContext()->diagnose(NoGraphicsHSA);
+    IsUnsupportedHsa = true;
   }
 
   SmallVector<ISD::InputArg, 16> Splits;
@@ -2933,7 +2937,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   for (unsigned i = 0, e = Ins.size(), ArgIdx = 0; i != e; ++i) {
     const ISD::InputArg &Arg = Ins[i];
-    if (Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) {
+    if ((Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) || IsUnsupportedHsa) {
       InVals.push_back(DAG.getUNDEF(Arg.VT));
       continue;
     }
