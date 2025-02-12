@@ -16,11 +16,9 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <cstring>
 
 using namespace llvm;
 using namespace mlir;
@@ -88,26 +86,6 @@ TEST(Bytecode, MultiModuleWithResource) {
 
   checkResourceAttribute(*module);
   checkResourceAttribute(*roundTripModule);
-}
-
-TEST(Bytecode, WriteEquivalence) {
-  MLIRContext context;
-  Builder builder(&context);
-  ParserConfig parseConfig(&context);
-  OwningOpRef<Operation *> module =
-      parseSourceString<Operation *>(irWithResources, parseConfig);
-  ASSERT_TRUE(module);
-
-  // Write the module to bytecode
-  std::string buffer;
-  llvm::raw_string_ostream ostream(buffer);
-  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
-
-  // Write the module to bytecode using the mmap API.
-  auto writeBuffer = writeBytecode(module.get());
-  ASSERT_TRUE(writeBuffer);
-  ASSERT_EQ(writeBuffer->size(), buffer.size());
-  ASSERT_EQ(memcmp(buffer.data(), writeBuffer->data(), writeBuffer->size()), 0);
 }
 
 namespace {
