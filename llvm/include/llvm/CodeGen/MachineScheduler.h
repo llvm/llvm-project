@@ -99,6 +99,8 @@
 
 namespace llvm {
 namespace impl_detail {
+// FIXME: Remove these declarations once RegisterClassInfo is queryable as an
+// analysis.
 class MachineSchedulerImpl;
 class PostMachineSchedulerImpl;
 } // namespace impl_detail
@@ -1390,6 +1392,8 @@ createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
                                const TargetRegisterInfo *TRI);
 
 class MachineSchedulerPass : public PassInfoMixin<MachineSchedulerPass> {
+  // FIXME: Remove this member once RegisterClassInfo is queryable as an
+  // analysis.
   std::unique_ptr<impl_detail::MachineSchedulerImpl> Impl;
   const TargetMachine *TM;
 
@@ -1403,6 +1407,8 @@ public:
 
 class PostMachineSchedulerPass
     : public PassInfoMixin<PostMachineSchedulerPass> {
+  // FIXME: Remove this member once RegisterClassInfo is queryable as an
+  // analysis.
   std::unique_ptr<impl_detail::PostMachineSchedulerImpl> Impl;
   const TargetMachine *TM;
 
