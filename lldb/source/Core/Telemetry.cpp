@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef LLDB_BUILD_TELEMETRY
+#include "llvm/Config/llvm-config.h"
+
+#ifdef LLVM_BUILD_TELEMETRY
 
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Core/Debugger.h"
@@ -71,4 +73,4 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
 } // namespace telemetry
 } // namespace lldb_private
 
-#endif // LLDB_BUILD_TELEMETRY
+#endif // LLVM_BUILD_TELEMETRY
