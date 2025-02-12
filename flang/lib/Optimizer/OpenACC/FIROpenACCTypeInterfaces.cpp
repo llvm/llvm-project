@@ -227,9 +227,7 @@ OpenACCMappableModel<fir::BaseBoxType>::generateAccBounds(
 }
 
 static bool isScalarLike(mlir::Type type) {
-  return type.isIntOrIndexOrFloat() ||
-         mlir::isa<mlir::ComplexType, fir::LogicalType>(type) ||
-         fir::isa_ref_type(type);
+  return fir::isa_trivial(type) || fir::isa_ref_type(type);
 }
 
 static bool isArrayLike(mlir::Type type) {
