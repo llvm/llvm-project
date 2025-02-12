@@ -1,18 +1,19 @@
-//===-- AMDGPUOccupancyAndLatencyHelper - Helper functions for occupancy and latency --===//
+//==- AMDGPUOccupancyAndLatencyHelper.cpp - Helpers for occupancy + latency ==//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===--------------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 /// \file
 /// \brief Helper functions for occupancy and latency.
 //
-//===--------------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/MC/MCInstrItineraries.h"
 
 namespace llvm {
 
@@ -30,7 +31,7 @@ struct SchedScore {
   unsigned MemLatency = 0;  // Only save mem latency.
                             // We want mem latency small and hide big. Compare
                             // memLatency - hide * Occ, smaller is better.
-  unsigned MixAlu = 0; // VAlu and SAlu can running parallel if Occ > 1.
+  unsigned MixAlu = 0;      // VAlu and SAlu can running parallel if Occ > 1.
   unsigned Alu = 0; // avoid sequence of s_alu inst count less then occupancy.
   unsigned Lds = 0; // Todo: count lds.
   SchedScore() {}
@@ -39,9 +40,9 @@ struct SchedScore {
   float computeScore() const;
   float computeScore2() const;
 
-  void sum(const SchedScore &s, unsigned loopDepth=0);
+  void sum(const SchedScore &s, unsigned loopDepth = 0);
   bool isBetter(const SchedScore &s) const;
-  bool isMemBound(unsigned TargetOccupancy, unsigned ExtraOcc=1) const;
+  bool isMemBound(unsigned TargetOccupancy, unsigned ExtraOcc = 1) const;
   // More latency can be hiden with ExtraOcc.
   unsigned latencyGain(unsigned TargetOccupancy, unsigned ExtraOcc) const;
 };
@@ -71,4 +72,4 @@ struct AMDGPULatencyTracker {
 SchedScore CollectLatency(llvm::MachineFunction &MF,
                           const llvm::GCNSubtarget &ST,
                           const llvm::MachineLoopInfo *MLI = nullptr);
-}
+} // namespace llvm

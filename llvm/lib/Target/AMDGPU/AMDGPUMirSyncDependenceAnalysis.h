@@ -1,4 +1,5 @@
-//===- MirSyncDependenceAnalysis.h - MirDivergent Branch Dependence -*- C++ -*-===//
+//===- MirSyncDependenceAnalysis.h - MirDivergent Branch Dependence -*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,8 +21,9 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include <memory>
+#include "llvm/CodeGen/MachineFunction.h"
 #include <map>
+#include <memory>
 
 namespace llvm {
 class MachineBasicBlock;
@@ -44,14 +46,16 @@ using ConstBlockSet = llvm::SmallPtrSet<const MachineBasicBlock *, 4>;
 /// This analysis relates points of divergent control to points of converging
 /// divergent control. The analysis requires all loops to be reducible.
 class SyncDependenceAnalysis {
-  void visitSuccessor(const MachineBasicBlock &succBlock, const MachineLoop *termLoop,
+  void visitSuccessor(const MachineBasicBlock &succBlock,
+                      const MachineLoop *termLoop,
                       const MachineBasicBlock *defBlock);
 
 public:
   bool inRegion(const MachineBasicBlock &BB) const;
 
   ~SyncDependenceAnalysis();
-  SyncDependenceAnalysis(const MachineDominatorTree &DT, const MachinePostDominatorTree &PDT,
+  SyncDependenceAnalysis(const MachineDominatorTree &DT,
+                         const MachinePostDominatorTree &PDT,
                          const MachineLoopInfo &LI,
                          // AMDGPU change begin
                          DivergentJoinMapTy &JoinMap
@@ -88,11 +92,10 @@ private:
   // AMDGPU change begin.
   DivergentJoinMapTy &DivergentJoinMap;
   // AMDGPU change end.
-  std::map<const MachineLoop *, std::unique_ptr<ConstBlockSet>> CachedLoopExitJoins;
+  std::map<const MachineLoop *, std::unique_ptr<ConstBlockSet>>
+      CachedLoopExitJoins;
   std::map<const MachineInstr *, std::unique_ptr<ConstBlockSet>>
       CachedBranchJoins;
 };
 
 } // namespace llvm
-
-

@@ -4,7 +4,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/MC/LaneBitmask.h"
 
-#include "llvm/CodeGen/ScheduleDAG.h"  // For SUnit.
+#include "llvm/CodeGen/ScheduleDAG.h" // For SUnit.
 
 namespace llvm {
 class MachineFunction;
@@ -14,8 +14,7 @@ class SIRegisterInfo;
 class SIInstrInfo;
 class MachineInstr;
 class MachineBasicBlock;
-template<typename GraphType>
-class GraphWriter;
+template <typename GraphType> class GraphWriter;
 class SUnit;
 class IntEqClasses;
 class Twine;
@@ -55,13 +54,12 @@ struct SubExp {
                        const llvm::SIRegisterInfo *SIRI);
   void dump(const llvm::MachineRegisterInfo &MRI,
             const llvm::SIRegisterInfo *SIRI) const;
-  bool modifiesRegister(unsigned Reg, const llvm::SIRegisterInfo* SIRI) const;
+  bool modifiesRegister(unsigned Reg, const llvm::SIRegisterInfo *SIRI) const;
 };
 
 struct ExpDag {
   ExpDag(const llvm::MachineRegisterInfo &MRI, const llvm::SIRegisterInfo *SIRI,
-         const llvm::SIInstrInfo *SIII,
-         const bool bJoinInput);
+         const llvm::SIInstrInfo *SIII, const bool bJoinInput);
   const llvm::MachineRegisterInfo &MRI;
   const llvm::SIRegisterInfo *SIRI;
   const llvm::SIInstrInfo *SIII;
@@ -83,13 +81,14 @@ struct ExpDag {
   std::string getDAGName() const;
   /// Adds custom features for a visualization of the ScheduleDAG.
   void addCustomGraphFeatures(llvm::GraphWriter<ExpDag *> &) const {}
+
 private:
-  template<typename T>
-  void initNodes(const LiveSet &InputLiveReg, T &insts);
+  template <typename T> void initNodes(const LiveSet &InputLiveReg, T &insts);
   void addDataDep(const llvm::SIRegisterInfo *SIRI);
   void addCtrlDep();
   void buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
-                   const llvm::SIRegisterInfo *SIRI, const llvm::SIInstrInfo *SIII);
+                   const llvm::SIRegisterInfo *SIRI,
+                   const llvm::SIInstrInfo *SIII);
 };
 
 struct BlockExpDag : public ExpDag {
@@ -103,11 +102,11 @@ struct BlockExpDag : public ExpDag {
   std::vector<SubExp> SubExps;
   void build();
   void buildWithPressure();
+
 private:
   void buildAvail(const LiveSet &passThruSet,
                   llvm::DenseMap<llvm::SUnit *, LiveSet> &DagAvailRegMap);
-  void buildPressure(const LiveSet &StartLiveReg,
-                     const LiveSet &EndLiveReg);
+  void buildPressure(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg);
 };
 
 void getRegBound(llvm::MachineBasicBlock *MBB,
@@ -194,4 +193,4 @@ std::vector<const llvm::SUnit *> hrbSched(std::vector<llvm::SUnit> &SUnits,
                                           const llvm::MachineRegisterInfo &MRI,
                                           const llvm::SIRegisterInfo *SIRI);
 
-}
+} // namespace llvm

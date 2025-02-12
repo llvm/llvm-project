@@ -1,22 +1,11 @@
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// AMDGPUMIRUtils.cpp                                                          //
-// Copyright (C) Microsoft Corporation. All rights reserved.                 //
-// This file is distributed under the University of Illinois Open Source     //
-// License. See LICENSE.TXT for details.                                     //
-//                                                                           //
-// Util functions for llvm MIR Passes.                                       //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
+#include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
+#include "SIRegisterInfo.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/SlotIndexes.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "SIInstrInfo.h"
-#include "SIRegisterInfo.h"
-#include "SIMachineFunctionInfo.h"
 
-//#include "dxc/DXIL/DxilMetadataHelper.h"
+// #include "dxc/DXIL/DxilMetadataHelper.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -26,9 +15,9 @@
 
 #include "llvm/Support/Debug.h"
 
-#include "GCNRegPressure.h"
 #include "AMDGPUMIRUtils.h"
 #include "AMDGPUSubExpDag.h"
+#include "GCNRegPressure.h"
 #include <unordered_set>
 
 #define DEBUG_TYPE "xb-mir-util"
@@ -48,7 +37,7 @@ public:
         phiInsts.insert(&I);
         unsigned Reg = I.getOperand(0).getReg();
         // Add incoming values.
-        for (unsigned i=1;i<I.getNumOperands();i+=2) {
+        for (unsigned i = 1; i < I.getNumOperands(); i += 2) {
           MachineOperand &MO = I.getOperand(i);
           if (!MO.isReg())
             continue;
@@ -66,7 +55,8 @@ public:
   } /// Adds custom features for a visualization of the ScheduleDAG.
   void addCustomGraphFeatures(llvm::GraphWriter<CFGWithPhi *> &) const {}
   MachineFunction &F;
-  DenseMap<const MachineBasicBlock *, DenseSet<MachineInstr *>> blockToPhiInstsMap;
+  DenseMap<const MachineBasicBlock *, DenseSet<MachineInstr *>>
+      blockToPhiInstsMap;
   void dump();
 };
 
@@ -110,7 +100,8 @@ template <> struct DOTGraphTraits<CFGWithPhi *> : public DefaultDOTGraphTraits {
     return R;
   }
 
-  static std::string getNodeLabel(const MachineBasicBlock *BB, const CFGWithPhi *G) {
+  static std::string getNodeLabel(const MachineBasicBlock *BB,
+                                  const CFGWithPhi *G) {
     enum { MaxColumns = 8000 };
     std::string Str;
     raw_string_ostream OS(Str);
@@ -347,7 +338,7 @@ void andNotLiveRegSet(LiveSet &targetSet, const LiveSet &inputSet) {
 }
 
 MachineBasicBlock *split(MachineInstr *Inst) {
-  
+
   // Create the fall-through block.
   MachineBasicBlock *MBB = Inst->getParent();
   MachineFunction *MF = MBB->getParent();
@@ -462,9 +453,8 @@ bool reduceChannel(unsigned offset, MachineInstr &MI, const MCInstrDesc &desc,
                              .addImm(offset * LaneSize);
         MachineInstr *OffsetAddMI = OffsetAdd.getInstr();
         MachineBasicBlock::iterator InsertPoint =
-            llvm::FindOrCreateInsertionPointForSccDef(
-                MI.getParent(), MI, SIRI, SIII, &MRI
-            );
+            llvm::FindOrCreateInsertionPointForSccDef(MI.getParent(), MI, SIRI,
+                                                      SIII, &MRI);
         MI.getParent()->insert(InsertPoint, OffsetAddMI);
         SIII->legalizeOperands(*OffsetAddMI);
         OffsetOp->setReg(NewOffsetReg);
@@ -631,7 +621,7 @@ bool reach_blocks(MachineBasicBlock *BB, MachineDominatorTree *DT,
   return bCross;
 }
 
-}
+} // namespace llvm
 
 namespace llvm {
 void viewCFGWithPhi(llvm::MachineFunction &F) {
@@ -1520,12 +1510,12 @@ void write_pressure(MachineFunction &MF, LiveIntervals *LIS, raw_ostream &os) {
 }
 
 } // namespace pressure
-}// namespace llvm
+} // namespace llvm
 
 namespace {
 class ContributionList {
 public:
-  ContributionList(MachineFunction &MF) : MF(MF){};
+  ContributionList(MachineFunction &MF) : MF(MF) {};
   void build();
   bool propagateContribution();
   MachineFunction &MF;
@@ -1754,46 +1744,45 @@ void write_contribution_list(llvm::MachineFunction &MF, const char *Filename) {
 }
 } // namespace llvm
 
-static bool IsPhysReg(const MachineOperand &Op)
-{
-    return Op.isReg() && Op.getReg().isPhysical();
+static bool IsPhysReg(const MachineOperand &Op) {
+  return Op.isReg() && Op.getReg().isPhysical();
 }
 
 // Sometimes split bb uses physical registers defined in BB, have to add them to
 // live-in or the ir is malformed.
-void llvm::UpdatePhysRegLiveInForBlock(MachineBasicBlock *NewBB, const MachineRegisterInfo *MRI)
-{
-    // Initialize with current set of liveins. For new blocks this will be empty.
-    SmallDenseSet<unsigned, 8> DefSet;
-    for (const MachineBasicBlock::RegisterMaskPair &P : NewBB->liveins())
-    {
-        DefSet.insert(P.PhysReg);
+void llvm::UpdatePhysRegLiveInForBlock(MachineBasicBlock *NewBB,
+                                       const MachineRegisterInfo *MRI) {
+  // Initialize with current set of liveins. For new blocks this will be empty.
+  SmallDenseSet<unsigned, 8> DefSet;
+  for (const MachineBasicBlock::RegisterMaskPair &P : NewBB->liveins()) {
+    DefSet.insert(P.PhysReg);
+  }
+
+  for (auto &MI : *NewBB) {
+    // Add all undefined physical registers to the live in set.
+    for (MachineOperand &Use : MI.operands()) {
+      // Only process physreg uses.
+      if (!IsPhysReg(Use) || !Use.isUse())
+        continue;
+
+      // Reserved regs do not need to be tracked through live-in sets.
+      unsigned Reg = Use.getReg();
+      if (Use.isImplicit() && MRI && MRI->isReserved(Reg))
+        continue;
+
+      if (!DefSet.count(Reg))
+        NewBB->addLiveIn(Reg);
     }
 
-    for (auto &MI : *NewBB)
-    {
-        // Add all undefined physical registers to the live in set.
-        for (MachineOperand &Use : MI.operands())
-        {
-            // Only process physreg uses.
-            if (!IsPhysReg(Use) || !Use.isUse()) continue;
-
-            // Reserved regs do not need to be tracked through live-in sets.
-            unsigned Reg = Use.getReg();
-            if (Use.isImplicit() && MRI && MRI->isReserved(Reg)) continue;
-
-            if (!DefSet.count(Reg))
-                NewBB->addLiveIn(Reg);
-        }
-
-        // Add all physical register defs (exlicit+implicit) to the def register set.
-        for (MachineOperand &Def : MI.operands()) 
-        {
-            // Only process physreg defs.
-            if (!IsPhysReg(Def) || !Def.isDef()) continue;
-            DefSet.insert(Def.getReg());
-        }
+    // Add all physical register defs (exlicit+implicit) to the def register
+    // set.
+    for (MachineOperand &Def : MI.operands()) {
+      // Only process physreg defs.
+      if (!IsPhysReg(Def) || !Def.isDef())
+        continue;
+      DefSet.insert(Def.getReg());
     }
+  }
 }
 
 void llvm::BuildPhysRegLiveInForBlock(MachineBasicBlock *NewBB,
@@ -1829,50 +1818,41 @@ void llvm::BuildPhysRegLiveInForBlock(MachineBasicBlock *NewBB,
   }
 }
 
-MachineReg llvm::CreateVirtualRegForOperand(
-    MachineOpcode Opcode,
-    unsigned OpNum,
-    MachineFunction &MF
-)
-{
-    const TargetSubtargetInfo &ST = MF.getSubtarget();
-    const TargetRegisterInfo *TRI = ST.getRegisterInfo();
-    const TargetInstrInfo *TII = ST.getInstrInfo();
-    const MCInstrDesc &Desc = TII->get(Opcode);
-    const TargetRegisterClass *RC = TII->getRegClass(Desc, OpNum, TRI, MF);
-    if (!RC)
-    {
-        llvm::report_fatal_error("Unable to create virtual reg for instruction operand");
-    }
+MachineReg llvm::CreateVirtualRegForOperand(MachineOpcode Opcode,
+                                            unsigned OpNum,
+                                            MachineFunction &MF) {
+  const TargetSubtargetInfo &ST = MF.getSubtarget();
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  const TargetInstrInfo *TII = ST.getInstrInfo();
+  const MCInstrDesc &Desc = TII->get(Opcode);
+  const TargetRegisterClass *RC = TII->getRegClass(Desc, OpNum, TRI, MF);
+  if (!RC) {
+    llvm::report_fatal_error(
+        "Unable to create virtual reg for instruction operand");
+  }
 
-    MachineRegisterInfo &MRI = MF.getRegInfo();
-    return MRI.createVirtualRegister(RC);
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  return MRI.createVirtualRegister(RC);
 }
 
-MachineReg llvm::CreateVirtualDstReg(
-    MachineOpcode Opcode,
-    MachineFunction &MF
-)
-{
-    return llvm::CreateVirtualRegForOperand(Opcode, 0, MF);
+MachineReg llvm::CreateVirtualDstReg(MachineOpcode Opcode,
+                                     MachineFunction &MF) {
+  return llvm::CreateVirtualRegForOperand(Opcode, 0, MF);
 }
 
 // Return true if the MI is a copy of exec.
 // If true then sets pDst to the destination register.
-bool llvm::IsExecCopy(const MachineInstr &MI, MachineReg Exec, MachineReg *pDst)
-{
-    enum {DST=0, SRC=1};
-    bool FoundCopy = false;
-    if (MI.getOpcode() == AMDGPU::COPY
-        || MI.getOpcode() == AMDGPU::S_MOV_B32
-        || MI.getOpcode() == AMDGPU::S_MOV_B64)
-    {
-        const MachineOperand &Src = MI.getOperand(SRC);
-        if (Src.isReg() && Src.getReg() == Exec)
-        {
-            FoundCopy = true;
-        }
+bool llvm::IsExecCopy(const MachineInstr &MI, MachineReg Exec,
+                      MachineReg *pDst) {
+  enum { DST = 0, SRC = 1 };
+  bool FoundCopy = false;
+  if (MI.getOpcode() == AMDGPU::COPY || MI.getOpcode() == AMDGPU::S_MOV_B32 ||
+      MI.getOpcode() == AMDGPU::S_MOV_B64) {
+    const MachineOperand &Src = MI.getOperand(SRC);
+    if (Src.isReg() && Src.getReg() == Exec) {
+      FoundCopy = true;
     }
+  }
 #if 0 // TODO: Delete this.
     else if (MI.getOpcode() == AMDGPU::AMDGPU_GET_ENTRY_ACTIVE_MASK_PSEUDO ||
              MI.getOpcode() == AMDGPU::AMDGPU_GET_ENTRY_ACTIVE_MASK_PSEUDO_32)
@@ -1880,29 +1860,26 @@ bool llvm::IsExecCopy(const MachineInstr &MI, MachineReg Exec, MachineReg *pDst)
         FoundCopy = true;
     }
 #endif
-            
-    if (FoundCopy)
-    {
-        *pDst = MI.getOperand(DST).getReg();
-    }
 
-    return FoundCopy;
+  if (FoundCopy) {
+    *pDst = MI.getOperand(DST).getReg();
+  }
+
+  return FoundCopy;
 }
 
-llvm::MachineRegWithSubReg llvm::GetWqmEntryActiveMask(MachineFunction &MF)
-{
-    llvm::MachineRegWithSubReg LiveLaneMask = {AMDGPU::NoRegister, AMDGPU::NoSubRegister};
-    if (MachineInstr* MI = GetWqmEntryActiveMaskInst(MF))
-    {
-        LiveLaneMask.Reg = MI->getOperand(0).getReg();
-        LiveLaneMask.SubReg = MI->getOperand(0).getSubReg();
-    }
+llvm::MachineRegWithSubReg llvm::GetWqmEntryActiveMask(MachineFunction &MF) {
+  llvm::MachineRegWithSubReg LiveLaneMask = {AMDGPU::NoRegister,
+                                             AMDGPU::NoSubRegister};
+  if (MachineInstr *MI = GetWqmEntryActiveMaskInst(MF)) {
+    LiveLaneMask.Reg = MI->getOperand(0).getReg();
+    LiveLaneMask.SubReg = MI->getOperand(0).getSubReg();
+  }
 
-    return LiveLaneMask;
+  return LiveLaneMask;
 }
 
-MachineInstr* llvm::GetWqmEntryActiveMaskInst(MachineFunction &MF)
-{
+MachineInstr *llvm::GetWqmEntryActiveMaskInst(MachineFunction &MF) {
 #if 0 // TODO: Get rid of this
     // Look forward in the entry block for the SET_LIVE_LANE_MASK instruction.
     // This instruction is added by the SIWholeQuadMode pass.
@@ -1917,22 +1894,23 @@ MachineInstr* llvm::GetWqmEntryActiveMaskInst(MachineFunction &MF)
     }
 #endif
 
-    return nullptr;
+  return nullptr;
 }
 
-bool llvm::IsFetchShaderCall(const MachineInstr *MI)
-{
+bool llvm::IsFetchShaderCall(const MachineInstr *MI) {
 #if 0 // TODO: Get rid of this.
     return 
         MI->getOpcode() == AMDGPU::AMDGPU_CALL_FETCH_SHADER ||
         MI->getAMDGPUFlag(MachineInstr::AMDGPUMIFlag::FetchShaderCall);
 #else
-    return false;
+  return false;
 #endif
 }
 
-bool llvm::IsSccLiveAt(llvm::MachineBasicBlock *MBB, llvm::MachineBasicBlock::iterator MI) {
-  const TargetRegisterInfo* TRI = MBB->getParent()->getRegInfo().getTargetRegisterInfo();
+bool llvm::IsSccLiveAt(llvm::MachineBasicBlock *MBB,
+                       llvm::MachineBasicBlock::iterator MI) {
+  const TargetRegisterInfo *TRI =
+      MBB->getParent()->getRegInfo().getTargetRegisterInfo();
   for (auto it = MI; it != MBB->end(); ++it) {
     const MachineInstr &CurMI = *it;
     // Hit use of scc, it is live.
@@ -1962,78 +1940,69 @@ bool llvm::IsSccLiveAt(llvm::MachineBasicBlock *MBB, llvm::MachineBasicBlock::it
 // as the new insert location.
 //
 MachineBasicBlock::iterator llvm::FindOrCreateInsertionPointForSccDef(
-    MachineBasicBlock *MBB,
-    MachineBasicBlock::iterator MI,
-    const TargetRegisterInfo* TRI,
-    const SIInstrInfo* TII,
-    MachineRegisterInfo* MRI,
-    SccDefInsertPointConstraintFlags Constraints
-)
-{
-    // If SCC is dead at MI when we can use MI as the insert point.
-    if (!llvm::IsSccLiveAt(MBB, MI))
-    {
-        return MI;
-    }
-
-    const bool CheckForExecWrite =
-        Constraints & SccDefInsertPointConstraintFlags::NoExecWrite;
-
-    // Get the starting reverse iterator taking care to handle the MBB->end() case.
-    MachineBasicBlock::reverse_iterator Start;
-    if (MI == MBB->end())
-    {
-        Start = MBB->rbegin();
-    }
-    else
-    {
-        Start = MI.getReverse();
-    }
-
-    // Otherwise, walk backwards through the block looking for a location where
-    // SCC is dead.
-    for (MachineBasicBlock::reverse_iterator It = Start, End = MBB->rend(); It != End; ++It)
-    {
-        // If the instruction modifies exec then we cannot use it as
-        // an insertion point (if that is a constraint from the caller).
-        // The check for EXEC works for both wave64 and wave32 because
-        // it will also catch writes to the subregisters (e.g. exec_lo).
-        if (CheckForExecWrite && It->modifiesRegister(AMDGPU::EXEC, TRI))
-        {
-            break;
-        }
-
-        if (It->modifiesRegister(AMDGPU::SCC, TRI) 
-            && !It->readsRegister(AMDGPU::SCC, TRI))
-        {
-            return It->getIterator();
-        }
-    }
-
-    // If no safe location can be found in the block we can save and restore
-    // SCC around MI. There is no way to directly read or write SCC so we use
-    // s_cselect to read the current value of SCC and s_cmp to write the saved
-    // value back to SCC.
-    //
-    // The generated code will look like this;
-    //
-    //      S_CSELECT_B32 %SavedSCC, -1, 0  # Save SCC
-    //      <----- Newly created safe insert point.
-    //      MI
-    //      S_CMP_LG_U32 %SavedSCC, 0       # Restore SCC
-    //
-    unsigned int TmpScc = MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-    DebugLoc DL = MI->getDebugLoc();
-    BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_CSELECT_B32), TmpScc)
-        .addImm(-1)
-        .addImm(0);
-    BuildMI(*MBB, std::next(MI->getIterator()), DL, TII->get(AMDGPU::S_CMP_LG_U32))
-        .addReg(TmpScc, RegState::Kill)
-        .addImm(0);
-
+    MachineBasicBlock *MBB, MachineBasicBlock::iterator MI,
+    const TargetRegisterInfo *TRI, const SIInstrInfo *TII,
+    MachineRegisterInfo *MRI, SccDefInsertPointConstraintFlags Constraints) {
+  // If SCC is dead at MI when we can use MI as the insert point.
+  if (!llvm::IsSccLiveAt(MBB, MI)) {
     return MI;
-}
+  }
 
+  const bool CheckForExecWrite =
+      Constraints & SccDefInsertPointConstraintFlags::NoExecWrite;
+
+  // Get the starting reverse iterator taking care to handle the MBB->end()
+  // case.
+  MachineBasicBlock::reverse_iterator Start;
+  if (MI == MBB->end()) {
+    Start = MBB->rbegin();
+  } else {
+    Start = MI.getReverse();
+  }
+
+  // Otherwise, walk backwards through the block looking for a location where
+  // SCC is dead.
+  for (MachineBasicBlock::reverse_iterator It = Start, End = MBB->rend();
+       It != End; ++It) {
+    // If the instruction modifies exec then we cannot use it as
+    // an insertion point (if that is a constraint from the caller).
+    // The check for EXEC works for both wave64 and wave32 because
+    // it will also catch writes to the subregisters (e.g. exec_lo).
+    if (CheckForExecWrite && It->modifiesRegister(AMDGPU::EXEC, TRI)) {
+      break;
+    }
+
+    if (It->modifiesRegister(AMDGPU::SCC, TRI) &&
+        !It->readsRegister(AMDGPU::SCC, TRI)) {
+      return It->getIterator();
+    }
+  }
+
+  // If no safe location can be found in the block we can save and restore
+  // SCC around MI. There is no way to directly read or write SCC so we use
+  // s_cselect to read the current value of SCC and s_cmp to write the saved
+  // value back to SCC.
+  //
+  // The generated code will look like this;
+  //
+  //      S_CSELECT_B32 %SavedSCC, -1, 0  # Save SCC
+  //      <----- Newly created safe insert point.
+  //      MI
+  //      S_CMP_LG_U32 %SavedSCC, 0       # Restore SCC
+  //
+  unsigned int TmpScc =
+      MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+  DebugLoc DL = MI->getDebugLoc();
+  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_CSELECT_B32), TmpScc)
+      .addImm(-1)
+      .addImm(0);
+  BuildMI(*MBB, std::next(MI->getIterator()), DL,
+          TII->get(AMDGPU::S_CMP_LG_U32))
+      .addReg(TmpScc, RegState::Kill)
+      .addImm(0);
+
+  return MI;
+}
 
 namespace {
 bool isLocalSegment(const LiveRange::Segment *Seg, SlotIndexes *Indexes,
@@ -2099,9 +2068,7 @@ bool llvm::isLocalLiveInterval(
   return isLocalLiveRange(&LI, Indexes, touchedMBBSet);
 }
 
-
-bool llvm::isLocalLiveInterval(
-    const LiveInterval &LI, SlotIndexes *Indexes) {
+bool llvm::isLocalLiveInterval(const LiveInterval &LI, SlotIndexes *Indexes) {
   if (LI.hasSubRanges()) {
     for (const auto &S : LI.subranges()) {
       if (!isLocalLiveRange(&S, Indexes))
@@ -2117,8 +2084,8 @@ bool llvm::isLocalLiveInterval(
 void llvm::buildEndLiveMap(
     llvm::LiveIntervals *LIS, llvm::MachineFunction &MF,
     const llvm::MachineRegisterInfo &MRI,
-    llvm::DenseMap<llvm::MachineBasicBlock *, LiveSet>
-        &MBBLiveMap, bool After) {
+    llvm::DenseMap<llvm::MachineBasicBlock *, LiveSet> &MBBLiveMap,
+    bool After) {
   // When only have one block, end live reg must be empty.
   if (MF.size() == 1)
     return;
@@ -2158,7 +2125,8 @@ void llvm::buildEndLiveMap(
   }
 }
 
-unsigned llvm::GetCurrentVGPRCount(llvm::MachineFunction &MF, const SIRegisterInfo *SIRI) {
+unsigned llvm::GetCurrentVGPRCount(llvm::MachineFunction &MF,
+                                   const SIRegisterInfo *SIRI) {
   auto &MRI = MF.getRegInfo();
   for (MCPhysReg Reg : reverse(AMDGPU::VGPR_32RegClass.getRegisters())) {
     if (MRI.isPhysRegUsed(Reg)) {
@@ -2168,14 +2136,16 @@ unsigned llvm::GetCurrentVGPRCount(llvm::MachineFunction &MF, const SIRegisterIn
   return 0;
 }
 
-unsigned llvm::GetCurrentSGPRCount(llvm::MachineFunction &MF, const SIRegisterInfo *SIRI) {
+unsigned llvm::GetCurrentSGPRCount(llvm::MachineFunction &MF,
+                                   const SIRegisterInfo *SIRI) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   unsigned ScratchRSrcReg = MFI->getScratchRSrcReg();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   unsigned MaxSGPR = 0;
   for (MCPhysReg Reg : reverse(AMDGPU::SGPR_32RegClass.getRegisters())) {
     if (MRI.isPhysRegUsed(Reg)) {
-      // Skip scratch reserved reg, which is a big register that don't really contribute to this stat.
+      // Skip scratch reserved reg, which is a big register that don't really
+      // contribute to this stat.
       if (ScratchRSrcReg != 0) {
         if (SIRI->isSubRegister(ScratchRSrcReg, Reg))
           continue;
@@ -2187,8 +2157,7 @@ unsigned llvm::GetCurrentSGPRCount(llvm::MachineFunction &MF, const SIRegisterIn
   return 1 + llvm::RegForVCC + MaxSGPR;
 }
 
-void llvm::dumpLiveSet(const LiveSet &LiveSet,
-                 const SIRegisterInfo *SIRI) {
+void llvm::dumpLiveSet(const LiveSet &LiveSet, const SIRegisterInfo *SIRI) {
 
   dbgs() << "\n live set: \n";
   for (auto it : LiveSet) {
@@ -2227,15 +2196,16 @@ bool llvm::IsLdsSpillSupportedForHwStage(xmd::HwStage Stage)
 }
 #endif
 
-MachineBasicBlock::succ_iterator llvm::FindSuccessor(llvm::MachineBasicBlock* MBB, llvm::MachineBasicBlock* Succ)
-{
-    for (MachineBasicBlock::succ_iterator It = MBB->succ_begin(), End = MBB->succ_end(); It != End; ++It)
-    {
-        if (*It == Succ)
-        {
-            return It;
-        }
+MachineBasicBlock::succ_iterator
+llvm::FindSuccessor(llvm::MachineBasicBlock *MBB,
+                    llvm::MachineBasicBlock *Succ) {
+  for (MachineBasicBlock::succ_iterator It = MBB->succ_begin(),
+                                        End = MBB->succ_end();
+       It != End; ++It) {
+    if (*It == Succ) {
+      return It;
     }
+  }
 
-    return MBB->succ_end();
+  return MBB->succ_end();
 }

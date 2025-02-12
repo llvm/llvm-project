@@ -69,7 +69,8 @@
 // ...
 //
 // label:
-// v3 = phi v0, v1                         ; divergent! because of divergent branch.
+// v3 = phi v0, v1                         ; divergent! because of divergent
+// branch.
 //
 // The boolean value is bit-divergent. When passed to the branch as an operand,
 // the branch becomes divergent, whose sync dependency will be computed as
@@ -81,13 +82,14 @@
 // control flow.
 // For case like
 //  %163:sreg_64_xexec = S_MOV_B64 $exec
-//bb.1:
+// bb.1:
 //; predecessors: %bb.1, %bb.0
-//  successors: %bb.1(0x40000000), %bb.2(0x40000000); %bb.1(50.00%), %bb.2(50.00%)
-//  %162:vreg_512 = PHI %41:vreg_512, %bb.0, %40:vreg_512, %bb.1
+//  successors: %bb.1(0x40000000), %bb.2(0x40000000); %bb.1(50.00%),
+//  %bb.2(50.00%) %162:vreg_512 = PHI %41:vreg_512, %bb.0, %40:vreg_512, %bb.1
 //  %167:sgpr_32 = V_READFIRSTLANE_B32 %17:vgpr_32, implicit $exec
 //  %168:sreg_64 = V_CMP_EQ_U32_e64 %167:sgpr_32, %17:vgpr_32, implicit $exec
-//  %166:sreg_64 = S_AND_SAVEEXEC_B64 %168:sreg_64, implicit-def $exec, implicit-def $scc, implicit $exec
+//  %166:sreg_64 = S_AND_SAVEEXEC_B64 %168:sreg_64, implicit-def $exec,
+//  implicit-def $scc, implicit $exec
 //...
 //  $exec = S_XOR_B64_term $exec, %166:sreg_64, implicit-def $scc
 //  S_CBRANCH_EXECNZ %bb.1, implicit $exec
@@ -164,20 +166,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
 #include "AMDGPUMirDivergenceAnalysis.h"
-#include "GCNSubtarget.h"
+#include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
+#include "SIInstrInfo.h"
+#include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUAsmUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "TargetInfo/AMDGPUTargetInfo.h"
-#include "SIInstrInfo.h"
-//#include "llvm/Analysis/Passes.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
+// #include "llvm/Analysis/Passes.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/Support/Debug.h"
-//#include "newbe/cli/newbe_opts.h"  // AMDGPU change.
+// #include "newbe/cli/newbe_opts.h"  // AMDGPU change.
 #include "llvm/Support/raw_ostream.h"
 #include <vector>
 
@@ -1223,24 +1225,24 @@ bool llvm::isAMDGPUOpcodeDivergent(class MachineInstr *MI) {
   case AMDGPU::IMAGE_ATOMIC_AND_V2_V4_nsa_gfx10:
   case AMDGPU::IMAGE_ATOMIC_AND_V2_V4_si:
   case AMDGPU::IMAGE_ATOMIC_AND_V2_V4_vi:
-  //case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V1_gfx10:
-  //case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V1_si:
-  //case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V1_vi:
+  // case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V1_gfx10:
+  // case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V1_si:
+  // case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V1_vi:
   case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V2_V1_gfx10:
   case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V2_V1_si:
   case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V2_V1_vi:
-  //case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V2_gfx10:
-  //case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V2_nsa_gfx10:
-  //case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V2_si:
-  //case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V2_vi:
+  // case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V2_gfx10:
+  // case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V2_nsa_gfx10:
+  // case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V2_si:
+  // case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V2_vi:
   case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V2_V2_gfx10:
   case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V2_V2_nsa_gfx10:
   case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V2_V2_si:
   case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V2_V2_vi:
-  //case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V4_gfx10:
-  //case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V4_nsa_gfx10:
-  //case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V4_si:
-  //case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V4_vi:
+  // case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V4_gfx10:
+  // case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V4_nsa_gfx10:
+  // case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V4_si:
+  // case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V1_V4_vi:
   case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V2_V4_gfx10:
   case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V2_V4_nsa_gfx10:
   case AMDGPU::IMAGE_ATOMIC_CMPSWAP_V2_V4_si:
@@ -1555,8 +1557,8 @@ bool writeBoolDst(const MachineInstr *MI, const SIRegisterInfo *SIRI,
     if (MO.isUse())
       continue;
     unsigned Reg = MO.getReg();
-    if (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO ||
-        Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO)
+    if (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO || Reg == AMDGPU::VCC ||
+        Reg == AMDGPU::VCC_LO)
       return true;
 
     // Check if the written register class overlaps the bool register class.
@@ -1567,15 +1569,15 @@ bool writeBoolDst(const MachineInstr *MI, const SIRegisterInfo *SIRI,
     //
     // The underlying problem is that we have two notions of divergence
     // (bit divergence and wave divergence) but the algorithm only propagates
-    // wave divergence. The bit divergence is important for bools because it determines
-    // if a branch is uniform or not (and thus catches cases where a uniform value is
-    // used outside of a divergent control flow region). For bool values the
-    // algorithm will treat normally uniform values (i.e. scalar registers) as divergent
-    // in order to try and propagate bit divergence.
+    // wave divergence. The bit divergence is important for bools because it
+    // determines if a branch is uniform or not (and thus catches cases where a
+    // uniform value is used outside of a divergent control flow region). For
+    // bool values the algorithm will treat normally uniform values (i.e. scalar
+    // registers) as divergent in order to try and propagate bit divergence.
     //
-    // To fix all the possible bugs here I think we need to actually proagate bit
-    // divergence as well as wave divergences. That is a bigger fix and this check should
-    // cover most cases of treating a bool value as divergent.
+    // To fix all the possible bugs here I think we need to actually proagate
+    // bit divergence as well as wave divergences. That is a bigger fix and this
+    // check should cover most cases of treating a bool value as divergent.
     const TargetRegisterClass *RC = SIRI->getRegClassForReg(MRI, Reg);
     if (SIRI->getCommonSubClass(BoolRC, RC))
       return true;
@@ -1597,13 +1599,13 @@ bool isAlwaysUniformMI(const MachineInstr *MI, const SIInstrInfo *SIII,
         !MI->isTerminator())
       return true;
     break;
-  //case AMDGPU::AMDGPU_MAKE_UNIFORM:
-  //case AMDGPU::AMDGPU_WAVE_READ_LANE_FIRST:
+  // case AMDGPU::AMDGPU_MAKE_UNIFORM:
+  // case AMDGPU::AMDGPU_WAVE_READ_LANE_FIRST:
   case AMDGPU::V_READFIRSTLANE_B32:
   case AMDGPU::V_READLANE_B32:
-  //case AMDGPU::AMDGPU_WAVE_ACTIVE_BALLOT_W32:
-  //case AMDGPU::AMDGPU_WAVE_ACTIVE_BALLOT_W64:
-    // bool readfirstlane should be 1 bit, which means bit uniform.
+    // case AMDGPU::AMDGPU_WAVE_ACTIVE_BALLOT_W32:
+    // case AMDGPU::AMDGPU_WAVE_ACTIVE_BALLOT_W64:
+    //  bool readfirstlane should be 1 bit, which means bit uniform.
     return true;
   case AMDGPU::S_OR_B32:
   case AMDGPU::S_OR_B64: {
@@ -1638,7 +1640,8 @@ bool isAlwaysUniformMI(const MachineInstr *MI, const SIInstrInfo *SIII,
 }
 
 bool isPhysicalReg(MachineRegisterInfo &MRI, Register reg) {
-  return reg.isPhysical();;
+  return reg.isPhysical();
+  ;
 }
 
 bool isRegClass(MachineRegisterInfo &MRI, unsigned reg, unsigned regClassID) {
@@ -1646,13 +1649,14 @@ bool isRegClass(MachineRegisterInfo &MRI, unsigned reg, unsigned regClassID) {
 }
 
 // For input reg of MF, vgpr will be divergent.
-bool isDivergentInputReg(unsigned Reg, MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI) {
+bool isDivergentInputReg(unsigned Reg, MachineRegisterInfo &MRI,
+                         const SIRegisterInfo *SIRI) {
   if (isPhysicalReg(MRI, Reg)) {
     unsigned vir_reg = MRI.getLiveInVirtReg(Reg);
     if (SIRI->isVGPR(MRI, vir_reg))
       return true;
   } else {
-   if (SIRI->isVGPR(MRI, Reg))
+    if (SIRI->isVGPR(MRI, Reg))
       return true;
   }
   return false;
@@ -1660,8 +1664,8 @@ bool isDivergentInputReg(unsigned Reg, MachineRegisterInfo &MRI, const SIRegiste
 
 bool isSourceOfDivergence(MachineInstr *MI, MachineRegisterInfo &MRI,
                           const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
-  //if (MI->getAMDGPUFlag(MachineInstr::AMDGPUMIFlag::IsDivergent))
-  //  return true;
+  // if (MI->getAMDGPUFlag(MachineInstr::AMDGPUMIFlag::IsDivergent))
+  //   return true;
   if (isAMDGPUOpcodeDivergent(MI))
     return true;
 
@@ -1715,8 +1719,7 @@ bool isWriteExec(const MachineInstr *MI) {
     if (MO.isUse())
       continue;
     unsigned Reg = MO.getReg();
-    if (Reg == AMDGPU::EXEC ||
-        Reg == AMDGPU::EXEC_LO)
+    if (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO)
       return true;
   }
   return false;
@@ -1734,7 +1737,6 @@ bool isVCndMask(unsigned Opcode) {
     return true;
   }
 }
-
 
 bool isExecRegionOp(unsigned Op) {
   switch (Op) {
@@ -1812,17 +1814,18 @@ bool isInsideExecRegion(const MachineBasicBlock &MBB,
   return PDT.dominates(RegionEndMBB, &MBB);
 }
 
-// Map from BB to nearest Exec Region. How to build? Add every MBB unless already has smaller region?
-// Then when hit saveExec, propagate leaked users of define inside the exec region.
+// Map from BB to nearest Exec Region. How to build? Add every MBB unless
+// already has smaller region? Then when hit saveExec, propagate leaked users of
+// define inside the exec region.
 
 } // namespace
 
 namespace llvm {
 // class DivergenceAnalysis
 DivergenceAnalysis::DivergenceAnalysis(
-    const MachineFunction &F, const MachineLoop *RegionLoop, const MachineDominatorTree &DT,
-    const MachinePostDominatorTree &PDT, const MachineLoopInfo &LI,
-    SyncDependenceAnalysis &SDA, bool IsLCSSAForm,
+    const MachineFunction &F, const MachineLoop *RegionLoop,
+    const MachineDominatorTree &DT, const MachinePostDominatorTree &PDT,
+    const MachineLoopInfo &LI, SyncDependenceAnalysis &SDA, bool IsLCSSAForm,
     // AMDGPU change begin.
     DivergentJoinMapTy &JoinMap
     // AMDGPU change end.
@@ -1841,7 +1844,7 @@ void DivergenceAnalysis::markDivergent(const ValueTy DivVal) {
   LLVM_DEBUG(const GCNSubtarget *ST = &F.getSubtarget<GCNSubtarget>();
              const SIRegisterInfo *SIRI = ST->getRegisterInfo();
              dbgs() << "\t MarkDivergent :"; printReg(DivVal, SIRI););
-  //AMDGPU change end.
+  // AMDGPU change end.
   DivergentValues.insert(DivVal);
 }
 
@@ -1948,7 +1951,7 @@ bool DivergenceAnalysis::updateTerminator(const MachineInstr &Term) const {
     // Check bit uniform here if not divergent.
     return !isBitUniform(Term, Processed);
   }
-  //case AMDGPU::AMDGPU_CALL_INDIRECT:
+  // case AMDGPU::AMDGPU_CALL_INDIRECT:
   case AMDGPU::SI_CALL:
     return true;
   }
@@ -1965,13 +1968,10 @@ bool DivergenceAnalysis::updateNormalInstruction(const MachineInstr &I) const {
       continue;
     Register Reg = Op.getReg();
     if (Reg.isPhysical()) {
-      if (Reg == AMDGPU::EXEC ||
-          Reg == AMDGPU::EXEC_LO ||
-          Reg == AMDGPU::SCC)
+      if (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO || Reg == AMDGPU::SCC)
         continue;
-      else 
-      if (const MachineInstr *DefMI =
-              findPhysicalDefineInSameMBB(Op.getParent(), Reg)) {
+      else if (const MachineInstr *DefMI =
+                   findPhysicalDefineInSameMBB(Op.getParent(), Reg)) {
         if (isDivergent(*DefMI))
           return true;
       } else {
@@ -1986,15 +1986,17 @@ bool DivergenceAnalysis::updateNormalInstruction(const MachineInstr &I) const {
   return false;
 }
 
-bool DivergenceAnalysis::isTemporalDivergent(const MachineBasicBlock &ObservingBlock,
-                                             const ValueTy Val,
-                                             const MachineBasicBlock &IncomingBlock) const { // AMDGPU change
-  const MachineBasicBlock *DefBlock = &IncomingBlock; // AMDGPU change: Take def point as incoming block for constants.
+bool DivergenceAnalysis::isTemporalDivergent(
+    const MachineBasicBlock &ObservingBlock, const ValueTy Val,
+    const MachineBasicBlock &IncomingBlock) const { // AMDGPU change
+  const MachineBasicBlock *DefBlock =
+      &IncomingBlock; // AMDGPU change: Take def point as incoming block for
+                      // constants.
   const auto *Inst = MRI.getUniqueVRegDef(Val);
   if (Inst == nullptr)
     return true;
   if (Inst)
-      DefBlock = Inst->getParent(); 
+    DefBlock = Inst->getParent();
 
   // check whether any divergent loop carrying Val terminates before control
   // proceeds to ObservingBlock
@@ -2020,13 +2022,14 @@ static bool HasIncomingUndefValue(const PHINode_ *Phi) {
 
 // For case like
 //  %163:sreg_64_xexec = S_MOV_B64 $exec
-//bb.1:
+// bb.1:
 //; predecessors: %bb.1, %bb.0
-//  successors: %bb.1(0x40000000), %bb.2(0x40000000); %bb.1(50.00%), %bb.2(50.00%)
-//  %162:vreg_512 = PHI %41:vreg_512, %bb.0, %40:vreg_512, %bb.1
+//  successors: %bb.1(0x40000000), %bb.2(0x40000000); %bb.1(50.00%),
+//  %bb.2(50.00%) %162:vreg_512 = PHI %41:vreg_512, %bb.0, %40:vreg_512, %bb.1
 //  %167:sgpr_32 = V_READFIRSTLANE_B32 %17:vgpr_32, implicit $exec
 //  %168:sreg_64 = V_CMP_EQ_U32_e64 %167:sgpr_32, %17:vgpr_32, implicit $exec
-//  %166:sreg_64 = S_AND_SAVEEXEC_B64 %168:sreg_64, implicit-def $exec, implicit-def $scc, implicit $exec
+//  %166:sreg_64 = S_AND_SAVEEXEC_B64 %168:sreg_64, implicit-def $exec,
+//  implicit-def $scc, implicit $exec
 //...
 //  $exec = S_XOR_B64_term $exec, %166:sreg_64, implicit-def $scc
 //  S_CBRANCH_EXECNZ %bb.1, implicit $exec
@@ -2091,8 +2094,8 @@ findSaveExec(const MachineInstr *MI,
 // It will only run on divergent branch, so (A, B) is not in
 // DivergentDisjointMap when A is uniform.
 static bool isJoinDivergentOnlyOnSameIncomingValue(
-    const PHINode_ &Phi, const DivergenceAnalysis *pDA, const MachineDominatorTree &DT,
-    DivergentJoinMapTy &DivergentJoinMap) {
+    const PHINode_ &Phi, const DivergenceAnalysis *pDA,
+    const MachineDominatorTree &DT, DivergentJoinMapTy &DivergentJoinMap) {
   // for phi which join divergent, if the incoming values from divergent
   // branch are the same, the phi is still uniform.
   // A
@@ -2183,14 +2186,14 @@ bool DivergenceAnalysis::updatePHINode(const PHINode_ &Phi) const {
   // joining divergent disjoint path in Phi parent block
   if (isJoinDivergent(*Phi.getParent())) {
     // AMDGPU CHANGE BEGIN
-    if (true/*TODO: ENABLE_AGGRESSIVE_UNIFORM_ANALYSIS*/) {
+    if (true /*TODO: ENABLE_AGGRESSIVE_UNIFORM_ANALYSIS*/) {
       // Continue if the divergent join only on same incoming value.
       if (!isJoinDivergentOnlyOnSameIncomingValue(Phi, this, DT,
                                                   DivergentJoinMap))
         return true;
     } else
-    // AMDGPU CHANGE END
-    return true;
+      // AMDGPU CHANGE END
+      return true;
   }
 
   // An incoming value could be divergent by itself.
@@ -2213,7 +2216,6 @@ bool DivergenceAnalysis::updatePHINode(const PHINode_ &Phi) const {
     if (isDivergent(Reg) ||
         isTemporalDivergent(*Phi.getParent(), Reg, *BB.getMBB()))
       return true;
-
   }
 
   return false;
@@ -2259,7 +2261,8 @@ bool DivergenceAnalysis::inRegion(const MachineBasicBlock &BB) const {
 
 // marks all users of loop-carried values of the loop headed by LoopHeader as
 // divergent
-void DivergenceAnalysis::taintLoopLiveOuts(const MachineBasicBlock &LoopHeader) {
+void DivergenceAnalysis::taintLoopLiveOuts(
+    const MachineBasicBlock &LoopHeader) {
   auto *DivLoop = LI.getLoopFor(&LoopHeader);
   assert(DivLoop && "loopHeader is not actually part of a loop");
 
@@ -2324,7 +2327,7 @@ void DivergenceAnalysis::taintLoopLiveOuts(const MachineBasicBlock &LoopHeader) 
   }
 }
 
-void DivergenceAnalysis::pushInstruction(const MachineInstr &I) { 
+void DivergenceAnalysis::pushInstruction(const MachineInstr &I) {
   Worklist.push_back(&I);
 }
 void DivergenceAnalysis::pushPHINodes(const MachineBasicBlock &Block) {
@@ -2355,8 +2358,8 @@ void DivergenceAnalysis::pushUsers(const MachineInstr &I) {
   }
 }
 
-bool DivergenceAnalysis::propagateJoinDivergence(const MachineBasicBlock &JoinBlock,
-                                                 const MachineLoop *BranchLoop) {
+bool DivergenceAnalysis::propagateJoinDivergence(
+    const MachineBasicBlock &JoinBlock, const MachineLoop *BranchLoop) {
   LLVM_DEBUG(dbgs() << "\tpropJoinDiv " << JoinBlock.getName() << "\n");
 
   // ignore divergence outside the region
@@ -2403,8 +2406,10 @@ void DivergenceAnalysis::propagateBranchDivergence(const MachineInstr &Term) {
   }
 }
 
-void DivergenceAnalysis::propagateLoopDivergence(const MachineLoop &ExitingLoop) {
-  LLVM_DEBUG(dbgs() << "propLoopDiv " << ExitingLoop.getHeader()->getNumber() << "\n");
+void DivergenceAnalysis::propagateLoopDivergence(
+    const MachineLoop &ExitingLoop) {
+  LLVM_DEBUG(dbgs() << "propLoopDiv " << ExitingLoop.getHeader()->getNumber()
+                    << "\n");
 
   // don't propagate beyond region
   if (!inRegion(*ExitingLoop.getHeader()))
@@ -2444,20 +2449,21 @@ void DivergenceAnalysis::propagateLoopDivergence(const MachineLoop &ExitingLoop)
 // For case like
 //  %149:sreg_64_xexec = S_MOV_B64 $exec
 //
-//bb.3:
+// bb.3:
 //; predecessors: %bb.3, %bb.2
-//  successors: %bb.3(0x40000000), %bb.4(0x40000000); %bb.3(50.00%), %bb.4(50.00%)
+//  successors: %bb.3(0x40000000), %bb.4(0x40000000); %bb.3(50.00%),
+//  %bb.4(50.00%)
 //
 //  %148:vreg_512 = PHI %56:vreg_512, %bb.2, %55:vreg_512, %bb.3
 //  %153:sgpr_32 = V_READFIRSTLANE_B32 %36:vgpr_32, implicit $exec
 //  %154:sreg_64 = V_CMP_EQ_U32_e64 %153:sgpr_32, %36:vgpr_32, implicit $exec
-//  %152:sreg_64 = S_AND_SAVEEXEC_B64 %154:sreg_64, implicit-def $exec, implicit-def $scc, implicit $exec
-//  $m0 = S_MOV_B32 %153:sgpr_32
-//  %55:vreg_512 = V_MOVRELD_B32_V16 %148:vreg_512(tied-def 0), -2, 0, implicit $m0, implicit $exec
-//  $exec = S_XOR_B64_term $exec, %152:sreg_64, implicit-def $scc
+//  %152:sreg_64 = S_AND_SAVEEXEC_B64 %154:sreg_64, implicit-def $exec,
+//  implicit-def $scc, implicit $exec $m0 = S_MOV_B32 %153:sgpr_32 %55:vreg_512
+//  = V_MOVRELD_B32_V16 %148:vreg_512(tied-def 0), -2, 0, implicit $m0, implicit
+//  $exec $exec = S_XOR_B64_term $exec, %152:sreg_64, implicit-def $scc
 //  S_CBRANCH_EXECNZ %bb.3, implicit $exec
 //
-//bb.4:
+// bb.4:
 //; predecessors: %bb.3
 //  successors: %bb.5(0x80000000); %bb.5(100.00%)
 //
@@ -2596,7 +2602,7 @@ void DivergenceAnalysis::compute() {
 
   // propagate divergence
   while (!Worklist.empty()) {
-    const MachineInstr *I= Worklist.back();
+    const MachineInstr *I = Worklist.back();
     Worklist.pop_back();
 
     // maintain uniformity of overrides
@@ -2715,23 +2721,23 @@ bool DivergenceAnalysis::isDivergent(const MachineInstr &I) const {
 void DivergenceAnalysis::print(raw_ostream &OS, const Module_ *) const {
   // iterate instructions using instructions() to ensure a deterministic order.
   for (auto &MBB : F)
-  for (auto &I : MBB) {
-    if (isDivergent(I))
-      OS << "DIVERGENT:" << I ;
-    // AMDGPU changes begin
-    else
-      OS << "UNIFORM:" << I ;
-    // AMDGPU changes end
-  }
+    for (auto &I : MBB) {
+      if (isDivergent(I))
+        OS << "DIVERGENT:" << I;
+      // AMDGPU changes begin
+      else
+        OS << "UNIFORM:" << I;
+      // AMDGPU changes end
+    }
 }
 
 // class GPUDivergenceAnalysis
-MirGPUDivergenceAnalysis::MirGPUDivergenceAnalysis(MachineFunction &F,
-                                             const MachineDominatorTree &DT,
-                                             const MachinePostDominatorTree &PDT,
-                                             const MachineLoopInfo &LI)
-    : SDA(DT, PDT, LI, /*AMDGPU change*/DivergentJoinMap),
-      DA(F, nullptr, DT, PDT, LI, SDA, false, /*AMDGPU change*/DivergentJoinMap) {
+MirGPUDivergenceAnalysis::MirGPUDivergenceAnalysis(
+    MachineFunction &F, const MachineDominatorTree &DT,
+    const MachinePostDominatorTree &PDT, const MachineLoopInfo &LI)
+    : SDA(DT, PDT, LI, /*AMDGPU change*/ DivergentJoinMap),
+      DA(F, nullptr, DT, PDT, LI, SDA, false,
+         /*AMDGPU change*/ DivergentJoinMap) {
   MachineRegisterInfo &MRI = F.getRegInfo();
   const GCNSubtarget *ST = &F.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *SIRI = ST->getRegisterInfo();
@@ -2758,10 +2764,11 @@ bool MirGPUDivergenceAnalysis::isDivergent(const MachineInstr *I) const {
   return DA.isDivergent(*I);
 }
 
-void MirGPUDivergenceAnalysis::print(raw_ostream &OS, const Module_ *mod) const {
+void MirGPUDivergenceAnalysis::print(raw_ostream &OS,
+                                     const Module_ *mod) const {
   OS << "Divergence of kernel " << DA.getFunction().getName() << " {\n";
   DA.print(OS, mod);
   OS << "}\n";
 }
 
-}
+} // namespace llvm
