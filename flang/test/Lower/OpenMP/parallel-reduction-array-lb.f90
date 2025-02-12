@@ -17,20 +17,19 @@ end program
 ! CHECK:           omp.yield(%[[VAL_15]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>)
 ! CHECK-LABEL:   } init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>):
+! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.array<3x2xi32> {bindc_name = ".tmp"}
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_3]], %[[VAL_4]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<3x2xi32> {bindc_name = ".tmp", uniq_name = ""}
-! CHECK:           %[[VAL_7:.*]] = arith.constant true
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<3x2xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<3x2xi32>>, !fir.heap<!fir.array<3x2xi32>>)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.ref<!fir.array<3x2xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x2xi32>>, !fir.ref<!fir.array<3x2xi32>>)
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_9]] : (!fir.box<!fir.array<3x2xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_12:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_11]] : (!fir.box<!fir.array<3x2xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_13:.*]] = fir.shape_shift %[[VAL_10]]#0, %[[VAL_10]]#1, %[[VAL_12]]#0, %[[VAL_12]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
-! CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_8]]#0(%[[VAL_13]]) : (!fir.heap<!fir.array<3x2xi32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<3x2xi32>>
+! CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_8]]#0(%[[VAL_13]]) : (!fir.ref<!fir.array<3x2xi32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<3x2xi32>>
 ! CHECK:           hlfir.assign %[[VAL_1]] to %[[VAL_14]] : i32, !fir.box<!fir.array<3x2xi32>>
 ! CHECK:           fir.store %[[VAL_14]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
 ! CHECK:           omp.yield(%[[ALLOC]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>)
@@ -55,18 +54,6 @@ end program
 ! CHECK:             }
 ! CHECK:           }
 ! CHECK:           omp.yield(%[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>)
-! CHECK:         }  cleanup {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>):
-! CHECK:           %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
-! CHECK:           %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.array<3x2xi32>>) -> !fir.ref<!fir.array<3x2xi32>>
-! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<3x2xi32>>) -> i64
-! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i64
-! CHECK:           %[[VAL_5:.*]] = arith.cmpi ne, %[[VAL_3]], %[[VAL_4]] : i64
-! CHECK:           fir.if %[[VAL_5]] {
-! CHECK:             %[[VAL_6:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<3x2xi32>>) -> !fir.heap<!fir.array<3x2xi32>>
-! CHECK:             fir.freemem %[[VAL_6]] : !fir.heap<!fir.array<3x2xi32>>
-! CHECK:           }
-! CHECK:           omp.yield
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "reduce"} {

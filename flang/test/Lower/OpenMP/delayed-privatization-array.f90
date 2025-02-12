@@ -36,8 +36,7 @@ end subroutine
 ! ONE_DIM-NEXT:   %[[C0:.*]] = arith.constant 0 : index
 ! ONE_DIM-NEXT:   %[[DIMS:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0]]
 ! ONE_DIM-NEXT:   %[[SHAPE:.*]] = fir.shape %[[DIMS]]#1
-! ONE_DIM-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %[[DIMS]]#1
-! ONE_DIM-NEXT:   %[[TRUE:.*]] = arith.constant true
+! ONE_DIM-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.alloca !fir.array<?xi32>, %[[DIMS]]#1
 ! ONE_DIM-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[ARRAY_ALLOC]](%[[SHAPE]])
 ! ONE_DIM-NEXT:   %[[C0_0:.*]] = arith.constant 0
 ! ONE_DIM-NEXT:   %[[DIMS2:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0_0]]
@@ -74,8 +73,7 @@ end subroutine
 ! TWO_DIM-NEXT:   %[[C1:.*]] = arith.constant 1 : index
 ! TWO_DIM-NEXT:   %[[DIMS_1:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C1]]
 ! TWO_DIM-NEXT:   %[[SHAPE:.*]] = fir.shape %[[DIMS_0]]#1, %[[DIMS_1]]#1
-! TWO_DIM-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.allocmem !fir.array<?x?xi32>, %[[DIMS_0]]#1, %[[DIMS_1]]#1
-! TWO_DIM-NEXT:   %[[TRUE:.*]] = arith.constant true
+! TWO_DIM-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.alloca !fir.array<?x?xi32>, %[[DIMS_0]]#1, %[[DIMS_1]]#1
 ! TWO_DIM-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[ARRAY_ALLOC]](%[[SHAPE]])
 ! TWO_DIM-NEXT:   %[[C0_0:.*]] = arith.constant 0
 ! TWO_DIM-NEXT:   %[[DIMS2_0:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0_0]]
@@ -107,11 +105,10 @@ end program
 ! ONE_DIM_DEFAULT_LB-SAME: @[[PRIVATIZER_SYM:.*]] : [[BOX_TYPE:!fir.box<!fir.array<10xi32>>]] init {
 
 ! ONE_DIM_DEFAULT_LB-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE:!fir.ref<!fir.box<!fir.array<10xi32>>>]], %[[PRIV_BOX_ALLOC:.*]]: [[TYPE]]):
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.alloca !fir.array<10xi32>
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[PRIV_ARG_VAL:.*]] = fir.load %[[PRIV_ARG]]
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[C10:.*]] = arith.constant 10 : index
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[SHAPE:.*]] = fir.shape %[[C10]]
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.allocmem !fir.array<10xi32>
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[TRUE:.*]] = arith.constant true
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[ARRAY_ALLOC]](%[[SHAPE]])
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[C0_0:.*]] = arith.constant 0
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[DIMS2:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0_0]]
