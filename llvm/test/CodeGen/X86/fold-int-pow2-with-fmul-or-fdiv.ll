@@ -706,6 +706,33 @@ define double @fmul_pow_shl_cnt2(i64 %cnt) nounwind {
   ret double %mul
 }
 
+; FIXME: The zext of the input is being lost so the upper 4 bits of %rdi after
+; the shlq are garbage.
+define double @fmul_pow_shl_cnt3(i8 %cnt) nounwind {
+; CHECK-SSE-LABEL: fmul_pow_shl_cnt3:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-SSE-NEXT:    shlq $52, %rdi
+; CHECK-SSE-NEXT:    movabsq $-4602115869219225600, %rax # imm = 0xC022000000000000
+; CHECK-SSE-NEXT:    addq %rdi, %rax
+; CHECK-SSE-NEXT:    movq %rax, %xmm0
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fmul_pow_shl_cnt3:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-AVX-NEXT:    shlq $52, %rdi
+; CHECK-AVX-NEXT:    movabsq $-4602115869219225600, %rax # imm = 0xC022000000000000
+; CHECK-AVX-NEXT:    addq %rdi, %rax
+; CHECK-AVX-NEXT:    vmovq %rax, %xmm0
+; CHECK-AVX-NEXT:    retq
+  %zext_cnt = zext i8 %cnt to i64
+  %shl = shl nuw i64 1, %zext_cnt
+  %conv = uitofp i64 %shl to double
+  %mul = fmul double -9.000000e+00, %conv
+  ret double %mul
+}
+
 define float @fmul_pow_select(i32 %cnt, i1 %c) nounwind {
 ; CHECK-SSE-LABEL: fmul_pow_select:
 ; CHECK-SSE:       # %bb.0:
@@ -1236,15 +1263,15 @@ define float @fdiv_pow_shl_cnt_fail_maybe_z(i64 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-SSE-NEXT:    shlq %cl, %rax
 ; CHECK-SSE-NEXT:    testq %rax, %rax
-; CHECK-SSE-NEXT:    js .LBB22_1
+; CHECK-SSE-NEXT:    js .LBB23_1
 ; CHECK-SSE-NEXT:  # %bb.2:
 ; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm1
-; CHECK-SSE-NEXT:    jmp .LBB22_3
-; CHECK-SSE-NEXT:  .LBB22_1:
+; CHECK-SSE-NEXT:    jmp .LBB23_3
+; CHECK-SSE-NEXT:  .LBB23_1:
 ; CHECK-SSE-NEXT:    shrq %rax
 ; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm1
 ; CHECK-SSE-NEXT:    addss %xmm1, %xmm1
-; CHECK-SSE-NEXT:  .LBB22_3:
+; CHECK-SSE-NEXT:  .LBB23_3:
 ; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [-9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    divss %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
@@ -1256,15 +1283,15 @@ define float @fdiv_pow_shl_cnt_fail_maybe_z(i64 %cnt) nounwind {
 ; CHECK-AVX2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-AVX2-NEXT:    shlq %cl, %rax
 ; CHECK-AVX2-NEXT:    testq %rax, %rax
-; CHECK-AVX2-NEXT:    js .LBB22_1
+; CHECK-AVX2-NEXT:    js .LBB23_1
 ; CHECK-AVX2-NEXT:  # %bb.2:
 ; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    jmp .LBB22_3
-; CHECK-AVX2-NEXT:  .LBB22_1:
+; CHECK-AVX2-NEXT:    jmp .LBB23_3
+; CHECK-AVX2-NEXT:  .LBB23_1:
 ; CHECK-AVX2-NEXT:    shrq %rax
 ; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vaddss %xmm0, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:  .LBB22_3:
+; CHECK-AVX2-NEXT:  .LBB23_3:
 ; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [-9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-AVX2-NEXT:    retq
