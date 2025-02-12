@@ -1,3 +1,24 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+/// \file
+/// This file provides utility functions for interacting with the libc++abi
+/// runtime.
+///
+/// This header defines helper functions used for handling libc++abi-specific
+/// runtime operations, such as judging if a symbol name is the name of vtable,
+/// type information or type name string.
+///
+/// The utilities provided here are useful for transformations that require
+/// analyzing or modifying libc++abi-specific constructs.
+//
+//===----------------------------------------------------------------------===//
+//
 #ifndef LLVM_SUPPORT_LIBCXXABI_H
 #define LLVM_SUPPORT_LIBCXXABI_H
 
