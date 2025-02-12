@@ -267,12 +267,10 @@ void ICF::forEachClassRange(size_t begin, size_t end,
 
 // Find or create a symbol at offset 0 in the given section
 static Symbol *getThunkTargetSymbol(ConcatInputSection *isec) {
-  for (Symbol *sym : isec->symbols) {
-    if (auto *d = dyn_cast<Defined>(sym)) {
+  for (Symbol *sym : isec->symbols)
+    if (auto *d = dyn_cast<Defined>(sym))
       if (d->value == 0)
         return sym;
-    }
-  }
 
   std::string thunkName;
   if (isec->symbols.size() == 0)
@@ -551,6 +549,8 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
   // ICF::segregate()
   std::vector<ConcatInputSection *> foldable;
   uint64_t icfUniqueID = inputSections.size();
+  // Reset the thunk counter for each run of ICF.
+  icfThunkCounter = 0;
   for (ConcatInputSection *isec : inputSections) {
     bool isFoldableWithAddendsRemoved = isCfStringSection(isec) ||
                                         isClassRefsSection(isec) ||
