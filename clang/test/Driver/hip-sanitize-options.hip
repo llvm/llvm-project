@@ -3,6 +3,11 @@
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=NORDC %s
 
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx1200 \
+// RUN:   -fsanitize=address \
+// RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
+// RUN:   %s 2>&1 | FileCheck -check-prefixes=NORDC %s
+
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
 // RUN:   -fsanitize=address -fno-gpu-sanitize \
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \

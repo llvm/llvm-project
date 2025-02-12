@@ -1112,6 +1112,11 @@ bool AMDGPUToolChain::shouldSkipSanitizeOption(
 
   assert(OptionalGpuArch && "Invalid Target ID");
   (void)OptionalGpuArch;
+
+  // Skip checking 'xnack+' feature availability for gfx12 family.
+  if (llvm::AMDGPU::getIsaVersion(TargetID).Major == 12)
+    return false;
+
   auto Loc = FeatureMap.find("xnack");
   if (Loc == FeatureMap.end() || !Loc->second) {
     Diags.Report(

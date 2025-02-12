@@ -13,7 +13,6 @@
 // RUN:   | FileCheck --check-prefix=NOTSUPPORTED %s
 
 // GPU ASan Enabled Test Cases
-
 // GPU ASan enabled for amdgpu-arch [gfx908:xnack+]
 // RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSAN,GPUSAN,SAN %s
@@ -22,12 +21,15 @@
 // RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSAN,GPUSAN,SAN %s
 
-// ASan enabled for multiple amdgpu-arch [gfx908:xnack+,gfx900:xnack+]
+// GPU ASan enabled for multiple amdgpu-arch [gfx908:xnack+,gfx900:xnack+]
 // RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ --offload-arch=gfx900:xnack+ -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSAN,GPUSAN,SAN %s
 
-// GPU ASan Disabled Test Cases
+// GPU ASan enabled for amdgpu-arch [gfx1200]
+// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx1200 -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=HOSTSAN,GPUSAN,SAN %s
 
+// GPU ASan Disabled Test Cases
 // GPU ASan disabled through '-fsanitize=address' without '-fgpu-sanitize' flag for amdgpu-arch [gfx908]
 // RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908 -fsanitize=address --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=NOXNACK,HOSTSAN,NOGPUSAN,SAN %s
@@ -56,9 +58,9 @@
 
 // HOSTSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address".* "-fopenmp-targets=amdgcn-amd-amdhsa".* "-x" "c".*}}
 
-// GPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc".* "-mlink-bitcode-file" "[^"]*asanrtl.bc".* "-mlink-bitcode-file" "[^"]*ockl.bc".* "-target-cpu" "(gfx908|gfx900)".* "-fopenmp".* "-fsanitize=address".* "-x" "c".*}}
+// GPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc".* "-mlink-bitcode-file" "[^"]*asanrtl.bc".* "-mlink-bitcode-file" "[^"]*ockl.bc".* "-target-cpu" "(gfx1200|gfx908|gfx900)".* "-fopenmp".* "-fsanitize=address".* "-x" "c".*}}
 // NOGPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc".* "-target-cpu" "(gfx908|gfx900)".* "-fopenmp".* "-x" "c".*}}
 
-// SAN: {{"[^"]*clang-offload-packager[^"]*" "-o".* "--image=file=.*.bc,triple=amdgcn-amd-amdhsa,arch=gfx908(:xnack\-|:xnack\+)?,kind=openmp(,feature=(\-xnack|\+xnack))?"}}
+// SAN: {{"[^"]*clang-offload-packager[^"]*" "-o".* "--image=file=.*.bc,triple=amdgcn-amd-amdhsa,arch=(gfx1200|gfx908)(:xnack\-|:xnack\+)?,kind=openmp(,feature=(\-xnack|\+xnack))?"}}
 // SAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address".* "-fopenmp-targets=amdgcn-amd-amdhsa".* "-x" "ir".*}}
 // SAN: {{"[^"]*clang-linker-wrapper[^"]*".* "--host-triple=x86_64-unknown-linux-gnu".* "--linker-path=[^"]*".* "--whole-archive" "[^"]*(libclang_rt.asan_static.a|libclang_rt.asan_static-x86_64.a)".* "--whole-archive" "[^"]*(libclang_rt.asan.a|libclang_rt.asan-x86_64.a)".*}}
