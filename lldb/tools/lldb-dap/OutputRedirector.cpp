@@ -19,16 +19,9 @@
 #include <unistd.h>
 #endif
 
-using lldb_private::Pipe;
-using llvm::createStringError;
-using llvm::Error;
-using llvm::Expected;
-using llvm::inconvertibleErrorCode;
-using llvm::StringRef;
+using namespace llvm;
 
-namespace {
-char kCloseSentinel[] = "\0";
-} // namespace
+static constexpr auto kCloseSentinel = StringLiteral::withInnerNUL("\0");
 
 namespace lldb_dap {
 
@@ -63,18 +56,18 @@ Error OutputRedirector::RedirectTo(std::function<void(StringRef)> callback) {
     char buffer[OutputBufferSize];
     while (!m_stopped) {
       ssize_t bytes_count = ::read(read_fd, &buffer, sizeof(buffer));
-      // EOF detected.
-      if (bytes_count == 0 ||
-          (bytes_count == sizeof(kCloseSentinel) &&
-           std::memcmp(buffer, kCloseSentinel, sizeof(kCloseSentinel)) == 0 &&
-           m_fd == kInvalidDescriptor))
-        break;
       if (bytes_count == -1) {
         // Skip non-fatal errors.
         if (errno == EAGAIN || errno == EINTR || errno == EWOULDBLOCK)
           continue;
         break;
       }
+
+      StringRef data(buffer, bytes_count);
+      if (m_stopped)
+        data.consume_back(kCloseSentinel);
+      if (data.empty())
+        break;
 
       callback(StringRef(buffer, bytes_count));
     }
@@ -93,7 +86,7 @@ void OutputRedirector::Stop() {
     // Closing the pipe may not be sufficient to wake up the thread in case the
     // write descriptor is duplicated (to stdout/err or to another process).
     // Write a null byte to ensure the read call returns.
-    (void)::write(fd, kCloseSentinel, sizeof(kCloseSentinel));
+    (void)::write(fd, kCloseSentinel.data(), kCloseSentinel.size());
     ::close(fd);
     m_forwarder.join();
   }
