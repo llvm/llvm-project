@@ -440,7 +440,6 @@ static SVal castArgToParamTypeIfNeeded(const CallEvent &Call, unsigned ArgIdx,
     return ArgVal;
 
   const FunctionDecl *Definition = CallExprDecl;
-  Definition->hasBody(Definition);
 
   // The function decl of the Call (in the AST) will not have any parameter
   // declarations, if it was 'only' declared without a prototype. However, the
