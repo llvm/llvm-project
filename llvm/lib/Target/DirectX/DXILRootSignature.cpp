@@ -69,7 +69,7 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
                        "Invalid Root Element: " + ElementText->getString());
   }
 
-  return true;
+  llvm_unreachable("Root signature element kind not expected.");
 }
 
 static bool parse(LLVMContext *Ctx, ModuleRootSignature *MRS, NamedMDNode *Root,
