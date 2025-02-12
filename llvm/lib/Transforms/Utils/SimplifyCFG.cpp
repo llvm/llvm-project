@@ -3290,8 +3290,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // count.
   unsigned SpeculatedInstructions = 0;
   // By default the number of instructions that may be speculatively executed is
-  // one. Whenever a pattern is found in the basic block, that is cheap for sure
-  // we increase this number to the size of the pattern (how many instructions
+  // one. Whenever `extract oneuse(op.with.overflow),1` pattern is found,
+  // we increase this threshold to the size of the pattern (how many instructions
   // are there in that pattern).
   unsigned MaxSpeculatedInstructionsToHoist = 1;
   // In case we have found a cheap pattern, we don't want to do cost checking
