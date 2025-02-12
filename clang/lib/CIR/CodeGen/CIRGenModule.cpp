@@ -9,6 +9,7 @@
 // This is the internal per-translation-unit state used for CIR translation.
 //
 //===----------------------------------------------------------------------===//
+#include "CIRGenCUDARuntime.h"
 #include "CIRGenCXXABI.h"
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
@@ -108,7 +109,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
       theModule{mlir::ModuleOp::create(builder.getUnknownLoc())}, Diags(Diags),
       target(astContext.getTargetInfo()), ABI(createCXXABI(*this)),
       genTypes{*this}, VTables{*this},
-      openMPRuntime(new CIRGenOpenMPRuntime(*this)) {
+      openMPRuntime(new CIRGenOpenMPRuntime(*this)),
+      cudaRuntime(new CIRGenCUDARuntime(*this)) {
 
   // Initialize CIR signed integer types cache.
   SInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);

@@ -15,6 +15,7 @@
 
 #include "Address.h"
 #include "CIRGenBuilder.h"
+#include "CIRGenCUDARuntime.h"
 #include "CIRGenCall.h"
 #include "CIRGenOpenCLRuntime.h"
 #include "CIRGenTBAA.h"
@@ -112,6 +113,9 @@ private:
 
   /// Holds the OpenMP runtime
   std::unique_ptr<CIRGenOpenMPRuntime> openMPRuntime;
+
+  /// Holds the CUDA runtime
+  std::unique_ptr<CIRGenCUDARuntime> cudaRuntime;
 
   /// Per-function codegen information. Updated everytime emitCIR is called
   /// for FunctionDecls's.
@@ -862,10 +866,16 @@ public:
   /// Print out an error that codegen doesn't support the specified decl yet.
   void ErrorUnsupported(const Decl *D, const char *Type);
 
-  /// Return a reference to the configured OpenMP runtime.
+  /// Return a reference to the configured OpenCL runtime.
   CIRGenOpenCLRuntime &getOpenCLRuntime() {
     assert(openCLRuntime != nullptr);
     return *openCLRuntime;
+  }
+
+  /// Return a reference to the configured CUDA runtime.
+  CIRGenCUDARuntime &getCUDARuntime() {
+    assert(cudaRuntime != nullptr);
+    return *cudaRuntime;
   }
 
   void createOpenCLRuntime() {

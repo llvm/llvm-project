@@ -19,6 +19,7 @@ add_clang_library(clangCIR
   CIRGenClass.cpp
   CIRGenCleanup.cpp
   CIRGenCoroutine.cpp
+  CIRGenCUDARuntime.cpp
   CIRGenDecl.cpp
   CIRGenDeclCXX.cpp
   CIRGenException.cpp

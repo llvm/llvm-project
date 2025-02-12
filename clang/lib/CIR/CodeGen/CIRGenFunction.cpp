@@ -753,7 +753,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, cir::FuncOp Fn,
       emitConstructorBody(Args);
     else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
              FD->hasAttr<CUDAGlobalAttr>())
-      llvm_unreachable("NYI");
+      CGM.getCUDARuntime().emitDeviceStub(*this, Fn, Args);
     else if (isa<CXXMethodDecl>(FD) &&
              cast<CXXMethodDecl>(FD)->isLambdaStaticInvoker()) {
       // The lambda static invoker function is special, because it forwards or
