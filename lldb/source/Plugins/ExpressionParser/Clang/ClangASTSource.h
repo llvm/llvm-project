@@ -89,9 +89,6 @@ public:
                                  clang::DeclarationName Name,
                                  const clang::DeclContext *OriginalDC) override;
 
-  bool FindExternalVisibleMethodsByName(const clang::DeclContext *DC,
-                                        clang::DeclarationName Name) override;
-
   /// Enumerate all Decls in a given lexical context.
   ///
   /// \param[in] DC
@@ -159,8 +156,6 @@ public:
   ///     The Decl to be completed in place.
   void CompleteType(clang::ObjCInterfaceDecl *Class) override;
 
-  void CompleteRedeclChain(clang::Decl const *D) override;
-
   /// Called on entering a translation unit.  Tells Clang by calling
   /// setHasExternalVisibleStorage() and setHasExternalLexicalStorage() that
   /// this object has something to say about undefined names.
@@ -202,7 +197,6 @@ public:
   /// \param[in] context
   ///     The NameSearchContext to use when filing results.
   virtual void FindExternalVisibleDecls(NameSearchContext &context);
-  virtual void FindExternalVisibleMethods(NameSearchContext &context);
 
   clang::Sema *getSema();
 
@@ -224,12 +218,6 @@ public:
         const clang::DeclContext *DC, clang::DeclarationName Name,
         const clang::DeclContext *OriginalDC) override {
       return m_original.FindExternalVisibleDeclsByName(DC, Name, OriginalDC);
-    }
-
-    bool
-    FindExternalVisibleMethodsByName(const clang::DeclContext *DC,
-                                     clang::DeclarationName Name) override {
-      return m_original.FindExternalVisibleMethodsByName(DC, Name);
     }
 
     void FindExternalLexicalDecls(
@@ -301,9 +289,6 @@ protected:
   void FindExternalVisibleDecls(NameSearchContext &context,
                                 lldb::ModuleSP module,
                                 CompilerDeclContext &namespace_decl);
-  void FindExternalVisibleMethods(NameSearchContext &context,
-                                  lldb::ModuleSP module,
-                                  CompilerDeclContext &namespace_decl);
 
   /// Find all Objective-C methods matching a given selector.
   ///

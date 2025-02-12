@@ -7,7 +7,7 @@ class TestSwiftLateDylib(TestBase):
     @skipUnlessDarwin
     @swiftTest
     @skipIfDarwinEmbedded
-    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
+    @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'true'))
     def test(self):
         """Test that a late loaded Swift dylib is debuggable"""
         arch = self.getArchitecture()

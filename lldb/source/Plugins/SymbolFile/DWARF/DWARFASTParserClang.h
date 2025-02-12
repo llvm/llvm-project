@@ -148,15 +148,6 @@ protected:
   DIEToRecordMap m_die_to_record_map;
   DIEToObjCInterfaceMap m_die_to_objc_interface_map;
   std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_up;
-
-  struct TypeToComplete {
-    lldb_private::CompilerType clang_type;
-    lldb_private::plugin::dwarf::DWARFDIE die;
-    lldb::TypeSP type;
-  };
-  std::vector<TypeToComplete> m_to_complete;
-  llvm::DenseSet<const lldb_private::plugin::dwarf::DWARFDebugInfoEntry *>
-      m_currently_parsed_record_dies;
   /// @}
 
   clang::DeclContext *

@@ -9,7 +9,7 @@ class TestSwiftClangImporterExplicitCC1(TestBase):
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
-    @skipIf(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'), bugnumber='rdar://128094135')
+    @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'false'))
     @skipUnlessDarwin
     @swiftTest
     def test(self):

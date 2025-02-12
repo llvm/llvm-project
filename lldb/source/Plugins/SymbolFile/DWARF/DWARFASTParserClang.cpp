@@ -74,18 +74,6 @@ using namespace lldb_private;
 using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
 
-/// Types that we want to complete directly (instead of
-/// relying on CompleteRedeclChain):
-/// - Anonymous structures
-/// - Function-local classes
-static bool DirectlyCompleteType(clang::DeclContext *decl_ctx,
-                                 const ParsedDWARFTypeAttributes &attrs) {
-  assert(decl_ctx);
-  if (decl_ctx->isFunctionOrMethod())
-    return true;
-  return attrs.name.IsEmpty() && !attrs.is_forward_declaration;
-}
-
 DWARFASTParserClang::DWARFASTParserClang(TypeSystemClang &ast)
     : DWARFASTParser(Kind::DWARFASTParserClang), m_ast(ast),
       m_die_to_decl_ctx(), m_decl_ctx_to_die() {}
@@ -338,10 +326,7 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
     return; // Non-tag context are always ready.
 
   // We have already completed the type or it is already prepared.
-  bool hasDef = ast.UseRedeclCompletion()
-                    ? tag_decl_ctx->getDefinition() != nullptr
-                    : tag_decl_ctx->isCompleteDefinition();
-  if (hasDef || tag_decl_ctx->isBeingDefined())
+  if (tag_decl_ctx->isCompleteDefinition() || tag_decl_ctx->isBeingDefined())
     return;
 
   // If this tag was imported from another AST context (in the gmodules case),
@@ -565,15 +550,12 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   // Set a bit that lets us know that we are currently parsing this
-  if (TypeSystemClang::UseRedeclCompletion()) {
-    if (Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE()))
-      return type_ptr->shared_from_this();
-  } else if (auto [it, inserted] =
-            dwarf->GetDIEToType().try_emplace(die.GetDIE(), DIE_IS_BEING_PARSED);
-        !inserted) {
-      if (it->getSecond() == nullptr || it->getSecond() == DIE_IS_BEING_PARSED)
-        return nullptr;
-      return it->getSecond()->shared_from_this();
+  if (auto [it, inserted] =
+          dwarf->GetDIEToType().try_emplace(die.GetDIE(), DIE_IS_BEING_PARSED);
+      !inserted) {
+    if (it->getSecond() == nullptr || it->getSecond() == DIE_IS_BEING_PARSED)
+      return nullptr;
+    return it->getSecond()->shared_from_this();
   }
 
   ParsedDWARFTypeAttributes attrs(die);
@@ -637,14 +619,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   }
   if (type_sp) {
     dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
-  }
-
-  if (m_ast.UseRedeclCompletion()) {
-    while (!m_to_complete.empty()) {
-      TypeToComplete to_complete = m_to_complete.back();
-      m_to_complete.pop_back();
-      CompleteRecordType(to_complete.die, to_complete.clang_type);
-    }
   }
 
   return type_sp;
@@ -1870,9 +1844,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   clang::DeclContext *containing_decl_ctx =
       GetClangDeclContextContainingDIE(die, nullptr);
 
-  const bool should_directly_complete =
-      DirectlyCompleteType(containing_decl_ctx, attrs);
-
   ConstString unique_typename(attrs.name);
   Declaration unique_decl(attrs.decl);
   uint64_t byte_size = attrs.byte_size.value_or(0);
@@ -2033,10 +2004,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         attrs.name.GetCString(), tag_decl_kind, attrs.class_language, metadata,
         attrs.exports_symbols);
     RegisterDIE(die.GetDIE(), clang_type);
-    if (!should_directly_complete)
-      if (auto *source = llvm::dyn_cast_or_null<ImporterBackedASTSource>(
-              m_ast.getASTContext().getExternalSource()))
-        source->MarkRedeclChainsAsOutOfDate(m_ast.getASTContext());
   }
 
   TypeSP type_sp = dwarf->MakeType(
@@ -2049,9 +2016,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   // parameters in any class methods need it for the clang types for
   // function prototypes.
   clang::DeclContext *type_decl_ctx =
-      TypeSystemClang::UseRedeclCompletion()
-          ? GetClangDeclContextContainingDIE(die, nullptr)
-          : TypeSystemClang::GetDeclContextForType(clang_type);
+      TypeSystemClang::GetDeclContextForType(clang_type);
   LinkDeclContextToDIE(type_decl_ctx, die);
 
   // UniqueDWARFASTType is large, so don't create a local variables on the
@@ -2070,29 +2035,22 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   dwarf->GetUniqueDWARFASTTypeMap().Insert(unique_typename,
                                            *unique_ast_entry_up);
 
-  if (!TypeSystemClang::UseRedeclCompletion() ||
-      !should_directly_complete) {
-    // Leave this as a forward declaration until we need to know the
-    // details of the type. lldb_private::Type will automatically call
-    // the SymbolFile virtual function
-    // "SymbolFileDWARF::CompleteType(Type *)" When the definition
-    // needs to be defined.
-    bool inserted =
-        dwarf->GetForwardDeclCompilerTypeToDIE()
-            .try_emplace(
-                ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType(),
-                *die.GetDIERef())
-            .second;
-    assert(inserted && "Type already in the forward declaration map!");
-    (void)inserted;
-    if (!TypeSystemClang::UseRedeclCompletion())
-      m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
-  }
+  // Leave this as a forward declaration until we need to know the
+  // details of the type. lldb_private::Type will automatically call
+  // the SymbolFile virtual function
+  // "SymbolFileDWARF::CompleteType(Type *)" When the definition
+  // needs to be defined.
+  bool inserted =
+      dwarf->GetForwardDeclCompilerTypeToDIE()
+          .try_emplace(
+              ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType(),
+              *die.GetDIERef())
+          .second;
+  assert(inserted && "Type already in the forward declaration map!");
+  (void)inserted;
+  m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
 
-  if (!TypeSystemClang::UseRedeclCompletion())
-    adjustArgPassing(m_ast, attrs, clang_type);
-  else if (should_directly_complete)
-    m_to_complete.push_back({clang_type, die, type_sp});
+  adjustArgPassing(m_ast, attrs, clang_type);
 
   return type_sp;
 }
@@ -2274,10 +2232,6 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
 
 bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
                                              CompilerType clang_type) {
-  if (TypeSystemClang::UseRedeclCompletion())
-    if (!m_currently_parsed_record_dies.insert(die.GetDIE()).second)
-      return true;
-
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf = die.GetDWARF();
 
@@ -2289,12 +2243,6 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     return true;
 
   clang::DeclContext *decl_ctx = GetClangDeclContextContainingDIE(die, nullptr);
-
-  if (TypeSystemClang::UseRedeclCompletion() &&
-      !DirectlyCompleteType(decl_ctx, attrs)) {
-    clang_type = m_ast.CreateRedeclaration(clang_type);
-    RegisterDIE(die.GetDIE(), clang_type);
-  }
 
   // Start the definition if the type is not being defined already. This can
   // happen (e.g.) when adding nested types to a class type -- see
@@ -2324,34 +2272,8 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   const bool type_is_objc_object_or_interface =
       TypeSystemClang::IsObjCObjectOrInterfaceType(clang_type);
   // Now parse any methods if there were any...
-  for (const DWARFDIE &mem : member_function_dies) {
-    if (!TypeSystemClang::UseRedeclCompletion() ||
-        type_is_objc_object_or_interface) {
-      dwarf->ResolveType(mem);
-      continue;
-    }
-
-    ConstString mem_name(mem.GetName());
-    ConstString die_name(die.GetName());
-    const bool is_ctor = mem_name == die_name;
-    const bool is_virtual_method =
-        mem.GetAttributeValueAsUnsigned(
-            DW_AT_virtuality, DW_VIRTUALITY_none) > DW_VIRTUALITY_none;
-    const bool is_operator = mem_name.GetStringRef().starts_with("operator");
-    const bool is_static_method =
-        mem.GetFirstChild().GetAttributeValueAsUnsigned(DW_AT_artificial,
-                                                        0) == 0;
-
-    // FIXME: With RedeclCompletion, we currently don't have a good
-    // way to call `FindExternalVisibleMethods` from Clang
-    // for static functions, constructors or operators.
-    // So resolve them now.
-    //
-    // We want to resolve virtual methods now too because
-    // we set the method overrides below.
-    if (is_ctor || is_operator || is_virtual_method || is_static_method)
-      dwarf->ResolveType(mem);
-  }
+  for (const DWARFDIE &mem : member_function_dies)
+    dwarf->ResolveType(mem);
 
   if (type_is_objc_object_or_interface) {
     ConstString class_name(clang_type.GetTypeName());
@@ -2379,9 +2301,6 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
 
     m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(), std::move(bases));
   }
-
-  if (TypeSystemClang::UseRedeclCompletion())
-    adjustArgPassing(m_ast, attrs, clang_type);
 
   m_ast.AddMethodOverridesForCXXRecordType(clang_type.GetOpaqueQualType());
   TypeSystemClang::BuildIndirectFields(clang_type);
@@ -2443,8 +2362,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(
 
   // Disable external storage for this type so we don't get anymore
   // clang::ExternalASTSource queries for this type.
-  if (!TypeSystemClang::UseRedeclCompletion())
-    m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), false);
+  m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), false);
 
   if (!die)
     return false;

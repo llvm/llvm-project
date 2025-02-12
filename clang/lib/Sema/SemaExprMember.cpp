@@ -736,13 +736,6 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
   DeclContext *DC = SS.isSet() ? SemaRef.computeDeclContext(SS)
                                : SemaRef.computeDeclContext(RTy);
 
-  if (ExternalASTSource *Source =
-          DC->getParentASTContext().getExternalSource()) {
-    if (auto LookupName = R.getLookupName()) {
-      Source->FindExternalVisibleMethodsByName(DC, LookupName);
-    }
-  }
-
   struct QueryState {
     Sema &SemaRef;
     DeclarationNameInfo NameInfo;
