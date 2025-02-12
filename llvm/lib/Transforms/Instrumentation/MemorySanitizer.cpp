@@ -2619,7 +2619,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
     if (I.arg_size() == 2)
       assert(ParamType == cast<FixedVectorType>(I.getArgOperand(1)->getType()));
-    FixedVectorType *ReturnType = cast<FixedVectorType>(I.getType());
+    [[maybe_unused]] FixedVectorType *ReturnType =
+        cast<FixedVectorType>(I.getType());
     assert(ParamType->getNumElements() * I.arg_size() ==
            2 * ReturnType->getNumElements());
 
