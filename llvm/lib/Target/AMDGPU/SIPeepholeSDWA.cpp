@@ -190,7 +190,8 @@ public:
       }
     }
 
-    return std::unique_ptr<SDWASrcOperand>(new SDWASrcOperand(TargetOp, ReplacedOp, SrcSel_, Abs_, Neg_, Sext_));
+    return std::unique_ptr<SDWASrcOperand>(
+        new SDWASrcOperand(TargetOp, ReplacedOp, SrcSel_, Abs_, Neg_, Sext_));
   };
 
   MachineInstr *potentialToConvert(const SIInstrInfo *TII,
