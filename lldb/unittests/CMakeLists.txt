@@ -81,5 +81,5 @@ if(LLDB_CAN_USE_DEBUGSERVER AND LLDB_TOOL_DEBUGSERVER_BUILD AND NOT LLDB_USE_SYS
 endif()
 
 if(LLVM_BUILD_TELEMETRY)
-  add_subdirectory(telemetry_plugin)
+  add_subdirectory(telemetry)
 endif()
