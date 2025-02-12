@@ -284,13 +284,14 @@ add_header_macro(
   signal.h
   DEPENDS
     .llvm-libc-macros.signal_macros
+    .llvm-libc-types.pid_t
     .llvm-libc-types.sig_atomic_t
+    .llvm-libc-types.sighandler_t
+    .llvm-libc-types.siginfo_t
     .llvm-libc-types.sigset_t
+    .llvm-libc-types.stack_t
     .llvm-libc-types.struct_sigaction
     .llvm-libc-types.union_sigval
-    .llvm-libc-types.siginfo_t
-    .llvm-libc-types.stack_t
-    .llvm-libc-types.pid_t
 )
 
 add_header_macro(

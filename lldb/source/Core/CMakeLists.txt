@@ -16,6 +16,10 @@ if (LLDB_ENABLE_CURSES)
   endif()
 endif()
 
+if (LLVM_BUILD_TELEMETRY)
+   set(TELEMETRY_DEPS Telemetry)
+endif()
+
 # TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbCore
 add_lldb_library(lldbCore
   Address.cpp
@@ -52,10 +56,10 @@ add_lldb_library(lldbCore
   SourceLocationSpec.cpp
   SourceManager.cpp
   StreamAsynchronousIO.cpp
+  Telemetry.cpp
   ThreadedCommunication.cpp
   UserSettingsController.cpp
   Value.cpp
-
   DEPENDS
     clang-tablegen-targets
 
@@ -80,6 +84,7 @@ add_lldb_library(lldbCore
     Support
     Demangle
     TargetParser
+    ${TELEMETRY_DEPS}
   )
 
 add_dependencies(lldbCore

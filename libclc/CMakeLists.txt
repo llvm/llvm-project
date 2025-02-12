@@ -32,10 +32,6 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   spirv64/lib/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
-  clc/lib/clspv/SOURCES;
-  clc/lib/clspv64/SOURCES;
-  clc/lib/spirv/SOURCES;
-  clc/lib/spirv64/SOURCES;
 )
 
 set( LIBCLC_MIN_LLVM 3.9.0 )
@@ -251,11 +247,27 @@ add_custom_target( "generate_convert.cl" DEPENDS convert.cl )
 set_target_properties( "generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
 
 add_custom_command(
-  OUTPUT clspv-convert.cl
-  COMMAND ${Python3_EXECUTABLE} ${script_loc} --clspv > clspv-convert.cl
+  OUTPUT clc-convert.cl
+  COMMAND ${Python3_EXECUTABLE} ${script_loc} --clc > clc-convert.cl
   DEPENDS ${script_loc} )
-add_custom_target( "clspv-generate_convert.cl" DEPENDS clspv-convert.cl )
-set_target_properties( "clspv-generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
+add_custom_target( "clc-generate_convert.cl" DEPENDS clc-convert.cl )
+set_target_properties( "clc-generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
+
+if ( clspv-- IN_LIST LIBCLC_TARGETS_TO_BUILD OR clspv64-- IN_LIST LIBCLC_TARGETS_TO_BUILD )
+  add_custom_command(
+    OUTPUT clspv-convert.cl
+    COMMAND ${Python3_EXECUTABLE} ${script_loc} --clspv > clspv-convert.cl
+    DEPENDS ${script_loc} )
+  add_custom_target( "clspv-generate_convert.cl" DEPENDS clspv-convert.cl )
+  set_target_properties( "clspv-generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
+
+  add_custom_command(
+    OUTPUT clc-clspv-convert.cl
+    COMMAND ${Python3_EXECUTABLE} ${script_loc} --clc --clspv > clc-clspv-convert.cl
+    DEPENDS ${script_loc} )
+  add_custom_target( "clc-clspv-generate_convert.cl" DEPENDS clc-clspv-convert.cl )
+  set_target_properties( "clc-clspv-generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
+endif()
 
 enable_testing()
 
@@ -266,15 +278,15 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   list( GET TRIPLE 1 VENDOR )
   list( GET TRIPLE 2 OS )
 
-  set( dirs )
+  set( opencl_dirs )
 
   if ( NOT ${ARCH} STREQUAL spirv AND NOT ${ARCH} STREQUAL spirv64 AND
        NOT ${ARCH} STREQUAL clspv AND NOT ${ARCH} STREQUAL clspv64)
-    LIST( APPEND dirs generic )
+    LIST( APPEND opencl_dirs generic )
   endif()
 
   if( ${ARCH} STREQUAL r600 OR ${ARCH} STREQUAL amdgcn )
-    list( APPEND dirs amdgpu )
+    list( APPEND opencl_dirs amdgpu )
   endif()
 
   # Some targets' directories alias others
@@ -291,11 +303,19 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   endif()
 
   set( clc_lib_files )
+  set( clc_dirs ${dirs} generic )
+
+  if( ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
+    set( clc_gen_files clc-clspv-convert.cl )
+  else()
+    set( clc_gen_files clc-convert.cl )
+  endif()
+
   libclc_configure_lib_source(
     clc_lib_files
     CLC_INTERNAL
     LIB_ROOT_DIR clc
-    DIRS ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
+    DIRS ${clc_dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
   )
 
   set( opencl_lib_files )
@@ -312,7 +332,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
   libclc_configure_lib_source(
     opencl_lib_files
-    DIRS ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
+    DIRS ${opencl_dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
   )
 
   foreach( d ${${t}_devices} )
@@ -353,7 +373,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     string( TOUPPER "CLC_${MACRO_ARCH}" CLC_TARGET_DEFINE )
 
     list( APPEND build_flags
-      -D__CLC_INTERNAL
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
@@ -365,14 +384,17 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       list( APPEND build_flags -mcpu=${cpu} )
     endif()
 
+    set( clc_build_flags ${build_flags} -DCLC_INTERNAL )
+
     add_libclc_builtin_set(
       CLC_INTERNAL
       ARCH ${ARCH}
       ARCH_SUFFIX clc-${arch_suffix}
       TRIPLE ${clang_triple}
-      COMPILE_FLAGS ${build_flags}
+      COMPILE_FLAGS ${clc_build_flags}
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${clc_lib_files}
+      GEN_FILES ${clc_gen_files}
     )
 
     list( APPEND build_flags
