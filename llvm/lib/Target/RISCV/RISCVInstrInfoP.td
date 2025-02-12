@@ -306,15 +306,15 @@ def PLI_B : RVPUnaryImm8<0b10110100, "pli.b">;
 
 let DecoderNamespace = "RISCV32Only_",
     Predicates = [HasStdExtP, IsRV32] in {
-def PSEXTB_H_RV32 : RVPUnaryWUF<0b00, 0b00100, "psextb.h">;
+def PSEXT_H_B_RV32 : RVPUnaryWUF<0b00, 0b00100, "psext.h.b">;
 def PSABS_H_RV32  : RVPUnaryWUF<0b00, 0b00111, "psabs.h">;
 def PSABS_B_RV32  : RVPUnaryWUF<0b01, 0b00111, "psabs.b">;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
-def PSEXTB_H_RV64 : RVPUnaryWUF<0b00, 0b00100, "psextb.h">;
-def PSEXTB_W      : RVPUnaryWUF<0b01, 0b00100, "psextb.w">;
-def PSEXTH_W      : RVPUnaryWUF<0b01, 0b00101, "psexth.w">;
+def PSEXT_H_B_RV64 : RVPUnaryWUF<0b00, 0b00100, "psext.h.b">;
+def PSEXT_W_B      : RVPUnaryWUF<0b01, 0b00100, "psext.w.b">;
+def PSEXT_W_H      : RVPUnaryWUF<0b01, 0b00101, "psext.w.h">;
 def PSABS_H_RV64  : RVPUnaryWUF<0b00, 0b00111, "psabs.h">;
 def PSABS_B_RV64  : RVPUnaryWUF<0b10, 0b00111, "psabs.b">;
 } // Predicates = [HasStdExtP, IsRV64]
@@ -325,12 +325,12 @@ let Predicates = [HasStdExtP, IsRV64] in
 def PLUI_W : RVPUnaryImm9<0b1111001, "plui.w">;
 
 let Predicates = [HasStdExtP] in {
-def PSLL_H_H0   : RVPBinary1F1W<0b000, 0b00, "psll.h.h0", 0b010>;
-def PSLL_B_B0   : RVPBinary1F1W<0b000, 0b10, "psll.b.b0", 0b010>;
-def PADD_H_H0   : RVPBinary1F1W<0b001, 0b00, "padd.h.h0", 0b010>;
-def PADD_B_B0   : RVPBinary1F1W<0b001, 0b10, "padd.b.b0", 0b010>;
-def PSSHA_H_H0  : RVPBinary1F1W<0b110, 0b00, "pssha.h.h0", 0b010>;
-def PSSHAR_H_H0 : RVPBinary1F1W<0b111, 0b00, "psshar.h.h0", 0b010>;
+def PSLL_HS   : RVPBinary1F1W<0b000, 0b00, "psll.hs", 0b010>;
+def PSLL_BS   : RVPBinary1F1W<0b000, 0b10, "psll.bs", 0b010>;
+def PADD_HS   : RVPBinary1F1W<0b001, 0b00, "padd.hs", 0b010>;
+def PADD_BS   : RVPBinary1F1W<0b001, 0b10, "padd.bs", 0b010>;
+def PSSHA_HS  : RVPBinary1F1W<0b110, 0b00, "pssha.hs", 0b010>;
+def PSSHAR_HS : RVPBinary1F1W<0b111, 0b00, "psshar.hs", 0b010>;
 } // Predicates = [HasStdExtP]
 let DecoderNamespace = "RISCV32Only_",
     Predicates = [HasStdExtP, IsRV32] in {
@@ -339,10 +339,10 @@ def SSHAR       : RVPBinary1F1W<0b111, 0b01, "sshar", 0b010>;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
-def PSLL_W_W0   : RVPBinary1F1W<0b000, 0b01, "psll.w.w0", 0b010>;
-def PADD_W_W0   : RVPBinary1F1W<0b001, 0b01, "padd.w.w0", 0b010>;
-def PSSHA_W_W0  : RVPBinary1F1W<0b110, 0b01, "pssha.w.w0", 0b010>;
-def PSSHAR_W_W0 : RVPBinary1F1W<0b111, 0b01, "psshar.w.w0", 0b010>;
+def PSLL_WS   : RVPBinary1F1W<0b000, 0b01, "psll.ws", 0b010>;
+def PADD_WS   : RVPBinary1F1W<0b001, 0b01, "padd.ws", 0b010>;
+def PSSHA_WS  : RVPBinary1F1W<0b110, 0b01, "pssha.ws", 0b010>;
+def PSSHAR_WS : RVPBinary1F1W<0b111, 0b01, "psshar.ws", 0b010>;
 def SHA         : RVPBinary1F1W<0b110, 0b11, "sha", 0b010>;
 def SHAR        : RVPBinary1F1W<0b111, 0b11, "shar", 0b010>;
 } // Predicates = [HasStdExtP, IsRV64]
@@ -370,21 +370,21 @@ def USATI_RV64 : RVPUnary1F0<0b010, 0b1000000, "usati">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
-def PSRL_H_H0  : RVPBinary1F1W<0b000, 0b00, "psrl.h.h0", 0b100>;
-def PSRL_B_B0  : RVPBinary1F1W<0b000, 0b10, "psrl.b.b0", 0b100>;
-def PREDSUM_H  : RVPBinary1F1W<0b001, 0b00, "predsum.h", 0b100>;
-def PREDSUM_B  : RVPBinary1F1W<0b001, 0b10, "predsum.b", 0b100>;
-def PREDSUMU_H : RVPBinary1F1W<0b011, 0b00, "predsumu.h", 0b100>;
-def PREDSUMU_B : RVPBinary1F1W<0b011, 0b10, "predsumu.b", 0b100>;
-def PSRA_H_H0  : RVPBinary1F1W<0b100, 0b00, "psra.h.h0", 0b100>;
-def PSRA_B_B0  : RVPBinary1F1W<0b100, 0b10, "psra.b.b0", 0b100>;
+def PSRL_HS  : RVPBinary1F1W<0b000, 0b00, "psrl.hs", 0b100>;
+def PSRL_BS  : RVPBinary1F1W<0b000, 0b10, "psrl.bs", 0b100>;
+def PREDSUM_HS  : RVPBinary1F1W<0b001, 0b00, "predsum.hs", 0b100>;
+def PREDSUM_BS  : RVPBinary1F1W<0b001, 0b10, "predsum.bs", 0b100>;
+def PREDSUMU_HS : RVPBinary1F1W<0b011, 0b00, "predsumu.hs", 0b100>;
+def PREDSUMU_BS : RVPBinary1F1W<0b011, 0b10, "predsumu.bs", 0b100>;
+def PSRA_HS  : RVPBinary1F1W<0b100, 0b00, "psra.hs", 0b100>;
+def PSRA_BS  : RVPBinary1F1W<0b100, 0b10, "psra.bs", 0b100>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV64] in {
-def PSRL_W_W0  : RVPBinary1F1W<0b000, 0b01, "psrl.w.w0", 0b100>;
-def PREDSUM_W  : RVPBinary1F1W<0b001, 0b01, "predsum.w", 0b100>;
-def PREDSUMU_W : RVPBinary1F1W<0b011, 0b01, "predsumu.w", 0b100>;
-def PSRA_W_W0  : RVPBinary1F1W<0b100, 0b01, "psra.w.w0", 0b100>;
+def PSRL_WS  : RVPBinary1F1W<0b000, 0b01, "psrl.ws", 0b100>;
+def PREDSUM_WS  : RVPBinary1F1W<0b001, 0b01, "predsum.ws", 0b100>;
+def PREDSUMU_WS : RVPBinary1F1W<0b011, 0b01, "predsumu.ws", 0b100>;
+def PSRA_WS  : RVPBinary1F1W<0b100, 0b01, "psra.ws", 0b100>;
 } // Predicates = [HasStdExtP, IsRV64]
 
 
@@ -452,13 +452,13 @@ def PASUBU_W : RVPBinary1LongFW<0b1111, 0b01, 0b000, "pasubu.w">;
 
 let Predicates = [HasStdExtP] in {
 def SLX         : RVPBinary1LongFW<0b0001, 0b11, 0b001, "slx">;
-def PMUL_H_BEO  : RVPBinary1LongFW<0b0010, 0b00, 0b001, "pmul.h.beo">;
+def PMUL_H_B01  : RVPBinary1LongFW<0b0010, 0b00, 0b001, "pmul.h.b01">;
 
 def MVM         : RVPBinary1LongFW<0b0101, 0b00, 0b001, "mvm">;
 def MVMN        : RVPBinary1LongFW<0b0101, 0b01, 0b001, "mvmn">;
 def MERGE       : RVPBinary1LongFW<0b0101, 0b10, 0b001, "merge">;
 def SRX         : RVPBinary1LongFW<0b0101, 0b11, 0b001, "srx">;
-def PMULU_H_BEO : RVPBinary1LongFW<0b0110, 0b00, 0b001, "pmulu.h.beo">;
+def PMULU_H_B01 : RVPBinary1LongFW<0b0110, 0b00, 0b001, "pmulu.h.b01">;
 def PDIFSUMU_B  : RVPBinary1LongFW<0b0110, 0b10, 0b001, "pdifsumu.b">;
 def PDIFSUMAU_B : RVPBinary1LongFW<0b0111, 0b10, 0b001, "pdifsumau.b">;
 } // Predicates = [HasStdExtP]
@@ -473,14 +473,14 @@ def MACCU_H01 : RVPBinary1LongFW<0b0111, 0b01, 0b001, "maccu.h01">;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
-def PMUL_W_HEO   : RVPBinary1LongFW<0b0010, 0b01, 0b001, "pmul.w.heo">;
+def PMUL_W_H01   : RVPBinary1LongFW<0b0010, 0b01, 0b001, "pmul.w.h01">;
 def MUL_W01      : RVPBinary1LongFW<0b0010, 0b11, 0b001, "mul.w01">;
-def PMACC_W_HEO  : RVPBinary1LongFW<0b0011, 0b01, 0b001, "pmacc.w.heo">;
+def PMACC_W_H01  : RVPBinary1LongFW<0b0011, 0b01, 0b001, "pmacc.w.h01">;
 def MACC_W01     : RVPBinary1LongFW<0b0011, 0b11, 0b001, "macc.w01">;
 
-def PMULU_W_HEO  : RVPBinary1LongFW<0b0110, 0b01, 0b001, "pmulu.w.heo">;
+def PMULU_W_H01  : RVPBinary1LongFW<0b0110, 0b01, 0b001, "pmulu.w.h01">;
 def MULU_W01     : RVPBinary1LongFW<0b0110, 0b11, 0b001, "mulu.w01">;
-def PMACCU_W_HEO : RVPBinary1LongFW<0b0111, 0b01, 0b001, "pmaccu.w.heo">;
+def PMACCU_W_H01 : RVPBinary1LongFW<0b0111, 0b01, 0b001, "pmaccu.w.h01">;
 def MACCU_W01    : RVPBinary1LongFW<0b0111, 0b11, 0b001, "maccu.w01">;
 } // Predicates = [HasStdExtP, IsRV64]
 
@@ -510,14 +510,14 @@ def ZIP16HP   : RVPBinary1F0W<0b111, 0b11, "zip16hp", 0b010>;
 
 
 let Predicates = [HasStdExtP] in {
-def PMUL_H_BEE   : RVPBinary1LongFW<0b0000, 0b00, 0b011, "pmul.h.bee">;
-def PMUL_H_BOO   : RVPBinary1LongFW<0b0010, 0b00, 0b011, "pmul.h.boo">;
+def PMUL_H_B00   : RVPBinary1LongFW<0b0000, 0b00, 0b011, "pmul.h.b00">;
+def PMUL_H_B11   : RVPBinary1LongFW<0b0010, 0b00, 0b011, "pmul.h.b11">;
 
-def PMULU_H_BEE  : RVPBinary1LongFW<0b0100, 0b00, 0b011, "pmulu.h.bee">;
-def PMULU_H_BOO  : RVPBinary1LongFW<0b0110, 0b00, 0b011, "pmulu.h.boo">;
+def PMULU_H_B00  : RVPBinary1LongFW<0b0100, 0b00, 0b011, "pmulu.h.b00">;
+def PMULU_H_B11  : RVPBinary1LongFW<0b0110, 0b00, 0b011, "pmulu.h.b11">;
 
-def PMULSU_H_BEE : RVPBinary1LongFW<0b1100, 0b00, 0b011, "pmulsu.h.bee">;
-def PMULSU_H_BOO : RVPBinary1LongFW<0b1110, 0b00, 0b011, "pmulsu.h.boo">;
+def PMULSU_H_B00 : RVPBinary1LongFW<0b1100, 0b00, 0b011, "pmulsu.h.b00">;
+def PMULSU_H_B11 : RVPBinary1LongFW<0b1110, 0b00, 0b011, "pmulsu.h.b11">;
 } // Predicates = [HasStdExtP]
 let DecoderNamespace = "RISCV32Only_",
     Predicates = [HasStdExtP, IsRV32] in {
@@ -538,31 +538,31 @@ def MACCSU_H11 : RVPBinary1LongFW<0b1111, 0b01, 0b011, "maccsu.h11">;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
-def PMUL_W_BEE    : RVPBinary1LongFW<0b0000, 0b01, 0b011, "pmul.w.bee">;
+def PMUL_W_H00    : RVPBinary1LongFW<0b0000, 0b01, 0b011, "pmul.w.h00">;
 def MUL_W00       : RVPBinary1LongFW<0b0000, 0b11, 0b011, "mul.w00">;
-def PMACC_W_HEE   : RVPBinary1LongFW<0b0001, 0b01, 0b011, "pmacc.w.hee">;
+def PMACC_W_H00   : RVPBinary1LongFW<0b0001, 0b01, 0b011, "pmacc.w.h00">;
 def MACC_W00      : RVPBinary1LongFW<0b0001, 0b11, 0b011, "macc.w00">;
-def PMUL_W_HOO    : RVPBinary1LongFW<0b0010, 0b01, 0b011, "pmul.w.hoo">;
+def PMUL_W_H11    : RVPBinary1LongFW<0b0010, 0b01, 0b011, "pmul.w.h11">;
 def MUL_W11       : RVPBinary1LongFW<0b0010, 0b11, 0b011, "mul.w11">;
-def PMACC_W_HOO   : RVPBinary1LongFW<0b0011, 0b01, 0b011, "pmacc.w.hoo">;
+def PMACC_W_H11   : RVPBinary1LongFW<0b0011, 0b01, 0b011, "pmacc.w.h11">;
 def MACC_W11      : RVPBinary1LongFW<0b0011, 0b11, 0b011, "macc.w11">;
 
-def PMULU_W_HEE   : RVPBinary1LongFW<0b0100, 0b01, 0b011, "pmulu.w.hee">;
+def PMULU_W_H00   : RVPBinary1LongFW<0b0100, 0b01, 0b011, "pmulu.w.h00">;
 def MULU_W00      : RVPBinary1LongFW<0b0100, 0b11, 0b011, "mulu.w00">;
-def PMACCU_W_HEE  : RVPBinary1LongFW<0b0101, 0b01, 0b011, "pmaccu.w.hee">;
+def PMACCU_W_H00  : RVPBinary1LongFW<0b0101, 0b01, 0b011, "pmaccu.w.h00">;
 def MACCU_W00     : RVPBinary1LongFW<0b0101, 0b11, 0b011, "maccu.w00">;
-def PMULU_W_HOO   : RVPBinary1LongFW<0b0110, 0b01, 0b011, "pmulu.w.hoo">;
+def PMULU_W_H11   : RVPBinary1LongFW<0b0110, 0b01, 0b011, "pmulu.w.h11">;
 def MULU_W11      : RVPBinary1LongFW<0b0110, 0b11, 0b011, "mulu.w11">;
-def PMACCU_W_HOO  : RVPBinary1LongFW<0b0111, 0b01, 0b011, "pmaccu.w.hoo">;
+def PMACCU_W_H11  : RVPBinary1LongFW<0b0111, 0b01, 0b011, "pmaccu.w.h11">;
 def MACCU_W11     : RVPBinary1LongFW<0b0111, 0b11, 0b011, "maccu.w11">;
 
-def PMULSU_W_HEE  : RVPBinary1LongFW<0b1100, 0b01, 0b011, "pmulsu.w.hee">;
+def PMULSU_W_H00  : RVPBinary1LongFW<0b1100, 0b01, 0b011, "pmulsu.w.h00">;
 def MULSU_W00     : RVPBinary1LongFW<0b1100, 0b11, 0b011, "mulsu.w00">;
-def PMACCSU_W_HEE : RVPBinary1LongFW<0b1101, 0b01, 0b011, "pmaccsu.w.hee">;
+def PMACCSU_W_H00 : RVPBinary1LongFW<0b1101, 0b01, 0b011, "pmaccsu.w.h00">;
 def MACCSU_W00    : RVPBinary1LongFW<0b1101, 0b11, 0b011, "maccsu.w00">;
-def PMULSU_W_HOO  : RVPBinary1LongFW<0b1110, 0b01, 0b011, "pmulsu.w.hoo">;
+def PMULSU_W_H11  : RVPBinary1LongFW<0b1110, 0b01, 0b011, "pmulsu.w.h11">;
 def MULSU_W11     : RVPBinary1LongFW<0b1110, 0b11, 0b011, "mulsu.w11">;
-def PMACCSU_W_HOO : RVPBinary1LongFW<0b1111, 0b01, 0b011, "pmaccsu.w.hoo">;
+def PMACCSU_W_H11 : RVPBinary1LongFW<0b1111, 0b01, 0b011, "pmaccsu.w.h11">;
 def MACCSU_W11    : RVPBinary1LongFW<0b1111, 0b11, 0b011, "maccsu.w11">;
 } // Predicates = [HasStdExtP, IsRV64]
 
@@ -653,9 +653,9 @@ def PM4ADDSU_H  : RVPBinary1LongFW<0b1100, 0b11, 0b101, "pm4addsu.h">;
 def PM2ADDASU_W : RVPBinary1LongFW<0b1101, 0b01, 0b101, "pm2addasu.w">;
 def PM4ADDASU_H : RVPBinary1LongFW<0b1101, 0b11, 0b101, "pm4addasu.h">;
 
-def PMQACC_W_HEO  : RVPBinary1LongFW<0b1111, 0b00, 0b101, "pmqacc.w.heo">;
+def PMQACC_W_H01  : RVPBinary1LongFW<0b1111, 0b00, 0b101, "pmqacc.w.h01">;
 def MQACC_W01     : RVPBinary1LongFW<0b1111, 0b01, 0b101, "mqacc.w01">;
-def PMQRACC_W_HEO : RVPBinary1LongFW<0b1111, 0b10, 0b101, "pmqracc.w.heo">;
+def PMQRACC_W_H01 : RVPBinary1LongFW<0b1111, 0b10, 0b101, "pmqracc.w.h01">;
 def MQRACC_W01    : RVPBinary1LongFW<0b1111, 0b11, 0b101, "mqracc.w01">;
 } // Predicates = [HasStdExtP, IsRV64]
 
@@ -716,14 +716,14 @@ def PMULHRU_H    : RVPBinary1LongFW<0b0010, 0b10, 0b111, "pmulhru.h">;
 def PMHACCU_H    : RVPBinary1LongFW<0b0011, 0b00, 0b111, "pmhaccu.h">;
 def PMHRACCU_H   : RVPBinary1LongFW<0b0011, 0b10, 0b111, "pmhraccu.h">;
 
-def PMULH_H_BE   : RVPBinary1LongFW<0b0100, 0b00, 0b111, "pmulh.h.be">;
-def PMULHSU_H_BE : RVPBinary1LongFW<0b0100, 0b10, 0b111, "pmulhsu.h.be">;
-def PMHACCU_H_BE : RVPBinary1LongFW<0b0101, 0b00, 0b111, "pmhaccu.h.be">;
-def PMHACCSU_H_BE: RVPBinary1LongFW<0b0101, 0b10, 0b111, "pmhaccsu.h.be">;
-def PMULH_H_BO   : RVPBinary1LongFW<0b0110, 0b00, 0b111, "pmulh.h.bo">;
-def PMULHSU_H_BO : RVPBinary1LongFW<0b0110, 0b10, 0b111, "pmulhsu.h.bo">;
-def PMHACC_H_BO  : RVPBinary1LongFW<0b0111, 0b00, 0b111, "pmhacc.h.bo">;
-def PMHACCSU_H_BO: RVPBinary1LongFW<0b0111, 0b10, 0b111, "pmhaccsu.h.bo">;
+def PMULH_H_B0   : RVPBinary1LongFW<0b0100, 0b00, 0b111, "pmulh.h.b0">;
+def PMULHSU_H_B0 : RVPBinary1LongFW<0b0100, 0b10, 0b111, "pmulhsu.h.b0">;
+def PMHACCU_H_B0 : RVPBinary1LongFW<0b0101, 0b00, 0b111, "pmhaccu.h.b0">;
+def PMHACCSU_H_B0: RVPBinary1LongFW<0b0101, 0b10, 0b111, "pmhaccsu.h.b0">;
+def PMULH_H_B1   : RVPBinary1LongFW<0b0110, 0b00, 0b111, "pmulh.h.b1">;
+def PMULHSU_H_B1 : RVPBinary1LongFW<0b0110, 0b10, 0b111, "pmulhsu.h.b1">;
+def PMHACC_H_B1  : RVPBinary1LongFW<0b0111, 0b00, 0b111, "pmhacc.h.b1">;
+def PMHACCSU_H_B1: RVPBinary1LongFW<0b0111, 0b10, 0b111, "pmhaccsu.h.b1">;
 
 def PMULHSU_H    : RVPBinary1LongFW<0b1000, 0b00, 0b111, "pmulhsu.h">;
 def PMULHRSU_H   : RVPBinary1LongFW<0b1000, 0b10, 0b111, "pmulhrsu.h">;
@@ -773,14 +773,14 @@ def PMULHRU_W    : RVPBinary1LongFW<0b0010, 0b11, 0b111, "pmulhru.w">;
 def PMHACCU_W    : RVPBinary1LongFW<0b0011, 0b01, 0b111, "pmhaccu.w">;
 def PMHRACCU_W   : RVPBinary1LongFW<0b0011, 0b11, 0b111, "pmhraccu.w">;
 
-def PMULH_W_HE   : RVPBinary1LongFW<0b0100, 0b01, 0b111, "pmulh.w.he">;
-def PMULHSU_W_HE : RVPBinary1LongFW<0b0100, 0b11, 0b111, "pmulhsu.w.he">;
-def PMHACC_W_HE  : RVPBinary1LongFW<0b0101, 0b01, 0b111, "pmhacc.w.he">;
-def PMHACCSU_W_HE: RVPBinary1LongFW<0b0101, 0b11, 0b111, "pmhaccsu.w.he">;
-def PMULH_W_HO   : RVPBinary1LongFW<0b0110, 0b01, 0b111, "pmulh.w.ho">;
-def PMULHSU_W_HO : RVPBinary1LongFW<0b0110, 0b11, 0b111, "pmulhsu.w.ho">;
-def PMHACC_W_HO  : RVPBinary1LongFW<0b0111, 0b01, 0b111, "pmhacc.w.ho">;
-def PMHACCSU_W_HO: RVPBinary1LongFW<0b0111, 0b11, 0b111, "pmhaccsu.w.ho">;
+def PMULH_W_H0   : RVPBinary1LongFW<0b0100, 0b01, 0b111, "pmulh.w.h0">;
+def PMULHSU_W_H0 : RVPBinary1LongFW<0b0100, 0b11, 0b111, "pmulhsu.w.h0">;
+def PMHACC_W_H0  : RVPBinary1LongFW<0b0101, 0b01, 0b111, "pmhacc.w.h0">;
+def PMHACCSU_W_H0: RVPBinary1LongFW<0b0101, 0b11, 0b111, "pmhaccsu.w.h0">;
+def PMULH_W_H1   : RVPBinary1LongFW<0b0110, 0b01, 0b111, "pmulh.w.h1">;
+def PMULHSU_W_H1 : RVPBinary1LongFW<0b0110, 0b11, 0b111, "pmulhsu.w.h1">;
+def PMHACC_W_H1  : RVPBinary1LongFW<0b0111, 0b01, 0b111, "pmhacc.w.h1">;
+def PMHACCSU_W_H1: RVPBinary1LongFW<0b0111, 0b11, 0b111, "pmhaccsu.w.h1">;
 
 def PMULHSU_W    : RVPBinary1LongFW<0b1000, 0b01, 0b111, "pmulhsu.w">;
 def PMULHRSU_W   : RVPBinary1LongFW<0b1000, 0b11, 0b111, "pmulhrsu.w">;
@@ -789,13 +789,13 @@ def PMHRACCSU_W  : RVPBinary1LongFW<0b1001, 0b11, 0b111, "pmhraccsu.w">;
 def PMULQ_W      : RVPBinary1LongFW<0b1010, 0b01, 0b111, "pmulq.w">;
 def PMULQR_W     : RVPBinary1LongFW<0b1010, 0b11, 0b111, "pmulqr.w">;
 
-def PMQACC_W_HEE : RVPBinary1LongFW<0b1101, 0b00, 0b111, "pmqacc.w.hee">;
+def PMQACC_W_H00 : RVPBinary1LongFW<0b1101, 0b00, 0b111, "pmqacc.w.h00">;
 def MQACC_W00    : RVPBinary1LongFW<0b1101, 0b01, 0b111, "mqacc.w00">;
-def PMQRACC_W_HEE: RVPBinary1LongFW<0b1101, 0b10, 0b111, "pmqracc.w.hee">;
+def PMQRACC_W_H00: RVPBinary1LongFW<0b1101, 0b10, 0b111, "pmqracc.w.h00">;
 def MQRACC_W00   : RVPBinary1LongFW<0b1101, 0b11, 0b111, "mqracc.w00">;
-def PMQACC_W_HOO : RVPBinary1LongFW<0b1111, 0b00, 0b111, "pmqacc.w.hoo">;
+def PMQACC_W_H11 : RVPBinary1LongFW<0b1111, 0b00, 0b111, "pmqacc.w.h11">;
 def MQACC_W11    : RVPBinary1LongFW<0b1111, 0b01, 0b111, "mqacc.w11">;
-def PMQRACC_W_HOO: RVPBinary1LongFW<0b1111, 0b10, 0b111, "pmqracc.w.hoo">;
+def PMQRACC_W_H11: RVPBinary1LongFW<0b1111, 0b10, 0b111, "pmqracc.w.h11">;
 def MQRACC_W11   : RVPBinary1LongFW<0b1111, 0b11, 0b111, "mqracc.w11">;
 } // Predicates = [HasStdExtP, IsRV64]
 
@@ -814,12 +814,12 @@ def PLI_DB   : RVPUnaryImm8<0b00110100, "pli.db", GPRPairRV32>;
 def PLUI_DH  : RVPUnaryImm9<0b0111000,  "plui.dh", GPRPairRV32>;
 
 
-def PWSLLI_B_B0 : RVPBinary0F1WRdp<0b000, 0b00, "pwslli.b.b0">;
-def PWSLL_H_H0  : RVPBinary0F1WRdp<0b000, 0b01, "pwsll.h.h0">;
+def PWSLLI_BS : RVPBinary0F1WRdp<0b000, 0b00, "pwslli.bs">;
+def PWSLL_HS  : RVPBinary0F1WRdp<0b000, 0b01, "pwsll.hs">;
 def WSLL        : RVPBinary0F1WRdp<0b000, 0b11, "wsll">;
 
-def PWSLA_B_B0 : RVPBinary0F1WRdp<0b100, 0b00, "pwsla.b.b0">;
-def PWSLA_H_H0 : RVPBinary0F1WRdp<0b100, 0b01, "pwsla.h.h0">;
+def PWSLA_BS : RVPBinary0F1WRdp<0b100, 0b00, "pwsla.bs">;
+def PWSLA_HS : RVPBinary0F1WRdp<0b100, 0b01, "pwsla.hs">;
 def WSLA       : RVPBinary0F1WRdp<0b100, 0b11, "wsla">;
 def WZIP8P     : RVPBinary0F1WRdp<0b111, 0b00, "wzip8p">;
 def WZIP16P    : RVPBinary0F1WRdp<0b111, 0b01, "wzip16p">;
@@ -883,10 +883,10 @@ def PMQWACC      : RVPBinary0LongFW<0b1111, 0b01, "pmqwacc">;
 def PMQRWACC_H   : RVPBinary0LongFW<0b1111, 0b10, "pmqrwacc.h">;
 def PMQRWACC     : RVPBinary0LongFW<0b1111, 0b11, "pmqrwacc">;
 
-def PREDSUM_DH   : RVPBinary0F1WRs1p<0b000, 0b00, "predsum.dh">;
-def PREDSUM_DB   : RVPBinary0F1WRs1p<0b000, 0b10, "predsum.db">;
-def PREDSUMU_DH  : RVPBinary0F1WRs1p<0b011, 0b00, "predsumu.dh">;
-def PREDSUMU_DB  : RVPBinary0F1WRs1p<0b011, 0b10, "predsumu.db">;
+def PREDSUM_DHS   : RVPBinary0F1WRs1p<0b000, 0b00, "predsum.dhs">;
+def PREDSUM_DBS   : RVPBinary0F1WRs1p<0b000, 0b10, "predsum.dbs">;
+def PREDSUMU_DHS  : RVPBinary0F1WRs1p<0b011, 0b00, "predsumu.dhs">;
+def PREDSUMU_DBS  : RVPBinary0F1WRs1p<0b011, 0b10, "predsumu.dbs">;
 
 def PNSRLI_B     : RVPUnary0F0Rs1p<0b000, 0b0010000, "pnsrli.b">;
 def PNSRLI_H     : RVPUnary0F0Rs1p<0b000, 0b0100000, "pnsrli.h">;
@@ -911,27 +911,27 @@ def PNCLIPRI_B   : RVPUnary0F0Rs1p<0b111, 0b0010000, "pnclipri.b">;
 def PNCLIPRI_H   : RVPUnary0F0Rs1p<0b111, 0b0100000, "pnclipri.h">;
 def NCLIPRI      : RVPUnary0F0Rs1p<0b111, 0b1000000, "nclipri">;
 
-def PNSRL_B_B0    : RVPBinary0F1WRs1p<0b000, 0b00, "pnsrl.b.b0",    0b1>;
-def PNSRL_H_H0    : RVPBinary0F1WRs1p<0b000, 0b01, "pnsrl.h.h0",    0b1>;
+def PNSRL_BS    : RVPBinary0F1WRs1p<0b000, 0b00, "pnsrl.bs",    0b1>;
+def PNSRL_HS    : RVPBinary0F1WRs1p<0b000, 0b01, "pnsrl.hs",    0b1>;
 def NSRL          : RVPBinary0F1WRs1p<0b000, 0b11, "nsrl",          0b1>;
-def PNCLIPU_B_B0  : RVPBinary0F1WRs1p<0b010, 0b00, "pnclipu.b.b0",  0b1>;
-def PNCLIPU_H_H0  : RVPBinary0F1WRs1p<0b010, 0b01, "pnclipu.h.h0",  0b1>;
+def PNCLIPU_BS  : RVPBinary0F1WRs1p<0b010, 0b00, "pnclipu.bs",  0b1>;
+def PNCLIPU_HS  : RVPBinary0F1WRs1p<0b010, 0b01, "pnclipu.hs",  0b1>;
 def NCLIPU        : RVPBinary0F1WRs1p<0b010, 0b11, "nclipu",        0b1>;
-def PNCLIPRU_B_B0 : RVPBinary0F1WRs1p<0b011, 0b00, "pnclipru.b.b0", 0b1>;
-def PNCLIPRU_H_H0 : RVPBinary0F1WRs1p<0b011, 0b01, "pnclipru.h.h0", 0b1>;
+def PNCLIPRU_BS : RVPBinary0F1WRs1p<0b011, 0b00, "pnclipru.bs", 0b1>;
+def PNCLIPRU_HS : RVPBinary0F1WRs1p<0b011, 0b01, "pnclipru.hs", 0b1>;
 def NCLIPRU       : RVPBinary0F1WRs1p<0b011, 0b11, "nclipru",       0b1>;
 
-def PNSRA_B_B0    : RVPBinary0F1WRs1p<0b100, 0b00, "pnsra.b.b0",   0b1>;
-def PNSRA_H_H0    : RVPBinary0F1WRs1p<0b100, 0b01, "pnsra.h.h0",   0b1>;
+def PNSRA_BS    : RVPBinary0F1WRs1p<0b100, 0b00, "pnsra.bs",   0b1>;
+def PNSRA_HS    : RVPBinary0F1WRs1p<0b100, 0b01, "pnsra.hs",   0b1>;
 def NSRA          : RVPBinary0F1WRs1p<0b100, 0b11, "nsra",         0b1>;
-def PNSRAR_B_B0   : RVPBinary0F1WRs1p<0b101, 0b00, "pnsrar.b.b0",  0b1>;
-def PNSRAR_H_H0   : RVPBinary0F1WRs1p<0b101, 0b01, "pnsrar.h.h0",  0b1>;
+def PNSRAR_BS   : RVPBinary0F1WRs1p<0b101, 0b00, "pnsrar.bs",  0b1>;
+def PNSRAR_HS   : RVPBinary0F1WRs1p<0b101, 0b01, "pnsrar.hs",  0b1>;
 def NSRAR         : RVPBinary0F1WRs1p<0b101, 0b11, "nsrar",        0b1>;
-def PNCLIP_B_B0   : RVPBinary0F1WRs1p<0b110, 0b00, "pnclip.b.b0",  0b1>;
-def PNCLIP_H_H0   : RVPBinary0F1WRs1p<0b110, 0b01, "pnclip.h.h0",  0b1>;
+def PNCLIP_BS   : RVPBinary0F1WRs1p<0b110, 0b00, "pnclip.bs",  0b1>;
+def PNCLIP_HS   : RVPBinary0F1WRs1p<0b110, 0b01, "pnclip.hs",  0b1>;
 def NCLIP         : RVPBinary0F1WRs1p<0b110, 0b11, "nclip",        0b1>;
-def PNCLIPR_B_B0  : RVPBinary0F1WRs1p<0b111, 0b00, "pnclipr.b.b0", 0b1>;
-def PNCLIPR_H_H0  : RVPBinary0F1WRs1p<0b111, 0b01, "pnclipr.h.h0", 0b1>;
+def PNCLIPR_BS  : RVPBinary0F1WRs1p<0b111, 0b00, "pnclipr.bs", 0b1>;
+def PNCLIPR_HS  : RVPBinary0F1WRs1p<0b111, 0b01, "pnclipr.hs", 0b1>;
 def NCLIPR        : RVPBinary0F1WRs1p<0b111, 0b11, "nclipr",       0b1>;
 
 
@@ -942,23 +942,23 @@ def PSLLI_DW      : RVPUnary0F0Rs1pRdp<0b000, 0b0100000, "pslli.dw">;
 def PSSLAI_DH    : RVPUnary0F0Rs1pRdp<0b101, 0b0010000, "psslai.dh">;
 def PSSLAI_DW    : RVPUnary0F0Rs1pRdp<0b101, 0b0100000, "psslai.dw">;
 
-def PSEXTB_DH    : RVPUnaryWUFRs1pRdp<0b00, 0b00100, "psextb.dh">;
-def PSEXTB_DW    : RVPUnaryWUFRs1pRdp<0b01, 0b00100, "psextb.dw">;
-def PSEXTW_DW    : RVPUnaryWUFRs1pRdp<0b01, 0b00101, "psextw.dw">;
-def PSABS_DH     : RVPUnaryWUFRs1pRdp<0b00, 0b00111, "psabs.dh">;
-def PSABS_DB     : RVPUnaryWUFRs1pRdp<0b10, 0b00111, "psabs.db">;
+def PSEXT_DH_B    : RVPUnaryWUFRs1pRdp<0b00, 0b00100, "psext.dh.b">;
+def PSEXT_DW_B    : RVPUnaryWUFRs1pRdp<0b01, 0b00100, "psext.dw.b">;
+def PSEXT_DW_H    : RVPUnaryWUFRs1pRdp<0b01, 0b00101, "psext.dw.h">;
+def PSABS_DH      : RVPUnaryWUFRs1pRdp<0b00, 0b00111, "psabs.dh">;
+def PSABS_DB      : RVPUnaryWUFRs1pRdp<0b10, 0b00111, "psabs.db">;
 
-def PSLL_DH_H0   : RVPBinary0F1WRs1pRdp<0b000, 0b00, "psll.dh.h0">;
-def PSLL_DW_W    : RVPBinary0F1WRs1pRdp<0b000, 0b01, "psll.dw.w">;
-def PSLL_DB_B0   : RVPBinary0F1WRs1pRdp<0b000, 0b10, "psll.db.b0">;
-def PADD_DH_H0   : RVPBinary0F1WRs1pRdp<0b001, 0b00, "padd.dh.h0">;
-def PADD_DW_W    : RVPBinary0F1WRs1pRdp<0b001, 0b01, "padd.dw.w">;
-def PADD_DB_B0   : RVPBinary0F1WRs1pRdp<0b001, 0b10, "padd.db.b0">;
+def PSLL_DHS   : RVPBinary0F1WRs1pRdp<0b000, 0b00, "psll.dhs">;
+def PSLL_DWS    : RVPBinary0F1WRs1pRdp<0b000, 0b01, "psll.dws">;
+def PSLL_DBS   : RVPBinary0F1WRs1pRdp<0b000, 0b10, "psll.dbs">;
+def PADD_DHS   : RVPBinary0F1WRs1pRdp<0b001, 0b00, "padd.dhs">;
+def PADD_DWS    : RVPBinary0F1WRs1pRdp<0b001, 0b01, "padd.dws">;
+def PADD_DBS   : RVPBinary0F1WRs1pRdp<0b001, 0b10, "padd.dbs">;
 
-def PSSHA_DH_H0  : RVPBinary0F1WRs1pRdp<0b110, 0b00, "pssha.dh.h0">;
-def PSSHA_DW_W   : RVPBinary0F1WRs1pRdp<0b110, 0b01, "pssha.dw.w">;
-def PSSHAR_DH_H0 : RVPBinary0F1WRs1pRdp<0b111, 0b00, "psshar.dh.h0">;
-def PSSHAR_DW_W  : RVPBinary0F1WRs1pRdp<0b111, 0b01, "psshar.dw.w">;
+def PSSHA_DHS  : RVPBinary0F1WRs1pRdp<0b110, 0b00, "pssha.dhs">;
+def PSSHA_DWS   : RVPBinary0F1WRs1pRdp<0b110, 0b01, "pssha.dws">;
+def PSSHAR_DHS : RVPBinary0F1WRs1pRdp<0b111, 0b00, "psshar.dhs">;
+def PSSHAR_DWS  : RVPBinary0F1WRs1pRdp<0b111, 0b01, "psshar.dws">;
 
 def PSRLI_DB    : RVPUnary0F0Rs1pRdp<0b000, 0b0001000, "psrli.db",  0b1>;
 def PSRLI_DH    : RVPUnary0F0Rs1pRdp<0b000, 0b0010000, "psrli.dh",  0b1>;
@@ -974,13 +974,13 @@ def PSRARI_DW   : RVPUnary0F0Rs1pRdp<0b101, 0b0100000, "psrari.dw", 0b1>;
 def PSATI_DH    : RVPUnary0F0Rs1pRdp<0b110, 0b0010000, "psati.dh",  0b1>;
 def PSATI_DW    : RVPUnary0F0Rs1pRdp<0b110, 0b0100000, "psati.dw",  0b1>;
 
-def PSRL_DH_H0  : RVPBinary0F1WRs1pRdp<0b000, 0b00, "psrl.dh.h0", 0b1>;
-def PSRL_DW_W   : RVPBinary0F1WRs1pRdp<0b000, 0b01, "psrl.dw.w",  0b1>;
-def PSRL_DB_B0  : RVPBinary0F1WRs1pRdp<0b000, 0b10, "psrl.db.b0", 0b1>;
+def PSRL_DHS  : RVPBinary0F1WRs1pRdp<0b000, 0b00, "psrl.dhs", 0b1>;
+def PSRL_DWS   : RVPBinary0F1WRs1pRdp<0b000, 0b01, "psrl.dws",  0b1>;
+def PSRL_DBS  : RVPBinary0F1WRs1pRdp<0b000, 0b10, "psrl.dbs", 0b1>;
 
-def PSRA_DH_H0  : RVPBinary0F1WRs1pRdp<0b100, 0b00, "psra.dh.h0", 0b1>;
-def PSRA_DW_W   : RVPBinary0F1WRs1pRdp<0b100, 0b01, "psra.dw.w",  0b1>;
-def PSRA_DB_B0  : RVPBinary0F1WRs1pRdp<0b100, 0b10, "psra.db.b0", 0b1>;
+def PSRA_DHS  : RVPBinary0F1WRs1pRdp<0b100, 0b00, "psra.dhs", 0b1>;
+def PSRA_DWS   : RVPBinary0F1WRs1pRdp<0b100, 0b01, "psra.dws",  0b1>;
+def PSRA_DBS  : RVPBinary0F1WRs1pRdp<0b100, 0b10, "psra.dbs", 0b1>;
 
 def PADD_DH     : RVPBinary1FWRs2pRs1pRdp<0b0000, 0b00, "padd.dh">;
 def PADD_DW     : RVPBinary1FWRs2pRs1pRdp<0b0000, 0b01, "padd.dw">;
