@@ -267,9 +267,9 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
     (build_vector (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
                             (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
                             (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))), f16:$elt1),
-    (v2f16 (mixlo_inst $src0_modifiers, $src0,
-                $src1_modifiers, $src1,
-                $src2_modifiers, $src2,
+    (v2f16 (mixlo_inst $src0_modifiers, (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
+                $src1_modifiers, (REG_SEQUENCE VGPR_32, $src1, lo16, (i16 (IMPLICIT_DEF)), hi16),
+                $src2_modifiers, (REG_SEQUENCE VGPR_32, $src2, lo16, (i16 (IMPLICIT_DEF)), hi16),
                 DSTCLAMP.NONE,
                 (REG_SEQUENCE VGPR_32, (f16 (IMPLICIT_DEF)), lo16, $elt1, hi16)))
   >;
@@ -278,9 +278,9 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
     (build_vector f16:$elt0, (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
                                                 (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
                                                 (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers)))))),
-    (v2f16 (mixhi_inst $src0_modifiers, $src0,
-                       $src1_modifiers, $src1,
-                       $src2_modifiers, $src2,
+    (v2f16 (mixhi_inst $src0_modifiers, (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
+                       $src1_modifiers, (REG_SEQUENCE VGPR_32, $src1, lo16, (i16 (IMPLICIT_DEF)), hi16),
+                       $src2_modifiers, (REG_SEQUENCE VGPR_32, $src2, lo16, (i16 (IMPLICIT_DEF)), hi16),
                        DSTCLAMP.NONE,
                        (REG_SEQUENCE VGPR_32, $elt0, lo16, (f16 (IMPLICIT_DEF)), hi16)))
   >;
@@ -291,11 +291,11 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
       (AMDGPUclamp (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
                                       (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
                                       (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))))),
-    (v2f16 (mixhi_inst $src0_modifiers, $src0,
-                       $src1_modifiers, $src1,
-                       $src2_modifiers, $src2,
-                       DSTCLAMP.ENABLE,
-                       (REG_SEQUENCE VGPR_32, $elt0, lo16, (f16 (IMPLICIT_DEF)), hi16)))
+      (v2f16 (mixhi_inst $src0_modifiers, (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
+                         $src1_modifiers, (REG_SEQUENCE VGPR_32, $src1, lo16, (i16 (IMPLICIT_DEF)), hi16),
+                         $src2_modifiers, (REG_SEQUENCE VGPR_32, $src2, lo16, (i16 (IMPLICIT_DEF)), hi16),
+                         DSTCLAMP.ENABLE,
+                        (REG_SEQUENCE VGPR_32, $elt0, lo16, (f16 (IMPLICIT_DEF)), hi16)))
   >;
   } // end OtherPredicates
 }

@@ -3461,13 +3461,19 @@ class PackB32Pat<Instruction inst> : GCNPat <
                                            (f16 (VOP3Mods (f16 VGPR_32:$src1), i32:$src1_mods)))),
   (inst $src0_mods, VGPR_32:$src0, $src1_mods, VGPR_32:$src1)
 >;
+
+class PackB32Pat_t16<Instruction inst> : GCNPat <
+  (v2f16 (is_canonicalized_2<build_vector> (f16 (VOP3Mods (f16 VGPR_16:$src0), i32:$src0_mods)),
+                                           (f16 (VOP3Mods (f16 VGPR_16:$src1), i32:$src1_mods)))),
+  (inst $src0_mods, VGPR_16:$src0, $src1_mods, VGPR_16:$src1)
+>;
 }
 let SubtargetPredicate = isGFX9Plus in {
 let True16Predicate = NotHasTrue16BitInsts in
   def : PackB32Pat<V_PACK_B32_F16_e64>;
 
 let True16Predicate = UseRealTrue16Insts in
-  def : PackB32Pat<V_PACK_B32_F16_t16_e64>;
+  def : PackB32Pat_t16<V_PACK_B32_F16_t16_e64>;
 
 let True16Predicate = UseFakeTrue16Insts in
   def : PackB32Pat<V_PACK_B32_F16_fake16_e64>;
