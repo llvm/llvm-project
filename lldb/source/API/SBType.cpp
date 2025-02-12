@@ -687,6 +687,40 @@ lldb::TemplateArgumentKind SBType::GetTemplateArgumentKind(uint32_t idx) {
   return eTemplateArgumentKindNull;
 }
 
+lldb::SBValue SBType::GetTemplateArgumentValue(lldb::SBTarget target,
+                                               uint32_t idx) {
+  LLDB_INSTRUMENT_VA(this, target, idx);
+
+  if (!IsValid())
+    return SBValue();
+
+  std::optional<CompilerType::IntegralTemplateArgument> arg;
+  const bool expand_pack = true;
+  switch (GetTemplateArgumentKind(idx)) {
+  case eTemplateArgumentKindIntegral:
+    arg = m_opaque_sp->GetCompilerType(false).GetIntegralTemplateArgument(
+        idx, expand_pack);
+    break;
+  default:
+    break;
+  }
+
+  if (!arg)
+    return {};
+
+  Scalar value{arg->value};
+
+  if (!value.IsValid())
+    return {};
+
+  DataExtractor data;
+  value.GetData(data);
+
+  auto value_obj_sp = ValueObjectConstResult::Create(
+      target.GetSP().get(), arg->type, ConstString("value"), data);
+  return SBValue(std::move(value_obj_sp));
+}
+
 SBType SBType::FindDirectNestedType(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 
