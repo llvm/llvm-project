@@ -5038,7 +5038,7 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   return LoopBB;
 }
 
-static uint32_t getInitialValueForWaveReduction(unsigned Opc) {
+static uint32_t getIdentityValueForWaveReduction(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::S_MIN_U32:
     return std::numeric_limits<uint32_t>::max();
@@ -5056,7 +5056,7 @@ static uint32_t getInitialValueForWaveReduction(unsigned Opc) {
   case AMDGPU::S_AND_B32:
     return std::numeric_limits<uint32_t>::max();
   default:
-    llvm_unreachable("Unexpected opcode in getInitialValueForWaveReduction");
+    llvm_unreachable("Unexpected opcode in getIdentityValueForWaveReduction");
   }
 }
 
@@ -5184,7 +5184,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
 
     // Create initail values of induction variable from Exec, Accumulator and
     // insert branch instr to newly created ComputeBlock
-    uint32_t InitalValue = getInitialValueForWaveReduction(Opc);
+    uint32_t InitalValue = getIdentityValueForWaveReduction(Opc);
     auto TmpSReg =
         BuildMI(BB, I, DL, TII->get(MovOpc), LoopIterator).addReg(ExecReg);
     BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B32), InitalValReg)
