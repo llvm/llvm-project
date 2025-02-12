@@ -1,19 +1,21 @@
-; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s
+; RUN: not --crash llc %s --filetype=obj -o - 2>&1 | FileCheck %s
+; CHECK: error: More than one entry function defined
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
 
-define void @main() {
+define void @main() #0 {
 entry:
   ret void
 }
 
-define void @anotherMain() #0 {
+define void @anotherMain() #1 {
 entry:
   ret void
 }
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
+attributes #1 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 !dx.rootsignatures = !{!2, !5} ; list of function/root signature pairs
 !2 = !{ ptr @main, !3 } ; function, root signature
@@ -22,14 +24,3 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 !5 = !{ ptr @anotherMain, !6 } ; function, root signature
 !6 = !{ !7 } ; list of root signature elements
 !7 = !{ !"RootFlags", i32 2 } ; 1 = allow_input_assembler_input_layout
-
-
-; CHECK:  - Name:            RTS0
-; CHECK-NEXT:    Size:            24
-; CHECK-NEXT:    RootSignature:
-; CHECK-NEXT:      Version:         2
-; CHECK-NEXT:      NumParameters:   0
-; CHECK-NEXT:      RootParametersOffset: 0
-; CHECK-NEXT:      NumStaticSamplers: 0
-; CHECK-NEXT:      StaticSamplersOffset: 0
-; CHECK-NEXT:      DenyVertexShaderRootAccess: true

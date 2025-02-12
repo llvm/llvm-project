@@ -20,6 +20,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -63,9 +64,6 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
 
   case RootSignatureElementKind::RootFlags:
     return parseRootFlags(Ctx, MRS, Element);
-  default:
-    return reportError(Ctx,
-                       "Invalid Root Element: " + ElementText->getString());
   }
 
   return true;
@@ -95,8 +93,14 @@ static bool parse(LLVMContext *Ctx, ModuleRootSignature *MRS, NamedMDNode *Root,
       continue;
     }
 
+    const MDOperand &FunctionPointerMdNode = Node->getOperand(0);
+    if (FunctionPointerMdNode == nullptr) {
+      // Function was pruned during compilation.
+      continue;
+    }
+
     ValueAsMetadata *VAM =
-        llvm::dyn_cast<ValueAsMetadata>(Node->getOperand(0).get());
+        llvm::dyn_cast<ValueAsMetadata>(FunctionPointerMdNode.get());
     if (VAM == nullptr) {
       HasError =
           reportError(Ctx, "First element of root signature is not a value");
@@ -140,24 +144,26 @@ static bool validate(LLVMContext *Ctx, ModuleRootSignature *MRS) {
   return false;
 }
 
+static const Function *getEntryFunction(Module &M, ModuleMetadataInfo MMI) {
+
+  LLVMContext *Ctx = &M.getContext();
+  if (MMI.EntryPropertyVec.size() != 1) {
+    reportError(Ctx, "More than one entry function defined.");
+    return nullptr;
+  }
+  return MMI.EntryPropertyVec[0].Entry;
+}
+
 std::optional<ModuleRootSignature>
-ModuleRootSignature::analyzeModule(Module &M, ModuleMetadataInfo MMI) {
-  if (MMI.ShaderProfile == Triple::Library)
-    return std::nullopt;
+ModuleRootSignature::analyzeModule(Module &M, const Function *F) {
 
   LLVMContext *Ctx = &M.getContext();
 
-  if (MMI.EntryPropertyVec.size() != 1) {
-    reportError(Ctx, "More than one entry function defined.");
-    return std::nullopt;
-  }
-
   ModuleRootSignature MRS;
-  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
 
   NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
-  if (RootSignatureNode == nullptr ||
-      parse(Ctx, &MRS, RootSignatureNode, EntryFunction) || validate(Ctx, &MRS))
+  if (RootSignatureNode == nullptr || parse(Ctx, &MRS, RootSignatureNode, F) ||
+      validate(Ctx, &MRS))
     return std::nullopt;
 
   return MRS;
@@ -168,15 +174,18 @@ AnalysisKey RootSignatureAnalysis::Key;
 std::optional<ModuleRootSignature>
 RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   ModuleMetadataInfo MMI = AM.getResult<DXILMetadataAnalysis>(M);
-  return ModuleRootSignature::analyzeModule(M, MMI);
+  if (MMI.ShaderProfile == Triple::Library)
+    return std::nullopt;
+  return ModuleRootSignature::analyzeModule(M, getEntryFunction(M, MMI));
 }
 
 //===----------------------------------------------------------------------===//
 bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
-
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
-  MRS = ModuleRootSignature::analyzeModule(M, MMI);
+  if (MMI.ShaderProfile == Triple::Library)
+    return false;
+  MRS = ModuleRootSignature::analyzeModule(M, getEntryFunction(M, MMI));
   return false;
 }
 
