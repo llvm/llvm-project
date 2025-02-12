@@ -990,6 +990,17 @@ public:
       return LT.first * 2 * OpCost;
     }
 
+    // For a UDIV/UREM, if the operand is a power of 2 we can use the shift or
+    // and cost.
+    if (ISD == ISD::UDIV && Opd2Info.isPowerOf2())
+      return thisT()->getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
+                                             Opd1Info.getNoProps(),
+                                             Opd2Info.getNoProps());
+    if (ISD == ISD::UREM && Opd2Info.isPowerOf2())
+      return thisT()->getArithmeticInstrCost(Instruction::And, Ty, CostKind,
+                                             Opd1Info.getNoProps(),
+                                             Opd2Info.getNoProps());
+
     // An 'Expand' of URem and SRem is special because it may default
     // to expanding the operation into a sequence of sub-operations
     // i.e. X % Y -> X-(X/Y)*Y.
