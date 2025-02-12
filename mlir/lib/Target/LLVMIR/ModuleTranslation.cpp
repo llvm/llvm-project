@@ -38,6 +38,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -1171,7 +1172,9 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   // Convert global variable bodies.
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     if (Block *initializer = op.getInitializerBlock()) {
-      llvm::IRBuilder<> builder(llvmModule->getContext());
+      llvm::IRBuilder<llvm::TargetFolder> builder(
+          llvmModule->getContext(),
+          llvm::TargetFolder(llvmModule->getDataLayout()));
 
       [[maybe_unused]] int numConstantsHit = 0;
       [[maybe_unused]] int numConstantsErased = 0;
@@ -1282,7 +1285,9 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   // Convert global alias bodies.
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>()) {
     Block &initializer = op.getInitializerBlock();
-    llvm::IRBuilder<> builder(llvmModule->getContext());
+    llvm::IRBuilder<llvm::TargetFolder> builder(
+        llvmModule->getContext(),
+        llvm::TargetFolder(llvmModule->getDataLayout()));
 
     for (mlir::Operation &op : initializer.without_terminator()) {
       if (failed(convertOperation(op, builder)))
