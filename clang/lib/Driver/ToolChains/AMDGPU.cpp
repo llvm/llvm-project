@@ -950,13 +950,7 @@ void ROCMToolChain::addClangTargetOptions(
                                                 ABIVer))
     return;
 
-  std::tuple<bool, const SanitizerArgs> GPUSan(
-      DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                         options::OPT_fno_gpu_sanitize, true),
-      getSanitizerArgs(DriverArgs));
-
   bool Wave64 = isWave64(DriverArgs, Kind);
-
   // TODO: There are way too many flags that change this. Do we need to check
   // them all?
   bool DAZ = DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) ||
@@ -968,6 +962,12 @@ void ROCMToolChain::addClangTargetOptions(
   bool FastRelaxedMath = DriverArgs.hasArg(options::OPT_cl_fast_relaxed_math);
   bool CorrectSqrt =
       DriverArgs.hasArg(options::OPT_cl_fp32_correctly_rounded_divide_sqrt);
+
+  // GPU Sanitizer currently only supports ASan and is enabled through host
+  // ASan.
+  bool GPUSan = DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                                   options::OPT_fno_gpu_sanitize, true) &&
+                getSanitizerArgs(DriverArgs).needsAsanRt();
 
   // Add the OpenCL specific bitcode library.
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
@@ -1009,15 +1009,9 @@ llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 RocmInstallationDetector::getCommonBitcodeLibs(
     const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile, bool Wave64,
     bool DAZ, bool FiniteOnly, bool UnsafeMathOpt, bool FastRelaxedMath,
-    bool CorrectSqrt, DeviceLibABIVersion ABIVer,
-    const std::tuple<bool, const SanitizerArgs> &GPUSan,
-    bool isOpenMP = false) const {
+    bool CorrectSqrt, DeviceLibABIVersion ABIVer, bool GPUSan,
+    bool isOpenMP) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
-
-  // GPU Sanitizer currently only supports ASan and is enabled through host
-  // ASan.
-  bool GPUSanEnabled = std::get<bool>(GPUSan) &&
-                       std::get<const SanitizerArgs>(GPUSan).needsAsanRt();
 
   auto AddBCLib = [&](ToolChain::BitCodeLibraryInfo BCLib,
                       bool Internalize = true) {
@@ -1025,7 +1019,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     BCLibs.emplace_back(BCLib);
   };
   auto AddSanBCLibs = [&]() {
-    if (GPUSanEnabled)
+    if (GPUSan)
       AddBCLib(getAsanRTLPath(), false);
   };
 
@@ -1033,7 +1027,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   AddBCLib(getOCMLPath());
   if (!isOpenMP)
     AddBCLib(getOCKLPath());
-  else if (GPUSanEnabled && isOpenMP)
+  else if (GPUSan && isOpenMP)
     AddBCLib(getOCKLPath(), false);
   AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
@@ -1065,10 +1059,6 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
   // If --hip-device-lib is not set, add the default bitcode libraries.
   // TODO: There are way too many flags that change this. Do we need to check
   // them all?
-  std::tuple<bool, const SanitizerArgs> GPUSan(
-      DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                         options::OPT_fno_gpu_sanitize, true),
-      getSanitizerArgs(DriverArgs));
   bool DAZ = DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
                                 options::OPT_fno_gpu_flush_denormals_to_zero,
                                 getDefaultDenormsAreZeroForTarget(Kind));
@@ -1083,6 +1073,12 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
       options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
       options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, true);
   bool Wave64 = isWave64(DriverArgs, Kind);
+
+  // GPU Sanitizer currently only supports ASan and is enabled through host
+  // ASan.
+  bool GPUSan = DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                                   options::OPT_fno_gpu_sanitize, true) &&
+                getSanitizerArgs(DriverArgs).needsAsanRt();
 
   return RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
