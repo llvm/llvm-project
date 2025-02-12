@@ -61,9 +61,15 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
 /// applicable to LLDB.
 class TelemetryManager : public llvm::telemetry::Manager {
 public:
+  llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
+
+  static TelemetryManager *getInstance();
+
+protected:
   TelemetryManager(std::unique_ptr<llvm::telemetry::Config> config);
 
-  llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
+  static std::unique_ptr<TelemetryManager> g_instance;
+  static void SetInstance(std::unique_ptr<TelemetryManager> manger);
 
 private:
   std::unique_ptr<llvm::telemetry::Config> m_config;

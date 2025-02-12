@@ -11,12 +11,6 @@
 
 #include <memory>
 
-#include "llvm/Config/llvm-config.h"
-#ifdef LLVM_BUILD_TELEMETRY
-#include "llvm/Telemetry/Telemetry.h"
-#include "lldb/Core/Telemetry.h"
-#endif
-
 // lldb forward declarations
 namespace lldb_private {
 
@@ -243,11 +237,6 @@ class Progress;
 class Target;
 class TargetList;
 class TargetProperties;
-#ifdef LLVM_BUILD_TELEMETRY
-typedef std::unique_ptr<llvm::telemetry::Config> TelemetryConfigUP;
-typedef std::unique_ptr<lldb_private::telemetry::TelemetryManager>
-    TelemetryManagerUP;
-#endif // LLVM_BUILD_TELEMETRY
 class Thread;
 class ThreadCollection;
 class ThreadList;
