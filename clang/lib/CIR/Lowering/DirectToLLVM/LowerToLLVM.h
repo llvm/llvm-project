@@ -16,6 +16,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 namespace cir {
 namespace direct {
@@ -819,6 +820,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::AtomicFetch op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMAtomicFenceLowering
+    : public mlir::OpConversionPattern<cir::AtomicFence> {
+public:
+  using mlir::OpConversionPattern<cir::AtomicFence>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::AtomicFence op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

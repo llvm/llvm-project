@@ -16,7 +16,11 @@
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "CIRGenValue.h"
 #include "TargetInfo.h"
+#include "clang/AST/Expr.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/MissingFeatures.h"
 
 // TODO(cir): we shouldn't need this but we currently reuse intrinsic IDs for
@@ -30,7 +34,9 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Support/LLVM.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -331,6 +337,30 @@ static mlir::Value MakeAtomicCmpXchgValue(CIRGenFunction &cgf,
       builder.getI64IntegerAttr(destAddr.getAlignment().getAsAlign().value()));
 
   return returnBool ? op.getResult(1) : op.getResult(0);
+}
+
+static mlir::Value makeAtomicFenceValue(CIRGenFunction &cgf,
+                                        const CallExpr *expr,
+                                        cir::MemScopeKind syncScope) {
+  auto &builder = cgf.getBuilder();
+  mlir::Value orderingVal = cgf.emitScalarExpr(expr->getArg(0));
+
+  auto constOrdering =
+      mlir::dyn_cast<cir::ConstantOp>(orderingVal.getDefiningOp());
+  if (!constOrdering)
+    llvm_unreachable("NYI: variable ordering not supported");
+
+  auto constOrderingAttr =
+      mlir::dyn_cast<cir::IntAttr>(constOrdering.getValue());
+  if (constOrderingAttr) {
+    cir::MemOrder ordering =
+        static_cast<cir::MemOrder>(constOrderingAttr.getUInt());
+
+    builder.create<cir::AtomicFence>(cgf.getLoc(expr->getSourceRange()),
+                                     syncScope, ordering);
+  }
+
+  return mlir::Value();
 }
 
 static bool
@@ -1863,10 +1893,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm_unreachable("BI__atomic_clear NYI");
 
   case Builtin::BI__atomic_thread_fence:
+    return RValue::get(
+        makeAtomicFenceValue(*this, E, cir::MemScopeKind::MemScope_System));
   case Builtin::BI__atomic_signal_fence:
+    return RValue::get(makeAtomicFenceValue(
+        *this, E, cir::MemScopeKind::MemScope_SingleThread));
   case Builtin::BI__c11_atomic_thread_fence:
   case Builtin::BI__c11_atomic_signal_fence:
-    llvm_unreachable("BI__atomic_thread_fence like NYI");
+    llvm_unreachable("BI__c11_atomic_thread_fence like NYI");
 
   case Builtin::BI__builtin_signbit:
   case Builtin::BI__builtin_signbitf:

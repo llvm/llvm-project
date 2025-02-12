@@ -5411,6 +5411,49 @@ def AtomicCmpXchg : CIR_Op<"atomic.cmp_xchg",
   let hasVerifier = 0;
 }
 
+def MemScope_SingleThread : I32EnumAttrCase<"MemScope_SingleThread",
+                                            0, "single_thread">;
+def MemScope_System       : I32EnumAttrCase<"MemScope_System",
+                                            1, "system">;
+
+def MemScopeKind : I32EnumAttr<
+    "MemScopeKind",
+    "Memory Scope Enumeration",
+    [MemScope_SingleThread, MemScope_System]> {
+  let cppNamespace = "::cir";
+}
+
+def AtomicFence : CIR_Op<"atomic.fence"> {
+  let summary = "Atomic thread fence";
+  let description = [{
+    C/C++ Atomic thread fence synchronization primitive. Implements the builtin
+    `__atomic_thread_fence` which enforces memory ordering constraints across
+    threads within the specified synchronization scope.
+
+    This handles all variations including:
+      - `__atomic_thread_fence`
+      - `__atomic_signal_fence`
+      - `__c11_atomic_thread_fence`
+      - `__c11_atomic_signal_fence`
+
+    Example:
+    ```mlir
+      cir.atomic.fence system seq_cst
+      cir.atomic.fence single_thread seq_cst
+    ```
+
+  }];
+  let results = (outs);
+  let arguments = (ins Arg<MemScopeKind, "sync scope">:$sync_scope,
+                       Arg<MemOrder, "memory order">:$ordering);
+
+  let assemblyFormat = [{
+    $sync_scope $ordering attr-dict
+  }];
+
+  let hasVerifier = 0;
+}
+
 def SignBitOp : CIR_Op<"signbit", [Pure]> {
   let summary = "Checks the sign of a floating-point number";
   let description = [{
