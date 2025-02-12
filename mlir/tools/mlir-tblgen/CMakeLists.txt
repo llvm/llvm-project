@@ -31,6 +31,7 @@ add_tablegen(mlir-tblgen MLIR
   PassDocGen.cpp
   PassGen.cpp
   RewriterGen.cpp
+  SharedCL.cpp
   SPIRVUtilsGen.cpp
   )
 
