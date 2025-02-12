@@ -1056,6 +1056,10 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_BFloat16:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)           \
+  case TST_##Name:
+#define SVE_TYPE(Name, Id, SingletonId)
+#include "clang/Basic/AArch64SVEACLETypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case TST_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
   case TST_unknown_anytype:

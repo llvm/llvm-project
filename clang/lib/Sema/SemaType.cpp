@@ -1365,6 +1365,13 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
 #include "clang/Basic/OpenCLImageTypes.def"
 
+#define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)           \
+  case DeclSpec::TST_##Name:                                                   \
+    Result = Context.getVectorType(Context.BaseType, NumEls, VectorKind);      \
+    break;
+#define SVE_TYPE(Name, Id, SingletonId)
+#include "clang/Basic/AArch64SVEACLETypes.def"
+
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   case DeclSpec::TST_##Name:                                                   \
     Result = Context.SingletonId;                                              \
