@@ -71,7 +71,7 @@ bool RootSignatureLexer::LexToken(RootSignatureToken &Result) {
 
   // All following tokens require at least one additional character
   if (Buffer.size() <= 1) {
-    Result = RootSignatureToken(SourceLoc);
+    Result = RootSignatureToken(TokenKind::invalid, SourceLoc);
     return false;
   }
 
@@ -134,6 +134,9 @@ bool RootSignatureLexer::LexToken(RootSignatureToken &Result) {
 bool RootSignatureLexer::ConsumeToken() {
   // If we previously peeked then just copy the value over
   if (NextToken && NextToken->Kind != TokenKind::end_of_stream) {
+    // Propogate error up if error was encountered during previous peek
+    if (NextToken->Kind == TokenKind::error)
+      return true;
     CurToken = *NextToken;
     NextToken = std::nullopt;
     return false;
@@ -156,8 +159,11 @@ std::optional<RootSignatureToken> RootSignatureLexer::PeekNextToken() {
   RootSignatureToken Result;
   if (EndOfBuffer()) {
     Result = RootSignatureToken(TokenKind::end_of_stream, SourceLoc);
-  } else if (LexToken(Result))
-    return std::nullopt; // propogate lex error up
+  } else if (LexToken(Result)) { // propogate lex error up
+    // store error token to prevent further peeking
+    NextToken = RootSignatureToken();
+    return std::nullopt;
+  }
   NextToken = Result;
   return Result;
 }

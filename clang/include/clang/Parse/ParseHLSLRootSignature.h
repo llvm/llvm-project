@@ -31,7 +31,7 @@ struct RootSignatureToken {
 #include "clang/Parse/HLSLRootSignatureTokenKinds.def"
   };
 
-  Kind Kind = Kind::invalid;
+  Kind Kind = Kind::error;
 
   // Retain the SouceLocation of the token for diagnostics
   clang::SourceLocation TokLoc;
