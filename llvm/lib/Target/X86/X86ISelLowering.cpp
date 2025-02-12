@@ -41579,8 +41579,7 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
   EVT ShuffleVT = N.getValueType();
   unsigned Opc = N.getOpcode();
 
-  auto IsMergeableWithShuffle = [Opc, &DAG](SDValue Op, bool FoldShuf = true,
-                                            bool FoldLoad = false) {
+  auto IsMergeableWithShuffle = [Opc, &DAG](SDValue Op, bool FoldShuf = true) {
     // AllZeros/AllOnes constants are freely shuffled and will peek through
     // bitcasts. Other constant build vectors do not peek through bitcasts. Only
     // merge with target shuffles if it has one use so shuffle combining is
@@ -41593,7 +41592,6 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
            (Op.getOpcode() == Opc && Op->hasOneUse()) ||
            (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op->hasOneUse()) ||
            (FoldShuf && isTargetShuffle(Op.getOpcode()) && Op->hasOneUse()) ||
-           (FoldLoad && isShuffleFoldableLoad(Op)) ||
            DAG.isSplatValue(Op, /*AllowUndefs*/ false);
   };
   auto IsSafeToMoveShuffle = [ShuffleVT](SDValue Op, unsigned BinOp) {
@@ -41629,9 +41627,8 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
         SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
         SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
         bool FoldShuf = Opc != X86ISD::VPERMI;
-        bool FoldLoad = Opc != X86ISD::PSHUFB;
-        if (IsMergeableWithShuffle(Op00, FoldShuf, FoldLoad) ||
-            IsMergeableWithShuffle(Op01, FoldShuf, FoldLoad)) {
+        if (IsMergeableWithShuffle(Op00, FoldShuf) ||
+            IsMergeableWithShuffle(Op01, FoldShuf)) {
           SDValue LHS, RHS;
           Op00 = DAG.getBitcast(ShuffleVT, Op00);
           Op01 = DAG.getBitcast(ShuffleVT, Op01);
