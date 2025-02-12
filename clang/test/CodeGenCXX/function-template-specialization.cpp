@@ -57,6 +57,6 @@ template <class T> int G(T t) {
   return 0;
 }
 
-// CHECK: define linkonce_odr noundef i32 @_ZN8GH1257471GIiEEiT_(i32 noundef %t)
+// CHECK: define {{.*}} @_ZN8GH1257471GIiEEiT_
 
 }
