@@ -33,17 +33,12 @@ Marking Functions as Kernels
 
 In PTX, there are two types of functions: *device functions*, which are only
 callable by device code, and *kernel functions*, which are callable by host
-code. By default, the back-end will emit device functions. Metadata is used to
-declare a function as a kernel function. This metadata is attached to the
-``nvvm.annotations`` named metadata object, and has the following format:
+code. By default, the back-end will emit device functions. The ``ptx_kernel``
+calling convention is used to declare a function as a kernel function.
 
-.. code-block:: text
-
-   !0 = !{<function-ref>, metadata !"kernel", i32 1}
-
-The first parameter is a reference to the kernel function. The following
-example shows a kernel function calling a device function in LLVM IR. The
-function ``@my_kernel`` is callable from host code, but ``@my_fmad`` is not.
+The following example shows a kernel function calling a device function in LLVM
+IR. The function ``@my_kernel`` is callable from host code, but ``@my_fmad`` is
+not.
 
 .. code-block:: llvm
 
@@ -53,17 +48,31 @@ function ``@my_kernel`` is callable from host code, but ``@my_fmad`` is not.
       ret float %add
     }
 
-    define void @my_kernel(ptr %ptr) {
+    define ptx_kernel void @my_kernel(ptr %ptr) {
       %val = load float, ptr %ptr
       %ret = call float @my_fmad(float %val, float %val, float %val)
       store float %ret, ptr %ptr
       ret void
     }
 
-    !nvvm.annotations = !{!1}
-    !1 = !{ptr @my_kernel, !"kernel", i32 1}
-
 When compiled, the PTX kernel functions are callable by host-side code.
+
+.. _nvptx_fnattrs:
+
+Function Attributes
+-------------------
+
+``"nvvm.maxclusterrank"="<n>"``
+    This attribute specifies the maximum number of blocks per cluster. Must be 
+    non-zero. Only supported for Hopper+.
+
+``"nvvm.minctasm"="<n>"``
+    This indicates a hint/directive to the compiler/driver, asking it to put at
+    least these many CTAs on an SM.
+
+``"nvvm.maxnreg"="<n>"``
+    This attribute indicates the maximum number of registers to be used for the
+    kernel function.
 
 
 .. _address_spaces:

@@ -564,8 +564,7 @@ section_iterator GOFFObjectFile::section_end() const {
 
 void GOFFObjectFile::moveSymbolNext(DataRefImpl &Symb) const {
   for (uint32_t I = Symb.d.a + 1, E = EsdPtrs.size(); I < E; ++I) {
-    if (EsdPtrs[I]) {
-      const uint8_t *EsdRecord = EsdPtrs[I];
+    if (const uint8_t *EsdRecord = EsdPtrs[I]) {
       GOFF::ESDSymbolType SymbolType;
       ESDRecord::getSymbolType(EsdRecord, SymbolType);
       // Skip EDs - i.e. section symbols.
