@@ -2929,7 +2929,7 @@ the behavior is undefined, unless one of the following exceptions applies:
   must be a null pointer, otherwise the behavior is undefined.
 
 * ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
-    dereferenceable at the point of the assumption and may not be
+    dereferenceable at the point of the assumption. The pointer may not be
     dereferenceable at later pointers, e.g. because it could have been
     freed.
 
