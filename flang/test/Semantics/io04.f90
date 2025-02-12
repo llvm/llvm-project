@@ -3,6 +3,7 @@
   character(kind=1,len=100) msg
   character(20) sign
   character, parameter :: const_internal_file*(*) = "(I6)"
+  character(kind=1,len=50) internal_fileA(20)
   integer*1 stat1, id1
   integer*2 stat2
   integer*4 stat4
@@ -149,7 +150,7 @@
   !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type REAL(4)
   write(1.0, *)
   write(internal_fileA, *)
-  !! Not sure why this isn't an error with this message: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
   write((internal_fileA), *)
   !ERROR: I/O unit number must be scalar
   write([1,2,3], *)
