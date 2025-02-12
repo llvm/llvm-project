@@ -262,7 +262,6 @@ bool CodeGenAction::beginSourceFileAction() {
 
   // Load the MLIR dialects required by Flang
   mlirCtx = std::make_unique<mlir::MLIRContext>();
-  fir::support::loadNonCodegenDialects(*mlirCtx);
   fir::support::loadDialects(*mlirCtx);
   fir::support::registerLLVMTranslation(*mlirCtx);
   mlir::DialectRegistry registry;
