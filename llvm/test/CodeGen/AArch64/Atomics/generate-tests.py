@@ -14,20 +14,31 @@ TRIPLES = [
 ]
 
 
-# Type name size
-class Type(enum.Enum):
-    # Value is the size in bytes
-    i8 = 1
-    i16 = 2
-    i32 = 4
-    i64 = 8
-    i128 = 16
+class ByteSizes:
+    def __init__(self, pairs):
+        if not isinstance(pairs, list):
+            raise ValueError("Must init with a list of key-value pairs")
 
-    def align(self, aligned: bool) -> int:
-        return self.value if aligned else 1
+        self._data = pairs[:]
 
-    def __str__(self) -> str:
-        return self.name
+    def __iter__(self):
+        return iter(self._data)
+
+
+# fmt: off
+Type = ByteSizes([
+   ("i8",   1),
+   ("i16",  2),
+   ("i32",  4),
+   ("i64",  8),
+   ("i128", 16)])
+
+FPType = ByteSizes([
+   ("half",   2),
+   ("bfloat", 2),
+   ("float",  4),
+   ("double", 8)])
+# fmt: on
 
 
 # Is this an aligned or unaligned access?
@@ -161,11 +172,32 @@ ATOMICRMW_OPS = [
     "umin",
 ]
 
+FP_ATOMICRMW_OPS = [
+    "fadd",
+    "fsub",
+    "fmax",
+    "fmin",
+]
 
-def all_atomicrmw(f):
-    for op in ATOMICRMW_OPS:
+
+def relpath():
+    # __file__ changed to return absolute path in Python 3.9. Print only
+    # up to llvm-project (6 levels higher), to avoid unnecessary diffs and
+    # revealing directory structure of people running this script
+    top = "../" * 6
+    fp = os.path.relpath(__file__, os.path.abspath(os.path.join(__file__, top)))
+    return fp
+
+
+def align(val, aligned: bool) -> int:
+    return val if aligned else 1
+
+
+def all_atomicrmw(f, datatype, atomicrmw_ops):
+    for op in atomicrmw_ops:
         for aligned in Aligned:
-            for ty in Type:
+            for ty, val in datatype:
+                alignval = align(val, aligned)
                 for ordering in ATOMICRMW_ORDERS:
                     name = f"atomicrmw_{op}_{ty}_{aligned}_{ordering}"
                     instr = "atomicrmw"
@@ -173,7 +205,7 @@ def all_atomicrmw(f):
                         textwrap.dedent(
                             f"""
                         define dso_local {ty} @{name}(ptr %ptr, {ty} %value) {{
-                            %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {ty.align(aligned)}
+                            %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {alignval}
                             ret {ty} %r
                         }}
                     """
@@ -183,7 +215,8 @@ def all_atomicrmw(f):
 
 def all_load(f):
     for aligned in Aligned:
-        for ty in Type:
+        for ty, val in Type:
+            alignval = align(val, aligned)
             for ordering in ATOMIC_LOAD_ORDERS:
                 for const in [False, True]:
                     name = f"load_atomic_{ty}_{aligned}_{ordering}"
@@ -195,7 +228,7 @@ def all_load(f):
                         textwrap.dedent(
                             f"""
                         define dso_local {ty} @{name}({arg}) {{
-                            %r = {instr} {ty}, ptr %ptr {ordering}, align {ty.align(aligned)}
+                            %r = {instr} {ty}, ptr %ptr {ordering}, align {alignval}
                             ret {ty} %r
                         }}
                     """
@@ -205,7 +238,8 @@ def all_load(f):
 
 def all_store(f):
     for aligned in Aligned:
-        for ty in Type:
+        for ty, val in Type:
+            alignval = align(val, aligned)
             for ordering in ATOMIC_STORE_ORDERS:  # FIXME stores
                 name = f"store_atomic_{ty}_{aligned}_{ordering}"
                 instr = "store atomic"
@@ -213,7 +247,7 @@ def all_store(f):
                     textwrap.dedent(
                         f"""
                     define dso_local void @{name}({ty} %value, ptr %ptr) {{
-                        {instr} {ty} %value, ptr %ptr {ordering}, align {ty.align(aligned)}
+                        {instr} {ty} %value, ptr %ptr {ordering}, align {alignval}
                         ret void
                     }}
                 """
@@ -223,7 +257,8 @@ def all_store(f):
 
 def all_cmpxchg(f):
     for aligned in Aligned:
-        for ty in Type:
+        for ty, val in Type:
+            alignval = align(val, aligned)
             for success_ordering in CMPXCHG_SUCCESS_ORDERS:
                 for failure_ordering in CMPXCHG_FAILURE_ORDERS:
                     for weak in [False, True]:
@@ -236,7 +271,7 @@ def all_cmpxchg(f):
                             textwrap.dedent(
                                 f"""
                             define dso_local {ty} @{name}({ty} %expected, {ty} %new, ptr %ptr) {{
-                                %pair = {instr} ptr %ptr, {ty} %expected, {ty} %new {success_ordering} {failure_ordering}, align {ty.align(aligned)}
+                                %pair = {instr} ptr %ptr, {ty} %expected, {ty} %new {success_ordering} {failure_ordering}, align {alignval}
                                 %r = extractvalue {{ {ty}, i1 }} %pair, 0
                                 ret {ty} %r
                             }}
@@ -305,7 +340,11 @@ def write_lit_tests(feature, datatypes, ops):
             with open(f"{triple}-atomicrmw-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld[^r]|st[^r]|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'
                 header(f, triple, [feat], filter_args)
-                all_atomicrmw(f)
+                all_atomicrmw(f, datatypes, ops)
+
+            # Floating point atomics only supported for atomicrmw currently
+            if feature.test_scope() == "atomicrmw":
+                continue
 
             with open(f"{triple}-cmpxchg-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld[^r]|st[^r]|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'
