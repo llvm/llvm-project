@@ -267,8 +267,7 @@ void Flang::AddRISCVTargetArgs(const ArgList &Args,
   if (ABIName == "lp64" || ABIName == "lp64f" || ABIName == "lp64d")
     CmdArgs.push_back(Args.MakeArgString("-mabi=" + ABIName));
   else
-    D.Diag(diag::err_drv_unsupported_option_argument)
-        << "-mabi=" << ABIName;
+    D.Diag(diag::err_drv_unsupported_option_argument) << "-mabi=" << ABIName;
 
   // Handle -mrvv-vector-bits=<bits>
   if (Arg *A = Args.getLastArg(options::OPT_mrvv_vector_bits_EQ)) {
