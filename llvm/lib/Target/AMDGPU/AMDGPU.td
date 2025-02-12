@@ -372,10 +372,10 @@ def FeatureGFX90AInsts : SubtargetFeature<"gfx90a-insts",
   // [HasAtomicFMinFMaxF64GlobalInsts, HasAtomicFMinFMaxF64FlatInsts] // TODO
 >;
 
-def FeatureGFX942Insts : SubtargetFeature<"gfx942-insts",
-  "GFX942Insts",
+def FeatureGFX940Insts : SubtargetFeature<"gfx940-insts",
+  "GFX940Insts",
   "true",
-  "Additional instructions for GFX942+"
+  "Additional instructions for GFX940+"
 >;
 
 def FeaturePermlane16Swap : SubtargetFeature<"permlane16-swap",
@@ -1040,6 +1040,12 @@ def FeatureVALUTransUseHazard : SubtargetFeature<"valu-trans-use-hazard",
   "Hazard when TRANS instructions are closely followed by a use of the result"
 >;
 
+def FeatureForceStoreSC0SC1 : SubtargetFeature<"force-store-sc0-sc1",
+  "HasForceStoreSC0SC1",
+  "true",
+  "Has SC0 and SC1 on stores"
+>;
+
 def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
   "HasSALUFloatInsts",
   "true",
@@ -1558,7 +1564,7 @@ def FeatureISAVersion9_0_C : FeatureSet<
 def FeatureISAVersion9_4_Common : FeatureSet<
   [FeatureGFX9,
    FeatureGFX90AInsts,
-   FeatureGFX942Insts,
+   FeatureGFX940Insts,
    FeatureFmaMixInsts,
    FeatureLDSBankCount32,
    FeatureDLInsts,
@@ -2047,20 +2053,20 @@ def isGFX8GFX9NotGFX90A :
   AssemblerPredicate<(all_of FeatureGFX8Insts, FeatureGCN3Encoding, (not FeatureGFX90AInsts))>;
 
 def isGFX90AOnly :
-  Predicate<"Subtarget->hasGFX90AInsts() && !Subtarget->hasGFX942Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX90AInsts, (not FeatureGFX942Insts))>;
+  Predicate<"Subtarget->hasGFX90AInsts() && !Subtarget->hasGFX940Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX90AInsts, (not FeatureGFX940Insts))>;
 
 def isGFX908orGFX90A :
-  Predicate<"Subtarget->hasMAIInsts() && !Subtarget->hasGFX942Insts()">,
-  AssemblerPredicate<(all_of FeatureMAIInsts, (not FeatureGFX942Insts))>;
+  Predicate<"Subtarget->hasMAIInsts() && !Subtarget->hasGFX940Insts()">,
+  AssemblerPredicate<(all_of FeatureMAIInsts, (not FeatureGFX940Insts))>;
 
-def isGFX942Plus :
-  Predicate<"Subtarget->hasGFX942Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX942Insts)>;
+def isGFX940Plus :
+  Predicate<"Subtarget->hasGFX940Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX940Insts)>;
 
-def isNotGFX942Plus :
-  Predicate<"!Subtarget->hasGFX942Insts()">,
-  AssemblerPredicate<(all_of (not FeatureGFX942Insts))>;
+def isNotGFX940Plus :
+  Predicate<"!Subtarget->hasGFX940Insts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX940Insts))>;
 
 def HasGFX950Insts :
   Predicate<"Subtarget->hasGFX950Insts()">,
@@ -2074,11 +2080,11 @@ def HasPermlane32Swap :
   Predicate<"Subtarget->hasPermlane32Swap()">,
   AssemblerPredicate<(all_of FeaturePermlane32Swap)>;
 
-def isGFX8GFX9NotGFX942 :
-  Predicate<"!Subtarget->hasGFX942Insts() &&"
+def isGFX8GFX9NotGFX940 :
+  Predicate<"!Subtarget->hasGFX940Insts() &&"
             "(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
             " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9)">,
-  AssemblerPredicate<(all_of FeatureGFX8Insts, FeatureGCN3Encoding, (not FeatureGFX942Insts))>;
+  AssemblerPredicate<(all_of FeatureGFX8Insts, FeatureGCN3Encoding, (not FeatureGFX940Insts))>;
 
 def isGFX8GFX9 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
@@ -2185,9 +2191,9 @@ def HasD16LoadStore : Predicate<"Subtarget->hasD16LoadStore()">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
 def HasFlatScratchSTMode : Predicate<"Subtarget->hasFlatScratchSTMode()">,
-  AssemblerPredicate<(any_of FeatureGFX10_3Insts, FeatureGFX942Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX10_3Insts, FeatureGFX940Insts)>;
 def HasFlatScratchSVSMode : Predicate<"Subtarget->hasFlatScratchSVSMode()">,
-  AssemblerPredicate<(any_of FeatureGFX942Insts, FeatureGFX11Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX11Insts)>;
 
 def HasGFX10_AEncoding : Predicate<"Subtarget->hasGFX10_AEncoding()">,
   AssemblerPredicate<(all_of FeatureGFX10_AEncoding)>;
@@ -2295,7 +2301,7 @@ def HasPkMovB32 : Predicate<"Subtarget->hasPkMovB32()">,
 
 def HasFmaakFmamkF32Insts :
   Predicate<"Subtarget->hasFmaakFmamkF32Insts()">,
-  AssemblerPredicate<(any_of FeatureGFX10Insts, FeatureGFX942Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX10Insts, FeatureGFX940Insts)>;
 
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;

@@ -28,7 +28,7 @@ def SIEncodingFamily {
   int GFX10 = 6;
   int SDWA10 = 7;
   int GFX90A = 8;
-  int GFX942 = 9;
+  int GFX940 = 9;
   int GFX11 = 10;
   int GFX12 = 11;
 }
@@ -3113,7 +3113,7 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX10)],
                    [!cast<string>(SIEncodingFamily.SDWA10)],
                    [!cast<string>(SIEncodingFamily.GFX90A)],
-                   [!cast<string>(SIEncodingFamily.GFX942)],
+                   [!cast<string>(SIEncodingFamily.GFX940)],
                    [!cast<string>(SIEncodingFamily.GFX11)],
                    [!cast<string>(SIEncodingFamily.GFX12)]];
 }

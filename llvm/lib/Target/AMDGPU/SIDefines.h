@@ -42,7 +42,7 @@ enum {
   GFX10 = 6,
   SDWA10 = 7,
   GFX90A = 8,
-  GFX942 = 9,
+  GFX940 = 9,
   GFX11 = 10,
   GFX12 = 11,
 };
@@ -542,7 +542,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_EXCP_FLAG_USER = 18,
   ID_TRAP_CTRL = 19,
 
-  // GFX942 specific registers
+  // GFX94* specific registers
   ID_XCC_ID = 20,
   ID_SQ_PERF_SNAPSHOT_DATA = 21,
   ID_SQ_PERF_SNAPSHOT_DATA1 = 22,

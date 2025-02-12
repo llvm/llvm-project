@@ -880,7 +880,7 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
   let SubtargetPredicate = HasMAIInsts;
   Instruction Opcode = !cast<Instruction>(NAME);
   bit is_dgemm = 0;
-  bit is_gfx942_xdl = 0;
+  bit is_gfx940_xdl = 0;
   let PseudoInstr = NAME; // FIXME: Why is this not the default
 }
 
@@ -1005,7 +1005,7 @@ defm V_MFMA_F32_16X16X4F32  : MAIInst<"v_mfma_f32_16x16x4f32",  "F32_F32_X4",   
 defm V_MFMA_F32_32X32X1F32  : MAIInst<"v_mfma_f32_32x32x1f32",  "F32_F32_X32",   int_amdgcn_mfma_f32_32x32x1f32>;
 defm V_MFMA_F32_32X32X2F32  : MAIInst<"v_mfma_f32_32x32x2f32",  "F32_F32_X16",   int_amdgcn_mfma_f32_32x32x2f32>;
 
-let is_gfx942_xdl = 1 in {
+let is_gfx940_xdl = 1 in {
 defm V_MFMA_F32_4X4X4F16    : MAIInst<"v_mfma_f32_4x4x4f16",    "F32_V4F16_X4",  int_amdgcn_mfma_f32_4x4x4f16>;
 defm V_MFMA_I32_4X4X4I8     : MAIInst<"v_mfma_i32_4x4x4i8",     "I32_I32_X4",    int_amdgcn_mfma_i32_4x4x4i8>;
 defm V_MFMA_F32_16X16X4F16  : MAIInst<"v_mfma_f32_16x16x4f16",  "F32_V4F16_X16", int_amdgcn_mfma_f32_16x16x4f16>;
@@ -1026,7 +1026,7 @@ defm V_MFMA_F32_32X32X2BF16 : MAIInst<"v_mfma_f32_32x32x2bf16", "F32_V2I16_X32",
 defm V_MFMA_F32_32X32X4BF16 : MAIInst<"v_mfma_f32_32x32x4bf16", "F32_V2I16_X16", int_amdgcn_mfma_f32_32x32x4bf16>;
 }
 
-let SubtargetPredicate = HasGFX950Insts, is_gfx942_xdl = 1 in {
+let SubtargetPredicate = HasGFX950Insts, is_gfx940_xdl = 1 in {
 defm V_MFMA_F32_16X16X32_F16   : MAIInst<"v_mfma_f32_16x16x32f16",    "F32_V8F16_X32", int_amdgcn_mfma_f32_16x16x32_f16>;
 defm V_MFMA_F32_32X32X16_F16   : MAIInst<"v_mfma_f32_32x32x16f16",    "F32_V8F16_X16", int_amdgcn_mfma_f32_32x32x16_f16>;
 defm V_MFMA_F32_16X16X32_BF16  : MAIInst<"v_mfma_f32_16x16x32bf16",   "F32_V8BF16_X4", int_amdgcn_mfma_f32_16x16x32_bf16>;
@@ -1054,7 +1054,7 @@ defm V_MFMA_LD_SCALE_B32 : VOP3PInst<"v_mfma_ld_scale_b32", VOP_MFMA_LD_SCALE>;
 }
 
 let SubtargetPredicate = isGFX90APlus in {
-  let is_gfx942_xdl = 1 in {
+  let is_gfx940_xdl = 1 in {
   defm V_MFMA_F32_32X32X4BF16_1K  : MAIInst<"v_mfma_f32_32x32x4bf16_1k",  "F32_V4I16_X32",  int_amdgcn_mfma_f32_32x32x4bf16_1k>;
   defm V_MFMA_F32_16X16X4BF16_1K  : MAIInst<"v_mfma_f32_16x16x4bf16_1k",  "F32_V4I16_X16",  int_amdgcn_mfma_f32_16x16x4bf16_1k>;
   defm V_MFMA_F32_4X4X4BF16_1K    : MAIInst<"v_mfma_f32_4x4x4bf16_1k",    "F32_V4I16_X4",   int_amdgcn_mfma_f32_4x4x4bf16_1k>;
@@ -1068,17 +1068,17 @@ let SubtargetPredicate = isGFX90APlus in {
   }
 } // End SubtargetPredicate = isGFX90APlus
 
-let SubtargetPredicate = isGFX942Plus, is_gfx942_xdl = 1 in {
+let SubtargetPredicate = isGFX940Plus, is_gfx940_xdl = 1 in {
   defm V_MFMA_I32_32X32X16I8       : MAIInst<"v_mfma_i32_32x32x16i8",       "I32_I64_X32",    int_amdgcn_mfma_i32_32x32x16_i8>;
   defm V_MFMA_I32_16X16X32I8       : MAIInst<"v_mfma_i32_16x16x32i8",       "I32_I64_X16",    int_amdgcn_mfma_i32_16x16x32_i8>;
-} // End SubtargetPredicate = isGFX942Plus, is_gfx942_xdl = 1
+} // End SubtargetPredicate = isGFX940Plus, is_gfx940_xdl = 1
 
-let SubtargetPredicate = HasXF32Insts, is_gfx942_xdl = 1 in {
+let SubtargetPredicate = HasXF32Insts, is_gfx940_xdl = 1 in {
   defm V_MFMA_F32_16X16X8XF32      : MAIInst<"v_mfma_f32_16x16x8xf32",      "F32_V2F32_X16",  int_amdgcn_mfma_f32_16x16x8_xf32>;
   defm V_MFMA_F32_32X32X4XF32      : MAIInst<"v_mfma_f32_32x32x4xf32",      "F32_V2F32_X32",  int_amdgcn_mfma_f32_32x32x4_xf32>;
-} // End SubtargetPredicate = HasXF32Insts, is_gfx942_xdl = 1
+} // End SubtargetPredicate = HasXF32Insts, is_gfx940_xdl = 1
 
-let SubtargetPredicate = HasFP8Insts, is_gfx942_xdl = 1 in {
+let SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1 in {
   defm V_MFMA_F32_16X16X32_BF8_BF8 : MAIInst<"v_mfma_f32_16x16x32_bf8_bf8", "F32_I64_X32",    int_amdgcn_mfma_f32_16x16x32_bf8_bf8>;
   defm V_MFMA_F32_16X16X32_BF8_FP8 : MAIInst<"v_mfma_f32_16x16x32_bf8_fp8", "F32_I64_X32",    int_amdgcn_mfma_f32_16x16x32_bf8_fp8>;
   defm V_MFMA_F32_16X16X32_FP8_BF8 : MAIInst<"v_mfma_f32_16x16x32_fp8_bf8", "F32_I64_X32",    int_amdgcn_mfma_f32_16x16x32_fp8_bf8>;
@@ -1087,16 +1087,16 @@ let SubtargetPredicate = HasFP8Insts, is_gfx942_xdl = 1 in {
   defm V_MFMA_F32_32X32X16_BF8_FP8 : MAIInst<"v_mfma_f32_32x32x16_bf8_fp8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_bf8_fp8>;
   defm V_MFMA_F32_32X32X16_FP8_BF8 : MAIInst<"v_mfma_f32_32x32x16_fp8_bf8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_fp8_bf8>;
   defm V_MFMA_F32_32X32X16_FP8_FP8 : MAIInst<"v_mfma_f32_32x32x16_fp8_fp8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_fp8_fp8>;
-} // End SubtargetPredicate = HasFP8Insts, is_gfx942_xdl = 1
+} // End SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1
 
 multiclass SMFMACInst<string OpName, string P, SDPatternOperator node> {
   let Constraints = "$vdst = $src2", DisableEncoding = "$src2",
-      isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1, is_gfx942_xdl = 1 in {
+      isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1, is_gfx940_xdl = 1 in {
     def _e64 : MAIInst<OpName, !cast<VOPProfileSMFMAC>("VOPProfileSMFMAC_" # P), node>;
   }
 }
 
-let SubtargetPredicate = isGFX942Plus in {
+let SubtargetPredicate = isGFX940Plus in {
 defm V_SMFMAC_F32_16X16X32_F16     : SMFMACInst<"v_smfmac_f32_16x16x32_f16",     "F32_16X16X32_F16", int_amdgcn_smfmac_f32_16x16x32_f16>;
 defm V_SMFMAC_F32_32X32X16_F16     : SMFMACInst<"v_smfmac_f32_32x32x16_f16",     "F32_32X32X16_F16", int_amdgcn_smfmac_f32_32x32x16_f16>;
 defm V_SMFMAC_F32_16X16X32_BF16    : SMFMACInst<"v_smfmac_f32_16x16x32_bf16",    "F32_16X16X32_I16", int_amdgcn_smfmac_f32_16x16x32_bf16>;
@@ -1105,7 +1105,7 @@ defm V_SMFMAC_I32_16X16X64_I8      : SMFMACInst<"v_smfmac_i32_16x16x64_i8",     
 defm V_SMFMAC_I32_32X32X32_I8      : SMFMACInst<"v_smfmac_i32_32x32x32_i8",      "I32_32X32X32_I8",  int_amdgcn_smfmac_i32_32x32x32_i8>;
 }
 
-let SubtargetPredicate = HasFP8Insts, is_gfx942_xdl = 1 in {
+let SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1 in {
 defm V_SMFMAC_F32_16X16X64_BF8_BF8 : SMFMACInst<"v_smfmac_f32_16x16x64_bf8_bf8", "F32_16X16X64_F8",  int_amdgcn_smfmac_f32_16x16x64_bf8_bf8>;
 defm V_SMFMAC_F32_16X16X64_BF8_FP8 : SMFMACInst<"v_smfmac_f32_16x16x64_bf8_fp8", "F32_16X16X64_F8",  int_amdgcn_smfmac_f32_16x16x64_bf8_fp8>;
 defm V_SMFMAC_F32_16X16X64_FP8_BF8 : SMFMACInst<"v_smfmac_f32_16x16x64_fp8_bf8", "F32_16X16X64_F8",  int_amdgcn_smfmac_f32_16x16x64_fp8_bf8>;
@@ -1114,7 +1114,7 @@ defm V_SMFMAC_F32_32X32X32_BF8_BF8 : SMFMACInst<"v_smfmac_f32_32x32x32_bf8_bf8",
 defm V_SMFMAC_F32_32X32X32_BF8_FP8 : SMFMACInst<"v_smfmac_f32_32x32x32_bf8_fp8", "F32_32X32X32_F8",  int_amdgcn_smfmac_f32_32x32x32_bf8_fp8>;
 defm V_SMFMAC_F32_32X32X32_FP8_BF8 : SMFMACInst<"v_smfmac_f32_32x32x32_fp8_bf8", "F32_32X32X32_F8",  int_amdgcn_smfmac_f32_32x32x32_fp8_bf8>;
 defm V_SMFMAC_F32_32X32X32_FP8_FP8 : SMFMACInst<"v_smfmac_f32_32x32x32_fp8_fp8", "F32_32X32X32_F8",  int_amdgcn_smfmac_f32_32x32x32_fp8_fp8>;
-} // End SubtargetPredicate = HasFP8Insts, is_gfx942_xdl = 1
+} // End SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1
 
 let SubtargetPredicate = HasGFX950Insts in {
 defm V_SMFMAC_F32_16X16X64_F16     : SMFMACInst<"v_smfmac_f32_16x16x64_f16",     "F32_16X16X64_F16", int_amdgcn_smfmac_f32_16x16x64_f16>;
@@ -1137,7 +1137,7 @@ def MAIInstInfoTable : GenericTable {
   let FilterClass = "MAIInst";
   let CppTypeName = "MAIInstInfo";
   let Fields = [
-    "Opcode", "is_dgemm", "is_gfx942_xdl"
+    "Opcode", "is_dgemm", "is_gfx940_xdl"
   ];
 
   let PrimaryKey = ["Opcode"];
@@ -1947,7 +1947,7 @@ multiclass VOP3P_Real_MFMA_gfx90a<bits<7> op> {
 }
 }
 
-multiclass VOP3P_Real_MFMA_gfx942_aliases<string NameFrom, string NameTo, string Op,
+multiclass VOP3P_Real_MFMA_gfx940_aliases<string NameFrom, string NameTo, string Op,
                                           VOP3_Pseudo PS_ACD = !cast<VOP3_Pseudo>(Op # "_e64"),
                                           VOP3_Pseudo PS_VCD = !cast<VOP3_Pseudo>(Op # "_vgprcd" # "_e64"),
                                           VOPProfile Pfl_ACD = PS_ACD.Pfl,
@@ -1956,59 +1956,59 @@ multiclass VOP3P_Real_MFMA_gfx942_aliases<string NameFrom, string NameTo, string
     let SubtargetPredicate = PS_ACD.SubtargetPredicate,
         OtherPredicates = PS_ACD.OtherPredicates in {
       def : InstAlias <NameTo # " " # PS_ACD.AsmOperands,
-                     (!cast<VOP3P_Real>(Op # "_gfx942_acd") Pfl_ACD.DstRC:$vdst,
+                     (!cast<VOP3P_Real>(Op # "_gfx940_acd") Pfl_ACD.DstRC:$vdst,
                          Pfl_ACD.Src0RC64:$src0, Pfl_ACD.Src1RC64:$src1, Pfl_ACD.Src2RC64:$src2,
                          CBSZ:$cbsz, ABID:$abid, blgp:$blgp)>, PredicateControl;
       def : InstAlias <NameTo # " " # PS_VCD.AsmOperands,
-                     (!cast<VOP3P_Real>(Op # "_gfx942_vcd") Pfl_VCD.DstRC:$vdst,
+                     (!cast<VOP3P_Real>(Op # "_gfx940_vcd") Pfl_VCD.DstRC:$vdst,
                          Pfl_VCD.Src0RC64:$src0, Pfl_VCD.Src1RC64:$src1, Pfl_VCD.Src2RC64:$src2,
                          CBSZ:$cbsz, ABID:$abid, blgp:$blgp)>, PredicateControl;
     }
   }
 }
 
-multiclass VOP3P_Real_MFMA_gfx942<bits<7> op, string Name = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
+multiclass VOP3P_Real_MFMA_gfx940<bits<7> op, string Name = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
                                   VOP3_Pseudo PS_ACD = !cast<VOP3_Pseudo>(NAME # "_e64"),
                                   VOP3_Pseudo PS_VCD = !cast<VOP3_Pseudo>(NAME # "_vgprcd" # "_e64")> {
-  let AssemblerPredicate = isGFX942Plus,
-      DecoderNamespace = "GFX942",
+  let AssemblerPredicate = isGFX940Plus,
+      DecoderNamespace = "GFX940",
       AsmString = Name # PS_ACD.AsmOperands, Constraints = "" in {
-  def _gfx942_acd : VOP3P_Real<PS_ACD, SIEncodingFamily.GFX942>,
+  def _gfx940_acd : VOP3P_Real<PS_ACD, SIEncodingFamily.GFX940>,
                     VOP3Pe_MAI <op, PS_ACD.Pfl, 1>;
 
-  def _gfx942_vcd : VOP3P_Real<PS_VCD, SIEncodingFamily.GFX942>,
+  def _gfx940_vcd : VOP3P_Real<PS_VCD, SIEncodingFamily.GFX940>,
                     VOP3Pe_MAI <op, PS_VCD.Pfl, 0>;
-  } // End AssemblerPredicate = isGFX942Plus, DecoderNamespace = "GFX942"
+  } // End AssemblerPredicate = isGFX940Plus, DecoderNamespace = "GFX940"
 
   let SubtargetPredicate = PS_ACD.SubtargetPredicate,
       OtherPredicates = PS_ACD.OtherPredicates,
-      AssemblerPredicate = isGFX942Plus
+      AssemblerPredicate = isGFX940Plus
       in {
-    defm : VOP3P_Real_MFMA_gfx942_aliases<Name, PS_ACD.Mnemonic, NAME>;
+    defm : VOP3P_Real_MFMA_gfx940_aliases<Name, PS_ACD.Mnemonic, NAME>;
 
     if !ne(!subst("_1k", "", PS_ACD.Mnemonic), PS_ACD.Mnemonic) then
-    defm : VOP3P_Real_MFMA_gfx942_aliases<Name, !subst("_1k", "", PS_ACD.Mnemonic), NAME>;
+    defm : VOP3P_Real_MFMA_gfx940_aliases<Name, !subst("_1k", "", PS_ACD.Mnemonic), NAME>;
   }
 }
 
-multiclass VOP3P_Real_MFMA_F8F6F4_gfx942<bits<7> op, string Name = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
+multiclass VOP3P_Real_MFMA_F8F6F4_gfx940<bits<7> op, string Name = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
                                   VOP3_Pseudo PS_ACD = !cast<VOP3_Pseudo>(NAME # "_e64"),
                                   VOP3_Pseudo PS_VCD = !cast<VOP3_Pseudo>(NAME # "_vgprcd" # "_e64")> {
 
   defvar F8F8Name = !substr(NAME, 0, !sub(!size(NAME), !size("_fN_fM")))#"_f8_f8";
 
-  let AssemblerPredicate = isGFX942Plus,
-      DecoderNamespace = "GFX942",
+  let AssemblerPredicate = isGFX940Plus,
+      DecoderNamespace = "GFX940",
       AsmString = Name # PS_ACD.AsmOperands,
       Constraints = "" in {
-  def _gfx942_acd : VOP3P_Real<PS_ACD, SIEncodingFamily.GFX942>,
+  def _gfx940_acd : VOP3P_Real<PS_ACD, SIEncodingFamily.GFX940>,
                     VOP3Pe_MAI <op, PS_ACD.Pfl, 1>,
-                    MFMA_F8F6F4_WithSizeTable_Helper<PS_ACD, F8F8Name#"_gfx942_acd">;
+                    MFMA_F8F6F4_WithSizeTable_Helper<PS_ACD, F8F8Name#"_gfx940_acd">;
 
-  def _gfx942_vcd : VOP3P_Real<PS_VCD, SIEncodingFamily.GFX942>,
+  def _gfx940_vcd : VOP3P_Real<PS_VCD, SIEncodingFamily.GFX940>,
                     VOP3Pe_MAI <op, PS_VCD.Pfl, 0>,
-                    MFMA_F8F6F4_WithSizeTable_Helper<PS_VCD, F8F8Name#"_gfx942_vcd">;
-  } // End AssemblerPredicate = isGFX942Plus, DecoderNamespace = "GFX942"
+                    MFMA_F8F6F4_WithSizeTable_Helper<PS_VCD, F8F8Name#"_gfx940_vcd">;
+  } // End AssemblerPredicate = isGFX940Plus, DecoderNamespace = "GFX940"
 }
 
 multiclass VOP3P_Real_MFMA_gfx950<bits<7> op, string Name = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
@@ -2016,23 +2016,23 @@ multiclass VOP3P_Real_MFMA_gfx950<bits<7> op, string Name = !cast<VOP3_Pseudo>(N
                                   VOP3_Pseudo PS_VCD = !cast<VOP3_Pseudo>(NAME # "_vgprcd" # "_e64")> {
     let SubtargetPredicate = HasGFX950Insts,
         AssemblerPredicate = HasGFX950Insts in {
-    defm "" : VOP3P_Real_MFMA_gfx942<op, Name, PS_ACD, PS_VCD>;
+    defm "" : VOP3P_Real_MFMA_gfx940<op, Name, PS_ACD, PS_VCD>;
   }
 }
 
 
 multiclass VOP3P_Real_MFMA_F8F6F4_gfx950_mc<bits<7> op, string Name> {
-  defm _f8_f8 : VOP3P_Real_MFMA_F8F6F4_gfx942<op, Name>;
+  defm _f8_f8 : VOP3P_Real_MFMA_F8F6F4_gfx940<op, Name>;
 
   let isAsmParserOnly = true in { // Disable ambiguous disassembly.
-    defm _f8_f6 : VOP3P_Real_MFMA_F8F6F4_gfx942<op, Name>;
-    defm _f6_f8 : VOP3P_Real_MFMA_F8F6F4_gfx942<op, Name>;
-    defm _f8_f4 : VOP3P_Real_MFMA_F8F6F4_gfx942<op, Name>;
-    defm _f4_f8 : VOP3P_Real_MFMA_F8F6F4_gfx942<op, Name>;
-    defm _f6_f6 : VOP3P_Real_MFMA_F8F6F4_gfx942<op, Name>;
-    defm _f6_f4 : VOP3P_Real_MFMA_F8F6F4_gfx942<op, Name>;
-    defm _f4_f6 : VOP3P_Real_MFMA_F8F6F4_gfx942<op, Name>;
-    defm _f4_f4 : VOP3P_Real_MFMA_F8F6F4_gfx942<op, Name>;
+    defm _f8_f6 : VOP3P_Real_MFMA_F8F6F4_gfx940<op, Name>;
+    defm _f6_f8 : VOP3P_Real_MFMA_F8F6F4_gfx940<op, Name>;
+    defm _f8_f4 : VOP3P_Real_MFMA_F8F6F4_gfx940<op, Name>;
+    defm _f4_f8 : VOP3P_Real_MFMA_F8F6F4_gfx940<op, Name>;
+    defm _f6_f6 : VOP3P_Real_MFMA_F8F6F4_gfx940<op, Name>;
+    defm _f6_f4 : VOP3P_Real_MFMA_F8F6F4_gfx940<op, Name>;
+    defm _f4_f6 : VOP3P_Real_MFMA_F8F6F4_gfx940<op, Name>;
+    defm _f4_f4 : VOP3P_Real_MFMA_F8F6F4_gfx940<op, Name>;
   }
 }
 
@@ -2043,15 +2043,15 @@ multiclass VOP3PX_Real_ScaledMFMA<bits<7> op> {
   defvar F8F8Name = !substr(NAME, 0, !sub(!size(NAME), !size("_fN_fM")))#"_f8_f8";
 
   let SubtargetPredicate = HasGFX950Insts,
-      DecoderNamespace = "GFX942",
+      DecoderNamespace = "GFX940",
       AsmString = Name # PS_ACD.AsmOperands, Constraints = "" in {
-   def _gfx942_acd : VOP3P_Real<PS_ACD, SIEncodingFamily.GFX942>,
+   def _gfx940_acd : VOP3P_Real<PS_ACD, SIEncodingFamily.GFX940>,
                      VOP3PXe <op, PS_ACD.Pfl, /*acc_cd=*/1>,
-                     MFMA_F8F6F4_WithSizeTable_Helper<PS_ACD, F8F8Name#"_gfx942_acd">;
+                     MFMA_F8F6F4_WithSizeTable_Helper<PS_ACD, F8F8Name#"_gfx940_acd">;
 
-   def _gfx942_vcd : VOP3P_Real<PS_VCD, SIEncodingFamily.GFX942>,
+   def _gfx940_vcd : VOP3P_Real<PS_VCD, SIEncodingFamily.GFX940>,
                      VOP3PXe <op, PS_VCD.Pfl, /*acc_cd=*/0>,
-                     MFMA_F8F6F4_WithSizeTable_Helper<PS_VCD, F8F8Name#"_gfx942_vcd">;
+                     MFMA_F8F6F4_WithSizeTable_Helper<PS_VCD, F8F8Name#"_gfx940_vcd">;
   }
 }
 
@@ -2084,18 +2084,18 @@ multiclass VOP3P_Real_MFMA_vi_gfx90a<bits<7> op> :
   VOP3P_Real_MFMA_gfx90a <op>,
   VOP3P_Real_MFMA_vi <op>;
 
-multiclass VOP3P_Real_MFMA<bits<7> op, string GFX942Name = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic> :
+multiclass VOP3P_Real_MFMA<bits<7> op, string GFX940Name = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic> :
   VOP3P_Real_MFMA_vi_gfx90a <op>,
-  VOP3P_Real_MFMA_gfx942 <op, GFX942Name>;
+  VOP3P_Real_MFMA_gfx940 <op, GFX940Name>;
 
 multiclass VOP3P_Real_SMFMAC<bits<7> op, string alias> {
-  def _gfx942 : VOP3P_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
+  def _gfx940 : VOP3P_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
                 VOP3Pe_SMFMAC <op> {
-    let AssemblerPredicate = isGFX942Plus;
+    let AssemblerPredicate = isGFX940Plus;
     let DecoderNamespace = "GFX8";
   }
   def : AMDGPUMnemonicAlias<alias, !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic> {
-    let AssemblerPredicate = isGFX942Plus;
+    let AssemblerPredicate = isGFX940Plus;
   }
 }
 
@@ -2193,28 +2193,28 @@ defm V_MFMA_F32_32X32X64_F8F6F4  : VOP3P_Real_MFMA_F8F6F4_gfx950_mc <0x2e, "v_mf
 defm V_MFMA_SCALE_F32_32X32X64_F8F6F4 : VOP3PX_Real_ScaledMFMA_F8F6F4_mc <0x2e>;
 defm V_DOT2_F32_BF16 : VOP3P_Real_vi<0x1a>;
 
-defm V_MFMA_I32_32X32X16I8       : VOP3P_Real_MFMA_gfx942 <0x56, "v_mfma_i32_32x32x16_i8">;
-defm V_MFMA_I32_16X16X32I8       : VOP3P_Real_MFMA_gfx942 <0x57, "v_mfma_i32_16x16x32_i8">;
-defm V_MFMA_F32_16X16X8XF32      : VOP3P_Real_MFMA_gfx942 <0x3e, "v_mfma_f32_16x16x8_xf32">;
-defm V_MFMA_F32_32X32X4XF32      : VOP3P_Real_MFMA_gfx942 <0x3f, "v_mfma_f32_32x32x4_xf32">;
+defm V_MFMA_I32_32X32X16I8       : VOP3P_Real_MFMA_gfx940 <0x56, "v_mfma_i32_32x32x16_i8">;
+defm V_MFMA_I32_16X16X32I8       : VOP3P_Real_MFMA_gfx940 <0x57, "v_mfma_i32_16x16x32_i8">;
+defm V_MFMA_F32_16X16X8XF32      : VOP3P_Real_MFMA_gfx940 <0x3e, "v_mfma_f32_16x16x8_xf32">;
+defm V_MFMA_F32_32X32X4XF32      : VOP3P_Real_MFMA_gfx940 <0x3f, "v_mfma_f32_32x32x4_xf32">;
 
-defm V_MFMA_F32_16X16X32_BF8_BF8 : VOP3P_Real_MFMA_gfx942 <0x70>;
-defm V_MFMA_F32_16X16X32_BF8_FP8 : VOP3P_Real_MFMA_gfx942 <0x71>;
-defm V_MFMA_F32_16X16X32_FP8_BF8 : VOP3P_Real_MFMA_gfx942 <0x72>;
-defm V_MFMA_F32_16X16X32_FP8_FP8 : VOP3P_Real_MFMA_gfx942 <0x73>;
-defm V_MFMA_F32_32X32X16_BF8_BF8 : VOP3P_Real_MFMA_gfx942 <0x74>;
-defm V_MFMA_F32_32X32X16_BF8_FP8 : VOP3P_Real_MFMA_gfx942 <0x75>;
-defm V_MFMA_F32_32X32X16_FP8_BF8 : VOP3P_Real_MFMA_gfx942 <0x76>;
-defm V_MFMA_F32_32X32X16_FP8_FP8 : VOP3P_Real_MFMA_gfx942 <0x77>;
+defm V_MFMA_F32_16X16X32_BF8_BF8 : VOP3P_Real_MFMA_gfx940 <0x70>;
+defm V_MFMA_F32_16X16X32_BF8_FP8 : VOP3P_Real_MFMA_gfx940 <0x71>;
+defm V_MFMA_F32_16X16X32_FP8_BF8 : VOP3P_Real_MFMA_gfx940 <0x72>;
+defm V_MFMA_F32_16X16X32_FP8_FP8 : VOP3P_Real_MFMA_gfx940 <0x73>;
+defm V_MFMA_F32_32X32X16_BF8_BF8 : VOP3P_Real_MFMA_gfx940 <0x74>;
+defm V_MFMA_F32_32X32X16_BF8_FP8 : VOP3P_Real_MFMA_gfx940 <0x75>;
+defm V_MFMA_F32_32X32X16_FP8_BF8 : VOP3P_Real_MFMA_gfx940 <0x76>;
+defm V_MFMA_F32_32X32X16_FP8_FP8 : VOP3P_Real_MFMA_gfx940 <0x77>;
 
-defm V_MFMA_F32_32X32X4BF16_1K   : VOP3P_Real_MFMA_gfx942 <0x5d, "v_mfma_f32_32x32x4_2b_bf16">;
-defm V_MFMA_F32_16X16X4BF16_1K   : VOP3P_Real_MFMA_gfx942 <0x5e, "v_mfma_f32_16x16x4_4b_bf16">;
-defm V_MFMA_F32_4X4X4BF16_1K     : VOP3P_Real_MFMA_gfx942 <0x5f, "v_mfma_f32_4x4x4_16b_bf16">;
-defm V_MFMA_F32_32X32X8BF16_1K   : VOP3P_Real_MFMA_gfx942 <0x60, "v_mfma_f32_32x32x8_bf16">;
-defm V_MFMA_F32_16X16X16BF16_1K  : VOP3P_Real_MFMA_gfx942 <0x61, "v_mfma_f32_16x16x16_bf16">;
+defm V_MFMA_F32_32X32X4BF16_1K   : VOP3P_Real_MFMA_gfx940 <0x5d, "v_mfma_f32_32x32x4_2b_bf16">;
+defm V_MFMA_F32_16X16X4BF16_1K   : VOP3P_Real_MFMA_gfx940 <0x5e, "v_mfma_f32_16x16x4_4b_bf16">;
+defm V_MFMA_F32_4X4X4BF16_1K     : VOP3P_Real_MFMA_gfx940 <0x5f, "v_mfma_f32_4x4x4_16b_bf16">;
+defm V_MFMA_F32_32X32X8BF16_1K   : VOP3P_Real_MFMA_gfx940 <0x60, "v_mfma_f32_32x32x8_bf16">;
+defm V_MFMA_F32_16X16X16BF16_1K  : VOP3P_Real_MFMA_gfx940 <0x61, "v_mfma_f32_16x16x16_bf16">;
 
-defm V_MFMA_F64_16X16X4F64       : VOP3P_Real_MFMA_gfx942 <0x6e, "v_mfma_f64_16x16x4_f64">;
-defm V_MFMA_F64_4X4X4F64         : VOP3P_Real_MFMA_gfx942 <0x6f, "v_mfma_f64_4x4x4_4b_f64">;
+defm V_MFMA_F64_16X16X4F64       : VOP3P_Real_MFMA_gfx940 <0x6e, "v_mfma_f64_16x16x4_f64">;
+defm V_MFMA_F64_4X4X4F64         : VOP3P_Real_MFMA_gfx940 <0x6f, "v_mfma_f64_4x4x4_4b_f64">;
 
 defm V_SMFMAC_F32_16X16X32_F16     : VOP3P_Real_SMFMAC <0x62, "v_smfmac_f32_16x16x32f16">;
 defm V_SMFMAC_F32_32X32X16_F16     : VOP3P_Real_SMFMAC <0x64, "v_smfmac_f32_32x32x16f16">;

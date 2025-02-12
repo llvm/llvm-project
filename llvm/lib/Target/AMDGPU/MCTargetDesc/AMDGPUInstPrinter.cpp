@@ -151,16 +151,15 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
   }
 
   if (Imm & CPol::GLC)
-    O << ((AMDGPU::isGFX942(STI) &&
-           !(MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SMRD))
-              ? " sc0"
-              : " glc");
+    O << ((AMDGPU::isGFX940(STI) &&
+           !(MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SMRD)) ? " sc0"
+                                                                     : " glc");
   if (Imm & CPol::SLC)
-    O << (AMDGPU::isGFX942(STI) ? " nt" : " slc");
+    O << (AMDGPU::isGFX940(STI) ? " nt" : " slc");
   if ((Imm & CPol::DLC) && AMDGPU::isGFX10Plus(STI))
     O << " dlc";
   if ((Imm & CPol::SCC) && AMDGPU::isGFX90A(STI))
-    O << (AMDGPU::isGFX942(STI) ? " sc1" : " scc");
+    O << (AMDGPU::isGFX940(STI) ? " sc1" : " scc");
   if (Imm & ~CPol::ALL_pregfx12)
     O << " /* unexpected cache policy bit */";
 }
@@ -630,12 +629,12 @@ void AMDGPUInstPrinter::printBLGP(const MCInst *MI, unsigned OpNo,
   if (!Imm)
     return;
 
-  if (AMDGPU::isGFX942(STI)) {
+  if (AMDGPU::isGFX940(STI)) {
     switch (MI->getOpcode()) {
-    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx942_acd:
-    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx942_vcd:
-    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx942_acd:
-    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx942_vcd:
+    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx940_acd:
+    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx940_vcd:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx940_acd:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx940_vcd:
       O << " neg:[" << (Imm & 1) << ',' << ((Imm >> 1) & 1) << ','
         << ((Imm >> 2) & 1) << ']';
       return;

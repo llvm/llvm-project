@@ -248,13 +248,13 @@ TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fmax_f64, "dd*0d", "t", "gfx90a-inst
 TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_f64, "dd*3d", "t", "gfx90a-insts")
 TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_f32, "ff*3f", "t", "gfx8-insts")
 
-TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fadd_f32, "ff*0f", "t", "gfx942-insts")
+TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fadd_f32, "ff*0f", "t", "gfx940-insts")
 TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fadd_v2f16, "V2hV2h*0V2h", "t", "atomic-flat-pk-add-16-insts")
 TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fadd_v2bf16, "V2sV2s*0V2s", "t", "atomic-flat-pk-add-16-insts")
 TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_v2bf16, "V2sV2s*1V2s", "t", "atomic-global-pk-add-bf16-inst")
 TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_v2bf16, "V2sV2s*3V2s", "t", "atomic-ds-pk-add-16-insts")
 TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_v2f16, "V2hV2h*3V2h", "t", "atomic-ds-pk-add-16-insts")
-TARGET_BUILTIN(__builtin_amdgcn_global_load_lds, "vv*1v*3IUiIiIUi", "t", "gfx942-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_load_lds, "vv*1v*3IUiIiIUi", "t", "gfx940-insts")
 
 //===----------------------------------------------------------------------===//
 // Deep learning builtins.

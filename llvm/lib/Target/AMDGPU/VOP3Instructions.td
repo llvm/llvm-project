@@ -687,7 +687,7 @@ defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32
 
 // V_LSHL_ADD_U64: D0.u64 = (S0.u64 << S1.u[2:0]) + S2.u64
 // src0 is shifted left by 0-4 (use “0” to get ADD_U64).
-let SubtargetPredicate = isGFX942Plus in
+let SubtargetPredicate = isGFX940Plus in
 defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", VOP3_Profile<VOP_I64_I64_I32_I64>>;
 
 let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
@@ -705,7 +705,7 @@ let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
   // These instructions have non-standard use of op_sel. In particular they are
   // using op_sel bits 2 and 3 while only having two sources. Therefore dummy
   // src2 is used to hold the op_sel value.
-  let Constraints = "$vdst = $src2", DisableEncoding = "$src2", SubtargetPredicate = isGFX942Plus in {
+  let Constraints = "$vdst = $src2", DisableEncoding = "$src2", SubtargetPredicate = isGFX940Plus in {
     defm V_CVT_SR_FP8_F32 : VOP3Inst<"v_cvt_sr_fp8_f32", VOP3_CVT_SR_F8_F32_Profile>;
     defm V_CVT_SR_BF8_F32 : VOP3Inst<"v_cvt_sr_bf8_f32", VOP3_CVT_SR_F8_F32_Profile>;
   }
@@ -734,7 +734,7 @@ foreach Index = [0, -1] in {
   def : Cvt_PK_F8_F32_Pat<int_amdgcn_cvt_pk_bf8_f32, Index, V_CVT_PK_BF8_F32_e64>;
 }
 
-let SubtargetPredicate = isGFX942Plus in {
+let SubtargetPredicate = isGFX940Plus in {
   foreach Index = [0, 1, 2, 3] in {
     def : Cvt_SR_F8_F32_Pat<int_amdgcn_cvt_sr_fp8_f32, Index, V_CVT_SR_FP8_F32_e64>;
     def : Cvt_SR_F8_F32_Pat<int_amdgcn_cvt_sr_bf8_f32, Index, V_CVT_SR_BF8_F32_e64>;
@@ -766,7 +766,7 @@ def : GCNPat<
  (DivergentBinFrag<mul> i32:$src0, IsPow2Plus1:$src1),
  (V_LSHL_ADD_U32_e64 i32:$src0, (i32 (Log2_32 imm:$src1)), i32:$src0)>;
 
-let SubtargetPredicate = isGFX942Plus in
+let SubtargetPredicate = isGFX940Plus in
 def : GCNPat<
   (ThreeOpFrag<shl_0_to_4, add> i64:$src0, i32:$src1, i64:$src2),
   (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)

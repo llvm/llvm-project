@@ -1866,10 +1866,10 @@ multiclass FLAT_Real_AllAddr_vi<bits<7> op,
   def _SADDR_vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(NAME#"_SADDR"), has_sccb>;
 }
 
-class FLAT_Real_gfx942 <bits<7> op, FLAT_Pseudo ps> :
+class FLAT_Real_gfx940 <bits<7> op, FLAT_Pseudo ps> :
   FLAT_Real <op, ps>,
-  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX942> {
-  let AssemblerPredicate = isGFX942Plus;
+  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX940> {
+  let AssemblerPredicate = isGFX940Plus;
   let DecoderNamespace = "GFX9";
   let Inst{13} = ps.sve;
   let Inst{25} = !if(ps.has_sccb, cpol{CPolBit.SCC}, ps.sccbValue);
@@ -1877,43 +1877,43 @@ class FLAT_Real_gfx942 <bits<7> op, FLAT_Pseudo ps> :
 
 multiclass FLAT_Real_AllAddr_SVE_vi<bits<7> op> {
   def _vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(NAME)> {
-    let AssemblerPredicate = isGFX8GFX9NotGFX942;
-    let OtherPredicates = [isGFX8GFX9NotGFX942];
+    let AssemblerPredicate = isGFX8GFX9NotGFX940;
+    let OtherPredicates = [isGFX8GFX9NotGFX940];
   }
   def _SADDR_vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(NAME#"_SADDR")> {
     let DecoderNamespace = "GFX9";
   }
-  let AssemblerPredicate = isGFX942Plus, SubtargetPredicate = isGFX942Plus in {
-    def _VE_gfx942  : FLAT_Real_gfx942<op, !cast<FLAT_Pseudo>(NAME)>;
-    def _SVS_gfx942 : FLAT_Real_gfx942<op, !cast<FLAT_Pseudo>(NAME#"_SVS")>;
-    def _ST_gfx942  : FLAT_Real_gfx942<op, !cast<FLAT_Pseudo>(NAME#"_ST")>;
+  let AssemblerPredicate = isGFX940Plus, SubtargetPredicate = isGFX940Plus in {
+    def _VE_gfx940  : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME)>;
+    def _SVS_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME#"_SVS")>;
+    def _ST_gfx940  : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME#"_ST")>;
   }
 }
 
-multiclass FLAT_Real_AllAddr_LDS<bits<7> op, bits<7> pre_gfx942_op,
-  string pre_gfx942_name = !subst("_lds", "", !cast<FLAT_Pseudo>(NAME).Mnemonic),
+multiclass FLAT_Real_AllAddr_LDS<bits<7> op, bits<7> pre_gfx940_op,
+  string pre_gfx940_name = !subst("_lds", "", !cast<FLAT_Pseudo>(NAME).Mnemonic),
   bit has_sccb = !cast<FLAT_Pseudo>(NAME).has_sccb> {
 
-  let OtherPredicates = [isGFX8GFX9NotGFX942] in {
-    def _vi : FLAT_Real_vi<pre_gfx942_op, !cast<FLAT_Pseudo>(NAME), has_sccb> {
-      let AsmString = pre_gfx942_name # !cast<FLAT_Pseudo>(NAME).AsmOperands # " lds";
+  let OtherPredicates = [isGFX8GFX9NotGFX940] in {
+    def _vi : FLAT_Real_vi<pre_gfx940_op, !cast<FLAT_Pseudo>(NAME), has_sccb> {
+      let AsmString = pre_gfx940_name # !cast<FLAT_Pseudo>(NAME).AsmOperands # " lds";
     }
-    def _SADDR_vi : FLAT_Real_vi<pre_gfx942_op, !cast<FLAT_Pseudo>(NAME#"_SADDR"), has_sccb> {
-      let AsmString = pre_gfx942_name # !cast<FLAT_Pseudo>(NAME#"_SADDR").AsmOperands # " lds";
+    def _SADDR_vi : FLAT_Real_vi<pre_gfx940_op, !cast<FLAT_Pseudo>(NAME#"_SADDR"), has_sccb> {
+      let AsmString = pre_gfx940_name # !cast<FLAT_Pseudo>(NAME#"_SADDR").AsmOperands # " lds";
     }
   }
 
-  let SubtargetPredicate = isGFX942Plus in {
-    def _gfx942 : FLAT_Real_gfx942<op, !cast<FLAT_Pseudo>(NAME)>;
-    def _SADDR_gfx942 : FLAT_Real_gfx942<op, !cast<FLAT_Pseudo>(NAME#"_SADDR")>;
+  let SubtargetPredicate = isGFX940Plus in {
+    def _gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME)>;
+    def _SADDR_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME#"_SADDR")>;
   }
 }
 
-multiclass FLAT_Real_AllAddr_SVE_LDS<bits<7> op, bits<7> pre_gfx942_op> {
-  defm "" : FLAT_Real_AllAddr_LDS<op, pre_gfx942_op>;
-  let SubtargetPredicate = isGFX942Plus in {
-    def _SVS_gfx942 : FLAT_Real_gfx942<op, !cast<FLAT_Pseudo>(NAME#"_SVS")>;
-    def _ST_gfx942  : FLAT_Real_gfx942<op, !cast<FLAT_Pseudo>(NAME#"_ST")>;
+multiclass FLAT_Real_AllAddr_SVE_LDS<bits<7> op, bits<7> pre_gfx940_op> {
+  defm "" : FLAT_Real_AllAddr_LDS<op, pre_gfx940_op>;
+  let SubtargetPredicate = isGFX940Plus in {
+    def _SVS_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME#"_SVS")>;
+    def _ST_gfx940  : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME#"_ST")>;
   }
 }
 
@@ -2075,8 +2075,8 @@ defm SCRATCH_STORE_DWORDX2      : FLAT_Real_AllAddr_SVE_vi <0x1d>;
 defm SCRATCH_STORE_DWORDX3      : FLAT_Real_AllAddr_SVE_vi <0x1e>;
 defm SCRATCH_STORE_DWORDX4      : FLAT_Real_AllAddr_SVE_vi <0x1f>;
 
-let SubtargetPredicate = isGFX8GFX9NotGFX942 in {
-  // These instructions are encoded differently on gfx90* and gfx942.
+let SubtargetPredicate = isGFX8GFX9NotGFX940 in {
+  // These instructions are encoded differently on gfx90* and gfx94*.
   defm GLOBAL_ATOMIC_ADD_F32    : FLAT_Global_Real_Atomics_vi <0x04d, 0>;
   defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Real_Atomics_vi <0x04e, 0>;
 }
@@ -2090,39 +2090,39 @@ let SubtargetPredicate = isGFX90AOnly in {
   defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Real_Atomics_vi<0x51, 0>;
 } // End SubtargetPredicate = isGFX90AOnly
 
-multiclass FLAT_Real_AllAddr_gfx942<bits<7> op> {
-  def _gfx942       : FLAT_Real_gfx942<op, !cast<FLAT_Pseudo>(NAME)>;
-  def _SADDR_gfx942 : FLAT_Real_gfx942<op, !cast<FLAT_Pseudo>(NAME#"_SADDR")>;
+multiclass FLAT_Real_AllAddr_gfx940<bits<7> op> {
+  def _gfx940       : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME)>;
+  def _SADDR_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME#"_SADDR")>;
 }
 
-multiclass FLAT_Real_Atomics_gfx942 <bits<7> op> {
+multiclass FLAT_Real_Atomics_gfx940 <bits<7> op> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
-  def _gfx942     : FLAT_Real_gfx942<op, !cast<FLAT_Pseudo>(ps.PseudoInstr)>;
-  def _RTN_gfx942 : FLAT_Real_gfx942<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN")>;
+  def _gfx940     : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(ps.PseudoInstr)>;
+  def _RTN_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN")>;
 }
 
-multiclass FLAT_Global_Real_Atomics_gfx942<bits<7> op> :
-  FLAT_Real_AllAddr_gfx942<op> {
-  def _RTN_gfx942       : FLAT_Real_gfx942 <op, !cast<FLAT_Pseudo>(NAME#"_RTN")>;
-  def _SADDR_RTN_gfx942 : FLAT_Real_gfx942 <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN")>;
+multiclass FLAT_Global_Real_Atomics_gfx940<bits<7> op> :
+  FLAT_Real_AllAddr_gfx940<op> {
+  def _RTN_gfx940       : FLAT_Real_gfx940 <op, !cast<FLAT_Pseudo>(NAME#"_RTN")>;
+  def _SADDR_RTN_gfx940 : FLAT_Real_gfx940 <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN")>;
 }
 
-let SubtargetPredicate = isGFX942Plus in {
-  // These instructions are encoded differently on gfx90* and gfx942.
-  defm GLOBAL_ATOMIC_ADD_F32     : FLAT_Global_Real_Atomics_gfx942 <0x04d>;
-  defm GLOBAL_ATOMIC_PK_ADD_F16  : FLAT_Global_Real_Atomics_gfx942 <0x04e>;
+let SubtargetPredicate = isGFX940Plus in {
+  // These instructions are encoded differently on gfx90* and gfx940.
+  defm GLOBAL_ATOMIC_ADD_F32     : FLAT_Global_Real_Atomics_gfx940 <0x04d>;
+  defm GLOBAL_ATOMIC_PK_ADD_F16  : FLAT_Global_Real_Atomics_gfx940 <0x04e>;
 
-  defm FLAT_ATOMIC_ADD_F64       : FLAT_Real_Atomics_gfx942<0x4f>;
-  defm FLAT_ATOMIC_MIN_F64       : FLAT_Real_Atomics_gfx942<0x50>;
-  defm FLAT_ATOMIC_MAX_F64       : FLAT_Real_Atomics_gfx942<0x51>;
-  defm GLOBAL_ATOMIC_ADD_F64     : FLAT_Global_Real_Atomics_gfx942<0x4f>;
-  defm GLOBAL_ATOMIC_MIN_F64     : FLAT_Global_Real_Atomics_gfx942<0x50>;
-  defm GLOBAL_ATOMIC_MAX_F64     : FLAT_Global_Real_Atomics_gfx942<0x51>;
+  defm FLAT_ATOMIC_ADD_F64       : FLAT_Real_Atomics_gfx940<0x4f>;
+  defm FLAT_ATOMIC_MIN_F64       : FLAT_Real_Atomics_gfx940<0x50>;
+  defm FLAT_ATOMIC_MAX_F64       : FLAT_Real_Atomics_gfx940<0x51>;
+  defm GLOBAL_ATOMIC_ADD_F64     : FLAT_Global_Real_Atomics_gfx940<0x4f>;
+  defm GLOBAL_ATOMIC_MIN_F64     : FLAT_Global_Real_Atomics_gfx940<0x50>;
+  defm GLOBAL_ATOMIC_MAX_F64     : FLAT_Global_Real_Atomics_gfx940<0x51>;
   defm FLAT_ATOMIC_ADD_F32       : FLAT_Real_Atomics_vi<0x4d>;
   defm FLAT_ATOMIC_PK_ADD_F16    : FLAT_Real_Atomics_vi<0x4e>;
   defm FLAT_ATOMIC_PK_ADD_BF16   : FLAT_Real_Atomics_vi<0x52>;
   defm GLOBAL_ATOMIC_PK_ADD_BF16 : FLAT_Global_Real_Atomics_vi<0x52>;
-} // End SubtargetPredicate = isGFX942Plus
+} // End SubtargetPredicate = isGFX940Plus
 
 //===----------------------------------------------------------------------===//
 // GFX10.

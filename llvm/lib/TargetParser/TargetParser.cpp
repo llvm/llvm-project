@@ -358,7 +358,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     Features["gfx8-insts"] = true;
     Features["gfx9-insts"] = true;
     Features["gfx90a-insts"] = true;
-    Features["gfx942-insts"] = true;
+    Features["gfx940-insts"] = true;
     Features["gfx950-insts"] = true;
     Features["gfx10-insts"] = true;
     Features["gfx10-3-insts"] = true;
@@ -508,7 +508,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
         Features["xf32-insts"] = true;
       [[fallthrough]];
     case GK_GFX9_4_GENERIC:
-      Features["gfx942-insts"] = true;
+      Features["gfx940-insts"] = true;
       Features["atomic-ds-pk-add-16-insts"] = true;
       Features["atomic-flat-pk-add-16-insts"] = true;
       Features["atomic-global-pk-add-bf16-inst"] = true;

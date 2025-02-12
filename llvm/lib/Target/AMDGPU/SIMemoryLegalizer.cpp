@@ -359,6 +359,11 @@ public:
 
   /// Virtual destructor to allow derivations to be deleted.
   virtual ~SICacheControl() = default;
+
+  virtual bool tryForceStoreSC0SC1(const SIMemOpInfo &MOI,
+                                   MachineBasicBlock::iterator &MI) const {
+    return false;
+  }
 };
 
 class SIGfx6CacheControl : public SICacheControl {
@@ -465,7 +470,7 @@ public:
                      Position Pos) const override;
 };
 
-class SIGfx942CacheControl : public SIGfx90ACacheControl {
+class SIGfx940CacheControl : public SIGfx90ACacheControl {
 protected:
 
   /// Sets SC0 bit to "true" if present in \p MI. Returns true if \p MI
@@ -487,7 +492,7 @@ protected:
   }
 
 public:
-  SIGfx942CacheControl(const GCNSubtarget &ST) : SIGfx90ACacheControl(ST) {};
+  SIGfx940CacheControl(const GCNSubtarget &ST) : SIGfx90ACacheControl(ST) {};
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
@@ -512,6 +517,20 @@ public:
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
                      Position Pos) const override;
+
+  bool tryForceStoreSC0SC1(const SIMemOpInfo &MOI,
+                           MachineBasicBlock::iterator &MI) const override {
+    bool Changed = false;
+    if (ST.hasForceStoreSC0SC1() &&
+        (MOI.getInstrAddrSpace() & (SIAtomicAddrSpace::SCRATCH |
+                                    SIAtomicAddrSpace::GLOBAL |
+                                    SIAtomicAddrSpace::OTHER)) !=
+         SIAtomicAddrSpace::NONE) {
+      Changed |= enableSC0Bit(MI);
+      Changed |= enableSC1Bit(MI);
+    }
+    return Changed;
+  }
 };
 
 class SIGfx10CacheControl : public SIGfx7CacheControl {
@@ -938,8 +957,8 @@ bool SICacheControl::enableNamedBit(const MachineBasicBlock::iterator MI,
 /* static */
 std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
   GCNSubtarget::Generation Generation = ST.getGeneration();
-  if (ST.hasGFX942Insts())
-    return std::make_unique<SIGfx942CacheControl>(ST);
+  if (ST.hasGFX940Insts())
+    return std::make_unique<SIGfx940CacheControl>(ST);
   if (ST.hasGFX90AInsts())
     return std::make_unique<SIGfx90ACacheControl>(ST);
   if (Generation <= AMDGPUSubtarget::SOUTHERN_ISLANDS)
@@ -1557,7 +1576,7 @@ bool SIGfx90ACacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
-bool SIGfx942CacheControl::enableLoadCacheBypass(
+bool SIGfx940CacheControl::enableLoadCacheBypass(
     const MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
     SIAtomicAddrSpace AddrSpace) const {
   assert(MI->mayLoad() && !MI->mayStore());
@@ -1601,9 +1620,9 @@ bool SIGfx942CacheControl::enableLoadCacheBypass(
   return Changed;
 }
 
-bool SIGfx942CacheControl::enableStoreCacheBypass(
-    const MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
-    SIAtomicAddrSpace AddrSpace) const {
+bool SIGfx940CacheControl::enableStoreCacheBypass(
+    const MachineBasicBlock::iterator &MI,
+    SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace) const {
   assert(!MI->mayLoad() && MI->mayStore());
   bool Changed = false;
 
@@ -1641,7 +1660,7 @@ bool SIGfx942CacheControl::enableStoreCacheBypass(
   return Changed;
 }
 
-bool SIGfx942CacheControl::enableRMWCacheBypass(
+bool SIGfx940CacheControl::enableRMWCacheBypass(
     const MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
     SIAtomicAddrSpace AddrSpace) const {
   assert(MI->mayLoad() && MI->mayStore());
@@ -1670,7 +1689,7 @@ bool SIGfx942CacheControl::enableRMWCacheBypass(
   return Changed;
 }
 
-bool SIGfx942CacheControl::enableVolatileAndOrNonTemporal(
+bool SIGfx940CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
   // Only handle load and store, not atomic read-modify-write insructions. The
@@ -1710,7 +1729,7 @@ bool SIGfx942CacheControl::enableVolatileAndOrNonTemporal(
   return Changed;
 }
 
-bool SIGfx942CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
+bool SIGfx940CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
                                          SIAtomicScope Scope,
                                          SIAtomicAddrSpace AddrSpace,
                                          Position Pos) const {
@@ -1796,7 +1815,7 @@ bool SIGfx942CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
-bool SIGfx942CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
+bool SIGfx940CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
                                          SIAtomicScope Scope,
                                          SIAtomicAddrSpace AddrSpace,
                                          bool IsCrossAddrSpaceOrdering,
@@ -2801,6 +2820,7 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
         Changed |= expandLoad(*MOI, MI);
       else if (const auto &MOI = MOA.getStoreInfo(MI)) {
         Changed |= expandStore(*MOI, MI);
+        Changed |= CC->tryForceStoreSC0SC1(*MOI, MI);
       } else if (const auto &MOI = MOA.getAtomicFenceInfo(MI))
         Changed |= expandAtomicFence(*MOI, MI);
       else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI))
