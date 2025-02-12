@@ -5016,10 +5016,10 @@ def int_nvvm_prefetch_local_L2 :  Intrinsic<[], [llvm_local_ptr_ty],
   
 def int_nvvm_prefetch_global_L2_evict_normal: Intrinsic<[], [llvm_global_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>], 
-  "llvm.nvvm.prefetch.global.L2.evictnormal">;
+  "llvm.nvvm.prefetch.global.L2.evict_normal">;
 def int_nvvm_prefetch_global_L2_evict_last: Intrinsic<[], [llvm_global_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.prefetch.global.L2.evictlast">;
+  "llvm.nvvm.prefetch.global.L2.evict_last">;
 
 
 def int_nvvm_prefetchu_L1 : Intrinsic<[], [llvm_ptr_ty],
