@@ -3364,7 +3364,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
             PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic)
       return false;
 
-    // The number of instrcutions to be speculatively executed is limited.
+    // The number of instructions to be speculatively executed is limited.
     // This limit is dependent on the found patterns.
     if (SpeculatedInstructions > MaxSpeculatedInstructionsToHoist)
       return false;
