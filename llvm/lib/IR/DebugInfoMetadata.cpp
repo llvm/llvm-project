@@ -269,10 +269,6 @@ static DILocalScope *NextScopeWithDifferentFile(MDNode *LocOrScope) {
     S = S->getScope();
   }
 
-  if (auto *SP = dyn_cast_or_null<DISubprogram>(S)) {
-    return SP;
-  }
-
   return nullptr;
 }
 
@@ -325,13 +321,13 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
 
     // We should traverse DILexicalBlock's that enclose input locations and
     // have different file attribute.
-    using NestedLexicalBlocksMatchKey = MDNode *;
+    using NestedLexicalBlocksMatchKey = DIFile *;
     // We try to match equal scopes or locations belonging to the same file.
     auto GetLocOrScopeMatchKey = [](MDNode *N) -> NestedLexicalBlocksMatchKey {
       if (auto *Loc = dyn_cast_if_present<DILocation>(N)) {
         return Loc->getFile();
       } else if (auto *LS = dyn_cast_if_present<DILocalScope>(N)) {
-        return LS;
+        return LS->getFile();
       }
 
       return nullptr;
