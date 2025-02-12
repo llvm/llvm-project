@@ -2016,7 +2016,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case Type::Vector: {
     const auto *VT = cast<VectorType>(T);
     TypeInfo EltInfo = getTypeInfo(VT->getElementType());
-    Width = (VT->isExtVectorBoolType() && !getLangOpts().HLSL)
+    Width = VT->isPackedVectorBoolType(*this)
                 ? VT->getNumElements()
                 : EltInfo.Width * VT->getNumElements();
     // Enforce at least byte size and alignment.
