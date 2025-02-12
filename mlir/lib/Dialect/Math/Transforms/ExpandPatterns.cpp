@@ -312,10 +312,10 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
   return success();
 }
 
-// Convert Powf(float a, float b) for special cases when b is constant:
+// Converts Powf(float a, float b) (meaning a^b) to exp^(b * ln(a))
+// Some special cases where b is constant are handled separately:
 // when b == 0, or |b| == 0.5, 1.0, or 2.0.
-static LogicalResult convertSpecialPowfOp(math::PowFOp op,
-                                          PatternRewriter &rewriter) {
+static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operandA = op.getOperand(0);
   Value operandB = op.getOperand(1);
@@ -325,68 +325,54 @@ static LogicalResult convertSpecialPowfOp(math::PowFOp op,
   auto &sem =
       cast<mlir::FloatType>(getElementTypeOrSelf(typeB)).getFloatSemantics();
   APFloat valueB(sem);
-  if (!matchPattern(operandB, m_ConstantFloat(&valueB))) {
-    // Not a constant, return failure
-    return failure();
-  }
-  if (valueB.isZero()) {
-    // a^0 -> 1
-    Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
-    rewriter.replaceOp(op, one);
-    return success();
-  }
-  if (valueB.compare(APFloat::getOne(sem)) == APFloat::cmpEqual) {
-    // a^1 -> a
-    rewriter.replaceOp(op, operandA);
-    return success();
-  }
-  if (valueB.compare(-APFloat::getOne(sem)) == APFloat::cmpEqual) {
-    // a^(-1) -> 1 / a
-    Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
-    Value div = b.create<arith::DivFOp>(one, operandA);
-    rewriter.replaceOp(op, div);
-    return success();
-  }
-  APFloat halfVal(0.5);
-  halfVal.convert(sem, APFloat::rmNearestTiesToEven, /*losesInfo=*/nullptr);
-  if (valueB.compare(halfVal) == APFloat::cmpEqual) {
-    // a^(1/2) -> sqrt(a)
-    Value sqrt = b.create<math::SqrtOp>(operandA);
-    rewriter.replaceOp(op, sqrt);
-    return success();
-  }
-  if (valueB.compare(-halfVal) == APFloat::cmpEqual) {
-    // a^(-1/2) -> 1 / sqrt(a)
-    Value rsqrt = b.create<math::RsqrtOp>(operandA);
-    rewriter.replaceOp(op, rsqrt);
-    return success();
-  }
-  APFloat twoVal(2.0);
-  twoVal.convert(sem, APFloat::rmNearestTiesToEven, /*losesInfo=*/nullptr);
-  if (valueB.compare(twoVal) == APFloat::cmpEqual) {
-    // a^2 -> a * a
-    Value mul = b.create<arith::MulFOp>(operandA, operandA);
-    rewriter.replaceOp(op, mul);
-    return success();
-  }
-  if (valueB.compare(-twoVal) == APFloat::cmpEqual) {
-    // a^(-2) -> 1 / (a * a)
-    Value mul = b.create<arith::MulFOp>(operandA, operandA);
-    Value one =
-        createFloatConst(op->getLoc(), operandA.getType(), 1.0, rewriter);
-    Value div = b.create<arith::DivFOp>(one, mul);
-    rewriter.replaceOp(op, div);
-    return success();
+  if (matchPattern(operandB, m_ConstantFloat(&valueB))) {
+    if (valueB.isZero()) {
+      // a^0 -> 1
+      Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
+      rewriter.replaceOp(op, one);
+      return success();
+    }
+    if (valueB.compare(APFloat::getOne(sem)) == APFloat::cmpEqual) {
+      // a^1 -> a
+      rewriter.replaceOp(op, operandA);
+      return success();
+    }
+    if (valueB.compare(-APFloat::getOne(sem)) == APFloat::cmpEqual) {
+      // a^(-1) -> 1 / a
+      Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
+      Value div = b.create<arith::DivFOp>(one, operandA);
+      rewriter.replaceOp(op, div);
+      return success();
+    }
+    if (valueB.isExactlyValue(0.5)) {
+      // a^(1/2) -> sqrt(a)
+      Value sqrt = b.create<math::SqrtOp>(operandA);
+      rewriter.replaceOp(op, sqrt);
+      return success();
+    }
+    if (valueB.isExactlyValue(-0.5)) {
+      // a^(-1/2) -> 1 / sqrt(a)
+      Value rsqrt = b.create<math::RsqrtOp>(operandA);
+      rewriter.replaceOp(op, rsqrt);
+      return success();
+    }
+    if (valueB.isExactlyValue(2.0)) {
+      // a^2 -> a * a
+      Value mul = b.create<arith::MulFOp>(operandA, operandA);
+      rewriter.replaceOp(op, mul);
+      return success();
+    }
+    if (valueB.isExactlyValue(-2.0)) {
+      // a^(-2) -> 1 / (a * a)
+      Value mul = b.create<arith::MulFOp>(operandA, operandA);
+      Value one =
+          createFloatConst(op->getLoc(), operandA.getType(), 1.0, rewriter);
+      Value div = b.create<arith::DivFOp>(one, mul);
+      rewriter.replaceOp(op, div);
+      return success();
+    }
   }
 
-  return failure();
-}
-
-// Converts Powf(float a, float b) (meaning a^b) to exp^(b * ln(a))
-static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
-  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
-  Value operandA = op.getOperand(0);
-  Value operandB = op.getOperand(1);
   Value logA = b.create<math::LogOp>(operandA);
   Value mult = b.create<arith::MulFOp>(operandB, logA);
   Value expResult = b.create<math::ExpOp>(mult);
@@ -706,7 +692,6 @@ void mlir::populateExpandExp2FPattern(RewritePatternSet &patterns) {
 }
 
 void mlir::populateExpandPowFPattern(RewritePatternSet &patterns) {
-  patterns.add(convertSpecialPowfOp, /*benefit=*/2);
   patterns.add(convertPowfOp);
 }
 
