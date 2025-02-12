@@ -5,10 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifdef LLDB_BUILD_TELEMETRY
-
 #ifndef LLDB_CORE_TELEMETRYVENDOR_H
 #define LLDB_CORE_TELEMETRYVENDOR_H
+
+#include "llvm/Config/llvm-config.h"
+
+#ifdef LLVM_BUILD_TELEMETRY
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/Telemetry.h"
@@ -23,21 +25,19 @@ public:
   TelemetryVendor() = default;
 
   llvm::StringRef GetPluginName() override;
-
   static void Initialize();
-
   static void Terminate();
-
   static lldb::TelemetryConfig GetTelemetryConfig();
-
-  static void SetTelemetryConfig(const lldb::TelemetryConfigSP &config);
-
   static lldb::TelemetryManagerSP GetTelemetryManager();
 
+
+protected:
+  static void SetTelemetryConfig(const lldb::TelemetryConfigSP &config);
   static void SetTelemetryManager(const lldb::TelemetryManagerSP &manager_sp);
 };
 
 } // namespace lldb_private
-#endif // LLDB_CORE_TELEMETRYVENDOR_H
 
-#endif // LLDB_BUILD_TELEMETRY
+#endif // LLVM_BUILD_TELEMETRY
+
+#endif // LLDB_CORE_TELEMETRYVENDOR_H
