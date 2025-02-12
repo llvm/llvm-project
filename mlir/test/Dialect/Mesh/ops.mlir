@@ -167,8 +167,6 @@ func.func @mesh_shard_shape() {
 // CHECK-LABEL: func @mesh_get_sharding
 // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
 func.func @mesh_get_sharding(%arg0 : tensor<4x8xf32>) -> !mesh.sharding {
-  // CHECK-NEXT: %[[S:.*]] = mesh.sharding @mesh1 split_axes = {{\[\[}}], [0]] : !mesh.sharding
-  %s = mesh.sharding @mesh1 split_axes = [[], [0]] : !mesh.sharding
   // CHECK-NEXT: mesh.get_sharding %[[ARG]] : tensor<4x8xf32> -> !mesh.sharding
   %0 = mesh.get_sharding %arg0 : tensor<4x8xf32> -> !mesh.sharding
   return %0 : !mesh.sharding

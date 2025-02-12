@@ -629,30 +629,33 @@ public:
     bool modified = succeeded(foldDynamicIndexList(mixedHalos, true)) ||
                     succeeded(foldDynamicIndexList(mixedOffs, true));
 
-    auto halos = decomposeMixedValues(mixedHalos);
-    auto offs = decomposeMixedValues(mixedOffs);
+    auto [staticHalos, dynamicHalos] = decomposeMixedValues(mixedHalos);
+    auto [staticOffs, dynamicOffs] = decomposeMixedValues(mixedOffs);
 
-    if (halos.second.empty() && !halos.first.empty()) {
-      if (halos.first[0] == 0 && llvm::all_equal(halos.first)) {
-        halos.first.clear();
+    if (dynamicHalos.empty() && !staticHalos.empty()) {
+      if (staticHalos[0] == 0 && llvm::all_equal(staticHalos)) {
+        staticHalos.clear();
         modified = true;
       }
     }
 
     // Remove sharded dims offsets if they are effectively the default values,
     // e.g. if they define equi-distance between all neighboring shards.
-    if (offs.second.empty() && !offs.first.empty()) {
-      assert(offs.first.size() >= 2);
-      auto diff = offs.first[1] - offs.first[0];
-      bool all_same = offs.first.size() > 2;
-      for (auto i = 2u; i < offs.first.size(); ++i) {
-        if (offs.first[i] - offs.first[i - 1] != diff) {
+    // Requires static-only offsets. Compares the first distance as the
+    // difference between the first two offsets. Only if all consecutive
+    // distances are the same, the offsets are removed.
+    if (dynamicOffs.empty() && !staticOffs.empty()) {
+      assert(staticOffs.size() >= 2);
+      auto diff = staticOffs[1] - staticOffs[0];
+      bool all_same = staticOffs.size() > 2;
+      for (auto i = 2u; i < staticOffs.size(); ++i) {
+        if (staticOffs[i] - staticOffs[i - 1] != diff) {
           all_same = false;
           break;
         }
       }
       if (all_same) {
-        offs.first.clear();
+        staticOffs.clear();
         modified = true;
       }
     }
@@ -661,10 +664,10 @@ public:
       return failure();
     }
 
-    op.setStaticHaloSizes(halos.first);
-    op.getDynamicHaloSizesMutable().assign(halos.second);
-    op.setStaticShardedDimsOffsets(offs.first);
-    op.getDynamicShardedDimsOffsetsMutable().assign(offs.second);
+    op.setStaticHaloSizes(staticHalos);
+    op.getDynamicHaloSizesMutable().assign(dynamicHalos);
+    op.setStaticShardedDimsOffsets(staticOffs);
+    op.getDynamicShardedDimsOffsetsMutable().assign(dynamicOffs);
 
     return success();
   }
