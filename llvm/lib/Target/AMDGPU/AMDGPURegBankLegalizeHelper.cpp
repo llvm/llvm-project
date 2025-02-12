@@ -258,13 +258,14 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
   // TODO: executeInWaterfallLoop(... WaterfallSgprs)
 }
 
-LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
+bool RegBankLegalizeHelper::isValidTyForID(LLT Ty,
+                                           RegBankLLTMappingApplyID ID) {
   switch (ID) {
   case Vcc:
   case UniInVcc:
-    return LLT::scalar(1);
+    return Ty.isScalar(1);
   case Sgpr16:
-    return LLT::scalar(16);
+    return Ty.isScalar(16);
   case Sgpr32:
   case Sgpr32Trunc:
   case Sgpr32AExt:
@@ -272,28 +273,28 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32SExt:
   case UniInVgprS32:
   case Vgpr32:
-    return LLT::scalar(32);
+    return Ty.isScalar(32);
   case Sgpr64:
   case Vgpr64:
-    return LLT::scalar(64);
+    return Ty.isScalar(64);
   case SgprP1:
   case VgprP1:
-    return LLT::pointer(1, 64);
+    return Ty == LLT::pointer(1, 64);
   case SgprP3:
   case VgprP3:
-    return LLT::pointer(3, 32);
+    return Ty == LLT::pointer(3, 32);
   case SgprP4:
   case VgprP4:
-    return LLT::pointer(4, 64);
+    return Ty == LLT::pointer(4, 64);
   case SgprP5:
   case VgprP5:
-    return LLT::pointer(5, 32);
+    return Ty == LLT::pointer(5, 32);
   case SgprV4S32:
   case VgprV4S32:
   case UniInVgprV4S32:
-    return LLT::fixed_vector(4, 32);
+    return Ty.isFixedVector(4, 32);
   default:
-    return LLT();
+    return Ty == LLT();
   }
 }
 
@@ -302,7 +303,7 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case SgprB32:
   case VgprB32:
   case UniInVgprB32:
-    if (Ty == LLT::scalar(32) || Ty == LLT::fixed_vector(2, 16) ||
+    if (Ty.isScalar(32) || Ty.isFixedVector(2, 16) ||
         Ty == LLT::pointer(3, 32) || Ty == LLT::pointer(5, 32) ||
         Ty == LLT::pointer(6, 32))
       return Ty;
@@ -310,37 +311,34 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case SgprB64:
   case VgprB64:
   case UniInVgprB64:
-    if (Ty == LLT::scalar(64) || Ty == LLT::fixed_vector(2, 32) ||
-        Ty == LLT::fixed_vector(4, 16) || Ty == LLT::pointer(0, 64) ||
-        Ty == LLT::pointer(1, 64) || Ty == LLT::pointer(4, 64))
+    if (Ty.isScalar(64) || Ty.isFixedVector(2, 32) || Ty.isFixedVector(4, 16) ||
+        Ty == LLT::pointer(0, 64) || Ty == LLT::pointer(1, 64) ||
+        Ty == LLT::pointer(4, 64))
       return Ty;
     return LLT();
   case SgprB96:
   case VgprB96:
   case UniInVgprB96:
-    if (Ty == LLT::scalar(96) || Ty == LLT::fixed_vector(3, 32) ||
-        Ty == LLT::fixed_vector(6, 16))
+    if (Ty.isScalar(96) || Ty.isFixedVector(3, 32) || Ty.isFixedVector(6, 16))
       return Ty;
     return LLT();
   case SgprB128:
   case VgprB128:
   case UniInVgprB128:
-    if (Ty == LLT::scalar(128) || Ty == LLT::fixed_vector(4, 32) ||
-        Ty == LLT::fixed_vector(2, 64))
+    if (Ty.isScalar(128) || Ty.isFixedVector(4, 32) || Ty.isFixedVector(2, 64))
       return Ty;
     return LLT();
   case SgprB256:
   case VgprB256:
   case UniInVgprB256:
-    if (Ty == LLT::scalar(256) || Ty == LLT::fixed_vector(8, 32) ||
-        Ty == LLT::fixed_vector(4, 64) || Ty == LLT::fixed_vector(16, 16))
+    if (Ty.isScalar(256) || Ty.isFixedVector(8, 32) ||
+        Ty.isFixedVector(4, 64) || Ty.isFixedVector(16, 16))
       return Ty;
     return LLT();
   case SgprB512:
   case VgprB512:
   case UniInVgprB512:
-    if (Ty == LLT::scalar(512) || Ty == LLT::fixed_vector(16, 32) ||
-        Ty == LLT::fixed_vector(8, 64))
+    if (Ty.isScalar(512) || Ty.isFixedVector(16, 32) || Ty.isFixedVector(8, 64))
       return Ty;
     return LLT();
   default:
@@ -430,7 +428,7 @@ void RegBankLegalizeHelper::applyMappingDst(
     case VgprP4:
     case VgprP5:
     case VgprV4S32: {
-      assert(Ty == getTyFromID(MethodIDs[OpIdx]));
+      assert(isValidTyForID(Ty, MethodIDs[OpIdx]));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
       break;
     }
@@ -464,7 +462,7 @@ void RegBankLegalizeHelper::applyMappingDst(
     }
     case UniInVgprS32:
     case UniInVgprV4S32: {
-      assert(Ty == getTyFromID(MethodIDs[OpIdx]));
+      assert(isValidTyForID(Ty, MethodIDs[OpIdx]));
       assert(RB == SgprRB);
       Register NewVgprDst = MRI.createVirtualRegister({VgprRB, Ty});
       Op.setReg(NewVgprDst);
@@ -537,7 +535,7 @@ void RegBankLegalizeHelper::applyMappingSrc(
     case SgprP4:
     case SgprP5:
     case SgprV4S32: {
-      assert(Ty == getTyFromID(MethodIDs[i]));
+      assert(isValidTyForID(Ty, MethodIDs[i]));
       assert(RB == getRegBankFromID(MethodIDs[i]));
       break;
     }
@@ -560,7 +558,7 @@ void RegBankLegalizeHelper::applyMappingSrc(
     case VgprP4:
     case VgprP5:
     case VgprV4S32: {
-      assert(Ty == getTyFromID(MethodIDs[i]));
+      assert(isValidTyForID(Ty, MethodIDs[i]));
       if (RB != VgprRB) {
         auto CopyToVgpr = B.buildCopy({VgprRB, Ty}, Reg);
         Op.setReg(CopyToVgpr.getReg(0));
@@ -619,7 +617,7 @@ void RegBankLegalizeHelper::applyMappingPHI(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
 
-  if (Ty == LLT::scalar(1) && MUI.isUniform(Dst)) {
+  if (Ty.isScalar(1) && MUI.isUniform(Dst)) {
     B.setInsertPt(*MI.getParent(), MI.getParent()->getFirstNonPHI());
 
     Register NewDst = MRI.createVirtualRegister(SgprRB_S32);
@@ -644,7 +642,7 @@ void RegBankLegalizeHelper::applyMappingPHI(MachineInstr &MI) {
   // ALL divergent i1 phis should be already lowered and inst-selected into PHI
   // with sgpr reg class and S1 LLT.
   // Note: this includes divergent phis that don't require lowering.
-  if (Ty == LLT::scalar(1) && MUI.isDivergent(Dst)) {
+  if (Ty.isScalar(1) && MUI.isDivergent(Dst)) {
     LLVM_DEBUG(dbgs() << "Divergent S1 G_PHI: "; MI.dump(););
     llvm_unreachable("Make sure to run AMDGPUGlobalISelDivergenceLowering "
                      "before RegBankLegalize to lower lane mask(vcc) phis");
@@ -653,7 +651,7 @@ void RegBankLegalizeHelper::applyMappingPHI(MachineInstr &MI) {
   // We accept all types that can fit in some register class.
   // Uniform G_PHIs have all sgpr registers.
   // Divergent G_PHIs have vgpr dst but inputs can be sgpr or vgpr.
-  if (Ty == LLT::scalar(32) || Ty == LLT::pointer(4, 64)) {
+  if (Ty.isScalar(32) || Ty == LLT::pointer(4, 64)) {
     return;
   }
 

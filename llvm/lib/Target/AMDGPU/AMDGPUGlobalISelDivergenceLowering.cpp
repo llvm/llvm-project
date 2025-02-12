@@ -87,7 +87,7 @@ DivergenceLoweringHelper::DivergenceLoweringHelper(
 
 // _(s1) -> SReg_32/64(s1)
 void DivergenceLoweringHelper::markAsLaneMask(Register DstReg) const {
-  assert(MRI->getType(DstReg) == LLT::scalar(1));
+  assert(MRI->getType(DstReg).isScalar(1));
 
   if (MRI->getRegClassOrNull(DstReg)) {
     if (MRI->constrainRegClass(DstReg, ST->getBoolRC()))
@@ -100,13 +100,11 @@ void DivergenceLoweringHelper::markAsLaneMask(Register DstReg) const {
 
 void DivergenceLoweringHelper::getCandidatesForLowering(
     SmallVectorImpl<MachineInstr *> &Vreg1Phis) const {
-  LLT S1 = LLT::scalar(1);
-
   // Add divergent i1 phis to the list
   for (MachineBasicBlock &MBB : *MF) {
     for (MachineInstr &MI : MBB.phis()) {
       Register Dst = MI.getOperand(0).getReg();
-      if (MRI->getType(Dst) == S1 && MUI->isDivergent(Dst))
+      if (MRI->getType(Dst).isScalar(1) && MUI->isDivergent(Dst))
         Vreg1Phis.push_back(&MI);
     }
   }

@@ -409,7 +409,7 @@ static bool isFPExtFromF16OrConst(const MachineRegisterInfo &MRI,
   const MachineInstr *Def = MRI.getVRegDef(Reg);
   if (Def->getOpcode() == TargetOpcode::G_FPEXT) {
     Register SrcReg = Def->getOperand(1).getReg();
-    return MRI.getType(SrcReg) == LLT::scalar(16);
+    return MRI.getType(SrcReg).isScalar(16);
   }
 
   if (Def->getOpcode() == TargetOpcode::G_FCONSTANT) {
@@ -428,7 +428,7 @@ bool AMDGPUCombinerHelper::matchExpandPromotedF16FMed3(MachineInstr &MI,
                                                        Register Src2) const {
   assert(MI.getOpcode() == TargetOpcode::G_FPTRUNC);
   Register SrcReg = MI.getOperand(1).getReg();
-  if (!MRI.hasOneNonDBGUse(SrcReg) || MRI.getType(SrcReg) != LLT::scalar(32))
+  if (!MRI.hasOneNonDBGUse(SrcReg) || !MRI.getType(SrcReg).isScalar(32))
     return false;
 
   return isFPExtFromF16OrConst(MRI, Src0) && isFPExtFromF16OrConst(MRI, Src1) &&

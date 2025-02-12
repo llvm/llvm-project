@@ -119,11 +119,11 @@ bool AMDGPUPreLegalizerCombinerImpl::matchClampI64ToI16(
 
   // Try to find a pattern where an i64 value should get clamped to short.
   const LLT SrcType = MRI.getType(MI.getOperand(1).getReg());
-  if (SrcType != LLT::scalar(64))
+  if (!SrcType.isScalar(64))
     return false;
 
   const LLT DstType = MRI.getType(MI.getOperand(0).getReg());
-  if (DstType != LLT::scalar(16))
+  if (!DstType.isScalar(16))
     return false;
 
   Register Base;
@@ -177,8 +177,7 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
     MachineInstr &MI, const ClampI64ToI16MatchInfo &MatchInfo) const {
 
   Register Src = MatchInfo.Origin;
-  assert(MI.getParent()->getParent()->getRegInfo().getType(Src) ==
-         LLT::scalar(64));
+  assert(MI.getParent()->getParent()->getRegInfo().getType(Src).isScalar(64));
   const LLT S32 = LLT::scalar(32);
 
   auto Unmerge = B.buildUnmerge(S32, Src);

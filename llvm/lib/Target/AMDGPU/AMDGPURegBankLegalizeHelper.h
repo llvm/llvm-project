@@ -88,7 +88,7 @@ private:
                               iterator_range<MachineBasicBlock::iterator> Range,
                               SmallSet<Register, 4> &SgprOperandRegs);
 
-  LLT getTyFromID(RegBankLLTMappingApplyID ID);
+  bool isValidTyForID(LLT Ty, RegBankLLTMappingApplyID ID);
   LLT getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty);
 
   const RegisterBank *getRegBankFromID(RegBankLLTMappingApplyID ID);

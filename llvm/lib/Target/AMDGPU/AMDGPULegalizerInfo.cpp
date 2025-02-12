@@ -278,7 +278,7 @@ static LegalityPredicate elementTypeIsLegal(unsigned TypeIdx) {
     if (!QueryTy.isVector())
       return false;
     const LLT EltTy = QueryTy.getElementType();
-    return EltTy == LLT::scalar(16) || EltTy.getSizeInBits() >= 32;
+    return EltTy.isScalar(16) || EltTy.getSizeInBits() >= 32;
   };
 }
 
@@ -2451,7 +2451,7 @@ bool AMDGPULegalizerInfo::legalizeFroundeven(MachineInstr &MI,
                                              MachineIRBuilder &B) const {
   Register Src = MI.getOperand(1).getReg();
   LLT Ty = MRI.getType(Src);
-  assert(Ty.isScalar() && Ty.getSizeInBits() == 64);
+  assert(Ty.isFloat() && Ty.getSizeInBits() == 64);
 
   APFloat C1Val(APFloat::IEEEdouble(), "0x1.0p+52");
   APFloat C2Val(APFloat::IEEEdouble(), "0x1.fffffffffffffp+51");
@@ -2480,7 +2480,7 @@ bool AMDGPULegalizerInfo::legalizeFceil(
   const LLT S64 = LLT::scalar(64);
 
   Register Src = MI.getOperand(1).getReg();
-  assert(MRI.getType(Src) == S64);
+  assert(MRI.getType(Src).isFloat(64));
 
   // result = trunc(src)
   // if (src > 0.0 && src != result)
