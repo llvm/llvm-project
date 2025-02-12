@@ -4901,7 +4901,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
                                llvm::DILocation::get(CGM.getLLVMContext(), Line,
                                                      Column, Scope,
                                                      CurInlinedAt),
-                               Builder.GetInsertBlock());
+                               Builder.GetInsertBlock()->end());
       }
     }
   }
@@ -4969,7 +4969,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   DBuilder.insertDeclare(Storage, D, DBuilder.createExpression(Expr),
                          llvm::DILocation::get(CGM.getLLVMContext(), Line,
                                                Column, Scope, CurInlinedAt),
-                         Builder.GetInsertBlock());
+                         Builder.GetInsertBlock()->end());
 
   return D;
 }
@@ -5075,7 +5075,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
   DBuilder.insertDeclare(Storage, D, DBuilder.createExpression(Expr),
                          llvm::DILocation::get(CGM.getLLVMContext(), Line,
                                                Column, Scope, CurInlinedAt),
-                         Builder.GetInsertBlock());
+                         Builder.GetInsertBlock()->end());
 
   return D;
 }
@@ -5122,7 +5122,7 @@ void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {
   DBuilder.insertLabel(L,
                        llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,
                                              Scope, CurInlinedAt),
-                       Builder.GetInsertBlock());
+                       Builder.GetInsertBlock()->end());
 }
 
 llvm::DIType *CGDebugInfo::CreateSelfType(const QualType &QualTy,
@@ -5200,9 +5200,10 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
                                   LexicalBlockStack.back(), CurInlinedAt);
   auto *Expr = DBuilder.createExpression(addr);
   if (InsertPoint)
-    DBuilder.insertDeclare(Storage, D, Expr, DL, InsertPoint);
+    DBuilder.insertDeclare(Storage, D, Expr, DL, InsertPoint->getIterator());
   else
-    DBuilder.insertDeclare(Storage, D, Expr, DL, Builder.GetInsertBlock());
+    DBuilder.insertDeclare(Storage, D, Expr, DL,
+                           Builder.GetInsertBlock()->end());
 }
 
 llvm::DILocalVariable *
@@ -5385,7 +5386,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
   DBuilder.insertDeclare(Alloca, debugVar, DBuilder.createExpression(),
                          llvm::DILocation::get(CGM.getLLVMContext(), line,
                                                column, scope, CurInlinedAt),
-                         Builder.GetInsertBlock());
+                         Builder.GetInsertBlock()->end());
 }
 
 llvm::DIDerivedType *
@@ -5865,7 +5866,7 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
 
   if (auto InsertPoint = Value->getInsertionPointAfterDef()) {
     DBuilder.insertDbgValueIntrinsic(Value, D, DBuilder.createExpression(), DIL,
-                                     &**InsertPoint);
+                                     *InsertPoint);
   }
 }
 
