@@ -88,28 +88,27 @@ public:
 
 using namespace AMDGPU::SDWA;
 
-/// Check that the SDWA selections \p Sel and \p OperandSel
-/// are suitable for being combined by combineSdwaSel.
-bool compatibleSelections(SdwaSel Sel, SdwaSel OperandSel) {
-  return Sel == SdwaSel::DWORD || OperandSel == Sel ||
-         (Sel != SdwaSel::WORD_1 && Sel != SdwaSel::BYTE_2 &&
-          Sel != SdwaSel::BYTE_3 &&
-          (OperandSel == SdwaSel::WORD_0 || OperandSel == SdwaSel::WORD_1));
-}
-
 /// Combine an SDWA instruction's existing SDWA selection \p Sel with
-/// the SDWA selection \p OpSel of its operand which must be
-/// compatible.
+/// the SDWA selection \p OperandSel of its operand. If the selections
+/// are compatible, return the combined selection, otherwise return a
+/// nullopt.
 /// For example, if we have Sel = BYTE_0 Sel and OperandSel = WORD_1:
 ///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
-SdwaSel combineSdwaSel(SdwaSel Sel, SdwaSel OperandSel) {
-  assert(compatibleSelections(Sel, OperandSel));
-
+std::optional<SdwaSel> combineSdwaSel(SdwaSel Sel, SdwaSel OperandSel) {
   if (Sel == SdwaSel::DWORD)
     return OperandSel;
 
-  if (OperandSel == SdwaSel::DWORD || Sel == OperandSel ||
-      OperandSel == SdwaSel::WORD_0)
+  if (OperandSel == SdwaSel::DWORD)
+    return Sel;
+
+  if (Sel == SdwaSel::WORD_1 || Sel == SdwaSel::BYTE_2 ||
+      Sel == SdwaSel::BYTE_3)
+    return {};
+
+  if (Sel == OperandSel)
+    return Sel;
+
+  if (OperandSel == SdwaSel::WORD_0)
     return Sel;
 
   if (OperandSel == SdwaSel::WORD_1) {
@@ -121,7 +120,7 @@ SdwaSel combineSdwaSel(SdwaSel Sel, SdwaSel OperandSel) {
       return SdwaSel::WORD_1;
   }
 
-  llvm_unreachable("Unexpected selections");
+  return {};
 }
 
 class SDWAOperand {
@@ -183,9 +182,11 @@ public:
     if (TII->isSDWA(MI.getOpcode())) {
       for (auto SelOpName :
            {AMDGPU::OpName::src0_sel, AMDGPU::OpName::src1_sel}) {
-        const MachineOperand *NamedOp = TII->getNamedOperand(MI, SelOpName);
-        if (NamedOp && !compatibleSelections(
-                           static_cast<SdwaSel>(NamedOp->getImm()), SrcSel_))
+        const MachineOperand *Op = TII->getNamedOperand(MI, SelOpName);
+        if (!Op)
+          break;
+        auto Sel = static_cast<SdwaSel>(Op->getImm());
+        if (!combineSdwaSel(Sel, SrcSel_).has_value())
           return nullptr;
       }
     }
@@ -233,7 +234,7 @@ public:
     if (TII->isSDWA(MI.getOpcode())) {
       SdwaSel InstSel = static_cast<SdwaSel>(
           TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel)->getImm());
-      if (!compatibleSelections(InstSel, DstSel_))
+      if (!combineSdwaSel(InstSel, DstSel_).has_value())
         return nullptr;
     }
 
@@ -530,7 +531,7 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   copyRegOperand(*Src, *getTargetOperand());
   if (!IsPreserveSrc) {
     SdwaSel ExistingSel = static_cast<SdwaSel>(SrcSel->getImm());
-    SrcSel->setImm(combineSdwaSel(ExistingSel, getSrcSel()));
+    SrcSel->setImm(combineSdwaSel(ExistingSel, getSrcSel()).value());
     SrcMods->setImm(getSrcMods(TII, Src));
   }
   getTargetOperand()->setIsKill(false);
@@ -579,7 +580,7 @@ bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   assert(DstSel);
 
   SdwaSel ExistingSel = static_cast<SdwaSel>(DstSel->getImm());
-  DstSel->setImm(combineSdwaSel(ExistingSel, getDstSel()));
+  DstSel->setImm(combineSdwaSel(ExistingSel, getDstSel()).value());
 
   MachineOperand *DstUnused= TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
   assert(DstUnused);
