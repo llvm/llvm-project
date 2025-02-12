@@ -99,6 +99,15 @@ else()
   set(NO_LTO_FLAGS "")
 endif()
 
+# based on AddLLVM.cmake
+if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  set(NO_RTTI_FLAGS "-fno-exceptions -fno-rtti")
+elseif (MSVC)
+  set(NO_RTTI_FLAGS "/EHs-c- /GR-")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
+  set(NO_RTTI_FLAGS "-qnoeh -qnortti")
+endif ()
+
 configure_file(config.h.cmake config.h)
 # include_directories is used here instead of target_include_directories
 # because add_flang_library creates multiple objects (STATIC/SHARED, OBJECT)
@@ -107,6 +116,7 @@ include_directories(AFTER ${CMAKE_CURRENT_BINARY_DIR})
 
 append(${NO_LTO_FLAGS} CMAKE_C_FLAGS)
 append(${NO_LTO_FLAGS} CMAKE_CXX_FLAGS)
+append(${NO_RTTI_FLAGS} CMAKE_CXX_FLAGS)
 
 # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build,
 # to avoid an unwanted dependency on libstdc++/libc++.so.
