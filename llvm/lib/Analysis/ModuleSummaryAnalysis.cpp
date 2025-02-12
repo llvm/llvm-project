@@ -916,6 +916,8 @@ static void setLiveRoot(ModuleSummaryIndex &Index, StringRef Name) {
       Summary->setLive(true);
 }
 
+// Return true if the User U is reachable from a non-vtable user
+// through the use-def chain.
 static bool hasNonVTableUsers(const User *U, CXXABI *ABI) {
   LLVM_DEBUG(dbgs() << "Check if " << *U << "has vtable users\n");
   if (isa<Instruction>(U)) {
