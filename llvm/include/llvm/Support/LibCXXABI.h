@@ -27,6 +27,16 @@
 
 namespace llvm {
 
+
+/// Abstract interface for handling C++ ABI (Application Binary Interface) specifics.
+///
+/// This class provides an abstraction for interacting with different C++ ABIs,
+/// particularly in the context of name mangling and vtable layout.
+/// This allows the CXX ABI-aware optimizations to correctly identify and transform
+/// RTTI data and vtables.
+///
+/// Note this is an abstract class that should be subclassed to provide
+/// implementation details for a specific C++ ABI such as Itanium or MSVC.
 class CXXABI {
 
   virtual const char * getVTablePrefix() = 0;
@@ -36,6 +46,9 @@ class CXXABI {
 public:
   static std::unique_ptr<CXXABI> Create(Triple &TT);
   virtual ~CXXABI() {}
+
+  /// Return the offset from the type info slot to its address point
+  /// in the vtable.
   virtual int64_t
   getOffsetFromTypeInfoSlotToAddressPoint(const DataLayout &DT) = 0;
 
@@ -47,10 +60,20 @@ public:
     return Name.starts_with(getTypeInfoPrefix());
   }
 
+  /// Return the name of type name string from the given name of the
+  /// type info.
   std::string getTypeNameFromTypeInfo(StringRef TypeInfo);
+
+  /// Return the name of the type info from the given name of the vtable.
   std::string getTypeInfoFromVTable(StringRef VTable);
 };
 
+/// Implements C++ ABI support for the Itanium ABI.
+///
+/// This class provides functionality specific to the Itanium C++ ABI.
+/// It extends the `CXXABI` interface to implement ABI-specific operations.
+///
+/// See https://itanium-cxx-abi.github.io/cxx-abi/abi.html#rtti
 class Itanium final : public CXXABI {
 
   const char * getVTablePrefix() override { return "_ZTV"; }
