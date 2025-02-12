@@ -751,13 +751,14 @@ BuiltinTypeDeclBuilder::addHandleAccessFunction(DeclarationName &Name,
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   QualType ElemTy = getHandleElementType();
-  // TODO: Map to an hlsl_device address space.
-  QualType ElemPtrTy = AST.getPointerType(ElemTy);
-  QualType ReturnTy = ElemTy;
+  QualType AddrSpaceElemTy =
+      AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
+  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
+  // QualType ReturnTy = (IsRef ? AST.getLValueReferenceType(ElemTy) : ElemTy);
+  QualType ReturnTy =
+      (IsRef ? AST.getLValueReferenceType(AddrSpaceElemTy) : ElemTy);
   if (IsConst)
     ReturnTy.addConst();
-  if (IsRef)
-    ReturnTy = AST.getLValueReferenceType(ReturnTy);
 
   return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, IsConst)
       .addParam("Index", AST.UnsignedIntTy)
@@ -771,12 +772,15 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addAppendMethod() {
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
   QualType ElemTy = getHandleElementType();
+  QualType AddrSpaceElemTy =
+      AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
   return BuiltinTypeMethodBuilder(*this, "Append", AST.VoidTy)
       .addParam("value", ElemTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", AST.UnsignedIntTy,
                    PH::Handle, getConstantIntExpr(1))
       .callBuiltin("__builtin_hlsl_resource_getpointer",
-                   AST.getPointerType(ElemTy), PH::Handle, PH::LastStmt)
+                   AST.getPointerType(AddrSpaceElemTy), PH::Handle,
+                   PH::LastStmt)
       .dereference(PH::LastStmt)
       .assign(PH::LastStmt, PH::_0)
       .finalize();
@@ -786,11 +790,14 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addConsumeMethod() {
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
   QualType ElemTy = getHandleElementType();
+  QualType AddrSpaceElemTy =
+      AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
   return BuiltinTypeMethodBuilder(*this, "Consume", ElemTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", AST.UnsignedIntTy,
                    PH::Handle, getConstantIntExpr(-1))
       .callBuiltin("__builtin_hlsl_resource_getpointer",
-                   AST.getPointerType(ElemTy), PH::Handle, PH::LastStmt)
+                   AST.getPointerType(AddrSpaceElemTy), PH::Handle,
+                   PH::LastStmt)
       .dereference(PH::LastStmt)
       .finalize();
 }
