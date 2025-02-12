@@ -28,20 +28,19 @@ class BackendConsumer : public ASTConsumer {
   using LinkModule = CodeGenAction::LinkModule;
 
   virtual void anchor();
+  CompilerInstance &CI;
   DiagnosticsEngine &Diags;
-  BackendAction Action;
-  const HeaderSearchOptions &HeaderSearchOpts;
   const CodeGenOptions &CodeGenOpts;
   const TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
   const CASOptions &CASOpts; // MCCAS
   std::unique_ptr<raw_pwrite_stream> AsmOutStream;
   std::unique_ptr<raw_pwrite_stream> CasIDStream;
-  ASTContext *Context;
+  ASTContext *Context = nullptr;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
 
   llvm::Timer LLVMIRGeneration;
-  unsigned LLVMIRGenerationRefCount;
+  unsigned LLVMIRGenerationRefCount = 0;
 
   /// True if we've finished generating IR. This prevents us from generating
   /// additional LLVM IR after emitting output in HandleTranslationUnit. This
@@ -49,6 +48,8 @@ class BackendConsumer : public ASTConsumer {
   bool IRGenFinished = false;
 
   bool TimerIsEnabled = false;
+
+  BackendAction Action;
 
   std::unique_ptr<CodeGenerator> Gen;
 
@@ -71,30 +72,14 @@ class BackendConsumer : public ASTConsumer {
   llvm::Module *CurLinkModule = nullptr;
 
 public:
-  BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
+  BackendConsumer(CompilerInstance &CI, BackendAction Action,
                   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                  const HeaderSearchOptions &HeaderSearchOpts,
-                  const PreprocessorOptions &PPOpts,
-                  const CodeGenOptions &CodeGenOpts,
-                  const TargetOptions &TargetOpts, const LangOptions &LangOpts,
-                  const CASOptions &CASOpts, const std::string &InFile,
-                  SmallVector<LinkModule, 4> LinkModules,
-                  std::unique_ptr<raw_pwrite_stream> OS, llvm::LLVMContext &C,
-                  CoverageSourceInfo *CoverageInfo = nullptr,
-                  std::unique_ptr<raw_pwrite_stream> CasIDOS = nullptr);
-
-  // This constructor is used in installing an empty BackendConsumer
-  // to use the clang diagnostic handler for IR input files. It avoids
-  // initializing the OS field.
-  BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
-                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                  const HeaderSearchOptions &HeaderSearchOpts,
-                  const PreprocessorOptions &PPOpts,
-                  const CodeGenOptions &CodeGenOpts,
-                  const TargetOptions &TargetOpts, const LangOptions &LangOpts,
-                  const CASOptions &CASOpts, llvm::Module *Module,
-                  SmallVector<LinkModule, 4> LinkModules, llvm::LLVMContext &C,
-                  CoverageSourceInfo *CoverageInfo = nullptr);
+                  const CASOptions &CASOpts,
+                  llvm::LLVMContext &C, SmallVector<LinkModule, 4> LinkModules,
+                  StringRef InFile, std::unique_ptr<raw_pwrite_stream> OS,
+                  CoverageSourceInfo *CoverageInfo,
+                  std::unique_ptr<raw_pwrite_stream> CasIDOS = nullptr,
+                  llvm::Module *CurLinkModule = nullptr);
 
   llvm::Module *getModule() const;
   std::unique_ptr<llvm::Module> takeModule();

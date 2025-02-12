@@ -11,8 +11,8 @@
 
 #include "formatting.h"
 #include "type.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Common/reference.h"
+#include "flang/Support/default-kinds.h"
 #include <map>
 #include <vector>
 
@@ -65,6 +65,7 @@ public:
   ~ConstantBounds();
   const ConstantSubscripts &shape() const { return shape_; }
   int Rank() const { return GetRank(shape_); }
+  static constexpr int Corank() { return 0; }
   Constant<SubscriptInteger> SHAPE() const;
 
   // It is possible in this representation for a constant array to have

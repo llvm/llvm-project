@@ -36,7 +36,8 @@ class RVInst16CR<bits<4> funct4, bits<2> opcode, dag outs, dag ins,
 
 // The immediate value encoding differs for each instruction, so each subclass
 // is responsible for setting the appropriate bits in the Inst field.
-// The bits Inst{6-2} must be set for each instruction.
+// The bits Inst{12} and Inst{6-2} may need to be set differently for some
+// instructions.
 class RVInst16CI<bits<3> funct3, bits<2> opcode, dag outs, dag ins,
                  string opcodestr, string argstr>
     : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatCI> {
@@ -46,12 +47,13 @@ class RVInst16CI<bits<3> funct3, bits<2> opcode, dag outs, dag ins,
   let Inst{15-13} = funct3;
   let Inst{12} = imm{5};
   let Inst{11-7} = rd;
+  let Inst{6-2} = imm{4-0};
   let Inst{1-0} = opcode;
 }
 
 // The immediate value encoding differs for each instruction, so each subclass
 // is responsible for setting the appropriate bits in the Inst field.
-// The bits Inst{12-7} must be set for each instruction.
+// The bits Inst{12-7} may need to be set differently for some instructions.
 class RVInst16CSS<bits<3> funct3, bits<2> opcode, dag outs, dag ins,
                   string opcodestr, string argstr>
     : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatCSS> {
@@ -60,6 +62,7 @@ class RVInst16CSS<bits<3> funct3, bits<2> opcode, dag outs, dag ins,
   bits<5> rs1;
 
   let Inst{15-13} = funct3;
+  let Inst{12-7} = imm{5-0};
   let Inst{6-2} = rs2;
   let Inst{1-0} = opcode;
 }

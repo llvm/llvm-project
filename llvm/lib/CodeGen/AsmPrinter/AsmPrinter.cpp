@@ -504,13 +504,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   // don't, this at least helps the user find where a global came from.
   if (MAI->hasSingleParameterDotFile()) {
     // .file "foo.c"
-
-    SmallString<128> FileName;
-    if (MAI->hasBasenameOnlyForFileDirective())
-      FileName = llvm::sys::path::filename(M.getSourceFileName());
-    else
-      FileName = M.getSourceFileName();
-    if (MAI->hasFourStringsDotFile()) {
+    if (MAI->isAIX()) {
       const char VerStr[] =
 #ifdef PACKAGE_VENDOR
           PACKAGE_VENDOR " "
@@ -521,9 +515,10 @@ bool AsmPrinter::doInitialization(Module &M) {
 #endif
           ;
       // TODO: Add timestamp and description.
-      OutStreamer->emitFileDirective(FileName, VerStr, "", "");
+      OutStreamer->emitFileDirective(M.getSourceFileName(), VerStr, "", "");
     } else {
-      OutStreamer->emitFileDirective(FileName);
+      OutStreamer->emitFileDirective(
+          llvm::sys::path::filename(M.getSourceFileName()));
     }
   }
 
@@ -532,7 +527,8 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
     emitModuleCommandLines(M);
     // Now we can generate section information.
-    OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
+    OutStreamer->switchSection(
+        OutContext.getObjectFileInfo()->getTextSection());
 
     // To work around an AIX assembler and/or linker bug, generate
     // a rename for the default text-section symbol name.  This call has
@@ -566,11 +562,11 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
     if (EmitCodeView && TM.getTargetTriple().isOSWindows())
-      DebugHandlers.push_back(std::make_unique<CodeViewDebug>(this));
+      Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
         DD = new DwarfDebug(this);
-        DebugHandlers.push_back(std::unique_ptr<DwarfDebug>(DD));
+        Handlers.push_back(std::unique_ptr<DwarfDebug>(DD));
       }
     }
   }
@@ -637,11 +633,11 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   // Emit tables for any value of cfguard flag (i.e. cfguard=1 or cfguard=2).
   if (mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("cfguard")))
-    Handlers.push_back(std::make_unique<WinCFGuard>(this));
+    EHHandlers.push_back(std::make_unique<WinCFGuard>(this));
 
-  for (auto &Handler : DebugHandlers)
-    Handler->beginModule(&M);
   for (auto &Handler : Handlers)
+    Handler->beginModule(&M);
+  for (auto &Handler : EHHandlers)
     Handler->beginModule(&M);
 
   return false;
@@ -789,7 +785,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // sections and expected to be contiguous (e.g. ObjC metadata).
   const Align Alignment = getGVAlignment(GV, DL);
 
-  for (auto &Handler : DebugHandlers)
+  for (auto &Handler : Handlers)
     Handler->setSymbolSize(GVSym, Size);
 
   // Handle common symbols
@@ -967,11 +963,10 @@ void AsmPrinter::emitFunctionHeader() {
     MF->setSection(getObjFileLowering().SectionForGlobal(&F, TM));
   OutStreamer->switchSection(MF->getSection());
 
-  if (!MAI->hasVisibilityOnlyWithLinkage())
-    emitVisibility(CurrentFnSym, F.getVisibility());
-
-  if (MAI->needsFunctionDescriptors())
+  if (MAI->isAIX())
     emitLinkage(&F, CurrentFnDescSym);
+  else
+    emitVisibility(CurrentFnSym, F.getVisibility());
 
   emitLinkage(&F, CurrentFnSym);
   if (MAI->hasFunctionAlignment())
@@ -1031,7 +1026,7 @@ void AsmPrinter::emitFunctionHeader() {
   // to emit their specific function descriptor. Right now it is only used by
   // the AIX target. The PowerPC 64-bit V1 ELF target also uses function
   // descriptors and should be converted to use this hook as well.
-  if (MAI->needsFunctionDescriptors())
+  if (MAI->isAIX())
     emitFunctionDescriptor();
 
   // Emit the CurrentFnSym. This is a virtual function to allow targets to do
@@ -1060,14 +1055,14 @@ void AsmPrinter::emitFunctionHeader() {
   }
 
   // Emit pre-function debug and/or EH information.
-  for (auto &Handler : DebugHandlers) {
+  for (auto &Handler : Handlers) {
     Handler->beginFunction(MF);
     Handler->beginBasicBlockSection(MF->front());
   }
-  for (auto &Handler : Handlers)
+  for (auto &Handler : EHHandlers) {
     Handler->beginFunction(MF);
-  for (auto &Handler : Handlers)
     Handler->beginBasicBlockSection(MF->front());
+  }
 
   // Emit the prologue data.
   if (F.hasPrologueData())
@@ -1842,7 +1837,7 @@ void AsmPrinter::emitFunctionBody() {
       if (MDNode *MD = MI.getPCSections())
         emitPCSectionsLabel(*MF, *MD);
 
-      for (auto &Handler : DebugHandlers)
+      for (auto &Handler : Handlers)
         Handler->beginInstruction(&MI);
 
       if (isVerbose())
@@ -1958,7 +1953,7 @@ void AsmPrinter::emitFunctionBody() {
       if (MCSymbol *S = MI.getPostInstrSymbol())
         OutStreamer->emitLabel(S);
 
-      for (auto &Handler : DebugHandlers)
+      for (auto &Handler : Handlers)
         Handler->endInstruction();
     }
 
@@ -2095,12 +2090,14 @@ void AsmPrinter::emitFunctionBody() {
   // Call endBasicBlockSection on the last block now, if it wasn't already
   // called.
   if (!MF->back().isEndSection()) {
-    for (auto &Handler : DebugHandlers)
-      Handler->endBasicBlockSection(MF->back());
     for (auto &Handler : Handlers)
+      Handler->endBasicBlockSection(MF->back());
+    for (auto &Handler : EHHandlers)
       Handler->endBasicBlockSection(MF->back());
   }
   for (auto &Handler : Handlers)
+    Handler->markFunctionEnd();
+  for (auto &Handler : EHHandlers)
     Handler->markFunctionEnd();
   // Update the end label of the entry block's section.
   MBBSectionRanges[MF->front().getSectionID()].EndLabel = CurrentFnEnd;
@@ -2109,9 +2106,9 @@ void AsmPrinter::emitFunctionBody() {
   emitJumpTableInfo();
 
   // Emit post-function debug and/or EH information.
-  for (auto &Handler : DebugHandlers)
-    Handler->endFunction(MF);
   for (auto &Handler : Handlers)
+    Handler->endFunction(MF);
+  for (auto &Handler : EHHandlers)
     Handler->endFunction(MF);
 
   // Emit section containing BB address offsets and their metadata, when
@@ -2258,9 +2255,6 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   // point, all the extra label is emitted, we just have to emit linkage for
   // those labels.
   if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
-    assert(MAI->hasVisibilityOnlyWithLinkage() &&
-           "Visibility should be handled with emitLinkage() on AIX.");
-
     // Linkage for alias of global variable has been emitted.
     if (isa<GlobalVariable>(GA.getAliaseeObject()))
       return;
@@ -2469,11 +2463,14 @@ bool AsmPrinter::doFinalization(Module &M) {
   // we can conditionalize accesses based on whether or not it is nullptr.
   MF = nullptr;
 
-  for (GlobalVariable &G : make_early_inc_range(M.globals())) {
+  std::vector<GlobalVariable *> GlobalsToTag;
+  for (GlobalVariable &G : M.globals()) {
     if (G.isDeclaration() || !G.isTagged())
       continue;
-    tagGlobalDefinition(M, &G);
+    GlobalsToTag.push_back(&G);
   }
+  for (GlobalVariable *G : GlobalsToTag)
+    tagGlobalDefinition(M, G);
 
   // Gather all GOT equivalent globals in the module. We really need two
   // passes over the globals: one to compute and another to avoid its emission
@@ -2613,17 +2610,16 @@ bool AsmPrinter::doFinalization(Module &M) {
     emitGlobalIFunc(M, IFunc);
 
   // Finalize debug and EH information.
-  for (auto &Handler : DebugHandlers)
-    Handler->endModule();
   for (auto &Handler : Handlers)
+    Handler->endModule();
+  for (auto &Handler : EHHandlers)
     Handler->endModule();
 
   // This deletes all the ephemeral handlers that AsmPrinter added, while
   // keeping all the user-added handlers alive until the AsmPrinter is
   // destroyed.
+  EHHandlers.clear();
   Handlers.erase(Handlers.begin() + NumUserHandlers, Handlers.end());
-  DebugHandlers.erase(DebugHandlers.begin() + NumUserDebugHandlers,
-                      DebugHandlers.end());
   DD = nullptr;
 
   // If the target wants to know about weak references, print them all.
@@ -2751,7 +2747,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
     HasNoSplitStack = true;
 
   // Get the function symbol.
-  if (!MAI->needsFunctionDescriptors()) {
+  if (!MAI->isAIX()) {
     CurrentFnSym = getSymbol(&MF.getFunction());
   } else {
     assert(TM.getTargetTriple().isOSAIX() &&
@@ -2882,7 +2878,6 @@ void AsmPrinter::emitConstantPool() {
 // Print assembly representations of the jump tables used by the current
 // function.
 void AsmPrinter::emitJumpTableInfo() {
-  const DataLayout &DL = MF->getDataLayout();
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
   if (!MJTI) return;
   if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_Inline) return;
@@ -2897,42 +2892,83 @@ void AsmPrinter::emitJumpTableInfo() {
       MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
           MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64,
       F);
-  if (JTInDiffSection) {
-    // Drop it in the readonly section.
-    MCSection *ReadOnlySection = TLOF.getSectionForJumpTable(F, TM);
-    OutStreamer->switchSection(ReadOnlySection);
+
+  if (!TM.Options.EnableStaticDataPartitioning) {
+    emitJumpTableImpl(*MJTI, llvm::to_vector(llvm::seq<unsigned>(JT.size())),
+                      JTInDiffSection);
+    return;
   }
 
-  emitAlignment(Align(MJTI->getEntryAlignment(DL)));
+  SmallVector<unsigned> HotJumpTableIndices, ColdJumpTableIndices;
+  // When static data partitioning is enabled, collect jump table entries that
+  // go into the same section together to reduce the amount of section switch
+  // statements.
+  for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI) {
+    if (JT[JTI].Hotness == MachineFunctionDataHotness::Cold) {
+      ColdJumpTableIndices.push_back(JTI);
+    } else {
+      HotJumpTableIndices.push_back(JTI);
+    }
+  }
+
+  emitJumpTableImpl(*MJTI, HotJumpTableIndices, JTInDiffSection);
+  emitJumpTableImpl(*MJTI, ColdJumpTableIndices, JTInDiffSection);
+}
+
+void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                                   ArrayRef<unsigned> JumpTableIndices,
+                                   bool JTInDiffSection) {
+  if (JumpTableIndices.empty())
+    return;
+
+  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
+  const Function &F = MF->getFunction();
+  const std::vector<MachineJumpTableEntry> &JT = MJTI.getJumpTables();
+  MCSection *JumpTableSection = nullptr;
+  if (TM.Options.EnableStaticDataPartitioning) {
+    JumpTableSection =
+        TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
+  } else {
+    JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
+  }
+
+  const DataLayout &DL = MF->getDataLayout();
+  if (JTInDiffSection) {
+    OutStreamer->switchSection(JumpTableSection);
+  }
+
+  emitAlignment(Align(MJTI.getEntryAlignment(MF->getDataLayout())));
 
   // Jump tables in code sections are marked with a data_region directive
   // where that's supported.
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionJT32);
 
-  for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {
-    const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
+  for (const unsigned JumpTableIndex : JumpTableIndices) {
+    ArrayRef<MachineBasicBlock *> JTBBs = JT[JumpTableIndex].MBBs;
 
     // If this jump table was deleted, ignore it.
-    if (JTBBs.empty()) continue;
+    if (JTBBs.empty())
+      continue;
 
     // For the EK_LabelDifference32 entry, if using .set avoids a relocation,
     /// emit a .set directive for each unique entry.
-    if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 &&
+    if (MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 &&
         MAI->doesSetDirectiveSuppressReloc()) {
-      SmallPtrSet<const MachineBasicBlock*, 16> EmittedSets;
+      SmallPtrSet<const MachineBasicBlock *, 16> EmittedSets;
       const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-      const MCExpr *Base = TLI->getPICJumpTableRelocBaseExpr(MF,JTI,OutContext);
+      const MCExpr *Base =
+          TLI->getPICJumpTableRelocBaseExpr(MF, JumpTableIndex, OutContext);
       for (const MachineBasicBlock *MBB : JTBBs) {
         if (!EmittedSets.insert(MBB).second)
           continue;
 
         // .set LJTSet, LBB32-base
         const MCExpr *LHS =
-          MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
-        OutStreamer->emitAssignment(GetJTSetSymbol(JTI, MBB->getNumber()),
-                                    MCBinaryExpr::createSub(LHS, Base,
-                                                            OutContext));
+            MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
+        OutStreamer->emitAssignment(
+            GetJTSetSymbol(JumpTableIndex, MBB->getNumber()),
+            MCBinaryExpr::createSub(LHS, Base, OutContext));
       }
     }
 
@@ -2944,27 +2980,27 @@ void AsmPrinter::emitJumpTableInfo() {
       // FIXME: This doesn't have to have any specific name, just any randomly
       // named and numbered local label started with 'l' would work.  Simplify
       // GetJTISymbol.
-      OutStreamer->emitLabel(GetJTISymbol(JTI, true));
+      OutStreamer->emitLabel(GetJTISymbol(JumpTableIndex, true));
 
-    MCSymbol* JTISymbol = GetJTISymbol(JTI);
+    MCSymbol *JTISymbol = GetJTISymbol(JumpTableIndex);
     OutStreamer->emitLabel(JTISymbol);
 
     // Defer MCAssembler based constant folding due to a performance issue. The
     // label differences will be evaluated at write time.
     for (const MachineBasicBlock *MBB : JTBBs)
-      emitJumpTableEntry(MJTI, MBB, JTI);
+      emitJumpTableEntry(MJTI, MBB, JumpTableIndex);
   }
 
   if (EmitJumpTableSizesSection)
-    emitJumpTableSizesSection(MJTI, F);
+    emitJumpTableSizesSection(MJTI, MF->getFunction());
 
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 }
 
-void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
+void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
                                            const Function &F) const {
-  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
+  const std::vector<MachineJumpTableEntry> &JT = MJTI.getJumpTables();
 
   if (JT.empty())
     return;
@@ -3012,17 +3048,17 @@ void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
 
 /// EmitJumpTableEntry - Emit a jump table entry for the specified MBB to the
 /// current stream.
-void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
+void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
                                     const MachineBasicBlock *MBB,
                                     unsigned UID) const {
   assert(MBB && MBB->getNumber() >= 0 && "Invalid basic block");
   const MCExpr *Value = nullptr;
-  switch (MJTI->getEntryKind()) {
+  switch (MJTI.getEntryKind()) {
   case MachineJumpTableInfo::EK_Inline:
     llvm_unreachable("Cannot emit EK_Inline jump table entry");
   case MachineJumpTableInfo::EK_Custom32:
     Value = MF->getSubtarget().getTargetLowering()->LowerCustomJumpTableEntry(
-        MJTI, MBB, UID, OutContext);
+        &MJTI, MBB, UID, OutContext);
     break;
   case MachineJumpTableInfo::EK_BlockAddress:
     // EK_BlockAddress - Each entry is a plain address of block, e.g.:
@@ -3056,7 +3092,7 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
     // If the .set directive avoids relocations, this is emitted as:
     //      .set L4_5_set_123, LBB123 - LJTI1_2
     //      .word L4_5_set_123
-    if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 &&
+    if (MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 &&
         MAI->doesSetDirectiveSuppressReloc()) {
       Value = MCSymbolRefExpr::create(GetJTSetSymbol(UID, MBB->getNumber()),
                                       OutContext);
@@ -3072,7 +3108,7 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
 
   assert(Value && "Unknown entry kind!");
 
-  unsigned EntrySize = MJTI->getEntrySize(getDataLayout());
+  unsigned EntrySize = MJTI.getEntrySize(getDataLayout());
   OutStreamer->emitValue(Value, EntrySize);
 }
 
@@ -3678,10 +3714,11 @@ static void emitGlobalConstantArray(const DataLayout &DL,
 
 static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP);
 
-static void emitGlobalConstantVector(const DataLayout &DL,
-                                     const ConstantVector *CV, AsmPrinter &AP,
+static void emitGlobalConstantVector(const DataLayout &DL, const Constant *CV,
+                                     AsmPrinter &AP,
                                      AsmPrinter::AliasMapTy *AliasList) {
-  Type *ElementType = CV->getType()->getElementType();
+  auto *VTy = cast<FixedVectorType>(CV->getType());
+  Type *ElementType = VTy->getElementType();
   uint64_t ElementSizeInBits = DL.getTypeSizeInBits(ElementType);
   uint64_t ElementAllocSizeInBits = DL.getTypeAllocSizeInBits(ElementType);
   uint64_t EmittedSize;
@@ -3694,7 +3731,7 @@ static void emitGlobalConstantVector(const DataLayout &DL,
     Type *IntT =
         IntegerType::get(CV->getContext(), DL.getTypeSizeInBits(CV->getType()));
     ConstantInt *CI = dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
-        ConstantExpr::getBitCast(const_cast<ConstantVector *>(CV), IntT), DL));
+        ConstantExpr::getBitCast(const_cast<Constant *>(CV), IntT), DL));
     if (!CI) {
       report_fatal_error(
           "Cannot lower vector global with unusual element type");
@@ -3703,12 +3740,11 @@ static void emitGlobalConstantVector(const DataLayout &DL,
     emitGlobalConstantLargeInt(CI, AP);
     EmittedSize = DL.getTypeStoreSize(CV->getType());
   } else {
-    for (unsigned I = 0, E = CV->getType()->getNumElements(); I != E; ++I) {
+    for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
       emitGlobalAliasInline(AP, DL.getTypeAllocSize(CV->getType()) * I, AliasList);
-      emitGlobalConstantImpl(DL, CV->getOperand(I), AP);
+      emitGlobalConstantImpl(DL, CV->getAggregateElement(I), AP);
     }
-    EmittedSize =
-        DL.getTypeAllocSize(ElementType) * CV->getType()->getNumElements();
+    EmittedSize = DL.getTypeAllocSize(ElementType) * VTy->getNumElements();
   }
 
   unsigned Size = DL.getTypeAllocSize(CV->getType());
@@ -3957,29 +3993,32 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   if (isa<ConstantAggregateZero>(CV)) {
     StructType *structType;
     if (AliasList && (structType = llvm::dyn_cast<StructType>(CV->getType()))) {
-      // Handle cases of aliases to direct struct elements
-      const StructLayout *Layout = DL.getStructLayout(structType);
-      uint64_t SizeSoFar = 0;
-      for (unsigned int i = 0, n = structType->getNumElements(); i < n - 1;
-           ++i) {
-        uint64_t GapToNext = Layout->getElementOffset(i + 1) - SizeSoFar;
-        AP.OutStreamer->emitZeros(GapToNext);
-        SizeSoFar += GapToNext;
-        emitGlobalAliasInline(AP, Offset + SizeSoFar, AliasList);
+      unsigned numElements = {structType->getNumElements()};
+      if (numElements != 0) {
+        // Handle cases of aliases to direct struct elements
+        const StructLayout *Layout = DL.getStructLayout(structType);
+        uint64_t SizeSoFar = 0;
+        for (unsigned int i = 0; i < numElements - 1; ++i) {
+          uint64_t GapToNext = Layout->getElementOffset(i + 1) - SizeSoFar;
+          AP.OutStreamer->emitZeros(GapToNext);
+          SizeSoFar += GapToNext;
+          emitGlobalAliasInline(AP, Offset + SizeSoFar, AliasList);
+        }
+        AP.OutStreamer->emitZeros(Size - SizeSoFar);
+        return;
       }
-      AP.OutStreamer->emitZeros(Size - SizeSoFar);
-      return;
-    } else {
-      return AP.OutStreamer->emitZeros(Size);
     }
+    return AP.OutStreamer->emitZeros(Size);
   }
 
   if (isa<UndefValue>(CV))
     return AP.OutStreamer->emitZeros(Size);
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
-    const uint64_t StoreSize = DL.getTypeStoreSize(CV->getType());
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
 
+    const uint64_t StoreSize = DL.getTypeStoreSize(CV->getType());
     if (StoreSize <= 8) {
       if (AP.isVerbose())
         AP.OutStreamer->getCommentOS()
@@ -3996,8 +4035,12 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     return;
   }
 
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV))
-    return emitGlobalConstantFP(CFP, AP);
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV)) {
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
+    else
+      return emitGlobalConstantFP(CFP, AP);
+  }
 
   if (isa<ConstantPointerNull>(CV)) {
     AP.OutStreamer->emitIntValue(0, Size);
@@ -4029,8 +4072,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     }
   }
 
-  if (const ConstantVector *V = dyn_cast<ConstantVector>(CV))
-    return emitGlobalConstantVector(DL, V, AP, AliasList);
+  if (isa<ConstantVector>(CV))
+    return emitGlobalConstantVector(DL, CV, AP, AliasList);
 
   // Otherwise, it must be a ConstantExpr.  Lower it to an MCExpr, then emit it
   // thread the streamer with EmitValue.
@@ -4232,6 +4275,10 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
       Handler->endFunclet();
       Handler->beginFunclet(MBB);
     }
+    for (auto &Handler : EHHandlers) {
+      Handler->endFunclet();
+      Handler->beginFunclet(MBB);
+    }
   }
 
   // Switch to a new section if this basic block must begin a section. The
@@ -4244,7 +4291,7 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     CurrentSectionBeginSym = MBB.getSymbol();
   }
 
-  for (auto &Handler : DebugHandlers)
+  for (auto &Handler : Handlers)
     Handler->beginCodeAlignment(MBB);
 
   // Emit an alignment directive for this block, if needed.
@@ -4304,9 +4351,9 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   // if it begins a section (Entry block call is handled separately, next to
   // beginFunction).
   if (MBB.isBeginSection() && !MBB.isEntryBlock()) {
-    for (auto &Handler : DebugHandlers)
-      Handler->beginBasicBlockSection(MBB);
     for (auto &Handler : Handlers)
+      Handler->beginBasicBlockSection(MBB);
+    for (auto &Handler : EHHandlers)
       Handler->beginBasicBlockSection(MBB);
   }
 }
@@ -4315,9 +4362,9 @@ void AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
   // Check if CFI information needs to be updated for this MBB with basic block
   // sections.
   if (MBB.isEndSection()) {
-    for (auto &Handler : DebugHandlers)
-      Handler->endBasicBlockSection(MBB);
     for (auto &Handler : Handlers)
+      Handler->endBasicBlockSection(MBB);
+    for (auto &Handler : EHHandlers)
       Handler->endBasicBlockSection(MBB);
   }
 }
@@ -4451,12 +4498,7 @@ void AsmPrinter::addAsmPrinterHandler(
   NumUserHandlers++;
 }
 
-void AsmPrinter::addDebugHandler(std::unique_ptr<DebugHandlerBase> Handler) {
-  DebugHandlers.insert(DebugHandlers.begin(), std::move(Handler));
-  NumUserDebugHandlers++;
-}
-
-/// Pin vtable to this file.
+/// Pin vtables to this file.
 AsmPrinterHandler::~AsmPrinterHandler() = default;
 
 void AsmPrinterHandler::markFunctionEnd() {}

@@ -88,6 +88,10 @@ static XcodeSDK::Type GetSDKType(const llvm::Triple &target,
     if (is_simulator())
       return XcodeSDK::Type::WatchSimulator;
     return XcodeSDK::Type::watchOS;
+  case llvm::Triple::OSType::XROS:
+    if (is_simulator())
+      return XcodeSDK::Type::XRSimulator;
+    return XcodeSDK::Type::XROS;
   default:
     return XcodeSDK::Type::unknown;
   }

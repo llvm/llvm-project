@@ -133,7 +133,7 @@ static void runImpl(Function &F, const TargetLibraryInfo &TLI) {
     return;
 
   // Track all annotated instructions aggregated based on their debug location.
-  DenseMap<MDNode *, SmallVector<Instruction *, 4>> DebugLoc2Annotated;
+  MapVector<MDNode *, SmallVector<Instruction *, 4>> DebugLoc2Annotated;
 
   OptimizationRemarkEmitter ORE(&F);
   // First, generate a summary of the annotated instructions.

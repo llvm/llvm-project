@@ -1,0 +1,3 @@
+struct FromC {
+  int i;
+};

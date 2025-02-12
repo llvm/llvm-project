@@ -6,6 +6,7 @@ add_lldb_library(lldbPluginSwiftLanguageRuntime PLUGIN
   SwiftLanguageRuntimeNames.cpp
   SwiftLanguageRuntimeRemoteAST.cpp
   SwiftMetadataCache.cpp
+  SwiftTask.cpp
 
   LINK_LIBS
     swiftAST

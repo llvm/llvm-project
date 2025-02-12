@@ -50,7 +50,7 @@ int post_inc(int *__null_terminated p) {
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont:
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ADD_PTR]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -68,7 +68,7 @@ int add_one(int *__null_terminated p) {
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont:
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ADD_PTR]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -86,7 +86,7 @@ int add_one_swap(int *__null_terminated p) {
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont:
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ADD_PTR]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -104,7 +104,7 @@ int assign_add_one(int *__null_terminated p) {
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont:
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ADD_PTR]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -122,7 +122,7 @@ int sub_minus_one(int *__null_terminated p) {
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont:
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ADD_PTR]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //

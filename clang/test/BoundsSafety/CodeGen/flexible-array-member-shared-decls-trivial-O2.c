@@ -118,8 +118,8 @@ struct Outer * bad_ptr(void) {
 // CHECK-LABEL: define dso_local noalias noundef nonnull ptr @bad_fam(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    store ptr @b, ptr getelementptr inbounds (i8, ptr @a, i64 1), align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i32 42, ptr getelementptr inbounds (i8, ptr @a, i64 9), align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store ptr @b, ptr getelementptr inbounds nuw (i8, ptr @a, i64 1), align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store i32 42, ptr getelementptr inbounds nuw (i8, ptr @a, i64 9), align 8, !tbaa [[TBAA8]]
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META9]]
 // CHECK-NEXT:    unreachable, !annotation [[META9]]
 //
@@ -132,7 +132,8 @@ struct Outer * bad_fam(void) {
 //.
 // CHECK: [[TBAA2]] = !{[[META3:![0-9]+]], [[META4:![0-9]+]], i64 0}
 // CHECK: [[META3]] = !{!"Inner", [[META4]], i64 0, [[META7:![0-9]+]], i64 8}
-// CHECK: [[META4]] = !{!"any pointer", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"p1 omnipotent char", [[META41:!.+]], i64 0}
+// CHECK: [[META41]] = !{!"any pointer", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
 // CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
 // CHECK: [[META7]] = !{!"int", [[META5]], i64 0}

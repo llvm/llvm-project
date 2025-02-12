@@ -10,10 +10,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
 
@@ -481,6 +479,13 @@ SymbolFileDWARF::~SymbolFileDWARF() = default;
 static ConstString GetDWARFMachOSegmentName() {
   static ConstString g_dwarf_section_name("__DWARF");
   return g_dwarf_section_name;
+}
+
+llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &
+SymbolFileDWARF::GetDIEToType() {
+  if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
+    return debug_map_symfile->GetDIEToType();
+  return m_die_to_type;
 }
 
 llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
@@ -1607,6 +1612,8 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   if (!dwarf_ast)
     return false;
   Type *type = GetDIEToType().lookup(decl_die.GetDIE());
+  assert(type);
+
   if (decl_die != def_die) {
     GetDIEToType()[def_die.GetDIE()] = type;
     DWARFASTParserClang *ast_parser =
@@ -2467,18 +2474,12 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   }
   assert(die && die.Tag() == DW_TAG_subprogram);
   if (GetFunction(die, sc)) {
-    Address addr;
     // Parse all blocks if needed
     if (inlined_die) {
       Block &function_block = sc.function->GetBlock(true);
       sc.block = function_block.FindBlockByID(inlined_die.GetID());
       if (sc.block == nullptr)
         sc.block = function_block.FindBlockByID(inlined_die.GetOffset());
-      if (sc.block == nullptr || !sc.block->GetStartAddress(addr))
-        addr.Clear();
-    } else {
-      sc.block = nullptr;
-      addr = sc.function->GetAddressRange().GetBaseAddress();
     }
 
     sc_list.Append(sc);
@@ -2606,6 +2607,22 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
     if (resolved_dies.insert(die.GetDIE()).second)
       ResolveFunction(die, include_inlines, sc_list);
     return true;
+  });
+}
+
+void SymbolFileDWARF::FindImportedDeclaration(
+    ConstString name, std::vector<ImportedDeclaration> &sc_list,
+    bool find_one) {
+  llvm::DenseSet<const DWARFDebugInfoEntry *> resolved_dies;
+  m_index->GetNamespaces(name, [&](DWARFDIE die) {
+    if (die.Tag() != llvm::dwarf::DW_TAG_imported_declaration)
+      return true;
+
+    if (name != die.GetName())
+      return true;
+
+    sc_list.emplace_back(die.GetID(), name, this);
+    return !find_one;
   });
 }
 
@@ -2750,18 +2767,11 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
       // Copy our match's context and update the basename we are looking for
       // so we can use this only to compare the context correctly.
       m_index->GetTypesWithQuery(query_simple, [&](DWARFDIE die) {
-        // Check the language, but only if we have a language filter.
-        if (query.HasLanguage()) {
-          if (!query.LanguageMatches(GetLanguageFamily(*die.GetCU())))
-            return true; // Keep iterating over index types, language mismatch.
-        }
-
-        std::string qualified_name;
-        llvm::raw_string_ostream os(qualified_name);
-        llvm::DWARFTypePrinter<DWARFDIE> type_printer(os);
-        type_printer.appendQualifiedName(die);
-        TypeQuery die_query(qualified_name, e_exact_match);
-        if (query.ContextMatches(die_query.GetContextRef()))
+        std::vector<CompilerContext> qualified_context =
+            query.GetModuleSearch()
+                ? die.GetDeclContext(/*derive_template_names=*/true)
+                : die.GetTypeLookupContext(/*derive_template_names=*/true);
+        if (query.ContextMatches(qualified_context))
           if (Type *matching_type = ResolveType(die, true, true))
             results.InsertUnique(matching_type->shared_from_this());
         return !results.Done(query); // Keep iterating if we aren't done.
@@ -3253,8 +3263,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(Function &func) {
                 /*check_hi_lo_pc=*/true)) {
       if (ranges->empty())
         return 0;
-      // TODO: Use the first range instead.
-      dw_addr_t function_file_addr = llvm::min_element(*ranges)->LowPC;
+      dw_addr_t function_file_addr = ranges->begin()->LowPC;
       if (function_file_addr != LLDB_INVALID_ADDRESS)
         ParseBlocksRecursive(*comp_unit, &func.GetBlock(false),
                              function_die.GetFirstChild(), function_file_addr);
@@ -3293,9 +3302,8 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
       if (llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
               function_die.GetDIE()->GetAttributeAddressRanges(
                   function_die.GetCU(), /*check_hi_lo_pc=*/true)) {
-        // TODO: Use the first range element instead.
         if (!ranges->empty())
-          func_lo_pc = llvm::min_element(*ranges)->LowPC;
+          func_lo_pc = ranges->begin()->LowPC;
       } else {
         LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
                        "DIE({1:x}): {0}", function_die.GetID());
@@ -3493,7 +3501,10 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       mangled = form_value.AsCString();
       break;
     case DW_AT_type:
-      type_die_form = form_value;
+      // DW_AT_type on declaration may be less accurate than
+      // that of definition, so don't overwrite it.
+      if (!type_die_form.IsValid())
+        type_die_form = form_value;
       break;
     case DW_AT_external:
       is_external = form_value.Boolean();

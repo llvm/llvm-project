@@ -17,7 +17,7 @@
 // scheduled. Targets can override the DAG builder and scheduler without
 // replacing the pass as follows:
 //
-// ScheduleDAGInstrs *<Target>PassConfig::
+// ScheduleDAGInstrs *<Target>TargetMachine::
 // createMachineScheduler(MachineSchedContext *C) {
 //   return new CustomMachineScheduler(C);
 // }
@@ -29,7 +29,7 @@
 // plugin an alternate MachineSchedStrategy. The strategy is responsible for
 // selecting the highest priority node from the list:
 //
-// ScheduleDAGInstrs *<Target>PassConfig::
+// ScheduleDAGInstrs *<Target>TargetMachine::
 // createMachineScheduler(MachineSchedContext *C) {
 //   return new ScheduleDAGMILive(C, CustomStrategy(C));
 // }
@@ -39,7 +39,7 @@
 // can adjust dependencies based on target-specific knowledge or add weak edges
 // to aid heuristics:
 //
-// ScheduleDAGInstrs *<Target>PassConfig::
+// ScheduleDAGInstrs *<Target>TargetMachine::
 // createMachineScheduler(MachineSchedContext *C) {
 //   ScheduleDAGMI *DAG = createGenericSchedLive(C);
 //   DAG->addMutation(new CustomDAGMutation(...));
@@ -137,7 +137,7 @@ struct MachineSchedContext {
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
   const MachineDominatorTree *MDT = nullptr;
-  const TargetPassConfig *PassConfig = nullptr;
+  const TargetMachine *TM = nullptr;
   AAResults *AA = nullptr;
   LiveIntervals *LIS = nullptr;
 
@@ -525,7 +525,7 @@ protected:
 
   void initRegPressure();
 
-  void updatePressureDiffs(ArrayRef<RegisterMaskPair> LiveUses);
+  void updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses);
 
   void updateScheduledPressure(const SUnit *SU,
                                const std::vector<unsigned> &NewMaxPressure);

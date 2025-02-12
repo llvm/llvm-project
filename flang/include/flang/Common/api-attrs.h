@@ -178,4 +178,15 @@
 #define RT_DEVICE_NOINLINE_HOST_INLINE inline
 #endif
 
+/* RT_OPTNONE_ATTR allows disabling optimizations per function. */
+#if __has_attribute(optimize)
+/* GCC style. */
+#define RT_OPTNONE_ATTR __attribute__((optimize("O0")))
+#elif __has_attribute(optnone)
+/* Clang style. */
+#define RT_OPTNONE_ATTR __attribute__((optnone))
+#else
+#define RT_OPTNONE_ATTR
+#endif
+
 #endif /* !FORTRAN_RUNTIME_API_ATTRS_H_ */

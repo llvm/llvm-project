@@ -31,11 +31,11 @@ void wide_array_subscript_trap1() {
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [5 x %"__bounds_safety::wide_ptr.indexable"], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 80, ptr nonnull [[ARR]]) #[[ATTR7:[0-9]+]]
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(80) [[ARR]], i8 0, i64 80, i1 false), {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 80
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARR]], i64 -16
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[UPPER]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[ARR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 80
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[ARR]], i64 -16
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[UPPER]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[ARR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
@@ -120,7 +120,7 @@ void wide_member_assign_ok() {
 // CHECK-NEXT:    [[W:%.*]] = alloca [[STRUCT_WIDE_MEMBER_T:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[W]]) #[[ATTR7]]
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(24) [[W]], i8 0, i64 24, i1 false), {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[W]], i64 24
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[W]], i64 24
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[W]], i64 48
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP1]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT1:%.*]], {{!annotation ![0-9]+}}

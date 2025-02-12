@@ -2543,8 +2543,7 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
   if (LastFieldBitfieldOrUnnamed) {
     if (LastFieldBitfieldOrUnnamed->isBitField()) {
       // Last field was a bitfield. Must update the info.
-      uint64_t BitFieldSize
-        = LastFieldBitfieldOrUnnamed->getBitWidthValue(CGM.getContext());
+      uint64_t BitFieldSize = LastFieldBitfieldOrUnnamed->getBitWidthValue();
       unsigned UnsSize = (BitFieldSize / ByteSizeInBits) +
                         ((BitFieldSize % ByteSizeInBits) != 0);
       CharUnits Size = CharUnits::fromQuantity(UnsSize);
@@ -5718,7 +5717,7 @@ ObjCCommonTypesHelper::ObjCCommonTypesHelper(CodeGen::CodeGenModule &cgm)
   IntTy = CGM.IntTy;
   LongTy = cast<llvm::IntegerType>(Types.ConvertType(Ctx.LongTy));
   Int8PtrTy = CGM.Int8PtrTy;
-  Int8PtrProgramASTy = llvm::PointerType::get(CGM.Int8Ty, ProgramAS);
+  Int8PtrProgramASTy = llvm::PointerType::get(CGM.getLLVMContext(), ProgramAS);
   Int8PtrPtrTy = CGM.Int8PtrPtrTy;
 
   // arm64 targets use "int" ivar offset variables. All others,

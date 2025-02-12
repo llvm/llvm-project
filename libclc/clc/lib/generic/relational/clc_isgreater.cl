@@ -1,12 +1,9 @@
 #include <clc/internal/clc.h>
 #include <clc/relational/relational.h>
 
-// Note: It would be nice to use __builtin_isgreater with vector inputs, but it
-// seems to only take scalar values as input, which will produce incorrect
-// output for vector input types.
+#define _CLC_RELATIONAL_OP(X, Y) (X) > (Y)
 
-_CLC_DEFINE_RELATIONAL_BINARY(int, __clc_isgreater, __builtin_isgreater, float,
-                              float)
+_CLC_DEFINE_SIMPLE_RELATIONAL_BINARY(int, int, __clc_isgreater, float, float)
 
 #ifdef cl_khr_fp64
 
@@ -14,12 +11,7 @@ _CLC_DEFINE_RELATIONAL_BINARY(int, __clc_isgreater, __builtin_isgreater, float,
 
 // The scalar version of __clc_isgreater(double, double) returns an int, but the
 // vector versions return long.
-
-_CLC_DEF _CLC_OVERLOAD int __clc_isgreater(double x, double y) {
-  return __builtin_isgreater(x, y);
-}
-
-_CLC_DEFINE_RELATIONAL_BINARY_VEC_ALL(long, __clc_isgreater, double, double)
+_CLC_DEFINE_SIMPLE_RELATIONAL_BINARY(int, long, __clc_isgreater, double, double)
 
 #endif
 
@@ -29,11 +21,8 @@ _CLC_DEFINE_RELATIONAL_BINARY_VEC_ALL(long, __clc_isgreater, double, double)
 
 // The scalar version of __clc_isgreater(half, half) returns an int, but the
 // vector versions return short.
-
-_CLC_DEF _CLC_OVERLOAD int __clc_isgreater(half x, half y) {
-  return __builtin_isgreater(x, y);
-}
-
-_CLC_DEFINE_RELATIONAL_BINARY_VEC_ALL(short, __clc_isgreater, half, half)
+_CLC_DEFINE_SIMPLE_RELATIONAL_BINARY(int, short, __clc_isgreater, half, half)
 
 #endif
+
+#undef _CLC_RELATIONAL_OP

@@ -374,6 +374,20 @@ public:
   CanonicalizeSugar(swift::Demangle::Demangler &dem,
                     swift::Demangle::NodePointer node);
 
+  /// Finds the nominal type node (struct, class, enum) that contains the
+  /// module and identifier nodes for that type. If \p node is not a valid
+  /// type node, returns a nullptr.
+  static swift::Demangle::NodePointer
+  FindTypeWithModuleAndIdentifierNode(swift::Demangle::NodePointer node);
+
+  /// Types with the @_originallyDefinedIn attribute are serialized with with
+  /// the original module name in reflection metadata. At the same time the type
+  /// is serialized with the swiftmodule name in debug info, but with a parent
+  /// module with the original module name. This function adjusts \type to look
+  /// up the type in reflection metadata if necessary.
+  std::string
+  AdjustTypeForOriginallyDefinedInModule(llvm::StringRef mangled_typename);
+
   /// Return the canonicalized Demangle tree for a Swift mangled type name.
   swift::Demangle::NodePointer
   GetCanonicalDemangleTree(swift::Demangle::Demangler &dem,
@@ -434,6 +448,13 @@ protected:
   /// Cast \p opaque_type as a mangled name.
   static const char *AsMangledName(lldb::opaque_compiler_type_t type);
 
+  /// Helper function that canonicalizes node, but doesn't look at its
+  /// children.
+  swift::Demangle::NodePointer
+  Canonicalize(swift::Demangle::Demangler &dem,
+               swift::Demangle::NodePointer node,
+               swift::Mangle::ManglingFlavor flavor);
+
   /// Demangle the mangled name of the canonical type of \p type and
   /// drill into the Global(TypeMangling(Type())).
   ///
@@ -441,6 +462,15 @@ protected:
   swift::Demangle::NodePointer
   DemangleCanonicalType(swift::Demangle::Demangler &dem,
                         lldb::opaque_compiler_type_t type);
+
+  /// Demangle the mangled name of \p type after canonicalizing its
+  /// outermost type node and drill into the
+  /// Global(TypeMangling(Type())).
+  ///
+  /// \return the child of Type or a nullptr.
+  swift::Demangle::NodePointer
+  DemangleCanonicalOutermostType(swift::Demangle::Demangler &dem,
+                                 lldb::opaque_compiler_type_t type);
 
   /// If \p node is a Struct/Class/Typedef in the __C module, return a
   /// Swiftified node by looking up the name in the corresponding APINotes and
@@ -472,9 +502,23 @@ protected:
   CompilerType LookupClangForwardType(llvm::StringRef name, 
                   llvm::ArrayRef<CompilerContext> decl_context);
 
-  std::pair<swift::Demangle::NodePointer, CompilerType> ResolveTypeAlias(
-      swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
-      swift::Mangle::ManglingFlavor flavor, bool prefer_clang_types = false);
+  /// Recursively resolves all type aliases.
+  swift::Demangle::NodePointer
+  ResolveAllTypeAliases(swift::Demangle::Demangler &dem,
+                        swift::Demangle::NodePointer node);
+
+  /// Resolve a type alias node and return a demangle tree for the
+  /// resolved type. If the type alias resolves to a Clang type, return
+  /// a Clang CompilerType.
+  ///
+  /// \param prefer_clang_types if this is true, type aliases in the
+  ///                           __C module are resolved as Clang types.
+  ///
+  std::pair<swift::Demangle::NodePointer, CompilerType>
+  ResolveTypeAlias(swift::Demangle::Demangler &dem,
+                   swift::Demangle::NodePointer node,
+                   swift::Mangle::ManglingFlavor flavor,
+                   bool prefer_clang_types = false);
 
   swift::Demangle::NodePointer
   GetCanonicalNode(swift::Demangle::Demangler &dem,

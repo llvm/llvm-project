@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 using namespace clang;
@@ -79,13 +80,11 @@ public:
   // Adds a NamedMDNode with GV, Name, and Operand as operands, and adds the
   // resulting MDNode to the nvvm.annotations MDNode.
   static void addNVVMMetadata(llvm::GlobalValue *GV, StringRef Name,
-                              int Operand,
-                              const SmallVectorImpl<int> &GridConstantArgs);
+                              int Operand);
 
-  static void addNVVMMetadata(llvm::GlobalValue *GV, StringRef Name,
-                              int Operand) {
-    addNVVMMetadata(GV, Name, Operand, SmallVector<int, 1>(0));
-  }
+  static void
+  addGridConstantNVVMMetadata(llvm::GlobalValue *GV,
+                              const SmallVectorImpl<int> &GridConstantArgs);
 
 private:
   static void emitBuiltinSurfTexDeviceCopy(CodeGenFunction &CGF, LValue Dst,
@@ -259,7 +258,7 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
     if (FD->hasAttr<OpenCLKernelAttr>()) {
       // OpenCL __kernel functions get kernel metadata
       // Create !{<func-ref>, metadata !"kernel", i32 1} node
-      addNVVMMetadata(F, "kernel", 1);
+      F->setCallingConv(llvm::CallingConv::PTX_Kernel);
       // And kernel functions are not subject to inlining
       F->addFnAttr(llvm::Attribute::NoInline);
     }
@@ -277,7 +276,8 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
           // For some reason arg indices are 1-based in NVVM
           GCI.push_back(IV.index() + 1);
       // Create !{<func-ref>, metadata !"kernel", i32 1} node
-      addNVVMMetadata(F, "kernel", 1, GCI);
+      F->setCallingConv(llvm::CallingConv::PTX_Kernel);
+      addGridConstantNVVMMetadata(F, GCI);
     }
     if (CUDALaunchBoundsAttr *Attr = FD->getAttr<CUDALaunchBoundsAttr>())
       M.handleCUDALaunchBoundsAttr(F, Attr);
@@ -285,13 +285,12 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
 
   // Attach kernel metadata directly if compiling for NVPTX.
   if (FD->hasAttr<NVPTXKernelAttr>()) {
-    addNVVMMetadata(F, "kernel", 1);
+    F->setCallingConv(llvm::CallingConv::PTX_Kernel);
   }
 }
 
-void NVPTXTargetCodeGenInfo::addNVVMMetadata(
-    llvm::GlobalValue *GV, StringRef Name, int Operand,
-    const SmallVectorImpl<int> &GridConstantArgs) {
+void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::GlobalValue *GV,
+                                             StringRef Name, int Operand) {
   llvm::Module *M = GV->getParent();
   llvm::LLVMContext &Ctx = M->getContext();
 
@@ -302,6 +301,21 @@ void NVPTXTargetCodeGenInfo::addNVVMMetadata(
       llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, Name),
       llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), Operand))};
+
+  // Append metadata to nvvm.annotations
+  MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
+}
+
+void NVPTXTargetCodeGenInfo::addGridConstantNVVMMetadata(
+    llvm::GlobalValue *GV, const SmallVectorImpl<int> &GridConstantArgs) {
+
+  llvm::Module *M = GV->getParent();
+  llvm::LLVMContext &Ctx = M->getContext();
+
+  // Get "nvvm.annotations" metadata node
+  llvm::NamedMDNode *MD = M->getOrInsertNamedMetadata("nvvm.annotations");
+
+  SmallVector<llvm::Metadata *, 5> MDVals = {llvm::ConstantAsMetadata::get(GV)};
   if (!GridConstantArgs.empty()) {
     SmallVector<llvm::Metadata *, 10> GCM;
     for (int I : GridConstantArgs)
@@ -310,6 +324,7 @@ void NVPTXTargetCodeGenInfo::addNVVMMetadata(
     MDVals.append({llvm::MDString::get(Ctx, "grid_constant"),
                    llvm::MDNode::get(Ctx, GCM)});
   }
+
   // Append metadata to nvvm.annotations
   MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
 }

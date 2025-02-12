@@ -69,7 +69,6 @@ class TestSwiftDeploymentTarget(TestBase):
     @skipUnlessDarwin  # This test uses macOS triples explicitly.
     @skipIfDarwinEmbedded
     @skipIf(macos_version=["<", "11.1"])
-    @skipIf(setting=("symbols.swift-precise-compiler-invocation", "false"))
     @swiftTest
     def test_swift_precise_compiler_invocation_triple(self):
         """

@@ -88,12 +88,12 @@ int consume(int* __bidi_indexable ptr, int idx) {
 // OPT0: [[META3]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.
 // OPT2: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// OPT2: [[META3]] = !{!"any pointer", [[META4:![0-9]+]], i64 0}
+// OPT2: [[META3]] = !{!"p2 int", [[META31:!.+]], i64 0}
+// OPT2: [[META31]] = !{!"any pointer", [[META4:![0-9]+]], i64 0}
 // OPT2: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // OPT2: [[META5]] = !{!"Simple C/C++ TBAA"}
 // OPT2: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
 // OPT2: [[META7]] = !{!"int", [[META4]], i64 0}
-// OPT2: [[TBAA_STRUCT8]] = !{i64 0, i64 24, [[TBAA2]]}
 // OPT2: [[META9]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
 // OPT2: [[META10]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.

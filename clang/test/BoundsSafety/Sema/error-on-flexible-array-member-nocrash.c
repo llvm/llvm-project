@@ -11,7 +11,7 @@ struct saddr {
 };
 
 void test(struct saddr *sa, unsigned length) {
-  // expected-error@+1{{BoundsSafety forbids arithmetic on pointers to types with a flexible array member}}
+  // expected-error@+1{{-fbounds-safety forbids arithmetic on pointers to types with a flexible array member}}
   sa = sa + 1;
   sa->len = length;
 }

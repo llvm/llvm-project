@@ -30,15 +30,19 @@ class TestSwiftPrivateGenericType(TestBase):
                     error=True)
         # Test that not binding works.
         self.expect("expr --bind-generic-types false -- self", 
-                    substrs=["Public.StructWrapper<T>", 
+                    substrs=["Public.StructWrapper<Private.InvisibleStruct>", 
                              'name = "The invisible struct."'])
         # Test that the "auto" behavior also works.
         self.expect("expr --bind-generic-types auto -- self", 
-                    substrs=["Public.StructWrapper<T>", 
+                    substrs=["Public.StructWrapper<Private.InvisibleStruct>", 
                              'name = "The invisible struct."'])
         # Test that the default (should be the auto option) also works.
-        self.expect("expr -- self", substrs=["Public.StructWrapper<T>", 
+        self.expect("expr -- self", substrs=["Public.StructWrapper<Private.InvisibleStruct>", 
                                           'name = "The invisible struct."'])
+        # Test that accessing the field works.
+        self.expect("expr --bind-generic-types false -- t", 
+                    substrs=["Private.InvisibleStruct", 
+                             'name = "The invisible struct."'])
 
         breakpoint = target.BreakpointCreateBySourceRegex(
             'break here for class', lldb.SBFileSpec('Public.swift'), None)
@@ -54,6 +58,9 @@ class TestSwiftPrivateGenericType(TestBase):
                              'name = "The invisible struct."'])
         self.expect("expr -- self", 
                     substrs=["Public.ClassWrapper<Private.InvisibleStruct>", 
+                             'name = "The invisible struct."'])
+        self.expect("expr --bind-generic-types false -- t", 
+                    substrs=["Private.InvisibleStruct", 
                              'name = "The invisible struct."'])
 
         breakpoint = target.BreakpointCreateBySourceRegex(
@@ -77,6 +84,13 @@ class TestSwiftPrivateGenericType(TestBase):
                              "<Private.InvisibleClass, Private.InvisibleStruct>", 
                              'name = "The invisible class."',
                              "someNumber = 42"])
+        self.expect("expr --bind-generic-types false -- t", 
+                    substrs=["Private.InvisibleClass", 
+                             'name = "The invisible class."', 
+                             "someNumber = 42"])
+        self.expect("expr --bind-generic-types false -- u", 
+                    substrs=["Private.InvisibleStruct", 
+                             'name = "The invisible struct."'])
 
         breakpoint = target.BreakpointCreateBySourceRegex(
             'break here for three generic parameters', lldb.SBFileSpec('Public.swift'), None)
@@ -86,21 +100,21 @@ class TestSwiftPrivateGenericType(TestBase):
                     error=True)
         self.expect("expr --bind-generic-types false -- self", 
                     substrs=["Public.ThreeGenericParameters",
-                             "<T, U, V>", 
+                             "<Private.InvisibleClass, Private.InvisibleStruct, Bool>", 
                              'name = "The invisible class."',
                              "someNumber = 42",
                              'name = "The invisible struct."',
                              "v = true"])
         self.expect("expr --bind-generic-types auto -- self", 
                     substrs=["Public.ThreeGenericParameters",
-                             "<T, U, V>", 
+                             "<Private.InvisibleClass, Private.InvisibleStruct, Bool>", 
                              'name = "The invisible class."',
                              "someNumber = 42",
                              'name = "The invisible struct."',
                              "v = true"])
         self.expect("expr -- self", 
                     substrs=["Public.ThreeGenericParameters",
-                             "<T, U, V>", 
+                             "<Private.InvisibleClass, Private.InvisibleStruct, Bool>", 
                              'name = "The invisible class."',
                              "someNumber = 42",
                              'name = "The invisible struct."',
@@ -114,7 +128,7 @@ class TestSwiftPrivateGenericType(TestBase):
                     error=True)
         self.expect("expr --bind-generic-types false -- self", 
                     substrs=["Public.FourGenericParameters",
-                             "<T, U, V, W>", 
+                             "<Private.InvisibleStruct, Private.InvisibleClass, [String], Int>", 
                              'name = "The invisible struct."',
                              'name = "The invisible class."',
                              "someNumber = 42",
@@ -122,7 +136,7 @@ class TestSwiftPrivateGenericType(TestBase):
                              "w = 482"])
         self.expect("expr --bind-generic-types auto -- self", 
                     substrs=["Public.FourGenericParameters",
-                             "<T, U, V, W>", 
+                             "<Private.InvisibleStruct, Private.InvisibleClass, [String], Int>", 
                              'name = "The invisible struct."',
                              'name = "The invisible class."',
                              "someNumber = 42",
@@ -130,7 +144,7 @@ class TestSwiftPrivateGenericType(TestBase):
                              "w = 482"])
         self.expect("expr -- self", 
                     substrs=["Public.FourGenericParameters",
-                             "<T, U, V, W>", 
+                             "<Private.InvisibleStruct, Private.InvisibleClass, [String], Int>", 
                              'name = "The invisible struct."',
                              'name = "The invisible class."',
                              "someNumber = 42",

@@ -594,8 +594,8 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
       UsesToUpdate.push_back(&U);
 
     Value *ArgInParamAS = new AddrSpaceCastInst(
-        Arg, PointerType::get(StructType, ADDRESS_SPACE_PARAM), Arg->getName(),
-        FirstInst);
+        Arg, PointerType::get(StructType->getContext(), ADDRESS_SPACE_PARAM),
+        Arg->getName(), FirstInst);
     for (Use *U : UsesToUpdate)
       convertToParamAS(U, ArgInParamAS, HasCvtaParam, IsGridConstant);
     LLVM_DEBUG(dbgs() << "No need to copy or cast " << *Arg << "\n");

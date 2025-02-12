@@ -13,9 +13,9 @@
 #ifndef FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 #define FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 
-#include "flang/Common/LangOptions.h"
-#include "flang/Common/MathOptionsBase.h"
 #include "flang/Frontend/CodeGenOptions.h"
+#include "flang/Support/LangOptions.h"
+#include "flang/Support/MathOptionsBase.h"
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -174,7 +174,7 @@ struct OffloadModuleOpts {
 //  Shares assinging of the OpenMP OffloadModuleInterface and its assorted
 //  attributes accross Flang tools (bbc/flang)
 [[maybe_unused]] static void setOffloadModuleInterfaceAttributes(
-    mlir::ModuleOp &module, OffloadModuleOpts Opts) {
+    mlir::ModuleOp module, OffloadModuleOpts Opts) {
   // Should be registered by the OpenMPDialect
   if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
           module.getOperation())) {
@@ -198,7 +198,7 @@ struct OffloadModuleOpts {
 }
 
 [[maybe_unused]] static void setOpenMPVersionAttribute(
-    mlir::ModuleOp &module, int64_t version) {
+    mlir::ModuleOp module, int64_t version) {
   module.getOperation()->setAttr(
       mlir::StringAttr::get(module.getContext(), llvm::Twine{"omp.version"}),
       mlir::omp::VersionAttr::get(module.getContext(), version));

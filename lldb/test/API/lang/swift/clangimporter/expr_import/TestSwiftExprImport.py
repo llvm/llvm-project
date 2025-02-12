@@ -6,7 +6,6 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftExprImport(TestBase):
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
-    @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'true'))
     @swiftTest
     def test(self):
         """Test error handling if the expression evaluator

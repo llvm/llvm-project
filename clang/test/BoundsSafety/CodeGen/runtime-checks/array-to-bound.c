@@ -10,7 +10,7 @@
 
 // O2-LABEL: @foo(
 // O2-NEXT:  entry:
-// O2-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[ARR:%.*]], i64 4
+// O2-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR:%.*]], i64 4
 // O2-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARR]], i64 40
 // O2-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[UPPER]], {{!annotation ![0-9]+}}
 // O2-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[ARR]], {{!annotation ![0-9]+}}

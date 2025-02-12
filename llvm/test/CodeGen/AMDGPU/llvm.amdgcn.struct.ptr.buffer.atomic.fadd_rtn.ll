@@ -216,15 +216,14 @@ define float @struct_ptr_buffer_atomic_add_f32_rtn__vgpr_val__vgpr_rsrc__vgpr_vo
 ; GFX1200-NEXT:    v_readfirstlane_b32 s6, v3
 ; GFX1200-NEXT:    v_readfirstlane_b32 s7, v4
 ; GFX1200-NEXT:    v_readfirstlane_b32 s3, v7
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1200-NEXT:    s_wait_alu 0xf1ff
 ; GFX1200-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[3:4]
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1200-NEXT:    v_cmp_eq_u32_e64 s1, s3, v7
-; GFX1200-NEXT:    s_wait_alu 0xfffe
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1200-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1200-NEXT:    s_wait_alu 0xfffe
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1200-NEXT:    s_and_b32 s0, s0, s1
 ; GFX1200-NEXT:    s_wait_alu 0xfffe
 ; GFX1200-NEXT:    s_and_saveexec_b32 s0, s0
@@ -233,13 +232,11 @@ define float @struct_ptr_buffer_atomic_add_f32_rtn__vgpr_val__vgpr_rsrc__vgpr_vo
 ; GFX1200-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX1200-NEXT:    ; implicit-def: $vgpr7
 ; GFX1200-NEXT:    ; implicit-def: $vgpr5_vgpr6
-; GFX1200-NEXT:    s_wait_alu 0xfffe
 ; GFX1200-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX1200-NEXT:    s_cbranch_execnz .LBB4_1
 ; GFX1200-NEXT:  ; %bb.2:
 ; GFX1200-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-NEXT:    s_wait_alu 0xfffe
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret float %ret
@@ -329,15 +326,14 @@ define <2 x half> @struct_ptr_buffer_atomic_add_v2f16_rtn__vgpr_val__vgpr_rsrc__
 ; GFX1200-NEXT:    v_readfirstlane_b32 s6, v3
 ; GFX1200-NEXT:    v_readfirstlane_b32 s7, v4
 ; GFX1200-NEXT:    v_readfirstlane_b32 s3, v7
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1200-NEXT:    s_wait_alu 0xf1ff
 ; GFX1200-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[3:4]
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1200-NEXT:    v_cmp_eq_u32_e64 s1, s3, v7
-; GFX1200-NEXT:    s_wait_alu 0xfffe
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1200-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1200-NEXT:    s_wait_alu 0xfffe
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1200-NEXT:    s_and_b32 s0, s0, s1
 ; GFX1200-NEXT:    s_wait_alu 0xfffe
 ; GFX1200-NEXT:    s_and_saveexec_b32 s0, s0
@@ -346,13 +342,11 @@ define <2 x half> @struct_ptr_buffer_atomic_add_v2f16_rtn__vgpr_val__vgpr_rsrc__
 ; GFX1200-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX1200-NEXT:    ; implicit-def: $vgpr7
 ; GFX1200-NEXT:    ; implicit-def: $vgpr5_vgpr6
-; GFX1200-NEXT:    s_wait_alu 0xfffe
 ; GFX1200-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX1200-NEXT:    s_cbranch_execnz .LBB5_1
 ; GFX1200-NEXT:  ; %bb.2:
 ; GFX1200-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-NEXT:    s_wait_alu 0xfffe
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <2 x half> @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.v2f16(<2 x half> %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret <2 x half> %ret

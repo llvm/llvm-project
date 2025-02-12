@@ -345,6 +345,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::EmbedExprClass:
   case Stmt::HLSLOutArgExprClass:
   case Stmt::OpenACCAsteriskSizeExprClass:
+  case Stmt::ResolvedUnexpandedPackExprClass:
     K = CXCursor_UnexposedExpr;
     break;
 
@@ -379,6 +380,10 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
 
   case Stmt::CapturedStmtClass:
+    K = CXCursor_UnexposedStmt;
+    break;
+
+  case Stmt::SYCLKernelCallStmtClass:
     K = CXCursor_UnexposedStmt;
     break;
 
@@ -913,6 +918,24 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
   case Stmt::OpenACCHostDataConstructClass:
     K = CXCursor_OpenACCHostDataConstruct;
+    break;
+  case Stmt::OpenACCWaitConstructClass:
+    K = CXCursor_OpenACCWaitConstruct;
+    break;
+  case Stmt::OpenACCInitConstructClass:
+    K = CXCursor_OpenACCInitConstruct;
+    break;
+  case Stmt::OpenACCShutdownConstructClass:
+    K = CXCursor_OpenACCShutdownConstruct;
+    break;
+  case Stmt::OpenACCSetConstructClass:
+    K = CXCursor_OpenACCSetConstruct;
+    break;
+  case Stmt::OpenACCUpdateConstructClass:
+    K = CXCursor_OpenACCUpdateConstruct;
+    break;
+  case Stmt::OpenACCAtomicConstructClass:
+    K = CXCursor_OpenACCAtomicConstruct;
     break;
   case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     K = CXCursor_OMPTargetParallelGenericLoopDirective;

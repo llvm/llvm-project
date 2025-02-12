@@ -170,6 +170,15 @@ void reportVectorizationFailure(const StringRef DebugMsg,
     const StringRef OREMsg, const StringRef ORETag,
     OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr);
 
+/// Same as above, but the debug message and optimization remark are identical
+inline void reportVectorizationFailure(const StringRef DebugMsg,
+                                       const StringRef ORETag,
+                                       OptimizationRemarkEmitter *ORE,
+                                       Loop *TheLoop,
+                                       Instruction *I = nullptr) {
+  reportVectorizationFailure(DebugMsg, DebugMsg, ORETag, ORE, TheLoop, I);
+}
+
 /// A marker analysis to determine if extra passes should be run after loop
 /// vectorization.
 struct ShouldRunExtraVectorPasses

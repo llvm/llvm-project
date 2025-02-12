@@ -100,8 +100,8 @@ private:
   bool m_step_past_prologue; // FIXME: For now hard-coded to true, we could put
                              // a switch in for this if there's
                              // demand for that.
-  bool m_virtual_step; // true if we've just done a "virtual step", i.e. just
-                       // moved the inline stack depth.
+  LazyBool m_virtual_step;   // true if we've just done a "virtual step", i.e.
+                             // just moved the inline stack depth.
   ConstString m_step_into_target;
   std::vector<lldb::break_id_t> m_step_in_deep_bps; // Places where we might
                                                     // want to stop when we do a

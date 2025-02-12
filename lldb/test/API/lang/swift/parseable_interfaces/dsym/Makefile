@@ -17,7 +17,7 @@ setup:
 	cp $(SRCDIR)/libs/A.swift libs/AA.swift
 
 sharedA:
-	$(MAKE) MAKE_DSYM=$(DYLIB_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
+	"$(MAKE)" MAKE_DSYM=$(DYLIB_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) VPATH=$(BUILDDIR) SWIFTSDKROOT=$(SWIFTSDKROOT) \
 		SWIFT_MODULE_CACHE_FLAGS="$(SWIFT_MODULE_CACHE_FLAGS)" \
 		DSYMUTIL=$(DSYMUTIL) \
@@ -31,6 +31,6 @@ clear_modules:
 	rm -rf cache
 
 clean::
-	$(MAKE) VPATH=$(BUILDDIR) SWIFTC=$(SWIFTC) BASENAME=AA -f $(SRCDIR)/libs/Makefile clean
+	"$(MAKE)" VPATH=$(BUILDDIR) SWIFTC=$(SWIFTC) BASENAME=AA -f $(SRCDIR)/libs/Makefile clean
 	rm -rf libs
 	rm -rf cache

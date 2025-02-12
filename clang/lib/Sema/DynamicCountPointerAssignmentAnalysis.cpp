@@ -570,8 +570,7 @@ public:
     }
 
     assert(!Ty->getCountExpr()->HasSideEffects(Ctx));
-    ExprResult CountR =
-        DeclReplacer.TransformBoundsAttrExpr(Ty->getCountExpr());
+    ExprResult CountR = DeclReplacer.TransformExpr(Ty->getCountExpr());
     if (CountR.isInvalid())
       return ExprError();
     Expr *Count = CountR.get();
@@ -781,7 +780,7 @@ public:
     // '__ended_by'. We may revisit this if we decide to expose '__started_by'
     // to users.
     if (auto *End = Ty->getEndPointer()) {
-      if (!PushValidOrErr(DeclReplacer.TransformBoundsAttrExpr(End)))
+      if (!PushValidOrErr(DeclReplacer.TransformExpr(End)))
         return ExprError();
     }
 
@@ -969,7 +968,7 @@ public:
       Counts.push_back(Zero.get());
     }
 
-    ExprResult NewCount = DeclReplacer.TransformBoundsAttrExpr(Count);
+    ExprResult NewCount = DeclReplacer.TransformExpr(Count);
     NewCount = SemaRef.DefaultLvalueConversion(NewCount.get());
     if (NewCount.isInvalid())
       return;
@@ -1025,7 +1024,7 @@ public:
 
       assert(!RangePtr->HasSideEffects(SemaRef.Context));
       // Since we materialize self assignments, we can reuse the materialized value.
-      ExprResult NewRangePtr = DeclReplacer.TransformBoundsAttrExpr(RangePtr);
+      ExprResult NewRangePtr = DeclReplacer.TransformExpr(RangePtr);
       assert(!NewRangePtr.isInvalid());
       // This is assuming the range has not been changed.
       NewRangePtr = SemaRef.DefaultFunctionArrayLvalueConversion(NewRangePtr.get());

@@ -646,7 +646,7 @@ class TypedVecListRegOperand<RegisterClass Reg, int lanes, string eltsize>
                                                    # eltsize # "'>">;
 
 multiclass VectorList<int count, RegisterClass Reg64, RegisterClass Reg128> {
-  // With implicit types (probably on instruction instead). E.g. { v0, v1 }
+  // With implicit types (probably on instruction instead). E.g. { v0, v1 } or {v0, v2, v4}.
   def _64AsmOperand : AsmOperandClass {
     let Name = NAME # "64";
     let PredicateMethod = "isImplicitlyTypedVectorList<RegKind::NeonVector, " # count # ">";
@@ -665,6 +665,17 @@ multiclass VectorList<int count, RegisterClass Reg64, RegisterClass Reg128> {
 
   def "128" : RegisterOperand<Reg128, "printImplicitlyTypedVectorList"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_128AsmOperand");
+  }
+
+  // With implicit types (probably on instruction instead), consecutive registers. E.g. { v0, v1, v2 }
+  def _Consecutive128AsmOperand : AsmOperandClass {
+    let Name = NAME # "Consecutive128";
+    let PredicateMethod = "isImplicitlyTypedVectorList<RegKind::NeonVector, " # count # ", true>";
+    let RenderMethod = "addVectorListOperands<AArch64Operand::VecListIdx_QReg, " # count # ", true>";
+  }
+
+  def "Consecutive128" : RegisterOperand<Reg128, "printImplicitlyTypedVectorList"> {
+    let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_Consecutive128AsmOperand");
   }
 
   // 64-bit register lists with explicit type.
@@ -968,10 +979,19 @@ class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
 //******************************************************************************
 
 // SVE predicate register classes.
+
+// Note: This hardware mode is enabled in AArch64Subtarget::getHwModeSet()
+// (without the use of the table-gen'd predicates).
+def SMEWithZPRPredicateSpills : HwMode<"", [Predicate<"false">]>;
+
+def PPRSpillFillRI : RegInfoByHwMode<
+      [DefaultMode,              SMEWithZPRPredicateSpills],
+      [RegInfo<16,16,16>,        RegInfo<16,128,128>]>;
+
 class PPRClass<int firstreg, int lastreg, int step = 1> : RegisterClass<"AArch64",
                                   [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1 ], 16,
                                   (sequence "P%u", firstreg, lastreg, step)> {
-  let Size = 16;
+  let RegInfos = PPRSpillFillRI;
 }
 
 def PPR    : PPRClass<0, 15> {

@@ -20,7 +20,7 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 !llvm.module.flags = !{!4}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
-!1 = !DIFile(filename: "/Users/zainjaffal/Repos/internal/llvm-project2/llvm/test/Transforms/Util/bounds-safety-annotation-remarks.ll", directory: "/")
+!1 = !DIFile(filename: "/llvm-project/llvm/test/Transforms/Util/bounds-safety-annotation-remarks.ll", directory: "/")
 !2 = !{i32 4}
 !3 = !{i32 1}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
@@ -54,7 +54,7 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; CHECK-NEXT: Pass:            annotation-remarks
 ; CHECK-NEXT: Name:            AutoInitStore
 ; CHECK-NEXT: DebugLoc:        { File: 
-; CHECK-NEXT:                    Line: 3, Column: 1 }
+; CHECK-NEXT:                    Line: 2, Column: 1 }
 ; CHECK-NEXT: Function:        test1
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Store inserted by -ftrivial-auto-var-init.
@@ -78,7 +78,7 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; CHECK-NEXT: Pass:            annotation-remarks
 ; CHECK-NEXT: Name:            AutoInitStore
 ; CHECK-NEXT: DebugLoc:        { File: 
-; CHECK-NEXT:                    Line: 2, Column: 1 }
+; CHECK-NEXT:                    Line: 3, Column: 1 }
 ; CHECK-NEXT: Function:        test1
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Store inserted by -ftrivial-auto-var-init.

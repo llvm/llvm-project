@@ -23,7 +23,7 @@ ifneq "$(CODESIGN)" ""
 endif
 
 %.swift.o: %.swift
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=$(patsubst %.swift.o,%,$@) \
 		SWIFT_SOURCES=$(patsubst %.swift.o,%.swift,$@) \
 		SWIFT_OBJC_HEADER=$(patsubst %.swift.o,%-swift.h,$@) \

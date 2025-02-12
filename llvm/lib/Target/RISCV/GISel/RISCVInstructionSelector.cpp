@@ -57,6 +57,17 @@ private:
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) const;
 
+  static constexpr unsigned MaxRecursionDepth = 6;
+
+  bool hasAllNBitUsers(const MachineInstr &MI, unsigned Bits,
+                       const unsigned Depth = 0) const;
+  bool hasAllHUsers(const MachineInstr &MI) const {
+    return hasAllNBitUsers(MI, 16);
+  }
+  bool hasAllWUsers(const MachineInstr &MI) const {
+    return hasAllNBitUsers(MI, 32);
+  }
+
   bool isRegInGprb(Register Reg) const;
   bool isRegInFprb(Register Reg) const;
 
@@ -80,7 +91,6 @@ private:
   bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB) const;
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineIRBuilder &MIB) const;
-  bool selectMergeValues(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool selectUnmergeValues(MachineInstr &MI, MachineIRBuilder &MIB) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root,
@@ -129,13 +139,18 @@ private:
                           int OpIdx) const;
   void renderImmPlus1(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx) const;
-  void renderImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                 int OpIdx) const;
+  void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
 
   void renderTrailingZeros(MachineInstrBuilder &MIB, const MachineInstr &MI,
                            int OpIdx) const;
   void renderXLenSubTrailingOnes(MachineInstrBuilder &MIB,
                                  const MachineInstr &MI, int OpIdx) const;
+
+  void renderAddiPairImmLarge(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                              int OpIdx) const;
+  void renderAddiPairImmSmall(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                              int OpIdx) const;
 
   const RISCVSubtarget &STI;
   const RISCVInstrInfo &TII;
@@ -178,6 +193,79 @@ RISCVInstructionSelector::RISCVInstructionSelector(
 #include "RISCVGenGlobalISel.inc"
 #undef GET_GLOBALISEL_TEMPORARIES_INIT
 {
+}
+
+// Mimics optimizations in ISel and RISCVOptWInst Pass
+bool RISCVInstructionSelector::hasAllNBitUsers(const MachineInstr &MI,
+                                               unsigned Bits,
+                                               const unsigned Depth) const {
+
+  assert((MI.getOpcode() == TargetOpcode::G_ADD ||
+          MI.getOpcode() == TargetOpcode::G_SUB ||
+          MI.getOpcode() == TargetOpcode::G_MUL ||
+          MI.getOpcode() == TargetOpcode::G_SHL ||
+          MI.getOpcode() == TargetOpcode::G_LSHR ||
+          MI.getOpcode() == TargetOpcode::G_AND ||
+          MI.getOpcode() == TargetOpcode::G_OR ||
+          MI.getOpcode() == TargetOpcode::G_XOR ||
+          MI.getOpcode() == TargetOpcode::G_SEXT_INREG || Depth != 0) &&
+         "Unexpected opcode");
+
+  if (Depth >= RISCVInstructionSelector::MaxRecursionDepth)
+    return false;
+
+  auto DestReg = MI.getOperand(0).getReg();
+  for (auto &UserOp : MRI->use_nodbg_operands(DestReg)) {
+    assert(UserOp.getParent() && "UserOp must have a parent");
+    const MachineInstr &UserMI = *UserOp.getParent();
+    unsigned OpIdx = UserOp.getOperandNo();
+
+    switch (UserMI.getOpcode()) {
+    default:
+      return false;
+    case RISCV::ADDW:
+    case RISCV::ADDIW:
+    case RISCV::SUBW:
+      if (Bits >= 32)
+        break;
+      return false;
+    case RISCV::SLL:
+    case RISCV::SRA:
+    case RISCV::SRL:
+      // Shift amount operands only use log2(Xlen) bits.
+      if (OpIdx == 2 && Bits >= Log2_32(Subtarget->getXLen()))
+        break;
+      return false;
+    case RISCV::SLLI:
+      // SLLI only uses the lower (XLen - ShAmt) bits.
+      if (Bits >= Subtarget->getXLen() - UserMI.getOperand(2).getImm())
+        break;
+      return false;
+    case RISCV::ANDI:
+      if (Bits >= (unsigned)llvm::bit_width<uint64_t>(
+                      (uint64_t)UserMI.getOperand(2).getImm()))
+        break;
+      goto RecCheck;
+    case RISCV::AND:
+    case RISCV::OR:
+    case RISCV::XOR:
+    RecCheck:
+      if (hasAllNBitUsers(UserMI, Bits, Depth + 1))
+        break;
+      return false;
+    case RISCV::SRLI: {
+      unsigned ShAmt = UserMI.getOperand(2).getImm();
+      // If we are shifting right by less than Bits, and users don't demand any
+      // bits that were shifted into [Bits-1:0], then we can consider this as an
+      // N-Bit user.
+      if (Bits > ShAmt && hasAllNBitUsers(UserMI, Bits - ShAmt, Depth + 1))
+        break;
+      return false;
+    }
+    }
+  }
+
+  return true;
 }
 
 InstructionSelector::ComplexRendererFns
@@ -533,7 +621,7 @@ static void getOperandsForBranch(Register CondReg, RISCVCC::CondCode &CC,
     return;
   }
 
-  // We found an ICmp, do some canonicalizations.
+  // We found an ICmp, do some canonicalization.
 
   // Adjust comparisons to use comparison with 0 if possible.
   if (auto Constant = getIConstantVRegSExtVal(RHS, MRI)) {
@@ -647,7 +735,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return true;
   }
   case TargetOpcode::G_FCONSTANT: {
-    // TODO: Use constant pool for complext constants.
+    // TODO: Use constant pool for complex constants.
     // TODO: Optimize +0.0 to use fcvt.d.w for s64 on rv32.
     Register DstReg = MI.getOperand(0).getReg();
     const APFloat &FPimm = MI.getOperand(1).getFPImm()->getValueAPF();
@@ -710,14 +798,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.setDesc(TII.get(RISCV::PseudoBRIND));
     MI.addOperand(MachineOperand::CreateImm(0));
     return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-  case TargetOpcode::G_FRAME_INDEX: {
-    // TODO: We may want to replace this code with the SelectionDAG patterns,
-    // which fail to get imported because it uses FrameAddrRegImm, which is a
-    // ComplexPattern
-    MI.setDesc(TII.get(RISCV::ADDI));
-    MI.addOperand(MachineOperand::CreateImm(0));
-    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-  }
   case TargetOpcode::G_SELECT:
     return selectSelect(MI, MIB);
   case TargetOpcode::G_FCMP:
@@ -733,8 +813,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_IMPLICIT_DEF:
     return selectImplicitDef(MI, MIB);
-  case TargetOpcode::G_MERGE_VALUES:
-    return selectMergeValues(MI, MIB);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(MI, MIB);
   default:
@@ -742,25 +820,12 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
 }
 
-bool RISCVInstructionSelector::selectMergeValues(MachineInstr &MI,
-                                                 MachineIRBuilder &MIB) const {
-  assert(MI.getOpcode() == TargetOpcode::G_MERGE_VALUES);
-
-  // Build a F64 Pair from operands
-  if (MI.getNumOperands() != 3)
-    return false;
-  Register Dst = MI.getOperand(0).getReg();
-  Register Lo = MI.getOperand(1).getReg();
-  Register Hi = MI.getOperand(2).getReg();
-  if (!isRegInFprb(Dst) || !isRegInGprb(Lo) || !isRegInGprb(Hi))
-    return false;
-  MI.setDesc(TII.get(RISCV::BuildPairF64Pseudo));
-  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-}
-
 bool RISCVInstructionSelector::selectUnmergeValues(
     MachineInstr &MI, MachineIRBuilder &MIB) const {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
+
+  if (!Subtarget->hasStdExtZfa())
+    return false;
 
   // Split F64 Src into two s32 parts
   if (MI.getNumOperands() != 3)
@@ -770,8 +835,17 @@ bool RISCVInstructionSelector::selectUnmergeValues(
   Register Hi = MI.getOperand(1).getReg();
   if (!isRegInFprb(Src) || !isRegInGprb(Lo) || !isRegInGprb(Hi))
     return false;
-  MI.setDesc(TII.get(RISCV::SplitF64Pseudo));
-  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+
+  MachineInstr *ExtractLo = MIB.buildInstr(RISCV::FMV_X_W_FPR64, {Lo}, {Src});
+  if (!constrainSelectedInstRegOperands(*ExtractLo, TII, TRI, RBI))
+    return false;
+
+  MachineInstr *ExtractHi = MIB.buildInstr(RISCV::FMVH_X_D, {Hi}, {Src});
+  if (!constrainSelectedInstRegOperands(*ExtractHi, TII, TRI, RBI))
+    return false;
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
@@ -845,13 +919,12 @@ void RISCVInstructionSelector::renderImmPlus1(MachineInstrBuilder &MIB,
   MIB.addImm(CstVal + 1);
 }
 
-void RISCVInstructionSelector::renderImm(MachineInstrBuilder &MIB,
-                                         const MachineInstr &MI,
-                                         int OpIdx) const {
-  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
-         "Expected G_CONSTANT");
-  int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
-  MIB.addImm(CstVal);
+void RISCVInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
+                                                const MachineInstr &MI,
+                                                int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FRAME_INDEX && OpIdx == -1 &&
+         "Expected G_FRAME_INDEX");
+  MIB.add(MI.getOperand(1));
 }
 
 void RISCVInstructionSelector::renderTrailingZeros(MachineInstrBuilder &MIB,
@@ -869,6 +942,25 @@ void RISCVInstructionSelector::renderXLenSubTrailingOnes(
          "Expected G_CONSTANT");
   uint64_t C = MI.getOperand(1).getCImm()->getZExtValue();
   MIB.addImm(Subtarget->getXLen() - llvm::countr_one(C));
+}
+
+void RISCVInstructionSelector::renderAddiPairImmSmall(MachineInstrBuilder &MIB,
+                                                      const MachineInstr &MI,
+                                                      int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue();
+  int64_t Adj = Imm < 0 ? -2048 : 2047;
+  MIB.addImm(Imm - Adj);
+}
+
+void RISCVInstructionSelector::renderAddiPairImmLarge(MachineInstrBuilder &MIB,
+                                                      const MachineInstr &MI,
+                                                      int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue() < 0 ? -2048 : 2047;
+  MIB.addImm(Imm);
 }
 
 const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(

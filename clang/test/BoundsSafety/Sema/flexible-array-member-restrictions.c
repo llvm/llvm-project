@@ -33,10 +33,10 @@ void accepting_flexible_ptr(struct flexible *p);
 void accepting_flex_ptr(flex_t *p);
 
 // these shouldn't work
-struct flexible returning_flexible(void); // expected-error{{BoundsSafety forbids passing 'struct flexible' by copy}}
-flex_t returning_flex(void); // expected-error{{BoundsSafety forbids passing 'flex_t' (aka 'struct flexible') by copy}}
-void accepting_flexible(struct flexible p); // expected-error{{BoundsSafety forbids passing 'struct flexible' by copy}}
-void accepting_flex(flex_t p); // expected-error{{BoundsSafety forbids passing 'flex_t' (aka 'struct flexible') by copy}}
+struct flexible returning_flexible(void); // expected-error{{-fbounds-safety forbids passing 'struct flexible' by copy}}
+flex_t returning_flex(void); // expected-error{{-fbounds-safety forbids passing 'flex_t' (aka 'struct flexible') by copy}}
+void accepting_flexible(struct flexible p); // expected-error{{-fbounds-safety forbids passing 'struct flexible' by copy}}
+void accepting_flex(flex_t p); // expected-error{{-fbounds-safety forbids passing 'flex_t' (aka 'struct flexible') by copy}}
 
 flex_t negative_count_die = { .count = -1, {1} }; // expected-error{{flexible array member is initialized with 1 element, but count value is initialized to -1}}
 flex_t negative_count_die2 = { .count = -1 }; // expected-error{{flexible array member is initialized with 0 elements, but count value is initialized to -1}}
@@ -50,17 +50,17 @@ flex_t count_too_large_die2 = { .count = 3, .elems = { 0 } }; // expected-error{
 flex_t count_too_large_die3 = { .count = 3, .elems = { [1] = 0 } }; // expected-error{{flexible array member is initialized with 2 elements, but count value is initialized to 3}}
 
 void foo(void) {
-    flex_t flex_local = flex; // expected-error{{BoundsSafety forbids passing 'struct flexible' by copy}}
-    flex_local = flex; // expected-error{{BoundsSafety forbids passing 'struct flexible' by copy}}
+    flex_t flex_local = flex; // expected-error{{-fbounds-safety forbids passing 'struct flexible' by copy}}
+    flex_local = flex; // expected-error{{-fbounds-safety forbids passing 'struct flexible' by copy}}
 }
 
 flex_t *bar(flex_t *__bidi_indexable flex) {
-    ++flex; // expected-error{{BoundsSafety forbids arithmetic on pointers to types with a flexible array member}}
-    flex++; // expected-error{{BoundsSafety forbids arithmetic on pointers to types with a flexible array member}}
-    --flex; // expected-error{{BoundsSafety forbids arithmetic on pointers to types with a flexible array member}}
-    flex--; // expected-error{{BoundsSafety forbids arithmetic on pointers to types with a flexible array member}}
-    (void) (flex + 1); // expected-error{{BoundsSafety forbids arithmetic on pointers to types with a flexible array member}}
-    (void) (flex - 1); // expected-error{{BoundsSafety forbids arithmetic on pointers to types with a flexible array member}}
+    ++flex; // expected-error{{-fbounds-safety forbids arithmetic on pointers to types with a flexible array member}}
+    flex++; // expected-error{{-fbounds-safety forbids arithmetic on pointers to types with a flexible array member}}
+    --flex; // expected-error{{-fbounds-safety forbids arithmetic on pointers to types with a flexible array member}}
+    flex--; // expected-error{{-fbounds-safety forbids arithmetic on pointers to types with a flexible array member}}
+    (void) (flex + 1); // expected-error{{-fbounds-safety forbids arithmetic on pointers to types with a flexible array member}}
+    (void) (flex - 1); // expected-error{{-fbounds-safety forbids arithmetic on pointers to types with a flexible array member}}
 }
 
 void baz(flex_t *__counted_by(1) flex); // expected-error{{cannot apply '__counted_by' attribute to 'flex_t *' (aka 'struct flexible *') because 'flex_t' (aka 'struct flexible') has unknown size; did you mean to use '__sized_by' instead?}}

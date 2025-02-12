@@ -9,7 +9,6 @@ from lldbsuite.test.decorators import *
 class TestSwiftForwardInteropCxxLangOpt(TestBase):
 
     @swiftTest
-    @expectedFailureAll(setting=('symbols.swift-precise-compiler-invocation', 'false'))
     def test_class(self):
         """
         Test that C++ interoperability is enabled on a per-CU basis.

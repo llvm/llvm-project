@@ -14,11 +14,11 @@
 #define UNLOCK_FUNCTION(...)            __attribute__ ((unlock_function(__VA_ARGS__)))
 
 void elf_fun_params(int lvar EXCLUSIVE_LOCK_FUNCTION()); // \
-  // expected-warning {{'exclusive_lock_function' attribute only applies to functions}}
+  // expected-warning {{'exclusive_lock_function' attribute applies to function parameters only if their type is a reference to a 'scoped_lockable'-annotated type}}
 void slf_fun_params(int lvar SHARED_LOCK_FUNCTION()); // \
-  // expected-warning {{'shared_lock_function' attribute only applies to functions}}
+  // expected-warning {{'shared_lock_function' attribute applies to function parameters only if their type is a reference to a 'scoped_lockable'-annotated type}}
 void uf_fun_params(int lvar UNLOCK_FUNCTION()); // \
-  // expected-warning {{'unlock_function' attribute only applies to functions}}
+  // expected-warning {{'unlock_function' attribute applies to function parameters only if their type is a reference to a 'scoped_lockable'-annotated type}}
 
 // regression tests added for rdar://92699615
 typedef bool __attribute__((capability("role"))) role_t;

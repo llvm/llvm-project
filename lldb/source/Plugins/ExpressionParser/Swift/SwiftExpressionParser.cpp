@@ -13,6 +13,7 @@
 #include "SwiftExpressionParser.h"
 
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "Plugins/Language/Swift/LogChannelSwift.h"
 #include "SwiftASTManipulator.h"
 #include "SwiftDiagnostic.h"
 #include "SwiftExpressionSourceCode.h"
@@ -26,7 +27,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -43,6 +43,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm-c/Analysis.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -810,9 +811,14 @@ SwiftExpressionParser::GetASTContext(DiagnosticManager &diagnostic_manager) {
     m_swift_ast_ctx.GetLanguageOptions().EnableDollarIdentifiers = true;
     m_swift_ast_ctx.GetLanguageOptions().EnableAccessControl =
         (repl || playground);
+    LLDB_LOG(lldb_private::GetSwiftHealthLog(), "Language option EnableAccessControl = {0}",
+             m_swift_ast_ctx.GetLanguageOptions().EnableAccessControl);
+
     m_swift_ast_ctx.GetLanguageOptions().EnableTargetOSChecking = false;
 
     auto should_disable_objc_runtime = [&]() {
+      if (playground)
+        return false;
       lldb::StackFrameSP this_frame_sp(m_stack_frame_wp.lock());
       if (!this_frame_sp)
         return false;
@@ -823,8 +829,13 @@ SwiftExpressionParser::GetASTContext(DiagnosticManager &diagnostic_manager) {
     };
     if (should_disable_objc_runtime())
       m_swift_ast_ctx.GetLanguageOptions().EnableObjCInterop = false;
+    LLDB_LOG(lldb_private::GetSwiftHealthLog(), "Language option EnableObjCInterop = {0}",
+             m_swift_ast_ctx.GetLanguageOptions().EnableObjCInterop);
 
     m_swift_ast_ctx.GetLanguageOptions().Playground = repl || playground;
+    LLDB_LOG(lldb_private::GetSwiftHealthLog(), "Language option Playground = {0}",
+             m_swift_ast_ctx.GetLanguageOptions().Playground);
+
     m_swift_ast_ctx.GetIRGenOptions().Playground = repl || playground;
 
     // For the expression parser and REPL we want to relax the
@@ -832,6 +843,9 @@ SwiftExpressionParser::GetASTContext(DiagnosticManager &diagnostic_manager) {
     // might throw.
     if (repl || !playground)
       m_swift_ast_ctx.GetLanguageOptions().EnableThrowWithoutTry = true;
+    LLDB_LOG(lldb_private::GetSwiftHealthLog(), "Language option EnableThrowWithoutTry = {0}",
+             m_swift_ast_ctx.GetLanguageOptions().EnableThrowWithoutTry);
+
 
     m_swift_ast_ctx.GetIRGenOptions().OutputKind =
         swift::IRGenOutputKind::Module;
@@ -2027,8 +2041,9 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         llvm::ArrayRef<std::string>());
 
     if (GenModule) {
-      swift::performLLVMOptimizations(IRGenOpts, GenModule.getModule(),
-                                      GenModule.getTargetMachine(), nullptr);
+      swift::performLLVMOptimizations(
+          IRGenOpts, m_swift_ast_ctx.GetDiagnosticEngine(), nullptr,
+          GenModule.getModule(), GenModule.getTargetMachine(), nullptr);
     }
     auto ContextAndModule = std::move(GenModule).release();
     m_llvm_context.reset(ContextAndModule.first);

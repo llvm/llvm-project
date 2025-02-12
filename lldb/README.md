@@ -3,10 +3,8 @@
 
 || **Status** |
 |---|---|
-|**macOS**         |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-osx-cmake/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-osx)|
-|**Ubuntu 14.04** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-14_04/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-14_04)|
-|**Ubuntu 16.04** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-16_04/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-16_04)|
-|**Ubuntu 18.04** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-18_04/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-18_04)|
+|**macOS**         |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-macos-cmake/lastCompletedBuild/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-macos-cmake)|
+|**Ubuntu 22.04** |[![Build Status](https://ci.swift.org/job/oss-lldb-linux-ubuntu-22_04/lastCompletedBuild/badge/icon)](https://ci.swift.org/job/oss-lldb-linux-ubuntu-22_04)|
 
 **Welcome to the Swift Debugger and REPL!**
 
@@ -26,7 +24,7 @@ flag to it. Example invocation:
 ```
 mkdir myswift
 cd myswift
-git clone https://github.com/apple/swift.git swift
+git clone https://github.com/swiftlang/swift.git swift
 ./swift/utils/update-checkout --clone
 ./llvm-project/lldb/scripts/macos-setup-codesign.sh
 ./swift/utils/build-script -r --lldb

@@ -37,6 +37,7 @@ using namespace clang;
 
 namespace {
 class PCHContainerGenerator : public ASTConsumer {
+  CompilerInstance &CI;
   DiagnosticsEngine &Diags;
   const std::string MainFileName;
   const std::string OutputFileName;
@@ -80,6 +81,9 @@ class PCHContainerGenerator : public ASTConsumer {
       if (auto *TD = dyn_cast<TagDecl>(D))
         if (!TD->isCompleteDefinition())
           return true;
+
+      if (D->hasAttr<NoDebugAttr>())
+        return true;
 
       QualType QualTy = Ctx.getTypeDeclType(D);
       if (!QualTy.isNull() && CanRepresent(QualTy.getTypePtr()))
@@ -140,7 +144,7 @@ public:
                         const std::string &OutputFileName,
                         std::unique_ptr<raw_pwrite_stream> OS,
                         std::shared_ptr<PCHBuffer> Buffer)
-      : Diags(CI.getDiagnostics()), MainFileName(MainFileName),
+      : CI(CI), Diags(CI.getDiagnostics()), MainFileName(MainFileName),
         OutputFileName(OutputFileName), Ctx(nullptr),
         MMap(CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()),
         FS(&CI.getVirtualFileSystem()),
@@ -319,9 +323,8 @@ public:
     LLVM_DEBUG({
       // Print the IR for the PCH container to the debug output.
       llvm::SmallString<0> Buffer;
-      clang::EmitBackendOutput(
-          Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts, LangOpts,
-          CASOpts, // MCCAS
+      clang::emitBackendOutput(
+          CI, CodeGenOpts, CASOpts /* MCCAS */,
           Ctx.getTargetInfo().getDataLayoutString(), M.get(),
           BackendAction::Backend_EmitLL, FS,
           std::make_unique<llvm::raw_svector_ostream>(Buffer));
@@ -329,9 +332,7 @@ public:
     });
 
     // Use the LLVM backend to emit the pch container.
-    clang::EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
-                             LangOpts,
-                             CASOpts, // MCCAS
+    clang::emitBackendOutput(CI, CodeGenOpts, CASOpts, // MCCAS
                              Ctx.getTargetInfo().getDataLayoutString(), M.get(),
                              BackendAction::Backend_EmitObj, FS, std::move(OS));
 

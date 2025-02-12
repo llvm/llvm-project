@@ -7,7 +7,7 @@
 #include <ptrcheck.h>
 
 // CHECK-LABEL: define dso_local ptr @cb_in_from_bidi(
-// CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    ret ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]]
@@ -26,7 +26,7 @@ int *__counted_by(count) cb_in_from_single(int count, int *__single p) {
 }
 
 // CHECK-LABEL: define dso_local noundef ptr @cb_out_from_single(
-// CHECK-SAME: ptr nocapture noundef readnone [[COUNT:%.*]], ptr noundef readnone returned [[P:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: ptr noundef readnone captures(none) [[COUNT:%.*]], ptr noundef readnone returned [[P:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret ptr [[P]]
 //
@@ -44,7 +44,7 @@ int *__counted_by_or_null(count) cbn_in_from_single(int count, int *__single p) 
 }
 
 // CHECK-LABEL: define dso_local ptr @sb_in_from_bidi(
-// CHECK-SAME: i32 noundef [[SIZE:%.*]], ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[SIZE:%.*]], ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    ret ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]]
@@ -54,7 +54,7 @@ void *__sized_by(size) sb_in_from_bidi(int size, void *__bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local ptr @eb_from_bidi(
-// CHECK-SAME: ptr nocapture noundef readnone [[END:%.*]], ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readnone captures(none) [[END:%.*]], ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    ret ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]]

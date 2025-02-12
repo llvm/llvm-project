@@ -9,16 +9,34 @@ namespace usage_invalid {
     ~A() [[clang::lifetimebound]]; // expected-error {{cannot be applied to a destructor}}
     static int *static_class_member() [[clang::lifetimebound]]; // expected-error {{static member function has no implicit object parameter}}
     int *explicit_object(this A&) [[clang::lifetimebound]]; // expected-error {{explicit object member function has no implicit object parameter}}
-    int not_function [[clang::lifetimebound]]; // expected-error {{only applies to parameters and implicit object parameters}}
-    int [[clang::lifetimebound]] also_not_function; // expected-error {{cannot be applied to types}}
+    int attr_on_var [[clang::lifetimebound]]; // expected-error {{only applies to parameters and implicit object parameters}}
+    int [[clang::lifetimebound]] attr_on_int; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int * [[clang::lifetimebound]] attr_on_int_ptr; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int * [[clang::lifetimebound]] * attr_on_int_ptr_ptr; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int (* [[clang::lifetimebound]] attr_on_func_ptr)(); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
     void void_return_member() [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute cannot be applied to an implicit object parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
   };
   int *attr_with_param(int &param [[clang::lifetimebound(42)]]); // expected-error {{takes no arguments}}
+
+  void attr_on_ptr_arg(int * [[clang::lifetimebound]] ptr); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  static_assert((int [[clang::lifetimebound]]) 12); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  int* attr_on_unnamed_arg(const int& [[clang::lifetimebound]]); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  template <typename T>
+  int* attr_on_template_ptr_arg(T * [[clang::lifetimebound]] ptr); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+
+  int (*func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  int (*(*func_ptr_ptr)(int) [[clang::lifetimebound]])(int); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  struct X {};
+  int (X::*member_func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
 }
 
 namespace usage_ok {
   struct IntRef { int *target; };
 
+  const int &crefparam(const int &param); // Omitted in first decl
+  const int &crefparam(const int &param); // Omitted in second decl
+  const int &crefparam(const int &param [[clang::lifetimebound]]); // Add LB
+  const int &crefparam(const int &param) { return param; } // Omit in impl
   int &refparam(int &param [[clang::lifetimebound]]);
   int &classparam(IntRef param [[clang::lifetimebound]]);
 
@@ -48,6 +66,7 @@ namespace usage_ok {
   int *p = A().class_member(); // expected-warning {{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
   int *q = A(); // expected-warning {{temporary whose address is used as value of local variable 'q' will be destroyed at the end of the full-expression}}
   int *r = A(1); // expected-warning {{temporary whose address is used as value of local variable 'r' will be destroyed at the end of the full-expression}}
+  const int& s = crefparam(2); // expected-warning {{temporary bound to local reference 's' will be destroyed at the end of the full-expression}}
 
   void test_assignment() {
     p = A().class_member(); // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}

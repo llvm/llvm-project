@@ -134,8 +134,10 @@ class AsanSwiftTestCase(lldbtest.TestBase):
             thread.GetStopReason(),
             lldb.eStopReasonInstrumentation)
 
+        self.runCmd("expr long $ar = (long)__asan_get_report_address()")
+
         self.expect(
-            "memory history `__asan_get_report_address()`",
+            "memory history $ar",
             substrs=[
                 'Memory allocated by Thread 1',
                 'main.swift'])

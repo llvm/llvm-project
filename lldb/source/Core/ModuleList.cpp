@@ -200,6 +200,12 @@ bool ModuleListProperties::GetSwiftValidateTypeSystem() const {
       idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
 
+bool ModuleListProperties::GetSwiftLoadConformances() const {
+  const uint32_t idx = ePropertySwiftLoadConformances;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
 SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
   const uint32_t idx = ePropertySwiftModuleLoadingMode;
   return GetPropertyAtIndexAs<SwiftModuleLoadingMode>(
@@ -828,6 +834,24 @@ void ModuleList::FindTypes(Module *search_first, const TypeQuery &query,
       if (results.Done(query))
         return;
     }
+  }
+}
+
+void ModuleList::FindImportedDeclarations(
+    Module *search_first, ConstString name,
+    std::vector<ImportedDeclaration> &results, bool find_one) const {
+  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  if (search_first) {
+    search_first->FindImportedDeclarations(name, results, find_one);
+    if (find_one && !results.empty())
+      return;
+  }
+  for (const auto &module_sp : m_modules) {
+    if (search_first != module_sp.get()) {
+      module_sp->FindImportedDeclarations(name, results, find_one);
+    }
+    if (find_one && !results.empty())
+      return;
   }
 }
 

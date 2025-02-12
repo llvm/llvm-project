@@ -44,6 +44,48 @@ APValue::LValueBase::LValueBase(const ValueDecl *P, unsigned I, unsigned V)
 APValue::LValueBase::LValueBase(const Expr *P, unsigned I, unsigned V)
     : Ptr(P), Local{I, V} {}
 
+// Separated definitions of these template functions to avoid nasty build issues
+// caused by header dependency.
+template <class T>
+APValue::LValueBase::EnableIfDAOrForged<T, bool>
+APValue::LValueBase::is() const {
+  if (!isa<DynamicAllocOrForgedPtrLValue>(Ptr))
+    return false;
+  DynamicAllocOrForgedPtrLValue::BaseTy DAOrForged =
+      cast<DynamicAllocOrForgedPtrLValue>(Ptr);
+  return isa<T>(DAOrForged);
+}
+
+template APValue::LValueBase::EnableIfDAOrForged<ForgedPtrLValue, bool>
+APValue::LValueBase::is<ForgedPtrLValue>() const;
+template APValue::LValueBase::EnableIfDAOrForged<DynamicAllocLValue, bool>
+APValue::LValueBase::is<DynamicAllocLValue>() const;
+
+template <class T>
+APValue::LValueBase::EnableIfDAOrForged<T> APValue::LValueBase::get() const {
+  DynamicAllocOrForgedPtrLValue::BaseTy DAOrForged =
+      cast<DynamicAllocOrForgedPtrLValue>(Ptr);
+  return cast<T>(DAOrForged);
+}
+
+template APValue::LValueBase::EnableIfDAOrForged<ForgedPtrLValue>
+APValue::LValueBase::get<ForgedPtrLValue>() const;
+template APValue::LValueBase::EnableIfDAOrForged<DynamicAllocLValue>
+APValue::LValueBase::get<DynamicAllocLValue>() const;
+
+template <class T>
+APValue::LValueBase::EnableIfDAOrForged<T>
+APValue::LValueBase::dyn_cast() const {
+  if (is<T>())
+    return cast<DynamicAllocOrForgedPtrLValue>(Ptr).dyn_cast<T>();
+  return T();
+}
+
+template APValue::LValueBase::EnableIfDAOrForged<ForgedPtrLValue>
+APValue::LValueBase::dyn_cast<ForgedPtrLValue>() const;
+template APValue::LValueBase::EnableIfDAOrForged<DynamicAllocLValue>
+APValue::LValueBase::dyn_cast<DynamicAllocLValue>() const;
+
 APValue::LValueBase APValue::LValueBase::getDynamicAlloc(DynamicAllocLValue LV,
                                                          QualType Type) {
   LValueBase Base;
@@ -336,7 +378,8 @@ APValue::UnionData::~UnionData () {
   delete Value;
 }
 
-APValue::APValue(const APValue &RHS) : Kind(None) {
+APValue::APValue(const APValue &RHS)
+    : Kind(None), AllowConstexprUnknown(RHS.AllowConstexprUnknown) {
   switch (RHS.getKind()) {
   case None:
   case Indeterminate:
@@ -421,13 +464,17 @@ APValue::APValue(const APValue &RHS) : Kind(None) {
   }
 }
 
-APValue::APValue(APValue &&RHS) : Kind(RHS.Kind), Data(RHS.Data) {
+APValue::APValue(APValue &&RHS)
+    : Kind(RHS.Kind), AllowConstexprUnknown(RHS.AllowConstexprUnknown),
+      Data(RHS.Data) {
   RHS.Kind = None;
 }
 
 APValue &APValue::operator=(const APValue &RHS) {
   if (this != &RHS)
     *this = APValue(RHS);
+
+  AllowConstexprUnknown = RHS.AllowConstexprUnknown;
   return *this;
 }
 
@@ -437,6 +484,7 @@ APValue &APValue::operator=(APValue &&RHS) {
       DestroyDataAndMakeUninit();
     Kind = RHS.Kind;
     Data = RHS.Data;
+    AllowConstexprUnknown = RHS.AllowConstexprUnknown;
     RHS.Kind = None;
   }
   return *this;
@@ -468,6 +516,7 @@ void APValue::DestroyDataAndMakeUninit() {
   else if (Kind == AddrLabelDiff)
     ((AddrLabelDiffData *)(char *)&Data)->~AddrLabelDiffData();
   Kind = None;
+  AllowConstexprUnknown = false;
 }
 
 bool APValue::needsCleanup() const {
@@ -510,6 +559,10 @@ bool APValue::needsCleanup() const {
 void APValue::swap(APValue &RHS) {
   std::swap(Kind, RHS.Kind);
   std::swap(Data, RHS.Data);
+  // We can't use std::swap w/ bit-fields
+  bool tmp = AllowConstexprUnknown;
+  AllowConstexprUnknown = RHS.AllowConstexprUnknown;
+  RHS.AllowConstexprUnknown = tmp;
 }
 
 /// Profile the value of an APInt, excluding its bit-width.

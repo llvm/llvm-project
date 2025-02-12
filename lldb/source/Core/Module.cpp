@@ -953,9 +953,8 @@ void Module::FindFunctions(const RegularExpression &regex,
               const SymbolContext &sc = sc_list[i];
               if (sc.block)
                 continue;
-              file_addr_to_index[sc.function->GetAddressRange()
-                                     .GetBaseAddress()
-                                     .GetFileAddress()] = i;
+              file_addr_to_index[sc.function->GetAddress().GetFileAddress()] =
+                  i;
             }
 
             FileAddrToIndexMap::const_iterator end = file_addr_to_index.end();
@@ -1010,6 +1009,12 @@ void Module::FindAddressesForLine(const lldb::TargetSP target_sp,
 void Module::FindTypes(const TypeQuery &query, TypeResults &results) {
   if (SymbolFile *symbols = GetSymbolFile())
     symbols->FindTypes(query, results);
+}
+void Module::FindImportedDeclarations(ConstString name,
+                                      std::vector<ImportedDeclaration> &results,
+                                      bool find_one) {
+  if (SymbolFile *symbols = GetSymbolFile())
+    symbols->FindImportedDeclaration(name, results, find_one);
 }
 
 static Debugger::DebuggerList

@@ -7,7 +7,7 @@ all: Direct.framework $(EXE)
 include Makefile.rules
 
 Discovered.framework: Discovered.h
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES \
 		DYLIB_NAME=Discovered \
 		DYLIB_OBJC_SOURCES=Discovered.m \
@@ -19,7 +19,7 @@ Direct.framework: $(SRCDIR)/Direct.swift.in Discovered.framework
 	mkdir -p $(BUILDDIR)/secret_path
 	cp $< $(BUILDDIR)/Direct.swift
 	mv Discovered.framework $(BUILDDIR)/secret_path
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=Direct \
 		DYLIB_SWIFT_SOURCES=Direct.swift \
 		DYLIB_MODULENAME=Direct \

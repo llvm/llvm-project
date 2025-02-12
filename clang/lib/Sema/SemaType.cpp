@@ -164,6 +164,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_ArmIn:                                                   \
   case ParsedAttr::AT_ArmOut:                                                  \
   case ParsedAttr::AT_ArmInOut:                                                \
+  case ParsedAttr::AT_ArmAgnostic:                                             \
   case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:                            \
   case ParsedAttr::AT_AnyX86NoCfCheck:                                         \
     CALLING_CONV_ATTRS_CASELIST
@@ -1870,7 +1871,8 @@ QualType Sema::BuildPointerType(QualType T, BoundsSafetyPointerAttributes A,
   if (checkQualifiedFunction(*this, T, Loc, QFK_Pointer))
     return QualType();
 
-  assert(!T->isObjCObjectType() && "Should build ObjCObjectPointerType");
+  if (T->isObjCObjectType())
+    return Context.getObjCObjectPointerType(T);
 
   // In ARC, it is forbidden to build pointers to unqualified pointers.
   if (getLangOpts().ObjCAutoRefCount)
@@ -5277,6 +5279,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               if (ParamTy.hasQualifiers())
                 S.Diag(DeclType.Loc, diag::err_void_param_qualified);
 
+              for (const auto *A : Param->attrs()) {
+                S.Diag(A->getLoc(), diag::warn_attribute_on_void_param)
+                    << A << A->getRange();
+              }
+
               // Reject, but continue to parse 'float(this void)' as
               // 'float(void)'.
               if (Param->isExplicitObjectParameter()) {
@@ -7859,6 +7866,40 @@ static bool checkMutualExclusion(TypeProcessingState &state,
   return true;
 }
 
+static bool handleArmAgnosticAttribute(Sema &S,
+                                       FunctionProtoType::ExtProtoInfo &EPI,
+                                       ParsedAttr &Attr) {
+  if (!Attr.getNumArgs()) {
+    S.Diag(Attr.getLoc(), diag::err_missing_arm_state) << Attr;
+    Attr.setInvalid();
+    return true;
+  }
+
+  for (unsigned I = 0; I < Attr.getNumArgs(); ++I) {
+    StringRef StateName;
+    SourceLocation LiteralLoc;
+    if (!S.checkStringLiteralArgumentAttr(Attr, I, StateName, &LiteralLoc))
+      return true;
+
+    if (StateName != "sme_za_state") {
+      S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
+      Attr.setInvalid();
+      return true;
+    }
+
+    if (EPI.AArch64SMEAttributes &
+        (FunctionType::SME_ZAMask | FunctionType::SME_ZT0Mask)) {
+      S.Diag(Attr.getLoc(), diag::err_conflicting_attributes_arm_agnostic);
+      Attr.setInvalid();
+      return true;
+    }
+
+    EPI.setArmSMEAttribute(FunctionType::SME_AgnosticZAStateMask);
+  }
+
+  return false;
+}
+
 static bool handleArmStateAttribute(Sema &S,
                                     FunctionProtoType::ExtProtoInfo &EPI,
                                     ParsedAttr &Attr,
@@ -7885,6 +7926,12 @@ static bool handleArmStateAttribute(Sema &S,
       ExistingState = FunctionType::getArmZT0State(EPI.AArch64SMEAttributes);
     } else {
       S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
+      Attr.setInvalid();
+      return true;
+    }
+
+    if (EPI.AArch64SMEAttributes & FunctionType::SME_AgnosticZAStateMask) {
+      S.Diag(LiteralLoc, diag::err_conflicting_attributes_arm_agnostic);
       Attr.setInvalid();
       return true;
     }
@@ -8039,7 +8086,8 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
       attr.getKind() == ParsedAttr::AT_ArmPreserves ||
       attr.getKind() == ParsedAttr::AT_ArmIn ||
       attr.getKind() == ParsedAttr::AT_ArmOut ||
-      attr.getKind() == ParsedAttr::AT_ArmInOut) {
+      attr.getKind() == ParsedAttr::AT_ArmInOut ||
+      attr.getKind() == ParsedAttr::AT_ArmAgnostic) {
     if (S.CheckAttrTarget(attr))
       return true;
 
@@ -8055,8 +8103,9 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     if (!FnTy) {
       // SME ACLE attributes are not supported on K&R-style unprototyped C
       // functions.
-      S.Diag(attr.getLoc(), diag::warn_attribute_wrong_decl_type) <<
-        attr << attr.isRegularKeywordAttribute() << ExpectedFunctionWithProtoType;
+      S.Diag(attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+          << attr << attr.isRegularKeywordAttribute()
+          << ExpectedFunctionWithProtoType;
       attr.setInvalid();
       return false;
     }
@@ -8088,6 +8137,10 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
       break;
     case ParsedAttr::AT_ArmInOut:
       if (handleArmStateAttribute(S, EPI, attr, FunctionType::ARM_InOut))
+        return true;
+      break;
+    case ParsedAttr::AT_ArmAgnostic:
+      if (handleArmAgnosticAttribute(S, EPI, attr))
         return true;
       break;
     default:
@@ -8373,7 +8426,8 @@ static bool isPermittedNeonBaseType(QualType &Ty, VectorKind VecKind, Sema &S) {
          BTy->getKind() == BuiltinType::ULongLong ||
          BTy->getKind() == BuiltinType::Float ||
          BTy->getKind() == BuiltinType::Half ||
-         BTy->getKind() == BuiltinType::BFloat16;
+         BTy->getKind() == BuiltinType::BFloat16 ||
+         BTy->getKind() == BuiltinType::MFloat8;
 }
 
 static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
@@ -8650,7 +8704,8 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
     return;
   }
 
-  auto VScale = S.Context.getTargetInfo().getVScaleRange(S.getLangOpts());
+  auto VScale =
+      S.Context.getTargetInfo().getVScaleRange(S.getLangOpts(), false);
   if (!VScale || !VScale->first || VScale->first != VScale->second) {
     S.Diag(Attr.getLoc(), diag::err_attribute_riscv_rvv_bits_unsupported)
         << Attr;
@@ -9626,7 +9681,11 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
     CurType = State.getAttributedType(
         createSimpleAttr<LifetimeBoundAttr>(State.getSema().Context, Attr),
         CurType, CurType);
+    return;
   }
+  State.getSema().Diag(Attr.getLoc(), diag::err_attribute_wrong_decl_type)
+      << Attr << Attr.isRegularKeywordAttribute()
+      << ExpectedParameterOrImplicitObjectParameter;
 }
 
 static void HandleLifetimeCaptureByAttr(TypeProcessingState &State,
@@ -10377,7 +10436,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         runWithSufficientStackSpace(Loc, [&] {
           Diagnosed = InstantiateClassTemplateSpecialization(
               Loc, ClassTemplateSpec, TSK_ImplicitInstantiation,
-              /*Complain=*/Diagnoser);
+              /*Complain=*/Diagnoser, ClassTemplateSpec->hasStrictPackMatch());
         });
         Instantiated = true;
       }
@@ -11300,8 +11359,7 @@ QualType Sema::BuiltinAddPointer(QualType BaseType, SourceLocation Loc) {
 }
 
 QualType Sema::BuiltinRemovePointer(QualType BaseType, SourceLocation Loc) {
-  // We don't want block pointers or ObjectiveC's id type.
-  if (!BaseType->isAnyPointerType() || BaseType->isObjCIdType())
+  if (!BaseType->isAnyPointerType())
     return BaseType;
 
   return BaseType->getPointeeType();

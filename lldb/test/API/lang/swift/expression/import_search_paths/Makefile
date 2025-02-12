@@ -9,7 +9,7 @@ include Makefile.rules
 
 libHidden: $(SRCDIR)/hidden/Indirect.swift
 	mkdir -p $(BUILDDIR)/hidden
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		-C $(BUILDDIR)/hidden VPATH=$(SRCDIR)/hidden \
 		DYLIB_ONLY=YES \
 		DYLIB_NAME=Indirect \
@@ -19,7 +19,7 @@ libHidden: $(SRCDIR)/hidden/Indirect.swift
 		MAKE_DSYM=NO
 
 libDirect: $(SRCDIR)/Direct.swift libHidden
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES \
 		DYLIB_NAME=Direct \
 		DYLIB_SWIFT_SOURCES=Direct.swift \

@@ -12,7 +12,7 @@
 
 #include "SwiftBasicTypes.h"
 
-#include "lldb/Core/ValueObject.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
 using namespace lldb_private;

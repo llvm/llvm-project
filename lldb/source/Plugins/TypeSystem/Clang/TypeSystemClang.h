@@ -22,6 +22,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTFwd.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -80,7 +81,8 @@ public:
   TypePayloadClang() = default;
   explicit TypePayloadClang(OptionalClangModuleID owning_module,
                             bool is_complete_objc_class = false);
-  explicit TypePayloadClang(uint32_t opaque_payload) : m_payload(opaque_payload) {}
+  explicit TypePayloadClang(uint32_t opaque_payload)
+      : m_payload(opaque_payload) {}
   operator Type::Payload() { return m_payload; }
 
   static constexpr unsigned ObjCClassBit = 1 << 31;
@@ -525,9 +527,6 @@ public:
                              const char *name, const CompilerType &param_type,
                              int storage, bool add_decl = false);
 
-  void SetFunctionParameters(clang::FunctionDecl *function_decl,
-                             llvm::ArrayRef<clang::ParmVarDecl *> params);
-
   CompilerType CreateBlockPointerType(const CompilerType &function_type);
 
   // Array Types
@@ -537,21 +536,22 @@ public:
                                bool is_vector);
 
   // Enumeration Types
-  clang::EnumDecl *CreateEnumerationDecl(llvm::StringRef name,
-                                         clang::DeclContext *decl_ctx,
-                                         OptionalClangModuleID owning_module,
-                                         const Declaration &decl,
-                                         const CompilerType &integer_qual_type,
-                                         bool is_scoped);
+  clang::EnumDecl *CreateEnumerationDecl(
+      llvm::StringRef name, clang::DeclContext *decl_ctx,
+      OptionalClangModuleID owning_module, const Declaration &decl,
+      const CompilerType &integer_qual_type, bool is_scoped,
+      std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind =
+          std::nullopt);
 
-  CompilerType CreateEnumerationType(llvm::StringRef name,
-                                     clang::DeclContext *decl_ctx,
-                                     OptionalClangModuleID owning_module,
-                                     const Declaration &decl,
-                                     const CompilerType &integer_qual_type,
-                                     bool is_scoped) {
-    clang::EnumDecl *enum_decl = CreateEnumerationDecl(
-        name, decl_ctx, owning_module, decl, integer_qual_type, is_scoped);
+  CompilerType CreateEnumerationType(
+      llvm::StringRef name, clang::DeclContext *decl_ctx,
+      OptionalClangModuleID owning_module, const Declaration &decl,
+      const CompilerType &integer_qual_type, bool is_scoped,
+      std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind =
+          std::nullopt) {
+    clang::EnumDecl *enum_decl =
+        CreateEnumerationDecl(name, decl_ctx, owning_module, decl,
+                              integer_qual_type, is_scoped, enum_kind);
     return GetType(getASTContext().getTagDeclType(enum_decl));
   }
 
@@ -870,9 +870,12 @@ public:
   CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type) override;
 
   /* TO_UPSTREAM(BoundsSafety) ON */
-  CompilerType AddBoundsSafetyIndexableAttribute(lldb::opaque_compiler_type_t type) override;
-  CompilerType AddBoundsSafetyBidiIndexableAttribute(lldb::opaque_compiler_type_t type) override;
-  CompilerType AddBoundsSafetyUnspecifiedAttribute(lldb::opaque_compiler_type_t type) override;
+  CompilerType
+  AddBoundsSafetyIndexableAttribute(lldb::opaque_compiler_type_t type) override;
+  CompilerType AddBoundsSafetyBidiIndexableAttribute(
+      lldb::opaque_compiler_type_t type) override;
+  CompilerType AddBoundsSafetyUnspecifiedAttribute(
+      lldb::opaque_compiler_type_t type) override;
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// Using the current type, create a new typedef to that type using
@@ -934,8 +937,7 @@ public:
 
   void ForEachEnumerator(
       lldb::opaque_compiler_type_t type,
-      std::function<bool(const CompilerType &integer_type,
-                         ConstString name,
+      std::function<bool(const CompilerType &integer_type, ConstString name,
                          const llvm::APSInt &value)> const &callback) override;
 
   uint32_t GetNumFields(lldb::opaque_compiler_type_t type,
@@ -1052,6 +1054,24 @@ public:
   SetFloatingInitializerForVariable(clang::VarDecl *var,
                                     const llvm::APFloat &init_value);
 
+  /// For each parameter type of \c prototype, creates a \c clang::ParmVarDecl
+  /// whose \c clang::DeclContext is \c context.
+  ///
+  /// \param[in] context Non-null \c clang::FunctionDecl which will be the \c
+  /// clang::DeclContext of each parameter created/returned by this function.
+  /// \param[in] prototype The \c clang::FunctionProtoType of \c context.
+  /// \param[in] param_names The ith element of this vector contains the name
+  /// of the ith parameter. This parameter may be unnamed, in which case the
+  /// ith entry in \c param_names is an empty string. This vector is either
+  /// empty, or will have an entry for *each* parameter of the prototype
+  /// regardless of whether a parameter is unnamed or not.
+  ///
+  /// \returns A list of newly created of non-null \c clang::ParmVarDecl (one
+  /// for each parameter of \c prototype).
+  llvm::SmallVector<clang::ParmVarDecl *> CreateParameterDeclarations(
+      clang::FunctionDecl *context, const clang::FunctionProtoType &prototype,
+      const llvm::SmallVector<llvm::StringRef> &param_names);
+
   clang::CXXMethodDecl *AddMethodToCXXRecordType(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
       const char *mangled_name, const CompilerType &method_type,
@@ -1101,7 +1121,7 @@ public:
   // Modifying Enumeration types
   clang::EnumConstantDecl *AddEnumerationValueToEnumerationType(
       const CompilerType &enum_type, const Declaration &decl, const char *name,
-      int64_t enum_value, uint32_t enum_value_bit_size);
+      uint64_t enum_value, uint32_t enum_value_bit_size);
   clang::EnumConstantDecl *AddEnumerationValueToEnumerationType(
       const CompilerType &enum_type, const Declaration &decl, const char *name,
       const llvm::APSInt &value);

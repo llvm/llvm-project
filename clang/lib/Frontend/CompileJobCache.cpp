@@ -616,7 +616,7 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
   Clang.setInvocation(std::move(Invok));
   llvm::raw_svector_ostream DiagOS(DiagText);
   Clang.createDiagnostics(
-      Clang.getVirtualFileSystem(),
+      *llvm::vfs::getRealFileSystem(),
       new TextDiagnosticPrinter(DiagOS, &Clang.getDiagnosticOpts()));
   Clang.setVerboseOutputStream(DiagOS);
 

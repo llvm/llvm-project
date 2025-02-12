@@ -135,31 +135,20 @@ struct NormalizedConstraint {
     return *this;
   }
 
-  bool isAtomic() const { return Constraint.is<AtomicConstraint *>(); }
+  bool isAtomic() const { return llvm::isa<AtomicConstraint *>(Constraint); }
   bool isFoldExpanded() const {
-    return Constraint.is<FoldExpandedConstraint *>();
+    return llvm::isa<FoldExpandedConstraint *>(Constraint);
   }
-  bool isCompound() const { return Constraint.is<CompoundConstraint>(); }
+  bool isCompound() const { return llvm::isa<CompoundConstraint>(Constraint); }
 
-  CompoundConstraintKind getCompoundKind() const {
-    assert(isCompound() && "getCompoundKind on a non-compound constraint..");
-    return Constraint.get<CompoundConstraint>().getInt();
-  }
+  CompoundConstraintKind getCompoundKind() const;
 
   NormalizedConstraint &getLHS() const;
   NormalizedConstraint &getRHS() const;
 
-  AtomicConstraint *getAtomicConstraint() const {
-    assert(isAtomic() &&
-           "getAtomicConstraint called on non-atomic constraint.");
-    return Constraint.get<AtomicConstraint *>();
-  }
+  AtomicConstraint *getAtomicConstraint() const;
 
-  FoldExpandedConstraint *getFoldExpandedConstraint() const {
-    assert(isFoldExpanded() &&
-           "getFoldExpandedConstraint called on non-fold-expanded constraint.");
-    return Constraint.get<FoldExpandedConstraint *>();
-  }
+  FoldExpandedConstraint *getFoldExpandedConstraint() const;
 
 private:
   static std::optional<NormalizedConstraint>

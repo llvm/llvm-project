@@ -53,6 +53,7 @@
 #include "swift/IRGen/Linking.h"
 #include "swift/SIL/SILModule.h"
 #include "swift/Sema/IDETypeChecking.h"
+#include "swift/Serialization/SerializationOptions.h"
 #include "swift/Serialization/Validation.h"
 #include "swift/SymbolGraphGen/SymbolGraphOptions.h"
 
@@ -1311,9 +1312,10 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
     known_##NAME.insert(path KEY);                                             \
   }
 
-  INIT_SEARCH_PATH_SET(std::string, getImportSearchPaths(),
-                       import_search_paths, );
-  INIT_SEARCH_PATH_SET(swift::SearchPathOptions::FrameworkSearchPath,
+  INIT_SEARCH_PATH_SET(swift::SearchPathOptions::SearchPath,
+                       getImportSearchPaths(), import_search_paths,
+                       .Path);
+  INIT_SEARCH_PATH_SET(swift::SearchPathOptions::SearchPath,
                        getFrameworkSearchPaths(), framework_search_paths,
                        .Path);
 
@@ -1397,10 +1399,12 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
           for (auto &searchPath : searchPaths) {
             std::string path = remap(searchPath.Path);
             if (!searchPath.IsFramework) {
+              swift::SearchPathOptions::SearchPath
+                  import_search_path(path, searchPath.IsSystem);
               if (known_import_search_paths.insert(path).second)
-                import_search_paths.push_back(path);
+                import_search_paths.push_back(import_search_path);
             } else {
-              swift::SearchPathOptions::FrameworkSearchPath
+              swift::SearchPathOptions::SearchPath
                   framework_search_path(path, searchPath.IsSystem);
               if (known_framework_search_paths.insert(path).second)
                 framework_search_paths.push_back(framework_search_path);
@@ -1800,7 +1804,7 @@ static void applyOverrideOptions(std::vector<std::string> &args,
 
 void SwiftASTContext::AddExtraClangArgs(
     const std::vector<std::string> &ExtraArgs,
-    const std::vector<std::string> &module_search_paths,
+    const std::vector<std::pair<std::string, bool>> module_search_paths,
     const std::vector<std::pair<std::string, bool>> framework_search_paths,
     StringRef overrideOpts) {
   swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
@@ -1849,7 +1853,7 @@ void SwiftASTContext::AddExtraClangArgs(
 
 void SwiftASTContext::AddExtraClangCC1Args(
     const std::vector<std::string> &source,
-    const std::vector<std::string> &module_search_paths,
+    const std::vector<std::pair<std::string, bool>> module_search_paths,
     const std::vector<std::pair<std::string, bool>> framework_search_paths,
     std::vector<std::string> &dest) {
   clang::CompilerInvocation invocation;
@@ -1870,7 +1874,7 @@ void SwiftASTContext::AddExtraClangCC1Args(
   // additional clang modules when doing type reconstruction.
   for (auto &path : module_search_paths) {
     clangArgs.push_back("-I");
-    clangArgs.push_back(path.c_str());
+    clangArgs.push_back(path.first.c_str());
   }
   for (auto &path : default_paths) {
     llvm::SmallString<128> search_path(GetPlatformSDKPath());
@@ -2203,7 +2207,7 @@ ProcessModule(Module &module, std::string m_description,
               bool is_main_executable, StringRef module_filter,
               llvm::Triple triple,
               std::vector<swift::PluginSearchOption> &plugin_search_options,
-              std::vector<std::string> &module_search_paths,
+              std::vector<std::pair<std::string, bool>> &module_search_paths,
               std::vector<std::pair<std::string, bool>> &framework_search_paths,
               std::vector<std::string> &extra_clang_args,
               std::string &error) {
@@ -2300,7 +2304,7 @@ ProcessModule(Module &module, std::string m_description,
     bool exists = false;
     llvm::sys::fs::is_directory(path, exists);
     if (exists)
-      module_search_paths.push_back(std::string(path));
+      module_search_paths.push_back({std::string(path), /*system*/ false});
   }
 
   // Create a one-off CompilerInvocation as a place to load the
@@ -2333,9 +2337,8 @@ ProcessModule(Module &module, std::string m_description,
   plugin_search_options.insert(plugin_search_options.end(),
                                opts.PluginSearchOpts.begin(),
                                opts.PluginSearchOpts.end());
-  module_search_paths.insert(module_search_paths.end(),
-                             opts.getImportSearchPaths().begin(),
-                             opts.getImportSearchPaths().end());
+  for (auto path : opts.getImportSearchPaths())
+    module_search_paths.push_back({path.Path, path.IsSystem});
   for (auto path : opts.getFrameworkSearchPaths())
     framework_search_paths.push_back({path.Path, path.IsSystem});
   auto &clang_opts = invocation.getClangImporterOptions().ExtraArgs;
@@ -2372,7 +2375,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     ss << '"' << ')';
   }
   LLDB_SCOPED_TIMERF("%s::CreateInstance", m_description.c_str());
-  std::vector<std::string> module_search_paths;
+  std::vector<std::pair<std::string, bool>> module_search_paths;
   std::vector<std::pair<std::string, bool>> framework_search_paths;
 
   LOG_PRINTF(GetLog(LLDBLog::Types), "(Module)");
@@ -3024,7 +3027,7 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
   ConfigureModuleCachePath(*swift_ast_sp);
 
   std::vector<swift::PluginSearchOption> plugin_search_options;
-  std::vector<std::string> module_search_paths;
+  std::vector<std::pair<std::string, bool>> module_search_paths;
   std::vector<std::pair<std::string, bool>> framework_search_paths;
   std::vector<std::string> extra_clang_args;
 
@@ -3036,10 +3039,11 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
     use_all_compiler_flags =
         !got_serialized_options || target_sp->GetUseAllCompilerFlags();
 
-    for (const FileSpec &path : target_sp->GetSwiftModuleSearchPaths())
-      module_search_paths.push_back(path.GetPath());
-
     const bool is_system = false;
+
+    for (const FileSpec &path : target_sp->GetSwiftModuleSearchPaths())
+      module_search_paths.push_back({path.GetPath(), is_system});
+
     for (const FileSpec &path : target_sp->GetSwiftFrameworkSearchPaths())
       framework_search_paths.push_back({path.GetPath(), is_system});
   }
@@ -3459,6 +3463,10 @@ swift::CASOptions &SwiftASTContext::GetCASOptions() {
   return GetCompilerInvocation().getCASOptions();
 }
 
+swift::SerializationOptions &SwiftASTContext::GetSerializationOptions() {
+  return GetCompilerInvocation().getSerializationOptions();
+}
+
 swift::DiagnosticEngine &SwiftASTContext::GetDiagnosticEngine() {
   if (!m_diagnostic_engine_ap) {
     m_diagnostic_engine_ap.reset(
@@ -3523,7 +3531,7 @@ swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
 }
 
 void SwiftASTContext::InitializeSearchPathOptions(
-    llvm::ArrayRef<std::string> extra_module_search_paths,
+    llvm::ArrayRef<std::pair<std::string, bool>> extra_module_search_paths,
     llvm::ArrayRef<std::pair<std::string, bool>> extra_framework_search_paths) {
   LLDB_SCOPED_TIMER();
   swift::CompilerInvocation &invocation = GetCompilerInvocation();
@@ -3602,24 +3610,24 @@ void SwiftASTContext::InitializeSearchPathOptions(
   }
 
   llvm::StringMap<bool> processed;
-  std::vector<std::string> invocation_import_paths(
+  std::vector<swift::SearchPathOptions::SearchPath> invocation_import_paths(
       invocation.getSearchPathOptions().getImportSearchPaths());
   // Add all deserialized paths to the map.
   for (const auto &path : invocation_import_paths)
-    processed.insert({path, false});
+    processed.insert({path.Path, path.IsSystem});
 
   // Add/unique all extra paths.
   for (const auto &path : extra_module_search_paths) {
-    auto it_notseen = processed.insert({path, false});
+    auto it_notseen = processed.insert(path);
     if (it_notseen.second)
-      invocation_import_paths.push_back(path);
+      invocation_import_paths.push_back({path.first, path.second});
   }
   invocation.getSearchPathOptions().setImportSearchPaths(
       invocation_import_paths);
 
   // This preserves the IsSystem bit, but deduplicates entries ignoring it.
   processed.clear();
-  std::vector<swift::SearchPathOptions::FrameworkSearchPath>
+  std::vector<swift::SearchPathOptions::SearchPath>
       invocation_framework_paths(
           invocation.getSearchPathOptions().getFrameworkSearchPaths());
   // Add all deserialized paths to the map.
@@ -3650,9 +3658,8 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
   m_ast_context_ap.reset(swift::ASTContext::get(
       GetLanguageOptions(), GetTypeCheckerOptions(), GetSILOptions(),
       GetSearchPathOptions(), GetClangImporterOptions(),
-      GetSymbolGraphOptions(), GetCASOptions(), GetSourceManager(),
-      GetDiagnosticEngine(),
-      /*OutputBackend=*/nullptr));
+      GetSymbolGraphOptions(), GetCASOptions(), GetSerializationOptions(),
+      GetSourceManager(), GetDiagnosticEngine(), /*OutputBackend=*/nullptr));
 
   if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
     // NOTE: leaking a swift::PrintingDiagnosticConsumer() here, but
@@ -4045,7 +4052,7 @@ SwiftASTContext::GetModule(const FileSpec &module_spec) {
   std::string module_directory(module_spec.GetDirectory().GetCString());
   bool add_search_path = true;
   for (auto path : ast->SearchPathOpts.getImportSearchPaths()) {
-    if (path == module_directory) {
+    if (path.Path == module_directory) {
       add_search_path = false;
       break;
     }
@@ -4780,6 +4787,16 @@ SwiftASTContext::ReconstructType(ConstString mangled_typename) {
                    .getPointer();
   assert(!found_type || &found_type->getASTContext() == *ast_ctx);
 
+  // This type might have been been found in reflection and annotated with
+  // @_originallyDefinedIn. The compiler emits a typelias for these type
+  // pointing them back to the types with the real module name.
+  if (!found_type) {
+    auto adjusted =
+        GetTypeSystemSwiftTypeRef()->AdjustTypeForOriginallyDefinedInModule(
+            mangled_typename);
+    found_type =
+        swift::Demangle::getTypeForMangling(**ast_ctx, adjusted).getPointer();
+  }
   // Objective-C classes sometimes have private subclasses that are invisible
   // to the Swift compiler because they are declared and defined in a .m file.
   // If we can't reconstruct an ObjC type, walk up the type hierarchy until we
@@ -5448,7 +5465,7 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
   unsigned num_images = module_list.GetSize();
   for (size_t mi = 0; mi != num_images; ++mi) {
     std::vector<swift::PluginSearchOption> plugin_search_options;
-    std::vector<std::string> module_search_paths;
+    std::vector<std::pair<std::string, bool>> module_search_paths;
     std::vector<std::pair<std::string, bool>> framework_search_paths;
     std::vector<std::string> extra_clang_args;
     lldb::ModuleSP module_sp = module_list.GetModuleAtIndex(mi);
@@ -5542,9 +5559,9 @@ void SwiftASTContext::LogConfiguration(bool is_repl) {
                     (unsigned long long)m_ast_context_ap->SearchPathOpts
                         .getImportSearchPaths()
                         .size());
-  for (const std::string &import_search_path :
+  for (const auto &import_search_path :
        m_ast_context_ap->SearchPathOpts.getImportSearchPaths())
-    HEALTH_LOG_PRINTF("    %s", import_search_path.c_str());
+    HEALTH_LOG_PRINTF("    %s", import_search_path.Path.c_str());
 
   swift::ClangImporterOptions &clang_importer_options =
       GetClangImporterOptions();

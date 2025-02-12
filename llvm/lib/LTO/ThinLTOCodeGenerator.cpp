@@ -198,8 +198,7 @@ generateModuleMap(std::vector<std::unique_ptr<lto::InputFile>> &Modules) {
 
 static void promoteModule(Module &TheModule, const ModuleSummaryIndex &Index,
                           bool ClearDSOLocalOnDeclarations) {
-  if (renameModuleForThinLTO(TheModule, Index, ClearDSOLocalOnDeclarations))
-    report_fatal_error("renameModuleForThinLTO failed");
+  renameModuleForThinLTO(TheModule, Index, ClearDSOLocalOnDeclarations);
 }
 
 namespace {
@@ -1583,6 +1582,8 @@ void ThinLTOCodeGenerator::run() {
   // First, we need to remember whether the caller requests buffer API or file
   // API based on if the SavedObjectsDirectoryPath was set or not.
   bool UseBufferAPI = SavedObjectsDirectoryPath.empty();
+  if (SavedObjectsDirectoryPath.empty())
+    SavedObjectsDirectoryPath = RemoteServiceTempsDir;
   std::string TempDirectory;
   if (CacheOptions.Type == CachingOptions::CacheType::RemoteService &&
       SavedObjectsDirectoryPath.empty()) {

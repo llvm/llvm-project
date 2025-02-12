@@ -56,8 +56,9 @@ size_t strlen(const char* s);
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/cstring>
+#else
 #  include <__config>
 #  include <__cstddef/size_t.h>
 #  include <__type_traits/is_constant_evaluated.h>
@@ -103,6 +104,6 @@ using ::strlen _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CSTRING

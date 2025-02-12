@@ -11,7 +11,7 @@ SWIFTFLAGS_EXTRAS=$(BAR_FLAGS) \
   -Xlinker -rpath -Xlinker $(BUILDDIR)
 
 Framework.framework: Framework.swift
-	$(MAKE) -f $(MAKEFILE_RULES) -C $(BUILDDIR) VPATH=$(VPATH) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) -C $(BUILDDIR) VPATH=$(VPATH) \
                 MAKE_DSYM=NO CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		DYLIB_NAME=$(shell basename $< .swift) \

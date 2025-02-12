@@ -22,8 +22,6 @@ using namespace ompx;
 
 namespace {
 
-#pragma omp begin declare target device_type(nohost)
-
 void gpu_regular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct) {
   for (uint32_t mask = mapping::getWarpSize() / 2; mask > 0; mask /= 2) {
     shflFct(reduce_data, /*LaneId - not used= */ 0,
@@ -44,7 +42,6 @@ void gpu_irregular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
   }
 }
 
-#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ < 700
 static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
                                           ShuffleReductFnTy shflFct) {
   uint32_t size, remote_id, physical_lane_id;
@@ -63,7 +60,6 @@ static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
   } while (logical_lane_id % 2 == 0 && size > 1);
   return (logical_lane_id == 0);
 }
-#endif
 
 static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
                                             ShuffleReductFnTy shflFct,
@@ -74,49 +70,53 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
   uint32_t NumThreads = omp_get_num_threads();
   if (NumThreads == 1)
     return 1;
-    /*
-     * This reduce function handles reduction within a team. It handles
-     * parallel regions in both L1 and L2 parallelism levels. It also
-     * supports Generic, SPMD, and NoOMP modes.
-     *
-     * 1. Reduce within a warp.
-     * 2. Warp master copies value to warp 0 via shared memory.
-     * 3. Warp 0 reduces to a single value.
-     * 4. The reduced value is available in the thread that returns 1.
-     */
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-  uint32_t WarpsNeeded =
-      (NumThreads + mapping::getWarpSize() - 1) / mapping::getWarpSize();
-  uint32_t WarpId = mapping::getWarpIdInBlock();
-
-  // Volta execution model:
-  // For the Generic execution mode a parallel region either has 1 thread and
-  // beyond that, always a multiple of 32. For the SPMD execution mode we may
-  // have any number of threads.
-  if ((NumThreads % mapping::getWarpSize() == 0) || (WarpId < WarpsNeeded - 1))
-    gpu_regular_warp_reduce(reduce_data, shflFct);
-  else if (NumThreads > 1) // Only SPMD execution mode comes thru this case.
-    gpu_irregular_warp_reduce(reduce_data, shflFct,
-                              /*LaneCount=*/NumThreads % mapping::getWarpSize(),
-                              /*LaneId=*/mapping::getThreadIdInBlock() %
-                                  mapping::getWarpSize());
-
-  // When we have more than [mapping::getWarpSize()] number of threads
-  // a block reduction is performed here.
   //
-  // Only L1 parallel region can enter this if condition.
-  if (NumThreads > mapping::getWarpSize()) {
-    // Gather all the reduced values from each warp
-    // to the first warp.
-    cpyFct(reduce_data, WarpsNeeded);
+  // This reduce function handles reduction within a team. It handles
+  // parallel regions in both L1 and L2 parallelism levels. It also
+  // supports Generic, SPMD, and NoOMP modes.
+  //
+  // 1. Reduce within a warp.
+  // 2. Warp master copies value to warp 0 via shared memory.
+  // 3. Warp 0 reduces to a single value.
+  // 4. The reduced value is available in the thread that returns 1.
+  //
 
-    if (WarpId == 0)
-      gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded,
-                                BlockThreadId);
+#if __has_builtin(__nvvm_reflect)
+  if (__nvvm_reflect("__CUDA_ARCH") >= 700) {
+    uint32_t WarpsNeeded =
+        (NumThreads + mapping::getWarpSize() - 1) / mapping::getWarpSize();
+    uint32_t WarpId = mapping::getWarpIdInBlock();
+
+    // Volta execution model:
+    // For the Generic execution mode a parallel region either has 1 thread and
+    // beyond that, always a multiple of 32. For the SPMD execution mode we may
+    // have any number of threads.
+    if ((NumThreads % mapping::getWarpSize() == 0) ||
+        (WarpId < WarpsNeeded - 1))
+      gpu_regular_warp_reduce(reduce_data, shflFct);
+    else if (NumThreads > 1) // Only SPMD execution mode comes thru this case.
+      gpu_irregular_warp_reduce(
+          reduce_data, shflFct,
+          /*LaneCount=*/NumThreads % mapping::getWarpSize(),
+          /*LaneId=*/mapping::getThreadIdInBlock() % mapping::getWarpSize());
+
+    // When we have more than [mapping::getWarpSize()] number of threads
+    // a block reduction is performed here.
+    //
+    // Only L1 parallel region can enter this if condition.
+    if (NumThreads > mapping::getWarpSize()) {
+      // Gather all the reduced values from each warp
+      // to the first warp.
+      cpyFct(reduce_data, WarpsNeeded);
+
+      if (WarpId == 0)
+        gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded,
+                                  BlockThreadId);
+    }
+    return BlockThreadId == 0;
   }
-  return BlockThreadId == 0;
-#else
+#endif
   __kmpc_impl_lanemask_t Liveness = mapping::activemask();
   if (Liveness == lanes::All) // Full warp
     gpu_regular_warp_reduce(reduce_data, shflFct);
@@ -150,10 +150,9 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
     return BlockThreadId == 0;
   }
 
-  // Get the OMP thread Id. This is different from BlockThreadId in the case of
-  // an L2 parallel region.
+  // Get the OMP thread Id. This is different from BlockThreadId in the case
+  // of an L2 parallel region.
   return BlockThreadId == 0;
-#endif // __CUDA_ARCH__ >= 700
 }
 
 uint32_t roundToWarpsize(uint32_t s) {
@@ -197,15 +196,15 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   uint32_t NumThreads = omp_get_num_threads();
   uint32_t TeamId = omp_get_team_num();
   uint32_t NumTeams = omp_get_num_teams();
-  static unsigned SHARED(Bound);
-  static unsigned SHARED(ChunkTeamCount);
+  [[clang::loader_uninitialized]] static Local<unsigned> Bound;
+  [[clang::loader_uninitialized]] static Local<unsigned> ChunkTeamCount;
 
   // Block progress for teams greater than the current upper
   // limit. We always only allow a number of teams less or equal
   // to the number of slots in the buffer.
   bool IsMaster = (ThreadId == 0);
   while (IsMaster) {
-    Bound = atomic::load(&IterCnt, atomic::aquire);
+    Bound = atomic::load(&IterCnt, atomic::acquire);
     if (TeamId < Bound + num_of_records)
       break;
   }
@@ -258,7 +257,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   unsigned NumRecs = kmpcMin(NumTeams, uint32_t(num_of_records));
   if (ChunkTeamCount == NumTeams - Bound - 1) {
     // Ensure we see the global memory writes by other teams
-    fence::kernel(atomic::aquire);
+    fence::kernel(atomic::acquire);
 
     //
     // Last team processing.
@@ -315,5 +314,3 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 void *__kmpc_reduction_get_fixed_buffer() {
   return state::getKernelLaunchEnvironment().ReductionBuffer;
 }
-
-#pragma omp end declare target

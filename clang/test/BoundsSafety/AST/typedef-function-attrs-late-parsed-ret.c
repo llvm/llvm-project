@@ -93,12 +93,12 @@ void foo(
 // CHECK: |       `-AttributedType {{.+}} 'int *__single' sugar
 // CHECK: |         `-PointerType {{.+}} 'int *__single'
 // CHECK: |           `-BuiltinType {{.+}} 'int'
-// CHECK: |-FunctionDecl {{.+}} g_cb 'cb_t':'int *__single __counted_by(count)(int)'
-// CHECK: | `-ParmVarDecl {{.+}} implicit 'int'
-// CHECK: |-FunctionDecl {{.+}} g_sb 'sb_t':'void *__single __sized_by(size)(int)'
-// CHECK: | `-ParmVarDecl {{.+}} implicit 'int'
-// CHECK: |-FunctionDecl {{.+}} g_eb 'eb_t':'int *__single __ended_by(end)(int *__single)'
-// CHECK: | `-ParmVarDecl {{.+}} implicit 'int *__single'
+// CHECK: |-FunctionDecl {{.+}} g_cb 'int *__single __counted_by(count)(int)'
+// CHECK: | `-ParmVarDecl {{.+}} implicit used count 'int'
+// CHECK: |-FunctionDecl {{.+}} g_sb 'void *__single __sized_by(size)(int)'
+// CHECK: | `-ParmVarDecl {{.+}} implicit used size 'int'
+// CHECK: |-FunctionDecl {{.+}} g_eb 'int *__single __ended_by(end)(int *__single)'
+// CHECK: | `-ParmVarDecl {{.+}} implicit used end 'int *__single'
 // CHECK: |-VarDecl {{.+}} g_cb_ptr 'int *__single __counted_by(count)(*__single)(int)'
 // CHECK: |-VarDecl {{.+}} g_sb_ptr 'void *__single __sized_by(size)(*__single)(int)'
 // CHECK: |-VarDecl {{.+}} g_eb_ptr 'int *__single __ended_by(end)(*__single)(int *__single)'
@@ -117,14 +117,14 @@ void foo(
 // CHECK:   |-ParmVarDecl {{.+}} a_ptr_eb 'eb_t *__single'
 // CHECK:   `-CompoundStmt {{.+}}
 // CHECK:     |-DeclStmt
-// CHECK:     | `-FunctionDecl {{.+}} l_cb 'cb_t':'int *__single __counted_by(count)(int)'
-// CHECK:     |   `-ParmVarDecl {{.+}} implicit 'int'
+// CHECK:     | `-FunctionDecl {{.+}} l_cb 'int *__single __counted_by(count)(int)'
+// CHECK:     |   `-ParmVarDecl {{.+}} implicit used count 'int'
 // CHECK:     |-DeclStmt
-// CHECK:     | `-FunctionDecl {{.+}} l_sb 'sb_t':'void *__single __sized_by(size)(int)'
-// CHECK:     |   `-ParmVarDecl {{.+}} implicit 'int'
+// CHECK:     | `-FunctionDecl {{.+}} l_sb 'void *__single __sized_by(size)(int)'
+// CHECK:     |   `-ParmVarDecl {{.+}} implicit used size 'int'
 // CHECK:     |-DeclStmt
-// CHECK:     | `-FunctionDecl {{.+}} l_eb 'eb_t':'int *__single __ended_by(end)(int *__single)'
-// CHECK:     |   `-ParmVarDecl {{.+}} implicit 'int *__single'
+// CHECK:     | `-FunctionDecl {{.+}} l_eb 'int *__single __ended_by(end)(int *__single)'
+// CHECK:     |   `-ParmVarDecl {{.+}} implicit used end 'int *__single'
 // CHECK:     |-DeclStmt
 // CHECK:     | `-VarDecl {{.+}} l_cb_ptr 'int *__single __counted_by(count)(*__single)(int)'
 // CHECK:     |-DeclStmt

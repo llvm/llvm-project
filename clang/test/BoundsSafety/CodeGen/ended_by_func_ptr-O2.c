@@ -20,7 +20,7 @@ struct {
 // CHECK-LABEL: @ok(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @ended_by_p, align 8, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    tail call void [[TMP0]](ptr noundef nonnull getelementptr inbounds nuw (i8, ptr @x, i64 1), ptr noundef nonnull getelementptr inbounds (i8, ptr @x, i64 11)) #[[ATTR4:[0-9]+]]
+// CHECK-NEXT:    tail call void [[TMP0]](ptr noundef nonnull getelementptr inbounds nuw (i8, ptr @x, i64 1), ptr noundef nonnull getelementptr inbounds nuw (i8, ptr @x, i64 11)) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void ok(void) {
@@ -31,7 +31,7 @@ void ok(void) {
 // CHECK-LABEL: @start_fail_lower(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @ended_by_p, align 8, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    tail call void [[TMP0]](ptr noundef nonnull @x, ptr noundef nonnull getelementptr inbounds (i8, ptr @x, i64 11)) #[[ATTR4]]
+// CHECK-NEXT:    tail call void [[TMP0]](ptr noundef nonnull @x, ptr noundef nonnull getelementptr inbounds nuw (i8, ptr @x, i64 11)) #[[ATTR4]]
 // CHECK-NEXT:    ret void
 //
 void start_fail_lower(void) {

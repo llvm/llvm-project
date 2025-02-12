@@ -1,4 +1,3 @@
-
 #include <ptrcheck.h>
 #include <builtin-function-sys.h>
 
@@ -23,7 +22,7 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK: |   `-MaterializeSequenceExpr {{.+}} <Unbind>
 // CHECK: |     |-MaterializeSequenceExpr {{.+}} <Bind>
 // CHECK: |     | |-BoundsSafetyPointerPromotionExpr {{.+}} 'void *__bidi_indexable'
-// CHECK: |     | | |-OpaqueValueExpr [[ove:0x[^ ]+]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK: |     | | |-OpaqueValueExpr [[ove:0x[^ ]+]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK: |     | | |   | `-OpaqueValueExpr [[ove_1:0x[^ ]+]] {{.*}} 'void *'
 // CHECK: |     | | |   | `-OpaqueValueExpr [[ove_2:0x[^ ]+]] {{.*}} 'void *'
 // CHECK: |     | | |   `-OpaqueValueExpr [[ove_3:0x[^ ]+]] {{.*}} 'unsigned long'
@@ -31,7 +30,7 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK: |     | | | `-BinaryOperator {{.+}} 'char *' '+'
 // CHECK: |     | | |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK: |     | | |   | `-ImplicitCastExpr {{.+}} 'void *' <BoundsSafetyPointerCast>
-// CHECK: |     | | |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK: |     | | |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK: |     | | |   `-AssumptionExpr
 // CHECK: |     | | |     |-OpaqueValueExpr [[ove_3]] {{.*}} 'unsigned long'
 // CHECK: |     | | |     `-BinaryOperator {{.+}} 'int' '>='
@@ -51,17 +50,17 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK: |     | |     `-DeclRefExpr {{.+}} [[var_size]]
 // CHECK: |     | `-OpaqueValueExpr [[ove]]
 // CHECK: |     |   `-CallExpr
-// CHECK: |     |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by()(*)(void *__single __sized_by(), const void *__single __sized_by(), unsigned long)' <BuiltinFnToFnPtr>
+// CHECK: |     |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), const void *__single __sized_by(function-parameter-0-2), unsigned long)' <BuiltinFnToFnPtr>
 // CHECK: |     |     | `-DeclRefExpr {{.+}}
-// CHECK: |     |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by()':'void *__single' <BoundsSafetyPointerCast>
+// CHECK: |     |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single' <BoundsSafetyPointerCast>
 // CHECK: |     |     | `-OpaqueValueExpr [[ove_1]] {{.*}} 'void *'
-// CHECK: |     |     |-ImplicitCastExpr {{.+}} 'const void *__single __sized_by()':'const void *__single' <BoundsSafetyPointerCast>
+// CHECK: |     |     |-ImplicitCastExpr {{.+}} 'const void *__single __sized_by(function-parameter-0-2)':'const void *__single' <BoundsSafetyPointerCast>
 // CHECK: |     |     | `-OpaqueValueExpr [[ove_2]] {{.*}} 'void *'
 // CHECK: |     |     `-OpaqueValueExpr [[ove_3]] {{.*}} 'unsigned long'
 // CHECK: |     |-OpaqueValueExpr [[ove_1]] {{.*}} 'void *'
 // CHECK: |     |-OpaqueValueExpr [[ove_2]] {{.*}} 'void *'
 // CHECK: |     |-OpaqueValueExpr [[ove_3]] {{.*}} 'unsigned long'
-// CHECK: |     `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK: |     `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK: |-FunctionDecl [[func_static_1:0x[^ ]+]] {{.+}} static
 // CHECK: | |-ParmVarDecl [[var_dst_1:0x[^ ]+]]
 // CHECK: | |-ParmVarDecl [[var_src_1:0x[^ ]+]]
@@ -72,7 +71,7 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK: |       `-MaterializeSequenceExpr {{.+}} <Unbind>
 // CHECK: |         |-MaterializeSequenceExpr {{.+}} <Bind>
 // CHECK: |         | |-BoundsSafetyPointerPromotionExpr {{.+}} 'void *__bidi_indexable'
-// CHECK: |         | | |-OpaqueValueExpr [[ove_4:0x[^ ]+]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK: |         | | |-OpaqueValueExpr [[ove_4:0x[^ ]+]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK: |         | | |   | `-OpaqueValueExpr [[ove_5:0x[^ ]+]] {{.*}} 'void *'
 // CHECK: |         | | |   | `-OpaqueValueExpr [[ove_6:0x[^ ]+]] {{.*}} 'void *'
 // CHECK: |         | | |   `-OpaqueValueExpr [[ove_7:0x[^ ]+]] {{.*}} 'unsigned long'
@@ -80,7 +79,7 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK: |         | | | `-BinaryOperator {{.+}} 'char *' '+'
 // CHECK: |         | | |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK: |         | | |   | `-ImplicitCastExpr {{.+}} 'void *' <BoundsSafetyPointerCast>
-// CHECK: |         | | |   |   `-OpaqueValueExpr [[ove_4]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK: |         | | |   |   `-OpaqueValueExpr [[ove_4]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK: |         | | |   `-AssumptionExpr
 // CHECK: |         | | |     |-OpaqueValueExpr [[ove_7]] {{.*}} 'unsigned long'
 // CHECK: |         | | |     `-BinaryOperator {{.+}} 'int' '>='
@@ -100,17 +99,17 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK: |         | |     `-DeclRefExpr {{.+}} [[var_size_1]]
 // CHECK: |         | `-OpaqueValueExpr [[ove_4]]
 // CHECK: |         |   `-CallExpr
-// CHECK: |         |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by()(*)(void *__single __sized_by(), const void *__single __sized_by(), unsigned long)' <BuiltinFnToFnPtr>
+// CHECK: |         |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), const void *__single __sized_by(function-parameter-0-2), unsigned long)' <BuiltinFnToFnPtr>
 // CHECK: |         |     | `-DeclRefExpr {{.+}}
-// CHECK: |         |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by()':'void *__single' <BoundsSafetyPointerCast>
+// CHECK: |         |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single' <BoundsSafetyPointerCast>
 // CHECK: |         |     | `-OpaqueValueExpr [[ove_5]] {{.*}} 'void *'
-// CHECK: |         |     |-ImplicitCastExpr {{.+}} 'const void *__single __sized_by()':'const void *__single' <BoundsSafetyPointerCast>
+// CHECK: |         |     |-ImplicitCastExpr {{.+}} 'const void *__single __sized_by(function-parameter-0-2)':'const void *__single' <BoundsSafetyPointerCast>
 // CHECK: |         |     | `-OpaqueValueExpr [[ove_6]] {{.*}} 'void *'
 // CHECK: |         |     `-OpaqueValueExpr [[ove_7]] {{.*}} 'unsigned long'
 // CHECK: |         |-OpaqueValueExpr [[ove_5]] {{.*}} 'void *'
 // CHECK: |         |-OpaqueValueExpr [[ove_6]] {{.*}} 'void *'
 // CHECK: |         |-OpaqueValueExpr [[ove_7]] {{.*}} 'unsigned long'
-// CHECK: |         `-OpaqueValueExpr [[ove_4]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK: |         `-OpaqueValueExpr [[ove_4]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK: |-FunctionDecl [[func_static_2:0x[^ ]+]] {{.+}} static
 // CHECK: | |-ParmVarDecl [[var_dst_2:0x[^ ]+]]
 // CHECK: | |-ParmVarDecl [[var_src_2:0x[^ ]+]]
@@ -122,7 +121,7 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK: |   |     `-MaterializeSequenceExpr {{.+}} <Unbind>
 // CHECK: |   |       |-MaterializeSequenceExpr {{.+}} <Bind>
 // CHECK: |   |       | |-BoundsSafetyPointerPromotionExpr {{.+}} 'void *__bidi_indexable'
-// CHECK: |   |       | | |-OpaqueValueExpr [[ove_8:0x[^ ]+]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK: |   |       | | |-OpaqueValueExpr [[ove_8:0x[^ ]+]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK: |   |       | | |   | `-OpaqueValueExpr [[ove_9:0x[^ ]+]] {{.*}} 'void *'
 // CHECK: |   |       | | |   | `-OpaqueValueExpr [[ove_10:0x[^ ]+]] {{.*}} 'void *'
 // CHECK: |   |       | | |   `-OpaqueValueExpr [[ove_11:0x[^ ]+]] {{.*}} 'unsigned long'
@@ -130,7 +129,7 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK: |   |       | | | `-BinaryOperator {{.+}} 'char *' '+'
 // CHECK: |   |       | | |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK: |   |       | | |   | `-ImplicitCastExpr {{.+}} 'void *' <BoundsSafetyPointerCast>
-// CHECK: |   |       | | |   |   `-OpaqueValueExpr [[ove_8]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK: |   |       | | |   |   `-OpaqueValueExpr [[ove_8]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK: |   |       | | |   `-AssumptionExpr
 // CHECK: |   |       | | |     |-OpaqueValueExpr [[ove_11]] {{.*}} 'unsigned long'
 // CHECK: |   |       | | |     `-BinaryOperator {{.+}} 'int' '>='
@@ -150,17 +149,17 @@ char * __counted_by(len) func(char * __counted_by(len) src_str, int len) {
 // CHECK: |   |       | |     `-DeclRefExpr {{.+}} [[var_size_2]]
 // CHECK: |   |       | `-OpaqueValueExpr [[ove_8]]
 // CHECK: |   |       |   `-CallExpr
-// CHECK: |   |       |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by()(*)(void *__single __sized_by(), const void *__single __sized_by(), unsigned long)' <BuiltinFnToFnPtr>
+// CHECK: |   |       |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), const void *__single __sized_by(function-parameter-0-2), unsigned long)' <BuiltinFnToFnPtr>
 // CHECK: |   |       |     | `-DeclRefExpr {{.+}}
-// CHECK: |   |       |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by()':'void *__single' <BoundsSafetyPointerCast>
+// CHECK: |   |       |     |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single' <BoundsSafetyPointerCast>
 // CHECK: |   |       |     | `-OpaqueValueExpr [[ove_9]] {{.*}} 'void *'
-// CHECK: |   |       |     |-ImplicitCastExpr {{.+}} 'const void *__single __sized_by()':'const void *__single' <BoundsSafetyPointerCast>
+// CHECK: |   |       |     |-ImplicitCastExpr {{.+}} 'const void *__single __sized_by(function-parameter-0-2)':'const void *__single' <BoundsSafetyPointerCast>
 // CHECK: |   |       |     | `-OpaqueValueExpr [[ove_10]] {{.*}} 'void *'
 // CHECK: |   |       |     `-OpaqueValueExpr [[ove_11]] {{.*}} 'unsigned long'
 // CHECK: |   |       |-OpaqueValueExpr [[ove_9]] {{.*}} 'void *'
 // CHECK: |   |       |-OpaqueValueExpr [[ove_10]] {{.*}} 'void *'
 // CHECK: |   |       |-OpaqueValueExpr [[ove_11]] {{.*}} 'unsigned long'
-// CHECK: |   |       `-OpaqueValueExpr [[ove_8]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK: |   |       `-OpaqueValueExpr [[ove_8]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK: |   `-ReturnStmt
 // CHECK: |     `-ImplicitCastExpr {{.+}} 'void *' <LValueToRValue>
 // CHECK: |       `-DeclRefExpr {{.+}} [[var_tmp]]

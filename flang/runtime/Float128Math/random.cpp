@@ -16,7 +16,7 @@ extern "C" {
 #if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(RandomNumber16)(
     const Descriptor &harvest, const char *source, int line) {
-  return Generate<CppTypeFor<TypeCategory::Real, 16>, 113>(harvest);
+  return GenerateReal<CppTypeFor<TypeCategory::Real, 16>, 113>(harvest);
 }
 #endif
 

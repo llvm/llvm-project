@@ -10,6 +10,7 @@ program test_event_wait
   implicit none
 
   ! event_type variables must be coarrays
+  !ERROR: Variable 'non_coarray' with EVENT_TYPE or LOCK_TYPE must be a coarray
   type(event_type) non_coarray
 
   type(event_type) concert[*], occurrences(2)[*]
@@ -23,9 +24,6 @@ program test_event_wait
 
   !ERROR: The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV
   event wait(non_event)
-
-  !ERROR: The event-variable must be a coarray
-  event wait(non_coarray)
 
   !ERROR: A event-variable in a EVENT WAIT statement may not be a coindexed object
   event wait(concert[1])

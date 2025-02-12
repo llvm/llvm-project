@@ -18,6 +18,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/Support/PrefixMapper.h"
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -37,7 +38,7 @@ namespace dependencies {
 
 /// A callback to lookup module outputs for "-fmodule-file=", "-o" etc.
 using LookupModuleOutputCallback =
-    llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>;
+    std::function<std::string(const ModuleID &, ModuleOutputKind)>;
 
 /// Graph of modular dependencies.
 using ModuleDepsGraph = std::vector<ModuleDeps>;
@@ -174,14 +175,17 @@ public:
   /// \param LookupModuleOutput This function is called to fill in
   ///                           "-fmodule-file=", "-o" and other output
   ///                           arguments for dependencies.
+  /// \param TUBuffer Optional memory buffer for translation unit input. If
+  ///                 TUBuffer is nullopt, the input should be included in the
+  ///                 Commandline already.
   ///
   /// \returns a \c StringError with the diagnostic output if clang errors
   /// occurred, \c TranslationUnitDeps otherwise.
-  llvm::Expected<TranslationUnitDeps>
-  getTranslationUnitDependencies(const std::vector<std::string> &CommandLine,
-                                 StringRef CWD,
-                                 const llvm::DenseSet<ModuleID> &AlreadySeen,
-                                 LookupModuleOutputCallback LookupModuleOutput);
+  llvm::Expected<TranslationUnitDeps> getTranslationUnitDependencies(
+      const std::vector<std::string> &CommandLine, StringRef CWD,
+      const llvm::DenseSet<ModuleID> &AlreadySeen,
+      LookupModuleOutputCallback LookupModuleOutput,
+      std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
   /// Given a compilation context specified via the Clang driver command-line,
   /// gather modular dependencies of module with the given name, and return the

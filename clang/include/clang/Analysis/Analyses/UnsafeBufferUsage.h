@@ -134,6 +134,13 @@ public:
                                                           ASTContext &Ctx) {
     handleUnsafeOperation(Arg, IsRelatedToDecl, Ctx);
   }
+
+  /// Invoked when an unsafe passing to __single pointer is found.
+  virtual void handleUnsafeSinglePointerArgument(const Expr *Arg,
+                                                 bool IsRelatedToDecl,
+                                                 ASTContext &Ctx) {
+    handleUnsafeOperation(Arg, IsRelatedToDecl, Ctx);
+  }
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// Invoked when a fix is suggested against a variable. This function groups

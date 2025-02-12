@@ -227,6 +227,10 @@ AST_MATCHER(QualType, isCountAttributedType) {
   return Node->isCountAttributedType();
 }
 
+AST_MATCHER(QualType, isSinglePointerType) {
+  return Node->isSinglePointerType();
+}
+
 AST_MATCHER_P(Stmt, forEachDescendantEvaluatedStmt, internal::Matcher<Stmt>,
               innerMatcher) {
   const DynTypedMatcher &DTM = static_cast<DynTypedMatcher>(innerMatcher);
@@ -404,48 +408,23 @@ getDependentValuesFromCall(const CountAttributedType *CAT,
   return {std::move(Values)};
 }
 
-// Checks if Self and Other are the same member bases. This supports only very
-// simple forms of member bases.
-bool isSameMemberBase(const Expr *Self, const Expr *Other) {
-  for (;;) {
-    if (Self == Other)
-      return true;
-
-    const auto *SelfICE = dyn_cast<ImplicitCastExpr>(Self);
-    const auto *OtherICE = dyn_cast<ImplicitCastExpr>(Other);
-    if (SelfICE && OtherICE &&
-        SelfICE->getCastKind() == OtherICE->getCastKind() &&
-        (SelfICE->getCastKind() == CK_LValueToRValue ||
-         SelfICE->getCastKind() == CK_UncheckedDerivedToBase)) {
-      Self = SelfICE->getSubExpr();
-      Other = OtherICE->getSubExpr();
-    }
-
-    const auto *SelfDRE = dyn_cast<DeclRefExpr>(Self);
-    const auto *OtherDRE = dyn_cast<DeclRefExpr>(Other);
-    if (SelfDRE && OtherDRE)
-      return SelfDRE->getDecl() == OtherDRE->getDecl();
-
-    if (isa<CXXThisExpr>(Self) && isa<CXXThisExpr>(Other)) {
-      // `Self` and `Other` should be evaluated at the same state so `this` must
-      // mean the same thing for both:
-      return true;
-    }
-
-    const auto *SelfME = dyn_cast<MemberExpr>(Self);
-    const auto *OtherME = dyn_cast<MemberExpr>(Other);
-    if (!SelfME || !OtherME ||
-        SelfME->getMemberDecl() != OtherME->getMemberDecl()) {
-      return false;
-    }
-
-    Self = SelfME->getBase();
-    Other = OtherME->getBase();
-  }
-}
-
 // Impl of `isCompatibleWithCountExpr`.  See `isCompatibleWithCountExpr` for
-// document.
+// high-level document.
+//
+// This visitor compares two expressions in a tiny subset of the language,
+// including DRE of VarDecls, constants, binary operators, subscripts,
+// dereferences, member accesses, and member function calls.
+//
+// - For constants, they are literal constants and expressions have
+//   compile-time constant values.
+// - For a supported dereference expression, it can be either of the forms '*e'
+//   or '*&e', where 'e' is a supported expression.
+// - For a subscript expression, it can be either an array subscript or
+//   overloaded subscript operator.
+// - For a member function call, it must be a call to a 'const' (non-static)
+//   member function with zero argument.  This is to ensure side-effect free.
+//   Other kinds of function calls are not supported, so an expression of the
+//   form `f(...)` is not supported.
 struct CompatibleCountExprVisitor
     : public ConstStmtVisitor<CompatibleCountExprVisitor, bool, const Expr *> {
   using BaseVisitor =
@@ -519,6 +498,10 @@ struct CompatibleCountExprVisitor
     return false;
   }
 
+  bool VisitCXXThisExpr(const CXXThisExpr *SelfThis, const Expr *Other) {
+    return isa<CXXThisExpr>(Other->IgnoreParenImpCasts());
+  }
+
   bool VisitDeclRefExpr(const DeclRefExpr *SelfDRE, const Expr *Other) {
     const ValueDecl *SelfVD = SelfDRE->getDecl();
 
@@ -540,7 +523,7 @@ struct CompatibleCountExprVisitor
     const auto *OtherME = dyn_cast<MemberExpr>(O);
     if (MemberBase && OtherME) {
       return OtherME->getMemberDecl() == SelfVD &&
-             isSameMemberBase(OtherME->getBase(), MemberBase);
+             Visit(OtherME->getBase(), MemberBase);
     }
 
     return false;
@@ -553,7 +536,12 @@ struct CompatibleCountExprVisitor
       return true;
     if (const auto *DRE = dyn_cast<DeclRefExpr>(Other->IgnoreParenImpCasts()))
       return MemberBase && Self->getMemberDecl() == DRE->getDecl() &&
-             isSameMemberBase(Self->getBase(), MemberBase);
+             Visit(Self->getBase(), MemberBase);
+    if (const auto *OtherME =
+            dyn_cast<MemberExpr>(Other->IgnoreParenImpCasts())) {
+      return Self->getMemberDecl() == OtherME->getMemberDecl() &&
+             Visit(Self->getBase(), OtherME->getBase());
+    }
     return false;
   }
 
@@ -581,6 +569,54 @@ struct CompatibleCountExprVisitor
              Visit(SelfBO->getRHS(), OtherBO->getRHS());
     }
 
+    return false;
+  }
+
+  // Support any overloaded operator[] so long as it is a const method.
+  bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *SelfOpCall,
+                                const Expr *Other) {
+    if (SelfOpCall->getOperator() != OverloadedOperatorKind::OO_Subscript)
+      return false;
+
+    const auto *MD = dyn_cast<CXXMethodDecl>(SelfOpCall->getCalleeDecl());
+
+    if (!MD || !MD->isConst())
+      return false;
+    if (const auto *OtherOpCall =
+            dyn_cast<CXXOperatorCallExpr>(Other->IgnoreParenImpCasts()))
+      if (SelfOpCall->getOperator() == OtherOpCall->getOperator()) {
+        return Visit(SelfOpCall->getArg(0), OtherOpCall->getArg(0)) &&
+               Visit(SelfOpCall->getArg(1), OtherOpCall->getArg(1));
+      }
+    return false;
+  }
+
+  // Support array/pointer subscript. Even though these operators are generally
+  // considered unsafe, they can be safely used on constant arrays with
+  // known-safe literal indexes.
+  bool VisitArraySubscriptExpr(const ArraySubscriptExpr *SelfAS,
+                               const Expr *Other) {
+    if (const auto *OtherAS =
+            dyn_cast<ArraySubscriptExpr>(Other->IgnoreParenImpCasts()))
+      return Visit(SelfAS->getLHS(), OtherAS->getLHS()) &&
+             Visit(SelfAS->getRHS(), OtherAS->getRHS());
+    return false;
+  }
+
+  // Support non-static member call:
+  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *SelfCall,
+                              const Expr *Other) {
+    const CXXMethodDecl *MD = SelfCall->getMethodDecl();
+
+    // The callee member function must be a const function with no parameter:
+    if (MD->isConst() && MD->param_empty()) {
+      if (auto *OtherCall =
+              dyn_cast<CXXMemberCallExpr>(Other->IgnoreParenImpCasts())) {
+        return OtherCall->getMethodDecl() == MD &&
+               Visit(SelfCall->getImplicitObjectArgument(),
+                     OtherCall->getImplicitObjectArgument());
+      }
+    }
     return false;
   }
 };
@@ -832,18 +868,70 @@ bool isCountAttributedPointerArgumentSafe(ASTContext &Context,
                                    &*ValuesOpt, Context);
 }
 
+// Checks if the argument passed to __single pointer is one of the following
+// forms:
+// 0. `nullptr`.
+// 1. `&var`, if `var` is a variable identifier.
+// 2. `&C[_]`, if `C` is a hardened container/view.
+// 3. `sp.first(1).data()` and friends.
+bool isSinglePointerArgumentSafe(ASTContext &Context, const Expr *Arg) {
+  const Expr *ArgNoImp = Arg->IgnoreParenImpCasts();
+
+  // Check form 0:
+  if (ArgNoImp->getType()->isNullPtrType())
+    return true;
+
+  // Check form 1:
+  {
+    auto AddrOfDREMatcher = expr(
+        unaryOperator(hasOperatorName("&"),
+                      hasUnaryOperand(ignoringParenImpCasts(declRefExpr()))));
+    bool Matches = !match(AddrOfDREMatcher, *ArgNoImp, Context).empty();
+    if (Matches)
+      return true;
+  }
+
+  // Check form 2:
+  {
+    // TODO: Add more classes.
+    auto HardenedClassNameMatcher =
+        anyOf(hasName("::std::array"), hasName("::std::basic_string"),
+              hasName("::std::basic_string_view"), hasName("::std::span"),
+              hasName("::std::vector"));
+    auto SubscriptOpMatcher = cxxOperatorCallExpr(callee(cxxMethodDecl(
+        hasName("operator[]"), ofClass(HardenedClassNameMatcher))));
+    auto AddrOfMatcher = expr(unaryOperator(
+        hasOperatorName("&"),
+        hasUnaryOperand(ignoringParenImpCasts(SubscriptOpMatcher))));
+    bool Matches = !match(AddrOfMatcher, *ArgNoImp, Context).empty();
+    if (Matches)
+      return true;
+  }
+
+  // Check form 3:
+  if (const Expr *ExtentExpr =
+          extractExtentFromSubviewDataCall(Context, ArgNoImp)) {
+    std::optional<llvm::APSInt> ExtentVal =
+        ExtentExpr->getIntegerConstantExpr(Context);
+    if (ExtentVal.has_value() && ExtentVal->isOne())
+      return true;
+  }
+
+  return false;
+}
+
 } // namespace
 
 // Given a two-param std::span construct call, matches iff the call has the
 // following forms:
 //   1. `std::span<T>{new T[n], n}`, where `n` is a literal or a DRE
 //   2. `std::span<T>{new T, 1}`
-//   3. `std::span<T>{&var, 1}`
+//   3. `std::span<T>{&var, 1}` or `std::span<T>{std::addressof(...), 1}`
 //   4. `std::span<T>{a, n}`, where `a` is of an array-of-T with constant size
 //   `n`
 //   5. `std::span<T>{any, 0}`
-//   6. `std::span<T>{std::addressof(...), 1}`
-//   7. `std::span<T>{p, n}`, where `p` is a __counted_by(`n`)/__sized_by(`n`)
+//   6. `std::span<T>{p, n}`, where `p` is a __counted_by(`n`)/__sized_by(`n`)
+//   pointer OR `std::span<char>{(char*)p, n}`, where `p` is a __sized_by(`n`)
 //   pointer.
 
 AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
@@ -914,9 +1002,28 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
   }
 
   // Check form 6:
+  bool isArg0CastToBytePtrType = false;
+
+  if (auto *CE = dyn_cast<CastExpr>(Arg0)) {
+    if (auto DestTySize = Finder->getASTContext().getTypeSizeInCharsIfKnown(
+            Arg0Ty->getPointeeType())) {
+      if (!DestTySize->isOne())
+        return false; // If the destination pointee type is NOT of one byte
+                      // size, pattern match fails.
+      Arg0 = CE->getSubExpr()->IgnoreParenImpCasts();
+      Arg0Ty = Arg0->getType();
+      isArg0CastToBytePtrType = true;
+    }
+  }
+  // Check pointer and count/size with respect to the count-attribute:
   if (const auto *CAT = Arg0Ty->getAs<CountAttributedType>()) {
-    // Accept __sized_by() if the size of the pointee type is 1.
-    if (CAT->isCountInBytes()) {
+    // For the pattern of `std::span<char>{(char *) p, n}`, p must NOT be a
+    // __counted_by pointer.
+    if (!CAT->isCountInBytes() && isArg0CastToBytePtrType)
+      return false;
+    // If `Arg0` is not a cast and is a sized_by pointer, its pointee type size
+    // must be one byte:
+    if (CAT->isCountInBytes() && !isArg0CastToBytePtrType) {
       std::optional<CharUnits> SizeOpt =
           Finder->getASTContext().getTypeSizeInCharsIfKnown(
               CAT->getPointeeType());
@@ -966,8 +1073,13 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
     return false;
   }
 
-  if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
-    const APInt ArrIdx = IdxLit->getValue();
+  Expr::EvalResult EVResult;
+  const Expr *IndexExpr = Node.getIdx();
+  if (!IndexExpr->isValueDependent() &&
+      IndexExpr->EvaluateAsInt(EVResult, Finder->getASTContext())) {
+    llvm::APSInt ArrIdx = EVResult.Val.getInt();
+    // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
+    // bug
     if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < limit)
       return true;
   }
@@ -1456,7 +1568,7 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
       // The array element type must be compatible with `char` otherwise an
       // explicit cast will be needed, which will make this check unreachable.
       // Therefore, the array extent is same as its' bytewise size.
-      if (Size->EvaluateAsConstantExpr(ER, Ctx)) {
+      if (Size->EvaluateAsInt(ER, Ctx)) {
         APSInt EVal = ER.Val.getInt(); // Size must have integer type
 
         return APSInt::compareValues(EVal, APSInt(CAT->getSize(), true)) != 0;
@@ -1503,6 +1615,12 @@ AST_MATCHER_P(CallExpr, forEachUnsafeCountAttributedPointerArgument,
   }
 
   return Matched;
+}
+
+// Matches iff the argument passed to __single pointer type is safe.
+AST_MATCHER(Expr, isSinglePointerArgumentSafe) {
+  ASTContext &Context = Finder->getASTContext();
+  return isSinglePointerArgumentSafe(Context, &Node);
 }
 
 } // namespace clang::ast_matchers
@@ -2597,6 +2715,45 @@ public:
                              ASTContext &Ctx) const override {
     Handler.handleUnsafeCountAttributedPointerArgument(Call, Arg,
                                                        IsRelatedToDecl, Ctx);
+  }
+
+  SourceLocation getSourceLoc() const override { return Arg->getBeginLoc(); }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
+      return {DRE};
+    }
+    return {};
+  }
+};
+
+// Represents an argument that is being passed to a __single pointer.
+class SinglePointerArgumentGadget : public WarningGadget {
+private:
+  static constexpr const char *const ArgTag = "SinglePointerArgument_Arg";
+  const Expr *Arg;
+
+public:
+  explicit SinglePointerArgumentGadget(const MatchFinder::MatchResult &Result)
+      : WarningGadget(Kind::SinglePointerArgument),
+        Arg(Result.Nodes.getNodeAs<Expr>(ArgTag)) {
+    assert(Arg != nullptr && "Expecting a non-null matching result");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::SinglePointerArgument;
+  }
+
+  static Matcher matcher() {
+    return stmt(callExpr(forEachArgumentWithParamType(
+        expr(unless(isSinglePointerArgumentSafe())).bind(ArgTag),
+        isSinglePointerType())));
+  }
+
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    Handler.handleUnsafeSinglePointerArgument(Arg, IsRelatedToDecl, Ctx);
   }
 
   SourceLocation getSourceLoc() const override { return Arg->getBeginLoc(); }

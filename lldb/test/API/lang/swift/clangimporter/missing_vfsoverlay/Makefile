@@ -11,7 +11,7 @@ OVERLAY := $(BUILDDIR)/overlay.yaml
 lib%.dylib: %.swift
 	rm -f $(OVERLAY)
 	echo "{ 'version': 0, 'roots': [] }" >$(OVERLAY)
-	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
+	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=$(shell basename $< .swift) \
 		SWIFTFLAGS_EXTRAS="-Xcc -ivfsoverlay -Xcc $(OVERLAY)" \
@@ -19,7 +19,7 @@ lib%.dylib: %.swift
 	rm -f $(OVERLAY)
 
 clean::
-	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
+	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=$(shell basename $< .swift) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk clean

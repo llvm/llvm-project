@@ -7,7 +7,7 @@ include Makefile.rules
 
 OtherArch.framework/Versions/A/OtherArch: $(SRCDIR)/OtherArch.swift
 	touch OtherArch.h
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 	    MAKE_DSYM=YES \
 		DYLIB_ONLY=YES \
 		DYLIB_SWIFT_SOURCES=OtherArch.swift \

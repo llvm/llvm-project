@@ -211,8 +211,9 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/ios>
+#else
 #  include <__config>
 
 #  if _LIBCPP_HAS_LOCALIZATION
@@ -628,9 +629,9 @@ private:
   basic_ostream<char_type, traits_type>* __tie_;
 
 #    if defined(_LIBCPP_ABI_IOS_ALLOW_ARBITRARY_FILL_VALUE)
-  using _FillType = _FillHelper<traits_type>;
+  using _FillType _LIBCPP_NODEBUG = _FillHelper<traits_type>;
 #    else
-  using _FillType = _SentinelValueFill<traits_type>;
+  using _FillType _LIBCPP_NODEBUG = _SentinelValueFill<traits_type>;
 #    endif
   mutable _FillType __fill_;
 };
@@ -891,6 +892,6 @@ _LIBCPP_POP_MACROS
 #    include <type_traits>
 #    include <typeinfo>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_IOS

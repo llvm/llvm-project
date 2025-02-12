@@ -460,8 +460,8 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   // Now update all value_regs with each register info as needed
   const size_t num_regs = m_regs.size();
   for (size_t i = 0; i < num_regs; ++i) {
-    if (m_value_regs_map.find(i) != m_value_regs_map.end())
-      m_regs[i].value_regs = m_value_regs_map[i].data();
+    if (auto it = m_value_regs_map.find(i); it != m_value_regs_map.end())
+      m_regs[i].value_regs = it->second.data();
     else
       m_regs[i].value_regs = nullptr;
   }
@@ -509,8 +509,9 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
 
   // Now update all invalidate_regs with each register info as needed
   for (size_t i = 0; i < num_regs; ++i) {
-    if (m_invalidate_regs_map.find(i) != m_invalidate_regs_map.end())
-      m_regs[i].invalidate_regs = m_invalidate_regs_map[i].data();
+    if (auto it = m_invalidate_regs_map.find(i);
+        it != m_invalidate_regs_map.end())
+      m_regs[i].invalidate_regs = it->second.data();
     else
       m_regs[i].invalidate_regs = nullptr;
   }

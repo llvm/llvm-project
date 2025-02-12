@@ -1,5 +1,3 @@
-
-
 // RUN: %clang_cc1 -ast-dump -fbounds-safety %s 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental %s 2>&1 | FileCheck %s
 
@@ -22,7 +20,7 @@ typedef struct {
 // CHECK:   `-MaterializeSequenceExpr {{.+}} <Unbind>
 // CHECK:     |-MaterializeSequenceExpr {{.+}} <Bind>
 // CHECK:     | |-BoundsSafetyPointerPromotionExpr {{.+}} 'void *__bidi_indexable'
-// CHECK:     | | |-OpaqueValueExpr [[ove:0x[^ ]+]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK:     | | |-OpaqueValueExpr [[ove:0x[^ ]+]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK:     | | |   | | `-OpaqueValueExpr [[ove_1:0x[^ ]+]] {{.*}} 'void *__bidi_indexable'
 // CHECK:     | | |   | |       | | |-OpaqueValueExpr [[ove_2:0x[^ ]+]] {{.*}} 'flex_t *__single'
 // CHECK:     | | |   | |-OpaqueValueExpr [[ove_3:0x[^ ]+]] {{.*}} 'int'
@@ -31,7 +29,7 @@ typedef struct {
 // CHECK:     | | | `-BinaryOperator {{.+}} 'char *' '+'
 // CHECK:     | | |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK:     | | |   | `-ImplicitCastExpr {{.+}} 'void *' <BoundsSafetyPointerCast>
-// CHECK:     | | |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK:     | | |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK:     | | |   `-AssumptionExpr
 // CHECK:     | | |     |-OpaqueValueExpr [[ove_4]] {{.*}} 'unsigned long'
 // CHECK:     | | |     `-BinaryOperator {{.+}} 'int' '>='
@@ -65,9 +63,9 @@ typedef struct {
 // CHECK:     | `-OpaqueValueExpr [[ove]]
 // CHECK:     |   `-BoundsCheckExpr {{.+}} 'flex <= __builtin_get_pointer_upper_bound(flex) && __builtin_get_pointer_lower_bound(flex) <= flex && size <= (char *)__builtin_get_pointer_upper_bound(flex) - (char *)flex'
 // CHECK:     |     |-CallExpr
-// CHECK:     |     | |-ImplicitCastExpr {{.+}} 'void *__single __sized_by()(*)(void *__single __sized_by(), int, unsigned long)' <BuiltinFnToFnPtr>
+// CHECK:     |     | |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), int, unsigned long)' <BuiltinFnToFnPtr>
 // CHECK:     |     | | `-DeclRefExpr {{.+}}
-// CHECK:     |     | |-ImplicitCastExpr {{.+}} 'void *__single __sized_by()':'void *__single' <BoundsSafetyPointerCast>
+// CHECK:     |     | |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single' <BoundsSafetyPointerCast>
 // CHECK:     |     | | `-OpaqueValueExpr [[ove_1]] {{.*}} 'void *__bidi_indexable'
 // CHECK:     |     | |-OpaqueValueExpr [[ove_3]] {{.*}} 'int'
 // CHECK:     |     | `-OpaqueValueExpr [[ove_4]] {{.*}} 'unsigned long'
@@ -99,7 +97,7 @@ typedef struct {
 // CHECK:     |-OpaqueValueExpr [[ove_1]] {{.*}} 'void *__bidi_indexable'
 // CHECK:     |-OpaqueValueExpr [[ove_3]] {{.*}} 'int'
 // CHECK:     |-OpaqueValueExpr [[ove_4]] {{.*}} 'unsigned long'
-// CHECK:     `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK:     `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 void foo(flex_t *flex, unsigned size) {
   __builtin_memset(flex, 0, size);
 }

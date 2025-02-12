@@ -79,16 +79,16 @@ void ctypedef_c_nt(my_cint_t const __null_terminated ctypedef_c_nt);
 // CHECK: VarDecl {{.+}} def_c_nt_nt 'int *__single __terminated_by(0)const':'int *__singleconst'
 my_ptr_c_nt_t __null_terminated def_c_nt_nt;
 
-#define my_ptr_nt_nullable_t int *__null_terminated __nullable
+#define my_ptr_nt_nullable_t int *__null_terminated _Nullable
 // CHECK: VarDecl {{.+}} def_nt_nullable_nt 'int *__single __terminated_by(0) _Nullable':'int *__single'
 my_ptr_nt_nullable_t __null_terminated def_nt_nullable_nt;
 
-#define my_ptr_nullable_nt_t int *__nullable __null_terminated
+#define my_ptr_nullable_nt_t int *_Nullable __null_terminated
 // CHECK: VarDecl {{.+}} def_nullable_nt_nt 'int *__single __terminated_by(0) _Nullable':'int *__single'
 my_ptr_nullable_nt_t __null_terminated def_nullable_nt_nt;
 
 #define my_c_a_int_t const int __attribute__((aligned(64)))
-typedef my_c_a_int_t * __attribute__((align_value(64))) __nullable __null_terminated my_c_ptr_nullable_nt_t;
+typedef my_c_a_int_t * __attribute__((align_value(64))) _Nullable __null_terminated my_c_ptr_nullable_nt_t;
 // CHECK: TypedefDecl {{.*}} referenced my_c_ptr_nullable_nt_t 'const int * __terminated_by(0) _Nullable':'const int *'
 // CHECK-NEXT: |-AttributedType {{.*}} 'const int * __terminated_by(0) _Nullable' sugar
 // CHECK-NEXT: | `-ValueTerminatedType {{.*}} 'const int * __terminated_by(0)' sugar

@@ -319,7 +319,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // tighten these requirements. Many of these math functions are only legal on
   // specific bitwidths, so they are not selectable for
   // allFloatScalarsAndVectors.
-  getActionDefinitionsBuilder({G_FPOW,
+  getActionDefinitionsBuilder({G_STRICT_FSQRT,
+                               G_FPOW,
                                G_FEXP,
                                G_FEXP2,
                                G_FLOG,

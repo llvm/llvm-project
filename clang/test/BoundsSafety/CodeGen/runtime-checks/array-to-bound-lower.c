@@ -95,7 +95,7 @@
 // CHECK-O2-NEXT:  entry:
 // CHECK-O2-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
 // CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR3:[0-9]+]]
-// CHECK-O2-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 40
+// CHECK-O2-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 40
 // CHECK-O2-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i64 -4
 // CHECK-O2-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[UPPER]], {{!annotation ![0-9]+}}
 // CHECK-O2-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH]], [[ARR]], {{!annotation ![0-9]+}}
@@ -112,7 +112,7 @@
 // CHECK-ARM-O2-NEXT:  entry:
 // CHECK-ARM-O2-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 4
 // CHECK-ARM-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR]]) #[[ATTR3:[0-9]+]]
-// CHECK-ARM-O2-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i32 40
+// CHECK-ARM-O2-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i32 40
 // CHECK-ARM-O2-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i32 -4
 // CHECK-ARM-O2-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[UPPER]], {{!annotation ![0-9]+}}
 // CHECK-ARM-O2-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH]], [[ARR]], {{!annotation ![0-9]+}}

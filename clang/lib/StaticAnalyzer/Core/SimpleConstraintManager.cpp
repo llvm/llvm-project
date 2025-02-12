@@ -75,7 +75,7 @@ ProgramStateRef SimpleConstraintManager::assumeAux(ProgramStateRef State,
   }
 
   case nonloc::ConcreteIntKind: {
-    bool b = Cond.castAs<nonloc::ConcreteInt>().getValue() != 0;
+    bool b = *Cond.castAs<nonloc::ConcreteInt>().getValue().get() != 0;
     bool isFeasible = b ? Assumption : !Assumption;
     return isFeasible ? State : nullptr;
   }

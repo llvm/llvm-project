@@ -1,2 +1,2 @@
 all:
-	$(MAKE) -C "pro:ject"
+	"$(MAKE)" -C "pro:ject"

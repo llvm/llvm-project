@@ -12,7 +12,6 @@ class TestSwiftLazyFramework(lldbtest.TestBase):
 
     @swiftTest
     @skipIf(oslist=no_match(["macosx"]))
-    @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'true'))
     def test_system_framework(self):
         """Test that a framework that is registered as autolinked in a Swift
            module used in the target, but not linked against the target is

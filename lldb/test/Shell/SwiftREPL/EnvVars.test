@@ -1,0 +1,10 @@
+// Test inheriting environment variables in the REPL.
+// REQUIRES: system-darwin
+// REQUIRES: swift
+
+// RUN: FOO=foo %lldb --repl -O 'settings set target.inherit-env true' < %s 2>&1 \
+// RUN: | FileCheck %s
+
+import Foundation
+ProcessInfo.processInfo.environment["FOO"]
+// CHECK: $R0: String? = "foo"

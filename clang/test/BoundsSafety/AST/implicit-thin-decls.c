@@ -1,5 +1,3 @@
-
-
 // RUN: %clang_cc1 -ast-dump -fbounds-safety %s 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental %s 2>&1 | FileCheck %s
 
@@ -33,4 +31,4 @@ typedef struct {
 // CHECK: `-TypedefDecl {{.+}} T 'struct T':'T'
 // CHECK:   `-ElaboratedType {{.+}} 'struct T' sugar
 // CHECK:     `-RecordType {{.+}} 'T'
-// CHECK:       `-Record [[ADDR]] ''
+// CHECK:       `-Record [[ADDR]] {{.+}}

@@ -9,7 +9,7 @@ all: $(FRAMEWORKS) dylib $(EXE)
 include Makefile.rules
 
 lib%.a: %.swift
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=static \
 		SWIFT_SOURCES=$(patsubst lib%.a,%.swift,$@) \
 		MODULENAME=$(patsubst lib%.a,%,$@) \
@@ -28,7 +28,7 @@ lib%.a: %.swift
 	mv $(BUILDDIR)/$(patsubst lib%.a,%.swiftinterface,$<) $(BUILDDIR)/$@/Modules/
 
 dylib: Dylib.swift
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=Dylib \
 		DYLIB_SWIFT_SOURCES=Dylib.swift \
 		DYLIB_MODULENAME=Dylib \

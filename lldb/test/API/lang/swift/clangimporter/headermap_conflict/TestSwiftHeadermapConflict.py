@@ -20,7 +20,6 @@ import shutil
 class TestSwiftHeadermapConflict(TestBase):
     @skipIf(bugnumber="rdar://60396797",
             setting=('symbols.use-swift-clangimporter', 'false'))
-    @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'true'))
     @skipUnlessDarwin
     @swiftTest
     def test(self):

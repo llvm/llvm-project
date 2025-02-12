@@ -9,7 +9,7 @@ include Makefile.rules
 
 libDylib: Dylib.swift
 	mkdir -p $(BUILDDIR)/$(shell basename $< .swift)
-	$(MAKE) MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
+	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		DYLIB_NAME=Dylib DYLIB_SWIFT_SOURCES=Dylib.swift \
 		VPATH=$(SRCDIR) SWIFTFLAGS_EXTRAS=-I$(SRCDIR) \

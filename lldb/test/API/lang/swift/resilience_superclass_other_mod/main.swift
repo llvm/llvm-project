@@ -1,0 +1,3 @@
+import ModWithClass
+
+entry()

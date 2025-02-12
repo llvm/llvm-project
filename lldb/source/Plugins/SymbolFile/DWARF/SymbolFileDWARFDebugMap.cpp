@@ -1071,8 +1071,7 @@ static void RemoveFunctionsWithModuleNotEqualTo(const ModuleSP &module_sp,
     SymbolContext sc;
     sc_list.GetContextAtIndex(i, sc);
     if (sc.function) {
-      const SectionSP section_sp(
-          sc.function->GetAddressRange().GetBaseAddress().GetSection());
+      const SectionSP section_sp = sc.function->GetAddress().GetSection();
       if (section_sp->GetModule() != module_sp) {
         sc_list.RemoveContextAtIndex(i);
         continue;
@@ -1117,6 +1116,17 @@ void SymbolFileDWARFDebugMap::FindFunctions(const RegularExpression &regex,
       RemoveFunctionsWithModuleNotEqualTo(m_objfile_sp->GetModule(), sc_list,
                                           sc_idx);
     }
+    return IterationAction::Continue;
+  });
+}
+
+void SymbolFileDWARFDebugMap::FindImportedDeclaration(
+    ConstString name, std::vector<ImportedDeclaration> &declarations,
+    bool find_one) {
+  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
+    oso_dwarf->FindImportedDeclaration(name, declarations, find_one);
+    if (find_one && !declarations.empty())
+      return IterationAction::Stop;
     return IterationAction::Continue;
   });
 }

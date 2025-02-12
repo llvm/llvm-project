@@ -194,6 +194,10 @@ public:
   void FindFunctions(const RegularExpression &regex, bool include_inlines,
                      SymbolContextList &sc_list) override;
 
+  void FindImportedDeclaration(ConstString name,
+                               std::vector<ImportedDeclaration> &sc_list,
+                               bool find_one) override;
+
   void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names) override;
@@ -351,9 +355,7 @@ public:
     m_file_index = file_index;
   }
 
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> DIEToTypePtr;
-
-  virtual DIEToTypePtr &GetDIEToType() { return m_die_to_type; }
+  virtual llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &GetDIEToType();
 
   virtual llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
   GetForwardDeclCompilerTypeToDIE();
@@ -555,7 +557,7 @@ protected:
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   // A map from DIE to lldb_private::Type. For record type, the key might be
   // either declaration DIE or definition DIE.
-  DIEToTypePtr m_die_to_type;
+  llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> m_die_to_type;
   DIEToVariableSP m_die_to_variable_sp;
   // A map from CompilerType to the struct/class/union/enum DIE (might be a
   // declaration or a definition) that is used to construct it.

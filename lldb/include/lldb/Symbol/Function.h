@@ -431,8 +431,8 @@ public:
   ///     Pass in true if this is a function know to throw
   Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
            lldb::user_id_t func_type_uid, const Mangled &mangled,
-           Type *func_type, AddressRanges ranges, bool can_throw = false,
-           bool generic_trampoline = false);
+           Type *func_type, Address address, AddressRanges ranges,
+           bool can_throw = false, bool generic_trampoline = false);
 
   /// Destructor.
   ~Function() override;
@@ -452,6 +452,16 @@ public:
   const AddressRange &GetAddressRange() { return m_range; }
 
   AddressRanges GetAddressRanges() { return m_block.GetRanges(); }
+
+  /// Return the address of the function (its entry point). This address is also
+  /// used as a base address for relocation of function-scope entities (blocks
+  /// and variables).
+  const Address &GetAddress() const { return m_address; }
+
+  bool GetRangeContainingLoadAddress(lldb::addr_t load_addr, Target &target,
+                                     AddressRange &range) {
+    return m_block.GetRangeContainingLoadAddress(load_addr, target, range);
+  }
 
   lldb::LanguageType GetLanguage() const;
   /// Find the file and line number of the source location of the start of the
@@ -672,6 +682,9 @@ protected:
   /// all blocks. DEPRECATED: do not use this field in new code as the range may
   /// include addresses belonging to other functions.
   AddressRange m_range;
+
+  /// The address (entry point) of the function.
+  Address m_address;
 
   /// The frame base expression for variables that are relative to the frame
   /// pointer.

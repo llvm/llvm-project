@@ -267,15 +267,6 @@ struct ReplaceDeclRefWithRHS : public TreeTransform<ReplaceDeclRefWithRHS> {
 
   bool AlwaysRebuild() { return true; }
 
-  ExprResult TransformBoundsAttrExpr(Expr *E) {
-    using ExpressionKind =
-        Sema::ExpressionEvaluationContextRecord::ExpressionKind;
-    EnterExpressionEvaluationContext EC(
-        SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
-        nullptr, ExpressionKind::EK_AttrArgument);
-    return TransformExpr(E);
-  }
-
   ExprResult TransformOpaqueValueExpr(OpaqueValueExpr *E) { return Owned(E); }
 
   /// If we are replacing the value pointed to by DeclRef, we unwrap dereference

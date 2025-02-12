@@ -28,6 +28,9 @@ let Definition = "modulelist" in {
   def SwiftValidateTypeSystem: Property<"swift-validate-typesystem", "Boolean">,
     DefaultFalse,
     Desc<"Validate all Swift typesystem queries. Used for testing an asserts-enabled LLDB only.">;
+  def SwiftLoadConformances: Property<"swift-load-conformances", "Boolean">,
+    DefaultFalse,
+    Desc<"Resolve type alias via the conformance section. Disabled for performance reasons">;
   def SwiftModuleLoadingMode: Property<"swift-module-loading-mode", "Enum">,
     DefaultEnumValue<"eSwiftModuleLoadingModePreferSerialized">,
     EnumValues<"OptionEnumValues(g_swift_module_loading_mode_enums)">,

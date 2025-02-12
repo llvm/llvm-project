@@ -62,6 +62,15 @@ static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
     "riscv-min-jump-table-entries", cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on RISCV"));
 
+static cl::opt<bool>
+    UseMIPSLoadStorePairsOpt("mips-riscv-load-store-pairs",
+                             cl::desc("RISCV: Optimize for load-store bonding"),
+                             cl::init(false), cl::Hidden);
+
+static cl::opt<bool>
+    UseCCMovInsn("riscv-ccmov", cl::desc("RISCV: Use 'mips.ccmov' instruction"),
+                 cl::init(true), cl::Hidden);
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -194,6 +203,10 @@ bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
 
 bool RISCVSubtarget::enableSubRegLiveness() const { return true; }
 
+bool RISCVSubtarget::enableMachinePipeliner() const {
+  return getSchedModel().hasInstrSchedModel();
+}
+
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
 bool RISCVSubtarget::useAA() const { return UseAA; }
@@ -233,4 +246,8 @@ void RISCVSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
     Policy.OnlyTopDown = false;
     Policy.OnlyBottomUp = false;
   }
+}
+
+bool RISCVSubtarget::useCCMovInsn() const {
+  return UseCCMovInsn && HasVendorXMIPSCMove;
 }

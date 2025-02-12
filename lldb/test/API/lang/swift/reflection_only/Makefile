@@ -10,7 +10,7 @@ all: dylib $(EXE)
 
 include Makefile.rules
 dylib: lib.swift
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		MAKE_DSYM=YES DYLIB_ONLY=YES DYLIB_NAME=dynamic_lib \
 		DYLIB_SWIFT_SOURCES="lib.swift" \
 		DYLIB_HIDE_SWIFTMODULE=YES \

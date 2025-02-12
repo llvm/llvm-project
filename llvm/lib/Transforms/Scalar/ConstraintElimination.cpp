@@ -44,7 +44,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
-#include <cmath>
 #include <optional>
 #include <string>
 
@@ -279,7 +278,7 @@ struct StackEntry {
   StackEntry(unsigned NumIn, unsigned NumOut, bool IsSigned,
              SmallVector<Value *, 2> ValuesToRelease)
       : NumIn(NumIn), NumOut(NumOut), IsSigned(IsSigned),
-        ValuesToRelease(ValuesToRelease) {}
+        ValuesToRelease(std::move(ValuesToRelease)) {}
 };
 
 struct ConstraintTy {
@@ -377,7 +376,8 @@ public:
   /// \p NewVariables.
   ConstraintTy getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                              SmallVectorImpl<Value *> &NewVariables,
-                             bool ShouldDecompose) const;
+                             bool ShouldDecompose,
+                             bool ForceSignedSystem = false) const;
 
   /// Turns a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
   /// constraints using getConstraint. Returns an empty constraint if the result
@@ -394,6 +394,14 @@ public:
   void transferToOtherSystem(CmpInst::Predicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack);
+
+private:
+  /// Adds facts into constraint system. \p ForceSignedSystem can be set when
+  /// the \p Pred is eq/ne, and signed constraint system is used when it's
+  /// specified.
+  void addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
+                   unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack,
+                   bool ForceSignedSystem);
 };
 
 /// Represents a (Coefficient * Variable) entry after IR decomposition.
@@ -516,10 +524,11 @@ decomposeGEP(GEPOperator &GEP, SmallVectorImpl<ConditionTy> &Preconditions,
       collectOffsets(GEP, State.DL);
   // We support either plain gep nuw, or gep nusw with non-negative offset,
   // which implies gep nuw.
-  if (!BasePtr || NW == GEPNoWrapFlags::none())
+  if (!BasePtr)
     return &GEP;
 
-  if (!NW.hasNoUnsignedSignedWrap()) {
+  bool SaveViaPrecondition = false;
+  if (NW == GEPNoWrapFlags::none()) {
     // If a GEP is not inbounds, check if we have a known-safe bounds.
     // If we have, add a precondition to make sure the GEP index is <=
     // the known-safe bound.
@@ -530,6 +539,7 @@ decomposeGEP(GEPOperator &GEP, SmallVectorImpl<ConditionTy> &Preconditions,
       if (!IndexExpr)
         return &GEP;
       Preconditions.emplace_back(CmpInst::ICMP_ULE, IndexExpr, Iter->second);
+      SaveViaPrecondition = true;
     } else
       return &GEP;
   }
@@ -542,7 +552,8 @@ decomposeGEP(GEPOperator &GEP, SmallVectorImpl<ConditionTy> &Preconditions,
 
     if (!NW.hasNoUnsignedWrap()) {
       // Try to prove nuw from nusw and nneg.
-      assert(NW.hasNoUnsignedSignedWrap() && "Must have nusw flag");
+      assert((SaveViaPrecondition || NW.hasNoUnsignedSignedWrap()) &&
+             "Must have nusw flag");
       if (!isKnownNonNegative(Index, State.DL))
         Preconditions.emplace_back(CmpInst::ICMP_SGE, Index,
                                    ConstantInt::get(Index->getType(), 0));
@@ -738,12 +749,16 @@ static Decomposition decompose(Value *V,
 ConstraintTy
 ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                               SmallVectorImpl<Value *> &NewVariables,
-                              bool ShouldDecompose) const {
+                              bool ShouldDecompose,
+                              bool ForceSignedSystem) const {
   assert(NewVariables.empty() && "NewVariables must be empty when passed in");
+  assert((!ForceSignedSystem || CmpInst::isEquality(Pred)) &&
+         "signed system can only be forced on eq/ne");
+
   bool IsEq = false;
   bool IsNe = false;
 
-  // Try to convert Pred to one of ULE/SLT/SLE/SLT.
+  // Try to convert Pred to one of ULE/ULT/SLE/SLT.
   switch (Pred) {
   case CmpInst::ICMP_UGT:
   case CmpInst::ICMP_UGE:
@@ -754,7 +769,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     break;
   }
   case CmpInst::ICMP_EQ:
-    if (match(Op1, m_Zero())) {
+    if (!ForceSignedSystem && match(Op1, m_Zero())) {
       Pred = CmpInst::ICMP_ULE;
     } else {
       IsEq = true;
@@ -762,7 +777,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     }
     break;
   case CmpInst::ICMP_NE:
-    if (match(Op1, m_Zero())) {
+    if (!ForceSignedSystem && match(Op1, m_Zero())) {
       Pred = CmpInst::getSwappedPredicate(CmpInst::ICMP_UGT);
       std::swap(Op0, Op1);
     } else {
@@ -778,9 +793,9 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
       Pred != CmpInst::ICMP_SLE && Pred != CmpInst::ICMP_SLT)
     return {};
 
-  bool IsSigned = CmpInst::isSigned(Pred);
-  auto &Value2Index = getValue2Index(IsSigned);
   SmallVector<ConditionTy, 4> Preconditions;
+  bool IsSigned = ForceSignedSystem || CmpInst::isSigned(Pred);
+  auto &Value2Index = getValue2Index(IsSigned);
   Decomposition ADec = Op0->stripPointerCastsSameRepresentation();
   Decomposition BDec = Op1->stripPointerCastsSameRepresentation();
   if (ShouldDecompose) {
@@ -833,8 +848,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   }
 
   for (const auto &KV : VariablesB) {
-    if (SubOverflow(R[GetOrAddIndex(KV.Variable)], KV.Coefficient,
-                    R[GetOrAddIndex(KV.Variable)]))
+    auto &Coeff = R[GetOrAddIndex(KV.Variable)];
+    if (SubOverflow(Coeff, KV.Coefficient, Coeff))
       return {};
     auto I =
         KnownNonNegativeVariables.insert({KV.Variable, KV.IsKnownNonNegative});
@@ -844,7 +859,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   int64_t OffsetSum;
   if (AddOverflow(Offset1, Offset2, OffsetSum))
     return {};
-  if (Pred == (IsSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT))
+  if (Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_ULT)
     if (AddOverflow(OffsetSum, int64_t(-1), OffsetSum))
       return {};
   R[0] = OffsetSum;
@@ -866,9 +881,9 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     if (!KV.second ||
         (!Value2Index.contains(KV.first) && !NewIndexMap.contains(KV.first)))
       continue;
-    SmallVector<int64_t, 8> C(Value2Index.size() + NewVariables.size() + 1, 0);
+    auto &C = Res.ExtraInfo.emplace_back(
+        Value2Index.size() + NewVariables.size() + 1, 0);
     C[GetOrAddIndex(KV.first)] = -1;
-    Res.ExtraInfo.push_back(C);
   }
   return Res;
 }
@@ -1812,7 +1827,7 @@ static void generateReproducer(CmpInst *Cond, Module *M,
       Instruction *Cloned = I->clone();
       Old2New[I] = Cloned;
       Old2New[I]->setName(I->getName());
-      Cloned->insertBefore(&*Builder.GetInsertPoint());
+      Cloned->insertBefore(Builder.GetInsertPoint());
       Cloned->dropUnknownNonDebugMetadata();
       Cloned->setDebugLoc({});
     }
@@ -2064,10 +2079,22 @@ static bool checkOrAndOpImpliedByOther(
 void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack) {
+  addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack, false);
+  // If the Pred is eq/ne, also add the fact to signed system.
+  if (CmpInst::isEquality(Pred))
+    addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack, true);
+}
+
+void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
+                                 unsigned NumIn, unsigned NumOut,
+                                 SmallVectorImpl<StackEntry> &DFSInStack,
+                                 bool ForceSignedSystem) {
   // If the constraint has a pre-condition, skip the constraint if it does not
   // hold.
   SmallVector<Value *> NewVariables;
-  auto R = getConstraint(Pred, A, B, NewVariables, true);
+  auto R = getConstraint(Pred, A, B, NewVariables, /*ShouldDecompose=*/true,
+                         ForceSignedSystem);
+
   // TODO: Support non-equality for facts as well.
   if (R.isNe())
     return;
@@ -2080,52 +2107,51 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
 
   LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
              dbgs() << "'\n");
-  bool Added = false;
   auto &CSToUse = getCS(R.IsSigned);
   if (R.Coefficients.empty())
     return;
 
-  Added |= CSToUse.addVariableRowFill(R.Coefficients);
+  bool Added = CSToUse.addVariableRowFill(R.Coefficients);
+  if (!Added)
+    return;
 
   // If R has been added to the system, add the new variables and queue it for
   // removal once it goes out-of-scope.
-  if (Added) {
-    SmallVector<Value *, 2> ValuesToRelease;
-    auto &Value2Index = getValue2Index(R.IsSigned);
+  SmallVector<Value *, 2> ValuesToRelease;
+  auto &Value2Index = getValue2Index(R.IsSigned);
+  for (Value *V : NewVariables) {
+    Value2Index.insert({V, Value2Index.size() + 1});
+    ValuesToRelease.push_back(V);
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "  constraint: ";
+    dumpConstraint(R.Coefficients, getValue2Index(R.IsSigned));
+    dbgs() << "\n";
+  });
+
+  DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                          std::move(ValuesToRelease));
+
+  if (!R.IsSigned) {
     for (Value *V : NewVariables) {
-      Value2Index.insert({V, Value2Index.size() + 1});
-      ValuesToRelease.push_back(V);
-    }
-
-    LLVM_DEBUG({
-      dbgs() << "  constraint: ";
-      dumpConstraint(R.Coefficients, getValue2Index(R.IsSigned));
-      dbgs() << "\n";
-    });
-
-    DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
-                            std::move(ValuesToRelease));
-
-    if (!R.IsSigned) {
-      for (Value *V : NewVariables) {
-        ConstraintTy VarPos(SmallVector<int64_t, 8>(Value2Index.size() + 1, 0),
-                            false, false, false);
-        VarPos.Coefficients[Value2Index[V]] = -1;
-        CSToUse.addVariableRow(VarPos.Coefficients);
-        DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
-                                SmallVector<Value *, 2>());
-      }
-    }
-
-    if (R.isEq()) {
-      // Also add the inverted constraint for equality constraints.
-      for (auto &Coeff : R.Coefficients)
-        Coeff *= -1;
-      CSToUse.addVariableRowFill(R.Coefficients);
-
+      ConstraintTy VarPos(SmallVector<int64_t, 8>(Value2Index.size() + 1, 0),
+                          false, false, false);
+      VarPos.Coefficients[Value2Index[V]] = -1;
+      CSToUse.addVariableRow(VarPos.Coefficients);
       DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
                               SmallVector<Value *, 2>());
     }
+  }
+
+  if (R.isEq()) {
+    // Also add the inverted constraint for equality constraints.
+    for (auto &Coeff : R.Coefficients)
+      Coeff *= -1;
+    CSToUse.addVariableRowFill(R.Coefficients);
+
+    DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                            SmallVector<Value *, 2>());
   }
 }
 

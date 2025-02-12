@@ -31,6 +31,9 @@ let Definition = "target_experimental" in {
     DefaultEnumValue<"llvm::to_underlying(AutoBool::Auto)">,
     EnumValues<"OptionEnumValues(g_swift_pcm_validation_values)">,
     Desc<"Enable validation when loading Clang PCM files (-fvalidate-pch, -fmodules-check-relocated).">;
+  def SwiftUseTasksPlugin: Property<"swift-tasks-plugin-enabled", "Boolean">,
+    DefaultTrue,
+    Desc<"Enables the swift plugin converting tasks into threads">;
   def UseDIL : Property<"use-DIL", "Boolean">,
     Global, DefaultFalse,
     Desc<"If true, use the alternative DIL implementation for frame variable evaluation.">;
@@ -274,7 +277,7 @@ let Definition = "process_experimental" in {
   def OSPluginReportsAllThreads: Property<"os-plugin-reports-all-threads", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"Set to False if your OS Plugins doesn't report all threads on each stop.">;
+    Desc<"Set to False if your Python OS Plugin doesn't report all threads on each stop.">;
 }
 
 let Definition = "process" in {

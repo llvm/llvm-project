@@ -14,24 +14,24 @@ struct buf {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR:%.*]] = getelementptr inbounds nuw i8, ptr [[BP:%.*]], i64 4
 // CHECK-NEXT:    store i32 0, ptr [[ARR]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BP]], i64 8
-// CHECK-NEXT:    store i32 1, ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[BP]], i64 12
-// CHECK-NEXT:    store i32 2, ptr [[TMP1]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BP]], i64 16
-// CHECK-NEXT:    store i32 3, ptr [[TMP2]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BP]], i64 20
-// CHECK-NEXT:    store i32 4, ptr [[TMP3]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[BP]], i64 24
-// CHECK-NEXT:    store i32 5, ptr [[TMP4]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[BP]], i64 28
-// CHECK-NEXT:    store i32 6, ptr [[TMP5]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[BP]], i64 32
-// CHECK-NEXT:    store i32 7, ptr [[TMP6]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[BP]], i64 36
-// CHECK-NEXT:    store i32 8, ptr [[TMP7]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BP]], i64 40
-// CHECK-NEXT:    store i32 9, ptr [[TMP8]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i8, ptr [[BP]], i64 8
+// CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX_1]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr i8, ptr [[BP]], i64 12
+// CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX_2]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr i8, ptr [[BP]], i64 16
+// CHECK-NEXT:    store i32 3, ptr [[ARRAYIDX_3]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr i8, ptr [[BP]], i64 20
+// CHECK-NEXT:    store i32 4, ptr [[ARRAYIDX_4]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr i8, ptr [[BP]], i64 24
+// CHECK-NEXT:    store i32 5, ptr [[ARRAYIDX_5]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr i8, ptr [[BP]], i64 28
+// CHECK-NEXT:    store i32 6, ptr [[ARRAYIDX_6]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr i8, ptr [[BP]], i64 32
+// CHECK-NEXT:    store i32 7, ptr [[ARRAYIDX_7]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_8:%.*]] = getelementptr i8, ptr [[BP]], i64 36
+// CHECK-NEXT:    store i32 8, ptr [[ARRAYIDX_8]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_9:%.*]] = getelementptr i8, ptr [[BP]], i64 40
+// CHECK-NEXT:    store i32 9, ptr [[ARRAYIDX_9]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
 void array_member_access_can_remove(struct buf *bp) {
@@ -43,24 +43,24 @@ void array_member_access_can_remove(struct buf *bp) {
 // CHECK-NEXT:  trap:
 // CHECK-NEXT:    [[ARR:%.*]] = getelementptr inbounds nuw i8, ptr [[BP:%.*]], i64 4
 // CHECK-NEXT:    store i32 0, ptr [[ARR]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BP]], i64 8
-// CHECK-NEXT:    store i32 1, ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[BP]], i64 12
-// CHECK-NEXT:    store i32 2, ptr [[TMP1]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BP]], i64 16
-// CHECK-NEXT:    store i32 3, ptr [[TMP2]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BP]], i64 20
-// CHECK-NEXT:    store i32 4, ptr [[TMP3]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[BP]], i64 24
-// CHECK-NEXT:    store i32 5, ptr [[TMP4]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[BP]], i64 28
-// CHECK-NEXT:    store i32 6, ptr [[TMP5]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[BP]], i64 32
-// CHECK-NEXT:    store i32 7, ptr [[TMP6]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[BP]], i64 36
-// CHECK-NEXT:    store i32 8, ptr [[TMP7]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BP]], i64 40
-// CHECK-NEXT:    store i32 9, ptr [[TMP8]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i8, ptr [[BP]], i64 8
+// CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX_1]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr i8, ptr [[BP]], i64 12
+// CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX_2]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr i8, ptr [[BP]], i64 16
+// CHECK-NEXT:    store i32 3, ptr [[ARRAYIDX_3]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr i8, ptr [[BP]], i64 20
+// CHECK-NEXT:    store i32 4, ptr [[ARRAYIDX_4]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr i8, ptr [[BP]], i64 24
+// CHECK-NEXT:    store i32 5, ptr [[ARRAYIDX_5]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr i8, ptr [[BP]], i64 28
+// CHECK-NEXT:    store i32 6, ptr [[ARRAYIDX_6]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr i8, ptr [[BP]], i64 32
+// CHECK-NEXT:    store i32 7, ptr [[ARRAYIDX_7]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_8:%.*]] = getelementptr i8, ptr [[BP]], i64 36
+// CHECK-NEXT:    store i32 8, ptr [[ARRAYIDX_8]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX_9:%.*]] = getelementptr i8, ptr [[BP]], i64 40
+// CHECK-NEXT:    store i32 9, ptr [[ARRAYIDX_9]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
@@ -77,8 +77,8 @@ struct buf_var_size {
 // CHECK-LABEL: @array_member_access_can_remove_variable(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[BP:%.*]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_LR_PH:%.*]]
+// CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
+// CHECK-NEXT:    br i1 [[CMP14_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_LR_PH:%.*]]
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[ARR:%.*]] = getelementptr inbounds nuw i8, ptr [[BP]], i64 4
 // CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[TMP0]] to i64
@@ -87,9 +87,9 @@ struct buf_var_size {
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[ARR]], i64 [[INDVARS_IV]]
-// CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
-// CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP1]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[ARR]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 // CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 // CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], {{!llvm.loop ![0-9]+}}
@@ -114,17 +114,17 @@ void array_member_access_can_remove_variable(struct buf_var_size *bp) {
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT8:%.*]] ]
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[ARR]], i64 [[INDVARS_IV]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr [[TMP1]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr [[TMP1]], [[ARR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP3]], [[TMP2]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[ARR]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[ARR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP2]], [[TMP1]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT8]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont8:
-// CHECK-NEXT:    [[TMP4:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
-// CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP1]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
+// CHECK-NEXT:    store i32 [[TMP3]], ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 // CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 // CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], {{!llvm.loop ![0-9]+}}

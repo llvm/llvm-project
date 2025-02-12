@@ -15,6 +15,7 @@
 
 #include <mutex>
 
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "swift/ABI/ObjectFile.h"
 #include "swift/Remote/RemoteAddress.h"
@@ -130,6 +131,11 @@ public:
       const swift::reflection::TypeRef *enum_type_ref,
       swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) = 0;
+  virtual const swift::reflection::TypeRef *
+  LookupTypeWitness(const std::string &MangledTypeName,
+                    const std::string &Member, StringRef Protocol) = 0;
+  virtual swift::reflection::ConformanceCollectionResult
+  GetAllConformances() = 0;
   virtual const swift::reflection::TypeRef *ReadTypeFromMetadata(
       lldb::addr_t metadata_address,
       swift::reflection::DescriptorFinder *descriptor_finder,
@@ -158,6 +164,8 @@ public:
     bool hasIsRunning = false;
     bool isRunning = false;
     bool isEnqueued = false;
+    uint64_t id = 0;
+    lldb::addr_t resumeAsyncContext = LLDB_INVALID_ADDRESS;
   };
   // The default limits are copied from swift-inspect.
   virtual llvm::Expected<AsyncTaskInfo>
