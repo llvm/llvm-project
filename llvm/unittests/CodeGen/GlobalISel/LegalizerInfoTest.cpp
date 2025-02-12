@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "GISelMITest.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/Support/TypeSize.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -54,7 +55,7 @@ TEST(LegalizerInfoTest, ScalarRISC) {
   // Typical RISCy set of operations based on AArch64.
   for (unsigned Op : {G_ADD, G_SUB}) {
     for (unsigned Size : {32, 64})
-      LegacyInfo.setAction({Op, 0, LLT::scalar(Size)},
+      LegacyInfo.setAction({Op, 0, LLT::integer(Size)},
                            LegacyLegalizeActions::Legal);
     LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
         Op, 0, LegacyLegalizerInfo::widenToLargerTypesAndNarrowToLargest);
@@ -64,29 +65,29 @@ TEST(LegalizerInfoTest, ScalarRISC) {
 
   for (unsigned opcode : {G_ADD, G_SUB}) {
     // Check we infer the correct types and actually do what we're told.
-    EXPECT_EQ(L.getAction({opcode, {LLT::scalar(8)}}),
-              LegalizeActionStep(WidenScalar, 0, LLT::scalar(32)));
-    EXPECT_EQ(L.getAction({opcode, {LLT::scalar(16)}}),
-              LegalizeActionStep(WidenScalar, 0, LLT::scalar(32)));
-    EXPECT_EQ(L.getAction({opcode, {LLT::scalar(32)}}),
+    EXPECT_EQ(L.getAction({opcode, {LLT::integer(8)}}),
+              LegalizeActionStep(WidenScalar, 0, LLT::integer(32)));
+    EXPECT_EQ(L.getAction({opcode, {LLT::integer(16)}}),
+              LegalizeActionStep(WidenScalar, 0, LLT::integer(32)));
+    EXPECT_EQ(L.getAction({opcode, {LLT::integer(32)}}),
               LegalizeActionStep(Legal, 0, LLT{}));
-    EXPECT_EQ(L.getAction({opcode, {LLT::scalar(64)}}),
+    EXPECT_EQ(L.getAction({opcode, {LLT::integer(64)}}),
               LegalizeActionStep(Legal, 0, LLT{}));
 
     // Make sure the default for over-sized types applies.
-    EXPECT_EQ(L.getAction({opcode, {LLT::scalar(128)}}),
-              LegalizeActionStep(NarrowScalar, 0, LLT::scalar(64)));
+    EXPECT_EQ(L.getAction({opcode, {LLT::integer(128)}}),
+              LegalizeActionStep(NarrowScalar, 0, LLT::integer(64)));
     // Make sure we also handle unusual sizes
-    EXPECT_EQ(L.getAction({opcode, {LLT::scalar(1)}}),
-              LegalizeActionStep(WidenScalar, 0, LLT::scalar(32)));
-    EXPECT_EQ(L.getAction({opcode, {LLT::scalar(31)}}),
-              LegalizeActionStep(WidenScalar, 0, LLT::scalar(32)));
-    EXPECT_EQ(L.getAction({opcode, {LLT::scalar(33)}}),
-              LegalizeActionStep(WidenScalar, 0, LLT::scalar(64)));
-    EXPECT_EQ(L.getAction({opcode, {LLT::scalar(63)}}),
-              LegalizeActionStep(WidenScalar, 0, LLT::scalar(64)));
-    EXPECT_EQ(L.getAction({opcode, {LLT::scalar(65)}}),
-              LegalizeActionStep(NarrowScalar, 0, LLT::scalar(64)));
+    EXPECT_EQ(L.getAction({opcode, {LLT::integer(1)}}),
+              LegalizeActionStep(WidenScalar, 0, LLT::integer(32)));
+    EXPECT_EQ(L.getAction({opcode, {LLT::integer(31)}}),
+              LegalizeActionStep(WidenScalar, 0, LLT::integer(32)));
+    EXPECT_EQ(L.getAction({opcode, {LLT::integer(33)}}),
+              LegalizeActionStep(WidenScalar, 0, LLT::integer(64)));
+    EXPECT_EQ(L.getAction({opcode, {LLT::integer(63)}}),
+              LegalizeActionStep(WidenScalar, 0, LLT::integer(64)));
+    EXPECT_EQ(L.getAction({opcode, {LLT::integer(65)}}),
+              LegalizeActionStep(NarrowScalar, 0, LLT::integer(64)));
   }
 }
 
@@ -95,17 +96,17 @@ TEST(LegalizerInfoTest, VectorRISC) {
   LegalizerInfo L;
   auto &LegacyInfo = L.getLegacyLegalizerInfo();
   // Typical RISCy set of operations based on ARM.
-  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(8, 8)},
+  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(8, LLT::integer(8))},
                        LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(16, 8)},
+  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(16, LLT::integer(8))},
                        LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(4, 16)},
+  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(4, LLT::integer(16))},
                        LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(8, 16)},
+  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(8, LLT::integer(16))},
                        LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(2, 32)},
+  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(2, LLT::integer(32))},
                        LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(4, 32)},
+  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(4, LLT::integer(32))},
                        LegacyLegalizeActions::Legal);
 
   LegacyInfo.setLegalizeVectorElementToDifferentSizeStrategy(
@@ -118,19 +119,24 @@ TEST(LegalizerInfoTest, VectorRISC) {
 
   // Check we infer the correct types and actually do what we're told for some
   // simple cases.
-  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(8, 8)}}),
+  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(8, LLT::integer(8))}}),
             LegalizeActionStep(Legal, 0, LLT{}));
-  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(8, 7)}}),
-            LegalizeActionStep(WidenScalar, 0, LLT::fixed_vector(8, 8)));
-  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(2, 8)}}),
-            LegalizeActionStep(MoreElements, 0, LLT::fixed_vector(8, 8)));
-  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(8, 32)}}),
-            LegalizeActionStep(FewerElements, 0, LLT::fixed_vector(4, 32)));
+  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(8, LLT::integer(7))}}),
+            LegalizeActionStep(WidenScalar, 0,
+                               LLT::fixed_vector(8, LLT::integer(8))));
+  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(2, LLT::integer(8))}}),
+            LegalizeActionStep(MoreElements, 0,
+                               LLT::fixed_vector(8, LLT::integer(8))));
+  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(8, LLT::integer(32))}}),
+            LegalizeActionStep(FewerElements, 0,
+                               LLT::fixed_vector(4, LLT::integer(32))));
   // Check a few non-power-of-2 sizes:
-  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(3, 3)}}),
-            LegalizeActionStep(WidenScalar, 0, LLT::fixed_vector(3, 8)));
-  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(3, 8)}}),
-            LegalizeActionStep(MoreElements, 0, LLT::fixed_vector(8, 8)));
+  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(3, LLT::integer(3))}}),
+            LegalizeActionStep(WidenScalar, 0,
+                               LLT::fixed_vector(3, LLT::integer(8))));
+  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(3, LLT::integer(8))}}),
+            LegalizeActionStep(MoreElements, 0,
+                               LLT::fixed_vector(8, LLT::integer(8))));
 }
 
 TEST(LegalizerInfoTest, MultipleTypes) {
@@ -176,10 +182,10 @@ TEST(LegalizerInfoTest, MultipleSteps) {
 
   LegacyInfo.computeTables();
 
-  EXPECT_EQ(L.getAction({G_UREM, {LLT::scalar(16)}}),
-            LegalizeActionStep(WidenScalar, 0, LLT::scalar(32)));
-  EXPECT_EQ(L.getAction({G_UREM, {LLT::scalar(32)}}),
-            LegalizeActionStep(Lower, 0, LLT::scalar(32)));
+  EXPECT_EQ(L.getAction({G_UREM, {LLT::integer(16)}}),
+            LegalizeActionStep(WidenScalar, 0, LLT::integer(32)));
+  EXPECT_EQ(L.getAction({G_UREM, {LLT::integer(32)}}),
+            LegalizeActionStep(Lower, 0, LLT::integer(32)));
 }
 
 TEST(LegalizerInfoTest, SizeChangeStrategy) {
@@ -187,7 +193,7 @@ TEST(LegalizerInfoTest, SizeChangeStrategy) {
   LegalizerInfo L;
   auto &LegacyInfo = L.getLegacyLegalizerInfo();
   for (unsigned Size : {1, 8, 16, 32})
-    LegacyInfo.setAction({G_UREM, 0, LLT::scalar(Size)},
+    LegacyInfo.setAction({G_UREM, 0, LLT::integer(Size)},
                          LegacyLegalizeActions::Legal);
 
   LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
@@ -196,21 +202,21 @@ TEST(LegalizerInfoTest, SizeChangeStrategy) {
 
   // Check we infer the correct types and actually do what we're told.
   for (unsigned Size : {1, 8, 16, 32}) {
-    EXPECT_EQ(L.getAction({G_UREM, {LLT::scalar(Size)}}),
+    EXPECT_EQ(L.getAction({G_UREM, {LLT::integer(Size)}}),
               LegalizeActionStep(Legal, 0, LLT{}));
   }
-  EXPECT_EQ(L.getAction({G_UREM, {LLT::scalar(2)}}),
-            LegalizeActionStep(WidenScalar, 0, LLT::scalar(8)));
-  EXPECT_EQ(L.getAction({G_UREM, {LLT::scalar(7)}}),
-            LegalizeActionStep(WidenScalar, 0, LLT::scalar(8)));
-  EXPECT_EQ(L.getAction({G_UREM, {LLT::scalar(9)}}),
-            LegalizeActionStep(WidenScalar, 0, LLT::scalar(16)));
-  EXPECT_EQ(L.getAction({G_UREM, {LLT::scalar(17)}}),
-            LegalizeActionStep(WidenScalar, 0, LLT::scalar(32)));
-  EXPECT_EQ(L.getAction({G_UREM, {LLT::scalar(31)}}),
-            LegalizeActionStep(WidenScalar, 0, LLT::scalar(32)));
-  EXPECT_EQ(L.getAction({G_UREM, {LLT::scalar(33)}}),
-            LegalizeActionStep(Unsupported, 0, LLT::scalar(33)));
+  EXPECT_EQ(L.getAction({G_UREM, {LLT::integer(2)}}),
+            LegalizeActionStep(WidenScalar, 0, LLT::integer(8)));
+  EXPECT_EQ(L.getAction({G_UREM, {LLT::integer(7)}}),
+            LegalizeActionStep(WidenScalar, 0, LLT::integer(8)));
+  EXPECT_EQ(L.getAction({G_UREM, {LLT::integer(9)}}),
+            LegalizeActionStep(WidenScalar, 0, LLT::integer(16)));
+  EXPECT_EQ(L.getAction({G_UREM, {LLT::integer(17)}}),
+            LegalizeActionStep(WidenScalar, 0, LLT::integer(32)));
+  EXPECT_EQ(L.getAction({G_UREM, {LLT::integer(31)}}),
+            LegalizeActionStep(WidenScalar, 0, LLT::integer(32)));
+  EXPECT_EQ(L.getAction({G_UREM, {LLT::integer(33)}}),
+            LegalizeActionStep(Unsupported, 0, LLT::integer(33)));
 }
 }
 
@@ -436,20 +442,20 @@ TEST(LegalizerInfoTest, RuleSets) {
     EXPECT_ACTION(MoreElements, 1, v2s1, LegalityQuery(G_SELECT, {v2s32, s1}));
     EXPECT_ACTION(MoreElements, 1, v4s1, LegalityQuery(G_SELECT, {v4p0, s1}));
 
-    EXPECT_ACTION(MoreElements, 1, LLT::scalable_vector(2, 1),
-                  LegalityQuery(G_SELECT, {LLT::scalable_vector(2, 32), s1}));
-    EXPECT_ACTION(MoreElements, 1, LLT::scalable_vector(4, 1),
-                  LegalityQuery(G_SELECT, {LLT::scalable_vector(4, 32), s1}));
+    EXPECT_ACTION(MoreElements, 1, LLT::scalable_vector(2, s1),
+                  LegalityQuery(G_SELECT, {LLT::scalable_vector(2, s32), s1}));
+    EXPECT_ACTION(MoreElements, 1, LLT::scalable_vector(4, s1),
+                  LegalityQuery(G_SELECT, {LLT::scalable_vector(4, s32), s1}));
     EXPECT_ACTION(MoreElements, 1, LLT::scalable_vector(2, s1),
                   LegalityQuery(G_SELECT, {LLT::scalable_vector(2, p0), s1}));
 
     EXPECT_ACTION(FewerElements, 0, v2s32, LegalityQuery(G_ADD, {v4s32}));
     EXPECT_ACTION(FewerElements, 0, s32, LegalityQuery(G_ADD, {v8s32}));
 
-    EXPECT_ACTION(FewerElements, 0, LLT::scalable_vector(2, 16),
-                  LegalityQuery(G_ADD, {LLT::scalable_vector(4, 16)}));
+    EXPECT_ACTION(FewerElements, 0, LLT::scalable_vector(2, s16),
+                  LegalityQuery(G_ADD, {LLT::scalable_vector(4, s16)}));
     EXPECT_ACTION(FewerElements, 0, s16,
-                  LegalityQuery(G_ADD, {LLT::scalable_vector(8, 16)}));
+                  LegalityQuery(G_ADD, {LLT::scalable_vector(8, s16)}));
   }
 
   // Test minScalarEltSameAsIf
