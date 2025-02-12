@@ -254,23 +254,20 @@ OpenACCMappableModel<fir::BaseBoxType>::getTypeCategory(mlir::Type type,
 
   // If the type enclosed by the box is a mappable type, then have it
   // provide the type category.
-  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy)) {
+  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
     return mappableTy.getTypeCategory(var);
-  }
 
   // For all arrays, despite whether they are allocatable, pointer, assumed,
   // etc, we'd like to categorize them as "array".
-  if (isArrayLike(eleTy)) {
+  if (isArrayLike(eleTy))
     return mlir::acc::VariableTypeCategory::array;
-  }
 
   // We got here because we don't have an array nor a mappable type. At this
   // point, we know we have a type that fits the "aggregate" definition since it
   // is a type with a descriptor. Try to refine it by checking if it matches the
   // "composite" definition.
-  if (isCompositeLike(eleTy)) {
+  if (isCompositeLike(eleTy))
     return mlir::acc::VariableTypeCategory::composite;
-  }
 
   // Even if we have a scalar type - simply because it is wrapped in a box
   // we want to categorize it as "nonscalar". Anything else would've been
@@ -282,9 +279,8 @@ static mlir::TypedValue<mlir::acc::PointerLikeType>
 getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
   // If there is no defining op - the unwrapped reference is the base one.
   mlir::Operation *op = varPtr.getDefiningOp();
-  if (!op) {
+  if (!op)
     return varPtr;
-  }
 
   // Look to find if this value originates from an interior pointer
   // calculation op.
@@ -319,27 +315,21 @@ categorizePointee(mlir::Type pointer,
   auto baseRef = getBaseRef(varPtr);
   mlir::Type eleTy = baseRef.getType().getElementType();
 
-  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy)) {
+  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
     return mappableTy.getTypeCategory(varPtr);
-  }
 
-  if (isScalarLike(eleTy)) {
+  if (isScalarLike(eleTy))
     return mlir::acc::VariableTypeCategory::scalar;
-  }
-  if (isArrayLike(eleTy)) {
+  if (isArrayLike(eleTy))
     return mlir::acc::VariableTypeCategory::array;
-  }
-  if (isCompositeLike(eleTy)) {
+  if (isCompositeLike(eleTy))
     return mlir::acc::VariableTypeCategory::composite;
-  }
-  if (mlir::isa<fir::CharacterType, mlir::FunctionType>(eleTy)) {
+  if (mlir::isa<fir::CharacterType, mlir::FunctionType>(eleTy))
     return mlir::acc::VariableTypeCategory::nonscalar;
-  }
   // "pointers" - in the sense of raw address point-of-view, are considered
   // scalars. However
-  if (mlir::isa<fir::LLVMPointerType>(eleTy)) {
+  if (mlir::isa<fir::LLVMPointerType>(eleTy))
     return mlir::acc::VariableTypeCategory::scalar;
-  }
 
   // Without further checking, this type cannot be categorized.
   return mlir::acc::VariableTypeCategory::uncategorized;
