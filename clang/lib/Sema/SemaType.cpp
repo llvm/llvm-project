@@ -1598,7 +1598,7 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     if (EltTy->isAnyPointerType() || EltTy->isReferenceType() ||
         EltTy->isMemberPointerType()) {
 
-      if (const MemberPointerType *PTy = EltTy->getAs<MemberPointerType>())
+      if (const auto *PTy = EltTy->getAs<MemberPointerType>())
         EltTy = PTy->getPointeeType();
       else
         EltTy = EltTy->getPointeeType();
@@ -1621,12 +1621,10 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
       Diag(Loc, DiagID) << EltTy;
       Qs.removeRestrict();
     } else {
-      if (T->isArrayType()) {
-        if (getLangOpts().C23)
-          Diag(Loc, diag::warn_c23_compat_restrict_on_array_of_pointers);
-        else
-          Diag(Loc, diag::ext_restrict_on_array_of_pointers_c23);
-      }
+      if (T->isArrayType())
+        Diag(Loc, getLangOpts().C23
+                      ? diag::warn_c23_compat_restrict_on_array_of_pointers
+                      : diag::ext_restrict_on_array_of_pointers_c23);
     }
   }
 
