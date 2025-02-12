@@ -46,6 +46,10 @@ class TestCase(TestBase):
         self.assertEqual(template_type.GetTemplateArgumentType(2).GetName(), "")
 
         value = self.expect_expr("temp2", result_type="Foo<short, -2>")
+
+        # Can't get template parameter value with invalid target.
+        self.assertFalse(value.GetType().GetTemplateArgumentValue(lldb.SBTarget(), 1))
+
         template_param_value = value.GetType().GetTemplateArgumentValue(target, 1)
         self.assertTrue(template_param_value)
         self.assertEqual(template_param_value.GetTypeName(), "short")

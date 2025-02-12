@@ -709,15 +709,18 @@ lldb::SBValue SBType::GetTemplateArgumentValue(lldb::SBTarget target,
     return {};
 
   Scalar value{arg->value};
-
-  if (!value.IsValid())
-    return {};
-
   DataExtractor data;
   value.GetData(data);
 
-  return SBValue(ValueObjectConstResult::Create(target.GetSP().get(), arg->type,
-                                                ConstString("value"), data));
+  ExecutionContext exe_ctx;
+  auto target_sp = target.GetSP();
+  if (!target_sp)
+    return {};
+
+  target_sp->CalculateExecutionContext(exe_ctx);
+
+  return ValueObject::CreateValueObjectFromData("value", data, exe_ctx,
+                                                arg->type);
 }
 
 SBType SBType::FindDirectNestedType(const char *name) {
