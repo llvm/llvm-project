@@ -24,7 +24,7 @@ public:
 
   static void Initialize();
   static void Terminate();
-  static llvm::StringRef GetPluginNameStatic() { return "windows-dyld"; }
+  static llvm::StringRef GetPluginNameStatic() { return "aix-dyld"; }
   static llvm::StringRef GetPluginDescriptionStatic();
 
   static DynamicLoader *CreateInstance(Process *process, bool force);
@@ -45,6 +45,9 @@ public:
 
 protected:
   lldb::addr_t GetLoadAddress(lldb::ModuleSP executable);
+
+  /// Loads Module from inferior process.
+  void ResolveExecutableModule(lldb::ModuleSP &module_sp);
 
 private:
   std::map<lldb::ModuleSP, lldb::addr_t> m_loaded_modules;
