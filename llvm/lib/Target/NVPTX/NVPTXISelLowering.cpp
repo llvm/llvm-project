@@ -825,7 +825,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
                        ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
-                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST});
+                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::FP_ROUND});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -5582,6 +5582,40 @@ static SDValue combineADDRSPACECAST(SDNode *N,
   return SDValue();
 }
 
+static SDValue PerformFP_ROUNDCombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  SDLoc DL(N);
+  SDValue Op = N->getOperand(0);
+  SDValue Trunc = N->getOperand(1);
+  EVT NarrowVT = N->getValueType(0);
+  EVT WideVT = Op.getValueType();
+
+  // v2[b]f16 = fp_round (v2f32 A)
+  // -> v2[b]f16 = (build_vector ([b]f16 = fp_round (extractelt A, 0)),
+  //                             ([b]f16 = fp_round (extractelt A, 1)))
+  if ((NarrowVT == MVT::v2bf16 || NarrowVT == MVT::v2f16) &&
+      WideVT == MVT::v2f32) {
+    SDValue F32Op0, F32Op1;
+    if (Op.getOpcode() == ISD::BUILD_VECTOR) {
+      F32Op0 = Op.getOperand(0);
+      F32Op1 = Op.getOperand(1);
+    } else {
+      F32Op0 = DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, Op,
+                               DCI.DAG.getIntPtrConstant(0, DL));
+      F32Op1 = DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, Op,
+                               DCI.DAG.getIntPtrConstant(1, DL));
+    }
+    return DCI.DAG.getBuildVector(
+        NarrowVT, DL,
+        {DCI.DAG.getNode(ISD::FP_ROUND, DL, NarrowVT.getScalarType(), F32Op0,
+                         Trunc),
+         DCI.DAG.getNode(ISD::FP_ROUND, DL, NarrowVT.getScalarType(), F32Op1,
+                         Trunc)});
+  }
+
+  return SDValue();
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5618,6 +5652,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformBUILD_VECTORCombine(N, DCI);
     case ISD::ADDRSPACECAST:
       return combineADDRSPACECAST(N, DCI);
+    case ISD::FP_ROUND:
+      return PerformFP_ROUNDCombine(N, DCI);
   }
   return SDValue();
 }
