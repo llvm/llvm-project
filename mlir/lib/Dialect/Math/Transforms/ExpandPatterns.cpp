@@ -703,7 +703,7 @@ void mlir::populateExpandExp2FPattern(RewritePatternSet &patterns) {
 }
 
 void mlir::populateExpandPowFPattern(RewritePatternSet &patterns) {
-  patterns.add(convertSpecialPowfOp);
+  patterns.add(convertSpecialPowfOp, /*benefit=*/ 2);
   patterns.add(convertPowfOp);
 }
 
