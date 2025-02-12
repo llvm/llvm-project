@@ -1024,6 +1024,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setFP16OperationAction(ISD::FEXP2, MVT::v2f16, Legal, Expand);
   setBF16OperationAction(ISD::FEXP2, MVT::bf16, Legal, Promote);
   setBF16OperationAction(ISD::FEXP2, MVT::v2bf16, Legal, Expand);
+  setOperationAction(ISD::FEXP2, MVT::v2f32, Expand);
 
   // FLOG2 supports f32 only
   // f16/bf16 types aren't supported, but they are promoted/expanded to f32.
@@ -1031,7 +1032,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::FLOG2, MVT::f32, Legal);
     setOperationPromotedToType(ISD::FLOG2, MVT::f16, MVT::f32);
     setOperationPromotedToType(ISD::FLOG2, MVT::bf16, MVT::f32);
-    setOperationAction(ISD::FLOG2, {MVT::v2f16, MVT::v2bf16}, Expand);
+    setOperationAction(ISD::FLOG2, {MVT::v2f16, MVT::v2bf16, MVT::v2f32},
+                       Expand);
   }
 
   setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
