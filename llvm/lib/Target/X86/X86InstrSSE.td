@@ -1425,6 +1425,11 @@ def : Pat<(v2f64 (X86Movsd
                      (f64 (any_fpextend (f32 (extractelt VR128:$src, (iPTR 0))))))))),
           (VCVTSS2SDrr_Int VR128:$dst, VR128:$src)>;
 
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128:$dst),
+                   (v2f64 (scalar_to_vector (f64 (any_fpextend (loadf32 addr:$src))))))),
+          (VCVTSS2SDrm_Int VR128:$dst, ssmem:$src)>;
+
 def : Pat<(v4f32 (X86Movss
                    (v4f32 VR128:$dst),
                    (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR64:$src)))))),
@@ -1478,6 +1483,11 @@ def : Pat<(v2f64 (X86Movsd
                    (v2f64 (scalar_to_vector
                      (f64 (any_fpextend (f32 (extractelt VR128:$src, (iPTR 0))))))))),
           (CVTSS2SDrr_Int VR128:$dst, VR128:$src)>;
+
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128:$dst),
+                   (v2f64 (scalar_to_vector (f64 (any_fpextend (loadf32 addr:$src))))))),
+          (CVTSS2SDrm_Int VR128:$dst, ssmem:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128:$dst),

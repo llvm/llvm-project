@@ -7777,6 +7777,12 @@ def : Pat<(v2f64 (X86Movsd
           (VCVTSS2SDZrr_Int VR128X:$dst, VR128X:$src)>,
           Requires<[HasAVX512]>;
 
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128X:$dst),
+                   (v2f64 (scalar_to_vector (f64 (any_fpextend (loadf32 addr:$src))))))),
+          (VCVTSS2SDZrm_Int VR128:$dst, ssmem:$src)>,
+          Requires<[HasAVX512]>;
+
 //===----------------------------------------------------------------------===//
 // AVX-512  Vector convert from signed/unsigned integer to float/double
 //          and from float/double to signed/unsigned integer
