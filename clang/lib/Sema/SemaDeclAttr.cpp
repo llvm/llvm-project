@@ -2950,12 +2950,11 @@ static void handleSectionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 }
 
-static bool isValidCodeModelAttr(Sema &S, StringRef Str) {
-  if (S.Context.getTargetInfo().getTriple().isLoongArch()) {
+static bool isValidCodeModelAttr(llvm::Triple Triple, StringRef Str) {
+  if (Triple.isLoongArch()) {
     return Str == "normal" || Str == "medium" || Str == "extreme";
   } else {
-    assert(S.Context.getTargetInfo().getTriple().getArch() ==
-               llvm::Triple::x86_64 &&
+    assert(Triple.getArch() == llvm::Triple::x86_64 &&
            "only loongarch/x86-64 supported");
     return Str == "small" || Str == "large";
   }
@@ -2964,20 +2963,36 @@ static bool isValidCodeModelAttr(Sema &S, StringRef Str) {
 static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
   SourceLocation LiteralLoc;
+  auto IsTripleSupported = [](const llvm::Triple Triple) {
+    return Triple.getArch() == llvm::Triple::ArchType::x86_64 ||
+           Triple.isLoongArch();
+  };
+
   // Check that it is a string.
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc))
     return;
 
-  // Ignore the attribute for GPU device compiles since it only applies to host
-  // globals.
-  if (S.Context.getTargetInfo().getTriple().isNVPTX() ||
-      S.Context.getTargetInfo().getTriple().isAMDGPU() ||
-      S.Context.getTargetInfo().getTriple().isSPIRV())
+  SmallVector<llvm::Triple, 2> Triples = {
+      S.Context.getTargetInfo().getTriple()};
+  if (auto *aux = S.Context.getAuxTargetInfo()) {
+    Triples.push_back(aux->getTriple());
+  } else if (S.Context.getTargetInfo().getTriple().isNVPTX() ||
+             S.Context.getTargetInfo().getTriple().isAMDGPU() ||
+             S.Context.getTargetInfo().getTriple().isSPIRV()) {
+    // Ignore the attribute for pure GPU device compiles since it only applies
+    // to host globals.
     return;
+  }
+
+  auto SupportedTripleIt = llvm::find_if(Triples, IsTripleSupported);
+  if (SupportedTripleIt == Triples.end()) {
+    S.Diag(LiteralLoc, diag::warn_unknown_attribute_ignored) << AL;
+    return;
+  }
 
   llvm::CodeModel::Model CM;
   if (!CodeModelAttr::ConvertStrToModel(Str, CM) ||
-      !isValidCodeModelAttr(S, Str)) {
+      !isValidCodeModelAttr(*SupportedTripleIt, Str)) {
     S.Diag(LiteralLoc, diag::err_attr_codemodel_arg) << Str;
     return;
   }
