@@ -54,6 +54,22 @@ public:
   }
   bool empty() const { return List.empty(); }
   void clear() { List = {}; }
+  /// \Removes \p N if found in the ready list.
+  void remove(DGNode *N) {
+    // TODO: Use a more efficient data-structure for the ready list because the
+    // priority queue does not support fast removals.
+    SmallVector<DGNode *, 8> Keep;
+    Keep.reserve(List.size());
+    while (!List.empty()) {
+      auto *Top = List.top();
+      List.pop();
+      if (Top == N)
+        break;
+      Keep.push_back(Top);
+    }
+    for (auto *KeepN : Keep)
+      List.push(KeepN);
+  }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
@@ -116,6 +132,8 @@ class Scheduler {
   /// The dependency graph is used by the scheduler to determine the legal
   /// ordering of instructions.
   DependencyGraph DAG;
+  friend class SchedulerInternalsAttorney; // For DAG.
+  Context &Ctx;
   /// This is the top of the schedule, i.e. the location where the scheduler
   /// is about to place the scheduled instructions. It gets updated as we
   /// schedule.
@@ -124,6 +142,12 @@ class Scheduler {
   DenseMap<SchedBundle *, std::unique_ptr<SchedBundle>> Bndls;
   /// The BB that we are currently scheduling.
   BasicBlock *ScheduledBB = nullptr;
+  /// The ID of the callback we register with Sandbox IR.
+  std::optional<Context::CallbackID> CreateInstrCB;
+  /// Called by Sandbox IR's callback system, after \p I has been created.
+  /// NOTE: This should run after DAG's callback has run.
+  // TODO: Perhaps call DAG's notify function from within this one?
+  void notifyCreateInstr(Instruction *I);
 
   /// \Returns a scheduling bundle containing \p Instrs.
   SchedBundle *createBundle(ArrayRef<Instruction *> Instrs);
@@ -153,8 +177,16 @@ class Scheduler {
   Scheduler &operator=(const Scheduler &) = delete;
 
 public:
-  Scheduler(AAResults &AA, Context &Ctx) : DAG(AA, Ctx) {}
-  ~Scheduler() {}
+  Scheduler(AAResults &AA, Context &Ctx) : DAG(AA, Ctx), Ctx(Ctx) {
+    // NOTE: The scheduler's callback depends on the DAG's callback running
+    // before it and updating the DAG accordingly.
+    CreateInstrCB = Ctx.registerCreateInstrCallback(
+        [this](Instruction *I) { notifyCreateInstr(I); });
+  }
+  ~Scheduler() {
+    if (CreateInstrCB)
+      Ctx.unregisterCreateInstrCallback(*CreateInstrCB);
+  }
   /// Tries to build a schedule that includes all of \p Instrs scheduled at the
   /// same scheduling cycle. This essentially checks that there are no
   /// dependencies among \p Instrs. This function may involve scheduling
@@ -178,6 +210,13 @@ public:
   void dump(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif
+};
+
+/// A client-attorney class for accessing the Scheduler's internals (used for
+/// unit tests).
+class SchedulerInternalsAttorney {
+public:
+  static DependencyGraph &getDAG(Scheduler &Sched) { return Sched.DAG; }
 };
 
 } // namespace llvm::sandboxir

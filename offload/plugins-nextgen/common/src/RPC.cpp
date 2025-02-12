@@ -99,18 +99,15 @@ static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer) {
 }
 
 void RPCServerTy::ServerThread::startThread() {
-  assert(!Running.load(std::memory_order_relaxed) &&
-         "Attempting to start thread that is already running");
-  Running.store(true, std::memory_order_release);
-  Worker = std::thread([this]() { run(); });
+  if (!Running.fetch_or(true, std::memory_order_acquire))
+    Worker = std::thread([this]() { run(); });
 }
 
 void RPCServerTy::ServerThread::shutDown() {
-  assert(Running.load(std::memory_order_relaxed) &&
-         "Attempting to shut down a thread that is not running");
+  if (!Running.fetch_and(false, std::memory_order_release))
+    return;
   {
     std::lock_guard<decltype(Mutex)> Lock(Mutex);
-    Running.store(false, std::memory_order_release);
     CV.notify_all();
   }
   if (Worker.joinable())

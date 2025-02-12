@@ -17,6 +17,7 @@
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include <optional>
 #include <string>
 
@@ -83,9 +84,21 @@ public:
                            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   /// Run the dependency scanning tool for a given clang driver command-line,
-  /// and report the discovered dependencies to the provided consumer. If \p
-  /// ModuleName isn't empty, this function reports the dependencies of module
-  /// \p ModuleName.
+  /// and report the discovered dependencies to the provided consumer. If
+  /// TUBuffer is not nullopt, it is used as TU input for the dependency
+  /// scanning. Otherwise, the input should be included as part of the
+  /// command-line.
+  ///
+  /// \returns false if clang errors occurred (with diagnostics reported to
+  /// \c DiagConsumer), true otherwise.
+  bool computeDependencies(
+      StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+      DependencyConsumer &DepConsumer, DependencyActionController &Controller,
+      DiagnosticConsumer &DiagConsumer,
+      std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
+
+  /// Run the dependency scanning tool for a given clang driver command-line
+  /// for a specific module.
   ///
   /// \returns false if clang errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
@@ -94,13 +107,28 @@ public:
                            DependencyConsumer &DepConsumer,
                            DependencyActionController &Controller,
                            DiagnosticConsumer &DiagConsumer,
-                           std::optional<StringRef> ModuleName = std::nullopt);
+                           StringRef ModuleName);
+
+  /// Run the dependency scanning tool for a given clang driver command-line
+  /// for a specific translation unit via file system or memory buffer.
+  ///
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, success otherwise.
   llvm::Error computeDependencies(
       StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
       DependencyConsumer &Consumer, DependencyActionController &Controller,
-      std::optional<StringRef> ModuleName = std::nullopt);
+      std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
+
+  /// Run the dependency scanning tool for a given clang driver command-line
+  /// for a specific module.
+  ///
+  /// \returns A \c StringError with the diagnostic output if clang errors
+  /// occurred, success otherwise.
+  llvm::Error computeDependencies(StringRef WorkingDirectory,
+                                  const std::vector<std::string> &CommandLine,
+                                  DependencyConsumer &Consumer,
+                                  DependencyActionController &Controller,
+                                  StringRef ModuleName);
 
   bool shouldEagerLoadModules() const { return EagerLoadModules; }
 
@@ -121,6 +149,15 @@ private:
   ScanningOptimizations OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   bool EagerLoadModules;
+
+  /// Private helper functions.
+  bool scanDependencies(StringRef WorkingDirectory,
+                        const std::vector<std::string> &CommandLine,
+                        DependencyConsumer &Consumer,
+                        DependencyActionController &Controller,
+                        DiagnosticConsumer &DC,
+                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                        std::optional<StringRef> ModuleName);
 };
 
 } // end namespace dependencies

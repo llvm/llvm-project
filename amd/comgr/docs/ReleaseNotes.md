@@ -213,6 +213,8 @@ directly relying on HIP
 validate generated artifacts with command-line tools like llvm-dis,
 llvm-objdump, etc. Moving forward, most new Comgr tests should be written as
 lit tests, and tests in comgr/test should be transitioned to comgr/test-lit.
+- Removed HIP\_PATH and ROCM\_PATH environment variables. These were used for
+now-removed Comgr actions, such as \*COMPILE\_SOURCE\_TO\_FATBIN.
 
 New Targets
 -----------

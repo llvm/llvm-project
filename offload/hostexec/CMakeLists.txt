@@ -92,8 +92,7 @@ set_property(TARGET amdgpu_hostexec_services PROPERTY POSITION_INDEPENDENT_CODE 
 option(LIBOMPTARGET_BUILD_DEVICE_FORTRT "Build device fortran IO runtime to use hostexec" OFF)
 if (LIBOMPTARGET_BUILD_DEVICE_FORTRT)
  add_compile_definitions(_HOSTEXEC_BUILD_DEVICE_FORTRT)
- target_link_libraries(amdgpu_hostexec_services FortranDecimal -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
- target_link_libraries(amdgpu_hostexec_services FortranRuntime -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
+ target_link_libraries(amdgpu_hostexec_services flang_rt.runtime -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
 endif()
 
 if (LIBOMPTARGET_DEP_CUDA_FOUND)

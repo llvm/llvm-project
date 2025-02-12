@@ -54,14 +54,6 @@ bool shouldEmitVerboseLogs();
 /// Return whether the environment requests time statistics collection.
 bool needTimeStatistics();
 
-/// If environment variable ROCM_PATH is set, return the environment varaible,
-/// otherwise return the default ROCM path.
-llvm::StringRef getROCMPath();
-
-/// If environment variable HIP_PATH is set, return the environment variable,
-/// otherwise return the default HIP path.
-llvm::StringRef getHIPPath();
-
 /// If environment variable LLVM_PATH is set, return the environment variable,
 /// otherwise return the default LLVM path.
 llvm::StringRef getLLVMPath();

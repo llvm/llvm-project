@@ -29,11 +29,6 @@ struct PoisonOpLowering final : OpConversionPattern<ub::PoisonOp> {
   matchAndRewrite(ub::PoisonOp op, OpAdaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type origType = op.getType();
-    if (!origType.isIntOrIndexOrFloat())
-      return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
-        diag << "unsupported type " << origType;
-      });
-
     Type resType = getTypeConverter()->convertType(origType);
     if (!resType)
       return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {

@@ -463,4 +463,26 @@ namespace MoveAssign {
   }
   static_assert(f()== 12);
 }
+
+namespace IFD {
+  template <class T>
+  struct Optional {
+    struct {
+      union {
+        char null_state;
+        T val;
+      };
+    };
+    constexpr Optional() : null_state(){}
+  };
+
+  constexpr bool test()
+  {
+    Optional<int> opt{};
+    Optional<int> opt2{};
+    opt = opt2;
+    return true;
+  }
+  static_assert(test());
+}
 #endif

@@ -797,6 +797,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Setup the global device memory pool, if the plugin requires one.
   Error setupDeviceMemoryPool(GenericPluginTy &Plugin, DeviceImageTy &Image,
                               uint64_t PoolSize);
+
+  // Setup the RPC server for this device if needed. This may not run on some
+  // plugins like the CPU targets. By default, it will not be executed so it is
+  // up to the target to override this using the shouldSetupRPCServer function.
+  Error setupRPCServer(GenericPluginTy &Plugin, DeviceImageTy &Image);
+
   /// Synchronize the current thread with the pending operations on the
   /// __tgt_async_info structure.
   Error synchronize(__tgt_async_info *AsyncInfo);

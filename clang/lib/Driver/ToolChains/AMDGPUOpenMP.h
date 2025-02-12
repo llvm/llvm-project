@@ -70,8 +70,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUOpenMPToolChain final
 public:
   AMDGPUOpenMPToolChain(const Driver &D, const llvm::Triple &Triple,
                         const ToolChain &HostTC,
-                        const llvm::opt::ArgList &Args,
-                        const Action::OffloadKind OK);
+                        const llvm::opt::ArgList &Args);
 
   const llvm::Triple *getAuxTriple() const override {
     return &HostTC.getTriple();

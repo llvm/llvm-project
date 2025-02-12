@@ -51,7 +51,7 @@ static void printBinary(const OffloadBinary &OB, uint64_t Index) {
 }
 
 /// Print the embedded offloading contents of an ObjectFile \p O.
-void llvm::dumpOffloadBinary(const ObjectFile &O) {
+void llvm::dumpOffloadBinary(const ObjectFile &O, std::string ArchName) {
   if (!O.isELF() && !O.isCOFF()) {
     reportWarning(
         "--offloading is currently only supported for COFF and ELF targets",
@@ -67,14 +67,15 @@ void llvm::dumpOffloadBinary(const ObjectFile &O) {
   // Print out all the binaries that are contained in this buffer.
   for (uint64_t I = 0, E = Binaries.size(); I != E; ++I)
     printBinary(*Binaries[I].getBinary(), I);
+
+  dumpOffloadBundleFatBinary(O, ArchName);
 }
 
 // Given an Object file, collect all Bundles of FatBin Binaries
 // and dump them into Code Object files
 // if -d is specified, disassemble the Code Object Files
 // if -arch=-name is specified, only dump the Entries that match the target arch
-void llvm::dumpOffloadBundleFatBinary(const ObjectFile &O, std::string ArchName,
-                                      bool Disassemble) {
+void llvm::dumpOffloadBundleFatBinary(const ObjectFile &O, std::string ArchName) {
   assert((O.isELF() || O.isCOFF()) && "Invalid file type");
   // Collect all Bundles and their Entries ....
   SmallVector<llvm::object::OffloadBundleFatBin> FoundBundles;
