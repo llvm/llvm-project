@@ -7,7 +7,6 @@ subroutine exponent_test(i1, i2, x4, x8)
     integer :: i1, i2, i3
     real(kind = 4) :: x4
     real(kind = 8) :: x8
-    real(kind = 16) :: x16
 
     i1 = exponent(x4)
   ! CHECK: %[[temp0:.*]] = fir.load %{{.*}} : !fir.ref<f32>

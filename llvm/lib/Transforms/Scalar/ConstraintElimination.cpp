@@ -40,7 +40,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
-#include <cmath>
 #include <optional>
 #include <string>
 
@@ -654,7 +653,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   bool IsEq = false;
   bool IsNe = false;
 
-  // Try to convert Pred to one of ULE/SLT/SLE/SLT.
+  // Try to convert Pred to one of ULE/ULT/SLE/SLT.
   switch (Pred) {
   case CmpInst::ICMP_UGT:
   case CmpInst::ICMP_UGE:

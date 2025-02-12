@@ -2776,7 +2776,7 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
         if (!FoldPackParameter)
           return TemplateDeductionResult::MiscellaneousDeductionFailure;
         if (FoldPackArgument)
-          Info.setMatchedPackOnParmToNonPackOnArg();
+          Info.setStrictPackMatch();
       }
       // Deduce template arguments from the pattern.
       if (auto Result = DeduceTemplateArguments(
@@ -2972,7 +2972,7 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
         Arg, QualType(), Info.getLocation(), Param);
 
     SaveAndRestore _1(CTAI.MatchingTTP, false);
-    SaveAndRestore _2(CTAI.MatchedPackOnParmToNonPackOnArg, false);
+    SaveAndRestore _2(CTAI.StrictPackMatch, false);
     // Check the template argument, converting it as necessary.
     auto Res = S.CheckTemplateArgument(
         Param, ArgLoc, Template, Template->getLocation(),
@@ -2981,8 +2981,8 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
             ? (Arg.wasDeducedFromArrayBound() ? Sema::CTAK_DeducedFromArrayBound
                                               : Sema::CTAK_Deduced)
             : Sema::CTAK_Specified);
-    if (CTAI.MatchedPackOnParmToNonPackOnArg)
-      Info.setMatchedPackOnParmToNonPackOnArg();
+    if (CTAI.StrictPackMatch)
+      Info.setStrictPackMatch();
     return Res;
   };
 
@@ -3177,7 +3177,7 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
 
     SaveAndRestore _1(CTAI.PartialOrdering, false);
     SaveAndRestore _2(CTAI.MatchingTTP, false);
-    SaveAndRestore _3(CTAI.MatchedPackOnParmToNonPackOnArg, false);
+    SaveAndRestore _3(CTAI.StrictPackMatch, false);
     // Check whether we can actually use the default argument.
     if (S.CheckTemplateArgument(
             Param, DefArg, TD, TD->getLocation(), TD->getSourceRange().getEnd(),
@@ -3341,8 +3341,6 @@ FinishTemplateArgumentDeduction(
     return ConstraintsNotSatisfied
                ? TemplateDeductionResult::ConstraintsNotSatisfied
                : TemplateDeductionResult::SubstitutionFailure;
-  if (InstCTAI.MatchedPackOnParmToNonPackOnArg)
-    Info.setMatchedPackOnParmToNonPackOnArg();
 
   TemplateParameterList *TemplateParams = Template->getTemplateParameters();
   for (unsigned I = 0, E = TemplateParams->size(); I != E; ++I) {
@@ -4074,22 +4072,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   if (FunctionTemplate->getFriendObjectKind())
     Owner = FunctionTemplate->getLexicalDeclContext();
   FunctionDecl *FD = FunctionTemplate->getTemplatedDecl();
-  // additional check for inline friend,
-  // ```
-  //   template <class F1> int foo(F1 X);
-  //   template <int A1> struct A {
-  //     template <class F1> friend int foo(F1 X) { return A1; }
-  //   };
-  //   template struct A<1>;
-  //   int a = foo(1.0);
-  // ```
-  const FunctionDecl *FDFriend;
-  if (FD->getFriendObjectKind() == Decl::FriendObjectKind::FOK_None &&
-      FD->isDefined(FDFriend, /*CheckForPendingFriendDefinition*/ true) &&
-      FDFriend->getFriendObjectKind() != Decl::FriendObjectKind::FOK_None) {
-    FD = const_cast<FunctionDecl *>(FDFriend);
-    Owner = FD->getLexicalDeclContext();
-  }
+
   MultiLevelTemplateArgumentList SubstArgs(
       FunctionTemplate, CanonicalDeducedArgumentList->asArray(),
       /*Final=*/false);
@@ -6514,7 +6497,7 @@ bool Sema::isMoreSpecializedThanPrimary(
 bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
     TemplateParameterList *P, TemplateDecl *PArg, TemplateDecl *AArg,
     const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
-    bool PartialOrdering, bool *MatchedPackOnParmToNonPackOnArg) {
+    bool PartialOrdering, bool *StrictPackMatch) {
   // C++1z [temp.arg.template]p4: (DR 150)
   //   A template template-parameter P is at least as specialized as a
   //   template template-argument A if, given the following rewrite to two
@@ -6572,8 +6555,8 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
                                   /*ConstraintsNotSatisfied=*/nullptr))
       return false;
     PArgs = std::move(CTAI.SugaredConverted);
-    if (MatchedPackOnParmToNonPackOnArg)
-      *MatchedPackOnParmToNonPackOnArg |= CTAI.MatchedPackOnParmToNonPackOnArg;
+    if (StrictPackMatch)
+      *StrictPackMatch |= CTAI.StrictPackMatch;
   }
 
   // Determine whether P1 is at least as specialized as P2.
@@ -6598,9 +6581,8 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
       PartialOrdering ? PackFold::ArgumentToParameter : PackFold::Both,
       /*HasDeducedAnyParam=*/nullptr)) {
   case clang::TemplateDeductionResult::Success:
-    if (MatchedPackOnParmToNonPackOnArg &&
-        Info.hasMatchedPackOnParmToNonPackOnArg())
-      *MatchedPackOnParmToNonPackOnArg = true;
+    if (StrictPackMatch && Info.hasStrictPackMatch())
+      *StrictPackMatch = true;
     break;
 
   case TemplateDeductionResult::MiscellaneousDeductionFailure:

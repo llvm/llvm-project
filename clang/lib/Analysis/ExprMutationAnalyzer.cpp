@@ -806,17 +806,15 @@ FunctionParmMutationAnalyzer::FunctionParmMutationAnalyzer(
 
 const Stmt *
 FunctionParmMutationAnalyzer::findMutation(const ParmVarDecl *Parm) {
-  const auto Memoized = Results.find(Parm);
-  if (Memoized != Results.end())
-    return Memoized->second;
+  auto [Place, Inserted] = Results.try_emplace(Parm);
+  if (!Inserted)
+    return Place->second;
+
   // To handle call A -> call B -> call A. Assume parameters of A is not mutated
   // before analyzing parameters of A. Then when analyzing the second "call A",
   // FunctionParmMutationAnalyzer can use this memoized value to avoid infinite
   // recursion.
-  Results[Parm] = nullptr;
-  if (const Stmt *S = BodyAnalyzer.findMutation(Parm))
-    return Results[Parm] = S;
-  return Results[Parm];
+  return Place->second = BodyAnalyzer.findMutation(Parm);
 }
 
 } // namespace clang

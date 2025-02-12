@@ -319,6 +319,7 @@ def OpenACCInitConstruct : StmtNode<OpenACCConstructStmt>;
 def OpenACCShutdownConstruct : StmtNode<OpenACCConstructStmt>;
 def OpenACCSetConstruct : StmtNode<OpenACCConstructStmt>;
 def OpenACCUpdateConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCAtomicConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
 
 // OpenACC Additional Expressions.
 def OpenACCAsteriskSizeExpr : StmtNode<Expr>;

@@ -17,7 +17,6 @@
 #include "InterpState.h"
 #include "PrimType.h"
 #include "Source.h"
-#include "llvm/Support/Error.h"
 
 namespace clang {
 namespace interp {
@@ -41,8 +40,6 @@ public:
 
   /// Clean up all resources.
   void cleanup();
-
-  InterpState &getState() { return S; }
 
 protected:
   EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);

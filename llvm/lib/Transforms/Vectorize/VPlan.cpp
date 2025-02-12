@@ -19,6 +19,7 @@
 #include "VPlan.h"
 #include "LoopVectorizationPlanner.h"
 #include "VPlanCFG.h"
+#include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
@@ -400,8 +401,8 @@ void VPTransformState::packScalarIntoVectorValue(VPValue *Def,
   set(Def, VectorValue);
 }
 
-BasicBlock *
-VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
+BasicBlock *VPBasicBlock::createEmptyBasicBlock(VPTransformState &State) {
+  auto &CFG = State.CFG;
   // BB stands for IR BasicBlocks. VPBB stands for VPlan VPBasicBlocks.
   // Pred stands for Predessor. Prev stands for Previous - last visited/created.
   BasicBlock *PrevBB = CFG.PrevBB;
@@ -412,7 +413,8 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   return NewBB;
 }
 
-void VPBasicBlock::connectToPredecessors(VPTransformState::CFGState &CFG) {
+void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
+  auto &CFG = State.CFG;
   BasicBlock *NewBB = CFG.VPBB2IRBB[this];
   // Hook up the new basic block to its predecessors.
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
@@ -467,7 +469,7 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
         "other blocks must be terminated by a branch");
   }
 
-  connectToPredecessors(State->CFG);
+  connectToPredecessors(*State);
 }
 
 VPIRBasicBlock *VPIRBasicBlock::clone() {
@@ -494,7 +496,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     //  * the exit of a replicate region.
     State->CFG.VPBB2IRBB[this] = NewBB;
   } else {
-    NewBB = createEmptyBasicBlock(State->CFG);
+    NewBB = createEmptyBasicBlock(*State);
 
     State->Builder.SetInsertPoint(NewBB);
     // Temporarily terminate with unreachable until CFG is rewired.
@@ -514,7 +516,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
 
     State->CFG.PrevBB = NewBB;
     State->CFG.VPBB2IRBB[this] = NewBB;
-    connectToPredecessors(State->CFG);
+    connectToPredecessors(*State);
   }
 
   // 2. Fill the IR basic block with IR instructions.
@@ -623,6 +625,11 @@ bool VPBasicBlock::isExiting() const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPBlockBase::print(raw_ostream &O) const {
+  VPSlotTracker SlotTracker(getPlan());
+  print(O, "", SlotTracker);
+}
+
 void VPBlockBase::printSuccessors(raw_ostream &O, const Twine &Indent) const {
   if (getSuccessors().empty()) {
     O << Indent << "No successors\n";
@@ -1470,58 +1477,6 @@ void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   });
 }
 #endif
-
-void VPInterleavedAccessInfo::visitRegion(VPRegionBlock *Region,
-                                          Old2NewTy &Old2New,
-                                          InterleavedAccessInfo &IAI) {
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
-      RPOT(Region->getEntry());
-  for (VPBlockBase *Base : RPOT) {
-    visitBlock(Base, Old2New, IAI);
-  }
-}
-
-void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
-                                         InterleavedAccessInfo &IAI) {
-  if (VPBasicBlock *VPBB = dyn_cast<VPBasicBlock>(Block)) {
-    for (VPRecipeBase &VPI : *VPBB) {
-      if (isa<VPWidenPHIRecipe>(&VPI))
-        continue;
-      assert(isa<VPInstruction>(&VPI) && "Can only handle VPInstructions");
-      auto *VPInst = cast<VPInstruction>(&VPI);
-
-      auto *Inst = dyn_cast_or_null<Instruction>(VPInst->getUnderlyingValue());
-      if (!Inst)
-        continue;
-      auto *IG = IAI.getInterleaveGroup(Inst);
-      if (!IG)
-        continue;
-
-      auto NewIGIter = Old2New.find(IG);
-      if (NewIGIter == Old2New.end())
-        Old2New[IG] = new InterleaveGroup<VPInstruction>(
-            IG->getFactor(), IG->isReverse(), IG->getAlign());
-
-      if (Inst == IG->getInsertPos())
-        Old2New[IG]->setInsertPos(VPInst);
-
-      InterleaveGroupMap[VPInst] = Old2New[IG];
-      InterleaveGroupMap[VPInst]->insertMember(
-          VPInst, IG->getIndex(Inst),
-          Align(IG->isReverse() ? (-1) * int(IG->getFactor())
-                                : IG->getFactor()));
-    }
-  } else if (VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block))
-    visitRegion(Region, Old2New, IAI);
-  else
-    llvm_unreachable("Unsupported kind of VPBlock.");
-}
-
-VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
-                                                 InterleavedAccessInfo &IAI) {
-  Old2NewTy Old2New;
-  visitRegion(Plan.getVectorLoopRegion(), Old2New, IAI);
-}
 
 void VPSlotTracker::assignName(const VPValue *V) {
   assert(!VPValue2Name.contains(V) && "VPValue already has a name!");

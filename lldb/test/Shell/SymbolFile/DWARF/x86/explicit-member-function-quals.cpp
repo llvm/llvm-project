@@ -9,9 +9,9 @@
 // CHECK:      (lldb) type lookup Foo
 // CHECK-NEXT: struct Foo {
 // CHECK-NEXT:      void Method(Foo);
-// CHECK-NEXT:      void cMethod(Foo const&);
-// CHECK-NEXT:      void vMethod(Foo volatile&);
-// CHECK-NEXT:      void cvMethod(const Foo volatile&) const volatile;
+// CHECK-NEXT:      void cMethod(const Foo &) const;
+// CHECK-NEXT:      void vMethod(volatile Foo &) volatile;
+// CHECK-NEXT:      void cvMethod(const volatile Foo &) const volatile;
 // CHECK-NEXT: }
 
 struct Foo {

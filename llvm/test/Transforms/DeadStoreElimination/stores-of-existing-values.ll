@@ -752,7 +752,6 @@ define void @memset_different_attributes_1(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[PTR:%.*]], i8 0, i64 20, i1 false)
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr dereferenceable(20) [[PTR]], i8 0, i64 20, i1 false)
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
@@ -773,7 +772,6 @@ define void @memset_different_attributes_2(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr dereferenceable(20) [[PTR:%.*]], i8 0, i64 20, i1 false)
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[PTR]], i8 0, i64 20, i1 false)
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void

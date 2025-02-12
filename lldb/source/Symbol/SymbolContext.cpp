@@ -351,8 +351,8 @@ bool SymbolContext::GetAddressRange(uint32_t scope, uint32_t range_idx,
   }
 
   if ((scope & eSymbolContextFunction) && (function != nullptr)) {
-    if (range_idx == 0) {
-      range = function->GetAddressRange();
+    if (range_idx < function->GetAddressRanges().size()) {
+      range = function->GetAddressRanges()[range_idx];
       return true;
     }
   }
@@ -368,6 +368,16 @@ bool SymbolContext::GetAddressRange(uint32_t scope, uint32_t range_idx,
   }
   range.Clear();
   return false;
+}
+
+Address SymbolContext::GetFunctionOrSymbolAddress() const {
+  if (function)
+    return function->GetAddress();
+
+  if (symbol)
+    return symbol->GetAddress();
+
+  return Address();
 }
 
 LanguageType SymbolContext::GetLanguage() const {

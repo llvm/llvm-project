@@ -21,6 +21,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_WITH_Z3
   PPC_LINUX_DEFAULT_IEEELONGDOUBLE
   LLVM_TOOL_LLVM_DRIVER_BUILD
+  LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   )
 
 configure_lit_site_cfg(
@@ -101,6 +102,15 @@ if(CLANG_BUILD_EXAMPLES AND CLANG_PLUGIN_SUPPORT)
     LLVMPrintFunctionNames
     )
 endif ()
+
+if(LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+  list(APPEND CLANG_TEST_DEPS
+    spirv-dis
+    spirv-val
+    spirv-as
+    spirv-link
+    )
+endif()    
 
 set(CLANG_TEST_PARAMS
   USE_Z3_SOLVER=0

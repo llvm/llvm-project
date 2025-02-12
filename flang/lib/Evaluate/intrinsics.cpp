@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/intrinsics.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/check-expression.h"
@@ -19,6 +18,7 @@
 #include "flang/Evaluate/type.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cmath>
@@ -2036,11 +2036,16 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       if (!sameArg) {
         sameArg = arg;
       }
-      // Check both ways so that a CLASS(*) actuals to
-      // MOVE_ALLOC and EOSHIFT both work.
       auto sameType{sameArg->GetType().value()};
-      argOk = sameType.IsTkLenCompatibleWith(*type) ||
-          type->IsTkLenCompatibleWith(sameType);
+      if (name == "move_alloc"s) {
+        // second argument can be more general
+        argOk = type->IsTkLenCompatibleWith(sameType);
+      } else if (name == "merge"s) {
+        argOk = type->IsTkLenCompatibleWith(sameType) &&
+            sameType.IsTkLenCompatibleWith(*type);
+      } else {
+        argOk = sameType.IsTkLenCompatibleWith(*type);
+      }
     } break;
     case KindCode::sameKind:
       if (!sameArg) {
@@ -2364,7 +2369,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       if (kindArg) {
         if (auto *expr{kindArg->UnwrapExpr()}) {
           CHECK(expr->Rank() == 0);
-          if (auto code{ToInt64(*expr)}) {
+          if (auto code{ToInt64(Fold(context, common::Clone(*expr)))}) {
             if (context.targetCharacteristics().IsTypeEnabled(
                     *category, *code)) {
               if (*category == TypeCategory::Character) { // ACHAR & CHAR
@@ -2376,9 +2381,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             }
           }
         }
-        messages.Say("'kind=' argument must be a constant scalar integer "
-                     "whose value is a supported kind for the "
-                     "intrinsic result type"_err_en_US);
+        messages.Say(
+            "'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type"_err_en_US);
         // use default kind below for error recovery
       } else if (kindDummyArg->flags.test(ArgFlag::defaultsToSameKind)) {
         CHECK(sameArg);
