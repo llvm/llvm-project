@@ -12,16 +12,16 @@ typedef int *S[2];
 restrict S y; // expected-warning {{'restrict' qualifier on an array of pointers is a C23 extension}}
 
 // int128_t is available.
-int a(void) {
+void a(void) {
   __int128_t s;
   __uint128_t t;
-} // expected-warning {{non-void function does not return a value}}
+}
 
 // but not a keyword
-int b(void) {
+void b(void) {
   int __int128_t;
   int __uint128_t;
-} // expected-warning {{non-void function does not return a value}}
+}
 
 // __int128 is a keyword
 int c(void) {
