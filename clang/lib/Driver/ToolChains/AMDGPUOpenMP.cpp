@@ -68,10 +68,17 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
     Action::OffloadKind DeviceOffloadKind) const {
   DerivedArgList *DAL =
       HostTC.TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+
   if (!DAL)
     DAL = new DerivedArgList(Args.getBaseArgs());
 
   const OptTable &Opts = getDriver().getOpts();
+
+  // Skip sanitize options passed from the HostTC. Claim them early.
+  // The decision to sanitize device code is computed only by
+  // 'shouldSkipSanitizeOption'.
+  if (DAL->hasArg(options::OPT_fsanitize_EQ))
+    DAL->claimAllArgs(options::OPT_fsanitize_EQ);
 
   for (Arg *A : Args)
     if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
