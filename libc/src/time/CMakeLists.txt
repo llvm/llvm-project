@@ -89,7 +89,6 @@ add_entrypoint_object(
     .time_constants
     libc.hdr.types.time_t
     libc.include.time
-    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
