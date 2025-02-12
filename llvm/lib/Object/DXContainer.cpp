@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/DXContainer.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
@@ -259,7 +261,8 @@ Error DirectX::RootSignature::parse(StringRef Data) {
   Current += sizeof(uint32_t);
 
   if (!dxbc::RootSignatureValidations::isValidVersion(VValue))
-    return make_error<GenericBinaryError>("Invalid Root Signature Version");
+    return validationFailed("unsupported root signature version read: " +
+                            llvm::Twine(VValue));
   Version = VValue;
 
   NumParameters =
@@ -283,7 +286,8 @@ Error DirectX::RootSignature::parse(StringRef Data) {
   Current += sizeof(uint32_t);
 
   if (!dxbc::RootSignatureValidations::isValidRootFlag(FValue))
-    return make_error<GenericBinaryError>("Invalid Root Signature flag");
+    return validationFailed("unsupported root signature flag value read: " +
+                            llvm::Twine(FValue));
   Flags = FValue;
 
   return Error::success();
