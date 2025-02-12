@@ -1456,6 +1456,9 @@ enum NodeType {
   // element type of Accumulator before multiplying their results.
   // This result is concatenated to the Accumulator, and this is then reduced,
   // using addition, to the result type.
+  // The output is only expected to either be given to another partial reduction
+  // operation or an equivalent vector reduce operation, so the order in which
+  // the elements are reduced is deliberately not specified.
   // Input1 and Input2 must be the same type. Accumulator and the output must be
   // the same type.
   // The number of elements in Input1 and Input2 must be a positive integer

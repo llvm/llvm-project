@@ -1272,3 +1272,89 @@ entry:
   %partial.reduce = tail call <vscale x 2 x i64> @llvm.experimental.vector.partial.reduce.add.nxv2i64.nxv8i64(<vscale x 2 x i64> %acc, <vscale x 8 x i64> %mult)
   ret <vscale x 2 x i64> %partial.reduce
 }
+
+define <vscale x 2 x i16> @udot_nxv8i8_promote (<vscale x 2 x i16> %acc, <vscale x 8 x i8> %a, <vscale x 8 x i8> %b){
+; CHECK-LABEL: udot_nxv8i8_promote:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-NEXT:    and z2.h, z2.h, #0xff
+; CHECK-NEXT:    mul z1.h, z1.h, z2.h
+; CHECK-NEXT:    uunpklo z2.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    uunpklo z3.d, z2.s
+; CHECK-NEXT:    uunpklo z4.d, z1.s
+; CHECK-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    add z0.d, z0.d, z3.d
+; CHECK-NEXT:    add z2.d, z2.d, z4.d
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    add z0.d, z2.d, z0.d
+; CHECK-NEXT:    ret
+;
+; CHECK-NEWLOWERING-LABEL: udot_nxv8i8_promote:
+; CHECK-NEWLOWERING:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-NEWLOWERING-NEXT:    and z2.h, z2.h, #0xff
+; CHECK-NEWLOWERING-NEXT:    mul z1.h, z1.h, z2.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z2.s, z1.h
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z3.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z4.d, z1.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z3.d
+; CHECK-NEWLOWERING-NEXT:    add z2.d, z2.d, z4.d
+; CHECK-NEWLOWERING-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEWLOWERING-NEXT:    add z0.d, z2.d, z0.d
+; CHECK-NEWLOWERING-NEXT:    ret
+entry:
+  %a.wide = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
+  %b.wide = zext <vscale x 8 x i8> %b to <vscale x 8 x i16>
+  %mult = mul nuw nsw <vscale x 8 x i16> %a.wide, %b.wide
+  %partial.reduce = tail call <vscale x 2 x i16> @llvm.experimental.vector.partial.reduce.add.nxv2i16.nxv8i16(<vscale x 2 x i16> %acc, <vscale x 8 x i16> %mult)
+  ret <vscale x 2 x i16> %partial.reduce
+}
+
+define <vscale x 2 x i16> @sdot_nxv8i8_promote (<vscale x 2 x i16> %acc, <vscale x 8 x i8> %a, <vscale x 8 x i8> %b){
+; CHECK-LABEL: sdot_nxv8i8_promote:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
+; CHECK-NEXT:    sxtb z2.h, p0/m, z2.h
+; CHECK-NEXT:    mul z1.h, z1.h, z2.h
+; CHECK-NEXT:    uunpklo z2.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    uunpklo z3.d, z2.s
+; CHECK-NEXT:    uunpklo z4.d, z1.s
+; CHECK-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    add z0.d, z0.d, z3.d
+; CHECK-NEXT:    add z2.d, z2.d, z4.d
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    add z0.d, z2.d, z0.d
+; CHECK-NEXT:    ret
+;
+; CHECK-NEWLOWERING-LABEL: sdot_nxv8i8_promote:
+; CHECK-NEWLOWERING:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-NEXT:    ptrue p0.h
+; CHECK-NEWLOWERING-NEXT:    sxtb z1.h, p0/m, z1.h
+; CHECK-NEWLOWERING-NEXT:    sxtb z2.h, p0/m, z2.h
+; CHECK-NEWLOWERING-NEXT:    mul z1.h, z1.h, z2.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z2.s, z1.h
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z3.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z4.d, z1.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z3.d
+; CHECK-NEWLOWERING-NEXT:    add z2.d, z2.d, z4.d
+; CHECK-NEWLOWERING-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEWLOWERING-NEXT:    add z0.d, z2.d, z0.d
+; CHECK-NEWLOWERING-NEXT:    ret
+entry:
+  %a.wide = sext <vscale x 8 x i8> %a to <vscale x 8 x i16>
+  %b.wide = sext <vscale x 8 x i8> %b to <vscale x 8 x i16>
+  %mult = mul nuw nsw <vscale x 8 x i16> %a.wide, %b.wide
+  %partial.reduce = tail call <vscale x 2 x i16> @llvm.experimental.vector.partial.reduce.add.nxv2i16.nxv8i16(<vscale x 2 x i16> %acc, <vscale x 8 x i16> %mult)
+  ret <vscale x 2 x i16> %partial.reduce
+}

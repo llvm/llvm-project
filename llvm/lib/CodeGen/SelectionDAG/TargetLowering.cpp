@@ -11897,46 +11897,41 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
   SDValue Acc = N->getOperand(0);
   SDValue MulLHS = N->getOperand(1);
   SDValue MulRHS = N->getOperand(2);
-  EVT ReducedTy = Acc.getValueType();
-  EVT FullTy = MulLHS.getValueType();
+  EVT AccVT = Acc.getValueType();
+  EVT MulOpVT = MulLHS.getValueType();
 
-  EVT NewVT =
-      EVT::getVectorVT(*DAG.getContext(), ReducedTy.getVectorElementType(),
-                       FullTy.getVectorElementCount());
+  EVT ExtMulOpVT =
+      EVT::getVectorVT(*DAG.getContext(), AccVT.getVectorElementType(),
+                       MulOpVT.getVectorElementCount());
   unsigned ExtOpc = N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA
                         ? ISD::SIGN_EXTEND
                         : ISD::ZERO_EXTEND;
-  EVT MulLHSVT = MulLHS.getValueType();
-  assert(MulLHSVT == MulRHS.getValueType() &&
-         "The second and third operands of a PARTIAL_REDUCE_MLA node must have "
-         "the same value type!");
-  EVT ExtVT = MulLHSVT.changeVectorElementType(
-      Acc.getValueType().getVectorElementType());
-  if (ExtVT != FullTy) {
-    MulLHS = DAG.getNode(ExtOpc, DL, ExtVT, MulLHS);
-    MulRHS = DAG.getNode(ExtOpc, DL, ExtVT, MulRHS);
+
+  if (ExtMulOpVT != MulOpVT) {
+    MulLHS = DAG.getNode(ExtOpc, DL, ExtMulOpVT, MulLHS);
+    MulRHS = DAG.getNode(ExtOpc, DL, ExtMulOpVT, MulRHS);
   }
   SDValue Input = MulLHS;
   APInt ConstantOne;
   if (!ISD::isConstantSplatVector(MulRHS.getNode(), ConstantOne) ||
       !ConstantOne.isOne())
-    Input = DAG.getNode(ISD::MUL, DL, NewVT, MulLHS, MulRHS);
+    Input = DAG.getNode(ISD::MUL, DL, ExtMulOpVT, MulLHS, MulRHS);
 
-  unsigned Stride = ReducedTy.getVectorMinNumElements();
-  unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
+  unsigned Stride = AccVT.getVectorMinNumElements();
+  unsigned ScaleFactor = MulOpVT.getVectorMinNumElements() / Stride;
 
   // Collect all of the subvectors
   std::deque<SDValue> Subvectors = {Acc};
   for (unsigned I = 0; I < ScaleFactor; I++) {
     auto SourceIndex = DAG.getVectorIdxConstant(I * Stride, DL);
-    Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy,
-                                     {Input, SourceIndex}));
+    Subvectors.push_back(
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, AccVT, {Input, SourceIndex}));
   }
 
   // Flatten the subvector tree
   while (Subvectors.size() > 1) {
     Subvectors.push_back(
-        DAG.getNode(ISD::ADD, DL, ReducedTy, {Subvectors[0], Subvectors[1]}));
+        DAG.getNode(ISD::ADD, DL, AccVT, {Subvectors[0], Subvectors[1]}));
     Subvectors.pop_front();
     Subvectors.pop_front();
   }

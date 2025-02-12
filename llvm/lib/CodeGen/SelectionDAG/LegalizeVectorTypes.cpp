@@ -1375,7 +1375,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
-    SplitVecRes_PARTIAL_REDUCE_MLA(N);
+    SplitVecRes_PARTIAL_REDUCE_MLA(N, Lo, Hi);
     break;
   }
 
@@ -3186,9 +3186,11 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
   std::tie(Lo, Hi) = DAG.SplitVector(Load, DL);
 }
 
-void DAGTypeLegalizer::SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
-  SDValue Res = TLI.expandPartialReduceMLA(N, DAG);
-  ReplaceValueWith(SDValue(N, 0), Res);
+void DAGTypeLegalizer::SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N, SDValue &Lo,
+                                                      SDValue &Hi) {
+  SDLoc DL(N);
+  SDValue Expanded = TLI.expandPartialReduceMLA(N, DAG);
+  std::tie(Lo, Hi) = DAG.SplitVector(Expanded, DL);
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
@@ -4449,9 +4451,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
-  SDValue Res = TLI.expandPartialReduceMLA(N, DAG);
-  ReplaceValueWith(SDValue(N, 0), Res);
-  return SDValue();
+  return TLI.expandPartialReduceMLA(N, DAG);
 }
 
 //===----------------------------------------------------------------------===//
