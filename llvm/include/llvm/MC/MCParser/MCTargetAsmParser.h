@@ -211,9 +211,6 @@ public:
 
   constexpr DiagnosticPredicate(PredicateTy T) : Predicate(T) {}
 
-  DiagnosticPredicate& operator=(const DiagnosticPredicate &) = default;
-  DiagnosticPredicate(const DiagnosticPredicate &) = default;
-
   explicit constexpr DiagnosticPredicate(bool Matches)
       : Predicate(Matches ? Match : NearMatch) {}
 
