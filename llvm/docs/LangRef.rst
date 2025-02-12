@@ -20252,7 +20252,7 @@ of the result's type, while maintaining the same element type.
 Semantics:
 """"""""""
 
-Other than the reduction operator (e.g. add) the way in which the concatinated
+Other than the reduction operator (e.g. add) the way in which the concatenated
 arguments is reduced is entirely unspecified. By their nature these intrinsics
 are not expected to be useful in isolation but instead implement the first phase
 of an overall reduction operation.
@@ -20261,8 +20261,8 @@ The typical use case is loop vectorization where reductions are split into an
 in-loop phase, where maintaining an unordered vector result is important for
 performance, and an out-of-loop phase to calculate the final scalar result.
 
-By not introducing any new ordering constraints these intrinsics maximize the
-abilitity to utilise a target's accumulation instructions.
+By avoiding the introduction of new ordering constraints, these intrinsics
+enhance the ability to leverage a target's accumulation instructions.
 
 '``llvm.experimental.vector.histogram.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
