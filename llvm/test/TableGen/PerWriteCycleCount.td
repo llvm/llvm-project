@@ -1,4 +1,5 @@
 // RUN: llvm-tblgen -gen-subtarget -I %p/../../include %s 2>&1 | FileCheck %s
+// RUN: not llvm-tblgen -gen-subtarget -I %p/../../include -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
 
 // Make sure that ReadAdvance entries with multiple writes are correctly
 // handled.
@@ -18,6 +19,7 @@ let CompleteModel = 0 in {
 }
 
 def Read_D : SchedRead;
+def Read_E : SchedRead;
 
 // CHECK: extern const llvm::MCReadAdvanceEntry MyTargetReadAdvanceTable[] = {
 // CHECK-NEXT:  {0,  0,  0}, // Invalid
@@ -36,6 +38,11 @@ let SchedModel = SchedModel_A in {
   def : InstRW<[Write_C, Read_D], (instrs Inst_C)>;
 
   def : ReadAdvance<Read_D, 2, [Write_A, Write_B, Write_C], [-1, 1]>;
+
+#ifdef ERROR1
+// ERROR1: error: assertion failed: cannot have more `tunables' than `writes'
+  def : ReadAdvance<Read_E, 2, [Write_A, Write_B, Write_C], [1, 2, 3, 4]>;
+#endif
 }
 
 def ProcessorA: ProcessorModel<"ProcessorA", SchedModel_A, []>;

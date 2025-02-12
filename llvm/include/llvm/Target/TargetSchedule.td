@@ -323,6 +323,8 @@ class SchedWriteRes<list<ProcResourceKind> resources> : SchedWrite,
 // SchedModel ties these resources to a processor.
 class ProcReadAdvance<int cycles, list<SchedWrite> writes = [],
                       list<int> tunables = []> {
+  assert !le(!size(tunables), !size(writes)),
+         "cannot have more `tunables' than `writes'";
   int Cycles = cycles;
   list<SchedWrite> ValidWrites = writes;
   list<int> CycleTunables = tunables;
