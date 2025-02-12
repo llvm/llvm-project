@@ -4149,8 +4149,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // by masking.
   // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
   bool ContainsScalableVF = MaxFactors.ScalableVF.isNonZero();
-  setTailFoldingStyles(ContainsScalableVF,
-                       !MaxPowerOf2RuntimeVF.has_value(), UserIC);
+  setTailFoldingStyles(ContainsScalableVF, !MaxPowerOf2RuntimeVF.has_value(),
+                       UserIC);
   if (foldTailByMasking()) {
     if (getTailFoldingStyle() == TailFoldingStyle::DataWithEVL) {
       LLVM_DEBUG(
