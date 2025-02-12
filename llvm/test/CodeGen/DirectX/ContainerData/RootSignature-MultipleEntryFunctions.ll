@@ -1,9 +1,9 @@
-; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s
+; RUN: opt -passes='print<dxil-root-signature>' %s -S -o - 2>&1 | FileCheck %s
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
 
-define void @main() {
+define void @main() #0 {
 entry:
   ret void
 }
@@ -24,12 +24,8 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 !7 = !{ !"RootFlags", i32 2 } ; 1 = allow_input_assembler_input_layout
 
 
-; CHECK:  - Name:            RTS0
-; CHECK-NEXT:    Size:            24
-; CHECK-NEXT:    RootSignature:
-; CHECK-NEXT:      Version:         2
-; CHECK-NEXT:      NumParameters:   0
-; CHECK-NEXT:      RootParametersOffset: 0
-; CHECK-NEXT:      NumStaticSamplers: 0
-; CHECK-NEXT:      StaticSamplersOffset: 0
-; CHECK-NEXT:      DenyVertexShaderRootAccess: true
+; CHECK: Root Signature Definitions
+; CHECK-NEXT: Definition for 'main':
+; CHECK-NEXT:  Flags: 0x000001:
+; CHECK-NEXT: Definition for 'anotherMain':
+; CHECK-NEXT:  Flags: 0x000002:
