@@ -9,6 +9,7 @@
 // new_handler.
 //===----------------------------------------------------------------------===//
 
+#include <cstdlib>
 #include <exception>
 #include <new>
 #include "abort_message.h"
