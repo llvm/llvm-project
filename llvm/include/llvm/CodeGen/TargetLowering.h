@@ -1683,21 +1683,13 @@ public:
 
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       Type *EltTy = VTy->getElementType();
-      ElementCount EC = VTy->getElementCount();
       // Lower vectors of pointers to native pointer types.
       if (auto *PTy = dyn_cast<PointerType>(EltTy)) {
         EVT PointerTy(getPointerTy(DL, PTy->getAddressSpace()));
-        // Kludge around AMDGPU's fat pointers which, while not lowered to
-        // codegen, still needed an MVT, and could only use vectors because
-        // there weren't big enough scalars. Therefore, flatten the nominal
-        // vector-of-vectors.
-        if (PointerTy.isVector()) {
-          EC = EC * PointerTy.getVectorNumElements();
-          PointerTy = PointerTy.getVectorElementType();
-        }
         EltTy = PointerTy.getTypeForEVT(Ty->getContext());
       }
-      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false), EC);
+      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false),
+                              VTy->getElementCount());
     }
 
     return EVT::getEVT(Ty, AllowUnknown);
@@ -1711,24 +1703,17 @@ public:
 
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       Type *EltTy = VTy->getElementType();
-      ElementCount EC = VTy->getElementCount();
       if (auto *PTy = dyn_cast<PointerType>(EltTy)) {
         EVT PointerTy(getPointerMemTy(DL, PTy->getAddressSpace()));
-        // Kludge around AMDGPU's fat pointers which, while not lowered to
-        // codegen, still needed an MVT, and could only use vectors because
-        // there weren't big enough scalars. Therefore, flatten the nominal
-        // vector-of-vectors.
-        if (PointerTy.isVector()) {
-          EC = EC * PointerTy.getVectorNumElements();
-          PointerTy = PointerTy.getVectorElementType();
-        }
         EltTy = PointerTy.getTypeForEVT(Ty->getContext());
       }
-      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false), EC);
+      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false),
+                              VTy->getElementCount());
     }
 
     return getValueType(DL, Ty, AllowUnknown);
   }
+
 
   /// Return the MVT corresponding to this LLVM type. See getValueType.
   MVT getSimpleValueType(const DataLayout &DL, Type *Ty,
