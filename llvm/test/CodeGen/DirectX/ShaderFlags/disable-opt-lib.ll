@@ -19,9 +19,6 @@
 ; int foo() {return 0;}
 ; EOF
 
-; ModuleID = '-'
-source_filename = "-"
-target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
 target triple = "dxilv1.3-pc-shadermodel6.3-library"
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
@@ -45,9 +42,3 @@ entry:
 
 attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "approx-func-fp-math"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { convergent noinline norecurse optnone "approx-func-fp-math"="true" "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-
-!llvm.module.flags = !{!0}
-!dx.valver = !{!1}
-
-!0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{i32 1, i32 8}

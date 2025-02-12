@@ -153,11 +153,11 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         MMDI.EntryPropertyVec[0].Entry->hasFnAttribute(
             llvm::Attribute::OptimizeNone);
     // Ensure all entry functions have the same optimization attribute
-    for (auto EF : MMDI.EntryPropertyVec)
+    for (const auto &EntryFunProps : MMDI.EntryPropertyVec)
       if (CombinedSFMask.DisableOptimizations !=
-          EF.Entry->hasFnAttribute(llvm::Attribute::OptimizeNone))
-        EF.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
-            *(EF.Entry), "Inconsistent optnone attribute "));
+          EntryFunProps.Entry->hasFnAttribute(llvm::Attribute::OptimizeNone))
+        EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
+            *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
   }
 }
 
