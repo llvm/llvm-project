@@ -527,96 +527,99 @@ LogicalResult TosaValidation::applyVariableCheck(Operation *op) {
 }
 
 bool checkErrorIfResize(Operation *op) {
-  if (auto resize = dyn_cast<tosa::ResizeOp>(op)) {
-    const Value input = resize.getInput();
-    const Value output = resize.getOutput();
-    const RankedTensorType inputType =
-        llvm::dyn_cast<RankedTensorType>(input.getType());
-    const RankedTensorType outputType =
-        llvm::dyn_cast<RankedTensorType>(output.getType());
+  auto resize = dyn_cast<tosa::ResizeOp>(op);
+  if (!resize)
+    return true;
 
-    if (!inputType || !outputType) {
-      op->emitOpError("expect ranked input/output tensor");
-      return false;
-    }
+  const Value input = resize.getInput();
+  const Value output = resize.getOutput();
+  const RankedTensorType inputType =
+      llvm::dyn_cast<RankedTensorType>(input.getType());
+  const RankedTensorType outputType =
+      llvm::dyn_cast<RankedTensorType>(output.getType());
 
-    // Ensure the image size is supported by GPU APIs and that for integer
-    // implementations, position * stride does not overflow int32_t.
-    if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
-      const SmallVector<int64_t, 4> sizes = {
-          outputType.getDimSize(1), outputType.getDimSize(2),
-          inputType.getDimSize(1), inputType.getDimSize(2)};
-      const int64_t *maxDim = llvm::max_element(sizes);
-      if (maxDim != sizes.end() && *maxDim >= 16384) {
-        op->emitOpError("expect input/output height/width dims to be < 16384, ")
-            << "got [OH, OW, IH, IW] = " << sizes;
-        return false;
-      }
-    }
+  if (!inputType || !outputType) {
+    op->emitOpError("expect ranked input/output tensor");
+    return false;
+  }
 
-    SmallVector<int64_t> scale;
-    if (!tosa::getConstShapeValue(resize.getScale().getDefiningOp(), scale)) {
-      return false;
-    }
-
-    const int64_t scaleYN = scale[0];
-    const int64_t scaleYD = scale[1];
-    const int64_t scaleXN = scale[2];
-    const int64_t scaleXD = scale[3];
-
-    // Ensure scale values don't overflow int32 accumulator
-    if (scaleYN > (1 << 11) || scaleXN > (1 << 11)) {
-      op->emitOpError("expect all scale numerator values to be <= (1 << 11), "
-                      "got scale_y_n=")
-          << scaleYN << ", scale_x_n=" << scaleXN;
-      return false;
-    }
-
-    if (scaleYD >= 16 * scaleYN || scaleXD >= 16 * scaleXN) {
-      op->emitOpError("expect a downscale ratio larger than 1/16, got y=")
-          << scaleYN << "/" << scaleYD << ", x=" << scaleXN << "/" << scaleXD;
-      return false;
-    }
-
-    SmallVector<int64_t> offset;
-    SmallVector<int64_t> border;
-    if (!tosa::getConstShapeValue(resize.getOffset().getDefiningOp(), offset) ||
-        !tosa::getConstShapeValue(resize.getBorder().getDefiningOp(), border)) {
-      return false;
-    }
-
-    const int64_t offsetY = offset[0];
-    const int64_t offsetX = offset[1];
-    const int64_t borderY = border[0];
-    const int64_t borderX = border[1];
-
-    // Set a consistent lower limit of 1/16 downscale to simplify
-    // implementations
-    if (offsetY < -scaleYN || offsetY >= 16 * scaleYN) {
-      op->emitOpError(
-          "expect offsetY / scaleYNumerator to be in range [-1, 16), got ")
-          << offsetY << "/" << scaleYN;
-      return false;
-    }
-    if (offsetX < -scaleXN || offsetX >= 16 * scaleXN) {
-      op->emitOpError(
-          "expect offsetX / scaleXNumerator to be in range [-1, 16), got ")
-          << offsetX << "/" << scaleXN;
-      return false;
-    }
-    if (borderY < -16 * scaleYN || borderY >= scaleYN) {
-      op->emitOpError(
-          "expect borderY / scaleYNumerator to be in range [-16, 1), got ")
-          << borderY << "/" << scaleYN;
-      return false;
-    }
-    if (borderX < -16 * scaleXN || borderX >= scaleXN) {
-      op->emitOpError(
-          "expect borderX / scaleXNumerator to be in range [-16, 1), got ")
-          << borderX << "/" << scaleXN;
+  // Ensure the image size is supported by GPU APIs and that for integer
+  // implementations, position * stride does not overflow int32_t.
+  if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
+    const SmallVector<int64_t, 4> sizes = {
+        outputType.getDimSize(1), outputType.getDimSize(2),
+        inputType.getDimSize(1), inputType.getDimSize(2)};
+    const int64_t *maxDim = llvm::max_element(sizes);
+    if (maxDim != sizes.end() && *maxDim >= 16384) {
+      op->emitOpError("expect input/output height/width dims to be < 16384, ")
+          << "got [OH, OW, IH, IW] = " << sizes;
       return false;
     }
   }
+
+  SmallVector<int64_t> scale;
+  if (!tosa::getConstShapeValue(resize.getScale().getDefiningOp(), scale)) {
+    return false;
+  }
+
+  const int64_t scaleYN = scale[0];
+  const int64_t scaleYD = scale[1];
+  const int64_t scaleXN = scale[2];
+  const int64_t scaleXD = scale[3];
+
+  // Ensure scale values don't overflow int32 accumulator
+  if (scaleYN > (1 << 11) || scaleXN > (1 << 11)) {
+    op->emitOpError("expect all scale numerator values to be <= (1 << 11), "
+                    "got scale_y_n=")
+        << scaleYN << ", scale_x_n=" << scaleXN;
+    return false;
+  }
+
+  if (scaleYD >= 16 * scaleYN || scaleXD >= 16 * scaleXN) {
+    op->emitOpError("expect a downscale ratio larger than 1/16, got y=")
+        << scaleYN << "/" << scaleYD << ", x=" << scaleXN << "/" << scaleXD;
+    return false;
+  }
+
+  SmallVector<int64_t> offset;
+  SmallVector<int64_t> border;
+  if (!tosa::getConstShapeValue(resize.getOffset().getDefiningOp(), offset) ||
+      !tosa::getConstShapeValue(resize.getBorder().getDefiningOp(), border)) {
+    return false;
+  }
+
+  const int64_t offsetY = offset[0];
+  const int64_t offsetX = offset[1];
+  // Set a consistent lower limit of 1/16 downscale to simplify
+  // implementations
+  if (offsetY < -scaleYN || offsetY >= 16 * scaleYN) {
+    op->emitOpError(
+        "expect offsetY / scaleYNumerator to be in range [-1, 16), got ")
+        << offsetY << "/" << scaleYN;
+    return false;
+  }
+  if (offsetX < -scaleXN || offsetX >= 16 * scaleXN) {
+    op->emitOpError(
+        "expect offsetX / scaleXNumerator to be in range [-1, 16), got ")
+        << offsetX << "/" << scaleXN;
+    return false;
+  }
+
+  const int64_t borderY = border[0];
+  const int64_t borderX = border[1];
+  if (borderY < -16 * scaleYN || borderY >= scaleYN) {
+    op->emitOpError(
+        "expect borderY / scaleYNumerator to be in range [-16, 1), got ")
+        << borderY << "/" << scaleYN;
+    return false;
+  }
+  if (borderX < -16 * scaleXN || borderX >= scaleXN) {
+    op->emitOpError(
+        "expect borderX / scaleXNumerator to be in range [-16, 1), got ")
+        << borderX << "/" << scaleXN;
+    return false;
+  }
+
   return true;
 }
 
