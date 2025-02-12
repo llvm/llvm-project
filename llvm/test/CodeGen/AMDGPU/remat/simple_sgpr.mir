@@ -1,6 +1,6 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs %s -o - -run-pass=amdgpu-hot-block-remat | FileCheck %s
 
-# Check that the scalar loads have been moved to the use
+# Check that the loads have been moved to the use
 # CHECK: bb.2:
 # CHECK: %[[#reg0:]]:sgpr_128 = S_LOAD_DWORDX4_IMM %{{.+}}, 0, 0
 # CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg0]], %{{.+}}, 0, 0

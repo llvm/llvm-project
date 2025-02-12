@@ -2676,7 +2676,7 @@ bool collectPacifist(MachineInstr &MI,
       continue;
 
     Register Reg = MO.getReg();
-    if (MO.isImplicit() && (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO))
+    if (MO.isImplicit() && (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO || Reg == AMDGPU::MODE))
       continue;
     if (Reg.isPhysical())
       return false;
@@ -2794,7 +2794,9 @@ bool tryHoldPacifist(MachineBasicBlock &MBB, LiveIntervals *LIS,
   bool bUpdated = false;
 
   // Move pacifist to its first user.
-  for (MachineInstr *MI : pacifistList) {
+  //for (MachineInstr *MI : pacifistList) {
+  for (auto it = pacifistList.rbegin(); it != pacifistList.rend(); it++) {
+    MachineInstr *MI = *it;
     MachineInstr *firstUser = findPacifistInsertPoint(*MI, MBB, MRI, AA, slotIndexes);
     if (firstUser == MI)
       continue;
