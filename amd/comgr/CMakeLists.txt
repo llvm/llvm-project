@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-include(CheckIncludeFileCXX)
-
 file(READ "VERSION.txt" comgr_ver_file)
 
 string(REGEX MATCH "#COMGR_VERSION_MAJOR\n([0-9]*)" _ ${comgr_ver_file})
