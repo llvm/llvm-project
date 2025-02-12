@@ -313,6 +313,24 @@ bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
   return !F || !ST->isSingleLaneExecution(*F);
 }
 
+unsigned GCNTTIImpl::getRegUsageForType(Type *Ty) {
+  if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
+    if (auto *PT = dyn_cast<PointerType>(VT->getElementType())) {
+      switch (PT->getAddressSpace()) {
+      // Assume that the resource parts of the vector being asked about are the
+      // same.
+      case AMDGPUAS::BUFFER_FAT_POINTER:
+        return 4 + VT->getNumElements();
+      case AMDGPUAS::BUFFER_STRIDED_POINTER:
+        return 4 + 2 * VT->getNumElements();
+      default:
+        break;
+      }
+    }
+  }
+  return BaseT::getRegUsageForType(Ty);
+}
+
 unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
   // NB: RCID is not an RCID. In fact it is 0 or 1 for scalar or vector
   // registers. See getRegisterClassForType for the implementation.

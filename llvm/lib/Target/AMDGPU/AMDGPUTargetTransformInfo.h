@@ -113,6 +113,14 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);
 
+  // Vectorization will query for the number of registers needed for
+  // <N x ptr addrspace(7/9)> and the default implementation will cause crashes,
+  // so override it here. This also lets us account for the fact that, in the
+  // context of loop vectorization (which is what uses this API), the number of
+  // registers needed for fat pointers is lower because they'll share a resource
+  // part.
+  unsigned getRegUsageForType(Type *Ty);
+
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) {
     assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
     return TTI::PSK_FastHardware;
