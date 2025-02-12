@@ -1363,6 +1363,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::v512i1, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v512i1, Custom);
   }
+  if (Subtarget.isISAFuture()) {
+    setOperationAction(ISD::LOAD, MVT::v1024i1, Custom);
+    setOperationAction(ISD::STORE, MVT::v1024i1, Custom);
+    addRegisterClass(MVT::v1024i1, &PPC::DMRRCRegClass);
+  }
 
   if (Subtarget.has64BitSupport())
     setOperationAction(ISD::PREFETCH, MVT::Other, Legal);
@@ -11766,8 +11771,12 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
   SDValue BasePtr = LN->getBasePtr();
   EVT VT = Op.getValueType();
 
-  if (VT != MVT::v256i1 && VT != MVT::v512i1)
+  if (VT != MVT::v256i1 && VT != MVT::v512i1 && VT != MVT::v1024i1)
     return Op;
+
+  // Used for dense math registers.
+  assert((VT != MVT::v1024i1 || Subtarget.isISAFuture()) &&
+         "Type unsupported for this processor");
 
   // Type v256i1 is used for pairs and v512i1 is used for accumulators.
   // Here we create 2 or 4 v16i8 loads to load the pair or accumulator value in
@@ -11796,9 +11805,36 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
     std::reverse(LoadChains.begin(), LoadChains.end());
   }
   SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
-  SDValue Value =
-      DAG.getNode(VT == MVT::v512i1 ? PPCISD::ACC_BUILD : PPCISD::PAIR_BUILD,
-                  dl, VT, Loads);
+  SDValue Value;
+  if (VT == MVT::v1024i1) {
+    SmallVector<SDValue, 4> Pairs;
+    SDValue Vsx0Idx = DAG.getTargetConstant(PPC::sub_vsx0, dl, MVT::i32);
+    SDValue Vsx1Idx = DAG.getTargetConstant(PPC::sub_vsx1, dl, MVT::i32);
+    SDValue VSRpRC = DAG.getTargetConstant(PPC::VSRpRCRegClassID, dl, MVT::i32);
+    NumVecs >>= 1;
+    for (unsigned Idx = 0; Idx < NumVecs; ++Idx) {
+      const SDValue Ops[] = {VSRpRC, Loads[Idx * 2], Vsx0Idx,
+                             Loads[Idx * 2 + 1], Vsx1Idx};
+      Pairs.push_back(SDValue(
+          DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v256i1, Ops), 0));
+    }
+    SDValue Lo(DAG.getMachineNode(PPC::DMXXINSTFDMR512, dl, MVT::v512i1,
+                                  Pairs[0], Pairs[1]),
+               0);
+    SDValue LoSub = DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32);
+    SDValue Hi(DAG.getMachineNode(PPC::DMXXINSTFDMR512_HI, dl, MVT::v512i1,
+                                  Pairs[2], Pairs[3]),
+               0);
+    SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);
+    SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
+    const SDValue Ops[] = {RC, Lo, LoSub, Hi, HiSub};
+    Value = SDValue(
+        DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Ops), 0);
+  } else {
+    Value =
+        DAG.getNode(VT == MVT::v512i1 ? PPCISD::ACC_BUILD : PPCISD::PAIR_BUILD,
+                    dl, VT, Loads);
+  }
   SDValue RetOps[] = {Value, TF};
   return DAG.getMergeValues(RetOps, dl);
 }
@@ -11810,11 +11846,16 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
   SDValue StoreChain = SN->getChain();
   SDValue BasePtr = SN->getBasePtr();
   SDValue Value = SN->getValue();
-  SDValue Value2 = SN->getValue();
   EVT StoreVT = Value.getValueType();
+  SmallVector<SDValue, 4> ValueVec;
 
-  if (StoreVT != MVT::v256i1 && StoreVT != MVT::v512i1)
+  if (StoreVT != MVT::v256i1 && StoreVT != MVT::v512i1 &&
+      StoreVT != MVT::v1024i1)
     return Op;
+
+  // Used for dense math registers.
+  assert((StoreVT != MVT::v1024i1 || Subtarget.isISAFuture()) &&
+         "Type unsupported for this processor");
 
   // Type v256i1 is used for pairs and v512i1 is used for accumulators.
   // Here we create 2 or 4 v16i8 stores to store the pair or accumulator
@@ -11832,20 +11873,43 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
       MachineSDNode *ExtNode = DAG.getMachineNode(
           PPC::DMXXEXTFDMR512, dl, ReturnTypes, Op.getOperand(1));
 
-      Value = SDValue(ExtNode, 0);
-      Value2 = SDValue(ExtNode, 1);
+      ValueVec.push_back(SDValue(ExtNode, 0));
+      ValueVec.push_back(SDValue(ExtNode, 1));
     } else
       Value = DAG.getNode(PPCISD::XXMFACC, dl, MVT::v512i1, Value);
     NumVecs = 4;
+
+  } else if (StoreVT == MVT::v1024i1) {
+    SDValue Lo(DAG.getMachineNode(
+                   TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
+                   Op.getOperand(1),
+                   DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32)),
+               0);
+    SDValue Hi(DAG.getMachineNode(
+                   TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
+                   Op.getOperand(1),
+                   DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32)),
+               0);
+    EVT ReturnTypes[] = {MVT::v256i1, MVT::v256i1};
+    MachineSDNode *ExtNode =
+        DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes, Lo);
+    ValueVec.push_back(SDValue(ExtNode, 0));
+    ValueVec.push_back(SDValue(ExtNode, 1));
+    ExtNode = DAG.getMachineNode(PPC::DMXXEXTFDMR512_HI, dl, ReturnTypes, Hi);
+    ValueVec.push_back(SDValue(ExtNode, 0));
+    ValueVec.push_back(SDValue(ExtNode, 1));
+    NumVecs = 8;
   }
   for (unsigned Idx = 0; Idx < NumVecs; ++Idx) {
     unsigned VecNum = Subtarget.isLittleEndian() ? NumVecs - 1 - Idx : Idx;
     SDValue Elt;
     if (Subtarget.isISAFuture()) {
       VecNum = Subtarget.isLittleEndian() ? 1 - (Idx % 2) : (Idx % 2);
-      Elt = DAG.getNode(PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8,
-                        Idx > 1 ? Value2 : Value,
-                        DAG.getConstant(VecNum, dl, getPointerTy(DAG.getDataLayout())));
+      unsigned Pairx =
+          Subtarget.isLittleEndian() ? (NumVecs - Idx - 1) / 2 : Idx / 2;
+      Elt = DAG.getNode(
+          PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8, ValueVec[Pairx],
+          DAG.getConstant(VecNum, dl, getPointerTy(DAG.getDataLayout())));
     } else
       Elt = DAG.getNode(PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8, Value,
                         DAG.getConstant(VecNum, dl, getPointerTy(DAG.getDataLayout())));
