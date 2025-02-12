@@ -93,7 +93,7 @@ class SPIRVEmitIntrinsics
   void eraseTodoType(Value *Op) {
     auto It = TodoType.find(Op);
     if (It != TodoType.end() && It->second) {
-      TodoType[Op] = false;
+      It->second = false;
       --TodoTypeSz;
     }
   }
