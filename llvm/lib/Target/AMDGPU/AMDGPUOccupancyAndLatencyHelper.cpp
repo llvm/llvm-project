@@ -1,22 +1,22 @@
-//===-- AMDGPUOccupancyAndLatencyHelper - Helper functions for occupancy and latency --===//
+//==- AMDGPUOccupancyAndLatencyHelper.cpp - Helpers for occupancy + latency ==//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===--------------------------------------------------------------------------------===//
+//==------------------------------------------------------------------------==//
 //
 /// \file
 /// \brief Helper functions for occupancy and latency.
 //
-//===--------------------------------------------------------------------------------===//
+//==------------------------------------------------------------------------==//
 
-#include "SIInstrInfo.h"
-#include "SIRegisterInfo.h"
+#include "AMDGPUOccupancyAndLatencyHelper.h"
 #include "AMDGPUSubtarget.h"
 #include "GCNSubtarget.h"
-#include "AMDGPUOccupancyAndLatencyHelper.h"
+#include "SIInstrInfo.h"
+#include "SIRegisterInfo.h"
 
 #include "llvm/CodeGen/MachineLoopInfo.h"
 
@@ -57,7 +57,7 @@ bool SchedScore::isBetter(const SchedScore &s) const {
 bool SchedScore::isMemBound(unsigned TargetOccupancy, unsigned ExtraOcc) const {
   unsigned gain = latencyGain(TargetOccupancy, ExtraOcc);
   // 10% is good enough.
-  if ((10*gain) >= Alu)
+  if ((10 * gain) >= Alu)
     return true;
   else
     return false;
@@ -65,7 +65,7 @@ bool SchedScore::isMemBound(unsigned TargetOccupancy, unsigned ExtraOcc) const {
 
 unsigned SchedScore::latencyGain(unsigned TgtOcc, unsigned ExtraOcc) const {
   unsigned latency = MemLatency;
-  return (latency / (TgtOcc))- (latency / (TgtOcc + ExtraOcc));
+  return (latency / (TgtOcc)) - (latency / (TgtOcc + ExtraOcc));
 }
 
 // AMDGPULatencyTracker
@@ -73,7 +73,8 @@ AMDGPULatencyTracker::AMDGPULatencyTracker(const GCNSubtarget &ST)
     : SIII(ST.getInstrInfo()), ItinerayData(ST.getInstrItineraryData()) {}
 
 void AMDGPULatencyTracker::scan(const MachineInstr &MI) {
-  if (MI.isDebugInstr()) return;
+  if (MI.isDebugInstr())
+    return;
   int latency = SIII->getInstrLatency(ItinerayData, MI);
   // If inside latency hide.
   if (!LatencyMIs.empty()) {
@@ -184,5 +185,3 @@ SchedScore CollectLatency(MachineFunction &MF, const llvm::GCNSubtarget &ST,
 }
 
 } // namespace llvm
-
-

@@ -1,4 +1,5 @@
-//===- MirSyncDependenceAnalysis.cpp - Mir Divergent Branch Dependence Calculation
+//===- MirSyncDependenceAnalysis.cpp - Mir Divergent Branch Dependence
+//Calculation
 //--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -101,15 +102,15 @@
 // loop exit and the loop header (_after_ SSA construction).
 //
 //===----------------------------------------------------------------------===//
+#include "AMDGPUMirSyncDependenceAnalysis.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
-#include "AMDGPUMirSyncDependenceAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 
 #include <stack>
 #include <unordered_set>
@@ -120,19 +121,18 @@ namespace llvm {
 
 ConstBlockSet SyncDependenceAnalysis::EmptyBlockSet;
 
-SyncDependenceAnalysis::SyncDependenceAnalysis(const MachineDominatorTree &DT,
-                                               const MachinePostDominatorTree &PDT,
-                                               const MachineLoopInfo &LI,
-                                               // AMDGPU change begin.
-                                               DivergentJoinMapTy &JoinMap
-                                               // AMDGPU change end.
+SyncDependenceAnalysis::SyncDependenceAnalysis(
+    const MachineDominatorTree &DT, const MachinePostDominatorTree &PDT,
+    const MachineLoopInfo &LI,
+    // AMDGPU change begin.
+    DivergentJoinMapTy &JoinMap
+    // AMDGPU change end.
     )
     : FuncRPOT(DT.getRoot()->getParent()), DT(DT), PDT(PDT), LI(LI),
-    // AMDGPU change begin.
+      // AMDGPU change begin.
       DivergentJoinMap(JoinMap)
-    // AMDGPU change end.
-{
-}
+// AMDGPU change end.
+{}
 
 SyncDependenceAnalysis::~SyncDependenceAnalysis() {}
 
@@ -155,19 +155,23 @@ struct DivergencePropagator {
   // if DefMap[B] ~ undef then we haven't seen B yet
   // if DefMap[B] == B then B is a join point of disjoint paths from X or B is
   // an immediate successor of X (initial value).
-  using DefiningBlockMap = std::map<const MachineBasicBlock *, const MachineBasicBlock *>;
+  using DefiningBlockMap =
+      std::map<const MachineBasicBlock *, const MachineBasicBlock *>;
   DefiningBlockMap DefMap;
 
   // all blocks with pending visits
   std::unordered_set<const MachineBasicBlock *> PendingUpdates;
 
-  DivergencePropagator(const FunctionRPOT &FuncRPOT, const MachineDominatorTree &DT,
-                       const MachinePostDominatorTree &PDT, const MachineLoopInfo &LI)
+  DivergencePropagator(const FunctionRPOT &FuncRPOT,
+                       const MachineDominatorTree &DT,
+                       const MachinePostDominatorTree &PDT,
+                       const MachineLoopInfo &LI)
       : FuncRPOT(FuncRPOT), DT(DT), PDT(PDT), LI(LI),
         JoinBlocks(new ConstBlockSet) {}
 
   // set the definition at @block and mark @block as pending for a visit
-  void addPending(const MachineBasicBlock &Block, const MachineBasicBlock &DefBlock) {
+  void addPending(const MachineBasicBlock &Block,
+                  const MachineBasicBlock &DefBlock) {
     bool WasAdded = DefMap.emplace(&Block, &DefBlock).second;
     if (WasAdded)
       PendingUpdates.insert(&Block);
@@ -190,7 +194,8 @@ struct DivergencePropagator {
 
   // process @succBlock with reaching definition @defBlock
   // the original divergent branch was in @parentLoop (if any)
-  void visitSuccessor(const MachineBasicBlock &SuccBlock, const MachineLoop *ParentLoop,
+  void visitSuccessor(const MachineBasicBlock &SuccBlock,
+                      const MachineLoop *ParentLoop,
                       const MachineBasicBlock &DefBlock) {
 
     // @succBlock is a loop exit
@@ -223,14 +228,14 @@ struct DivergencePropagator {
   // divergent exits.
   // @rootBlock is either the block containing the branch or the header of the
   // divergent loop.
-  // @nodeSuccessors is the set of successors of the node (MachineLoop or Terminator)
-  // headed by @rootBlock.
-  // @parentLoop is the parent loop of the MachineLoop or the loop that contains the
-  // Terminator.
+  // @nodeSuccessors is the set of successors of the node (MachineLoop or
+  // Terminator) headed by @rootBlock.
+  // @parentLoop is the parent loop of the MachineLoop or the loop that contains
+  // the Terminator.
   template <typename SuccessorIterable>
-  std::unique_ptr<ConstBlockSet>
-  computeJoinPoints(const MachineBasicBlock &RootBlock,
-                    SuccessorIterable NodeSuccessors, const MachineLoop *ParentLoop, const MachineBasicBlock * PdBoundBlock) {
+  std::unique_ptr<ConstBlockSet> computeJoinPoints(
+      const MachineBasicBlock &RootBlock, SuccessorIterable NodeSuccessors,
+      const MachineLoop *ParentLoop, const MachineBasicBlock *PdBoundBlock) {
     assert(JoinBlocks);
 
     // bootstrap with branch targets
@@ -250,7 +255,8 @@ struct DivergencePropagator {
     auto ItBeginRPO = FuncRPOT.begin();
 
     // skip until term (TODO RPOT won't let us start at @term directly)
-    for (; *ItBeginRPO != &RootBlock; ++ItBeginRPO) {}
+    for (; *ItBeginRPO != &RootBlock; ++ItBeginRPO) {
+    }
 
     auto ItEndRPO = FuncRPOT.end();
     assert(ItBeginRPO != ItEndRPO);
@@ -337,30 +343,26 @@ struct DivergencePropagator {
       //     |  B   C
       //     |  | / |
       //     +--L   P
-      //   
+      //
       // In this cfg, C is the RootBlock and P is C's post-dominator.
       // It will only visit L and P and then stop because it hits the
       // post dominator. Most loops do not hit this case because the
       // loop exiting block (C) will branch directly back to the loop
       // header.
-      // 
-      if (HeaderDefBlock)
-      {
-          for (const auto *ExitBlock : ReachedLoopExits) {
-            auto ItExitDef = DefMap.find(ExitBlock);
-            assert((ItExitDef != DefMap.end()) &&
-                   "no reaching def at reachable loop exit");
-            if (ItExitDef->second != HeaderDefBlock) {
-              JoinBlocks->insert(ExitBlock);
-            }
+      //
+      if (HeaderDefBlock) {
+        for (const auto *ExitBlock : ReachedLoopExits) {
+          auto ItExitDef = DefMap.find(ExitBlock);
+          assert((ItExitDef != DefMap.end()) &&
+                 "no reaching def at reachable loop exit");
+          if (ItExitDef->second != HeaderDefBlock) {
+            JoinBlocks->insert(ExitBlock);
           }
-      }
-      else
-      {
-          for (const auto *ExitBlock : ReachedLoopExits)
-          {
-              JoinBlocks->insert(ExitBlock);
-          }
+        }
+      } else {
+        for (const auto *ExitBlock : ReachedLoopExits) {
+          JoinBlocks->insert(ExitBlock);
+        }
       }
     }
 
@@ -370,12 +372,14 @@ struct DivergencePropagator {
 
 // AMDGPU change begin.
 // For all join blocks caused by divergent RootBlock, the prevs of a join block
-// which are in DefMap or the RootBlock are divergent join each other on the join block because
-// of divergent RootBlock.
-static void updateJoinMap(
-    const MachineBasicBlock *RootBlock,
-    DenseMap<const MachineBasicBlock *, SmallPtrSet<const MachineBasicBlock *, 4>> &JoinMap,
-    DivergencePropagator::DefiningBlockMap &DefMap, ConstBlockSet &JoinBlocks) {
+// which are in DefMap or the RootBlock are divergent join each other on the
+// join block because of divergent RootBlock.
+static void
+updateJoinMap(const MachineBasicBlock *RootBlock,
+              DenseMap<const MachineBasicBlock *,
+                       SmallPtrSet<const MachineBasicBlock *, 4>> &JoinMap,
+              DivergencePropagator::DefiningBlockMap &DefMap,
+              ConstBlockSet &JoinBlocks) {
   for (const MachineBasicBlock *JoinBB : JoinBlocks) {
     // makr divergent join for all pred pair which in DefMap.
     for (auto predIt = JoinBB->pred_begin(); predIt != JoinBB->pred_end();
@@ -400,7 +404,8 @@ static void updateJoinMap(
 }
 // AMDGPU change end.
 
-const ConstBlockSet &SyncDependenceAnalysis::join_blocks(const MachineLoop &MachineLoop) {
+const ConstBlockSet &
+SyncDependenceAnalysis::join_blocks(const MachineLoop &MachineLoop) {
   using LoopExitVec = SmallVector<MachineBasicBlock *, 4>;
   LoopExitVec LoopExits;
   MachineLoop.getExitBlocks(LoopExits);
@@ -415,7 +420,8 @@ const ConstBlockSet &SyncDependenceAnalysis::join_blocks(const MachineLoop &Mach
   }
 
   // dont propagte beyond the immediate post dom of the loop
-  const auto *PdNode = PDT.getNode(const_cast<MachineBasicBlock *>(MachineLoop.getHeader()));
+  const auto *PdNode =
+      PDT.getNode(const_cast<MachineBasicBlock *>(MachineLoop.getHeader()));
   const auto *IpdNode = PdNode->getIDom();
   const auto *PdBoundBlock = IpdNode ? IpdNode->getBlock() : nullptr;
   while (PdBoundBlock && MachineLoop.contains(PdBoundBlock)) {
@@ -426,15 +432,17 @@ const ConstBlockSet &SyncDependenceAnalysis::join_blocks(const MachineLoop &Mach
   // compute all join points
   DivergencePropagator Propagator{FuncRPOT, DT, PDT, LI};
   auto JoinBlocks = Propagator.computeJoinPoints<const LoopExitVec &>(
-      *MachineLoop.getHeader(), LoopExits, MachineLoop.getParentLoop(), PdBoundBlock);
+      *MachineLoop.getHeader(), LoopExits, MachineLoop.getParentLoop(),
+      PdBoundBlock);
 
   // AMDGPU change begin.
   // Save divergent join pairs.
   updateJoinMap(MachineLoop.getHeader(), DivergentJoinMap, Propagator.DefMap,
-                    *JoinBlocks.get());
+                *JoinBlocks.get());
   // AMDGPU change end.
 
-  auto ItInserted = CachedLoopExitJoins.emplace(&MachineLoop, std::move(JoinBlocks));
+  auto ItInserted =
+      CachedLoopExitJoins.emplace(&MachineLoop, std::move(JoinBlocks));
   assert(ItInserted.second);
   return *ItInserted.first->second;
 }
@@ -452,18 +460,18 @@ SyncDependenceAnalysis::join_blocks(const MachineInstr &Term) {
     return *ItCached->second;
 
   // dont propagate beyond the immediate post dominator of the branch
-  const auto *PdNode = PDT.getNode(const_cast<MachineBasicBlock *>(Term.getParent()));
+  const auto *PdNode =
+      PDT.getNode(const_cast<MachineBasicBlock *>(Term.getParent()));
   const auto *IpdNode = PdNode->getIDom();
   const auto *PdBoundBlock = IpdNode ? IpdNode->getBlock() : nullptr;
-  
 
   // compute all join points
   DivergencePropagator Propagator{FuncRPOT, DT, PDT, LI};
   const auto &TermBlock = *Term.getParent();
-  
+
   // AMDGPU CHANGE
   // Make sure the post-dominator is outside the loop for the loop header.
-  // Otherwise, we may not find all the join blocks in the loop 
+  // Otherwise, we may not find all the join blocks in the loop
   // because the search stops too early. Some join points can be reached
   // after the post-dominator!
   //
@@ -477,30 +485,30 @@ SyncDependenceAnalysis::join_blocks(const MachineInstr &Term) {
   //
   // In this cfg, A is the loop header and P is A's post-dominator.
   // The algorithm to mark join points does an Reverse Post Order walk
-  // from A and stops when it reaches the post dominator. It would not 
+  // from A and stops when it reaches the post dominator. It would not
   // mark the phi node in L as divergent even when A had a divergent branch.
   // The fix we made was to make the join point search continue all the way
   // to the loops post dominator (which is X in this example).
   //
   // NOTE: They already made this change for the loop case above, but for
-  //       a different bug apparently. See SyncDependenceAnalysis::join_blocks(MachineLoop&)
-  //   
+  //       a different bug apparently. See
+  //       SyncDependenceAnalysis::join_blocks(MachineLoop&)
+  //
   const MachineLoop *MachineLoop = LI.getLoopFor(&TermBlock);
-  if (MachineLoop && (MachineLoop->getHeader() == &TermBlock))
-  {
-      while (PdBoundBlock && MachineLoop->contains(PdBoundBlock)) {
-        IpdNode = IpdNode->getIDom();
-        PdBoundBlock = IpdNode ? IpdNode->getBlock() : nullptr;
-      }
+  if (MachineLoop && (MachineLoop->getHeader() == &TermBlock)) {
+    while (PdBoundBlock && MachineLoop->contains(PdBoundBlock)) {
+      IpdNode = IpdNode->getIDom();
+      PdBoundBlock = IpdNode ? IpdNode->getBlock() : nullptr;
+    }
   }
- 
+
   auto JoinBlocks = Propagator.computeJoinPoints(
       TermBlock, Term.getParent()->successors(), MachineLoop, PdBoundBlock);
 
   // AMDGPU change begin.
   // Save divergent join pairs.
   updateJoinMap(&TermBlock, DivergentJoinMap, Propagator.DefMap,
-                    *JoinBlocks.get());
+                *JoinBlocks.get());
   // AMDGPU change end.
 
   auto ItInserted = CachedBranchJoins.emplace(&Term, std::move(JoinBlocks));

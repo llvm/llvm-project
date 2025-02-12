@@ -1,4 +1,4 @@
-//===- AMDGPUMirDivergenceAnalysis.h -        Mir Divergence Analysis -*- C++ -*-===//
+//===- AMDGPUMirDivergenceAnalysis.h -  Mir Divergence Analysis -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,11 +14,11 @@
 
 #pragma once
 
-#include "llvm/ADT/DenseSet.h"
+#include "AMDGPUMirSyncDependenceAnalysis.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "AMDGPUMirSyncDependenceAnalysis.h"
 #include "llvm/Pass.h"
 #include <vector>
 
@@ -50,8 +50,10 @@ public:
   /// Otherwise the whole function is analyzed.
   /// \param IsLCSSAForm whether the analysis may assume that the IR in the
   /// region in in LCSSA form.
-  DivergenceAnalysis(const llvm::MachineFunction &F, const MachineLoop *RegionLoop,
-                     const MachineDominatorTree &DT, const MachinePostDominatorTree &PDT,
+  DivergenceAnalysis(const llvm::MachineFunction &F,
+                     const MachineLoop *RegionLoop,
+                     const MachineDominatorTree &DT,
+                     const MachinePostDominatorTree &PDT,
                      const MachineLoopInfo &LI, SyncDependenceAnalysis &SDA,
                      bool IsLCSSAForm,
                      // AMDGPU change begin.
@@ -98,10 +100,12 @@ private:
   bool updateTerminator(const MachineInstr &Term) const;
   bool updatePHINode(const PHINode_ &Phi) const;
   bool updateVCndMask(const MachineInstr &VCndMask) const;
-  bool isBitUniform(const MachineInstr &I,
-                    llvm::DenseMap<const MachineInstr *, bool> &Processed) const;
-  bool isBitUniform(const MachineInstr &I, const llvm::MachineOperand &UseMO,
-                    llvm::DenseMap<const MachineInstr *, bool> &Processed) const;
+  bool
+  isBitUniform(const MachineInstr &I,
+               llvm::DenseMap<const MachineInstr *, bool> &Processed) const;
+  bool
+  isBitUniform(const MachineInstr &I, const llvm::MachineOperand &UseMO,
+               llvm::DenseMap<const MachineInstr *, bool> &Processed) const;
 
   /// \brief Computes whether \p Inst is divergent based on the
   /// divergence of its operands.
@@ -136,9 +140,9 @@ private:
   }
 
   /// \brief Whether \p Val is divergent when read in \p ObservingBlock.
-  bool isTemporalDivergent(const MachineBasicBlock &ObservingBlock,
-                           const ValueTy Val,
-                           const MachineBasicBlock &incomingBlock) const; // AMDGPU change
+  bool isTemporalDivergent(
+      const MachineBasicBlock &ObservingBlock, const ValueTy Val,
+      const MachineBasicBlock &incomingBlock) const; // AMDGPU change
 
   /// \brief Whether \p Block is join divergent
   ///
@@ -207,14 +211,14 @@ private:
 
   // Set of known-uniform values.
   llvm::DenseSet<unsigned> UniformOverrides;
-  llvm::DenseSet<const llvm::MachineInstr*> UniformOverridesInsts;
+  llvm::DenseSet<const llvm::MachineInstr *> UniformOverridesInsts;
 
   // Blocks with joining divergent control from different predecessors.
   llvm::DenseSet<const MachineBasicBlock *> DivergentJoinBlocks;
 
   // Detected/marked divergent values.
   llvm::DenseSet<unsigned> DivergentValues;
-  llvm::DenseSet<const llvm::MachineInstr*> DivergentInsts;
+  llvm::DenseSet<const llvm::MachineInstr *> DivergentInsts;
 
   // Mir change for EXEC control flow.
   // Map from MBB to the exec region it belongs too.
@@ -226,16 +230,15 @@ private:
   struct ExecRegion {
     const llvm::MachineInstr *begin;
     const llvm::MachineInstr *end;
-    std::vector<const llvm::MachineBasicBlock*> blocks;
+    std::vector<const llvm::MachineBasicBlock *> blocks;
     bool bPropagated = false;
-    ExecRegion(const llvm::MachineInstr *b,
-               const llvm::MachineInstr *e)
+    ExecRegion(const llvm::MachineInstr *b, const llvm::MachineInstr *e)
         : begin(b), end(e), bPropagated(false) {}
   };
   llvm::DenseMap<const llvm::MachineBasicBlock *, ExecRegion *> ExecRegionMap;
 
   // Internal worklist for divergence propagation.
-  std::vector<const llvm::MachineInstr*> Worklist;
+  std::vector<const llvm::MachineInstr *> Worklist;
 };
 
 /// \brief Divergence analysis frontend for GPU kernels.
@@ -251,15 +254,17 @@ class MirGPUDivergenceAnalysis {
   // When A is divergent branch, B and C are divergent join at D.
   // Then DivergentJoinMap[B].count(C) > 0 and
   // DivergentJoinMap[C].count(B) > 0.
-  DivergentJoinMapTy  DivergentJoinMap;
+  DivergentJoinMapTy DivergentJoinMap;
   // AMDGPU change end
   SyncDependenceAnalysis SDA;
   DivergenceAnalysis DA;
 
 public:
   /// Runs the divergence analysis on @F, a GPU kernel
-  MirGPUDivergenceAnalysis(llvm::MachineFunction &F, const MachineDominatorTree &DT,
-                        const MachinePostDominatorTree &PDT, const MachineLoopInfo &LI);
+  MirGPUDivergenceAnalysis(llvm::MachineFunction &F,
+                           const MachineDominatorTree &DT,
+                           const MachinePostDominatorTree &PDT,
+                           const MachineLoopInfo &LI);
 
   /// Whether any divergence was detected.
   bool hasDivergence() const { return DA.hasDetectedDivergence(); }
@@ -278,4 +283,3 @@ public:
 };
 
 } // namespace llvm
-

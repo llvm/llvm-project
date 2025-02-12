@@ -1,4 +1,4 @@
-//===-- AMDGPUHotBlockRematerialize.cpp - AMDGPU Hot Block Rematerialize-------===//
+//===- AMDGPUHotBlockRematerialize.cpp - AMDGPU Hot BlockRematerialize ----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,24 +13,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
+#include "AMDGPUMIRUtils.h"
 #include "AMDGPUMirDivergenceAnalysis.h"
-#include "AMDGPUSubExpDag.h"
-#include "AMDGPUVMemDegreeDAG.h"
 #include "AMDGPUOccupancyAndLatencyHelper.h"
+#include "AMDGPUSubExpDag.h"
+#include "AMDGPUSubtarget.h"
+#include "AMDGPUVMemDegreeDAG.h"
 #include "GCNRegPressure.h"
 #include "SIInstrInfo.h"
-#include "SIRegisterInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "AMDGPUMIRUtils.h"
+#include "SIRegisterInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 
@@ -43,20 +43,24 @@
 using namespace llvm;
 
 static cl::opt<unsigned> TargetOccupancy("amdgpu-remat-target-occupancy");
-static cl::opt<bool> EnableAggressive("amdgpu-remat-enable-hot-block-remat-aggressive");
-static cl::opt<bool> EnableSubExpAggressive("amdgpu-remat-enable-sub-exp-remat-aggressive");
-static cl::opt<bool> EnableSubExpClone("amdgpu-remat-enable-sub-exp-remat-clone");
+static cl::opt<bool>
+    EnableAggressive("amdgpu-remat-enable-hot-block-remat-aggressive");
+static cl::opt<bool>
+    EnableSubExpAggressive("amdgpu-remat-enable-sub-exp-remat-aggressive");
+static cl::opt<bool>
+    EnableSubExpClone("amdgpu-remat-enable-sub-exp-remat-clone");
 static cl::opt<bool> EnableVmemDegree("amdgpu-remat-enable-vmem-degree");
 static cl::opt<bool> EnableInBlockRemat("amdgpu-remat-enable-in-blk-remat");
 static cl::opt<bool> EnableSubExp("amdgpu-remat-enable-sub-exp-remat");
-static cl::opt<bool> EnableUniformVectorToScalar("amdgpu-remat-enable-late-float-vtos");
-static cl::opt<bool> EnableSubExpMinReg("amdgpu-remat-enable-sub-exp-remat-min-reg");
+static cl::opt<bool>
+    EnableUniformVectorToScalar("amdgpu-remat-enable-late-float-vtos");
+static cl::opt<bool>
+    EnableSubExpMinReg("amdgpu-remat-enable-sub-exp-remat-min-reg");
 
 namespace {
 typedef DenseSet<MachineInstr *> InstSet;
 typedef DenseSet<MachineBasicBlock *> BlockSet;
-template<typename T>
-using BlockMap = MapVector<MachineBasicBlock *, T>;
+template <typename T> using BlockMap = MapVector<MachineBasicBlock *, T>;
 
 // Rematerialize in a single pass instead of doing in register allcation.
 // If in register allocation, fail to rematerialize will cause spill.
@@ -65,9 +69,9 @@ class AMDGPUHotBlockRematerialize : public MachineFunctionPass {
 public:
   static char ID;
 
-  DenseSet<const MachineInstr*> TotalUniformInsts;
-  DenseSet<const MachineInstr*> SafeToRemoveInsts;
-  DenseSet<const MachineInstr*> DivergentInsts;
+  DenseSet<const MachineInstr *> TotalUniformInsts;
+  DenseSet<const MachineInstr *> SafeToRemoveInsts;
+  DenseSet<const MachineInstr *> DivergentInsts;
   void RemoveInst(const MachineInstr *MI) {
     TotalUniformInsts.erase(MI);
     SafeToRemoveInsts.erase(MI);
@@ -99,9 +103,8 @@ typedef AMDGPUHotBlockRematerialize Remat;
 // Util functions.
 namespace {
 
-MachineBasicBlock *
-nearest_common_dominator(MachineDominatorTree *DT,
-                         BlockSet &Blocks) {
+MachineBasicBlock *nearest_common_dominator(MachineDominatorTree *DT,
+                                            BlockSet &Blocks) {
   auto I = Blocks.begin(), E = Blocks.end();
 
   MachineBasicBlock *DomB = cast<MachineBasicBlock>(*(I++));
@@ -217,10 +220,10 @@ bool IsSafeToMove(MachineInstr *DefMI, MachineRegisterInfo &MRI) {
   return true;
 }
 
-
 // SGPR has alignment requirment, cannot get accurate reg number.
 const unsigned NearTargetRegLimit = 10;
-bool nearSgprSpill(unsigned maxSPressure, const GCNSubtarget *ST, MachineFunction &MF) {
+bool nearSgprSpill(unsigned maxSPressure, const GCNSubtarget *ST,
+                   MachineFunction &MF) {
   unsigned maxSGPR = ST->getAddressableNumSGPRs();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   unsigned ScratchRSrcReg = MFI->getScratchRSrcReg();
@@ -254,10 +257,10 @@ struct RematStatus {
   DenseSet<MachineBasicBlock *> MemWriteMBBSet;
 };
 
-unsigned CollectMBBPressure(
-    MachineBasicBlock &MBB, LiveIntervals *LIS, const MachineRegisterInfo &MRI,
-    const GCNSubtarget *ST, unsigned &maxVPressure, unsigned &maxSPressure,
-    RematStatus &status) {
+unsigned CollectMBBPressure(MachineBasicBlock &MBB, LiveIntervals *LIS,
+                            const MachineRegisterInfo &MRI,
+                            const GCNSubtarget *ST, unsigned &maxVPressure,
+                            unsigned &maxSPressure, RematStatus &status) {
   // Skip processing current block if it has only debug instructions
   if (MBB.getFirstNonDebugInstr() == MBB.end())
     return ST->getOccupancyWithNumVGPRs(0);
@@ -290,10 +293,10 @@ unsigned CollectMBBPressure(
   return RP.getOccupancy(*ST);
 }
 
-unsigned CollectFnPressure(
-    MachineFunction &MF, LiveIntervals *LIS, const MachineRegisterInfo &MRI,
-    const GCNSubtarget *ST, unsigned &maxVPressure, unsigned &maxSPressure,
-    RematStatus &status) {
+unsigned CollectFnPressure(MachineFunction &MF, LiveIntervals *LIS,
+                           const MachineRegisterInfo &MRI,
+                           const GCNSubtarget *ST, unsigned &maxVPressure,
+                           unsigned &maxSPressure, RematStatus &status) {
   unsigned TgtOcc = ST->getOccupancyWithWorkGroupSizes(MF).second;
   // If only have one block, input/ouput virtual live set are empty.
   if (MF.size() > 1) {
@@ -376,14 +379,14 @@ unsigned CollectFnPressure(
   }
   return TgtOcc;
 }
-RematStatus
-GetRematStatus(MachineFunction &MF, MachineLoopInfo *MLI, LiveIntervals *LIS,
-               const MachineRegisterInfo &MRI, const GCNSubtarget *ST) {
+RematStatus GetRematStatus(MachineFunction &MF, MachineLoopInfo *MLI,
+                           LiveIntervals *LIS, const MachineRegisterInfo &MRI,
+                           const GCNSubtarget *ST) {
   unsigned maxSPressure = 0;
   unsigned maxVPressure = 0;
   RematStatus status;
-  unsigned TgtOcc = CollectFnPressure(MF, LIS, MRI, ST, maxVPressure,
-                                      maxSPressure, status);
+  unsigned TgtOcc =
+      CollectFnPressure(MF, LIS, MRI, ST, maxVPressure, maxSPressure, status);
   const unsigned MaxOcc = ST->getWavesPerEU(MF.getFunction()).second;
   if (TgtOcc >= MaxOcc) {
     status.TargetOcc = TgtOcc;
@@ -418,7 +421,7 @@ GetRematStatus(MachineFunction &MF, MachineLoopInfo *MLI, LiveIntervals *LIS,
       TgtOcc = bigOcc;
       bNotBalance = true;
       if (TgtOcc >= MaxOccupancy)
-        TgtOcc = MaxOccupancy-1;
+        TgtOcc = MaxOccupancy - 1;
     }
   }
 
@@ -436,7 +439,7 @@ GetRematStatus(MachineFunction &MF, MachineLoopInfo *MLI, LiveIntervals *LIS,
       vInputPressure += RegSize;
     } else {
       unsigned RegIndex = SIRI->getHWRegIndex(Reg);
-      uint64_t mask = ((1 << RegSize) - 1 ) << RegIndex;
+      uint64_t mask = ((1 << RegSize) - 1) << RegIndex;
       sInputMask |= mask;
     }
   }
@@ -450,7 +453,6 @@ GetRematStatus(MachineFunction &MF, MachineLoopInfo *MLI, LiveIntervals *LIS,
     }
     mask = mask << 4;
   }
-
 
   // If balanced, try next occupancy.
   TgtOcc = bNotBalance ? TgtOcc : (TgtOcc + 1);
@@ -614,8 +616,7 @@ int GetSharedReducedSize(InstSet &ReducedInsts, bool bVGPR,
 }
 
 int GetReducedSize(MapVector<unsigned, RematNode> &RematMap, bool bVGPR,
-                   GCNRPTracker::LiveRegSet &CanidateSet,
-                   InstSet &ReducedInsts,
+                   GCNRPTracker::LiveRegSet &CanidateSet, InstSet &ReducedInsts,
                    const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
                    BlockLiveInfo &LiveInfo,
                    DenseMap<MachineBasicBlock *, unsigned> &RPOTIndexMap) {
@@ -791,9 +792,11 @@ void BuildRematCandiates(std::vector<RematNode> &Candidates,
 }
 
 // For case like
-//   %477:sreg_32_xm0 = S_AND_B32 %472.sub0:sreg_64_xexec, %304:sreg_32_xm0, implicit-def dead $scc; xb.uniform
-//  S_CMP_EQ_U32 %302:sreg_32_xm0, %475:sreg_32_xm0, implicit-def $scc; xb.uniform
-//  %2489:sreg_32_xm0 = S_CSELECT_B32 %477:sreg_32_xm0, 16, implicit killed $scc; xb.uniform
+//   %477:sreg_32_xm0 = S_AND_B32 %472.sub0:sreg_64_xexec, %304:sreg_32_xm0,
+//   implicit-def dead $scc; xb.uniform
+//  S_CMP_EQ_U32 %302:sreg_32_xm0, %475:sreg_32_xm0, implicit-def $scc;
+//  xb.uniform %2489:sreg_32_xm0 = S_CSELECT_B32 %477:sreg_32_xm0, 16, implicit
+//  killed $scc; xb.uniform
 // Sink S_AND right before S_CSELECT will overwrite SCC.
 // To avoid it, skip case when DefMI and UseMI has implicit define use.
 bool isImplicitDefUse(MachineInstr *DefMI, MachineInstr *UseMI) {
@@ -973,7 +976,7 @@ int FilterRematCandiates(std::vector<RematNode> &Candidates,
 }
 
 void updateUsers(unsigned Reg, unsigned NewReg, bool bSubRegDef,
-                SmallVector<MachineInstr *, 2> &userMIs) {
+                 SmallVector<MachineInstr *, 2> &userMIs) {
   for (MachineInstr *UseMI : userMIs) {
     for (MachineOperand &MO : UseMI->operands()) {
       if (!MO.isReg())
@@ -998,7 +1001,6 @@ DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
       hotBlockSet.insert(hotBlock.BB);
     }
   }
-
 
   // For userBlocks which dominate all hotBlocks, don't need to clone because
   // the value not cross hotBlocks when later blocks are cloned.
@@ -1064,68 +1066,45 @@ DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
 // Look for an earlier insert point if the InstructionToMove
 // writes to scc and scc is live at the CurrentInsertPoint.
 static MachineBasicBlock::iterator AdjustInsertPointToAvoidSccSmash(
-    MachineInstr *InstructionToMove,
-    MachineBasicBlock *MBB,
-    MachineBasicBlock::iterator CurrentInsertPoint,
-    MachineRegisterInfo &MRI,
-   const SIRegisterInfo *SIRI,
-   const SIInstrInfo *SIII
-) 
-{
-    const bool WillSmashScc = InstructionToMove->modifiesRegister(AMDGPU::SCC, SIRI);
-    if (WillSmashScc)
-    {
-        CurrentInsertPoint = llvm::FindOrCreateInsertionPointForSccDef(MBB,
-            CurrentInsertPoint,
-            SIRI,
-            SIII,
-            &MRI
-        );
-    }
+    MachineInstr *InstructionToMove, MachineBasicBlock *MBB,
+    MachineBasicBlock::iterator CurrentInsertPoint, MachineRegisterInfo &MRI,
+    const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
+  const bool WillSmashScc =
+      InstructionToMove->modifiesRegister(AMDGPU::SCC, SIRI);
+  if (WillSmashScc) {
+    CurrentInsertPoint = llvm::FindOrCreateInsertionPointForSccDef(
+        MBB, CurrentInsertPoint, SIRI, SIII, &MRI);
+  }
 
-    return CurrentInsertPoint;
+  return CurrentInsertPoint;
 }
 
 // Look for an earlier insert point if the SubExp
 // writes to scc and scc is live at the CurrentInsertPoint.
 static MachineBasicBlock::iterator AdjustInsertPointForSubExpToAvoidSccSmash(
-    const SubExp &SubExpToMove,
-    MachineBasicBlock *MBB,
-    MachineBasicBlock::iterator CurrentInsertPoint,
-    MachineRegisterInfo& MRI,
-    const SIRegisterInfo* SIRI,
-    const SIInstrInfo* SIII
-)
-{
-    const bool WillSmashScc = SubExpToMove.modifiesRegister(AMDGPU::SCC, SIRI);
-    if (WillSmashScc)
-    {
-        CurrentInsertPoint = llvm::FindOrCreateInsertionPointForSccDef(MBB,
-            CurrentInsertPoint,
-            SIRI,
-            SIII,
-            &MRI
-        );
-    }
+    const SubExp &SubExpToMove, MachineBasicBlock *MBB,
+    MachineBasicBlock::iterator CurrentInsertPoint, MachineRegisterInfo &MRI,
+    const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
+  const bool WillSmashScc = SubExpToMove.modifiesRegister(AMDGPU::SCC, SIRI);
+  if (WillSmashScc) {
+    CurrentInsertPoint = llvm::FindOrCreateInsertionPointForSccDef(
+        MBB, CurrentInsertPoint, SIRI, SIII, &MRI);
+  }
 
-    return CurrentInsertPoint;
+  return CurrentInsertPoint;
 }
 
 // Return trun if moving MI to Location will smash a live scc value.
-static bool WillSmashSccAtLocation(
-    MachineInstr* MI,
-    MachineBasicBlock* MBB,
-    MachineBasicBlock::iterator Location
-)
-{
-    // It is ok to pass nullptr to `modifiesRegister` for TRI here since
-    // SCC has no subreg/suprereg relationships.
-    return MI->modifiesRegister(AMDGPU::SCC, nullptr)
-        && llvm::IsSccLiveAt(MBB, Location);
+static bool WillSmashSccAtLocation(MachineInstr *MI, MachineBasicBlock *MBB,
+                                   MachineBasicBlock::iterator Location) {
+  // It is ok to pass nullptr to `modifiesRegister` for TRI here since
+  // SCC has no subreg/suprereg relationships.
+  return MI->modifiesRegister(AMDGPU::SCC, nullptr) &&
+         llvm::IsSccLiveAt(MBB, Location);
 }
 
-void ApplyCloneRemat(Remat *Remat,
-                     RematNode &Node, std::vector<BlockLiveInfo> &hotBlocks,
+void ApplyCloneRemat(Remat *Remat, RematNode &Node,
+                     std::vector<BlockLiveInfo> &hotBlocks,
                      MachineDominatorTree *pDT, MachineRegisterInfo &MRI,
                      SlotIndexes *SlotIndexes, const SIRegisterInfo *SIRI,
                      const SIInstrInfo *SIII, MachineFunction &MF) {
@@ -1185,10 +1164,9 @@ void ApplyCloneRemat(Remat *Remat,
         InsertPointMI = UseMI;
       }
     }
-    
+
     MachineBasicBlock::iterator InsertPoint = AdjustInsertPointToAvoidSccSmash(
-        DefMI, InsertPointMI->getParent(), InsertPointMI, MRI, SIRI, SIII
-    );
+        DefMI, InsertPointMI->getParent(), InsertPointMI, MRI, SIRI, SIII);
 
     for (MachineMemOperand *MO : DefMI->memoperands()) {
       NewDef->addMemOperand(MF, MO);
@@ -1221,10 +1199,11 @@ void ApplyCloneRemat(Remat *Remat,
 
 void ApplyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
                             SlotIndexes *slotIndexes,
-                            const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
+                            const SIRegisterInfo *SIRI,
+                            const SIInstrInfo *SIII) {
   MachineInstr *DefMI = Node.DefMI;
   MachineInstr *InsertPointMI = Node.InsertPointMI;
-  MachineBasicBlock* MBB = nullptr;
+  MachineBasicBlock *MBB = nullptr;
 
   // Find a valid insert point.
   MachineBasicBlock::iterator InsertPoint;
@@ -1236,10 +1215,9 @@ void ApplyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
     MBB = Node.InsertBlock;
   }
 
-  InsertPoint = AdjustInsertPointToAvoidSccSmash(
-      DefMI, MBB, InsertPoint, MRI, SIRI, SIII
-  );
-  
+  InsertPoint = AdjustInsertPointToAvoidSccSmash(DefMI, MBB, InsertPoint, MRI,
+                                                 SIRI, SIII);
+
   // Move instruction to new location.
   DefMI->removeFromParent();
   InsertPoint->getParent()->insert(InsertPoint, DefMI);
@@ -1271,7 +1249,8 @@ void ApplyRemat(Remat *Remat, MapVector<unsigned, RematNode> &RematMap,
     if (Node.Kind == RematNode::RematKind::OneDefOneUse) {
       ApplyOneDefOneUseRemat(Node, MRI, slotIndexes, SIRI, SIII);
     } else if (Node.Kind == RematNode::RematKind::Clone) {
-      ApplyCloneRemat(Remat, Node, hotBlocks, pDT, MRI, slotIndexes, SIRI, SIII, MF);
+      ApplyCloneRemat(Remat, Node, hotBlocks, pDT, MRI, slotIndexes, SIRI, SIII,
+                      MF);
     }
   }
 }
@@ -1505,7 +1484,8 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
               MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(Reg);
               if (UseMI.getParent() != MBB)
                 continue;
-              int gain = RematGain(&MI, Reg, CandidateRegs, MRI, SIRI, /*bVGPR*/false);
+              int gain = RematGain(&MI, Reg, CandidateRegs, MRI, SIRI,
+                                   /*bVGPR*/ false);
               if (gain > 0) {
                 // Skip case when DefMI has implicit define which used by UseMI.
                 if (isImplicitDefUse(&MI, &UseMI)) {
@@ -1539,8 +1519,7 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
     bool bNeedVRemat = rematVCnt > 0;
     // If sgpr spill, always do remat.
     bool bSRematOK =
-        (newRematSCnt <= 0 && !SRematMap.empty()) ||
-        bForceRematSgpr;
+        (newRematSCnt <= 0 && !SRematMap.empty()) || bForceRematSgpr;
     bool bVRematOK =
         (status.bNotBalance || newRematVCnt <= 0) && !VRematMap.empty();
     if (bNeedSRemat && bNeedVRemat) {
@@ -1575,7 +1554,8 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
 
   if (!SRematMap.empty()) {
     bUpdated = true;
-    ApplyRemat(Remat, SRematMap, hotBlocks, pDT, SlotIndexes, MRI, SIRI, SIII, MF);
+    ApplyRemat(Remat, SRematMap, hotBlocks, pDT, SlotIndexes, MRI, SIRI, SIII,
+               MF);
     LLVM_DEBUG(llvm::dbgs() << "after hotremat"; MF.print(dbgs()););
   }
 
@@ -1595,49 +1575,46 @@ bool isPhyRegUniqueDef(unsigned Reg, const MachineRegisterInfo &MRI) {
   return DefMIs.size() == 1;
 }
 
-static bool IsImplicitUseOfReg(const MachineOperand &MO, unsigned Reg)
-{
-    if (!MO.isImplicit() || !MO.isUse() || !MO.isReg())
-    {
-        return false;
-    }
+static bool IsImplicitUseOfReg(const MachineOperand &MO, unsigned Reg) {
+  if (!MO.isImplicit() || !MO.isUse() || !MO.isReg()) {
+    return false;
+  }
 
-    return MO.getReg() == Reg;
+  return MO.getReg() == Reg;
 }
 
-static bool IsImplicitDefOfReg(const MachineOperand &MO, unsigned Reg)
-{
-    if (!MO.isImplicit() || !MO.isDef() || !MO.isReg())
-    {
-        return false;
-    }
+static bool IsImplicitDefOfReg(const MachineOperand &MO, unsigned Reg) {
+  if (!MO.isImplicit() || !MO.isDef() || !MO.isReg()) {
+    return false;
+  }
 
-    return MO.getReg() == Reg;
+  return MO.getReg() == Reg;
 }
 
-static bool IsSafeRematCandidateUser(const MachineInstr *UseMI, const SIInstrInfo *SIII)
-{
-    // Make sure UseMI is not wqm like sample.
-    if (SIII->isWQM(UseMI->getOpcode()))
-        return false;
-    if (UseMI->getOpcode() == AMDGPU::PHI)
-        return false;
-    
-    return true;
+static bool IsSafeRematCandidateUser(const MachineInstr *UseMI,
+                                     const SIInstrInfo *SIII) {
+  // Make sure UseMI is not wqm like sample.
+  if (SIII->isWQM(UseMI->getOpcode()))
+    return false;
+  if (UseMI->getOpcode() == AMDGPU::PHI)
+    return false;
+
+  return true;
 }
 
 static bool isConvergent(Remat *Remat, const MachineInstr &MI) {
   return MI.isConvergent() &&
-    // This flag is set on readfirstlane's to indicate that they
-    // are redundant (the value being read is already uniform).
-    // Normally, readfirstlanes are convergent, because different exec
-    // will cause a different value to be read; a known uniform
-    // readfirstlane is safe to move or clone and not actually convergent.
-    !Remat->TotalUniformInsts.count(&MI);
+         // This flag is set on readfirstlane's to indicate that they
+         // are redundant (the value being read is already uniform).
+         // Normally, readfirstlanes are convergent, because different exec
+         // will cause a different value to be read; a known uniform
+         // readfirstlane is safe to move or clone and not actually convergent.
+         !Remat->TotalUniformInsts.count(&MI);
 }
 
 bool isSafeCandidate(Remat *Remat, Register Reg, const MachineRegisterInfo &MRI,
-                     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII, bool bSink) {
+                     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
+                     bool bSink) {
   if (Reg.isPhysical())
     return false;
   bool bVGPR = SIRI->isVGPR(MRI, Reg);
@@ -1664,7 +1641,8 @@ bool isSafeCandidate(Remat *Remat, Register Reg, const MachineRegisterInfo &MRI,
     if (!Op.isReg())
       continue;
     Register OpReg = Op.getReg();
-    if (IsImplicitUseOfReg(Op, AMDGPU::EXEC) || IsImplicitUseOfReg(Op, AMDGPU::EXEC_LO))
+    if (IsImplicitUseOfReg(Op, AMDGPU::EXEC) ||
+        IsImplicitUseOfReg(Op, AMDGPU::EXEC_LO))
       continue;
     if (IsImplicitUseOfReg(Op, AMDGPU::MODE))
       continue;
@@ -1675,7 +1653,8 @@ bool isSafeCandidate(Remat *Remat, Register Reg, const MachineRegisterInfo &MRI,
       continue;
     if (OpReg.isPhysical())
       return false;
-    if (!MRI.getUniqueVRegDef(OpReg) && !llvm::IsSub0Sub1SingleDef(OpReg, MRI)) {
+    if (!MRI.getUniqueVRegDef(OpReg) &&
+        !llvm::IsSub0Sub1SingleDef(OpReg, MRI)) {
       return false;
     }
   }
@@ -1696,12 +1675,10 @@ bool isSafeCandidate(Remat *Remat, Register Reg, const MachineRegisterInfo &MRI,
 }
 
 std::vector<SubExp> buildSubExpFromCandidates(
-    Remat *Remat,
-    GCNRPTracker::LiveRegSet &Candidates, MachineBasicBlock *MBB,
+    Remat *Remat, GCNRPTracker::LiveRegSet &Candidates, MachineBasicBlock *MBB,
     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
     const MachineRegisterInfo &MRI, SlotIndexes *slotIndexes,
-    GCNRPTracker::LiveRegSet &unUsedPassThrus,
-    bool bAllowPartialUseInSubExp) {
+    GCNRPTracker::LiveRegSet &unUsedPassThrus, bool bAllowPartialUseInSubExp) {
   InstSet CandidateDefs;
   DenseSet<unsigned> RemovedCandidates;
   std::vector<unsigned> CandidateRegs;
@@ -1798,7 +1775,7 @@ std::vector<SubExp> buildSubExpFromCandidates(
       break;
     }
 
-    if (!isSafeCandidate(Remat, Reg, MRI, SIRI, SIII, /*bSink*/true))
+    if (!isSafeCandidate(Remat, Reg, MRI, SIRI, SIII, /*bSink*/ true))
       continue;
 
     // If all users of MI are in candidate defs, add MI into candidate defs.
@@ -1877,10 +1854,8 @@ std::vector<SubExp> buildSubExpFromCandidates(
   return dag.SubExps;
 }
 
-
 std::vector<SubExp> buildSubExpFromCandidatesTopBottom(
-    Remat* Remat,
-    GCNRPTracker::LiveRegSet &Candidates, MachineBasicBlock *MBB,
+    Remat *Remat, GCNRPTracker::LiveRegSet &Candidates, MachineBasicBlock *MBB,
     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
     const MachineRegisterInfo &MRI, SlotIndexes *slotIndexes) {
   InstSet CandidateDefs;
@@ -2052,7 +2027,7 @@ std::vector<SubExp> buildSubExpFromCandidatesTopBottom(
   } dbgs() << "\nFinished Candidate Defs End\n";);
 
   LLVM_DEBUG(dbgs() << "\nLocalCandidates:\n"; for (auto it
-                                                            : LocalCandidates) {
+                                                    : LocalCandidates) {
     pressure::print_reg(it.first, MRI, SIRI, llvm::dbgs());
   } dbgs() << "\nLocalCandidates End\n";);
   // Make sure all input reg are uniqueDef.
@@ -2063,7 +2038,6 @@ std::vector<SubExp> buildSubExpFromCandidatesTopBottom(
   dag.build(Candidates, LocalCandidates, defs);
   return dag.SubExps;
 }
-
 
 void print_vreg(Register Reg, const MachineRegisterInfo &MRI) {
   if (Reg.isVirtual()) {
@@ -2102,8 +2076,7 @@ MachineBasicBlock *FindTargetBlock(unsigned Reg, MachineBasicBlock *FromBB,
 
 void ApplySubExpMoveNearUser(SubExp &Exp, const MachineRegisterInfo &MRI,
                              MachineDominatorTree *pDT,
-                             SlotIndexes *slotIndexes,
-                             const SIInstrInfo *SIII,
+                             SlotIndexes *slotIndexes, const SIInstrInfo *SIII,
                              const SIRegisterInfo *SIRI) {
   // Move from bottom.
   MachineBasicBlock *FromBB = Exp.FromBB;
@@ -2118,12 +2091,14 @@ void ApplySubExpMoveNearUser(SubExp &Exp, const MachineRegisterInfo &MRI,
       continue;
 
     // Do not overwrite a live scc.
-    MachineBasicBlock::iterator InsertPoint = ToBB->SkipPHIsAndLabels(ToBB->begin());
+    MachineBasicBlock::iterator InsertPoint =
+        ToBB->SkipPHIsAndLabels(ToBB->begin());
     if (WillSmashSccAtLocation(DefMI, ToBB, InsertPoint))
       continue;
 
     DefMI->removeFromParent();
-    assert(!llvm::isExecUpdateForControlFlow(*InsertPoint) && "invalid insert point");
+    assert(!llvm::isExecUpdateForControlFlow(*InsertPoint) &&
+           "invalid insert point");
     ToBB->insert(InsertPoint, DefMI);
     // Debug insts don't need slot index.
     if (DefMI->isDebugInstr())
@@ -2134,12 +2109,11 @@ void ApplySubExpMoveNearUser(SubExp &Exp, const MachineRegisterInfo &MRI,
   }
 }
 
-
 void ApplySubExpMoveNearDefine(SubExp &Exp, MachineRegisterInfo &MRI,
-                             MachineDominatorTree *pDT,
-                             SlotIndexes *slotIndexes,
-                             const SIInstrInfo *SIII,
-                             const SIRegisterInfo *SIRI) {
+                               MachineDominatorTree *pDT,
+                               SlotIndexes *slotIndexes,
+                               const SIInstrInfo *SIII,
+                               const SIRegisterInfo *SIRI) {
   // Move from top.
   // Find lowest input def.
   MachineBasicBlock *ToBB = Exp.ToBB;
@@ -2155,9 +2129,8 @@ void ApplySubExpMoveNearDefine(SubExp &Exp, MachineRegisterInfo &MRI,
       Terminator = ToBB->end();
   }
 
-  Terminator = AdjustInsertPointForSubExpToAvoidSccSmash(
-      Exp, ToBB, Terminator, MRI, SIRI, SIII
-  );
+  Terminator = AdjustInsertPointForSubExpToAvoidSccSmash(Exp, ToBB, Terminator,
+                                                         MRI, SIRI, SIII);
 
   for (auto it = Exp.SUnits.begin(); it != Exp.SUnits.end(); it++) {
     MachineInstr *DefMI = *it;
@@ -2391,11 +2364,12 @@ void ApplySubExpCloneNearUser(SubExp &Exp, std::vector<HotBlock> &hotBlocks,
       reduceClonedMBBs(Exp, userBlocks, userBlocksLiveRegs, hotBlocks, pDT);
 
   // Sort to make stable order.
-  std::sort(userBlocks.begin(), userBlocks.end(),
-    [](std::pair<MachineBasicBlock*, SmallVector<MachineInstr*, 2>>& it0,
-      std::pair<MachineBasicBlock*, SmallVector<MachineInstr*, 2>>& it1) {
+  std::sort(
+      userBlocks.begin(), userBlocks.end(),
+      [](std::pair<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> &it0,
+         std::pair<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> &it1) {
         return it0.first->getNumber() < it1.first->getNumber();
-    });
+      });
 
   const bool bModifiesScc = Exp.modifiesRegister(AMDGPU::SCC, SIRI);
 
@@ -2483,7 +2457,6 @@ void ApplySubExpCloneNearUser(SubExp &Exp, std::vector<HotBlock> &hotBlocks,
     }
   }
 }
-
 
 void ApplySubExpCloneNearUserInBlock(
     SubExp &Exp,
@@ -2623,7 +2596,7 @@ unsigned getPacifistLevel(unsigned Reg,
 }
 
 bool hasInBlockDef(unsigned Reg, MachineBasicBlock *MBB,
-                                  const MachineRegisterInfo &MRI) {
+                   const MachineRegisterInfo &MRI) {
   for (MachineInstr &def : MRI.def_instructions(Reg)) {
     if (def.getParent() != MBB)
       continue;
@@ -2658,8 +2631,8 @@ bool isPassThru(unsigned Reg, const GCNRPTracker::LiveRegSet &inputLive,
   return inputLive.count(Reg) && outputLive.count(Reg);
 }
 
-// Instructions which only use imm/passThru reg/output only reg will not kill any
-// live reg, so name them pacifist here.
+// Instructions which only use imm/passThru reg/output only reg will not kill
+// any live reg, so name them pacifist here.
 bool collectPacifist(MachineInstr &MI,
                      const GCNRPTracker::LiveRegSet &inputLive,
                      const GCNRPTracker::LiveRegSet &outputLive,
@@ -2676,7 +2649,8 @@ bool collectPacifist(MachineInstr &MI,
       continue;
 
     Register Reg = MO.getReg();
-    if (MO.isImplicit() && (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO || Reg == AMDGPU::MODE))
+    if (MO.isImplicit() &&
+        (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO || Reg == AMDGPU::MODE))
       continue;
     if (Reg.isPhysical())
       return false;
@@ -2702,7 +2676,8 @@ bool collectPacifist(MachineInstr &MI,
     if (Reg.isPhysical())
       return false;
 
-    if (nullptr == getInBlockUniqueDef(Reg, MI.getParent(), inputLive, outputLive, MRI))
+    if (nullptr ==
+        getInBlockUniqueDef(Reg, MI.getParent(), inputLive, outputLive, MRI))
       return false;
 
     bHasDef = true;
@@ -2711,30 +2686,27 @@ bool collectPacifist(MachineInstr &MI,
   return bHasDef;
 }
 
-static MachineInstr* findFirstAliasingLoadOrStoreInMBB(
-    MachineInstr &MI,
-    MachineBasicBlock &MBB,
-    AliasAnalysis *AA
-)
-{
-    if (MI.mayLoadOrStore())
-    {
-        for (MachineBasicBlock::iterator I = MI.getIterator(), E = MBB.end(); I != E; ++I)
-        {
-            const bool UseTBAA = false;
-            if (MI.mayAlias(AA, *I, UseTBAA))
-            {
-                return &*I;
-            }
-        }
+static MachineInstr *findFirstAliasingLoadOrStoreInMBB(MachineInstr &MI,
+                                                       MachineBasicBlock &MBB,
+                                                       AliasAnalysis *AA) {
+  if (MI.mayLoadOrStore()) {
+    for (MachineBasicBlock::iterator I = MI.getIterator(), E = MBB.end();
+         I != E; ++I) {
+      const bool UseTBAA = false;
+      if (MI.mayAlias(AA, *I, UseTBAA)) {
+        return &*I;
+      }
     }
+  }
 
-    return nullptr;
+  return nullptr;
 }
 
-static MachineInstr *findPacifistInsertPoint(MachineInstr &MI, MachineBasicBlock &MBB, MachineRegisterInfo &MRI,
-                            AliasAnalysis *AA,
-                            SlotIndexes *slotIndexes) {
+static MachineInstr *findPacifistInsertPoint(MachineInstr &MI,
+                                             MachineBasicBlock &MBB,
+                                             MachineRegisterInfo &MRI,
+                                             AliasAnalysis *AA,
+                                             SlotIndexes *slotIndexes) {
 
   SmallVector<MachineInstr *, 2> users;
 
@@ -2742,14 +2714,13 @@ static MachineInstr *findPacifistInsertPoint(MachineInstr &MI, MachineBasicBlock
   // op with which it aliases. Find the first instruction
   // that aliases the pacifist MI (if any) and add it to the list
   // of users. The sort() below will select the earliest user instruction.
-  if (MachineInstr* AliasMI = findFirstAliasingLoadOrStoreInMBB(MI, MBB, AA)) {
+  if (MachineInstr *AliasMI = findFirstAliasingLoadOrStoreInMBB(MI, MBB, AA)) {
     users.push_back(AliasMI);
   }
 
   for (MachineOperand &MO : MI.defs()) {
     unsigned Reg = MO.getReg();
-    for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg))
-    {
+    for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
       if (&MBB != UseMI.getParent())
         continue;
       users.emplace_back(&UseMI);
@@ -2773,8 +2744,7 @@ static MachineInstr *findPacifistInsertPoint(MachineInstr &MI, MachineBasicBlock
 bool tryHoldPacifist(MachineBasicBlock &MBB, LiveIntervals *LIS,
                      MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
                      const SIInstrInfo *SIII, AliasAnalysis *AA,
-                     RematStatus &status) 
-{
+                     RematStatus &status) {
   const GCNRPTracker::LiveRegSet inputLive = status.MBBInputLiveMap[&MBB];
   const GCNRPTracker::LiveRegSet outputLive = status.MBBOutputLiveMap[&MBB];
 
@@ -2794,10 +2764,11 @@ bool tryHoldPacifist(MachineBasicBlock &MBB, LiveIntervals *LIS,
   bool bUpdated = false;
 
   // Move pacifist to its first user.
-  //for (MachineInstr *MI : pacifistList) {
+  // for (MachineInstr *MI : pacifistList) {
   for (auto it = pacifistList.rbegin(); it != pacifistList.rend(); it++) {
     MachineInstr *MI = *it;
-    MachineInstr *firstUser = findPacifistInsertPoint(*MI, MBB, MRI, AA, slotIndexes);
+    MachineInstr *firstUser =
+        findPacifistInsertPoint(*MI, MBB, MRI, AA, slotIndexes);
     if (firstUser == MI)
       continue;
     if (firstUser == MI->getNextNode())
@@ -2814,14 +2785,15 @@ bool tryHoldPacifist(MachineBasicBlock &MBB, LiveIntervals *LIS,
         // BRANCH may have exec update before it.
         insertPoint--;
 
-      insertPoint = llvm::skipDebugInstructionsBackward(insertPoint, MBB.instr_begin());
+      insertPoint =
+          llvm::skipDebugInstructionsBackward(insertPoint, MBB.instr_begin());
 
       while ((insertPoint->definesRegister(AMDGPU::EXEC, SIRI) ||
               insertPoint->definesRegister(AMDGPU::EXEC_LO, SIRI)) &&
-             insertPoint != MI->getIterator())
-      {
+             insertPoint != MI->getIterator()) {
         insertPoint--;
-        insertPoint = llvm::skipDebugInstructionsBackward(insertPoint, MBB.instr_begin());
+        insertPoint =
+            llvm::skipDebugInstructionsBackward(insertPoint, MBB.instr_begin());
       }
       if (insertPoint == MI->getIterator())
         continue;
@@ -2887,7 +2859,7 @@ bool collectVToSCrossHotSpot(
     const SIInstrInfo *SIII) {
   unsigned VLimit = status.TargetVLimit;
   unsigned SLimit = status.TargetSLimit;
-  auto& ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
+  auto &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
 
   GCNDownwardRPTracker Tracker(*LIS);
 
@@ -2926,24 +2898,23 @@ bool collectVToSCrossHotSpot(
       VExtra--;
       bUpdated = true;
     }
-
   }
   return bUpdated;
 }
 
 // Return true if the user is outside of the def's loop.
-static bool IsCrossLoopUse(MachineInstr *Def, MachineInstr *User, MachineLoopInfo *MLI)
-{
-  MachineLoop* L = MLI->getLoopFor(Def->getParent());
+static bool IsCrossLoopUse(MachineInstr *Def, MachineInstr *User,
+                           MachineLoopInfo *MLI) {
+  MachineLoop *L = MLI->getLoopFor(Def->getParent());
   return L && !L->contains(User->getParent());
 }
 
 bool rematUniformVgprToSgpr(
-    Remat *Remat,
-    MachineFunction &MF, RematStatus &status,
+    Remat *Remat, MachineFunction &MF, RematStatus &status,
     DenseMap<MachineBasicBlock *, GCNRegPressure> &MBBPressureMap,
-    std::vector<HotBlock> &hotBlocks, LiveIntervals *LIS, MachineRegisterInfo &MRI,
-    const SIRegisterInfo *SIRI, const SIInstrInfo *SIII, MachineLoopInfo *MLI) {
+    std::vector<HotBlock> &hotBlocks, LiveIntervals *LIS,
+    MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
+    const SIInstrInfo *SIII, MachineLoopInfo *MLI) {
   DenseMap<unsigned, MachineInstr *> UniformVgprMap =
       collectUniformVgprs(Remat, MF, MRI, SIRI);
 
@@ -2977,7 +2948,8 @@ bool rematUniformVgprToSgpr(
       // Do not replace v->s across loops. Even if the value is uniform
       // branch divergence can cause a uniform value in a loop to be
       // non-uniform when used outside a loop.
-      if (IsSafeRematCandidateUser(&userMI, SIII) && !IsCrossLoopUse(MI, &userMI, MLI))
+      if (IsSafeRematCandidateUser(&userMI, SIII) &&
+          !IsCrossLoopUse(MI, &userMI, MLI))
         userMIs.emplace_back(&userMI);
     }
 
@@ -2993,7 +2965,7 @@ bool rematUniformVgprToSgpr(
     for (MachineInstr *userMI : userMIs) {
       const auto &Desc = userMI->getDesc();
       bool bIllegal = false;
-      for (unsigned i=0;i<userMI->getNumOperands();i++) {
+      for (unsigned i = 0; i < userMI->getNumOperands(); i++) {
         MachineOperand &MO = userMI->getOperand(i);
         if (!MO.isReg())
           continue;
@@ -3026,7 +2998,8 @@ bool rematUniformVgprToSgpr(
       auto rit = userMI->getReverseIterator();
       rit++;
       auto endIt = userMI->getParent()->rend();
-      while (rit != endIt && !rit->isDebugInstr() && !slotIndexes->hasIndex(*rit))
+      while (rit != endIt && !rit->isDebugInstr() &&
+             !slotIndexes->hasIndex(*rit))
         slotIndexes->insertMachineInstrInMaps(*(rit++));
     }
   }
@@ -3112,9 +3085,8 @@ bool tryRemat(MachineBasicBlock &MBB, MachineInstr *hotMI,
               DenseSet<MachineInstr *> &hotSet, int vDistance, int sDistance,
               unsigned VLimit, unsigned SLimit,
               const DenseSet<MachineBasicBlock *> &MemWriteMBBSet,
-              LiveIntervals *LIS,
-              const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-              const SIInstrInfo *SIII) {
+              LiveIntervals *LIS, const MachineRegisterInfo &MRI,
+              const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
   auto &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
   const auto &SI = LIS->getInstructionIndex(*hotMI).getBaseIndex();
   const auto LISLR = llvm::getLiveRegs(SI, *LIS, MRI);
@@ -3139,7 +3111,8 @@ bool tryRemat(MachineBasicBlock &MBB, MachineInstr *hotMI,
       continue;
 
     // Igonre inst in hot range.
-    if (RP.getVGPRNum(ST.hasGFX90AInsts()) > VLimit || RP.getMaxSGPR() > SLimit) {
+    if (RP.getVGPRNum(ST.hasGFX90AInsts()) > VLimit ||
+        RP.getMaxSGPR() > SLimit) {
       Tracker.advance();
       continue;
     }
@@ -3254,7 +3227,7 @@ bool tryRematInHotSpot(
   unsigned VLimit = status.TargetVLimit;
   unsigned SLimit = status.TargetSLimit;
 
-  auto& ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
+  auto &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
   const GCNRPTracker::LiveRegSet inputLive = status.MBBInputLiveMap[&MBB];
 
   const GCNRPTracker::LiveRegSet outputLive = status.MBBOutputLiveMap[&MBB];
@@ -3305,9 +3278,8 @@ bool tryRematInHotSpot(
     // Use hotVMI when apply.
     inBlockHotSInstMap[&MBB] = nullptr;
     if (tryRemat(MBB, hotVMI, inBlockCloneSubExps, /*bVGPR*/ true, inputLive,
-                    outputLive, hotSet, vDistance, sDistance, VLimit, SLimit,
-                    status.MemWriteMBBSet,
-                    LIS, MRI, SIRI, SIII))
+                 outputLive, hotSet, vDistance, sDistance, VLimit, SLimit,
+                 status.MemWriteMBBSet, LIS, MRI, SIRI, SIII))
       return true;
   }
 
@@ -3317,8 +3289,7 @@ bool tryRematInHotSpot(
     inBlockHotVInstMap[&MBB] = nullptr;
     return tryRemat(MBB, hotSMI, inBlockCloneSubExps, /*bVGPR*/ false,
                     inputLive, outputLive, hotSet, vDistance, sDistance, VLimit,
-                    SLimit, status.MemWriteMBBSet,
-                    LIS, MRI, SIRI, SIII);
+                    SLimit, status.MemWriteMBBSet, LIS, MRI, SIRI, SIII);
   }
   return false;
 }
@@ -3449,7 +3420,8 @@ void sortSubExpCandidates(std::vector<SubExp> &subExpCandidates) {
   }
 }
 
-// Compare pressure, return ture if maxV0/maxS0 pressure is higher than maxV1/maxS1.
+// Compare pressure, return ture if maxV0/maxS0 pressure is higher than
+// maxV1/maxS1.
 bool pressureHigher(unsigned maxV0, unsigned maxS0, unsigned maxV1,
                     unsigned maxS1, const GCNSubtarget *ST) {
   unsigned VTgtOcc0 = ST->getOccupancyWithNumVGPRs(maxV0);
@@ -3472,10 +3444,11 @@ bool pressureHigher(unsigned maxV0, unsigned maxS0, unsigned maxV1,
 }
 
 // Return true if the subExp can help pressure for passThrus.
-bool canHelpPressureWhenSink(SubExp &subExp, const GCNRPTracker::LiveRegSet &passThrus,
-                     const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-                     const SIInstrInfo *SIII, const MachineLoopInfo *MLI,
-                     MachineDominatorTree *pDT, bool bCanClone,bool bSgprBound) {
+bool canHelpPressureWhenSink(
+    SubExp &subExp, const GCNRPTracker::LiveRegSet &passThrus,
+    const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
+    const SIInstrInfo *SIII, const MachineLoopInfo *MLI,
+    MachineDominatorTree *pDT, bool bCanClone, bool bSgprBound) {
   LLVM_DEBUG(subExp.dump(MRI, SIRI));
   if (!subExp.isSafeToMove(MRI, /*bMoveUp*/ false))
     return false;
@@ -3591,8 +3564,7 @@ bool canHelpPressureWhenHoist(SubExp &subExp, const MachineRegisterInfo &MRI,
 }
 
 SmallVector<std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet>>
-groupPassThruByDefBlock(Remat *Remat,
-                        const GCNRPTracker::LiveRegSet &passThrus,
+groupPassThruByDefBlock(Remat *Remat, const GCNRPTracker::LiveRegSet &passThrus,
                         GCNRPTracker::LiveRegSet &usedPassThrus,
                         MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
                         const SIInstrInfo *SIII) {
@@ -3618,8 +3590,9 @@ groupPassThruByDefBlock(Remat *Remat,
     GCNRPTracker::LiveRegSet &DefInMBB = Candidates[DefMI->getParent()];
     DefInMBB[Reg] = it.second;
   }
-  
-  llvm::SmallVector<std::pair<MachineBasicBlock*, GCNRPTracker::LiveRegSet>> result = Candidates.takeVector();
+
+  llvm::SmallVector<std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet>>
+      result = Candidates.takeVector();
 
   LLVM_DEBUG(llvm::dbgs() << "Before sort candidates\n"; for (auto it
                                                               : result) {
@@ -3636,7 +3609,7 @@ groupPassThruByDefBlock(Remat *Remat,
             });
 
   LLVM_DEBUG(llvm::dbgs() << "After sort candidates\n"; for (auto it
-                                                              : result) {
+                                                             : result) {
     MachineBasicBlock *MBB = it.first;
     auto &defInMBB = it.second;
     MBB->dump();
@@ -3693,7 +3666,8 @@ collectPassThrus(MachineBasicBlock *MBB,
   return passThrus;
 }
 // Try to build a free subExp which all input is passThrus.
-SubExp buildFreeSubExp(Remat *Remat, SubExp &subExp, GCNRPTracker::LiveRegSet &passThrus,
+SubExp buildFreeSubExp(Remat *Remat, SubExp &subExp,
+                       GCNRPTracker::LiveRegSet &passThrus,
                        MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI) {
   SubExp freeExp;
   // Try to split the subExp to find a help case.
@@ -3818,9 +3792,9 @@ std::vector<SubExp> buildSubExpCandidates(
     // Try to remove out reg def sub exp from DefMBB.
     GCNRPTracker::LiveRegSet &DefInMBB = it.second;
     // Go up on the dag until reach share node.
-    auto subExps =
-        buildSubExpFromCandidates(Remat, DefInMBB, DefMBB, SIRI, SIII, MRI,
-                                  slotIndexes, unUsedPassThrus, bAllowPartialUseInSubExp);
+    auto subExps = buildSubExpFromCandidates(
+        Remat, DefInMBB, DefMBB, SIRI, SIII, MRI, slotIndexes, unUsedPassThrus,
+        bAllowPartialUseInSubExp);
     for (SubExp &subExp : subExps) {
       if (subExp.bHasMemInst) {
         // Skip when memory ld/st inst need to cross MBB which write memory.
@@ -3847,11 +3821,13 @@ std::vector<SubExp> buildSubExpCandidates(
         }
       }
       if (!canHelpPressureWhenSink(subExp, passThrus, MRI, SIRI, SIII, MLI, pDT,
-                           bCanClone, bSgprBound)) {
-        if (bAllowPartialUseInSubExp && subExp.isSafeToMove(MRI, /*bMoveUp*/ false)) {
-          SubExp freeSubExp = buildFreeSubExp(Remat, subExp, passThrus, MRI, SIRI);
-          if (canHelpPressureWhenSink(freeSubExp, passThrus, MRI, SIRI, SIII, MLI, pDT,
-                              bCanClone, bSgprBound)) {
+                                   bCanClone, bSgprBound)) {
+        if (bAllowPartialUseInSubExp &&
+            subExp.isSafeToMove(MRI, /*bMoveUp*/ false)) {
+          SubExp freeSubExp =
+              buildFreeSubExp(Remat, subExp, passThrus, MRI, SIRI);
+          if (canHelpPressureWhenSink(freeSubExp, passThrus, MRI, SIRI, SIII,
+                                      MLI, pDT, bCanClone, bSgprBound)) {
             subExpCandidates.emplace_back(freeSubExp);
           }
         }
@@ -3936,8 +3912,8 @@ calculateSaving(HotBlock &hotBB, std::vector<SubExp> &subExpCandidates,
           unsigned Size = getRegSize(Reg, profitMask, MRI, SIRI);
           LLVM_DEBUG(std::string movStr =
                          Exp.bHoist ? "output hoist:" : "output sink:";
-                     dbgs() << movStr << Register::virtReg2Index(Reg)
-                            << " " << Size);
+                     dbgs()
+                     << movStr << Register::virtReg2Index(Reg) << " " << Size);
           // Exp out live at block input.
           // It will descrease live for MBB when sink and increase when hoist.
           if (SIRI->isVGPR(MRI, Reg)) {
@@ -3974,10 +3950,9 @@ calculateSaving(HotBlock &hotBB, std::vector<SubExp> &subExpCandidates,
           // It will increase live for MBB.
           unsigned Size = getRegSize(Reg, profitMask, MRI, SIRI);
 
-          LLVM_DEBUG(std::string movStr =
-                         Exp.bHoist ? "input hoist:" : "input sink:";
-                     dbgs() << movStr << Register::virtReg2Index(Reg)
-                            << " " << Size);
+          LLVM_DEBUG(
+              std::string movStr = Exp.bHoist ? "input hoist:" : "input sink:";
+              dbgs() << movStr << Register::virtReg2Index(Reg) << " " << Size);
           if (SIRI->isVGPR(MRI, Reg)) {
             LLVM_DEBUG(dbgs() << "v\n");
             if (Exp.bHoist)
@@ -4019,8 +3994,8 @@ calculateSaving(HotBlock &hotBB, std::vector<SubExp> &subExpCandidates,
         LaneBitmask profitMask = outMask & MBBBeginMask;
         if (MBBBeginMask.any()) {
           unsigned Size = getRegSize(Reg, profitMask, MRI, SIRI);
-          LLVM_DEBUG(dbgs() << "move:" << Register::virtReg2Index(Reg)
-                            << " " << Size);
+          LLVM_DEBUG(dbgs()
+                     << "move:" << Register::virtReg2Index(Reg) << " " << Size);
           // Exp out live at block input.
           // It will descrease live for MBB.
           if (SIRI->isVGPR(MRI, Reg)) {
@@ -4048,8 +4023,8 @@ calculateSaving(HotBlock &hotBB, std::vector<SubExp> &subExpCandidates,
           // It will increase live for MBB.
           unsigned Size = getRegSize(Reg, profitMask, MRI, SIRI);
 
-          LLVM_DEBUG(dbgs() << "add:" << Register::virtReg2Index(Reg)
-                            << " " << Size);
+          LLVM_DEBUG(dbgs()
+                     << "add:" << Register::virtReg2Index(Reg) << " " << Size);
           if (SIRI->isVGPR(MRI, Reg)) {
             LLVM_DEBUG(dbgs() << "v\n");
             vgprDiff += Size;
@@ -4095,8 +4070,8 @@ void addExpCandidates(std::vector<SubExp> &subExpCandidates,
 }
 
 bool tryToAddSubExps(
-    Remat *Remat,
-    HotBlock &hotBB, RematStatus &status, std::vector<SubExp> &subExpCandidates,
+    Remat *Remat, HotBlock &hotBB, RematStatus &status,
+    std::vector<SubExp> &subExpCandidates,
     std::vector<SubExp> &inBlockCloneSubExps,
     DenseMap<MachineBasicBlock *, MachineInstr *> &inBlockHotVInstMap,
     DenseMap<MachineBasicBlock *, MachineInstr *> &inBlockHotSInstMap,
@@ -4110,9 +4085,9 @@ bool tryToAddSubExps(
     SlotIndexes *slotIndexes, LiveIntervals *LIS, MachineDominatorTree *pDT,
     bool bCanClone, bool bVOutBound, bool bSOutBound,
     GCNRPTracker::LiveRegSet &unUsedPassThrus, bool bAllowPartialUseInSubExp) {
-  std::vector<SubExp> partialSubExps = buildSubExpCandidates(Remat,
-      Candidates, passThrus, MRI, SIRI, SIII, MLI, slotIndexes, pDT, bCanClone,
-      bSOutBound, unUsedPassThrus, status.MemWriteMBBSet,
+  std::vector<SubExp> partialSubExps = buildSubExpCandidates(
+      Remat, Candidates, passThrus, MRI, SIRI, SIII, MLI, slotIndexes, pDT,
+      bCanClone, bSOutBound, unUsedPassThrus, status.MemWriteMBBSet,
       bAllowPartialUseInSubExp);
 
   GCNRPTracker::LiveRegSet tmpSavingInputLive = savingInputLive;
@@ -4182,8 +4157,8 @@ bool tryToAddSubExps(
       // Try to remove out reg def sub exp from DefMBB.
       GCNRPTracker::LiveRegSet &UseInMBB = it.second;
       // Go up on the dag until reach share node.
-      auto subExps = buildSubExpFromCandidatesTopBottom(Remat, UseInMBB, UseMBB, SIRI,
-                                                        SIII, MRI, slotIndexes);
+      auto subExps = buildSubExpFromCandidatesTopBottom(
+          Remat, UseInMBB, UseMBB, SIRI, SIII, MRI, slotIndexes);
       for (SubExp &subExp : subExps) {
         if (!canHelpPressureWhenHoist(subExp, MRI, SIRI, SIII, MLI, bSOutBound))
           continue;
@@ -4216,8 +4191,7 @@ bool tryToAddSubExps(
   if (EnableVmemDegree &&
       // Only expect vmem when last tryToAddSubExps.
       // If not, bAllowPartialUseInSubExp will no chance to be true.
-      (bAllowPartialUseInSubExp ||
-       !EnableSubExpAggressive)) {
+      (bAllowPartialUseInSubExp || !EnableSubExpAggressive)) {
     // Assume vmemLdSize could be optimized by not parallel.
     if (((vgpr - hotBB.vmemLdInputSize) <= VLimit ||
          (vgpr - hotBB.vmemLdOutputSize) <= VLimit) &&
@@ -4256,8 +4230,7 @@ bool tryToAddSubExps(
 // Reason to do it per block is to make sure passthru reuse is precise.
 // If try remat on all hot blocks together, the passthru might be on one block,
 // but the reuse in on another block which the reg is not passthru there.
-bool perBlockPassthruRemat(Remat *Remat,
-                           std::vector<HotBlock> &hotBlocks,
+bool perBlockPassthruRemat(Remat *Remat, std::vector<HotBlock> &hotBlocks,
                            RematStatus &status,
                            GCNRPTracker::LiveRegSet &liveRegCandidates,
                            const GCNSubtarget *ST, LiveIntervals *LIS,
@@ -4266,8 +4239,7 @@ bool perBlockPassthruRemat(Remat *Remat,
                            const SIRegisterInfo *SIRI,
                            const SIInstrInfo *SIII) {
   bool bUpdated = false;
-  bool bCanClone = EnableSubExpClone |
-                   EnableSubExpAggressive;
+  bool bCanClone = EnableSubExpClone | EnableSubExpAggressive;
 
   SlotIndexes *slotIndexes = LIS->getSlotIndexes();
   // Sort hot blocks by pressure first.
@@ -4331,19 +4303,19 @@ bool perBlockPassthruRemat(Remat *Remat,
 
     // Group pass thru regs by def MBB.
     SmallVector<std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet>>
-        Candidates =
-        groupPassThruByDefBlock(Remat, passThrus, usedPassThrus, MRI, SIRI, SIII);
+        Candidates = groupPassThruByDefBlock(Remat, passThrus, usedPassThrus,
+                                             MRI, SIRI, SIII);
     // unUsedPassThrus used to collect passThru which is skipped when build
     // subExp.
     GCNRPTracker::LiveRegSet unusedPassThrus;
     // Build exp dag on define blocks.
     bool bAllowPartialUseInSubExp = false;
-    if (tryToAddSubExps(Remat, it, status, subExpCandidates, inBlockCloneSubExps,
-                        inBlockHotVInstMap, inBlockHotSInstMap, Candidates,
-                        vgpr, sgpr, savingInputLive, savingOutputLive,
-                        passThrus, usedRegs, MRI, SIRI, SIII, MLI, slotIndexes,
-                        LIS, pDT, bCanClone, bVOutBound, bSOutBound,
-                        unusedPassThrus, bAllowPartialUseInSubExp)) {
+    if (tryToAddSubExps(
+            Remat, it, status, subExpCandidates, inBlockCloneSubExps,
+            inBlockHotVInstMap, inBlockHotSInstMap, Candidates, vgpr, sgpr,
+            savingInputLive, savingOutputLive, passThrus, usedRegs, MRI, SIRI,
+            SIII, MLI, slotIndexes, LIS, pDT, bCanClone, bVOutBound, bSOutBound,
+            unusedPassThrus, bAllowPartialUseInSubExp)) {
       // Remove unusedPassThrus from passThrus first.
       llvm::andNotLiveRegSet(passThrus, unusedPassThrus);
       llvm::mergeLiveRegSet(usedPassThrus, passThrus);
@@ -4359,12 +4331,12 @@ bool perBlockPassthruRemat(Remat *Remat,
       return false;
 
     bAllowPartialUseInSubExp = true;
-    if (!tryToAddSubExps(Remat, it, status, subExpCandidates, inBlockCloneSubExps,
-                         inBlockHotVInstMap, inBlockHotSInstMap, Candidates,
-                         vgpr, sgpr, savingInputLive, savingOutputLive,
-                         passThrus, usedRegs, MRI, SIRI, SIII, MLI, slotIndexes,
-                         LIS, pDT, bCanClone, bVOutBound, bSOutBound,
-                         unusedPassThrus, bAllowPartialUseInSubExp)) {
+    if (!tryToAddSubExps(
+            Remat, it, status, subExpCandidates, inBlockCloneSubExps,
+            inBlockHotVInstMap, inBlockHotSInstMap, Candidates, vgpr, sgpr,
+            savingInputLive, savingOutputLive, passThrus, usedRegs, MRI, SIRI,
+            SIII, MLI, slotIndexes, LIS, pDT, bCanClone, bVOutBound, bSOutBound,
+            unusedPassThrus, bAllowPartialUseInSubExp)) {
       return false;
     }
     // Just merge all passThrus after tryToAddSubExps allow partialUseInSubExp.
@@ -4430,10 +4402,9 @@ int getVMemLdSize(MachineBasicBlock &MBB, const SIInstrInfo *SIII,
 
 } // namespace
 
-bool GroupRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI, LiveIntervals *LIS,
-                MachineDominatorTree *pDT, MachinePostDominatorTree *pPDT,
-                AliasAnalysis *AA)
-{
+bool GroupRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
+                LiveIntervals *LIS, MachineDominatorTree *pDT,
+                MachinePostDominatorTree *pPDT, AliasAnalysis *AA) {
   if (MF.size() < 2)
     return false;
   const GCNSubtarget *ST = &MF.getSubtarget<GCNSubtarget>();
@@ -4495,7 +4466,6 @@ bool GroupRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI, LiveInt
                          maxLocalSPressure, status);
 
       maxLocalSPressure += RegForVCC;
-
     }
     if (maxLocalVPressure <= VLimit && maxLocalSPressure <= SLimit)
       continue;
@@ -4504,7 +4474,9 @@ bool GroupRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI, LiveInt
     if (bBothOutLimit && maxLocalVPressure <= VLimit)
       continue;
     GCNRPTracker::LiveRegSet liveSet;
-    hotBlocks.push_back({ &MBB, liveSet,std::make_pair(maxLocalVPressure, maxLocalSPressure), 0, 0 });
+    hotBlocks.push_back({&MBB, liveSet,
+                         std::make_pair(maxLocalVPressure, maxLocalSPressure),
+                         0, 0});
   }
   // Collect vmemLdInput/OutputSize.
   if (EnableVmemDegree) {
@@ -4546,8 +4518,8 @@ bool GroupRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI, LiveInt
   }
 
   if (EnableUniformVectorToScalar) {
-    if (rematUniformVgprToSgpr(Remat, MF, status, status.MBBPressureMap, hotBlocks, LIS, MRI,
-                               SIRI, SIII, MLI)) {
+    if (rematUniformVgprToSgpr(Remat, MF, status, status.MBBPressureMap,
+                               hotBlocks, LIS, MRI, SIRI, SIII, MLI)) {
       // Rebuild LIS.
       LIS->reanalyze(MF);
       status = GetRematStatus(MF, MLI, LIS, MRI, ST);
@@ -4601,15 +4573,17 @@ bool GroupRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI, LiveInt
         PressureUnderLimitSet.insert(MBB);
       } else {
         if (MaxLocalVGPR < it.maxPressures.first)
-          it.maxPressures = std::make_pair(MaxLocalVGPR, it.maxPressures.second);
+          it.maxPressures =
+              std::make_pair(MaxLocalVGPR, it.maxPressures.second);
         if (MaxLocalSGPR < it.maxPressures.second)
           it.maxPressures = std::make_pair(it.maxPressures.first, MaxLocalSGPR);
       }
     }
   }
 
-  bool bUpdated = perBlockPassthruRemat(Remat, hotBlocks, status, liveRegCandidates,
-                                        ST, LIS, MLI, pDT, MRI, SIRI, SIII);
+  bool bUpdated =
+      perBlockPassthruRemat(Remat, hotBlocks, status, liveRegCandidates, ST,
+                            LIS, MLI, pDT, MRI, SIRI, SIII);
 
   return bUpdated;
 }
@@ -4618,8 +4592,10 @@ bool AMDGPUHotBlockRematerialize::runOnMachineFunction(MachineFunction &MF) {
   if (MF.size() < 2)
     return false;
   LiveIntervals *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  MachineDominatorTree *DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  MachinePostDominatorTree *PDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  MachineDominatorTree *DT =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachinePostDominatorTree *PDT =
+      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
@@ -4628,9 +4604,10 @@ bool AMDGPUHotBlockRematerialize::runOnMachineFunction(MachineFunction &MF) {
     CI.compute(MF);
     auto TTI = MF.getTarget().getTargetTransformInfo(MF.getFunction());
     MachineUniformityInfo MachineUniformity =
-      llvm::computeMachineUniformityInfo(MF, CI, *DT, /*HasBranchDivergence*/true);
+        llvm::computeMachineUniformityInfo(MF, CI, *DT,
+                                           /*HasBranchDivergence*/ true);
 
-    //llvm::MirGPUDivergenceAnalysis DA(MF, *DT, *PDT, *MLI);
+    // llvm::MirGPUDivergenceAnalysis DA(MF, *DT, *PDT, *MLI);
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : MBB) {
         if (MachineUniformity.isUniform(&MI)) {
@@ -4640,8 +4617,8 @@ bool AMDGPUHotBlockRematerialize::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  //LLVM_DEBUG(pressure::write_pressure(MF, LIS, R"(D:\Temp\d.json)"));
-  // For non-cs/ps, set target occ as 4.
+  // LLVM_DEBUG(pressure::write_pressure(MF, LIS, R"(D:\Temp\d.json)"));
+  //  For non-cs/ps, set target occ as 4.
   bool bNearTarget = false;
   bool bFinalUpdated = false;
   bool bUpdated = hotBlockRemat(this, MF, MLI, LIS, DT, PDT, bNearTarget);
@@ -4666,8 +4643,8 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(AMDGPUHotBlockRematerialize, DEBUG_TYPE, "AMDGPU rematerialize",
-                    false, false)
+INITIALIZE_PASS_END(AMDGPUHotBlockRematerialize, DEBUG_TYPE,
+                    "AMDGPU rematerialize", false, false)
 
 char AMDGPUHotBlockRematerialize::ID = 0;
 char &llvm::AMDGPUHotBlockRematerializeID = AMDGPUHotBlockRematerialize::ID;
@@ -4675,4 +4652,3 @@ char &llvm::AMDGPUHotBlockRematerializeID = AMDGPUHotBlockRematerialize::ID;
 FunctionPass *llvm::createAMDGPUHotBlockRematerializePass() {
   return new AMDGPUHotBlockRematerialize();
 }
-

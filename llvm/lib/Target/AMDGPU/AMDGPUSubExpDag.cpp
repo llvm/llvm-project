@@ -1,9 +1,9 @@
-#include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/CodeGen/SlotIndexes.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 
-//#include "dxc/DXIL/DxilMetadataHelper.h"
+// #include "dxc/DXIL/DxilMetadataHelper.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -14,9 +14,9 @@
 
 #include "llvm/Support/Debug.h"
 
-#include "GCNRegPressure.h"
 #include "AMDGPUMIRUtils.h"
 #include "AMDGPUSubExpDag.h"
+#include "GCNRegPressure.h"
 #include <unordered_set>
 
 #define DEBUG_TYPE "xb-sub-exp-dag"
@@ -27,37 +27,35 @@ namespace llvm {
 // Expression Dag.
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void SubExp::dump(const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI) const {
-    dbgs() << "\nSubExp:\n";
-    dbgs() << "input regs:\n";
-    for (auto &input : inputLive) {
-      pressure::print_reg(input.first, MRI, SIRI, llvm::dbgs());
-      dbgs() << "\n";
-    }
-    dbgs() << "output regs:\n";
-    for (auto &output : outputLive) {
-      pressure::print_reg(output.first, MRI, SIRI, llvm::dbgs());
-      dbgs() << "\n";
-    }
+void SubExp::dump(const MachineRegisterInfo &MRI,
+                  const SIRegisterInfo *SIRI) const {
+  dbgs() << "\nSubExp:\n";
+  dbgs() << "input regs:\n";
+  for (auto &input : inputLive) {
+    pressure::print_reg(input.first, MRI, SIRI, llvm::dbgs());
+    dbgs() << "\n";
+  }
+  dbgs() << "output regs:\n";
+  for (auto &output : outputLive) {
+    pressure::print_reg(output.first, MRI, SIRI, llvm::dbgs());
+    dbgs() << "\n";
+  }
 
-    for (MachineInstr *MI : SUnits) {
-      MI->dump();
-    }
-    dbgs() << "End of SubExp\n";
+  for (MachineInstr *MI : SUnits) {
+    MI->dump();
+  }
+  dbgs() << "End of SubExp\n";
 }
 #endif
 
-bool SubExp::modifiesRegister(unsigned Reg, const SIRegisterInfo* SIRI) const
-{
-    for (const MachineInstr *MI : SUnits)
-    {
-        if (MI->modifiesRegister(Reg, SIRI))
-        {
-            return true;
-        }
+bool SubExp::modifiesRegister(unsigned Reg, const SIRegisterInfo *SIRI) const {
+  for (const MachineInstr *MI : SUnits) {
+    if (MI->modifiesRegister(Reg, SIRI)) {
+      return true;
     }
+  }
 
-    return false;
+  return false;
 }
 
 void SubExp::calcMaxPressure(const MachineRegisterInfo &MRI,
@@ -95,7 +93,9 @@ void SubExp::calcMaxPressure(const MachineRegisterInfo &MRI,
 
   for (auto it = SUnits.rbegin(); it != SUnits.rend(); it++) {
     MachineInstr *MI = *it;
-    auto *ST = &MI->getMF()->getSubtarget<GCNSubtarget>(); // TODO: Better way to get this.
+    auto *ST =
+        &MI->getMF()
+             ->getSubtarget<GCNSubtarget>(); // TODO: Better way to get this.
     for (MachineOperand &MO : MI->operands()) {
       if (!MO.isReg())
         continue;
@@ -149,8 +149,8 @@ bool SubExp::isSafeToMove(const MachineRegisterInfo &MRI, bool bMoveUp) const {
 }
 
 ExpDag::ExpDag(const llvm::MachineRegisterInfo &MRI,
-               const llvm::SIRegisterInfo *SIRI,
-               const SIInstrInfo *SIII, const bool bJoinInput)
+               const llvm::SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
+               const bool bJoinInput)
     : MRI(MRI), SIRI(SIRI), SIII(SIII), bJoinInputToSubExp(bJoinInput) {}
 
 template <typename T>
@@ -196,9 +196,9 @@ template void
 ExpDag::build<DenseSet<MachineInstr *>>(const LiveSet &InputLiveReg,
                                         const LiveSet &OutputLiveReg,
                                         DenseSet<MachineInstr *> &instRange);
-template void ExpDag::build<std::vector<MachineInstr *>>(const LiveSet &InputLiveReg,
-                                               const LiveSet &OutputLiveReg,
-                                               std::vector<MachineInstr *> &instRange);
+template void ExpDag::build<std::vector<MachineInstr *>>(
+    const LiveSet &InputLiveReg, const LiveSet &OutputLiveReg,
+    std::vector<MachineInstr *> &instRange);
 
 void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
                          const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
@@ -311,7 +311,8 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
             // UserMI should always be in same subExp.
             unsigned UseSubIdx = SubtreeClasses[UseSU->NodeNum];
             if (UseSubIdx != OriginSubIdx) {
-              // When reg has multiple def, it is possible for user def in different subExp.
+              // When reg has multiple def, it is possible for user def in
+              // different subExp.
               if (MRI.getUniqueVRegDef(Reg))
                 llvm::report_fatal_error("user and def in different subExp");
               break;
@@ -470,9 +471,8 @@ void BlockExpDag::buildWithPressure() {
   buildPressure(StartLiveReg, EndLiveReg);
 }
 
-void BlockExpDag::buildAvail(
-    const LiveSet &passThruSet,
-    DenseMap<SUnit *, LiveSet> &DagAvailRegMap) {
+void BlockExpDag::buildAvail(const LiveSet &passThruSet,
+                             DenseMap<SUnit *, LiveSet> &DagAvailRegMap) {
   DenseSet<SUnit *> Processed;
 
   DenseSet<SUnit *> WorkList;
@@ -596,10 +596,10 @@ void BlockExpDag::buildPressure(const LiveSet &StartLiveReg,
       // Using pass thru as base because output of current SU should not
       // affect other output SUs.
       GCNUpwardRPTracker RP(*LIS);
-      RP.reset(BeginMI, &passThruSet, /*After*/true);
+      RP.reset(BeginMI, &passThruSet, /*After*/ true);
       MachineInstr *MI = SU.getInstr();
       if (MI) {
-        RP.reset(*MI, &passThruSet, /*After*/true);
+        RP.reset(*MI, &passThruSet, /*After*/ true);
         RP.recede(*MI);
       }
       DagPressureMap[&SU] = RP.getLiveRegs();
@@ -639,9 +639,9 @@ void BlockExpDag::buildPressure(const LiveSet &StartLiveReg,
         GCNRPTracker::LiveRegSet SuccLive = DagPressureMap[SuccSU];
 
         GCNUpwardRPTracker RP(*LIS);
-        RP.reset(BeginMI, &SuccLive, /*After*/true);
+        RP.reset(BeginMI, &SuccLive, /*After*/ true);
         if (MI) {
-          RP.reset(*MI, &SuccLive, /*After*/true);
+          RP.reset(*MI, &SuccLive, /*After*/ true);
           // Update SuccLive based on MI.
           RP.recede(*MI);
         }
@@ -684,9 +684,7 @@ std::string ExpDag::getGraphNodeLabel(const SUnit *SU) const {
 }
 
 /// Return the label.
-std::string ExpDag::getDAGName() const {
-  return "dag.exp";
-}
+std::string ExpDag::getDAGName() const { return "dag.exp"; }
 
 /// viewGraph - Pop up a ghostview window with the reachable parts of the DAG
 /// rendered using 'dot'.
@@ -707,7 +705,7 @@ void ExpDag::dump() {
   viewGraph(getDAGName(), "Exp Dag Graph for " + getDAGName());
 }
 
-}
+} // namespace llvm
 
 // Expression Dag dump.
 namespace llvm {
@@ -757,7 +755,8 @@ struct DOTGraphTraits<llvm::ExpDag *> : public DefaultDOTGraphTraits {
     SS << "SU:" << SU->NodeNum;
     return SS.str();
   }
-  static std::string getNodeDescription(const SUnit *SU, const llvm::ExpDag *G) {
+  static std::string getNodeDescription(const SUnit *SU,
+                                        const llvm::ExpDag *G) {
     return G->getGraphNodeLabel(SU);
   }
   static std::string getNodeAttributes(const SUnit *N,
@@ -804,7 +803,9 @@ void getRegBound(llvm::MachineBasicBlock *MBB,
   const GCNRPTracker::LiveRegSet outputLive =
       llvm::getLiveRegs(EndSlot, *LIS, MRI);
 
-  auto* ST = &MBB->getParent()->getSubtarget<GCNSubtarget>(); // TODO: Better way to get this.
+  auto *ST =
+      &MBB->getParent()
+           ->getSubtarget<GCNSubtarget>(); // TODO: Better way to get this.
   if (MBB->empty()) {
     GCNRegPressure MaxPressure = getRegPressure(MRI, outputLive);
     MaxSGPR = MaxPressure.getSGPRNum();
@@ -845,7 +846,7 @@ void getRegBound(llvm::MachineBasicBlock *MBB,
   auto SchedResult = hrbSched(SUnits, BotRoots, MRI, SIRI);
 
   GCNUpwardRPTracker RPTracker(*LIS);
-  RPTracker.reset(MBB->front(), &outputLive, /*After*/true);
+  RPTracker.reset(MBB->front(), &outputLive, /*After*/ true);
   for (auto it = SchedResult.rbegin(); it != SchedResult.rend(); it++) {
     const SUnit *SU = *it;
     if (!SU->isInstr())
@@ -1116,8 +1117,7 @@ SUnit *HRB::findHeir(SUnit *SU, std::vector<llvm::SUnit> &SUnits) {
   return Heir;
 }
 
-HRB::Lineage HRB::buildChain(SUnit *Node,
-                             std::vector<llvm::SUnit> &SUnits) {
+HRB::Lineage HRB::buildChain(SUnit *Node, std::vector<llvm::SUnit> &SUnits) {
   HRB::Lineage chain;
   chain.addNode(Node);
   ChainedNodes.insert(Node);
@@ -1754,7 +1754,7 @@ std::vector<const SUnit *> hrbSched(std::vector<SUnit> &SUnits,
         SUnit *SU = *it;
 
         if (!Color.isHead(SU)) {
-            continue;
+          continue;
         }
         Candidate = SU;
         // Remove Candidate from ReadyList.

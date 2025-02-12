@@ -1,4 +1,4 @@
-//===-- AMDGPUVMemDegreeDAG.h - Build degree about VMem on DAG --------------===//
+//===-- AMDGPUVMemDegreeDAG.h - Build degree about VMem on DAG ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,9 +14,9 @@
 //===----------------------------------------------------------------------===//
 #pragma once
 
-#include <vector>
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/ScheduleDAG.h"  // For SUnit.
+#include "llvm/CodeGen/ScheduleDAG.h" // For SUnit.
+#include <vector>
 
 namespace llvm {
 class MachineBasicBlock;
@@ -42,7 +42,6 @@ private:
   void addCtrlDep();
 };
 
-
 // Collect height/depth for high latency mem ld, which only update height/depth
 // when cross high latency mem ld. Call the height/depth as VMem degree here.
 // The rule is sample and its user should has different degree.
@@ -60,14 +59,12 @@ private:
 
 class VMemDegreeDAG {
 public:
-  VMemDegreeDAG(std::vector<llvm::SUnit> &Units,
-              const llvm::SIInstrInfo *TII)
+  VMemDegreeDAG(std::vector<llvm::SUnit> &Units, const llvm::SIInstrInfo *TII)
       : SUnits(Units), SIII(TII) {}
   std::vector<llvm::SUnit> &SUnits;
   // InstrInfo.
   const llvm::SIInstrInfo *SIII;
   void build();
-
 
   bool isHighLatency(const llvm::SUnit *SU) const;
   bool isHighLatency(const llvm::MachineInstr *MI) const;
@@ -79,28 +76,24 @@ public:
   std::vector<unsigned> VMemFullDepth;
   llvm::SmallVector<llvm::SUnit *, 16> VMemSUs;
   llvm::SmallVector<llvm::SmallVector<llvm::SUnit *, 8>, 16> GroupedVMemSUs;
-  llvm::SmallVector<llvm::SmallVector<llvm::SUnit *, 8>, 16> GroupedVMemSUsByDepth;
-
+  llvm::SmallVector<llvm::SmallVector<llvm::SUnit *, 8>, 16>
+      GroupedVMemSUsByDepth;
 
   void dump();
 
 private:
   static constexpr unsigned kNoReg = -1;
 
-
-  std::pair<unsigned, unsigned> buildVMemDepthHeight(std::vector<unsigned> &VMemHeight,
-                            std::vector<unsigned> &VMemDepth, bool bDataOnly);
+  std::pair<unsigned, unsigned>
+  buildVMemDepthHeight(std::vector<unsigned> &VMemHeight,
+                       std::vector<unsigned> &VMemDepth, bool bDataOnly);
   // Compute vmem height/depth.
   void buildVMemDepthHeight();
   void buildVMemDataDepthHeight();
   void groupVmemSUnits();
-
 };
-
-
 
 // Split block based on vmem depth.
 void buildVMemDepth(llvm::MachineBasicBlock &MBB, llvm::VMemDegreeDAG &dag);
 
-}
-
+} // namespace llvm
