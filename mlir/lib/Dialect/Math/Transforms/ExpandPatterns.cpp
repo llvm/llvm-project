@@ -324,49 +324,52 @@ static LogicalResult convertSpecialPowfOp(math::PowFOp op,
 
   auto &sem =
       cast<mlir::FloatType>(getElementTypeOrSelf(typeB)).getFloatSemantics();
-  auto valueB = APFloat(sem);
+  APFloat valueB(sem);
   if (!matchPattern(operandB, m_ConstantFloat(&valueB))) {
     // Not a constant, return failure
     return failure();
   }
-
-  if (valueB.compare(APFloat(0.0f)) == APFloat::cmpEqual) {
+  if (valueB.compare(APFloat::getZero(sem)) == APFloat::cmpEqual) {
     // a^0 -> 1
     Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
     rewriter.replaceOp(op, one);
     return success();
   }
-  if (valueB.compare(APFloat(1.0f)) == APFloat::cmpEqual) {
+  if (valueB.compare(APFloat::getOne(sem)) == APFloat::cmpEqual) {
     // a^1 -> a
     rewriter.replaceOp(op, operandA);
     return success();
   }
-  if (valueB.compare(APFloat(-1.0f)) == APFloat::cmpEqual) {
+  if (valueB.compare(-APFloat::getOne(sem)) == APFloat::cmpEqual) {
     // a^(-1) -> 1 / a
     Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
     Value div = b.create<arith::DivFOp>(one, operandA);
     rewriter.replaceOp(op, div);
     return success();
   }
-  if (valueB.compare(APFloat(0.5f)) == APFloat::cmpEqual) {
+  APFloat halfVal(0.5);
+  halfVal.convert(sem, APFloat::rmNearestTiesToEven, /*losesInfo=*/nullptr);
+  if (valueB.compare(halfVal) == APFloat::cmpEqual) {
     // a^(1/2) -> sqrt(a)
     Value sqrt = b.create<math::SqrtOp>(operandA);
     rewriter.replaceOp(op, sqrt);
     return success();
   }
-  if (valueB.compare(APFloat(-0.5f)) == APFloat::cmpEqual) {
+  if (valueB.compare(-halfVal) == APFloat::cmpEqual) {
     // a^(-1/2) -> 1 / sqrt(a)
     Value rsqrt = b.create<math::RsqrtOp>(operandA);
     rewriter.replaceOp(op, rsqrt);
     return success();
   }
-  if (valueB.compare(APFloat(2.0f)) == APFloat::cmpEqual) {
+  APFloat twoVal(2.0);
+  twoVal.convert(sem, APFloat::rmNearestTiesToEven, /*losesInfo=*/nullptr);
+  if (valueB.compare(twoVal) == APFloat::cmpEqual) {
     // a^2 -> a * a
     Value mul = b.create<arith::MulFOp>(operandA, operandA);
     rewriter.replaceOp(op, mul);
     return success();
   }
-  if (valueB.compare(APFloat(-2.0f)) == APFloat::cmpEqual) {
+  if (valueB.compare(-twoVal) == APFloat::cmpEqual) {
     // a^(-2) -> 1 / (a * a)
     Value mul = b.create<arith::MulFOp>(operandA, operandA);
     Value one =
