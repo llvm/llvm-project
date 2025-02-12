@@ -1415,7 +1415,7 @@ Currently, only the following parameter attributes are defined:
     captured in certain locations. Currently only the return value (``ret``)
     and other (default) locations are supported.
 
-    The `pointer capture section <pointercapture>` discusses these semantics
+    The :ref:`pointer capture section <pointercapture>` discusses these semantics
     in more detail.
 
     Some examples of how to use the attribute:
