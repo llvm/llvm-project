@@ -18,6 +18,10 @@
 #include <memory>
 
 TEST(TelemetryTest, PluginTest) {
+  // This would have been called by the plugin reg in a "real" plugin
+  // For tests, we just call it directly.
+  lldb_private::FakePlugin::Initialize();
+
   auto ins = lldb_private::telemetry::TelemetryManager::getInstance();
 
   ASSERT_NE(ins, nullptr);
