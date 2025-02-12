@@ -1230,18 +1230,18 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.LdsSize = STM.isAmdHsaOS() ? 0 : ProgInfo.LDSBlocks;
   ProgInfo.EXCPEnable = 0;
 
-  if (STM.hasGFX90AInsts()) {
-    // return ((Dst & ~Mask) | (Value << Shift))
-    auto SetBits = [&Ctx](const MCExpr *Dst, const MCExpr *Value, uint32_t Mask,
-                          uint32_t Shift) {
-      const auto *Shft = MCConstantExpr::create(Shift, Ctx);
-      const auto *Msk = MCConstantExpr::create(Mask, Ctx);
-      Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
-      Dst = MCBinaryExpr::createOr(
-          Dst, MCBinaryExpr::createShl(Value, Shft, Ctx), Ctx);
-      return Dst;
-    };
+  // return ((Dst & ~Mask) | (Value << Shift))
+  auto SetBits = [&Ctx](const MCExpr *Dst, const MCExpr *Value, uint32_t Mask,
+                        uint32_t Shift) {
+    const auto *Shft = MCConstantExpr::create(Shift, Ctx);
+    const auto *Msk = MCConstantExpr::create(Mask, Ctx);
+    Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
+    Dst = MCBinaryExpr::createOr(Dst, MCBinaryExpr::createShl(Value, Shft, Ctx),
+                                 Ctx);
+    return Dst;
+  };
 
+  if (STM.hasGFX90AInsts()) {
     ProgInfo.ComputePGMRSrc3 =
         SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.AccumOffset,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
@@ -1267,6 +1267,26 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
             F.getName() + "': desired occupancy was " + Twine(MinWEU) +
             ", final occupancy is " + Twine(Occupancy));
     F.getContext().diagnose(Diag);
+  }
+
+  if (isGFX11Plus(STM)) {
+    uint32_t CodeSizeInBytes = (uint32_t)std::min(
+        ProgInfo.getFunctionCodeSize(MF, true /* IsLowerBound */),
+        (uint64_t)std::numeric_limits<uint32_t>::max());
+    uint32_t CodeSizeInLines = divideCeil(CodeSizeInBytes, 128);
+    uint32_t Field, Shift, Width;
+    if (isGFX11(STM)) {
+      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
+    } else {
+      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
+    }
+    uint64_t InstPrefSize = std::min(CodeSizeInLines, (1u << Width) - 1);
+    ProgInfo.ComputePGMRSrc3 = SetBits(ProgInfo.ComputePGMRSrc3,
+                                       CreateExpr(InstPrefSize), Field, Shift);
   }
 }
 
