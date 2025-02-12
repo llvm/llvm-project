@@ -121,3 +121,18 @@ entry:
     %1 = icmp ne i64 %0, 844424930131968
     ret i1 %1
 }
+
+define i32 @test_trunc_add(i64 %x) {
+; X64-LABEL: test_trunc_add:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movabsq $3940649673949184, %rax # imm = 0xE000000000000
+; X64-NEXT:    addq %rdi, %rax
+; X64-NEXT:    shrq $48, %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    retq
+entry:
+  %add = add i64 %x, 3940649673949184
+  %shr = lshr i64 %add, 48
+  %conv = trunc i64 %shr to i32
+  ret i32 %conv
+}
