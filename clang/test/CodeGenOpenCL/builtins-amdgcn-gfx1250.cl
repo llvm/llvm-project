@@ -1047,7 +1047,7 @@ void test_cvt_scalef32_sr_pk(global uint2 *out2, bfloat8 srcbf8, half8 srch8, fl
   *out3 = __builtin_amdgcn_cvt_scalef32_sr_pk16_fp6_f32(srcf16, sr, scale);
 }
 
-// CHECK-LABEL: @test_cvt_sat_pk_i4_i8(
+// CHECK-LABEL: @test_sat_pk4_i4_i8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
@@ -1056,19 +1056,19 @@ void test_cvt_scalef32_sr_pk(global uint2 *out2, bfloat8 srcbf8, half8 srch8, fl
 // CHECK-NEXT:    store ptr [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.amdgcn.cvt.sat.pk.i4.i8(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.amdgcn.sat.pk4.i4.i8(i32 [[TMP0]])
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i16 [[TMP1]], ptr [[TMP2]], align 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.amdgcn.cvt.sat.pk.u4.u8(i32 [[TMP3]])
+// CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.amdgcn.sat.pk4.u4.u8(i32 [[TMP3]])
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i16 [[TMP4]], ptr [[TMP5]], align 2
 // CHECK-NEXT:    ret void
 //
-void test_cvt_sat_pk_i4_i8(ushort *out, uint src)
+void test_sat_pk4_i4_i8(ushort *out, uint src)
 {
-  *out = __builtin_amdgcn_cvt_sat_pk_i4_i8(src);
-  *out = __builtin_amdgcn_cvt_sat_pk_u4_u8(src);
+  *out = __builtin_amdgcn_sat_pk4_i4_i8(src);
+  *out = __builtin_amdgcn_sat_pk4_u4_u8(src);
 }
 
 // CHECK-LABEL: @test_get_cluster_group_id(
