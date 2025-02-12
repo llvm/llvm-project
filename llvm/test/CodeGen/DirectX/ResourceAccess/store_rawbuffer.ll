@@ -122,3 +122,24 @@ define void @storev4f64_byte(i32 %offset, <4 x double> %data) {
 
   ret void
 }
+
+%struct.S = type { i32 }
+; CHECK-LABEL: define void @copyStructWithAddrspaceCast
+define void @copyStructWithAddrspaceCast() {
+entry:
+  %buffer = tail call target("dx.RawBuffer", %struct.S, 1, 0)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
+  %ptr0 = call ptr addrspace(1) @llvm.dx.resource.getpointer(
+      target("dx.RawBuffer", %struct.S, 1, 0) %buffer, i32 1)
+  %cast0 = addrspacecast ptr addrspace(1) %ptr0 to ptr
+  %ptr1 = call ptr addrspace(1) @llvm.dx.resource.getpointer(
+      target("dx.RawBuffer", %struct.S, 1, 0) %buffer, i32 0)
+  %cast1 = addrspacecast ptr addrspace(1) %ptr1 to ptr
+
+  ; CHECK: %[[L:.*]] = call { i32, i1 } @llvm.dx.resource.load.rawbuffer.i32.tdx.RawBuffer_s_struct.Ss_1_0t(target("dx.RawBuffer", %struct.S, 1, 0) %buffer, i32 1, i32 0)
+  ; CHECK: %[[V:.*]] = extractvalue { i32, i1 } %[[L]], 0
+  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_s_struct.Ss_1_0t.i32(target("dx.RawBuffer", %struct.S, 1, 0) %{{.*}}, i32 0, i32 0, i32 %[[V]])
+  %2 = load i32, ptr %cast0, align 4
+  store i32 %2, ptr %cast1, align 4
+  ret void
+}
